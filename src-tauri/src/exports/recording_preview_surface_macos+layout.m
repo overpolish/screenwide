@@ -156,17 +156,6 @@ void screenwide_preview_surface_set_editor_zoom(void *handle,
   });
 }
 
-void screenwide_preview_surface_center_editor(void *handle) {
-  if (handle == NULL) return;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  on_main_async(^{
-    if (!surface.editorEnabled) return;
-    surface.editorPanX = 0.0;
-    surface.editorPanY = 0.0;
-    apply_editor_transform(surface);
-  });
-}
-
 void screenwide_preview_surface_set_selection(void *handle,
                                               const ScreenwidePreviewSelection *selection) {
   if (handle == NULL) return;

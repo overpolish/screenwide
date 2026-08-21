@@ -409,23 +409,3 @@ pub fn set_recording_preview_zoom(
   }
   Ok(())
 }
-
-#[tauri::command]
-pub fn center_recording_preview_workspace(app: tauri::AppHandle) -> Result<(), String> {
-  tauri::async_runtime::spawn_blocking(move || {
-    let surface = {
-      let state = app.state::<RecordingPreviewPlayerState>();
-      state.0.lock().ok().and_then(|manager| {
-        manager
-          .sources
-          .as_ref()
-          .and_then(|sources| sources.preview_surface.clone())
-      })
-    };
-    if let Some(surface) = surface {
-      #[cfg(any(target_os = "macos", target_os = "windows"))]
-      surface.center_editor();
-    }
-  });
-  Ok(())
-}

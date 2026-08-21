@@ -2725,14 +2725,6 @@ impl RecordingPreviewSurface {
     }
   }
 
-  pub(crate) fn center_editor(&self) {
-    if let Ok(mut state) = self.inner.state.lock() {
-      state.workspace_transform.pan_x = 0.0;
-      state.workspace_transform.pan_y = 0.0;
-      apply_workspace_transform(&self.inner, &mut state, false);
-    }
-  }
-
   pub(crate) fn set_selection_callback(&mut self, callback: SelectionCallback) {
     if let Ok(mut callbacks) = self.inner.callbacks.lock() {
       callbacks.selection = Some(callback);
@@ -2902,8 +2894,8 @@ impl RecordingPreviewSurface {
             restored_zoom = Some(transform.zoom);
           }
           state.workspace_transform.zoom = transform.zoom;
-          state.workspace_transform.pan_x = 0.0;
-          state.workspace_transform.pan_y = 0.0;
+          state.workspace_transform.pan_x = transform.pan_x;
+          state.workspace_transform.pan_y = transform.pan_y;
         }
         state.workspace_natural_size = Some(natural_size);
       }

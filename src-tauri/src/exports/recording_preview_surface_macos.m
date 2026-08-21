@@ -101,11 +101,11 @@ SCREENWIDE_PREVIEW_PRIVATE void restore_workspace_transform(
   ScreenwideWorkspaceTransform transform;
   [value getValue:&transform size:sizeof(transform)];
   BOOL zoomChanged = fabs(surface.editorZoom - transform.zoom) > 0.000001;
-  // Undo/redo restores the zoom belonging to that frame size, but recenters
-  // instead of restoring the workspace's old pan offset.
+  // Undo/redo restores the zoom and the pan offset the workspace had at that
+  // frame size, so the view returns to exactly where the user left it.
   surface.editorZoom = transform.zoom;
-  surface.editorPanX = 0.0;
-  surface.editorPanY = 0.0;
+  surface.editorPanX = transform.pan_x;
+  surface.editorPanY = transform.pan_y;
   if (zoomChanged && surface.transformCallback)
     surface.transformCallback(transform.zoom * 100.0,
                               surface.transformContext);

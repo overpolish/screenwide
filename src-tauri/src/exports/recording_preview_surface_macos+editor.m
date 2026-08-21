@@ -768,20 +768,16 @@
           MAX(self.selectionFrameDragStart.size.width, 1.0);
       deltaY = delta.y * inverseZoom /
           MAX(self.selectionFrameDragStart.size.height, 1.0);
-      self.surface.editorPanX = 0.0;
-      self.surface.editorPanY = 0.0;
-      apply_editor_transform(self.surface);
     }
     emit_selection_gesture(self.surface, 2, self.selectionDragOperation,
                            edges, scale, deltaX, deltaY);
-    if (self.selectionDragOperation == 3) {
-      end_workspace_frame_resize(self.surface, YES);
-    } else if (self.selectionDragOperation == 0 &&
-               !NSIsEmptyRect(self.selectionMoveFrameStart)) {
-      // Unlike Frame (which recentred above), an auto-fit Move leaves the
-      // view where the drag put it; the layout echoing the grown canvas must
-      // keep that transform rather than restore/recentre. A plain move sets
-      // this too, harmlessly: its echo changes no size and clears the flag.
+    if (self.selectionDragOperation == 3 ||
+        (self.selectionDragOperation == 0 &&
+         !NSIsEmptyRect(self.selectionMoveFrameStart))) {
+      // A Frame resize and an auto-fit Move both leave the view where the
+      // drag's rebase put it; the layout echoing the grown canvas must keep
+      // that transform rather than restore/recentre. A plain move sets this
+      // too, harmlessly: its echo changes no size and clears the flag.
       self.surface.keepTransformForCommittedNaturalSize = YES;
       end_workspace_frame_resize(self.surface, YES);
     }

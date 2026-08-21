@@ -8,8 +8,6 @@ import {
   browseExportDirectory,
   cancelExport,
   cancelExportJob,
-  centerRecordingPreviewWorkspace,
-  centerScreenshotPreviewWorkspace,
   copyExportToClipboard,
   saveExport,
   setExportDirectory,
@@ -263,30 +261,6 @@ export function ExportWindow() {
   }, []);
   const editGesture = useExportEditHistory({
     apply: applyEditState,
-    onApply: (before, after) => {
-      const screenshotFrameChanged =
-        before.screenshotOutput.width !== after.screenshotOutput.width ||
-        before.screenshotOutput.height !== after.screenshotOutput.height;
-      const recordingFrameChanged = (["primary", "camera"] as const).some(
-        (track) =>
-          before.recordingOutput[track].width !==
-            after.recordingOutput[track].width ||
-          before.recordingOutput[track].height !==
-            after.recordingOutput[track].height,
-      );
-      if (
-        (artifact?.kind === "screenshot" && !screenshotFrameChanged) ||
-        (artifact?.kind === "recording" && !recordingFrameChanged)
-      )
-        return;
-      requestAnimationFrame(() => {
-        const center =
-          artifact?.kind === "screenshot"
-            ? centerScreenshotPreviewWorkspace
-            : centerRecordingPreviewWorkspace;
-        void center().catch(() => undefined);
-      });
-    },
     resetKey:
       artifact?.kind === "screenshot"
         ? `${artifact.id.toString()}:${artifact.items.map((item) => item.id).join(":")}`

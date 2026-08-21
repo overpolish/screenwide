@@ -67,17 +67,14 @@ const changedKey = <State extends object>(before: State, after: State) =>
 /** One undo stack for every option that changes the exported result. */
 export function useExportEditHistory<State extends object>({
   apply,
-  onApply,
   resetKey,
   state,
 }: {
   apply: (state: State) => void;
   resetKey: unknown;
   state: State;
-  onApply?: (before: State, after: State) => void;
 }) {
   const applyRef = useRef(apply);
-  const onApplyRef = useRef(onApply);
   const currentRef = useRef(state);
   const observedRef = useRef(state);
   const futureRef = useRef<State[]>([]);
@@ -91,7 +88,6 @@ export function useExportEditHistory<State extends object>({
   const gestureRef = useRef(false);
   const suppressRef = useRef(true);
   applyRef.current = apply;
-  onApplyRef.current = onApply;
   currentRef.current = state;
 
   const finishGroup = useCallback(() => {
@@ -178,11 +174,9 @@ export function useExportEditHistory<State extends object>({
         finishGroup();
         const next = futureRef.current.pop();
         if (!next) return;
-        const current = currentRef.current;
-        pastRef.current.push(current);
+        pastRef.current.push(currentRef.current);
         applyingRef.current = true;
         applyRef.current(next);
-        onApplyRef.current?.(current, next);
         return;
       }
 
@@ -191,20 +185,16 @@ export function useExportEditHistory<State extends object>({
         if (timerRef.current !== null) window.clearTimeout(timerRef.current);
         timerRef.current = null;
         pendingRef.current = null;
-        const current = currentRef.current;
-        futureRef.current.push(current);
+        futureRef.current.push(currentRef.current);
         applyingRef.current = true;
         applyRef.current(pending.start);
-        onApplyRef.current?.(current, pending.start);
         return;
       }
       const previous = pastRef.current.pop();
       if (!previous) return;
-      const current = currentRef.current;
-      futureRef.current.push(current);
+      futureRef.current.push(currentRef.current);
       applyingRef.current = true;
       applyRef.current(previous);
-      onApplyRef.current?.(current, previous);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {

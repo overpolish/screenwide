@@ -8,9 +8,8 @@ use super::callbacks::{
   release_callback_on_main, selection_callback, selection_gesture_callback, transform_callback,
 };
 use super::ffi::{
-  screenwide_preview_surface_center_editor, screenwide_preview_surface_enable_editor,
-  screenwide_preview_surface_set_editor_zoom, screenwide_preview_surface_set_selection,
-  screenwide_preview_surface_set_selection_callback,
+  screenwide_preview_surface_enable_editor, screenwide_preview_surface_set_editor_zoom,
+  screenwide_preview_surface_set_selection, screenwide_preview_surface_set_selection_callback,
   screenwide_preview_surface_set_selection_gesture_callback,
   screenwide_preview_surface_set_selection_snapping,
   screenwide_preview_surface_set_selection_targets,
@@ -50,12 +49,6 @@ impl RecordingPreviewSurface {
   pub(crate) fn set_editor_zoom(&self, zoom_percent: f64) {
     unsafe {
       screenwide_preview_surface_set_editor_zoom(self.handle, zoom_percent);
-    }
-  }
-
-  pub(crate) fn center_editor(&self) {
-    unsafe {
-      screenwide_preview_surface_center_editor(self.handle);
     }
   }
 

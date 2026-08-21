@@ -124,9 +124,6 @@ export const setRecordingPreviewZoom = (
     zoomPercent,
   });
 
-export const centerRecordingPreviewWorkspace = () =>
-  invoke<null>("center_recording_preview_workspace");
-
 export const layoutRecordingPreviewSurface = ({
   backdrop,
   bakeCamera,
@@ -369,9 +366,6 @@ export const setScreenshotPreviewZoom = (
     sessionId,
     zoomPercent,
   });
-
-export const centerScreenshotPreviewWorkspace = () =>
-  invoke<null>("center_screenshot_preview_workspace");
 
 export const stopScreenshotPreview = (sessionId: number) =>
   invoke<null>("stop_screenshot_preview", { sessionId });

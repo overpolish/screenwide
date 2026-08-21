@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::Manager;
-
 use super::state::ScreenshotPreviewState;
 
 #[tauri::command]
@@ -26,23 +24,6 @@ pub fn set_screenshot_preview_zoom(
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     surface.set_editor_zoom(zoom_percent);
   }
-  Ok(())
-}
-
-#[tauri::command]
-pub fn center_screenshot_preview_workspace(app: tauri::AppHandle) -> Result<(), String> {
-  tauri::async_runtime::spawn_blocking(move || {
-    let surface = app
-      .state::<ScreenshotPreviewState>()
-      .0
-      .lock()
-      .ok()
-      .and_then(|manager| manager.surface.clone());
-    if let Some(surface) = surface {
-      #[cfg(any(target_os = "macos", target_os = "windows"))]
-      surface.center_editor();
-    }
-  });
   Ok(())
 }
 
