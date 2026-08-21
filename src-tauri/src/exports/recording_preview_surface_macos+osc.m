@@ -425,6 +425,14 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       if (y + label.height > size.height)
         y = NSMaxY(frame) - 4.0 - label.height;
       x = MAX(0.0, MIN(x, size.width - label.width));
+      // A viewport edge may hold the readout only until the corresponding
+      // selection edge catches it; after that it travels with the frame.
+      CGFloat minimumX = NSMinX(frame);
+      CGFloat maximumX = NSMaxX(frame) - label.width;
+      if (minimumX <= maximumX)
+        x = MAX(minimumX, MIN(x, maximumX));
+      else
+        x = NSMidX(frame) - label.width / 2.0;
       y = MAX(0.0, y);
       // Snap to device pixels so the glyphs land on the same grid they were
       // rasterised on and stay crisp instead of resampling every sample.

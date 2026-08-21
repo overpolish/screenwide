@@ -577,6 +577,15 @@ impl SelectionOverlay {
             y = frame[1] + frame[3] - gap - height;
           }
           x = x.min(size.0 as f32 - width).max(0.0);
+          // A viewport edge may hold the readout only until the corresponding
+          // selection edge catches it; after that it travels with the frame.
+          let minimum_x = frame[0];
+          let maximum_x = frame[0] + frame[2] - width;
+          x = if minimum_x <= maximum_x {
+            x.clamp(minimum_x, maximum_x)
+          } else {
+            frame[0] + (frame[2] - width) * 0.5
+          };
           y = y.max(0.0);
           (view, [x.floor(), y.floor(), width, height])
         }),
