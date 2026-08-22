@@ -50,8 +50,13 @@ import { useScreenshotCapture } from "../use-screenshot-capture";
 import { RecordingBar } from "./recording-bar";
 
 const RECORDING_ERROR_EVENT = "recording://error";
+const RECORDING_DISMISS_REQUESTED_EVENT = "recording-ui://dismiss-requested";
 /** A recording started without selected inputs whose devices had vanished. */
 const RECORDING_INPUTS_SKIPPED_EVENT = "recording://inputs-skipped";
+
+const dismissRecordingUi = () => {
+  void hideRecordingUi();
+};
 
 const SKIPPED_INPUT_LABELS: Record<string, string> = {
   camera: "camera",
@@ -241,6 +246,23 @@ export function RecordingBarWindow() {
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
     let disposed = false;
+
+    void listen(RECORDING_DISMISS_REQUESTED_EVENT, dismissRecordingUi).then(
+      (listener) => {
+        if (disposed) listener();
+        else unlisten = listener;
+      },
+    );
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+    let disposed = false;
     // Emitting to a window does not scope delivery: `listen` registers for any
     // target, so every window sees every shortcut action and each listener has
     // to match the one it owns exactly.
@@ -322,7 +344,7 @@ export function RecordingBarWindow() {
         grantPermission("camera", permissions.camera);
       }}
       onCancel={() => {
-        void hideRecordingUi();
+        dismissRecordingUi();
       }}
       onFocusPendingExport={() => {
         // Only a pending recording routes here now; a screenshot workspace

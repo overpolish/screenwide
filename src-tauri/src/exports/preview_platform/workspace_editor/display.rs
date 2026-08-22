@@ -59,7 +59,9 @@ pub fn rebase_display_fit(
   };
   DisplayFitRebase {
     fit,
-    zoom: (displayed.width / fit_width.max(1.0)).clamp(0.1, 16.0),
+    // The surface owns the content-aware upper bound. Tall scrolling captures
+    // can legitimately need far more than 16x merely to reach native pixels.
+    zoom: (displayed.width / fit_width.max(1.0)).max(0.1),
     pan_x: displayed.x + displayed.width / 2.0 - viewport.0 / 2.0,
     pan_y: displayed.y + displayed.height / 2.0 - viewport.1 / 2.0,
   }

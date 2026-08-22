@@ -277,6 +277,52 @@ struct MoveAutoFit {
   targets_start: Vec<PreviewSelection>,
 }
 
+const MINIMUM_EDITOR_ZOOM_CEILING: f64 = 16.0;
+const NATIVE_PIXEL_ZOOM_HEADROOM: f64 = 4.0;
+
+/// Mirrors the content-aware ceiling used by the toolbar and the macOS
+/// surface. A scrolling capture is fitted far below one point per output
+/// pixel, so its usable ceiling has to grow with that fit rather than stop at
+/// the ordinary 16x limit.
+fn maximum_editor_zoom(state: &SurfaceState) -> f64 {
+  let scale = state.scale.max(0.000_001);
+  if let Some((width, height)) = state.workspace_natural_size {
+    let bounds = state
+      .panes
+      .iter()
+      .flatten()
+      .filter(|pane| pane.seen)
+      .map(|pane| pane.base_rect)
+      .reduce(union_rect);
+    if let Some(bounds) = bounds.filter(|bounds| bounds.width > 0.0 && bounds.height > 0.0) {
+      let native_scale = (f64::from(width) / (bounds.width * scale))
+        .max(f64::from(height) / (bounds.height * scale));
+      return MINIMUM_EDITOR_ZOOM_CEILING.max(NATIVE_PIXEL_ZOOM_HEADROOM * native_scale);
+    }
+  }
+
+  // Screenshot workspaces retain their natural canvas size on the pane's
+  // output settings instead of `workspace_natural_size`.
+  state
+    .panes
+    .iter()
+    .flatten()
+    .filter(|pane| pane.seen)
+    .filter_map(|pane| {
+      let settings = pane.settings.as_ref()?;
+      if pane.base_rect.width <= 0.0 || pane.base_rect.height <= 0.0 {
+        return None;
+      }
+      Some(
+        (f64::from(settings.width) / (pane.base_rect.width * scale))
+          .max(f64::from(settings.height) / (pane.base_rect.height * scale)),
+      )
+    })
+    .fold(MINIMUM_EDITOR_ZOOM_CEILING, |ceiling, native_scale| {
+      ceiling.max(NATIVE_PIXEL_ZOOM_HEADROOM * native_scale)
+    })
+}
+
 /// Mirrors the Metal backend's `auto_fit_selection_bounds`: the smallest
 /// whole-pixel box, in mouse-down canvas units, holding the canvas and every
 /// layer of the moved layer's pane with the moved layer at `moved`.
@@ -2360,7 +2406,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       if let Ok(mut state) = inner.state.lock() {
         state.last_pointer = point;
         let old = state.workspace_transform.zoom;
-        let next = (old * (delta * 0.12).exp()).clamp(0.1, 16.0);
+        let next = (old * (delta * 0.12).exp()).clamp(0.1, maximum_editor_zoom(&state));
         let ratio = next / old;
         let center = (state.viewport.width / 2.0, state.viewport.height / 2.0);
         state.workspace_transform.pan_x =
@@ -2708,19 +2754,19 @@ impl RecordingPreviewSurface {
   }
 
   pub(crate) fn set_editor_zoom(&self, zoom_percent: f64) {
-    let zoom = (zoom_percent / 100.0).clamp(0.1, 16.0);
-    let mut changed = false;
+    let mut changed_zoom = None;
     if let Ok(mut state) = self.inner.state.lock() {
+      let zoom = (zoom_percent / 100.0).clamp(0.1, maximum_editor_zoom(&state));
       if (state.workspace_transform.zoom - zoom).abs() > 0.0001 {
         let ratio = zoom / state.workspace_transform.zoom;
         state.workspace_transform.pan_x *= ratio;
         state.workspace_transform.pan_y *= ratio;
         state.workspace_transform.zoom = zoom;
         apply_workspace_transform(&self.inner, &mut state, false);
-        changed = true;
+        changed_zoom = Some(zoom);
       }
     }
-    if changed {
+    if let Some(zoom) = changed_zoom {
       emit_transform(&self.inner, zoom);
     }
   }
@@ -2916,11 +2962,8 @@ impl RecordingPreviewSurface {
     let Ok(mut state) = self.inner.state.lock() else {
       return;
     };
-    state.workspace_transform = WorkspaceTransform {
-      pan_x,
-      pan_y,
-      zoom: zoom.clamp(0.1, 16.0),
-    };
+    let zoom = zoom.clamp(0.1, maximum_editor_zoom(&state));
+    state.workspace_transform = WorkspaceTransform { pan_x, pan_y, zoom };
     apply_workspace_transform(&self.inner, &mut state, false);
   }
 

@@ -389,6 +389,18 @@ fn display_fit_rebase_preserves_displayed_bounds() {
 }
 
 #[test]
+fn display_fit_rebase_does_not_restore_the_old_fixed_zoom_ceiling() {
+  let displayed = DisplayRect {
+    x: 0.0,
+    y: 0.0,
+    width: 20_000.0,
+    height: 10_000.0,
+  };
+  let rebased = rebase_display_fit((1_000.0, 700.0), displayed, 8.0);
+  assert!(rebased.zoom > 16.0);
+}
+
+#[test]
 fn canvas_fit_preserves_absolute_layer_geometry() {
   let layer = LayerGeometry {
     crop: n(0.25, -0.5, 0.5, 1.0),
