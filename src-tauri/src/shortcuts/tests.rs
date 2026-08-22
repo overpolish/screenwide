@@ -20,6 +20,11 @@ fn defaults_open_the_recording_bar_take_screenshots_and_recognize_text() {
     assigned[1].shortcut.as_deref(),
     Some("CommandOrControl+Shift+Digit8")
   );
+  assert!(settings
+    .bindings
+    .iter()
+    .find(|binding| binding.action == ShortcutAction::TakeScreenshotToClipboard)
+    .is_some_and(|binding| binding.shortcut.is_none()));
   assert_eq!(assigned[2].action, ShortcutAction::RecognizeText);
   assert_eq!(
     assigned[2].shortcut.as_deref(),
@@ -42,6 +47,10 @@ fn each_frontend_action_goes_to_the_window_that_performs_it() {
     action_window(ShortcutAction::TakeScreenshot).map(WindowLabel::as_str),
     Some(WindowLabel::RegionSelector.as_str())
   );
+  assert_eq!(
+    action_window(ShortcutAction::TakeScreenshotToClipboard).map(WindowLabel::as_str),
+    Some(WindowLabel::RegionSelector.as_str())
+  );
 }
 
 #[test]
@@ -56,6 +65,10 @@ fn taking_a_screenshot_never_reaches_the_recording_bar() {
 fn taking_a_screenshot_keeps_the_ruler_visible() {
   assert_eq!(
     preserved_capture_overlay(ShortcutAction::TakeScreenshot),
+    Some(crate::capture_overlays::CaptureOverlay::Ruler)
+  );
+  assert_eq!(
+    preserved_capture_overlay(ShortcutAction::TakeScreenshotToClipboard),
     Some(crate::capture_overlays::CaptureOverlay::Ruler)
   );
   assert_eq!(

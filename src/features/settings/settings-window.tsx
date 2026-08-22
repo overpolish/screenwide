@@ -48,6 +48,11 @@ const actions: {
     label: "Take screenshot",
   },
   {
+    action: "takeScreenshotToClipboard",
+    description: "Pick a region and copy it without opening Export.",
+    label: "Take screenshot to clipboard",
+  },
+  {
     action: "recognizeText",
     description: "Draw around text anywhere on screen and copy it.",
     label: "Recognize text",

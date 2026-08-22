@@ -39,6 +39,7 @@ import {
   beginScreenshotCapture,
   captureScreenshotRegion,
   endScreenshotCapture,
+  isScreenshotShortcut,
 } from "./screenshot-session";
 import { ResizeDirection } from "./types";
 import { useKeyHeld } from "./use-key-held";
@@ -107,12 +108,11 @@ export function RegionSelectorWindow() {
     let unlisten: UnlistenFn | undefined;
     let disposed = false;
 
-    // Emitting to a window does not scope delivery: `listen` registers for any
-    // target, so every window sees every shortcut action and each listener has
-    // to match the one it owns exactly.
+    // `listen` receives events for any target, so each window must match the
+    // shortcut action it owns exactly.
     void listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
-      if (payload !== "takeScreenshot") return;
-      beginScreenshotCapture().catch((error: unknown) => {
+      if (!isScreenshotShortcut(payload)) return;
+      beginScreenshotCapture(payload).catch((error: unknown) => {
         console.error("Could not open the region for a screenshot", error);
       });
     }).then((listener) => {

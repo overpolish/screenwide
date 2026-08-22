@@ -13,17 +13,31 @@ import {
 import { useRecordingSourceStore } from "../recording-sources/store";
 import { Region } from "../recording-sources/types";
 import { cancelRuler, setRulerScreenshotMode } from "../ruler/api";
-import { captureStill } from "../screenshots/api";
+import { captureStill, ScreenshotDestination } from "../screenshots/api";
+import { ShortcutAction } from "../settings/types";
+
+let screenshotDestination: ScreenshotDestination = "export";
+type ScreenshotShortcutAction = Extract<
+  ShortcutAction,
+  "takeScreenshot" | "takeScreenshotToClipboard"
+>;
+
+export const isScreenshotShortcut = (
+  action: ShortcutAction,
+): action is ScreenshotShortcutAction =>
+  action === "takeScreenshot" || action === "takeScreenshotToClipboard";
 
 /**
  * The screenshot shortcut's borrowing of the region overlay, from opening it
- * in region-edit mode to handing the still to the export window.
+ * in region-edit mode to handing the still to its requested destination.
  *
  * The session touches nothing the user chose: the recording mode, source and
  * region are all left exactly as they were found. It starts with no region at
  * all - the overlay opens empty and the user draws the one shot's region.
  */
-export const beginScreenshotCapture = async () => {
+export const beginScreenshotCapture = async (
+  action: ScreenshotShortcutAction,
+) => {
   const { selectedMonitor, setScreenshotCapture, setSelectedMonitor } =
     useRecordingSourceStore.getState();
 
@@ -37,6 +51,8 @@ export const beginScreenshotCapture = async () => {
   // Rust has to know the overlay is allowed on screen before it is asked for:
   // the recording controls may well be hidden behind it.
   await setScreenshotRegionSession(true);
+  screenshotDestination =
+    action === "takeScreenshotToClipboard" ? "clipboard" : "export";
   setScreenshotCapture(true);
 };
 
@@ -61,15 +77,16 @@ export const endScreenshotCapture = async (dismissRuler = false) => {
   }
 };
 
-/** Captures the region and hands it to the export window, ending the session. */
+/** Captures the region to the session's destination, then ends the session. */
 export const captureScreenshotRegion = (monitorId: number, region: Region) => {
+  const destination = screenshotDestination;
   // The overlay is on top of what is being captured, so it goes invisible for
   // the shot exactly as it does for the magnifier's monitor image.
   const capture = async () => {
     try {
       await setRegionSelectorOpacity(0);
       await captureStill({
-        destination: "export",
+        destination,
         showCursor: useRecordingInputStore.getState().inputs.showCursor,
         target: { kind: "region", monitorId, region },
       });

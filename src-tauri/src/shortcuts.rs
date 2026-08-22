@@ -19,6 +19,7 @@ pub enum ShortcutAction {
   StartStopRecording,
   PauseResumeRecording,
   TakeScreenshot,
+  TakeScreenshotToClipboard,
   RecognizeText,
   RulerOverlay,
 }
@@ -55,6 +56,10 @@ impl Default for ShortcutSettings {
         ShortcutBinding {
           action: ShortcutAction::TakeScreenshot,
           shortcut: Some("CommandOrControl+Shift+Digit8".to_owned()),
+        },
+        ShortcutBinding {
+          action: ShortcutAction::TakeScreenshotToClipboard,
+          shortcut: None,
         },
         ShortcutBinding {
           action: ShortcutAction::RecognizeText,
@@ -113,7 +118,9 @@ const fn action_window(action: ShortcutAction) -> Option<WindowLabel> {
     ShortcutAction::StartStopRecording => Some(WindowLabel::RecordingBar),
     // The overlay opens itself in region-edit mode and captures what the user
     // settles on, so the screenshot never goes near the recording bar.
-    ShortcutAction::TakeScreenshot => Some(WindowLabel::RegionSelector),
+    ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard => {
+      Some(WindowLabel::RegionSelector)
+    }
     ShortcutAction::ToggleRecordingBar
     | ShortcutAction::PauseResumeRecording
     | ShortcutAction::RecognizeText
@@ -132,9 +139,9 @@ const fn preserved_capture_overlay(
 ) -> Option<crate::capture_overlays::CaptureOverlay> {
   match action {
     ShortcutAction::RecognizeText => Some(crate::capture_overlays::CaptureOverlay::TextRecognition),
-    ShortcutAction::TakeScreenshot | ShortcutAction::RulerOverlay => {
-      Some(crate::capture_overlays::CaptureOverlay::Ruler)
-    }
+    ShortcutAction::TakeScreenshot
+    | ShortcutAction::TakeScreenshotToClipboard
+    | ShortcutAction::RulerOverlay => Some(crate::capture_overlays::CaptureOverlay::Ruler),
     _ => None,
   }
 }
@@ -183,7 +190,7 @@ fn run_action(app: &AppHandle, action: ShortcutAction) {
       }
       crate::recording::RecordingStatus::Stopping => {}
     },
-    ShortcutAction::TakeScreenshot => {
+    ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard => {
       if crate::recording::is_idle(app)
         && !crate::exports::focus_if_screenshot_workspace_blocked(app)
       {
