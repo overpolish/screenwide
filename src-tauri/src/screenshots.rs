@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod clipboard;
 pub(crate) mod encoding;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod mesh;
@@ -26,6 +27,7 @@ use crate::recording::Region;
 pub(crate) use crate::capture_geometry::physical_capture_rect;
 #[cfg(test)]
 pub(crate) use crate::capture_geometry::CaptureRect;
+pub(crate) use clipboard::open_in_export as open_clipboard_in_export;
 pub use encoding::encode_png;
 #[cfg(not(target_os = "macos"))]
 pub use encoding::rounded_corners;

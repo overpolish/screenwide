@@ -10,6 +10,7 @@ use crate::recording::RecordingStatus;
 use crate::windows;
 
 const DISCARD_MENU_ID: &str = "discard-recording";
+const OPEN_CLIPBOARD_SCREENSHOT_MENU_ID: &str = "open-clipboard-screenshot";
 const OPEN_MENU_ID: &str = "open-screenwide";
 const PAUSE_MENU_ID: &str = "pause-recording";
 const QUIT_MENU_ID: &str = "quit-screenwide";
@@ -56,7 +57,12 @@ const fn status_tooltip(status: RecordingStatus) -> &'static str {
 /// The recording controls join the menu only while there is a recording to
 /// control. Quit always stays, because the tray is not the only way out.
 fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wry>> {
-  let mut builder = MenuBuilder::new(app).text(OPEN_MENU_ID, "Open Screenwide");
+  let mut builder = MenuBuilder::new(app)
+    .text(OPEN_MENU_ID, "Open Screenwide")
+    .text(
+      OPEN_CLIPBOARD_SCREENSHOT_MENU_ID,
+      "Open Screenshot from Clipboard",
+    );
 
   if matches!(status, RecordingStatus::Recording | RecordingStatus::Paused) {
     let pause_label = if status == RecordingStatus::Paused {
@@ -119,6 +125,9 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
       crate::capture_overlays::dismiss_except(app, preserved);
       match event.id().as_ref() {
         DISCARD_MENU_ID => report("discard", crate::recording::cancel(app)),
+        OPEN_CLIPBOARD_SCREENSHOT_MENU_ID => {
+          crate::screenshots::open_clipboard_in_export(app);
+        }
         OPEN_MENU_ID => show_main_window(app),
         PAUSE_MENU_ID => report("pause", crate::recording::toggle_pause(app)),
         QUIT_MENU_ID => app.exit(0),
