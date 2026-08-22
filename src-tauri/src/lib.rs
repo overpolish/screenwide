@@ -16,6 +16,7 @@ mod capture_overlays;
 #[cfg(target_os = "macos")]
 mod cursor_scrub;
 mod exports;
+mod image_analysis;
 mod permissions;
 mod recording;
 mod recording_inputs;
@@ -139,6 +140,7 @@ pub fn run() {
       ruler::snapshot::get_ruler_gradients,
       ruler::snapshot::get_ruler_snapshot,
       ruler::start_ruler,
+      screenshots::scrolling::command::capture_scrolling_still,
       screenshots::capture_still,
       text_recognition::cancel_text_recognition,
       text_recognition::capture_text_region,

@@ -252,24 +252,6 @@ SCREENWIDE_PREVIEW_PRIVATE void apply_editor_transform(ScreenwidePreviewSurface 
 }
 
 
-SCREENWIDE_PREVIEW_PRIVATE void set_editor_zoom(ScreenwidePreviewSurface *surface,
-                            double zoom, NSPoint anchor) {
-  double previous = surface.editorZoom;
-  zoom = fmin(16.0, fmax(0.1, zoom));
-  if (fabs(previous - zoom) < 0.000001) return;
-  double centeredX = anchor.x - NSMidX(surface.interaction.bounds);
-  double centeredY = anchor.y - NSMidY(surface.interaction.bounds);
-  double ratio = zoom / previous;
-  surface.editorPanX =
-      centeredX - (centeredX - surface.editorPanX) * ratio;
-  surface.editorPanY =
-      centeredY - (centeredY - surface.editorPanY) * ratio;
-  surface.editorZoom = zoom;
-  apply_editor_transform(surface);
-  if (surface.transformCallback)
-    surface.transformCallback(zoom * 100.0, surface.transformContext);
-}
-
 @implementation ScreenwidePreviewInteractionView
 @end
 

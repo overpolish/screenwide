@@ -4,6 +4,7 @@
 import { useRef, useState } from "react";
 
 import {
+  ScreenshotLayout,
   ScreenshotOutputSettings,
   ScreenshotWorkspaceOutputSettings,
   fitScreenshotWorkspaceToItems,
@@ -18,6 +19,8 @@ import {
   ScreenshotSelectionGestureEvent,
   useScreenshotPreviewSurface,
 } from "../use-screenshot-preview-surface";
+
+import { PreviewPaneFit } from "./preview-transform";
 
 type PreviewViewportProps = {
   alt: string;
@@ -44,6 +47,7 @@ type PreviewViewportProps = {
     settings: ScreenshotOutputSettings,
     itemId?: number,
   ) => void;
+  onPaneFitChange?: (fit: PreviewPaneFit) => void;
   onRadiusChangeEnd?: () => void;
   onZoomChange?: (zoomPercent: number) => void;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
@@ -53,6 +57,23 @@ type PreviewViewportProps = {
 
 const AUTO_FIT_MOVE_EDGE = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE = 1 << 18;
+
+/** A laid-out item as fractions of the output canvas, which is how the native
+ * surface addresses selections. */
+function normalizedSelection(
+  layout: ScreenshotLayout,
+  output: { height: number; width: number },
+) {
+  const height = Math.max(1, output.height);
+  const width = Math.max(1, output.width);
+  const fractions = (box: ScreenshotLayout["crop"]) => ({
+    height: box.height / height,
+    width: box.width / width,
+    x: box.x / width,
+    y: box.y / height,
+  });
+  return { image: fractions(layout.image), rect: fractions(layout.crop) };
+}
 
 export function PreviewViewport({
   alt,
@@ -69,6 +90,7 @@ export function PreviewViewport({
   onCanvasResize,
   onItemSelect,
   onOutputChange,
+  onPaneFitChange,
   onRadiusChangeEnd,
   onZoomChange,
   screenshotOutput,
@@ -423,30 +445,15 @@ export function PreviewViewport({
           selectedItemIndex >= 0 &&
           selectedItem &&
           selectedItemOutput
-        ? (() => {
-            const layout = screenshotLayout(
-              selectedItem,
+        ? {
+            cropMode: isEditing,
+            paneIndex: selectedItemIndex,
+            radiusPercent: selectedItemOutput.radiusPercent,
+            ...normalizedSelection(
+              screenshotLayout(selectedItem, output, selectedItemOutput),
               output,
-              selectedItemOutput,
-            );
-            return {
-              cropMode: isEditing,
-              image: {
-                height: layout.image.height / Math.max(1, output.height),
-                width: layout.image.width / Math.max(1, output.width),
-                x: layout.image.x / Math.max(1, output.width),
-                y: layout.image.y / Math.max(1, output.height),
-              },
-              paneIndex: selectedItemIndex,
-              radiusPercent: selectedItemOutput.radiusPercent,
-              rect: {
-                height: layout.crop.height / Math.max(1, output.height),
-                width: layout.crop.width / Math.max(1, output.width),
-                x: layout.crop.x / Math.max(1, output.width),
-                y: layout.crop.y / Math.max(1, output.height),
-              },
-            };
-          })()
+            ),
+          }
         : null;
   const selectionTargets =
     (isSelecting || isEditing) && workspaceOutput
@@ -459,20 +466,9 @@ export function PreviewViewport({
           return [
             {
               cropMode: isEditing,
-              image: {
-                height: layout.image.height / Math.max(1, output.height),
-                width: layout.image.width / Math.max(1, output.width),
-                x: layout.image.x / Math.max(1, output.width),
-                y: layout.image.y / Math.max(1, output.height),
-              },
               paneIndex,
               radiusPercent: itemOutput.output.radiusPercent,
-              rect: {
-                height: layout.crop.height / Math.max(1, output.height),
-                width: layout.crop.width / Math.max(1, output.width),
-                x: layout.crop.x / Math.max(1, output.width),
-                y: layout.crop.y / Math.max(1, output.height),
-              },
+              ...normalizedSelection(layout, output),
             },
           ];
         })
@@ -483,6 +479,7 @@ export function PreviewViewport({
     interactionOutput: workspaceOutput,
     isEditorSuspended: isSaving,
     isEnabled: workspaceOutput !== undefined,
+    onPaneFitChange,
     onSelectionChange: (paneIndex) => {
       if (paneIndex === null) return;
       const itemOutput = workspaceOutput?.items[paneIndex];

@@ -282,6 +282,8 @@ void set_selection_cursor_at_point(ScreenwidePreviewSurface *surface,
 void invalidate_selection_cursor_rects(ScreenwidePreviewSurface *surface);
 void set_editor_zoom(ScreenwidePreviewSurface *surface,
                             double zoom, NSPoint anchor);
+double maximum_editor_zoom(ScreenwidePreviewSurface *surface);
+void clamp_editor_zoom_to_ceiling(ScreenwidePreviewSurface *surface);
 void update_crop_magnifier(ScreenwidePreviewSurface *surface,
                                   NSPoint point, uint32_t edges);
 void begin_workspace_frame_resize(ScreenwidePreviewSurface *surface);

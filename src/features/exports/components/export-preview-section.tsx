@@ -2,17 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Crop, MousePointer2, ScanSquare } from "lucide-react";
-import {
-  MouseEvent as ReactMouseEvent,
-  ReactNode,
-  useRef,
-  useState,
-} from "react";
-import { TooltipTrigger } from "react-aria-components";
+import { ReactNode, useRef, useState } from "react";
 
-import { ToggleButton } from "../../../components/base/button/toggle-button";
-import { Keyboard } from "../../../components/base/keyboard/keyboard";
-import { Tooltip } from "../../../components/base/tooltip/tooltip";
 import {
   scaledDimensions,
   scaledVideoDimensions,
@@ -41,11 +32,13 @@ import {
 import { useExportWindowShortcuts } from "../use-export-window-shortcuts";
 
 import { PreviewToolbar } from "./preview-toolbar";
+import { maximumZoom, MINIMUM_ZOOM_CEILING } from "./preview-transform";
 import { PreviewViewport } from "./preview-viewport";
 import {
   deleteScreenshotLayer,
   moveScreenshotLayer,
 } from "./screenshot-layer-actions";
+import { ScreenshotToolToggle } from "./screenshot-tool-toggle";
 import { ScrubPreview } from "./scrub-preview";
 
 /**
@@ -79,6 +72,9 @@ export function ScreenshotSection({
   selectedItemId?: number | null;
 }) {
   const [zoomPercent, setZoomPercent] = useState(100);
+  const [maximumZoomPercent, setMaximumZoomPercent] = useState(
+    MINIMUM_ZOOM_CEILING * 100,
+  );
   const [tool, setTool] = useState<"canvas" | "crop" | "select" | null>(
     "select",
   );
@@ -194,123 +190,70 @@ export function ScreenshotSection({
   return (
     <div className="flex min-h-0 min-w-0 grow flex-col">
       <PreviewToolbar
+        maximumZoomPercent={maximumZoomPercent}
         onZoomChange={setZoomPercent}
         tools={
           <div className="flex items-center gap-1">
-            <TooltipTrigger delay={400}>
-              <span
-                className="inline-flex"
-                onContextMenu={(event: ReactMouseEvent<HTMLSpanElement>) => {
-                  event.preventDefault();
-                  if (!selectedItem || !selectedOutput) return;
-                  onOutputChange?.(
-                    resetScreenshotTransform(selectedOutput, selectedItem),
-                    selectedItem.id,
-                  );
-                }}
-              >
-                <ToggleButton
-                  animation="scale-selected"
-                  aria-keyshortcuts="V"
-                  aria-label="Select screenshot"
-                  isSelected={tool === "select"}
-                  onChange={(selected) => {
-                    setTool(selected ? "select" : null);
-                  }}
-                  showFocus={false}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <MousePointer2 size={15} />
-                </ToggleButton>
-              </span>
-              <Tooltip placement="bottom">
-                <span className="flex items-center gap-2">
-                  Select
-                  <Keyboard size="xs" variant="tooltip">
-                    V
-                  </Keyboard>
-                </span>
-              </Tooltip>
-            </TooltipTrigger>
-            <TooltipTrigger delay={400}>
-              <span
-                className="inline-flex"
-                onContextMenu={(event: ReactMouseEvent<HTMLSpanElement>) => {
-                  event.preventDefault();
-                  if (!screenshotOutput) return;
-                  onCanvasResize?.(
-                    resizeScreenshotWorkspaceCentered({
-                      height: artifact.height,
-                      settings: screenshotOutput,
-                      sources: artifact.items,
-                      width: artifact.width,
-                    }),
-                  );
-                }}
-              >
-                <ToggleButton
-                  animation="scale-selected"
-                  aria-keyshortcuts="F"
-                  aria-label="Resize canvas"
-                  isSelected={tool === "canvas"}
-                  onChange={(selected) => {
-                    setTool(selected ? "canvas" : null);
-                  }}
-                  showFocus={false}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <ScanSquare size={15} />
-                </ToggleButton>
-              </span>
-              <Tooltip placement="bottom">
-                <span className="flex items-center gap-2">
-                  Resize canvas
-                  <Keyboard size="xs" variant="tooltip">
-                    F
-                  </Keyboard>
-                </span>
-              </Tooltip>
-            </TooltipTrigger>
-            <TooltipTrigger delay={400}>
-              <span
-                className="inline-flex"
-                onContextMenu={(event: ReactMouseEvent<HTMLSpanElement>) => {
-                  event.preventDefault();
-                  if (!selectedItem || !selectedOutput) return;
-                  onOutputChange?.(
-                    resetScreenshotCrop(selectedOutput, selectedItem),
-                    selectedItem.id,
-                  );
-                }}
-              >
-                <ToggleButton
-                  animation="scale-selected"
-                  aria-keyshortcuts="C"
-                  aria-label="Crop screenshot"
-                  isSelected={tool === "crop"}
-                  onChange={(selected) => {
-                    if (selectedItemId === null)
-                      onSelectedItemChange?.(newestItemId);
-                    setTool(selected ? "crop" : null);
-                  }}
-                  showFocus={false}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <Crop size={15} />
-                </ToggleButton>
-              </span>
-              <Tooltip placement="bottom">
-                <span className="flex items-center gap-2">
-                  Crop
-                  <Keyboard size="xs" variant="tooltip">
-                    C
-                  </Keyboard>
-                </span>
-              </Tooltip>
-            </TooltipTrigger>
+            <ScreenshotToolToggle
+              isSelected={tool === "select"}
+              label="Select"
+              name="Select screenshot"
+              onReset={() => {
+                if (!selectedItem || !selectedOutput) return;
+                onOutputChange?.(
+                  resetScreenshotTransform(selectedOutput, selectedItem),
+                  selectedItem.id,
+                );
+              }}
+              onSelectedChange={(selected) => {
+                setTool(selected ? "select" : null);
+              }}
+              shortcut="V"
+            >
+              <MousePointer2 size={15} />
+            </ScreenshotToolToggle>
+            <ScreenshotToolToggle
+              isSelected={tool === "canvas"}
+              label="Resize canvas"
+              name="Resize canvas"
+              onReset={() => {
+                if (!screenshotOutput) return;
+                onCanvasResize?.(
+                  resizeScreenshotWorkspaceCentered({
+                    height: artifact.height,
+                    settings: screenshotOutput,
+                    sources: artifact.items,
+                    width: artifact.width,
+                  }),
+                );
+              }}
+              onSelectedChange={(selected) => {
+                setTool(selected ? "canvas" : null);
+              }}
+              shortcut="F"
+            >
+              <ScanSquare size={15} />
+            </ScreenshotToolToggle>
+            <ScreenshotToolToggle
+              isSelected={tool === "crop"}
+              label="Crop"
+              name="Crop screenshot"
+              onReset={() => {
+                if (!selectedItem || !selectedOutput) return;
+                onOutputChange?.(
+                  resetScreenshotCrop(selectedOutput, selectedItem),
+                  selectedItem.id,
+                );
+              }}
+              onSelectedChange={(selected) => {
+                if (selectedItemId === null)
+                  onSelectedItemChange?.(newestItemId);
+                setTool(selected ? "crop" : null);
+              }}
+              shortcut="C"
+            >
+              <Crop size={15} />
+            </ScreenshotToolToggle>
           </div>
         }
         zoomPercent={zoomPercent}
@@ -330,6 +273,9 @@ export function ScreenshotSection({
         onCanvasResize={onCanvasResize}
         onItemSelect={onSelectedItemChange}
         onOutputChange={onOutputChange}
+        onPaneFitChange={(fit) => {
+          setMaximumZoomPercent(Math.round(maximumZoom(fit) * 100));
+        }}
         onRadiusChangeEnd={onRadiusChangeEnd}
         onZoomChange={setZoomPercent}
         screenshotOutput={screenshotOutput}

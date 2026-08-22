@@ -397,6 +397,9 @@ void screenwide_preview_surface_finish_layout(void *handle) {
       view.hidden = YES;
       view.hasPendingFrame = NO;
     }
+    // The pane rects and the canvas size this batch delivered decide the zoom
+    // ceiling, so the clamp happens once the whole batch has landed.
+    clamp_editor_zoom_to_ceiling(surface);
     if (!(surface.workspaceMode && surface.workspaceLayoutAwaitsPresent))
       redraw_selection(surface);
     surface.workspaceLayoutAwaitsPresent = NO;

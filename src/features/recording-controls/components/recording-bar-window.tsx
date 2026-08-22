@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { focusExportWindow } from "../../exports/api";
 import {
@@ -39,13 +39,13 @@ import {
   showRegionSelector,
 } from "../../recording-sources/api";
 import { useRecordingSourceStore } from "../../recording-sources/store";
-import { captureStill } from "../../screenshots/api";
 import { ShortcutAction } from "../../settings/types";
 import { startRecording } from "../api";
-import { screenshotTarget, startRecordingOptions } from "../recording-request";
+import { startRecordingOptions } from "../recording-request";
 import { selectStatus, useRecordingStore } from "../store";
-import { RecordingError, ScreenshotAction, ScreenshotState } from "../types";
+import { RecordingError } from "../types";
 import { useRecordingInputAvailability } from "../use-recording-input-availability";
+import { useScreenshotCapture } from "../use-screenshot-capture";
 
 import { RecordingBar } from "./recording-bar";
 
@@ -59,9 +59,6 @@ const SKIPPED_INPUT_LABELS: Record<string, string> = {
   systemAudio: "system audio",
 };
 const SHORTCUT_ACTION_EVENT = "global-shortcut://action";
-/** How long the screenshot button holds its outcome before going back to idle. */
-const SCREENSHOT_FEEDBACK_MS = 2000;
-
 const validateSelectedWindow = async () => {
   const selected = useRecordingSourceStore.getState().selectedWindow;
   if (!selected) return;
@@ -125,13 +122,10 @@ export function RecordingBarWindow() {
   const hydrated = usePermissionStore((state) => state.hydrated);
   const permissions = usePermissionStore((state) => state.permissions);
   const status = useRecordingStore(selectStatus);
-  const [screenshotFeedback, setScreenshotFeedback] = useState<{
-    action: ScreenshotAction;
-    state: ScreenshotState;
-  }>({ action: "export", state: "idle" });
+  const { screenshotFeedback, takeScreenshot, takeScrollingScreenshot } =
+    useScreenshotCapture();
   const [isCaptureOverlayActive, setIsCaptureOverlayActive] = useState(false);
   const [isRecordingUiVisible, setIsRecordingUiVisible] = useState(false);
-  const screenshotResetRef = useRef<number | undefined>(undefined);
   const {
     isRegionEditing,
     isScreenshotCapture,
@@ -180,13 +174,6 @@ export function RecordingBarWindow() {
     // to a window that is gone.
     setScreenshotCapture(false);
   }, [setScreenshotCapture]);
-
-  useEffect(
-    () => () => {
-      window.clearTimeout(screenshotResetRef.current);
-    },
-    [],
-  );
 
   useEffect(() => {
     // Returning to idle does not mean the controls should return: a completed
@@ -250,36 +237,6 @@ export function RecordingBarWindow() {
       unlistenCaptureStarted?.();
     };
   }, []);
-
-  const takeScreenshot = (destination: ScreenshotAction) => {
-    const target = screenshotTarget();
-    if (!target) return;
-
-    window.clearTimeout(screenshotResetRef.current);
-    setScreenshotFeedback({ action: destination, state: "pending" });
-    captureStill({
-      destination,
-      showCursor: inputs.showCursor,
-      target,
-    })
-      .then(() => {
-        // Opening the export window is its own success feedback. Clipboard
-        // capture stays on the bar, so acknowledge it here instead.
-        setScreenshotFeedback({
-          action: destination,
-          state: destination === "clipboard" ? "done" : "idle",
-        });
-      })
-      .catch((error: unknown) => {
-        console.error("Could not take the screenshot", error);
-        setScreenshotFeedback({ action: destination, state: "failed" });
-      })
-      .finally(() => {
-        screenshotResetRef.current = window.setTimeout(() => {
-          setScreenshotFeedback({ action: destination, state: "idle" });
-        }, SCREENSHOT_FEEDBACK_MS);
-      });
-  };
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -408,6 +365,13 @@ export function RecordingBarWindow() {
       }}
       onScreenshotToClipboard={() => {
         takeScreenshot("clipboard");
+      }}
+      onScrollingScreenshot={() => {
+        if (!permissions.accessibility.granted) {
+          grantPermission("accessibility", permissions.accessibility);
+          return;
+        }
+        takeScrollingScreenshot();
       }}
       pendingExports={{
         recording: hasPendingRecording,

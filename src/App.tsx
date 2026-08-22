@@ -14,6 +14,7 @@ import { RecordingSourceSelectorWindow } from "./features/recording-sources/reco
 import { RecordingSourceSync } from "./features/recording-sources/recording-source-sync";
 import { RegionSelectorWindow } from "./features/region-selector/region-selector-window";
 import { RulerWindow } from "./features/ruler/ruler-window";
+import { ScrollingCaptureOverlayWindow } from "./features/screenshots/scrolling-capture-overlay-window";
 import { SettingsWindow } from "./features/settings/settings-window";
 import { StandaloneListboxSync } from "./features/standalone-listbox/standalone-listbox-sync";
 import { StandaloneListboxWindow } from "./features/standalone-listbox/standalone-listbox-window";
@@ -37,6 +38,8 @@ export function App() {
         return <RulerWindow />;
       case "/recording-options":
         return <RecordingOptionsWindow />;
+      case "/scrolling-capture-overlay":
+        return <ScrollingCaptureOverlayWindow />;
       case "/settings":
         return <SettingsWindow />;
       case "/standalone-listbox":

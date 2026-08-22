@@ -7,19 +7,21 @@ pub(crate) mod encoding;
 mod mesh;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod mesh_gpu;
+mod naming;
 mod output;
 #[cfg(target_os = "macos")]
 mod platform;
 #[cfg(target_os = "windows")]
 mod platform_windows;
+pub(crate) mod scrolling;
 #[cfg(test)]
 mod tests;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use chrono::{Local, NaiveDateTime};
+use chrono::Local;
 use serde::Deserialize;
-use tauri::{image::Image, AppHandle, Manager};
+use tauri::{image::Image, AppHandle};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::recording::Region;
@@ -35,6 +37,7 @@ pub use encoding::rounded_corners;
 pub(crate) use mesh::validate_mesh;
 #[cfg(all(test, target_os = "macos"))]
 pub(crate) use mesh::MeshGradientPoint;
+pub use naming::{capture_file_stem, screenshot_directory, unique_path};
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub use output::compose_screenshot;
 #[cfg(target_os = "windows")]
@@ -102,52 +105,6 @@ pub enum ScreenshotDestination {
   Both,
 }
 
-/// The naming macOS's own `screencapture` uses, which is the least surprising
-/// thing to find sitting on a Desktop. Recordings are named the same way, from
-/// the moment they started, so a session's files sit together in order.
-pub fn capture_file_stem(captured_at: NaiveDateTime) -> String {
-  captured_at
-    .format("Screenwide %Y-%m-%d at %H.%M.%S")
-    .to_string()
-}
-
-/// Appends " (2)", " (3)" and so on until the name is free, as both platforms'
-/// file managers do. `exists` is injected so the walk can be tested without
-/// touching a disk.
-pub fn unique_path(
-  directory: &Path,
-  stem: &str,
-  extension: &str,
-  exists: &dyn Fn(&Path) -> bool,
-) -> PathBuf {
-  let mut candidate = directory.join(format!("{stem}.{extension}"));
-  let mut suffix = 1_u32;
-
-  while exists(&candidate) {
-    suffix += 1;
-    candidate = directory.join(format!("{stem} ({suffix}).{extension}"));
-  }
-
-  candidate
-}
-
-/// Where a still goes when it is not going to the clipboard. Both are the
-/// platform's own screenshot destination.
-pub fn screenshot_directory(app: &AppHandle) -> Result<PathBuf, String> {
-  let path = app.path();
-
-  #[cfg(target_os = "macos")]
-  let directory = path.desktop_dir().map_err(|error| error.to_string())?;
-
-  #[cfg(not(target_os = "macos"))]
-  let directory = path
-    .picture_dir()
-    .map_err(|error| error.to_string())?
-    .join("Screenshots");
-
-  Ok(directory)
-}
-
 /// A whole-monitor still with Screenwide's own windows left out, whatever the
 /// "Record Screenwide's windows" setting says: the region overlay reads this
 /// for its magnifier while it is itself on screen.
@@ -171,6 +128,24 @@ pub(crate) async fn capture(
   let include_own_windows =
     include_ruler || crate::settings::current(app).record_screenwide_windows;
 
+  capture_content(target, include_own_windows, show_cursor).await
+}
+
+/// A still with Screenwide's own windows always left out, whatever the "Record
+/// Screenwide's windows" setting says: the scrolling capture floats its own
+/// progress overlay over the very region it is photographing, frame after
+/// frame, so that overlay must never reach the sensor.
+pub(crate) async fn capture_excluding_own_windows(
+  target: ScreenshotTarget,
+) -> Result<CapturedImage, String> {
+  capture_content(target, false, false).await
+}
+
+async fn capture_content(
+  target: ScreenshotTarget,
+  include_own_windows: bool,
+  show_cursor: bool,
+) -> Result<CapturedImage, String> {
   #[cfg(target_os = "macos")]
   {
     tauri::async_runtime::spawn_blocking(move || {

@@ -11,6 +11,7 @@ import {
   startScreenshotPreview,
   stopScreenshotPreview,
 } from "./api";
+import { fitPreviewPane, PreviewPaneFit } from "./components/preview-transform";
 import {
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
@@ -52,6 +53,7 @@ export function useScreenshotPreviewSurface({
   interactionOutput,
   isEditorSuspended = false,
   isEnabled,
+  onPaneFitChange,
   onSelectionChange,
   onSelectionGesture,
   onZoomChange,
@@ -75,6 +77,9 @@ export function useScreenshotPreviewSurface({
    * workspace zoom, which the native side resets while the editor is inactive.
    */
   isEditorSuspended?: boolean;
+  /** How small the workspace was drawn to fit the pane, which the toolbar
+   * turns into its zoom ceiling. */
+  onPaneFitChange?: (fit: PreviewPaneFit) => void;
   onSelectionChange?: (paneIndex: number | null) => void;
   onSelectionGesture?: (event: ScreenshotSelectionGestureEvent) => void;
   onZoomChange?: (zoomPercent: number) => void;
@@ -110,6 +115,8 @@ export function useScreenshotPreviewSurface({
   zoomPercentRef.current = zoomPercent;
   const onZoomChangeRef = useRef(onZoomChange);
   onZoomChangeRef.current = onZoomChange;
+  const onPaneFitChangeRef = useRef(onPaneFitChange);
+  onPaneFitChangeRef.current = onPaneFitChange;
   const onSelectionGestureRef = useRef(onSelectionGesture);
   onSelectionGestureRef.current = onSelectionGesture;
   const onSelectionChangeRef = useRef(onSelectionChange);
@@ -332,20 +339,14 @@ export function useScreenshotPreviewSurface({
           : marker.closest<HTMLElement>("[data-recording-preview-viewport]");
         if (viewport) {
           const viewportRect = viewport.getBoundingClientRect();
-          const natural = screenshotOutputDimensions(currentOutput);
-          const fit = Math.min(
-            1,
-            Math.max(0, viewportRect.width - 16) / natural.width,
-            Math.max(0, viewportRect.height - 16) / natural.height,
-          );
-          const width = natural.width * fit;
-          const height = natural.height * fit;
-          const pane = {
-            height,
-            width,
-            x: (viewportRect.width - width) / 2,
-            y: (viewportRect.height - height) / 2,
-          };
+          const scale = window.devicePixelRatio || 1;
+          const fit = fitPreviewPane({
+            natural: screenshotOutputDimensions(currentOutput),
+            pixelRatio: scale,
+            viewport: viewportRect,
+          });
+          const pane = fit.pane;
+          onPaneFitChangeRef.current?.(fit);
           for (const element of document.querySelectorAll<HTMLElement>(
             "[data-preview-backdrop]",
           )) {
@@ -374,7 +375,6 @@ export function useScreenshotPreviewSurface({
             x: viewportRect.left,
             y: viewportRect.top,
           };
-          const scale = window.devicePixelRatio || 1;
           const backdrop = effectiveBackdrop();
           // A fresh capture with the same dimensions and default layout
           // produces the same geometry as the last one sent, but the native

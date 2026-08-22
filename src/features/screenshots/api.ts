@@ -11,6 +11,8 @@ export type ScreenshotTarget =
   | { kind: "screen"; monitorId: number }
   | { kind: "window"; windowId: number };
 
+type ScrollingScreenshotTarget = Extract<ScreenshotTarget, { kind: "region" }>;
+
 type CaptureStillOptions = {
   destination: ScreenshotDestination;
   showCursor: boolean;
@@ -28,3 +30,6 @@ export const captureStill = ({
     showCursor,
     target,
   });
+
+export const captureScrollingStill = (target: ScrollingScreenshotTarget) =>
+  invoke<null>("capture_scrolling_still", { target });

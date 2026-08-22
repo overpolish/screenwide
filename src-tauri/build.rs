@@ -21,6 +21,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+selection.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+workspace.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+layout.m");
+    println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+zoom.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos_private.h");
     println!("cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos.h");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_reader_macos.m");
@@ -38,6 +39,7 @@ fn main() {
       .file("src/exports/recording_preview_surface_macos+selection.m")
       .file("src/exports/recording_preview_surface_macos+workspace.m")
       .file("src/exports/recording_preview_surface_macos+layout.m")
+      .file("src/exports/recording_preview_surface_macos+zoom.m")
       .flag("-fobjc-arc")
       .compile("screenwide_gpu_compositor");
     // Objective-C categories do not define a class symbol, so the linker will

@@ -52,6 +52,23 @@ pub fn sync_capture_affinity(
   Ok(())
 }
 
+/// Keeps one window out of every capture, whatever the persistent "record
+/// Screenwide's windows" preference says. Windows excludes per window; macOS
+/// excludes by owning process at the capture call, so there is nothing to do
+/// to the window itself there.
+pub(crate) fn exclude_from_capture(window: &WebviewWindow) -> tauri::Result<()> {
+  #[cfg(target_os = "windows")]
+  {
+    platform::set_capture_affinity(window, false)
+  }
+
+  #[cfg(not(target_os = "windows"))]
+  {
+    let _ = window;
+    Ok(())
+  }
+}
+
 /// Removes a disposable overlay's pixels before Windows runs its native hide
 /// or close transition. This is intentionally reserved for windows that will
 /// be destroyed rather than shown again, because their layered alpha remains

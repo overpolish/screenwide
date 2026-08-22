@@ -4,11 +4,8 @@
 import {
   Camera,
   CameraOff,
-  Check,
   Circle,
   CircleX,
-  ClipboardCopy,
-  ImageDown,
   Lock,
   Mic,
   MicOff,
@@ -31,6 +28,7 @@ import { canStartRecording } from "../can-record";
 import { RecordingStatus, ScreenshotAction, ScreenshotState } from "../types";
 
 import { RecordingBarInputToggle as InputToggle } from "./recording-bar-input-toggle";
+import { RecordingBarScreenshotActions } from "./recording-bar-screenshot-actions";
 import { RecordingModePicker } from "./recording-mode-picker";
 
 type RecordingBarProps = {
@@ -62,6 +60,7 @@ type RecordingBarProps = {
   onRecord?: () => void;
   onScreenshot?: () => void;
   onScreenshotToClipboard?: () => void;
+  onScrollingScreenshot?: () => void;
   /**
    * Which workspaces are holding unsaved work. Each has a window of its own,
    * so only a pending recording stands in the way of starting another.
@@ -108,6 +107,7 @@ export function RecordingBar({
   onRecord,
   onScreenshot,
   onScreenshotToClipboard,
+  onScrollingScreenshot,
   pendingExports = { recording: false, screenshot: false },
   screenshotAction = "export",
   screenshotState = "idle",
@@ -150,12 +150,16 @@ export function RecordingBar({
     screenshotAction === "export" ? screenshotState : "idle";
   const clipboardScreenshotState =
     screenshotAction === "clipboard" ? screenshotState : "idle";
+  const scrollingScreenshotState =
+    screenshotAction === "scrolling" ? screenshotState : "idle";
   const canCaptureStill =
     isScreenCapture && !isScreenshotLocked && !isRecordingActive;
   // A pending recording no longer stands in a screenshot's way: it waits in
   // its own window while the screenshot workspace opens beside it.
   const canExportScreenshot = canCaptureStill;
   const canCopyScreenshot = canCaptureStill;
+  const canCaptureScrollingScreenshot =
+    canCaptureStill && mode === "region" && onScrollingScreenshot !== undefined;
   const canRecordIgnoringExport =
     !isRecordingActive &&
     canStartRecording({
@@ -306,52 +310,18 @@ export function RecordingBar({
       {/* `mr-3` rather than a gap on the row: everything to the left of here
           is separated by rules, and only these last two columns - which grew a
           toggle each underneath them - need air between them. */}
-      <div className="mr-3 flex flex-col items-center justify-center self-stretch">
-        <Button
-          aria-label="Take screenshot"
-          className="group cursor-default p-1"
-          isDisabled={!canExportScreenshot || isCapturingStill}
-          onPress={onScreenshot}
-          showFocus={false}
-          variant="ghost"
-        >
-          {exportScreenshotState === "done" ? (
-            <Check className="text-success" size={40} strokeWidth={3} />
-          ) : (
-            <ImageDown
-              className={cn(
-                "origin-center transform-gpu backface-hidden will-change-transform transition-[color,transform,scale] group-data-[hovered]:scale-110",
-                isCapturingStill && "animate-pulse text-muted",
-                exportScreenshotState === "failed" && "text-error",
-              )}
-              size={40}
-            />
-          )}
-        </Button>
-
-        <Button
-          aria-label="Copy screenshot to clipboard"
-          className="group cursor-default"
-          isDisabled={!canCopyScreenshot || isCapturingStill}
-          onPress={onScreenshotToClipboard}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
-        >
-          {clipboardScreenshotState === "done" ? (
-            <Check className="text-success" size={16} strokeWidth={3} />
-          ) : (
-            <ClipboardCopy
-              className={cn(
-                "origin-center transform-gpu backface-hidden will-change-transform transition-[color,transform,scale] group-data-[hovered]:scale-110",
-                isCapturingStill && "animate-pulse text-muted",
-                clipboardScreenshotState === "failed" && "text-error",
-              )}
-              size={16}
-            />
-          )}
-        </Button>
-      </div>
+      <RecordingBarScreenshotActions
+        canCaptureScrollingScreenshot={canCaptureScrollingScreenshot}
+        canCopyScreenshot={canCopyScreenshot}
+        canExportScreenshot={canExportScreenshot}
+        clipboardScreenshotState={clipboardScreenshotState}
+        exportScreenshotState={exportScreenshotState}
+        isCapturingStill={isCapturingStill}
+        onScreenshot={onScreenshot}
+        onScreenshotToClipboard={onScreenshotToClipboard}
+        onScrollingScreenshot={onScrollingScreenshot}
+        scrollingScreenshotState={scrollingScreenshotState}
+      />
 
       <Sparkles
         icon={Sparkle}

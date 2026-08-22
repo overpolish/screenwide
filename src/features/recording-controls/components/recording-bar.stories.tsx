@@ -5,7 +5,10 @@ import { type Meta, type StoryObj } from "@storybook/react-vite";
 
 import { RecordingBar } from "./recording-bar";
 const meta = {
-  args: { hasSelectedMonitor: true },
+  args: {
+    hasSelectedMonitor: true,
+    onScrollingScreenshot: () => undefined,
+  },
   component: RecordingBar,
   parameters: {
     layout: "centered",
@@ -73,6 +76,22 @@ export const ClipboardScreenshotFailed: Story = {
   args: { screenshotAction: "clipboard", screenshotState: "failed" },
 };
 
+export const ScrollingScreenshotPending: Story = {
+  args: {
+    initialMode: "region",
+    screenshotAction: "scrolling",
+    screenshotState: "pending",
+  },
+};
+
+export const ScrollingScreenshotFailed: Story = {
+  args: {
+    initialMode: "region",
+    screenshotAction: "scrolling",
+    screenshotState: "failed",
+  },
+};
+
 export const OptionalPermissionsLocked: Story = {
   args: { isCameraLocked: true, isMicrophoneLocked: true },
 };
@@ -112,6 +131,11 @@ export const MissingDisabledInputs: Story = {
 };
 
 export const Region: Story = {
+  args: { initialMode: "region" },
+};
+
+/** Scrolling capture is an alternate region-only screenshot action. */
+export const ScrollingCapture: Story = {
   args: { initialMode: "region" },
 };
 

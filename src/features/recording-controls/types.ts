@@ -50,7 +50,7 @@ export type StartRecordingOptions = {
 
 /** What the screenshot button is currently reflecting. */
 export type ScreenshotState = "done" | "failed" | "idle" | "pending";
-export type ScreenshotAction = "clipboard" | "export";
+export type ScreenshotAction = "clipboard" | "export" | "scrolling";
 
 type RecordingErrorPhase = "start" | "pause" | "resume" | "stop";
 
