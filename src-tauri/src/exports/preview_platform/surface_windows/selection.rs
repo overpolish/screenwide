@@ -586,7 +586,11 @@ impl SelectionOverlay {
           } else {
             frame[0] + (frame[2] - width) * 0.5
           };
-          y = y.max(0.0);
+          // Do not leave the readout pinned to the viewport top after the
+          // selection has travelled above it. The gap is part of the label's
+          // normal below-frame placement, so keep it until that trailing edge
+          // itself moves offscreen.
+          y = y.max(0.0).min(frame[1] + frame[3] + gap);
           (view, [x.floor(), y.floor(), width, height])
         }),
       _ => None,

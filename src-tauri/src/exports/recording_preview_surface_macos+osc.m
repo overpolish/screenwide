@@ -420,10 +420,11 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       // `frame` is already top-left-origin / y-down, so NSMaxY is the box's
       // BOTTOM edge on screen and the readout hangs 4pt below it, trailing
       // edge flush with the box's right edge (Keyframeless's placement).
+      CGFloat gap = 4.0;
       CGFloat x = NSMaxX(frame) - label.width;
-      CGFloat y = NSMaxY(frame) + 4.0;
+      CGFloat y = NSMaxY(frame) + gap;
       if (y + label.height > size.height)
-        y = NSMaxY(frame) - 4.0 - label.height;
+        y = NSMaxY(frame) - gap - label.height;
       x = MAX(0.0, MIN(x, size.width - label.width));
       // A viewport edge may hold the readout only until the corresponding
       // selection edge catches it; after that it travels with the frame.
@@ -433,7 +434,11 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         x = MAX(minimumX, MIN(x, maximumX));
       else
         x = NSMidX(frame) - label.width / 2.0;
-      y = MAX(0.0, y);
+      // Do not leave the readout pinned to the viewport top after the
+      // selection has travelled above it. The gap is part of the label's
+      // normal below-frame placement, so keep it until that trailing edge
+      // itself moves offscreen.
+      y = MIN(MAX(0.0, y), NSMaxY(frame) + gap);
       // Snap to device pixels so the glyphs land on the same grid they were
       // rasterised on and stay crisp instead of resampling every sample.
       x = floor(x * scale) / scale;
