@@ -283,6 +283,11 @@ pub async fn layout_recording_preview_surface(
   let defer_resize = needs_decoder_still || redraw_still || manager.is_playing;
   surface.set_scale(scale);
   surface.set_selection(selection.map(|selection| PreviewSelection {
+    recenter_height: 0.0,
+    recenter_width: 0.0,
+    recenter_x: 0.0,
+    recenter_y: 0.0,
+    recenter_mode: 0,
     crop_mode: u32::from(selection.crop_mode),
     image_height: selection.image.map_or(0.0, |image| image.height),
     image_width: selection.image.map_or(0.0, |image| image.width),
@@ -301,6 +306,11 @@ pub async fn layout_recording_preview_surface(
     targets
       .into_iter()
       .map(|target| PreviewSelection {
+        recenter_height: 0.0,
+        recenter_width: 0.0,
+        recenter_x: 0.0,
+        recenter_y: 0.0,
+        recenter_mode: 0,
         crop_mode: u32::from(target.crop_mode),
         image_height: target.image.map_or(0.0, |image| image.height),
         image_width: target.image.map_or(0.0, |image| image.width),

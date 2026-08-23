@@ -90,6 +90,7 @@ pub(super) unsafe extern "C" fn selection_gesture_callback(
       4 => SelectionGestureOperation::FrameRadius,
       5 => SelectionGestureOperation::CropMove,
       6 => SelectionGestureOperation::CropResize,
+      7 => SelectionGestureOperation::RecenterAction,
       _ => return,
     };
     callback(phase, pane_index, operation, edges, scale, delta_x, delta_y);

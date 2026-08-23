@@ -63,7 +63,8 @@ SCREENWIDE_PREVIEW_PRIVATE NSRect rebase_workspace_fit(ScreenwidePreviewSurface 
     displayed.size.height,
   };
   ScreenwideDisplayFitRebase rebased = screenwide_workspace_rebase_display_fit(
-      viewport.width, viewport.height, topLeftDisplayed, 8.0);
+      viewport.width, viewport.height, topLeftDisplayed,
+      surface.workspaceNaturalWidth, surface.workspaceNaturalHeight, 8.0);
   surface.editorZoom = rebased.zoom;
   surface.editorPanX = rebased.pan_x;
   surface.editorPanY = rebased.pan_y;
@@ -313,6 +314,19 @@ fragment float4 selection_fragment(selection_out in [[stage_in]],
     float4 sampled = label.sample(label_sampler, in.uv);
     if (sampled.a <= 0.002) discard_fragment();
     return float4(sampled.rgb / sampled.a, sampled.a);
+  }
+  if (in.kind >= 12 && in.kind <= 14) {
+    float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
+    float radius = dimensions.y * 0.24;
+    float2 local = abs((in.uv - 0.5) * dimensions) -
+                   (dimensions * 0.5 - radius);
+    float distance = length(max(local, 0.0)) +
+                     min(max(local.x, local.y), 0.0) - radius;
+    float coverage = 1.0 - smoothstep(-1.0, 1.0, distance);
+    float shade = in.kind == 14 ? 0.18 : in.kind == 13 ? 0.15 : 0.12;
+    float3 fill = light_mode != 0 ? float3(1.0 - shade * 0.2)
+                                  : float3(shade);
+    return float4(fill, coverage * 0.96);
   }
   if (in.kind == 6) return float4(0.0, 0.0, 0.0, 0.4);
   if (in.kind >= 7 && in.kind <= 10) {

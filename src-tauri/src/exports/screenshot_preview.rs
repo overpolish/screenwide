@@ -14,6 +14,7 @@ mod gesture;
 mod layout;
 mod payloads;
 mod presentation;
+mod recenter;
 mod refresh;
 mod start;
 mod state;

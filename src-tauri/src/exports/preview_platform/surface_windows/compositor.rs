@@ -38,16 +38,18 @@ use windows::{
 
 use crate::exports::media_preview::BakeGeometry;
 use crate::screenshots::{
-  output_placement, parse_hex_colour, validate_mesh, ScreenshotOutputSettings,
+  colour_f32, foreground_bounds_f32, optional_colour_f32, output_placement, validate_mesh,
+  ScreenshotOutputSettings,
 };
 
 const SHADER: &str = r#"
 cbuffer Canvas : register(b0) {
   float4 output_source; // output width/height, source width/height
   float4 image_rect;
-  float4 crop_rect;
+  float4 crop_rect, source_crop_rect;
   float4 solid_color;
   float4 base_color;
+  float4 recenter_inset_color;
   float4 mesh_points[8];
   float4 mesh_colors[4];
   float4 effects; // image radius, background radius, warp, shadow sigma
@@ -58,8 +60,7 @@ cbuffer Canvas : register(b0) {
   float4 camera_frame; // output-space x/y/width/height
   float4 camera_crop; // camera source-space x/y/width/height
   float4 camera_effects; // radius, enabled, shadow sigma, camera on top
-  float4 magnifier; // output-space center x/y, diameter, source zoom
-  float4 magnifier_options; // explicit camera source, active crop edges
+  float4 magnifier, magnifier_options, magnifier_bounds;
   float4 native_cursor_hotspots[8]; // normalized atlas hotspot x/y
   uint4 options; // seed, mesh enabled, point count, shadow enabled
   uint4 cursor_options; // artwork, enabled, clip to video, foreground only
@@ -69,7 +70,6 @@ Texture2DArray native_cursor_images : register(t1);
 Texture2D camera_image : register(t2);
 SamplerState linear_sampler : register(s0);
 SamplerState point_sampler : register(s1);
-
 float hash(float2 position, uint seed) {
   float value = sin(dot(position, float2(127.1, 311.7)) + (float)seed * 0.017) * 43758.5453;
   return frac(value) * 2.0 - 1.0;
@@ -103,7 +103,7 @@ float visible_shadow(float2 pixel, float sigma) {
   // A tall crop around a wide source must not cast a tall rectangular shadow.
   float crop_distance = rounded_distance(shadow_pixel, crop_rect, effects.x);
   float image_distance = rounded_distance(shadow_pixel, image_rect, 0.0);
-  float distance = max(max(crop_distance, image_distance), 0.0);
+  float distance = max(recenter_inset_color.a > 0.0 ? crop_distance : max(crop_distance, image_distance), 0.0);
   return (36.0 / 255.0) * exp(-0.5 * distance * distance / (sigma * sigma));
 }
 float4 cursor_sample(float2 source_pixel, float2 anchor) {
@@ -206,8 +206,6 @@ float4 camera_layer(float4 result, float2 pixel) {
 float4 ps_main(float4 position : SV_Position) : SV_Target {
   float2 pixel = position.xy;
   float background_alpha = rounded_coverage(pixel, float4(0, 0, output_source.xy), effects.y);
-  // Compose the complete frame first. Canvas rounding is a final output mask,
-  // not merely a property of the background layer.
   float4 result = cursor_options.w != 0
     ? float4(0.0, 0.0, 0.0, 0.0)
     : float4(background(pixel), 1.0);
@@ -216,15 +214,18 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
   // Axis-aligned zero-radius source edges are already pixel-exact. Smoothing
   // them leaks a fractional row of canvas colour around a default crop.
   float image_rect_alpha = rounded_coverage(pixel, image_rect, 0.0);
-  float image_alpha = crop_alpha * image_rect_alpha;
+  float image_alpha = crop_alpha * image_rect_alpha * rounded_coverage(pixel, source_crop_rect, 0.0);
+  float frame_alpha = recenter_inset_color.a > 0.0 ? crop_alpha : image_alpha;
   if (options.w != 0 && effects.w > 1.0) {
     float shadow = visible_shadow(pixel, effects.w);
     if (cursor_options.w != 0) {
-      result.a = shadow * (1.0 - image_alpha);
+      result.a = shadow * (1.0 - frame_alpha);
     } else {
-      result.rgb *= 1.0 - shadow * (1.0 - image_alpha);
+      result.rgb *= 1.0 - shadow * (1.0 - frame_alpha);
     }
   }
+  if (recenter_inset_color.a > 0.0)
+    result = lerp(result, float4(recenter_inset_color.rgb, 1.0), crop_alpha);
   float2 uv = (pixel - image_rect.xy) / image_rect.zw;
   if (image_alpha > 0.0) {
     float4 video = source_image.Sample(linear_sampler, uv);
@@ -235,15 +236,9 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
   result.rgb = lerp(result.rgb, cursor.rgb, cursor.a);
   result.a = cursor.a + result.a * (1.0 - cursor.a);
   if (camera_effects.w != 0.0) result = camera_layer(result, pixel);
-  // Dither belongs to the completed stack, applied once by the base layer. A
-  // foreground layer must keep its uncovered pixels at exactly zero or the
-  // lifted colour turns invalid premultiplied alpha and brightens the layers
-  // beneath it.
   if (cursor_options.w == 0) {
     result.rgb = saturate(result.rgb + hash(pixel, 0x9e3779b9) / 255.0);
   }
-  // The crop editor magnifier samples the retained source directly. Keep the
-  // sample point- filtered so individual source pixels remain legible.
   if (magnifier.z > 0.0) {
     float2 center = magnifier.xy;
     float2 box_size = magnifier.zz;
@@ -256,18 +251,20 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
       float2 dimensions;
       if (use_camera) {
         float2 local = (center - camera_frame.xy) / camera_frame.zw;
-        source_pixel = camera_crop.xy + local * camera_crop.zw
-          + (pixel - center) / max(magnifier.w, 1.0);
+        source_pixel = camera_crop.xy + local * camera_crop.zw + (pixel - center) / max(magnifier.w, 1.0);
         uint width, height;
         camera_image.GetDimensions(width, height);
         dimensions = float2(width, height);
-        result = camera_image.Sample(point_sampler, source_pixel / dimensions);
+        result = all(source_pixel >= 0.0) && all(source_pixel < dimensions) ? camera_image.Sample(point_sampler, source_pixel / dimensions) : float4(0.15, 0.15, 0.16, 1.0);
       } else {
         float2 local = (center - image_rect.xy) / image_rect.zw;
-        source_pixel = local * output_source.zw
-          + (pixel - center) / max(magnifier.w, 1.0);
+        source_pixel = local * output_source.zw + (pixel - center) / max(magnifier.w, 1.0);
         dimensions = output_source.zw;
-        result = source_image.Sample(point_sampler, source_pixel / dimensions);
+        float2 source_uv = source_pixel / dimensions;
+        bool in_effective_source = all(source_uv >= magnifier_bounds.xy) &&
+          all(source_uv <= magnifier_bounds.xy + magnifier_bounds.zw);
+        result = all(source_pixel >= 0.0) && all(source_pixel < dimensions) && in_effective_source
+          ? source_image.Sample(point_sampler, source_uv) : float4(0.15, 0.15, 0.16, 1.0);
       }
       uint edges = (uint)magnifier_options.y;
       bool shade = ((edges & 1u) != 0u && pixel.x < center.x)
@@ -300,8 +297,10 @@ struct Constants {
   output_source: [f32; 4],
   image_rect: [f32; 4],
   crop_rect: [f32; 4],
+  source_crop_rect: [f32; 4],
   solid_color: [f32; 4],
   base_color: [f32; 4],
+  recenter_inset_color: [f32; 4],
   mesh_points: [[f32; 4]; 8],
   mesh_colors: [[f32; 4]; 4],
   effects: [f32; 4],
@@ -314,6 +313,7 @@ struct Constants {
   camera_effects: [f32; 4],
   magnifier: [f32; 4],
   magnifier_options: [f32; 4],
+  magnifier_bounds: [f32; 4],
   native_cursor_hotspots: [[f32; 4]; 8],
   options: [u32; 4],
   cursor_options: [u32; 4],
@@ -335,10 +335,6 @@ pub(super) struct SourceTexture {
   pub(super) size: (u32, u32),
   texture: ID3D11Texture2D,
   view: ID3D11ShaderResourceView,
-}
-
-fn color(value: &str) -> Result<[f32; 4], String> {
-  Ok(parse_hex_colour(value)?.map(|channel| f32::from(channel) / 255.0))
 }
 
 fn cursor_scheme_path(value_name: &str, fallback_name: &str) -> Option<PathBuf> {
@@ -795,7 +791,7 @@ impl Compositor {
     settings: &ScreenshotOutputSettings,
     composition: super::ComposedFrame,
     camera: Option<(&SourceTexture, BakeGeometry, bool, bool)>,
-    magnifier: Option<super::CropMagnifier>,
+    magnifier: Option<super::recenter::CropMagnifier>,
   ) -> Result<(), String> {
     let placement = output_placement(source.size.0, source.size.1, settings)?;
     let mut mesh_points = [[0.0; 4]; 8];
@@ -826,16 +822,12 @@ impl Compositor {
           (point.radius_y / 100.0) as f32,
         ];
         mesh_points[index * 2 + 1] = [radians.cos() as f32, radians.sin() as f32, 0.0, 0.0];
-        mesh_colors[index] = color(&settings.mesh_colors[index])?;
+        mesh_colors[index] = colour_f32(&settings.mesh_colors[index])?;
       }
     }
     let shortest_output = settings.width.min(settings.height) as f32;
-    let visible_left = (placement.crop_x as f32).max(placement.image_x as f32);
-    let visible_top = (placement.crop_y as f32).max(placement.image_y as f32);
-    let visible_right = (placement.crop_x as f32 + placement.crop_width as f32)
-      .min(placement.image_x as f32 + placement.image_width as f32);
-    let visible_bottom = (placement.crop_y as f32 + placement.crop_height as f32)
-      .min(placement.image_y as f32 + placement.image_height as f32);
+    let (visible_left, visible_top, visible_right, visible_bottom) =
+      foreground_bounds_f32(placement, settings.recenter_inset_color.is_some());
     let visible_width = (visible_right - visible_left).max(0.0);
     let visible_height = (visible_bottom - visible_top).max(0.0);
     let shadow_margin = visible_left
@@ -868,9 +860,15 @@ impl Compositor {
         placement.crop_width as f32,
         placement.crop_height as f32,
       ],
-      solid_color: color(&settings.background_color)?,
+      source_crop_rect: [
+        placement.source_crop_x as f32,
+        placement.source_crop_y as f32,
+        placement.source_crop_width as f32,
+        placement.source_crop_height as f32,
+      ],
+      solid_color: colour_f32(&settings.background_color)?,
       base_color: if mesh {
-        color(
+        colour_f32(
           settings
             .mesh_colors
             .last()
@@ -879,6 +877,7 @@ impl Compositor {
       } else {
         [0.0; 4]
       },
+      recenter_inset_color: optional_colour_f32(settings.recenter_inset_color.as_deref())?,
       mesh_points,
       mesh_colors,
       effects: [
@@ -929,6 +928,7 @@ impl Compositor {
       }),
       magnifier: magnifier.map_or([0.0; 4], |value| value.geometry),
       magnifier_options: magnifier.map_or([0.0; 4], |value| value.options),
+      magnifier_bounds: magnifier.map_or([0.0, 0.0, 1.0, 1.0], |value| value.bounds),
       native_cursor_hotspots: self.cursor_hotspots,
       options: [
         settings.mesh_seed,

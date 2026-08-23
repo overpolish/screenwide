@@ -17,6 +17,7 @@ function ShortcutPreview() {
   const [isCropping, setIsCropping] = useState(false);
   const [isResizingCanvas, setIsResizingCanvas] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isRecentering, setIsRecentering] = useState(false);
   const [lastAction, setLastAction] = useState("None");
   const [isSelecting, setIsSelecting] = useState(false);
   const [nudge, setNudge] = useState({ x: 0, y: 0 });
@@ -40,6 +41,9 @@ function ShortcutPreview() {
           }));
         }
       : undefined,
+    onRecenter: () => {
+      setIsRecentering((recentering) => !recentering);
+    },
     onResizeCanvas: () => {
       setIsResizingCanvas((resizing) => !resizing);
     },
@@ -72,7 +76,7 @@ function ShortcutPreview() {
         <span role="status">
           {isPlaying ? "Playing" : "Paused"} ·{" "}
           {isCropping ? "Crop on" : "Crop off"} · {lastAction} · Activations{" "}
-          {activations} ·{" "}
+          {activations} · {isRecentering ? "Recenter on" : "Recenter off"} ·{" "}
           {isResizingCanvas ? "Canvas resize on" : "Canvas resize off"} ·{" "}
           {isSelecting ? "Select tool on" : "Select tool off"} · Nudge {nudge.x}
           , {nudge.y}

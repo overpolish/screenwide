@@ -558,12 +558,12 @@ static int update_workspace_resize(
     double next_shortest = MIN(next_width, next_height);
     layer.canvas_width = next_width;
     layer.canvas_height = next_height;
-    layer.canvas.crop_x =
-        (int32_t)llround(layer.canvas.crop_x + move_x - origin_x);
-    layer.canvas.crop_y =
-        (int32_t)llround(layer.canvas.crop_y + move_y - origin_y);
+    layer.canvas.crop_x = (int32_t)llround(layer.canvas.crop_x + move_x - origin_x);
+    layer.canvas.crop_y = (int32_t)llround(layer.canvas.crop_y + move_y - origin_y);
     layer.canvas.image_x += (float)(move_x - origin_x);
     layer.canvas.image_y += (float)(move_y - origin_y);
+    layer.canvas.source_crop_x += (int32_t)llround(move_x - origin_x);
+    layer.canvas.source_crop_y += (int32_t)llround(move_y - origin_y);
     if (layer.overlay.cursor_width > 0) {
       layer.overlay.cursor_x += (int32_t)llround(move_x - origin_x);
       layer.overlay.cursor_y += (int32_t)llround(move_y - origin_y);

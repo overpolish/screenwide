@@ -14,6 +14,7 @@ use crate::screenshots::{
 #[derive(Default)]
 pub(crate) struct NativeCanvas {
   pub(crate) background_color: [f32; 4],
+  pub(crate) recenter_inset_color: [f32; 4],
   pub(crate) background_radius: u32,
   pub(crate) crop_x: i32,
   pub(crate) crop_y: i32,
@@ -23,6 +24,10 @@ pub(crate) struct NativeCanvas {
   pub(crate) image_y: f32,
   pub(crate) image_width: u32,
   pub(crate) image_height: u32,
+  pub(crate) source_crop_x: i32,
+  pub(crate) source_crop_y: i32,
+  pub(crate) source_crop_width: u32,
+  pub(crate) source_crop_height: u32,
   pub(crate) radius: u32,
   pub(crate) drop_shadow: u32,
   pub(crate) mesh_enabled: u32,
@@ -96,6 +101,11 @@ pub(crate) fn native_canvas(
   super::validate_output_settings(source_width, source_height, settings)?;
   let placement = output_placement(source_width, source_height, settings)?;
   let colour = parse_hex_colour(&settings.background_color)?;
+  let inset_colour = settings
+    .recenter_inset_color
+    .as_deref()
+    .map(parse_hex_colour)
+    .transpose()?;
   let channel = |value: u8| f32::from(value) / 255.0;
   let mut canvas = NativeCanvas {
     background_color: [
@@ -104,6 +114,14 @@ pub(crate) fn native_canvas(
       channel(colour[2]),
       1.0,
     ],
+    recenter_inset_color: inset_colour.map_or([0.0; 4], |colour| {
+      [
+        channel(colour[0]),
+        channel(colour[1]),
+        channel(colour[2]),
+        1.0,
+      ]
+    }),
     background_radius: (f64::from(settings.width.min(settings.height))
       * settings.background_radius_percent
       / 100.0)
@@ -116,6 +134,10 @@ pub(crate) fn native_canvas(
     image_y: placement.image_y as f32,
     image_width: placement.image_width,
     image_height: placement.image_height,
+    source_crop_x: placement.source_crop_x,
+    source_crop_y: placement.source_crop_y,
+    source_crop_width: placement.source_crop_width,
+    source_crop_height: placement.source_crop_height,
     radius: (f64::from(placement.crop_width.min(placement.crop_height)) * settings.radius_percent
       / 100.0)
       .round() as u32,

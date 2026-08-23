@@ -9,28 +9,19 @@ use crate::{
 use std::process::Command;
 
 fn output(width: u32, height: u32) -> crate::screenshots::ScreenshotOutputSettings {
-  crate::screenshots::ScreenshotOutputSettings {
-    background_color: "#000000".to_owned(),
-    background_type: "solid".to_owned(),
-    background_radius_percent: 0.0,
-    drop_shadow: false,
-    height,
-    legacy_mode: None,
-    mesh_colors: Vec::new(),
-    mesh_locked_colors: Vec::new(),
-    mesh_points: Vec::new(),
-    mesh_seed: 0,
-    mesh_warp_percent: 0.0,
-    radius_percent: 0.0,
-    screenshot_crop_height_percent: 100.0,
-    screenshot_crop_width_percent: 100.0,
-    screenshot_crop_x_percent: 0.0,
-    screenshot_crop_y_percent: 0.0,
-    screenshot_image_width_percent: 100.0,
-    screenshot_image_x_percent: 50.0,
-    screenshot_image_y_percent: 50.0,
-    width,
-  }
+  let mut output = crate::screenshots::test_output_settings(width, height);
+  output.background_color = "#000000".to_owned();
+  output.mesh_colors.clear();
+  output.mesh_locked_colors.clear();
+  output.mesh_points.clear();
+  output.mesh_seed = 0;
+  output.mesh_warp_percent = 0.0;
+  output.screenshot_crop_height_percent = 100.0;
+  output.screenshot_crop_width_percent = 100.0;
+  output.screenshot_crop_x_percent = 0.0;
+  output.screenshot_crop_y_percent = 0.0;
+  output.screenshot_image_width_percent = 100.0;
+  output
 }
 
 fn mesh_output(width: u32, height: u32) -> crate::screenshots::ScreenshotOutputSettings {
@@ -137,8 +128,6 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       width: 16.0,
     },
   ];
-  // One continuous 160 point sweep across the screen: the exported cursor has
-  // to travel with it, and its motion blur has to stay a local smear.
   records.extend((0..=50).map(|step| CursorRecord::Position {
     timestamp_us: step * 20_000,
     x: 80.0 + f64::from(step as u32) * 160.0 / 50.0,
@@ -220,8 +209,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
     let left = lit.iter().map(|(x, _)| *x).min().unwrap();
     let right = lit.iter().map(|(x, _)| *x).max().unwrap();
     let top = lit.iter().map(|(_, y)| *y).min().unwrap();
-    // The recorded hotspot sits at the cursor's drawn tip, and the sidecar is
-    // sampled two frames early to match the captured screen.
+    // Sample early while keeping the recorded hotspot at the drawn tip.
     assert!(
       left.abs_diff(expected_x) <= 12,
       "the cursor at {timestamp}s starts at x={left}, expected about {expected_x}"
@@ -238,15 +226,9 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
   let _ = std::fs::remove_dir_all(directory);
 }
 
-/// A custom cursor's box is whatever shape the application asked for, and the
-/// sidecar carries none of its pixels. Stretching the arrow over a square box
-/// squashed it, so the GPU has to fit the arrow inside that box at the arrow's
-/// own aspect, anchored by the arrow's own hotspot. This process never loads
-/// system artwork (`NSCursor` is unavailable outside a GUI session), so what
-/// runs here is the baked vector arrow, whose 28:40 design frame matches the
-/// system arrow's 28x40 points; `custom_cursors_index_the_system_arrow_fitted_
-/// to_their_box` pins the routing and `custom_cursors_fit_the_system_arrow_by_
-/// its_own_hotspot` the geometry (cursor_effects/raster.rs).
+/// Fits the baked 28:40 arrow into arbitrary custom-cursor boxes without
+/// stretching it. These tests pin both routing and hotspot-anchored geometry;
+/// system artwork is unavailable outside a GUI session.
 #[test]
 fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
   let directory = std::env::temp_dir().join(format!(
@@ -278,8 +260,6 @@ fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
     .unwrap();
   assert!(status.success());
 
-  // The recorded appearance of the real 32x32 custom cursor that exposed the
-  // squash, scaled up so the drawn extents survive H.264 chroma subsampling.
   let records = [
     CursorRecord::Header {
       coordinate_space: "global-logical-points".to_owned(),

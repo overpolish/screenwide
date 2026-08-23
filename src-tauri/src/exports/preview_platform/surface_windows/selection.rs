@@ -170,6 +170,15 @@ float4 ps_main(VertexOut input) : SV_Target {
   // stroked-then-filled monospaced label: the fill is the glyph coverage, the
   // halo a dilation of that coverage by the stroke radius, so the text stays
   // legible over any pane content without a backing plate.
+  if (label_params.z > 0.5 && label.z > 0.0) {
+    float4 button = float4(label.xy - float2(7.0, 4.0) * scale,
+                           label.zw + float2(14.0, 8.0) * scale);
+    float button_alpha = 0.96 * (1.0 - smoothstep(-1.0, 1.0, rounded_distance(p, button, 6.0 * scale)));
+    float shade = label_params.z > 2.5 ? 0.18 : label_params.z > 1.5 ? 0.15 : 0.12;
+    float3 button_fill = lerp(float3(1.0 - shade * 0.2), float3(shade), dark_theme);
+    color = lerp(color, button_fill, button_alpha);
+    alpha = max(alpha, button_alpha);
+  }
   if (label.z > 0.0 && p.x >= label.x && p.x <= label.x + label.z &&
       p.y >= label.y && p.y <= label.y + label.w) {
     float2 uv = (p - label.xy) / label.zw;
@@ -403,6 +412,7 @@ fn build_label_texture(
 }
 
 pub(super) struct SelectionOverlay {
+  pub(super) action: super::osc_action::OscAction,
   buffer_size: (u32, u32),
   constants: ID3D11Buffer,
   label: Option<LabelTexture>,
@@ -488,9 +498,9 @@ impl SelectionOverlay {
     let mut label_sampler = None;
     unsafe { device.CreateSamplerState(&sampler_description, Some(&mut label_sampler)) }
       .map_err(|error| error.to_string())?;
-    // A 1x1 transparent texture stands in whenever no size readout exists.
     let label_placeholder = upload_label_texture(device, &[0u8; 4], (1, 1), "", 0)?;
     Ok(Self {
+      action: super::osc_action::OscAction::default(),
       buffer_size: (2, 2),
       constants: constants.ok_or_else(|| "D3D11 created no selection constants".to_owned())?,
       label: None,
@@ -540,6 +550,7 @@ impl SelectionOverlay {
     guides: Option<(Option<f32>, Option<f32>, bool, bool)>,
     magnifier_box: Option<[f32; 4]>,
     label_text: Option<&str>,
+    label_action: bool,
     scale: f64,
     light: bool,
   ) -> Result<(), String> {
@@ -570,27 +581,14 @@ impl SelectionOverlay {
         .map(|(view, (width, height))| {
           let width = width as f32;
           let height = height as f32;
-          let gap = (4.0 * scale) as f32;
-          let mut x = frame[0] + frame[2] - width;
-          let mut y = frame[1] + frame[3] + gap;
-          if y + height > size.1 as f32 {
-            y = frame[1] + frame[3] - gap - height;
-          }
-          x = x.min(size.0 as f32 - width).max(0.0);
-          // A viewport edge may hold the readout only until the corresponding
-          // selection edge catches it; after that it travels with the frame.
-          let minimum_x = frame[0];
-          let maximum_x = frame[0] + frame[2] - width;
-          x = if minimum_x <= maximum_x {
-            x.clamp(minimum_x, maximum_x)
-          } else {
-            frame[0] + (frame[2] - width) * 0.5
-          };
-          // Do not leave the readout pinned to the viewport top after the
-          // selection has travelled above it. The gap is part of the label's
-          // normal below-frame placement, so keep it until that trailing edge
-          // itself moves offscreen.
-          y = y.max(0.0).min(frame[1] + frame[3] + gap);
+          let gap = ((if label_action { 14.0 } else { 4.0 }) * scale) as f32;
+          let (x, y) = super::recenter::label_origin(
+            frame,
+            (width, height),
+            (size.0 as f32, size.1 as f32),
+            gap,
+            label_action,
+          );
           (view, [x.floor(), y.floor(), width, height])
         }),
       _ => None,
@@ -599,6 +597,7 @@ impl SelectionOverlay {
       Some((view, rect)) => (view, rect),
       None => (self.label_placeholder.view.clone(), [0.0; 4]),
     };
+    let action_state = self.action.layout(label_rect, scale as f32, label_action);
     let values = Constants {
       frame: frame.unwrap_or_default(),
       viewport: [
@@ -625,7 +624,7 @@ impl SelectionOverlay {
       label_params: [
         (LABEL_STROKE * 0.5 * 0.75 * scale) as f32,
         scale as f32,
-        0.0,
+        action_state,
         0.0,
       ],
     };

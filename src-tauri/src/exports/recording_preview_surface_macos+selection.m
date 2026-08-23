@@ -5,7 +5,6 @@
 
 #import <objc/runtime.h>
 #include <math.h>
-
 /// Native selection interaction extension point for annotation and ruler tools.
 static IMP original_cursor_set = NULL;
 SCREENWIDE_PREVIEW_PRIVATE NSCursor *expected_selection_cursor = nil;
@@ -578,6 +577,7 @@ SCREENWIDE_PREVIEW_PRIVATE void set_selection_move_cursor(void) {
 
 SCREENWIDE_PREVIEW_PRIVATE void set_selection_cursor_at_point(ScreenwidePreviewSurface *surface,
                                           NSPoint point) {
+  if (surface.selectionActionOperation != 0 && NSPointInRect(point, surface.selectionActionRect)) { set_selection_cursor([NSCursor arrowCursor]); return; }
   NSCursor *cursor = selection_cursor(surface, point);
   if (cursor == selection_move_cursor()) set_selection_move_cursor();
   else set_selection_cursor(cursor);

@@ -411,43 +411,42 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
                       surface.selection.radius_disabled == 0);
   double pixelWidth = 0.0;
   double pixelHeight = 0.0;
-  if (selection_pixel_size(surface, &pixelWidth, &pixelHeight)) {
-    NSString *text = [NSString stringWithFormat:@"%lld × %lld",
-                      (long long)MAX(1, llround(pixelWidth)),
-                      (long long)MAX(1, llround(pixelHeight))];
+  BOOL recenterAction = surface.selection.recenter_mode != 0;
+  BOOL hasLabel = recenterAction ||
+      selection_pixel_size(surface, &pixelWidth, &pixelHeight);
+  surface.selectionActionRect = NSZeroRect;
+  surface.selectionActionOperation = recenterAction ? 7 : 0;
+  if (hasLabel) {
+    NSString *text = recenterAction ? @"Recenter" :
+        [NSString stringWithFormat:@"%lld × %lld",
+         (long long)MAX(1, llround(pixelWidth)),
+         (long long)MAX(1, llround(pixelHeight))];
     if (update_selection_label(surface, text, scale, lightMode)) {
       NSSize label = surface.selectionLabelSize;
-      // `frame` is already top-left-origin / y-down, so NSMaxY is the box's
-      // BOTTOM edge on screen and the readout hangs 4pt below it, trailing
-      // edge flush with the box's right edge (Keyframeless's placement).
-      CGFloat gap = 4.0;
-      CGFloat x = NSMaxX(frame) - label.width;
+      CGFloat gap = recenterAction ? 14.0 : 4.0;
+      CGFloat x = recenterAction ? NSMidX(frame) - label.width / 2.0
+                                 : NSMaxX(frame) - label.width;
       CGFloat y = NSMaxY(frame) + gap;
       if (y + label.height > size.height)
         y = NSMaxY(frame) - gap - label.height;
       x = MAX(0.0, MIN(x, size.width - label.width));
-      // A viewport edge may hold the readout only until the corresponding
-      // selection edge catches it; after that it travels with the frame.
       CGFloat minimumX = NSMinX(frame);
       CGFloat maximumX = NSMaxX(frame) - label.width;
       if (minimumX <= maximumX)
         x = MAX(minimumX, MIN(x, maximumX));
       else
         x = NSMidX(frame) - label.width / 2.0;
-      // Do not leave the readout pinned to the viewport top after the
-      // selection has travelled above it. The gap is part of the label's
-      // normal below-frame placement, so keep it until that trailing edge
-      // itself moves offscreen.
       y = MIN(MAX(0.0, y), NSMaxY(frame) + gap);
-      // Snap to device pixels so the glyphs land on the same grid they were
-      // rasterised on and stay crisp instead of resampling every sample.
       x = floor(x * scale) / scale;
       y = floor(y * scale) / scale;
-      // The quad's uv (0,0) sits at the rect's min corner, which is the TOP
-      // left here; texture row 0 is the bitmap's first memory row, which is
-      // the top scanline of the rendered text. So no v flip is needed.
-      add_selection_quad(vertices, &count, size,
-                         NSMakeRect(x, y, label.width, label.height), 11);
+      NSRect labelRect = NSMakeRect(x, y, label.width, label.height);
+      if (recenterAction) {
+        surface.selectionActionRect = NSInsetRect(labelRect, -7.0, -4.0);
+        uint32_t actionKind = surface.selectionActionPressed ? 14 : surface.selectionActionHovered ? 13 : 12;
+        add_selection_quad(vertices, &count, size,
+                           surface.selectionActionRect, actionKind);
+      }
+      add_selection_quad(vertices, &count, size, labelRect, 11);
     }
   }
   if (surface.hasSelectionSnapGuideX) {

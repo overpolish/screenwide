@@ -373,7 +373,7 @@ fn display_fit_rebase_preserves_displayed_bounds() {
     width: 720.0,
     height: 360.0,
   };
-  let rebased = rebase_display_fit((1_000.0, 700.0), displayed, 8.0);
+  let rebased = rebase_display_fit((1_000.0, 700.0), displayed, (2_000.0, 1_000.0), 8.0);
   assert_eq!(
     rebased.fit,
     DisplayRect {
@@ -396,8 +396,32 @@ fn display_fit_rebase_does_not_restore_the_old_fixed_zoom_ceiling() {
     width: 20_000.0,
     height: 10_000.0,
   };
-  let rebased = rebase_display_fit((1_000.0, 700.0), displayed, 8.0);
+  let rebased = rebase_display_fit((1_000.0, 700.0), displayed, (20_000.0, 10_000.0), 8.0);
   assert!(rebased.zoom > 16.0);
+}
+
+#[test]
+fn display_fit_rebase_keeps_small_canvas_tool_layouts_stable() {
+  let displayed = DisplayRect {
+    x: 200.0,
+    y: 200.0,
+    width: 600.0,
+    height: 300.0,
+  };
+  let rebased = rebase_display_fit((1_000.0, 700.0), displayed, (400.0, 200.0), 8.0);
+
+  assert_eq!(
+    rebased.fit,
+    DisplayRect {
+      x: 300.0,
+      y: 250.0,
+      width: 400.0,
+      height: 200.0,
+    }
+  );
+  assert_eq!(rebased.zoom, 1.5);
+  assert_eq!(rebased.pan_x, 0.0);
+  assert_eq!(rebased.pan_y, 0.0);
 }
 
 #[test]

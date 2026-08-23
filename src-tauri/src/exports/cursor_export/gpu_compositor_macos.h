@@ -7,6 +7,7 @@
 
 typedef struct {
   float background_color[4];
+  float recenter_inset_color[4];
   uint32_t background_radius;
   int32_t crop_x;
   int32_t crop_y;
@@ -16,6 +17,10 @@ typedef struct {
   float image_y;
   uint32_t image_width;
   uint32_t image_height;
+  int32_t source_crop_x;
+  int32_t source_crop_y;
+  uint32_t source_crop_width;
+  uint32_t source_crop_height;
   uint32_t radius;
   uint32_t drop_shadow;
   uint32_t mesh_enabled;
@@ -109,6 +114,10 @@ typedef struct {
   uint32_t light_mode;
   float sample_u;
   float sample_v;
+  float source_min_u;
+  float source_min_v;
+  float source_max_u;
+  float source_max_v;
   int32_t box_x;
   int32_t box_y;
   uint32_t box_width;

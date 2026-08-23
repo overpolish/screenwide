@@ -4,7 +4,11 @@
 import { useRef, useState } from "react";
 
 import {
-  ScreenshotLayout,
+  applyScreenshotCropGesture,
+  commitScreenshotCrop,
+  uncroppedScreenshotPreviewOutput,
+} from "../screenshot-crop";
+import {
   ScreenshotOutputSettings,
   ScreenshotWorkspaceOutputSettings,
   fitScreenshotWorkspaceToItems,
@@ -12,8 +16,8 @@ import {
   screenshotLayout,
   screenshotWorkspaceItemOutput,
   screenshotOutputDimensions,
-  uncroppedScreenshotPreviewOutput,
 } from "../screenshot-output";
+import { applyScreenshotRecenterGesture } from "../screenshot-recenter";
 import { useExportEditGesture } from "../use-export-edit-history";
 import {
   ScreenshotSelectionGestureEvent,
@@ -21,6 +25,7 @@ import {
 } from "../use-screenshot-preview-surface";
 
 import { PreviewPaneFit } from "./preview-transform";
+import { normalizedScreenshotSelection } from "./screenshot-selection";
 
 type PreviewViewportProps = {
   alt: string;
@@ -29,14 +34,9 @@ type PreviewViewportProps = {
   naturalHeight: number;
   naturalWidth: number;
   isEditing?: boolean;
+  isRecentering?: boolean;
   isResizingCanvas?: boolean;
-  /**
-   * A running save covers the viewport with the progress overlay, whose Cancel
-   * button is a DOM control - and the native interaction view is inserted
-   * above the webview, so it would swallow that click and pan the workspace
-   * instead. Suspending the native editor for the duration of the save hands
-   * input back to the webview without giving up the native composition.
-   */
+  /** A save suspends native input so its DOM Cancel button remains clickable. */
   isSaving?: boolean;
   isSelecting?: boolean;
   onBackgroundRadiusChange?: (radiusPercent: number) => void;
@@ -49,6 +49,7 @@ type PreviewViewportProps = {
   ) => void;
   onPaneFitChange?: (fit: PreviewPaneFit) => void;
   onRadiusChangeEnd?: () => void;
+  onRecenter?: () => void;
   onZoomChange?: (zoomPercent: number) => void;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
   selectedItemId?: number | null;
@@ -58,27 +59,11 @@ type PreviewViewportProps = {
 const AUTO_FIT_MOVE_EDGE = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE = 1 << 18;
 
-/** A laid-out item as fractions of the output canvas, which is how the native
- * surface addresses selections. */
-function normalizedSelection(
-  layout: ScreenshotLayout,
-  output: { height: number; width: number },
-) {
-  const height = Math.max(1, output.height);
-  const width = Math.max(1, output.width);
-  const fractions = (box: ScreenshotLayout["crop"]) => ({
-    height: box.height / height,
-    width: box.width / width,
-    x: box.x / width,
-    y: box.y / height,
-  });
-  return { image: fractions(layout.image), rect: fractions(layout.crop) };
-}
-
 export function PreviewViewport({
   alt,
   artifactId,
   isEditing = false,
+  isRecentering = false,
   isResizingCanvas = false,
   isSaving = false,
   isSelecting = false,
@@ -92,6 +77,7 @@ export function PreviewViewport({
   onOutputChange,
   onPaneFitChange,
   onRadiusChangeEnd,
+  onRecenter,
   onZoomChange,
   screenshotOutput,
   selectedItemId = null,
@@ -232,13 +218,14 @@ export function PreviewViewport({
     return true;
   };
   const selectionGesture = (event: ScreenshotSelectionGestureEvent) => {
+    if (event.operation === "recenterAction") return onRecenter?.();
     if (frameGesture(event)) return;
     if (event.phase === "begin") {
       const itemOutput = workspaceOutput?.items[event.paneIndex];
       const cropGesture =
         event.operation === "cropMove" || event.operation === "cropResize";
       if (
-        (!isSelecting && !(isEditing && cropGesture)) ||
+        (!isSelecting && !isRecentering && !(isEditing && cropGesture)) ||
         !workspaceOutput ||
         !itemOutput
       )
@@ -294,8 +281,6 @@ export function PreviewViewport({
       active.lastEdges = event.edges;
       active.lastScale = event.scale;
       active.snapshot = committedItem;
-      // The remainder of this pointer gesture is relative to the accepted
-      // canvas, but edit history remains open until the one mouse-up.
       active.workspaceSnapshot = committed;
       return;
     }
@@ -321,36 +306,41 @@ export function PreviewViewport({
         event.operation === "radius" ||
         event.operation === "cropResize") &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
-    // Mouse-up is authoritative even when snapping returns exactly to the
-    // gesture snapshot (zero delta / unit scale). A prior live update may
-    // still have moved React away from that snapshot, so rejecting the final
-    // zero as "unchanged" would push stale geometry back into native layout.
-    const shouldApply = event.phase === "end" ? differsFromLastUpdate : changed;
+    const cropOperation =
+      event.operation === "cropMove" || event.operation === "cropResize";
+    const shouldApply =
+      event.phase === "end" ? cropOperation || differsFromLastUpdate : changed;
     const cropX = active.snapshot.screenshotCropXPercent + event.deltaX * 100;
     const cropY = active.snapshot.screenshotCropYPercent + event.deltaY * 100;
     let next: ScreenshotOutputSettings;
-    if (event.operation === "cropMove") {
-      next = {
-        ...active.snapshot,
-        screenshotCropXPercent: cropX,
-        screenshotCropYPercent: cropY,
-      };
-    } else if (event.operation === "cropResize") {
-      let left = active.snapshot.screenshotCropXPercent;
-      let top = active.snapshot.screenshotCropYPercent;
-      let right = left + active.snapshot.screenshotCropWidthPercent;
-      let bottom = top + active.snapshot.screenshotCropHeightPercent;
-      if ((event.edges & 1) !== 0) left += event.deltaX * 100;
-      if ((event.edges & 2) !== 0) right += event.deltaX * 100;
-      if ((event.edges & 4) !== 0) top += event.deltaY * 100;
-      if ((event.edges & 8) !== 0) bottom += event.deltaY * 100;
-      next = {
-        ...active.snapshot,
-        screenshotCropHeightPercent: bottom - top,
-        screenshotCropWidthPercent: right - left,
-        screenshotCropXPercent: left,
-        screenshotCropYPercent: top,
-      };
+    const recentered = isRecentering
+      ? applyScreenshotRecenterGesture({
+          deltaX: event.deltaX,
+          deltaY: event.deltaY,
+          edges: event.edges,
+          operation: event.operation,
+          scale: event.scale,
+          settings: active.snapshot,
+          source: items.find((item) => item.id === active.itemId),
+        })
+      : null;
+    if (recentered) {
+      next = recentered;
+    } else if (
+      event.operation === "cropMove" ||
+      event.operation === "cropResize"
+    ) {
+      const source = items.find((item) => item.id === active.itemId);
+      if (!source) return;
+      next = applyScreenshotCropGesture({
+        ...event,
+        operation: event.operation,
+        output,
+        settings: active.snapshot,
+        source,
+      });
+      if (event.phase === "end")
+        next = commitScreenshotCrop(active.snapshot, next, source);
     } else if (event.operation === "radius") {
       next = {
         ...active.snapshot,
@@ -401,7 +391,9 @@ export function PreviewViewport({
     }
     if (shouldApply) {
       const autoFit =
-        event.operation === "move" && (event.edges & AUTO_FIT_MOVE_EDGE) !== 0;
+        !isRecentering &&
+        event.operation === "move" &&
+        (event.edges & AUTO_FIT_MOVE_EDGE) !== 0;
       if (autoFit) {
         const fitted = fitScreenshotWorkspaceToItems({
           initial: active.workspaceSnapshot,
@@ -441,7 +433,7 @@ export function PreviewViewport({
           radiusPercent: workspaceOutput.backgroundRadiusPercent,
           rect: { height: 1, width: 1, x: 0, y: 0 },
         }
-      : (isSelecting || isEditing) &&
+      : (isSelecting || isEditing || isRecentering) &&
           selectedItemIndex >= 0 &&
           selectedItem &&
           selectedItemOutput
@@ -449,14 +441,16 @@ export function PreviewViewport({
             cropMode: isEditing,
             paneIndex: selectedItemIndex,
             radiusPercent: selectedItemOutput.radiusPercent,
-            ...normalizedSelection(
+            recenterMode: isRecentering,
+            ...normalizedScreenshotSelection(
               screenshotLayout(selectedItem, output, selectedItemOutput),
               output,
+              isRecentering ? "recenter" : isEditing ? "crop" : "select",
             ),
           }
         : null;
   const selectionTargets =
-    (isSelecting || isEditing) && workspaceOutput
+    (isSelecting || isEditing || isRecentering) && workspaceOutput
       ? workspaceOutput.items.flatMap((itemOutput, paneIndex) => {
           const item = items.find(
             (candidate) => candidate.id === itemOutput.id,
@@ -468,7 +462,12 @@ export function PreviewViewport({
               cropMode: isEditing,
               paneIndex,
               radiusPercent: itemOutput.output.radiusPercent,
-              ...normalizedSelection(layout, output),
+              recenterMode: isRecentering,
+              ...normalizedScreenshotSelection(
+                layout,
+                output,
+                isRecentering ? "recenter" : isEditing ? "crop" : "select",
+              ),
             },
           ];
         })
@@ -491,8 +490,6 @@ export function PreviewViewport({
     paneCount: orderedItems.length,
     selection: selectionOverlay,
     selectionTargets,
-    // Reordering changes composition, not source ownership. Restart only when
-    // the set of uploaded source images changes.
     sourceKey: orderedItems
       .map((item) => item.id)
       .sort((first, second) => first - second)
@@ -502,7 +499,7 @@ export function PreviewViewport({
   return (
     <div
       aria-label={alt}
-      className={`relative flex min-h-0 grow overflow-hidden ${isSelecting ? "cursor-move" : "cursor-grab"}`}
+      className={`relative flex min-h-0 grow overflow-hidden ${isSelecting || isRecentering ? "cursor-move" : "cursor-grab"}`}
       data-recording-preview-viewport
       ref={nativeFrameRef}
       role="img"

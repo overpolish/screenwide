@@ -337,6 +337,7 @@ export function ExportWindow() {
               // aspect ratio or manually enlarged output canvas.
               height: screenshotDefaults.height,
               radiusPercent: persistedScreenshotRadius,
+              recenterInsetColor: null,
               width: screenshotDefaults.width,
             },
             artifact,
@@ -639,6 +640,8 @@ export function ExportWindow() {
             items: current.items.map((item) =>
               item.id === targetItemId ? { ...item, output: settings } : item,
             ),
+            // Inset belongs to one screenshot layer, never the shared canvas.
+            recenterInsetColor: current.recenterInsetColor,
           }));
           setError(null);
         }}

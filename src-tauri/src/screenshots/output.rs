@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 
 use super::mesh::MeshGradientPoint;
 #[cfg(any(test, not(target_os = "macos")))]
+use super::placement::output_placement;
+#[cfg(any(test, not(target_os = "macos")))]
 use super::CapturedImage;
+use super::NormalizedSourceRect;
 #[cfg(not(target_os = "macos"))]
 use super::{mesh::mesh_canvas, rounded_corners};
 
@@ -35,6 +38,8 @@ pub struct ScreenshotOutputSettings {
   pub mesh_seed: u32,
   pub mesh_warp_percent: f64,
   pub radius_percent: f64,
+  #[serde(default)]
+  pub recenter_inset_color: Option<String>,
   #[serde(default = "default_hundred")]
   pub screenshot_crop_height_percent: f64,
   #[serde(default = "default_hundred")]
@@ -49,6 +54,7 @@ pub struct ScreenshotOutputSettings {
   pub screenshot_image_x_percent: f64,
   #[serde(default = "default_fifty")]
   pub screenshot_image_y_percent: f64,
+  pub source_crop: NormalizedSourceRect,
   pub width: u32,
 }
 
@@ -75,96 +81,6 @@ pub(crate) fn output_dimensions(settings: &ScreenshotOutputSettings) -> Result<(
     return Err("The screenshot output dimensions are not valid".to_owned());
   }
   Ok((settings.width, settings.height))
-}
-
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct OutputPlacement {
-  pub crop_height: u32,
-  pub crop_width: u32,
-  pub crop_x: i32,
-  pub crop_y: i32,
-  pub image_height: u32,
-  pub image_width: u32,
-  pub image_x: f64,
-  pub image_y: f64,
-}
-
-pub(crate) fn output_placement(
-  source_width: u32,
-  source_height: u32,
-  settings: &ScreenshotOutputSettings,
-) -> Result<OutputPlacement, String> {
-  let (output_width, output_height) = output_dimensions(settings)?;
-  let percentages = [
-    settings.screenshot_crop_height_percent,
-    settings.screenshot_crop_width_percent,
-    settings.screenshot_crop_x_percent,
-    settings.screenshot_crop_y_percent,
-    settings.screenshot_image_width_percent,
-    settings.screenshot_image_x_percent,
-    settings.screenshot_image_y_percent,
-  ];
-  if source_width == 0
-    || source_height == 0
-    || percentages.iter().any(|value| !value.is_finite())
-    || !(1.0..=800.0).contains(&settings.screenshot_crop_width_percent)
-    || !(1.0..=800.0).contains(&settings.screenshot_crop_height_percent)
-    || settings.screenshot_crop_x_percent.abs() > 800.0
-    || settings.screenshot_crop_y_percent.abs() > 800.0
-    || !(1.0..=800.0).contains(&settings.screenshot_image_width_percent)
-  {
-    return Err("The screenshot placement is not valid".to_owned());
-  }
-  let image_width = (f64::from(output_width) * settings.screenshot_image_width_percent / 100.0)
-    .round()
-    .max(1.0) as u32;
-  let image_height = (f64::from(image_width) * f64::from(source_height) / f64::from(source_width))
-    .round()
-    .max(1.0) as u32;
-  let mut crop_height = (f64::from(output_height) * settings.screenshot_crop_height_percent / 100.0)
-    .round()
-    .max(1.0) as u32;
-  let mut crop_width = (f64::from(output_width) * settings.screenshot_crop_width_percent / 100.0)
-    .round()
-    .max(1.0) as u32;
-  let mut crop_x =
-    (f64::from(output_width) * settings.screenshot_crop_x_percent / 100.0).round() as i32;
-  let mut crop_y =
-    (f64::from(output_height) * settings.screenshot_crop_y_percent / 100.0).round() as i32;
-  let image_x = f64::from(output_width) * settings.screenshot_image_x_percent / 100.0
-    - f64::from(image_width) / 2.0;
-  let image_y = f64::from(output_height) * settings.screenshot_image_y_percent / 100.0
-    - f64::from(image_height) / 2.0;
-  // Preview resolution scaling can round a crop and its otherwise coincident
-  // placed source to opposite sides of the same pixel. Snap all four edges
-  // when they differ by no more than one pixel; a deliberate crop edit moves
-  // farther than this and remains independent.
-  let image_left = image_x.round() as i32;
-  let image_top = image_y.round() as i32;
-  let image_right = image_left.saturating_add(image_width as i32);
-  let image_bottom = image_top.saturating_add(image_height as i32);
-  let crop_right = crop_x.saturating_add(crop_width as i32);
-  let crop_bottom = crop_y.saturating_add(crop_height as i32);
-  if (crop_x - image_left).abs() <= 1
-    && (crop_right - image_right).abs() <= 1
-    && (crop_y - image_top).abs() <= 1
-    && (crop_bottom - image_bottom).abs() <= 1
-  {
-    crop_x = image_left;
-    crop_y = image_top;
-    crop_width = image_width;
-    crop_height = image_height;
-  }
-  Ok(OutputPlacement {
-    crop_height,
-    crop_width,
-    crop_x,
-    crop_y,
-    image_height,
-    image_width,
-    image_x,
-    image_y,
-  })
 }
 
 #[cfg(all(target_os = "macos", test))]
@@ -204,20 +120,38 @@ pub fn compose_screenshot(
   let crop_y = f64::from(placement.crop_y);
   let crop_width = placement.crop_width;
   let crop_height = placement.crop_height;
-  let source_x = (crop_x - image_x).round() as i64;
-  let source_y = (crop_y - image_y).round() as i64;
   let resized = image::imageops::resize(
     &source,
     image_width,
     image_height,
     image::imageops::FilterType::Lanczos3,
   );
-  // Crop and image are independently movable. Their overlap is the video;
-  // uncovered crop pixels stay transparent so the configured background
-  // shows through, matching the GPU preview shader instead of rejecting a
-  // valid artistic placement.
-  let mut cropped = image::RgbaImage::new(crop_width, crop_height);
-  image::imageops::overlay(&mut cropped, &resized, -source_x, -source_y);
+  // Crop and image are independently movable. Recenter gives uncovered crop
+  // pixels their source-derived inset; ordinary placement leaves them clear.
+  let inset = settings.recenter_inset_color.is_some();
+  let mut cropped = super::recenter::output_inset_layer(settings, crop_width, crop_height)?;
+  let source_crop_local_x =
+    (placement.source_crop_x - image_x.round() as i32).clamp(0, image_width as i32 - 1) as u32;
+  let source_crop_local_y =
+    (placement.source_crop_y - image_y.round() as i32).clamp(0, image_height as i32 - 1) as u32;
+  let source_crop = image::imageops::crop_imm(
+    &resized,
+    source_crop_local_x,
+    source_crop_local_y,
+    placement
+      .source_crop_width
+      .min(image_width - source_crop_local_x),
+    placement
+      .source_crop_height
+      .min(image_height - source_crop_local_y),
+  )
+  .to_image();
+  image::imageops::overlay(
+    &mut cropped,
+    &source_crop,
+    i64::from(placement.source_crop_x) - crop_x.round() as i64,
+    i64::from(placement.source_crop_y) - crop_y.round() as i64,
+  );
   let rounded = rounded_corners(
     &CapturedImage {
       height: crop_height,
@@ -246,10 +180,8 @@ pub fn compose_screenshot(
     .ok_or_else(|| "The screenshot pixels are not valid".to_owned())?;
   let placement_x = crop_x.round() as i64;
   let placement_y = crop_y.round() as i64;
-  let visible_left = crop_x.max(image_x);
-  let visible_top = crop_y.max(image_y);
-  let visible_right = (crop_x + f64::from(crop_width)).min(image_x + f64::from(image_width));
-  let visible_bottom = (crop_y + f64::from(crop_height)).min(image_y + f64::from(image_height));
+  let (visible_left, visible_top, visible_right, visible_bottom) =
+    super::recenter::foreground_bounds(placement, inset);
   let visible_width = (visible_right - visible_left).max(0.0);
   let visible_height = (visible_bottom - visible_top).max(0.0);
   let shadow_margin = visible_left
@@ -300,10 +232,10 @@ pub fn compose_screenshot(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
   use super::*;
 
-  fn solid_image(width: u32, height: u32, colour: [u8; 4]) -> CapturedImage {
+  pub(crate) fn solid_image(width: u32, height: u32, colour: [u8; 4]) -> CapturedImage {
     CapturedImage {
       height,
       rgba: colour.repeat((width * height) as usize),
@@ -311,14 +243,14 @@ mod tests {
     }
   }
 
-  fn assert_colour_close(actual: &[u8], expected: [u8; 4]) {
+  pub(crate) fn assert_colour_close(actual: &[u8], expected: [u8; 4]) {
     assert!(actual
       .iter()
       .zip(expected)
       .all(|(actual, expected)| actual.abs_diff(expected) <= 1));
   }
 
-  fn settings(width: u32, height: u32) -> ScreenshotOutputSettings {
+  pub(crate) fn settings(width: u32, height: u32) -> ScreenshotOutputSettings {
     let placed_width_percent = 80.0;
     let placed_height_percent =
       f64::from(width) * placed_width_percent / 100.0 / 2.0 / f64::from(height) * 100.0;
@@ -370,6 +302,7 @@ mod tests {
       mesh_seed: 42,
       mesh_warp_percent: 9.0,
       radius_percent: 0.0,
+      recenter_inset_color: None,
       screenshot_crop_height_percent: placed_height_percent,
       screenshot_crop_width_percent: placed_width_percent,
       screenshot_crop_x_percent: 10.0,
@@ -377,6 +310,12 @@ mod tests {
       screenshot_image_width_percent: placed_width_percent,
       screenshot_image_x_percent: 50.0,
       screenshot_image_y_percent: 50.0,
+      source_crop: NormalizedSourceRect {
+        height: 1.0,
+        width: 1.0,
+        x: 0.0,
+        y: 0.0,
+      },
       width,
     }
   }
@@ -413,6 +352,23 @@ mod tests {
     output_settings.screenshot_crop_height_percent += 300.0 / 401.0;
     let deliberate = output_placement(200, 100, &output_settings).unwrap();
     assert_ne!(deliberate.crop_height, deliberate.image_height);
+  }
+
+  #[test]
+  fn places_a_source_crop_inside_the_scaled_image() {
+    let mut output_settings = settings(400, 400);
+    output_settings.source_crop = NormalizedSourceRect {
+      x: 0.25,
+      y: 0.1,
+      width: 0.5,
+      height: 0.6,
+    };
+
+    let placement = output_placement(200, 100, &output_settings).unwrap();
+    assert_eq!(placement.source_crop_x, 120);
+    assert_eq!(placement.source_crop_y, 136);
+    assert_eq!(placement.source_crop_width, 160);
+    assert_eq!(placement.source_crop_height, 96);
   }
 
   #[test]

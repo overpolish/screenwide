@@ -19,6 +19,7 @@ export function useExportWindowShortcuts({
   onMoveBackward,
   onMoveForward,
   onNudge,
+  onRecenter,
   onResizeCanvas,
   onSelectTool,
   onStep,
@@ -32,6 +33,7 @@ export function useExportWindowShortcuts({
   onMoveForward?: () => void;
   /** Moves the selected layer by one arrow press; `coarse` is the Shift jump. */
   onNudge?: (directionX: number, directionY: number, coarse: boolean) => void;
+  onRecenter?: () => void;
   onResizeCanvas?: () => void;
   onSelectTool?: () => void;
   /** Moves the playhead by one arrow press; `coarse` is the Shift jump. */
@@ -128,6 +130,13 @@ export function useExportWindowShortcuts({
         event.preventDefault();
         onTogglePlayback();
       } else if (
+        event.code === "KeyR" &&
+        onRecenter &&
+        !ownsTextEditingKeys(event.target)
+      ) {
+        event.preventDefault();
+        onRecenter();
+      } else if (
         event.code === "KeyF" &&
         onResizeCanvas &&
         !ownsTextEditingKeys(event.target)
@@ -162,6 +171,7 @@ export function useExportWindowShortcuts({
     onMoveBackward,
     onMoveForward,
     onNudge,
+    onRecenter,
     onResizeCanvas,
     onSelectTool,
     onStep,

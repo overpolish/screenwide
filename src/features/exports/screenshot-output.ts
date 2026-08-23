@@ -1,34 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { fullSourceRect } from "./screenshot-geometry";
+import { screenshotLayout } from "./screenshot-layout";
 import {
-  MeshGradientPoint,
-  randomMeshComposition,
-} from "./screenshot-background";
+  defaultScreenshotOutput,
+  normalizedScreenshotOutput,
+  ScreenshotOutputSettings,
+  withScreenshotSourceCrop,
+} from "./screenshot-output-settings";
 
-type ScreenshotBackgroundType = "mesh" | "solid";
-
-export type ScreenshotOutputSettings = {
-  backgroundColor: string;
-  backgroundRadiusPercent: number;
-  backgroundType: ScreenshotBackgroundType;
-  dropShadow: boolean;
-  height: number;
-  meshColors: string[];
-  meshLockedColors: boolean[];
-  meshPoints: MeshGradientPoint[];
-  meshSeed: number;
-  meshWarpPercent: number;
-  radiusPercent: number;
-  screenshotCropHeightPercent: number;
-  screenshotCropWidthPercent: number;
-  screenshotCropXPercent: number;
-  screenshotCropYPercent: number;
-  screenshotImageWidthPercent: number;
-  screenshotImageXPercent: number;
-  screenshotImageYPercent: number;
-  width: number;
-};
+export { screenshotLayout } from "./screenshot-layout";
+export type { ScreenshotLayout } from "./screenshot-layout";
+export { defaultScreenshotOutput, normalizedScreenshotOutput };
+export type { ScreenshotOutputSettings };
 
 type ScreenshotWorkspaceItemOutput = {
   id: number;
@@ -83,95 +68,6 @@ export const recordingVideoTrackOrder = (settings: RecordingOutputSettings) =>
     ? (["camera", "primary"] as const)
     : (["primary", "camera"] as const);
 
-export const defaultScreenshotOutput = (
-  width: number,
-  height: number,
-  radii: { background?: number; screenshot?: number } = {},
-): ScreenshotOutputSettings => {
-  const mesh = randomMeshComposition();
-  return {
-    ...mesh,
-    backgroundColor: "#171717",
-    backgroundRadiusPercent: radii.background ?? 0,
-    backgroundType: "solid",
-    dropShadow: true,
-    height,
-    meshLockedColors: mesh.meshColors.map(() => false),
-    radiusPercent: radii.screenshot ?? 0,
-    screenshotCropHeightPercent: 100,
-    screenshotCropWidthPercent: 100,
-    screenshotCropXPercent: 0,
-    screenshotCropYPercent: 0,
-    screenshotImageWidthPercent: 100,
-    screenshotImageXPercent: 50,
-    screenshotImageYPercent: 50,
-    width,
-  };
-};
-
-export const normalizedScreenshotOutput = (
-  settings: ScreenshotOutputSettings,
-): ScreenshotOutputSettings => {
-  const finite = (value: number, fallback: number) =>
-    Number.isFinite(value) ? value : fallback;
-  const defaults = defaultScreenshotOutput(
-    finite(settings.width, 1),
-    finite(settings.height, 1),
-  );
-  return {
-    ...settings,
-    backgroundRadiusPercent: finite(
-      settings.backgroundRadiusPercent,
-      defaults.backgroundRadiusPercent,
-    ),
-    height: Math.max(1, Math.round(finite(settings.height, defaults.height))),
-    meshLockedColors: settings.meshColors.map(
-      (_, index) => settings.meshLockedColors[index] ?? false,
-    ),
-    meshPoints: settings.meshPoints.map((point, index) => {
-      const fallback = defaults.meshPoints[index] ?? defaults.meshPoints[0];
-      return {
-        radiusX: finite(point.radiusX, fallback.radiusX),
-        radiusY: finite(point.radiusY, fallback.radiusY),
-        rotation: finite(point.rotation, fallback.rotation),
-        x: finite(point.x, fallback.x),
-        y: finite(point.y, fallback.y),
-      };
-    }),
-    meshWarpPercent: finite(settings.meshWarpPercent, defaults.meshWarpPercent),
-    radiusPercent: finite(settings.radiusPercent, defaults.radiusPercent),
-    screenshotCropHeightPercent: finite(
-      settings.screenshotCropHeightPercent,
-      defaults.screenshotCropHeightPercent,
-    ),
-    screenshotCropWidthPercent: finite(
-      settings.screenshotCropWidthPercent,
-      defaults.screenshotCropWidthPercent,
-    ),
-    screenshotCropXPercent: finite(
-      settings.screenshotCropXPercent,
-      defaults.screenshotCropXPercent,
-    ),
-    screenshotCropYPercent: finite(
-      settings.screenshotCropYPercent,
-      defaults.screenshotCropYPercent,
-    ),
-    screenshotImageWidthPercent: finite(
-      settings.screenshotImageWidthPercent,
-      defaults.screenshotImageWidthPercent,
-    ),
-    screenshotImageXPercent: finite(
-      settings.screenshotImageXPercent,
-      defaults.screenshotImageXPercent,
-    ),
-    screenshotImageYPercent: finite(
-      settings.screenshotImageYPercent,
-      defaults.screenshotImageYPercent,
-    ),
-    width: Math.max(1, Math.round(finite(settings.width, defaults.width))),
-  };
-};
-
 export const screenshotOutputDimensions = (
   settings: ScreenshotOutputSettings,
 ) => ({
@@ -179,7 +75,7 @@ export const screenshotOutputDimensions = (
   width: Math.max(1, Math.round(settings.width)),
 });
 
-const screenshotPlacement = (
+export const screenshotPlacement = (
   source: { height: number; width: number },
   output: { height: number; width: number },
 ) => {
@@ -197,11 +93,6 @@ const screenshotPlacement = (
   };
 };
 
-export type ScreenshotLayout = {
-  crop: { height: number; width: number; x: number; y: number };
-  image: { height: number; width: number; x: number; y: number };
-};
-
 export type ScreenshotCanvasBounds = {
   height: number;
   originX: number;
@@ -212,32 +103,6 @@ export type ScreenshotCanvasBounds = {
 const CENTERED_RESIZE_EDGE = 1 << 16;
 const MAXIMUM_CANVAS_PIXELS = 120_000_000;
 const MINIMUM_CANVAS_SIZE = 64;
-
-export const screenshotLayout = (
-  source: { height: number; width: number },
-  output: { height: number; width: number },
-  settings: ScreenshotOutputSettings,
-): ScreenshotLayout => {
-  const imageWidth =
-    (output.width * Math.max(1, settings.screenshotImageWidthPercent)) / 100;
-  const imageHeight = imageWidth * (source.height / Math.max(1, source.width));
-  const imageCenterX = (output.width * settings.screenshotImageXPercent) / 100;
-  const imageCenterY = (output.height * settings.screenshotImageYPercent) / 100;
-  return {
-    crop: {
-      height: (output.height * settings.screenshotCropHeightPercent) / 100,
-      width: (output.width * settings.screenshotCropWidthPercent) / 100,
-      x: (output.width * settings.screenshotCropXPercent) / 100,
-      y: (output.height * settings.screenshotCropYPercent) / 100,
-    },
-    image: {
-      height: imageHeight,
-      width: imageWidth,
-      x: imageCenterX - imageWidth / 2,
-      y: imageCenterY - imageHeight / 2,
-    },
-  };
-};
 
 /** Resize the output canvas without moving or scaling the screenshot in it. */
 const resizeScreenshotCanvas = (
@@ -546,63 +411,39 @@ export const fitScreenshotWorkspaceToItems = ({
   };
 };
 
-/**
- * Display-only composition used while the crop tool is active. The native
- * compositor draws the whole source image; the webview then dims the pixels
- * outside the committed crop without changing what will be exported.
- */
-export const uncroppedScreenshotPreviewOutput = (
-  source: { height: number; width: number },
-  settings: ScreenshotOutputSettings,
-): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(settings);
-  const { image } = screenshotLayout(source, output, settings);
-  return {
-    ...settings,
-    dropShadow: false,
-    radiusPercent: 0,
-    screenshotCropHeightPercent: (image.height * 100) / output.height,
-    screenshotCropWidthPercent: (image.width * 100) / output.width,
-    screenshotCropXPercent: (image.x * 100) / output.width,
-    screenshotCropYPercent: (image.y * 100) / output.height,
-  };
-};
-
 export const resetScreenshotLayout = (
   settings: ScreenshotOutputSettings,
   source: { height: number; width: number },
 ): ScreenshotOutputSettings => {
   const output = screenshotOutputDimensions(settings);
   const placement = screenshotPlacement(source, output);
-  return {
-    ...settings,
-    screenshotCropHeightPercent: (placement.height * 100) / output.height,
-    screenshotCropWidthPercent: (placement.width * 100) / output.width,
-    screenshotCropXPercent: (placement.x * 100) / output.width,
-    screenshotCropYPercent: (placement.y * 100) / output.height,
-    screenshotImageWidthPercent: (placement.width * 100) / output.width,
-    screenshotImageXPercent:
-      ((placement.x + placement.width / 2) * 100) / output.width,
-    screenshotImageYPercent:
-      ((placement.y + placement.height / 2) * 100) / output.height,
-  };
+  return withScreenshotSourceCrop(
+    {
+      ...settings,
+      recenterInsetColor: null,
+      screenshotCropHeightPercent: (placement.height * 100) / output.height,
+      screenshotCropWidthPercent: (placement.width * 100) / output.width,
+      screenshotCropXPercent: (placement.x * 100) / output.width,
+      screenshotCropYPercent: (placement.y * 100) / output.height,
+      screenshotImageWidthPercent: (placement.width * 100) / output.width,
+      screenshotImageXPercent:
+        ((placement.x + placement.width / 2) * 100) / output.width,
+      screenshotImageYPercent:
+        ((placement.y + placement.height / 2) * 100) / output.height,
+    },
+    fullSourceRect(),
+  );
 };
 
 /** Reset only the visible crop, retaining the image's scale and position. */
 export const resetScreenshotCrop = (
   settings: ScreenshotOutputSettings,
-  source: { height: number; width: number },
+  _source: { height: number; width: number },
 ): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(settings);
-  const { image } = screenshotLayout(source, output, settings);
-  return {
-    ...settings,
-    radiusPercent: 0,
-    screenshotCropHeightPercent: (image.height * 100) / output.height,
-    screenshotCropWidthPercent: (image.width * 100) / output.width,
-    screenshotCropXPercent: (image.x * 100) / output.width,
-    screenshotCropYPercent: (image.y * 100) / output.height,
-  };
+  return withScreenshotSourceCrop(
+    { ...settings, radiusPercent: 0 },
+    fullSourceRect(),
+  );
 };
 
 /** Reset the selected item's scale and position while retaining its crop. */
@@ -672,6 +513,7 @@ export const restoredRecordingOutput = ({
         ...persisted[key],
         backgroundRadiusPercent: 0,
         height: defaults[key].height,
+        recenterInsetColor: null,
         width: defaults[key].width,
       },
       source,
@@ -684,19 +526,3 @@ export const restoredRecordingOutput = ({
     primary: restore("primary", primary),
   };
 };
-
-export const hasOutputComposition = (
-  settings: ScreenshotOutputSettings,
-  source: { height: number; width: number },
-) =>
-  settings.width !== source.width ||
-  settings.height !== source.height ||
-  settings.backgroundRadiusPercent > 0 ||
-  settings.radiusPercent > 0 ||
-  Math.abs(settings.screenshotCropHeightPercent - 100) > 0.000_001 ||
-  Math.abs(settings.screenshotCropWidthPercent - 100) > 0.000_001 ||
-  Math.abs(settings.screenshotCropXPercent) > 0.000_001 ||
-  Math.abs(settings.screenshotCropYPercent) > 0.000_001 ||
-  Math.abs(settings.screenshotImageWidthPercent - 100) > 0.000_001 ||
-  Math.abs(settings.screenshotImageXPercent - 50) > 0.000_001 ||
-  Math.abs(settings.screenshotImageYPercent - 50) > 0.000_001;

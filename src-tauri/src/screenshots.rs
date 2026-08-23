@@ -9,11 +9,16 @@ mod mesh;
 mod mesh_gpu;
 mod naming;
 mod output;
+#[cfg(test)]
+pub(crate) use output::tests::settings as test_output_settings;
+mod placement;
 #[cfg(target_os = "macos")]
 mod platform;
 #[cfg(target_os = "windows")]
 mod platform_windows;
+mod recenter;
 pub(crate) mod scrolling;
+mod source_crop;
 #[cfg(test)]
 mod tests;
 
@@ -42,13 +47,16 @@ pub use naming::{capture_file_stem, screenshot_directory, unique_path};
 pub use output::compose_screenshot;
 #[cfg(target_os = "windows")]
 pub(crate) use output::output_dimensions;
+pub(crate) use output::parse_hex_colour;
 pub use output::ScreenshotOutputSettings;
-pub(crate) use output::{output_placement, parse_hex_colour};
+pub(crate) use placement::output_placement;
 #[cfg(target_os = "macos")]
 pub(crate) use platform::{
   alpha_composite, compose_output_layers, native_canvas, NativeCanvas, StillOverlay,
 };
-
+#[cfg(target_os = "windows")]
+pub(crate) use recenter::{colour_f32, foreground_bounds_f32, optional_colour_f32};
+pub(crate) use source_crop::NormalizedSourceRect;
 /// A captured still: straight (non-premultiplied) RGBA8, packed rows, top down.
 /// That is what both the clipboard and the PNG encoder want.
 #[derive(Clone)]
@@ -66,6 +74,9 @@ pub(crate) fn validate_output_settings(
 ) -> Result<(), String> {
   output_placement(source_width, source_height, settings)?;
   parse_hex_colour(&settings.background_color)?;
+  if let Some(colour) = settings.recenter_inset_color.as_deref() {
+    parse_hex_colour(colour)?;
+  }
   if !settings.radius_percent.is_finite()
     || !(0.0..=50.0).contains(&settings.radius_percent)
     || !settings.background_radius_percent.is_finite()

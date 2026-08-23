@@ -50,6 +50,10 @@ use windows::{
 mod compositor;
 #[path = "surface_windows/editor.rs"]
 mod editor;
+#[path = "surface_windows/osc_action.rs"]
+mod osc_action;
+#[path = "surface_windows/recenter.rs"]
+mod recenter;
 #[path = "surface_windows/selection.rs"]
 mod selection;
 #[path = "surface_windows/snapping.rs"]
@@ -155,29 +159,22 @@ struct Backdrop {
 struct Pane {
   /// Stable viewport-local geometry before the shared workspace transform.
   base_rect: PreviewSurfaceRect,
-  /// Allocated swap-chain size. Grown with headroom and kept, so an
-  /// interactive canvas resize does not reallocate GPU buffers per pointer
-  /// move; `SetSourceSize` presents only the `content_size` region.
+  /// Retained swap-chain allocation; `content_size` is the presented region.
   buffer_size: (u32, u32),
   clip: IDCompositionRectangleClip,
   clip_edges: (i32, i32, i32, i32),
   /// The presented region of the buffer - the actual output resolution.
   content_size: (u32, u32),
   display_size: (i32, i32),
-  /// Geometry laid out but not yet committed. Applying it before the matching
-  /// frame is composed would show the previous buffer fitted into the new
-  /// rect for a display tick; the next present (or batch flush) publishes it
-  /// together with the new pixels.
+  /// Geometry waiting to publish atomically with its matching frame.
   pending_geometry: bool,
-  /// The cursor and timeline state of the last composed frame. A paused
-  /// output-settings change redraws from the cached source with this
-  /// composition instead of round-tripping through the decoder.
+  /// Last composition, retained for redraws that do not need another decode.
   last_composition: Option<ComposedFrame>,
   /// The camera overlay the most recent present composed over the source, so a
   /// local redraw (magnifier, geometry) never drops the baked camera for a frame.
   last_camera: Option<(BakeGeometry, bool, bool)>,
   settings: Option<ScreenshotOutputSettings>,
-  magnifier: Option<CropMagnifier>,
+  magnifier: Option<recenter::CropMagnifier>,
   /// A frame drawn inside an open present batch, waiting for the batch flush
   /// to call `Present` so every pane's new pixels reach the compositor in the
   /// same pass.
@@ -195,13 +192,6 @@ struct Pane {
   source_token: Option<u64>,
   swap_chain: IDXGISwapChain3,
   visual: IDCompositionVisual,
-}
-
-#[derive(Clone, Copy)]
-struct CropMagnifier {
-  display_box: [f32; 4],
-  geometry: [f32; 4],
-  options: [f32; 4],
 }
 
 struct SurfaceState {
@@ -872,21 +862,10 @@ fn update_magnifier(state: &mut SurfaceState) {
       width: selection.width * rect.width,
       height: selection.height * rect.height,
     };
-    (
-      if gesture.edges & 1 != 0 {
-        frame.x
-      } else if gesture.edges & 2 != 0 {
-        frame.x + frame.width
-      } else {
-        state.last_pointer.0
-      },
-      if gesture.edges & 4 != 0 {
-        frame.y
-      } else if gesture.edges & 8 != 0 {
-        frame.y + frame.height
-      } else {
-        state.last_pointer.1
-      },
+    workspace_editor::crop_magnifier_anchor(
+      [frame.x, frame.y, frame.width, frame.height],
+      state.last_pointer,
+      gesture.edges,
     )
   } else {
     state.last_pointer
@@ -897,7 +876,8 @@ fn update_magnifier(state: &mut SurfaceState) {
   let sample_camera = state.camera_source.is_some() && selection.layer_id != selection.pane_index;
   let luminance =
     state.backdrop[0] * 0.2126 + state.backdrop[1] * 0.7152 + state.backdrop[2] * 0.0722;
-  pane.magnifier = Some(CropMagnifier {
+  pane.magnifier = Some(recenter::CropMagnifier {
+    bounds: recenter::magnifier_bounds(selection),
     display_box: [
       (display_point.0 - 48.0) as f32,
       (display_point.1 - 48.0) as f32,
@@ -1199,9 +1179,12 @@ fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
         height * scale as f32,
       ]
     });
-  // The "W × H" readout under the box, in output pixels (the Metal backend's
-  // `selection_pixel_size` label).
+  // The output-pixel size readout, or Recenter action, below the box.
+  let recenter_action = recenter::action_visible(state);
   let label_text = display.and_then(|_| {
+    if recenter_action {
+      return Some("Recenter".to_owned());
+    }
     let (width, height) = selection_pixel_size(state, state.selection?)?;
     Some(format!(
       "{} × {}",
@@ -1223,6 +1206,7 @@ fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       guides,
       magnifier_box,
       label_text.as_deref(),
+      recenter_action,
       scale,
       luminance > 0.5,
     );
@@ -1429,6 +1413,11 @@ fn rebase_workspace_fit(state: &mut SurfaceState, start: &FrameResizeStart) {
   // Pane rects and `WorkspaceTransform::apply` are viewport-relative, so the
   // displayed union and the fit stay in that space; adding the viewport origin
   // here would shift every pane by it on each move.
+  let natural = state
+    .workspace_natural_size
+    .map_or((bounds.width, bounds.height), |(width, height)| {
+      (f64::from(width), f64::from(height))
+    });
   let rebased = rebase_display_fit(
     (state.viewport.width, state.viewport.height),
     DisplayRect {
@@ -1437,6 +1426,7 @@ fn rebase_workspace_fit(state: &mut SurfaceState, start: &FrameResizeStart) {
       width: displayed.width,
       height: displayed.height,
     },
+    natural,
     8.0,
   );
   let fit = PreviewSurfaceRect {
@@ -1585,6 +1575,10 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       y,
       snapping: _,
     } => {
+      if recenter::begin_action(inner, (x, y)) {
+        editor::EditorWindow::set_cursor(editor::CursorKind::Arrow);
+        return;
+      }
       let point = logical(x, y);
       let mut selected = None;
       let mut began = None;
@@ -1767,6 +1761,10 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       snapping,
     } => {
       let point = logical(x, y);
+      if recenter::update_action(inner, (x, y)) {
+        editor::EditorWindow::set_cursor(editor::CursorKind::Arrow);
+        return;
+      }
       let mut update = None;
       let mut zoom = None;
       if let Ok(mut state) = inner.state.lock() {
@@ -1797,11 +1795,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                 if gesture.operation == SelectionGestureOperation::FrameResize {
                   clear_selection_snap_guides(&mut state);
                   let start = gesture.pane_start;
-                  // Pointer travel is display points; pane rects are pre-zoom
-                  // workspace points. The gesture's *starting* zoom converts
-                  // between them for the whole drag - the live zoom is
-                  // rebased on every move, and feeding that back would make
-                  // the canvas chase the pointer.
+                  // Convert display travel with the immutable starting zoom.
                   let start_zoom = state
                     .frame_resize
                     .as_ref()
@@ -1886,20 +1880,8 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                   gesture.last_delta =
                     (raw_x / start.width.max(1.0), raw_y / start.height.max(1.0));
                   gesture.last_scale = 1.0;
-                  // The gesture emitted below re-composes this canvas
-                  // synchronously, and that present publishes the boxes: one
-                  // commit per input, with pixels and geometry agreeing.
-                  //
-                  // The composed canvas and this box are derived from the
-                  // same pointer travel (`resize_recording_frame` versus the
-                  // edge maths above), so they agree except where the shared
-                  // model's own bounds bite - `FRAME_MIN_SIZE` (64 output px)
-                  // and `FRAME_MAX_AREA`, neither of which the local 36-point
-                  // minimum expresses, plus integer rounding of the output
-                  // size. At those extremes `update_geometry`'s uniform fit
-                  // centres the canvas in the box, which is the graceful
-                  // outcome; nothing accumulates, because every move
-                  // re-derives the box from the gesture's starts.
+                  // The synchronous present publishes pixels and boxes from
+                  // the same pointer sample; uniform fit handles model limits.
                   apply_workspace_transform(inner, &mut state, true);
                 } else if matches!(
                   gesture.operation,
@@ -1921,12 +1903,8 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                 } else if gesture.operation == SelectionGestureOperation::Move {
                   let auto_fit_active = state.move_auto_fit.as_ref().is_some_and(|fit| fit.active);
                   if auto_fit_active && !centered {
-                    // Releasing Alt accepts the grown canvas. The remainder of
-                    // this pointer gesture is rebased onto that committed
-                    // scene - React and the managers keep one edit-history
-                    // transaction open across the checkpoint - and the DOM
-                    // layout that follows carries its size, so it keeps the
-                    // rebased transform exactly like a Frame resize commit.
+                    // Rebase the remaining drag onto the accepted grown canvas
+                    // while its one edit-history transaction remains open.
                     state.frame_resize = None;
                     state.frame_resize_committed = true;
                     // The committed canvas becomes the move's starting point,
@@ -1964,11 +1942,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                   } else {
                     let auto_fit = centered && state.move_auto_fit.is_some();
                     if auto_fit && state.frame_resize.is_none() {
-                      // First Alt sample (of this gesture, or since an Alt
-                      // release committed): the native side takes over the
-                      // pane geometry for the grown canvas, as for a Frame
-                      // resize. The box grows from wherever the pane is now -
-                      // after a commit the DOM layout may have re-placed it.
+                      // The first Alt sample takes over the current pane box.
                       if let Some(size) = state.workspace_natural_size {
                         let transform = state.workspace_transform;
                         state.workspace_transforms.insert(size, transform);
@@ -1976,10 +1950,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                       gesture.pane_start = selection_pane_rect(&state, gesture.selection_start);
                       state.frame_resize = Some(frame_resize_start(&state));
                     }
-                    // While the canvas is grown every sample re-derives from
-                    // mouse-down geometry: the pane box and zoom are rebased on
-                    // each move, and feeding those back would make the layer
-                    // chase the pointer.
+                    // Re-derive grown samples from mouse-down geometry.
                     let (move_pane, move_zoom) = state
                       .frame_resize
                       .as_ref()
@@ -1993,7 +1964,10 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                     selection.x += dx;
                     selection.y += dy;
                     gesture.last_delta = (dx, dy);
-                    if state.selection_snapping_enabled && snapping {
+                    if gesture.selection_start.recenter_mode == 0
+                      && state.selection_snapping_enabled
+                      && snapping
+                    {
                       let targets_x = selection_snap_targets(&state, gesture.selection_start, true);
                       let targets_y =
                         selection_snap_targets(&state, gesture.selection_start, false);
@@ -2149,117 +2123,98 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                 } else {
                   let edges = gesture.edges;
                   let start = gesture.selection_start;
-                  let anchor_x = if edges & 1 != 0 {
-                    start.x + start.width
-                  } else if edges & 2 != 0 {
-                    start.x
-                  } else {
-                    start.x + start.width / 2.0
-                  };
-                  let anchor_y = if edges & 4 != 0 {
-                    start.y + start.height
-                  } else if edges & 8 != 0 {
-                    start.y
-                  } else {
-                    start.y + start.height / 2.0
-                  };
-                  let handle_x = if edges & 1 != 0 {
-                    start.x
-                  } else if edges & 2 != 0 {
-                    start.x + start.width
-                  } else {
-                    start.x + start.width / 2.0
-                  };
-                  let handle_y = if edges & 4 != 0 {
-                    start.y
-                  } else if edges & 8 != 0 {
-                    start.y + start.height
-                  } else {
-                    start.y + start.height / 2.0
-                  };
-                  let vx = handle_x - anchor_x;
-                  let vy = handle_y - anchor_y;
-                  let denominator = vx * vx + vy * vy;
-                  let factor = if denominator > 0.0 {
-                    ((dx + vx) * vx + (dy + vy) * vy) / denominator
-                  } else {
-                    1.0
-                  };
-                  let minimum = (36.0
-                    / (pane.width * state.workspace_transform.zoom * start.width).max(1.0))
-                  .max(
-                    36.0 / (pane.height * state.workspace_transform.zoom * start.height).max(1.0),
-                  );
-                  let factor = factor.clamp(minimum.min(8.0), 8.0);
-                  let mut factor = factor;
-                  if state.selection_snapping_enabled && snapping {
-                    let targets_x = selection_snap_targets(&state, start, true);
-                    let targets_y = selection_snap_targets(&state, start, false);
-                    let horizontal = snapping::resize_axis(
-                      anchor_x,
-                      vx,
-                      factor,
-                      pane.width,
-                      pane.height,
-                      state.workspace_transform.zoom,
-                      minimum,
-                      8.0,
-                      &targets_x,
-                      start.layer_id,
-                    );
-                    let vertical = snapping::resize_axis(
-                      anchor_y,
-                      vy,
-                      factor,
-                      pane.height,
-                      pane.width,
-                      state.workspace_transform.zoom,
-                      minimum,
-                      8.0,
-                      &targets_y,
-                      start.layer_id,
-                    );
-                    let chosen = if horizontal.found
-                      && (!vertical.found || horizontal.distance <= vertical.distance)
-                    {
-                      horizontal
-                    } else {
-                      vertical
-                    };
-                    if chosen.found {
-                      factor = chosen.adjustment;
-                    }
-                    let x_difference = horizontal
-                      .found
-                      .then_some(
-                        (horizontal.adjustment - factor).abs()
-                          * vx.abs()
-                          * pane.width
-                          * state.workspace_transform.zoom,
-                      )
-                      .unwrap_or(f64::INFINITY);
-                    let y_difference = vertical
-                      .found
-                      .then_some(
-                        (vertical.adjustment - factor).abs()
-                          * vy.abs()
-                          * pane.height
-                          * state.workspace_transform.zoom,
-                      )
-                      .unwrap_or(f64::INFINITY);
-                    state.selection_snap_guide_x =
-                      (horizontal.found && x_difference <= 0.5).then_some(horizontal);
-                    state.selection_snap_guide_y =
-                      (vertical.found && y_difference <= 0.5).then_some(vertical);
-                  } else {
+                  if start.recenter_mode != 0 {
                     clear_selection_snap_guides(&mut state);
+                    let (next, factor) =
+                      recenter::inset_resize(start, edges, (dx, dy), (pane.width, pane.height));
+                    selection.x = next.x;
+                    selection.y = next.y;
+                    selection.width = next.width;
+                    selection.height = next.height;
+                    gesture.last_delta = (selection.x - start.x, selection.y - start.y);
+                    gesture.last_scale = factor;
+                  } else {
+                    let resize = recenter::selection_resize(
+                      start,
+                      edges,
+                      (dx, dy),
+                      (pane.width, pane.height),
+                      state.workspace_transform.zoom,
+                      centered,
+                    );
+                    let (anchor_x, anchor_y) = resize.anchor;
+                    let (vx, vy) = resize.vector;
+                    let maximum = resize.maximum_scale;
+                    let mut factor = resize.scale;
+                    if state.selection_snapping_enabled && snapping {
+                      let targets_x = selection_snap_targets(&state, start, true);
+                      let targets_y = selection_snap_targets(&state, start, false);
+                      let horizontal = snapping::resize_axis(
+                        anchor_x,
+                        vx,
+                        factor,
+                        pane.width,
+                        pane.height,
+                        state.workspace_transform.zoom,
+                        resize.minimum_scale,
+                        maximum,
+                        &targets_x,
+                        start.layer_id,
+                      );
+                      let vertical = snapping::resize_axis(
+                        anchor_y,
+                        vy,
+                        factor,
+                        pane.height,
+                        pane.width,
+                        state.workspace_transform.zoom,
+                        resize.minimum_scale,
+                        maximum,
+                        &targets_y,
+                        start.layer_id,
+                      );
+                      let chosen = if horizontal.found
+                        && (!vertical.found || horizontal.distance <= vertical.distance)
+                      {
+                        horizontal
+                      } else {
+                        vertical
+                      };
+                      if chosen.found {
+                        factor = chosen.adjustment;
+                      }
+                      let x_difference = horizontal
+                        .found
+                        .then_some(
+                          (horizontal.adjustment - factor).abs()
+                            * vx.abs()
+                            * pane.width
+                            * state.workspace_transform.zoom,
+                        )
+                        .unwrap_or(f64::INFINITY);
+                      let y_difference = vertical
+                        .found
+                        .then_some(
+                          (vertical.adjustment - factor).abs()
+                            * vy.abs()
+                            * pane.height
+                            * state.workspace_transform.zoom,
+                        )
+                        .unwrap_or(f64::INFINITY);
+                      state.selection_snap_guide_x =
+                        (horizontal.found && x_difference <= 0.5).then_some(horizontal);
+                      state.selection_snap_guide_y =
+                        (vertical.found && y_difference <= 0.5).then_some(vertical);
+                    } else {
+                      clear_selection_snap_guides(&mut state);
+                    }
+                    selection.x = anchor_x + (start.x - anchor_x) * factor;
+                    selection.y = anchor_y + (start.y - anchor_y) * factor;
+                    selection.width = start.width * factor;
+                    selection.height = start.height * factor;
+                    gesture.last_delta = (selection.x - start.x, selection.y - start.y);
+                    gesture.last_scale = factor;
                   }
-                  selection.x = anchor_x + (start.x - anchor_x) * factor;
-                  selection.y = anchor_y + (start.y - anchor_y) * factor;
-                  selection.width = start.width * factor;
-                  selection.height = start.height * factor;
-                  gesture.last_delta = (selection.x - start.x, selection.y - start.y);
-                  gesture.last_scale = factor;
                 }
                 state.selection = Some(selection);
                 state.gesture = Some(ActiveGesture::Selection(gesture));
@@ -2312,6 +2267,10 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
     }
     editor::Input::Up { x, y } => {
       let point = logical(x, y);
+      if recenter::release_action(inner, (x, y), point) {
+        editor::EditorWindow::set_cursor(editor::CursorKind::Arrow);
+        return;
+      }
       let mut ended = None;
       if let Ok(mut state) = inner.state.lock() {
         state.last_pointer = point;

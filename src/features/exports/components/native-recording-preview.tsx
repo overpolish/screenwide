@@ -18,15 +18,16 @@ import {
 } from "../camera-overlay-geometry";
 import { PREVIEW_FRAME_MS } from "../duration";
 import { defaultCameraOverlay } from "../recording-export-settings";
+import { uncroppedRecordingPreviewOutput } from "../screenshot-crop";
 import {
   RecordingOutputSettings,
+  defaultScreenshotOutput,
   defaultRecordingOutput,
   recordingVideoTrackOrder,
   resizeScreenshotWorkspaceCanvasEdges,
   screenshotOutputDimensions,
   screenshotLayout,
   screenshotWorkspaceItemOutput,
-  uncroppedScreenshotPreviewOutput,
 } from "../screenshot-output";
 import {
   CameraOverlaySettings,
@@ -194,7 +195,7 @@ export function NativeRecordingPreview({
       return effectiveRecordingOutput;
     return {
       ...effectiveRecordingOutput,
-      [activeVideoTrack]: uncroppedScreenshotPreviewOutput(
+      [activeVideoTrack]: uncroppedRecordingPreviewOutput(
         cropSource,
         effectiveRecordingOutput[activeVideoTrack],
       ),
@@ -1240,30 +1241,10 @@ export function NativeRecordingPreview({
                     (player.isPreparing || isPreparingPreview)
                   }
                   outputSettings={
-                    // The draft-derived output, so the composed frame and the
-                    // native workspace follow the resize before it reaches the
-                    // export window's state.
-                    activeRecordingOutput?.primary ?? {
-                      backgroundColor: "#171717",
-                      backgroundRadiusPercent: 0,
-                      backgroundType: "solid",
-                      dropShadow: true,
-                      height: screenPane.height,
-                      meshColors: [],
-                      meshLockedColors: [],
-                      meshPoints: [],
-                      meshSeed: 0,
-                      meshWarpPercent: 0,
-                      radiusPercent: 0,
-                      screenshotCropHeightPercent: 100,
-                      screenshotCropWidthPercent: 100,
-                      screenshotCropXPercent: 0,
-                      screenshotCropYPercent: 0,
-                      screenshotImageWidthPercent: 100,
-                      screenshotImageXPercent: 50,
-                      screenshotImageYPercent: 50,
-                      width: screenPane.width,
-                    }
+                    // Draft output keeps the frame and workspace on the resize
+                    // before it reaches the export window's state.
+                    activeRecordingOutput?.primary ??
+                    defaultScreenshotOutput(screenPane.width, screenPane.height)
                   }
                   screenCanvasRef={screenCanvasRef}
                   tool={canvasTool}

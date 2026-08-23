@@ -40,17 +40,18 @@ pub struct DisplayFitRebase {
 pub fn rebase_display_fit(
   viewport: (f64, f64),
   displayed: DisplayRect,
+  natural: (f64, f64),
   gutter: f64,
 ) -> DisplayFitRebase {
   let available_width = (viewport.0 - gutter * 2.0).max(1.0);
   let available_height = (viewport.1 - gutter * 2.0).max(1.0);
-  let aspect = displayed.width.max(1.0) / displayed.height.max(1.0);
-  let mut fit_width = available_width;
-  let mut fit_height = fit_width / aspect.max(0.000_001);
-  if fit_height > available_height {
-    fit_height = available_height;
-    fit_width = fit_height * aspect;
-  }
+  let natural_width = natural.0.max(1.0);
+  let natural_height = natural.1.max(1.0);
+  let points_per_pixel = 1.0_f64
+    .min(available_width / natural_width)
+    .min(available_height / natural_height);
+  let fit_width = natural_width * points_per_pixel;
+  let fit_height = natural_height * points_per_pixel;
   let fit = DisplayRect {
     x: (viewport.0 - fit_width) / 2.0,
     y: (viewport.1 - fit_height) / 2.0,

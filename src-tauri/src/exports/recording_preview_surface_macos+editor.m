@@ -62,10 +62,12 @@
 - (void)mouseMoved:(NSEvent *)event {
   [self claimCursorControl];
   NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+  selection_action_hover(self.surface, point);
   set_selection_cursor_at_point(self.surface, point);
 }
 - (void)mouseEntered:(NSEvent *)event { [self mouseMoved:event]; }
 - (void)mouseExited:(NSEvent *)event {
+  if (self.surface.selectionActionHovered) { self.surface.selectionActionHovered = NO; redraw_selection(self.surface); }
   [self releaseCursorControl];
   [[NSCursor arrowCursor] set];
   (void)event;
@@ -121,6 +123,7 @@
                     self.surface.selectionGestureCallback != NULL &&
                     self.surface.hasSelection &&
                     self.surface.selection.pane_index < self.surface.editorBaseRects.count;
+  if (canGesture && selection_action_begin(self.surface, event.buttonNumber, point)) return;
   if (event.buttonNumber == 0 && self.surface.selectionHitTestingEnabled) {
     ScreenwidePreviewSelection target;
     uint8_t sharedHandle = 0;
@@ -314,6 +317,7 @@
 }
 - (void)mouseDragged:(NSEvent *)event {
   NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+  if (selection_action_drag(self.surface, point)) return;
   if (self.selectionDragActive) {
     NSPoint delta = NSMakePoint(point.x - self.selectionDragOrigin.x,
                                 point.y - self.selectionDragOrigin.y);
@@ -523,43 +527,45 @@
       uint32_t edges = self.selectionDragEdges;
       ScreenwidePreviewSelection start = self.selectionDragStart;
       double x = start.x, y = start.y, width = start.width, height = start.height;
+      BOOL recentering = start.recenter_mode != 0 && start.recenter_width > 0.0 && start.recenter_height > 0.0;
+      if (recentering) { selection_recenter_drag(self.surface, start, edges, dx, dy, pane.size); return; }
       BOOL centered = (event.modifierFlags & NSEventModifierFlagOption) != 0;
       double anchorX = centered ? start.x + start.width / 2.0
-                                : (edges & 1) ? start.x + start.width
-                                              : (edges & 2) ? start.x : start.x + start.width / 2.0;
+          : (edges & 1) ? start.x + start.width
+          : (edges & 2) ? start.x : start.x + start.width / 2.0;
       double anchorY = centered ? start.y + start.height / 2.0
-                                : (edges & 4) ? start.y + start.height
-                                              : (edges & 8) ? start.y : start.y + start.height / 2.0;
+          : (edges & 4) ? start.y + start.height
+          : (edges & 8) ? start.y : start.y + start.height / 2.0;
       double handleX = (edges & 1) ? start.x : (edges & 2) ? start.x + start.width
                                                             : start.x + start.width / 2.0;
       double handleY = (edges & 4) ? start.y : (edges & 8) ? start.y + start.height
                                                             : start.y + start.height / 2.0;
-      double vectorX = handleX - anchorX;
-      double vectorY = handleY - anchorY;
+      double vectorX = handleX - anchorX, vectorY = handleY - anchorY;
       double denominator = vectorX * vectorX + vectorY * vectorY;
       double scale = denominator > 0.0
           ? ((dx + handleX - anchorX) * vectorX +
              (dy + handleY - anchorY) * vectorY) / denominator
           : 1.0;
-      double minimumWidthScale = 36.0 /
-          MAX(pane.size.width * self.surface.editorZoom * start.width, 1.0);
-      double minimumHeightScale = 36.0 /
-          MAX(pane.size.height * self.surface.editorZoom * start.height, 1.0);
+      double minimumWidthScale = 36.0 / MAX(pane.size.width * self.surface.editorZoom * start.width, 1.0);
+      double minimumHeightScale = 36.0 / MAX(pane.size.height * self.surface.editorZoom * start.height, 1.0);
       double minimumScale = MAX(minimumWidthScale, minimumHeightScale);
-      scale = fmin(8.0, fmax(minimumScale, scale));
-      BOOL snapping = self.surface.selectionSnappingEnabled &&
+      double maximumScale = recentering ? MIN(
+          start.recenter_width / MAX(start.width, 0.000001),
+          start.recenter_height / MAX(start.height, 0.000001)) : 8.0;
+      maximumScale = MAX(maximumScale, 0.01);
+      double effectiveMinimumScale = MIN(minimumScale, maximumScale);
+      scale = fmin(maximumScale, fmax(effectiveMinimumScale, scale));
+      BOOL snapping = !recentering && self.surface.selectionSnappingEnabled &&
           (event.modifierFlags & (NSEventModifierFlagCommand |
                                   NSEventModifierFlagControl)) != 0;
       if (snapping)
         scale = snap_selection_resize(
             self.surface, scale, anchorX, anchorY, vectorX, vectorY,
-            edges, pane, minimumScale, 8.0);
+            edges, pane, effectiveMinimumScale, maximumScale);
       else
         clear_selection_snap_guides(self.surface);
-      x = anchorX + (start.x - anchorX) * scale;
-      y = anchorY + (start.y - anchorY) * scale;
-      width = start.width * scale;
-      height = start.height * scale;
+      x = anchorX + (start.x - anchorX) * scale; y = anchorY + (start.y - anchorY) * scale;
+      width = start.width * scale; height = start.height * scale;
       ScreenwidePreviewSelection resized = start;
       resized.x = x; resized.y = y; resized.width = width; resized.height = height;
       self.surface.selection = resized;
@@ -581,10 +587,7 @@
         self.selectionDragOrigin = point;
         self.selectionMoveDeltaX = 0.0;
         self.selectionMoveDeltaY = 0.0;
-        // The committed canvas becomes the move's new starting point, so
-        // Option can grow it again later in this same gesture: re-express
-        // the mouse-down targets in it and re-snapshot the workspace exactly
-        // as beginWorkspaceMove did at mouse-down.
+        // Rebase the mouse-down targets so Option can grow the canvas again.
         NSRect bounds = self.selectionMoveAutoFitBounds;
         if (bounds.size.width > 0.0 && bounds.size.height > 0.0) {
           NSMutableArray<NSValue *> *rebased = [NSMutableArray
@@ -628,7 +631,8 @@
           MAX(movePane.size.height * self.selectionMoveZoomStart, 1.0);
       double x = self.selectionDragStart.x + moveDeltaX;
       double y = self.selectionDragStart.y + moveDeltaY;
-      BOOL snapping = self.surface.selectionSnappingEnabled &&
+      BOOL snapping = self.selectionDragStart.recenter_mode == 0 &&
+          self.surface.selectionSnappingEnabled &&
           (event.modifierFlags & (NSEventModifierFlagCommand |
                                   NSEventModifierFlagControl)) != 0;
       if (snapping) snap_selection_move(self.surface, &x, &y);
@@ -723,6 +727,7 @@
   apply_editor_transform(self.surface);
 }
 - (void)mouseUp:(NSEvent *)event {
+  if (selection_action_end(self.surface, [self convertPoint:event.locationInWindow fromView:nil])) return;
   BOOL hadSnapGuides = self.surface.hasSelectionSnapGuideX ||
                        self.surface.hasSelectionSnapGuideY;
   BOOL hadMagnifier = self.surface.workspaceMagnifier.active != 0;
@@ -735,15 +740,14 @@
         self.selectionDragOperation == 6)
       [self mouseDragged:event];
     NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
-    double scale = (self.selectionDragOperation == 2 ||
-                    self.selectionDragOperation == 4)
-                       ? self.surface.selection.radius_percent
-                       : self.selectionDragOperation == 1 &&
-                           self.selectionDragStart.width > 0.0
-                       ? self.surface.selection.width /
-                             self.selectionDragStart.width
-                       : 1.0;
     uint32_t edges = self.selectionDragEdges;
+    double scale = 1.0;
+    if (self.selectionDragOperation == 2 || self.selectionDragOperation == 4)
+      scale = self.surface.selection.radius_percent;
+    else if (self.selectionDragOperation == 1 && self.selectionDragStart.width > 0.0)
+      scale = self.selectionDragStart.recenter_mode != 0
+          ? selection_recenter_scale(self.selectionDragStart, self.surface.selection, edges)
+          : self.surface.selection.width / self.selectionDragStart.width;
     double deltaX = self.surface.selection.x - self.selectionDragStart.x;
     double deltaY = self.surface.selection.y - self.selectionDragStart.y;
     if (self.selectionDragOperation == 6) {
@@ -821,4 +825,3 @@
                   self.surface.editorZoom * (1.0 + event.magnification), point);
 }
 @end
-

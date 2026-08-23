@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Crop, MousePointer2, ScanSquare } from "lucide-react";
+import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { ReactNode, useRef, useState } from "react";
 
 import {
@@ -9,9 +9,9 @@ import {
   scaledVideoDimensions,
   sourceScalePercent,
 } from "../resolution";
+import { resetCommittedScreenshotCrop } from "../screenshot-crop";
 import {
   RecordingOutputSettings,
-  resetScreenshotCrop,
   resetScreenshotTransform,
   resizeScreenshotWorkspaceCentered,
   ScreenshotOutputSettings,
@@ -40,6 +40,7 @@ import {
 } from "./screenshot-layer-actions";
 import { ScreenshotToolToggle } from "./screenshot-tool-toggle";
 import { ScrubPreview } from "./scrub-preview";
+import { useScreenshotRecenter } from "./use-screenshot-recenter";
 
 /**
  * The screenshot section. Sibling to `RecordingSection`, and the reason the
@@ -75,9 +76,9 @@ export function ScreenshotSection({
   const [maximumZoomPercent, setMaximumZoomPercent] = useState(
     MINIMUM_ZOOM_CEILING * 100,
   );
-  const [tool, setTool] = useState<"canvas" | "crop" | "select" | null>(
-    "select",
-  );
+  const [tool, setTool] = useState<
+    "canvas" | "crop" | "recenter" | "select" | null
+  >("select");
   const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
   const moveSelectedLayer = (
     direction: "backward" | "forward",
@@ -116,6 +117,16 @@ export function ScreenshotSection({
     screenshotOutput && selectedItem
       ? screenshotWorkspaceItemOutput(screenshotOutput, selectedItem.id)
       : null;
+  const recenter = useScreenshotRecenter({
+    artifactId: artifact.id,
+    onOutputChange,
+    selectedItem,
+    selectedOutput,
+  });
+  const setRecenterSelected = (selected: boolean) => {
+    setTool(selected ? "recenter" : null);
+    if (selected) recenter.prepare();
+  };
   // A keyboard nudge writes exactly the fields a select-tool drag writes - the
   // `move` branch of `selectionGesture` in preview-viewport.tsx. It is not
   // wrapped in an edit gesture on purpose: the history hook already groups
@@ -175,6 +186,9 @@ export function ScreenshotSection({
       tool === "select" && selectedItem && selectedOutput
         ? nudgeSelectedLayer
         : undefined,
+    onRecenter: () => {
+      setRecenterSelected(tool !== "recenter");
+    },
     onResizeCanvas: () => {
       setTool((current) => (current === "canvas" ? null : "canvas"));
     },
@@ -241,7 +255,7 @@ export function ScreenshotSection({
               onReset={() => {
                 if (!selectedItem || !selectedOutput) return;
                 onOutputChange?.(
-                  resetScreenshotCrop(selectedOutput, selectedItem),
+                  resetCommittedScreenshotCrop(selectedOutput, selectedItem),
                   selectedItem.id,
                 );
               }}
@@ -254,6 +268,16 @@ export function ScreenshotSection({
             >
               <Crop size={15} />
             </ScreenshotToolToggle>
+            <ScreenshotToolToggle
+              isSelected={tool === "recenter"}
+              label="Recenter"
+              name="Recenter screenshot"
+              onReset={recenter.reset}
+              onSelectedChange={setRecenterSelected}
+              shortcut="R"
+            >
+              <CircleDotDashed size={15} />
+            </ScreenshotToolToggle>
           </div>
         }
         zoomPercent={zoomPercent}
@@ -262,6 +286,7 @@ export function ScreenshotSection({
         alt="Screenshot preview"
         artifactId={artifact.id}
         isEditing={tool === "crop"}
+        isRecentering={tool === "recenter"}
         isResizingCanvas={tool === "canvas"}
         isSaving={isSaving}
         isSelecting={tool === "select"}
@@ -277,6 +302,7 @@ export function ScreenshotSection({
           setMaximumZoomPercent(Math.round(maximumZoom(fit) * 100));
         }}
         onRadiusChangeEnd={onRadiusChangeEnd}
+        onRecenter={recenter.begin}
         onZoomChange={setZoomPercent}
         screenshotOutput={screenshotOutput}
         selectedItemId={selectedItemId}

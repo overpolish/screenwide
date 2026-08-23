@@ -48,6 +48,17 @@ const normalizedAudioTrackVolumes = (volumes: AudioTrackVolume[]) =>
     decibels: finite(volume.decibels, 0),
   }));
 
+type PreviewSelectionLayout = {
+  paneIndex: number;
+  radiusPercent: number;
+  rect: { height: number; width: number; x: number; y: number };
+  cropMode?: boolean;
+  image?: { height: number; width: number; x: number; y: number };
+  layerId?: number;
+  recenterBounds?: { height: number; width: number; x: number; y: number };
+  recenterMode?: boolean;
+};
+
 export type RecordingPreviewPlayerEvent =
   | { event: "ended" }
   | { data: { message: string }; event: "error" }
@@ -151,24 +162,8 @@ export const layoutRecordingPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
-  selection?: {
-    paneIndex: number;
-    radiusPercent: number;
-    rect: { height: number; width: number; x: number; y: number };
-    cropMode?: boolean;
-    image?: { height: number; width: number; x: number; y: number };
-    layerId?: number;
-  } | null;
-  selectionTargets?:
-    | {
-        paneIndex: number;
-        radiusPercent: number;
-        rect: { height: number; width: number; x: number; y: number };
-        cropMode?: boolean;
-        image?: { height: number; width: number; x: number; y: number };
-        layerId?: number;
-      }[]
-    | null;
+  selection?: PreviewSelectionLayout | null;
+  selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
   invoke<null>("layout_recording_preview_surface", {
     layout: {
@@ -317,24 +312,8 @@ export const layoutScreenshotPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
-  selection?: {
-    paneIndex: number;
-    radiusPercent: number;
-    rect: { height: number; width: number; x: number; y: number };
-    cropMode?: boolean;
-    image?: { height: number; width: number; x: number; y: number };
-    layerId?: number;
-  } | null;
-  selectionTargets?:
-    | {
-        paneIndex: number;
-        radiusPercent: number;
-        rect: { height: number; width: number; x: number; y: number };
-        cropMode?: boolean;
-        image?: { height: number; width: number; x: number; y: number };
-        layerId?: number;
-      }[]
-    | null;
+  selection?: PreviewSelectionLayout | null;
+  selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
   invoke<null>("layout_screenshot_preview_surface", {
     backdrop,

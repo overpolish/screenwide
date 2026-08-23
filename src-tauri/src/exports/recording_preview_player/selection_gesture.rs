@@ -133,9 +133,9 @@ impl PreviewPlayerManager {
             SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
             SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
             SelectionGestureOperation::Radius => WorkspaceGestureOperation::Radius,
-            SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
-              return Ok(())
-            }
+            SelectionGestureOperation::FrameResize
+            | SelectionGestureOperation::FrameRadius
+            | SelectionGestureOperation::RecenterAction => return Ok(()),
             SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
               unreachable!("crop gestures are mirrored by the frontend")
             }
@@ -230,9 +230,9 @@ impl PreviewPlayerManager {
           SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
           SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
           SelectionGestureOperation::Radius => WorkspaceGestureOperation::Radius,
-          SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
-            return Ok(())
-          }
+          SelectionGestureOperation::FrameResize
+          | SelectionGestureOperation::FrameRadius
+          | SelectionGestureOperation::RecenterAction => return Ok(()),
           SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
             unreachable!("crop gestures are mirrored by the frontend")
           }

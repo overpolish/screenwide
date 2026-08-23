@@ -66,9 +66,8 @@ struct CameraUniforms {
   uint source_height;
   uint drop_shadow;
 };
-
 struct CanvasUniforms {
-  packed_float4 background_color;
+  packed_float4 background_color, recenter_inset_color;
   uint background_radius;
   int crop_x;
   int crop_y;
@@ -78,6 +77,8 @@ struct CanvasUniforms {
   float image_y;
   uint image_width;
   uint image_height;
+  int source_crop_x, source_crop_y;
+  uint source_crop_width, source_crop_height;
   uint radius;
   uint drop_shadow;
   uint mesh_enabled;
@@ -90,7 +91,6 @@ struct CanvasUniforms {
   uint transparent_background;
   uint foreground_only;
 };
-
 struct StillOverlayUniforms {
   int cursor_x;
   int cursor_y;
@@ -112,7 +112,6 @@ struct StillOverlayUniforms {
   uint camera_drop_shadow;
   uint camera_on_top;
 };
-
 static float hash(float2 position, uint seed) {
   return fract(sin(dot(position, float2(127.1, 311.7)) + float(seed) * 0.017) * 43758.5453) * 2.0 - 1.0;
 }
@@ -304,34 +303,33 @@ static float4 canvas_rgba_pixel(const device uchar4 *source,
     ? mesh_pixel(point, dimensions, u, seconds)
     : u.background_color.rgb;
   float background_alpha = u.foreground_only != 0 ? 0.0 : 1.0;
-  float2 crop_point = point - float2(u.crop_x, u.crop_y);
-  float2 crop_size = float2(u.crop_width, u.crop_height);
+  float2 crop_point = point - float2(u.crop_x, u.crop_y), crop_size = float2(u.crop_width, u.crop_height);
   float2 crop_origin = float2(u.crop_x, u.crop_y);
-  float2 image_origin = float2(u.image_x, u.image_y);
-  float2 image_size = float2(u.image_width, u.image_height);
+  float2 image_origin = float2(u.image_x, u.image_y), image_size = float2(u.image_width, u.image_height);
+  float2 source_crop_origin = float2(u.source_crop_x, u.source_crop_y), source_crop_size = float2(u.source_crop_width, u.source_crop_height);
   float crop_coverage = rounded_coverage(crop_point, crop_size, float(u.radius));
   float2 image_point = point - image_origin;
   float image_coverage = crop_coverage *
-    rounded_coverage(image_point, image_size, 0.0);
+    rounded_coverage(image_point, image_size, 0.0) *
+    rounded_coverage(point - source_crop_origin, source_crop_size, 0.0);
+  float frame_coverage = u.recenter_inset_color.a > 0.0 ? crop_coverage : image_coverage;
+  float2 shadow_origin = u.recenter_inset_color.a > 0.0 ? crop_origin : source_crop_origin, shadow_size = u.recenter_inset_color.a > 0.0 ? crop_size : source_crop_size;
   if (u.drop_shadow != 0) {
-    float sigma = visible_foreground_sigma(
-      crop_origin, crop_size, image_origin, image_size, dimensions);
+    float sigma = visible_foreground_sigma(crop_origin, crop_size, shadow_origin, shadow_size, dimensions);
     if (sigma > 1.0) {
-      float shadow = visible_foreground_shadow(
-        point, crop_origin, crop_size, float(u.radius),
-        image_origin, image_size, sigma, 0.14);
+      float shadow = visible_foreground_shadow(point, crop_origin, crop_size,
+        float(u.radius), shadow_origin, shadow_size, sigma, 0.14);
       if (u.foreground_only != 0) {
         background = float3(0.0);
-        background_alpha = shadow * (1.0 - image_coverage);
+        background_alpha = shadow * (1.0 - frame_coverage);
       } else {
-        background *= 1.0 - shadow * (1.0 - image_coverage);
+        background *= 1.0 - shadow * (1.0 - frame_coverage);
       }
     }
   }
   float4 result = float4(background * background_alpha, background_alpha);
-  // The source only exists inside its placed rect: a crop reaching past it
-  // (a 4:5 or 9:16 canvas around a wide capture) must show background there,
-  // not clamp-to-edge smears of the outermost source pixels.
+  if (u.recenter_inset_color.a > 0.0)
+    result = mix(result, float4(u.recenter_inset_color.rgb, 1.0), crop_coverage);
   if (image_coverage > 0.0) {
     float4 video = rgba_source_pixel(source, source_width, source_height, point, u);
     float source_alpha = video.a * image_coverage;
@@ -345,24 +343,25 @@ static float4 overlay_canvas_foreground_rgba(
     float4 result, const device uchar4 *source, uint source_width,
     uint source_height, float2 point, float2 dimensions,
     constant CanvasUniforms &u) {
-  float2 crop_origin = float2(u.crop_x, u.crop_y);
-  float2 crop_size = float2(u.crop_width, u.crop_height);
-  float2 image_origin = float2(u.image_x, u.image_y);
-  float2 image_size = float2(u.image_width, u.image_height);
+  float2 crop_origin = float2(u.crop_x, u.crop_y), crop_size = float2(u.crop_width, u.crop_height);
+  float2 image_origin = float2(u.image_x, u.image_y), image_size = float2(u.image_width, u.image_height);
+  float2 source_crop_origin = float2(u.source_crop_x, u.source_crop_y), source_crop_size = float2(u.source_crop_width, u.source_crop_height);
   float crop_coverage = rounded_coverage(
     point - crop_origin, crop_size, float(u.radius));
   float image_coverage = crop_coverage * rounded_coverage(
-    point - image_origin, image_size, 0.0);
+    point - image_origin, image_size, 0.0) * rounded_coverage(
+    point - source_crop_origin, source_crop_size, 0.0);
+  float frame_coverage = u.recenter_inset_color.a > 0.0 ? crop_coverage : image_coverage;
+  float2 shadow_origin = u.recenter_inset_color.a > 0.0 ? crop_origin : source_crop_origin, shadow_size = u.recenter_inset_color.a > 0.0 ? crop_size : source_crop_size;
   if (u.drop_shadow != 0) {
-    float sigma = visible_foreground_sigma(
-      crop_origin, crop_size, image_origin, image_size, dimensions);
+    float sigma = visible_foreground_sigma(crop_origin, crop_size, shadow_origin, shadow_size, dimensions);
     if (sigma > 1.0) {
-      float shadow = visible_foreground_shadow(
-        point, crop_origin, crop_size, float(u.radius), image_origin,
-        image_size, sigma, 0.14);
-      result.rgb *= 1.0 - shadow * (1.0 - image_coverage);
+      float shadow = visible_foreground_shadow(point, crop_origin, crop_size, float(u.radius), shadow_origin, shadow_size, sigma, 0.14);
+      result.rgb *= 1.0 - shadow * (1.0 - frame_coverage);
     }
   }
+  if (u.recenter_inset_color.a > 0.0)
+    result = mix(result, float4(u.recenter_inset_color.rgb, 1.0), crop_coverage);
   if (image_coverage > 0.0) {
     float4 video = rgba_source_pixel(
       source, source_width, source_height, point, u);
@@ -591,15 +590,13 @@ struct WorkspaceMagnifier {
   uint light_mode;
   float sample_u;
   float sample_v;
+  float source_min_u, source_min_v, source_max_u, source_max_v;
   int box_x;
   int box_y;
   uint box_width;
   uint box_height;
 };
-
-// Clear and layer composition are separate kernels so every workspace layer
-// can be submitted to one command buffer while preserving foreground-over
-// ordering in a single read/write drawable-sized texture.
+// Separate kernels preserve foreground-over ordering in one command buffer.
 kernel void workspace_clear(
     texture2d<float, access::write> output [[texture(0)]],
     uint2 gid [[thread_position_in_grid]]) {
@@ -720,14 +717,17 @@ kernel void workspace_magnifier(
   float distance = length(max(rounded, 0.0)) +
                    min(max(rounded.x, rounded.y), 0.0) - radius;
   if (distance > 0.0) return;
-  float2 source_center = float2(magnifier.sample_u, magnifier.sample_v) *
-                         float2(source_dimensions);
+  float2 source_center = float2(magnifier.sample_u, magnifier.sample_v) * float2(source_dimensions);
   float2 source_point = source_center +
       (local / box_size - 0.5) * 40.0;
-  uint2 sample_point = min(uint2(max(floor(source_point), 0.0)),
-                           source_dimensions - 1);
-  float4 pixel = float4(source[sample_point.y * source_dimensions.x +
-                               sample_point.x]) / 255.0;
+  int2 sample_point = int2(floor(source_point));
+  float2 sample_uv = source_point / float2(source_dimensions);
+  bool in_source = all(sample_point >= 0) && all(sample_point < int2(source_dimensions)) &&
+      all(sample_uv >= float2(magnifier.source_min_u, magnifier.source_min_v)) &&
+      all(sample_uv <= float2(magnifier.source_max_u, magnifier.source_max_v));
+  float4 pixel = in_source ? float4(source[uint(sample_point.y) *
+      source_dimensions.x + uint(sample_point.x)]) / 255.0
+      : float4(0.15, 0.15, 0.16, 1.0);
   bool shade = ((magnifier.edges & 1u) != 0u && local.x < half_size.x) ||
                ((magnifier.edges & 2u) != 0u && local.x >= half_size.x) ||
                ((magnifier.edges & 4u) != 0u && local.y < half_size.y) ||
@@ -760,22 +760,22 @@ static float3 canvas_pixel(texture2d<float, access::sample> source_y,
     : u.background_color.rgb;
   float canvas_coverage = rounded_coverage(
     point, dimensions, float(u.background_radius));
-  float2 crop_point = point - float2(u.crop_x, u.crop_y);
-  float2 crop_size = float2(u.crop_width, u.crop_height);
+  float2 crop_point = point - float2(u.crop_x, u.crop_y), crop_size = float2(u.crop_width, u.crop_height);
   float2 crop_origin = float2(u.crop_x, u.crop_y);
-  float2 image_origin = float2(u.image_x, u.image_y);
-  float2 image_size = float2(u.image_width, u.image_height);
+  float2 image_origin = float2(u.image_x, u.image_y), image_size = float2(u.image_width, u.image_height);
+  float2 source_crop_origin = float2(u.source_crop_x, u.source_crop_y), source_crop_size = float2(u.source_crop_width, u.source_crop_height);
   float crop_coverage = rounded_coverage(crop_point, crop_size, float(u.radius));
   float2 image_point = point - image_origin;
   float image_coverage = crop_coverage *
-    rounded_coverage(image_point, image_size, 0.0);
+    rounded_coverage(image_point, image_size, 0.0) *
+    rounded_coverage(point - source_crop_origin, source_crop_size, 0.0);
   if (u.drop_shadow != 0) {
     float sigma = visible_foreground_sigma(
-      crop_origin, crop_size, image_origin, image_size, dimensions);
+      crop_origin, crop_size, source_crop_origin, source_crop_size, dimensions);
     if (sigma > 1.0) {
       float shadow = visible_foreground_shadow(
         point, crop_origin, crop_size, float(u.radius),
-        image_origin, image_size, sigma, 0.14);
+        source_crop_origin, source_crop_size, sigma, 0.14);
       background *= 1.0 - shadow * (1.0 - image_coverage);
     }
   }

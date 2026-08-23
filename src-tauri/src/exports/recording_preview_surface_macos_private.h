@@ -47,8 +47,8 @@ extern ScreenwideDisplayHit screenwide_workspace_hit_test(
     const ScreenwideDisplayTarget *targets, size_t count, double x, double y,
     double handle_size);
 extern ScreenwideDisplayFitRebase screenwide_workspace_rebase_display_fit(
-    double viewport_width, double viewport_height,
-    ScreenwideDisplayRect displayed, double gutter);
+    double viewport_width, double viewport_height, ScreenwideDisplayRect displayed, double natural_width,
+    double natural_height, double gutter);
 _Static_assert(sizeof(ScreenwideDisplayTarget) == 64,
                "Rust/C display target layout mismatch");
 _Static_assert(sizeof(ScreenwideDisplayHit) == 24,
@@ -80,17 +80,11 @@ typedef void (*screenwide_preview_selection_callback)(int32_t pane_index,
 typedef struct {
   uint32_t pane_index;
   uint32_t layer_id;
-  uint32_t crop_mode;
-  uint32_t radius_disabled;
-  double x;
-  double y;
-  double width;
-  double height;
+  uint32_t crop_mode, radius_disabled, recenter_mode;
+  double x, y, width, height;
   double radius_percent;
-  double image_x;
-  double image_y;
-  double image_width;
-  double image_height;
+  double image_x, image_y, image_width, image_height;
+  double recenter_x, recenter_y, recenter_width, recenter_height;
 } ScreenwidePreviewSelection;
 @class ScreenwidePreviewSurface;
 
@@ -193,26 +187,22 @@ typedef struct {
 @property(nonatomic) BOOL selectionVisible;
 @property(nonatomic) ScreenwidePreviewSelection selection;
 @property(nonatomic, strong) CAMetalLayer *selectionLayer;
-/// The rasterised "W × H" readout drawn under the selection OSC, plus the
-/// inputs it was built from. Rebuilding the bitmap on every gesture sample
-/// would burn a CoreGraphics text layout per pointer event, so the texture is
-/// reused until the text, the backing scale or the appearance changes.
+/// Cached selection label texture and the inputs that invalidate it.
 @property(nonatomic, strong) id<MTLTexture> selectionLabelTexture;
-/// Bound whenever there is no label. The fragment function declares a texture,
-/// and Metal validation requires every declared texture slot to be filled even
-/// when no vertex in the draw samples it.
+/// Transparent texture bound whenever the selection has no label.
 @property(nonatomic, strong) id<MTLTexture> selectionLabelPlaceholder;
 @property(nonatomic, strong) NSString *selectionLabelText;
 @property(nonatomic) CGFloat selectionLabelScale;
 @property(nonatomic) uint32_t selectionLabelLightMode;
 @property(nonatomic) NSSize selectionLabelSize;
+@property(nonatomic) NSRect selectionActionRect;
+@property(nonatomic) uint32_t selectionActionOperation;
+@property(nonatomic) BOOL selectionActionHovered;
+@property(nonatomic) BOOL selectionActionPressed;
 @property(nonatomic) uint64_t selectionDrawRevision;
 @property(nonatomic) BOOL selectionDrawInFlight;
 @property(nonatomic) BOOL selectionDrawPending;
-/// An open present batch: drawables collected between `begin_present` and
-/// `end_present` are presented in ONE Core Animation transaction together
-/// with every pane's pending frame, so screen, camera and their new rects
-/// change on the same display tick.
+/// Drawables and pane frames published by one Core Animation transaction.
 @property(nonatomic, strong) NSLock *batchLock;
 @property(nonatomic) NSInteger batchDepth;
 @property(nonatomic, strong) NSMutableArray<id<CAMetalDrawable>> *batchDrawables;
@@ -278,7 +268,17 @@ NSCursor *selection_resize_cursor(uint32_t edges);
 void set_selection_cursor(NSCursor *cursor);
 void set_selection_move_cursor(void);
 void set_selection_cursor_at_point(ScreenwidePreviewSurface *surface,
-                                          NSPoint point);
+                                   NSPoint point);
+BOOL selection_action_hover(ScreenwidePreviewSurface *surface, NSPoint point);
+BOOL selection_action_begin(ScreenwidePreviewSurface *surface, NSInteger button, NSPoint point);
+BOOL selection_action_drag(ScreenwidePreviewSurface *surface, NSPoint point);
+BOOL selection_action_end(ScreenwidePreviewSurface *surface, NSPoint point);
+ScreenwidePreviewSelection selection_recenter_resize(
+    ScreenwidePreviewSelection start, uint32_t edges, double delta_x,
+    double delta_y, NSSize pane, double *scale);
+double selection_recenter_scale(ScreenwidePreviewSelection start, ScreenwidePreviewSelection resized, uint32_t edges);
+void selection_recenter_drag(ScreenwidePreviewSurface *surface,
+    ScreenwidePreviewSelection start, uint32_t edges, double delta_x, double delta_y, NSSize pane);
 void invalidate_selection_cursor_rects(ScreenwidePreviewSurface *surface);
 void set_editor_zoom(ScreenwidePreviewSurface *surface,
                             double zoom, NSPoint anchor);

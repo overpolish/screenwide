@@ -93,6 +93,7 @@ pub(crate) enum SelectionGesturePhase {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
 pub(crate) enum SelectionGestureOperation {
   Move = 0,
   Resize = 1,
@@ -101,6 +102,7 @@ pub(crate) enum SelectionGestureOperation {
   FrameRadius = 4,
   CropMove = 5,
   CropResize = 6,
+  RecenterAction = 7,
 }
 
 pub(crate) type SelectionGestureCallback = Box<
@@ -152,6 +154,8 @@ pub(crate) struct PreviewSelection {
   pub crop_mode: u32,
   /// Non-zero when this selection has no corner-radius gesture or OSC.
   pub radius_disabled: u32,
+  /// Non-zero when resize uses the supplied bounds as its pivot and ceiling.
+  pub recenter_mode: u32,
   pub x: f64,
   pub y: f64,
   pub width: f64,
@@ -161,4 +165,8 @@ pub(crate) struct PreviewSelection {
   pub image_y: f64,
   pub image_width: f64,
   pub image_height: f64,
+  pub recenter_x: f64,
+  pub recenter_y: f64,
+  pub recenter_width: f64,
+  pub recenter_height: f64,
 }

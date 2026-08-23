@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  hasOutputComposition,
-  RecordingOutputSettings,
-} from "./screenshot-output";
+import { hasOutputComposition } from "./screenshot-composition";
+import { RecordingOutputSettings } from "./screenshot-output";
 import {
   CursorEffectSettings,
   AudioTrackVolume,

@@ -16,6 +16,8 @@ fn main() {
       "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_shader_source.h"
     );
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos.m");
+    println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+action.m");
+    println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+magnifier.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+editor.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+osc.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+selection.m");
@@ -34,6 +36,8 @@ fn main() {
       .file("src/exports/recording_preview_reader_macos.m")
       .file("src/exports/recording_preview_scrubber_macos.m")
       .file("src/exports/recording_preview_surface_macos.m")
+      .file("src/exports/recording_preview_surface_macos+action.m")
+      .file("src/exports/recording_preview_surface_macos+magnifier.m")
       .file("src/exports/recording_preview_surface_macos+editor.m")
       .file("src/exports/recording_preview_surface_macos+osc.m")
       .file("src/exports/recording_preview_surface_macos+selection.m")

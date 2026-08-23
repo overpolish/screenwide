@@ -29,7 +29,7 @@ export function ScreenshotToolToggle({
   name: string;
   onReset: () => void;
   onSelectedChange: (selected: boolean) => void;
-  shortcut: string;
+  shortcut?: string;
 }) {
   return (
     <TooltipTrigger delay={400}>
@@ -56,9 +56,11 @@ export function ScreenshotToolToggle({
       <Tooltip placement="bottom">
         <span className="flex items-center gap-2">
           {label}
-          <Keyboard size="xs" variant="tooltip">
-            {shortcut}
-          </Keyboard>
+          {shortcut ? (
+            <Keyboard size="xs" variant="tooltip">
+              {shortcut}
+            </Keyboard>
+          ) : null}
         </span>
       </Tooltip>
     </TooltipTrigger>

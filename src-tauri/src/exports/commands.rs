@@ -3,6 +3,42 @@
 
 use super::*;
 
+mod recenter;
+
+#[tauri::command]
+pub async fn get_screenshot_content_bounds(
+  app: AppHandle,
+  artifact_id: u64,
+  item_id: u64,
+  source_crop: crate::screenshots::NormalizedSourceRect,
+) -> Result<Option<recenter::RecenterAnalysis>, String> {
+  source_crop.validate()?;
+  let image = {
+    let state = app.state::<ExportState>();
+    let artifact = state
+      .screenshot
+      .artifact
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let Some(ExportArtifact::Screenshot { id, items, .. }) = artifact.as_ref() else {
+      return Err("There is no screenshot to analyse".to_owned());
+    };
+    if *id != artifact_id {
+      return Err("That screenshot is no longer waiting to be exported".to_owned());
+    }
+    items
+      .iter()
+      .find(|item| item.id == item_id)
+      .map(|item| item.image.clone())
+      .ok_or_else(|| "That screenshot layer is no longer available".to_owned())?
+  };
+  tauri::async_runtime::spawn_blocking(move || {
+    recenter::analyse(&image.rgba, image.width, image.height, source_crop, 24)
+  })
+  .await
+  .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn cancel_export(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
   discard(&app, kind_of_window(&window)?);

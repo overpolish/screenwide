@@ -86,68 +86,6 @@ static ScreenwideWorkspacePlacement workspace_placement(
   };
 }
 
-SCREENWIDE_PREVIEW_PRIVATE void update_crop_magnifier(ScreenwidePreviewSurface *surface,
-                                  NSPoint point, uint32_t edges) {
-  if (!surface.workspaceMode || !surface.hasSelection ||
-      surface.selection.crop_mode == 0 ||
-      surface.selection.pane_index >= surface.editorBaseRects.count) {
-    ScreenwideWorkspaceMagnifier clearedMagnifier = surface.workspaceMagnifier;
-    clearedMagnifier.active = 0;
-    surface.workspaceMagnifier = clearedMagnifier;
-    return;
-  }
-  NSRect transformed = editor_frame(
-      surface, surface.editorBaseRects[surface.selection.pane_index].rectValue);
-  // The interaction view is flipped (top-left origin), while editor frames
-  // use AppKit's bottom-left coordinates. The magnifier and source mapping
-  // both operate in the interaction view's top-left coordinate space.
-  NSRect pane = NSMakeRect(
-      transformed.origin.x,
-      surface.interaction.bounds.size.height - NSMaxY(transformed),
-      transformed.size.width, transformed.size.height);
-  if (NSIsEmptyRect(pane) || surface.selection.image_width <= 0.0 ||
-      surface.selection.image_height <= 0.0) {
-    ScreenwideWorkspaceMagnifier clearedMagnifier = surface.workspaceMagnifier;
-    clearedMagnifier.active = 0;
-    surface.workspaceMagnifier = clearedMagnifier;
-    return;
-  }
-  double paneX = (point.x - NSMinX(pane)) / pane.size.width;
-  double paneY = (point.y - NSMinY(pane)) / pane.size.height;
-  double sampleU = (paneX - surface.selection.image_x) /
-                   surface.selection.image_width;
-  double sampleV = (paneY - surface.selection.image_y) /
-                   surface.selection.image_height;
-  CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
-  int32_t size = (int32_t)MAX(llround(96.0 * scale), 1);
-  int32_t centerX = (int32_t)llround(point.x * scale);
-  int32_t centerY = (int32_t)llround(point.y * scale);
-  // Keep the box centred on the crop edge even when part of it falls outside
-  // the workarea. Clamping its origin would move the visual split away from
-  // the pointer/sample coordinate; the compute kernel safely clips writes to
-  // the drawable while retaining this local coordinate system.
-  int32_t boxX = centerX - size / 2;
-  int32_t boxY = centerY - size / 2;
-  surface.workspaceMagnifier = (ScreenwideWorkspaceMagnifier){
-    .active = 1,
-    .pane_index = surface.selection.pane_index,
-    .layer_id = surface.selection.layer_id,
-    .sample_camera = surface.workspaceExplicitPlacements &&
-                     surface.selection.layer_id != surface.selection.pane_index,
-    .edges = edges,
-    .light_mode = [[[surface.interaction effectiveAppearance]
-        bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua,
-                                            NSAppearanceNameDarkAqua]]
-        isEqualToString:NSAppearanceNameAqua] ? 1 : 0,
-    .sample_u = (float)fmin(1.0, fmax(0.0, sampleU)),
-    .sample_v = (float)fmin(1.0, fmax(0.0, sampleV)),
-    .box_x = boxX,
-    .box_y = boxY,
-    .box_width = (uint32_t)size,
-    .box_height = (uint32_t)size,
-  };
-}
-
 SCREENWIDE_PREVIEW_PRIVATE void begin_workspace_frame_resize(ScreenwidePreviewSurface *surface) {
   if (!surface.workspaceMode || surface.views.count == 0) return;
   ScreenwidePreviewView *workspace = surface.views[0];

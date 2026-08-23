@@ -46,6 +46,7 @@ pub async fn layout_screenshot_preview_surface(
       .map_err(|_| "The screenshot preview is unavailable".to_owned())?;
     manager.require_session(session_id)?;
     manager.react_output = Some(interaction_output.clone());
+    manager.recenter_mode = selection.as_ref().is_some_and(|item| item.recenter_mode);
     // Pointer ownership stays native for the complete gesture. React layouts
     // may update the inspector and display-only preview model meanwhile, but
     // they cannot replace the pixel gesture snapshot until mouse-up.
@@ -110,13 +111,18 @@ pub async fn layout_screenshot_preview_surface(
   #[cfg(not(target_os = "macos"))]
   let _ = natural_size;
   surface.set_selection(selection.map(|overlay| PreviewSelection {
+    recenter_height: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.height),
+    recenter_width: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.width),
+    recenter_x: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.x),
+    recenter_y: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.y),
+    recenter_mode: u32::from(overlay.recenter_mode),
     crop_mode: u32::from(overlay.crop_mode),
     image_height: overlay.image.map_or(0.0, |image| image.height),
     image_width: overlay.image.map_or(0.0, |image| image.width),
     image_x: overlay.image.map_or(0.0, |image| image.x),
     image_y: overlay.image.map_or(0.0, |image| image.y),
     layer_id: overlay.layer_id.unwrap_or(overlay.pane_index),
-    radius_disabled: 0,
+    radius_disabled: u32::from(overlay.recenter_mode),
     #[cfg(target_os = "macos")]
     pane_index: 0,
     #[cfg(not(target_os = "macos"))]
@@ -131,13 +137,18 @@ pub async fn layout_screenshot_preview_surface(
     targets
       .into_iter()
       .map(|target| PreviewSelection {
+        recenter_height: target.recenter_bounds.map_or(0.0, |bounds| bounds.height),
+        recenter_width: target.recenter_bounds.map_or(0.0, |bounds| bounds.width),
+        recenter_x: target.recenter_bounds.map_or(0.0, |bounds| bounds.x),
+        recenter_y: target.recenter_bounds.map_or(0.0, |bounds| bounds.y),
+        recenter_mode: u32::from(target.recenter_mode),
         crop_mode: u32::from(target.crop_mode),
         image_height: target.image.map_or(0.0, |image| image.height),
         image_width: target.image.map_or(0.0, |image| image.width),
         image_x: target.image.map_or(0.0, |image| image.x),
         image_y: target.image.map_or(0.0, |image| image.y),
         layer_id: target.layer_id.unwrap_or(target.pane_index),
-        radius_disabled: 0,
+        radius_disabled: u32::from(target.recenter_mode),
         #[cfg(target_os = "macos")]
         pane_index: 0,
         #[cfg(not(target_os = "macos"))]

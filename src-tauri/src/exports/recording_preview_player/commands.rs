@@ -106,15 +106,7 @@ pub async fn start_recording_preview_player(
           super::super::preview_platform::SelectionGesturePhase::End => "end",
           super::super::preview_platform::SelectionGesturePhase::Cancel => "cancel",
         };
-        let operation = match operation {
-          super::super::preview_platform::SelectionGestureOperation::Move => 0,
-          super::super::preview_platform::SelectionGestureOperation::Resize => 1,
-          super::super::preview_platform::SelectionGestureOperation::Radius => 2,
-          super::super::preview_platform::SelectionGestureOperation::FrameResize => 3,
-          super::super::preview_platform::SelectionGestureOperation::FrameRadius => 4,
-          super::super::preview_platform::SelectionGestureOperation::CropMove => 5,
-          super::super::preview_platform::SelectionGestureOperation::CropResize => 6,
-        };
+        let operation = operation as u32;
         let _ = event_app.emit(
           "recording-preview://selection-gesture",
           RecordingPreviewSelectionGestureEvent {

@@ -35,6 +35,7 @@ export type ScreenshotSelectionGestureEvent = {
     | "frameRadius"
     | "frameResize"
     | "move"
+    | "recenterAction"
     | "radius"
     | "resize";
   paneIndex: number;
@@ -85,20 +86,10 @@ export function useScreenshotPreviewSurface({
   onZoomChange?: (zoomPercent: number) => void;
   output?: ScreenshotWorkspaceOutputSettings;
   paneCount?: number;
-  selection?: {
-    paneIndex: number;
-    radiusPercent: number;
-    rect: { height: number; width: number; x: number; y: number };
-    layerId?: number;
-  } | null;
-  selectionTargets?:
-    | {
-        paneIndex: number;
-        radiusPercent: number;
-        rect: { height: number; width: number; x: number; y: number };
-        layerId?: number;
-      }[]
-    | null;
+  selection?: Parameters<typeof layoutScreenshotPreviewSurface>[0]["selection"];
+  selectionTargets?: Parameters<
+    typeof layoutScreenshotPreviewSurface
+  >[0]["selectionTargets"];
   sourceKey?: string;
   zoomPercent?: number;
 }) {
@@ -229,7 +220,7 @@ export function useScreenshotPreviewSurface({
         !Number.isFinite(payload.deltaX) ||
         !Number.isFinite(payload.deltaY) ||
         !Number.isInteger(payload.edges) ||
-        ![0, 1, 2, 3, 4, 5, 6].includes(payload.operation) ||
+        ![0, 1, 2, 3, 4, 5, 6, 7].includes(payload.operation) ||
         !Number.isInteger(payload.paneIndex) ||
         !Number.isFinite(payload.scale) ||
         !["begin", "update", "end", "cancel"].includes(payload.phase)
@@ -247,6 +238,7 @@ export function useScreenshotPreviewSurface({
           "frameRadius",
           "cropMove",
           "cropResize",
+          "recenterAction",
         ][payload.operation] as ScreenshotSelectionGestureEvent["operation"],
         paneIndex: payload.paneIndex,
         phase: payload.phase,
