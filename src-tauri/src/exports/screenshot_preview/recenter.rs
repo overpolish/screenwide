@@ -10,7 +10,7 @@ use super::super::preview_platform::workspace_editor::{
 use super::super::ScreenshotWorkspaceOutputSettings;
 use crate::screenshots::CapturedImage;
 
-fn resized_recenter_geometry(
+pub(crate) fn resized_recenter_geometry(
   start: LayerGeometry,
   canvas: (f64, f64),
   source: (f64, f64),

@@ -63,6 +63,14 @@ impl PreviewPlayerManager {
       if self.still_decoder.is_none() {
         self.still_decoder = Some(platform::StillDecoder::spawn(sources, event_channel)?);
       }
+      // Startup reaches here before React has supplied the native pane
+      // geometry. Decoding against an empty target can publish Ready while
+      // the surface still has nowhere to present, leaving the editor blank
+      // until the next explicit seek. The first non-empty surface layout
+      // requests this same still once its pane targets are installed.
+      if self.pane_target_sizes.iter().all(|size| *size == (0, 0)) {
+        return Ok(());
+      }
       return self
         .still_decoder
         .as_ref()

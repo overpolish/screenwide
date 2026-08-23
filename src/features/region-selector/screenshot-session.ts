@@ -11,7 +11,7 @@ import {
   showRegionSelector,
 } from "../recording-sources/api";
 import { useRecordingSourceStore } from "../recording-sources/store";
-import { Region } from "../recording-sources/types";
+import { MonitorDetails, Region } from "../recording-sources/types";
 import { cancelRuler, setRulerScreenshotMode } from "../ruler/api";
 import { captureStill, ScreenshotDestination } from "../screenshots/api";
 import { ShortcutAction } from "../settings/types";
@@ -26,6 +26,21 @@ export const isScreenshotShortcut = (
   action: ShortcutAction,
 ): action is ScreenshotShortcutAction =>
   action === "takeScreenshot" || action === "takeScreenshotToClipboard";
+
+/** Reveals the transparent native overlay after its empty DOM has painted. */
+export const revealScreenshotRegion = (monitor: MonitorDetails) => {
+  let disposed = false;
+  void showRegionSelector(monitor).then(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!disposed) void setRegionSelectorOpacity(1);
+      });
+    });
+  });
+  return () => {
+    disposed = true;
+  };
+};
 
 /**
  * The screenshot shortcut's borrowing of the region overlay, from opening it
@@ -47,13 +62,23 @@ export const beginScreenshotCapture = async (
     if (!monitor) return;
     setSelectedMonitor(monitor);
   }
-  await setRulerScreenshotMode(true);
-  // Rust has to know the overlay is allowed on screen before it is asked for:
-  // the recording controls may well be hidden behind it.
-  await setScreenshotRegionSession(true);
-  screenshotDestination =
-    action === "takeScreenshotToClipboard" ? "clipboard" : "export";
-  setScreenshotCapture(true);
+  // A hidden WebView retains its last composited frame. In region recording
+  // mode that frame contains the saved video cutout, so make the native window
+  // transparent before React asks it to show for a screenshot. The overlay
+  // restores opacity only after its empty screenshot surface has painted.
+  await setRegionSelectorOpacity(0);
+  try {
+    await setRulerScreenshotMode(true);
+    // Rust has to know the overlay is allowed on screen before it is asked for:
+    // the recording controls may well be hidden behind it.
+    await setScreenshotRegionSession(true);
+    screenshotDestination =
+      action === "takeScreenshotToClipboard" ? "clipboard" : "export";
+    setScreenshotCapture(true);
+  } catch (error: unknown) {
+    await setRegionSelectorOpacity(1);
+    throw error;
+  }
 };
 
 export const endScreenshotCapture = async (dismissRuler = false) => {

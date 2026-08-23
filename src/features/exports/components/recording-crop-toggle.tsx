@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Crop, MousePointer2, ScanSquare } from "lucide-react";
+import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { MouseEvent as ReactMouseEvent } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
@@ -24,7 +24,8 @@ import {
   RecordingVideoTrackId,
 } from "../types";
 
-export type RecordingCanvasTool = "canvas" | "crop" | "select" | null;
+export type RecordingCanvasTool =
+  "canvas" | "crop" | "recenter" | "select" | null;
 
 export function RecordingCanvasTools({
   activeTrack,
@@ -32,9 +33,11 @@ export function RecordingCanvasTools({
   cameraPane,
   isEnabled,
   isFrameEnabled = isEnabled,
+  isRecenterEnabled = false,
   isSelectEnabled = isEnabled,
   onCameraOverlayReset,
   onChange,
+  onRecenterReset,
   onToolChange,
   outputs,
   screenPane,
@@ -47,17 +50,23 @@ export function RecordingCanvasTools({
   tool: RecordingCanvasTool;
   cameraPane?: RecordingPreviewPane;
   isFrameEnabled?: boolean;
+  isRecenterEnabled?: boolean;
   isSelectEnabled?: boolean;
   onCameraOverlayReset?: (settings: CameraOverlaySettings) => void;
   onChange?: (
     track: RecordingVideoTrackId,
     settings: RecordingOutputSettings[RecordingVideoTrackId],
   ) => void;
+  onRecenterReset?: () => void;
   outputs?: RecordingOutputSettings;
   screenPane?: RecordingPreviewPane;
 }) {
   const reset = (event: ReactMouseEvent<HTMLSpanElement>) => {
     event.preventDefault();
+    if (tool === "recenter") {
+      onRecenterReset?.();
+      return;
+    }
     if (activeTrack === "camera" && bakeCamera && tool !== "canvas") {
       // The reset must be computed from the real output and camera geometry:
       // generic 16:9 defaults land the crop frame outside the camera image
@@ -172,6 +181,33 @@ export function RecordingCanvasTools({
             Crop
             <Keyboard size="xs" variant="tooltip">
               C
+            </Keyboard>
+          </span>
+        </Tooltip>
+      </TooltipTrigger>
+      <TooltipTrigger delay={400}>
+        <span className="inline-flex" onContextMenu={reset}>
+          <ToggleButton
+            animation="scale-selected"
+            aria-keyshortcuts="R"
+            aria-label="Recenter recording from current frame"
+            isDisabled={!isRecenterEnabled}
+            isSelected={tool === "recenter" && isRecenterEnabled}
+            onChange={(selected) => {
+              onToolChange(selected ? "recenter" : null);
+            }}
+            showFocus={false}
+            size="sm"
+            variant="ghost"
+          >
+            <CircleDotDashed size={15} />
+          </ToggleButton>
+        </span>
+        <Tooltip placement="bottom">
+          <span className="flex items-center gap-2">
+            Recenter from current frame
+            <Keyboard size="xs" variant="tooltip">
+              R
             </Keyboard>
           </span>
         </Tooltip>

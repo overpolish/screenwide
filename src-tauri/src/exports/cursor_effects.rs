@@ -8,6 +8,8 @@ use crate::recording::cursor::{
 };
 use std::path::Path;
 
+mod appearance_timeline;
+use appearance_timeline::{normalize_custom_fallback_size, stable_appearances};
 mod overlay;
 #[cfg(target_os = "macos")]
 pub(in crate::exports) use overlay::CursorOverlayCache;
@@ -279,37 +281,6 @@ fn last_at_or_before<T>(
   index.checked_sub(1)
 }
 
-fn stable_appearances(appearances: &[Appearance], recording_end_us: u64) -> Vec<Appearance> {
-  let mut changes = Vec::new();
-  for appearance in appearances {
-    if changes.last().is_some_and(|previous: &Appearance| {
-      raster::uses_same_artwork(previous.style, appearance.style)
-    }) {
-      continue;
-    }
-    changes.push(*appearance);
-  }
-  let Some(first) = changes.first().copied() else {
-    return Vec::new();
-  };
-  let mut stable = vec![first];
-  for (index, appearance) in changes.iter().enumerate().skip(1) {
-    let end_us = changes
-      .get(index + 1)
-      .map_or(recording_end_us, |next| next.timestamp_us);
-    if end_us.saturating_sub(appearance.timestamp_us) < APPEARANCE_STABILITY_US {
-      continue;
-    }
-    if stable
-      .last()
-      .is_none_or(|previous| !raster::uses_same_artwork(previous.style, appearance.style))
-    {
-      stable.push(*appearance);
-    }
-  }
-  stable
-}
-
 fn motion_blur_sample_count(distance: f64) -> usize {
   ((distance / 2.0).ceil() as usize + 1).clamp(8, MAX_BLUR_SAMPLES)
 }
@@ -350,6 +321,7 @@ impl CursorCompositor {
       })
       .collect();
     appearances.sort_by_key(|appearance| appearance.timestamp_us);
+    normalize_custom_fallback_size(&mut appearances);
     let mut raw_positions: Vec<_> = records
       .iter()
       .filter_map(|record| match record {

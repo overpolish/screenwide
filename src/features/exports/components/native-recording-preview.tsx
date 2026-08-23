@@ -18,7 +18,11 @@ import {
 } from "../camera-overlay-geometry";
 import { PREVIEW_FRAME_MS } from "../duration";
 import { defaultCameraOverlay } from "../recording-export-settings";
-import { uncroppedRecordingPreviewOutput } from "../screenshot-crop";
+import {
+  applyScreenshotCropGesture,
+  commitScreenshotCrop,
+  uncroppedScreenshotPreviewOutput,
+} from "../screenshot-crop";
 import {
   RecordingOutputSettings,
   defaultScreenshotOutput,
@@ -26,9 +30,9 @@ import {
   recordingVideoTrackOrder,
   resizeScreenshotWorkspaceCanvasEdges,
   screenshotOutputDimensions,
-  screenshotLayout,
   screenshotWorkspaceItemOutput,
 } from "../screenshot-output";
+import { applyScreenshotRecenterGesture } from "../screenshot-recenter";
 import {
   CameraOverlaySettings,
   RecordingTrackId,
@@ -50,8 +54,10 @@ import { RecordingOutputPreviewViewport } from "./recording-output-preview-viewp
 import { RecordingPlaybackControls } from "./recording-playback-controls";
 import { RECORDING_PREVIEW_PANE_GAP } from "./recording-preview-layout";
 import { RecordingPreviewViewport } from "./recording-preview-viewport";
+import { normalizedRecordingSelection } from "./recording-selection";
 import { RecordingTrackLanes } from "./recording-track-lanes";
 import { clamp, createPlayhead } from "./scrub-playhead";
+import { useRecordingRecenter } from "./use-recording-recenter";
 
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 import type { ScrubPreviewProps } from "./scrub-preview";
@@ -106,8 +112,10 @@ export function NativeRecordingPreview({
     operation: RecordingSelectionGestureEvent["operation"];
     outputSnapshot: RecordingOutputSettings[RecordingVideoTrackId] | null;
     paneIndex: number;
+    recenterMode: boolean;
     trackId: RecordingVideoTrackId;
   } | null>(null);
+  const recenterActionRef = useRef<() => void>(() => undefined);
   const editGesture = useExportEditGesture();
   const totalDurationRef = useRef(durationMs);
   const [playhead] = useState(createPlayhead);
@@ -195,7 +203,7 @@ export function NativeRecordingPreview({
       return effectiveRecordingOutput;
     return {
       ...effectiveRecordingOutput,
-      [activeVideoTrack]: uncroppedRecordingPreviewOutput(
+      [activeVideoTrack]: uncroppedScreenshotPreviewOutput(
         cropSource,
         effectiveRecordingOutput[activeVideoTrack],
       ),
@@ -260,8 +268,11 @@ export function NativeRecordingPreview({
       };
     }
     if (
-      (canvasTool !== "select" && canvasTool !== "crop") ||
+      (canvasTool !== "select" &&
+        canvasTool !== "crop" &&
+        canvasTool !== "recenter") ||
       !activeVideoTrack ||
+      (canvasTool === "recenter" && activeVideoTrack !== "primary") ||
       !selectedVideoTracks.has(activeVideoTrack)
     )
       return null;
@@ -272,29 +283,12 @@ export function NativeRecordingPreview({
     if (!primarySource) return null;
     if (canPreviewBakedCamera) {
       if (activeVideoTrack === "primary") {
-        const layout = screenshotLayout(
-          primarySource,
-          primaryOutput,
-          effectiveRecordingOutput.primary,
-        );
-        return {
-          cropMode: canvasTool === "crop",
-          image: {
-            height: layout.image.height / Math.max(1, primaryOutput.height),
-            width: layout.image.width / Math.max(1, primaryOutput.width),
-            x: layout.image.x / Math.max(1, primaryOutput.width),
-            y: layout.image.y / Math.max(1, primaryOutput.height),
-          },
-          layerId: 0,
+        return normalizedRecordingSelection({
+          mode: canvasTool,
+          output: effectiveRecordingOutput.primary,
           paneIndex: 0,
-          radiusPercent: effectiveRecordingOutput.primary.radiusPercent,
-          rect: {
-            height: layout.crop.height / Math.max(1, primaryOutput.height),
-            width: layout.crop.width / Math.max(1, primaryOutput.width),
-            x: layout.crop.x / Math.max(1, primaryOutput.width),
-            y: layout.crop.y / Math.max(1, primaryOutput.height),
-          },
-        };
+          source: primarySource,
+        });
       }
       const cameraSource = previewSourceDimensions.camera;
       if (!cameraSource) return null;
@@ -344,32 +338,12 @@ export function NativeRecordingPreview({
         ? primarySource
         : previewSourceDimensions.camera;
     if (!source) return null;
-    const output = screenshotOutputDimensions(
-      effectiveRecordingOutput[activeVideoTrack],
-    );
-    const layout = screenshotLayout(
-      source,
-      output,
-      effectiveRecordingOutput[activeVideoTrack],
-    );
-    return {
-      cropMode: canvasTool === "crop",
-      image: {
-        height: layout.image.height / Math.max(1, output.height),
-        width: layout.image.width / Math.max(1, output.width),
-        x: layout.image.x / Math.max(1, output.width),
-        y: layout.image.y / Math.max(1, output.height),
-      },
-      layerId: paneIndex,
+    return normalizedRecordingSelection({
+      mode: canvasTool,
+      output: effectiveRecordingOutput[activeVideoTrack],
       paneIndex,
-      radiusPercent: effectiveRecordingOutput[activeVideoTrack].radiusPercent,
-      rect: {
-        height: layout.crop.height / Math.max(1, output.height),
-        width: layout.crop.width / Math.max(1, output.width),
-        x: layout.crop.x / Math.max(1, output.width),
-        y: layout.crop.y / Math.max(1, output.height),
-      },
-    };
+      source,
+    });
   }, [
     activeVideoTrack,
     canPreviewBakedCamera,
@@ -394,17 +368,24 @@ export function NativeRecordingPreview({
             ]
           : [],
       );
+    if (canvasTool === "recenter") {
+      const source = previewSourceDimensions.primary;
+      if (!source || !selectedVideoTracks.has("primary")) return null;
+      return [
+        normalizedRecordingSelection({
+          mode: "recenter",
+          output: effectiveRecordingOutput.primary,
+          paneIndex: 0,
+          source,
+        }),
+      ];
+    }
     if (canvasTool !== "select" && canvasTool !== "crop") return null;
     if (canPreviewBakedCamera) {
       const primarySource = previewSourceDimensions.primary;
       const cameraSource = previewSourceDimensions.camera;
       if (!primarySource || !cameraSource) return null;
       const output = screenshotOutputDimensions(
-        effectiveRecordingOutput.primary,
-      );
-      const primaryLayout = screenshotLayout(
-        primarySource,
-        output,
         effectiveRecordingOutput.primary,
       );
       const cameraGeometry = cameraOverlayGeometry(
@@ -429,24 +410,12 @@ export function NativeRecordingPreview({
         cameraOverlay,
       );
       return [
-        {
-          cropMode: canvasTool === "crop",
-          image: {
-            height: primaryLayout.image.height / Math.max(1, output.height),
-            width: primaryLayout.image.width / Math.max(1, output.width),
-            x: primaryLayout.image.x / Math.max(1, output.width),
-            y: primaryLayout.image.y / Math.max(1, output.height),
-          },
-          layerId: 0,
+        normalizedRecordingSelection({
+          mode: canvasTool,
+          output: effectiveRecordingOutput.primary,
           paneIndex: 0,
-          radiusPercent: effectiveRecordingOutput.primary.radiusPercent,
-          rect: {
-            height: primaryLayout.crop.height / Math.max(1, output.height),
-            width: primaryLayout.crop.width / Math.max(1, output.width),
-            x: primaryLayout.crop.x / Math.max(1, output.width),
-            y: primaryLayout.crop.y / Math.max(1, output.height),
-          },
-        },
+          source: primarySource,
+        }),
         {
           cropMode: canvasTool === "crop",
           image: {
@@ -471,33 +440,13 @@ export function NativeRecordingPreview({
       if (!selectedVideoTracks.has(trackId)) return [];
       const source = previewSourceDimensions[trackId];
       if (!source) return [];
-      const output = screenshotOutputDimensions(
-        effectiveRecordingOutput[trackId],
-      );
-      const layout = screenshotLayout(
-        source,
-        output,
-        effectiveRecordingOutput[trackId],
-      );
       return [
-        {
-          cropMode: canvasTool === "crop",
-          image: {
-            height: layout.image.height / Math.max(1, output.height),
-            width: layout.image.width / Math.max(1, output.width),
-            x: layout.image.x / Math.max(1, output.width),
-            y: layout.image.y / Math.max(1, output.height),
-          },
-          layerId: trackId === "primary" ? 0 : 1,
+        normalizedRecordingSelection({
+          mode: canvasTool,
+          output: effectiveRecordingOutput[trackId],
           paneIndex: trackId === "primary" ? 0 : 1,
-          radiusPercent: effectiveRecordingOutput[trackId].radiusPercent,
-          rect: {
-            height: layout.crop.height / Math.max(1, output.height),
-            width: layout.crop.width / Math.max(1, output.width),
-            x: layout.crop.x / Math.max(1, output.width),
-            y: layout.crop.y / Math.max(1, output.height),
-          },
-        },
+          source,
+        }),
       ];
     });
   }, [
@@ -509,6 +458,10 @@ export function NativeRecordingPreview({
     selectedVideoTracks,
   ]);
   const selectionGesture = (event: RecordingSelectionGestureEvent) => {
+    if (event.operation === "recenterAction") {
+      if (event.phase === "begin") recenterActionRef.current();
+      return;
+    }
     const trackId =
       event.paneIndex === 0
         ? "primary"
@@ -519,6 +472,10 @@ export function NativeRecordingPreview({
       event.operation === "frameResize" || event.operation === "frameRadius";
     const isCropGesture =
       event.operation === "cropMove" || event.operation === "cropResize";
+    const isRecenterGesture =
+      canvasTool === "recenter" &&
+      trackId === "primary" &&
+      (event.operation === "move" || event.operation === "resize");
     if (event.phase === "begin") {
       if (
         !trackId ||
@@ -526,7 +483,7 @@ export function NativeRecordingPreview({
           ? canvasTool !== "canvas"
           : isCropGesture
             ? canvasTool !== "crop"
-            : canvasTool !== "select") ||
+            : !isRecenterGesture && canvasTool !== "select") ||
         !selectedVideoTracks.has(trackId)
       )
         return;
@@ -542,6 +499,7 @@ export function NativeRecordingPreview({
           ? null
           : effectiveRecordingOutput[trackId],
         paneIndex: event.paneIndex,
+        recenterMode: isRecenterGesture,
         trackId,
       };
       editGesture.beginGesture();
@@ -592,7 +550,8 @@ export function NativeRecordingPreview({
     // The final native transform can legitimately be the original snapshot
     // after snapping. Apply it when it differs from the last live frame even
     // though its delta is zero, or React will re-send stale geometry.
-    const shouldApply = event.phase === "end" ? differsFromLastUpdate : changed;
+    const shouldApply =
+      event.phase === "end" ? isCropGesture || differsFromLastUpdate : changed;
     const autoFitMove =
       event.operation === "move" && (event.edges & AUTO_FIT_MOVE_EDGE) !== 0;
     const autoFitCommit =
@@ -728,31 +687,42 @@ export function NativeRecordingPreview({
     }
     const snapshot = active.outputSnapshot;
     if (!snapshot) return;
+    if (active.recenterMode) {
+      const next = applyScreenshotRecenterGesture({
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+        edges: event.edges,
+        operation: event.operation,
+        scale: event.scale,
+        settings: snapshot,
+        source: previewSourceDimensions.primary,
+      });
+      if (next && shouldApply) onRecordingOutputChange?.("primary", next);
+      if (event.phase === "update") finaliseGestureFrame();
+      if (event.phase === "end") {
+        selectionGestureRef.current = null;
+        requestAnimationFrame(editGesture.endGesture);
+      }
+      return;
+    }
     const cropX = snapshot.screenshotCropXPercent + event.deltaX * 100;
     const cropY = snapshot.screenshotCropYPercent + event.deltaY * 100;
     let next: RecordingOutputSettings[RecordingVideoTrackId];
-    if (event.operation === "cropMove") {
-      next = {
-        ...snapshot,
-        screenshotCropXPercent: cropX,
-        screenshotCropYPercent: cropY,
-      };
-    } else if (event.operation === "cropResize") {
-      let left = snapshot.screenshotCropXPercent;
-      let top = snapshot.screenshotCropYPercent;
-      let right = left + snapshot.screenshotCropWidthPercent;
-      let bottom = top + snapshot.screenshotCropHeightPercent;
-      if ((event.edges & 1) !== 0) left += event.deltaX * 100;
-      if ((event.edges & 2) !== 0) right += event.deltaX * 100;
-      if ((event.edges & 4) !== 0) top += event.deltaY * 100;
-      if ((event.edges & 8) !== 0) bottom += event.deltaY * 100;
-      next = {
-        ...snapshot,
-        screenshotCropHeightPercent: bottom - top,
-        screenshotCropWidthPercent: right - left,
-        screenshotCropXPercent: left,
-        screenshotCropYPercent: top,
-      };
+    if (event.operation === "cropMove" || event.operation === "cropResize") {
+      const source =
+        active.trackId === "primary"
+          ? previewSourceDimensions.primary
+          : previewSourceDimensions.camera;
+      if (!source) return;
+      next = applyScreenshotCropGesture({
+        ...event,
+        operation: event.operation,
+        output: screenshotOutputDimensions(snapshot),
+        settings: snapshot,
+        source,
+      });
+      if (event.phase === "end")
+        next = commitScreenshotCrop(snapshot, next, source);
     } else if (event.operation === "frameResize") {
       const source =
         active.trackId === "primary"
@@ -965,6 +935,14 @@ export function NativeRecordingPreview({
     selectionTargets,
     zoomPercent,
   });
+  const recenter = useRecordingRecenter({
+    artifactId,
+    getPositionMs: player.getPositionMs,
+    onOutputChange: (next) => onRecordingOutputChange?.("primary", next),
+    output: effectiveRecordingOutput.primary,
+    source: previewSourceDimensions.primary,
+  });
+  recenterActionRef.current = recenter.begin;
   const timelineThumbnails = useRecordingTimelineThumbnails({
     artifactId,
     isEnabled: previewLayout === undefined,
@@ -1027,6 +1005,10 @@ export function NativeRecordingPreview({
     activeVideoTrack !== null && selectedVideoTracks.has(activeVideoTrack);
   const canResizeActiveTrack =
     canEditActiveTrack && (!bakeCamera || canPreviewBakedCamera);
+  const canRecenterPrimary =
+    activeVideoTrack === "primary" &&
+    selectedVideoTracks.has("primary") &&
+    screenPane?.kind === "screen";
   const moveActiveVideoTrack = useCallback(
     (direction: "backward" | "forward") => {
       if (!activeVideoTrack) return;
@@ -1064,6 +1046,21 @@ export function NativeRecordingPreview({
   const toggleCropTool = useCallback(() => {
     setCanvasTool((current) => (current === "crop" ? null : "crop"));
   }, []);
+  const toggleRecenterTool = useCallback(() => {
+    pause();
+    if (canvasTool !== "recenter") recenter.prepare();
+    setCanvasTool((current) => (current === "recenter" ? null : "recenter"));
+  }, [canvasTool, pause, recenter]);
+  const changeCanvasTool = useCallback(
+    (next: RecordingCanvasTool) => {
+      if (next === "recenter") {
+        pause();
+        recenter.prepare();
+      }
+      setCanvasTool(next);
+    },
+    [pause, recenter],
+  );
 
   // The tools read the committed `recordingOutput`, never the resize draft, so
   // holding the element keeps the memoized toolbar's props stable mid-gesture.
@@ -1076,10 +1073,12 @@ export function NativeRecordingPreview({
           cameraPane={cameraPane}
           isEnabled={canEditActiveTrack}
           isFrameEnabled={canResizeActiveTrack}
+          isRecenterEnabled={canRecenterPrimary}
           isSelectEnabled={visiblePaneEntries.length > 0}
           onCameraOverlayReset={onCameraOverlayChange}
           onChange={onRecordingOutputChange}
-          onToolChange={setCanvasTool}
+          onRecenterReset={recenter.reset}
+          onToolChange={changeCanvasTool}
           outputs={recordingOutput}
           screenPane={screenPane}
           tool={canvasTool}
@@ -1091,9 +1090,12 @@ export function NativeRecordingPreview({
       cameraPane,
       canEditActiveTrack,
       canResizeActiveTrack,
+      canRecenterPrimary,
       canvasTool,
+      changeCanvasTool,
       onCameraOverlayChange,
       onRecordingOutputChange,
+      recenter.reset,
       recordingOutput,
       screenPane,
       visiblePaneEntries.length,
@@ -1149,6 +1151,7 @@ export function NativeRecordingPreview({
       ? moveActiveVideoTrackForward
       : undefined,
     onNudge: canNudgeActiveTrack ? nudgeActiveTrack : undefined,
+    onRecenter: canRecenterPrimary ? toggleRecenterTool : undefined,
     onResizeCanvas: canResizeActiveTrack ? toggleCanvasTool : undefined,
     onSelectTool: hasVisiblePanes ? toggleSelectTool : undefined,
     onStep: !canNudgeActiveTrack && layout ? stepPlayhead : undefined,

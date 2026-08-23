@@ -75,7 +75,7 @@ export const screenshotOutputDimensions = (
   width: Math.max(1, Math.round(settings.width)),
 });
 
-export const screenshotPlacement = (
+const screenshotPlacement = (
   source: { height: number; width: number },
   output: { height: number; width: number },
 ) => {

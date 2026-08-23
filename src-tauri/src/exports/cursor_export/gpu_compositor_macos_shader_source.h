@@ -372,6 +372,17 @@ static float4 overlay_canvas_foreground_rgba(
   return result;
 }
 
+/// Alpha-aware bilinear sampling preserves the cursor edge during canvas fit.
+static float4 still_cursor_pixel(const device uchar4 *cursor, float2 destination_point, uint2 destination_size, uint2 source_size) {
+  float2 point = clamp((destination_point + 0.5) * float2(source_size) / float2(destination_size) - 0.5, 0.0, float2(source_size - 1));
+  uint2 low = uint2(floor(point)), high = min(low + 1, source_size - 1);
+  float4 a = float4(cursor[low.y * source_size.x + low.x]) / 255.0, b = float4(cursor[low.y * source_size.x + high.x]) / 255.0;
+  float4 c = float4(cursor[high.y * source_size.x + low.x]) / 255.0, d = float4(cursor[high.y * source_size.x + high.x]) / 255.0;
+  a.rgb *= a.a; b.rgb *= b.a; c.rgb *= c.a; d.rgb *= d.a;
+  float4 pixel = mix(mix(a, b, fract(point.x)), mix(c, d, fract(point.x)), fract(point.y));
+  if (pixel.a > 0.0) pixel.rgb /= pixel.a; return pixel;
+}
+
 kernel void compose_canvas_rgba(
     const device uchar4 *source [[buffer(0)]],
     device uchar4 *output [[buffer(1)]],
@@ -399,12 +410,9 @@ kernel void compose_canvas_rgba(
         rounded_pixel_visible(crop_point, crop_size, float(u.radius));
     }
     if (cursor_visible) {
-      uint2 cursor_source = min(uint2(
-        float2(cursor_point) / float2(overlay.cursor_width, overlay.cursor_height) *
-        float2(overlay.cursor_source_width, overlay.cursor_source_height)),
-        uint2(overlay.cursor_source_width - 1, overlay.cursor_source_height - 1));
-      float4 cursor_pixel = float4(cursor[
-        cursor_source.y * overlay.cursor_source_width + cursor_source.x]) / 255.0;
+      float4 cursor_pixel = still_cursor_pixel(
+        cursor, float2(cursor_point), uint2(overlay.cursor_width, overlay.cursor_height),
+        uint2(overlay.cursor_source_width, overlay.cursor_source_height));
       rgba = mix(rgba, cursor_pixel, cursor_pixel.a);
     }
   }
@@ -454,12 +462,10 @@ kernel void compose_canvas_rgba(
           rounded_pixel_visible(crop_point, crop_size, float(u.radius));
       }
       if (cursor_visible) {
-        uint2 cursor_source = min(uint2(
-          float2(cursor_point) / float2(overlay.cursor_width, overlay.cursor_height) *
-          float2(overlay.cursor_source_width, overlay.cursor_source_height)),
-          uint2(overlay.cursor_source_width - 1, overlay.cursor_source_height - 1));
-        float4 cursor_pixel = float4(cursor[
-          cursor_source.y * overlay.cursor_source_width + cursor_source.x]) / 255.0;
+        float4 cursor_pixel = still_cursor_pixel(
+          cursor, float2(cursor_point),
+          uint2(overlay.cursor_width, overlay.cursor_height),
+          uint2(overlay.cursor_source_width, overlay.cursor_source_height));
         rgba = mix(rgba, cursor_pixel, cursor_pixel.a);
       }
     }
@@ -503,12 +509,10 @@ kernel void present_canvas_rgba(
         rounded_pixel_visible(crop_point, crop_size, float(u.radius));
     }
     if (cursor_visible) {
-      uint2 cursor_source = min(uint2(
-        float2(cursor_point) / float2(overlay.cursor_width, overlay.cursor_height) *
-        float2(overlay.cursor_source_width, overlay.cursor_source_height)),
-        uint2(overlay.cursor_source_width - 1, overlay.cursor_source_height - 1));
-      float4 cursor_pixel = float4(cursor[
-        cursor_source.y * overlay.cursor_source_width + cursor_source.x]) / 255.0;
+      float4 cursor_pixel = still_cursor_pixel(
+        cursor, float2(cursor_point),
+        uint2(overlay.cursor_width, overlay.cursor_height),
+        uint2(overlay.cursor_source_width, overlay.cursor_source_height));
       rgba = mix(rgba, cursor_pixel, cursor_pixel.a);
     }
   }
@@ -555,12 +559,10 @@ kernel void present_canvas_rgba(
           rounded_pixel_visible(crop_point, crop_size, float(u.radius));
       }
       if (cursor_visible) {
-        uint2 cursor_source = min(uint2(
-          float2(cursor_point) / float2(overlay.cursor_width, overlay.cursor_height) *
-          float2(overlay.cursor_source_width, overlay.cursor_source_height)),
-          uint2(overlay.cursor_source_width - 1, overlay.cursor_source_height - 1));
-        float4 cursor_pixel = float4(cursor[
-          cursor_source.y * overlay.cursor_source_width + cursor_source.x]) / 255.0;
+        float4 cursor_pixel = still_cursor_pixel(
+          cursor, float2(cursor_point),
+          uint2(overlay.cursor_width, overlay.cursor_height),
+          uint2(overlay.cursor_source_width, overlay.cursor_source_height));
         rgba = mix(rgba, cursor_pixel, cursor_pixel.a);
       }
     }
@@ -639,14 +641,10 @@ kernel void workspace_layer(
         existing, source, source_dimensions.x, source_dimensions.y,
         canvas_point, canvas_dimensions, u);
   }
-  int2 cursor_point = int2(canvas_point) - int2(overlay.cursor_x, overlay.cursor_y);
+  float2 cursor_point = canvas_point - float2(overlay.cursor_x, overlay.cursor_y);
   if (overlay.cursor_width > 0 && cursor_point.x >= 0 && cursor_point.y >= 0 &&
-      cursor_point.x < int(overlay.cursor_width) &&
-      cursor_point.y < int(overlay.cursor_height)) {
-    uint2 cursor_source = min(uint2(
-      float2(cursor_point) / float2(overlay.cursor_width, overlay.cursor_height) *
-      float2(overlay.cursor_source_width, overlay.cursor_source_height)),
-      uint2(overlay.cursor_source_width - 1, overlay.cursor_source_height - 1));
+      cursor_point.x < float(overlay.cursor_width) &&
+      cursor_point.y < float(overlay.cursor_height)) {
     bool visible = true;
     if (u.clip_cursor_at_video_edge != 0) {
       float2 crop_point = canvas_point - float2(u.crop_x, u.crop_y);
@@ -655,8 +653,10 @@ kernel void workspace_layer(
         rounded_pixel_visible(crop_point, crop_size, float(u.radius));
     }
     if (visible) {
-      float4 pixel = float4(cursor[cursor_source.y * overlay.cursor_source_width +
-                                   cursor_source.x]) / 255.0;
+      float4 pixel = still_cursor_pixel(
+        cursor, cursor_point,
+        uint2(overlay.cursor_width, overlay.cursor_height),
+        uint2(overlay.cursor_source_width, overlay.cursor_source_height));
       rgba = mix(rgba, pixel, pixel.a);
     }
   }
@@ -769,20 +769,20 @@ static float3 canvas_pixel(texture2d<float, access::sample> source_y,
   float image_coverage = crop_coverage *
     rounded_coverage(image_point, image_size, 0.0) *
     rounded_coverage(point - source_crop_origin, source_crop_size, 0.0);
+  bool has_inset = u.recenter_inset_color.a > 0.0; float frame_coverage = has_inset ? crop_coverage : image_coverage;
+  float2 shadow_origin = has_inset ? crop_origin : source_crop_origin, shadow_size = has_inset ? crop_size : source_crop_size;
   if (u.drop_shadow != 0) {
-    float sigma = visible_foreground_sigma(
-      crop_origin, crop_size, source_crop_origin, source_crop_size, dimensions);
+    float sigma = visible_foreground_sigma(crop_origin, crop_size, shadow_origin, shadow_size, dimensions);
     if (sigma > 1.0) {
-      float shadow = visible_foreground_shadow(
-        point, crop_origin, crop_size, float(u.radius),
-        source_crop_origin, source_crop_size, sigma, 0.14);
-      background *= 1.0 - shadow * (1.0 - image_coverage);
+      float shadow = visible_foreground_shadow(point, crop_origin, crop_size,
+        float(u.radius), shadow_origin, shadow_size, sigma, 0.14);
+      background *= 1.0 - shadow * (1.0 - frame_coverage);
     }
   }
-  if (image_coverage > 0.0)
-    return mix(background, source_pixel(source_y, source_uv, point, u),
-               image_coverage) * canvas_coverage;
-  return background * canvas_coverage;
+  float3 result = background; if (has_inset) result = mix(result, u.recenter_inset_color.rgb, crop_coverage);
+  if (image_coverage > 0.0) result = mix(result,
+    source_pixel(source_y, source_uv, point, u), image_coverage);
+  return result * canvas_coverage;
 }
 
 kernel void compose_canvas_luma(

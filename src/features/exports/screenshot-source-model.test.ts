@@ -247,4 +247,32 @@ describe("Crop and Recenter composition", () => {
       ).sourceCrop,
     );
   });
+
+  it("preserves the configured inset when Recenter detects new content", () => {
+    const source = { height: 1_000, width: 1_000 };
+    const settings = withScreenshotSourceCrop(
+      {
+        ...defaultScreenshotOutput(source.width, source.height),
+        recenterInsetColor: "#ffffff",
+        screenshotCropHeightPercent: 60,
+        screenshotCropWidthPercent: 60,
+        screenshotCropXPercent: 20,
+        screenshotCropYPercent: 20,
+      },
+      sourceRect({ height: 0.4, width: 0.4, x: 0.3, y: 0.3 }),
+    );
+
+    const recentered = recenterScreenshotContent(settings, source, {
+      height: 200,
+      width: 200,
+      x: 400,
+      y: 400,
+    });
+    const layout = screenshotLayout(source, source, recentered);
+
+    expect((layout.crop.width - layout.sourceCrop.width) / 2).toBeCloseTo(100);
+    expect((layout.crop.height - layout.sourceCrop.height) / 2).toBeCloseTo(
+      100,
+    );
+  });
 });

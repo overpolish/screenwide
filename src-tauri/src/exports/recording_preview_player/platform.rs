@@ -43,6 +43,6 @@ pub(super) use backend::composed_frame_image;
 #[cfg(target_os = "windows")]
 pub(crate) use backend::GpuVideoReader;
 pub(super) use backend::{
-  generate_thumbnails, playback_factors, send_frame, spawn_video, StillDecoder, VideoFramePayload,
-  NATIVE_STILLS,
+  generate_thumbnails, playback_factors, send_frame, source_frame_jpeg, spawn_video, StillDecoder,
+  VideoFramePayload, NATIVE_STILLS,
 };

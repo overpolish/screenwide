@@ -358,5 +358,8 @@ pub(super) fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult
 }
 
 #[cfg(test)]
+#[path = "platform_macos_recenter_tests.rs"]
+mod recenter_tests;
+#[cfg(test)]
 #[path = "platform_macos_tests.rs"]
 mod tests;

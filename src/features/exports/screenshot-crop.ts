@@ -127,21 +127,3 @@ export const uncroppedScreenshotPreviewOutput = (
     screenshotCropYPercent: (image.y * 100) / output.height,
   };
 };
-
-/** Preserve recording Crop, whose committed crop is the video track frame. */
-export const uncroppedRecordingPreviewOutput = (
-  source: { height: number; width: number },
-  settings: ScreenshotOutputSettings,
-): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(settings);
-  const { image } = screenshotLayout(source, output, settings);
-  return {
-    ...settings,
-    dropShadow: false,
-    radiusPercent: 0,
-    screenshotCropHeightPercent: (image.height * 100) / output.height,
-    screenshotCropWidthPercent: (image.width * 100) / output.width,
-    screenshotCropXPercent: (image.x * 100) / output.width,
-    screenshotCropYPercent: (image.y * 100) / output.height,
-  };
-};

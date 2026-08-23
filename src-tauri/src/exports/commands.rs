@@ -3,7 +3,7 @@
 
 use super::*;
 
-mod recenter;
+pub(crate) mod recenter;
 
 #[tauri::command]
 pub async fn get_screenshot_content_bounds(

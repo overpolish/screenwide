@@ -4,6 +4,7 @@
 use super::*;
 use crate::exports::recording_preview_player::layout::PreviewPaneKind;
 use crate::exports::{AudioTrackKind, RecordingAudioTrack};
+use crate::recording::PrimaryRecordingKind;
 
 #[test]
 fn decodes_tracks_into_independent_pcm_channels() {
@@ -32,6 +33,7 @@ fn decodes_tracks_into_independent_pcm_channels() {
     playback_layout: layout,
     playing: Default::default(),
     preview_surface: None,
+    primary_kind: PrimaryRecordingKind::Screen,
     screen_path: "/tmp/recording.mov".into(),
   };
   let config = StreamConfig {

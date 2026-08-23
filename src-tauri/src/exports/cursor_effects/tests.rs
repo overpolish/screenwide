@@ -51,6 +51,69 @@ fn custom_cursor_drops_its_recorded_hotspot() {
   assert_eq!(output_hotspot(custom), (0.0, 0.0));
 }
 
+#[test]
+fn custom_arrow_fallback_keeps_the_recorded_arrow_size() {
+  let records = [
+    CursorRecord::Header {
+      coordinate_space: "global-logical-points".to_owned(),
+      platform: "macos".to_owned(),
+      source: CursorSource {
+        height: 166.0,
+        kind: crate::recording::cursor::CursorSourceKind::Region,
+        platform_id: "1".to_owned(),
+        video_height: 332,
+        video_width: 1_008,
+        width: 504.0,
+        x: 379.0,
+        y: 446.0,
+      },
+      timebase: "recording-microseconds".to_owned(),
+      version: crate::recording::cursor::FORMAT_VERSION,
+    },
+    CursorRecord::Appearance {
+      height: 40.0,
+      hotspot_x: 5.0,
+      hotspot_y: 5.0,
+      style: CursorStyle::Arrow,
+      timestamp_us: 0,
+      width: 28.0,
+    },
+    CursorRecord::Position {
+      timestamp_us: 0,
+      x: 500.0,
+      y: 500.0,
+    },
+    CursorRecord::Appearance {
+      height: 18.0,
+      hotspot_x: 4.0,
+      hotspot_y: 9.0,
+      style: CursorStyle::Custom,
+      timestamp_us: 1_000_000,
+      width: 9.0,
+    },
+    CursorRecord::Position {
+      timestamp_us: 2_000_000,
+      x: 500.0,
+      y: 500.0,
+    },
+  ];
+  let compositor = CursorCompositor::from_records(&records).unwrap();
+  let cursor = compositor
+    .gpu_cursor(
+      1_500,
+      (1_008, 332),
+      CursorEffectSettings {
+        size_percent: 400.0,
+        ..CursorEffectSettings::default()
+      },
+    )
+    .unwrap();
+
+  assert_eq!(cursor.width, 56.0);
+  assert_eq!(cursor.height, 80.0);
+  assert_eq!(cursor.scale, 4.0);
+}
+
 #[cfg(target_os = "windows")]
 #[test]
 fn windows_standard_cursors_keep_their_recorded_native_hotspots() {

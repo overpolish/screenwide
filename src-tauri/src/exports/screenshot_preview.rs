@@ -14,7 +14,7 @@ mod gesture;
 mod layout;
 mod payloads;
 mod presentation;
-mod recenter;
+pub(crate) mod recenter;
 mod refresh;
 mod start;
 mod state;

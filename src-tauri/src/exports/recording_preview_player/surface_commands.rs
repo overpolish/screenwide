@@ -3,9 +3,10 @@
 
 //! Native preview surface layout and visibility commands.
 
+use super::surface_selection::RecordingPreviewSelection;
 use super::*;
 use crate::exports::preview_platform::workspace_editor::WorldRect;
-use crate::exports::preview_platform::{PreviewSelection, PreviewSurfaceRect};
+use crate::exports::preview_platform::PreviewSurfaceRect;
 use crate::exports::preview_workspace_model::WorkspacePane;
 use crate::exports::CameraOverlaySettings;
 
@@ -15,20 +16,6 @@ pub struct PreviewSurfacePane {
   index: u32,
   rect: PreviewSurfaceRect,
 }
-
-#[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RecordingPreviewSelection {
-  #[serde(default)]
-  crop_mode: bool,
-  #[serde(default)]
-  image: Option<PreviewSurfaceRect>,
-  layer_id: Option<u32>,
-  pane_index: u32,
-  radius_percent: f64,
-  rect: PreviewSurfaceRect,
-}
-
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingPreviewSurfaceLayout {
@@ -134,6 +121,9 @@ pub async fn layout_recording_preview_surface(
     return Ok(());
   }
   manager.latest_layout_request = request_id;
+  manager.recenter_mode = selection
+    .as_ref()
+    .is_some_and(RecordingPreviewSelection::is_recenter);
   let settings = manager
     .sources
     .as_ref()
@@ -277,54 +267,14 @@ pub async fn layout_recording_preview_surface(
     && !retained_recomposition
     && (!cfg!(target_os = "windows") || needs_initial_frame || bake_changed);
   let redraw_still = cfg!(target_os = "windows") && wants_still && !needs_decoder_still;
-  // A present is on its way (re-composed still, or live playback frames), so
-  // the pane may hold its size until that frame lands rather than fitting the
-  // previous drawable into the new rect for a display tick.
+  // Hold the pane size while a new composed or live frame is on its way.
   let defer_resize = needs_decoder_still || redraw_still || manager.is_playing;
   surface.set_scale(scale);
-  surface.set_selection(selection.map(|selection| PreviewSelection {
-    recenter_height: 0.0,
-    recenter_width: 0.0,
-    recenter_x: 0.0,
-    recenter_y: 0.0,
-    recenter_mode: 0,
-    crop_mode: u32::from(selection.crop_mode),
-    image_height: selection.image.map_or(0.0, |image| image.height),
-    image_width: selection.image.map_or(0.0, |image| image.width),
-    image_x: selection.image.map_or(0.0, |image| image.x),
-    image_y: selection.image.map_or(0.0, |image| image.y),
-    layer_id: selection.layer_id.unwrap_or(selection.pane_index),
-    radius_disabled: u32::from(selection.layer_id == Some(u32::MAX)),
-    pane_index: selection.pane_index,
-    x: selection.rect.x,
-    y: selection.rect.y,
-    width: selection.rect.width,
-    height: selection.rect.height,
-    radius_percent: selection.radius_percent,
-  }));
+  surface.set_selection(selection.map(RecordingPreviewSelection::into_native));
   let selection_targets = selection_targets.map(|targets| {
     targets
       .into_iter()
-      .map(|target| PreviewSelection {
-        recenter_height: 0.0,
-        recenter_width: 0.0,
-        recenter_x: 0.0,
-        recenter_y: 0.0,
-        recenter_mode: 0,
-        crop_mode: u32::from(target.crop_mode),
-        image_height: target.image.map_or(0.0, |image| image.height),
-        image_width: target.image.map_or(0.0, |image| image.width),
-        image_x: target.image.map_or(0.0, |image| image.x),
-        image_y: target.image.map_or(0.0, |image| image.y),
-        layer_id: target.layer_id.unwrap_or(target.pane_index),
-        radius_disabled: u32::from(target.layer_id == Some(u32::MAX)),
-        pane_index: target.pane_index,
-        x: target.rect.x,
-        y: target.rect.y,
-        width: target.rect.width,
-        height: target.rect.height,
-        radius_percent: target.radius_percent,
-      })
+      .map(RecordingPreviewSelection::into_native)
       .collect::<Vec<_>>()
   });
   surface.set_selection_targets(selection_targets.as_deref());

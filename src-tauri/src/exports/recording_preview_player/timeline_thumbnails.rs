@@ -6,11 +6,10 @@ use std::thread;
 use tauri::{image::Image, ipc::Channel, AppHandle};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-use super::{platform, sources};
+use super::{platform, sources, sources::headless_sources};
 use crate::exports::{
   cursor_effects::CursorEffectSettings, CameraOverlaySettings, RecordingOutputSettings,
 };
-
 pub(super) const HEADER_MARKER: u32 = u32::from_le_bytes(*b"OCTH");
 const HEADER_VERSION: u32 = 1;
 const MAX_THUMBNAILS: u32 = 32;
@@ -76,7 +75,7 @@ pub async fn stream_recording_timeline_thumbnails(
   count: u32,
   channel: Channel,
 ) -> Result<(), String> {
-  let sources = sources(&app, artifact_id, None)?;
+  let sources = headless_sources(&app, artifact_id)?;
   let count = count.clamp(MIN_THUMBNAILS, MAX_THUMBNAILS);
   thread::Builder::new()
     .name("recording-timeline-thumbnails".to_owned())

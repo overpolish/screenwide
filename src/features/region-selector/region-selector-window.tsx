@@ -40,6 +40,7 @@ import {
   captureScreenshotRegion,
   endScreenshotCapture,
   isScreenshotShortcut,
+  revealScreenshotRegion,
 } from "./screenshot-session";
 import { ResizeDirection } from "./types";
 import { useKeyHeld } from "./use-key-held";
@@ -84,8 +85,6 @@ export function RegionSelectorWindow() {
   const generalSettings = useGeneralSettings();
   const captureOnDraw = generalSettings?.captureScreenshotOnDraw ?? false;
 
-  // The overlay is the screenshot shortcut's own surface as well as the
-  // recording region's, so it shows for either reason.
   const activeMonitor =
     recordingMode === "region" || isScreenshotCapture ? selectedMonitor : null;
 
@@ -165,6 +164,7 @@ export function RegionSelectorWindow() {
     ) {
       setRegion(fitted);
     }
+    if (isScreenshotCapture) return revealScreenshotRegion(activeMonitor);
     void showRegionSelector(activeMonitor);
   }, [activeMonitor, isScreenshotCapture, region, setRegion]);
 

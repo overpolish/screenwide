@@ -181,12 +181,24 @@ export type RecordingSelectionGestureEvent = {
     | "frameResize"
     | "move"
     | "radius"
-    | "resize";
+    | "resize"
+    | "recenterAction";
   paneIndex: number;
   phase: "begin" | "update" | "end" | "cancel";
   scale: number;
   cameraOverlay?: CameraOverlaySettings;
   recordingOutput?: RecordingOutputSettings;
+};
+
+type RecordingPreviewSelection = {
+  paneIndex: number;
+  radiusPercent: number;
+  rect: { height: number; width: number; x: number; y: number };
+  cropMode?: boolean;
+  image?: { height: number; width: number; x: number; y: number };
+  layerId?: number;
+  recenterBounds?: { height: number; width: number; x: number; y: number };
+  recenterMode?: boolean;
 };
 
 export function useRecordingPreviewSurface({
@@ -237,24 +249,8 @@ export function useRecordingPreviewSurface({
   onSelectionChange?: (paneIndex: number | null) => void;
   onSelectionGesture?: (event: RecordingSelectionGestureEvent) => void;
   onZoomChange?: (zoomPercent: number) => void;
-  selection?: {
-    paneIndex: number;
-    radiusPercent: number;
-    rect: { height: number; width: number; x: number; y: number };
-    cropMode?: boolean;
-    image?: { height: number; width: number; x: number; y: number };
-    layerId?: number;
-  } | null;
-  selectionTargets?:
-    | {
-        paneIndex: number;
-        radiusPercent: number;
-        rect: { height: number; width: number; x: number; y: number };
-        cropMode?: boolean;
-        image?: { height: number; width: number; x: number; y: number };
-        layerId?: number;
-      }[]
-    | null;
+  selection?: RecordingPreviewSelection | null;
+  selectionTargets?: RecordingPreviewSelection[] | null;
   zoomPercent?: number;
 }) {
   const compositionRef = useRef({ bakeCamera, cameraOverlay, recordingOutput });
@@ -366,7 +362,7 @@ export function useRecordingPreviewSurface({
         !Number.isFinite(payload.deltaX) ||
         !Number.isFinite(payload.deltaY) ||
         !Number.isInteger(payload.edges) ||
-        ![0, 1, 2, 3, 4, 5, 6].includes(payload.operation) ||
+        ![0, 1, 2, 3, 4, 5, 6, 7].includes(payload.operation) ||
         !Number.isInteger(payload.paneIndex) ||
         !Number.isFinite(payload.scale) ||
         !["begin", "update", "end", "cancel"].includes(payload.phase)
@@ -385,20 +381,16 @@ export function useRecordingPreviewSurface({
         deltaX: payload.deltaX,
         deltaY: payload.deltaY,
         edges: payload.edges,
-        operation:
-          payload.operation === 0
-            ? "move"
-            : payload.operation === 1
-              ? "resize"
-              : payload.operation === 2
-                ? "radius"
-                : payload.operation === 3
-                  ? "frameResize"
-                  : payload.operation === 4
-                    ? "frameRadius"
-                    : payload.operation === 5
-                      ? "cropMove"
-                      : "cropResize",
+        operation: [
+          "move",
+          "resize",
+          "radius",
+          "frameResize",
+          "frameRadius",
+          "cropMove",
+          "cropResize",
+          "recenterAction",
+        ][payload.operation] as RecordingSelectionGestureEvent["operation"],
         paneIndex: payload.paneIndex,
         phase: payload.phase,
         recordingOutput: payload.recordingOutput,

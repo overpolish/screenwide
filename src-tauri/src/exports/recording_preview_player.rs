@@ -19,10 +19,13 @@ mod audio;
 pub(crate) mod commands;
 mod layout;
 mod lifecycle;
+mod output_gesture;
 mod platform;
+pub(crate) mod recenter;
 mod selection_gesture;
 mod selection_preview;
 mod sources;
+mod surface_selection;
 #[cfg(target_os = "windows")]
 pub(crate) use platform::GpuVideoReader;
 pub(crate) mod surface_commands;
@@ -73,6 +76,7 @@ struct PreviewCompositionSettings {
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 struct RecordingSelectionGesture {
+  recenter_mode: bool,
   snapshot: PreviewCompositionSettings,
 }
 
@@ -121,6 +125,7 @@ struct PreviewPlayerManager {
   /// The next still seek came from a scrub gesture in progress, so the
   /// scrubber may land on the cheapest nearby frame for immediacy.
   rough_seek: bool,
+  recenter_mode: bool,
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   selection_gesture: Option<RecordingSelectionGesture>,
   sources: Option<PlayerSources>,

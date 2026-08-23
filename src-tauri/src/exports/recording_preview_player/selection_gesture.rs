@@ -24,6 +24,9 @@ impl PreviewPlayerManager {
     delta_x: f64,
     delta_y: f64,
   ) -> Result<(), String> {
+    if operation == SelectionGestureOperation::RecenterAction {
+      return Ok(());
+    }
     let settings = self
       .sources
       .as_ref()
@@ -47,7 +50,10 @@ impl PreviewPlayerManager {
           self.selection_gesture = None;
           return Ok(());
         }
-        self.selection_gesture = Some(RecordingSelectionGesture { snapshot });
+        self.selection_gesture = Some(RecordingSelectionGesture {
+          recenter_mode: self.recenter_mode,
+          snapshot,
+        });
         Ok(())
       }
       SelectionGesturePhase::Update | SelectionGesturePhase::End => {
@@ -66,9 +72,15 @@ impl PreviewPlayerManager {
             .read()
             .map_err(|_| "The recording preview composition is unavailable".to_owned())?
             .clone();
-          self.selection_gesture = Some(RecordingSelectionGesture { snapshot });
+          self.selection_gesture = Some(RecordingSelectionGesture {
+            recenter_mode: self.recenter_mode,
+            snapshot,
+          });
         }
-        if operation == SelectionGestureOperation::Move && edges & AUTO_FIT_COMMIT_EDGE != 0 {
+        if operation == SelectionGestureOperation::Move
+          && !self.recenter_mode
+          && edges & AUTO_FIT_COMMIT_EDGE != 0
+        {
           let current = settings
             .read()
             .map_err(|_| "The recording preview composition is unavailable".to_owned())?
@@ -81,6 +93,7 @@ impl PreviewPlayerManager {
         let Some(gesture) = self.selection_gesture.as_ref() else {
           return Ok(());
         };
+        let recenter_mode = gesture.recenter_mode;
         let snapshot = &gesture.snapshot;
         let mut next = snapshot.clone();
         if matches!(
@@ -237,42 +250,27 @@ impl PreviewPlayerManager {
             unreachable!("crop gestures are mirrored by the frontend")
           }
         };
-        let mut geometry = apply_layer_gesture(
-          LayerGeometry {
-            crop: NormalizedRect {
-              x: start.screenshot_crop_x_percent / 100.0,
-              y: start.screenshot_crop_y_percent / 100.0,
-              width: start.screenshot_crop_width_percent / 100.0,
-              height: start.screenshot_crop_height_percent / 100.0,
-            },
-            image_center_x: start.screenshot_image_x_percent / 100.0,
-            image_center_y: start.screenshot_image_y_percent / 100.0,
-            image_width: start.screenshot_image_width_percent / 100.0,
-            radius_percent: start.radius_percent,
-          },
+        let source = self
+          .sources
+          .as_ref()
+          .and_then(|sources| sources.layout.panes.get(layer_id as usize));
+        if !super::output_gesture::apply(
+          start,
+          output,
+          source,
+          recenter_mode,
           operation,
-          (delta_x, delta_y),
+          edges,
           scale,
-        );
-        if operation == WorkspaceGestureOperation::Move && edges & AUTO_FIT_MOVE_EDGE != 0 {
-          let ((width, height), fitted) =
-            fit_canvas_to_layers((start.width, start.height), &[geometry]);
-          geometry = fitted[0];
-          output.width = width;
-          output.height = height;
+          (delta_x, delta_y),
+          AUTO_FIT_MOVE_EDGE,
+        ) {
+          return Ok(());
         }
-        output.screenshot_crop_x_percent = geometry.crop.x * 100.0;
-        output.screenshot_crop_y_percent = geometry.crop.y * 100.0;
-        output.screenshot_crop_width_percent = geometry.crop.width * 100.0;
-        output.screenshot_crop_height_percent = geometry.crop.height * 100.0;
-        output.screenshot_image_x_percent = geometry.image_center_x * 100.0;
-        output.screenshot_image_y_percent = geometry.image_center_y * 100.0;
-        output.screenshot_image_width_percent = geometry.image_width * 100.0;
-        output.radius_percent = geometry.radius_percent;
         *settings
           .write()
           .map_err(|_| "The recording preview composition is unavailable".to_owned())? = next;
-        if edges & AUTO_FIT_MOVE_EDGE != 0 {
+        if !recenter_mode && edges & AUTO_FIT_MOVE_EDGE != 0 {
           if ending {
             self.selection_gesture = None;
           }

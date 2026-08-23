@@ -20,6 +20,7 @@ pub(super) struct PlayerSources {
   /// never stomps a playing frame.
   pub(super) playing: Arc<AtomicBool>,
   pub(super) preview_surface: Option<Arc<RecordingPreviewSurface>>,
+  pub(super) primary_kind: PrimaryRecordingKind,
   pub(super) screen_path: PathBuf,
 }
 
@@ -27,6 +28,19 @@ pub(super) fn sources(
   app: &AppHandle,
   artifact_id: u64,
   settings: Option<&PreviewPlayerSettings>,
+) -> Result<PlayerSources, String> {
+  sources_with_surface(app, artifact_id, settings, true)
+}
+
+pub(super) fn headless_sources(app: &AppHandle, artifact_id: u64) -> Result<PlayerSources, String> {
+  sources_with_surface(app, artifact_id, None, false)
+}
+
+fn sources_with_surface(
+  app: &AppHandle,
+  artifact_id: u64,
+  settings: Option<&PreviewPlayerSettings>,
+  create_surface: bool,
 ) -> Result<PlayerSources, String> {
   let state = app.state::<ExportState>();
   let (audio_tracks, camera, cursor_path, duration_ms, height, path, primary_kind, width) = {
@@ -74,10 +88,14 @@ pub(super) fn sources(
   // export window's NSView/HWND. Never do that while holding the artifact
   // mutex: the main thread may simultaneously be serving a snapshot request
   // that needs the same mutex, which deadlocks crash recovery on startup.
-  let preview_surface = app
-    .get_webview_window(ExportKind::Recording.window_label().as_str())
-    .map(|window| RecordingPreviewSurface::from_window(&window).map(Arc::new))
-    .transpose()?;
+  let preview_surface = if create_surface {
+    app
+      .get_webview_window(ExportKind::Recording.window_label().as_str())
+      .map(|window| RecordingPreviewSurface::from_window(&window).map(Arc::new))
+      .transpose()?
+  } else {
+    None
+  };
   let layout = preview_layout(primary_pane, camera_size, height);
   // Native playback decodes every source at its own stored resolution. The
   // presentation surface handles its visual size, so a portrait camera is not
@@ -119,6 +137,7 @@ pub(super) fn sources(
     playback_layout,
     playing: Arc::new(AtomicBool::new(false)),
     preview_surface,
+    primary_kind,
     screen_path: path,
   })
 }

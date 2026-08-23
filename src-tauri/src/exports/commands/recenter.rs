@@ -14,7 +14,7 @@ pub(crate) struct RecenterAnalysis {
 
 /// The smallest rectangle containing every detected UI component. Empty
 /// space outside this union is the padding Recenter balances.
-pub(super) fn analyse(
+pub(crate) fn analyse(
   rgba: &[u8],
   width: u32,
   height: u32,

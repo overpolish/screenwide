@@ -34,6 +34,17 @@ export const getScreenshotRecenterAnalysis = (
     sourceCrop,
   });
 
+export const getRecordingRecenterAnalysis = (
+  artifactId: number,
+  positionMs: number,
+  sourceCrop: SourceRect,
+) =>
+  invoke<ScreenshotRecenterAnalysis | null>("get_recording_content_bounds", {
+    artifactId,
+    positionMs: Math.max(0, Math.round(positionMs)),
+    sourceCrop,
+  });
+
 export const recenterScreenshotContent = (
   settings: ScreenshotOutputSettings,
   source: { height: number; width: number },
@@ -41,6 +52,13 @@ export const recenterScreenshotContent = (
 ): ScreenshotOutputSettings => {
   const output = screenshotOutputDimensions(settings);
   const layout = screenshotLayout(source, output, settings);
+  const inset = Math.max(
+    0,
+    Math.min(
+      (layout.crop.width - layout.sourceCrop.width) / 2,
+      (layout.crop.height - layout.sourceCrop.height) / 2,
+    ),
+  );
   const sourceCrop = sourceRect({
     height: content.height / source.height,
     width: content.width / source.width,
@@ -64,10 +82,14 @@ export const recenterScreenshotContent = (
   return withScreenshotSourceCrop(
     {
       ...settings,
-      screenshotCropHeightPercent: (contentRect.height * 100) / output.height,
-      screenshotCropWidthPercent: (contentRect.width * 100) / output.width,
-      screenshotCropXPercent: ((contentRect.x + deltaX) * 100) / output.width,
-      screenshotCropYPercent: ((contentRect.y + deltaY) * 100) / output.height,
+      screenshotCropHeightPercent:
+        ((contentRect.height + inset * 2) * 100) / output.height,
+      screenshotCropWidthPercent:
+        ((contentRect.width + inset * 2) * 100) / output.width,
+      screenshotCropXPercent:
+        ((contentRect.x + deltaX - inset) * 100) / output.width,
+      screenshotCropYPercent:
+        ((contentRect.y + deltaY - inset) * 100) / output.height,
       screenshotImageXPercent:
         settings.screenshotImageXPercent + (deltaX * 100) / output.width,
       screenshotImageYPercent:

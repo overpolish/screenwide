@@ -25,11 +25,6 @@ export type CanvasGeometry = {
   };
 };
 
-export type ScreenshotLayerGeometry = {
-  canvas: CanvasGeometry;
-  sourceCrop: SourceRect;
-};
-
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value));
 
