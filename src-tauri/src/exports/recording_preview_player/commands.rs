@@ -12,7 +12,6 @@ struct RecordingPreviewSelectionChangeEvent {
   pane_index: Option<u32>,
   session_id: u64,
 }
-
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct RecordingPreviewSelectionGestureEvent {
@@ -62,6 +61,16 @@ pub async fn start_recording_preview_player(
         },
       );
     }));
+    if let Some(event_window) =
+      app.get_webview_window(ExportKind::Recording.window_label().as_str())
+    {
+      surface.set_pointer_down_callback(Box::new(move || {
+        let _ = event_window.emit(
+          super::super::preview_platform::NATIVE_POINTER_DOWN_EVENT,
+          (),
+        );
+      }));
+    }
     let event_app = app.clone();
     surface.set_selection_gesture_callback(Box::new(
       move |phase, pane_index, operation, edges, scale, delta_x, delta_y| {
@@ -70,10 +79,9 @@ pub async fn start_recording_preview_player(
           let updated = manager
             .handle_selection_gesture(phase, pane_index, operation, edges, scale, delta_x, delta_y)
             .is_ok();
-          // A canvas resize - a Frame drag, or an Alt-drag Move growing the
-          // canvas around its layer - moves the pane box on every pointer
-          // move, so the composition has to follow it in the same input. macOS
-          // recomposes its retained workspace natively; Windows redraws the
+          // A Frame drag, or an Alt-drag Move growing the canvas around its
+          // layer, moves the pane box on every pointer move, so the composition
+          // follows it immediately. macOS recomposes natively; Windows redraws the
           // paused still from its cached sources here, which also publishes
           // the geometry the drag deferred. Without this the pane would show
           // the previous canvas letterboxed into the new box until mouse-up.

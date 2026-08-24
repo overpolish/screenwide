@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Minus, Plus } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Button,
   Group,
@@ -17,12 +16,12 @@ import { VariantProps } from "tailwind-variants";
 import { tv } from "../../../lib/variants";
 import { inputFieldVariants } from "../input-fields/input-field";
 
+import { useNumberFieldScrub } from "./use-number-field-scrub";
+
 const ICON_SIZES = {
   md: 16,
   sm: 14,
 };
-
-const isMac = navigator.userAgent.includes("Mac");
 
 const numberFieldVariants = tv({
   extend: inputFieldVariants,
@@ -77,13 +76,6 @@ export const NumberField = ({
   const resolvedValue = value ?? uncontrolledValue;
   const valueRef = useRef(resolvedValue);
   const groupRef = useRef<HTMLDivElement>(null);
-  const cursorScrubRef = useRef<Promise<unknown> | null>(null);
-  const dragRef = useRef<{
-    residual: number;
-    restoreFocus: boolean;
-    scrubbing: boolean;
-    startTravel: number;
-  } | null>(null);
 
   valueRef.current = resolvedValue;
 
@@ -108,120 +100,14 @@ export const NumberField = ({
     [maxValue, minValue, onChange, scrubStep, step, value],
   );
 
-  const releaseCursorScrub = useCallback(() => {
-    document.documentElement.removeAttribute("data-number-field-scrubbing");
-    if (cursorScrubRef.current) {
-      const cursorScrub = cursorScrubRef.current;
-      cursorScrubRef.current = null;
-      void cursorScrub
-        .catch(() => undefined)
-        .then(() => invoke("end_cursor_scrub"))
-        .catch(() => undefined);
-    } else if (document.pointerLockElement) {
-      document.exitPointerLock();
-    }
-  }, []);
-
-  useEffect(
-    () => () => {
-      releaseCursorScrub();
-    },
-    [releaseCursorScrub],
-  );
-
-  useEffect(() => {
-    if (!scrubbable) {
-      return;
-    }
-
-    const handleMouseMove = (event: MouseEvent) => {
-      const drag = dragRef.current;
-      if (!drag) {
-        return;
-      }
-
-      const travel = event.movementX - event.movementY;
-      if (!drag.scrubbing) {
-        drag.startTravel += travel;
-        if (Math.abs(drag.startTravel) < 3) {
-          return;
-        }
-        drag.scrubbing = true;
-      }
-
-      drag.residual += travel;
-      const stepsMoved = Math.trunc(drag.residual / 4);
-      if (stepsMoved === 0) {
-        return;
-      }
-
-      drag.residual -= stepsMoved * 4;
-      const multiplier = (event.shiftKey ? 10 : 1) * (event.altKey ? 0.1 : 1);
-      changeValue(
-        valueRef.current + stepsMoved * (scrubStep ?? step ?? 1) * multiplier,
-      );
-    };
-
-    const finishScrub = (restoreFocus: boolean) => {
-      const drag = dragRef.current;
-      if (!drag) {
-        return;
-      }
-
-      dragRef.current = null;
-      releaseCursorScrub();
-
-      const input = groupRef.current?.querySelector("input");
-      if (!drag.scrubbing) {
-        input?.focus();
-        input?.select();
-      } else if (restoreFocus && drag.restoreFocus) {
-        input?.focus({ preventScroll: true });
-      }
-    };
-
-    const handleMouseUp = () => {
-      finishScrub(true);
-    };
-
-    const handleWindowBlur = () => {
-      finishScrub(false);
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("blur", handleWindowBlur);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("blur", handleWindowBlur);
-    };
-  }, [changeValue, releaseCursorScrub, scrubbable, scrubStep, step]);
-
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrubbable || event.button !== 0) {
-      return;
-    }
-
-    const input = groupRef.current?.querySelector("input");
-    const restoreFocus = document.activeElement === input;
-    input?.blur();
-    window.getSelection()?.removeAllRanges();
-    event.preventDefault();
-
-    dragRef.current = {
-      residual: 0,
-      restoreFocus,
-      scrubbing: false,
-      startTravel: 0,
-    };
-    document.documentElement.setAttribute("data-number-field-scrubbing", "");
-    if (isTauri() && isMac) {
-      cursorScrubRef.current = invoke("begin_cursor_scrub");
-    } else if (isTauri()) {
-      void groupRef.current?.requestPointerLock().catch(() => undefined);
-    }
-  };
+  const handlePointerDown = useNumberFieldScrub({
+    changeValue,
+    groupRef,
+    scrubStep,
+    scrubbable,
+    step,
+    valueRef,
+  });
 
   const {
     base,

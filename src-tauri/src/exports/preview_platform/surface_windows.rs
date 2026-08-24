@@ -69,8 +69,8 @@ use super::{
     rebase_display_fit_mode, DisplayRect, DisplayTarget, NormalizedRect,
   },
   workspace_transform::WorkspaceTransform,
-  PreviewSelection, PreviewSurfaceRect, SelectionCallback, SelectionGestureCallback,
-  SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
+  PointerDownCallback, PreviewSelection, PreviewSurfaceRect, SelectionCallback,
+  SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
 };
 use crate::exports::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
@@ -394,6 +394,7 @@ enum ActiveGesture {
 #[derive(Default)]
 struct EditorCallbacks {
   gesture: Option<SelectionGestureCallback>,
+  pointer_down: Option<PointerDownCallback>,
   selection: Option<SelectionCallback>,
   transform: Option<TransformCallback>,
 }
@@ -1380,6 +1381,16 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
     return;
   };
   let inner = &inner;
+  if matches!(
+    input,
+    editor::Input::Down { .. } | editor::Input::PanDown { .. }
+  ) {
+    if let Ok(mut callbacks) = inner.callbacks.lock() {
+      if let Some(callback) = callbacks.pointer_down.as_mut() {
+        callback();
+      }
+    }
+  }
   let scale = inner
     .state
     .lock()
@@ -2565,6 +2576,12 @@ impl RecordingPreviewSurface {
   pub(crate) fn set_selection_callback(&mut self, callback: SelectionCallback) {
     if let Ok(mut callbacks) = self.inner.callbacks.lock() {
       callbacks.selection = Some(callback);
+    }
+  }
+
+  pub(crate) fn set_pointer_down_callback(&mut self, callback: PointerDownCallback) {
+    if let Ok(mut callbacks) = self.inner.callbacks.lock() {
+      callbacks.pointer_down = Some(callback);
     }
   }
 

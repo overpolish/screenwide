@@ -13,7 +13,7 @@ mod capture_geometry;
 #[cfg(target_os = "macos")]
 mod capture_kit;
 mod capture_overlays;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod cursor_scrub;
 mod exports;
 mod image_analysis;
@@ -77,9 +77,9 @@ pub fn run() {
       audio_preview::stop_audio_preview,
       camera_preview::start_camera_preview,
       camera_preview::stop_camera_preview,
-      #[cfg(target_os = "macos")]
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
       cursor_scrub::begin_cursor_scrub,
-      #[cfg(target_os = "macos")]
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
       cursor_scrub::end_cursor_scrub,
       exports::commands::browse_export_directory,
       exports::commands::cancel_export,

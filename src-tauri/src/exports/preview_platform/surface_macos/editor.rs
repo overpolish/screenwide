@@ -2,14 +2,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::{
-  PreviewSelection, SelectionCallback, SelectionGestureCallback, TransformCallback,
+  PointerDownCallback, PreviewSelection, SelectionCallback, SelectionGestureCallback,
+  TransformCallback,
 };
 use super::callbacks::{
-  release_callback_on_main, selection_callback, selection_gesture_callback, transform_callback,
+  pointer_down_callback, release_callback_on_main, selection_callback, selection_gesture_callback,
+  transform_callback,
 };
 use super::ffi::{
   screenwide_preview_surface_enable_editor, screenwide_preview_surface_set_editor_zoom,
-  screenwide_preview_surface_set_selection, screenwide_preview_surface_set_selection_callback,
+  screenwide_preview_surface_set_pointer_down_callback, screenwide_preview_surface_set_selection,
+  screenwide_preview_surface_set_selection_callback,
   screenwide_preview_surface_set_selection_gesture_callback,
   screenwide_preview_surface_set_selection_snapping,
   screenwide_preview_surface_set_selection_targets,
@@ -97,6 +100,19 @@ impl RecordingPreviewSurface {
       );
     }
     release_callback_on_main(self.selection_callback.replace(callback));
+  }
+
+  pub(crate) fn set_pointer_down_callback(&mut self, callback: PointerDownCallback) {
+    let mut callback = Box::new(callback);
+    let context = (&mut *callback) as *mut PointerDownCallback as *mut std::ffi::c_void;
+    unsafe {
+      screenwide_preview_surface_set_pointer_down_callback(
+        self.handle,
+        Some(pointer_down_callback),
+        context,
+      );
+    }
+    release_callback_on_main(self.pointer_down_callback.replace(callback));
   }
 
   /// Installs the native selection-body gesture callback. The callback is

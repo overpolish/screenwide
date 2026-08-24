@@ -76,6 +76,7 @@ typedef void (*screenwide_preview_selection_gesture_callback)(uint32_t phase,
                                                                void *context);
 typedef void (*screenwide_preview_selection_callback)(int32_t pane_index,
                                                        void *context);
+typedef void (*screenwide_preview_pointer_down_callback)(void *context);
 
 typedef struct {
   uint32_t pane_index;
@@ -175,6 +176,8 @@ typedef struct {
 @property(nonatomic) void *selectionGestureContext;
 @property(nonatomic) screenwide_preview_selection_callback selectionCallback;
 @property(nonatomic) void *selectionContext;
+@property(nonatomic) screenwide_preview_pointer_down_callback pointerDownCallback;
+@property(nonatomic) void *pointerDownContext;
 @property(nonatomic) BOOL selectionHitTestingEnabled;
 @property(nonatomic, strong) NSArray<NSValue *> *selectionTargets;
 @property(nonatomic) BOOL selectionSnappingEnabled;

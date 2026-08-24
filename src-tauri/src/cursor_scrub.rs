@@ -1,51 +1,66 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::Mutex;
+use serde::Serialize;
+use tauri::ipc::Channel;
 
-use core_graphics::{
-  display::CGDisplay,
-  event::CGEvent,
-  event_source::{CGEventSource, CGEventSourceStateID},
-  geometry::CGPoint,
-};
+#[cfg(target_os = "macos")]
+#[path = "cursor_scrub/macos.rs"]
+mod platform;
+#[cfg(target_os = "windows")]
+#[path = "cursor_scrub/windows.rs"]
+mod platform;
 
-static CURSOR_ANCHOR: Mutex<Option<(f64, f64)>> = Mutex::new(None);
+#[derive(Clone, Serialize)]
+#[cfg_attr(target_os = "macos", allow(dead_code))]
+#[serde(
+  rename_all = "camelCase",
+  rename_all_fields = "camelCase",
+  tag = "type"
+)]
+pub(super) enum CursorScrubEvent {
+  Move {
+    alt_key: bool,
+    delta_x: i32,
+    delta_y: i32,
+    shift_key: bool,
+  },
+  End,
+}
 
 #[tauri::command]
-pub fn begin_cursor_scrub() -> Result<(), String> {
-  let source = CGEventSource::new(CGEventSourceStateID::CombinedSessionState)
-    .map_err(|()| "Could not read the cursor position".to_string())?;
-  let point = CGEvent::new(source)
-    .map_err(|()| "Could not read the cursor position".to_string())?
-    .location();
-
-  CGDisplay::associate_mouse_and_mouse_cursor_position(false)
-    .map_err(|error| format!("Could not pin the cursor: {error}"))?;
-  if let Err(error) = CGDisplay::warp_mouse_cursor_position(point) {
-    let _ = CGDisplay::associate_mouse_and_mouse_cursor_position(true);
-    return Err(format!("Could not pin the cursor: {error}"));
-  }
-
-  *CURSOR_ANCHOR
-    .lock()
-    .map_err(|_| "Could not store the cursor position".to_string())? = Some((point.x, point.y));
-  Ok(())
+pub fn begin_cursor_scrub(channel: Channel<CursorScrubEvent>) -> Result<(), String> {
+  platform::begin(channel)
 }
 
 #[tauri::command]
 pub fn end_cursor_scrub() -> Result<(), String> {
-  let anchor = CURSOR_ANCHOR
-    .lock()
-    .map_err(|_| "Could not restore the cursor position".to_string())?
-    .take();
+  platform::end()
+}
 
-  let warp_result = anchor
-    .map(|(x, y)| CGDisplay::warp_mouse_cursor_position(CGPoint::new(x, y)))
-    .transpose();
-  let association_result = CGDisplay::associate_mouse_and_mouse_cursor_position(true);
+#[cfg(test)]
+mod tests {
+  use super::CursorScrubEvent;
 
-  warp_result
-    .and(association_result)
-    .map_err(|error| format!("Could not restore the cursor position: {error}"))
+  #[test]
+  fn movement_payload_uses_frontend_field_names() {
+    let payload = serde_json::to_value(CursorScrubEvent::Move {
+      alt_key: true,
+      delta_x: 3,
+      delta_y: -2,
+      shift_key: false,
+    })
+    .unwrap();
+
+    assert_eq!(
+      payload,
+      serde_json::json!({
+        "altKey": true,
+        "deltaX": 3,
+        "deltaY": -2,
+        "shiftKey": false,
+        "type": "move",
+      })
+    );
+  }
 }

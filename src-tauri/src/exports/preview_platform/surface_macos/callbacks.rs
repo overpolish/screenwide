@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::{
-  SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
-  TransformCallback,
+  PointerDownCallback, SelectionCallback, SelectionGestureCallback, SelectionGestureOperation,
+  SelectionGesturePhase, TransformCallback,
 };
 use super::ffi::screenwide_preview_surface_release_context_on_main;
 
@@ -61,6 +61,12 @@ pub(super) unsafe extern "C" fn selection_callback(
 ) {
   if let Some(callback) = (context as *mut SelectionCallback).as_mut() {
     callback(u32::try_from(pane_index).ok());
+  }
+}
+
+pub(super) unsafe extern "C" fn pointer_down_callback(context: *mut std::ffi::c_void) {
+  if let Some(callback) = (context as *mut PointerDownCallback).as_mut() {
+    callback();
   }
 }
 

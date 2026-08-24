@@ -98,6 +98,21 @@ export function ExportWindow() {
     );
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelingSave, setIsCancelingSave] = useState(false);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void getCurrentWindow()
+      .listen("preview://native-pointer-down", () => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        window.getSelection()?.removeAllRanges();
+      })
+      .then((dispose) => {
+        unlisten = dispose;
+      });
+    return () => unlisten?.();
+  }, []);
   const [trackSelection, setTrackSelection] = useState<{
     artifactId: number;
     streamIndices: number[];

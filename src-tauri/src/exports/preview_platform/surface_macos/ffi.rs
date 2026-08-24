@@ -128,6 +128,11 @@ unsafe extern "C" {
     callback: Option<unsafe extern "C" fn(i32, *mut std::ffi::c_void)>,
     context: *mut std::ffi::c_void,
   );
+  pub(super) fn screenwide_preview_surface_set_pointer_down_callback(
+    handle: *mut std::ffi::c_void,
+    callback: Option<unsafe extern "C" fn(*mut std::ffi::c_void)>,
+    context: *mut std::ffi::c_void,
+  );
   pub(super) fn screenwide_preview_surface_set_selection_gesture_callback(
     handle: *mut std::ffi::c_void,
     callback: Option<

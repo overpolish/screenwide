@@ -98,9 +98,9 @@
     NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
     set_selection_cursor_at_point(self.surface, point);
   }
-  (void)event;
 }
 - (void)mouseDown:(NSEvent *)event {
+  if (self.surface.pointerDownCallback) self.surface.pointerDownCallback(self.surface.pointerDownContext);
   // A stale commit flag must not outlive its gesture (see its declaration).
   self.surface.keepTransformForCommittedNaturalSize = NO;
   // Keep keyboard shortcuts in React even though pointer gestures are native.

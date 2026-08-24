@@ -31,16 +31,18 @@ use self::ffi::{
   screenwide_preview_surface_begin_present, screenwide_preview_surface_create,
   screenwide_preview_surface_destroy, screenwide_preview_surface_enable_editor,
   screenwide_preview_surface_end_present, screenwide_preview_surface_present,
+  screenwide_preview_surface_set_pointer_down_callback,
   screenwide_preview_surface_set_selection_callback,
   screenwide_preview_surface_set_selection_gesture_callback,
 };
 pub(crate) use self::native_types::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
-use super::{SelectionCallback, SelectionGestureCallback, TransformCallback};
+use super::{PointerDownCallback, SelectionCallback, SelectionGestureCallback, TransformCallback};
 use crate::screenshots::CapturedImage;
 
 pub(crate) struct RecordingPreviewSurface {
   pub(super) handle: *mut std::ffi::c_void,
   pub(super) selection_callback: Option<Box<SelectionCallback>>,
+  pub(super) pointer_down_callback: Option<Box<PointerDownCallback>>,
   pub(super) transform_callback: Option<Box<TransformCallback>>,
   pub(super) selection_gesture_callback: Option<Box<SelectionGestureCallback>>,
 }
@@ -58,6 +60,7 @@ impl RecordingPreviewSurface {
       Ok(Self {
         handle,
         selection_callback: None,
+        pointer_down_callback: None,
         transform_callback: None,
         selection_gesture_callback: None,
       })
@@ -91,6 +94,7 @@ impl Drop for RecordingPreviewSurface {
     unsafe {
       screenwide_preview_surface_enable_editor(self.handle, None, std::ptr::null_mut());
       screenwide_preview_surface_set_selection_callback(self.handle, None, std::ptr::null_mut());
+      screenwide_preview_surface_set_pointer_down_callback(self.handle, None, std::ptr::null_mut());
       screenwide_preview_surface_set_selection_gesture_callback(
         self.handle,
         None,
@@ -100,6 +104,7 @@ impl Drop for RecordingPreviewSurface {
     }
     release_callback_on_main(self.transform_callback.take());
     release_callback_on_main(self.selection_callback.take());
+    release_callback_on_main(self.pointer_down_callback.take());
     release_callback_on_main(self.selection_gesture_callback.take());
   }
 }

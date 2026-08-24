@@ -66,6 +66,13 @@ pub fn start_screenshot_preview(
             },
           );
         }));
+        let event_window = window.clone();
+        surface.set_pointer_down_callback(Box::new(move || {
+          let _ = event_window.emit(
+            super::super::preview_platform::NATIVE_POINTER_DOWN_EVENT,
+            (),
+          );
+        }));
         let event_app = app.clone();
         surface.set_selection_gesture_callback(Box::new(
           move |phase, pane_index, operation, edges, scale, delta_x, delta_y| {

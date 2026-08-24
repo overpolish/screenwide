@@ -83,6 +83,8 @@ pub(crate) use surface::{run_on_main_queue, NativeWorkspacePlacement, RecordingW
 
 pub(crate) type TransformCallback = Box<dyn FnMut(f64) + Send + 'static>;
 pub(crate) type SelectionCallback = Box<dyn FnMut(Option<u32>) + Send + 'static>;
+pub(crate) type PointerDownCallback = Box<dyn FnMut() + Send + 'static>;
+pub(crate) const NATIVE_POINTER_DOWN_EVENT: &str = "preview://native-pointer-down";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SelectionGesturePhase {
