@@ -3,7 +3,7 @@
 
 use cpal::{
   traits::{DeviceTrait, HostTrait},
-  Device, SampleFormat, StreamConfig,
+  Device, DeviceDescription, InterfaceType, SampleFormat, StreamConfig,
 };
 use nokhwa::{
   query,
@@ -60,8 +60,12 @@ fn enumerate_microphones() -> Result<Vec<InputDeviceDetails>, String> {
   let devices = host.input_devices().map_err(|error| error.to_string())?;
   let mut result = devices
     .filter_map(|device| {
+      let description = device.description().ok()?;
+      if !is_user_selectable_microphone(&description) {
+        return None;
+      }
       let id = device.id().ok()?.to_string();
-      let label = device.description().ok()?.name().to_string();
+      let label = description.name().to_string();
       Some(InputDeviceDetails {
         is_default: default_id.as_deref() == Some(&id),
         id,
@@ -72,6 +76,10 @@ fn enumerate_microphones() -> Result<Vec<InputDeviceDetails>, String> {
   result.sort_by_cached_key(|device| (!device.is_default, device.label.to_lowercase()));
   result.dedup_by(|left, right| left.id == right.id);
   Ok(result)
+}
+
+fn is_user_selectable_microphone(description: &DeviceDescription) -> bool {
+  description.interface_type() != InterfaceType::Aggregate
 }
 
 /// Whether the camera the user selected earlier still enumerates. Used at
@@ -302,6 +310,17 @@ pub(crate) fn camera_id(camera: &CameraInfo) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn hides_private_aggregate_devices_from_microphone_selection() {
+    let physical = cpal::DeviceDescriptionBuilder::new("Built-in Microphone").build();
+    let aggregate = cpal::DeviceDescriptionBuilder::new("Cpal loopback aggregate")
+      .interface_type(InterfaceType::Aggregate)
+      .build();
+
+    assert!(is_user_selectable_microphone(&physical));
+    assert!(!is_user_selectable_microphone(&aggregate));
+  }
 
   #[test]
   fn sorts_camera_modes_by_size_then_orientation() {
