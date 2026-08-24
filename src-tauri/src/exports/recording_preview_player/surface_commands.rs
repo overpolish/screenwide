@@ -5,6 +5,19 @@
 
 use super::surface_selection::RecordingPreviewSelection;
 use super::*;
+
+fn workspace_topology(
+  panes: &[PreviewSurfacePane],
+  bake_camera: bool,
+) -> RecordingWorkspaceTopology {
+  let mut pane_indices = panes.iter().map(|pane| pane.index).collect::<Vec<_>>();
+  pane_indices.sort_unstable();
+  pane_indices.dedup();
+  RecordingWorkspaceTopology {
+    bake_camera,
+    pane_indices,
+  }
+}
 use crate::exports::preview_platform::workspace_editor::WorldRect;
 use crate::exports::preview_platform::PreviewSurfaceRect;
 use crate::exports::preview_workspace_model::WorkspacePane;
@@ -159,6 +172,9 @@ pub async fn layout_recording_preview_surface(
     .iter()
     .map(|pane| pane.index as usize)
     .collect::<Vec<_>>();
+  let next_topology = workspace_topology(&panes, bake_camera);
+  let topology_changed = manager.workspace_topology.as_ref() != Some(&next_topology);
+  manager.workspace_topology = Some(next_topology);
   clear_inactive_pane_targets(&mut manager.pane_target_sizes, &active_pane_indices);
   let mut sizes_changed = false;
   let needs_initial_frame = panes.iter().any(|pane| {
@@ -225,6 +241,10 @@ pub async fn layout_recording_preview_surface(
   else {
     return Ok(());
   };
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  if topology_changed {
+    surface.clear_workspace_transform_history();
+  }
   #[cfg(target_os = "macos")]
   let retained_recomposition = if composition_changed && !bake_changed {
     let active_outputs = panes
@@ -332,7 +352,8 @@ pub async fn layout_recording_preview_surface(
 
 #[cfg(test)]
 mod tests {
-  use super::clear_inactive_pane_targets;
+  use super::{clear_inactive_pane_targets, workspace_topology, PreviewSurfacePane};
+  use crate::exports::preview_platform::PreviewSurfaceRect;
 
   #[test]
   fn reenabled_panes_require_a_fresh_present() {
@@ -342,6 +363,26 @@ mod tests {
 
     let camera_needs_present = targets[1] == (0, 0);
     assert!(camera_needs_present);
+  }
+
+  #[test]
+  fn workspace_topology_distinguishes_camera_modes_and_active_panes() {
+    let pane = |index| PreviewSurfacePane {
+      index,
+      rect: PreviewSurfaceRect {
+        height: 100.0,
+        width: 100.0,
+        x: 0.0,
+        y: 0.0,
+      },
+    };
+    let primary = workspace_topology(&[pane(0)], false);
+    let split = workspace_topology(&[pane(1), pane(0)], false);
+    let baked = workspace_topology(&[pane(0)], true);
+
+    assert_ne!(primary, split);
+    assert_ne!(primary, baked);
+    assert_eq!(split, workspace_topology(&[pane(0), pane(1)], false));
   }
 }
 

@@ -22,12 +22,16 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+action.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+magnifier.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+editor.m");
+    println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+label.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+osc.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+selection.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+workspace.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+layout.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+zoom.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos_private.h");
+    println!(
+      "cargo:rerun-if-changed=src/exports/recording_preview_surface_macos_private_functions.h"
+    );
     println!("cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos.h");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_reader_macos.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_scrubber_macos.m");
@@ -43,6 +47,7 @@ fn main() {
       .file("src/exports/recording_preview_surface_macos+action.m")
       .file("src/exports/recording_preview_surface_macos+magnifier.m")
       .file("src/exports/recording_preview_surface_macos+editor.m")
+      .file("src/exports/recording_preview_surface_macos+label.m")
       .file("src/exports/recording_preview_surface_macos+osc.m")
       .file("src/exports/recording_preview_surface_macos+selection.m")
       .file("src/exports/recording_preview_surface_macos+workspace.m")
@@ -57,6 +62,7 @@ fn main() {
       "AVFoundation",
       "AppKit",
       "CoreMedia",
+      "CoreText",
       "CoreVideo",
       "Foundation",
       "Metal",
@@ -72,11 +78,11 @@ fn main() {
 #[cfg(windows)]
 fn compile_windows_preview_shaders() {
   compile_shader(
-    "src/exports/preview_platform/surface_windows/compositor.rs",
+    "src/exports/preview_platform/surface_windows/shaders/preview.hlsl",
     "recording_preview",
   );
   compile_shader(
-    "src/exports/preview_platform/surface_windows/selection.rs",
+    "src/exports/preview_platform/surface_windows/shaders/selection.hlsl",
     "recording_selection",
   );
 }
@@ -89,16 +95,8 @@ fn compile_shader(source_path: &str, output_prefix: &str) {
     Win32::Graphics::Direct3D::{Fxc::D3DCompile, ID3DBlob},
   };
 
-  const START: &str = "const SHADER: &str = r#\"";
-  const END: &str = "\"#;";
   println!("cargo:rerun-if-changed={source_path}");
-  let rust = std::fs::read_to_string(source_path).expect("read the Windows preview shader");
-  let start = rust.find(START).expect("find the preview shader start") + START.len();
-  let end = rust[start..]
-    .find(END)
-    .map(|offset| start + offset)
-    .expect("find the preview shader end");
-  let source = &rust.as_bytes()[start..end];
+  let source = std::fs::read(source_path).expect("read the Windows preview shader");
   let output = PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo supplied OUT_DIR"));
 
   for (entry, target, suffix) in [("vs_main", "vs_4_0", "vs"), ("ps_main", "ps_4_0", "ps")] {
@@ -129,7 +127,9 @@ fn compile_shader(source_path: &str, output_prefix: &str) {
           .trim_matches(char::from(0))
           .to_owned()
       });
-      panic!("Windows preview shader compilation failed: {error}: {detail}");
+      panic!(
+        "Windows preview shader compilation failed for {source_path} ({entry:?}, {target:?}): {error}: {detail}"
+      );
     }
     let code = code.expect("D3DCompile returned preview bytecode");
     let bytes = unsafe {

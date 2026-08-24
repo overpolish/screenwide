@@ -80,7 +80,25 @@ pub(super) fn begin_action(inner: &SurfaceInner, physical: (f64, f64)) -> bool {
   hit
 }
 
-pub(super) fn update_action(inner: &SurfaceInner, physical: (f64, f64)) -> bool {
+pub(super) fn animate_action(inner: &SurfaceInner) -> bool {
+  redraw_action(inner);
+  inner
+    .gpu
+    .selection
+    .lock()
+    .is_ok_and(|overlay| overlay.action.is_animating())
+}
+
+pub(super) fn action_hit(inner: &SurfaceInner, physical: (f64, f64)) -> bool {
+  inner
+    .gpu
+    .selection
+    .lock()
+    .ok()
+    .is_some_and(|overlay| overlay.action.hit(physical))
+}
+
+pub(super) fn update_action(inner: &SurfaceInner, physical: (f64, f64)) -> (bool, bool) {
   let (hovered, changed) = inner
     .gpu
     .selection
@@ -92,7 +110,7 @@ pub(super) fn update_action(inner: &SurfaceInner, physical: (f64, f64)) -> bool 
   if changed {
     redraw_action(inner);
   }
-  hovered
+  (hovered, changed)
 }
 
 pub(super) fn release_action(

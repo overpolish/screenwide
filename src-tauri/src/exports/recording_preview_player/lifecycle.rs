@@ -128,6 +128,7 @@ impl PreviewPlayerManager {
     }
     self.sources = None;
     self.session_id = None;
+    self.workspace_topology = None;
     self.workspace_scene = None;
   }
 

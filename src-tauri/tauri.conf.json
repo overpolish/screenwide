@@ -241,7 +241,9 @@
     "externalBin": ["binaries/ffmpeg"],
     "resources": {
       "../FFMPEG.md": "licenses/FFMPEG.md",
-      "../LICENSE": "licenses/GPL-3.0.txt"
+      "../LICENSE": "licenses/GPL-3.0.txt",
+      "assets/Inter-OFL-1.1.txt": "licenses/Inter-OFL-1.1.txt",
+      "assets/Inter-VariableFont_opsz,wght.ttf": "fonts/Inter-VariableFont_opsz,wght.ttf"
     },
     "macOS": {
       "minimumSystemVersion": "14.2"

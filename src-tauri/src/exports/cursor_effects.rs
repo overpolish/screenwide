@@ -489,8 +489,12 @@ impl CursorCompositor {
       scale: (output.cursor.scale * settings.size_percent.clamp(50.0, 500.0) / 100.0) as f32,
       style: artwork,
       width: output.width as f32,
-      x: output.x as f32,
-      y: output.y as f32,
+      // Keep the artwork origin on the output pixel grid. Fractional cursor
+      // event positions otherwise make opposite edges sample different texel
+      // coverage, producing the alternating thin/thick outline seen during
+      // very small movements.
+      x: output.x.round() as f32,
+      y: output.y.round() as f32,
       clip_at_video_edge: settings.clip_at_video_edge,
     })
   }

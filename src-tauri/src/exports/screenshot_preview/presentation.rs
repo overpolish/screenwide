@@ -50,12 +50,17 @@ impl PreviewManager {
       return Ok(staged);
     }
     #[cfg(not(target_os = "macos"))]
+    let mut staged = true;
+    #[cfg(not(target_os = "macos"))]
+    let mut has_source = false;
+    #[cfg(not(target_os = "macos"))]
     for (index, item_output) in output.items.iter().enumerate() {
       let Some((_, source)) = sources.iter().find(|(id, _)| *id == item_output.id) else {
         continue;
       };
+      has_source = true;
       let item_settings = output.output_for_id(item_output.id);
-      surface.present_screenshot_layer(
+      staged &= surface.present_screenshot_layer(
         index as u32,
         item_output.id,
         source,
@@ -64,7 +69,7 @@ impl PreviewManager {
       )?;
     }
     #[cfg(not(target_os = "macos"))]
-    Ok(true)
+    Ok(!has_source || staged)
   }
 
   pub(super) fn present_batch(&self) -> Result<(), String> {

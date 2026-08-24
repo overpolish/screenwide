@@ -425,6 +425,39 @@ fn display_fit_rebase_keeps_small_canvas_tool_layouts_stable() {
 }
 
 #[test]
+fn display_fit_rebase_matches_recording_workspaces_that_upscale_small_outputs() {
+  let displayed = DisplayRect {
+    x: 8.0,
+    y: 177.72,
+    width: 908.0,
+    height: 164.55,
+  };
+  let rebased =
+    super::rebase_display_fit_mode((924.0, 519.0), displayed, (644.0, 116.71), 8.0, true);
+
+  assert!((rebased.fit.width - displayed.width).abs() < 0.01);
+  assert!((rebased.fit.height - displayed.height).abs() < 0.01);
+  assert!((rebased.zoom - 1.0).abs() < 0.000_1);
+}
+
+#[test]
+fn display_fit_rebase_recalculates_relative_zoom_for_a_resized_canvas() {
+  let displayed = DisplayRect {
+    x: 200.0,
+    y: 200.0,
+    width: 600.0,
+    height: 300.0,
+  };
+  let before = rebase_display_fit((1_000.0, 700.0), displayed, (400.0, 200.0), 8.0);
+  let resized = rebase_display_fit((1_000.0, 700.0), displayed, (800.0, 400.0), 8.0);
+
+  assert_eq!(before.zoom, 1.5);
+  assert!(resized.zoom < before.zoom);
+  assert!((resized.fit.width * resized.zoom - displayed.width).abs() < 0.000_001);
+  assert!((resized.fit.height * resized.zoom - displayed.height).abs() < 0.000_001);
+}
+
+#[test]
 fn canvas_fit_preserves_absolute_layer_geometry() {
   let layer = LayerGeometry {
     crop: n(0.25, -0.5, 0.5, 1.0),

@@ -3,8 +3,8 @@
 
 use super::{
   recovery::{
-    camera_for_recording, cursor_for_recording, orphaned_recordings, sweep_preview_files,
-    sweep_unclaimed_cameras, sweep_unclaimed_cursors, OrphanPlan,
+    camera_for_recording, cursor_for_recording, orphaned_recordings, sweep_cancelled_recordings,
+    sweep_preview_files, sweep_unclaimed_cameras, sweep_unclaimed_cursors, OrphanPlan,
   },
   save::{save_recording, save_selected_recording},
   *,
@@ -158,6 +158,20 @@ fn recovers_an_unsaved_recording_whichever_container_it_was_written_in() {
   expected.sort();
 
   assert_eq!(found, expected);
+}
+
+#[test]
+fn never_recovers_a_deliberately_cancelled_recording() {
+  let directory = test_directory("cancelled-recording-recovery");
+  let recording = directory.join("recording-20260808-143205.000.mp4");
+  let marker = crate::recording::cancelled_marker(&recording);
+  std::fs::write(&recording, b"partial movie").unwrap();
+  std::fs::write(&marker, []).unwrap();
+
+  assert!(orphaned_recordings(&directory).is_empty());
+  sweep_cancelled_recordings(&directory);
+  assert!(!recording.exists());
+  assert!(!marker.exists());
 }
 
 #[test]

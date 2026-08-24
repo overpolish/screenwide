@@ -106,10 +106,6 @@ pub async fn layout_screenshot_preview_surface(
     manager.has_layout = true;
     (surface, will_present, natural_size)
   };
-  // The natural canvas size only drives the retained macOS workspace layout;
-  // the Windows path lays panes out from their own rects.
-  #[cfg(not(target_os = "macos"))]
-  let _ = natural_size;
   surface.set_selection(selection.map(|overlay| PreviewSelection {
     recenter_height: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.height),
     recenter_width: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.width),
@@ -181,9 +177,20 @@ pub async fn layout_screenshot_preview_surface(
   if let Some(pane) = panes.first() {
     surface.layout_workspace(pane.rect, natural_size, will_present);
   }
-  #[cfg(not(target_os = "macos"))]
-  for pane in panes {
-    surface.layout(pane.index, pane.rect, will_present);
+  #[cfg(target_os = "windows")]
+  {
+    let pane_rects = panes
+      .iter()
+      .map(|pane| (pane.index, pane.rect))
+      .collect::<Vec<_>>();
+    surface.layout_screenshot_workspace(natural_size, &pane_rects, will_present);
+  }
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  {
+    let _ = natural_size;
+    for pane in panes {
+      surface.layout(pane.index, pane.rect, will_present);
+    }
   }
   // Open the batch before `finish_layout` so the hides, the deferred pane
   // frames and the fresh layer presents all land in one commit - on Windows

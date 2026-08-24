@@ -296,6 +296,7 @@ export function ScreenshotSection({
         onBackgroundRadiusChange={onBackgroundRadiusChange}
         onBackgroundRadiusChangeEnd={onBackgroundRadiusChangeEnd}
         onCanvasResize={onCanvasResize}
+        onCropChangeEnd={recenter.refresh}
         onItemSelect={onSelectedItemChange}
         onOutputChange={onOutputChange}
         onPaneFitChange={(fit) => {

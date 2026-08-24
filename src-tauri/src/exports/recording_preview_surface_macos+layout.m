@@ -408,3 +408,11 @@ void screenwide_preview_surface_finish_layout(void *handle) {
     invalidate_selection_cursor_rects(surface);
   });
 }
+
+void screenwide_preview_surface_clear_workspace_transform_history(void *handle) {
+  if (handle == NULL) return;
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  on_main_async(^{
+    [surface.workspaceTransforms removeAllObjects];
+  });
+}

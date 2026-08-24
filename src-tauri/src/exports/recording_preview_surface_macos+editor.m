@@ -67,7 +67,11 @@
 }
 - (void)mouseEntered:(NSEvent *)event { [self mouseMoved:event]; }
 - (void)mouseExited:(NSEvent *)event {
-  if (self.surface.selectionActionHovered) { self.surface.selectionActionHovered = NO; redraw_selection(self.surface); }
+  if (self.surface.selectionActionHovered) {
+    self.surface.selectionActionHovered = NO;
+    selection_action_begin_transition(self.surface);
+    redraw_selection(self.surface);
+  }
   [self releaseCursorControl];
   [[NSCursor arrowCursor] set];
   (void)event;
@@ -103,16 +107,6 @@
   // The overlay receives the click, so AppKit cannot focus WKWebView for us.
   if (self.surface.webview != nil)
     [self.window makeFirstResponder:self.surface.webview];
-  if (event.clickCount == 2) {
-    self.surface.editorPanX = 0;
-    self.surface.editorPanY = 0;
-    self.surface.editorZoom = 1.0;
-    apply_editor_transform(self.surface);
-    if (self.surface.transformCallback)
-      self.surface.transformCallback(100.0,
-                                     self.surface.transformContext);
-    return;
-  }
   self.dragOrigin = [self convertPoint:event.locationInWindow fromView:nil];
   self.dragPan = NSMakePoint(self.surface.editorPanX,
                              self.surface.editorPanY);
@@ -124,6 +118,16 @@
                     self.surface.hasSelection &&
                     self.surface.selection.pane_index < self.surface.editorBaseRects.count;
   if (canGesture && selection_action_begin(self.surface, event.buttonNumber, point)) return;
+  if (event.clickCount == 2) {
+    self.surface.editorPanX = 0;
+    self.surface.editorPanY = 0;
+    self.surface.editorZoom = 1.0;
+    apply_editor_transform(self.surface);
+    if (self.surface.transformCallback)
+      self.surface.transformCallback(100.0,
+                                     self.surface.transformContext);
+    return;
+  }
   if (event.buttonNumber == 0 && self.surface.selectionHitTestingEnabled) {
     ScreenwidePreviewSelection target;
     uint8_t sharedHandle = 0;

@@ -25,6 +25,7 @@ import {
 } from "../screenshot-crop";
 import {
   RecordingOutputSettings,
+  ScreenshotOutputSettings,
   defaultScreenshotOutput,
   defaultRecordingOutput,
   recordingVideoTrackOrder,
@@ -116,6 +117,9 @@ export function NativeRecordingPreview({
     trackId: RecordingVideoTrackId;
   } | null>(null);
   const recenterActionRef = useRef<() => void>(() => undefined);
+  const recenterRefreshRef = useRef<
+    (crop: ScreenshotOutputSettings["sourceCrop"]) => void
+  >(() => undefined);
   const editGesture = useExportEditGesture();
   const totalDurationRef = useRef(durationMs);
   const [playhead] = useState(createPlayhead);
@@ -802,6 +806,8 @@ export function NativeRecordingPreview({
     }
     if (event.phase === "update") finaliseGestureFrame();
     if (event.phase === "end") {
+      if (isCropGesture && active.trackId === "primary")
+        recenterRefreshRef.current(next.sourceCrop);
       // Mouse-up is the authoritative native transform. Apply it once more,
       // then keep the history gesture open through React's commit so a late
       // pointer update cannot become a tiny second undo entry.
@@ -943,6 +949,7 @@ export function NativeRecordingPreview({
     source: previewSourceDimensions.primary,
   });
   recenterActionRef.current = recenter.begin;
+  recenterRefreshRef.current = recenter.refresh;
   const timelineThumbnails = useRecordingTimelineThumbnails({
     artifactId,
     isEnabled: previewLayout === undefined,

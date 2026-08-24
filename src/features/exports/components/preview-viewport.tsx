@@ -8,6 +8,7 @@ import {
   commitScreenshotCrop,
   uncroppedScreenshotPreviewOutput,
 } from "../screenshot-crop";
+import { SourceRect } from "../screenshot-geometry";
 import {
   ScreenshotOutputSettings,
   ScreenshotWorkspaceOutputSettings,
@@ -42,6 +43,7 @@ type PreviewViewportProps = {
   onBackgroundRadiusChange?: (radiusPercent: number) => void;
   onBackgroundRadiusChangeEnd?: () => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
+  onCropChangeEnd?: (crop: SourceRect) => void;
   onItemSelect?: (itemId: number) => void;
   onOutputChange?: (
     settings: ScreenshotOutputSettings,
@@ -73,6 +75,7 @@ export function PreviewViewport({
   onBackgroundRadiusChange,
   onBackgroundRadiusChangeEnd,
   onCanvasResize,
+  onCropChangeEnd,
   onItemSelect,
   onOutputChange,
   onPaneFitChange,
@@ -419,6 +422,7 @@ export function PreviewViewport({
     active.lastEdges = event.edges;
     if (event.phase === "update") finaliseGestureFrame();
     if (event.phase === "end") {
+      if (cropOperation) onCropChangeEnd?.(next.sourceCrop);
       selectionGestureRef.current = null;
       requestAnimationFrame(editGesture.endGesture);
       if (event.operation === "radius") onRadiusChangeEnd?.();

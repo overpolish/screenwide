@@ -64,7 +64,8 @@ SCREENWIDE_PREVIEW_PRIVATE NSRect rebase_workspace_fit(ScreenwidePreviewSurface 
   };
   ScreenwideDisplayFitRebase rebased = screenwide_workspace_rebase_display_fit(
       viewport.width, viewport.height, topLeftDisplayed,
-      surface.workspaceNaturalWidth, surface.workspaceNaturalHeight, 8.0);
+      surface.workspaceNaturalWidth, surface.workspaceNaturalHeight, 8.0,
+      surface.workspaceExplicitPlacements ? 1 : 0);
   surface.editorZoom = rebased.zoom;
   surface.editorPanX = rebased.pan_x;
   surface.editorPanY = rebased.pan_y;
@@ -299,6 +300,7 @@ vertex selection_out selection_vertex_main(const device selection_vertex *vertic
 fragment float4 selection_fragment(selection_out in [[stage_in]],
                                    constant uint &light_mode [[buffer(0)]],
                                    constant float4 &magnifier_box [[buffer(1)]],
+                                   constant float2 &action_shades [[buffer(2)]],
                                    texture2d<float> label [[texture(0)]]) {
   constexpr sampler label_sampler(filter::linear, address::clamp_to_edge);
   if (magnifier_box.z > 0.0) {
@@ -319,16 +321,17 @@ fragment float4 selection_fragment(selection_out in [[stage_in]],
   }
   if (in.kind >= 12 && in.kind <= 14) {
     float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
-    float radius = dimensions.y * 0.24;
+    // The compact action is 24pt tall; this ratio keeps React's 6pt rounded-md
+    // radius independent of backing scale because `dimensions` is in pixels.
+    float radius = dimensions.y * 0.25;
     float2 local = abs((in.uv - 0.5) * dimensions) -
                    (dimensions * 0.5 - radius);
     float distance = length(max(local, 0.0)) +
                      min(max(local.x, local.y), 0.0) - radius;
     float coverage = 1.0 - smoothstep(-1.0, 1.0, distance);
-    float shade = in.kind == 14 ? 0.18 : in.kind == 13 ? 0.15 : 0.12;
-    float3 fill = light_mode != 0 ? float3(1.0 - shade * 0.2)
-                                  : float3(shade);
-    return float4(fill, coverage * 0.96);
+    // Opaque resolved values of React's neutral-soft semantic tokens.
+    float shade = light_mode != 0 ? action_shades.x : action_shades.y;
+    return float4(float3(shade), coverage);
   }
   if (in.kind == 6) return float4(0.0, 0.0, 0.0, 0.4);
   if (in.kind >= 7 && in.kind <= 10) {

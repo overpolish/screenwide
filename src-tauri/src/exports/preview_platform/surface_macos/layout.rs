@@ -3,8 +3,10 @@
 
 use super::super::PreviewSurfaceRect;
 use super::ffi::{
-  screenwide_preview_surface_begin_layout, screenwide_preview_surface_finish_layout,
-  screenwide_preview_surface_hide, screenwide_preview_surface_layout_recording_workspace,
+  screenwide_preview_surface_begin_layout,
+  screenwide_preview_surface_clear_workspace_transform_history,
+  screenwide_preview_surface_finish_layout, screenwide_preview_surface_hide,
+  screenwide_preview_surface_layout_recording_workspace,
   screenwide_preview_surface_layout_workspace, screenwide_preview_surface_set_viewport,
 };
 use super::native_types::NativeWorkspacePaneRect;
@@ -91,6 +93,11 @@ impl RecordingPreviewSurface {
   pub(crate) fn finish_layout(&self) {
     unsafe {
       screenwide_preview_surface_finish_layout(self.handle);
+    }
+  }
+  pub(crate) fn clear_workspace_transform_history(&self) {
+    unsafe {
+      screenwide_preview_surface_clear_workspace_transform_history(self.handle);
     }
   }
   pub(crate) fn hide(&self) {

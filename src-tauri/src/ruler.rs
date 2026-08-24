@@ -10,6 +10,8 @@ use crate::{capture_overlays, screenshots};
 
 pub(crate) mod analysis;
 pub(crate) mod focus;
+#[cfg(target_os = "windows")]
+mod platform_windows;
 pub(crate) mod snapshot;
 use focus::{follow_cursor_focus, watch_focus, FocusRegion};
 pub use snapshot::RulerState;
@@ -144,6 +146,8 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     .visible_on_all_workspaces(true)
     .build()
     .map_err(|error| error.to_string())?;
+    #[cfg(target_os = "windows")]
+    platform_windows::suppress_menu_key_mode(&window)?;
     // Deliberately shareable: the screenshot shortcut can preserve the ruler
     // and capture its annotations as part of the selected desktop region.
     set_ruler_level(&window, 33)?;

@@ -4,6 +4,71 @@
 #import "recording_preview_surface_macos_private.h"
 #include <math.h>
 
+static const double kSelectionActionTransitionSeconds = 0.15;
+
+static void selection_action_target(ScreenwidePreviewSurface *surface,
+                                    float target[2]) {
+  if (surface.selectionActionPressed) {
+    target[0] = 0.918f; target[1] = 0.231f;
+  } else if (surface.selectionActionHovered) {
+    target[0] = 0.832f; target[1] = 0.322f;
+  } else {
+    target[0] = 0.924f; target[1] = 0.226f;
+  }
+}
+
+SCREENWIDE_PREVIEW_PRIVATE void selection_action_shades(
+    ScreenwidePreviewSurface *surface, float shades[2]) {
+  if (surface.selectionActionTransitionStarted <= 0.0) {
+    // Objective-C scalar properties begin at zero. Until the first state
+    // change, the action is visually in its normal opaque state; afterwards
+    // the last transition target is the stable current colour.
+    shades[0] = surface.selectionActionToLight > 0.0f
+        ? surface.selectionActionToLight : 0.924f;
+    shades[1] = surface.selectionActionToDark > 0.0f
+        ? surface.selectionActionToDark : 0.226f;
+    return;
+  }
+  double progress = fmin(1.0, (CACurrentMediaTime() -
+      surface.selectionActionTransitionStarted) /
+      kSelectionActionTransitionSeconds);
+  shades[0] = surface.selectionActionFromLight +
+      (surface.selectionActionToLight - surface.selectionActionFromLight) * progress;
+  shades[1] = surface.selectionActionFromDark +
+      (surface.selectionActionToDark - surface.selectionActionFromDark) * progress;
+}
+
+static void schedule_selection_action_frame(ScreenwidePreviewSurface *surface,
+                                             uint64_t revision) {
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 16 * NSEC_PER_MSEC),
+                 dispatch_get_main_queue(), ^{
+    if (surface.selectionActionAnimationRevision != revision) return;
+    redraw_selection(surface);
+    if (CACurrentMediaTime() - surface.selectionActionTransitionStarted <
+        kSelectionActionTransitionSeconds) {
+      schedule_selection_action_frame(surface, revision);
+    } else {
+      surface.selectionActionTransitionStarted = 0.0;
+    }
+  });
+}
+
+SCREENWIDE_PREVIEW_PRIVATE void selection_action_begin_transition(
+    ScreenwidePreviewSurface *surface) {
+  float current[2], target[2];
+  selection_action_shades(surface, current);
+  selection_action_target(surface, target);
+  if (fabsf(current[0] - target[0]) < 0.0001f &&
+      fabsf(current[1] - target[1]) < 0.0001f) return;
+  surface.selectionActionFromLight = current[0];
+  surface.selectionActionFromDark = current[1];
+  surface.selectionActionToLight = target[0];
+  surface.selectionActionToDark = target[1];
+  surface.selectionActionTransitionStarted = CACurrentMediaTime();
+  uint64_t revision = ++surface.selectionActionAnimationRevision;
+  schedule_selection_action_frame(surface, revision);
+}
+
 SCREENWIDE_PREVIEW_PRIVATE double selection_recenter_scale(
     ScreenwidePreviewSelection start, ScreenwidePreviewSelection resized,
     uint32_t edges) {
@@ -19,6 +84,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_action_hover(
                  NSPointInRect(point, surface.selectionActionRect);
   if (surface.selectionActionHovered != hovered) {
     surface.selectionActionHovered = hovered;
+    selection_action_begin_transition(surface);
     redraw_selection(surface);
   }
   return hovered;
@@ -30,6 +96,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_action_begin(
       !NSPointInRect(point, surface.selectionActionRect)) return NO;
   surface.selectionActionPressed = YES;
   surface.selectionActionHovered = YES;
+  selection_action_begin_transition(surface);
   redraw_selection(surface);
   set_selection_cursor([NSCursor arrowCursor]);
   return YES;
@@ -49,6 +116,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_action_end(
   BOOL activate = selection_action_hover(surface, point);
   uint32_t operation = surface.selectionActionOperation;
   surface.selectionActionPressed = NO;
+  selection_action_begin_transition(surface);
   redraw_selection(surface);
   if (activate && operation != 0)
     emit_selection_gesture(surface, 0, operation, 0, 1.0, 0.0, 0.0);

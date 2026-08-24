@@ -12,6 +12,19 @@ pub(super) struct SnapGuide {
   pub guide: f64,
 }
 
+pub(super) struct ResizeAxis<'a> {
+  pub(super) anchor: f64,
+  pub(super) vector: f64,
+  pub(super) raw_scale: f64,
+  pub(super) pane_width: f64,
+  pub(super) pane_height: f64,
+  pub(super) zoom: f64,
+  pub(super) minimum: f64,
+  pub(super) maximum: f64,
+  pub(super) targets: &'a [(u32, f64, f64)],
+  pub(super) layer_id: u32,
+}
+
 fn consider(best: &mut SnapGuide, adjustment: f64, guide: f64, object: bool, threshold: f64) {
   let distance = adjustment.abs();
   if distance > threshold
@@ -85,18 +98,19 @@ pub(super) fn move_axis(
   best
 }
 
-pub(super) fn resize_axis(
-  anchor: f64,
-  vector: f64,
-  raw_scale: f64,
-  pane_width: f64,
-  pane_height: f64,
-  zoom: f64,
-  minimum: f64,
-  maximum: f64,
-  targets: &[(u32, f64, f64)],
-  layer_id: u32,
-) -> SnapGuide {
+pub(super) fn resize_axis(request: ResizeAxis<'_>) -> SnapGuide {
+  let ResizeAxis {
+    anchor,
+    vector,
+    raw_scale,
+    pane_width,
+    pane_height,
+    zoom,
+    minimum,
+    maximum,
+    targets,
+    layer_id,
+  } = request;
   let mut best = SnapGuide::default();
   if vector.abs() < 0.0000001 {
     return best;
@@ -168,25 +182,36 @@ mod tests {
 
   #[test]
   fn resize_returns_uniform_scale_for_target_edge() {
-    let result = resize_axis(0.0, 1.0, 0.987, 1000.0, 600.0, 1.0, 0.1, 8.0, &[], 1);
+    let result = resize_axis(ResizeAxis {
+      anchor: 0.0,
+      vector: 1.0,
+      raw_scale: 0.987,
+      pane_width: 1000.0,
+      pane_height: 600.0,
+      zoom: 1.0,
+      minimum: 0.1,
+      maximum: 8.0,
+      targets: &[],
+      layer_id: 1,
+    });
     assert!(result.found);
     assert!((result.adjustment - 0.988).abs() < 1e-9);
   }
 
   #[test]
   fn resize_object_wins_equal_distance_tie() {
-    let result = resize_axis(
-      0.0,
-      1.0,
-      0.496,
-      1000.0,
-      600.0,
-      1.0,
-      0.1,
-      8.0,
-      &[(2, 0.5, 0.1)],
-      1,
-    );
+    let result = resize_axis(ResizeAxis {
+      anchor: 0.0,
+      vector: 1.0,
+      raw_scale: 0.496,
+      pane_width: 1000.0,
+      pane_height: 600.0,
+      zoom: 1.0,
+      minimum: 0.1,
+      maximum: 8.0,
+      targets: &[(2, 0.5, 0.1)],
+      layer_id: 1,
+    });
     assert!(result.found && result.object);
   }
 }

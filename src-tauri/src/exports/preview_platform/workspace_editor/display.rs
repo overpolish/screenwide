@@ -43,13 +43,30 @@ pub fn rebase_display_fit(
   natural: (f64, f64),
   gutter: f64,
 ) -> DisplayFitRebase {
+  rebase_display_fit_mode(viewport, displayed, natural, gutter, false)
+}
+
+/// Recording workspaces always fill their available viewport, including when
+/// that means enlarging a small composed output. Screenshot workspaces stop at
+/// one point per output pixel. `allow_upscale` keeps the shared rebase aligned
+/// with whichever React marker layout supplied the native pane rectangles.
+pub fn rebase_display_fit_mode(
+  viewport: (f64, f64),
+  displayed: DisplayRect,
+  natural: (f64, f64),
+  gutter: f64,
+  allow_upscale: bool,
+) -> DisplayFitRebase {
   let available_width = (viewport.0 - gutter * 2.0).max(1.0);
   let available_height = (viewport.1 - gutter * 2.0).max(1.0);
   let natural_width = natural.0.max(1.0);
   let natural_height = natural.1.max(1.0);
-  let points_per_pixel = 1.0_f64
-    .min(available_width / natural_width)
-    .min(available_height / natural_height);
+  let available_scale = (available_width / natural_width).min(available_height / natural_height);
+  let points_per_pixel = if allow_upscale {
+    available_scale
+  } else {
+    1.0_f64.min(available_scale)
+  };
   let fit_width = natural_width * points_per_pixel;
   let fit_height = natural_height * points_per_pixel;
   let fit = DisplayRect {

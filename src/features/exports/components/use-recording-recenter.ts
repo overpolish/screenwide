@@ -27,11 +27,14 @@ export function useRecordingRecenter({
   const currentRef = useRef({ output, source });
   currentRef.current = { output, source };
 
-  const analyse = (applyBounds: boolean) => {
+  const analyse = (
+    applyBounds: boolean,
+    sourceCrop = currentRef.current.output.sourceCrop,
+    refresh = false,
+  ) => {
     const current = currentRef.current;
     if (!current.source) return;
-    if (!applyBounds && current.output.recenterInsetColor) return;
-    const sourceCrop = current.output.sourceCrop;
+    if (!applyBounds && !refresh && current.output.recenterInsetColor) return;
     const request = Symbol();
     requestRef.current = request;
     void getRecordingRecenterAnalysis(artifactId, getPositionMs(), sourceCrop)
@@ -72,6 +75,9 @@ export function useRecordingRecenter({
   const prepare = () => {
     analyse(false);
   };
+  const refresh = (sourceCrop: ScreenshotOutputSettings["sourceCrop"]) => {
+    analyse(false, sourceCrop, true);
+  };
 
   const reset = () => {
     const current = currentRef.current;
@@ -80,5 +86,5 @@ export function useRecordingRecenter({
     onOutputChange?.(resetScreenshotRecenter(current.output, current.source));
   };
 
-  return { begin, prepare, reset };
+  return { begin, prepare, refresh, reset };
 }

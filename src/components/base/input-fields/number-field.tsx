@@ -80,6 +80,7 @@ export const NumberField = ({
   const cursorScrubRef = useRef<Promise<unknown> | null>(null);
   const dragRef = useRef<{
     residual: number;
+    restoreFocus: boolean;
     scrubbing: boolean;
     startTravel: number;
   } | null>(null);
@@ -161,7 +162,7 @@ export const NumberField = ({
       );
     };
 
-    const handleMouseUp = () => {
+    const finishScrub = (restoreFocus: boolean) => {
       const drag = dragRef.current;
       if (!drag) {
         return;
@@ -170,20 +171,30 @@ export const NumberField = ({
       dragRef.current = null;
       releaseCursorScrub();
 
+      const input = groupRef.current?.querySelector("input");
       if (!drag.scrubbing) {
-        const input = groupRef.current?.querySelector("input");
         input?.focus();
         input?.select();
+      } else if (restoreFocus && drag.restoreFocus) {
+        input?.focus({ preventScroll: true });
       }
+    };
+
+    const handleMouseUp = () => {
+      finishScrub(true);
+    };
+
+    const handleWindowBlur = () => {
+      finishScrub(false);
     };
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("blur", handleMouseUp);
+    window.addEventListener("blur", handleWindowBlur);
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("blur", handleMouseUp);
+      window.removeEventListener("blur", handleWindowBlur);
     };
   }, [changeValue, releaseCursorScrub, scrubbable, scrubStep, step]);
 
@@ -192,9 +203,20 @@ export const NumberField = ({
       return;
     }
 
-    dragRef.current = { residual: 0, scrubbing: false, startTravel: 0 };
+    const input = groupRef.current?.querySelector("input");
+    const restoreFocus = document.activeElement === input;
+    input?.blur();
+    window.getSelection()?.removeAllRanges();
+    event.preventDefault();
+
+    dragRef.current = {
+      residual: 0,
+      restoreFocus,
+      scrubbing: false,
+      startTravel: 0,
+    };
+    document.documentElement.setAttribute("data-number-field-scrubbing", "");
     if (isTauri() && isMac) {
-      document.documentElement.setAttribute("data-number-field-scrubbing", "");
       cursorScrubRef.current = invoke("begin_cursor_scrub");
     } else if (isTauri()) {
       void groupRef.current?.requestPointerLock().catch(() => undefined);

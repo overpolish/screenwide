@@ -40,7 +40,7 @@ pub use encoding::encode_png;
 pub use encoding::rounded_corners;
 #[cfg(target_os = "windows")]
 pub(crate) use mesh::validate_mesh;
-#[cfg(all(test, target_os = "macos"))]
+#[cfg(test)]
 pub(crate) use mesh::MeshGradientPoint;
 pub use naming::{capture_file_stem, screenshot_directory, unique_path};
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]

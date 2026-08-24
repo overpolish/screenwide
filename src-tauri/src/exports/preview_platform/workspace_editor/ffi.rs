@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{
-  display::{rebase_display_fit, DisplayFitRebase, DisplayHit, DisplayRect, DisplayTarget},
+  display::{
+    rebase_display_fit, rebase_display_fit_mode, DisplayFitRebase, DisplayHit, DisplayRect,
+    DisplayTarget,
+  },
   hit_test::hit_test_display,
 };
 
@@ -14,13 +17,24 @@ pub extern "C" fn screenwide_workspace_rebase_display_fit(
   natural_width: f64,
   natural_height: f64,
   gutter: f64,
+  allow_upscale: u8,
 ) -> DisplayFitRebase {
-  rebase_display_fit(
-    (viewport_width, viewport_height),
-    displayed,
-    (natural_width, natural_height),
-    gutter,
-  )
+  if allow_upscale != 0 {
+    rebase_display_fit_mode(
+      (viewport_width, viewport_height),
+      displayed,
+      (natural_width, natural_height),
+      gutter,
+      true,
+    )
+  } else {
+    rebase_display_fit(
+      (viewport_width, viewport_height),
+      displayed,
+      (natural_width, natural_height),
+      gutter,
+    )
+  }
 }
 
 /// C entry point for native adapters. Null pointers and invalid counts return no hit.

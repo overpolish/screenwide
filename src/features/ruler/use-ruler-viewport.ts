@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { Point } from "./pixel-analysis";
+import { rulerWheelZoomFactor } from "./ruler-zoom";
 
 const MINIMUM_ZOOM = 1;
 const MAXIMUM_ZOOM = 16;
@@ -82,7 +83,7 @@ export function useRulerViewport() {
       }
       zoomAt(
         { x: event.clientX, y: event.clientY },
-        Math.exp(-event.deltaY * 0.01),
+        rulerWheelZoomFactor(event.deltaY, PLAIN_WHEEL_PANS),
       );
     },
     [zoomAt],

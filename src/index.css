@@ -65,6 +65,19 @@
 
   --color-neutral: var(--color-neutral-200);
   --color-neutral-100: var(--color-neutral-300);
+  /* Opaque counterparts to the old neutral alpha treatments. Keeping these
+     as semantic colours lets React and native compositor controls resolve the
+     same appearance without allowing preview content to tint either layer. */
+  --color-neutral-soft: color-mix(
+    in srgb,
+    var(--color-neutral) 75%,
+    var(--color-content)
+  );
+  --color-neutral-pressed: color-mix(
+    in srgb,
+    var(--color-neutral) 80%,
+    var(--color-content)
+  );
 
   --color-success: var(--color-green-600);
   --color-info: var(--color-sky-600);

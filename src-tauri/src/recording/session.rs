@@ -17,6 +17,11 @@ use super::{
   StartRecordingOptions, SystemAudioSelection,
 };
 
+mod cancellation;
+
+pub(crate) use cancellation::cancelled_marker;
+pub(super) use cancellation::{discard_capture, mark_capture_cancelled};
+
 const RECORDING_ERROR_EVENT: &str = "recording://error";
 /// Emitted when a recording starts without one or more selected inputs whose
 /// devices were no longer available; the bar tells the user instead of the
@@ -411,22 +416,4 @@ pub(super) fn finalize_capture(
   info.source_scale_factor = source_scale_factor;
 
   Ok((info, crate::screenshots::capture_file_stem(started_at)))
-}
-
-pub(super) fn discard_capture(handles: Option<CaptureHandles>) {
-  let Some(CaptureHandles {
-    cursor,
-    output_path,
-    session,
-    ..
-  }) = handles
-  else {
-    return;
-  };
-
-  session.cancel();
-  if let Some(cursor) = cursor {
-    cursor.cancel();
-  }
-  let _ = std::fs::remove_file(output_path);
 }

@@ -82,6 +82,12 @@ struct RecordingSelectionGesture {
   snapshot: PreviewCompositionSettings,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct RecordingWorkspaceTopology {
+  bake_camera: bool,
+  pane_indices: Vec<u32>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RecordingPreviewPlayerInfo {
@@ -133,6 +139,7 @@ struct PreviewPlayerManager {
   sources: Option<PlayerSources>,
   session_id: Option<u64>,
   still_decoder: Option<platform::StillDecoder>,
+  workspace_topology: Option<RecordingWorkspaceTopology>,
   workspace_scene: Option<WorkspaceScene>,
   worker: Option<PreviewPlayerWorker>,
 }

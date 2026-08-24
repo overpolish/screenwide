@@ -252,95 +252,6 @@ static BOOL selection_pixel_size(ScreenwidePreviewSurface *surface,
   return YES;
 }
 
-static const CGFloat ScreenwideSelectionLabelFontSize = 11.0;
-static const CGFloat ScreenwideSelectionLabelStroke = 2.0;
-
-/// (Re)builds `selectionLabelTexture` for `text`. Returns NO when the bitmap
-/// could not be produced, in which case no label must be drawn.
-///
-/// Rasterised exactly like Keyframeless's OSC label: a monospaced string drawn
-/// twice into a premultiplied sRGB bitmap - a stroked halo pass first, then the
-/// fill on top - so the readout stays legible over any pane content without a
-/// backing plate. The colours mirror the OSC palette in `selection_fragment`.
-static BOOL update_selection_label(ScreenwidePreviewSurface *surface,
-                                   NSString *text, CGFloat scale,
-                                   uint32_t lightMode) {
-  if (surface.device == nil || text.length == 0) return NO;
-  if (surface.selectionLabelTexture != nil &&
-      surface.selectionLabelScale == scale &&
-      surface.selectionLabelLightMode == lightMode &&
-      [surface.selectionLabelText isEqualToString:text])
-    return YES;
-
-  NSColor *fill = lightMode != 0
-      ? [NSColor colorWithSRGBRed:0.12 green:0.12 blue:0.12 alpha:1.0]
-      : [NSColor colorWithSRGBRed:1.0 green:1.0 blue:1.0 alpha:1.0];
-  NSColor *halo = lightMode != 0
-      ? [NSColor colorWithSRGBRed:1.0 green:1.0 blue:1.0 alpha:1.0]
-      : [NSColor colorWithSRGBRed:0.0 green:0.0 blue:0.0 alpha:0.8];
-  NSFont *font = [NSFont monospacedSystemFontOfSize:ScreenwideSelectionLabelFontSize
-                                             weight:NSFontWeightMedium];
-  // A positive stroke width strokes the glyph without filling it, so this pass
-  // lays down only the outline the fill pass then sits inside.
-  NSDictionary *strokeAttributes = @{
-    NSFontAttributeName : font,
-    NSForegroundColorAttributeName : halo,
-    NSStrokeColorAttributeName : halo,
-    NSStrokeWidthAttributeName :
-        @(ScreenwideSelectionLabelStroke / ScreenwideSelectionLabelFontSize * 100.0),
-  };
-  NSDictionary *fillAttributes = @{
-    NSFontAttributeName : font,
-    NSForegroundColorAttributeName : fill,
-  };
-  NSSize textSize = [text sizeWithAttributes:fillAttributes];
-  // The inset leaves room for the halo, which spills outside the glyph box.
-  NSInteger pointWidth = (NSInteger)ceil(textSize.width) + 4;
-  NSInteger pointHeight = (NSInteger)ceil(textSize.height) + 2;
-  NSInteger pixelWidth = (NSInteger)MAX(round(pointWidth * scale), 1.0);
-  NSInteger pixelHeight = (NSInteger)MAX(round(pointHeight * scale), 1.0);
-
-  CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-  CGContextRef context = CGBitmapContextCreate(
-      NULL, (size_t)pixelWidth, (size_t)pixelHeight, 8, (size_t)pixelWidth * 4,
-      space,
-      (CGBitmapInfo)kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
-  CGColorSpaceRelease(space);
-  if (context == NULL) return NO;
-  CGContextScaleCTM(context, scale, scale);
-  NSGraphicsContext *graphics =
-      [NSGraphicsContext graphicsContextWithCGContext:context flipped:NO];
-  [NSGraphicsContext saveGraphicsState];
-  [NSGraphicsContext setCurrentContext:graphics];
-  [text drawAtPoint:NSMakePoint(2.0, 1.0) withAttributes:strokeAttributes];
-  [text drawAtPoint:NSMakePoint(2.0, 1.0) withAttributes:fillAttributes];
-  [NSGraphicsContext restoreGraphicsState];
-
-  MTLTextureDescriptor *descriptor = [MTLTextureDescriptor
-      texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
-                                   width:(NSUInteger)pixelWidth
-                                  height:(NSUInteger)pixelHeight
-                               mipmapped:NO];
-  descriptor.usage = MTLTextureUsageShaderRead;
-  id<MTLTexture> texture = [surface.device newTextureWithDescriptor:descriptor];
-  if (texture == nil) {
-    CGContextRelease(context);
-    return NO;
-  }
-  [texture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)pixelWidth,
-                                         (NSUInteger)pixelHeight)
-             mipmapLevel:0
-               withBytes:CGBitmapContextGetData(context)
-             bytesPerRow:(NSUInteger)pixelWidth * 4];
-  CGContextRelease(context);
-
-  surface.selectionLabelTexture = texture;
-  surface.selectionLabelText = [text copy];
-  surface.selectionLabelScale = scale;
-  surface.selectionLabelLightMode = lightMode;
-  surface.selectionLabelSize = NSMakeSize(pointWidth, pointHeight);
-  return YES;
-}
 
 static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   surface.selectionDrawRevision += 1;
@@ -421,9 +332,14 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         [NSString stringWithFormat:@"%lld × %lld",
          (long long)MAX(1, llround(pixelWidth)),
          (long long)MAX(1, llround(pixelHeight))];
-    if (update_selection_label(surface, text, scale, lightMode)) {
+    if ([surface updateSelectionLabel:text
+                                scale:scale
+                            lightMode:lightMode
+                               action:recenterAction]) {
       NSSize label = surface.selectionLabelSize;
-      CGFloat gap = recenterAction ? 14.0 : 4.0;
+      // The compact action's 4pt top padding leaves the visible button at the
+      // same 6pt distance from the selection frame as before.
+      CGFloat gap = recenterAction ? 10.0 : 4.0;
       CGFloat x = recenterAction ? NSMidX(frame) - label.width / 2.0
                                  : NSMaxX(frame) - label.width;
       CGFloat y = NSMaxY(frame) + gap;
@@ -441,8 +357,10 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       y = floor(y * scale) / scale;
       NSRect labelRect = NSMakeRect(x, y, label.width, label.height);
       if (recenterAction) {
-        surface.selectionActionRect = NSInsetRect(labelRect, -7.0, -4.0);
-        uint32_t actionKind = surface.selectionActionPressed ? 14 : surface.selectionActionHovered ? 13 : 12;
+        // The label bitmap has 2pt horizontal inset and a 16pt text-xs line
+        // box; these insets complete React's px-2/py-1 compact Button geometry.
+        surface.selectionActionRect = NSInsetRect(labelRect, -6.0, -4.0);
+        uint32_t actionKind = 12;
         add_selection_quad(vertices, &count, size,
                            surface.selectionActionRect, actionKind);
       }
@@ -497,6 +415,9 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       magnifier.active != 0 ? magnifier.box_height : 0,
     };
     [encoder setFragmentBytes:magnifierBox length:sizeof(magnifierBox) atIndex:1];
+    float actionShades[2];
+    selection_action_shades(surface, actionShades);
+    [encoder setFragmentBytes:actionShades length:sizeof(actionShades) atIndex:2];
     [encoder drawPrimitives:MTLPrimitiveTypeTriangle
                 vertexStart:0 vertexCount:count];
     [encoder endEncoding];
@@ -529,6 +450,9 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
                       atIndex:0];
   float magnifierBox[4] = {0};
   [encoder setFragmentBytes:magnifierBox length:sizeof(magnifierBox) atIndex:1];
+  float actionShades[2];
+  selection_action_shades(surface, actionShades);
+  [encoder setFragmentBytes:actionShades length:sizeof(actionShades) atIndex:2];
   [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:count];
   [encoder endEncoding];
   [command presentDrawable:drawable];

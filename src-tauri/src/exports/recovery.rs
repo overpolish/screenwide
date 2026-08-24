@@ -51,6 +51,9 @@ pub(super) fn orphaned_recordings(directory: &Path) -> Vec<(PathBuf, SystemTime)
       if media_preview::is_preview_file(&path) {
         return None;
       }
+      if crate::recording::cancelled_marker(&path).is_file() {
+        return None;
+      }
       if !path
         .file_name()
         .and_then(|name| name.to_str())
@@ -72,6 +75,27 @@ pub(super) fn orphaned_recordings(directory: &Path) -> Vec<(PathBuf, SystemTime)
       }
     })
     .collect()
+}
+
+/// Finishes cleanup for a cancellation interrupted by process shutdown. The
+/// marker is retained if deletion fails so the movie remains non-recoverable.
+pub(super) fn sweep_cancelled_recordings(directory: &Path) {
+  let Ok(entries) = std::fs::read_dir(directory) else {
+    return;
+  };
+  for entry in entries.flatten() {
+    let marker = entry.path();
+    let Some(name) = marker.file_name().and_then(|name| name.to_str()) else {
+      continue;
+    };
+    let Some(recording_name) = name.strip_suffix(".cancelled") else {
+      continue;
+    };
+    let recording = marker.with_file_name(recording_name);
+    if !recording.exists() || std::fs::remove_file(&recording).is_ok() {
+      let _ = std::fs::remove_file(marker);
+    }
+  }
 }
 
 pub(super) fn camera_for_recording(recording: &Path) -> Option<PathBuf> {
@@ -152,6 +176,7 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
     return;
   };
   sweep_preview_files(&directory);
+  sweep_cancelled_recordings(&directory);
   let plan = orphan_plan(orphaned_recordings(&directory), SystemTime::now());
 
   for path in plan.delete {
@@ -185,6 +210,21 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
   };
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let recovered_info = media_preview::recording_info(&path);
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  if primary_kind == crate::recording::PrimaryRecordingKind::Screen
+    && recovered_info.is_none_or(|info| info.width == 0 || info.height == 0)
+  {
+    // A screen recording without readable dimensions cannot produce a finite
+    // preview layout. It is an incomplete container, not a recoverable movie.
+    let _ = std::fs::remove_file(&path);
+    if let Some(path) = camera_path {
+      let _ = std::fs::remove_file(path);
+    }
+    if let Some(path) = cursor_path {
+      let _ = std::fs::remove_file(path);
+    }
+    return;
+  }
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let (duration_ms, width, height) = recovered_info.map_or((0, 0, 0), |info| {
     (info.duration_ms, info.width, info.height)

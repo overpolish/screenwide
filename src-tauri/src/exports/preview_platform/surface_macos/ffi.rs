@@ -45,6 +45,9 @@ unsafe extern "C" {
   );
   pub(super) fn screenwide_preview_surface_begin_layout(handle: *mut std::ffi::c_void);
   pub(super) fn screenwide_preview_surface_finish_layout(handle: *mut std::ffi::c_void);
+  pub(super) fn screenwide_preview_surface_clear_workspace_transform_history(
+    handle: *mut std::ffi::c_void,
+  );
   pub(super) fn screenwide_preview_surface_begin_present(handle: *mut std::ffi::c_void);
   pub(super) fn screenwide_preview_surface_end_present(handle: *mut std::ffi::c_void);
   pub(super) fn screenwide_preview_surface_present(

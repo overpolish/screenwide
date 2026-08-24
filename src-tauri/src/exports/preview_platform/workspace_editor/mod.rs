@@ -31,7 +31,8 @@ pub use crop::{apply_crop_move, apply_crop_resize};
 // feature extension points.
 #[allow(unused_imports)]
 pub use display::{
-  rebase_display_fit, DisplayFitRebase, DisplayHandle, DisplayHit, DisplayRect, DisplayTarget,
+  rebase_display_fit, rebase_display_fit_mode, DisplayFitRebase, DisplayHandle, DisplayHit,
+  DisplayRect, DisplayTarget,
 };
 #[allow(unused_imports)]
 pub use frame_resize::FrameResizeResult;

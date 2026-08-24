@@ -114,6 +114,48 @@ fn custom_arrow_fallback_keeps_the_recorded_arrow_size() {
   assert_eq!(cursor.scale, 4.0);
 }
 
+#[test]
+fn gpu_cursor_position_is_rounded_to_the_output_pixel_grid() {
+  let records = [
+    CursorRecord::Header {
+      coordinate_space: "global-logical-points".to_owned(),
+      platform: "test".to_owned(),
+      source: CursorSource {
+        height: 100.0,
+        kind: crate::recording::cursor::CursorSourceKind::Region,
+        platform_id: "1".to_owned(),
+        video_height: 100,
+        video_width: 100,
+        width: 100.0,
+        x: 0.0,
+        y: 0.0,
+      },
+      timebase: "recording-microseconds".to_owned(),
+      version: crate::recording::cursor::FORMAT_VERSION,
+    },
+    CursorRecord::Appearance {
+      height: 32.0,
+      hotspot_x: 1.0,
+      hotspot_y: 1.0,
+      style: CursorStyle::Arrow,
+      timestamp_us: 0,
+      width: 24.0,
+    },
+    CursorRecord::Position {
+      timestamp_us: 0,
+      x: 10.4,
+      y: 10.6,
+    },
+  ];
+  let compositor = CursorCompositor::from_records(&records).unwrap();
+  let cursor = compositor
+    .gpu_cursor(0, (100, 100), CursorEffectSettings::default())
+    .unwrap();
+
+  assert_eq!(cursor.x, 10.0);
+  assert_eq!(cursor.y, 11.0);
+}
+
 #[cfg(target_os = "windows")]
 #[test]
 fn windows_standard_cursors_keep_their_recorded_native_hotspots() {

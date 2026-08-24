@@ -105,6 +105,34 @@ export function useScreenshotRecenter({
         console.error("Could not detect screenshot inset colour", error);
       });
   };
+  const refresh = (crop: SourceRect) => {
+    const itemId = selectedRef.current.id;
+    if (itemId === undefined) return;
+    const analysisToken = Symbol();
+    const key = analysisKey(itemId, crop);
+    analysesRef.current.set(itemId, analysisToken);
+    analyse(itemId, crop, true)
+      .then((analysis) => {
+        if (
+          !analysis ||
+          analysesRef.current.get(itemId) !== analysisToken ||
+          selectedRef.current.id !== itemId
+        )
+          return;
+        const current = selectedRef.current.output;
+        if (!current || analysisKey(itemId, current.sourceCrop) !== key) return;
+        onOutputChange?.(
+          { ...current, recenterInsetColor: analysis.backgroundColor },
+          itemId,
+        );
+      })
+      .catch((error: unknown) => {
+        if (analysesRef.current.get(itemId) === analysisToken)
+          analysesRef.current.delete(itemId);
+        resultsRef.current.delete(key);
+        console.error("Could not refresh screenshot inset colour", error);
+      });
+  };
   const reset = () => {
     if (!selectedItem || !selectedOutput) return;
     analysesRef.current.delete(selectedItem.id);
@@ -113,5 +141,5 @@ export function useScreenshotRecenter({
       selectedItem.id,
     );
   };
-  return { begin, prepare, reset };
+  return { begin, prepare, refresh, reset };
 }

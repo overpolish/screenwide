@@ -53,7 +53,7 @@ const buttonVariants = tv({
       variant: "soft",
     },
     {
-      class: "bg-neutral/75",
+      class: "bg-neutral-soft",
       color: "neutral",
       variant: "soft",
     },
@@ -82,7 +82,7 @@ const buttonVariants = tv({
       neutral: [
         "text-content-fg bg-neutral",
         "data-[hovered]:bg-neutral-100",
-        "data-[pressed]:bg-neutral/80",
+        "data-[pressed]:bg-neutral-pressed",
       ],
       success: [
         "text-white bg-success",
@@ -111,7 +111,7 @@ const buttonVariants = tv({
         "data-[hovered]:bg-transparent",
         "data-[pressed]:bg-transparent",
       ],
-      soft: "bg-opacity-20 border-none",
+      soft: "border-none",
       solid: "border-none",
     },
   },

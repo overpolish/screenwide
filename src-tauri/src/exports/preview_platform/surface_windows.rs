@@ -60,11 +60,13 @@ mod selection;
 mod snapping;
 #[path = "surface_windows/window.rs"]
 mod window;
+#[path = "surface_windows/workspace_layout.rs"]
+mod workspace_layout;
 
 use super::{
   workspace_editor::{
-    apply_crop_move, apply_crop_resize, hit_test_display, rebase_display_fit, DisplayRect,
-    DisplayTarget, NormalizedRect,
+    apply_crop_move, apply_crop_resize, crop_magnifier_anchor, hit_test_display,
+    rebase_display_fit_mode, DisplayRect, DisplayTarget, NormalizedRect,
   },
   workspace_transform::WorkspaceTransform,
   PreviewSelection, PreviewSurfaceRect, SelectionCallback, SelectionGestureCallback,
@@ -72,6 +74,10 @@ use super::{
 };
 use crate::exports::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
+use workspace_layout::{
+  apply_workspace_transform, aspect_fit_rect, rebase_workspace_fit, reflow_workspace_panes,
+  union_rect,
+};
 
 pub(crate) struct StillOverlay;
 
@@ -220,6 +226,9 @@ struct SurfaceState {
   selection_snap_guide_y: Option<snapping::SnapGuide>,
   selection_targets: Vec<PreviewSelection>,
   viewport: PreviewSurfaceRect,
+  /// Recording marker layouts fill the viewport even above one point per
+  /// output pixel; screenshot marker layouts stop at native size.
+  workspace_allows_upscale: bool,
   workspace_natural_size: Option<(u32, u32)>,
   workspace_transform: WorkspaceTransform,
   workspace_transforms: HashMap<(u32, u32), WorkspaceTransform>,
@@ -862,7 +871,7 @@ fn update_magnifier(state: &mut SurfaceState) {
       width: selection.width * rect.width,
       height: selection.height * rect.height,
     };
-    workspace_editor::crop_magnifier_anchor(
+    crop_magnifier_anchor(
       [frame.x, frame.y, frame.width, frame.height],
       state.last_pointer,
       gesture.edges,
@@ -1109,7 +1118,10 @@ fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
           let frame = [x as f32, y as f32, (right - x) as f32, (bottom - y) as f32];
           let radius = if selection.crop_mode == 0 && selection.radius_disabled == 0 {
             let radius = radius_point(rect, selection.radius_percent);
-            [(radius.0 * scale) as f32, (radius.1 * scale) as f32]
+            [
+              window::pixel_center(radius.0 * scale),
+              window::pixel_center(radius.1 * scale),
+            ]
           } else {
             [f32::NAN, f32::NAN]
           };
@@ -1148,19 +1160,19 @@ fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     );
     let x = state
       .selection_snap_guide_x
-      .map(|guide| ((pane.x + guide.guide * pane.width) * scale) as f32);
+      .map(|guide| window::pixel_center((pane.x + guide.guide * pane.width) * scale));
     let y = state
       .selection_snap_guide_y
-      .map(|guide| ((pane.y + guide.guide * pane.height) * scale) as f32);
+      .map(|guide| window::pixel_center((pane.y + guide.guide * pane.height) * scale));
     Some((
       x,
       y,
       state
         .selection_snap_guide_x
-        .map_or(false, |guide| guide.object),
+        .is_some_and(|guide| guide.object),
       state
         .selection_snap_guide_y
-        .map_or(false, |guide| guide.object),
+        .is_some_and(|guide| guide.object),
     ))
   });
   let luminance =
@@ -1276,200 +1288,6 @@ fn cursor_for_state(state: &SurfaceState, point: (f64, f64)) -> editor::CursorKi
   }
 }
 
-fn union_rect(left: PreviewSurfaceRect, right: PreviewSurfaceRect) -> PreviewSurfaceRect {
-  let x = left.x.min(right.x);
-  let y = left.y.min(right.y);
-  let right_edge = (left.x + left.width).max(right.x + right.width);
-  let bottom = (left.y + left.height).max(right.y + right.height);
-  PreviewSurfaceRect {
-    x,
-    y,
-    width: right_edge - x,
-    height: bottom - y,
-  }
-}
-
-/// Re-flows the sibling panes around the one a Frame resize is dragging, the
-/// Windows counterpart of `reflow_recording_workspace_panes`: the row keeps
-/// its gesture-start gaps and side ordering while every pane stays centred on
-/// the row, so growing one canvas pushes its neighbours instead of
-/// overlapping them.
-fn reflow_workspace_panes(
-  starts: &[(usize, PreviewSurfaceRect)],
-  selected: usize,
-  resized: PreviewSurfaceRect,
-) -> Vec<(usize, PreviewSurfaceRect)> {
-  let mut order = (0..starts.len()).collect::<Vec<_>>();
-  order.sort_by(|left, right| {
-    starts[*left]
-      .1
-      .x
-      .partial_cmp(&starts[*right].1.x)
-      .unwrap_or(std::cmp::Ordering::Equal)
-  });
-  let mut next = starts.to_vec();
-  let Some(selected_position) = order
-    .iter()
-    .position(|position| starts[*position].0 == selected)
-  else {
-    return next;
-  };
-  next[order[selected_position]].1 = resized;
-  let tallest = order.iter().fold(0.0_f64, |tallest, position| {
-    tallest.max(next[*position].1.height)
-  });
-  let group_top = resized.y - (tallest - resized.height) / 2.0;
-  for position in &order {
-    next[*position].1.y = group_top + (tallest - next[*position].1.height) / 2.0;
-  }
-  for position in selected_position + 1..order.len() {
-    let previous = order[position - 1];
-    let index = order[position];
-    let gap = starts[index].1.x - (starts[previous].1.x + starts[previous].1.width);
-    next[index].1.x = next[previous].1.x + next[previous].1.width + gap;
-  }
-  for position in (0..selected_position).rev() {
-    let index = order[position];
-    let following = order[position + 1];
-    let gap = starts[following].1.x - (starts[index].1.x + starts[index].1.width);
-    next[index].1.x = next[following].1.x - gap - next[index].1.width;
-  }
-  next
-}
-
-/// Centres a composition of `content` aspect inside `rect`. A committed
-/// canvas resize keeps arriving from the DOM at the session's fixed source
-/// aspect for a layout or two; fitting rather than filling means the pane
-/// shows the composed canvas whole instead of stretching it.
-fn aspect_fit_rect(rect: PreviewSurfaceRect, content: (u32, u32)) -> PreviewSurfaceRect {
-  let content_width = f64::from(content.0.max(1));
-  let content_height = f64::from(content.1.max(1));
-  let first = content_width * rect.height;
-  let second = content_height * rect.width;
-  let scale = first.max(second).max(1.0);
-  if rect.width <= 0.0 || rect.height <= 0.0 || (first - second).abs() / scale < 0.005 {
-    return rect;
-  }
-  let fit = (rect.width / content_width).min(rect.height / content_height);
-  let width = content_width * fit;
-  let height = content_height * fit;
-  PreviewSurfaceRect {
-    x: rect.x + (rect.width - width) / 2.0,
-    y: rect.y + (rect.height - height) / 2.0,
-    width,
-    height,
-  }
-}
-
-/// Re-expresses the resized workspace against a fresh centred fit without
-/// moving a single displayed pixel, mirroring
-/// `rebase_recording_workspace_fit`. `start` supplies the gesture's immutable
-/// transform, so `displayed` is where the panes actually are on screen; only
-/// the fit-relative zoom/pan representation changes, which is what makes the
-/// toolbar percentage follow the drag and the commit land without a jump.
-fn rebase_workspace_fit(state: &mut SurfaceState, start: &FrameResizeStart) {
-  let active = state
-    .panes
-    .iter()
-    .enumerate()
-    .filter_map(|(index, pane)| {
-      pane
-        .as_ref()
-        .filter(|pane| pane.seen)
-        .map(|pane| (index, pane.base_rect))
-    })
-    .collect::<Vec<_>>();
-  let Some((_, first)) = active.first().copied() else {
-    return;
-  };
-  let bounds = active
-    .iter()
-    .skip(1)
-    .fold(first, |bounds, (_, rect)| union_rect(bounds, *rect));
-  let start_bounds = active
-    .iter()
-    .map(|(index, rect)| {
-      start
-        .pane_rects
-        .iter()
-        .find(|(start_index, _)| start_index == index)
-        .map_or(*rect, |(_, start_rect)| *start_rect)
-    })
-    .reduce(union_rect)
-    .unwrap_or(bounds);
-  let first_display = start.transform.apply(state.viewport, first);
-  let displayed = active
-    .iter()
-    .skip(1)
-    .fold(first_display, |bounds, (_, rect)| {
-      union_rect(bounds, start.transform.apply(state.viewport, *rect))
-    });
-  if let Some((width, height)) = start.natural_size {
-    state.workspace_natural_size = Some((
-      ((f64::from(width) * bounds.width / start_bounds.width.max(1.0)).round()).max(1.0) as u32,
-      ((f64::from(height) * bounds.height / start_bounds.height.max(1.0)).round()).max(1.0) as u32,
-    ));
-  }
-  // Pane rects and `WorkspaceTransform::apply` are viewport-relative, so the
-  // displayed union and the fit stay in that space; adding the viewport origin
-  // here would shift every pane by it on each move.
-  let natural = state
-    .workspace_natural_size
-    .map_or((bounds.width, bounds.height), |(width, height)| {
-      (f64::from(width), f64::from(height))
-    });
-  let rebased = rebase_display_fit(
-    (state.viewport.width, state.viewport.height),
-    DisplayRect {
-      x: displayed.x,
-      y: displayed.y,
-      width: displayed.width,
-      height: displayed.height,
-    },
-    natural,
-    8.0,
-  );
-  let fit = PreviewSurfaceRect {
-    x: rebased.fit.x,
-    y: rebased.fit.y,
-    width: rebased.fit.width,
-    height: rebased.fit.height,
-  };
-  let scale_x = fit.width / bounds.width.max(1.0);
-  let scale_y = fit.height / bounds.height.max(1.0);
-  for (index, rect) in active {
-    if let Some(pane) = state.panes.get_mut(index).and_then(Option::as_mut) {
-      pane.base_rect = PreviewSurfaceRect {
-        x: fit.x + (rect.x - bounds.x) * scale_x,
-        y: fit.y + (rect.y - bounds.y) * scale_y,
-        width: rect.width * scale_x,
-        height: rect.height * scale_y,
-      };
-    }
-  }
-  state.workspace_transform.zoom = rebased.zoom;
-  state.workspace_transform.pan_x = rebased.pan_x;
-  state.workspace_transform.pan_y = rebased.pan_y;
-}
-
-/// Publishes the workspace transform to every pane. `defer_geometry` parks the
-/// pane boxes instead of committing them: a canvas resize changes the box and
-/// the composition together, and the re-composed still that follows this call
-/// publishes the parked geometry with its own present, so the pane never shows
-/// the previous canvas letterboxed into the new box for a frame. The selection
-/// overlay is always redrawn immediately - it tracks the box, not the pixels.
-fn apply_workspace_transform(inner: &SurfaceInner, state: &mut SurfaceState, defer_geometry: bool) {
-  let transform = state.workspace_transform;
-  let viewport = state.viewport;
-  let scale = state.scale;
-  for pane in state.panes.iter_mut().flatten().filter(|pane| pane.seen) {
-    let rect = transform.apply(viewport, pane.base_rect);
-    set_pane_geometry(pane, viewport, rect, scale, defer_geometry);
-  }
-  draw_selection(inner, state);
-  let _ = unsafe { inner.gpu.composition.Commit() };
-}
-
 fn emit_transform(inner: &SurfaceInner, zoom: f64) {
   if let Ok(mut callbacks) = inner.callbacks.lock() {
     if let Some(callback) = callbacks.transform.as_mut() {
@@ -1569,6 +1387,11 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
     .map_or(1.0, |state| state.scale.max(0.1));
   let logical = |x: f64, y: f64| (x / scale, y / scale);
   match input {
+    editor::Input::AnimateAction => {
+      if !recenter::animate_action(inner) {
+        editor::EditorWindow::stop_action_animation(editor_hwnd);
+      }
+    }
     editor::Input::Down {
       centered: _,
       x,
@@ -1576,6 +1399,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       snapping: _,
     } => {
       if recenter::begin_action(inner, (x, y)) {
+        editor::EditorWindow::animate_action(editor_hwnd);
         editor::EditorWindow::set_cursor(editor::CursorKind::Arrow);
         return;
       }
@@ -1664,7 +1488,8 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
               let transform = state.workspace_transform;
               state.workspace_transforms.insert(size, transform);
             }
-            state.frame_resize = Some(frame_resize_start(&state));
+            let start = frame_resize_start(&state);
+            state.frame_resize = Some(start);
           }
           state.gesture = Some(ActiveGesture::Selection(gesture));
           if changed {
@@ -1761,7 +1586,11 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       snapping,
     } => {
       let point = logical(x, y);
-      if recenter::update_action(inner, (x, y)) {
+      let (over_action, action_changed) = recenter::update_action(inner, (x, y));
+      if action_changed {
+        editor::EditorWindow::animate_action(editor_hwnd);
+      }
+      if over_action {
         editor::EditorWindow::set_cursor(editor::CursorKind::Arrow);
         return;
       }
@@ -1870,8 +1699,8 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                       }
                     }
                     rebase_workspace_fit(&mut state, &start_state);
-                    state.frame_resize = Some(start_state);
                     zoom = Some(state.workspace_transform.zoom);
+                    state.frame_resize = Some(start_state);
                   } else if let Some(pane) = state.panes.get_mut(selected).and_then(Option::as_mut)
                   {
                     pane.base_rect = resized;
@@ -2149,30 +1978,30 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                     if state.selection_snapping_enabled && snapping {
                       let targets_x = selection_snap_targets(&state, start, true);
                       let targets_y = selection_snap_targets(&state, start, false);
-                      let horizontal = snapping::resize_axis(
-                        anchor_x,
-                        vx,
-                        factor,
-                        pane.width,
-                        pane.height,
-                        state.workspace_transform.zoom,
-                        resize.minimum_scale,
+                      let horizontal = snapping::resize_axis(snapping::ResizeAxis {
+                        anchor: anchor_x,
+                        vector: vx,
+                        raw_scale: factor,
+                        pane_width: pane.width,
+                        pane_height: pane.height,
+                        zoom: state.workspace_transform.zoom,
+                        minimum: resize.minimum_scale,
                         maximum,
-                        &targets_x,
-                        start.layer_id,
-                      );
-                      let vertical = snapping::resize_axis(
-                        anchor_y,
-                        vy,
-                        factor,
-                        pane.height,
-                        pane.width,
-                        state.workspace_transform.zoom,
-                        resize.minimum_scale,
+                        targets: &targets_x,
+                        layer_id: start.layer_id,
+                      });
+                      let vertical = snapping::resize_axis(snapping::ResizeAxis {
+                        anchor: anchor_y,
+                        vector: vy,
+                        raw_scale: factor,
+                        pane_width: pane.height,
+                        pane_height: pane.width,
+                        zoom: state.workspace_transform.zoom,
+                        minimum: resize.minimum_scale,
                         maximum,
-                        &targets_y,
-                        start.layer_id,
-                      );
+                        targets: &targets_y,
+                        layer_id: start.layer_id,
+                      });
                       let chosen = if horizontal.found
                         && (!vertical.found || horizontal.distance <= vertical.distance)
                       {
@@ -2183,24 +2012,22 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                       if chosen.found {
                         factor = chosen.adjustment;
                       }
-                      let x_difference = horizontal
-                        .found
-                        .then_some(
-                          (horizontal.adjustment - factor).abs()
-                            * vx.abs()
-                            * pane.width
-                            * state.workspace_transform.zoom,
-                        )
-                        .unwrap_or(f64::INFINITY);
-                      let y_difference = vertical
-                        .found
-                        .then_some(
-                          (vertical.adjustment - factor).abs()
-                            * vy.abs()
-                            * pane.height
-                            * state.workspace_transform.zoom,
-                        )
-                        .unwrap_or(f64::INFINITY);
+                      let x_difference = if horizontal.found {
+                        (horizontal.adjustment - factor).abs()
+                          * vx.abs()
+                          * pane.width
+                          * state.workspace_transform.zoom
+                      } else {
+                        f64::INFINITY
+                      };
+                      let y_difference = if vertical.found {
+                        (vertical.adjustment - factor).abs()
+                          * vy.abs()
+                          * pane.height
+                          * state.workspace_transform.zoom
+                      } else {
+                        f64::INFINITY
+                      };
                       state.selection_snap_guide_x =
                         (horizontal.found && x_difference <= 0.5).then_some(horizontal);
                       state.selection_snap_guide_y =
@@ -2268,6 +2095,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
     editor::Input::Up { x, y } => {
       let point = logical(x, y);
       if recenter::release_action(inner, (x, y), point) {
+        editor::EditorWindow::animate_action(editor_hwnd);
         editor::EditorWindow::set_cursor(editor::CursorKind::Arrow);
         return;
       }
@@ -2380,7 +2208,10 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
         emit_transform(inner, zoom);
       }
     }
-    editor::Input::DoubleClick { .. } => {
+    editor::Input::DoubleClick { x, y } => {
+      if recenter::action_hit(inner, (x, y)) {
+        return;
+      }
       if let Ok(mut state) = inner.state.lock() {
         state.workspace_transform = WorkspaceTransform::default();
         apply_workspace_transform(inner, &mut state, false);
@@ -2602,6 +2433,7 @@ impl RecordingPreviewSurface {
               x: 0.0,
               y: 0.0,
             },
+            workspace_allows_upscale: false,
             workspace_transform: WorkspaceTransform::default(),
             workspace_natural_size: None,
             workspace_transforms: HashMap::new(),
@@ -2813,13 +2645,6 @@ impl RecordingPreviewSurface {
   /// `defer_resize` holds the new pane geometry back until the re-composed
   /// frame for it presents, so rect and pixels reach the compositor together
   /// instead of the old buffer shifting into the new rect for a tick.
-  pub(crate) fn layout(&self, index: u32, rect: PreviewSurfaceRect, defer_resize: bool) {
-    let Ok(mut state) = self.inner.state.lock() else {
-      return;
-    };
-    self.layout_pane(&mut state, index, rect, defer_resize);
-  }
-
   fn layout_pane(
     &self,
     state: &mut SurfaceState,
@@ -2879,8 +2704,31 @@ impl RecordingPreviewSurface {
     panes: &[(u32, PreviewSurfaceRect)],
     defer_draw: bool,
   ) {
+    self.layout_retained_workspace(natural_size, panes, defer_draw, true);
+  }
+
+  /// Screenshot markers use `fitPreviewPane`, which never enlarges content
+  /// beyond one point per output pixel. Keep that baseline distinct from the
+  /// always-fill recording workspace.
+  pub(crate) fn layout_screenshot_workspace(
+    &self,
+    natural_size: (u32, u32),
+    panes: &[(u32, PreviewSurfaceRect)],
+    defer_draw: bool,
+  ) {
+    self.layout_retained_workspace(natural_size, panes, defer_draw, false);
+  }
+
+  fn layout_retained_workspace(
+    &self,
+    natural_size: (u32, u32),
+    panes: &[(u32, PreviewSurfaceRect)],
+    defer_draw: bool,
+    allow_upscale: bool,
+  ) {
     let mut restored_zoom = None;
     if let Ok(mut state) = self.inner.state.lock() {
+      state.workspace_allows_upscale = allow_upscale;
       if state.frame_resize.is_some() {
         // A live drag owns the canvas size too: the re-flow tracks it from
         // the gesture's starts, and the DOM is a layout behind.
@@ -2910,6 +2758,15 @@ impl RecordingPreviewSurface {
     }
     if let Some(zoom) = restored_zoom {
       emit_transform(&self.inner, zoom);
+    }
+  }
+
+  /// Remembered transforms belong to one workspace topology. A recording
+  /// switching between primary-only, split camera and baked camera must not
+  /// restore a same-sized transform captured for a different set of frames.
+  pub(crate) fn clear_workspace_transform_history(&self) {
+    if let Ok(mut state) = self.inner.state.lock() {
+      state.workspace_transforms.clear();
     }
   }
 
@@ -3568,8 +3425,16 @@ impl RecordingPreviewSurface {
       state.camera_source = None;
       state.primary_composition = None;
       self.inner.gpu.backdrop.hide();
-      for pane in state.panes.iter().flatten() {
+      for pane in state.panes.iter_mut().flatten() {
         pane.hide();
+        // Windows surfaces live for the export window, not for one preview
+        // session. Reusable screenshot item IDs therefore cannot be allowed
+        // to keep the previous session's immutable source texture alive.
+        pane.source = None;
+        pane.source_token = None;
+        pane.settings = None;
+        pane.magnifier = None;
+        pane.pending_present = false;
       }
       state.editor_active = false;
       state.selection = None;
