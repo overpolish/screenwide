@@ -5,6 +5,7 @@ use cidre::{cg, cv, sc};
 use std::ffi::c_char;
 
 use crate::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
+use crate::exports::cursor_effects::{GpuArtwork, GpuCursor, NativeGpuArtwork, NativeGpuCursor};
 use crate::screenshots::{
   output_placement, parse_hex_colour, physical_capture_rect, CapturedImage,
   ScreenshotOutputSettings, ScreenshotTarget,
@@ -74,7 +75,9 @@ unsafe extern "C" {
     output_width: u32,
     output_height: u32,
     seconds: f64,
-    cursor_rgba: *const u8,
+    cursor: *const NativeGpuCursor,
+    cursor_artworks: *const NativeGpuArtwork,
+    cursor_artwork_count: u32,
     camera_rgba: *const u8,
     overlay: *const StillOverlay,
     output_rgba: *mut u8,
@@ -180,7 +183,7 @@ pub(crate) fn compose_output_layers(
   settings: &ScreenshotOutputSettings,
   seconds: f64,
   transparent_background: bool,
-  cursor: Option<&CapturedImage>,
+  cursor: Option<(&GpuCursor, &[GpuArtwork])>,
   camera: Option<&CapturedImage>,
   overlay: Option<&StillOverlay>,
   clip_cursor_at_video_edge: bool,
@@ -191,6 +194,12 @@ pub(crate) fn compose_output_layers(
   canvas.foreground_only = u32::from(foreground_only);
   let mut rgba = vec![0_u8; settings.width as usize * settings.height as usize * 4];
   let mut error = vec![0_i8; 2_048];
+  let native_cursor = NativeGpuCursor::from(cursor.map(|(cursor, _)| *cursor));
+  let native_artworks = cursor
+    .map_or(&[][..], |(_, artworks)| artworks)
+    .iter()
+    .map(NativeGpuArtwork::from)
+    .collect::<Vec<_>>();
   let result = unsafe {
     screenwide_gpu_composite_still(
       image.rgba.as_ptr(),
@@ -200,7 +209,9 @@ pub(crate) fn compose_output_layers(
       settings.width,
       settings.height,
       seconds,
-      cursor.map_or(std::ptr::null(), |image| image.rgba.as_ptr()),
+      &native_cursor,
+      native_artworks.as_ptr(),
+      native_artworks.len().try_into().unwrap_or(u32::MAX),
       camera.map_or(std::ptr::null(), |image| image.rgba.as_ptr()),
       overlay.map_or(std::ptr::null(), std::ptr::from_ref),
       rgba.as_mut_ptr(),

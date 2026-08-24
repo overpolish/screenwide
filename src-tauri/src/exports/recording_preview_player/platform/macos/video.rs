@@ -13,11 +13,10 @@ use std::{
 use cidre::{arc, av, cm, cv, ns};
 
 use super::{
-  composition::{cursor_rgba, still_overlay},
-  cursor::{cursor_preview, CursorPreview},
+  composition::gpu_still_overlay,
+  cursor::{gpu_cursor_preview, GpuCursorPreview},
   VideoFramePayload,
 };
-use crate::exports::cursor_effects::CursorOverlayCache;
 use crate::exports::recording_preview_player::{
   video::{VideoFrame, PREVIEW_FPS},
   PlayerSources,
@@ -260,7 +259,6 @@ pub(super) fn spawn(
     .name("recording-preview-video-native".to_owned())
     .spawn(move || {
       let mut index = 0;
-      let mut cursor_cache = CursorOverlayCache::new();
       while !cancelled.load(Ordering::Acquire) {
         let target_ms = start_ms.saturating_add(index * 1_000 / PREVIEW_FPS);
         if target_ms >= duration_ms {
@@ -288,23 +286,14 @@ pub(super) fn spawn(
           },
           None => None,
         };
-        let cursor_frame: Option<CursorPreview> = cursor_preview(
-          cursor.as_deref(),
-          target_ms,
-          cursor_settings,
-          cursor_output,
-          &mut cursor_cache,
-        )
-        .unwrap_or_default();
-        let cursor_pixels = cursor_frame
-          .as_ref()
-          .and_then(|cursor| cursor_rgba(cursor).ok());
+        let cursor_frame: Option<GpuCursorPreview> =
+          gpu_cursor_preview(cursor.as_deref(), target_ms, cursor_settings, cursor_output);
         let screen_output =
           super::still_decode::scaled_output(&composition.recording_output.primary, screen_factor);
-        let (cursor_image, overlay) = match still_overlay(
+        let (cursor, overlay) = match gpu_still_overlay(
           &raw_screen,
           &screen_output,
-          cursor_frame.as_ref().zip(cursor_pixels),
+          cursor_frame.as_ref(),
           composition
             .bake_camera
             .then_some(raw_camera.as_ref())
@@ -327,7 +316,7 @@ pub(super) fn spawn(
             camera: raw_camera,
             screen_output,
             camera_output,
-            cursor_image,
+            cursor,
             overlay,
             bake_camera: composition.bake_camera,
             seconds: target_ms as f64 / 1_000.0,

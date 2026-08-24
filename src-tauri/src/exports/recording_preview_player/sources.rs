@@ -10,6 +10,8 @@ pub(super) struct PlayerSources {
   pub(super) camera_path: Option<PathBuf>,
   #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
   pub(super) cursor: Option<Arc<CursorCompositor>>,
+  #[cfg(target_os = "macos")]
+  pub(super) cursor_artworks: Option<Arc<Vec<GpuArtwork>>>,
   pub(super) cursor_settings: Arc<RwLock<CursorEffectSettings>>,
   pub(super) composition_settings: Option<Arc<RwLock<PreviewCompositionSettings>>>,
   pub(super) duration_ms: u64,
@@ -112,14 +114,21 @@ fn sources_with_surface(
     .map(|pane| pane.height)
     .max()
     .unwrap_or(0);
+  let cursor = cursor_path
+    .as_ref()
+    .map(|path| CursorCompositor::open(path).map(Arc::new))
+    .transpose()?;
+  #[cfg(target_os = "macos")]
+  let cursor_artworks = cursor
+    .as_ref()
+    .map(|_| Arc::new(crate::exports::cursor_effects::gpu_artworks()));
   Ok(PlayerSources {
     audio_tracks,
     camera_duration_ms: camera.as_ref().map(|value| value.duration_ms),
     camera_path: camera.as_ref().map(|value| value.path.clone()),
-    cursor: cursor_path
-      .as_ref()
-      .map(|path| CursorCompositor::open(path).map(Arc::new))
-      .transpose()?,
+    cursor,
+    #[cfg(target_os = "macos")]
+    cursor_artworks,
     composition_settings: settings.map(|settings| {
       Arc::new(RwLock::new(PreviewCompositionSettings {
         bake_camera: settings.bake_camera,

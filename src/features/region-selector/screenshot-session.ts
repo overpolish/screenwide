@@ -62,11 +62,6 @@ export const beginScreenshotCapture = async (
     if (!monitor) return;
     setSelectedMonitor(monitor);
   }
-  // A hidden WebView retains its last composited frame. In region recording
-  // mode that frame contains the saved video cutout, so make the native window
-  // transparent before React asks it to show for a screenshot. The overlay
-  // restores opacity only after its empty screenshot surface has painted.
-  await setRegionSelectorOpacity(0);
   try {
     await setRulerScreenshotMode(true);
     // Rust has to know the overlay is allowed on screen before it is asked for:

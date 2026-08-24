@@ -30,7 +30,6 @@
   "src-tauri/src/exports/cursor_export/gpu_compositor_macos+presenter.m": 951,
   "src-tauri/src/exports/cursor_export/gpu_compositor_macos.m": 1009,
   "src-tauri/src/exports/cursor_export/gpu_compositor_macos_shader_source.h": 1202,
-  "src-tauri/src/exports/cursor_export/platform_macos.rs": 443,
   "src-tauri/src/exports/cursor_export/platform_macos_tests.rs": 726,
   "src-tauri/src/exports/cursor_export/platform_windows.rs": 363,
   "src-tauri/src/exports/media_preview/encode.rs": 304,

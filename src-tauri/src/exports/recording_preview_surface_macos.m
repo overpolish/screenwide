@@ -117,6 +117,8 @@ SCREENWIDE_PREVIEW_PRIVATE NSRect selection_display_frame_for(
     ScreenwidePreviewSelection selection);
 SCREENWIDE_PREVIEW_PRIVATE BOOL selection_is_frame(ScreenwidePreviewSurface *surface);
 SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surface);
+SCREENWIDE_PREVIEW_PRIVATE ScreenwidePreviewView *make_preview_view(
+    ScreenwidePreviewSurface *surface);
 SCREENWIDE_PREVIEW_PRIVATE void update_crop_magnifier(ScreenwidePreviewSurface *surface,
                                   NSPoint point, uint32_t edges);
 SCREENWIDE_PREVIEW_PRIVATE void begin_workspace_frame_resize(ScreenwidePreviewSurface *surface);
@@ -661,6 +663,7 @@ void *screenwide_preview_surface_create(void *host_view) {
     surface.selectionVisible = YES;
     surface.editorBaseRects = [NSMutableArray array];
     surface.views = [NSMutableArray array];
+    [surface.views addObject:make_preview_view(surface)];
     surface.batchLock = [NSLock new];
     surface.workspaceLock = [NSLock new];
     surface.workspaceTransforms = [NSMutableDictionary dictionary];

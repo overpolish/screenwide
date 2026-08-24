@@ -60,7 +60,7 @@ pub fn toggle_recording_options(app: AppHandle, anchor_x: f64) -> tauri::Result<
   ))?;
   window.set_position(recording_options_frame(&app, anchor_x)?)?;
   RECORDING_OPTIONS_VISIBLE.store(true, Ordering::Relaxed);
-  platform::show(&window)?;
+  platform::show(&window, 1.0)?;
   platform::restore_recording_level(&window)?;
   app.emit_to(
     WindowLabel::RecordingOptions.as_str(),
@@ -116,7 +116,7 @@ pub fn show_standalone_listbox(
   window.set_size(size)?;
   window.set_position(position)?;
   STANDALONE_LISTBOX_VISIBLE.store(true, Ordering::Relaxed);
-  platform::show(&window)?;
+  platform::show(&window, 1.0)?;
   platform::restore_recording_level(&window)
 }
 

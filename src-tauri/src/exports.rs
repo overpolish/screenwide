@@ -5,7 +5,7 @@ mod artifact;
 mod audio_save;
 mod camera_save;
 pub(crate) mod commands;
-mod cursor_effects;
+pub(crate) mod cursor_effects;
 mod cursor_export;
 mod directory;
 mod media_preview;

@@ -169,7 +169,7 @@ pub fn show_recording_dock(app: &AppHandle) -> tauri::Result<()> {
       .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(position);
   }
 
-  platform::show(&dock)?;
+  platform::show(&dock, 1.0)?;
   platform::restore_recording_level(&dock)
 }
 

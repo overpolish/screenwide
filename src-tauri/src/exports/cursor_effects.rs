@@ -10,9 +10,10 @@ use std::path::Path;
 
 mod appearance_timeline;
 use appearance_timeline::{normalize_custom_fallback_size, stable_appearances};
-mod overlay;
 #[cfg(target_os = "macos")]
-pub(in crate::exports) use overlay::CursorOverlayCache;
+mod gpu_wire;
+#[cfg(target_os = "macos")]
+pub(crate) use gpu_wire::{NativeGpuArtwork, NativeGpuCursor};
 mod raster;
 mod settings;
 #[cfg(test)]
@@ -35,7 +36,9 @@ const POSITION_SEGMENT_GAP_US: u64 = 100_000;
 const POSITION_DWELL_US: u64 = 120_000;
 const POSITION_DWELL_SPAN: f64 = 0.015;
 const POSITION_DWELL_CORE: f64 = 0.4;
+#[cfg(test)]
 const MAX_BLUR_DISTANCE: f64 = 80.0;
+#[cfg(test)]
 const MAX_BLUR_SAMPLES: usize = 48;
 
 #[derive(Clone, Copy)]
@@ -126,12 +129,6 @@ pub(crate) struct GpuCursor {
   pub x: f32,
   pub y: f32,
   pub clip_at_video_edge: bool,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub(super) struct CursorOverlayPosition {
-  pub x: i32,
-  pub y: i32,
 }
 
 #[derive(Clone)]
@@ -281,6 +278,7 @@ fn last_at_or_before<T>(
   index.checked_sub(1)
 }
 
+#[cfg(test)]
 fn motion_blur_sample_count(distance: f64) -> usize {
   ((distance / 2.0).ceil() as usize + 1).clamp(8, MAX_BLUR_SAMPLES)
 }
@@ -469,6 +467,10 @@ impl CursorCompositor {
     };
     #[cfg(not(target_os = "windows"))]
     let artwork = raster::artwork_index(output.cursor.appearance.style);
+    #[cfg(target_os = "macos")]
+    let rotation_adjustment = raster::gpu_rotation_radians(output.cursor.appearance.style);
+    #[cfg(not(target_os = "macos"))]
+    let rotation_adjustment = 0.0;
     Some(GpuCursor {
       blur_delta_x: if settings.motion_blur {
         output.delta_x as f32
@@ -483,7 +485,7 @@ impl CursorCompositor {
       height: output.height as f32,
       hotspot_x: output.hotspot_x as f32,
       hotspot_y: output.hotspot_y as f32,
-      rotation_radians: output.cursor.rotation_degrees.to_radians() as f32,
+      rotation_radians: output.cursor.rotation_degrees.to_radians() as f32 + rotation_adjustment,
       scale: (output.cursor.scale * settings.size_percent.clamp(50.0, 500.0) / 100.0) as f32,
       style: artwork,
       width: output.width as f32,
@@ -491,49 +493,6 @@ impl CursorCompositor {
       y: output.y as f32,
       clip_at_video_edge: settings.clip_at_video_edge,
     })
-  }
-
-  fn draw_output(
-    &self,
-    frame: &mut raster::FrameMut<'_>,
-    output: OutputCursor,
-    x: f64,
-    y: f64,
-    settings: CursorEffectSettings,
-  ) {
-    let scale = output.cursor.scale * settings.size_percent.clamp(50.0, 500.0) / 100.0;
-    let travel = output.delta_x.hypot(output.delta_y);
-    let blur_distance = if settings.motion_blur {
-      travel.min(MAX_BLUR_DISTANCE)
-    } else {
-      0.0
-    };
-    let raster = raster::CursorRaster::new(
-      output.cursor.appearance.style,
-      output.cursor.rotation_degrees,
-      output.width,
-      output.height,
-      output.hotspot_x,
-      output.hotspot_y,
-      scale,
-    );
-    if blur_distance > 1.25 && travel > 0.0 {
-      // Keep exposure samples no more than two output pixels apart. Scaling
-      // this by cursor size left distinct copies visible on large pointers.
-      let sample_count = motion_blur_sample_count(blur_distance);
-      raster::draw_blurred(
-        frame,
-        raster,
-        x,
-        y,
-        output.delta_x / travel,
-        output.delta_y / travel,
-        blur_distance,
-        sample_count,
-      );
-      return;
-    }
-    raster::draw(frame, raster, x, y);
   }
 
   fn evaluate(&self, timestamp_us: u64, settings: CursorEffectSettings) -> Option<EvaluatedCursor> {
@@ -570,7 +529,7 @@ pub(crate) fn initialize_artwork() {
 }
 
 #[cfg(target_os = "macos")]
-pub(in crate::exports) use raster::GpuArtwork;
+pub(crate) use raster::GpuArtwork;
 
 /// The style-indexed artwork the native compositor uploads once per export.
 #[cfg(target_os = "macos")]

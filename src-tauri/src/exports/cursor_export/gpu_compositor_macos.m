@@ -8,40 +8,13 @@
 #include <math.h>
 
 #import "gpu_compositor_macos.h"
+#import "gpu_compositor_macos_cursor_resources.h"
 
 typedef bool (*ScreenwideShouldCancel)(void *context);
 typedef void (*ScreenwideProgress)(void *context, uint64_t position_ms);
 
 /// The artwork description the shader needs, without the caller's bitmap
 /// pointer. Slice `style` of the artwork texture array holds the pixels.
-typedef struct {
-  uint32_t width;
-  uint32_t height;
-  float design_width;
-  float design_height;
-  float origin_x;
-  float origin_y;
-  uint32_t use_design;
-  uint32_t clip_local_box;
-} ScreenwideCursorArtworkUniforms;
-
-typedef struct {
-  int32_t x;
-  int32_t y;
-  uint32_t cursor_width;
-  uint32_t cursor_height;
-  uint32_t output_width;
-  uint32_t output_height;
-  int32_t crop_x;
-  int32_t crop_y;
-  uint32_t crop_width;
-  uint32_t crop_height;
-  uint32_t crop_radius;
-  uint32_t clip_at_video_edge;
-  ScreenwideGpuCursor cursor;
-  ScreenwideCursorArtworkUniforms artwork;
-} ScreenwideOverlayUniforms;
-
 typedef struct {
   uint32_t crop_x;
   uint32_t crop_y;
@@ -219,6 +192,7 @@ static void encode_cursor_overlay(
           artwork->origin_y,
           artwork->use_design,
           artwork->clip_local_box,
+          artwork->supersample,
       },
   };
   MTLSize group = MTLSizeMake(16, 16, 1);
@@ -843,7 +817,9 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
                               uint32_t output_width,
                               uint32_t output_height,
                               double seconds,
-                              const uint8_t *cursor_rgba,
+                              const ScreenwideGpuCursor *gpu_cursor,
+                              const ScreenwideCursorArtwork *cursor_artworks,
+                              uint32_t cursor_artwork_count,
                               const uint8_t *camera_rgba,
                               const ScreenwideStillOverlay *overlay,
                               uint8_t *output_rgba,
@@ -851,6 +827,7 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
                               size_t error_capacity) {
   @autoreleasepool {
     if (source_rgba == NULL || output_rgba == NULL || canvas == NULL ||
+        gpu_cursor == NULL ||
         source_width == 0 || source_height == 0 ||
         output_width == 0 || output_height == 0) {
       return fail(error_text, error_capacity,
@@ -893,12 +870,21 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
                                                 options:MTLResourceStorageModeShared];
     ScreenwideStillOverlay empty_overlay = {0};
     if (overlay == NULL) overlay = &empty_overlay;
-    id<MTLBuffer> cursor = cursor_rgba == NULL
-        ? [device newBufferWithLength:4 options:MTLResourceStorageModeShared]
-        : [device newBufferWithBytes:cursor_rgba
-                              length:(NSUInteger)overlay->cursor_source_width *
-                                     overlay->cursor_source_height * 4
-                             options:MTLResourceStorageModeShared];
+    ScreenwideCursorResources *cursor_resources = screenwide_cursor_resources(
+        device, cursor_artworks, cursor_artwork_count);
+    if (cursor_resources == nil ||
+        (gpu_cursor->visible != 0 &&
+         gpu_cursor->style >= cursor_resources.count)) {
+      return fail(error_text, error_capacity,
+                  @"The GPU still compositor could not load cursor artwork");
+    }
+    ScreenwideOverlayUniforms cursor_uniforms_value =
+        screenwide_canvas_cursor_uniforms(cursor_resources, gpu_cursor, canvas,
+                                           output_width, output_height);
+    id<MTLBuffer> cursor_uniforms = [device
+        newBufferWithBytes:&cursor_uniforms_value
+                    length:sizeof(cursor_uniforms_value)
+                   options:MTLResourceStorageModeShared];
     id<MTLBuffer> camera = camera_rgba == NULL
         ? [device newBufferWithLength:4 options:MTLResourceStorageModeShared]
         : [device newBufferWithBytes:camera_rgba
@@ -918,9 +904,10 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
     [encoder setBuffer:uniforms offset:0 atIndex:2];
     [encoder setBytes:source_dimensions length:sizeof(source_dimensions) atIndex:3];
     [encoder setBytes:&time length:sizeof(time) atIndex:4];
-    [encoder setBuffer:cursor offset:0 atIndex:5];
+    [encoder setBuffer:cursor_uniforms offset:0 atIndex:5];
     [encoder setBuffer:camera offset:0 atIndex:6];
     [encoder setBuffer:overlay_uniforms offset:0 atIndex:7];
+    [encoder setTexture:cursor_resources.texture atIndex:0];
     MTLSize grid = MTLSizeMake(output_width, output_height, 1);
     NSUInteger width = MIN(pipeline.threadExecutionWidth, output_width);
     NSUInteger height = MIN(MAX((NSUInteger)1,

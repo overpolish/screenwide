@@ -3,6 +3,7 @@
 
 use super::super::PreviewSelection;
 use super::native_types::{NativeWorkspaceLayer, NativeWorkspacePaneRect};
+use crate::exports::cursor_effects::NativeGpuArtwork;
 use crate::screenshots::{NativeCanvas, StillOverlay};
 
 unsafe extern "C" {
@@ -62,6 +63,8 @@ unsafe extern "C" {
     handle: *mut std::ffi::c_void,
     layers: *const NativeWorkspaceLayer,
     layer_count: u32,
+    artworks: *const NativeGpuArtwork,
+    artwork_count: u32,
   ) -> i32;
   pub(super) fn screenwide_preview_surface_workspace_source_size(
     handle: *mut std::ffi::c_void,

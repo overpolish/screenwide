@@ -13,6 +13,9 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos.m");
     println!("cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos+presenter.m");
     println!(
+      "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_cursor_resources.m"
+    );
+    println!(
       "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_shader_source.h"
     );
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos.m");
@@ -32,6 +35,7 @@ fn main() {
     cc::Build::new()
       .file("src/exports/cursor_export/gpu_compositor_macos.m")
       .file("src/exports/cursor_export/gpu_compositor_macos+presenter.m")
+      .file("src/exports/cursor_export/gpu_compositor_macos_cursor_resources.m")
       .file("src/recording/platform/camera/confidence_scaler_macos.m")
       .file("src/exports/recording_preview_reader_macos.m")
       .file("src/exports/recording_preview_scrubber_macos.m")

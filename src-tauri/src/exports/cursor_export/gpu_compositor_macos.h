@@ -67,7 +67,37 @@ typedef struct {
   float origin_y;
   uint32_t use_design;
   uint32_t clip_local_box;
+  uint32_t supersample;
 } ScreenwideCursorArtwork;
+
+typedef struct {
+  uint32_t width;
+  uint32_t height;
+  float design_width;
+  float design_height;
+  float origin_x;
+  float origin_y;
+  uint32_t use_design;
+  uint32_t clip_local_box;
+  uint32_t supersample;
+} ScreenwideCursorArtworkUniforms;
+
+typedef struct {
+  int32_t x;
+  int32_t y;
+  uint32_t cursor_width;
+  uint32_t cursor_height;
+  uint32_t output_width;
+  uint32_t output_height;
+  int32_t crop_x;
+  int32_t crop_y;
+  uint32_t crop_width;
+  uint32_t crop_height;
+  uint32_t crop_radius;
+  uint32_t clip_at_video_edge;
+  ScreenwideGpuCursor cursor;
+  ScreenwideCursorArtworkUniforms artwork;
+} ScreenwideOverlayUniforms;
 
 typedef struct {
   int32_t cursor_x;
@@ -151,7 +181,7 @@ typedef struct {
   ScreenwideCanvas canvas;
   ScreenwideWorkspacePlacement placement;
   double seconds;
-  const uint8_t *cursor_rgba;
+  ScreenwideGpuCursor cursor;
   const uint8_t *camera_rgba;
   void *camera_pixels;
   ScreenwideStillOverlay overlay;
@@ -182,6 +212,9 @@ int screenwide_gpu_still_presenter_present_workspace(
 int screenwide_gpu_still_presenter_set_workspace(
     void *handle, const ScreenwideWorkspaceLayer *layers,
     uint32_t layer_count);
+int screenwide_gpu_still_presenter_set_cursor_artworks(
+    void *handle, const ScreenwideCursorArtwork *artworks,
+    uint32_t artwork_count);
 
 /// Updates one retained workspace layer's composition uniforms without
 /// replacing its cached GPU source buffer.

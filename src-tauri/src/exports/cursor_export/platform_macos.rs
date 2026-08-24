@@ -8,6 +8,7 @@ use std::{
 };
 
 use super::*;
+use crate::exports::cursor_effects::{NativeGpuArtwork, NativeGpuCursor};
 
 const GPU_PROGRESS_PERCENT: u64 = 95;
 static GPU_EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
@@ -46,47 +47,12 @@ unsafe extern "C" fn gpu_progress(context: *mut c_void, position_ms: u64) {
   (callbacks.on_progress)(position_ms.saturating_mul(GPU_PROGRESS_PERCENT) / 100);
 }
 
-/// Repr(C) mirror of [`GpuCursor`] for one output frame. Positions are canvas
-/// pixels; the shader turns these numbers into the drawn cursor.
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
-struct GpuCursorFrame {
-  blur_delta_x: f32,
-  blur_delta_y: f32,
-  height: f32,
-  hotspot_x: f32,
-  hotspot_y: f32,
-  rotation_radians: f32,
-  scale: f32,
-  width: f32,
-  x: f32,
-  y: f32,
-  style: u32,
-  clip_at_video_edge: u32,
-  visible: u32,
-}
-
-/// One style's artwork bitmap. The pointer stays owned by the caller and is
-/// only read while `screenwide_gpu_composite_cursor` uploads its textures.
-#[repr(C)]
-struct GpuCursorArtwork {
-  pixels: *const u8,
-  width: u32,
-  height: u32,
-  design_width: f32,
-  design_height: f32,
-  origin_x: f32,
-  origin_y: f32,
-  use_design: u32,
-  clip_local_box: u32,
-}
-
 unsafe extern "C" {
   fn screenwide_gpu_composite_cursor(
     screen_path: *const c_char,
-    cursors: *const GpuCursorFrame,
+    cursors: *const NativeGpuCursor,
     cursor_count: u32,
-    artworks: *const GpuCursorArtwork,
+    artworks: *const NativeGpuArtwork,
     artwork_count: u32,
     camera_path: *const c_char,
     camera_overlay: *const GpuCameraOverlay,
@@ -119,59 +85,20 @@ fn gpu_video_path() -> PathBuf {
   ))
 }
 
-/// Flattens the evaluated timeline into the frame array the compositor
-/// indexes. The vertical fallback artwork carries its quarter turn in the
-/// rotation, exactly as `CursorRaster::new` applies it (raster.rs:57-65).
-fn cursor_frames(timeline: &native_macos::CursorTimeline) -> Vec<GpuCursorFrame> {
+/// Flattens the evaluated timeline into the frame array the compositor indexes.
+fn cursor_frames(timeline: &native_macos::CursorTimeline) -> Vec<NativeGpuCursor> {
   timeline
     .frames
     .iter()
-    .map(|cursor| {
-      cursor.map_or_else(GpuCursorFrame::default, |cursor| {
-        let vertical = timeline
-          .artworks
-          .get(cursor.style as usize)
-          .is_some_and(|artwork| artwork.vertical);
-        GpuCursorFrame {
-          blur_delta_x: cursor.blur_delta_x,
-          blur_delta_y: cursor.blur_delta_y,
-          height: cursor.height,
-          hotspot_x: cursor.hotspot_x,
-          hotspot_y: cursor.hotspot_y,
-          rotation_radians: cursor.rotation_radians
-            + if vertical {
-              std::f32::consts::FRAC_PI_2
-            } else {
-              0.0
-            },
-          scale: cursor.scale,
-          width: cursor.width,
-          x: cursor.x,
-          y: cursor.y,
-          style: cursor.style,
-          clip_at_video_edge: u32::from(cursor.clip_at_video_edge),
-          visible: 1,
-        }
-      })
-    })
+    .map(|cursor| NativeGpuCursor::from(*cursor))
     .collect()
 }
 
-fn cursor_artworks(timeline: &native_macos::CursorTimeline) -> Vec<GpuCursorArtwork> {
+fn cursor_artworks(timeline: &native_macos::CursorTimeline) -> Vec<NativeGpuArtwork> {
   timeline
     .artworks
     .iter()
-    .map(|artwork| GpuCursorArtwork {
-      pixels: artwork.pixels.as_ptr(),
-      width: artwork.width,
-      height: artwork.height,
-      design_width: artwork.design_width,
-      design_height: artwork.design_height,
-      origin_x: artwork.origin_x,
-      origin_y: artwork.origin_y,
-      use_design: u32::from(artwork.use_design),
-      clip_local_box: u32::from(artwork.clip_local_box),
-    })
+    .map(NativeGpuArtwork::from)
     .collect()
 }
 

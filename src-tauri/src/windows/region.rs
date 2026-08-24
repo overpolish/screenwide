@@ -8,11 +8,11 @@ use std::time::Duration;
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize};
 
 use super::{
-  collapse_recording_source_selector, platform, WindowLabel, RECORDING_CONTROLS_VISIBLE,
+  collapse_recording_source_selector, escape, platform, WindowLabel, RECORDING_CONTROLS_VISIBLE,
   REGION_SELECTOR_EDITING, SELECTOR_VISIBLE,
 };
 
-static SCREENSHOT_REGION_SESSION: AtomicBool = AtomicBool::new(false);
+pub(super) static SCREENSHOT_REGION_SESSION: AtomicBool = AtomicBool::new(false);
 
 pub fn is_region_selector_visible(app: &AppHandle) -> bool {
   app
@@ -45,8 +45,10 @@ pub fn show_region_selector(
   }
   region.set_size(size)?;
   region.set_position(position)?;
-  platform::set_opacity(&region, 1.0)?;
-  platform::show(&region)?;
+  let initial_opacity = f64::from(region_selector_restores_opacity(
+    SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
+  ) as u8);
+  platform::show(&region, initial_opacity)?;
   platform::restore_recording_level(&region)?;
 
   raise_recording_controls(&app)?;
@@ -69,6 +71,10 @@ pub fn show_region_selector(
   });
 
   Ok(())
+}
+
+const fn region_selector_restores_opacity(screenshot_session: bool) -> bool {
+  !screenshot_session
 }
 
 #[tauri::command]
@@ -132,14 +138,11 @@ const fn region_selector_is_interactive(is_editing: bool, is_recording_idle: boo
   is_editing && is_recording_idle
 }
 
-/// The region boundary belongs to the recording UI while idle. Once an export
-/// takes over and hides that UI, a delayed frontend synchronization must not
-/// bring the overlay back by itself. An active recording may keep its existing
-/// boundary visible after the controls have gone.
-///
+/// The region boundary belongs to the recording UI while idle. Delayed
+/// frontend synchronization must not restore it after those controls hide,
+/// while an active recording may keep its existing boundary visible.
 /// A screenshot session is the exception: the screenshot shortcut draws the
-/// overlay on its own, with the recording controls deliberately left wherever
-/// the user had them.
+/// overlay on its own and leaves the recording controls in place.
 const fn region_selector_may_show(
   is_recording_idle: bool,
   controls_visible: bool,
@@ -148,13 +151,24 @@ const fn region_selector_may_show(
   !is_recording_idle || controls_visible || screenshot_session
 }
 
-/// Marks the overlay as belonging to a shortcut-initiated screenshot.
-///
-/// The frontend owns the session: it turns this on before asking for the
-/// overlay and off once the still is taken or the session is abandoned.
 #[tauri::command]
-pub fn set_screenshot_region_session(active: bool) {
-  SCREENSHOT_REGION_SESSION.store(active, Ordering::Relaxed);
+pub fn set_screenshot_region_session(app: AppHandle, active: bool) -> tauri::Result<()> {
+  let controls_visible = RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed);
+  SCREENSHOT_REGION_SESSION.store(active, Ordering::Release);
+  escape::sync(&app, controls_visible, active);
+
+  if active {
+    let result = match app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
+      Some(region) => platform::hide(&region).and_then(|()| platform::set_opacity(&region, 0.0)),
+      None => Ok(()),
+    };
+    if let Err(error) = result {
+      SCREENSHOT_REGION_SESSION.store(false, Ordering::Release);
+      escape::sync(&app, controls_visible, false);
+      return Err(error);
+    }
+  }
+  Ok(())
 }
 
 /// Re-asserts that invariant against the window.
@@ -239,7 +253,7 @@ pub fn set_recording_controls_opacity(app: AppHandle, opacity: f64) -> tauri::Re
 mod tests {
   use super::{
     recording_controls_may_raise, region_selector_is_interactive, region_selector_may_show,
-    source_selector_visibility_allows_show,
+    region_selector_restores_opacity, source_selector_visibility_allows_show,
   };
 
   #[test]
@@ -275,5 +289,11 @@ mod tests {
   fn a_screenshot_session_shows_the_overlay_without_the_recording_ui() {
     assert!(region_selector_may_show(true, false, true));
     assert!(region_selector_may_show(true, true, true));
+  }
+
+  #[test]
+  fn a_screenshot_session_preserves_prepared_window_opacity() {
+    assert!(!region_selector_restores_opacity(true));
+    assert!(region_selector_restores_opacity(false));
   }
 }

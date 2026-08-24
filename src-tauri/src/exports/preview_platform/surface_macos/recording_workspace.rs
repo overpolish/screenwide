@@ -11,15 +11,19 @@ use super::ffi::{
 };
 use super::native_types::{NativeWorkspaceLayer, RecordingWorkspaceLayer};
 use super::RecordingPreviewSurface;
-use crate::exports::{media_preview, CameraOverlaySettings};
+use crate::exports::{
+  cursor_effects::{GpuArtwork, NativeGpuArtwork, NativeGpuCursor},
+  media_preview, CameraOverlaySettings,
+};
 use crate::screenshots::{native_canvas, ScreenshotOutputSettings, StillOverlay};
 
 impl RecordingPreviewSurface {
   /// Presents a retained recording scene with explicit per-layer placements.
   /// Unlike screenshot layers, recording panes are not implicitly coincident.
-  pub(crate) fn present_recording_workspace(
+  pub(in crate::exports) fn present_recording_workspace(
     &self,
     layers: &[RecordingWorkspaceLayer<'_>],
+    artworks: Option<&[GpuArtwork]>,
   ) -> Result<bool, String> {
     let mut native_layers = Vec::with_capacity(layers.len());
     for layer in layers {
@@ -45,9 +49,6 @@ impl RecordingPreviewSurface {
         .map_or_else(StillOverlay::default, |overlay| unsafe {
           std::ptr::read(overlay)
         });
-      let (cursor_rgba, cursor_dims) = layer.cursor.map_or((std::ptr::null(), (0, 0)), |cursor| {
-        (cursor.rgba.as_ptr(), (cursor.width, cursor.height))
-      });
       let (camera_rgba, camera_dims) = layer.camera.map_or((std::ptr::null(), (0, 0)), |camera| {
         (camera.rgba.as_ptr(), (camera.width, camera.height))
       });
@@ -56,12 +57,6 @@ impl RecordingPreviewSurface {
         .map_or((std::ptr::null_mut(), (0, 0)), |(pixels, size)| {
           (pixels, size)
         });
-      if overlay.cursor_source_width == 0 {
-        overlay.cursor_source_width = cursor_dims.0;
-      }
-      if overlay.cursor_source_height == 0 {
-        overlay.cursor_source_height = cursor_dims.1;
-      }
       if overlay.camera_source_width == 0 {
         overlay.camera_source_width = camera_dims.0;
       }
@@ -88,17 +83,24 @@ impl RecordingPreviewSurface {
         canvas,
         placement: layer.placement,
         seconds: layer.seconds,
-        cursor_rgba,
+        cursor: NativeGpuCursor::from(layer.cursor),
         camera_rgba,
         camera_pixels,
         overlay,
       });
     }
+    let native_artworks = artworks
+      .unwrap_or_default()
+      .iter()
+      .map(NativeGpuArtwork::from)
+      .collect::<Vec<_>>();
     Ok(unsafe {
       screenwide_preview_surface_present_recording_workspace(
         self.handle,
         native_layers.as_ptr(),
         native_layers.len().try_into().unwrap_or(u32::MAX),
+        native_artworks.as_ptr(),
+        native_artworks.len().try_into().unwrap_or(u32::MAX),
       ) != 0
     })
   }

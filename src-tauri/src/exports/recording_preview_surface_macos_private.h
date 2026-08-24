@@ -142,6 +142,7 @@ typedef struct {
 @property(nonatomic, strong) NSMutableArray<ScreenwidePreviewView *> *views;
 @property(nonatomic) BOOL workspaceMode;
 @property(nonatomic) uint32_t workspaceLayerCount;
+@property(nonatomic) BOOL workspaceRedrawRetried;
 @property(nonatomic) BOOL workspaceExplicitPlacements;
 @property(nonatomic, strong) NSMutableData *workspacePlacements;
 @property(nonatomic, strong) NSArray<NSNumber *> *workspacePaneIndices;
@@ -295,5 +296,4 @@ BOOL update_workspace_auto_fit_move(
 void end_workspace_frame_resize(
     ScreenwidePreviewSurface *surface, BOOL commit);
 void redraw_workspace(ScreenwidePreviewSurface *surface);
-
 #endif

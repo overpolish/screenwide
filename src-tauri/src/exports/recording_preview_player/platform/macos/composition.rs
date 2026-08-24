@@ -1,48 +1,42 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::cursor::CursorPreview;
+use super::cursor::GpuCursorPreview;
 use crate::{
-  exports::{media_preview, CameraOverlaySettings},
+  exports::{cursor_effects::GpuCursor, media_preview, CameraOverlaySettings},
   screenshots::{self, CapturedImage, ScreenshotOutputSettings, StillOverlay},
 };
 
-pub(super) fn still_overlay(
+pub(super) fn gpu_still_overlay(
   screen: &CapturedImage,
   output: &ScreenshotOutputSettings,
-  cursor: Option<(&CursorPreview, CapturedImage)>,
+  cursor: Option<&GpuCursorPreview>,
   camera: Option<&CapturedImage>,
   camera_overlay: Option<CameraOverlaySettings>,
   camera_drop_shadow: bool,
   camera_on_top: bool,
-) -> Result<(Option<CapturedImage>, Option<StillOverlay>), String> {
-  let cursor_image = cursor.as_ref().map(|(_, image)| image.clone());
+) -> Result<(Option<GpuCursor>, Option<StillOverlay>), String> {
   let placement = screenshots::output_placement(screen.width, screen.height, output)?;
-  let mapped_cursor = cursor.as_ref().map(|(cursor, image)| {
-    let scale_x = f64::from(placement.image_width) / f64::from(cursor.canvas_width.max(1));
-    let scale_y = f64::from(placement.image_height) / f64::from(cursor.canvas_height.max(1));
-    (
-      (placement.image_x + f64::from(cursor.x) * scale_x).round() as i32,
-      (placement.image_y + f64::from(cursor.y) * scale_y).round() as i32,
-      (f64::from(image.width) * scale_x).round().max(1.0) as u32,
-      (f64::from(image.height) * scale_y).round().max(1.0) as u32,
-    )
+  let cursor = cursor.map(|preview| {
+    let scale_x = f64::from(placement.image_width) / f64::from(preview.canvas_width.max(1));
+    let scale_y = f64::from(placement.image_height) / f64::from(preview.canvas_height.max(1));
+    let mut cursor = preview.cursor;
+    cursor.x = (placement.image_x + f64::from(cursor.x) * scale_x) as f32;
+    cursor.y = (placement.image_y + f64::from(cursor.y) * scale_y) as f32;
+    cursor.width *= scale_x as f32;
+    cursor.height *= scale_y as f32;
+    cursor.hotspot_x *= scale_x as f32;
+    cursor.hotspot_y *= scale_y as f32;
+    cursor.blur_delta_x *= scale_x as f32;
+    cursor.blur_delta_y *= scale_y as f32;
+    cursor
   });
   let overlay = camera_overlay
     .map(|settings| {
-      camera_still_overlay(
-        camera,
-        output,
-        settings,
-        mapped_cursor,
-        cursor_image.as_ref(),
-        camera_drop_shadow,
-        camera_on_top,
-      )
+      camera_still_overlay(camera, output, settings, camera_drop_shadow, camera_on_top)
     })
-    .transpose()?
-    .or_else(|| cursor_still_overlay(cursor.as_ref(), mapped_cursor));
-  Ok((cursor_image, overlay))
+    .transpose()?;
+  Ok((cursor, overlay))
 }
 
 pub(super) fn encoded_jpeg(image: &CapturedImage) -> Result<Vec<u8>, String> {
@@ -59,8 +53,6 @@ pub(super) fn camera_still_overlay(
   camera: Option<&CapturedImage>,
   output: &ScreenshotOutputSettings,
   settings: CameraOverlaySettings,
-  cursor: Option<(i32, i32, u32, u32)>,
-  cursor_image: Option<&CapturedImage>,
   camera_drop_shadow: bool,
   camera_on_top: bool,
 ) -> Result<StillOverlay, String> {
@@ -79,12 +71,6 @@ pub(super) fn camera_still_overlay(
     },
   })?;
   Ok(StillOverlay {
-    cursor_x: cursor.map_or(0, |value| value.0),
-    cursor_y: cursor.map_or(0, |value| value.1),
-    cursor_width: cursor.map_or(0, |value| value.2),
-    cursor_height: cursor.map_or(0, |value| value.3),
-    cursor_source_width: cursor_image.map_or(0, |image| image.width),
-    cursor_source_height: cursor_image.map_or(0, |image| image.height),
     camera_crop_x: geometry.crop_x,
     camera_crop_y: geometry.crop_y,
     camera_crop_width: geometry.crop_width,
@@ -98,26 +84,8 @@ pub(super) fn camera_still_overlay(
     camera_source_height: camera.height,
     camera_drop_shadow: u32::from(camera_drop_shadow),
     camera_on_top: u32::from(camera_on_top),
-  })
-}
-
-pub(super) fn cursor_still_overlay(
-  cursor: Option<&(&CursorPreview, CapturedImage)>,
-  mapped: Option<(i32, i32, u32, u32)>,
-) -> Option<StillOverlay> {
-  cursor.map(|(cursor, image)| StillOverlay {
-    cursor_x: mapped.map_or(cursor.x, |value| value.0),
-    cursor_y: mapped.map_or(cursor.y, |value| value.1),
-    cursor_width: mapped.map_or(image.width, |value| value.2),
-    cursor_height: mapped.map_or(image.height, |value| value.3),
-    cursor_source_width: image.width,
-    cursor_source_height: image.height,
     ..Default::default()
   })
-}
-
-pub(super) fn cursor_rgba(cursor: &CursorPreview) -> Result<CapturedImage, String> {
-  decoded_rgba(&cursor.pixels)
 }
 
 pub(super) fn decoded_rgba(encoded: &[u8]) -> Result<CapturedImage, String> {

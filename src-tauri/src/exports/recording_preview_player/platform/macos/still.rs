@@ -12,11 +12,10 @@ use std::{sync::atomic::Ordering, sync::mpsc, thread::JoinHandle};
 
 use tauri::ipc::Channel;
 
-use super::composition::{cursor_rgba, still_overlay};
-use super::cursor::cursor_preview;
+use super::composition::gpu_still_overlay;
+use super::cursor::gpu_cursor_preview;
 use super::image::frame_position;
 use super::still_decode::{scaled_output, DecodedFrame, PaneDecoder};
-use crate::exports::cursor_effects::CursorOverlayCache;
 use crate::exports::preview_platform::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
 use crate::exports::recording_preview_player::{PlayerSources, RecordingPreviewPlayerEvent};
 
@@ -79,7 +78,6 @@ fn run(
     }
     _ => None,
   };
-  let mut cursor_cache = CursorOverlayCache::new();
   let mut image_cache: Option<CachedImages> = None;
   let mut pending_command = None;
 
@@ -171,7 +169,7 @@ fn run(
       .read()
       .map(|settings| *settings)
       .unwrap_or_default();
-    let cursor = cursor_preview(
+    let cursor = gpu_cursor_preview(
       sources.cursor.as_deref(),
       screen_position_ms,
       cursor_settings,
@@ -179,10 +177,7 @@ fn run(
         sources.playback_layout.panes[0].source_width,
         sources.playback_layout.panes[0].source_height,
       ),
-      &mut cursor_cache,
-    )
-    .unwrap_or_default();
-    let cursor_pixels = cursor.as_ref().and_then(|cursor| cursor_rgba(cursor).ok());
+    );
     // Only live playback may veto a still present; newer queued seeks just
     // mean this frame is a beat old, which still beats a frozen screen.
     if sources.playing.load(Ordering::Acquire) {
@@ -205,10 +200,10 @@ fn run(
       }
       let screen_metadata = cache.screen.metadata();
       let camera_metadata = cache.camera.as_ref().map(DecodedFrame::metadata);
-      let (cursor_image, overlay) = match still_overlay(
+      let (cursor, overlay) = match gpu_still_overlay(
         &screen_metadata,
         &screen_output,
-        cursor.as_ref().zip(cursor_pixels),
+        cursor.as_ref(),
         composition
           .bake_camera
           .then_some(camera_metadata.as_ref())
@@ -255,7 +250,7 @@ fn run(
         settings: screen_output,
         placement: NativeWorkspacePlacement::default(),
         seconds: screen_position_ms as f64 / 1_000.0,
-        cursor: cursor_image.as_ref(),
+        cursor,
         camera: baked_camera.and_then(|camera| camera.rgba()),
         camera_pixels: baked_camera
           .and_then(|camera| camera.pixels().map(|pixels| (pixels, camera.dimensions()))),
@@ -290,7 +285,10 @@ fn run(
         }
       }
       surface
-        .present_recording_workspace(&layers)
+        .present_recording_workspace(
+          &layers,
+          sources.cursor_artworks.as_deref().map(Vec::as_slice),
+        )
         .unwrap_or(false)
     } else {
       cache

@@ -199,7 +199,17 @@ SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surfa
       workspace.compositor, (__bridge void *)layer, placements,
       surface.workspaceLayerCount, &magnifier,
       workspace_transaction_presenter(surface));
-  if (result == 0) surface.workspaceDrawInFlight = NO;
+  if (result == 0) {
+    surface.workspaceDrawInFlight = NO;
+    if (!surface.workspaceRedrawRetried) {
+      surface.workspaceRedrawRetried = YES;
+      dispatch_async(dispatch_get_main_queue(), ^{
+        redraw_workspace(surface);
+      });
+    }
+  } else {
+    surface.workspaceRedrawRetried = NO;
+  }
   [surface.workspaceLock unlock];
 }
 
@@ -230,6 +240,7 @@ int screenwide_preview_surface_present_screenshot_workspace(
     return 0;
   }
   surface.workspaceLayerCount = layer_count;
+  surface.workspaceRedrawRetried = NO;
   surface.workspaceExplicitPlacements = NO;
   surface.workspacePlacements = nil;
   surface.workspacePaneIndices = nil;
@@ -252,17 +263,21 @@ int screenwide_preview_surface_present_screenshot_workspace(
 /// independently editable inside one native drawable.
 int screenwide_preview_surface_present_recording_workspace(
     void *handle, const ScreenwideWorkspaceLayer *layers,
-    uint32_t layer_count) {
+    uint32_t layer_count, const ScreenwideCursorArtwork *artworks,
+    uint32_t artwork_count) {
   if (handle == NULL || layers == NULL || layer_count == 0) return 0;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  if (!surface.workspaceMode || surface.views.count == 0) return 0;
+  if (surface.views.count == 0) return 0;
   ScreenwidePreviewView *workspace = surface.views[0];
-  if (!workspace.active) return 1;
   [surface.workspaceLock lock];
-  int staged = screenwide_gpu_still_presenter_set_workspace(
-      workspace.compositor, layers, layer_count);
+  int configured = artwork_count == 0 ||
+      screenwide_gpu_still_presenter_set_cursor_artworks(
+          workspace.compositor, artworks, artwork_count);
+  int staged = configured ? screenwide_gpu_still_presenter_set_workspace(
+      workspace.compositor, layers, layer_count) : 0;
   if (staged != 0) {
     surface.workspaceLayerCount = layer_count;
+    surface.workspaceRedrawRetried = NO;
     surface.workspaceExplicitPlacements = YES;
     NSMutableArray<NSNumber *> *paneIndices = [NSMutableArray arrayWithCapacity:layer_count];
     for (uint32_t index = 0; index < layer_count; index++)

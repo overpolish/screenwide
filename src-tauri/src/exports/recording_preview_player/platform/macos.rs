@@ -26,10 +26,7 @@ use tauri::ipc::Channel;
 
 use super::super::{video::VideoFrame, PlayerSources};
 use crate::{
-  exports::{
-    cursor_effects::{CursorEffectSettings, CursorOverlayCache},
-    CameraOverlaySettings, RecordingOutputSettings,
-  },
+  exports::{cursor_effects::CursorEffectSettings, CameraOverlaySettings, RecordingOutputSettings},
   screenshots::{compose_output_layers, CapturedImage},
 };
 
@@ -45,7 +42,7 @@ pub(crate) enum VideoFramePayload {
     camera: Option<crate::screenshots::CapturedImage>,
     screen_output: crate::screenshots::ScreenshotOutputSettings,
     camera_output: crate::screenshots::ScreenshotOutputSettings,
-    cursor_image: Option<crate::screenshots::CapturedImage>,
+    cursor: Option<crate::exports::cursor_effects::GpuCursor>,
     overlay: Option<crate::screenshots::StillOverlay>,
     bake_camera: bool,
     seconds: f64,
@@ -60,7 +57,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
       camera,
       screen_output,
       camera_output,
-      cursor_image,
+      cursor,
       overlay,
       bake_camera,
       seconds,
@@ -77,7 +74,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
           settings: screen_output,
           placement: NativeWorkspacePlacement::default(),
           seconds,
-          cursor: cursor_image.as_ref(),
+          cursor,
           camera: bake_camera.then_some(camera.as_ref()).flatten(),
           camera_pixels: None,
           overlay: overlay.as_ref(),
@@ -104,7 +101,10 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
           }
         }
         return surface
-          .present_recording_workspace(&layers)
+          .present_recording_workspace(
+            &layers,
+            sources.cursor_artworks.as_deref().map(Vec::as_slice),
+          )
           .unwrap_or(false);
       }
       false
@@ -197,19 +197,16 @@ pub(crate) fn composed_frame_image(
   } else {
     None
   };
-  let mut cursor_cache = CursorOverlayCache::new();
-  let cursor = cursor::cursor_preview(
+  let cursor = cursor::gpu_cursor_preview(
     sources.cursor.as_deref(),
     position_ms,
     cursor_effects,
     (screen.width, screen.height),
-    &mut cursor_cache,
-  )?;
-  let cursor_image = cursor.as_ref().map(composition::cursor_rgba).transpose()?;
-  let (cursor_image, overlay) = composition::still_overlay(
+  );
+  let (cursor, overlay) = composition::gpu_still_overlay(
     &screen,
     &recording_output.primary,
-    cursor.as_ref().zip(cursor_image),
+    cursor.as_ref(),
     camera.as_ref(),
     camera.as_ref().map(|_| camera_overlay),
     recording_output.camera.drop_shadow,
@@ -220,7 +217,12 @@ pub(crate) fn composed_frame_image(
     &recording_output.primary,
     position_ms as f64 / 1_000.0,
     true,
-    cursor_image.as_ref(),
+    cursor.as_ref().and_then(|cursor| {
+      sources
+        .cursor_artworks
+        .as_deref()
+        .map(|artworks| (cursor, artworks.as_slice()))
+    }),
     camera.as_ref(),
     overlay.as_ref(),
     cursor_effects.clip_at_video_edge,

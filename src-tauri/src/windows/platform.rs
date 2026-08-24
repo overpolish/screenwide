@@ -205,7 +205,6 @@ pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 /// Orders a recording panel onscreen without disturbing keyboard focus.
-///
 /// Tauri's `WebviewWindow::show` is `makeKeyAndOrderFront:` underneath. On a
 /// non-activating panel that is the worst of both worlds: the app never
 /// activates, but WindowServer still moves keyboard focus off whatever the user
@@ -213,16 +212,15 @@ pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
 /// never calls it. `Panel::show` is `orderFrontRegardless`, which puts the
 /// panel on screen and leaves key status where it is.
 ///
-/// Nothing depends on the Tauri-side call: tao's `is_visible` asks the NSWindow
-/// (`isVisible`), so every `window.is_visible()` caller sees the panel the
-/// moment it is ordered front.
+/// Tao's `is_visible` asks the NSWindow, so callers see the panel as soon as it
+/// is ordered front.
 #[cfg(target_os = "macos")]
-pub fn show(window: &WebviewWindow) -> tauri::Result<()> {
+pub fn show(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
   window.set_ignore_cursor_events(false)?;
   let panel = ensure_recording_panel(window)?;
   let app = window.app_handle().clone();
   app.run_on_main_thread(move || {
-    panel.set_alpha_value(1.0);
+    panel.set_alpha_value(opacity);
     panel.show();
   })
 }
@@ -391,7 +389,8 @@ pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 #[cfg(target_os = "windows")]
-pub fn show(window: &WebviewWindow) -> tauri::Result<()> {
+pub fn show(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
+  set_opacity(window, opacity)?;
   prepare_to_show(window)?;
   window.show()
 }
@@ -437,7 +436,8 @@ pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn show(window: &WebviewWindow) -> tauri::Result<()> {
+pub fn show(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
+  set_opacity(window, opacity)?;
   window.show()
 }
 

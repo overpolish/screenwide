@@ -36,6 +36,8 @@ mod worker;
 use self::layout::{preview_layout, RecordingPreviewLayout};
 use self::sources::{sources, PlayerSources};
 use self::worker::{PlaybackMode, PreviewPlayerWorker};
+#[cfg(target_os = "macos")]
+use super::cursor_effects::GpuArtwork;
 use super::preview_platform::workspace_editor::WorkspaceScene;
 use super::preview_platform::RecordingPreviewSurface;
 use super::{

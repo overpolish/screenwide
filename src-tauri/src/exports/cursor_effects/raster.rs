@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::recording::cursor::CursorStyle;
+#[cfg(test)]
 use image::RgbaImage;
-use rayon::prelude::*;
 
 #[cfg(target_os = "macos")]
 #[path = "raster/platform_macos.rs"]
 mod platform;
+#[cfg(target_os = "macos")]
+pub(super) use platform::gpu_rotation_radians;
 #[cfg(not(target_os = "macos"))]
 #[path = "raster/platform_unsupported.rs"]
 mod platform;
@@ -80,7 +82,7 @@ pub(super) fn artwork_index(style: CursorStyle) -> u32 {
 /// draws) keeps that frame's aspect inside the box and anchors `origin` at the
 /// recorded position, so the frame and origin travel with it.
 #[cfg(target_os = "macos")]
-pub(in crate::exports) struct GpuArtwork {
+pub(crate) struct GpuArtwork {
   pub design_height: f32,
   pub design_width: f32,
   pub height: u32,
@@ -90,8 +92,8 @@ pub(in crate::exports) struct GpuArtwork {
   /// The fallback arrow deliberately draws outside the recorded cursor box so
   /// its rounded tip stroke survives at the hotspot (`sample`, raster.rs:85).
   pub clip_local_box: bool,
+  pub supersample: bool,
   pub use_design: bool,
-  pub vertical: bool,
   pub width: u32,
 }
 
@@ -145,8 +147,8 @@ fn custom_gpu_artwork(arrow: Option<&platform::StyleArtwork>) -> GpuArtwork {
     origin_y: arrow.hotspot_y as f32,
     pixels: arrow.image.as_raw().clone(),
     clip_local_box: false,
+    supersample: false,
     use_design: true,
-    vertical: false,
     width: arrow.image.width(),
   }
 }
@@ -162,8 +164,8 @@ fn gpu_artwork(style: CursorStyle) -> GpuArtwork {
       origin_y: 0.0,
       pixels: image.as_raw().clone(),
       clip_local_box: true,
+      supersample: false,
       use_design: false,
-      vertical: false,
       width: image.width(),
     };
   }
@@ -207,8 +209,8 @@ fn fallback_gpu_artwork(style: CursorStyle) -> GpuArtwork {
     origin_y: origin_y as f32,
     pixels,
     clip_local_box: artwork != fallback::Artwork::Arrow,
+    supersample: true,
     use_design: true,
-    vertical: fallback::is_vertical(style),
     width,
   }
 }
@@ -219,6 +221,7 @@ fn fallback_gpu_artwork(style: CursorStyle) -> GpuArtwork {
 /// units) lands at the recorded position. Only a custom cursor uses this — its
 /// pixels are not recorded, so neither its box's aspect nor its hotspot
 /// describes the arrow that stands in for it.
+#[cfg(test)]
 #[derive(Clone, Copy)]
 struct SystemDesign {
   height: f64,
@@ -227,6 +230,7 @@ struct SystemDesign {
   width: f64,
 }
 
+#[cfg(test)]
 #[derive(Clone, Copy)]
 pub(super) struct CursorRaster {
   artwork: fallback::Artwork,
@@ -241,13 +245,7 @@ pub(super) struct CursorRaster {
   width: f64,
 }
 
-pub(super) struct FrameMut<'a> {
-  pub height: usize,
-  pub pixels: &'a mut [u8],
-  pub stride: usize,
-  pub width: usize,
-}
-
+#[cfg(test)]
 impl CursorRaster {
   #[allow(clippy::too_many_arguments)]
   pub(super) fn new(
@@ -390,12 +388,9 @@ impl CursorRaster {
     }
     [color[0], color[1], color[2], alpha / 16.0 * 255.0]
   }
-
-  fn radius(self) -> f64 {
-    self.width.hypot(self.height) * self.scale
-  }
 }
 
+#[cfg(test)]
 fn sample_image(image: &RgbaImage, x: f64, y: f64) -> [f64; 4] {
   let x = x.clamp(0.0, f64::from(image.width().saturating_sub(1)));
   let y = y.clamp(0.0, f64::from(image.height().saturating_sub(1)));
@@ -432,125 +427,6 @@ fn sample_image(image: &RgbaImage, x: f64, y: f64) -> [f64; 4] {
     color[2] / alpha,
     alpha * 255.0,
   ]
-}
-
-fn blend(frame: &mut FrameMut<'_>, x: usize, y: usize, source: [f64; 4]) {
-  let offset = y * frame.stride;
-  let Some(row) = frame.pixels.get_mut(offset..offset + frame.stride) else {
-    return;
-  };
-  blend_row(row, x, source);
-}
-
-fn blend_row(row: &mut [u8], x: usize, source: [f64; 4]) {
-  let source_alpha = source[3].clamp(0.0, 1.0);
-  if source_alpha <= 0.0 {
-    return;
-  }
-  let offset = x * 4;
-  if offset + 3 >= row.len() {
-    return;
-  }
-  let destination_alpha = f64::from(row[offset + 3]) / 255.0;
-  let output_alpha = source_alpha + destination_alpha * (1.0 - source_alpha);
-  for (destination, source) in row[offset..offset + 3]
-    .iter_mut()
-    .zip([source[2], source[1], source[0]])
-  {
-    let premultiplied =
-      source * source_alpha + f64::from(*destination) * destination_alpha * (1.0 - source_alpha);
-    *destination = (premultiplied / output_alpha).round() as u8;
-  }
-  row[offset + 3] = (output_alpha * 255.0).round() as u8;
-}
-
-pub(super) fn draw(frame: &mut FrameMut<'_>, cursor: CursorRaster, x: f64, y: f64) {
-  let radius = cursor.radius();
-  let bounds = bounds(frame, x, y, radius, 0.0);
-  for destination_y in bounds.1..bounds.3 {
-    for destination_x in bounds.0..bounds.2 {
-      // The native cursor artwork already carries an antialiased alpha edge,
-      // and `sample_image` interpolates it while scaling and rotating. A 4x4
-      // supersample here did the same texture lookup sixteen times per output
-      // pixel, which made a large cursor layer slower than the recording it
-      // was being composited onto without improving its edge.
-      let mut source =
-        cursor.sample_for_draw(destination_x as f64 + 0.5, destination_y as f64 + 0.5, x, y);
-      source[3] /= 255.0;
-      blend(frame, destination_x, destination_y, source);
-    }
-  }
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(super) fn draw_blurred(
-  frame: &mut FrameMut<'_>,
-  cursor: CursorRaster,
-  x: f64,
-  y: f64,
-  direction_x: f64,
-  direction_y: f64,
-  distance: f64,
-  sample_count: usize,
-) {
-  let bounds = bounds(frame, x, y, cursor.radius(), distance);
-  let weights = (0..sample_count)
-    .map(|index| {
-      let progress = index as f64 / (sample_count - 1) as f64;
-      let centered = (progress - 0.5) / 0.34;
-      (-0.5 * centered * centered).exp()
-    })
-    .collect::<Vec<_>>();
-  let total_weight = weights.iter().sum::<f64>();
-  frame
-    .pixels
-    .par_chunks_mut(frame.stride)
-    .enumerate()
-    .skip(bounds.1)
-    .take(bounds.3 - bounds.1)
-    .for_each(|(destination_y, row)| {
-      for destination_x in bounds.0..bounds.2 {
-        let mut alpha = 0.0;
-        let mut color = [0.0; 3];
-        for (index, weight) in weights.iter().enumerate() {
-          let progress = index as f64 / (sample_count - 1) as f64;
-          let exposure_offset = (progress - 0.8) * distance;
-          let source = cursor.sample(
-            destination_x as f64 + 0.5,
-            destination_y as f64 + 0.5,
-            x + direction_x * exposure_offset,
-            y + direction_y * exposure_offset,
-          );
-          let sample_alpha = source[3] / 255.0;
-          alpha += sample_alpha * weight;
-          for channel in 0..3 {
-            color[channel] += source[channel] * sample_alpha * weight;
-          }
-        }
-        alpha /= total_weight;
-        if alpha > 0.0 {
-          for channel in &mut color {
-            *channel /= total_weight * alpha;
-          }
-          blend_row(row, destination_x, [color[0], color[1], color[2], alpha]);
-        }
-      }
-    });
-}
-
-fn bounds(
-  frame: &FrameMut<'_>,
-  x: f64,
-  y: f64,
-  radius: f64,
-  blur: f64,
-) -> (usize, usize, usize, usize) {
-  (
-    (x - radius - blur).floor().max(0.0) as usize,
-    (y - radius - blur).floor().max(0.0) as usize,
-    (x + radius + blur).ceil().min(frame.width as f64) as usize,
-    (y + radius + blur).ceil().min(frame.height as f64) as usize,
-  )
 }
 
 #[cfg(test)]
@@ -629,7 +505,6 @@ mod tests {
       !artwork.clip_local_box,
       "the fitted arrow reaches outside the recorded box at its hotspot"
     );
-    assert!(!artwork.vertical);
     assert_eq!(
       artwork.pixels.len(),
       artwork.width as usize * artwork.height as usize * 4
@@ -643,7 +518,6 @@ mod tests {
     let artwork = custom_gpu_artwork(None);
     assert!(artwork.use_design);
     assert!(!artwork.clip_local_box);
-    assert!(!artwork.vertical);
     assert_eq!(artwork.design_width, 28.0);
     assert_eq!(artwork.design_height, 40.0);
     assert_eq!(
@@ -657,9 +531,8 @@ mod tests {
     assert_eq!(uploaded.pixels, artwork.pixels);
   }
 
-  /// The CPU preview has to place the system arrow by the same two rules the
-  /// GPU slot carries: one aspect-preserving scale into the recorded box, and
-  /// the arrow's own hotspot at the recorded position.
+  /// The CPU raster utility follows the GPU slot's aspect-preserving placement
+  /// and anchors the arrow's own hotspot at the recorded position.
   #[test]
   fn custom_cursors_fit_the_system_arrow_by_its_own_hotspot() {
     let image: &'static RgbaImage = Box::leak(Box::new(RgbaImage::from_pixel(

@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::screenshots::{CapturedImage, NativeCanvas, ScreenshotOutputSettings, StillOverlay};
+use crate::{
+  exports::cursor_effects::{GpuCursor, NativeGpuCursor},
+  screenshots::{CapturedImage, NativeCanvas, ScreenshotOutputSettings, StillOverlay},
+};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -37,7 +40,7 @@ pub(super) struct NativeWorkspaceLayer {
   pub(super) canvas: NativeCanvas,
   pub(super) placement: NativeWorkspacePlacement,
   pub(super) seconds: f64,
-  pub(super) cursor_rgba: *const u8,
+  pub(super) cursor: NativeGpuCursor,
   pub(super) camera_rgba: *const u8,
   pub(super) camera_pixels: *mut std::ffi::c_void,
   pub(super) overlay: StillOverlay,
@@ -54,7 +57,7 @@ pub(crate) struct RecordingWorkspaceLayer<'a> {
   pub settings: ScreenshotOutputSettings,
   pub placement: NativeWorkspacePlacement,
   pub seconds: f64,
-  pub cursor: Option<&'a CapturedImage>,
+  pub cursor: Option<GpuCursor>,
   pub camera: Option<&'a CapturedImage>,
   pub camera_pixels: Option<(*mut std::ffi::c_void, (u32, u32))>,
   pub overlay: Option<&'a StillOverlay>,

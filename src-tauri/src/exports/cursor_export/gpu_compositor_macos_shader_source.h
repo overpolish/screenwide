@@ -33,6 +33,7 @@ struct CursorArtwork {
   float origin_y;
   uint use_design;
   uint clip_local_box;
+  uint supersample;
 };
 
 struct OverlayUniforms {
@@ -372,7 +373,32 @@ static float4 overlay_canvas_foreground_rgba(
   return result;
 }
 
-/// Alpha-aware bilinear sampling preserves the cursor edge during canvas fit.
+static float4 cursor_pixel(
+    texture2d_array<float, access::read> images,
+    constant OverlayUniforms &u, float2 point);
+
+static float4 canvas_cursor_pixel(
+    texture2d_array<float, access::read> images,
+    constant OverlayUniforms &cursor, constant CanvasUniforms &canvas,
+    float2 point) {
+  if (cursor.cursor.visible == 0) return 0.0;
+  float blur = min(length(float2(cursor.cursor.blur_delta_x,
+                                 cursor.cursor.blur_delta_y)), 80.0);
+  float radius = length(float2(cursor.cursor.width, cursor.cursor.height)) *
+                     cursor.cursor.scale + blur + 4.0;
+  bool visible = all(abs(point - float2(cursor.cursor.x, cursor.cursor.y)) <=
+                     radius);
+  if (canvas.clip_cursor_at_video_edge != 0) {
+    float2 crop_point = point - float2(canvas.crop_x, canvas.crop_y);
+    float2 crop_size = float2(canvas.crop_width, canvas.crop_height);
+    visible = visible && all(crop_point >= 0.0) &&
+      all(crop_point < crop_size) && rounded_pixel_visible(
+        crop_point, crop_size, float(canvas.radius));
+  }
+  return visible ? cursor_pixel(images, cursor, point) : float4(0.0);
+}
+
+/// Alpha-aware bilinear sampling preserves legacy RGBA overlays.
 static float4 still_cursor_pixel(const device uchar4 *cursor, float2 destination_point, uint2 destination_size, uint2 source_size) {
   float2 point = clamp((destination_point + 0.5) * float2(source_size) / float2(destination_size) - 0.5, 0.0, float2(source_size - 1));
   uint2 low = uint2(floor(point)), high = min(low + 1, source_size - 1);
@@ -389,33 +415,19 @@ kernel void compose_canvas_rgba(
     constant CanvasUniforms &u [[buffer(2)]],
     constant uint2 &source_dimensions [[buffer(3)]],
     constant float &seconds [[buffer(4)]],
-    const device uchar4 *cursor [[buffer(5)]],
+    constant OverlayUniforms &cursor [[buffer(5)]],
     const device uchar4 *camera [[buffer(6)]],
     constant StillOverlayUniforms &overlay [[buffer(7)]],
+    texture2d_array<float, access::read> cursor_images [[texture(0)]],
     uint2 gid [[thread_position_in_grid]],
     uint2 dimensions [[threads_per_grid]]) {
   if (any(gid >= dimensions)) return;
   float4 rgba = canvas_rgba_pixel(
     source, source_dimensions.x, source_dimensions.y, float2(gid) + 0.5,
     float2(dimensions), u, seconds);
-  int2 cursor_point = int2(gid) - int2(overlay.cursor_x, overlay.cursor_y);
-  if (overlay.cursor_width > 0 && cursor_point.x >= 0 && cursor_point.y >= 0 &&
-      cursor_point.x < int(overlay.cursor_width) &&
-      cursor_point.y < int(overlay.cursor_height)) {
-    bool cursor_visible = true;
-    if (u.clip_cursor_at_video_edge != 0) {
-      float2 crop_point = float2(gid) + 0.5 - float2(u.crop_x, u.crop_y);
-      float2 crop_size = float2(u.crop_width, u.crop_height);
-      cursor_visible = all(crop_point >= 0.0) && all(crop_point < crop_size) &&
-        rounded_pixel_visible(crop_point, crop_size, float(u.radius));
-    }
-    if (cursor_visible) {
-      float4 cursor_pixel = still_cursor_pixel(
-        cursor, float2(cursor_point), uint2(overlay.cursor_width, overlay.cursor_height),
-        uint2(overlay.cursor_source_width, overlay.cursor_source_height));
-      rgba = mix(rgba, cursor_pixel, cursor_pixel.a);
-    }
-  }
+  float4 cursor_rgba = canvas_cursor_pixel(
+    cursor_images, cursor, u, float2(gid) + 0.5);
+  rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
   float2 camera_point = float2(gid) -
     float2(overlay.camera_frame_x, overlay.camera_frame_y);
   float2 camera_size = float2(
@@ -451,24 +463,7 @@ kernel void compose_canvas_rgba(
     rgba = overlay_canvas_foreground_rgba(
       rgba, source, source_dimensions.x, source_dimensions.y,
       float2(gid) + 0.5, float2(dimensions), u);
-    if (overlay.cursor_width > 0 && cursor_point.x >= 0 && cursor_point.y >= 0 &&
-        cursor_point.x < int(overlay.cursor_width) &&
-        cursor_point.y < int(overlay.cursor_height)) {
-      bool cursor_visible = true;
-      if (u.clip_cursor_at_video_edge != 0) {
-        float2 crop_point = float2(gid) + 0.5 - float2(u.crop_x, u.crop_y);
-        float2 crop_size = float2(u.crop_width, u.crop_height);
-        cursor_visible = all(crop_point >= 0.0) && all(crop_point < crop_size) &&
-          rounded_pixel_visible(crop_point, crop_size, float(u.radius));
-      }
-      if (cursor_visible) {
-        float4 cursor_pixel = still_cursor_pixel(
-          cursor, float2(cursor_point),
-          uint2(overlay.cursor_width, overlay.cursor_height),
-          uint2(overlay.cursor_source_width, overlay.cursor_source_height));
-        rgba = mix(rgba, cursor_pixel, cursor_pixel.a);
-      }
-    }
+    rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
   }
   float canvas_coverage = rounded_coverage(
     float2(gid) + 0.5, float2(dimensions), float(u.background_radius));
@@ -614,10 +609,11 @@ kernel void workspace_layer(
     constant WorkspacePlacement &placement [[buffer(3)]],
     constant uint &first_layer [[buffer(4)]],
     constant uint2 &logical_dimensions [[buffer(5)]],
-    const device uchar4 *cursor [[buffer(6)]],
+    constant OverlayUniforms &cursor_uniforms [[buffer(6)]],
     const device uchar4 *camera [[buffer(7)]],
     constant StillOverlayUniforms &overlay [[buffer(8)]],
     constant float &seconds [[buffer(9)]],
+    texture2d_array<float, access::read> cursor_images [[texture(1)]],
     uint2 gid [[thread_position_in_grid]]) {
   uint2 dimensions(output.get_width(), output.get_height());
   if (any(gid >= dimensions) || placement.width == 0 || placement.height == 0)
@@ -641,22 +637,19 @@ kernel void workspace_layer(
         existing, source, source_dimensions.x, source_dimensions.y,
         canvas_point, canvas_dimensions, u);
   }
-  float2 cursor_point = canvas_point - float2(overlay.cursor_x, overlay.cursor_y);
-  if (overlay.cursor_width > 0 && cursor_point.x >= 0 && cursor_point.y >= 0 &&
-      cursor_point.x < float(overlay.cursor_width) &&
-      cursor_point.y < float(overlay.cursor_height)) {
-    bool visible = true;
+  if (cursor_uniforms.cursor.visible != 0) {
+    float blur = min(length(float2(cursor_uniforms.cursor.blur_delta_x, cursor_uniforms.cursor.blur_delta_y)), 80.0);
+    float radius = length(float2(cursor_uniforms.cursor.width, cursor_uniforms.cursor.height)) * cursor_uniforms.cursor.scale + blur + 4.0;
+    bool visible = all(abs(canvas_point - float2(cursor_uniforms.cursor.x,
+                                                  cursor_uniforms.cursor.y)) <= radius);
     if (u.clip_cursor_at_video_edge != 0) {
       float2 crop_point = canvas_point - float2(u.crop_x, u.crop_y);
       float2 crop_size = float2(u.crop_width, u.crop_height);
-      visible = all(crop_point >= 0.0) && all(crop_point < crop_size) &&
+      visible = visible && all(crop_point >= 0.0) && all(crop_point < crop_size) &&
         rounded_pixel_visible(crop_point, crop_size, float(u.radius));
     }
     if (visible) {
-      float4 pixel = still_cursor_pixel(
-        cursor, cursor_point,
-        uint2(overlay.cursor_width, overlay.cursor_height),
-        uint2(overlay.cursor_source_width, overlay.cursor_source_height));
+      float4 pixel = cursor_pixel(cursor_images, cursor_uniforms, canvas_point);
       rgba = mix(rgba, pixel, pixel.a);
     }
   }
@@ -1085,7 +1078,7 @@ static float4 cursor_artwork_sample(
 static float4 cursor_draw_sample(texture2d_array<float, access::read> images,
                                  constant OverlayUniforms &u, float2 point,
                                  float2 anchor) {
-  if (u.artwork.use_design == 0)
+  if (u.artwork.supersample == 0)
     return cursor_artwork_sample(images, u, point, anchor);
   const float offsets[4] = {-0.375, -0.125, 0.125, 0.375};
   float alpha = 0.0;
@@ -1128,7 +1121,7 @@ static float4 cursor_pixel(texture2d_array<float, access::read> images,
     float progress = float(index) / float(count - 1);
     float centered = (progress - 0.5) / 0.34;
     float weight = exp(-0.5 * centered * centered);
-    float4 sample = cursor_artwork_sample(
+    float4 sample = cursor_draw_sample(
         images, u, point, anchor + direction * ((progress - 0.8) * distance));
     alpha += sample.a * weight;
     colour += sample.rgb * sample.a * weight;

@@ -9,10 +9,10 @@ use tauri::{
   AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, WebviewWindow,
   WindowEvent,
 };
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 pub(crate) mod dock;
+mod escape;
 mod geometry;
 mod lifecycle;
 pub(crate) mod monitor_capture;
@@ -134,59 +134,10 @@ static SELECTOR_ANIMATION: AtomicU64 = AtomicU64::new(0);
 static SELECTOR_EXPANDED: AtomicBool = AtomicBool::new(false);
 static SELECTOR_VISIBLE: AtomicBool = AtomicBool::new(true);
 static RECORDING_CONTROLS_VISIBLE: AtomicBool = AtomicBool::new(false);
-static RECORDING_ESCAPE_ARMED: AtomicBool = AtomicBool::new(false);
 static WINDOW_SELECTOR_ACTIVE: AtomicBool = AtomicBool::new(false);
 static REGION_SELECTOR_EDITING: AtomicBool = AtomicBool::new(false);
 #[cfg(target_os = "windows")]
 static BAR_DRAG_ACTIVE: AtomicBool = AtomicBool::new(false);
-
-const RECORDING_ESCAPE: &str = "Escape";
-const RECORDING_DISMISS_REQUESTED_EVENT: &str = "recording-ui://dismiss-requested";
-
-/// The bar is deliberately shown without taking keyboard focus on macOS, and
-/// may not own it on Windows either. Claim Escape globally only while the bar
-/// is onscreen so dismissal works like the platform capture tools without
-/// stealing ordinary Escape presses while Screenwide is idle in the tray.
-fn arm_recording_escape(app: &AppHandle) {
-  if RECORDING_ESCAPE_ARMED
-    .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-    .is_err()
-  {
-    return;
-  }
-  let Ok(shortcut) = RECORDING_ESCAPE.parse::<Shortcut>() else {
-    RECORDING_ESCAPE_ARMED.store(false, Ordering::Release);
-    return;
-  };
-  if app
-    .global_shortcut()
-    .on_shortcut(shortcut, |app, _, event| {
-      if event.state() == ShortcutState::Pressed && is_recording_ui_visible() {
-        // Do not unregister this shortcut from inside its own native callback.
-        // Ask the bar to take its ordinary close-button path; the resulting
-        // IPC command returns here on a later event-loop turn and can safely
-        // disarm Escape as part of the normal teardown.
-        let _ = app.emit_to(
-          WindowLabel::RecordingBar.as_str(),
-          RECORDING_DISMISS_REQUESTED_EVENT,
-          (),
-        );
-      }
-    })
-    .is_err()
-  {
-    RECORDING_ESCAPE_ARMED.store(false, Ordering::Release);
-  }
-}
-
-fn disarm_recording_escape(app: &AppHandle) {
-  if !RECORDING_ESCAPE_ARMED.swap(false, Ordering::AcqRel) {
-    return;
-  }
-  if let Ok(shortcut) = RECORDING_ESCAPE.parse::<Shortcut>() {
-    let _ = app.global_shortcut().unregister(shortcut);
-  }
-}
 
 #[derive(Clone, Copy, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -399,7 +350,7 @@ pub fn toggle_recording_source_selector(
   if !window.is_visible()? {
     window.set_size(collapsed.size)?;
     window.set_position(collapsed.position)?;
-    platform::show(&window)?;
+    platform::show(&window, 1.0)?;
   }
   SELECTOR_EXPANDED.store(true, Ordering::Relaxed);
   app.emit_to(
@@ -413,7 +364,7 @@ pub fn toggle_recording_source_selector(
 }
 
 pub fn hide_recording_bar(app: &AppHandle) -> tauri::Result<()> {
-  disarm_recording_escape(app);
+  escape::sync(app, false, false);
   // Clear first so later overlay ordering cannot raise the bar again.
   RECORDING_CONTROLS_VISIBLE.store(false, Ordering::Relaxed);
   if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
@@ -595,7 +546,7 @@ fn show_recording_source_selector(app: &AppHandle) -> tauri::Result<()> {
   SELECTOR_EXPANDED.store(false, Ordering::Relaxed);
   selector.set_size(collapsed.size)?;
   selector.set_position(collapsed.position)?;
-  platform::show(&selector)?;
+  platform::show(&selector, 1.0)?;
   platform::restore_recording_level(&selector)?;
   app.emit_to(
     WindowLabel::RecordingSourceSelector.as_str(),
@@ -670,8 +621,12 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
   let bar = app
     .get_webview_window(WindowLabel::RecordingBar.as_str())
     .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  platform::show(&bar)?;
-  arm_recording_escape(app);
+  platform::show(&bar, 1.0)?;
+  escape::sync(
+    app,
+    true,
+    region::SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
+  );
   // Asserted rather than assumed: the bar may have been faded out for region
   // editing, and requests to fade it back in are refused while a recording is
   // on. Coming back to idle is where that is put right.

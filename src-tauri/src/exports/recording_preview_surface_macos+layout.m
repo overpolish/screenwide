@@ -10,7 +10,8 @@ SCREENWIDE_PREVIEW_PRIVATE void restore_workspace_transform(
 SCREENWIDE_PREVIEW_PRIVATE void on_main_async(dispatch_block_t block);
 
 /// Native scene-layout extension point for future timeline topology changes.
-static ScreenwidePreviewView *make_view(ScreenwidePreviewSurface *surface) {
+SCREENWIDE_PREVIEW_PRIVATE ScreenwidePreviewView *make_preview_view(
+    ScreenwidePreviewSurface *surface) {
   ScreenwidePreviewView *view = [[ScreenwidePreviewView alloc] initWithFrame:NSZeroRect];
   view.wantsLayer = YES;
   CAMetalLayer *layer = [CAMetalLayer layer];
@@ -246,7 +247,8 @@ void screenwide_preview_surface_layout(void *handle, uint32_t index,
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   on_main_async(^{
     surface.workspaceMode = NO;
-    while (surface.views.count <= index) [surface.views addObject:make_view(surface)];
+    while (surface.views.count <= index)
+      [surface.views addObject:make_preview_view(surface)];
     ScreenwidePreviewView *view = surface.views[index];
     CGFloat viewport_height = surface.container.bounds.size.height;
     NSRect base = NSMakeRect(x, y, width, height);
@@ -292,7 +294,7 @@ void screenwide_preview_surface_layout_workspace(
     surface.workspaceActivePaneIndices = [NSSet setWithObject:@0];
     surface.workspaceLayoutAwaitsPresent = defer_draw != 0;
     while (surface.views.count == 0)
-      [surface.views addObject:make_view(surface)];
+      [surface.views addObject:make_preview_view(surface)];
     ScreenwidePreviewView *workspace = surface.views[0];
     while (surface.editorBaseRects.count == 0)
       [surface.editorBaseRects addObject:[NSValue valueWithRect:NSZeroRect]];
@@ -358,7 +360,7 @@ void screenwide_preview_surface_layout_recording_workspace(
       restore_workspace_transform(surface, natural_width, natural_height);
     if (!ownsFrame) surface.keepTransformForCommittedNaturalSize = NO;
     while (surface.views.count == 0)
-      [surface.views addObject:make_view(surface)];
+      [surface.views addObject:make_preview_view(surface)];
     while (surface.editorBaseRects.count < pane_count)
       [surface.editorBaseRects addObject:[NSValue valueWithRect:NSZeroRect]];
     for (uint32_t index = 0; index < pane_count; index++) {
