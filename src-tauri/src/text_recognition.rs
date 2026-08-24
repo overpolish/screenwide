@@ -11,6 +11,7 @@ use crate::{capture_overlays, recording::Region, screenshots};
 mod platform_macos;
 #[cfg(target_os = "windows")]
 mod platform_windows;
+mod qr;
 pub(crate) mod snapshot;
 
 pub use snapshot::TextRecognitionState;
@@ -43,10 +44,20 @@ pub struct RecognizedLine {
   pub characters: Vec<RecognizedCharacter>,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecognizedQrCode {
+  pub bounds: TextRect,
+  pub content: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub decode_error: Option<String>,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextRecognitionResult {
   pub lines: Vec<RecognizedLine>,
+  pub qr_codes: Vec<RecognizedQrCode>,
   pub text: String,
 }
 
@@ -125,6 +136,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     window
       .set_content_protected(true)
       .map_err(|error| error.to_string())?;
+    capture_overlays::set_level(&window, capture_overlays::FOREGROUND_LEVEL)?;
     crate::windows::show(&window, index == 0).map_err(|error| error.to_string())?;
   }
 
@@ -153,7 +165,7 @@ pub fn cancel_text_recognition(app: AppHandle) {
 }
 
 #[tauri::command]
-pub fn copy_recognized_text(app: AppHandle, text: String) -> Result<(), String> {
+pub fn copy_recognition_content(app: AppHandle, text: String) -> Result<(), String> {
   app
     .clipboard()
     .write_text(text)
@@ -190,22 +202,31 @@ pub async fn recognize_captured_text(
   let image = state
     .selected()
     .ok_or_else(|| "The selected image is no longer available".to_owned())?;
-  let lines = recognize(image.rgba, image.width, image.height).await?;
+  let (lines, qr_codes) = recognize(image.rgba, image.width, image.height).await?;
   let text = lines
     .iter()
     .map(|line| line.text.as_str())
     .collect::<Vec<_>>()
     .join("\n");
-  Ok(TextRecognitionResult { lines, text })
+  Ok(TextRecognitionResult {
+    lines,
+    qr_codes,
+    text,
+  })
 }
 
-async fn recognize(rgba: Vec<u8>, width: u32, height: u32) -> Result<Vec<RecognizedLine>, String> {
+async fn recognize(
+  rgba: Vec<u8>,
+  width: u32,
+  height: u32,
+) -> Result<(Vec<RecognizedLine>, Vec<RecognizedQrCode>), String> {
   tauri::async_runtime::spawn_blocking(move || {
+    let qr_codes = qr::recognize(&rgba, width, height);
     #[cfg(target_os = "macos")]
-    return platform_macos::recognize(&rgba, width, height);
+    return platform_macos::recognize(&rgba, width, height).map(|lines| (lines, qr_codes));
 
     #[cfg(target_os = "windows")]
-    return platform_windows::recognize(&rgba, width, height);
+    return platform_windows::recognize(&rgba, width, height).map(|lines| (lines, qr_codes));
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     Err("Text recognition is not available on this platform".to_owned())

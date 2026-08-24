@@ -20,13 +20,14 @@ import { cn } from "../../lib/styling";
 import {
   cancelTextRecognition,
   captureTextRegion,
-  copyRecognizedText,
+  copyRecognitionContent,
   recognizeCapturedText,
   CapturedTextRegion,
   TextRecognitionResult,
 } from "./api";
 import { FrozenMonitorSnapshot } from "./frozen-monitor-snapshot";
 import { capturedTextImageUrl } from "./image-url";
+import { QrCodeOverlay } from "./qr-code-overlay";
 import {
   TextRecognitionActions,
   TextRecognitionCloseAction,
@@ -49,7 +50,6 @@ const monitorId = Number(
 );
 const isMac = navigator.userAgent.includes("Mac");
 const TOOLBAR_MARGIN = 8;
-
 export function TextRecognitionWindow() {
   const [start, setStart] = useState<Point>();
   const [selection, setSelection] = useState<ScreenSelection>();
@@ -77,7 +77,6 @@ export function TextRecognitionWindow() {
     () => (capture ? capturedTextImageUrl(capture.imagePng) : undefined),
     [capture],
   );
-
   useEffect(
     () => () => {
       if (frozenUrl) URL.revokeObjectURL(frozenUrl);
@@ -122,7 +121,7 @@ export function TextRecognitionWindow() {
 
   const copyAndClose = useCallback((text: string) => {
     if (!text) return;
-    void copyRecognizedText(text).then(() => {
+    void copyRecognitionContent(text).then(() => {
       void cancelTextRecognition();
     });
   }, []);
@@ -330,6 +329,9 @@ export function TextRecognitionWindow() {
                   />
                 </div>
               )}
+              {status === "ready" && result && (
+                <QrCodeOverlay codes={result.qrCodes} onDismiss={close} />
+              )}
             </>
           )}
         </SelectionFrame>
@@ -346,7 +348,7 @@ export function TextRecognitionWindow() {
           }}
         >
           <span className="rounded-md border border-muted/20 bg-content/90 px-3 py-1.5 text-sm text-content-fg shadow-md backdrop-blur-md">
-            Finding text…
+            Finding text and QR codes…
           </span>
         </div>
       )}

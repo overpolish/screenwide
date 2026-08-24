@@ -54,8 +54,8 @@ const actions: {
   },
   {
     action: "recognizeText",
-    description: "Draw around text anywhere on screen and copy it.",
-    label: "Recognize text",
+    description: "Draw around text or a QR code anywhere on screen.",
+    label: "Recognize Text/QR",
   },
   {
     action: "rulerOverlay",

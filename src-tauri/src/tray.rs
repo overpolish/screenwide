@@ -81,7 +81,7 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
       .text(DISCARD_MENU_ID, "Cancel Recording");
   }
 
-  let mut recognize_text = MenuItemBuilder::with_id(RECOGNIZE_TEXT_MENU_ID, "Recognize Text");
+  let mut recognize_text = MenuItemBuilder::with_id(RECOGNIZE_TEXT_MENU_ID, "Recognize Text/QR");
   if let Some(shortcut) =
     crate::shortcuts::shortcut_for(app, crate::shortcuts::ShortcutAction::RecognizeText)
   {

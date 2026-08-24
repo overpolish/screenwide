@@ -14,7 +14,14 @@ export type TextRecognitionResult = {
     confidence: number;
     text: string;
   }[];
+  qrCodes: RecognizedQrCode[];
   text: string;
+};
+
+export type RecognizedQrCode = {
+  bounds: { height: number; width: number; x: number; y: number };
+  content: string;
+  decodeError?: string;
 };
 
 export type CapturedTextRegion = {
@@ -55,5 +62,5 @@ export const getTextRecognitionSnapshot = (
 export const recognizeCapturedText = () =>
   invoke<TextRecognitionResult>("recognize_captured_text");
 
-export const copyRecognizedText = (text: string) =>
-  invoke<null>("copy_recognized_text", { text });
+export const copyRecognitionContent = (text: string) =>
+  invoke<null>("copy_recognition_content", { text });

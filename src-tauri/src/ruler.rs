@@ -23,34 +23,6 @@ const SCREENSHOT_MODE_EVENT: &str = "ruler://screenshot-mode";
 /// blur it causes must not tear the session down.
 static SCREENSHOT_MODE: AtomicBool = AtomicBool::new(false);
 
-fn set_ruler_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), String> {
-  #[cfg(target_os = "macos")]
-  {
-    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
-    let window = window.clone();
-    let app = window.app_handle().clone();
-    app
-      .run_on_main_thread(move || {
-        let result = window
-          .ns_window()
-          .map_err(|error| error.to_string())
-          .map(|raw_window| {
-            let native_window: &objc2_app_kit::NSWindow = unsafe { &*raw_window.cast() };
-            native_window.setLevel(level);
-          });
-        let _ = sender.send(result);
-      })
-      .map_err(|error| error.to_string())?;
-    receiver.recv().map_err(|error| error.to_string())?
-  }
-
-  #[cfg(not(target_os = "macos"))]
-  {
-    let _ = (window, level);
-    Ok(())
-  }
-}
-
 fn ruler_windows(app: &AppHandle) -> Vec<tauri::WebviewWindow> {
   capture_overlays::windows(app, WINDOW_PREFIX)
 }
@@ -79,7 +51,14 @@ pub fn set_ruler_screenshot_mode(app: AppHandle, active: bool) -> Result<(), Str
   for window in ruler_windows(&app) {
     // The region editor must sit above the ruler while the shot is framed;
     // the ruler remains visible underneath and returns to its normal level.
-    set_ruler_level(&window, if active { 26 } else { 33 })?;
+    capture_overlays::set_level(
+      &window,
+      if active {
+        26
+      } else {
+        capture_overlays::FOREGROUND_LEVEL
+      },
+    )?;
     window
       .emit(SCREENSHOT_MODE_EVENT, active)
       .map_err(|error| error.to_string())?;
@@ -150,7 +129,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     platform_windows::suppress_menu_key_mode(&window)?;
     // Deliberately shareable: the screenshot shortcut can preserve the ruler
     // and capture its annotations as part of the selected desktop region.
-    set_ruler_level(&window, 33)?;
+    capture_overlays::set_level(&window, capture_overlays::FOREGROUND_LEVEL)?;
     // Switching to any other app - or any other window of ours - ends the
     // session, exactly as the cancel command does.
     watch_focus(&window);

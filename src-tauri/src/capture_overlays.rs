@@ -5,10 +5,43 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::windows::WindowLabel;
 
+/// Sits immediately above the recording Dock's native macOS level (32).
+pub const FOREGROUND_LEVEL: isize = 33;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CaptureOverlay {
   Ruler,
   TextRecognition,
+}
+
+/// Gives capture overlays a stable order above the recording controls on
+/// macOS. Other platforms retain their existing always-on-top behavior.
+pub fn set_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), String> {
+  #[cfg(target_os = "macos")]
+  {
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    let window = window.clone();
+    let app = window.app_handle().clone();
+    app
+      .run_on_main_thread(move || {
+        let result = window
+          .ns_window()
+          .map_err(|error| error.to_string())
+          .map(|raw_window| {
+            let native_window: &objc2_app_kit::NSWindow = unsafe { &*raw_window.cast() };
+            native_window.setLevel(level);
+          });
+        let _ = sender.send(result);
+      })
+      .map_err(|error| error.to_string())?;
+    receiver.recv().map_err(|error| error.to_string())?
+  }
+
+  #[cfg(not(target_os = "macos"))]
+  {
+    let _ = (window, level);
+    Ok(())
+  }
 }
 
 /// Extension point for capture tools that must be mutually exclusive while
