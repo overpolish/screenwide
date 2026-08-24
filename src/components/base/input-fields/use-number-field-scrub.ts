@@ -99,22 +99,26 @@ export const useNumberFieldScrub = ({
     // relative DOM movement while Core Graphics pins the cursor.
     if (!scrubbable || (isTauri() && !isMac)) return;
 
-    const handleMouseMove = (event: MouseEvent) => {
+    const handlePointerMove = (event: PointerEvent) => {
       moveScrub(
         event.movementX - event.movementY,
         event.shiftKey,
         event.altKey,
       );
     };
-    const handleMouseUp = () => {
+    const handlePointerEnd = () => {
       finishScrub();
     };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerEnd);
+    document.addEventListener("pointercancel", handlePointerEnd);
+    window.addEventListener("blur", handlePointerEnd);
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerEnd);
+      document.removeEventListener("pointercancel", handlePointerEnd);
+      window.removeEventListener("blur", handlePointerEnd);
     };
   }, [finishScrub, moveScrub, scrubbable]);
 

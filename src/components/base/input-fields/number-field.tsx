@@ -152,7 +152,20 @@ export const NumberField = ({
         <div className={inputWrapper()}>
           {leftSection}
 
-          <Input className={input()} />
+          <Input
+            className={input()}
+            onKeyDown={(event) => {
+              if (
+                !scrubbable ||
+                (event.key !== "Enter" && event.key !== "Escape")
+              ) {
+                return;
+              }
+              event.preventDefault();
+              event.stopPropagation();
+              event.currentTarget.blur();
+            }}
+          />
 
           {rightSection}
         </div>
