@@ -14,7 +14,7 @@ use std::{
 
 use tauri::{AppHandle, Manager, WindowEvent};
 
-use super::{dismiss, ruler_windows, SCREENSHOT_MODE};
+use super::{dismiss, ruler_windows, screenshot_mode};
 
 /// Focus moving between the per-monitor ruler windows arrives as a blur and a
 /// focus event in either order, so a blur only decides the session's fate after
@@ -68,7 +68,7 @@ pub fn follow_cursor_focus(app: &AppHandle, regions: Vec<FocusRegion>) {
   tauri::async_runtime::spawn(async move {
     loop {
       tokio::time::sleep(FOCUS_POLL).await;
-      if SCREENSHOT_MODE.load(Ordering::Relaxed) {
+      if screenshot_mode::is_active() {
         continue;
       }
       let windows = ruler_windows(&app);
@@ -119,13 +119,13 @@ pub fn watch_focus(window: &tauri::WebviewWindow) {
     }
     // Windows that never held focus (every monitor but the first, while the
     // session is still opening) have no focus to lose.
-    if !focused_once.load(Ordering::Relaxed) || SCREENSHOT_MODE.load(Ordering::Relaxed) {
+    if !focused_once.load(Ordering::Relaxed) || screenshot_mode::is_active() {
       return;
     }
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
       tokio::time::sleep(FOCUS_SETTLE).await;
-      if SCREENSHOT_MODE.load(Ordering::Relaxed) {
+      if screenshot_mode::is_active() {
         return;
       }
       let windows = ruler_windows(&app);

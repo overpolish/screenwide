@@ -9,7 +9,6 @@ import { MonitorDetails, RecordingMode, Region, WindowDetails } from "./types";
 const STORE_NAME = "screenwide-recording-source";
 
 type RecordingSourceStore = {
-  isRegionEditing: boolean;
   /**
    * A shortcut-initiated screenshot borrows the region overlay, whatever the
    * recording mode happens to be, and hands the region straight to a capture.
@@ -17,11 +16,12 @@ type RecordingSourceStore = {
   isScreenshotCapture: boolean;
   recordingMode: RecordingMode;
   region: Region;
+  regionAspectRatio: number | undefined;
   selectedMonitor: MonitorDetails | null;
   selectedWindow: WindowDetails | null;
   setRecordingMode: (mode: RecordingMode) => void;
   setRegion: (region: Region) => void;
-  setRegionEditing: (editing: boolean) => void;
+  setRegionAspectRatio: (ratio: number | undefined) => void;
   setScreenshotCapture: (capturing: boolean) => void;
   setSelectedMonitor: (monitor: MonitorDetails) => void;
   setSelectedWindow: (window: WindowDetails | null) => void;
@@ -30,33 +30,26 @@ type RecordingSourceStore = {
 export const useRecordingSourceStore = create<RecordingSourceStore>()(
   persist(
     (set) => ({
-      isRegionEditing: false,
       isScreenshotCapture: false,
       recordingMode: "screen",
       region: {
         position: { x: 160, y: 90 },
         size: { height: 720, width: 1280 },
       },
+      regionAspectRatio: undefined,
       selectedMonitor: null,
       selectedWindow: null,
       setRecordingMode: (recordingMode) => {
-        set((state) => ({
-          isRegionEditing:
-            recordingMode === "region" ? state.isRegionEditing : false,
-          recordingMode,
-        }));
+        set({ recordingMode });
       },
       setRegion: (region) => {
         set({ region });
       },
-      setRegionEditing: (isRegionEditing) => {
-        set({ isRegionEditing });
+      setRegionAspectRatio: (regionAspectRatio) => {
+        set({ regionAspectRatio });
       },
-      // A screenshot session is nothing but region editing that ends in a
-      // capture, so it carries the editing flag with it and leaves the
-      // recording mode the user chose alone.
       setScreenshotCapture: (isScreenshotCapture) => {
-        set({ isRegionEditing: isScreenshotCapture, isScreenshotCapture });
+        set({ isScreenshotCapture });
       },
       setSelectedMonitor: (selectedMonitor) => {
         set({ selectedMonitor });

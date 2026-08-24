@@ -35,6 +35,7 @@ import {
   hideRegionSelector,
   listWindows,
   recordingUiVisible,
+  setRecordingSourceSelectorRegionControls,
   setRecordingSourceSelectorVisible,
   showRegionSelector,
 } from "../../recording-sources/api";
@@ -99,6 +100,7 @@ const synchronizeRecordingUi = async (
 
   const hasSourceSelector = !["audio", "camera"].includes(mode);
 
+  await setRecordingSourceSelectorRegionControls(mode === "region");
   await setRecordingSourceSelectorVisible(hasSourceSelector);
   if (mode === "region" && monitor) {
     await showRegionSelector(monitor);
@@ -132,7 +134,6 @@ export function RecordingBarWindow() {
   const [isCaptureOverlayActive, setIsCaptureOverlayActive] = useState(false);
   const [isRecordingUiVisible, setIsRecordingUiVisible] = useState(false);
   const {
-    isRegionEditing,
     isScreenshotCapture,
     recordingMode,
     selectedMonitor,
@@ -154,7 +155,6 @@ export function RecordingBarWindow() {
     active:
       isRecordingUiVisible &&
       !isCaptureOverlayActive &&
-      !isRegionEditing &&
       !isScreenshotCapture &&
       screenshotFeedback.state !== "pending" &&
       status === "idle",
@@ -175,8 +175,8 @@ export function RecordingBarWindow() {
   });
 
   useEffect(() => {
-    // Editing, and any screenshot session that outlived a previous run, belong
-    // to a window that is gone.
+    // Any screenshot session that outlived a previous run belongs to a window
+    // that is gone.
     setScreenshotCapture(false);
   }, [setScreenshotCapture]);
 

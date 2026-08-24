@@ -2,16 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Channel } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
-import { Check, ImageDown, SquareDot } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Rnd } from "react-rnd";
 
-import { Button } from "../../components/base/button/button";
-import { AspectRatio } from "../../components/shared/aspect-ratio/aspect-ratio";
-import { TransformControls } from "../../components/shared/canvas-tools/transform-controls";
-import { CheckOnClickButton } from "../../components/shared/check-on-click-button/check-on-click-button";
 import { cn } from "../../lib/styling";
+import { selectStatus, useRecordingStore } from "../recording-controls/store";
 import {
   hideRegionSelector,
   setRecordingControlsOpacity,
@@ -21,7 +15,6 @@ import {
 } from "../recording-sources/api";
 import { useRecordingSourceStore } from "../recording-sources/store";
 import { Region } from "../recording-sources/types";
-import { ShortcutAction } from "../settings/types";
 import { useGeneralSettings } from "../settings/use-general-settings";
 
 import { Magnifier } from "./magnifier";
@@ -32,61 +25,63 @@ import {
   hasRegion,
   snapRegion,
   wholePixel,
-  wholePixelSize,
 } from "./region-geometry";
-import { HANDLE_CLASSES, HANDLE_STYLES } from "./resize-handles";
+import { RegionShade } from "./region-shade";
+import { RegionTransformFrame } from "./region-transform-frame";
+import { ScreenshotRegionControls } from "./screenshot-region-controls";
 import {
-  beginScreenshotCapture,
   captureScreenshotRegion,
   endScreenshotCapture,
-  isScreenshotShortcut,
   revealScreenshotRegion,
 } from "./screenshot-session";
 import { ResizeDirection } from "./types";
 import { useKeyHeld } from "./use-key-held";
+import { useRegionGestureVisibility } from "./use-region-gesture-visibility";
+import { useScreenshotShortcut } from "./use-screenshot-shortcut";
 
-const SHORTCUT_ACTION_EVENT = "global-shortcut://action";
 // Holding this ignores the linked ratio, so the region can be reshaped
 // freely; the shape it ends up with becomes the new ratio.
 const FREE_ASPECT_KEY = "Shift";
 
 export function RegionSelectorWindow() {
   const {
-    isRegionEditing,
     isScreenshotCapture,
     recordingMode,
     region,
+    regionAspectRatio,
     selectedMonitor,
     setRegion,
-    setRegionEditing,
   } = useRecordingSourceStore((state) => state);
+  const recordingStatus = useRecordingStore(selectStatus);
   const [draft, setDraft] = useState(region);
   const [seededForSession, setSeededForSession] = useState(isScreenshotCapture);
   if (seededForSession !== isScreenshotCapture) {
-    // Reseed while rendering rather than in an effect: the session flag and
-    // the editing flag flip together, so an effect would leave one painted
-    // frame of the marquee sitting on the recording region before the empty
-    // draft landed - a visible flash when the overlay was already on screen
-    // for region mode.
+    // Reseed while rendering rather than in an effect: otherwise the session
+    // would leave one painted frame of the recording marquee before the empty
+    // draft landed - a visible flash when the overlay was already on screen.
     setSeededForSession(isScreenshotCapture);
     setDraft(isScreenshotCapture ? EMPTY_REGION : region);
   }
-  const [activeAspect, setActiveAspect] = useState<number>();
+  const [screenshotAspect, setScreenshotAspect] = useState<number>();
   const [resizeDirection, setResizeDirection] = useState<ResizeDirection>();
   const [isDragging, setIsDragging] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [screenshot, setScreenshot] = useState<ArrayBuffer | null>(null);
-  const [freedThisResize, setFreedThisResize] = useState(false);
   const freeAspect = useKeyHeld(FREE_ASPECT_KEY);
-  const activeHandleRef = useRef<HTMLElement | null>(null);
   // A capture ends the session, so whichever gesture starts one shuts the
   // others out until the session is over.
   const isCapturingRef = useRef(false);
   const generalSettings = useGeneralSettings();
   const captureOnDraw = generalSettings?.captureScreenshotOnDraw ?? false;
+  const isIdle = recordingStatus === "idle";
+  useScreenshotShortcut();
 
   const activeMonitor =
     recordingMode === "region" || isScreenshotCapture ? selectedMonitor : null;
+
+  const { beginGesture, finishGesture } = useRegionGestureVisibility(
+    isDragging || resizeDirection !== undefined,
+  );
 
   const persistDraft = useCallback((): Region => {
     const persisted = snapRegion(draft);
@@ -102,28 +97,6 @@ export function RegionSelectorWindow() {
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setDraft(isScreenshotCapture ? EMPTY_REGION : region);
   }, [isScreenshotCapture, region]);
-
-  useEffect(() => {
-    let unlisten: UnlistenFn | undefined;
-    let disposed = false;
-
-    // `listen` receives events for any target, so each window must match the
-    // shortcut action it owns exactly.
-    void listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
-      if (!isScreenshotShortcut(payload)) return;
-      beginScreenshotCapture(payload).catch((error: unknown) => {
-        console.error("Could not open the region for a screenshot", error);
-      });
-    }).then((listener) => {
-      if (disposed) listener();
-      else unlisten = listener;
-    });
-
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, []);
 
   useEffect(() => {
     // Each session gets its one capture back.
@@ -143,7 +116,12 @@ export function RegionSelectorWindow() {
   }, [isScreenshotCapture]);
 
   useEffect(() => {
+    void setRecordingControlsOpacity(isScreenshotCapture ? 0 : 1);
+  }, [isScreenshotCapture]);
+
+  useEffect(() => {
     if (!activeMonitor) {
+      void setRegionSelectorPassthrough(true);
       void hideRegionSelector();
       return;
     }
@@ -171,9 +149,8 @@ export function RegionSelectorWindow() {
   useEffect(() => {
     if (!activeMonitor) return;
 
-    void setRegionSelectorPassthrough(!isRegionEditing);
-    void setRecordingControlsOpacity(isRegionEditing ? 0 : 1);
-    if (!isRegionEditing) return;
+    void setRegionSelectorPassthrough(!isIdle);
+    if (!isIdle) return;
 
     const channel = new Channel<ArrayBuffer>();
     channel.onmessage = setScreenshot;
@@ -183,10 +160,9 @@ export function RegionSelectorWindow() {
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setScreenshot(null);
     void takeMonitorScreenshot(activeMonitor.id, channel);
-  }, [activeMonitor, isRegionEditing]);
+  }, [activeMonitor, isIdle]);
 
-  // Until a region is drawn there is nothing to move, resize, centre or
-  // capture, which a screenshot session starts out with.
+  // A screenshot session starts without a region to manipulate or capture.
   const regionPlaced = hasRegion(draft);
 
   const center = () => {
@@ -203,36 +179,20 @@ export function RegionSelectorWindow() {
   };
 
   const finish = useCallback(() => {
-    if (!activeMonitor) return;
-    if (isScreenshotCapture) {
-      if (isCapturingRef.current) return;
-      isCapturingRef.current = true;
-      captureScreenshotRegion(activeMonitor.id, persistDraft());
+    if (!activeMonitor || !isScreenshotCapture || isCapturingRef.current)
       return;
-    }
-    persistDraft();
-    setRegionEditing(false);
-  }, [activeMonitor, isScreenshotCapture, persistDraft, setRegionEditing]);
+    isCapturingRef.current = true;
+    captureScreenshotRegion(activeMonitor.id, persistDraft());
+  }, [activeMonitor, isScreenshotCapture, persistDraft]);
 
-  // The toolbar is up for the whole of an edit, region or not: an aspect
-  // preset picked before anything is drawn is the ratio to draw at. Instant
-  // capture has no step after the draw for it to serve, so it stays away.
+  // Screenshot capture keeps its toolbar while recording controls are hidden.
   const showActions =
-    isRegionEditing &&
+    isScreenshotCapture &&
     !resizeDirection &&
     !isDragging &&
     !isDrawing &&
-    !(isScreenshotCapture && captureOnDraw);
+    !captureOnDraw;
   const canFinish = showActions && regionPlaced;
-
-  useEffect(() => {
-    // re-resizable fixes the ratio when a resize starts, so handing it a
-    // number again mid-gesture snaps the region back to the shape it began
-    // with. Freeing once therefore has to hold until the gesture ends.
-    if (!freeAspect || !resizeDirection) return;
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setFreedThisResize(true);
-  }, [freeAspect, resizeDirection]);
 
   useEffect(() => {
     if (!canFinish) return;
@@ -252,8 +212,6 @@ export function RegionSelectorWindow() {
 
   if (!activeMonitor) return null;
 
-  const isMac = navigator.userAgent.includes("Mac");
-
   return (
     <main
       className={cn(
@@ -261,39 +219,16 @@ export function RegionSelectorWindow() {
         resizeDirection && "cursor-none [&_*]:cursor-none!",
       )}
     >
-      <svg aria-hidden className="pointer-events-none absolute size-full">
-        <defs>
-          <mask id="region-cutout">
-            <rect className="fill-white" height="100%" width="100%" />
-            <rect
-              className="fill-black"
-              height={draft.size.height}
-              width={draft.size.width}
-              x={draft.position.x}
-              y={draft.position.y}
-            />
-          </mask>
-        </defs>
-        <rect
-          className="fill-black/50"
-          height="100%"
-          mask="url(#region-cutout)"
-          width="100%"
-        />
-      </svg>
+      <RegionShade region={draft} />
 
       <RegionDrawingSurface
-        aspect={freeAspect ? undefined : activeAspect}
+        aspect={freeAspect ? undefined : screenshotAspect}
         bounds={activeMonitor.size}
         current={draft}
-        isEditing={isRegionEditing}
+        isEditing={isScreenshotCapture && isIdle}
         onChange={setDraft}
         onDrawingChange={setIsDrawing}
         onFinish={(nextRegion) => {
-          if (!isScreenshotCapture) {
-            setRegion(nextRegion);
-            return;
-          }
           // Releasing the region is the whole gesture when instant capture is
           // on: the region just drawn goes straight to the shot, since `draft`
           // may not have re-rendered with it yet.
@@ -303,132 +238,36 @@ export function RegionSelectorWindow() {
         }}
       />
 
-      <Rnd
-        bounds="parent"
-        className={cn(
-          "relative transition-opacity",
-          (!isRegionEditing || !regionPlaced) && "invisible opacity-0",
-        )}
-        dragGrid={[1, 1]}
-        lockAspectRatio={
-          freeAspect || freedThisResize ? false : (activeAspect ?? false)
+      <RegionTransformFrame
+        aspectRatio={
+          (isScreenshotCapture ? screenshotAspect : regionAspectRatio) || false
         }
-        onDrag={(_event, data) => {
-          setDraft((current) => ({
-            ...current,
-            position: { x: data.x, y: data.y },
-          }));
+        freeAspect={freeAspect}
+        onChange={setDraft}
+        onDraggingChange={setIsDragging}
+        onGestureBegin={() => {
+          if (!isScreenshotCapture) beginGesture();
         }}
-        onDragStart={() => {
-          setIsDragging(true);
+        onGestureFinish={() => {
+          if (!isScreenshotCapture) finishGesture();
         }}
-        onDragStop={() => {
-          persistDraft();
-          setIsDragging(false);
-        }}
-        // react-rnd defines this callback with five required parameters.
-        // eslint-disable-next-line @typescript-eslint/max-params
-        onResize={(_event, _direction, element, _delta, position) => {
-          setDraft({
-            position,
-            size: {
-              height: Number.parseInt(element.style.height, 10),
-              width: Number.parseInt(element.style.width, 10),
-            },
-          });
-        }}
-        onResizeStart={(_event, direction, element) => {
-          activeHandleRef.current = element.querySelector(
-            `.${HANDLE_CLASSES[direction] ?? ""}`,
-          );
-          setResizeDirection(direction);
-        }}
-        onResizeStop={() => {
-          persistDraft();
-          activeHandleRef.current = null;
-          setResizeDirection(undefined);
-          setFreedThisResize(false);
-        }}
-        position={draft.position}
-        resizeGrid={[1, 1]}
-        resizeHandleClasses={HANDLE_CLASSES}
-        resizeHandleStyles={HANDLE_STYLES}
-        size={draft.size}
-      >
-        {/* The same marquee chrome as the export window's crop controls;
-            react-rnd supplies behaviour through its own invisible handles. */}
-        <TransformControls
-          frame={{
-            height: draft.size.height,
-            width: draft.size.width,
-            x: 0,
-            y: 0,
-          }}
-          inverseScale="1"
-        />
-      </Rnd>
+        onPersist={persistDraft}
+        onResizeDirectionChange={setResizeDirection}
+        region={draft}
+        visible={isIdle && regionPlaced}
+      />
 
-      <div
-        className={cn(
-          "absolute left-1/2 flex -translate-x-1/2 items-center justify-center opacity-0 transition-opacity",
-          isMac ? "top-12" : "top-2",
-          showActions && "opacity-100",
-        )}
-      >
-        <div
-          className={cn(
-            "pointer-events-none flex items-center gap-2 rounded-md border border-muted/25 bg-content p-2 shadow-md",
-            showActions && "pointer-events-auto",
-          )}
-        >
-          <CheckOnClickButton
-            isDisabled={!regionPlaced}
-            onPress={center}
-            showFocus={false}
-            size="sm"
-            variant="ghost"
-          >
-            <SquareDot aria-hidden size={14} />
-            Center
-          </CheckOnClickButton>
-          <AspectRatio
-            height={draft.size.height}
-            onRatioChange={setActiveAspect}
-            setHeight={(height) => {
-              // A ratio picked before a region exists is only the shape to
-              // draw at; there is nothing to resize yet.
-              if (!regionPlaced) return;
-              setDraft((current) => ({
-                ...current,
-                size: { ...current.size, height: wholePixelSize(height) },
-              }));
-            }}
-            setWidth={(width) => {
-              // As above: no region, nothing to resize.
-              if (!regionPlaced) return;
-              setDraft((current) => ({
-                ...current,
-                size: { ...current.size, width: wholePixelSize(width) },
-              }));
-            }}
-            width={draft.size.width}
-          />
-          <Button
-            color="success"
-            isDisabled={!regionPlaced}
-            onPress={finish}
-            showFocus={false}
-            size="sm"
-          >
-            {isScreenshotCapture ? (
-              <ImageDown aria-hidden size={18} />
-            ) : (
-              <Check aria-hidden size={18} />
-            )}
-            {isScreenshotCapture ? "Capture" : "Finish"}
-          </Button>
-        </div>
-      </div>
+      <ScreenshotRegionControls
+        onAspectChange={setScreenshotAspect}
+        onCenter={center}
+        onFinish={finish}
+        onSizeChange={(size) => {
+          setDraft((current) => ({ ...current, size }));
+        }}
+        region={draft}
+        regionPlaced={regionPlaced}
+        visible={showActions}
+      />
 
       {screenshot ? (
         <Magnifier

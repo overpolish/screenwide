@@ -8,8 +8,8 @@ use std::time::Duration;
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize};
 
 use super::{
-  collapse_recording_source_selector, escape, platform, WindowLabel, RECORDING_CONTROLS_VISIBLE,
-  REGION_SELECTOR_EDITING, SELECTOR_VISIBLE,
+  escape, platform, region_gesture, source_selector, WindowLabel, RECORDING_CONTROLS_VISIBLE,
+  REGION_SELECTOR_INTERACTIVE,
 };
 
 pub(super) static SCREENSHOT_REGION_SESSION: AtomicBool = AtomicBool::new(false);
@@ -88,7 +88,7 @@ pub fn hide_region_selector(app: AppHandle) -> tauri::Result<()> {
 fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
   if !recording_controls_may_raise(
     RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
-    REGION_SELECTOR_EDITING.load(Ordering::Relaxed),
+    region_gesture::is_active(),
   ) {
     return Ok(());
   }
@@ -96,7 +96,7 @@ fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
   if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
     platform::raise_without_activation(&bar)?;
   }
-  if SELECTOR_VISIBLE.load(Ordering::Relaxed) {
+  if source_selector::is_visible() {
     if let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str()) {
       platform::raise_without_activation(&selector)?;
     }
@@ -104,38 +104,35 @@ fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
   Ok(())
 }
 
-/// Cross-window persistence may ask the overlay to show while its edit
-/// gesture is ending. Editing owns the pointer during that interval, so the
-/// source selector must not be raised over it.
-const fn recording_controls_may_raise(controls_visible: bool, region_editing: bool) -> bool {
-  controls_visible && !region_editing
+/// Cross-window persistence may ask the overlay to show while a region gesture
+/// owns the pointer. The recording controls stay down until that gesture ends.
+const fn recording_controls_may_raise(controls_visible: bool, gesture_active: bool) -> bool {
+  controls_visible && !gesture_active
 }
 
-/// Region editing owns the screen until the user explicitly finishes it.
 /// Persisting resize geometry rehydrates the recording bar's source store,
 /// which can legitimately re-assert that region mode has a source selector.
 /// That synchronization must update the desired idle state without ordering
-/// the selector back on screen in the middle of the edit gesture.
+/// the selector back on screen in the middle of the gesture.
 const fn source_selector_visibility_allows_show(
   controls_visible: bool,
-  region_editing: bool,
+  gesture_active: bool,
 ) -> bool {
-  controls_visible && !region_editing
+  controls_visible && !gesture_active
 }
 
 pub(super) fn source_selector_may_show() -> bool {
   source_selector_visibility_allows_show(
     RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
-    REGION_SELECTOR_EDITING.load(Ordering::Relaxed),
+    region_gesture::is_active(),
   )
 }
 
-/// The region overlay may take clicks only while the user is actively editing
-/// the region, and only outside a recording. Every other time it is on screen -
-/// displaying the chosen frame, or standing in as the recording boundary - it
-/// has to let clicks through to whatever is underneath.
-const fn region_selector_is_interactive(is_editing: bool, is_recording_idle: bool) -> bool {
-  is_editing && is_recording_idle
+/// The region overlay may take clicks only while its frontend has made the
+/// editor available, and only outside a recording. During a recording the same
+/// window remains visible as a boundary but must let desktop clicks through.
+const fn region_selector_is_interactive(is_interactive: bool, is_recording_idle: bool) -> bool {
+  is_interactive && is_recording_idle
 }
 
 /// The region boundary belongs to the recording UI while idle. Delayed
@@ -149,6 +146,10 @@ const fn region_selector_may_show(
   screenshot_session: bool,
 ) -> bool {
   !is_recording_idle || controls_visible || screenshot_session
+}
+
+pub(super) const fn recording_ui_may_hide(screenshot_session: bool) -> bool {
+  !screenshot_session
 }
 
 #[tauri::command]
@@ -182,7 +183,7 @@ fn apply_region_selector_interactivity(app: &AppHandle) -> tauri::Result<()> {
     return Ok(());
   };
   let is_interactive = region_selector_is_interactive(
-    REGION_SELECTOR_EDITING.load(Ordering::Relaxed),
+    REGION_SELECTOR_INTERACTIVE.load(Ordering::Relaxed),
     crate::recording::is_idle(app),
   );
 
@@ -203,7 +204,7 @@ fn apply_region_selector_interactivity(app: &AppHandle) -> tauri::Result<()> {
 
 #[tauri::command]
 pub fn set_region_selector_passthrough(app: AppHandle, passthrough: bool) -> tauri::Result<()> {
-  REGION_SELECTOR_EDITING.store(!passthrough, Ordering::Relaxed);
+  REGION_SELECTOR_INTERACTIVE.store(!passthrough, Ordering::Relaxed);
   apply_region_selector_interactivity(&app)
 }
 
@@ -215,15 +216,14 @@ pub fn set_region_selector_opacity(app: AppHandle, opacity: f64) -> tauri::Resul
   platform::set_opacity(&region, opacity)
 }
 
-/// Fades the recording controls, and is the only thing that decides they are
-/// on screen.
+/// Fades the recording controls while the region overlay is borrowed for a
+/// screenshot session.
 ///
 /// Fading them *in* is refused outside an idle app. The controls belong to the
 /// idle state; while a recording is starting or running they are deliberately
-/// gone. Several callers ask for opacity 1.0 without knowing that - hiding the
-/// region overlay does it as cleanup, and the overlay window does it whenever
-/// it stops editing - and `prepare_windows` itself hides the bar and then
-/// hides the region overlay, which used to put the bar straight back.
+/// gone. Hiding the region overlay asks for opacity 1.0 as cleanup without
+/// knowing that, and `prepare_windows` itself hides the bar before hiding the
+/// region overlay. The guard prevents that cleanup from reviving the bar.
 #[tauri::command]
 pub fn set_recording_controls_opacity(app: AppHandle, opacity: f64) -> tauri::Result<()> {
   if !RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed) {
@@ -236,7 +236,7 @@ pub fn set_recording_controls_opacity(app: AppHandle, opacity: f64) -> tauri::Re
   if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
     platform::set_opacity(&bar, opacity)?;
   }
-  if SELECTOR_VISIBLE.load(Ordering::Relaxed) {
+  if source_selector::is_visible() {
     if let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str()) {
       platform::set_opacity(&selector, opacity)?;
     }
@@ -244,56 +244,10 @@ pub fn set_recording_controls_opacity(app: AppHandle, opacity: f64) -> tauri::Re
   if opacity > 0.0 {
     raise_recording_controls(&app)?;
   } else {
-    let _ = collapse_recording_source_selector(app.clone());
+    let _ = source_selector::collapse_recording_source_selector(app.clone());
   }
   Ok(())
 }
 
 #[cfg(test)]
-mod tests {
-  use super::{
-    recording_controls_may_raise, region_selector_is_interactive, region_selector_may_show,
-    region_selector_restores_opacity, source_selector_visibility_allows_show,
-  };
-
-  #[test]
-  fn region_editing_does_not_raise_the_source_selector() {
-    assert!(recording_controls_may_raise(true, false));
-    assert!(!recording_controls_may_raise(true, true));
-    assert!(!recording_controls_may_raise(false, false));
-  }
-
-  #[test]
-  fn region_editing_keeps_the_source_selector_hidden_during_store_sync() {
-    assert!(source_selector_visibility_allows_show(true, false));
-    assert!(!source_selector_visibility_allows_show(true, true));
-    assert!(!source_selector_visibility_allows_show(false, false));
-  }
-
-  #[test]
-  fn the_region_overlay_takes_clicks_only_while_editing_outside_a_recording() {
-    assert!(region_selector_is_interactive(true, true));
-    assert!(!region_selector_is_interactive(false, true));
-    assert!(!region_selector_is_interactive(true, false));
-    assert!(!region_selector_is_interactive(false, false));
-  }
-
-  #[test]
-  fn a_hidden_recording_ui_cannot_resurrect_only_its_region_overlay() {
-    assert!(region_selector_may_show(true, true, false));
-    assert!(region_selector_may_show(false, false, false));
-    assert!(!region_selector_may_show(true, false, false));
-  }
-
-  #[test]
-  fn a_screenshot_session_shows_the_overlay_without_the_recording_ui() {
-    assert!(region_selector_may_show(true, false, true));
-    assert!(region_selector_may_show(true, true, true));
-  }
-
-  #[test]
-  fn a_screenshot_session_preserves_prepared_window_opacity() {
-    assert!(!region_selector_restores_opacity(true));
-    assert!(region_selector_restores_opacity(false));
-  }
-}
+mod tests;

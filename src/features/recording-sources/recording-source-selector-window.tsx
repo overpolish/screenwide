@@ -3,8 +3,7 @@
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
-import { AppWindowMac, ChevronDown, Monitor, SquareDashed } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AppWindowMac, ChevronDown, Monitor } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "../../components/base/button/button";
@@ -17,6 +16,7 @@ import {
   toggleRecordingSourceSelector,
 } from "./api";
 import { MonitorSelector } from "./monitor-selector";
+import { RegionSourceControls } from "./region-source-controls";
 import { useRecordingSourceStore } from "./store";
 import { MonitorDetails, SelectorPlacement, WindowDetails } from "./types";
 import { WindowSelector } from "./window-selector";
@@ -60,7 +60,6 @@ export function RecordingSourceSelectorWindow() {
     recordingMode,
     selectedMonitor,
     selectedWindow,
-    setRegionEditing,
     setSelectedMonitor,
     setSelectedWindow,
   } = useRecordingSourceStore((state) => state);
@@ -215,7 +214,7 @@ export function RecordingSourceSelectorWindow() {
           className={`flex h-6 w-full shrink-0 gap-2 ${placement === "below" ? "order-1" : "order-2"}`}
         >
           <Button
-            className="h-full min-w-0 grow justify-center overflow-hidden"
+            className={`h-full min-w-0 justify-center overflow-hidden ${recordingMode === "region" ? "w-44 shrink-0" : "grow"}`}
             onPress={() => {
               void (isExpanded
                 ? collapseRecordingSourceSelector()
@@ -255,30 +254,7 @@ export function RecordingSourceSelectorWindow() {
             />
           </Button>
 
-          <AnimatePresence initial={false}>
-            {recordingMode === "region" ? (
-              <motion.div
-                animate={{ opacity: 1, width: "auto" }}
-                className="h-full overflow-hidden"
-                exit={{ opacity: 0, width: 0 }}
-                initial={{ opacity: 0, width: 0 }}
-              >
-                <Button
-                  className="h-full"
-                  onPress={() => {
-                    void collapseRecordingSourceSelector();
-                    setRegionEditing(true);
-                  }}
-                  showFocus={false}
-                  size="sm"
-                  variant="soft"
-                >
-                  <SquareDashed aria-hidden size={14} />
-                  Edit
-                </Button>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+          {recordingMode === "region" ? <RegionSourceControls /> : null}
         </div>
       </section>
     </main>

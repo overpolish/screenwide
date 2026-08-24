@@ -51,6 +51,9 @@ export const recordingUiVisible = () => invoke<boolean>("recording_ui_visible");
 export const setRecordingSourceSelectorVisible = (visible: boolean) =>
   invoke<null>("set_recording_source_selector_visible", { visible });
 
+export const setRecordingSourceSelectorRegionControls = (visible: boolean) =>
+  invoke<null>("set_recording_source_selector_region_controls", { visible });
+
 export const showRegionSelector = (monitor: MonitorDetails) =>
   invoke<null>("show_region_selector", {
     position: monitor.physicalPosition,
@@ -70,6 +73,12 @@ export const setScreenshotRegionSession = (active: boolean) =>
 
 export const setRecordingControlsOpacity = (opacity: number) =>
   invoke<null>("set_recording_controls_opacity", { opacity });
+
+export const beginRegionSelectorGesture = () =>
+  invoke<null>("begin_region_selector_gesture");
+
+export const finishRegionSelectorGesture = () =>
+  invoke<null>("finish_region_selector_gesture");
 
 export const takeMonitorScreenshot = (
   monitorId: number,

@@ -1,14 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use serde::Serialize;
-use tauri::{
-  AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, WebviewWindow,
-  WindowEvent,
-};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WindowEvent};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 pub(crate) mod dock;
@@ -19,6 +15,9 @@ pub(crate) mod monitor_capture;
 pub(crate) mod options;
 mod platform;
 pub(crate) mod region;
+pub(crate) mod region_gesture;
+pub(crate) mod source_selector;
+mod source_selector_layout;
 
 #[cfg(not(target_os = "macos"))]
 pub use dock::initialize_recording_dock;
@@ -122,187 +121,10 @@ impl WindowLabel {
 // rather than by name, so a window added later is excluded the day it is added
 // and there is no list left to forget to update. See `capture_kit::our_windows`.
 
-const SELECTOR_COLLAPSED_WIDTH: f64 = 300.0;
-const SELECTOR_COLLAPSED_HEIGHT: f64 = 40.0;
-const SELECTOR_EXPANDED_WIDTH: f64 = 500.0;
-const SELECTOR_EXPANDED_HEIGHT: f64 = 250.0;
-const WINDOW_SELECTOR_EXPANDED_WIDTH: f64 = 750.0;
-const WINDOW_SELECTOR_EXPANDED_HEIGHT: f64 = 500.0;
-const SELECTOR_GAP: f64 = 6.0;
-const ANIMATION_STEPS: u64 = 18;
-static SELECTOR_ANIMATION: AtomicU64 = AtomicU64::new(0);
-static SELECTOR_EXPANDED: AtomicBool = AtomicBool::new(false);
-static SELECTOR_VISIBLE: AtomicBool = AtomicBool::new(true);
 static RECORDING_CONTROLS_VISIBLE: AtomicBool = AtomicBool::new(false);
-static WINDOW_SELECTOR_ACTIVE: AtomicBool = AtomicBool::new(false);
-static REGION_SELECTOR_EDITING: AtomicBool = AtomicBool::new(false);
+static REGION_SELECTOR_INTERACTIVE: AtomicBool = AtomicBool::new(false);
 #[cfg(target_os = "windows")]
 static BAR_DRAG_ACTIVE: AtomicBool = AtomicBool::new(false);
-
-#[derive(Clone, Copy, Serialize)]
-#[serde(rename_all = "lowercase")]
-enum SelectorPlacement {
-  Above,
-  Below,
-}
-
-struct SelectorFrame {
-  position: LogicalPosition<f64>,
-  size: LogicalSize<f64>,
-}
-
-fn selector_frames(
-  app: &AppHandle,
-) -> tauri::Result<(SelectorPlacement, SelectorFrame, SelectorFrame)> {
-  let bar = app
-    .get_webview_window(WindowLabel::RecordingBar.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  #[cfg(target_os = "windows")]
-  let bar_position = bar.inner_position()?;
-  #[cfg(not(target_os = "windows"))]
-  let bar_position = bar.outer_position()?;
-  #[cfg(target_os = "windows")]
-  let bar_size = bar.inner_size()?;
-  #[cfg(not(target_os = "windows"))]
-  let bar_size = bar.outer_size()?;
-  let monitor = bar
-    .current_monitor()?
-    .or(app.primary_monitor()?)
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-
-  let scale = monitor.scale_factor();
-  let monitor_position = monitor.position().to_logical::<f64>(scale);
-  let monitor_size = monitor.size().to_logical::<f64>(scale);
-  let bar_position = bar_position.to_logical::<f64>(scale);
-  let bar_size = bar_size.to_logical::<f64>(scale);
-  #[cfg(target_os = "windows")]
-  let selector_frame_offset = {
-    let selector = app
-      .get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
-      .ok_or_else(|| tauri::Error::WindowNotFound)?;
-    let inner = selector.inner_position()?.to_logical::<f64>(scale);
-    let outer = selector.outer_position()?.to_logical::<f64>(scale);
-    LogicalPosition::new(inner.x - outer.x, inner.y - outer.y)
-  };
-  #[cfg(not(target_os = "windows"))]
-  let selector_frame_offset = LogicalPosition::new(0.0, 0.0);
-  let monitor_right = monitor_position.x + monitor_size.width;
-  let bar_left = bar_position.x;
-  let bar_top = bar_position.y;
-  let bar_right = bar_left + bar_size.width;
-  let bar_bottom = bar_top + bar_size.height;
-  let (expanded_width, expanded_height) = if WINDOW_SELECTOR_ACTIVE.load(Ordering::Relaxed) {
-    (
-      WINDOW_SELECTOR_EXPANDED_WIDTH,
-      WINDOW_SELECTOR_EXPANDED_HEIGHT,
-    )
-  } else {
-    (SELECTOR_EXPANDED_WIDTH, SELECTOR_EXPANDED_HEIGHT)
-  };
-  let collapsed_width = SELECTOR_COLLAPSED_WIDTH;
-  let collapsed_height = SELECTOR_COLLAPSED_HEIGHT;
-  let gap = SELECTOR_GAP;
-  let available_above = bar_top - monitor_position.y;
-  let placement = if available_above >= expanded_height + gap {
-    SelectorPlacement::Above
-  } else {
-    SelectorPlacement::Below
-  };
-  let center_x = (bar_left + bar_right) / 2.0;
-  let expanded_x =
-    (center_x - expanded_width / 2.0).clamp(monitor_position.x, monitor_right - expanded_width);
-  let collapsed_x =
-    (center_x - collapsed_width / 2.0).clamp(monitor_position.x, monitor_right - collapsed_width);
-  let (collapsed_y, expanded_y) = match placement {
-    SelectorPlacement::Above => (
-      bar_top - gap - collapsed_height,
-      bar_top - gap - expanded_height,
-    ),
-    SelectorPlacement::Below => (bar_bottom + gap, bar_bottom + gap),
-  };
-
-  Ok((
-    placement,
-    SelectorFrame {
-      position: LogicalPosition::new(
-        collapsed_x - selector_frame_offset.x,
-        collapsed_y - selector_frame_offset.y,
-      ),
-      size: LogicalSize::new(collapsed_width, collapsed_height),
-    },
-    SelectorFrame {
-      position: LogicalPosition::new(
-        expanded_x - selector_frame_offset.x,
-        expanded_y - selector_frame_offset.y,
-      ),
-      size: LogicalSize::new(expanded_width, expanded_height),
-    },
-  ))
-}
-
-fn animate_selector<F>(
-  window: WebviewWindow,
-  from: SelectorFrame,
-  to: SelectorFrame,
-  on_complete: F,
-) where
-  F: FnOnce() + Send + 'static,
-{
-  let animation = SELECTOR_ANIMATION.fetch_add(1, Ordering::Relaxed) + 1;
-  tauri::async_runtime::spawn_blocking(move || {
-    for step in 1..=ANIMATION_STEPS {
-      if SELECTOR_ANIMATION.load(Ordering::Relaxed) != animation {
-        return;
-      }
-
-      let progress = step as f64 / ANIMATION_STEPS as f64;
-      let eased = 1.0 - (1.0 - progress).powi(3);
-      let interpolate = |start: f64, end: f64| start + (end - start) * eased;
-      let position = LogicalPosition::new(
-        interpolate(from.position.x, to.position.x),
-        interpolate(from.position.y, to.position.y),
-      );
-      let size = LogicalSize::new(
-        interpolate(from.size.width, to.size.width),
-        interpolate(from.size.height, to.size.height),
-      );
-
-      let _ = window.set_position(position);
-      let _ = window.set_size(size);
-      std::thread::sleep(Duration::from_millis(10));
-    }
-
-    if SELECTOR_ANIMATION.load(Ordering::Relaxed) == animation {
-      on_complete();
-    }
-  });
-}
-
-fn reposition_recording_source_selector(app: &AppHandle) -> tauri::Result<()> {
-  let selector = app
-    .get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  if !selector.is_visible()? {
-    return Ok(());
-  }
-
-  let (placement, collapsed, expanded) = selector_frames(app)?;
-  let target = if SELECTOR_EXPANDED.load(Ordering::Relaxed) {
-    expanded
-  } else {
-    collapsed
-  };
-  SELECTOR_ANIMATION.fetch_add(1, Ordering::Relaxed);
-  selector.set_size(target.size)?;
-  selector.set_position(target.position)?;
-  app.emit_to(
-    WindowLabel::RecordingSourceSelector.as_str(),
-    "recording-source-selector://placement",
-    placement,
-  )?;
-
-  Ok(())
-}
 
 fn contain_recording_bar(app: &AppHandle) -> tauri::Result<()> {
   let bar = app
@@ -323,42 +145,6 @@ fn contain_recording_bar(app: &AppHandle) -> tauri::Result<()> {
   if contained != bar_position {
     bar.set_position(contained)?;
   }
-
-  Ok(())
-}
-
-#[tauri::command]
-pub fn toggle_recording_source_selector(
-  app: AppHandle,
-  window_selector: bool,
-) -> tauri::Result<()> {
-  // A recording hides this chrome deliberately; nothing may bring it back
-  // until the recording is over.
-  if !crate::recording::is_idle(&app) {
-    return Ok(());
-  }
-
-  let window = app
-    .get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  if SELECTOR_EXPANDED.load(Ordering::Relaxed) {
-    return collapse_recording_source_selector(app);
-  }
-  WINDOW_SELECTOR_ACTIVE.store(window_selector, Ordering::Relaxed);
-  let (placement, collapsed, expanded) = selector_frames(&app)?;
-
-  if !window.is_visible()? {
-    window.set_size(collapsed.size)?;
-    window.set_position(collapsed.position)?;
-    platform::show(&window, 1.0)?;
-  }
-  SELECTOR_EXPANDED.store(true, Ordering::Relaxed);
-  app.emit_to(
-    WindowLabel::RecordingSourceSelector.as_str(),
-    "recording-source-selector://expanded",
-    placement,
-  )?;
-  animate_selector(window, collapsed, expanded, || {});
 
   Ok(())
 }
@@ -390,7 +176,7 @@ pub fn manage_recording_bar_movement(app: &AppHandle) {
       return;
     }
 
-    let _ = reposition_recording_source_selector(&app);
+    let _ = source_selector::reposition(&app);
     let _ = hide_recording_options(app.clone());
 
     #[cfg(target_os = "windows")]
@@ -418,12 +204,12 @@ pub fn manage_recording_source_selector_dismissal(app: &AppHandle) {
         let Ok((x, y)) = position.lock().map(|position| *position) else {
           return;
         };
-        if SELECTOR_EXPANDED.load(Ordering::Relaxed) {
+        if source_selector::is_expanded() {
           if let Some(selector) =
             app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
           {
             if !options::coordinate_is_in_window(x, y, &selector) {
-              let _ = collapse_recording_source_selector(app.clone());
+              let _ = source_selector::collapse_recording_source_selector(app.clone());
             }
           }
         }
@@ -453,14 +239,14 @@ pub fn manage_recording_source_selector_dismissal(app: &AppHandle) {
           break;
         };
         let position = event.location();
-        if SELECTOR_EXPANDED.load(Ordering::Relaxed) {
+        if source_selector::is_expanded() {
           let Some(selector) =
             app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
           else {
             break;
           };
           if !options::coordinate_is_in_window(position.x, position.y, &selector) {
-            let _ = collapse_recording_source_selector(app.clone());
+            let _ = source_selector::collapse_recording_source_selector(app.clone());
           }
         }
         options::dismiss_if_outside(&app, position.x, position.y);
@@ -500,7 +286,7 @@ fn watch_for_recording_bar_mouse_up(app: AppHandle) {
 #[tauri::command]
 pub fn finish_recording_bar_drag(app: AppHandle) -> Result<(), String> {
   contain_recording_bar(&app).map_err(|error| error.to_string())?;
-  reposition_recording_source_selector(&app).map_err(|error| error.to_string())?;
+  source_selector::reposition(&app).map_err(|error| error.to_string())?;
   app
     .save_window_state(StateFlags::POSITION)
     .map_err(|error| error.to_string())?;
@@ -508,101 +294,18 @@ pub fn finish_recording_bar_drag(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn collapse_recording_source_selector(app: AppHandle) -> tauri::Result<()> {
-  let window = app
-    .get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  if !window.is_visible()? || !SELECTOR_EXPANDED.swap(false, Ordering::Relaxed) {
+pub fn hide_recording_ui(app: AppHandle) -> tauri::Result<()> {
+  // A Quick Screenshot is driven by the Region Selector webview. Hiding that
+  // window during `capture_still` suspends its promise continuation before it
+  // can restore the ruler's click handling and clear the screenshot session.
+  // The frontend calls this command again after that cleanup is complete.
+  if !region::recording_ui_may_hide(region::SCREENSHOT_REGION_SESSION.load(Ordering::Acquire)) {
     return Ok(());
   }
 
-  let (_, collapsed, _) = selector_frames(&app)?;
-  let scale = window.scale_factor()?;
-  let current = SelectorFrame {
-    position: window.outer_position()?.to_logical(scale),
-    size: window.outer_size()?.to_logical(scale),
-  };
-  let event_app = app.clone();
-  animate_selector(window, current, collapsed, move || {
-    let _ = event_app.emit_to(
-      WindowLabel::RecordingSourceSelector.as_str(),
-      "recording-source-selector://collapsed",
-      (),
-    );
-  });
-
-  Ok(())
-}
-
-fn show_recording_source_selector(app: &AppHandle) -> tauri::Result<()> {
-  let selector = app
-    .get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  let (placement, collapsed, _) = selector_frames(app)?;
-  #[cfg(target_os = "macos")]
-  let positioning = SELECTOR_ANIMATION.fetch_add(1, Ordering::Relaxed) + 1;
-  #[cfg(not(target_os = "macos"))]
-  SELECTOR_ANIMATION.fetch_add(1, Ordering::Relaxed);
-  SELECTOR_EXPANDED.store(false, Ordering::Relaxed);
-  selector.set_size(collapsed.size)?;
-  selector.set_position(collapsed.position)?;
-  platform::show(&selector, 1.0)?;
-  platform::restore_recording_level(&selector)?;
-  app.emit_to(
-    WindowLabel::RecordingSourceSelector.as_str(),
-    "recording-source-selector://collapsed",
-    placement,
-  )?;
-
-  #[cfg(target_os = "macos")]
-  let app = app.clone();
-  #[cfg(target_os = "macos")]
-  tauri::async_runtime::spawn_blocking(move || {
-    std::thread::sleep(Duration::from_millis(75));
-    if SELECTOR_ANIMATION.load(Ordering::Relaxed) != positioning {
-      return;
-    }
-    let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
-    else {
-      return;
-    };
-    if let Ok((_, collapsed, _)) = selector_frames(&app) {
-      let _ = selector.set_size(collapsed.size);
-      let _ = selector.set_position(collapsed.position);
-    }
-  });
-
-  Ok(())
-}
-
-#[tauri::command]
-pub fn set_recording_source_selector_visible(app: AppHandle, visible: bool) -> tauri::Result<()> {
-  SELECTOR_VISIBLE.store(visible, Ordering::Relaxed);
-  if visible {
-    if region::source_selector_may_show() {
-      show_recording_source_selector(&app)
-    } else {
-      Ok(())
-    }
-  } else {
-    SELECTOR_ANIMATION.fetch_add(1, Ordering::Relaxed);
-    SELECTOR_EXPANDED.store(false, Ordering::Relaxed);
-    if let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str()) {
-      platform::hide(&selector)?;
-    }
-    Ok(())
-  }
-}
-
-#[tauri::command]
-pub fn hide_recording_ui(app: AppHandle) -> tauri::Result<()> {
   RECORDING_CONTROLS_VISIBLE.store(false, Ordering::Relaxed);
-  SELECTOR_ANIMATION.fetch_add(1, Ordering::Relaxed);
-  SELECTOR_EXPANDED.store(false, Ordering::Relaxed);
   hide_recording_options(app.clone())?;
-  if let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str()) {
-    platform::hide(&selector)?;
-  }
+  source_selector::hide(&app)?;
   hide_recording_bar(&app)?;
   if let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
     platform::hide(&region)?;
@@ -627,14 +330,14 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
     true,
     region::SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
   );
-  // Asserted rather than assumed: the bar may have been faded out for region
-  // editing, and requests to fade it back in are refused while a recording is
-  // on. Coming back to idle is where that is put right.
+  // Asserted rather than assumed: a screenshot session may have faded the bar
+  // out, and requests to fade it back in are refused while a recording is on.
+  // Coming back to idle is where that is put right.
   platform::set_opacity(&bar, 1.0)?;
   platform::restore_recording_level(&bar)?;
 
-  if SELECTOR_VISIBLE.load(Ordering::Relaxed) && region::source_selector_may_show() {
-    show_recording_source_selector(app)?;
+  if source_selector::is_visible() && region::source_selector_may_show() {
+    source_selector::show(app)?;
   }
   app.emit_to(
     WindowLabel::RecordingBar.as_str(),

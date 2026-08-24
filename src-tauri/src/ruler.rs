@@ -1,9 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::atomic::{AtomicBool, Ordering};
-
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::{capture_overlays, screenshots};
@@ -12,16 +10,12 @@ pub(crate) mod analysis;
 pub(crate) mod focus;
 #[cfg(target_os = "windows")]
 mod platform_windows;
+mod screenshot_mode;
 pub(crate) mod snapshot;
 use focus::{follow_cursor_focus, watch_focus, FocusRegion};
 pub use snapshot::RulerState;
 
 const WINDOW_PREFIX: &str = "ruler-";
-const SCREENSHOT_MODE_EVENT: &str = "ruler://screenshot-mode";
-
-/// The region editor takes focus above a deliberately preserved ruler, so the
-/// blur it causes must not tear the session down.
-static SCREENSHOT_MODE: AtomicBool = AtomicBool::new(false);
 
 fn ruler_windows(app: &AppHandle) -> Vec<tauri::WebviewWindow> {
   capture_overlays::windows(app, WINDOW_PREFIX)
@@ -32,7 +26,7 @@ fn close_ruler_windows(app: &AppHandle) {
 }
 
 pub fn dismiss(app: &AppHandle) {
-  SCREENSHOT_MODE.store(false, Ordering::Relaxed);
+  screenshot_mode::reset();
   let had_windows = !ruler_windows(app).is_empty();
   close_ruler_windows(app);
   let had_capture = app.state::<RulerState>().cancel();
@@ -46,27 +40,8 @@ pub fn is_active(app: &AppHandle) -> bool {
 }
 
 #[tauri::command]
-pub fn set_ruler_screenshot_mode(app: AppHandle, active: bool) -> Result<(), String> {
-  SCREENSHOT_MODE.store(active, Ordering::Relaxed);
-  for window in ruler_windows(&app) {
-    // The region editor must sit above the ruler while the shot is framed;
-    // the ruler remains visible underneath and returns to its normal level.
-    capture_overlays::set_level(
-      &window,
-      if active {
-        26
-      } else {
-        capture_overlays::FOREGROUND_LEVEL
-      },
-    )?;
-    window
-      .emit(SCREENSHOT_MODE_EVENT, active)
-      .map_err(|error| error.to_string())?;
-    window
-      .set_ignore_cursor_events(active)
-      .map_err(|error| error.to_string())?;
-  }
-  Ok(())
+pub async fn set_ruler_screenshot_mode(app: AppHandle, active: bool) -> Result<(), String> {
+  screenshot_mode::set(&app, active).await
 }
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {

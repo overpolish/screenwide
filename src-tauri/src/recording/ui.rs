@@ -18,8 +18,9 @@ pub(super) fn prepare_windows(
   let to_message = |error: tauri::Error| error.to_string();
 
   windows::hide_recording_options(app.clone()).map_err(to_message)?;
-  windows::collapse_recording_source_selector(app.clone()).map_err(to_message)?;
-  windows::set_recording_source_selector_visible(app.clone(), false).map_err(to_message)?;
+  windows::source_selector::collapse_recording_source_selector(app.clone()).map_err(to_message)?;
+  windows::source_selector::set_recording_source_selector_visible(app.clone(), false)
+    .map_err(to_message)?;
   windows::hide_recording_bar(app).map_err(to_message)?;
   // The dock is useful feedback while hardware streams warm up. Its Starting
   // overlay prevents controls being used until the first encoded frames prove

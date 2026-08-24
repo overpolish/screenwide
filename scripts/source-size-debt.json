@@ -18,7 +18,6 @@
   "src/features/recording-controls/components/recording-dock.tsx": 306,
   "src/features/recording-inputs/recording-options-window.tsx": 325,
   "src/features/recording-inputs/recording-options.tsx": 408,
-  "src/features/region-selector/region-selector-window.tsx": 449,
   "src/features/text-recognition/text-recognition-window.tsx": 415,
   "src-tauri/src/audio_preview.rs": 335,
   "src-tauri/src/camera_preview.rs": 533,
