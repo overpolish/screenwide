@@ -66,7 +66,12 @@ export function RegionSelectorWindow() {
   const [resizeDirection, setResizeDirection] = useState<ResizeDirection>();
   const [isDragging, setIsDragging] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [screenshot, setScreenshot] = useState<ArrayBuffer | null>(null);
+  const [screenshot, setScreenshot] = useState<{
+    height: number;
+    pixels: ArrayBuffer;
+    width: number;
+  } | null>(null);
+  const [captureRequest, setCaptureRequest] = useState(0);
   const freeAspect = useKeyHeld(FREE_ASPECT_KEY);
   // A capture ends the session, so whichever gesture starts one shuts the
   // others out until the session is over.
@@ -105,7 +110,9 @@ export function RegionSelectorWindow() {
 
     const cancel = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      void endScreenshotCapture();
+      // Escape closes the borrowed screenshot overlay and the ruler that was
+      // handed underneath it, while leaving the recording controls untouched.
+      void endScreenshotCapture(true);
     };
 
     window.addEventListener("keydown", cancel);
@@ -150,17 +157,36 @@ export function RegionSelectorWindow() {
     if (!activeMonitor) return;
 
     void setRegionSelectorPassthrough(!isIdle);
-    if (!isIdle) return;
+    if (!isIdle || captureRequest === 0) return;
 
+    let disposed = false;
+    let metadata: { height: number; width: number } | undefined;
+    let pixels: ArrayBuffer | undefined;
+    const commit = () => {
+      if (!disposed && metadata && pixels) {
+        setScreenshot({ ...metadata, pixels });
+      }
+    };
     const channel = new Channel<ArrayBuffer>();
-    channel.onmessage = setScreenshot;
-    // Clear the prior monitor image before asynchronously capturing the next
-    // one. The capture leaves Screenwide's windows out, so the overlay stays
-    // exactly as it is while the image is taken.
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setScreenshot(null);
-    void takeMonitorScreenshot(activeMonitor.id, channel);
-  }, [activeMonitor, isIdle]);
+    channel.onmessage = (message) => {
+      pixels = message;
+      commit();
+    };
+    // Keep the prior complete snapshot installed until both parts of its
+    // replacement arrive. The first magnifier simply appears when this first
+    // request completes; opening the recording UI does no capture work.
+    void takeMonitorScreenshot(activeMonitor.id, channel)
+      .then((result) => {
+        metadata = result;
+        commit();
+      })
+      .catch((reason: unknown) => {
+        console.error("Could not load the region magnifier image", reason);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [activeMonitor, captureRequest, isIdle]);
 
   // A screenshot session starts without a region to manipulate or capture.
   const regionPlaced = hasRegion(draft);
@@ -252,7 +278,10 @@ export function RegionSelectorWindow() {
           if (!isScreenshotCapture) finishGesture();
         }}
         onPersist={persistDraft}
-        onResizeDirectionChange={setResizeDirection}
+        onResizeDirectionChange={(direction) => {
+          setResizeDirection(direction);
+          if (direction) setCaptureRequest((current) => current + 1);
+        }}
         region={draft}
         visible={isIdle && regionPlaced}
       />
@@ -271,7 +300,6 @@ export function RegionSelectorWindow() {
 
       {screenshot ? (
         <Magnifier
-          monitor={activeMonitor}
           regionRect={{
             height: draft.size.height,
             width: draft.size.width,

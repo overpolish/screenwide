@@ -122,9 +122,8 @@ pub enum ScreenshotDestination {
 #[cfg(target_os = "macos")]
 pub(crate) fn capture_monitor_without_own_windows_blocking(
   monitor_id: u32,
-) -> Result<Vec<u8>, String> {
+) -> Result<CapturedImage, String> {
   platform::capture_blocking(ScreenshotTarget::Screen { monitor_id }, false, false)
-    .map(|image| image.rgba)
 }
 
 pub(crate) async fn capture(

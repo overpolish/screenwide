@@ -33,6 +33,7 @@ pub fn dismiss(app: &AppHandle) {
   if had_windows || had_capture {
     capture_overlays::emit_lifecycle(app, false);
   }
+  crate::windows::sync_recording_ui_escape(app, false);
 }
 
 pub fn is_active(app: &AppHandle) -> bool {
@@ -113,6 +114,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   follow_cursor_focus(app, regions);
 
   capture_overlays::emit_lifecycle(app, true);
+  crate::windows::sync_recording_ui_escape(app, true);
 
   Ok(())
 }

@@ -83,4 +83,8 @@ export const finishRegionSelectorGesture = () =>
 export const takeMonitorScreenshot = (
   monitorId: number,
   channel: Channel<ArrayBuffer>,
-) => invoke<null>("take_monitor_screenshot", { channel, monitorId });
+) =>
+  invoke<{ height: number; width: number }>("take_monitor_screenshot", {
+    channel,
+    monitorId,
+  });

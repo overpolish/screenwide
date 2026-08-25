@@ -150,7 +150,7 @@ fn contain_recording_bar(app: &AppHandle) -> tauri::Result<()> {
 }
 
 pub fn hide_recording_bar(app: &AppHandle) -> tauri::Result<()> {
-  escape::sync(app, false, false);
+  escape::sync(app, false, false, crate::ruler::is_active(app));
   // Clear first so later overlay ordering cannot raise the bar again.
   RECORDING_CONTROLS_VISIBLE.store(false, Ordering::Relaxed);
   if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
@@ -329,6 +329,7 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
     app,
     true,
     region::SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
+    crate::ruler::is_active(app),
   );
   // Asserted rather than assumed: a screenshot session may have faded the bar
   // out, and requests to fade it back in are refused while a recording is on.
@@ -348,6 +349,15 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
 
 pub fn is_recording_ui_visible() -> bool {
   RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed)
+}
+
+pub(crate) fn sync_recording_ui_escape(app: &AppHandle, ruler_active: bool) {
+  escape::sync(
+    app,
+    RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
+    region::SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
+    ruler_active,
+  );
 }
 
 #[tauri::command]

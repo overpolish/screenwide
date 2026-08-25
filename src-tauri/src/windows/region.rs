@@ -41,7 +41,8 @@ pub fn show_region_selector(
   // overlay is already covering this monitor, so do not run native show/order
   // choreography again merely because its React geometry changed.
   if region.is_visible()? && region.outer_position()? == position && region.outer_size()? == size {
-    return apply_region_selector_interactivity(&app);
+    apply_region_selector_interactivity(&app)?;
+    return raise_recording_controls(&app);
   }
   region.set_size(size)?;
   region.set_position(position)?;
@@ -51,9 +52,11 @@ pub fn show_region_selector(
   platform::show(&region, initial_opacity)?;
   platform::restore_recording_level(&region)?;
 
-  raise_recording_controls(&app)?;
   apply_region_selector_interactivity(&app)?;
-
+  // Applying editor interactivity focuses its full-monitor WebView. Put the
+  // recording controls above it afterwards without taking that focus, so the
+  // editor remains usable everywhere the controls do not cover it.
+  raise_recording_controls(&app)?;
   #[cfg(target_os = "macos")]
   tauri::async_runtime::spawn_blocking(move || {
     // AppKit completes showing a previously hidden panel asynchronously and
@@ -156,7 +159,12 @@ pub(super) const fn recording_ui_may_hide(screenshot_session: bool) -> bool {
 pub fn set_screenshot_region_session(app: AppHandle, active: bool) -> tauri::Result<()> {
   let controls_visible = RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed);
   SCREENSHOT_REGION_SESSION.store(active, Ordering::Release);
-  escape::sync(&app, controls_visible, active);
+  escape::sync(
+    &app,
+    controls_visible,
+    active,
+    crate::ruler::is_active(&app),
+  );
 
   if active {
     let result = match app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
@@ -165,7 +173,7 @@ pub fn set_screenshot_region_session(app: AppHandle, active: bool) -> tauri::Res
     };
     if let Err(error) = result {
       SCREENSHOT_REGION_SESSION.store(false, Ordering::Release);
-      escape::sync(&app, controls_visible, false);
+      escape::sync(&app, controls_visible, false, crate::ruler::is_active(&app));
       return Err(error);
     }
   }

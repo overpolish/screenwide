@@ -12,7 +12,7 @@ import {
 } from "../recording-sources/api";
 import { useRecordingSourceStore } from "../recording-sources/store";
 import { MonitorDetails, Region } from "../recording-sources/types";
-import { setRulerScreenshotMode } from "../ruler/api";
+import { cancelRuler, setRulerScreenshotMode } from "../ruler/api";
 import { captureStill, ScreenshotDestination } from "../screenshots/api";
 import { ShortcutAction } from "../settings/types";
 
@@ -101,7 +101,7 @@ export const beginScreenshotCapture = async (
   }
 };
 
-export const endScreenshotCapture = async () => {
+export const endScreenshotCapture = async (dismissRuler = false) => {
   const { recordingMode, selectedMonitor, setScreenshotCapture } =
     useRecordingSourceStore.getState();
   const recordingMonitor = recordingMode === "region" ? selectedMonitor : null;
@@ -121,9 +121,9 @@ export const endScreenshotCapture = async () => {
     // leave the recording controls and ruler exactly where the user had them.
     () => setRegionSelectorPassthrough(recordingMonitor === null),
     ...(recordingMonitor ? [() => showRegionSelector(recordingMonitor)] : []),
-    // Restoring ruler focus comes last so re-showing the normal recording
-    // region cannot take Escape back from the overlay opened most recently.
-    () => setRulerScreenshotMode(false),
+    // Ruler teardown/focus restoration comes last so re-showing the normal
+    // recording region cannot take Escape back during cleanup.
+    () => (dismissRuler ? cancelRuler() : setRulerScreenshotMode(false)),
   ]);
 };
 

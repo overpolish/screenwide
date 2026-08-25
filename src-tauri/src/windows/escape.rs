@@ -12,13 +12,16 @@ static ARMED: AtomicBool = AtomicBool::new(false);
 const ESCAPE: &str = "Escape";
 const DISMISS_REQUESTED_EVENT: &str = "recording-ui://dismiss-requested";
 
-const fn should_be_armed(controls_visible: bool, screenshot_session: bool) -> bool {
-  controls_visible && !screenshot_session
+const fn should_be_armed(
+  controls_visible: bool,
+  screenshot_session: bool,
+  ruler_active: bool,
+) -> bool {
+  controls_visible && !screenshot_session && !ruler_active
 }
 
-/// The screenshot overlay borrows Escape while its one-shot capture is open.
-/// Otherwise the visible recording bar owns it even though its panel does not
-/// take focus.
+/// A capture overlay borrows Escape while it is active. Otherwise the visible
+/// recording bar owns it even though its panel does not take focus.
 pub(super) fn arm(app: &AppHandle) {
   if ARMED
     .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
@@ -58,12 +61,16 @@ pub(super) fn disarm(app: &AppHandle) {
   }
 }
 
-/// Gives Escape to exactly one owner. A screenshot overlay needs the ordinary
-/// key event in its WebView, so the recording UI's global shortcut must be
-/// absent for the entire screenshot session rather than merely ignoring its
-/// callback.
-pub(super) fn sync(app: &AppHandle, controls_visible: bool, screenshot_session: bool) {
-  if should_be_armed(controls_visible, screenshot_session) {
+/// Gives Escape to exactly one owner. Screenshot and ruler overlays need the
+/// ordinary key event in their focused WebView, so the recording UI's global
+/// shortcut must be absent rather than merely ignoring its callback.
+pub(super) fn sync(
+  app: &AppHandle,
+  controls_visible: bool,
+  screenshot_session: bool,
+  ruler_active: bool,
+) {
+  if should_be_armed(controls_visible, screenshot_session, ruler_active) {
     arm(app);
   } else {
     disarm(app);
@@ -76,8 +83,13 @@ mod tests {
 
   #[test]
   fn screenshot_session_borrows_escape_from_visible_recording_ui() {
-    assert!(!should_be_armed(true, true));
-    assert!(should_be_armed(true, false));
-    assert!(!should_be_armed(false, false));
+    assert!(!should_be_armed(true, true, false));
+    assert!(should_be_armed(true, false, false));
+    assert!(!should_be_armed(false, false, false));
+  }
+
+  #[test]
+  fn ruler_borrows_escape_from_visible_recording_ui() {
+    assert!(!should_be_armed(true, false, true));
   }
 }
