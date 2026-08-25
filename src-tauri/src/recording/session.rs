@@ -12,16 +12,17 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{
-  capture, cursor::CursorRecorder, encoding, snapshot, state, CameraCaptureMode,
-  CaptureStartupConfig, FinalizeInfo, PrimaryCaptureSource, RecordingMode, RecordingStatus,
-  StartRecordingOptions, SystemAudioSelection,
+  capture, encoding, snapshot, state, CameraCaptureMode, CaptureStartupConfig, FinalizeInfo,
+  PrimaryCaptureSource, RecordingMode, RecordingStatus, StartRecordingOptions,
+  SystemAudioSelection,
 };
 
 mod cancellation;
+mod sidecars;
 
 pub(crate) use cancellation::cancelled_marker;
 pub(super) use cancellation::{discard_capture, mark_capture_cancelled};
-
+use sidecars::RecordingSidecars;
 const RECORDING_ERROR_EVENT: &str = "recording://error";
 /// Emitted when a recording starts without one or more selected inputs whose
 /// devices were no longer available; the bar tells the user instead of the
@@ -37,7 +38,7 @@ pub(super) const FIRST_FRAME_TIMEOUT: Duration = Duration::from_secs(5);
 /// Everything a running recording is, from the state machine's side: a live
 /// capture session and the file it is filling.
 pub(super) struct CaptureHandles {
-  cursor: Option<CursorRecorder>,
+  sidecars: RecordingSidecars,
   output_path: PathBuf,
   session: capture::CaptureSession,
   source_scale_factor: f32,
@@ -156,6 +157,15 @@ pub(super) fn records_cursor(mode: RecordingMode) -> bool {
     )
 }
 
+pub(super) fn records_keyboard(mode: RecordingMode, enabled: bool) -> bool {
+  cfg!(target_os = "macos")
+    && enabled
+    && matches!(
+      mode,
+      RecordingMode::Screen | RecordingMode::Region | RecordingMode::Window
+    )
+}
+
 impl CaptureHandles {
   pub(super) fn mark_stopped_at(&self, at: Instant) {
     #[cfg(target_os = "windows")]
@@ -240,6 +250,8 @@ pub(super) fn begin_capture(
   // baking off, or a clean recording turn the editable cursor layer on.
   let cursor_path = records_cursor(options.mode)
     .then(|| directory.join(encoding::cursor_temp_file_name(started_at)));
+  let keyboard_path = records_keyboard(options.mode, options.capture_keyboard_shortcuts)
+    .then(|| directory.join(encoding::keyboard_temp_file_name(started_at)));
 
   // Reported at most once per recording, from the writer thread, however many
   // frames the failure goes on to affect.
@@ -303,11 +315,14 @@ pub(super) fn begin_capture(
     if let Some(camera_path) = &camera_path {
       let _ = std::fs::remove_file(camera_path);
     }
+    if let Some(keyboard_path) = &keyboard_path {
+      let _ = std::fs::remove_file(keyboard_path);
+    }
   })?;
 
-  let cursor = match (cursor_path, cursor_source) {
-    (Some(path), Some(source)) => match CursorRecorder::start(path, timeline_origin, source) {
-      Ok(cursor) => Some(cursor),
+  let sidecars =
+    match RecordingSidecars::start(cursor_path, cursor_source, keyboard_path, timeline_origin) {
+      Ok(sidecars) => sidecars,
       Err(error) => {
         session.cancel();
         let _ = std::fs::remove_file(&output_path);
@@ -316,17 +331,7 @@ pub(super) fn begin_capture(
         }
         return Err(error);
       }
-    },
-    (None, _) => None,
-    (Some(_), None) => {
-      session.cancel();
-      let _ = std::fs::remove_file(&output_path);
-      if let Some(camera_path) = &camera_path {
-        let _ = std::fs::remove_file(camera_path);
-      }
-      return Err("The capture source has no cursor coordinate space".to_owned());
-    }
-  };
+    };
 
   if system_audio_skipped.load(std::sync::atomic::Ordering::Acquire) {
     skipped_inputs.push("systemAudio");
@@ -351,7 +356,7 @@ pub(super) fn begin_capture(
 
   Ok((
     CaptureHandles {
-      cursor,
+      sidecars,
       output_path,
       session,
       source_scale_factor,
@@ -364,56 +369,64 @@ pub(super) fn begin_capture(
 pub(super) fn pause_capture(handles: &CaptureHandles) {
   let at = Instant::now();
   handles.session.pause_at(at);
-  if let Some(cursor) = &handles.cursor {
-    cursor.pause(at);
-  }
+  handles.sidecars.pause(at);
 }
 
 pub(super) fn resume_capture(handles: &CaptureHandles) -> Result<(), String> {
   let at = Instant::now();
   handles.session.resume_at(at)?;
-  if let Some(cursor) = &handles.cursor {
-    cursor.resume(at);
-  }
+  handles.sidecars.resume(at);
   Ok(())
 }
 
-/// Finishes the movie, returning it alongside the name to suggest for it.
 pub(super) fn finalize_capture(
   handles: CaptureHandles,
   stopped_at: Instant,
 ) -> Result<(FinalizeInfo, String), String> {
   let CaptureHandles {
-    cursor,
+    sidecars,
     output_path,
     session,
     source_scale_factor,
     started_at,
   } = handles;
 
-  let cursor_path = cursor.map(CursorRecorder::stop).transpose();
+  let stopped_sidecars = sidecars.stop();
   let mut info = match session.stop_at(stopped_at) {
     Ok(info) => info,
     Err(error) => {
       // Nothing playable came out, so nothing is left lying around either.
       let _ = std::fs::remove_file(&output_path);
-      if let Ok(Some(path)) = &cursor_path {
-        let _ = std::fs::remove_file(path);
-      }
+      sidecars::remove_stopped(&stopped_sidecars);
       return Err(error);
     }
   };
-  info.cursor_path = match cursor_path {
+  info.cursor_path = match stopped_sidecars.cursor {
     Ok(path) => path,
     Err(error) => {
       let _ = std::fs::remove_file(&info.path);
       if let Some(camera) = &info.camera {
         let _ = std::fs::remove_file(&camera.path);
       }
+      if let Ok(Some(path)) = &stopped_sidecars.keyboard {
+        let _ = std::fs::remove_file(path);
+      }
+      return Err(error);
+    }
+  };
+  info.keyboard_path = match stopped_sidecars.keyboard {
+    Ok(path) => path,
+    Err(error) => {
+      let _ = std::fs::remove_file(&info.path);
+      if let Some(camera) = &info.camera {
+        let _ = std::fs::remove_file(&camera.path);
+      }
+      if let Some(path) = &info.cursor_path {
+        let _ = std::fs::remove_file(path);
+      }
       return Err(error);
     }
   };
   info.source_scale_factor = source_scale_factor;
-
   Ok((info, crate::screenshots::capture_file_stem(started_at)))
 }

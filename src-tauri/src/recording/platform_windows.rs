@@ -101,7 +101,6 @@ impl AudioOnlyClock {
     u64::try_from(elapsed.saturating_sub(paused).as_millis()).unwrap_or(u64::MAX)
   }
 }
-
 impl CaptureSession {
   pub fn mark_stopped_at(&self, at: Instant) {
     let _ = self.stopped_at.set(at);
@@ -163,6 +162,7 @@ impl CaptureSession {
       return Ok(FinalizeInfo {
         camera: None,
         cursor_path: None,
+        keyboard_path: None,
         duration_ms,
         has_microphone,
         has_system_audio,

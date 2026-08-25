@@ -106,7 +106,7 @@
         "label": "recording-bar",
         "title": "Screenwide Recording Bar",
         "url": "/recording-bar",
-        "width": 648,
+        "width": 672,
         "height": 92,
         "acceptFirstMouse": true,
         "alwaysOnTop": false,

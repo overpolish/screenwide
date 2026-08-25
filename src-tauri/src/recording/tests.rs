@@ -212,6 +212,31 @@ fn cursor_metadata_does_not_depend_on_the_native_cursor_pixels() {
 }
 
 #[test]
+fn keyboard_metadata_requires_an_enabled_screen_capture() {
+  for mode in [
+    RecordingMode::Screen,
+    RecordingMode::Region,
+    RecordingMode::Window,
+  ] {
+    assert_eq!(
+      session::records_keyboard(mode, true),
+      cfg!(target_os = "macos")
+    );
+    assert!(!session::records_keyboard(mode, false));
+  }
+  assert!(!session::records_keyboard(RecordingMode::Camera, true));
+  assert!(!session::records_keyboard(RecordingMode::Audio, true));
+}
+
+#[test]
+fn older_recording_requests_do_not_capture_keyboard_shortcuts() {
+  let options: StartRecordingOptions =
+    serde_json::from_str(r#"{"mode":"screen","monitorId":7}"#).unwrap();
+
+  assert!(!options.capture_keyboard_shortcuts);
+}
+
+#[test]
 fn accepts_a_region_with_monitor_local_geometry() {
   let options: StartRecordingOptions = serde_json::from_str(
     r#"{
@@ -262,6 +287,7 @@ fn rejects_a_window_without_a_capture_identifier() {
 
 fn screen_options() -> StartRecordingOptions {
   StartRecordingOptions {
+    capture_keyboard_shortcuts: false,
     mode: RecordingMode::Screen,
     monitor_id: Some(1),
     window_id: None,

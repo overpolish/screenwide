@@ -100,6 +100,7 @@ export const InputsEnabled: Story = {
   args: {
     initialInputs: {
       camera: true,
+      keyboardShortcuts: true,
       microphone: true,
       showCursor: true,
       systemAudio: true,
@@ -114,6 +115,7 @@ export const MissingEnabledInputs: Story = {
     hasSystemAudioWarning: true,
     initialInputs: {
       camera: true,
+      keyboardShortcuts: true,
       microphone: true,
       showCursor: true,
       systemAudio: true,

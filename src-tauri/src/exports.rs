@@ -8,6 +8,8 @@ pub(crate) mod commands;
 pub(crate) mod cursor_effects;
 mod cursor_export;
 mod directory;
+pub(crate) mod effect_animation;
+pub(crate) mod keyboard_effects;
 mod media_preview;
 mod naming;
 mod preferences;
@@ -16,6 +18,7 @@ pub(crate) mod preview_platform;
 mod preview_workspace_model;
 pub(crate) mod recording_preview;
 pub(crate) mod recording_preview_player;
+mod recording_sidecar;
 mod recovery;
 pub(crate) mod save;
 pub(crate) mod screenshot_preview;
@@ -36,6 +39,7 @@ use preferences::{
   load_screenshot_output, load_screenshot_radius, remember_completed_export,
   remember_screenshot_background_radius, remember_screenshot_output, remember_screenshot_radius,
 };
+use recording_sidecar::{RecordingCursor, RecordingKeyboard};
 pub use recovery::initialize;
 #[cfg(test)]
 use recovery::orphan_plan;
@@ -164,6 +168,7 @@ pub enum ExportArtifact {
     audio_tracks: Vec<RecordingAudioTrack>,
     camera: Option<RecordingCamera>,
     cursor: Option<RecordingCursor>,
+    keyboard: Option<RecordingKeyboard>,
     id: u64,
     duration_ms: u64,
     height: u32,
@@ -178,7 +183,6 @@ pub enum ExportArtifact {
 }
 
 /// One independently editable image in a screenshot workspace.
-///
 /// Pixels remain owned by Rust and are uploaded to the native renderer once;
 /// the webview only ever needs this identity and the scene metadata added in
 /// the next slice.
@@ -256,6 +260,7 @@ fn compose_screenshot_workspace(
       None,
       None,
       None,
+      None,
       false,
       false,
     )?;
@@ -265,6 +270,7 @@ fn compose_screenshot_workspace(
         &output.output_for(item),
         0.0,
         true,
+        None,
         None,
         None,
         None,
@@ -324,6 +330,9 @@ pub enum ExportArtifactSnapshot {
     can_compress: bool,
     cursor_data_version: Option<u16>,
     has_cursor_data: bool,
+    keyboard_data_version: Option<u16>,
+    keyboard_maximum_width_units: Option<u16>,
+    has_keyboard_data: bool,
     id: u64,
     suggested_file_stem: String,
     extension: String,
@@ -366,11 +375,6 @@ pub struct RecordingCamera {
   pub width: u32,
 }
 
-pub struct RecordingCursor {
-  pub format_version: u16,
-  pub path: PathBuf,
-}
-
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CameraOverlaySettings {
@@ -395,6 +399,7 @@ pub struct RecordingExportOptions {
   pub collapse_audio: bool,
   pub compression: u8,
   pub cursor_effects: cursor_effects::CursorEffectSettings,
+  pub keyboard_effects: keyboard_effects::KeyboardEffectSettings,
   pub enabled_stream_indices: Vec<usize>,
   pub include_camera: bool,
   pub include_primary_video: bool,
@@ -402,7 +407,6 @@ pub struct RecordingExportOptions {
   pub recording_output: RecordingOutputSettings,
   pub screenshot_output: ScreenshotWorkspaceOutputSettings,
 }
-
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingOutputSettings {

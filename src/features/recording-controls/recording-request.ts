@@ -42,6 +42,7 @@ export const startRecordingOptions = (): StartRecordingOptions => {
         ? (cameraPalById[selectedCamera.id] ?? false)
         : false,
     cameraWidth: wantsCamera ? (selectedCameraMode?.width ?? null) : null,
+    captureKeyboardShortcuts: inputs.keyboardShortcuts,
     fps,
     microphoneId: inputs.microphone ? (selectedMicrophone?.id ?? null) : null,
     mode: recordingMode,

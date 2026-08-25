@@ -26,7 +26,10 @@ use tauri::ipc::Channel;
 
 use super::super::{video::VideoFrame, PlayerSources};
 use crate::{
-  exports::{cursor_effects::CursorEffectSettings, CameraOverlaySettings, RecordingOutputSettings},
+  exports::{
+    cursor_effects::CursorEffectSettings, keyboard_effects::KeyboardOverlay, CameraOverlaySettings,
+    RecordingOutputSettings,
+  },
   screenshots::{compose_output_layers, CapturedImage},
 };
 
@@ -43,6 +46,7 @@ pub(crate) enum VideoFramePayload {
     screen_output: crate::screenshots::ScreenshotOutputSettings,
     camera_output: crate::screenshots::ScreenshotOutputSettings,
     cursor: Option<crate::exports::cursor_effects::GpuCursor>,
+    keyboard: Option<KeyboardOverlay>,
     overlay: Option<crate::screenshots::StillOverlay>,
     bake_camera: bool,
     seconds: f64,
@@ -58,6 +62,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
       screen_output,
       camera_output,
       cursor,
+      keyboard,
       overlay,
       bake_camera,
       seconds,
@@ -75,6 +80,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
           placement: NativeWorkspacePlacement::default(),
           seconds,
           cursor,
+          keyboard,
           camera: bake_camera.then_some(camera.as_ref()).flatten(),
           camera_pixels: None,
           overlay: overlay.as_ref(),
@@ -92,6 +98,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
               placement: NativeWorkspacePlacement::default(),
               seconds,
               cursor: None,
+              keyboard: None,
               camera: None,
               camera_pixels: None,
               overlay: None,
@@ -177,6 +184,7 @@ pub(crate) fn composed_frame_image(
   bake_camera: bool,
   camera_overlay: CameraOverlaySettings,
   cursor_effects: CursorEffectSettings,
+  keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings,
   recording_output: &RecordingOutputSettings,
 ) -> Result<CapturedImage, String> {
   let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
@@ -203,6 +211,16 @@ pub(crate) fn composed_frame_image(
     cursor_effects,
     (screen.width, screen.height),
   );
+  let keyboard = sources.keyboard.as_deref().and_then(|keyboard| {
+    keyboard.evaluate_fitted(
+      position_ms,
+      keyboard_effects,
+      (
+        recording_output.primary.width,
+        recording_output.primary.height,
+      ),
+    )
+  });
   let (cursor, overlay) = composition::gpu_still_overlay(
     &screen,
     &recording_output.primary,
@@ -225,6 +243,7 @@ pub(crate) fn composed_frame_image(
     }),
     camera.as_ref(),
     overlay.as_ref(),
+    keyboard.as_ref(),
     cursor_effects.clip_at_video_edge,
     false,
   )

@@ -6,8 +6,13 @@ import { Dispatch, RefObject, SetStateAction, useEffect } from "react";
 import {
   setRecordingPreviewAudioVolumes,
   setRecordingPreviewCursorEffects,
+  setRecordingPreviewKeyboardEffects,
 } from "./api";
-import { AudioTrackVolume, CursorEffectSettings } from "./types";
+import {
+  AudioTrackVolume,
+  CursorEffectSettings,
+  KeyboardEffectSettings,
+} from "./types";
 
 /**
  * The preview settings React still pushes on their own channel.
@@ -22,6 +27,7 @@ export function useRecordingPreviewSettings({
   audioTrackVolumes,
   cursorEffects,
   isEnabled,
+  keyboardEffects,
   sessionIdRef,
   setError,
   startedRef,
@@ -29,6 +35,7 @@ export function useRecordingPreviewSettings({
   audioTrackVolumes: AudioTrackVolume[];
   cursorEffects: CursorEffectSettings;
   isEnabled: boolean;
+  keyboardEffects: KeyboardEffectSettings;
   sessionIdRef: RefObject<number>;
   setError: Dispatch<SetStateAction<string | null>>;
   startedRef: RefObject<boolean>;
@@ -40,6 +47,7 @@ export function useRecordingPreviewSettings({
     )
     .join("-");
   const cursor = Object.values(cursorEffects).join("-");
+  const keyboard = Object.values(keyboardEffects).join("-");
   useEffect(() => {
     if (!isEnabled || !startedRef.current) return;
     void setRecordingPreviewAudioVolumes(
@@ -56,4 +64,12 @@ export function useRecordingPreviewSettings({
     ).catch(setError);
     // eslint-disable-next-line @eslint-react/exhaustive-deps
   }, [cursor, isEnabled]);
+  useEffect(() => {
+    if (!isEnabled || !startedRef.current) return;
+    void setRecordingPreviewKeyboardEffects(
+      keyboardEffects,
+      sessionIdRef.current,
+    ).catch(setError);
+    // eslint-disable-next-line @eslint-react/exhaustive-deps
+  }, [isEnabled, keyboard]);
 }

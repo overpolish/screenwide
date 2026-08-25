@@ -13,14 +13,17 @@ import {
   setRecordingPreviewAudioVolumes,
   setRecordingPreviewComposition,
   setRecordingPreviewCursorEffects,
+  setRecordingPreviewKeyboardEffects,
   setRecordingPreviewZoom,
   startRecordingPreviewPlayer,
   stopRecordingPreviewPlayer,
 } from "./api";
 import { ScrubPhase } from "./components/scrub-timeline";
+import { recordingPreviewSettingsKey } from "./recording-preview-settings-key";
 import {
   AudioTrackVolume,
   CursorEffectSettings,
+  KeyboardEffectSettings,
   RecordingPreviewLayout,
 } from "./types";
 import { useRecordingPreviewSettings } from "./use-recording-preview-settings";
@@ -30,15 +33,6 @@ import {
 } from "./use-recording-preview-surface";
 
 let sessionSequence = 0;
-
-const settingsKey = (settings: {
-  audioTrackVolumes: AudioTrackVolume[];
-  bakeCamera: boolean;
-  cameraOverlay: import("./types").CameraOverlaySettings;
-  cursorEffects: CursorEffectSettings;
-  enabledStreamIndices: number[];
-  recordingOutput: import("./screenshot-output").RecordingOutputSettings;
-}) => JSON.stringify(settings);
 
 export function useRecordingPreviewPlayer({
   artifactId,
@@ -50,6 +44,7 @@ export function useRecordingPreviewPlayer({
   enabledStreamIndices,
   isEditorSuspended,
   isEnabled,
+  keyboardEffects,
   nativeEditorOwnsLayout,
   nativeLayoutHasPanes,
   nativeLayoutKey,
@@ -72,6 +67,7 @@ export function useRecordingPreviewPlayer({
   enabledStreamIndices: number[];
   isEditorSuspended: boolean;
   isEnabled: boolean;
+  keyboardEffects: KeyboardEffectSettings;
   nativeEditorOwnsLayout: boolean;
   nativeLayoutHasPanes: boolean;
   nativeLayoutKey: string;
@@ -104,6 +100,7 @@ export function useRecordingPreviewPlayer({
   const onPositionRef = useRef(onPosition);
   const audioTrackVolumesRef = useRef(audioTrackVolumes);
   const cursorEffectsRef = useRef(cursorEffects);
+  const keyboardEffectsRef = useRef(keyboardEffects);
   const compositionRef = useRef({ bakeCamera, cameraOverlay, recordingOutput });
   const enabledStreamIndicesRef = useRef(enabledStreamIndices);
   const durationRef = useRef(0);
@@ -119,14 +116,10 @@ export function useRecordingPreviewPlayer({
   const [durationMs, setDurationMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  // The native compositor owns the pixels; React only tracks whether the first
-  // frame has been presented and what pane layout the session reported.
   const [previewLayout, setPreviewLayout] =
     useState<RecordingPreviewLayout | null>(null);
   const [isPreparing, setIsPreparing] = useState(true);
   const beginPreparing = useCallback(() => {
-    // Starting a session is exactly when the preview goes back to "preparing":
-    // the previous frame is gone and nothing has been presented yet.
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setIsPreparing(true);
   }, []);
@@ -140,6 +133,7 @@ export function useRecordingPreviewPlayer({
   onPositionRef.current = onPosition;
   audioTrackVolumesRef.current = audioTrackVolumes;
   cursorEffectsRef.current = cursorEffects;
+  keyboardEffectsRef.current = keyboardEffects;
   compositionRef.current = { bakeCamera, cameraOverlay, recordingOutput };
   enabledStreamIndicesRef.current = enabledStreamIndices;
 
@@ -147,6 +141,7 @@ export function useRecordingPreviewPlayer({
     audioTrackVolumes,
     cursorEffects,
     isEnabled,
+    keyboardEffects,
     sessionIdRef,
     setError,
     startedRef,
@@ -183,12 +178,13 @@ export function useRecordingPreviewPlayer({
   useEffect(() => {
     if (!isEnabled) return;
     let disposed = false;
-    const initialSettingsKey = settingsKey({
+    const initialSettingsKey = recordingPreviewSettingsKey({
       audioTrackVolumes,
       bakeCamera,
       cameraOverlay,
       cursorEffects,
       enabledStreamIndices,
+      keyboardEffects,
       recordingOutput,
     });
     const sessionId = Date.now() * 1_000 + (++sessionSequence % 1_000);
@@ -259,6 +255,7 @@ export function useRecordingPreviewPlayer({
       cursorEffects,
       enabledStreamIndices,
       eventChannel,
+      keyboardEffects,
       recordingOutput,
       sessionId,
     })
@@ -279,12 +276,13 @@ export function useRecordingPreviewPlayer({
             },
           );
         }
-        const latestSettingsKey = settingsKey({
+        const latestSettingsKey = recordingPreviewSettingsKey({
           audioTrackVolumes: audioTrackVolumesRef.current,
           bakeCamera: compositionRef.current.bakeCamera,
           cameraOverlay: compositionRef.current.cameraOverlay,
           cursorEffects: cursorEffectsRef.current,
           enabledStreamIndices: enabledStreamIndicesRef.current,
+          keyboardEffects: keyboardEffectsRef.current,
           recordingOutput: compositionRef.current.recordingOutput,
         });
         // Startup already installed the exact settings passed above. Repeating
@@ -303,6 +301,10 @@ export function useRecordingPreviewPlayer({
             sessionId,
           ),
           setRecordingPreviewCursorEffects(cursorEffectsRef.current, sessionId),
+          setRecordingPreviewKeyboardEffects(
+            keyboardEffectsRef.current,
+            sessionId,
+          ),
           setRecordingPreviewComposition({
             bakeCamera: compositionRef.current.bakeCamera,
             cameraOverlay: compositionRef.current.cameraOverlay,
@@ -446,9 +448,6 @@ export function useRecordingPreviewPlayer({
       send(normalized, phase);
     }
     if (phase === "end") {
-      // The ready event settles the exact frame and resumes playback if the
-      // gesture began while playing. Starting playback here can race the still
-      // decoder and replace the release frame.
       scrubFinishedRef.current = false;
     }
   };

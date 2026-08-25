@@ -6,6 +6,8 @@ import {
   CameraOff,
   Circle,
   CircleX,
+  Keyboard,
+  KeyboardOff,
   Lock,
   Mic,
   MicOff,
@@ -73,6 +75,7 @@ type RecordingBarProps = {
 
 const defaultInputs: RecordingInputs = {
   camera: false,
+  keyboardShortcuts: false,
   microphone: false,
   showCursor: true,
   systemAudio: false,
@@ -183,7 +186,7 @@ export function RecordingBar({
 
   return (
     <main
-      className="window-surface flex h-full min-h-[92px] w-full min-w-[648px] items-center justify-center overflow-hidden rounded-[10px] bg-content/92 p-2 text-content-fg"
+      className="window-surface flex h-full min-h-[92px] w-full min-w-[672px] items-center justify-center overflow-hidden rounded-[10px] bg-content/92 p-2 text-content-fg"
       data-tauri-drag-region="deep"
       onKeyDownCapture={(event) => {
         if (optionsButtonRef.current?.contains(event.target as Node)) return;
@@ -229,7 +232,7 @@ export function RecordingBar({
 
       <Separator className="h-[60px]" orientation="vertical" spacing="sm" />
 
-      <div className="mr-2 flex min-w-24 flex-col">
+      <div className="mr-2 flex min-w-[120px] flex-col">
         <div className="flex justify-between px-2">
           <InputToggle
             hasWarning={hasSystemAudioWarning}
@@ -280,6 +283,16 @@ export function RecordingBar({
             on={<MousePointer2 size={16} />}
             onChange={(selected) => {
               setInput("showCursor", selected);
+            }}
+          />
+          <InputToggle
+            isDisabled={!isScreenCapture || isRecordingActive}
+            isSelected={isScreenCapture && inputs.keyboardShortcuts}
+            label="Keyboard shortcuts"
+            off={<KeyboardOff size={16} />}
+            on={<Keyboard size={16} />}
+            onChange={(selected) => {
+              setInput("keyboardShortcuts", selected);
             }}
           />
         </div>

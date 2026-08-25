@@ -8,6 +8,7 @@ import {
   AudioTrackVolume,
   CameraOverlaySettings,
   CursorEffectSettings,
+  KeyboardEffectSettings,
   PreparedAudioTrack,
   RecordingPreviewLayout,
   RecordingTrackId,
@@ -31,10 +32,12 @@ export type ScrubPreviewProps = {
   enabledStreamIndices?: number[];
   enabledVideoTracks?: RecordingVideoTrackId[];
   hasCursorData?: boolean;
+  hasKeyboardData?: boolean;
   inspector?: ReactNode;
   isPreparingAudio?: boolean;
   isPreparingPreview?: boolean;
   isSaving?: boolean;
+  keyboardEffects?: KeyboardEffectSettings;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onEnabledTracksChange?: (streamIndices: number[]) => void;
   onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;

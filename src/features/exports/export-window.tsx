@@ -23,6 +23,7 @@ import {
   cameraExportSettings,
   DEFAULT_COMPRESSION,
   DEFAULT_CURSOR_EFFECTS,
+  DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
   recordingSavePlan,
 } from "./recording-export-settings";
@@ -68,6 +69,7 @@ export function ExportWindow() {
   const directory = useExportStore(selectDirectory(kind));
   const {
     cursorEffects: persistedCursorEffects,
+    keyboardEffects: persistedKeyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
     recordingOutput: persistedRecordingOutput,
     screenshotBackgroundRadiusPercent: persistedScreenshotBackgroundRadius,
     screenshotOutput: persistedScreenshotOutput,
@@ -81,6 +83,9 @@ export function ExportWindow() {
   const [bakeCamera, setBakeCamera] = useState(false);
   const [cameraOverlay, setCameraOverlay] = useState(defaultCameraOverlay);
   const [cursorEffects, setCursorEffects] = useState(DEFAULT_CURSOR_EFFECTS);
+  const [keyboardEffects, setKeyboardEffects] = useState(
+    DEFAULT_KEYBOARD_EFFECTS,
+  );
   const [cameraResolutionScalePercent, setCameraResolutionScalePercent] =
     useState(100);
   const [resolutionScalePercent, setResolutionScalePercent] = useState(100);
@@ -223,6 +228,7 @@ export function ExportWindow() {
       collapseAudio,
       compression,
       cursorEffects,
+      keyboardEffects,
       recordingOutput,
       resolutionScalePercent,
       screenshotOutput,
@@ -238,6 +244,7 @@ export function ExportWindow() {
       collapseAudio,
       compression,
       cursorEffects,
+      keyboardEffects,
       recordingOutput,
       resolutionScalePercent,
       screenshotOutput,
@@ -254,6 +261,7 @@ export function ExportWindow() {
     setCollapseAudio(next.collapseAudio);
     setCompression(next.compression);
     setCursorEffects(next.cursorEffects);
+    setKeyboardEffects(next.keyboardEffects);
     setResolutionScalePercent(next.resolutionScalePercent);
     setRecordingOutput({
       ...next.recordingOutput,
@@ -294,6 +302,7 @@ export function ExportWindow() {
     enabledStreamIndices,
     includeCamera,
     includePrimaryVideo,
+    keyboardEffects,
     recordingOutput,
     resolutionScalePercent,
   });
@@ -315,6 +324,7 @@ export function ExportWindow() {
     setBakeCamera(false);
     setCameraOverlay(defaultCameraOverlay(artifact));
     setCursorEffects(persistedCursorEffects);
+    setKeyboardEffects(persistedKeyboardEffects);
     setCollapseAudio(false);
     setCompression(canCompress ? DEFAULT_COMPRESSION : 0);
     setCameraCompression(canCompress ? DEFAULT_COMPRESSION : 0);
@@ -510,6 +520,7 @@ export function ExportWindow() {
         isPreparingRecordingAudio={isPreparingRecordingPreview}
         isPreparingRecordingPreview={isPreparingRecordingPreview}
         isSaving={isSaving}
+        keyboardEffects={keyboardEffects}
         onBakeCameraChange={handleBakeCameraChange}
         onBrowse={() => {
           browseExportDirectory()
@@ -568,6 +579,7 @@ export function ExportWindow() {
           setFileStem(value);
           setError(null);
         }}
+        onKeyboardEffectsChange={setKeyboardEffects}
         onMinimize={() => {
           getCurrentWindow()
             .minimize()
@@ -602,6 +614,7 @@ export function ExportWindow() {
             enabledStreamIndices,
             includeCamera,
             includePrimaryVideo,
+            keyboardEffects,
             originalResolutionScale,
             recordingOutput,
             resolutionScalePercent,

@@ -17,7 +17,10 @@ import {
   uncroppedCameraPreviewOverlay,
 } from "../camera-overlay-geometry";
 import { PREVIEW_FRAME_MS } from "../duration";
-import { defaultCameraOverlay } from "../recording-export-settings";
+import {
+  DEFAULT_KEYBOARD_EFFECTS,
+  defaultCameraOverlay,
+} from "../recording-export-settings";
 import {
   applyScreenshotCropGesture,
   commitScreenshotCrop,
@@ -51,6 +54,7 @@ import {
   RecordingCanvasTools,
   RecordingCanvasTool,
 } from "./recording-crop-toggle";
+import { usePublishRecordingOutputDimensions } from "./recording-output-dimensions-channel";
 import { RecordingOutputPreviewViewport } from "./recording-output-preview-viewport";
 import { RecordingPlaybackControls } from "./recording-playback-controls";
 import { RECORDING_PREVIEW_PANE_GAP } from "./recording-preview-layout";
@@ -91,6 +95,7 @@ export function NativeRecordingPreview({
   isPreparingAudio = false,
   isPreparingPreview = false,
   isSaving = false,
+  keyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
   onCameraOverlayChange,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
@@ -185,8 +190,8 @@ export function NativeRecordingPreview({
       camera: previewOutputDimensions?.camera,
       primary: previewOutputDimensions?.primary ?? { height: 64, width: 64 },
     });
-  // Only the layer order matters here, and it is the one part of the output a
-  // resize never touches; keying on it holds the array identity across a drag.
+  usePublishRecordingOutputDimensions(effectiveRecordingOutput.primary);
+  // Resizing never changes layer order, so keep its identity across the drag.
   const videoTrackOrder = useMemo(
     () => recordingVideoTrackOrder(effectiveRecordingOutput),
     // eslint-disable-next-line @eslint-react/exhaustive-deps
@@ -921,6 +926,7 @@ export function NativeRecordingPreview({
     enabledStreamIndices: selectedStreamIndices,
     isEditorSuspended,
     isEnabled: previewLayout === undefined,
+    keyboardEffects,
     nativeEditorOwnsLayout,
     nativeLayoutHasPanes: enabledVideoTracks.length > 0,
     nativeLayoutKey: `${bakeCamera ? "baked" : "split"}|${enabledVideoTracks.join(":")}|${videoTrackOrderList.join(":")}`,
@@ -1190,12 +1196,14 @@ export function NativeRecordingPreview({
     bakeCamera,
     cameraOverlay,
     cursorEffects,
+    keyboardEffects,
     recordingOutput: effectiveRecordingOutput,
   });
   copyPayloadRef.current = {
     bakeCamera,
     cameraOverlay,
     cursorEffects,
+    keyboardEffects,
     recordingOutput: effectiveRecordingOutput,
   };
   const getPositionMs = player.getPositionMs;
@@ -1206,6 +1214,7 @@ export function NativeRecordingPreview({
       bakeCamera: copyPayloadRef.current.bakeCamera,
       cameraOverlay: copyPayloadRef.current.cameraOverlay,
       cursorEffects: copyPayloadRef.current.cursorEffects,
+      keyboardEffects: copyPayloadRef.current.keyboardEffects,
       positionMs: getPositionMs(),
       recordingOutput: copyPayloadRef.current.recordingOutput,
     }).catch((cause: unknown) => {

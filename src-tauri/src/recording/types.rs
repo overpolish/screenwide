@@ -69,6 +69,8 @@ pub struct StartRecordingOptions {
   #[serde(default)]
   pub show_cursor: bool,
   #[serde(default)]
+  pub capture_keyboard_shortcuts: bool,
+  #[serde(default)]
   pub system_audio: bool,
   #[serde(default)]
   pub system_audio_application_ids: Vec<String>,

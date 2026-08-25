@@ -79,6 +79,16 @@ export type CursorEffectSettings = {
   smoothMovement: boolean;
 };
 
+export type KeyboardEffectAnimation = "fade" | "none" | "pop";
+export type KeyboardEffectAppearance = "dark" | "light";
+
+export type KeyboardEffectSettings = {
+  animation: KeyboardEffectAnimation;
+  appearance: KeyboardEffectAppearance;
+  bake: boolean;
+  sizePercent: number;
+};
+
 export const recordingAudioTrackId = (streamIndex: number): RecordingTrackId =>
   `audio:${String(streamIndex)}` as RecordingTrackId;
 
@@ -124,6 +134,8 @@ export type ExportArtifact =
       /** Zero for a recording recovered from an earlier run, whose length is unknown. */
       durationMs: number;
       hasCursorData: boolean;
+      hasKeyboardData: boolean;
+      keyboardDataVersion: number | null;
       kind: "recording";
       originalSizeBytes: number;
       /** The working recording consumed by the native preview and export paths. */
@@ -131,6 +143,7 @@ export type ExportArtifact =
       primaryKind: "audio" | "camera" | "screen";
       /** Captured pixels per logical display point, multiplied by 100. */
       sourceScalePercent: number;
+      keyboardMaximumWidthUnits?: number | null;
     })
   | (ExportArtifactBase & {
       items: { height: number; id: number; width: number }[];
@@ -153,6 +166,8 @@ export type ExportSnapshot = {
   screenshotRadiusPercent: number;
   /** The workspace this describes: the change event is app-wide. */
   workspace: ExportKind;
+  /** Absent in snapshots from builds before keyboard preview settings. */
+  keyboardEffects?: KeyboardEffectSettings;
 };
 
 export type ExportSnapshots = Record<ExportKind, ExportSnapshot>;
@@ -170,6 +185,12 @@ export const initialExportSnapshot = (
     smoothMovement: true,
   },
   directory: null,
+  keyboardEffects: {
+    animation: "pop",
+    appearance: "light",
+    bake: true,
+    sizePercent: 100,
+  },
   recordingOutput: null,
   screenshotBackgroundRadiusPercent: 0,
   screenshotOutput: null,

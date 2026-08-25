@@ -270,6 +270,7 @@ pub(crate) fn composed_frame_image(
   bake_camera: bool,
   camera_overlay: crate::exports::CameraOverlaySettings,
   cursor_effects: crate::exports::cursor_effects::CursorEffectSettings,
+  _keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings,
   recording_output: &crate::exports::RecordingOutputSettings,
 ) -> Result<crate::screenshots::CapturedImage, String> {
   let surface = sources

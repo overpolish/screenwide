@@ -17,6 +17,7 @@ use tauri::{ipc::Channel, AppHandle, Manager};
 
 mod audio;
 pub(crate) mod commands;
+pub(crate) mod keyboard_command;
 mod layout;
 mod lifecycle;
 mod output_gesture;
@@ -38,6 +39,7 @@ use self::sources::{sources, PlayerSources};
 use self::worker::{PlaybackMode, PreviewPlayerWorker};
 #[cfg(target_os = "macos")]
 use super::cursor_effects::GpuArtwork;
+use super::keyboard_effects::{KeyboardCompositor, KeyboardEffectSettings};
 use super::preview_platform::workspace_editor::WorkspaceScene;
 use super::preview_platform::RecordingPreviewSurface;
 use super::{
@@ -65,6 +67,8 @@ pub(crate) struct PreviewPlayerSettings {
   pub bake_camera: bool,
   pub camera_overlay: CameraOverlaySettings,
   pub cursor_effects: CursorEffectSettings,
+  #[serde(default)]
+  pub keyboard_effects: KeyboardEffectSettings,
   pub recording_output: RecordingOutputSettings,
 }
 

@@ -4,6 +4,7 @@
 use super::*;
 
 mod cursor;
+mod lifecycle;
 mod location;
 mod recording_file;
 
@@ -32,6 +33,7 @@ pub async fn save_export(
     collapse_audio,
     compression,
     cursor_effects,
+    keyboard_effects,
     enabled_stream_indices,
     include_camera,
     include_primary_video,
@@ -104,6 +106,7 @@ pub async fn save_export(
           audio_tracks,
           camera,
           cursor,
+          keyboard,
           duration_ms,
           height,
           id,
@@ -134,6 +137,10 @@ pub async fn save_export(
             .as_ref()
             .filter(|_| cursor_effects.bake)
             .map(|cursor| cursor.path.as_path());
+          let baked_keyboard = keyboard
+            .as_ref()
+            .filter(|_| keyboard_effects.bake)
+            .map(|keyboard| keyboard.path.as_path());
           let primary_output = &recording_output.primary;
           let camera_output = &recording_output.camera;
 
@@ -181,7 +188,7 @@ pub async fn save_export(
               if saved.is_some() {
                 let _ = std::fs::remove_file(working);
                 let _ = std::fs::remove_file(&camera.path);
-                cursor::remove_working_file(cursor.as_ref());
+                recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
               }
               return Ok(saved);
             }
@@ -202,7 +209,7 @@ pub async fn save_export(
               if let Some(camera) = camera {
                 let _ = std::fs::remove_file(&camera.path);
               }
-              cursor::remove_working_file(cursor.as_ref());
+              recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
             }
             return Ok(saved);
           }
@@ -229,6 +236,7 @@ pub async fn save_export(
               recording_output.camera_on_top,
               (compression, resolution_scale_percent, *source_scale_percent),
               baked_cursor.map(|cursor| (cursor, cursor_effects)),
+              baked_keyboard.map(|keyboard| (keyboard, keyboard_effects)),
               primary_output,
               &progress_app,
               &job_cancellation,
@@ -236,7 +244,7 @@ pub async fn save_export(
             if saved.is_some() {
               let _ = std::fs::remove_file(working);
               let _ = std::fs::remove_file(&camera.path);
-              cursor::remove_working_file(cursor.as_ref());
+              recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
             }
             return Ok(saved);
           }
@@ -254,6 +262,8 @@ pub async fn save_export(
             compression,
             cursor: baked_cursor,
             cursor_effects,
+            keyboard: baked_keyboard,
+            keyboard_effects,
             directory: &writing,
             duration_ms: *duration_ms,
             height: *height,
@@ -335,7 +345,7 @@ pub async fn save_export(
               let _ = std::fs::remove_file(&camera.path);
             }
           }
-          cursor::remove_working_file(cursor.as_ref());
+          recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
           Ok(Some(saved))
         }
       }
@@ -346,20 +356,7 @@ pub async fn save_export(
   .await
   .map_err(|error| error.to_string())?;
 
-  {
-    let state = app.state::<ExportState>();
-    let mut active = state
-      .slot(kind)
-      .active_export
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if active
-      .as_ref()
-      .is_some_and(|job| job.artifact_id == artifact_id)
-    {
-      active.take();
-    }
-  }
+  lifecycle::clear_active_export(&app, kind, artifact_id);
 
   let path = match result {
     Ok(Some(path)) => path,
@@ -406,6 +403,5 @@ pub async fn save_export(
       eprintln!("Could not open the export location: {error}");
     }
   }
-
   Ok(Some(path))
 }

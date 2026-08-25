@@ -6,6 +6,7 @@ use std::ffi::c_char;
 
 use crate::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
 use crate::exports::cursor_effects::{GpuArtwork, GpuCursor, NativeGpuArtwork, NativeGpuCursor};
+use crate::exports::keyboard_effects::KeyboardOverlay;
 use crate::screenshots::{
   output_placement, parse_hex_colour, physical_capture_rect, CapturedImage,
   ScreenshotOutputSettings, ScreenshotTarget,
@@ -80,6 +81,7 @@ unsafe extern "C" {
     cursor_artwork_count: u32,
     camera_rgba: *const u8,
     overlay: *const StillOverlay,
+    keyboard: *const KeyboardOverlay,
     output_rgba: *mut u8,
     error_text: *mut c_char,
     error_capacity: usize,
@@ -186,6 +188,7 @@ pub(crate) fn compose_output_layers(
   cursor: Option<(&GpuCursor, &[GpuArtwork])>,
   camera: Option<&CapturedImage>,
   overlay: Option<&StillOverlay>,
+  keyboard: Option<&KeyboardOverlay>,
   clip_cursor_at_video_edge: bool,
   foreground_only: bool,
 ) -> Result<CapturedImage, String> {
@@ -214,6 +217,7 @@ pub(crate) fn compose_output_layers(
       native_artworks.len().try_into().unwrap_or(u32::MAX),
       camera.map_or(std::ptr::null(), |image| image.rgba.as_ptr()),
       overlay.map_or(std::ptr::null(), std::ptr::from_ref),
+      keyboard.map_or(std::ptr::null(), std::ptr::from_ref),
       rgba.as_mut_ptr(),
       error.as_mut_ptr(),
       error.len(),

@@ -4,6 +4,7 @@
 pub(crate) mod commands;
 pub(crate) mod cursor;
 mod encoding;
+pub(crate) mod keyboard;
 mod microphone;
 mod monitor;
 #[cfg(target_os = "macos")]

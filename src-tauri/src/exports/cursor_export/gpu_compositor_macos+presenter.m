@@ -9,6 +9,7 @@
 
 #import "gpu_compositor_macos.h"
 #import "gpu_compositor_macos_cursor_resources.h"
+#import "gpu_compositor_macos_keyboard.h"
 
 extern __attribute__((visibility("hidden"))) NSString *const shader_source;
 
@@ -30,7 +31,7 @@ extern __attribute__((visibility("hidden"))) NSString *const shader_source;
 @property(nonatomic, strong) NSMutableDictionary<NSNumber *, id<MTLBuffer>> *workspaceSources;
 @property(nonatomic, strong) NSMutableDictionary<NSNumber *, id<MTLBuffer>> *workspaceCameraSources;
 @property(nonatomic, strong) NSMutableDictionary<NSNumber *, NSValue *> *workspaceSourceSizes;
-@property(nonatomic, strong) NSMutableArray<NSValue *> *workspaceLayers;
+@property(nonatomic, strong) NSMutableArray<NSValue *> *workspaceLayers; @property(nonatomic, strong) NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *> *keyboardArtworks;
 @property(nonatomic, strong) NSArray<NSValue *> *workspaceResizeLayers;
 @property(nonatomic, strong) id<MTLComputePipelineState> workspaceClearPipeline;
 @property(nonatomic, strong) id<MTLComputePipelineState> workspaceLayerPipeline;
@@ -66,6 +67,7 @@ void *screenwide_gpu_still_presenter_create(void) {
     presenter.workspaceCameraSources = [NSMutableDictionary dictionary];
     presenter.workspaceSourceSizes = [NSMutableDictionary dictionary];
     presenter.workspaceLayers = [NSMutableArray array];
+    presenter.keyboardArtworks = [NSMutableDictionary dictionary];
     const uint8_t transparentCursor[4] = {0, 0, 0, 0};
     const ScreenwideCursorArtwork emptyCursor = {transparentCursor, 1, 1, 1, 1,
                                                   0, 0, 0, 0, 0};
@@ -309,12 +311,10 @@ static int presenter_present_workspace_layers(
       if (camera_reference != NULL)
         [pixelReferences addObject:[NSValue valueWithPointer:camera_reference]];
     }
-    id<MTLBuffer> overlay = [presenter.device newBufferWithBytes:&item->overlay
-        length:sizeof(item->overlay) options:MTLResourceStorageModeShared];
+    id<MTLBuffer> overlay = [presenter.device newBufferWithBytes:&item->overlay length:sizeof(item->overlay) options:MTLResourceStorageModeShared];
     if (camera == nil || overlay == nil) return 0;
     presenter.workspaceCameraSources[token] = camera;
-    ScreenwideOverlayUniforms cursorUniforms =
-        screenwide_workspace_cursor_uniforms(presenter.cursorResources, item);
+    ScreenwideOverlayUniforms cursorUniforms = screenwide_workspace_cursor_uniforms(presenter.cursorResources, item);
     uint32_t dimensions[2] = {item->source_width, item->source_height};
     uint32_t first = index == 0 ? 1 : 0;
     id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
@@ -332,6 +332,7 @@ static int presenter_present_workspace_layers(
     [encoder setBuffer:overlay offset:0 atIndex:8];
     float seconds = (float)item->seconds;
     [encoder setBytes:&seconds length:sizeof(seconds) atIndex:9];
+    screenwide_bind_keyboard(encoder, presenter.device, presenter.keyboardArtworks, item->keyboard, item->canvas_height);
     [encoder setTexture:presenter.cursorResources.texture atIndex:1];
     workspace_dispatch(encoder, presenter.workspaceLayerPipeline, grid);
     [encoder endEncoding];
@@ -352,6 +353,14 @@ int screenwide_gpu_still_presenter_set_workspace(
   if (handle == NULL || layers == NULL || layer_count == 0) return 0;
   @autoreleasepool {
     ScreenwideStillPresenter *presenter = (__bridge ScreenwideStillPresenter *)handle;
+    // Pointer-rate retained resize state is authoritative until mouse-up.
+    // Asynchronous semantic preview frames can arrive during the gesture; if
+    // accepted here they replace the correctly resized snapshot with geometry
+    // from an earlier pointer sample, leaving background over the clip until
+    // the final committed frame arrives.
+    if (presenter.workspaceResizeLayers.count > 0) {
+      return 1;
+    }
     NSMutableArray<NSValue *> *retained = [NSMutableArray arrayWithCapacity:layer_count];
     NSMutableSet<NSNumber *> *activeTokens = [NSMutableSet setWithCapacity:layer_count];
     id<MTLCommandBuffer> uploadCommand = nil;
@@ -522,6 +531,27 @@ int screenwide_gpu_still_presenter_update_workspace_camera_overlay(
   return 0;
 }
 
+/// Moves everything attached to a layer's clip by (dx, dy) canvas pixels when
+/// a Frame gesture moves the canvas origin: the crop and image placement, the
+/// visible source region the shader gates clip coverage on, and both cursor
+/// representations. The workspace kernel draws `cursor`, not
+/// `overlay.cursor_*`, so the recorded pointer must travel with the clip too.
+static void shift_layer_content(ScreenwideWorkspaceLayer *layer, double dx,
+                                double dy) {
+  layer->canvas.crop_x = (int32_t)llround(layer->canvas.crop_x + dx);
+  layer->canvas.crop_y = (int32_t)llround(layer->canvas.crop_y + dy);
+  layer->canvas.image_x += (float)dx;
+  layer->canvas.image_y += (float)dy;
+  layer->canvas.source_crop_x += (int32_t)llround(dx);
+  layer->canvas.source_crop_y += (int32_t)llround(dy);
+  if (layer->overlay.cursor_width > 0) {
+    layer->overlay.cursor_x += (int32_t)llround(dx);
+    layer->overlay.cursor_y += (int32_t)llround(dy);
+  }
+  layer->cursor.x += (float)dx;
+  layer->cursor.y += (float)dy;
+}
+
 int screenwide_gpu_still_presenter_begin_workspace_resize(void *handle) {
   if (handle == NULL) return 0;
   ScreenwideStillPresenter *presenter = (__bridge ScreenwideStillPresenter *)handle;
@@ -557,16 +587,7 @@ static int update_workspace_resize(
     double next_shortest = MIN(next_width, next_height);
     layer.canvas_width = next_width;
     layer.canvas_height = next_height;
-    layer.canvas.crop_x = (int32_t)llround(layer.canvas.crop_x + move_x - origin_x);
-    layer.canvas.crop_y = (int32_t)llround(layer.canvas.crop_y + move_y - origin_y);
-    layer.canvas.image_x += (float)(move_x - origin_x);
-    layer.canvas.image_y += (float)(move_y - origin_y);
-    layer.canvas.source_crop_x += (int32_t)llround(move_x - origin_x);
-    layer.canvas.source_crop_y += (int32_t)llround(move_y - origin_y);
-    if (layer.overlay.cursor_width > 0) {
-      layer.overlay.cursor_x += (int32_t)llround(move_x - origin_x);
-      layer.overlay.cursor_y += (int32_t)llround(move_y - origin_y);
-    }
+    shift_layer_content(&layer, move_x - origin_x, move_y - origin_y);
     layer.canvas.background_radius = (uint32_t)MAX(
         llround(layer.canvas.background_radius * next_shortest / old_shortest), 0);
     [resized addObject:[NSValue valueWithBytes:&layer
@@ -621,28 +642,14 @@ int screenwide_gpu_still_presenter_update_recording_auto_fit_move(
       double moveY = oldHeight * move_y_ratio;
       layer.canvas_width = (uint32_t)MAX(llround(oldWidth * width_ratio), 1);
       layer.canvas_height = (uint32_t)MAX(llround(oldHeight * height_ratio), 1);
-      layer.canvas.crop_x -= (int32_t)llround(originX);
-      layer.canvas.crop_y -= (int32_t)llround(originY);
-      layer.canvas.image_x -= (float)originX;
-      layer.canvas.image_y -= (float)originY;
       if (bakedCamera) {
+        // The selected camera moves independently, while the screen content
+        // (and the cursor attached to it) only follows the canvas origin.
+        shift_layer_content(&layer, -originX, -originY);
         layer.overlay.camera_frame_x += (int32_t)llround(moveX - originX);
         layer.overlay.camera_frame_y += (int32_t)llround(moveY - originY);
-        // The selected camera moves independently, while the cursor remains
-        // attached to the screen content whose canvas origin just changed.
-        if (layer.overlay.cursor_width > 0) {
-          layer.overlay.cursor_x -= (int32_t)llround(originX);
-          layer.overlay.cursor_y -= (int32_t)llround(originY);
-        }
       } else {
-        layer.canvas.crop_x += (int32_t)llround(moveX);
-        layer.canvas.crop_y += (int32_t)llround(moveY);
-        layer.canvas.image_x += (float)moveX;
-        layer.canvas.image_y += (float)moveY;
-        if (layer.overlay.cursor_width > 0) {
-          layer.overlay.cursor_x += (int32_t)llround(moveX - originX);
-          layer.overlay.cursor_y += (int32_t)llround(moveY - originY);
-        }
+        shift_layer_content(&layer, moveX - originX, moveY - originY);
       }
       layer.placement.width =
           (uint32_t)MAX(llround(layer.placement.width * width_ratio), 1);
@@ -682,24 +689,15 @@ int screenwide_gpu_still_presenter_update_workspace_selected_resize(
       uint32_t next_height = (uint32_t)MAX(llround(old_height * height_ratio), 1);
       double old_shortest = MAX(MIN(old_width, old_height), 1.0);
       double next_shortest = MIN(next_width, next_height);
-      layer.canvas.crop_x -= (int32_t)llround(old_width * origin_x_ratio);
-      layer.canvas.crop_y -= (int32_t)llround(old_height * origin_y_ratio);
-      layer.canvas.image_x -= (float)(old_width * origin_x_ratio);
-      layer.canvas.image_y -= (float)(old_height * origin_y_ratio);
+      double origin_x = old_width * origin_x_ratio;
+      double origin_y = old_height * origin_y_ratio;
+      shift_layer_content(&layer, -origin_x, -origin_y);
       // A baked camera is another layer in this canvas. Keep its absolute
       // canvas position stable when a Frame gesture moves the canvas origin,
       // matching the shared semantic rebase used at gesture commit.
       if (layer.overlay.camera_frame_width > 0) {
-        layer.overlay.camera_frame_x -=
-            (int32_t)llround(old_width * origin_x_ratio);
-        layer.overlay.camera_frame_y -=
-            (int32_t)llround(old_height * origin_y_ratio);
-      }
-      if (layer.overlay.cursor_width > 0) {
-        layer.overlay.cursor_x -=
-            (int32_t)llround(old_width * origin_x_ratio);
-        layer.overlay.cursor_y -=
-            (int32_t)llround(old_height * origin_y_ratio);
+        layer.overlay.camera_frame_x -= (int32_t)llround(origin_x);
+        layer.overlay.camera_frame_y -= (int32_t)llround(origin_y);
       }
       layer.canvas_width = next_width;
       layer.canvas_height = next_height;
@@ -815,11 +813,9 @@ int screenwide_gpu_still_presenter_redraw_workspace(
             length:sizeof(layers[index].canvas) options:MTLResourceStorageModeShared];
         id<MTLBuffer> camera = presenter.workspaceCameraSources[@(layers[index].source_token)]
             ?: [presenter.device newBufferWithLength:4 options:MTLResourceStorageModeShared];
-        id<MTLBuffer> overlay = [presenter.device newBufferWithBytes:&layers[index].overlay
-            length:sizeof(layers[index].overlay) options:MTLResourceStorageModeShared];
+        id<MTLBuffer> overlay = [presenter.device newBufferWithBytes:&layers[index].overlay length:sizeof(layers[index].overlay) options:MTLResourceStorageModeShared];
         uint32_t dimensions[2] = {layers[index].source_width, layers[index].source_height};
-        ScreenwideOverlayUniforms cursor = screenwide_workspace_cursor_uniforms(
-            presenter.cursorResources, &layers[index]);
+        ScreenwideOverlayUniforms cursor = screenwide_workspace_cursor_uniforms(presenter.cursorResources, &layers[index]);
         uint32_t first = index == 0 ? 1 : 0;
         id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
         [encoder setComputePipelineState:presenter.workspaceLayerPipeline];
@@ -837,6 +833,7 @@ int screenwide_gpu_still_presenter_redraw_workspace(
         [encoder setBuffer:overlay offset:0 atIndex:8];
         float seconds = (float)layers[index].seconds;
         [encoder setBytes:&seconds length:sizeof(seconds) atIndex:9];
+        screenwide_bind_keyboard(encoder, presenter.device, presenter.keyboardArtworks, layers[index].keyboard, layers[index].canvas_height);
         [encoder setTexture:presenter.cursorResources.texture atIndex:1];
         workspace_dispatch(encoder, presenter.workspaceLayerPipeline, grid);
         [encoder endEncoding];

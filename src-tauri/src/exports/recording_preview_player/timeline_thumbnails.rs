@@ -8,7 +8,8 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use super::{platform, sources, sources::headless_sources};
 use crate::exports::{
-  cursor_effects::CursorEffectSettings, CameraOverlaySettings, RecordingOutputSettings,
+  cursor_effects::CursorEffectSettings, keyboard_effects::KeyboardEffectSettings,
+  CameraOverlaySettings, RecordingOutputSettings,
 };
 pub(super) const HEADER_MARKER: u32 = u32::from_le_bytes(*b"OCTH");
 const HEADER_VERSION: u32 = 1;
@@ -40,6 +41,7 @@ pub(super) fn target_width(source_width: u32, source_height: u32) -> u32 {
 /// composition happen only for this explicit action; live preview stays on
 /// the native GPU surface and does not cross IPC.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn copy_recording_preview_frame_to_clipboard(
   app: AppHandle,
   artifact_id: u64,
@@ -47,6 +49,7 @@ pub async fn copy_recording_preview_frame_to_clipboard(
   bake_camera: bool,
   camera_overlay: CameraOverlaySettings,
   cursor_effects: CursorEffectSettings,
+  keyboard_effects: KeyboardEffectSettings,
   recording_output: RecordingOutputSettings,
 ) -> Result<(), String> {
   let sources = sources(&app, artifact_id, None)?;
@@ -57,6 +60,7 @@ pub async fn copy_recording_preview_frame_to_clipboard(
       bake_camera,
       camera_overlay,
       cursor_effects,
+      keyboard_effects,
       &recording_output,
     )
   })

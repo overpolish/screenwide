@@ -39,6 +39,8 @@ pub(super) struct CursorExportRequest<'a> {
   pub cancelled: &'a AtomicBool,
   pub cursor: Option<&'a Path>,
   pub cursor_effects: CursorEffectSettings,
+  pub keyboard: Option<&'a Path>,
+  pub keyboard_effects: super::keyboard_effects::KeyboardEffectSettings,
   pub destination: &'a Path,
   pub duration_ms: u64,
   pub height: u32,
@@ -103,6 +105,9 @@ pub(super) fn estimated_video_bytes(
 pub(super) fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
   if request.cursor.is_some() && !request.cursor_effects.bake {
     return Err("Cursor baking was not enabled".to_owned());
+  }
+  if request.keyboard.is_some() && !request.keyboard_effects.bake {
+    return Err("Keyboard baking was not enabled".to_owned());
   }
   if !request.cursor_effects.size_percent.is_finite()
     || !(50.0..=500.0).contains(&request.cursor_effects.size_percent)

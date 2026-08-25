@@ -9,7 +9,10 @@
 //! scale, rotate, blur and blend the cursor itself.
 
 use super::*;
-use crate::exports::cursor_effects::{CursorCompositor, GpuArtwork, GpuCursor};
+use crate::exports::{
+  cursor_effects::{CursorCompositor, GpuArtwork, GpuCursor},
+  keyboard_effects::{KeyboardCompositor, KeyboardOverlay},
+};
 
 /// The cursor grid the compositor indexes. Frame `n` covers the output frames
 /// whose presentation time is at or after `n / 60` seconds, which is exactly
@@ -19,6 +22,10 @@ pub(super) const CURSOR_FRAME_RATE: u64 = 60;
 pub(super) struct CursorTimeline {
   pub artworks: Vec<GpuArtwork>,
   pub frames: Vec<Option<GpuCursor>>,
+}
+
+pub(super) struct KeyboardTimeline {
+  pub frames: Vec<KeyboardOverlay>,
 }
 
 pub(super) fn scaled_size(request: &CursorExportRequest<'_>) -> Result<(u32, u32), String> {
@@ -66,6 +73,30 @@ pub(super) fn evaluate(
     artworks: crate::exports::cursor_effects::gpu_artworks(),
     frames,
   }))
+}
+
+pub(super) fn evaluate_keyboard(
+  request: &CursorExportRequest<'_>,
+) -> Result<Option<KeyboardTimeline>, String> {
+  let Some(keyboard_path) = request.keyboard else {
+    return Ok(None);
+  };
+  let keyboard = KeyboardCompositor::open(keyboard_path)?;
+  let dimensions = (request.output.width, request.output.height);
+  let frame_count = request
+    .duration_ms
+    .saturating_mul(CURSOR_FRAME_RATE)
+    .div_ceil(1_000)
+    .saturating_add(1);
+  let frames = (0..frame_count)
+    .map(|frame| {
+      let position_ms = frame.saturating_mul(1_000) / CURSOR_FRAME_RATE;
+      keyboard
+        .evaluate_fitted(position_ms, request.keyboard_effects, dimensions)
+        .unwrap_or_default()
+    })
+    .collect();
+  Ok(Some(KeyboardTimeline { frames }))
 }
 
 #[cfg(test)]

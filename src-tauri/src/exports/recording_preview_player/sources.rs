@@ -13,6 +13,8 @@ pub(super) struct PlayerSources {
   #[cfg(target_os = "macos")]
   pub(super) cursor_artworks: Option<Arc<Vec<GpuArtwork>>>,
   pub(super) cursor_settings: Arc<RwLock<CursorEffectSettings>>,
+  pub(super) keyboard: Option<Arc<KeyboardCompositor>>,
+  pub(super) keyboard_settings: Arc<RwLock<KeyboardEffectSettings>>,
   pub(super) composition_settings: Option<Arc<RwLock<PreviewCompositionSettings>>>,
   pub(super) duration_ms: u64,
   /// Zero when OSCs are hidden, one for the primary pane and two for camera.
@@ -45,7 +47,17 @@ fn sources_with_surface(
   create_surface: bool,
 ) -> Result<PlayerSources, String> {
   let state = app.state::<ExportState>();
-  let (audio_tracks, camera, cursor_path, duration_ms, height, path, primary_kind, width) = {
+  let (
+    audio_tracks,
+    camera,
+    cursor_path,
+    keyboard_path,
+    duration_ms,
+    height,
+    path,
+    primary_kind,
+    width,
+  ) = {
     let artifact = state
       .recording
       .artifact
@@ -55,6 +67,7 @@ fn sources_with_surface(
       audio_tracks,
       camera,
       cursor,
+      keyboard,
       duration_ms,
       height,
       id,
@@ -73,6 +86,7 @@ fn sources_with_surface(
       audio_tracks.clone(),
       camera.clone(),
       cursor.as_ref().map(|value| value.path.clone()),
+      keyboard.as_ref().map(|value| value.path.clone()),
       *duration_ms,
       *height,
       path.clone(),
@@ -118,6 +132,10 @@ fn sources_with_surface(
     .as_ref()
     .map(|path| CursorCompositor::open(path).map(Arc::new))
     .transpose()?;
+  let keyboard = keyboard_path
+    .as_ref()
+    .map(|path| KeyboardCompositor::open(path).map(Arc::new))
+    .transpose()?;
   #[cfg(target_os = "macos")]
   let cursor_artworks = cursor
     .as_ref()
@@ -139,6 +157,12 @@ fn sources_with_surface(
     cursor_settings: Arc::new(RwLock::new(
       settings.map_or_else(CursorEffectSettings::default, |settings| {
         settings.cursor_effects
+      }),
+    )),
+    keyboard,
+    keyboard_settings: Arc::new(RwLock::new(
+      settings.map_or_else(KeyboardEffectSettings::default, |settings| {
+        settings.keyboard_effects.normalized()
       }),
     )),
     duration_ms,

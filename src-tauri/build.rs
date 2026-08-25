@@ -15,8 +15,15 @@ fn main() {
     println!(
       "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_cursor_resources.m"
     );
+    println!("cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_keyboard.m");
+    println!(
+      "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_keyboard_artwork.m"
+    );
     println!(
       "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_shader_source.h"
+    );
+    println!(
+      "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_keyboard_shader_source.h"
     );
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+action.m");
@@ -34,6 +41,9 @@ fn main() {
       "cargo:rerun-if-changed=src/exports/recording_preview_surface_macos_private_functions.h"
     );
     println!("cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos.h");
+    println!(
+      "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_keyboard_types.h"
+    );
     println!("cargo:rerun-if-changed=src/exports/recording_preview_reader_macos.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_scrubber_macos.m");
     println!("cargo:rerun-if-changed=src/recording/platform/camera/confidence_scaler_macos.m");
@@ -41,6 +51,8 @@ fn main() {
       .file("src/exports/cursor_export/gpu_compositor_macos.m")
       .file("src/exports/cursor_export/gpu_compositor_macos+presenter.m")
       .file("src/exports/cursor_export/gpu_compositor_macos_cursor_resources.m")
+      .file("src/exports/cursor_export/gpu_compositor_macos_keyboard.m")
+      .file("src/exports/cursor_export/gpu_compositor_macos_keyboard_artwork.m")
       .file("src/recording/platform/camera/confidence_scaler_macos.m")
       .file("src/exports/recording_preview_reader_macos.m")
       .file("src/exports/recording_preview_scrubber_macos.m")

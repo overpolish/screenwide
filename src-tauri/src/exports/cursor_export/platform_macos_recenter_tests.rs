@@ -59,6 +59,8 @@ fn exports_recenter_inset_pixels_outside_the_source_crop() {
     cancelled: &cancelled,
     cursor: None,
     cursor_effects: CursorEffectSettings::default(),
+    keyboard: None,
+    keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings::default(),
     destination: &destination,
     duration_ms: 1_000,
     height: 180,

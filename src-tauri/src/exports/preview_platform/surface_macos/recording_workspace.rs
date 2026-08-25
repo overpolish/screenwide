@@ -84,6 +84,7 @@ impl RecordingPreviewSurface {
         placement: layer.placement,
         seconds: layer.seconds,
         cursor: NativeGpuCursor::from(layer.cursor),
+        keyboard: layer.keyboard.unwrap_or_default(),
         camera_rgba,
         camera_pixels,
         overlay,

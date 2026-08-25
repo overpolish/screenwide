@@ -5,10 +5,13 @@ import { Button } from "../../../components/base/button/button";
 import { CircularProgressBar } from "../../../components/base/circular-progress-bar/circular-progress-bar";
 import { Overlay } from "../../../components/base/overlay/overlay";
 import { formatEta } from "../duration";
-import { defaultCameraOverlay } from "../recording-export-settings";
+import {
+  DEFAULT_CURSOR_EFFECTS,
+  DEFAULT_KEYBOARD_EFFECTS,
+  defaultCameraOverlay,
+} from "../recording-export-settings";
 import {
   RecordingOutputSettings,
-  ScreenshotOutputSettings,
   ScreenshotWorkspaceOutputSettings,
   resizeScreenshotWorkspaceCentered,
   screenshotWorkspaceItemOutput,
@@ -17,6 +20,7 @@ import {
   AudioTrackVolume,
   CameraOverlaySettings,
   CursorEffectSettings,
+  KeyboardEffectSettings,
   ExportArtifact,
   PreparedAudioTrack,
   RecordingPreviewLayout,
@@ -24,10 +28,15 @@ import {
   RecordingVideoTrackId,
 } from "../types";
 
+import {
+  RecordingOutputChange,
+  ScreenshotOutputChange,
+} from "./export-content";
 import { ExportInspector } from "./export-inspector";
 import { RecordingSection, ScreenshotSection } from "./export-preview-section";
 import { ExportTitlebar } from "./export-titlebar";
 import { ScreenshotInspector } from "./screenshot-inspector";
+import { selectedTrackVolume } from "./selected-track-volume";
 
 type ExportPanelProps = {
   artifact: ExportArtifact | null;
@@ -53,6 +62,7 @@ type ExportPanelProps = {
   isPreparingRecordingAudio?: boolean;
   isPreparingRecordingPreview?: boolean;
   isSaving?: boolean;
+  keyboardEffects?: KeyboardEffectSettings;
   onBakeCameraChange?: (bake: boolean) => void;
   onBrowse?: () => void;
   onCameraCompressionChange?: (compression: number) => void;
@@ -68,19 +78,14 @@ type ExportPanelProps = {
   onEnabledTracksChange?: (streamIndices: number[]) => void;
   onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;
   onFileStemChange?: (fileStem: string) => void;
+  onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onMinimize?: () => void;
-  onRecordingOutputChange?: (
-    trackId: RecordingVideoTrackId,
-    settings: ScreenshotOutputSettings,
-  ) => void;
+  onRecordingOutputChange?: RecordingOutputChange;
   onResolutionScaleChange?: (scale: number) => void;
   onSave?: () => void;
   onScreenshotBackgroundRadiusChange?: (radiusPercent: number) => void;
   onScreenshotBackgroundRadiusChangeEnd?: () => void;
-  onScreenshotOutputChange?: (
-    settings: ScreenshotOutputSettings,
-    itemId?: number,
-  ) => void;
+  onScreenshotOutputChange?: ScreenshotOutputChange;
   onScreenshotRadiusChangeEnd?: () => void;
   onSelectedScreenshotItemChange?: (itemId: number | null) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
@@ -95,11 +100,9 @@ type ExportPanelProps = {
   savePhase?: "camera" | "finalizing" | "recording";
   saveProgress?: number | null;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
-  screenshotRadiusPercent?: number;
   selectedScreenshotItemId?: number | null;
   selectedTrack?: RecordingTrackId | null;
 };
-
 export function ExportPanel({
   artifact,
   audioTrackVolumes = [],
@@ -109,14 +112,7 @@ export function ExportPanel({
   cameraResolutionScalePercent = 100,
   collapseAudio,
   compression = 0,
-  cursorEffects = {
-    bake: true,
-    clickAnimation: true,
-    clipAtVideoEdge: false,
-    motionBlur: true,
-    sizePercent: 100,
-    smoothMovement: true,
-  },
+  cursorEffects = DEFAULT_CURSOR_EFFECTS,
   directory,
   enabledAudioTrackCount,
   enabledStreamIndices,
@@ -131,6 +127,7 @@ export function ExportPanel({
   isPreparingRecordingAudio,
   isPreparingRecordingPreview,
   isSaving,
+  keyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
   onBakeCameraChange,
   onBrowse,
   onCameraCompressionChange,
@@ -146,6 +143,7 @@ export function ExportPanel({
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
   onFileStemChange,
+  onKeyboardEffectsChange,
   onMinimize,
   onRecordingOutputChange,
   onResolutionScaleChange,
@@ -173,10 +171,8 @@ export function ExportPanel({
   const isRecording = artifact?.kind === "recording";
   const enabledVideoTrackCount = enabledVideoTracks.length;
   const isAudioExport = isRecording && enabledVideoTrackCount === 0;
-  const hasExportableContent =
+  const hasContent =
     !isRecording || enabledVideoTrackCount + (enabledAudioTrackCount ?? 0) > 0;
-  const exportExtension =
-    isRecording && enabledVideoTrackCount === 0 ? "m4a" : undefined;
   const inspector =
     artifact?.kind === "recording" ? (
       <ExportInspector
@@ -194,6 +190,7 @@ export function ExportPanel({
         estimatedSizeBytes={estimatedSizeBytes}
         isEstimatingSize={isEstimatingSize}
         isSaving={isSaving}
+        keyboardEffects={keyboardEffects}
         onBakeCameraChange={onBakeCameraChange}
         onCameraCompressionChange={onCameraCompressionChange}
         onCameraOverlayChange={onCameraOverlayChange}
@@ -201,6 +198,7 @@ export function ExportPanel({
         onCollapseAudioChange={onCollapseAudioChange}
         onCompressionChange={onCompressionChange}
         onCursorEffectsChange={onCursorEffectsChange}
+        onKeyboardEffectsChange={onKeyboardEffectsChange}
         onRecordingOutputChange={onRecordingOutputChange}
         onResolutionScaleChange={onResolutionScaleChange}
         onSelectedTrackChange={onSelectedTrackChange}
@@ -208,15 +206,12 @@ export function ExportPanel({
         recordingOutput={recordingOutput}
         resolutionScalePercent={resolutionScalePercent}
         selectedTrack={selectedTrack}
-        selectedTrackVolume={
-          audioTrackVolumes.find(
-            (volume) =>
-              `audio:${volume.streamIndex.toString()}` === selectedTrack,
-          )?.decibels ?? 0
-        }
+        selectedTrackVolume={selectedTrackVolume(
+          audioTrackVolumes,
+          selectedTrack,
+        )}
       />
     ) : null;
-
   return (
     <main className="window-surface relative flex h-screen w-screen flex-col overflow-hidden rounded-[10px] text-content-fg">
       {/* The window background lives on its own layer so the native preview
@@ -276,9 +271,11 @@ export function ExportPanel({
       <ExportTitlebar
         artifact={artifact}
         directory={directory}
-        extension={exportExtension}
+        extension={
+          isRecording && enabledVideoTrackCount === 0 ? "m4a" : undefined
+        }
         fileStem={fileStem}
-        hasExportableContent={hasExportableContent}
+        hasExportableContent={hasContent}
         isExportPreparationPending={isExportPreparationPending}
         isSaving={isSaving}
         onBrowse={onBrowse}
@@ -301,11 +298,13 @@ export function ExportPanel({
           enabledStreamIndices={enabledStreamIndices}
           enabledVideoTracks={enabledVideoTracks}
           hasCursorData={artifact.hasCursorData}
+          hasKeyboardData={artifact.hasKeyboardData}
           inspector={inspector}
           isPreparingRecordingAudio={isPreparingRecordingAudio}
           isPreparingRecordingPreview={isPreparingRecordingPreview}
           isSaving={isSaving}
           key={artifact.id}
+          keyboardEffects={keyboardEffects}
           onCameraOverlayChange={onCameraOverlayChange}
           onEnabledTracksChange={onEnabledTracksChange}
           onEnabledVideoTracksChange={onEnabledVideoTracksChange}

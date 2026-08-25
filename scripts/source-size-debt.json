@@ -22,7 +22,6 @@
   "src-tauri/src/audio_preview.rs": 335,
   "src-tauri/src/camera_preview.rs": 533,
   "src-tauri/src/exports/artifact.rs": 365,
-  "src-tauri/src/exports/camera_save.rs": 337,
   "src-tauri/src/exports/cursor_effects/raster.rs": 733,
   "src-tauri/src/exports/cursor_effects/timing.rs": 599,
   "src-tauri/src/exports/cursor_effects.rs": 608,

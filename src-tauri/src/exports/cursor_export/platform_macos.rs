@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::{
-  ffi::{c_char, c_void, CString, OsString},
+  ffi::{c_char, c_void, CString},
   path::PathBuf,
   sync::atomic::{AtomicU64, Ordering},
 };
 
 use super::*;
 use crate::exports::cursor_effects::{NativeGpuArtwork, NativeGpuCursor};
+
+#[path = "platform_macos/mux.rs"]
+mod mux;
 
 const GPU_PROGRESS_PERCENT: u64 = 95;
 static GPU_EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
@@ -54,6 +57,8 @@ unsafe extern "C" {
     cursor_count: u32,
     artworks: *const NativeGpuArtwork,
     artwork_count: u32,
+    keyboards: *const crate::exports::keyboard_effects::KeyboardOverlay,
+    keyboard_count: u32,
     camera_path: *const c_char,
     camera_overlay: *const GpuCameraOverlay,
     canvas: *const crate::screenshots::NativeCanvas,
@@ -105,12 +110,16 @@ fn cursor_artworks(timeline: &native_macos::CursorTimeline) -> Vec<NativeGpuArtw
 fn render_gpu_video(
   request: &mut CursorExportRequest<'_>,
   timeline: Option<&native_macos::CursorTimeline>,
+  keyboard_timeline: Option<&native_macos::KeyboardTimeline>,
   path: &Path,
 ) -> Result<ExportRunResult, String> {
   crate::screenshots::validate_output_settings(request.width, request.height, request.output)?;
   let screen = c_path(request.screen)?;
   let cursors = timeline.map(cursor_frames).unwrap_or_default();
   let artworks = timeline.map(cursor_artworks).unwrap_or_default();
+  let keyboards = keyboard_timeline
+    .map(|timeline| timeline.frames.as_slice())
+    .unwrap_or_default();
   let camera = request.camera.map(|(path, _)| c_path(path)).transpose()?;
   let camera_overlay = request
     .camera
@@ -156,6 +165,8 @@ fn render_gpu_video(
       cursors.len() as u32,
       artworks.as_ptr(),
       artworks.len() as u32,
+      keyboards.as_ptr(),
+      keyboards.len() as u32,
       camera
         .as_ref()
         .map_or(std::ptr::null(), |path| path.as_ptr()),
@@ -196,66 +207,23 @@ fn render_gpu_video(
   }
 }
 
-fn mux_gpu_video_args(
-  request: &CursorExportRequest<'_>,
-  video: &Path,
-  temporary: &Path,
-) -> Vec<OsString> {
-  let mut args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i"]
-    .map(OsString::from)
-    .to_vec();
-  args.push(video.into());
-  args.extend([
-    OsString::from("-i"),
-    request.audio_source.unwrap_or(request.screen).into(),
-  ]);
-  args.extend(
-    [
-      "-progress",
-      "pipe:1",
-      "-nostats",
-      "-map",
-      "0:v:0",
-      "-c:v",
-      "copy",
-    ]
-    .map(OsString::from),
-  );
-  args.extend(
-    request
-      .selection
-      .audio_args_from(request.audio_layout, 1)
-      .into_iter()
-      .map(OsString::from),
-  );
-  args.extend(
-    [
-      "-tag:v",
-      "avc1",
-      "-movflags",
-      "+faststart",
-      "-map_metadata",
-      "-1",
-      "-f",
-      "mp4",
-    ]
-    .map(OsString::from),
-  );
-  args.push(temporary.into());
-  args
-}
-
 fn export_gpu(mut request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
   let timeline = native_macos::evaluate(&request)?;
+  let keyboard_timeline = native_macos::evaluate_keyboard(&request)?;
   let result = (|| {
     let video = gpu_video_path();
-    let video_result = render_gpu_video(&mut request, timeline.as_ref(), &video)?;
+    let video_result = render_gpu_video(
+      &mut request,
+      timeline.as_ref(),
+      keyboard_timeline.as_ref(),
+      &video,
+    )?;
     if !matches!(video_result, ExportRunResult::Completed) {
       let _ = std::fs::remove_file(&video);
       return Ok(video_result);
     }
     let temporary = media_preview::remux_temp_path(request.destination);
-    let args = mux_gpu_video_args(&request, &video, &temporary);
+    let args = mux::args(&request, &video, &temporary);
     let duration_ms = request.duration_ms;
     let on_progress = &mut request.on_progress;
     let mut final_progress = |processed_ms: u64| {
@@ -284,6 +252,9 @@ pub(super) fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult
   export_gpu(request)
 }
 
+#[cfg(test)]
+#[path = "platform_macos_keyboard_tests.rs"]
+mod keyboard_tests;
 #[cfg(test)]
 #[path = "platform_macos_recenter_tests.rs"]
 mod recenter_tests;

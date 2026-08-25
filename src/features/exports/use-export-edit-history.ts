@@ -19,6 +19,7 @@ import {
   AudioTrackVolume,
   CameraOverlaySettings,
   CursorEffectSettings,
+  KeyboardEffectSettings,
   RecordingVideoTrackId,
 } from "./types";
 
@@ -49,6 +50,7 @@ export type ExportEditState = {
   collapseAudio: boolean;
   compression: number;
   cursorEffects: CursorEffectSettings;
+  keyboardEffects: KeyboardEffectSettings;
   recordingOutput: RecordingOutputSettings;
   resolutionScalePercent: number;
   screenshotOutput: ScreenshotWorkspaceOutputSettings;

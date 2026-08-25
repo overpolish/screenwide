@@ -23,6 +23,7 @@ import {
   AudioTrackVolume,
   CameraOverlaySettings,
   CursorEffectSettings,
+  KeyboardEffectSettings,
   ExportArtifact,
   PreparedAudioTrack,
   RecordingPreviewLayout,
@@ -34,6 +35,10 @@ import { useExportWindowShortcuts } from "../use-export-window-shortcuts";
 import { PreviewToolbar } from "./preview-toolbar";
 import { maximumZoom, MINIMUM_ZOOM_CEILING } from "./preview-transform";
 import { PreviewViewport } from "./preview-viewport";
+import {
+  createRecordingOutputDimensionsChannel,
+  RecordingOutputDimensionsContext,
+} from "./recording-output-dimensions-channel";
 import {
   deleteScreenshotLayer,
   moveScreenshotLayer,
@@ -330,10 +335,12 @@ export function RecordingSection({
   enabledStreamIndices,
   enabledVideoTracks,
   hasCursorData,
+  hasKeyboardData,
   inspector,
   isPreparingRecordingAudio,
   isPreparingRecordingPreview,
   isSaving,
+  keyboardEffects,
   onCameraOverlayChange,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
@@ -356,10 +363,12 @@ export function RecordingSection({
   enabledStreamIndices?: number[];
   enabledVideoTracks?: RecordingVideoTrackId[];
   hasCursorData?: boolean;
+  hasKeyboardData?: boolean;
   inspector?: ReactNode;
   isPreparingRecordingAudio?: boolean;
   isPreparingRecordingPreview?: boolean;
   isSaving?: boolean;
+  keyboardEffects?: KeyboardEffectSettings;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onEnabledTracksChange?: (streamIndices: number[]) => void;
   onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;
@@ -376,6 +385,7 @@ export function RecordingSection({
   resolutionScalePercent?: number;
   selectedTrack?: RecordingTrackId | null;
 }) {
+  const [dimensionsChannel] = useState(createRecordingOutputDimensionsChannel);
   const primaryOutputDimensions = recordingOutput
     ? {
         height: recordingOutput.primary.height,
@@ -400,49 +410,55 @@ export function RecordingSection({
       : undefined;
 
   return (
-    <div className="flex min-h-0 grow flex-col">
-      <ScrubPreview
-        artifactId={artifact.id}
-        audioError={recordingPreviewError}
-        audioTracks={recordingPreviewTracks}
-        audioTrackVolumes={audioTrackVolumes}
-        bakeCamera={bakeCamera}
-        cameraOverlay={cameraOverlay}
-        cursorEffects={cursorEffects}
-        durationMs={artifact.durationMs}
-        enabledStreamIndices={enabledStreamIndices}
-        enabledVideoTracks={enabledVideoTracks}
-        hasCursorData={hasCursorData}
-        inspector={inspector}
-        isPreparingAudio={isPreparingRecordingAudio}
-        isPreparingPreview={isPreparingRecordingPreview}
-        isSaving={isSaving}
-        key={artifact.id}
-        onCameraOverlayChange={onCameraOverlayChange}
-        onEnabledTracksChange={onEnabledTracksChange}
-        onEnabledVideoTracksChange={onEnabledVideoTracksChange}
-        onRecordingOutputChange={onRecordingOutputChange}
-        onSelectedTrackChange={onSelectedTrackChange}
-        onVideoTrackOrderChange={onVideoTrackOrderChange}
-        previewLayout={recordingPreviewLayout}
-        previewOutputDimensions={{
-          primary: primaryOutputDimensions,
-          ...(cameraOutputDimensions ? { camera: cameraOutputDimensions } : {}),
-        }}
-        previewSourceDimensions={{
-          primary: { height: artifact.height, width: artifact.width },
-          ...(artifact.camera
-            ? {
-                camera: {
-                  height: artifact.camera.height,
-                  width: artifact.camera.width,
-                },
-              }
-            : {}),
-        }}
-        recordingOutput={recordingOutput}
-        selectedTrack={selectedTrack}
-      />
-    </div>
+    <RecordingOutputDimensionsContext value={dimensionsChannel}>
+      <div className="flex min-h-0 grow flex-col">
+        <ScrubPreview
+          artifactId={artifact.id}
+          audioError={recordingPreviewError}
+          audioTracks={recordingPreviewTracks}
+          audioTrackVolumes={audioTrackVolumes}
+          bakeCamera={bakeCamera}
+          cameraOverlay={cameraOverlay}
+          cursorEffects={cursorEffects}
+          durationMs={artifact.durationMs}
+          enabledStreamIndices={enabledStreamIndices}
+          enabledVideoTracks={enabledVideoTracks}
+          hasCursorData={hasCursorData}
+          hasKeyboardData={hasKeyboardData}
+          inspector={inspector}
+          isPreparingAudio={isPreparingRecordingAudio}
+          isPreparingPreview={isPreparingRecordingPreview}
+          isSaving={isSaving}
+          key={artifact.id}
+          keyboardEffects={keyboardEffects}
+          onCameraOverlayChange={onCameraOverlayChange}
+          onEnabledTracksChange={onEnabledTracksChange}
+          onEnabledVideoTracksChange={onEnabledVideoTracksChange}
+          onRecordingOutputChange={onRecordingOutputChange}
+          onSelectedTrackChange={onSelectedTrackChange}
+          onVideoTrackOrderChange={onVideoTrackOrderChange}
+          previewLayout={recordingPreviewLayout}
+          previewOutputDimensions={{
+            primary: primaryOutputDimensions,
+            ...(cameraOutputDimensions
+              ? { camera: cameraOutputDimensions }
+              : {}),
+          }}
+          previewSourceDimensions={{
+            primary: { height: artifact.height, width: artifact.width },
+            ...(artifact.camera
+              ? {
+                  camera: {
+                    height: artifact.camera.height,
+                    width: artifact.camera.width,
+                  },
+                }
+              : {}),
+          }}
+          recordingOutput={recordingOutput}
+          selectedTrack={selectedTrack}
+        />
+      </div>
+    </RecordingOutputDimensionsContext>
   );
 }

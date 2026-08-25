@@ -35,6 +35,7 @@ pub(super) fn snapshot(app: &AppHandle, kind: ExportKind) -> ExportSnapshot {
         audio_tracks,
         camera,
         cursor,
+        keyboard,
         duration_ms,
         height,
         id,
@@ -50,6 +51,9 @@ pub(super) fn snapshot(app: &AppHandle, kind: ExportKind) -> ExportSnapshot {
           && media_preview::supports_compression(),
         cursor_data_version: cursor.as_ref().map(|cursor| cursor.format_version),
         has_cursor_data: cursor.is_some(),
+        keyboard_data_version: keyboard.as_ref().map(|keyboard| keyboard.format_version),
+        keyboard_maximum_width_units: keyboard.as_ref().map(|value| value.maximum_width_units),
+        has_keyboard_data: keyboard.is_some(),
         id: *id,
         suggested_file_stem: suggested_file_stem.clone(),
         extension: if *primary_kind == PrimaryRecordingKind::Audio {
@@ -65,10 +69,7 @@ pub(super) fn snapshot(app: &AppHandle, kind: ExportKind) -> ExportSnapshot {
             .as_ref()
             .and_then(|camera| std::fs::metadata(&camera.path).ok())
             .map_or(0, |metadata| metadata.len())
-          + cursor
-            .as_ref()
-            .and_then(|cursor| std::fs::metadata(&cursor.path).ok())
-            .map_or(0, |metadata| metadata.len()),
+          + recording_sidecar::total_size(cursor.as_ref(), keyboard.as_ref()),
         path: path.clone(),
         primary_kind: *primary_kind,
         source_scale_percent: *source_scale_percent,
@@ -126,6 +127,7 @@ pub(super) fn delete_working_file(artifact: &ExportArtifact) {
   if let ExportArtifact::Recording {
     camera,
     cursor,
+    keyboard,
     path,
     ..
   } = artifact
@@ -134,9 +136,7 @@ pub(super) fn delete_working_file(artifact: &ExportArtifact) {
     if let Some(camera) = camera {
       let _ = std::fs::remove_file(&camera.path);
     }
-    if let Some(cursor) = cursor {
-      let _ = std::fs::remove_file(&cursor.path);
-    }
+    recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
   }
 }
 
@@ -290,6 +290,7 @@ pub fn present_recording(
   let FinalizeInfo {
     camera,
     cursor_path,
+    keyboard_path,
     has_microphone,
     has_system_audio,
     duration_ms,
@@ -323,10 +324,8 @@ pub fn present_recording(
           width: camera.width,
         }
       }),
-      cursor: cursor_path.map(|path| RecordingCursor {
-        format_version: crate::recording::cursor::FORMAT_VERSION,
-        path,
-      }),
+      cursor: cursor_path.map(RecordingCursor::new),
+      keyboard: keyboard_path.map(RecordingKeyboard::new),
       duration_ms,
       height,
       path,

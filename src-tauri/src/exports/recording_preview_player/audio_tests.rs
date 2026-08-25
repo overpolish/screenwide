@@ -30,6 +30,8 @@ fn decodes_tracks_into_independent_pcm_channels() {
     #[cfg(target_os = "macos")]
     cursor_artworks: None,
     cursor_settings: Default::default(),
+    keyboard: None,
+    keyboard_settings: Default::default(),
     duration_ms: 1_000,
     layout: layout.clone(),
     playback_layout: layout,

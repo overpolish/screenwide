@@ -72,6 +72,58 @@ fn mesh_output(width: u32, height: u32) -> crate::screenshots::ScreenshotOutputS
 }
 
 #[test]
+fn composites_keyboard_pixels_into_a_gpu_still() {
+  use crate::exports::keyboard_effects::KeyboardOverlay;
+
+  let source = crate::screenshots::CapturedImage {
+    rgba: [0, 0, 0, 255].repeat(640 * 360),
+    width: 640,
+    height: 360,
+  };
+  let settings = output(640, 360);
+  let plain = crate::screenshots::compose_output_layers(
+    &source, &settings, 0.0, false, None, None, None, None, false, false,
+  )
+  .unwrap();
+  let mut keyboard = KeyboardOverlay {
+    key_count: 1,
+    animation: KeyboardOverlay::ANIMATION_POP,
+    appearance: KeyboardOverlay::APPEARANCE_LIGHT,
+    scale: 3.0,
+    progress: 1.0,
+    ..Default::default()
+  };
+  keyboard.keys[0].key_code = 55;
+  keyboard.keys[0].visible = 1;
+  keyboard.keys[0].progress = 1.0;
+  keyboard.keys[0].alpha = 1.0;
+  keyboard.keys[0].scale = 3.0;
+  keyboard.keys[0].layout_progress = 1.0;
+  keyboard.keys[0].layout_from_mask = 1;
+  keyboard.keys[0].layout_to_mask = 1;
+  let composed = crate::screenshots::compose_output_layers(
+    &source,
+    &settings,
+    0.0,
+    false,
+    None,
+    None,
+    None,
+    Some(&keyboard),
+    false,
+    false,
+  )
+  .unwrap();
+  let changed = plain
+    .rgba
+    .chunks_exact(4)
+    .zip(composed.rgba.chunks_exact(4))
+    .filter(|(before, after)| before != after)
+    .count();
+  assert!(changed > 500, "the keyboard changed only {changed} pixels");
+}
+
+#[test]
 fn exports_composited_cursor_pixels_into_a_real_movie() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-cursor-export-test-{}",
@@ -150,6 +202,8 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
     cancelled: &cancelled,
     cursor: Some(&cursor_path),
     cursor_effects: CursorEffectSettings::default(),
+    keyboard: None,
+    keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings::default(),
     destination: &destination,
     duration_ms: 1_000,
     height: 180,
@@ -312,6 +366,8 @@ fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
     cancelled: &cancelled,
     cursor: Some(&cursor_path),
     cursor_effects: CursorEffectSettings::default(),
+    keyboard: None,
+    keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings::default(),
     destination: &destination,
     duration_ms: 1_000,
     height: 180,
@@ -480,6 +536,8 @@ fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
       cancelled: &cancelled,
       cursor: Some(&cursor_path),
       cursor_effects: CursorEffectSettings::default(),
+      keyboard: None,
+      keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings::default(),
       destination: &destination,
       duration_ms: 1_000,
       height: 180,
@@ -609,6 +667,8 @@ fn benchmarks_retina_gpu_cursor_export() {
     cancelled: &cancelled,
     cursor: Some(&cursor_path),
     cursor_effects: CursorEffectSettings::default(),
+    keyboard: None,
+    keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings::default(),
     destination: &destination,
     duration_ms,
     height: 2_338,
@@ -679,6 +739,8 @@ fn benchmarks_animated_mesh_export() {
       cancelled: &cancelled,
       cursor: None,
       cursor_effects: CursorEffectSettings::default(),
+      keyboard: None,
+      keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings::default(),
       destination: &destination,
       duration_ms,
       height,

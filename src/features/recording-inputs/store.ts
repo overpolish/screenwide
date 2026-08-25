@@ -101,6 +101,7 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
       fps: DEFAULT_FPS,
       inputs: {
         camera: false,
+        keyboardShortcuts: false,
         microphone: false,
         showCursor: true,
         systemAudio: false,
@@ -189,6 +190,10 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
           fps: recordingFpsOptions.includes(persisted.fps as RecordingFps)
             ? (persisted.fps as RecordingFps)
             : DEFAULT_FPS,
+          inputs: {
+            ...currentState.inputs,
+            ...(persisted.inputs ?? {}),
+          },
           // Older builds persisted only a physical camera. A formatless
           // camera cannot faithfully preview or record, so discovery chooses
           // a real mode instead of guessing behind the user's back.

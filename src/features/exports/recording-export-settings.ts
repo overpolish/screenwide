@@ -5,6 +5,7 @@ import { hasOutputComposition } from "./screenshot-composition";
 import { RecordingOutputSettings } from "./screenshot-output";
 import {
   CursorEffectSettings,
+  KeyboardEffectSettings,
   AudioTrackVolume,
   CameraOverlaySettings,
   ExportArtifact,
@@ -18,6 +19,13 @@ export const DEFAULT_CURSOR_EFFECTS: CursorEffectSettings = {
   motionBlur: true,
   sizePercent: 100,
   smoothMovement: true,
+};
+
+export const DEFAULT_KEYBOARD_EFFECTS: KeyboardEffectSettings = {
+  animation: "pop",
+  appearance: "light",
+  bake: true,
+  sizePercent: 100,
 };
 
 /**
@@ -94,6 +102,7 @@ type RecordingSavePlanOptions = {
   enabledStreamIndices: number[];
   includeCamera: boolean;
   includePrimaryVideo: boolean;
+  keyboardEffects: KeyboardEffectSettings;
   recordingOutput: RecordingOutputSettings;
   resolutionScalePercent: number;
 };
@@ -131,6 +140,7 @@ export const recordingSavePlan = ({
   enabledStreamIndices,
   includeCamera,
   includePrimaryVideo,
+  keyboardEffects,
   originalResolutionScale,
   recordingOutput,
   resolutionScalePercent,
@@ -146,6 +156,7 @@ export const recordingSavePlan = ({
   enabledStreamIndices: number[] | null;
   includeCamera: boolean;
   includePrimaryVideo: boolean;
+  keyboardEffects: KeyboardEffectSettings;
   originalResolutionScale: number;
   recordingOutput: RecordingOutputSettings;
   resolutionScalePercent: number;
@@ -172,6 +183,7 @@ export const recordingSavePlan = ({
       artifact.primaryKind === "audio" ||
       compression > 0 ||
       (artifact.hasCursorData && cursorEffects.bake) ||
+      (artifact.hasKeyboardData && keyboardEffects.bake) ||
       hasPrimaryComposition ||
       resolutionScalePercent < originalResolutionScale ||
       (hasCamera &&
@@ -194,6 +206,7 @@ export const recordingSavePlan = ({
       enabledStreamIndices: selectedIndices,
       includeCamera: hasCamera,
       includePrimaryVideo,
+      keyboardEffects,
       recordingOutput,
       resolutionScalePercent,
     },

@@ -1,24 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
-
 //! Paused-frame and scrub decoding for the native preview player.
 //!
 //! Stills are decoded by the same `AVAssetReader` pipeline as playback and
 //! composed by the same GPU compositor, so a paused frame is pixel-identical
 //! to the playing frame at that position. Scrubbing decodes at the presented
 //! size and the settled frame is refined at full resolution.
-
-use std::{sync::atomic::Ordering, sync::mpsc, thread::JoinHandle};
-
-use tauri::ipc::Channel;
-
 use super::composition::gpu_still_overlay;
 use super::cursor::gpu_cursor_preview;
 use super::image::frame_position;
 use super::still_decode::{scaled_output, DecodedFrame, PaneDecoder};
 use crate::exports::preview_platform::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
 use crate::exports::recording_preview_player::{PlayerSources, RecordingPreviewPlayerEvent};
-
+use std::{sync::atomic::Ordering, sync::mpsc, thread::JoinHandle};
+use tauri::ipc::Channel;
 enum DecoderCommand {
   Seek {
     position_ms: u64,
@@ -30,12 +25,10 @@ enum DecoderCommand {
   },
   Stop,
 }
-
 pub(crate) struct NativeStillDecoder {
   sender: mpsc::Sender<DecoderCommand>,
   thread: Option<JoinHandle<()>>,
 }
-
 struct CachedImages {
   camera: Option<DecodedFrame>,
   camera_ms: Option<u64>,
@@ -43,7 +36,6 @@ struct CachedImages {
   screen_ms: u64,
   sizes: (u32, u32, Option<(u32, u32)>),
 }
-
 fn run(
   sources: PlayerSources,
   receiver: mpsc::Receiver<DecoderCommand>,
@@ -80,7 +72,6 @@ fn run(
   };
   let mut image_cache: Option<CachedImages> = None;
   let mut pending_command = None;
-
   while let Ok(mut command) = pending_command.take().map_or_else(|| receiver.recv(), Ok) {
     while let Ok(next) = receiver.try_recv() {
       command = next;
@@ -94,10 +85,6 @@ fn run(
     else {
       break;
     };
-    // Screen and camera (and any pane rects the layout deferred to this
-    // still) reach the screen in one commit, so a canvas resize never shows
-    // one pane a display tick ahead of the other. Opened before any early
-    // `continue` so a skipped still flushes the deferred layout regardless.
     let _batch = sources
       .preview_surface
       .as_ref()
@@ -157,10 +144,6 @@ fn run(
         sizes: sizes_key,
       });
     }
-    // A decoded frame is always presented, even when newer seeks are already
-    // queued: during a drag newer seeks are the norm, and dropping the frame
-    // would starve the screen down to a few updates a second. The loop drains
-    // to the newest command right after, so latest-wins still holds.
     let cache = image_cache
       .as_ref()
       .expect("a decoded still is cached after a successful request");
@@ -178,8 +161,26 @@ fn run(
         sources.playback_layout.panes[0].source_height,
       ),
     );
-    // Only live playback may veto a still present; newer queued seeks just
-    // mean this frame is a beat old, which still beats a frozen screen.
+    let keyboard_settings = sources
+      .keyboard_settings
+      .read()
+      .map(|settings| *settings)
+      .unwrap_or_default();
+    let keyboard_dimensions = composition.as_ref().map_or(
+      (
+        sources.playback_layout.panes[0].source_width,
+        sources.playback_layout.panes[0].source_height,
+      ),
+      |composition| {
+        (
+          composition.recording_output.primary.width,
+          composition.recording_output.primary.height,
+        )
+      },
+    );
+    let keyboard = sources.keyboard.as_deref().and_then(|keyboard| {
+      keyboard.evaluate_fitted(screen_position_ms, keyboard_settings, keyboard_dimensions)
+    });
     if sources.playing.load(Ordering::Acquire) {
       continue;
     }
@@ -251,6 +252,7 @@ fn run(
         placement: NativeWorkspacePlacement::default(),
         seconds: screen_position_ms as f64 / 1_000.0,
         cursor,
+        keyboard,
         camera: baked_camera.and_then(|camera| camera.rgba()),
         camera_pixels: baked_camera
           .and_then(|camera| camera.pixels().map(|pixels| (pixels, camera.dimensions()))),
@@ -276,6 +278,7 @@ fn run(
             placement: NativeWorkspacePlacement::default(),
             seconds: screen_position_ms as f64 / 1_000.0,
             cursor: None,
+            keyboard: None,
             camera: None,
             camera_pixels: None,
             overlay: None,
@@ -305,7 +308,6 @@ fn run(
     continue;
   }
 }
-
 impl NativeStillDecoder {
   pub(crate) fn spawn(
     sources: PlayerSources,

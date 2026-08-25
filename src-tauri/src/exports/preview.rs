@@ -28,6 +28,7 @@ pub async fn estimate_recording_export(
     collapse_audio,
     compression,
     cursor_effects,
+    keyboard_effects,
     enabled_stream_indices,
     include_camera,
     include_primary_video,
@@ -54,6 +55,7 @@ pub async fn estimate_recording_export(
       primary_kind,
       source_scale_percent,
       has_cursor,
+      has_keyboard,
     ) = {
       let artifact = state
         .recording
@@ -64,6 +66,7 @@ pub async fn estimate_recording_export(
         audio_tracks,
         camera,
         cursor,
+        keyboard,
         duration_ms,
         height,
         id,
@@ -91,12 +94,14 @@ pub async fn estimate_recording_export(
         *primary_kind,
         *source_scale_percent,
         cursor.is_some(),
+        keyboard.is_some(),
       )
     };
     if bake_camera && (!include_primary_video || !include_camera || camera.is_none()) {
       return Err("There is no camera recording to bake in".to_owned());
     }
     let bake_cursor = cursor_effects.bake && include_primary_video && has_cursor;
+    let bake_keyboard = keyboard_effects.bake && include_primary_video && has_keyboard;
     if !include_primary_video && !include_camera && enabled_stream_indices.is_empty() {
       return Err("Select at least one track to export".to_owned());
     }
@@ -140,7 +145,7 @@ pub async fn estimate_recording_export(
       cursor_export::needs_composition(&recording_output.camera, camera.width, camera.height)
     });
     let estimate_compression =
-      if (bake_camera || bake_cursor || primary_composition) && compression == 0 {
+      if (bake_camera || bake_cursor || bake_keyboard || primary_composition) && compression == 0 {
         // Original means no intentional quality reduction. Composition still
         // requires an encode, so it uses the same high-quality step as High
         // rather than pretending the source can be stream-copied.
@@ -150,7 +155,7 @@ pub async fn estimate_recording_export(
       };
     let key = (
       artifact_id,
-      u8::from(bake_camera) * 2 + u8::from(bake_cursor) * 4,
+      u8::from(bake_camera) * 2 + u8::from(bake_cursor) * 4 + u8::from(bake_keyboard) * 8,
       estimate_compression,
       resolution_scale_percent,
     );
@@ -168,7 +173,7 @@ pub async fn estimate_recording_export(
       _ if !include_primary_video => 0,
       Some(bytes) => bytes,
       None if !has_video => 0,
-      None if bake_cursor || bake_camera || primary_composition => {
+      None if bake_cursor || bake_keyboard || bake_camera || primary_composition => {
         cursor_export::estimated_video_bytes(
           recording_output.primary.width,
           recording_output.primary.height,
@@ -185,6 +190,7 @@ pub async fn estimate_recording_export(
       None
         if !bake_camera
           && !bake_cursor
+          && !bake_keyboard
           && compression == 0
           && resolution_scale_percent == source_scale_percent =>
       {

@@ -7,11 +7,13 @@ pub(super) struct CursorSaveRequest<'a> {
   pub app: &'a AppHandle,
   pub artifact_id: u64,
   pub cancelled: &'a AtomicBool,
-  pub cursor: &'a Path,
+  pub cursor: Option<&'a Path>,
+  pub cursor_effects: cursor_effects::CursorEffectSettings,
   pub directory: &'a Path,
   pub duration_ms: u64,
-  pub effects: cursor_effects::CursorEffectSettings,
   pub height: u32,
+  pub keyboard: Option<&'a Path>,
+  pub keyboard_effects: keyboard_effects::KeyboardEffectSettings,
   pub layout: track_selection::AudioLayout,
   pub output: &'a ScreenshotOutputSettings,
   pub progress_share: f64,
@@ -46,8 +48,10 @@ pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBu
     camera: None,
     camera_on_top: true,
     cancelled: request.cancelled,
-    cursor: Some(request.cursor),
-    cursor_effects: request.effects,
+    cursor: request.cursor,
+    cursor_effects: request.cursor_effects,
+    keyboard: request.keyboard,
+    keyboard_effects: request.keyboard_effects,
     destination: &path,
     duration_ms: request.duration_ms,
     height: request.height,
@@ -60,11 +64,5 @@ pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBu
   })? {
     media_preview::ExportRunResult::Completed => Ok(Some(path)),
     media_preview::ExportRunResult::Cancelled => Ok(None),
-  }
-}
-
-pub(super) fn remove_working_file(cursor: Option<&RecordingCursor>) {
-  if let Some(cursor) = cursor {
-    let _ = std::fs::remove_file(&cursor.path);
   }
 }

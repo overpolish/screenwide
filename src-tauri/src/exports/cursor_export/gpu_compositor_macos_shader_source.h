@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #pragma once
-
+#import "gpu_compositor_macos_keyboard_shader_source.h"
 /// Native Metal shader extension point for future screenshot annotation tools.
 __attribute__((visibility("hidden"))) NSString *const shader_source = @R"METAL(
 #include <metal_stdlib>
@@ -409,6 +409,9 @@ static float4 still_cursor_pixel(const device uchar4 *cursor, float2 destination
   if (pixel.a > 0.0) pixel.rgb /= pixel.a; return pixel;
 }
 
+)METAL"
+SCREENWIDE_KEYBOARD_SHADER_SOURCE
+@R"METAL(
 kernel void compose_canvas_rgba(
     const device uchar4 *source [[buffer(0)]],
     device uchar4 *output [[buffer(1)]],
@@ -418,6 +421,8 @@ kernel void compose_canvas_rgba(
     constant OverlayUniforms &cursor [[buffer(5)]],
     const device uchar4 *camera [[buffer(6)]],
     constant StillOverlayUniforms &overlay [[buffer(7)]],
+    const device uchar4 *keyboard_pixels [[buffer(10)]],
+    constant KeyboardUniforms &keyboard [[buffer(11)]],
     texture2d_array<float, access::read> cursor_images [[texture(0)]],
     uint2 gid [[thread_position_in_grid]],
     uint2 dimensions [[threads_per_grid]]) {
@@ -465,6 +470,8 @@ kernel void compose_canvas_rgba(
       float2(gid) + 0.5, float2(dimensions), u);
     rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
   }
+  rgba = composite_keyboard(rgba, keyboard_pixels, keyboard,
+                            float2(gid) + 0.5, float2(dimensions));
   float canvas_coverage = rounded_coverage(
     float2(gid) + 0.5, float2(dimensions), float(u.background_radius));
   if (u.foreground_only == 0) rgba.rgb = output_dither(rgba.rgb, float2(gid));
@@ -613,6 +620,8 @@ kernel void workspace_layer(
     const device uchar4 *camera [[buffer(7)]],
     constant StillOverlayUniforms &overlay [[buffer(8)]],
     constant float &seconds [[buffer(9)]],
+    const device uchar4 *keyboard_pixels [[buffer(10)]],
+    constant KeyboardUniforms &keyboard [[buffer(11)]],
     texture2d_array<float, access::read> cursor_images [[texture(1)]],
     uint2 gid [[thread_position_in_grid]]) {
   uint2 dimensions(output.get_width(), output.get_height());
@@ -684,6 +693,8 @@ kernel void workspace_layer(
       rgba, source, source_dimensions.x, source_dimensions.y,
       canvas_point, canvas_dimensions, u);
   }
+  rgba = composite_keyboard(rgba, keyboard_pixels, keyboard, canvas_point,
+                            canvas_dimensions);
   if (u.foreground_only == 0) rgba.rgb = output_dither(rgba.rgb, global_point);
   rgba.rgb *= canvas_coverage;
   rgba.a = u.foreground_only != 0 || u.transparent_background != 0

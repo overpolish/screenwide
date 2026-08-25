@@ -5,6 +5,10 @@
 
 #include <stdint.h>
 
+#import <CoreMedia/CoreMedia.h>
+
+#import "gpu_compositor_macos_keyboard_types.h"
+
 typedef struct {
   float background_color[4];
   float recenter_inset_color[4];
@@ -182,6 +186,7 @@ typedef struct {
   ScreenwideWorkspacePlacement placement;
   double seconds;
   ScreenwideGpuCursor cursor;
+  ScreenwideKeyboardOverlay keyboard;
   const uint8_t *camera_rgba;
   void *camera_pixels;
   ScreenwideStillOverlay overlay;

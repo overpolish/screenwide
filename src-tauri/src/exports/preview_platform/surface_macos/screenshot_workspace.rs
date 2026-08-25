@@ -42,6 +42,7 @@ impl RecordingPreviewSurface {
         placement: NativeWorkspacePlacement::default(),
         seconds: 0.0,
         cursor: Default::default(),
+        keyboard: Default::default(),
         camera_rgba: std::ptr::null(),
         camera_pixels: std::ptr::null_mut(),
         overlay: StillOverlay::default(),

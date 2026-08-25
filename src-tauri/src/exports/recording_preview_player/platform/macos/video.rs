@@ -1,17 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
-
-use std::{
-  path::Path,
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    mpsc::{SyncSender, TrySendError},
-    Arc,
-  },
-};
-
-use cidre::{arc, av, cm, cv, ns};
-
 use super::{
   composition::gpu_still_overlay,
   cursor::{gpu_cursor_preview, GpuCursorPreview},
@@ -22,7 +10,15 @@ use crate::exports::recording_preview_player::{
   PlayerSources,
 };
 use crate::screenshots::CapturedImage;
-
+use cidre::{arc, av, cm, cv, ns};
+use std::{
+  path::Path,
+  sync::{
+    atomic::{AtomicBool, Ordering},
+    mpsc::{SyncSender, TrySendError},
+    Arc,
+  },
+};
 unsafe extern "C" {
   fn screenwide_preview_reader_enable_random_access(output: *mut std::ffi::c_void);
   fn screenwide_preview_reader_reset_range(
@@ -31,7 +27,6 @@ unsafe extern "C" {
     duration_milliseconds: i64,
   ) -> i32;
 }
-
 pub(super) struct NativeVideoReader {
   _reader: arc::R<av::AssetReader>,
   last_frame: Option<CapturedImage>,
@@ -39,7 +34,6 @@ pub(super) struct NativeVideoReader {
   pending: Option<arc::R<cm::SampleBuf>>,
   previous: Option<arc::R<cm::SampleBuf>>,
 }
-
 pub(super) fn open_asset(path: &Path) -> Result<arc::R<av::UrlAsset>, String> {
   let path_text = path
     .to_str()
@@ -248,6 +242,8 @@ pub(super) fn spawn(
   };
   let cursor = sources.cursor.clone();
   let cursor_settings = Arc::clone(&sources.cursor_settings);
+  let keyboard = sources.keyboard.clone();
+  let keyboard_settings = Arc::clone(&sources.keyboard_settings);
   let composition_settings = sources.composition_settings.clone();
   let duration_ms = sources.duration_ms;
   let cursor_output = (
@@ -288,6 +284,20 @@ pub(super) fn spawn(
         };
         let cursor_frame: Option<GpuCursorPreview> =
           gpu_cursor_preview(cursor.as_deref(), target_ms, cursor_settings, cursor_output);
+        let keyboard_settings = keyboard_settings
+          .read()
+          .map(|settings| *settings)
+          .unwrap_or_default();
+        let keyboard_overlay = keyboard.as_deref().and_then(|keyboard| {
+          keyboard.evaluate_fitted(
+            target_ms,
+            keyboard_settings,
+            (
+              composition.recording_output.primary.width,
+              composition.recording_output.primary.height,
+            ),
+          )
+        });
         let screen_output =
           super::still_decode::scaled_output(&composition.recording_output.primary, screen_factor);
         let (cursor, overlay) = match gpu_still_overlay(
@@ -317,6 +327,7 @@ pub(super) fn spawn(
             screen_output,
             camera_output,
             cursor,
+            keyboard: keyboard_overlay,
             overlay,
             bake_camera: composition.bake_camera,
             seconds: target_ms as f64 / 1_000.0,

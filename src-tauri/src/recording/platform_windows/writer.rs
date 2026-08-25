@@ -482,7 +482,6 @@ impl Writer {
     let pts_ns = self.timeline.wall_frame_pts_ns(wall_ns);
     self.append(&frame, pts_ns, self.frame_duration_100ns);
   }
-
   fn finish(&mut self, at: Instant) -> Result<FinalizeInfo, String> {
     if !self.timeline.has_started() {
       return Err("The recording captured no frames".to_owned());
@@ -500,6 +499,7 @@ impl Writer {
     Ok(FinalizeInfo {
       camera: None,
       cursor_path: None,
+      keyboard_path: None,
       duration_ms: u64::try_from(end_ns / 1_000_000).unwrap_or_default(),
       has_microphone: false,
       has_system_audio: false,

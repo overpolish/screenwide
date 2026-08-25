@@ -38,8 +38,10 @@ const recording: Extract<ExportArtifact, { kind: "recording" }> = {
   durationMs: 3_845_000,
   extension: "mp4",
   hasCursorData: true,
+  hasKeyboardData: true,
   height: 2160,
   id: 2,
+  keyboardDataVersion: 1,
   kind: "recording",
   originalSizeBytes: 186_400_000,
   // The working file is a QuickTime movie; `extension` is what saving it
@@ -253,7 +255,9 @@ export const CameraRecording: Story = {
       ...recording,
       cursorDataVersion: null,
       hasCursorData: false,
+      hasKeyboardData: false,
       height: 1080,
+      keyboardDataVersion: null,
       primaryKind: "camera",
       sourceScalePercent: 100,
       width: 1920,
@@ -274,7 +278,9 @@ export const AudioRecording: Story = {
       cursorDataVersion: null,
       extension: "m4a",
       hasCursorData: false,
+      hasKeyboardData: false,
       height: 0,
+      keyboardDataVersion: null,
       path: "/tmp/Recordings/audio-20260808-143205.000.mov",
       primaryKind: "audio",
       sourceScalePercent: 100,
@@ -309,7 +315,6 @@ export const RecordingWithCamera: Story = {
   },
   render: (args) => <RecordingStoryPanel {...args} />,
 };
-
 export const SavingRecording: Story = {
   args: {
     ...Recording.args,
@@ -318,7 +323,6 @@ export const SavingRecording: Story = {
     saveProgress: 58,
   },
 };
-
 export const SavingCamera: Story = {
   args: {
     ...RecordingWithCamera.args,
@@ -328,14 +332,12 @@ export const SavingCamera: Story = {
     saveProgress: 68,
   },
 };
-
 export const CancelingRecording: Story = {
   args: {
     ...SavingRecording.args,
     isCancelingSave: true,
   },
 };
-
 export const EstimatingCompressedSize: Story = {
   args: {
     ...Recording.args,
@@ -343,7 +345,6 @@ export const EstimatingCompressedSize: Story = {
     isEstimatingSize: false,
   },
 };
-
 export const RecordingWithoutCompressionSupport: Story = {
   args: {
     ...Recording.args,
@@ -352,7 +353,6 @@ export const RecordingWithoutCompressionSupport: Story = {
     estimatedSizeBytes: recording.originalSizeBytes,
   },
 };
-
 /** A recovered recording has only its file and name, not frames or duration. */
 export const RecoveredRecording: Story = {
   args: {

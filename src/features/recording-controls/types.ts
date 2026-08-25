@@ -32,6 +32,7 @@ export const initialRecordingSnapshot: RecordingSnapshot = {
 export type StartRecordingOptions = {
   cameraFlipped: boolean;
   cameraPal: boolean;
+  captureKeyboardShortcuts: boolean;
   fps: RecordingFps;
   mode: RecordingMode;
   showCursor: boolean;

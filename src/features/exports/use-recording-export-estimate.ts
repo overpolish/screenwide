@@ -15,6 +15,7 @@ import {
   CameraOverlaySettings,
   CursorEffectSettings,
   ExportArtifact,
+  KeyboardEffectSettings,
 } from "./types";
 
 const ESTIMATE_DEBOUNCE_MS = 450;
@@ -31,6 +32,7 @@ export function useRecordingExportEstimate({
   enabledStreamIndices,
   includeCamera,
   includePrimaryVideo,
+  keyboardEffects,
   recordingOutput,
   resolutionScalePercent,
 }: {
@@ -45,6 +47,7 @@ export function useRecordingExportEstimate({
   enabledStreamIndices: number[] | null;
   includeCamera: boolean;
   includePrimaryVideo: boolean;
+  keyboardEffects: KeyboardEffectSettings;
   recordingOutput: RecordingOutputSettings;
   resolutionScalePercent: number;
 }) {
@@ -73,6 +76,7 @@ export function useRecordingExportEstimate({
           bakeCamera ? "baked" : "separate",
           compression,
           cursorEffects.bake ? "cursor" : "no-cursor",
+          keyboardEffects.bake ? "keyboard" : "no-keyboard",
           resolutionScalePercent,
           camera.compression,
           camera.resolutionScalePercent,
@@ -140,6 +144,7 @@ export function useRecordingExportEstimate({
         enabledStreamIndices: streamIndices,
         includeCamera,
         includePrimaryVideo,
+        keyboardEffects,
         recordingOutput,
         resolutionScalePercent,
         screenshotOutput: { ...defaultScreenshotOutput(1, 1), items: [] },
@@ -173,6 +178,7 @@ export function useRecordingExportEstimate({
     collapseAudio,
     compression,
     cursorEffects,
+    keyboardEffects,
     enabledSignature,
     includeCamera,
     includePrimaryVideo,

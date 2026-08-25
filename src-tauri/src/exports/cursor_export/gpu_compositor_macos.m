@@ -9,6 +9,7 @@
 
 #import "gpu_compositor_macos.h"
 #import "gpu_compositor_macos_cursor_resources.h"
+#import "gpu_compositor_macos_keyboard.h"
 
 typedef bool (*ScreenwideShouldCancel)(void *context);
 typedef void (*ScreenwideProgress)(void *context, uint64_t position_ms);
@@ -385,6 +386,8 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
                                uint32_t cursor_count,
                                const ScreenwideCursorArtwork *artworks,
                                uint32_t artwork_count,
+                               const ScreenwideKeyboardOverlay *keyboards,
+                               uint32_t keyboard_count,
                                const char *camera_path,
                                const ScreenwideCameraOverlay *camera_overlay,
                                const ScreenwideCanvas *canvas,
@@ -499,6 +502,8 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
         [device newComputePipelineStateWithFunction:
                     [library newFunctionWithName:@"overlay_chroma"]
                                               error:&error];
+    id<MTLComputePipelineState> keyboard_luma_pipeline = screenwide_keyboard_pipeline(device, library, @"overlay_keyboard_luma", &error);
+    id<MTLComputePipelineState> keyboard_chroma_pipeline = screenwide_keyboard_pipeline(device, library, @"overlay_keyboard_chroma", &error);
     id<MTLComputePipelineState> camera_luma_pipeline =
         [device newComputePipelineStateWithFunction:
                     [library newFunctionWithName:@"overlay_camera_luma"]
@@ -526,11 +531,13 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
     id<MTLCommandQueue> queue = [device newCommandQueue];
     id<MTLTexture> cursor_artwork =
         cursor_artwork_texture(device, artworks, artwork_count);
+    NSMutableDictionary *keyboard_cache = [NSMutableDictionary dictionary];
     CVMetalTextureCacheRef texture_cache = NULL;
     CVMetalTextureCacheCreate(kCFAllocatorDefault, NULL, device, NULL,
                               &texture_cache);
     if (device == nil || library == nil || luma_pipeline == nil ||
-        chroma_pipeline == nil || camera_luma_pipeline == nil ||
+        chroma_pipeline == nil || keyboard_luma_pipeline == nil ||
+        keyboard_chroma_pipeline == nil || camera_luma_pipeline == nil ||
         camera_chroma_pipeline == nil || queue == nil ||
         canvas_luma_pipeline == nil || canvas_chroma_pipeline == nil ||
         screen_luma_pipeline == nil || screen_chroma_pipeline == nil ||
@@ -568,6 +575,8 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
         }
         CMTime pts = CMSampleBufferGetPresentationTimeStamp(screen_sample);
         const ScreenwideGpuCursor *cursor = cursor_at(cursors, cursor_count, pts);
+        const ScreenwideKeyboardOverlay *keyboard =
+            screenwide_keyboard_at(keyboards, keyboard_count, pts);
         while (next_camera_sample != NULL &&
                CMTimeCompare(
                    CMSampleBufferGetPresentationTimeStamp(next_camera_sample),
@@ -721,6 +730,10 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
                                 cursor, artworks, artwork_count, canvas,
                                 output_width, output_height);
         }
+        screenwide_encode_keyboard_overlay(
+            command, device, keyboard_luma_pipeline, keyboard_chroma_pipeline,
+            destination_y, destination_uv, keyboard_cache, keyboard,
+            output_width, output_height);
         // Commit without waiting: the GPU works on this frame while the loop
         // decodes and composites the next ones. The frame owns every resource
         // the command buffer reads or writes until it completes.
@@ -822,6 +835,7 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
                               uint32_t cursor_artwork_count,
                               const uint8_t *camera_rgba,
                               const ScreenwideStillOverlay *overlay,
+                              const ScreenwideKeyboardOverlay *keyboard,
                               uint8_t *output_rgba,
                               char *error_text,
                               size_t error_capacity) {
@@ -836,6 +850,7 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
     static id<MTLDevice> device;
     static id<MTLComputePipelineState> pipeline;
     static id<MTLCommandQueue> queue;
+    static NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *> *keyboard_cache;
     static NSString *initialization_error;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
@@ -849,6 +864,7 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
       pipeline =
           [device newComputePipelineStateWithFunction:function error:&error];
       queue = [device newCommandQueue];
+      keyboard_cache = [NSMutableDictionary dictionary];
       initialization_error = error.localizedDescription;
     });
     if (device == nil || pipeline == nil || queue == nil) {
@@ -870,6 +886,8 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
                                                 options:MTLResourceStorageModeShared];
     ScreenwideStillOverlay empty_overlay = {0};
     if (overlay == NULL) overlay = &empty_overlay;
+    ScreenwideKeyboardOverlay empty_keyboard = {0};
+    if (keyboard == NULL) keyboard = &empty_keyboard;
     ScreenwideCursorResources *cursor_resources = screenwide_cursor_resources(
         device, cursor_artworks, cursor_artwork_count);
     if (cursor_resources == nil ||
@@ -907,6 +925,7 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
     [encoder setBuffer:cursor_uniforms offset:0 atIndex:5];
     [encoder setBuffer:camera offset:0 atIndex:6];
     [encoder setBuffer:overlay_uniforms offset:0 atIndex:7];
+    screenwide_bind_keyboard(encoder, device, keyboard_cache, *keyboard, output_height);
     [encoder setTexture:cursor_resources.texture atIndex:0];
     MTLSize grid = MTLSizeMake(output_width, output_height, 1);
     NSUInteger width = MIN(pipeline.threadExecutionWidth, output_width);

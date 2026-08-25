@@ -22,7 +22,7 @@ pub(crate) fn cancelled_marker(path: &Path) -> PathBuf {
 
 pub(in crate::recording) fn discard_capture(handles: Option<CaptureHandles>) {
   let Some(CaptureHandles {
-    cursor,
+    sidecars,
     output_path,
     session,
     ..
@@ -37,9 +37,7 @@ pub(in crate::recording) fn discard_capture(handles: Option<CaptureHandles>) {
   let marker = cancelled_marker(&output_path);
   let _ = std::fs::write(&marker, []);
   session.cancel();
-  if let Some(cursor) = cursor {
-    cursor.cancel();
-  }
+  sidecars.cancel();
   let removed = std::fs::remove_file(output_path).is_ok();
   if removed {
     let _ = std::fs::remove_file(marker);

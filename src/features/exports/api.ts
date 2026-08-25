@@ -17,6 +17,7 @@ import {
   RecordingPreview,
   RecordingPreviewLayout,
   CursorEffectSettings,
+  KeyboardEffectSettings,
 } from "./types";
 
 const finite = (value: number, fallback: number) =>
@@ -42,6 +43,17 @@ const normalizedCursorEffects = (
   sizePercent: finite(settings.sizePercent, 100),
 });
 
+const normalizedKeyboardEffects = (
+  settings: KeyboardEffectSettings,
+): KeyboardEffectSettings => ({
+  animation:
+    settings.animation === "fade" || settings.animation === "none"
+      ? settings.animation
+      : "pop",
+  appearance: settings.appearance === "dark" ? "dark" : "light",
+  bake: settings.bake,
+  sizePercent: finite(settings.sizePercent, 100),
+});
 const normalizedAudioTrackVolumes = (volumes: AudioTrackVolume[]) =>
   volumes.map((volume) => ({
     ...volume,
@@ -87,6 +99,7 @@ export const startRecordingPreviewPlayer = ({
   cursorEffects,
   enabledStreamIndices,
   eventChannel,
+  keyboardEffects,
   recordingOutput,
   sessionId,
 }: {
@@ -97,6 +110,7 @@ export const startRecordingPreviewPlayer = ({
   cursorEffects: CursorEffectSettings;
   enabledStreamIndices: number[];
   eventChannel: Channel<RecordingPreviewPlayerEvent>;
+  keyboardEffects: KeyboardEffectSettings;
   recordingOutput: RecordingOutputSettings;
   sessionId: number;
 }) =>
@@ -112,6 +126,7 @@ export const startRecordingPreviewPlayer = ({
       bakeCamera,
       cameraOverlay: normalizedCameraOverlay(cameraOverlay),
       cursorEffects: normalizedCursorEffects(cursorEffects),
+      keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
       recordingOutput: {
         camera: normalizedScreenshotOutput(recordingOutput.camera),
         cameraOnTop: recordingOutput.cameraOnTop,
@@ -236,6 +251,15 @@ export const setRecordingPreviewCursorEffects = (
     sessionId,
   });
 
+export const setRecordingPreviewKeyboardEffects = (
+  keyboardEffects: KeyboardEffectSettings,
+  sessionId: number,
+) =>
+  invoke<null>("set_recording_preview_keyboard_effects", {
+    keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
+    sessionId,
+  });
+
 export const setRecordingPreviewComposition = ({
   bakeCamera,
   cameraOverlay,
@@ -263,6 +287,7 @@ export const copyRecordingPreviewFrameToClipboard = ({
   bakeCamera,
   cameraOverlay,
   cursorEffects,
+  keyboardEffects,
   positionMs,
   recordingOutput,
 }: {
@@ -270,6 +295,7 @@ export const copyRecordingPreviewFrameToClipboard = ({
   bakeCamera: boolean;
   cameraOverlay: CameraOverlaySettings;
   cursorEffects: CursorEffectSettings;
+  keyboardEffects: KeyboardEffectSettings;
   positionMs: number;
   recordingOutput: RecordingOutputSettings;
 }) =>
@@ -278,6 +304,7 @@ export const copyRecordingPreviewFrameToClipboard = ({
     bakeCamera,
     cameraOverlay: normalizedCameraOverlay(cameraOverlay),
     cursorEffects: normalizedCursorEffects(cursorEffects),
+    keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
     positionMs: Math.max(0, Math.round(positionMs)),
     recordingOutput: {
       camera: normalizedScreenshotOutput(recordingOutput.camera),
@@ -375,11 +402,11 @@ type RecordingProcessingOptions = {
   enabledStreamIndices: number[];
   includeCamera: boolean;
   includePrimaryVideo: boolean;
+  keyboardEffects: KeyboardEffectSettings;
   recordingOutput: RecordingOutputSettings;
   resolutionScalePercent: number;
   screenshotOutput: ScreenshotWorkspaceOutputSettings;
 };
-
 export const estimateRecordingExport = ({
   artifactId,
   audioTrackVolumes,
@@ -393,6 +420,7 @@ export const estimateRecordingExport = ({
   enabledStreamIndices,
   includeCamera,
   includePrimaryVideo,
+  keyboardEffects,
   recordingOutput,
   resolutionScalePercent,
   screenshotOutput,
@@ -411,6 +439,7 @@ export const estimateRecordingExport = ({
       enabledStreamIndices,
       includeCamera,
       includePrimaryVideo,
+      keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
       recordingOutput: {
         camera: normalizedScreenshotOutput(recordingOutput.camera),
         cameraOnTop: recordingOutput.cameraOnTop,
@@ -420,7 +449,6 @@ export const estimateRecordingExport = ({
       screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
     },
   });
-
 type SaveExportOptions = RecordingProcessingOptions & {
   fileStem: string;
 };
@@ -438,6 +466,7 @@ export const saveExport = ({
   fileStem,
   includeCamera,
   includePrimaryVideo,
+  keyboardEffects,
   recordingOutput,
   resolutionScalePercent,
   screenshotOutput,
@@ -456,6 +485,7 @@ export const saveExport = ({
       enabledStreamIndices,
       includeCamera,
       includePrimaryVideo,
+      keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
       recordingOutput: {
         camera: normalizedScreenshotOutput(recordingOutput.camera),
         cameraOnTop: recordingOutput.cameraOnTop,

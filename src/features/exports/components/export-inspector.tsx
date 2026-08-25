@@ -1,14 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Camera,
-  Cog,
-  Mic,
-  Monitor,
-  MousePointer2,
-  Volume2,
-} from "lucide-react";
+import { Cog, Keyboard, MousePointer2 } from "lucide-react";
 import { useState } from "react";
 
 import { Alert } from "../../../components/base/alert/alert";
@@ -20,7 +13,6 @@ import { resizeCameraOverlayCentered } from "../camera-overlay-geometry";
 import { resolutionScales, scaledDimensions } from "../resolution";
 import {
   RecordingOutputSettings,
-  recordingVideoTrackOrder,
   resizeScreenshotOutputCentered,
   ScreenshotOutputSettings,
 } from "../screenshot-output";
@@ -28,18 +20,20 @@ import {
   CameraOverlaySettings,
   ExportArtifact,
   CursorEffectSettings,
+  KeyboardEffectSettings,
   recordingAudioStreamIndex,
-  recordingAudioTrackId,
   RecordingTrackId,
   RecordingVideoTrackId,
 } from "../types";
 
 import { CameraTrackSettings } from "./camera-track-settings";
 import { CursorEffectControls } from "./cursor-effect-controls";
+import { KeyboardEffectControls } from "./keyboard-effect-controls";
 import {
   RecordingSizeEstimate,
   VideoExportSettings,
 } from "./recording-export-options";
+import { recordingTrackTabs } from "./recording-track-tabs";
 import { ScreenshotOutputControls } from "./screenshot-inspector";
 
 type RecordingArtifact = Extract<ExportArtifact, { kind: "recording" }>;
@@ -48,50 +42,6 @@ const inspectorTabs = [
   { icon: <Cog size={15} />, id: "settings", label: "Settings" },
   { icon: <MousePointer2 size={15} />, id: "cursor", label: "Cursor" },
 ];
-
-const trackTabs = (
-  artifact: RecordingArtifact,
-  recordingOutput?: RecordingOutputSettings,
-) => {
-  const tabs: {
-    icon: React.ReactNode;
-    id: RecordingTrackId;
-    label: string;
-  }[] = [];
-  const videoTabs: typeof tabs = [];
-  if (artifact.primaryKind !== "audio") {
-    const isCamera = artifact.primaryKind === "camera";
-    videoTabs.push({
-      icon: isCamera ? <Camera size={15} /> : <Monitor size={15} />,
-      id: "primary",
-      label: isCamera ? "Camera" : "Screen",
-    });
-  }
-  if (artifact.camera) {
-    videoTabs.push({
-      icon: <Camera size={15} />,
-      id: "camera",
-      label: "Camera",
-    });
-  }
-  const videoOrder = recordingOutput
-    ? recordingVideoTrackOrder(recordingOutput)
-    : (["camera", "primary"] as const);
-  tabs.push(
-    ...videoTabs.sort(
-      (left, right) =>
-        videoOrder.indexOf(left.id as RecordingVideoTrackId) -
-        videoOrder.indexOf(right.id as RecordingVideoTrackId),
-    ),
-    ...artifact.audioTracks.map((track) => ({
-      icon:
-        track.kind === "microphone" ? <Mic size={15} /> : <Volume2 size={15} />,
-      id: recordingAudioTrackId(track.streamIndex),
-      label: track.label,
-    })),
-  );
-  return tabs;
-};
 
 export function ExportInspector({
   artifact,
@@ -108,6 +58,7 @@ export function ExportInspector({
   estimatedSizeBytes,
   isEstimatingSize,
   isSaving,
+  keyboardEffects,
   onBakeCameraChange,
   onCameraCompressionChange,
   onCameraOverlayChange,
@@ -115,6 +66,7 @@ export function ExportInspector({
   onCollapseAudioChange,
   onCompressionChange,
   onCursorEffectsChange,
+  onKeyboardEffectsChange,
   onRecordingOutputChange,
   onResolutionScaleChange,
   onSelectedTrackChange,
@@ -131,6 +83,7 @@ export function ExportInspector({
   cameraResolutionScalePercent: number;
   compression: number;
   cursorEffects: CursorEffectSettings;
+  keyboardEffects: KeyboardEffectSettings;
   selectedTrack: RecordingTrackId | null;
   collapseAudio?: boolean;
   enabledAudioTrackCount?: number;
@@ -146,6 +99,7 @@ export function ExportInspector({
   onCollapseAudioChange?: (collapse: boolean) => void;
   onCompressionChange?: (compression: number) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
+  onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onRecordingOutputChange?: (
     trackId: RecordingVideoTrackId,
     settings: ScreenshotOutputSettings,
@@ -161,6 +115,9 @@ export function ExportInspector({
   const availableResolutionScales = resolutionScales(artifact);
   const effectiveResolutionScale =
     resolutionScalePercent ?? availableResolutionScales[0];
+  const keyboardOutputDimensions = recordingOutput
+    ? recordingOutput.primary
+    : scaledDimensions(artifact, effectiveResolutionScale);
   const selectedAudioStreamIndex = recordingAudioStreamIndex(selectedTrack);
   const selectedAudioTrack = artifact.audioTracks.find(
     (track) => track.streamIndex === selectedAudioStreamIndex,
@@ -170,7 +127,13 @@ export function ExportInspector({
     videoSelection.has("primary") && videoSelection.has("camera");
   const hasRecordingSettings =
     Boolean(artifact.camera) || artifact.audioTracks.length > 1;
-  const tabs = trackTabs(artifact, recordingOutput);
+  const tabs = recordingTrackTabs(artifact, recordingOutput);
+  const availableInspectorTabs = artifact.hasKeyboardData
+    ? [
+        ...inspectorTabs,
+        { icon: <Keyboard size={15} />, id: "keyboard", label: "Keyboard" },
+      ]
+    : inspectorTabs;
   const effectiveSelectedTrack = selectedTrack ?? tabs[0].id;
   const resizePrimaryOutput = (width: number, height: number) => {
     if (!recordingOutput) return;
@@ -198,7 +161,7 @@ export function ExportInspector({
           <PillGroup
             ariaLabel="Inspector section"
             isDisabled={isSaving}
-            items={inspectorTabs}
+            items={availableInspectorTabs}
             onSelectionChange={setInspectorTab}
             selected={inspectorTab}
           />
@@ -256,6 +219,16 @@ export function ExportInspector({
               isSaving={Boolean(isSaving)}
               onChange={onCursorEffectsChange}
               settings={cursorEffects}
+            />
+          ) : null}
+
+          {inspectorTab === "keyboard" && artifact.hasKeyboardData ? (
+            <KeyboardEffectControls
+              isSaving={Boolean(isSaving)}
+              maximumWidthUnits={artifact.keyboardMaximumWidthUnits}
+              onChange={onKeyboardEffectsChange}
+              outputDimensions={keyboardOutputDimensions}
+              settings={keyboardEffects}
             />
           ) : null}
 
