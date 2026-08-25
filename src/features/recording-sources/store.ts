@@ -27,6 +27,24 @@ type RecordingSourceStore = {
   setSelectedWindow: (window: WindowDetails | null) => void;
 };
 
+export const mergeRecordingSourceState = <
+  State extends { regionAspectRatio: number | undefined },
+>(
+  persistedState: unknown,
+  currentState: State,
+): State => {
+  const persisted = persistedState as Partial<State> | undefined;
+
+  return {
+    ...currentState,
+    ...persisted,
+    // JSON omits `undefined`, which is how the linked control represents an
+    // unlinked ratio. Treat an absent persisted key as that explicit state so
+    // another window cannot retain the ratio from its previous store snapshot.
+    regionAspectRatio: persisted?.regionAspectRatio,
+  };
+};
+
 export const useRecordingSourceStore = create<RecordingSourceStore>()(
   persist(
     (set) => ({
@@ -59,6 +77,7 @@ export const useRecordingSourceStore = create<RecordingSourceStore>()(
       },
     }),
     {
+      merge: mergeRecordingSourceState,
       name: STORE_NAME,
       storage: createJSONStorage(() => localStorage),
     },

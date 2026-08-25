@@ -38,6 +38,7 @@ import {
   setRecordingSourceSelectorRegionControls,
   setRecordingSourceSelectorVisible,
   showRegionSelector,
+  toggleRecordingUi,
 } from "../../recording-sources/api";
 import { useRecordingSourceStore } from "../../recording-sources/store";
 import { ShortcutAction } from "../../settings/types";
@@ -267,6 +268,10 @@ export function RecordingBarWindow() {
     // target, so every window sees every shortcut action and each listener has
     // to match the one it owns exactly.
     void listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
+      if (payload === "toggleRecordingBar") {
+        void toggleRecordingUi();
+        return;
+      }
       if (payload !== "startStopRecording") return;
       startRecording(startRecordingOptions()).catch((error: unknown) => {
         console.error("Could not start the recording", error);

@@ -48,6 +48,8 @@ export const hideRecordingUi = () => invoke<null>("hide_recording_ui");
 
 export const recordingUiVisible = () => invoke<boolean>("recording_ui_visible");
 
+export const toggleRecordingUi = () => invoke<null>("toggle_recording_ui");
+
 export const setRecordingSourceSelectorVisible = (visible: boolean) =>
   invoke<null>("set_recording_source_selector_visible", { visible });
 

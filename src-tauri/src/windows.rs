@@ -351,6 +351,27 @@ pub fn is_recording_ui_visible() -> bool {
   RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed)
 }
 
+#[tauri::command]
+pub fn toggle_recording_ui(app: AppHandle) -> tauri::Result<()> {
+  crate::capture_overlays::dismiss_all(&app);
+  if !crate::recording::is_idle(&app) || crate::exports::focus_pending_workspace(&app) {
+    return Ok(());
+  }
+
+  // Tauri's visibility query describes the original webview window and is not
+  // authoritative after macOS converts it into an NSPanel.
+  if is_recording_ui_visible() {
+    return hide_recording_ui(app);
+  }
+
+  #[cfg(target_os = "macos")]
+  if !crate::permissions::has_required_recording_permissions(&app) {
+    return crate::permissions::show_permissions_window(&app);
+  }
+
+  show_recording_ui(&app)
+}
+
 pub(crate) fn sync_recording_ui_escape(app: &AppHandle, ruler_active: bool) {
   escape::sync(
     app,

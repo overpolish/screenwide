@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-use crate::windows::{self, WindowLabel};
+use crate::windows::WindowLabel;
 
 const SHORTCUTS_FILE: &str = "shortcuts.json";
 const SHORTCUT_ACTION_EVENT: &str = "global-shortcut://action";
@@ -115,14 +115,15 @@ fn store(app: &AppHandle, settings: &ShortcutSettings) -> Result<(), String> {
 /// these events and each listener has to match on the action itself.
 const fn action_window(action: ShortcutAction) -> Option<WindowLabel> {
   match action {
-    ShortcutAction::StartStopRecording => Some(WindowLabel::RecordingBar),
+    ShortcutAction::ToggleRecordingBar | ShortcutAction::StartStopRecording => {
+      Some(WindowLabel::RecordingBar)
+    }
     // The overlay opens itself in region-edit mode and captures what the user
     // settles on, so the screenshot never goes near the recording bar.
     ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard => {
       Some(WindowLabel::RegionSelector)
     }
-    ShortcutAction::ToggleRecordingBar
-    | ShortcutAction::PauseResumeRecording
+    ShortcutAction::PauseResumeRecording
     | ShortcutAction::RecognizeText
     | ShortcutAction::RulerOverlay => None,
   }
@@ -147,27 +148,18 @@ const fn preserved_capture_overlay(
 }
 
 fn run_action(app: &AppHandle, action: ShortcutAction) {
+  if action == ShortcutAction::ToggleRecordingBar {
+    // The global-shortcut plugin holds its registration mutex while this
+    // callback runs. Toggling the bar and dismissing capture overlays can both
+    // synchronize Escape, so hand all of that work to the bar's later IPC turn
+    // after this callback returns.
+    notify_frontend(app, action);
+    return;
+  }
+
   crate::capture_overlays::dismiss_except(app, preserved_capture_overlay(action));
   match action {
-    ShortcutAction::ToggleRecordingBar => {
-      if crate::recording::is_idle(app) {
-        if crate::exports::focus_pending_workspace(app) {
-          return;
-        }
-        // Tauri's visibility query describes the original webview window and
-        // is not authoritative after macOS converts it into an NSPanel.
-        if windows::is_recording_ui_visible() {
-          let _ = windows::hide_recording_ui(app.clone());
-        } else {
-          #[cfg(target_os = "macos")]
-          if !crate::permissions::has_required_recording_permissions(app) {
-            let _ = crate::permissions::show_permissions_window(app);
-            return;
-          }
-          let _ = windows::show_recording_ui(app);
-        }
-      }
-    }
+    ShortcutAction::ToggleRecordingBar => unreachable!("handled above"),
     ShortcutAction::PauseResumeRecording => {
       if matches!(
         crate::recording::snapshot(app).status,

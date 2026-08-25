@@ -40,6 +40,10 @@ fn defaults_open_the_recording_bar_take_screenshots_and_recognize_text() {
 #[test]
 fn each_frontend_action_goes_to_the_window_that_performs_it() {
   assert_eq!(
+    action_window(ShortcutAction::ToggleRecordingBar).map(WindowLabel::as_str),
+    Some(WindowLabel::RecordingBar.as_str())
+  );
+  assert_eq!(
     action_window(ShortcutAction::StartStopRecording).map(WindowLabel::as_str),
     Some(WindowLabel::RecordingBar.as_str())
   );
@@ -84,7 +88,6 @@ fn taking_a_screenshot_keeps_the_ruler_visible() {
 #[test]
 fn the_actions_rust_handles_alone_ask_no_window() {
   for action in [
-    ShortcutAction::ToggleRecordingBar,
     ShortcutAction::PauseResumeRecording,
     ShortcutAction::RecognizeText,
     ShortcutAction::RulerOverlay,
