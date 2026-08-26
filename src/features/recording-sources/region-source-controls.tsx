@@ -40,7 +40,7 @@ export function RegionSourceControls() {
   };
 
   return (
-    <div className="flex h-full min-w-0 items-center gap-1 overflow-hidden">
+    <div className="flex h-full min-w-0 items-center gap-1 overflow-visible">
       <Button
         aria-label="Center region"
         className="h-full shrink-0"
