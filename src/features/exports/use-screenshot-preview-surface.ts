@@ -101,7 +101,7 @@ export function useScreenshotPreviewSurface({
   interactionOutputRef.current = interactionOutput ?? output;
   const paneCountRef = useRef(paneCount);
   paneCountRef.current = paneCount;
-  const nativeZoomEchoRef = useRef<number | undefined>(undefined);
+  const lastNativeZoomRef = useRef<number | undefined>(undefined);
   const zoomPercentRef = useRef(zoomPercent);
   zoomPercentRef.current = zoomPercent;
   const onZoomChangeRef = useRef(onZoomChange);
@@ -162,8 +162,7 @@ export function useScreenshotPreviewSurface({
           Number.isFinite(event.payload.zoomPercent)
         ) {
           const roundedZoom = Math.round(event.payload.zoomPercent);
-          nativeZoomEchoRef.current =
-            roundedZoom === zoomPercentRef.current ? undefined : roundedZoom;
+          lastNativeZoomRef.current = roundedZoom;
           onZoomChangeRef.current?.(roundedZoom);
         }
       },
@@ -263,14 +262,10 @@ export function useScreenshotPreviewSurface({
       sessionIdRef.current === 0
     )
       return;
-    // A native gesture already applied this value synchronously. Sending its
-    // rounded React echo back through IPC lets older commands overtake a fast
-    // gesture and visibly desynchronizes the toolbar from the Metal surface.
-    const nativeZoom = nativeZoomEchoRef.current;
-    if (nativeZoom !== undefined) {
-      if (nativeZoom === zoomPercent) nativeZoomEchoRef.current = undefined;
-      return;
-    }
+    // React only ever holds native's zoom rounded to a whole percent. A value
+    // equal to the last one native reported is that echo, not a new request;
+    // sending it back would replace native's exact zoom with the rounded one.
+    if (zoomPercent === lastNativeZoomRef.current) return;
     void setScreenshotPreviewZoom(sessionIdRef.current, zoomPercent).catch(
       () => undefined,
     );

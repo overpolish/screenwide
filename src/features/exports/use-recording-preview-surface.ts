@@ -267,7 +267,7 @@ export function useRecordingPreviewSurface({
   const pendingZoomRestoreRef = useRef(false);
   const layoutRequestIdRef = useRef(0);
   const measureRef = useRef<() => void>(() => undefined);
-  const nativeZoomEchoRef = useRef<number | undefined>(undefined);
+  const lastNativeZoomRef = useRef<number | undefined>(undefined);
   const zoomPercentRef = useRef(zoomPercent);
   zoomPercentRef.current = zoomPercent;
   compositionRef.current = { bakeCamera, cameraOverlay, recordingOutput };
@@ -285,8 +285,7 @@ export function useRecordingPreviewSurface({
           Number.isFinite(event.payload.zoomPercent)
         ) {
           const roundedZoom = Math.round(event.payload.zoomPercent);
-          nativeZoomEchoRef.current =
-            roundedZoom === zoomPercentRef.current ? undefined : roundedZoom;
+          lastNativeZoomRef.current = roundedZoom;
           onZoomChange?.(roundedZoom);
         }
       },
@@ -309,11 +308,10 @@ export function useRecordingPreviewSurface({
       !startedRef.current
     )
       return;
-    const nativeZoom = nativeZoomEchoRef.current;
-    if (nativeZoom !== undefined) {
-      if (nativeZoom === zoomPercent) nativeZoomEchoRef.current = undefined;
-      return;
-    }
+    // React only ever holds native's zoom rounded to a whole percent. A value
+    // equal to the last one native reported is that echo, not a new request;
+    // sending it back would replace native's exact zoom with the rounded one.
+    if (zoomPercent === lastNativeZoomRef.current) return;
     void setRecordingPreviewZoom(sessionIdRef.current, zoomPercent).catch(
       (cause: unknown) => {
         onError(String(cause));

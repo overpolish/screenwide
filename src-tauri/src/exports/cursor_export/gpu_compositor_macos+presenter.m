@@ -33,6 +33,7 @@ extern __attribute__((visibility("hidden"))) NSString *const shader_source;
 @property(nonatomic, strong) NSMutableDictionary<NSNumber *, NSValue *> *workspaceSourceSizes;
 @property(nonatomic, strong) NSMutableArray<NSValue *> *workspaceLayers; @property(nonatomic, strong) NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *> *keyboardArtworks;
 @property(nonatomic, strong) NSArray<NSValue *> *workspaceResizeLayers;
+@property(nonatomic) BOOL workspaceResizeApplied;
 @property(nonatomic, strong) id<MTLComputePipelineState> workspaceClearPipeline;
 @property(nonatomic, strong) id<MTLComputePipelineState> workspaceLayerPipeline;
 @property(nonatomic, strong) id<MTLComputePipelineState> workspaceMagnifierPipeline;
@@ -353,12 +354,15 @@ int screenwide_gpu_still_presenter_set_workspace(
   if (handle == NULL || layers == NULL || layer_count == 0) return 0;
   @autoreleasepool {
     ScreenwideStillPresenter *presenter = (__bridge ScreenwideStillPresenter *)handle;
-    // Pointer-rate retained resize state is authoritative until mouse-up.
-    // Asynchronous semantic preview frames can arrive during the gesture; if
-    // accepted here they replace the correctly resized snapshot with geometry
-    // from an earlier pointer sample, leaving background over the clip until
-    // the final committed frame arrives.
-    if (presenter.workspaceResizeLayers.count > 0) {
+    // The retained resize state is authoritative only once a Frame/auto-fit
+    // update has actually rewritten the layers: then a late asynchronous
+    // preview frame would clobber it with geometry from an earlier pointer
+    // sample. Before that (a plain Move that merely opened the session so
+    // Option can auto-fit later) the decoder's recomposed frames are the only
+    // source of the moved pixels and must be accepted, otherwise the clip only
+    // moves on mouse-up.
+    if (presenter.workspaceResizeLayers.count > 0 &&
+        presenter.workspaceResizeApplied) {
       return 1;
     }
     NSMutableArray<NSValue *> *retained = [NSMutableArray arrayWithCapacity:layer_count];
@@ -556,6 +560,7 @@ int screenwide_gpu_still_presenter_begin_workspace_resize(void *handle) {
   if (handle == NULL) return 0;
   ScreenwideStillPresenter *presenter = (__bridge ScreenwideStillPresenter *)handle;
   presenter.workspaceResizeLayers = [presenter.workspaceLayers copy];
+  presenter.workspaceResizeApplied = NO;
   return presenter.workspaceResizeLayers.count > 0;
 }
 
@@ -594,6 +599,7 @@ static int update_workspace_resize(
                                        objCType:@encode(ScreenwideWorkspaceLayer)]];
     index += 1;
   }
+  presenter.workspaceResizeApplied = YES;
   presenter.workspaceLayers = resized;
   return 1;
 }
@@ -660,6 +666,7 @@ int screenwide_gpu_still_presenter_update_recording_auto_fit_move(
                                        objCType:@encode(ScreenwideWorkspaceLayer)]];
   }
   if (!found) return 0;
+  presenter.workspaceResizeApplied = YES;
   presenter.workspaceLayers = resized;
   return 1;
 }
@@ -710,6 +717,7 @@ int screenwide_gpu_still_presenter_update_workspace_selected_resize(
                                        objCType:@encode(ScreenwideWorkspaceLayer)]];
   }
   if (!found) return 0;
+  presenter.workspaceResizeApplied = YES;
   presenter.workspaceLayers = resized;
   return 1;
 }
@@ -755,6 +763,7 @@ void screenwide_gpu_still_presenter_end_workspace_resize(
   if (commit == 0 && presenter.workspaceResizeLayers.count > 0)
     presenter.workspaceLayers = [presenter.workspaceResizeLayers mutableCopy];
   presenter.workspaceResizeLayers = nil;
+  presenter.workspaceResizeApplied = NO;
 }
 
 int screenwide_gpu_still_presenter_present_workspace(

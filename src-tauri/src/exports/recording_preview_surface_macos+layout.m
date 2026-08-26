@@ -151,6 +151,13 @@ void screenwide_preview_surface_set_editor_zoom(void *handle,
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   on_main_async(^{
     if (!surface.editorEnabled) return;
+    // A native selection gesture (Frame resize, auto-fit Move) re-fits the
+    // transform on every pointer sample and has already reported the exact
+    // zoom to React; anything React sends back mid-gesture is that echo
+    // rounded to a whole percent, and re-anchoring on it fights the gesture
+    // (a visible flicker of the clip). Native owns the transform until
+    // mouse-up.
+    if (surface.interaction.selectionDragActive) return;
     NSPoint center = NSMakePoint(NSMidX(surface.interaction.bounds),
                                  NSMidY(surface.interaction.bounds));
     set_editor_zoom(surface, zoom_percent / 100.0, center);
