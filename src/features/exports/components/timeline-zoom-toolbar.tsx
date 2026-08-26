@@ -1,7 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Maximize2, Scissors, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  Maximize2,
+  Scissors,
+  SquareDashed,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { ReactNode, RefObject } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
@@ -48,14 +54,18 @@ function TimelineToolbarTooltip({
 
 export function TimelineZoomToolbar({
   isBladeActive,
+  isRangeActive,
   onBladeActiveChange,
   onFit,
+  onRangeActiveChange,
   onZoom,
   viewport,
 }: {
   isBladeActive: boolean;
+  isRangeActive: boolean;
   onBladeActiveChange: (active: boolean) => void;
   onFit: () => void;
+  onRangeActiveChange: (active: boolean) => void;
   onZoom: (factor: number) => void;
   viewport: TimelineViewportState;
 }) {
@@ -73,6 +83,20 @@ export function TimelineZoomToolbar({
           variant="ghost"
         >
           <Scissors size={15} />
+        </ToggleButton>
+      </TimelineToolbarTooltip>
+      <TimelineToolbarTooltip label="Range" shortcut="Shift+R">
+        <ToggleButton
+          animation="scale-selected"
+          aria-keyshortcuts="Shift+R"
+          aria-label="Range tool"
+          isSelected={isRangeActive}
+          onChange={onRangeActiveChange}
+          showFocus={false}
+          size="sm"
+          variant="ghost"
+        >
+          <SquareDashed size={15} />
         </ToggleButton>
       </TimelineToolbarTooltip>
       <div className="ml-auto flex items-center gap-0.5">
@@ -158,8 +182,10 @@ export function TimelineHeader({
     <div className="flex h-9 items-center gap-2">
       <TimelineZoomToolbar
         isBladeActive={blade.isActive}
+        isRangeActive={blade.isRangeActive}
         onBladeActiveChange={blade.setActive}
         onFit={onFit}
+        onRangeActiveChange={blade.setRangeActive}
         onZoom={onZoom}
         viewport={viewport}
       />

@@ -7,6 +7,7 @@ import { PREVIEW_FRAME_MS } from "../duration";
 import {
   createRecordingTimelineEdit,
   cutRecordingTimeline,
+  deleteRecordingTimelineRange,
   deleteRecordingTimelineSegment,
   RecordingTimelineEdit,
   recordingTimelineOutputToSource,
@@ -20,6 +21,7 @@ import { useExportWindowShortcuts } from "../use-export-window-shortcuts";
 
 import { clamp, Playhead } from "./scrub-playhead";
 import { SeekHandler } from "./scrub-timeline";
+import { TimelineRangeSelection } from "./timeline-blade";
 import { useRecordingTimelineTrim } from "./use-recording-timeline-trim";
 
 export function useRecordingTimelineBlade({
@@ -49,10 +51,13 @@ export function useRecordingTimelineBlade({
 }) {
   const editGesture = useExportEditGesture();
   const [isActive, setIsActive] = useState(false);
+  const [isRangeActive, setIsRangeActive] = useState(false);
   const [previewPosition, setPreviewPosition] = useState<number | null>(null);
   const [selectedSegmentId, setSelectedSegmentId] = useState<number | null>(
     null,
   );
+  const [rangeSelection, setRangeSelection] =
+    useState<TimelineRangeSelection | null>(null);
   const effectiveEdit = useMemo(
     () =>
       edit?.artifactId === artifactId
@@ -202,28 +207,80 @@ export function useRecordingTimelineBlade({
     cutSourceAt(positionRef.current() / totalDurationMs);
   }, [cutSourceAt, totalDurationMs]);
   const deleteSelected = useCallback(() => {
-    if (effectiveSelectedSegmentId === null || !onChange) return;
-    const next = deleteRecordingTimelineSegment(
-      effectiveEdit,
-      effectiveSelectedSegmentId,
-    );
+    if (!onChange) return;
+    const next = rangeSelection
+      ? deleteRecordingTimelineRange(
+          effectiveEdit,
+          rangeSelection.start,
+          rangeSelection.end,
+        )
+      : effectiveSelectedSegmentId === null
+        ? effectiveEdit
+        : deleteRecordingTimelineSegment(
+            effectiveEdit,
+            effectiveSelectedSegmentId,
+          );
     if (next === effectiveEdit) return;
+    setRangeSelection(null);
     setSelectedSegmentId(null);
     editGesture.beginGesture();
     onChange(next);
     editGesture.endGesture();
-  }, [editGesture, effectiveEdit, effectiveSelectedSegmentId, onChange]);
+  }, [
+    editGesture,
+    effectiveEdit,
+    effectiveSelectedSegmentId,
+    onChange,
+    rangeSelection,
+  ]);
   const setActive = useCallback((active: boolean) => {
     setIsActive(active);
-    if (active) setSelectedSegmentId(null);
-    else setPreviewPosition(null);
+    if (active) {
+      setIsRangeActive(false);
+      setRangeSelection(null);
+      setSelectedSegmentId(null);
+    } else setPreviewPosition(null);
   }, []);
   const toggle = useCallback(() => {
     setIsActive((active) => {
       if (active) setPreviewPosition(null);
-      else setSelectedSegmentId(null);
+      else {
+        setIsRangeActive(false);
+        setRangeSelection(null);
+        setSelectedSegmentId(null);
+      }
       return !active;
     });
+  }, []);
+  const changeRangeActive = useCallback((active: boolean) => {
+    setIsRangeActive(active);
+    if (active) {
+      setIsActive(false);
+      setPreviewPosition(null);
+      setSelectedSegmentId(null);
+    } else setRangeSelection(null);
+  }, []);
+  const toggleRange = useCallback(() => {
+    setIsRangeActive((active) => {
+      if (active) setRangeSelection(null);
+      else {
+        setIsActive(false);
+        setPreviewPosition(null);
+        setSelectedSegmentId(null);
+      }
+      return !active;
+    });
+  }, []);
+  const changeRangeSelection = useCallback(
+    (anchor: number, focus: number) => {
+      const start = snapOutput(Math.min(anchor, focus));
+      const end = snapOutput(Math.max(anchor, focus));
+      setRangeSelection(start === end ? null : { end, start });
+    },
+    [snapOutput],
+  );
+  const clearRangeSelection = useCallback(() => {
+    setRangeSelection(null);
   }, []);
   const previewAt = useCallback(
     (sourcePosition: number) => {
@@ -260,26 +317,35 @@ export function useRecordingTimelineBlade({
   useExportWindowShortcuts({
     onCutTimeline: shortcutsEnabled ? cutAtPlayhead : undefined,
     onDelete: shortcutsEnabled ? deleteSelected : undefined,
-    onDeselect:
-      shortcutsEnabled && effectiveSelectedSegmentId !== null
-        ? clearSelection
-        : undefined,
+    onDeselect: shortcutsEnabled
+      ? rangeSelection !== null
+        ? clearRangeSelection
+        : effectiveSelectedSegmentId !== null
+          ? clearSelection
+          : undefined
+      : undefined,
     onToggleBladeTool: shortcutsEnabled ? toggle : undefined,
+    onToggleRangeTool: shortcutsEnabled ? toggleRange : undefined,
   });
 
   return {
     blade: {
       beginTrim: trim.begin,
       clearPreview,
+      clearRangeSelection,
       cutAt,
       edit: effectiveEdit,
       endTrim: trim.end,
       isActive,
+      isRangeActive,
       previewAt,
       previewPosition,
+      rangeSelection,
       selectSegment: setSelectedSegmentId,
       selectedSegmentId: effectiveSelectedSegmentId,
       setActive,
+      setRangeActive: changeRangeActive,
+      setRangeSelection: changeRangeSelection,
       snapPosition: snapOutput,
       updateTrim: trim.update,
     },

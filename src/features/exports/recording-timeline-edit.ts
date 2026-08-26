@@ -17,6 +17,8 @@ export type RecordingTimelineEdit = {
 
 export type RecordingTimelineTrimEdge = "end" | "start";
 
+const TIMELINE_POSITION_EPSILON = 1e-9;
+
 export type RecordingTimelineLayoutSegment = RecordingTimelineSegment & {
   /** Normalized position in the retained, magnetic output timeline. */
   outputEnd: number;
@@ -125,6 +127,58 @@ export function deleteRecordingTimelineSegment(
   return segments.length === edit.segments.length
     ? edit
     : { ...edit, segments };
+}
+
+/**
+ * Removes a normalized output-time range, splitting retained source segments
+ * at either boundary as needed. The remaining ranges ripple together and, like
+ * segment deletion, an edit may not remove the entire recording.
+ */
+export function deleteRecordingTimelineRange(
+  edit: RecordingTimelineEdit,
+  outputStart: number,
+  outputEnd: number,
+): RecordingTimelineEdit {
+  if (!Number.isFinite(outputStart) || !Number.isFinite(outputEnd)) return edit;
+  const start = Math.max(0, Math.min(1, Math.min(outputStart, outputEnd)));
+  const end = Math.max(0, Math.min(1, Math.max(outputStart, outputEnd)));
+  if (start >= end) return edit;
+
+  const retainedDuration = recordingTimelineRetainedDuration(edit);
+  if (retainedDuration <= 0) return edit;
+  const removalStart = start * retainedDuration;
+  const removalEnd = end * retainedDuration;
+  if (removalEnd - removalStart <= TIMELINE_POSITION_EPSILON) return edit;
+  let retainedStart = 0;
+  let nextSegmentId = edit.nextSegmentId;
+  const segments = edit.segments.flatMap((segment) => {
+    const duration = segment.sourceEnd - segment.sourceStart;
+    const retainedEnd = retainedStart + duration;
+    const overlapStart = Math.max(removalStart, retainedStart);
+    const overlapEnd = Math.min(removalEnd, retainedEnd);
+    const segmentRetainedStart = retainedStart;
+    retainedStart = retainedEnd;
+    if (overlapEnd - overlapStart <= TIMELINE_POSITION_EPSILON)
+      return [segment];
+
+    const sourceRemovalStart =
+      segment.sourceStart + overlapStart - segmentRetainedStart;
+    const sourceRemovalEnd =
+      segment.sourceStart + overlapEnd - segmentRetainedStart;
+    const pieces: RecordingTimelineSegment[] = [];
+    if (sourceRemovalStart - segment.sourceStart > TIMELINE_POSITION_EPSILON)
+      pieces.push({ ...segment, sourceEnd: sourceRemovalStart });
+    if (segment.sourceEnd - sourceRemovalEnd > TIMELINE_POSITION_EPSILON) {
+      pieces.push({
+        ...segment,
+        id: pieces.length > 0 ? nextSegmentId++ : segment.id,
+        sourceStart: sourceRemovalEnd,
+      });
+    }
+    return pieces;
+  });
+
+  return segments.length === 0 ? edit : { ...edit, nextSegmentId, segments };
 }
 
 /** Clamps a trim target to the position `trimRecordingTimelineSegment` accepts. */

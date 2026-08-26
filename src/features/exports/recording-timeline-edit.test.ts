@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   clampRecordingTimelineTrimPosition,
   createRecordingTimelineEdit,
+  deleteRecordingTimelineRange,
   cutRecordingTimeline,
   deleteRecordingTimelineSegment,
   layoutRecordingTimelineSegments,
@@ -115,6 +116,75 @@ describe("recording timeline ripple layout", () => {
     const single = createRecordingTimelineEdit(42);
     expect(deleteRecordingTimelineSegment(single, 0)).toBe(single);
     expect(deleteRecordingTimelineSegment(single, 99)).toBe(single);
+  });
+});
+
+describe("recording timeline range deletion", () => {
+  it("splits at arbitrary boundaries and ripples the remaining ranges", () => {
+    const edit = deleteRecordingTimelineRange(
+      createRecordingTimelineEdit(42),
+      0.2,
+      0.6,
+    );
+
+    expect(edit).toEqual({
+      artifactId: 42,
+      nextSegmentId: 2,
+      segments: [
+        { id: 0, sourceEnd: 0.2, sourceStart: 0 },
+        { id: 1, sourceEnd: 1, sourceStart: 0.6 },
+      ],
+    });
+    expect(recordingTimelineRetainedDuration(edit)).toBeCloseTo(0.6);
+  });
+
+  it("deletes across existing cuts while preserving unaffected segment ids", () => {
+    const cut = cutRecordingTimeline(
+      cutRecordingTimeline(createRecordingTimelineEdit(42), 0.2),
+      0.6,
+    );
+    const edit = deleteRecordingTimelineRange(cut, 0.1, 0.8);
+
+    expect(edit.segments).toHaveLength(2);
+    expect(edit.segments[0]).toMatchObject({
+      id: 0,
+      sourceStart: 0,
+    });
+    expect(edit.segments[0].sourceEnd).toBeCloseTo(0.1);
+    expect(edit.segments[1]).toMatchObject({ id: 2, sourceEnd: 1 });
+    expect(edit.segments[1].sourceStart).toBeCloseTo(0.8);
+    expect(edit.nextSegmentId).toBe(3);
+  });
+
+  it("interprets the selection in current magnetic output time", () => {
+    const cut = cutRecordingTimeline(
+      cutRecordingTimeline(createRecordingTimelineEdit(42), 0.2),
+      0.6,
+    );
+    const withGap = deleteRecordingTimelineSegment(cut, 1);
+    const edit = deleteRecordingTimelineRange(withGap, 0.25, 0.75);
+
+    expect(edit.segments).toHaveLength(2);
+    expect(edit.segments[0]).toMatchObject({
+      id: 0,
+      sourceStart: 0,
+    });
+    expect(edit.segments[0].sourceEnd).toBeCloseTo(0.15);
+    expect(edit.segments[1]).toMatchObject({ id: 2, sourceEnd: 1 });
+    expect(edit.segments[1].sourceStart).toBeCloseTo(0.85);
+  });
+
+  it("normalizes reversed bounds and ignores empty, invalid, or full ranges", () => {
+    const initial = createRecordingTimelineEdit(42);
+    expect(deleteRecordingTimelineRange(initial, 0.6, 0.2).segments).toEqual([
+      { id: 0, sourceEnd: 0.2, sourceStart: 0 },
+      { id: 1, sourceEnd: 1, sourceStart: 0.6 },
+    ]);
+    expect(deleteRecordingTimelineRange(initial, 0.2, 0.2)).toBe(initial);
+    expect(deleteRecordingTimelineRange(initial, Number.NaN, 0.5)).toBe(
+      initial,
+    );
+    expect(deleteRecordingTimelineRange(initial, 0, 1)).toBe(initial);
   });
 });
 

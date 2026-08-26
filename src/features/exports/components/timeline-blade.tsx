@@ -18,18 +18,28 @@ export type TimelineBladeController = {
     outputPosition: number,
   ) => void;
   clearPreview: () => void;
+  clearRangeSelection: () => void;
   cutAt: (sourcePosition: number) => void;
   edit: RecordingTimelineEdit;
   endTrim: (outputPosition: number) => void;
   isActive: boolean;
+  isRangeActive: boolean;
   previewAt: (sourcePosition: number) => void;
   previewPosition: number | null;
+  rangeSelection: TimelineRangeSelection | null;
   selectSegment: (segmentId: number | null) => void;
   selectedSegmentId: number | null;
   setActive: (active: boolean) => void;
+  setRangeActive: (active: boolean) => void;
+  setRangeSelection: (anchor: number, focus: number) => void;
   snapPosition: (sourcePosition: number) => number;
   /** Returns the clamped output position when the drag overshot the trim. */
   updateTrim: (outputPosition: number) => number | null;
+};
+
+export type TimelineRangeSelection = {
+  end: number;
+  start: number;
 };
 
 // Exact Lucide geometry. Custom CSS cursors are rasterized by the WebView, so

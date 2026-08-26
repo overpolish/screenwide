@@ -28,6 +28,7 @@ export function useExportWindowShortcuts({
   onToggleBladeTool,
   onToggleCrop,
   onTogglePlayback,
+  onToggleRangeTool,
 }: {
   onCopy?: () => void;
   onCutTimeline?: () => void;
@@ -46,6 +47,7 @@ export function useExportWindowShortcuts({
   onToggleBladeTool?: () => void;
   onToggleCrop?: () => void;
   onTogglePlayback?: () => void;
+  onToggleRangeTool?: () => void;
 }) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -106,6 +108,18 @@ export function useExportWindowShortcuts({
           event.preventDefault();
           onExport();
         }
+        return;
+      }
+
+      if (
+        event.shiftKey &&
+        !commandKey &&
+        event.code === "KeyR" &&
+        onToggleRangeTool &&
+        !ownsTextEditingKeys(event.target)
+      ) {
+        event.preventDefault();
+        onToggleRangeTool();
         return;
       }
 
@@ -207,5 +221,6 @@ export function useExportWindowShortcuts({
     onToggleCrop,
     onToggleBladeTool,
     onTogglePlayback,
+    onToggleRangeTool,
   ]);
 }

@@ -6,6 +6,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   createRecordingTimelineEdit,
   cutRecordingTimeline,
+  deleteRecordingTimelineRange,
   deleteRecordingTimelineSegment,
   recordingTimelineOutputToSource,
   recordingTimelineRetainedDuration,
@@ -35,6 +36,11 @@ function TimelinePreview() {
   );
   const [isBladeActive, setIsBladeActive] = useState(false);
   const [previewPosition, setPreviewPosition] = useState<number | null>(null);
+  const [isRangeActive, setIsRangeActive] = useState(false);
+  const [rangeSelection, setRangeSelection] = useState<{
+    end: number;
+    start: number;
+  } | null>(null);
   const [selectedSegmentId, setSelectedSegmentId] = useState<number | null>(
     null,
   );
@@ -83,17 +89,22 @@ function TimelinePreview() {
     [editGesture, timelineEdit],
   );
   const deleteSelected = useCallback(() => {
-    if (selectedSegmentId === null) return;
-    const next = deleteRecordingTimelineSegment(
-      timelineEdit,
-      selectedSegmentId,
-    );
+    const next = rangeSelection
+      ? deleteRecordingTimelineRange(
+          timelineEdit,
+          rangeSelection.start,
+          rangeSelection.end,
+        )
+      : selectedSegmentId === null
+        ? timelineEdit
+        : deleteRecordingTimelineSegment(timelineEdit, selectedSegmentId);
     if (next === timelineEdit) return;
+    setRangeSelection(null);
     setSelectedSegmentId(null);
     editGesture.beginGesture();
     setTimelineEdit(next);
     editGesture.endGesture();
-  }, [editGesture, selectedSegmentId, timelineEdit]);
+  }, [editGesture, rangeSelection, selectedSegmentId, timelineEdit]);
   useExportWindowShortcuts({
     onCutTimeline: () => {
       cutAt(playheadRatioRef.current);
@@ -130,20 +141,38 @@ function TimelinePreview() {
             clearPreview: () => {
               setPreviewPosition(null);
             },
+            clearRangeSelection: () => {
+              setRangeSelection(null);
+            },
             cutAt,
             edit: timelineEdit,
             endTrim: () => undefined,
             isActive: isBladeActive,
+            isRangeActive,
             previewAt: (position) => {
               setPreviewPosition(snapOutput(position));
             },
             previewPosition,
+            rangeSelection,
             selectSegment: setSelectedSegmentId,
             selectedSegmentId,
             setActive: (active) => {
               setIsBladeActive(active);
+              if (active) setIsRangeActive(false);
               if (active) setSelectedSegmentId(null);
               if (!active) setPreviewPosition(null);
+            },
+            setRangeActive: (active) => {
+              setIsRangeActive(active);
+              if (active) {
+                setIsBladeActive(false);
+                setSelectedSegmentId(null);
+              } else setRangeSelection(null);
+            },
+            setRangeSelection: (anchor, focus) => {
+              const start = snapOutput(Math.min(anchor, focus));
+              const end = snapOutput(Math.max(anchor, focus));
+              setRangeSelection(start === end ? null : { end, start });
             },
             snapPosition: snapOutput,
             updateTrim: () => null,
