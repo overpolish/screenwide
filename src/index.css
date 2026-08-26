@@ -186,6 +186,16 @@ html[data-timeline-trimming] * {
   cursor: none !important;
 }
 
+/*
+ * Ruler overlays normally hide every descendant cursor. The held range tool
+ * must win over that default for its entire keyboard gesture, including across
+ * React rerenders that replace the element currently under the pointer.
+ */
+html[data-ruler-range],
+html[data-ruler-range] * {
+  cursor: crosshair !important;
+}
+
 :where(input, textarea, [contenteditable="true"]) {
   user-select: text;
   -webkit-user-select: text;

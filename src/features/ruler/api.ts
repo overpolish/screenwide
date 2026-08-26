@@ -43,3 +43,6 @@ export const getRulerSnapshot = (
 
 export const setRulerScreenshotMode = (active: boolean) =>
   invoke<null>("set_ruler_screenshot_mode", { active });
+
+export const setRulerCursorRangeActive = (active: boolean) =>
+  invoke<null>("set_ruler_cursor_range_active", { active });

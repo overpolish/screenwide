@@ -17,6 +17,22 @@ pub use snapshot::RulerState;
 
 const WINDOW_PREFIX: &str = "ruler-";
 
+#[tauri::command]
+pub fn set_ruler_cursor_range_active(app: AppHandle, active: bool) -> Result<(), String> {
+  #[cfg(target_os = "macos")]
+  app
+    .run_on_main_thread(move || unsafe {
+      unsafe extern "C" {
+        fn screenwide_set_ruler_cursor_range_active(active: std::ffi::c_int);
+      }
+      screenwide_set_ruler_cursor_range_active(i32::from(active));
+    })
+    .map_err(|error| error.to_string())?;
+  #[cfg(not(target_os = "macos"))]
+  let _ = app;
+  Ok(())
+}
+
 fn ruler_windows(app: &AppHandle) -> Vec<tauri::WebviewWindow> {
   capture_overlays::windows(app, WINDOW_PREFIX)
 }

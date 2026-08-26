@@ -4,7 +4,7 @@
 import { clsx } from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { cancelRuler } from "./api";
+import { cancelRuler, setRulerCursorRangeActive } from "./api";
 import { snapBounds } from "./bounds-snap";
 import { Axis } from "./gradient-field";
 import { hoveredPixelAt } from "./hovered-pixel";
@@ -25,6 +25,7 @@ import { useDistanceProbes } from "./use-distance-probes";
 import { useGuideMove } from "./use-guide-move";
 import { useLabelHandles } from "./use-label-handles";
 import { useOptionKey } from "./use-option-key";
+import { useProbeDrag } from "./use-probe-drag";
 import { useRulerAnalysis } from "./use-ruler-analysis";
 import { useRulerClipboard } from "./use-ruler-clipboard";
 import { selectedFromLabel, useRulerDeletion } from "./use-ruler-deletion";
@@ -66,6 +67,9 @@ export function RulerWindow() {
   const close = useCallback(() => {
     void cancelRuler();
   }, []);
+  const setNativeCursorRangeActive = useCallback((active: boolean) => {
+    void setRulerCursorRangeActive(active);
+  }, []);
 
   const { copied, copyColor, copyLatestMeasurement } = useRulerClipboard({
     cursorRef,
@@ -95,14 +99,14 @@ export function RulerWindow() {
     threshold,
     viewport: rulerViewportSize(),
   });
-  const persistDistanceProbe = distanceProbes.persist;
-  const stampProbe = useCallback(
-    (axis: Axis) => {
-      if (!cursorRef.current) return;
+  const persistProbe = distanceProbes.persistProbe;
+  const previewProbeBetween = distanceProbes.between;
+  const commitProbe = useCallback(
+    (probe: Parameters<typeof persistProbe>[0]) => {
       record();
-      persistDistanceProbe(axis, cursorRef.current);
+      persistProbe(probe);
     },
-    [persistDistanceProbe, record],
+    [persistProbe, record],
   );
   const labels = useLabelHandles(rulerViewport.toWorld, record);
   const { handles, hovered } = labels;
@@ -127,20 +131,43 @@ export function RulerWindow() {
     setMeasurements,
     zoom: rulerViewport.zoom,
   });
-  const { guideAxis } = useRulerHotkeys({
+  const probeDrag = useProbeDrag({
+    onFinish: commitProbe,
+    preview: previewProbeBetween,
+  });
+  const beginProbeDrag = probeDrag.begin;
+  const startProbeDrag = useCallback(
+    (axis: Axis) => {
+      if (!cursorRef.current) return false;
+      beginProbeDrag(axis, cursorRef.current);
+      return true;
+    },
+    [beginProbeDrag],
+  );
+  const { guideAxis, probeAxis } = useRulerHotkeys({
+    cancelProbe: probeDrag.cancel,
     close,
     copyColor,
     copyLatestMeasurement,
     cycleTolerance,
     deleteHovered,
     deleteLatestMeasurement,
+    finishProbe: probeDrag.finish,
     redo,
-    stampProbe,
+    setNativeCursorRangeActive,
+    startProbe: startProbeDrag,
     toggleCenterlines: view.toggleCenterlines,
     toggleCrosshair: view.toggleCrosshair,
     toggleDetectedBoxes: view.toggleDetectedBoxes,
     undo,
   });
+  useEffect(() => {
+    if (!probeAxis) return;
+    document.documentElement.setAttribute("data-ruler-range", "");
+    return () => {
+      document.documentElement.removeAttribute("data-ruler-range");
+    };
+  }, [probeAxis]);
   const commitBox = useCallback(
     (raw: Bounds) => {
       if (!field || (raw.width < 2 && raw.height < 2)) return;
@@ -177,13 +204,24 @@ export function RulerWindow() {
   const carrying = guideMove.activeId !== undefined;
   // Nearest line within a few screen px: pulsing halo + delete-key target.
   const selected = selectLine({
-    active: !quiet && !guideAxis && !carrying && !boxDrag.draft,
+    active:
+      !quiet &&
+      !guideAxis &&
+      !probeAxis &&
+      !carrying &&
+      !boxDrag.draft &&
+      !probeDrag.draft,
     cursor,
   });
   // Hovering a label halos its owner too, previewing what delete removes.
   const highlighted = hovered ? selectedFromLabel(hovered) : selected;
   // Halos and unfocused windows (stale by definition) silence the transients.
-  const calm = quiet || carrying || selected !== undefined || !windowFocused;
+  const calm =
+    quiet ||
+    carrying ||
+    probeDrag.draft !== undefined ||
+    selected !== undefined ||
+    !windowFocused;
 
   const { begin, cancel, finish, move } = rulerPointerHandlers({
     boxDrag,
@@ -191,6 +229,7 @@ export function RulerWindow() {
     guideMove,
     moveGuide,
     place,
+    probeDrag,
     record,
     selected,
     setScreenCursor,
@@ -203,13 +242,20 @@ export function RulerWindow() {
         "relative h-screen w-screen overflow-hidden select-none",
         // Guide placement shows the native crosshair: the preview line sits at
         // the SNAPPED position, so the true cursor spot must stay visible.
-        hovered === undefined &&
+        !probeAxis &&
+          hovered === undefined &&
           (guideAxis || carrying
             ? "cursor-crosshair! [&_*]:cursor-crosshair!"
             : "cursor-none! [&_*]:cursor-none!"),
       )}
       onDoubleClick={() => {
-        if (!guideAxis && !boxDrag.isActive() && !rulerViewport.isPanning())
+        if (
+          !guideAxis &&
+          !probeAxis &&
+          !boxDrag.isActive() &&
+          !probeDrag.isActive() &&
+          !rulerViewport.isPanning()
+        )
           rulerViewport.reset();
       }}
       onPointerCancel={cancel}
@@ -236,12 +282,16 @@ export function RulerWindow() {
       {!calm && view.crosshair && screenCursor ? (
         <RulerCrosshair cursor={screenCursor} />
       ) : null}
-
       {/* Screen-space cursor furniture: crisp at any zoom of the world. */}
       <PreviewProbeLayer
         probes={
-          calm || boxDrag.draft || guideAxis ? [] : distanceProbes.previews
+          probeDrag.draft
+            ? [probeDrag.draft]
+            : calm || boxDrag.draft || guideAxis || probeAxis
+              ? []
+              : distanceProbes.previews
         }
+        showLabels={probeDrag.draft !== undefined}
         toScreen={rulerViewport.toScreen}
       />
 

@@ -20,10 +20,12 @@ const INTERSECT_GAP = 3;
  */
 export function PreviewProbeLayer({
   probes,
+  showLabels = false,
   toScreen,
 }: {
   probes: readonly DistanceProbe[];
   toScreen: (point: Point) => Point;
+  showLabels?: boolean;
 }) {
   if (probes.length === 0) return null;
   const converted = probes.map((probe) => {
@@ -50,7 +52,7 @@ export function PreviewProbeLayer({
           gapSize={INTERSECT_GAP}
           key={probe.axis}
           probe={probe}
-          showLabel={false}
+          showLabel={showLabels}
         />
       ))}
     </svg>

@@ -139,6 +139,7 @@ pub fn run() {
       recording_sources::restore_window_border,
       ruler::cancel_ruler,
       ruler::copy_ruler_value,
+      ruler::set_ruler_cursor_range_active,
       ruler::set_ruler_screenshot_mode,
       ruler::snapshot::get_ruler_boxes,
       ruler::snapshot::get_ruler_gradients,

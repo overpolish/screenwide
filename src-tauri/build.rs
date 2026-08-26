@@ -47,6 +47,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/recording_preview_reader_macos.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_scrubber_macos.m");
     println!("cargo:rerun-if-changed=src/recording/platform/camera/confidence_scaler_macos.m");
+    println!("cargo:rerun-if-changed=src/ruler/cursor_guard_macos.m");
     cc::Build::new()
       .file("src/exports/cursor_export/gpu_compositor_macos.m")
       .file("src/exports/cursor_export/gpu_compositor_macos+presenter.m")
@@ -54,6 +55,7 @@ fn main() {
       .file("src/exports/cursor_export/gpu_compositor_macos_keyboard.m")
       .file("src/exports/cursor_export/gpu_compositor_macos_keyboard_artwork.m")
       .file("src/recording/platform/camera/confidence_scaler_macos.m")
+      .file("src/ruler/cursor_guard_macos.m")
       .file("src/exports/recording_preview_reader_macos.m")
       .file("src/exports/recording_preview_scrubber_macos.m")
       .file("src/exports/recording_preview_surface_macos.m")

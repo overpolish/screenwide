@@ -1,24 +1,28 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Axis } from "./gradient-field";
 
 export function useRulerHotkeys({
+  cancelProbe,
   close,
   copyColor,
   copyLatestMeasurement,
   cycleTolerance,
   deleteHovered,
   deleteLatestMeasurement,
+  finishProbe,
   redo,
-  stampProbe,
+  setNativeCursorRangeActive,
+  startProbe,
   toggleCenterlines,
   toggleCrosshair,
   toggleDetectedBoxes,
   undo,
 }: {
+  cancelProbe: () => void;
   close: () => void;
   copyColor: () => void;
   copyLatestMeasurement: () => void;
@@ -26,9 +30,11 @@ export function useRulerHotkeys({
   /** Deletes whatever a hovered label owns; falsy when nothing is hovered. */
   deleteHovered: () => boolean;
   deleteLatestMeasurement: () => void;
+  finishProbe: () => void;
   /** Falsy when the redo stack is empty, so the key stays unhandled. */
   redo: () => boolean;
-  stampProbe: (axis: Axis) => void;
+  setNativeCursorRangeActive: (active: boolean) => void;
+  startProbe: (axis: Axis) => boolean;
   toggleCenterlines: () => void;
   toggleCrosshair: () => void;
   /** Debug view: outlines every box the detector found at this tolerance. */
@@ -37,10 +43,16 @@ export function useRulerHotkeys({
   undo: () => boolean;
 }) {
   const [guideAxis, setGuideAxis] = useState<Axis>();
+  const [probeAxis, setProbeAxis] = useState<Axis>();
+  const heldProbeCodeRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     const clearHeldTools = () => {
       setGuideAxis(undefined);
+      setProbeAxis(undefined);
+      heldProbeCodeRef.current = undefined;
+      setNativeCursorRangeActive(false);
+      cancelProbe();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       // History first: holding the combo repeats, and neither shortcut may fall
@@ -86,7 +98,13 @@ export function useRulerHotkeys({
         setGuideAxis(event.code === "KeyV" ? "x" : "y");
       } else if (event.code === "Digit1" || event.code === "Digit2") {
         event.preventDefault();
-        if (!event.repeat) stampProbe(event.code === "Digit1" ? "y" : "x");
+        if (event.repeat) return;
+        const axis = event.code === "Digit1" ? "y" : "x";
+        if (startProbe(axis)) {
+          setNativeCursorRangeActive(true);
+          heldProbeCodeRef.current = event.code;
+          setProbeAxis(axis);
+        }
       }
     };
     const onKeyUp = (event: KeyboardEvent) => {
@@ -94,6 +112,14 @@ export function useRulerHotkeys({
         setGuideAxis((current) => (current === "y" ? undefined : current));
       } else if (event.code === "KeyV") {
         setGuideAxis((current) => (current === "x" ? undefined : current));
+      } else if (
+        (event.code === "Digit1" || event.code === "Digit2") &&
+        heldProbeCodeRef.current === event.code
+      ) {
+        heldProbeCodeRef.current = undefined;
+        setProbeAxis(undefined);
+        setNativeCursorRangeActive(false);
+        finishProbe();
       }
     };
     window.addEventListener("blur", clearHeldTools);
@@ -105,19 +131,22 @@ export function useRulerHotkeys({
       window.removeEventListener("keyup", onKeyUp, true);
     };
   }, [
+    cancelProbe,
     close,
     copyColor,
     copyLatestMeasurement,
     cycleTolerance,
     deleteHovered,
     deleteLatestMeasurement,
+    finishProbe,
     redo,
-    stampProbe,
+    setNativeCursorRangeActive,
+    startProbe,
     toggleCenterlines,
     toggleCrosshair,
     toggleDetectedBoxes,
     undo,
   ]);
 
-  return { guideAxis };
+  return { guideAxis, probeAxis };
 }

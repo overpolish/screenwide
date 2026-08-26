@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
+import { combineDistanceProbes } from "./distance-probe-range";
 import { Axis, GradientField } from "./gradient-field";
 import {
   distanceProbeAt,
@@ -37,12 +38,8 @@ export function useDistanceProbes({
   const [probes, setProbes] = useState<PersistedDistanceProbe[]>([]);
   const nextIdRef = useRef(1);
   const { height: viewportHeight, width: viewportWidth } = viewport;
-  // Stamping reads the modifier through a ref: making `persist` depend on the
-  // (per-render) artifacts object would re-register every hotkey listener.
-  const artifactsRef = useRef(artifacts);
-  useEffect(() => {
-    artifactsRef.current = artifacts;
-  }, [artifacts]);
+  const artifactGuides = artifacts?.guides;
+  const artifactMeasurements = artifacts?.measurements;
   const previews =
     cursor && field
       ? (["x", "y"] as const).map((axis) => {
@@ -56,27 +53,50 @@ export function useDistanceProbes({
           return artifacts ? clipProbe({ ...artifacts, cursor, probe }) : probe;
         })
       : [];
-  const persist = useCallback(
-    (axis: Axis, point: Point) => {
-      if (!field) return;
-      const raw = distanceProbeAt({
+  const between = useCallback(
+    (axis: Axis, start: Point, end: Point) => {
+      if (!field) return undefined;
+      const shared = {
         axis,
         field,
-        point,
         threshold,
         viewport: { height: viewportHeight, width: viewportWidth },
+      };
+      // The initial along-axis position remains the range anchor, while both
+      // ends are re-sampled on the cursor's current scanline so the live ruler
+      // follows perpendicular pointer movement before it is stamped.
+      const trackingStart =
+        axis === "x" ? { x: start.x, y: end.y } : { x: end.x, y: start.y };
+      const startProbe = distanceProbeAt({ ...shared, point: trackingStart });
+      const endProbe = distanceProbeAt({ ...shared, point: end });
+      const combined = combineDistanceProbes({
+        endPoint: end,
+        endProbe,
+        startPoint: trackingStart,
+        startProbe,
       });
-      const held = artifactsRef.current;
-      const probe = held
-        ? clipProbe({ ...held, cursor: point, probe: raw })
-        : raw;
-      setProbes((current) => [
-        ...current,
-        { ...probe, id: nextIdRef.current++ },
-      ]);
+      const sameAlong = axis === "x" ? start.x === end.x : start.y === end.y;
+      return artifactGuides && artifactMeasurements && sameAlong
+        ? clipProbe({
+            cursor: end,
+            guides: artifactGuides,
+            measurements: artifactMeasurements,
+            probe: combined,
+          })
+        : combined;
     },
-    [field, threshold, viewportHeight, viewportWidth],
+    [
+      artifactGuides,
+      artifactMeasurements,
+      field,
+      threshold,
+      viewportHeight,
+      viewportWidth,
+    ],
   );
+  const persistProbe = useCallback((probe: DistanceProbe) => {
+    setProbes((current) => [...current, { ...probe, id: nextIdRef.current++ }]);
+  }, []);
   const clear = useCallback(() => {
     setProbes([]);
   }, []);
@@ -87,5 +107,13 @@ export function useDistanceProbes({
   const restore = useCallback((next: PersistedDistanceProbe[]) => {
     setProbes(next);
   }, []);
-  return { clear, persist, previews, probes, remove, restore };
+  return {
+    between,
+    clear,
+    persistProbe,
+    previews,
+    probes,
+    remove,
+    restore,
+  };
 }

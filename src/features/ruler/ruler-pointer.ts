@@ -7,13 +7,15 @@ import type { Axis } from "./gradient-field";
 import type { Point } from "./pixel-analysis";
 import type { useBoxDrag } from "./use-box-drag";
 import type { useGuideMove } from "./use-guide-move";
+import type { useProbeDrag } from "./use-probe-drag";
 import type { SelectedLine } from "./use-ruler-deletion";
 import type { useRulerViewport } from "./use-ruler-viewport";
 
 /**
  * The world surface's pointer gestures, in priority order: a pan claims the
  * event first, a held guide axis stamps a guide, a haloed guide is picked up and
- * carried, otherwise it is a box drag.
+ * carried, otherwise it is a box drag. A key-held probe does not claim pointer
+ * buttons; pointer movement only updates its live range.
  */
 export function rulerPointerHandlers({
   boxDrag,
@@ -21,6 +23,7 @@ export function rulerPointerHandlers({
   guideMove,
   moveGuide,
   place,
+  probeDrag,
   record,
   selected,
   setScreenCursor,
@@ -30,6 +33,7 @@ export function rulerPointerHandlers({
   guideMove: ReturnType<typeof useGuideMove>;
   moveGuide: (id: number, point: Point) => void;
   place: (axis: Axis, point: Point) => void;
+  probeDrag: ReturnType<typeof useProbeDrag>;
   record: () => void;
   setScreenCursor: Dispatch<SetStateAction<Point | undefined>>;
   viewport: ReturnType<typeof useRulerViewport>;
@@ -41,6 +45,10 @@ export function rulerPointerHandlers({
     setScreenCursor(screenPoint);
     if (viewport.movePan(event)) return;
     const point = viewport.toWorld(screenPoint);
+    if (probeDrag.isActive()) {
+      probeDrag.move(point);
+      return;
+    }
     const gesture = guideMove.gesture();
     if (gesture) {
       // History records on the FIRST movement, when a mutation is certain — a
