@@ -211,6 +211,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
     output: &output(320, 180),
     screen: &source,
     selection: &TrackSelection::default(),
+    timeline: None,
     video: VideoExportOptions {
       compression: 1,
       resolution_scale_percent: 50,
@@ -277,6 +278,56 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       "the cursor at {timestamp}s smeared from x={left} to x={right}"
     );
   }
+  let timeline_destination = directory.join("timeline-output.mp4");
+  let timeline = crate::exports::timeline_edit::TimelinePlan::from_edit(
+    &crate::exports::timeline_edit::RecordingTimelineEdit {
+      artifact_id: 1,
+      next_segment_id: 2,
+      segments: vec![
+        crate::exports::timeline_edit::RecordingTimelineSegment {
+          id: 0,
+          source_end: 0.2,
+          source_start: 0.0,
+        },
+        crate::exports::timeline_edit::RecordingTimelineSegment {
+          id: 1,
+          source_end: 1.0,
+          source_start: 0.8,
+        },
+      ],
+    },
+    1_000,
+  )
+  .unwrap();
+  let result = export(CursorExportRequest {
+    audio_layout: AudioLayout::SeparateTracks,
+    audio_source: None,
+    camera: None,
+    camera_on_top: true,
+    cancelled: &cancelled,
+    cursor: Some(&cursor_path),
+    cursor_effects: CursorEffectSettings::default(),
+    keyboard: None,
+    keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings::default(),
+    destination: &timeline_destination,
+    duration_ms: 1_000,
+    height: 180,
+    on_progress: &mut |_| {},
+    output: &output(320, 180),
+    screen: &source,
+    selection: &TrackSelection::default(),
+    timeline: Some(&timeline),
+    video: VideoExportOptions {
+      compression: 1,
+      resolution_scale_percent: 100,
+      source_scale_percent: 100,
+    },
+    width: 320,
+  })
+  .unwrap();
+  assert_eq!(result, ExportRunResult::Completed);
+  assert!(media_preview::duration_ms(&timeline_destination)
+    .is_some_and(|duration| duration.abs_diff(timeline.duration_ms()) < 100));
   let _ = std::fs::remove_dir_all(directory);
 }
 
@@ -375,6 +426,7 @@ fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
     output: &output(320, 180),
     screen: &source,
     selection: &TrackSelection::default(),
+    timeline: None,
     video: VideoExportOptions {
       compression: 1,
       resolution_scale_percent: 100,
@@ -545,6 +597,7 @@ fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
       output: &output(320, 180),
       screen: &source,
       selection: &TrackSelection::default(),
+      timeline: None,
       video: VideoExportOptions {
         compression: 1,
         resolution_scale_percent: 100,
@@ -676,6 +729,7 @@ fn benchmarks_retina_gpu_cursor_export() {
     output: &output(3_600, 2_338),
     screen: &source,
     selection: &TrackSelection::default(),
+    timeline: None,
     video: VideoExportOptions {
       compression: 2,
       resolution_scale_percent,
@@ -748,6 +802,7 @@ fn benchmarks_animated_mesh_export() {
       output: &output,
       screen: &source,
       selection: &TrackSelection::default(),
+      timeline: None,
       video: VideoExportOptions {
         compression: 2,
         resolution_scale_percent: 100,

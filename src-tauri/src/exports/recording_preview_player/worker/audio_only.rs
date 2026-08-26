@@ -13,7 +13,9 @@ use std::{
 use tauri::ipc::Channel;
 
 use super::{audio, send_error, stop_child, PlaybackMode};
-use crate::exports::recording_preview_player::{PlayerSources, RecordingPreviewPlayerEvent};
+use crate::exports::recording_preview_player::{
+  PlayerSources, RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
+};
 use crate::exports::AudioTrackVolume;
 
 pub(super) struct RunContext {
@@ -21,6 +23,8 @@ pub(super) struct RunContext {
   pub(super) cancelled: Arc<AtomicBool>,
   pub(super) event_channel: Channel<RecordingPreviewPlayerEvent>,
   pub(super) mode: PlaybackMode,
+  pub(super) playback_end_ms: Option<u64>,
+  pub(super) playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   pub(super) position_ms: Arc<AtomicU64>,
   pub(super) request_id: u64,
   pub(super) selected_audio: Arc<RwLock<Vec<usize>>>,
@@ -39,6 +43,8 @@ pub(super) fn run(context: RunContext) {
     cancelled,
     event_channel,
     mode,
+    playback_end_ms,
+    playback_ranges,
     position_ms,
     request_id,
     selected_audio,
@@ -54,11 +60,22 @@ pub(super) fn run(context: RunContext) {
     });
     return;
   }
+  let ranges = if playback_ranges.is_empty() {
+    vec![RecordingPreviewPlaybackRange {
+      source_start_ms: start_ms,
+      source_end_ms: playback_end_ms
+        .unwrap_or(sources.duration_ms)
+        .min(sources.duration_ms)
+        .max(start_ms),
+    }]
+  } else {
+    playback_ranges
+  };
   let audio = match audio::spawn(
     &sources,
     selected_audio,
     audio_volumes,
-    start_ms,
+    &ranges,
     Arc::clone(&cancelled),
     Arc::clone(&audio_child),
   ) {
@@ -74,24 +91,47 @@ pub(super) fn run(context: RunContext) {
   let _ = event_channel.send(RecordingPreviewPlayerEvent::Playing {
     position_ms: start_ms,
   });
+  let output_duration_ms = ranges.iter().map(|range| range.duration_ms()).sum::<u64>();
   while !cancelled.load(Ordering::Acquire) {
     let elapsed =
       audio.played_frames.load(Ordering::Acquire) * 1_000 / u64::from(audio.sample_rate);
-    let current = start_ms.saturating_add(elapsed).min(sources.duration_ms);
+    if elapsed >= output_duration_ms {
+      position_ms.store(
+        ranges.last().map_or(start_ms, |range| range.source_end_ms),
+        Ordering::Release,
+      );
+      break;
+    }
+    let mut remaining = elapsed;
+    let current = ranges
+      .iter()
+      .find_map(|range| {
+        if remaining < range.duration_ms() {
+          Some(range.source_start_ms + remaining)
+        } else {
+          remaining = remaining.saturating_sub(range.duration_ms());
+          None
+        }
+      })
+      .unwrap_or_else(|| ranges.last().map_or(start_ms, |range| range.source_end_ms));
     position_ms.store(current, Ordering::Release);
     let _ = event_channel.send(RecordingPreviewPlayerEvent::Position {
       position_ms: current,
     });
-    if current >= sources.duration_ms {
-      break;
-    }
-    std::thread::sleep(Duration::from_millis(16));
+    std::thread::sleep(Duration::from_millis(
+      output_duration_ms.saturating_sub(elapsed).clamp(1, 16),
+    ));
   }
   cancelled.store(true, Ordering::Release);
   stop_child(&audio_child);
   drop(audio.stream);
   let _ = audio.thread.join();
-  if position_ms.load(Ordering::Acquire) >= sources.duration_ms.saturating_sub(50) {
+  let final_end_ms = ranges.last().map_or(start_ms, |range| range.source_end_ms);
+  if final_end_ms < sources.duration_ms && position_ms.load(Ordering::Acquire) >= final_end_ms {
+    let _ = event_channel.send(RecordingPreviewPlayerEvent::RangeEnded {
+      position_ms: final_end_ms,
+    });
+  } else if position_ms.load(Ordering::Acquire) >= sources.duration_ms.saturating_sub(50) {
     position_ms.store(sources.duration_ms, Ordering::Release);
     let _ = event_channel.send(RecordingPreviewPlayerEvent::Ended);
   }

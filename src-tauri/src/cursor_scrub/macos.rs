@@ -35,14 +35,14 @@ pub(super) fn begin(_channel: Channel<CursorScrubEvent>) -> Result<(), String> {
   Ok(())
 }
 
-pub(super) fn end() -> Result<(), String> {
+pub(super) fn end(offset_x: f64) -> Result<(), String> {
   let anchor = CURSOR_ANCHOR
     .lock()
     .map_err(|_| "Could not restore the cursor position".to_string())?
     .take();
 
   let warp_result = anchor
-    .map(|(x, y)| CGDisplay::warp_mouse_cursor_position(CGPoint::new(x, y)))
+    .map(|(x, y)| CGDisplay::warp_mouse_cursor_position(CGPoint::new(x + offset_x, y)))
     .transpose();
   let association_result = CGDisplay::associate_mouse_and_mouse_cursor_position(true);
 

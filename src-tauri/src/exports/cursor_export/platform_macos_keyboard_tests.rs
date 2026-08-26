@@ -139,6 +139,7 @@ fn exports_keyboard_shortcuts_into_a_real_movie() {
     output: &output,
     screen: &source,
     selection: &TrackSelection::default(),
+    timeline: None,
     video: VideoExportOptions {
       compression: 1,
       resolution_scale_percent: 100,

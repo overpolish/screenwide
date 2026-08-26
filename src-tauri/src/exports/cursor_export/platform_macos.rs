@@ -59,6 +59,8 @@ unsafe extern "C" {
     artwork_count: u32,
     keyboards: *const crate::exports::keyboard_effects::KeyboardOverlay,
     keyboard_count: u32,
+    timeline_ranges: *const crate::exports::timeline_edit::TimelineRange,
+    timeline_range_count: u32,
     camera_path: *const c_char,
     camera_overlay: *const GpuCameraOverlay,
     canvas: *const crate::screenshots::NativeCanvas,
@@ -149,6 +151,9 @@ fn render_gpu_video(
       }
     });
   let output = c_path(path)?;
+  let timeline_ranges = request
+    .timeline
+    .map_or(&[][..], |timeline| timeline.ranges());
   let mut canvas =
     crate::screenshots::native_canvas(request.width, request.height, request.output, false)?;
   canvas.clip_cursor_at_video_edge = u32::from(request.cursor_effects.clip_at_video_edge);
@@ -167,6 +172,8 @@ fn render_gpu_video(
       artworks.len() as u32,
       keyboards.as_ptr(),
       keyboards.len() as u32,
+      timeline_ranges.as_ptr(),
+      timeline_ranges.len() as u32,
       camera
         .as_ref()
         .map_or(std::ptr::null(), |path| path.as_ptr()),
@@ -224,7 +231,9 @@ fn export_gpu(mut request: CursorExportRequest<'_>) -> Result<ExportRunResult, S
     }
     let temporary = media_preview::remux_temp_path(request.destination);
     let args = mux::args(&request, &video, &temporary);
-    let duration_ms = request.duration_ms;
+    let duration_ms = request
+      .timeline
+      .map_or(request.duration_ms, |timeline| timeline.duration_ms());
     let on_progress = &mut request.on_progress;
     let mut final_progress = |processed_ms: u64| {
       on_progress(

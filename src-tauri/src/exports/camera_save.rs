@@ -71,7 +71,10 @@ pub(super) fn save_camera_copy(
   compression: u8,
   resolution_scale_percent: u16,
   output: &ScreenshotOutputSettings,
+  timeline: Option<&timeline_edit::TimelinePlan>,
 ) -> Result<Option<PathBuf>, String> {
+  let progress_duration_ms =
+    timeline.map_or(camera.duration_ms, timeline_edit::TimelinePlan::duration_ms);
   let camera_stem = format!("{stem} Camera");
   let empty_selection = track_selection::TrackSelection::default();
   let mut on_progress = |processed_ms| {
@@ -80,7 +83,7 @@ pub(super) fn save_camera_copy(
       artifact_id,
       "camera",
       processed_ms,
-      camera.duration_ms,
+      progress_duration_ms,
       progress_start,
       99.0 - progress_start,
     );
@@ -107,6 +110,7 @@ pub(super) fn save_camera_copy(
       output,
       screen: &camera.path,
       selection: &empty_selection,
+      timeline,
       video: media_preview::VideoExportOptions {
         compression,
         resolution_scale_percent: 100,
@@ -123,7 +127,8 @@ pub(super) fn save_camera_copy(
     };
   }
   let exporter = media_preview::selected_recording_exporter();
-  if exporter.is_none() && (compression > 0 || resolution_scale_percent < 100) {
+  if exporter.is_none() && (timeline.is_some() || compression > 0 || resolution_scale_percent < 100)
+  {
     return Err("FFmpeg is required to compress the camera recording".to_owned());
   };
   let saved = if let Some(exporter) = exporter {
@@ -136,6 +141,7 @@ pub(super) fn save_camera_copy(
       media_preview::ExportRunOptions {
         cancelled,
         on_progress: &mut on_progress,
+        timeline,
         video: media_preview::VideoExportOptions {
           compression,
           resolution_scale_percent,
@@ -172,7 +178,10 @@ pub(super) fn save_camera_as_primary(
   compression: u8,
   resolution_scale_percent: u16,
   output: &ScreenshotOutputSettings,
+  timeline: Option<&timeline_edit::TimelinePlan>,
 ) -> Result<Option<PathBuf>, String> {
+  let progress_duration_ms =
+    timeline.map_or(camera.duration_ms, timeline_edit::TimelinePlan::duration_ms);
   if cursor_export::needs_composition(output, camera.width, camera.height) {
     let path = unique_path(directory, stem, RECORDING_EXTENSION, &|candidate| {
       candidate.exists()
@@ -183,7 +192,7 @@ pub(super) fn save_camera_as_primary(
         artifact_id,
         "camera",
         processed_ms,
-        camera.duration_ms,
+        progress_duration_ms,
         0.0,
         99.0,
       );
@@ -205,6 +214,7 @@ pub(super) fn save_camera_as_primary(
       output,
       screen: &camera.path,
       selection,
+      timeline,
       video: media_preview::VideoExportOptions {
         compression,
         resolution_scale_percent: 100,
@@ -227,7 +237,7 @@ pub(super) fn save_camera_as_primary(
       artifact_id,
       "camera",
       processed_ms,
-      camera.duration_ms,
+      progress_duration_ms,
       0.0,
       99.0,
     );
@@ -241,6 +251,7 @@ pub(super) fn save_camera_as_primary(
     media_preview::ExportRunOptions {
       cancelled,
       on_progress: &mut on_progress,
+      timeline,
       video: media_preview::VideoExportOptions {
         compression,
         resolution_scale_percent,

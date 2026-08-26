@@ -1,0 +1,300 @@
+<!doctype html>
+<!--
+SPDX-FileCopyrightText: 2026 overpolish
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Screen recording, screenshots, measurement and text recognition for macOS and Windows."
+    />
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#262626"
+      media="(prefers-color-scheme: dark)"
+    />
+    <title>Screenwide | Everything screen</title>
+    <link rel="icon" href="assets/ScreenwideLogo.png" type="image/png" />
+    <link rel="stylesheet" href="assets/site.css" />
+  </head>
+  <body>
+    <div class="pointer-glow" aria-hidden="true"></div>
+    <main class="page">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="Screenwide home">
+          <span class="brand-mark">
+            <img src="assets/ScreenwideLogo.png" alt="" />
+          </span>
+          <span>Screenwide</span>
+        </a>
+        <!-- GitHub and Apple paths: Simple Icons (CC0-1.0). -->
+        <a class="github-link" href="https://github.com/overpolish/screenwide">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+            />
+          </svg>
+          GitHub
+        </a>
+      </header>
+
+      <section class="hero">
+        <h1><span class="aurora-text">Everything</span> screen.</h1>
+        <p>Screen recording, screenshots, a ruler and text recognition.</p>
+        <div class="download-group">
+          <a
+            class="download"
+            id="primary-download"
+            href="https://github.com/overpolish/screenwide/releases/latest"
+          >
+            <svg
+              aria-hidden="true"
+              data-download-icon="macos"
+              hidden
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"
+              />
+            </svg>
+            <svg
+              aria-hidden="true"
+              data-download-icon="windows"
+              hidden
+              viewBox="0 0 128 128"
+            >
+              <path
+                d="M67.328 67.331h60.669V128H67.328zm-67.325 0h60.669V128H.003zM67.328 0h60.669v60.669H67.328zM.003 0h60.669v60.669H.003z"
+              />
+            </svg>
+            <span id="primary-download-label">View downloads</span>
+          </a>
+          <div class="platform-downloads" aria-label="Other downloads">
+            <a
+              class="platform-download"
+              data-platform-download="macos"
+              href="https://github.com/overpolish/screenwide/releases/latest"
+              title="Download for macOS"
+              aria-label="Download for macOS"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path
+                  d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"
+                />
+              </svg>
+            </a>
+            <a
+              class="platform-download"
+              data-platform-download="windows"
+              href="https://github.com/overpolish/screenwide/releases/latest"
+              title="Download for Windows"
+              aria-label="Download for Windows"
+            >
+              <!-- Windows path: Devicon (MIT). -->
+              <svg aria-hidden="true" viewBox="0 0 128 128">
+                <path
+                  d="M67.328 67.331h60.669V128H67.328zm-67.325 0h60.669V128H.003zM67.328 0h60.669v60.669H67.328zM.003 0h60.669v60.669H.003z"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+        <span class="download-note">Free and open source.</span>
+      </section>
+
+      <section class="demo" aria-label="Screenwide demo video">
+        <video autoplay loop muted playsinline preload="metadata">
+          <!-- Add this file when the demo is ready:
+          <source src="assets/screenwide-demo.mp4" type="video/mp4" />
+          -->
+        </video>
+        <div class="demo-placeholder" aria-hidden="true">
+          <img src="assets/ScreenwideLogo.png" alt="" />
+          <span>Screenwide demo</span>
+        </div>
+      </section>
+
+      <section class="features" aria-label="Screenwide features">
+        <div class="card-list">
+          <article class="feature-card">
+            <div class="feature-media">
+              <!-- Replace with feature-screenshots.jpg or .mp4. -->
+              <div class="feature-placeholder" aria-hidden="true">
+                <img src="assets/ScreenwideLogo.png" alt="" />
+                <span>Screenshots</span>
+              </div>
+            </div>
+            <div class="feature-copy">
+              <h2>Screenshots</h2>
+              <p>
+                Capture a selected area or a scrolling page. Combine several
+                captures if needed.
+              </p>
+            </div>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-media">
+              <!-- Replace with feature-text-recognition.jpg or .mp4. -->
+              <div class="feature-placeholder" aria-hidden="true">
+                <img src="assets/ScreenwideLogo.png" alt="" />
+                <span>Text recognition</span>
+              </div>
+            </div>
+            <div class="feature-copy">
+              <h2>Text recognition</h2>
+              <p>Copy text from anywhere on screen. QR codes work too.</p>
+            </div>
+          </article>
+        </div>
+
+        <h2 class="more-heading">And <span class="aurora-text">more</span></h2>
+        <div class="utility-list">
+          <article class="utility-item">
+            <div class="utility-media">
+              <!-- Replace with feature-cursors.jpg or .mp4. -->
+              <div class="feature-placeholder" aria-hidden="true">
+                <img src="assets/ScreenwideLogo.png" alt="" />
+                <span>Better cursors</span>
+              </div>
+            </div>
+            <div>
+              <h2>Better cursors</h2>
+              <p>
+                Make the cursor easier to follow, with control over its size and
+                movement.
+              </p>
+            </div>
+          </article>
+
+          <article class="utility-item">
+            <div class="utility-media">
+              <!-- Replace with feature-keyboard-shortcuts.jpg or .mp4. -->
+              <div class="feature-placeholder" aria-hidden="true">
+                <img src="assets/ScreenwideLogo.png" alt="" />
+                <span>Keyboard shortcuts</span>
+              </div>
+            </div>
+            <div>
+              <h2>Keyboard shortcuts</h2>
+              <p>Show pressed shortcuts on the recording.</p>
+            </div>
+          </article>
+
+          <article class="utility-item">
+            <div class="utility-media">
+              <!-- Replace with feature-ruler.jpg or .mp4. -->
+              <div class="feature-placeholder" aria-hidden="true">
+                <img src="assets/ScreenwideLogo.png" alt="" />
+                <span>Ruler</span>
+              </div>
+            </div>
+            <div>
+              <h2>Ruler</h2>
+              <p>Measure anything on screen and copy the result.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <footer>
+        <div class="footer-brand">
+          <img src="assets/ScreenwideLogo.png" alt="" />
+          <div>
+            <strong>Screenwide</strong>
+            <span>Everything screen.</span>
+          </div>
+        </div>
+        <div class="footer-meta">
+          <a
+            class="footer-github"
+            href="https://github.com/overpolish/screenwide"
+            title="Screenwide on GitHub"
+            aria-label="Screenwide on GitHub"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path
+                d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+              />
+            </svg>
+          </a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const demo = document.querySelector(".demo");
+      const video = demo.querySelector("video");
+      video.addEventListener("loadeddata", () => {
+        demo.classList.add("has-video");
+      });
+
+      const pointerGlow = document.querySelector(".pointer-glow");
+      let pointerFrame;
+      let pointerX = 0;
+      let pointerY = 0;
+
+      document.addEventListener("pointermove", (event) => {
+        if (event.pointerType === "touch") return;
+
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+        pointerGlow.classList.add("is-visible");
+
+        if (pointerFrame) return;
+        pointerFrame = requestAnimationFrame(() => {
+          pointerGlow.style.transform = `translate3d(${pointerX}px, ${pointerY}px, 0)`;
+          pointerFrame = undefined;
+        });
+      });
+
+      document.documentElement.addEventListener("mouseleave", () => {
+        pointerGlow.classList.remove("is-visible");
+      });
+
+      const releasesUrl =
+        "https://github.com/overpolish/screenwide/releases/latest";
+      const downloadLinks = {
+        macos: releasesUrl,
+        windows: releasesUrl,
+      };
+      const reportedPlatform =
+        navigator.userAgentData?.platform ||
+        navigator.platform ||
+        navigator.userAgent ||
+        "";
+      const detectedPlatform = /mac/i.test(reportedPlatform)
+        ? "macos"
+        : /win/i.test(reportedPlatform)
+          ? "windows"
+          : null;
+      const primaryDownload = document.querySelector("#primary-download");
+      const primaryDownloadLabel = document.querySelector(
+        "#primary-download-label",
+      );
+
+      document.querySelectorAll("[data-platform-download]").forEach((link) => {
+        link.href = downloadLinks[link.dataset.platformDownload];
+      });
+
+      if (detectedPlatform) {
+        primaryDownload.href = downloadLinks[detectedPlatform];
+        primaryDownloadLabel.textContent =
+          detectedPlatform === "macos"
+            ? "Download for macOS"
+            : "Download for Windows";
+        document.querySelector(
+          `[data-download-icon="${detectedPlatform}"]`,
+        ).hidden = false;
+      }
+    </script>
+  </body>
+</html>

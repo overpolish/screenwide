@@ -8,22 +8,28 @@ import { PreparedAudioTrack } from "../types";
 
 import { AudioTrackVolumes } from "./audio-level";
 import { Waveform } from "./scrub-timeline";
+import { TimelineBladeController } from "./timeline-blade";
+import { TimelineViewportState } from "./timeline-viewport";
 
 export function ScrubAudioTracks({
   audioTracks,
+  blade,
   enabledTracks,
   hasEnabledVideo,
   onEnabledTracksChange,
   onSelectTrack,
   selectedTrack,
+  viewport,
   volumes,
 }: {
   audioTracks: PreparedAudioTrack[];
+  blade: TimelineBladeController;
   enabledTracks: Set<number>;
   hasEnabledVideo: boolean;
   onEnabledTracksChange: (tracks: Set<number>) => void;
   onSelectTrack: (streamIndex: number) => void;
   selectedTrack: number | null;
+  viewport: TimelineViewportState;
   volumes: AudioTrackVolumes;
 }) {
   return (
@@ -36,7 +42,7 @@ export function ScrubAudioTracks({
         return (
           <div className="flex items-center gap-2" key={track.streamIndex}>
             <div
-              className={`flex h-8 w-36 shrink-0 items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors ${selectedTrack === track.streamIndex ? "bg-info/15" : ""}`}
+              className={`flex h-8 w-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-1.25rem)] shrink-0 items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors ${selectedTrack === track.streamIndex ? "bg-info/15" : ""}`}
               onClick={() => {
                 onSelectTrack(track.streamIndex);
               }}
@@ -63,11 +69,13 @@ export function ScrubAudioTracks({
               <span className="min-w-0 grow truncate">{track.label}</span>
             </div>
             <Waveform
+              blade={blade}
               enabled={enabled}
               onSelect={() => {
                 onSelectTrack(track.streamIndex);
               }}
               track={track}
+              viewport={viewport}
               volumeDecibels={volumes.get(track.streamIndex) ?? 0}
             />
           </div>

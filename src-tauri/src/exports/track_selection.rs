@@ -41,6 +41,14 @@ pub struct TrackSelection {
 }
 
 impl TrackSelection {
+  pub(crate) fn stream_indices(&self) -> &[usize] {
+    &self.stream_indices
+  }
+
+  pub(crate) fn volume_decibels(&self, stream_index: usize) -> i16 {
+    self.volume(stream_index)
+  }
+
   /// Reads a selection from what the window's toggle rows are set to.
   ///
   /// Indices that name no track in this recording are dropped, and the rest

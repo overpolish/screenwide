@@ -13,6 +13,7 @@ pub(super) struct AudioSaveRequest<'a> {
   pub(super) selected_any: bool,
   pub(super) selection: &'a track_selection::TrackSelection,
   pub(super) stem: &'a str,
+  pub(super) timeline: Option<&'a timeline_edit::TimelinePlan>,
   pub(super) working: &'a Path,
 }
 
@@ -27,6 +28,7 @@ pub(super) fn save_audio(request: AudioSaveRequest<'_>) -> Result<Option<PathBuf
     selected_any,
     selection,
     stem,
+    timeline,
     working,
   } = request;
   if !selected_any {
@@ -43,6 +45,7 @@ pub(super) fn save_audio(request: AudioSaveRequest<'_>) -> Result<Option<PathBuf
   let run = media_preview::ExportRunOptions {
     cancelled,
     on_progress: &mut on_progress,
+    timeline,
     video: media_preview::VideoExportOptions {
       compression: 0,
       resolution_scale_percent: 100,

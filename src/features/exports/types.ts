@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -144,6 +145,8 @@ export type ExportArtifact =
       /** Captured pixels per logical display point, multiplied by 100. */
       sourceScalePercent: number;
       keyboardMaximumWidthUnits?: number | null;
+      timelineEdit?: RecordingTimelineEdit | null;
+      timelineEditRevision?: number | null;
     })
   | (ExportArtifactBase & {
       items: { height: number; id: number; width: number }[];

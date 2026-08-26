@@ -17,6 +17,7 @@ pub(super) struct PlayerSources {
   pub(super) keyboard_settings: Arc<RwLock<KeyboardEffectSettings>>,
   pub(super) composition_settings: Option<Arc<RwLock<PreviewCompositionSettings>>>,
   pub(super) duration_ms: u64,
+  pub(super) frames_per_second: Option<f64>,
   /// Zero when OSCs are hidden, one for the primary pane and two for camera.
   pub(super) layout: RecordingPreviewLayout,
   pub(super) playback_layout: RecordingPreviewLayout,
@@ -94,6 +95,11 @@ fn sources_with_surface(
       *width,
     )
   };
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  let frames_per_second =
+    super::super::media_preview::recording_info(&path).and_then(|info| info.frames_per_second);
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let frames_per_second = None;
   let camera_size = camera.as_ref().map(|value| (value.width, value.height));
   let primary_pane = match primary_kind {
     PrimaryRecordingKind::Screen => Some((width, height, layout::PreviewPaneKind::Screen)),
@@ -166,6 +172,7 @@ fn sources_with_surface(
       }),
     )),
     duration_ms,
+    frames_per_second,
     layout,
     playback_layout,
     playing: Arc::new(AtomicBool::new(false)),

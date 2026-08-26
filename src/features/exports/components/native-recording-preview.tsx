@@ -16,7 +16,6 @@ import {
   cameraOverlayGeometry,
   uncroppedCameraPreviewOverlay,
 } from "../camera-overlay-geometry";
-import { PREVIEW_FRAME_MS } from "../duration";
 import {
   DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
@@ -61,8 +60,10 @@ import { RECORDING_PREVIEW_PANE_GAP } from "./recording-preview-layout";
 import { RecordingPreviewViewport } from "./recording-preview-viewport";
 import { normalizedRecordingSelection } from "./recording-selection";
 import { RecordingTrackLanes } from "./recording-track-lanes";
-import { clamp, createPlayhead } from "./scrub-playhead";
+import { createPlayhead } from "./scrub-playhead";
 import { useRecordingRecenter } from "./use-recording-recenter";
+import { useRecordingTimelineBlade } from "./use-recording-timeline-blade";
+import { useRecordingTrimPreview } from "./use-recording-trim-preview";
 
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 import type { ScrubPreviewProps } from "./scrub-preview";
@@ -100,12 +101,14 @@ export function NativeRecordingPreview({
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
   onRecordingOutputChange,
+  onRecordingTimelineEditChange,
   onSelectedTrackChange,
   onVideoTrackOrderChange,
   previewLayout,
   previewOutputDimensions,
   previewSourceDimensions,
   recordingOutput,
+  recordingTimelineEdit,
   selectedTrack = null,
 }: ScrubPreviewProps & { inspector?: ReactNode }) {
   const screenCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -128,6 +131,11 @@ export function NativeRecordingPreview({
   const editGesture = useExportEditGesture();
   const totalDurationRef = useRef(durationMs);
   const [playhead] = useState(createPlayhead);
+  const trimPreview = useRecordingTrimPreview({
+    edit: recordingTimelineEdit,
+    playhead,
+    totalDurationRef,
+  });
   const [zoomPercent, setZoomPercent] = useState(100);
   const [canvasTool, setCanvasTool] = useState<RecordingCanvasTool>("select");
   // A canvas resize runs at pointer rate; committing every move to the export
@@ -930,10 +938,7 @@ export function NativeRecordingPreview({
     nativeEditorOwnsLayout,
     nativeLayoutHasPanes: enabledVideoTracks.length > 0,
     nativeLayoutKey: `${bakeCamera ? "baked" : "split"}|${enabledVideoTracks.join(":")}|${videoTrackOrderList.join(":")}`,
-    onPosition: (positionMs) => {
-      const total = totalDurationRef.current;
-      playhead.publish(positionMs / 1_000, total > 0 ? positionMs / total : 0);
-    },
+    onPosition: trimPreview.onPosition,
     onSelectionChange: (paneIndex) => {
       if (paneIndex === null) return;
       const trackId = paneIndex === 0 ? "primary" : "camera";
@@ -945,6 +950,7 @@ export function NativeRecordingPreview({
     screenCanvasRef,
     selection: selectionOverlay,
     selectionTargets,
+    timelineEdit: recordingTimelineEdit,
     zoomPercent,
   });
   const recenter = useRecordingRecenter({
@@ -963,6 +969,19 @@ export function NativeRecordingPreview({
   const totalDurationMs = player.durationMs || durationMs;
   totalDurationRef.current = totalDurationMs;
   const layout = player.layout ?? previewLayout ?? null;
+  const timelineBlade = useRecordingTimelineBlade({
+    artifactId,
+    edit: recordingTimelineEdit,
+    framesPerSecond: player.framesPerSecond,
+    getPositionMs: player.getPositionMs,
+    onChange: onRecordingTimelineEditChange,
+    onTrimPreviewRestore: trimPreview.restore,
+    onTrimPreviewStart: trimPreview.start,
+    playhead,
+    seekPlayer: player.seek,
+    shortcutsEnabled: Boolean(layout),
+    totalDurationMs,
+  });
   const canvasRefs = useMemo(
     () => [screenCanvasRef, cameraCanvasRef],
     [cameraCanvasRef, screenCanvasRef],
@@ -1119,39 +1138,6 @@ export function NativeRecordingPreview({
     playhead.publish(0, 0);
   }, [artifactId, playhead]);
 
-  // The lanes are memoized, so the handlers they receive must outlive a resize
-  // draft update. The player's seek is re-created per render by design, so it is
-  // reached through a ref rather than captured.
-  const playerSeekRef = useRef(player.seek);
-  playerSeekRef.current = player.seek;
-  const seek = useCallback(
-    (ratio: number, phase: "end" | "move" | "start") => {
-      const positionMs = ratio * totalDurationRef.current;
-      playhead.publish(positionMs / 1_000, ratio);
-      playerSeekRef.current(positionMs, phase);
-    },
-    [playhead],
-  );
-  // The player re-creates its reader per render, and the shortcut hook re-binds
-  // its listener whenever a handler identity changes, so this goes through a ref.
-  const playerPositionRef = useRef(player.getPositionMs);
-  playerPositionRef.current = player.getPositionMs;
-  const stepPlayhead = useCallback(
-    (direction: -1 | 1, coarse: boolean) => {
-      const total = totalDurationRef.current;
-      if (total <= 0) return;
-      const positionMs = clamp(
-        playerPositionRef.current() +
-          direction * (coarse ? 1_000 : PREVIEW_FRAME_MS),
-        0,
-        total,
-      );
-      const ratio = positionMs / total;
-      seek(ratio, "start");
-      seek(ratio, "end");
-    },
-    [seek],
-  );
   // Arrows either move the selected layer or the playhead, never both: nudging
   // needs the selection tool, a movable layer and a parked playhead.
   const canNudgeActiveTrack =
@@ -1167,7 +1153,7 @@ export function NativeRecordingPreview({
     onRecenter: canRecenterPrimary ? toggleRecenterTool : undefined,
     onResizeCanvas: canResizeActiveTrack ? toggleCanvasTool : undefined,
     onSelectTool: hasVisiblePanes ? toggleSelectTool : undefined,
-    onStep: !canNudgeActiveTrack && layout ? stepPlayhead : undefined,
+    onStep: !canNudgeActiveTrack && layout ? timelineBlade.step : undefined,
     onToggleCrop: hasVisiblePanes ? toggleCropTool : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
   });
@@ -1225,8 +1211,8 @@ export function NativeRecordingPreview({
   }, [artifactId, getPositionMs]);
 
   return (
-    <div className="flex min-h-0 grow flex-col">
-      <div className="grid min-h-0 grow grid-cols-[clamp(270px,23vw,300px)_minmax(0,1fr)]">
+    <div className="flex min-h-0 grow flex-col [--recording-inspector-width:clamp(270px,23vw,300px)]">
+      <div className="grid min-h-0 grow grid-cols-[var(--recording-inspector-width)_minmax(0,1fr)]">
         {inspector}
         <section className="relative flex min-h-0 min-w-0 flex-col">
           <div
@@ -1337,13 +1323,14 @@ export function NativeRecordingPreview({
         ) : (
           <RecordingTrackLanes
             audioTracks={audioTracks}
-            durationMs={totalDurationMs}
+            blade={timelineBlade.blade}
+            durationMs={timelineBlade.timelineDurationMs}
             enabledTracks={enabledTracks}
             enabledVideoTracks={selectedVideoTracks}
             layout={layout}
             onEnabledTracksChange={changeEnabledTracks}
             onEnabledVideoTracksChange={changeEnabledVideoTracks}
-            onSeek={seek}
+            onSeek={timelineBlade.seek}
             onSelectedTrackChange={changeSelectedTrack}
             onVideoTrackOrderChange={onVideoTrackOrderChange}
             playhead={playhead}

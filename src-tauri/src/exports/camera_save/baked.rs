@@ -23,14 +23,16 @@ pub(in crate::exports) fn save_baked_recording(
   output: &ScreenshotOutputSettings,
   progress_app: &AppHandle,
   cancelled: &AtomicBool,
+  timeline: Option<&timeline_edit::TimelinePlan>,
 ) -> Result<Option<PathBuf>, String> {
+  let progress_duration_ms = timeline.map_or(duration_ms, timeline_edit::TimelinePlan::duration_ms);
   let mut on_progress = |processed_ms| {
     emit_progress(
       progress_app,
       artifact_id,
       "recording",
       processed_ms,
-      duration_ms,
+      progress_duration_ms,
       0.0,
       99.0,
     );
@@ -76,6 +78,7 @@ pub(in crate::exports) fn save_baked_recording(
     output,
     screen,
     selection,
+    timeline,
     video: baked.video,
     width: screen_size.0,
   })?;
@@ -85,8 +88,8 @@ pub(in crate::exports) fn save_baked_recording(
         progress_app,
         artifact_id,
         "finalizing",
-        duration_ms,
-        duration_ms,
+        progress_duration_ms,
+        progress_duration_ms,
         0.0,
         99.0,
       );

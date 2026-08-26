@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod artifact;
+mod artifact_snapshot;
 mod audio_save;
 mod camera_save;
 pub(crate) mod commands;
@@ -22,12 +23,15 @@ mod recording_sidecar;
 mod recovery;
 pub(crate) mod save;
 pub(crate) mod screenshot_preview;
+mod timeline_edit;
 mod track_selection;
 mod validation;
 mod workspace;
 
 pub use artifact::{discard, present_recording, present_screenshot};
 use artifact::{emit_snapshot, snapshots, take_artifact};
+use artifact_snapshot::snapshot;
+pub use artifact_snapshot::ExportArtifactSnapshot;
 use camera_save::validate_camera_overlay;
 use commands::store_export_directory;
 use directory::current_directory;
@@ -299,56 +303,6 @@ fn compose_screenshot_workspace(
   }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ScreenshotItemSnapshot {
-  pub height: u32,
-  pub id: u64,
-  pub width: u32,
-}
-
-/// What the window is told about the pending artifact. Deliberately without
-/// pixels: the preview travels separately, as bytes.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(
-  rename_all = "camelCase",
-  rename_all_fields = "camelCase",
-  tag = "kind"
-)]
-pub enum ExportArtifactSnapshot {
-  Screenshot {
-    id: u64,
-    items: Vec<ScreenshotItemSnapshot>,
-    suggested_file_stem: String,
-    extension: String,
-    width: u32,
-    height: u32,
-  },
-  Recording {
-    audio_tracks: Vec<RecordingAudioTrack>,
-    camera: Option<RecordingCamera>,
-    can_compress: bool,
-    cursor_data_version: Option<u16>,
-    has_cursor_data: bool,
-    keyboard_data_version: Option<u16>,
-    keyboard_maximum_width_units: Option<u16>,
-    has_keyboard_data: bool,
-    id: u64,
-    suggested_file_stem: String,
-    extension: String,
-    width: u32,
-    height: u32,
-    duration_ms: u64,
-    original_size_bytes: u64,
-    /// The working file, for the window to play through the asset protocol.
-    /// Scoped to the recordings directory in `tauri.conf.json`, which is the
-    /// only place this path can ever point.
-    path: PathBuf,
-    primary_kind: PrimaryRecordingKind,
-    source_scale_percent: u16,
-  },
-}
-
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum AudioTrackKind {
@@ -406,6 +360,8 @@ pub struct RecordingExportOptions {
   pub resolution_scale_percent: u16,
   pub recording_output: RecordingOutputSettings,
   pub screenshot_output: ScreenshotWorkspaceOutputSettings,
+  #[serde(default)]
+  pub timeline_edit: Option<timeline_edit::RecordingTimelineEdit>,
 }
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]

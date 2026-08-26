@@ -1,0 +1,325 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+use std::fs::File;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+
+use serde::{Deserialize, Serialize};
+
+const FORMAT_VERSION: u16 = 1;
+const MAX_SEGMENTS: usize = 100_000;
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingTimelineSegment {
+  pub id: u64,
+  pub source_end: f64,
+  pub source_start: f64,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingTimelineEdit {
+  pub artifact_id: u64,
+  pub next_segment_id: u64,
+  pub segments: Vec<RecordingTimelineSegment>,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TimelineRange {
+  pub output_start_us: u64,
+  pub source_end_us: u64,
+  pub source_start_us: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TimelinePlan {
+  duration_us: u64,
+  ranges: Vec<TimelineRange>,
+}
+
+impl TimelinePlan {
+  pub fn from_edit(edit: &RecordingTimelineEdit, duration_ms: u64) -> Option<Self> {
+    if duration_ms == 0 || validate(edit).is_err() {
+      return None;
+    }
+    let source_duration_us = duration_ms.saturating_mul(1_000);
+    let mut ranges: Vec<TimelineRange> = Vec::new();
+    for segment in &edit.segments {
+      let source_start_us = (segment.source_start * source_duration_us as f64).round() as u64;
+      let source_end_us = (segment.source_end * source_duration_us as f64).round() as u64;
+      if ranges
+        .last()
+        .is_some_and(|range| range.source_end_us == source_start_us)
+      {
+        ranges.last_mut()?.source_end_us = source_end_us;
+        continue;
+      }
+      let output_start_us = ranges.last().map_or(0, |range| {
+        range
+          .output_start_us
+          .saturating_add(range.source_end_us.saturating_sub(range.source_start_us))
+      });
+      ranges.push(TimelineRange {
+        output_start_us,
+        source_end_us,
+        source_start_us,
+      });
+    }
+    let duration_us = ranges.last().map_or(0, |range| {
+      range
+        .output_start_us
+        .saturating_add(range.source_end_us.saturating_sub(range.source_start_us))
+    });
+    let plan = Self {
+      duration_us,
+      ranges,
+    };
+    (!plan.is_identity(source_duration_us)).then_some(plan)
+  }
+
+  pub fn duration_ms(&self) -> u64 {
+    self.duration_us.div_ceil(1_000)
+  }
+
+  pub fn ranges(&self) -> &[TimelineRange] {
+    &self.ranges
+  }
+
+  #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+  pub fn source_to_output_us(&self, source_us: u64) -> Option<u64> {
+    let range = self
+      .ranges
+      .iter()
+      .find(|range| source_us >= range.source_start_us && source_us < range.source_end_us)?;
+    Some(
+      range
+        .output_start_us
+        .saturating_add(source_us.saturating_sub(range.source_start_us)),
+    )
+  }
+
+  fn is_identity(&self, source_duration_us: u64) -> bool {
+    self.ranges.as_slice()
+      == [TimelineRange {
+        output_start_us: 0,
+        source_end_us: source_duration_us,
+        source_start_us: 0,
+      }]
+  }
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PersistedTimelineEdit {
+  edit: RecordingTimelineEdit,
+  revision: u64,
+  version: u16,
+}
+
+fn sidecar_path(recording: &Path, slot: char) -> Option<PathBuf> {
+  let stem = recording.file_stem()?.to_str()?;
+  Some(recording.with_file_name(format!("{stem}.timeline-edit-{slot}.json")))
+}
+
+fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
+  if edit.segments.is_empty() || edit.segments.len() > MAX_SEGMENTS {
+    return Err("The timeline must contain a reasonable number of segments".to_owned());
+  }
+  let mut previous_end = 0.0;
+  let mut ids = std::collections::HashSet::with_capacity(edit.segments.len());
+  for segment in &edit.segments {
+    if !segment.source_start.is_finite()
+      || !segment.source_end.is_finite()
+      || segment.source_start < previous_end
+      || segment.source_start < 0.0
+      || segment.source_end <= segment.source_start
+      || segment.source_end > 1.0
+      || !ids.insert(segment.id)
+    {
+      return Err("The timeline contains an invalid segment".to_owned());
+    }
+    previous_end = segment.source_end;
+  }
+  if edit.next_segment_id
+    <= edit
+      .segments
+      .iter()
+      .map(|segment| segment.id)
+      .max()
+      .unwrap_or(0)
+  {
+    return Err("The timeline's next segment identity is invalid".to_owned());
+  }
+  Ok(())
+}
+
+fn read_slot(recording: &Path, slot: char) -> Option<PersistedTimelineEdit> {
+  let bytes = std::fs::read(sidecar_path(recording, slot)?).ok()?;
+  let persisted: PersistedTimelineEdit = serde_json::from_slice(&bytes).ok()?;
+  (persisted.version == FORMAT_VERSION && validate(&persisted.edit).is_ok()).then_some(persisted)
+}
+
+pub fn for_recording(recording: &Path, artifact_id: u64) -> Option<(u64, RecordingTimelineEdit)> {
+  let mut persisted = ['a', 'b']
+    .into_iter()
+    .filter_map(|slot| read_slot(recording, slot))
+    .max_by_key(|candidate| candidate.revision)?;
+  persisted.edit.artifact_id = artifact_id;
+  Some((persisted.revision, persisted.edit))
+}
+
+pub fn snapshot_fields(
+  recording: &Path,
+  artifact_id: u64,
+) -> (Option<u64>, Option<RecordingTimelineEdit>) {
+  for_recording(recording, artifact_id).map_or((None, None), |(revision, edit)| {
+    (Some(revision), Some(edit))
+  })
+}
+
+pub fn persist(
+  recording: &Path,
+  artifact_id: u64,
+  revision: u64,
+  edit: RecordingTimelineEdit,
+) -> Result<(), String> {
+  if edit.artifact_id != artifact_id {
+    return Err("That timeline belongs to another recording".to_owned());
+  }
+  validate(&edit)?;
+  if for_recording(recording, artifact_id).is_some_and(|(current, _)| current >= revision) {
+    return Ok(());
+  }
+
+  let slot = if revision.is_multiple_of(2) { 'a' } else { 'b' };
+  let target = sidecar_path(recording, slot)
+    .ok_or_else(|| "The recording has no valid timeline sidecar name".to_owned())?;
+  let temporary = target.with_extension("json.tmp");
+  let bytes = serde_json::to_vec(&PersistedTimelineEdit {
+    edit,
+    revision,
+    version: FORMAT_VERSION,
+  })
+  .map_err(|error| error.to_string())?;
+  let mut file = File::create(&temporary).map_err(|error| error.to_string())?;
+  file.write_all(&bytes).map_err(|error| error.to_string())?;
+  file.sync_all().map_err(|error| error.to_string())?;
+  drop(file);
+  if target.exists() {
+    std::fs::remove_file(&target).map_err(|error| error.to_string())?;
+  }
+  std::fs::rename(&temporary, target).map_err(|error| error.to_string())
+}
+
+pub fn remove_for_recording(recording: &Path) {
+  for slot in ['a', 'b'] {
+    if let Some(path) = sidecar_path(recording, slot) {
+      let _ = std::fs::remove_file(&path);
+      let _ = std::fs::remove_file(path.with_extension("json.tmp"));
+    }
+  }
+}
+
+pub fn sweep_unclaimed(directory: &Path, keep: Option<&Path>) {
+  let keep_stem = keep
+    .and_then(Path::file_stem)
+    .and_then(|stem| stem.to_str());
+  let Ok(entries) = std::fs::read_dir(directory) else {
+    return;
+  };
+  for entry in entries.flatten() {
+    let path = entry.path();
+    let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+      continue;
+    };
+    let is_timeline =
+      name.contains(".timeline-edit-") && (name.ends_with(".json") || name.ends_with(".json.tmp"));
+    if is_timeline && !keep_stem.is_some_and(|stem| name.starts_with(&format!("{stem}."))) {
+      let _ = std::fs::remove_file(path);
+    }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
+    RecordingTimelineEdit {
+      artifact_id,
+      next_segment_id: 2,
+      segments: vec![
+        RecordingTimelineSegment {
+          id: 0,
+          source_end: split,
+          source_start: 0.0,
+        },
+        RecordingTimelineSegment {
+          id: 1,
+          source_end: 1.0,
+          source_start: split,
+        },
+      ],
+    }
+  }
+
+  #[test]
+  fn restores_the_newest_valid_slot_and_rebinds_the_artifact() {
+    let directory =
+      std::env::temp_dir().join(format!("screenwide-timeline-edit-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&directory);
+    std::fs::create_dir_all(&directory).unwrap();
+    let recording = directory.join("recording-test.mov");
+    std::fs::write(&recording, []).unwrap();
+
+    persist(&recording, 7, 1, edit(7, 0.25)).unwrap();
+    persist(&recording, 7, 2, edit(7, 0.75)).unwrap();
+    persist(&recording, 7, 1, edit(7, 0.5)).unwrap();
+    let (revision, restored) = for_recording(&recording, 99).unwrap();
+    assert_eq!(revision, 2);
+    assert_eq!(restored.artifact_id, 99);
+    assert_eq!(restored.segments[0].source_end, 0.75);
+
+    std::fs::write(sidecar_path(&recording, 'a').unwrap(), b"truncated").unwrap();
+    let (revision, restored) = for_recording(&recording, 99).unwrap();
+    assert_eq!(revision, 1);
+    assert_eq!(restored.segments[0].source_end, 0.25);
+    let _ = std::fs::remove_dir_all(directory);
+  }
+
+  #[test]
+  fn rejects_overlapping_or_empty_segments() {
+    let mut invalid = edit(1, 0.5);
+    invalid.segments[1].source_start = 0.25;
+    assert!(validate(&invalid).is_err());
+    invalid.segments.clear();
+    assert!(validate(&invalid).is_err());
+  }
+
+  #[test]
+  fn export_plan_coalesces_cuts_and_maps_retained_source_time() {
+    let mut timeline = edit(1, 0.25);
+    timeline.next_segment_id = 4;
+    timeline.segments.push(RecordingTimelineSegment {
+      id: 3,
+      source_end: 1.0,
+      source_start: 0.75,
+    });
+    timeline.segments[1].source_end = 0.5;
+
+    let plan = TimelinePlan::from_edit(&timeline, 8_000).unwrap();
+    assert_eq!(plan.duration_ms(), 6_000);
+    assert_eq!(plan.ranges().len(), 2);
+    assert_eq!(plan.source_to_output_us(3_000_000), Some(3_000_000));
+    assert_eq!(plan.source_to_output_us(5_000_000), None);
+    assert_eq!(plan.source_to_output_us(7_000_000), Some(5_000_000));
+  }
+
+  #[test]
+  fn export_plan_ignores_cut_only_timelines() {
+    assert!(TimelinePlan::from_edit(&edit(1, 0.5), 8_000).is_none());
+  }
+}

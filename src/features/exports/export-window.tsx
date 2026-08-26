@@ -27,6 +27,7 @@ import {
   defaultCameraOverlay,
   recordingSavePlan,
 } from "./recording-export-settings";
+import { recordingOutputForEdit } from "./recording-output-edit";
 import { sourceScalePercent } from "./resolution";
 import {
   defaultRecordingOutput,
@@ -57,6 +58,7 @@ import {
 import { useExportProgress } from "./use-export-progress";
 import { useRecordingExportEstimate } from "./use-recording-export-estimate";
 import { useRecordingExportPreview } from "./use-recording-export-preview";
+import { useRecordingTimelineEditState } from "./use-recording-timeline-edit-state";
 import { currentExportKind } from "./window-kind";
 
 const EMPTY_AUDIO_TRACK_VOLUMES: AudioTrackVolume[] = [];
@@ -101,6 +103,8 @@ export function ExportWindow() {
     useState<RecordingOutputSettings>(() =>
       defaultRecordingOutput({ primary: { height: 1, width: 1 } }),
     );
+  const [recordingTimelineEdit, setRecordingTimelineEdit] =
+    useRecordingTimelineEditState(artifact);
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelingSave, setIsCancelingSave] = useState(false);
 
@@ -230,6 +234,7 @@ export function ExportWindow() {
       cursorEffects,
       keyboardEffects,
       recordingOutput,
+      recordingTimelineEdit,
       resolutionScalePercent,
       screenshotOutput,
       trackSelection,
@@ -246,42 +251,37 @@ export function ExportWindow() {
       cursorEffects,
       keyboardEffects,
       recordingOutput,
+      recordingTimelineEdit,
       resolutionScalePercent,
       screenshotOutput,
       trackSelection,
       videoTrackSelection,
     ],
   );
-  const applyEditState = useCallback((next: ExportEditState) => {
-    setAudioTrackVolumes(next.audioTrackVolumes);
-    setBakeCamera(next.bakeCamera);
-    setCameraCompression(next.cameraCompression);
-    setCameraOverlay(next.cameraOverlay);
-    setCameraResolutionScalePercent(next.cameraResolutionScalePercent);
-    setCollapseAudio(next.collapseAudio);
-    setCompression(next.compression);
-    setCursorEffects(next.cursorEffects);
-    setKeyboardEffects(next.keyboardEffects);
-    setResolutionScalePercent(next.resolutionScalePercent);
-    setRecordingOutput({
-      ...next.recordingOutput,
-      camera: {
-        ...next.recordingOutput.camera,
-        backgroundRadiusPercent: 0,
-      },
-      primary: {
-        ...next.recordingOutput.primary,
-        backgroundRadiusPercent: 0,
-      },
-    });
-    screenshotRadiusRef.current = next.screenshotOutput.radiusPercent;
-    screenshotBackgroundRadiusRef.current =
-      next.screenshotOutput.backgroundRadiusPercent;
-    setScreenshotOutput(next.screenshotOutput);
-    setTrackSelection(next.trackSelection);
-    setVideoTrackSelection(next.videoTrackSelection);
-    setError(null);
-  }, []);
+  const applyEditState = useCallback(
+    (next: ExportEditState) => {
+      setAudioTrackVolumes(next.audioTrackVolumes);
+      setBakeCamera(next.bakeCamera);
+      setCameraCompression(next.cameraCompression);
+      setCameraOverlay(next.cameraOverlay);
+      setCameraResolutionScalePercent(next.cameraResolutionScalePercent);
+      setCollapseAudio(next.collapseAudio);
+      setCompression(next.compression);
+      setCursorEffects(next.cursorEffects);
+      setKeyboardEffects(next.keyboardEffects);
+      setRecordingTimelineEdit(next.recordingTimelineEdit);
+      setResolutionScalePercent(next.resolutionScalePercent);
+      setRecordingOutput(recordingOutputForEdit(next.recordingOutput));
+      screenshotRadiusRef.current = next.screenshotOutput.radiusPercent;
+      screenshotBackgroundRadiusRef.current =
+        next.screenshotOutput.backgroundRadiusPercent;
+      setScreenshotOutput(next.screenshotOutput);
+      setTrackSelection(next.trackSelection);
+      setVideoTrackSelection(next.videoTrackSelection);
+      setError(null);
+    },
+    [setRecordingTimelineEdit],
+  );
   const editGesture = useExportEditHistory({
     apply: applyEditState,
     resetKey:
@@ -304,6 +304,7 @@ export function ExportWindow() {
     includePrimaryVideo,
     keyboardEffects,
     recordingOutput,
+    recordingTimelineEdit,
     resolutionScalePercent,
   });
 
@@ -594,6 +595,7 @@ export function ExportWindow() {
           }));
           setError(null);
         }}
+        onRecordingTimelineEditChange={setRecordingTimelineEdit}
         onResolutionScaleChange={(scale) => {
           setResolutionScalePercent(scale);
           if (scale < originalResolutionScale && compression === 0) {
@@ -627,6 +629,7 @@ export function ExportWindow() {
             ...plan.options,
             fileStem,
             screenshotOutput,
+            timelineEdit: recordingTimelineEdit,
           })
             .then((path) => {
               if (path === null) {
@@ -716,6 +719,7 @@ export function ExportWindow() {
         recordingOutput={recordingOutput}
         recordingPreviewError={recordingPreviewError}
         recordingPreviewTracks={recordingPreviewTracks}
+        recordingTimelineEdit={recordingTimelineEdit}
         resolutionScalePercent={resolutionScalePercent}
         savePhase={saveProgress.phase}
         saveProgress={saveProgress.progress}

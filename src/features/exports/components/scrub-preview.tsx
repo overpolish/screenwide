@@ -3,6 +3,7 @@
 
 import { ReactNode } from "react";
 
+import { RecordingTimelineEdit } from "../recording-timeline-edit";
 import { RecordingOutputSettings } from "../screenshot-output";
 import {
   AudioTrackVolume,
@@ -45,6 +46,7 @@ export type ScrubPreviewProps = {
     trackId: RecordingVideoTrackId,
     settings: RecordingOutputSettings[RecordingVideoTrackId],
   ) => void;
+  onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
   onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
   previewLayout?: RecordingPreviewLayout;
@@ -52,6 +54,7 @@ export type ScrubPreviewProps = {
     Record<RecordingVideoTrackId, { height: number; width: number }>
   >;
   recordingOutput?: RecordingOutputSettings;
+  recordingTimelineEdit?: RecordingTimelineEdit | null;
   selectedTrack?: RecordingTrackId | null;
 };
 

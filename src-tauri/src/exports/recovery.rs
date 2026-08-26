@@ -164,12 +164,14 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
   let plan = orphan_plan(orphaned_recordings(&directory), SystemTime::now());
 
   for path in plan.delete {
+    timeline_edit::remove_for_recording(&path);
     let _ = std::fs::remove_file(path);
   }
   let Some(path) = plan.present else {
     sweep_unclaimed_cameras(&directory, None);
     sweep_unclaimed_cursors(&directory, None);
     sweep_unclaimed_keyboards(&directory, None);
+    timeline_edit::sweep_unclaimed(&directory, None);
     return;
   };
   let camera_path = camera_for_recording(&path);
@@ -178,6 +180,7 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
   sweep_unclaimed_cameras(&directory, camera_path.as_deref());
   sweep_unclaimed_cursors(&directory, cursor_path.as_deref());
   sweep_unclaimed_keyboards(&directory, keyboard_path.as_deref());
+  timeline_edit::sweep_unclaimed(&directory, Some(&path));
 
   let recorded_at = std::fs::metadata(&path)
     .and_then(|metadata| metadata.modified())
@@ -204,6 +207,7 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
     // A screen recording without readable dimensions cannot produce a finite
     // preview layout. It is an incomplete container, not a recoverable movie.
     let _ = std::fs::remove_file(&path);
+    timeline_edit::remove_for_recording(&path);
     if let Some(path) = camera_path {
       let _ = std::fs::remove_file(path);
     }

@@ -6,6 +6,8 @@ use tauri::{ipc::Channel, AppHandle, Emitter, Manager};
 
 use super::*;
 
+pub(crate) mod playback;
+
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct RecordingPreviewSelectionChangeEvent {
@@ -135,10 +137,7 @@ pub async fn start_recording_preview_player(
     surface.set_selection_snapping(true);
     surface.set_editor_active(false);
   }
-  let info = RecordingPreviewPlayerInfo {
-    duration_ms: sources.duration_ms,
-    layout: sources.layout.clone(),
-  };
+  let info = RecordingPreviewPlayerInfo::from(&sources);
   let mut manager = state
     .0
     .lock()
@@ -277,39 +276,6 @@ async fn cancel_off_thread(worker: PreviewPlayerWorker) -> Result<(), String> {
   })
   .await
   .map_err(|error| error.to_string())
-}
-
-// Async so the old worker's join stays off the main thread. It has to finish
-// before the new worker starts, though: two cpal output streams must not own
-// the audio device at once.
-#[tauri::command]
-pub async fn play_recording_preview(
-  state: tauri::State<'_, RecordingPreviewPlayerState>,
-  session_id: u64,
-) -> Result<(), String> {
-  let worker = {
-    let mut manager = state
-      .0
-      .lock()
-      .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-    manager.require_session(session_id)?;
-    manager.is_playing = true;
-    manager.take_worker()
-  };
-  if let Some(worker) = worker {
-    cancel_off_thread(worker).await?;
-  }
-  let mut manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  manager.require_session(session_id)?;
-  if !manager.is_playing {
-    // A pause or a seek won the race while the old worker was being joined,
-    // and it already owns what the preview presents.
-    return Ok(());
-  }
-  manager.restart(PlaybackMode::Playing)
 }
 
 #[tauri::command]

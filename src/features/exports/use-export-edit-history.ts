@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { ownsTextEditingKeys } from "./keyboard-target";
+import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import {
   RecordingOutputSettings,
   ScreenshotWorkspaceOutputSettings,
@@ -52,6 +53,7 @@ export type ExportEditState = {
   cursorEffects: CursorEffectSettings;
   keyboardEffects: KeyboardEffectSettings;
   recordingOutput: RecordingOutputSettings;
+  recordingTimelineEdit: RecordingTimelineEdit | null;
   resolutionScalePercent: number;
   screenshotOutput: ScreenshotWorkspaceOutputSettings;
   trackSelection: { artifactId: number; streamIndices: number[] } | null;

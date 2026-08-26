@@ -232,6 +232,17 @@ fn render_video(
       frame.timestamp_100ns.saturating_sub(timeline_origin)
     });
     let position_ms = u64::try_from(pts_100ns.max(0) / 10_000).unwrap_or_default();
+    let source_us = u64::try_from(pts_100ns.max(0) / 10).unwrap_or_default();
+    let output_us = request.timeline.map_or(Some(source_us), |timeline| {
+      timeline.source_to_output_us(source_us)
+    });
+    let Some(output_us) = output_us else {
+      let Some(next) = next else {
+        break;
+      };
+      current = next;
+      continue;
+    };
     while camera_next
       .as_ref()
       .is_some_and(|frame| frame.timestamp_100ns.saturating_sub(timeline_origin) <= pts_100ns)
@@ -280,12 +291,19 @@ fn render_video(
     )?;
     sink.write(
       &texture,
-      pts_100ns,
+      i64::try_from(output_us)
+        .unwrap_or(i64::MAX / 10)
+        .saturating_mul(10),
       next_pts_100ns.saturating_sub(pts_100ns),
     )?;
     (request.on_progress)(
-      position_ms
-        .min(request.duration_ms)
+      output_us
+        .div_ceil(1_000)
+        .min(
+          request
+            .timeline
+            .map_or(request.duration_ms, |timeline| timeline.duration_ms()),
+        )
         .saturating_mul(GPU_PROGRESS_PERCENT)
         / 100,
     );
@@ -319,13 +337,24 @@ fn mux_args(request: &CursorExportRequest<'_>, video: &Path, temporary: &Path) -
     ]
     .map(OsString::from),
   );
-  args.extend(
-    request
-      .selection
-      .audio_args_from(request.audio_layout, 1)
-      .into_iter()
-      .map(OsString::from),
-  );
+  args.extend(request.timeline.map_or_else(
+    || {
+      request
+        .selection
+        .audio_args_from(request.audio_layout, 1)
+        .into_iter()
+        .map(OsString::from)
+        .collect()
+    },
+    |timeline| {
+      media_preview::timeline_audio_mapping_args(
+        timeline,
+        1,
+        request.selection,
+        request.audio_layout,
+      )
+    },
+  ));
   args.extend(
     [
       "-tag:v",
@@ -352,7 +381,9 @@ pub(super) fn export(mut request: CursorExportRequest<'_>) -> Result<ExportRunRe
     }
     let temporary = media_preview::remux_temp_path(request.destination);
     let args = mux_args(&request, &video, &temporary);
-    let duration_ms = request.duration_ms;
+    let duration_ms = request
+      .timeline
+      .map_or(request.duration_ms, |timeline| timeline.duration_ms());
     let on_progress = &mut request.on_progress;
     let mut final_progress = |processed_ms: u64| {
       on_progress(

@@ -34,8 +34,16 @@ pub fn begin_cursor_scrub(channel: Channel<CursorScrubEvent>) -> Result<(), Stri
 }
 
 #[tauri::command]
-pub fn end_cursor_scrub() -> Result<(), String> {
-  platform::end()
+pub fn end_cursor_scrub(
+  window: tauri::WebviewWindow,
+  cursor_offset_x: Option<f64>,
+) -> Result<(), String> {
+  let offset = cursor_offset_x.unwrap_or(0.0);
+  #[cfg(target_os = "windows")]
+  let offset = offset * window.scale_factor().map_err(|error| error.to_string())?;
+  #[cfg(target_os = "macos")]
+  let _ = window;
+  platform::end(offset)
 }
 
 #[cfg(test)]

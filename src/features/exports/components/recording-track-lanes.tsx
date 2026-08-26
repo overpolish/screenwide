@@ -21,15 +21,17 @@ import {
 } from "../types";
 
 import { AudioTrackVolumes } from "./audio-level";
-import {
-  LayerContextMenu,
-  LayerContextMenuState,
-} from "./screenshot-layer-context-menu";
+import { RecordingTrackContextMenu } from "./recording-track-context-menu";
+import { LayerContextMenuState } from "./screenshot-layer-context-menu";
 import { ScrubAudioTracks } from "./scrub-audio-tracks";
 import { Playhead } from "./scrub-playhead";
-import { SeekHandler, TimelineRuler, TimelineScrubber } from "./scrub-timeline";
+import { SeekHandler } from "./scrub-timeline";
 import { TimelineAudioMeter } from "./timeline-audio-meter";
-import { VideoThumbnailStrip } from "./video-thumbnail-strip";
+import { TimelineBladeController } from "./timeline-blade";
+import { TimelineScrubberOverlay } from "./timeline-scrubber";
+import { TimelineVideoClip } from "./timeline-video-clip";
+import { TimelineHeader } from "./timeline-zoom-toolbar";
+import { useTimelineNavigation } from "./use-timeline-navigation";
 
 /**
  * Memoized: the lanes own the ruler, both thumbnail strips, the audio rows and
@@ -38,6 +40,7 @@ import { VideoThumbnailStrip } from "./video-thumbnail-strip";
  */
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   audioTracks,
+  blade,
   durationMs,
   enabledTracks,
   enabledVideoTracks,
@@ -54,6 +57,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   volumes,
 }: {
   audioTracks: PreparedAudioTrack[];
+  blade: TimelineBladeController;
   durationMs: number;
   enabledTracks: Set<number>;
   enabledVideoTracks: Set<RecordingVideoTrackId>;
@@ -75,6 +79,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
     dropIndex: number;
     source: RecordingVideoTrackId;
   } | null>(null);
+  const timeline = useTimelineNavigation(blade.edit.artifactId);
   const dragRef = useRef<{
     dropIndex: number;
     source: RecordingVideoTrackId;
@@ -85,7 +90,8 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
     new Map<RecordingVideoTrackId, HTMLDivElement>(),
   );
   const rowCount = layout.panes.length + audioTracks.length;
-  const meterHeight = 16 + rowCount * 34;
+  const meterHeight = 30 + rowCount * 34;
+
   const videoRows = layout.panes
     .map((pane, index) => ({
       pane,
@@ -178,19 +184,21 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   return (
     <section
       aria-label="Recording timeline"
-      className="shrink-0 border-t border-muted/15 bg-content/55 py-2 pr-3 pl-3"
+      className="shrink-0 border-t border-muted/15 bg-content/55 pt-0.5 pr-3 pb-2 pl-3 [&_*]:outline-none! [&_*]:ring-0! [&_*]:ring-offset-0!"
+      {...timeline.interactionProps}
     >
       <div className="flex items-stretch gap-2">
         <div className="relative flex min-w-0 grow flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <span aria-hidden="true" className="w-36 shrink-0" />
-            <TimelineRuler
-              durationMs={durationMs}
-              onSeek={onSeek}
-              playhead={playhead}
-            />
-          </div>
-
+          <TimelineHeader
+            areaRef={timeline.areaRef}
+            blade={blade}
+            durationMs={durationMs}
+            onFit={timeline.fit}
+            onSeek={onSeek}
+            onZoom={timeline.zoom}
+            playhead={playhead}
+            viewport={timeline.viewport}
+          />
           {videoRows.map(({ pane, trackId }, rowIndex) => {
             const Icon = pane.kind === "camera" ? Camera : Monitor;
             const label = pane.kind === "camera" ? "Camera" : "Screen";
@@ -225,7 +233,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
                   <div className="pointer-events-none absolute -bottom-0.5 right-0 left-0 z-20 h-0.5 rounded bg-info" />
                 ) : null}
                 <div
-                  className={`flex h-8 w-36 shrink-0 cursor-grab items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors active:cursor-grabbing ${selectedTrack === trackId ? "bg-info/15" : ""}`}
+                  className={`flex h-8 w-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-1.25rem)] shrink-0 cursor-grab items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors active:cursor-grabbing ${selectedTrack === trackId ? "bg-info/15" : ""}`}
                   onClick={() => {
                     onSelectedTrackChange(trackId);
                   }}
@@ -255,18 +263,15 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
                   <Icon className="shrink-0 text-muted" size={14} />
                   <span className="min-w-0 grow truncate">{label}</span>
                 </div>
-                <div
-                  aria-selected={selectedTrack === trackId}
-                  className="relative h-8 min-w-0 grow cursor-default overflow-hidden rounded bg-muted/8"
-                  onClick={() => {
-                    onSelectedTrackChange(trackId);
-                  }}
-                >
-                  <VideoThumbnailStrip
-                    enabled={enabled}
-                    thumbnails={thumbnails[trackId]}
-                  />
-                </div>
+                <TimelineVideoClip
+                  blade={blade}
+                  enabled={enabled}
+                  onSelect={onSelectedTrackChange}
+                  selected={selectedTrack === trackId}
+                  thumbnails={thumbnails[trackId]}
+                  trackId={trackId}
+                  viewport={timeline.viewport}
+                />
               </div>
             );
           })}
@@ -274,6 +279,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
           {audioTracks.length > 0 ? (
             <ScrubAudioTracks
               audioTracks={audioTracks}
+              blade={blade}
               enabledTracks={enabledTracks}
               hasEnabledVideo={enabledVideoTracks.size > 0}
               onEnabledTracksChange={onEnabledTracksChange}
@@ -281,13 +287,17 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
                 onSelectedTrackChange(recordingAudioTrackId(streamIndex));
               }}
               selectedTrack={recordingAudioStreamIndex(selectedTrack)}
+              viewport={timeline.viewport}
               volumes={volumes}
             />
           ) : null}
 
-          <div className="pointer-events-none absolute inset-y-0 right-0 left-[9.5rem] z-10 overflow-hidden">
-            <TimelineScrubber onSeek={onSeek} playhead={playhead} />
-          </div>
+          <TimelineScrubberOverlay
+            blade={blade}
+            onSeek={onSeek}
+            playhead={playhead}
+            viewport={timeline.viewport}
+          />
         </div>
 
         {audioTracks.length > 0 ? (
@@ -300,24 +310,13 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
           />
         ) : null}
       </div>
-      {contextMenu ? (
-        <LayerContextMenu
-          ariaLabel="Video layer actions"
-          canDelete={false}
-          menu={contextMenu}
-          onClose={() => {
-            setContextMenu(null);
-          }}
-          onDelete={() => undefined}
-          onMoveBackward={() => {
-            moveTrack(contextMenu.itemId, "backward");
-          }}
-          onMoveForward={() => {
-            moveTrack(contextMenu.itemId, "forward");
-          }}
-          showDelete={false}
-        />
-      ) : null}
+      <RecordingTrackContextMenu
+        menu={contextMenu}
+        onClose={() => {
+          setContextMenu(null);
+        }}
+        onMove={moveTrack}
+      />
     </section>
   );
 });

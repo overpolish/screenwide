@@ -14,7 +14,9 @@ const arrowDirections = new Map([
 
 export function useExportWindowShortcuts({
   onCopy,
+  onCutTimeline,
   onDelete,
+  onDeselect,
   onExport,
   onMoveBackward,
   onMoveForward,
@@ -23,11 +25,14 @@ export function useExportWindowShortcuts({
   onResizeCanvas,
   onSelectTool,
   onStep,
+  onToggleBladeTool,
   onToggleCrop,
   onTogglePlayback,
 }: {
   onCopy?: () => void;
+  onCutTimeline?: () => void;
   onDelete?: () => void;
+  onDeselect?: () => void;
   onExport?: () => void;
   onMoveBackward?: () => void;
   onMoveForward?: () => void;
@@ -38,6 +43,7 @@ export function useExportWindowShortcuts({
   onSelectTool?: () => void;
   /** Moves the playhead by one arrow press; `coarse` is the Shift jump. */
   onStep?: (direction: -1 | 1, coarse: boolean) => void;
+  onToggleBladeTool?: () => void;
   onToggleCrop?: () => void;
   onTogglePlayback?: () => void;
 }) {
@@ -76,9 +82,23 @@ export function useExportWindowShortcuts({
 
       if (event.repeat || event.isComposing || event.altKey) return;
 
+      if (
+        event.code === "Escape" &&
+        onDeselect &&
+        !ownsTextEditingKeys(event.target)
+      ) {
+        event.preventDefault();
+        onDeselect();
+        return;
+      }
+
       const commandKey = event.ctrlKey || event.metaKey;
       if (commandKey && !event.shiftKey) {
-        if (event.code === "KeyC" && onCopy) {
+        if (event.code === "KeyB" && onCutTimeline) {
+          if (ownsTextEditingKeys(event.target)) return;
+          event.preventDefault();
+          onCutTimeline();
+        } else if (event.code === "KeyC" && onCopy) {
           if (ownsTextEditingKeys(event.target)) return;
           event.preventDefault();
           onCopy();
@@ -123,6 +143,13 @@ export function useExportWindowShortcuts({
 
       // P leaves Space available to activate whichever control has focus.
       if (
+        event.code === "KeyB" &&
+        onToggleBladeTool &&
+        !ownsTextEditingKeys(event.target)
+      ) {
+        event.preventDefault();
+        onToggleBladeTool();
+      } else if (
         event.code === "KeyP" &&
         onTogglePlayback &&
         !ownsTextEditingKeys(event.target)
@@ -166,7 +193,9 @@ export function useExportWindowShortcuts({
     };
   }, [
     onCopy,
+    onCutTimeline,
     onDelete,
+    onDeselect,
     onExport,
     onMoveBackward,
     onMoveForward,
@@ -176,6 +205,7 @@ export function useExportWindowShortcuts({
     onSelectTool,
     onStep,
     onToggleCrop,
+    onToggleBladeTool,
     onTogglePlayback,
   ]);
 }

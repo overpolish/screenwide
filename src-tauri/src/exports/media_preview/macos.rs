@@ -35,16 +35,19 @@ fn recording_info_result(path: &Path) -> Result<RecordingInfo, String> {
   let tracks =
     tauri::async_runtime::block_on(asset.load_tracks_with_media_type(av::MediaType::video()))
       .map_err(|error| error.to_string())?;
-  let (width, height) = tracks.get(0).map_or((0, 0), |track| {
+  let (width, height, frames_per_second) = tracks.get(0).map_or((0, 0, None), |track| {
     let size = track.natural_size();
+    let rate = f64::from(track.nominal_frame_rate());
     (
       size.width.abs().round() as u32,
       size.height.abs().round() as u32,
+      (rate.is_finite() && rate > 0.0).then_some(rate),
     )
   });
 
   Ok(RecordingInfo {
     duration_ms: (seconds * 1_000.0).round() as u64,
+    frames_per_second,
     height,
     width,
   })

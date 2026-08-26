@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod audio_only;
+mod ranged;
 
 use std::{
   process::Child,
@@ -9,14 +10,13 @@ use std::{
     atomic::{AtomicBool, AtomicU64, Ordering},
     mpsc, Arc, Mutex, RwLock,
   },
-  time::{Duration, Instant},
 };
 
 use tauri::ipc::Channel;
 
 use super::{
   audio, platform, AudioTrackVolume, PlayerSources, PreviewAudioSettings,
-  RecordingPreviewPlayerEvent,
+  RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
 };
 
 #[derive(Clone, Copy)]
@@ -30,6 +30,8 @@ pub(super) struct WorkerLaunch {
   pub audio: PreviewAudioSettings,
   pub mode: PlaybackMode,
   pub playback_factors: Vec<f64>,
+  pub playback_end_ms: Option<u64>,
+  pub playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   pub request_id: u64,
   pub start_ms: u64,
 }
@@ -57,10 +59,6 @@ fn send_error(channel: &Channel<RecordingPreviewPlayerEvent>, message: String) {
   let _ = channel.send(RecordingPreviewPlayerEvent::Error { message });
 }
 
-const fn presentation_elapsed_ms(frame_timestamp_ms: u64, start_ms: u64) -> u64 {
-  frame_timestamp_ms.saturating_sub(start_ms)
-}
-
 struct RunContext {
   audio_child: Arc<Mutex<Option<Child>>>,
   audio_volumes: Arc<RwLock<Vec<AudioTrackVolume>>>,
@@ -68,6 +66,8 @@ struct RunContext {
   event_channel: Channel<RecordingPreviewPlayerEvent>,
   mode: PlaybackMode,
   playback_factors: Vec<f64>,
+  playback_end_ms: Option<u64>,
+  playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   position_ms: Arc<AtomicU64>,
   request_id: u64,
   selected_audio: Arc<RwLock<Vec<usize>>>,
@@ -86,6 +86,8 @@ fn run(context: RunContext) {
     event_channel,
     cancelled,
     playback_factors,
+    playback_end_ms,
+    playback_ranges,
     position_ms,
     request_id,
     video_child,
@@ -97,6 +99,8 @@ fn run(context: RunContext) {
       cancelled,
       event_channel,
       mode,
+      playback_end_ms,
+      playback_ranges,
       position_ms,
       request_id,
       selected_audio,
@@ -105,25 +109,23 @@ fn run(context: RunContext) {
       start_ms,
     });
   }
-  let (frame_tx, frame_rx) = mpsc::sync_channel(3);
-  let video_result = platform::spawn_video(
-    &sources,
-    &playback_factors,
-    start_ms,
-    matches!(mode, PlaybackMode::Still | PlaybackMode::InteractiveStill),
-    Arc::clone(&cancelled),
-    Arc::clone(&video_child),
-    frame_tx,
-  );
-  let video_thread = match video_result {
-    Ok(thread) => thread,
-    Err(error) => {
-      send_error(&event_channel, error);
-      return;
-    }
-  };
-
   if matches!(mode, PlaybackMode::Still | PlaybackMode::InteractiveStill) {
+    let (frame_tx, frame_rx) = mpsc::sync_channel(3);
+    let video_thread = match platform::spawn_video(
+      &sources,
+      &playback_factors,
+      start_ms,
+      true,
+      Arc::clone(&cancelled),
+      Arc::clone(&video_child),
+      frame_tx,
+    ) {
+      Ok(thread) => thread,
+      Err(error) => {
+        send_error(&event_channel, error);
+        return;
+      }
+    };
     if let Ok(frame) = frame_rx.recv() {
       if !cancelled.load(Ordering::Acquire) && platform::send_frame(&sources, frame.payload) {
         position_ms.store(start_ms, Ordering::Release);
@@ -137,84 +139,20 @@ fn run(context: RunContext) {
     let _ = video_thread.join();
     return;
   }
-
-  let audio = if sources.audio_tracks.is_empty() {
-    None
-  } else {
-    match audio::spawn(
-      &sources,
-      Arc::clone(&selected_audio),
-      Arc::clone(&audio_volumes),
-      start_ms,
-      Arc::clone(&cancelled),
-      Arc::clone(&audio_child),
-    ) {
-      Ok(audio) => Some(audio),
-      Err(error) => {
-        send_error(&event_channel, error);
-        cancelled.store(true, Ordering::Release);
-        stop_child(&video_child);
-        let _ = video_thread.join();
-        return;
-      }
-    }
-  };
-  let started = Instant::now();
-  let _ = event_channel.send(RecordingPreviewPlayerEvent::Playing {
-    position_ms: start_ms,
+  ranged::run(ranged::RunContext {
+    audio_child,
+    audio_volumes,
+    cancelled,
+    event_channel,
+    playback_end_ms,
+    playback_factors,
+    playback_ranges,
+    position_ms,
+    selected_audio,
+    sources,
+    start_ms,
+    video_child,
   });
-  let elapsed_ms = || {
-    audio.as_ref().map_or_else(
-      || started.elapsed().as_millis() as u64,
-      |playback| {
-        playback.played_frames.load(Ordering::Acquire) * 1_000 / u64::from(playback.sample_rate)
-      },
-    )
-  };
-
-  let mut reached_video_end = false;
-  while !cancelled.load(Ordering::Acquire) {
-    let frame = match frame_rx.recv_timeout(Duration::from_millis(50)) {
-      Ok(frame) => frame,
-      Err(mpsc::RecvTimeoutError::Timeout) if !video_thread.is_finished() => continue,
-      Err(_) => {
-        reached_video_end = !cancelled.load(Ordering::Acquire);
-        break;
-      }
-    };
-    let frame_time_ms = presentation_elapsed_ms(frame.timestamp_ms, start_ms);
-    while elapsed_ms() < frame_time_ms && !cancelled.load(Ordering::Acquire) {
-      std::thread::sleep(Duration::from_millis(2));
-    }
-    if cancelled.load(Ordering::Acquire) {
-      break;
-    }
-    let current = start_ms
-      .saturating_add(elapsed_ms())
-      .min(sources.duration_ms);
-    position_ms.store(current, Ordering::Release);
-    if !platform::send_frame(&sources, frame.payload) {
-      break;
-    }
-    let _ = event_channel.send(RecordingPreviewPlayerEvent::Position {
-      position_ms: current,
-    });
-  }
-
-  cancelled.store(true, Ordering::Release);
-  stop_child(&video_child);
-  stop_child(&audio_child);
-  let _ = video_thread.join();
-  if let Some(audio) = audio {
-    drop(audio.stream);
-    let _ = audio.thread.join();
-  }
-  if reached_video_end
-    || position_ms.load(Ordering::Acquire) >= sources.duration_ms.saturating_sub(50)
-  {
-    position_ms.store(sources.duration_ms, Ordering::Release);
-    let _ = event_channel.send(RecordingPreviewPlayerEvent::Ended);
-  }
 }
 
 impl PreviewPlayerWorker {
@@ -227,6 +165,8 @@ impl PreviewPlayerWorker {
       audio,
       mode,
       playback_factors,
+      playback_end_ms,
+      playback_ranges,
       request_id,
       start_ms,
     } = launch;
@@ -252,6 +192,8 @@ impl PreviewPlayerWorker {
             event_channel,
             mode,
             playback_factors,
+            playback_end_ms,
+            playback_ranges,
             position_ms,
             request_id,
             selected_audio,
@@ -318,16 +260,5 @@ impl PreviewPlayerWorker {
       let _ = thread.join();
     }
     self.position_ms.load(Ordering::Acquire)
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::presentation_elapsed_ms;
-
-  #[test]
-  fn playback_follows_media_timestamps_after_a_seek() {
-    assert_eq!(presentation_elapsed_ms(7_126, 5_000), 2_126);
-    assert_eq!(presentation_elapsed_ms(4_999, 5_000), 0);
   }
 }

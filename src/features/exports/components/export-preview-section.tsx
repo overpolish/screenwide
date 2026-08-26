@@ -4,6 +4,7 @@
 import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { ReactNode, useRef, useState } from "react";
 
+import { RecordingTimelineEdit } from "../recording-timeline-edit";
 import {
   scaledDimensions,
   scaledVideoDimensions,
@@ -345,12 +346,14 @@ export function RecordingSection({
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
   onRecordingOutputChange,
+  onRecordingTimelineEditChange,
   onSelectedTrackChange,
   onVideoTrackOrderChange,
   recordingOutput,
   recordingPreviewError,
   recordingPreviewLayout,
   recordingPreviewTracks,
+  recordingTimelineEdit,
   resolutionScalePercent,
   selectedTrack,
 }: {
@@ -376,12 +379,14 @@ export function RecordingSection({
     trackId: RecordingVideoTrackId,
     settings: RecordingOutputSettings[RecordingVideoTrackId],
   ) => void;
+  onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
   onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
   recordingOutput?: RecordingOutputSettings;
   recordingPreviewError?: string | null;
   recordingPreviewLayout?: RecordingPreviewLayout;
   recordingPreviewTracks?: PreparedAudioTrack[];
+  recordingTimelineEdit?: RecordingTimelineEdit | null;
   resolutionScalePercent?: number;
   selectedTrack?: RecordingTrackId | null;
 }) {
@@ -435,6 +440,7 @@ export function RecordingSection({
           onEnabledTracksChange={onEnabledTracksChange}
           onEnabledVideoTracksChange={onEnabledVideoTracksChange}
           onRecordingOutputChange={onRecordingOutputChange}
+          onRecordingTimelineEditChange={onRecordingTimelineEditChange}
           onSelectedTrackChange={onSelectedTrackChange}
           onVideoTrackOrderChange={onVideoTrackOrderChange}
           previewLayout={recordingPreviewLayout}
@@ -456,6 +462,7 @@ export function RecordingSection({
               : {}),
           }}
           recordingOutput={recordingOutput}
+          recordingTimelineEdit={recordingTimelineEdit}
           selectedTrack={selectedTrack}
         />
       </div>

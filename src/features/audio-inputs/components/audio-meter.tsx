@@ -24,7 +24,6 @@ const ticksForLength = (length: number) => {
 type TickProps = {
   tick: number;
   display?: string;
-  excludeLine?: boolean;
   labelClassName?: string;
   maxTick?: number;
   orientation?: "horizontal" | "vertical";
@@ -32,7 +31,6 @@ type TickProps = {
 };
 const Tick = ({
   display,
-  excludeLine = false,
   labelClassName,
   maxTick,
   orientation = "horizontal",
@@ -58,16 +56,13 @@ const Tick = ({
           : { left: `${percentage.toString()}%` }
       }
     >
-      {!excludeLine && (
-        <div
-          className={`${vertical ? "h-px w-0.5" : "h-0.5 w-px"} ${
-            clipping ? "bg-warning-100" : "bg-muted"
-          } transition-colors`}
-        />
-      )}
       <span
         className={`relative px-0.25 text-[6px]/2 text-shadow-2xs transition-colors ${
-          vertical ? "ml-px" : position === "above" ? "mb-px" : ""
+          vertical
+            ? `ml-px ${tick === -3 ? "top-0.5" : ""}`
+            : position === "above"
+              ? "mb-px"
+              : ""
         } ${clipping ? "text-warning-100" : ""} ${labelClassName ?? ""}`}
       >
         {display ?? tick}

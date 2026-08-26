@@ -45,6 +45,36 @@ typedef struct {
   uint32_t drop_shadow;
 } ScreenwideCameraUniforms;
 
+typedef struct {
+  uint64_t output_start_us;
+  uint64_t source_end_us;
+  uint64_t source_start_us;
+} ScreenwideTimelineRange;
+
+static bool timeline_presentation(
+    CMTime source, const ScreenwideTimelineRange *ranges, uint32_t count,
+    CMTime *output) {
+  if (ranges == NULL || count == 0) {
+    *output = source;
+    return true;
+  }
+  double source_us = CMTimeGetSeconds(source) * 1000000.0;
+  if (!isfinite(source_us) || source_us < 0.0)
+    return false;
+  uint64_t rounded_source_us = (uint64_t)llround(source_us);
+  for (uint32_t index = 0; index < count; ++index) {
+    const ScreenwideTimelineRange *range = &ranges[index];
+    if (rounded_source_us < range->source_start_us ||
+        rounded_source_us >= range->source_end_us)
+      continue;
+    uint64_t output_us = range->output_start_us +
+                         rounded_source_us - range->source_start_us;
+    *output = CMTimeMake((int64_t)output_us, 1000000);
+    return true;
+  }
+  return false;
+}
+
 #import "gpu_compositor_macos_shader_source.h"
 
 static int fail(char *error, size_t capacity, NSString *message) {
@@ -388,6 +418,8 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
                                uint32_t artwork_count,
                                const ScreenwideKeyboardOverlay *keyboards,
                                uint32_t keyboard_count,
+                               const ScreenwideTimelineRange *timeline_ranges,
+                               uint32_t timeline_range_count,
                                const char *camera_path,
                                const ScreenwideCameraOverlay *camera_overlay,
                                const ScreenwideCanvas *canvas,
@@ -574,6 +606,12 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
           break;
         }
         CMTime pts = CMSampleBufferGetPresentationTimeStamp(screen_sample);
+        CMTime output_pts = kCMTimeInvalid;
+        if (!timeline_presentation(pts, timeline_ranges, timeline_range_count,
+                                   &output_pts)) {
+          CFRelease(screen_sample);
+          continue;
+        }
         const ScreenwideGpuCursor *cursor = cursor_at(cursors, cursor_count, pts);
         const ScreenwideKeyboardOverlay *keyboard =
             screenwide_keyboard_at(keyboards, keyboard_count, pts);
@@ -740,7 +778,7 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
         [command commit];
         ScreenwideInflightFrame *frame = [ScreenwideInflightFrame new];
         frame.command = command;
-        frame.presentation = pts;
+        frame.presentation = output_pts;
         frame.destination = destination;
         frame.sourceLuma = source_y_ref;
         frame.sourceChroma = source_uv_ref;

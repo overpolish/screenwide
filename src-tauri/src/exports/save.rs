@@ -40,6 +40,7 @@ pub async fn save_export(
     resolution_scale_percent,
     recording_output,
     screenshot_output,
+    timeline_edit: timeline_model,
   } = options;
   if compression > 4 || camera_compression > 4 {
     return Err("Compression must be between 0 and 4".to_owned());
@@ -143,6 +144,21 @@ pub async fn save_export(
             .map(|keyboard| keyboard.path.as_path());
           let primary_output = &recording_output.primary;
           let camera_output = &recording_output.camera;
+          let persisted_timeline;
+          let timeline_edit = if let Some(edit) = timeline_model
+            .as_ref()
+            .filter(|edit| edit.artifact_id == *id)
+          {
+            Some(edit)
+          } else {
+            persisted_timeline = timeline_edit::for_recording(working, *id).map(|(_, edit)| edit);
+            persisted_timeline.as_ref()
+          };
+          let timeline = timeline_edit
+            .and_then(|edit| timeline_edit::TimelinePlan::from_edit(edit, *duration_ms));
+          let export_duration_ms = timeline
+            .as_ref()
+            .map_or(*duration_ms, timeline_edit::TimelinePlan::duration_ms);
 
           if !include_primary_video && !include_camera && enabled_stream_indices.is_empty() {
             return Err("Select at least one track to export".to_owned());
@@ -156,12 +172,13 @@ pub async fn save_export(
               app: &progress_app,
               cancelled: &job_cancellation,
               directory: &writing,
-              duration_ms: *duration_ms,
+              duration_ms: export_duration_ms,
               id: *id,
               layout,
               selected_any: !enabled_stream_indices.is_empty(),
               selection: &selection,
               stem: &stem,
+              timeline: timeline.as_ref(),
               working,
             });
           }
@@ -184,6 +201,7 @@ pub async fn save_export(
                 camera_compression,
                 camera_resolution_scale_percent,
                 camera_output,
+                timeline.as_ref(),
               )?;
               if saved.is_some() {
                 let _ = std::fs::remove_file(working);
@@ -197,12 +215,13 @@ pub async fn save_export(
               app: &progress_app,
               cancelled: &job_cancellation,
               directory: &writing,
-              duration_ms: *duration_ms,
+              duration_ms: export_duration_ms,
               id: *id,
               layout,
               selected_any: !enabled_stream_indices.is_empty(),
               selection: &selection,
               stem: &stem,
+              timeline: timeline.as_ref(),
               working,
             })?;
             if saved.is_some() {
@@ -240,6 +259,7 @@ pub async fn save_export(
               primary_output,
               &progress_app,
               &job_cancellation,
+              timeline.as_ref(),
             )?;
             if saved.is_some() {
               let _ = std::fs::remove_file(working);
@@ -275,6 +295,7 @@ pub async fn save_export(
             selection: &selection,
             source_scale_percent: *source_scale_percent,
             stem: &stem,
+            timeline: timeline.as_ref(),
             width: *width,
           })?;
           let Some(saved) = saved else {
@@ -314,6 +335,7 @@ pub async fn save_export(
               camera_compression,
               camera_resolution_scale_percent,
               camera_output,
+              timeline.as_ref(),
             )
             .inspect_err(|_| {
               let _ = std::fs::remove_file(&saved);
@@ -381,6 +403,10 @@ pub async fn save_export(
       return Err(error);
     }
   };
+
+  if let ExportArtifact::Recording { path: working, .. } = &artifact {
+    timeline_edit::remove_for_recording(working);
+  }
 
   store_export_directory(&app, kind, directory)?;
   remember_completed_export(

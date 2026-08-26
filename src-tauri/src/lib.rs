@@ -94,7 +94,7 @@ pub fn run() {
       exports::recording_preview_player::commands::pause_recording_preview,
       exports::recording_preview_player::surface_commands::layout_recording_preview_surface,
       exports::recording_preview_player::surface_commands::set_recording_preview_zoom,
-      exports::recording_preview_player::commands::play_recording_preview,
+      exports::recording_preview_player::commands::playback::play_recording_preview,
       exports::recording_preview_player::commands::seek_recording_preview,
       exports::recording_preview_player::commands::select_recording_preview_audio,
       exports::recording_preview_player::commands::set_recording_preview_audio_volumes,
@@ -112,6 +112,7 @@ pub fn run() {
       exports::screenshot_preview::start_screenshot_preview,
       exports::screenshot_preview::stop_screenshot_preview,
       exports::commands::set_export_directory,
+      exports::commands::set_recording_timeline_edit,
       exports::commands::set_screenshot_background_radius,
       exports::commands::set_screenshot_radius,
       permissions::open_permission_settings,
@@ -294,6 +295,5 @@ pub fn run() {
   if !exports::has_pending_workspace(app.handle()) {
     app.set_dock_visibility(false);
   }
-
   app.run(|_, _| {});
 }

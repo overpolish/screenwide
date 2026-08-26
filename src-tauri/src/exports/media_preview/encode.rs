@@ -4,8 +4,13 @@
 use super::*;
 
 mod args;
+mod timeline_args;
 
 pub(super) use args::{audio_export_args, camera_export_args, remux_args, selected_export_args};
+pub(in crate::exports) use timeline_args::timeline_audio_mapping_args;
+pub(super) use timeline_args::{
+  timeline_audio_export_args, timeline_camera_export_args, timeline_selected_export_args,
+};
 
 /// Counts the remuxes this process has attempted, so the temporary a save
 /// writes through never collides with another save's.
@@ -88,6 +93,7 @@ pub fn export_selected_recording(
   let ExportRunOptions {
     cancelled,
     on_progress,
+    timeline,
     video,
   } = run;
   let VideoExportOptions {
@@ -95,12 +101,18 @@ pub fn export_selected_recording(
     resolution_scale_percent,
     source_scale_percent,
   } = video;
-  if (compression > 0 || resolution_scale_percent < source_scale_percent) && !supports_compression()
+  if (timeline.is_some() || compression > 0 || resolution_scale_percent < source_scale_percent)
+    && !supports_compression()
   {
     return Err("This FFmpeg build does not include the H.264 encoder".to_owned());
   }
   let temporary = remux_temp_path(destination);
-  let args = selected_export_args(source, &temporary, selection, layout, video);
+  let args = timeline.map_or_else(
+    || selected_export_args(source, &temporary, selection, layout, video),
+    |timeline| {
+      timeline_selected_export_args(source, &temporary, selection, layout, video, timeline)
+    },
+  );
   run_export(args, &temporary, destination, cancelled, on_progress)
 }
 
@@ -115,21 +127,39 @@ pub fn export_camera_recording(
   let ExportRunOptions {
     cancelled,
     on_progress,
+    timeline,
     video,
   } = run;
-  if (video.compression > 0 || video.resolution_scale_percent < video.source_scale_percent)
+  if (timeline.is_some()
+    || video.compression > 0
+    || video.resolution_scale_percent < video.source_scale_percent)
     && !supports_compression()
   {
     return Err("This FFmpeg build does not include the H.264 encoder".to_owned());
   }
   let temporary = remux_temp_path(destination);
-  let args = camera_export_args(
-    audio_source,
-    camera_source,
-    &temporary,
-    selection,
-    layout,
-    video,
+  let args = timeline.map_or_else(
+    || {
+      camera_export_args(
+        audio_source,
+        camera_source,
+        &temporary,
+        selection,
+        layout,
+        video,
+      )
+    },
+    |timeline| {
+      timeline_camera_export_args(
+        audio_source,
+        camera_source,
+        &temporary,
+        selection,
+        layout,
+        video,
+        timeline,
+      )
+    },
   );
   run_export(args, &temporary, destination, cancelled, on_progress)
 }
@@ -144,10 +174,14 @@ pub fn export_selected_audio(
   let ExportRunOptions {
     cancelled,
     on_progress,
+    timeline,
     video: _,
   } = run;
   let temporary = remux_temp_path(destination);
-  let args = audio_export_args(source, &temporary, selection, layout);
+  let args = timeline.map_or_else(
+    || audio_export_args(source, &temporary, selection, layout),
+    |timeline| timeline_audio_export_args(source, &temporary, selection, layout, timeline),
+  );
   run_export(args, &temporary, destination, cancelled, on_progress)
 }
 

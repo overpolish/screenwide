@@ -24,12 +24,17 @@ pub(in crate::exports) struct PrimaryRecordingSaveRequest<'a> {
   pub selection: &'a track_selection::TrackSelection,
   pub source_scale_percent: u16,
   pub stem: &'a str,
+  pub timeline: Option<&'a timeline_edit::TimelinePlan>,
   pub width: u32,
 }
 
 pub(in crate::exports) fn save_primary_recording(
   request: PrimaryRecordingSaveRequest<'_>,
 ) -> Result<Option<PathBuf>, String> {
+  let progress_duration_ms = request.timeline.map_or(
+    request.duration_ms,
+    timeline_edit::TimelinePlan::duration_ms,
+  );
   let video = media_preview::VideoExportOptions {
     compression: request.compression,
     resolution_scale_percent: request.resolution_scale_percent,
@@ -53,6 +58,7 @@ pub(in crate::exports) fn save_primary_recording(
       screen: request.screen,
       selection: request.selection,
       stem: request.stem,
+      timeline: request.timeline,
       video,
       width: request.width,
     });
@@ -70,7 +76,7 @@ pub(in crate::exports) fn save_primary_recording(
         request.artifact_id,
         "recording",
         processed_ms,
-        request.duration_ms,
+        progress_duration_ms,
         0.0,
         request.progress_share,
       );
@@ -92,6 +98,7 @@ pub(in crate::exports) fn save_primary_recording(
       output: request.output,
       screen: request.screen,
       selection: request.selection,
+      timeline: request.timeline,
       video,
       width: request.width,
     })? {
@@ -99,7 +106,8 @@ pub(in crate::exports) fn save_primary_recording(
       media_preview::ExportRunResult::Cancelled => Ok(None),
     };
   }
-  if request.compression == 0
+  if request.timeline.is_none()
+    && request.compression == 0
     && request.resolution_scale_percent >= request.source_scale_percent
     && !request
       .selection
@@ -119,7 +127,7 @@ pub(in crate::exports) fn save_primary_recording(
       request.artifact_id,
       "recording",
       processed_ms,
-      request.duration_ms,
+      progress_duration_ms,
       0.0,
       request.progress_share,
     );
@@ -133,6 +141,7 @@ pub(in crate::exports) fn save_primary_recording(
     media_preview::ExportRunOptions {
       cancelled: request.cancelled,
       on_progress: &mut on_progress,
+      timeline: request.timeline,
       video,
     },
     media_preview::selected_recording_exporter(),

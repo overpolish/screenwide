@@ -350,7 +350,9 @@ mod tests {
   #[test]
   fn classifies_modifier_keys_as_flag_changes_on_both_sides() {
     let mut tracker = KeyTracker::default();
-    let left = tracker.classify(&press(0xa2, false)).expect("a transition is classified");
+    let left = tracker
+      .classify(&press(0xa2, false))
+      .expect("a transition is classified");
     assert_eq!(left.key_code, 59);
     assert_eq!(
       left.kind,
@@ -359,7 +361,9 @@ mod tests {
         modifier: KeyboardModifier::Control
       }
     );
-    let right = tracker.classify(&release(0x5c, false)).expect("a transition is classified");
+    let right = tracker
+      .classify(&release(0x5c, false))
+      .expect("a transition is classified");
     assert_eq!(right.key_code, 54);
     assert_eq!(
       right.kind,
@@ -395,14 +399,18 @@ mod tests {
     let mut tracker = KeyTracker::default();
     tracker.classify(&press(0xa2, false));
     tracker.classify(&press(0xa1, false));
-    let event = tracker.classify(&press(0x43, false)).expect("a key down is classified");
+    let event = tracker
+      .classify(&press(0x43, false))
+      .expect("a key down is classified");
     assert_eq!(event.key_code, 8);
     assert_eq!(
       event.modifiers,
       vec![KeyboardModifier::Control, KeyboardModifier::Shift]
     );
     tracker.classify(&release(0xa2, false));
-    let event = tracker.classify(&press(0x56, false)).expect("a key down is classified");
+    let event = tracker
+      .classify(&press(0x56, false))
+      .expect("a key down is classified");
     assert_eq!(event.modifiers, vec![KeyboardModifier::Shift]);
   }
 

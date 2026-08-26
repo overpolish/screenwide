@@ -35,6 +35,7 @@ pub async fn estimate_recording_export(
     resolution_scale_percent,
     recording_output,
     screenshot_output: _,
+    timeline_edit: timeline_model,
   } = options;
   if compression > 4 || camera_compression > 4 {
     return Err("Compression must be between 0 and 4".to_owned());
@@ -122,6 +123,18 @@ pub async fn estimate_recording_export(
     } else {
       track_selection::AudioLayout::SeparateTracks
     };
+    let persisted_timeline;
+    let timeline_edit = if let Some(edit) = timeline_model
+      .as_ref()
+      .filter(|edit| edit.artifact_id == artifact_id)
+    {
+      Some(edit)
+    } else {
+      persisted_timeline = timeline_edit::for_recording(&path, artifact_id).map(|(_, edit)| edit);
+      persisted_timeline.as_ref()
+    };
+    let timeline =
+      timeline_edit.and_then(|edit| timeline_edit::TimelinePlan::from_edit(edit, duration_ms));
     let selected_audio = selection.estimated_audio_bytes(&tracks, layout, duration_ms);
 
     let all_indices = tracks
@@ -284,6 +297,9 @@ pub async fn estimate_recording_export(
     let media = screen_video
       .saturating_add(camera_video)
       .saturating_add(selected_audio);
+    let media = timeline.as_ref().map_or(media, |timeline| {
+      media.saturating_mul(timeline.duration_ms()) / duration_ms.max(1)
+    });
     Ok(media.saturating_add(media / 200).saturating_add(4_096))
   })
   .await

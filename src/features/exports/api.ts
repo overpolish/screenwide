@@ -4,6 +4,11 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 
 import {
+  RecordingPreviewPlayerEvent,
+  RecordingPreviewPlayerInfo,
+} from "./recording-preview-player-contract";
+import { RecordingTimelineEdit } from "./recording-timeline-edit";
+import {
   normalizedScreenshotOutput,
   RecordingOutputSettings,
   ScreenshotWorkspaceOutputSettings,
@@ -15,7 +20,6 @@ import {
   ExportKind,
   ExportSnapshots,
   RecordingPreview,
-  RecordingPreviewLayout,
   CursorEffectSettings,
   KeyboardEffectSettings,
 } from "./types";
@@ -71,20 +75,6 @@ type PreviewSelectionLayout = {
   recenterMode?: boolean;
 };
 
-export type RecordingPreviewPlayerEvent =
-  | { event: "ended" }
-  | { data: { message: string }; event: "error" }
-  | {
-      data: { positionMs: number };
-      event: "paused" | "playing" | "position";
-    }
-  | { data: { positionMs: number; requestId: number }; event: "ready" };
-
-export type RecordingPreviewPlayerInfo = {
-  durationMs: number;
-  layout: RecordingPreviewLayout;
-};
-
 export const getExportSnapshot = () =>
   invoke<ExportSnapshots>("get_export_snapshot");
 
@@ -134,9 +124,6 @@ export const startRecordingPreviewPlayer = ({
       },
     },
   });
-
-export const playRecordingPreview = (sessionId: number) =>
-  invoke<null>("play_recording_preview", { sessionId });
 
 export const pauseRecordingPreview = (sessionId: number) =>
   invoke<null>("pause_recording_preview", { sessionId });
@@ -406,6 +393,7 @@ type RecordingProcessingOptions = {
   recordingOutput: RecordingOutputSettings;
   resolutionScalePercent: number;
   screenshotOutput: ScreenshotWorkspaceOutputSettings;
+  timelineEdit?: RecordingTimelineEdit | null;
 };
 export const estimateRecordingExport = ({
   artifactId,
@@ -424,6 +412,7 @@ export const estimateRecordingExport = ({
   recordingOutput,
   resolutionScalePercent,
   screenshotOutput,
+  timelineEdit,
 }: RecordingProcessingOptions & { artifactId: number }) =>
   invoke<number>("estimate_recording_export", {
     artifactId,
@@ -447,6 +436,7 @@ export const estimateRecordingExport = ({
       },
       resolutionScalePercent,
       screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
+      timelineEdit,
     },
   });
 type SaveExportOptions = RecordingProcessingOptions & {
@@ -470,6 +460,7 @@ export const saveExport = ({
   recordingOutput,
   resolutionScalePercent,
   screenshotOutput,
+  timelineEdit,
 }: SaveExportOptions) =>
   invoke<string | null>("save_export", {
     fileStem,
@@ -493,6 +484,7 @@ export const saveExport = ({
       },
       resolutionScalePercent,
       screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
+      timelineEdit,
     },
   });
 

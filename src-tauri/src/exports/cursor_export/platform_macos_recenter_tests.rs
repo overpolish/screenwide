@@ -68,6 +68,7 @@ fn exports_recenter_inset_pixels_outside_the_source_crop() {
     output: &settings,
     screen: &source,
     selection: &TrackSelection::default(),
+    timeline: None,
     video: VideoExportOptions {
       compression: 1,
       resolution_scale_percent: 100,

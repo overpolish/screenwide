@@ -20,11 +20,16 @@ pub(super) struct CursorSaveRequest<'a> {
   pub screen: &'a Path,
   pub selection: &'a track_selection::TrackSelection,
   pub stem: &'a str,
+  pub timeline: Option<&'a timeline_edit::TimelinePlan>,
   pub video: media_preview::VideoExportOptions,
   pub width: u32,
 }
 
 pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBuf>, String> {
+  let progress_duration_ms = request.timeline.map_or(
+    request.duration_ms,
+    timeline_edit::TimelinePlan::duration_ms,
+  );
   let path = unique_path(
     request.directory,
     request.stem,
@@ -37,7 +42,7 @@ pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBu
       request.artifact_id,
       "recording",
       processed_ms,
-      request.duration_ms,
+      progress_duration_ms,
       0.0,
       request.progress_share,
     );
@@ -58,6 +63,7 @@ pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBu
     on_progress: &mut on_progress,
     screen: request.screen,
     selection: request.selection,
+    timeline: request.timeline,
     output: request.output,
     video: request.video,
     width: request.width,

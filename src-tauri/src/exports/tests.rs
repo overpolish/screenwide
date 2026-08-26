@@ -319,6 +319,7 @@ fn saves_a_selected_audio_layout_without_changing_the_working_movie() {
     media_preview::ExportRunOptions {
       cancelled: &cancelled,
       on_progress: &mut ignore_progress,
+      timeline: None,
       video: media_preview::VideoExportOptions {
         compression: 0,
         resolution_scale_percent: 200,
@@ -352,6 +353,7 @@ fn keeps_the_working_movie_when_a_selected_audio_export_fails() {
     media_preview::ExportRunOptions {
       cancelled: &cancelled,
       on_progress: &mut ignore_progress,
+      timeline: None,
       video: media_preview::VideoExportOptions {
         compression: 0,
         resolution_scale_percent: 200,

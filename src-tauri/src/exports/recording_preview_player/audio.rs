@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod filter;
+
 use std::{
   collections::VecDeque,
   io::Read,
@@ -17,7 +19,8 @@ use cpal::{
   FromSample, SampleFormat, SizedSample, Stream, StreamConfig,
 };
 
-use super::PlayerSources;
+use self::filter::args;
+use super::{PlayerSources, RecordingPreviewPlaybackRange};
 use crate::exports::{media_preview, AudioTrackVolume};
 
 const MAX_QUEUED_SECONDS: usize = 2;
@@ -211,67 +214,11 @@ fn output_stream(
   Ok((stream, played, config))
 }
 
-fn args(sources: &PlayerSources, start_ms: u64, config: &StreamConfig) -> Vec<String> {
-  let stream_indices = sources
-    .audio_tracks
-    .iter()
-    .map(|track| track.stream_index)
-    .collect::<Vec<_>>();
-  let mut args = vec![
-    "-hide_banner".to_owned(),
-    "-loglevel".to_owned(),
-    "error".to_owned(),
-    "-nostdin".to_owned(),
-    "-ss".to_owned(),
-    format!("{}.{:03}", start_ms / 1_000, start_ms % 1_000),
-    "-i".to_owned(),
-    sources.screen_path.to_string_lossy().into_owned(),
-  ];
-  let remaining_ms = sources.duration_ms.saturating_sub(start_ms).max(1);
-  let remaining = format!("{}.{:03}", remaining_ms / 1_000, remaining_ms % 1_000);
-  if stream_indices.len() == 1 {
-    args.extend(["-map".to_owned(), format!("0:a:{}", stream_indices[0])]);
-  } else {
-    let mut filter = String::new();
-    let mut inputs = String::new();
-    for (position, stream_index) in stream_indices.iter().enumerate() {
-      filter.push_str(&format!(
-        "[0:a:{stream_index}]aresample={},aformat=sample_fmts=flt:channel_layouts=mono,apad=whole_dur={remaining}[track{position}];",
-        config.sample_rate,
-      ));
-      inputs.push_str(&format!("[track{position}]"));
-    }
-    filter.push_str(&format!(
-      "{inputs}amerge=inputs={}[tracks]",
-      stream_indices.len()
-    ));
-    args.extend([
-      "-filter_complex".to_owned(),
-      filter,
-      "-map".to_owned(),
-      "[tracks]".to_owned(),
-    ]);
-  }
-  args.extend([
-    "-vn".to_owned(),
-    "-ac".to_owned(),
-    stream_indices.len().to_string(),
-    "-ar".to_owned(),
-    config.sample_rate.to_string(),
-    "-t".to_owned(),
-    remaining,
-    "-f".to_owned(),
-    "f32le".to_owned(),
-    "pipe:1".to_owned(),
-  ]);
-  args
-}
-
 pub(super) fn spawn(
   sources: &PlayerSources,
   selected_audio: Arc<RwLock<Vec<usize>>>,
   audio_volumes: Arc<RwLock<Vec<AudioTrackVolume>>>,
-  start_ms: u64,
+  ranges: &[RecordingPreviewPlaybackRange],
   cancelled: Arc<AtomicBool>,
   child: Arc<Mutex<Option<Child>>>,
 ) -> Result<AudioPlayback, String> {
@@ -290,7 +237,7 @@ pub(super) fn spawn(
   )?;
   let mut process = Command::new(media_preview::ffmpeg_path());
   process
-    .args(args(sources, start_ms, &config))
+    .args(args(sources, ranges, &config))
     .stdout(Stdio::piped())
     .stderr(Stdio::null());
   let mut process = process

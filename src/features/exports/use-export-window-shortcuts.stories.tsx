@@ -7,6 +7,7 @@ import { Button } from "../../components/base/button/button";
 
 import { createPlayhead } from "./components/scrub-playhead";
 import { TimelineRuler } from "./components/scrub-timeline";
+import { fitTimelineViewport } from "./components/timeline-viewport";
 import { PREVIEW_FRAME_MS } from "./duration";
 import { useExportWindowShortcuts } from "./use-export-window-shortcuts";
 
@@ -96,6 +97,7 @@ function ShortcutPreview() {
           playhead.publish(ratio * 5, ratio);
         }}
         playhead={playhead}
+        viewport={fitTimelineViewport()}
       />
       <input
         aria-label="File name"

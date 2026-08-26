@@ -246,8 +246,10 @@ pub(super) fn keyboard_backing_scale(output_height: u32, overlay: &KeyboardOverl
   } else {
     overlay.scale
   };
-  let pixels =
-    f64::from(output_height) * (60.0 / 1080.0) * f64::from(requested).max(0.0) * MAXIMUM_ANIMATED_SCALE;
+  let pixels = f64::from(output_height)
+    * (60.0 / 1080.0)
+    * f64::from(requested).max(0.0)
+    * MAXIMUM_ANIMATED_SCALE;
   (pixels / DESIGN_HEIGHT).ceil().clamp(12.0, 64.0)
 }
 
@@ -355,8 +357,8 @@ pub(super) fn rasterize_keyboard(
     .iter()
     .map(|width| width.ceil() + DESIGN_INSET * 2.0)
     .collect();
-  let design_width = key_widths.iter().sum::<f64>()
-    + DESIGN_GAP * (key_widths.len().saturating_sub(1)) as f64;
+  let design_width =
+    key_widths.iter().sum::<f64>() + DESIGN_GAP * (key_widths.len().saturating_sub(1)) as f64;
   let width = ((design_width * backing_scale).ceil() as u32).max(1);
   let height = ((DESIGN_HEIGHT * backing_scale).ceil() as u32).max(1);
 
@@ -404,15 +406,8 @@ pub(super) fn rasterize_keyboard(
     let key_width = key_widths[index];
     let text_x = key_x + (key_width - text_widths[index]) * 0.5;
     let y = (height as i32 - measured[index].1) / 2;
-    drawn &= unsafe {
-      TextOutW(
-        device.dc,
-        (text_x * backing_scale).round() as i32,
-        y,
-        text,
-      )
-    }
-    .as_bool();
+    drawn &=
+      unsafe { TextOutW(device.dc, (text_x * backing_scale).round() as i32, y, text) }.as_bool();
     keys.push((
       (key_x * backing_scale).round() as u32,
       (key_width * backing_scale).round() as u32,
@@ -496,7 +491,12 @@ fn update_uniforms(
   for (index, (_, state)) in prepared.iter().enumerate() {
     values.key_geometry[index][2] = state.visible;
     values.key_geometry[index][3] = state.slot;
-    values.key_motion[index] = [state.alpha, state.scale, state.progress, state.layout_progress];
+    values.key_motion[index] = [
+      state.alpha,
+      state.scale,
+      state.progress,
+      state.layout_progress,
+    ];
     values.key_masks[index] = [state.layout_from_mask, state.layout_to_mask, 0, 0];
   }
 }

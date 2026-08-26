@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { estimateRecordingExport } from "./api";
 import { mixSignature, VideoExportSettings } from "./recording-export-settings";
+import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import {
   defaultScreenshotOutput,
   RecordingOutputSettings,
@@ -34,6 +35,7 @@ export function useRecordingExportEstimate({
   includePrimaryVideo,
   keyboardEffects,
   recordingOutput,
+  recordingTimelineEdit,
   resolutionScalePercent,
 }: {
   artifact: ExportArtifact | null;
@@ -49,6 +51,7 @@ export function useRecordingExportEstimate({
   includePrimaryVideo: boolean;
   keyboardEffects: KeyboardEffectSettings;
   recordingOutput: RecordingOutputSettings;
+  recordingTimelineEdit: RecordingTimelineEdit | null;
   resolutionScalePercent: number;
 }) {
   const cacheRef = useRef(new Map<string, number>());
@@ -90,6 +93,7 @@ export function useRecordingExportEstimate({
           cameraOverlay.frameYPercent,
           cameraOverlay.radiusPercent,
           JSON.stringify(recordingOutput),
+          JSON.stringify(recordingTimelineEdit?.segments ?? null),
           collapseAudio ? "mix" : "separate",
           audioTrackVolumes
             .map(
@@ -148,6 +152,7 @@ export function useRecordingExportEstimate({
         recordingOutput,
         resolutionScalePercent,
         screenshotOutput: { ...defaultScreenshotOutput(1, 1), items: [] },
+        timelineEdit: recordingTimelineEdit,
       })
         .then((bytes) => {
           if (disposed) return;
@@ -184,6 +189,7 @@ export function useRecordingExportEstimate({
     includePrimaryVideo,
     resolutionScalePercent,
     recordingOutput,
+    recordingTimelineEdit,
     signature,
   ]);
 

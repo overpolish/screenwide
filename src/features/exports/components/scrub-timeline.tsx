@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
@@ -10,10 +11,23 @@ import {
 } from "react";
 
 import { PREVIEW_FRAME_MS, formatDuration } from "../duration";
+import { RecordingTimelineEdit } from "../recording-timeline-edit";
 import { PreparedAudioTrack } from "../types";
 
-import { decibelGain } from "./audio-level";
 import { clamp, Playhead } from "./scrub-playhead";
+import {
+  TIMELINE_BLADE_CURSOR,
+  TimelineBladeController,
+  TimelineBladePreview,
+  TimelineSegments,
+} from "./timeline-blade";
+import { TimelineRulerSelection } from "./timeline-segment-selection";
+import {
+  timelineXToFraction,
+  TimelineViewportState,
+} from "./timeline-viewport";
+import { TimelineViewportContent } from "./timeline-viewport-content";
+import { timelineWaveformPath } from "./timeline-waveform-path";
 
 export type ScrubPhase = "end" | "move" | "start";
 export type SeekHandler = (ratio: number, phase: ScrubPhase) => void;
@@ -21,138 +35,115 @@ export type SeekHandler = (ratio: number, phase: ScrubPhase) => void;
 const TICK_INTERVALS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
 const MINIMUM_TICK_SPACING = 70;
 
-const waveformPath = (points: number[], volumeDecibels: number) => {
-  if (points.length === 0) return "";
-  const center = 20;
-  return points
-    .map((peak, index) => {
-      const x = (index / Math.max(1, points.length - 1)) * 1000;
-      const adjustedPeak = Math.min(1, peak * decibelGain(volumeDecibels));
-      const height = Math.max(
-        1.25,
-        Math.pow(Math.max(0, adjustedPeak), 0.55) * 18.5,
-      );
-      return `M${x.toFixed(2)} ${(center - height).toFixed(2)}V${(center + height).toFixed(2)}`;
-    })
-    .join(" ");
-};
-
 export function Waveform({
+  blade,
   enabled,
   onSelect,
   track,
+  viewport,
   volumeDecibels,
 }: {
+  blade: TimelineBladeController;
   enabled: boolean;
   onSelect: () => void;
   track: PreparedAudioTrack;
+  viewport: TimelineViewportState;
   volumeDecibels: number;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const path = useMemo(
-    () => waveformPath(track.waveform, volumeDecibels),
+    () => timelineWaveformPath(track.waveform, volumeDecibels),
     [track.waveform, volumeDecibels],
   );
 
   return (
     <div
-      className="relative h-8 min-w-0 grow cursor-default overflow-hidden rounded bg-muted/8"
+      className="relative h-8 min-w-0 grow cursor-default overflow-hidden rounded-sm"
       data-audio-stream-index={track.streamIndex}
-      onClick={onSelect}
-    >
-      <svg
-        aria-hidden="true"
-        className={enabled ? "size-full text-info" : "size-full text-muted/35"}
-        preserveAspectRatio="none"
-        viewBox="0 0 1000 40"
-      >
-        <path
-          className="stroke-current"
-          d={path}
-          fill="none"
-          strokeWidth="2"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-    </div>
-  );
-}
-
-export function TimelineScrubber({
-  onSeek,
-  playhead,
-}: {
-  onSeek: SeekHandler;
-  playhead: Playhead;
-}) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const lineRef = useRef<HTMLDivElement>(null);
-
-  useEffect(
-    () =>
-      playhead.subscribe((_seconds, ratio) => {
-        if (lineRef.current)
-          lineRef.current.style.left = `${(ratio * 100).toString()}%`;
-      }),
-    [playhead],
-  );
-
-  const seek = (
-    event: ReactPointerEvent<HTMLDivElement>,
-    phase: ScrubPhase,
-  ) => {
-    const bounds = rootRef.current?.getBoundingClientRect();
-    if (!bounds) return;
-    onSeek(clamp((event.clientX - bounds.left) / bounds.width, 0, 1), phase);
-  };
-
-  return (
-    <div
-      className="pointer-events-none absolute inset-0 overflow-hidden"
+      onClick={(event: ReactMouseEvent<HTMLDivElement>) => {
+        if (!blade.isActive) {
+          blade.selectSegment(null);
+          onSelect();
+          return;
+        }
+        const bounds = event.currentTarget.getBoundingClientRect();
+        blade.cutAt(
+          clamp(timelineXToFraction(event.clientX, viewport, bounds), 0, 1),
+        );
+      }}
+      onMouseLeave={blade.clearPreview}
+      onMouseMove={(event) => {
+        if (!blade.isActive) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        blade.previewAt(
+          clamp(timelineXToFraction(event.clientX, viewport, bounds), 0, 1),
+        );
+      }}
       ref={rootRef}
+      style={{ cursor: blade.isActive ? TIMELINE_BLADE_CURSOR : undefined }}
     >
-      <div
-        className="pointer-events-auto absolute inset-y-0 w-3 -translate-x-1/2 cursor-ew-resize touch-none"
-        onPointerCancel={(event) => {
-          seek(event, "end");
-          if (event.currentTarget.hasPointerCapture(event.pointerId))
-            event.currentTarget.releasePointerCapture(event.pointerId);
-        }}
-        onPointerDown={(event) => {
-          event.preventDefault();
-          event.currentTarget.setPointerCapture(event.pointerId);
-          seek(event, "start");
-        }}
-        onPointerMove={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId))
-            seek(event, "move");
-        }}
-        onPointerUp={(event) => {
-          seek(event, "end");
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        }}
-        ref={lineRef}
-        style={{ left: "0%" }}
-      >
-        <span className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-content-fg/80" />
-      </div>
+      <TimelineViewportContent viewport={viewport}>
+        <TimelineSegments
+          blade={blade}
+          edit={blade.edit}
+          isBladeActive={blade.isActive}
+          onSelectSegment={(segmentId) => {
+            blade.selectSegment(segmentId);
+            onSelect();
+          }}
+          outputPositionAt={(clientX) => {
+            const bounds = rootRef.current?.getBoundingClientRect();
+            return bounds ? timelineXToFraction(clientX, viewport, bounds) : 0;
+          }}
+          renderContent={() => (
+            <svg
+              aria-hidden="true"
+              className={
+                enabled ? "size-full text-info" : "size-full text-muted/35"
+              }
+              preserveAspectRatio="none"
+              viewBox="0 0 1000 40"
+            >
+              <path
+                className="stroke-current"
+                d={path}
+                fill="none"
+                strokeWidth="2"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          )}
+          selectedSegmentId={blade.selectedSegmentId}
+        />
+        <TimelineBladePreview blade={blade} />
+      </TimelineViewportContent>
     </div>
   );
 }
 
 export function TimelineRuler({
   durationMs,
+  edit,
   onSeek,
   playhead,
+  selectedSegmentId = null,
+  snapPosition = (position) => position,
+  viewport,
 }: {
   durationMs: number;
   onSeek: SeekHandler;
   playhead: Playhead;
+  viewport: TimelineViewportState;
+  edit?: RecordingTimelineEdit;
+  selectedSegmentId?: number | null;
+  snapPosition?: (sourcePosition: number) => number;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const ratioRef = useRef(0);
   const [width, setWidth] = useState(0);
   const durationSeconds = Math.max(0, durationMs / 1_000);
-  const pixelsPerSecond = width / Math.max(1, durationSeconds);
+  const pixelsPerSecond =
+    (width * viewport.zoom) / Math.max(1, durationSeconds);
   const interval =
     TICK_INTERVALS.find(
       (candidate) => candidate * pixelsPerSecond >= MINIMUM_TICK_SPACING,
@@ -197,7 +188,10 @@ export function TimelineRuler({
     phase: ScrubPhase,
   ) => {
     const bounds = event.currentTarget.getBoundingClientRect();
-    onSeek(clamp((event.clientX - bounds.left) / bounds.width, 0, 1), phase);
+    onSeek(
+      clamp(timelineXToFraction(event.clientX, viewport, bounds), 0, 1),
+      phase,
+    );
   };
 
   return (
@@ -206,7 +200,7 @@ export function TimelineRuler({
       aria-valuemax={100}
       aria-valuemin={0}
       aria-valuenow={0}
-      className="relative h-4 min-w-0 grow cursor-ew-resize touch-none overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-content-fg/75"
+      className="relative h-9 min-w-0 grow cursor-ew-resize touch-none overflow-hidden outline-none"
       onKeyDown={(event) => {
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
         event.preventDefault();
@@ -230,6 +224,7 @@ export function TimelineRuler({
         event.currentTarget.blur();
       }}
       onPointerDown={(event) => {
+        if (event.button !== 0) return;
         // Pointer scrubbing must not leave a transient focus treatment on the
         // ruler; keyboard users can still reach it normally with Tab.
         event.preventDefault();
@@ -250,20 +245,20 @@ export function TimelineRuler({
       role="slider"
       tabIndex={0}
     >
+      <TimelineRulerSelection {...{ edit, selectedSegmentId, viewport }} />
       {ticks.map((seconds) => {
         const label = formatDuration(seconds * 1_000);
-        const x = (seconds / Math.max(1, durationSeconds)) * width;
+        const fraction = snapPosition(seconds / Math.max(1, durationSeconds));
+        const x = (fraction - viewport.panOffset) * viewport.zoom * width;
         // Match the native timeline: labels always sit after their tick and
         // disappear when they would not fit, rather than flipping to the
         // other side at the trailing edge.
-        const showLabel = width - x >= label.length * 6 + 4;
+        const showLabel = x >= 0 && width - x >= label.length * 6 + 4;
         return (
           <div
-            className="pointer-events-none absolute inset-y-0 border-l border-muted/35"
+            className="pointer-events-none absolute top-2.5 h-4 border-l border-muted/35"
             key={seconds}
-            style={{
-              left: `${((seconds / Math.max(1, durationSeconds)) * 100).toString()}%`,
-            }}
+            style={{ left: `${x.toString()}px` }}
           >
             {showLabel ? (
               <span className="absolute left-1 top-0 whitespace-nowrap text-xxs font-medium text-muted tabular-nums">

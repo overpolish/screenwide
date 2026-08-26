@@ -135,6 +135,28 @@ pub fn set_screenshot_background_radius(app: AppHandle, radius_percent: f64) -> 
 }
 
 #[tauri::command]
+pub fn set_recording_timeline_edit(
+  app: AppHandle,
+  artifact_id: u64,
+  revision: u64,
+  edit: timeline_edit::RecordingTimelineEdit,
+) -> Result<(), String> {
+  let state = app.state::<ExportState>();
+  let artifact = state
+    .recording
+    .artifact
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  let Some(ExportArtifact::Recording { id, path, .. }) = artifact.as_ref() else {
+    return Err("There is no recording to edit".to_owned());
+  };
+  if *id != artifact_id {
+    return Err("That recording is no longer waiting to be exported".to_owned());
+  }
+  timeline_edit::persist(path, artifact_id, revision, edit)
+}
+
+#[tauri::command]
 pub async fn browse_export_directory(
   app: AppHandle,
   window: tauri::WebviewWindow,

@@ -294,6 +294,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
     ExportRunOptions {
       cancelled: &cancelled,
       on_progress: &mut |milliseconds| progress.push(milliseconds),
+      timeline: None,
       video: VideoExportOptions {
         compression: 2,
         resolution_scale_percent: 100,
@@ -334,6 +335,82 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
   // one, which verifies both choices are applied by the same output pass.
   assert_eq!(streams, 2);
 
+  let timeline_destination = directory.join("timeline.mp4");
+  let timeline = crate::exports::timeline_edit::TimelinePlan::from_edit(
+    &crate::exports::timeline_edit::RecordingTimelineEdit {
+      artifact_id: 1,
+      next_segment_id: 2,
+      segments: vec![
+        crate::exports::timeline_edit::RecordingTimelineSegment {
+          id: 0,
+          source_end: 0.5,
+          source_start: 0.0,
+        },
+        crate::exports::timeline_edit::RecordingTimelineSegment {
+          id: 1,
+          source_end: 1.0,
+          source_start: 0.75,
+        },
+      ],
+    },
+    3_000,
+  )
+  .unwrap();
+  export_selected_recording(
+    &source,
+    &timeline_destination,
+    &selection,
+    AudioLayout::Mixdown,
+    ExportRunOptions {
+      cancelled: &cancelled,
+      on_progress: &mut |_| {},
+      timeline: Some(&timeline),
+      video: VideoExportOptions {
+        compression: 2,
+        resolution_scale_percent: 100,
+        source_scale_percent: 100,
+      },
+    },
+  )
+  .unwrap();
+  assert!(plays_from_start_to_end(&timeline_destination));
+  assert!(duration_ms(&timeline_destination)
+    .is_some_and(|duration| duration.abs_diff(timeline.duration_ms()) < 100));
+
+  let single_range_destination = directory.join("timeline-single-range.mp4");
+  let single_range = crate::exports::timeline_edit::TimelinePlan::from_edit(
+    &crate::exports::timeline_edit::RecordingTimelineEdit {
+      artifact_id: 1,
+      next_segment_id: 1,
+      segments: vec![crate::exports::timeline_edit::RecordingTimelineSegment {
+        id: 0,
+        source_end: 0.75,
+        source_start: 0.25,
+      }],
+    },
+    3_000,
+  )
+  .unwrap();
+  export_selected_recording(
+    &source,
+    &single_range_destination,
+    &selection,
+    AudioLayout::Mixdown,
+    ExportRunOptions {
+      cancelled: &cancelled,
+      on_progress: &mut |_| {},
+      timeline: Some(&single_range),
+      video: VideoExportOptions {
+        compression: 2,
+        resolution_scale_percent: 100,
+        source_scale_percent: 100,
+      },
+    },
+  )
+  .unwrap();
+  assert!(duration_ms(&single_range_destination)
+    .is_some_and(|duration| duration.abs_diff(single_range.duration_ms()) < 100));
+
   let cancelled_destination = directory.join("cancelled.mp4");
   let cancelled = AtomicBool::new(true);
   let result = export_selected_recording(
@@ -344,6 +421,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
     ExportRunOptions {
       cancelled: &cancelled,
       on_progress: &mut |_| {},
+      timeline: None,
       video: VideoExportOptions {
         compression: 2,
         resolution_scale_percent: 100,

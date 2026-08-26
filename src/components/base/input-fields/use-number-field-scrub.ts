@@ -73,7 +73,7 @@ export const useNumberFieldScrub = ({
     if (cursorScrub) {
       void cursorScrub
         .catch(() => undefined)
-        .then(() => invoke("end_cursor_scrub"))
+        .then(() => invoke("end_cursor_scrub", { cursorOffsetX: null }))
         .catch(() => undefined);
     }
   }, []);

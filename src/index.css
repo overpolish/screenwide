@@ -180,7 +180,9 @@ html.dark {
 }
 
 html[data-number-field-scrubbing],
-html[data-number-field-scrubbing] * {
+html[data-number-field-scrubbing] *,
+html[data-timeline-trimming],
+html[data-timeline-trimming] * {
   cursor: none !important;
 }
 

@@ -47,6 +47,7 @@ pub(super) struct CursorExportRequest<'a> {
   pub on_progress: &'a mut dyn FnMut(u64),
   pub screen: &'a Path,
   pub selection: &'a TrackSelection,
+  pub timeline: Option<&'a super::timeline_edit::TimelinePlan>,
   pub output: &'a ScreenshotOutputSettings,
   pub video: VideoExportOptions,
   pub width: u32,

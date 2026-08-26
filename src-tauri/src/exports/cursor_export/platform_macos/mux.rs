@@ -29,13 +29,24 @@ pub(super) fn args(
     ]
     .map(OsString::from),
   );
-  args.extend(
-    request
-      .selection
-      .audio_args_from(request.audio_layout, 1)
-      .into_iter()
-      .map(OsString::from),
-  );
+  args.extend(request.timeline.map_or_else(
+    || {
+      request
+        .selection
+        .audio_args_from(request.audio_layout, 1)
+        .into_iter()
+        .map(OsString::from)
+        .collect()
+    },
+    |timeline| {
+      media_preview::timeline_audio_mapping_args(
+        timeline,
+        1,
+        request.selection,
+        request.audio_layout,
+      )
+    },
+  ));
   args.extend(
     [
       "-tag:v",

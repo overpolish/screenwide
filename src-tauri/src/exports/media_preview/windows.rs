@@ -71,10 +71,19 @@ fn recording_info_result(path: &Path) -> Result<RecordingInfo, String> {
   }
   .map_err(|error| error.to_string())?;
   let duration_100ns = u64::try_from(&duration).map_err(|error| error.to_string())?;
-  let packed_size = unsafe { reader.GetNativeMediaType(VIDEO_STREAM, 0) }
-    .ok()
+  let media_type = unsafe { reader.GetNativeMediaType(VIDEO_STREAM, 0) }.ok();
+  let packed_size = media_type
+    .as_ref()
     .and_then(|media_type| unsafe { media_type.GetUINT64(&MF_MT_FRAME_SIZE) }.ok())
     .unwrap_or(0);
+  let packed_rate = media_type
+    .as_ref()
+    .and_then(|media_type| unsafe { media_type.GetUINT64(&MF_MT_FRAME_RATE) }.ok())
+    .unwrap_or(0);
+  let rate_numerator = packed_rate >> 32;
+  let rate_denominator = packed_rate & u64::from(u32::MAX);
+  let frames_per_second =
+    (rate_denominator > 0).then(|| rate_numerator as f64 / rate_denominator as f64);
   let width = (packed_size >> 32) as u32;
   let height = packed_size as u32;
   if duration_100ns == 0 {
@@ -82,6 +91,7 @@ fn recording_info_result(path: &Path) -> Result<RecordingInfo, String> {
   }
   Ok(RecordingInfo {
     duration_ms: duration_100ns.div_ceil(HUNDRED_NS_PER_MS),
+    frames_per_second,
     height,
     width,
   })

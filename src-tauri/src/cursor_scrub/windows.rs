@@ -80,15 +80,14 @@ pub(super) fn begin(channel: Channel<CursorScrubEvent>) -> Result<(), String> {
   Ok(())
 }
 
-pub(super) fn end() -> Result<(), String> {
+pub(super) fn end(offset_x: f64) -> Result<(), String> {
   let scrub = ACTIVE_SCRUB
     .lock()
     .map_err(|_| "The cursor scrub state is unavailable".to_owned())?
     .take();
   if let Some(scrub) = scrub {
-    unsafe { PostThreadMessageW(scrub.thread_id, WM_QUIT, WPARAM(0), LPARAM(0)) }
-      .map_err(|error| format!("Could not stop the raw input monitor: {error}"))?;
-    unsafe { SetCursorPos(scrub.anchor.x, scrub.anchor.y) }
+    let _ = unsafe { PostThreadMessageW(scrub.thread_id, WM_QUIT, WPARAM(0), LPARAM(0)) };
+    unsafe { SetCursorPos(scrub.anchor.x + offset_x.round() as i32, scrub.anchor.y) }
       .map_err(|error| format!("Could not restore the cursor position: {error}"))?;
   }
   Ok(())
@@ -254,17 +253,18 @@ fn emit_movement(delta_x: i32, delta_y: i32) {
 }
 
 fn finish_from_input() {
-  let Ok(mut active) = ACTIVE_SCRUB.lock() else {
+  let Ok(active) = ACTIVE_SCRUB.lock() else {
     return;
   };
-  let Some(scrub) = active.take() else {
+  let Some(scrub) = active.as_ref() else {
     return;
   };
   let _ = scrub.events.send(CursorScrubEvent::End);
   let anchor = scrub.anchor;
+  let thread_id = scrub.thread_id;
   drop(active);
   let _ = unsafe { SetCursorPos(anchor.x, anchor.y) };
   unsafe {
-    let _ = PostThreadMessageW(scrub.thread_id, WM_QUIT, WPARAM(0), LPARAM(0));
+    let _ = PostThreadMessageW(thread_id, WM_QUIT, WPARAM(0), LPARAM(0));
   }
 }

@@ -96,7 +96,18 @@ struct RecordingWorkspaceTopology {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RecordingPreviewPlayerInfo {
   pub duration_ms: u64,
+  pub frames_per_second: Option<f64>,
   pub layout: RecordingPreviewLayout,
+}
+
+impl From<&PlayerSources> for RecordingPreviewPlayerInfo {
+  fn from(sources: &PlayerSources) -> Self {
+    Self {
+      duration_ms: sources.duration_ms,
+      frames_per_second: sources.frames_per_second,
+      layout: sources.layout.clone(),
+    }
+  }
 }
 
 #[derive(Clone, Copy, Serialize)]
@@ -119,7 +130,21 @@ pub enum RecordingPreviewPlayerEvent {
   Paused { position_ms: u64 },
   Playing { position_ms: u64 },
   Position { position_ms: u64 },
+  RangeEnded { position_ms: u64 },
   Ready { position_ms: u64, request_id: u64 },
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingPreviewPlaybackRange {
+  source_end_ms: u64,
+  source_start_ms: u64,
+}
+
+impl RecordingPreviewPlaybackRange {
+  const fn duration_ms(self) -> u64 {
+    self.source_end_ms.saturating_sub(self.source_start_ms)
+  }
 }
 
 #[derive(Default)]
@@ -133,6 +158,8 @@ struct PreviewPlayerManager {
   latest_layout_request: u64,
   latest_seek_request: u64,
   pane_target_sizes: Vec<(u32, u32)>,
+  playback_end_ms: Option<u64>,
+  playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   position_ms: u64,
   /// The next still seek came from a scrub gesture in progress, so the
   /// scrubber may land on the cheapest nearby frame for immediacy.

@@ -6,8 +6,6 @@ import { RefObject, useCallback, useEffect, useRef, useState } from "react";
 
 import {
   pauseRecordingPreview,
-  playRecordingPreview,
-  RecordingPreviewPlayerEvent,
   seekRecordingPreview,
   selectRecordingPreviewAudio,
   setRecordingPreviewAudioVolumes,
@@ -19,7 +17,15 @@ import {
   stopRecordingPreviewPlayer,
 } from "./api";
 import { ScrubPhase } from "./components/scrub-timeline";
+import { playRecordingPreview } from "./recording-preview-playback-api";
+import { RecordingPreviewPlayerEvent } from "./recording-preview-player-contract";
 import { recordingPreviewSettingsKey } from "./recording-preview-settings-key";
+import { RecordingTimelineEdit } from "./recording-timeline-edit";
+import {
+  recordingTimelinePlaybackRangeFrom,
+  recordingTimelinePlaybackRanges,
+  recordingTimelinePlaybackRangesFrom,
+} from "./recording-timeline-playback";
 import {
   AudioTrackVolume,
   CursorEffectSettings,
@@ -33,6 +39,7 @@ import {
 } from "./use-recording-preview-surface";
 
 let sessionSequence = 0;
+type PreviewTiming = [durationMs: number, framesPerSecond: number | null];
 
 export function useRecordingPreviewPlayer({
   artifactId,
@@ -56,6 +63,7 @@ export function useRecordingPreviewPlayer({
   screenCanvasRef,
   selection,
   selectionTargets,
+  timelineEdit,
   zoomPercent,
 }: {
   artifactId: number;
@@ -91,6 +99,7 @@ export function useRecordingPreviewPlayer({
         layerId?: number;
       }[]
     | null;
+  timelineEdit?: RecordingTimelineEdit | null;
   zoomPercent?: number;
 }) {
   const isPlayingRef = useRef(false);
@@ -103,7 +112,8 @@ export function useRecordingPreviewPlayer({
   const keyboardEffectsRef = useRef(keyboardEffects);
   const compositionRef = useRef({ bakeCamera, cameraOverlay, recordingOutput });
   const enabledStreamIndicesRef = useRef(enabledStreamIndices);
-  const durationRef = useRef(0);
+  const timingRef = useRef<PreviewTiming>([0, null]);
+  const timelineEditRef = useRef(timelineEdit);
   const positionRef = useRef(0);
   const seekRequestRef = useRef(0);
   const lastSentSeekRef = useRef<number | null>(null);
@@ -116,8 +126,7 @@ export function useRecordingPreviewPlayer({
   const [durationMs, setDurationMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [previewLayout, setPreviewLayout] =
-    useState<RecordingPreviewLayout | null>(null);
+  const [layout, setLayout] = useState<RecordingPreviewLayout | null>(null);
   const [isPreparing, setIsPreparing] = useState(true);
   const beginPreparing = useCallback(() => {
     // eslint-disable-next-line @eslint-react/set-state-in-effect
@@ -127,7 +136,7 @@ export function useRecordingPreviewPlayer({
     setIsPreparing(false);
   }, []);
   const applyLayout = useCallback((next: RecordingPreviewLayout) => {
-    setPreviewLayout(next);
+    setLayout(next);
     if (next.panes.length === 0) setIsPreparing(false);
   }, []);
   onPositionRef.current = onPosition;
@@ -136,7 +145,21 @@ export function useRecordingPreviewPlayer({
   keyboardEffectsRef.current = keyboardEffects;
   compositionRef.current = { bakeCamera, cameraOverlay, recordingOutput };
   enabledStreamIndicesRef.current = enabledStreamIndices;
+  timelineEditRef.current = timelineEdit;
 
+  const playbackRanges = useCallback(
+    () =>
+      recordingTimelinePlaybackRanges(
+        timelineEditRef.current,
+        timingRef.current[0],
+      ),
+    [],
+  );
+  const playbackRangeFrom = useCallback(
+    (sourcePositionMs: number) =>
+      recordingTimelinePlaybackRangeFrom(playbackRanges(), sourcePositionMs),
+    [playbackRanges],
+  );
   useRecordingPreviewSettings({
     audioTrackVolumes,
     cursorEffects,
@@ -203,9 +226,38 @@ export function useRecordingPreviewPlayer({
       if (event.event === "ended") {
         wantsPlaybackRef.current = false;
         updatePlaying(false);
-        positionRef.current = durationRef.current;
-        onPositionRef.current(durationRef.current);
+        positionRef.current = timingRef.current[0];
+        onPositionRef.current(timingRef.current[0]);
         void pauseRecordingPreview(sessionIdRef.current).catch(() => undefined);
+        return;
+      }
+      if (event.event === "rangeEnded") {
+        positionRef.current = event.data.positionMs;
+        onPositionRef.current(event.data.positionMs);
+        const ranges = playbackRanges();
+        const endedIndex = ranges.findIndex(
+          (range) => Math.abs(range.sourceEndMs - event.data.positionMs) < 1,
+        );
+        if (endedIndex < 0 || endedIndex + 1 >= ranges.length) {
+          wantsPlaybackRef.current = false;
+          updatePlaying(false);
+          void pauseRecordingPreview(sessionIdRef.current).catch(
+            () => undefined,
+          );
+          return;
+        }
+        const next = ranges[endedIndex + 1];
+        positionRef.current = next.sourceStartMs;
+        onPositionRef.current(next.sourceStartMs);
+        void playRecordingPreview(
+          sessionIdRef.current,
+          Math.round(next.sourceEndMs),
+          { startPositionMs: Math.round(next.sourceStartMs) },
+        ).catch((cause: unknown) => {
+          wantsPlaybackRef.current = false;
+          updatePlaying(false);
+          setError(String(cause));
+        });
         return;
       }
       if (event.event === "ready") {
@@ -219,13 +271,21 @@ export function useRecordingPreviewPlayer({
           resumeAfterSeekRef.current = false;
           scrubFinishedRef.current = true;
           wantsPlaybackRef.current = true;
-          void playRecordingPreview(sessionIdRef.current).catch(
-            (cause: unknown) => {
-              wantsPlaybackRef.current = false;
-              updatePlaying(false);
-              setError(String(cause));
+          const { index, ranges } = playbackRangeFrom(event.data.positionMs);
+          void playRecordingPreview(
+            sessionIdRef.current,
+            Math.round(ranges[index]?.sourceEndMs ?? timingRef.current[0]),
+            {
+              playbackRanges: recordingTimelinePlaybackRangesFrom(
+                playbackRanges(),
+                event.data.positionMs,
+              ),
             },
-          );
+          ).catch((cause: unknown) => {
+            wantsPlaybackRef.current = false;
+            updatePlaying(false);
+            setError(String(cause));
+          });
         } else if (settleRequestRef.current === event.data.requestId) {
           settleRequestRef.current = null;
           scrubFinishedRef.current = true;
@@ -262,7 +322,7 @@ export function useRecordingPreviewPlayer({
       .then((info) => {
         if (disposed) return;
         applyLayout(info.layout);
-        durationRef.current = info.durationMs;
+        timingRef.current = [info.durationMs, info.framesPerSecond];
         setDurationMs(info.durationMs);
         startedRef.current = true;
         if (
@@ -350,22 +410,36 @@ export function useRecordingPreviewPlayer({
     updatePlaying(true);
     void (async () => {
       try {
-        if (positionRef.current >= durationRef.current) {
-          positionRef.current = 0;
+        const { index, ranges } = playbackRangeFrom(positionRef.current);
+        const range = ranges[index];
+        if (
+          positionRef.current < range.sourceStartMs ||
+          positionRef.current >= range.sourceEndMs
+        ) {
+          positionRef.current = range.sourceStartMs;
           await seekRecordingPreview({
-            positionMs: 0,
+            positionMs: Math.round(range.sourceStartMs),
             requestId: ++seekRequestRef.current,
             sessionId: sessionIdRef.current,
           });
         }
-        await playRecordingPreview(sessionIdRef.current);
+        await playRecordingPreview(
+          sessionIdRef.current,
+          Math.round(range.sourceEndMs),
+          {
+            playbackRanges: recordingTimelinePlaybackRangesFrom(
+              playbackRanges(),
+              positionRef.current,
+            ),
+          },
+        );
       } catch (cause) {
         wantsPlaybackRef.current = false;
         updatePlaying(false);
         setError(String(cause));
       }
     })();
-  }, [isEnabled]);
+  }, [isEnabled, playbackRangeFrom, playbackRanges]);
   const pause = useCallback(() => {
     if (!isEnabled) return;
     resumeAfterSeekRef.current = false;
@@ -457,10 +531,11 @@ export function useRecordingPreviewPlayer({
   return {
     durationMs,
     error,
+    framesPerSecond: timingRef.current[1],
     getPositionMs,
     isPlaying,
     isPreparing,
-    layout: previewLayout,
+    layout,
     pause,
     play,
     seek,
