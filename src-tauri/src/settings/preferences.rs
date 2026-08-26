@@ -30,7 +30,7 @@ impl Default for GeneralSettings {
       recording_directory: None,
       screenshot_directory: None,
       capture_screenshot_on_draw: false,
-      open_location_after_export: false,
+      open_location_after_export: true,
       record_screenwide_windows: false,
       show_recording_confidence_checks: true,
       launch_at_login: false,
@@ -180,4 +180,24 @@ pub async fn browse_default_location(
   })
   .await
   .map_err(|error| error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::GeneralSettings;
+
+  #[test]
+  fn opens_export_location_when_the_setting_is_missing() {
+    let settings: GeneralSettings = serde_json::from_str("{}").unwrap();
+
+    assert!(settings.open_location_after_export);
+  }
+
+  #[test]
+  fn preserves_an_explicitly_disabled_export_location() {
+    let settings: GeneralSettings =
+      serde_json::from_str(r#"{"openLocationAfterExport":false}"#).unwrap();
+
+    assert!(!settings.open_location_after_export);
+  }
 }
