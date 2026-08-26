@@ -28,7 +28,8 @@ export type TimelineBladeController = {
   selectedSegmentId: number | null;
   setActive: (active: boolean) => void;
   snapPosition: (sourcePosition: number) => number;
-  updateTrim: (outputPosition: number) => void;
+  /** Returns the clamped output position when the drag overshot the trim. */
+  updateTrim: (outputPosition: number) => number | null;
 };
 
 // Exact Lucide geometry. Custom CSS cursors are rasterized by the WebView, so

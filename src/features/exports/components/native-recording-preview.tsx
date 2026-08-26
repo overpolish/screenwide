@@ -1298,7 +1298,7 @@ export function NativeRecordingPreview({
 
           {layout ? (
             <RecordingPlaybackControls
-              durationMs={totalDurationMs}
+              durationMs={timelineBlade.timelineDurationMs}
               isPlaying={player.isPlaying}
               onCopyCurrentFrame={copyCurrentFrame}
               onPause={player.pause}

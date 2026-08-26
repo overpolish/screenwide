@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  clampRecordingTimelineTrimPosition,
   createRecordingTimelineEdit,
   cutRecordingTimeline,
   deleteRecordingTimelineSegment,
@@ -197,6 +198,34 @@ describe("recording timeline trimming", () => {
         sourcePosition: 0,
       }),
     ).toBe(edit);
+  });
+
+  it("clamps a trim target to the same bounds the trim itself applies", () => {
+    const edit = cutIntoThirds();
+    expect(
+      clampRecordingTimelineTrimPosition(edit, {
+        edge: "end",
+        minimumDuration: 0.01,
+        segmentId: 0,
+        sourcePosition: 0.9,
+      }),
+    ).toBe(0.3);
+    expect(
+      clampRecordingTimelineTrimPosition(edit, {
+        edge: "start",
+        minimumDuration: 0.1,
+        segmentId: 1,
+        sourcePosition: 0.55,
+      }),
+    ).toBeCloseTo(0.5);
+    expect(
+      clampRecordingTimelineTrimPosition(edit, {
+        edge: "start",
+        minimumDuration: 0.01,
+        segmentId: 99,
+        sourcePosition: 0.2,
+      }),
+    ).toBe(0.2);
   });
 });
 

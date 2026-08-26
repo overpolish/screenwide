@@ -146,7 +146,7 @@ function TimelinePreview() {
               if (!active) setPreviewPosition(null);
             },
             snapPosition: snapOutput,
-            updateTrim: () => undefined,
+            updateTrim: () => null,
           }}
           durationMs={timelineDurationMs}
           enabledTracks={enabledAudio}

@@ -127,6 +127,39 @@ export function deleteRecordingTimelineSegment(
     : { ...edit, segments };
 }
 
+/** Clamps a trim target to the position `trimRecordingTimelineSegment` accepts. */
+export function clampRecordingTimelineTrimPosition(
+  edit: RecordingTimelineEdit,
+  {
+    edge,
+    minimumDuration,
+    segmentId,
+    sourcePosition,
+  }: {
+    edge: RecordingTimelineTrimEdge;
+    minimumDuration: number;
+    segmentId: number;
+    sourcePosition: number;
+  },
+): number {
+  const index = edit.segments.findIndex((segment) => segment.id === segmentId);
+  if (index === -1) return sourcePosition;
+  const segment = edit.segments[index];
+  const minimum = Math.max(0, minimumDuration);
+  if (edge === "start") {
+    const lower = edit.segments[index - 1]?.sourceEnd ?? 0;
+    return Math.max(
+      lower,
+      Math.min(segment.sourceEnd - minimum, sourcePosition),
+    );
+  }
+  const upper = edit.segments[index + 1]?.sourceStart ?? 1;
+  return Math.min(
+    upper,
+    Math.max(segment.sourceStart + minimum, sourcePosition),
+  );
+}
+
 /**
  * Moves one retained edge without overlapping the neighbouring source range.
  * Source omitted between neighbours remains available, so dragging the edge
@@ -150,21 +183,16 @@ export function trimRecordingTimelineSegment(
   const index = edit.segments.findIndex((segment) => segment.id === segmentId);
   if (index === -1) return edit;
   const segment = edit.segments[index];
-  const minimum = Math.max(0, minimumDuration);
-  const next = { ...segment };
-  if (edge === "start") {
-    const lower = edit.segments[index - 1]?.sourceEnd ?? 0;
-    next.sourceStart = Math.max(
-      lower,
-      Math.min(segment.sourceEnd - minimum, sourcePosition),
-    );
-  } else {
-    const upper = edit.segments[index + 1]?.sourceStart ?? 1;
-    next.sourceEnd = Math.min(
-      upper,
-      Math.max(segment.sourceStart + minimum, sourcePosition),
-    );
-  }
+  const clamped = clampRecordingTimelineTrimPosition(edit, {
+    edge,
+    minimumDuration,
+    segmentId,
+    sourcePosition,
+  });
+  const next =
+    edge === "start"
+      ? { ...segment, sourceStart: clamped }
+      : { ...segment, sourceEnd: clamped };
   if (
     next.sourceStart === segment.sourceStart &&
     next.sourceEnd === segment.sourceEnd

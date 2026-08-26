@@ -67,9 +67,15 @@ export function useTimelineNativeTrim({
       const drag = dragRef.current;
       if (!drag) return;
       drag.travel += deltaX;
-      blade.updateTrim(position());
+      const clampedOutput = blade.updateTrim(position());
+      if (clampedOutput === null) return;
+      const outputPerPixel =
+        outputPositionAt(drag.anchorClientX + 1) -
+        outputPositionAt(drag.anchorClientX);
+      if (outputPerPixel > 0)
+        drag.travel = (clampedOutput - drag.outputPosition) / outputPerPixel;
     },
-    [blade, position],
+    [blade, outputPositionAt, position],
   );
   useEffect(() => {
     if (isTauri() && !isMacOS) return;

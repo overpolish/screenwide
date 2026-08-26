@@ -4,6 +4,7 @@
 import { useCallback, useRef } from "react";
 
 import {
+  clampRecordingTimelineTrimPosition,
   RecordingTimelineEdit,
   recordingTimelineRetainedDuration,
   RecordingTimelineTrimEdge,
@@ -46,17 +47,23 @@ export function useRecordingTimelineTrim({
   const updateAt = useCallback(
     (outputPosition: number, phase: "end" | "move") => {
       const active = activeRef.current;
-      if (!active || !onChange || totalDurationMs <= 0) return;
+      if (!active || !onChange || totalDurationMs <= 0) return null;
       const frameDurationMs =
         framesPerSecond !== null &&
         Number.isFinite(framesPerSecond) &&
         framesPerSecond > 0
           ? 1_000 / framesPerSecond
           : 1;
-      const sourcePosition = snap(
+      const snapped = snap(
         active.boundary +
           (outputPosition - active.outputPosition) * active.retainedDuration,
       );
+      const sourcePosition = clampRecordingTimelineTrimPosition(active.edit, {
+        edge: active.edge,
+        minimumDuration: frameDurationMs / totalDurationMs,
+        segmentId: active.segmentId,
+        sourcePosition: snapped,
+      });
       const next = trimRecordingTimelineSegment(active.edit, {
         edge: active.edge,
         minimumDuration: frameDurationMs / totalDurationMs,
@@ -65,13 +72,15 @@ export function useRecordingTimelineTrim({
       });
       if (next !== edit) onChange(next);
       onPreview?.(sourcePosition, phase);
+      return sourcePosition === snapped
+        ? null
+        : active.outputPosition +
+            (sourcePosition - active.boundary) / active.retainedDuration;
     },
     [edit, framesPerSecond, onChange, onPreview, snap, totalDurationMs],
   );
   const update = useCallback(
-    (outputPosition: number) => {
-      updateAt(outputPosition, "move");
-    },
+    (outputPosition: number) => updateAt(outputPosition, "move"),
     [updateAt],
   );
   const begin = useCallback(
