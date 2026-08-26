@@ -322,25 +322,65 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
                       surface.selection.radius_disabled == 0);
   double pixelWidth = 0.0;
   double pixelHeight = 0.0;
+  BOOL keyboardAction = surface.selection.layer_id == UINT32_MAX - 1;
   BOOL recenterAction = surface.selection.recenter_mode != 0;
-  BOOL hasLabel = recenterAction ||
+  BOOL compactAction = recenterAction || keyboardAction;
+  BOOL hasLabel = compactAction ||
       selection_pixel_size(surface, &pixelWidth, &pixelHeight);
   surface.selectionActionRect = NSZeroRect;
-  surface.selectionActionOperation = recenterAction ? 7 : 0;
-  if (hasLabel) {
-    NSString *text = recenterAction ? @"Recenter" :
+  surface.selectionSecondaryActionRect = NSZeroRect;
+  surface.selectionActionOperation = keyboardAction ? 8 : recenterAction ? 7 : 0;
+  if (keyboardAction &&
+      [surface updateSelectionLabel:@"Reset" scale:scale
+                          lightMode:lightMode action:YES] &&
+      [surface updateSelectionSecondaryLabel:@"Apply to all" scale:scale
+                                    lightMode:lightMode]) {
+    NSSize primaryLabel = surface.selectionLabelSize;
+    NSSize secondaryLabel = surface.selectionSecondaryLabelSize;
+    CGFloat buttonGap = 4.0;
+    CGFloat buttonHeight = MAX(primaryLabel.height, secondaryLabel.height) + 8.0;
+    CGFloat primaryWidth = primaryLabel.width + 12.0;
+    CGFloat secondaryWidth = secondaryLabel.width + 12.0;
+    CGFloat totalWidth = primaryWidth + buttonGap + secondaryWidth;
+    CGFloat actionX = NSMidX(frame) - totalWidth / 2.0;
+    CGFloat actionY = NSMaxY(frame) + 6.0;
+    if (actionY + buttonHeight > size.height)
+      actionY = NSMinY(frame) - 6.0 - buttonHeight;
+    actionX = MAX(0.0, MIN(actionX, size.width - totalWidth));
+    actionY = MAX(0.0, MIN(actionY, size.height - buttonHeight));
+    actionX = floor(actionX * scale) / scale;
+    actionY = floor(actionY * scale) / scale;
+    surface.selectionActionRect = NSMakeRect(
+        actionX, actionY, primaryWidth, buttonHeight);
+    surface.selectionSecondaryActionRect = NSMakeRect(
+        actionX + primaryWidth + buttonGap, actionY,
+        secondaryWidth, buttonHeight);
+    add_selection_quad(vertices, &count, size,
+                       surface.selectionActionRect, 12);
+    add_selection_quad(vertices, &count, size,
+                       surface.selectionSecondaryActionRect, 13);
+    add_selection_quad(vertices, &count, size,
+        NSMakeRect(NSMinX(surface.selectionActionRect) + 6.0,
+                   NSMinY(surface.selectionActionRect) + 4.0,
+                   primaryLabel.width, primaryLabel.height), 11);
+    add_selection_quad(vertices, &count, size,
+        NSMakeRect(NSMinX(surface.selectionSecondaryActionRect) + 6.0,
+                   NSMinY(surface.selectionSecondaryActionRect) + 4.0,
+                   secondaryLabel.width, secondaryLabel.height), 15);
+  } else if (hasLabel && !keyboardAction) {
+    NSString *text = compactAction ? @"Recenter" :
         [NSString stringWithFormat:@"%lld × %lld",
          (long long)MAX(1, llround(pixelWidth)),
          (long long)MAX(1, llround(pixelHeight))];
     if ([surface updateSelectionLabel:text
                                 scale:scale
                             lightMode:lightMode
-                               action:recenterAction]) {
+                               action:compactAction]) {
       NSSize label = surface.selectionLabelSize;
       // The compact action's 4pt top padding leaves the visible button at the
       // same 6pt distance from the selection frame as before.
-      CGFloat gap = recenterAction ? 10.0 : 4.0;
-      CGFloat x = recenterAction ? NSMidX(frame) - label.width / 2.0
+      CGFloat gap = compactAction ? 10.0 : 4.0;
+      CGFloat x = compactAction ? NSMidX(frame) - label.width / 2.0
                                  : NSMaxX(frame) - label.width;
       CGFloat y = NSMaxY(frame) + gap;
       if (y + label.height > size.height)
@@ -356,13 +396,13 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       x = floor(x * scale) / scale;
       y = floor(y * scale) / scale;
       NSRect labelRect = NSMakeRect(x, y, label.width, label.height);
-      if (recenterAction) {
+      if (compactAction) {
         // The label bitmap has 2pt horizontal inset and a 16pt text-xs line
         // box; these insets complete React's px-2/py-1 compact Button geometry.
-        surface.selectionActionRect = NSInsetRect(labelRect, -6.0, -4.0);
-        uint32_t actionKind = 12;
+        NSRect actionRect = NSInsetRect(labelRect, -6.0, -4.0);
+        surface.selectionActionRect = actionRect;
         add_selection_quad(vertices, &count, size,
-                           surface.selectionActionRect, actionKind);
+                           surface.selectionActionRect, 12);
       }
       add_selection_quad(vertices, &count, size, labelRect, 11);
     }
@@ -407,6 +447,9 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     [encoder setFragmentTexture:(surface.selectionLabelTexture
                                      ?: surface.selectionLabelPlaceholder)
                         atIndex:0];
+    [encoder setFragmentTexture:(surface.selectionSecondaryLabelTexture
+                                     ?: surface.selectionLabelPlaceholder)
+                        atIndex:1];
     ScreenwideWorkspaceMagnifier magnifier = surface.workspaceMagnifier;
     float magnifierBox[4] = {
       magnifier.active != 0 ? magnifier.box_x : 0,
@@ -415,7 +458,7 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       magnifier.active != 0 ? magnifier.box_height : 0,
     };
     [encoder setFragmentBytes:magnifierBox length:sizeof(magnifierBox) atIndex:1];
-    float actionShades[2];
+    float actionShades[4];
     selection_action_shades(surface, actionShades);
     [encoder setFragmentBytes:actionShades length:sizeof(actionShades) atIndex:2];
     [encoder drawPrimitives:MTLPrimitiveTypeTriangle
@@ -448,9 +491,12 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   [encoder setFragmentTexture:(surface.selectionLabelTexture
                                    ?: surface.selectionLabelPlaceholder)
                       atIndex:0];
+  [encoder setFragmentTexture:(surface.selectionSecondaryLabelTexture
+                                   ?: surface.selectionLabelPlaceholder)
+                      atIndex:1];
   float magnifierBox[4] = {0};
   [encoder setFragmentBytes:magnifierBox length:sizeof(magnifierBox) atIndex:1];
-  float actionShades[2];
+  float actionShades[4];
   selection_action_shades(surface, actionShades);
   [encoder setFragmentBytes:actionShades length:sizeof(actionShades) atIndex:2];
   [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:count];

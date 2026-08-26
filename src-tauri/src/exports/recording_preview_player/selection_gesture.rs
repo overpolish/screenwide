@@ -10,7 +10,6 @@ use crate::exports::preview_platform::{
   },
   SelectionGestureOperation, SelectionGesturePhase,
 };
-
 impl PreviewPlayerManager {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   #[allow(clippy::too_many_arguments)] // Native editor callback fields stay separate.
@@ -24,7 +23,8 @@ impl PreviewPlayerManager {
     delta_x: f64,
     delta_y: f64,
   ) -> Result<(), String> {
-    if operation == SelectionGestureOperation::RecenterAction {
+    if operation.is_action() || layer_id == u32::MAX - 1 {
+      self.selection_gesture = None;
       return Ok(());
     }
     let settings = self
@@ -132,9 +132,7 @@ impl PreviewPlayerManager {
           *settings
             .write()
             .map_err(|_| "The recording preview composition is unavailable".to_owned())? = next;
-          // The retained native workspace updates media and OSC in the same
-          // command buffer. React mirrors this state, and the final layout
-          // performs the one post-gesture decoder reconciliation.
+          // Native owns pointer-rate media/OSC; React reconciles after commit.
           if ending {
             self.selection_gesture = None;
           }
@@ -146,12 +144,13 @@ impl PreviewPlayerManager {
             SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
             SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
             SelectionGestureOperation::Radius => WorkspaceGestureOperation::Radius,
-            SelectionGestureOperation::FrameResize
-            | SelectionGestureOperation::FrameRadius
-            | SelectionGestureOperation::RecenterAction => return Ok(()),
+            SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
+              return Ok(())
+            }
             SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
               unreachable!("crop gestures are mirrored by the frontend")
             }
+            _ => return Ok(()),
           };
           let mut geometry = apply_layer_gesture(
             LayerGeometry {
@@ -243,12 +242,13 @@ impl PreviewPlayerManager {
           SelectionGestureOperation::Move => WorkspaceGestureOperation::Move,
           SelectionGestureOperation::Resize => WorkspaceGestureOperation::Resize,
           SelectionGestureOperation::Radius => WorkspaceGestureOperation::Radius,
-          SelectionGestureOperation::FrameResize
-          | SelectionGestureOperation::FrameRadius
-          | SelectionGestureOperation::RecenterAction => return Ok(()),
+          SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
+            return Ok(())
+          }
           SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
             unreachable!("crop gestures are mirrored by the frontend")
           }
+          _ => return Ok(()),
         };
         let source = self
           .sources

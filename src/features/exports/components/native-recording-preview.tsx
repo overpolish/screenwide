@@ -61,7 +61,12 @@ import { RecordingPreviewViewport } from "./recording-preview-viewport";
 import { normalizedRecordingSelection } from "./recording-selection";
 import { RecordingTrackLanes } from "./recording-track-lanes";
 import { createPlayhead } from "./scrub-playhead";
+import {
+  KEYBOARD_LAYER_ID,
+  useRecordingKeyboardPreviewEditing,
+} from "./use-recording-keyboard-canvas-editing";
 import { useRecordingRecenter } from "./use-recording-recenter";
+import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
 import { useRecordingTimelineBlade } from "./use-recording-timeline-blade";
 import { useRecordingTrimPreview } from "./use-recording-trim-preview";
 
@@ -92,14 +97,17 @@ export function NativeRecordingPreview({
   durationMs,
   enabledStreamIndices,
   enabledVideoTracks = [],
+  hasKeyboardData = false,
   inspector,
   isPreparingAudio = false,
   isPreparingPreview = false,
   isSaving = false,
   keyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
+  keyboardMaximumWidthUnits,
   onCameraOverlayChange,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
+  onKeyboardEffectsChange,
   onRecordingOutputChange,
   onRecordingTimelineEditChange,
   onSelectedTrackChange,
@@ -145,6 +153,8 @@ export function NativeRecordingPreview({
   const [canvasResizeDraft, setCanvasResizeDraft] =
     useState<RecordingOutputSettings | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
+  const [previewPositionMs, setPreviewPositionMs] = useState(0);
+  const previewPlayingRef = useRef(false);
   // Everything derived below feeds memoized children. A canvas-resize gesture
   // re-renders this component at pointer rate, so a derived array or Set rebuilt
   // per render would defeat the memo of every subtree it reaches.
@@ -198,6 +208,23 @@ export function NativeRecordingPreview({
       camera: previewOutputDimensions?.camera,
       primary: previewOutputDimensions?.primary ?? { height: 64, width: 64 },
     });
+  const keyboardPreview = useRecordingKeyboardPreviewEditing({
+    artifactId,
+    canvasTool,
+    durationMs,
+    edit: recordingTimelineEdit,
+    enabled: hasKeyboardData,
+    keyboardEffects,
+    maximumWidthUnits: keyboardMaximumWidthUnits,
+    onChange: onRecordingTimelineEditChange,
+    onKeyboardEffectsChange,
+    onSelectionStart: () => onSelectedTrackChange?.(null),
+    output: effectiveRecordingOutput.primary,
+    positionMs: previewPositionMs,
+  });
+  const keyboardCanvas = keyboardPreview.canvas;
+  const keyboardTimeline = keyboardPreview.timeline;
+  const visibleKeyboardFragment = keyboardPreview.visibleFragment;
   usePublishRecordingOutputDimensions(effectiveRecordingOutput.primary);
   // Resizing never changes layer order, so keep its identity across the drag.
   const videoTrackOrder = useMemo(
@@ -270,7 +297,7 @@ export function NativeRecordingPreview({
     effectiveRecordingOutput.primary,
     previewSourceDimensions.camera,
   ]);
-  const selectionOverlay = useMemo(() => {
+  const videoSelectionOverlay = useMemo(() => {
     if (canvasTool === "canvas") {
       // Frame is a synthetic selection, just as in the screenshot workspace.
       // In baked mode it always belongs to the primary output; in split mode
@@ -371,7 +398,7 @@ export function NativeRecordingPreview({
     previewSourceDimensions.primary,
     selectedVideoTracks,
   ]);
-  const selectionTargets = useMemo(() => {
+  const videoSelectionTargets = useMemo(() => {
     if (canvasTool === "canvas")
       return (["primary", "camera"] as const).flatMap((trackId) =>
         selectedVideoTracks.has(trackId) && previewSourceDimensions[trackId]
@@ -474,7 +501,19 @@ export function NativeRecordingPreview({
     previewSourceDimensions,
     selectedVideoTracks,
   ]);
+  const keyboardSelection = keyboardPreview.selection;
+  const selectionOverlay =
+    keyboardSelection &&
+    keyboardTimeline.selection.ids.has(
+      visibleKeyboardFragment?.fragmentId ?? "",
+    )
+      ? keyboardSelection
+      : videoSelectionOverlay;
+  const selectionTargets = keyboardSelection
+    ? [...(videoSelectionTargets ?? []), keyboardSelection]
+    : videoSelectionTargets;
   const selectionGesture = (event: RecordingSelectionGestureEvent) => {
+    if (keyboardCanvas.applyGesture(event)) return;
     if (event.operation === "recenterAction") {
       if (event.phase === "begin") recenterActionRef.current();
       return;
@@ -835,95 +874,17 @@ export function NativeRecordingPreview({
       });
     }
   };
-  // A keyboard nudge replays the native move gesture so it reuses the same
-  // snapshot, camera-overlay-versus-output routing and undo grouping as a drag.
-  // The gesture reads the geometry React last rendered, so consecutive presses
-  // that land before a re-render have to accumulate into one growing delta;
-  // keying the accumulator on that geometry's identity resets it as soon as the
-  // committed settings arrive.
   const editsBakedCameraOverlay =
     canPreviewBakedCamera && activeVideoTrack === "camera";
-  const nudgeContextRef = useRef<{
-    applyGesture: (event: RecordingSelectionGestureEvent) => void;
-    origin: object | null;
-    outputSize: { height: number; width: number } | undefined;
-    paneIndex: number;
-  }>({
+  const nudgeActiveTrack = useRecordingSelectionNudge({
+    activeTrack: activeVideoTrack,
     applyGesture: selectionGesture,
-    origin: null,
-    outputSize: undefined,
-    paneIndex: 0,
+    cameraOverlay,
+    editsBakedCamera: editsBakedCameraOverlay,
+    gestureAccepted: () => selectionGestureRef.current !== null,
+    output: effectiveRecordingOutput,
+    outputDimensions: previewOutputDimensions,
   });
-  nudgeContextRef.current = {
-    applyGesture: selectionGesture,
-    origin: !activeVideoTrack
-      ? null
-      : editsBakedCameraOverlay
-        ? cameraOverlay
-        : effectiveRecordingOutput[activeVideoTrack],
-    // A baked camera moves in percentages of the primary output it sits in, so
-    // one "output pixel" there is one pixel of the primary frame.
-    outputSize: activeVideoTrack
-      ? previewOutputDimensions?.[
-          editsBakedCameraOverlay ? "primary" : activeVideoTrack
-        ]
-      : undefined,
-    paneIndex: activeVideoTrack === "camera" ? 1 : 0,
-  };
-  const nudgeRef = useRef<{
-    deltaX: number;
-    deltaY: number;
-    origin: object;
-  } | null>(null);
-  const nudgeActiveTrack = useCallback(
-    (directionX: number, directionY: number, coarse: boolean) => {
-      const { applyGesture, origin, outputSize, paneIndex } =
-        nudgeContextRef.current;
-      if (!origin) return;
-      const pixels = coarse ? 10 : 1;
-      // Without the output size the fraction cannot be a pixel, so fall back to
-      // a proportional step of the frame.
-      const stepX = outputSize
-        ? pixels / Math.max(1, outputSize.width)
-        : pixels / 1_000;
-      const stepY = outputSize
-        ? pixels / Math.max(1, outputSize.height)
-        : pixels / 1_000;
-      const gesture = {
-        edges: 0,
-        operation: "move" as const,
-        paneIndex,
-        scale: 1,
-      };
-      applyGesture({ ...gesture, deltaX: 0, deltaY: 0, phase: "begin" });
-      // The begin phase refuses gestures the current tool does not allow; bail
-      // before accumulating so a rejected press cannot skew the next one.
-      if (!selectionGestureRef.current) return;
-      const accumulated =
-        nudgeRef.current?.origin === origin
-          ? nudgeRef.current
-          : { deltaX: 0, deltaY: 0, origin };
-      // Replay the deltas already applied to this geometry as the gesture's
-      // live frame, so the closing frame is compared against them: an arrow
-      // that walks the layer back onto its origin still commits.
-      applyGesture({
-        ...gesture,
-        deltaX: accumulated.deltaX,
-        deltaY: accumulated.deltaY,
-        phase: "update",
-      });
-      accumulated.deltaX += directionX * stepX;
-      accumulated.deltaY += directionY * stepY;
-      nudgeRef.current = accumulated;
-      applyGesture({
-        ...gesture,
-        deltaX: accumulated.deltaX,
-        deltaY: accumulated.deltaY,
-        phase: "end",
-      });
-    },
-    [],
-  );
   const player = useRecordingPreviewPlayer({
     artifactId,
     audioTrackVolumes,
@@ -938,9 +899,18 @@ export function NativeRecordingPreview({
     nativeEditorOwnsLayout,
     nativeLayoutHasPanes: enabledVideoTracks.length > 0,
     nativeLayoutKey: `${bakeCamera ? "baked" : "split"}|${enabledVideoTracks.join(":")}|${videoTrackOrderList.join(":")}`,
-    onPosition: trimPreview.onPosition,
+    onPosition: (positionMs) => {
+      trimPreview.onPosition(positionMs);
+      if (!previewPlayingRef.current) setPreviewPositionMs(positionMs);
+    },
     onSelectionChange: (paneIndex) => {
       if (paneIndex === null) return;
+      if (paneIndex === KEYBOARD_LAYER_ID) {
+        keyboardCanvas.selectVisible();
+        onSelectedTrackChange?.(null);
+        return;
+      }
+      keyboardTimeline.selection.onClear();
       const trackId = paneIndex === 0 ? "primary" : "camera";
       if (selectedVideoTracks.has(trackId)) onSelectedTrackChange?.(trackId);
     },
@@ -950,9 +920,22 @@ export function NativeRecordingPreview({
     screenCanvasRef,
     selection: selectionOverlay,
     selectionTargets,
+    sourceDurationMs: durationMs,
     timelineEdit: recordingTimelineEdit,
     zoomPercent,
   });
+  const isPlaying = player.isPlaying;
+  const getPlayerPositionMs = player.getPositionMs;
+  previewPlayingRef.current = isPlaying;
+  useEffect(() => {
+    if (isPlaying) return;
+    const frame = requestAnimationFrame(() => {
+      setPreviewPositionMs(getPlayerPositionMs());
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [getPlayerPositionMs, isPlaying]);
   const recenter = useRecordingRecenter({
     artifactId,
     getPositionMs: player.getPositionMs,
@@ -1026,7 +1009,6 @@ export function NativeRecordingPreview({
   );
   const screenPane = layout?.panes[0];
   const cameraPane = layout?.panes[1];
-  const isPlaying = player.isPlaying;
   const pause = player.pause;
   const play = player.play;
   const togglePlayback = useCallback(() => {
@@ -1057,7 +1039,6 @@ export function NativeRecordingPreview({
     },
     [activeVideoTrack, onVideoTrackOrderChange, videoTrackOrder],
   );
-
   // The shortcut hook re-binds its window listener whenever a handler identity
   // changes, so these stay stable across the per-move draft renders.
   const canMoveActiveVideoTrack =
@@ -1133,7 +1114,6 @@ export function NativeRecordingPreview({
       visiblePaneEntries.length,
     ],
   );
-
   useEffect(() => {
     playhead.publish(0, 0);
   }, [artifactId, playhead]);
@@ -1157,7 +1137,6 @@ export function NativeRecordingPreview({
     onToggleCrop: hasVisiblePanes ? toggleCropTool : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
   });
-
   const changeEnabledTracks = useCallback(
     (tracks: Set<number>) => {
       onEnabledTracksChange?.([...tracks]);
@@ -1172,9 +1151,10 @@ export function NativeRecordingPreview({
   );
   const changeSelectedTrack = useCallback(
     (trackId: RecordingTrackId) => {
+      keyboardTimeline.selection.onClear();
       onSelectedTrackChange?.(trackId);
     },
-    [onSelectedTrackChange],
+    [keyboardTimeline.selection, onSelectedTrackChange],
   );
   // The copied frame must use the output on screen, which during a resize is
   // the draft; a ref keeps the handler stable without staling the payload.
@@ -1322,11 +1302,16 @@ export function NativeRecordingPreview({
           </div>
         ) : (
           <RecordingTrackLanes
+            adjustedKeyboardFragmentIds={keyboardTimeline.adjustedFragmentIds}
             audioTracks={audioTracks}
             blade={timelineBlade.blade}
             durationMs={timelineBlade.timelineDurationMs}
             enabledTracks={enabledTracks}
             enabledVideoTracks={selectedVideoTracks}
+            hiddenKeyboardFragmentIds={keyboardTimeline.hiddenFragmentIds}
+            hiddenKeyboardItemIds={keyboardTimeline.hiddenItemIds}
+            keyboardItems={keyboardTimeline.items}
+            keyboardSelection={keyboardTimeline.selection}
             layout={layout}
             onEnabledTracksChange={changeEnabledTracks}
             onEnabledVideoTracksChange={changeEnabledVideoTracks}
@@ -1335,6 +1320,7 @@ export function NativeRecordingPreview({
             onVideoTrackOrderChange={onVideoTrackOrderChange}
             playhead={playhead}
             selectedTrack={selectedTrack}
+            sourceDurationMs={durationMs}
             thumbnails={timelineThumbnails}
             videoTrackOrder={videoTrackOrderList}
             volumes={audioVolumeByStream}

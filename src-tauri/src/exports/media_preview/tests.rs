@@ -339,6 +339,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
   let timeline = crate::exports::timeline_edit::TimelinePlan::from_edit(
     &crate::exports::timeline_edit::RecordingTimelineEdit {
       artifact_id: 1,
+      keyboard_deletions: Box::default(),
       next_segment_id: 2,
       segments: vec![
         crate::exports::timeline_edit::RecordingTimelineSegment {
@@ -381,6 +382,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
   let single_range = crate::exports::timeline_edit::TimelinePlan::from_edit(
     &crate::exports::timeline_edit::RecordingTimelineEdit {
       artifact_id: 1,
+      keyboard_deletions: Box::default(),
       next_segment_id: 1,
       segments: vec![crate::exports::timeline_edit::RecordingTimelineSegment {
         id: 0,

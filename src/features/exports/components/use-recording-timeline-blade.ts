@@ -4,9 +4,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PREVIEW_FRAME_MS } from "../duration";
+import { cutKeyboardTimeline } from "../recording-keyboard-timeline-cut";
 import {
   createRecordingTimelineEdit,
-  cutRecordingTimeline,
   deleteRecordingTimelineRange,
   deleteRecordingTimelineSegment,
   RecordingTimelineEdit,
@@ -185,7 +185,7 @@ export function useRecordingTimelineBlade({
 
   const cutSourceAt = useCallback(
     (sourcePosition: number) => {
-      const next = cutRecordingTimeline(effectiveEdit, snap(sourcePosition));
+      const next = cutKeyboardTimeline(effectiveEdit, snap(sourcePosition));
       if (next === effectiveEdit || !onChange) return;
       setSelectedSegmentId(null);
       editGesture.beginGesture();

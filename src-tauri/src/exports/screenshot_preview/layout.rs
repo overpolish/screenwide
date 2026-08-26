@@ -128,6 +128,8 @@ pub async fn layout_screenshot_preview_surface(
     width: overlay.rect.width,
     height: overlay.rect.height,
     radius_percent: overlay.radius_percent,
+    minimum_scale: 0.0,
+    maximum_scale: 0.0,
   }));
   let selection_targets = selection_targets.map(|targets| {
     targets
@@ -154,6 +156,8 @@ pub async fn layout_screenshot_preview_surface(
         width: target.rect.width,
         height: target.rect.height,
         radius_percent: target.radius_percent,
+        minimum_scale: 0.0,
+        maximum_scale: 0.0,
       })
       .collect::<Vec<_>>()
   });

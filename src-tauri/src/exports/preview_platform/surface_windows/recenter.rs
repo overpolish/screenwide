@@ -46,7 +46,7 @@ pub(super) fn label_origin(
 pub(super) fn action_visible(state: &SurfaceState) -> bool {
   state
     .selection
-    .is_some_and(|selection| selection.recenter_mode != 0)
+    .is_some_and(|selection| selection.recenter_mode != 0 || selection.layer_id == u32::MAX - 1)
 }
 
 pub(super) fn magnifier_bounds(selection: PreviewSelection) -> [f32; 4] {
@@ -118,12 +118,17 @@ pub(super) fn release_action(
   physical: (f64, f64),
   logical: (f64, f64),
 ) -> bool {
-  let (activate, changed) = inner
-    .gpu
-    .selection
-    .lock()
-    .ok()
-    .map_or((false, false), |mut overlay| overlay.action.up(physical));
+  let (activate, changed, second_half) =
+    inner
+      .gpu
+      .selection
+      .lock()
+      .ok()
+      .map_or((false, false, false), |mut overlay| {
+        let second_half = overlay.action.second_half(physical);
+        let (activate, changed) = overlay.action.up(physical);
+        (activate, changed, second_half)
+      });
   if changed {
     redraw_action(inner);
   }
@@ -133,7 +138,7 @@ pub(super) fn release_action(
     .and_then(|state| {
       let selection = state
         .selection
-        .filter(|selection| selection.recenter_mode != 0)?;
+        .filter(|selection| selection.recenter_mode != 0 || selection.layer_id == u32::MAX - 1)?;
       Some((selection, selection_pane_rect(&state, selection)))
     });
   if let Some((selection, pane_start)) = action {
@@ -144,10 +149,19 @@ pub(super) fn release_action(
         edges: 0,
         last_delta: (0.0, 0.0),
         last_scale: 1.0,
-        operation: SelectionGestureOperation::RecenterAction,
+        operation: if selection.layer_id == u32::MAX - 1 {
+          if second_half {
+            SelectionGestureOperation::ApplyToAllAction
+          } else {
+            SelectionGestureOperation::ResetAction
+          }
+        } else {
+          SelectionGestureOperation::RecenterAction
+        },
         pane_start,
         pointer_start: logical,
         selection_start: selection,
+        keyboard_start: None,
       },
     );
   }
@@ -162,8 +176,17 @@ pub(super) fn selection_resize(
   zoom: f64,
   centered: bool,
 ) -> workspace_editor::SelectionResize {
-  let minimum = (36.0 / (pane.0 * zoom * start.width).max(1.0))
-    .max(36.0 / (pane.1 * zoom * start.height).max(1.0));
+  let minimum = if start.layer_id == u32::MAX - 1 {
+    0.01
+  } else {
+    (36.0 / (pane.0 * zoom * start.width).max(1.0))
+      .max(36.0 / (pane.1 * zoom * start.height).max(1.0))
+  };
+  let minimum = if start.minimum_scale > 0.0 {
+    minimum.max(start.minimum_scale)
+  } else {
+    minimum
+  };
   let constraint =
     (start.recenter_mode != 0 && start.recenter_width > 0.0 && start.recenter_height > 0.0)
       .then_some(workspace_editor::NormalizedRect {
@@ -172,7 +195,7 @@ pub(super) fn selection_resize(
         width: start.recenter_width,
         height: start.recenter_height,
       });
-  workspace_editor::selection_resize(
+  let mut resize = workspace_editor::selection_resize(
     workspace_editor::NormalizedRect {
       x: start.x,
       y: start.y,
@@ -184,7 +207,15 @@ pub(super) fn selection_resize(
     delta,
     minimum,
     centered,
-  )
+  );
+  if start.maximum_scale > 0.0 {
+    resize.maximum_scale = resize.maximum_scale.min(start.maximum_scale);
+    resize.minimum_scale = resize.minimum_scale.min(resize.maximum_scale);
+    resize.scale = resize
+      .scale
+      .clamp(resize.minimum_scale, resize.maximum_scale);
+  }
+  resize
 }
 
 pub(super) fn inset_resize(

@@ -300,8 +300,8 @@ vertex selection_out selection_vertex_main(const device selection_vertex *vertic
 fragment float4 selection_fragment(selection_out in [[stage_in]],
                                    constant uint &light_mode [[buffer(0)]],
                                    constant float4 &magnifier_box [[buffer(1)]],
-                                   constant float2 &action_shades [[buffer(2)]],
-                                   texture2d<float> label [[texture(0)]]) {
+                                   constant float4 &action_shades [[buffer(2)]],
+                                   texture2d<float> label [[texture(0)]], texture2d<float> secondary_label [[texture(1)]]) {
   constexpr sampler label_sampler(filter::linear, address::clamp_to_edge);
   if (magnifier_box.z > 0.0) {
     float2 half_size = magnifier_box.zw * 0.5;
@@ -311,11 +311,11 @@ fragment float4 selection_fragment(selection_out in [[stage_in]],
                      min(max(local.x, local.y), 0.0) - 4.0;
     if (distance <= 0.0) discard_fragment();
   }
-  if (in.kind == 11) {
+  if (in.kind == 11 || in.kind == 15) {
     // The label bitmap is premultiplied, but this pipeline blends with
     // SourceAlpha/OneMinusSourceAlpha (i.e. it expects straight alpha), so the
     // colour is un-premultiplied back out before it is returned.
-    float4 sampled = label.sample(label_sampler, in.uv);
+    float4 sampled = in.kind == 15 ? secondary_label.sample(label_sampler, in.uv) : label.sample(label_sampler, in.uv);
     if (sampled.a <= 0.002) discard_fragment();
     return float4(sampled.rgb / sampled.a, sampled.a);
   }
@@ -330,7 +330,7 @@ fragment float4 selection_fragment(selection_out in [[stage_in]],
                      min(max(local.x, local.y), 0.0) - radius;
     float coverage = 1.0 - smoothstep(-1.0, 1.0, distance);
     // Opaque resolved values of React's neutral-soft semantic tokens.
-    float shade = light_mode != 0 ? action_shades.x : action_shades.y;
+    float shade = light_mode != 0 ? (in.kind == 13 ? action_shades.z : action_shades.x) : (in.kind == 13 ? action_shades.w : action_shades.y);
     return float4(float3(shade), coverage);
   }
   if (in.kind == 6) return float4(0.0, 0.0, 0.0, 0.4);

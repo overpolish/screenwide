@@ -46,7 +46,44 @@ struct Constants {
   crop_image: [f32; 4],
   magnifier_box: [f32; 4],
   label: [f32; 4],
+  secondary_label: [f32; 4],
   label_params: [f32; 4],
+  action_shades: [f32; 4],
+}
+
+fn split_action_label_rects(
+  frame: [f32; 4],
+  primary: (u32, u32),
+  secondary: (u32, u32),
+  viewport: (f32, f32),
+  scale: f32,
+) -> ([f32; 4], [f32; 4]) {
+  let padding_x = 6.0 * scale;
+  let padding_y = 4.0 * scale;
+  let gap = 4.0 * scale;
+  let primary = (primary.0 as f32, primary.1 as f32);
+  let secondary = (secondary.0 as f32, secondary.1 as f32);
+  let primary_button = primary.0 + padding_x * 2.0;
+  let secondary_button = secondary.0 + padding_x * 2.0;
+  let total_width = primary_button + gap + secondary_button;
+  let button_height = primary.1.max(secondary.1) + padding_y * 2.0;
+  let x = (frame[0] + (frame[2] - total_width) * 0.5)
+    .clamp(0.0, (viewport.0 - total_width).max(0.0))
+    .floor();
+  let mut y = frame[1] + frame[3] + 6.0 * scale;
+  if y + button_height > viewport.1 {
+    y = frame[1] - 6.0 * scale - button_height;
+  }
+  y = y.clamp(0.0, (viewport.1 - button_height).max(0.0)).floor();
+  (
+    [x + padding_x, y + padding_y, primary.0, primary.1],
+    [
+      x + primary_button + gap + padding_x,
+      y + padding_y,
+      secondary.0,
+      secondary.1,
+    ],
+  )
 }
 
 pub(super) struct SelectionOverlay {
@@ -54,6 +91,7 @@ pub(super) struct SelectionOverlay {
   buffer_size: (u32, u32),
   constants: ID3D11Buffer,
   label: Option<LabelTexture>,
+  secondary_label: Option<LabelTexture>,
   /// Bound whenever there is no label, so the pixel shader's texture slot is
   /// always filled with a real (transparent 1x1) view.
   label_placeholder: LabelTexture,
@@ -142,6 +180,7 @@ impl SelectionOverlay {
       buffer_size: (2, 2),
       constants: constants.ok_or_else(|| "D3D11 created no selection constants".to_owned())?,
       label: None,
+      secondary_label: None,
       label_placeholder,
       label_sampler: label_sampler
         .ok_or_else(|| "D3D11 created no selection label sampler".to_owned())?,
@@ -175,6 +214,25 @@ impl SelectionOverlay {
         .ok();
     }
     self.label.as_ref()
+  }
+
+  fn secondary_label_texture(
+    &mut self,
+    device: &ID3D11Device,
+    text: &str,
+    scale: f64,
+  ) -> Option<&LabelTexture> {
+    let key = label_scale_key(scale);
+    let stale = self
+      .secondary_label
+      .as_ref()
+      .is_none_or(|label| label.scale_key != key || label.text != text || !label.action);
+    if stale {
+      self.secondary_label = build_label_texture(device, text, scale, true)
+        .inspect_err(|error| eprintln!("The secondary OSC action could not be drawn: {error}"))
+        .ok();
+    }
+    self.secondary_label.as_ref()
   }
 
   #[allow(clippy::too_many_arguments)]
@@ -213,7 +271,28 @@ impl SelectionOverlay {
     // run off the bottom, and is clamped into the viewport. Everything here is
     // already in physical pixels, so snapping to the pixel grid is a floor:
     // the glyphs then land on the grid they were rasterised on and stay crisp.
-    let label = match (frame, label_text) {
+    let split_actions = label_action && label_text.is_some_and(|text| text.starts_with("Reset"));
+    let split_label = if let Some(frame) = frame.filter(|_| split_actions) {
+      let primary = self
+        .label_texture(device, "Reset", scale, true)
+        .map(|label| (label.view.clone(), label.size));
+      let secondary = self
+        .secondary_label_texture(device, "Apply to all", scale)
+        .map(|label| (label.view.clone(), label.size));
+      primary.zip(secondary).map(|(primary, secondary)| {
+        let (primary_rect, secondary_rect) = split_action_label_rects(
+          frame,
+          primary.1,
+          secondary.1,
+          (size.0 as f32, size.1 as f32),
+          scale as f32,
+        );
+        (primary.0, primary_rect, secondary.0, secondary_rect)
+      })
+    } else {
+      None
+    };
+    let label = match (frame, label_text.filter(|_| !split_actions)) {
       (Some(frame), Some(text)) => self
         .label_texture(device, text, scale, label_action)
         .map(|label| (label.view.clone(), label.size))
@@ -234,11 +313,24 @@ impl SelectionOverlay {
         }),
       _ => None,
     };
-    let (label_view, label_rect) = match label {
-      Some((view, rect)) => (view, rect),
-      None => (self.label_placeholder.view.clone(), [0.0; 4]),
+    let (label_view, label_rect, secondary_label_view, secondary_label_rect) = match split_label {
+      Some((primary, primary_rect, secondary, secondary_rect)) => {
+        (primary, primary_rect, secondary, secondary_rect)
+      }
+      None => {
+        let (view, rect) = label.map_or(
+          (self.label_placeholder.view.clone(), [0.0; 4]),
+          |(view, rect)| (view, rect),
+        );
+        (view, rect, self.label_placeholder.view.clone(), [0.0; 4])
+      }
     };
-    let action_shades = self.action.layout(label_rect, scale as f32, label_action);
+    let action_shades = self.action.layout(
+      label_rect,
+      (secondary_label_rect[2] > 0.0).then_some(secondary_label_rect),
+      scale as f32,
+      label_action,
+    );
     let values = Constants {
       frame: frame.unwrap_or_default(),
       viewport: [
@@ -259,15 +351,17 @@ impl SelectionOverlay {
       crop_image: crop_image.unwrap_or([-1.0; 4]),
       magnifier_box: magnifier_box.unwrap_or_default(),
       label: label_rect,
+      secondary_label: secondary_label_rect,
       // The stroke is centred on the glyph outline, so half of it spills out;
       // GDI glyphs are lighter than CoreText's, and the ring-mean halo reaches
       // a touch past its radius, so it is trimmed to keep the same weight.
       label_params: [
         (LABEL_STROKE * 0.5 * 0.75 * scale) as f32,
         scale as f32,
-        action_shades[0],
-        action_shades[1],
+        f32::from(label_action),
+        f32::from(split_actions),
       ],
+      action_shades,
     };
     let constants: ID3D11Resource = self.constants.cast().map_err(|error| error.to_string())?;
     unsafe {
@@ -301,10 +395,10 @@ impl SelectionOverlay {
       context.VSSetShader(&self.vertex_shader, None);
       context.PSSetShader(&self.pixel_shader, None);
       context.PSSetConstantBuffers(0, Some(&[Some(self.constants.clone())]));
-      context.PSSetShaderResources(0, Some(&[Some(label_view)]));
+      context.PSSetShaderResources(0, Some(&[Some(label_view), Some(secondary_label_view)]));
       context.PSSetSamplers(0, Some(&[Some(self.label_sampler.clone())]));
       context.Draw(3, 0);
-      context.PSSetShaderResources(0, Some(&[None]));
+      context.PSSetShaderResources(0, Some(&[None, None]));
       context.OMSetRenderTargets(None, None);
       self
         .swap_chain

@@ -9,6 +9,43 @@ struct RecordingPreviewSources {
   tracks: Vec<RecordingAudioTrack>,
 }
 
+/// Returns the captured keyboard shortcuts as generic timed-lane items.
+/// Missing keyboard capture is valid (for example when Accessibility access
+/// was unavailable), so that case deliberately returns an empty lane.
+#[tauri::command]
+pub async fn get_recording_keyboard_timeline(
+  app: AppHandle,
+  artifact_id: u64,
+) -> Result<Vec<crate::exports::keyboard_effects::KeyboardTimelineItem>, String> {
+  let path = {
+    let state = app.state::<ExportState>();
+    let artifact = state
+      .recording
+      .artifact
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let Some(ExportArtifact::Recording { id, keyboard, .. }) = artifact.as_ref() else {
+      return Err("There is no recording to preview".to_owned());
+    };
+    if *id != artifact_id {
+      return Err("That recording is no longer waiting to be exported".to_owned());
+    }
+    keyboard.as_ref().map(|keyboard| keyboard.path.clone())
+  };
+
+  tauri::async_runtime::spawn_blocking(move || {
+    path.map_or_else(
+      || Ok(Vec::new()),
+      |path| {
+        crate::exports::keyboard_effects::KeyboardCompositor::open(&path)
+          .map(|keyboard| keyboard.timeline_items())
+      },
+    )
+  })
+  .await
+  .map_err(|error| error.to_string())?
+}
+
 /// Prepares the lightweight waveform data used beside the native player.
 #[tauri::command]
 pub async fn get_recording_preview(

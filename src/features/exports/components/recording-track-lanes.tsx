@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Camera, Monitor } from "lucide-react";
+import { Camera, Keyboard, Monitor } from "lucide-react";
 import {
   memo,
   PointerEvent as ReactPointerEvent,
@@ -11,39 +11,34 @@ import {
 
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import {
-  PreparedAudioTrack,
   recordingAudioStreamIndex,
   recordingAudioTrackId,
-  RecordingPreviewLayout,
-  RecordingTrackId,
-  RecordingTimelineThumbnails,
   RecordingVideoTrackId,
 } from "../types";
 
-import { AudioTrackVolumes } from "./audio-level";
 import { RecordingTrackContextMenu } from "./recording-track-context-menu";
+import { RecordingTrackLanesProps } from "./recording-track-lanes-contract";
 import { LayerContextMenuState } from "./screenshot-layer-context-menu";
 import { ScrubAudioTracks } from "./scrub-audio-tracks";
-import { Playhead } from "./scrub-playhead";
-import { SeekHandler } from "./scrub-timeline";
 import { TimelineAudioMeter } from "./timeline-audio-meter";
-import { TimelineBladeController } from "./timeline-blade";
+import { TimelineItemLane } from "./timeline-item-lane";
 import { TimelineScrubberOverlay } from "./timeline-scrubber";
 import { TimelineVideoClip } from "./timeline-video-clip";
 import { TimelineHeader } from "./timeline-zoom-toolbar";
 import { useTimelineNavigation } from "./use-timeline-navigation";
 
-/**
- * Memoized: the lanes own the ruler, both thumbnail strips, the audio rows and
- * the meter - by far the widest subtree in the editor - and none of it depends
- * on the output settings a canvas-resize gesture rewrites at pointer rate.
- */
+/** Memoized because pointer-rate canvas settings do not affect this subtree. */
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
+  adjustedKeyboardFragmentIds,
   audioTracks,
   blade,
   durationMs,
   enabledTracks,
   enabledVideoTracks,
+  hiddenKeyboardFragmentIds,
+  hiddenKeyboardItemIds,
+  keyboardItems,
+  keyboardSelection,
   layout,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
@@ -52,27 +47,11 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   onVideoTrackOrderChange,
   playhead,
   selectedTrack,
+  sourceDurationMs,
   thumbnails,
   videoTrackOrder,
   volumes,
-}: {
-  audioTracks: PreparedAudioTrack[];
-  blade: TimelineBladeController;
-  durationMs: number;
-  enabledTracks: Set<number>;
-  enabledVideoTracks: Set<RecordingVideoTrackId>;
-  layout: RecordingPreviewLayout;
-  onEnabledTracksChange: (tracks: Set<number>) => void;
-  onEnabledVideoTracksChange: (tracks: Set<RecordingVideoTrackId>) => void;
-  onSeek: SeekHandler;
-  onSelectedTrackChange: (trackId: RecordingTrackId) => void;
-  playhead: Playhead;
-  selectedTrack: RecordingTrackId | null;
-  thumbnails: RecordingTimelineThumbnails;
-  videoTrackOrder: RecordingVideoTrackId[];
-  volumes: AudioTrackVolumes;
-  onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
-}) {
+}: RecordingTrackLanesProps) {
   const [contextMenu, setContextMenu] =
     useState<LayerContextMenuState<RecordingVideoTrackId> | null>(null);
   const [drag, setDrag] = useState<{
@@ -89,9 +68,11 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   const rowElementsRef = useRef(
     new Map<RecordingVideoTrackId, HTMLDivElement>(),
   );
-  const rowCount = layout.panes.length + audioTracks.length;
+  const rowCount =
+    layout.panes.length +
+    audioTracks.length +
+    (keyboardItems.length > 0 ? 1 : 0);
   const meterHeight = 30 + rowCount * 34;
-
   const videoRows = layout.panes
     .map((pane, index) => ({
       pane,
@@ -180,7 +161,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
   };
-
   return (
     <section
       aria-label="Recording timeline"
@@ -275,7 +255,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               </div>
             );
           })}
-
           {audioTracks.length > 0 ? (
             <ScrubAudioTracks
               audioTracks={audioTracks}
@@ -291,7 +270,28 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               volumes={volumes}
             />
           ) : null}
-
+          {keyboardItems.length > 0 ? (
+            <TimelineItemLane
+              edit={blade.edit}
+              hiddenFragmentIds={hiddenKeyboardFragmentIds}
+              hiddenItemIds={hiddenKeyboardItemIds}
+              icon={<Keyboard size={14} />}
+              items={keyboardItems}
+              label="Shortcuts"
+              minimumItemWidthPx={48}
+              onClearSelection={keyboardSelection.onClear}
+              onSelect={(fragment, outputPosition, toggle) => {
+                blade.clearRangeSelection();
+                blade.selectSegment(null);
+                keyboardSelection.onSelect(fragment.fragmentId, toggle);
+                onSeek(outputPosition, "end");
+              }}
+              selectedFragmentIds={keyboardSelection.ids}
+              sourceDurationMs={sourceDurationMs}
+              viewport={timeline.viewport}
+              warningFragmentIds={adjustedKeyboardFragmentIds}
+            />
+          ) : null}
           <TimelineScrubberOverlay
             blade={blade}
             onSeek={onSeek}
@@ -299,7 +299,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
             viewport={timeline.viewport}
           />
         </div>
-
         {audioTracks.length > 0 ? (
           <TimelineAudioMeter
             audioTracks={audioTracks}

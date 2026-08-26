@@ -3,8 +3,13 @@
 
 //! Timestamped keyboard-shortcut effects shared by preview, export, and still composition.
 
+use crate::exports::timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
 use serde_json::Value;
-use std::path::Path;
+use std::{
+  collections::HashSet,
+  path::Path,
+  sync::{Arc, RwLock},
+};
 
 mod animation;
 use animation::{ease_out, pop_spring, replacement_enter_progress, replacement_exit_progress};
@@ -19,16 +24,24 @@ mod settings;
 pub(crate) use settings::{KeyboardAnimation, KeyboardAppearance, KeyboardEffectSettings};
 mod state;
 use state::{KeyboardStateTimeline, TransitionKind};
+mod timeline;
+pub(crate) use timeline::KeyboardTimelineItem;
 
 const ENTRANCE_SECONDS: f64 = 0.6;
-const EXIT_SECONDS: f64 = 0.6;
+const EXIT_SECONDS: f64 = 0.4;
 const MICROS_PER_SECOND: f64 = 1_000_000.0;
+pub(super) const HOLD_US: u64 = 750_000;
 
 #[derive(Clone, Debug)]
 pub(crate) struct KeyboardCompositor {
   maximum_width: f64,
   timeline: KeyboardStateTimeline,
   slots: Vec<u32>,
+  shortcuts: Vec<Shortcut>,
+  legacy_modifier_expansion: bool,
+  deleted_shortcut_ids: Arc<RwLock<HashSet<u64>>>,
+  deleted_shortcut_ranges: Arc<RwLock<Vec<DeletedKeyboardShortcutRange>>>,
+  shortcut_positions: Arc<RwLock<Vec<KeyboardShortcutPositionRange>>>,
 }
 #[derive(Clone, Debug)]
 pub(super) struct Shortcut {
@@ -44,6 +57,13 @@ pub(super) struct KeyPress {
 
 impl KeyboardCompositor {
   pub(crate) fn open(path: &Path) -> Result<Self, String> {
+    Self::open_with_deleted(path, &[], &[])
+  }
+  pub(crate) fn open_with_deleted(
+    path: &Path,
+    deleted_ids: &[u64],
+    deleted_ranges: &[DeletedKeyboardShortcutRange],
+  ) -> Result<Self, String> {
     let records = read_values(path)?;
     let version = records
       .first()
@@ -55,7 +75,9 @@ impl KeyboardCompositor {
     } else {
       parse_v1(&records)
     };
-    Ok(Self::from_shortcuts_with_legacy(shortcuts, version < 2))
+    let compositor = Self::from_shortcuts_with_legacy(shortcuts, version < 2);
+    compositor.set_deleted_shortcuts(deleted_ids, deleted_ranges);
+    Ok(compositor)
   }
   #[cfg(test)]
   fn from_shortcuts(shortcuts: Vec<Shortcut>) -> Self {
@@ -87,8 +109,14 @@ impl KeyboardCompositor {
       maximum_width,
       timeline,
       slots,
+      shortcuts,
+      legacy_modifier_expansion,
+      deleted_shortcut_ids: Arc::new(RwLock::new(HashSet::new())),
+      deleted_shortcut_ranges: Arc::new(RwLock::new(Vec::new())),
+      shortcut_positions: Arc::new(RwLock::new(Vec::new())),
     }
   }
+
   pub(crate) fn maximum_width_units(&self) -> u16 {
     self.maximum_width.ceil().clamp(0.0, f64::from(u16::MAX)) as u16
   }
@@ -101,12 +129,10 @@ impl KeyboardCompositor {
     settings: KeyboardEffectSettings,
     dimensions: (u32, u32),
   ) -> Option<KeyboardOverlay> {
-    let fitted_scale = (settings
-      .size_percent
-      .min(self.maximum_size_percent(dimensions.0, dimensions.1))
-      / 100.0) as f32;
     let mut overlay = self.evaluate(position_ms, settings)?;
-    overlay.scale = fitted_scale;
+    overlay.scale = overlay
+      .requested_scale
+      .min((self.maximum_size_percent(dimensions.0, dimensions.1) / 100.0) as f32);
     Some(overlay)
   }
   pub(crate) fn evaluate(
@@ -137,14 +163,38 @@ impl KeyboardCompositor {
       progress: 1.0,
       maximum_width: self.maximum_width as f32,
       requested_scale: size_scale,
+      center_x: settings
+        .position_x_percent
+        .map_or(-1.0, |position| (position / 100.0) as f32),
+      center_y: settings
+        .position_y_percent
+        .map_or(-1.0, |position| (position / 100.0) as f32),
       ..Default::default()
     };
+    let deleted_ids = self
+      .deleted_shortcut_ids
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let deleted_ranges = self
+      .deleted_shortcut_ranges
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
     let mut visible = self
       .timeline
       .visuals
       .iter()
+      .filter(|key| {
+        let shortcut_id = key.source_shortcut as u64;
+        !deleted_ids.contains(&shortcut_id)
+          && !deleted_ranges.iter().any(|range| {
+            range.shortcut_id == shortcut_id
+              && position_ms >= range.start_ms
+              && position_ms < range.end_ms
+          })
+      })
       .filter(|key| key.visible_at(now))
       .collect::<Vec<_>>();
+    self.apply_shortcut_position(&mut overlay, &visible, position_ms);
     let slots = &self.slots;
     visible.sort_by_key(|key| {
       (
@@ -215,7 +265,7 @@ impl KeyboardCompositor {
         detached_amount.unwrap_or_else(|| pop_spring(key_progress))
       } else {
         1.0
-      }) * (settings.size_percent / 100.0) as f32;
+      }) * overlay.requested_scale;
       let index = overlay.key_count as usize;
       let layout = key.layout.sample(now);
       overlay.keys[index] = KeyboardKey {
@@ -244,3 +294,5 @@ impl KeyboardCompositor {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod timeline_tests;

@@ -22,6 +22,7 @@ import { useExportWindowShortcuts } from "../use-export-window-shortcuts";
 
 import { RecordingTrackLanes } from "./recording-track-lanes";
 import { createPlayhead } from "./scrub-playhead";
+import { selectTimelineItem } from "./timeline-item-selection";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
@@ -37,6 +38,9 @@ function TimelinePreview() {
   const [isBladeActive, setIsBladeActive] = useState(false);
   const [previewPosition, setPreviewPosition] = useState<number | null>(null);
   const [isRangeActive, setIsRangeActive] = useState(false);
+  const [selectedKeyboardItems, setSelectedKeyboardItems] = useState(
+    () => new Set<string>(),
+  );
   const [rangeSelection, setRangeSelection] = useState<{
     end: number;
     start: number;
@@ -125,6 +129,7 @@ function TimelinePreview() {
     <ExportEditGestureContext value={editGesture}>
       <div className="w-[760px] bg-content text-content-fg">
         <RecordingTrackLanes
+          adjustedKeyboardFragmentIds={new Set()}
           audioTracks={[
             {
               kind: "system-audio",
@@ -180,6 +185,24 @@ function TimelinePreview() {
           durationMs={timelineDurationMs}
           enabledTracks={enabledAudio}
           enabledVideoTracks={enabledVideo}
+          hiddenKeyboardFragmentIds={new Set()}
+          hiddenKeyboardItemIds={new Set()}
+          keyboardItems={[
+            { endMs: 11_800, id: 0, label: "⌘ C", startMs: 10_000 },
+            { endMs: 29_600, id: 1, label: "⌘ V", startMs: 28_000 },
+            { endMs: 74_900, id: 2, label: "⇧ ⌘ 4", startMs: 72_000 },
+          ]}
+          keyboardSelection={{
+            ids: selectedKeyboardItems,
+            onClear: () => {
+              setSelectedKeyboardItems(new Set());
+            },
+            onSelect: (itemId, toggle) => {
+              setSelectedKeyboardItems((current) =>
+                selectTimelineItem(current, itemId, toggle),
+              );
+            },
+          }}
           layout={{
             height: 1080,
             panes: [
@@ -204,6 +227,7 @@ function TimelinePreview() {
           onSelectedTrackChange={setSelectedTrack}
           playhead={playhead}
           selectedTrack={selectedTrack}
+          sourceDurationMs={STORY_DURATION_MS}
           thumbnails={{
             camera: [],
             primary: Array.from({ length: 24 }, (_, index) => ({

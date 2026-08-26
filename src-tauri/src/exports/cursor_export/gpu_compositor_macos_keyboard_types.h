@@ -30,6 +30,8 @@ typedef struct {
   float progress;
   float maximum_width;
   float requested_scale;
+  float center_x;
+  float center_y;
   ScreenwideKeyboardKey keys[SCREENWIDE_KEYBOARD_MAX_KEYS];
 } ScreenwideKeyboardOverlay;
 
@@ -53,9 +55,12 @@ typedef struct {
   uint32_t animation;
   float scale;
   float layout_progress;
-  float padding[2];
+  float maximum_width;
+  float requested_scale;
+  float center_x;
+  float center_y;
   ScreenwideKeyboardKeyUniforms keys[SCREENWIDE_KEYBOARD_MAX_KEYS];
 } ScreenwideKeyboardUniforms;
 
-_Static_assert(offsetof(ScreenwideKeyboardUniforms, keys) == 32,
+_Static_assert(offsetof(ScreenwideKeyboardUniforms, keys) == 40,
                "Keyboard uniforms must match their Metal layout");

@@ -345,6 +345,7 @@ export function RecordingSection({
   onCameraOverlayChange,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
+  onKeyboardEffectsChange,
   onRecordingOutputChange,
   onRecordingTimelineEditChange,
   onSelectedTrackChange,
@@ -375,6 +376,7 @@ export function RecordingSection({
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onEnabledTracksChange?: (streamIndices: number[]) => void;
   onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;
+  onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onRecordingOutputChange?: (
     trackId: RecordingVideoTrackId,
     settings: RecordingOutputSettings[RecordingVideoTrackId],
@@ -436,9 +438,11 @@ export function RecordingSection({
           isSaving={isSaving}
           key={artifact.id}
           keyboardEffects={keyboardEffects}
+          keyboardMaximumWidthUnits={artifact.keyboardMaximumWidthUnits}
           onCameraOverlayChange={onCameraOverlayChange}
           onEnabledTracksChange={onEnabledTracksChange}
           onEnabledVideoTracksChange={onEnabledVideoTracksChange}
+          onKeyboardEffectsChange={onKeyboardEffectsChange}
           onRecordingOutputChange={onRecordingOutputChange}
           onRecordingTimelineEditChange={onRecordingTimelineEditChange}
           onSelectedTrackChange={onSelectedTrackChange}

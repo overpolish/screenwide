@@ -3,7 +3,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { keyboardMaximumSizePercent } from "./keyboard-effect-geometry";
+import {
+  keyboardMaximumSizePercent,
+  keyboardSelectionGeometry,
+} from "./keyboard-effect-geometry";
 
 describe("keyboardMaximumSizePercent", () => {
   it("reserves frame margin and animation headroom for long chords", () => {
@@ -24,5 +27,21 @@ describe("keyboardMaximumSizePercent", () => {
         width: 3840,
       }),
     ).toBe(500);
+  });
+});
+
+describe("keyboardSelectionGeometry", () => {
+  it("fits oversized overrides and exposes the same resize limits as appearance", () => {
+    const geometry = keyboardSelectionGeometry({
+      height: 1080,
+      maximumWidthUnits: 138,
+      position: { centerX: 0.5, centerY: 0.5, sizePercent: 500 },
+      sizePercent: 100,
+      width: 1920,
+    });
+
+    expect(geometry?.sizePercent).toBe(365);
+    expect(geometry?.maximumSizePercent).toBe(365);
+    expect(geometry?.minimumSizePercent).toBe(50);
   });
 });

@@ -10,7 +10,7 @@ use super::layout::LayoutTrack;
 mod role_model;
 pub(super) use role_model::{role, VisualRole};
 
-const EXIT_US: u64 = 600_000;
+pub(super) const EXIT_US: u64 = (super::EXIT_SECONDS * super::MICROS_PER_SECOND) as u64;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum TransitionKind {
@@ -22,6 +22,7 @@ pub(super) enum TransitionKind {
 
 #[derive(Clone, Debug)]
 pub(super) struct VisualKey {
+  pub source_shortcut: usize,
   pub key_code: u16,
   pub modifier_mask: u32,
   pub role: VisualRole,

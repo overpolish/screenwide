@@ -10,35 +10,9 @@
 #import "gpu_compositor_macos.h"
 #import "gpu_compositor_macos_cursor_resources.h"
 #import "gpu_compositor_macos_keyboard.h"
+#import "gpu_compositor_macos_presenter_private.h"
 
 extern __attribute__((visibility("hidden"))) NSString *const shader_source;
-
-/// Native still/workspace extension point for future screenshot annotation passes.
-@interface ScreenwideStillPresenter : NSObject
-@property(nonatomic, strong) id<MTLDevice> device;
-@property(nonatomic, strong) id<MTLCommandQueue> queue;
-@property(nonatomic, strong) id<MTLComputePipelineState> pipeline;
-@property(nonatomic, strong) id<MTLComputePipelineState> unpackPipeline;
-@property(nonatomic, strong) id<MTLBuffer> source;
-@property(nonatomic, strong) id<MTLBuffer> camera;
-@property(nonatomic) CVMetalTextureCacheRef textureCache;
-@property(nonatomic) uint64_t sourceToken;
-@property(nonatomic) uint32_t sourceWidth;
-@property(nonatomic) uint32_t sourceHeight;
-@property(nonatomic) uint64_t cameraToken;
-@property(nonatomic) uint32_t cameraWidth;
-@property(nonatomic) uint32_t cameraHeight;
-@property(nonatomic, strong) NSMutableDictionary<NSNumber *, id<MTLBuffer>> *workspaceSources;
-@property(nonatomic, strong) NSMutableDictionary<NSNumber *, id<MTLBuffer>> *workspaceCameraSources;
-@property(nonatomic, strong) NSMutableDictionary<NSNumber *, NSValue *> *workspaceSourceSizes;
-@property(nonatomic, strong) NSMutableArray<NSValue *> *workspaceLayers; @property(nonatomic, strong) NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *> *keyboardArtworks;
-@property(nonatomic, strong) NSArray<NSValue *> *workspaceResizeLayers;
-@property(nonatomic) BOOL workspaceResizeApplied;
-@property(nonatomic, strong) id<MTLComputePipelineState> workspaceClearPipeline;
-@property(nonatomic, strong) id<MTLComputePipelineState> workspaceLayerPipeline;
-@property(nonatomic, strong) id<MTLComputePipelineState> workspaceMagnifierPipeline;
-@property(nonatomic, strong) ScreenwideCursorResources *cursorResources;
-@end
 
 @implementation ScreenwideStillPresenter
 - (void)dealloc {
@@ -534,6 +508,7 @@ int screenwide_gpu_still_presenter_update_workspace_camera_overlay(
   }
   return 0;
 }
+
 
 /// Moves everything attached to a layer's clip by (dx, dy) canvas pixels when
 /// a Frame gesture moves the canvas origin: the crop and image placement, the

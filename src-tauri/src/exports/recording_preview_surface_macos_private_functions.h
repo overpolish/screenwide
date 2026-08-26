@@ -12,10 +12,23 @@
                       scale:(CGFloat)scale
                   lightMode:(uint32_t)lightMode
                      action:(BOOL)action;
+- (BOOL)updateSelectionSecondaryLabel:(NSString *)text
+                               scale:(CGFloat)scale
+                           lightMode:(uint32_t)lightMode;
 @end
 NSRect editor_frame(ScreenwidePreviewSurface *surface, NSRect base);
 void selection_action_begin_transition(ScreenwidePreviewSurface *surface);
-void selection_action_shades(ScreenwidePreviewSurface *surface, float shades[2]);
+void selection_action_shades(ScreenwidePreviewSurface *surface, float shades[4]);
+BOOL selection_is_keyboard(ScreenwidePreviewSelection selection);
+NSRect keyboard_hit_frame(ScreenwidePreviewSurface *surface,
+                          ScreenwidePreviewSelection selection);
+BOOL keyboard_body_contains(ScreenwidePreviewSurface *surface,
+                            ScreenwidePreviewSelection selection,
+                            NSPoint point);
+void begin_keyboard_transform(ScreenwidePreviewSurface *surface);
+void update_keyboard_transform(
+    ScreenwidePreviewSurface *surface, ScreenwidePreviewSelection selection,
+    double scale);
 NSRect editor_frame_with_transform(
     ScreenwidePreviewSurface *surface, NSRect base, double zoom,
     NSPoint pan);

@@ -99,15 +99,14 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_target_at_point(ScreenwidePreviewSurfa
         ? [surface.workspaceActivePaneIndices containsObject:@(target.pane_index)]
         : target.pane_index < surface.views.count &&
               surface.views[target.pane_index].active;
-    if (paneActive &&
-        NSPointInRect(point, selection_display_frame_for(surface, target))) {
+    NSRect rect = keyboard_hit_frame(surface, target);
+    if (paneActive && NSPointInRect(point, rect)) {
       *result = target;
       return YES;
     }
   }
   return NO;
 }
-
 static uint64_t selection_target_id(ScreenwidePreviewSelection target) {
   return ((uint64_t)target.pane_index << 32) | (uint64_t)target.layer_id;
 }
@@ -137,7 +136,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL shared_selection_hit(ScreenwidePreviewSurface *s
         ? [surface.workspaceActivePaneIndices containsObject:@(target.pane_index)]
         : target.pane_index < surface.views.count &&
               surface.views[target.pane_index].active;
-    NSRect rect = selection_display_frame_for(surface, target);
+    NSRect rect = selected ? selection_display_frame_for(surface, target) : keyboard_hit_frame(surface, target);
     int32_t zOrder = (int32_t)count;
     targets[count] = (ScreenwideDisplayTarget){
         .id = selection_target_id(target),
@@ -189,6 +188,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL shared_selection_hit(ScreenwidePreviewSurface *s
     if (!found) return NO;
   }
   *handle = hit.handle;
+  if (*handle == 0 && !keyboard_body_contains(surface, *selection, point)) return NO;
   return YES;
 }
 
@@ -577,7 +577,7 @@ SCREENWIDE_PREVIEW_PRIVATE void set_selection_move_cursor(void) {
 
 SCREENWIDE_PREVIEW_PRIVATE void set_selection_cursor_at_point(ScreenwidePreviewSurface *surface,
                                           NSPoint point) {
-  if (surface.selectionActionOperation != 0 && NSPointInRect(point, surface.selectionActionRect)) { set_selection_cursor([NSCursor arrowCursor]); return; }
+  if (surface.selectionActionOperation != 0 && (NSPointInRect(point, surface.selectionActionRect) || NSPointInRect(point, surface.selectionSecondaryActionRect))) { set_selection_cursor([NSCursor arrowCursor]); return; }
   NSCursor *cursor = selection_cursor(surface, point);
   if (cursor == selection_move_cursor()) set_selection_move_cursor();
   else set_selection_cursor(cursor);

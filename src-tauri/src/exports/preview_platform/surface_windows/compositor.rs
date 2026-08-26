@@ -38,6 +38,7 @@ use windows::{
 };
 
 use super::keyboard_artwork::{KeyboardArtworkCache, KeyboardConstants};
+use crate::exports::keyboard_effects::KeyboardOverlay;
 use crate::exports::media_preview::BakeGeometry;
 use crate::screenshots::{
   colour_f32, foreground_bounds_f32, optional_colour_f32, output_placement, validate_mesh,
@@ -319,6 +320,15 @@ fn native_cursor_pixels(
 }
 
 impl Compositor {
+  pub(super) fn keyboard_visible_bounds(
+    &self,
+    device: &ID3D11Device,
+    overlay: &KeyboardOverlay,
+    output: (u32, u32),
+  ) -> Result<Option<[f64; 4]>, String> {
+    self.keyboard_cache.visible_bounds(device, overlay, output)
+  }
+
   pub(super) fn new(device: &ID3D11Device) -> Result<Self, String> {
     let mut vertex_shader = None;
     let mut pixel_shader = None;

@@ -88,6 +88,15 @@ export type KeyboardEffectSettings = {
   appearance: KeyboardEffectAppearance;
   bake: boolean;
   sizePercent: number;
+  positionXPercent?: number;
+  positionYPercent?: number;
+};
+
+export type RecordingKeyboardTimelineItem = {
+  endMs: number;
+  id: number;
+  label: string;
+  startMs: number;
 };
 
 export const recordingAudioTrackId = (streamIndex: number): RecordingTrackId =>

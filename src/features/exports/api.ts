@@ -56,6 +56,8 @@ const normalizedKeyboardEffects = (
       : "pop",
   appearance: settings.appearance === "dark" ? "dark" : "light",
   bake: settings.bake,
+  positionXPercent: settings.positionXPercent,
+  positionYPercent: settings.positionYPercent,
   sizePercent: finite(settings.sizePercent, 100),
 });
 const normalizedAudioTrackVolumes = (volumes: AudioTrackVolume[]) =>
@@ -71,13 +73,13 @@ type PreviewSelectionLayout = {
   cropMode?: boolean;
   image?: { height: number; width: number; x: number; y: number };
   layerId?: number;
+  maximumScale?: number;
+  minimumScale?: number;
   recenterBounds?: { height: number; width: number; x: number; y: number };
   recenterMode?: boolean;
 };
-
 export const getExportSnapshot = () =>
   invoke<ExportSnapshots>("get_export_snapshot");
-
 export const getRecordingPreview = (artifactId: number) =>
   invoke<RecordingPreview>("get_recording_preview", { artifactId });
 
@@ -90,6 +92,7 @@ export const startRecordingPreviewPlayer = ({
   enabledStreamIndices,
   eventChannel,
   keyboardEffects,
+  keyboardTimeline,
   recordingOutput,
   sessionId,
 }: {
@@ -101,6 +104,7 @@ export const startRecordingPreviewPlayer = ({
   enabledStreamIndices: number[];
   eventChannel: Channel<RecordingPreviewPlayerEvent>;
   keyboardEffects: KeyboardEffectSettings;
+  keyboardTimeline: import("./recording-keyboard-timeline-api").RecordingPreviewKeyboardDeletions;
   recordingOutput: RecordingOutputSettings;
   sessionId: number;
 }) =>
@@ -117,6 +121,7 @@ export const startRecordingPreviewPlayer = ({
       cameraOverlay: normalizedCameraOverlay(cameraOverlay),
       cursorEffects: normalizedCursorEffects(cursorEffects),
       keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
+      ...keyboardTimeline,
       recordingOutput: {
         camera: normalizedScreenshotOutput(recordingOutput.camera),
         cameraOnTop: recordingOutput.cameraOnTop,

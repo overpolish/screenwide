@@ -25,6 +25,10 @@ pub(crate) struct KeyboardEffectSettings {
   pub animation: KeyboardAnimation,
   pub appearance: KeyboardAppearance,
   pub size_percent: f64,
+  #[serde(default)]
+  pub position_x_percent: Option<f64>,
+  #[serde(default)]
+  pub position_y_percent: Option<f64>,
 }
 
 impl Default for KeyboardEffectSettings {
@@ -34,6 +38,8 @@ impl Default for KeyboardEffectSettings {
       animation: KeyboardAnimation::Pop,
       appearance: KeyboardAppearance::Light,
       size_percent: 100.0,
+      position_x_percent: None,
+      position_y_percent: None,
     }
   }
 }
@@ -46,6 +52,14 @@ impl KeyboardEffectSettings {
       } else {
         100.0
       },
+      position_x_percent: self
+        .position_x_percent
+        .filter(|value| value.is_finite())
+        .map(|value| value.clamp(0.0, 100.0)),
+      position_y_percent: self
+        .position_y_percent
+        .filter(|value| value.is_finite())
+        .map(|value| value.clamp(0.0, 100.0)),
       ..self
     }
   }

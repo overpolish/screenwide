@@ -282,6 +282,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
   let timeline = crate::exports::timeline_edit::TimelinePlan::from_edit(
     &crate::exports::timeline_edit::RecordingTimelineEdit {
       artifact_id: 1,
+      keyboard_deletions: Box::default(),
       next_segment_id: 2,
       segments: vec![
         crate::exports::timeline_edit::RecordingTimelineSegment {

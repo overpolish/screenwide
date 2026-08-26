@@ -1,10 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Button } from "../../../components/base/button/button";
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
+import { NumberField } from "../../../components/base/input-fields/number-field";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
 import { Slider } from "../../../components/base/slider/slider";
-import { keyboardMaximumSizePercent } from "../keyboard-effect-geometry";
+import {
+  keyboardDefaultCenter,
+  keyboardMaximumSizePercent,
+} from "../keyboard-effect-geometry";
 import {
   KeyboardEffectAnimation,
   KeyboardEffectAppearance,
@@ -25,17 +30,23 @@ const appearanceOptions = [
 ] satisfies { id: KeyboardEffectAppearance; label: string }[];
 
 export function KeyboardEffectControls({
+  canRestoreShortcuts = false,
   isSaving,
   maximumWidthUnits,
   onChange,
+  onResetShortcuts,
+  onRestoreShortcuts,
   outputDimensions,
   settings,
 }: {
   isSaving: boolean;
   outputDimensions: { height: number; width: number };
   settings: KeyboardEffectSettings;
+  canRestoreShortcuts?: boolean;
   maximumWidthUnits?: number | null;
   onChange?: (settings: KeyboardEffectSettings) => void;
+  onResetShortcuts?: () => void;
+  onRestoreShortcuts?: () => void;
 }) {
   const update = (change: Partial<KeyboardEffectSettings>) => {
     onChange?.({ ...settings, ...change });
@@ -48,6 +59,11 @@ export function KeyboardEffectControls({
   const sizePercent = Number.isFinite(settings.sizePercent)
     ? Math.min(settings.sizePercent, maximumSizePercent)
     : 100;
+  const position = keyboardDefaultCenter({
+    positionXPercent: settings.positionXPercent,
+    positionYPercent: settings.positionYPercent,
+    sizePercent,
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -79,6 +95,49 @@ export function KeyboardEffectControls({
         value={sizePercent}
       />
       <div className="flex items-center justify-between gap-3">
+        <span className="text-xs text-content-fg">Position</span>
+        <div className="flex gap-2">
+          <NumberField
+            aria-label="Shortcut X position"
+            className="w-20"
+            isDisabled={isSaving || !settings.bake}
+            leftSection={<span className="text-xs text-muted">X</span>}
+            maxValue={100}
+            minValue={0}
+            onChange={(positionXPercent) => {
+              update({ positionXPercent });
+            }}
+            rightAligned
+            rightSection={<span className="text-xs text-muted">%</span>}
+            scrubbable
+            showSteppers={false}
+            size="sm"
+            step={1}
+            value={position.x * 100}
+            variant="solid"
+          />
+          <NumberField
+            aria-label="Shortcut Y position"
+            className="w-20"
+            isDisabled={isSaving || !settings.bake}
+            leftSection={<span className="text-xs text-muted">Y</span>}
+            maxValue={100}
+            minValue={0}
+            onChange={(positionYPercent) => {
+              update({ positionYPercent });
+            }}
+            rightAligned
+            rightSection={<span className="text-xs text-muted">%</span>}
+            scrubbable
+            showSteppers={false}
+            size="sm"
+            step={1}
+            value={position.y * 100}
+            variant="solid"
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-content-fg">Animation</span>
         <PillGroup
           ariaLabel="Shortcut animation"
@@ -103,6 +162,24 @@ export function KeyboardEffectControls({
           }}
           selected={settings.appearance}
         />
+      </div>
+      <div className="flex justify-center gap-2">
+        <Button
+          isDisabled={isSaving || !canRestoreShortcuts || !onRestoreShortcuts}
+          onPress={onRestoreShortcuts}
+          size="sm"
+          variant="soft"
+        >
+          Restore all shortcuts
+        </Button>
+        <Button
+          isDisabled={isSaving || !onResetShortcuts}
+          onPress={onResetShortcuts}
+          size="sm"
+          variant="soft"
+        >
+          Reset all
+        </Button>
       </div>
     </div>
   );

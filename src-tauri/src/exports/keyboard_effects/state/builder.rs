@@ -6,12 +6,12 @@
 use std::collections::HashMap;
 
 use super::{role, KeyboardStateTimeline, LayoutTrack, TransitionKind, VisualKey, VisualRole};
+use crate::exports::keyboard_effects::HOLD_US;
 use crate::exports::keyboard_effects::{KeyPress, Shortcut};
-
-const HOLD_US: u64 = 750_000;
 
 #[derive(Clone, Copy, Debug)]
 struct PhysicalEvent {
+  shortcut: usize,
   at: u64,
   key_code: u16,
   modifier_mask: u32,
@@ -37,8 +37,13 @@ impl KeyboardStateTimeline {
   pub(in crate::exports::keyboard_effects) fn from_shortcuts(shortcuts: &[Shortcut]) -> Self {
     let mut events = shortcuts
       .iter()
-      .flat_map(|shortcut| shortcut.keys.iter())
-      .flat_map(events_for_press)
+      .enumerate()
+      .flat_map(|(shortcut, shortcut_data)| {
+        shortcut_data
+          .keys
+          .iter()
+          .flat_map(move |press| events_for_press(shortcut, press))
+      })
       .flatten()
       .collect::<Vec<_>>();
     events.sort_by_key(|event| (event.at, event.down));
@@ -54,15 +59,17 @@ impl KeyboardStateTimeline {
   }
 }
 
-fn events_for_press(press: &KeyPress) -> [Option<PhysicalEvent>; 2] {
+fn events_for_press(shortcut: usize, press: &KeyPress) -> [Option<PhysicalEvent>; 2] {
   [
     Some(PhysicalEvent {
+      shortcut,
       at: press.down_us,
       key_code: press.key_code,
       modifier_mask: press.modifier_mask,
       down: true,
     }),
     press.up_us.map(|at| PhysicalEvent {
+      shortcut,
       at,
       key_code: press.key_code,
       modifier_mask: press.modifier_mask,
@@ -162,6 +169,7 @@ impl Builder {
     };
     let visual = self.timeline.visuals.len();
     self.timeline.visuals.push(VisualKey {
+      source_shortcut: event.shortcut,
       key_code: event.key_code,
       modifier_mask: event.modifier_mask,
       role,

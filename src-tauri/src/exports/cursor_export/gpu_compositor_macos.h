@@ -234,6 +234,13 @@ int screenwide_gpu_still_presenter_update_workspace_canvas(
     uint32_t canvas_height, const ScreenwideCanvas *canvas);
 int screenwide_gpu_still_presenter_update_workspace_camera_overlay(
     void *handle, uint32_t pane_index, const ScreenwideStillOverlay *overlay);
+/// Applies an absolute keyboard transform from a mouse-down scene snapshot.
+int screenwide_gpu_still_presenter_update_workspace_keyboard(
+    void *handle, uint32_t pane_index, double center_x, double center_y,
+    double scale_ratio);
+int screenwide_gpu_still_presenter_workspace_keyboard_bounds(
+    void *handle, uint32_t pane_index, double *x, double *y,
+    double *width, double *height);
 
 /// Native Frame gestures transform the retained scene directly so the media
 /// uniforms and OSC use the same revision before React mirrors the update.

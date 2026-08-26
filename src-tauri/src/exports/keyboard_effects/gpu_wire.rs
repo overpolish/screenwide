@@ -34,6 +34,9 @@ pub(crate) struct KeyboardOverlay {
   /// produced this payload; retained resizes need the original ceiling so the
   /// keyboard can grow again when space is restored.
   pub requested_scale: f32,
+  /// Normalized canvas centre. Negative values retain the default bottom-centre position.
+  pub center_x: f32,
+  pub center_y: f32,
   pub keys: [KeyboardKey; MAX_KEYS],
 }
 
@@ -47,6 +50,8 @@ impl Default for KeyboardOverlay {
       progress: 1.0,
       maximum_width: 0.0,
       requested_scale: 0.0,
+      center_x: -1.0,
+      center_y: -1.0,
       keys: [KeyboardKey::default(); MAX_KEYS],
     }
   }

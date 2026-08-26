@@ -10,6 +10,10 @@ use serde::{Deserialize, Serialize};
 const FORMAT_VERSION: u16 = 1;
 const MAX_SEGMENTS: usize = 100_000;
 
+#[path = "timeline_edit_keyboard.rs"]
+mod keyboard;
+pub use keyboard::{KeyboardShortcutPositionRange, RecordingTimelineKeyboardDeletions};
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingTimelineSegment {
@@ -18,10 +22,27 @@ pub struct RecordingTimelineSegment {
   pub source_start: f64,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeletedKeyboardShortcutFragment {
+  pub segment_id: u64,
+  pub shortcut_id: u64,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeletedKeyboardShortcutRange {
+  pub end_ms: u64,
+  pub shortcut_id: u64,
+  pub start_ms: u64,
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingTimelineEdit {
   pub artifact_id: u64,
+  #[serde(flatten)]
+  pub keyboard_deletions: Box<RecordingTimelineKeyboardDeletions>,
   pub next_segment_id: u64,
   pub segments: Vec<RecordingTimelineSegment>,
 }
@@ -34,8 +55,11 @@ pub struct TimelineRange {
   pub source_start_us: u64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TimelinePlan {
+  deleted_keyboard_shortcut_ids: Vec<u64>,
+  deleted_keyboard_shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
+  keyboard_shortcut_positions: Vec<KeyboardShortcutPositionRange>,
   duration_us: u64,
   ranges: Vec<TimelineRange>,
 }
@@ -74,10 +98,25 @@ impl TimelinePlan {
         .saturating_add(range.source_end_us.saturating_sub(range.source_start_us))
     });
     let plan = Self {
+      deleted_keyboard_shortcut_ids: edit.keyboard_deletions.shortcut_ids.clone(),
+      deleted_keyboard_shortcut_ranges: keyboard::ranges(
+        &edit.keyboard_deletions,
+        &edit.segments,
+        duration_ms,
+      ),
+      keyboard_shortcut_positions: keyboard::position_ranges(
+        &edit.keyboard_deletions,
+        &edit.segments,
+        duration_ms,
+      ),
       duration_us,
       ranges,
     };
-    (!plan.is_identity(source_duration_us)).then_some(plan)
+    (!plan.is_identity(source_duration_us)
+      || !plan.deleted_keyboard_shortcut_ids.is_empty()
+      || !plan.deleted_keyboard_shortcut_ranges.is_empty()
+      || !plan.keyboard_shortcut_positions.is_empty())
+    .then_some(plan)
   }
 
   pub fn duration_ms(&self) -> u64 {
@@ -86,6 +125,14 @@ impl TimelinePlan {
 
   pub fn ranges(&self) -> &[TimelineRange] {
     &self.ranges
+  }
+
+  pub fn deleted_keyboard_shortcut_ids(&self) -> &[u64] {
+    &self.deleted_keyboard_shortcut_ids
+  }
+
+  pub fn deleted_keyboard_shortcut_ranges(&self) -> &[DeletedKeyboardShortcutRange] {
+    &self.deleted_keyboard_shortcut_ranges
   }
 
   #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
@@ -153,6 +200,7 @@ fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
   {
     return Err("The timeline's next segment identity is invalid".to_owned());
   }
+  keyboard::validate(&edit.keyboard_deletions, MAX_SEGMENTS)?;
   Ok(())
 }
 
@@ -244,82 +292,5 @@ pub fn sweep_unclaimed(directory: &Path, keep: Option<&Path>) {
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-
-  fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
-    RecordingTimelineEdit {
-      artifact_id,
-      next_segment_id: 2,
-      segments: vec![
-        RecordingTimelineSegment {
-          id: 0,
-          source_end: split,
-          source_start: 0.0,
-        },
-        RecordingTimelineSegment {
-          id: 1,
-          source_end: 1.0,
-          source_start: split,
-        },
-      ],
-    }
-  }
-
-  #[test]
-  fn restores_the_newest_valid_slot_and_rebinds_the_artifact() {
-    let directory =
-      std::env::temp_dir().join(format!("screenwide-timeline-edit-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&directory);
-    std::fs::create_dir_all(&directory).unwrap();
-    let recording = directory.join("recording-test.mov");
-    std::fs::write(&recording, []).unwrap();
-
-    persist(&recording, 7, 1, edit(7, 0.25)).unwrap();
-    persist(&recording, 7, 2, edit(7, 0.75)).unwrap();
-    persist(&recording, 7, 1, edit(7, 0.5)).unwrap();
-    let (revision, restored) = for_recording(&recording, 99).unwrap();
-    assert_eq!(revision, 2);
-    assert_eq!(restored.artifact_id, 99);
-    assert_eq!(restored.segments[0].source_end, 0.75);
-
-    std::fs::write(sidecar_path(&recording, 'a').unwrap(), b"truncated").unwrap();
-    let (revision, restored) = for_recording(&recording, 99).unwrap();
-    assert_eq!(revision, 1);
-    assert_eq!(restored.segments[0].source_end, 0.25);
-    let _ = std::fs::remove_dir_all(directory);
-  }
-
-  #[test]
-  fn rejects_overlapping_or_empty_segments() {
-    let mut invalid = edit(1, 0.5);
-    invalid.segments[1].source_start = 0.25;
-    assert!(validate(&invalid).is_err());
-    invalid.segments.clear();
-    assert!(validate(&invalid).is_err());
-  }
-
-  #[test]
-  fn export_plan_coalesces_cuts_and_maps_retained_source_time() {
-    let mut timeline = edit(1, 0.25);
-    timeline.next_segment_id = 4;
-    timeline.segments.push(RecordingTimelineSegment {
-      id: 3,
-      source_end: 1.0,
-      source_start: 0.75,
-    });
-    timeline.segments[1].source_end = 0.5;
-
-    let plan = TimelinePlan::from_edit(&timeline, 8_000).unwrap();
-    assert_eq!(plan.duration_ms(), 6_000);
-    assert_eq!(plan.ranges().len(), 2);
-    assert_eq!(plan.source_to_output_us(3_000_000), Some(3_000_000));
-    assert_eq!(plan.source_to_output_us(5_000_000), None);
-    assert_eq!(plan.source_to_output_us(7_000_000), Some(5_000_000));
-  }
-
-  #[test]
-  fn export_plan_ignores_cut_only_timelines() {
-    assert!(TimelinePlan::from_edit(&edit(1, 0.5), 8_000).is_none());
-  }
-}
+#[path = "timeline_edit_tests.rs"]
+mod tests;

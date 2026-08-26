@@ -182,7 +182,9 @@ export type RecordingSelectionGestureEvent = {
     | "move"
     | "radius"
     | "resize"
-    | "recenterAction";
+    | "recenterAction"
+    | "resetAction"
+    | "applyToAllAction";
   paneIndex: number;
   phase: "begin" | "update" | "end" | "cancel";
   scale: number;
@@ -190,13 +192,15 @@ export type RecordingSelectionGestureEvent = {
   recordingOutput?: RecordingOutputSettings;
 };
 
-type RecordingPreviewSelection = {
+export type RecordingPreviewSelection = {
   paneIndex: number;
   radiusPercent: number;
   rect: { height: number; width: number; x: number; y: number };
   cropMode?: boolean;
   image?: { height: number; width: number; x: number; y: number };
   layerId?: number;
+  maximumScale?: number;
+  minimumScale?: number;
   recenterBounds?: { height: number; width: number; x: number; y: number };
   recenterMode?: boolean;
 };
@@ -360,7 +364,7 @@ export function useRecordingPreviewSurface({
         !Number.isFinite(payload.deltaX) ||
         !Number.isFinite(payload.deltaY) ||
         !Number.isInteger(payload.edges) ||
-        ![0, 1, 2, 3, 4, 5, 6, 7].includes(payload.operation) ||
+        ![0, 1, 2, 3, 4, 5, 6, 7, 8, 9].includes(payload.operation) ||
         !Number.isInteger(payload.paneIndex) ||
         !Number.isFinite(payload.scale) ||
         !["begin", "update", "end", "cancel"].includes(payload.phase)
@@ -388,6 +392,8 @@ export function useRecordingPreviewSurface({
           "cropMove",
           "cropResize",
           "recenterAction",
+          "resetAction",
+          "applyToAllAction",
         ][payload.operation] as RecordingSelectionGestureEvent["operation"],
         paneIndex: payload.paneIndex,
         phase: payload.phase,

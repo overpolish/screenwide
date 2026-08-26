@@ -47,6 +47,7 @@ use super::{
   AudioTrackVolume, CameraOverlaySettings, ExportArtifact, ExportKind, ExportState,
   RecordingAudioTrack, RecordingOutputSettings,
 };
+use crate::exports::timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
 use crate::recording::PrimaryRecordingKind;
 pub use commands::stop_all;
 
@@ -69,6 +70,12 @@ pub(crate) struct PreviewPlayerSettings {
   pub cursor_effects: CursorEffectSettings,
   #[serde(default)]
   pub keyboard_effects: KeyboardEffectSettings,
+  #[serde(default)]
+  pub deleted_keyboard_shortcut_ids: Vec<u64>,
+  #[serde(default)]
+  pub deleted_keyboard_shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
+  #[serde(default)]
+  pub keyboard_shortcut_positions: Vec<KeyboardShortcutPositionRange>,
   pub recording_output: RecordingOutputSettings,
 }
 

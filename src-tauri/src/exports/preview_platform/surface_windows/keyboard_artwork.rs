@@ -32,6 +32,9 @@ use windows::{
 
 use crate::exports::keyboard_effects::{KeyboardKey, KeyboardOverlay};
 
+#[path = "keyboard_artwork/visible_bounds.rs"]
+mod visible_bounds;
+
 /// Must match the `keyboard_key_*` array lengths in `preview.hlsl`.
 const MAX_KEYS: usize = 8;
 /// The React Keyboard's default variant: Inter text-sm/5 with tracking-wider
@@ -53,18 +56,20 @@ const CACHE_BYTES: usize = 64 * 1024 * 1024;
 pub(super) struct KeyboardConstants {
   pub(super) dimensions: [u32; 4],
   pub(super) animation: [f32; 4],
+  pub(super) position: [f32; 4],
   pub(super) key_geometry: [[u32; 4]; MAX_KEYS],
   pub(super) key_motion: [[f32; 4]; MAX_KEYS],
   pub(super) key_masks: [[u32; 4]; MAX_KEYS],
 }
 
-const _: () = assert!(size_of::<KeyboardConstants>() == 416);
+const _: () = assert!(size_of::<KeyboardConstants>() == 432);
 
 impl Default for KeyboardConstants {
   fn default() -> Self {
     Self {
       dimensions: [0; 4],
       animation: [0.0; 4],
+      position: [0.0; 4],
       key_geometry: [[0; 4]; MAX_KEYS],
       key_motion: [[0.0; 4]; MAX_KEYS],
       key_masks: [[0; 4]; MAX_KEYS],
@@ -488,6 +493,7 @@ fn update_uniforms(
     overlay.maximum_width,
     overlay.requested_scale,
   ];
+  values.position = [overlay.center_x, overlay.center_y, 0.0, 0.0];
   for (index, (_, state)) in prepared.iter().enumerate() {
     values.key_geometry[index][2] = state.visible;
     values.key_geometry[index][3] = state.slot;
@@ -539,6 +545,19 @@ fn upload(device: &ID3D11Device, raster: &KeyboardRaster) -> Result<KeyboardArtw
 }
 
 impl KeyboardArtworkCache {
+  pub(super) fn visible_bounds(
+    &self,
+    device: &ID3D11Device,
+    overlay: &KeyboardOverlay,
+    output: (u32, u32),
+  ) -> Result<Option<[f64; 4]>, String> {
+    Ok(
+      self
+        .resolve(device, overlay, output.1)?
+        .and_then(|(_, values)| visible_bounds::calculate(&values, output)),
+    )
+  }
+
   /// Returns the artwork strip for `overlay` and the shader uniforms that
   /// place it, rasterising and uploading only when the appearance, density or
   /// shortcut changed.
@@ -623,7 +642,7 @@ mod tests {
 
   #[test]
   fn keyboard_constants_match_the_shader_register_packing() {
-    assert_eq!(size_of::<KeyboardConstants>(), 416);
+    assert_eq!(size_of::<KeyboardConstants>(), 432);
     assert_eq!(size_of::<KeyboardConstants>() % 16, 0);
   }
 

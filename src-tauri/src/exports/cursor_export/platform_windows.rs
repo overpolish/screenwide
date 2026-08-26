@@ -190,7 +190,21 @@ fn render_video(
   let mut cursor = request.cursor.map(CursorCompositor::open).transpose()?;
   let keyboard = request
     .keyboard
-    .map(crate::exports::keyboard_effects::KeyboardCompositor::open)
+    .map(|path| {
+      let compositor = crate::exports::keyboard_effects::KeyboardCompositor::open_with_deleted(
+        path,
+        request
+          .timeline
+          .map_or(&[], |timeline| timeline.deleted_keyboard_shortcut_ids()),
+        request
+          .timeline
+          .map_or(&[], |timeline| timeline.deleted_keyboard_shortcut_ranges()),
+      )?;
+      if let Some(timeline) = request.timeline {
+        compositor.set_shortcut_positions(timeline.keyboard_shortcut_positions());
+      }
+      Ok(compositor)
+    })
     .transpose()?;
   let output_size = crate::screenshots::output_dimensions(request.output)?;
   let compositor = request.camera.map_or_else(

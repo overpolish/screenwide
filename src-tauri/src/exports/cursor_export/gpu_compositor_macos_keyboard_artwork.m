@@ -99,8 +99,10 @@ static void update_uniforms(ScreenwideKeyboardUniforms *uniforms,
   uniforms->animation = overlay.animation;
   uniforms->scale = overlay.scale;
   uniforms->layout_progress = overlay.progress;
-  uniforms->padding[0] = overlay.maximum_width;
-  uniforms->padding[1] = overlay.requested_scale;
+  uniforms->maximum_width = overlay.maximum_width;
+  uniforms->requested_scale = overlay.requested_scale;
+  uniforms->center_x = overlay.center_x;
+  uniforms->center_y = overlay.center_y;
   for (uint32_t index = 0; index < prepared.count; ++index) {
     ScreenwideKeyboardKey state = prepared.keys[index].state;
     uniforms->keys[index].visible = state.visible;

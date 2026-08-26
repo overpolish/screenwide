@@ -199,7 +199,9 @@ impl PreviewManager {
           SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
             unreachable!("crop gestures are mirrored by the frontend")
           }
-          SelectionGestureOperation::RecenterAction => return Ok(()),
+          SelectionGestureOperation::RecenterAction
+          | SelectionGestureOperation::ResetAction
+          | SelectionGestureOperation::ApplyToAllAction => return Ok(()),
         };
         let start_geometry = LayerGeometry {
           crop: NormalizedRect {

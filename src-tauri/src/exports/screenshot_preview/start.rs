@@ -126,6 +126,8 @@ pub fn start_screenshot_preview(
                   SelectionGestureOperation::CropMove => 5,
                   SelectionGestureOperation::CropResize => 6,
                   SelectionGestureOperation::RecenterAction => 7,
+                  SelectionGestureOperation::ResetAction => 8,
+                  SelectionGestureOperation::ApplyToAllAction => 9,
                 },
                 pane_index,
                 phase: phase_name,

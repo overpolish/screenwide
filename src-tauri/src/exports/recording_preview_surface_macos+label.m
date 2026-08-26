@@ -29,18 +29,22 @@ static void register_inter_font(void) {
 /// monospaced face while action text uses the app's proportional UI family.
 /// Dimensions receive the contrast halo; action text is drawn cleanly over its
 /// button fill, matching the React component.
-@implementation ScreenwidePreviewSurface (Label)
-
-- (BOOL)updateSelectionLabel:(NSString *)text
-                      scale:(CGFloat)scale
-                  lightMode:(uint32_t)lightMode
-                     action:(BOOL)action {
-  ScreenwidePreviewSurface *surface = self;
+static BOOL update_selection_label(ScreenwidePreviewSurface *surface,
+                                   NSString *text, CGFloat scale,
+                                   uint32_t lightMode, BOOL action,
+                                   BOOL secondary) {
   if (surface.device == nil || text.length == 0) return NO;
-  if (surface.selectionLabelTexture != nil &&
+  if (!secondary && (surface.selectionLabelScale != scale ||
+                     surface.selectionLabelLightMode != lightMode))
+    surface.selectionSecondaryLabelTexture = nil;
+  id<MTLTexture> knownTexture = secondary
+      ? surface.selectionSecondaryLabelTexture : surface.selectionLabelTexture;
+  NSString *knownText = secondary
+      ? surface.selectionSecondaryLabelText : surface.selectionLabelText;
+  if (knownTexture != nil &&
       surface.selectionLabelScale == scale &&
       surface.selectionLabelLightMode == lightMode &&
-      [surface.selectionLabelText isEqualToString:text])
+      [knownText isEqualToString:text])
     return YES;
 
   NSColor *fill = lightMode != 0
@@ -126,12 +130,33 @@ static void register_inter_font(void) {
              bytesPerRow:(NSUInteger)pixelWidth * 4];
   CGContextRelease(context);
 
-  surface.selectionLabelTexture = texture;
-  surface.selectionLabelText = [text copy];
+  if (secondary) {
+    surface.selectionSecondaryLabelTexture = texture;
+    surface.selectionSecondaryLabelText = [text copy];
+    surface.selectionSecondaryLabelSize = NSMakeSize(pointWidth, pointHeight);
+  } else {
+    surface.selectionLabelTexture = texture;
+    surface.selectionLabelText = [text copy];
+    surface.selectionLabelSize = NSMakeSize(pointWidth, pointHeight);
+  }
   surface.selectionLabelScale = scale;
   surface.selectionLabelLightMode = lightMode;
-  surface.selectionLabelSize = NSMakeSize(pointWidth, pointHeight);
   return YES;
+}
+
+@implementation ScreenwidePreviewSurface (Label)
+
+- (BOOL)updateSelectionLabel:(NSString *)text
+                      scale:(CGFloat)scale
+                  lightMode:(uint32_t)lightMode
+                     action:(BOOL)action {
+  return update_selection_label(self, text, scale, lightMode, action, NO);
+}
+
+- (BOOL)updateSelectionSecondaryLabel:(NSString *)text
+                               scale:(CGFloat)scale
+                           lightMode:(uint32_t)lightMode {
+  return update_selection_label(self, text, scale, lightMode, YES, YES);
 }
 
 @end

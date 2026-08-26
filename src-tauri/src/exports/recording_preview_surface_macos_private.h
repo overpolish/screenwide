@@ -86,6 +86,7 @@ typedef struct {
   double radius_percent;
   double image_x, image_y, image_width, image_height;
   double recenter_x, recenter_y, recenter_width, recenter_height;
+  double minimum_scale, maximum_scale;
 } ScreenwidePreviewSelection;
 @class ScreenwidePreviewSurface;
 
@@ -121,6 +122,9 @@ typedef struct {
 
 @interface ScreenwidePreviewInteractionView (Editor)
 - (void)releaseCursorControl;
+@end
+@interface ScreenwidePreviewInteractionView (Keyboard)
+- (void)beginWorkspaceMove;
 @end
 @interface ScreenwidePreviewView : NSView
 @property(nonatomic) BOOL active;
@@ -193,16 +197,20 @@ typedef struct {
 @property(nonatomic, strong) CAMetalLayer *selectionLayer;
 /// Cached selection label texture and the inputs that invalidate it.
 @property(nonatomic, strong) id<MTLTexture> selectionLabelTexture;
+@property(nonatomic, strong) id<MTLTexture> selectionSecondaryLabelTexture;
 /// Transparent texture bound whenever the selection has no label.
 @property(nonatomic, strong) id<MTLTexture> selectionLabelPlaceholder;
 @property(nonatomic, strong) NSString *selectionLabelText;
+@property(nonatomic, strong) NSString *selectionSecondaryLabelText;
 @property(nonatomic) CGFloat selectionLabelScale;
 @property(nonatomic) uint32_t selectionLabelLightMode;
 @property(nonatomic) NSSize selectionLabelSize;
+@property(nonatomic) NSSize selectionSecondaryLabelSize;
 @property(nonatomic) NSRect selectionActionRect;
+@property(nonatomic) NSRect selectionSecondaryActionRect;
 @property(nonatomic) uint32_t selectionActionOperation;
-@property(nonatomic) BOOL selectionActionHovered;
-@property(nonatomic) BOOL selectionActionPressed;
+@property(nonatomic) uint8_t selectionActionHovered;
+@property(nonatomic) uint8_t selectionActionPressed;
 @property(nonatomic) double selectionActionTransitionStarted;
 @property(nonatomic) float selectionActionFromLight;
 @property(nonatomic) float selectionActionFromDark;

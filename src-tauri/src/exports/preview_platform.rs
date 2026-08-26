@@ -105,6 +105,17 @@ pub(crate) enum SelectionGestureOperation {
   CropMove = 5,
   CropResize = 6,
   RecenterAction = 7,
+  ResetAction = 8,
+  ApplyToAllAction = 9,
+}
+
+impl SelectionGestureOperation {
+  pub(crate) fn is_action(self) -> bool {
+    matches!(
+      self,
+      Self::RecenterAction | Self::ResetAction | Self::ApplyToAllAction
+    )
+  }
 }
 
 pub(crate) type SelectionGestureCallback = Box<
@@ -171,4 +182,6 @@ pub(crate) struct PreviewSelection {
   pub recenter_y: f64,
   pub recenter_width: f64,
   pub recenter_height: f64,
+  pub minimum_scale: f64,
+  pub maximum_scale: f64,
 }

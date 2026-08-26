@@ -52,6 +52,8 @@ mod compositor;
 mod editor;
 #[path = "surface_windows/keyboard_artwork.rs"]
 mod keyboard_artwork;
+#[path = "surface_windows/keyboard_hit.rs"]
+mod keyboard_hit;
 #[path = "surface_windows/osc_action.rs"]
 mod osc_action;
 #[path = "surface_windows/recenter.rs"]
@@ -246,6 +248,7 @@ struct EditorGesture {
   pane_start: PreviewSurfaceRect,
   pointer_start: (f64, f64),
   selection_start: PreviewSelection,
+  keyboard_start: Option<crate::exports::keyboard_effects::KeyboardOverlay>,
 }
 
 /// Everything a Frame resize needs to stay reversible and drift-free: the
@@ -939,13 +942,76 @@ fn redraw_magnifier(inner: &std::sync::Arc<SurfaceInner>, state: &mut SurfaceSta
   redraw_stale_selection(inner, state);
 }
 
+fn redraw_keyboard_transform(
+  inner: &std::sync::Arc<SurfaceInner>,
+  state: &mut SurfaceState,
+  start: Option<crate::exports::keyboard_effects::KeyboardOverlay>,
+  selection: PreviewSelection,
+  scale: f64,
+) {
+  let Some(mut keyboard) = start else {
+    return;
+  };
+  let camera_source = state.camera_source.clone();
+  let Some(pane) = state
+    .panes
+    .get_mut(selection.pane_index as usize)
+    .and_then(Option::as_mut)
+  else {
+    return;
+  };
+  let (Some(settings), Some(mut composition)) = (pane.settings.clone(), pane.last_composition)
+  else {
+    return;
+  };
+  keyboard.center_x = (selection.x + selection.width / 2.0) as f32;
+  keyboard.center_y = (selection.y + selection.height / 2.0) as f32;
+  keyboard.requested_scale *= scale as f32;
+  keyboard.scale *= scale as f32;
+  for key in &mut keyboard.keys[..keyboard.key_count.min(keyboard.keys.len() as u32) as usize] {
+    key.scale *= scale as f32;
+  }
+  composition.keyboard = Some(keyboard);
+  let camera = match (pane.last_camera, camera_source.as_ref()) {
+    (Some((geometry, drop_shadow, camera_on_top)), Some(source)) => {
+      Some((source, geometry, drop_shadow, camera_on_top))
+    }
+    (Some(_), None) => return,
+    (None, _) => None,
+  };
+  let surface = RecordingPreviewSurface {
+    inner: std::sync::Arc::clone(inner),
+  };
+  let _ = surface.present_cached_source_with_camera(pane, &settings, composition, camera);
+}
+
+fn keyboard_transform_start(
+  state: &SurfaceState,
+  selection: PreviewSelection,
+) -> Option<crate::exports::keyboard_effects::KeyboardOverlay> {
+  (selection.layer_id == u32::MAX - 1)
+    .then(|| {
+      state
+        .panes
+        .get(selection.pane_index as usize)
+        .and_then(Option::as_ref)
+        .and_then(|pane| pane.last_composition)
+        .and_then(|composition| composition.keyboard)
+    })
+    .flatten()
+}
+
 fn radius_point(frame: PreviewSurfaceRect, radius_percent: f64) -> (f64, f64) {
   let offset =
     frame.width.min(frame.height) * radius_percent.clamp(0.0, 50.0) / 100.0 * 0.55 + 10.0;
   (frame.x + offset, frame.y + offset)
 }
 
-fn shared_selection_hit(state: &SurfaceState, point: (f64, f64)) -> Option<(PreviewSelection, u8)> {
+fn shared_selection_hit(
+  inner: &SurfaceInner,
+  state: &SurfaceState,
+  point: (f64, f64),
+) -> Option<(PreviewSelection, u8)> {
   let mut selections = state.selection_targets.clone();
   if let Some(current) = state.selection {
     if let Some(target) = selections
@@ -961,7 +1027,14 @@ fn shared_selection_hit(state: &SurfaceState, point: (f64, f64)) -> Option<(Prev
     .iter()
     .enumerate()
     .filter_map(|(index, selection)| {
-      let rect = display_selection(state, *selection)?;
+      let selected = state.selection.is_some_and(|current| {
+        current.pane_index == selection.pane_index && current.layer_id == selection.layer_id
+      });
+      let rect = if selected {
+        display_selection(state, *selection)?
+      } else {
+        keyboard_hit::frame(inner, state, *selection)?
+      };
       Some(DisplayTarget {
         id: (u64::from(selection.pane_index) << 32) | u64::from(selection.layer_id),
         rect: DisplayRect {
@@ -973,9 +1046,7 @@ fn shared_selection_hit(state: &SurfaceState, point: (f64, f64)) -> Option<(Prev
         radius_enabled: u8::from(selection.crop_mode == 0 && selection.radius_disabled == 0),
         radius_percent: selection.radius_percent,
         z_order: index as i32,
-        selected: u8::from(state.selection.is_some_and(|current| {
-          current.pane_index == selection.pane_index && current.layer_id == selection.layer_id
-        })),
+        selected: u8::from(selected),
         visible: 1,
       })
     })
@@ -983,10 +1054,20 @@ fn shared_selection_hit(state: &SurfaceState, point: (f64, f64)) -> Option<(Prev
   let hit = hit_test_display(&targets, point, 8.0)?;
   let pane_index = (hit.target_id >> 32) as u32;
   let layer_id = hit.target_id as u32;
-  selections
+  let selection = selections
     .into_iter()
-    .find(|selection| selection.pane_index == pane_index && selection.layer_id == layer_id)
-    .map(|selection| (selection, hit.handle))
+    .find(|selection| selection.pane_index == pane_index && selection.layer_id == layer_id)?;
+  if hit.handle == 0 && selection.layer_id == u32::MAX - 1 {
+    let frame = keyboard_hit::frame(inner, state, selection)?;
+    if point.0 < frame.x
+      || point.0 > frame.x + frame.width
+      || point.1 < frame.y
+      || point.1 > frame.y + frame.height
+    {
+      return None;
+    }
+  }
+  Some((selection, hit.handle))
 }
 
 fn shared_handle_edges(handle: u8) -> u32 {
@@ -1199,7 +1280,14 @@ fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
   let recenter_action = recenter::action_visible(state);
   let label_text = display.and_then(|_| {
     if recenter_action {
-      return Some("Recenter".to_owned());
+      return Some(
+        if state.selection?.layer_id == u32::MAX - 1 {
+          "Reset"
+        } else {
+          "Recenter"
+        }
+        .to_owned(),
+      );
     }
     let (width, height) = selection_pixel_size(state, state.selection?)?;
     Some(format!(
@@ -1274,8 +1362,12 @@ fn selection_snap_targets(
     .collect()
 }
 
-fn cursor_for_state(state: &SurfaceState, point: (f64, f64)) -> editor::CursorKind {
-  let Some((selection, handle)) = shared_selection_hit(state, point) else {
+fn cursor_for_state(
+  inner: &SurfaceInner,
+  state: &SurfaceState,
+  point: (f64, f64),
+) -> editor::CursorKind {
+  let Some((selection, handle)) = shared_selection_hit(inner, state, point) else {
     return editor::CursorKind::Arrow;
   };
   if handle == 0 && selection.layer_id == FRAME_LAYER_ID {
@@ -1373,7 +1465,7 @@ fn refresh_cursor_for(inner: &SurfaceInner) {
           editor::CursorKind::ResizeNesw
         }
       }
-      _ => cursor_for_state(&state, state.last_pointer),
+      _ => cursor_for_state(inner, &state, state.last_pointer),
     })
     .unwrap_or(editor::CursorKind::Arrow);
   editor::EditorWindow::set_cursor(kind);
@@ -1422,7 +1514,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       let mut began = None;
       if let Ok(mut state) = inner.state.lock() {
         state.last_pointer = point;
-        let shared = shared_selection_hit(&state, point);
+        let shared = shared_selection_hit(inner, &state, point);
         let inactive_frame_target = shared
           .filter(|(selection, _)| {
             selection.layer_id == FRAME_LAYER_ID
@@ -1464,6 +1556,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
             pane_start: selection_pane_rect(&state, selection),
             pointer_start: point,
             selection_start: selection,
+            keyboard_start: keyboard_transform_start(&state, selection),
           };
           state.gesture = Some(ActiveGesture::Selection(gesture));
           if changed {
@@ -1494,6 +1587,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
             pane_start: selection_pane_rect(&state, selection),
             pointer_start: point,
             selection_start: selection,
+            keyboard_start: keyboard_transform_start(&state, selection),
           };
           if gesture.operation == SelectionGestureOperation::FrameResize {
             // Remember the transform that belongs to the canvas size being
@@ -1548,9 +1642,11 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
             pane_start: selection_pane_rect(&state, selection),
             pointer_start: point,
             selection_start: selection,
+            keyboard_start: keyboard_transform_start(&state, selection),
           };
-          state.move_auto_fit =
-            (gesture.operation == SelectionGestureOperation::Move).then(|| MoveAutoFit {
+          state.move_auto_fit = (gesture.operation == SelectionGestureOperation::Move
+            && selection.layer_id != u32::MAX - 1)
+            .then(|| MoveAutoFit {
               active: false,
               last_bounds: None,
               natural_size: state
@@ -2057,6 +2153,13 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                     gesture.last_scale = factor;
                   }
                 }
+                redraw_keyboard_transform(
+                  inner,
+                  &mut state,
+                  gesture.keyboard_start,
+                  selection,
+                  gesture.last_scale,
+                );
                 state.selection = Some(selection);
                 state.gesture = Some(ActiveGesture::Selection(gesture));
                 update_magnifier(&mut state);
@@ -2069,7 +2172,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
             None => {}
           }
         } else {
-          editor::EditorWindow::set_cursor(cursor_for_state(&state, point));
+          editor::EditorWindow::set_cursor(cursor_for_state(inner, &state, point));
         }
       }
       // The toolbar percentage follows a live canvas resize: the rebase keeps
@@ -2103,7 +2206,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
         if matches!(state.gesture, Some(ActiveGesture::Pan { .. })) {
           state.gesture = None;
         }
-        editor::EditorWindow::set_cursor(cursor_for_state(&state, point));
+        editor::EditorWindow::set_cursor(cursor_for_state(inner, &state, point));
       }
     }
     editor::Input::Up { x, y } => {
@@ -2140,7 +2243,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
         update_magnifier(&mut state);
         redraw_magnifier(inner, &mut state);
         draw_selection(inner, &state);
-        editor::EditorWindow::set_cursor(cursor_for_state(&state, point));
+        editor::EditorWindow::set_cursor(cursor_for_state(inner, &state, point));
       }
       if let Some(gesture) = ended {
         emit_gesture(inner, SelectionGesturePhase::End, gesture);
@@ -2152,6 +2255,13 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       if let Ok(mut state) = inner.state.lock() {
         if let Some(ActiveGesture::Selection(gesture)) = state.gesture.take() {
           state.selection = Some(gesture.selection_start);
+          redraw_keyboard_transform(
+            inner,
+            &mut state,
+            gesture.keyboard_start,
+            gesture.selection_start,
+            1.0,
+          );
           state.move_auto_fit = None;
           // An auto-fit Move owns the workspace exactly like a Frame resize
           // until it commits, and is unwound the same way.

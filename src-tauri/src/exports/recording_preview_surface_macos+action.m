@@ -6,6 +6,13 @@
 
 static const double kSelectionActionTransitionSeconds = 0.15;
 
+static uint8_t selection_action_at(ScreenwidePreviewSurface *surface,
+                                   NSPoint point) {
+  if (NSPointInRect(point, surface.selectionActionRect)) return 1;
+  if (NSPointInRect(point, surface.selectionSecondaryActionRect)) return 2;
+  return 0;
+}
+
 static void selection_action_target(ScreenwidePreviewSurface *surface,
                                     float target[2]) {
   if (surface.selectionActionPressed) {
@@ -18,24 +25,31 @@ static void selection_action_target(ScreenwidePreviewSurface *surface,
 }
 
 SCREENWIDE_PREVIEW_PRIVATE void selection_action_shades(
-    ScreenwidePreviewSurface *surface, float shades[2]) {
+    ScreenwidePreviewSurface *surface, float shades[4]) {
+  float active[2];
   if (surface.selectionActionTransitionStarted <= 0.0) {
     // Objective-C scalar properties begin at zero. Until the first state
     // change, the action is visually in its normal opaque state; afterwards
     // the last transition target is the stable current colour.
-    shades[0] = surface.selectionActionToLight > 0.0f
+    active[0] = surface.selectionActionToLight > 0.0f
         ? surface.selectionActionToLight : 0.924f;
-    shades[1] = surface.selectionActionToDark > 0.0f
+    active[1] = surface.selectionActionToDark > 0.0f
         ? surface.selectionActionToDark : 0.226f;
-    return;
+  } else {
+    double progress = fmin(1.0, (CACurrentMediaTime() -
+        surface.selectionActionTransitionStarted) /
+        kSelectionActionTransitionSeconds);
+    active[0] = surface.selectionActionFromLight +
+        (surface.selectionActionToLight - surface.selectionActionFromLight) * progress;
+    active[1] = surface.selectionActionFromDark +
+        (surface.selectionActionToDark - surface.selectionActionFromDark) * progress;
   }
-  double progress = fmin(1.0, (CACurrentMediaTime() -
-      surface.selectionActionTransitionStarted) /
-      kSelectionActionTransitionSeconds);
-  shades[0] = surface.selectionActionFromLight +
-      (surface.selectionActionToLight - surface.selectionActionFromLight) * progress;
-  shades[1] = surface.selectionActionFromDark +
-      (surface.selectionActionToDark - surface.selectionActionFromDark) * progress;
+  shades[0] = shades[2] = 0.924f;
+  shades[1] = shades[3] = 0.226f;
+  uint8_t action = surface.selectionActionPressed != 0
+      ? surface.selectionActionPressed : surface.selectionActionHovered;
+  if (action == 1) { shades[0] = active[0]; shades[1] = active[1]; }
+  if (action == 2) { shades[2] = active[0]; shades[3] = active[1]; }
 }
 
 static void schedule_selection_action_frame(ScreenwidePreviewSurface *surface,
@@ -55,13 +69,16 @@ static void schedule_selection_action_frame(ScreenwidePreviewSurface *surface,
 
 SCREENWIDE_PREVIEW_PRIVATE void selection_action_begin_transition(
     ScreenwidePreviewSurface *surface) {
-  float current[2], target[2];
+  float current[4], target[2];
   selection_action_shades(surface, current);
   selection_action_target(surface, target);
-  if (fabsf(current[0] - target[0]) < 0.0001f &&
-      fabsf(current[1] - target[1]) < 0.0001f) return;
-  surface.selectionActionFromLight = current[0];
-  surface.selectionActionFromDark = current[1];
+  uint8_t action = surface.selectionActionPressed != 0
+      ? surface.selectionActionPressed : surface.selectionActionHovered;
+  NSUInteger offset = action == 2 ? 2 : 0;
+  if (fabsf(current[offset] - target[0]) < 0.0001f &&
+      fabsf(current[offset + 1] - target[1]) < 0.0001f) return;
+  surface.selectionActionFromLight = current[offset];
+  surface.selectionActionFromDark = current[offset + 1];
   surface.selectionActionToLight = target[0];
   surface.selectionActionToDark = target[1];
   surface.selectionActionTransitionStarted = CACurrentMediaTime();
@@ -80,22 +97,23 @@ SCREENWIDE_PREVIEW_PRIVATE double selection_recenter_scale(
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL selection_action_hover(
     ScreenwidePreviewSurface *surface, NSPoint point) {
-  BOOL hovered = surface.selectionActionOperation != 0 &&
-                 NSPointInRect(point, surface.selectionActionRect);
+  uint8_t hovered = surface.selectionActionOperation != 0
+      ? selection_action_at(surface, point) : 0;
   if (surface.selectionActionHovered != hovered) {
     surface.selectionActionHovered = hovered;
     selection_action_begin_transition(surface);
     redraw_selection(surface);
   }
-  return hovered;
+  return hovered != 0;
 }
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL selection_action_begin(
     ScreenwidePreviewSurface *surface, NSInteger button, NSPoint point) {
-  if (button != 0 || surface.selectionActionOperation == 0 ||
-      !NSPointInRect(point, surface.selectionActionRect)) return NO;
-  surface.selectionActionPressed = YES;
-  surface.selectionActionHovered = YES;
+  uint8_t action = selection_action_at(surface, point);
+  if (button != 0 || surface.selectionActionOperation == 0 || action == 0)
+    return NO;
+  surface.selectionActionPressed = action;
+  surface.selectionActionHovered = action;
   selection_action_begin_transition(surface);
   redraw_selection(surface);
   set_selection_cursor([NSCursor arrowCursor]);
@@ -113,9 +131,13 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_action_drag(
 SCREENWIDE_PREVIEW_PRIVATE BOOL selection_action_end(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   if (!surface.selectionActionPressed) return NO;
-  BOOL activate = selection_action_hover(surface, point);
+  uint8_t hovered = selection_action_at(surface, point);
+  BOOL activate = surface.selectionActionPressed == hovered;
   uint32_t operation = surface.selectionActionOperation;
-  surface.selectionActionPressed = NO;
+  if (operation == 8 && surface.selectionActionPressed == 2)
+    operation = 9;
+  surface.selectionActionPressed = 0;
+  surface.selectionActionHovered = hovered;
   selection_action_begin_transition(surface);
   redraw_selection(surface);
   if (activate && operation != 0)

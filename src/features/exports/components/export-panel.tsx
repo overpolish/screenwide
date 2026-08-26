@@ -21,6 +21,7 @@ import { RecordingSection, ScreenshotSection } from "./export-preview-section";
 import { ExportTitlebar } from "./export-titlebar";
 import { ScreenshotInspector } from "./screenshot-inspector";
 import { selectedTrackVolume } from "./selected-track-volume";
+import { useRestoreRecordingKeyboardShortcuts } from "./use-restore-recording-keyboard-shortcuts";
 
 export function ExportPanel({
   artifact,
@@ -89,6 +90,14 @@ export function ExportPanel({
   selectedScreenshotItemId = null,
   selectedTrack = null,
 }: ExportPanelProps) {
+  const {
+    canRestore: canRestoreKeyboardShortcuts,
+    reset: resetKeyboardShortcuts,
+    restore: restoreKeyboardShortcuts,
+  } = useRestoreRecordingKeyboardShortcuts(
+    recordingTimelineEdit,
+    onRecordingTimelineEditChange,
+  );
   const isRecording = artifact?.kind === "recording";
   const enabledVideoTrackCount = enabledVideoTracks.length;
   const isAudioExport = isRecording && enabledVideoTrackCount === 0;
@@ -102,6 +111,7 @@ export function ExportPanel({
         cameraCompression={cameraCompression}
         cameraOverlay={cameraOverlay}
         cameraResolutionScalePercent={cameraResolutionScalePercent}
+        canRestoreKeyboardShortcuts={canRestoreKeyboardShortcuts}
         collapseAudio={collapseAudio}
         compression={compression}
         cursorEffects={cursorEffects}
@@ -121,7 +131,9 @@ export function ExportPanel({
         onCursorEffectsChange={onCursorEffectsChange}
         onKeyboardEffectsChange={onKeyboardEffectsChange}
         onRecordingOutputChange={onRecordingOutputChange}
+        onResetKeyboardShortcuts={resetKeyboardShortcuts}
         onResolutionScaleChange={onResolutionScaleChange}
+        onRestoreKeyboardShortcuts={restoreKeyboardShortcuts}
         onSelectedTrackChange={onSelectedTrackChange}
         onSelectedTrackVolumeChange={onSelectedTrackVolumeChange}
         recordingOutput={recordingOutput}
@@ -135,9 +147,6 @@ export function ExportPanel({
     ) : null;
   return (
     <main className="window-surface relative flex h-screen w-screen flex-col overflow-hidden rounded-[10px] text-content-fg">
-      {/* The window background lives on its own layer so the native preview
-          panes below the webview can mask holes through it without also
-          masking the controls rendered above them. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-content/92"
@@ -229,6 +238,7 @@ export function ExportPanel({
           onCameraOverlayChange={onCameraOverlayChange}
           onEnabledTracksChange={onEnabledTracksChange}
           onEnabledVideoTracksChange={onEnabledVideoTracksChange}
+          onKeyboardEffectsChange={onKeyboardEffectsChange}
           onRecordingOutputChange={onRecordingOutputChange}
           onRecordingTimelineEditChange={onRecordingTimelineEditChange}
           onSelectedTrackChange={onSelectedTrackChange}

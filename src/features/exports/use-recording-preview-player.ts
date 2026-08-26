@@ -17,6 +17,10 @@ import {
   stopRecordingPreviewPlayer,
 } from "./api";
 import { ScrubPhase } from "./components/scrub-timeline";
+import {
+  recordingPreviewKeyboardDeletions as keyboardDeletionsFor,
+  setRecordingPreviewDeletedKeyboardShortcuts,
+} from "./recording-keyboard-timeline-api";
 import { playRecordingPreview } from "./recording-preview-playback-api";
 import { RecordingPreviewPlayerEvent } from "./recording-preview-player-contract";
 import { recordingPreviewSettingsKey } from "./recording-preview-settings-key";
@@ -34,13 +38,12 @@ import {
 } from "./types";
 import { useRecordingPreviewSettings } from "./use-recording-preview-settings";
 import {
+  type RecordingPreviewSelection,
   type RecordingSelectionGestureEvent,
   useRecordingPreviewSurface,
 } from "./use-recording-preview-surface";
-
 let sessionSequence = 0;
 type PreviewTiming = [durationMs: number, framesPerSecond: number | null];
-
 export function useRecordingPreviewPlayer({
   artifactId,
   audioTrackVolumes,
@@ -63,6 +66,7 @@ export function useRecordingPreviewPlayer({
   screenCanvasRef,
   selection,
   selectionTargets,
+  sourceDurationMs,
   timelineEdit,
   zoomPercent,
 }: {
@@ -82,23 +86,12 @@ export function useRecordingPreviewPlayer({
   onPosition: (positionMs: number) => void;
   recordingOutput: import("./screenshot-output").RecordingOutputSettings;
   screenCanvasRef: RefObject<HTMLCanvasElement | null>;
+  sourceDurationMs: number;
   onSelectionChange?: (paneIndex: number | null) => void;
   onSelectionGesture?: (event: RecordingSelectionGestureEvent) => void;
   onZoomChange?: (zoomPercent: number) => void;
-  selection?: {
-    paneIndex: number;
-    radiusPercent: number;
-    rect: { height: number; width: number; x: number; y: number };
-    layerId?: number;
-  } | null;
-  selectionTargets?:
-    | {
-        paneIndex: number;
-        radiusPercent: number;
-        rect: { height: number; width: number; x: number; y: number };
-        layerId?: number;
-      }[]
-    | null;
+  selection?: RecordingPreviewSelection | null;
+  selectionTargets?: RecordingPreviewSelection[] | null;
   timelineEdit?: RecordingTimelineEdit | null;
   zoomPercent?: number;
 }) {
@@ -146,7 +139,8 @@ export function useRecordingPreviewPlayer({
   compositionRef.current = { bakeCamera, cameraOverlay, recordingOutput };
   enabledStreamIndicesRef.current = enabledStreamIndices;
   timelineEditRef.current = timelineEdit;
-
+  const keyboardDeletions = () =>
+    keyboardDeletionsFor(timelineEditRef.current, sourceDurationMs);
   const playbackRanges = useCallback(
     () =>
       recordingTimelinePlaybackRanges(
@@ -164,12 +158,12 @@ export function useRecordingPreviewPlayer({
     audioTrackVolumes,
     cursorEffects,
     isEnabled,
+    keyboardDeletions: keyboardDeletions(),
     keyboardEffects,
     sessionIdRef,
     setError,
     startedRef,
   });
-
   useRecordingPreviewSurface({
     bakeCamera,
     cameraCanvasRef,
@@ -192,12 +186,10 @@ export function useRecordingPreviewPlayer({
     startedRef,
     zoomPercent,
   });
-
   const updatePlaying = (playing: boolean) => {
     isPlayingRef.current = playing;
     setIsPlaying(playing);
   };
-
   useEffect(() => {
     if (!isEnabled) return;
     let disposed = false;
@@ -206,6 +198,7 @@ export function useRecordingPreviewPlayer({
       bakeCamera,
       cameraOverlay,
       cursorEffects,
+      ...keyboardDeletions(),
       enabledStreamIndices,
       keyboardEffects,
       recordingOutput,
@@ -316,6 +309,7 @@ export function useRecordingPreviewPlayer({
       enabledStreamIndices,
       eventChannel,
       keyboardEffects,
+      keyboardTimeline: keyboardDeletions(),
       recordingOutput,
       sessionId,
     })
@@ -341,15 +335,11 @@ export function useRecordingPreviewPlayer({
           bakeCamera: compositionRef.current.bakeCamera,
           cameraOverlay: compositionRef.current.cameraOverlay,
           cursorEffects: cursorEffectsRef.current,
+          ...keyboardDeletions(),
           enabledStreamIndices: enabledStreamIndicesRef.current,
           keyboardEffects: keyboardEffectsRef.current,
           recordingOutput: compositionRef.current.recordingOutput,
         });
-        // Startup already installed the exact settings passed above. Repeating
-        // them restarts a paused native decoder for cursor and composition,
-        // making first-open review needlessly decode its first frame three
-        // times. Only catch up when controls genuinely changed while startup
-        // was in flight.
         if (latestSettingsKey === initialSettingsKey) return;
         void Promise.all([
           selectRecordingPreviewAudio(
@@ -363,6 +353,10 @@ export function useRecordingPreviewPlayer({
           setRecordingPreviewCursorEffects(cursorEffectsRef.current, sessionId),
           setRecordingPreviewKeyboardEffects(
             keyboardEffectsRef.current,
+            sessionId,
+          ),
+          setRecordingPreviewDeletedKeyboardShortcuts(
+            keyboardDeletions(),
             sessionId,
           ),
           setRecordingPreviewComposition({
@@ -399,7 +393,6 @@ export function useRecordingPreviewPlayer({
     };
     // eslint-disable-next-line @eslint-react/exhaustive-deps
   }, [artifactId, isEnabled]);
-
   const play = useCallback(() => {
     if (!isEnabled) return;
     resumeAfterSeekRef.current = false;
@@ -525,9 +518,7 @@ export function useRecordingPreviewPlayer({
       scrubFinishedRef.current = false;
     }
   };
-
   const getPositionMs = useCallback(() => positionRef.current, []);
-
   return {
     durationMs,
     error,

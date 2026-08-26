@@ -9,12 +9,15 @@ cbuffer Selection : register(b0) {
   float4 crop_image; // image x/y/width/height; negative width disables crop shade
   float4 magnifier_box; // x/y/width/height; zero width disables the cutout
   float4 label; // size readout x/y/width/height in physical pixels; zero width hides it
+  float4 secondary_label; // second intrinsic OSC action label, or zero when absent
   float4 label_params; // halo radius in pixels, display scale (pixels per point), reserved
+  float4 action_shades; // primary light/dark, secondary light/dark
 };
 
 // Grayscale glyph coverage of the "W x H" readout, one texel per physical
 // pixel of `label`, rasterised by GDI on the CPU (see `LabelTexture`).
 Texture2D label_coverage : register(t0);
+Texture2D secondary_label_coverage : register(t1);
 SamplerState label_sampler : register(s0);
 
 struct VertexOut { float4 position : SV_Position; };
@@ -59,6 +62,10 @@ void composite_layer(inout float3 color, inout float alpha,
 
 float label_sample(float2 uv) {
   return label_coverage.SampleLevel(label_sampler, uv, 0).r;
+}
+
+float secondary_label_sample(float2 uv) {
+  return secondary_label_coverage.SampleLevel(label_sampler, uv, 0).r;
 }
 
 float4 ps_main(VertexOut input) : SV_Target {
@@ -147,14 +154,24 @@ float4 ps_main(VertexOut input) : SV_Target {
   if (label_params.z > 0.5 && label.z > 0.0) {
     // The label bitmap has 2pt horizontal inset and a 16pt text-xs line box.
     // These extents complete React's px-2/py-1 compact Button geometry.
-    float4 button = float4(label.xy - float2(6.0, 4.0) * scale,
-                           label.zw + float2(12.0, 8.0) * scale);
-    float coverage = 1.0 - smoothstep(-1.0, 1.0, rounded_distance(p, button, 6.0 * scale));
+    float4 primary_button = float4(label.xy - float2(6.0, 4.0) * scale,
+                                   label.zw + float2(12.0, 8.0) * scale);
+    float primary_coverage = 1.0 - smoothstep(
+        -1.0, 1.0, rounded_distance(p, primary_button, 6.0 * scale));
+    float secondary_coverage = 0.0;
+    if (secondary_label.z > 0.0) {
+      float4 secondary_button = float4(
+          secondary_label.xy - float2(6.0, 4.0) * scale,
+          secondary_label.zw + float2(12.0, 8.0) * scale);
+      secondary_coverage = 1.0 - smoothstep(
+          -1.0, 1.0, rounded_distance(p, secondary_button, 6.0 * scale));
+    }
     // React resolves its neutral-soft and pressed semantic tokens to opaque
     // colours. These are the same sRGB mixes, while hover is neutral-100.
-    float shade = lerp(label_params.z, label_params.w, dark_theme);
-    float3 button_fill = float3(shade, shade, shade);
-    composite_layer(color, alpha, button_fill, coverage);
+    float primary_shade = lerp(action_shades.x, action_shades.y, dark_theme);
+    float secondary_shade = lerp(action_shades.z, action_shades.w, dark_theme);
+    composite_layer(color, alpha, primary_shade.xxx, primary_coverage);
+    composite_layer(color, alpha, secondary_shade.xxx, secondary_coverage);
   }
   if (label.z > 0.0 && p.x >= label.x && p.x <= label.x + label.z &&
       p.y >= label.y && p.y <= label.y + label.w) {
@@ -179,6 +196,14 @@ float4 ps_main(VertexOut input) : SV_Target {
       : saturate(halo_coverage) * lerp(1.0, 0.8, dark_theme);
     composite_layer(color, alpha, label_halo, halo_alpha);
     composite_layer(color, alpha, label_fill, saturate(fill_coverage));
+  }
+  if (secondary_label.z > 0.0 &&
+      p.x >= secondary_label.x && p.x <= secondary_label.x + secondary_label.z &&
+      p.y >= secondary_label.y && p.y <= secondary_label.y + secondary_label.w) {
+    float2 uv = (p - secondary_label.xy) / secondary_label.zw;
+    float coverage = secondary_label_sample(uv);
+    float3 fill = lerp(float3(0.149, 0.149, 0.149), 1.0, dark_theme);
+    composite_layer(color, alpha, fill, saturate(coverage));
   }
   return float4(color * alpha, alpha);
 }

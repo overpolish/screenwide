@@ -1,6 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
-
 mod audio_preview;
 mod camera_format;
 #[cfg(target_os = "macos")]
@@ -25,13 +24,11 @@ mod ruler;
 mod screenshots;
 mod settings;
 mod shortcuts;
-
 mod text_recognition;
 #[cfg(desktop)]
 mod tray;
 mod updates;
 mod windows;
-
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -91,6 +88,7 @@ pub fn run() {
       exports::preview::estimate_recording_export,
       exports::preview::get_export_snapshot,
       exports::recording_preview::get_recording_preview,
+      exports::recording_preview::get_recording_keyboard_timeline,
       exports::recording_preview_player::commands::pause_recording_preview,
       exports::recording_preview_player::surface_commands::layout_recording_preview_surface,
       exports::recording_preview_player::surface_commands::set_recording_preview_zoom,
@@ -100,6 +98,7 @@ pub fn run() {
       exports::recording_preview_player::commands::set_recording_preview_audio_volumes,
       exports::recording_preview_player::commands::set_recording_preview_cursor_effects,
       exports::recording_preview_player::keyboard_command::set_recording_preview_keyboard_effects,
+      exports::recording_preview_player::keyboard_command::set_recording_preview_deleted_keyboard_shortcuts,
       exports::recording_preview_player::commands::set_recording_preview_composition,
       exports::recording_preview_player::commands::start_recording_preview_player,
       exports::recording_preview_player::commands::stop_recording_preview_player,

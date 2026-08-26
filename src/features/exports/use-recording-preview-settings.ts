@@ -9,6 +9,10 @@ import {
   setRecordingPreviewKeyboardEffects,
 } from "./api";
 import {
+  RecordingPreviewKeyboardDeletions,
+  setRecordingPreviewDeletedKeyboardShortcuts,
+} from "./recording-keyboard-timeline-api";
+import {
   AudioTrackVolume,
   CursorEffectSettings,
   KeyboardEffectSettings,
@@ -27,6 +31,7 @@ export function useRecordingPreviewSettings({
   audioTrackVolumes,
   cursorEffects,
   isEnabled,
+  keyboardDeletions,
   keyboardEffects,
   sessionIdRef,
   setError,
@@ -35,6 +40,7 @@ export function useRecordingPreviewSettings({
   audioTrackVolumes: AudioTrackVolume[];
   cursorEffects: CursorEffectSettings;
   isEnabled: boolean;
+  keyboardDeletions: RecordingPreviewKeyboardDeletions;
   keyboardEffects: KeyboardEffectSettings;
   sessionIdRef: RefObject<number>;
   setError: Dispatch<SetStateAction<string | null>>;
@@ -47,6 +53,7 @@ export function useRecordingPreviewSettings({
     )
     .join("-");
   const cursor = Object.values(cursorEffects).join("-");
+  const deletedKeyboardShortcuts = JSON.stringify(keyboardDeletions);
   const keyboard = Object.values(keyboardEffects).join("-");
   useEffect(() => {
     if (!isEnabled || !startedRef.current) return;
@@ -72,4 +79,12 @@ export function useRecordingPreviewSettings({
     ).catch(setError);
     // eslint-disable-next-line @eslint-react/exhaustive-deps
   }, [isEnabled, keyboard]);
+  useEffect(() => {
+    if (!isEnabled || !startedRef.current) return;
+    void setRecordingPreviewDeletedKeyboardShortcuts(
+      keyboardDeletions,
+      sessionIdRef.current,
+    ).catch(setError);
+    // eslint-disable-next-line @eslint-react/exhaustive-deps
+  }, [deletedKeyboardShortcuts, isEnabled]);
 }

@@ -49,6 +49,7 @@ export function ExportInspector({
   cameraCompression,
   cameraOverlay,
   cameraResolutionScalePercent,
+  canRestoreKeyboardShortcuts,
   collapseAudio,
   compression,
   cursorEffects,
@@ -68,7 +69,9 @@ export function ExportInspector({
   onCursorEffectsChange,
   onKeyboardEffectsChange,
   onRecordingOutputChange,
+  onResetKeyboardShortcuts,
   onResolutionScaleChange,
+  onRestoreKeyboardShortcuts,
   onSelectedTrackChange,
   onSelectedTrackVolumeChange,
   recordingOutput,
@@ -85,6 +88,7 @@ export function ExportInspector({
   cursorEffects: CursorEffectSettings;
   keyboardEffects: KeyboardEffectSettings;
   selectedTrack: RecordingTrackId | null;
+  canRestoreKeyboardShortcuts?: boolean;
   collapseAudio?: boolean;
   enabledAudioTrackCount?: number;
   enabledVideoTracks?: RecordingVideoTrackId[];
@@ -104,7 +108,9 @@ export function ExportInspector({
     trackId: RecordingVideoTrackId,
     settings: ScreenshotOutputSettings,
   ) => void;
+  onResetKeyboardShortcuts?: () => void;
   onResolutionScaleChange?: (scale: number) => void;
+  onRestoreKeyboardShortcuts?: () => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
   onSelectedTrackVolumeChange?: (decibels: number) => void;
   recordingOutput?: RecordingOutputSettings;
@@ -224,9 +230,12 @@ export function ExportInspector({
 
           {inspectorTab === "keyboard" && artifact.hasKeyboardData ? (
             <KeyboardEffectControls
+              canRestoreShortcuts={canRestoreKeyboardShortcuts}
               isSaving={Boolean(isSaving)}
               maximumWidthUnits={artifact.keyboardMaximumWidthUnits}
               onChange={onKeyboardEffectsChange}
+              onResetShortcuts={onResetKeyboardShortcuts}
+              onRestoreShortcuts={onRestoreKeyboardShortcuts}
               outputDimensions={keyboardOutputDimensions}
               settings={keyboardEffects}
             />

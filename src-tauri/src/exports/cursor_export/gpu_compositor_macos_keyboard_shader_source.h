@@ -12,10 +12,9 @@ struct KeyboardKeyUniforms {
 struct KeyboardUniforms {
   uint width, height, key_count, animation;
   float scale, layout_progress, maximum_width, requested_scale;
-  KeyboardKeyUniforms keys[8];
+  float center_x, center_y; KeyboardKeyUniforms keys[8];
 };
-static_assert(sizeof(KeyboardUniforms) == 352,
-              "Keyboard uniforms must match their native layout");
+static_assert(sizeof(KeyboardUniforms) == 360, "Keyboard uniforms must match their native layout");
 
 static float keyboard_effective_scale(
     constant KeyboardUniforms &keyboard, float2 canvas_dimensions) {
@@ -59,12 +58,15 @@ static float4 keyboard_key_pixel(
                  keyboard_effective_scale(keyboard, canvas_dimensions);
   float width = height * float(keyboard.width) / max(float(keyboard.height), 1.0);
   float bottom = canvas_dimensions.y * 0.055;
-  float row_x = (canvas_dimensions.x - width) * 0.5;
+  float center_x = keyboard.center_x >= 0.0 ? keyboard.center_x * canvas_dimensions.x
+                                           : canvas_dimensions.x * 0.5;
+  float center_y = keyboard.center_y >= 0.0 ? keyboard.center_y * canvas_dimensions.y
+                                           : canvas_dimensions.y - bottom - height * 0.5;
+  float row_x = center_x - width * 0.5;
   float key_x = row_x + width * float(key.x) / float(keyboard.width);
   float key_width = width * float(key.width) / float(keyboard.width);
   float2 key_size = float2(key_width, height) * animation_scale;
-  float2 center = float2(key_x + key_width * 0.5 + x_offset,
-                         canvas_dimensions.y - bottom - height * 0.5);
+  float2 center = float2(key_x + key_width * 0.5 + x_offset, center_y);
   float2 uv = (point - (center - key_size * 0.5)) / key_size;
   if (any(uv < 0.0) || any(uv > 1.0)) return float4(0.0);
   // `keyboard_texel` treats integer coordinates as texel centres. Convert

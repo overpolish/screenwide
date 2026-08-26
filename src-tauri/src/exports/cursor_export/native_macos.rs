@@ -81,7 +81,20 @@ pub(super) fn evaluate_keyboard(
   let Some(keyboard_path) = request.keyboard else {
     return Ok(None);
   };
-  let keyboard = KeyboardCompositor::open(keyboard_path)?;
+  let deleted_keyboard_shortcut_ids = request
+    .timeline
+    .map_or(&[][..], |timeline| timeline.deleted_keyboard_shortcut_ids());
+  let deleted_keyboard_shortcut_ranges = request.timeline.map_or(&[][..], |timeline| {
+    timeline.deleted_keyboard_shortcut_ranges()
+  });
+  let keyboard = KeyboardCompositor::open_with_deleted(
+    keyboard_path,
+    deleted_keyboard_shortcut_ids,
+    deleted_keyboard_shortcut_ranges,
+  )?;
+  if let Some(timeline) = request.timeline {
+    keyboard.set_shortcut_positions(timeline.keyboard_shortcut_positions());
+  }
   let dimensions = (request.output.width, request.output.height);
   let frame_count = request
     .duration_ms

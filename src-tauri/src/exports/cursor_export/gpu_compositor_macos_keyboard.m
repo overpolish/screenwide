@@ -67,8 +67,11 @@ void screenwide_encode_keyboard_overlay(
   float height = (float)output_height * (60.0f / 1080.0f) *
       keyboard_effective_scale(*keyboard, output_width, output_height);
   float width = height * (float)uniforms.width / (float)uniforms.height;
-  float center_x = (float)output_width * 0.5f;
-  float center_y = (float)output_height * (1.0f - 0.055f) - height * 0.5f;
+  float center_x = keyboard->center_x >= 0.0f
+      ? keyboard->center_x * (float)output_width : (float)output_width * 0.5f;
+  float center_y = keyboard->center_y >= 0.0f
+      ? keyboard->center_y * (float)output_height
+      : (float)output_height * (1.0f - 0.055f) - height * 0.5f;
   float margin = height;
   int32_t origin[2] = {
       (int32_t)floorf(center_x - width * 0.5f - margin),

@@ -70,6 +70,12 @@ const fn presentation_elapsed_ms(frame_timestamp_ms: u64, start_ms: u64) -> u64 
   frame_timestamp_ms.saturating_sub(start_ms)
 }
 
+fn complete_range(position_ms: &AtomicU64, cancelled: &AtomicBool, failed: bool, end_ms: u64) {
+  if !failed && !cancelled.load(Ordering::Acquire) {
+    position_ms.store(end_ms, Ordering::Release);
+  }
+}
+
 fn ranges(context: &RunContext) -> Vec<RecordingPreviewPlaybackRange> {
   if context.playback_ranges.is_empty() {
     vec![RecordingPreviewPlaybackRange {
@@ -160,9 +166,12 @@ pub(super) fn run(context: RunContext) {
           position_ms: current,
         });
     }
-    context
-      .position_ms
-      .store(range.source_end_ms, Ordering::Release);
+    complete_range(
+      &context.position_ms,
+      &context.cancelled,
+      failed,
+      range.source_end_ms,
+    );
     current_video.stop();
     output_offset_ms = output_end_ms;
     if failed || context.cancelled.load(Ordering::Acquire) || range_index + 1 == ranges.len() {
@@ -217,11 +226,19 @@ pub(super) fn run(context: RunContext) {
 
 #[cfg(test)]
 mod tests {
-  use super::presentation_elapsed_ms;
+  use super::{complete_range, presentation_elapsed_ms};
+  use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
   #[test]
   fn playback_follows_media_timestamps_after_a_seek() {
     assert_eq!(presentation_elapsed_ms(7_126, 5_000), 2_126);
     assert_eq!(presentation_elapsed_ms(4_999, 5_000), 0);
+  }
+
+  #[test]
+  fn cancelling_playback_keeps_the_last_presented_position() {
+    let position = AtomicU64::new(2_400);
+    complete_range(&position, &AtomicBool::new(true), false, 8_000);
+    assert_eq!(position.load(Ordering::Acquire), 2_400);
   }
 }

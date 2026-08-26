@@ -33,6 +33,7 @@ Texture2D keyboard_image : register(t3);
 cbuffer Keyboard : register(b1) {
   uint4 keyboard_dimensions; // artwork width/height, key count, animation
   float4 keyboard_animation; // scale, layout progress, maximum width, requested scale
+  float4 keyboard_position; // normalized centre x/y; negative keeps the default
   uint4 keyboard_key_geometry[8]; // artwork x, artwork width, visible, slot
   float4 keyboard_key_motion[8]; // alpha, scale, progress, layout progress
   uint4 keyboard_key_masks[8]; // layout from mask, layout to mask
@@ -218,12 +219,16 @@ float4 keyboard_key_pixel(uint index, float2 canvas_point, float2 canvas_dimensi
   float width = height * float(keyboard_dimensions.x) /
                 max(float(keyboard_dimensions.y), 1.0);
   float bottom = canvas_dimensions.y * 0.055;
-  float row_x = (canvas_dimensions.x - width) * 0.5;
+  float center_x = keyboard_position.x >= 0.0
+      ? keyboard_position.x * canvas_dimensions.x : canvas_dimensions.x * 0.5;
+  float center_y = keyboard_position.y >= 0.0
+      ? keyboard_position.y * canvas_dimensions.y
+      : canvas_dimensions.y - bottom - height * 0.5;
+  float row_x = center_x - width * 0.5;
   float key_x = row_x + width * float(geometry.x) / float(keyboard_dimensions.x);
   float key_width = width * float(geometry.y) / float(keyboard_dimensions.x);
   float2 key_size = float2(key_width, height) * animation_scale;
-  float2 center = float2(key_x + key_width * 0.5 + x_offset,
-                         canvas_dimensions.y - bottom - height * 0.5);
+  float2 center = float2(key_x + key_width * 0.5 + x_offset, center_y);
   float2 uv = (canvas_point - (center - key_size * 0.5)) / key_size;
   if (any(uv < 0.0) || any(uv > 1.0)) return 0.0;
   // `keyboard_texel` treats integer coordinates as texel centres. Convert

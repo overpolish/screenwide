@@ -140,7 +140,38 @@ fn sources_with_surface(
     .transpose()?;
   let keyboard = keyboard_path
     .as_ref()
-    .map(|path| KeyboardCompositor::open(path).map(Arc::new))
+    .map(|keyboard_path| {
+      let persisted =
+        crate::exports::timeline_edit::for_recording(&path, artifact_id).and_then(|(_, edit)| {
+          crate::exports::timeline_edit::TimelinePlan::from_edit(&edit, duration_ms)
+        });
+      let deleted_ids = settings
+        .map(|settings| settings.deleted_keyboard_shortcut_ids.clone())
+        .unwrap_or_else(|| {
+          persisted.as_ref().map_or_else(Vec::new, |plan| {
+            plan.deleted_keyboard_shortcut_ids().to_vec()
+          })
+        });
+      let deleted_ranges = settings
+        .map(|settings| settings.deleted_keyboard_shortcut_ranges.clone())
+        .unwrap_or_else(|| {
+          persisted.as_ref().map_or_else(Vec::new, |plan| {
+            plan.deleted_keyboard_shortcut_ranges().to_vec()
+          })
+        });
+      let compositor =
+        KeyboardCompositor::open_with_deleted(keyboard_path, &deleted_ids, &deleted_ranges)?;
+      let positions = settings
+        .map(|settings| settings.keyboard_shortcut_positions.as_slice())
+        .or_else(|| {
+          persisted
+            .as_ref()
+            .map(|plan| plan.keyboard_shortcut_positions())
+        })
+        .unwrap_or(&[]);
+      compositor.set_shortcut_positions(positions);
+      Ok::<_, String>(Arc::new(compositor))
+    })
     .transpose()?;
   #[cfg(target_os = "macos")]
   let cursor_artworks = cursor

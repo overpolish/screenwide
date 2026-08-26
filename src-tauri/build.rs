@@ -13,6 +13,9 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos.m");
     println!("cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos+presenter.m");
     println!(
+      "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos+presenter_keyboard.m"
+    );
+    println!(
       "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_cursor_resources.m"
     );
     println!("cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_keyboard.m");
@@ -30,6 +33,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+callbacks.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+magnifier.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+editor.m");
+    println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+keyboard.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+label.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+osc.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+selection.m");
@@ -51,6 +55,7 @@ fn main() {
     cc::Build::new()
       .file("src/exports/cursor_export/gpu_compositor_macos.m")
       .file("src/exports/cursor_export/gpu_compositor_macos+presenter.m")
+      .file("src/exports/cursor_export/gpu_compositor_macos+presenter_keyboard.m")
       .file("src/exports/cursor_export/gpu_compositor_macos_cursor_resources.m")
       .file("src/exports/cursor_export/gpu_compositor_macos_keyboard.m")
       .file("src/exports/cursor_export/gpu_compositor_macos_keyboard_artwork.m")
@@ -63,6 +68,7 @@ fn main() {
       .file("src/exports/recording_preview_surface_macos+callbacks.m")
       .file("src/exports/recording_preview_surface_macos+magnifier.m")
       .file("src/exports/recording_preview_surface_macos+editor.m")
+      .file("src/exports/recording_preview_surface_macos+keyboard.m")
       .file("src/exports/recording_preview_surface_macos+label.m")
       .file("src/exports/recording_preview_surface_macos+osc.m")
       .file("src/exports/recording_preview_surface_macos+selection.m")
