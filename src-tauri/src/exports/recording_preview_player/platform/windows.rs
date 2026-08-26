@@ -61,8 +61,29 @@ pub(super) fn present_native_frame(sources: &PlayerSources, index: u32, frame: &
             cursor_settings,
           )
         });
+      let keyboard_settings = sources
+        .keyboard_settings
+        .read()
+        .map(|settings| *settings)
+        .unwrap_or_default();
+      // The shortcut strip belongs to the screen pane and is fitted against the
+      // recording canvas, never against the camera pane's own output.
+      let keyboard = (index == 0)
+        .then_some(())
+        .and(sources.keyboard.as_deref())
+        .and_then(|keyboard| {
+          keyboard.evaluate_fitted(
+            frame.timestamp_ms,
+            keyboard_settings,
+            (
+              settings.recording_output.primary.width,
+              settings.recording_output.primary.height,
+            ),
+          )
+        });
       let composed = ComposedFrame {
         cursor,
+        keyboard,
         foreground_only: false,
         seconds: frame.timestamp_ms as f64 / 1_000.0,
       };
@@ -270,7 +291,7 @@ pub(crate) fn composed_frame_image(
   bake_camera: bool,
   camera_overlay: crate::exports::CameraOverlaySettings,
   cursor_effects: crate::exports::cursor_effects::CursorEffectSettings,
-  _keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings,
+  keyboard_effects: crate::exports::keyboard_effects::KeyboardEffectSettings,
   recording_output: &crate::exports::RecordingOutputSettings,
 ) -> Result<crate::screenshots::CapturedImage, String> {
   let surface = sources
@@ -328,6 +349,16 @@ pub(crate) fn composed_frame_image(
         cursor_effects,
       )
     });
+  let keyboard = sources.keyboard.as_deref().and_then(|keyboard| {
+    keyboard.evaluate_fitted(
+      position_ms,
+      keyboard_effects,
+      (
+        recording_output.primary.width,
+        recording_output.primary.height,
+      ),
+    )
+  });
   surface.compose_texture_to_image(
     &frame.texture,
     frame.subresource,
@@ -335,6 +366,7 @@ pub(crate) fn composed_frame_image(
     &recording_output.primary,
     ComposedFrame {
       cursor,
+      keyboard,
       foreground_only: false,
       seconds: frame.timestamp_ms as f64 / 1_000.0,
     },

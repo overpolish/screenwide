@@ -26,6 +26,17 @@ cbuffer Canvas : register(b0) {
 Texture2D source_image : register(t0);
 Texture2DArray native_cursor_images : register(t1);
 Texture2D camera_image : register(t2);
+Texture2D keyboard_image : register(t3);
+// Mirrors the Metal `KeyboardUniforms` struct. HLSL pads struct array elements
+// to 16 bytes, so the per-key fields live in parallel uint4/float4 arrays whose
+// packing is identical on both backends.
+cbuffer Keyboard : register(b1) {
+  uint4 keyboard_dimensions; // artwork width/height, key count, animation
+  float4 keyboard_animation; // scale, layout progress, maximum width, requested scale
+  uint4 keyboard_key_geometry[8]; // artwork x, artwork width, visible, slot
+  float4 keyboard_key_motion[8]; // alpha, scale, progress, layout progress
+  uint4 keyboard_key_masks[8]; // layout from mask, layout to mask
+};
 SamplerState linear_sampler : register(s0);
 SamplerState point_sampler : register(s1);
 float hash(float2 position, uint seed) {
@@ -167,6 +178,171 @@ float4 camera_layer(float4 result, float2 pixel) {
   }
   return result;
 }
+uint keyboard_key_count() { return min(keyboard_dimensions.z, 8u); }
+// Shader model 4 has no countbits intrinsic.
+uint keyboard_popcount(uint mask) {
+  uint count = 0;
+  [loop] for (uint bit = 0; bit < 32; ++bit) count += (mask >> bit) & 1u;
+  return count;
+}
+float keyboard_effective_scale(float2 canvas_dimensions) {
+  float requested = keyboard_animation.w > 0.0 ? keyboard_animation.w : keyboard_animation.x;
+  if (!(keyboard_animation.z > 0.0) || any(canvas_dimensions <= 0.0)) return requested;
+  const float design_height = 20.0;
+  const float edge_margin = 0.055;
+  const float animation_extent = 1.12;
+  float available_width = canvas_dimensions.x * (1.0 - edge_margin * 2.0);
+  float width_at_unit_scale = canvas_dimensions.y * (60.0 / 1080.0) *
+      keyboard_animation.z / design_height;
+  float fitted = available_width / max(width_at_unit_scale * animation_extent, 0.0001);
+  return min(requested, fitted);
+}
+float4 keyboard_texel(float2 source) {
+  float2 last = float2(keyboard_dimensions.xy) - 1.0;
+  source = clamp(source, 0.0, last);
+  int2 low = int2(floor(source));
+  int2 high = min(low + 1, int2(last));
+  float2 fraction = frac(source);
+  float4 a = keyboard_image.Load(int3(low.x, low.y, 0));
+  float4 b = keyboard_image.Load(int3(high.x, low.y, 0));
+  float4 c = keyboard_image.Load(int3(low.x, high.y, 0));
+  float4 d = keyboard_image.Load(int3(high.x, high.y, 0));
+  return lerp(lerp(a, b, fraction.x), lerp(c, d, fraction.x), fraction.y);
+}
+float4 keyboard_key_pixel(uint index, float2 canvas_point, float2 canvas_dimensions,
+                          float animation_scale, float x_offset) {
+  if (animation_scale <= 0.0001) return 0.0;
+  uint4 geometry = keyboard_key_geometry[index];
+  float height = canvas_dimensions.y * (60.0 / 1080.0) *
+                 keyboard_effective_scale(canvas_dimensions);
+  float width = height * float(keyboard_dimensions.x) /
+                max(float(keyboard_dimensions.y), 1.0);
+  float bottom = canvas_dimensions.y * 0.055;
+  float row_x = (canvas_dimensions.x - width) * 0.5;
+  float key_x = row_x + width * float(geometry.x) / float(keyboard_dimensions.x);
+  float key_width = width * float(geometry.y) / float(keyboard_dimensions.x);
+  float2 key_size = float2(key_width, height) * animation_scale;
+  float2 center = float2(key_x + key_width * 0.5 + x_offset,
+                         canvas_dimensions.y - bottom - height * 0.5);
+  float2 uv = (canvas_point - (center - key_size * 0.5)) / key_size;
+  if (any(uv < 0.0) || any(uv > 1.0)) return 0.0;
+  // `keyboard_texel` treats integer coordinates as texel centres. Convert
+  // from rectangle-edge UVs accordingly and clamp to this key so linear
+  // sampling cannot pull colour from its neighbouring gap or key.
+  float2 source = float2(float(geometry.x) + uv.x * float(geometry.y) - 0.5,
+                         uv.y * float(keyboard_dimensions.y) - 0.5);
+  source.x = clamp(source.x, float(geometry.x),
+                   float(geometry.x + max(geometry.y, 1u) - 1u));
+  source.y = clamp(source.y, 0.0, float(keyboard_dimensions.y - 1u));
+  return keyboard_texel(source);
+}
+float keyboard_motion_spring(float progress) {
+  float t = saturate(progress);
+  float phase = 6.0 * t;
+  return t >= 1.0 ? 1.0
+      : 1.0 - exp(-5.0 * t) * (cos(phase) + (5.0 / 6.0) * sin(phase));
+}
+uint keyboard_slot_count() {
+  uint count = keyboard_key_count();
+  uint slots = 0;
+  [loop] for (uint index = 0; index < count; ++index)
+    slots = max(slots, keyboard_key_geometry[index].w + 1u);
+  return slots;
+}
+float keyboard_gap() {
+  uint count = keyboard_key_count();
+  float gap = 1e30;
+  [loop] for (uint index = 1; index < count; ++index) {
+    float candidate = float(keyboard_key_geometry[index].x) -
+        float(keyboard_key_geometry[index - 1].x + keyboard_key_geometry[index - 1].y);
+    if (candidate > 0.0) gap = min(gap, candidate);
+  }
+  return gap < 1e30 ? gap : 0.0;
+}
+float keyboard_slot_width(uint slot) {
+  uint count = keyboard_key_count();
+  float width = 0.0;
+  [loop] for (uint index = 0; index < count; ++index)
+    if (keyboard_key_geometry[index].w == slot)
+      width = max(width, float(keyboard_key_geometry[index].y));
+  return width;
+}
+float keyboard_slot_left(uint slot, uint mask) {
+  uint slots = keyboard_slot_count();
+  float gap = keyboard_gap();
+  uint included = keyboard_popcount(mask);
+  float total = gap * float(max(int(included) - 1, 0));
+  [loop] for (uint candidate = 0; candidate < slots; ++candidate)
+    if ((mask & (1u << candidate)) != 0u) total += keyboard_slot_width(candidate);
+  float left = (float(keyboard_dimensions.x) - total) * 0.5;
+  [loop] for (uint walked = 0; walked < slot; ++walked)
+    if ((mask & (1u << walked)) != 0u) left += keyboard_slot_width(walked) + gap;
+  return left;
+}
+float keyboard_layout_offset(uint index, float2 canvas_dimensions, float progress_delta) {
+  uint count = keyboard_key_count();
+  if (count < 2u) return 0.0;
+  float height = canvas_dimensions.y * (60.0 / 1080.0) *
+                 keyboard_effective_scale(canvas_dimensions);
+  float full_width = height * float(keyboard_dimensions.x) /
+                     max(float(keyboard_dimensions.y), 1.0);
+  uint4 geometry = keyboard_key_geometry[index];
+  uint4 masks = keyboard_key_masks[index];
+  float slot_width = keyboard_slot_width(geometry.w);
+  float from_center = keyboard_slot_left(geometry.w, masks.x) + slot_width * 0.5;
+  float to_center = keyboard_slot_left(geometry.w, masks.y) + slot_width * 0.5;
+  float progress = keyboard_motion_spring(
+      max(keyboard_key_motion[index].w - progress_delta, 0.0));
+  float target_center = lerp(from_center, to_center, progress);
+  float source_offset = target_center - (float(geometry.x) + float(geometry.y) * 0.5);
+  return source_offset * full_width / max(float(keyboard_dimensions.x), 1.0);
+}
+float4 composite_keyboard(float4 rgba, float2 canvas_point, float2 dimensions) {
+  if (keyboard_dimensions.z == 0 || keyboard_dimensions.x == 0 || keyboard_dimensions.y == 0)
+    return rgba;
+  uint count = keyboard_key_count();
+  [loop] for (uint index = 0; index < count; ++index) {
+    uint4 geometry = keyboard_key_geometry[index];
+    float4 motion = keyboard_key_motion[index];
+    if (geometry.z == 0 || motion.x <= 0.0) continue;
+    float4 value = 0.0;
+    float total = 0.0;
+    float layout_offset = keyboard_layout_offset(index, dimensions, 0.0);
+    float previous_offset = keyboard_layout_offset(index, dimensions, 0.12);
+    float layout_delta = previous_offset - layout_offset;
+    bool pop_blur = keyboard_dimensions.w == 0u && motion.z < 1.0;
+    bool layout_blur = abs(layout_delta) > 0.25;
+    float requested_scale = keyboard_animation.w > 0.0
+        ? keyboard_animation.w : keyboard_animation.x;
+    float current_scale = motion.y / max(requested_scale, 0.001);
+    float previous_progress = geometry.z == 2u
+        ? min(motion.z + 0.08, 1.0) : max(motion.z - 0.08, 0.0);
+    float previous_scale = pop_blur
+        ? keyboard_motion_spring(previous_progress) : current_scale;
+    float key_height = dimensions.y * (60.0 / 1080.0) *
+                       keyboard_effective_scale(dimensions);
+    float key_width = key_height * float(geometry.y) /
+                      max(float(keyboard_dimensions.y), 1.0);
+    float radial_travel = 0.5 * length(float2(key_width, key_height)) *
+                          abs(previous_scale - current_scale);
+    float travel = max(abs(layout_delta), radial_travel);
+    uint samples = (pop_blur || layout_blur)
+        ? min(max((uint)ceil(travel / 0.75) + 1u, 8u), 48u) : 1u;
+    [loop] for (uint step_index = 0; step_index < samples; ++step_index) {
+      float amount = samples == 1u ? 0.0 : float(step_index) / float(samples - 1u);
+      float weight = exp(-2.5 * amount * amount);
+      value += keyboard_key_pixel(index, canvas_point, dimensions,
+          lerp(current_scale, previous_scale, amount),
+          layout_offset + layout_delta * amount) * weight;
+      total += weight;
+    }
+    value /= max(total, 1.0);
+    float opacity = saturate(motion.x);
+    rgba.rgb = value.rgb * opacity + rgba.rgb * (1.0 - value.a * opacity);
+    rgba.a = value.a * opacity + rgba.a * (1.0 - value.a * opacity);
+  }
+  return rgba;
+}
 float4 ps_main(float4 position : SV_Position) : SV_Target {
   float2 pixel = position.xy;
   float background_alpha = rounded_coverage(pixel, float4(0, 0, output_source.xy), effects.y);
@@ -200,6 +376,7 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
   result.rgb = lerp(result.rgb, cursor.rgb, cursor.a);
   result.a = cursor.a + result.a * (1.0 - cursor.a);
   if (camera_effects.w != 0.0) result = camera_layer(result, pixel);
+  result = composite_keyboard(result, pixel, output_source.xy);
   if (cursor_options.w == 0) {
     result.rgb = saturate(result.rgb + hash(pixel, 0x9e3779b9) / 255.0);
   }

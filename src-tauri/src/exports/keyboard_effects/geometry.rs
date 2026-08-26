@@ -16,8 +16,30 @@ fn is_modifier(code: u16) -> bool {
 }
 
 fn key_width(code: u16) -> f64 {
+  // Windows draws these keys as text rather than the macOS glyphs, so their
+  // bounds differ per platform. Slight overestimates are safe: the fitting
+  // bound stops growth early instead of overflowing the edge margins.
+  #[cfg(target_os = "windows")]
+  {
+    let text_label = match code {
+      51 => 76.0,                // Backspace
+      57 | 121 => 72.0,          // Caps Lock, Page Down
+      71 => 66.0,                // Num Lock
+      114 => 50.0,               // Insert
+      36 | 76 => 48.0,           // Enter
+      56 | 60 => 46.0,           // Shift
+      54 | 55 | 59 | 62 => 38.0, // Win, Ctrl
+      48 => 36.0,                // Tab
+      58 | 61 => 34.0,           // Alt
+      117 => 30.0,               // Del
+      _ => 0.0,
+    };
+    if text_label > 0.0 {
+      return text_label;
+    }
+  }
   match code {
-    54 | 55 | 56 | 58 | 59 | 60 | 61 | 62 => 24.0,
+    54..=62 => 24.0,
     63 => 28.0,
     49 => 52.0,
     71 | 114 | 115 => 52.0,

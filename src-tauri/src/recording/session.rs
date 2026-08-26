@@ -158,7 +158,7 @@ pub(super) fn records_cursor(mode: RecordingMode) -> bool {
 }
 
 pub(super) fn records_keyboard(mode: RecordingMode, enabled: bool) -> bool {
-  cfg!(target_os = "macos")
+  cfg!(any(target_os = "macos", target_os = "windows"))
     && enabled
     && matches!(
       mode,

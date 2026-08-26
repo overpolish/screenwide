@@ -18,7 +18,8 @@ use windows::{
       D3D11_BLEND_DESC, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD,
       D3D11_BUFFER_DESC, D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_FILTER_MIN_MAG_MIP_LINEAR,
       D3D11_RENDER_TARGET_BLEND_DESC, D3D11_SAMPLER_DESC, D3D11_SUBRESOURCE_DATA,
-      D3D11_TEXTURE2D_DESC, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT, D3D11_VIEWPORT,
+      D3D11_TEXTURE2D_DESC, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT,
+      D3D11_USAGE_IMMUTABLE, D3D11_VIEWPORT,
     },
     Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SAMPLE_DESC},
     Gdi::{
@@ -36,6 +37,7 @@ use windows::{
   },
 };
 
+use super::keyboard_artwork::{KeyboardArtworkCache, KeyboardConstants};
 use crate::exports::media_preview::BakeGeometry;
 use crate::screenshots::{
   colour_f32, foreground_bounds_f32, optional_colour_f32, output_placement, validate_mesh,
@@ -77,6 +79,11 @@ pub(super) struct Compositor {
   constants: ID3D11Buffer,
   cursor_hotspots: [[f32; 4]; 8],
   cursor_view: ID3D11ShaderResourceView,
+  keyboard_cache: KeyboardArtworkCache,
+  keyboard_constants: ID3D11Buffer,
+  /// Bound at t3 when no shortcut is on screen, mirroring the four-byte
+  /// fallback buffer the Metal compositor binds.
+  keyboard_fallback: ID3D11ShaderResourceView,
   layer_blend: ID3D11BlendState,
   pixel_shader: ID3D11PixelShader,
   sampler: ID3D11SamplerState,
@@ -332,6 +339,60 @@ impl Compositor {
     let mut constants = None;
     unsafe { device.CreateBuffer(&description, None, Some(&mut constants)) }
       .map_err(|error| error.to_string())?;
+    let mut keyboard_constants = None;
+    unsafe {
+      device.CreateBuffer(
+        &D3D11_BUFFER_DESC {
+          ByteWidth: size_of::<KeyboardConstants>() as u32,
+          Usage: D3D11_USAGE_DEFAULT,
+          BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
+          ..Default::default()
+        },
+        None,
+        Some(&mut keyboard_constants),
+      )
+    }
+    .map_err(|error| error.to_string())?;
+    let mut keyboard_fallback_texture = None;
+    unsafe {
+      device.CreateTexture2D(
+        &D3D11_TEXTURE2D_DESC {
+          Width: 1,
+          Height: 1,
+          MipLevels: 1,
+          ArraySize: 1,
+          Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+          SampleDesc: DXGI_SAMPLE_DESC {
+            Count: 1,
+            Quality: 0,
+          },
+          Usage: D3D11_USAGE_IMMUTABLE,
+          BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
+          ..Default::default()
+        },
+        Some(&D3D11_SUBRESOURCE_DATA {
+          pSysMem: [0_u8; 4].as_ptr().cast::<c_void>(),
+          SysMemPitch: 4,
+          SysMemSlicePitch: 0,
+        }),
+        Some(&mut keyboard_fallback_texture),
+      )
+    }
+    .map_err(|error| error.to_string())?;
+    let keyboard_fallback_texture = keyboard_fallback_texture
+      .ok_or_else(|| "D3D11 created no keyboard fallback texture".to_owned())?;
+    let keyboard_fallback_resource: ID3D11Resource = keyboard_fallback_texture
+      .cast()
+      .map_err(|error| error.to_string())?;
+    let mut keyboard_fallback = None;
+    unsafe {
+      device.CreateShaderResourceView(
+        &keyboard_fallback_resource,
+        None,
+        Some(&mut keyboard_fallback),
+      )
+    }
+    .map_err(|error| error.to_string())?;
     let sampler_description = D3D11_SAMPLER_DESC {
       Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
       AddressU: D3D11_TEXTURE_ADDRESS_CLAMP,
@@ -445,6 +506,11 @@ impl Compositor {
       cursor_hotspots,
       cursor_view: cursor_view
         .ok_or_else(|| "D3D11 created no native cursor atlas view".to_owned())?,
+      keyboard_cache: KeyboardArtworkCache::default(),
+      keyboard_constants: keyboard_constants
+        .ok_or_else(|| "D3D11 created no keyboard constant buffer".to_owned())?,
+      keyboard_fallback: keyboard_fallback
+        .ok_or_else(|| "D3D11 created no keyboard fallback view".to_owned())?,
       layer_blend: layer_blend
         .ok_or_else(|| "D3D11 created no screenshot layer blend state".to_owned())?,
       pixel_shader: pixel_shader
@@ -702,6 +768,35 @@ impl Compositor {
     };
     let target_resource: ID3D11Resource = target.cast().map_err(|error| error.to_string())?;
     let mut render_target: Option<ID3D11RenderTargetView> = None;
+    let device = unsafe { target.GetDevice() }.map_err(|error| error.to_string())?;
+    let keyboard = composition
+      .keyboard
+      .map(|overlay| {
+        self
+          .keyboard_cache
+          .resolve(&device, &overlay, settings.height)
+      })
+      .transpose()?
+      .flatten();
+    let keyboard_values = keyboard
+      .as_ref()
+      .map_or_else(KeyboardConstants::default, |(_, values)| *values);
+    unsafe {
+      self
+        .keyboard_constants
+        .cast::<ID3D11Resource>()
+        .map_err(|error| error.to_string())
+        .map(|resource| {
+          context.UpdateSubresource(
+            &resource,
+            0,
+            None,
+            (&raw const keyboard_values).cast::<c_void>(),
+            0,
+            0,
+          );
+        })?;
+    }
     unsafe {
       self
         .constants
@@ -718,7 +813,6 @@ impl Compositor {
           );
         })?;
     }
-    let device = unsafe { target.GetDevice() }.map_err(|error| error.to_string())?;
     unsafe { device.CreateRenderTargetView(&target_resource, None, Some(&mut render_target)) }
       .map_err(|error| error.to_string())?;
     let render_target =
@@ -740,19 +834,29 @@ impl Compositor {
       context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
       context.VSSetShader(&self.vertex_shader, None);
       context.PSSetShader(&self.pixel_shader, None);
-      context.PSSetConstantBuffers(0, Some(&[Some(self.constants.clone())]));
+      context.PSSetConstantBuffers(
+        0,
+        Some(&[
+          Some(self.constants.clone()),
+          Some(self.keyboard_constants.clone()),
+        ]),
+      );
       context.PSSetShaderResources(
         0,
         Some(&[
           Some(source.view.clone()),
           Some(self.cursor_view.clone()),
           camera.map(|(camera, _, _, _)| camera.view.clone()),
+          Some(keyboard.as_ref().map_or_else(
+            || self.keyboard_fallback.clone(),
+            |(artwork, _)| artwork.view.clone(),
+          )),
         ]),
       );
       context.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
       context.PSSetSamplers(1, Some(&[Some(self.point_sampler.clone())]));
       context.Draw(3, 0);
-      context.PSSetShaderResources(0, Some(&[None, None, None]));
+      context.PSSetShaderResources(0, Some(&[None, None, None, None]));
       context.OMSetBlendState(None::<&ID3D11BlendState>, None, u32::MAX);
       context.OMSetRenderTargets(None, None);
     }

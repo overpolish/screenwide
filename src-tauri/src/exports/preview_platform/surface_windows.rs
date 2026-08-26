@@ -50,6 +50,8 @@ use windows::{
 mod compositor;
 #[path = "surface_windows/editor.rs"]
 mod editor;
+#[path = "surface_windows/keyboard_artwork.rs"]
+mod keyboard_artwork;
 #[path = "surface_windows/osc_action.rs"]
 mod osc_action;
 #[path = "surface_windows/recenter.rs"]
@@ -130,6 +132,7 @@ pub(crate) struct RecordingWorkspaceLayer<'a> {
 #[derive(Clone, Copy)]
 pub(crate) struct ComposedFrame {
   pub cursor: Option<crate::exports::cursor_effects::GpuCursor>,
+  pub keyboard: Option<crate::exports::keyboard_effects::KeyboardOverlay>,
   pub foreground_only: bool,
   pub seconds: f64,
 }
@@ -3108,6 +3111,7 @@ impl RecordingPreviewSurface {
         settings,
         ComposedFrame {
           cursor: None,
+          keyboard: None,
           foreground_only: index > 0,
           seconds: 0.0,
         },
@@ -3368,6 +3372,7 @@ impl RecordingPreviewSurface {
       settings,
       ComposedFrame {
         cursor: None,
+        keyboard: None,
         foreground_only: false,
         seconds,
       },
@@ -3410,6 +3415,7 @@ impl RecordingPreviewSurface {
       settings,
       ComposedFrame {
         cursor: None,
+        keyboard: None,
         foreground_only,
         seconds: 0.0,
       },

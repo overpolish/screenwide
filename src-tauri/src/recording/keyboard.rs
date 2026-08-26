@@ -10,7 +10,10 @@
 #[cfg(target_os = "macos")]
 #[path = "keyboard/platform_macos.rs"]
 mod platform;
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+#[path = "keyboard/platform_windows.rs"]
+mod platform;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 #[path = "keyboard/platform_unsupported.rs"]
 mod platform;
 

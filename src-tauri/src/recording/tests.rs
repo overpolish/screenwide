@@ -220,7 +220,7 @@ fn keyboard_metadata_requires_an_enabled_screen_capture() {
   ] {
     assert_eq!(
       session::records_keyboard(mode, true),
-      cfg!(target_os = "macos")
+      cfg!(any(target_os = "macos", target_os = "windows"))
     );
     assert!(!session::records_keyboard(mode, false));
   }

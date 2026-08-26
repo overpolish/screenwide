@@ -188,6 +188,10 @@ fn render_video(
     None => None,
   };
   let mut cursor = request.cursor.map(CursorCompositor::open).transpose()?;
+  let keyboard = request
+    .keyboard
+    .map(crate::exports::keyboard_effects::KeyboardCompositor::open)
+    .transpose()?;
   let output_size = crate::screenshots::output_dimensions(request.output)?;
   let compositor = request.camera.map_or_else(
     || surface.export_compositor((request.width, request.height), output_size),
@@ -262,6 +266,13 @@ fn render_video(
       request.output,
       ComposedFrame {
         cursor: baked_cursor,
+        keyboard: keyboard.as_ref().and_then(|keyboard| {
+          keyboard.evaluate_fitted(
+            position_ms,
+            request.keyboard_effects,
+            (request.output.width, request.output.height),
+          )
+        }),
         foreground_only: false,
         seconds: position_ms as f64 / 1_000.0,
       },

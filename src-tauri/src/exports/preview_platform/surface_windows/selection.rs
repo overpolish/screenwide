@@ -25,7 +25,7 @@ use windows::{
 };
 
 #[path = "selection/label.rs"]
-mod label;
+pub(super) mod label;
 #[path = "selection/label_texture.rs"]
 mod label_texture;
 

@@ -38,7 +38,7 @@ pub(super) fn label_scale_key(scale: f64) -> u32 {
   (scale * 1000.0).round().max(0.0) as u32
 }
 
-fn register_inter_font() {
+pub(in crate::exports::preview_platform::surface) fn register_inter_font() {
   static REGISTERED: OnceLock<()> = OnceLock::new();
   REGISTERED.get_or_init(|| {
     static FONT: &[u8] = include_bytes!("../../../../../assets/Inter-VariableFont_opsz,wght.ttf");
