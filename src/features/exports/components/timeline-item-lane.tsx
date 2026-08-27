@@ -74,11 +74,23 @@ export function TimelineItemLane<
             const { fragmentId, item, outputEnd, outputStart, row } = fragment;
             const selected = selectedFragmentIds?.has(fragmentId) ?? false;
             const warning = warningFragmentIds?.has(fragmentId) ?? false;
+            // A segment split inside one item renders as a joined run: the
+            // seam keeps a single hairline divider and the label appears
+            // once, on the run's widest fragment. Run members also waive the
+            // minimum width and label padding - the run as a whole stays
+            // clickable, and an inflated sliver would overlap the fragment
+            // it continues into.
+            const inRun = fragment.continuesPrevious || fragment.continuedByNext;
+            const seam = `${
+              fragment.continuesPrevious ? "rounded-l-none border-l-0 " : ""
+            }${fragment.continuedByNext ? "rounded-r-none " : ""}${
+              inRun ? "" : "min-w-1.5 "
+            }${fragment.showLabel ? "px-1.5" : ""}`;
             return (
               <button
                 aria-label={item.label}
                 aria-pressed={selectedFragmentIds ? selected : undefined}
-                className={`absolute min-w-1.5 overflow-hidden rounded-sm border px-1.5 text-left text-[10px] leading-5 whitespace-nowrap transition-[left,width,top,color,background-color,border-color] duration-200 ${
+                className={`absolute overflow-hidden rounded-sm border text-left text-[10px] leading-5 whitespace-nowrap transition-[left,width,top,color,background-color,border-color] duration-200 ${seam} ${
                   warning
                     ? selected
                       ? "border-warning bg-warning/35 text-content-fg shadow-[inset_0_0_0_1px] shadow-warning"
@@ -99,14 +111,14 @@ export function TimelineItemLane<
                 style={{
                   height: rowHeightPx - 8,
                   left: `${(outputStart * 100).toString()}%`,
-                  minWidth: minimumItemWidthPx,
+                  minWidth: inRun ? undefined : minimumItemWidthPx,
                   top: row * rowHeightPx + 4,
                   width: `${((outputEnd - outputStart) * 100).toString()}%`,
                 }}
                 title={item.label}
                 type="button"
               >
-                {item.label}
+                {fragment.showLabel ? item.label : null}
               </button>
             );
           })}

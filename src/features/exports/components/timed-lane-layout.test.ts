@@ -109,4 +109,34 @@ describe("stackTimedLaneFragments", () => {
   it("reports one row for an empty lane", () => {
     expect(stackTimedLaneFragments([]).rowCount).toBe(1);
   });
+
+  it("marks a segment split inside one item as a seam continuation", () => {
+    const split = (id: string, segmentId: number, start: number, end: number) =>
+      ({
+        fragmentId: `${id}:${segmentId.toString()}`,
+        item: { endMs: 9_000, id, startMs: 1_000 },
+        outputEnd: end,
+        outputStart: start,
+        segmentId,
+      }) satisfies TimedLaneFragment<TimedLaneItem>;
+    const { fragments } = stackTimedLaneFragments([
+      split("crossing", 0, 0.1, 0.3),
+      split("crossing", 1, 0.3, 0.6),
+      fragment("separate", 0.6, 0.8),
+    ]);
+    const byId = Object.fromEntries(
+      fragments.map((fragment) => [fragment.fragmentId, fragment]),
+    );
+    expect(byId["crossing:0"]?.continuesPrevious).toBe(false);
+    expect(byId["crossing:0"]?.continuedByNext).toBe(true);
+    expect(byId["crossing:1"]?.continuesPrevious).toBe(true);
+    expect(byId["crossing:1"]?.continuedByNext).toBe(false);
+    // The run's widest fragment carries the one label, so a sliver at the
+    // boundary never swallows it.
+    expect(byId["crossing:0"]?.showLabel).toBe(false);
+    expect(byId["crossing:1"]?.showLabel).toBe(true);
+    // A different item merely touching the run stays a fresh, labelled box.
+    expect(byId.separate?.continuesPrevious).toBe(false);
+    expect(byId.separate?.showLabel).toBe(true);
+  });
 });

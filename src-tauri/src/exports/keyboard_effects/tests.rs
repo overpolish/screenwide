@@ -376,12 +376,13 @@ fn an_outgoing_chords_unused_slot_collapses_and_cannot_be_reused_later() {
     serde_json::json!({"type":"keyDown","keyCode":8,"timestampUs":6_164_356,"modifiers":["command"]}),
     serde_json::json!({"type":"keyUp","keyCode":8,"timestampUs":6_225_880,"modifiers":["command"]}),
     serde_json::json!({"type":"keyUp","keyCode":55,"timestampUs":6_273_893,"modifiers":[]}),
-    serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":7_276_454,"modifiers":["command"]}),
+    // Inside the previous badge's post-release hold, so the chord chains.
+    serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":6_800_000,"modifiers":["command"]}),
     serde_json::json!({"type":"keyDown","keyCode":8,"timestampUs":8_376_825,"modifiers":["command"]}),
   ];
   let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
 
-  let collapse = compositor.evaluate(7_700, Default::default()).unwrap();
+  let collapse = compositor.evaluate(7_250, Default::default()).unwrap();
   let outgoing = collapse.keys.iter().find(|key| key.key_code == 8).unwrap();
   assert_eq!(outgoing.alpha, 0.0);
   assert_eq!(outgoing.layout_from_mask, outgoing.layout_to_mask);
@@ -413,18 +414,44 @@ fn an_initial_key_uses_the_full_six_tenths_entrance() {
 
 #[test]
 fn repressing_a_released_modifier_crossfades_in_its_existing_slot() {
+  // The re-press lands inside the badge's post-release hold, so it still
+  // continues the badge and crossfades in place.
+  let records = vec![
+    serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":1_000_000,"modifiers":["command"]}),
+    serde_json::json!({"type":"keyUp","keyCode":55,"timestampUs":1_200_000,"modifiers":[]}),
+    serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":1_900_000,"modifiers":["command"]}),
+  ];
+  let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
+  assert_eq!(compositor.visuals_snapshot().len(), 2);
+  let overlay = compositor.evaluate(2_000, Default::default()).unwrap();
+  assert_eq!(overlay.key_count, 2);
+  assert_eq!(overlay.keys[0].slot, overlay.keys[1].slot);
+  assert!(overlay.keys[..2].iter().any(|key| key.visible == 2));
+  assert!(overlay.keys[..2].iter().any(|key| key.visible == 1));
+}
+
+#[test]
+fn repressing_a_modifier_during_the_fade_starts_a_fresh_badge() {
+  // The re-press lands after the badge began its exit fade, so instead of
+  // resurrecting it the fade is pulled forward to finish at the press and
+  // the chord enters as a fresh badge.
   let records = vec![
     serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":1_000_000,"modifiers":["command"]}),
     serde_json::json!({"type":"keyUp","keyCode":55,"timestampUs":1_200_000,"modifiers":[]}),
     serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":2_000_000,"modifiers":["command"]}),
   ];
   let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
-  assert_eq!(compositor.visuals_snapshot().len(), 2);
+  let visuals = compositor.visuals_snapshot();
+  assert_eq!(visuals.len(), 2);
+  assert_eq!(
+    visuals[0].exit,
+    Some((1_600_000, TransitionKind::GroupRelease))
+  );
+  assert_ne!(visuals[0].group, visuals[1].group);
+  assert!(!visuals[1].replacement_enter);
   let overlay = compositor.evaluate(2_100, Default::default()).unwrap();
-  assert_eq!(overlay.key_count, 2);
-  assert_eq!(overlay.keys[0].slot, overlay.keys[1].slot);
-  assert!(overlay.keys[..2].iter().any(|key| key.visible == 2));
-  assert!(overlay.keys[..2].iter().any(|key| key.visible == 1));
+  assert_eq!(overlay.key_count, 1);
+  assert_eq!(overlay.keys[0].visible, 1);
 }
 
 #[test]
@@ -471,7 +498,10 @@ fn replacement_labels_trade_places_instead_of_double_exposing() {
   let start = compositor.evaluate(1_500, Default::default()).unwrap();
   let leaving = start.keys.iter().find(|key| key.key_code == 8).unwrap();
   let arriving = start.keys.iter().find(|key| key.key_code == 9).unwrap();
-  assert_eq!(leaving.alpha, 1.0);
+  // The C's own entrance was ~2/3 done when the replacement landed; the exit
+  // composes from that point instead of snapping to fully entered.
+  assert!(leaving.alpha > 0.9);
+  assert!(leaving.alpha < 1.0);
   assert_eq!(arriving.alpha, 0.0);
 
   let middle = compositor.evaluate(1_700, Default::default()).unwrap();
@@ -585,18 +615,26 @@ fn the_reported_recording_keeps_replacement_slots_and_moves_without_jumps() {
   let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
 
   let visuals = compositor.visuals_snapshot();
-  let modifier_slots = visuals
+  // Chords landing during a fade start fresh badges with fresh slots, so
+  // slot stability holds per badge group rather than across the recording.
+  let groups = visuals
     .iter()
-    .filter(|visual| is_modifier_key(visual.key_code))
-    .map(|visual| visual.slot_id)
+    .map(|visual| visual.group)
     .collect::<std::collections::HashSet<_>>();
-  let primary_slots = visuals
-    .iter()
-    .filter(|visual| !is_modifier_key(visual.key_code))
-    .map(|visual| visual.slot_id)
-    .collect::<std::collections::HashSet<_>>();
-  assert_eq!(modifier_slots.len(), 1);
-  assert_eq!(primary_slots.len(), 1);
+  for group in groups {
+    let modifier_slots = visuals
+      .iter()
+      .filter(|visual| visual.group == group && is_modifier_key(visual.key_code))
+      .map(|visual| visual.slot_id)
+      .collect::<std::collections::HashSet<_>>();
+    let primary_slots = visuals
+      .iter()
+      .filter(|visual| visual.group == group && !is_modifier_key(visual.key_code))
+      .map(|visual| visual.slot_id)
+      .collect::<std::collections::HashSet<_>>();
+    assert!(modifier_slots.len() <= 1);
+    assert!(primary_slots.len() <= 1);
+  }
 
   let switching = compositor.evaluate(3_800, Default::default()).unwrap();
   let shift = switching
@@ -722,4 +760,75 @@ fn animations_reach_true_zero_and_none_exits_without_a_tail() {
       },
     )
     .is_none());
+}
+
+#[test]
+fn a_rolled_key_reserves_its_slot_before_its_own_entrance() {
+  // Shift lands 81ms after Control - one rolled gesture - so it occupies its
+  // slot from Control's press at zero size, keeping Control's position
+  // stable; A joins 417ms later, outside the roll, and is absent until then.
+  let records = vec![
+    serde_json::json!({"type":"keyDown","keyCode":59,"modifiers":["control"],"timestampUs":1_787_822u64}),
+    serde_json::json!({"type":"keyDown","keyCode":56,"modifiers":["shift"],"timestampUs":1_869_210u64}),
+    serde_json::json!({"type":"keyDown","keyCode":0,"modifiers":["control","shift"],"timestampUs":2_285_987u64}),
+    serde_json::json!({"type":"keyUp","keyCode":0,"modifiers":["control","shift"],"timestampUs":2_398_132u64}),
+    serde_json::json!({"type":"keyUp","keyCode":56,"modifiers":["shift"],"timestampUs":2_545_309u64}),
+    serde_json::json!({"type":"keyUp","keyCode":59,"modifiers":["control"],"timestampUs":2_607_073u64}),
+  ];
+  let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
+
+  let early = compositor.evaluate(1_800, Default::default()).unwrap();
+  assert_eq!(early.key_count, 2, "the rolled shift is already present");
+  let shift = early.keys[..2]
+    .iter()
+    .find(|key| key.key_code == 56)
+    .expect("the reserved shift is in the overlay");
+  assert_eq!(shift.alpha, 0.0);
+  assert_eq!(shift.scale, 0.0);
+  let control = early.keys[..2]
+    .iter()
+    .find(|key| key.key_code == 59)
+    .expect("control is in the overlay");
+  assert!(control.alpha > 0.0);
+
+  let before_late_join = compositor.evaluate(2_200, Default::default()).unwrap();
+  assert_eq!(
+    before_late_join.key_count, 2,
+    "a late join is not reserved ahead of its press"
+  );
+
+  let entered = compositor.evaluate(1_900, Default::default()).unwrap();
+  let shift = entered.keys[..2]
+    .iter()
+    .find(|key| key.key_code == 56)
+    .expect("shift stays in the overlay");
+  assert!(shift.alpha > 0.0 || shift.scale > 0.0, "shift pops in place");
+}
+
+#[test]
+fn an_exit_composes_with_an_unfinished_entrance_without_snapping() {
+  // At 2x the 600ms entrance is only ~70% done when the hold ends at 1.85s
+  // source. The exit must take over from that point continuously instead of
+  // snapping the key to fully-entered before animating out.
+  let compositor = KeyboardCompositor::from_shortcuts(vec![Shortcut {
+    keys: vec![KeyPress {
+      key_code: 0,
+      modifier_mask: 0,
+      down_us: 1_000_000,
+      up_us: Some(1_100_000),
+    }],
+  }]);
+  let plan = speed_plan(2.0);
+  let before = compositor
+    .evaluate_with_timeline(1_840, Default::default(), Some(&plan))
+    .unwrap();
+  let after = compositor
+    .evaluate_with_timeline(1_900, Default::default(), Some(&plan))
+    .unwrap();
+  assert!(before.keys[0].progress < 0.75, "the entrance is unfinished");
+  assert!(
+    (after.keys[0].progress - before.keys[0].progress).abs() < 0.1,
+    "the handover is continuous"
+  );
+  assert!(after.keys[0].progress < 0.8, "no snap to fully entered");
 }

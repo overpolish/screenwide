@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{
-  layout::MOTION_US, state::VisualKey, state::EXIT_US, KeyboardCompositor, KeyboardOverlay,
+  state::TransitionKind, state::VisualKey, state::EXIT_US, KeyboardCompositor, KeyboardOverlay,
   Shortcut, HOLD_US,
 };
 use crate::exports::timeline_edit::{
@@ -100,11 +100,12 @@ impl KeyboardCompositor {
     &self,
     ranges: Option<&[TimelineRange]>,
   ) -> Vec<KeyboardTimelineItem> {
+    self.set_animation_timeline(ranges);
     let baked = self
       .baked
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
-    self
+    let mut items: Vec<KeyboardTimelineItem> = self
       .shortcuts
       .iter()
       .enumerate()
@@ -123,22 +124,25 @@ impl KeyboardCompositor {
           .map(|key| key.up_us.unwrap_or(key.down_us))
           .max()
           .unwrap_or(start_us);
-        // Match VisualKey::visible_at: released keys remain visible through
-        // the compositor's exit lifetime, so the lane ends when the artwork
-        // is actually gone rather than at the physical key-up event.
+        // Released keys remain visible through the compositor's exit
+        // lifetime, so the lane ends when the artwork is actually gone
+        // rather than at the physical key-up event. Replacements and
+        // detachments are the exception: they hand this key's place to the
+        // continuing badge at the exit moment, so the morph and pop tails -
+        // and any layout reflow that follows them - belong to the
+        // successor's clip and the lane ends at the handover.
         let end_us = baked
           .timeline
           .visuals
           .iter()
           .filter(|visual| visual.source_shortcut == index)
           .filter_map(|visual| {
-            let artwork_end = visual
-              .exit
-              .and_then(|(exit_us, _)| source_after_output_duration_us(ranges, exit_us, EXIT_US));
-            let layout_end = visual.layout_anchor_until_us.and_then(|until_us| {
-              source_after_output_duration_us(ranges, until_us.saturating_sub(MOTION_US), MOTION_US)
-            });
-            artwork_end.into_iter().chain(layout_end).max()
+            visual.exit.and_then(|(exit_us, kind)| match kind {
+              TransitionKind::Replacement | TransitionKind::Detached => {
+                source_after_output_duration_us(ranges, exit_us, 0)
+              }
+              _ => source_after_output_duration_us(ranges, exit_us, EXIT_US),
+            })
           })
           .max()
           .unwrap_or_else(|| {
@@ -148,11 +152,24 @@ impl KeyboardCompositor {
         Some(KeyboardTimelineItem {
           id: index as u64,
           start_ms: start_us / 1_000,
-          end_ms: end_us.div_ceil(1_000),
+          // Floored like start_ms: a handover end shares its instant with the
+          // successor's start, and rounding it up would fabricate a 1ms
+          // overlap that stacks the two clips into separate sublanes.
+          end_ms: end_us / 1_000,
           label: shortcut_label(shortcut, self.legacy_modifier_expansion),
         })
       })
-      .collect()
+      .collect();
+    // A successor press pulls its predecessor's fade to finish by that press
+    // on the output clock. When the physical release leaves less than a full
+    // fade of output time, the residue past the press is a frame at most, so
+    // the lane clamps to the successor rather than overlapping it.
+    for index in 1..items.len() {
+      let start_ms = items[index].start_ms;
+      let previous = &mut items[index - 1];
+      previous.end_ms = previous.end_ms.min(start_ms).max(previous.start_ms);
+    }
+    items
   }
 }
 

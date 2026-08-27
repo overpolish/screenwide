@@ -118,29 +118,29 @@ fn timeline_lane_exit_tail_crosses_a_speed_boundary_in_output_time() {
 
   assert_eq!(
     compositor.timeline_items_with_timeline(Some(&ranges))[0].end_ms,
-    2_363
+    2_362
   );
 }
 
 #[test]
-fn timeline_lanes_show_the_true_visible_range() {
+fn timeline_lanes_end_at_a_replacement_handover() {
   let records = vec![
     serde_json::json!({"type":"keyDown","keyCode":0,"timestampUs":1_000_000,"modifiers":[]}),
     serde_json::json!({"type":"keyUp","keyCode":0,"timestampUs":1_100_000,"modifiers":[]}),
     serde_json::json!({"type":"keyDown","keyCode":1,"timestampUs":1_200_000,"modifiers":[]}),
   ];
   let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
-  // The replaced badge fades until 1.6s, so its lane overlaps the successor:
-  // the timeline shows when artwork is actually on screen.
-  assert_eq!(compositor.timeline_items()[0].end_ms, 1_600);
+  // The successor chord takes over the badge at 1.2s; the replaced chord's
+  // morph-out belongs to the successor's clip, so the lanes meet exactly.
+  assert_eq!(compositor.timeline_items()[0].end_ms, 1_200);
   assert_eq!(compositor.timeline_items()[1].start_ms, 1_200);
 }
 
 #[test]
-fn timeline_lanes_overlap_across_a_modifier_repress() {
+fn timeline_lanes_meet_across_a_modifier_repress() {
   // A lone Control press whose lingering badge is replaced by a chord that
-  // starts before the hold-and-fade lifetime has finished; the lane keeps
-  // the fade tail so the true exit time stays visible.
+  // starts before the hold-and-fade lifetime has finished; the first lane
+  // ends at the handover rather than keeping the fade tail.
   let records = vec![
     serde_json::json!({"type":"keyDown","keyCode":59,"timestampUs":2_002_000,"modifiers":["control"]}),
     serde_json::json!({"type":"keyUp","keyCode":59,"timestampUs":2_570_000,"modifiers":["control"]}),
@@ -156,8 +156,8 @@ fn timeline_lanes_overlap_across_a_modifier_repress() {
   assert_eq!(items.len(), 2);
   assert_eq!(items[0].label, "Control");
   assert_eq!(items[1].label, "Control Shift A");
-  assert!(items[0].end_ms > items[1].start_ms);
-  assert_eq!(items[0].end_ms, 3_474);
+  assert_eq!(items[0].end_ms, items[1].start_ms);
+  assert_eq!(items[0].end_ms, 3_074);
 }
 
 #[test]
@@ -398,4 +398,119 @@ fn many_fresh_badges_stay_within_wire_slot_bounds() {
       assert!(overlay.keys[index].slot < 32);
     }
   }
+}
+
+#[test]
+fn a_chord_during_the_fade_starts_a_fresh_badge() {
+  // The second chord lands 41ms after the first badge began its exit fade.
+  // It must not resurrect that badge: the fade is pulled forward to finish
+  // exactly at the press and the new chord pops in fresh, so the lanes meet
+  // at the press with no morph or layout tail crossing the boundary.
+  let records = vec![
+    serde_json::json!({"type":"keyDown","keyCode":59,"modifiers":["control"],"timestampUs":1_787_822u64}),
+    serde_json::json!({"type":"keyDown","keyCode":56,"modifiers":["shift"],"timestampUs":1_869_210u64}),
+    serde_json::json!({"type":"keyDown","keyCode":0,"modifiers":["control","shift"],"timestampUs":2_285_987u64}),
+    serde_json::json!({"type":"keyUp","keyCode":0,"modifiers":["control","shift"],"timestampUs":2_398_132u64}),
+    serde_json::json!({"type":"keyUp","keyCode":56,"modifiers":["shift"],"timestampUs":2_545_309u64}),
+    serde_json::json!({"type":"keyUp","keyCode":59,"modifiers":["control"],"timestampUs":2_607_073u64}),
+    serde_json::json!({"type":"keyDown","keyCode":59,"modifiers":["control"],"timestampUs":3_398_339u64}),
+    serde_json::json!({"type":"keyDown","keyCode":0,"modifiers":["control"],"timestampUs":4_029_162u64}),
+    serde_json::json!({"type":"keyUp","keyCode":0,"modifiers":["control"],"timestampUs":4_122_845u64}),
+    serde_json::json!({"type":"keyUp","keyCode":59,"modifiers":["control"],"timestampUs":4_650_000u64}),
+  ];
+  let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
+  let items = compositor.timeline_items();
+  assert_eq!(items[0].label, "Control Shift A");
+  assert_eq!(items[0].end_ms, 3_398);
+  assert_eq!(items[1].start_ms, 3_398);
+  for visual in compositor.visuals_snapshot() {
+    if visual.source_shortcut == 0 {
+      assert_eq!(
+        visual.exit,
+        Some((2_998_339, TransitionKind::GroupRelease)),
+        "the first badge's fade finishes exactly at the second press"
+      );
+      assert_eq!(visual.layout_anchor_until_us, None);
+    } else {
+      assert!(!visual.replacement_enter, "the fresh badge enters normally");
+    }
+  }
+}
+
+fn two_x_speed_ranges() -> [TimelineRange; 3] {
+  // The reported edit: cuts around the first shortcut with the middle
+  // segment at 2x, so both shortcuts and the handover sit in sped-up time.
+  [
+    TimelineRange {
+      output_start_us: 0,
+      source_start_us: 0,
+      source_end_us: 1_787_000,
+      playback_rate: 1.0,
+    },
+    TimelineRange {
+      output_start_us: 1_787_000,
+      source_start_us: 1_787_000,
+      source_end_us: 3_789_000,
+      playback_rate: 2.0,
+    },
+    TimelineRange {
+      output_start_us: 2_788_000,
+      source_start_us: 3_789_000,
+      source_end_us: 9_348_000,
+      playback_rate: 1.0,
+    },
+  ]
+}
+
+#[test]
+fn a_sped_up_handover_still_meets_at_the_successor() {
+  // At 2x the fade occupies twice the source time, and the physical release
+  // leaves less than a full fade of output time before the press; the lane
+  // clamps the imperceptible residue so the clips never overlap.
+  let records = vec![
+    serde_json::json!({"type":"keyDown","keyCode":59,"modifiers":["control"],"timestampUs":1_787_822u64}),
+    serde_json::json!({"type":"keyDown","keyCode":56,"modifiers":["shift"],"timestampUs":1_869_210u64}),
+    serde_json::json!({"type":"keyDown","keyCode":0,"modifiers":["control","shift"],"timestampUs":2_285_987u64}),
+    serde_json::json!({"type":"keyUp","keyCode":0,"modifiers":["control","shift"],"timestampUs":2_398_132u64}),
+    serde_json::json!({"type":"keyUp","keyCode":56,"modifiers":["shift"],"timestampUs":2_545_309u64}),
+    serde_json::json!({"type":"keyUp","keyCode":59,"modifiers":["control"],"timestampUs":2_607_073u64}),
+    serde_json::json!({"type":"keyDown","keyCode":59,"modifiers":["control"],"timestampUs":3_398_339u64}),
+    serde_json::json!({"type":"keyUp","keyCode":59,"modifiers":["control"],"timestampUs":4_650_000u64}),
+  ];
+  let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
+  let items = compositor.timeline_items_with_timeline(Some(&two_x_speed_ranges()));
+  assert_eq!(items[0].end_ms, 3_398);
+  assert_eq!(items[1].start_ms, 3_398);
+}
+
+#[test]
+fn the_roll_window_is_measured_on_the_output_clock() {
+  // A key 417ms after its chord's previous key is a late join at 1x, but at
+  // 2x the viewer sees it 208ms later - one rolled gesture, so the row is
+  // laid out for all keys from the start and nothing slides.
+  let records = vec![
+    serde_json::json!({"type":"keyDown","keyCode":59,"modifiers":["control"],"timestampUs":1_787_822u64}),
+    serde_json::json!({"type":"keyDown","keyCode":56,"modifiers":["shift"],"timestampUs":1_869_210u64}),
+    serde_json::json!({"type":"keyDown","keyCode":0,"modifiers":["control","shift"],"timestampUs":2_285_987u64}),
+    serde_json::json!({"type":"keyUp","keyCode":0,"modifiers":["control","shift"],"timestampUs":2_398_132u64}),
+    serde_json::json!({"type":"keyUp","keyCode":56,"modifiers":["shift"],"timestampUs":2_545_309u64}),
+    serde_json::json!({"type":"keyUp","keyCode":59,"modifiers":["control"],"timestampUs":2_607_073u64}),
+  ];
+  let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
+
+  let ranges = two_x_speed_ranges();
+  let sped = compositor
+    .evaluate_with_ranges(2_300, Default::default(), Some(&ranges))
+    .unwrap();
+  for key in &sped.keys[..sped.key_count as usize] {
+    assert_eq!(key.layout_progress, 1.0, "a rolled chord never slides");
+  }
+
+  let plain = compositor
+    .evaluate_with_ranges(2_300, Default::default(), None)
+    .unwrap();
+  let sliding = plain.keys[..plain.key_count as usize]
+    .iter()
+    .any(|key| key.layout_progress < 1.0);
+  assert!(sliding, "at 1x the same key is a late join and the row moves");
 }

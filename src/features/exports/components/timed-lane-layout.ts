@@ -84,7 +84,23 @@ export function layoutTimedLaneItems<Item extends TimedLaneItem>({
 }
 
 export type StackedLaneFragment<Item extends TimedLaneItem> =
-  TimedLaneFragment<Item> & { row: number };
+  TimedLaneFragment<Item> & {
+    row: number;
+    /**
+     * The same item continuing seamlessly from the previous fragment on this
+     * row - a segment split, not a separate occurrence - so the lane renders
+     * the pair joined and carries the label only once.
+     */
+    continuesPrevious: boolean;
+    continuedByNext: boolean;
+    /**
+     * Carries the item's label: the widest fragment of its seam run, so a
+     * sliver at a segment boundary never swallows the whole run's label.
+     */
+    showLabel: boolean;
+  };
+
+const SEAM_EPSILON = 1e-9;
 
 /**
  * Assigns overlapping fragments to stacked sublanes so simultaneous items
@@ -99,6 +115,9 @@ export function stackTimedLaneFragments<Item extends TimedLaneItem>(
       left.outputStart - right.outputStart || left.outputEnd - right.outputEnd,
   );
   const rowEnds: number[] = [];
+  const rowLast: (StackedLaneFragment<Item> | undefined)[] = [];
+  const runs: StackedLaneFragment<Item>[][] = [];
+  const rowRun: number[] = [];
   const stacked = ordered.map((fragment) => {
     let row = rowEnds.findIndex((end) => fragment.outputStart >= end);
     if (row === -1) {
@@ -107,7 +126,40 @@ export function stackTimedLaneFragments<Item extends TimedLaneItem>(
     } else {
       rowEnds[row] = fragment.outputEnd;
     }
-    return { ...fragment, row };
+    const previous = rowLast[row];
+    const continuesPrevious =
+      previous !== undefined &&
+      previous.item.id === fragment.item.id &&
+      Math.abs(previous.outputEnd - fragment.outputStart) < SEAM_EPSILON;
+    const placed = {
+      ...fragment,
+      continuedByNext: false,
+      continuesPrevious,
+      row,
+      showLabel: false,
+    };
+    if (continuesPrevious && previous) {
+      previous.continuedByNext = true;
+      runs[rowRun[row] ?? -1]?.push(placed);
+    } else {
+      rowRun[row] = runs.length;
+      runs.push([placed]);
+    }
+    rowLast[row] = placed;
+    return placed;
   });
+  for (const run of runs) {
+    let widest: StackedLaneFragment<Item> | undefined;
+    for (const member of run) {
+      if (
+        !widest ||
+        member.outputEnd - member.outputStart >
+          widest.outputEnd - widest.outputStart
+      ) {
+        widest = member;
+      }
+    }
+    if (widest) widest.showLabel = true;
+  }
   return { fragments: stacked, rowCount: Math.max(rowEnds.length, 1) };
 }

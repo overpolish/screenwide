@@ -45,6 +45,11 @@ pub(crate) struct KeyboardCompositor {
   deleted_shortcut_ids: Arc<RwLock<HashSet<u64>>>,
   deleted_shortcut_ranges: Arc<RwLock<Vec<DeletedKeyboardShortcutRange>>>,
   shortcut_positions: Arc<RwLock<Vec<KeyboardShortcutPositionRange>>>,
+  /// The retained playback ranges of the current edit. Animation durations
+  /// run on the output clock, so decisions baked from them (fade pulled
+  /// forward to finish by a press, the chord-roll assembly window) need the
+  /// rate mapping at bake time, not only at evaluation.
+  animation_ranges: Arc<RwLock<Option<Vec<crate::exports::timeline_edit::TimelineRange>>>>,
 }
 
 #[derive(Debug, Default)]
@@ -101,9 +106,30 @@ impl KeyboardCompositor {
       deleted_shortcut_ids: Arc::new(RwLock::new(HashSet::new())),
       deleted_shortcut_ranges: Arc::new(RwLock::new(Vec::new())),
       shortcut_positions: Arc::new(RwLock::new(Vec::new())),
+      animation_ranges: Arc::new(RwLock::new(None)),
     };
     compositor.rebake();
     compositor
+  }
+
+  /// Adopts the edit's playback ranges for bake-time animation decisions,
+  /// rebaking only when they changed. Called by every evaluation entry point,
+  /// so a compositor always bakes against the timeline it renders for.
+  pub(super) fn set_animation_timeline(
+    &self,
+    ranges: Option<&[crate::exports::timeline_edit::TimelineRange]>,
+  ) {
+    {
+      let mut known = self
+        .animation_ranges
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+      if known.as_deref() == ranges {
+        return;
+      }
+      *known = ranges.map(<[_]>::to_vec);
+    }
+    self.rebake();
   }
 
   /// Rebuilds the display lifecycle from the shortcuts and the current
@@ -127,15 +153,21 @@ impl KeyboardCompositor {
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
       .clone();
+    let animation_ranges = self
+      .animation_ranges
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .clone();
     let mut timeline = KeyboardStateTimeline::from_shortcuts(
       &self.shortcuts,
       ChainContext {
         deleted_ids: &deleted_ids,
         deleted_ranges: &deleted_ranges,
         positions: &positions,
+        ranges: animation_ranges.as_deref(),
       },
     );
-    layout::attach_tracks(&mut timeline.visuals);
+    layout::attach_tracks(&mut timeline.visuals, animation_ranges.as_deref());
     let mut slots = timeline
       .visuals
       .iter()
@@ -252,6 +284,7 @@ impl KeyboardCompositor {
     if !settings.bake {
       return None;
     }
+    self.set_animation_timeline(ranges);
     let now = position_ms.saturating_mul(1_000);
     let baked = self
       .baked
@@ -431,18 +464,28 @@ impl KeyboardCompositor {
       } else {
         raw_entrance_progress
       };
+      // The exit composes with a still-running entrance instead of replacing
+      // it: the exit curve starts at 1.0, so a key whose compressed lifetime
+      // never finished entering hands over continuously at whatever point it
+      // reached, rather than popping to full size to begin its exit.
       let key_progress = exit_progress.map_or(entrance_progress, |progress| {
-        if exit.is_some_and(|(_, kind)| kind == TransitionKind::Replacement) {
+        let exiting = if exit.is_some_and(|(_, kind)| kind == TransitionKind::Replacement) {
           1.0 - replacement_exit_progress(progress)
         } else {
           1.0 - progress
-        }
+        };
+        entrance_progress.min(exiting)
       });
       let detached_amount = exit
         .filter(|(_, kind)| *kind == TransitionKind::Detached)
         .and(exit_progress)
-        .map(|progress| 1.0 - pop_spring(progress).clamp(0.0, 1.0));
-      let key_alpha = if artwork_hidden {
+        .map(|progress| {
+          entrance_progress.min(1.0 - pop_spring(progress).clamp(0.0, 1.0))
+        });
+      // A slot reserved by a roll renders nothing until its own entrance,
+      // in every animation mode: it only holds the row geometry stable.
+      let pending_entrance = now < key.animation_enter_us;
+      let key_alpha = if pending_entrance || artwork_hidden {
         0.0
       } else if let Some(amount) = detached_amount {
         amount
@@ -454,7 +497,7 @@ impl KeyboardCompositor {
       } else {
         1.0
       };
-      let key_scale = (if artwork_hidden {
+      let key_scale = (if pending_entrance || artwork_hidden {
         0.0
       } else if animation == KeyboardOverlay::ANIMATION_POP {
         detached_amount.unwrap_or_else(|| pop_spring(key_progress))

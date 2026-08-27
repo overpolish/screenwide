@@ -9,7 +9,10 @@ use super::{role, KeyboardStateTimeline, LayoutTrack, TransitionKind, VisualKey,
 use crate::exports::keyboard_effects::clock::AnimationClock;
 use crate::exports::keyboard_effects::HOLD_US;
 use crate::exports::keyboard_effects::{KeyPress, Shortcut};
-use crate::exports::timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
+use crate::exports::timeline_edit::{
+  source_before_output_duration_us, DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange,
+  TimelineRange,
+};
 
 /// The timeline-edit state a chord's badge continuity depends on. A chord
 /// continues its predecessor's badge only when both are visible then and
@@ -19,6 +22,24 @@ pub(in crate::exports::keyboard_effects) struct ChainContext<'a> {
   pub deleted_ids: &'a [u64],
   pub deleted_ranges: &'a [DeletedKeyboardShortcutRange],
   pub positions: &'a [KeyboardShortcutPositionRange],
+  /// The edit's retained playback ranges; animation durations run on the
+  /// output clock, so bake-time scheduling maps through them.
+  pub ranges: Option<&'a [TimelineRange]>,
+}
+
+impl<'a> ChainContext<'a> {
+  pub(super) fn clock(&self) -> AnimationClock<'a> {
+    self
+      .ranges
+      .map_or_else(AnimationClock::source, AnimationClock::edited)
+  }
+
+  /// The source instant at which an exit fade must start so it has fully
+  /// played out - in output time - by `press_us`.
+  fn fade_finished_by(&self, press_us: u64) -> u64 {
+    source_before_output_duration_us(self.ranges, press_us, super::EXIT_US)
+      .unwrap_or_else(|| press_us.saturating_sub(super::EXIT_US))
+  }
 }
 
 impl ChainContext<'_> {
@@ -48,26 +69,10 @@ impl ChainContext<'_> {
 
   fn chains(&self, previous: usize, next: usize, at_us: u64) -> bool {
     let at_ms = at_us / 1_000;
-    if self.deleted(previous, at_ms) {
-      eprintln!(
-        "[keyboard] shortcut {next} at {at_ms}ms: fresh badge, predecessor {previous} is deleted"
-      );
+    if self.deleted(previous, at_ms) || self.deleted(next, at_ms) {
       return false;
     }
-    if self.deleted(next, at_ms) {
-      eprintln!("[keyboard] shortcut {next} at {at_ms}ms: fresh badge, it is deleted itself");
-      return false;
-    }
-    let from = self.placement(previous, at_ms);
-    let to = self.placement(next, at_ms);
-    if from != to {
-      eprintln!(
-        "[keyboard] shortcut {next} at {at_ms}ms: fresh badge, placement {from:?} -> {to:?}"
-      );
-      return false;
-    }
-    eprintln!("[keyboard] shortcut {next} at {at_ms}ms: continues badge of shortcut {previous}");
-    true
+    self.placement(previous, at_ms) == self.placement(next, at_ms)
   }
 }
 
@@ -169,10 +174,17 @@ impl Builder<'_> {
         .slots
         .iter()
         .filter_map(|slot| slot.current)
-        .max_by_key(|visual| self.timeline.visuals[*visual].enter_us)
-        .map(|visual| self.timeline.visuals[visual].source_shortcut);
-      let chains =
-        predecessor.is_some_and(|previous| self.context.chains(previous, event.shortcut, event.at));
+        .max_by_key(|visual| self.timeline.visuals[*visual].enter_us);
+      // A badge that has begun its exit fade is already leaving, so a new
+      // chord never continues it: the fade is finished by this press below
+      // and the chord pops in as a fresh badge instead.
+      let chains = predecessor.is_some_and(|visual| {
+        let known = &self.timeline.visuals[visual];
+        known.exit.is_none_or(|(exit_us, _)| event.at < exit_us)
+          && self
+            .context
+            .chains(known.source_shortcut, event.shortcut, event.at)
+      });
       if chains {
         for index in 0..self.slots.len() {
           if self.slots[index].group != self.current_group {
@@ -191,6 +203,7 @@ impl Builder<'_> {
         // forward far enough to be FINISHED by this press - while never
         // starting before the badge's own keys were actually released.
         if !self.context.deleted_at(event.shortcut, event.at) {
+          let fade_start = self.context.fade_finished_by(event.at);
           let lingering = self
             .slots
             .iter()
@@ -200,7 +213,7 @@ impl Builder<'_> {
             let visual = &mut self.timeline.visuals[visual];
             if let Some((exit_us, kind)) = visual.exit {
               let release_us = exit_us.saturating_sub(HOLD_US);
-              let finished_by_press = event.at.saturating_sub(super::EXIT_US).max(release_us);
+              let finished_by_press = fade_start.max(release_us);
               visual.exit = Some((exit_us.min(finished_by_press), kind));
             }
           }
@@ -296,6 +309,7 @@ impl Builder<'_> {
       slot_id,
       enter_us: event.at,
       animation_enter_us: event.at,
+      reserve_from_us: None,
       replacement_enter,
       layout_exit_us: None,
       layout_anchor_until_us: None,
@@ -384,12 +398,13 @@ impl Builder<'_> {
   }
 
   fn clear_finished(&mut self, at: u64) {
+    let clock = self.context.clock();
     let finished = self
       .slots
       .iter()
       .filter_map(|slot| {
         let visual = slot.current?;
-        (!self.timeline.visuals[visual].visible_at(at, AnimationClock::source())).then_some(slot.id)
+        (!self.timeline.visuals[visual].visible_at(at, clock)).then_some(slot.id)
       })
       .collect::<Vec<_>>();
     for slot_id in finished {
@@ -413,9 +428,7 @@ impl Builder<'_> {
       .visuals
       .iter()
       .enumerate()
-      .filter(|(_, visual)| {
-        visual.slot_id == slot && visual.visible_at(at, AnimationClock::source())
-      })
+      .filter(|(_, visual)| visual.slot_id == slot && visual.visible_at(at, self.context.clock()))
       .max_by_key(|(_, visual)| visual.enter_us)
       .map(|(index, _)| index)
   }

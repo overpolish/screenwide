@@ -104,6 +104,21 @@ pub(crate) fn source_after_output_duration_us(
   output_to_source_us(ranges, output_anchor_us.saturating_add(duration_us))
 }
 
+/// The reverse of [`source_after_output_duration_us`]: the source coordinate
+/// that lies an output-time duration BEFORE the anchor, so a fixed-length
+/// animation can be scheduled to finish exactly at the anchor at any rate.
+pub(crate) fn source_before_output_duration_us(
+  ranges: Option<&[TimelineRange]>,
+  anchor_us: u64,
+  duration_us: u64,
+) -> Option<u64> {
+  let Some(ranges) = ranges else {
+    return Some(anchor_us.saturating_sub(duration_us));
+  };
+  let output_anchor_us = source_to_output_us(ranges, anchor_us)?;
+  output_to_source_us(ranges, output_anchor_us.saturating_sub(duration_us))
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct TimelinePlan {
   deleted_keyboard_shortcut_ids: Vec<u64>,

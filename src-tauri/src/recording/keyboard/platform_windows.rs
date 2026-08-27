@@ -14,8 +14,8 @@ use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
   CallNextHookEx, DispatchMessageW, GetMessageW, PostThreadMessageW, SetWindowsHookExW,
-  TranslateMessage, UnhookWindowsHookEx, HC_ACTION, KBDLLHOOKSTRUCT, LLKHF_EXTENDED,
-  LLKHF_INJECTED, MSG, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP,
+  TranslateMessage, UnhookWindowsHookEx, HC_ACTION, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, MSG,
+  WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP,
 };
 
 use super::{EventSink, FocusContext, RawKeyboardEvent};
@@ -47,8 +47,11 @@ unsafe extern "system" fn hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -
     let data = unsafe { *(lparam.0 as *const KBDLLHOOKSTRUCT) };
     let is_down = matches!(wparam.0 as u32, WM_KEYDOWN | WM_SYSKEYDOWN);
     let is_up = matches!(wparam.0 as u32, WM_KEYUP | WM_SYSKEYUP);
-    // Synthetic keystrokes belong to whatever generated them, not the user.
-    if (is_down || is_up) && !data.flags.contains(LLKHF_INJECTED) {
+    // LLKHF_INJECTED is deliberately not filtered: remote-desktop and
+    // streaming hosts (Parsec, Sunshine, RDP) deliver all of the user's real
+    // typing as injected input, and the macOS HID tap records synthetic
+    // events too.
+    if is_down || is_up {
       HOOK_STATE.with(|state| {
         if let Some(state) = state.borrow().as_ref() {
           let _ = state.events.try_send(classifier::PendingEvent {

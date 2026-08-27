@@ -35,6 +35,10 @@ pub(super) struct VisualKey {
   pub slot_id: u32,
   pub enter_us: u64,
   pub animation_enter_us: u64,
+  /// A rolled chord assumes its slots from the roll's first key: from this
+  /// instant the key occupies its place in the row (so earlier keys never
+  /// shift to make room) while its artwork still pops on its own entrance.
+  pub reserve_from_us: Option<u64>,
   pub replacement_enter: bool,
   pub layout_exit_us: Option<u64>,
   pub layout_anchor_until_us: Option<u64>,
@@ -51,7 +55,12 @@ impl VisualKey {
       let anchor_us = until_us.saturating_sub(super::layout::MOTION_US);
       clock.elapsed_us(anchor_us, now) < super::layout::MOTION_US
     });
-    self.animation_enter_us <= now && (artwork_visible || layout_visible)
+    let present_us = self
+      .reserve_from_us
+      .map_or(self.animation_enter_us, |reserve| {
+        reserve.min(self.animation_enter_us)
+      });
+    present_us <= now && (artwork_visible || layout_visible)
   }
 }
 
