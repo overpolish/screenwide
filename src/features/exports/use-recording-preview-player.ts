@@ -25,17 +25,14 @@ import { playRecordingPreview } from "./recording-preview-playback-api";
 import { RecordingPreviewPlayerEvent } from "./recording-preview-player-contract";
 import { recordingPreviewSettingsKey } from "./recording-preview-settings-key";
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
-import {
-  recordingTimelinePlaybackRangeFrom,
-  recordingTimelinePlaybackRanges,
-  recordingTimelinePlaybackRangesFrom,
-} from "./recording-timeline-playback";
+import { recordingTimelinePlaybackRangesFrom } from "./recording-timeline-playback";
 import {
   AudioTrackVolume,
   CursorEffectSettings,
   KeyboardEffectSettings,
   RecordingPreviewLayout,
 } from "./types";
+import { useRecordingPreviewRate } from "./use-recording-preview-rate";
 import { useRecordingPreviewSettings } from "./use-recording-preview-settings";
 import {
   type RecordingPreviewSelection,
@@ -141,19 +138,23 @@ export function useRecordingPreviewPlayer({
   timelineEditRef.current = timelineEdit;
   const keyboardDeletions = () =>
     keyboardDeletionsFor(timelineEditRef.current, sourceDurationMs);
-  const playbackRanges = useCallback(
-    () =>
-      recordingTimelinePlaybackRanges(
-        timelineEditRef.current,
-        timingRef.current[0],
-      ),
-    [],
-  );
-  const playbackRangeFrom = useCallback(
-    (sourcePositionMs: number) =>
-      recordingTimelinePlaybackRangeFrom(playbackRanges(), sourcePositionMs),
-    [playbackRanges],
-  );
+  const {
+    playbackRangeFrom,
+    playbackRanges,
+    playbackRate,
+    playbackRateRef,
+    setPlaybackRate,
+  } = useRecordingPreviewRate({
+    isEnabled,
+    isPlayingRef,
+    positionRef,
+    sessionIdRef,
+    setError,
+    setIsPlaying,
+    timelineEditRef,
+    timingRef,
+    wantsPlaybackRef,
+  });
   useRecordingPreviewSettings({
     audioTrackVolumes,
     cursorEffects,
@@ -245,7 +246,14 @@ export function useRecordingPreviewPlayer({
         void playRecordingPreview(
           sessionIdRef.current,
           Math.round(next.sourceEndMs),
-          { startPositionMs: Math.round(next.sourceStartMs) },
+          {
+            playbackRanges: recordingTimelinePlaybackRangesFrom(
+              ranges,
+              next.sourceStartMs,
+            ),
+            playbackRate: playbackRateRef.current,
+            startPositionMs: Math.round(next.sourceStartMs),
+          },
         ).catch((cause: unknown) => {
           wantsPlaybackRef.current = false;
           updatePlaying(false);
@@ -273,6 +281,7 @@ export function useRecordingPreviewPlayer({
                 playbackRanges(),
                 event.data.positionMs,
               ),
+              playbackRate: playbackRateRef.current,
             },
           ).catch((cause: unknown) => {
             wantsPlaybackRef.current = false;
@@ -424,6 +433,7 @@ export function useRecordingPreviewPlayer({
               playbackRanges(),
               positionRef.current,
             ),
+            playbackRate: playbackRateRef.current,
           },
         );
       } catch (cause) {
@@ -432,7 +442,7 @@ export function useRecordingPreviewPlayer({
         setError(String(cause));
       }
     })();
-  }, [isEnabled, playbackRangeFrom, playbackRanges]);
+  }, [isEnabled, playbackRangeFrom, playbackRanges, playbackRateRef]);
   const pause = useCallback(() => {
     if (!isEnabled) return;
     resumeAfterSeekRef.current = false;
@@ -529,6 +539,8 @@ export function useRecordingPreviewPlayer({
     layout,
     pause,
     play,
+    playbackRate,
     seek,
+    setPlaybackRate,
   };
 }

@@ -49,7 +49,9 @@ export function layoutTimedLaneItems<Item extends TimedLaneItem>({
     const fragments: TimedLaneFragment<Item>[] = [];
 
     for (const [index, segment] of edit.segments.entries()) {
-      const segmentDuration = segment.sourceEnd - segment.sourceStart;
+      const playbackRate = segment.playbackRate ?? 1;
+      const segmentDuration =
+        (segment.sourceEnd - segment.sourceStart) / playbackRate;
       const intersectionStart = Math.max(sourceStart, segment.sourceStart);
       const intersectionEnd = Math.min(sourceEnd, segment.sourceEnd);
       const isPoint = sourceStart === sourceEnd;
@@ -60,10 +62,12 @@ export function layoutTimedLaneItems<Item extends TimedLaneItem>({
             sourceStart === segment.sourceEnd));
       if (intersectionStart < intersectionEnd || (isPoint && containsPoint)) {
         const outputStart =
-          (retainedBefore + intersectionStart - segment.sourceStart) /
+          (retainedBefore +
+            (intersectionStart - segment.sourceStart) / playbackRate) /
           retainedDuration;
         const outputEnd =
-          (retainedBefore + intersectionEnd - segment.sourceStart) /
+          (retainedBefore +
+            (intersectionEnd - segment.sourceStart) / playbackRate) /
           retainedDuration;
         fragments.push({
           fragmentId: `${String(item.id)}:${segment.id.toString()}`,

@@ -1283,6 +1283,8 @@ export function NativeRecordingPreview({
               onCopyCurrentFrame={copyCurrentFrame}
               onPause={player.pause}
               onPlay={player.play}
+              onPlaybackRateChange={player.setPlaybackRate}
+              playbackRate={player.playbackRate}
               playhead={playhead}
             />
           ) : null}

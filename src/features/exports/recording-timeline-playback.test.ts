@@ -24,8 +24,8 @@ const edit: RecordingTimelineEdit = {
 describe("recording timeline playback", () => {
   it("coalesces cuts but preserves deleted gaps", () => {
     expect(recordingTimelinePlaybackRanges(edit, 8_000)).toEqual([
-      { sourceEndMs: 4_000, sourceStartMs: 0 },
-      { sourceEndMs: 8_000, sourceStartMs: 6_000 },
+      { playbackRate: 1, sourceEndMs: 4_000, sourceStartMs: 0 },
+      { playbackRate: 1, sourceEndMs: 8_000, sourceStartMs: 6_000 },
     ]);
   });
 
@@ -43,11 +43,28 @@ describe("recording timeline playback", () => {
   it("starts native playback inside the current retained range", () => {
     const ranges = recordingTimelinePlaybackRanges(edit, 8_000);
     expect(recordingTimelinePlaybackRangesFrom(ranges, 2_500)).toEqual([
-      { sourceEndMs: 4_000, sourceStartMs: 2_500 },
-      { sourceEndMs: 8_000, sourceStartMs: 6_000 },
+      { playbackRate: 1, sourceEndMs: 4_000, sourceStartMs: 2_500 },
+      { playbackRate: 1, sourceEndMs: 8_000, sourceStartMs: 6_000 },
     ]);
     expect(recordingTimelinePlaybackRangesFrom(ranges, 5_000)).toEqual([
-      { sourceEndMs: 8_000, sourceStartMs: 6_000 },
+      { playbackRate: 1, sourceEndMs: 8_000, sourceStartMs: 6_000 },
     ]);
+  });
+
+  it("carries rates and does not coalesce adjacent ranges with different rates", () => {
+    const rated: RecordingTimelineEdit = {
+      ...edit,
+      segments: [
+        { id: 0, playbackRate: 2, sourceEnd: 0.25, sourceStart: 0 },
+        { id: 1, playbackRate: 0.5, sourceEnd: 0.5, sourceStart: 0.25 },
+        { id: 3, playbackRate: 2, sourceEnd: 1, sourceStart: 0.75 },
+      ],
+    };
+    expect(recordingTimelinePlaybackRanges(rated, 8_000)).toEqual([
+      { playbackRate: 2, sourceEndMs: 2_000, sourceStartMs: 0 },
+      { playbackRate: 0.5, sourceEndMs: 4_000, sourceStartMs: 2_000 },
+      { playbackRate: 2, sourceEndMs: 8_000, sourceStartMs: 6_000 },
+    ]);
+    expect(recordingTimelinePlaybackDurationMs(rated, 8_000)).toBe(6_000);
   });
 });

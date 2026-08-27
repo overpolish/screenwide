@@ -85,8 +85,8 @@ pub(crate) fn available_camera_formats(
   Ok(formats)
 }
 
-/// Keeps one format per native resolution — the earliest advertised preference,
-/// or failing that the cadence closest to the leading one — largest first.
+/// Keeps one format per native resolution - the earliest advertised preference,
+/// or failing that the cadence closest to the leading one - largest first.
 ///
 /// Duplicate pixel formats are not meaningful options to a person, and the
 /// writer receives NV12 either way.

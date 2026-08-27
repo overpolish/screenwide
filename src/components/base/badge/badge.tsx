@@ -27,7 +27,7 @@ const badgeVariants = tv({
     },
     variant: {
       ghost: "",
-      outline: "border-1",
+      outline: "border-1 bg-content",
     },
   },
 });

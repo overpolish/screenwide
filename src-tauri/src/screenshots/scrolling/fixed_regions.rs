@@ -129,7 +129,7 @@ fn dominant_colour(
 }
 
 /// Whether one row (vertical axis) or column (horizontal axis) is unchanged
-/// between the pair at *identical viewport coordinates* — the signature of
+/// between the pair at *identical viewport coordinates* - the signature of
 /// chrome that stays put while the document scrolls underneath it.
 fn position_is_static(
   previous: &CapturedImage,
@@ -178,8 +178,8 @@ fn static_strips(previous: &CapturedImage, current: &CapturedImage, axis: Axis) 
 /// poorly because of sparse text, animations or lazy content; masking those
 /// would cut vertical or horizontal holes in the page. The trailing run goes
 /// too, because an overlay scrollbar thumb makes the right-edge band read as
-/// chrome on the pairs it crosses: painting it over erases the page behind it —
-/// a source-control panel's status letters — in the stripes that flipping
+/// chrome on the pairs it crosses: painting it over erases the page behind it -
+/// a source-control panel's status letters - in the stripes that flipping
 /// classification draws. Composition rebuilds that strip from what the covering
 /// tiles agree on instead. A frame with no unfixed band at all is ambiguous and
 /// keeps every one of them.
@@ -269,7 +269,7 @@ impl FixedBands {
   }
 
   /// Width of independently moving chrome connected to the right viewport edge
-  /// — the strip `keep_leading_rail` dropped, for reconstruction to rebuild.
+  /// - the strip `keep_leading_rail` dropped, for reconstruction to rebuild.
   pub(super) fn right_edge_width(&self, image: &CapturedImage) -> u32 {
     if self.axis != Axis::Vertical {
       return 0;

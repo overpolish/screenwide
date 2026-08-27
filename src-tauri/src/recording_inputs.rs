@@ -262,7 +262,7 @@ fn camera_modes(camera: &CameraInfo, preferred_fps: &[u32]) -> Vec<(u32, u32, u3
       Some((width, height, choose_fps(&ranges, preferred_fps)))
     })
     .collect::<Vec<_>>();
-  // A camera often advertises the same dimensions twice — one format capped at
+  // A camera often advertises the same dimensions twice - one format capped at
   // 25, another reaching 50. Ranking by preference order before raw distance
   // keeps the earliest satisfied wish, so PAL at 60 keeps the 50 fps format.
   modes.sort_by_key(|(width, height, fps)| {

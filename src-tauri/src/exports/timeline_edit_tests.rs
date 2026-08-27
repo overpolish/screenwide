@@ -86,11 +86,13 @@ fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
         id: 0,
         source_end: split,
         source_start: 0.0,
+        playback_rate: 1.0,
       },
       RecordingTimelineSegment {
         id: 1,
         source_end: 1.0,
         source_start: split,
+        playback_rate: 1.0,
       },
     ],
   }
@@ -137,6 +139,7 @@ fn export_plan_coalesces_cuts_and_maps_retained_source_time() {
     id: 3,
     source_end: 1.0,
     source_start: 0.75,
+    playback_rate: 1.0,
   });
   timeline.segments[1].source_end = 0.5;
 
@@ -151,4 +154,63 @@ fn export_plan_coalesces_cuts_and_maps_retained_source_time() {
 #[test]
 fn export_plan_ignores_cut_only_timelines() {
   assert!(TimelinePlan::from_edit(&edit(1, 0.5), 8_000).is_none());
+}
+
+#[test]
+fn export_plan_scales_ranges_by_playback_rate_without_coalescing_different_rates() {
+  let mut timeline = edit(1, 0.5);
+  timeline.segments[0].playback_rate = 2.0;
+  timeline.segments[1].playback_rate = 0.5;
+  let plan = TimelinePlan::from_edit(&timeline, 8_000).unwrap();
+  assert_eq!(plan.duration_ms(), 10_000);
+  assert_eq!(plan.ranges().len(), 2);
+  assert_eq!(plan.ranges()[0].output_start_us, 0);
+  assert_eq!(plan.ranges()[1].output_start_us, 2_000_000);
+  assert_eq!(plan.source_to_output_us(6_000_000), Some(6_000_000));
+}
+
+#[test]
+fn fixed_output_duration_maps_back_through_playback_rate() {
+  let fast = [TimelineRange {
+    output_start_us: 0,
+    source_end_us: 5_000_000,
+    source_start_us: 0,
+    playback_rate: 2.0,
+  }];
+  let slow = [TimelineRange {
+    playback_rate: 0.5,
+    ..fast[0]
+  }];
+
+  assert_eq!(
+    source_after_output_duration_us(Some(&fast), 2_000_000, 400_000),
+    Some(2_800_000)
+  );
+  assert_eq!(
+    source_after_output_duration_us(Some(&slow), 2_000_000, 400_000),
+    Some(2_200_000)
+  );
+}
+
+#[test]
+fn fixed_output_duration_crosses_speed_boundaries() {
+  let ranges = [
+    TimelineRange {
+      output_start_us: 0,
+      source_end_us: 2_200_000,
+      source_start_us: 0,
+      playback_rate: 2.0,
+    },
+    TimelineRange {
+      output_start_us: 1_100_000,
+      source_end_us: 5_000_000,
+      source_start_us: 2_200_000,
+      playback_rate: 0.5,
+    },
+  ];
+
+  assert_eq!(
+    source_after_output_duration_us(Some(&ranges), 2_050_000, 400_000),
+    Some(2_362_500)
+  );
 }

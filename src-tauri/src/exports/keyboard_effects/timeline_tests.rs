@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use crate::exports::timeline_edit::TimelineRange;
 
 #[test]
 fn v1_timeline_expands_legacy_modifier_mask() {
@@ -63,6 +64,62 @@ fn reconstructed_v2_timeline_keeps_chord_bounds() {
   let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
   assert_eq!(compositor.timeline_items()[0].start_ms, 1_000);
   assert_eq!(compositor.timeline_items()[0].end_ms, 2_450);
+}
+
+#[test]
+fn timeline_lane_exit_tail_uses_edited_output_time() {
+  let records = vec![
+    serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":1_000_000,"modifiers":["command"]}),
+    serde_json::json!({"type":"keyDown","keyCode":0,"timestampUs":1_100_000,"modifiers":["command"]}),
+    serde_json::json!({"type":"keyUp","keyCode":0,"timestampUs":1_200_000,"modifiers":["command"]}),
+    serde_json::json!({"type":"keyUp","keyCode":55,"timestampUs":1_300_000,"modifiers":[]}),
+  ];
+  let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
+  let range = |playback_rate| TimelineRange {
+    output_start_us: 0,
+    source_end_us: 5_000_000,
+    source_start_us: 0,
+    playback_rate,
+  };
+
+  assert_eq!(
+    compositor.timeline_items_with_timeline(Some(&[range(2.0)]))[0].end_ms,
+    2_850
+  );
+  assert_eq!(
+    compositor.timeline_items_with_timeline(Some(&[range(0.5)]))[0].end_ms,
+    2_250
+  );
+}
+
+#[test]
+fn timeline_lane_exit_tail_crosses_a_speed_boundary_in_output_time() {
+  let records = vec![
+    serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":1_000_000,"modifiers":["command"]}),
+    serde_json::json!({"type":"keyDown","keyCode":0,"timestampUs":1_100_000,"modifiers":["command"]}),
+    serde_json::json!({"type":"keyUp","keyCode":0,"timestampUs":1_200_000,"modifiers":["command"]}),
+    serde_json::json!({"type":"keyUp","keyCode":55,"timestampUs":1_300_000,"modifiers":[]}),
+  ];
+  let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
+  let ranges = [
+    TimelineRange {
+      output_start_us: 0,
+      source_end_us: 2_200_000,
+      source_start_us: 0,
+      playback_rate: 2.0,
+    },
+    TimelineRange {
+      output_start_us: 1_100_000,
+      source_end_us: 5_000_000,
+      source_start_us: 2_200_000,
+      playback_rate: 0.5,
+    },
+  ];
+
+  assert_eq!(
+    compositor.timeline_items_with_timeline(Some(&ranges))[0].end_ms,
+    2_363
+  );
 }
 
 #[test]

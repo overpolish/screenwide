@@ -7,6 +7,8 @@ export type RecordingTimelineSegment = {
   sourceEnd: number;
   /** Normalized position in the original recording, before magnetic edits. */
   sourceStart: number;
+  /** Playback rate for this retained source range. */
+  playbackRate?: number;
 };
 
 export type RecordingTimelineEdit = {
@@ -38,7 +40,9 @@ export const recordingTimelineRetainedDuration = (
   edit: RecordingTimelineEdit,
 ) =>
   edit.segments.reduce(
-    (total, segment) => total + segment.sourceEnd - segment.sourceStart,
+    (total, segment) =>
+      total +
+      (segment.sourceEnd - segment.sourceStart) / (segment.playbackRate ?? 1),
     0,
   );
 
@@ -48,7 +52,8 @@ export function layoutRecordingTimelineSegments(
   const retainedDuration = recordingTimelineRetainedDuration(edit);
   let retainedStart = 0;
   return edit.segments.map((segment, index) => {
-    const duration = segment.sourceEnd - segment.sourceStart;
+    const duration =
+      (segment.sourceEnd - segment.sourceStart) / (segment.playbackRate ?? 1);
     const outputStart = retainedStart / retainedDuration;
     retainedStart += duration;
     return {
@@ -70,9 +75,10 @@ export function recordingTimelineOutputToSource(
   const target = Math.max(0, Math.min(1, outputPosition)) * retainedDuration;
   let retainedStart = 0;
   for (const segment of edit.segments) {
-    const duration = segment.sourceEnd - segment.sourceStart;
+    const rate = segment.playbackRate ?? 1;
+    const duration = (segment.sourceEnd - segment.sourceStart) / rate;
     if (target <= retainedStart + duration)
-      return segment.sourceStart + target - retainedStart;
+      return segment.sourceStart + (target - retainedStart) * rate;
     retainedStart += duration;
   }
   return edit.segments[edit.segments.length - 1]?.sourceEnd ?? 0;
@@ -89,10 +95,13 @@ export function recordingTimelineSourceToOutput(
       return retainedStart / retainedDuration;
     if (sourcePosition <= segment.sourceEnd)
       return (
-        (retainedStart + sourcePosition - segment.sourceStart) /
+        (retainedStart +
+          (sourcePosition - segment.sourceStart) /
+            (segment.playbackRate ?? 1)) /
         retainedDuration
       );
-    retainedStart += segment.sourceEnd - segment.sourceStart;
+    retainedStart +=
+      (segment.sourceEnd - segment.sourceStart) / (segment.playbackRate ?? 1);
   }
   return 1;
 }
@@ -129,6 +138,22 @@ export function deleteRecordingTimelineSegment(
     : { ...edit, segments };
 }
 
+/** Updates one segment's playback rate. Invalid rates and unknown segments are no-ops. */
+export function setRecordingTimelineSegmentPlaybackRate(
+  edit: RecordingTimelineEdit,
+  segmentId: number,
+  playbackRate: number,
+): RecordingTimelineEdit {
+  if (!Number.isFinite(playbackRate) || playbackRate < 0.25 || playbackRate > 4)
+    return edit;
+  const index = edit.segments.findIndex((segment) => segment.id === segmentId);
+  if (index < 0 || (edit.segments[index].playbackRate ?? 1) === playbackRate)
+    return edit;
+  const segments = [...edit.segments];
+  segments[index] = { ...segments[index], playbackRate };
+  return { ...edit, segments };
+}
+
 /**
  * Removes a normalized output-time range, splitting retained source segments
  * at either boundary as needed. The remaining ranges ripple together and, like
@@ -152,7 +177,8 @@ export function deleteRecordingTimelineRange(
   let retainedStart = 0;
   let nextSegmentId = edit.nextSegmentId;
   const segments = edit.segments.flatMap((segment) => {
-    const duration = segment.sourceEnd - segment.sourceStart;
+    const rate = segment.playbackRate ?? 1;
+    const duration = (segment.sourceEnd - segment.sourceStart) / rate;
     const retainedEnd = retainedStart + duration;
     const overlapStart = Math.max(removalStart, retainedStart);
     const overlapEnd = Math.min(removalEnd, retainedEnd);
@@ -162,9 +188,9 @@ export function deleteRecordingTimelineRange(
       return [segment];
 
     const sourceRemovalStart =
-      segment.sourceStart + overlapStart - segmentRetainedStart;
+      segment.sourceStart + (overlapStart - segmentRetainedStart) * rate;
     const sourceRemovalEnd =
-      segment.sourceStart + overlapEnd - segmentRetainedStart;
+      segment.sourceStart + (overlapEnd - segmentRetainedStart) * rate;
     const pieces: RecordingTimelineSegment[] = [];
     if (sourceRemovalStart - segment.sourceStart > TIMELINE_POSITION_EPSILON)
       pieces.push({ ...segment, sourceEnd: sourceRemovalStart });
@@ -302,6 +328,7 @@ export function cutRecordingTimeline(
       ...edit.segments.slice(0, segmentIndex),
       { ...segment, sourceEnd: sourcePosition },
       {
+        ...segment,
         id: edit.nextSegmentId,
         sourceEnd: segment.sourceEnd,
         sourceStart: sourcePosition,

@@ -55,6 +55,8 @@ pub(crate) struct GpuVideoReader {
   // Keep the current sample alive until the caller has presented the frame.
   last_sample: Option<IMFSample>,
   last_timestamp_ms: u64,
+  pending_frame: Option<GpuFrame>,
+  pending_sample: Option<IMFSample>,
   reader: IMFSourceReader,
   width: u32,
   _device_manager: IMFDXGIDeviceManager,
@@ -129,6 +131,8 @@ impl GpuVideoReader {
       last_frame: None,
       last_sample: None,
       last_timestamp_ms: 0,
+      pending_frame: None,
+      pending_sample: None,
       reader,
       width,
       _device_manager: device_manager,
@@ -154,15 +158,34 @@ impl GpuVideoReader {
     win(unsafe { self.reader.SetCurrentPosition(&GUID::zeroed(), &position) })?;
     self.last_frame = None;
     self.last_sample = None;
+    self.pending_frame = None;
+    self.pending_sample = None;
     self.last_timestamp_ms = seek_ms;
     Ok(())
   }
 
   pub(crate) fn frame_at(&mut self, target_ms: u64) -> Result<Option<GpuFrame>, String> {
     loop {
-      let Some(frame) = self.next_frame()? else {
+      if self.pending_frame.is_none() {
+        let Some((frame, sample)) = self.read_frame()? else {
+          return Ok(self.last_frame.clone());
+        };
+        self.pending_frame = Some(frame);
+        self.pending_sample = Some(sample);
+      }
+      let pending = self
+        .pending_frame
+        .as_ref()
+        .expect("the pending GPU frame exists");
+      if pending.timestamp_ms > target_ms.saturating_add(2) && self.last_frame.is_some() {
         return Ok(self.last_frame.clone());
-      };
+      }
+      let frame = self.pending_frame.take().expect("the pending frame exists");
+      let sample = self
+        .pending_sample
+        .take()
+        .expect("the pending sample exists");
+      let frame = self.install_frame(frame, sample);
       if frame.timestamp_ms.saturating_add(2) >= target_ms {
         return Ok(Some(frame));
       }
@@ -173,6 +196,24 @@ impl GpuVideoReader {
   /// fixed display clock. Final export uses this so capture timestamps and
   /// dropped-frame gaps survive exactly instead of being shifted or padded.
   pub(crate) fn next_frame(&mut self) -> Result<Option<GpuFrame>, String> {
+    let pending = self.pending_frame.take().zip(self.pending_sample.take());
+    let Some((frame, sample)) = (match pending {
+      Some(value) => Some(value),
+      None => self.read_frame()?,
+    }) else {
+      return Ok(None);
+    };
+    Ok(Some(self.install_frame(frame, sample)))
+  }
+
+  fn install_frame(&mut self, frame: GpuFrame, sample: IMFSample) -> GpuFrame {
+    self.last_timestamp_ms = frame.timestamp_ms;
+    self.last_sample = Some(sample);
+    self.last_frame = Some(frame.clone());
+    frame
+  }
+
+  fn read_frame(&mut self) -> Result<Option<(GpuFrame, IMFSample)>, String> {
     loop {
       let mut flags = 0_u32;
       let mut timestamp = 0_i64;
@@ -197,10 +238,7 @@ impl GpuVideoReader {
       let mut frame = sample_texture(&sample, self.width, self.height)?;
       frame.timestamp_100ns = timestamp.max(0);
       frame.timestamp_ms = timestamp_ms;
-      self.last_sample = Some(sample);
-      self.last_timestamp_ms = timestamp_ms;
-      self.last_frame = Some(frame.clone());
-      return Ok(Some(frame));
+      return Ok(Some((frame, sample)));
     }
   }
 

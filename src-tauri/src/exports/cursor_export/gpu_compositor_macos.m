@@ -49,6 +49,7 @@ typedef struct {
   uint64_t output_start_us;
   uint64_t source_end_us;
   uint64_t source_start_us;
+  double playback_rate;
 } ScreenwideTimelineRange;
 
 static bool timeline_presentation(
@@ -67,8 +68,8 @@ static bool timeline_presentation(
     if (rounded_source_us < range->source_start_us ||
         rounded_source_us >= range->source_end_us)
       continue;
-    uint64_t output_us = range->output_start_us +
-                         rounded_source_us - range->source_start_us;
+    uint64_t output_us = range->output_start_us + (uint64_t)llround(
+        (rounded_source_us - range->source_start_us) / range->playback_rate);
     *output = CMTimeMake((int64_t)output_us, 1000000);
     return true;
   }

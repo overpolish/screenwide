@@ -64,7 +64,7 @@ const noopRecord = () => undefined;
 
 /**
  * The real `useLabelHandles`, wired to an identity `toWorld` so client px are
- * world px — the same pointer-capture path the ruler window uses.
+ * world px - the same pointer-capture path the ruler window uses.
  */
 function DraggableLabel(props: ComponentProps<typeof SvgLabel>) {
   const { handles } = useLabelHandles(identityToWorld, noopRecord);

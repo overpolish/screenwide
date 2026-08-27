@@ -81,7 +81,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     let position = monitor.position().to_logical::<f64>(scale);
     let size = monitor.size().to_logical::<f64>(scale);
     // Logical coordinates on macOS (mixed-DPI physical rects share no global
-    // space); physical elsewhere — matching `focus::poll_cursor`.
+    // space); physical elsewhere - matching `focus::poll_cursor`.
     #[cfg(target_os = "macos")]
     regions.push(FocusRegion {
       height: size.height,

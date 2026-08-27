@@ -8,7 +8,7 @@ import { Bounds } from "./pixel-analysis";
 
 /** Centres this close in device px read as collinear. */
 const ALIGNMENT_SLACK = 1;
-/** Below this a component is noise — antialiasing, a hairline, a stray dot. */
+/** Below this a component is noise - antialiasing, a hairline, a stray dot. */
 const MINIMUM_OBJECT_SIZE = 3;
 /** More outlines than this stops reading as "the things in the box". */
 const MAXIMUM_OBJECTS = 12;
@@ -51,7 +51,7 @@ const isSelf = (rect: PixelRect, box: PixelRect) =>
  * words of a label) reads as a single object instead of its parts.
  */
 const CLUSTER_GAP = 6;
-/** Clustering input cap — keeps the merge loop bounded on text-heavy boxes. */
+/** Clustering input cap - keeps the merge loop bounded on text-heavy boxes. */
 const MAXIMUM_PARTS = 128;
 
 const near = (a: PixelRect, b: PixelRect) =>
@@ -89,10 +89,10 @@ const clustered = (parts: readonly PixelRect[]): PixelRect[] => {
 /**
  * The objects INSIDE the measurement whose centring is worth reporting: the
  * icon, the label, the badge. Detector components sitting within
- * [`CLUSTER_GAP`] of each other are one visual object — a multi-stroke icon
+ * [`CLUSTER_GAP`] of each other are one visual object - a multi-stroke icon
  * must not read as its strokes. The component (or cluster) matching the
- * measurement itself is excluded — comparing a box against itself is always
- * "centred" and says nothing — as are specks.
+ * measurement itself is excluded - comparing a box against itself is always
+ * "centred" and says nothing - as are specks.
  */
 const innerObjects = (
   boxes: readonly RulerComponentBox[],

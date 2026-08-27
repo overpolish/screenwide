@@ -126,12 +126,20 @@ pub(crate) fn spawn_video(
   sources: &PlayerSources,
   playback_factors: &[f64],
   start_ms: u64,
+  playback_rate: f64,
   _still: bool,
   cancelled: Arc<AtomicBool>,
   _child: Arc<Mutex<Option<Child>>>,
   sender: SyncSender<VideoFrame>,
 ) -> Result<std::thread::JoinHandle<()>, String> {
-  video::spawn(sources, playback_factors, start_ms, cancelled, sender)
+  video::spawn(
+    sources,
+    playback_factors,
+    start_ms,
+    playback_rate,
+    cancelled,
+    sender,
+  )
 }
 
 /// How much each pane's playback decode shrinks to match the on-screen pane
@@ -211,16 +219,14 @@ pub(crate) fn composed_frame_image(
     cursor_effects,
     (screen.width, screen.height),
   );
-  let keyboard = sources.keyboard.as_deref().and_then(|keyboard| {
-    keyboard.evaluate_fitted(
-      position_ms,
-      keyboard_effects,
-      (
-        recording_output.primary.width,
-        recording_output.primary.height,
-      ),
-    )
-  });
+  let keyboard = sources.keyboard_overlay(
+    position_ms,
+    keyboard_effects,
+    (
+      recording_output.primary.width,
+      recording_output.primary.height,
+    ),
+  );
   let (cursor, overlay) = composition::gpu_still_overlay(
     &screen,
     &recording_output.primary,

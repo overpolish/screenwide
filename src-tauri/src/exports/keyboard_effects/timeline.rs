@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{
-  state::VisualKey, state::EXIT_US, KeyboardCompositor, KeyboardOverlay, Shortcut, HOLD_US,
+  layout::MOTION_US, state::VisualKey, state::EXIT_US, KeyboardCompositor, KeyboardOverlay,
+  Shortcut, HOLD_US,
 };
-use crate::exports::timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
+use crate::exports::timeline_edit::{
+  source_after_output_duration_us, DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange,
+  TimelineRange,
+};
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -83,7 +87,19 @@ impl KeyboardCompositor {
 
   /// Returns captured shortcut groups in reconstruction order, using the same
   /// parsed data consumed by preview and export.
+  #[cfg(test)]
   pub(crate) fn timeline_items(&self) -> Vec<KeyboardTimelineItem> {
+    self.timeline_items_with_timeline(None)
+  }
+
+  /// Returns lane bounds in source coordinates, adjusted so animation-only
+  /// tails occupy their fixed duration on the edited output timeline. The
+  /// frontend can therefore use its normal source-to-output lane mapping while
+  /// matching the compositor at every playback rate.
+  pub(crate) fn timeline_items_with_timeline(
+    &self,
+    ranges: Option<&[TimelineRange]>,
+  ) -> Vec<KeyboardTimelineItem> {
     let baked = self
       .baked
       .read()
@@ -118,18 +134,21 @@ impl KeyboardCompositor {
           .filter_map(|visual| {
             let artwork_end = visual
               .exit
-              .map(|(exit_us, _)| exit_us.saturating_add(EXIT_US));
-            artwork_end
-              .into_iter()
-              .chain(visual.layout_anchor_until_us)
-              .max()
+              .and_then(|(exit_us, _)| source_after_output_duration_us(ranges, exit_us, EXIT_US));
+            let layout_end = visual.layout_anchor_until_us.and_then(|until_us| {
+              source_after_output_duration_us(ranges, until_us.saturating_sub(MOTION_US), MOTION_US)
+            });
+            artwork_end.into_iter().chain(layout_end).max()
           })
           .max()
-          .unwrap_or_else(|| last_key_us.saturating_add(HOLD_US).saturating_add(EXIT_US));
+          .unwrap_or_else(|| {
+            source_after_output_duration_us(ranges, last_key_us.saturating_add(HOLD_US), EXIT_US)
+              .unwrap_or(last_key_us)
+          });
         Some(KeyboardTimelineItem {
           id: index as u64,
           start_ms: start_us / 1_000,
-          end_ms: end_us / 1_000,
+          end_ms: end_us.div_ceil(1_000),
           label: shortcut_label(shortcut, self.legacy_modifier_expansion),
         })
       })

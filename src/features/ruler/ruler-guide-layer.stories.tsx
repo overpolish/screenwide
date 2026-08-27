@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const viewport = { height: 400, width: 640 };
 
-/** Inert stand-in for `useLabelHandles` — gap chips render, nothing drags. */
+/** Inert stand-in for `useLabelHandles` - gap chips render, nothing drags. */
 const handles: LabelHandles = {
   beginDrag: () => undefined,
   drag: () => undefined,
@@ -63,7 +63,7 @@ export const Horizontal: Story = {
   args: { guides: horizontals },
 };
 
-/** Both axes at once — gaps never compare across axes. */
+/** Both axes at once - gaps never compare across axes. */
 export const BothAxes: Story = {
   args: { guides: [...verticals, ...horizontals] },
 };

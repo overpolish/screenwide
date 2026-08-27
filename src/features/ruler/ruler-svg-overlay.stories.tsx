@@ -13,7 +13,7 @@ import { LabelHandles } from "./use-label-handles";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** Inert stand-in for `useLabelHandles` — chips render, nothing drags. */
+/** Inert stand-in for `useLabelHandles` - chips render, nothing drags. */
 const handles: LabelHandles = {
   beginDrag: () => undefined,
   drag: () => undefined,
@@ -39,9 +39,9 @@ const measurements: readonly Measurement[] = [
  * are dropped by the self-exclusion, so only the three genuine pieces of
  * content inside measurement 1 become inner objects:
  *
- * - `150..210 × 80..110` centres on x=180 — the measurement's own x centre — so
+ * - `150..210 × 80..110` centres on x=180 - the measurement's own x centre - so
  *   it draws a vertical centre tick.
- * - `250..290 × 115..145` centres on y=130 — the measurement's y centre — so it
+ * - `250..290 × 115..145` centres on y=130 - the measurement's y centre - so it
  *   draws a horizontal one.
  * - `80..120 × 150..170` is centred on neither and stays a bare outline.
  *
@@ -99,7 +99,7 @@ export const SelectedProbe: Story = {
   args: { highlighted: { id: 12, kind: "probe" } },
 };
 
-/** Centerlines off — just the boxes, their labels and the probes. */
+/** Centerlines off - just the boxes, their labels and the probes. */
 export const NoCenterlines: Story = {
   args: { centerlines: false },
 };

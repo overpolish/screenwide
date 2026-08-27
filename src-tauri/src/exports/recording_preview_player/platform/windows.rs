@@ -24,7 +24,10 @@ use tauri::ipc::Channel;
 
 use self::gpu_decoder::GpuFrame;
 pub(crate) use self::gpu_decoder::GpuVideoReader;
-use super::super::{video::VideoFrame, PlayerSources};
+use super::super::{
+  video::{presentation_elapsed_ms, source_position_ms, VideoFrame},
+  PlayerSources,
+};
 use crate::exports::preview_platform::ComposedFrame;
 
 pub(crate) const NATIVE_STILLS: bool = true;
@@ -69,10 +72,8 @@ pub(super) fn present_native_frame(sources: &PlayerSources, index: u32, frame: &
       // The shortcut strip belongs to the screen pane and is fitted against the
       // recording canvas, never against the camera pane's own output.
       let keyboard = (index == 0)
-        .then_some(())
-        .and(sources.keyboard.as_deref())
-        .and_then(|keyboard| {
-          keyboard.evaluate_fitted(
+        .then(|| {
+          sources.keyboard_overlay(
             frame.timestamp_ms,
             keyboard_settings,
             (
@@ -80,7 +81,8 @@ pub(super) fn present_native_frame(sources: &PlayerSources, index: u32, frame: &
               settings.recording_output.primary.height,
             ),
           )
-        });
+        })
+        .flatten();
       let composed = ComposedFrame {
         cursor,
         keyboard,
@@ -140,6 +142,7 @@ pub(crate) fn spawn_video(
   sources: &PlayerSources,
   _playback_factors: &[f64],
   start_ms: u64,
+  playback_rate: f64,
   _still: bool,
   cancelled: Arc<AtomicBool>,
   _child: Arc<Mutex<Option<Child>>>,
@@ -174,68 +177,73 @@ pub(crate) fn spawn_video(
             return;
           }
         };
-        let pending = match reader.frame_at(start_ms) {
-          Ok(frame) => frame,
+        match reader.frame_at(start_ms) {
+          Ok(_) => {}
           Err(error) => {
             let _ = startup_tx.send(Err(error));
             return;
           }
-        };
-        streams.push((index, duration_ms, reader, pending));
+        }
+        streams.push((index, duration_ms, reader));
       }
       let _ = startup_tx.send(Ok(()));
+      let mut output_frame = 0_u64;
       while !cancelled.load(Ordering::Acquire) {
-        let Some(stream_index) = streams
-          .iter()
-          .enumerate()
-          .filter_map(|(stream_index, (_, duration_ms, _, frame))| {
-            frame
-              .as_ref()
-              .filter(|frame| frame.timestamp_ms < *duration_ms)
-              .map(|frame| (stream_index, frame.timestamp_ms))
-          })
-          .min_by_key(|(_, timestamp_ms)| *timestamp_ms)
-          .map(|(stream_index, _)| stream_index)
-        else {
-          break;
-        };
-        let (index, _, reader, pending) = &mut streams[stream_index];
-        let Some(frame) = pending.take() else {
-          continue;
-        };
-        // The decoder's sample owns a pooled DXGI surface. Do not ask Media
-        // Foundation for another sample until the consumer has submitted this
-        // texture to the compositor, otherwise its pixels can be recycled
-        // underneath the older timestamp still waiting in the playback queue.
-        let (presented_tx, presented_rx) = mpsc::sync_channel(0);
-        let mut frame = VideoFrame {
-          timestamp_ms: frame.timestamp_ms,
-          payload: VideoFramePayload::Native {
-            frame,
-            index: *index,
-            presented: Some(presented_tx),
-          },
-        };
-        loop {
-          match sender.try_send(frame) {
-            Ok(()) => break,
-            Err(TrySendError::Full(returned)) => {
-              if cancelled.load(Ordering::Acquire) {
-                return;
+        let target_ms = source_position_ms(start_ms, output_frame, playback_rate);
+        let mut sent = false;
+        for (index, duration_ms, reader) in &mut streams {
+          if target_ms >= *duration_ms {
+            continue;
+          }
+          let mut frame = match reader.frame_at(target_ms) {
+            Ok(Some(frame)) => frame,
+            Ok(None) => continue,
+            Err(_) => return,
+          };
+          // Presentation metadata follows the output tick even when the
+          // retained source texture repeats, so overlays still animate at
+          // the full output cadence.
+          frame.timestamp_ms = target_ms;
+          frame.timestamp_100ns = i64::try_from(target_ms)
+            .unwrap_or(i64::MAX / 10_000)
+            .saturating_mul(10_000);
+          // The decoder's sample owns a pooled DXGI surface. Keep it retained
+          // until this output tick has submitted the texture; repeated slow-
+          // motion ticks safely reuse the retained sample before decoding on.
+          let (presented_tx, presented_rx) = mpsc::sync_channel(0);
+          let mut frame = VideoFrame {
+            presentation_elapsed_ms: presentation_elapsed_ms(output_frame),
+            payload: VideoFramePayload::Native {
+              frame,
+              index: *index,
+              presented: Some(presented_tx),
+            },
+          };
+          loop {
+            match sender.try_send(frame) {
+              Ok(()) => break,
+              Err(TrySendError::Full(returned)) => {
+                if cancelled.load(Ordering::Acquire) {
+                  return;
+                }
+                frame = returned;
+                std::thread::yield_now();
               }
-              frame = returned;
-              std::thread::yield_now();
+              Err(TrySendError::Disconnected(_)) => return,
             }
-            Err(TrySendError::Disconnected(_)) => return,
           }
-        }
-        while !cancelled.load(Ordering::Acquire) {
-          match presented_rx.recv_timeout(Duration::from_millis(50)) {
-            Ok(()) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
-            Err(mpsc::RecvTimeoutError::Timeout) => {}
+          while !cancelled.load(Ordering::Acquire) {
+            match presented_rx.recv_timeout(Duration::from_millis(50)) {
+              Ok(()) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
+              Err(mpsc::RecvTimeoutError::Timeout) => {}
+            }
           }
+          sent = true;
         }
-        *pending = reader.next_frame().unwrap_or_default();
+        if !sent {
+          break;
+        }
+        output_frame = output_frame.saturating_add(1);
       }
     })
     .map_err(|error| error.to_string())?;
@@ -349,16 +357,14 @@ pub(crate) fn composed_frame_image(
         cursor_effects,
       )
     });
-  let keyboard = sources.keyboard.as_deref().and_then(|keyboard| {
-    keyboard.evaluate_fitted(
-      position_ms,
-      keyboard_effects,
-      (
-        recording_output.primary.width,
-        recording_output.primary.height,
-      ),
-    )
-  });
+  let keyboard = sources.keyboard_overlay(
+    position_ms,
+    keyboard_effects,
+    (
+      recording_output.primary.width,
+      recording_output.primary.height,
+    ),
+  );
   surface.compose_texture_to_image(
     &frame.texture,
     frame.subresource,

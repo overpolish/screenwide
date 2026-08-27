@@ -12,6 +12,7 @@ import {
   Button,
   Label,
   Popover,
+  PopoverProps,
   SelectValue,
 } from "react-aria-components";
 import { VariantProps } from "tailwind-variants";
@@ -23,6 +24,7 @@ import {
 } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 import { ListBox } from "../listbox/listbox";
+import { OverflowShadow } from "../overflow-shadow/overflow-shadow";
 
 import { ClearButton } from "./components/clear-button";
 
@@ -99,8 +101,12 @@ type SelectProps<T extends object> = Omit<AriaSelectProps<T>, "children"> &
     items?: Iterable<T>;
     label?: string;
     leftSection?: ReactNode;
+    listBoxClassName?: string;
     onClear?: () => void;
     onPress?: () => void;
+    popoverPlacement?: PopoverProps["placement"];
+    popoverShouldFlip?: boolean;
+    scrollShadow?: boolean;
     /**
      * @default false
      * @type boolean
@@ -120,9 +126,13 @@ export const Select = <T extends object>({
   items,
   label,
   leftSection,
+  listBoxClassName,
   onClear,
   onPress,
   placeholder,
+  popoverPlacement,
+  popoverShouldFlip,
+  scrollShadow,
   showFocus,
   size,
   standalone,
@@ -137,6 +147,18 @@ export const Select = <T extends object>({
     line,
     trigger,
   } = selectVariants({ compact, size, variant });
+  const listBox = (
+    <ListBox
+      className={
+        scrollShadow
+          ? "w-full overflow-visible rounded-none border-0 bg-transparent shadow-none"
+          : listBoxClassName
+      }
+      items={items}
+    >
+      {children}
+    </ListBox>
+  );
 
   return (
     <AriaSelect {...props} className={base()}>
@@ -209,8 +231,23 @@ export const Select = <T extends object>({
             }
             // Standalone still needs listbox to be rendered to show a display value
             isOpen={standalone ? false : undefined}
+            placement={popoverPlacement}
+            shouldFlip={popoverShouldFlip}
           >
-            <ListBox items={items}>{children}</ListBox>
+            {scrollShadow ? (
+              <OverflowShadow
+                constrainHeight
+                rootClassName={clsx(
+                  "border-1 border-muted/30 bg-content shadow-md",
+                  listBoxClassName,
+                )}
+                shadowRadius="md"
+              >
+                {listBox}
+              </OverflowShadow>
+            ) : (
+              listBox
+            )}
           </Popover>
         </>
       )}

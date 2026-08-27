@@ -94,6 +94,7 @@ impl PreviewPlayerManager {
         mode,
         playback_factors,
         playback_end_ms: self.playback_end_ms,
+        playback_rate: self.playback_rate,
         playback_ranges: self.playback_ranges.clone(),
         request_id: self.latest_seek_request,
         start_ms: self.position_ms,

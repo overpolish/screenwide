@@ -16,6 +16,7 @@ import {
   remapRecordingTimelinePosition,
   snapRecordingTimelinePosition,
   trimRecordingTimelineSegment,
+  setRecordingTimelineSegmentPlaybackRate,
 } from "./recording-timeline-edit";
 
 describe("recording timeline edit", () => {
@@ -52,6 +53,37 @@ describe("recording timeline edit", () => {
 });
 
 describe("recording timeline ripple layout", () => {
+  it("uses playback rate for duration, layout, and source/output mapping", () => {
+    const edit = setRecordingTimelineSegmentPlaybackRate(
+      createRecordingTimelineEdit(42),
+      0,
+      2,
+    );
+    expect(recordingTimelineRetainedDuration(edit)).toBe(0.5);
+    expect(recordingTimelineOutputToSource(edit, 0.5)).toBeCloseTo(0.5);
+    expect(recordingTimelineSourceToOutput(edit, 0.5)).toBeCloseTo(0.5);
+    expect(layoutRecordingTimelineSegments(edit)[0]).toMatchObject({
+      outputEnd: 1,
+      outputStart: 0,
+      playbackRate: 2,
+    });
+  });
+
+  it("rejects rates outside the supported range and preserves rates through cuts/deletions", () => {
+    const rated = setRecordingTimelineSegmentPlaybackRate(
+      createRecordingTimelineEdit(42),
+      0,
+      0.5,
+    );
+    expect(setRecordingTimelineSegmentPlaybackRate(rated, 0, 0.1)).toBe(rated);
+    const cut = cutRecordingTimeline(rated, 0.5);
+    expect(cut.segments.map((segment) => segment.playbackRate)).toEqual([
+      0.5, 0.5,
+    ]);
+    const deleted = deleteRecordingTimelineRange(cut, 0, 0.25);
+    expect(deleted.segments[0]?.playbackRate).toBe(0.5);
+  });
+
   const editWithRemovedMiddle = () => {
     const first = cutRecordingTimeline(createRecordingTimelineEdit(42), 0.2);
     const second = cutRecordingTimeline(first, 0.6);

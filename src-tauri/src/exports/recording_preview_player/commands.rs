@@ -153,6 +153,7 @@ pub async fn start_recording_preview_player(
   manager.event_channel = Some(event_channel);
   manager.latest_layout_request = 0;
   manager.latest_seek_request = 0;
+  manager.playback_rate = 1.0;
   manager.position_ms = 0;
   manager.sources = Some(sources);
   manager.session_id = Some(session_id);

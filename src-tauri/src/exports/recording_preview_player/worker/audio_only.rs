@@ -24,6 +24,7 @@ pub(super) struct RunContext {
   pub(super) event_channel: Channel<RecordingPreviewPlayerEvent>,
   pub(super) mode: PlaybackMode,
   pub(super) playback_end_ms: Option<u64>,
+  pub(super) playback_rate: f64,
   pub(super) playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   pub(super) position_ms: Arc<AtomicU64>,
   pub(super) request_id: u64,
@@ -37,6 +38,37 @@ const fn plays_audio(mode: PlaybackMode) -> bool {
   matches!(mode, PlaybackMode::Playing)
 }
 
+fn output_duration_ms(source_duration_ms: u64, playback_rate: f64) -> u64 {
+  ((source_duration_ms as f64) / playback_rate).ceil() as u64
+}
+
+fn effective_rate(range: RecordingPreviewPlaybackRange, global_rate: f64) -> f64 {
+  range.playback_rate * global_rate
+}
+
+fn position_at_elapsed(
+  ranges: &[RecordingPreviewPlaybackRange],
+  elapsed_ms: u64,
+  playback_rate: f64,
+  fallback_ms: u64,
+) -> u64 {
+  let mut remaining = elapsed_ms;
+  for range in ranges {
+    let rate = effective_rate(*range, playback_rate);
+    let output_duration = output_duration_ms(range.duration_ms(), rate);
+    if remaining < output_duration {
+      return range
+        .source_start_ms
+        .saturating_add(((remaining as f64) * rate).round() as u64)
+        .min(range.source_end_ms);
+    }
+    remaining = remaining.saturating_sub(output_duration);
+  }
+  ranges
+    .last()
+    .map_or(fallback_ms, |range| range.source_end_ms)
+}
+
 pub(super) fn run(context: RunContext) {
   let RunContext {
     audio_child,
@@ -44,6 +76,7 @@ pub(super) fn run(context: RunContext) {
     event_channel,
     mode,
     playback_end_ms,
+    playback_rate,
     playback_ranges,
     position_ms,
     request_id,
@@ -67,6 +100,7 @@ pub(super) fn run(context: RunContext) {
         .unwrap_or(sources.duration_ms)
         .min(sources.duration_ms)
         .max(start_ms),
+      playback_rate: 1.0,
     }]
   } else {
     playback_ranges
@@ -76,6 +110,7 @@ pub(super) fn run(context: RunContext) {
     selected_audio,
     audio_volumes,
     &ranges,
+    playback_rate,
     Arc::clone(&cancelled),
     Arc::clone(&audio_child),
   ) {
@@ -91,7 +126,10 @@ pub(super) fn run(context: RunContext) {
   let _ = event_channel.send(RecordingPreviewPlayerEvent::Playing {
     position_ms: start_ms,
   });
-  let output_duration_ms = ranges.iter().map(|range| range.duration_ms()).sum::<u64>();
+  let output_duration_ms = ranges
+    .iter()
+    .map(|range| output_duration_ms(range.duration_ms(), effective_rate(*range, playback_rate)))
+    .sum::<u64>();
   while !cancelled.load(Ordering::Acquire) {
     let elapsed =
       audio.played_frames.load(Ordering::Acquire) * 1_000 / u64::from(audio.sample_rate);
@@ -102,18 +140,7 @@ pub(super) fn run(context: RunContext) {
       );
       break;
     }
-    let mut remaining = elapsed;
-    let current = ranges
-      .iter()
-      .find_map(|range| {
-        if remaining < range.duration_ms() {
-          Some(range.source_start_ms + remaining)
-        } else {
-          remaining = remaining.saturating_sub(range.duration_ms());
-          None
-        }
-      })
-      .unwrap_or_else(|| ranges.last().map_or(start_ms, |range| range.source_end_ms));
+    let current = position_at_elapsed(&ranges, elapsed, playback_rate, start_ms);
     position_ms.store(current, Ordering::Release);
     let _ = event_channel.send(RecordingPreviewPlayerEvent::Position {
       position_ms: current,
@@ -139,7 +166,46 @@ pub(super) fn run(context: RunContext) {
 
 #[cfg(test)]
 mod tests {
-  use super::{plays_audio, PlaybackMode};
+  use super::{output_duration_ms, plays_audio, position_at_elapsed, PlaybackMode};
+  use crate::exports::recording_preview_player::RecordingPreviewPlaybackRange;
+
+  #[test]
+  fn maps_scaled_elapsed_time_across_deleted_gaps() {
+    let ranges = [
+      RecordingPreviewPlaybackRange {
+        source_end_ms: 1_000,
+        source_start_ms: 0,
+        playback_rate: 1.0,
+      },
+      RecordingPreviewPlaybackRange {
+        source_end_ms: 3_000,
+        source_start_ms: 2_000,
+        playback_rate: 1.0,
+      },
+    ];
+    assert_eq!(output_duration_ms(1_000, 2.0), 500);
+    assert_eq!(position_at_elapsed(&ranges, 250, 2.0, 0), 500);
+    assert_eq!(position_at_elapsed(&ranges, 500, 2.0, 0), 2_000);
+    assert_eq!(position_at_elapsed(&ranges, 750, 2.0, 0), 2_500);
+  }
+
+  #[test]
+  fn mixed_range_rates_map_elapsed_time_independently() {
+    let ranges = [
+      RecordingPreviewPlaybackRange {
+        source_end_ms: 1_000,
+        source_start_ms: 0,
+        playback_rate: 2.0,
+      },
+      RecordingPreviewPlaybackRange {
+        source_end_ms: 3_000,
+        source_start_ms: 2_000,
+        playback_rate: 0.5,
+      },
+    ];
+    assert_eq!(position_at_elapsed(&ranges, 500, 1.0, 0), 2_000);
+    assert_eq!(position_at_elapsed(&ranges, 1_500, 1.0, 0), 2_500);
+  }
 
   #[test]
   fn paused_and_scrubbed_audio_only_previews_do_not_play() {

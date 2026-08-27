@@ -220,8 +220,8 @@ fn paint_sidebar(image: &mut CapturedImage, width: u32, raised: u32) {
 }
 
 /// A dismissible banner above a sticky layout: on the first scroll the banner
-/// leaves and the whole sticky layout — a full-width header and the sidebar
-/// anchored under it — slides up the viewport. That chrome *moved*, so it
+/// leaves and the whole sticky layout - a full-width header and the sidebar
+/// anchored under it - slides up the viewport. That chrome *moved*, so it
 /// passes the viewport-change gate, and it contaminates the sample grid in a
 /// cross shape: the header poisons every cross-axis band, the sidebar poisons
 /// every along-axis segment. Only a region excluded along both axes at once is

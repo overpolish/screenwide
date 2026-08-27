@@ -20,6 +20,12 @@ pub struct RecordingTimelineSegment {
   pub id: u64,
   pub source_end: f64,
   pub source_start: f64,
+  #[serde(default = "default_playback_rate")]
+  pub playback_rate: f64,
+}
+
+const fn default_playback_rate() -> f64 {
+  1.0
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash, Serialize)]
@@ -48,11 +54,54 @@ pub struct RecordingTimelineEdit {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TimelineRange {
   pub output_start_us: u64,
   pub source_end_us: u64,
   pub source_start_us: u64,
+  pub playback_rate: f64,
+}
+
+pub(crate) fn source_to_output_us(ranges: &[TimelineRange], source_us: u64) -> Option<u64> {
+  let range = ranges.iter().find(|range| {
+    source_us >= range.source_start_us
+      && (source_us < range.source_end_us
+        || source_us == range.source_end_us && range.source_end_us == range.source_start_us)
+  })?;
+  Some(range.output_start_us.saturating_add(
+    ((source_us.saturating_sub(range.source_start_us)) as f64 / range.playback_rate).round() as u64,
+  ))
+}
+
+fn output_to_source_us(ranges: &[TimelineRange], output_us: u64) -> Option<u64> {
+  for range in ranges {
+    let output_end_us = range.output_start_us.saturating_add(
+      ((range.source_end_us.saturating_sub(range.source_start_us)) as f64 / range.playback_rate)
+        .round() as u64,
+    );
+    if output_us <= output_end_us {
+      return Some(range.source_start_us.saturating_add(
+        ((output_us.saturating_sub(range.output_start_us)) as f64 * range.playback_rate).round()
+          as u64,
+      ));
+    }
+  }
+  ranges.last().map(|range| range.source_end_us)
+}
+
+/// Converts a source-time animation anchor plus an output-time duration back
+/// into a source coordinate. Timed lanes can map that coordinate normally and
+/// still match animations whose duration must not stretch with playback rate.
+pub(crate) fn source_after_output_duration_us(
+  ranges: Option<&[TimelineRange]>,
+  anchor_us: u64,
+  duration_us: u64,
+) -> Option<u64> {
+  let Some(ranges) = ranges else {
+    return Some(anchor_us.saturating_add(duration_us));
+  };
+  let output_anchor_us = source_to_output_us(ranges, anchor_us)?;
+  output_to_source_us(ranges, output_anchor_us.saturating_add(duration_us))
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -74,28 +123,30 @@ impl TimelinePlan {
     for segment in &edit.segments {
       let source_start_us = (segment.source_start * source_duration_us as f64).round() as u64;
       let source_end_us = (segment.source_end * source_duration_us as f64).round() as u64;
-      if ranges
-        .last()
-        .is_some_and(|range| range.source_end_us == source_start_us)
-      {
+      if ranges.last().is_some_and(|range| {
+        range.source_end_us == source_start_us && range.playback_rate == segment.playback_rate
+      }) {
         ranges.last_mut()?.source_end_us = source_end_us;
         continue;
       }
       let output_start_us = ranges.last().map_or(0, |range| {
-        range
-          .output_start_us
-          .saturating_add(range.source_end_us.saturating_sub(range.source_start_us))
+        range.output_start_us.saturating_add(
+          ((range.source_end_us.saturating_sub(range.source_start_us)) as f64 / range.playback_rate)
+            .round() as u64,
+        )
       });
       ranges.push(TimelineRange {
         output_start_us,
         source_end_us,
         source_start_us,
+        playback_rate: segment.playback_rate,
       });
     }
     let duration_us = ranges.last().map_or(0, |range| {
-      range
-        .output_start_us
-        .saturating_add(range.source_end_us.saturating_sub(range.source_start_us))
+      range.output_start_us.saturating_add(
+        ((range.source_end_us.saturating_sub(range.source_start_us)) as f64 / range.playback_rate)
+          .round() as u64,
+      )
     });
     let plan = Self {
       deleted_keyboard_shortcut_ids: edit.keyboard_deletions.shortcut_ids.clone(),
@@ -137,15 +188,7 @@ impl TimelinePlan {
 
   #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
   pub fn source_to_output_us(&self, source_us: u64) -> Option<u64> {
-    let range = self
-      .ranges
-      .iter()
-      .find(|range| source_us >= range.source_start_us && source_us < range.source_end_us)?;
-    Some(
-      range
-        .output_start_us
-        .saturating_add(source_us.saturating_sub(range.source_start_us)),
-    )
+    source_to_output_us(&self.ranges, source_us)
   }
 
   fn is_identity(&self, source_duration_us: u64) -> bool {
@@ -154,6 +197,7 @@ impl TimelinePlan {
         output_start_us: 0,
         source_end_us: source_duration_us,
         source_start_us: 0,
+        playback_rate: 1.0,
       }]
   }
 }
@@ -184,6 +228,8 @@ fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
       || segment.source_start < 0.0
       || segment.source_end <= segment.source_start
       || segment.source_end > 1.0
+      || !segment.playback_rate.is_finite()
+      || !(0.25..=4.0).contains(&segment.playback_rate)
       || !ids.insert(segment.id)
     {
       return Err("The timeline contains an invalid segment".to_owned());

@@ -5,9 +5,12 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use super::state::{TransitionKind, VisualKey};
+use super::{
+  clock::AnimationClock,
+  state::{TransitionKind, VisualKey},
+};
 
-const MOTION_US: u64 = 600_000;
+pub(super) const MOTION_US: u64 = 600_000;
 /// A key pressed this soon after the previous key of its chord is part of the
 /// same rolled gesture, not a late join: the row is laid out for the whole
 /// roll from its first key (each key still pops in on its own entrance)
@@ -123,7 +126,7 @@ impl LayoutTrack {
     self.freeze_us = Some(self.freeze_us.map_or(at, |known| known.min(at)));
   }
 
-  pub(super) fn sample(&self, now: u64) -> LayoutSample<'_> {
+  pub(super) fn sample(&self, now: u64, clock: AnimationClock<'_>) -> LayoutSample<'_> {
     let at = self.freeze_us.map_or(now, |freeze| now.min(freeze));
     let Some(change) = self
       .changes
@@ -137,7 +140,7 @@ impl LayoutTrack {
         progress: 1.0,
       };
     };
-    let elapsed = at.saturating_sub(change.start_us);
+    let elapsed = clock.elapsed_us(change.start_us, at);
     if elapsed >= MOTION_US {
       let settled = change.settled();
       return LayoutSample {
@@ -155,7 +158,7 @@ impl LayoutTrack {
   }
 
   fn representative_snapshot(&self, at: u64) -> Vec<u32> {
-    let sample = self.sample(at);
+    let sample = self.sample(at, AnimationClock::source());
     if sample.progress < 0.5 {
       sample.from.to_vec()
     } else {
@@ -168,7 +171,10 @@ pub(super) fn attach_tracks(visuals: &mut [VisualKey]) {
   // Layout is a per-badge concern: keys of one badge-continuity group never
   // shift, anchor, or morph in response to another group's keys, so each
   // group's tracks are attached in isolation.
-  let mut groups = visuals.iter().map(|visual| visual.group).collect::<Vec<_>>();
+  let mut groups = visuals
+    .iter()
+    .map(|visual| visual.group)
+    .collect::<Vec<_>>();
   groups.sort_unstable();
   groups.dedup();
   for group in groups {
@@ -196,8 +202,8 @@ fn attach_group_tracks(visuals: &mut [VisualKey], group: u32) {
     let mut roll_start = None;
     let mut previous = None;
     for &(enter_us, index) in enters.iter() {
-      let rolled = previous
-        .is_some_and(|previous: u64| enter_us.saturating_sub(previous) < ASSEMBLY_US);
+      let rolled =
+        previous.is_some_and(|previous: u64| enter_us.saturating_sub(previous) < ASSEMBLY_US);
       if !rolled {
         roll_start = Some(enter_us);
       }
@@ -211,12 +217,11 @@ fn attach_group_tracks(visuals: &mut [VisualKey], group: u32) {
     .enumerate()
     .filter(|(_, visual)| visual.group == group)
   {
-    let layout_enter = layout_enters.get(&index).copied().unwrap_or(visual.enter_us);
-    events
-      .entry(layout_enter)
-      .or_default()
-      .enters
-      .push(index);
+    let layout_enter = layout_enters
+      .get(&index)
+      .copied()
+      .unwrap_or(visual.enter_us);
+    events.entry(layout_enter).or_default().enters.push(index);
     if let Some((at, kind)) = visual.exit {
       if kind != TransitionKind::Replacement {
         events.entry(at).or_default().freezes.push(index);
@@ -321,7 +326,7 @@ fn replacement_track(visuals: &[VisualKey], incoming: usize, at: u64) -> Option<
       *index != incoming
         && visual.slot_id == visuals[incoming].slot_id
         && visual.enter_us < at
-        && visual.visible_at(at)
+        && visual.visible_at(at, AnimationClock::source())
     })
     .max_by_key(|(_, visual)| visual.enter_us)
     .map(|(_, visual)| visual.layout.clone())
@@ -335,7 +340,7 @@ fn tracked_indices(visuals: &[VisualKey], active: &HashMap<u32, usize>, at: u64)
       .is_some_and(|(exit_us, kind)| {
         kind == TransitionKind::Replacement
           && exit_us <= at
-          && visual.visible_at(at)
+          && visual.visible_at(at, AnimationClock::source())
           && active.contains_key(&visual.slot_id)
       })
       .then_some(index)

@@ -2,15 +2,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
   useRef,
+  useState,
 } from "react";
+
+import { recordingTimelineRangePlaybackRate } from "../recording-timeline-speed";
 
 import { clamp, Playhead } from "./scrub-playhead";
 import { TimelineBladeController } from "./timeline-blade";
 import { TimelineLaneSelectionOverlay } from "./timeline-segment-selection";
+import {
+  TimelineSegmentSpeedContextMenu,
+  TimelineSpeedMenuState,
+} from "./timeline-segment-speed-context-menu";
 import {
   timelineXToFraction,
   TimelineViewportState,
@@ -91,9 +99,14 @@ function TimelineRangeOverlay({
   viewport: TimelineViewportState;
 }) {
   const anchorRef = useRef<number | null>(null);
+  const [speedMenu, setSpeedMenu] = useState<TimelineSpeedMenuState | null>(
+    null,
+  );
   if (!blade.isRangeActive) return null;
 
-  const positionAt = (event: ReactPointerEvent<HTMLDivElement>) =>
+  const positionAt = (
+    event: ReactMouseEvent<HTMLDivElement> | ReactPointerEvent<HTMLDivElement>,
+  ) =>
     clamp(
       timelineXToFraction(
         event.clientX,
@@ -127,6 +140,29 @@ function TimelineRangeOverlay({
       <div
         aria-label="Select timeline range"
         className="absolute top-9 right-0 bottom-0 left-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-0.75rem)] z-10 cursor-crosshair touch-none"
+        onContextMenu={(event) => {
+          const selection = blade.rangeSelection;
+          const position = positionAt(event);
+          if (
+            !selection ||
+            position < selection.start ||
+            position > selection.end
+          )
+            return;
+          event.preventDefault();
+          event.stopPropagation();
+          const timelineTop =
+            event.currentTarget
+              .closest("section[aria-label='Recording timeline']")
+              ?.getBoundingClientRect().top ?? 0;
+          setSpeedMenu({
+            x: Math.min(event.clientX, window.innerWidth - 120),
+            y: Math.max(
+              timelineTop + 4,
+              Math.min(event.clientY, window.innerHeight - 220),
+            ),
+          });
+        }}
         onPointerCancel={(event) => {
           update(event);
           anchorRef.current = null;
@@ -148,6 +184,21 @@ function TimelineRangeOverlay({
             event.currentTarget.releasePointerCapture(event.pointerId);
         }}
       />
+      {speedMenu && blade.rangeSelection ? (
+        <TimelineSegmentSpeedContextMenu
+          menu={speedMenu}
+          onChange={blade.setRangePlaybackRate}
+          onClose={() => {
+            setSpeedMenu(null);
+          }}
+          playbackRate={recordingTimelineRangePlaybackRate(
+            blade.edit,
+            blade.rangeSelection.start,
+            blade.rangeSelection.end,
+          )}
+          title="Range"
+        />
+      ) : null}
     </>
   );
 }

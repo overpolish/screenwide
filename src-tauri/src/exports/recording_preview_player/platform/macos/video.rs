@@ -6,7 +6,7 @@ use super::{
   VideoFramePayload,
 };
 use crate::exports::recording_preview_player::{
-  video::{VideoFrame, PREVIEW_FPS},
+  video::{presentation_elapsed_ms, source_position_ms, VideoFrame},
   PlayerSources,
 };
 use crate::screenshots::CapturedImage;
@@ -32,7 +32,6 @@ pub(super) struct NativeVideoReader {
   last_frame: Option<CapturedImage>,
   output: arc::R<av::AssetReaderTrackOutput>,
   pending: Option<arc::R<cm::SampleBuf>>,
-  previous: Option<arc::R<cm::SampleBuf>>,
 }
 pub(super) fn open_asset(path: &Path) -> Result<arc::R<av::UrlAsset>, String> {
   let path_text = path
@@ -103,7 +102,6 @@ impl NativeVideoReader {
       last_frame: None,
       output,
       pending: None,
-      previous: None,
     })
   }
 
@@ -112,7 +110,6 @@ impl NativeVideoReader {
   /// avoids paying AVAssetReader construction cost for every backward jump.
   pub(super) fn reset(&mut self, start_ms: u64, duration_ms: u64) -> Result<(), String> {
     self.pending = None;
-    self.previous = None;
     self.last_frame = None;
     let reset = unsafe {
       screenwide_preview_reader_reset_range(
@@ -137,27 +134,18 @@ impl NativeVideoReader {
           .map_err(|error| error.to_string())?;
       }
       let Some(sample) = self.pending.as_ref() else {
-        // The range is exhausted: the newest sample skipped past (retained
-        // undecoded below) is still the correct still for a seek at or past
-        // the end of the track.
-        if let Some(previous) = self.previous.take() {
-          return Self::converted(previous).map(|frame| {
-            self.last_frame = Some(frame.clone());
-            Some(frame)
-          });
-        }
         return Ok(self.last_frame.clone());
       };
       let pts_ms = (sample.pts().as_secs().max(0.0) * 1_000.0).round() as u64;
-      if pts_ms.saturating_add(2) < target_ms {
-        self.previous = self.pending.take();
-        continue;
+      if pts_ms > target_ms.saturating_add(2) && self.last_frame.is_some() {
+        return Ok(self.last_frame.clone());
       }
       let sample = self.pending.take().expect("the pending sample exists");
-      self.previous = None;
       let frame = Self::converted(sample)?;
       self.last_frame = Some(frame.clone());
-      return Ok(Some(frame));
+      if pts_ms.saturating_add(2) >= target_ms {
+        return Ok(Some(frame));
+      }
     }
   }
 
@@ -210,6 +198,7 @@ pub(super) fn spawn(
   sources: &PlayerSources,
   playback_factors: &[f64],
   start_ms: u64,
+  playback_rate: f64,
   cancelled: Arc<AtomicBool>,
   sender: SyncSender<VideoFrame>,
 ) -> Result<std::thread::JoinHandle<()>, String> {
@@ -243,6 +232,7 @@ pub(super) fn spawn(
   let cursor = sources.cursor.clone();
   let cursor_settings = Arc::clone(&sources.cursor_settings);
   let keyboard = sources.keyboard.clone();
+  let sources_keyboard_animation_ranges = Arc::clone(&sources.keyboard_animation_ranges);
   let keyboard_settings = Arc::clone(&sources.keyboard_settings);
   let composition_settings = sources.composition_settings.clone();
   let duration_ms = sources.duration_ms;
@@ -256,7 +246,7 @@ pub(super) fn spawn(
     .spawn(move || {
       let mut index = 0;
       while !cancelled.load(Ordering::Acquire) {
-        let target_ms = start_ms.saturating_add(index * 1_000 / PREVIEW_FPS);
+        let target_ms = source_position_ms(start_ms, index, playback_rate);
         if target_ms >= duration_ms {
           break;
         }
@@ -288,14 +278,18 @@ pub(super) fn spawn(
           .read()
           .map(|settings| *settings)
           .unwrap_or_default();
-        let keyboard_overlay = keyboard.as_deref().and_then(|keyboard| {
-          keyboard.evaluate_fitted(
+        let keyboard_overlay = keyboard.as_deref().and_then(|_| {
+          let ranges = sources_keyboard_animation_ranges
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+          keyboard.as_deref()?.evaluate_fitted_with_ranges(
             target_ms,
             keyboard_settings,
             (
               composition.recording_output.primary.width,
               composition.recording_output.primary.height,
             ),
+            (!ranges.is_empty()).then_some(ranges.as_slice()),
           )
         });
         let screen_output =
@@ -320,7 +314,7 @@ pub(super) fn spawn(
         let camera_output =
           super::still_decode::scaled_output(&composition.recording_output.camera, camera_factor);
         let mut frame = VideoFrame {
-          timestamp_ms: target_ms,
+          presentation_elapsed_ms: presentation_elapsed_ms(index),
           payload: VideoFramePayload::Native {
             screen: raw_screen,
             camera: raw_camera,

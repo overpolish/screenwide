@@ -62,7 +62,7 @@ const sample = (active: Map<number, Settle>, now: number) => {
 /**
  * Presentational-only settle: a freshly committed measurement eases from the
  * raw drag rect to its snapped bounds. Returns the interpolated bounds keyed by
- * measurement id — absent once landed, so callers fall back to the final bounds
+ * measurement id - absent once landed, so callers fall back to the final bounds
  * and no derived logic ever sees a half-way value.
  */
 export function useSettleAnimation(measurements: readonly Measurement[]) {

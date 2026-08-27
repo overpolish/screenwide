@@ -13,11 +13,13 @@ use std::{
 
 mod animation;
 use animation::{ease_out, pop_spring, replacement_enter_progress, replacement_exit_progress};
+mod clock;
+use clock::AnimationClock;
 mod data;
 use data::{parse_v1, read_values, reconstruct_v2};
 mod gpu_wire;
-use gpu_wire::{KEY_CENTER_DEFAULT, KEY_CENTER_INHERIT, MAX_KEYS};
 pub(crate) use gpu_wire::{KeyboardKey, KeyboardOverlay};
+use gpu_wire::{KEY_CENTER_DEFAULT, KEY_CENTER_INHERIT, MAX_KEYS};
 mod geometry;
 mod layout;
 mod settings;
@@ -187,30 +189,64 @@ impl KeyboardCompositor {
   }
 
   pub(crate) fn maximum_width_units(&self) -> u16 {
-    self
-      .maximum_width()
-      .ceil()
-      .clamp(0.0, f64::from(u16::MAX)) as u16
+    self.maximum_width().ceil().clamp(0.0, f64::from(u16::MAX)) as u16
   }
   pub(crate) fn maximum_size_percent(&self, width: u32, height: u32) -> f64 {
     geometry::maximum_size_percent(self.maximum_width(), width, height)
   }
-  pub(crate) fn evaluate_fitted(
+  pub(crate) fn evaluate_fitted_with_timeline(
     &self,
     position_ms: u64,
     settings: KeyboardEffectSettings,
     dimensions: (u32, u32),
+    timeline: Option<&crate::exports::timeline_edit::TimelinePlan>,
   ) -> Option<KeyboardOverlay> {
-    let mut overlay = self.evaluate(position_ms, settings)?;
+    self.evaluate_fitted_with_ranges(
+      position_ms,
+      settings,
+      dimensions,
+      timeline.map(|timeline| timeline.ranges()),
+    )
+  }
+  pub(crate) fn evaluate_fitted_with_ranges(
+    &self,
+    position_ms: u64,
+    settings: KeyboardEffectSettings,
+    dimensions: (u32, u32),
+    ranges: Option<&[crate::exports::timeline_edit::TimelineRange]>,
+  ) -> Option<KeyboardOverlay> {
+    let mut overlay = self.evaluate_with_ranges(position_ms, settings, ranges)?;
     overlay.scale = overlay
       .requested_scale
       .min((self.maximum_size_percent(dimensions.0, dimensions.1) / 100.0) as f32);
     Some(overlay)
   }
+  #[cfg(test)]
   pub(crate) fn evaluate(
     &self,
     position_ms: u64,
     settings: KeyboardEffectSettings,
+  ) -> Option<KeyboardOverlay> {
+    self.evaluate_with_timeline(position_ms, settings, None)
+  }
+  #[cfg(test)]
+  pub(crate) fn evaluate_with_timeline(
+    &self,
+    position_ms: u64,
+    settings: KeyboardEffectSettings,
+    timeline: Option<&crate::exports::timeline_edit::TimelinePlan>,
+  ) -> Option<KeyboardOverlay> {
+    self.evaluate_with_ranges(
+      position_ms,
+      settings,
+      timeline.map(|timeline| timeline.ranges()),
+    )
+  }
+  fn evaluate_with_ranges(
+    &self,
+    position_ms: u64,
+    settings: KeyboardEffectSettings,
+    ranges: Option<&[crate::exports::timeline_edit::TimelineRange]>,
   ) -> Option<KeyboardOverlay> {
     let settings = settings.normalized();
     if !settings.bake {
@@ -221,6 +257,7 @@ impl KeyboardCompositor {
       .baked
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let clock = ranges.map_or_else(AnimationClock::source, AnimationClock::edited);
     let animation = match settings.animation {
       KeyboardAnimation::Pop => KeyboardOverlay::ANIMATION_POP,
       KeyboardAnimation::Fade => KeyboardOverlay::ANIMATION_FADE,
@@ -268,7 +305,7 @@ impl KeyboardCompositor {
               && position_ms < range.end_ms
           })
       })
-      .filter(|key| key.visible_at(now))
+      .filter(|key| key.visible_at(now, clock))
       .collect::<Vec<_>>();
     // Manual placements are per shortcut, so during a transition two groups
     // can occupy different spots. The overlay centre follows the newest
@@ -302,7 +339,7 @@ impl KeyboardCompositor {
     // in the global ordering so rows stay stable.
     let mut frame_slots: Vec<u32> = Vec::new();
     for key in &visible {
-      let sample = key.layout.sample(now);
+      let sample = key.layout.sample(now, clock);
       for slot in std::iter::once(&key.slot_id)
         .chain(sample.from)
         .chain(sample.to)
@@ -333,12 +370,13 @@ impl KeyboardCompositor {
     for key in visible {
       let exit = key.exit.filter(|(exit_us, _)| now >= *exit_us);
       let exit_progress = exit.map(|(exit_us, _)| {
-        ((now.saturating_sub(exit_us) as f64 / MICROS_PER_SECOND) / EXIT_SECONDS).clamp(0.0, 1.0)
+        ((clock.elapsed_us(exit_us, now) as f64 / MICROS_PER_SECOND) / EXIT_SECONDS).clamp(0.0, 1.0)
           as f32
       });
-      let layout_tail_visible = key
-        .layout_anchor_until_us
-        .is_some_and(|until_us| now < until_us);
+      let layout_tail_visible = key.layout_anchor_until_us.is_some_and(|until_us| {
+        let anchor_us = until_us.saturating_sub(layout::MOTION_US);
+        clock.elapsed_us(anchor_us, now) < layout::MOTION_US
+      });
       let artwork_hidden = exit_progress
         .is_some_and(|progress| settings.animation == KeyboardAnimation::None || progress >= 1.0);
       if artwork_hidden && !layout_tail_visible {
@@ -352,7 +390,11 @@ impl KeyboardCompositor {
       // group's spot so it animates there.
       let placement = placement_at(key.source_shortcut);
       let (center_x, center_y, group_scale) = if placement == overlay_placement {
-        (KEY_CENTER_INHERIT, KEY_CENTER_INHERIT, overlay.requested_scale)
+        (
+          KEY_CENTER_INHERIT,
+          KEY_CENTER_INHERIT,
+          overlay.requested_scale,
+        )
       } else if let Some((x, y, size)) = placement {
         (
           x as f32,
@@ -380,7 +422,7 @@ impl KeyboardCompositor {
       } else {
         ENTRANCE_SECONDS
       };
-      let raw_entrance_progress = ((now.saturating_sub(key.animation_enter_us) as f64
+      let raw_entrance_progress = ((clock.elapsed_us(key.animation_enter_us, now) as f64
         / MICROS_PER_SECOND)
         / entrance_seconds)
         .clamp(0.0, 1.0) as f32;
@@ -420,7 +462,7 @@ impl KeyboardCompositor {
         1.0
       }) * overlay.requested_scale;
       let index = overlay.key_count as usize;
-      let layout = key.layout.sample(now);
+      let layout = key.layout.sample(now, clock);
       overlay.keys[index] = KeyboardKey {
         key_code: key.key_code,
         modifier_mask: key.modifier_mask,

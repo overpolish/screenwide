@@ -6,7 +6,7 @@ import { DistanceProbeSvg } from "./ruler-probe-svg";
 import { DistanceProbe } from "./ruler-types";
 
 /**
- * The sibling's 1px stroke plus 1px of air each side — plain screen pixels,
+ * The sibling's 1px stroke plus 1px of air each side - plain screen pixels,
  * since this layer never scales.
  */
 const INTERSECT_GAP = 3;
@@ -14,7 +14,7 @@ const INTERSECT_GAP = 3;
 /**
  * Transient probe previews, rendered OUTSIDE the zoomed world layer: they are
  * cursor furniture, and screen space keeps their 1px strokes and the cut-out
- * at their intersection crisp at any zoom — the scaled world layer's capped
+ * at their intersection crisp at any zoom - the scaled world layer's capped
  * rasterisation would swallow both. Stamped probes stay in the world layer,
  * anchored to the content they measure.
  */

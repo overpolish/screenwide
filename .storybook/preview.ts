@@ -16,7 +16,7 @@ import "./styles.css";
 // event-plugin handler. Without it, e.g. `new Channel()` throws because
 // `transformCallback` is undefined. Run as a module-load side effect so the
 // runtime exists before the first story's effects fire. Commands need not
-// return real data — components render for layout, not live pixels — so unknown
+// return real data - components render for layout, not live pixels - so unknown
 // commands resolve to `null` and never throw.
 mockIPC(() => null, { shouldMockEvents: true });
 

@@ -64,6 +64,54 @@ export const keyboardShortcutFragmentId = (
   segmentId: number,
 ) => `${shortcutId.toString()}:${segmentId.toString()}`;
 
+/** Copies segment-keyed shortcut edits onto newly split descendants. */
+export function inheritRecordingKeyboardSegmentEdits(
+  edit: RecordingTimelineEdit,
+  next: RecordingTimelineEdit,
+  descendantIds: ReadonlyMap<number, readonly number[]>,
+): RecordingTimelineEdit {
+  const inheritedPositions = recordingKeyboardShortcutPositions(edit).flatMap(
+    (position) =>
+      (descendantIds.get(position.segmentId) ?? []).map((segmentId) => ({
+        ...position,
+        segmentId,
+      })),
+  );
+  const inheritedDeleted = deletedRecordingKeyboardShortcutFragments(
+    edit,
+  ).flatMap((fragment) =>
+    (descendantIds.get(fragment.segmentId) ?? []).map((segmentId) => ({
+      ...fragment,
+      segmentId,
+    })),
+  );
+  if (inheritedPositions.length === 0 && inheritedDeleted.length === 0)
+    return next;
+  return {
+    ...next,
+    ...(inheritedPositions.length > 0
+      ? {
+          keyboardShortcutPositions: [
+            ...recordingKeyboardShortcutPositions(edit),
+            ...inheritedPositions,
+          ].sort(
+            (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
+          ),
+        }
+      : {}),
+    ...(inheritedDeleted.length > 0
+      ? {
+          deletedKeyboardShortcutFragments: [
+            ...deletedRecordingKeyboardShortcutFragments(edit),
+            ...inheritedDeleted,
+          ].sort(
+            (a, b) => a.shortcutId - b.shortcutId || a.segmentId - b.segmentId,
+          ),
+        }
+      : {}),
+  };
+}
+
 const parseKeyboardShortcutFragmentId = (fragmentId: string) => {
   const parts = fragmentId.split(":");
   if (parts.length !== 2) return null;

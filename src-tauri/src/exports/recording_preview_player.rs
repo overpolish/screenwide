@@ -47,6 +47,7 @@ use super::{
   AudioTrackVolume, CameraOverlaySettings, ExportArtifact, ExportKind, ExportState,
   RecordingAudioTrack, RecordingOutputSettings,
 };
+use crate::exports::timeline_edit::TimelineRange;
 use crate::exports::timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
 use crate::recording::PrimaryRecordingKind;
 pub use commands::stop_all;
@@ -76,6 +77,8 @@ pub(crate) struct PreviewPlayerSettings {
   pub deleted_keyboard_shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
   #[serde(default)]
   pub keyboard_shortcut_positions: Vec<KeyboardShortcutPositionRange>,
+  #[serde(default)]
+  pub playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   pub recording_output: RecordingOutputSettings,
 }
 
@@ -146,12 +149,42 @@ pub enum RecordingPreviewPlayerEvent {
 pub struct RecordingPreviewPlaybackRange {
   source_end_ms: u64,
   source_start_ms: u64,
+  #[serde(default = "default_playback_rate")]
+  pub(crate) playback_rate: f64,
+}
+
+const fn default_playback_rate() -> f64 {
+  1.0
 }
 
 impl RecordingPreviewPlaybackRange {
   const fn duration_ms(self) -> u64 {
     self.source_end_ms.saturating_sub(self.source_start_ms)
   }
+}
+
+pub(super) fn animation_timeline_ranges(
+  ranges: &[RecordingPreviewPlaybackRange],
+) -> Vec<TimelineRange> {
+  let mut output_start_us = 0_u64;
+  ranges
+    .iter()
+    .map(|range| {
+      let source_start_us = range.source_start_ms.saturating_mul(1_000);
+      let source_end_us = range.source_end_ms.saturating_mul(1_000);
+      let timeline_range = TimelineRange {
+        output_start_us,
+        source_end_us,
+        source_start_us,
+        playback_rate: range.playback_rate,
+      };
+      output_start_us = output_start_us.saturating_add(
+        ((source_end_us.saturating_sub(source_start_us)) as f64 / range.playback_rate).round()
+          as u64,
+      );
+      timeline_range
+    })
+    .collect()
 }
 
 #[derive(Default)]
@@ -166,6 +199,7 @@ struct PreviewPlayerManager {
   latest_seek_request: u64,
   pane_target_sizes: Vec<(u32, u32)>,
   playback_end_ms: Option<u64>,
+  playback_rate: f64,
   playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   position_ms: u64,
   /// The next still seek came from a scrub gesture in progress, so the

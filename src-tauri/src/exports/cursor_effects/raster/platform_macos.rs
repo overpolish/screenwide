@@ -21,7 +21,7 @@ pub(in crate::exports) fn gpu_rotation_radians(style: CursorStyle) -> f32 {
 /// One system cursor's bitmap plus the hotspot that bitmap addresses. The
 /// hotspot is stored in bitmap texels rather than points so callers can anchor
 /// the artwork without knowing what backing scale the decoded representation
-/// came from — `load` picks the largest representation the system ships, so
+/// came from - `load` picks the largest representation the system ships, so
 /// that scale is whatever that representation carries (10x for the arrow, 2x
 /// for most styles) and never assumed to be 1x.
 pub(super) struct StyleArtwork {
@@ -167,7 +167,7 @@ fn hotspot_texels(
 ///
 /// Cost: 16 styles at up to ~280x400 RGBA is ~450KB each, ~7MB in total, loaded
 /// once into the process and uploaded once into the GPU artwork texture array
-/// (which sizes its slices to the largest artwork) — the same bitmaps the
+/// (which sizes its slices to the largest artwork) - the same bitmaps the
 /// flattened decode already yielded, so this is not new spend.
 fn decode_largest_representation(native: &NSImage) -> Option<RgbaImage> {
   let representations = native.representations();

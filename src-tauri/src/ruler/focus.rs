@@ -60,7 +60,7 @@ fn poll_cursor(app: &AppHandle) -> Option<(f64, f64)> {
 /// webview sees nothing until it is clicked (verified by instrumentation).
 /// Focus must therefore follow the cursor natively: while the session is live,
 /// key focus moves to whichever monitor's ruler window contains the pointer.
-/// Focus is only ever shuttled BETWEEN ruler windows — if none of them holds
+/// Focus is only ever shuttled BETWEEN ruler windows - if none of them holds
 /// it, the user has switched away and `watch_focus` is about to end the
 /// session, so grabbing focus back would fight the dismissal.
 pub fn follow_cursor_focus(app: &AppHandle, regions: Vec<FocusRegion>) {

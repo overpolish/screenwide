@@ -81,8 +81,8 @@ pub(super) fn compose(tiles: Vec<Tile>) -> Result<CapturedImage, String> {
   let tile_count = tiles.len();
   let mut rgba = vec![0_u8; width as usize * height as usize * 4];
   // Mask fills are only a stand-in for a rail's background: where a later tile
-  // carries real pixels for the same document row — the footer that replaces a
-  // sticky sidebar at the page bottom — those must win. Real pixels still take
+  // carries real pixels for the same document row - the footer that replaces a
+  // sticky sidebar at the page bottom - those must win. Real pixels still take
   // the first writer, so ordinary overlap seams are unaffected.
   let mut is_placeholder = vec![false; width as usize * height as usize];
   for (tile_index, tile) in tiles.iter().enumerate() {

@@ -1,14 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ReactNode } from "react";
+import { RotateCcwClock } from "lucide-react";
+import { ReactNode, useState } from "react";
 
+import { Badge } from "../../../components/base/badge/badge";
 import {
   layoutRecordingTimelineSegments,
   RecordingTimelineEdit,
   RecordingTimelineTrimEdge,
 } from "../recording-timeline-edit";
 
+import {
+  TimelineSegmentSpeedContextMenu,
+  TimelineSpeedMenuState,
+} from "./timeline-segment-speed-context-menu";
 import { useTimelineNativeTrim } from "./use-timeline-native-trim";
 
 export type TimelineBladeController = {
@@ -31,7 +37,9 @@ export type TimelineBladeController = {
   selectedSegmentId: number | null;
   setActive: (active: boolean) => void;
   setRangeActive: (active: boolean) => void;
+  setRangePlaybackRate: (playbackRate: number) => void;
   setRangeSelection: (anchor: number, focus: number) => void;
+  setSegmentPlaybackRate: (segmentId: number, playbackRate: number) => void;
   snapPosition: (sourcePosition: number) => number;
   /** Returns the clamped output position when the drag overshot the trim. */
   updateTrim: (outputPosition: number) => number | null;
@@ -98,11 +106,15 @@ export function TimelineSegments({
   renderContent: () => ReactNode;
   selectedSegmentId: number | null;
 }) {
+  const [speedMenu, setSpeedMenu] = useState<
+    (TimelineSpeedMenuState & { segmentId: number }) | null
+  >(null);
   const handleEvents = isBladeActive
     ? "pointer-events-none"
     : "pointer-events-auto transition hover:bg-info/40 active:bg-info/55";
   const beginTrim = useTimelineNativeTrim({ blade, outputPositionAt });
-  return layoutRecordingTimelineSegments(edit).map((segment, index) => {
+  const layout = layoutRecordingTimelineSegments(edit);
+  const segments = layout.map((segment, index) => {
     const duration = segment.sourceEnd - segment.sourceStart;
     const isSelected = segment.id === selectedSegmentId;
     return (
@@ -115,6 +127,24 @@ export function TimelineSegments({
         onClick={(event) => {
           event.stopPropagation();
           onSelectSegment(segment.id);
+        }}
+        onContextMenu={(event) => {
+          if (isBladeActive) return;
+          event.preventDefault();
+          event.stopPropagation();
+          onSelectSegment(segment.id);
+          const timelineTop =
+            event.currentTarget
+              .closest("section[aria-label='Recording timeline']")
+              ?.getBoundingClientRect().top ?? 0;
+          setSpeedMenu({
+            segmentId: segment.id,
+            x: Math.min(event.clientX, window.innerWidth - 120),
+            y: Math.max(
+              timelineTop + 4,
+              Math.min(event.clientY, window.innerHeight - 220),
+            ),
+          });
         }}
         onKeyDown={(event) => {
           if (event.key !== "Enter" && event.key !== " ") return;
@@ -134,6 +164,17 @@ export function TimelineSegments({
         >
           {renderContent()}
         </div>
+        {(segment.playbackRate ?? 1) !== 1 ? (
+          <span
+            className="pointer-events-none absolute top-1 left-1/2 z-20 -translate-x-1/2"
+            title={`Segment speed: ${(segment.playbackRate ?? 1).toString()}×`}
+          >
+            <Badge size="xs">
+              <RotateCcwClock size={10} />
+              {(segment.playbackRate ?? 1).toString()}×
+            </Badge>
+          </span>
+        ) : null}
         <span
           className={`absolute inset-y-0 left-0 z-10 w-2.5 bg-info/25 ${handleEvents}`}
           onPointerDown={(event) => {
@@ -151,6 +192,27 @@ export function TimelineSegments({
       </div>
     );
   });
+  const menuSegment = speedMenu
+    ? layout.find((segment) => segment.id === speedMenu.segmentId)
+    : null;
+  return (
+    <>
+      {segments}
+      {speedMenu && menuSegment ? (
+        <TimelineSegmentSpeedContextMenu
+          menu={speedMenu}
+          onChange={(playbackRate) => {
+            blade.setSegmentPlaybackRate(speedMenu.segmentId, playbackRate);
+          }}
+          onClose={() => {
+            setSpeedMenu(null);
+          }}
+          playbackRate={menuSegment.playbackRate ?? 1}
+          title="Segment"
+        />
+      ) : null}
+    </>
+  );
 }
 
 export function TimelineBladePreview({

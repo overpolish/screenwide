@@ -14,8 +14,10 @@ import {
   recordingTimelineRetainedDuration,
   recordingTimelineSourceToOutput,
   remapRecordingTimelinePosition,
+  setRecordingTimelineSegmentPlaybackRate,
   snapRecordingTimelinePosition,
 } from "../recording-timeline-edit";
+import { setRecordingTimelineRangePlaybackRate } from "../recording-timeline-speed";
 import { useExportEditGesture } from "../use-export-edit-history";
 import { useExportWindowShortcuts } from "../use-export-window-shortcuts";
 
@@ -233,6 +235,40 @@ export function useRecordingTimelineBlade({
     onChange,
     rangeSelection,
   ]);
+  const changeSegmentPlaybackRate = useCallback(
+    (segmentId: number, playbackRate: number) => {
+      if (!onChange) return;
+      const next = setRecordingTimelineSegmentPlaybackRate(
+        effectiveEdit,
+        segmentId,
+        playbackRate,
+      );
+      if (next === effectiveEdit) return;
+      setRangeSelection(null);
+      setSelectedSegmentId(segmentId);
+      editGesture.beginGesture();
+      onChange(next);
+      editGesture.endGesture();
+    },
+    [editGesture, effectiveEdit, onChange],
+  );
+  const changeRangePlaybackRate = useCallback(
+    (playbackRate: number) => {
+      if (!onChange || !rangeSelection) return;
+      const next = setRecordingTimelineRangePlaybackRate(effectiveEdit, {
+        outputEnd: rangeSelection.end,
+        outputStart: rangeSelection.start,
+        playbackRate,
+      });
+      if (next === effectiveEdit) return;
+      setRangeSelection(null);
+      setSelectedSegmentId(null);
+      editGesture.beginGesture();
+      onChange(next);
+      editGesture.endGesture();
+    },
+    [editGesture, effectiveEdit, onChange, rangeSelection],
+  );
   const setActive = useCallback((active: boolean) => {
     setIsActive(active);
     if (active) {
@@ -345,7 +381,9 @@ export function useRecordingTimelineBlade({
       selectedSegmentId: effectiveSelectedSegmentId,
       setActive,
       setRangeActive: changeRangeActive,
+      setRangePlaybackRate: changeRangePlaybackRate,
       setRangeSelection: changeRangeSelection,
+      setSegmentPlaybackRate: changeSegmentPlaybackRate,
       snapPosition: snapOutput,
       updateTrim: trim.update,
     },

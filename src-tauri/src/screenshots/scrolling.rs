@@ -28,13 +28,13 @@ mod platform;
 // right-edge reconstruction always has two clean samples to outvote a tile
 // whose scrollbar thumb happens to sit over that row. A row is covered by
 // 1 / SCROLL_FRACTION tiles, so a third of a viewport per step clears the
-// majority with room to spare — and leaves ample shared content for matching
+// majority with room to spare - and leaves ample shared content for matching
 // pages with sticky headers. Acquisition remains fast because each pair's
 // matching overlaps the next scroll's settle and the settle itself is short.
 const SCROLL_FRACTION: f64 = 0.30;
 const SETTLE_DELAY: Duration = Duration::from_millis(80);
 /// Carried by the ordinary error path when Escape stops a capture. The text is
-/// never shown — `cancel::was_requested` is what the command believes — but a
+/// never shown - `cancel::was_requested` is what the command believes - but a
 /// stop still has to unwind like any other early return.
 const CANCELLED: &str = "The scrolling capture was cancelled";
 

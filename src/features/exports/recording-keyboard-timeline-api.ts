@@ -11,6 +11,10 @@ import {
   recordingKeyboardShortcutPositionRanges,
 } from "./recording-keyboard-timeline-edit";
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
+import {
+  recordingTimelinePlaybackRanges,
+  RecordingTimelinePlaybackRange,
+} from "./recording-timeline-playback";
 import { RecordingKeyboardTimelineItem } from "./types";
 
 export const getRecordingKeyboardTimeline = (
@@ -19,6 +23,7 @@ export const getRecordingKeyboardTimeline = (
 ) =>
   invoke<RecordingKeyboardTimelineItem[]>("get_recording_keyboard_timeline", {
     artifactId,
+    playbackRanges: deletions.playbackRanges,
     shortcutIds: deletions.deletedKeyboardShortcutIds,
     shortcutPositions: deletions.keyboardShortcutPositions,
     shortcutRanges: deletions.deletedKeyboardShortcutRanges,
@@ -28,6 +33,7 @@ export type RecordingPreviewKeyboardDeletions = {
   deletedKeyboardShortcutIds: number[];
   deletedKeyboardShortcutRanges: DeletedKeyboardShortcutRange[];
   keyboardShortcutPositions: KeyboardShortcutPositionRange[];
+  playbackRanges: RecordingTimelinePlaybackRange[];
 };
 
 export const recordingPreviewKeyboardDeletions = (
@@ -43,6 +49,13 @@ export const recordingPreviewKeyboardDeletions = (
     edit,
     sourceDurationMs,
   ),
+  playbackRanges: recordingTimelinePlaybackRanges(edit, sourceDurationMs).map(
+    (range) => ({
+      ...range,
+      sourceEndMs: Math.round(range.sourceEndMs),
+      sourceStartMs: Math.round(range.sourceStartMs),
+    }),
+  ),
 });
 
 export const setRecordingPreviewDeletedKeyboardShortcuts = (
@@ -50,6 +63,7 @@ export const setRecordingPreviewDeletedKeyboardShortcuts = (
   sessionId: number,
 ) =>
   invoke<null>("set_recording_preview_deleted_keyboard_shortcuts", {
+    playbackRanges: deletions.playbackRanges,
     sessionId,
     shortcutIds: deletions.deletedKeyboardShortcutIds,
     shortcutPositions: deletions.keyboardShortcutPositions,

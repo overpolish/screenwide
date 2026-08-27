@@ -289,11 +289,13 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
           id: 0,
           source_end: 0.2,
           source_start: 0.0,
+          playback_rate: 1.0,
         },
         crate::exports::timeline_edit::RecordingTimelineSegment {
           id: 1,
           source_end: 1.0,
           source_start: 0.8,
+          playback_rate: 1.0,
         },
       ],
     },

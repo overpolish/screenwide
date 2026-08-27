@@ -2,6 +2,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use crate::exports::timeline_edit::{
+  RecordingTimelineEdit, RecordingTimelineKeyboardDeletions, RecordingTimelineSegment, TimelinePlan,
+};
+
+fn speed_plan(rate: f64) -> TimelinePlan {
+  TimelinePlan::from_edit(
+    &RecordingTimelineEdit {
+      artifact_id: 1,
+      keyboard_deletions: Box::<RecordingTimelineKeyboardDeletions>::default(),
+      next_segment_id: 2,
+      segments: vec![RecordingTimelineSegment {
+        id: 1,
+        source_start: 0.0,
+        source_end: 1.0,
+        playback_rate: rate,
+      }],
+    },
+    10_000,
+  )
+  .unwrap()
+}
 
 fn v1() -> KeyboardCompositor {
   KeyboardCompositor::from_shortcuts(vec![Shortcut {
@@ -19,6 +40,82 @@ fn v1_fallback_is_one_key() {
   let overlay = v1().evaluate(1_100, Default::default()).unwrap();
   assert_eq!(overlay.key_count, 1);
   assert_eq!(overlay.keys[0].key_code, 0);
+}
+
+#[test]
+fn entrance_animation_duration_is_invariant_across_segment_speeds() {
+  let compositor = v1();
+  let half = compositor
+    .evaluate_with_timeline(1_150, Default::default(), Some(&speed_plan(0.5)))
+    .unwrap();
+  let normal = compositor.evaluate(1_300, Default::default()).unwrap();
+  let double = compositor
+    .evaluate_with_timeline(1_600, Default::default(), Some(&speed_plan(2.0)))
+    .unwrap();
+  assert!((normal.keys[0].progress - 0.5).abs() < 0.001);
+  assert!((half.keys[0].progress - normal.keys[0].progress).abs() < 0.001);
+  assert!((double.keys[0].progress - normal.keys[0].progress).abs() < 0.001);
+}
+
+#[test]
+fn exit_animation_duration_is_invariant_across_segment_speeds() {
+  let compositor = KeyboardCompositor::from_shortcuts(vec![Shortcut {
+    keys: vec![KeyPress {
+      key_code: 0,
+      modifier_mask: 0,
+      down_us: 1_000_000,
+      up_us: Some(1_200_000),
+    }],
+  }]);
+  // The recorded hold ends at 1.95s; each sample is 0.2s later in output time.
+  let half = compositor
+    .evaluate_with_timeline(2_050, Default::default(), Some(&speed_plan(0.5)))
+    .unwrap();
+  let normal = compositor.evaluate(2_150, Default::default()).unwrap();
+  let double = compositor
+    .evaluate_with_timeline(2_350, Default::default(), Some(&speed_plan(2.0)))
+    .unwrap();
+  assert!((normal.keys[0].progress - 0.5).abs() < 0.001);
+  assert!((half.keys[0].progress - normal.keys[0].progress).abs() < 0.001);
+  assert!((double.keys[0].progress - normal.keys[0].progress).abs() < 0.001);
+}
+
+#[test]
+fn layout_animation_duration_is_invariant_across_segment_speeds() {
+  let compositor = KeyboardCompositor::from_shortcuts(vec![Shortcut {
+    keys: vec![
+      KeyPress {
+        key_code: 55,
+        modifier_mask: 1,
+        down_us: 1_000_000,
+        up_us: None,
+      },
+      KeyPress {
+        key_code: 0,
+        modifier_mask: 1,
+        down_us: 2_000_000,
+        up_us: None,
+      },
+    ],
+  }]);
+  let half = compositor
+    .evaluate_with_timeline(2_150, Default::default(), Some(&speed_plan(0.5)))
+    .unwrap();
+  let normal = compositor.evaluate(2_300, Default::default()).unwrap();
+  let double = compositor
+    .evaluate_with_timeline(2_600, Default::default(), Some(&speed_plan(2.0)))
+    .unwrap();
+  let progress = |overlay: &KeyboardOverlay| {
+    overlay
+      .keys
+      .iter()
+      .find(|key| key.key_code == 55)
+      .unwrap()
+      .layout_progress
+  };
+  assert!((progress(&normal) - 0.5).abs() < 0.001);
+  assert!((progress(&half) - progress(&normal)).abs() < 0.001);
+  assert!((progress(&double) - progress(&normal)).abs() < 0.001);
 }
 
 #[test]

@@ -6,8 +6,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::AppHandle;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-/// Only one scrolling capture can run at a time — the screenshot workspace is
-/// reserved for the whole of it — so the request needs no per-job identity.
+/// Only one scrolling capture can run at a time - the screenshot workspace is
+/// reserved for the whole of it - so the request needs no per-job identity.
 static REQUESTED: AtomicBool = AtomicBool::new(false);
 
 const ESCAPE: &str = "Escape";

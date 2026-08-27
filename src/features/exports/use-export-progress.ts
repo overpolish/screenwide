@@ -15,7 +15,7 @@ const EXPORT_PROGRESS_EVENT = "export://progress";
 const ETA_WINDOW_MS = 10_000;
 // Do not surface an estimate until the window actually spans this much
 // wall-clock time, so the first estimate isn't extrapolated from a noisy burst.
-// This single gate replaces the old per-event interval and sample-count gates —
+// This single gate replaces the old per-event interval and sample-count gates -
 // with an endpoint-based rate, closely spaced events are harmless.
 const ETA_MIN_SPAN_MS = 3_000;
 // Progress events arrive per encoded frame, so store at most one sample per
@@ -135,8 +135,8 @@ export function useExportProgress(artifactId?: number) {
           }
         }
       }
-      // When the rate is not measurable — warm-up, just after a phase change, or
-      // no forward progress — the last shown estimate simply holds. Blanking the
+      // When the rate is not measurable - warm-up, just after a phase change, or
+      // no forward progress - the last shown estimate simply holds. Blanking the
       // label and bringing it back is far more distracting than a value that has
       // gone a few seconds stale, and formatEta is coarse enough to hide it.
       // Only resetEta (begin/complete/reset) clears the estimate.

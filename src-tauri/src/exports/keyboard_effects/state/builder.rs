@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 
 use super::{role, KeyboardStateTimeline, LayoutTrack, TransitionKind, VisualKey, VisualRole};
+use crate::exports::keyboard_effects::clock::AnimationClock;
 use crate::exports::keyboard_effects::HOLD_US;
 use crate::exports::keyboard_effects::{KeyPress, Shortcut};
 use crate::exports::timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
@@ -187,7 +188,7 @@ impl Builder<'_> {
         // Every key is physically released by now, so lingering badges are in
         // their post-release hold. A new visible badge makes that hold a lie
         // (the same key may already be down again), so the fade is pulled
-        // forward far enough to be FINISHED by this press — while never
+        // forward far enough to be FINISHED by this press - while never
         // starting before the badge's own keys were actually released.
         if !self.context.deleted_at(event.shortcut, event.at) {
           let lingering = self
@@ -388,7 +389,7 @@ impl Builder<'_> {
       .iter()
       .filter_map(|slot| {
         let visual = slot.current?;
-        (!self.timeline.visuals[visual].visible_at(at)).then_some(slot.id)
+        (!self.timeline.visuals[visual].visible_at(at, AnimationClock::source())).then_some(slot.id)
       })
       .collect::<Vec<_>>();
     for slot_id in finished {
@@ -412,7 +413,9 @@ impl Builder<'_> {
       .visuals
       .iter()
       .enumerate()
-      .filter(|(_, visual)| visual.slot_id == slot && visual.visible_at(at))
+      .filter(|(_, visual)| {
+        visual.slot_id == slot && visual.visible_at(at, AnimationClock::source())
+      })
       .max_by_key(|(_, visual)| visual.enter_us)
       .map(|(index, _)| index)
   }

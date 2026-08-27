@@ -32,7 +32,7 @@ const middleTruncate = (value: string, maxLength: number): string => {
  * have no leading separator and keep the volume (`C:`) as their root.
  *
  * The ellipsis lands only at separator boundaries, never inside a segment, so
- * the result is stable regardless of where a name happens to contain a space —
+ * the result is stable regardless of where a name happens to contain a space -
  * unlike CSS `text-overflow: ellipsis`, which WebKit renders with a stray gap
  * when the clip point falls on whitespace.
  */

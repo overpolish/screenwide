@@ -6,7 +6,7 @@ import { PointerEvent as ReactPointerEvent } from "react";
 import { LABEL_HEIGHT, labelWidth } from "./ruler-label-metrics";
 import { LabelHandles } from "./use-label-handles";
 
-/** Every chip wears the app tooltip palette — black and white, no variants. */
+/** Every chip wears the app tooltip palette - black and white, no variants. */
 export function SvgLabel({
   handles,
   labelKey,

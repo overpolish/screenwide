@@ -87,7 +87,7 @@ const isEdge = (
   for (let offset = -1; offset <= 1; offset += 1) {
     const at = { across: across + offset, axis, position };
     // A flat pixel next to a strong ridge borrows enough mass to pass on its
-    // own, which would stop every probe one pixel short of a hard edge — the
+    // own, which would stop every probe one pixel short of a hard edge - the
     // pixel itself must carry gradient, exactly as the Rust binarization does.
     if (gradientAt(field, at) > 0 && edgeMass(field, at) >= threshold)
       hits += 1;

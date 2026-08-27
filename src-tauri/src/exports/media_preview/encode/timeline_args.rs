@@ -10,13 +10,32 @@ fn seconds(microseconds: u64) -> String {
   format!("{:.6}", microseconds as f64 / 1_000_000.0)
 }
 
+fn atempo(rate: f64) -> String {
+  let mut remaining = rate;
+  let mut filters = Vec::new();
+  while remaining > 2.0 {
+    filters.push("atempo=2.0".to_owned());
+    remaining /= 2.0;
+  }
+  while remaining < 0.5 {
+    filters.push("atempo=0.5".to_owned());
+    remaining /= 0.5;
+  }
+  if (remaining - 1.0).abs() > f64::EPSILON {
+    filters.push(format!("atempo={remaining:.6}"));
+  }
+  filters.join(",")
+}
+
 fn cut_fades(range: TimelineRange, index: usize, count: usize) -> String {
   let mut fades = String::new();
   if index > 0 {
     fades.push_str(&format!(",afade=t=in:st=0:d={}", seconds(CUT_FADE_US)));
   }
   if index + 1 < count {
-    let duration_us = range.source_end_us.saturating_sub(range.source_start_us);
+    let duration_us = ((range.source_end_us.saturating_sub(range.source_start_us)) as f64
+      / range.playback_rate)
+      .round() as u64;
     fades.push_str(&format!(
       ",afade=t=out:st={}:d={}",
       seconds(duration_us.saturating_sub(CUT_FADE_US)),
@@ -66,9 +85,10 @@ fn append_video_filters(
       format!("[{input}:v:0]")
     };
     filters.push(format!(
-      "{source}trim=start={}:end={},setpts=PTS-STARTPTS[v{index}]",
+      "{source}trim=start={}:end={},setpts=(PTS-STARTPTS)/{}[v{index}]",
       seconds(range.source_start_us),
-      seconds(range.source_end_us)
+      seconds(range.source_end_us),
+      range.playback_rate
     ));
     parts.push_str(&format!("[v{index}]"));
   }
@@ -110,8 +130,14 @@ fn append_audio_filters(
         format!("[{audio_input}:a:{stream}]")
       };
       let fades = cut_fades(*range, index, ranges.len());
+      let tempo = atempo(range.playback_rate);
+      let tempo = if tempo.is_empty() {
+        String::new()
+      } else {
+        format!(",{tempo}")
+      };
       filters.push(format!(
-        "{source}atrim=start={}:end={},asetpts=PTS-STARTPTS{fades}[a{track}_{index}]",
+        "{source}atrim=start={}:end={},asetpts=PTS-STARTPTS{tempo}{fades}[a{track}_{index}]",
         seconds(range.source_start_us),
         seconds(range.source_end_us)
       ));
@@ -258,12 +284,13 @@ pub(in crate::exports::media_preview) fn timeline_audio_export_args(
 
 #[cfg(test)]
 mod tests {
-  use super::{cut_fades, TimelineRange};
+  use super::{atempo, cut_fades, TimelineRange};
 
   const RANGE: TimelineRange = TimelineRange {
     output_start_us: 0,
     source_end_us: 250_000,
     source_start_us: 0,
+    playback_rate: 1.0,
   };
 
   #[test]
@@ -274,5 +301,11 @@ mod tests {
     );
     assert_eq!(cut_fades(RANGE, 1, 2), ",afade=t=in:st=0:d=0.003000");
     assert!(cut_fades(RANGE, 0, 1).is_empty());
+  }
+
+  #[test]
+  fn chains_atempo_filters_at_supported_extremes() {
+    assert_eq!(atempo(0.25), "atempo=0.5,atempo=0.500000");
+    assert_eq!(atempo(4.0), "atempo=2.0,atempo=2.000000");
   }
 }

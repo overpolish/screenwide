@@ -138,8 +138,8 @@ pub(super) fn alignment_error(
   // it, and the contamination lands in a cross: the header spans every
   // cross-axis band but only the leading rows, while the sidebar that slid up
   // with it spans every along-axis segment but only the leading bands. Neither
-  // axis alone can excise a cross, so the grid is collapsed jointly — best
-  // three bands within the best run of segments — and only a region excluded on
+  // axis alone can excise a cross, so the grid is collapsed jointly - best
+  // three bands within the best run of segments - and only a region excluded on
   // both axes at once survives, which is precisely the clean document.
   //
   // The segment run must be contiguous. Moving chrome sits at an edge of the
@@ -152,7 +152,7 @@ pub(super) fn alignment_error(
   //
   // The bands are chosen once, over the whole overlap, and every run is then
   // scored on that same choice. Chrome contaminating a run leaves the ranking
-  // between bands intact — it lands on all of them — so the choice is as good
+  // between bands intact - it lands on all of them - so the choice is as good
   // as one made per run, while re-picking the best three inside each run would
   // let a lucky quarter of a mismatching frame drift below the threshold.
   let mut total_differences = [0_u64; ALIGNMENT_BANDS];

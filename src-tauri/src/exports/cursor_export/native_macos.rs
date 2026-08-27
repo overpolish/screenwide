@@ -105,7 +105,12 @@ pub(super) fn evaluate_keyboard(
     .map(|frame| {
       let position_ms = frame.saturating_mul(1_000) / CURSOR_FRAME_RATE;
       keyboard
-        .evaluate_fitted(position_ms, request.keyboard_effects, dimensions)
+        .evaluate_fitted_with_timeline(
+          position_ms,
+          request.keyboard_effects,
+          dimensions,
+          request.timeline,
+        )
         .unwrap_or_default()
     })
     .collect();

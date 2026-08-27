@@ -50,7 +50,7 @@ const ORIGIN_SLACK = 1;
  * Tightens a pixel-edge probe so it also stops at committed guides and
  * measurement-box edges. Stops can only shorten the span, so taking the extreme
  * on each side of the cursor is the same as picking the nearest stop. A stop at
- * the cursor itself clips neither side — probing while standing on a guide
+ * the cursor itself clips neither side - probing while standing on a guide
  * measures outward FROM it instead of collapsing to zero.
  */
 export const clipProbe = ({

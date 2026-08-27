@@ -292,10 +292,11 @@ fn render_video(
       ComposedFrame {
         cursor: baked_cursor,
         keyboard: keyboard.as_ref().and_then(|keyboard| {
-          keyboard.evaluate_fitted(
+          keyboard.evaluate_fitted_with_timeline(
             position_ms,
             request.keyboard_effects,
             (request.output.width, request.output.height),
+            request.timeline,
           )
         }),
         foreground_only: false,

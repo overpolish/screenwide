@@ -22,7 +22,7 @@ export type SelectedLine = {
   kind: "guide" | "measurement" | "probe";
 };
 
-/** The line a hovered label chip stands for — what deleting it would remove. */
+/** The line a hovered label chip stands for - what deleting it would remove. */
 export const selectedFromLabel = (key: string): SelectedLine => {
   const ids = labelIds(key);
   if (key.startsWith("m")) return { id: ids[0], kind: "measurement" };
@@ -34,7 +34,7 @@ export const selectedFromLabel = (key: string): SelectedLine => {
 /**
  * Everything the delete key can act on: a hovered label chip (which owns its
  * measurement, probe, or gap), or the guide/probe line nearest the cursor.
- * Call `selectLine` during render once the placement state is known — the
+ * Call `selectLine` during render once the placement state is known - the
  * chosen line wears a pulsing halo, and the keydown handler reads the same
  * choice through a ref so the key always deletes what the halo shows.
  */

@@ -11,8 +11,10 @@ import {
   recordingTimelineOutputToSource,
   recordingTimelineRetainedDuration,
   recordingTimelineSourceToOutput,
+  setRecordingTimelineSegmentPlaybackRate,
   snapRecordingTimelinePosition,
 } from "../recording-timeline-edit";
+import { setRecordingTimelineRangePlaybackRate } from "../recording-timeline-speed";
 import { RecordingTrackId, RecordingVideoTrackId } from "../types";
 import {
   ExportEditGestureContext,
@@ -174,10 +176,30 @@ function TimelinePreview() {
                 setSelectedSegmentId(null);
               } else setRangeSelection(null);
             },
+            setRangePlaybackRate: (playbackRate) => {
+              if (!rangeSelection) return;
+              setTimelineEdit((current) =>
+                setRecordingTimelineRangePlaybackRate(current, {
+                  outputEnd: rangeSelection.end,
+                  outputStart: rangeSelection.start,
+                  playbackRate,
+                }),
+              );
+              setRangeSelection(null);
+            },
             setRangeSelection: (anchor, focus) => {
               const start = snapOutput(Math.min(anchor, focus));
               const end = snapOutput(Math.max(anchor, focus));
               setRangeSelection(start === end ? null : { end, start });
+            },
+            setSegmentPlaybackRate: (segmentId, playbackRate) => {
+              setTimelineEdit((current) =>
+                setRecordingTimelineSegmentPlaybackRate(
+                  current,
+                  segmentId,
+                  playbackRate,
+                ),
+              );
             },
             snapPosition: snapOutput,
             updateTrim: () => null,

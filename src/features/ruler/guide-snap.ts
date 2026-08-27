@@ -70,7 +70,7 @@ const candidatesAt = (
 
 /**
  * Picks the ridge nearest the cursor, but keeps the previously held one unless
- * the newcomer clearly wins — otherwise two rival edges flicker under a jitter
+ * the newcomer clearly wins - otherwise two rival edges flicker under a jitter
  * of a single pixel.
  */
 export const snapGuide = (

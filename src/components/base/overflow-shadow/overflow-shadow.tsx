@@ -103,6 +103,7 @@ const overflowShadowVariants = tv({
 type OverflowShadowProps = VariantProps<typeof overflowShadowVariants> & {
   children?: React.ReactNode;
   className?: string;
+  constrainHeight?: boolean;
   hideScrollbar?: boolean;
   rootClassName?: string;
   startAtEnd?: boolean;
@@ -111,6 +112,7 @@ type OverflowShadowProps = VariantProps<typeof overflowShadowVariants> & {
 export const OverflowShadow = ({
   children,
   className,
+  constrainHeight,
   hideScrollbar,
   insetShadow,
   orientation,
@@ -170,7 +172,7 @@ export const OverflowShadow = ({
   return (
     <div className={cn(os(), rootClassName)}>
       <OverlayScrollbarsComponent
-        className="w-full h-full"
+        className={cn("h-full w-full", constrainHeight && "max-h-[inherit]")}
         defer
         events={{
           initialized: initialize,

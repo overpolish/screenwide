@@ -178,9 +178,8 @@ fn run(
         )
       },
     );
-    let keyboard = sources.keyboard.as_deref().and_then(|keyboard| {
-      keyboard.evaluate_fitted(screen_position_ms, keyboard_settings, keyboard_dimensions)
-    });
+    let keyboard =
+      sources.keyboard_overlay(screen_position_ms, keyboard_settings, keyboard_dimensions);
     if sources.playing.load(Ordering::Acquire) {
       continue;
     }

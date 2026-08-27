@@ -18,7 +18,7 @@ export function DistanceProbeSvg({
   showLabel: boolean;
   /** Along-axis centre of the sibling ruler crossing this one. */
   gapAt?: number;
-  /** World width of the sibling's stroke — the exact exclusion to leave. */
+  /** World width of the sibling's stroke - the exact exclusion to leave. */
   gapSize?: number;
   handles?: LabelHandles;
   selected?: boolean;

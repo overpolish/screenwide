@@ -37,8 +37,8 @@ const push = (stack: Snapshot[], entry: Snapshot) => {
 };
 
 /**
- * A stable `record` the mutating hooks can take before the history hook — which
- * needs their state as its snapshot — has been created. `fill` hands the real
+ * A stable `record` the mutating hooks can take before the history hook - which
+ * needs their state as its snapshot - has been created. `fill` hands the real
  * implementation over once it exists.
  */
 export function useRecordSlot() {

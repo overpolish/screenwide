@@ -48,7 +48,7 @@ export function RulerCrosshair({ cursor }: { cursor: Point }) {
 
 /**
  * One two-line chip: dimensions on top, the pixel colour beneath in a smaller
- * row (Tab copies it — documented in the guides, not here). Either line stands
+ * row (Tab copies it - documented in the guides, not here). Either line stands
  * alone when the other has nothing to say.
  */
 export function CursorReadout({

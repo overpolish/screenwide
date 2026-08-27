@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 /**
  * Whether this ruler window holds key focus. Only the focused window receives
  * mouse events, so an unfocused window's cursor-following readouts are stale by
- * definition and hide until focus returns — the multi-monitor hand-off then
+ * definition and hide until focus returns - the multi-monitor hand-off then
  * reads as one smooth transition instead of two half-alive overlays.
  */
 export function useWindowFocus() {

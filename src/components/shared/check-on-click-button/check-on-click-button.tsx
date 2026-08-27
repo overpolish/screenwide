@@ -49,7 +49,7 @@ type CheckOnClickButtonProps = Omit<ComponentProps<typeof Button>, "onPress"> &
  *   holds for two seconds; success and failure look identical.
  * - Returns a `Promise`: awaited. The button pulses while the promise is in
  *   flight and only shows the check once it resolves. A rejection returns the
- *   button to idle with no check — surfacing the error is the caller's job.
+ *   button to idle with no check - surfacing the error is the caller's job.
  *
  * The button is non-interactive while pending or checked, but is never marked
  * `isDisabled` for that: the disabled styling desaturates the check itself.

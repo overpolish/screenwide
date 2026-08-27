@@ -39,6 +39,7 @@ pub(crate) fn set_recording_preview_deleted_keyboard_shortcuts(
   shortcut_ids: Vec<u64>,
   shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
   shortcut_positions: Vec<KeyboardShortcutPositionRange>,
+  playback_ranges: Vec<super::RecordingPreviewPlaybackRange>,
   session_id: u64,
 ) -> Result<(), String> {
   let mut manager = state
@@ -46,12 +47,16 @@ pub(crate) fn set_recording_preview_deleted_keyboard_shortcuts(
     .lock()
     .map_err(|_| "The recording preview player is unavailable".to_owned())?;
   manager.require_session(session_id)?;
-  let keyboard = manager
+  let sources = manager
     .sources
     .as_ref()
-    .ok_or_else(|| "The recording preview player is not open".to_owned())?
-    .keyboard
-    .clone();
+    .ok_or_else(|| "The recording preview player is not open".to_owned())?;
+  let keyboard = sources.keyboard.clone();
+  *sources
+    .keyboard_animation_ranges
+    .write()
+    .map_err(|_| "The keyboard animation timeline is unavailable".to_owned())? =
+    super::animation_timeline_ranges(&playback_ranges);
   if let Some(keyboard) = keyboard {
     keyboard.set_deleted_shortcuts(&shortcut_ids, &shortcut_ranges);
     keyboard.set_shortcut_positions(&shortcut_positions);

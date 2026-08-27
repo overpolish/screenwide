@@ -25,7 +25,7 @@ export type LabelHandles = {
 /**
  * Turns persisted label chips into handles: hovering one arms the delete key
  * and reveals the native cursor, dragging one nudges it in world coordinates.
- * Offsets live for the session only — stale keys after a delete cost nothing.
+ * Offsets live for the session only - stale keys after a delete cost nothing.
  */
 export function useLabelHandles(
   toWorld: (point: Point) => Point,
@@ -71,7 +71,7 @@ export function useLabelHandles(
       const gesture = dragRef.current;
       if (!gesture) return;
       event.stopPropagation();
-      // History records on the FIRST movement, when a mutation is certain — a
+      // History records on the FIRST movement, when a mutation is certain - a
       // bare click must neither add an undo step nor clear the redo stack.
       if (!gesture.recorded) {
         gesture.recorded = true;

@@ -54,8 +54,8 @@ fn agrees(left: [u8; 4], right: [u8; 4]) -> bool {
 
 /// The value at least two covering tiles agree on, verbatim from the first of
 /// them. Averaging would nudge genuine content, so the agreed candidate is
-/// copied unchanged; the odd one out — the tile whose thumb covers this
-/// document row — is simply never the one that finds a partner.
+/// copied unchanged; the odd one out - the tile whose thumb covers this
+/// document row - is simply never the one that finds a partner.
 fn agreed_value(candidates: &[[u8; 4]]) -> Option<[u8; 4]> {
   candidates.iter().copied().find(|candidate| {
     candidates
@@ -74,8 +74,8 @@ fn agreed_value(candidates: &[[u8; 4]]) -> Option<[u8; 4]> {
 /// tiles agree on is the document and is written back; anything else is left as
 /// the placement loop wrote it.
 ///
-/// Rows only one tile covers — the head of the first tile and the tail of the
-/// last — have nothing to compare against, so a thumb remnant can survive
+/// Rows only one tile covers - the head of the first tile and the tail of the
+/// last - have nothing to compare against, so a thumb remnant can survive
 /// there. That is the deliberate residual: it beats erasing real content, such
 /// as a source-control panel's status letters, from every row.
 pub(super) fn reconstruct_right_edge(

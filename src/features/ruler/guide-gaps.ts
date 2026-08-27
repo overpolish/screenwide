@@ -42,7 +42,7 @@ const axisGaps = ({
       axis,
       centre: (previous.position + guide.position) / 2,
       key: `g${axis}:${String(previous.id)}-${String(guide.id)}`,
-      // Logical (CSS) px — the app-wide display unit, matching box and probe
+      // Logical (CSS) px - the app-wide display unit, matching box and probe
       // labels. Never multiply display values by the device scale.
       value: Math.round(span),
     });

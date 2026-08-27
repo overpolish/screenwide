@@ -5,6 +5,7 @@ import {
   DeletedKeyboardShortcutRange,
   KeyboardShortcutPositionRange,
 } from "./recording-keyboard-timeline-edit";
+import { RecordingTimelinePlaybackRange } from "./recording-timeline-playback";
 import { RecordingOutputSettings } from "./screenshot-output";
 import {
   AudioTrackVolume,
@@ -23,5 +24,6 @@ export const recordingPreviewSettingsKey = (settings: {
   enabledStreamIndices: number[];
   keyboardEffects: KeyboardEffectSettings;
   keyboardShortcutPositions: KeyboardShortcutPositionRange[];
+  playbackRanges: RecordingTimelinePlaybackRange[];
   recordingOutput: RecordingOutputSettings;
 }) => JSON.stringify(settings);

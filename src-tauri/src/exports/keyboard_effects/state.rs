@@ -6,7 +6,7 @@
 mod builder;
 pub(super) use builder::ChainContext;
 
-use super::layout::LayoutTrack;
+use super::{clock::AnimationClock, layout::LayoutTrack};
 #[path = "role.rs"]
 mod role_model;
 pub(super) use role_model::{role, VisualRole};
@@ -43,13 +43,14 @@ pub(super) struct VisualKey {
 }
 
 impl VisualKey {
-  pub(super) fn visible_at(&self, now: u64) -> bool {
+  pub(super) fn visible_at(&self, now: u64, clock: AnimationClock<'_>) -> bool {
     let artwork_visible = self
       .exit
-      .is_none_or(|(exit_us, _)| now < exit_us.saturating_add(EXIT_US));
-    let layout_visible = self
-      .layout_anchor_until_us
-      .is_some_and(|until_us| now < until_us);
+      .is_none_or(|(exit_us, _)| clock.elapsed_us(exit_us, now) < EXIT_US);
+    let layout_visible = self.layout_anchor_until_us.is_some_and(|until_us| {
+      let anchor_us = until_us.saturating_sub(super::layout::MOTION_US);
+      clock.elapsed_us(anchor_us, now) < super::layout::MOTION_US
+    });
     self.animation_enter_us <= now && (artwork_visible || layout_visible)
   }
 }

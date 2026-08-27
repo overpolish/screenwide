@@ -7,6 +7,7 @@ import {
 } from "./recording-timeline-edit";
 
 export type RecordingTimelinePlaybackRange = {
+  playbackRate: number;
   sourceEndMs: number;
   sourceStartMs: number;
 };
@@ -20,24 +21,28 @@ export function recordingTimelinePlaybackRanges(
   sourceDurationMs: number,
 ): RecordingTimelinePlaybackRange[] {
   if (!edit || sourceDurationMs <= 0) {
-    return [{ sourceEndMs: sourceDurationMs, sourceStartMs: 0 }];
+    return [
+      { playbackRate: 1, sourceEndMs: sourceDurationMs, sourceStartMs: 0 },
+    ];
   }
   const ranges: RecordingTimelinePlaybackRange[] = [];
   for (const segment of edit.segments) {
     const sourceStartMs = segment.sourceStart * sourceDurationMs;
     const sourceEndMs = segment.sourceEnd * sourceDurationMs;
+    const playbackRate = segment.playbackRate ?? 1;
     if (
       ranges.length > 0 &&
-      Math.abs(ranges[ranges.length - 1].sourceEndMs - sourceStartMs) < 0.5
+      Math.abs(ranges[ranges.length - 1].sourceEndMs - sourceStartMs) < 0.5 &&
+      ranges[ranges.length - 1].playbackRate === playbackRate
     ) {
       ranges[ranges.length - 1].sourceEndMs = sourceEndMs;
     } else {
-      ranges.push({ sourceEndMs, sourceStartMs });
+      ranges.push({ playbackRate, sourceEndMs, sourceStartMs });
     }
   }
   return ranges.length > 0
     ? ranges
-    : [{ sourceEndMs: sourceDurationMs, sourceStartMs: 0 }];
+    : [{ playbackRate: 1, sourceEndMs: sourceDurationMs, sourceStartMs: 0 }];
 }
 
 export function recordingTimelinePlaybackRangeAt(
@@ -72,6 +77,7 @@ export function recordingTimelinePlaybackRangesFrom(
     sourcePositionMs,
   );
   return ranges.slice(index).map((range, rangeIndex) => ({
+    playbackRate: range.playbackRate,
     sourceEndMs: Math.round(range.sourceEndMs),
     sourceStartMs: Math.round(
       rangeIndex === 0

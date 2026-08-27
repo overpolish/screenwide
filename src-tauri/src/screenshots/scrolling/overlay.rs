@@ -16,8 +16,8 @@ fn centred_origin(centre_x: f64, centre_y: f64) -> LogicalPosition<f64> {
 /// Where the overlay sits: centred on the region being captured.
 ///
 /// A region is expressed in logical points relative to its monitor on both
-/// platforms — the physical maths in `scroll_geometry` is what the pointer APIs
-/// want, not what a window position wants — so converting the monitor origin to
+/// platforms - the physical maths in `scroll_geometry` is what the pointer APIs
+/// want, not what a window position wants - so converting the monitor origin to
 /// logical points is the whole conversion.
 fn position(app: &AppHandle, target: ScreenshotTarget) -> Result<LogicalPosition<f64>, String> {
   let ScreenshotTarget::Region { monitor_id, region } = target else {

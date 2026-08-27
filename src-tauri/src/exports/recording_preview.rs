@@ -12,12 +12,13 @@ struct RecordingPreviewSources {
 /// Returns the captured keyboard shortcuts as generic timed-lane items.
 /// Missing keyboard capture is valid (for example when Accessibility access
 /// was unavailable), so that case deliberately returns an empty lane.
-/// Deletions and manual placements shape badge continuity — and with it each
-/// badge's real exit time — so the current edit is applied before reading.
+/// Deletions and manual placements shape badge continuity - and with it each
+/// badge's real exit time - so the current edit is applied before reading.
 #[tauri::command]
 pub async fn get_recording_keyboard_timeline(
   app: AppHandle,
   artifact_id: u64,
+  playback_ranges: Option<Vec<recording_preview_player::RecordingPreviewPlaybackRange>>,
   shortcut_ids: Option<Vec<u64>>,
   shortcut_ranges: Option<Vec<crate::exports::timeline_edit::DeletedKeyboardShortcutRange>>,
   shortcut_positions: Option<Vec<crate::exports::timeline_edit::KeyboardShortcutPositionRange>>,
@@ -39,6 +40,9 @@ pub async fn get_recording_keyboard_timeline(
   };
 
   tauri::async_runtime::spawn_blocking(move || {
+    let timeline_ranges = playback_ranges
+      .as_deref()
+      .map(recording_preview_player::animation_timeline_ranges);
     path.map_or_else(
       || Ok(Vec::new()),
       |path| {
@@ -48,7 +52,7 @@ pub async fn get_recording_keyboard_timeline(
           &shortcut_ranges.unwrap_or_default(),
         );
         keyboard.set_shortcut_positions(&shortcut_positions.unwrap_or_default());
-        Ok(keyboard.timeline_items())
+        Ok(keyboard.timeline_items_with_timeline(timeline_ranges.as_deref()))
       },
     )
   })

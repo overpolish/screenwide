@@ -95,7 +95,7 @@ fn excludes_a_band_that_moves_at_a_different_rate() {
 
 /// Copies `columns` of every row from `source` into the pair, taking the
 /// current frame's rows `offset` further down so the band moves at its own
-/// rate — the signal an overlay scrollbar and a sticky rail both produce.
+/// rate - the signal an overlay scrollbar and a sticky rail both produce.
 fn desynchronise(
   previous: &mut CapturedImage,
   current: &mut CapturedImage,

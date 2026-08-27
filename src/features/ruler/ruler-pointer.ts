@@ -51,7 +51,7 @@ export function rulerPointerHandlers({
     }
     const gesture = guideMove.gesture();
     if (gesture) {
-      // History records on the FIRST movement, when a mutation is certain — a
+      // History records on the FIRST movement, when a mutation is certain - a
       // bare click on a haloed guide must not add an undo step.
       if (!gesture.recorded) {
         gesture.recorded = true;

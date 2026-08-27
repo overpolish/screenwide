@@ -42,7 +42,7 @@ export const TwoLine: Story = {
   args: { hex: "#3B82F6" },
 };
 
-/** No pixel sampled yet — the size line stands alone. */
+/** No pixel sampled yet - the size line stands alone. */
 export const DimensionsOnly: Story = {};
 
 /** Hovering without a measured span leaves only the swatch row. */

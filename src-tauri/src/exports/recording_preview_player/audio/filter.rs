@@ -11,13 +11,37 @@ fn seconds(milliseconds: u64) -> String {
   format!("{}.{:03}", milliseconds / 1_000, milliseconds % 1_000)
 }
 
-fn cut_fades(range: RecordingPreviewPlaybackRange, index: usize, count: usize) -> String {
+fn atempo(rate: f64) -> String {
+  let mut remaining = rate;
+  let mut filters = Vec::new();
+  while remaining > 2.0 {
+    filters.push("atempo=2.0".to_owned());
+    remaining /= 2.0;
+  }
+  while remaining < 0.5 {
+    filters.push("atempo=0.5".to_owned());
+    remaining /= 0.5;
+  }
+  if (remaining - 1.0).abs() > f64::EPSILON {
+    filters.push(format!("atempo={remaining:.6}"));
+  }
+  filters.join(",")
+}
+
+fn cut_fades(
+  range: RecordingPreviewPlaybackRange,
+  playback_rate: f64,
+  index: usize,
+  count: usize,
+) -> String {
   let mut fades = String::new();
   if index > 0 {
     fades.push_str(&format!(",afade=t=in:st=0:d={}", seconds(CUT_FADE_MS)));
   }
   if index + 1 < count {
-    let fade_start_ms = range.duration_ms().saturating_sub(CUT_FADE_MS);
+    let effective_rate = range.playback_rate * playback_rate;
+    let fade_start_ms =
+      ((range.duration_ms() as f64 / effective_rate).ceil() as u64).saturating_sub(CUT_FADE_MS);
     fades.push_str(&format!(
       ",afade=t=out:st={}:d={}",
       seconds(fade_start_ms),
@@ -31,6 +55,7 @@ pub(super) fn args(
   sources: &PlayerSources,
   ranges: &[RecordingPreviewPlaybackRange],
   config: &StreamConfig,
+  playback_rate: f64,
 ) -> Vec<String> {
   let stream_indices = sources
     .audio_tracks
@@ -48,12 +73,14 @@ pub(super) fn args(
     sources.screen_path.to_string_lossy().into_owned(),
   ];
   let first_start_ms = ranges[0].source_start_ms;
-  let retained_ms = ranges
-    .iter()
-    .map(|range| range.duration_ms())
-    .sum::<u64>()
-    .max(1);
-  let retained = seconds(retained_ms);
+  let retained = seconds(
+    ranges
+      .iter()
+      .map(|range| {
+        (range.duration_ms() as f64 / (range.playback_rate * playback_rate)).ceil() as u64
+      })
+      .sum(),
+  );
   let mut filter = String::new();
   let mut merged_inputs = String::new();
   for (track_position, stream_index) in stream_indices.iter().enumerate() {
@@ -75,9 +102,15 @@ pub(super) fn args(
       } else {
         format!("[track{track_position}source{range_index}]")
       };
-      let fades = cut_fades(*range, range_index, ranges.len());
+      let fades = cut_fades(*range, playback_rate, range_index, ranges.len());
+      let tempo = atempo(range.playback_rate * playback_rate);
+      let tempo = if tempo.is_empty() {
+        String::new()
+      } else {
+        format!(",{tempo}")
+      };
       filter.push_str(&format!(
-        "{source}atrim=start={}:end={},asetpts=PTS-STARTPTS{fades}[track{track_position}range{range_index}];",
+        "{source}atrim=start={}:end={},asetpts=PTS-STARTPTS{tempo}{fades}[track{track_position}range{range_index}];",
         seconds(relative_start),
         seconds(relative_end),
       ));

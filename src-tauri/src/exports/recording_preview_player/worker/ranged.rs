@@ -26,6 +26,7 @@ pub(super) struct RunContext {
   pub event_channel: Channel<RecordingPreviewPlayerEvent>,
   pub playback_end_ms: Option<u64>,
   pub playback_factors: Vec<f64>,
+  pub playback_rate: f64,
   pub playback_ranges: Vec<RecordingPreviewPlaybackRange>,
   pub position_ms: Arc<AtomicU64>,
   pub selected_audio: Arc<RwLock<Vec<usize>>>,
@@ -41,13 +42,14 @@ struct VideoPlayback {
 }
 
 impl VideoPlayback {
-  fn spawn(context: &RunContext, start_ms: u64) -> Result<Self, String> {
+  fn spawn(context: &RunContext, range: RecordingPreviewPlaybackRange) -> Result<Self, String> {
     let cancelled = Arc::new(AtomicBool::new(false));
     let (sender, frames) = mpsc::sync_channel(3);
     let thread = platform::spawn_video(
       &context.sources,
       &context.playback_factors,
-      start_ms,
+      range.source_start_ms,
+      effective_rate(range, context.playback_rate),
       false,
       Arc::clone(&cancelled),
       Arc::clone(&context.video_child),
@@ -66,8 +68,16 @@ impl VideoPlayback {
   }
 }
 
-const fn presentation_elapsed_ms(frame_timestamp_ms: u64, start_ms: u64) -> u64 {
-  frame_timestamp_ms.saturating_sub(start_ms)
+fn output_duration_ms(source_duration_ms: u64, playback_rate: f64) -> u64 {
+  ((source_duration_ms as f64) / playback_rate).ceil() as u64
+}
+
+fn effective_rate(range: RecordingPreviewPlaybackRange, global_rate: f64) -> f64 {
+  range.playback_rate * global_rate
+}
+
+fn source_elapsed_ms(output_elapsed_ms: u64, playback_rate: f64) -> u64 {
+  ((output_elapsed_ms as f64) * playback_rate).round() as u64
 }
 
 fn complete_range(position_ms: &AtomicU64, cancelled: &AtomicBool, failed: bool, end_ms: u64) {
@@ -85,6 +95,7 @@ fn ranges(context: &RunContext) -> Vec<RecordingPreviewPlaybackRange> {
         .unwrap_or(context.sources.duration_ms)
         .min(context.sources.duration_ms)
         .max(context.start_ms),
+      playback_rate: 1.0,
     }]
   } else {
     context.playback_ranges.clone()
@@ -93,7 +104,7 @@ fn ranges(context: &RunContext) -> Vec<RecordingPreviewPlaybackRange> {
 
 pub(super) fn run(context: RunContext) {
   let ranges = ranges(&context);
-  let mut current_video = match VideoPlayback::spawn(&context, ranges[0].source_start_ms) {
+  let mut current_video = match VideoPlayback::spawn(&context, ranges[0]) {
     Ok(playback) => playback,
     Err(error) => return send_error(&context.event_channel, error),
   };
@@ -105,6 +116,7 @@ pub(super) fn run(context: RunContext) {
       Arc::clone(&context.selected_audio),
       Arc::clone(&context.audio_volumes),
       &ranges,
+      context.playback_rate,
       Arc::clone(&context.cancelled),
       Arc::clone(&context.audio_child),
     ) {
@@ -131,20 +143,20 @@ pub(super) fn run(context: RunContext) {
   };
   let mut next_video = ranges
     .get(1)
-    .map(|range| VideoPlayback::spawn(&context, range.source_start_ms));
+    .map(|range| VideoPlayback::spawn(&context, *range));
   let mut output_offset_ms = 0;
   let mut failed = false;
 
   for (range_index, range) in ranges.iter().copied().enumerate() {
-    let output_end_ms = output_offset_ms + range.duration_ms();
+    let rate = effective_rate(range, context.playback_rate);
+    let output_end_ms = output_offset_ms + output_duration_ms(range.duration_ms(), rate);
     while !context.cancelled.load(Ordering::Acquire) {
       let frame = match current_video.frames.recv_timeout(Duration::from_millis(16)) {
         Ok(frame) => frame,
         Err(mpsc::RecvTimeoutError::Timeout) if elapsed_ms() < output_end_ms => continue,
         Err(_) => break,
       };
-      let frame_output_ms =
-        output_offset_ms + presentation_elapsed_ms(frame.timestamp_ms, range.source_start_ms);
+      let frame_output_ms = output_offset_ms + frame.presentation_elapsed_ms;
       while elapsed_ms() < frame_output_ms && !context.cancelled.load(Ordering::Acquire) {
         std::thread::sleep(Duration::from_millis(2));
       }
@@ -153,7 +165,10 @@ pub(super) fn run(context: RunContext) {
       }
       let current = range
         .source_start_ms
-        .saturating_add(elapsed_ms().saturating_sub(output_offset_ms))
+        .saturating_add(source_elapsed_ms(
+          elapsed_ms().saturating_sub(output_offset_ms),
+          rate,
+        ))
         .min(range.source_end_ms);
       context.position_ms.store(current, Ordering::Release);
       if !platform::send_frame(&context.sources, frame.payload) {
@@ -188,7 +203,7 @@ pub(super) fn run(context: RunContext) {
     };
     next_video = ranges
       .get(range_index + 2)
-      .map(|next| VideoPlayback::spawn(&context, next.source_start_ms));
+      .map(|next| VideoPlayback::spawn(&context, *next));
   }
 
   if let Some(Ok(playback)) = next_video {
@@ -226,13 +241,13 @@ pub(super) fn run(context: RunContext) {
 
 #[cfg(test)]
 mod tests {
-  use super::{complete_range, presentation_elapsed_ms};
+  use super::{complete_range, output_duration_ms};
   use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
   #[test]
-  fn playback_follows_media_timestamps_after_a_seek() {
-    assert_eq!(presentation_elapsed_ms(7_126, 5_000), 2_126);
-    assert_eq!(presentation_elapsed_ms(4_999, 5_000), 0);
+  fn playback_duration_scales_by_rate() {
+    assert_eq!(output_duration_ms(1_000, 0.5), 2_000);
+    assert_eq!(output_duration_ms(1_000, 2.0), 500);
   }
 
   #[test]

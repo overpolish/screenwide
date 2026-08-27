@@ -218,7 +218,7 @@ fn fallback_gpu_artwork(style: CursorStyle) -> GpuArtwork {
 /// Places system artwork by its own design frame instead of stretching it over
 /// the recorded cursor box: the frame is fitted into the box at a single
 /// aspect-preserving scale and `origin` (the artwork's own hotspot, in frame
-/// units) lands at the recorded position. Only a custom cursor uses this — its
+/// units) lands at the recorded position. Only a custom cursor uses this - its
 /// pixels are not recorded, so neither its box's aspect nor its hotspot
 /// describes the arrow that stands in for it.
 #[cfg(test)]

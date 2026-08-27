@@ -54,7 +54,7 @@ const THUMB: [u8; 4] = [90, 90, 90, 255];
 /// Inside the detected right-edge strip, which bands 30 and 31 of a 64px-wide
 /// frame put at column 60 and up.
 const STRIP_COLUMN: u32 = 61;
-/// Document rows carrying a distinctive strip pixel — the stand-in for a source
+/// Document rows carrying a distinctive strip pixel - the stand-in for a source
 /// control panel's status letters. Row 54 lies where only the terminal tile
 /// reaches.
 const CONTENT_ROWS: [u32; 5] = [14, 20, 25, 40, 54];
@@ -145,7 +145,7 @@ fn strip_content_every_covering_tile_agrees_on_survives_verbatim() {
 fn strip_content_survives_wherever_the_thumb_falls() {
   // The regression this reproduces: a right-edge band reads as fixed chrome
   // because the thumb crossed it, and painting it over erased the status
-  // letters for the tile's whole document range. Nothing may be masked here —
+  // letters for the tile's whole document range. Nothing may be masked here -
   // row 5 has no second tile to redeem it, and on row 40 the only later tile is
   // the terminal one, whose own thumb would have been redeemed in its place.
   let rows = [5_u32, 14, 25, 40];
@@ -154,7 +154,7 @@ fn strip_content_survives_wherever_the_thumb_falls() {
     assert_eq!(at(&image, STRIP_COLUMN, row), CONTENT, "row {row}");
   }
   // Row 25 is thumb-covered in the first tile, and the two later tiles outvote
-  // it — the majority the scroll overlap exists to provide.
+  // it - the majority the scroll overlap exists to provide.
   for row in 24..32 {
     for column in 58..64 {
       assert_ne!(at(&image, column, row), THUMB, "row {row} column {column}");

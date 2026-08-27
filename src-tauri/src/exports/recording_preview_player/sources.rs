@@ -14,6 +14,7 @@ pub(super) struct PlayerSources {
   pub(super) cursor_artworks: Option<Arc<Vec<GpuArtwork>>>,
   pub(super) cursor_settings: Arc<RwLock<CursorEffectSettings>>,
   pub(super) keyboard: Option<Arc<KeyboardCompositor>>,
+  pub(super) keyboard_animation_ranges: Arc<RwLock<Vec<TimelineRange>>>,
   pub(super) keyboard_settings: Arc<RwLock<KeyboardEffectSettings>>,
   pub(super) composition_settings: Option<Arc<RwLock<PreviewCompositionSettings>>>,
   pub(super) duration_ms: u64,
@@ -27,6 +28,27 @@ pub(super) struct PlayerSources {
   pub(super) preview_surface: Option<Arc<RecordingPreviewSurface>>,
   pub(super) primary_kind: PrimaryRecordingKind,
   pub(super) screen_path: PathBuf,
+}
+
+impl PlayerSources {
+  pub(super) fn keyboard_overlay(
+    &self,
+    position_ms: u64,
+    settings: KeyboardEffectSettings,
+    dimensions: (u32, u32),
+  ) -> Option<crate::exports::keyboard_effects::KeyboardOverlay> {
+    let keyboard = self.keyboard.as_deref()?;
+    let ranges = self
+      .keyboard_animation_ranges
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    keyboard.evaluate_fitted_with_ranges(
+      position_ms,
+      settings,
+      dimensions,
+      (!ranges.is_empty()).then_some(ranges.as_slice()),
+    )
+  }
 }
 
 pub(super) fn sources(
@@ -197,6 +219,9 @@ fn sources_with_surface(
       }),
     )),
     keyboard,
+    keyboard_animation_ranges: Arc::new(RwLock::new(settings.map_or_else(Vec::new, |settings| {
+      animation_timeline_ranges(&settings.playback_ranges)
+    }))),
     keyboard_settings: Arc::new(RwLock::new(
       settings.map_or_else(KeyboardEffectSettings::default, |settings| {
         settings.keyboard_effects.normalized()

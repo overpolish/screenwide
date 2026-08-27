@@ -19,8 +19,10 @@ fn decodes_tracks_into_independent_pcm_channels() {
     &[RecordingPreviewPlaybackRange {
       source_start_ms: 250,
       source_end_ms: 1_000,
+      playback_rate: 1.0,
     }],
     &config,
+    1.0,
   )
   .join(" ");
 
@@ -46,13 +48,16 @@ fn concatenates_retained_ranges_before_opening_the_output_stream() {
       RecordingPreviewPlaybackRange {
         source_start_ms: 250,
         source_end_ms: 500,
+        playback_rate: 1.0,
       },
       RecordingPreviewPlaybackRange {
         source_start_ms: 750,
         source_end_ms: 1_000,
+        playback_rate: 1.0,
       },
     ],
     &config,
+    1.0,
   )
   .join(" ");
 
@@ -63,6 +68,57 @@ fn concatenates_retained_ranges_before_opening_the_output_stream() {
   assert!(rendered.contains("afade=t=in:st=0:d=0.003"));
   assert!(rendered.contains("concat=n=2:v=0:a=1"));
   assert!(rendered.contains("-t 0.500"));
+}
+
+#[test]
+fn applies_atempo_and_scales_audio_duration() {
+  let sources = test_sources();
+  let config = StreamConfig {
+    channels: 2,
+    sample_rate: 48_000,
+    buffer_size: cpal::BufferSize::Default,
+  };
+  let rendered = args(
+    &sources,
+    &[RecordingPreviewPlaybackRange {
+      source_start_ms: 0,
+      source_end_ms: 1_000,
+      playback_rate: 1.0,
+    }],
+    &config,
+    2.0,
+  )
+  .join(" ");
+  assert!(rendered.contains("atempo=2.0"));
+  assert!(rendered.contains("apad=whole_dur=0.500"));
+  assert!(rendered.contains("-t 0.500"));
+}
+
+#[test]
+fn scales_cut_fades_by_the_effective_playback_rate() {
+  let mut sources = test_sources();
+  sources.audio_tracks.truncate(1);
+  let config = StreamConfig {
+    channels: 1,
+    sample_rate: 48_000,
+    buffer_size: cpal::BufferSize::Default,
+  };
+  let ranges = [
+    RecordingPreviewPlaybackRange {
+      source_start_ms: 0,
+      source_end_ms: 500,
+      playback_rate: 2.0,
+    },
+    RecordingPreviewPlaybackRange {
+      source_start_ms: 500,
+      source_end_ms: 1_000,
+      playback_rate: 1.0,
+    },
+  ];
+  let rendered = args(&sources, &ranges, &config, 2.0).join(" ");
+
+  assert!(rendered.contains("afade=t=out:st=0.122:d=0.003"));
+  assert!(rendered.contains("apad=whole_dur=0.375"));
 }
 
 fn test_sources() -> PlayerSources {
@@ -89,6 +145,7 @@ fn test_sources() -> PlayerSources {
     cursor_artworks: None,
     cursor_settings: Default::default(),
     keyboard: None,
+    keyboard_animation_ranges: Default::default(),
     keyboard_settings: Default::default(),
     duration_ms: 1_000,
     frames_per_second: Some(60.0),

@@ -358,7 +358,7 @@ async fn capture(
   // Without an explicit color space SCK emits each display's NATIVE profile,
   // so the same overlay renders slightly differently per monitor (an sRGB
   // canvas mis-shows native-profile pixels). The recording pipeline already
-  // normalizes to sRGB — screenshots must match.
+  // normalizes to sRGB - screenshots must match.
   cfg.set_color_space_name(cg::color_space::names::srgb());
 
   match target {

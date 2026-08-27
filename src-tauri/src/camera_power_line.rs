@@ -6,7 +6,7 @@
 //! macOS removes mains flicker by pinning the camera to a PAL cadence (25/50
 //! fps), which AVFoundation allows anywhere inside a format's frame rate range.
 //! Media Foundation only offers the discrete frame intervals a camera's
-//! descriptor lists — a C920 exposes 5/10/15/20/24/30, never 25 — so the
+//! descriptor lists - a C920 exposes 5/10/15/20/24/30, never 25 - so the
 //! cadence route is closed there. What Windows does expose is the camera's own
 //! anti-flicker: the UVC power line frequency control, which makes the camera
 //! hold exposure to multiples of the mains period. Setting it is a property
