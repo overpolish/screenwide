@@ -968,7 +968,8 @@ fn redraw_keyboard_transform(
   keyboard.center_y = (selection.y + selection.height / 2.0) as f32;
   keyboard.requested_scale *= scale as f32;
   keyboard.scale *= scale as f32;
-  for key in &mut keyboard.keys[..keyboard.key_count.min(keyboard.keys.len() as u32) as usize] {
+  let key_count = keyboard.key_count.min(keyboard.keys.len() as u32) as usize;
+  for key in &mut keyboard.keys[..key_count] {
     key.scale *= scale as f32;
   }
   composition.keyboard = Some(keyboard);

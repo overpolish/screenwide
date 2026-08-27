@@ -3,8 +3,14 @@
 
 pub(super) const MAX_KEYS: usize = 8;
 
+/// Per-key centre sentinel: the key follows the overlay's centre.
+pub(crate) const KEY_CENTER_INHERIT: f32 = -1.0;
+/// Per-key centre sentinel: the key keeps the bottom-centre default even when
+/// the overlay's centre has been moved elsewhere.
+pub(crate) const KEY_CENTER_DEFAULT: f32 = -2.0;
+
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct KeyboardKey {
   pub key_code: u16,
   pub modifier_mask: u32,
@@ -16,6 +22,37 @@ pub(crate) struct KeyboardKey {
   pub slot: u32,
   pub layout_from_mask: u32,
   pub layout_to_mask: u32,
+  /// Normalized canvas centre for this key's shortcut group, letting a badge
+  /// that was manually placed finish its animation at its own spot while a
+  /// differently placed group is on screen. Non-negative is an explicit
+  /// centre; the negative sentinels select the overlay centre or the default.
+  pub center_x: f32,
+  pub center_y: f32,
+  /// This key's group size relative to the overlay's requested scale, so a
+  /// differently sized group keeps its size without polluting `scale`, which
+  /// stays the pure pop-animation scale the renderer's motion blur compares
+  /// against the spring curve.
+  pub scale_ratio: f32,
+}
+
+impl Default for KeyboardKey {
+  fn default() -> Self {
+    Self {
+      key_code: 0,
+      modifier_mask: 0,
+      visible: 0,
+      progress: 0.0,
+      alpha: 0.0,
+      scale: 0.0,
+      layout_progress: 0.0,
+      slot: 0,
+      layout_from_mask: 0,
+      layout_to_mask: 0,
+      center_x: KEY_CENTER_INHERIT,
+      center_y: KEY_CENTER_INHERIT,
+      scale_ratio: 1.0,
+    }
+  }
 }
 
 #[repr(C)]

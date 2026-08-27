@@ -107,7 +107,9 @@ pub(super) fn snapshot(app: &AppHandle, kind: ExportKind) -> ExportSnapshot {
           has_cursor_data: cursor.is_some(),
           keyboard_data_version: keyboard.as_ref().map(|keyboard| keyboard.format_version),
           keyboard_maximum_width_units: keyboard.as_ref().map(|value| value.maximum_width_units),
-          has_keyboard_data: keyboard.is_some(),
+          has_keyboard_data: keyboard
+            .as_ref()
+            .is_some_and(|keyboard| keyboard.has_shortcuts),
           id: *id,
           suggested_file_stem: suggested_file_stem.clone(),
           extension: if *primary_kind == PrimaryRecordingKind::Audio {

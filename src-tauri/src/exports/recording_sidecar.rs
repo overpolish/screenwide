@@ -6,6 +6,9 @@ use std::path::{Path, PathBuf};
 #[derive(Clone)]
 pub(crate) struct RecordingKeyboard {
   pub format_version: u16,
+  /// A sidecar can exist yet hold no shortcuts (nothing qualifying was ever
+  /// pressed); keyboard UI is only offered when there is something to show.
+  pub has_shortcuts: bool,
   pub maximum_width_units: u16,
   pub path: PathBuf,
 }
@@ -26,12 +29,15 @@ impl RecordingCursor {
 
 impl RecordingKeyboard {
   pub(super) fn new(path: PathBuf) -> Self {
-    let maximum_width_units = super::keyboard_effects::KeyboardCompositor::open(&path)
-      .map(|keyboard| keyboard.maximum_width_units())
-      .unwrap_or(20);
+    let compositor = super::keyboard_effects::KeyboardCompositor::open(&path).ok();
     Self {
       format_version: crate::recording::keyboard::FORMAT_VERSION,
-      maximum_width_units,
+      has_shortcuts: compositor
+        .as_ref()
+        .is_some_and(|keyboard| keyboard.shortcut_count() > 0),
+      maximum_width_units: compositor
+        .map(|keyboard| keyboard.maximum_width_units())
+        .unwrap_or(20),
       path,
     }
   }

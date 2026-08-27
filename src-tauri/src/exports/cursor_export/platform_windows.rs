@@ -203,7 +203,7 @@ fn render_video(
       if let Some(timeline) = request.timeline {
         compositor.set_shortcut_positions(timeline.keyboard_shortcut_positions());
       }
-      Ok(compositor)
+      Ok::<_, String>(compositor)
     })
     .transpose()?;
   let output_size = crate::screenshots::output_dimensions(request.output)?;

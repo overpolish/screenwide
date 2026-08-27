@@ -20,6 +20,13 @@ typedef struct {
   uint32_t slot;
   uint32_t layout_from_mask;
   uint32_t layout_to_mask;
+  // Normalized group centre; non-negative is explicit, -1 follows the
+  // overlay centre, and at or below -1.5 the key keeps the default.
+  float center_x;
+  float center_y;
+  // Group size relative to the overlay's requested scale; `scale` stays the
+  // pure pop-animation scale the motion blur compares to the spring curve.
+  float scale_ratio;
 } ScreenwideKeyboardKey;
 
 typedef struct {
@@ -46,6 +53,9 @@ typedef struct {
   float layout_progress;
   uint32_t layout_from_mask;
   uint32_t layout_to_mask;
+  float center_x;
+  float center_y;
+  float scale_ratio;
 } ScreenwideKeyboardKeyUniforms;
 
 typedef struct {

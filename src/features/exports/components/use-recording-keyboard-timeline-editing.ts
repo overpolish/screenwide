@@ -23,28 +23,46 @@ export function useRecordingKeyboardTimelineEditing({
   enabled,
   onChange,
   onSelectionStart,
+  sourceDurationMs,
 }: {
   artifactId: number;
   edit: RecordingTimelineEdit;
   enabled: boolean;
+  sourceDurationMs: number;
   onChange?: (edit: RecordingTimelineEdit) => void;
   onSelectionStart?: () => void;
 }) {
-  const allItems = useRecordingKeyboardTimeline(artifactId, enabled);
+  const { appliedEdit, items: allItems } = useRecordingKeyboardTimeline({
+    artifactId,
+    edit,
+    enabled,
+    sourceDurationMs,
+  });
   const selection = useTimelineItemSelection<string>(onSelectionStart);
   const editGesture = useExportEditGesture();
+  // Lane geometry is computed against `appliedEdit`, which trails the live
+  // edit by one round trip. Hiding by the union of both keeps deletions
+  // instant while an undone deletion stays hidden until the recalculated
+  // lane arrives, instead of flashing over its neighbour's stale span.
   const hiddenItemIds = useMemo(
-    () => new Set(deletedRecordingKeyboardShortcutIds(edit)),
-    [edit],
+    () =>
+      new Set([
+        ...deletedRecordingKeyboardShortcutIds(edit),
+        ...deletedRecordingKeyboardShortcutIds(appliedEdit),
+      ]),
+    [appliedEdit, edit],
   );
   const hiddenFragmentIds = useMemo(
     () =>
       new Set(
-        deletedRecordingKeyboardShortcutFragments(edit).map((fragment) =>
+        [
+          ...deletedRecordingKeyboardShortcutFragments(edit),
+          ...deletedRecordingKeyboardShortcutFragments(appliedEdit),
+        ].map((fragment) =>
           keyboardShortcutFragmentId(fragment.shortcutId, fragment.segmentId),
         ),
       ),
-    [edit],
+    [appliedEdit, edit],
   );
   const adjustedFragmentIds = useMemo(
     () =>

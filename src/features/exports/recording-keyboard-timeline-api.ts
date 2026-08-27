@@ -13,9 +13,15 @@ import {
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import { RecordingKeyboardTimelineItem } from "./types";
 
-export const getRecordingKeyboardTimeline = (artifactId: number) =>
+export const getRecordingKeyboardTimeline = (
+  artifactId: number,
+  deletions: RecordingPreviewKeyboardDeletions,
+) =>
   invoke<RecordingKeyboardTimelineItem[]>("get_recording_keyboard_timeline", {
     artifactId,
+    shortcutIds: deletions.deletedKeyboardShortcutIds,
+    shortcutPositions: deletions.keyboardShortcutPositions,
+    shortcutRanges: deletions.deletedKeyboardShortcutRanges,
   });
 
 export type RecordingPreviewKeyboardDeletions = {

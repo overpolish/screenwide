@@ -5,7 +5,12 @@ import { describe, expect, it } from "vitest";
 
 import { RecordingTimelineEdit } from "../recording-timeline-edit";
 
-import { layoutTimedLaneItems } from "./timed-lane-layout";
+import {
+  layoutTimedLaneItems,
+  stackTimedLaneFragments,
+  TimedLaneFragment,
+  TimedLaneItem,
+} from "./timed-lane-layout";
 
 const edit: RecordingTimelineEdit = {
   artifactId: 1,
@@ -59,5 +64,49 @@ describe("timed lane layout", () => {
 
     expect(fragments).toHaveLength(1);
     expect(fragments[0]?.outputStart).toBe(fragments[0]?.outputEnd);
+  });
+});
+
+describe("stackTimedLaneFragments", () => {
+  const fragment = (
+    id: string,
+    outputStart: number,
+    outputEnd: number,
+  ): TimedLaneFragment<TimedLaneItem> => ({
+    fragmentId: id,
+    item: { endMs: outputEnd * 10_000, id, startMs: outputStart * 10_000 },
+    outputEnd,
+    outputStart,
+    segmentId: 0,
+  });
+
+  it("keeps non-overlapping fragments in a single row", () => {
+    const { fragments, rowCount } = stackTimedLaneFragments([
+      fragment("a", 0.0, 0.2),
+      fragment("b", 0.2, 0.4),
+      fragment("c", 0.6, 0.9),
+    ]);
+    expect(rowCount).toBe(1);
+    expect(fragments.every(({ row }) => row === 0)).toBe(true);
+  });
+
+  it("stacks overlapping fragments into sublanes and reuses freed rows", () => {
+    const { fragments, rowCount } = stackTimedLaneFragments([
+      fragment("fade", 0.0, 0.5),
+      fragment("next", 0.3, 0.7),
+      fragment("later", 0.55, 0.9),
+    ]);
+    expect(rowCount).toBe(2);
+    const rows = Object.fromEntries(
+      fragments.map(({ fragmentId, row }) => [fragmentId, row]),
+    );
+    expect(rows.fade).toBe(0);
+    expect(rows.next).toBe(1);
+    // "later" starts after "fade" ended, so it drops back into row zero.
+    expect(rows.later).toBe(0);
+  });
+
+  it("reports one row for an empty lane", () => {
+    expect(stackTimedLaneFragments([]).rowCount).toBe(1);
   });
 });

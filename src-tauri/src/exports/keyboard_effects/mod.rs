@@ -16,14 +16,14 @@ use animation::{ease_out, pop_spring, replacement_enter_progress, replacement_ex
 mod data;
 use data::{parse_v1, read_values, reconstruct_v2};
 mod gpu_wire;
-use gpu_wire::MAX_KEYS;
+use gpu_wire::{KEY_CENTER_DEFAULT, KEY_CENTER_INHERIT, MAX_KEYS};
 pub(crate) use gpu_wire::{KeyboardKey, KeyboardOverlay};
 mod geometry;
 mod layout;
 mod settings;
 pub(crate) use settings::{KeyboardAnimation, KeyboardAppearance, KeyboardEffectSettings};
 mod state;
-use state::{KeyboardStateTimeline, TransitionKind};
+use state::{ChainContext, KeyboardStateTimeline, TransitionKind};
 mod timeline;
 pub(crate) use timeline::KeyboardTimelineItem;
 
@@ -34,14 +34,22 @@ pub(super) const HOLD_US: u64 = 750_000;
 
 #[derive(Clone, Debug)]
 pub(crate) struct KeyboardCompositor {
-  maximum_width: f64,
-  timeline: KeyboardStateTimeline,
-  slots: Vec<u32>,
+  /// Display state derived from the shortcuts plus the timeline edits.
+  /// Deletions and manual placements decide badge continuity, so every edit
+  /// rebakes this rather than being patched over a stale lifecycle.
+  baked: Arc<RwLock<BakedTimeline>>,
   shortcuts: Vec<Shortcut>,
   legacy_modifier_expansion: bool,
   deleted_shortcut_ids: Arc<RwLock<HashSet<u64>>>,
   deleted_shortcut_ranges: Arc<RwLock<Vec<DeletedKeyboardShortcutRange>>>,
   shortcut_positions: Arc<RwLock<Vec<KeyboardShortcutPositionRange>>>,
+}
+
+#[derive(Debug, Default)]
+struct BakedTimeline {
+  maximum_width: f64,
+  timeline: KeyboardStateTimeline,
+  slots: Vec<u32>,
 }
 #[derive(Clone, Debug)]
 pub(super) struct Shortcut {
@@ -84,7 +92,47 @@ impl KeyboardCompositor {
     Self::from_shortcuts_with_legacy(shortcuts, false)
   }
   fn from_shortcuts_with_legacy(shortcuts: Vec<Shortcut>, legacy_modifier_expansion: bool) -> Self {
-    let mut timeline = KeyboardStateTimeline::from_shortcuts(&shortcuts);
+    let compositor = Self {
+      baked: Arc::new(RwLock::new(BakedTimeline::default())),
+      shortcuts,
+      legacy_modifier_expansion,
+      deleted_shortcut_ids: Arc::new(RwLock::new(HashSet::new())),
+      deleted_shortcut_ranges: Arc::new(RwLock::new(Vec::new())),
+      shortcut_positions: Arc::new(RwLock::new(Vec::new())),
+    };
+    compositor.rebake();
+    compositor
+  }
+
+  /// Rebuilds the display lifecycle from the shortcuts and the current
+  /// timeline edits. Called whenever deletions or manual placements change,
+  /// because they decide whether consecutive chords continue one badge.
+  pub(super) fn rebake(&self) {
+    let deleted_ids = self
+      .deleted_shortcut_ids
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .iter()
+      .copied()
+      .collect::<Vec<_>>();
+    let deleted_ranges = self
+      .deleted_shortcut_ranges
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .clone();
+    let positions = self
+      .shortcut_positions
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .clone();
+    let mut timeline = KeyboardStateTimeline::from_shortcuts(
+      &self.shortcuts,
+      ChainContext {
+        deleted_ids: &deleted_ids,
+        deleted_ranges: &deleted_ranges,
+        positions: &positions,
+      },
+    );
     layout::attach_tracks(&mut timeline.visuals);
     let mut slots = timeline
       .visuals
@@ -104,24 +152,48 @@ impl KeyboardCompositor {
       (order, *slot)
     });
     let maximum_width =
-      geometry::maximum_width(&timeline.visuals, &slots, legacy_modifier_expansion);
-    Self {
+      geometry::maximum_width(&timeline.visuals, &slots, self.legacy_modifier_expansion);
+    *self
+      .baked
+      .write()
+      .unwrap_or_else(|poisoned| poisoned.into_inner()) = BakedTimeline {
       maximum_width,
       timeline,
       slots,
-      shortcuts,
-      legacy_modifier_expansion,
-      deleted_shortcut_ids: Arc::new(RwLock::new(HashSet::new())),
-      deleted_shortcut_ranges: Arc::new(RwLock::new(Vec::new())),
-      shortcut_positions: Arc::new(RwLock::new(Vec::new())),
-    }
+    };
+  }
+
+  #[cfg(test)]
+  fn visuals_snapshot(&self) -> Vec<state::VisualKey> {
+    self
+      .baked
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .timeline
+      .visuals
+      .clone()
+  }
+
+  fn maximum_width(&self) -> f64 {
+    self
+      .baked
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .maximum_width
+  }
+
+  pub(crate) fn shortcut_count(&self) -> usize {
+    self.shortcuts.len()
   }
 
   pub(crate) fn maximum_width_units(&self) -> u16 {
-    self.maximum_width.ceil().clamp(0.0, f64::from(u16::MAX)) as u16
+    self
+      .maximum_width()
+      .ceil()
+      .clamp(0.0, f64::from(u16::MAX)) as u16
   }
   pub(crate) fn maximum_size_percent(&self, width: u32, height: u32) -> f64 {
-    geometry::maximum_size_percent(self.maximum_width, width, height)
+    geometry::maximum_size_percent(self.maximum_width(), width, height)
   }
   pub(crate) fn evaluate_fitted(
     &self,
@@ -145,6 +217,10 @@ impl KeyboardCompositor {
       return None;
     }
     let now = position_ms.saturating_mul(1_000);
+    let baked = self
+      .baked
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
     let animation = match settings.animation {
       KeyboardAnimation::Pop => KeyboardOverlay::ANIMATION_POP,
       KeyboardAnimation::Fade => KeyboardOverlay::ANIMATION_FADE,
@@ -161,7 +237,7 @@ impl KeyboardCompositor {
       appearance,
       scale: size_scale,
       progress: 1.0,
-      maximum_width: self.maximum_width as f32,
+      maximum_width: baked.maximum_width as f32,
       requested_scale: size_scale,
       center_x: settings
         .position_x_percent
@@ -179,7 +255,7 @@ impl KeyboardCompositor {
       .deleted_shortcut_ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
-    let mut visible = self
+    let visible = baked
       .timeline
       .visuals
       .iter()
@@ -194,8 +270,57 @@ impl KeyboardCompositor {
       })
       .filter(|key| key.visible_at(now))
       .collect::<Vec<_>>();
+    // Manual placements are per shortcut, so during a transition two groups
+    // can occupy different spots. The overlay centre follows the newest
+    // visible group as before; every key additionally carries its own
+    // group's centre so a differently placed badge finishes its animation
+    // where the user put it instead of teleporting to the successor.
+    let positions = self
+      .shortcut_positions
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .clone();
+    let placement_at = |shortcut: usize| {
+      positions
+        .iter()
+        .find(|position| {
+          position.shortcut_id == shortcut as u64
+            && position_ms >= position.start_ms
+            && position_ms < position.end_ms
+        })
+        .map(|position| (position.center_x, position.center_y, position.size_percent))
+    };
+    let base_center = (overlay.center_x, overlay.center_y);
     self.apply_shortcut_position(&mut overlay, &visible, position_ms);
-    let slots = &self.slots;
+    let overlay_placement = visible
+      .iter()
+      .max_by_key(|key| key.enter_us)
+      .and_then(|key| placement_at(key.source_shortcut));
+    // Wire slot indices and layout masks are bit positions, so they must be
+    // compact. Fresh badge groups keep allocating new slot ids for the whole
+    // recording; only the slots this frame actually references are wired,
+    // in the global ordering so rows stay stable.
+    let mut frame_slots: Vec<u32> = Vec::new();
+    for key in &visible {
+      let sample = key.layout.sample(now);
+      for slot in std::iter::once(&key.slot_id)
+        .chain(sample.from)
+        .chain(sample.to)
+      {
+        if !frame_slots.contains(slot) {
+          frame_slots.push(*slot);
+        }
+      }
+    }
+    frame_slots.sort_by_key(|slot| {
+      baked
+        .slots
+        .iter()
+        .position(|known| known == slot)
+        .unwrap_or(usize::MAX)
+    });
+    let slots = &frame_slots;
+    let mut visible = visible;
     visible.sort_by_key(|key| {
       (
         slots
@@ -222,6 +347,34 @@ impl KeyboardCompositor {
       if overlay.key_count as usize >= MAX_KEYS {
         break;
       }
+      // Inherit the overlay centre when this key's group placement matches
+      // the group the overlay follows; otherwise pin the key to its own
+      // group's spot so it animates there.
+      let placement = placement_at(key.source_shortcut);
+      let (center_x, center_y, group_scale) = if placement == overlay_placement {
+        (KEY_CENTER_INHERIT, KEY_CENTER_INHERIT, overlay.requested_scale)
+      } else if let Some((x, y, size)) = placement {
+        (
+          x as f32,
+          y as f32,
+          size.map_or(size_scale, |size| (size / 100.0) as f32),
+        )
+      } else {
+        (
+          if base_center.0 >= 0.0 {
+            base_center.0
+          } else {
+            KEY_CENTER_DEFAULT
+          },
+          if base_center.1 >= 0.0 {
+            base_center.1
+          } else {
+            KEY_CENTER_DEFAULT
+          },
+          size_scale,
+        )
+      };
+      let scale_ratio = group_scale / overlay.requested_scale.max(0.001);
       let entrance_seconds = if key.replacement_enter {
         EXIT_SECONDS
       } else {
@@ -282,6 +435,9 @@ impl KeyboardCompositor {
           .unwrap_or_default() as u32,
         layout_from_mask: layout::mask(layout.from, slots),
         layout_to_mask: layout::mask(layout.to, slots),
+        center_x,
+        center_y,
+        scale_ratio,
       };
       overlay.key_count += 1;
     }

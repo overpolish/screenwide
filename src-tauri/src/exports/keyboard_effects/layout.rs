@@ -8,6 +8,11 @@ use std::collections::{BTreeMap, HashMap};
 use super::state::{TransitionKind, VisualKey};
 
 const MOTION_US: u64 = 600_000;
+/// A key pressed this soon after the previous key of its chord is part of the
+/// same rolled gesture, not a late join: the row is laid out for the whole
+/// roll from its first key (each key still pops in on its own entrance)
+/// instead of sliding the earlier keys aside.
+const ASSEMBLY_US: u64 = 250_000;
 
 #[derive(Clone, Debug, Default)]
 pub(super) struct LayoutTrack {
@@ -160,10 +165,55 @@ impl LayoutTrack {
 }
 
 pub(super) fn attach_tracks(visuals: &mut [VisualKey]) {
+  // Layout is a per-badge concern: keys of one badge-continuity group never
+  // shift, anchor, or morph in response to another group's keys, so each
+  // group's tracks are attached in isolation.
+  let mut groups = visuals.iter().map(|visual| visual.group).collect::<Vec<_>>();
+  groups.sort_unstable();
+  groups.dedup();
+  for group in groups {
+    attach_group_tracks(visuals, group);
+  }
+}
+
+fn attach_group_tracks(visuals: &mut [VisualKey], group: u32) {
+  // Coalesce each chord's rolled presses: a key entering within the assembly
+  // window of the previous key of its chord shares that roll's layout event.
+  let mut chord_enters = HashMap::<usize, Vec<(u64, usize)>>::new();
+  for (index, visual) in visuals
+    .iter()
+    .enumerate()
+    .filter(|(_, visual)| visual.group == group)
+  {
+    chord_enters
+      .entry(visual.source_shortcut)
+      .or_default()
+      .push((visual.enter_us, index));
+  }
+  let mut layout_enters = HashMap::<usize, u64>::new();
+  for enters in chord_enters.values_mut() {
+    enters.sort_unstable();
+    let mut roll_start = None;
+    let mut previous = None;
+    for &(enter_us, index) in enters.iter() {
+      let rolled = previous
+        .is_some_and(|previous: u64| enter_us.saturating_sub(previous) < ASSEMBLY_US);
+      if !rolled {
+        roll_start = Some(enter_us);
+      }
+      layout_enters.insert(index, roll_start.unwrap_or(enter_us));
+      previous = Some(enter_us);
+    }
+  }
   let mut events = BTreeMap::<u64, Events>::new();
-  for (index, visual) in visuals.iter().enumerate() {
+  for (index, visual) in visuals
+    .iter()
+    .enumerate()
+    .filter(|(_, visual)| visual.group == group)
+  {
+    let layout_enter = layout_enters.get(&index).copied().unwrap_or(visual.enter_us);
     events
-      .entry(visual.enter_us)
+      .entry(layout_enter)
       .or_default()
       .enters
       .push(index);

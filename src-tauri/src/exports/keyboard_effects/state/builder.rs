@@ -8,6 +8,67 @@ use std::collections::HashMap;
 use super::{role, KeyboardStateTimeline, LayoutTrack, TransitionKind, VisualKey, VisualRole};
 use crate::exports::keyboard_effects::HOLD_US;
 use crate::exports::keyboard_effects::{KeyPress, Shortcut};
+use crate::exports::timeline_edit::{DeletedKeyboardShortcutRange, KeyboardShortcutPositionRange};
+
+/// The timeline-edit state a chord's badge continuity depends on. A chord
+/// continues its predecessor's badge only when both are visible then and
+/// occupy the same place at the same size.
+#[derive(Clone, Copy, Default)]
+pub(in crate::exports::keyboard_effects) struct ChainContext<'a> {
+  pub deleted_ids: &'a [u64],
+  pub deleted_ranges: &'a [DeletedKeyboardShortcutRange],
+  pub positions: &'a [KeyboardShortcutPositionRange],
+}
+
+impl ChainContext<'_> {
+  fn deleted(&self, shortcut: usize, at_ms: u64) -> bool {
+    let shortcut = shortcut as u64;
+    self.deleted_ids.contains(&shortcut)
+      || self.deleted_ranges.iter().any(|range| {
+        range.shortcut_id == shortcut && at_ms >= range.start_ms && at_ms < range.end_ms
+      })
+  }
+
+  fn placement(&self, shortcut: usize, at_ms: u64) -> Option<(f64, f64, Option<f64>)> {
+    self
+      .positions
+      .iter()
+      .find(|position| {
+        position.shortcut_id == shortcut as u64
+          && at_ms >= position.start_ms
+          && at_ms < position.end_ms
+      })
+      .map(|position| (position.center_x, position.center_y, position.size_percent))
+  }
+
+  fn deleted_at(&self, shortcut: usize, at_us: u64) -> bool {
+    self.deleted(shortcut, at_us / 1_000)
+  }
+
+  fn chains(&self, previous: usize, next: usize, at_us: u64) -> bool {
+    let at_ms = at_us / 1_000;
+    if self.deleted(previous, at_ms) {
+      eprintln!(
+        "[keyboard] shortcut {next} at {at_ms}ms: fresh badge, predecessor {previous} is deleted"
+      );
+      return false;
+    }
+    if self.deleted(next, at_ms) {
+      eprintln!("[keyboard] shortcut {next} at {at_ms}ms: fresh badge, it is deleted itself");
+      return false;
+    }
+    let from = self.placement(previous, at_ms);
+    let to = self.placement(next, at_ms);
+    if from != to {
+      eprintln!(
+        "[keyboard] shortcut {next} at {at_ms}ms: fresh badge, placement {from:?} -> {to:?}"
+      );
+      return false;
+    }
+    eprintln!("[keyboard] shortcut {next} at {at_ms}ms: continues badge of shortcut {previous}");
+    true
+  }
+}
 
 #[derive(Clone, Copy, Debug)]
 struct PhysicalEvent {
@@ -21,20 +82,26 @@ struct PhysicalEvent {
 #[derive(Clone, Copy, Debug)]
 struct Slot {
   id: u32,
+  group: u32,
   role: VisualRole,
   current: Option<usize>,
 }
 
 #[derive(Default)]
-struct Builder {
+struct Builder<'a> {
+  context: ChainContext<'a>,
   timeline: KeyboardStateTimeline,
   slots: Vec<Slot>,
   held: HashMap<u16, usize>,
   next_slot_id: u32,
+  current_group: u32,
 }
 
 impl KeyboardStateTimeline {
-  pub(in crate::exports::keyboard_effects) fn from_shortcuts(shortcuts: &[Shortcut]) -> Self {
+  pub(in crate::exports::keyboard_effects) fn from_shortcuts(
+    shortcuts: &[Shortcut],
+    context: ChainContext<'_>,
+  ) -> Self {
     let mut events = shortcuts
       .iter()
       .enumerate()
@@ -47,7 +114,10 @@ impl KeyboardStateTimeline {
       .flatten()
       .collect::<Vec<_>>();
     events.sort_by_key(|event| (event.at, event.down));
-    let mut builder = Builder::default();
+    let mut builder = Builder {
+      context,
+      ..Builder::default()
+    };
     for event in events {
       if event.down {
         builder.key_down(event);
@@ -78,7 +148,7 @@ fn events_for_press(shortcut: usize, press: &KeyPress) -> [Option<PhysicalEvent>
   ]
 }
 
-impl Builder {
+impl Builder<'_> {
   fn key_down(&mut self, event: PhysicalEvent) {
     self.clear_finished(event.at);
     if self.held.contains_key(&event.key_code) {
@@ -90,10 +160,49 @@ impl Builder {
     let mut replacement_enter = false;
     let mut replacement_candidates = Vec::new();
     if new_physical_chord {
-      for index in 0..self.slots.len() {
-        if let Some(visual) = self.slots[index].current.take() {
-          self.start_exit(visual, event.at, TransitionKind::Replacement);
-          replacement_candidates.push((self.slots[index].id, visual));
+      // The new chord continues the badge on screen only when it will draw
+      // in the same place at the same size; otherwise that badge finishes
+      // the exit it already has scheduled, completely untouched, and this
+      // chord starts a fresh badge with fresh slots.
+      let predecessor = self
+        .slots
+        .iter()
+        .filter_map(|slot| slot.current)
+        .max_by_key(|visual| self.timeline.visuals[*visual].enter_us)
+        .map(|visual| self.timeline.visuals[visual].source_shortcut);
+      let chains =
+        predecessor.is_some_and(|previous| self.context.chains(previous, event.shortcut, event.at));
+      if chains {
+        for index in 0..self.slots.len() {
+          if self.slots[index].group != self.current_group {
+            continue;
+          }
+          if let Some(visual) = self.slots[index].current.take() {
+            self.start_exit(visual, event.at, TransitionKind::Replacement);
+            replacement_candidates.push((self.slots[index].id, visual));
+          }
+        }
+      } else {
+        self.current_group += 1;
+        // Every key is physically released by now, so lingering badges are in
+        // their post-release hold. A new visible badge makes that hold a lie
+        // (the same key may already be down again), so the fade is pulled
+        // forward far enough to be FINISHED by this press — while never
+        // starting before the badge's own keys were actually released.
+        if !self.context.deleted_at(event.shortcut, event.at) {
+          let lingering = self
+            .slots
+            .iter()
+            .filter_map(|slot| slot.current)
+            .collect::<Vec<_>>();
+          for visual in lingering {
+            let visual = &mut self.timeline.visuals[visual];
+            if let Some((exit_us, kind)) = visual.exit {
+              let release_us = exit_us.saturating_sub(HOLD_US);
+              let finished_by_press = event.at.saturating_sub(super::EXIT_US).max(release_us);
+              visual.exit = Some((exit_us.min(finished_by_press), kind));
+            }
+          }
         }
       }
     } else {
@@ -108,7 +217,11 @@ impl Builder {
         if let Some(slot) = self
           .slots
           .iter()
-          .find(|slot| slot.role == VisualRole::Primary && slot.current.is_some())
+          .find(|slot| {
+            slot.group == self.current_group
+              && slot.role == VisualRole::Primary
+              && slot.current.is_some()
+          })
           .map(|slot| slot.id)
         {
           if let Some(visual) = self.slot_mut(slot).and_then(|known| known.current.take()) {
@@ -138,7 +251,11 @@ impl Builder {
       let inactive = self
         .slots
         .iter()
-        .filter(|slot| slot.current.is_none() && slot.role.same_slot_kind(role))
+        .filter(|slot| {
+          slot.group == self.current_group
+            && slot.current.is_none()
+            && slot.role.same_slot_kind(role)
+        })
         .map(|slot| (slot.id, self.latest_visible_in_slot(slot.id, event.at)))
         .min_by_key(|(slot, visible)| (visible.is_none(), *slot));
       if let Some((slot, outgoing)) = inactive {
@@ -162,6 +279,7 @@ impl Builder {
       self.next_slot_id += 1;
       self.slots.push(Slot {
         id: slot_id,
+        group: self.current_group,
         role,
         current: None,
       });
@@ -170,6 +288,7 @@ impl Builder {
     let visual = self.timeline.visuals.len();
     self.timeline.visuals.push(VisualKey {
       source_shortcut: event.shortcut,
+      group: self.current_group,
       key_code: event.key_code,
       modifier_mask: event.modifier_mask,
       role,
@@ -206,6 +325,7 @@ impl Builder {
       let currents = self
         .slots
         .iter()
+        .filter(|slot| slot.group == self.current_group)
         .filter_map(|slot| slot.current)
         .collect::<Vec<_>>();
       for current in currents {
@@ -225,6 +345,7 @@ impl Builder {
     let released = self
       .slots
       .iter()
+      .filter(|slot| slot.group == self.current_group)
       .filter_map(|slot| {
         slot
           .current

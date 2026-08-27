@@ -29,7 +29,7 @@ pub fn set_ruler_cursor_range_active(app: AppHandle, active: bool) -> Result<(),
     })
     .map_err(|error| error.to_string())?;
   #[cfg(not(target_os = "macos"))]
-  let _ = app;
+  let _ = (app, active);
   Ok(())
 }
 

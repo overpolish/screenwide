@@ -217,6 +217,7 @@ export function useRecordingKeyboardPreviewEditing({
     enabled,
     onChange,
     onSelectionStart,
+    sourceDurationMs: durationMs,
   });
   const fragments = useMemo(
     () =>

@@ -23,8 +23,8 @@ fn v1_fallback_is_one_key() {
 
 #[test]
 fn native_payload_layout_is_stable() {
-  assert_eq!(std::mem::size_of::<KeyboardKey>(), 40);
-  assert_eq!(std::mem::size_of::<KeyboardOverlay>(), 356);
+  assert_eq!(std::mem::size_of::<KeyboardKey>(), 52);
+  assert_eq!(std::mem::size_of::<KeyboardOverlay>(), 452);
 }
 
 #[test]
@@ -322,7 +322,7 @@ fn repressing_a_released_modifier_crossfades_in_its_existing_slot() {
     serde_json::json!({"type":"keyDown","keyCode":55,"timestampUs":2_000_000,"modifiers":["command"]}),
   ];
   let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
-  assert_eq!(compositor.timeline.visuals.len(), 2);
+  assert_eq!(compositor.visuals_snapshot().len(), 2);
   let overlay = compositor.evaluate(2_100, Default::default()).unwrap();
   assert_eq!(overlay.key_count, 2);
   assert_eq!(overlay.keys[0].slot, overlay.keys[1].slot);
@@ -487,16 +487,13 @@ fn the_reported_recording_keeps_replacement_slots_and_moves_without_jumps() {
   ];
   let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
 
-  let modifier_slots = compositor
-    .timeline
-    .visuals
+  let visuals = compositor.visuals_snapshot();
+  let modifier_slots = visuals
     .iter()
     .filter(|visual| is_modifier_key(visual.key_code))
     .map(|visual| visual.slot_id)
     .collect::<std::collections::HashSet<_>>();
-  let primary_slots = compositor
-    .timeline
-    .visuals
+  let primary_slots = visuals
     .iter()
     .filter(|visual| !is_modifier_key(visual.key_code))
     .map(|visual| visual.slot_id)

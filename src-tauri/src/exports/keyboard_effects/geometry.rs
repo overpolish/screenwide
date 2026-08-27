@@ -62,23 +62,41 @@ pub(super) fn maximum_width(
   slots: &[u32],
   legacy_modifier_expansion: bool,
 ) -> f64 {
-  let width = slots
+  // Slots are unique to their badge-continuity group, so the recording-wide
+  // bound is the widest single badge, not the sum of every badge's slots.
+  let mut groups = visuals.iter().map(|visual| visual.group).collect::<Vec<_>>();
+  groups.sort_unstable();
+  groups.dedup();
+  groups
     .iter()
-    .map(|slot| {
-      visuals
+    .map(|group| {
+      let group_slots = slots
         .iter()
-        .filter(|visual| visual.slot_id == *slot)
-        .map(|visual| {
-          if legacy_modifier_expansion && !is_modifier(visual.key_code) {
-            legacy_width(visual)
-          } else {
-            key_width(visual.key_code)
-          }
+        .filter(|slot| {
+          visuals
+            .iter()
+            .any(|visual| visual.group == *group && visual.slot_id == **slot)
         })
-        .fold(0.0, f64::max)
+        .collect::<Vec<_>>();
+      let width = group_slots
+        .iter()
+        .map(|slot| {
+          visuals
+            .iter()
+            .filter(|visual| visual.group == *group && visual.slot_id == **slot)
+            .map(|visual| {
+              if legacy_modifier_expansion && !is_modifier(visual.key_code) {
+                legacy_width(visual)
+              } else {
+                key_width(visual.key_code)
+              }
+            })
+            .fold(0.0, f64::max)
+        })
+        .sum::<f64>();
+      width + GAP * group_slots.len().saturating_sub(1) as f64
     })
-    .sum::<f64>();
-  width + GAP * slots.len().saturating_sub(1) as f64
+    .fold(0.0, f64::max)
 }
 
 pub(super) fn maximum_size_percent(maximum_width: f64, width: u32, height: u32) -> f64 {

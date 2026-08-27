@@ -8,13 +8,26 @@ struct KeyboardKeyUniforms {
   uint x, width, visible, slot;
   float alpha, scale, progress, layout_progress;
   uint layout_from_mask, layout_to_mask;
+  float center_x, center_y, scale_ratio;
 };
 struct KeyboardUniforms {
   uint width, height, key_count, animation;
   float scale, layout_progress, maximum_width, requested_scale;
   float center_x, center_y; KeyboardKeyUniforms keys[8];
 };
-static_assert(sizeof(KeyboardUniforms) == 360, "Keyboard uniforms must match their native layout");
+static_assert(sizeof(KeyboardUniforms) == 456, "Keyboard uniforms must match their native layout");
+
+// A key's group centre on one axis: non-negative is explicit, -1 follows the
+// overlay centre, and at or below -1.5 the key keeps the built-in default.
+static float keyboard_key_axis(float key_value, float overlay_value) {
+  if (key_value >= 0.0) return key_value;
+  return key_value > -1.5 ? overlay_value : -1.0;
+}
+
+// A key's group size relative to the overlay's requested scale.
+static float keyboard_key_ratio(constant KeyboardKeyUniforms &key) {
+  return key.scale_ratio > 0.0 ? key.scale_ratio : 1.0;
+}
 
 static float keyboard_effective_scale(
     constant KeyboardUniforms &keyboard, float2 canvas_dimensions) {
@@ -55,13 +68,16 @@ static float4 keyboard_key_pixel(
     float2 canvas_dimensions, float animation_scale, float x_offset) {
   if (animation_scale <= 0.0001) return float4(0.0);
   float height = canvas_dimensions.y * (60.0 / 1080.0) *
-                 keyboard_effective_scale(keyboard, canvas_dimensions);
+                 keyboard_effective_scale(keyboard, canvas_dimensions) *
+                 keyboard_key_ratio(key);
   float width = height * float(keyboard.width) / max(float(keyboard.height), 1.0);
   float bottom = canvas_dimensions.y * 0.055;
-  float center_x = keyboard.center_x >= 0.0 ? keyboard.center_x * canvas_dimensions.x
-                                           : canvas_dimensions.x * 0.5;
-  float center_y = keyboard.center_y >= 0.0 ? keyboard.center_y * canvas_dimensions.y
-                                           : canvas_dimensions.y - bottom - height * 0.5;
+  float position_x = keyboard_key_axis(key.center_x, keyboard.center_x);
+  float position_y = keyboard_key_axis(key.center_y, keyboard.center_y);
+  float center_x = position_x >= 0.0 ? position_x * canvas_dimensions.x
+                                     : canvas_dimensions.x * 0.5;
+  float center_y = position_y >= 0.0 ? position_y * canvas_dimensions.y
+                                     : canvas_dimensions.y - bottom - height * 0.5;
   float row_x = center_x - width * 0.5;
   float key_x = row_x + width * float(key.x) / float(keyboard.width);
   float key_width = width * float(key.width) / float(keyboard.width);
@@ -157,7 +173,8 @@ static float keyboard_layout_offset(
   float target_center = mix(from_center, to_center, progress);
   float source_offset = target_center -
                         (float(key.x) + float(key.width) * 0.5);
-  return source_offset * full_width / max(float(keyboard.width), 1.0);
+  return source_offset * full_width * keyboard_key_ratio(key) /
+         max(float(keyboard.width), 1.0);
 }
 
 static float4 composite_keyboard(

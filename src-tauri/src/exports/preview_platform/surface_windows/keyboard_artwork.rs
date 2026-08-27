@@ -60,9 +60,10 @@ pub(super) struct KeyboardConstants {
   pub(super) key_geometry: [[u32; 4]; MAX_KEYS],
   pub(super) key_motion: [[f32; 4]; MAX_KEYS],
   pub(super) key_masks: [[u32; 4]; MAX_KEYS],
+  pub(super) key_position: [[f32; 4]; MAX_KEYS],
 }
 
-const _: () = assert!(size_of::<KeyboardConstants>() == 432);
+const _: () = assert!(size_of::<KeyboardConstants>() == 560);
 
 impl Default for KeyboardConstants {
   fn default() -> Self {
@@ -73,6 +74,7 @@ impl Default for KeyboardConstants {
       key_geometry: [[0; 4]; MAX_KEYS],
       key_motion: [[0.0; 4]; MAX_KEYS],
       key_masks: [[0; 4]; MAX_KEYS],
+      key_position: [[-1.0, -1.0, 1.0, 0.0]; MAX_KEYS],
     }
   }
 }
@@ -504,6 +506,7 @@ fn update_uniforms(
       state.layout_progress,
     ];
     values.key_masks[index] = [state.layout_from_mask, state.layout_to_mask, 0, 0];
+    values.key_position[index] = [state.center_x, state.center_y, state.scale_ratio, 0.0];
   }
 }
 
@@ -642,7 +645,7 @@ mod tests {
 
   #[test]
   fn keyboard_constants_match_the_shader_register_packing() {
-    assert_eq!(size_of::<KeyboardConstants>(), 432);
+    assert_eq!(size_of::<KeyboardConstants>(), 560);
     assert_eq!(size_of::<KeyboardConstants>() % 16, 0);
   }
 

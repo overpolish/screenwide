@@ -25,6 +25,7 @@ import { TimelineItemLane } from "./timeline-item-lane";
 import { TimelineScrubberOverlay } from "./timeline-scrubber";
 import { TimelineVideoClip } from "./timeline-video-clip";
 import { TimelineHeader } from "./timeline-zoom-toolbar";
+import { useTimedLaneRows } from "./use-timed-lane-rows";
 import { useTimelineNavigation } from "./use-timeline-navigation";
 
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
@@ -68,11 +69,21 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   const rowElementsRef = useRef(
     new Map<RecordingVideoTrackId, HTMLDivElement>(),
   );
+  // The shortcut lane stacks overlapping badges into sublanes, so the meter
+  // must cover however tall it grows; derived from the same shared stacking
+  // the lane itself renders from.
+  const keyboardRows = useTimedLaneRows({
+    edit: blade.edit,
+    hiddenFragmentIds: hiddenKeyboardFragmentIds,
+    hiddenItemIds: hiddenKeyboardItemIds,
+    items: keyboardItems,
+    sourceDurationMs,
+  });
+  const keyboardRowCount = keyboardItems.length > 0 ? keyboardRows.rowCount : 0;
   const rowCount =
-    layout.panes.length +
-    audioTracks.length +
-    (keyboardItems.length > 0 ? 1 : 0);
-  const meterHeight = 30 + rowCount * 34;
+    layout.panes.length + audioTracks.length + (keyboardRowCount > 0 ? 1 : 0);
+  const meterHeight =
+    30 + rowCount * 34 + Math.max(0, keyboardRowCount - 1) * 32;
   const videoRows = layout.panes
     .map((pane, index) => ({
       pane,
@@ -294,7 +305,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
           ) : null}
           <TimelineScrubberOverlay
             blade={blade}
-            onSeek={onSeek}
             playhead={playhead}
             viewport={timeline.viewport}
           />

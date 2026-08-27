@@ -113,6 +113,9 @@ static void update_uniforms(ScreenwideKeyboardUniforms *uniforms,
     uniforms->keys[index].slot = state.slot;
     uniforms->keys[index].layout_from_mask = state.layout_from_mask;
     uniforms->keys[index].layout_to_mask = state.layout_to_mask;
+    uniforms->keys[index].center_x = state.center_x;
+    uniforms->keys[index].center_y = state.center_y;
+    uniforms->keys[index].scale_ratio = state.scale_ratio;
   }
 }
 

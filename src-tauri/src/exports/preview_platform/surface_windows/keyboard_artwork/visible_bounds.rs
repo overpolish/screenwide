@@ -69,15 +69,16 @@ pub(super) fn calculate(values: &KeyboardConstants, canvas: (u32, u32)) -> Optio
   };
   let row_height = canvas.1 as f32 * (60.0 / 1080.0) * effective;
   let row_width = row_height * values.dimensions[0] as f32 / values.dimensions[1] as f32;
-  let center_x = if values.position[0] >= 0.0 {
-    values.position[0] * canvas.0 as f32
-  } else {
-    canvas.0 as f32 * 0.5
-  };
-  let center_y = if values.position[1] >= 0.0 {
-    values.position[1] * canvas.1 as f32
-  } else {
-    canvas.1 as f32 * (1.0 - 0.055) - row_height * 0.5
+  // A key's group centre on one axis: non-negative is explicit, -1 follows
+  // the overlay centre, and at or below -1.5 the key keeps the default.
+  let key_axis = |key_value: f32, overlay_value: f32| {
+    if key_value >= 0.0 {
+      key_value
+    } else if key_value > -1.5 {
+      overlay_value
+    } else {
+      -1.0
+    }
   };
   let mut bounds = [
     f32::INFINITY,
@@ -95,19 +96,39 @@ pub(super) fn calculate(values: &KeyboardConstants, canvas: (u32, u32)) -> Optio
     if animation_scale <= 0.002 {
       continue;
     }
+    let ratio = if values.key_position[index][2] > 0.0 {
+      values.key_position[index][2]
+    } else {
+      1.0
+    };
+    let key_row_height = row_height * ratio;
+    let key_row_width = row_width * ratio;
+    let position_x = key_axis(values.key_position[index][0], values.position[0]);
+    let position_y = key_axis(values.key_position[index][1], values.position[1]);
+    let center_x = if position_x >= 0.0 {
+      position_x * canvas.0 as f32
+    } else {
+      canvas.0 as f32 * 0.5
+    };
+    let center_y = if position_y >= 0.0 {
+      position_y * canvas.1 as f32
+    } else {
+      canvas.1 as f32 * (1.0 - 0.055) - key_row_height * 0.5
+    };
     let slot = geometry[3];
     let masks = values.key_masks[index];
     let from = slot_left(values, slot, masks[0]) + slot_width(values, slot) * 0.5;
     let to = slot_left(values, slot, masks[1]) + slot_width(values, slot) * 0.5;
     let target = from + (to - from) * motion_spring(motion[3]);
-    let offset = (target - (geometry[0] as f32 + geometry[1] as f32 * 0.5)) * row_width
+    let offset = (target - (geometry[0] as f32 + geometry[1] as f32 * 0.5)) * key_row_width
       / values.dimensions[0] as f32;
-    let key_width = row_height * geometry[1] as f32 / values.dimensions[1] as f32;
-    let key_center = center_x - row_width * 0.5
-      + row_width * (geometry[0] as f32 + geometry[1] as f32 * 0.5) / values.dimensions[0] as f32
+    let key_width = key_row_height * geometry[1] as f32 / values.dimensions[1] as f32;
+    let key_center = center_x - key_row_width * 0.5
+      + key_row_width * (geometry[0] as f32 + geometry[1] as f32 * 0.5)
+        / values.dimensions[0] as f32
       + offset;
     let half_width = key_width * animation_scale * 0.5;
-    let half_height = row_height * animation_scale * 0.5;
+    let half_height = key_row_height * animation_scale * 0.5;
     bounds[0] = bounds[0].min(key_center - half_width);
     bounds[1] = bounds[1].min(center_y - half_height);
     bounds[2] = bounds[2].max(key_center + half_width);

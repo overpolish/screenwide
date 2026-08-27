@@ -37,6 +37,7 @@ cbuffer Keyboard : register(b1) {
   uint4 keyboard_key_geometry[8]; // artwork x, artwork width, visible, slot
   float4 keyboard_key_motion[8]; // alpha, scale, progress, layout progress
   uint4 keyboard_key_masks[8]; // layout from mask, layout to mask
+  float4 keyboard_key_position[8]; // group centre x/y; -1 inherits, <=-1.5 default; z group scale ratio
 };
 SamplerState linear_sampler : register(s0);
 SamplerState point_sampler : register(s1);
@@ -210,19 +211,32 @@ float4 keyboard_texel(float2 source) {
   float4 d = keyboard_image.Load(int3(high.x, high.y, 0));
   return lerp(lerp(a, b, fraction.x), lerp(c, d, fraction.x), fraction.y);
 }
+// A key's group centre on one axis: non-negative is explicit, -1 follows the
+// overlay centre, and at or below -1.5 the key keeps the built-in default.
+float keyboard_key_axis(float key_value, float overlay_value) {
+  if (key_value >= 0.0) return key_value;
+  return key_value > -1.5 ? overlay_value : -1.0;
+}
+float keyboard_key_ratio(uint index) {
+  float ratio = keyboard_key_position[index].z;
+  return ratio > 0.0 ? ratio : 1.0;
+}
 float4 keyboard_key_pixel(uint index, float2 canvas_point, float2 canvas_dimensions,
                           float animation_scale, float x_offset) {
   if (animation_scale <= 0.0001) return 0.0;
   uint4 geometry = keyboard_key_geometry[index];
   float height = canvas_dimensions.y * (60.0 / 1080.0) *
-                 keyboard_effective_scale(canvas_dimensions);
+                 keyboard_effective_scale(canvas_dimensions) *
+                 keyboard_key_ratio(index);
   float width = height * float(keyboard_dimensions.x) /
                 max(float(keyboard_dimensions.y), 1.0);
   float bottom = canvas_dimensions.y * 0.055;
-  float center_x = keyboard_position.x >= 0.0
-      ? keyboard_position.x * canvas_dimensions.x : canvas_dimensions.x * 0.5;
-  float center_y = keyboard_position.y >= 0.0
-      ? keyboard_position.y * canvas_dimensions.y
+  float position_x = keyboard_key_axis(keyboard_key_position[index].x, keyboard_position.x);
+  float position_y = keyboard_key_axis(keyboard_key_position[index].y, keyboard_position.y);
+  float center_x = position_x >= 0.0
+      ? position_x * canvas_dimensions.x : canvas_dimensions.x * 0.5;
+  float center_y = position_y >= 0.0
+      ? position_y * canvas_dimensions.y
       : canvas_dimensions.y - bottom - height * 0.5;
   float row_x = center_x - width * 0.5;
   float key_x = row_x + width * float(geometry.x) / float(keyboard_dimensions.x);
@@ -300,7 +314,8 @@ float keyboard_layout_offset(uint index, float2 canvas_dimensions, float progres
       max(keyboard_key_motion[index].w - progress_delta, 0.0));
   float target_center = lerp(from_center, to_center, progress);
   float source_offset = target_center - (float(geometry.x) + float(geometry.y) * 0.5);
-  return source_offset * full_width / max(float(keyboard_dimensions.x), 1.0);
+  return source_offset * full_width * keyboard_key_ratio(index) /
+         max(float(keyboard_dimensions.x), 1.0);
 }
 float4 composite_keyboard(float4 rgba, float2 canvas_point, float2 dimensions) {
   if (keyboard_dimensions.z == 0 || keyboard_dimensions.x == 0 || keyboard_dimensions.y == 0)

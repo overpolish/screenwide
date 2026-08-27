@@ -78,3 +78,32 @@ export function layoutTimedLaneItems<Item extends TimedLaneItem>({
     return fragments;
   });
 }
+
+export type StackedLaneFragment<Item extends TimedLaneItem> =
+  TimedLaneFragment<Item> & { row: number };
+
+/**
+ * Assigns overlapping fragments to stacked sublanes so simultaneous items
+ * stay individually visible. Fragments that never coincide share row zero,
+ * keeping the lane a single row tall in the common case.
+ */
+export function stackTimedLaneFragments<Item extends TimedLaneItem>(
+  fragments: TimedLaneFragment<Item>[],
+): { fragments: StackedLaneFragment<Item>[]; rowCount: number } {
+  const ordered = [...fragments].sort(
+    (left, right) =>
+      left.outputStart - right.outputStart || left.outputEnd - right.outputEnd,
+  );
+  const rowEnds: number[] = [];
+  const stacked = ordered.map((fragment) => {
+    let row = rowEnds.findIndex((end) => fragment.outputStart >= end);
+    if (row === -1) {
+      row = rowEnds.length;
+      rowEnds.push(fragment.outputEnd);
+    } else {
+      rowEnds[row] = fragment.outputEnd;
+    }
+    return { ...fragment, row };
+  });
+  return { fragments: stacked, rowCount: Math.max(rowEnds.length, 1) };
+}

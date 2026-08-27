@@ -1,17 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ReactNode, useMemo } from "react";
+import { ReactNode } from "react";
 
 import { RecordingTimelineEdit } from "../recording-timeline-edit";
 
-import {
-  TimedLaneFragment,
-  TimedLaneItem,
-  layoutTimedLaneItems,
-} from "./timed-lane-layout";
+import { TimedLaneFragment, TimedLaneItem } from "./timed-lane-layout";
 import { TimelineViewportState } from "./timeline-viewport";
 import { TimelineViewportContent } from "./timeline-viewport-content";
+import { useTimedLaneRows } from "./use-timed-lane-rows";
 
 export function TimelineItemLane<
   Item extends TimedLaneItem & { label: string },
@@ -48,10 +45,16 @@ export function TimelineItemLane<
   selectedFragmentIds?: ReadonlySet<string>;
   warningFragmentIds?: ReadonlySet<string>;
 }) {
-  const fragments = useMemo(
-    () => layoutTimedLaneItems({ edit, items, sourceDurationMs }),
-    [edit, items, sourceDurationMs],
-  );
+  // Overlapping fragments stack into sublanes so a badge that is still
+  // fading stays visible beside its successor; the lane grows as needed.
+  const { fragments, rowCount } = useTimedLaneRows({
+    edit,
+    hiddenFragmentIds,
+    hiddenItemIds,
+    items,
+    sourceDurationMs,
+  });
+  const rowHeightPx = 32;
 
   return (
     <div className="flex items-center gap-2">
@@ -62,24 +65,20 @@ export function TimelineItemLane<
         <span className="min-w-0 grow truncate">{label}</span>
       </div>
       <div
-        className="relative h-8 min-w-0 grow overflow-hidden rounded-sm bg-muted/8"
+        className="relative min-w-0 grow overflow-hidden rounded-sm bg-muted/8 transition-[height] duration-200"
         onClick={onClearSelection}
+        style={{ height: rowCount * rowHeightPx }}
       >
         <TimelineViewportContent viewport={viewport}>
           {fragments.map((fragment) => {
-            const { fragmentId, item, outputEnd, outputStart } = fragment;
-            if (
-              hiddenFragmentIds?.has(fragmentId) ||
-              hiddenItemIds?.has(item.id)
-            )
-              return null;
+            const { fragmentId, item, outputEnd, outputStart, row } = fragment;
             const selected = selectedFragmentIds?.has(fragmentId) ?? false;
             const warning = warningFragmentIds?.has(fragmentId) ?? false;
             return (
               <button
                 aria-label={item.label}
                 aria-pressed={selectedFragmentIds ? selected : undefined}
-                className={`absolute inset-y-1 min-w-1.5 overflow-hidden rounded-sm border px-1.5 text-left text-[10px] leading-5 whitespace-nowrap transition-colors ${
+                className={`absolute min-w-1.5 overflow-hidden rounded-sm border px-1.5 text-left text-[10px] leading-5 whitespace-nowrap transition-[left,width,top,color,background-color,border-color] duration-200 ${
                   warning
                     ? selected
                       ? "border-warning bg-warning/35 text-content-fg shadow-[inset_0_0_0_1px] shadow-warning"
@@ -98,8 +97,10 @@ export function TimelineItemLane<
                   );
                 }}
                 style={{
+                  height: rowHeightPx - 8,
                   left: `${(outputStart * 100).toString()}%`,
                   minWidth: minimumItemWidthPx,
+                  top: row * rowHeightPx + 4,
                   width: `${((outputEnd - outputStart) * 100).toString()}%`,
                 }}
                 title={item.label}

@@ -17,23 +17,29 @@ pub(crate) struct KeyboardTimelineItem {
 
 impl KeyboardCompositor {
   pub(crate) fn set_deleted_shortcuts(&self, ids: &[u64], ranges: &[DeletedKeyboardShortcutRange]) {
-    let mut deleted = self
-      .deleted_shortcut_ids
-      .write()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
-    deleted.clear();
-    deleted.extend(ids.iter().copied());
-    *self
-      .deleted_shortcut_ranges
-      .write()
-      .unwrap_or_else(|poisoned| poisoned.into_inner()) = ranges.to_vec();
+    {
+      let mut deleted = self
+        .deleted_shortcut_ids
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+      deleted.clear();
+      deleted.extend(ids.iter().copied());
+      *self
+        .deleted_shortcut_ranges
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = ranges.to_vec();
+    }
+    self.rebake();
   }
 
   pub(crate) fn set_shortcut_positions(&self, positions: &[KeyboardShortcutPositionRange]) {
-    *self
-      .shortcut_positions
-      .write()
-      .unwrap_or_else(|poisoned| poisoned.into_inner()) = positions.to_vec();
+    {
+      *self
+        .shortcut_positions
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = positions.to_vec();
+    }
+    self.rebake();
   }
 
   pub(super) fn apply_shortcut_position(
@@ -78,6 +84,10 @@ impl KeyboardCompositor {
   /// Returns captured shortcut groups in reconstruction order, using the same
   /// parsed data consumed by preview and export.
   pub(crate) fn timeline_items(&self) -> Vec<KeyboardTimelineItem> {
+    let baked = self
+      .baked
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
     self
       .shortcuts
       .iter()
@@ -100,7 +110,7 @@ impl KeyboardCompositor {
         // Match VisualKey::visible_at: released keys remain visible through
         // the compositor's exit lifetime, so the lane ends when the artwork
         // is actually gone rather than at the physical key-up event.
-        let end_us = self
+        let end_us = baked
           .timeline
           .visuals
           .iter()

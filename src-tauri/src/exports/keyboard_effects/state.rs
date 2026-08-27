@@ -4,6 +4,7 @@
 //! Deterministic keyboard-chord display state built from physical key events.
 
 mod builder;
+pub(super) use builder::ChainContext;
 
 use super::layout::LayoutTrack;
 #[path = "role.rs"]
@@ -23,6 +24,11 @@ pub(super) enum TransitionKind {
 #[derive(Clone, Debug)]
 pub(super) struct VisualKey {
   pub source_shortcut: usize,
+  /// Badge-continuity group. A chord joins its predecessor's group only when
+  /// it appears in the same place at the same size while that badge is still
+  /// on screen; slot reuse, replacement morphs, layout motion and anchoring
+  /// never cross group boundaries.
+  pub group: u32,
   pub key_code: u16,
   pub modifier_mask: u32,
   pub role: VisualRole,

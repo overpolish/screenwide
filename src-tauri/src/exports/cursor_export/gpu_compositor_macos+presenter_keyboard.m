@@ -132,12 +132,13 @@ int screenwide_gpu_still_presenter_workspace_keyboard_bounds(
     float rowHeight = (float)layer.canvas_height * (60.0f / 1080.0f) * effective;
     float rowWidth = rowHeight * (float)keyboard.width /
         MAX((float)keyboard.height, 1.0f);
-    float centerX = keyboard.center_x >= 0.0f
-        ? keyboard.center_x * (float)layer.canvas_width
-        : (float)layer.canvas_width * 0.5f;
-    float centerY = keyboard.center_y >= 0.0f
-        ? keyboard.center_y * (float)layer.canvas_height
-        : (float)layer.canvas_height * (1.0f - 0.055f) - rowHeight * 0.5f;
+    float defaultX = (float)layer.canvas_width * 0.5f;
+    float defaultY =
+        (float)layer.canvas_height * (1.0f - 0.055f) - rowHeight * 0.5f;
+    float overlayX = keyboard.center_x >= 0.0f
+        ? keyboard.center_x * (float)layer.canvas_width : defaultX;
+    float overlayY = keyboard.center_y >= 0.0f
+        ? keyboard.center_y * (float)layer.canvas_height : defaultY;
     float left = INFINITY, top = INFINITY;
     float right = -INFINITY, bottom = -INFINITY;
     uint32_t count = MIN(keyboard.key_count, SCREENWIDE_KEYBOARD_MAX_KEYS);
@@ -146,14 +147,28 @@ int screenwide_gpu_still_presenter_workspace_keyboard_bounds(
       if (key.visible == 0 || key.alpha <= 0.002f) continue;
       float animationScale = key.scale / fmaxf(requested, 0.001f);
       if (animationScale <= 0.002f) continue;
-      float keyWidth = rowHeight * (float)key.width /
+      // Keys carry their own group centre and size while a differently
+      // placed badge is still on screen.
+      float ratio = key.scale_ratio > 0.0f ? key.scale_ratio : 1.0f;
+      float keyRowHeight = rowHeight * ratio;
+      float keyRowWidth = rowWidth * ratio;
+      float centerX = key.center_x >= 0.0f
+          ? key.center_x * (float)layer.canvas_width
+          : (key.center_x > -1.5f ? overlayX : defaultX);
+      float centerY = key.center_y >= 0.0f
+          ? key.center_y * (float)layer.canvas_height
+          : (key.center_y > -1.5f
+                 ? overlayY
+                 : (float)layer.canvas_height * (1.0f - 0.055f) -
+                       keyRowHeight * 0.5f);
+      float keyWidth = keyRowHeight * (float)key.width /
           MAX((float)keyboard.height, 1.0f);
-      float keyCenterX = centerX - rowWidth * 0.5f +
-          rowWidth * ((float)key.x + (float)key.width * 0.5f) /
+      float keyCenterX = centerX - keyRowWidth * 0.5f +
+          keyRowWidth * ((float)key.x + (float)key.width * 0.5f) /
               MAX((float)keyboard.width, 1.0f) +
-          keyboard_layout_offset(keyboard, index, rowWidth);
+          keyboard_layout_offset(keyboard, index, keyRowWidth);
       float halfWidth = keyWidth * animationScale * 0.5f;
-      float halfHeight = rowHeight * animationScale * 0.5f;
+      float halfHeight = keyRowHeight * animationScale * 0.5f;
       left = fminf(left, keyCenterX - halfWidth);
       right = fmaxf(right, keyCenterX + halfWidth);
       top = fminf(top, centerY - halfHeight);
