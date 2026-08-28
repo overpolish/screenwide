@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { ReactNode, Ref } from "react";
-
 import { clsx } from "clsx";
 import { ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { type ComponentProps, type ReactNode, type Ref, use } from "react";
 import {
   Select as AriaSelect,
   SelectProps as AriaSelectProps,
@@ -15,114 +14,101 @@ import {
   PopoverProps,
   SelectValue,
 } from "react-aria-components";
-import { VariantProps } from "tailwind-variants";
 
-import {
-  availableVariants,
-  elementFocusVisible,
-  focusStyles,
-} from "../../../lib/styling";
+import { focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
+import { FieldGroupContext } from "../field-group/field-group-context";
 import { ListBox } from "../listbox/listbox";
 import { OverflowShadow } from "../overflow-shadow/overflow-shadow";
 
 import { ClearButton } from "./components/clear-button";
 
-const ICON_SIZES = {
-  md: 16,
-  sm: 14,
-};
-
 const selectVariants = tv({
-  compoundVariants: [
-    {
-      class: { trigger: "py-0.5" },
-      compact: true,
-      size: "md",
-      variant: "line",
-    },
-    {
-      class: { trigger: "py-0.5" },
-      compact: true,
-      size: "sm",
-      variant: "line",
-    },
-  ],
   defaultVariants: {
     showFocus: true,
-    size: "md",
-    variant: "solid",
+    size: "default",
   },
   slots: {
-    base: "flex flex-col gap-1",
-    controls: "text-muted/75",
-    label: "text-muted font-medium",
-    line: [
-      "absolute bottom-0 inset-x-0 bg-transparent h-[2px] pointer-events-none transition-shadow shadow-[0_1px_0_0] shadow-muted/30",
-      "group-data-[hovered]:shadow-[0_2px_0_0] group-data-[hovered]:shadow-content-fg/75",
-      "group-data-[pressed]:shadow-[0_2px_0_0] group-data-[pressed]:shadow-content-fg/75",
-    ],
-    trigger: [
-      "group relative outline-none shrink inline-flex flex-row items-center justify-between text-content-fg gap-4 rounded-md transition-colors",
-      "data-[hovered]:bg-neutral/50",
+    base: "flex shrink-0 flex-col gap-1",
+    controls: "text-muted",
+    field: [
+      "relative inline-flex shrink-0 items-stretch bg-neutral text-content-fg outline-none transition-colors",
+      "has-[button[data-hovered]]:bg-neutral-hover has-[button[data-pressed]]:bg-neutral-pressed",
+      "has-[button[data-disabled]]:bg-neutral-subtle has-[button[data-disabled]]:text-neutral-disabled-fg",
+      "has-[[data-select-clear]]:[&>[data-select-trigger]]:pr-0",
       focusStyles,
     ],
+    label: "text-muted font-medium",
+    trigger: [
+      "group gap-control relative inline-flex min-w-0 flex-1 shrink-0 flex-row items-center justify-between bg-transparent text-content-fg outline-none",
+    ],
+    value: "inline-flex min-w-0 flex-1 flex-row items-center",
   },
   variants: {
-    compact: availableVariants("true"),
+    grouped: {
+      true: {
+        field: [
+          "rounded-none bg-transparent",
+          "has-[button[data-hovered]]:bg-transparent has-[button[data-pressed]]:bg-transparent",
+        ],
+      },
+    },
     showFocus: {
       true: {
-        trigger: elementFocusVisible,
+        field:
+          "has-[[data-select-trigger][data-focus-visible]]:ring-1 has-[[data-select-trigger][data-focus-visible]]:ring-offset-1",
       },
     },
     size: {
-      md: { label: "text-sm", trigger: "text-sm px-2 py-2" },
-      sm: { label: "text-xs", trigger: "text-xs px-2 py-2" },
-    },
-    variant: {
-      ghost: {
-        trigger: "px-2 py-1",
+      compact: {
+        controls: "[&_svg]:size-icon-compact",
+        field: "h-6 rounded-lg",
+        label: "text-xs",
+        trigger: "px-2 text-xs",
+        value: "gap-2",
       },
-      line: {
-        trigger: "data-[hovered]:bg-transparent",
-      },
-      solid: {
-        trigger: "bg-content border-1 border-muted/30",
+      default: {
+        controls: "[&_svg]:size-icon-default",
+        field: "rounded-xl",
+        label: "text-sm",
+        trigger: "px-3 py-2 text-sm",
+        value: "gap-3",
       },
     },
   },
 });
 
-type SelectProps<T extends object> = Omit<AriaSelectProps<T>, "children"> &
-  VariantProps<typeof selectVariants> & {
-    children?: ReactNode | ((item: T) => ReactNode);
-    className?: string;
-    clearable?: boolean;
-    items?: Iterable<T>;
-    label?: string;
-    leftSection?: ReactNode;
-    listBoxClassName?: string;
-    onClear?: () => void;
-    onPress?: () => void;
-    popoverPlacement?: PopoverProps["placement"];
-    popoverShouldFlip?: boolean;
-    scrollShadow?: boolean;
-    /**
-     * @default false
-     * @type boolean
-     * @description
-     * You'll need to provide and control the visibility of your own
-     * listbox
-     */
-    standalone?: boolean;
-    triggerRef?: Ref<HTMLButtonElement>;
-  };
+type SelectProps<T extends object> = Omit<AriaSelectProps<T>, "children"> & {
+  children?: ReactNode | ((item: T) => ReactNode);
+  className?: string;
+  clearable?: boolean;
+  items?: Iterable<T>;
+  label?: string;
+  leftSection?: ReactNode;
+  listBoxClassName?: string;
+  onClear?: () => void;
+  onPress?: ComponentProps<typeof Button>["onPress"];
+  popoverPlacement?: PopoverProps["placement"];
+  popoverShouldFlip?: boolean;
+  scrollShadow?: boolean;
+  showFocus?: boolean;
+  size?: "compact" | "default";
+  /**
+   * @default false
+   * @type boolean
+   * @description
+   * You'll need to provide and control the visibility of your own
+   * listbox
+   */
+  standalone?: boolean;
+  triggerClassName?: string;
+  triggerRef?: Ref<HTMLButtonElement>;
+};
 
 export const Select = <T extends object>({
   children,
   className,
   clearable = true,
-  compact,
   items,
   label,
   leftSection,
@@ -136,46 +122,58 @@ export const Select = <T extends object>({
   showFocus,
   size,
   standalone,
+  triggerClassName,
   triggerRef,
-  variant,
   ...props
 }: SelectProps<T>) => {
+  const grouped = use(FieldGroupContext);
   const {
     base,
     controls,
+    field,
     label: _label,
-    line,
     trigger,
-  } = selectVariants({ compact, size, variant });
+    value,
+  } = selectVariants({
+    grouped,
+    showFocus,
+    size,
+  });
   const listBox = (
     <ListBox
       className={
         scrollShadow
-          ? "w-full overflow-visible rounded-none border-0 bg-transparent shadow-none"
+          ? "w-full overflow-visible rounded-none bg-transparent shadow-none"
           : listBoxClassName
       }
       items={items}
+      size={size}
     >
       {children}
     </ListBox>
   );
 
   return (
-    <AriaSelect {...props} className={base()}>
+    <AriaSelect
+      {...props}
+      className={base({ className })}
+      data-control-size={size ?? "default"}
+    >
       {({ isOpen }) => (
         <>
           {label && <Label className={_label()}>{label}</Label>}
 
-          <div className="relative">
+          <div className={field()}>
             <Button
-              className={trigger({ className, showFocus })}
+              className={trigger({ className: triggerClassName })}
+              data-select-trigger
               onPress={onPress}
               ref={triggerRef}
             >
-              <div className="inline-flex flex-row items-center gap-2 flex-1 min-w-0">
+              <div className={value()}>
                 {leftSection != null && <div>{leftSection}</div>}
 
-                <SelectValue className="data-[placeholder]:text-muted/75 truncate">
+                <SelectValue className="data-[placeholder]:text-muted truncate">
                   {({ defaultChildren, isPlaceholder }) =>
                     isPlaceholder ? placeholder : defaultChildren
                   }
@@ -188,29 +186,26 @@ export const Select = <T extends object>({
                   y: isOpen ? -0.5 : 0,
                 }}
                 aria-hidden="true"
-                className={controls({ className: clearable && "ml-3" })}
+                className={controls()}
                 transition={{
                   duration: 0.2,
                 }}
               >
-                <ChevronDown size={size ? ICON_SIZES[size] : 16} />
+                <ChevronDown />
               </motion.div>
-
-              {variant === "line" && <div className={line()} />}
             </Button>
 
             <AnimatePresence>
               {clearable && (
                 <ClearButton
                   animate={{ opacity: 1 }}
-                  className={controls()}
                   exit={{
                     opacity: 0,
                     scale: 0,
                   }}
                   initial={{ opacity: 0 }}
                   onClear={onClear}
-                  size={12}
+                  size={size}
                 />
               )}
             </AnimatePresence>
@@ -238,10 +233,9 @@ export const Select = <T extends object>({
               <OverflowShadow
                 constrainHeight
                 rootClassName={clsx(
-                  "border-1 border-muted/30 bg-content shadow-md",
+                  "rounded-xl bg-content shadow-md",
                   listBoxClassName,
                 )}
-                shadowRadius="md"
               >
                 {listBox}
               </OverflowShadow>

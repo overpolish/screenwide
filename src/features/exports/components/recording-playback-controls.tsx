@@ -4,10 +4,11 @@
 import { ClipboardCopy, Pause, Play } from "lucide-react";
 import { memo } from "react";
 
-import { ToggleButton } from "../../../components/base/button/toggle-button";
+import { Button } from "../../../components/base/button/button";
+import { IconToggleButton } from "../../../components/base/button/icon-button";
 import { ListBoxItem } from "../../../components/base/listbox-item/listbox-item";
 import { Select } from "../../../components/base/select/select";
-import { CheckOnClickButton } from "../../../components/shared/check-on-click-button/check-on-click-button";
+import { CheckOnClick } from "../../../components/shared/check-on-click/check-on-click";
 import { formatDuration } from "../duration";
 
 import { Playhead } from "./scrub-playhead";
@@ -48,7 +49,7 @@ export const RecordingPlaybackControls = memo(
   }: RecordingPlaybackControlsProps) {
     return (
       <div className="relative flex h-7 shrink-0 items-center justify-center gap-1.5 border-t border-muted/15 px-3">
-        <ToggleButton
+        <IconToggleButton
           aria-keyshortcuts="P"
           aria-label={isPlaying ? "Pause preview" : "Play preview"}
           className="size-6 shrink-0"
@@ -58,17 +59,13 @@ export const RecordingPlaybackControls = memo(
             if (selected) onPlay();
             else onPause();
           }}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
+          size="compact"
         >
           <Pause className="fill-current" size={14} />
-        </ToggleButton>
+        </IconToggleButton>
         <Select<(typeof PLAYBACK_RATES)[number]>
           aria-label="Preview speed"
-          className="h-6 gap-1 px-1.5 py-0"
           clearable={false}
-          compact
           items={PLAYBACK_RATES}
           listBoxClassName="max-h-[inherit] min-w-20"
           onChange={(selection) => {
@@ -81,16 +78,14 @@ export const RecordingPlaybackControls = memo(
           popoverShouldFlip={false}
           scrollShadow
           showFocus={false}
-          size="sm"
+          size="compact"
+          triggerClassName="h-6 gap-1 px-1.5 py-0"
           value={playbackRate.toString()}
-          variant="ghost"
         >
           {(rate) => (
             <ListBoxItem
               className="shrink-0"
-              compact
               id={rate.id}
-              size="sm"
               textValue={rate.label}
             >
               {rate.label}
@@ -102,18 +97,17 @@ export const RecordingPlaybackControls = memo(
           <span className="text-muted"> / {formatDuration(durationMs)}</span>
         </span>
         {onCopyCurrentFrame ? (
-          <CheckOnClickButton
-            aria-label="Copy current frame"
-            className="absolute right-3"
-            color="muted"
-            onPress={() => onCopyCurrentFrame()}
-            showFocus={false}
-            size="sm"
-            variant="ghost"
-          >
-            <ClipboardCopy size={13} />
-            Copy frame
-          </CheckOnClickButton>
+          <CheckOnClick onPress={() => onCopyCurrentFrame()}>
+            <Button
+              aria-label="Copy current frame"
+              className="absolute right-3"
+              size="compact"
+              variant="ghost"
+            >
+              <ClipboardCopy size={13} />
+              Copy frame
+            </Button>
+          </CheckOnClick>
         ) : null}
       </div>
     );

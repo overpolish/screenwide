@@ -24,7 +24,7 @@ const meta = {
   parameters: {
     layout: "centered",
   },
-  title: "Slider",
+  title: "Legacy/Slider",
 } satisfies Meta<typeof Slider>;
 
 export default meta;

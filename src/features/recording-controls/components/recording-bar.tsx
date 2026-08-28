@@ -4,7 +4,6 @@
 import {
   Camera,
   CameraOff,
-  Circle,
   CircleX,
   Keyboard,
   KeyboardOff,
@@ -13,16 +12,15 @@ import {
   MicOff,
   MousePointer2,
   MousePointer2Off,
-  Sparkle,
   Volume2,
   VolumeOff,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { ReactNode, useRef, useState } from "react";
 
 import { Button } from "../../../components/base/button/button";
+import { IconButton } from "../../../components/base/button/icon-button";
+import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { Overlay } from "../../../components/base/overlay/overlay";
-import { Separator } from "../../../components/base/separator/separator";
-import { Sparkles } from "../../../components/base/sparkles/sparkles";
 import { cn } from "../../../lib/styling";
 import { RecordingFps, RecordingInputs } from "../../recording-inputs/types";
 import { RecordingMode } from "../../recording-sources/types";
@@ -30,8 +28,11 @@ import { canStartRecording } from "../can-record";
 import { RecordingStatus, ScreenshotAction, ScreenshotState } from "../types";
 
 import { RecordingBarInputToggle as InputToggle } from "./recording-bar-input-toggle";
+import { RecordingBarRecordAction } from "./recording-bar-record-action";
 import { RecordingBarScreenshotActions } from "./recording-bar-screenshot-actions";
 import { RecordingModePicker } from "./recording-mode-picker";
+
+type Anchor = Pick<DOMRect, "height" | "width" | "x" | "y">;
 
 type RecordingBarProps = {
   fps?: RecordingFps;
@@ -57,9 +58,10 @@ type RecordingBarProps = {
   onInteract?: () => void;
   onMicrophoneLockedPress?: () => void;
   onModeChange?: (mode: RecordingMode) => void;
-  onOptions?: (anchorX: number) => void;
+  onOptions?: (anchor: Anchor, focusContents: boolean) => void;
   onPointerUp?: () => void;
   onRecord?: () => void;
+  onRequiredPermissionsPress?: () => void;
   onScreenshot?: () => void;
   onScreenshotToClipboard?: () => void;
   onScrollingScreenshot?: () => void;
@@ -70,6 +72,7 @@ type RecordingBarProps = {
   pendingExports?: { recording: boolean; screenshot: boolean };
   screenshotAction?: ScreenshotAction;
   screenshotState?: ScreenshotState;
+  sourceSelector?: ReactNode;
   status?: RecordingStatus;
 };
 
@@ -108,12 +111,14 @@ export function RecordingBar({
   onOptions,
   onPointerUp,
   onRecord,
+  onRequiredPermissionsPress,
   onScreenshot,
   onScreenshotToClipboard,
   onScrollingScreenshot,
   pendingExports = { recording: false, screenshot: false },
   screenshotAction = "export",
   screenshotState = "idle",
+  sourceSelector,
   status = "idle",
 }: RecordingBarProps) {
   const [uncontrolledMode, setUncontrolledMode] =
@@ -127,6 +132,7 @@ export function RecordingBar({
     },
   );
   const optionsButtonRef = useRef<HTMLButtonElement>(null);
+  const sourceSelectorRef = useRef<HTMLDivElement>(null);
 
   const mode = controlledMode ?? uncontrolledMode;
   const fps = controlledFps ?? uncontrolledFps;
@@ -186,193 +192,204 @@ export function RecordingBar({
 
   return (
     <main
-      className="window-surface flex h-full min-h-[92px] w-full min-w-[672px] items-center justify-center overflow-hidden rounded-[10px] bg-content/92 p-2 text-content-fg"
+      className="window-surface p-section flex h-full min-h-[120px] w-full min-w-[672px] flex-col overflow-hidden text-content-fg"
       data-tauri-drag-region="deep"
       onKeyDownCapture={(event) => {
-        if (optionsButtonRef.current?.contains(event.target as Node)) return;
+        if (
+          optionsButtonRef.current?.contains(event.target as Node) ||
+          sourceSelectorRef.current?.contains(event.target as Node)
+        ) {
+          return;
+        }
         onInteract?.();
       }}
       onPointerDownCapture={(event) => {
-        if (optionsButtonRef.current?.contains(event.target as Node)) return;
+        if (
+          optionsButtonRef.current?.contains(event.target as Node) ||
+          sourceSelectorRef.current?.contains(event.target as Node)
+        ) {
+          return;
+        }
         onInteract?.();
       }}
-      onPointerUpCapture={onPointerUp}
+      onPointerUpCapture={(event) => {
+        if (sourceSelectorRef.current?.contains(event.target as Node)) return;
+        onPointerUp?.();
+      }}
     >
       <Overlay
         blur="sm"
-        className="rounded-[10px]"
         isOpen={Boolean(isScreenshotLocked) && isScreenCapture}
       >
-        <Lock />
+        <IconButton
+          aria-label="Open permissions"
+          className="group"
+          onPress={onRequiredPermissionsPress}
+        >
+          <Lock className="transition-transform group-data-[hovered]:scale-110" />
+        </IconButton>
       </Overlay>
 
-      <Button
-        className="group self-stretch cursor-default"
-        onPress={onCancel}
-        showFocus={false}
-        variant="ghost"
+      <div
+        className={cn(
+          "gap-section relative flex min-h-0 w-full grow items-center justify-center",
+          sourceSelector &&
+            "pt-[calc(var(--spacing-window-inset)+var(--spacing-control))]",
+        )}
       >
-        <div className="flex flex-col items-center gap-1">
-          <CircleX className="origin-center transform-gpu backface-hidden text-muted will-change-transform transition-[color,transform,scale] group-data-[hovered]:scale-110 group-data-[hovered]:text-content-fg" />
-        </div>
-      </Button>
-
-      <Separator className="h-[60px]" orientation="vertical" spacing="sm" />
-
-      <RecordingModePicker
-        isDisabled={isRecordingActive}
-        mode={mode}
-        onChange={(nextMode) => {
-          if (controlledMode === undefined) {
-            setUncontrolledMode(nextMode);
-          }
-          onModeChange?.(nextMode);
-        }}
-      />
-
-      <Separator className="h-[60px]" orientation="vertical" spacing="sm" />
-
-      <div className="mr-2 flex min-w-[120px] flex-col">
-        <div className="flex justify-between px-2">
-          <InputToggle
-            hasWarning={hasSystemAudioWarning}
-            isDisabled={isRecordingActive}
-            isSelected={inputs.systemAudio}
-            label="System audio"
-            off={<VolumeOff size={16} />}
-            on={<Volume2 size={16} />}
-            onChange={(selected) => {
-              setInput("systemAudio", selected);
-            }}
-            warningLabel="One or more selected system audio applications are not detected"
-          />
-          <InputToggle
-            hasWarning={hasMicrophoneWarning}
-            isDisabled={isRecordingActive}
-            isLocked={isMicrophoneLocked}
-            isSelected={inputs.microphone}
-            label="Microphone"
-            off={<MicOff size={16} />}
-            on={<Mic size={16} />}
-            onChange={(selected) => {
-              setInput("microphone", selected);
-            }}
-            onLockedPress={onMicrophoneLockedPress}
-            warningLabel="Selected microphone is not detected"
-          />
-          <InputToggle
-            hasWarning={hasCameraWarning}
-            isDisabled={isAudioOnly || isRecordingActive}
-            isLocked={isCameraLocked}
-            isReadOnly={mode === "camera"}
-            isSelected={mode === "camera" || (!isAudioOnly && inputs.camera)}
-            label="Camera"
-            off={<CameraOff size={16} />}
-            on={<Camera size={16} />}
-            onChange={(selected) => {
-              setInput("camera", selected);
-            }}
-            onLockedPress={onCameraLockedPress}
-            warningLabel="Selected camera is not detected"
-          />
-          <InputToggle
-            isDisabled={!isScreenCapture || isRecordingActive}
-            isSelected={isScreenCapture && inputs.showCursor}
-            label="Show cursor"
-            off={<MousePointer2Off size={16} />}
-            on={<MousePointer2 size={16} />}
-            onChange={(selected) => {
-              setInput("showCursor", selected);
-            }}
-          />
-          <InputToggle
-            isDisabled={!isScreenCapture || isRecordingActive}
-            isSelected={isScreenCapture && inputs.keyboardShortcuts}
-            label="Keyboard shortcuts"
-            off={<KeyboardOff size={16} />}
-            on={<Keyboard size={16} />}
-            onChange={(selected) => {
-              setInput("keyboardShortcuts", selected);
-            }}
-          />
-        </div>
-
-        <div
-          className="flex justify-center"
-          onPointerDown={(event) => {
-            event.stopPropagation();
-          }}
-        >
-          <Button
-            className="origin-center transform-gpu backface-hidden justify-center will-change-transform transition-transform data-[hovered]:scale-110"
-            isDisabled={isRecordingActive}
-            onPress={() => {
-              const bounds = optionsButtonRef.current?.getBoundingClientRect();
-              if (bounds) onOptions?.(bounds.left + bounds.width / 2);
-            }}
-            ref={optionsButtonRef}
-            showFocus={false}
-            size="sm"
-            variant="ghost"
-          >
-            Options
-          </Button>
-        </div>
-      </div>
-
-      {/* `mr-3` rather than a gap on the row: everything to the left of here
-          is separated by rules, and only these last two columns - which grew a
-          toggle each underneath them - need air between them. */}
-      <RecordingBarScreenshotActions
-        canCaptureScrollingScreenshot={canCaptureScrollingScreenshot}
-        canCopyScreenshot={canCopyScreenshot}
-        canExportScreenshot={canExportScreenshot}
-        clipboardScreenshotState={clipboardScreenshotState}
-        exportScreenshotState={exportScreenshotState}
-        isCapturingStill={isCapturingStill}
-        onScreenshot={onScreenshot}
-        onScreenshotToClipboard={onScreenshotToClipboard}
-        onScrollingScreenshot={onScrollingScreenshot}
-        scrollingScreenshotState={scrollingScreenshotState}
-      />
-
-      <Sparkles
-        icon={Sparkle}
-        offset={{ x: { max: 70, min: 0 }, y: { max: 50, min: -10 } }}
-        scale={{ max: 0.5, min: 0.2 }}
-        sparklesCount={canRecord ? 2 : 0}
-      >
-        {/* Padding rather than margin: this sits inside the sparkle wrapper's
-            inline-block, so the space has to come from within it to widen the
-            column at all. */}
-        <div className="flex flex-col items-center justify-center self-stretch pr-2">
-          <Button
-            aria-label={
-              isRecordBlockedByExport ? "Show export window" : "Start recording"
+        <RecordingModePicker
+          isDisabled={isRecordingActive}
+          mode={mode}
+          onChange={(nextMode) => {
+            if (controlledMode === undefined) {
+              setUncontrolledMode(nextMode);
             }
-            className="group cursor-default p-1"
-            isDisabled={!canRecord && !isRecordBlockedByExport}
-            onPress={isRecordBlockedByExport ? onFocusPendingExport : onRecord}
-            showFocus={false}
-            variant="ghost"
+            onModeChange?.(nextMode);
+          }}
+        />
+
+        {sourceSelector ? (
+          <div
+            className="gap-control absolute inset-x-0 top-0 flex h-6"
+            ref={sourceSelectorRef}
           >
-            <Circle
-              className={cn(
-                "origin-center transform-gpu backface-hidden will-change-transform transition-[color,transform,scale]",
-                !isRecordBlockedByExport && "group-data-[hovered]:scale-110",
-                isRecordBlockedByExport &&
-                  "text-muted group-data-[hovered]:text-content-fg/75",
-              )}
-              size={40}
+            {sourceSelector}
+          </div>
+        ) : null}
+
+        <IconButton
+          aria-label="Cancel"
+          className="order-first"
+          iconSize="prominent"
+          onPress={onCancel}
+        >
+          <CircleX />
+        </IconButton>
+
+        <div className="gap-tight flex min-w-[120px] flex-col">
+          <ButtonGroup
+            aria-label="Recording inputs"
+            className="gap-tight px-control justify-between"
+          >
+            <InputToggle
+              hasWarning={hasSystemAudioWarning}
+              isDisabled={isRecordingActive}
+              isSelected={inputs.systemAudio}
+              label="System audio"
+              off={<VolumeOff />}
+              on={<Volume2 />}
+              onChange={(selected) => {
+                setInput("systemAudio", selected);
+              }}
+              warningLabel="One or more selected system audio applications are not detected"
             />
-          </Button>
+            <InputToggle
+              hasWarning={hasMicrophoneWarning}
+              isDisabled={isRecordingActive}
+              isLocked={isMicrophoneLocked}
+              isSelected={inputs.microphone}
+              label="Microphone"
+              off={<MicOff />}
+              on={<Mic />}
+              onChange={(selected) => {
+                setInput("microphone", selected);
+              }}
+              onLockedPress={onMicrophoneLockedPress}
+              warningLabel="Selected microphone is not detected"
+            />
+            <InputToggle
+              hasWarning={hasCameraWarning}
+              isDisabled={isAudioOnly || isRecordingActive}
+              isLocked={isCameraLocked}
+              isReadOnly={mode === "camera"}
+              isSelected={mode === "camera" || (!isAudioOnly && inputs.camera)}
+              label="Camera"
+              off={<CameraOff />}
+              on={<Camera />}
+              onChange={(selected) => {
+                setInput("camera", selected);
+              }}
+              onLockedPress={onCameraLockedPress}
+              warningLabel="Selected camera is not detected"
+            />
+            <InputToggle
+              isDisabled={!isScreenCapture || isRecordingActive}
+              isSelected={isScreenCapture && inputs.showCursor}
+              label="Show cursor"
+              off={<MousePointer2Off />}
+              on={<MousePointer2 />}
+              onChange={(selected) => {
+                setInput("showCursor", selected);
+              }}
+            />
+            <InputToggle
+              isDisabled={!isScreenCapture || isRecordingActive}
+              isSelected={isScreenCapture && inputs.keyboardShortcuts}
+              label="Keyboard shortcuts"
+              off={<KeyboardOff />}
+              on={<Keyboard />}
+              onChange={(selected) => {
+                setInput("keyboardShortcuts", selected);
+              }}
+            />
+          </ButtonGroup>
+
+          <div
+            className="flex justify-center"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <Button
+              isDisabled={isRecordingActive}
+              onPress={(event) => {
+                const bounds =
+                  optionsButtonRef.current?.getBoundingClientRect();
+                if (bounds) {
+                  onOptions?.(
+                    bounds.toJSON() as Anchor,
+                    ["keyboard", "virtual"].includes(event.pointerType),
+                  );
+                }
+              }}
+              ref={optionsButtonRef}
+              size="compact"
+              variant="ghost"
+            >
+              Options
+            </Button>
+          </div>
+        </div>
+
+        <RecordingBarScreenshotActions
+          canCaptureScrollingScreenshot={canCaptureScrollingScreenshot}
+          canCopyScreenshot={canCopyScreenshot}
+          canExportScreenshot={canExportScreenshot}
+          clipboardScreenshotState={clipboardScreenshotState}
+          exportScreenshotState={exportScreenshotState}
+          isCapturingStill={isCapturingStill}
+          onScreenshot={onScreenshot}
+          onScreenshotToClipboard={onScreenshotToClipboard}
+          onScrollingScreenshot={onScrollingScreenshot}
+          scrollingScreenshotState={scrollingScreenshotState}
+        />
+
+        <div className="gap-tight flex flex-col items-center justify-center self-stretch">
+          <RecordingBarRecordAction
+            canRecord={canRecord}
+            isLocked={Boolean(isLocked)}
+            isRecordBlockedByExport={isRecordBlockedByExport}
+            onFocusPendingExport={onFocusPendingExport}
+            onRecord={onRecord}
+            onRequiredPermissionsPress={onRequiredPermissionsPress}
+          />
 
           <InputToggle
             isDisabled={isRecordingActive}
             isSelected={fps === 60}
             label="Frames per second"
-            off={<span className="text-xxs tabular-nums">30</span>}
-            on={<span className="text-xxs tabular-nums">60</span>}
+            off={<span className="text-xs tabular-nums">30</span>}
+            on={<span className="text-xs tabular-nums">60</span>}
             onChange={(smooth) => {
               const nextFps: RecordingFps = smooth ? 60 : 30;
               if (controlledFps === undefined) setUncontrolledFps(nextFps);
@@ -380,7 +397,7 @@ export function RecordingBar({
             }}
           />
         </div>
-      </Sparkles>
+      </div>
     </main>
   );
 }

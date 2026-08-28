@@ -24,6 +24,13 @@ export type RecordingMode = "screen" | "region" | "window" | "camera" | "audio";
 
 export type SelectorPlacement = "above" | "below";
 
+export type SelectorState = {
+  expanded: boolean;
+  focusContents: boolean;
+  placement: SelectorPlacement;
+  revision: number;
+};
+
 export type WindowDetails = {
   appIconPath: string | null;
   appName: string;

@@ -7,34 +7,20 @@ import { Ruler } from "lucide-react";
 import { NumberField } from "./number-field";
 
 const sizes: React.ComponentProps<typeof NumberField>["size"][] = [
-  "md",
-  "sm",
-] as const;
-const variants: React.ComponentProps<typeof NumberField>["variant"][] = [
-  "solid",
-  "line",
-  "ghost",
+  "default",
+  "compact",
 ] as const;
 
 const meta = {
   argTypes: {
-    centered: { control: "boolean" },
-    rightAligned: { control: "boolean" },
-    scrubbable: { control: "boolean" },
     showSteppers: { control: "boolean" },
     size: {
       control: "inline-radio",
       options: sizes,
-      table: { defaultValue: { summary: "md" } },
-    },
-    variant: {
-      control: "inline-radio",
-      options: variants,
-      table: { defaultValue: { summary: "solid" } },
+      table: { defaultValue: { summary: "default" } },
     },
   },
   args: {
-    centered: false,
     defaultValue: 5,
     label: "Amount",
     maxValue: 100,
@@ -48,7 +34,7 @@ const meta = {
     },
     layout: "centered",
   },
-  title: "Number Field",
+  title: "Primitives/Number Field",
 } satisfies Meta<typeof NumberField>;
 
 export default meta;
@@ -59,8 +45,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     showSteppers: true,
-    size: "md",
-    variant: "solid",
+    size: "default",
   },
 };
 
@@ -77,19 +62,6 @@ export const Sizes: Story = {
   ),
 };
 
-export const Variants: Story = {
-  parameters: {
-    controls: { disable: true },
-  },
-  render: (args) => (
-    <div className="flex gap-2 items-center">
-      {variants.map((variant) => (
-        <NumberField key={variant} variant={variant} {...args} />
-      ))}
-    </div>
-  ),
-};
-
 export const WithoutSteppers: Story = {
   args: {
     label: undefined,
@@ -98,24 +70,11 @@ export const WithoutSteppers: Story = {
   parameters: { controls: { disable: true } },
 };
 
-export const Scrubbable: Story = {
-  args: {
-    label: undefined,
-    rightAligned: true,
-    rightSection: <span className="text-xs">%</span>,
-    scrubbable: true,
-    showSteppers: false,
-    variant: "ghost",
-  },
-  parameters: { controls: { disable: true } },
-};
-
 export const Sections: Story = {
   args: {
     leftSection: <Ruler size={18} />,
-    rightSection: <span className="text-xs">px</span>,
+    rightSection: "px",
     showSteppers: false,
-    variant: "solid",
   },
-  parameters: { controls: { include: ["showSteppers", "variant"] } },
+  parameters: { controls: { include: ["showSteppers", "size"] } },
 };

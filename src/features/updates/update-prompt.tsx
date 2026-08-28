@@ -51,7 +51,7 @@ export function UpdatePrompt({
   const released = displayDate(releaseDate);
 
   return (
-    <main className="window-surface flex h-full w-full flex-col overflow-hidden rounded-[10px] bg-content/96 text-content-fg">
+    <main className="window-surface flex h-full w-full flex-col overflow-hidden rounded-[10px] text-content-fg">
       <WindowTitlebar
         onClose={busy ? undefined : onRemindLater}
         title="Software Update"
@@ -75,7 +75,7 @@ export function UpdatePrompt({
           </div>
         </Alert>
 
-        <section className="flex min-h-0 grow flex-col overflow-hidden rounded-lg border border-muted/20 bg-neutral/15">
+        <section className="flex min-h-0 grow flex-col overflow-hidden rounded-lg border border-muted/20 bg-neutral">
           <div className="border-b border-muted/15 px-4 py-2.5 text-xs font-semibold text-muted">
             What’s new
           </div>
@@ -123,21 +123,15 @@ export function UpdatePrompt({
 
         <div className="flex items-center justify-end gap-2">
           <Button
-            color="muted"
             isDisabled={busy}
             onPress={onSkipVersion}
-            size="sm"
+            size="compact"
             variant="ghost"
           >
             <Ban size={14} />
             Skip this version
           </Button>
-          <Button
-            isDisabled={busy}
-            onPress={onRemindLater}
-            size="sm"
-            variant="soft"
-          >
+          <Button isDisabled={busy} onPress={onRemindLater} size="compact">
             <Clock3 size={14} />
             Not right now
           </Button>
@@ -149,10 +143,10 @@ export function UpdatePrompt({
             sparklesCount={busy ? 0 : 2}
           >
             <Button
-              color="info"
+              color="primary"
               isDisabled={busy}
               onPress={onInstall}
-              size="sm"
+              size="compact"
             >
               <Download size={14} />
               {busy ? "Installing…" : "Update and restart"}

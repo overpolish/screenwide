@@ -7,8 +7,7 @@ import { RulerComponentBox } from "./api";
 import { FrozenRulerSnapshot } from "./frozen-ruler-snapshot";
 import { Bounds, PixelSnapshot } from "./pixel-analysis";
 import { RulerSvgOverlay } from "./ruler-svg-overlay";
-import { DistanceProbe, Measurement } from "./ruler-types";
-import { LabelHandles } from "./use-label-handles";
+import { DistanceProbe, Measurement, RadiusMeasurement } from "./ruler-types";
 import { SelectedLine } from "./use-ruler-deletion";
 
 export function RulerWorld({
@@ -18,11 +17,12 @@ export function RulerWorld({
   deviceScale,
   distanceProbes,
   draft,
-  handles,
   highlighted,
   measurements,
   monitorId,
   onLoad,
+  radii,
+  radiusPreview,
   style,
 }: {
   boxes: readonly RulerComponentBox[];
@@ -30,13 +30,14 @@ export function RulerWorld({
   detectedBoxes: boolean;
   deviceScale: number;
   distanceProbes: readonly DistanceProbe[];
-  handles: LabelHandles;
   measurements: readonly Measurement[];
   monitorId: number;
   onLoad: (snapshot: PixelSnapshot) => void;
+  radii: readonly RadiusMeasurement[];
   style: CSSProperties;
   draft?: Bounds;
   highlighted?: SelectedLine;
+  radiusPreview?: RadiusMeasurement;
 }) {
   return (
     <div className="pointer-events-none absolute inset-0" style={style}>
@@ -48,9 +49,10 @@ export function RulerWorld({
         deviceScale={deviceScale}
         distanceProbes={distanceProbes}
         draft={draft}
-        handles={handles}
         highlighted={highlighted}
         measurements={measurements}
+        radii={radii}
+        radiusPreview={radiusPreview}
       />
     </div>
   );

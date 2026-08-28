@@ -5,7 +5,7 @@ import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { MouseEvent as ReactMouseEvent } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
-import { ToggleButton } from "../../../components/base/button/toggle-button";
+import { IconToggleButton } from "../../../components/base/button/icon-button";
 import { Keyboard } from "../../../components/base/keyboard/keyboard";
 import { Tooltip } from "../../../components/base/tooltip/tooltip";
 import {
@@ -106,8 +106,7 @@ export function RecordingCanvasTools({
     <div className="flex items-center gap-1">
       <TooltipTrigger delay={400}>
         <span className="inline-flex" onContextMenu={reset}>
-          <ToggleButton
-            animation="scale-selected"
+          <IconToggleButton
             aria-keyshortcuts="V"
             aria-label="Select recording clip"
             isDisabled={!isSelectEnabled}
@@ -115,12 +114,10 @@ export function RecordingCanvasTools({
             onChange={(selected) => {
               onToolChange(selected ? "select" : null);
             }}
-            showFocus={false}
-            size="sm"
-            variant="ghost"
+            size="compact"
           >
             <MousePointer2 size={15} />
-          </ToggleButton>
+          </IconToggleButton>
         </span>
         <Tooltip placement="bottom">
           <span className="flex items-center gap-2">
@@ -133,8 +130,7 @@ export function RecordingCanvasTools({
       </TooltipTrigger>
       <TooltipTrigger delay={400}>
         <span className="inline-flex" onContextMenu={reset}>
-          <ToggleButton
-            animation="scale-selected"
+          <IconToggleButton
             aria-keyshortcuts="F"
             aria-label="Resize recording frame"
             isDisabled={!isFrameEnabled}
@@ -142,12 +138,10 @@ export function RecordingCanvasTools({
             onChange={(selected) => {
               onToolChange(selected ? "canvas" : null);
             }}
-            showFocus={false}
-            size="sm"
-            variant="ghost"
+            size="compact"
           >
             <ScanSquare size={15} />
-          </ToggleButton>
+          </IconToggleButton>
         </span>
         <Tooltip placement="bottom">
           <span className="flex items-center gap-2">
@@ -160,8 +154,7 @@ export function RecordingCanvasTools({
       </TooltipTrigger>
       <TooltipTrigger delay={400}>
         <span className="inline-flex" onContextMenu={reset}>
-          <ToggleButton
-            animation="scale-selected"
+          <IconToggleButton
             aria-keyshortcuts="C"
             aria-label="Crop recording clip"
             isDisabled={!isEnabled}
@@ -169,12 +162,10 @@ export function RecordingCanvasTools({
             onChange={(selected) => {
               onToolChange(selected ? "crop" : null);
             }}
-            showFocus={false}
-            size="sm"
-            variant="ghost"
+            size="compact"
           >
             <Crop size={15} />
-          </ToggleButton>
+          </IconToggleButton>
         </span>
         <Tooltip placement="bottom">
           <span className="flex items-center gap-2">
@@ -187,8 +178,7 @@ export function RecordingCanvasTools({
       </TooltipTrigger>
       <TooltipTrigger delay={400}>
         <span className="inline-flex" onContextMenu={reset}>
-          <ToggleButton
-            animation="scale-selected"
+          <IconToggleButton
             aria-keyshortcuts="R"
             aria-label="Recenter recording from current frame"
             isDisabled={!isRecenterEnabled}
@@ -196,12 +186,10 @@ export function RecordingCanvasTools({
             onChange={(selected) => {
               onToolChange(selected ? "recenter" : null);
             }}
-            showFocus={false}
-            size="sm"
-            variant="ghost"
+            size="compact"
           >
             <CircleDotDashed size={15} />
-          </ToggleButton>
+          </IconToggleButton>
         </span>
         <Tooltip placement="bottom">
           <span className="flex items-center gap-2">

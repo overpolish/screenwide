@@ -15,6 +15,7 @@
     "update",
     "text-recognition-*",
     "ruler-*",
+    "screenshot-region-*",
     "scrolling-capture-overlay",
     "permissions"
   ],

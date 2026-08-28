@@ -3,78 +3,116 @@
 
 import { clsx } from "clsx";
 import {
+  AnimatePresence,
+  motion,
+  MotionProps,
+  useReducedMotion,
+  Variants,
+} from "motion/react";
+import { use } from "react";
+import {
   Tooltip as AriaTooltip,
   TooltipProps as AriaTooltipProps,
   OverlayArrow,
+  TooltipTriggerStateContext,
 } from "react-aria-components";
-import { VariantProps } from "tailwind-variants";
 
-import { tv } from "../../../lib/variants";
+const tooltipClassName = [
+  "bg-content-fg text-content m-2 rounded-lg px-2 py-1 text-xs shadow-md",
+  "data-[placement=top]:origin-bottom",
+  "data-[placement=bottom]:origin-top",
+  "data-[placement=left]:origin-right",
+  "data-[placement=right]:origin-left",
+];
 
-const tooltipVariants = tv({
-  base: [
-    "bg-content-fg text-content m-2 rounded-sm shadow-md",
-    "data-entering:animate-in data-entering:fade-in",
-    // React Aria cannot retain an anchor after a conditional toolbar trigger
-    // unmounts. Hide that exiting overlay immediately rather than letting its
-    // fade briefly render at the viewport origin.
-    "data-exiting:invisible",
-  ],
-  defaultVariants: {
-    size: "sm",
-  },
-  variants: {
-    size: {
-      md: "text-md py-1 px-2",
-      sm: "text-sm py-1 px-2",
-    },
-  },
-});
+const tooltipMotion: Variants = {
+  closed: (placement: NonNullable<AriaTooltipProps["placement"]>) => ({
+    opacity: 0,
+    scale: 0.95,
+    x: placement.startsWith("left")
+      ? 4
+      : placement.startsWith("right")
+        ? -4
+        : 0,
+    y: placement.startsWith("top")
+      ? 4
+      : placement.startsWith("bottom")
+        ? -4
+        : 0,
+  }),
+  open: { opacity: 1, scale: 1, x: 0, y: 0 },
+};
 
-type TooltipProps = AriaTooltipProps &
-  VariantProps<typeof tooltipVariants> & {
+type TooltipProps = Omit<AriaTooltipProps, keyof MotionProps> &
+  MotionProps & {
     children?: React.ReactNode;
     className?: string;
     withArrow?: boolean;
   };
 
+const MotionAriaTooltip = motion.create(AriaTooltip);
+
 export const Tooltip = ({
+  arrowBoundaryOffset = 8,
   children,
   className,
-  size,
   withArrow = true,
   ...props
 }: TooltipProps) => {
-  return (
-    <AriaTooltip {...props} className={tooltipVariants({ className, size })}>
-      {withArrow && (
-        <OverlayArrow>
-          {({ placement }) => {
-            const resolvedPlacement = placement ?? props.placement ?? "top";
-            return (
-              <svg
-                className={clsx(
-                  "fill-content-fg",
-                  (resolvedPlacement.startsWith("left") ||
-                    resolvedPlacement.startsWith("start")) &&
-                    "rotate-270",
-                  (resolvedPlacement.startsWith("right") ||
-                    resolvedPlacement.startsWith("end")) &&
-                    "rotate-90",
-                  resolvedPlacement.startsWith("bottom") && "rotate-180",
-                )}
-                height={8}
-                viewBox="0 0 8 8"
-                width={8}
-              >
-                <path d="M0 0 L4 4 L8 0" />
-              </svg>
-            );
-          }}
-        </OverlayArrow>
-      )}
+  const prefersReducedMotion = useReducedMotion();
+  const triggerState = use(TooltipTriggerStateContext);
+  const isOpen = props.isOpen ?? triggerState?.isOpen ?? false;
+  const placement = props.placement ?? "top";
 
-      {children}
-    </AriaTooltip>
+  return (
+    <AnimatePresence>
+      {isOpen ? (
+        <MotionAriaTooltip
+          {...props}
+          animate="open"
+          arrowBoundaryOffset={arrowBoundaryOffset}
+          className={clsx(tooltipClassName, className)}
+          custom={placement}
+          exit="closed"
+          initial="closed"
+          isOpen
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : { damping: 25, stiffness: 300, type: "spring" }
+          }
+          variants={tooltipMotion}
+        >
+          {withArrow && (
+            <OverlayArrow>
+              {({ placement }) => {
+                const resolvedPlacement = placement ?? props.placement ?? "top";
+                return (
+                  <svg
+                    className={clsx(
+                      "fill-content-fg",
+                      (resolvedPlacement.startsWith("left") ||
+                        resolvedPlacement.startsWith("start")) &&
+                        "rotate-270",
+                      (resolvedPlacement.startsWith("right") ||
+                        resolvedPlacement.startsWith("end")) &&
+                        "rotate-90",
+                      resolvedPlacement.startsWith("bottom") && "rotate-180",
+                    )}
+                    height={8}
+                    viewBox="0 0 8 8"
+                    width={8}
+                  >
+                    <path d="M0 0 L4 4 L8 0" />
+                  </svg>
+                );
+              }}
+            </OverlayArrow>
+          )}
+
+          {children}
+        </MotionAriaTooltip>
+      ) : null}
+    </AnimatePresence>
   );
 };

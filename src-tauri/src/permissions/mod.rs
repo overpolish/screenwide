@@ -212,7 +212,48 @@ pub fn restart_app(app: AppHandle) {
   app.restart();
 }
 
+#[tauri::command]
+pub fn dismiss_permissions_window(app: AppHandle) -> tauri::Result<()> {
+  #[cfg(target_os = "macos")]
+  window::hide(&app)?;
+
+  crate::windows::show_recording_ui(&app)
+}
+
+#[tauri::command]
+pub fn open_permissions_window(app: AppHandle) -> tauri::Result<()> {
+  #[cfg(target_os = "macos")]
+  {
+    crate::windows::hide_recording_ui(app.clone())?;
+    window::show(&app)
+  }
+
+  #[cfg(not(target_os = "macos"))]
+  {
+    let _ = app;
+    Ok(())
+  }
+}
+
 #[cfg(target_os = "macos")]
 pub fn show_permissions_window(app: &AppHandle) -> tauri::Result<()> {
   window::show(app)
+}
+
+#[cfg(target_os = "macos")]
+pub fn show_on_launch(
+  app: &AppHandle,
+  show_recording_bar_on_launch: bool,
+  has_pending_export: bool,
+) -> tauri::Result<()> {
+  let snapshot = tauri::async_runtime::block_on(refresh(app));
+  let show_permissions_preview =
+    cfg!(debug_assertions) && std::env::var_os("SCREENWIDE_SHOW_PERMISSIONS").is_some();
+  if show_permissions_preview || !snapshot.has_required_recording_permissions() {
+    show_permissions_window(app)?;
+  } else if show_recording_bar_on_launch && !has_pending_export {
+    crate::windows::show_recording_ui(app)?;
+  }
+
+  Ok(())
 }

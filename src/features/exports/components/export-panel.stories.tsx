@@ -143,7 +143,7 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
-  title: "Features/Export Panel",
+  title: "Legacy/Export Panel",
 } satisfies Meta<typeof ExportPanel>;
 
 export default meta;

@@ -44,7 +44,7 @@ export function MeshBackgroundControl({
               ),
             });
           }}
-          size="sm"
+          size="compact"
           variant="ghost"
         >
           <Shuffle size={14} />

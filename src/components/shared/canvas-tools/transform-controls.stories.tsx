@@ -15,7 +15,7 @@ const meta = {
     ),
   ],
   parameters: { layout: "centered" },
-  title: "On Screen Controls",
+  title: "Legacy/On Screen Controls",
 } satisfies Meta<typeof TransformControls>;
 
 export default meta;

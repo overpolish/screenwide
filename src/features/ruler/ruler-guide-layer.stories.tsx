@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { GuideLayer } from "./ruler-guide-layer";
+import { RulerLabelLayer } from "./ruler-label-layer";
 import { RulerStoryStage } from "./ruler-story-stage";
 import { Guide } from "./ruler-types";
 import { LabelHandles } from "./use-label-handles";
@@ -13,9 +14,11 @@ const viewport = { height: 400, width: 640 };
 /** Inert stand-in for `useLabelHandles` - gap chips render, nothing drags. */
 const handles: LabelHandles = {
   beginDrag: () => undefined,
+  contextMenu: () => undefined,
   drag: () => undefined,
   endDrag: () => undefined,
   enter: () => undefined,
+  isVisible: () => true,
   leave: () => undefined,
   offset: () => ({ x: 0, y: 0 }),
 };
@@ -39,15 +42,24 @@ const horizontals: readonly Guide[] = [
 ];
 
 const meta = {
-  args: { guides: verticals, handles, style: {}, viewport },
+  args: { guides: verticals, style: {} },
   component: GuideLayer,
   parameters: { layout: "padded" },
   render: (args) => (
     <RulerStoryStage>
       <GuideLayer {...args} />
+      <RulerLabelLayer
+        guides={args.guides}
+        handles={handles}
+        measurements={[]}
+        probes={[]}
+        radii={[]}
+        style={args.style}
+        viewport={viewport}
+      />
     </RulerStoryStage>
   ),
-  title: "Features/Ruler Guides",
+  title: "Legacy/Ruler Guides",
 } satisfies Meta<typeof GuideLayer>;
 
 export default meta;

@@ -28,7 +28,7 @@ const alertVariants = tv({
         icon: "text-info",
       },
       neutral: {
-        base: "border-muted/20 bg-neutral/20",
+        base: "border-muted/20 bg-neutral",
         icon: "text-muted",
       },
       success: {
@@ -46,7 +46,7 @@ const alertVariants = tv({
         icon: "size-4",
       },
       sm: {
-        base: "gap-2 px-2 py-2 text-xxs",
+        base: "gap-2 px-2 py-2 text-xs",
         icon: "size-3.5",
       },
     },

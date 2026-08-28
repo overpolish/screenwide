@@ -8,11 +8,6 @@ import { Button } from "../button/button";
 
 import { Tooltip } from "./tooltip";
 
-const sizes: React.ComponentProps<typeof Tooltip>["size"][] = [
-  "md",
-  "sm",
-] as const;
-
 const placements: React.ComponentProps<typeof Tooltip>["placement"][] = [
   "left",
   "top",
@@ -50,7 +45,7 @@ const meta = {
     controls: { include: ["withArrow"] },
     layout: "centered",
   },
-  title: "Tooltip",
+  title: "Primitives/Tooltip",
 } satisfies Meta<typeof Tooltip>;
 
 export default meta;
@@ -66,23 +61,6 @@ export const Default: Story = {
       <Button>Hello</Button>
       <Tooltip {...args} placement="bottom" />
     </TooltipTrigger>
-  ),
-};
-
-export const Sizes: Story = {
-  parameters: {
-    controls: { disable: true },
-    ...isolatedDocsStory,
-  },
-  render: (args) => (
-    <div className="flex gap-2 items-center">
-      {sizes.map((size) => (
-        <TooltipTrigger isOpen key={size}>
-          <Button>Hello</Button>
-          <Tooltip size={size} {...args} />
-        </TooltipTrigger>
-      ))}
-    </div>
   ),
 };
 

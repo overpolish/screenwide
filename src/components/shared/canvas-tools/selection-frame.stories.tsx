@@ -16,7 +16,7 @@ const meta = {
     ),
   ],
   parameters: { layout: "centered" },
-  title: "Selection Frame",
+  title: "Legacy/Selection Frame",
 } satisfies Meta<typeof SelectionFrame>;
 
 export default meta;

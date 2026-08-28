@@ -10,9 +10,11 @@ export function DistanceProbeSvg({
   gapAt,
   gapSize = 0,
   handles,
+  labelDistance,
   probe,
   selected,
   showLabel,
+  showLine = true,
 }: {
   probe: DistanceProbe;
   showLabel: boolean;
@@ -21,14 +23,18 @@ export function DistanceProbeSvg({
   /** World width of the sibling's stroke - the exact exclusion to leave. */
   gapSize?: number;
   handles?: LabelHandles;
+  /** Measured world-space span when the probe geometry is in screen space. */
+  labelDistance?: number;
   selected?: boolean;
+  showLine?: boolean;
 }) {
   const start = Math.min(probe.start, probe.end);
   const end = Math.max(probe.start, probe.end);
-  const distance = Math.round(end - start);
+  const span = end - start;
+  const distance = labelDistance ?? Math.round(span);
   const text = `${String(distance)} px`;
   const vertical = probe.axis === "y";
-  const fits = vertical ? distance >= 28 : distance >= labelWidth(text);
+  const fits = vertical ? span >= 28 : span >= labelWidth(text);
   const center = (start + end) / 2;
   const textWidth = labelWidth(text);
   const labelX = vertical
@@ -65,40 +71,44 @@ export function DistanceProbeSvg({
     );
   return (
     <g className="stroke-error">
-      {/* A pulsing halo marks the probe the cursor has picked for deletion.
-          Always mounted so the opacity transition animates it in AND out. */}
-      <line
-        {...line}
-        className={
-          selected
-            ? "animate-halo transition-opacity duration-75"
-            : "transition-opacity duration-75"
-        }
-        opacity={selected ? 0.4 : 0}
-        strokeWidth={7}
-        vectorEffect="non-scaling-stroke"
-      />
-      {segments.map((segment) => (
-        <line
-          key={`${String(segment.x1)}:${String(segment.y1)}`}
-          {...segment}
-          vectorEffect="non-scaling-stroke"
-        />
-      ))}
-      <line
-        vectorEffect="non-scaling-stroke"
-        x1={vertical ? probe.position - 4 : start}
-        x2={vertical ? probe.position + 4 : start}
-        y1={vertical ? start : probe.position - 4}
-        y2={vertical ? start : probe.position + 4}
-      />
-      <line
-        vectorEffect="non-scaling-stroke"
-        x1={vertical ? probe.position - 4 : end}
-        x2={vertical ? probe.position + 4 : end}
-        y1={vertical ? end : probe.position - 4}
-        y2={vertical ? end : probe.position + 4}
-      />
+      {showLine ? (
+        <>
+          {/* A pulsing halo marks the probe the cursor has picked for deletion.
+              Always mounted so the opacity transition animates it in AND out. */}
+          <line
+            {...line}
+            className={
+              selected
+                ? "animate-halo transition-opacity duration-75"
+                : "transition-opacity duration-75"
+            }
+            opacity={selected ? 0.4 : 0}
+            strokeWidth={7}
+            vectorEffect="non-scaling-stroke"
+          />
+          {segments.map((segment) => (
+            <line
+              key={`${String(segment.x1)}:${String(segment.y1)}`}
+              {...segment}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+          <line
+            vectorEffect="non-scaling-stroke"
+            x1={vertical ? probe.position - 4 : start}
+            x2={vertical ? probe.position + 4 : start}
+            y1={vertical ? start : probe.position - 4}
+            y2={vertical ? start : probe.position + 4}
+          />
+          <line
+            vectorEffect="non-scaling-stroke"
+            x1={vertical ? probe.position - 4 : end}
+            x2={vertical ? probe.position + 4 : end}
+            y1={vertical ? end : probe.position - 4}
+            y2={vertical ? end : probe.position + 4}
+          />
+        </>
+      ) : null}
       {showLabel ? (
         <SvgLabel
           handles={handles}

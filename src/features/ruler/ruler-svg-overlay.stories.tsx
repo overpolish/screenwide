@@ -6,9 +6,10 @@ import { ComponentProps, useState } from "react";
 import { Button } from "../../components/base/button/button";
 
 import { RulerComponentBox } from "./api";
+import { RulerLabelLayer } from "./ruler-label-layer";
 import { RulerStoryStage } from "./ruler-story-stage";
 import { RulerSvgOverlay } from "./ruler-svg-overlay";
-import { DistanceProbe, Measurement } from "./ruler-types";
+import { DistanceProbe, Measurement, RadiusMeasurement } from "./ruler-types";
 import { LabelHandles } from "./use-label-handles";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -16,9 +17,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 /** Inert stand-in for `useLabelHandles` - chips render, nothing drags. */
 const handles: LabelHandles = {
   beginDrag: () => undefined,
+  contextMenu: () => undefined,
   drag: () => undefined,
   endDrag: () => undefined,
   enter: () => undefined,
+  isVisible: () => true,
   leave: () => undefined,
   offset: () => ({ x: 0, y: 0 }),
 };
@@ -61,6 +64,19 @@ const distanceProbes: readonly DistanceProbe[] = [
   { axis: "y", end: 220, id: 12, position: 560, start: 60 },
 ];
 
+const radii: readonly RadiusMeasurement[] = [
+  {
+    confidence: "high",
+    corner: "top-left",
+    height: 140,
+    id: 21,
+    radius: 18,
+    width: 240,
+    x: 60,
+    y: 60,
+  },
+];
+
 const meta = {
   args: {
     boxes,
@@ -68,17 +84,26 @@ const meta = {
     detectedBoxes: false,
     deviceScale: 1,
     distanceProbes,
-    handles,
     measurements,
+    radii,
   },
   component: RulerSvgOverlay,
   parameters: { layout: "padded" },
   render: (args) => (
     <RulerStoryStage>
       <RulerSvgOverlay {...args} />
+      <RulerLabelLayer
+        guides={[]}
+        handles={handles}
+        measurements={args.measurements}
+        probes={args.distanceProbes}
+        radii={args.radii}
+        style={{}}
+        viewport={{ height: 400, width: 640 }}
+      />
     </RulerStoryStage>
   ),
-  title: "Features/Ruler Overlay",
+  title: "Legacy/Ruler Overlay",
 } satisfies Meta<typeof RulerSvgOverlay>;
 
 export default meta;
@@ -141,13 +166,21 @@ function SettlePreview(props: ComponentProps<typeof RulerSvgOverlay>) {
     <div className="flex flex-col items-center gap-3">
       <RulerStoryStage key={run}>
         <RulerSvgOverlay {...props} />
+        <RulerLabelLayer
+          guides={[]}
+          handles={handles}
+          measurements={props.measurements}
+          probes={props.distanceProbes}
+          radii={props.radii}
+          style={{}}
+          viewport={{ height: 400, width: 640 }}
+        />
       </RulerStoryStage>
       <Button
         onPress={() => {
           setRun((current) => current + 1);
         }}
-        size="sm"
-        variant="soft"
+        size="compact"
       >
         Replay settle
       </Button>

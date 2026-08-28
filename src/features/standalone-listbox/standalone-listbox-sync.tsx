@@ -9,6 +9,22 @@ import {
   useStandaloneListboxStore,
 } from "./store";
 
+type StandaloneListboxClosed = {
+  returnFocus: boolean;
+  triggerId: string;
+};
+
+const restoreTriggerFocus = (triggerId: string) => {
+  const trigger = [
+    ...document.querySelectorAll<HTMLElement>(
+      "[data-standalone-listbox-trigger]",
+    ),
+  ]
+    .find((element) => element.dataset.standaloneListboxTrigger === triggerId)
+    ?.querySelector<HTMLButtonElement>("button");
+  trigger?.focus();
+};
+
 export function StandaloneListboxSync() {
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -17,9 +33,17 @@ export function StandaloneListboxSync() {
     // The open listbox is presentation state and must not survive an app launch.
     useStandaloneListboxStore.getState().close();
     window.addEventListener("storage", synchronizeStandaloneListboxStore);
-    void listen("standalone-listbox://closed", () => {
-      useStandaloneListboxStore.getState().close();
-    }).then((listener) => {
+    void listen<StandaloneListboxClosed>(
+      "standalone-listbox://closed",
+      ({ payload }) => {
+        useStandaloneListboxStore.getState().close();
+        if (payload.returnFocus) {
+          window.requestAnimationFrame(() => {
+            restoreTriggerFocus(payload.triggerId);
+          });
+        }
+      },
+    ).then((listener) => {
       if (disposed) {
         listener();
       } else {

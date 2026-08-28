@@ -99,7 +99,7 @@ fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
   if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
     platform::raise_without_activation(&bar)?;
   }
-  if source_selector::is_visible() {
+  if source_selector::is_expanded() {
     if let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str()) {
       platform::raise_without_activation(&selector)?;
     }
@@ -111,24 +111,6 @@ fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
 /// owns the pointer. The recording controls stay down until that gesture ends.
 const fn recording_controls_may_raise(controls_visible: bool, gesture_active: bool) -> bool {
   controls_visible && !gesture_active
-}
-
-/// Persisting resize geometry rehydrates the recording bar's source store,
-/// which can legitimately re-assert that region mode has a source selector.
-/// That synchronization must update the desired idle state without ordering
-/// the selector back on screen in the middle of the gesture.
-const fn source_selector_visibility_allows_show(
-  controls_visible: bool,
-  gesture_active: bool,
-) -> bool {
-  controls_visible && !gesture_active
-}
-
-pub(super) fn source_selector_may_show() -> bool {
-  source_selector_visibility_allows_show(
-    RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
-    region_gesture::is_active(),
-  )
 }
 
 /// The region overlay may take clicks only while its frontend has made the
@@ -196,9 +178,7 @@ fn apply_region_selector_interactivity(app: &AppHandle) -> tauri::Result<()> {
   );
 
   region.set_ignore_cursor_events(!is_interactive)?;
-  if is_interactive {
-    region.set_focus()?;
-  } else {
+  if !is_interactive {
     // Going passthrough while still holding key status would leave the user
     // typing into an invisible overlay instead of the app they are recording,
     // so the overlay gives keyboard focus back as it stops taking clicks.
@@ -217,11 +197,14 @@ pub fn set_region_selector_passthrough(app: AppHandle, passthrough: bool) -> tau
 }
 
 #[tauri::command]
-pub fn set_region_selector_opacity(app: AppHandle, opacity: f64) -> tauri::Result<()> {
-  let region = app
-    .get_webview_window(WindowLabel::RegionSelector.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  platform::set_opacity(&region, opacity)
+pub fn set_region_selector_opacity(
+  window: tauri::WebviewWindow,
+  opacity: f64,
+) -> Result<(), String> {
+  if window.label().starts_with("screenshot-region-") {
+    return super::screenshot_region::set_opacity(&window, opacity);
+  }
+  platform::set_opacity(&window, opacity).map_err(|error| error.to_string())
 }
 
 /// Fades the recording controls while the region overlay is borrowed for a
@@ -244,7 +227,7 @@ pub fn set_recording_controls_opacity(app: AppHandle, opacity: f64) -> tauri::Re
   if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
     platform::set_opacity(&bar, opacity)?;
   }
-  if source_selector::is_visible() {
+  if source_selector::is_expanded() {
     if let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str()) {
       platform::set_opacity(&selector, opacity)?;
     }
@@ -252,7 +235,7 @@ pub fn set_recording_controls_opacity(app: AppHandle, opacity: f64) -> tauri::Re
   if opacity > 0.0 {
     raise_recording_controls(&app)?;
   } else {
-    let _ = source_selector::collapse_recording_source_selector(app.clone());
+    let _ = source_selector::collapse(app.clone(), Some(false));
   }
   Ok(())
 }

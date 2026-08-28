@@ -77,7 +77,7 @@ export function KeyboardEffectControls({
       >
         <span className="flex flex-col">
           <span className="text-xs">Bake shortcuts into recording</span>
-          <span className="text-xxs text-muted">
+          <span className="text-xs text-muted">
             Show captured keyboard shortcuts
           </span>
         </span>
@@ -101,39 +101,33 @@ export function KeyboardEffectControls({
             aria-label="Shortcut X position"
             className="w-20"
             isDisabled={isSaving || !settings.bake}
-            leftSection={<span className="text-xs text-muted">X</span>}
+            leftSection="X"
             maxValue={100}
             minValue={0}
             onChange={(positionXPercent) => {
               update({ positionXPercent });
             }}
-            rightAligned
-            rightSection={<span className="text-xs text-muted">%</span>}
-            scrubbable
+            rightSection="%"
             showSteppers={false}
-            size="sm"
+            size="compact"
             step={1}
             value={position.x * 100}
-            variant="solid"
           />
           <NumberField
             aria-label="Shortcut Y position"
             className="w-20"
             isDisabled={isSaving || !settings.bake}
-            leftSection={<span className="text-xs text-muted">Y</span>}
+            leftSection="Y"
             maxValue={100}
             minValue={0}
             onChange={(positionYPercent) => {
               update({ positionYPercent });
             }}
-            rightAligned
-            rightSection={<span className="text-xs text-muted">%</span>}
-            scrubbable
+            rightSection="%"
             showSteppers={false}
-            size="sm"
+            size="compact"
             step={1}
             value={position.y * 100}
-            variant="solid"
           />
         </div>
       </div>
@@ -167,16 +161,14 @@ export function KeyboardEffectControls({
         <Button
           isDisabled={isSaving || !canRestoreShortcuts || !onRestoreShortcuts}
           onPress={onRestoreShortcuts}
-          size="sm"
-          variant="soft"
+          size="compact"
         >
           Restore all shortcuts
         </Button>
         <Button
           isDisabled={isSaving || !onResetShortcuts}
           onPress={onResetShortcuts}
-          size="sm"
-          variant="soft"
+          size="compact"
         >
           Reset all
         </Button>

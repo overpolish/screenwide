@@ -4,8 +4,8 @@
 import { ImageDown, SquareDot } from "lucide-react";
 
 import { Button } from "../../components/base/button/button";
-import { AspectRatio } from "../../components/shared/aspect-ratio/aspect-ratio";
-import { CheckOnClickButton } from "../../components/shared/check-on-click-button/check-on-click-button";
+import { CheckOnClick } from "../../components/shared/check-on-click/check-on-click";
+import { Dimensions } from "../../components/shared/dimensions/dimensions";
 import { cn } from "../../lib/styling";
 import { Region } from "../recording-sources/types";
 
@@ -44,17 +44,13 @@ export function ScreenshotRegionControls({
           visible && "pointer-events-auto",
         )}
       >
-        <CheckOnClickButton
-          isDisabled={!regionPlaced}
-          onPress={onCenter}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
-        >
-          <SquareDot aria-hidden size={14} />
-          Center
-        </CheckOnClickButton>
-        <AspectRatio
+        <CheckOnClick onPress={onCenter}>
+          <Button isDisabled={!regionPlaced} size="compact" variant="ghost">
+            <SquareDot aria-hidden size={14} />
+            Center
+          </Button>
+        </CheckOnClick>
+        <Dimensions
           height={region.size.height}
           onRatioChange={onAspectChange}
           setHeight={(height) => {
@@ -77,11 +73,10 @@ export function ScreenshotRegionControls({
           width={region.size.width}
         />
         <Button
-          color="success"
+          color="primary"
           isDisabled={!regionPlaced}
           onPress={onFinish}
-          showFocus={false}
-          size="sm"
+          size="compact"
         >
           <ImageDown aria-hidden size={18} />
           Capture

@@ -13,7 +13,8 @@ import type { OverlayScrollbars } from "overlayscrollbars";
 const overflowShadowVariants = tv({
   compoundSlots: [
     {
-      class: "absolute z-100 from-black/30 to-transparent",
+      class:
+        "pointer-events-none absolute z-100 rounded-[inherit] from-shadow to-transparent",
       slots: ["end", "start"],
     },
     {
@@ -27,55 +28,15 @@ const overflowShadowVariants = tv({
       slots: ["end", "start"],
     },
   ],
-  compoundVariants: [
-    {
-      class: {
-        end: "rounded-r-md",
-        start: "rounded-l-md",
-      },
-      orientation: "horizontal",
-      shadowRadius: "md",
-    },
-    {
-      class: {
-        end: "rounded-r-sm",
-        start: "rounded-l-sm",
-      },
-      orientation: "horizontal",
-      shadowRadius: "sm",
-    },
-    {
-      class: {
-        end: "rounded-b-md",
-        start: "rounded-t-md",
-      },
-      orientation: "vertical",
-      shadowRadius: "md",
-    },
-    {
-      class: {
-        end: "rounded-b-sm",
-        start: "rounded-t-sm",
-      },
-      orientation: "vertical",
-      shadowRadius: "sm",
-    },
-  ],
   defaultVariants: {
     orientation: "vertical",
-    shadowRadius: "sm",
   },
   slots: {
-    end: "pointer-events-none",
-    os: "w-full h-full relative overflow-hidden",
-    start: "pointer-events-none",
+    end: "",
+    os: "relative h-full w-full overflow-hidden",
+    start: "",
   },
   variants: {
-    insetShadow: {
-      true: {
-        os: "inset-shadow-full",
-      },
-    },
     orientation: {
       horizontal: {
         end: "right-0 bg-gradient-to-l",
@@ -86,17 +47,6 @@ const overflowShadowVariants = tv({
         start: "top-0 bg-gradient-to-b",
       },
     },
-    shadowRadius: {
-      md: {
-        os: "rounded-md",
-      },
-      none: {
-        os: "rounded-none",
-      },
-      sm: {
-        os: "rounded-sm",
-      },
-    },
   },
 });
 
@@ -104,27 +54,17 @@ type OverflowShadowProps = VariantProps<typeof overflowShadowVariants> & {
   children?: React.ReactNode;
   className?: string;
   constrainHeight?: boolean;
-  hideScrollbar?: boolean;
   rootClassName?: string;
-  startAtEnd?: boolean;
 };
 
 export const OverflowShadow = ({
   children,
   className,
   constrainHeight,
-  hideScrollbar,
-  insetShadow,
   orientation,
   rootClassName,
-  shadowRadius,
-  startAtEnd,
 }: OverflowShadowProps) => {
-  const { end, os, start } = overflowShadowVariants({
-    insetShadow,
-    orientation,
-    shadowRadius,
-  });
+  const { end, os, start } = overflowShadowVariants({ orientation });
 
   const startRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -155,27 +95,13 @@ export const OverflowShadow = ({
     }
   };
 
-  const initialize = (instance: OverlayScrollbars) => {
-    const { viewport } = instance.elements();
-
-    if (startAtEnd) {
-      if (orientation === "horizontal") {
-        viewport.scrollLeft = viewport.scrollWidth;
-      } else {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
-    }
-
-    updateShadows(instance);
-  };
-
   return (
     <div className={cn(os(), rootClassName)}>
       <OverlayScrollbarsComponent
         className={cn("h-full w-full", constrainHeight && "max-h-[inherit]")}
         defer
         events={{
-          initialized: initialize,
+          initialized: updateShadows,
           scroll: updateShadows,
           updated: updateShadows,
         }}
@@ -187,12 +113,13 @@ export const OverflowShadow = ({
           scrollbars: {
             autoHide: "scroll",
             theme: "os-theme-screenwide",
-            visibility: hideScrollbar ? "hidden" : "visible",
+            visibility: "visible",
           },
         }}
       >
         <div
           className={cn(
+            "p-focus-safe",
             orientation === "horizontal" && "text-nowrap",
             className,
           )}

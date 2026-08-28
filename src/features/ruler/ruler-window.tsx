@@ -4,8 +4,14 @@
 import { clsx } from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { cancelRuler, setRulerCursorRangeActive } from "./api";
+import {
+  cancelRuler,
+  getRulerCursorPosition,
+  setRulerCursorRangeActive,
+  setRulerCursorVisible,
+} from "./api";
 import { snapBounds } from "./bounds-snap";
+import { cornerRadiusAt, radiusEstimateToWorld } from "./corner-radius";
 import { Axis } from "./gradient-field";
 import { hoveredPixelAt } from "./hovered-pixel";
 import { Bounds, PixelSnapshot, Point } from "./pixel-analysis";
@@ -15,9 +21,11 @@ import {
   ToleranceIndicator,
 } from "./ruler-cursor-overlays";
 import { GuideLayer } from "./ruler-guide-layer";
+import { RulerLabelLayer } from "./ruler-label-layer";
+import { labelKeyForLine } from "./ruler-label-target";
 import { rulerPointerHandlers } from "./ruler-pointer";
 import { PreviewProbeLayer } from "./ruler-preview-probes";
-import { Measurement } from "./ruler-types";
+import { Measurement, RadiusMeasurement } from "./ruler-types";
 import { rulerViewportSize } from "./ruler-viewport-size";
 import { RulerWorld } from "./ruler-world";
 import { useBoxDrag } from "./use-box-drag";
@@ -47,9 +55,11 @@ export function RulerWindow() {
   const [snapshot, setSnapshot] = useState<PixelSnapshot>();
   const [screenCursor, setScreenCursor] = useState<Point>();
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
+  const [radii, setRadii] = useState<RadiusMeasurement[]>([]);
   const view = useRulerViewToggles();
   const windowFocused = useWindowFocus();
   const nextIdRef = useRef(1);
+  const nextRadiusIdRef = useRef(1);
   const cursorRef = useRef<Point | undefined>(undefined);
   const rulerViewport = useRulerViewport();
   const screenshotMode = useRulerScreenshotMode();
@@ -60,6 +70,23 @@ export function RulerWindow() {
   } = useRulerTolerance();
   const { boxes, field } = useRulerAnalysis({ monitorId, threshold });
   const cursor = screenCursor ? rulerViewport.toWorld(screenCursor) : undefined;
+  useEffect(() => {
+    let active = true;
+    void getRulerCursorPosition()
+      .then((point) => {
+        if (active && point) {
+          // Do not replace a newer pointer event if the native lookup loses
+          // the race with the user's first movement.
+          setScreenCursor((current) => current ?? point);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Could not initialize the ruler cursor", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   useEffect(() => {
     cursorRef.current = cursor;
   }, [cursor]);
@@ -117,7 +144,9 @@ export function RulerWindow() {
     labels,
     measurements,
     probes: distanceProbes,
+    radii,
     setMeasurements,
+    setRadii,
   });
   const { deleteHovered, selectLine } = useRulerDeletion({
     clearHover: labels.clearHover,
@@ -125,10 +154,12 @@ export function RulerWindow() {
     hovered: labels.hovered,
     measurements,
     probes: distanceProbes.probes,
+    radii,
     record,
     removeGuide: guideApi.remove,
     removeProbe: distanceProbes.remove,
     setMeasurements,
+    setRadii,
     zoom: rulerViewport.zoom,
   });
   const probeDrag = useProbeDrag({
@@ -144,7 +175,7 @@ export function RulerWindow() {
     },
     [beginProbeDrag],
   );
-  const { guideAxis, probeAxis } = useRulerHotkeys({
+  const { guideAxis, probeAxis, radiusActive } = useRulerHotkeys({
     cancelProbe: probeDrag.cancel,
     close,
     copyColor,
@@ -189,6 +220,38 @@ export function RulerWindow() {
   );
   const boxDrag = useBoxDrag(commitBox);
 
+  const detectRadius = useCallback(
+    (point: Point) => {
+      if (!field) return undefined;
+      const viewport = rulerViewportSize();
+      const estimate = cornerRadiusAt({
+        boxes,
+        cursor: point,
+        field,
+        threshold,
+        viewport,
+      });
+      return estimate
+        ? radiusEstimateToWorld(estimate, field, viewport)
+        : undefined;
+    },
+    [boxes, field, threshold],
+  );
+  const radiusPreview =
+    radiusActive && cursor ? detectRadius(cursor) : undefined;
+  const stampRadius = useCallback(
+    (point: Point) => {
+      const detected = detectRadius(point);
+      if (!detected) return;
+      record();
+      setRadii((current) => [
+        ...current,
+        { ...detected, id: nextRadiusIdRef.current++ },
+      ]);
+    },
+    [detectRadius, record],
+  );
+
   const { hoveredColor } = hoveredPixelAt({
     cursor,
     snapshot,
@@ -197,17 +260,40 @@ export function RulerWindow() {
   const deviceScale = snapshot ? snapshot.width / window.innerWidth : 1;
   const guidePreview =
     guideAxis && cursor ? previewAt(guideAxis, cursor) : undefined;
+  const viewport = rulerViewportSize();
+  const visibleStart = rulerViewport.toWorld({ x: 0, y: 0 });
+  const visibleEnd = rulerViewport.toWorld({
+    x: viewport.width,
+    y: viewport.height,
+  });
+  const visibleBounds: Bounds = {
+    height: visibleEnd.y - visibleStart.y,
+    width: visibleEnd.x - visibleStart.x,
+    x: visibleStart.x,
+    y: visibleStart.y,
+  };
   // A hovered chip owns the pointer: transient readouts step aside and the
   // native move cursor has to become visible again.
   const quiet = screenshotMode || hovered !== undefined;
   // Carrying a guide behaves exactly like placing one, gates included.
   const carrying = guideMove.activeId !== undefined;
+  const nativeCursorVisible =
+    screenshotMode ||
+    probeAxis !== undefined ||
+    hovered !== undefined ||
+    guideAxis !== undefined ||
+    carrying ||
+    radiusActive;
+  useEffect(() => {
+    void setRulerCursorVisible(nativeCursorVisible);
+  }, [nativeCursorVisible]);
   // Nearest line within a few screen px: pulsing halo + delete-key target.
   const selected = selectLine({
     active:
       !quiet &&
       !guideAxis &&
       !probeAxis &&
+      !radiusActive &&
       !carrying &&
       !boxDrag.draft &&
       !probeDrag.draft,
@@ -220,6 +306,7 @@ export function RulerWindow() {
     quiet ||
     carrying ||
     probeDrag.draft !== undefined ||
+    radiusActive ||
     selected !== undefined ||
     !windowFocused;
 
@@ -230,9 +317,11 @@ export function RulerWindow() {
     moveGuide,
     place,
     probeDrag,
+    radiusActive,
     record,
     selected,
     setScreenCursor,
+    stampRadius,
     viewport: rulerViewport,
   });
 
@@ -244,14 +333,33 @@ export function RulerWindow() {
         // the SNAPPED position, so the true cursor spot must stay visible.
         !probeAxis &&
           hovered === undefined &&
-          (guideAxis || carrying
+          (guideAxis || carrying || radiusActive
             ? "cursor-crosshair! [&_*]:cursor-crosshair!"
             : "cursor-none! [&_*]:cursor-none!"),
       )}
+      onContextMenu={(event) => {
+        const point = rulerViewport.toWorld({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        const target = selectLine({ active: true, cursor: point });
+        if (!target) return;
+        const key = labelKeyForLine({
+          cursor: point,
+          guides,
+          selected: target,
+          viewport: rulerViewportSize(),
+        });
+        if (!key) return;
+        event.preventDefault();
+        event.stopPropagation();
+        labels.toggle(key);
+      }}
       onDoubleClick={() => {
         if (
           !guideAxis &&
           !probeAxis &&
+          !radiusActive &&
           !boxDrag.isActive() &&
           !probeDrag.isActive() &&
           !rulerViewport.isPanning()
@@ -271,11 +379,12 @@ export function RulerWindow() {
         deviceScale={deviceScale}
         distanceProbes={distanceProbes.probes}
         draft={screenshotMode ? undefined : boxDrag.draft}
-        handles={handles}
         highlighted={highlighted}
         measurements={measurements}
         monitorId={monitorId}
         onLoad={setSnapshot}
+        radii={radii}
+        radiusPreview={radiusPreview}
         style={rulerViewport.style}
       />
 
@@ -291,19 +400,36 @@ export function RulerWindow() {
               ? []
               : distanceProbes.previews
         }
-        showLabels={probeDrag.draft !== undefined}
         toScreen={rulerViewport.toScreen}
       />
 
       {/* Guides paint above the crosshair; the info chips below stay on top. */}
       <GuideLayer
         guides={guides}
-        handles={handles}
         preview={quiet ? undefined : guidePreview}
         selectedId={highlighted?.kind === "guide" ? highlighted.id : undefined}
         style={rulerViewport.style}
-        viewport={rulerViewportSize()}
       />
+
+      <RulerLabelLayer
+        guides={guides}
+        handles={handles}
+        measurements={measurements}
+        probes={distanceProbes.probes}
+        radii={radii}
+        radiusPreview={radiusPreview}
+        style={rulerViewport.style}
+        viewport={viewport}
+        visibleBounds={visibleBounds}
+      />
+      {probeDrag.draft ? (
+        <PreviewProbeLayer
+          probes={[probeDrag.draft]}
+          showLabels
+          showLines={false}
+          toScreen={rulerViewport.toScreen}
+        />
+      ) : null}
 
       {!screenshotMode && screenCursor && toleranceNotice ? (
         <ToleranceIndicator cursor={screenCursor} tolerance={toleranceNotice} />

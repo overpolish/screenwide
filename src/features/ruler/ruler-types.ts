@@ -25,3 +25,12 @@ export type DistanceProbe = {
   start: number;
   id?: number;
 };
+
+export type Corner = "bottom-left" | "bottom-right" | "top-left" | "top-right";
+
+export type RadiusMeasurement = Bounds & {
+  confidence: "high" | "low";
+  corner: Corner;
+  radius: number;
+  id?: number;
+};

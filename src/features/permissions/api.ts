@@ -18,3 +18,9 @@ export const openPermissionSettings = (permission: PermissionKind) =>
 
 export const restartApp = () =>
   invoke<null>("restart_app").then(() => undefined);
+
+export const dismissPermissionsWindow = () =>
+  invoke<null>("dismiss_permissions_window").then(() => undefined);
+
+export const openPermissionsWindow = () =>
+  invoke<null>("open_permissions_window").then(() => undefined);

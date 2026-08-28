@@ -5,7 +5,7 @@ import { Minus, X } from "lucide-react";
 import { ReactNode } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
-import { Button } from "../../base/button/button";
+import { IconButton } from "../../base/button/icon-button";
 
 export function WindowTitlebar({
   actions,
@@ -48,36 +48,30 @@ export function WindowTitlebar({
       <div className="min-w-4 grow" data-tauri-drag-region />
       {actions}
       {onMinimize ? (
-        <Button
+        <IconButton
           aria-label="Minimize"
           className="group"
-          icon
           onPress={onMinimize}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
+          size="compact"
         >
           <Minus
             className="transform-gpu text-muted transition-[color,transform,scale] group-data-[hovered]:scale-110 group-data-[hovered]:text-content-fg"
             size={18}
           />
-        </Button>
+        </IconButton>
       ) : null}
       {onClose ? (
-        <Button
+        <IconButton
           aria-label="Close"
           className="group"
-          icon
           onPress={onClose}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
+          size="compact"
         >
           <X
             className="transform-gpu text-muted transition-[color,transform,scale] group-data-[hovered]:scale-110 group-data-[hovered]:text-content-fg"
             size={18}
           />
-        </Button>
+        </IconButton>
       ) : null}
     </header>
   );

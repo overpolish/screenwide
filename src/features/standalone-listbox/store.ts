@@ -11,6 +11,7 @@ export type StandaloneListboxItem = {
 };
 
 type OpenListbox = {
+  focusContents: boolean;
   id: string;
   items: StandaloneListboxItem[];
   label: string;

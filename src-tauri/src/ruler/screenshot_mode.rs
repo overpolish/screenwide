@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use tauri::{AppHandle, Emitter};
 
-use super::ruler_windows;
+use super::{ruler_windows, set_system_ruler_cursor_visible};
 use crate::capture_overlays;
 
 const EVENT: &str = "ruler://screenshot-mode";
@@ -65,6 +65,11 @@ pub(super) async fn set(app: &AppHandle, active: bool) -> Result<(), String> {
   let was_active = is_active();
   if active {
     ACTIVE.store(true, Ordering::Relaxed);
+    // The macOS ruler hides the system cursor globally so it is invisible on
+    // the very first frame. Release that hide before the screenshot selector
+    // opens; the ruler webviews will reapply their appropriate state when this
+    // mode ends.
+    set_system_ruler_cursor_visible(app, true)?;
   }
   if active && !was_active {
     *FOCUS_BEFORE_SCREENSHOT

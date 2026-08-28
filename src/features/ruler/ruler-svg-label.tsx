@@ -26,6 +26,9 @@ export function SvgLabel({
     handles && labelKey
       ? {
           className: "pointer-events-auto cursor-move",
+          onContextMenu: (event: ReactPointerEvent<SVGGElement>) => {
+            handles.contextMenu(labelKey, event);
+          },
           onPointerCancel: handles.endDrag,
           onPointerDown: (event: ReactPointerEvent<SVGGElement>) => {
             handles.beginDrag(labelKey, event);

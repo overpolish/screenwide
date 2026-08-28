@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CircularProgressBar } from "../../components/base/circular-progress-bar/circular-progress-bar";
+import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
 import { Keyboard } from "../../components/base/keyboard/keyboard";
 
 import { ScrollingCapturePhase } from "./scrolling-capture-events";
@@ -36,11 +36,10 @@ export function ScrollingCaptureOverlay({
 
   return (
     <main className="flex h-full w-full flex-col items-center justify-center gap-3 overflow-hidden">
-      <CircularProgressBar
+      <CircularProgress
         aria-label="Scrolling capture progress"
         isIndeterminate
-        size={96}
-        strokeWidth={8}
+        size="large"
       />
       {/*
         Only the text is backed. The ring reads clearly against whatever it is

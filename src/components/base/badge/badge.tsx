@@ -1,51 +1,22 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { clsx } from "clsx";
 import { ReactNode } from "react";
-import { VariantProps } from "tailwind-variants";
 
-import { tv } from "../../../lib/variants";
-
-const badgeVariants = tv({
-  base: "flex flex-row items-center justify-center",
-  defaultVariants: {
-    color: "neutral",
-    size: "md",
-    variant: "outline",
-  },
-  variants: {
-    color: {
-      error: "border-error text-error",
-      info: "border-info text-info",
-      neutral: "border-muted text-muted",
-      warning: "border-warning text-warning",
-    },
-    size: {
-      md: "gap-1 rounded-lg px-2 py-1 text-sm",
-      sm: "gap-1 rounded-md px-1.5 py-0.5 text-xs",
-      xs: "gap-1 rounded px-1.5 py-0.5 text-xxs",
-    },
-    variant: {
-      ghost: "",
-      outline: "border-1 bg-content",
-    },
-  },
-});
-
-type BadgeProps = VariantProps<typeof badgeVariants> & {
+type BadgeProps = {
   children: ReactNode;
   className?: string;
 };
 
-export function Badge({
-  children,
-  className,
-  color,
-  size,
-  variant,
-}: BadgeProps) {
+export function Badge({ children, className }: BadgeProps) {
   return (
-    <div className={badgeVariants({ className, color, size, variant })}>
+    <div
+      className={clsx(
+        "flex flex-row items-center justify-center gap-1 rounded-xl bg-neutral px-2 py-0.5 text-xs",
+        className,
+      )}
+    >
       {children}
     </div>
   );

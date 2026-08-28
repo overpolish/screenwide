@@ -14,6 +14,11 @@ export const cancelRuler = () => invoke<null>("cancel_ruler");
 export const copyRulerValue = (value: string) =>
   invoke<null>("copy_ruler_value", { value });
 
+export const getRulerCursorPosition = () =>
+  invoke<[number, number] | null>("get_ruler_cursor_position").then((point) =>
+    point ? { x: point[0], y: point[1] } : undefined,
+  );
+
 export type RulerComponentBox = {
   height: number;
   width: number;
@@ -46,3 +51,6 @@ export const setRulerScreenshotMode = (active: boolean) =>
 
 export const setRulerCursorRangeActive = (active: boolean) =>
   invoke<null>("set_ruler_cursor_range_active", { active });
+
+export const setRulerCursorVisible = (visible: boolean) =>
+  invoke<null>("set_ruler_cursor_visible", { visible });

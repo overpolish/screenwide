@@ -111,7 +111,7 @@ function ShortcutPreview() {
 const meta = {
   component: ShortcutPreview,
   parameters: { layout: "centered" },
-  title: "Features/Window Shortcuts",
+  title: "Legacy/Window Shortcuts",
 } satisfies Meta<typeof ShortcutPreview>;
 
 export default meta;

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Button } from "../../../components/base/button/button";
-import { CircularProgressBar } from "../../../components/base/circular-progress-bar/circular-progress-bar";
+import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { Overlay } from "../../../components/base/overlay/overlay";
 import { formatEta } from "../duration";
 import {
@@ -149,13 +149,13 @@ export function ExportPanel({
     <main className="window-surface relative flex h-screen w-screen flex-col overflow-hidden rounded-[10px] text-content-fg">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-content/92"
+        className="pointer-events-none absolute inset-0 -z-10"
         data-preview-backdrop
         data-preview-window-backdrop
       />
       <Overlay blur="lg" contained isOpen={isSaving}>
         <div className="flex flex-col items-center gap-3">
-          <CircularProgressBar
+          <CircularProgress
             aria-label="Save progress"
             isIndeterminate={saveProgress === null}
             renderLabel={(percentage) =>
@@ -165,8 +165,7 @@ export function ExportPanel({
                 </span>
               )
             }
-            size={96}
-            strokeWidth={8}
+            size="large"
             value={saveProgress ?? undefined}
           />
           <div className="flex flex-col items-center gap-0.5">
@@ -190,9 +189,7 @@ export function ExportPanel({
           <Button
             isDisabled={isCancelingSave}
             onPress={onCancelSave}
-            showFocus={false}
-            size="sm"
-            variant="soft"
+            size="compact"
           >
             {isCancelingSave ? "Canceling…" : "Cancel"}
           </Button>

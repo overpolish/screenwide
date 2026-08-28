@@ -15,7 +15,10 @@ import {
 import { useLayoutEffect, useRef } from "react";
 
 import { Button } from "../../../components/base/button/button";
-import { ToggleButton } from "../../../components/base/button/toggle-button";
+import {
+  IconButton,
+  IconToggleButton,
+} from "../../../components/base/button/icon-button";
 import { ContentRotate } from "../../../components/base/content-rotate/content-rotate";
 import { Overlay } from "../../../components/base/overlay/overlay";
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
@@ -61,11 +64,11 @@ function DiscardButton({ isDisabled, onDiscard }: DiscardButtonProps) {
         <Check className="text-error" size={ICON_SIZE} strokeWidth={3} />
       }
       armedLabel="Confirm discarding"
-      className="h-9 w-9"
       idleIcon={<Trash2 size={ICON_SIZE} />}
       idleLabel="Discard recording"
       isDisabled={isDisabled}
       onConfirm={onDiscard}
+      size="default"
     />
   );
 }
@@ -125,7 +128,7 @@ export function RecordingDock({
 
   return (
     <main
-      className="window-surface relative flex h-full min-h-11 w-max items-center overflow-hidden rounded-[10px] bg-content/92 pr-1 text-content-fg"
+      className="window-surface relative flex h-full min-h-11 w-max items-center overflow-hidden rounded-[10px] pr-1 text-content-fg"
       onPointerUpCapture={onPointerUp}
       ref={dockRef}
     >
@@ -149,7 +152,7 @@ export function RecordingDock({
               aria-label="Cancel recording countdown"
               className="absolute right-1 h-9 w-9"
               onPress={onDiscard}
-              size="sm"
+              size="compact"
               variant="ghost"
             >
               <X size={ICON_SIZE} />
@@ -184,7 +187,7 @@ export function RecordingDock({
             }
             className="absolute right-1 h-9 w-9"
             onPress={onDiscard}
-            size="sm"
+            size="compact"
             variant="ghost"
           >
             <X size={ICON_SIZE} />
@@ -257,16 +260,14 @@ export function RecordingDock({
         </div>
       </div>
 
-      <ToggleButton
+      <IconToggleButton
         aria-label={isPaused ? "Resume recording" : "Pause recording"}
-        className="h-9 w-9"
         isDisabled={isBusy}
         isSelected={isPaused}
         off={<CirclePause size={ICON_SIZE} />}
         onChange={(selected) => {
           onPauseChange?.(selected);
         }}
-        variant="ghost"
       >
         <CirclePlay
           className={cn(
@@ -275,16 +276,13 @@ export function RecordingDock({
           )}
           size={ICON_SIZE}
         />
-      </ToggleButton>
+      </IconToggleButton>
 
-      <Button
+      <IconButton
         aria-label="Stop recording"
         className="cursor-default"
-        icon
         isDisabled={isBusy}
         onPress={onStop}
-        showFocus={false}
-        variant="ghost"
       >
         <CircleStop
           className={cn(
@@ -293,7 +291,7 @@ export function RecordingDock({
           )}
           size={ICON_SIZE}
         />
-      </Button>
+      </IconButton>
 
       <DiscardButton
         isDisabled={isBusy}

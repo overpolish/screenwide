@@ -35,20 +35,17 @@ export const PreviewToolbar = memo(function PreviewToolbar({
       <NumberField
         aria-label="Preview zoom"
         className="w-24 font-light tabular-nums"
-        leftSection={<ZoomIn className="shrink-0 text-muted" size={14} />}
+        leftSection={<ZoomIn size={14} />}
         maxValue={maximumZoomPercent}
         minValue={10}
         onChange={(value) => {
           onZoomChange(Math.round(value));
         }}
-        rightAligned
-        rightSection={<span className="text-xs text-muted">%</span>}
-        scrubbable
+        rightSection="%"
         showSteppers={false}
-        size="sm"
+        size="compact"
         step={1}
         value={zoomPercent}
-        variant="ghost"
       />
     </div>
   );

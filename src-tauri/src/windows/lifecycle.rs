@@ -39,6 +39,10 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
           WindowLabel::Settings => {
             let _ = crate::settings::hide_settings(app.clone());
           }
+          #[cfg(target_os = "macos")]
+          WindowLabel::Permissions => {
+            let _ = crate::permissions::dismiss_permissions_window(app.clone());
+          }
           _ => {
             let _ = window_to_hide.hide();
           }

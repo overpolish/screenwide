@@ -24,7 +24,7 @@ const meta = {
     controls: { exclude: ["className", "children", "ref"] },
     layout: "centered",
   },
-  title: "ListBox",
+  title: "Primitives/Listbox",
 } satisfies Meta<typeof ListBox>;
 
 export default meta;
@@ -48,14 +48,24 @@ export const Compact: Story = {
     "aria-label": "Milkshake flavor",
     children: (
       <>
-        <ListBoxItem compact textValue="Chocolate">
-          Chocolate
-        </ListBoxItem>
-        <ListBoxItem compact textValue="Strawberry">
-          Strawberry
-        </ListBoxItem>
+        <ListBoxItem textValue="Chocolate">Chocolate</ListBoxItem>
+        <ListBoxItem textValue="Strawberry">Strawberry</ListBoxItem>
       </>
     ),
+    size: "compact",
+  },
+};
+
+export const Transparent: Story = {
+  args: {
+    "aria-label": "Milkshake flavor",
+    children: (
+      <>
+        <ListBoxItem textValue="Chocolate">Chocolate</ListBoxItem>
+        <ListBoxItem textValue="Strawberry">Strawberry</ListBoxItem>
+      </>
+    ),
+    variant: "transparent",
   },
 };
 

@@ -28,7 +28,7 @@ const meta = {
   parameters: {
     layout: "centered",
   },
-  title: "Features/Recording Dock",
+  title: "Legacy/Recording Dock",
 } satisfies Meta<typeof RecordingDock>;
 
 export default meta;

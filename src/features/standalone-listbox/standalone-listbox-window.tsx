@@ -23,33 +23,51 @@ export function StandaloneListboxWindow() {
   const select = useStandaloneListboxStore((state) => state.select);
   const listboxRef = useRef<HTMLDivElement>(null);
   const selectingRef = useRef(false);
+  const activeId = active?.id;
+  const activeItemCount = active?.items.length ?? 0;
 
   useLayoutEffect(() => {
-    if (!active || !listboxRef.current) return;
+    if (activeId == null || !listboxRef.current) return;
 
     const window = getCurrentWindow();
+    const listbox = listboxRef.current;
+    const scrollContent = listbox.parentElement;
+    let cancelled = false;
+
     const resize = async () => {
       const scaleFactor = await window.scaleFactor();
       const currentSize = (await window.innerSize()).toLogical(scaleFactor);
+      if (cancelled) return;
+
       const height =
-        active.items.length === 0
+        activeItemCount === 0
           ? emptyStandaloneListboxHeight
           : Math.min(
-              listboxRef.current?.scrollHeight ?? currentSize.height,
+              scrollContent?.scrollHeight ?? listbox.scrollHeight,
               standaloneListboxMaxHeight,
             );
       await window.setSize(new LogicalSize(currentSize.width, height));
     };
 
     void resize();
-  }, [active]);
+
+    const observer = new ResizeObserver(() => {
+      void resize();
+    });
+    observer.observe(scrollContent ?? listbox);
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [activeId, activeItemCount]);
 
   if (!active) return null;
 
   if (active.items.length === 0) {
     return (
       <div
-        className="window-surface flex h-full min-h-16 w-full items-center justify-center rounded-[10px] px-3 text-center text-xs text-muted"
+        className="window-surface rounded-window px-section flex h-full min-h-16 w-full items-center justify-center overflow-hidden text-center text-xs text-muted"
         ref={listboxRef}
       >
         No options available
@@ -63,7 +81,7 @@ export function StandaloneListboxWindow() {
     selectingRef.current = true;
     select(active.id, [selectedId.toString()]);
     close();
-    void hideStandaloneListbox().finally(() => {
+    void hideStandaloneListbox(active.focusContents).finally(() => {
       selectingRef.current = false;
     });
   };
@@ -72,7 +90,9 @@ export function StandaloneListboxWindow() {
     if (selection === "all") return;
     if (active.selectionMode === "single") {
       const selected = selection.values().next();
-      if (!selected.done) selectItem(selected.value);
+      if (!selected.done) {
+        select(active.id, [selected.value.toString()]);
+      }
       return;
     }
 
@@ -98,41 +118,42 @@ export function StandaloneListboxWindow() {
   };
 
   return (
-    <OverflowShadow rootClassName="window-surface" shadowRadius="md">
+    <OverflowShadow
+      key={active.id}
+      rootClassName="window-surface rounded-window"
+    >
       <ListBox
         aria-label={active.label}
-        className="window-surface w-full overflow-visible rounded-[10px]"
+        autoFocus={active.focusContents}
+        className="w-full overflow-visible"
         onSelectionChange={onSelectionChange}
         ref={listboxRef}
         selectedKeys={active.selectedIds}
-        selectionBehavior={
-          active.selectionMode === "multiple" ? "toggle" : "replace"
-        }
+        selectionBehavior="toggle"
         selectionMode={active.selectionMode}
+        size="compact"
+        variant="transparent"
       >
         {active.items.map((item) => (
           <ListBoxItem
-            className="min-h-7"
-            compact
             id={item.id}
             key={item.id}
             onPress={() => {
               if (active.selectionMode === "single") selectItem(item.id);
             }}
-            size="sm"
             textValue={item.label}
           >
-            <span className="flex min-w-0 items-center gap-2">
+            <span className="gap-control flex min-w-0 items-center">
               {item.iconPath ? (
                 <img
                   alt=""
-                  className="size-4 shrink-0 object-contain"
+                  className="size-icon-compact shrink-0 object-contain"
                   src={convertFileSrc(item.iconPath)}
                 />
               ) : item.id === active.exclusiveId ? (
-                <Volume2 className="shrink-0 text-muted" size={14} />
+                <Volume2 className="size-icon-compact shrink-0 text-muted" />
               ) : active.selectionMode === "multiple" ? (
-                <AppWindowMac className="shrink-0 text-muted" size={14} />
+                <AppWindowMac className="size-icon-compact shrink-0 text-muted" />
               ) : null}
               <span className="truncate">{item.label}</span>
             </span>

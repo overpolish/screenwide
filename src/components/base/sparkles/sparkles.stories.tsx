@@ -28,7 +28,7 @@ const meta = {
     controls: { include: ["fillType"] },
     layout: "centered",
   },
-  title: "Sparkles",
+  title: "Legacy/Sparkles",
 } satisfies Meta<typeof Sparkles>;
 
 export default meta;

@@ -169,7 +169,7 @@ export function TimelineSegments({
             className="pointer-events-none absolute top-1 left-1/2 z-20 -translate-x-1/2"
             title={`Segment speed: ${(segment.playbackRate ?? 1).toString()}×`}
           >
-            <Badge size="xs">
+            <Badge>
               <RotateCcwClock size={10} />
               {(segment.playbackRate ?? 1).toString()}×
             </Badge>

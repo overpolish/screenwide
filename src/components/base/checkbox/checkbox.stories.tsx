@@ -29,7 +29,7 @@ const meta = {
     },
     layout: "centered",
   },
-  title: "Checkbox",
+  title: "Legacy/Checkbox",
 } satisfies Meta<typeof Checkbox>;
 
 export default meta;

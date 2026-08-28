@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { openPermissionSettings, requestPermission } from "../permissions/api";
@@ -25,6 +24,7 @@ import {
 } from "./types";
 import { useAudioPreview } from "./use-audio-preview";
 import { useCameraPreview } from "./use-camera-preview";
+import { useRecordingOptionsWindowLifecycle } from "./use-recording-options-window-lifecycle";
 
 const grantPermission = (
   permission: PermissionKind,
@@ -49,7 +49,7 @@ export function RecordingOptionsWindow() {
   const [audioSources, setAudioSources] = useState<SystemAudioSource[]>([
     ALL_SYSTEM_AUDIO,
   ]);
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, optionsRef } = useRecordingOptionsWindowLifecycle();
   const {
     cameraFlippedById,
     cameraPalById,
@@ -233,41 +233,14 @@ export function RecordingOptionsWindow() {
     if (hydrated) void refreshDevices();
   }, [hydrated, refreshDevices]);
 
-  useEffect(() => {
-    let disposed = false;
-    let unlistenOpened: (() => void) | undefined;
-    let unlistenClosed: (() => void) | undefined;
-    void Promise.all([
-      listen("recording-options://opened", () => {
-        setIsOpen(true);
-      }),
-      listen("recording-options://closed", () => {
-        setIsOpen(false);
-      }),
-    ]).then(([opened, closed]) => {
-      if (disposed) {
-        opened();
-        closed();
-      } else {
-        unlistenOpened = opened;
-        unlistenClosed = closed;
-      }
-    });
-
-    return () => {
-      disposed = true;
-      unlistenOpened?.();
-      unlistenClosed?.();
-    };
-  }, []);
-
   return (
     <div
-      className="h-full"
+      className="w-full"
       onPointerDown={() => {
         useStandaloneListboxStore.getState().close();
         void hideStandaloneListbox();
       }}
+      ref={optionsRef}
     >
       <RecordingOptions
         audioSources={audioSources}

@@ -9,12 +9,14 @@ import { Guide } from "./ruler-types";
 const MINIMUM_GAP = 4;
 /** Above this the pair is not really a rhythm worth labelling. */
 const MAXIMUM_SHARE = 0.25;
+const LABEL_MARGIN = 24;
 
 export type GuideGap = {
   /** Cross-axis world coordinate the chip parks at. */
   anchor: number;
   axis: Axis;
   centre: number;
+  guideIds: readonly [number, number];
   key: string;
   value: number;
 };
@@ -41,6 +43,7 @@ const axisGaps = ({
       anchor: (previous.anchor + guide.anchor) / 2,
       axis,
       centre: (previous.position + guide.position) / 2,
+      guideIds: [previous.id, guide.id],
       key: `g${axis}:${String(previous.id)}-${String(guide.id)}`,
       // Logical (CSS) px - the app-wide display unit, matching box and probe
       // labels. Never multiply display values by the device scale.
@@ -61,3 +64,20 @@ export const guideGaps = ({
   ...axisGaps({ axis: "x", guides, limit: viewport.width }),
   ...axisGaps({ axis: "y", guides, limit: viewport.height }),
 ];
+
+const clampLabel = (value: number, limit: number) =>
+  Math.min(
+    Math.max(value, LABEL_MARGIN),
+    Math.max(LABEL_MARGIN, limit - LABEL_MARGIN),
+  );
+
+/** World-space centre of a gap's label chip, including its viewport clamp. */
+export const guideGapLabelPoint = (gap: GuideGap, viewport: PixelSize) => {
+  const across = clampLabel(
+    gap.anchor,
+    gap.axis === "x" ? viewport.height : viewport.width,
+  );
+  return gap.axis === "x"
+    ? { x: gap.centre, y: across }
+    : { x: across, y: gap.centre };
+};

@@ -3,15 +3,50 @@
 
 import { type Meta, type StoryObj } from "@storybook/react-vite";
 
+import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { RecordingSourceTrigger } from "../../recording-sources/recording-source-trigger";
+import { MonitorDetails } from "../../recording-sources/types";
+
 import { RecordingBar } from "./recording-bar";
+
+const selectedMonitor: MonitorDetails = {
+  id: 1,
+  isBuiltin: true,
+  isPrimary: true,
+  layoutPosition: { x: 0, y: 0 },
+  layoutSize: { height: 982, width: 1512 },
+  name: "Built-in Retina Display",
+  physicalPosition: { x: 0, y: 0 },
+  physicalSize: { height: 1964, width: 3024 },
+  position: { x: 0, y: 0 },
+  scaleFactor: 2,
+  size: { height: 982, width: 1512 },
+};
+
 const meta = {
   args: {
     hasSelectedMonitor: true,
     onScrollingScreenshot: () => undefined,
+    sourceSelector: (
+      <RecordingSourceTrigger
+        isExpanded={false}
+        mode="screen"
+        onPress={() => undefined}
+        selectedMonitor={selectedMonitor}
+        selectedWindow={null}
+      />
+    ),
   },
   component: RecordingBar,
+  decorators: [
+    (Story, context) => (
+      <FeatureStoryStage height={120} viewMode={context.viewMode} width={672}>
+        <Story />
+      </FeatureStoryStage>
+    ),
+  ],
   parameters: {
-    layout: "centered",
+    layout: "fullscreen",
   },
   title: "Features/Recording Bar",
 } satisfies Meta<typeof RecordingBar>;

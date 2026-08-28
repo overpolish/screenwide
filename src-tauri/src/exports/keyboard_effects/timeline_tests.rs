@@ -355,10 +355,7 @@ fn a_deleted_predecessor_never_shapes_the_next_badge() {
     .find(|visual| visual.source_shortcut == 0)
     .expect("the deleted shortcut still builds visuals")
     .group;
-  for visual in visuals
-    .iter()
-    .filter(|visual| visual.source_shortcut == 1)
-  {
+  for visual in visuals.iter().filter(|visual| visual.source_shortcut == 1) {
     assert_ne!(visual.group, deleted_group);
     assert!(!visual.replacement_enter);
   }
@@ -373,9 +370,7 @@ fn many_fresh_badges_stay_within_wire_slot_bounds() {
   let mut positions = Vec::new();
   for index in 0..40u64 {
     let at = 1_000_000 + index * 200_000;
-    records.push(
-      serde_json::json!({"type":"keyDown","keyCode":0,"timestampUs":at,"modifiers":[]}),
-    );
+    records.push(serde_json::json!({"type":"keyDown","keyCode":0,"timestampUs":at,"modifiers":[]}));
     records.push(
       serde_json::json!({"type":"keyUp","keyCode":0,"timestampUs":at + 80_000,"modifiers":[]}),
     );

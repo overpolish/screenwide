@@ -22,7 +22,7 @@ const meta = {
     controls: { include: ["size"] },
     layout: "centered",
   },
-  title: "Switch",
+  title: "Legacy/Switch",
 } satisfies Meta<typeof Switch>;
 
 export default meta;

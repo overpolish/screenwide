@@ -39,7 +39,7 @@ const meta = {
     controls: { exclude: ["children", "className", "icon"] },
     layout: "centered",
   },
-  title: "Alert",
+  title: "Legacy/Alert",
 } satisfies Meta<typeof Alert>;
 
 export default meta;

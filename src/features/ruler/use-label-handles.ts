@@ -15,9 +15,11 @@ const ORIGIN: Point = { x: 0, y: 0 };
 
 export type LabelHandles = {
   beginDrag: (key: string, event: ReactPointerEvent<SVGGElement>) => void;
+  contextMenu: (key: string, event: ReactPointerEvent<SVGGElement>) => void;
   drag: (event: ReactPointerEvent<SVGGElement>) => void;
   endDrag: (event: ReactPointerEvent<SVGGElement>) => void;
   enter: (key: string) => void;
+  isVisible: (key: string) => boolean;
   leave: (key: string) => void;
   offset: (key: string) => Point;
 };
@@ -32,6 +34,7 @@ export function useLabelHandles(
   record: () => void,
 ) {
   const [hovered, setHovered] = useState<string>();
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
   const [offsets, setOffsets] = useState<Record<string, Point>>({});
   const dragRef = useRef<{
     base: Point;
@@ -111,6 +114,31 @@ export function useLabelHandles(
     [offsets],
   );
 
+  const isVisible = useCallback((key: string) => !hidden.has(key), [hidden]);
+
+  const toggle = useCallback(
+    (key: string) => {
+      record();
+      setHidden((current) => {
+        const next = new Set(current);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+      setHovered((current) => (current === key ? undefined : current));
+    },
+    [record],
+  );
+
+  const contextMenu = useCallback(
+    (key: string, event: ReactPointerEvent<SVGGElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggle(key);
+    },
+    [toggle],
+  );
+
   /** Deleting a hovered label unmounts it, so no pointerleave ever fires. */
   const clearHover = useCallback(() => {
     dragRef.current = null;
@@ -121,11 +149,27 @@ export function useLabelHandles(
     setOffsets(next);
   }, []);
 
+  const restoreHidden = useCallback((next: ReadonlySet<string>) => {
+    setHidden(next);
+  }, []);
+
   return {
     clearHover,
-    handles: { beginDrag, drag, endDrag, enter, leave, offset },
+    handles: {
+      beginDrag,
+      contextMenu,
+      drag,
+      endDrag,
+      enter,
+      isVisible,
+      leave,
+      offset,
+    },
+    hidden,
     hovered,
     offsets,
     restore,
+    restoreHidden,
+    toggle,
   };
 }

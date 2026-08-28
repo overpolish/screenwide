@@ -15,7 +15,7 @@ const meta = {
     ),
   ],
   parameters: { layout: "centered" },
-  title: "Selection Overlay",
+  title: "Legacy/Selection Overlay",
 } satisfies Meta<typeof SelectionOverlay>;
 
 export default meta;

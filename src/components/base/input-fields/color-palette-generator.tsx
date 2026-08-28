@@ -10,7 +10,7 @@ import {
   PaletteMode,
   varyPalette,
 } from "../../../lib/palette-generator";
-import { Button } from "../button/button";
+import { IconButton } from "../button/icon-button";
 import { Tooltip } from "../tooltip/tooltip";
 
 import { ColorSwatch } from "./color-swatch";
@@ -86,36 +86,32 @@ export function ColorPaletteGenerator({
         <div className="flex items-center gap-1">
           {paletteActions.map(({ icon: Icon, label, mode }) => (
             <TooltipTrigger delay={400} key={mode}>
-              <Button
+              <IconButton
                 aria-label={label}
-                icon
                 isDisabled={isDisabled}
                 onPress={() => {
                   onChange?.(
                     generatePaletteFromLocked({ colors, locked, mode }),
                   );
                 }}
-                size="sm"
-                variant="ghost"
+                size="compact"
               >
                 <Icon size={14} />
-              </Button>
+              </IconButton>
               <Tooltip>{label}</Tooltip>
             </TooltipTrigger>
           ))}
           <TooltipTrigger delay={400}>
-            <Button
+            <IconButton
               aria-label="Vary palette"
-              icon
               isDisabled={isDisabled}
               onPress={() => {
                 onChange?.(preserveLocked(varyPalette(colors)));
               }}
-              size="sm"
-              variant="ghost"
+              size="compact"
             >
               <WandSparkles size={14} />
-            </Button>
+            </IconButton>
             <Tooltip>Vary palette</Tooltip>
           </TooltipTrigger>
         </div>

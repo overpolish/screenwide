@@ -60,7 +60,7 @@ const meta = {
     controls: { exclude: ["className", "children"] },
     layout: "centered",
   },
-  title: "Overlay",
+  title: "Legacy/Overlay",
 } satisfies Meta<typeof Overlay>;
 
 export default meta;

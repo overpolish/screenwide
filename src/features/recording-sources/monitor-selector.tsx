@@ -3,18 +3,26 @@
 
 import { Monitor } from "lucide-react";
 
+import { Badge } from "../../components/base/badge/badge";
 import { Button } from "../../components/base/button/button";
+import { ButtonGroup } from "../../components/base/button-group/button-group";
+import { cn } from "../../lib/styling";
 
+import { orderMonitorsForNavigation } from "./monitor-selection";
 import { MonitorDetails } from "./types";
 
 type MonitorSelectorProps = {
+  focusContents: boolean;
   monitors: MonitorDetails[];
+  onCommit: (monitor: MonitorDetails, returnFocus: boolean) => void;
   onSelect: (monitor: MonitorDetails) => void;
   selectedMonitor: MonitorDetails | null;
 };
 
 export function MonitorSelector({
+  focusContents,
   monitors,
+  onCommit,
   onSelect,
   selectedMonitor,
 }: MonitorSelectorProps) {
@@ -48,51 +56,66 @@ export function MonitorSelector({
   );
   const layoutWidth = bounds.maxX - bounds.minX;
   const layoutHeight = bounds.maxY - bounds.minY;
+  const orientation = layoutWidth >= layoutHeight ? "horizontal" : "vertical";
+  const orderedMonitors = orderMonitorsForNavigation(monitors, orientation);
+  const focusTargetId = orderedMonitors.some(
+    (monitor) => monitor.id === selectedMonitor?.id,
+  )
+    ? selectedMonitor?.id
+    : orderedMonitors[0]?.id;
 
   return (
-    <div
+    <ButtonGroup
+      aria-label="Displays"
       className="relative max-h-full max-w-full"
+      orientation={orientation}
       style={{
         aspectRatio: layoutWidth / layoutHeight,
         height: `min(84%, 84vw / ${String(layoutWidth / layoutHeight)})`,
         width: `min(88%, 88vh * ${String(layoutWidth / layoutHeight)})`,
       }}
     >
-      {monitors.map((monitor) => {
+      {orderedMonitors.map((monitor) => {
         const isSelected = selectedMonitor?.id === monitor.id;
 
         return (
           <Button
             aria-label={`Select ${monitor.name}`}
-            className="absolute min-h-8 min-w-12 transform-gpu justify-center overflow-hidden px-2 shadow-md"
-            color={isSelected ? "info" : "neutral"}
+            className={cn(
+              "px-control absolute min-h-8 min-w-12 transform-gpu justify-center overflow-hidden shadow-md",
+              focusContents &&
+                monitor.id === focusTargetId &&
+                "focus:ring-1 focus:ring-offset-1",
+            )}
+            color={isSelected ? "primary" : "neutral"}
+            data-source-selector-focus-target={
+              monitor.id === focusTargetId ? "true" : undefined
+            }
             key={monitor.id}
-            onPress={() => {
+            onPress={(event) => {
+              onCommit(
+                monitor,
+                ["keyboard", "virtual"].includes(event.pointerType),
+              );
+            }}
+            onPressStart={() => {
               onSelect(monitor);
             }}
-            showFocus={false}
             style={{
               height: `${String((monitor.layoutSize.height / layoutHeight) * 100)}%`,
               left: `${String(((monitor.layoutPosition.x - bounds.minX) / layoutWidth) * 100)}%`,
               top: `${String(((monitor.layoutPosition.y - bounds.minY) / layoutHeight) * 100)}%`,
               width: `${String((monitor.layoutSize.width / layoutWidth) * 100)}%`,
             }}
-            variant="soft"
           >
-            <span className="flex min-w-0 flex-col items-center gap-1">
-              <Monitor aria-hidden size={14} />
-              <span className="max-w-full truncate text-xxs">
-                {monitor.name}
-              </span>
-              {monitor.isPrimary ? (
-                <span className="text-[8px] font-medium opacity-70">
-                  Primary
-                </span>
-              ) : null}
+            <span className="gap-control flex min-w-0 flex-col items-center">
+              <Monitor aria-hidden className="size-icon-compact" />
+              <span className="max-w-full truncate">{monitor.name}</span>
+              {monitor.isPrimary ? <Badge>Primary</Badge> : null}
             </span>
           </Button>
         );
       })}
-    </div>
+    </ButtonGroup>
   );
 }

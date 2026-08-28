@@ -116,7 +116,7 @@ export function SettingsWindow() {
   }, []);
 
   return (
-    <main className="window-surface flex h-screen w-screen flex-col overflow-hidden rounded-[10px] bg-content/92 text-content-fg">
+    <main className="window-surface flex h-screen w-screen flex-col overflow-hidden rounded-[10px] text-content-fg">
       <WindowTitlebar
         border={false}
         center={
@@ -155,10 +155,7 @@ export function SettingsWindow() {
         <section className="min-h-0 min-w-0 grow px-6 pb-6">
           <div className="mx-auto flex h-full max-w-2xl flex-col">
             {section === "general" && general ? (
-              <OverflowShadow
-                rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral/15"
-                shadowRadius="md"
-              >
+              <OverflowShadow rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral">
                 <GeneralSettingsPanel
                   isSaving={savingGeneral}
                   onChange={changeGeneral}
@@ -167,10 +164,7 @@ export function SettingsWindow() {
               </OverflowShadow>
             ) : null}
             {section === "hotkeys" ? (
-              <OverflowShadow
-                rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral/15"
-                shadowRadius="md"
-              >
+              <OverflowShadow rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral">
                 <div className="divide-y divide-muted/15 px-4">
                   {actions.map(({ action, description, label }) => {
                     const binding = settings?.bindings.find(
@@ -201,10 +195,7 @@ export function SettingsWindow() {
               </OverflowShadow>
             ) : null}
             {section === "about" ? (
-              <OverflowShadow
-                rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral/15"
-                shadowRadius="md"
-              >
+              <OverflowShadow rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral">
                 <UpdatePanel />
               </OverflowShadow>
             ) : null}

@@ -4,12 +4,18 @@
 import { Dispatch, SetStateAction, useCallback, useRef } from "react";
 
 import { Point } from "./pixel-analysis";
-import { DistanceProbe, Guide, Measurement } from "./ruler-types";
+import { radiusGeometry } from "./radius-geometry";
+import {
+  DistanceProbe,
+  Guide,
+  Measurement,
+  RadiusMeasurement,
+} from "./ruler-types";
 
 /** Cursor-to-line distance, in screen px, that counts as "selected". */
 const SELECT_RADIUS = 6;
 
-/** Trailing ids in a label key: `m3`, `p7`, `gx:2-5`. */
+/** Trailing ids in a label key: `m3`, `p7`, `r4`, `gx:2-5`. */
 const labelIds = (key: string) =>
   key
     .slice(1)
@@ -19,7 +25,7 @@ const labelIds = (key: string) =>
 
 export type SelectedLine = {
   id: number;
-  kind: "guide" | "measurement" | "probe";
+  kind: "guide" | "measurement" | "probe" | "radius";
 };
 
 /** The line a hovered label chip stands for - what deleting it would remove. */
@@ -27,6 +33,7 @@ export const selectedFromLabel = (key: string): SelectedLine => {
   const ids = labelIds(key);
   if (key.startsWith("m")) return { id: ids[0], kind: "measurement" };
   if (key.startsWith("p")) return { id: ids[0], kind: "probe" };
+  if (key.startsWith("r")) return { id: ids[0], kind: "radius" };
   // A gap chip deletes the later-placed of its two guides.
   return { id: Math.max(...ids), kind: "guide" };
 };
@@ -44,10 +51,12 @@ export function useRulerDeletion({
   hovered,
   measurements,
   probes,
+  radii,
   record,
   removeGuide,
   removeProbe,
   setMeasurements,
+  setRadii,
   zoom,
 }: {
   clearHover: () => void;
@@ -55,11 +64,13 @@ export function useRulerDeletion({
   hovered: string | undefined;
   measurements: readonly Measurement[];
   probes: readonly DistanceProbe[];
+  radii: readonly RadiusMeasurement[];
   /** Snapshots the document; only called once a deletion is certain. */
   record: () => void;
   removeGuide: (id: number) => void;
   removeProbe: (id: number) => void;
   setMeasurements: Dispatch<SetStateAction<Measurement[]>>;
+  setRadii: Dispatch<SetStateAction<RadiusMeasurement[]>>;
   zoom: number;
 }) {
   const selectedRef = useRef<SelectedLine | undefined>(undefined);
@@ -123,6 +134,20 @@ export function useRulerDeletion({
           bestDistance = distance;
         }
       }
+      for (const radius of radii) {
+        if (radius.id === undefined) continue;
+        const geometry = radiusGeometry(radius);
+        const signX = radius.corner.endsWith("right") ? 1 : -1;
+        const signY = radius.corner.startsWith("bottom") ? 1 : -1;
+        const dx = cursor.x - geometry.center.x;
+        const dy = cursor.y - geometry.center.y;
+        if (dx * signX < -bestDistance || dy * signY < -bestDistance) continue;
+        const distance = Math.abs(Math.hypot(dx, dy) - radius.radius);
+        if (distance <= bestDistance) {
+          best = { id: radius.id, kind: "radius" };
+          bestDistance = distance;
+        }
+      }
     }
     selectedRef.current = best;
     return best;
@@ -137,6 +162,8 @@ export function useRulerDeletion({
           current.filter((measurement) => measurement.id !== ids[0]),
         );
       else if (hovered.startsWith("p")) removeProbe(ids[0]);
+      else if (hovered.startsWith("r"))
+        setRadii((current) => current.filter((radius) => radius.id !== ids[0]));
       // Dropping the later-placed guide merges the neighbouring gaps.
       else removeGuide(Math.max(...ids));
       clearHover();
@@ -147,12 +174,24 @@ export function useRulerDeletion({
     record();
     if (selected.kind === "guide") removeGuide(selected.id);
     else if (selected.kind === "probe") removeProbe(selected.id);
+    else if (selected.kind === "radius")
+      setRadii((current) =>
+        current.filter((radius) => radius.id !== selected.id),
+      );
     else
       setMeasurements((current) =>
         current.filter((measurement) => measurement.id !== selected.id),
       );
     return true;
-  }, [clearHover, hovered, record, removeGuide, removeProbe, setMeasurements]);
+  }, [
+    clearHover,
+    hovered,
+    record,
+    removeGuide,
+    removeProbe,
+    setMeasurements,
+    setRadii,
+  ]);
 
   return { deleteHovered, selectLine };
 }

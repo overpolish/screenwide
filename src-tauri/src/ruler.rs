@@ -17,6 +17,71 @@ pub use snapshot::RulerState;
 
 const WINDOW_PREFIX: &str = "ruler-";
 
+#[cfg(target_os = "macos")]
+fn set_system_ruler_cursor_visible(app: &AppHandle, visible: bool) -> Result<(), String> {
+  app
+    .run_on_main_thread(move || unsafe {
+      unsafe extern "C" {
+        fn screenwide_set_ruler_cursor_visible(visible: std::ffi::c_int);
+      }
+      screenwide_set_ruler_cursor_visible(i32::from(visible));
+    })
+    .map_err(|error| error.to_string())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn set_system_ruler_cursor_visible(_app: &AppHandle, _visible: bool) -> Result<(), String> {
+  Ok(())
+}
+
+/// Returns the cursor in this ruler window's CSS-pixel coordinate space. The
+/// webview has not received a pointer event when it first opens, so seeding its
+/// cursor state here lets the transient rulers paint on the initial frame.
+#[tauri::command]
+pub fn get_ruler_cursor_position(app: AppHandle, window: tauri::WebviewWindow) -> Option<[f64; 2]> {
+  let cursor = app.cursor_position().ok()?;
+  let origin = window.outer_position().ok()?;
+  let scale = window.scale_factor().ok()?;
+
+  #[cfg(target_os = "macos")]
+  let (x, y) = {
+    // macOS reports the global cursor in primary-monitor physical pixels, but
+    // window origins use their own monitor scale. Convert both to the shared
+    // logical desktop space before subtracting.
+    let primary_scale = app
+      .primary_monitor()
+      .ok()
+      .flatten()
+      .map_or(1.0, |monitor| monitor.scale_factor());
+    let origin = origin.to_logical::<f64>(scale);
+    (
+      cursor.x / primary_scale - origin.x,
+      cursor.y / primary_scale - origin.y,
+    )
+  };
+
+  #[cfg(not(target_os = "macos"))]
+  let (x, y) = (
+    (cursor.x - f64::from(origin.x)) / scale,
+    (cursor.y - f64::from(origin.y)) / scale,
+  );
+
+  let size = window.inner_size().ok()?.to_logical::<f64>(scale);
+  (x >= 0.0 && x < size.width && y >= 0.0 && y < size.height).then_some([x, y])
+}
+
+#[tauri::command]
+pub fn set_ruler_cursor_visible(
+  app: AppHandle,
+  window: tauri::WebviewWindow,
+  visible: bool,
+) -> Result<(), String> {
+  set_system_ruler_cursor_visible(&app, visible)?;
+  window
+    .set_cursor_visible(visible)
+    .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn set_ruler_cursor_range_active(app: AppHandle, active: bool) -> Result<(), String> {
   #[cfg(target_os = "macos")]
@@ -42,6 +107,7 @@ fn close_ruler_windows(app: &AppHandle) {
 }
 
 pub fn dismiss(app: &AppHandle) {
+  let _ = set_system_ruler_cursor_visible(app, true);
   screenshot_mode::reset();
   let had_windows = !ruler_windows(app).is_empty();
   close_ruler_windows(app);
@@ -117,6 +183,12 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     .visible_on_all_workspaces(true)
     .build()
     .map_err(|error| error.to_string())?;
+    // CSS cursor changes are not applied by WebKit until its first pointer
+    // update. Hide natively before showing so invocation has no arrow flash.
+    window
+      .set_cursor_visible(false)
+      .map_err(|error| error.to_string())?;
+    set_system_ruler_cursor_visible(app, false)?;
     #[cfg(target_os = "windows")]
     platform_windows::suppress_menu_key_mode(&window)?;
     // Deliberately shareable: the screenshot shortcut can preserve the ruler

@@ -87,7 +87,7 @@ export function CursorReadout({
     >
       {size ? <span className="tabular-nums">{size}</span> : null}
       {colour ? (
-        <span className="text-xxs flex items-center gap-1 text-content/80">
+        <span className="flex items-center gap-1 text-xs text-content/80">
           {/* Inset ring keeps swatches close to the chip's own tone readable. */}
           <span
             className="size-2.5 rounded-xs ring-1 ring-content/30 ring-inset"

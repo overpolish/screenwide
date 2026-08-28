@@ -26,7 +26,7 @@ export function RecordingModePicker({
   return (
     <RadioGroup
       aria-label="Recording type"
-      className="min-w-0 grow pr-2"
+      className="min-w-0 grow self-stretch"
       isDisabled={isDisabled}
       onChange={(value) => {
         onChange(value as RecordingMode);
@@ -36,31 +36,31 @@ export function RecordingModePicker({
     >
       <IconRadio
         aria-label="Screen"
-        icon={<Monitor size={30} />}
+        icon={<Monitor />}
         subtext="Screen"
         value="screen"
       />
       <IconRadio
         aria-label="Region"
-        icon={<SquareDashed size={30} />}
+        icon={<SquareDashed />}
         subtext="Region"
         value="region"
       />
       <IconRadio
         aria-label="Window"
-        icon={<AppWindowMac size={30} />}
+        icon={<AppWindowMac />}
         subtext="Window"
         value="window"
       />
       <IconRadio
         aria-label="Camera only"
-        icon={<Camera size={30} />}
+        icon={<Camera />}
         subtext="Camera"
         value="camera"
       />
       <IconRadio
         aria-label="Audio only"
-        icon={<AudioLines size={30} />}
+        icon={<AudioLines />}
         subtext="Audio"
         value="audio"
       />

@@ -3,10 +3,7 @@
 
 import { CSSProperties } from "react";
 
-import { PixelSize } from "./pixel-analysis";
-import { GuideGapLabels } from "./ruler-guide-gaps";
 import { Guide } from "./ruler-types";
-import { LabelHandles } from "./use-label-handles";
 
 function GuideSvg({ guide, selected }: { guide: Guide; selected?: boolean }) {
   const vertical = guide.axis === "x";
@@ -48,16 +45,12 @@ function GuideSvg({ guide, selected }: { guide: Guide; selected?: boolean }) {
  */
 export function GuideLayer({
   guides,
-  handles,
   preview,
   selectedId,
   style,
-  viewport,
 }: {
   guides: readonly Guide[];
-  handles: LabelHandles;
   style: CSSProperties;
-  viewport: PixelSize;
   preview?: Guide;
   selectedId?: number;
 }) {
@@ -72,7 +65,6 @@ export function GuideLayer({
           />
         ))}
         {preview ? <GuideSvg guide={preview} /> : null}
-        <GuideGapLabels guides={guides} handles={handles} viewport={viewport} />
       </svg>
     </div>
   );

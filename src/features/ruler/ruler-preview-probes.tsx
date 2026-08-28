@@ -21,11 +21,13 @@ const INTERSECT_GAP = 3;
 export function PreviewProbeLayer({
   probes,
   showLabels = false,
+  showLines = true,
   toScreen,
 }: {
   probes: readonly DistanceProbe[];
   toScreen: (point: Point) => Point;
   showLabels?: boolean;
+  showLines?: boolean;
 }) {
   if (probes.length === 0) return null;
   const converted = probes.map((probe) => {
@@ -40,9 +42,22 @@ export function PreviewProbeLayer({
         ? { x: probe.position, y: probe.end }
         : { x: probe.end, y: probe.position },
     );
+    const labelDistance = Math.round(Math.abs(probe.end - probe.start));
     return vertical
-      ? { ...probe, end: to.y, position: from.x, start: from.y }
-      : { ...probe, end: to.x, position: from.y, start: from.x };
+      ? {
+          ...probe,
+          end: to.y,
+          labelDistance,
+          position: from.x,
+          start: from.y,
+        }
+      : {
+          ...probe,
+          end: to.x,
+          labelDistance,
+          position: from.y,
+          start: from.x,
+        };
   });
   return (
     <svg className="pointer-events-none absolute inset-0 size-full overflow-visible">
@@ -51,8 +66,10 @@ export function PreviewProbeLayer({
           gapAt={converted.find((other) => other.axis !== probe.axis)?.position}
           gapSize={INTERSECT_GAP}
           key={probe.axis}
+          labelDistance={probe.labelDistance}
           probe={probe}
           showLabel={showLabels}
+          showLine={showLines}
         />
       ))}
     </svg>

@@ -17,7 +17,7 @@ const meta = {
     ),
   ],
   parameters: { layout: "centered" },
-  title: "Features/Scrolling Capture Overlay",
+  title: "Legacy/Scrolling Capture Overlay",
 } satisfies Meta<typeof ScrollingCaptureOverlay>;
 
 export default meta;

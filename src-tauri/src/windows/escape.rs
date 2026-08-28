@@ -37,6 +37,18 @@ pub(super) fn arm(app: &AppHandle) {
     .global_shortcut()
     .on_shortcut(shortcut, |app, _, event| {
       if event.state() == ShortcutState::Pressed && is_recording_ui_visible() {
+        if super::source_selector::is_expanded() {
+          let _ = super::source_selector::collapse(app.clone(), Some(true));
+          return;
+        }
+        if super::options::is_standalone_listbox_open() {
+          let _ = super::options::close_standalone_listbox(app.clone(), true);
+          return;
+        }
+        if super::options::is_recording_options_open() {
+          let _ = super::options::close_recording_options(app.clone(), true);
+          return;
+        }
         // Teardown runs on the bar's later IPC turn rather than unregistering
         // the shortcut from inside its native callback.
         let _ = app.emit_to(

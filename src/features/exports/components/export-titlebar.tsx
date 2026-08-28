@@ -14,6 +14,7 @@ import { Input, TextField } from "react-aria-components";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
 import { Button } from "../../../components/base/button/button";
+import { IconButton } from "../../../components/base/button/icon-button";
 import { inputFieldVariants } from "../../../components/base/input-fields/input-field";
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { truncateDirectoryPath } from "../directory-path";
@@ -111,9 +112,7 @@ export function ExportTitlebar({
         className="min-w-0 max-w-56 shrink"
         isDisabled={isSaving}
         onPress={onBrowse}
-        showFocus={false}
-        size="sm"
-        variant="soft"
+        size="compact"
       >
         <Folder className="shrink-0" size={15} />
         <span className="truncate">{directoryLabel(directory)}</span>
@@ -125,8 +124,7 @@ export function ExportTitlebar({
         <Button
           isDisabled={isSaving}
           onPress={onCopy}
-          showFocus={false}
-          size="sm"
+          size="compact"
           variant="ghost"
         >
           <ClipboardCopy size={15} />
@@ -134,51 +132,44 @@ export function ExportTitlebar({
         </Button>
       ) : null}
       <Button
-        color="info"
+        color="primary"
         isDisabled={!canExport}
         onPress={onExport}
-        showFocus={false}
-        size="sm"
+        size="compact"
       >
         <Upload size={15} />
         Export
       </Button>
-      <Button
+      <IconButton
         aria-label="Minimize"
         className="group"
-        icon
         onPress={onMinimize}
-        showFocus={false}
-        size="sm"
-        variant="ghost"
+        size="compact"
       >
         <Minus
           className="transform-gpu text-muted transition-[color,transform,scale] group-data-[hovered]:scale-110 group-data-[hovered]:text-content-fg"
           size={18}
         />
-      </Button>
-      <Button
+      </IconButton>
+      <IconButton
         aria-label="Maximize or restore"
         className="group"
-        icon
         onPress={onToggleMaximize}
-        showFocus={false}
-        size="sm"
-        variant="ghost"
+        size="compact"
       >
         <Square
           className="transform-gpu text-muted transition-[color,transform,scale] group-data-[hovered]:scale-110 group-data-[hovered]:text-content-fg"
           size={14}
         />
-      </Button>
+      </IconButton>
       <ConfirmActionButton
         armedIcon={<Trash2 className="text-error" size={18} />}
         armedLabel="Confirm deleting capture"
-        className="h-6 w-6"
         idleIcon={<X size={18} />}
         idleLabel="Close"
         key={artifact?.id ?? "empty"}
         onConfirm={onClose}
+        size="compact"
       />
     </header>
   );

@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { SVGAttributes, useEffect, useRef, useState } from "react";
+import { SVGAttributes, use, useEffect, useRef, useState } from "react";
+
+import { FieldGroupContext } from "../../../components/base/field-group/field-group-context";
 
 const decibelToPercentage = (decibel: number): number => {
   if (decibel < -60) return 0;
@@ -63,7 +65,7 @@ const Tick = ({
             : position === "above"
               ? "mb-px"
               : ""
-        } ${clipping ? "text-warning-100" : ""} ${labelClassName ?? ""}`}
+        } ${clipping ? "text-error" : ""} ${labelClassName ?? ""}`}
       >
         {display ?? tick}
       </span>
@@ -96,6 +98,7 @@ export const AudioMeter = ({
   radius = 2,
   width,
 }: AudioMeterProps) => {
+  const grouped = use(FieldGroupContext);
   const vertical = orientation === "vertical";
   const meterHeight = height ?? (vertical ? 150 : 10);
   const meterWidth = width ?? (vertical ? 10 : 150);
@@ -165,8 +168,8 @@ export const AudioMeter = ({
             <stop offset="65%" stopColor="var(--color-success)" />
             <stop offset="85%" stopColor="var(--color-warning)" />
             <stop offset="93%" stopColor="var(--color-warning)" />
-            <stop offset="96%" stopColor="var(--color-warning-100)" />
-            <stop offset="100%" stopColor="var(--color-warning-100)" />
+            <stop offset="96%" stopColor="var(--color-error)" />
+            <stop offset="100%" stopColor="var(--color-error)" />
           </linearGradient>
 
           <clipPath id={meterClipId}>
@@ -202,7 +205,11 @@ export const AudioMeter = ({
           </clipPath>
         </defs>
 
-        <rect className="fill-muted/20" {...METER} width="100%" />
+        <rect
+          className={grouped ? "fill-neutral-pressed" : "fill-neutral"}
+          {...METER}
+          width="100%"
+        />
         <rect
           clipPath={`url(#${meterClipId})`}
           fill={`url(#${fillId})`}
@@ -234,7 +241,7 @@ export const AudioMeter = ({
           {!hidePeakTick && !disabled && peak >= -60 && (
             <Tick
               display={peak.toFixed(1)}
-              labelClassName="backdrop-blur-xs bg-content/50"
+              labelClassName="bg-content"
               maxTick={-0.5}
               orientation={orientation}
               position="below"

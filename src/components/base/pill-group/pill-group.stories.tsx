@@ -18,7 +18,7 @@ const items = [
 const meta = {
   component: PillGroup,
   parameters: { layout: "centered" },
-  title: "Pill Group",
+  title: "Legacy/Pill Group",
 } satisfies Meta<typeof PillGroup>;
 
 export default meta;

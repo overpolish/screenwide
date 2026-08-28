@@ -24,9 +24,11 @@ export function rulerPointerHandlers({
   moveGuide,
   place,
   probeDrag,
+  radiusActive,
   record,
   selected,
   setScreenCursor,
+  stampRadius,
   viewport,
 }: {
   boxDrag: ReturnType<typeof useBoxDrag>;
@@ -34,8 +36,10 @@ export function rulerPointerHandlers({
   moveGuide: (id: number, point: Point) => void;
   place: (axis: Axis, point: Point) => void;
   probeDrag: ReturnType<typeof useProbeDrag>;
+  radiusActive: boolean;
   record: () => void;
   setScreenCursor: Dispatch<SetStateAction<Point | undefined>>;
+  stampRadius: (point: Point) => void;
   viewport: ReturnType<typeof useRulerViewport>;
   guideAxis?: Axis;
   selected?: SelectedLine;
@@ -72,6 +76,10 @@ export function rulerPointerHandlers({
     if (guideAxis) {
       record();
       place(guideAxis, point);
+      return;
+    }
+    if (radiusActive) {
+      stampRadius(point);
       return;
     }
     event.currentTarget.setPointerCapture(event.pointerId);

@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   component: AnimatedPixelMagnifier,
   parameters: { layout: "centered" },
-  title: "Pixel Magnifier",
+  title: "Legacy/Pixel Magnifier",
 } satisfies Meta<typeof AnimatedPixelMagnifier>;
 
 export default meta;

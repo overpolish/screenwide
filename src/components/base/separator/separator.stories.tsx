@@ -18,7 +18,7 @@ const meta = {
     controls: { exclude: ["className", "children"] },
     layout: "centered",
   },
-  title: "Separator",
+  title: "Legacy/Separator",
 } satisfies Meta<typeof Separator>;
 
 export default meta;

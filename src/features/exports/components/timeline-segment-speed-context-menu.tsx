@@ -54,7 +54,6 @@ export function TimelineSegmentSpeedContextMenu({
       <OverflowShadow
         constrainHeight
         rootClassName="max-h-[inherit] border-1 border-muted/25 bg-content shadow-lg"
-        shadowRadius="md"
       >
         <div aria-label={`${title} playback speed`} className="p-1" role="menu">
           <p className="m-0 px-2 py-1 text-[10px] font-medium text-muted">

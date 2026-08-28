@@ -34,8 +34,7 @@ export function UpdatePanel() {
         <Button
           isDisabled={busy || status === "development"}
           onPress={() => void checkForUpdates()}
-          size="sm"
-          variant="soft"
+          size="compact"
         >
           <RefreshCw
             className={status === "checking" ? "animate-spin" : ""}
@@ -76,10 +75,10 @@ export function UpdatePanel() {
                 </div>
               </div>
               <Button
-                color="info"
+                color="primary"
                 isDisabled={busy}
                 onPress={() => void installUpdate()}
-                size="sm"
+                size="compact"
               >
                 <Download size={14} />
                 {status === "downloading"

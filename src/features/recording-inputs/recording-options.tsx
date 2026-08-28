@@ -2,20 +2,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  Activity,
   Camera,
   CameraOff,
   FlipHorizontal2,
   Lock,
-  Scan,
   Mic,
+  Scan,
   Volume2,
 } from "lucide-react";
 import { RefObject } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
 import { Button } from "../../components/base/button/button";
-import { ToggleButton } from "../../components/base/button/toggle-button";
-import { CircularProgressBar } from "../../components/base/circular-progress-bar/circular-progress-bar";
+import { IconToggleButton } from "../../components/base/button/icon-button";
+import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
+import {
+  FieldGroup,
+  FieldGroupAction,
+  FieldGroupFooter,
+} from "../../components/base/field-group/field-group";
 import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { Select } from "../../components/base/select/select";
 import { Tooltip } from "../../components/base/tooltip/tooltip";
@@ -84,10 +90,8 @@ function InputSelect<T extends InputDevice>({
         if (match) onChange(match);
       }}
       placeholder={placeholder}
-      showFocus={false}
-      size="sm"
+      size="compact"
       value={selected?.id ?? null}
-      variant="ghost"
     >
       {(item: T) => (
         <ListBoxItem id={item.id} textValue={item.label}>
@@ -120,7 +124,7 @@ function SystemAudioSelect({
         id="system-audio"
         items={items}
         label="System audio"
-        leftSection={<Volume2 size={14} />}
+        leftSection={<Volume2 className="size-icon-compact" />}
         onOpen={onOpen}
         onSelectionChange={(selection) => {
           onChange(
@@ -143,16 +147,14 @@ function SystemAudioSelect({
       className="w-full"
       clearable={false}
       items={items}
-      leftSection={<Volume2 size={14} />}
+      leftSection={<Volume2 className="size-icon-compact" />}
       onChange={(selection) => {
         const match = items.find((item) => item.id === selection);
         if (match) onChange([match]);
       }}
       placeholder="No system audio"
-      showFocus={false}
-      size="sm"
+      size="compact"
       value={selected[0]?.id ?? null}
-      variant="ghost"
     >
       {(item: SystemAudioSource) => (
         <ListBoxItem id={item.id} textValue={item.label}>
@@ -170,15 +172,14 @@ type PermissionOverlayProps = {
 
 function PermissionOverlay({ label, onPress }: PermissionOverlayProps) {
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-content/80 backdrop-blur-sm">
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-content/80 backdrop-blur-sm">
       <Button
-        className="gap-1.5"
+        className="gap-control"
         onPress={onPress}
-        showFocus={false}
-        size="sm"
+        size="compact"
         variant="ghost"
       >
-        <Lock size={13} />
+        <Lock className="size-icon-compact" />
         {label}
       </Button>
     </div>
@@ -260,8 +261,8 @@ export function RecordingOptions({
     selectedCameraResolution.width * 9 >= selectedCameraResolution.height * 16;
 
   return (
-    <main className="window-surface flex h-full min-h-[300px] w-full min-w-[240px] flex-col gap-3 overflow-hidden rounded-[10px] bg-content/92 p-4 text-content-fg">
-      <section className="relative flex flex-col gap-1.5">
+    <main className="window-surface gap-section p-section flex w-full min-w-[240px] flex-col overflow-hidden text-content-fg">
+      <section className="gap-section relative flex flex-col">
         {cameraLocked ? (
           <PermissionOverlay
             label="Grant camera access"
@@ -270,11 +271,11 @@ export function RecordingOptions({
         ) : null}
 
         <div className="relative flex aspect-video w-full shrink-0 items-center justify-center text-muted">
-          <div className="absolute inset-1 flex min-h-0 min-w-0 items-center justify-center">
+          <div className="inset-control absolute flex min-h-0 min-w-0 items-center justify-center">
             <canvas
               aria-label="Camera preview"
               className={cn(
-                "block shrink-0 self-center shadow-[0_2px_12px_rgb(0_0_0/0.38)]",
+                "shadow-preview block shrink-0 self-center",
                 previewIsWiderThanStage
                   ? "h-auto max-h-full w-full"
                   : "h-full w-auto max-w-full",
@@ -287,46 +288,50 @@ export function RecordingOptions({
           </div>
           {!cameraPreviewActive ? (
             cameraPreviewStarting ? (
-              <CircularProgressBar
+              <CircularProgress
                 aria-label="Starting camera preview"
                 isIndeterminate
-                size={24}
-                strokeWidth={12}
               />
             ) : (
-              <CameraOff size={24} />
+              <CameraOff className="size-icon-prominent" />
             )
-          ) : null}
-          {selectedCamera && onCameraFlippedChange ? (
-            <ToggleButton
-              aria-label="Flip camera horizontally"
-              className="absolute right-2 bottom-2"
-              isSelected={cameraFlipped}
-              onChange={onCameraFlippedChange}
-              showFocus={false}
-              size="sm"
-              variant="ghost"
-            >
-              <FlipHorizontal2 size={14} />
-            </ToggleButton>
           ) : null}
         </div>
 
-        <InputSelect
-          icon={<Camera size={14} />}
-          id="camera"
-          items={cameras}
-          label="Camera"
-          onChange={onCameraChange}
-          onOpen={onCameraOptionsOpen}
-          placeholder="No camera"
-          selected={selectedCamera}
-          standalone={standalone}
-        />
-        <div className="flex items-center gap-1">
+        <FieldGroup className="flex items-center">
           <div className="min-w-0 flex-1">
             <InputSelect
-              icon={<Scan size={14} />}
+              icon={<Camera className="size-icon-compact" />}
+              id="camera"
+              items={cameras}
+              label="Camera"
+              onChange={onCameraChange}
+              onOpen={onCameraOptionsOpen}
+              placeholder="No camera"
+              selected={selectedCamera}
+              standalone={standalone}
+            />
+          </div>
+          {selectedCamera && onCameraFlippedChange ? (
+            <FieldGroupAction>
+              <TooltipTrigger delay={400}>
+                <IconToggleButton
+                  aria-label="Flip camera horizontally"
+                  isSelected={cameraFlipped}
+                  onChange={onCameraFlippedChange}
+                  size="compact"
+                >
+                  <FlipHorizontal2 />
+                </IconToggleButton>
+                <Tooltip placement="top">Flip camera</Tooltip>
+              </TooltipTrigger>
+            </FieldGroupAction>
+          ) : null}
+        </FieldGroup>
+        <FieldGroup className="flex items-center">
+          <div className="min-w-0 flex-1">
+            <InputSelect
+              icon={<Scan className="size-icon-compact" />}
               id="camera-resolution"
               items={selectedCamera?.modes ?? []}
               label="Camera resolution"
@@ -337,24 +342,24 @@ export function RecordingOptions({
             />
           </div>
           {selectedCamera && onCameraPalChange ? (
-            <TooltipTrigger delay={400}>
-              <ToggleButton
-                aria-label="Anti-flicker"
-                isSelected={cameraPal}
-                onChange={onCameraPalChange}
-                showFocus={false}
-                size="sm"
-                variant="ghost"
-              >
-                <span className="text-xxs font-medium tabular-nums">PAL</span>
-              </ToggleButton>
-              <Tooltip placement="top">Anti-flicker</Tooltip>
-            </TooltipTrigger>
+            <FieldGroupAction>
+              <TooltipTrigger delay={400}>
+                <IconToggleButton
+                  aria-label="Anti-flicker"
+                  isSelected={cameraPal}
+                  onChange={onCameraPalChange}
+                  size="compact"
+                >
+                  <Activity className="transform-gpu" />
+                </IconToggleButton>
+                <Tooltip placement="top">Anti-flicker</Tooltip>
+              </TooltipTrigger>
+            </FieldGroupAction>
           ) : null}
-        </div>
+        </FieldGroup>
       </section>
 
-      <section className="relative flex flex-col gap-1">
+      <section className="relative">
         {microphoneLocked ? (
           <PermissionOverlay
             label="Grant microphone access"
@@ -362,45 +367,53 @@ export function RecordingOptions({
           />
         ) : null}
 
-        <InputSelect
-          icon={<Mic size={14} />}
-          id="microphone"
-          items={microphones}
-          label="Microphone"
-          onChange={onMicrophoneChange}
-          onOpen={onMicrophoneOptionsOpen}
-          placeholder="No microphone"
-          selected={selectedMicrophone}
-          standalone={standalone}
-        />
-        <AudioMeter
-          decibels={microphoneDecibels}
-          disabled={!microphonePreviewEnabled}
-          height={5}
-          hidePeakTick
-          hideTicks
-          peak={microphonePeak}
-          width="100%"
-        />
+        <FieldGroup className="gap-control flex flex-col">
+          <InputSelect
+            icon={<Mic className="size-icon-compact" />}
+            id="microphone"
+            items={microphones}
+            label="Microphone"
+            onChange={onMicrophoneChange}
+            onOpen={onMicrophoneOptionsOpen}
+            placeholder="No microphone"
+            selected={selectedMicrophone}
+            standalone={standalone}
+          />
+          <FieldGroupFooter>
+            <AudioMeter
+              decibels={microphoneDecibels}
+              disabled={!microphonePreviewEnabled}
+              height={5}
+              hidePeakTick
+              hideTicks
+              peak={microphonePeak}
+              width="100%"
+            />
+          </FieldGroupFooter>
+        </FieldGroup>
       </section>
 
-      <section className="flex flex-col gap-1">
-        <SystemAudioSelect
-          items={audioSources}
-          onChange={onSystemAudioChange}
-          onOpen={onSystemAudioOptionsOpen}
-          selected={selectedSystemAudio}
-          standalone={standalone}
-        />
-        <AudioMeter
-          decibels={systemAudioDecibels}
-          disabled={!systemAudioPreviewEnabled}
-          height={5}
-          hidePeakTick
-          hideTicks
-          peak={systemAudioPeak}
-          width="100%"
-        />
+      <section>
+        <FieldGroup className="gap-control flex flex-col">
+          <SystemAudioSelect
+            items={audioSources}
+            onChange={onSystemAudioChange}
+            onOpen={onSystemAudioOptionsOpen}
+            selected={selectedSystemAudio}
+            standalone={standalone}
+          />
+          <FieldGroupFooter>
+            <AudioMeter
+              decibels={systemAudioDecibels}
+              disabled={!systemAudioPreviewEnabled}
+              height={5}
+              hidePeakTick
+              hideTicks
+              peak={systemAudioPeak}
+              width="100%"
+            />
+          </FieldGroupFooter>
+        </FieldGroup>
       </section>
     </main>
   );

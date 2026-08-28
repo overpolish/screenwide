@@ -26,9 +26,11 @@ const arrowKeyRoles = [
   "listbox",
   "menu",
   "option",
+  "radiogroup",
   "slider",
   "spinbutton",
   "tab",
+  "toolbar",
 ];
 const arrowKeyTargets = [
   "select",
@@ -40,3 +42,34 @@ export const ownsArrowKeys = (target: EventTarget | null) =>
   // A range input carries the slider role implicitly, so it needs its own test.
   ((target instanceof HTMLInputElement && target.type === "range") ||
     target.closest(arrowKeyTargets) !== null);
+
+const activationTargets = [
+  "a[href]",
+  "button",
+  "input",
+  "select",
+  "summary",
+  '[role="button"]',
+  '[role="checkbox"]',
+  '[role="combobox"]',
+  '[role="radio"]',
+  '[role="slider"]',
+  '[role="spinbutton"]',
+  '[role="switch"]',
+  '[role="tab"]',
+].join(",");
+
+export const ownsActivationKeys = (target: EventTarget | null) =>
+  target instanceof HTMLElement && target.closest(activationTargets) !== null;
+
+const popupInteractionTargets = [
+  '[aria-expanded="true"]',
+  '[role="listbox"]',
+  '[role="menu"]',
+  '[role="menuitem"]',
+  '[role="option"]',
+].join(",");
+
+export const ownsPopupInteractionKeys = (target: EventTarget | null) =>
+  target instanceof HTMLElement &&
+  target.closest(popupInteractionTargets) !== null;

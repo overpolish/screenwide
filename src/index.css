@@ -14,8 +14,18 @@
     "Inter Variable", ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  --text-xxs: 0.6125rem;
-  --text-xxs--line-height: calc(1 / 0.6125);
+  /* Shared layout rhythm: compact peers, related content, and sections. */
+  --spacing-tight: 0.125rem;
+  --spacing-control: 0.25rem;
+  --spacing-control-inset: 0.5rem;
+  --spacing-section: 0.75rem;
+  --spacing-window-inset: 1.5rem;
+  --spacing-focus-safe: 0.125rem;
+  --spacing-icon-indicator: 0.625rem;
+  --spacing-icon-compact: 0.875rem;
+  --spacing-icon-default: 1.125rem;
+  --spacing-icon-prominent: 1.75rem;
+  --radius-window: 0.625rem;
 
   --animate-gradient: gradient 10s ease-in-out infinite;
   --animate-mesh-drift: mesh-drift 18s ease-in-out infinite alternate;
@@ -59,31 +69,46 @@
   --blur-lg: 5px;
 
   --inset-shadow-full: inset 0 0 8px rgb(0 0 0 / 25%);
+  --shadow-preview: 0 2px 12px var(--color-shadow);
 
   --color-content: white;
   --color-content-fg: var(--color-neutral-800);
+  --color-shadow: rgb(0 0 0 / 30%);
 
-  --color-neutral: var(--color-neutral-200);
-  --color-neutral-100: var(--color-neutral-300);
-  /* Opaque counterparts to the old neutral alpha treatments. Keeping these
-     as semantic colours lets React and native compositor controls resolve the
-     same appearance without allowing preview content to tint either layer. */
-  --color-neutral-soft: color-mix(
-    in srgb,
-    var(--color-neutral) 75%,
-    var(--color-content)
-  );
-  --color-neutral-pressed: color-mix(
-    in srgb,
-    var(--color-neutral) 80%,
-    var(--color-content)
-  );
+  --color-accent: #ff2970;
+  --color-accent-warm: #ff5c5a;
+  --color-accent-vivid: #ff009d;
+  --color-accent-heading: var(--color-accent);
+  --color-accent-heading-warm: var(--color-accent-warm);
+  --color-accent-heading-vivid: var(--color-accent-vivid);
 
-  --color-success: var(--color-green-600);
-  --color-info: var(--color-sky-600);
+  --color-primary: #d81b60;
+  --color-primary-fg: white;
+  --color-primary-surface: rgb(216 27 96 / 85%);
+  --color-primary-surface-hover: rgb(194 24 91 / 90%);
+  --color-primary-surface-pressed: rgb(173 20 87 / 95%);
+
+  /* Shared material-aware component surfaces. The native window material is
+     the base layer; these fills establish interaction hierarchy above it. */
+  --color-neutral: rgb(0 0 0 / 9%);
+  --color-neutral-hover: rgb(0 0 0 / 13%);
+  --color-neutral-pressed: rgb(0 0 0 / 17%);
+  --color-neutral-subtle: rgb(0 0 0 / 5%);
+  --color-neutral-disabled-fg: #a8a8a8;
+
+  --color-success: #248a3d;
+  --color-success-hover: #207c37;
+  --color-success-pressed: #1c6e31;
+  --color-info: #0068c9;
+  --color-info-solid: #0668c2;
+  --color-info-solid-fg: white;
+  --color-info-solid-hover: #075eaf;
+  --color-info-solid-pressed: #08539c;
   --color-warning: var(--color-yellow-500);
-  --color-warning-100: var(--color-orange-400);
-  --color-error: var(--color-red-500);
+  --color-error: #d70015;
+  --color-error-surface: rgb(255 59 48 / 18%);
+  --color-error-surface-hover: rgb(255 59 48 / 24%);
+  --color-error-surface-pressed: rgb(255 59 48 / 30%);
 
   --color-muted: var(--color-neutral-700);
 }
@@ -93,14 +118,40 @@
     --color-content: var(--color-neutral-800);
     --color-content-fg: white;
 
-    --color-neutral: var(--color-neutral-700);
-    --color-neutral-100: var(--color-neutral-600);
+    --color-primary-surface: color-mix(
+      in srgb,
+      var(--color-accent) 55%,
+      transparent
+    );
+    --color-primary-surface-hover: color-mix(
+      in srgb,
+      var(--color-accent) 65%,
+      transparent
+    );
+    --color-primary-surface-pressed: color-mix(
+      in srgb,
+      var(--color-accent) 75%,
+      transparent
+    );
 
-    --color-success: var(--color-green-600);
-    --color-info: var(--color-sky-500);
+    --color-neutral: rgb(255 255 255 / 12%);
+    --color-neutral-hover: rgb(255 255 255 / 17%);
+    --color-neutral-pressed: rgb(255 255 255 / 22%);
+    --color-neutral-subtle: rgb(255 255 255 / 7%);
+    --color-neutral-disabled-fg: #777777;
+
+    --color-success: #7ee787;
+    --color-success-hover: #8bea95;
+    --color-success-pressed: #98eda3;
+    --color-info: #66b7ff;
+    --color-info-solid: #1473c9;
+    --color-info-solid-hover: #2c82d0;
+    --color-info-solid-pressed: #438fd6;
     --color-warning: var(--color-yellow-500);
-    --color-warning-100: var(--color-orange-400);
-    --color-error: var(--color-red-500);
+    --color-error: #ff6961;
+    --color-error-surface: rgb(255 69 58 / 30%);
+    --color-error-surface-hover: rgb(255 69 58 / 38%);
+    --color-error-surface-pressed: rgb(255 69 58 / 46%);
 
     --color-muted: var(--color-neutral-400);
   }
@@ -169,6 +220,18 @@ body {
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.field-group:has([data-hovered]) {
+  background-color: var(--color-neutral-hover);
+}
+
+.field-group:has([data-pressed]) {
+  background-color: var(--color-neutral-pressed);
+}
+
+.field-group:has(> [data-field-group-action]) [data-select-trigger] {
+  padding-right: 0;
 }
 
 html {

@@ -29,15 +29,15 @@ export function RulerStoryStage({
 }: RulerStoryStageProps) {
   if (fullHeight)
     return (
-      <div className="relative h-screen w-full overflow-hidden bg-neutral-100">
+      <div className="relative h-screen w-full overflow-hidden bg-neutral-hover">
         {children}
       </div>
     );
 
   const stageClassName =
     size === "cursor"
-      ? "relative h-[220px] w-[360px] overflow-hidden rounded-md bg-neutral-100"
-      : "relative h-[400px] w-[640px] overflow-hidden rounded-md bg-neutral-100";
+      ? "relative h-[220px] w-[360px] overflow-hidden rounded-md bg-neutral-hover"
+      : "relative h-[400px] w-[640px] overflow-hidden rounded-md bg-neutral-hover";
 
   return (
     <div className="max-w-full overflow-auto">

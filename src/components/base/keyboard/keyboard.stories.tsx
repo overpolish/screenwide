@@ -38,7 +38,7 @@ const meta = {
     controls: { exclude: ["children", "ref"] },
     layout: "centered",
   },
-  title: "Keyboard",
+  title: "Legacy/Keyboard",
 } satisfies Meta<typeof Keyboard>;
 
 export default meta;

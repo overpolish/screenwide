@@ -2,64 +2,36 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { X } from "lucide-react";
-import { motion, MotionProps } from "motion/react";
+import { MotionProps } from "motion/react";
 import { use } from "react";
-import {
-  Button as AriaButton,
-  SelectStateContext,
-} from "react-aria-components";
-import { VariantProps } from "tailwind-variants";
+import { SelectStateContext } from "react-aria-components";
 
-import { elementFocusVisible, focusStyles } from "../../../../lib/styling";
-import { tv } from "../../../../lib/variants";
+import { IconButton } from "../../button/icon-button";
 
-const clearButtonVariants = tv({
-  slots: {
-    base: "flex items-center absolute inset-y-0 flex right-7",
-    button: [
-      "transition-colors rounded-sm p-0.5 mb-0.5 flex",
-      "data-[hovered]:bg-error/10 data-[hovered]:text-error",
-      "data-[pressed]:bg-error/5",
-      focusStyles,
-      elementFocusVisible,
-    ],
-  },
-});
+type ClearButtonProps = MotionProps & {
+  onClear?: () => void;
+  size?: "compact" | "default";
+};
 
-const MotionAriaButton = motion.create(AriaButton);
-
-type ClearButtonProps = MotionProps &
-  VariantProps<typeof clearButtonVariants> & {
-    className?: string;
-    onClear?: () => void;
-    size?: number;
-  };
-
-export const ClearButton = ({
-  className,
-  onClear,
-  size = 14,
-  ...props
-}: ClearButtonProps) => {
-  const { base, button } = clearButtonVariants({ className });
+export const ClearButton = ({ onClear, size, ...props }: ClearButtonProps) => {
   const state = use(SelectStateContext);
 
   if (!state?.selectedItems.length) return null;
 
   return (
-    <div className={base()}>
-      <MotionAriaButton
+    <div className="flex shrink-0 items-center" data-select-clear>
+      <IconButton
         {...props}
         aria-label="Clear selection"
-        className={button({ className })}
         onPress={() => {
           state.setValue(null);
           if (onClear) onClear();
         }}
+        size={size}
         slot={null}
       >
-        <X className="translate-x-0" size={size} />
-      </MotionAriaButton>
+        <X />
+      </IconButton>
     </div>
   );
 };

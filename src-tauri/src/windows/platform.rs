@@ -1,10 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::WebviewWindow;
+use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
+
+#[cfg(target_os = "macos")]
+use core_graphics::display::CGDisplay;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use tauri::Manager;
+
+#[cfg(target_os = "macos")]
+use objc2_app_kit::NSWindowOrderingMode;
 
 #[cfg(target_os = "macos")]
 use tauri_nspanel::{
@@ -128,6 +134,37 @@ fn ensure_recording_panel(window: &WebviewWindow) -> tauri::Result<PanelHandle<t
   registered_panel(window)
 }
 
+/// Applies the complete panel frame in one AppKit operation. Keeping position
+/// and size atomic prevents WindowServer from presenting an intermediate frame
+/// while an above-anchored panel changes height.
+#[cfg(target_os = "macos")]
+pub fn set_frame(
+  window: &WebviewWindow,
+  position: LogicalPosition<f64>,
+  size: LogicalSize<f64>,
+) -> tauri::Result<()> {
+  let panel = ensure_recording_panel(window)?;
+  let main_display_height = CGDisplay::main().pixels_high() as f64;
+  let frame = NSRect::new(
+    NSPoint::new(position.x, main_display_height - position.y - size.height),
+    NSSize::new(size.width, size.height),
+  );
+  let app = window.app_handle().clone();
+  app.run_on_main_thread(move || {
+    panel.as_panel().setFrame_display(frame, true);
+  })
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn set_frame(
+  window: &WebviewWindow,
+  position: LogicalPosition<f64>,
+  size: LogicalSize<f64>,
+) -> tauri::Result<()> {
+  window.set_size(size)?;
+  window.set_position(position)
+}
+
 /// The export window is an ordinary focusable window, so it gets none of the
 /// panel treatment - only the capture exclusion, so that taking a screenshot
 /// while it is open never pictures it. On macOS every window this process owns
@@ -218,8 +255,29 @@ pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
 pub fn show(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
   window.set_ignore_cursor_events(false)?;
   let panel = ensure_recording_panel(window)?;
+  let parent = if window.label() == "recording-source-selector" {
+    let bar = window
+      .app_handle()
+      .get_webview_window("recording-bar")
+      .ok_or(tauri::Error::WindowNotFound)?;
+    Some(ensure_recording_panel(&bar)?)
+  } else {
+    None
+  };
   let app = window.app_handle().clone();
   app.run_on_main_thread(move || {
+    // Ordering a child panel out can clear its parent relationship. Restore it
+    // on every show so subsequent source changes keep both panels moving as
+    // one compositor unit.
+    if let Some(parent) = parent {
+      if panel.as_panel().parentWindow().is_none() {
+        unsafe {
+          parent
+            .as_panel()
+            .addChildWindow_ordered(panel.as_panel(), NSWindowOrderingMode::Above);
+        }
+      }
+    }
     panel.set_alpha_value(opacity);
     panel.show();
   })

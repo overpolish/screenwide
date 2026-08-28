@@ -44,12 +44,14 @@ export function useRulerHotkeys({
 }) {
   const [guideAxis, setGuideAxis] = useState<Axis>();
   const [probeAxis, setProbeAxis] = useState<Axis>();
+  const [radiusActive, setRadiusActive] = useState(false);
   const heldProbeCodeRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     const clearHeldTools = () => {
       setGuideAxis(undefined);
       setProbeAxis(undefined);
+      setRadiusActive(false);
       heldProbeCodeRef.current = undefined;
       setNativeCursorRangeActive(false);
       cancelProbe();
@@ -72,6 +74,7 @@ export function useRulerHotkeys({
           event.code === "KeyB" ||
           event.code === "KeyC" ||
           event.code === "KeyM" ||
+          event.code === "KeyR" ||
           event.code === "KeyT")
       )
         return;
@@ -91,6 +94,14 @@ export function useRulerHotkeys({
         toggleCenterlines();
       } else if (event.code === "KeyT") {
         cycleTolerance();
+      } else if (
+        event.code === "KeyR" &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        setRadiusActive(true);
       } else if (event.key === "Backspace" || event.key === "Delete") {
         if (!deleteHovered()) deleteLatestMeasurement();
       } else if (event.code === "KeyH" || event.code === "KeyV") {
@@ -99,7 +110,7 @@ export function useRulerHotkeys({
       } else if (event.code === "Digit1" || event.code === "Digit2") {
         event.preventDefault();
         if (event.repeat) return;
-        const axis = event.code === "Digit1" ? "y" : "x";
+        const axis = event.code === "Digit1" ? "x" : "y";
         if (startProbe(axis)) {
           setNativeCursorRangeActive(true);
           heldProbeCodeRef.current = event.code;
@@ -112,6 +123,8 @@ export function useRulerHotkeys({
         setGuideAxis((current) => (current === "y" ? undefined : current));
       } else if (event.code === "KeyV") {
         setGuideAxis((current) => (current === "x" ? undefined : current));
+      } else if (event.code === "KeyR") {
+        setRadiusActive(false);
       } else if (
         (event.code === "Digit1" || event.code === "Digit2") &&
         heldProbeCodeRef.current === event.code
@@ -148,5 +161,5 @@ export function useRulerHotkeys({
     undo,
   ]);
 
-  return { guideAxis, probeAxis };
+  return { guideAxis, probeAxis, radiusActive };
 }

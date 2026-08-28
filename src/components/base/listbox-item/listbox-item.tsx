@@ -3,64 +3,56 @@
 
 import { Check } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { use } from "react";
 import {
   ListBoxItem as AriaListBoxItem,
   ListBoxItemProps as AriaListBoxItemProps,
 } from "react-aria-components";
-import { VariantProps } from "tailwind-variants";
 
 import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
+import { ListBoxSizeContext } from "../listbox/listbox-context";
 
 const listBoxItemVariants = tv({
   base: [
-    "rounded-md cursor-default transition-colors inline-flex gap-2 items-center justify-between bg-content text-content-fg",
+    "inline-flex shrink-0 cursor-default items-center justify-between gap-2 rounded-lg bg-transparent text-content-fg transition-colors",
     "truncate",
     "data-[hovered]:bg-neutral",
+    "data-[pressed]:bg-neutral-hover",
+    "data-[selected]:bg-neutral",
+    "data-[selected]:data-[hovered]:bg-neutral-hover",
+    "data-[selected]:data-[pressed]:bg-neutral-pressed",
+    "data-[disabled]:bg-neutral-subtle data-[disabled]:text-neutral-disabled-fg",
     focusStyles,
     elementFocusVisible,
   ],
-  compoundVariants: [
-    {
-      class: "px-1.5 py-1",
-      compact: true,
-      size: "md",
-    },
-    {
-      class: "px-1 py-1",
-      compact: true,
-      size: "sm",
-    },
-  ],
   defaultVariants: {
-    size: "md",
+    size: "default",
   },
   variants: {
-    compact: { true: "rounded-sm" },
     size: {
-      md: "text-sm px-3 py-2",
-      sm: "text-xs px-3 py-2",
+      compact: "px-2 py-1 text-xs",
+      default: "px-3 py-2 text-sm",
     },
   },
 });
 
-type ListBoxItemProps = AriaListBoxItemProps &
-  VariantProps<typeof listBoxItemVariants> & {
-    children?: React.ReactNode;
-    className?: string;
-  };
+type ListBoxItemProps = AriaListBoxItemProps & {
+  children?: React.ReactNode;
+  className?: string;
+};
 
 export const ListBoxItem = ({
   children,
   className,
-  compact,
-  size,
   ...props
 }: ListBoxItemProps) => {
+  const size = use(ListBoxSizeContext);
+
   return (
     <AriaListBoxItem
       {...props}
-      className={listBoxItemVariants({ className, compact, size })}
+      className={listBoxItemVariants({ className, size })}
     >
       {({ isSelected }) => (
         <>
@@ -73,8 +65,8 @@ export const ListBoxItem = ({
                 initial={{ scale: 0 }}
               >
                 <Check
-                  className="text-success transition-colors"
-                  size={size === "md" ? 16 : 14}
+                  className="text-content-fg transition-colors"
+                  size={size === "compact" ? 14 : 16}
                   strokeWidth={3}
                 />
               </motion.div>

@@ -3,7 +3,7 @@
 
 import { RefObject, useEffect, useRef, useState } from "react";
 
-import { CircularProgressBar } from "../../../components/base/circular-progress-bar/circular-progress-bar";
+import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { Overlay } from "../../../components/base/overlay/overlay";
 
 /** A pane's geometry is expressed in the unscaled workspace coordinate space. */
@@ -125,12 +125,7 @@ export function NativeRecordingWorkspaceViewport({
         contained
         isOpen={isBusy}
       >
-        <CircularProgressBar
-          aria-label="Preparing the preview"
-          isIndeterminate
-          size={32}
-          strokeWidth={10}
-        />
+        <CircularProgress aria-label="Preparing the preview" isIndeterminate />
       </Overlay>
     </div>
   );

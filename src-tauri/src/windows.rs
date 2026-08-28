@@ -14,10 +14,13 @@ mod lifecycle;
 pub(crate) mod monitor_capture;
 pub(crate) mod options;
 mod platform;
+mod recording_options_layout;
 pub(crate) mod region;
 pub(crate) mod region_gesture;
+pub(crate) mod screenshot_region;
 pub(crate) mod source_selector;
 mod source_selector_layout;
+mod transient_popover;
 
 #[cfg(not(target_os = "macos"))]
 pub use dock::initialize_recording_dock;
@@ -172,10 +175,13 @@ pub fn manage_recording_bar_movement(app: &AppHandle) {
   let app = app.clone();
 
   window.on_window_event(move |event| {
-    if !matches!(event, WindowEvent::Moved(_)) {
+    let WindowEvent::Moved(_) = event else {
       return;
-    }
+    };
 
+    // AppKit moves the source selector as a native child of the bar, avoiding
+    // the visible delay caused by chasing Moved events with a second window.
+    #[cfg(not(target_os = "macos"))]
     let _ = source_selector::reposition(&app);
     let _ = hide_recording_options(app.clone());
 
@@ -184,8 +190,28 @@ pub fn manage_recording_bar_movement(app: &AppHandle) {
   });
 }
 
+#[derive(Clone, Copy, Default)]
+struct PopoversOpenOnPress {
+  recording_options: bool,
+  source_selector: bool,
+}
+
+impl PopoversOpenOnPress {
+  fn capture() -> Self {
+    Self {
+      recording_options: options::is_recording_options_open(),
+      source_selector: source_selector::is_expanded(),
+    }
+  }
+
+  fn dismiss_outside(self, app: &AppHandle, x: f64, y: f64) {
+    source_selector::dismiss_if_outside(app, self.source_selector, x, y);
+    options::dismiss_recording_options_if_outside(app, self.recording_options, x, y);
+  }
+}
+
 #[cfg(target_os = "windows")]
-pub fn manage_recording_source_selector_dismissal(app: &AppHandle) {
+pub fn manage_transient_popover_dismissal(app: &AppHandle) {
   use std::sync::{Arc, Mutex};
 
   use rdev::{listen, Button, EventType};
@@ -194,62 +220,53 @@ pub fn manage_recording_source_selector_dismissal(app: &AppHandle) {
   let mouse_position = Arc::new(Mutex::new((0.0, 0.0)));
   std::thread::spawn(move || {
     let position = mouse_position.clone();
+    let mut open_on_press = PopoversOpenOnPress::default();
     let result = listen(move |event| match event.event_type {
       EventType::MouseMove { x, y } => {
         if let Ok(mut position) = position.lock() {
           *position = (x, y);
         }
       }
+      EventType::ButtonPress(Button::Left) => {
+        open_on_press = PopoversOpenOnPress::capture();
+      }
       EventType::ButtonRelease(Button::Left) => {
         let Ok((x, y)) = position.lock().map(|position| *position) else {
           return;
         };
-        if source_selector::is_expanded() {
-          if let Some(selector) =
-            app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
-          {
-            if !options::coordinate_is_in_window(x, y, &selector) {
-              let _ = source_selector::collapse_recording_source_selector(app.clone());
-            }
-          }
-        }
-        options::dismiss_if_outside(&app, x, y);
+        open_on_press.dismiss_outside(&app, x, y);
+        open_on_press = PopoversOpenOnPress::default();
       }
       _ => {}
     });
 
     if let Err(error) = result {
-      eprintln!("Could not monitor clicks for source selector dismissal: {error:?}");
+      eprintln!("Could not monitor clicks for transient popover dismissal: {error:?}");
     }
   });
 }
 
 #[cfg(target_os = "macos")]
-pub fn manage_recording_source_selector_dismissal(app: &AppHandle) {
+pub fn manage_transient_popover_dismissal(app: &AppHandle) {
   use cidre::cg::{Event, EventSrcState, MouseButton};
 
   let app = app.clone();
   std::thread::spawn(move || {
     let mut was_pressed = EventSrcState::CombinedSession.button_state(MouseButton::Left);
+    let mut open_on_press = PopoversOpenOnPress::default();
 
     loop {
       let is_pressed = EventSrcState::CombinedSession.button_state(MouseButton::Left);
+      if !was_pressed && is_pressed {
+        open_on_press = PopoversOpenOnPress::capture();
+      }
       if was_pressed && !is_pressed {
         let Some(event) = Event::with_src(None) else {
           break;
         };
         let position = event.location();
-        if source_selector::is_expanded() {
-          let Some(selector) =
-            app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str())
-          else {
-            break;
-          };
-          if !options::coordinate_is_in_window(position.x, position.y, &selector) {
-            let _ = source_selector::collapse_recording_source_selector(app.clone());
-          }
-        }
-        options::dismiss_if_outside(&app, position.x, position.y);
+        open_on_press.dismiss_outside(&app, position.x, position.y);
+        open_on_press = PopoversOpenOnPress::default();
       }
 
       was_pressed = is_pressed;
@@ -259,7 +276,7 @@ pub fn manage_recording_source_selector_dismissal(app: &AppHandle) {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn manage_recording_source_selector_dismissal(_app: &AppHandle) {}
+pub fn manage_transient_popover_dismissal(_app: &AppHandle) {}
 
 #[cfg(target_os = "windows")]
 fn watch_for_recording_bar_mouse_up(app: AppHandle) {
@@ -337,9 +354,6 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
   platform::set_opacity(&bar, 1.0)?;
   platform::restore_recording_level(&bar)?;
 
-  if source_selector::is_visible() && region::source_selector_may_show() {
-    source_selector::show(app)?;
-  }
   app.emit_to(
     WindowLabel::RecordingBar.as_str(),
     "recording-ui://shown",

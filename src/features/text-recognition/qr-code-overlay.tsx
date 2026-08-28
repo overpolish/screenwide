@@ -84,7 +84,7 @@ export function QrCodeOverlay({
               type="button"
             >
               {unsupported && (
-                <span className="rounded bg-error px-1.5 py-0.5 text-xxs font-semibold whitespace-nowrap text-white shadow-sm">
+                <span className="rounded bg-error px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-white shadow-sm">
                   Unsupported QR
                 </span>
               )}
@@ -111,7 +111,7 @@ export function QrCodeOverlay({
             {active.error && (
               <div className="mt-1 text-xs text-error">{active.error}</div>
             )}
-            <pre className="mt-3 min-h-20 flex-1 overflow-auto rounded bg-neutral/20 p-3 text-xs break-all whitespace-pre-wrap select-text">
+            <pre className="mt-3 min-h-20 flex-1 overflow-auto rounded bg-neutral p-3 text-xs break-all whitespace-pre-wrap select-text">
               {active.code.content || "(empty)"}
             </pre>
             <div className="mt-2 flex justify-end gap-2">
@@ -119,8 +119,7 @@ export function QrCodeOverlay({
                 onPress={() => {
                   setActive(undefined);
                 }}
-                showFocus={false}
-                size="sm"
+                size="compact"
                 variant="ghost"
               >
                 Close
@@ -130,8 +129,7 @@ export function QrCodeOverlay({
                   onPress={() => {
                     copyAndDismiss(active.code.content);
                   }}
-                  showFocus={false}
-                  size="sm"
+                  size="compact"
                 >
                   Copy content
                 </Button>

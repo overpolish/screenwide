@@ -4,16 +4,18 @@
 export const standaloneListboxMaxHeight = 150;
 export const emptyStandaloneListboxHeight = 64;
 
-const itemHeight = 28;
-const itemGap = 8;
-const listboxChrome = 10;
+const compactItemHeight = 24;
+const itemGap = 4;
+const listboxPadding = 8;
+const focusSafeInset = 4;
 
 export const initialStandaloneListboxHeight = (itemCount: number) =>
   itemCount === 0
     ? emptyStandaloneListboxHeight
     : Math.min(
-        itemCount * itemHeight +
+        itemCount * compactItemHeight +
           Math.max(itemCount - 1, 0) * itemGap +
-          listboxChrome,
+          listboxPadding +
+          focusSafeInset,
         standaloneListboxMaxHeight,
       );

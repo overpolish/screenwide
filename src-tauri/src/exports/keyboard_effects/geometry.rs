@@ -64,7 +64,10 @@ pub(super) fn maximum_width(
 ) -> f64 {
   // Slots are unique to their badge-continuity group, so the recording-wide
   // bound is the widest single badge, not the sum of every badge's slots.
-  let mut groups = visuals.iter().map(|visual| visual.group).collect::<Vec<_>>();
+  let mut groups = visuals
+    .iter()
+    .map(|visual| visual.group)
+    .collect::<Vec<_>>();
   groups.sort_unstable();
   groups.dedup();
   groups

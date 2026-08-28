@@ -32,7 +32,7 @@ export function CursorEffectControls({
       >
         <span className="flex flex-col">
           <span className="text-xs">Bake cursor into recording</span>
-          <span className="text-xxs text-muted">Dynamic Screenwide cursor</span>
+          <span className="text-xs text-muted">Dynamic Screenwide cursor</span>
         </span>
       </Checkbox>
       <Checkbox
@@ -55,7 +55,7 @@ export function CursorEffectControls({
       >
         <span className="flex flex-col">
           <span className="text-xs">Smooth movement</span>
-          <span className="text-xxs text-muted">
+          <span className="text-xs text-muted">
             Adds natural smoothing and momentum.
           </span>
         </span>

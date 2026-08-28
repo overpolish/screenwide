@@ -3,7 +3,7 @@
 
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
-use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::windows::{self, WindowLabel};
 
@@ -15,10 +15,10 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
       WebviewUrl::App("/permissions".into()),
     )
     .title("Screenwide Permissions")
-    .inner_size(540.0, 432.0)
+    .inner_size(540.0, 388.0)
     .center()
-    .always_on_top(true)
-    .closable(false)
+    .always_on_top(false)
+    .closable(true)
     .decorations(false)
     .resizable(false)
     .shadow(true)
@@ -31,7 +31,16 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
       state: Some(EffectState::Active),
     })
     .build()
+    .inspect(|_| windows::hide_instead_of_close(app, WindowLabel::Permissions))
   })?;
 
   windows::show(&window, true)
+}
+
+pub fn hide(app: &AppHandle) -> tauri::Result<()> {
+  if let Some(window) = app.get_webview_window(WindowLabel::Permissions.as_str()) {
+    window.hide()?;
+  }
+
+  Ok(())
 }

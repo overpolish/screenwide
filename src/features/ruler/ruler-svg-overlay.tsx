@@ -6,22 +6,25 @@ import { Bounds } from "./pixel-analysis";
 import { MeasurementCenterlines } from "./ruler-centerlines";
 import { LABEL_HEIGHT, labelWidth } from "./ruler-label-metrics";
 import { DistanceProbeSvg } from "./ruler-probe-svg";
+import { RadiusMeasurementSvg } from "./ruler-radius-svg";
 import { SvgLabel } from "./ruler-svg-label";
-import { DistanceProbe, Measurement } from "./ruler-types";
+import { DistanceProbe, Measurement, RadiusMeasurement } from "./ruler-types";
 import { LabelHandles } from "./use-label-handles";
 import { SelectedLine } from "./use-ruler-deletion";
 import { useSettleAnimation } from "./use-settle-animation";
 
-function MeasurementSvg({
+export function MeasurementSvg({
   handles,
   measurement,
   selected,
   showLabel = true,
+  showShape = true,
 }: {
   measurement: Measurement;
   handles?: LabelHandles;
   selected?: boolean;
   showLabel?: boolean;
+  showShape?: boolean;
 }) {
   const horizontal = measurement.height < 8;
   const vertical = measurement.width < 8;
@@ -54,33 +57,37 @@ function MeasurementSvg({
   }
   return (
     <g>
-      {/* A pulsing halo marks the box the cursor has picked for deletion.
-          Always mounted so the opacity transition animates it in AND out. */}
-      <rect
-        className={
-          selected
-            ? "animate-halo stroke-error transition-opacity duration-75"
-            : "stroke-error transition-opacity duration-75"
-        }
-        fill="none"
-        height={Math.max(1, measurement.height)}
-        opacity={selected ? 0.4 : 0}
-        rx={radius}
-        strokeWidth={7}
-        vectorEffect="non-scaling-stroke"
-        width={Math.max(1, measurement.width)}
-        x={measurement.x}
-        y={measurement.y}
-      />
-      <rect
-        className="fill-error/8 stroke-error"
-        height={Math.max(1, measurement.height)}
-        rx={radius}
-        vectorEffect="non-scaling-stroke"
-        width={Math.max(1, measurement.width)}
-        x={measurement.x}
-        y={measurement.y}
-      />
+      {showShape ? (
+        <>
+          {/* A pulsing halo marks the box the cursor has picked for deletion.
+              Always mounted so the opacity transition animates it in AND out. */}
+          <rect
+            className={
+              selected
+                ? "animate-halo stroke-error transition-opacity duration-75"
+                : "stroke-error transition-opacity duration-75"
+            }
+            fill="none"
+            height={Math.max(1, measurement.height)}
+            opacity={selected ? 0.4 : 0}
+            rx={radius}
+            strokeWidth={7}
+            vectorEffect="non-scaling-stroke"
+            width={Math.max(1, measurement.width)}
+            x={measurement.x}
+            y={measurement.y}
+          />
+          <rect
+            className="fill-error/8 stroke-error"
+            height={Math.max(1, measurement.height)}
+            rx={radius}
+            vectorEffect="non-scaling-stroke"
+            width={Math.max(1, measurement.width)}
+            x={measurement.x}
+            y={measurement.y}
+          />
+        </>
+      ) : null}
       {showLabel ? (
         <SvgLabel
           handles={handles}
@@ -124,19 +131,21 @@ export function RulerSvgOverlay({
   deviceScale,
   distanceProbes,
   draft,
-  handles,
   highlighted,
   measurements,
+  radii,
+  radiusPreview,
 }: {
   boxes: readonly RulerComponentBox[];
   centerlines: boolean;
   detectedBoxes: boolean;
   deviceScale: number;
   distanceProbes: readonly DistanceProbe[];
-  handles: LabelHandles;
   measurements: readonly Measurement[];
+  radii: readonly RadiusMeasurement[];
   draft?: Bounds;
   highlighted?: SelectedLine;
+  radiusPreview?: RadiusMeasurement;
 }) {
   const frames = useSettleAnimation(measurements);
   const settled = measurements.map((measurement) => {
@@ -174,26 +183,38 @@ export function RulerSvgOverlay({
           items={centred}
         />
       ) : null}
+      {radii.map((radius) => (
+        <RadiusMeasurementSvg
+          key={radius.id}
+          measurement={radius}
+          selected={
+            highlighted?.kind === "radius" && radius.id === highlighted.id
+          }
+          showLabel={false}
+        />
+      ))}
+      {radiusPreview ? (
+        <RadiusMeasurementSvg measurement={radiusPreview} showLabel={false} />
+      ) : null}
       {distanceProbes.map((probe) => (
         <DistanceProbeSvg
-          handles={handles}
           key={probe.id}
           probe={probe}
           selected={
             highlighted?.kind === "probe" && probe.id === highlighted.id
           }
-          showLabel
+          showLabel={false}
         />
       ))}
       {settled.map((measurement) => (
         <MeasurementSvg
-          handles={handles}
           key={measurement.id}
           measurement={measurement}
           selected={
             highlighted?.kind === "measurement" &&
             measurement.id === highlighted.id
           }
+          showLabel={false}
         />
       ))}
       {draft ? (

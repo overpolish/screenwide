@@ -11,8 +11,10 @@ import {
 import { ReactNode, RefObject } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
-import { Button } from "../../../components/base/button/button";
-import { ToggleButton } from "../../../components/base/button/toggle-button";
+import {
+  IconButton,
+  IconToggleButton,
+} from "../../../components/base/button/icon-button";
 import { Keyboard } from "../../../components/base/keyboard/keyboard";
 import { Tooltip } from "../../../components/base/tooltip/tooltip";
 
@@ -72,87 +74,72 @@ export function TimelineZoomToolbar({
   return (
     <div className="flex h-9 w-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-1.25rem)] shrink-0 items-center pl-1">
       <TimelineToolbarTooltip label="Blade" shortcut="B">
-        <ToggleButton
-          animation="scale-selected"
+        <IconToggleButton
           aria-keyshortcuts="B"
           aria-label="Blade tool"
           isSelected={isBladeActive}
           onChange={onBladeActiveChange}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
+          size="compact"
         >
           <Scissors size={15} />
-        </ToggleButton>
+        </IconToggleButton>
       </TimelineToolbarTooltip>
       <TimelineToolbarTooltip label="Range" shortcut="Shift+R">
-        <ToggleButton
-          animation="scale-selected"
+        <IconToggleButton
           aria-keyshortcuts="Shift+R"
           aria-label="Range tool"
           isSelected={isRangeActive}
           onChange={onRangeActiveChange}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
+          size="compact"
         >
           <SquareDashed size={15} />
-        </ToggleButton>
+        </IconToggleButton>
       </TimelineToolbarTooltip>
       <div className="ml-auto flex items-center gap-0.5">
         <TimelineToolbarTooltip
           isDisabled={viewport.zoom <= 1}
           label="Zoom out"
         >
-          <Button
+          <IconButton
             aria-label="Zoom timeline out"
-            color="muted"
-            icon
             isDisabled={viewport.zoom <= 1}
             onPress={() => {
               onZoom(0.8);
             }}
-            size="sm"
-            variant="ghost"
+            size="compact"
           >
             <ZoomOut size={15} />
-          </Button>
+          </IconButton>
         </TimelineToolbarTooltip>
         <TimelineToolbarTooltip
           isDisabled={viewport.zoom === 1 && viewport.panOffset === 0}
           label="Fit timeline"
           shortcut="Shift+Z"
         >
-          <Button
+          <IconButton
             aria-keyshortcuts="Shift+Z"
             aria-label="Fit timeline"
-            color="muted"
-            icon
             isDisabled={viewport.zoom === 1 && viewport.panOffset === 0}
             onPress={onFit}
-            size="sm"
-            variant="ghost"
+            size="compact"
           >
             <Maximize2 size={14} />
-          </Button>
+          </IconButton>
         </TimelineToolbarTooltip>
         <TimelineToolbarTooltip
           isDisabled={viewport.zoom >= 20}
           label="Zoom in"
         >
-          <Button
+          <IconButton
             aria-label="Zoom timeline in"
-            color="muted"
-            icon
             isDisabled={viewport.zoom >= 20}
             onPress={() => {
               onZoom(1.25);
             }}
-            size="sm"
-            variant="ghost"
+            size="compact"
           >
             <ZoomIn size={15} />
-          </Button>
+          </IconButton>
         </TimelineToolbarTooltip>
       </div>
     </div>

@@ -4,6 +4,7 @@
 import { Copy, RotateCcw, X } from "lucide-react";
 
 import { Button } from "../../base/button/button";
+import { IconButton } from "../../base/button/icon-button";
 
 import { CanvasToolbar } from "./canvas-toolbar";
 
@@ -12,7 +13,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   component: CanvasToolbar,
   parameters: { layout: "centered" },
-  title: "Canvas Toolbar",
+  title: "Legacy/Canvas Toolbar",
 } satisfies Meta<typeof CanvasToolbar>;
 
 export default meta;
@@ -22,28 +23,16 @@ export const Default: Story = {
   args: {
     children: (
       <>
-        <Button showFocus={false} size="sm" variant="ghost">
+        <Button size="compact" variant="ghost">
           <Copy size={15} />
           Copy
         </Button>
-        <Button
-          aria-label="Reset"
-          icon
-          showFocus={false}
-          size="sm"
-          variant="ghost"
-        >
+        <IconButton aria-label="Reset" size="compact">
           <RotateCcw size={15} />
-        </Button>
-        <Button
-          aria-label="Close"
-          icon
-          showFocus={false}
-          size="sm"
-          variant="ghost"
-        >
+        </IconButton>
+        <IconButton aria-label="Close" size="compact">
           <X size={15} />
-        </Button>
+        </IconButton>
       </>
     ),
   },

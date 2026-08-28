@@ -17,7 +17,7 @@ const meta = {
     ),
   ],
   parameters: { layout: "centered" },
-  title: "Window Titlebar",
+  title: "Legacy/Window Titlebar",
 } satisfies Meta<typeof WindowTitlebar>;
 
 export default meta;
@@ -26,7 +26,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     actions: (
-      <Button showFocus={false} size="sm" variant="ghost">
+      <Button size="compact" variant="ghost">
         Save
       </Button>
     ),

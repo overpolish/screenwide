@@ -25,7 +25,7 @@ const meta = {
       <PreviewProbeLayer {...args} />
     </RulerStoryStage>
   ),
-  title: "Features/Ruler Preview Probes",
+  title: "Legacy/Ruler Preview Probes",
 } satisfies Meta<typeof PreviewProbeLayer>;
 
 export default meta;

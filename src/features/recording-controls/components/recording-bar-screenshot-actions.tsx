@@ -8,9 +8,16 @@ import {
   ImageDown,
 } from "lucide-react";
 
-import { Button } from "../../../components/base/button/button";
+import { IconButton } from "../../../components/base/button/icon-button";
 import { cn } from "../../../lib/styling";
 import { ScreenshotState } from "../types";
+
+const screenshotFailurePreviewEnabled =
+  import.meta.env.DEV &&
+  import.meta.env.VITE_SCREENWIDE_SCREENSHOT_FAILURE_PREVIEW === "1";
+
+const failedActionClassName =
+  "bg-error-surface text-error data-[hovered]:bg-error-surface-hover data-[pressed]:bg-error-surface-pressed";
 
 type RecordingBarScreenshotActionsProps = {
   canCaptureScrollingScreenshot: boolean;
@@ -28,24 +35,20 @@ type RecordingBarScreenshotActionsProps = {
 function FeedbackIcon({
   icon: Icon,
   isCapturing,
-  size,
   state,
 }: {
   icon: typeof ImageDown;
   isCapturing: boolean;
-  size: number;
   state: ScreenshotState;
 }) {
   return state === "done" ? (
-    <Check className="text-success" size={size} strokeWidth={3} />
+    <Check className="text-success" strokeWidth={3} />
   ) : (
     <Icon
       className={cn(
-        "origin-center transform-gpu backface-hidden will-change-transform transition-[color,transform,scale] group-data-[hovered]:scale-110",
+        "transition-colors",
         isCapturing && "animate-pulse text-muted",
-        state === "failed" && "text-error",
       )}
-      size={size}
     />
   );
 }
@@ -62,58 +65,70 @@ export function RecordingBarScreenshotActions({
   onScrollingScreenshot,
   scrollingScreenshotState,
 }: RecordingBarScreenshotActionsProps) {
+  const effectiveClipboardState = screenshotFailurePreviewEnabled
+    ? "failed"
+    : clipboardScreenshotState;
+  const effectiveExportState = screenshotFailurePreviewEnabled
+    ? "failed"
+    : exportScreenshotState;
+  const effectiveScrollingState = screenshotFailurePreviewEnabled
+    ? "failed"
+    : scrollingScreenshotState;
+
   return (
-    <div className="mr-3 flex flex-col items-center justify-center self-stretch">
-      <Button
+    <div className="gap-tight flex flex-col items-center justify-center self-stretch">
+      <IconButton
         aria-label="Take screenshot"
-        className="group cursor-default p-1"
+        className={
+          effectiveExportState === "failed" ? failedActionClassName : undefined
+        }
+        iconSize="prominent"
         isDisabled={!canExportScreenshot || isCapturingStill}
         onPress={onScreenshot}
-        showFocus={false}
-        variant="ghost"
       >
         <FeedbackIcon
           icon={ImageDown}
           isCapturing={isCapturingStill}
-          size={40}
-          state={exportScreenshotState}
+          state={effectiveExportState}
         />
-      </Button>
+      </IconButton>
 
-      <div className="flex items-center justify-center">
-        <Button
+      <div className="gap-tight flex items-center justify-center">
+        <IconButton
           aria-label="Copy screenshot to clipboard"
-          className="group cursor-default"
+          className={
+            effectiveClipboardState === "failed"
+              ? failedActionClassName
+              : undefined
+          }
           isDisabled={!canCopyScreenshot || isCapturingStill}
           onPress={onScreenshotToClipboard}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
+          size="compact"
         >
           <FeedbackIcon
             icon={ClipboardCopy}
             isCapturing={isCapturingStill}
-            size={16}
-            state={clipboardScreenshotState}
+            state={effectiveClipboardState}
           />
-        </Button>
+        </IconButton>
 
-        <Button
+        <IconButton
           aria-label="Capture scrolling region"
-          className="group cursor-default"
+          className={
+            effectiveScrollingState === "failed"
+              ? failedActionClassName
+              : undefined
+          }
           isDisabled={!canCaptureScrollingScreenshot || isCapturingStill}
           onPress={onScrollingScreenshot}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
+          size="compact"
         >
           <FeedbackIcon
             icon={ArrowBigDownDash}
             isCapturing={isCapturingStill}
-            size={16}
-            state={scrollingScreenshotState}
+            state={effectiveScrollingState}
           />
-        </Button>
+        </IconButton>
       </div>
     </div>
   );

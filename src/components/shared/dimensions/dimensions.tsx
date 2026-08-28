@@ -1,35 +1,29 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Link, RotateCcw, Unlink, WandSparkles } from "lucide-react";
+import { Link, RotateCcw, Unlink } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { cn } from "../../../lib/styling";
-import { Button } from "../../base/button/button";
-import { ToggleButton } from "../../base/button/toggle-button";
+import { IconButton, IconToggleButton } from "../../base/button/icon-button";
+import { FieldGroup } from "../../base/field-group/field-group";
 import { NumberField } from "../../base/input-fields/number-field";
-import { CheckOnClickButton } from "../check-on-click-button/check-on-click-button";
 
 import {
   AspectRatioParts,
-  closestDimensionsAtRatio,
   dimensionsAtRatio,
   matchesRatio,
-  parseRatioFromId,
   reduceToRatio,
 } from "./aspect-ratio-math";
-import { PlatformPresets } from "./platform-presets";
 
 const numberFieldStyles: React.ComponentProps<typeof NumberField> = {
-  centered: true,
-  className: "w-15",
-  scrubbable: true,
+  className: "w-20",
+  rightSection: "px",
   showSteppers: false,
-  size: "sm",
-  variant: "line",
+  size: "compact",
 };
 
-type AspectRatioProps = {
+type DimensionsProps = {
   className?: string;
   defaultHeight?: number;
   defaultWidth?: number;
@@ -37,7 +31,6 @@ type AspectRatioProps = {
   initialLinked?: boolean;
   label?: string;
   layout?: "inline" | "stacked";
-  onApply?: (width: number, height: number) => void;
   onRatioChange?: (ratio: number | undefined) => void;
   onReset?: () => void;
   setDimensions?: (width: number, height: number) => void;
@@ -46,7 +39,7 @@ type AspectRatioProps = {
   width?: number;
 };
 
-export const AspectRatio = ({
+export const Dimensions = ({
   className,
   defaultHeight = 1080,
   defaultWidth = 1920,
@@ -54,14 +47,13 @@ export const AspectRatio = ({
   initialLinked = false,
   label = "Dimensions",
   layout = "inline",
-  onApply,
   onRatioChange,
   onReset,
   setDimensions,
   setHeight,
   setWidth,
   width,
-}: AspectRatioProps) => {
+}: DimensionsProps) => {
   // Determine if fully controlled (both values and setters provided)
   const isControlled =
     width != null && height != null && setWidth != null && setHeight != null;
@@ -185,13 +177,6 @@ export const AspectRatio = ({
     setDimensionValues(newWidth, newHeight);
   };
 
-  const applyPresetRatio = (ratio: AspectRatioParts) => {
-    const dimensions = closestDimensionsAtRatio(widthValue, heightValue, ratio);
-    lockedRatioRef.current = ratio;
-    setLinked(true);
-    setDimensionValues(dimensions.width, dimensions.height);
-  };
-
   const onChangeWidth = (value: number) => {
     if (linked) {
       adjustToRatio(value, "width", getLockedRatio());
@@ -206,28 +191,6 @@ export const AspectRatio = ({
       return;
     }
     setHeightValue(value);
-  };
-
-  const onPressPreset = (id: string) => {
-    const ratio = parseRatioFromId(id);
-    if (ratio) applyPresetRatio(ratio);
-  };
-
-  const onPressApply = () => {
-    onApply?.(widthValue, heightValue);
-  };
-
-  const onPressPlatform = (
-    width: number,
-    height: number,
-    aspectRatio: string,
-  ) => {
-    const ratio = parseRatioFromId(aspectRatio);
-    if (ratio) lockedRatioRef.current = ratio;
-    setLinked(true);
-    setDimensionValues(width, height);
-
-    onApply?.(width, height);
   };
 
   // Notify parent of the active aspect ratio to enforce in external resizers (e.g. RND)
@@ -259,135 +222,63 @@ export const AspectRatio = ({
     }
   }, [linked, widthValue, heightValue]);
 
-  const platformIcons = (
-    <PlatformPresets
-      onInstagram={() => {
-        onPressPlatform(1080, 1350, "4:5");
-      }}
-      onTiktok={() => {
-        onPressPlatform(1080, 1920, "9:16");
-      }}
-      onYoutube={() => {
-        onPressPlatform(1920, 1080, "16:9");
-      }}
-    />
-  );
   const dimensionFields = (
     <div className="flex flex-row items-center">
       {onReset ? (
-        <Button
+        <IconButton
           aria-label="Reset dimensions"
-          icon
           onPress={onReset}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
+          size="compact"
         >
-          <RotateCcw size={13} />
-        </Button>
+          <RotateCcw />
+        </IconButton>
       ) : null}
-      <NumberField
-        {...numberFieldStyles}
-        aria-label="Aspect Ratio Width"
-        onChange={onChangeWidth}
-        value={widthValue}
-      />
+      <FieldGroup className="flex items-center">
+        <NumberField
+          {...numberFieldStyles}
+          aria-label="Aspect Ratio Width"
+          onChange={onChangeWidth}
+          value={widthValue}
+        />
 
-      <ToggleButton
-        aria-label={linked ? "Unlink dimensions" : "Link dimensions"}
-        isSelected={linked}
-        off={<Unlink size={14} />}
-        onChange={(isSelected) => {
-          setLinked(isSelected);
-        }}
-        variant="ghost"
-      >
-        <Link size={14} />
-      </ToggleButton>
+        <IconToggleButton
+          aria-label={linked ? "Unlink dimensions" : "Link dimensions"}
+          isSelected={linked}
+          off={<Unlink />}
+          onChange={(isSelected) => {
+            setLinked(isSelected);
+          }}
+          size="compact"
+        >
+          <Link />
+        </IconToggleButton>
 
-      <NumberField
-        {...numberFieldStyles}
-        aria-label="Aspect Ratio Height"
-        onChange={onChangeHeight}
-        value={heightValue}
-      />
+        <NumberField
+          {...numberFieldStyles}
+          aria-label="Aspect Ratio Height"
+          onChange={onChangeHeight}
+          value={heightValue}
+        />
+      </FieldGroup>
     </div>
   );
-  const ratioButtons = (
-    <div className="flex flex-row gap-1">
-      <Button
-        className="border border-muted/30 text-muted"
-        onPress={() => {
-          onPressPreset("16:9");
-        }}
-        size="sm"
-        variant="ghost"
-      >
-        16:9
-      </Button>
-      <Button
-        className="border border-muted/30 text-muted"
-        onPress={() => {
-          onPressPreset("4:5");
-        }}
-        size="sm"
-        variant="ghost"
-      >
-        4:5
-      </Button>
-      <Button
-        className="border border-muted/30 text-muted"
-        onPress={() => {
-          onPressPreset("9:16");
-        }}
-        size="sm"
-        variant="ghost"
-      >
-        9:16
-      </Button>
-    </div>
-  );
-
   return (
     <div
       className={cn(
         layout === "stacked"
-          ? "flex w-full flex-col gap-2"
-          : "flex flex-row items-center gap-1.5",
+          ? "gap-section flex w-full flex-col"
+          : "gap-control flex flex-row items-center",
         className,
       )}
     >
       {layout === "stacked" ? (
-        <>
-          <div className="flex items-center">
-            <span className="text-xs text-content-fg">{label}</span>
-            <div className="grow" />
-            {dimensionFields}
-          </div>
-          <div className="flex items-center">
-            {platformIcons}
-            <div className="grow" />
-            {ratioButtons}
-          </div>
-        </>
-      ) : (
-        <>
-          {platformIcons}
+        <div className="flex items-center">
+          <span className="text-xs text-content-fg">{label}</span>
+          <div className="grow" />
           {dimensionFields}
-          {ratioButtons}
-        </>
-      )}
-
-      {onApply && (
-        <CheckOnClickButton
-          blur="xs"
-          onPress={onPressApply}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
-        >
-          <WandSparkles size={16} />
-        </CheckOnClickButton>
+        </div>
+      ) : (
+        dimensionFields
       )}
     </div>
   );

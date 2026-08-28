@@ -20,7 +20,7 @@ const sliderVariants = tv({
     fill: "absolute h-full rounded-full bg-info",
     header: "flex items-center justify-between gap-3",
     label: "text-xs",
-    output: "text-xxs text-muted tabular-nums",
+    output: "text-xs text-muted tabular-nums",
     thumb: [
       "top-1/2 size-4 rounded-full border-2 border-info bg-content shadow-sm",
       "transition-[transform,box-shadow] data-[dragging]:scale-110 data-[hovered]:scale-110",

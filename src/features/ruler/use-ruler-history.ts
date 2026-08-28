@@ -11,25 +11,29 @@ import {
 } from "react";
 
 import { Point } from "./pixel-analysis";
-import { Guide, Measurement } from "./ruler-types";
+import { Guide, Measurement, RadiusMeasurement } from "./ruler-types";
 import { PersistedDistanceProbe } from "./use-distance-probes";
 
 /** Snapshots are cheap (shared slice references), so the cap is generous. */
 const MAX_ENTRIES = 100;
 
-/** The four user-mutable slices of the ruler document. */
+/** The six user-mutable slices of the ruler document. */
 type Snapshot = {
   guides: Guide[];
+  hiddenLabels: ReadonlySet<string>;
   measurements: Measurement[];
   offsets: Record<string, Point>;
   probes: PersistedDistanceProbe[];
+  radii: RadiusMeasurement[];
 };
 
 const unchanged = (a: Snapshot, b: Snapshot) =>
   a.guides === b.guides &&
+  a.hiddenLabels === b.hiddenLabels &&
   a.measurements === b.measurements &&
   a.offsets === b.offsets &&
-  a.probes === b.probes;
+  a.probes === b.probes &&
+  a.radii === b.radii;
 
 const push = (stack: Snapshot[], entry: Snapshot) => {
   stack.push(entry);
@@ -67,40 +71,62 @@ export function useRulerHistory({
   labels,
   measurements,
   probes,
+  radii,
   setMeasurements,
+  setRadii,
 }: {
   fill: (record: () => void) => void;
   guides: { guides: Guide[]; restore: (guides: Guide[]) => void };
   labels: {
+    hidden: ReadonlySet<string>;
     offsets: Record<string, Point>;
     restore: (offsets: Record<string, Point>) => void;
+    restoreHidden: (hidden: ReadonlySet<string>) => void;
   };
   measurements: Measurement[];
   probes: {
     probes: PersistedDistanceProbe[];
     restore: (probes: PersistedDistanceProbe[]) => void;
   };
+  radii: RadiusMeasurement[];
   setMeasurements: Dispatch<SetStateAction<Measurement[]>>;
+  setRadii: Dispatch<SetStateAction<RadiusMeasurement[]>>;
 }) {
   const undoRef = useRef<Snapshot[]>([]);
   const redoRef = useRef<Snapshot[]>([]);
   const currentRef = useRef<Snapshot>({
     guides: guides.guides,
+    hiddenLabels: labels.hidden,
     measurements,
     offsets: labels.offsets,
     probes: probes.probes,
+    radii,
   });
-  const targetsRef = useRef({ guides, labels, probes, setMeasurements });
+  const targetsRef = useRef({
+    guides,
+    labels,
+    probes,
+    setMeasurements,
+    setRadii,
+  });
 
   useEffect(() => {
     currentRef.current = {
       guides: guides.guides,
+      hiddenLabels: labels.hidden,
       measurements,
       offsets: labels.offsets,
       probes: probes.probes,
+      radii,
     };
-    targetsRef.current = { guides, labels, probes, setMeasurements };
-  }, [guides, labels, measurements, probes, setMeasurements]);
+    targetsRef.current = {
+      guides,
+      labels,
+      probes,
+      setMeasurements,
+      setRadii,
+    };
+  }, [guides, labels, measurements, probes, radii, setMeasurements, setRadii]);
 
   const record = useCallback(() => {
     const stack = undoRef.current;
@@ -123,8 +149,10 @@ export function useRulerHistory({
     const targets = targetsRef.current;
     targets.guides.restore(entry.guides);
     targets.labels.restore(entry.offsets);
+    targets.labels.restoreHidden(entry.hiddenLabels);
     targets.probes.restore(entry.probes);
     targets.setMeasurements(entry.measurements);
+    targets.setRadii(entry.radii);
     // Repeated presses land before the next render refreshes the ref.
     currentRef.current = entry;
     return true;

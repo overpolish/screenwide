@@ -15,7 +15,7 @@ const meta = {
     ),
   ],
   parameters: { layout: "centered" },
-  title: "Crop Shade",
+  title: "Legacy/Crop Shade",
 } satisfies Meta<typeof CropShade>;
 
 export default meta;

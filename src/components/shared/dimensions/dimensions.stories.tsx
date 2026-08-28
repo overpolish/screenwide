@@ -3,24 +3,18 @@
 
 import { Meta, StoryObj } from "@storybook/react";
 
-import { AspectRatio } from "./aspect-ratio";
+import { Dimensions } from "./dimensions";
 
 const meta = {
-  component: AspectRatio,
+  component: Dimensions,
   parameters: {
     layout: "centered",
   },
-  title: "Features/Aspect Ratio",
-} satisfies Meta<typeof AspectRatio>;
+  title: "Components/Dimensions",
+} satisfies Meta<typeof Dimensions>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 /* --------------------------------- Stories -------------------------------- */
-export const Default: Story = {
-  args: {
-    onApply: (width, height) => {
-      console.log("Apply pressed", { height, width });
-    },
-  },
-};
+export const Default: Story = {};

@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 
-import { CircularProgressBar } from "../../../components/base/circular-progress-bar/circular-progress-bar";
+import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { copyRecordingPreviewFrameToClipboard } from "../api";
 import {
   cameraOverlayGeometry,
@@ -1210,11 +1210,9 @@ export function NativeRecordingPreview({
           <div className="flex min-h-0 grow items-stretch justify-center">
             {!layout ? (
               <div className="flex grow items-center justify-center gap-3 text-xs text-muted">
-                <CircularProgressBar
+                <CircularProgress
                   aria-label="Preparing recording preview"
                   isIndeterminate
-                  size={32}
-                  strokeWidth={10}
                 />
                 Preparing recording preview
               </div>
@@ -1294,11 +1292,10 @@ export function NativeRecordingPreview({
       {layout ? (
         isPreparingAudio ? (
           <div className="flex h-24 shrink-0 items-center justify-center gap-2 border-t border-muted/15 text-xs text-muted">
-            <CircularProgressBar
+            <CircularProgress
               aria-label="Preparing audio preview"
               isIndeterminate
-              size={22}
-              strokeWidth={8}
+              size="compact"
             />
             Preparing audio tracks
           </div>

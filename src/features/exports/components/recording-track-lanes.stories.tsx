@@ -268,7 +268,7 @@ function TimelinePreview() {
 const meta = {
   component: TimelinePreview,
   parameters: { layout: "centered" },
-  title: "Features/Recording Timeline",
+  title: "Legacy/Recording Timeline",
 } satisfies Meta<typeof TimelinePreview>;
 
 export default meta;

@@ -1,16 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { guideGaps } from "./guide-gaps";
+import { guideGapLabelPoint, guideGaps } from "./guide-gaps";
 import { PixelSize } from "./pixel-analysis";
 import { SvgLabel } from "./ruler-svg-label";
 import { Guide } from "./ruler-types";
 import { LabelHandles } from "./use-label-handles";
-
-const MARGIN = 24;
-
-const clamp = (value: number, limit: number) =>
-  Math.min(Math.max(value, MARGIN), Math.max(MARGIN, limit - MARGIN));
 
 /**
  * Gap chips park at the midpoint of the two guides' placement anchors, clamped
@@ -26,18 +21,16 @@ export function GuideGapLabels({
   viewport: PixelSize;
 }) {
   return guideGaps({ guides, viewport }).map((gap) => {
-    const across = clamp(
-      gap.anchor,
-      gap.axis === "x" ? viewport.height : viewport.width,
-    );
+    if (!handles.isVisible(gap.key)) return null;
+    const point = guideGapLabelPoint(gap, viewport);
     return (
       <SvgLabel
         handles={handles}
         key={gap.key}
         labelKey={gap.key}
         text={`${String(gap.value)} px`}
-        x={gap.axis === "x" ? gap.centre : across}
-        y={gap.axis === "x" ? across : gap.centre}
+        x={point.x}
+        y={point.y}
       />
     );
   });

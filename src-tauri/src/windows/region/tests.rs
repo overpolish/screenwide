@@ -4,7 +4,6 @@
 use super::{
   recording_controls_may_raise, recording_ui_may_hide, region_selector_is_interactive,
   region_selector_may_show, region_selector_restores_opacity,
-  source_selector_visibility_allows_show,
 };
 
 #[test]
@@ -12,13 +11,6 @@ fn a_region_gesture_does_not_raise_the_source_selector() {
   assert!(recording_controls_may_raise(true, false));
   assert!(!recording_controls_may_raise(true, true));
   assert!(!recording_controls_may_raise(false, false));
-}
-
-#[test]
-fn a_region_gesture_keeps_the_source_selector_hidden_during_store_sync() {
-  assert!(source_selector_visibility_allows_show(true, false));
-  assert!(!source_selector_visibility_allows_show(true, true));
-  assert!(!source_selector_visibility_allows_show(false, false));
 }
 
 #[test]

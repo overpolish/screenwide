@@ -28,19 +28,6 @@ export const reduceToRatio = (
   };
 };
 
-/** Parses a preset id like "16:9" into ratio parts. */
-export const parseRatioFromId = (
-  id: string | null,
-): AspectRatioParts | undefined => {
-  if (!id) return undefined;
-  const [a, b] = id.split(":").map((n) => Number.parseInt(n, 10));
-  if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0) {
-    return undefined;
-  }
-
-  return { ratioHeight: b, ratioWidth: a };
-};
-
 /**
  * Whether dimensions already sit on a ratio, bar whole-pixel rounding.
  *
@@ -83,18 +70,4 @@ export const dimensionsAtRatio = (
           Math.round((editedValue * ratioWidth) / ratioHeight),
         ),
       };
-};
-
-export const closestDimensionsAtRatio = (
-  width: number,
-  height: number,
-  ratio: AspectRatioParts,
-) => {
-  const fromWidth = dimensionsAtRatio(width, "width", ratio);
-  const fromHeight = dimensionsAtRatio(height, "height", ratio);
-  const widthDelta =
-    Math.abs(fromWidth.width - width) + Math.abs(fromWidth.height - height);
-  const heightDelta =
-    Math.abs(fromHeight.width - width) + Math.abs(fromHeight.height - height);
-  return widthDelta <= heightDelta ? fromWidth : fromHeight;
 };

@@ -3,11 +3,17 @@
 
 import { Channel, invoke } from "@tauri-apps/api/core";
 
-import { MonitorDetails, WindowDetails } from "./types";
+import { MonitorDetails, SelectorState, WindowDetails } from "./types";
 
 export const listMonitors = () => invoke<MonitorDetails[]>("list_monitors");
 
 export const listWindows = () => invoke<WindowDetails[]>("list_windows");
+
+export const selectedWindowAvailable = (window: WindowDetails) =>
+  invoke<boolean>("selected_window_available", {
+    id: window.id,
+    pid: window.pid,
+  });
 
 const windowIdentity = (window: WindowDetails) => ({
   id: window.id,
@@ -26,20 +32,20 @@ export const resizeWindow = (
     width,
   });
 
-export const centerWindow = (window: WindowDetails) =>
-  invoke<null>("center_window", windowIdentity(window));
+export const expandRecordingSourceSelector = (
+  windowSelector: boolean,
+  focusContents: boolean,
+) =>
+  invoke<null>("expand_recording_source_selector", {
+    focusContents,
+    windowSelector,
+  });
 
-export const makeWindowBorderless = (window: WindowDetails) =>
-  invoke<null>("make_window_borderless", windowIdentity(window));
+export const collapseRecordingSourceSelector = (returnFocus?: boolean) =>
+  invoke<null>("collapse_recording_source_selector", { returnFocus });
 
-export const restoreWindowBorder = (window: WindowDetails) =>
-  invoke<null>("restore_window_border", windowIdentity(window));
-
-export const toggleRecordingSourceSelector = (windowSelector: boolean) =>
-  invoke<null>("toggle_recording_source_selector", { windowSelector });
-
-export const collapseRecordingSourceSelector = () =>
-  invoke<null>("collapse_recording_source_selector");
+export const getRecordingSourceSelectorState = () =>
+  invoke<SelectorState>("get_recording_source_selector_state");
 
 export const finishRecordingBarDrag = () =>
   invoke<null>("finish_recording_bar_drag");
@@ -52,9 +58,6 @@ export const toggleRecordingUi = () => invoke<null>("toggle_recording_ui");
 
 export const setRecordingSourceSelectorVisible = (visible: boolean) =>
   invoke<null>("set_recording_source_selector_visible", { visible });
-
-export const setRecordingSourceSelectorRegionControls = (visible: boolean) =>
-  invoke<null>("set_recording_source_selector_region_controls", { visible });
 
 export const showRegionSelector = (monitor: MonitorDetails) =>
   invoke<null>("show_region_selector", {
@@ -72,6 +75,13 @@ export const setRegionSelectorOpacity = (opacity: number) =>
 
 export const setScreenshotRegionSession = (active: boolean) =>
   invoke<null>("set_screenshot_region_session", { active });
+
+export const openScreenshotRegionOverlays = (
+  destination: "clipboard" | "export",
+) => invoke<null>("open_screenshot_region_overlays", { destination });
+
+export const closeScreenshotRegionOverlays = () =>
+  invoke<null>("close_screenshot_region_overlays");
 
 export const setRecordingControlsOpacity = (opacity: number) =>
   invoke<null>("set_recording_controls_opacity", { opacity });

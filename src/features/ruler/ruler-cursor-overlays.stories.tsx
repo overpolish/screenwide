@@ -29,7 +29,7 @@ const meta = {
       <CursorReadout {...args} />
     </RulerStoryStage>
   ),
-  title: "Features/Ruler Cursor Overlays",
+  title: "Legacy/Ruler Cursor Overlays",
 } satisfies Meta<typeof CursorReadout>;
 
 export default meta;

@@ -21,6 +21,7 @@ export function RegionTransformFrame({
   onPersist,
   onResizeDirectionChange,
   region,
+  showHandles = true,
   visible,
 }: {
   aspectRatio: number | false;
@@ -33,6 +34,7 @@ export function RegionTransformFrame({
   onResizeDirectionChange: (direction: ResizeDirection | undefined) => void;
   region: Region;
   visible: boolean;
+  showHandles?: boolean;
 }) {
   const [resizeDirection, setResizeDirection] = useState<ResizeDirection>();
   const [freedThisResize, setFreedThisResize] = useState(false);
@@ -101,7 +103,7 @@ export function RegionTransformFrame({
       position={region.position}
       resizeGrid={[1, 1]}
       resizeHandleClasses={HANDLE_CLASSES}
-      resizeHandleStyles={HANDLE_STYLES}
+      resizeHandleStyles={showHandles ? HANDLE_STYLES : undefined}
       size={region.size}
     >
       {/* The same marquee chrome as the export window's crop controls;

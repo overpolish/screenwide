@@ -61,7 +61,7 @@ export const snapEdge = (
  * along the walk axis recovers it while leaving hard 1 px ridges at their true
  * contrast.
  */
-const edgeMass = (
+export const edgeMass = (
   field: GradientField,
   { across, axis, position }: { across: number; axis: Axis; position: number },
 ) =>

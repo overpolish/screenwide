@@ -63,7 +63,7 @@ export function StandaloneSelect({
     if (item) onSelectionChange(item);
   }, [id, items, lastSelection, onSelectionChange]);
 
-  const showListbox = async () => {
+  const showListbox = async (focusContents: boolean) => {
     const trigger = triggerRef.current;
     if (!trigger) return;
 
@@ -72,32 +72,37 @@ export function StandaloneSelect({
     const height = initialStandaloneListboxHeight(currentItems.length);
 
     open({
+      focusContents,
       id,
       items: currentItems,
       label,
       selectedIds: selectedId ? [selectedId] : [],
       selectionMode: "single",
     });
-    await showStandaloneListbox(
-      getCurrentWindow().label,
-      new LogicalPosition(bounds.left, bounds.bottom + 4),
-      new LogicalSize(bounds.width, height),
-    );
+    await showStandaloneListbox({
+      focusContents,
+      offset: new LogicalPosition(bounds.left, bounds.bottom + 4),
+      parentWindowLabel: getCurrentWindow().label,
+      size: new LogicalSize(bounds.width, height),
+      triggerId: id,
+    });
   };
 
-  const toggleListbox = async () => {
-    const isOpen = useStandaloneListboxStore.getState().active?.id === id;
+  const toggleListbox = async (focusContents: boolean) => {
+    const current = useStandaloneListboxStore.getState().active;
+    const isOpen = current?.id === id;
     if (isOpen) {
       close();
-      await hideStandaloneListbox();
+      await hideStandaloneListbox(current.focusContents);
     } else {
-      await showListbox();
+      await showListbox(focusContents);
     }
   };
 
   return (
     <div
       className="w-full"
+      data-standalone-listbox-trigger={id}
       onPointerDown={(event) => {
         event.stopPropagation();
       }}
@@ -109,16 +114,16 @@ export function StandaloneSelect({
         isOpen={active?.id === id}
         items={selectedItem ? [selectedItem] : []}
         leftSection={leftSection}
-        onPress={() => {
-          void toggleListbox();
+        onPress={(event) => {
+          void toggleListbox(
+            ["keyboard", "virtual"].includes(event.pointerType),
+          );
         }}
         placeholder={placeholder}
-        showFocus={false}
-        size="sm"
+        size="compact"
         standalone
         triggerRef={triggerRef}
         value={selectedId}
-        variant="ghost"
       >
         {(item: StandaloneListboxItem) => (
           <ListBoxItem id={item.id} textValue={item.label}>

@@ -4,7 +4,7 @@
 import { Lock, TriangleAlert } from "lucide-react";
 import { ReactNode } from "react";
 
-import { ToggleButton } from "../../../components/base/button/toggle-button";
+import { IconToggleButton } from "../../../components/base/button/icon-button";
 import { cn } from "../../../lib/styling";
 
 type RecordingBarInputToggleProps = {
@@ -39,18 +39,16 @@ export function RecordingBarInputToggle({
       {hasWarning && isSelected && !isDisabled ? (
         <TriangleAlert
           aria-label={warningLabel ?? `${label} source is not detected`}
-          className="absolute -top-3 text-warning"
+          className="size-icon-indicator pointer-events-none absolute top-0 z-10 -translate-y-1/2 text-warning"
           role="img"
-          size={12}
         />
       ) : isLocked && !isDisabled ? (
-        <Lock className="absolute -top-3 text-muted" size={12} />
+        <Lock className="size-icon-indicator pointer-events-none absolute top-0 z-10 -translate-y-1/2 text-muted" />
       ) : null}
-      <ToggleButton
+      <IconToggleButton
         aria-disabled={isReadOnly || undefined}
         aria-label={label}
         className={cn(
-          "data-[disabled]:opacity-35",
           isReadOnly &&
             "pointer-events-none cursor-default data-[hovered]:scale-100",
         )}
@@ -65,11 +63,10 @@ export function RecordingBarInputToggle({
             onChange(selected);
           }
         }}
-        size="sm"
-        variant="ghost"
+        size="compact"
       >
         {on}
-      </ToggleButton>
+      </IconToggleButton>
     </div>
   );
 }

@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   component: ConfirmActionButton,
   parameters: { layout: "centered" },
-  title: "Confirm Action Button",
+  title: "Legacy/Confirm Action Button",
 } satisfies Meta<typeof ConfirmActionButton>;
 
 export default meta;
@@ -22,5 +22,6 @@ export const Default: Story = {
     armedLabel: "Confirm delete",
     idleIcon: <X size={18} />,
     idleLabel: "Delete",
+    size: "compact",
   },
 };

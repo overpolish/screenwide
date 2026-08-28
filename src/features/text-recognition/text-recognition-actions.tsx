@@ -4,6 +4,7 @@
 import { Copy, Pilcrow, RotateCcw, Trash2, X } from "lucide-react";
 
 import { Button } from "../../components/base/button/button";
+import { IconButton } from "../../components/base/button/icon-button";
 import { CanvasToolbar } from "../../components/shared/canvas-tools/canvas-toolbar";
 import { ConfirmActionButton } from "../../components/shared/confirm-action-button/confirm-action-button";
 import { cn } from "../../lib/styling";
@@ -28,10 +29,10 @@ export function TextRecognitionCloseAction({
       <ConfirmActionButton
         armedIcon={<Trash2 className="text-error" size={18} />}
         armedLabel="Confirm closing text recognition"
-        className="h-7 w-7"
         idleIcon={<X size={18} />}
         idleLabel="Close text recognition"
         onConfirm={onClose}
+        size="compact"
       />
     </CanvasToolbar>
   );
@@ -53,8 +54,7 @@ export function TextRecognitionActions({
       <Button
         className="shrink-0 whitespace-nowrap"
         onPress={onCopyAll}
-        showFocus={false}
-        size="sm"
+        size="compact"
         variant="ghost"
       >
         <Copy size={15} />
@@ -63,30 +63,26 @@ export function TextRecognitionActions({
       <Button
         className="shrink-0 whitespace-nowrap"
         onPress={onCopyAsParagraph}
-        showFocus={false}
-        size="sm"
+        size="compact"
         variant="ghost"
       >
         <Pilcrow size={15} />
         Copy as paragraph
       </Button>
-      <Button
+      <IconButton
         aria-label="Recognize another area"
-        icon
         onPress={onReset}
-        showFocus={false}
-        size="sm"
-        variant="ghost"
+        size="compact"
       >
         <RotateCcw size={15} />
-      </Button>
+      </IconButton>
       <ConfirmActionButton
         armedIcon={<Trash2 className="text-error" size={15} />}
         armedLabel="Confirm closing text recognition"
-        className="h-6 w-6"
         idleIcon={<X size={15} />}
         idleLabel="Close text recognition"
         onConfirm={onClose}
+        size="compact"
       />
     </>
   );

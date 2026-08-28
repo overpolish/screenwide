@@ -4,11 +4,10 @@
 #[cfg(target_os = "windows")]
 mod windows_platform {
   use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     ffi::{c_void, OsStr, OsString},
     os::windows::ffi::{OsStrExt, OsStringExt},
     path::{Path, PathBuf},
-    sync::{Mutex, OnceLock},
   };
 
   use image::{ImageBuffer, Rgba};
@@ -16,11 +15,10 @@ mod windows_platform {
   use windows::{
     core::{PCWSTR, PWSTR},
     Win32::{
-      Foundation::{CloseHandle, HWND, RECT},
+      Foundation::{CloseHandle, HWND},
       Graphics::Gdi::{
-        CreateCompatibleDC, DeleteDC, DeleteObject, GetDIBits, GetMonitorInfoW, GetObjectW,
-        MonitorFromWindow, BITMAP, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
-        MONITORINFO, MONITOR_DEFAULTTONEAREST,
+        CreateCompatibleDC, DeleteDC, DeleteObject, GetDIBits, GetObjectW, BITMAP, BITMAPINFO,
+        BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
       },
       System::Threading::{
         OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
@@ -29,17 +27,12 @@ mod windows_platform {
       UI::{
         Shell::ExtractIconExW,
         WindowsAndMessaging::{
-          DestroyIcon, GetIconInfo, GetWindowLongPtrW, GetWindowRect, SetWindowLongPtrW,
-          SetWindowPos, GWL_EXSTYLE, GWL_STYLE, ICONINFO, SWP_FRAMECHANGED, SWP_NOACTIVATE,
-          SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, WS_BORDER, WS_CAPTION, WS_DLGFRAME,
-          WS_EX_CLIENTEDGE, WS_EX_DLGMODALFRAME, WS_EX_STATICEDGE, WS_EX_WINDOWEDGE,
-          WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
+          DestroyIcon, GetIconInfo, SetWindowPos, ICONINFO, SWP_NOACTIVATE, SWP_NOMOVE,
+          SWP_NOZORDER,
         },
       },
     },
   };
-
-  static ORIGINAL_STYLES: OnceLock<Mutex<HashMap<isize, (isize, isize)>>> = OnceLock::new();
 
   pub fn selectable_window_ids() -> Option<HashSet<u32>> {
     None
@@ -211,109 +204,7 @@ mod windows_platform {
       .map_err(|error| error.to_string())
     }
   }
-
-  pub fn center_window(id: u32, pid: u32, title: &str) -> Result<(), String> {
-    let window = find_window(id, pid, title)?;
-    unsafe {
-      let mut bounds = RECT::default();
-      GetWindowRect(window, &mut bounds).map_err(|error| error.to_string())?;
-      let monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
-      let mut info = MONITORINFO {
-        cbSize: std::mem::size_of::<MONITORINFO>() as u32,
-        ..Default::default()
-      };
-      if !GetMonitorInfoW(monitor, &mut info).as_bool() {
-        return Err("Could not read the window's display work area".into());
-      }
-      let width = bounds.right - bounds.left;
-      let height = bounds.bottom - bounds.top;
-      SetWindowPos(
-        window,
-        None,
-        info.rcWork.left + (info.rcWork.right - info.rcWork.left - width) / 2,
-        info.rcWork.top + (info.rcWork.bottom - info.rcWork.top - height) / 2,
-        0,
-        0,
-        SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
-      )
-      .map_err(|error| error.to_string())
-    }
-  }
-
-  pub fn make_borderless(id: u32, pid: u32, title: &str) -> Result<(), String> {
-    let window = find_window(id, pid, title)?;
-    unsafe {
-      let style = GetWindowLongPtrW(window, GWL_STYLE);
-      let extended_style = GetWindowLongPtrW(window, GWL_EXSTYLE);
-      ORIGINAL_STYLES
-        .get_or_init(Default::default)
-        .lock()
-        .map_err(|error| error.to_string())?
-        .entry(window.0 as isize)
-        .or_insert((style, extended_style));
-
-      let style = (style
-        & !(WS_OVERLAPPEDWINDOW.0
-          | WS_CAPTION.0
-          | WS_BORDER.0
-          | WS_DLGFRAME.0
-          | WS_THICKFRAME.0
-          | WS_MINIMIZEBOX.0
-          | WS_MAXIMIZEBOX.0
-          | WS_SYSMENU.0) as isize)
-        | WS_POPUP.0 as isize;
-      let extended_style = extended_style
-        & !(WS_EX_DLGMODALFRAME.0 | WS_EX_CLIENTEDGE.0 | WS_EX_STATICEDGE.0 | WS_EX_WINDOWEDGE.0)
-          as isize;
-      SetWindowLongPtrW(window, GWL_STYLE, style);
-      SetWindowLongPtrW(window, GWL_EXSTYLE, extended_style);
-      SetWindowPos(
-        window,
-        None,
-        0,
-        0,
-        0,
-        0,
-        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
-      )
-      .map_err(|error| error.to_string())
-    }
-  }
-
-  pub fn restore_border(id: u32, pid: u32, title: &str) -> Result<(), String> {
-    let window = find_window(id, pid, title)?;
-    let original = ORIGINAL_STYLES
-      .get_or_init(Default::default)
-      .lock()
-      .map_err(|error| error.to_string())?
-      .remove(&(window.0 as isize));
-    unsafe {
-      let (style, extended_style) = original.unwrap_or_else(|| {
-        (
-          GetWindowLongPtrW(window, GWL_STYLE) | WS_OVERLAPPEDWINDOW.0 as isize,
-          GetWindowLongPtrW(window, GWL_EXSTYLE)
-            | WS_EX_WINDOWEDGE.0 as isize
-            | WS_EX_CLIENTEDGE.0 as isize,
-        )
-      });
-      SetWindowLongPtrW(window, GWL_STYLE, style);
-      SetWindowLongPtrW(window, GWL_EXSTYLE, extended_style);
-      SetWindowPos(
-        window,
-        None,
-        0,
-        0,
-        0,
-        0,
-        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
-      )
-      .map_err(|error| error.to_string())
-    }
-  }
 }
 
 #[cfg(target_os = "windows")]
-pub use windows_platform::{
-  app_icon, app_identity, center_window, make_borderless, resize_window, restore_border,
-  selectable_window_ids,
-};
+pub use windows_platform::{app_icon, app_identity, resize_window, selectable_window_ids};

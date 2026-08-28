@@ -17,7 +17,7 @@ const meta = {
   component: SvgLabel,
   decorators: [
     (Story) => (
-      <div className="rounded-md bg-neutral-100 p-2">
+      <div className="rounded-md bg-neutral-hover p-2">
         <svg height={STAGE.height} width={STAGE.width}>
           <Story />
         </svg>
@@ -25,7 +25,7 @@ const meta = {
     ),
   ],
   parameters: { layout: "centered" },
-  title: "Features/Ruler Label",
+  title: "Legacy/Ruler Label",
 } satisfies Meta<typeof SvgLabel>;
 
 export default meta;

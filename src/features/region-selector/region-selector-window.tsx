@@ -8,13 +8,15 @@ import { cn } from "../../lib/styling";
 import { selectStatus, useRecordingStore } from "../recording-controls/store";
 import {
   hideRegionSelector,
+  listMonitors,
   setRecordingControlsOpacity,
   setRegionSelectorPassthrough,
   showRegionSelector,
   takeMonitorScreenshot,
 } from "../recording-sources/api";
 import { useRecordingSourceStore } from "../recording-sources/store";
-import { Region } from "../recording-sources/types";
+import { MonitorDetails, Region } from "../recording-sources/types";
+import { ScreenshotDestination } from "../screenshots/api";
 import { useGeneralSettings } from "../settings/use-general-settings";
 
 import { Magnifier } from "./magnifier";
@@ -32,7 +34,6 @@ import { ScreenshotRegionControls } from "./screenshot-region-controls";
 import {
   captureScreenshotRegion,
   endScreenshotCapture,
-  revealScreenshotRegion,
 } from "./screenshot-session";
 import { ResizeDirection } from "./types";
 import { useKeyHeld } from "./use-key-held";
@@ -42,6 +43,19 @@ import { useScreenshotShortcut } from "./use-screenshot-shortcut";
 // Holding this ignores the linked ratio, so the region can be reshaped
 // freely; the shape it ends up with becomes the new ratio.
 const FREE_ASPECT_KEY = "Shift";
+
+const screenshotParameters = new URLSearchParams(window.location.search);
+const requestedMonitorId = screenshotParameters.get("monitorId");
+const parsedMonitorId =
+  requestedMonitorId === null ? NaN : Number(requestedMonitorId);
+const screenshotMonitorId = Number.isFinite(parsedMonitorId)
+  ? parsedMonitorId
+  : null;
+const screenshotDestination: ScreenshotDestination =
+  screenshotParameters.get("destination") === "clipboard"
+    ? "clipboard"
+    : "export";
+const isScreenshotWindow = screenshotMonitorId !== null;
 
 export function RegionSelectorWindow() {
   const {
@@ -53,14 +67,17 @@ export function RegionSelectorWindow() {
     setRegion,
   } = useRecordingSourceStore((state) => state);
   const recordingStatus = useRecordingStore(selectStatus);
+  const [screenshotMonitor, setScreenshotMonitor] =
+    useState<MonitorDetails | null>(null);
+  const isScreenshotSurface = isScreenshotCapture && isScreenshotWindow;
   const [draft, setDraft] = useState(region);
-  const [seededForSession, setSeededForSession] = useState(isScreenshotCapture);
-  if (seededForSession !== isScreenshotCapture) {
+  const [seededForSession, setSeededForSession] = useState(isScreenshotSurface);
+  if (seededForSession !== isScreenshotSurface) {
     // Reseed while rendering rather than in an effect: otherwise the session
     // would leave one painted frame of the recording marquee before the empty
     // draft landed - a visible flash when the overlay was already on screen.
-    setSeededForSession(isScreenshotCapture);
-    setDraft(isScreenshotCapture ? EMPTY_REGION : region);
+    setSeededForSession(isScreenshotSurface);
+    setDraft(isScreenshotSurface ? EMPTY_REGION : region);
   }
   const [screenshotAspect, setScreenshotAspect] = useState<number>();
   const [resizeDirection, setResizeDirection] = useState<ResizeDirection>();
@@ -79,10 +96,15 @@ export function RegionSelectorWindow() {
   const generalSettings = useGeneralSettings();
   const captureOnDraw = generalSettings?.captureScreenshotOnDraw ?? false;
   const isIdle = recordingStatus === "idle";
-  useScreenshotShortcut();
+  useScreenshotShortcut(!isScreenshotWindow);
 
-  const activeMonitor =
-    recordingMode === "region" || isScreenshotCapture ? selectedMonitor : null;
+  const activeMonitor = isScreenshotWindow
+    ? isScreenshotCapture
+      ? screenshotMonitor
+      : null
+    : recordingMode === "region"
+      ? selectedMonitor
+      : null;
 
   const { beginGesture, finishGesture } = useRegionGestureVisibility(
     isDragging || resizeDirection !== undefined,
@@ -90,29 +112,49 @@ export function RegionSelectorWindow() {
 
   const persistDraft = useCallback((): Region => {
     const persisted = snapRegion(draft);
-    if (!isScreenshotCapture) setRegion(persisted);
+    if (!isScreenshotSurface) setRegion(persisted);
 
     return persisted;
-  }, [draft, isScreenshotCapture, setRegion]);
+  }, [draft, isScreenshotSurface, setRegion]);
+
+  useEffect(() => {
+    if (screenshotMonitorId === null) return;
+
+    let disposed = false;
+    void listMonitors()
+      .then((monitors) => {
+        if (disposed) return;
+        setScreenshotMonitor(
+          monitors.find((monitor) => monitor.id === screenshotMonitorId) ??
+            null,
+        );
+      })
+      .catch((error: unknown) => {
+        console.error("Could not resolve the screenshot monitor", error);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, []);
 
   useEffect(() => {
     // Cross-window storage updates replace the persisted region. A screenshot
     // session starts from nothing instead: the region is drawn for that shot
     // alone, and the persisted one comes back when the session ends.
     // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setDraft(isScreenshotCapture ? EMPTY_REGION : region);
-  }, [isScreenshotCapture, region]);
+    setDraft(isScreenshotSurface ? EMPTY_REGION : region);
+  }, [isScreenshotSurface, region]);
 
   useEffect(() => {
     // Each session gets its one capture back.
     isCapturingRef.current = false;
-    if (!isScreenshotCapture) return;
+    if (!isScreenshotSurface) return;
 
     const cancel = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      // Escape closes the borrowed screenshot overlay and the ruler that was
-      // handed underneath it, while leaving the recording controls untouched.
-      void endScreenshotCapture(true);
+      // Escape closes only the borrowed screenshot overlay. The ruler was
+      // already open before this session and remains available underneath it.
+      void endScreenshotCapture();
     };
 
     window.addEventListener("keydown", cancel);
@@ -120,7 +162,7 @@ export function RegionSelectorWindow() {
     return () => {
       window.removeEventListener("keydown", cancel);
     };
-  }, [isScreenshotCapture]);
+  }, [isScreenshotSurface]);
 
   useEffect(() => {
     void setRecordingControlsOpacity(isScreenshotCapture ? 0 : 1);
@@ -128,6 +170,7 @@ export function RegionSelectorWindow() {
 
   useEffect(() => {
     if (!activeMonitor) {
+      if (isScreenshotWindow) return;
       void setRegionSelectorPassthrough(true);
       void hideRegionSelector();
       return;
@@ -142,21 +185,21 @@ export function RegionSelectorWindow() {
     // frame. A screenshot session has no region until one is drawn, so its
     // draft starts empty rather than from the recording region.
     // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setDraft(isScreenshotCapture ? EMPTY_REGION : fitted);
+    setDraft(isScreenshotSurface ? EMPTY_REGION : fitted);
     if (
-      !isScreenshotCapture &&
+      !isScreenshotSurface &&
       JSON.stringify(fitted) !== JSON.stringify(region)
     ) {
       setRegion(fitted);
     }
-    if (isScreenshotCapture) return revealScreenshotRegion(activeMonitor);
+    if (isScreenshotSurface) return;
     void showRegionSelector(activeMonitor);
-  }, [activeMonitor, isScreenshotCapture, region, setRegion]);
+  }, [activeMonitor, isScreenshotSurface, region, setRegion]);
 
   useEffect(() => {
     if (!activeMonitor) return;
 
-    void setRegionSelectorPassthrough(!isIdle);
+    if (!isScreenshotWindow) void setRegionSelectorPassthrough(!isIdle);
     if (!isIdle || captureRequest === 0) return;
 
     let disposed = false;
@@ -201,19 +244,23 @@ export function RegionSelectorWindow() {
       },
     };
     setDraft(centered);
-    if (!isScreenshotCapture) setRegion(centered);
+    if (!isScreenshotSurface) setRegion(centered);
   };
 
   const finish = useCallback(() => {
-    if (!activeMonitor || !isScreenshotCapture || isCapturingRef.current)
+    if (!activeMonitor || !isScreenshotSurface || isCapturingRef.current)
       return;
     isCapturingRef.current = true;
-    captureScreenshotRegion(activeMonitor.id, persistDraft());
-  }, [activeMonitor, isScreenshotCapture, persistDraft]);
+    captureScreenshotRegion(
+      screenshotDestination,
+      activeMonitor.id,
+      persistDraft(),
+    );
+  }, [activeMonitor, isScreenshotSurface, persistDraft]);
 
   // Screenshot capture keeps its toolbar while recording controls are hidden.
   const showActions =
-    isScreenshotCapture &&
+    isScreenshotSurface &&
     !resizeDirection &&
     !isDragging &&
     !isDrawing &&
@@ -251,7 +298,7 @@ export function RegionSelectorWindow() {
         aspect={freeAspect ? undefined : screenshotAspect}
         bounds={activeMonitor.size}
         current={draft}
-        isEditing={isScreenshotCapture && isIdle}
+        isEditing={isScreenshotSurface && isIdle}
         onChange={setDraft}
         onDrawingChange={setIsDrawing}
         onFinish={(nextRegion) => {
@@ -260,22 +307,26 @@ export function RegionSelectorWindow() {
           // may not have re-rendered with it yet.
           if (!captureOnDraw || isCapturingRef.current) return;
           isCapturingRef.current = true;
-          captureScreenshotRegion(activeMonitor.id, snapRegion(nextRegion));
+          captureScreenshotRegion(
+            screenshotDestination,
+            activeMonitor.id,
+            snapRegion(nextRegion),
+          );
         }}
       />
 
       <RegionTransformFrame
         aspectRatio={
-          (isScreenshotCapture ? screenshotAspect : regionAspectRatio) || false
+          (isScreenshotSurface ? screenshotAspect : regionAspectRatio) || false
         }
         freeAspect={freeAspect}
         onChange={setDraft}
         onDraggingChange={setIsDragging}
         onGestureBegin={() => {
-          if (!isScreenshotCapture) beginGesture();
+          if (!isScreenshotSurface) beginGesture();
         }}
         onGestureFinish={() => {
-          if (!isScreenshotCapture) finishGesture();
+          if (!isScreenshotSurface) finishGesture();
         }}
         onPersist={persistDraft}
         onResizeDirectionChange={(direction) => {
@@ -283,6 +334,7 @@ export function RegionSelectorWindow() {
           if (direction) setCaptureRequest((current) => current + 1);
         }}
         region={draft}
+        showHandles={!isScreenshotSurface}
         visible={isIdle && regionPlaced}
       />
 

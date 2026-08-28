@@ -17,7 +17,7 @@ const keyboardVariants = tv({
     size: {
       md: "gap-0.5 px-1 text-sm",
       sm: "gap-0.25 px-0.5 text-xs",
-      xs: "px-0.5 text-xxs",
+      xs: "px-0.5 text-xs",
     },
     variant: {
       default: "bg-neutral text-muted",

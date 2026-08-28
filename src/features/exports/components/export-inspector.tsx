@@ -162,7 +162,7 @@ export function ExportInspector({
 
   return (
     <aside className="flex min-h-0 min-w-0 flex-col border-r border-muted/15 bg-content/35">
-      <OverflowShadow rootClassName="min-h-0 grow" shadowRadius="none">
+      <OverflowShadow rootClassName="min-h-0 grow">
         <div className="flex flex-col gap-4 p-4">
           <PillGroup
             ariaLabel="Inspector section"
@@ -183,7 +183,7 @@ export function ExportInspector({
                 >
                   <span className="flex flex-col">
                     <span className="text-xs">Bake camera into recording</span>
-                    <span className="text-xxs text-muted">
+                    <span className="text-xs text-muted">
                       Position and crop it directly in the preview.
                     </span>
                   </span>
@@ -199,7 +199,7 @@ export function ExportInspector({
                 >
                   <span className="flex flex-col">
                     <span className="text-xs">Collapse audio tracks</span>
-                    <span className="text-xxs text-muted">
+                    <span className="text-xs text-muted">
                       Mix the selected tracks into one.
                     </span>
                   </span>

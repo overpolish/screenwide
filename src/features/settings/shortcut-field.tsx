@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "../../components/base/button/button";
+import { IconButton } from "../../components/base/button/icon-button";
 import { Keyboard } from "../../components/base/keyboard/keyboard";
 
 import { beginShortcutCapture, endShortcutCapture } from "./api";
@@ -89,8 +90,7 @@ export function ShortcutField({
             setListening(true);
           });
         }}
-        showFocus={false}
-        size="sm"
+        size="compact"
         variant="ghost"
       >
         {listening ? (
@@ -107,19 +107,16 @@ export function ShortcutField({
           <span className="text-xs text-muted">Not set</span>
         )}
       </Button>
-      <Button
+      <IconButton
         aria-label="Clear shortcut"
-        icon
         isDisabled={isDisabled || value === null}
         onPress={() => {
           onChange(null);
         }}
-        showFocus={false}
-        size="sm"
-        variant="ghost"
+        size="compact"
       >
         <X size={14} />
-      </Button>
+      </IconButton>
     </div>
   );
 }

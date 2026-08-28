@@ -138,6 +138,28 @@ pub async fn list_windows(app: AppHandle) -> Result<Vec<WindowDetails>, String> 
 }
 
 #[tauri::command]
+pub async fn selected_window_available(id: u32, pid: u32) -> Result<bool, String> {
+  tauri::async_runtime::spawn_blocking(move || {
+    let selectable_window_ids = platform::selectable_window_ids();
+    let windows = xcap::Window::all().map_err(|error| error.to_string())?;
+
+    Ok(windows.into_iter().any(|window| {
+      window.id().ok() == Some(id)
+        && window.pid().ok() == Some(pid)
+        && selectable_window_ids
+          .as_ref()
+          .is_none_or(|window_ids| window_ids.contains(&id))
+        && window.title().is_ok_and(|title| !title.trim().is_empty())
+        && window.width().is_ok_and(|width| width > 0)
+        && window.height().is_ok_and(|height| height > 0)
+        && !window.is_minimized().unwrap_or(true)
+    }))
+  })
+  .await
+  .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 #[cfg(target_os = "macos")]
 pub async fn list_applications(app: AppHandle) -> Result<Vec<ApplicationDetails>, String> {
   let cache_dir = app
@@ -325,43 +347,4 @@ pub async fn resize_window(
   })
   .await
   .map_err(|error| error.to_string())?
-}
-
-#[tauri::command]
-pub async fn center_window(id: u32, pid: u32, title: String) -> Result<(), String> {
-  tauri::async_runtime::spawn_blocking(move || platform::center_window(id, pid, &title))
-    .await
-    .map_err(|error| error.to_string())?
-}
-
-#[tauri::command]
-pub async fn make_window_borderless(id: u32, pid: u32, title: String) -> Result<(), String> {
-  #[cfg(target_os = "windows")]
-  {
-    tauri::async_runtime::spawn_blocking(move || platform::make_borderless(id, pid, &title))
-      .await
-      .map_err(|error| error.to_string())?
-  }
-
-  #[cfg(not(target_os = "windows"))]
-  {
-    let _ = (id, pid, title);
-    Err("Border controls are only available on Windows".into())
-  }
-}
-
-#[tauri::command]
-pub async fn restore_window_border(id: u32, pid: u32, title: String) -> Result<(), String> {
-  #[cfg(target_os = "windows")]
-  {
-    tauri::async_runtime::spawn_blocking(move || platform::restore_border(id, pid, &title))
-      .await
-      .map_err(|error| error.to_string())?
-  }
-
-  #[cfg(not(target_os = "windows"))]
-  {
-    let _ = (id, pid, title);
-    Err("Border controls are only available on Windows".into())
-  }
 }

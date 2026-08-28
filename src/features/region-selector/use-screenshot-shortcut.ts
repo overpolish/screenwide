@@ -13,8 +13,10 @@ import {
 
 const SHORTCUT_ACTION_EVENT = "global-shortcut://action";
 
-export function useScreenshotShortcut() {
+export function useScreenshotShortcut(enabled = true) {
   useEffect(() => {
+    if (!enabled) return;
+
     let unlisten: UnlistenFn | undefined;
     let disposed = false;
 
@@ -34,5 +36,5 @@ export function useScreenshotShortcut() {
       disposed = true;
       unlisten?.();
     };
-  }, []);
+  }, [enabled]);
 }

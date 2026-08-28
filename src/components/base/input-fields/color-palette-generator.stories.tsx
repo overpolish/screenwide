@@ -12,7 +12,7 @@ const initialColors = ["#164E63", "#0891B2", "#22D3EE", "#A5F3FC"];
 const meta = {
   component: ColorPaletteGenerator,
   parameters: { layout: "centered" },
-  title: "Color Palette Generator",
+  title: "Legacy/Color Palette Generator",
 } satisfies Meta<typeof ColorPaletteGenerator>;
 
 export default meta;

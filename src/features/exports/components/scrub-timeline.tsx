@@ -261,7 +261,7 @@ export function TimelineRuler({
             style={{ left: `${x.toString()}px` }}
           >
             {showLabel ? (
-              <span className="absolute left-1 top-0 whitespace-nowrap text-xxs font-medium text-muted tabular-nums">
+              <span className="absolute top-0 left-1 whitespace-nowrap text-xs font-medium text-muted tabular-nums">
                 {label}
               </span>
             ) : null}

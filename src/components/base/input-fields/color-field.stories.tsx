@@ -9,7 +9,7 @@ import { ColorField } from "./color-field";
 const meta = {
   component: ColorField,
   parameters: { layout: "centered" },
-  title: "Color Field",
+  title: "Legacy/Color Field",
 } satisfies Meta<typeof ColorField>;
 
 export default meta;

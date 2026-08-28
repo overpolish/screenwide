@@ -4,6 +4,8 @@
 import { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useRef, useState } from "react";
 
+import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+
 import { RecordingOptions, RecordingOptionsProps } from "./recording-options";
 import {
   ALL_SYSTEM_AUDIO,
@@ -136,8 +138,15 @@ const meta = {
     systemAudioPreviewEnabled: true,
   },
   component: RecordingOptions,
+  decorators: [
+    (Story, context) => (
+      <FeatureStoryStage height={324} viewMode={context.viewMode} width={240}>
+        <Story />
+      </FeatureStoryStage>
+    ),
+  ],
   parameters: {
-    layout: "centered",
+    layout: "fullscreen",
   },
   render: (args) => <StatefulOptions {...args} />,
   title: "Features/Recording Options",

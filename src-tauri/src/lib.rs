@@ -51,12 +51,10 @@ pub fn run() {
         .skip_initial_state(windows::WindowLabel::RecordingBar.as_str())
         .build(),
     );
-
   #[cfg(target_os = "macos")]
   let builder = builder
     .plugin(tauri_plugin_macos_permissions::init())
     .plugin(tauri_nspanel::init());
-
   let app = builder
     .manage(audio_preview::AudioPreviewState::default())
     .manage(camera_preview::CameraPreviewState::default())
@@ -115,9 +113,11 @@ pub fn run() {
       exports::commands::set_screenshot_background_radius,
       exports::commands::set_screenshot_radius,
       permissions::open_permission_settings,
+      permissions::open_permissions_window,
       permissions::permission_snapshot,
       permissions::request_permission,
       permissions::require_permissions,
+      permissions::dismiss_permissions_window,
       permissions::restart_app,
       recording::commands::cancel_recording,
       recording::commands::get_recording_snapshot,
@@ -129,16 +129,16 @@ pub fn run() {
       recording::commands::stop_recording,
       recording_inputs::list_cameras,
       recording_inputs::list_microphones,
-      recording_sources::center_window,
       recording_sources::list_applications,
       recording_sources::list_monitors,
       recording_sources::list_windows,
-      recording_sources::make_window_borderless,
       recording_sources::resize_window,
-      recording_sources::restore_window_border,
+      recording_sources::selected_window_available,
       ruler::cancel_ruler,
       ruler::copy_ruler_value,
+      ruler::get_ruler_cursor_position,
       ruler::set_ruler_cursor_range_active,
+      ruler::set_ruler_cursor_visible,
       ruler::set_ruler_screenshot_mode,
       ruler::snapshot::get_ruler_boxes,
       ruler::snapshot::get_ruler_gradients,
@@ -165,12 +165,14 @@ pub fn run() {
       shortcuts::end_shortcut_capture,
       shortcuts::set_shortcut_binding,
       windows::source_selector::collapse_recording_source_selector,
+      windows::source_selector::get_recording_source_selector_state,
       windows::region_gesture::begin_region_selector_gesture,
       windows::finish_recording_bar_drag,
       windows::region_gesture::finish_region_selector_gesture,
       windows::dock::finish_recording_dock_drag,
       windows::dock::resize_recording_dock,
       windows::options::hide_recording_options,
+      windows::options::get_recording_options_state,
       windows::hide_recording_ui,
       windows::recording_ui_visible,
       windows::toggle_recording_ui,
@@ -178,14 +180,16 @@ pub fn run() {
       windows::options::hide_standalone_listbox,
       windows::region::set_recording_controls_opacity,
       windows::source_selector::set_recording_source_selector_visible,
-      windows::source_selector::set_recording_source_selector_region_controls,
       windows::region::set_region_selector_opacity,
       windows::region::set_region_selector_passthrough,
       windows::region::set_screenshot_region_session,
       windows::region::show_region_selector,
+      windows::screenshot_region::close_screenshot_region_overlays,
+      windows::screenshot_region::open_screenshot_region_overlays,
       windows::options::show_standalone_listbox,
+      windows::options::set_recording_options_content_height,
       windows::monitor_capture::take_monitor_screenshot,
-      windows::source_selector::toggle_recording_source_selector,
+      windows::source_selector::expand_recording_source_selector,
       windows::options::toggle_recording_options,
     ])
     .setup(|app| {
@@ -193,13 +197,13 @@ pub fn run() {
       {
         exports::initialize_cursor_artwork();
       }
-
       #[cfg(desktop)]
       tray::initialize(app)?;
-
       settings::initialize(app.handle());
-      let show_recording_bar_on_launch =
-        settings::current(app.handle()).show_recording_bar_on_launch;
+      let recording_bar_preview_enabled =
+        cfg!(debug_assertions) && std::env::var_os("SCREENWIDE_SHOW_RECORDING_BAR").is_some();
+      let show_recording_bar_on_launch = recording_bar_preview_enabled
+        || settings::current(app.handle()).show_recording_bar_on_launch;
 
       // Converting a hidden macOS webview into an NSPanel can order one stale
       // compositor frame onscreen. Keep tray-only startup genuinely tray-only:
@@ -242,17 +246,14 @@ pub fn run() {
       exports::initialize(app.handle());
       let has_pending_export = exports::has_pending_workspace(app.handle());
       shortcuts::initialize(app.handle());
-      windows::manage_recording_source_selector_dismissal(app.handle());
+      windows::manage_transient_popover_dismissal(app.handle());
 
       #[cfg(target_os = "macos")]
-      {
-        let snapshot = tauri::async_runtime::block_on(permissions::refresh(app.handle()));
-        if !snapshot.has_required_recording_permissions() {
-          permissions::show_permissions_window(app.handle())?;
-        } else if show_recording_bar_on_launch && !has_pending_export {
-          windows::show_recording_ui(app.handle())?;
-        }
-      }
+      permissions::show_on_launch(
+        app.handle(),
+        show_recording_bar_on_launch,
+        has_pending_export,
+      )?;
 
       #[cfg(not(target_os = "macos"))]
       if show_recording_bar_on_launch && !has_pending_export {

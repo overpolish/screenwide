@@ -4,8 +4,6 @@
 import { Channel, invoke, isTauri } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef } from "react";
 
-const isMac = navigator.userAgent.includes("Mac");
-
 type CursorScrubEvent =
   | {
       altKey: boolean;
@@ -19,17 +17,13 @@ type CursorScrubEvent =
 interface NumberFieldScrubOptions {
   changeValue: (value: number) => void;
   groupRef: React.RefObject<HTMLDivElement | null>;
-  scrubbable: boolean;
   valueRef: React.RefObject<number>;
-  scrubStep?: number;
   step?: number;
 }
 
 export const useNumberFieldScrub = ({
   changeValue,
   groupRef,
-  scrubStep,
-  scrubbable,
   step,
   valueRef,
 }: NumberFieldScrubOptions) => {
@@ -58,11 +52,9 @@ export const useNumberFieldScrub = ({
 
       drag.residual -= stepsMoved * 4;
       const multiplier = (shiftKey ? 10 : 1) * (altKey ? 0.1 : 1);
-      changeValue(
-        valueRef.current + stepsMoved * (scrubStep ?? step ?? 1) * multiplier,
-      );
+      changeValue(valueRef.current + stepsMoved * (step ?? 1) * multiplier);
     },
-    [changeValue, scrubStep, step, valueRef],
+    [changeValue, step, valueRef],
   );
 
   const releaseCursorScrub = useCallback(() => {
@@ -94,36 +86,13 @@ export const useNumberFieldScrub = ({
 
   useEffect(() => releaseCursorScrub, [releaseCursorScrub]);
 
-  useEffect(() => {
-    // Windows owns its entire monitor lifecycle natively. macOS still emits
-    // relative DOM movement while Core Graphics pins the cursor.
-    if (!scrubbable || (isTauri() && !isMac)) return;
-
-    const handlePointerMove = (event: PointerEvent) => {
-      moveScrub(
-        event.movementX - event.movementY,
-        event.shiftKey,
-        event.altKey,
-      );
-    };
-    const handlePointerEnd = () => {
-      finishScrub();
-    };
-
-    document.addEventListener("pointermove", handlePointerMove);
-    document.addEventListener("pointerup", handlePointerEnd);
-    document.addEventListener("pointercancel", handlePointerEnd);
-    window.addEventListener("blur", handlePointerEnd);
-    return () => {
-      document.removeEventListener("pointermove", handlePointerMove);
-      document.removeEventListener("pointerup", handlePointerEnd);
-      document.removeEventListener("pointercancel", handlePointerEnd);
-      window.removeEventListener("blur", handlePointerEnd);
-    };
-  }, [finishScrub, moveScrub, scrubbable]);
-
   return (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrubbable || event.button !== 0) return;
+    if (
+      !isTauri() ||
+      event.button !== 0 ||
+      (event.target as Element).closest("button")
+    )
+      return;
 
     dragRef.current = {
       residual: 0,

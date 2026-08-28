@@ -5,7 +5,7 @@ import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import { ColorSwatch } from "../../../components/base/input-fields/color-swatch";
 import { OverflowShadow } from "../../../components/base/overflow-shadow/overflow-shadow";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
-import { AspectRatio } from "../../../components/shared/aspect-ratio/aspect-ratio";
+import { Dimensions } from "../../../components/shared/dimensions/dimensions";
 import { ScreenshotOutputSettings } from "../screenshot-output";
 
 import { MeshBackgroundControl } from "./mesh-background-control";
@@ -32,7 +32,7 @@ export function ScreenshotInspector({
 }) {
   return (
     <aside className="flex min-h-0 min-w-0 flex-col border-r border-muted/15 bg-content/35">
-      <OverflowShadow rootClassName="min-h-0 grow" shadowRadius="none">
+      <OverflowShadow rootClassName="min-h-0 grow">
         <ScreenshotOutputControls
           isSaving={isSaving}
           onChange={onChange}
@@ -83,7 +83,7 @@ export function ScreenshotOutputControls({
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
       <div className={isSaving ? "pointer-events-none opacity-50" : ""}>
-        <AspectRatio
+        <Dimensions
           height={settings.height}
           initialLinked
           layout="stacked"

@@ -4,7 +4,7 @@
 import { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
-import { ToggleButton } from "../../../components/base/button/toggle-button";
+import { IconToggleButton } from "../../../components/base/button/icon-button";
 import { Keyboard } from "../../../components/base/keyboard/keyboard";
 import { Tooltip } from "../../../components/base/tooltip/tooltip";
 
@@ -40,18 +40,15 @@ export function ScreenshotToolToggle({
           onReset();
         }}
       >
-        <ToggleButton
-          animation="scale-selected"
+        <IconToggleButton
           aria-keyshortcuts={shortcut}
           aria-label={name}
           isSelected={isSelected}
           onChange={onSelectedChange}
-          showFocus={false}
-          size="sm"
-          variant="ghost"
+          size="compact"
         >
           {children}
-        </ToggleButton>
+        </IconToggleButton>
       </span>
       <Tooltip placement="bottom">
         <span className="flex items-center gap-2">

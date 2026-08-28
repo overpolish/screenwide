@@ -3,7 +3,7 @@
 
 import { ArrowRight } from "lucide-react";
 
-import { CircularProgressBar } from "../../../components/base/circular-progress-bar/circular-progress-bar";
+import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
 import { formatBytes } from "../duration";
 
@@ -28,16 +28,15 @@ export function RecordingSizeEstimate({
   isEstimatingSize?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-end gap-1.5 text-xxs text-muted tabular-nums">
+    <div className="flex items-center justify-end gap-1.5 text-xs text-muted tabular-nums">
       <span>{formatBytes(originalSizeBytes)} original</span>
       <ArrowRight aria-hidden="true" className="shrink-0" size={12} />
       {isEstimatingSize ? (
         <span className="flex items-center gap-1.5">
-          <CircularProgressBar
+          <CircularProgress
             aria-label="Estimating compressed size"
             isIndeterminate
-            size={12}
-            strokeWidth={10}
+            size="compact"
           />
           Estimating
         </span>

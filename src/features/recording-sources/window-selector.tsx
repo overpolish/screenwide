@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { AppWindowMac, CircleSlash2, LoaderCircle } from "lucide-react";
+import { AppWindowMac, CircleSlash2 } from "lucide-react";
 
 import { Button } from "../../components/base/button/button";
+import { ButtonGrid } from "../../components/base/button-group/button-group";
+import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
 import { OverflowShadow } from "../../components/base/overflow-shadow/overflow-shadow";
 
 import { WindowDetails } from "./types";
@@ -12,7 +14,7 @@ import { WindowDetails } from "./types";
 type WindowSelectorProps = {
   error: string | null;
   isLoading: boolean;
-  onSelect: (window: WindowDetails) => void;
+  onSelect: (window: WindowDetails, returnFocus: boolean) => void;
   selectedWindow: WindowDetails | null;
   windows: WindowDetails[];
 };
@@ -26,18 +28,15 @@ export function WindowSelector({
 }: WindowSelectorProps) {
   if (isLoading) {
     return (
-      <div className="relative h-full">
-        <LoaderCircle
-          className="spinner-pixel-centered animate-spin text-muted"
-          size={48}
-        />
+      <div className="flex h-full items-center justify-center">
+        <CircularProgress aria-label="Loading windows" isIndeterminate />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center px-8 text-center text-xs text-danger">
+      <div className="flex h-full items-center justify-center text-center text-xs text-error">
         {error}
       </div>
     );
@@ -45,82 +44,84 @@ export function WindowSelector({
 
   if (windows.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center gap-3 text-sm font-semibold text-muted">
-        <CircleSlash2 size={36} />
+      <div className="gap-section flex h-full items-center justify-center text-xs font-semibold text-muted">
+        <CircleSlash2 className="size-icon-prominent" />
         No windows found
       </div>
     );
   }
 
-  return (
-    <OverflowShadow
-      className="grid grid-cols-4 gap-2 p-3"
-      insetShadow
-      orientation="vertical"
-      shadowRadius="md"
-    >
-      {[...windows]
-        .sort((left, right) => {
-          const appOrder = left.appName.localeCompare(
-            right.appName,
-            undefined,
-            {
-              sensitivity: "base",
-            },
-          );
-          if (appOrder !== 0) return appOrder;
+  const orderedWindows = [...windows].sort((left, right) => {
+    const appOrder = left.appName.localeCompare(right.appName, undefined, {
+      sensitivity: "base",
+    });
+    if (appOrder !== 0) return appOrder;
 
-          return left.title.localeCompare(right.title, undefined, {
-            sensitivity: "base",
-          });
-        })
-        .map((window) => {
+    return left.title.localeCompare(right.title, undefined, {
+      sensitivity: "base",
+    });
+  });
+  const focusTargetId = orderedWindows.some(
+    (window) => window.id === selectedWindow?.id,
+  )
+    ? selectedWindow?.id
+    : orderedWindows[0]?.id;
+
+  return (
+    <OverflowShadow orientation="vertical" rootClassName="rounded-xl">
+      <ButtonGrid aria-label="Windows" className="gap-control" columns={3}>
+        {orderedWindows.map((window) => {
           const isSelected = selectedWindow?.id === window.id;
 
           return (
             <Button
               aria-label={`Select ${window.appName}: ${window.title}`}
-              className="relative min-h-30 min-w-0 flex-col items-stretch justify-start gap-2 p-2 ring-1 ring-inset ring-content-fg/5"
-              color={isSelected ? "info" : "neutral"}
+              className="gap-control min-w-0 flex-col items-stretch justify-start"
+              color={isSelected ? "primary" : "neutral"}
+              data-source-selector-focus-target={
+                window.id === focusTargetId ? "true" : undefined
+              }
               key={window.id}
-              onPress={() => {
-                onSelect(window);
+              onPress={(event) => {
+                onSelect(
+                  window,
+                  ["keyboard", "virtual"].includes(event.pointerType),
+                );
               }}
-              showFocus={false}
-              variant={isSelected ? "soft" : "ghost"}
             >
-              <span className="sticky top-2 z-10 flex w-full min-w-0 items-center gap-1.5 rounded-sm bg-content/50 p-1 text-left backdrop-blur-xs">
-                {window.appIconPath ? (
-                  <img
-                    alt=""
-                    className="size-4 shrink-0 object-contain"
-                    src={convertFileSrc(window.appIconPath)}
-                  />
-                ) : (
-                  <AppWindowMac className="shrink-0 text-muted" size={16} />
-                )}
-                <span className="min-w-0 truncate text-xxs font-medium">
-                  {window.title}
-                </span>
-              </span>
-
-              <span className="flex min-h-0 grow items-center justify-center overflow-hidden">
+              <span className="flex aspect-video min-h-0 w-full items-center justify-center overflow-hidden rounded-lg">
                 {window.thumbnailPath ? (
                   <img
                     alt=""
-                    className="max-h-full max-w-full rounded-sm object-contain shadow-md"
+                    className="max-h-full max-w-full rounded-lg object-contain"
                     src={convertFileSrc(window.thumbnailPath)}
                   />
                 ) : (
-                  <span className="flex flex-col items-center gap-1 text-[9px] text-muted">
-                    <AppWindowMac size={24} />
+                  <span className="gap-control flex flex-col items-center text-xs">
+                    <AppWindowMac className="size-icon-prominent" />
                     Preview unavailable
                   </span>
                 )}
               </span>
+
+              <span className="gap-control flex w-full min-w-0 items-center text-left">
+                {window.appIconPath ? (
+                  <img
+                    alt=""
+                    className="size-icon-compact shrink-0 object-contain"
+                    src={convertFileSrc(window.appIconPath)}
+                  />
+                ) : (
+                  <AppWindowMac className="size-icon-compact shrink-0" />
+                )}
+                <span className="min-w-0 truncate text-xs font-medium">
+                  {window.title}
+                </span>
+              </span>
             </Button>
           );
         })}
+      </ButtonGrid>
     </OverflowShadow>
   );
 }

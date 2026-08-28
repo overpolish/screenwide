@@ -1,9 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-import { ownsArrowKeys, ownsTextEditingKeys } from "./keyboard-target";
+import {
+  ownsActivationKeys,
+  ownsArrowKeys,
+  ownsPopupInteractionKeys,
+  ownsTextEditingKeys,
+} from "./keyboard-target";
 
 const arrowDirections = new Map([
   ["ArrowDown", { x: 0, y: 1 }],
@@ -49,8 +54,20 @@ export function useExportWindowShortcuts({
   onTogglePlayback?: () => void;
   onToggleRangeTool?: () => void;
 }) {
+  const focusIntentRef = useRef<"keyboard" | "pointer">("keyboard");
+
   useEffect(() => {
+    const onPointerDown = () => {
+      focusIntentRef.current = "pointer";
+    };
     const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.code === "Tab" ||
+        (arrowDirections.has(event.code) && ownsArrowKeys(event.target))
+      ) {
+        focusIntentRef.current = "keyboard";
+      }
+
       // Arrows run before the shared guards: holding one has to repeat, and
       // Shift only picks the bigger jump rather than naming another shortcut.
       const arrow = arrowDirections.get(event.code);
@@ -126,6 +143,24 @@ export function useExportWindowShortcuts({
       if (event.ctrlKey || event.metaKey || event.shiftKey) return;
 
       if (
+        event.code === "Space" &&
+        onTogglePlayback &&
+        !ownsTextEditingKeys(event.target)
+      ) {
+        if (
+          ownsPopupInteractionKeys(event.target) ||
+          (focusIntentRef.current === "keyboard" &&
+            ownsActivationKeys(event.target))
+        ) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        onTogglePlayback();
+        return;
+      }
+
+      if (
         (event.code === "Backspace" || event.code === "Delete") &&
         onDelete &&
         !ownsTextEditingKeys(event.target)
@@ -155,7 +190,6 @@ export function useExportWindowShortcuts({
         return;
       }
 
-      // P leaves Space available to activate whichever control has focus.
       if (
         event.code === "KeyB" &&
         onToggleBladeTool &&
@@ -201,8 +235,10 @@ export function useExportWindowShortcuts({
       }
     };
 
+    window.addEventListener("pointerdown", onPointerDown, true);
     window.addEventListener("keydown", onKeyDown, true);
     return () => {
+      window.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("keydown", onKeyDown, true);
     };
   }, [

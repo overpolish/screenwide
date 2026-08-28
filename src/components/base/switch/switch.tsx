@@ -39,7 +39,7 @@ const switchVariants = tv({
       md: {
         base: "text-sm",
         container: "h-[26px] w-[46px] p-[3px]",
-        innerLabel: "text-xxs left-0.75",
+        innerLabel: "left-0.75 text-xs",
         thumb: "h-[20px]",
       },
       xs: {

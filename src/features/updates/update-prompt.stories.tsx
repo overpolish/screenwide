@@ -140,7 +140,7 @@ const meta = {
     },
   ],
   parameters: { layout: "centered" },
-  title: "Features/Update Prompt",
+  title: "Legacy/Update Prompt",
 } satisfies Meta<typeof UpdatePrompt>;
 
 export default meta;

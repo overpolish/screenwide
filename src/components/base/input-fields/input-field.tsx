@@ -52,7 +52,7 @@ export const inputFieldVariants = tv({
         label: "text-sm",
       },
       sm: {
-        input: "text-xs py-2 placeholder:text-xxs",
+        input: "py-2 text-xs placeholder:text-xs",
         inputWrapper: "px-2 gap-2",
         label: "text-xs",
       },

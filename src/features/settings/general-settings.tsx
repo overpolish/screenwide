@@ -4,6 +4,7 @@
 import { Folder, RotateCcw } from "lucide-react";
 
 import { Button } from "../../components/base/button/button";
+import { IconButton } from "../../components/base/button/icon-button";
 import { Checkbox } from "../../components/base/checkbox/checkbox";
 import { PillGroup } from "../../components/base/pill-group/pill-group";
 
@@ -72,8 +73,7 @@ export function GeneralSettingsPanel({
             onPress={() => {
               choose("recording");
             }}
-            size="sm"
-            variant="soft"
+            size="compact"
           >
             <Folder size={14} />
             <span className="truncate">
@@ -81,19 +81,17 @@ export function GeneralSettingsPanel({
             </span>
           </Button>
           {settings.recordingDirectory !== null ? (
-            <Button
+            <IconButton
               aria-label="Use the system recording folder"
               className="max-w-52 whitespace-nowrap"
-              icon
               isDisabled={isSaving}
               onPress={() => {
                 update({ recordingDirectory: null });
               }}
-              size="sm"
-              variant="ghost"
+              size="compact"
             >
               <RotateCcw size={13} />
-            </Button>
+            </IconButton>
           ) : null}
         </div>
       </SettingRow>
@@ -107,8 +105,7 @@ export function GeneralSettingsPanel({
             onPress={() => {
               choose("screenshot");
             }}
-            size="sm"
-            variant="soft"
+            size="compact"
           >
             <Folder size={14} />
             <span className="truncate">
@@ -116,18 +113,16 @@ export function GeneralSettingsPanel({
             </span>
           </Button>
           {settings.screenshotDirectory !== null ? (
-            <Button
+            <IconButton
               aria-label="Use the system screenshot folder"
-              icon
               isDisabled={isSaving}
               onPress={() => {
                 update({ screenshotDirectory: null });
               }}
-              size="sm"
-              variant="ghost"
+              size="compact"
             >
               <RotateCcw size={13} />
-            </Button>
+            </IconButton>
           ) : null}
         </div>
       </SettingRow>

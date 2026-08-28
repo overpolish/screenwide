@@ -7,40 +7,56 @@ import {
   ProgressBar as AriaProgressBar,
   ProgressBarProps,
 } from "react-aria-components";
+import { VariantProps } from "tailwind-variants";
 
 import { tv } from "../../../lib/variants";
 
 const ANIMATION_DURATION = 1.25;
 
-const circularProgressBarVariants = tv({
+const circularProgressVariants = tv({
+  defaultVariants: { size: "default" },
   slots: {
-    backdrop: "stroke-muted/15",
+    backdrop: "stroke-neutral",
     base: "relative shrink-0",
     label:
-      "absolute inset-0 flex items-center justify-center text-3xl font-bold text-content-fg tabular-nums",
-    progress: "stroke-info [stroke-linecap:round]",
+      "absolute inset-0 flex items-center justify-center text-xl font-bold text-content-fg tabular-nums",
+    progress: "stroke-primary-surface [stroke-linecap:round]",
+  },
+  variants: {
+    size: {
+      compact: { base: "size-4" },
+      default: { base: "size-8" },
+      large: { base: "size-24" },
+    },
   },
 });
 
-type CircularProgressBarProps = Omit<
-  ProgressBarProps,
-  "children" | "className"
-> & {
-  hideBackdrop?: boolean;
-  renderLabel?: (percentage?: number) => ReactNode;
-  size?: number;
-  strokeWidth?: number;
+type CircularProgressSize = NonNullable<
+  VariantProps<typeof circularProgressVariants>["size"]
+>;
+
+const strokeWidths: Record<CircularProgressSize, number> = {
+  compact: 10,
+  default: 8,
+  large: 8,
 };
 
-export function CircularProgressBar({
-  hideBackdrop = false,
+type CircularProgressProps = Omit<ProgressBarProps, "children" | "className"> &
+  VariantProps<typeof circularProgressVariants> & {
+    renderLabel?: (percentage?: number) => ReactNode;
+  };
+
+export function CircularProgress({
   isIndeterminate = false,
   renderLabel,
-  size = 100,
-  strokeWidth = 10,
+  size = "default",
   ...props
-}: CircularProgressBarProps) {
-  const { backdrop, base, label, progress } = circularProgressBarVariants();
+}: CircularProgressProps) {
+  const resolvedSize = size;
+  const { backdrop, base, label, progress } = circularProgressVariants({
+    size: resolvedSize,
+  });
+  const strokeWidth = strokeWidths[resolvedSize];
   const radius = 50 - strokeWidth / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -48,7 +64,6 @@ export function CircularProgressBar({
     <AriaProgressBar
       className={base()}
       isIndeterminate={isIndeterminate}
-      style={{ height: size, width: size }}
       {...props}
     >
       {({ percentage }) => (
@@ -59,9 +74,7 @@ export function CircularProgressBar({
             strokeWidth={strokeWidth}
             viewBox="0 0 100 100"
           >
-            {!hideBackdrop ? (
-              <circle className={backdrop()} cx="50" cy="50" r={radius} />
-            ) : null}
+            <circle className={backdrop()} cx="50" cy="50" r={radius} />
 
             {isIndeterminate ? (
               <motion.circle
@@ -82,7 +95,6 @@ export function CircularProgressBar({
                 cx="50"
                 cy="50"
                 r={radius}
-                strokeWidth={strokeWidth}
                 style={{ transformOrigin: "50% 50%" }}
                 transition={{
                   rotate: {
@@ -106,9 +118,7 @@ export function CircularProgressBar({
 
             {percentage !== undefined && !isIndeterminate ? (
               <motion.circle
-                animate={{
-                  strokeDashoffset: 1 - percentage / 100,
-                }}
+                animate={{ strokeDashoffset: 1 - percentage / 100 }}
                 className={progress()}
                 cx="50"
                 cy="50"
@@ -116,7 +126,6 @@ export function CircularProgressBar({
                 pathLength={1}
                 r={radius}
                 strokeDasharray="1 1"
-                strokeWidth={strokeWidth}
                 transform="rotate(-90 50 50)"
                 transition={{ duration: 0.1, ease: "easeOut" }}
               />
@@ -124,7 +133,9 @@ export function CircularProgressBar({
           </svg>
 
           {renderLabel?.(percentage) ??
-            (percentage !== undefined && !isIndeterminate ? (
+            (percentage !== undefined &&
+            !isIndeterminate &&
+            resolvedSize === "large" ? (
               <span className={label()}>{percentage.toFixed(0)}</span>
             ) : null)}
         </>
@@ -132,3 +143,5 @@ export function CircularProgressBar({
     </AriaProgressBar>
   );
 }
+
+export type { CircularProgressProps };
