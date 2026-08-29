@@ -1,17 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::{
-  ipc::{Channel, InvokeResponseBody},
-  AppHandle,
-};
-
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MonitorScreenshot {
-  width: u32,
-  height: u32,
-}
+use tauri::AppHandle;
 
 static CAPTURE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
@@ -24,21 +14,13 @@ fn prepare_windows(app: &AppHandle, restore_affinity: bool) -> tauri::Result<()>
   result
 }
 
-/// The monitor image behind the region overlay, for its magnifier.
-///
-/// Screenwide's own windows are left out so the overlay can stay on screen
-/// while this is taken: macOS excludes them per capture, and on Windows they
-/// carry the exclude-from-capture affinity for the split second of the shot
-/// even when "Record Screenwide's windows" would otherwise keep them in.
-#[tauri::command]
-pub async fn take_monitor_screenshot(
+pub(crate) async fn capture_monitor_screenshot(
   app: AppHandle,
   monitor_id: u32,
-  channel: Channel,
-) -> Result<MonitorScreenshot, String> {
-  // React can mount the region selector effect twice while developing, and
-  // monitor changes may overlap too. Capture affinity is process-wide, so one
-  // capture must finish restoring it before another begins its transaction.
+) -> Result<crate::screenshots::CapturedImage, String> {
+  // Monitor changes and adjacent magnifier requests may overlap. Capture
+  // affinity is process-wide, so one capture must finish restoring it before
+  // another begins its transaction.
   let _capture = CAPTURE.lock().await;
   #[cfg(not(target_os = "windows"))]
   let _ = &app;
@@ -87,14 +69,5 @@ pub async fn take_monitor_screenshot(
   let affinity_restore = crate::windows::sync_capture_affinity(&app, restore_affinity);
   #[cfg(target_os = "windows")]
   affinity_restore.map_err(|error| error.to_string())?;
-  let screenshot = screenshot??;
-  let metadata = MonitorScreenshot {
-    width: screenshot.width,
-    height: screenshot.height,
-  };
-
-  channel
-    .send(InvokeResponseBody::Raw(screenshot.rgba))
-    .map_err(|error| error.to_string())?;
-  Ok(metadata)
+  screenshot?
 }

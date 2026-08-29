@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 
 import { MonitorDetails, SelectorState, WindowDetails } from "./types";
 
@@ -59,8 +59,9 @@ export const toggleRecordingUi = () => invoke<null>("toggle_recording_ui");
 export const setRecordingSourceSelectorVisible = (visible: boolean) =>
   invoke<null>("set_recording_source_selector_visible", { visible });
 
-export const showRegionSelector = (monitor: MonitorDetails) =>
+export const showRegionSelector = (monitor: MonitorDetails, desktop = false) =>
   invoke<null>("show_region_selector", {
+    desktop,
     position: monitor.physicalPosition,
     size: monitor.physicalSize,
   });
@@ -76,15 +77,52 @@ export const setRegionSelectorOpacity = (opacity: number) =>
 export const setScreenshotRegionSession = (active: boolean) =>
   invoke<null>("set_screenshot_region_session", { active });
 
-export const openScreenshotRegionOverlays = (
-  destination: "clipboard" | "export",
-) => invoke<null>("open_screenshot_region_overlays", { destination });
+export type ScreenshotRegionExclusion = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+export type ScreenshotRegionOscOptions = {
+  bounds: { height: number; width: number };
+  inputEnabled: boolean;
+  region: { height: number; width: number; x: number; y: number };
+  visible: boolean;
+  window: string;
+  allowDrawing?: boolean;
+  aspect?: number;
+  desktop?: boolean;
+  exclusionRect?: ScreenshotRegionExclusion;
+  monitorId?: number;
+  showFrame?: boolean;
+  showHandles?: boolean;
+};
 
-export const closeScreenshotRegionOverlays = () =>
-  invoke<null>("close_screenshot_region_overlays");
+export const setScreenshotRegionOsc = (options: ScreenshotRegionOscOptions) =>
+  invoke<boolean>("set_screenshot_region_osc", {
+    allowDrawing: options.allowDrawing ?? true,
+    aspect: options.aspect,
+    desktop: options.desktop ?? false,
+    exclusionRect: options.exclusionRect,
+    height: options.region.height,
+    inputEnabled: options.inputEnabled,
+    monitorHeight: options.bounds.height,
+    monitorId: options.monitorId,
+    monitorWidth: options.bounds.width,
+    showFrame: options.showFrame ?? true,
+    showHandles: options.showHandles ?? true,
+    visible: options.visible,
+    width: options.region.width,
+    window: options.window,
+    x: options.region.x,
+    y: options.region.y,
+  });
 
 export const setRecordingControlsOpacity = (opacity: number) =>
   invoke<null>("set_recording_controls_opacity", { opacity });
+
+export const setRegionSelectorOscFrameVisible = (visible: boolean) =>
+  invoke<boolean>("set_region_selector_osc_frame_visible", { visible });
 
 export const beginRegionSelectorGesture = () =>
   invoke<null>("begin_region_selector_gesture");
@@ -92,11 +130,11 @@ export const beginRegionSelectorGesture = () =>
 export const finishRegionSelectorGesture = () =>
   invoke<null>("finish_region_selector_gesture");
 
-export const takeMonitorScreenshot = (
+export const prepareScreenshotRegionMagnifier = (
   monitorId: number,
-  channel: Channel<ArrayBuffer>,
+  window: string,
 ) =>
-  invoke<{ height: number; width: number }>("take_monitor_screenshot", {
-    channel,
+  invoke<boolean>("prepare_screenshot_region_magnifier", {
     monitorId,
+    window,
   });

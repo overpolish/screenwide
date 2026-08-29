@@ -65,11 +65,11 @@
 - (void)cursorUpdate:(NSEvent *)event {
   if (self.selectionDragActive &&
       (self.selectionDragOperation == 2 || self.selectionDragOperation == 4))
-    set_selection_cursor(selection_resize_cursor(1 | 4));
+    set_selection_cursor(screenwide_region_resize_cursor(1 | 4));
   else if (self.selectionDragActive &&
            (self.selectionDragOperation == 1 || self.selectionDragOperation == 3 ||
             self.selectionDragOperation == 6))
-    set_selection_cursor(selection_resize_cursor(self.selectionDragEdges));
+    set_selection_cursor(screenwide_region_resize_cursor(self.selectionDragEdges));
   else if (self.selectionDragActive)
     set_selection_move_cursor();
   else if (self.panning)
@@ -150,7 +150,7 @@
         self.selectionDragOperation = selection_is_frame(self.surface) ? 4 : 2;
         emit_selection_gesture(self.surface, 0, self.selectionDragOperation, 0,
                                target.radius_percent, 0.0, 0.0);
-        set_selection_cursor(selection_resize_cursor(1 | 4));
+        set_selection_cursor(screenwide_region_resize_cursor(1 | 4));
       } else if (self.selectionDragEdges != 0) {
         self.selectionDragOperation = selection_is_frame(self.surface)
             ? 3 : target.crop_mode != 0 ? 6 : 1;
@@ -169,7 +169,7 @@
             (event.modifierFlags & NSEventModifierFlagOption) != 0;
         emit_selection_gesture(self.surface, 0, self.selectionDragOperation,
                                self.selectionDragEdges, 1.0, 0.0, 0.0);
-        set_selection_cursor(selection_resize_cursor(self.selectionDragEdges));
+        set_selection_cursor(screenwide_region_resize_cursor(self.selectionDragEdges));
       } else {
         self.selectionDragOperation = target.crop_mode != 0 ? 5 : 0;
         if (self.selectionDragOperation == 0) [self beginWorkspaceMove];
@@ -200,7 +200,7 @@
     self.selectionDragStart = self.surface.selection;
     emit_selection_gesture(self.surface, 0, self.selectionDragOperation, 0,
                            self.selectionDragStart.radius_percent, 0.0, 0.0);
-    set_selection_cursor(selection_resize_cursor(1 | 4));
+    set_selection_cursor(screenwide_region_resize_cursor(1 | 4));
     return;
   }
   if (canGesture && handleEdges != 0 && event.buttonNumber == 0) {
@@ -229,7 +229,7 @@
         (event.modifierFlags & NSEventModifierFlagOption) != 0;
     emit_selection_gesture(self.surface, 0, self.selectionDragOperation,
                            handleEdges, 1.0, 0.0, 0.0);
-    set_selection_cursor(selection_resize_cursor(handleEdges));
+    set_selection_cursor(screenwide_region_resize_cursor(handleEdges));
     return;
   }
   if (event.buttonNumber == 0 && self.surface.selectionHitTestingEnabled) {
@@ -796,7 +796,7 @@
   self.selectionMoveTargetsStart = nil;
   self.selectionFramePaneStarts = nil;
   self.panning = NO;
-  ScreenwideWorkspaceMagnifier clearedMagnifier = self.surface.workspaceMagnifier;
+  ScreenwideRegionMagnifier clearedMagnifier = self.surface.workspaceMagnifier;
   clearedMagnifier.active = 0;
   self.surface.workspaceMagnifier = clearedMagnifier;
   if (hadSnapGuides || hadMagnifier) redraw_selection(self.surface);

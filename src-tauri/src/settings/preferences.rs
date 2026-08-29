@@ -15,7 +15,6 @@ const SETTINGS_CHANGED_EVENT: &str = "settings://changed";
 pub struct GeneralSettings {
   pub recording_directory: Option<PathBuf>,
   pub screenshot_directory: Option<PathBuf>,
-  pub capture_screenshot_on_draw: bool,
   pub open_location_after_export: bool,
   pub record_screenwide_windows: bool,
   pub show_recording_confidence_checks: bool,
@@ -29,7 +28,6 @@ impl Default for GeneralSettings {
     Self {
       recording_directory: None,
       screenshot_directory: None,
-      capture_screenshot_on_draw: false,
       open_location_after_export: true,
       record_screenwide_windows: false,
       show_recording_confidence_checks: true,
@@ -199,5 +197,14 @@ mod tests {
       serde_json::from_str(r#"{"openLocationAfterExport":false}"#).unwrap();
 
     assert!(!settings.open_location_after_export);
+  }
+
+  #[test]
+  fn accepts_but_does_not_reserialize_the_retired_capture_on_draw_setting() {
+    let settings: GeneralSettings =
+      serde_json::from_str(r#"{"captureScreenshotOnDraw":false}"#).unwrap();
+    let serialized = serde_json::to_value(settings).unwrap();
+
+    assert!(serialized.get("captureScreenshotOnDraw").is_none());
   }
 }

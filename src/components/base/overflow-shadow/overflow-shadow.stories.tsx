@@ -3,6 +3,10 @@
 
 import { Meta, StoryObj } from "@storybook/react-vite";
 
+import { Button } from "../button/button";
+import { ListBox } from "../listbox/listbox";
+import { ListBoxItem } from "../listbox-item/listbox-item";
+
 import { OverflowShadow } from "./overflow-shadow";
 
 const items = Array.from(
@@ -21,15 +25,17 @@ type Story = StoryObj<typeof meta>;
 
 export const Vertical: Story = {
   render: () => (
-    <OverflowShadow
-      className="space-y-2 p-3"
-      rootClassName="h-32 w-64 rounded-xl bg-neutral text-content-fg"
-    >
-      {items.map((item) => (
-        <div className="rounded-lg bg-neutral px-3 py-2" key={item}>
-          {item}
-        </div>
-      ))}
+    <OverflowShadow rootClassName="h-32 w-64 rounded-xl bg-content shadow-md">
+      <ListBox
+        aria-label="Overflowing items"
+        className="w-full overflow-visible rounded-none bg-transparent shadow-none"
+      >
+        {items.map((item) => (
+          <ListBoxItem id={item} key={item}>
+            {item}
+          </ListBoxItem>
+        ))}
+      </ListBox>
     </OverflowShadow>
   ),
 };
@@ -37,14 +43,14 @@ export const Vertical: Story = {
 export const Horizontal: Story = {
   render: () => (
     <OverflowShadow
-      className="flex w-max gap-2 p-3"
+      className="gap-control p-control flex w-max"
       orientation="horizontal"
-      rootClassName="h-16 w-64 rounded-xl bg-neutral text-content-fg"
+      rootClassName="h-9 w-64 rounded-xl bg-content shadow-md"
     >
       {items.map((item) => (
-        <div className="rounded-lg bg-neutral px-3 py-2" key={item}>
+        <Button key={item} size="compact">
           {item}
-        </div>
+        </Button>
       ))}
     </OverflowShadow>
   ),

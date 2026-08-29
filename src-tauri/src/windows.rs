@@ -13,6 +13,8 @@ mod geometry;
 mod lifecycle;
 pub(crate) mod monitor_capture;
 pub(crate) mod options;
+#[cfg(target_os = "macos")]
+mod panel_presentation_macos;
 mod platform;
 mod recording_options_layout;
 pub(crate) mod region;
@@ -324,9 +326,7 @@ pub fn hide_recording_ui(app: AppHandle) -> tauri::Result<()> {
   hide_recording_options(app.clone())?;
   source_selector::hide(&app)?;
   hide_recording_bar(&app)?;
-  if let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
-    platform::hide(&region)?;
-  }
+  region::hide_region_selector(app.clone())?;
 
   Ok(())
 }

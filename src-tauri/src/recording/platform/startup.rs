@@ -14,6 +14,7 @@ mod writer_thread;
 
 use camera_writer::CameraWriterSetup;
 use screen_stream::VideoStreamRequest;
+use video_source::ResolvedVideo;
 use writer_thread::{both_first_frames, spawn_writer, WriterThread};
 
 pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, String> {
@@ -56,10 +57,10 @@ pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, 
     .flatten();
   let cursor_source = primary_video
     .as_ref()
-    .map(|video| video.cursor_source.clone());
+    .map(|video| video.cursor_source().clone());
   let source_scale_factor = primary_video
     .as_ref()
-    .map_or(1.0, |video| video.source_scale_factor);
+    .map_or(1.0, ResolvedVideo::source_scale_factor);
   let (width, height, primary_fps) = if camera_primary {
     let camera = camera_spec.as_ref().expect("checked above");
     (camera.width, camera.height, camera.fps)
@@ -67,7 +68,7 @@ pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, 
     let video = primary_video
       .as_ref()
       .ok_or_else(|| "No video source is available for recording".to_owned())?;
-    (video.width, video.height, video.fps)
+    video.dimensions()
   };
   if width == 0 || height == 0 {
     return Err("The selected video source has no usable size".to_owned());
@@ -144,7 +145,9 @@ pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, 
     content.as_deref(),
     output.as_ref(),
     &queue,
-    primary_video.as_ref(),
+    primary_video
+      .as_ref()
+      .is_some_and(ResolvedVideo::can_capture_all_audio),
   ) {
     Ok(streams) => streams,
     // Every selected application quit between selection and start. The
@@ -159,17 +162,36 @@ pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, 
     Err(error) => return Err(error),
   };
   let video_captures_all_audio = system_audio_streams.video_captures_all;
-  let video_stream = primary_video
-    .as_ref()
-    .map(|video| {
-      screen_stream::create_video(VideoStreamRequest {
-        captures_audio: video_captures_all_audio,
-        output: output.as_ref().expect("content has output"),
+  let video_stream = match primary_video.as_ref() {
+    Some(ResolvedVideo::Direct(video)) => Some(screen_stream::create_video(VideoStreamRequest {
+      captures_audio: video_captures_all_audio,
+      output: output.as_ref().expect("content has output"),
+      queue: &queue,
+      video,
+    })?),
+    _ => None,
+  };
+  let desktop_streams = match primary_video.as_ref() {
+    Some(ResolvedVideo::Desktop(video)) => Some(desktop_stream::create(
+      desktop_stream::DesktopStreamRequest {
+        audio_output: video_captures_all_audio.then_some(
+          output
+            .as_ref()
+            .expect("desktop audio has a ScreenCaptureKit output"),
+        ),
+        commands: commands.clone(),
+        content: content.as_ref().expect("desktop video has content"),
+        displays: &video.displays,
+        fps: video.fps,
+        include_own_windows,
+        plan: &video.plan,
         queue: &queue,
-        video,
-      })
-    })
-    .transpose()?;
+        show_cursor: video.show_cursor,
+        stats: Arc::clone(&stats),
+      },
+    )?),
+    _ => None,
+  };
 
   let microphone = microphone_stream::start(microphone_source, &commands, &monitor, &stats)?;
 
@@ -178,6 +200,15 @@ pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, 
     if let Err(error) = stream.start().await {
       system_audio_streams.stop();
       return Err(error.to_string());
+    }
+  }
+  if let Some(desktop) = &desktop_streams {
+    if let Err(error) = desktop.start().await {
+      if let Some(stream) = &video_stream {
+        stream.stop_with_ch(|_| {});
+      }
+      system_audio_streams.stop();
+      return Err(error);
     }
   }
   if let Some(spec) = primary_camera_spec {
@@ -195,6 +226,11 @@ pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, 
   if let Some(stream) = video_stream {
     streams.push(stream);
   }
+  let desktop = desktop_streams.map(|desktop| {
+    let (desktop_streams, keepalive) = desktop.into_parts();
+    streams.extend(desktop_streams);
+    keepalive
+  });
   system_audio_streams.append_to(&mut streams);
   let first_frame = match camera_first_frame {
     Some(camera) => both_first_frames(first_frame, camera),
@@ -208,6 +244,7 @@ pub(super) async fn begin(config: CaptureStartupConfig) -> Result<CaptureStart, 
       microphone,
       objects: StreamObjects {
         _output: output,
+        desktop,
         queue,
         streams,
       },

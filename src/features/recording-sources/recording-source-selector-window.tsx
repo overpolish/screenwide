@@ -9,7 +9,6 @@ import {
   getRecordingSourceSelectorState,
   listMonitors,
   listWindows,
-  showRegionSelector,
 } from "./api";
 import { findCurrentMonitor } from "./monitor-selection";
 import { MonitorSelector } from "./monitor-selector";
@@ -220,18 +219,14 @@ export function RecordingSourceSelectorWindow() {
             windows={windows}
           />
         </div>
-      ) : (
+      ) : recordingMode === "screen" ? (
         <div className="flex min-h-0 grow items-center justify-center overflow-hidden">
           <MonitorSelector
             focusContents={focusContents}
             monitors={monitors}
-            onCommit={(monitor, returnFocus) => {
-              if (recordingMode === "region") {
-                void showRegionSelector(monitor);
-              } else {
-                clearSelectorFocus();
-                void collapseRecordingSourceSelector(returnFocus);
-              }
+            onCommit={(_monitor, returnFocus) => {
+              clearSelectorFocus();
+              void collapseRecordingSourceSelector(returnFocus);
             }}
             onSelect={(monitor) => {
               setSelectedMonitor(monitor);
@@ -239,7 +234,7 @@ export function RecordingSourceSelectorWindow() {
             selectedMonitor={selectedMonitor}
           />
         </div>
-      )}
+      ) : null}
     </main>
   );
 }

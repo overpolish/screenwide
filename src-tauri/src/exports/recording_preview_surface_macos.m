@@ -10,6 +10,7 @@
 
 #import "cursor_export/gpu_compositor_macos.h"
 #import "recording_preview_surface_macos_private.h"
+#import "region_osc_renderer_macos.h"
 
 
 typedef struct {
@@ -259,6 +260,25 @@ SCREENWIDE_PREVIEW_PRIVATE void apply_editor_transform(ScreenwidePreviewSurface 
 @implementation ScreenwidePreviewInteractionView
 @end
 
+static void refresh_for_window_display_change(
+    ScreenwidePreviewSurface *surface) {
+  if (surface == nil || surface.host.window == nil) return;
+  CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
+  for (ScreenwidePreviewView *view in surface.views) {
+    CAMetalLayer *layer = (CAMetalLayer *)view.layer;
+    layer.contentsScale = scale;
+  }
+  if (surface.workspaceMode && surface.views.count > 0) {
+    CAMetalLayer *layer = (CAMetalLayer *)surface.views[0].layer;
+    NSSize size = surface.container.bounds.size;
+    layer.drawableSize = CGSizeMake(MAX(size.width * scale, 2.0),
+                                    MAX(size.height * scale, 2.0));
+    redraw_workspace(surface);
+  } else {
+    redraw_selection(surface);
+  }
+}
+
 static NSString *const shader = @R"(
 #include <metal_stdlib>
 using namespace metal;
@@ -275,102 +295,7 @@ kernel void present_rgba(const device uchar4 *source [[buffer(0)]],
   output.write(float4(pixel.r, pixel.g, pixel.b, pixel.a) / 255.0, gid);
 }
 
-struct selection_vertex {
-  float2 position;
-  float2 uv;
-  uint kind;
-  uint padding;
-};
 
-struct selection_out {
-  float4 position [[position]];
-  float2 uv;
-  uint kind;
-};
-
-vertex selection_out selection_vertex_main(const device selection_vertex *vertices [[buffer(0)]],
-                                           uint index [[vertex_id]]) {
-  selection_out out;
-  out.position = float4(vertices[index].position, 0.0, 1.0);
-  out.uv = vertices[index].uv;
-  out.kind = vertices[index].kind;
-  return out;
-}
-
-fragment float4 selection_fragment(selection_out in [[stage_in]],
-                                   constant uint &light_mode [[buffer(0)]],
-                                   constant float4 &magnifier_box [[buffer(1)]],
-                                   constant float4 &action_shades [[buffer(2)]],
-                                   texture2d<float> label [[texture(0)]], texture2d<float> secondary_label [[texture(1)]]) {
-  constexpr sampler label_sampler(filter::linear, address::clamp_to_edge);
-  if (magnifier_box.z > 0.0) {
-    float2 half_size = magnifier_box.zw * 0.5;
-    float2 local = abs(in.position.xy - (magnifier_box.xy + half_size)) -
-                   (half_size - 4.0);
-    float distance = length(max(local, 0.0)) +
-                     min(max(local.x, local.y), 0.0) - 4.0;
-    if (distance <= 0.0) discard_fragment();
-  }
-  if (in.kind == 11 || in.kind == 15) {
-    // The label bitmap is premultiplied, but this pipeline blends with
-    // SourceAlpha/OneMinusSourceAlpha (i.e. it expects straight alpha), so the
-    // colour is un-premultiplied back out before it is returned.
-    float4 sampled = in.kind == 15 ? secondary_label.sample(label_sampler, in.uv) : label.sample(label_sampler, in.uv);
-    if (sampled.a <= 0.002) discard_fragment();
-    return float4(sampled.rgb / sampled.a, sampled.a);
-  }
-  if (in.kind >= 12 && in.kind <= 14) {
-    float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
-    // The compact action is 24pt tall; this ratio keeps React's 6pt rounded-md
-    // radius independent of backing scale because `dimensions` is in pixels.
-    float radius = dimensions.y * 0.25;
-    float2 local = abs((in.uv - 0.5) * dimensions) -
-                   (dimensions * 0.5 - radius);
-    float distance = length(max(local, 0.0)) +
-                     min(max(local.x, local.y), 0.0) - radius;
-    float coverage = 1.0 - smoothstep(-1.0, 1.0, distance);
-    // Opaque resolved values of React's neutral-soft semantic tokens.
-    float shade = light_mode != 0 ? (in.kind == 13 ? action_shades.z : action_shades.x) : (in.kind == 13 ? action_shades.w : action_shades.y);
-    return float4(float3(shade), coverage);
-  }
-  if (in.kind == 6) return float4(0.0, 0.0, 0.0, 0.4);
-  if (in.kind >= 7 && in.kind <= 10) {
-    bool horizontal = in.kind <= 8;
-    bool halo = in.kind == 8 || in.kind == 10;
-    float coordinate = horizontal ? in.uv.x : in.uv.y;
-    float wave = abs(fract(coordinate) - 0.5);
-    float aa = max(fwidth(wave), 0.001);
-    float coverage = 1.0 - smoothstep(0.30, 0.30 + aa, wave);
-    if (coverage <= 0.0) discard_fragment();
-    float4 color = light_mode != 0
-        ? (halo ? float4(1.0) : float4(0.12, 0.12, 0.12, 1.0))
-        : (halo ? float4(0.0, 0.0, 0.0, 0.8) : float4(1.0));
-    color.a *= coverage;
-    return color;
-  }
-  float coverage = 1.0;
-  bool guide = in.kind == 4 || in.kind == 5;
-  if (!guide && (in.kind & 1) != 0) {
-    float edge = distance(in.uv, float2(0.5));
-    float aa = max(fwidth(edge), 0.001);
-    // Keep the fill fully opaque and spend the AA ramp outside its edge. This
-    // preserves the same perceived colour as the pixel-snapped line core.
-    coverage = 1.0 - smoothstep(0.5, 0.5 + aa, edge);
-    if (coverage <= 0.0) discard_fragment();
-  }
-  if (guide) {
-    if (in.kind == 5)
-      return light_mode != 0 ? float4(0.008, 0.518, 0.780, 1.0)
-                             : float4(0.055, 0.647, 0.914, 1.0);
-    return float4(0.918, 0.702, 0.031, 1.0);
-  }
-  bool halo = in.kind >= 2;
-  float4 color = light_mode != 0
-      ? (halo ? float4(1.0) : float4(0.12, 0.12, 0.12, 1.0))
-      : (halo ? float4(0.0, 0.0, 0.0, 0.8) : float4(1.0));
-  color.a *= coverage;
-  return color;
-}
 )";
 
 static void on_main(dispatch_block_t block) {
@@ -561,36 +486,21 @@ void *screenwide_preview_surface_create(void *host_view) {
     surface.device = MTLCreateSystemDefaultDevice();
     surface.queue = [surface.device newCommandQueue];
     NSError *error = nil;
-    id<MTLLibrary> library = [surface.device newLibraryWithSource:shader options:nil error:&error];
+    NSString *combinedShader =
+        [shader stringByAppendingString:screenwide_region_osc_shader_source()];
+    id<MTLLibrary> library = [surface.device
+        newLibraryWithSource:combinedShader
+                     options:nil
+                       error:&error];
     surface.pipeline = [surface.device newComputePipelineStateWithFunction:
       [library newFunctionWithName:@"present_rgba"] error:&error];
-    MTLRenderPipelineDescriptor *selectionDescriptor = [MTLRenderPipelineDescriptor new];
-    selectionDescriptor.vertexFunction = [library newFunctionWithName:@"selection_vertex_main"];
-    selectionDescriptor.fragmentFunction = [library newFunctionWithName:@"selection_fragment"];
-    selectionDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-    selectionDescriptor.colorAttachments[0].blendingEnabled = YES;
-    selectionDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-    selectionDescriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-    selectionDescriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
-    selectionDescriptor.colorAttachments[0].destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-    surface.selectionPipeline = [surface.device newRenderPipelineStateWithDescriptor:selectionDescriptor
-                                                                                  error:&error];
+    surface.selectionPipeline =
+        screenwide_region_osc_make_pipeline(surface.device, library, &error);
     // A 1x1 transparent texture stands in whenever no size readout exists, so
     // the fragment function's texture slot is always bound (see
     // `selectionLabelPlaceholder`).
-    MTLTextureDescriptor *placeholderDescriptor = [MTLTextureDescriptor
-        texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
-                                     width:1
-                                    height:1
-                                 mipmapped:NO];
-    placeholderDescriptor.usage = MTLTextureUsageShaderRead;
     surface.selectionLabelPlaceholder =
-        [surface.device newTextureWithDescriptor:placeholderDescriptor];
-    const uint8_t transparent[4] = {0, 0, 0, 0};
-    [surface.selectionLabelPlaceholder replaceRegion:MTLRegionMake2D(0, 0, 1, 1)
-                                         mipmapLevel:0
-                                           withBytes:transparent
-                                         bytesPerRow:4];
+        screenwide_region_osc_make_placeholder(surface.device);
     surface.container = [[ScreenwidePreviewView alloc] initWithFrame:NSZeroRect];
     surface.container.wantsLayer = YES;
     surface.container.layer.masksToBounds = YES;
@@ -672,6 +582,26 @@ void *screenwide_preview_surface_create(void *host_view) {
     surface.workspaceTransforms = [NSMutableDictionary dictionary];
     surface.batchDrawables = [NSMutableArray array];
     surface.batchViews = [NSMutableArray array];
+    NSWindow *window = surface.host.window;
+    if (window != nil) {
+      __weak ScreenwidePreviewSurface *weakSurface = surface;
+      NSNotificationCenter *notifications =
+          [NSNotificationCenter defaultCenter];
+      surface.windowScreenObserver = [notifications
+          addObserverForName:NSWindowDidChangeScreenNotification
+                      object:window
+                       queue:[NSOperationQueue mainQueue]
+                  usingBlock:^(__unused NSNotification *notification) {
+        refresh_for_window_display_change(weakSurface);
+      }];
+      surface.windowBackingObserver = [notifications
+          addObserverForName:NSWindowDidChangeBackingPropertiesNotification
+                      object:window
+                       queue:[NSOperationQueue mainQueue]
+                  usingBlock:^(__unused NSNotification *notification) {
+        refresh_for_window_display_change(weakSurface);
+      }];
+    }
     install_native_cursor_guard();
   });
   if (surface.pipeline == nil) return NULL;
@@ -741,6 +671,13 @@ void screenwide_preview_surface_destroy(void *handle) {
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge_transfer ScreenwidePreviewSurface *)handle;
   dispatch_async(dispatch_get_main_queue(), ^{
+    NSNotificationCenter *notifications = [NSNotificationCenter defaultCenter];
+    if (surface.windowScreenObserver != nil)
+      [notifications removeObserver:surface.windowScreenObserver];
+    if (surface.windowBackingObserver != nil)
+      [notifications removeObserver:surface.windowBackingObserver];
+    surface.windowScreenObserver = nil;
+    surface.windowBackingObserver = nil;
     for (ScreenwidePreviewView *view in surface.views) {
       screenwide_gpu_still_presenter_destroy(view.compositor);
       view.compositor = NULL;

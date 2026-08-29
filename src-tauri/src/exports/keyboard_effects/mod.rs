@@ -479,9 +479,7 @@ impl KeyboardCompositor {
       let detached_amount = exit
         .filter(|(_, kind)| *kind == TransitionKind::Detached)
         .and(exit_progress)
-        .map(|progress| {
-          entrance_progress.min(1.0 - pop_spring(progress).clamp(0.0, 1.0))
-        });
+        .map(|progress| entrance_progress.min(1.0 - pop_spring(progress).clamp(0.0, 1.0)));
       // A slot reserved by a roll renders nothing until its own entrance,
       // in every animation mode: it only holds the row geometry stable.
       let pending_entrance = now < key.animation_enter_us;

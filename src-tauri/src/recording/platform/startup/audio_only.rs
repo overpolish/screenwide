@@ -58,7 +58,7 @@ pub(super) async fn begin(
     content.as_deref(),
     output.as_ref(),
     &queue,
-    None,
+    false,
   )?;
   let microphone = microphone_stream::start(microphone_source, &commands, &monitor, &stats)?;
   system_audio_streams.start().await?;
@@ -80,6 +80,7 @@ pub(super) async fn begin(
       microphone,
       objects: StreamObjects {
         _output: output,
+        desktop: None,
         queue,
         streams,
       },

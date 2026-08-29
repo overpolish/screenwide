@@ -2,208 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #import "recording_preview_surface_macos_private.h"
+#import "region_osc_renderer_macos.h"
 
-typedef struct {
-  float x;
-  float y;
-} ScreenwideSelectionPoint;
-
-typedef struct {
-  ScreenwideSelectionPoint position;
-  ScreenwideSelectionPoint uv;
-  uint32_t kind;
-  uint32_t padding;
-} ScreenwideSelectionVertex;
-
-_Static_assert(sizeof(ScreenwideSelectionVertex) == 24,
-               "Selection vertices must match the Metal struct stride");
-
-static ScreenwideSelectionPoint selection_ndc(NSSize size, CGFloat x, CGFloat y) {
-  return (ScreenwideSelectionPoint){
-    (float)(2.0 * x / MAX(size.width, 1.0) - 1.0),
-    (float)(1.0 - 2.0 * y / MAX(size.height, 1.0)),
-  };
-}
-
-static void add_selection_quad(ScreenwideSelectionVertex *vertices, NSUInteger *count,
-                               NSSize viewSize, NSRect rect, uint32_t kind) {
-  ScreenwideSelectionPoint a = selection_ndc(viewSize, NSMinX(rect), NSMinY(rect));
-  ScreenwideSelectionPoint b = selection_ndc(viewSize, NSMaxX(rect), NSMinY(rect));
-  ScreenwideSelectionPoint c = selection_ndc(viewSize, NSMaxX(rect), NSMaxY(rect));
-  ScreenwideSelectionPoint d = selection_ndc(viewSize, NSMinX(rect), NSMaxY(rect));
-  ScreenwideSelectionVertex quad[6] = {
-    {a, {0, 0}, kind, 0}, {b, {1, 0}, kind, 0}, {c, {1, 1}, kind, 0},
-    {a, {0, 0}, kind, 0}, {c, {1, 1}, kind, 0}, {d, {0, 1}, kind, 0},
-  };
-  memcpy(vertices + *count, quad, sizeof(quad));
-  *count += 6;
-}
-
-static void add_selection_pattern_quad(ScreenwideSelectionVertex *vertices,
-                                       NSUInteger *count, NSSize viewSize,
-                                       NSRect rect, uint32_t kind,
-                                       BOOL horizontal, CGFloat scale) {
-  ScreenwideSelectionPoint a = selection_ndc(viewSize, NSMinX(rect), NSMinY(rect));
-  ScreenwideSelectionPoint b = selection_ndc(viewSize, NSMaxX(rect), NSMinY(rect));
-  ScreenwideSelectionPoint c = selection_ndc(viewSize, NSMaxX(rect), NSMaxY(rect));
-  ScreenwideSelectionPoint d = selection_ndc(viewSize, NSMinX(rect), NSMaxY(rect));
-  float repeats = (float)((horizontal ? rect.size.width : rect.size.height) *
-                          scale / 10.0);
-  ScreenwideSelectionPoint uvA = {0, 0};
-  ScreenwideSelectionPoint uvB = horizontal
-      ? (ScreenwideSelectionPoint){repeats, 0}
-      : (ScreenwideSelectionPoint){0, 0};
-  ScreenwideSelectionPoint uvC = {repeats, repeats};
-  ScreenwideSelectionPoint uvD = horizontal
-      ? (ScreenwideSelectionPoint){0, 0}
-      : (ScreenwideSelectionPoint){0, repeats};
-  ScreenwideSelectionVertex quad[6] = {
-    {a, uvA, kind, 0}, {b, uvB, kind, 0}, {c, uvC, kind, 0},
-    {a, uvA, kind, 0}, {c, uvC, kind, 0}, {d, uvD, kind, 0},
-  };
-  memcpy(vertices + *count, quad, sizeof(quad));
-  *count += 6;
-}
-
-static void add_selection_circle(ScreenwideSelectionVertex *vertices,
-                                 NSUInteger *count, NSSize viewSize,
-                                 NSPoint center, CGFloat radius,
-                                 CGFloat margin, uint32_t kind) {
-  CGFloat extent = radius + margin;
-  NSRect rect = NSMakeRect(center.x - extent, center.y - extent,
-                           extent * 2.0, extent * 2.0);
-  ScreenwideSelectionPoint a = selection_ndc(viewSize, NSMinX(rect), NSMinY(rect));
-  ScreenwideSelectionPoint b = selection_ndc(viewSize, NSMaxX(rect), NSMinY(rect));
-  ScreenwideSelectionPoint c = selection_ndc(viewSize, NSMaxX(rect), NSMaxY(rect));
-  ScreenwideSelectionPoint d = selection_ndc(viewSize, NSMinX(rect), NSMaxY(rect));
-  float uvMargin = (float)(margin / (radius * 2.0));
-  float uvMin = -uvMargin;
-  float uvMax = 1.0f + uvMargin;
-  ScreenwideSelectionVertex quad[6] = {
-    {a, {uvMin, uvMin}, kind, 0}, {b, {uvMax, uvMin}, kind, 0},
-    {c, {uvMax, uvMax}, kind, 0}, {a, {uvMin, uvMin}, kind, 0},
-    {c, {uvMax, uvMax}, kind, 0}, {d, {uvMin, uvMax}, kind, 0},
-  };
-  memcpy(vertices + *count, quad, sizeof(quad));
-  *count += 6;
-}
-
-static CGFloat selection_snap(CGFloat value, CGFloat scale) {
-  return (floor(value * scale) + 0.5) / scale;
-}
-
-static void add_selection_osc(ScreenwideSelectionVertex *vertices,
-                              NSUInteger *count, NSSize size, NSRect frame,
-                              CGFloat scale, double radiusPercent,
-                              BOOL radiusEnabled) {
-  CGFloat minX = selection_snap(NSMinX(frame), scale);
-  CGFloat maxX = selection_snap(NSMaxX(frame), scale);
-  CGFloat minY = selection_snap(NSMinY(frame), scale);
-  CGFloat maxY = selection_snap(NSMaxY(frame), scale);
-  CGFloat midX = selection_snap((minX + maxX) / 2.0, scale);
-  CGFloat midY = selection_snap((minY + maxY) / 2.0, scale);
-  NSPoint points[8] = {
-    NSMakePoint(minX, minY), NSMakePoint(midX, minY),
-    NSMakePoint(maxX, minY), NSMakePoint(maxX, midY),
-    NSMakePoint(maxX, maxY), NSMakePoint(midX, maxY),
-    NSMakePoint(minX, maxY), NSMakePoint(minX, midY),
-  };
-  for (NSUInteger pass = 0; pass < 2; pass++) {
-    BOOL halo = pass == 0;
-    CGFloat lineHalf = (halo ? 1.5 : 0.5) / scale;
-    uint32_t rectKind = halo ? 2 : 0;
-    uint32_t circleKind = halo ? 3 : 1;
-    add_selection_quad(vertices, count, size,
-                       NSMakeRect(minX - lineHalf, minY - lineHalf,
-                                  maxX - minX + lineHalf * 2.0,
-                                  lineHalf * 2.0), rectKind);
-    add_selection_quad(vertices, count, size,
-                       NSMakeRect(minX - lineHalf, maxY - lineHalf,
-                                  maxX - minX + lineHalf * 2.0,
-                                  lineHalf * 2.0), rectKind);
-    add_selection_quad(vertices, count, size,
-                       NSMakeRect(minX - lineHalf, minY - lineHalf,
-                                  lineHalf * 2.0,
-                                  maxY - minY + lineHalf * 2.0), rectKind);
-    add_selection_quad(vertices, count, size,
-                       NSMakeRect(maxX - lineHalf, minY - lineHalf,
-                                  lineHalf * 2.0,
-                                  maxY - minY + lineHalf * 2.0), rectKind);
-    CGFloat radius = 4.0 + (halo ? 1.0 / scale : 0.0);
-    for (NSUInteger index = 0; index < 8; index++)
-      add_selection_circle(vertices, count, size, points[index], radius,
-                           1.0 / scale, circleKind);
-    if (radiusEnabled) {
-      CGFloat radiusOffset = MIN(maxX - minX, maxY - minY) *
-                             radiusPercent / 100.0 * 0.55 + 10.0;
-      add_selection_circle(vertices, count, size,
-                           NSMakePoint(minX + radiusOffset,
-                                       minY + radiusOffset),
-                           radius, 1.0 / scale, circleKind);
-    }
-  }
-}
-
-static void add_crop_osc(ScreenwideSelectionVertex *vertices,
-                         NSUInteger *count, NSSize size, NSRect crop,
-                         NSRect image, CGFloat scale) {
-  NSRect shade[4] = {
-    NSMakeRect(NSMinX(image), NSMinY(image), image.size.width,
-               MAX(NSMinY(crop) - NSMinY(image), 0.0)),
-    NSMakeRect(NSMinX(image), NSMaxY(crop), image.size.width,
-               MAX(NSMaxY(image) - NSMaxY(crop), 0.0)),
-    NSMakeRect(NSMinX(image), NSMinY(crop),
-               MAX(NSMinX(crop) - NSMinX(image), 0.0), crop.size.height),
-    NSMakeRect(NSMaxX(crop), NSMinY(crop),
-               MAX(NSMaxX(image) - NSMaxX(crop), 0.0), crop.size.height),
-  };
-  for (NSUInteger index = 0; index < 4; index++)
-    if (!NSIsEmptyRect(shade[index]))
-      add_selection_quad(vertices, count, size, shade[index], 6);
-
-  CGFloat minX = selection_snap(NSMinX(crop), scale);
-  CGFloat maxX = selection_snap(NSMaxX(crop), scale);
-  CGFloat minY = selection_snap(NSMinY(crop), scale);
-  CGFloat maxY = selection_snap(NSMaxY(crop), scale);
-  CGFloat midX = selection_snap((minX + maxX) / 2.0, scale);
-  CGFloat midY = selection_snap((minY + maxY) / 2.0, scale);
-  NSPoint points[8] = {
-    NSMakePoint(minX, minY), NSMakePoint(midX, minY),
-    NSMakePoint(maxX, minY), NSMakePoint(maxX, midY),
-    NSMakePoint(maxX, maxY), NSMakePoint(midX, maxY),
-    NSMakePoint(minX, maxY), NSMakePoint(minX, midY),
-  };
-  for (NSUInteger pass = 0; pass < 2; pass++) {
-    BOOL halo = pass == 0;
-    CGFloat lineHalf = (halo ? 1.5 : 0.5) / scale;
-    uint32_t horizontalKind = halo ? 8 : 7;
-    uint32_t verticalKind = halo ? 10 : 9;
-    add_selection_pattern_quad(
-        vertices, count, size,
-        NSMakeRect(minX - lineHalf, minY - lineHalf,
-                   maxX - minX + lineHalf * 2.0, lineHalf * 2.0),
-        horizontalKind, YES, scale);
-    add_selection_pattern_quad(
-        vertices, count, size,
-        NSMakeRect(minX - lineHalf, maxY - lineHalf,
-                   maxX - minX + lineHalf * 2.0, lineHalf * 2.0),
-        horizontalKind, YES, scale);
-    add_selection_pattern_quad(
-        vertices, count, size,
-        NSMakeRect(minX - lineHalf, minY - lineHalf, lineHalf * 2.0,
-                   maxY - minY + lineHalf * 2.0),
-        verticalKind, NO, scale);
-    add_selection_pattern_quad(
-        vertices, count, size,
-        NSMakeRect(maxX - lineHalf, minY - lineHalf, lineHalf * 2.0,
-                   maxY - minY + lineHalf * 2.0),
-        verticalKind, NO, scale);
-    CGFloat radius = 4.0 + (halo ? 1.0 / scale : 0.0);
-    for (NSUInteger index = 0; index < 8; index++)
-      add_selection_circle(vertices, count, size, points[index], radius,
-                           1.0 / scale, halo ? 3 : 1);
-  }
-}
 
 static NSRect selection_image_frame_for(
     ScreenwidePreviewSurface *surface,
@@ -308,18 +108,20 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua,
                                           NSAppearanceNameDarkAqua]];
   uint32_t lightMode = [appearance isEqualToString:NSAppearanceNameAqua] ? 1 : 0;
-  ScreenwideSelectionVertex vertices[512];
+  ScreenwideRegionOscVertex vertices[512];
   NSUInteger count = 0;
   // Match Keyframeless's contrast-safe OSC construction: hard-edged quads
   // snapped to drawable-pixel centres, with a 3px dark halo underneath a 1px
   // white core. Handles keep their 8pt fill and gain a 1-device-pixel ring.
   if (surface.selection.crop_mode != 0)
-    add_crop_osc(vertices, &count, size, frame,
-                 selection_image_frame_for(surface, surface.selection), scale);
+    screenwide_region_osc_add_crop(
+        vertices, &count, size, frame,
+        selection_image_frame_for(surface, surface.selection), scale);
   else
-    add_selection_osc(vertices, &count, size, frame, scale,
-                      surface.selection.radius_percent,
-                      surface.selection.radius_disabled == 0);
+    screenwide_region_osc_add_selection(
+        vertices, &count, size, frame, scale,
+        surface.selection.radius_percent,
+        surface.selection.radius_disabled == 0);
   double pixelWidth = 0.0;
   double pixelHeight = 0.0;
   BOOL keyboardAction = surface.selection.layer_id == UINT32_MAX - 1;
@@ -355,15 +157,15 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     surface.selectionSecondaryActionRect = NSMakeRect(
         actionX + primaryWidth + buttonGap, actionY,
         secondaryWidth, buttonHeight);
-    add_selection_quad(vertices, &count, size,
-                       surface.selectionActionRect, 12);
-    add_selection_quad(vertices, &count, size,
-                       surface.selectionSecondaryActionRect, 13);
-    add_selection_quad(vertices, &count, size,
+    screenwide_region_osc_add_quad(vertices, &count, size,
+                                   surface.selectionActionRect, 12);
+    screenwide_region_osc_add_quad(vertices, &count, size,
+                                   surface.selectionSecondaryActionRect, 13);
+    screenwide_region_osc_add_quad(vertices, &count, size,
         NSMakeRect(NSMinX(surface.selectionActionRect) + 6.0,
                    NSMinY(surface.selectionActionRect) + 4.0,
                    primaryLabel.width, primaryLabel.height), 11);
-    add_selection_quad(vertices, &count, size,
+    screenwide_region_osc_add_quad(vertices, &count, size,
         NSMakeRect(NSMinX(surface.selectionSecondaryActionRect) + 6.0,
                    NSMinY(surface.selectionSecondaryActionRect) + 4.0,
                    secondaryLabel.width, secondaryLabel.height), 15);
@@ -401,10 +203,10 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         // box; these insets complete React's px-2/py-1 compact Button geometry.
         NSRect actionRect = NSInsetRect(labelRect, -6.0, -4.0);
         surface.selectionActionRect = actionRect;
-        add_selection_quad(vertices, &count, size,
-                           surface.selectionActionRect, 12);
+        screenwide_region_osc_add_quad(vertices, &count, size,
+                                       surface.selectionActionRect, 12);
       }
-      add_selection_quad(vertices, &count, size, labelRect, 11);
+      screenwide_region_osc_add_quad(vertices, &count, size, labelRect, 11);
     }
   }
   if (surface.hasSelectionSnapGuideX) {
@@ -413,11 +215,13 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     guide.y = 0.0;
     guide.width = 0.0;
     guide.height = 0.0;
-    CGFloat x = selection_snap(NSMinX(selection_display_frame_for(surface, guide)), scale);
+    CGFloat x = screenwide_region_osc_snap(
+        NSMinX(selection_display_frame_for(surface, guide)), scale);
     CGFloat half = 0.5 / scale;
-    add_selection_quad(vertices, &count, size,
-                       NSMakeRect(x - half, 0.0, half * 2.0, size.height),
-                       surface.selectionSnapGuideXIsObject ? 5 : 4);
+    screenwide_region_osc_add_quad(
+        vertices, &count, size,
+        NSMakeRect(x - half, 0.0, half * 2.0, size.height),
+        surface.selectionSnapGuideXIsObject ? 5 : 4);
   }
   if (surface.hasSelectionSnapGuideY) {
     ScreenwidePreviewSelection guide = surface.selection;
@@ -425,11 +229,13 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     guide.y = surface.selectionSnapGuideY;
     guide.width = 0.0;
     guide.height = 0.0;
-    CGFloat y = selection_snap(NSMinY(selection_display_frame_for(surface, guide)), scale);
+    CGFloat y = screenwide_region_osc_snap(
+        NSMinY(selection_display_frame_for(surface, guide)), scale);
     CGFloat half = 0.5 / scale;
-    add_selection_quad(vertices, &count, size,
-                       NSMakeRect(0.0, y - half, size.width, half * 2.0),
-                       surface.selectionSnapGuideYIsObject ? 5 : 4);
+    screenwide_region_osc_add_quad(
+        vertices, &count, size,
+        NSMakeRect(0.0, y - half, size.width, half * 2.0),
+        surface.selectionSnapGuideYIsObject ? 5 : 4);
   }
   if (workspaceEncoding) {
     id<MTLBuffer> buffer = [surface.device newBufferWithBytes:vertices
@@ -441,28 +247,19 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     pass.colorAttachments[0].storeAction = MTLStoreActionStore;
     id<MTLRenderCommandEncoder> encoder =
         [surface.workspaceEncodingCommand renderCommandEncoderWithDescriptor:pass];
-    [encoder setRenderPipelineState:surface.selectionPipeline];
-    [encoder setVertexBuffer:buffer offset:0 atIndex:0];
-    [encoder setFragmentBytes:&lightMode length:sizeof(lightMode) atIndex:0];
-    [encoder setFragmentTexture:(surface.selectionLabelTexture
-                                     ?: surface.selectionLabelPlaceholder)
-                        atIndex:0];
-    [encoder setFragmentTexture:(surface.selectionSecondaryLabelTexture
-                                     ?: surface.selectionLabelPlaceholder)
-                        atIndex:1];
-    ScreenwideWorkspaceMagnifier magnifier = surface.workspaceMagnifier;
-    float magnifierBox[4] = {
-      magnifier.active != 0 ? magnifier.box_x : 0,
-      magnifier.active != 0 ? magnifier.box_y : 0,
-      magnifier.active != 0 ? magnifier.box_width : 0,
-      magnifier.active != 0 ? magnifier.box_height : 0,
-    };
-    [encoder setFragmentBytes:magnifierBox length:sizeof(magnifierBox) atIndex:1];
-    float actionShades[4];
-    selection_action_shades(surface, actionShades);
-    [encoder setFragmentBytes:actionShades length:sizeof(actionShades) atIndex:2];
-    [encoder drawPrimitives:MTLPrimitiveTypeTriangle
-                vertexStart:0 vertexCount:count];
+    ScreenwideRegionMagnifier magnifier = surface.workspaceMagnifier;
+    ScreenwideRegionOscRenderState state =
+        screenwide_region_osc_render_state(lightMode);
+    state.magnifier_box[0] = magnifier.active != 0 ? magnifier.box_x : 0;
+    state.magnifier_box[1] = magnifier.active != 0 ? magnifier.box_y : 0;
+    state.magnifier_box[2] = magnifier.active != 0 ? magnifier.box_width : 0;
+    state.magnifier_box[3] = magnifier.active != 0 ? magnifier.box_height : 0;
+    selection_action_shades(surface, state.action_shades);
+    screenwide_region_osc_encode(
+        encoder, surface.selectionPipeline, buffer, count, state,
+        surface.selectionLabelTexture ?: surface.selectionLabelPlaceholder,
+        surface.selectionSecondaryLabelTexture ?:
+            surface.selectionLabelPlaceholder);
     [encoder endEncoding];
     return;
   }
@@ -485,21 +282,14 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
   id<MTLCommandBuffer> command = [surface.queue commandBuffer];
   id<MTLRenderCommandEncoder> encoder = [command renderCommandEncoderWithDescriptor:pass];
-  [encoder setRenderPipelineState:surface.selectionPipeline];
-  [encoder setVertexBuffer:buffer offset:0 atIndex:0];
-  [encoder setFragmentBytes:&lightMode length:sizeof(lightMode) atIndex:0];
-  [encoder setFragmentTexture:(surface.selectionLabelTexture
-                                   ?: surface.selectionLabelPlaceholder)
-                      atIndex:0];
-  [encoder setFragmentTexture:(surface.selectionSecondaryLabelTexture
-                                   ?: surface.selectionLabelPlaceholder)
-                      atIndex:1];
-  float magnifierBox[4] = {0};
-  [encoder setFragmentBytes:magnifierBox length:sizeof(magnifierBox) atIndex:1];
-  float actionShades[4];
-  selection_action_shades(surface, actionShades);
-  [encoder setFragmentBytes:actionShades length:sizeof(actionShades) atIndex:2];
-  [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:count];
+  ScreenwideRegionOscRenderState state =
+      screenwide_region_osc_render_state(lightMode);
+  selection_action_shades(surface, state.action_shades);
+  screenwide_region_osc_encode(
+      encoder, surface.selectionPipeline, buffer, count, state,
+      surface.selectionLabelTexture ?: surface.selectionLabelPlaceholder,
+      surface.selectionSecondaryLabelTexture ?:
+          surface.selectionLabelPlaceholder);
   [encoder endEncoding];
   [command presentDrawable:drawable];
   [command addCompletedHandler:^(__unused id<MTLCommandBuffer> completed) {

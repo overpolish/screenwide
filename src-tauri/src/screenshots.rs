@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod clipboard;
+pub(crate) mod desktop;
 pub(crate) mod encoding;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod mesh;
@@ -105,6 +106,7 @@ pub enum ScreenshotTarget {
   Screen { monitor_id: u32 },
   Window { window_id: u32 },
   Region { monitor_id: u32, region: Region },
+  DesktopRegion { monitor_id: u32, region: Region },
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize)]

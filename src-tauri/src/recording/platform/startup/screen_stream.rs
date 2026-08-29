@@ -36,7 +36,7 @@ pub(super) fn create_video(request: VideoStreamRequest<'_>) -> Result<arc::R<sc:
   cfg.set_shows_cursor(video.show_cursor);
   cfg.set_captures_audio(captures_audio);
   if captures_audio {
-    configure_audio(&mut cfg);
+    configure_system_audio(&mut cfg);
   }
   cfg.set_color_space_name(cg::color_space::names::srgb());
 
@@ -71,16 +71,10 @@ pub(super) fn create_all_audio(
   let filter = sc::ContentFilter::with_display_excluding_windows(display, &our_windows(content));
   let mut cfg = sc::StreamCfg::new();
   cfg.set_captures_audio(true);
-  configure_audio(&mut cfg);
+  configure_system_audio(&mut cfg);
   let stream = sc::Stream::new(&filter, &cfg);
   stream
     .add_stream_output(output.as_ref(), sc::OutputType::Audio, Some(queue))
     .map_err(|error| error.to_string())?;
   Ok(stream)
-}
-
-pub(super) fn configure_audio(cfg: &mut sc::StreamCfg) {
-  cfg.set_excludes_current_process_audio(true);
-  cfg.set_sample_rate(SYSTEM_AUDIO_SAMPLE_RATE);
-  cfg.set_channel_count(SYSTEM_AUDIO_CHANNELS);
 }

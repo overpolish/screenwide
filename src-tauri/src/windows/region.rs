@@ -25,6 +25,7 @@ pub fn show_region_selector(
   app: AppHandle,
   position: PhysicalPosition<i32>,
   size: PhysicalSize<u32>,
+  desktop: bool,
 ) -> tauri::Result<()> {
   if !region_selector_may_show(
     crate::recording::is_idle(&app),
@@ -40,17 +41,29 @@ pub fn show_region_selector(
   // Persisting a resize rehydrates every window's shared source store. The
   // overlay is already covering this monitor, so do not run native show/order
   // choreography again merely because its React geometry changed.
-  if region.is_visible()? && region.outer_position()? == position && region.outer_size()? == size {
+  if region.is_visible()?
+    && (desktop || (region.outer_position()? == position && region.outer_size()? == size))
+  {
+    #[cfg(target_os = "macos")]
+    if desktop {
+      super::screenshot_region::set_recording_overlay_desktop_presented(&region, true)?;
+    }
     apply_region_selector_interactivity(&app)?;
     return raise_recording_controls(&app);
   }
-  region.set_size(size)?;
-  region.set_position(position)?;
+  if !desktop {
+    region.set_size(size)?;
+    region.set_position(position)?;
+  }
   let initial_opacity = f64::from(region_selector_restores_opacity(
     SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
   ) as u8);
   platform::show(&region, initial_opacity)?;
   platform::restore_recording_level(&region)?;
+  #[cfg(target_os = "macos")]
+  if desktop {
+    super::screenshot_region::set_recording_overlay_desktop_presented(&region, true)?;
+  }
 
   apply_region_selector_interactivity(&app)?;
   // Applying editor interactivity focuses its full-monitor WebView. Put the
@@ -76,13 +89,15 @@ pub fn show_region_selector(
   Ok(())
 }
 
-const fn region_selector_restores_opacity(screenshot_session: bool) -> bool {
-  !screenshot_session
+const fn region_selector_restores_opacity(_screenshot_session: bool) -> bool {
+  true
 }
 
 #[tauri::command]
 pub fn hide_region_selector(app: AppHandle) -> tauri::Result<()> {
   if let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
+    #[cfg(target_os = "macos")]
+    super::screenshot_region::set_recording_overlay_desktop_presented(&region, false)?;
     platform::hide(&region)?;
   }
   set_recording_controls_opacity(app, 1.0)
@@ -150,7 +165,15 @@ pub fn set_screenshot_region_session(app: AppHandle, active: bool) -> tauri::Res
 
   if active {
     let result = match app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
-      Some(region) => platform::hide(&region).and_then(|()| platform::set_opacity(&region, 0.0)),
+      Some(region) => {
+        #[cfg(target_os = "macos")]
+        let peers = super::screenshot_region::prepare_recording_overlay_for_screenshot(&region);
+        #[cfg(not(target_os = "macos"))]
+        let peers = Ok(());
+        peers
+          .and_then(|()| platform::hide(&region))
+          .and_then(|()| platform::set_opacity(&region, 0.0))
+      }
       None => Ok(()),
     };
     if let Err(error) = result {
@@ -201,8 +224,10 @@ pub fn set_region_selector_opacity(
   window: tauri::WebviewWindow,
   opacity: f64,
 ) -> Result<(), String> {
-  if window.label().starts_with("screenshot-region-") {
-    return super::screenshot_region::set_opacity(&window, opacity);
+  #[cfg(target_os = "macos")]
+  if opacity <= 0.0 {
+    super::screenshot_region::set_recording_overlay_desktop_presented(&window, false)
+      .map_err(|error| error.to_string())?;
   }
   platform::set_opacity(&window, opacity).map_err(|error| error.to_string())
 }

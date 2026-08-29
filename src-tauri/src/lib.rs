@@ -14,8 +14,10 @@ mod capture_kit;
 mod capture_overlays;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod cursor_scrub;
+mod desktop_capture;
 mod exports;
 mod image_analysis;
+mod osc;
 mod permissions;
 mod recording;
 mod recording_inputs;
@@ -30,7 +32,6 @@ mod tray;
 mod updates;
 mod windows;
 use tauri::Manager;
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let builder = tauri::Builder::default()
@@ -184,11 +185,11 @@ pub fn run() {
       windows::region::set_region_selector_passthrough,
       windows::region::set_screenshot_region_session,
       windows::region::show_region_selector,
-      windows::screenshot_region::close_screenshot_region_overlays,
-      windows::screenshot_region::open_screenshot_region_overlays,
+      windows::screenshot_region::magnifier::prepare_screenshot_region_magnifier,
+      windows::screenshot_region::osc_command::set_screenshot_region_osc,
+      windows::screenshot_region::presentation::set_region_selector_osc_frame_visible,
       windows::options::show_standalone_listbox,
       windows::options::set_recording_options_content_height,
-      windows::monitor_capture::take_monitor_screenshot,
       windows::source_selector::expand_recording_source_selector,
       windows::options::toggle_recording_options,
     ])
@@ -205,9 +206,7 @@ pub fn run() {
       let show_recording_bar_on_launch = recording_bar_preview_enabled
         || settings::current(app.handle()).show_recording_bar_on_launch;
 
-      // Converting a hidden macOS webview into an NSPanel can order one stale
-      // compositor frame onscreen. Keep tray-only startup genuinely tray-only:
-      // panels are created lazily by the first explicit show request instead.
+      // Create panels lazily so conversion cannot order a stale frame onscreen.
       #[cfg(not(target_os = "macos"))]
       {
         windows::initialize_recording_bar(app.handle())?;
@@ -259,7 +258,6 @@ pub fn run() {
       if show_recording_bar_on_launch && !has_pending_export {
         windows::show_recording_ui(app.handle())?;
       }
-
       permissions::start_watcher(app.handle().clone());
 
       #[cfg(target_os = "macos")]

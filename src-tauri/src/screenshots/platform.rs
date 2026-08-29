@@ -4,6 +4,8 @@
 use cidre::{cg, cv, sc};
 use std::ffi::c_char;
 
+mod desktop_capture;
+
 use crate::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
 use crate::exports::cursor_effects::{GpuArtwork, GpuCursor, NativeGpuArtwork, NativeGpuCursor};
 use crate::exports::keyboard_effects::KeyboardOverlay;
@@ -404,6 +406,16 @@ async fn capture(
         &windows_to_exclude(&content, include_own_windows),
       );
       capture_filtered(&filter, &cfg).await
+    }
+    ScreenshotTarget::DesktopRegion { monitor_id, region } => {
+      desktop_capture::capture(
+        &content,
+        monitor_id,
+        region,
+        include_own_windows,
+        show_cursor,
+      )
+      .await
     }
     ScreenshotTarget::Window { window_id } => {
       let windows = content.windows();

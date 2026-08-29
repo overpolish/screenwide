@@ -194,7 +194,7 @@ SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surfa
       placements[index] = placement;
   }
   CAMetalLayer *layer = (CAMetalLayer *)workspace.layer;
-  ScreenwideWorkspaceMagnifier magnifier = surface.workspaceMagnifier;
+  ScreenwideRegionMagnifier magnifier = surface.workspaceMagnifier;
   int result = screenwide_gpu_still_presenter_redraw_workspace(
       workspace.compositor, (__bridge void *)layer, placements,
       surface.workspaceLayerCount, &magnifier,

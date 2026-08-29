@@ -802,7 +802,10 @@ fn a_rolled_key_reserves_its_slot_before_its_own_entrance() {
     .iter()
     .find(|key| key.key_code == 56)
     .expect("shift stays in the overlay");
-  assert!(shift.alpha > 0.0 || shift.scale > 0.0, "shift pops in place");
+  assert!(
+    shift.alpha > 0.0 || shift.scale > 0.0,
+    "shift pops in place"
+  );
 }
 
 #[test]

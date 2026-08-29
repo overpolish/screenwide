@@ -15,7 +15,7 @@ import { ListBoxSizeContext } from "../listbox/listbox-context";
 
 const listBoxItemVariants = tv({
   base: [
-    "inline-flex shrink-0 cursor-default items-center justify-between gap-2 rounded-lg bg-transparent text-content-fg transition-colors",
+    "inline-flex shrink-0 cursor-default items-center justify-between gap-2 bg-transparent text-content-fg transition-colors",
     "truncate",
     "data-[hovered]:bg-neutral",
     "data-[pressed]:bg-neutral-hover",
@@ -31,8 +31,8 @@ const listBoxItemVariants = tv({
   },
   variants: {
     size: {
-      compact: "px-2 py-1 text-xs",
-      default: "px-3 py-2 text-sm",
+      compact: "rounded-lg px-2 py-1 text-xs",
+      default: "rounded-xl px-3 py-2 text-sm",
     },
   },
 });

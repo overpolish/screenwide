@@ -25,8 +25,12 @@ void *screenwide_gpu_still_presenter_create(void) {
     ScreenwideStillPresenter *presenter = [ScreenwideStillPresenter new];
     presenter.device = MTLCreateSystemDefaultDevice();
     NSError *error = nil;
-    id<MTLLibrary> library =
-        [presenter.device newLibraryWithSource:shader_source options:nil error:&error];
+    NSString *combinedShader = [shader_source
+        stringByAppendingString:screenwide_region_osc_shader_source()];
+    id<MTLLibrary> library = [presenter.device
+        newLibraryWithSource:combinedShader
+                     options:nil
+                       error:&error];
     presenter.pipeline = [presenter.device newComputePipelineStateWithFunction:
         [library newFunctionWithName:@"present_canvas_rgba"] error:&error];
     presenter.unpackPipeline = [presenter.device newComputePipelineStateWithFunction:
@@ -35,8 +39,9 @@ void *screenwide_gpu_still_presenter_create(void) {
         [library newFunctionWithName:@"workspace_clear"] error:&error];
     presenter.workspaceLayerPipeline = [presenter.device newComputePipelineStateWithFunction:
         [library newFunctionWithName:@"workspace_layer"] error:&error];
-    presenter.workspaceMagnifierPipeline = [presenter.device newComputePipelineStateWithFunction:
-        [library newFunctionWithName:@"workspace_magnifier"] error:&error];
+    presenter.regionMagnifierPipeline =
+        screenwide_region_magnifier_make_pipeline(presenter.device, library,
+                                                   &error);
     presenter.queue = [presenter.device newCommandQueue];
     presenter.workspaceSources = [NSMutableDictionary dictionary];
     presenter.workspaceCameraSources = [NSMutableDictionary dictionary];
@@ -53,7 +58,7 @@ void *screenwide_gpu_still_presenter_create(void) {
     presenter.textureCache = texture_cache;
     if (presenter.pipeline == nil || presenter.unpackPipeline == nil ||
         presenter.workspaceClearPipeline == nil || presenter.workspaceLayerPipeline == nil ||
-        presenter.workspaceMagnifierPipeline == nil ||
+        presenter.regionMagnifierPipeline == nil ||
         presenter.queue == nil || presenter.textureCache == NULL) return NULL;
     return (__bridge_retained void *)presenter;
   }
@@ -759,7 +764,7 @@ int screenwide_gpu_still_presenter_present_workspace(
 int screenwide_gpu_still_presenter_redraw_workspace(
     void *handle, void *metal_layer,
     const ScreenwideWorkspacePlacement *placements, uint32_t placement_count,
-    const ScreenwideWorkspaceMagnifier *magnifier,
+    const ScreenwideRegionMagnifier *magnifier,
     ScreenwidePresentBlock present) {
   if (handle == NULL || metal_layer == NULL || placements == NULL ||
       placement_count == 0 || present == NULL) return 0;
@@ -842,15 +847,9 @@ int screenwide_gpu_still_presenter_redraw_workspace(
           };
           if (source == nil || dimensions[0] == 0 || dimensions[1] == 0) break;
           id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
-          [encoder setComputePipelineState:presenter.workspaceMagnifierPipeline];
-          [encoder setBuffer:source offset:0 atIndex:0];
-          [encoder setTexture:drawable.texture atIndex:0];
-          [encoder setBytes:dimensions length:sizeof(dimensions) atIndex:1];
-          [encoder setBytes:magnifier length:sizeof(*magnifier) atIndex:2];
-          workspace_dispatch(
-              encoder, presenter.workspaceMagnifierPipeline,
-              MTLSizeMake(MAX(magnifier->box_width, 1),
-                          MAX(magnifier->box_height, 1), 1));
+          screenwide_region_magnifier_encode(
+              encoder, presenter.regionMagnifierPipeline, source,
+              drawable.texture, dimensions, *magnifier);
           [encoder endEncoding];
           break;
         }

@@ -33,6 +33,6 @@
 @property(nonatomic) BOOL workspaceResizeApplied;
 @property(nonatomic, strong) id<MTLComputePipelineState> workspaceClearPipeline;
 @property(nonatomic, strong) id<MTLComputePipelineState> workspaceLayerPipeline;
-@property(nonatomic, strong) id<MTLComputePipelineState> workspaceMagnifierPipeline;
+@property(nonatomic, strong) id<MTLComputePipelineState> regionMagnifierPipeline;
 @property(nonatomic, strong) ScreenwideCursorResources *cursorResources;
 @end

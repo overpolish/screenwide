@@ -702,48 +702,6 @@ kernel void workspace_layer(
   output.write(rgba, gid);
 }
 
-kernel void workspace_magnifier(
-    const device uchar4 *source [[buffer(0)]],
-    texture2d<float, access::read_write> output [[texture(0)]],
-    constant uint2 &source_dimensions [[buffer(1)]],
-    constant WorkspaceMagnifier &magnifier [[buffer(2)]],
-    uint2 gid [[thread_position_in_grid]]) {
-  if (magnifier.active == 0 || gid.x >= magnifier.box_width ||
-      gid.y >= magnifier.box_height || any(source_dimensions == 0)) return;
-  int2 output_point = int2(magnifier.box_x, magnifier.box_y) + int2(gid);
-  if (any(output_point < 0) || output_point.x >= int(output.get_width()) ||
-      output_point.y >= int(output.get_height())) return;
-  float2 box_size = float2(magnifier.box_width, magnifier.box_height);
-  float2 local = float2(gid) + 0.5;
-  float radius = 4.0;
-  float2 half_size = box_size * 0.5;
-  float2 rounded = abs(local - half_size) - (half_size - radius);
-  float distance = length(max(rounded, 0.0)) +
-                   min(max(rounded.x, rounded.y), 0.0) - radius;
-  if (distance > 0.0) return;
-  float2 source_center = float2(magnifier.sample_u, magnifier.sample_v) * float2(source_dimensions);
-  float2 source_point = source_center +
-      (local / box_size - 0.5) * 40.0;
-  int2 sample_point = int2(floor(source_point));
-  float2 sample_uv = source_point / float2(source_dimensions);
-  bool in_source = all(sample_point >= 0) && all(sample_point < int2(source_dimensions)) &&
-      all(sample_uv >= float2(magnifier.source_min_u, magnifier.source_min_v)) &&
-      all(sample_uv <= float2(magnifier.source_max_u, magnifier.source_max_v));
-  float4 pixel = in_source ? float4(source[uint(sample_point.y) *
-      source_dimensions.x + uint(sample_point.x)]) / 255.0
-      : float4(0.15, 0.15, 0.16, 1.0);
-  bool shade = ((magnifier.edges & 1u) != 0u && local.x < half_size.x) ||
-               ((magnifier.edges & 2u) != 0u && local.x >= half_size.x) ||
-               ((magnifier.edges & 4u) != 0u && local.y < half_size.y) ||
-               ((magnifier.edges & 8u) != 0u && local.y >= half_size.y);
-  if (shade) {
-    float3 shade_color = magnifier.light_mode != 0
-        ? float3(0.0) : float3(1.0);
-    pixel.rgb = mix(pixel.rgb, shade_color, 0.1);
-  }
-  if (distance > -1.0) pixel = float4(0.15, 0.15, 0.16, 1.0);
-  output.write(pixel, uint2(output_point));
-}
 
 kernel void unpack_preview_bgra(
     texture2d<float, access::read> source [[texture(0)]],

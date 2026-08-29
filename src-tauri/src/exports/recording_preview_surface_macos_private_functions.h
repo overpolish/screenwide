@@ -76,7 +76,6 @@ double snap_selection_resize(ScreenwidePreviewSurface *surface,
 void clear_selection_snap_guides(ScreenwidePreviewSurface *surface);
 void snap_selection_move(ScreenwidePreviewSurface *surface,
                                 double *x, double *y);
-NSCursor *selection_resize_cursor(uint32_t edges);
 void set_selection_cursor(NSCursor *cursor);
 void set_selection_move_cursor(void);
 void set_selection_cursor_at_point(ScreenwidePreviewSurface *surface,

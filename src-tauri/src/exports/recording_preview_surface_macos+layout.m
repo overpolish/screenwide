@@ -195,7 +195,7 @@ void screenwide_preview_surface_set_selection(void *handle,
       surface.interaction.selectionMoveTargetsStart = nil;
       surface.interaction.panning = NO;
       surface.hasSelection = NO;
-      ScreenwideWorkspaceMagnifier clearedMagnifier = surface.workspaceMagnifier;
+      ScreenwideRegionMagnifier clearedMagnifier = surface.workspaceMagnifier;
       clearedMagnifier.active = 0;
       surface.workspaceMagnifier = clearedMagnifier;
       surface.selectionLayer.hidden = YES;

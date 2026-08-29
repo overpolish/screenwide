@@ -1,61 +1,35 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Channel } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useEffect, useRef, useState } from "react";
 
-import { cn } from "../../lib/styling";
 import { selectStatus, useRecordingStore } from "../recording-controls/store";
 import {
   hideRegionSelector,
   listMonitors,
+  prepareScreenshotRegionMagnifier,
   setRecordingControlsOpacity,
   setRegionSelectorPassthrough,
   showRegionSelector,
-  takeMonitorScreenshot,
 } from "../recording-sources/api";
 import { useRecordingSourceStore } from "../recording-sources/store";
-import { MonitorDetails, Region } from "../recording-sources/types";
-import { ScreenshotDestination } from "../screenshots/api";
-import { useGeneralSettings } from "../settings/use-general-settings";
+import { MonitorDetails } from "../recording-sources/types";
 
-import { Magnifier } from "./magnifier";
-import { RegionDrawingSurface } from "./region-drawing-surface";
-import {
-  EMPTY_REGION,
-  fitRegion,
-  hasRegion,
-  snapRegion,
-  wholePixel,
-} from "./region-geometry";
-import { RegionShade } from "./region-shade";
-import { RegionTransformFrame } from "./region-transform-frame";
-import { ScreenshotRegionControls } from "./screenshot-region-controls";
+import { EMPTY_REGION, fitRegion, snapRegion } from "./region-geometry";
 import {
   captureScreenshotRegion,
   endScreenshotCapture,
+  screenshotCaptureDestination,
 } from "./screenshot-session";
-import { ResizeDirection } from "./types";
-import { useKeyHeld } from "./use-key-held";
+import { useNativeScreenshotRegion } from "./use-native-screenshot-region";
 import { useRegionGestureVisibility } from "./use-region-gesture-visibility";
 import { useScreenshotShortcut } from "./use-screenshot-shortcut";
 
-// Holding this ignores the linked ratio, so the region can be reshaped
-// freely; the shape it ends up with becomes the new ratio.
-const FREE_ASPECT_KEY = "Shift";
-
-const screenshotParameters = new URLSearchParams(window.location.search);
-const requestedMonitorId = screenshotParameters.get("monitorId");
-const parsedMonitorId =
-  requestedMonitorId === null ? NaN : Number(requestedMonitorId);
-const screenshotMonitorId = Number.isFinite(parsedMonitorId)
-  ? parsedMonitorId
-  : null;
-const screenshotDestination: ScreenshotDestination =
-  screenshotParameters.get("destination") === "clipboard"
-    ? "clipboard"
-    : "export";
-const isScreenshotWindow = screenshotMonitorId !== null;
+const EMPTY_BOUNDS = { height: 0, width: 0 };
+const SCREENSHOT_DISMISS_REQUESTED_EVENT =
+  "screenshot-region://dismiss-requested";
 
 export function RegionSelectorWindow() {
   const {
@@ -65,67 +39,127 @@ export function RegionSelectorWindow() {
     regionAspectRatio,
     selectedMonitor,
     setRegion,
+    setSelectedMonitor,
   } = useRecordingSourceStore((state) => state);
   const recordingStatus = useRecordingStore(selectStatus);
   const [screenshotMonitor, setScreenshotMonitor] =
     useState<MonitorDetails | null>(null);
-  const isScreenshotSurface = isScreenshotCapture && isScreenshotWindow;
-  const [draft, setDraft] = useState(region);
+  const isScreenshotSurface = isScreenshotCapture;
+  const [draft, setDraft] = useState(
+    isScreenshotSurface ? EMPTY_REGION : region,
+  );
   const [seededForSession, setSeededForSession] = useState(isScreenshotSurface);
   if (seededForSession !== isScreenshotSurface) {
     // Reseed while rendering rather than in an effect: otherwise the session
-    // would leave one painted frame of the recording marquee before the empty
-    // draft landed - a visible flash when the overlay was already on screen.
+    // would leave one native sync frame of the recording region before the
+    // empty draft landed - a visible flash during screenshot activation.
     setSeededForSession(isScreenshotSurface);
     setDraft(isScreenshotSurface ? EMPTY_REGION : region);
   }
-  const [screenshotAspect, setScreenshotAspect] = useState<number>();
-  const [resizeDirection, setResizeDirection] = useState<ResizeDirection>();
-  const [isDragging, setIsDragging] = useState(false);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [screenshot, setScreenshot] = useState<{
-    height: number;
-    pixels: ArrayBuffer;
-    width: number;
-  } | null>(null);
+  const [gestureActive, setGestureActive] = useState(false);
   const [captureRequest, setCaptureRequest] = useState(0);
-  const freeAspect = useKeyHeld(FREE_ASPECT_KEY);
+  const resizeActiveRef = useRef(false);
   // A capture ends the session, so whichever gesture starts one shuts the
   // others out until the session is over.
   const isCapturingRef = useRef(false);
-  const generalSettings = useGeneralSettings();
-  const captureOnDraw = generalSettings?.captureScreenshotOnDraw ?? false;
+  const nativeMonitorRef = useRef<number | null>(null);
   const isIdle = recordingStatus === "idle";
-  useScreenshotShortcut(!isScreenshotWindow);
+  useScreenshotShortcut();
 
-  const activeMonitor = isScreenshotWindow
-    ? isScreenshotCapture
-      ? screenshotMonitor
-      : null
+  const activeMonitor = isScreenshotSurface
+    ? screenshotMonitor
     : recordingMode === "region"
       ? selectedMonitor
       : null;
+  useEffect(() => {
+    nativeMonitorRef.current = activeMonitor?.id ?? null;
+  }, [activeMonitor?.id, isScreenshotSurface]);
 
-  const { beginGesture, finishGesture } = useRegionGestureVisibility(
-    isDragging || resizeDirection !== undefined,
-  );
+  const { beginGesture, finishGesture } =
+    useRegionGestureVisibility(gestureActive);
+  const nativeOscEnabled =
+    !!activeMonitor && (isScreenshotSurface || recordingMode === "region");
 
-  const persistDraft = useCallback((): Region => {
-    const persisted = snapRegion(draft);
-    if (!isScreenshotSurface) setRegion(persisted);
-
-    return persisted;
-  }, [draft, isScreenshotSurface, setRegion]);
+  const nativeOscAvailable = useNativeScreenshotRegion({
+    allowDrawing: isScreenshotSurface,
+    aspect: isScreenshotSurface ? undefined : regionAspectRatio,
+    bounds: activeMonitor?.size ?? EMPTY_BOUNDS,
+    desktop: true,
+    enabled: nativeOscEnabled,
+    inputEnabled: isIdle,
+    monitorId: activeMonitor?.id,
+    onFinished: (nextRegion, gesture, monitorId) => {
+      const snapped = snapRegion(nextRegion);
+      if (isScreenshotSurface) {
+        if (gesture !== "drawing" || !activeMonitor || isCapturingRef.current)
+          return;
+        isCapturingRef.current = true;
+        captureScreenshotRegion(
+          screenshotCaptureDestination(),
+          monitorId ?? activeMonitor.id,
+          snapped,
+        );
+        return;
+      }
+      setDraft(snapped);
+      setRegion(snapped);
+    },
+    onGesture: ({ dragging, drawing, resizeDirection: direction }) => {
+      const resizing = direction !== undefined;
+      if (resizing && !resizeActiveRef.current)
+        setCaptureRequest((current) => current + 1);
+      resizeActiveRef.current = resizing;
+      const active = dragging || drawing || resizing;
+      setGestureActive(active);
+      if (!isScreenshotSurface) {
+        if (active) beginGesture();
+        else finishGesture();
+      }
+    },
+    onMonitorChange: (monitorId) => {
+      if (nativeMonitorRef.current === monitorId) return;
+      nativeMonitorRef.current = monitorId;
+      void listMonitors()
+        .then((monitors) => {
+          const monitor = monitors.find(
+            (candidate) => candidate.id === monitorId,
+          );
+          if (!monitor) return;
+          if (isScreenshotSurface) setScreenshotMonitor(monitor);
+          else setSelectedMonitor(monitor);
+        })
+        .catch((error: unknown) => {
+          nativeMonitorRef.current = activeMonitor?.id ?? null;
+          console.error("Could not follow the Region monitor", error);
+        });
+    },
+    onReconciled: (nextRegion) => {
+      setDraft(nextRegion);
+      if (!isScreenshotSurface) setRegion(nextRegion);
+    },
+    onRegionChange: setDraft,
+    region: draft,
+    showFrame: isScreenshotSurface || isIdle,
+    showHandles: !isScreenshotSurface && isIdle,
+    visible: isScreenshotSurface ? isIdle : nativeOscEnabled,
+    windowLabel: nativeOscEnabled ? getCurrentWindow().label : undefined,
+  });
 
   useEffect(() => {
-    if (screenshotMonitorId === null) return;
+    if (!isScreenshotSurface) {
+      // eslint-disable-next-line @eslint-react/set-state-in-effect
+      setScreenshotMonitor(null);
+      return;
+    }
 
     let disposed = false;
     void listMonitors()
       .then((monitors) => {
         if (disposed) return;
         setScreenshotMonitor(
-          monitors.find((monitor) => monitor.id === screenshotMonitorId) ??
+          monitors.find((monitor) => monitor.id === selectedMonitor?.id) ??
+            monitors.find((monitor) => monitor.isPrimary) ??
+            monitors.find((_monitor, index) => index === 0) ??
             null,
         );
       })
@@ -135,7 +169,7 @@ export function RegionSelectorWindow() {
     return () => {
       disposed = true;
     };
-  }, []);
+  }, [isScreenshotSurface, selectedMonitor?.id]);
 
   useEffect(() => {
     // Cross-window storage updates replace the persisted region. A screenshot
@@ -148,21 +182,42 @@ export function RegionSelectorWindow() {
   useEffect(() => {
     // Each session gets its one capture back.
     isCapturingRef.current = false;
-    if (!isScreenshotSurface) return;
+  }, [isScreenshotSurface]);
 
-    const cancel = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+    let disposed = false;
+    let cancelling = false;
+    const cancel = () => {
+      if (!useRecordingSourceStore.getState().isScreenshotCapture) return;
+      if (cancelling) return;
+      cancelling = true;
       // Escape closes only the borrowed screenshot overlay. The ruler was
       // already open before this session and remains available underneath it.
-      void endScreenshotCapture();
+      void endScreenshotCapture()
+        .catch((error: unknown) => {
+          console.error("Could not cancel the screenshot session", error);
+        })
+        .finally(() => {
+          cancelling = false;
+        });
+    };
+    const cancelKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") cancel();
     };
 
-    window.addEventListener("keydown", cancel);
+    window.addEventListener("keydown", cancelKey);
+    void listen(SCREENSHOT_DISMISS_REQUESTED_EVENT, cancel).then((listener) => {
+      if (disposed) listener();
+      else unlisten = listener;
+    });
 
     return () => {
-      window.removeEventListener("keydown", cancel);
+      disposed = true;
+      window.removeEventListener("keydown", cancelKey);
+      unlisten?.();
     };
-  }, [isScreenshotSurface]);
+  }, []);
 
   useEffect(() => {
     void setRecordingControlsOpacity(isScreenshotCapture ? 0 : 1);
@@ -170,17 +225,15 @@ export function RegionSelectorWindow() {
 
   useEffect(() => {
     if (!activeMonitor) {
-      if (isScreenshotWindow) return;
+      if (isScreenshotSurface) return;
       void setRegionSelectorPassthrough(true);
       void hideRegionSelector();
       return;
     }
 
-    const fitted = fitRegion(
-      region,
-      activeMonitor.size.width,
-      activeMonitor.size.height,
-    );
+    const fitted = isScreenshotSurface
+      ? fitRegion(region, activeMonitor.size.width, activeMonitor.size.height)
+      : region;
     // The overlay keeps a local draft so dragging does not write storage per
     // frame. A screenshot session has no region until one is drawn, so its
     // draft starts empty rather than from the recording region.
@@ -192,176 +245,31 @@ export function RegionSelectorWindow() {
     ) {
       setRegion(fitted);
     }
-    if (isScreenshotSurface) return;
-    void showRegionSelector(activeMonitor);
+    void showRegionSelector(activeMonitor, true);
   }, [activeMonitor, isScreenshotSurface, region, setRegion]);
 
   useEffect(() => {
     if (!activeMonitor) return;
 
-    if (!isScreenshotWindow) void setRegionSelectorPassthrough(!isIdle);
-    if (!isIdle || captureRequest === 0) return;
-
-    let disposed = false;
-    let metadata: { height: number; width: number } | undefined;
-    let pixels: ArrayBuffer | undefined;
-    const commit = () => {
-      if (!disposed && metadata && pixels) {
-        setScreenshot({ ...metadata, pixels });
-      }
-    };
-    const channel = new Channel<ArrayBuffer>();
-    channel.onmessage = (message) => {
-      pixels = message;
-      commit();
-    };
-    // Keep the prior complete snapshot installed until both parts of its
-    // replacement arrive. The first magnifier simply appears when this first
-    // request completes; opening the recording UI does no capture work.
-    void takeMonitorScreenshot(activeMonitor.id, channel)
-      .then((result) => {
-        metadata = result;
-        commit();
-      })
-      .catch((reason: unknown) => {
-        console.error("Could not load the region magnifier image", reason);
-      });
-    return () => {
-      disposed = true;
-    };
-  }, [activeMonitor, captureRequest, isIdle]);
-
-  // A screenshot session starts without a region to manipulate or capture.
-  const regionPlaced = hasRegion(draft);
-
-  const center = () => {
-    if (!activeMonitor || !regionPlaced) return;
-    const centered = {
-      ...draft,
-      position: {
-        x: wholePixel((activeMonitor.size.width - draft.size.width) / 2),
-        y: wholePixel((activeMonitor.size.height - draft.size.height) / 2),
-      },
-    };
-    setDraft(centered);
-    if (!isScreenshotSurface) setRegion(centered);
-  };
-
-  const finish = useCallback(() => {
-    if (!activeMonitor || !isScreenshotSurface || isCapturingRef.current)
-      return;
-    isCapturingRef.current = true;
-    captureScreenshotRegion(
-      screenshotDestination,
+    void setRegionSelectorPassthrough(!isIdle);
+    if (!isIdle || captureRequest === 0 || !nativeOscAvailable) return;
+    void prepareScreenshotRegionMagnifier(
       activeMonitor.id,
-      persistDraft(),
-    );
-  }, [activeMonitor, isScreenshotSurface, persistDraft]);
-
-  // Screenshot capture keeps its toolbar while recording controls are hidden.
-  const showActions =
-    isScreenshotSurface &&
-    !resizeDirection &&
-    !isDragging &&
-    !isDrawing &&
-    !captureOnDraw;
-  const canFinish = showActions && regionPlaced;
-
-  useEffect(() => {
-    if (!canFinish) return;
-
-    const finishOnEnter = (event: KeyboardEvent) => {
-      if (event.key !== "Enter" || event.repeat || event.isComposing) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      finish();
-    };
-
-    window.addEventListener("keydown", finishOnEnter, true);
-    return () => {
-      window.removeEventListener("keydown", finishOnEnter, true);
-    };
-  }, [canFinish, finish]);
+      getCurrentWindow().label,
+    ).catch((reason: unknown) => {
+      console.error("Could not prepare the native region magnifier", reason);
+    });
+  }, [
+    activeMonitor,
+    captureRequest,
+    isIdle,
+    isScreenshotSurface,
+    nativeOscAvailable,
+  ]);
 
   if (!activeMonitor) return null;
 
   return (
-    <main
-      className={cn(
-        "relative h-screen w-screen overflow-hidden select-none",
-        resizeDirection && "cursor-none [&_*]:cursor-none!",
-      )}
-    >
-      <RegionShade region={draft} />
-
-      <RegionDrawingSurface
-        aspect={freeAspect ? undefined : screenshotAspect}
-        bounds={activeMonitor.size}
-        current={draft}
-        isEditing={isScreenshotSurface && isIdle}
-        onChange={setDraft}
-        onDrawingChange={setIsDrawing}
-        onFinish={(nextRegion) => {
-          // Releasing the region is the whole gesture when instant capture is
-          // on: the region just drawn goes straight to the shot, since `draft`
-          // may not have re-rendered with it yet.
-          if (!captureOnDraw || isCapturingRef.current) return;
-          isCapturingRef.current = true;
-          captureScreenshotRegion(
-            screenshotDestination,
-            activeMonitor.id,
-            snapRegion(nextRegion),
-          );
-        }}
-      />
-
-      <RegionTransformFrame
-        aspectRatio={
-          (isScreenshotSurface ? screenshotAspect : regionAspectRatio) || false
-        }
-        freeAspect={freeAspect}
-        onChange={setDraft}
-        onDraggingChange={setIsDragging}
-        onGestureBegin={() => {
-          if (!isScreenshotSurface) beginGesture();
-        }}
-        onGestureFinish={() => {
-          if (!isScreenshotSurface) finishGesture();
-        }}
-        onPersist={persistDraft}
-        onResizeDirectionChange={(direction) => {
-          setResizeDirection(direction);
-          if (direction) setCaptureRequest((current) => current + 1);
-        }}
-        region={draft}
-        showHandles={!isScreenshotSurface}
-        visible={isIdle && regionPlaced}
-      />
-
-      <ScreenshotRegionControls
-        onAspectChange={setScreenshotAspect}
-        onCenter={center}
-        onFinish={finish}
-        onSizeChange={(size) => {
-          setDraft((current) => ({ ...current, size }));
-        }}
-        region={draft}
-        regionPlaced={regionPlaced}
-        visible={showActions}
-      />
-
-      {screenshot ? (
-        <Magnifier
-          regionRect={{
-            height: draft.size.height,
-            width: draft.size.width,
-            x: draft.position.x,
-            y: draft.position.y,
-          }}
-          resizeDirection={resizeDirection}
-          screenshot={screenshot}
-        />
-      ) : null}
-    </main>
+    <main className="relative h-screen w-screen overflow-hidden select-none" />
   );
 }

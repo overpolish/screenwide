@@ -10,8 +10,8 @@ static IMP original_hidden_until_mouse_moves = NULL;
 static IMP original_cursor_set = NULL;
 static atomic_bool range_active = false;
 static atomic_bool ruler_cursor_hidden = false;
-static atomic_bool screenshot_initial_crosshair_guard_active = false;
-static atomic_ulong screenshot_initial_crosshair_guard_generation = 0;
+static atomic_bool screenshot_crosshair_guard_active = false;
+static NSCursor *region_expected_cursor = nil;
 
 static void guarded_hidden_until_mouse_moves(id receiver, SEL selector,
                                              BOOL flag) {
@@ -32,10 +32,13 @@ static void install_cursor_guard(void) {
 
 static void guarded_cursor_set(id receiver, SEL selector) {
   id applied = receiver;
-  if (receiver == [NSCursor arrowCursor] &&
-      atomic_load_explicit(&screenshot_initial_crosshair_guard_active,
-                           memory_order_relaxed)) {
-    applied = [NSCursor crosshairCursor];
+  if (receiver == [NSCursor arrowCursor]) {
+    if (region_expected_cursor != nil) {
+      applied = region_expected_cursor;
+    } else if (atomic_load_explicit(&screenshot_crosshair_guard_active,
+                                    memory_order_relaxed)) {
+      applied = [NSCursor crosshairCursor];
+    }
   }
   ((void (*)(id, SEL))original_cursor_set)(applied, selector);
 }
@@ -69,27 +72,22 @@ void screenwide_set_ruler_cursor_visible(int visible) {
 
 void screenwide_arm_screenshot_initial_crosshair_guard(void) {
   install_cursor_set_guard();
-  unsigned long generation = atomic_fetch_add_explicit(
-                                 &screenshot_initial_crosshair_guard_generation,
-                                 1, memory_order_relaxed) +
-                             1;
-  atomic_store_explicit(&screenshot_initial_crosshair_guard_active, true,
+  // WebKit continues requesting the arrow cursor throughout the screenshot
+  // session, even with cursor rectangles disabled. Keep the narrow arrow-only
+  // substitution active until teardown; explicit move/resize/button cursors
+  // are different NSCursor instances and pass through unchanged.
+  atomic_store_explicit(&screenshot_crosshair_guard_active, true,
                         memory_order_relaxed);
-  dispatch_after(
-      dispatch_time(DISPATCH_TIME_NOW, 250 * NSEC_PER_MSEC),
-      dispatch_get_main_queue(), ^{
-        if (atomic_load_explicit(
-                &screenshot_initial_crosshair_guard_generation,
-                memory_order_relaxed) != generation)
-          return;
-        atomic_store_explicit(&screenshot_initial_crosshair_guard_active, false,
-                              memory_order_relaxed);
-      });
+  region_expected_cursor = [NSCursor crosshairCursor];
 }
 
 void screenwide_disarm_screenshot_initial_crosshair_guard(void) {
-  atomic_store_explicit(&screenshot_initial_crosshair_guard_active, false,
+  atomic_store_explicit(&screenshot_crosshair_guard_active, false,
                         memory_order_relaxed);
-  atomic_fetch_add_explicit(&screenshot_initial_crosshair_guard_generation, 1,
-                            memory_order_relaxed);
+  region_expected_cursor = nil;
+}
+
+void screenwide_set_region_expected_cursor(NSCursor *cursor) {
+  install_cursor_set_guard();
+  region_expected_cursor = cursor;
 }

@@ -507,5 +507,8 @@ fn the_roll_window_is_measured_on_the_output_clock() {
   let sliding = plain.keys[..plain.key_count as usize]
     .iter()
     .any(|key| key.layout_progress < 1.0);
-  assert!(sliding, "at 1x the same key is a late join and the row moves");
+  assert!(
+    sliding,
+    "at 1x the same key is a late join and the row moves"
+  );
 }

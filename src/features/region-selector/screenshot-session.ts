@@ -3,13 +3,10 @@
 
 import { useRecordingInputStore } from "../recording-inputs/store";
 import {
-  closeScreenshotRegionOverlays,
   hideRegionSelector,
   setRegionSelectorOpacity,
   setRegionSelectorPassthrough,
   setScreenshotRegionSession,
-  openScreenshotRegionOverlays,
-  showRegionSelector,
 } from "../recording-sources/api";
 import { useRecordingSourceStore } from "../recording-sources/store";
 import { Region } from "../recording-sources/types";
@@ -22,6 +19,9 @@ type ScreenshotShortcutAction = Extract<
   "takeScreenshot" | "takeScreenshotToClipboard"
 >;
 type CleanupStep = () => Promise<unknown>;
+let sessionDestination: ScreenshotDestination = "export";
+
+export const screenshotCaptureDestination = () => sessionDestination;
 
 async function runCleanupSteps(steps: CleanupStep[]) {
   let firstError: unknown;
@@ -57,18 +57,21 @@ export const beginScreenshotCapture = async (
   const { setScreenshotCapture } = useRecordingSourceStore.getState();
   const destination =
     action === "takeScreenshotToClipboard" ? "clipboard" : "export";
+  sessionDestination = destination;
   try {
-    await setRulerScreenshotMode(true);
     // Rust has to know the overlay is allowed on screen before it is asked for:
-    // the recording controls may well be hidden behind it.
+    // the recording controls may well be hidden behind it. Do this before
+    // entering ruler screenshot mode as well, because that transition can
+    // briefly synchronize the shared OSC while it still holds the persisted
+    // recording region.
     await setScreenshotRegionSession(true);
+    await setRulerScreenshotMode(true);
     // The prior session deliberately leaves the borrowed overlay passthrough
     // while it is hidden. Re-arm it explicitly before React shows it again;
     // the selected monitor may be unchanged, so no dependency effect is
     // guaranteed to do this for us.
     await setRegionSelectorPassthrough(false);
     setScreenshotCapture(true);
-    await openScreenshotRegionOverlays(destination);
   } catch (error: unknown) {
     try {
       await endScreenshotCapture();
@@ -90,10 +93,6 @@ export const endScreenshotCapture = async () => {
     () => setScreenshotRegionSession(false),
     () => hideRegionSelector(),
     () => setRegionSelectorOpacity(1),
-    // Release every screenshot window's hit testing while this WebView is
-    // still alive. The native command defers disposal long enough for the
-    // remaining shared session cleanup to finish.
-    () => closeScreenshotRegionOverlays(),
     () => {
       setScreenshotCapture(false);
       return Promise.resolve();
@@ -102,7 +101,6 @@ export const endScreenshotCapture = async () => {
     // recording UI's terms. Successful and cancelled quick screenshots both
     // leave the recording controls and ruler exactly where the user had them.
     () => setRegionSelectorPassthrough(recordingMonitor === null),
-    ...(recordingMonitor ? [() => showRegionSelector(recordingMonitor)] : []),
     // Ruler teardown/focus restoration comes last so re-showing the normal
     // recording region cannot take Escape back during cleanup.
     () => setRulerScreenshotMode(false),
@@ -124,7 +122,7 @@ export const captureScreenshotRegion = (
       await captureStill({
         destination,
         showCursor,
-        target: { kind: "region", monitorId, region },
+        target: { kind: "desktopRegion", monitorId, region },
       });
     } catch (error: unknown) {
       console.error("Could not take the screenshot", error);

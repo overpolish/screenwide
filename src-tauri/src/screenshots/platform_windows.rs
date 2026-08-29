@@ -47,6 +47,9 @@ pub fn capture(target: ScreenshotTarget, show_cursor: bool) -> Result<CapturedIm
         .map(captured)
         .map_err(|error| error.to_string())
     }
+    ScreenshotTarget::DesktopRegion { .. } => {
+      Err("Cross-display Region screenshots are not available on Windows yet".to_owned())
+    }
     ScreenshotTarget::Window { window_id } => xcap::Window::all()
       .map_err(|error| error.to_string())?
       .into_iter()

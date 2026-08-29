@@ -3,7 +3,8 @@
 
 use super::super::*;
 use crate::capture_geometry::{physical_capture_rect, video_capture_rect};
-use crate::capture_kit::windows_to_exclude;
+use crate::capture_kit::{desktop_layout, windows_to_exclude};
+use crate::desktop_capture::{self, CapturePlan, DesktopDisplay, OutputLimits};
 use crate::recording::cursor::{CursorSource, CursorSourceKind};
 use crate::recording::Region;
 
@@ -17,6 +18,46 @@ pub(super) struct PrimaryVideo {
   pub source_rect: Option<cg::Rect>,
   pub source_scale_factor: f32,
   pub width: u32,
+}
+
+pub(super) struct DesktopVideo {
+  pub cursor_source: CursorSource,
+  pub displays: Vec<DesktopDisplay>,
+  pub fps: u32,
+  pub plan: CapturePlan,
+  pub show_cursor: bool,
+}
+
+pub(super) enum ResolvedVideo {
+  Direct(PrimaryVideo),
+  Desktop(DesktopVideo),
+}
+
+impl ResolvedVideo {
+  pub fn cursor_source(&self) -> &CursorSource {
+    match self {
+      Self::Direct(video) => &video.cursor_source,
+      Self::Desktop(video) => &video.cursor_source,
+    }
+  }
+
+  pub fn dimensions(&self) -> (u32, u32, u32) {
+    match self {
+      Self::Direct(video) => (video.width, video.height, video.fps),
+      Self::Desktop(video) => (video.plan.width, video.plan.height, video.fps),
+    }
+  }
+
+  pub fn source_scale_factor(&self) -> f32 {
+    match self {
+      Self::Direct(video) => video.source_scale_factor,
+      Self::Desktop(video) => video.plan.output_scale as f32,
+    }
+  }
+
+  pub fn can_capture_all_audio(&self) -> bool {
+    !matches!(self, Self::Direct(video) if video.is_window)
+  }
 }
 
 fn pixel_dimension(points: f64, scale: f32) -> Option<u32> {
@@ -82,8 +123,6 @@ fn display_video(
     .map(|rect| (rect.width, rect.height))
     .unwrap_or_else(|| (even(monitor_width), even(monitor_height)));
   let source_rect = source_rect.map(|rect| {
-    // ScreenCaptureKit's source rectangle is expressed in display points,
-    // while the shared source contract is physical pixels.
     cg::Rect::new(
       f64::from(rect.x) / scale,
       f64::from(rect.y) / scale,
@@ -127,6 +166,57 @@ fn display_video(
   })
 }
 
+fn region_video(
+  content: &sc::ShareableContent,
+  fps: u32,
+  include_own_windows: bool,
+  monitor_id: u32,
+  region: Region,
+  show_cursor: bool,
+) -> Result<ResolvedVideo, String> {
+  let displays = desktop_layout()?;
+  let Some(plan) = composed_region_plan(&displays, monitor_id, region)? else {
+    return display_video(
+      content,
+      fps,
+      include_own_windows,
+      monitor_id,
+      Some(region),
+      show_cursor,
+    )
+    .map(ResolvedVideo::Direct);
+  };
+  let desktop = plan.desktop_region;
+  Ok(ResolvedVideo::Desktop(DesktopVideo {
+    cursor_source: CursorSource {
+      height: desktop.height,
+      kind: CursorSourceKind::Region,
+      platform_id: "desktop".to_owned(),
+      video_height: plan.height,
+      video_width: plan.width,
+      width: desktop.width,
+      x: desktop.x,
+      y: desktop.y,
+    },
+    displays,
+    fps,
+    plan,
+    show_cursor,
+  }))
+}
+
+fn composed_region_plan(
+  displays: &[DesktopDisplay],
+  monitor_id: u32,
+  region: Region,
+) -> Result<Option<CapturePlan>, String> {
+  let unbounded = desktop_capture::plan(displays, monitor_id, region, OutputLimits::UNBOUNDED)?;
+  if unbounded.pieces.len() < 2 {
+    return Ok(None);
+  }
+  desktop_capture::plan(displays, monitor_id, region, OutputLimits::VIDEO).map(Some)
+}
+
 fn window_video(
   content: &sc::ShareableContent,
   fps: u32,
@@ -164,7 +254,7 @@ pub(super) fn resolve(
   content: &sc::ShareableContent,
   include_own_windows: bool,
   primary: &PrimaryCaptureSource,
-) -> Result<Option<PrimaryVideo>, String> {
+) -> Result<Option<ResolvedVideo>, String> {
   match primary {
     PrimaryCaptureSource::Screen {
       fps,
@@ -178,18 +268,19 @@ pub(super) fn resolve(
       None,
       *show_cursor,
     )
+    .map(ResolvedVideo::Direct)
     .map(Some),
     PrimaryCaptureSource::Region {
       fps,
       monitor_id,
       region,
       show_cursor,
-    } => display_video(
+    } => region_video(
       content,
       *fps,
       include_own_windows,
       *monitor_id,
-      Some(*region),
+      *region,
       *show_cursor,
     )
     .map(Some),
@@ -197,40 +288,12 @@ pub(super) fn resolve(
       fps,
       show_cursor,
       window_id,
-    } => window_video(content, *fps, *show_cursor, *window_id).map(Some),
+    } => window_video(content, *fps, *show_cursor, *window_id)
+      .map(ResolvedVideo::Direct)
+      .map(Some),
     PrimaryCaptureSource::Camera | PrimaryCaptureSource::Audio => Ok(None),
   }
 }
 
 #[cfg(test)]
-mod tests {
-  use super::{pixel_dimension, window_cursor_source};
-  use cidre::cg;
-
-  #[test]
-  fn trims_window_dimensions_to_encoder_safe_pixels() {
-    assert_eq!(pixel_dimension(801.4, 2.0), Some(1_602));
-    assert_eq!(pixel_dimension(800.6, 1.0), Some(800));
-  }
-
-  #[test]
-  fn rejects_empty_or_invalid_window_dimensions() {
-    assert_eq!(pixel_dimension(0.0, 2.0), None);
-    assert_eq!(pixel_dimension(f64::NAN, 2.0), None);
-    assert_eq!(pixel_dimension(100.0, 0.0), None);
-  }
-
-  #[test]
-  fn window_cursor_coordinates_keep_the_global_window_origin() {
-    let source = window_cursor_source(
-      42,
-      cg::Rect::new(0.0, 0.0, 900.0, 600.0),
-      cg::Rect::new(125.0, 80.0, 900.0, 600.0),
-      1_800,
-      1_200,
-    );
-
-    assert_eq!((source.x, source.y), (125.0, 80.0));
-    assert_eq!((source.width, source.height), (900.0, 600.0));
-  }
-}
+mod tests;

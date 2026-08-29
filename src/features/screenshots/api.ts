@@ -7,6 +7,7 @@ import { Region } from "../recording-sources/types";
 export type ScreenshotDestination = "export" | "clipboard" | "both";
 
 export type ScreenshotTarget =
+  | { kind: "desktopRegion"; monitorId: number; region: Region }
   | { kind: "region"; monitorId: number; region: Region }
   | { kind: "screen"; monitorId: number }
   | { kind: "window"; windowId: number };

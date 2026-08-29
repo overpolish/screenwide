@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::*;
-use super::{screen_stream, video_source::PrimaryVideo};
+use super::screen_stream;
 use crate::recording::SystemAudioSelection;
 
 #[derive(Default)]
@@ -52,12 +52,11 @@ pub(super) fn create(
   content: Option<&sc::ShareableContent>,
   output: Option<&arc::R<ScreenOutput>>,
   queue: &dispatch::Queue,
-  video: Option<&PrimaryVideo>,
+  video_can_capture_all: bool,
 ) -> Result<SystemAudioStreams, String> {
   let captures_selected = selection.enabled && !selection.application_ids.is_empty();
   let captures_all = selection.enabled && !captures_selected;
-  let video_captures_all =
-    captures_all && video.is_some_and(|primary_video| !primary_video.is_window);
+  let video_captures_all = captures_all && video_can_capture_all;
   if !selection.enabled {
     return Ok(SystemAudioStreams::default());
   }
@@ -84,7 +83,7 @@ pub(super) fn create(
     let filter = application_audio_filter(content, display, &selection.application_ids)?;
     let mut cfg = sc::StreamCfg::new();
     cfg.set_captures_audio(true);
-    screen_stream::configure_audio(&mut cfg);
+    configure_system_audio(&mut cfg);
     let stream = sc::Stream::new(&filter, &cfg);
     stream
       .add_stream_output(output.as_ref(), sc::OutputType::Audio, Some(queue))

@@ -8,6 +8,7 @@ import {
   Camera,
   ChevronDown,
   Monitor,
+  ScanSquare,
 } from "lucide-react";
 import { PressEvent } from "react-aria";
 
@@ -30,9 +31,7 @@ export function RecordingSourceTrigger({
   selectedMonitor,
   selectedWindow,
 }: RecordingSourceTriggerProps) {
-  const sourceSelectionAvailable = ["region", "screen", "window"].includes(
-    mode,
-  );
+  const sourceSelectionAvailable = ["screen", "window"].includes(mode);
 
   return (
     <div className="grid min-w-0 grow">
@@ -55,12 +54,16 @@ export function RecordingSourceTrigger({
           ) : (
             <AppWindowMac aria-hidden className="size-icon-compact shrink-0" />
           )
+        ) : mode === "region" ? (
+          <ScanSquare aria-hidden className="size-icon-compact shrink-0" />
         ) : (
           <Monitor aria-hidden className="size-icon-compact shrink-0" />
         )}
         <span className="truncate">
           {!sourceSelectionAvailable
-            ? "Source selection not required"
+            ? mode === "region"
+              ? "Region"
+              : "Source selection not required"
             : mode === "window"
               ? (selectedWindow?.title ?? "Choose a window")
               : (selectedMonitor?.name ?? "Choose a display")}

@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::camera::CameraStream;
+use super::desktop_stream::DesktopKeepalive;
 use super::*;
 
 /// The ScreenCaptureKit objects a running session keeps alive.
 pub(super) struct StreamObjects {
-  pub(super) _output: Option<arc::R<ScreenOutput>>,
   pub(super) queue: arc::R<dispatch::Queue>,
   pub(super) streams: Vec<arc::R<sc::Stream>>,
+  pub(super) _output: Option<arc::R<ScreenOutput>>,
+  pub(super) desktop: Option<DesktopKeepalive>,
 }
 
 pub(super) struct CameraObjects {
@@ -94,6 +96,11 @@ impl CaptureSession {
       }
     }
     self.objects.queue.sync_once(|| {});
+    if let Some(desktop) = self.objects.desktop.as_mut() {
+      // Every native callback has finished. Drain composition before placing
+      // Stop behind the final composed frame on the writer channel.
+      desktop.stop();
+    }
 
     let (reply, replies) = mpsc::channel();
     self
@@ -158,6 +165,9 @@ impl CaptureSession {
 
     for stream in &self.objects.streams {
       stream.stop_with_ch(|_| {});
+    }
+    if let Some(desktop) = self.objects.desktop.as_mut() {
+      desktop.stop();
     }
     if let Some(camera) = self.primary_camera.take() {
       camera.stop();

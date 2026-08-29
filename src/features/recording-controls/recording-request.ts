@@ -61,7 +61,9 @@ export const startRecordingOptions = (): StartRecordingOptions => {
 };
 
 /** Mirrors how `startRecordingOptions` pairs a region with its monitor. */
-export const screenshotTarget = (): ScreenshotTarget | null => {
+export const screenshotTarget = (
+  desktopRegion = false,
+): ScreenshotTarget | null => {
   const { recordingMode, region, selectedMonitor, selectedWindow } =
     useRecordingSourceStore.getState();
 
@@ -73,6 +75,10 @@ export const screenshotTarget = (): ScreenshotTarget | null => {
   if (!selectedMonitor) return null;
 
   return recordingMode === "region"
-    ? { kind: "region", monitorId: selectedMonitor.id, region }
+    ? {
+        kind: desktopRegion ? "desktopRegion" : "region",
+        monitorId: selectedMonitor.id,
+        region,
+      }
     : { kind: "screen", monitorId: selectedMonitor.id };
 };

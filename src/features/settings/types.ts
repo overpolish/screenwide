@@ -20,7 +20,6 @@ export type ShortcutSettings = {
 };
 
 export type GeneralSettings = {
-  captureScreenshotOnDraw: boolean;
   launchAtLogin: boolean;
   openLocationAfterExport: boolean;
   recordScreenwideWindows: boolean;

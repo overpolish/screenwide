@@ -27,6 +27,8 @@
 
 mod audio_writer;
 mod camera;
+mod desktop_compositor;
+mod desktop_stream;
 mod media;
 mod output;
 mod session;
@@ -132,6 +134,12 @@ const MICROPHONE_AUDIO_BITRATE: i32 = 128_000;
 /// the bound only prevents a broken display stream retaining audio forever.
 const SYSTEM_AUDIO_PREROLL_LIMIT: usize = 64;
 const MICROPHONE_PREROLL_LIMIT: usize = 64;
+
+fn configure_system_audio(cfg: &mut sc::StreamCfg) {
+  cfg.set_excludes_current_process_audio(true);
+  cfg.set_sample_rate(SYSTEM_AUDIO_SAMPLE_RATE);
+  cfg.set_channel_count(SYSTEM_AUDIO_CHANNELS);
+}
 
 #[cfg(test)]
 mod tests;

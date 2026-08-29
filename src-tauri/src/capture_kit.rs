@@ -11,6 +11,25 @@ use std::collections::HashSet;
 
 use cidre::{arc, ns, sc};
 
+use crate::desktop_capture::DesktopDisplay;
+
+pub fn desktop_layout() -> Result<Vec<DesktopDisplay>, String> {
+  xcap::Monitor::all()
+    .map_err(|error| error.to_string())?
+    .into_iter()
+    .map(|monitor| {
+      Ok(DesktopDisplay {
+        id: monitor.id().map_err(|error| error.to_string())?,
+        x: f64::from(monitor.x().map_err(|error| error.to_string())?),
+        y: f64::from(monitor.y().map_err(|error| error.to_string())?),
+        width: f64::from(monitor.width().map_err(|error| error.to_string())?),
+        height: f64::from(monitor.height().map_err(|error| error.to_string())?),
+        scale: f64::from(monitor.scale_factor().map_err(|error| error.to_string())?),
+      })
+    })
+    .collect()
+}
+
 /// A monitor's scale and its size in physical pixels.
 ///
 /// xcap reports macOS monitors in points, from `CGDisplayBounds`, whereas on

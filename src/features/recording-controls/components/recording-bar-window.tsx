@@ -152,7 +152,7 @@ const synchronizeRecordingUi = async (
 
   await setRecordingSourceSelectorVisible(hasSourceSelector);
   if (mode === "region" && monitor) {
-    await showRegionSelector(monitor);
+    await showRegionSelector(monitor, true);
   } else {
     await hideRegionSelector();
   }

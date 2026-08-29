@@ -77,12 +77,12 @@ fn configure_panel<T: tauri_nspanel::FromWindow<tauri::Wry> + 'static>(
 ) -> tauri::Result<()> {
   let panel = window.to_panel::<T>()?;
 
-  // A hidden Tauri window can still contribute one stale compositor frame as
-  // it becomes an NSPanel. Start transparent before AppKit can order it; the
-  // explicit show path restores alpha and input together.
+  // Start hidden panels transparent so conversion cannot expose a stale frame;
+  // the explicit show path restores alpha and input together.
   panel.set_alpha_value(0.0);
   panel.set_level(PanelLevel::Custom(level).value());
   panel.set_style_mask(StyleMask::empty().nonactivating_panel().into());
+  super::panel_presentation_macos::configure_order_animation(window.label(), panel.as_panel());
   panel.set_collection_behavior(
     CollectionBehavior::new()
       .full_screen_auxiliary()

@@ -15,14 +15,19 @@ import { type ListBoxSize, ListBoxSizeContext } from "./listbox-context";
 
 const listBoxVariants = tv({
   base: [
-    "gap-control p-control flex w-(--trigger-width) flex-col overflow-auto rounded-xl text-content-fg outline-none",
+    "gap-control p-control flex w-(--trigger-width) flex-col overflow-auto text-content-fg outline-none",
     "scroll-py-5",
     "data-[empty]:py-section data-[empty]:text-xs data-[empty]:text-muted data-[empty]:flex data-[empty]:flex-row data-[empty]:items-center data-[empty]:justify-center",
   ],
   defaultVariants: {
+    size: "default",
     variant: "filled",
   },
   variants: {
+    size: {
+      compact: "rounded-lg",
+      default: "rounded-xl",
+    },
     variant: {
       filled: "bg-content shadow-md",
       transparent: "bg-transparent shadow-none",
@@ -56,7 +61,7 @@ export const ListBox = <T extends object>({
           </>
         )}
         {...props}
-        className={listBoxVariants({ className, variant })}
+        className={listBoxVariants({ className, size, variant })}
       >
         {children}
       </AriaListBox>

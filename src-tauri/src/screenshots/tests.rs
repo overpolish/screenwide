@@ -174,4 +174,17 @@ fn deserializes_every_target_the_bar_can_send() {
   };
   assert_eq!(monitor_id, 7);
   assert_eq!(region.size.width, 3.0);
+
+  let desktop_region: ScreenshotTarget = serde_json::from_str(
+    r#"{"kind":"desktopRegion","monitorId":9,"region":{"position":{"x":-12,"y":5},"size":{"width":400,"height":200}}}"#,
+  )
+  .unwrap();
+  let ScreenshotTarget::DesktopRegion {
+    monitor_id, region, ..
+  } = desktop_region
+  else {
+    panic!("expected a desktop region target");
+  };
+  assert_eq!(monitor_id, 9);
+  assert_eq!(region.position.x, -12.0);
 }

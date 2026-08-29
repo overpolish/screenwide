@@ -8,6 +8,7 @@
 #import <CoreMedia/CoreMedia.h>
 
 #import "gpu_compositor_macos_keyboard_types.h"
+#import "../region_osc_renderer_macos.h"
 
 typedef struct {
   float background_color[4];
@@ -140,25 +141,6 @@ typedef struct {
 } ScreenwideWorkspacePlacement;
 
 typedef struct {
-  uint32_t active;
-  uint32_t pane_index;
-  uint32_t layer_id;
-  uint32_t sample_camera;
-  uint32_t edges;
-  uint32_t light_mode;
-  float sample_u;
-  float sample_v;
-  float source_min_u;
-  float source_min_v;
-  float source_max_u;
-  float source_max_v;
-  int32_t box_x;
-  int32_t box_y;
-  uint32_t box_width;
-  uint32_t box_height;
-} ScreenwideWorkspaceMagnifier;
-
-typedef struct {
   uint32_t index;
   double x;
   double y;
@@ -277,5 +259,5 @@ void screenwide_gpu_still_presenter_end_workspace_resize(
 int screenwide_gpu_still_presenter_redraw_workspace(
     void *handle, void *metal_layer,
     const ScreenwideWorkspacePlacement *placements, uint32_t placement_count,
-    const ScreenwideWorkspaceMagnifier *magnifier,
+    const ScreenwideRegionMagnifier *magnifier,
     ScreenwidePresentBlock present);

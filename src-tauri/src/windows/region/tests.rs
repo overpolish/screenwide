@@ -35,8 +35,8 @@ fn a_screenshot_session_shows_the_overlay_without_the_recording_ui() {
 }
 
 #[test]
-fn a_screenshot_session_preserves_prepared_window_opacity() {
-  assert!(!region_selector_restores_opacity(true));
+fn a_screenshot_session_presents_the_borrowed_region_window() {
+  assert!(region_selector_restores_opacity(true));
   assert!(region_selector_restores_opacity(false));
 }
 

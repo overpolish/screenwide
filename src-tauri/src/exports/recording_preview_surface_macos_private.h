@@ -167,7 +167,7 @@ typedef struct {
 @property(nonatomic, strong) NSLock *workspaceLock;
 @property(nonatomic, strong) id<MTLCommandBuffer> workspaceEncodingCommand;
 @property(nonatomic, strong) id<MTLTexture> workspaceEncodingTexture;
-@property(nonatomic) ScreenwideWorkspaceMagnifier workspaceMagnifier;
+@property(nonatomic) ScreenwideRegionMagnifier workspaceMagnifier;
 @property(nonatomic, strong) ScreenwidePreviewInteractionView *interaction;
 @property(nonatomic) BOOL editorEnabled;
 @property(nonatomic, strong) NSMutableArray<NSValue *> *editorBaseRects;
@@ -222,6 +222,8 @@ typedef struct {
 @property(nonatomic) BOOL selectionDrawPending;
 /// Drawables and pane frames published by one Core Animation transaction.
 @property(nonatomic, strong) NSLock *batchLock;
+@property(nonatomic, strong) id windowScreenObserver;
+@property(nonatomic, strong) id windowBackingObserver;
 @property(nonatomic) NSInteger batchDepth;
 @property(nonatomic, strong) NSMutableArray<id<CAMetalDrawable>> *batchDrawables;
 @property(nonatomic, strong) NSMutableArray<ScreenwidePreviewView *> *batchViews;
