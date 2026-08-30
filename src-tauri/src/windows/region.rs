@@ -14,6 +14,10 @@ use super::{
 
 pub(super) static SCREENSHOT_REGION_SESSION: AtomicBool = AtomicBool::new(false);
 
+pub(crate) fn is_screenshot_region_session() -> bool {
+  SCREENSHOT_REGION_SESSION.load(Ordering::Acquire)
+}
+
 pub fn is_region_selector_visible(app: &AppHandle) -> bool {
   app
     .get_webview_window(WindowLabel::RegionSelector.as_str())

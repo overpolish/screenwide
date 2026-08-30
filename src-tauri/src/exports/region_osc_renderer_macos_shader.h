@@ -90,6 +90,22 @@ struct region_osc_control_palette {
   float4 outline;
 };
 
+struct region_osc_action_palette {
+  float4 primary;
+  float4 secondary;
+};
+
+struct region_osc_ocr_palette {
+  float4 primary_fill;
+  float4 primary_outline;
+  float4 qr_fill;
+  float4 qr_outline;
+  float4 error_fill;
+  float4 error_outline;
+  float4 selection_fill;
+  float4 selection_outline;
+};
+
 vertex region_osc_out region_osc_vertex_main(
     const device region_osc_vertex *vertices [[buffer(0)]],
     uint index [[vertex_id]]) {
@@ -104,10 +120,13 @@ fragment float4 region_osc_fragment(
     region_osc_out in [[stage_in]],
     constant uint &light_mode [[buffer(0)]],
     constant float4 &magnifier_box [[buffer(1)]],
-    constant float4 &action_shades [[buffer(2)]],
+    constant region_osc_action_palette &actions [[buffer(2)]],
     constant region_osc_control_palette &controls [[buffer(3)]],
+    constant region_osc_ocr_palette &ocr [[buffer(4)]],
+    constant float4 &overlay_shade [[buffer(5)]],
     texture2d<float> label [[texture(0)]],
-    texture2d<float> secondary_label [[texture(1)]]) {
+    texture2d<float> secondary_label [[texture(1)]],
+    texture2d<float> icons [[texture(2)]]) {
   constexpr sampler label_sampler(filter::linear, address::clamp_to_edge);
   if (magnifier_box.z > 0.0) {
     float2 half_size = magnifier_box.zw * 0.5;
@@ -124,20 +143,51 @@ fragment float4 region_osc_fragment(
     if (sampled.a <= 0.002) discard_fragment();
     return float4(sampled.rgb / sampled.a, sampled.a);
   }
+  if (in.kind >= 22 && in.kind <= 26) {
+    float cell = float(in.kind - 21);
+    float2 atlas_uv = float2((cell + in.uv.x) / 6.0, in.uv.y);
+    float coverage = icons.sample(label_sampler, atlas_uv).r;
+    if (coverage <= 0.002) discard_fragment();
+    float4 color = actions.secondary;
+    color.a *= coverage;
+    return color;
+  }
   if (in.kind >= 12 && in.kind <= 14) {
     float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
-    float radius = dimensions.y * 0.25;
+    float radius = dimensions.y / 3.0;
     float2 local = abs((in.uv - 0.5) * dimensions) -
                    (dimensions * 0.5 - radius);
     float distance = length(max(local, 0.0)) +
                      min(max(local.x, local.y), 0.0) - radius;
     float coverage = 1.0 - smoothstep(-1.0, 1.0, distance);
-    float shade = light_mode != 0
-        ? (in.kind == 13 ? action_shades.z : action_shades.x)
-        : (in.kind == 13 ? action_shades.w : action_shades.y);
-    return float4(float3(shade), coverage);
+    float4 color = in.kind == 13 ? actions.secondary : actions.primary;
+    color.a *= coverage;
+    return color;
   }
-  if (in.kind == 6) return float4(0.0, 0.0, 0.0, 0.4);
+  if (in.kind == 6) return overlay_shade;
+  if (in.kind >= 17 && in.kind <= 20) {
+    float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
+    float2 half_size = dimensions * 0.5;
+    float radius = min(2.0, min(half_size.x, half_size.y));
+    float2 point = abs((in.uv - 0.5) * dimensions) - (half_size - radius);
+    float distance = length(max(point, 0.0)) +
+                     min(max(point.x, point.y), 0.0) - radius;
+    float aa = max(fwidth(distance), 0.0001);
+    float coverage = clamp(0.5 - distance / aa, 0.0, 1.0);
+    if (coverage <= 0.0) discard_fragment();
+    float4 fill = in.kind == 20 ? ocr.selection_fill
+        : in.kind == 19 ? ocr.error_fill
+        : in.kind == 18 ? ocr.qr_fill : ocr.primary_fill;
+    float4 outline = in.kind == 20 ? ocr.selection_outline
+        : in.kind == 19 ? ocr.error_outline
+        : in.kind == 18 ? ocr.qr_outline : ocr.primary_outline;
+    float outline_width = in.kind == 17 || in.kind == 18 ? 2.0 : 1.0;
+    float outline_mix =
+        clamp(0.5 + (distance + outline_width) / aa, 0.0, 1.0);
+    float4 color = mix(fill, outline, outline_mix);
+    color.a *= coverage;
+    return color;
+  }
   if (in.kind >= 7 && in.kind <= 10) {
     bool horizontal = in.kind <= 8;
     float longitudinal = horizontal ? in.uv.x : in.uv.y;

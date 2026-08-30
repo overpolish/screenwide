@@ -2,6 +2,7 @@
 
 #import "screenshot_region_osc_macos_private.h"
 #import <objc/runtime.h>
+#include <stdlib.h>
 
 @implementation ScreenwideRegionOSC
 - (void)dealloc {
@@ -62,7 +63,13 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
   s.layer.drawableSize =
       CGSizeMake(MAX(size.width * scale, 2.0), MAX(size.height * scale, 2.0));
 
-  ScreenwideRegionOscVertex vertices[256];
+  NSUInteger capacity = 256 + screenwide_region_osc_ocr_vertex_capacity(s);
+  ScreenwideRegionOscVertex *vertices =
+      calloc(capacity, sizeof(ScreenwideRegionOscVertex));
+  if (!vertices) {
+    s.drawInFlight = NO;
+    return;
+  }
   NSUInteger count = 0;
   NSRect canvas = NSMakeRect(0, 0, size.width, size.height);
   if (NSIsEmptyRect(s.region))
@@ -71,9 +78,11 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
     screenwide_region_osc_add_crop_with_handles(
         vertices, &count, size, s.region, canvas, scale, s.showFrame,
         s.showHandles);
+  screenwide_region_osc_ocr_add_vertices(s, vertices, &count, size, scale);
 
   id<CAMetalDrawable> drawable = [s.layer nextDrawable];
   if (drawable == nil) {
+    free(vertices);
     s.drawInFlight = NO;
     return;
   }
@@ -106,6 +115,7 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
       [s.device newBufferWithBytes:vertices
                             length:count * sizeof(*vertices)
                            options:MTLResourceStorageModeShared];
+  free(vertices);
   MTLRenderPassDescriptor *pass =
       [MTLRenderPassDescriptor renderPassDescriptor];
   pass.colorAttachments[0].texture = drawable.texture;
@@ -186,6 +196,12 @@ void *screenwide_region_osc_attach(void *view_ptr, void *context,
     return NULL;
   }
   view.wantsLayer = YES;
+  s.snapshotLayer = [CALayer layer];
+  s.snapshotLayer.frame = view.bounds;
+  s.snapshotLayer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+  s.snapshotLayer.contentsGravity = kCAGravityResize;
+  s.snapshotLayer.hidden = YES;
+  [view.layer addSublayer:s.snapshotLayer];
   s.layer = [CAMetalLayer layer];
   s.layer.device = s.device;
   s.layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -194,7 +210,8 @@ void *screenwide_region_osc_attach(void *view_ptr, void *context,
   s.layer.frame = view.bounds;
   s.layer.contentsScale = view.window.backingScaleFactor ?: 1;
   s.layer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
-  [view.layer insertSublayer:s.layer atIndex:0];
+  [view.layer addSublayer:s.layer];
+  screenwide_region_osc_ocr_attach(s);
   objc_setAssociatedObject(view, ScreenwideRegionOSCKey, s,
                            OBJC_ASSOCIATION_RETAIN_NONATOMIC);
   screenwide_region_osc_appearance_install(s);
@@ -271,7 +288,11 @@ void screenwide_region_osc_detach(void *view_ptr) {
   s.visible = NO;
   s.drawPending = NO;
   s.layer.hidden = YES;
+  s.snapshotLayer.hidden = YES;
+  s.snapshotLayer.contents = nil;
+  screenwide_region_osc_ocr_teardown(s);
   [s.layer removeFromSuperlayer];
+  [s.snapshotLayer removeFromSuperlayer];
   objc_setAssociatedObject(view, ScreenwideRegionOSCKey, nil,
                            OBJC_ASSOCIATION_ASSIGN);
 }

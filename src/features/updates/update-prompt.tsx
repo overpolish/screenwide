@@ -57,7 +57,7 @@ export function UpdatePrompt({
         title="Software Update"
       />
       <div className="flex min-h-0 grow flex-col gap-4 px-6 pt-5 pb-6">
-        <Alert color="info">
+        <Alert color="neutral">
           <div>
             <p className="font-semibold">
               {updateVersion

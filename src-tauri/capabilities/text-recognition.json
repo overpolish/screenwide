@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "text-recognition-opener",
-  "description": "Open supported QR actions from text recognition overlays",
-  "windows": ["text-recognition-*"],
+  "description": "Open supported QR actions after confirmation in QR Details",
+  "windows": ["qr-details"],
   "permissions": [
     {
       "identifier": "opener:allow-open-url",

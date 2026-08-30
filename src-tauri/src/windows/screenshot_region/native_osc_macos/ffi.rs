@@ -19,6 +19,8 @@ pub const CURSOR_HORIZONTAL: u8 = 4;
 pub const CURSOR_VERTICAL: u8 = 5;
 pub const CURSOR_DIAGONAL: u8 = 6;
 pub const CURSOR_ARROW: u8 = 7;
+pub const CURSOR_IBEAM: u8 = 8;
+pub const CURSOR_POINTING_HAND: u8 = 9;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
@@ -30,6 +32,20 @@ pub struct NativeDesktopDisplay {
   pub height: f64,
   pub scale: f64,
 }
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NativeOcrRect {
+  pub x: f64,
+  pub y: f64,
+  pub width: f64,
+  pub height: f64,
+  pub kind: u8,
+  pub padding: [u8; 7],
+}
+
+const _: () = assert!(std::mem::size_of::<NativeOcrRect>() == 40);
+const _: () = assert!(std::mem::offset_of!(NativeOcrRect, kind) == 32);
 
 unsafe extern "C" {
   pub fn screenwide_region_osc_attach(
@@ -77,6 +93,23 @@ unsafe extern "C" {
   ) -> usize;
   pub fn screenwide_region_osc_set_desktop_presented(view: *mut c_void, presented: i32);
   pub fn screenwide_region_osc_claim_pointer_surface(view: *mut c_void);
+  pub fn screenwide_region_osc_set_snapshot(
+    view: *mut c_void,
+    display_id: u32,
+    rgba: *const u8,
+    length: usize,
+    width: u32,
+    height: u32,
+  ) -> i32;
+  pub fn screenwide_region_osc_set_snapshot_presented(view: *mut c_void, presented: i32);
+  pub fn screenwide_region_osc_set_ocr(
+    view: *mut c_void,
+    phase: u32,
+    rects: *const NativeOcrRect,
+    count: usize,
+    message: *const std::ffi::c_char,
+  ) -> i32;
+  pub fn screenwide_region_osc_ocr_set_cancel_visible(view: *mut c_void, visible: i32);
 }
 
 pub unsafe extern "C" fn release_context(ptr: *mut c_void) {

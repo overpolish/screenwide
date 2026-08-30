@@ -4,7 +4,7 @@
 use std::{ffi::c_void, panic::catch_unwind};
 
 use crate::osc::geometry::{Monitor, Rect, Size};
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 
 use super::{ffi, Context, DesktopBinding, NativeOscResult, Point};
 
@@ -21,20 +21,21 @@ pub unsafe extern "C" fn native_osc_input(
   phase: u32,
   x: f64,
   y: f64,
-  shift: u8,
+  modifiers: u8,
   out: *mut NativeOscResult,
 ) {
   if out.is_null() {
     return;
   }
-  let result = catch_unwind(|| {
+  let mut result = catch_unwind(|| {
     if context.is_null() {
       invalid_result()
     } else {
-      (&*context.cast::<Context>()).input(phase, Point { x, y }, shift != 0)
+      (&*context.cast::<Context>()).input(phase, Point { x, y }, modifiers)
     }
   })
   .unwrap_or_else(|_| invalid_result());
+  super::ocr::dismiss_on_idle_cancel(context, phase, &mut result);
   *out = result;
 }
 
@@ -44,6 +45,10 @@ pub unsafe extern "C" fn native_osc_layout_changed(context: *mut c_void) {
       return;
     }
     let context = &*context.cast::<Context>();
+    if context.purpose == super::Purpose::TextRecognition {
+      crate::text_recognition::restart_after_topology_change(context.window.app_handle());
+      return;
+    }
     let _ = context.window.emit_to(
       tauri::EventTarget::webview_window(context.window.label()),
       super::NATIVE_OSC_LAYOUT_EVENT,
@@ -52,8 +57,14 @@ pub unsafe extern "C" fn native_osc_layout_changed(context: *mut c_void) {
   });
 }
 
-fn attach(view: *mut c_void, window: super::WebviewWindow, width: f64, height: f64) -> bool {
-  let context = Box::into_raw(Context::new(window, width, height)).cast();
+fn attach(
+  view: *mut c_void,
+  window: super::WebviewWindow,
+  width: f64,
+  height: f64,
+  purpose: super::Purpose,
+) -> bool {
+  let context = Box::into_raw(Context::new(window, width, height, purpose)).cast();
   !ffi::attach(view, context).is_null()
 }
 
@@ -63,10 +74,21 @@ pub fn ensure_attached(
   width: f64,
   height: f64,
 ) -> bool {
-  with_context(view, |_| ()).is_some() || attach(view, window, width, height)
+  with_context(view, |_| ()).is_some()
+    || attach(view, window, width, height, super::Purpose::Region)
 }
 
-fn with_context<T>(view: *mut c_void, work: impl FnOnce(&Context) -> T) -> Option<T> {
+pub fn ensure_text_recognition_attached(
+  view: *mut c_void,
+  window: super::WebviewWindow,
+  width: f64,
+  height: f64,
+) -> bool {
+  with_context(view, |_| ()).is_some()
+    || attach(view, window, width, height, super::Purpose::TextRecognition)
+}
+
+pub(super) fn with_context<T>(view: *mut c_void, work: impl FnOnce(&Context) -> T) -> Option<T> {
   let ptr = unsafe { ffi::screenwide_region_osc_context(view) };
   (!ptr.is_null()).then(|| work(unsafe { &*ptr.cast::<Context>() }))
 }
@@ -96,6 +118,23 @@ pub fn clear_region(view: *mut c_void) -> bool {
     return false;
   }
   unsafe { ffi::screenwide_region_osc_set(view, 0.0, 0.0, 0.0, 0.0, 0) != 0 }
+}
+
+pub fn present_region(view: *mut c_void, rect: Option<Rect>) -> bool {
+  if with_context(view, |_| ()).is_none() {
+    return false;
+  }
+  let rect = rect.unwrap_or_default();
+  unsafe {
+    ffi::screenwide_region_osc_set(
+      view,
+      rect.origin.x,
+      rect.origin.y,
+      rect.size.width,
+      rect.size.height,
+      1,
+    ) != 0
+  }
 }
 
 pub fn configure_desktop(view: *mut c_void, binding: DesktopBinding, local: Option<Rect>) -> bool {
@@ -220,5 +259,35 @@ pub fn claim_pointer_surface(view: *mut c_void) -> bool {
     return false;
   }
   unsafe { ffi::screenwide_region_osc_claim_pointer_surface(view) };
+  true
+}
+
+pub fn set_snapshot(
+  view: *mut c_void,
+  display_id: u32,
+  rgba: &[u8],
+  width: u32,
+  height: u32,
+) -> bool {
+  if with_context(view, |_| ()).is_none() {
+    return false;
+  }
+  unsafe {
+    ffi::screenwide_region_osc_set_snapshot(
+      view,
+      display_id,
+      rgba.as_ptr(),
+      rgba.len(),
+      width,
+      height,
+    ) != 0
+  }
+}
+
+pub fn set_snapshot_presented(view: *mut c_void, presented: bool) -> bool {
+  if with_context(view, |_| ()).is_none() {
+    return false;
+  }
+  unsafe { ffi::screenwide_region_osc_set_snapshot_presented(view, i32::from(presented)) };
   true
 }

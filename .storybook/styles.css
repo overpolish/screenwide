@@ -12,6 +12,11 @@ body {
   background-color: var(--color-neutral-800);
 }
 
+html.screenwide-native-preview,
+html.screenwide-native-preview body {
+  background: transparent;
+}
+
 /* The application shell intentionally cannot scroll, but Storybook Docs can. */
 html:has(body.sb-main-fullscreen) {
   min-height: 100%;

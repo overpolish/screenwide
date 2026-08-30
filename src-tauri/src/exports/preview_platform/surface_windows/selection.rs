@@ -29,6 +29,10 @@ pub(super) mod label;
 #[path = "selection/label_texture.rs"]
 mod label_texture;
 
+use crate::osc::{
+  controls::{Appearance, ControlColor, ControlGroup, ControlSize, ControlSpec, ControlStyle},
+  geometry::Rect,
+};
 use label::{build_label_texture, label_scale_key, LABEL_STROKE};
 use label_texture::{upload_label_texture, LabelTexture};
 
@@ -48,7 +52,8 @@ struct Constants {
   label: [f32; 4],
   secondary_label: [f32; 4],
   label_params: [f32; 4],
-  action_shades: [f32; 4],
+  action_primary: [f32; 4],
+  action_secondary: [f32; 4],
 }
 
 fn split_action_label_rects(
@@ -87,7 +92,7 @@ fn split_action_label_rects(
 }
 
 pub(super) struct SelectionOverlay {
-  pub(super) action: super::osc_action::OscAction,
+  pub(super) action: ControlGroup,
   buffer_size: (u32, u32),
   constants: ID3D11Buffer,
   label: Option<LabelTexture>,
@@ -176,7 +181,7 @@ impl SelectionOverlay {
       .map_err(|error| error.to_string())?;
     let label_placeholder = upload_label_texture(device, &[0u8; 4], (1, 1), "", 0, false)?;
     Ok(Self {
-      action: super::osc_action::OscAction::default(),
+      action: ControlGroup::default(),
       buffer_size: (2, 2),
       constants: constants.ok_or_else(|| "D3D11 created no selection constants".to_owned())?,
       label: None,
@@ -325,12 +330,31 @@ impl SelectionOverlay {
         (view, rect, self.label_placeholder.view.clone(), [0.0; 4])
       }
     };
-    let action_shades = self.action.layout(
-      label_rect,
-      (secondary_label_rect[2] > 0.0).then_some(secondary_label_rect),
-      scale as f32,
-      label_action,
-    );
+    let action_spec = |label: [f32; 4]| ControlSpec {
+      rect: Rect::from_xywh(
+        f64::from(label[0] - 6.0 * scale as f32),
+        f64::from(label[1] - 4.0 * scale as f32),
+        f64::from(label[2] + 12.0 * scale as f32),
+        f64::from(label[3] + 8.0 * scale as f32),
+      ),
+      icon: crate::osc::controls::ControlIcon::None,
+      style: ControlStyle::button(ControlColor::Neutral, ControlSize::Compact),
+    };
+    let mut actions = Vec::with_capacity(2);
+    if label_action && label_rect[2] > 0.0 {
+      actions.push(action_spec(label_rect));
+      if secondary_label_rect[2] > 0.0 {
+        actions.push(action_spec(secondary_label_rect));
+      }
+    }
+    self.action.layout(&actions);
+    let visuals = self.action.visuals(if light {
+      Appearance::Light
+    } else {
+      Appearance::Dark
+    });
+    let action_primary = visuals.first().map_or([0.0; 4], |visual| visual.fill);
+    let action_secondary = visuals.get(1).map_or([0.0; 4], |visual| visual.fill);
     let values = Constants {
       frame: frame.unwrap_or_default(),
       viewport: [
@@ -361,7 +385,8 @@ impl SelectionOverlay {
         f32::from(label_action),
         f32::from(split_actions),
       ],
-      action_shades,
+      action_primary,
+      action_secondary,
     };
     let constants: ID3D11Resource = self.constants.cast().map_err(|error| error.to_string())?;
     unsafe {

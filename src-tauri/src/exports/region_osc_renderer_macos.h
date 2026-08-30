@@ -38,9 +38,11 @@ typedef struct {
 typedef struct {
   uint32_t light_mode;
   float magnifier_box[4];
-  float action_shades[4];
+  float overlay_shade[4];
+  float action_fills[8];
   float control_fill[4];
   float control_outline[4];
+  float ocr_colors[32];
 } ScreenwideRegionOscRenderState;
 
 typedef struct {
@@ -48,8 +50,31 @@ typedef struct {
   float outline[4];
 } ScreenwideOscControlPalette;
 
+typedef struct {
+  float shade[4];
+} ScreenwideOscOverlayPalette;
+
+typedef struct {
+  float primary_fill[4];
+  float primary_outline[4];
+  float qr_fill[4];
+  float qr_outline[4];
+  float error_fill[4];
+  float error_outline[4];
+  float selection_fill[4];
+  float selection_outline[4];
+  float loading_fill[4];
+  float loading_foreground[4];
+  float status_error_fill[4];
+  float status_error_foreground[4];
+} ScreenwideOscOcrPalette;
+_Static_assert(sizeof(ScreenwideOscOcrPalette) == 192,
+               "ScreenwideOscOcrPalette ABI must match Rust");
+
 ScreenwideOscControlPalette screenwide_osc_control_palette(
     uint32_t light_mode);
+ScreenwideOscOverlayPalette screenwide_osc_overlay_palette(void);
+ScreenwideOscOcrPalette screenwide_osc_ocr_palette(uint32_t light_mode);
 ScreenwideRegionOscRenderState screenwide_region_osc_render_state(
     uint32_t light_mode);
 
@@ -73,6 +98,10 @@ CGFloat screenwide_region_osc_snap(CGFloat value, CGFloat scale);
 void screenwide_region_osc_add_quad(ScreenwideRegionOscVertex *vertices,
                                     NSUInteger *count, NSSize view_size,
                                     NSRect rect, uint32_t kind);
+void screenwide_region_osc_add_line(ScreenwideRegionOscVertex *vertices,
+                                    NSUInteger *count, NSSize view_size,
+                                    NSPoint start, NSPoint end,
+                                    CGFloat width, uint32_t kind);
 void screenwide_region_osc_add_selection(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
     NSRect frame, CGFloat scale, double radius_percent, BOOL radius_enabled);
@@ -89,6 +118,7 @@ void screenwide_region_osc_encode(
     id<MTLRenderPipelineState> pipeline, id<MTLBuffer> vertices,
     NSUInteger vertex_count, ScreenwideRegionOscRenderState state,
     id<MTLTexture> label, id<MTLTexture> secondary_label);
+id<MTLTexture> screenwide_osc_icon_texture(id<MTLDevice> device);
 void screenwide_region_magnifier_encode(
     id<MTLComputeCommandEncoder> encoder,
     id<MTLComputePipelineState> pipeline, id<MTLBuffer> source,

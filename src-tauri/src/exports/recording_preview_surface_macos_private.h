@@ -10,6 +10,8 @@
 #include <stdint.h>
 
 #import "cursor_export/gpu_compositor_macos.h"
+#import "osc_material_surface_macos.h"
+#import "region_osc_renderer_macos.h"
 
 #define SCREENWIDE_PREVIEW_PRIVATE __attribute__((visibility("hidden")))
 
@@ -209,13 +211,11 @@ typedef struct {
 @property(nonatomic) NSRect selectionActionRect;
 @property(nonatomic) NSRect selectionSecondaryActionRect;
 @property(nonatomic) uint32_t selectionActionOperation;
-@property(nonatomic) uint8_t selectionActionHovered;
-@property(nonatomic) uint8_t selectionActionPressed;
-@property(nonatomic) double selectionActionTransitionStarted;
-@property(nonatomic) float selectionActionFromLight;
-@property(nonatomic) float selectionActionFromDark;
-@property(nonatomic) float selectionActionToLight;
-@property(nonatomic) float selectionActionToDark;
+@property(nonatomic) void *selectionActionControls;
+/// Native backdrop hosts contain their own retained Metal action layer. Their geometry is
+/// driven by the same Rust control metrics as the rendered controls.
+@property(nonatomic, strong) NSView *selectionActionMaterialContainer;
+@property(nonatomic, strong) NSArray<ScreenwideOscMaterialSurfaceView *> *selectionActionSurfaces;
 @property(nonatomic) uint64_t selectionActionAnimationRevision;
 @property(nonatomic) uint64_t selectionDrawRevision;
 @property(nonatomic) BOOL selectionDrawInFlight;

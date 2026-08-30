@@ -15,8 +15,10 @@
 
 - (void)viewDidChangeEffectiveAppearance {
   [super viewDidChangeEffectiveAppearance];
-  if (self.osc != nil)
+  if (self.osc != nil) {
+    screenwide_region_osc_ocr_update_appearance(self.osc);
     screenwide_region_osc_draw(self.osc);
+  }
 }
 @end
 

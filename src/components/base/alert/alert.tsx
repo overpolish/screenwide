@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react";
+import { Info, OctagonAlert } from "lucide-react";
 import { ComponentProps, ReactNode } from "react";
 import { VariantProps } from "tailwind-variants";
 
@@ -10,55 +10,30 @@ import { tv } from "../../../lib/variants";
 const alertVariants = tv({
   defaultVariants: {
     color: "neutral",
-    size: "md",
   },
   slots: {
-    base: "flex items-start rounded-md border text-content-fg",
-    content: "min-w-0 leading-relaxed",
-    icon: "mt-px shrink-0 [&>svg]:size-full",
+    base: "gap-control-inset p-section flex items-start rounded-xl text-sm text-content-fg",
+    content: "min-w-0 leading-normal",
+    icon:
+      "flex h-[1lh] w-icon-default shrink-0 items-center justify-center [&>svg]:size-icon-default",
   },
   variants: {
     color: {
       error: {
-        base: "border-error/25 bg-error/10",
+        base: "bg-error-surface text-error",
         icon: "text-error",
       },
-      info: {
-        base: "border-info/25 bg-info/10",
-        icon: "text-info",
-      },
       neutral: {
-        base: "border-muted/20 bg-neutral",
+        base: "bg-neutral",
         icon: "text-muted",
-      },
-      success: {
-        base: "border-success/25 bg-success/10",
-        icon: "text-success",
-      },
-      warning: {
-        base: "border-warning/25 bg-warning/10",
-        icon: "text-warning",
-      },
-    },
-    size: {
-      md: {
-        base: "gap-2.5 px-2.5 py-2 text-xs",
-        icon: "size-4",
-      },
-      sm: {
-        base: "gap-2 px-2 py-2 text-xs",
-        icon: "size-3.5",
       },
     },
   },
 });
 
 const defaultIcons = {
-  error: CircleAlert,
-  info: Info,
+  error: OctagonAlert,
   neutral: Info,
-  success: CircleCheck,
-  warning: TriangleAlert,
 };
 
 type AlertProps = Omit<ComponentProps<"div">, "color"> &
@@ -71,13 +46,11 @@ export function Alert({
   className,
   color = "neutral",
   icon: customIcon,
-  size,
   ...props
 }: AlertProps) {
   const { base, content, icon } = alertVariants({
     className,
     color,
-    size,
   });
   const DefaultIcon = defaultIcons[color];
 

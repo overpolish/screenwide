@@ -6,7 +6,7 @@ use tauri::Manager;
 
 pub(crate) mod magnifier;
 #[cfg(target_os = "macos")]
-mod native_osc_macos;
+pub(crate) mod native_osc_macos;
 pub(crate) mod osc_command;
 pub(crate) mod presentation;
 

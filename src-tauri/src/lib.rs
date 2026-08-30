@@ -26,6 +26,8 @@ mod ruler;
 mod screenshots;
 mod settings;
 mod shortcuts;
+#[cfg(debug_assertions)]
+mod storybook_native;
 mod text_recognition;
 #[cfg(desktop)]
 mod tray;
@@ -68,6 +70,7 @@ pub fn run() {
     .manage(settings::GeneralSettingsState::default())
     .manage(shortcuts::ShortcutSettingsState::default())
     .manage(text_recognition::TextRecognitionState::default())
+    .manage(text_recognition::qr_details::QrDetailsState::default())
     .invoke_handler(tauri::generate_handler![
       audio_preview::start_audio_preview,
       audio_preview::stop_audio_preview,
@@ -148,10 +151,9 @@ pub fn run() {
       screenshots::scrolling::command::capture_scrolling_still,
       screenshots::capture_still,
       text_recognition::cancel_text_recognition,
-      text_recognition::capture_text_region,
+      text_recognition::close_qr_details,
       text_recognition::copy_recognition_content,
-      text_recognition::snapshot::get_text_recognition_snapshot,
-      text_recognition::recognize_captured_text,
+      text_recognition::get_qr_details,
       text_recognition::start_text_recognition,
       updates::update_checks_enabled,
       updates::hide_update_prompt,
@@ -162,6 +164,7 @@ pub fn run() {
       settings::preferences::set_general_settings,
       settings::show_settings,
       shortcuts::get_shortcut_settings,
+      shortcuts::resume_shortcut_action,
       shortcuts::begin_shortcut_capture,
       shortcuts::end_shortcut_capture,
       shortcuts::set_shortcut_binding,
@@ -194,6 +197,12 @@ pub fn run() {
       windows::options::toggle_recording_options,
     ])
     .setup(|app| {
+      #[cfg(debug_assertions)]
+      if let Some(preview_url) = std::env::var_os("SCREENWIDE_STORYBOOK_NATIVE_URL") {
+        storybook_native::show(app.handle(), &preview_url.to_string_lossy())?;
+        return Ok(());
+      }
+
       #[cfg(target_os = "macos")]
       {
         exports::initialize_cursor_artwork();
@@ -240,6 +249,7 @@ pub fn run() {
       windows::hide_instead_of_close(app.handle(), windows::WindowLabel::ExportScreenshot);
       windows::hide_instead_of_close(app.handle(), windows::WindowLabel::Settings);
       windows::initialize_recording_bar_position(app.handle())?;
+      windows::initialize_topology_management(app.handle());
       windows::manage_recording_bar_movement(app.handle());
       windows::manage_recording_dock_movement(app.handle());
       exports::initialize(app.handle());

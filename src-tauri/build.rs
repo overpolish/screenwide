@@ -30,6 +30,12 @@ fn main() {
     );
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos.m");
     println!("cargo:rerun-if-changed=src/exports/region_osc_renderer_macos.h");
+    println!("cargo:rerun-if-changed=src/exports/osc_controls.h");
+    println!("cargo:rerun-if-changed=src/exports/osc_material_surface_macos.h");
+    println!("cargo:rerun-if-changed=src/exports/osc_material_surface_macos.m");
+    println!("cargo:rerun-if-changed=src/exports/osc_text_texture_macos.h");
+    println!("cargo:rerun-if-changed=src/exports/osc_text_texture_macos.m");
+    println!("cargo:rerun-if-changed=src/exports/osc_icon_renderer_macos.m");
     println!("cargo:rerun-if-changed=src/exports/region_cursor_macos.m");
     println!("cargo:rerun-if-changed=src/exports/region_magnifier_macos.m");
     println!("cargo:rerun-if-changed=src/exports/region_osc_renderer_macos.m");
@@ -51,6 +57,11 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+desktop.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+input.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+state.m");
+    println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+snapshot.m");
+    println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+ocr.m");
+    println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+ocr_cancel.m");
+    println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+ocr_toolbar.m");
+    println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+ocr_toolbar_input.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos_private.h");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos_private.h");
     println!(
@@ -78,6 +89,9 @@ fn main() {
       .file("src/exports/recording_preview_reader_macos.m")
       .file("src/exports/recording_preview_scrubber_macos.m")
       .file("src/exports/recording_preview_surface_macos.m")
+      .file("src/exports/osc_material_surface_macos.m")
+      .file("src/exports/osc_text_texture_macos.m")
+      .file("src/exports/osc_icon_renderer_macos.m")
       .file("src/exports/region_osc_renderer_macos.m")
       .file("src/exports/region_osc_pipeline_macos.m")
       .file("src/exports/region_cursor_macos.m")
@@ -98,6 +112,11 @@ fn main() {
       .file("src/exports/screenshot_region_osc_macos+desktop.m")
       .file("src/exports/screenshot_region_osc_macos+input.m")
       .file("src/exports/screenshot_region_osc_macos+state.m")
+      .file("src/exports/screenshot_region_osc_macos+snapshot.m")
+      .file("src/exports/screenshot_region_osc_macos+ocr.m")
+      .file("src/exports/screenshot_region_osc_macos+ocr_cancel.m")
+      .file("src/exports/screenshot_region_osc_macos+ocr_toolbar.m")
+      .file("src/exports/screenshot_region_osc_macos+ocr_toolbar_input.m")
       .flag("-fobjc-arc")
       .compile("screenwide_gpu_compositor");
     // Objective-C categories do not define a class symbol, so the linker will

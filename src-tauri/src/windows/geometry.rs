@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::{AppHandle, Monitor, PhysicalPosition, PhysicalSize, WebviewWindow};
+use tauri::{
+  AppHandle, LogicalPosition, LogicalSize, Monitor, PhysicalPosition, PhysicalSize, WebviewWindow,
+};
 
 /// The area, in physical pixels, that a window shares with a monitor.
 pub(super) fn overlap_area(
@@ -84,6 +86,17 @@ fn contained_size(
   PhysicalSize::new(
     window_size.width.min(area_size.width),
     window_size.height.min(area_size.height),
+  )
+}
+
+pub(crate) fn centered_logical_position(
+  area_position: LogicalPosition<f64>,
+  area_size: LogicalSize<f64>,
+  window_size: LogicalSize<f64>,
+) -> LogicalPosition<f64> {
+  LogicalPosition::new(
+    area_position.x + (area_size.width - window_size.width).max(0.0) / 2.0,
+    area_position.y + (area_size.height - window_size.height).max(0.0) / 2.0,
   )
 }
 
@@ -194,5 +207,17 @@ mod tests {
       WORK_AREA_SIZE
     );
     assert_eq!(contained_size(WORK_AREA_SIZE, WINDOW_SIZE), WINDOW_SIZE);
+  }
+
+  #[test]
+  fn centers_a_logical_window_independent_of_display_scale() {
+    assert_eq!(
+      centered_logical_position(
+        LogicalPosition::new(1_800.0, 0.0),
+        LogicalSize::new(1_920.0, 1_080.0),
+        LogicalSize::new(480.0, 360.0),
+      ),
+      LogicalPosition::new(2_520.0, 360.0)
+    );
   }
 }

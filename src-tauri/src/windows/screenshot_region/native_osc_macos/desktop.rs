@@ -49,6 +49,19 @@ impl DesktopBinding {
       owner_id: owner.id,
     })
   }
+
+  pub(super) fn display_at(&self, point: Point) -> Option<u32> {
+    self.displays.iter().find_map(|display| {
+      Rect::from_xywh(
+        display.origin.x,
+        display.origin.y,
+        display.size.width,
+        display.size.height,
+      )
+      .contains(point)
+      .then_some(display.id)
+    })
+  }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -168,4 +181,63 @@ impl Context {
 
 pub(super) fn global_committed(binding: &DesktopBinding, local: Option<Rect>) -> Option<Rect> {
   local.and_then(|region| binding.project_local(region))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn binding() -> DesktopBinding {
+    DesktopBinding {
+      displays: vec![
+        DesktopDisplay {
+          id: 1,
+          origin: Point { x: 0.0, y: 0.0 },
+          size: Size {
+            width: 1_800.0,
+            height: 1_169.0,
+          },
+          scale: 2.0,
+        },
+        DesktopDisplay {
+          id: 2,
+          origin: Point {
+            x: 1_800.0,
+            y: 89.0,
+          },
+          size: Size {
+            width: 1_920.0,
+            height: 1_080.0,
+          },
+          scale: 1.0,
+        },
+      ],
+      anchor_id: 1,
+      size: Size {
+        width: 3_720.0,
+        height: 1_169.0,
+      },
+      layout_changed: false,
+    }
+  }
+
+  #[test]
+  fn resolves_the_display_containing_desktop_input() {
+    let binding = binding();
+    assert_eq!(binding.display_at(Point { x: 900.0, y: 500.0 }), Some(1));
+    assert_eq!(
+      binding.display_at(Point {
+        x: 2_500.0,
+        y: 500.0
+      }),
+      Some(2)
+    );
+    assert_eq!(
+      binding.display_at(Point {
+        x: 1_900.0,
+        y: 20.0
+      }),
+      None
+    );
+  }
 }

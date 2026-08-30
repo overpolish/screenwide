@@ -44,6 +44,12 @@ static void applyCursor(NativeOscResult result) {
   case 7:
     value = [NSCursor arrowCursor];
     break;
+  case 8:
+    value = [NSCursor IBeamCursor];
+    break;
+  case 9:
+    value = [NSCursor pointingHandCursor];
+    break;
   default:
     break;
   }
@@ -175,25 +181,38 @@ static void processInput(ScreenwideRegionOSC *s, NSEvent *event,
     return;
   }
   screenwide_region_osc_cursor_claim(s);
-  if ((phase == 3 || phase == 4) && !s.gestureActive)
-    return;
   NSPoint point = [s.host convertPoint:event.locationInWindow fromView:nil];
   if (!s.host.isFlipped)
     point.y = NSHeight(s.host.bounds) - point.y;
+  if (screenwide_region_osc_ocr_control_input(s, point, phase))
+    return;
+  if ((phase == 3 || phase == 4) && !s.gestureActive)
+    return;
+  if (phase == 2 && s.ocrCancelVisible)
+    screenwide_region_osc_ocr_set_cancel_visible(
+        (__bridge void *)s.host, 0);
   if (phase == 2 && pointInRectTopLeft(point, s.exclusionRect))
     return;
   NativeOscResult result = {0};
   NSPoint desktopPoint =
       NSMakePoint(point.x + s.desktopOffset.x, point.y + s.desktopOffset.y);
-  s.input(s.rustContext, phase, desktopPoint.x, desktopPoint.y,
-          (event.modifierFlags & NSEventModifierFlagShift) != 0, &result);
+  uint8_t modifiers = 0;
+  if ((event.modifierFlags & NSEventModifierFlagShift) != 0)
+    modifiers |= 1;
+  if ((event.modifierFlags &
+       (NSEventModifierFlagCommand | NSEventModifierFlagControl)) != 0)
+    modifiers |= 2;
+  if (event.clickCount >= 2)
+    modifiers |= 4;
+  s.input(s.rustContext, phase, desktopPoint.x, desktopPoint.y, modifiers,
+          &result);
   if (result.status == 255)
     return;
   if (phase == 2)
     s.gestureActive = YES;
   if (phase == 4 || phase == 5)
     s.gestureActive = NO;
-  if (result.cursor)
+  if (result.cursor && screenwide_region_osc_root(s).inputEnabled)
     applyCursor(result);
   NativeOscResult localResult = result;
   localResult.x -= s.desktopOffset.x;
@@ -211,16 +230,56 @@ static void processInput(ScreenwideRegionOSC *s, NSEvent *event,
     screenwide_region_osc_draw(s);
 }
 
+static void processKeyboardCommand(ScreenwideRegionOSC *s, uint32_t phase) {
+  if (!s.inputEnabled || !s.input || !s.rustContext)
+    return;
+  NativeOscResult result = {0};
+  s.input(s.rustContext, phase, 0, 0, 0, &result);
+  if (result.cursor && screenwide_region_osc_root(s).inputEnabled)
+    applyCursor(result);
+  if (result.status == 1 || result.status == 2 || result.status == 3) {
+    screenwide_region_osc_apply_region(
+        s,
+        result.has_region
+            ? NSMakeRect(result.x, result.y, result.width, result.height)
+            : NSZeroRect,
+        screenwide_region_osc_root(s).visible);
+  }
+}
+
 void screenwide_region_osc_input_install(ScreenwideRegionOSC *s) {
   __weak ScreenwideRegionOSC *weak = s;
   NSEventMask mask = NSEventMaskMouseMoved | NSEventMaskLeftMouseDown |
-                     NSEventMaskLeftMouseDragged | NSEventMaskLeftMouseUp;
+                     NSEventMaskLeftMouseDragged | NSEventMaskLeftMouseUp |
+                     NSEventMaskKeyDown;
   s.eventMonitor = [NSEvent
       addLocalMonitorForEventsMatchingMask:mask
                                    handler:^NSEvent *(NSEvent *event) {
                                      ScreenwideRegionOSC *strong = weak;
                                      if (!strong)
                                        return event;
+                                     if (event.type == NSEventTypeKeyDown) {
+                                       if (event.window == strong.host.window &&
+                                           strong.inputEnabled) {
+                                         BOOL command =
+                                             (event.modifierFlags &
+                                              (NSEventModifierFlagCommand |
+                                               NSEventModifierFlagControl)) != 0;
+                                         if (strong.ocrPhase == 2 && command &&
+                                             (event.keyCode == 0 ||
+                                              event.keyCode == 8)) {
+                                           processKeyboardCommand(
+                                               strong,
+                                               event.keyCode == 0 ? 6 : 7);
+                                           // Tao force-delivers Command key-up
+                                           // directly to the key window. Let
+                                           // the passive webview receive the
+                                           // matching key-down as well.
+                                           return event;
+                                         }
+                                       }
+                                       return event;
+                                     }
                                      uint32_t phase =
                                          event.type == NSEventTypeMouseMoved ? 1
                                          : event.type ==

@@ -22,11 +22,13 @@ pub(crate) mod region_gesture;
 pub(crate) mod screenshot_region;
 pub(crate) mod source_selector;
 mod source_selector_layout;
+mod topology;
 mod transient_popover;
 
 #[cfg(not(target_os = "macos"))]
 pub use dock::initialize_recording_dock;
 pub use dock::{hide_recording_dock, manage_recording_dock_movement, show_recording_dock};
+pub(crate) use geometry::centered_logical_position;
 use geometry::monitor_with_most_overlap;
 #[cfg(target_os = "macos")]
 pub use lifecycle::get_or_create;
@@ -95,14 +97,33 @@ pub enum WindowLabel {
   RecordingBar,
   RecordingDock,
   RecordingOptions,
+  QrDetails,
   Settings,
   RegionSelector,
   RecordingSourceSelector,
   StandaloneListbox,
+  TextRecognition,
   Update,
 }
 
 impl WindowLabel {
+  pub const ALL: &'static [Self] = &[
+    Self::ExportRecording,
+    Self::ExportScreenshot,
+    #[cfg(target_os = "macos")]
+    Self::Permissions,
+    Self::RecordingBar,
+    Self::RecordingDock,
+    Self::RecordingOptions,
+    Self::QrDetails,
+    Self::Settings,
+    Self::RegionSelector,
+    Self::RecordingSourceSelector,
+    Self::StandaloneListbox,
+    Self::TextRecognition,
+    Self::Update,
+  ];
+
   pub const fn as_str(self) -> &'static str {
     match self {
       Self::ExportRecording => "export-recording",
@@ -112,13 +133,19 @@ impl WindowLabel {
       Self::RecordingBar => "recording-bar",
       Self::RecordingDock => "recording-dock",
       Self::RecordingOptions => "recording-options",
+      Self::QrDetails => "qr-details",
       Self::Settings => "settings",
       Self::RegionSelector => "region-selector",
       Self::RecordingSourceSelector => "recording-source-selector",
       Self::StandaloneListbox => "standalone-listbox",
+      Self::TextRecognition => "text-recognition",
       Self::Update => "update",
     }
   }
+}
+
+pub fn initialize_topology_management(app: &AppHandle) {
+  topology::initialize(app);
 }
 
 // This is where a list of capture-excluded window labels used to live. Capture

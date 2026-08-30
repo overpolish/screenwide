@@ -47,11 +47,7 @@
 }
 - (void)mouseEntered:(NSEvent *)event { [self mouseMoved:event]; }
 - (void)mouseExited:(NSEvent *)event {
-  if (self.surface.selectionActionHovered) {
-    self.surface.selectionActionHovered = NO;
-    selection_action_begin_transition(self.surface);
-    redraw_selection(self.surface);
-  }
+  selection_action_clear_hover(self.surface);
   [self releaseCursorControl];
   [[NSCursor arrowCursor] set];
   (void)event;

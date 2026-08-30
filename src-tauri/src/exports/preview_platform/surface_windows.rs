@@ -54,8 +54,6 @@ mod editor;
 mod keyboard_artwork;
 #[path = "surface_windows/keyboard_hit.rs"]
 mod keyboard_hit;
-#[path = "surface_windows/osc_action.rs"]
-mod osc_action;
 #[path = "surface_windows/recenter.rs"]
 mod recenter;
 #[path = "surface_windows/selection.rs"]

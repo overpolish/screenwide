@@ -57,6 +57,7 @@ void screenwide_preview_surface_set_viewport(void *handle,
     }
     surface.container.frame = nextFrame;
     surface.interaction.frame = surface.container.frame;
+    surface.selectionActionMaterialContainer.frame = surface.container.frame;
     // An opaque backstop: while the webview's mask holes and the native pane
     // layout briefly disagree (pan, zoom, resize), the gap shows the app's
     // dark backdrop instead of seeing through the window.
@@ -82,6 +83,8 @@ void screenwide_preview_surface_enable_editor(
     surface.transformCallback = callback;
     surface.transformContext = context;
     surface.interaction.hidden = !surface.editorEnabled;
+    if (!surface.editorEnabled)
+      surface.selectionActionMaterialContainer.hidden = YES;
     if (!surface.editorEnabled) {
       [surface.interaction releaseCursorControl];
       surface.editorPanX = 0;

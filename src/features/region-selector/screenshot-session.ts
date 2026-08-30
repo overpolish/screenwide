@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { invoke } from "@tauri-apps/api/core";
+
 import { useRecordingInputStore } from "../recording-inputs/store";
 import {
   hideRegionSelector,
@@ -13,6 +15,7 @@ import { Region } from "../recording-sources/types";
 import { setRulerScreenshotMode } from "../ruler/api";
 import { captureStill, ScreenshotDestination } from "../screenshots/api";
 import { ShortcutAction } from "../settings/types";
+import { cancelTextRecognition } from "../text-recognition/api";
 
 type ScreenshotShortcutAction = Extract<
   ShortcutAction,
@@ -20,6 +23,8 @@ type ScreenshotShortcutAction = Extract<
 >;
 type CleanupStep = () => Promise<unknown>;
 let sessionDestination: ScreenshotDestination = "export";
+let sessionAction: ScreenshotShortcutAction | null = null;
+let shortcutTransition: Promise<void> = Promise.resolve();
 
 export const screenshotCaptureDestination = () => sessionDestination;
 
@@ -65,6 +70,10 @@ export const beginScreenshotCapture = async (
     // briefly synchronize the shared OSC while it still holds the persisted
     // recording region.
     await setScreenshotRegionSession(true);
+    // Claim the session first so any shortcut arriving during OCR teardown is
+    // routed through the same serialized handoff. The capture windows are then
+    // closed on this later IPC turn before Region's surfaces are borrowed.
+    await cancelTextRecognition();
     await setRulerScreenshotMode(true);
     // The prior session deliberately leaves the borrowed overlay passthrough
     // while it is hidden. Re-arm it explicitly before React shows it again;
@@ -72,6 +81,7 @@ export const beginScreenshotCapture = async (
     // guaranteed to do this for us.
     await setRegionSelectorPassthrough(false);
     setScreenshotCapture(true);
+    sessionAction = action;
   } catch (error: unknown) {
     try {
       await endScreenshotCapture();
@@ -89,23 +99,50 @@ export const endScreenshotCapture = async () => {
 
   // Undoing exactly what starting the session did, so the overlay goes back to
   // being the recording region's - or to being off screen.
-  await runCleanupSteps([
-    () => setScreenshotRegionSession(false),
-    () => hideRegionSelector(),
-    () => setRegionSelectorOpacity(1),
-    () => {
-      setScreenshotCapture(false);
-      return Promise.resolve();
-    },
-    // With the session flag already cleared, this asks for the overlay on the
-    // recording UI's terms. Successful and cancelled quick screenshots both
-    // leave the recording controls and ruler exactly where the user had them.
-    () => setRegionSelectorPassthrough(recordingMonitor === null),
-    // Ruler teardown/focus restoration comes last so re-showing the normal
-    // recording region cannot take Escape back during cleanup.
-    () => setRulerScreenshotMode(false),
-  ]);
+  try {
+    await runCleanupSteps([
+      () => setScreenshotRegionSession(false),
+      () => hideRegionSelector(),
+      () => setRegionSelectorOpacity(1),
+      () => {
+        setScreenshotCapture(false);
+        return Promise.resolve();
+      },
+      // With the session flag already cleared, this asks for the overlay on the
+      // recording UI's terms. Successful and cancelled quick screenshots both
+      // leave the recording controls and ruler exactly where the user had them.
+      () => setRegionSelectorPassthrough(recordingMonitor === null),
+      // Ruler teardown/focus restoration comes last so re-showing the normal
+      // recording region cannot take Escape back during cleanup.
+      () => setRulerScreenshotMode(false),
+    ]);
+  } finally {
+    sessionAction = null;
+  }
 };
+
+const enqueueShortcutTransition = (work: () => Promise<void>) => {
+  const result = shortcutTransition.then(work, work);
+  shortcutTransition = result.catch(() => {});
+  return result;
+};
+
+export const handleScreenshotShortcut = (action: ScreenshotShortcutAction) =>
+  enqueueShortcutTransition(async () => {
+    const active = useRecordingSourceStore.getState().isScreenshotCapture;
+    const sameAction = active && sessionAction === action;
+    if (active) await endScreenshotCapture();
+    if (!sameAction) await beginScreenshotCapture(action);
+  });
+
+export const handoffScreenshotShortcut = (action: ShortcutAction) =>
+  enqueueShortcutTransition(async () => {
+    const sameAction = isScreenshotShortcut(action) && sessionAction === action;
+    await endScreenshotCapture();
+    if (!sameAction) {
+      await invoke("resume_shortcut_action", { action });
+    }
+  });
 
 /** Captures the region to the session's destination, then ends the session. */
 export const captureScreenshotRegion = (

@@ -106,9 +106,9 @@ export const WithElements: Story = {
   args: {
     children: (
       <>
-        <DoorOpen size={18} />
+        <DoorOpen />
         Sign out
-        <HandMetal size={18} />
+        <HandMetal />
       </>
     ),
   },

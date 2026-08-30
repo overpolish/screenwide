@@ -52,6 +52,41 @@ void screenwide_region_osc_add_quad(ScreenwideRegionOscVertex *vertices,
   *count += 6;
 }
 
+void screenwide_region_osc_add_line(ScreenwideRegionOscVertex *vertices,
+                                    NSUInteger *count, NSSize size,
+                                    NSPoint start, NSPoint end,
+                                    CGFloat width, uint32_t kind) {
+  CGFloat dx = end.x - start.x;
+  CGFloat dy = end.y - start.y;
+  CGFloat length = hypot(dx, dy);
+  if (length <= 0.0001 || width <= 0.0)
+    return;
+  CGFloat half = width * 0.5;
+  CGFloat ux = dx / length;
+  CGFloat uy = dy / length;
+  CGFloat px = -uy * half;
+  CGFloat py = ux * half;
+  NSPoint extendedStart = NSMakePoint(start.x - ux * half,
+                                      start.y - uy * half);
+  NSPoint extendedEnd = NSMakePoint(end.x + ux * half,
+                                    end.y + uy * half);
+  ScreenwideRegionOscPoint a =
+      ndc(size, extendedStart.x + px, extendedStart.y + py);
+  ScreenwideRegionOscPoint b =
+      ndc(size, extendedEnd.x + px, extendedEnd.y + py);
+  ScreenwideRegionOscPoint c =
+      ndc(size, extendedEnd.x - px, extendedEnd.y - py);
+  ScreenwideRegionOscPoint d =
+      ndc(size, extendedStart.x - px, extendedStart.y - py);
+  ScreenwideRegionOscVertex quad[6] = {
+      {a, {0, 0}, kind, 0}, {b, {1, 0}, kind, 0},
+      {c, {1, 1}, kind, 0}, {a, {0, 0}, kind, 0},
+      {c, {1, 1}, kind, 0}, {d, {0, 1}, kind, 0},
+  };
+  memcpy(vertices + *count, quad, sizeof(quad));
+  *count += 6;
+}
+
 static void add_pattern_quad(ScreenwideRegionOscVertex *vertices,
                              NSUInteger *count, NSSize size, NSRect rect,
                              uint32_t kind, BOOL horizontal, CGFloat scale,
@@ -266,8 +301,8 @@ void screenwide_region_osc_encode(
   [encoder setFragmentBytes:state.magnifier_box
                      length:sizeof(state.magnifier_box)
                     atIndex:1];
-  [encoder setFragmentBytes:state.action_shades
-                     length:sizeof(state.action_shades)
+  [encoder setFragmentBytes:state.action_fills
+                     length:sizeof(state.action_fills)
                     atIndex:2];
   float control_colors[8];
   memcpy(control_colors, state.control_fill, sizeof(state.control_fill));
@@ -276,8 +311,16 @@ void screenwide_region_osc_encode(
   [encoder setFragmentBytes:control_colors
                      length:sizeof(control_colors)
                     atIndex:3];
+  [encoder setFragmentBytes:state.ocr_colors
+                     length:sizeof(state.ocr_colors)
+                    atIndex:4];
+  [encoder setFragmentBytes:state.overlay_shade
+                     length:sizeof(state.overlay_shade)
+                    atIndex:5];
   [encoder setFragmentTexture:label atIndex:0];
   [encoder setFragmentTexture:secondary_label atIndex:1];
+  [encoder setFragmentTexture:screenwide_osc_icon_texture(pipeline.device)
+                        atIndex:2];
   [encoder drawPrimitives:MTLPrimitiveTypeTriangle
               vertexStart:0
               vertexCount:vertex_count];

@@ -11,7 +11,8 @@ cbuffer Selection : register(b0) {
   float4 label; // size readout x/y/width/height in physical pixels; zero width hides it
   float4 secondary_label; // second intrinsic OSC action label, or zero when absent
   float4 label_params; // halo radius in pixels, display scale (pixels per point), reserved
-  float4 action_shades; // primary light/dark, secondary light/dark
+  float4 action_primary;
+  float4 action_secondary;
 };
 
 // Grayscale glyph coverage of the "W x H" readout, one texel per physical
@@ -157,21 +158,19 @@ float4 ps_main(VertexOut input) : SV_Target {
     float4 primary_button = float4(label.xy - float2(6.0, 4.0) * scale,
                                    label.zw + float2(12.0, 8.0) * scale);
     float primary_coverage = 1.0 - smoothstep(
-        -1.0, 1.0, rounded_distance(p, primary_button, 6.0 * scale));
+        -1.0, 1.0, rounded_distance(p, primary_button, 8.0 * scale));
     float secondary_coverage = 0.0;
     if (secondary_label.z > 0.0) {
       float4 secondary_button = float4(
           secondary_label.xy - float2(6.0, 4.0) * scale,
           secondary_label.zw + float2(12.0, 8.0) * scale);
       secondary_coverage = 1.0 - smoothstep(
-          -1.0, 1.0, rounded_distance(p, secondary_button, 6.0 * scale));
+          -1.0, 1.0, rounded_distance(p, secondary_button, 8.0 * scale));
     }
-    // React resolves its neutral-soft and pressed semantic tokens to opaque
-    // colours. These are the same sRGB mixes, while hover is neutral-100.
-    float primary_shade = lerp(action_shades.x, action_shades.y, dark_theme);
-    float secondary_shade = lerp(action_shades.z, action_shades.w, dark_theme);
-    composite_layer(color, alpha, primary_shade.xxx, primary_coverage);
-    composite_layer(color, alpha, secondary_shade.xxx, secondary_coverage);
+    composite_layer(color, alpha, action_primary.rgb,
+                    primary_coverage * action_primary.a);
+    composite_layer(color, alpha, action_secondary.rgb,
+                    secondary_coverage * action_secondary.a);
   }
   if (label.z > 0.0 && p.x >= label.x && p.x <= label.x + label.z &&
       p.y >= label.y && p.y <= label.y + label.w) {

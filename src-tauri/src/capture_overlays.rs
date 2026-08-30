@@ -107,3 +107,29 @@ pub fn monitor_layout(app: &AppHandle) -> Result<Vec<(u32, f64, tauri::Monitor)>
     })
     .collect()
 }
+
+/// Resolves a capture display ID without assuming that xcap and Tauri return
+/// monitors in the same order. Both APIs accept the OS desktop coordinate
+/// space, so a point inside the xcap display gives Tauri the matching monitor
+/// on macOS and Windows alike.
+pub fn monitor_by_capture_id(
+  app: &AppHandle,
+  display_id: u32,
+) -> Result<Option<(f64, tauri::Monitor)>, String> {
+  let monitor = xcap::Monitor::all()
+    .map_err(|error| error.to_string())?
+    .into_iter()
+    .find(|monitor| monitor.id().ok() == Some(display_id));
+  let Some(monitor) = monitor else {
+    return Ok(None);
+  };
+  let x = f64::from(monitor.x().map_err(|error| error.to_string())?);
+  let y = f64::from(monitor.y().map_err(|error| error.to_string())?);
+  let width = f64::from(monitor.width().map_err(|error| error.to_string())?);
+  let height = f64::from(monitor.height().map_err(|error| error.to_string())?);
+  let scale = f64::from(monitor.scale_factor().map_err(|error| error.to_string())?);
+  let matched = app
+    .monitor_from_point(x + width / 2.0, y + height / 2.0)
+    .map_err(|error| error.to_string())?;
+  Ok(matched.map(|monitor| (scale, monitor)))
+}

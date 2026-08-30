@@ -11,6 +11,7 @@ export function WindowTitlebar({
   actions,
   border = true,
   center,
+  inset = "default",
   onClose,
   onMinimize,
   title,
@@ -18,13 +19,14 @@ export function WindowTitlebar({
   actions?: ReactNode;
   border?: boolean;
   center?: ReactNode;
+  inset?: "default" | "window";
   onClose?: () => void;
   onMinimize?: () => void;
   title?: string;
 }) {
   return (
     <header
-      className={`relative flex h-12 min-w-0 shrink-0 items-center gap-2 px-3 ${border ? "border-b border-muted/15" : ""}`}
+      className={`relative flex min-w-0 shrink-0 items-center gap-2 ${inset === "window" ? "px-window-inset pt-window-inset pb-section" : "h-12 px-3"} ${border ? "border-b border-muted/15" : ""}`}
       data-tauri-drag-region="deep"
     >
       <img

@@ -33,8 +33,10 @@ export const buttonVariants = tv({
       true: "cursor-not-allowed! bg-neutral-subtle text-neutral-disabled-fg",
     },
     size: {
-      compact: "h-6 rounded-lg px-2 text-xs",
-      default: "rounded-xl px-3 py-2 text-sm",
+      compact:
+        "h-6 rounded-lg px-2 text-xs [&_svg]:size-icon-compact [&_svg]:shrink-0",
+      default:
+        "rounded-xl px-3 py-2 text-sm [&_svg]:size-icon-default [&_svg]:shrink-0",
     },
     variant: {
       ghost: [

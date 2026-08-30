@@ -75,6 +75,10 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       surface.selection.pane_index >= surface.editorBaseRects.count ||
       !selectedPaneActive) {
     surface.selectionDrawPending = NO;
+    surface.selectionActionRect = NSZeroRect;
+    surface.selectionSecondaryActionRect = NSZeroRect;
+    surface.selectionActionOperation = 0;
+    selection_action_material_layout(surface);
     surface.selectionLayer.hidden = YES;
     return;
   }
@@ -157,18 +161,6 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     surface.selectionSecondaryActionRect = NSMakeRect(
         actionX + primaryWidth + buttonGap, actionY,
         secondaryWidth, buttonHeight);
-    screenwide_region_osc_add_quad(vertices, &count, size,
-                                   surface.selectionActionRect, 12);
-    screenwide_region_osc_add_quad(vertices, &count, size,
-                                   surface.selectionSecondaryActionRect, 13);
-    screenwide_region_osc_add_quad(vertices, &count, size,
-        NSMakeRect(NSMinX(surface.selectionActionRect) + 6.0,
-                   NSMinY(surface.selectionActionRect) + 4.0,
-                   primaryLabel.width, primaryLabel.height), 11);
-    screenwide_region_osc_add_quad(vertices, &count, size,
-        NSMakeRect(NSMinX(surface.selectionSecondaryActionRect) + 6.0,
-                   NSMinY(surface.selectionSecondaryActionRect) + 4.0,
-                   secondaryLabel.width, secondaryLabel.height), 15);
   } else if (hasLabel && !keyboardAction) {
     NSString *text = compactAction ? @"Recenter" :
         [NSString stringWithFormat:@"%lld × %lld",
@@ -203,12 +195,14 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         // box; these insets complete React's px-2/py-1 compact Button geometry.
         NSRect actionRect = NSInsetRect(labelRect, -6.0, -4.0);
         surface.selectionActionRect = actionRect;
-        screenwide_region_osc_add_quad(vertices, &count, size,
-                                       surface.selectionActionRect, 12);
       }
-      screenwide_region_osc_add_quad(vertices, &count, size, labelRect, 11);
+      if (!compactAction)
+        screenwide_region_osc_add_quad(vertices, &count, size, labelRect, 11);
     }
   }
+  selection_action_layout(surface);
+  selection_action_material_layout(surface);
+  selection_action_render_surfaces(surface, scale, lightMode);
   if (surface.hasSelectionSnapGuideX) {
     ScreenwidePreviewSelection guide = surface.selection;
     guide.x = surface.selectionSnapGuideX;
@@ -254,7 +248,6 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     state.magnifier_box[1] = magnifier.active != 0 ? magnifier.box_y : 0;
     state.magnifier_box[2] = magnifier.active != 0 ? magnifier.box_width : 0;
     state.magnifier_box[3] = magnifier.active != 0 ? magnifier.box_height : 0;
-    selection_action_shades(surface, state.action_shades);
     screenwide_region_osc_encode(
         encoder, surface.selectionPipeline, buffer, count, state,
         surface.selectionLabelTexture ?: surface.selectionLabelPlaceholder,
@@ -284,7 +277,6 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   id<MTLRenderCommandEncoder> encoder = [command renderCommandEncoderWithDescriptor:pass];
   ScreenwideRegionOscRenderState state =
       screenwide_region_osc_render_state(lightMode);
-  selection_action_shades(surface, state.action_shades);
   screenwide_region_osc_encode(
       encoder, surface.selectionPipeline, buffer, count, state,
       surface.selectionLabelTexture ?: surface.selectionLabelPlaceholder,

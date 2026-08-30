@@ -7,12 +7,23 @@
 @import "@fontsource-variable/inter/standard-italic.css";
 @import "overlayscrollbars/styles/overlayscrollbars.css";
 
+@font-face {
+  font-family: "Roboto Mono";
+  font-style: normal;
+  font-weight: 100 700;
+  src: url("../src-tauri/assets/RobotoMono-VariableFont_wght.ttf")
+    format("truetype");
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans:
     "Inter Variable", ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono:
+    "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 
   /* Shared layout rhythm: compact peers, related content, and sections. */
   --spacing-tight: 0.125rem;

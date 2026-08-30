@@ -18,7 +18,7 @@ import { ScrollingCaptureOverlayWindow } from "./features/screenshots/scrolling-
 import { SettingsWindow } from "./features/settings/settings-window";
 import { StandaloneListboxSync } from "./features/standalone-listbox/standalone-listbox-sync";
 import { StandaloneListboxWindow } from "./features/standalone-listbox/standalone-listbox-window";
-import { TextRecognitionWindow } from "./features/text-recognition/text-recognition-window";
+import { QrDetailsWindow } from "./features/text-recognition/qr-details-window";
 import { UpdatePromptWindow } from "./features/updates/update-prompt-window";
 
 export function App() {
@@ -45,7 +45,11 @@ export function App() {
       case "/standalone-listbox":
         return <StandaloneListboxWindow />;
       case "/text-recognition":
-        return <TextRecognitionWindow />;
+        // Native capture surfaces use this transparent webview only as their
+        // platform host. It deliberately has no React overlay or input path.
+        return null;
+      case "/qr-details":
+        return <QrDetailsWindow />;
       case "/update":
         return <UpdatePromptWindow />;
       default:

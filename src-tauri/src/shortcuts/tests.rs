@@ -55,6 +55,10 @@ fn each_frontend_action_goes_to_the_window_that_performs_it() {
     action_window(ShortcutAction::TakeScreenshotToClipboard).map(WindowLabel::as_str),
     Some(WindowLabel::RegionSelector.as_str())
   );
+  assert_eq!(
+    action_window(ShortcutAction::RecognizeText).map(WindowLabel::as_str),
+    Some(WindowLabel::RecordingBar.as_str())
+  );
 }
 
 #[test]
@@ -63,6 +67,17 @@ fn taking_a_screenshot_never_reaches_the_recording_bar() {
     action_window(ShortcutAction::TakeScreenshot).map(WindowLabel::as_str),
     action_window(ShortcutAction::StartStopRecording).map(WindowLabel::as_str)
   );
+}
+
+#[test]
+fn capture_window_graphs_are_never_changed_inside_shortcut_callbacks() {
+  for action in [
+    ShortcutAction::TakeScreenshot,
+    ShortcutAction::TakeScreenshotToClipboard,
+    ShortcutAction::RecognizeText,
+  ] {
+    assert!(requires_frontend_turn(action));
+  }
 }
 
 #[test]
@@ -89,7 +104,6 @@ fn taking_a_screenshot_keeps_the_ruler_visible() {
 fn the_actions_rust_handles_alone_ask_no_window() {
   for action in [
     ShortcutAction::PauseResumeRecording,
-    ShortcutAction::RecognizeText,
     ShortcutAction::RulerOverlay,
   ] {
     assert!(action_window(action).is_none());

@@ -207,7 +207,7 @@ export function ExportInspector({
               ) : null}
 
               {!hasRecordingSettings ? (
-                <Alert color="neutral" role="status" size="sm">
+                <Alert color="neutral" role="status">
                   No additional options are available for this recording.
                 </Alert>
               ) : null}

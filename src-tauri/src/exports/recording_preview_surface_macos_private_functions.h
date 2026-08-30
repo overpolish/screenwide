@@ -17,8 +17,12 @@
                            lightMode:(uint32_t)lightMode;
 @end
 NSRect editor_frame(ScreenwidePreviewSurface *surface, NSRect base);
-void selection_action_begin_transition(ScreenwidePreviewSurface *surface);
-void selection_action_shades(ScreenwidePreviewSurface *surface, float shades[4]);
+void selection_action_layout(ScreenwidePreviewSurface *surface);
+void selection_action_material_layout(ScreenwidePreviewSurface *surface);
+void selection_action_render_surfaces(
+    ScreenwidePreviewSurface *surface, CGFloat scale, uint32_t light_mode);
+void selection_action_fills(ScreenwidePreviewSurface *surface,
+                            uint32_t light_mode, float fills[8]);
 BOOL selection_is_keyboard(ScreenwidePreviewSelection selection);
 NSRect keyboard_hit_frame(ScreenwidePreviewSurface *surface,
                           ScreenwidePreviewSelection selection);
@@ -81,6 +85,8 @@ void set_selection_move_cursor(void);
 void set_selection_cursor_at_point(ScreenwidePreviewSurface *surface,
                                    NSPoint point);
 BOOL selection_action_hover(ScreenwidePreviewSurface *surface, NSPoint point);
+BOOL selection_action_hit(ScreenwidePreviewSurface *surface, NSPoint point);
+BOOL selection_action_clear_hover(ScreenwidePreviewSurface *surface);
 BOOL selection_action_begin(ScreenwidePreviewSurface *surface, NSInteger button, NSPoint point);
 BOOL selection_action_drag(ScreenwidePreviewSurface *surface, NSPoint point);
 BOOL selection_action_end(ScreenwidePreviewSurface *surface, NSPoint point);

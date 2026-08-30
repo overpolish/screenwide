@@ -53,6 +53,10 @@ import {
 } from "../../recording-sources/types";
 import { WindowSourceControls } from "../../recording-sources/window-source-controls";
 import { ShortcutAction } from "../../settings/types";
+import {
+  cancelTextRecognition,
+  startTextRecognition,
+} from "../../text-recognition/api";
 import { startRecording } from "../api";
 import { startRecordingOptions } from "../recording-request";
 import { selectStatus, useRecordingStore } from "../store";
@@ -64,6 +68,8 @@ import { RecordingBar } from "./recording-bar";
 
 const RECORDING_ERROR_EVENT = "recording://error";
 const RECORDING_DISMISS_REQUESTED_EVENT = "recording-ui://dismiss-requested";
+const TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT =
+  "text-recognition://dismiss-requested";
 /** A recording started without selected inputs whose devices had vanished. */
 const RECORDING_INPUTS_SKIPPED_EVENT = "recording://inputs-skipped";
 const SOURCE_AVAILABILITY_INTERVAL_MS = 1_500;
@@ -261,6 +267,23 @@ export function RecordingBarWindow() {
   }, []);
 
   useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+    let disposed = false;
+
+    void listen(TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT, () => {
+      void cancelTextRecognition();
+    }).then((listener) => {
+      if (disposed) listener();
+      else unlisten = listener;
+    });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
     // Returning to idle does not mean the controls should return: a completed
     // capture hands ownership to the export window. Explicitly showing the
     // recording UI emits the event below and synchronizes it at that point.
@@ -373,6 +396,15 @@ export function RecordingBarWindow() {
     void listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
       if (payload === "toggleRecordingBar") {
         void toggleRecordingUi();
+        return;
+      }
+      if (payload === "recognizeText") {
+        void (async () => {
+          await hideRecordingUi();
+          await startTextRecognition();
+        })().catch((error: unknown) => {
+          console.error("Could not start text recognition", error);
+        });
         return;
       }
       if (payload !== "startStopRecording") return;

@@ -5296,6 +5296,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 name = "screenwide"
 version = "0.1.0"
 dependencies = [
+ "block2",
  "bytemuck",
  "cc",
  "chrono",
@@ -5332,6 +5333,7 @@ dependencies = [
  "tauri-plugin-updater",
  "tauri-plugin-window-state",
  "tokio",
+ "url",
  "wasapi",
  "wgpu",
  "windows 0.62.2",

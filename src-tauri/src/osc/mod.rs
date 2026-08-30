@@ -4,6 +4,7 @@
 //! Platform-neutral state for on-screen controls (OSC). Rendering backends can
 //! consume this model without duplicating geometry or pointer semantics.
 pub mod controller;
+pub mod controls;
 pub mod desktop;
 pub mod geometry;
 pub mod gesture;

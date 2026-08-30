@@ -23,7 +23,6 @@ pub struct Rect {
 pub struct Monitor {
   pub size: Size,
 }
-
 impl Point {
   pub fn finite(self) -> bool {
     self.x.is_finite() && self.y.is_finite()
@@ -38,6 +37,20 @@ impl Size {
   }
 }
 impl Rect {
+  pub const fn from_xywh(x: f64, y: f64, width: f64, height: f64) -> Self {
+    Self {
+      origin: Point { x, y },
+      size: Size { width, height },
+    }
+  }
+  pub fn contains(self, point: Point) -> bool {
+    self.valid()
+      && point.finite()
+      && point.x >= self.origin.x
+      && point.x <= self.right()
+      && point.y >= self.origin.y
+      && point.y <= self.bottom()
+  }
   pub fn finite(self) -> bool {
     self.origin.finite() && self.size.finite()
   }
@@ -80,7 +93,6 @@ impl Rect {
     }
   }
 }
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Handle {
   Body,

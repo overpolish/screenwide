@@ -48,8 +48,17 @@ void screenwide_region_osc_set_input_enabled(void *view_ptr, int enabled) {
   for (ScreenwideRegionOSC *surface in screenwide_region_osc_surfaces(root)) {
     surface.gestureActive = NO;
     surface.inputEnabled = enabled != 0;
-    if (surface != root)
+    if (surface != root) {
       surface.host.window.ignoresMouseEvents = !surface.inputEnabled;
+      // Loading temporarily disables the peer panels while the React owner is
+      // brought forward. Reassert their compositor ordering when ready input
+      // returns, otherwise an external display can visually update while its
+      // pointer events fall through to the desktop beneath it.
+      if (surface.inputEnabled && root.visible && surface.host.window.visible) {
+        surface.host.window.level = root.host.window.level;
+        [surface.host.window orderFrontRegardless];
+      }
+    }
     if (!surface.inputEnabled) {
       ScreenwideRegionMagnifier magnifier = surface.magnifier;
       magnifier.active = 0;

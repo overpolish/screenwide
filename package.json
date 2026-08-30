@@ -21,6 +21,7 @@
     "dev": "pnpm ffmpeg:prepare && vite",
     "dev:permissions": "node scripts/dev-permissions-preview.mjs",
     "dev:screenshot-failures": "node scripts/dev-screenshot-failures-preview.mjs",
+    "dev:storybook-native": "node scripts/dev-storybook-native.mjs",
     "dev:updater": "node scripts/dev-updater-preview.mjs",
     "ffmpeg:prepare": "node scripts/prepare-ffmpeg.mjs",
     "ffmpeg:verify-release": "node scripts/verify-ffmpeg-release.mjs",

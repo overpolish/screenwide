@@ -12,13 +12,15 @@ static ARMED: AtomicBool = AtomicBool::new(false);
 const ESCAPE: &str = "Escape";
 const DISMISS_REQUESTED_EVENT: &str = "recording-ui://dismiss-requested";
 const SCREENSHOT_DISMISS_REQUESTED_EVENT: &str = "screenshot-region://dismiss-requested";
+const TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT: &str = "text-recognition://dismiss-requested";
 
 const fn should_be_armed(
   controls_visible: bool,
   screenshot_session: bool,
   ruler_active: bool,
+  text_recognition_active: bool,
 ) -> bool {
-  screenshot_session || (controls_visible && !ruler_active)
+  text_recognition_active || screenshot_session || (controls_visible && !ruler_active)
 }
 
 /// A capture overlay borrows Escape while it is active. Otherwise the visible
@@ -38,6 +40,14 @@ pub(super) fn arm(app: &AppHandle) {
     .global_shortcut()
     .on_shortcut(shortcut, |app, _, event| {
       if event.state() == ShortcutState::Pressed {
+        if crate::text_recognition::is_active(app) {
+          let _ = app.emit_to(
+            WindowLabel::RecordingBar.as_str(),
+            TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT,
+            (),
+          );
+          return;
+        }
         if super::region::SCREENSHOT_REGION_SESSION.load(Ordering::Acquire) {
           let _ = app.emit_to(
             WindowLabel::RegionSelector.as_str(),
@@ -94,7 +104,12 @@ pub(super) fn sync(
   screenshot_session: bool,
   ruler_active: bool,
 ) {
-  if should_be_armed(controls_visible, screenshot_session, ruler_active) {
+  if should_be_armed(
+    controls_visible,
+    screenshot_session,
+    ruler_active,
+    crate::text_recognition::is_active(app),
+  ) {
     arm(app);
   } else {
     disarm(app);
@@ -107,14 +122,19 @@ mod tests {
 
   #[test]
   fn screenshot_session_borrows_escape_from_visible_recording_ui() {
-    assert!(should_be_armed(true, true, false));
-    assert!(should_be_armed(false, true, true));
-    assert!(should_be_armed(true, false, false));
-    assert!(!should_be_armed(false, false, false));
+    assert!(should_be_armed(true, true, false, false));
+    assert!(should_be_armed(false, true, true, false));
+    assert!(should_be_armed(true, false, false, false));
+    assert!(!should_be_armed(false, false, false, false));
+  }
+
+  #[test]
+  fn text_recognition_borrows_escape_without_recording_controls() {
+    assert!(should_be_armed(false, false, false, true));
   }
 
   #[test]
   fn ruler_borrows_escape_from_visible_recording_ui() {
-    assert!(!should_be_armed(true, false, true));
+    assert!(!should_be_armed(true, false, true, false));
   }
 }

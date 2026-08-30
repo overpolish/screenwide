@@ -11,6 +11,7 @@ use crate::windows::WindowLabel;
 
 const SHORTCUTS_FILE: &str = "shortcuts.json";
 const SHORTCUT_ACTION_EVENT: &str = "global-shortcut://action";
+const SCREENSHOT_SHORTCUT_REQUESTED_EVENT: &str = "screenshot-region://shortcut-requested";
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -123,9 +124,8 @@ const fn action_window(action: ShortcutAction) -> Option<WindowLabel> {
     ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard => {
       Some(WindowLabel::RegionSelector)
     }
-    ShortcutAction::PauseResumeRecording
-    | ShortcutAction::RecognizeText
-    | ShortcutAction::RulerOverlay => None,
+    ShortcutAction::RecognizeText => Some(WindowLabel::RecordingBar),
+    ShortcutAction::PauseResumeRecording | ShortcutAction::RulerOverlay => None,
   }
 }
 
@@ -147,19 +147,52 @@ const fn preserved_capture_overlay(
   }
 }
 
+const fn requires_frontend_turn(action: ShortcutAction) -> bool {
+  matches!(
+    action,
+    ShortcutAction::ToggleRecordingBar
+      | ShortcutAction::RecognizeText
+      | ShortcutAction::TakeScreenshot
+      | ShortcutAction::TakeScreenshotToClipboard
+  )
+}
+
 fn run_action(app: &AppHandle, action: ShortcutAction) {
-  if action == ShortcutAction::ToggleRecordingBar {
-    // The global-shortcut plugin holds its registration mutex while this
-    // callback runs. Toggling the bar and dismissing capture overlays can both
-    // synchronize Escape, so hand all of that work to the bar's later IPC turn
-    // after this callback returns.
+  if crate::windows::region::is_screenshot_region_session() {
+    // The borrowed Region window owns screenshot teardown. Resume the action
+    // through `resume_shortcut_action` only after that later IPC turn has
+    // cleared the session, so shortcuts never overlap two window graphs.
+    let _ = app.emit_to(
+      WindowLabel::RegionSelector.as_str(),
+      SCREENSHOT_SHORTCUT_REQUESTED_EVENT,
+      action,
+    );
+    return;
+  }
+  if matches!(
+    action,
+    ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard
+  ) && (!crate::recording::is_idle(app)
+    || crate::exports::focus_if_screenshot_workspace_blocked(app))
+  {
+    return;
+  }
+  if requires_frontend_turn(action) {
+    // These operations create, show, or hide window graphs. Keep that work
+    // outside the native global-shortcut event cycle by handing it to the
+    // persistent frontend, which enters Rust again through a Tauri command.
     notify_frontend(app, action);
     return;
   }
 
   crate::capture_overlays::dismiss_except(app, preserved_capture_overlay(action));
   match action {
-    ShortcutAction::ToggleRecordingBar => unreachable!("handled above"),
+    ShortcutAction::ToggleRecordingBar
+    | ShortcutAction::RecognizeText
+    | ShortcutAction::TakeScreenshot
+    | ShortcutAction::TakeScreenshotToClipboard => {
+      unreachable!("handled above")
+    }
     ShortcutAction::PauseResumeRecording => {
       if matches!(
         crate::recording::snapshot(app).status,
@@ -182,20 +215,15 @@ fn run_action(app: &AppHandle, action: ShortcutAction) {
       }
       crate::recording::RecordingStatus::Stopping => {}
     },
-    ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard => {
-      if crate::recording::is_idle(app)
-        && !crate::exports::focus_if_screenshot_workspace_blocked(app)
-      {
-        notify_frontend(app, action);
-      }
-    }
-    ShortcutAction::RecognizeText => {
-      crate::text_recognition::start_detached(app);
-    }
     ShortcutAction::RulerOverlay => {
       crate::ruler::start_detached(app);
     }
   }
+}
+
+#[tauri::command]
+pub fn resume_shortcut_action(app: AppHandle, action: ShortcutAction) {
+  run_action(&app, action);
 }
 
 pub fn shortcut_for(app: &AppHandle, action: ShortcutAction) -> Option<String> {

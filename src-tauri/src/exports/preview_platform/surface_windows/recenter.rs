@@ -73,7 +73,7 @@ pub(super) fn begin_action(inner: &SurfaceInner, physical: (f64, f64)) -> bool {
     .selection
     .lock()
     .ok()
-    .is_some_and(|mut overlay| overlay.action.down(physical));
+    .is_some_and(|mut overlay| overlay.action.down(physical).consumed);
   if hit {
     redraw_action(inner);
   }
@@ -95,7 +95,7 @@ pub(super) fn action_hit(inner: &SurfaceInner, physical: (f64, f64)) -> bool {
     .selection
     .lock()
     .ok()
-    .is_some_and(|overlay| overlay.action.hit(physical))
+    .is_some_and(|overlay| overlay.action.hit_index(physical) != 0)
 }
 
 pub(super) fn update_action(inner: &SurfaceInner, physical: (f64, f64)) -> (bool, bool) {
@@ -105,7 +105,8 @@ pub(super) fn update_action(inner: &SurfaceInner, physical: (f64, f64)) -> (bool
     .lock()
     .ok()
     .map_or((false, false), |mut overlay| {
-      overlay.action.move_to(physical)
+      let update = overlay.action.move_to(physical);
+      (update.consumed, update.changed)
     });
   if changed {
     redraw_action(inner);
@@ -118,21 +119,19 @@ pub(super) fn release_action(
   physical: (f64, f64),
   logical: (f64, f64),
 ) -> bool {
-  let (activate, changed, second_half) =
-    inner
-      .gpu
-      .selection
-      .lock()
-      .ok()
-      .map_or((false, false, false), |mut overlay| {
-        let second_half = overlay.action.second_half(physical);
-        let (activate, changed) = overlay.action.up(physical);
-        (activate, changed, second_half)
-      });
+  let (activated, changed) = inner
+    .gpu
+    .selection
+    .lock()
+    .ok()
+    .map_or((0, false), |mut overlay| {
+      let update = overlay.action.up(physical);
+      (update.activated, update.changed)
+    });
   if changed {
     redraw_action(inner);
   }
-  let action = activate
+  let action = (activated != 0)
     .then(|| inner.state.lock().ok())
     .flatten()
     .and_then(|state| {
@@ -150,7 +149,7 @@ pub(super) fn release_action(
         last_delta: (0.0, 0.0),
         last_scale: 1.0,
         operation: if selection.layer_id == u32::MAX - 1 {
-          if second_half {
+          if activated == 2 {
             SelectionGestureOperation::ApplyToAllAction
           } else {
             SelectionGestureOperation::ResetAction

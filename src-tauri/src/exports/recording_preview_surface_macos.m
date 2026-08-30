@@ -9,6 +9,7 @@
 #include <math.h>
 
 #import "cursor_export/gpu_compositor_macos.h"
+#import "osc_controls.h"
 #import "recording_preview_surface_macos_private.h"
 #import "region_osc_renderer_macos.h"
 
@@ -501,6 +502,7 @@ void *screenwide_preview_surface_create(void *host_view) {
     // `selectionLabelPlaceholder`).
     surface.selectionLabelPlaceholder =
         screenwide_region_osc_make_placeholder(surface.device);
+    surface.selectionActionControls = screenwide_osc_control_group_create();
     surface.container = [[ScreenwidePreviewView alloc] initWithFrame:NSZeroRect];
     surface.container.wantsLayer = YES;
     surface.container.layer.masksToBounds = YES;
@@ -540,6 +542,19 @@ void *screenwide_preview_surface_create(void *host_view) {
     surface.interaction.surface = surface;
     surface.interaction.wantsLayer = YES;
     surface.interaction.layer.masksToBounds = YES;
+    surface.selectionActionMaterialContainer =
+        [[NSView alloc] initWithFrame:NSZeroRect];
+    surface.selectionActionMaterialContainer.wantsLayer = YES;
+    surface.selectionActionMaterialContainer.layer.masksToBounds = YES;
+    NSMutableArray<ScreenwideOscMaterialSurfaceView *> *materials =
+        [NSMutableArray arrayWithCapacity:2];
+    for (NSUInteger index = 0; index < 2; index++) {
+      ScreenwideOscMaterialSurfaceView *material =
+          screenwide_osc_material_surface(surface.device);
+      [surface.selectionActionMaterialContainer addSubview:material];
+      [materials addObject:material];
+    }
+    surface.selectionActionSurfaces = materials;
     surface.selectionLayer = [CAMetalLayer layer];
     surface.selectionLayer.device = surface.device;
     surface.selectionLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -560,17 +575,27 @@ void *screenwide_preview_surface_create(void *host_view) {
     [surface.interaction.layer addSublayer:surface.selectionLayer];
     surface.selectionLayer.hidden = YES;
     surface.interaction.hidden = YES;
+    surface.selectionActionMaterialContainer.hidden = YES;
     if (webview != nil) {
-      [surface.host addSubview:surface.interaction
+      [surface.host addSubview:surface.selectionActionMaterialContainer
                     positioned:NSWindowAbove
                     relativeTo:webview];
+      [surface.host addSubview:surface.interaction
+                    positioned:NSWindowAbove
+                    relativeTo:surface.selectionActionMaterialContainer];
     } else if ([surface.host isKindOfClass:[WKWebView class]] &&
                surface.host.superview != nil) {
-      [surface.host.superview addSubview:surface.interaction
+      [surface.host.superview addSubview:surface.selectionActionMaterialContainer
                               positioned:NSWindowAbove
                               relativeTo:surface.host];
+      [surface.host.superview addSubview:surface.interaction
+                              positioned:NSWindowAbove
+                              relativeTo:surface.selectionActionMaterialContainer];
     } else {
-      [surface.host addSubview:surface.interaction positioned:NSWindowAbove relativeTo:nil];
+      [surface.host addSubview:surface.selectionActionMaterialContainer
+                    positioned:NSWindowAbove relativeTo:nil];
+      [surface.host addSubview:surface.interaction positioned:NSWindowAbove
+                    relativeTo:surface.selectionActionMaterialContainer];
     }
     surface.editorZoom = 1.0;
     surface.selectionVisible = YES;
@@ -651,6 +676,7 @@ void screenwide_preview_surface_hide(void *handle) {
     [surface.interaction releaseCursorControl];
     surface.container.hidden = YES;
     surface.interaction.hidden = YES;
+    surface.selectionActionMaterialContainer.hidden = YES;
     for (ScreenwidePreviewView *view in surface.views) view.hidden = YES;
   });
 }
@@ -670,6 +696,8 @@ void screenwide_preview_surface_release_context_on_main(
 void screenwide_preview_surface_destroy(void *handle) {
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge_transfer ScreenwidePreviewSurface *)handle;
+  screenwide_osc_control_group_destroy(surface.selectionActionControls);
+  surface.selectionActionControls = NULL;
   dispatch_async(dispatch_get_main_queue(), ^{
     NSNotificationCenter *notifications = [NSNotificationCenter defaultCenter];
     if (surface.windowScreenObserver != nil)
@@ -683,6 +711,7 @@ void screenwide_preview_surface_destroy(void *handle) {
       view.compositor = NULL;
     }
     [surface.container removeFromSuperview];
+    [surface.selectionActionMaterialContainer removeFromSuperview];
     [surface.interaction removeFromSuperview];
   });
 }
