@@ -15,13 +15,49 @@ const SCREENSHOT_DISMISS_REQUESTED_EVENT: &str = "screenshot-region://dismiss-re
 const RULER_DISMISS_REQUESTED_EVENT: &str = "ruler://dismiss-requested";
 const TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT: &str = "text-recognition://dismiss-requested";
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum EscapeOwner {
+  TextRecognition,
+  Screenshot,
+  Ruler,
+  RecordingControls,
+}
+
+const fn owner(
+  controls_visible: bool,
+  screenshot_session: bool,
+  ruler_active: bool,
+  text_recognition_active: bool,
+) -> Option<EscapeOwner> {
+  if text_recognition_active {
+    Some(EscapeOwner::TextRecognition)
+  } else if screenshot_session {
+    // Quick Screenshot borrows the Region surface while preserving Ruler
+    // underneath it. Escape must return that borrowed surface first; Ruler
+    // becomes the owner again after the screenshot session has ended.
+    Some(EscapeOwner::Screenshot)
+  } else if ruler_active {
+    Some(EscapeOwner::Ruler)
+  } else if controls_visible {
+    Some(EscapeOwner::RecordingControls)
+  } else {
+    None
+  }
+}
+
 const fn should_be_armed(
   controls_visible: bool,
   screenshot_session: bool,
   ruler_active: bool,
   text_recognition_active: bool,
 ) -> bool {
-  text_recognition_active || screenshot_session || ruler_active || controls_visible
+  owner(
+    controls_visible,
+    screenshot_session,
+    ruler_active,
+    text_recognition_active,
+  )
+  .is_some()
 }
 
 /// A capture overlay borrows Escape while it is active. Otherwise the visible
@@ -41,29 +77,39 @@ pub(super) fn arm(app: &AppHandle) {
     .global_shortcut()
     .on_shortcut(shortcut, |app, _, event| {
       if event.state() == ShortcutState::Pressed {
-        if crate::text_recognition::is_active(app) {
-          let _ = app.emit_to(
-            WindowLabel::RecordingBar.as_str(),
-            TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT,
-            (),
-          );
-          return;
-        }
-        if crate::ruler::is_active(app) {
-          let _ = app.emit_to(
-            WindowLabel::RecordingBar.as_str(),
-            RULER_DISMISS_REQUESTED_EVENT,
-            (),
-          );
-          return;
-        }
-        if super::region::SCREENSHOT_REGION_SESSION.load(Ordering::Acquire) {
-          let _ = app.emit_to(
-            WindowLabel::RegionSelector.as_str(),
-            SCREENSHOT_DISMISS_REQUESTED_EVENT,
-            (),
-          );
-          return;
+        let screenshot_session = super::region::SCREENSHOT_REGION_SESSION.load(Ordering::Acquire);
+        match owner(
+          is_recording_ui_visible(),
+          screenshot_session,
+          crate::ruler::is_active(app),
+          crate::text_recognition::is_active(app),
+        ) {
+          Some(EscapeOwner::TextRecognition) => {
+            let _ = app.emit_to(
+              WindowLabel::RecordingBar.as_str(),
+              TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT,
+              (),
+            );
+            return;
+          }
+          Some(EscapeOwner::Screenshot) => {
+            let _ = app.emit_to(
+              WindowLabel::RegionSelector.as_str(),
+              SCREENSHOT_DISMISS_REQUESTED_EVENT,
+              (),
+            );
+            return;
+          }
+          Some(EscapeOwner::Ruler) => {
+            let _ = app.emit_to(
+              WindowLabel::RecordingBar.as_str(),
+              RULER_DISMISS_REQUESTED_EVENT,
+              (),
+            );
+            return;
+          }
+          Some(EscapeOwner::RecordingControls) => {}
+          None => return,
         }
         if !is_recording_ui_visible() {
           return;
@@ -126,7 +172,7 @@ pub(super) fn sync(
 
 #[cfg(test)]
 mod tests {
-  use super::should_be_armed;
+  use super::{owner, should_be_armed, EscapeOwner};
 
   #[test]
   fn screenshot_session_borrows_escape_from_visible_recording_ui() {
@@ -145,5 +191,14 @@ mod tests {
   fn ruler_borrows_escape_from_visible_recording_ui() {
     assert!(should_be_armed(true, false, true, false));
     assert!(should_be_armed(false, false, true, false));
+  }
+
+  #[test]
+  fn screenshot_borrows_escape_before_preserved_ruler() {
+    assert_eq!(
+      owner(true, true, true, false),
+      Some(EscapeOwner::Screenshot)
+    );
+    assert_eq!(owner(true, false, true, false), Some(EscapeOwner::Ruler));
   }
 }

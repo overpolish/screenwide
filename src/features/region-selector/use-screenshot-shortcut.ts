@@ -4,6 +4,7 @@
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 
+import { useRecordingSourceStore } from "../recording-sources/store";
 import { ShortcutAction } from "../settings/types";
 
 import {
@@ -28,6 +29,10 @@ export function useScreenshotShortcut(enabled = true) {
     void Promise.all([
       listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
         if (!isScreenshotShortcut(payload)) return;
+        // Rust routes active sessions through the dedicated handoff event.
+        // Tauri listeners can still observe the original targeted event; do
+        // not let that duplicate turn a destination switch into a dismissal.
+        if (useRecordingSourceStore.getState().isScreenshotCapture) return;
         handleScreenshotShortcut(payload).catch((error: unknown) => {
           console.error("Could not open the region for a screenshot", error);
         });

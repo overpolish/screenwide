@@ -4,8 +4,9 @@
 use super::*;
 use crate::osc::{
   controller::RegionController,
-  geometry::{Monitor, Point, Rect, Size},
+  geometry::{Handle, Monitor, Point, Rect, Size},
   gesture::GestureKind,
+  protocol::CursorIcon,
 };
 
 fn controller() -> RegionController {
@@ -67,22 +68,22 @@ fn idle_hover_keeps_crosshair_except_on_resize_handles() {
   assert_eq!(kind, GestureKind::Moving);
 
   let mut result = result_for(kind, None);
-  apply_phase_cursor(InputPhase::Hover as u32, true, &mut result);
-  assert_eq!(result.cursor, ffi::CURSOR_CROSSHAIR);
+  apply_phase_cursor(InputPhase::Hover, true, &mut result);
+  assert_eq!(result.cursor, CursorIcon::Crosshair as u8);
 
-  apply_phase_cursor(InputPhase::Down as u32, true, &mut result);
+  apply_phase_cursor(InputPhase::Down, true, &mut result);
   assert_eq!(result.cursor, ffi::CURSOR_CLOSED_HAND);
 
   let mut resize = result_for(GestureKind::Resizing(Handle::NorthEast), None);
-  apply_phase_cursor(InputPhase::Hover as u32, true, &mut resize);
+  apply_phase_cursor(InputPhase::Hover, true, &mut resize);
   assert_eq!(resize.cursor, ffi::CURSOR_DIAGONAL);
 
   let mut recording_body = result_for(GestureKind::Moving, None);
-  apply_phase_cursor(InputPhase::Hover as u32, false, &mut recording_body);
+  apply_phase_cursor(InputPhase::Hover, false, &mut recording_body);
   assert_eq!(recording_body.cursor, ffi::CURSOR_OPEN_HAND);
 
   let mut recording_outside = result_for(GestureKind::Drawing, None);
-  apply_phase_cursor(InputPhase::Hover as u32, false, &mut recording_outside);
+  apply_phase_cursor(InputPhase::Hover, false, &mut recording_outside);
   assert_eq!(recording_outside.cursor, ffi::CURSOR_ARROW);
 }
 

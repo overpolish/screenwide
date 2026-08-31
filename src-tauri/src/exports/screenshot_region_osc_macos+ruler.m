@@ -6,7 +6,7 @@
 
 static const CFTimeInterval kRulerAnimationDuration = 0.160;
 static const CFTimeInterval kRulerHoverPulseDuration =
-    kRulerAnimationDuration * 4.0;
+    kRulerAnimationDuration;
 static const NSUInteger kRulerAtlasCells = 22;
 
 @interface ScreenwideRulerLabelRenderState : NSObject
@@ -209,25 +209,12 @@ static CGFloat ruler_hover_ease(CGFloat progress) {
 }
 
 static CGFloat ruler_hover_width(ScreenwideRegionOSC *surface) {
-  ScreenwideOscControlSpacing spacing = screenwide_osc_control_spacing();
-  CGFloat progress = ruler_hover_progress(surface);
-  if (progress < 0.6) {
-    CGFloat eased = ruler_hover_ease(progress / 0.6);
-    return spacing.control + (spacing.section - spacing.control) * eased;
-  }
-  CGFloat eased = ruler_hover_ease((progress - 0.6) / 0.4);
-  return spacing.section +
-      (spacing.control_inset - spacing.section) * eased;
+  CGFloat eased = ruler_hover_ease(ruler_hover_progress(surface));
+  return 3.0 + (8.0 - 3.0) * eased;
 }
 
-static CGFloat ruler_hover_alpha(ScreenwideRegionOSC *surface) {
-  CGFloat progress = ruler_hover_progress(surface);
-  if (progress < 0.6) {
-    CGFloat eased = ruler_hover_ease(progress / 0.6);
-    return 0.50 + (0.16 - 0.50) * eased;
-  }
-  CGFloat eased = ruler_hover_ease((progress - 0.6) / 0.4);
-  return 0.16 + (0.24 - 0.16) * eased;
+static CGFloat ruler_hover_alpha(__unused ScreenwideRegionOSC *surface) {
+  return 0.24;
 }
 
 static void render(ScreenwideRegionOSC *surface);
@@ -266,8 +253,10 @@ static NSData *labelled_measurement_data(NSData *data) {
   NSMutableData *labelled = [NSMutableData dataWithData:data];
   NativeRulerMeasurement *items = labelled.mutableBytes;
   NSUInteger count = labelled.length / sizeof(NativeRulerMeasurement);
-  for (NSUInteger index = 0; index < count; index++)
+  for (NSUInteger index = 0; index < count; index++) {
     items[index].flags &= 11;
+    items[index].padding[0] = 0;
+  }
   return labelled;
 }
 
@@ -359,8 +348,10 @@ static NSData *labelled_radius_data(NSData *data) {
   NSMutableData *labelled = [NSMutableData dataWithData:data];
   NativeRulerRadius *items = labelled.mutableBytes;
   NSUInteger count = labelled.length / sizeof(NativeRulerRadius);
-  for (NSUInteger index = 0; index < count; index++)
+  for (NSUInteger index = 0; index < count; index++) {
     items[index].flags &= 11;
+    items[index].padding[0] = 0;
+  }
   return labelled;
 }
 
@@ -415,6 +406,7 @@ static NSData *labelled_guide_gap_data(NSData *data) {
   for (NSUInteger index = 0; index < count; index++) {
     NativeRulerGuideGap value = items[index];
     value.flags &= 2;
+    value.padding[0] = 0;
     [labelled appendBytes:&value length:sizeof(value)];
   }
   return labelled;
@@ -431,6 +423,7 @@ static NSData *labelled_probe_data(NSData *data) {
       continue;
     NativeRulerProbe value = items[index];
     value.flags = (draft ? 1 : 0) | (items[index].flags & 8);
+    value.padding[0] = 0;
     [labelled appendBytes:&value length:sizeof(value)];
   }
   return labelled;
@@ -859,34 +852,46 @@ static uint64_t hovered_artifact_key(NSData *measurementsData,
                                      NSData *probesData,
                                      NSData *guidesData,
                                      NSData *gapsData,
-                                     NSData *radiiData) {
+                                     NSData *radiiData,
+                                     CGFloat *opacity) {
+  if (opacity) *opacity = 0.0;
   const NativeRulerMeasurement *measurementItems = measurementsData.bytes;
   NSUInteger measurementCount =
       measurementsData.length / sizeof(NativeRulerMeasurement);
   for (NSUInteger index = 0; index < measurementCount; index++)
-    if ((measurementItems[index].flags & 4) != 0)
+    if (measurementItems[index].padding[0] != 0) {
+      if (opacity) *opacity = measurementItems[index].padding[0] / 255.0;
       return (measurementItems[index].id << 3) | 1;
+    }
 
   const NativeRulerProbe *probeItems = probesData.bytes;
   NSUInteger probeCount = probesData.length / sizeof(NativeRulerProbe);
   for (NSUInteger index = 0; index < probeCount; index++)
-    if ((probeItems[index].flags & 2) != 0)
+    if (probeItems[index].padding[0] != 0) {
+      if (opacity) *opacity = probeItems[index].padding[0] / 255.0;
       return (probeItems[index].id << 3) | 2;
+    }
   const NativeRulerGuide *guideItems = guidesData.bytes;
   NSUInteger guideCount = guidesData.length / sizeof(NativeRulerGuide);
   for (NSUInteger index = 0; index < guideCount; index++)
-    if ((guideItems[index].flags & 2) != 0)
+    if (guideItems[index].padding[0] != 0) {
+      if (opacity) *opacity = guideItems[index].padding[0] / 255.0;
       return (guideItems[index].id << 3) | 3;
+    }
   const NativeRulerGuideGap *gapItems = gapsData.bytes;
   NSUInteger gapCount = gapsData.length / sizeof(NativeRulerGuideGap);
   for (NSUInteger index = 0; index < gapCount; index++)
-    if ((gapItems[index].flags & 1) != 0)
+    if (gapItems[index].padding[0] != 0) {
+      if (opacity) *opacity = gapItems[index].padding[0] / 255.0;
       return (gapItems[index].id << 3) | 4;
+    }
   const NativeRulerRadius *radiusItems = radiiData.bytes;
   NSUInteger radiusCount = radiiData.length / sizeof(NativeRulerRadius);
   for (NSUInteger index = 0; index < radiusCount; index++)
-    if ((radiusItems[index].flags & 4) != 0)
+    if (radiusItems[index].padding[0] != 0) {
+      if (opacity) *opacity = radiusItems[index].padding[0] / 255.0;
       return (radiusItems[index].id << 3) | 5;
+    }
   return 0;
 }
 
@@ -942,19 +947,23 @@ void screenwide_region_osc_apply_ruler_result(ScreenwideRegionOSC *surface,
   NSData *centerlineList = centerline_data(root);
   NSData *innerObjectList = inner_object_data(root);
   NSData *viewports = viewport_data(root);
+  CGFloat hoverOpacity = 0.0;
   uint64_t hoverKey = hovered_artifact_key(drawList, probeList, guideList,
-                                           guideGapList, radiusList);
+                                           guideGapList, radiusList,
+                                           &hoverOpacity);
   BOOL hoverChanged = root.rulerHoveredArtifactKey != hoverKey;
   if (hoverChanged) {
     root.rulerHoveredArtifactKey = hoverKey;
     root.rulerHoverPulseStarted = CACurrentMediaTime();
     root.rulerHoverPulseRevision++;
   }
+  root.rulerHoverOpacity = hoverOpacity;
   BOOL animationActive = NO;
   const NativeRulerMeasurement *items = drawList.bytes;
   NSUInteger itemCount = drawList.length / sizeof(NativeRulerMeasurement);
   for (NSUInteger index = 0; index < itemCount; index++)
     animationActive |= (items[index].flags & 2) != 0;
+  animationActive |= (result.ruler_flags & 128) != 0;
   uint64_t revision = ++root.rulerCopiedRevision;
   for (ScreenwideRegionOSC *item in screenwide_region_osc_surfaces(root)) {
     NativeRulerViewport viewport = viewport_for_surface(item, viewports);
@@ -979,6 +988,7 @@ void screenwide_region_osc_apply_ruler_result(ScreenwideRegionOSC *surface,
     set_tolerance_visible(item, root.rulerToleranceVisible,
                           toleranceStarted);
     item.rulerHoveredArtifactKey = hoverKey;
+    item.rulerHoverOpacity = hoverOpacity;
     item.rulerHoverPulseStarted = root.rulerHoverPulseStarted;
     BOOL measurementChanged = viewportChanged ||
         ![item.rulerMeasurements isEqualToData:drawList];
@@ -1073,7 +1083,7 @@ void screenwide_region_osc_ruler_apply_render_state(
          sizeof(visual.foreground));
   state->ruler_animation[1] =
       surface.rulerHoveredArtifactKey != 0
-          ? ruler_hover_alpha(surface)
+          ? ruler_hover_alpha(surface) * surface.rulerHoverOpacity
           : 0.0;
   state->ruler_animation[2] =
       ruler_hover_width(surface) *
@@ -1820,7 +1830,7 @@ void screenwide_region_osc_ruler_add_vertices(
       start = end;
       end = swap;
     }
-    if ((probe.flags & 2) != 0)
+    if (probe.padding[0] != 0)
       screenwide_region_osc_add_line(
           vertices, count, size,
           probe.axis == 1 ? NSMakePoint(start, position)
@@ -1863,7 +1873,7 @@ void screenwide_region_osc_ruler_add_vertices(
                    surface.rulerViewportOrigin.x) * zoom;
       x = screenwide_region_osc_snap(x, scale);
       if (x >= 0.0 && x <= size.width) {
-        if ((guide.flags & 2) != 0)
+        if (guide.padding[0] != 0)
           screenwide_region_osc_add_line(vertices, count, size,
                                          NSMakePoint(x, 0.0),
                                          NSMakePoint(x, size.height),
@@ -1878,7 +1888,7 @@ void screenwide_region_osc_ruler_add_vertices(
                    surface.rulerViewportOrigin.y) * zoom;
       y = screenwide_region_osc_snap(y, scale);
       if (y >= 0.0 && y <= size.height) {
-        if ((guide.flags & 2) != 0)
+        if (guide.padding[0] != 0)
           screenwide_region_osc_add_line(vertices, count, size,
                                          NSMakePoint(0.0, y),
                                          NSMakePoint(size.width, y),
@@ -1908,7 +1918,7 @@ void screenwide_region_osc_ruler_add_vertices(
                                       : NSMakePoint(position, start);
     NSPoint lineEnd = gap.axis == 1 ? NSMakePoint(end, position)
                                     : NSMakePoint(position, end);
-    if ((gap.flags & 1) != 0)
+    if (gap.padding[0] != 0)
       screenwide_region_osc_add_line(vertices, count, size, lineStart,
                                      lineEnd, hoverWidth, 38);
     screenwide_region_osc_add_line(vertices, count, size, lineStart, lineEnd,
@@ -1947,7 +1957,7 @@ void screenwide_region_osc_ruler_add_vertices(
     CGFloat value = MAX(round(radius.radius * zoom * scale) / scale,
                         1.0 / scale);
     BOOL lowConfidence = (radius.flags & 1) != 0;
-    BOOL hovered = (radius.flags & 4) != 0;
+    BOOL hovered = radius.padding[0] != 0;
     screenwide_region_osc_add_ruler_arc(
         vertices, count, size, center, value, radius.corner, scale,
         hovered, hoverWidth, lowConfidence);
@@ -2000,6 +2010,6 @@ void screenwide_region_osc_ruler_add_vertices(
     NSRect frame = project_measurement(surface, items[index]);
     screenwide_region_osc_add_ruler_box(
         vertices, count, size, frame, scale,
-        (items[index].flags & 4) != 0, hoverWidth);
+        items[index].padding[0] != 0, hoverWidth);
   }
 }

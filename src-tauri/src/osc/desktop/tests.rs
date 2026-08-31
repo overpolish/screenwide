@@ -22,6 +22,38 @@ const EXTERNAL: DesktopDisplay = DesktopDisplay {
   scale: 1.0,
 };
 
+fn binding() -> DesktopBinding {
+  DesktopBinding {
+    displays: vec![RETINA, EXTERNAL],
+    anchor_id: RETINA.id,
+    size: Size {
+      width: 2920.0,
+      height: 1080.0,
+    },
+    layout_changed: false,
+  }
+}
+
+#[test]
+fn binding_resolves_the_display_containing_desktop_input() {
+  let binding = binding();
+  assert_eq!(binding.display_at(Point { x: 900.0, y: 500.0 }), Some(1));
+  assert_eq!(
+    binding.display_at(Point {
+      x: 2500.0,
+      y: 500.0,
+    }),
+    Some(2)
+  );
+  assert_eq!(
+    binding.display_at(Point {
+      x: 1100.0,
+      y: -20.0,
+    }),
+    None
+  );
+}
+
 #[test]
 fn round_trips_through_mixed_scale_desktop_coordinates() {
   let local = Rect {

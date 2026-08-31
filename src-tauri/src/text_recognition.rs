@@ -8,6 +8,8 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::{capture_overlays, screenshots, windows::WindowLabel};
+mod adapter;
+mod input;
 mod interaction;
 #[cfg(target_os = "macos")]
 mod native_overlay_macos;
@@ -20,8 +22,13 @@ pub(crate) mod qr_details;
 pub(crate) mod snapshot;
 mod text_selection;
 pub(crate) mod toolbar;
-mod visual;
+pub(crate) mod visual;
 
+pub(crate) use input::{
+  dispatch_control, dispatch_text_input as native_text_input,
+  selection_finished as native_selection_finished, selection_started as native_selection_started,
+  text_interaction_started as native_text_interaction_started,
+};
 pub(crate) use interaction::{copy_all_and_dismiss, copy_selection_and_dismiss};
 pub use snapshot::TextRecognitionState;
 
@@ -68,15 +75,6 @@ pub struct TextRecognitionResult {
   pub text: String,
 }
 
-#[cfg(target_os = "macos")]
-pub(crate) use native_overlay_macos::selection_finished as native_selection_finished;
-#[cfg(target_os = "macos")]
-pub(crate) use native_overlay_macos::selection_started as native_selection_started;
-#[cfg(target_os = "macos")]
-pub(crate) use native_overlay_macos::text_input as native_text_input;
-#[cfg(target_os = "macos")]
-pub(crate) use native_overlay_macos::text_interaction_started as native_text_interaction_started;
-
 fn recognition_windows(app: &AppHandle) -> Vec<tauri::WebviewWindow> {
   app
     .get_webview_window(WindowLabel::TextRecognition.as_str())
@@ -88,7 +86,6 @@ pub(crate) fn is_active(app: &AppHandle) -> bool {
   app.state::<TextRecognitionState>().is_active()
 }
 
-#[cfg(target_os = "macos")]
 pub(crate) fn restart_after_topology_change(app: &AppHandle) {
   let state = app.state::<TextRecognitionState>();
   let Some(generation) = state.active_generation() else {
@@ -110,16 +107,7 @@ fn close_recognition_windows(app: &AppHandle, except: Option<&str>) {
   // Native surfaces must be concealed before their owner webviews close:
   // peers are compositor panels rather than Tauri windows and otherwise
   // outlive the first monitor's visual teardown.
-  #[cfg(target_os = "macos")]
-  native_overlay_macos::close(app, except);
-  #[cfg(not(target_os = "macos"))]
-  for window in recognition_windows(app) {
-    if Some(window.label()) != except {
-      #[cfg(target_os = "windows")]
-      let _ = crate::windows::conceal_disposable_overlay(&window);
-      let _ = window.close();
-    }
-  }
+  adapter::close(app, except);
 }
 
 pub fn dismiss(app: &AppHandle) {
@@ -188,17 +176,13 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     .map_err(|error| error.to_string())?;
   capture_overlays::set_level(&window, capture_overlays::FOREGROUND_LEVEL)?;
 
-  #[cfg(target_os = "macos")]
-  native_overlay_macos::install(&window, anchor_id, &native_snapshots)?;
-
-  #[cfg(target_os = "macos")]
-  native_overlay_macos::show_without_activation(&window)?;
-
-  #[cfg(not(target_os = "macos"))]
-  crate::windows::show(&window, true).map_err(|error| error.to_string())?;
-
-  #[cfg(target_os = "macos")]
-  native_overlay_macos::present(&window)?;
+  let native_installed = adapter::install(&window, anchor_id, &native_snapshots)?;
+  if native_installed {
+    adapter::show_without_activation(&window)?;
+    adapter::present(&window)?;
+  } else {
+    crate::windows::show(&window, true).map_err(|error| error.to_string())?;
+  }
 
   capture_overlays::emit_lifecycle(app, true);
   crate::windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
@@ -255,9 +239,8 @@ async fn recognize_current(app: &AppHandle) -> Result<TextRecognitionResult, Str
   let (lines, qr_codes) = match recognize(image.rgba, image.width, image.height).await {
     Ok(result) => result,
     Err(error) => {
-      #[cfg(target_os = "macos")]
       if state.is_current_generation(generation) {
-        native_overlay_macos::show_error(app, &error);
+        adapter::show_error(app, &error);
       }
       return Err(error);
     }
@@ -272,9 +255,8 @@ async fn recognize_current(app: &AppHandle) -> Result<TextRecognitionResult, Str
     qr_codes,
     text,
   };
-  #[cfg(target_os = "macos")]
   if state.install_result(generation, result.clone()) {
-    native_overlay_macos::show_ready(app, generation);
+    adapter::show_ready(app, generation);
   }
   Ok(result)
 }

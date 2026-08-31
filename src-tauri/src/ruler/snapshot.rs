@@ -33,6 +33,7 @@ const ARTIFACT_HIT_SLOP: f64 = 6.0;
 const HISTORY_LIMIT: usize = 100;
 const GUIDE_SNAP_RADIUS: f64 = 10.0;
 const GUIDE_RELEASE_RADIUS: f64 = 16.0;
+const HOVER_EXIT_DURATION: Duration = Duration::from_millis(160);
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) enum Tolerance {
@@ -75,6 +76,7 @@ pub struct RulerMeasurementVisual {
   pub draft: bool,
   pub animating: bool,
   pub hovered: bool,
+  pub hover_alpha: f32,
   pub label_anchor: Option<Point>,
   pub label_hidden: bool,
 }
@@ -110,8 +112,7 @@ struct DisplaySnapshot {
   image: CapturedImage,
   gradients: GradientMaps,
   probes: ProbeIndex,
-  boxes: Vec<ComponentBox>,
-  radius_boxes: [Vec<ComponentBox>; 3],
+  boxes_by_tolerance: [Vec<ComponentBox>; 3],
   viewport: Viewport,
 }
 
@@ -139,6 +140,7 @@ pub(crate) struct RulerProbeVisual {
   pub position: f64,
   pub draft: bool,
   pub hovered: bool,
+  pub hover_alpha: f32,
   pub label_anchor: Option<Point>,
   pub label_hidden: bool,
 }
@@ -157,6 +159,7 @@ pub(crate) struct RulerGuideVisual {
   pub position: f64,
   pub draft: bool,
   pub hovered: bool,
+  pub hover_alpha: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -169,6 +172,7 @@ pub(crate) struct RulerGuideGapVisual {
   pub end: f64,
   pub position: f64,
   pub hovered: bool,
+  pub hover_alpha: f32,
   pub label_anchor: Option<Point>,
   pub label_hidden: bool,
 }
@@ -183,6 +187,7 @@ pub(crate) struct RulerRadiusVisual {
   pub low_confidence: bool,
   pub draft: bool,
   pub hovered: bool,
+  pub hover_alpha: f32,
   pub label_anchor: Option<Point>,
   pub label_hidden: bool,
 }
@@ -334,6 +339,12 @@ struct GuideDrag {
 }
 
 #[derive(Clone, Copy)]
+struct HoverExit {
+  target: HoverTarget,
+  started: Instant,
+}
+
+#[derive(Clone, Copy)]
 struct RadiusGesture {
   visual: Option<RulerRadiusVisual>,
 }
@@ -368,6 +379,7 @@ struct Session {
   undo: Vec<Document>,
   redo: Vec<Document>,
   hovered_target: Option<HoverTarget>,
+  hover_exit: Option<HoverExit>,
   label_drag: Option<LabelDrag>,
   range: Option<RangeGesture>,
   guide: Option<GuideGesture>,
@@ -422,10 +434,9 @@ impl RulerState {
           .map(|(_, image)| {
             let gradients = compute_gradients(&image.rgba, image.width, image.height);
             let probes = ProbeIndex::new(&gradients, Tolerance::Balanced.threshold());
-            let boxes = detect_boxes(&gradients, Tolerance::Balanced.threshold());
-            let radius_boxes = [
+            let boxes_by_tolerance = [
               detect_boxes(&gradients, Tolerance::ClearEdges.threshold()),
-              boxes.clone(),
+              detect_boxes(&gradients, Tolerance::Balanced.threshold()),
               detect_boxes(&gradients, Tolerance::SubtleEdges.threshold()),
             ];
             DisplaySnapshot {
@@ -433,15 +444,18 @@ impl RulerState {
               image: image.clone(),
               gradients,
               probes,
-              boxes,
-              radius_boxes,
+              boxes_by_tolerance,
               viewport: Viewport::default(),
             }
           })
       })
       .collect();
     session.tolerance = Tolerance::Balanced;
-    session.boxes = session.displays.iter().flat_map(detected_boxes).collect();
+    session.boxes = session
+      .displays
+      .iter()
+      .flat_map(|snapshot| detected_boxes(snapshot, Tolerance::Balanced))
+      .collect();
     session.visual = None;
     session.copied_until = None;
     session.tolerance_until = None;
@@ -451,6 +465,7 @@ impl RulerState {
     session.undo.clear();
     session.redo.clear();
     session.hovered_target = None;
+    session.hover_exit = None;
     session.label_drag = None;
     session.range = None;
     session.guide = None;
@@ -482,7 +497,7 @@ impl RulerState {
     let now = Instant::now();
     let copied = session.copied_until.is_some_and(|deadline| deadline > now);
     let crosshair = session.visual.is_some_and(|visual| visual.crosshair);
-    session.hovered_target = if session.range.is_none()
+    let hovered_target = if session.range.is_none()
       && session.guide.is_none()
       && session.guide_drag.is_none()
       && session.radius.is_none()
@@ -491,6 +506,7 @@ impl RulerState {
     } else {
       None
     };
+    update_hover_target(&mut session, hovered_target, Instant::now());
     update_range(&mut session, pointer);
     update_guide(&mut session, pointer);
     update_radius(&mut session, pointer);
@@ -726,6 +742,13 @@ impl RulerState {
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     let pointer = pointer_from_visual(session.visual?);
     session.tolerance = session.tolerance.next();
+    let tolerance = session.tolerance;
+    session.boxes = session
+      .displays
+      .iter()
+      .flat_map(|snapshot| detected_boxes(snapshot, tolerance))
+      .collect();
+    session.center_aid_cache = None;
     session.tolerance_until = Some(Instant::now() + TOLERANCE_FEEDBACK_DURATION);
     if let Some(guide) = &mut session.guide {
       guide.snapped = false;
@@ -756,6 +779,15 @@ impl RulerState {
       || session.guide.is_some()
       || session.guide_drag.is_some()
       || session.radius.is_some()
+  }
+
+  pub(crate) fn hover_fade_active(&self) -> bool {
+    let mut session = self
+      .0
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    expire_hover_exit(&mut session, Instant::now());
+    session.hover_exit.is_some()
   }
 
   pub(crate) fn set_option_active(&self, active: bool) -> Option<RulerVisual> {
@@ -855,6 +887,7 @@ impl RulerState {
       }
     }
     session.hovered_target = None;
+    session.hover_exit = None;
     session.label_drag = None;
     session.settle = None;
     let pointer = pointer_from_visual(session.visual?);
@@ -924,6 +957,7 @@ impl RulerState {
       .0
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let now = Instant::now();
     let mut guides = session
       .document
       .guides
@@ -935,6 +969,7 @@ impl RulerState {
         position: guide.position,
         draft: false,
         hovered: session.hovered_target == Some(HoverTarget::Guide(guide.id)),
+        hover_alpha: hover_alpha(&session, HoverTarget::Guide(guide.id), now),
       })
       .collect::<Vec<_>>();
     if let Some(gesture) = session.guide {
@@ -972,6 +1007,7 @@ impl RulerState {
       .0
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let now = Instant::now();
     let mut radii = session
       .document
       .radii
@@ -985,6 +1021,7 @@ impl RulerState {
         low_confidence: radius.low_confidence,
         draft: false,
         hovered: session.hovered_target == Some(HoverTarget::Radius(radius.id)),
+        hover_alpha: hover_alpha(&session, HoverTarget::Radius(radius.id), now),
         label_anchor: radius.label.anchor,
         label_hidden: radius.label.hidden,
       })
@@ -1063,6 +1100,7 @@ impl RulerState {
         position: guide_pointer_position(axis, pointer.world),
         draft: true,
         hovered: false,
+        hover_alpha: 0.0,
       },
       snapped: false,
     });
@@ -1408,7 +1446,8 @@ fn refresh_visual(session: &mut Session, pointer: RulerPointer) -> Option<RulerV
     && session.radius.is_none()
     && session.label_drag.is_none()
   {
-    session.hovered_target = hit_test_artifact(session, pointer);
+    let hovered_target = hit_test_artifact(session, pointer);
+    update_hover_target(session, hovered_target, Instant::now());
   }
   update_range(session, pointer);
   update_guide(session, pointer);
@@ -1425,6 +1464,42 @@ fn refresh_visual(session: &mut Session, pointer: RulerPointer) -> Option<RulerV
   };
   session.visual = Some(visual);
   Some(visual)
+}
+
+fn update_hover_target(session: &mut Session, target: Option<HoverTarget>, now: Instant) {
+  if session.hovered_target == target {
+    expire_hover_exit(session, now);
+    return;
+  }
+  session.hover_exit = match (session.hovered_target, target) {
+    (Some(previous), None) => Some(HoverExit {
+      target: previous,
+      started: now,
+    }),
+    _ => None,
+  };
+  session.hovered_target = target;
+}
+
+fn expire_hover_exit(session: &mut Session, now: Instant) {
+  if session
+    .hover_exit
+    .is_some_and(|exit| now.saturating_duration_since(exit.started) >= HOVER_EXIT_DURATION)
+  {
+    session.hover_exit = None;
+  }
+}
+
+fn hover_alpha(session: &Session, target: HoverTarget, now: Instant) -> f32 {
+  if session.hovered_target == Some(target) {
+    return 1.0;
+  }
+  let Some(exit) = session.hover_exit.filter(|exit| exit.target == target) else {
+    return 0.0;
+  };
+  let progress =
+    now.saturating_duration_since(exit.started).as_secs_f32() / HOVER_EXIT_DURATION.as_secs_f32();
+  (1.0 - progress.clamp(0.0, 1.0)).powi(3)
 }
 
 fn pointer_from_visual(visual: RulerVisual) -> RulerPointer {
@@ -1471,6 +1546,7 @@ fn measurement_visuals(session: &mut Session, now: Instant) -> Vec<RulerMeasurem
       draft: false,
       animating: false,
       hovered: session.hovered_target == Some(HoverTarget::Measurement(measurement.id)),
+      hover_alpha: hover_alpha(session, HoverTarget::Measurement(measurement.id), now),
       label_anchor: measurement.label.anchor,
       label_hidden: measurement.label.hidden,
     })
@@ -1482,6 +1558,7 @@ fn measurement_visuals(session: &mut Session, now: Instant) -> Vec<RulerMeasurem
       draft: true,
       animating: false,
       hovered: false,
+      hover_alpha: 0.0,
       label_anchor: None,
       label_hidden: false,
     });
@@ -1973,9 +2050,8 @@ fn ordered_rect(start: Point, end: Point) -> Rect {
   )
 }
 
-fn detected_boxes(snapshot: &DisplaySnapshot) -> Vec<Rect> {
-  snapshot
-    .boxes
+fn detected_boxes(snapshot: &DisplaySnapshot, tolerance: Tolerance) -> Vec<Rect> {
+  snapshot.boxes_by_tolerance[tolerance.index()]
     .iter()
     .copied()
     .map(|item| {
@@ -1992,6 +2068,7 @@ fn detected_boxes(snapshot: &DisplaySnapshot) -> Vec<Rect> {
 }
 
 fn probe_visuals(session: &Session) -> Vec<RulerProbeVisual> {
+  let now = Instant::now();
   let mut visuals = session
     .document
     .probes
@@ -2005,6 +2082,7 @@ fn probe_visuals(session: &Session) -> Vec<RulerProbeVisual> {
       position: probe.position,
       draft: false,
       hovered: session.hovered_target == Some(HoverTarget::Probe(probe.id)),
+      hover_alpha: hover_alpha(session, HoverTarget::Probe(probe.id), now),
       label_anchor: probe.label.anchor,
       label_hidden: probe.label.hidden,
     })
@@ -2078,6 +2156,7 @@ fn automatic_probes(session: &Session, pointer: RulerPointer) -> Option<[RulerPr
         position,
         draft: false,
         hovered: false,
+        hover_alpha: 0.0,
         label_anchor: None,
         label_hidden: false,
       }
@@ -2174,7 +2253,7 @@ fn update_radius(session: &mut Session, pointer: RulerPointer) {
         y: (pointer.world.y - display.origin.y) / scale_y,
       };
       corner_radius_at(
-        &snapshot.radius_boxes[session.tolerance.index()],
+        &snapshot.boxes_by_tolerance[session.tolerance.index()],
         cursor,
         &snapshot.gradients,
         session.tolerance.threshold(),
@@ -2195,6 +2274,7 @@ fn update_radius(session: &mut Session, pointer: RulerPointer) {
         low_confidence: estimate.low_confidence,
         draft: true,
         hovered: false,
+        hover_alpha: 0.0,
         label_anchor: None,
         label_hidden: false,
       })
@@ -2312,6 +2392,7 @@ fn reconcile_guide_gaps(document: &mut Document) {
 }
 
 fn guide_gap_visuals(session: &Session) -> Vec<RulerGuideGapVisual> {
+  let now = Instant::now();
   session
     .document
     .guide_gaps
@@ -2352,6 +2433,7 @@ fn guide_gap_visuals(session: &Session) -> Vec<RulerGuideGapVisual> {
         end: first.position.max(second.position),
         position,
         hovered: session.hovered_target == Some(HoverTarget::GuideGap(gap.id)),
+        hover_alpha: hover_alpha(session, HoverTarget::GuideGap(gap.id), now),
         label_anchor: gap.label.anchor,
         label_hidden: gap.label.hidden,
       })
@@ -2504,6 +2586,7 @@ fn update_range(session: &mut Session, pointer: RulerPointer) {
     },
     draft: true,
     hovered: false,
+    hover_alpha: 0.0,
     label_anchor: None,
     label_hidden: false,
   };
@@ -2691,10 +2774,10 @@ mod tests {
     ));
     let session = state.0.lock().unwrap();
     let snapshot = &session.displays[0];
-    assert!(snapshot.radius_boxes[Tolerance::ClearEdges.index()].is_empty());
-    assert!(snapshot.radius_boxes[Tolerance::Balanced.index()].is_empty());
+    assert!(snapshot.boxes_by_tolerance[Tolerance::ClearEdges.index()].is_empty());
+    assert!(snapshot.boxes_by_tolerance[Tolerance::Balanced.index()].is_empty());
     assert_eq!(
-      snapshot.radius_boxes[Tolerance::SubtleEdges.index()].len(),
+      snapshot.boxes_by_tolerance[Tolerance::SubtleEdges.index()].len(),
       1
     );
   }
@@ -3188,7 +3271,7 @@ mod tests {
   }
 
   #[test]
-  fn tolerance_changes_only_transient_edges_and_preserves_stamped_artifacts() {
+  fn tolerance_changes_every_live_edge_detector_and_preserves_stamped_artifacts() {
     let state = RulerState::default();
     let generation = state.begin();
     let display = DesktopDisplay {
@@ -3213,7 +3296,8 @@ mod tests {
       height: 100,
     };
     assert!(state.install(generation, &[display], &[(1, image)]));
-    let boxes = state.0.lock().unwrap().boxes.clone();
+    let balanced_boxes = state.0.lock().unwrap().boxes.clone();
+    assert!(balanced_boxes.is_empty());
     let pointer = state.map_pointer(Point { x: 50.0, y: 50.0 }).unwrap();
     assert!(state.hover(pointer).is_some());
     let horizontal = state
@@ -3233,10 +3317,29 @@ mod tests {
       .collect::<Vec<_>>();
     let probe_pointer = state.map_pointer(Point { x: 60.0, y: 50.0 }).unwrap();
     assert!(state.hover(probe_pointer).is_some());
+    {
+      let mut session = state.0.lock().unwrap();
+      session.document.next_id += 1;
+      let id = session.document.next_id;
+      session.document.measurements.push(Measurement {
+        id,
+        bounds: Rect::from_xywh(0.0, 0.0, 10.0, 10.0),
+        label: ArtifactLabel::default(),
+      });
+    }
+    let _ = state.center_aids();
+    assert!(state.0.lock().unwrap().center_aid_cache.is_some());
+    let stamped_document = state.0.lock().unwrap().document.clone();
 
     assert!(state.cycle_tolerance().is_some());
     assert_eq!(state.tolerance_notice(), Some(Tolerance::SubtleEdges));
-    assert_eq!(state.0.lock().unwrap().boxes, boxes);
+    let session = state.0.lock().unwrap();
+    let subtle_boxes = session.boxes.clone();
+    assert_eq!(subtle_boxes.len(), 1);
+    assert_ne!(subtle_boxes, balanced_boxes);
+    assert_eq!(session.document, stamped_document);
+    assert!(session.center_aid_cache.is_none());
+    drop(session);
     assert_eq!(
       state
         .guides()
@@ -3254,7 +3357,7 @@ mod tests {
 
     assert!(state.cycle_tolerance().is_some());
     assert_eq!(state.tolerance_notice(), Some(Tolerance::ClearEdges));
-    assert_eq!(state.0.lock().unwrap().boxes, boxes);
+    assert!(state.0.lock().unwrap().boxes.is_empty());
     assert_eq!(
       state
         .guides()
@@ -3272,6 +3375,57 @@ mod tests {
 
     assert!(state.cycle_tolerance().is_some());
     assert_eq!(state.tolerance_notice(), Some(Tolerance::Balanced));
+    assert_eq!(state.0.lock().unwrap().boxes, balanced_boxes);
+  }
+
+  #[test]
+  fn guide_snapping_uses_the_same_tolerance_as_other_live_edges() {
+    let state = RulerState::default();
+    let generation = state.begin();
+    let display = DesktopDisplay {
+      id: 1,
+      origin: Point { x: 0.0, y: 0.0 },
+      size: crate::osc::geometry::Size {
+        width: 100.0,
+        height: 100.0,
+      },
+      scale: 1.0,
+    };
+    let mut rgba = vec![255; 100 * 100 * 4];
+    for y in 30..70 {
+      for x in 30..90 {
+        let offset = (y * 100 + x) * 4;
+        rgba[offset..offset + 4].copy_from_slice(&[248, 249, 250, 255]);
+      }
+    }
+    assert!(state.install(
+      generation,
+      &[display],
+      &[(
+        1,
+        CapturedImage {
+          rgba,
+          width: 100,
+          height: 100,
+        },
+      )],
+    ));
+    let pointer = state.map_pointer(Point { x: 31.0, y: 50.0 }).unwrap();
+    let session = state.0.lock().unwrap();
+    let snapshot = &session.displays[0];
+    assert_eq!(
+      snap_guide(snapshot, GuideAxis::Vertical, pointer, Tolerance::Balanced),
+      None
+    );
+    assert_eq!(
+      snap_guide(
+        snapshot,
+        GuideAxis::Vertical,
+        pointer,
+        Tolerance::SubtleEdges,
+      ),
+      Some(30.0)
+    );
   }
 
   #[test]
@@ -3368,6 +3522,40 @@ mod tests {
     assert_eq!(
       hit_test_measurement(&measurements, Point { x: 30.0, y: 30.0 }, 6.0),
       None
+    );
+  }
+
+  #[test]
+  fn hover_target_clears_immediately_while_its_halo_fades_out() {
+    let now = Instant::now();
+    let target = HoverTarget::Measurement(1);
+    let mut session = Session {
+      hovered_target: Some(target),
+      document: Document {
+        measurements: vec![Measurement {
+          id: 1,
+          bounds: Rect::from_xywh(10.0, 10.0, 20.0, 20.0),
+          label: ArtifactLabel::default(),
+        }],
+        next_id: 1,
+        ..Default::default()
+      },
+      ..Default::default()
+    };
+
+    update_hover_target(&mut session, None, now);
+    assert_eq!(session.hovered_target, None);
+    assert!(session.hover_exit.is_some());
+    assert_eq!(hover_alpha(&session, target, now), 1.0);
+    let halfway = hover_alpha(&session, target, now + HOVER_EXIT_DURATION / 2);
+    assert!(halfway > 0.0 && halfway < 1.0);
+    assert_eq!(measurement_visuals(&mut session, now)[0].hover_alpha, 1.0);
+
+    expire_hover_exit(&mut session, now + HOVER_EXIT_DURATION);
+    assert!(session.hover_exit.is_none());
+    assert_eq!(
+      hover_alpha(&session, target, now + HOVER_EXIT_DURATION),
+      0.0
     );
   }
 

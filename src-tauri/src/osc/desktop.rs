@@ -15,6 +15,66 @@ pub struct DesktopDisplay {
   pub scale: f64,
 }
 
+/// A snapshot of the virtual desktop used by an OSC session. Platform code is
+/// responsible only for discovering displays and constructing this binding.
+#[derive(Clone, Debug)]
+pub struct DesktopBinding {
+  pub displays: Vec<DesktopDisplay>,
+  pub anchor_id: u32,
+  pub size: Size,
+  pub layout_changed: bool,
+}
+
+impl DesktopBinding {
+  pub fn anchor(&self) -> Option<DesktopDisplay> {
+    self
+      .displays
+      .iter()
+      .copied()
+      .find(|display| display.id == self.anchor_id)
+  }
+
+  pub fn virtual_monitor(&self) -> Monitor {
+    Monitor { size: self.size }
+  }
+
+  pub fn project_local(&self, local: Rect) -> Option<Rect> {
+    self.anchor().map(|anchor| global_region(anchor, local))
+  }
+
+  pub fn reconcile_local(&self, local: Rect) -> Option<DesktopRegion> {
+    let global = self.project_local(local)?;
+    let (global, owner) = reconcile_region(&self.displays, Some(self.anchor_id), global)?;
+    Some(DesktopRegion {
+      anchor_local: local_projection(self.anchor()?, global),
+      owner_local: local_projection(owner, global),
+      global,
+      owner_id: owner.id,
+    })
+  }
+
+  pub fn display_at(&self, point: Point) -> Option<u32> {
+    self.displays.iter().find_map(|display| {
+      Rect::from_xywh(
+        display.origin.x,
+        display.origin.y,
+        display.size.width,
+        display.size.height,
+      )
+      .contains(point)
+      .then_some(display.id)
+    })
+  }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DesktopRegion {
+  pub anchor_local: Rect,
+  pub owner_local: Rect,
+  pub global: Rect,
+  pub owner_id: u32,
+}
+
 impl DesktopDisplay {
   pub fn valid(self) -> bool {
     self.origin.finite()

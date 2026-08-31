@@ -27,8 +27,7 @@ pub(super) async fn set(app: &AppHandle, active: bool) -> Result<(), String> {
         capture_overlays::FOREGROUND_LEVEL
       },
     )?;
-    #[cfg(target_os = "macos")]
-    super::native_overlay_macos::set_screenshot_mode(&window, active)?;
+    super::adapter::set_screenshot_mode(&window, active)?;
   }
   Ok(())
 }

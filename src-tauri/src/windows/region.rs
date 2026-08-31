@@ -13,9 +13,26 @@ use super::{
 };
 
 pub(super) static SCREENSHOT_REGION_SESSION: AtomicBool = AtomicBool::new(false);
+static SCREENSHOT_REGION_RESTORING: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn is_screenshot_region_session() -> bool {
   SCREENSHOT_REGION_SESSION.load(Ordering::Acquire)
+}
+
+pub(crate) fn screenshot_region_scene_owner() -> crate::osc::scene::RegionSceneOwner {
+  if SCREENSHOT_REGION_SESSION.load(Ordering::Acquire) {
+    crate::osc::scene::RegionSceneOwner::Screenshot
+  } else if SCREENSHOT_REGION_RESTORING.load(Ordering::Acquire) {
+    crate::osc::scene::RegionSceneOwner::RestoringNormal
+  } else if !RECORDING_CONTROLS_VISIBLE.load(Ordering::Acquire) {
+    crate::osc::scene::RegionSceneOwner::DormantNormal
+  } else {
+    crate::osc::scene::RegionSceneOwner::Normal
+  }
+}
+
+pub(crate) fn finish_screenshot_region_restore() {
+  SCREENSHOT_REGION_RESTORING.store(false, Ordering::Release);
 }
 
 pub fn is_region_selector_visible(app: &AppHandle) -> bool {
@@ -156,10 +173,44 @@ pub(super) const fn recording_ui_may_hide(screenshot_session: bool) -> bool {
   !screenshot_session
 }
 
+const fn screenshot_region_may_restore(requested: bool, controls_visible: bool) -> bool {
+  requested && controls_visible
+}
+
 #[tauri::command]
-pub fn set_screenshot_region_session(app: AppHandle, active: bool) -> tauri::Result<()> {
+pub fn set_screenshot_region_session(
+  app: AppHandle,
+  active: bool,
+  restore_region: Option<bool>,
+) -> tauri::Result<bool> {
   let controls_visible = RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed);
-  SCREENSHOT_REGION_SESSION.store(active, Ordering::Release);
+  let mut restoring_region = false;
+  if !active && SCREENSHOT_REGION_SESSION.load(Ordering::Acquire) {
+    let restore_region =
+      screenshot_region_may_restore(restore_region.unwrap_or(false), controls_visible);
+    restoring_region = restore_region;
+    SCREENSHOT_REGION_SESSION.store(false, Ordering::Release);
+    SCREENSHOT_REGION_RESTORING.store(restore_region, Ordering::Release);
+    if let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
+      #[cfg(target_os = "macos")]
+      let transition = if restore_region {
+        super::screenshot_region::prepare_recording_overlay_for_region_restore(&region)
+      } else {
+        super::screenshot_region::prepare_recording_overlay_for_screenshot(&region)
+      };
+      #[cfg(not(target_os = "macos"))]
+      let transition: tauri::Result<()> = Ok(());
+      if let Err(error) = transition {
+        SCREENSHOT_REGION_SESSION.store(true, Ordering::Release);
+        SCREENSHOT_REGION_RESTORING.store(false, Ordering::Release);
+        return Err(error);
+      }
+    }
+  }
+  if active {
+    SCREENSHOT_REGION_RESTORING.store(false, Ordering::Release);
+    SCREENSHOT_REGION_SESSION.store(true, Ordering::Release);
+  }
   escape::sync(
     &app,
     controls_visible,
@@ -182,11 +233,12 @@ pub fn set_screenshot_region_session(app: AppHandle, active: bool) -> tauri::Res
     };
     if let Err(error) = result {
       SCREENSHOT_REGION_SESSION.store(false, Ordering::Release);
+      SCREENSHOT_REGION_RESTORING.store(false, Ordering::Release);
       escape::sync(&app, controls_visible, false, crate::ruler::is_active(&app));
       return Err(error);
     }
   }
-  Ok(())
+  Ok(restoring_region)
 }
 
 /// Re-asserts that invariant against the window.

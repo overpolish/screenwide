@@ -171,6 +171,7 @@ static BOOL rebuild_surfaces(ScreenwideRegionOSC *root,
         root.rulerToleranceAnimationTarget;
     peer.rulerMeasurements = root.rulerMeasurements;
     peer.rulerHoveredArtifactKey = root.rulerHoveredArtifactKey;
+    peer.rulerHoverOpacity = root.rulerHoverOpacity;
     peer.rulerHoverPulseStarted = root.rulerHoverPulseStarted;
     panel.ignoresMouseEvents = !root.inputEnabled;
     [root.desktopPeers addObject:peer];

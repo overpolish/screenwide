@@ -3,144 +3,22 @@
 
 use std::{ffi::c_void, panic::catch_unwind};
 
-use crate::osc::geometry::{Monitor, Rect, Size};
-use tauri::{Emitter, Manager};
+use crate::osc::{
+  controller::RegionController,
+  geometry::{Monitor, Point, Rect, Size},
+  scene::{RegionScene, RegionSceneOwner},
+  style::overlay_palette,
+};
+use crate::ruler::render::{
+  CenterlinePacket, GuideGapPacket, GuidePacket, InnerObjectPacket, MeasurementPacket, ProbePacket,
+  RadiusPacket, ViewportPacket,
+};
+use tauri::{Emitter, Manager, WebviewWindow};
 
-use super::{ffi, Context, DesktopBinding, NativeOscResult, Point, Purpose};
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct NativeRulerMeasurement {
-  pub id: u64,
-  pub x: f64,
-  pub y: f64,
-  pub width: f64,
-  pub height: f64,
-  pub flags: u8,
-  pub padding: [u8; 7],
-  pub label_anchor_x: f64,
-  pub label_anchor_y: f64,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct NativeRulerViewport {
-  pub display_id: u32,
-  pub padding: u32,
-  pub zoom: f64,
-  pub origin_x: f64,
-  pub origin_y: f64,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct NativeRulerProbe {
-  pub id: u64,
-  pub display_id: u32,
-  pub axis: u8,
-  pub flags: u8,
-  pub padding: [u8; 2],
-  pub start: f64,
-  pub end: f64,
-  pub position: f64,
-  pub label_anchor_x: f64,
-  pub label_anchor_y: f64,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct NativeRulerGuide {
-  pub id: u64,
-  pub display_id: u32,
-  pub axis: u8,
-  pub flags: u8,
-  pub padding: [u8; 2],
-  pub position: f64,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct NativeRulerGuideGap {
-  pub id: u64,
-  pub owner_id: u64,
-  pub display_id: u32,
-  pub axis: u8,
-  pub flags: u8,
-  pub padding: [u8; 2],
-  pub start: f64,
-  pub end: f64,
-  pub position: f64,
-  pub label_anchor_x: f64,
-  pub label_anchor_y: f64,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct NativeRulerRadius {
-  pub id: u64,
-  pub display_id: u32,
-  pub corner: u8,
-  pub flags: u8,
-  pub padding: [u8; 2],
-  pub x: f64,
-  pub y: f64,
-  pub width: f64,
-  pub height: f64,
-  pub radius: f64,
-  pub label_anchor_x: f64,
-  pub label_anchor_y: f64,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct NativeRulerCenterline {
-  pub id: u64,
-  pub x: f64,
-  pub y: f64,
-  pub width: f64,
-  pub height: f64,
-  pub flags: u8,
-  pub padding: [u8; 7],
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct NativeRulerInnerObject {
-  pub owner_id: u64,
-  pub x: f64,
-  pub y: f64,
-  pub width: f64,
-  pub height: f64,
-  pub flags: u8,
-  pub padding: [u8; 7],
-}
-
-const _: () = assert!(std::mem::size_of::<NativeRulerMeasurement>() == 64);
-const _: () = assert!(std::mem::offset_of!(NativeRulerMeasurement, flags) == 40);
-const _: () = assert!(std::mem::offset_of!(NativeRulerMeasurement, label_anchor_x) == 48);
-const _: () = assert!(std::mem::size_of::<NativeRulerViewport>() == 32);
-const _: () = assert!(std::mem::offset_of!(NativeRulerViewport, zoom) == 8);
-const _: () = assert!(std::mem::size_of::<NativeRulerProbe>() == 56);
-const _: () = assert!(std::mem::offset_of!(NativeRulerProbe, start) == 16);
-const _: () = assert!(std::mem::offset_of!(NativeRulerProbe, label_anchor_x) == 40);
-const _: () = assert!(std::mem::size_of::<NativeRulerGuide>() == 24);
-const _: () = assert!(std::mem::offset_of!(NativeRulerGuide, position) == 16);
-const _: () = assert!(std::mem::size_of::<NativeRulerGuideGap>() == 64);
-const _: () = assert!(std::mem::offset_of!(NativeRulerGuideGap, start) == 24);
-const _: () = assert!(std::mem::offset_of!(NativeRulerGuideGap, label_anchor_x) == 48);
-const _: () = assert!(std::mem::size_of::<NativeRulerRadius>() == 72);
-const _: () = assert!(std::mem::offset_of!(NativeRulerRadius, x) == 16);
-const _: () = assert!(std::mem::offset_of!(NativeRulerRadius, label_anchor_x) == 56);
-const _: () = assert!(std::mem::size_of::<NativeRulerCenterline>() == 48);
-const _: () = assert!(std::mem::offset_of!(NativeRulerCenterline, flags) == 40);
-const _: () = assert!(std::mem::size_of::<NativeRulerInnerObject>() == 48);
-const _: () = assert!(std::mem::offset_of!(NativeRulerInnerObject, flags) == 40);
+use super::{ffi, Context, DesktopBinding, NativeOscResult, Purpose};
 
 pub fn invalid_result() -> NativeOscResult {
-  NativeOscResult {
-    status: super::ResultStatus::Invalid as u8,
-    ..Default::default()
-  }
+  crate::osc::runtime::invalid_result()
 }
 
 #[no_mangle]
@@ -155,7 +33,7 @@ pub unsafe extern "C" fn native_osc_input(
   if out.is_null() {
     return;
   }
-  let mut result = catch_unwind(|| {
+  let result = catch_unwind(|| {
     if context.is_null() {
       invalid_result()
     } else {
@@ -163,14 +41,13 @@ pub unsafe extern "C" fn native_osc_input(
     }
   })
   .unwrap_or_else(|_| invalid_result());
-  super::ocr::dismiss_on_idle_cancel(context, phase, &mut result);
   *out = result;
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn native_osc_ruler_measurements(
   context: *mut c_void,
-  output: *mut NativeRulerMeasurement,
+  output: *mut MeasurementPacket,
   capacity: usize,
 ) -> usize {
   catch_unwind(|| {
@@ -190,20 +67,7 @@ pub unsafe extern "C" fn native_osc_ruler_measurements(
       return measurements.len();
     }
     for (index, measurement) in measurements.iter().take(capacity).enumerate() {
-      output.add(index).write(NativeRulerMeasurement {
-        id: measurement.id,
-        x: measurement.bounds.origin.x,
-        y: measurement.bounds.origin.y,
-        width: measurement.bounds.size.width,
-        height: measurement.bounds.size.height,
-        flags: u8::from(measurement.draft)
-          | u8::from(measurement.animating) << 1
-          | u8::from(measurement.hovered) << 2
-          | u8::from(measurement.label_hidden) << 3,
-        padding: [0; 7],
-        label_anchor_x: measurement.label_anchor.map_or(f64::NAN, |point| point.x),
-        label_anchor_y: measurement.label_anchor.map_or(f64::NAN, |point| point.y),
-      });
+      output.add(index).write(measurement.into());
     }
     measurements.len()
   })
@@ -213,7 +77,7 @@ pub unsafe extern "C" fn native_osc_ruler_measurements(
 #[no_mangle]
 pub unsafe extern "C" fn native_osc_ruler_viewports(
   context: *mut c_void,
-  output: *mut NativeRulerViewport,
+  output: *mut ViewportPacket,
   capacity: usize,
 ) -> usize {
   catch_unwind(|| {
@@ -233,13 +97,7 @@ pub unsafe extern "C" fn native_osc_ruler_viewports(
       return viewports.len();
     }
     for (index, visual) in viewports.iter().take(capacity).enumerate() {
-      output.add(index).write(NativeRulerViewport {
-        display_id: visual.display_id,
-        padding: 0,
-        zoom: visual.viewport.zoom,
-        origin_x: visual.viewport.origin.x,
-        origin_y: visual.viewport.origin.y,
-      });
+      output.add(index).write(visual.into());
     }
     viewports.len()
   })
@@ -249,7 +107,7 @@ pub unsafe extern "C" fn native_osc_ruler_viewports(
 #[no_mangle]
 pub unsafe extern "C" fn native_osc_ruler_probes(
   context: *mut c_void,
-  output: *mut NativeRulerProbe,
+  output: *mut ProbePacket,
   capacity: usize,
 ) -> usize {
   catch_unwind(|| {
@@ -269,24 +127,7 @@ pub unsafe extern "C" fn native_osc_ruler_probes(
       return probes.len();
     }
     for (index, probe) in probes.iter().take(capacity).enumerate() {
-      output.add(index).write(NativeRulerProbe {
-        id: probe.id,
-        display_id: probe.display_id,
-        axis: match probe.axis {
-          crate::ruler::probe::ProbeAxis::Horizontal => 1,
-          crate::ruler::probe::ProbeAxis::Vertical => 2,
-        },
-        flags: u8::from(probe.draft)
-          | u8::from(probe.hovered) << 1
-          | u8::from(probe.id == 0 && !probe.draft) << 2
-          | u8::from(probe.label_hidden) << 3,
-        padding: [0; 2],
-        start: probe.start,
-        end: probe.end,
-        position: probe.position,
-        label_anchor_x: probe.label_anchor.map_or(f64::NAN, |point| point.x),
-        label_anchor_y: probe.label_anchor.map_or(f64::NAN, |point| point.y),
-      });
+      output.add(index).write(probe.into());
     }
     probes.len()
   })
@@ -296,7 +137,7 @@ pub unsafe extern "C" fn native_osc_ruler_probes(
 #[no_mangle]
 pub unsafe extern "C" fn native_osc_ruler_guides(
   context: *mut c_void,
-  output: *mut NativeRulerGuide,
+  output: *mut GuidePacket,
   capacity: usize,
 ) -> usize {
   catch_unwind(|| {
@@ -316,17 +157,7 @@ pub unsafe extern "C" fn native_osc_ruler_guides(
       return guides.len();
     }
     for (index, guide) in guides.iter().take(capacity).enumerate() {
-      output.add(index).write(NativeRulerGuide {
-        id: guide.id,
-        display_id: guide.display_id,
-        axis: match guide.axis {
-          crate::ruler::snapshot::GuideAxis::Vertical => 1,
-          crate::ruler::snapshot::GuideAxis::Horizontal => 2,
-        },
-        flags: u8::from(guide.draft) | u8::from(guide.hovered) << 1,
-        padding: [0; 2],
-        position: guide.position,
-      });
+      output.add(index).write(guide.into());
     }
     guides.len()
   })
@@ -336,7 +167,7 @@ pub unsafe extern "C" fn native_osc_ruler_guides(
 #[no_mangle]
 pub unsafe extern "C" fn native_osc_ruler_guide_gaps(
   context: *mut c_void,
-  output: *mut NativeRulerGuideGap,
+  output: *mut GuideGapPacket,
   capacity: usize,
 ) -> usize {
   catch_unwind(|| {
@@ -356,22 +187,7 @@ pub unsafe extern "C" fn native_osc_ruler_guide_gaps(
       return gaps.len();
     }
     for (index, gap) in gaps.iter().take(capacity).enumerate() {
-      output.add(index).write(NativeRulerGuideGap {
-        id: gap.id,
-        owner_id: gap.owner_id,
-        display_id: gap.display_id,
-        axis: match gap.axis {
-          crate::ruler::probe::ProbeAxis::Horizontal => 1,
-          crate::ruler::probe::ProbeAxis::Vertical => 2,
-        },
-        flags: u8::from(gap.hovered) | u8::from(gap.label_hidden) << 1,
-        padding: [0; 2],
-        start: gap.start,
-        end: gap.end,
-        position: gap.position,
-        label_anchor_x: gap.label_anchor.map_or(f64::NAN, |point| point.x),
-        label_anchor_y: gap.label_anchor.map_or(f64::NAN, |point| point.y),
-      });
+      output.add(index).write(gap.into());
     }
     gaps.len()
   })
@@ -381,7 +197,7 @@ pub unsafe extern "C" fn native_osc_ruler_guide_gaps(
 #[no_mangle]
 pub unsafe extern "C" fn native_osc_ruler_radii(
   context: *mut c_void,
-  output: *mut NativeRulerRadius,
+  output: *mut RadiusPacket,
   capacity: usize,
 ) -> usize {
   catch_unwind(|| {
@@ -401,23 +217,7 @@ pub unsafe extern "C" fn native_osc_ruler_radii(
       return radii.len();
     }
     for (index, radius) in radii.iter().take(capacity).enumerate() {
-      output.add(index).write(NativeRulerRadius {
-        id: radius.id,
-        display_id: radius.display_id,
-        corner: radius.corner as u8,
-        flags: u8::from(radius.low_confidence)
-          | u8::from(radius.draft) << 1
-          | u8::from(radius.hovered) << 2
-          | u8::from(radius.label_hidden) << 3,
-        padding: [0; 2],
-        x: radius.bounds.origin.x,
-        y: radius.bounds.origin.y,
-        width: radius.bounds.size.width,
-        height: radius.bounds.size.height,
-        radius: radius.radius,
-        label_anchor_x: radius.label_anchor.map_or(f64::NAN, |point| point.x),
-        label_anchor_y: radius.label_anchor.map_or(f64::NAN, |point| point.y),
-      });
+      output.add(index).write(radius.into());
     }
     radii.len()
   })
@@ -427,7 +227,7 @@ pub unsafe extern "C" fn native_osc_ruler_radii(
 #[no_mangle]
 pub unsafe extern "C" fn native_osc_ruler_centerlines(
   context: *mut c_void,
-  output: *mut NativeRulerCenterline,
+  output: *mut CenterlinePacket,
   capacity: usize,
 ) -> usize {
   catch_unwind(|| {
@@ -447,15 +247,7 @@ pub unsafe extern "C" fn native_osc_ruler_centerlines(
       return centerlines.len();
     }
     for (index, line) in centerlines.iter().take(capacity).enumerate() {
-      output.add(index).write(NativeRulerCenterline {
-        id: line.id,
-        x: line.bounds.origin.x,
-        y: line.bounds.origin.y,
-        width: line.bounds.size.width,
-        height: line.bounds.size.height,
-        flags: u8::from(line.x_accent) | u8::from(line.y_accent) << 1,
-        padding: [0; 7],
-      });
+      output.add(index).write(line.into());
     }
     centerlines.len()
   })
@@ -465,7 +257,7 @@ pub unsafe extern "C" fn native_osc_ruler_centerlines(
 #[no_mangle]
 pub unsafe extern "C" fn native_osc_ruler_inner_objects(
   context: *mut c_void,
-  output: *mut NativeRulerInnerObject,
+  output: *mut InnerObjectPacket,
   capacity: usize,
 ) -> usize {
   catch_unwind(|| {
@@ -485,15 +277,7 @@ pub unsafe extern "C" fn native_osc_ruler_inner_objects(
       return objects.len();
     }
     for (index, object) in objects.iter().take(capacity).enumerate() {
-      output.add(index).write(NativeRulerInnerObject {
-        owner_id: object.owner_id,
-        x: object.bounds.origin.x,
-        y: object.bounds.origin.y,
-        width: object.bounds.size.width,
-        height: object.bounds.size.height,
-        flags: u8::from(object.aligned_x) | u8::from(object.aligned_y) << 1,
-        padding: [0; 7],
-      });
+      output.add(index).write(object.into());
     }
     objects.len()
   })
@@ -599,7 +383,7 @@ pub unsafe extern "C" fn native_osc_layout_changed(context: *mut c_void) {
 
 fn attach(
   view: *mut c_void,
-  window: super::WebviewWindow,
+  window: WebviewWindow,
   width: f64,
   height: f64,
   purpose: super::Purpose,
@@ -608,19 +392,14 @@ fn attach(
   !ffi::attach(view, context).is_null()
 }
 
-pub fn ensure_attached(
-  view: *mut c_void,
-  window: super::WebviewWindow,
-  width: f64,
-  height: f64,
-) -> bool {
+pub fn ensure_attached(view: *mut c_void, window: WebviewWindow, width: f64, height: f64) -> bool {
   with_context(view, |_| ()).is_some()
     || attach(view, window, width, height, super::Purpose::Region)
 }
 
 pub fn ensure_text_recognition_attached(
   view: *mut c_void,
-  window: super::WebviewWindow,
+  window: WebviewWindow,
   width: f64,
   height: f64,
 ) -> bool {
@@ -630,7 +409,7 @@ pub fn ensure_text_recognition_attached(
 
 pub fn ensure_ruler_attached(
   view: *mut c_void,
-  window: super::WebviewWindow,
+  window: WebviewWindow,
   width: f64,
   height: f64,
 ) -> bool {
@@ -661,6 +440,10 @@ pub fn clear_region(view: *mut c_void) -> bool {
     if let Ok(mut controller) = context.controller.lock() {
       let _ = controller.set_committed(None);
     }
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.region = Rect::default();
+      scene.visible = false;
+    }
   })
   .is_none()
   {
@@ -670,10 +453,17 @@ pub fn clear_region(view: *mut c_void) -> bool {
 }
 
 pub fn present_region(view: *mut c_void, rect: Option<Rect>) -> bool {
-  if with_context(view, |_| ()).is_none() {
+  let rect = rect.unwrap_or_default();
+  if with_context(view, |context| {
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.region = rect;
+      scene.visible = true;
+    }
+  })
+  .is_none()
+  {
     return false;
   }
-  let rect = rect.unwrap_or_default();
   unsafe {
     ffi::screenwide_region_osc_set(
       view,
@@ -686,13 +476,132 @@ pub fn present_region(view: *mut c_void, rect: Option<Rect>) -> bool {
   }
 }
 
+pub fn region_scene(view: *mut c_void) -> Option<RegionScene> {
+  with_context(view, |context| {
+    context.scene.lock().ok().map(|scene| scene.presented())
+  })
+  .flatten()
+}
+
+pub fn region_scene_request_base(
+  view: *mut c_void,
+  owner: RegionSceneOwner,
+) -> Option<RegionScene> {
+  with_context(view, |context| {
+    context
+      .scene
+      .lock()
+      .ok()
+      .map(|scene| scene.request_base(owner))
+  })
+  .flatten()
+}
+
+pub fn reconcile_region_scene_request(
+  view: *mut c_void,
+  requested: RegionScene,
+  owner: RegionSceneOwner,
+) -> Option<RegionScene> {
+  with_context(view, |context| {
+    context
+      .scene
+      .lock()
+      .ok()
+      .and_then(|mut state| state.reconcile_request(requested, owner))
+  })
+  .flatten()
+}
+
+pub fn restore_normal_region_scene(view: *mut c_void) -> bool {
+  let Some(scene) = with_context(view, |context| {
+    context
+      .scene
+      .lock()
+      .ok()
+      .map(|state| state.normal_presentation())
+  })
+  .flatten() else {
+    return false;
+  };
+  apply_region_scene(view, scene)
+}
+
+/// Applies the portable Region scene to the macOS compositor. The adapter
+/// diffs lifecycle-owned fields so a workflow refresh cannot needlessly
+/// re-present desktop or snapshot surfaces.
+pub fn apply_region_scene(view: *mut c_void, next: RegionScene) -> bool {
+  if next.overlay != overlay_palette() {
+    return false;
+  }
+  let Some(previous) = with_context(view, |context| {
+    let mut scene = context.scene.lock().ok()?;
+    let previous = scene.presented();
+    scene.set_presented(next);
+    context.allow_drawing.store(
+      next.interaction.allow_drawing,
+      std::sync::atomic::Ordering::Relaxed,
+    );
+    let mut controller = context.controller.lock().ok()?;
+    controller.set_aspect(next.interaction.aspect);
+    Some(previous)
+  })
+  .flatten() else {
+    return false;
+  };
+
+  unsafe {
+    if previous.chrome.frame_visible != next.chrome.frame_visible {
+      ffi::screenwide_region_osc_set_show_frame(view, i32::from(next.chrome.frame_visible));
+    }
+    if previous.chrome.handles_visible != next.chrome.handles_visible {
+      ffi::screenwide_region_osc_set_show_handles(view, i32::from(next.chrome.handles_visible));
+    }
+    if previous.interaction.input_enabled != next.interaction.input_enabled {
+      ffi::screenwide_region_osc_set_input_enabled(view, i32::from(next.interaction.input_enabled));
+    }
+    if previous.interaction.exclusion_rect != next.interaction.exclusion_rect {
+      let rect = next.interaction.exclusion_rect.unwrap_or_default();
+      ffi::screenwide_region_osc_set_exclusion_rect(
+        view,
+        rect.origin.x,
+        rect.origin.y,
+        rect.size.width,
+        rect.size.height,
+      );
+    }
+    if previous.snapshot.presented != next.snapshot.presented {
+      ffi::screenwide_region_osc_set_snapshot_presented(view, i32::from(next.snapshot.presented));
+    }
+    if previous.snapshot.composited != next.snapshot.composited {
+      ffi::screenwide_region_osc_set_snapshot_composited(view, i32::from(next.snapshot.composited));
+    }
+    // Geometry is submitted before desktop peers are presented so a newly
+    // shown surface can never expose the previous tool's cutout for a frame.
+    let presented = ffi::screenwide_region_osc_set(
+      view,
+      next.region.origin.x,
+      next.region.origin.y,
+      next.region.size.width,
+      next.region.size.height,
+      i32::from(next.visible),
+    ) != 0;
+    if !presented {
+      return false;
+    }
+    if previous.desktop_presented != next.desktop_presented {
+      ffi::screenwide_region_osc_set_desktop_presented(view, i32::from(next.desktop_presented));
+    }
+    true
+  }
+}
+
 pub fn configure_desktop(view: *mut c_void, binding: DesktopBinding, local: Option<Rect>) -> bool {
   with_context(view, |context| {
     if binding.anchor().is_none() {
       return false;
     }
     let committed = super::desktop::global_committed(&binding, local);
-    let controller = super::RegionController::new(binding.virtual_monitor(), committed, None);
+    let controller = RegionController::new(binding.virtual_monitor(), committed, None);
     let Ok(mut current_controller) = context.controller.lock() else {
       return false;
     };
@@ -726,6 +635,9 @@ pub fn set_allow_drawing(view: *mut c_void, allow_drawing: bool) -> bool {
     context
       .allow_drawing
       .store(allow_drawing, std::sync::atomic::Ordering::Relaxed);
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.interaction.allow_drawing = allow_drawing;
+    }
   })
   .is_some()
 }
@@ -742,6 +654,9 @@ pub fn set_magnifier_source(view: *mut c_void, rgba: &[u8], width: u32, height: 
 
 pub fn set_aspect(view: *mut c_void, aspect: Option<f64>) -> bool {
   with_context(view, |context| {
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.interaction.aspect = aspect;
+    }
     context
       .controller
       .lock()
@@ -755,7 +670,13 @@ pub fn set_aspect(view: *mut c_void, aspect: Option<f64>) -> bool {
 }
 
 pub fn set_input_enabled(view: *mut c_void, enabled: bool) -> bool {
-  if with_context(view, |_| ()).is_none() {
+  if with_context(view, |context| {
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.interaction.input_enabled = enabled;
+    }
+  })
+  .is_none()
+  {
     return false;
   }
   unsafe { ffi::screenwide_region_osc_set_input_enabled(view, i32::from(enabled)) };
@@ -763,7 +684,13 @@ pub fn set_input_enabled(view: *mut c_void, enabled: bool) -> bool {
 }
 
 pub fn set_show_handles(view: *mut c_void, show_handles: bool) -> bool {
-  if with_context(view, |_| ()).is_none() {
+  if with_context(view, |context| {
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.chrome.handles_visible = show_handles;
+    }
+  })
+  .is_none()
+  {
     return false;
   }
   unsafe { ffi::screenwide_region_osc_set_show_handles(view, i32::from(show_handles)) };
@@ -771,32 +698,27 @@ pub fn set_show_handles(view: *mut c_void, show_handles: bool) -> bool {
 }
 
 pub fn set_show_frame(view: *mut c_void, show_frame: bool) -> bool {
-  if with_context(view, |_| ()).is_none() {
+  if with_context(view, |context| {
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.chrome.frame_visible = show_frame;
+    }
+  })
+  .is_none()
+  {
     return false;
   }
   unsafe { ffi::screenwide_region_osc_set_show_frame(view, i32::from(show_frame)) };
   true
 }
 
-pub fn set_exclusion_rect(view: *mut c_void, rect: Option<Rect>) -> bool {
-  if with_context(view, |_| ()).is_none() {
-    return false;
-  }
-  let rect = rect.unwrap_or_default();
-  unsafe {
-    ffi::screenwide_region_osc_set_exclusion_rect(
-      view,
-      rect.origin.x,
-      rect.origin.y,
-      rect.size.width,
-      rect.size.height,
-    );
-  }
-  true
-}
-
 pub fn set_desktop_presented(view: *mut c_void, presented: bool) -> bool {
-  if with_context(view, |_| ()).is_none() {
+  if with_context(view, |context| {
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.desktop_presented = presented;
+    }
+  })
+  .is_none()
+  {
     return false;
   }
   unsafe { ffi::screenwide_region_osc_set_desktop_presented(view, i32::from(presented)) };
@@ -850,7 +772,13 @@ pub fn set_snapshot(
 }
 
 pub fn set_snapshot_presented(view: *mut c_void, presented: bool) -> bool {
-  if with_context(view, |_| ()).is_none() {
+  if with_context(view, |context| {
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.snapshot.presented = presented;
+    }
+  })
+  .is_none()
+  {
     return false;
   }
   unsafe { ffi::screenwide_region_osc_set_snapshot_presented(view, i32::from(presented)) };
@@ -858,7 +786,13 @@ pub fn set_snapshot_presented(view: *mut c_void, presented: bool) -> bool {
 }
 
 pub fn set_snapshot_composited(view: *mut c_void, composited: bool) -> bool {
-  if with_context(view, |_| ()).is_none() {
+  if with_context(view, |context| {
+    if let Ok(mut scene) = context.scene.lock() {
+      scene.snapshot.composited = composited;
+    }
+  })
+  .is_none()
+  {
     return false;
   }
   unsafe { ffi::screenwide_region_osc_set_snapshot_composited(view, i32::from(composited)) };

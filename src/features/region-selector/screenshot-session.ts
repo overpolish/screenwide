@@ -29,6 +29,12 @@ let shortcutTransition: Promise<void> = Promise.resolve();
 
 export const screenshotCaptureDestination = () => sessionDestination;
 
+const selectScreenshotAction = (action: ScreenshotShortcutAction) => {
+  sessionDestination =
+    action === "takeScreenshotToClipboard" ? "clipboard" : "export";
+  sessionAction = action;
+};
+
 async function runCleanupSteps(steps: CleanupStep[]) {
   let firstError: unknown;
   for (const step of steps) {
@@ -61,9 +67,7 @@ export const beginScreenshotCapture = async (
   action: ScreenshotShortcutAction,
 ) => {
   const { setScreenshotCapture } = useRecordingSourceStore.getState();
-  const destination =
-    action === "takeScreenshotToClipboard" ? "clipboard" : "export";
-  sessionDestination = destination;
+  selectScreenshotAction(action);
   try {
     // Rust has to know the overlay is allowed on screen before it is asked for:
     // the recording controls may well be hidden behind it. Do this before
@@ -82,7 +86,6 @@ export const beginScreenshotCapture = async (
     // guaranteed to do this for us.
     await setRegionSelectorPassthrough(false);
     setScreenshotCapture(true);
-    sessionAction = action;
   } catch (error: unknown) {
     try {
       await endScreenshotCapture();
@@ -97,13 +100,19 @@ export const endScreenshotCapture = async () => {
   const { recordingMode, selectedMonitor, setScreenshotCapture } =
     useRecordingSourceStore.getState();
   const recordingMonitor = recordingMode === "region" ? selectedMonitor : null;
+  let restoringRegion = false;
 
   // Undoing exactly what starting the session did, so the overlay goes back to
   // being the recording region's - or to being off screen.
   try {
     await runCleanupSteps([
-      () => setScreenshotRegionSession(false),
-      () => hideRegionSelector(),
+      () =>
+        setScreenshotRegionSession(false, recordingMonitor !== null).then(
+          (restoring) => {
+            restoringRegion = restoring;
+          },
+        ),
+      () => (restoringRegion ? Promise.resolve() : hideRegionSelector()),
       () => setRegionSelectorOpacity(1),
       () => {
         setScreenshotCapture(false);
@@ -132,17 +141,34 @@ export const handleScreenshotShortcut = (action: ScreenshotShortcutAction) =>
   enqueueShortcutTransition(async () => {
     const active = useRecordingSourceStore.getState().isScreenshotCapture;
     const sameAction = active && sessionAction === action;
-    if (active) await endScreenshotCapture();
-    if (!sameAction) await beginScreenshotCapture(action);
+    if (sameAction) {
+      await endScreenshotCapture();
+      return;
+    }
+    if (active) {
+      selectScreenshotAction(action);
+      return;
+    }
+    await beginScreenshotCapture(action);
   });
 
 export const handoffScreenshotShortcut = (action: ShortcutAction) =>
   enqueueShortcutTransition(async () => {
-    const sameAction = isScreenshotShortcut(action) && sessionAction === action;
-    await endScreenshotCapture();
-    if (!sameAction) {
-      await invoke("resume_shortcut_action", { action });
+    if (isScreenshotShortcut(action)) {
+      const active = useRecordingSourceStore.getState().isScreenshotCapture;
+      if (!active) {
+        await invoke("resume_shortcut_action", { action });
+        return;
+      }
+      if (sessionAction === action) {
+        await endScreenshotCapture();
+      } else {
+        selectScreenshotAction(action);
+      }
+      return;
     }
+    await endScreenshotCapture();
+    await invoke("resume_shortcut_action", { action });
   });
 
 /** Captures the region to the session's destination, then ends the session. */

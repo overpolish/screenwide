@@ -5,15 +5,21 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::{capture_overlays, screenshots, windows::WindowLabel};
 
+mod adapter;
 pub(crate) mod analysis;
 pub(crate) mod centerlines;
+pub(crate) mod input;
 #[cfg(target_os = "macos")]
 mod native_overlay_macos;
 pub(crate) mod probe;
 pub(crate) mod radius;
+pub(crate) mod render;
+#[cfg(test)]
+mod render_tests;
 mod screenshot_mode;
 pub(crate) mod snapshot;
 pub(crate) mod viewport;
+pub(crate) use input::{dispatch_input, dispatch_label, dispatch_viewport, visual_result};
 pub use snapshot::RulerState;
 
 fn ruler_windows(app: &AppHandle) -> Vec<tauri::WebviewWindow> {
@@ -24,12 +30,7 @@ fn ruler_windows(app: &AppHandle) -> Vec<tauri::WebviewWindow> {
 }
 
 fn close_ruler_windows(app: &AppHandle) {
-  #[cfg(target_os = "macos")]
-  native_overlay_macos::close(app);
-  #[cfg(not(target_os = "macos"))]
-  for window in ruler_windows(app) {
-    let _ = window.close();
-  }
+  adapter::close(app);
 }
 
 pub fn dismiss(app: &AppHandle) {
@@ -47,7 +48,6 @@ pub fn is_active(app: &AppHandle) -> bool {
   app.state::<RulerState>().active_generation().is_some()
 }
 
-#[cfg(target_os = "macos")]
 pub(crate) fn restart_after_topology_change(app: &AppHandle) {
   let Some(generation) = app.state::<RulerState>().active_generation() else {
     return;
@@ -69,27 +69,21 @@ pub async fn set_ruler_screenshot_mode(app: AppHandle, active: bool) -> Result<(
 }
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
-  #[cfg(not(target_os = "macos"))]
-  {
-    let _ = app;
+  if !adapter::available() {
     return Ok(());
   }
 
-  #[cfg(target_os = "macos")]
-  {
+  dismiss(app);
+  capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::Ruler));
+  let generation = app.state::<RulerState>().begin();
+  let result = start_native(app, generation).await;
+  if result.is_err() {
     dismiss(app);
-    capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::Ruler));
-    let generation = app.state::<RulerState>().begin();
-    let result = start_macos(app, generation).await;
-    if result.is_err() {
-      dismiss(app);
-    }
-    result
   }
+  result
 }
 
-#[cfg(target_os = "macos")]
-async fn start_macos(app: &AppHandle, generation: u64) -> Result<(), String> {
+async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
   let monitors = capture_overlays::monitor_layout(app)?;
   let mut snapshots = Vec::with_capacity(monitors.len());
   for (monitor_id, _, _) in &monitors {
@@ -126,15 +120,15 @@ async fn start_macos(app: &AppHandle, generation: u64) -> Result<(), String> {
   .build()
   .map_err(|error| error.to_string())?;
   capture_overlays::set_level(&window, capture_overlays::FOREGROUND_LEVEL)?;
-  let binding = native_overlay_macos::install(&window, *anchor_id, &snapshots)?;
+  let binding = adapter::install(&window, *anchor_id, &snapshots)?;
   if !app
     .state::<RulerState>()
     .install(generation, &binding.displays, &snapshots)
   {
     return Ok(());
   }
-  native_overlay_macos::show_without_activation(&window)?;
-  native_overlay_macos::present(&window)?;
+  adapter::show_without_activation(&window)?;
+  adapter::present(&window)?;
   capture_overlays::emit_lifecycle(app, true);
   crate::windows::sync_recording_ui_escape(app, true);
   Ok(())

@@ -281,6 +281,7 @@ void screenwide_set_region_expected_cursor(NSCursor *cursor);
 @property(nonatomic, strong) NSData *rulerInnerObjects;
 @property(nonatomic) BOOL rulerSettleScheduled;
 @property(nonatomic) uint64_t rulerHoveredArtifactKey;
+@property(nonatomic) CGFloat rulerHoverOpacity;
 @property(nonatomic) uint64_t rulerHoverPulseRevision;
 @property(nonatomic) CFTimeInterval rulerHoverPulseStarted;
 @property(nonatomic) CGFloat rulerViewportZoom;

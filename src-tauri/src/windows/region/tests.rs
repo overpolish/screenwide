@@ -3,7 +3,7 @@
 
 use super::{
   recording_controls_may_raise, recording_ui_may_hide, region_selector_is_interactive,
-  region_selector_may_show, region_selector_restores_opacity,
+  region_selector_may_show, region_selector_restores_opacity, screenshot_region_may_restore,
 };
 
 #[test]
@@ -44,4 +44,11 @@ fn a_screenshot_session_presents_the_borrowed_region_window() {
 fn a_screenshot_session_keeps_its_driver_window_alive_for_cleanup() {
   assert!(!recording_ui_may_hide(true));
   assert!(recording_ui_may_hide(false));
+}
+
+#[test]
+fn a_saved_region_mode_restores_only_with_visible_recording_controls() {
+  assert!(screenshot_region_may_restore(true, true));
+  assert!(!screenshot_region_may_restore(true, false));
+  assert!(!screenshot_region_may_restore(false, true));
 }

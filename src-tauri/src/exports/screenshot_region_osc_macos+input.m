@@ -237,8 +237,13 @@ static void processInput(ScreenwideRegionOSC *s, NSEvent *event,
       return;
     }
   }
-  if ((phase == 3 || phase == 4) && !s.gestureActive)
+  if ((phase == 3 || phase == 4) && !s.gestureActive) {
+    // Mouse-dragged events arrive after a rejected Region-editor press. Each
+    // event temporarily claims native cursor ownership at the top of this
+    // function, so release it again instead of leaving a drawing crosshair.
+    screenwide_region_osc_cursor_release(s);
     return;
+  }
   if (phase == 2 && s.ocrCancelVisible)
     screenwide_region_osc_ocr_set_cancel_visible(
         (__bridge void *)s.host, 0);
@@ -257,8 +262,14 @@ static void processInput(ScreenwideRegionOSC *s, NSEvent *event,
     modifiers |= 8;
   s.input(s.rustContext, phase, desktopPoint.x, desktopPoint.y, modifiers,
           &result);
-  if (result.status == 255)
+  if (result.status == 255) {
+    // A non-drawing Region editor rejects presses outside its committed
+    // region. The temporary native claim above must not leave the crosshair
+    // behind when no gesture accepted that press.
+    if (phase == 2)
+      screenwide_region_osc_cursor_release(s);
     return;
+  }
   screenwide_region_osc_apply_ruler_result(s, result);
   if (phase == 2)
     s.gestureActive = YES;

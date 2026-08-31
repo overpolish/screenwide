@@ -5,22 +5,9 @@ use std::ffi::CString;
 
 use tauri::Manager;
 
-use crate::{
-  osc::geometry::Rect, screenshots, windows::screenshot_region::native_osc_macos as native_region,
-};
+use crate::{screenshots, windows::screenshot_region::native_osc_macos as native_region};
 
-use super::{interaction::TextAction, visual::VisualPhase, TextRecognitionState};
-
-mod input;
-pub(crate) use input::text_input;
-
-#[derive(Clone, Copy)]
-struct SurfaceMode {
-  frame: bool,
-  input: bool,
-  reset: bool,
-  claim_crosshair: bool,
-}
+use super::visual::{RenderPacket, VisualPhase};
 
 pub(super) fn install(
   window: &tauri::WebviewWindow,
@@ -149,153 +136,44 @@ pub(super) fn close(app: &tauri::AppHandle, except: Option<&str>) {
   }
 }
 
-pub(crate) fn selection_finished(
-  window: tauri::WebviewWindow,
-  binding: native_region::DesktopBinding,
-  monitor_id: u32,
-  region: Rect,
-) {
-  let app = window.app_handle().clone();
-  let finishing_window = window.clone();
-  let _ = app.run_on_main_thread(move || {
-    if let Ok(view) = finishing_window.ns_view() {
-      let _ = native_region::set_input_enabled(view.cast(), false);
-      let _ = native_region::set_show_frame(view.cast(), false);
-      let message = CString::new("Finding text and QR codes…").expect("static OCR status");
-      let _ = native_region::set_ocr(view.cast(), VisualPhase::Loading as u32, &[], &message);
-    }
-  });
-  tauri::async_runtime::spawn(async move {
-    let capture_app = app.clone();
-    let displays = binding.displays.clone();
-    let selected = tauri::async_runtime::spawn_blocking(move || {
-      capture_app
-        .state::<TextRecognitionState>()
-        .select_desktop_region(&displays, monitor_id, region)
-    })
-    .await;
-    match selected {
-      Ok(Ok(_)) => {}
-      Ok(Err(error)) => return emit_error(&app, error),
-      Err(error) => return emit_error(&app, error.to_string()),
-    }
-    if super::recognize_current(&app).await.is_err() {
-      return;
-    }
-    finish_handoff(&app, window);
-  });
+pub(super) fn render(app: &tauri::AppHandle, packet: RenderPacket) {
+  update_surfaces(app, packet);
 }
 
-fn emit_error(app: &tauri::AppHandle, error: String) {
-  show_error(app, &error);
-}
-
-fn finish_handoff(app: &tauri::AppHandle, window: tauri::WebviewWindow) {
-  if app.get_webview_window(window.label()).is_none() {
-    return;
-  }
-  let main_app = app.clone();
-  let _ = app.run_on_main_thread(move || {
-    if let Some(target) = main_app.get_webview_window(window.label()) {
-      let _ = target.set_ignore_cursor_events(false);
-      let _ = crate::windows::show(&target, true);
-    }
-  });
-}
-
-pub(crate) fn selection_started(window: &tauri::WebviewWindow) {
-  // Initial presentation deliberately avoids becoming key while a global
-  // shortcut's modifier key is still being released. The first real overlay
-  // interaction is the safe point to claim keyboard focus for copy/select-all.
-  let _ = window.set_focus();
+pub(super) fn render_window(window: &tauri::WebviewWindow, packet: RenderPacket) {
   if let Ok(view) = window.ns_view() {
-    let empty = CString::new("").expect("empty OCR status");
-    let _ = native_region::set_ocr(view.cast(), VisualPhase::Idle as u32, &[], &empty);
+    let _ = apply_packet(view.cast(), packet);
   }
 }
 
-pub(crate) fn text_interaction_started(window: &tauri::WebviewWindow) {
-  // Peer panels do not become key themselves. Retain the single Tauri owner
-  // for keyboard commands, but avoid reordering it on every text click.
-  if !window.is_focused().unwrap_or(false) {
-    let _ = window.set_focus();
+fn apply_packet(view: *mut std::ffi::c_void, packet: RenderPacket) -> bool {
+  let message = CString::new(packet.message.replace('\0', " ")).expect("sanitized OCR status");
+  if !native_region::set_ocr(view, packet.phase as u32, &packet.rects, &message) {
+    return false;
   }
+  let presentation = packet.presentation;
+  if let Some(frame) = presentation.frame {
+    let _ = native_region::set_show_frame(view, frame);
+  }
+  if presentation.reset {
+    let _ = native_region::reset_text_recognition_input(view);
+  }
+  if let Some(input) = presentation.input {
+    let _ = native_region::set_input_enabled(view, input);
+  }
+  if presentation.claim_crosshair {
+    let _ = native_region::claim_pointer_surface(view);
+  }
+  true
 }
 
-pub(super) fn show_ready(app: &tauri::AppHandle, generation: u64) {
-  let Some(snapshot) = app
-    .state::<TextRecognitionState>()
-    .visual_snapshot(generation)
-  else {
-    return;
-  };
-  update_surfaces(
-    app,
-    VisualPhase::Ready,
-    native_rects(&snapshot),
-    "",
-    SurfaceMode {
-      frame: false,
-      input: true,
-      reset: false,
-      claim_crosshair: false,
-    },
-  );
-}
-
-pub(super) fn show_error(app: &tauri::AppHandle, message: &str) {
-  update_surfaces(
-    app,
-    VisualPhase::Error,
-    Vec::new(),
-    message,
-    SurfaceMode {
-      frame: true,
-      input: true,
-      reset: true,
-      claim_crosshair: true,
-    },
-  );
-}
-
-fn native_rects(snapshot: &super::visual::VisualSnapshot) -> Vec<native_region::NativeOcrRect> {
-  snapshot
-    .rects
-    .iter()
-    .map(|visual| native_region::NativeOcrRect {
-      x: visual.rect.origin.x,
-      y: visual.rect.origin.y,
-      width: visual.rect.size.width,
-      height: visual.rect.size.height,
-      kind: visual.kind as u8,
-      padding: [0; 7],
-    })
-    .collect()
-}
-
-fn update_surfaces(
-  app: &tauri::AppHandle,
-  phase: VisualPhase,
-  rects: Vec<native_region::NativeOcrRect>,
-  message: &str,
-  mode: SurfaceMode,
-) {
+fn update_surfaces(app: &tauri::AppHandle, packet: RenderPacket) {
   let windows = super::recognition_windows(app);
-  let message = CString::new(message.replace('\0', " ")).expect("sanitized OCR status");
   let app = app.clone();
   let _ = app.clone().run_on_main_thread(move || {
     for window in windows {
       let Ok(view) = window.ns_view() else { continue };
-      let view = view.cast();
-      if native_region::set_ocr(view, phase as u32, &rects, &message) {
-        let _ = native_region::set_show_frame(view, mode.frame);
-        if mode.reset {
-          let _ = native_region::reset_text_recognition_input(view);
-        }
-        let _ = native_region::set_input_enabled(view, mode.input);
-        if mode.claim_crosshair {
-          let _ = native_region::claim_pointer_surface(view);
-        }
+      if apply_packet(view.cast(), packet.clone()) {
         break;
       }
     }

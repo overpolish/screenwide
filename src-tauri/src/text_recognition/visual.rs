@@ -39,6 +39,88 @@ pub struct VisualSnapshot {
   pub rects: Vec<VisualRect>,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct OcrRectPacket {
+  pub x: f64,
+  pub y: f64,
+  pub width: f64,
+  pub height: f64,
+  pub kind: u8,
+  pub padding: [u8; 7],
+}
+
+impl From<&VisualRect> for OcrRectPacket {
+  fn from(value: &VisualRect) -> Self {
+    Self {
+      x: value.rect.origin.x,
+      y: value.rect.origin.y,
+      width: value.rect.size.width,
+      height: value.rect.size.height,
+      kind: value.kind as u8,
+      padding: [0; 7],
+    }
+  }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct SurfacePresentation {
+  pub frame: Option<bool>,
+  pub input: Option<bool>,
+  pub reset: bool,
+  pub claim_crosshair: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct RenderPacket {
+  pub phase: VisualPhase,
+  pub rects: Vec<OcrRectPacket>,
+  pub message: String,
+  pub presentation: SurfacePresentation,
+}
+
+impl RenderPacket {
+  pub(crate) fn loading(message: impl Into<String>) -> Self {
+    Self {
+      phase: VisualPhase::Loading,
+      message: message.into(),
+      presentation: SurfacePresentation {
+        frame: Some(false),
+        input: Some(false),
+        ..Default::default()
+      },
+      ..Default::default()
+    }
+  }
+
+  pub(crate) fn ready(snapshot: &VisualSnapshot) -> Self {
+    Self {
+      phase: VisualPhase::Ready,
+      rects: snapshot.rects.iter().map(Into::into).collect(),
+      presentation: SurfacePresentation {
+        frame: Some(false),
+        input: Some(true),
+        ..Default::default()
+      },
+      ..Default::default()
+    }
+  }
+
+  pub(crate) fn error(message: impl Into<String>) -> Self {
+    Self {
+      phase: VisualPhase::Error,
+      message: message.into(),
+      presentation: SurfacePresentation {
+        frame: Some(true),
+        input: Some(true),
+        reset: true,
+        claim_crosshair: true,
+      },
+      ..Default::default()
+    }
+  }
+}
+
 pub fn snapshot(
   selection: Rect,
   result: &TextRecognitionResult,
@@ -137,5 +219,31 @@ mod tests {
       visual.rects[2].rect,
       Rect::from_xywh(1780.0, 110.0, 40.0, 40.0)
     );
+  }
+
+  #[test]
+  fn ready_and_error_packets_share_geometry_and_presentation_policy() {
+    let snapshot = VisualSnapshot {
+      selection: Rect::from_xywh(0.0, 0.0, 100.0, 100.0),
+      rects: vec![VisualRect {
+        rect: Rect::from_xywh(10.0, 20.0, 30.0, 40.0),
+        kind: VisualKind::Selection,
+      }],
+    };
+
+    let ready = RenderPacket::ready(&snapshot);
+    assert_eq!(ready.phase, VisualPhase::Ready);
+    assert_eq!((ready.rects[0].x, ready.rects[0].kind), (10.0, 4));
+    assert_eq!(ready.presentation.input, Some(true));
+    assert_eq!(ready.presentation.frame, Some(false));
+    assert!(!ready.presentation.claim_crosshair);
+
+    let error = RenderPacket::error("failed");
+    assert_eq!(error.phase, VisualPhase::Error);
+    assert_eq!(error.message, "failed");
+    assert_eq!(error.presentation.frame, Some(true));
+    assert_eq!(error.presentation.input, Some(true));
+    assert!(error.presentation.reset);
+    assert!(error.presentation.claim_crosshair);
   }
 }

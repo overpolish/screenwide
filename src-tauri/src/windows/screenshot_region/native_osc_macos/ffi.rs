@@ -12,15 +12,14 @@ const _: () = assert!(std::mem::size_of::<NativeOscResult>() == 48);
 const _: () = assert!(std::mem::offset_of!(NativeOscResult, x) == 8);
 
 pub type ReleaseContext = unsafe extern "C" fn(*mut c_void);
-pub const CURSOR_CROSSHAIR: u8 = 1;
+#[cfg(test)]
 pub const CURSOR_OPEN_HAND: u8 = 2;
+#[cfg(test)]
 pub const CURSOR_CLOSED_HAND: u8 = 3;
-pub const CURSOR_HORIZONTAL: u8 = 4;
-pub const CURSOR_VERTICAL: u8 = 5;
+#[cfg(test)]
 pub const CURSOR_DIAGONAL: u8 = 6;
+#[cfg(test)]
 pub const CURSOR_ARROW: u8 = 7;
-pub const CURSOR_IBEAM: u8 = 8;
-pub const CURSOR_POINTING_HAND: u8 = 9;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
@@ -33,16 +32,7 @@ pub struct NativeDesktopDisplay {
   pub scale: f64,
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NativeOcrRect {
-  pub x: f64,
-  pub y: f64,
-  pub width: f64,
-  pub height: f64,
-  pub kind: u8,
-  pub padding: [u8; 7],
-}
+pub(crate) type NativeOcrRect = crate::text_recognition::visual::OcrRectPacket;
 
 const _: () = assert!(std::mem::size_of::<NativeOcrRect>() == 40);
 const _: () = assert!(std::mem::offset_of!(NativeOcrRect, kind) == 32);
