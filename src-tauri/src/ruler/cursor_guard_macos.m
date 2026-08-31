@@ -6,29 +6,9 @@
 #import <objc/runtime.h>
 #include <stdatomic.h>
 
-static IMP original_hidden_until_mouse_moves = NULL;
 static IMP original_cursor_set = NULL;
-static atomic_bool range_active = false;
-static atomic_bool ruler_cursor_hidden = false;
 static atomic_bool screenshot_crosshair_guard_active = false;
 static NSCursor *region_expected_cursor = nil;
-
-static void guarded_hidden_until_mouse_moves(id receiver, SEL selector,
-                                             BOOL flag) {
-  if (flag && atomic_load_explicit(&range_active, memory_order_relaxed)) return;
-  ((void (*)(id, SEL, BOOL))original_hidden_until_mouse_moves)(receiver,
-                                                               selector, flag);
-}
-
-static void install_cursor_guard(void) {
-  static dispatch_once_t once;
-  dispatch_once(&once, ^{
-    Method method = class_getClassMethod(
-        NSCursor.class, @selector(setHiddenUntilMouseMoves:));
-    original_hidden_until_mouse_moves = method_setImplementation(
-        method, (IMP)guarded_hidden_until_mouse_moves);
-  });
-}
 
 static void guarded_cursor_set(id receiver, SEL selector) {
   id applied = receiver;
@@ -50,24 +30,6 @@ static void install_cursor_set_guard(void) {
     original_cursor_set =
         method_setImplementation(method, (IMP)guarded_cursor_set);
   });
-}
-
-void screenwide_set_ruler_cursor_range_active(int active) {
-  install_cursor_guard();
-  atomic_store_explicit(&range_active, active != 0, memory_order_relaxed);
-  if (active) [NSCursor setHiddenUntilMouseMoves:NO];
-}
-
-void screenwide_set_ruler_cursor_visible(int visible) {
-  bool hidden = visible == 0;
-  bool previous = atomic_exchange_explicit(
-      &ruler_cursor_hidden, hidden, memory_order_relaxed);
-  if (hidden == previous) return;
-  if (hidden) {
-    [NSCursor hide];
-  } else {
-    [NSCursor unhide];
-  }
 }
 
 void screenwide_arm_screenshot_initial_crosshair_guard(void) {

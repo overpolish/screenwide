@@ -52,6 +52,26 @@ void screenwide_region_osc_add_quad(ScreenwideRegionOscVertex *vertices,
   *count += 6;
 }
 
+void screenwide_region_osc_add_texture_quad(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
+    NSRect rect, NSRect texture_rect, uint32_t kind) {
+  ScreenwideRegionOscPoint a = ndc(size, NSMinX(rect), NSMinY(rect));
+  ScreenwideRegionOscPoint b = ndc(size, NSMaxX(rect), NSMinY(rect));
+  ScreenwideRegionOscPoint c = ndc(size, NSMaxX(rect), NSMaxY(rect));
+  ScreenwideRegionOscPoint d = ndc(size, NSMinX(rect), NSMaxY(rect));
+  float min_u = NSMinX(texture_rect);
+  float min_v = NSMinY(texture_rect);
+  float max_u = NSMaxX(texture_rect);
+  float max_v = NSMaxY(texture_rect);
+  ScreenwideRegionOscVertex quad[6] = {
+      {a, {min_u, min_v}, kind, 0}, {b, {max_u, min_v}, kind, 0},
+      {c, {max_u, max_v}, kind, 0}, {a, {min_u, min_v}, kind, 0},
+      {c, {max_u, max_v}, kind, 0}, {d, {min_u, max_v}, kind, 0},
+  };
+  memcpy(vertices + *count, quad, sizeof(quad));
+  *count += 6;
+}
+
 void screenwide_region_osc_add_line(ScreenwideRegionOscVertex *vertices,
                                     NSUInteger *count, NSSize size,
                                     NSPoint start, NSPoint end,
@@ -164,22 +184,19 @@ static NSPoint snap_handle_point(NSPoint point, CGFloat scale) {
                      snap_handle_center(point.y, scale));
 }
 
-void screenwide_region_osc_add_selection(
-    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
-    NSRect frame, CGFloat scale, double radius_percent, BOOL radius_enabled) {
+static void add_selection_frame(ScreenwideRegionOscVertex *vertices,
+                                NSUInteger *count, NSSize size,
+                                NSRect frame, CGFloat scale,
+                                uint32_t halo_kind,
+                                uint32_t line_kind, CGFloat halo_width) {
   CGFloat min_x = screenwide_region_osc_snap(NSMinX(frame), scale);
   CGFloat max_x = screenwide_region_osc_snap(NSMaxX(frame), scale);
   CGFloat min_y = screenwide_region_osc_snap(NSMinY(frame), scale);
   CGFloat max_y = screenwide_region_osc_snap(NSMaxY(frame), scale);
-  CGFloat mid_x = screenwide_region_osc_snap((min_x + max_x) / 2.0, scale);
-  CGFloat mid_y = screenwide_region_osc_snap((min_y + max_y) / 2.0, scale);
-  NSPoint points[8] = {{min_x, min_y}, {mid_x, min_y}, {max_x, min_y},
-                       {max_x, mid_y}, {max_x, max_y}, {mid_x, max_y},
-                       {min_x, max_y}, {min_x, mid_y}};
   for (NSUInteger pass = 0; pass < 2; pass++) {
     BOOL halo = pass == 0;
-    CGFloat half = (halo ? 1.5 : 0.5) / scale;
-    uint32_t rect_kind = halo ? 2 : 0;
+    CGFloat half = halo ? halo_width * 0.5 : 0.5 / scale;
+    uint32_t rect_kind = halo ? halo_kind : line_kind;
     screenwide_region_osc_add_quad(
         vertices, count, size,
         NSMakeRect(min_x - half, min_y - half, max_x - min_x + half * 2.0,
@@ -201,6 +218,120 @@ void screenwide_region_osc_add_selection(
                    max_y - min_y + half * 2.0),
         rect_kind);
   }
+}
+
+void screenwide_region_osc_add_ruler_box(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
+    NSRect frame, CGFloat scale, BOOL hovered, CGFloat hover_width) {
+  CGFloat min_x = screenwide_region_osc_snap(NSMinX(frame), scale);
+  CGFloat max_x = screenwide_region_osc_snap(NSMaxX(frame), scale);
+  CGFloat min_y = screenwide_region_osc_snap(NSMinY(frame), scale);
+  CGFloat max_y = screenwide_region_osc_snap(NSMaxY(frame), scale);
+  CGFloat halo_width = hovered ? hover_width : 3.0 / scale;
+  CGFloat margin = halo_width * 0.5 + 1.0 / scale;
+  screenwide_region_osc_add_quad(
+      vertices, count, size,
+      NSMakeRect(min_x - margin, min_y - margin,
+                 max_x - min_x + margin * 2.0,
+                 max_y - min_y + margin * 2.0),
+      hovered ? 34 : 35);
+
+  CGFloat half = 0.5 / scale;
+  CGFloat vertical_height = MAX(max_y - min_y - half * 2.0, 0.0);
+  screenwide_region_osc_add_quad(
+      vertices, count, size,
+      NSMakeRect(min_x - half, min_y - half,
+                 max_x - min_x + half * 2.0, half * 2.0),
+      28);
+  screenwide_region_osc_add_quad(
+      vertices, count, size,
+      NSMakeRect(min_x - half, max_y - half,
+                 max_x - min_x + half * 2.0, half * 2.0),
+      28);
+  if (vertical_height > 0.0) {
+    screenwide_region_osc_add_quad(
+        vertices, count, size,
+        NSMakeRect(min_x - half, min_y + half, half * 2.0,
+                   vertical_height),
+        28);
+    screenwide_region_osc_add_quad(
+        vertices, count, size,
+        NSMakeRect(max_x - half, min_y + half, half * 2.0,
+                   vertical_height),
+        28);
+  }
+}
+
+static void add_ruler_arc_quad(ScreenwideRegionOscVertex *vertices,
+                               NSUInteger *count, NSSize size,
+                               NSPoint center, CGFloat radius,
+                               uint8_t corner, CGFloat margin,
+                               uint32_t kind) {
+  BOOL right = corner == 2 || corner == 4;
+  BOOL bottom = corner == 3 || corner == 4;
+  CGFloat sign_x = right ? 1.0 : -1.0;
+  CGFloat sign_y = bottom ? 1.0 : -1.0;
+  CGFloat min_x = right ? center.x - margin : center.x - radius - margin;
+  CGFloat max_x = right ? center.x + radius + margin : center.x + margin;
+  CGFloat min_y = bottom ? center.y - margin : center.y - radius - margin;
+  CGFloat max_y = bottom ? center.y + radius + margin : center.y + margin;
+  ScreenwideRegionOscPoint a = ndc(size, min_x, min_y);
+  ScreenwideRegionOscPoint b = ndc(size, max_x, min_y);
+  ScreenwideRegionOscPoint c = ndc(size, max_x, max_y);
+  ScreenwideRegionOscPoint d = ndc(size, min_x, max_y);
+  ScreenwideRegionOscPoint uv_a = {
+      (float)((min_x - center.x) * sign_x / radius),
+      (float)((min_y - center.y) * sign_y / radius)};
+  ScreenwideRegionOscPoint uv_b = {
+      (float)((max_x - center.x) * sign_x / radius),
+      (float)((min_y - center.y) * sign_y / radius)};
+  ScreenwideRegionOscPoint uv_c = {
+      (float)((max_x - center.x) * sign_x / radius),
+      (float)((max_y - center.y) * sign_y / radius)};
+  ScreenwideRegionOscPoint uv_d = {
+      (float)((min_x - center.x) * sign_x / radius),
+      (float)((max_y - center.y) * sign_y / radius)};
+  ScreenwideRegionOscVertex quad[6] = {
+      {a, uv_a, kind, 0}, {b, uv_b, kind, 0},
+      {c, uv_c, kind, 0}, {a, uv_a, kind, 0},
+      {c, uv_c, kind, 0}, {d, uv_d, kind, 0},
+  };
+  memcpy(vertices + *count, quad, sizeof(quad));
+  *count += 6;
+}
+
+void screenwide_region_osc_add_ruler_arc(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
+    NSPoint center, CGFloat radius, uint8_t corner, CGFloat scale,
+    BOOL hovered, CGFloat hover_width, BOOL low_confidence) {
+  if (radius <= 0.0 || scale <= 0.0)
+    return;
+  center.x = screenwide_region_osc_snap(center.x, scale);
+  center.y = screenwide_region_osc_snap(center.y, scale);
+  radius = MAX(round(radius * scale) / scale, 1.0 / scale);
+  if (hovered) {
+    CGFloat margin = hover_width * 0.5 + 1.0 / scale;
+    add_ruler_arc_quad(vertices, count, size, center, radius, corner,
+                       margin, 40);
+  }
+  add_ruler_arc_quad(vertices, count, size, center, radius, corner,
+                     1.5 / scale, low_confidence ? 41 : 39);
+}
+
+void screenwide_region_osc_add_selection(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
+    NSRect frame, CGFloat scale, double radius_percent, BOOL radius_enabled) {
+  CGFloat min_x = screenwide_region_osc_snap(NSMinX(frame), scale);
+  CGFloat max_x = screenwide_region_osc_snap(NSMaxX(frame), scale);
+  CGFloat min_y = screenwide_region_osc_snap(NSMinY(frame), scale);
+  CGFloat max_y = screenwide_region_osc_snap(NSMaxY(frame), scale);
+  CGFloat mid_x = screenwide_region_osc_snap((min_x + max_x) / 2.0, scale);
+  CGFloat mid_y = screenwide_region_osc_snap((min_y + max_y) / 2.0, scale);
+  NSPoint points[8] = {{min_x, min_y}, {mid_x, min_y}, {max_x, min_y},
+                       {max_x, mid_y}, {max_x, max_y}, {mid_x, max_y},
+                       {min_x, max_y}, {min_x, mid_y}};
+  add_selection_frame(vertices, count, size, frame, scale, 2, 0,
+                      3.0 / scale);
   CGFloat radius = 4.0 + 1.0 / scale;
   for (NSUInteger index = 0; index < 8; index++) {
     NSPoint point = snap_handle_point(points[index], scale);
@@ -288,11 +419,12 @@ void screenwide_region_osc_add_crop(ScreenwideRegionOscVertex *vertices,
       vertices, count, size, crop, image, scale, YES, YES);
 }
 
-void screenwide_region_osc_encode(
+static void encode(
     id<MTLRenderCommandEncoder> encoder,
     id<MTLRenderPipelineState> pipeline, id<MTLBuffer> vertices,
     NSUInteger vertex_count, ScreenwideRegionOscRenderState state,
-    id<MTLTexture> label, id<MTLTexture> secondary_label) {
+    id<MTLTexture> label, id<MTLTexture> secondary_label,
+    id<MTLTexture> snapshot) {
   [encoder setRenderPipelineState:pipeline];
   [encoder setVertexBuffer:vertices offset:0 atIndex:0];
   [encoder setFragmentBytes:&state.light_mode
@@ -317,11 +449,42 @@ void screenwide_region_osc_encode(
   [encoder setFragmentBytes:state.overlay_shade
                      length:sizeof(state.overlay_shade)
                     atIndex:5];
+  [encoder setFragmentBytes:state.ruler_colors
+                     length:sizeof(state.ruler_colors)
+                    atIndex:6];
+  [encoder setFragmentBytes:state.ruler_sample
+                     length:sizeof(state.ruler_sample)
+                    atIndex:7];
+  [encoder setFragmentBytes:state.ruler_animation
+                     length:sizeof(state.ruler_animation)
+                    atIndex:8];
   [encoder setFragmentTexture:label atIndex:0];
   [encoder setFragmentTexture:secondary_label atIndex:1];
   [encoder setFragmentTexture:screenwide_osc_icon_texture(pipeline.device)
                         atIndex:2];
+  [encoder setFragmentTexture:snapshot atIndex:3];
   [encoder drawPrimitives:MTLPrimitiveTypeTriangle
               vertexStart:0
               vertexCount:vertex_count];
+}
+
+void screenwide_region_osc_encode(
+    id<MTLRenderCommandEncoder> encoder,
+    id<MTLRenderPipelineState> pipeline, id<MTLBuffer> vertices,
+    NSUInteger vertex_count, ScreenwideRegionOscRenderState state,
+    id<MTLTexture> label, id<MTLTexture> secondary_label) {
+  // Non-snapshot surfaces never emit kind 33, so any valid texture keeps the
+  // shared fragment interface fully bound without allocating another asset.
+  encode(encoder, pipeline, vertices, vertex_count, state, label,
+         secondary_label, label);
+}
+
+void screenwide_region_osc_encode_with_snapshot(
+    id<MTLRenderCommandEncoder> encoder,
+    id<MTLRenderPipelineState> pipeline, id<MTLBuffer> vertices,
+    NSUInteger vertex_count, ScreenwideRegionOscRenderState state,
+    id<MTLTexture> label, id<MTLTexture> secondary_label,
+    id<MTLTexture> snapshot) {
+  encode(encoder, pipeline, vertices, vertex_count, state, label,
+         secondary_label, snapshot);
 }

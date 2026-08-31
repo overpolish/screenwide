@@ -12,6 +12,7 @@ static ARMED: AtomicBool = AtomicBool::new(false);
 const ESCAPE: &str = "Escape";
 const DISMISS_REQUESTED_EVENT: &str = "recording-ui://dismiss-requested";
 const SCREENSHOT_DISMISS_REQUESTED_EVENT: &str = "screenshot-region://dismiss-requested";
+const RULER_DISMISS_REQUESTED_EVENT: &str = "ruler://dismiss-requested";
 const TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT: &str = "text-recognition://dismiss-requested";
 
 const fn should_be_armed(
@@ -20,7 +21,7 @@ const fn should_be_armed(
   ruler_active: bool,
   text_recognition_active: bool,
 ) -> bool {
-  text_recognition_active || screenshot_session || (controls_visible && !ruler_active)
+  text_recognition_active || screenshot_session || ruler_active || controls_visible
 }
 
 /// A capture overlay borrows Escape while it is active. Otherwise the visible
@@ -44,6 +45,14 @@ pub(super) fn arm(app: &AppHandle) {
           let _ = app.emit_to(
             WindowLabel::RecordingBar.as_str(),
             TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT,
+            (),
+          );
+          return;
+        }
+        if crate::ruler::is_active(app) {
+          let _ = app.emit_to(
+            WindowLabel::RecordingBar.as_str(),
+            RULER_DISMISS_REQUESTED_EVENT,
             (),
           );
           return;
@@ -95,9 +104,8 @@ pub(super) fn disarm(app: &AppHandle) {
   }
 }
 
-/// Gives Escape to exactly one owner. Quick Screenshot uses the global route
-/// because its non-activating desktop panels cannot reliably receive key
-/// events. The ruler keeps its ordinary focused-window handling.
+/// Gives Escape to exactly one owner. Native desktop panels use the global
+/// route because non-activating peer surfaces cannot reliably receive keys.
 pub(super) fn sync(
   app: &AppHandle,
   controls_visible: bool,
@@ -135,6 +143,7 @@ mod tests {
 
   #[test]
   fn ruler_borrows_escape_from_visible_recording_ui() {
-    assert!(!should_be_armed(true, false, true, false));
+    assert!(should_be_armed(true, false, true, false));
+    assert!(should_be_armed(false, false, true, false));
   }
 }

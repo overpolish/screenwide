@@ -68,6 +68,7 @@ tauri_panel! {
       }
     }
   })
+
 }
 
 #[cfg(target_os = "macos")]

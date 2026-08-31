@@ -19,6 +19,28 @@ int screenwide_region_osc_set_snapshot(void *view_ptr, uint32_t display_id,
   if (!target)
     return 0;
 
+  if (target.snapshotComposited) {
+    MTLTextureDescriptor *descriptor = [MTLTextureDescriptor
+        texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                     width:width
+                                    height:height
+                                 mipmapped:NO];
+    descriptor.usage = MTLTextureUsageShaderRead;
+    descriptor.storageMode = MTLStorageModeShared;
+    id<MTLTexture> texture =
+        [target.device newTextureWithDescriptor:descriptor];
+    if (!texture)
+      return 0;
+    [texture replaceRegion:MTLRegionMake2D(0, 0, width, height)
+                mipmapLevel:0
+                  withBytes:rgba
+                bytesPerRow:(NSUInteger)width * 4];
+    target.snapshotTexture = texture;
+    target.snapshotLayer.contents = nil;
+    target.snapshotLayer.hidden = YES;
+    return 1;
+  }
+
   NSData *pixels = [NSData dataWithBytes:rgba length:length];
   CGDataProviderRef provider =
       CGDataProviderCreateWithCFData((__bridge CFDataRef)pixels);
@@ -43,7 +65,27 @@ void screenwide_region_osc_set_snapshot_presented(void *view_ptr,
       screenwide_region_osc_root(screenwide_region_osc_for_view(view_ptr));
   if (!root)
     return;
-  for (ScreenwideRegionOSC *surface in screenwide_region_osc_surfaces(root))
+  for (ScreenwideRegionOSC *surface in screenwide_region_osc_surfaces(root)) {
+    surface.snapshotPresented = presented != 0;
     surface.snapshotLayer.hidden =
-        !presented || surface.snapshotLayer.contents == nil;
+        surface.snapshotComposited || !presented ||
+        surface.snapshotLayer.contents == nil;
+    if (surface.snapshotComposited && surface.visible)
+      screenwide_region_osc_draw(surface);
+  }
+}
+
+void screenwide_region_osc_set_snapshot_composited(void *view_ptr,
+                                                    int composited) {
+  ScreenwideRegionOSC *root =
+      screenwide_region_osc_root(screenwide_region_osc_for_view(view_ptr));
+  if (!root)
+    return;
+  for (ScreenwideRegionOSC *surface in screenwide_region_osc_surfaces(root)) {
+    surface.snapshotComposited = composited != 0;
+    if (surface.snapshotComposited) {
+      surface.snapshotLayer.contents = nil;
+      surface.snapshotLayer.hidden = YES;
+    }
+  }
 }

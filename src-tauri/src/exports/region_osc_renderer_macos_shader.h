@@ -106,6 +106,11 @@ struct region_osc_ocr_palette {
   float4 selection_outline;
 };
 
+struct region_osc_ruler_palette {
+  float4 primary;
+  float4 info;
+};
+
 vertex region_osc_out region_osc_vertex_main(
     const device region_osc_vertex *vertices [[buffer(0)]],
     uint index [[vertex_id]]) {
@@ -124,10 +129,60 @@ fragment float4 region_osc_fragment(
     constant region_osc_control_palette &controls [[buffer(3)]],
     constant region_osc_ocr_palette &ocr [[buffer(4)]],
     constant float4 &overlay_shade [[buffer(5)]],
+    constant region_osc_ruler_palette &ruler [[buffer(6)]],
+    constant float4 &ruler_sample [[buffer(7)]],
+    constant float4 &ruler_animation [[buffer(8)]],
     texture2d<float> label [[texture(0)]],
     texture2d<float> secondary_label [[texture(1)]],
-    texture2d<float> icons [[texture(2)]]) {
+    texture2d<float> icons [[texture(2)]],
+    texture2d<float> snapshot [[texture(3)]]) {
   constexpr sampler label_sampler(filter::linear, address::clamp_to_edge);
+  if (in.kind == 33) return snapshot.sample(label_sampler, in.uv);
+  if (in.kind == 34 || in.kind == 35) {
+    float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
+    float width = in.kind == 34 ? max(ruler_animation.z, 1.0) : 3.0;
+    float margin = width * 0.5 + 1.0;
+    float2 half_size = dimensions * 0.5;
+    float2 centerline_half = max(half_size - margin, float2(0.0));
+    float2 point = abs((in.uv - 0.5) * dimensions) - centerline_half;
+    float distance = length(max(point, 0.0)) +
+                     min(max(point.x, point.y), 0.0);
+    float ring_distance = abs(distance) - width * 0.5;
+    float aa = max(fwidth(distance), 0.5);
+    float coverage = clamp(0.5 - ring_distance / aa, 0.0, 1.0);
+    if (coverage <= 0.0) discard_fragment();
+    float4 color = ruler.primary;
+    color.a *= coverage * (in.kind == 34 ? ruler_animation.y : 0.32);
+    return color;
+  }
+  if (in.kind >= 39 && in.kind <= 41) {
+    float2 pixel_radius = 1.0 / max(fwidth(in.uv), float2(0.0001));
+    float radius = (pixel_radius.x + pixel_radius.y) * 0.5;
+    float2 local = in.uv * radius;
+    float width = in.kind == 40 ? max(ruler_animation.z, 1.0) : 1.0;
+    float half_width = width * 0.5;
+    float radial = abs(length(local) - radius) - half_width;
+    float quadrant = max(-local.x, -local.y);
+    float arc_distance = max(radial, quadrant);
+    float endpoint_x = length(local - float2(radius, 0.0)) - half_width;
+    float endpoint_y = length(local - float2(0.0, radius)) - half_width;
+    float distance = min(arc_distance, min(endpoint_x, endpoint_y));
+    float aa = max(fwidth(distance), 0.5);
+    float coverage = clamp(0.5 - distance / aa, 0.0, 1.0);
+    if (in.kind == 41) {
+      float along = atan2(max(local.y, 0.0), max(local.x, 0.0)) * radius;
+      float phase = fmod(along, 7.0);
+      float pattern_aa = max(fwidth(along), 0.5);
+      float dash = 1.0 - smoothstep(4.0 - pattern_aa,
+                                   4.0 + pattern_aa, phase);
+      coverage *= dash;
+    }
+    if (coverage <= 0.0) discard_fragment();
+    float4 color = ruler.primary;
+    color.a *= coverage * (in.kind == 40 ? ruler_animation.y
+                                         : in.kind == 41 ? 0.7 : 1.0);
+    return color;
+  }
   if (magnifier_box.z > 0.0) {
     float2 half_size = magnifier_box.zw * 0.5;
     float2 local = abs(in.position.xy - (magnifier_box.xy + half_size)) -
@@ -136,12 +191,61 @@ fragment float4 region_osc_fragment(
                      min(max(local.x, local.y), 0.0) - 4.0;
     if (distance <= 0.0) discard_fragment();
   }
+  if (in.kind == 37) {
+    float4 sampled = secondary_label.sample(label_sampler, in.uv);
+    if (sampled.a <= 0.002) discard_fragment();
+    return float4(sampled.rgb / sampled.a,
+                  sampled.a * ruler_animation.w);
+  }
   if (in.kind == 11 || in.kind == 15) {
     float4 sampled = in.kind == 15
         ? secondary_label.sample(label_sampler, in.uv)
         : label.sample(label_sampler, in.uv);
     if (sampled.a <= 0.002) discard_fragment();
-    return float4(sampled.rgb / sampled.a, sampled.a);
+    float opacity = in.kind == 11 ? 1.0 - ruler_animation.w : 1.0;
+    return float4(sampled.rgb / sampled.a, sampled.a * opacity);
+  }
+  if (in.kind == 28) return ruler.primary;
+  if (in.kind >= 42 && in.kind <= 44) {
+    float4 color = ruler.primary;
+    color.a *= in.kind == 42 ? 0.45 : in.kind == 43 ? 0.85 : 0.30;
+    return color;
+  }
+  if (in.kind == 36) return ruler.info;
+  if (in.kind == 38) {
+    float4 color = ruler.info;
+    color.a *= ruler_animation.y;
+    return color;
+  }
+  if (in.kind == 31) {
+    float4 color = ruler.primary;
+    color.a *= 0.32;
+    return color;
+  }
+  if (in.kind == 32) {
+    float4 color = ruler.primary;
+    color.a *= ruler_animation.y;
+    return color;
+  }
+  if (in.kind == 29) {
+    float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
+    float2 half_size = dimensions * 0.5;
+    float radius = min(4.0, min(half_size.x, half_size.y));
+    float2 point = abs((in.uv - 0.5) * dimensions) - (half_size - radius);
+    float distance = length(max(point, 0.0)) +
+                     min(max(point.x, point.y), 0.0) - radius;
+    float aa = max(fwidth(distance), 0.0001);
+    float coverage = clamp(0.5 - distance / aa, 0.0, 1.0);
+    if (coverage <= 0.0) discard_fragment();
+    float4 color = ruler_sample;
+    color.a *= coverage * (1.0 - ruler_animation.x) *
+        (1.0 - ruler_animation.w);
+    return color;
+  }
+  if (in.kind == 30) {
+    float4 color = actions.secondary;
+    color.a *= ruler_animation.x * (1.0 - ruler_animation.w);
+    return color;
   }
   if (in.kind >= 22 && in.kind <= 26) {
     float cell = float(in.kind - 21);
@@ -153,15 +257,11 @@ fragment float4 region_osc_fragment(
     return color;
   }
   if (in.kind >= 12 && in.kind <= 14) {
-    float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
-    float radius = dimensions.y / 3.0;
-    float2 local = abs((in.uv - 0.5) * dimensions) -
-                   (dimensions * 0.5 - radius);
-    float distance = length(max(local, 0.0)) +
-                     min(max(local.x, local.y), 0.0) - radius;
-    float coverage = 1.0 - smoothstep(-1.0, 1.0, distance);
+    // Material-backed OSC controls have one semantic radius owner: their
+    // native surface. Keeping the Metal fill rectangular prevents a second,
+    // height-derived radius from diverging on composed controls such as the
+    // two-row ruler loupe.
     float4 color = in.kind == 13 ? actions.secondary : actions.primary;
-    color.a *= coverage;
     return color;
   }
   if (in.kind == 6) return overlay_shade;

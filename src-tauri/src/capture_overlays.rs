@@ -59,24 +59,6 @@ pub fn dismiss_all(app: &AppHandle) {
   dismiss_except(app, None);
 }
 
-pub fn windows(app: &AppHandle, prefix: &str) -> Vec<tauri::WebviewWindow> {
-  app
-    .webview_windows()
-    .into_values()
-    .filter(|window| window.label().starts_with(prefix))
-    .collect()
-}
-
-pub fn close_windows(app: &AppHandle, prefix: &str, except: Option<&str>) {
-  for window in windows(app, prefix) {
-    if Some(window.label()) != except {
-      #[cfg(target_os = "windows")]
-      let _ = crate::windows::conceal_disposable_overlay(&window);
-      let _ = window.close();
-    }
-  }
-}
-
 pub fn emit_lifecycle(app: &AppHandle, active: bool) {
   let event = if active {
     "capture-overlay://started"

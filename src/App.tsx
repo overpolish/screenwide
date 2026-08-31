@@ -13,7 +13,6 @@ import { RecordingOptionsWindow } from "./features/recording-inputs/recording-op
 import { RecordingSourceSelectorWindow } from "./features/recording-sources/recording-source-selector-window";
 import { RecordingSourceSync } from "./features/recording-sources/recording-source-sync";
 import { RegionSelectorWindow } from "./features/region-selector/region-selector-window";
-import { RulerWindow } from "./features/ruler/ruler-window";
 import { ScrollingCaptureOverlayWindow } from "./features/screenshots/scrolling-capture-overlay-window";
 import { SettingsWindow } from "./features/settings/settings-window";
 import { StandaloneListboxSync } from "./features/standalone-listbox/standalone-listbox-sync";
@@ -35,7 +34,9 @@ export function App() {
       case "/region-selector":
         return <RegionSelectorWindow />;
       case "/ruler":
-        return <RulerWindow />;
+        // Native ruler surfaces use this route only as their transparent host.
+        // No ruler rendering or interaction is allowed in React.
+        return null;
       case "/recording-options":
         return <RecordingOptionsWindow />;
       case "/scrolling-capture-overlay":

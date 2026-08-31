@@ -46,7 +46,9 @@ const fn policy(label: WindowLabel) -> Policy {
     WindowLabel::RecordingOptions
     | WindowLabel::RecordingSourceSelector
     | WindowLabel::StandaloneListbox => Policy::OwnedTransient,
-    WindowLabel::RegionSelector | WindowLabel::TextRecognition => Policy::DesktopSurface,
+    WindowLabel::RegionSelector | WindowLabel::Ruler | WindowLabel::TextRecognition => {
+      Policy::DesktopSurface
+    }
   }
 }
 
@@ -108,6 +110,7 @@ mod tests {
   #[test]
   fn desktop_surfaces_are_not_clamped_like_normal_windows() {
     assert_eq!(policy(WindowLabel::RegionSelector), Policy::DesktopSurface);
+    assert_eq!(policy(WindowLabel::Ruler), Policy::DesktopSurface);
     assert_eq!(policy(WindowLabel::TextRecognition), Policy::DesktopSurface);
   }
 }

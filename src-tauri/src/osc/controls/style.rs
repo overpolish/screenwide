@@ -77,6 +77,31 @@ pub struct ControlMetrics {
   pub line_height: f64,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ControlSpacing {
+  pub tight: f64,
+  pub control: f64,
+  pub control_inset: f64,
+  pub section: f64,
+  pub window_inset: f64,
+}
+
+pub const fn control_spacing() -> ControlSpacing {
+  ControlSpacing {
+    tight: 2.0,
+    control: 4.0,
+    control_inset: 8.0,
+    section: 12.0,
+    window_inset: 24.0,
+  }
+}
+
+#[no_mangle]
+pub extern "C" fn screenwide_osc_control_spacing() -> ControlSpacing {
+  control_spacing()
+}
+
 pub const fn control_metrics(kind: ControlKind, size: ControlSize) -> ControlMetrics {
   match (kind, size) {
     (ControlKind::Button, ControlSize::Compact) => ControlMetrics {

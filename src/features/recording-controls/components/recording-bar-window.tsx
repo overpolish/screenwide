@@ -52,6 +52,7 @@ import {
   SelectorState,
 } from "../../recording-sources/types";
 import { WindowSourceControls } from "../../recording-sources/window-source-controls";
+import { cancelRuler } from "../../region-selector/ruler-screenshot-mode";
 import { ShortcutAction } from "../../settings/types";
 import {
   cancelTextRecognition,
@@ -68,6 +69,7 @@ import { RecordingBar } from "./recording-bar";
 
 const RECORDING_ERROR_EVENT = "recording://error";
 const RECORDING_DISMISS_REQUESTED_EVENT = "recording-ui://dismiss-requested";
+const RULER_DISMISS_REQUESTED_EVENT = "ruler://dismiss-requested";
 const TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT =
   "text-recognition://dismiss-requested";
 /** A recording started without selected inputs whose devices had vanished. */
@@ -259,6 +261,23 @@ export function RecordingBarWindow() {
     };
 
     void initialize();
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+    let disposed = false;
+
+    void listen(RULER_DISMISS_REQUESTED_EVENT, () => {
+      void cancelRuler();
+    }).then((listener) => {
+      if (disposed) listener();
+      else unlisten = listener;
+    });
 
     return () => {
       disposed = true;

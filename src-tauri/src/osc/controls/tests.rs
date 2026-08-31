@@ -58,6 +58,16 @@ fn metrics_match_the_current_react_components() {
 }
 
 #[test]
+fn spacing_matches_the_semantic_css_tokens() {
+  let spacing = super::style::control_spacing();
+  assert_eq!(spacing.tight, 2.0);
+  assert_eq!(spacing.control, 4.0);
+  assert_eq!(spacing.control_inset, 8.0);
+  assert_eq!(spacing.section, 12.0);
+  assert_eq!(spacing.window_inset, 24.0);
+}
+
+#[test]
 fn neutral_tokens_match_the_translucent_css_values() {
   let light = control_visual(
     ControlStyle::button(ControlColor::Neutral, ControlSize::Compact),

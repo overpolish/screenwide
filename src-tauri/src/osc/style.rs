@@ -20,6 +20,15 @@ pub struct OverlayPalette {
   pub shade: [f32; 4],
 }
 
+/// Shared ruler crosshair token. The callout itself resolves through the OSC
+/// compact neutral control tokens so it cannot drift from native buttons.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RulerPalette {
+  pub primary: [f32; 4],
+  pub info: [f32; 4],
+}
+
 pub const OVERLAY_SHADE_OPACITY: f32 = 0.48;
 
 pub const fn overlay_palette() -> OverlayPalette {
@@ -31,6 +40,25 @@ pub const fn overlay_palette() -> OverlayPalette {
 #[no_mangle]
 pub extern "C" fn screenwide_osc_overlay_palette() -> OverlayPalette {
   overlay_palette()
+}
+
+pub const fn ruler_palette(light_appearance: bool) -> RulerPalette {
+  if light_appearance {
+    RulerPalette {
+      primary: [216.0 / 255.0, 27.0 / 255.0, 96.0 / 255.0, 1.0],
+      info: [0.0, 104.0 / 255.0, 201.0 / 255.0, 1.0],
+    }
+  } else {
+    RulerPalette {
+      primary: [1.0, 41.0 / 255.0, 112.0 / 255.0, 1.0],
+      info: [102.0 / 255.0, 183.0 / 255.0, 1.0, 1.0],
+    }
+  }
+}
+
+#[no_mangle]
+pub extern "C" fn screenwide_osc_ruler_palette(light_mode: u32) -> RulerPalette {
+  ruler_palette(light_mode != 0)
 }
 
 #[repr(C)]
@@ -155,5 +183,18 @@ mod tests {
     assert_eq!(dark.error_outline, [1.0, 105.0 / 255.0, 97.0 / 255.0, 0.80]);
     assert_eq!(dark.qr_fill, [1.0, 41.0 / 255.0, 112.0 / 255.0, 0.50]);
     assert_eq!(dark.qr_outline[3], 0.95);
+  }
+
+  #[test]
+  fn ruler_crosshair_uses_the_shared_primary_accent() {
+    let light = ruler_palette(true);
+    assert_eq!(
+      light.primary,
+      [216.0 / 255.0, 27.0 / 255.0, 96.0 / 255.0, 1.0]
+    );
+    let dark = ruler_palette(false);
+    assert_eq!(dark.primary, [1.0, 41.0 / 255.0, 112.0 / 255.0, 1.0]);
+    assert_eq!(light.info, [0.0, 104.0 / 255.0, 201.0 / 255.0, 1.0]);
+    assert_eq!(dark.info, [102.0 / 255.0, 183.0 / 255.0, 1.0, 1.0]);
   }
 }

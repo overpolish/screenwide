@@ -57,6 +57,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+desktop.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+input.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+state.m");
+    println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+ruler.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+snapshot.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+ocr.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+ocr_cancel.m");
@@ -112,6 +113,7 @@ fn main() {
       .file("src/exports/screenshot_region_osc_macos+desktop.m")
       .file("src/exports/screenshot_region_osc_macos+input.m")
       .file("src/exports/screenshot_region_osc_macos+state.m")
+      .file("src/exports/screenshot_region_osc_macos+ruler.m")
       .file("src/exports/screenshot_region_osc_macos+snapshot.m")
       .file("src/exports/screenshot_region_osc_macos+ocr.m")
       .file("src/exports/screenshot_region_osc_macos+ocr_cancel.m")

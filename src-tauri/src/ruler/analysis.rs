@@ -30,7 +30,7 @@ pub struct GradientMaps {
   pub height: u32,
 }
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ComponentBox {
   pub x: u32,

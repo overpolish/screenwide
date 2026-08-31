@@ -155,6 +155,23 @@ static BOOL rebuild_surfaces(ScreenwideRegionOSC *root,
     peer.showHandles = root.showHandles;
     peer.inputEnabled = root.inputEnabled;
     peer.exclusionRect = NSZeroRect;
+    peer.rulerVisible = root.rulerVisible;
+    peer.rulerCrosshair = root.rulerCrosshair;
+    peer.rulerCopied = root.rulerCopied;
+    peer.rulerPoint = NSMakePoint(root.rulerPoint.x - peer.desktopOffset.x,
+                                 root.rulerPoint.y - peer.desktopOffset.y);
+    peer.rulerColor = root.rulerColor;
+    peer.rulerToleranceMode = root.rulerToleranceMode;
+    peer.rulerToleranceVisible = root.rulerToleranceVisible;
+    peer.rulerToleranceAnimationFrom =
+        root.rulerToleranceAnimationFrom;
+    peer.rulerToleranceAnimationStarted =
+        root.rulerToleranceAnimationStarted;
+    peer.rulerToleranceAnimationTarget =
+        root.rulerToleranceAnimationTarget;
+    peer.rulerMeasurements = root.rulerMeasurements;
+    peer.rulerHoveredArtifactKey = root.rulerHoveredArtifactKey;
+    peer.rulerHoverPulseStarted = root.rulerHoverPulseStarted;
     panel.ignoresMouseEvents = !root.inputEnabled;
     [root.desktopPeers addObject:peer];
     [root.desktopWindows addObject:panel];

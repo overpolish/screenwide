@@ -42,6 +42,14 @@ typedef struct {
 } ScreenwideOscControlMetrics;
 
 typedef struct {
+  double tight;
+  double control;
+  double control_inset;
+  double section;
+  double window_inset;
+} ScreenwideOscControlSpacing;
+
+typedef struct {
   const uint8_t *pixels;
   size_t length;
   uint32_t width;
@@ -75,6 +83,7 @@ typedef struct {
 void *screenwide_osc_control_group_create(void);
 ScreenwideOscControlMetrics screenwide_osc_control_metrics(
     uint8_t kind, uint8_t size);
+ScreenwideOscControlSpacing screenwide_osc_control_spacing(void);
 void screenwide_osc_control_group_destroy(void *handle);
 void screenwide_osc_control_group_layout(
     void *handle, const ScreenwideOscControlSpec *specs, size_t count);

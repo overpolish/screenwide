@@ -36,12 +36,14 @@ void screenwide_region_osc_set_input_enabled(void *view_ptr, int enabled) {
   if (root.inputEnabled && !enabled && active) {
     NativeOscResult result = {0};
     root.input(root.rustContext, 5, 0, 0, 0, &result);
-    screenwide_region_osc_apply_region(
-        root,
-        result.has_region
-            ? NSMakeRect(result.x, result.y, result.width, result.height)
-            : NSZeroRect,
-        root.visible);
+    screenwide_region_osc_apply_ruler_result(root, result);
+    if ((result.ruler_flags & 1) == 0)
+      screenwide_region_osc_apply_region(
+          root,
+          result.has_region
+              ? NSMakeRect(result.x, result.y, result.width, result.height)
+              : NSZeroRect,
+          root.visible);
   }
   if (!enabled)
     screenwide_region_osc_cancel_pointer_claim(root);

@@ -43,6 +43,9 @@ typedef struct {
   float control_fill[4];
   float control_outline[4];
   float ocr_colors[32];
+  float ruler_colors[8];
+  float ruler_sample[4];
+  float ruler_animation[4];
 } ScreenwideRegionOscRenderState;
 
 typedef struct {
@@ -68,6 +71,10 @@ typedef struct {
   float status_error_fill[4];
   float status_error_foreground[4];
 } ScreenwideOscOcrPalette;
+typedef struct {
+  float primary[4];
+  float info[4];
+} ScreenwideOscRulerPalette;
 _Static_assert(sizeof(ScreenwideOscOcrPalette) == 192,
                "ScreenwideOscOcrPalette ABI must match Rust");
 
@@ -75,11 +82,14 @@ ScreenwideOscControlPalette screenwide_osc_control_palette(
     uint32_t light_mode);
 ScreenwideOscOverlayPalette screenwide_osc_overlay_palette(void);
 ScreenwideOscOcrPalette screenwide_osc_ocr_palette(uint32_t light_mode);
+ScreenwideOscRulerPalette screenwide_osc_ruler_palette(uint32_t light_mode);
 ScreenwideRegionOscRenderState screenwide_region_osc_render_state(
     uint32_t light_mode);
 
 NSString *screenwide_region_osc_shader_source(void);
 id<MTLRenderPipelineState> screenwide_region_osc_make_pipeline(
+    id<MTLDevice> device, id<MTLLibrary> library, NSError **error);
+id<MTLRenderPipelineState> screenwide_region_osc_make_snapshot_pipeline(
     id<MTLDevice> device, id<MTLLibrary> library, NSError **error);
 id<MTLComputePipelineState> screenwide_region_magnifier_make_pipeline(
     id<MTLDevice> device, id<MTLLibrary> library, NSError **error);
@@ -98,6 +108,9 @@ CGFloat screenwide_region_osc_snap(CGFloat value, CGFloat scale);
 void screenwide_region_osc_add_quad(ScreenwideRegionOscVertex *vertices,
                                     NSUInteger *count, NSSize view_size,
                                     NSRect rect, uint32_t kind);
+void screenwide_region_osc_add_texture_quad(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count,
+    NSSize view_size, NSRect rect, NSRect texture_rect, uint32_t kind);
 void screenwide_region_osc_add_line(ScreenwideRegionOscVertex *vertices,
                                     NSUInteger *count, NSSize view_size,
                                     NSPoint start, NSPoint end,
@@ -105,6 +118,13 @@ void screenwide_region_osc_add_line(ScreenwideRegionOscVertex *vertices,
 void screenwide_region_osc_add_selection(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
     NSRect frame, CGFloat scale, double radius_percent, BOOL radius_enabled);
+void screenwide_region_osc_add_ruler_box(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
+    NSRect frame, CGFloat scale, BOOL hovered, CGFloat hover_width);
+void screenwide_region_osc_add_ruler_arc(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count,
+    NSSize view_size, NSPoint center, CGFloat radius, uint8_t corner,
+    CGFloat scale, BOOL hovered, CGFloat hover_width, BOOL low_confidence);
 void screenwide_region_osc_add_crop(ScreenwideRegionOscVertex *vertices,
                                     NSUInteger *count, NSSize view_size,
                                     NSRect crop, NSRect image, CGFloat scale);
@@ -118,6 +138,12 @@ void screenwide_region_osc_encode(
     id<MTLRenderPipelineState> pipeline, id<MTLBuffer> vertices,
     NSUInteger vertex_count, ScreenwideRegionOscRenderState state,
     id<MTLTexture> label, id<MTLTexture> secondary_label);
+void screenwide_region_osc_encode_with_snapshot(
+    id<MTLRenderCommandEncoder> encoder,
+    id<MTLRenderPipelineState> pipeline, id<MTLBuffer> vertices,
+    NSUInteger vertex_count, ScreenwideRegionOscRenderState state,
+    id<MTLTexture> label, id<MTLTexture> secondary_label,
+    id<MTLTexture> snapshot);
 id<MTLTexture> screenwide_osc_icon_texture(id<MTLDevice> device);
 void screenwide_region_magnifier_encode(
     id<MTLComputeCommandEncoder> encoder,

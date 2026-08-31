@@ -21,6 +21,7 @@
   }
   screenwide_region_osc_appearance_teardown(self);
   screenwide_region_osc_input_teardown(self);
+  screenwide_region_osc_ruler_teardown(self);
   if (self.releaseContext && self.rustContext)
     self.releaseContext(self.rustContext);
 }
@@ -63,7 +64,8 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
   s.layer.drawableSize =
       CGSizeMake(MAX(size.width * scale, 2.0), MAX(size.height * scale, 2.0));
 
-  NSUInteger capacity = 256 + screenwide_region_osc_ocr_vertex_capacity(s);
+  NSUInteger capacity = 262 + screenwide_region_osc_ocr_vertex_capacity(s) +
+                        screenwide_region_osc_ruler_vertex_capacity(s);
   ScreenwideRegionOscVertex *vertices =
       calloc(capacity, sizeof(ScreenwideRegionOscVertex));
   if (!vertices) {
@@ -72,6 +74,15 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
   }
   NSUInteger count = 0;
   NSRect canvas = NSMakeRect(0, 0, size.width, size.height);
+  if (s.snapshotComposited && s.snapshotPresented && s.snapshotTexture) {
+    CGFloat zoom = MAX(s.rulerViewportZoom, 1.0);
+    NSRect source = NSMakeRect(
+        s.rulerViewportOrigin.x / size.width,
+        s.rulerViewportOrigin.y / size.height,
+        1.0 / zoom, 1.0 / zoom);
+    screenwide_region_osc_add_texture_quad(
+        vertices, &count, size, canvas, source, 33);
+  }
   if (NSIsEmptyRect(s.region))
     screenwide_region_osc_add_quad(vertices, &count, size, canvas, 6);
   else
@@ -79,6 +90,7 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
         vertices, &count, size, s.region, canvas, scale, s.showFrame,
         s.showHandles);
   screenwide_region_osc_ocr_add_vertices(s, vertices, &count, size, scale);
+  screenwide_region_osc_ruler_add_vertices(s, vertices, &count, size, scale);
 
   id<CAMetalDrawable> drawable = [s.layer nextDrawable];
   if (drawable == nil) {
@@ -123,19 +135,27 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
   pass.colorAttachments[0].storeAction = MTLStoreActionStore;
   id<MTLRenderCommandEncoder> encoder =
       [command renderCommandEncoderWithDescriptor:pass];
+  id<MTLRenderPipelineState> renderPipeline =
+      s.snapshotComposited ? s.snapshotPipeline : s.pipeline;
   ScreenwideRegionOscRenderState state =
       screenwide_region_osc_render_state(light_mode(s));
+  screenwide_region_osc_ruler_apply_render_state(s, &state);
+  state.ruler_sample[0] = ((s.rulerColor >> 24) & 0xFF) / 255.0;
+  state.ruler_sample[1] = ((s.rulerColor >> 16) & 0xFF) / 255.0;
+  state.ruler_sample[2] = ((s.rulerColor >> 8) & 0xFF) / 255.0;
+  state.ruler_sample[3] = (s.rulerColor & 0xFF) / 255.0;
   if (showMagnifier) {
     state.magnifier_box[0] = s.magnifier.box_x;
     state.magnifier_box[1] = s.magnifier.box_y;
     state.magnifier_box[2] = s.magnifier.box_width;
     state.magnifier_box[3] = s.magnifier.box_height;
   }
-  screenwide_region_osc_encode(encoder, s.pipeline, buffer, count, state,
-                               s.placeholder, s.placeholder);
+  screenwide_region_osc_encode_with_snapshot(
+      encoder, renderPipeline, buffer, count, state,
+      s.rulerLabel.texture ?: s.placeholder, s.placeholder,
+      s.snapshotTexture ?: s.placeholder);
   [encoder endEncoding];
-  [command presentDrawable:drawable];
-  [command addCompletedHandler:^(__unused id<MTLCommandBuffer> completed) {
+  [drawable addPresentedHandler:^(__unused id<MTLDrawable> presented) {
     dispatch_async(dispatch_get_main_queue(), ^{
       s.drawInFlight = NO;
       BOOL redrawPending = s.drawPending;
@@ -149,6 +169,7 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
       }
     });
   }];
+  [command presentDrawable:drawable];
   [command commit];
 }
 
@@ -185,10 +206,13 @@ void *screenwide_region_osc_attach(void *view_ptr, void *context,
     return NULL;
   }
   s.pipeline = screenwide_region_osc_make_pipeline(s.device, library, &error);
+  s.snapshotPipeline =
+      screenwide_region_osc_make_snapshot_pipeline(s.device, library, &error);
   s.magnifierPipeline =
       screenwide_region_magnifier_make_pipeline(s.device, library, &error);
   s.placeholder = screenwide_region_osc_make_placeholder(s.device);
-  if (!s.pipeline || !s.magnifierPipeline || !s.placeholder) {
+  if (!s.pipeline || !s.snapshotPipeline || !s.magnifierPipeline ||
+      !s.placeholder) {
     s.rustContext = NULL;
     s.releaseContext = NULL;
     if (release)
@@ -211,6 +235,7 @@ void *screenwide_region_osc_attach(void *view_ptr, void *context,
   s.layer.contentsScale = view.window.backingScaleFactor ?: 1;
   s.layer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
   [view.layer addSublayer:s.layer];
+  screenwide_region_osc_ruler_attach(s);
   screenwide_region_osc_ocr_attach(s);
   objc_setAssociatedObject(view, ScreenwideRegionOSCKey, s,
                            OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -290,6 +315,7 @@ void screenwide_region_osc_detach(void *view_ptr) {
   s.layer.hidden = YES;
   s.snapshotLayer.hidden = YES;
   s.snapshotLayer.contents = nil;
+  s.snapshotTexture = nil;
   screenwide_region_osc_ocr_teardown(s);
   [s.layer removeFromSuperlayer];
   [s.snapshotLayer removeFromSuperlayer];

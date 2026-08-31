@@ -15,8 +15,6 @@
   "src/features/recording-controls/components/recording-bar.tsx": 404,
   "src/features/recording-controls/components/recording-dock.tsx": 306,
   "src/features/recording-inputs/recording-options.tsx": 421,
-  "src/features/ruler/corner-radius.ts": 321,
-  "src/features/ruler/ruler-window.tsx": 449,
   "src-tauri/src/audio_preview.rs": 335,
   "src-tauri/src/camera_preview.rs": 533,
   "src-tauri/src/exports/cursor_effects/raster.rs": 733,

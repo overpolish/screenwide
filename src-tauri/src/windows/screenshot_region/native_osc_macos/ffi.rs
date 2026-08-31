@@ -8,7 +8,7 @@ use super::{
   NativeOscResult,
 };
 
-const _: () = assert!(std::mem::size_of::<NativeOscResult>() == 40);
+const _: () = assert!(std::mem::size_of::<NativeOscResult>() == 48);
 const _: () = assert!(std::mem::offset_of!(NativeOscResult, x) == 8);
 
 pub type ReleaseContext = unsafe extern "C" fn(*mut c_void);
@@ -93,6 +93,8 @@ unsafe extern "C" {
   ) -> usize;
   pub fn screenwide_region_osc_set_desktop_presented(view: *mut c_void, presented: i32);
   pub fn screenwide_region_osc_claim_pointer_surface(view: *mut c_void);
+  pub fn screenwide_region_osc_ruler_refresh_pointer(view: *mut c_void);
+  pub fn screenwide_region_osc_ruler_set_transient_chrome(view: *mut c_void, visible: i32);
   pub fn screenwide_region_osc_set_snapshot(
     view: *mut c_void,
     display_id: u32,
@@ -102,6 +104,7 @@ unsafe extern "C" {
     height: u32,
   ) -> i32;
   pub fn screenwide_region_osc_set_snapshot_presented(view: *mut c_void, presented: i32);
+  pub fn screenwide_region_osc_set_snapshot_composited(view: *mut c_void, composited: i32);
   pub fn screenwide_region_osc_set_ocr(
     view: *mut c_void,
     phase: u32,

@@ -4,5 +4,6 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Purpose {
   Region,
+  Ruler,
   TextRecognition,
 }

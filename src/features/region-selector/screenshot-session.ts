@@ -12,10 +12,11 @@ import {
 } from "../recording-sources/api";
 import { useRecordingSourceStore } from "../recording-sources/store";
 import { Region } from "../recording-sources/types";
-import { setRulerScreenshotMode } from "../ruler/api";
 import { captureStill, ScreenshotDestination } from "../screenshots/api";
 import { ShortcutAction } from "../settings/types";
 import { cancelTextRecognition } from "../text-recognition/api";
+
+import { setRulerScreenshotMode } from "./ruler-screenshot-mode";
 
 type ScreenshotShortcutAction = Extract<
   ShortcutAction,
