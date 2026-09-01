@@ -227,6 +227,36 @@ pub fn raise_without_activation(window: &WebviewWindow) -> tauri::Result<()> {
   restore_recording_level(window)
 }
 
+/// Presents a normally nonactivating overlay as the key window for one
+/// explicit interactive-tool lease.
+///
+/// Recording UI must continue to use [`show`]. Only a cursor lease that has
+/// already activated Screenwide may enter this path, and it must call
+/// [`restore_nonactivating_overlay`] before returning foreground ownership.
+#[cfg(target_os = "macos")]
+pub fn show_interactive_overlay(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
+  window.set_ignore_cursor_events(false)?;
+  let panel = ensure_recording_panel(window)?;
+  let app = window.app_handle().clone();
+  app.run_on_main_thread(move || {
+    panel.set_style_mask(StyleMask::empty().into());
+    panel.set_alpha_value(opacity);
+    panel.make_key_and_order_front();
+  })
+}
+
+/// Returns a leased interactive overlay to the recording UI's nonactivating
+/// presentation before the cursor lease restores the prior application.
+#[cfg(target_os = "macos")]
+pub fn restore_nonactivating_overlay(window: &WebviewWindow) -> tauri::Result<()> {
+  let panel = ensure_recording_panel(window)?;
+  let app = window.app_handle().clone();
+  app.run_on_main_thread(move || {
+    panel.resign_key_window();
+    panel.set_style_mask(StyleMask::empty().nonactivating_panel().into());
+  })
+}
+
 #[cfg(target_os = "macos")]
 pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
   window.set_ignore_cursor_events(true)?;

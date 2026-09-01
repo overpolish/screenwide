@@ -22,7 +22,8 @@ mod platform;
 mod platform;
 
 pub(super) use platform::{
-  apply_region_scene, prepare_for_region_restore, prepare_for_screenshot, set_desktop_presented,
+  acquire_quick_screenshot_cursor, apply_region_scene, prepare_for_region_restore,
+  prepare_for_screenshot, release_quick_screenshot_cursor, set_desktop_presented,
   set_frame_visible, set_magnifier_source,
 };
 

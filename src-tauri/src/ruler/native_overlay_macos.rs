@@ -72,7 +72,7 @@ pub(super) fn install(
   receiver.recv().map_err(|error| error.to_string())?
 }
 
-pub(super) fn show_without_activation(window: &tauri::WebviewWindow) -> Result<(), String> {
+pub(super) fn show_interactive(window: &tauri::WebviewWindow) -> Result<(), String> {
   let window = window.clone();
   let native_window = window.clone();
   let app = window.app_handle().clone();
@@ -84,7 +84,7 @@ pub(super) fn show_without_activation(window: &tauri::WebviewWindow) -> Result<(
         .map_err(|error| error.to_string())
         .map(|raw_window| {
           let native_window: &objc2_app_kit::NSWindow = unsafe { &*raw_window.cast() };
-          native_window.orderFrontRegardless();
+          native_window.makeKeyAndOrderFront(None);
         });
       let _ = sender.send(result);
     })
@@ -111,6 +111,14 @@ pub(super) fn set_screenshot_mode(
   window: &tauri::WebviewWindow,
   active: bool,
 ) -> Result<(), String> {
+  if !active {
+    // Resume the native surface only after WindowServer routes pointer events
+    // to it again. Claiming while the Tauri window is still passthrough leaves
+    // transient Ruler chrome dormant until the first click.
+    window
+      .set_ignore_cursor_events(false)
+      .map_err(|error| error.to_string())?;
+  }
   let window = window.clone();
   let native_window = window.clone();
   let app = window.app_handle().clone();
@@ -124,6 +132,14 @@ pub(super) fn set_screenshot_mode(
           let view = view.cast();
           let _ = native_region::set_ruler_transient_chrome(view, !active);
           let _ = native_region::set_input_enabled(view, !active);
+          if let Ok(raw_window) = native_window.ns_window() {
+            let panel: &objc2_app_kit::NSWindow = unsafe { &*raw_window.cast() };
+            if active {
+              panel.resignKeyWindow();
+            } else {
+              panel.makeKeyAndOrderFront(None);
+            }
+          }
           if !active {
             let _ = native_region::claim_pointer_surface(view);
             let _ = native_region::refresh_ruler_pointer(view);
@@ -133,9 +149,12 @@ pub(super) fn set_screenshot_mode(
     })
     .map_err(|error| error.to_string())?;
   receiver.recv().map_err(|error| error.to_string())??;
-  window
-    .set_ignore_cursor_events(active)
-    .map_err(|error| error.to_string())
+  if active {
+    window
+      .set_ignore_cursor_events(true)
+      .map_err(|error| error.to_string())?;
+  }
+  Ok(())
 }
 
 fn close_windows(windows: Vec<tauri::WebviewWindow>) {

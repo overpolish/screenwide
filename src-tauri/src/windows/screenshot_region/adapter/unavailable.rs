@@ -5,6 +5,14 @@ use tauri::AppHandle;
 
 use super::RegionSceneRequest;
 
+pub(crate) fn acquire_quick_screenshot_cursor(_app: &AppHandle) -> Result<(), String> {
+  Ok(())
+}
+
+pub(crate) fn release_quick_screenshot_cursor(_app: &AppHandle) -> Result<(), String> {
+  Ok(())
+}
+
 /// Windows deliberately reports the absent compositor until its Win32/D3D
 /// adapter is installed. The portable request is already the contract it must
 /// consume; no workflow-specific fallback is allowed here.

@@ -14,8 +14,8 @@ pub(crate) fn install(
   Ok(true)
 }
 
-pub(crate) fn show_without_activation(window: &tauri::WebviewWindow) -> Result<(), String> {
-  native::show_without_activation(window)
+pub(crate) fn show_interactive(window: &tauri::WebviewWindow) -> Result<(), String> {
+  native::show_interactive(window)
 }
 
 pub(crate) fn present(window: &tauri::WebviewWindow) -> Result<(), String> {

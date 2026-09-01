@@ -174,7 +174,7 @@ pub fn run() {
       windows::toggle_recording_ui,
       windows::region::hide_region_selector,
       windows::options::hide_standalone_listbox,
-      windows::region::set_recording_controls_opacity,
+      windows::region::set_recording_controls_borrowed,
       windows::source_selector::set_recording_source_selector_visible,
       windows::region::set_region_selector_opacity,
       windows::region::set_region_selector_passthrough,

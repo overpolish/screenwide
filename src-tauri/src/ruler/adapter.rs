@@ -15,7 +15,7 @@ mod platform;
 mod platform;
 
 pub(super) use platform::{
-  available, close, install, present, set_screenshot_mode, show_without_activation,
+  available, close, install, present, set_screenshot_mode, show_interactive,
 };
 
 #[cfg(test)]

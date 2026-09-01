@@ -8,6 +8,14 @@ pub(crate) mod native_osc_macos;
 pub(crate) mod osc_command;
 pub(crate) mod presentation;
 
+pub(super) fn acquire_quick_screenshot_cursor(app: &tauri::AppHandle) -> Result<(), String> {
+  adapter::acquire_quick_screenshot_cursor(app)
+}
+
+pub(super) fn release_quick_screenshot_cursor(app: &tauri::AppHandle) -> Result<(), String> {
+  adapter::release_quick_screenshot_cursor(app)
+}
+
 pub(super) fn set_recording_overlay_desktop_presented(
   window: &tauri::WebviewWindow,
   presented: bool,

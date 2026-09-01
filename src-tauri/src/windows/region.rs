@@ -14,6 +14,7 @@ use super::{
 
 pub(super) static SCREENSHOT_REGION_SESSION: AtomicBool = AtomicBool::new(false);
 static SCREENSHOT_REGION_RESTORING: AtomicBool = AtomicBool::new(false);
+static RECORDING_CONTROLS_BORROWED: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn is_screenshot_region_session() -> bool {
   SCREENSHOT_REGION_SESSION.load(Ordering::Acquire)
@@ -66,6 +67,10 @@ pub fn show_region_selector(
     && (desktop || (region.outer_position()? == position && region.outer_size()? == size))
   {
     #[cfg(target_os = "macos")]
+    if SCREENSHOT_REGION_SESSION.load(Ordering::Acquire) {
+      platform::show_interactive_overlay(&region, 1.0)?;
+    }
+    #[cfg(target_os = "macos")]
     if desktop {
       super::screenshot_region::set_recording_overlay_desktop_presented(&region, true)?;
     }
@@ -79,6 +84,13 @@ pub fn show_region_selector(
   let initial_opacity = f64::from(region_selector_restores_opacity(
     SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
   ) as u8);
+  #[cfg(target_os = "macos")]
+  if SCREENSHOT_REGION_SESSION.load(Ordering::Acquire) {
+    platform::show_interactive_overlay(&region, initial_opacity)?;
+  } else {
+    platform::show(&region, initial_opacity)?;
+  }
+  #[cfg(not(target_os = "macos"))]
   platform::show(&region, initial_opacity)?;
   platform::restore_recording_level(&region)?;
   #[cfg(target_os = "macos")]
@@ -121,13 +133,14 @@ pub fn hide_region_selector(app: AppHandle) -> tauri::Result<()> {
     super::screenshot_region::set_recording_overlay_desktop_presented(&region, false)?;
     platform::hide(&region)?;
   }
-  set_recording_controls_opacity(app, 1.0)
+  set_recording_controls_borrowed(app, false)
 }
 
 fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
   if !recording_controls_may_raise(
     RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
     region_gesture::is_active(),
+    RECORDING_CONTROLS_BORROWED.load(Ordering::Relaxed),
   ) {
     return Ok(());
   }
@@ -145,8 +158,12 @@ fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
 
 /// Cross-window persistence may ask the overlay to show while a region gesture
 /// owns the pointer. The recording controls stay down until that gesture ends.
-const fn recording_controls_may_raise(controls_visible: bool, gesture_active: bool) -> bool {
-  controls_visible && !gesture_active
+const fn recording_controls_may_raise(
+  controls_visible: bool,
+  gesture_active: bool,
+  controls_borrowed: bool,
+) -> bool {
+  controls_visible && !gesture_active && !controls_borrowed
 }
 
 /// The region overlay may take clicks only while its frontend has made the
@@ -184,8 +201,13 @@ pub fn set_screenshot_region_session(
   restore_region: Option<bool>,
 ) -> tauri::Result<bool> {
   let controls_visible = RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed);
+  let session_was_active = SCREENSHOT_REGION_SESSION.load(Ordering::Acquire);
   let mut restoring_region = false;
-  if !active && SCREENSHOT_REGION_SESSION.load(Ordering::Acquire) {
+  if active && !session_was_active {
+    super::screenshot_region::acquire_quick_screenshot_cursor(&app)
+      .map_err(std::io::Error::other)?;
+  }
+  if !active && session_was_active {
     let restore_region =
       screenshot_region_may_restore(restore_region.unwrap_or(false), controls_visible);
     restoring_region = restore_region;
@@ -205,6 +227,11 @@ pub fn set_screenshot_region_session(
         SCREENSHOT_REGION_RESTORING.store(false, Ordering::Release);
         return Err(error);
       }
+      #[cfg(target_os = "macos")]
+      platform::restore_nonactivating_overlay(&region)?;
+    }
+    if let Err(error) = super::screenshot_region::release_quick_screenshot_cursor(&app) {
+      return Err(std::io::Error::other(error).into());
     }
   }
   if active {
@@ -234,6 +261,9 @@ pub fn set_screenshot_region_session(
     if let Err(error) = result {
       SCREENSHOT_REGION_SESSION.store(false, Ordering::Release);
       SCREENSHOT_REGION_RESTORING.store(false, Ordering::Release);
+      if !session_was_active {
+        let _ = super::screenshot_region::release_quick_screenshot_cursor(&app);
+      }
       escape::sync(&app, controls_visible, false, crate::ruler::is_active(&app));
       return Err(error);
     }
@@ -288,37 +318,42 @@ pub fn set_region_selector_opacity(
   platform::set_opacity(&window, opacity).map_err(|error| error.to_string())
 }
 
-/// Fades the recording controls while the region overlay is borrowed for a
-/// screenshot session.
+/// Temporarily removes the recording-control window graph while Quick
+/// Screenshot borrows the shared region overlay.
 ///
-/// Fading them *in* is refused outside an idle app. The controls belong to the
-/// idle state; while a recording is starting or running they are deliberately
-/// gone. Hiding the region overlay asks for opacity 1.0 as cleanup without
-/// knowing that, and `prepare_windows` itself hides the bar before hiding the
-/// region overlay. The guard prevents that cleanup from reviving the bar.
+/// This deliberately leaves `RECORDING_CONTROLS_VISIBLE` unchanged: borrowing
+/// is presentation state, not a request to close the recording UI. Returning
+/// the controls therefore restores the bar only when it is still logically
+/// visible and the app is idle. The region-selector window is not touched
+/// because it is the driver for the screenshot session.
 #[tauri::command]
-pub fn set_recording_controls_opacity(app: AppHandle, opacity: f64) -> tauri::Result<()> {
-  if !RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed) {
-    return Ok(());
-  }
-  if opacity > 0.0 && !crate::recording::is_idle(&app) {
+pub fn set_recording_controls_borrowed(app: AppHandle, borrowed: bool) -> tauri::Result<()> {
+  RECORDING_CONTROLS_BORROWED.store(borrowed, Ordering::Release);
+
+  if borrowed {
+    super::hide_recording_options(app.clone())?;
+    super::options::hide_standalone_listbox(app.clone(), Some(false))?;
+    source_selector::hide(&app)?;
+    if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
+      platform::hide(&bar)?;
+    }
     return Ok(());
   }
 
-  if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
-    platform::set_opacity(&bar, opacity)?;
-  }
-  if source_selector::is_expanded() {
-    if let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str()) {
-      platform::set_opacity(&selector, opacity)?;
+  if recording_controls_may_restore(
+    RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
+    crate::recording::is_idle(&app),
+  ) {
+    if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
+      platform::show(&bar, 1.0)?;
+      platform::restore_recording_level(&bar)?;
     }
   }
-  if opacity > 0.0 {
-    raise_recording_controls(&app)?;
-  } else {
-    let _ = source_selector::collapse(app.clone(), Some(false));
-  }
   Ok(())
+}
+
+const fn recording_controls_may_restore(controls_visible: bool, recording_idle: bool) -> bool {
+  controls_visible && recording_idle
 }
 
 #[cfg(test)]

@@ -378,9 +378,9 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
     region::SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
     crate::ruler::is_active(app),
   );
-  // Asserted rather than assumed: a screenshot session may have faded the bar
-  // out, and requests to fade it back in are refused while a recording is on.
-  // Coming back to idle is where that is put right.
+  // Asserted rather than assumed: a screenshot session may have borrowed and
+  // hidden the bar. Coming back to idle is where its complete presentation is
+  // put right.
   platform::set_opacity(&bar, 1.0)?;
   platform::restore_recording_level(&bar)?;
 

@@ -6,6 +6,14 @@ use tauri::{AppHandle, Emitter, EventTarget, Manager};
 use super::{resolve_region_scene, RegionSceneRequest};
 use crate::windows::screenshot_region::native_osc_macos as native;
 
+pub(crate) fn acquire_quick_screenshot_cursor(app: &AppHandle) -> Result<(), String> {
+  crate::osc::cursor::macos::acquire_quick_screenshot(app)
+}
+
+pub(crate) fn release_quick_screenshot_cursor(app: &AppHandle) -> Result<(), String> {
+  crate::osc::cursor::macos::release_quick_screenshot(app)
+}
+
 pub(crate) fn apply_region_scene(
   app: &AppHandle,
   target: tauri::WebviewWindow,

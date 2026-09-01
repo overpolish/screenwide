@@ -114,6 +114,10 @@ pub fn dismiss(app: &AppHandle) {
   qr_details::hide_without_resume(app);
   let had_windows = !recognition_windows(app).is_empty();
   close_recognition_windows(app, None);
+  #[cfg(target_os = "macos")]
+  if let Err(error) = crate::osc::cursor::macos::release_text_recognition(app) {
+    eprintln!("Could not release text-recognition cursor ownership: {error}");
+  }
   let had_capture = app.state::<TextRecognitionState>().cancel();
   if had_windows || had_capture {
     capture_overlays::emit_lifecycle(app, false);
@@ -123,6 +127,16 @@ pub fn dismiss(app: &AppHandle) {
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
   dismiss(app);
+  #[cfg(target_os = "macos")]
+  crate::osc::cursor::macos::acquire_text_recognition(app)?;
+  let result = start_session(app).await;
+  if result.is_err() || !is_active(app) {
+    dismiss(app);
+  }
+  result
+}
+
+async fn start_session(app: &AppHandle) -> Result<(), String> {
   capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::TextRecognition));
   let generation = app.state::<TextRecognitionState>().begin();
 
@@ -156,9 +170,9 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   .accept_first_mouse(true)
   .always_on_top(true)
   .decorations(false)
-  // On macOS the global shortcut's Command key-up can arrive after this
-  // window is presented. Do not make the overlay key until the user begins
-  // a selection, otherwise Tao forwards that key-up into the new window.
+  // Building must not make the window key while the global shortcut event is
+  // still unwinding. The cursor lease promotes it only after snapshots and
+  // native surfaces are ready for interaction.
   .focused(!cfg!(target_os = "macos"))
   .inner_size(size.width, size.height)
   .position(position.x, position.y)
@@ -178,7 +192,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
 
   let native_installed = adapter::install(&window, anchor_id, &native_snapshots)?;
   if native_installed {
-    adapter::show_without_activation(&window)?;
+    adapter::show_interactive(&window)?;
     adapter::present(&window)?;
   } else {
     crate::windows::show(&window, true).map_err(|error| error.to_string())?;

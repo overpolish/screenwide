@@ -37,6 +37,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/osc_text_texture_macos.m");
     println!("cargo:rerun-if-changed=src/exports/osc_icon_renderer_macos.m");
     println!("cargo:rerun-if-changed=src/exports/region_cursor_macos.m");
+    println!("cargo:rerun-if-changed=src/exports/cursor_session_macos.m");
     println!("cargo:rerun-if-changed=src/exports/region_magnifier_macos.m");
     println!("cargo:rerun-if-changed=src/exports/region_osc_renderer_macos.m");
     println!("cargo:rerun-if-changed=src/exports/region_osc_pipeline_macos.m");
@@ -96,6 +97,7 @@ fn main() {
       .file("src/exports/region_osc_renderer_macos.m")
       .file("src/exports/region_osc_pipeline_macos.m")
       .file("src/exports/region_cursor_macos.m")
+      .file("src/exports/cursor_session_macos.m")
       .file("src/exports/region_magnifier_macos.m")
       .file("src/exports/recording_preview_surface_macos+action.m")
       .file("src/exports/recording_preview_surface_macos+callbacks.m")

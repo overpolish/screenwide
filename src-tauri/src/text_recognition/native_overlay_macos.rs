@@ -81,7 +81,7 @@ pub(super) fn present(window: &tauri::WebviewWindow) -> Result<(), String> {
     .map_err(|error| error.to_string())
 }
 
-pub(super) fn show_without_activation(window: &tauri::WebviewWindow) -> Result<(), String> {
+pub(super) fn show_interactive(window: &tauri::WebviewWindow) -> Result<(), String> {
   let window = window.clone();
   let app = window.app_handle().clone();
   let (sender, receiver) = std::sync::mpsc::sync_channel(1);
@@ -92,7 +92,7 @@ pub(super) fn show_without_activation(window: &tauri::WebviewWindow) -> Result<(
         .map_err(|error| error.to_string())
         .map(|raw_window| {
           let native_window: &objc2_app_kit::NSWindow = unsafe { &*raw_window.cast() };
-          native_window.orderFrontRegardless();
+          native_window.makeKeyAndOrderFront(None);
         });
       let _ = sender.send(result);
     })

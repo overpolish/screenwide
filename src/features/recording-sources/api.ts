@@ -121,8 +121,8 @@ export const setScreenshotRegionOsc = (options: ScreenshotRegionOscOptions) =>
     y: options.region.y,
   });
 
-export const setRecordingControlsOpacity = (opacity: number) =>
-  invoke<null>("set_recording_controls_opacity", { opacity });
+export const setRecordingControlsBorrowed = (borrowed: boolean) =>
+  invoke<null>("set_recording_controls_borrowed", { borrowed });
 
 export const setRegionSelectorOscFrameVisible = (visible: boolean) =>
   invoke<boolean>("set_region_selector_osc_frame_visible", { visible });

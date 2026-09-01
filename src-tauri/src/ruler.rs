@@ -37,6 +37,10 @@ pub fn dismiss(app: &AppHandle) {
   screenshot_mode::reset();
   let had_windows = !ruler_windows(app).is_empty();
   close_ruler_windows(app);
+  #[cfg(target_os = "macos")]
+  if let Err(error) = crate::osc::cursor::macos::release_ruler(app) {
+    eprintln!("Could not release Ruler cursor ownership: {error}");
+  }
   let had_capture = app.state::<RulerState>().cancel();
   if had_windows || had_capture {
     capture_overlays::emit_lifecycle(app, false);
@@ -74,10 +78,12 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   }
 
   dismiss(app);
+  #[cfg(target_os = "macos")]
+  crate::osc::cursor::macos::acquire_ruler(app)?;
   capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::Ruler));
   let generation = app.state::<RulerState>().begin();
   let result = start_native(app, generation).await;
-  if result.is_err() {
+  if result.is_err() || !is_active(app) {
     dismiss(app);
   }
   result
@@ -127,7 +133,7 @@ async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
   {
     return Ok(());
   }
-  adapter::show_without_activation(&window)?;
+  adapter::show_interactive(&window)?;
   adapter::present(&window)?;
   capture_overlays::emit_lifecycle(app, true);
   crate::windows::sync_recording_ui_escape(app, true);

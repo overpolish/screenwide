@@ -15,7 +15,7 @@ pub(crate) fn install(
   Err("The native Ruler compositor is not available on this platform".to_owned())
 }
 
-pub(crate) fn show_without_activation(_window: &tauri::WebviewWindow) -> Result<(), String> {
+pub(crate) fn show_interactive(_window: &tauri::WebviewWindow) -> Result<(), String> {
   Ok(())
 }
 

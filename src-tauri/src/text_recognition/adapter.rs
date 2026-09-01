@@ -16,9 +16,7 @@ mod platform;
 #[path = "adapter/unavailable.rs"]
 mod platform;
 
-pub(super) use platform::{
-  close, install, present, render, render_window, show_without_activation,
-};
+pub(super) use platform::{close, install, present, render, render_window, show_interactive};
 
 pub(super) fn show_ready(app: &tauri::AppHandle, generation: u64) {
   let Some(snapshot) = app

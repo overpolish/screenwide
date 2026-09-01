@@ -5,6 +5,7 @@
 //! consume this model without duplicating geometry or pointer semantics.
 pub mod controller;
 pub mod controls;
+pub mod cursor;
 pub mod desktop;
 pub mod geometry;
 pub mod gesture;

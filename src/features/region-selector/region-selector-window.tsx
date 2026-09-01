@@ -10,7 +10,7 @@ import {
   hideRegionSelector,
   listMonitors,
   prepareScreenshotRegionMagnifier,
-  setRecordingControlsOpacity,
+  setRecordingControlsBorrowed,
   setRegionSelectorPassthrough,
   showRegionSelector,
 } from "../recording-sources/api";
@@ -220,7 +220,7 @@ export function RegionSelectorWindow() {
   }, []);
 
   useEffect(() => {
-    void setRecordingControlsOpacity(isScreenshotCapture ? 0 : 1);
+    void setRecordingControlsBorrowed(isScreenshotCapture);
   }, [isScreenshotCapture]);
 
   useEffect(() => {
