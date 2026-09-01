@@ -5,6 +5,7 @@
   "windows": [
     "export-recording",
     "export-screenshot",
+    "glide",
     "recording-bar",
     "recording-dock",
     "recording-source-selector",

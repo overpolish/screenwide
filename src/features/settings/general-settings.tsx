@@ -9,6 +9,7 @@ import { Checkbox } from "../../components/base/checkbox/checkbox";
 import { PillGroup } from "../../components/base/pill-group/pill-group";
 
 import { browseDefaultLocation } from "./api";
+import { SettingRow } from "./setting-row";
 import { GeneralSettings } from "./types";
 
 const folderName = (path: string | null) => {
@@ -16,26 +17,6 @@ const folderName = (path: string | null) => {
   const parts = path.split(/[\\/]/).filter(Boolean);
   return parts[parts.length - 1] ?? path;
 };
-
-function SettingRow({
-  children,
-  description,
-  label,
-}: {
-  children: React.ReactNode;
-  description: string;
-  label: string;
-}) {
-  return (
-    <div className="flex min-h-15 items-center gap-4 py-3">
-      <div className="min-w-0 grow">
-        <div className="text-sm font-medium">{label}</div>
-        <div className="mt-0.5 text-xs text-muted">{description}</div>
-      </div>
-      <div className="shrink-0 whitespace-nowrap">{children}</div>
-    </div>
-  );
-}
 
 export function GeneralSettingsPanel({
   isSaving,

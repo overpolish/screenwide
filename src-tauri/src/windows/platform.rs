@@ -3,6 +3,13 @@
 
 use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
 
+#[path = "platform/glide_preview.rs"]
+mod glide_preview;
+
+#[cfg(target_os = "macos")]
+pub use glide_preview::fade_out as fade_glide_preview;
+pub use glide_preview::{initialize_glide_preview, show_passthrough};
+
 #[cfg(target_os = "macos")]
 use core_graphics::display::CGDisplay;
 
@@ -116,6 +123,7 @@ fn recording_panel_level(window: &WebviewWindow) -> Option<i32> {
     "recording-options" => Some(30),
     "standalone-listbox" => Some(31),
     "recording-dock" => Some(32),
+    "glide" => Some(34),
     _ => None,
   }
 }
@@ -127,7 +135,7 @@ fn ensure_recording_panel(window: &WebviewWindow) -> tauri::Result<PanelHandle<t
   }
 
   let level = recording_panel_level(window).ok_or(tauri::Error::WindowNotFound)?;
-  if window.label() == "recording-dock" {
+  if matches!(window.label(), "glide" | "recording-dock") {
     configure_panel::<RecordingDockPanel>(window, level)?;
   } else {
     configure_panel::<RecordingBarPanel>(window, level)?;

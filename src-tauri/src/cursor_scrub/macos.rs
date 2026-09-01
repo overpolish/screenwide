@@ -46,12 +46,7 @@ pub(super) fn begin(channel: Channel<CursorScrubEvent>) -> Result<(), String> {
     .map_err(|()| "Could not read the cursor position".to_owned())?
     .location();
 
-  CGDisplay::associate_mouse_and_mouse_cursor_position(false)
-    .map_err(|error| format!("Could not pin the cursor: {error}"))?;
-  if let Err(error) = CGDisplay::warp_mouse_cursor_position(point) {
-    let _ = CGDisplay::associate_mouse_and_mouse_cursor_position(true);
-    return Err(format!("Could not pin the cursor: {error}"));
-  }
+  pin_cursor_at(point)?;
 
   let stop = Arc::new(AtomicBool::new(false));
   let worker_stop = Arc::clone(&stop);
@@ -107,7 +102,21 @@ pub(super) fn end(offset_x: f64) -> Result<(), String> {
 }
 
 fn restore_cursor(anchor: (f64, f64), offset_x: f64) {
-  let _ = CGDisplay::warp_mouse_cursor_position(CGPoint::new(anchor.0 + offset_x, anchor.1));
+  restore_cursor_at(CGPoint::new(anchor.0 + offset_x, anchor.1));
+}
+
+pub(super) fn pin_cursor_at(point: CGPoint) -> Result<(), String> {
+  CGDisplay::associate_mouse_and_mouse_cursor_position(false)
+    .map_err(|error| format!("Could not pin the cursor: {error}"))?;
+  if let Err(error) = CGDisplay::warp_mouse_cursor_position(point) {
+    let _ = CGDisplay::associate_mouse_and_mouse_cursor_position(true);
+    return Err(format!("Could not pin the cursor: {error}"));
+  }
+  Ok(())
+}
+
+pub(super) fn restore_cursor_at(point: CGPoint) {
+  let _ = CGDisplay::warp_mouse_cursor_position(point);
   let _ = CGDisplay::associate_mouse_and_mouse_cursor_position(true);
 }
 

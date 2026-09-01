@@ -139,6 +139,10 @@ fn main() {
     ] {
       println!("cargo:rustc-link-lib=framework={framework}");
     }
+    // Glide's tap recognition reads raw trackpad contact frames, which only
+    // the private MultitouchSupport framework exposes.
+    println!("cargo:rustc-link-search=framework=/System/Library/PrivateFrameworks");
+    println!("cargo:rustc-link-lib=framework=MultitouchSupport");
   }
   tauri_build::build()
 }

@@ -19,6 +19,21 @@ export type ShortcutSettings = {
   bindings: ShortcutBinding[];
 };
 
+export type GlideModifier = "command" | "option" | "control" | "shift";
+
+export type GlidePacing = "snappy" | "normal" | "relaxed";
+
+export type GlideSettings = {
+  cursorFollows: boolean;
+  doubleTapCenter: boolean;
+  enabled: boolean;
+  haptics: boolean;
+  mouseModifier: GlideModifier;
+  pacing: GlidePacing;
+  thirdsModifier: GlideModifier;
+  windowGap: number;
+};
+
 export type GeneralSettings = {
   launchAtLogin: boolean;
   openLocationAfterExport: boolean;

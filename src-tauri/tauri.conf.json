@@ -124,6 +124,27 @@
         }
       },
       {
+        "label": "glide",
+        "title": "Screenwide Glide",
+        "url": "/glide",
+        "width": 48,
+        "height": 32,
+        "acceptFirstMouse": false,
+        "alwaysOnTop": true,
+        "decorations": false,
+        "focus": false,
+        "resizable": false,
+        "shadow": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "visible": false,
+        "windowEffects": {
+          "effects": ["underWindowBackground", "mica"],
+          "radius": 10,
+          "state": "active"
+        }
+      },
+      {
         "label": "recording-source-selector",
         "title": "Screenwide Recording Source Selector",
         "url": "/recording-source-selector",

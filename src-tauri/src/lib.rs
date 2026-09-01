@@ -16,6 +16,8 @@ mod capture_overlays;
 mod cursor_scrub;
 mod desktop_capture;
 mod exports;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod glide;
 mod image_analysis;
 mod osc;
 mod permissions;
@@ -58,6 +60,8 @@ pub fn run() {
   let builder = builder
     .plugin(tauri_plugin_macos_permissions::init())
     .plugin(tauri_nspanel::init());
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  let builder = builder.manage(glide::settings::GlideSettingsState::default());
   let app = builder
     .manage(audio_preview::AudioPreviewState::default())
     .manage(camera_preview::CameraPreviewState::default())
@@ -116,6 +120,10 @@ pub fn run() {
       exports::commands::set_recording_timeline_edit,
       exports::commands::set_screenshot_background_radius,
       exports::commands::set_screenshot_radius,
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      glide::settings::get_glide_settings,
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      glide::settings::set_glide_settings,
       permissions::open_permission_settings,
       permissions::open_permissions_window,
       permissions::permission_snapshot,
@@ -202,6 +210,12 @@ pub fn run() {
       #[cfg(desktop)]
       tray::initialize(app)?;
       settings::initialize(app.handle());
+      // Before the input monitoring starts, so the very first event already
+      // sees the stored settings rather than the defaults.
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      glide::settings::initialize(app.handle());
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      glide::initialize(app.handle()).map_err(std::io::Error::other)?;
       let recording_bar_preview_enabled =
         cfg!(debug_assertions) && std::env::var_os("SCREENWIDE_SHOW_RECORDING_BAR").is_some();
       let show_recording_bar_on_launch = recording_bar_preview_enabled

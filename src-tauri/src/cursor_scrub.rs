@@ -46,6 +46,16 @@ pub fn end_cursor_scrub(
   platform::end(offset)
 }
 
+#[cfg(target_os = "macos")]
+pub(crate) fn pin_cursor_at(point: core_graphics::geometry::CGPoint) -> Result<(), String> {
+  platform::pin_cursor_at(point)
+}
+
+#[cfg(target_os = "macos")]
+pub(crate) fn restore_cursor_at(point: core_graphics::geometry::CGPoint) {
+  platform::restore_cursor_at(point);
+}
+
 #[cfg(test)]
 mod tests {
   use super::CursorScrubEvent;

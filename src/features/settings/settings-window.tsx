@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Info, Keyboard, Settings } from "lucide-react";
+import { Info, Keyboard, LayoutGrid, Settings } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { OverflowShadow } from "../../components/base/overflow-shadow/overflow-shadow";
@@ -12,15 +12,23 @@ import { UpdatePanel } from "../updates/update-panel";
 
 import {
   getGeneralSettings,
+  getGlideSettings,
   getShortcutSettings,
   endShortcutCapture,
   hideSettings,
   setGeneralSettings,
+  setGlideSettings,
   setShortcutBinding,
 } from "./api";
 import { GeneralSettingsPanel } from "./general-settings";
+import { GlideSettingsPanel } from "./glide-settings";
 import { ShortcutField } from "./shortcut-field";
-import { GeneralSettings, ShortcutAction, ShortcutSettings } from "./types";
+import {
+  GeneralSettings,
+  GlideSettings,
+  ShortcutAction,
+  ShortcutSettings,
+} from "./types";
 
 const actions: {
   action: ShortcutAction;
@@ -64,18 +72,48 @@ const actions: {
   },
 ];
 
+type SettingsSection = "about" | "general" | "glide" | "hotkeys";
+
+type SectionCopy = { subtitle: string; title: string };
+
+const sectionCopy: Record<SettingsSection, SectionCopy> = {
+  about: {
+    subtitle: "Version information and software updates.",
+    title: "About",
+  },
+  general: {
+    subtitle: "Defaults for capture, export and launch behaviour.",
+    title: "General",
+  },
+  glide: {
+    subtitle: "Move and size windows by gliding them from their titlebars.",
+    title: "Glide",
+  },
+  hotkeys: {
+    subtitle: "These work globally while Screenwide is running.",
+    title: "Hotkeys",
+  },
+};
+
 export function SettingsWindow() {
-  const [section, setSection] = useState("general");
+  const [section, setSection] = useState<SettingsSection>("general");
   const [general, setGeneral] = useState<GeneralSettings | null>(null);
+  const [glide, setGlide] = useState<GlideSettings | null>(null);
+  const [savingGlide, setSavingGlide] = useState(false);
   const [savingGeneral, setSavingGeneral] = useState(false);
   const [settings, setSettings] = useState<ShortcutSettings | null>(null);
   const [saving, setSaving] = useState<ShortcutAction | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getGeneralSettings(), getShortcutSettings()])
-      .then(([generalSettings, shortcutSettings]) => {
+    Promise.all([
+      getGeneralSettings(),
+      getGlideSettings(),
+      getShortcutSettings(),
+    ])
+      .then(([generalSettings, glideSettings, shortcutSettings]) => {
         setGeneral(generalSettings);
+        setGlide(glideSettings);
         setSettings(shortcutSettings);
       })
       .catch((reason: unknown) => {
@@ -115,6 +153,21 @@ export function SettingsWindow() {
       });
   }, []);
 
+  const changeGlide = useCallback((next: GlideSettings) => {
+    setGlide(next);
+    setSavingGlide(true);
+    setError(null);
+    setGlideSettings(next)
+      .then(setGlide)
+      .catch((reason: unknown) => {
+        setError(String(reason));
+        void getGlideSettings().then(setGlide);
+      })
+      .finally(() => {
+        setSavingGlide(false);
+      });
+  }, []);
+
   return (
     <main className="window-surface flex h-screen w-screen flex-col overflow-hidden rounded-[10px] text-content-fg">
       <WindowTitlebar
@@ -125,10 +178,13 @@ export function SettingsWindow() {
             display="icon-label"
             items={[
               { icon: <Settings size={15} />, id: "general", label: "General" },
+              { icon: <LayoutGrid size={15} />, id: "glide", label: "Glide" },
               { icon: <Keyboard size={15} />, id: "hotkeys", label: "Hotkeys" },
               { icon: <Info size={15} />, id: "about", label: "About" },
             ]}
-            onSelectionChange={setSection}
+            onSelectionChange={(id) => {
+              setSection(id as SettingsSection);
+            }}
             selected={section}
           />
         }
@@ -138,18 +194,10 @@ export function SettingsWindow() {
       <div className="flex min-h-0 grow flex-col">
         <header className="mx-auto w-full max-w-2xl shrink-0 px-6 pt-3 pb-4">
           <h1 className="text-lg font-semibold">
-            {section === "general"
-              ? "General"
-              : section === "hotkeys"
-                ? "Hotkeys"
-                : "About"}
+            {sectionCopy[section].title}
           </h1>
           <p className="mt-1 text-xs text-muted">
-            {section === "general"
-              ? "Defaults for capture, export and launch behaviour."
-              : section === "hotkeys"
-                ? "These work globally while Screenwide is running."
-                : "Version information and software updates."}
+            {sectionCopy[section].subtitle}
           </p>
         </header>
         <section className="min-h-0 min-w-0 grow px-6 pb-6">
@@ -160,6 +208,15 @@ export function SettingsWindow() {
                   isSaving={savingGeneral}
                   onChange={changeGeneral}
                   settings={general}
+                />
+              </OverflowShadow>
+            ) : null}
+            {section === "glide" && glide ? (
+              <OverflowShadow rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral">
+                <GlideSettingsPanel
+                  isSaving={savingGlide}
+                  onChange={changeGlide}
+                  settings={glide}
                 />
               </OverflowShadow>
             ) : null}

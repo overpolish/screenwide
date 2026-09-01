@@ -9,7 +9,7 @@ import { WindowDetails } from "./types";
 import { WindowSelector } from "./window-selector";
 
 const windows: WindowDetails[] = [
-  [101, "Safari", "Screenwide — UI rework"],
+  [101, "Safari", "Screenwide - UI rework"],
   [102, "Finder", "Applications"],
   [103, "Final Cut Pro", "Screen Recording"],
   [104, "Terminal", "screenwide"],

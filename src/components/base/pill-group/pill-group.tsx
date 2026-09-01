@@ -27,6 +27,7 @@ const selectedId = (selection: Selection) => {
 export function PillGroup({
   ariaLabel,
   className,
+  disabledIds,
   display = "icon",
   isDisabled,
   items,
@@ -38,6 +39,8 @@ export function PillGroup({
   onSelectionChange: (id: string) => void;
   selected: string;
   className?: string;
+  /** Items that stay visible but cannot be picked. */
+  disabledIds?: string[];
   display?: "icon" | "icon-label" | "label";
   isDisabled?: boolean;
 }) {
@@ -61,10 +64,12 @@ export function PillGroup({
           aria-label={item.ariaLabel ?? item.label}
           className={cn(
             "relative flex h-7 items-center justify-center rounded-md px-2 text-xs text-muted outline-none transition-colors data-[hovered]:text-content-fg data-[selected]:text-content-fg",
+            "data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-disabled-fg data-[disabled]:data-[hovered]:text-neutral-disabled-fg",
             elementFocusVisible,
             display === "icon" && "w-7 px-0",
           )}
           id={item.id}
+          isDisabled={disabledIds?.includes(item.id)}
           key={item.id}
         >
           {({ isSelected }) => (

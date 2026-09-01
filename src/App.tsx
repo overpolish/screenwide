@@ -3,6 +3,7 @@
 
 import { ExportSync } from "./features/exports/export-sync";
 import { ExportWindow } from "./features/exports/export-window";
+import { GlideWindow } from "./features/glide/glide-window";
 import { PermissionSync } from "./features/permissions/permission-sync";
 import { PermissionsWindow } from "./features/permissions/permissions-window";
 import { RecordingBarWindow } from "./features/recording-controls/components/recording-bar-window";
@@ -25,6 +26,8 @@ export function App() {
     switch (window.location.pathname) {
       case "/export":
         return <ExportWindow />;
+      case "/glide":
+        return <GlideWindow />;
       case "/permissions":
         return <PermissionsWindow />;
       case "/recording-dock":

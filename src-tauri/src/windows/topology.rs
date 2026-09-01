@@ -43,7 +43,8 @@ const fn policy(label: WindowLabel) -> Policy {
     #[cfg(target_os = "macos")]
     WindowLabel::Permissions => Policy::Contained,
     WindowLabel::RecordingBar | WindowLabel::RecordingDock => Policy::PersistentControl,
-    WindowLabel::RecordingOptions
+    WindowLabel::Glide
+    | WindowLabel::RecordingOptions
     | WindowLabel::RecordingSourceSelector
     | WindowLabel::StandaloneListbox => Policy::OwnedTransient,
     WindowLabel::RegionSelector | WindowLabel::Ruler | WindowLabel::TextRecognition => {

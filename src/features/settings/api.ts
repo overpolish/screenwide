@@ -3,7 +3,12 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-import { GeneralSettings, ShortcutAction, ShortcutSettings } from "./types";
+import {
+  GeneralSettings,
+  GlideSettings,
+  ShortcutAction,
+  ShortcutSettings,
+} from "./types";
 
 export const getShortcutSettings = () =>
   invoke<ShortcutSettings>("get_shortcut_settings");
@@ -25,6 +30,12 @@ export const getGeneralSettings = () =>
 
 export const setGeneralSettings = (settings: GeneralSettings) =>
   invoke<GeneralSettings>("set_general_settings", { settings });
+
+export const getGlideSettings = () =>
+  invoke<GlideSettings>("get_glide_settings");
+
+export const setGlideSettings = (settings: GlideSettings) =>
+  invoke<GlideSettings>("set_glide_settings", { settings });
 
 export const browseDefaultLocation = (kind: "recording" | "screenshot") =>
   invoke<string | null>("browse_default_location", { kind });

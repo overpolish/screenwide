@@ -13,6 +13,24 @@ use tauri::{AppHandle, Manager};
 
 mod platform;
 
+/// Reachable outside the pickers so Glide resolves its target's icon through
+/// the very same extraction, rather than growing a second copy of it.
+pub(crate) use platform::app_icon;
+
+/// The directory the application pickers cache extracted app icons in. Glide
+/// shares it, so an icon one surface has already paid for is instant for the
+/// next, and the asset protocol only has this one path to allow.
+pub(crate) fn application_icon_cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
+  let cache_dir = app
+    .path()
+    .temp_dir()
+    .map_err(|error| error.to_string())?
+    .join("Screenwide")
+    .join("application-sources");
+  std::fs::create_dir_all(&cache_dir).map_err(|error| error.to_string())?;
+  Ok(cache_dir)
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MonitorDetails {
@@ -162,12 +180,7 @@ pub async fn selected_window_available(id: u32, pid: u32) -> Result<bool, String
 #[tauri::command]
 #[cfg(target_os = "macos")]
 pub async fn list_applications(app: AppHandle) -> Result<Vec<ApplicationDetails>, String> {
-  let cache_dir = app
-    .path()
-    .temp_dir()
-    .map_err(|error| error.to_string())?
-    .join("Screenwide")
-    .join("application-sources");
+  let cache_dir = application_icon_cache_dir(&app)?;
   let applications = platform::audio_applications().await?;
   tauri::async_runtime::spawn_blocking(move || {
     enumerate_audio_applications(&cache_dir, applications)
@@ -181,7 +194,6 @@ fn enumerate_audio_applications(
   cache_dir: &Path,
   candidates: Vec<platform::AudioApplication>,
 ) -> Result<Vec<ApplicationDetails>, String> {
-  std::fs::create_dir_all(cache_dir).map_err(|error| error.to_string())?;
   let mut applications = HashMap::<String, (String, Option<PathBuf>, HashSet<u32>)>::new();
 
   for candidate in candidates {
@@ -201,12 +213,7 @@ fn enumerate_audio_applications(
 #[tauri::command]
 #[cfg(not(target_os = "macos"))]
 pub async fn list_applications(app: AppHandle) -> Result<Vec<ApplicationDetails>, String> {
-  let cache_dir = app
-    .path()
-    .temp_dir()
-    .map_err(|error| error.to_string())?
-    .join("Screenwide")
-    .join("application-sources");
+  let cache_dir = application_icon_cache_dir(&app)?;
   tauri::async_runtime::spawn_blocking(move || enumerate_applications(&cache_dir))
     .await
     .map_err(|error| error.to_string())?
@@ -214,7 +221,6 @@ pub async fn list_applications(app: AppHandle) -> Result<Vec<ApplicationDetails>
 
 #[cfg(not(target_os = "macos"))]
 fn enumerate_applications(cache_dir: &Path) -> Result<Vec<ApplicationDetails>, String> {
-  std::fs::create_dir_all(cache_dir).map_err(|error| error.to_string())?;
   let current_pid = std::process::id();
   let mut applications = HashMap::<String, (String, Option<PathBuf>, HashSet<u32>)>::new();
 
