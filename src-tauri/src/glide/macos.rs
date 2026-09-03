@@ -40,9 +40,9 @@ pub(super) use commands::haptic;
 use own_window::any_titlebar;
 use session::{
   accumulate_pointer_travel, active_input, begin_if_titlebar, end_session, is_active,
-  is_suppressing, is_suppressing_momentum, session_anchor, set_detector_thirds,
-  set_momentum_suppression, set_mouse_up_swallow, set_suppression, settle_detector,
-  take_mouse_up_swallow, update_detector, InputKind, SharedState,
+  is_suppressing, is_suppressing_momentum, session_anchor, set_momentum_suppression,
+  set_mouse_up_swallow, set_suppression, settle_detector, take_mouse_up_swallow, update_detector,
+  InputKind, SharedState,
 };
 
 const POLL_INTERVAL: Duration = Duration::from_millis(16);

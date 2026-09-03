@@ -31,10 +31,7 @@ pub use magnifier::set_source as set_magnifier_source;
 pub const NATIVE_OSC_EVENT: &str = crate::osc::semantic::REGION_EVENT;
 pub const NATIVE_OSC_LAYOUT_EVENT: &str = crate::osc::semantic::DESKTOP_LAYOUT_EVENT;
 
-pub use ocr::{
-  reset_input as reset_text_recognition_input, set_cancel_visible as set_ocr_cancel_visible,
-  set_ocr,
-};
+pub use ocr::{reset_input as reset_text_recognition_input, set_ocr};
 #[cfg(test)]
 use state::invalid_result;
 pub use state::{

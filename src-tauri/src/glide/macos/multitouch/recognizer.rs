@@ -74,8 +74,10 @@ impl TapRecognizer {
 mod tests {
   use super::TapRecognizer;
 
+  type Frame = (usize, Option<(f32, f32)>, f64);
+
   /// Feeds a run of frames and returns whether they closed exactly one tap.
-  fn taps(frames: &[(usize, Option<(f32, f32)>, f64)]) -> bool {
+  fn taps(frames: &[Frame]) -> bool {
     let mut recognizer = TapRecognizer::default();
     frames
       .iter()

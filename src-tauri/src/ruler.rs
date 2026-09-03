@@ -56,6 +56,7 @@ pub fn is_active(app: &AppHandle) -> bool {
   app.state::<RulerState>().active_generation().is_some()
 }
 
+#[cfg(target_os = "windows")]
 pub(crate) fn is_screenshot_mode() -> bool {
   screenshot_mode::is_active()
 }

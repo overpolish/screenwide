@@ -354,6 +354,7 @@ pub async fn set_region_selector_opacity(
   return platform::set_opacity(&window, opacity).map_err(|error| error.to_string());
 }
 
+#[cfg(any(test, target_os = "windows"))]
 const fn region_selector_capturable_after_opacity(
   opacity: f64,
   record_screenwide_windows: bool,

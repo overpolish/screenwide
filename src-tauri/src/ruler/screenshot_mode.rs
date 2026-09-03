@@ -12,6 +12,7 @@ use crate::capture_overlays;
 
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 
+#[cfg(target_os = "windows")]
 pub(super) fn is_active() -> bool {
   ACTIVE.load(Ordering::Acquire)
 }

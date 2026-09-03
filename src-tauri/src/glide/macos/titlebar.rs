@@ -53,11 +53,6 @@ pub(super) fn ax_titlebar_at(point: CGPoint) -> AxTitlebar {
   let Some(frame) = window.frame().ok().and_then(|value| value.cg_rect()) else {
     return AxTitlebar::Miss;
   };
-  // What the point landed *on* beats where it landed: a tab strip or a toolbar
-  // control is titlebar however tall it is.
-  if is_chrome_element(&element, &window, frame) {
-    return AxTitlebar::Titlebar(window, frame);
-  }
   let measured = [
     ax::attr::close_button(),
     ax::attr::minimize_button(),
@@ -72,6 +67,13 @@ pub(super) fn ax_titlebar_at(point: CGPoint) -> AxTitlebar {
   // Real measurements are trusted on their own - a window with chrome shorter
   // than the fallback gets the smaller, truthful band.
   let chrome_bottom = measured.unwrap_or(frame.origin.y + FALLBACK_TITLEBAR_HEIGHT) + CHROME_MARGIN;
+  // What the point landed *on* beats where it landed, provided the containing
+  // toolbar or tab group is itself confined to the measured chrome. Safari's
+  // web content is a window-sized AXTabGroup rooted at the top of the window;
+  // treating that ancestor as chrome makes every page pixel start Glide.
+  if is_chrome_element(&element, &window, frame, chrome_bottom) {
+    return AxTitlebar::Titlebar(window, frame);
+  }
   let hit = point.x >= frame.origin.x
     && point.x <= frame.origin.x + frame.size.width
     && point.y >= frame.origin.y
@@ -109,14 +111,19 @@ fn hit_at(point: CGPoint) -> AxHit {
 /// Walks from the hit element up towards - but never into - the window, asking
 /// each node whether it is window chrome. Stopping short of the window matters:
 /// the window itself owns every pixel, so it can never answer this question.
-fn is_chrome_element(element: &ax::UiElement, window: &ax::UiElement, frame: cg::Rect) -> bool {
+fn is_chrome_element(
+  element: &ax::UiElement,
+  window: &ax::UiElement,
+  frame: cg::Rect,
+  chrome_bottom: f64,
+) -> bool {
   let title = window.attr_value(ax::attr::title_ui_element()).ok();
   let mut node = element.retained();
   for _ in 0..ANCESTOR_HOPS {
     if node.equal(window) {
       return false;
     }
-    if is_chrome_role(&node, frame) {
+    if is_chrome_role(&node, frame, chrome_bottom) {
       return true;
     }
     if title.as_ref().is_some_and(|title| title.equal(&node)) {
@@ -134,7 +141,7 @@ fn is_chrome_element(element: &ax::UiElement, window: &ax::UiElement, frame: cg:
 /// window; the same roles appear mid-content as segmented controls and tabbed
 /// panes, which must keep scrolling and clicking normally. Window buttons are
 /// chrome wherever the window decides to put them.
-fn is_chrome_role(node: &ax::UiElement, frame: cg::Rect) -> bool {
+fn is_chrome_role(node: &ax::UiElement, frame: cg::Rect, chrome_bottom: f64) -> bool {
   let top_anchored_band = node
     .role()
     .is_ok_and(|role| role.equal(ax::role::toolbar()) || role.equal(ax::role::tab_group()))
@@ -142,7 +149,7 @@ fn is_chrome_role(node: &ax::UiElement, frame: cg::Rect) -> bool {
       .frame()
       .ok()
       .and_then(|value| value.cg_rect())
-      .is_some_and(|bounds| bounds.origin.y <= frame.origin.y + FALLBACK_TITLEBAR_HEIGHT);
+      .is_some_and(|bounds| top_anchored_chrome_band(bounds, frame, chrome_bottom));
   if top_anchored_band {
     return true;
   }
@@ -156,6 +163,11 @@ fn is_chrome_role(node: &ax::UiElement, frame: cg::Rect) -> bool {
     .into_iter()
     .any(|button| subrole.equal(button))
   })
+}
+
+fn top_anchored_chrome_band(bounds: cg::Rect, frame: cg::Rect, chrome_bottom: f64) -> bool {
+  bounds.origin.y <= frame.origin.y + FALLBACK_TITLEBAR_HEIGHT
+    && bounds.origin.y + bounds.size.height <= chrome_bottom
 }
 
 /// A unified toolbar anchored at the top of the window is part of the same
@@ -199,4 +211,43 @@ fn accessible_frame(window: &ax::UiElement, attr: &ax::Attr) -> Option<cg::Rect>
   let value = window.attr_value(attr).ok()?;
   let element: arc::R<ax::UiElement> = unsafe { cf::Type::retain(&value) };
   element.frame().ok()?.cg_rect()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::top_anchored_chrome_band;
+  use cidre::cg;
+
+  fn rect(x: f64, y: f64, width: f64, height: f64) -> cg::Rect {
+    cg::Rect {
+      origin: cg::Point { x, y },
+      size: cg::Size { width, height },
+    }
+  }
+
+  #[test]
+  fn accepts_a_tab_group_confined_to_measured_chrome() {
+    let window = rect(100.0, 50.0, 900.0, 700.0);
+    assert!(top_anchored_chrome_band(
+      rect(100.0, 50.0, 900.0, 76.0),
+      window,
+      132.0,
+    ));
+  }
+
+  #[test]
+  fn rejects_a_top_anchored_tab_group_that_fills_safari_content() {
+    let window = rect(100.0, 50.0, 900.0, 700.0);
+    assert!(!top_anchored_chrome_band(window, window, 132.0));
+  }
+
+  #[test]
+  fn rejects_a_tab_group_below_the_window_chrome() {
+    let window = rect(100.0, 50.0, 900.0, 700.0);
+    assert!(!top_anchored_chrome_band(
+      rect(100.0, 200.0, 900.0, 76.0),
+      window,
+      132.0,
+    ));
+  }
 }
