@@ -36,11 +36,24 @@
 # Core features
 
 - **Screen recording.** Record all of the screen or just the part you need. Camera and audio are optional.
+- **Screenshots.** Capture a selected area or a scrolling page. Combine several captures if needed.
+- **Glide.** Move and resize windows with a fluid trackpad or mouse gesture. Snap them into halves, quarters, thirds or full screen—or glide down to minimize.
 - **Better cursors.** Make the cursor easier to follow, with control over its size and movement.
 - **Keyboard shortcuts.** Show pressed shortcuts on the recording.
-- **Screenshots.** Capture a selected area or a scrolling page. Combine several captures if needed.
 - **Ruler.** Measure anything on screen and copy the result.
 - **Text recognition.** Copy text from anywhere on screen. QR codes work too.
+
+<br />
+
+# Glide
+
+Glide makes arranging windows feel like one continuous gesture. Start over a window's title bar, then move it into a half, quarter, third or full-screen layout—or glide down to minimize it. A live preview shows where the window will land before you release it.
+
+- **Trackpad:** use a two-finger gesture over the title bar.
+- **Mouse:** hold your configured Glide control while moving over the title bar.
+- **Thirds:** hold the configured Thirds control during a glide to switch from halves to thirds.
+
+Glide is enabled by default on macOS and Windows. Open **Settings → Glide** to change its controls, add spacing between windows, choose whether the cursor follows the window, and configure the extra options available on your platform.
 
 <br />
 

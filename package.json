@@ -19,6 +19,7 @@
     "build-storybook": "storybook build",
     "check": "pnpm license:check && pnpm architecture:check && pnpm knip && pnpm format:check && pnpm build && pnpm build-storybook && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings && cargo build --manifest-path src-tauri/Cargo.toml",
     "dev": "pnpm ffmpeg:prepare && vite",
+    "docs:dev": "python3 -m http.server 4173 --directory docs",
     "dev:permissions": "node scripts/dev-permissions-preview.mjs",
     "dev:screenshot-failures": "node scripts/dev-screenshot-failures-preview.mjs",
     "dev:storybook-native": "node scripts/dev-storybook-native.mjs",
