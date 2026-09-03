@@ -161,8 +161,13 @@ export function RecordingBar({
     screenshotAction === "clipboard" ? screenshotState : "idle";
   const scrollingScreenshotState =
     screenshotAction === "scrolling" ? screenshotState : "idle";
+  const hasScreenshotSource =
+    mode === "window" ? hasSelectedWindow : hasSelectedMonitor;
   const canCaptureStill =
-    isScreenCapture && !isScreenshotLocked && !isRecordingActive;
+    isScreenCapture &&
+    hasScreenshotSource &&
+    !isScreenshotLocked &&
+    !isRecordingActive;
   // A pending recording no longer stands in a screenshot's way: it waits in
   // its own window while the screenshot workspace opens beside it.
   const canExportScreenshot = canCaptureStill;

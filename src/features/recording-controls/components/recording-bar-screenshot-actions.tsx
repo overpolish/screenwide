@@ -44,12 +44,7 @@ function FeedbackIcon({
   return state === "done" ? (
     <Check className="text-success" strokeWidth={3} />
   ) : (
-    <Icon
-      className={cn(
-        "transition-colors",
-        isCapturing && "animate-pulse text-muted",
-      )}
-    />
+    <Icon className={cn(isCapturing && "animate-pulse text-muted")} />
   );
 }
 

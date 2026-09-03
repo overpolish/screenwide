@@ -32,6 +32,7 @@
     "lint:fix": "eslint . --fix",
     "knip": "knip",
     "license:check": "node scripts/check-spdx.mjs",
+    "macos-icon:prepare": "node scripts/prepare-macos-icon.mjs",
     "preview": "vite preview",
     "release:check-version": "node scripts/check-release-version.mjs",
     "test": "vitest run",

@@ -181,30 +181,42 @@ fn toolbar_bottom(window: &ax::UiElement, frame: cg::Rect) -> Option<f64> {
 }
 
 fn owning_window(element: arc::R<ax::UiElement>) -> Option<arc::R<ax::UiElement>> {
-  if has_window_role(&element) {
+  if is_usable_window(&element) {
     return Some(element);
   }
   if let Ok(window) = element.window() {
-    return Some(window);
+    if is_usable_window(&window) {
+      return Some(window);
+    }
   }
 
   let mut ancestor = element;
   for _ in 0..ANCESTOR_HOPS {
     ancestor = ancestor.parent().ok()?;
-    if has_window_role(&ancestor) {
+    if is_usable_window(&ancestor) {
       return Some(ancestor);
     }
     if let Ok(window) = ancestor.window() {
-      return Some(window);
+      if is_usable_window(&window) {
+        return Some(window);
+      }
     }
   }
   None
 }
 
-fn has_window_role(element: &ax::UiElement) -> bool {
+/// WebKit can return an `AXWindow` attribute whose proxy is already invalid:
+/// fetching it succeeds, but every attribute on the returned element fails.
+/// Such a husk must not stop the parent walk before it reaches the real window.
+fn is_usable_window(element: &ax::UiElement) -> bool {
   element
     .role()
     .is_ok_and(|role| role.equal(ax::role::window()))
+    && element
+      .frame()
+      .ok()
+      .and_then(|value| value.cg_rect())
+      .is_some()
 }
 
 fn accessible_frame(window: &ax::UiElement, attr: &ax::Attr) -> Option<cg::Rect> {
