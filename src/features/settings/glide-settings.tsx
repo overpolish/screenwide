@@ -2,40 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Checkbox } from "../../components/base/checkbox/checkbox";
-import { PillGroup } from "../../components/base/pill-group/pill-group";
 import { Slider } from "../../components/base/slider/slider";
 
+import { KeyField } from "./key-field";
 import { SettingRow } from "./setting-row";
-import { GlideModifier, GlidePacing, GlideSettings } from "./types";
+import { GlideSettings } from "./types";
 
-/** The four bare modifiers a gesture can be held with, in native notation. */
 const isMac =
   typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
-const modifiers: { id: GlideModifier; label: string; name: string }[] = isMac
-  ? [
-      { id: "command", label: "⌘", name: "Command" },
-      { id: "option", label: "⌥", name: "Option" },
-      { id: "control", label: "⌃", name: "Control" },
-      { id: "shift", label: "⇧", name: "Shift" },
-    ]
-  : [
-      { id: "command", label: "Win", name: "Windows" },
-      { id: "option", label: "Alt", name: "Alt" },
-      { id: "control", label: "Ctrl", name: "Control" },
-      { id: "shift", label: "Shift", name: "Shift" },
-    ];
-
-const modifierItems = modifiers.map(({ id, label, name }) => ({
-  ariaLabel: name,
-  id,
-  label,
-}));
-
-const pacings: { id: GlidePacing; label: string }[] = [
-  { id: "snappy", label: "Snappy" },
-  { id: "normal", label: "Normal" },
-  { id: "relaxed", label: "Relaxed" },
-];
 
 export function GlideSettingsPanel({
   isSaving,
@@ -69,35 +43,37 @@ export function GlideSettingsPanel({
         />
       </SettingRow>
       <SettingRow
-        description="Mouse users hold this while moving over a titlebar. Trackpads need no modifier - a two-finger scroll starts the glide."
-        label="Mouse modifier"
+        description="Mouse users hold this key or auxiliary button while moving over a titlebar. Trackpads need no control - a two-finger gesture starts the glide."
+        label="Mouse control"
       >
-        <PillGroup
-          ariaLabel="Mouse modifier"
-          disabledIds={[settings.thirdsModifier]}
-          display="label"
+        <KeyField
+          ariaLabel="Mouse activation control"
           isDisabled={isOff}
-          items={modifierItems}
-          onSelectionChange={(mouseModifier) => {
-            update({ mouseModifier: mouseModifier as GlideModifier });
+          onChange={(mouseModifier) => {
+            update(
+              mouseModifier === settings.thirdsModifier
+                ? { mouseModifier, thirdsModifier: settings.mouseModifier }
+                : { mouseModifier },
+            );
           }}
-          selected={settings.mouseModifier}
+          value={settings.mouseModifier}
         />
       </SettingRow>
       <SettingRow
-        description="Held during a glide to target thirds instead of halves."
-        label="Thirds modifier"
+        description="A key or auxiliary mouse button held during a glide to target thirds instead of halves."
+        label="Thirds control"
       >
-        <PillGroup
-          ariaLabel="Thirds modifier"
-          disabledIds={[settings.mouseModifier]}
-          display="label"
+        <KeyField
+          ariaLabel="Thirds control"
           isDisabled={isOff}
-          items={modifierItems}
-          onSelectionChange={(thirdsModifier) => {
-            update({ thirdsModifier: thirdsModifier as GlideModifier });
+          onChange={(thirdsModifier) => {
+            update(
+              thirdsModifier === settings.mouseModifier
+                ? { mouseModifier: settings.thirdsModifier, thirdsModifier }
+                : { thirdsModifier },
+            );
           }}
-          selected={settings.thirdsModifier}
+          value={settings.thirdsModifier}
         />
       </SettingRow>
       <SettingRow
@@ -147,21 +123,6 @@ export function GlideSettingsPanel({
           />
         </SettingRow>
       )}
-      <SettingRow
-        description="How long a pause arms the next move."
-        label="Gesture pacing"
-      >
-        <PillGroup
-          ariaLabel="Gesture pacing"
-          display="label"
-          isDisabled={isOff}
-          items={pacings}
-          onSelectionChange={(pacing) => {
-            update({ pacing: pacing as GlidePacing });
-          }}
-          selected={settings.pacing}
-        />
-      </SettingRow>
       {isMac && (
         <SettingRow
           description="Two quick taps on a titlebar - or a modifier double-click - center the window."

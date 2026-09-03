@@ -7,6 +7,7 @@
 //! works in logical rectangles and never learns which it is holding.
 
 use cidre::{arc, ax, cf, cg};
+use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication};
 use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
 
 use super::super::own_window::{decoration_size, logical_frame};
@@ -56,6 +57,31 @@ impl WindowTarget {
     match self {
       Self::Ax(element) => Self::Ax(element.retained()),
       Self::Own(window) => Self::Own(window.clone()),
+    }
+  }
+
+  /// Brings the window to the front: its application is activated and the
+  /// window itself raised above the application's other windows.
+  pub(in crate::glide) fn raise(&self) {
+    match self {
+      Self::Ax(element) => {
+        if let Some(app) = element
+          .pid()
+          .ok()
+          .and_then(NSRunningApplication::runningApplicationWithProcessIdentifier)
+        {
+          #[allow(deprecated)]
+          app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
+        }
+        if let Err(error) = element.perform_action(ax::action::raise()) {
+          eprintln!("Could not raise the window: {error}");
+        }
+      }
+      Self::Own(window) => {
+        if let Err(error) = window.set_focus() {
+          eprintln!("Could not raise the window: {error}");
+        }
+      }
     }
   }
 

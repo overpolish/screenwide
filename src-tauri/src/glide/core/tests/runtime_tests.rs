@@ -35,6 +35,20 @@ fn pending_minimize_reveals_without_moving_and_only_commits_on_a_lift() {
   assert_eq!(armed.move_to, None);
   assert!(runtime.should_minimize(false));
   assert!(!runtime.should_minimize(true));
+  assert!(runtime.commits_terminal_action(false));
+  assert!(!runtime.commits_terminal_action(true));
+}
+
+#[test]
+fn only_full_screen_region_commits_are_terminal_for_cursor_placement() {
+  let mut full_screen = GlideRuntime::default();
+  full_screen.update(sample(0.0, -45.0, false, 0.0));
+  assert!(full_screen.commits_terminal_action(false));
+  assert!(!full_screen.commits_terminal_action(true));
+
+  let mut half_screen = GlideRuntime::default();
+  half_screen.update(sample(-45.0, 0.0, false, 0.0));
+  assert!(!half_screen.commits_terminal_action(false));
 }
 
 #[test]

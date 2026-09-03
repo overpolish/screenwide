@@ -165,41 +165,57 @@ fn text_position_at(result: &TextRecognitionResult, point: Point) -> Option<Text
   let (line_index, line) = result.lines.iter().enumerate().min_by(|(_, a), (_, b)| {
     line_distance(a.bounds, point).total_cmp(&line_distance(b.bounds, point))
   })?;
-  if let Some(character) = line.characters.iter().min_by(|a, b| {
-    character_distance(a.bounds, point.x).total_cmp(&character_distance(b.bounds, point.x))
-  }) {
-    return Some(TextPosition {
-      line: line_index,
-      offset: if point.x < character.bounds.x + character.bounds.width / 2.0 {
-        character.start
-      } else {
-        character.end
-      },
+  let position = if !line.characters.is_empty() {
+    // OCR APIs commonly return slightly overlapping character boxes. Picking
+    // the nearest containing box therefore sticks to the first overlap and
+    // makes horizontal drags appear frozen. Text controls instead compare the
+    // pointer with ordered caret boundaries, so do the same here.
+    let mut characters = line.characters.iter().collect::<Vec<_>>();
+    characters.sort_by(|a, b| {
+      a.bounds
+        .x
+        .total_cmp(&b.bounds.x)
+        .then_with(|| a.start.cmp(&b.start))
     });
-  }
-  let fraction = ((point.x - line.bounds.x) / line.bounds.width.max(0.0001)).clamp(0.0, 1.0);
-  Some(TextPosition {
-    line: line_index,
-    offset: (fraction * line_length(&line.text) as f64).round() as usize,
-  })
+    for character in &characters {
+      if point.x < character.bounds.x + character.bounds.width * 0.5 {
+        return Some(TextPosition {
+          line: line_index,
+          offset: character.start,
+        });
+      }
+    }
+    let character = characters.last()?;
+    TextPosition {
+      line: line_index,
+      offset: character.end,
+    }
+  } else {
+    let fraction = ((point.x - line.bounds.x) / line.bounds.width.max(0.0001)).clamp(0.0, 1.0);
+    TextPosition {
+      line: line_index,
+      offset: (fraction * line_length(&line.text) as f64).round() as usize,
+    }
+  };
+  Some(position)
 }
 
 fn line_distance(bounds: TextRect, point: Point) -> f64 {
-  if point.y < bounds.y {
+  let horizontal = if point.x < bounds.x {
+    bounds.x - point.x
+  } else if point.x > bounds.x + bounds.width {
+    point.x - bounds.x - bounds.width
+  } else {
+    0.0
+  };
+  let vertical = if point.y < bounds.y {
     bounds.y - point.y
   } else if point.y > bounds.y + bounds.height {
     point.y - bounds.y - bounds.height
   } else {
     0.0
-  }
-}
-
-fn character_distance(bounds: TextRect, x: f64) -> f64 {
-  if x >= bounds.x && x <= bounds.x + bounds.width {
-    0.0
-  } else {
-    (x - bounds.x - bounds.width / 2.0).abs()
-  }
+  };
+  horizontal * horizontal + vertical * vertical
 }
 
 #[cfg(test)]

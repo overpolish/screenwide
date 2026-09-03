@@ -71,10 +71,16 @@ pub struct RegionSceneState {
 
 impl Default for RegionSceneState {
   fn default() -> Self {
-    let scene = RegionScene::default();
+    let presented = RegionScene::default();
+    // `RegionScene::default` is drawing-capable because Quick Screenshot is
+    // the first workflow that commonly attaches the shared compositor. The
+    // separately retained Recording Bar scene must nevertheless be a normal
+    // (non-drawing) scene even before that UI has submitted its first update.
+    let mut requested_normal = presented;
+    requested_normal.interaction.allow_drawing = false;
     Self {
-      presented: scene,
-      requested_normal: scene,
+      presented,
+      requested_normal,
     }
   }
 }
@@ -121,11 +127,10 @@ impl RegionSceneState {
     requested.reconcile_owner(owner)
   }
 
-  pub fn normal_presentation(self) -> RegionScene {
+  pub fn normal_presentation(self) -> Option<RegionScene> {
     self
       .requested_normal
       .reconcile_owner(RegionSceneOwner::Normal)
-      .expect("a retained normal Region scene must remain a normal scene")
   }
 
   pub fn set_presented(&mut self, scene: RegionScene) {

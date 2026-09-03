@@ -56,6 +56,7 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-opener = "2"
 url = "2"
+keyboard-types = "0.7"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 xcap = { version = "0.9.8", features = ["wgc"] }
@@ -70,6 +71,7 @@ windows = { version = "0.62.2", features = [
   "Media_Ocr",
   "Storage_Streams",
   "Win32_Foundation",
+  "Win32_Devices_HumanInterfaceDevice",
   "Win32_Graphics_Direct3D",
   "Win32_Graphics_Direct3D_Fxc",
   "Win32_Graphics_Direct3D10",
@@ -97,6 +99,7 @@ windows = { version = "0.62.2", features = [
   "Win32_UI_HiDpi",
   "Win32_UI_Input",
   "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Input_Pointer",
   "Win32_UI_Shell",
   "Win32_UI_Shell_PropertiesSystem",
   "Win32_UI_WindowsAndMessaging",

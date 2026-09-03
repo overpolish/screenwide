@@ -5,6 +5,7 @@
 
 mod desktop;
 mod ffi;
+mod magnifier;
 mod ocr;
 mod state;
 
@@ -25,6 +26,7 @@ pub use crate::osc::{
   protocol::{OscResult as NativeOscResult, Purpose, ResultStatus},
 };
 pub use desktop::configure_window as configure_desktop_window;
+pub use magnifier::set_source as set_magnifier_source;
 
 pub const NATIVE_OSC_EVENT: &str = crate::osc::semantic::REGION_EVENT;
 pub const NATIVE_OSC_LAYOUT_EVENT: &str = crate::osc::semantic::DESKTOP_LAYOUT_EVENT;
@@ -40,8 +42,8 @@ pub use state::{
   ensure_ruler_attached, ensure_text_recognition_attached, present_region,
   reconcile_region_scene_request, refresh_ruler_pointer, region_scene, region_scene_request_base,
   restore_normal_region_scene, set_allow_drawing, set_aspect, set_committed, set_desktop_presented,
-  set_input_enabled, set_magnifier_source, set_monitor, set_ruler_transient_chrome, set_show_frame,
-  set_show_handles, set_snapshot, set_snapshot_composited, set_snapshot_presented,
+  set_input_enabled, set_monitor, set_ruler_transient_chrome, set_show_frame, set_show_handles,
+  set_snapshot, set_snapshot_composited, set_snapshot_presented,
 };
 
 #[cfg(test)]

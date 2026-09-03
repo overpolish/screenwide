@@ -29,7 +29,7 @@ fn main() {
       "cargo:rerun-if-changed=src/exports/cursor_export/gpu_compositor_macos_keyboard_shader_source.h"
     );
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos.m");
-    println!("cargo:rerun-if-changed=src/exports/region_osc_renderer_macos.h");
+    println!("cargo:rerun-if-changed=src/exports/osc_gpu_macos.h");
     println!("cargo:rerun-if-changed=src/exports/osc_controls.h");
     println!("cargo:rerun-if-changed=src/exports/osc_material_surface_macos.h");
     println!("cargo:rerun-if-changed=src/exports/osc_material_surface_macos.m");
@@ -39,9 +39,9 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/region_cursor_macos.m");
     println!("cargo:rerun-if-changed=src/exports/cursor_session_macos.m");
     println!("cargo:rerun-if-changed=src/exports/region_magnifier_macos.m");
-    println!("cargo:rerun-if-changed=src/exports/region_osc_renderer_macos.m");
-    println!("cargo:rerun-if-changed=src/exports/region_osc_pipeline_macos.m");
-    println!("cargo:rerun-if-changed=src/exports/region_osc_renderer_macos_shader.h");
+    println!("cargo:rerun-if-changed=src/exports/osc_gpu_macos.m");
+    println!("cargo:rerun-if-changed=src/exports/osc_gpu_pipeline_macos.m");
+    println!("cargo:rerun-if-changed=src/exports/osc_gpu_macos_shader.h");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+action.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+callbacks.m");
     println!("cargo:rerun-if-changed=src/exports/recording_preview_surface_macos+magnifier.m");
@@ -57,6 +57,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+appearance.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+desktop.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+input.m");
+    println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+magnifier.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+state.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+ruler.m");
     println!("cargo:rerun-if-changed=src/exports/screenshot_region_osc_macos+snapshot.m");
@@ -94,8 +95,8 @@ fn main() {
       .file("src/exports/osc_material_surface_macos.m")
       .file("src/exports/osc_text_texture_macos.m")
       .file("src/exports/osc_icon_renderer_macos.m")
-      .file("src/exports/region_osc_renderer_macos.m")
-      .file("src/exports/region_osc_pipeline_macos.m")
+      .file("src/exports/osc_gpu_macos.m")
+      .file("src/exports/osc_gpu_pipeline_macos.m")
       .file("src/exports/region_cursor_macos.m")
       .file("src/exports/cursor_session_macos.m")
       .file("src/exports/region_magnifier_macos.m")
@@ -114,6 +115,7 @@ fn main() {
       .file("src/exports/screenshot_region_osc_macos+appearance.m")
       .file("src/exports/screenshot_region_osc_macos+desktop.m")
       .file("src/exports/screenshot_region_osc_macos+input.m")
+      .file("src/exports/screenshot_region_osc_macos+magnifier.m")
       .file("src/exports/screenshot_region_osc_macos+state.m")
       .file("src/exports/screenshot_region_osc_macos+ruler.m")
       .file("src/exports/screenshot_region_osc_macos+snapshot.m")
@@ -153,9 +155,10 @@ fn compile_windows_preview_shaders() {
     "src/exports/preview_platform/surface_windows/shaders/preview.hlsl",
     "recording_preview",
   );
+  compile_shader("src/osc/gpu/windows/shaders/osc.hlsl", "osc_gpu");
   compile_shader(
-    "src/exports/preview_platform/surface_windows/shaders/selection.hlsl",
-    "recording_selection",
+    "src/recording/platform_windows/shaders/desktop_compositor.hlsl",
+    "desktop_compositor",
   );
 }
 

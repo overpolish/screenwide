@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::{AppHandle, Emitter, Manager};
+#[cfg(target_os = "macos")]
+use tauri::Manager;
+use tauri::{AppHandle, Emitter};
 
 use crate::windows::WindowLabel;
 
@@ -17,6 +19,9 @@ pub enum CaptureOverlay {
 /// Gives capture overlays a stable order above the recording controls on
 /// macOS. Other platforms retain their existing always-on-top behavior.
 pub fn set_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  crate::windows::initialize_capture_overlay(window).map_err(|error| error.to_string())?;
+
   #[cfg(target_os = "macos")]
   {
     let (sender, receiver) = std::sync::mpsc::sync_channel(1);
@@ -37,9 +42,15 @@ pub fn set_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), Stri
     receiver.recv().map_err(|error| error.to_string())?
   }
 
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
     let _ = (window, level);
+    Ok(())
+  }
+
+  #[cfg(target_os = "windows")]
+  {
+    let _ = level;
     Ok(())
   }
 }

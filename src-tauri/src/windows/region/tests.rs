@@ -3,9 +3,10 @@
 
 use super::{
   recording_controls_may_raise, recording_controls_may_restore, recording_ui_may_hide,
-  region_selector_is_interactive, region_selector_may_show, region_selector_restores_opacity,
-  screenshot_region_may_restore,
+  region_scene_owner, region_selector_capturable_after_opacity, region_selector_is_interactive,
+  region_selector_may_show, region_selector_restores_opacity, screenshot_region_may_restore,
 };
+use crate::osc::scene::RegionSceneOwner;
 
 #[test]
 fn a_region_gesture_does_not_raise_the_source_selector() {
@@ -51,6 +52,26 @@ fn a_screenshot_session_shows_the_overlay_without_the_recording_ui() {
 fn a_screenshot_session_presents_the_borrowed_region_window() {
   assert!(region_selector_restores_opacity(true));
   assert!(region_selector_restores_opacity(false));
+}
+
+#[test]
+fn a_running_region_keeps_its_scene_when_the_recording_bar_hides() {
+  assert_eq!(
+    region_scene_owner(false, false, false, false),
+    RegionSceneOwner::Normal
+  );
+  assert_eq!(
+    region_scene_owner(false, false, false, true),
+    RegionSceneOwner::DormantNormal
+  );
+}
+
+#[test]
+fn the_shutter_excludes_region_then_restores_the_global_capture_preference() {
+  assert!(!region_selector_capturable_after_opacity(0.0, false));
+  assert!(!region_selector_capturable_after_opacity(0.0, true));
+  assert!(!region_selector_capturable_after_opacity(1.0, false));
+  assert!(region_selector_capturable_after_opacity(1.0, true));
 }
 
 #[test]

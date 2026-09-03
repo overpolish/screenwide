@@ -203,7 +203,7 @@ mod tests {
     assert!(c.committed().is_none());
   }
   #[test]
-  fn cancel_restores_committed_and_shift_latches_resize() {
+  fn cancel_restores_committed_after_temporarily_free_resize() {
     let mut c = RegionController::new(monitor(), Some(region()), Some(1.));
     c.pointer_down(Point { x: 50., y: 40. });
     c.pointer_move(Point { x: 60., y: 50. }, true);

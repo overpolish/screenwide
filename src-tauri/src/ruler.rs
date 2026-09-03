@@ -9,8 +9,12 @@ mod adapter;
 pub(crate) mod analysis;
 pub(crate) mod centerlines;
 pub(crate) mod input;
+#[cfg(target_os = "windows")]
+pub(crate) use crate::osc::keyboard_windows::alt_pressed as windows_alt_pressed;
 #[cfg(target_os = "macos")]
 mod native_overlay_macos;
+#[cfg(target_os = "windows")]
+mod native_overlay_windows;
 pub(crate) mod probe;
 pub(crate) mod radius;
 pub(crate) mod render;
@@ -50,6 +54,10 @@ pub fn dismiss(app: &AppHandle) {
 
 pub fn is_active(app: &AppHandle) -> bool {
   app.state::<RulerState>().active_generation().is_some()
+}
+
+pub(crate) fn is_screenshot_mode() -> bool {
+  screenshot_mode::is_active()
 }
 
 pub(crate) fn restart_after_topology_change(app: &AppHandle) {

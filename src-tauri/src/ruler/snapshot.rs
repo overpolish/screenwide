@@ -614,6 +614,10 @@ impl RulerState {
     if !session.active {
       return None;
     }
+    if session.range.is_some() {
+      update_range(&mut session, pointer);
+      return refresh_visual(&mut session, pointer);
+    }
     if session.guide.is_some() {
       update_guide(&mut session, pointer);
       return refresh_visual(&mut session, pointer);
@@ -2111,13 +2115,10 @@ fn probe_visuals(session: &Session) -> Vec<RulerProbeVisual> {
 }
 
 fn automatic_probes(session: &Session, pointer: RulerPointer) -> Option<[RulerProbeVisual; 2]> {
-  let Some(snapshot) = session
+  let snapshot = session
     .displays
     .iter()
-    .find(|snapshot| snapshot.display.id == pointer.display_id)
-  else {
-    return None;
-  };
+    .find(|snapshot| snapshot.display.id == pointer.display_id)?;
   let display = snapshot.display;
   let image_width = snapshot.image.width.max(1);
   let image_height = snapshot.image.height.max(1);
@@ -2165,13 +2166,19 @@ fn automatic_probes(session: &Session, pointer: RulerPointer) -> Option<[RulerPr
     .try_into()
     .ok()?;
   if session.option_active {
-    clip_transient_probes_to_guides(&session.document.guides, pointer, &mut visuals);
+    clip_transient_probes_to_structural_edges(
+      &session.document.guides,
+      &session.document.measurements,
+      pointer,
+      &mut visuals,
+    );
   }
   Some(visuals)
 }
 
-fn clip_transient_probes_to_guides(
+fn clip_transient_probes_to_structural_edges(
   guides: &[GuideArtifact],
+  measurements: &[Measurement],
   pointer: RulerPointer,
   probes: &mut [RulerProbeVisual; 2],
 ) {
@@ -2180,12 +2187,31 @@ fn clip_transient_probes_to_guides(
       ProbeAxis::Horizontal => (GuideAxis::Vertical, pointer.world.x),
       ProbeAxis::Vertical => (GuideAxis::Horizontal, pointer.world.y),
     };
-    let positions = guides
+    let mut positions = guides
       .iter()
       .filter(|guide| guide.display_id == pointer.display_id && guide.axis == guide_axis)
       .map(|guide| guide.position)
       .filter(|position| *position >= probe.start && *position <= probe.end)
       .collect::<Vec<_>>();
+    positions.extend(measurements.iter().flat_map(|measurement| {
+      let bounds = measurement.bounds;
+      match probe.axis {
+        ProbeAxis::Horizontal
+          if pointer.world.y >= bounds.origin.y && pointer.world.y <= bounds.bottom() =>
+        {
+          [Some(bounds.origin.x), Some(bounds.right())]
+        }
+        ProbeAxis::Vertical
+          if pointer.world.x >= bounds.origin.x && pointer.world.x <= bounds.right() =>
+        {
+          [Some(bounds.origin.y), Some(bounds.bottom())]
+        }
+        _ => [None, None],
+      }
+      .into_iter()
+      .flatten()
+      .filter(|position| *position >= probe.start && *position <= probe.end)
+    }));
     probe.start = positions
       .iter()
       .copied()
@@ -2989,7 +3015,15 @@ mod tests {
     assert_eq!(draft.position, 2.25);
 
     let end = state.map_pointer(Point { x: 7.0, y: 3.25 }).unwrap();
-    assert!(state.hover(end).is_some());
+    assert!(state.pointer_down(start).is_some());
+    assert!(state.pointer_drag(end).is_some());
+    let live = state
+      .probes()
+      .into_iter()
+      .find(|probe| probe.draft)
+      .unwrap();
+    assert_eq!((live.start, live.end, live.position), (1.5, 8.0, 3.25));
+    assert!(state.pointer_up(end).is_some());
     assert!(state.finish_range().is_some());
     let stamped = state
       .probes()
@@ -3202,7 +3236,7 @@ mod tests {
   }
 
   #[test]
-  fn option_clips_transient_probes_to_neighbouring_guides() {
+  fn option_clips_transient_probes_to_guides_and_measurement_boxes() {
     let state = RulerState::default();
     let generation = state.begin();
     let display = DesktopDisplay {
@@ -3252,7 +3286,12 @@ mod tests {
           anchor: 10.0,
         },
       ];
-      session.document.next_id = 4;
+      session.document.measurements.push(Measurement {
+        id: 5,
+        bounds: Rect::from_xywh(35.0, 40.0, 30.0, 20.0),
+        label: ArtifactLabel::default(),
+      });
+      session.document.next_id = 5;
       reconcile_guide_gaps(&mut session.document);
     }
     let pointer = state.map_pointer(Point { x: 50.0, y: 50.0 }).unwrap();
@@ -3262,8 +3301,8 @@ mod tests {
     assert_eq!((probes[1].start, probes[1].end), (0.0, 99.0));
     assert!(state.set_option_active(true).is_some());
     let probes = state.probes();
-    assert_eq!((probes[0].start, probes[0].end), (30.0, 70.0));
-    assert_eq!((probes[1].start, probes[1].end), (20.0, 80.0));
+    assert_eq!((probes[0].start, probes[0].end), (35.0, 65.0));
+    assert_eq!((probes[1].start, probes[1].end), (40.0, 60.0));
     assert!(state.set_option_active(false).is_some());
     let probes = state.probes();
     assert_eq!((probes[0].start, probes[0].end), (0.0, 99.0));

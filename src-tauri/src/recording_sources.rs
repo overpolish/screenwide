@@ -300,7 +300,9 @@ fn enumerate_windows(cache_dir: &Path) -> Result<Vec<WindowDetails>, String> {
         return None;
       }
 
-      let thumbnail_path = create_thumbnail(&window, cache_dir, id);
+      // A window without a capturable preview is not a usable recording
+      // source. Filter it out just as we do minimized windows above.
+      let thumbnail_path = create_thumbnail(&window, cache_dir, id)?;
       let app_icon_path = platform::app_icon(cache_dir, pid);
 
       Some(WindowDetails {
@@ -314,7 +316,7 @@ fn enumerate_windows(cache_dir: &Path) -> Result<Vec<WindowDetails>, String> {
         },
         size: Size { width, height },
         app_icon_path,
-        thumbnail_path,
+        thumbnail_path: Some(thumbnail_path),
       })
     })
     .collect::<Vec<_>>();

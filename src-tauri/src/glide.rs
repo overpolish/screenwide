@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[cfg(target_os = "windows")]
 use crate::windows::WindowLabel;
 use tauri::AppHandle;
 #[cfg(target_os = "windows")]
-use tauri::Manager;
+use tauri::{LogicalSize, Manager, PhysicalPosition, PhysicalSize};
 
 #[cfg(target_os = "macos")]
 #[path = "glide/macos.rs"]
@@ -31,12 +30,35 @@ mod icon;
 #[path = "glide/fit.rs"]
 mod fit;
 
-/// The Windows preview is positioned in physical pixels beside the captured
-/// cursor anchor; placement policy itself lives in the shared Rust runtime.
+/// How long the hand rests before the detector commits a transition. One
+/// timing on every platform: short enough that a multi-fold reads as one
+/// gesture, long enough that a flick's overshoot never chains into the next
+/// fold.
+const REST_MS: f64 = 40.0;
+
+const GLIDABLE_WINDOW_LABELS: &[WindowLabel] = &[
+  WindowLabel::Settings,
+  WindowLabel::RecordingBar,
+  WindowLabel::RecordingDock,
+  WindowLabel::ExportRecording,
+  WindowLabel::ExportScreenshot,
+];
+
+const fn uses_full_surface(label: WindowLabel) -> bool {
+  matches!(
+    label,
+    WindowLabel::RecordingBar | WindowLabel::RecordingDock
+  )
+}
+
+/// Glide's preview has the same logical dimensions on both platforms. Windows
+/// reapplies them when a session begins because moving a hidden WebView between
+/// differently-scaled monitors can otherwise retain its previous physical
+/// extent.
 #[cfg(target_os = "windows")]
-const PREVIEW_WIDTH: f64 = 80.0;
+const PREVIEW_WIDTH: f64 = 48.0;
 #[cfg(target_os = "windows")]
-const PREVIEW_HEIGHT: f64 = 48.0;
+const PREVIEW_HEIGHT: f64 = 32.0;
 
 pub fn initialize(app: &AppHandle) -> Result<(), String> {
   crate::windows::initialize_glide_preview(app).map_err(|error| error.to_string())?;
@@ -68,14 +90,68 @@ fn begin_physical(app: &AppHandle, session_id: u64, x: i32, y: i32) -> Result<()
   let window = app
     .get_webview_window(WindowLabel::Glide.as_str())
     .ok_or_else(|| "The Glide preview window is unavailable".to_owned())?;
-  let scale = window.scale_factor().map_err(|error| error.to_string())?;
+
+  // First move the hidden window onto the anchor's monitor so Windows/Tauri
+  // resolves the logical size against that monitor's DPI, then centre the
+  // resulting physical extent and contain it in the monitor work area.
   window
-    .set_position(tauri::PhysicalPosition::new(
-      x - (PREVIEW_WIDTH * scale / 2.0).round() as i32,
-      y - (PREVIEW_HEIGHT * scale / 2.0).round() as i32,
-    ))
+    .set_position(PhysicalPosition::new(x, y))
+    .map_err(|error| error.to_string())?;
+  window
+    .set_size(LogicalSize::new(PREVIEW_WIDTH, PREVIEW_HEIGHT))
+    .map_err(|error| error.to_string())?;
+  let size = window.outer_size().map_err(|error| error.to_string())?;
+  let origin = preview_origin(app, PhysicalPosition::new(x, y), size)?;
+  window
+    .set_position(origin)
     .map_err(|error| error.to_string())?;
   emit(app, GlideInputEvent::Start { session_id })
+}
+
+#[cfg(target_os = "windows")]
+fn preview_origin(
+  app: &AppHandle,
+  anchor: PhysicalPosition<i32>,
+  size: PhysicalSize<u32>,
+) -> Result<PhysicalPosition<i32>, String> {
+  let monitors = app
+    .available_monitors()
+    .map_err(|error| error.to_string())?;
+  let monitor = monitors
+    .into_iter()
+    .find(|monitor| {
+      let position = monitor.position();
+      let extent = monitor.size();
+      anchor.x >= position.x
+        && anchor.x < position.x + extent.width as i32
+        && anchor.y >= position.y
+        && anchor.y < position.y + extent.height as i32
+    })
+    .or_else(|| app.primary_monitor().ok().flatten());
+  let centered = PhysicalPosition::new(
+    anchor.x - (size.width / 2) as i32,
+    anchor.y - (size.height / 2) as i32,
+  );
+  let Some(monitor) = monitor else {
+    return Ok(centered);
+  };
+  let work = monitor.work_area();
+  Ok(contained_origin(centered, size, work.position, work.size))
+}
+
+#[cfg(target_os = "windows")]
+fn contained_origin(
+  origin: PhysicalPosition<i32>,
+  size: PhysicalSize<u32>,
+  work_origin: PhysicalPosition<i32>,
+  work_size: PhysicalSize<u32>,
+) -> PhysicalPosition<i32> {
+  let maximum_x = work_origin.x + work_size.width.saturating_sub(size.width) as i32;
+  let maximum_y = work_origin.y + work_size.height.saturating_sub(size.height) as i32;
+  PhysicalPosition::new(
+    origin.x.clamp(work_origin.x, maximum_x.max(work_origin.x)),
+    origin.y.clamp(work_origin.y, maximum_y.max(work_origin.y)),
+  )
 }
 
 fn finish(app: &AppHandle, anchor_x: f64, anchor_y: f64, cancelled: bool) {
@@ -95,7 +171,7 @@ fn finish(app: &AppHandle, anchor_x: f64, anchor_y: f64, cancelled: bool) {
     });
   }
   #[cfg(target_os = "windows")]
-  let _ = crate::windows::hide_glide_preview(app);
+  crate::windows::defer_hide_glide_preview(app);
 }
 
 /// The cursor returns this far into the fade, so its arrival overlaps the
@@ -176,3 +252,47 @@ fn run_once(completion: &std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>>) {
 #[cfg(test)]
 #[path = "glide/input_event_tests.rs"]
 mod input_event_tests;
+
+#[cfg(all(test, target_os = "windows"))]
+mod windows_preview_tests {
+  use super::*;
+
+  #[test]
+  fn preview_is_contained_at_each_work_area_edge() {
+    let work_origin = PhysicalPosition::new(-1_920, 40);
+    let work_size = PhysicalSize::new(1_920, 1_040);
+    let preview_size = PhysicalSize::new(72, 48);
+
+    assert_eq!(
+      contained_origin(
+        PhysicalPosition::new(-1_956, 16),
+        preview_size,
+        work_origin,
+        work_size,
+      ),
+      PhysicalPosition::new(-1_920, 40),
+    );
+    assert_eq!(
+      contained_origin(
+        PhysicalPosition::new(-20, 1_060),
+        preview_size,
+        work_origin,
+        work_size,
+      ),
+      PhysicalPosition::new(-72, 1_032),
+    );
+  }
+
+  #[test]
+  fn preview_larger_than_work_area_pins_to_its_origin() {
+    assert_eq!(
+      contained_origin(
+        PhysicalPosition::new(40, 50),
+        PhysicalSize::new(400, 300),
+        PhysicalPosition::new(100, 80),
+        PhysicalSize::new(200, 100),
+      ),
+      PhysicalPosition::new(100, 80),
+    );
+  }
+}

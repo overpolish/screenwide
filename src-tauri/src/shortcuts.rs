@@ -1,7 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::{path::PathBuf, sync::Mutex};
+use std::{
+  path::PathBuf,
+  sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
+  },
+};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
@@ -12,6 +18,7 @@ use crate::windows::WindowLabel;
 const SHORTCUTS_FILE: &str = "shortcuts.json";
 const SHORTCUT_ACTION_EVENT: &str = "global-shortcut://action";
 const SCREENSHOT_SHORTCUT_REQUESTED_EVENT: &str = "screenshot-region://shortcut-requested";
+static CAPTURING: AtomicBool = AtomicBool::new(false);
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -274,11 +281,14 @@ pub fn begin_shortcut_capture(app: AppHandle) -> Result<(), String> {
   app
     .global_shortcut()
     .unregister_all()
-    .map_err(|error| error.to_string())
+    .map_err(|error| error.to_string())?;
+  CAPTURING.store(true, Ordering::Release);
+  Ok(())
 }
 
 #[tauri::command]
 pub fn end_shortcut_capture(app: AppHandle) -> Result<(), String> {
+  CAPTURING.store(false, Ordering::Release);
   let settings = app
     .state::<ShortcutSettingsState>()
     .0
@@ -296,6 +306,10 @@ pub fn end_shortcut_capture(app: AppHandle) -> Result<(), String> {
     }
   }
   Ok(())
+}
+
+pub(crate) fn is_capturing() -> bool {
+  CAPTURING.load(Ordering::Acquire)
 }
 
 #[tauri::command]

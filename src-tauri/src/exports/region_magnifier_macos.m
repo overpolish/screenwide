@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#import "region_osc_renderer_macos.h"
+#import "osc_gpu_macos.h"
 
 id<MTLComputePipelineState> screenwide_region_magnifier_make_pipeline(
     id<MTLDevice> device, id<MTLLibrary> library, NSError **error) {

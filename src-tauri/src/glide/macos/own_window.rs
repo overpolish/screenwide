@@ -18,7 +18,6 @@ use core_graphics::geometry::CGPoint;
 use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, WebviewWindow};
 
 use super::titlebar::{ax_titlebar_at, AxTitlebar, CHROME_MARGIN, FALLBACK_TITLEBAR_HEIGHT};
-use crate::windows::WindowLabel;
 
 /// Whether a point is on any titlebar a gesture may act on - a foreign one, or
 /// one of our own. The Accessibility hit test goes first because it is the one
@@ -32,29 +31,17 @@ pub(super) fn any_titlebar(app: &AppHandle, point: CGPoint) -> bool {
   }
 }
 
-/// The windows of ours a gesture is allowed to pick up. Everything absent from
-/// this list is an overlay, a panel or a selector - chrome of the application
-/// itself, which a window-management gesture must stay clear of. It is a
-/// function rather than a bare constant because the list is expected to grow as
-/// Screenwide gains ordinary windows.
-fn glidable_labels() -> &'static [WindowLabel] {
-  &[
-    WindowLabel::Settings,
-    WindowLabel::RecordingBar,
-    WindowLabel::RecordingDock,
-    WindowLabel::ExportRecording,
-    WindowLabel::ExportScreenshot,
-  ]
-}
-
 /// The allowlisted window of ours whose titlebar a global point lands on, with
 /// its logical outer frame - the same rectangle, in the same space, that the
 /// Accessibility path reports for a foreign window.
 pub(super) fn own_window_at(app: &AppHandle, point: CGPoint) -> Option<(WebviewWindow, cg::Rect)> {
-  glidable_labels().iter().find_map(|label| {
-    let window = app.get_webview_window(label.as_str())?;
-    titlebar_hit(&window, point).map(|frame| (window.clone(), frame))
-  })
+  crate::glide::GLIDABLE_WINDOW_LABELS
+    .iter()
+    .find_map(|label| {
+      let window = app.get_webview_window(label.as_str())?;
+      window_hit(&window, point, crate::glide::uses_full_surface(*label))
+        .map(|frame| (window.clone(), frame))
+    })
 }
 
 /// Whether a point is on the titlebar of one of our own windows. The tap-side
@@ -97,17 +84,27 @@ pub(super) fn decoration_size(window: &WebviewWindow) -> Option<LogicalSize<f64>
 
 /// The frame of a window the point lands on the titlebar of. A hidden or
 /// minimized window is nowhere, whatever its last frame said.
-fn titlebar_hit(window: &WebviewWindow, point: CGPoint) -> Option<cg::Rect> {
+fn window_hit(window: &WebviewWindow, point: CGPoint, full_surface: bool) -> Option<cg::Rect> {
   if !window.is_visible().ok()? || window.is_minimized().ok()? {
     return None;
   }
   let frame = logical_frame(window)?;
+  if full_surface {
+    return contains(frame, point).then_some(frame);
+  }
   let bottom = chrome_bottom(window, frame)?;
   let hit = point.x >= frame.origin.x
     && point.x <= frame.origin.x + frame.size.width
     && point.y >= frame.origin.y
     && point.y <= bottom;
   hit.then_some(frame)
+}
+
+fn contains(frame: cg::Rect, point: CGPoint) -> bool {
+  point.x >= frame.origin.x
+    && point.x <= frame.origin.x + frame.size.width
+    && point.y >= frame.origin.y
+    && point.y <= frame.origin.y + frame.size.height
 }
 
 /// The lowest point that still starts a gesture. Tauri measures the real

@@ -224,10 +224,10 @@ impl OscRuntime {
   }
 
   pub(crate) fn project_event(&self, event: ControllerEvent) -> (ControllerEvent, Option<u32>) {
-    let Ok(mut desktop) = self.desktop.lock() else {
+    let Ok(desktop) = self.desktop.lock() else {
       return (event, None);
     };
-    let Some(binding) = desktop.as_mut() else {
+    let Some(binding) = desktop.as_ref() else {
       return (event, None);
     };
     project_desktop_event(binding, event)

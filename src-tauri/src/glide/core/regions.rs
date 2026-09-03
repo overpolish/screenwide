@@ -7,6 +7,13 @@ use crate::glide::region_rect::PlacedRegion;
 pub type GlideRegion = PlacedRegion;
 
 pub const GRID_ROWS: u32 = 2;
+pub fn is_full_screen(region: GlideRegion) -> bool {
+  region.col_start == 0
+    && region.col_span == region.grid_cols
+    && region.row_start == 0
+    && region.row_span == GRID_ROWS
+}
+
 pub fn bottom_row_region(grid_cols: u32) -> GlideRegion {
   GlideRegion {
     col_span: grid_cols,

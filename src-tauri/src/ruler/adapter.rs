@@ -10,7 +10,10 @@
 #[cfg(target_os = "macos")]
 #[path = "adapter/macos.rs"]
 mod platform;
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+#[path = "adapter/windows.rs"]
+mod platform;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 #[path = "adapter/unavailable.rs"]
 mod platform;
 
@@ -23,13 +26,12 @@ mod tests {
   use super::*;
   use crate::{osc::desktop::DesktopBinding, screenshots::CapturedImage};
 
+  type Install =
+    fn(&tauri::WebviewWindow, u32, &[(u32, CapturedImage)]) -> Result<DesktopBinding, String>;
+
   #[test]
   fn selected_platform_satisfies_the_ruler_surface_contract() {
-    let _: fn(
-      &tauri::WebviewWindow,
-      u32,
-      &[(u32, CapturedImage)],
-    ) -> Result<DesktopBinding, String> = platform::install;
+    let _: Install = platform::install;
     let _: fn(&tauri::WebviewWindow) -> Result<(), String> = platform::present;
     let _: fn(&tauri::WebviewWindow, bool) -> Result<(), String> = platform::set_screenshot_mode;
     let _: fn(&tauri::AppHandle) = platform::close;

@@ -3,7 +3,7 @@
 
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { selectStatus, useRecordingStore } from "../recording-controls/store";
 import {
@@ -66,6 +66,36 @@ export function RegionSelectorWindow() {
   const isIdle = recordingStatus === "idle";
   useScreenshotShortcut();
 
+  const commitRecordingRegion = useCallback(
+    (nextRegion: typeof region, monitorId?: number) => {
+      const commit = () => {
+        setDraft(nextRegion);
+        setRegion(nextRegion);
+      };
+      if (monitorId === undefined || nativeMonitorRef.current === monitorId) {
+        commit();
+        return;
+      }
+      void listMonitors()
+        .then((monitors) => {
+          const monitor = monitors.find(
+            (candidate) => candidate.id === monitorId,
+          );
+          if (!monitor) return;
+          // Commit the new monitor and its monitor-local rectangle in one turn;
+          // publishing either half first can briefly re-clamp the marquee to
+          // the previous anchor.
+          nativeMonitorRef.current = monitorId;
+          setSelectedMonitor(monitor);
+          commit();
+        })
+        .catch((error: unknown) => {
+          console.error("Could not follow the Region monitor", error);
+        });
+    },
+    [setRegion, setSelectedMonitor],
+  );
+
   const activeMonitor = isScreenshotSurface
     ? screenshotMonitor
     : recordingMode === "region"
@@ -101,8 +131,7 @@ export function RegionSelectorWindow() {
         );
         return;
       }
-      setDraft(snapped);
-      setRegion(snapped);
+      commitRecordingRegion(snapped, monitorId);
     },
     onGesture: ({ dragging, drawing, resizeDirection: direction }) => {
       const resizing = direction !== undefined;
@@ -116,30 +145,16 @@ export function RegionSelectorWindow() {
         else finishGesture();
       }
     },
-    onMonitorChange: (monitorId) => {
-      if (nativeMonitorRef.current === monitorId) return;
-      nativeMonitorRef.current = monitorId;
-      void listMonitors()
-        .then((monitors) => {
-          const monitor = monitors.find(
-            (candidate) => candidate.id === monitorId,
-          );
-          if (!monitor) return;
-          if (isScreenshotSurface) setScreenshotMonitor(monitor);
-          else setSelectedMonitor(monitor);
-        })
-        .catch((error: unknown) => {
-          nativeMonitorRef.current = activeMonitor?.id ?? null;
-          console.error("Could not follow the Region monitor", error);
-        });
-    },
-    onReconciled: (nextRegion) => {
-      setDraft(nextRegion);
-      if (!isScreenshotSurface) setRegion(nextRegion);
+    onReconciled: (nextRegion, monitorId) => {
+      if (isScreenshotSurface) {
+        setDraft(nextRegion);
+      } else {
+        commitRecordingRegion(nextRegion, monitorId);
+      }
     },
     onRegionChange: setDraft,
     region: draft,
-    showFrame: isScreenshotSurface || isIdle,
+    showFrame: isScreenshotSurface || (recordingMode === "region" && isIdle),
     showHandles: !isScreenshotSurface && isIdle,
     visible: isScreenshotSurface ? isIdle : nativeOscEnabled,
     windowLabel: nativeOscEnabled ? getCurrentWindow().label : undefined,

@@ -17,10 +17,15 @@ use crate::osc::{
 #[cfg(target_os = "macos")]
 #[path = "adapter/macos.rs"]
 mod platform;
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+#[path = "adapter/windows.rs"]
+mod platform;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 #[path = "adapter/unavailable.rs"]
 mod platform;
 
+#[cfg(target_os = "windows")]
+pub(super) use platform::set_capture_affinity;
 pub(super) use platform::{
   acquire_quick_screenshot_cursor, apply_region_scene, prepare_for_region_restore,
   prepare_for_screenshot, release_quick_screenshot_cursor, set_desktop_presented,

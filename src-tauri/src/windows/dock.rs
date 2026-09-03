@@ -289,8 +289,7 @@ pub fn finish_recording_dock_drag(app: AppHandle) -> Result<(), String> {
   Ok(())
 }
 
-/// Windows does not deliver a pointer-up to the webview after a native drag,
-/// so the pill's position is committed the same way the bar's is.
+/// Persists a native drag after Windows stops delivering pointer events.
 #[cfg(target_os = "windows")]
 pub fn manage_recording_dock_movement(app: &AppHandle) {
   let Some(window) = app.get_webview_window(WindowLabel::RecordingDock.as_str()) else {
@@ -309,12 +308,13 @@ pub fn manage_recording_dock_movement(app: &AppHandle) {
 
 #[cfg(not(target_os = "windows"))]
 pub fn manage_recording_dock_movement(_app: &AppHandle) {}
-
 #[cfg(target_os = "windows")]
 fn watch_for_recording_dock_mouse_up(app: AppHandle) {
   use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
 
-  if DOCK_DRAG_ACTIVE.swap(true, Ordering::Relaxed) {
+  if unsafe { GetAsyncKeyState(VK_LBUTTON.0.into()) } >= 0
+    || DOCK_DRAG_ACTIVE.swap(true, Ordering::Relaxed)
+  {
     return;
   }
 

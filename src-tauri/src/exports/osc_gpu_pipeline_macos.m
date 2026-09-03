@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#import "region_osc_renderer_macos.h"
+#import "osc_gpu_macos.h"
 
 ScreenwideRegionOscRenderState screenwide_region_osc_render_state(
     uint32_t light_mode) {

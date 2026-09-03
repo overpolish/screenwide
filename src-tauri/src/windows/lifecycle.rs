@@ -214,7 +214,7 @@ fn watch_for_export_mouse_up(app: AppHandle, export: WebviewWindow) {
   use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
 
   let label = export.label().to_owned();
-  if export_drag_begin(&label) {
+  if unsafe { GetAsyncKeyState(VK_LBUTTON.0.into()) } >= 0 || export_drag_begin(&label) {
     return;
   }
   tauri::async_runtime::spawn_blocking(move || {

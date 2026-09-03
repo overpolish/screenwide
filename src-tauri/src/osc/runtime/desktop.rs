@@ -3,47 +3,34 @@
 
 use crate::osc::{
   controller::ControllerEvent,
-  desktop::{local_projection, owner_for_region, DesktopBinding},
-  geometry::Rect,
+  desktop::{local_projection, DesktopBinding},
 };
 
 pub fn project_desktop_event(
-  binding: &mut DesktopBinding,
+  binding: &DesktopBinding,
   event: ControllerEvent,
 ) -> (ControllerEvent, Option<u32>) {
-  let owner_for = |region: Rect| {
-    owner_for_region(&binding.displays, Some(binding.anchor_id), region)
-      .or_else(|| binding.anchor())
-  };
-  let owner = match event {
-    ControllerEvent::Changed { draft, .. } => draft.and_then(owner_for),
-    ControllerEvent::Finished { committed, .. } | ControllerEvent::Cancelled { committed } => {
-      committed.and_then(owner_for)
-    }
-  };
+  let anchor = binding.anchor();
   let projected = match event {
     ControllerEvent::Changed { draft, kind } => ControllerEvent::Changed {
       draft: draft
-        .zip(owner)
-        .map(|(region, owner)| local_projection(owner, region)),
+        .zip(anchor)
+        .map(|(region, anchor)| local_projection(anchor, region)),
       kind,
     },
     ControllerEvent::Finished { committed, kind } => ControllerEvent::Finished {
       committed: committed
-        .zip(owner)
-        .map(|(region, owner)| local_projection(owner, region)),
+        .zip(anchor)
+        .map(|(region, anchor)| local_projection(anchor, region)),
       kind,
     },
     ControllerEvent::Cancelled { committed } => ControllerEvent::Cancelled {
       committed: committed
-        .zip(owner)
-        .map(|(region, owner)| local_projection(owner, region)),
+        .zip(anchor)
+        .map(|(region, anchor)| local_projection(anchor, region)),
     },
   };
-  if let Some(owner) = owner {
-    binding.anchor_id = owner.id;
-  }
-  (projected, Some(binding.anchor_id))
+  (projected, anchor.map(|anchor| anchor.id))
 }
 
 #[cfg(test)]
@@ -51,13 +38,13 @@ mod tests {
   use super::*;
   use crate::osc::{
     desktop::DesktopDisplay,
-    geometry::{Point, Size},
+    geometry::{Point, Rect, Size},
     gesture::GestureKind,
   };
 
   #[test]
-  fn projection_moves_semantic_ownership_across_a_display_boundary() {
-    let mut binding = DesktopBinding {
+  fn projection_keeps_semantic_geometry_relative_to_the_session_anchor() {
+    let binding = DesktopBinding {
       displays: vec![
         DesktopDisplay {
           id: 1,
@@ -90,14 +77,14 @@ mod tests {
       kind: GestureKind::Moving,
     };
 
-    let (projected, owner) = project_desktop_event(&mut binding, event);
+    let (projected, owner) = project_desktop_event(&binding, event);
 
-    assert_eq!(owner, Some(2));
-    assert_eq!(binding.anchor_id, 2);
+    assert_eq!(owner, Some(1));
+    assert_eq!(binding.anchor_id, 1);
     assert_eq!(
       projected,
       ControllerEvent::Changed {
-        draft: Some(Rect::from_xywh(-10.0, 10.0, 80.0, 30.0)),
+        draft: Some(Rect::from_xywh(90.0, 10.0, 80.0, 30.0)),
         kind: GestureKind::Moving,
       }
     );

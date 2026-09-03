@@ -450,6 +450,14 @@ html[data-platform="windows"] .window-surface {
   border-radius: 0;
 }
 
+.glide-app-icon-windows-boost {
+  display: none;
+}
+
+html[data-platform="windows"] .glide-app-icon-windows-boost {
+  display: block;
+}
+
 .os-theme-screenwide {
   --os-size: 10px;
   --os-padding-perpendicular: 2px;

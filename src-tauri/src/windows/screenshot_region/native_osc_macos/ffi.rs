@@ -56,6 +56,7 @@ unsafe extern "C" {
   ) -> i32;
   pub fn screenwide_region_osc_set_magnifier_source(
     view: *mut c_void,
+    display_id: u32,
     rgba: *const u8,
     length: usize,
     width: u32,

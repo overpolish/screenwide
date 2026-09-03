@@ -7,7 +7,7 @@
 
 use std::{path::PathBuf, sync::RwLock};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use tauri::{AppHandle, Emitter, Manager};
 
 const SETTINGS_FILE: &str = "glide-settings.json";
@@ -17,39 +17,66 @@ const SETTINGS_CHANGED_EVENT: &str = "glide-settings://changed";
 /// and start reading as floating windows.
 const MAXIMUM_WINDOW_GAP: u32 = 32;
 
-/// A bare modifier key, as the two gestures are held down with. Named rather
-/// than carried as a native flag so the same settings file works everywhere.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum GlideModifier {
-  Command,
-  Option,
-  Control,
-  Shift,
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum GlideControl {
+  Key(keyboard_types::Code),
+  MouseMiddle,
+  MouseBack,
+  MouseForward,
 }
 
-/// How long the detector lets the fingers rest before it commits a transition.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum GlidePacing {
-  Snappy,
-  Normal,
-  Relaxed,
+impl GlideControl {
+  pub const COMMAND: Self = Self::Key(keyboard_types::Code::MetaLeft);
+  pub const CONTROL: Self = Self::Key(keyboard_types::Code::ControlLeft);
+  pub const SHIFT: Self = Self::Key(keyboard_types::Code::ShiftLeft);
+}
+
+impl Serialize for GlideControl {
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    let value = match self {
+      Self::Key(code) => code.to_string(),
+      Self::MouseMiddle => "MouseMiddle".to_owned(),
+      Self::MouseBack => "MouseBack".to_owned(),
+      Self::MouseForward => "MouseForward".to_owned(),
+    };
+    serializer.serialize_str(&value)
+  }
+}
+
+impl<'de> Deserialize<'de> for GlideControl {
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    let value = String::deserialize(deserializer)?;
+    let migrated = match value.as_str() {
+      "command" => "MetaLeft",
+      "option" => "AltLeft",
+      "control" => "ControlLeft",
+      "shift" => "ShiftLeft",
+      _ => value.as_str(),
+    };
+    match migrated {
+      "MouseMiddle" => Ok(Self::MouseMiddle),
+      "MouseBack" => Ok(Self::MouseBack),
+      "MouseForward" => Ok(Self::MouseForward),
+      _ => migrated
+        .parse()
+        .map(Self::Key)
+        .map_err(serde::de::Error::custom),
+    }
+  }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct GlideSettings {
   pub enabled: bool,
-  pub mouse_modifier: GlideModifier,
-  pub thirds_modifier: GlideModifier,
+  pub mouse_modifier: GlideControl,
+  pub thirds_modifier: GlideControl,
   /// The uniform gap between placed windows, in logical pixels. Outer edges are
   /// inset by the whole gap and shared edges by half each, so two adjacent
   /// windows sit exactly one gap apart.
   pub window_gap: u32,
   pub cursor_follows: bool,
   pub haptics: bool,
-  pub pacing: GlidePacing,
   pub double_tap_center: bool,
 }
 
@@ -58,26 +85,15 @@ impl Default for GlideSettings {
     Self {
       enabled: true,
       mouse_modifier: if cfg!(target_os = "windows") {
-        GlideModifier::Control
+        GlideControl::CONTROL
       } else {
-        GlideModifier::Command
+        GlideControl::COMMAND
       },
-      thirds_modifier: GlideModifier::Shift,
+      thirds_modifier: GlideControl::SHIFT,
       window_gap: 0,
       cursor_follows: true,
       haptics: true,
-      pacing: GlidePacing::Normal,
       double_tap_center: true,
-    }
-  }
-}
-
-impl GlidePacing {
-  pub(crate) const fn rest_ms(self) -> f64 {
-    match self {
-      Self::Snappy => 40.0,
-      Self::Normal => 60.0,
-      Self::Relaxed => 100.0,
     }
   }
 }
@@ -116,7 +132,12 @@ fn write(app: &AppHandle, settings: &GlideSettings) -> Result<(), String> {
 fn validate(settings: &mut GlideSettings) -> Result<(), String> {
   settings.window_gap = settings.window_gap.min(MAXIMUM_WINDOW_GAP);
   if settings.mouse_modifier == settings.thirds_modifier {
-    return Err("The glide and thirds modifiers must be different keys".to_owned());
+    return Err("The glide and thirds controls must be different".to_owned());
+  }
+  if !super::platform::supports_control(settings.mouse_modifier)
+    || !super::platform::supports_control(settings.thirds_modifier)
+  {
+    return Err("That control is not available for Glide on this platform".to_owned());
   }
   Ok(())
 }

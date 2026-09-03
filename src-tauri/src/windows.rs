@@ -47,16 +47,40 @@ pub use region::{
 };
 
 #[cfg(target_os = "windows")]
+const fn window_capturable(record_screenwide_windows: bool, preserve_ruler: bool) -> bool {
+  record_screenwide_windows || preserve_ruler
+}
+
+#[cfg(target_os = "windows")]
 pub fn sync_capture_affinity(
   app: &AppHandle,
   record_screenwide_windows: bool,
 ) -> tauri::Result<()> {
   for window in app.webview_windows().values() {
     if platform::is_visible(window)? {
-      platform::set_capture_affinity(window, record_screenwide_windows)?;
+      // Quick Screenshot temporarily preserves Ruler in the captured pixels.
+      // Region's pre-shutter exclusion pass must not overwrite the anchor
+      // host's affinity: its additional-display peers are native windows and
+      // would otherwise remain capturable while only the anchor vanished.
+      let preserve_ruler =
+        window.label() == WindowLabel::Ruler.as_str() && crate::ruler::is_screenshot_mode();
+      platform::set_capture_affinity(
+        window,
+        window_capturable(record_screenwide_windows, preserve_ruler),
+      )?;
     }
   }
   Ok(())
+}
+
+#[cfg(all(test, target_os = "windows"))]
+mod capture_affinity_tests {
+  #[test]
+  fn quick_screenshot_preserves_the_ruler_anchor_during_global_exclusion() {
+    assert!(super::window_capturable(false, true));
+    assert!(!super::window_capturable(false, false));
+    assert!(super::window_capturable(true, false));
+  }
 }
 
 /// Keeps one window out of every capture, whatever the persistent "record
@@ -74,6 +98,24 @@ pub(crate) fn exclude_from_capture(window: &WebviewWindow) -> tauri::Result<()> 
     let _ = window;
     Ok(())
   }
+}
+
+/// Overrides capture affinity for one overlay host. Native desktop peers need
+/// their own matching update because they are separate top-level windows.
+#[cfg(target_os = "windows")]
+pub(crate) fn set_window_capture_affinity(
+  window: &WebviewWindow,
+  capturable: bool,
+) -> tauri::Result<()> {
+  platform::set_capture_affinity(window, capturable)
+}
+
+/// Applies the same non-animated, always-on-top policy as the predefined
+/// overlays to capture tools whose transparent host windows are created only
+/// when the tool starts (Ruler, OCR, and their auxiliary windows).
+#[cfg(target_os = "windows")]
+pub(crate) fn initialize_capture_overlay(window: &WebviewWindow) -> tauri::Result<()> {
+  platform::initialize_capture_overlay(window)
 }
 
 /// Removes a disposable overlay's pixels before Windows runs its native hide
@@ -165,7 +207,17 @@ pub fn hide_glide_preview(app: &AppHandle) -> tauri::Result<()> {
   let window = app
     .get_webview_window(WindowLabel::Glide.as_str())
     .ok_or(tauri::Error::WindowNotFound)?;
+  #[cfg(target_os = "windows")]
+  window.set_ignore_cursor_events(true)?;
   platform::hide(&window)
+}
+
+#[cfg(target_os = "windows")]
+pub fn defer_hide_glide_preview(app: &AppHandle) {
+  let main_app = app.clone();
+  let _ = app.run_on_main_thread(move || {
+    let _ = hide_glide_preview(&main_app);
+  });
 }
 
 /// Fades the preview out instead of hiding it outright, then runs `completion`
@@ -228,11 +280,11 @@ pub(crate) fn position_glide_preview(app: &AppHandle, x: f64, y: f64) -> tauri::
   Ok(())
 }
 
-pub fn show_glide_preview(app: &AppHandle) -> tauri::Result<()> {
+pub fn show_glide_preview(app: &AppHandle, blocks_hover: bool) -> tauri::Result<()> {
   let window = app
     .get_webview_window(WindowLabel::Glide.as_str())
     .ok_or(tauri::Error::WindowNotFound)?;
-  platform::show_passthrough(&window, 1.0)
+  platform::show_glide(&window, 1.0, blocks_hover)
 }
 
 // This is where a list of capture-excluded window labels used to live. Capture
@@ -398,7 +450,9 @@ pub fn manage_transient_popover_dismissal(_app: &AppHandle) {}
 fn watch_for_recording_bar_mouse_up(app: AppHandle) {
   use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
 
-  if BAR_DRAG_ACTIVE.swap(true, Ordering::Relaxed) {
+  if unsafe { GetAsyncKeyState(VK_LBUTTON.0.into()) } >= 0
+    || BAR_DRAG_ACTIVE.swap(true, Ordering::Relaxed)
+  {
     return;
   }
 

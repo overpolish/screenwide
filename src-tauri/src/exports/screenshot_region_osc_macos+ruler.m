@@ -742,7 +742,7 @@ static void render(ScreenwideRegionOSC *surface) {
                    surface.rulerLabel.size.height),
         glyph_texture_rect(surface.rulerLabel,
                            glyph_index([text characterAtIndex:index])),
-        11);
+        48);
   }
   if (dimensions) {
     CGFloat dimensionsLeft = (width - cellWidth * dimensions.length) * 0.5;
@@ -756,7 +756,7 @@ static void render(ScreenwideRegionOSC *surface) {
                      cellWidth, surface.rulerLabel.size.height),
           glyph_texture_rect(surface.rulerLabel,
                              glyph_index([dimensions characterAtIndex:index])),
-          11);
+          48);
     }
   }
 

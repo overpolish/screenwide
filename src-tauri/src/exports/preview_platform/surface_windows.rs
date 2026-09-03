@@ -387,6 +387,7 @@ fn frame_resize_start(state: &SurfaceState) -> FrameResizeStart {
 }
 
 #[derive(Clone, Copy)]
+#[allow(clippy::large_enum_variant)]
 enum ActiveGesture {
   Pan {
     pointer_start: (f64, f64),
@@ -3691,6 +3692,10 @@ impl Drop for PresentBatch<'_> {
       if pane.pending_geometry {
         pane.pending_geometry = false;
         let _ = pane.update_geometry();
+        // Selection geometry is derived from the pane's final canvas rect.
+        // A Frame undo can move/resize that rect without resizing the D3D
+        // buffer, so buffer staleness alone is not sufficient.
+        selection_stale = true;
       }
       selection_stale |= std::mem::take(&mut pane.selection_stale);
     }

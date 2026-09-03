@@ -177,8 +177,9 @@ export const captureScreenshotRegion = (
   monitorId: number,
   region: Region,
 ) => {
-  // The overlay is on top of what is being captured, so it goes invisible for
-  // the shot exactly as it does for the magnifier's monitor image.
+  // The overlay is on top of what is being captured. macOS hides it for the
+  // shot; Windows keeps it visible but temporarily excludes its native window
+  // graph from capture, avoiding a flash.
   const capture = async () => {
     const showCursor = useRecordingInputStore.getState().inputs.showCursor;
     try {

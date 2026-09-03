@@ -48,6 +48,7 @@ pub(crate) fn set_frame_visible(
 
 pub(crate) fn set_magnifier_source(
   _window: &tauri::WebviewWindow,
+  _display_id: u32,
   _image: crate::screenshots::CapturedImage,
 ) -> Result<bool, String> {
   Ok(false)

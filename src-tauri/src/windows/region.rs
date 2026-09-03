@@ -20,12 +20,28 @@ pub(crate) fn is_screenshot_region_session() -> bool {
   SCREENSHOT_REGION_SESSION.load(Ordering::Acquire)
 }
 
-pub(crate) fn screenshot_region_scene_owner() -> crate::osc::scene::RegionSceneOwner {
-  if SCREENSHOT_REGION_SESSION.load(Ordering::Acquire) {
+pub(crate) fn screenshot_region_scene_owner(
+  app: &AppHandle,
+) -> crate::osc::scene::RegionSceneOwner {
+  region_scene_owner(
+    SCREENSHOT_REGION_SESSION.load(Ordering::Acquire),
+    SCREENSHOT_REGION_RESTORING.load(Ordering::Acquire),
+    RECORDING_CONTROLS_VISIBLE.load(Ordering::Acquire),
+    crate::recording::is_idle(app),
+  )
+}
+
+const fn region_scene_owner(
+  screenshot_session: bool,
+  restoring: bool,
+  controls_visible: bool,
+  recording_is_idle: bool,
+) -> crate::osc::scene::RegionSceneOwner {
+  if screenshot_session {
     crate::osc::scene::RegionSceneOwner::Screenshot
-  } else if SCREENSHOT_REGION_RESTORING.load(Ordering::Acquire) {
+  } else if restoring {
     crate::osc::scene::RegionSceneOwner::RestoringNormal
-  } else if !RECORDING_CONTROLS_VISIBLE.load(Ordering::Acquire) {
+  } else if !controls_visible && recording_is_idle {
     crate::osc::scene::RegionSceneOwner::DormantNormal
   } else {
     crate::osc::scene::RegionSceneOwner::Normal
@@ -70,7 +86,7 @@ pub fn show_region_selector(
     if SCREENSHOT_REGION_SESSION.load(Ordering::Acquire) {
       platform::show_interactive_overlay(&region, 1.0)?;
     }
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     if desktop {
       super::screenshot_region::set_recording_overlay_desktop_presented(&region, true)?;
     }
@@ -93,7 +109,7 @@ pub fn show_region_selector(
   #[cfg(not(target_os = "macos"))]
   platform::show(&region, initial_opacity)?;
   platform::restore_recording_level(&region)?;
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   if desktop {
     super::screenshot_region::set_recording_overlay_desktop_presented(&region, true)?;
   }
@@ -129,7 +145,7 @@ const fn region_selector_restores_opacity(_screenshot_session: bool) -> bool {
 #[tauri::command]
 pub fn hide_region_selector(app: AppHandle) -> tauri::Result<()> {
   if let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     super::screenshot_region::set_recording_overlay_desktop_presented(&region, false)?;
     platform::hide(&region)?;
   }
@@ -214,13 +230,13 @@ pub fn set_screenshot_region_session(
     SCREENSHOT_REGION_SESSION.store(false, Ordering::Release);
     SCREENSHOT_REGION_RESTORING.store(restore_region, Ordering::Release);
     if let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
-      #[cfg(target_os = "macos")]
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
       let transition = if restore_region {
         super::screenshot_region::prepare_recording_overlay_for_region_restore(&region)
       } else {
         super::screenshot_region::prepare_recording_overlay_for_screenshot(&region)
       };
-      #[cfg(not(target_os = "macos"))]
+      #[cfg(not(any(target_os = "macos", target_os = "windows")))]
       let transition: tauri::Result<()> = Ok(());
       if let Err(error) = transition {
         SCREENSHOT_REGION_SESSION.store(true, Ordering::Release);
@@ -248,9 +264,9 @@ pub fn set_screenshot_region_session(
   if active {
     let result = match app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
       Some(region) => {
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
         let peers = super::screenshot_region::prepare_recording_overlay_for_screenshot(&region);
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         let peers = Ok(());
         peers
           .and_then(|()| platform::hide(&region))
@@ -306,16 +322,43 @@ pub fn set_region_selector_passthrough(app: AppHandle, passthrough: bool) -> tau
 }
 
 #[tauri::command]
-pub fn set_region_selector_opacity(
+#[allow(clippy::needless_return)]
+pub async fn set_region_selector_opacity(
   window: tauri::WebviewWindow,
   opacity: f64,
 ) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  {
+    let capturable = region_selector_capturable_after_opacity(
+      opacity,
+      crate::settings::current(window.app_handle()).record_screenwide_windows,
+    );
+    super::sync_capture_affinity(window.app_handle(), capturable)
+      .map_err(|error| error.to_string())?;
+    super::screenshot_region::set_recording_overlay_capture_affinity(&window, capturable)
+      .map_err(|error| error.to_string())?;
+    if opacity <= 0.0 {
+      // Display affinity is committed asynchronously by DWM. Let that frame
+      // land before the shutter without changing anything visible onscreen.
+      tokio::time::sleep(std::time::Duration::from_millis(75)).await;
+    }
+    return Ok(());
+  }
+
   #[cfg(target_os = "macos")]
   if opacity <= 0.0 {
     super::screenshot_region::set_recording_overlay_desktop_presented(&window, false)
       .map_err(|error| error.to_string())?;
   }
-  platform::set_opacity(&window, opacity).map_err(|error| error.to_string())
+  #[cfg(not(target_os = "windows"))]
+  return platform::set_opacity(&window, opacity).map_err(|error| error.to_string());
+}
+
+const fn region_selector_capturable_after_opacity(
+  opacity: f64,
+  record_screenwide_windows: bool,
+) -> bool {
+  opacity > 0.0 && record_screenwide_windows
 }
 
 /// Temporarily removes the recording-control window graph while Quick

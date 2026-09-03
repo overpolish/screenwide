@@ -30,10 +30,10 @@ impl Default for GlideDetectorOptions {
     Self {
       diagonal_corner_ratio: 0.5,
       horizontal_dominance: 1.15,
-      horizontal_threshold: 44.,
-      vertical_fill_threshold: 44.,
+      horizontal_threshold: 36.,
+      vertical_fill_threshold: 36.,
       vertical_release_threshold: 20.,
-      vertical_threshold: 44.,
+      vertical_threshold: 36.,
       motion_noise_floor: 2.,
       rest_ms: 60.,
       reversal_hysteresis: 10.,
@@ -153,9 +153,12 @@ pub(super) fn step_ladder(
 ) -> Option<GlideFold> {
   let side = axis_step(across, options.horizontal_threshold);
   if side != 0 {
+    // A sideways step settles like the opening sideways fold: the hand often
+    // turns straight up or down for a corner without resting in between, so
+    // that one vertical step is allowed through before the rest closes it.
     return Some(GlideFold {
       pending: None,
-      porous: false,
+      porous: true,
       region: Some(regions::step_columns(region, side)),
     });
   }

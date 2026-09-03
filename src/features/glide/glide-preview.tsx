@@ -206,11 +206,21 @@ export function GlidePreview({
       {/* Centered over whatever the fill is doing: which app is moving is one
           fact about the whole preview, not about the destination. */}
       {iconSrc ? (
-        <img
-          alt=""
-          className="pointer-events-none absolute inset-0 m-auto size-icon-default object-contain"
-          src={iconSrc}
-        />
+        <>
+          {/* Some Windows executables expose unusually low-alpha icon artwork.
+              A second identical layer restores its visual weight without
+              changing opaque icons or baking in an app-specific backdrop. */}
+          <img
+            alt=""
+            className="glide-app-icon-windows-boost pointer-events-none absolute inset-0 m-auto size-icon-default object-contain"
+            src={iconSrc}
+          />
+          <img
+            alt=""
+            className="pointer-events-none absolute inset-0 m-auto size-icon-default object-contain"
+            src={iconSrc}
+          />
+        </>
       ) : null}
     </div>
   );

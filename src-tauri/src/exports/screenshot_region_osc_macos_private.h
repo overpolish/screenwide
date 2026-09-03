@@ -4,7 +4,7 @@
 #import <QuartzCore/CAMetalLayer.h>
 #include <stddef.h>
 #import "osc_controls.h"
-#import "region_osc_renderer_macos.h"
+#import "osc_gpu_macos.h"
 #import "osc_material_surface_macos.h"
 #import "osc_text_texture_macos.h"
 

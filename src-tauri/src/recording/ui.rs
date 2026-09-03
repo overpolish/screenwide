@@ -28,8 +28,12 @@ pub(super) fn prepare_windows(
   windows::show_recording_dock(app).map_err(to_message)?;
 
   if options.mode == RecordingMode::Region {
-    // The overlay stays up as the recording boundary, but must stop eating
-    // clicks now that the user is no longer editing the region.
+    // Retain the desktop-wide cutout surfaces, but remove editing chrome and
+    // stop taking clicks now that the user is no longer editing the region.
+    windows::screenshot_region::presentation::set_region_selector_osc_frame_visible(
+      app.clone(),
+      false,
+    )?;
     windows::set_region_selector_passthrough(app.clone(), true).map_err(to_message)?;
   } else {
     windows::hide_region_selector(app.clone()).map_err(to_message)?;

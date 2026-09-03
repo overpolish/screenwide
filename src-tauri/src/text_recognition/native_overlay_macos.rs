@@ -42,7 +42,6 @@ pub(super) fn install(
             || !native_region::set_show_frame(view, true)
             || !native_region::set_show_handles(view, false)
             || !native_region::set_input_enabled(view, true)
-            || !native_region::set_ocr_cancel_visible(view, true)
           {
             return Err("Could not configure the native text selection surface".to_owned());
           }

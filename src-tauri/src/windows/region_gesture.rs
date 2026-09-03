@@ -11,6 +11,34 @@ use super::{
 
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 
+fn conceal_recording_bar(window: &tauri::WebviewWindow) -> tauri::Result<()> {
+  #[cfg(target_os = "windows")]
+  {
+    // Keep WebView2 presented while the region gesture borrows its space. A
+    // hide/show cycle can expose its blank backing surface for one frame when
+    // the bar returns.
+    window.set_ignore_cursor_events(true)?;
+    platform::set_opacity(window, 0.0)
+  }
+  #[cfg(not(target_os = "windows"))]
+  platform::hide(window)
+}
+
+fn restore_recording_bar(window: &tauri::WebviewWindow) -> tauri::Result<()> {
+  #[cfg(target_os = "windows")]
+  {
+    platform::prepare_to_show(window)?;
+    window.set_ignore_cursor_events(false)?;
+    platform::set_opacity(window, 1.0)?;
+    platform::restore_recording_level(window)
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    platform::show(window, 1.0)?;
+    platform::restore_recording_level(window)
+  }
+}
+
 pub(super) fn is_active() -> bool {
   ACTIVE.load(Ordering::Relaxed)
 }
@@ -31,7 +59,7 @@ pub fn begin_region_selector_gesture(app: AppHandle) -> tauri::Result<()> {
     hide_recording_options(app.clone())?;
     source_selector::collapse(app.clone(), Some(false))?;
     if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
-      platform::hide(&bar)?;
+      conceal_recording_bar(&bar)?;
     }
     if let Some(selector) = app.get_webview_window(WindowLabel::RecordingSourceSelector.as_str()) {
       platform::hide(&selector)?;
@@ -52,8 +80,7 @@ fn restore_recording_controls(app: &AppHandle) -> tauri::Result<()> {
   }
 
   if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
-    platform::show(&bar, 1.0)?;
-    platform::restore_recording_level(&bar)?;
+    restore_recording_bar(&bar)?;
   }
   Ok(())
 }

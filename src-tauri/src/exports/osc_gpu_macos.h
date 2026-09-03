@@ -4,6 +4,9 @@
 #import <AppKit/AppKit.h>
 #import <Metal/Metal.h>
 
+// Shared Metal OSC contract. Region and Export provide scene geometry to this
+// same renderer; tool-specific interaction remains in their surface adapters.
+
 typedef struct {
   float x;
   float y;

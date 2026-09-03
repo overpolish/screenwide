@@ -8,7 +8,7 @@
 #import <CoreMedia/CoreMedia.h>
 
 #import "gpu_compositor_macos_keyboard_types.h"
-#import "../region_osc_renderer_macos.h"
+#import "../osc_gpu_macos.h"
 
 typedef struct {
   float background_color[4];

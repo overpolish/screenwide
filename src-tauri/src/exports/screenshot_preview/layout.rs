@@ -106,7 +106,7 @@ pub async fn layout_screenshot_preview_surface(
     manager.has_layout = true;
     (surface, will_present, natural_size)
   };
-  surface.set_selection(selection.map(|overlay| PreviewSelection {
+  let selection = selection.map(|overlay| PreviewSelection {
     recenter_height: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.height),
     recenter_width: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.width),
     recenter_x: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.x),
@@ -130,7 +130,7 @@ pub async fn layout_screenshot_preview_surface(
     radius_percent: overlay.radius_percent,
     minimum_scale: 0.0,
     maximum_scale: 0.0,
-  }));
+  });
   let selection_targets = selection_targets.map(|targets| {
     targets
       .into_iter()
@@ -161,7 +161,10 @@ pub async fn layout_screenshot_preview_surface(
       })
       .collect::<Vec<_>>()
   });
+  // Install hit targets before the selected item. `set_selection` performs
+  // the draw, so this publishes one coherent OSC state after undo/selection.
   surface.set_selection_targets(selection_targets.as_deref());
+  surface.set_selection(selection);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor.unwrap_or(true));
   // No interaction view exists off the two native preview backends.

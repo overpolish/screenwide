@@ -24,6 +24,7 @@ pub(crate) fn apply_region_scene(
   let monitor_width = request.monitor_width;
   let monitor_height = request.monitor_height;
   let desktop_anchor = request.desktop_anchor;
+  let owner_app = app.clone();
   let (sender, receiver) = std::sync::mpsc::sync_channel(1);
   app
     .run_on_main_thread(move || {
@@ -36,7 +37,7 @@ pub(crate) fn apply_region_scene(
           let desktop_binding = desktop_anchor
             .map(|anchor| native::configure_desktop_window(view.cast(), anchor))
             .transpose()?;
-          let owner = crate::windows::region::screenshot_region_scene_owner();
+          let owner = crate::windows::region::screenshot_region_scene_owner(&owner_app);
           let base = native::region_scene_request_base(view.cast(), owner).unwrap_or_default();
           let resolved = resolve_region_scene(request, base, desktop_binding.as_ref());
           let monitor_ready = attached
@@ -90,7 +91,7 @@ pub(crate) fn set_desktop_presented(
   let app = window.app_handle().clone();
   app.run_on_main_thread(move || {
     if let Ok(view) = window.ns_view() {
-      let owner = crate::windows::region::screenshot_region_scene_owner();
+      let owner = crate::windows::region::screenshot_region_scene_owner(window.app_handle());
       let screenshot_session = owner == crate::osc::scene::RegionSceneOwner::Screenshot;
       if presented && owner == crate::osc::scene::RegionSceneOwner::Normal {
         let _ = native::restore_normal_region_scene(view.cast());
@@ -144,6 +145,9 @@ pub(crate) fn prepare_for_screenshot(window: &tauri::WebviewWindow) -> tauri::Re
     let result = window.ns_view().map(|view| {
       // Clear every surface before hiding its desktop peers. Reversing this
       // order lets the root surface submit one last persisted Region frame.
+      // A hidden driver view must not retain an enabled input surface or a
+      // half-owned gesture for the next Quick Screenshot session.
+      let _ = native::set_input_enabled(view.cast(), false);
       let _ = native::clear_region(view.cast());
       let _ = native::set_desktop_presented(view.cast(), false);
     });
@@ -173,6 +177,7 @@ pub(crate) fn set_frame_visible(
 
 pub(crate) fn set_magnifier_source(
   window: &tauri::WebviewWindow,
+  display_id: u32,
   image: crate::screenshots::CapturedImage,
 ) -> Result<bool, String> {
   let window = window.clone();
@@ -183,7 +188,13 @@ pub(crate) fn set_magnifier_source(
       let result = window
         .ns_view()
         .map(|view| {
-          native::set_magnifier_source(view.cast(), &image.rgba, image.width, image.height)
+          native::set_magnifier_source(
+            view.cast(),
+            display_id,
+            &image.rgba,
+            image.width,
+            image.height,
+          )
         })
         .map_err(|error| error.to_string());
       let _ = sender.send(result);

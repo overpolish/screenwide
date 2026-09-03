@@ -58,7 +58,7 @@ export type NativeScreenshotRegionOptions = {
   inputEnabled?: boolean;
   monitorId?: number;
   onMonitorChange?: (monitorId: number) => void;
-  onReconciled?: (region: Region) => void;
+  onReconciled?: (region: Region, monitorId?: number) => void;
   showFrame?: boolean;
   showHandles?: boolean;
 };

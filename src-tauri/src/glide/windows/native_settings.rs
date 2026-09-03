@@ -3,26 +3,26 @@
 
 //! The settings snapshot read by the Windows raw-input adapter.
 
-use std::sync::{LazyLock, RwLock};
-
-use windows::Win32::UI::Input::KeyboardAndMouse::{
-  GetAsyncKeyState, VIRTUAL_KEY, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
+use std::{
+  collections::HashSet,
+  sync::{LazyLock, Mutex, RwLock},
 };
 
-use crate::glide::settings::{GlideModifier, GlideSettings};
+use super::control::NativeControl;
+use crate::glide::settings::GlideSettings;
 
 #[derive(Clone, Copy)]
 pub(super) struct NativeGlideSettings {
   pub cursor_follows: bool,
   pub enabled: bool,
-  pub mouse_modifier: GlideModifier,
-  pub rest_ms: f64,
-  pub thirds_modifier: GlideModifier,
+  pub mouse_modifier: NativeControl,
+  pub thirds_modifier: NativeControl,
   pub window_gap: u32,
 }
 
 static NATIVE: LazyLock<RwLock<NativeGlideSettings>> =
   LazyLock::new(|| RwLock::new(native(&GlideSettings::default())));
+static PRESSED: LazyLock<Mutex<HashSet<u32>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
 
 pub(super) fn snapshot() -> NativeGlideSettings {
   *NATIVE
@@ -31,39 +31,45 @@ pub(super) fn snapshot() -> NativeGlideSettings {
 }
 
 pub(super) fn apply(settings: &GlideSettings) {
+  let settings = native(settings);
   *NATIVE
     .write()
-    .unwrap_or_else(|poisoned| poisoned.into_inner()) = native(settings);
+    .unwrap_or_else(|poisoned| poisoned.into_inner()) = settings;
+  if let Ok(mut pressed) = PRESSED.lock() {
+    pressed.clear();
+  }
 }
 
-pub(super) fn is_down(modifier: GlideModifier) -> bool {
-  keys(modifier)
-    .iter()
-    .any(|key| unsafe { GetAsyncKeyState(key.0 as i32) } < 0)
+pub(super) fn is_down(key: NativeControl) -> bool {
+  key.is_down()
+    || (key.uses_observed_state()
+      && PRESSED
+        .lock()
+        .is_ok_and(|pressed| pressed.iter().any(|value| key.matches(*value))))
 }
 
-pub(super) fn matches(modifier: GlideModifier, key: u32) -> bool {
-  keys(modifier)
-    .iter()
-    .any(|candidate| u32::from(candidate.0) == key)
+pub(super) fn observe(key: u32, pressed: bool) {
+  if let Ok(mut keys) = PRESSED.lock() {
+    if pressed {
+      keys.insert(key);
+    } else {
+      keys.remove(&key);
+    }
+  }
+}
+
+pub(super) fn matches(configured: NativeControl, key: u32) -> bool {
+  configured.matches(key)
 }
 
 fn native(settings: &GlideSettings) -> NativeGlideSettings {
   NativeGlideSettings {
     cursor_follows: settings.cursor_follows,
     enabled: settings.enabled,
-    mouse_modifier: settings.mouse_modifier,
-    rest_ms: settings.pacing.rest_ms(),
-    thirds_modifier: settings.thirds_modifier,
+    mouse_modifier: NativeControl::from_control(settings.mouse_modifier)
+      .expect("validated Glide mouse control"),
+    thirds_modifier: NativeControl::from_control(settings.thirds_modifier)
+      .expect("validated Glide thirds control"),
     window_gap: settings.window_gap,
-  }
-}
-
-fn keys(modifier: GlideModifier) -> &'static [VIRTUAL_KEY] {
-  match modifier {
-    GlideModifier::Command => &[VK_LWIN, VK_RWIN],
-    GlideModifier::Option => &[VK_MENU],
-    GlideModifier::Control => &[VK_CONTROL],
-    GlideModifier::Shift => &[VK_SHIFT],
   }
 }

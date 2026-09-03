@@ -137,6 +137,7 @@ pub(super) fn begin_if_titlebar(
   let Some((target, original_frame, pid)) = target_at(app, anchor) else {
     return false;
   };
+  target.raise();
   let Some((work_position, work_size)) = work_area_at(app, anchor) else {
     eprintln!("Could not find the monitor the Glide gesture started on");
     return false;
@@ -160,7 +161,7 @@ pub(super) fn begin_if_titlebar(
       anchor,
       input,
       runtime: GlideRuntime::new(GlideDetectorOptions {
-        rest_ms: native_settings::snapshot().rest_ms,
+        rest_ms: crate::glide::REST_MS,
         ..GlideDetectorOptions::default()
       }),
       runtime_clock: Instant::now(),
@@ -260,7 +261,8 @@ fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option
   let original = session.original_frame;
   // Read here rather than inside the closure: the setting that counts is the
   // one in force when the gesture ended.
-  let cursor_follows = native_settings::snapshot().cursor_follows;
+  let cursor_follows = native_settings::snapshot().cursor_follows
+    && !session.runtime.commits_terminal_action(cancelled);
   finish_with_fade(
     app,
     anchor.x,

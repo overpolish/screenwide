@@ -42,7 +42,7 @@ fn opening_folds_match_halves_and_thirds_policy() {
 #[test]
 fn first_fold_thresholds_and_dominance_are_inclusive() {
   let mut gesture = Gesture::new();
-  assert!(!gesture.move_by(stroke(43.0, 2.0)).changed);
+  assert!(!gesture.move_by(stroke(35.0, 2.0)).changed);
   assert_eq!(
     gesture.move_by(stroke(1.0, 0.0)).region,
     Some(region(2, 1, 1, 0, 2))
@@ -82,11 +82,74 @@ fn reversal_is_measured_from_the_turn_point() {
   gesture.move_by(stroke(45.0, 0.0));
   gesture.rest();
   gesture.move_by(stroke(30.0, 0.0));
-  assert!(!gesture.move_by(stroke(-18.0, 0.0)).changed);
-  assert!(!gesture.move_by(stroke(-18.0, 0.0)).changed);
+  assert!(!gesture.move_by(stroke(-12.0, 0.0)).changed);
+  assert!(!gesture.move_by(stroke(-12.0, 0.0)).changed);
   assert_eq!(
-    gesture.move_by(stroke(-18.0, 0.0)).region,
+    gesture.move_by(stroke(-12.0, 0.0)).region,
     Some(region(2, 0, 1, 0, 2))
+  );
+}
+
+#[test]
+fn direction_changes_fold_without_waiting_for_rest() {
+  let mut gesture = Gesture::new();
+  assert_eq!(
+    gesture.move_by(stroke(45.0, -45.0)).region,
+    Some(region(2, 1, 1, 0, 1))
+  );
+
+  // Down reverses the diagonal's vertical component, then left changes axis
+  // from that row fold. Neither transition needs a timer boundary.
+  assert_eq!(
+    gesture.move_by(stroke(0.0, 45.0)).region,
+    Some(region(2, 1, 1, 0, 2))
+  );
+  assert_eq!(
+    gesture.move_by(stroke(-36.0, 0.0)).region,
+    Some(region(2, 0, 1, 0, 2))
+  );
+}
+
+#[test]
+fn orthogonal_change_uses_the_normal_threshold() {
+  let mut gesture = Gesture::new();
+  gesture.move_by(stroke(0.0, -45.0));
+
+  assert!(!gesture.move_by(stroke(35.0, 0.0)).changed);
+  assert_eq!(
+    gesture.move_by(stroke(1.0, 0.0)).region,
+    Some(region(2, 1, 1, 0, 2))
+  );
+}
+
+#[test]
+fn decisive_reversal_keeps_the_normal_threshold() {
+  let mut gesture = Gesture::new();
+  gesture.move_by(stroke(45.0, 0.0));
+
+  assert_eq!(
+    gesture.move_by(stroke(-36.0, 0.0)).region,
+    Some(region(2, 0, 1, 0, 2))
+  );
+}
+
+#[test]
+fn same_direction_still_needs_a_quiet_beat() {
+  let mut gesture = Gesture::new();
+  gesture.move_by(stroke(45.0, -45.0));
+  gesture.move_by(stroke(0.0, 45.0));
+
+  // Continuing down is one stroke, so it cannot cascade to the bottom row.
+  assert!(!gesture.move_by(stroke(0.0, 80.0)).changed);
+  assert_eq!(gesture.detector.region(), Some(region(2, 1, 1, 0, 2)));
+
+  assert_eq!(
+    gesture.flick(stroke(0.0, 45.0)).region,
+    Some(region(2, 1, 1, 1, 1))
+  );
+  assert_eq!(
+    gesture.flick(stroke(0.0, 45.0)).pending,
+    Some(GlideAction::Minimize)
   );
 }
 
@@ -145,7 +208,7 @@ fn readiness_is_reported_once_whether_timer_or_sample_wins() {
 }
 
 #[test]
-fn opening_sideways_settle_is_vertically_porous_once() {
+fn opening_sideways_settle_accepts_each_new_direction_once() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(50.0, 0.0));
   let corner = gesture.move_by(stroke(0.0, -50.0));
@@ -153,7 +216,29 @@ fn opening_sideways_settle_is_vertically_porous_once() {
   assert_eq!(corner.region, Some(region(2, 1, 1, 0, 1)));
 
   assert!(!gesture.move_by(stroke(0.0, -50.0)).changed);
-  assert!(!gesture.move_by(stroke(-60.0, 0.0)).changed);
+  assert_eq!(
+    gesture.move_by(stroke(-60.0, 0.0)).region,
+    Some(region(2, 0, 2, 0, 1))
+  );
+}
+
+#[test]
+fn column_step_settle_accepts_each_new_direction_once() {
+  let mut gesture = Gesture::new();
+  gesture.move_by(stroke(-50.0, 0.0));
+  gesture.rest();
+  let stepped = gesture.move_by(stroke(50.0, 0.0));
+  assert_eq!(stepped.region, Some(region(2, 1, 1, 0, 2)));
+
+  let corner = gesture.move_by(stroke(0.0, -50.0));
+  assert!(corner.changed);
+  assert_eq!(corner.region, Some(region(2, 1, 1, 0, 1)));
+
+  assert!(!gesture.move_by(stroke(0.0, -50.0)).changed);
+  assert_eq!(
+    gesture.move_by(stroke(-60.0, 0.0)).region,
+    Some(region(2, 0, 2, 0, 1))
+  );
 }
 
 #[test]

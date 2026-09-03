@@ -5,6 +5,8 @@ mod adapter;
 pub(crate) mod magnifier;
 #[cfg(target_os = "macos")]
 pub(crate) mod native_osc_macos;
+#[cfg(target_os = "windows")]
+pub(crate) mod native_osc_windows;
 pub(crate) mod osc_command;
 pub(crate) mod presentation;
 
@@ -21,6 +23,14 @@ pub(super) fn set_recording_overlay_desktop_presented(
   presented: bool,
 ) -> tauri::Result<()> {
   adapter::set_desktop_presented(window, presented)
+}
+
+#[cfg(target_os = "windows")]
+pub(super) fn set_recording_overlay_capture_affinity(
+  window: &tauri::WebviewWindow,
+  capturable: bool,
+) -> tauri::Result<()> {
+  adapter::set_capture_affinity(window, capturable)
 }
 
 /// Stops Quick Screenshot input immediately while retaining its last visual

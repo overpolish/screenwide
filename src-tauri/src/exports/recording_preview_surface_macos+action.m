@@ -103,6 +103,9 @@ SCREENWIDE_PREVIEW_PRIVATE void selection_action_render_surfaces(
     ScreenwidePreviewSurface *surface, CGFloat scale, uint32_t lightMode) {
   ScreenwideRegionOscRenderState state =
       screenwide_region_osc_render_state(lightMode);
+  ScreenwideOscControlMetrics metrics = screenwide_osc_control_metrics(0, 0);
+  CGFloat labelInsetX = MAX(metrics.padding_x - 2.0, 0.0);
+  CGFloat labelInsetY = MAX((metrics.height - metrics.line_height) / 2.0, 0.0);
   selection_action_fills(surface, lightMode, state.action_fills);
   NSRect rects[2] = {surface.selectionActionRect,
                      surface.selectionSecondaryActionRect};
@@ -137,7 +140,7 @@ SCREENWIDE_PREVIEW_PRIVATE void selection_action_render_surfaces(
         index == 0 ? 12 : 13);
     screenwide_region_osc_add_quad(
         vertices, &count, size,
-        NSMakeRect(6.0, 4.0, labelSizes[index].width,
+        NSMakeRect(labelInsetX, labelInsetY, labelSizes[index].width,
                    labelSizes[index].height),
         index == 0 ? 11 : 15);
     control.contentLayer.contentsScale = scale;

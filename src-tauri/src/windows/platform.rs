@@ -8,7 +8,7 @@ mod glide_preview;
 
 #[cfg(target_os = "macos")]
 pub use glide_preview::fade_out as fade_glide_preview;
-pub use glide_preview::{initialize_glide_preview, show_passthrough};
+pub use glide_preview::{initialize_glide_preview, show_glide};
 
 #[cfg(target_os = "macos")]
 use core_graphics::display::CGDisplay;
@@ -85,8 +85,7 @@ fn configure_panel<T: tauri_nspanel::FromWindow<tauri::Wry> + 'static>(
 ) -> tauri::Result<()> {
   let panel = window.to_panel::<T>()?;
 
-  // Start hidden panels transparent so conversion cannot expose a stale frame;
-  // the explicit show path restores alpha and input together.
+  // Start transparent so conversion cannot expose a stale frame.
   panel.set_alpha_value(0.0);
   panel.set_level(PanelLevel::Custom(level).value());
   panel.set_style_mask(StyleMask::empty().nonactivating_panel().into());
@@ -329,7 +328,48 @@ pub fn show(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
 fn initialize_overlay(window: &WebviewWindow) -> tauri::Result<()> {
   window.set_always_on_top(true)?;
   window.set_skip_taskbar(true)?;
+  disable_show_transitions(window)?;
   initialize_capture_affinity(window)
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn initialize_capture_overlay(window: &WebviewWindow) -> tauri::Result<()> {
+  // Dynamic capture hosts may call `set_level` again during a screenshot
+  // handoff. Reapply the idempotent native policy without the startup-only
+  // hide choreography used by predefined windows.
+  window.set_always_on_top(true)?;
+  window.set_skip_taskbar(true)?;
+  disable_show_transitions(window)?;
+  let record_screenwide_windows =
+    crate::settings::current(window.app_handle()).record_screenwide_windows;
+  set_capture_affinity(window, record_screenwide_windows)
+}
+
+/// DWM plays a scale-and-fade transition on `ShowWindow` for top-level
+/// windows; the AppKit recording panels order in and out instantly. Overlays
+/// must match the panels, most visibly the monitor-sized region selector.
+#[cfg(target_os = "windows")]
+fn disable_show_transitions(window: &WebviewWindow) -> tauri::Result<()> {
+  use windows::{
+    core::BOOL,
+    Win32::{
+      Foundation::HWND,
+      Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_TRANSITIONS_FORCEDISABLED},
+    },
+  };
+
+  let hwnd = HWND(window.hwnd()?.0);
+  let disabled = BOOL(1);
+  unsafe {
+    DwmSetWindowAttribute(
+      hwnd,
+      DWMWA_TRANSITIONS_FORCEDISABLED,
+      (&raw const disabled).cast(),
+      std::mem::size_of::<BOOL>() as u32,
+    )
+  }
+  .map_err(std::io::Error::other)?;
+  Ok(())
 }
 
 #[cfg(target_os = "macos")]

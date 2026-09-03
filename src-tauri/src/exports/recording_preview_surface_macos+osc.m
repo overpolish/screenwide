@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#import "osc_gpu_macos.h"
+#import "osc_controls.h"
 #import "recording_preview_surface_macos_private.h"
-#import "region_osc_renderer_macos.h"
 
 
 static NSRect selection_image_frame_for(
@@ -143,10 +144,15 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
                                     lightMode:lightMode]) {
     NSSize primaryLabel = surface.selectionLabelSize;
     NSSize secondaryLabel = surface.selectionSecondaryLabelSize;
-    CGFloat buttonGap = 4.0;
-    CGFloat buttonHeight = MAX(primaryLabel.height, secondaryLabel.height) + 8.0;
-    CGFloat primaryWidth = primaryLabel.width + 12.0;
-    CGFloat secondaryWidth = secondaryLabel.width + 12.0;
+    ScreenwideOscControlMetrics metrics = screenwide_osc_control_metrics(0, 0);
+    ScreenwideOscControlSpacing spacing = screenwide_osc_control_spacing();
+    // Label textures already contain 2pt horizontal inset. Complete the
+    // shared compact button padding around that intrinsic texture.
+    CGFloat labelInsetX = MAX(metrics.padding_x - 2.0, 0.0);
+    CGFloat buttonGap = spacing.control;
+    CGFloat buttonHeight = metrics.height;
+    CGFloat primaryWidth = primaryLabel.width + labelInsetX * 2.0;
+    CGFloat secondaryWidth = secondaryLabel.width + labelInsetX * 2.0;
     CGFloat totalWidth = primaryWidth + buttonGap + secondaryWidth;
     CGFloat actionX = NSMidX(frame) - totalWidth / 2.0;
     CGFloat actionY = NSMaxY(frame) + 6.0;

@@ -35,7 +35,7 @@ fn win<T>(result: windows::core::Result<T>) -> Result<T, String> {
 /// surface. The copy never leaves the GPU; Media Foundation may safely retain
 /// samples that refer to this immutable texture while a later WGC frame is
 /// being cached.
-fn snapshot_frame(device: &ID3D11Device, mut frame: Frame) -> Result<Frame, String> {
+pub(super) fn snapshot_frame(device: &ID3D11Device, mut frame: Frame) -> Result<Frame, String> {
   let mut source_description = D3D11_TEXTURE2D_DESC::default();
   unsafe { frame.texture.GetDesc(&mut source_description) };
   let description = D3D11_TEXTURE2D_DESC {

@@ -21,7 +21,7 @@ pub fn reveal(app: &AppHandle, session_id: u64) -> Result<(), String> {
   let state = STATE
     .get()
     .ok_or_else(|| "Glide input monitoring is not running".to_owned())?;
-  {
+  let blocks_hover = {
     let mut monitor = state
       .lock()
       .map_err(|_| "The Glide session state is unavailable".to_owned())?;
@@ -35,7 +35,8 @@ pub fn reveal(app: &AppHandle, session_id: u64) -> Result<(), String> {
     if let Err(error) = super::hide_cursor() {
       eprintln!("{error}");
     }
-  }
+    session.input == super::InputKind::Mouse
+  };
 
   let state = state.clone();
   let main_app = app.clone();
@@ -50,7 +51,7 @@ pub fn reveal(app: &AppHandle, session_id: u64) -> Result<(), String> {
           .is_some_and(|session| session.id == session_id)
       });
       if active {
-        if let Err(error) = crate::windows::show_glide_preview(&main_app) {
+        if let Err(error) = crate::windows::show_glide_preview(&main_app, blocks_hover) {
           eprintln!("Could not present Glide: {error}");
         }
       }

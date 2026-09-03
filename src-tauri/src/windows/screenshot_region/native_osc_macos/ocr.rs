@@ -20,6 +20,10 @@ pub fn set_ocr(
   }
 }
 
+#[expect(
+  dead_code,
+  reason = "the reusable cancel OSC is intentionally not shown by OCR"
+)]
 pub fn set_cancel_visible(view: *mut c_void, visible: bool) -> bool {
   if with_context(view, |_| ()).is_none() {
     return false;

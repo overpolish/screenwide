@@ -14,7 +14,7 @@ fn row_release_is_cheaper_than_the_next_row_step() {
     Some(region(2, 1, 1, 0, 2))
   );
   assert_eq!(
-    gesture.flick(stroke(0.0, 43.0)).region,
+    gesture.flick(stroke(0.0, 35.0)).region,
     Some(region(2, 1, 1, 0, 2))
   );
   assert_eq!(

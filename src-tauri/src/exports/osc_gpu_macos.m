@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#import "region_osc_renderer_macos.h"
-#import "region_osc_renderer_macos_shader.h"
+#import "osc_gpu_macos.h"
+#import "osc_gpu_macos_shader.h"
 
 _Static_assert(sizeof(ScreenwideRegionOscVertex) == 24,
                "Region OSC vertices must match the Metal struct stride");

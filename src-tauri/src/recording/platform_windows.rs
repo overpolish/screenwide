@@ -10,16 +10,24 @@
 mod audio;
 mod camera;
 mod capture;
+mod desktop_compositor;
 mod writer;
 
-use std::sync::{mpsc, Arc, Mutex, OnceLock};
+use std::sync::{
+  atomic::{AtomicBool, Ordering},
+  mpsc, Arc, Mutex, OnceLock,
+};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use capture::{CaptureObjects, CaptureTarget};
+use desktop_compositor::DesktopFrameCoordinator;
 use writer::{Command, WriterConfig};
 
-use crate::capture_geometry::{physical_capture_rect, video_capture_rect, CaptureRect};
+use crate::{
+  capture_geometry::{physical_capture_rect, video_capture_rect, CaptureRect},
+  desktop_capture::{self, CapturePlan, DesktopDisplay, OutputLimits},
+};
 
 use super::encoding::FinalizeInfo;
 use super::{
@@ -42,7 +50,7 @@ pub struct CaptureSession {
   audio_only_clock: Option<AudioOnlyClock>,
   audio_only_path: Option<std::path::PathBuf>,
   camera: Option<CameraRecording>,
-  capture: Option<CaptureObjects>,
+  captures: Vec<CaptureObjects>,
   commands: Option<mpsc::SyncSender<Command>>,
   primary_camera: Option<camera::CameraStream>,
   stopped_at: Arc<OnceLock<Instant>>,
@@ -232,7 +240,7 @@ impl CaptureSession {
   }
 
   fn close_sources(&mut self) {
-    if let Some(mut capture) = self.capture.take() {
+    for mut capture in self.captures.drain(..) {
       capture.close();
     }
     if let Some(camera) = self.primary_camera.take() {
@@ -274,6 +282,39 @@ impl Drop for CaptureSession {
   }
 }
 
+fn desktop_layout(monitors: &[xcap::Monitor]) -> Result<Vec<DesktopDisplay>, String> {
+  monitors
+    .iter()
+    .map(|monitor| {
+      let scale = f64::from(monitor.scale_factor().map_err(|error| error.to_string())?);
+      if !scale.is_finite() || scale <= 0.0 {
+        return Err("Windows returned an invalid monitor scale".to_owned());
+      }
+      Ok(DesktopDisplay {
+        id: monitor.id().map_err(|error| error.to_string())?,
+        x: f64::from(monitor.x().map_err(|error| error.to_string())?) / scale,
+        y: f64::from(monitor.y().map_err(|error| error.to_string())?) / scale,
+        width: f64::from(monitor.width().map_err(|error| error.to_string())?) / scale,
+        height: f64::from(monitor.height().map_err(|error| error.to_string())?) / scale,
+        scale,
+      })
+    })
+    .collect()
+}
+
+fn composed_region_plan(
+  monitors: &[xcap::Monitor],
+  monitor_id: u32,
+  region: crate::recording::Region,
+) -> Result<Option<CapturePlan>, String> {
+  let displays = desktop_layout(monitors)?;
+  let unbounded = desktop_capture::plan(&displays, monitor_id, region, OutputLimits::UNBOUNDED)?;
+  if unbounded.pieces.len() < 2 {
+    return Ok(None);
+  }
+  desktop_capture::plan(&displays, monitor_id, region, OutputLimits::VIDEO).map(Some)
+}
+
 pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, String> {
   let CaptureStartupConfig {
     camera,
@@ -306,6 +347,7 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
   }
   let camera_selected = camera_spec.is_some();
   let mut graphics_source = None;
+  let mut desktop_plan = None;
   let mut source_crop: Option<CaptureRect> = None;
   let (
     width,
@@ -365,49 +407,73 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
       region,
       show_cursor,
     } => {
-      let monitor = xcap::Monitor::all()
-        .map_err(|error| error.to_string())?
-        .into_iter()
+      let monitors = xcap::Monitor::all().map_err(|error| error.to_string())?;
+      let monitor = monitors
+        .iter()
         .find(|monitor| monitor.id().ok() == Some(monitor_id))
         .ok_or_else(|| "The selected monitor is no longer available".to_owned())?;
-      let source_scale_factor = monitor.scale_factor().map_err(|error| error.to_string())?;
-      let monitor_x = monitor.x().map_err(|error| error.to_string())?;
-      let monitor_y = monitor.y().map_err(|error| error.to_string())?;
-      let monitor_width = monitor.width().map_err(|error| error.to_string())?;
-      let monitor_height = monitor.height().map_err(|error| error.to_string())?;
-      let crop = physical_capture_rect(
-        region,
-        f64::from(source_scale_factor),
-        monitor_width,
-        monitor_height,
-      )
-      .and_then(video_capture_rect)
-      .ok_or_else(|| "The selected region is too small or outside the monitor".to_owned())?;
-      source_crop = Some(crop);
-      graphics_source = Some((
-        CaptureTarget::Monitor(monitor_id),
-        monitor_width,
-        monitor_height,
-        show_cursor,
-      ));
-      (
-        crop.width,
-        crop.height,
-        fps,
-        super::encoding::PrimaryRecordingKind::Screen,
-        source_scale_factor,
-        Some(CursorSource {
-          height: f64::from(crop.height),
-          kind: CursorSourceKind::Region,
-          platform_id: monitor_id.to_string(),
-          video_height: crop.height,
-          video_width: crop.width,
-          width: f64::from(crop.width),
-          x: f64::from(monitor_x) + f64::from(crop.x),
-          y: f64::from(monitor_y) + f64::from(crop.y),
-        }),
-        true,
-      )
+      if let Some(plan) = composed_region_plan(&monitors, monitor_id, region)? {
+        let desktop = plan.desktop_region;
+        let result = (
+          plan.width,
+          plan.height,
+          fps,
+          super::encoding::PrimaryRecordingKind::Screen,
+          plan.output_scale as f32,
+          Some(CursorSource {
+            height: desktop.height,
+            kind: CursorSourceKind::Region,
+            platform_id: "desktop".to_owned(),
+            video_height: plan.height,
+            video_width: plan.width,
+            width: desktop.width,
+            x: desktop.x,
+            y: desktop.y,
+          }),
+          true,
+        );
+        desktop_plan = Some((plan, show_cursor));
+        result
+      } else {
+        let source_scale_factor = monitor.scale_factor().map_err(|error| error.to_string())?;
+        let monitor_x = monitor.x().map_err(|error| error.to_string())?;
+        let monitor_y = monitor.y().map_err(|error| error.to_string())?;
+        let monitor_width = monitor.width().map_err(|error| error.to_string())?;
+        let monitor_height = monitor.height().map_err(|error| error.to_string())?;
+        let crop = physical_capture_rect(
+          region,
+          f64::from(source_scale_factor),
+          monitor_width,
+          monitor_height,
+        )
+        .and_then(video_capture_rect)
+        .ok_or_else(|| "The selected region is too small or outside the monitor".to_owned())?;
+        source_crop = Some(crop);
+        graphics_source = Some((
+          CaptureTarget::Monitor(monitor_id),
+          monitor_width,
+          monitor_height,
+          show_cursor,
+        ));
+        (
+          crop.width,
+          crop.height,
+          fps,
+          super::encoding::PrimaryRecordingKind::Screen,
+          source_scale_factor,
+          Some(CursorSource {
+            height: f64::from(crop.height),
+            kind: CursorSourceKind::Region,
+            platform_id: monitor_id.to_string(),
+            video_height: crop.height,
+            video_width: crop.width,
+            width: f64::from(crop.width),
+            x: f64::from(monitor_x) + f64::from(crop.x),
+            y: f64::from(monitor_y) + f64::from(crop.y),
+          }),
+          true,
+        )
+      }
     }
     PrimaryCaptureSource::Window {
       fps,
@@ -500,7 +566,7 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
     audio_only_clock: None,
     audio_only_path: None,
     camera: None,
-    capture: None,
+    captures: Vec::new(),
     commands: Some(commands.clone()),
     primary_camera: None,
     stopped_at,
@@ -544,10 +610,48 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
       });
     }
   }
-  if let Some((target, capture_width, capture_height, show_cursor)) = graphics_source {
+  if let Some((plan, show_cursor)) = desktop_plan {
+    let coordinator = Arc::new(Mutex::new(DesktopFrameCoordinator::new(
+      device.clone(),
+      &plan,
+    )?));
+    let failed = Arc::new(AtomicBool::new(false));
+    for (source_index, piece) in plan.pieces.iter().enumerate() {
+      let piece = *piece;
+      let target = CaptureTarget::Monitor(piece.display_id);
+      let (capture_width, capture_height) = capture::target_size(target)?;
+      let coordinator = Arc::clone(&coordinator);
+      let commands = commands.clone();
+      let failed = Arc::clone(&failed);
+      let report = Arc::clone(&on_failure);
+      session.captures.push(CaptureObjects::start_with_handler(
+        device.clone(),
+        target,
+        capture_width,
+        capture_height,
+        show_cursor,
+        move |frame| {
+          let result = coordinator
+            .lock()
+            .map_err(|_| "The desktop compositor lock was poisoned".to_owned())
+            .and_then(|mut coordinator| coordinator.update(source_index, frame));
+          match result {
+            Ok(Some(frame)) => match commands.try_send(Command::Frame(frame)) {
+              Ok(())
+              | Err(mpsc::TrySendError::Full(_))
+              | Err(mpsc::TrySendError::Disconnected(_)) => {}
+            },
+            Ok(None) => {}
+            Err(error) if !failed.swap(true, Ordering::AcqRel) => report(error),
+            Err(_) => {}
+          }
+        },
+      )?);
+    }
+  } else if let Some((target, capture_width, capture_height, show_cursor)) = graphics_source {
     // Match the user's capture choice exactly. Cursor metadata remains a
     // separate editable layer even when native pixels include the pointer.
-    session.capture = Some(CaptureObjects::start(
+    session.captures.push(CaptureObjects::start(
       device,
       target,
       capture_width,
@@ -651,7 +755,7 @@ fn begin_audio_only(
       audio_only_clock: Some(AudioOnlyClock::new(started)),
       audio_only_path: Some(path),
       camera: None,
-      capture: None,
+      captures: Vec::new(),
       commands: None,
       primary_camera: None,
       stopped_at: Arc::new(OnceLock::new()),
@@ -856,6 +960,69 @@ mod tests {
     assert!(
       info.duration_ms <= 1_500,
       "stop finalization added a frozen tail: {} ms",
+      info.duration_ms
+    );
+    assert!(std::fs::metadata(&path).unwrap().len() > 1_024);
+    std::fs::remove_file(path).unwrap();
+  }
+
+  #[test]
+  #[ignore = "requires two Windows displays and a hardware encoder"]
+  fn records_a_playable_cross_monitor_region() {
+    use tauri::{LogicalPosition, LogicalSize};
+
+    let monitors = xcap::Monitor::all().unwrap();
+    let displays = desktop_layout(&monitors).unwrap();
+    assert!(displays.len() >= 2, "connect two displays for this test");
+    let anchor = displays[0];
+    let other = displays[1];
+    let left = anchor.x.min(other.x);
+    let top = anchor.y.min(other.y);
+    let right = (anchor.x + anchor.width).max(other.x + other.width);
+    let bottom = (anchor.y + anchor.height).max(other.y + other.height);
+    let region = crate::recording::Region {
+      position: LogicalPosition::new(left - anchor.x, top - anchor.y),
+      size: LogicalSize::new(right - left, bottom - top),
+    };
+    let plan = composed_region_plan(&monitors, anchor.id, region)
+      .unwrap()
+      .expect("the test region must cross both displays");
+    let path = std::env::temp_dir().join(format!(
+      "screenwide-windows-cross-monitor-{}.mp4",
+      std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let start = begin_blocking(CaptureStartupConfig {
+      camera: None,
+      camera_path: None,
+      include_own_windows: true,
+      system_audio_skipped: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+      microphone_id: None,
+      monitor: Arc::new(RecordingMonitor::default()),
+      on_failure: Arc::new(|error| eprintln!("cross-monitor recording failure: {error}")),
+      path: path.clone(),
+      primary: PrimaryCaptureSource::Region {
+        fps: 60,
+        monitor_id: anchor.id,
+        region,
+        show_cursor: false,
+      },
+      system_audio: SystemAudioSelection::default(),
+    })
+    .unwrap();
+    start
+      .first_frame
+      .recv_timeout(Duration::from_secs(10))
+      .unwrap()
+      .unwrap();
+    std::thread::sleep(Duration::from_secs(1));
+    let stopped_at = Instant::now();
+    start.session.mark_stopped_at(stopped_at);
+    let info = start.session.stop_at(stopped_at).unwrap();
+    assert_eq!((info.width, info.height), (plan.width, plan.height));
+    assert!(
+      info.duration_ms >= 750,
+      "duration was {} ms",
       info.duration_ms
     );
     assert!(std::fs::metadata(&path).unwrap().len() > 1_024);

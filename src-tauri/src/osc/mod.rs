@@ -9,6 +9,9 @@ pub mod cursor;
 pub mod desktop;
 pub mod geometry;
 pub mod gesture;
+pub(crate) mod gpu;
+#[cfg(target_os = "windows")]
+pub(crate) mod keyboard_windows;
 pub mod protocol;
 mod resize;
 pub mod runtime;

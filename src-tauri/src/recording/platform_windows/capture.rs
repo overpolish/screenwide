@@ -14,6 +14,7 @@ use windows::Graphics::DirectX::{Direct3D11::IDirect3DDevice, DirectXPixelFormat
 use windows::Graphics::SizeInt32;
 use windows::Win32::Foundation::{HMODULE, HWND};
 use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
+use windows::Win32::Graphics::Direct3D10::ID3D10Multithread;
 use windows::Win32::Graphics::Direct3D11::{
   D3D11CreateDevice, ID3D11Device, ID3D11Texture2D, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
   D3D11_SDK_VERSION,
@@ -73,7 +74,10 @@ pub(super) fn create_device() -> Result<ID3D11Device, String> {
     )
   }
   .map_err(|error| error.to_string())?;
-  device.ok_or_else(|| "Direct3D did not create a recording device".to_owned())
+  let device = device.ok_or_else(|| "Direct3D did not create a recording device".to_owned())?;
+  let multithread: ID3D10Multithread = device.cast().map_err(|error| error.to_string())?;
+  let _ = unsafe { multithread.SetMultithreadProtected(true) };
+  Ok(device)
 }
 
 pub(super) struct CaptureObjects {
@@ -91,6 +95,26 @@ impl CaptureObjects {
     height: u32,
     show_cursor: bool,
     commands: SyncSender<Command>,
+  ) -> Result<Self, String> {
+    Self::start_with_handler(
+      device,
+      target,
+      width,
+      height,
+      show_cursor,
+      move |frame| match commands.try_send(Command::Frame(frame)) {
+        Ok(()) | Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {}
+      },
+    )
+  }
+
+  pub(super) fn start_with_handler(
+    device: ID3D11Device,
+    target: CaptureTarget,
+    width: u32,
+    height: u32,
+    show_cursor: bool,
+    handle_frame: impl Fn(Frame) + Send + Sync + 'static,
   ) -> Result<Self, String> {
     let item = target.item()?;
     let size = SizeInt32 {
@@ -124,15 +148,11 @@ impl CaptureObjects {
           let surface = frame.Surface()?;
           let access = surface.cast::<IDirect3DDxgiInterfaceAccess>()?;
           let texture = unsafe { access.GetInterface::<ID3D11Texture2D>()? };
-          let command = Command::Frame(Frame {
+          handle_frame(Frame {
             source_100ns,
             texture,
             wall: Instant::now(),
           });
-          match commands.try_send(command) {
-            Ok(()) | Err(TrySendError::Full(_)) => {}
-            Err(TrySendError::Disconnected(_)) => return Ok(()),
-          }
           Ok(())
         }),
       )

@@ -117,7 +117,43 @@ fn dormant_projection_does_not_destroy_the_requested_normal_scene() {
   assert!(!state.presented().visible);
   assert!(!state.presented().interaction.input_enabled);
   assert_eq!(
-    state.normal_presentation(),
+    state.normal_presentation().unwrap(),
     requested.reconcile_owner(RegionSceneOwner::Normal).unwrap()
   );
+}
+
+#[test]
+fn repeated_screenshots_can_precede_the_first_normal_region_scene() {
+  let mut state = RegionSceneState::default();
+
+  // This is the lifecycle that used to retain RegionScene::default() as a
+  // drawing-capable "normal" scene and panic when Recording Bar first opened
+  // Region after Quick Screenshot had been started and cancelled a few times.
+  for _ in 0..3 {
+    let quick = RegionScene {
+      visible: true,
+      interaction: RegionInteraction {
+        input_enabled: true,
+        allow_drawing: true,
+        ..RegionScene::default().interaction
+      },
+      ..RegionScene::default()
+    };
+    let quick = state
+      .reconcile_request(quick, RegionSceneOwner::Screenshot)
+      .unwrap();
+    state.set_presented(quick);
+
+    let mut torn_down = state.presented();
+    torn_down.visible = false;
+    torn_down.interaction.input_enabled = false;
+    torn_down.desktop_presented = false;
+    state.set_presented(torn_down);
+  }
+
+  let normal = state.normal_presentation().unwrap();
+  assert!(!normal.visible);
+  assert!(!normal.interaction.input_enabled);
+  assert!(!normal.interaction.allow_drawing);
+  assert!(!normal.desktop_presented);
 }

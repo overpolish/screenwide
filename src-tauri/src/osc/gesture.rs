@@ -17,6 +17,8 @@ pub struct Gesture {
   start_rect: Rect,
   aspect: Option<f64>,
   free: bool,
+  last_pointer: Point,
+  last_rect: Rect,
 }
 impl Gesture {
   pub fn begin(kind: GestureKind, pointer: Point, rect: Rect, aspect: Option<f64>) -> Self {
@@ -26,14 +28,25 @@ impl Gesture {
       start_rect: rect,
       aspect,
       free: false,
+      last_pointer: pointer,
+      last_rect: rect,
     }
   }
   pub fn kind(&self) -> GestureKind {
     self.kind
   }
   pub fn update(&mut self, pointer: Point, monitor: Monitor, free_aspect: bool) -> Rect {
-    if matches!(self.kind, GestureKind::Resizing(_)) && free_aspect {
-      self.free = true;
+    let resizing = matches!(self.kind, GestureKind::Resizing(_));
+    if resizing && free_aspect != self.free {
+      // The modifier transition creates a new baseline at the last presented
+      // rectangle. In particular, releasing Shift makes the freeform shape
+      // the immutable rectangle that uniform resize scales from here on.
+      self.start_pointer = self.last_pointer;
+      self.start_rect = self.last_rect;
+      if !free_aspect {
+        let ratio = self.last_rect.size.width / self.last_rect.size.height;
+        self.aspect = (ratio.is_finite() && ratio > 0.0).then_some(ratio);
+      }
     }
     let dx = pointer.x - self.start_pointer.x;
     let dy = pointer.y - self.start_pointer.y;
@@ -64,12 +77,15 @@ impl Gesture {
           dx,
           dy,
           monitor,
-          if self.free { None } else { self.aspect },
+          if free_aspect { None } else { self.aspect },
         ),
         Some(handle),
       ),
     };
     if resizing.is_some() {
+      self.free = free_aspect;
+      self.last_pointer = pointer;
+      self.last_rect = result;
       result
     } else {
       result.clamp(monitor).snap()
@@ -161,18 +177,23 @@ mod tests {
     );
   }
   #[test]
-  fn free_aspect_latches() {
+  fn shift_temporarily_frees_resize_aspect() {
     let mut g = Gesture::begin(
       GestureKind::Resizing(Handle::SouthEast),
       Point { x: 40., y: 20. },
       r(),
       Some(1.),
     );
-    let _ = g.update(Point { x: 50., y: 30. }, m(), true);
-    assert_eq!(
-      g.update(Point { x: 60., y: 40. }, m(), false).size.height,
-      40.
-    );
+    let release_pointer = Point { x: 60., y: 40. };
+    let unlocked = g.update(release_pointer, m(), true);
+    let relocked = g.update(release_pointer, m(), false);
+    assert_eq!(unlocked, relocked);
+    let continued = g.update(Point { x: 65., y: 40. }, m(), false);
+    let unlocked_ratio = unlocked.size.width / unlocked.size.height;
+    let continued_ratio = continued.size.width / continued.size.height;
+    // Pixel snapping may move the ratio by less than one pixel per axis.
+    assert!((unlocked_ratio - continued_ratio).abs() < 0.03);
+    assert!((continued_ratio - 1.0).abs() > 0.1);
   }
   #[test]
   fn resize_boundaries_keep_opposite_edges() {

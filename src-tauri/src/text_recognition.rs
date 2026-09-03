@@ -13,6 +13,8 @@ mod input;
 mod interaction;
 #[cfg(target_os = "macos")]
 mod native_overlay_macos;
+#[cfg(target_os = "windows")]
+mod native_overlay_windows;
 #[cfg(target_os = "macos")]
 mod platform_macos;
 #[cfg(target_os = "windows")]

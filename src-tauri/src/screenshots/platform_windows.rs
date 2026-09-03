@@ -1,7 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::screenshots::{physical_capture_rect, CapturedImage, ScreenshotTarget};
+use crate::{
+  desktop_capture::{self, DesktopDisplay, OutputLimits},
+  screenshots::{
+    desktop as still_composition, physical_capture_rect, CapturedImage, ScreenshotTarget,
+  },
+};
 
 fn monitor(monitor_id: u32) -> Result<xcap::Monitor, String> {
   xcap::Monitor::all()
@@ -17,6 +22,70 @@ fn captured(image: image::RgbaImage) -> CapturedImage {
     height: image.height(),
     rgba: image.into_raw(),
   }
+}
+
+fn logical_display(
+  id: u32,
+  x: i32,
+  y: i32,
+  width: u32,
+  height: u32,
+  scale: f64,
+) -> Result<DesktopDisplay, String> {
+  if !scale.is_finite() || scale <= 0.0 {
+    return Err("Windows returned an invalid monitor scale".to_owned());
+  }
+  Ok(DesktopDisplay {
+    id,
+    x: f64::from(x) / scale,
+    y: f64::from(y) / scale,
+    width: f64::from(width) / scale,
+    height: f64::from(height) / scale,
+    scale,
+  })
+}
+
+fn desktop_layout(monitors: &[xcap::Monitor]) -> Result<Vec<DesktopDisplay>, String> {
+  monitors
+    .iter()
+    .map(|monitor| {
+      let scale = f64::from(monitor.scale_factor().map_err(|error| error.to_string())?);
+      // xcap exposes Windows' virtual-screen geometry in device pixels while
+      // the native Region controller emits anchor-local logical points.
+      // Dividing every display by its own scale matches the OSC desktop plane.
+      logical_display(
+        monitor.id().map_err(|error| error.to_string())?,
+        monitor.x().map_err(|error| error.to_string())?,
+        monitor.y().map_err(|error| error.to_string())?,
+        monitor.width().map_err(|error| error.to_string())?,
+        monitor.height().map_err(|error| error.to_string())?,
+        scale,
+      )
+    })
+    .collect()
+}
+
+fn capture_desktop_region(
+  anchor_id: u32,
+  region: crate::recording::Region,
+) -> Result<CapturedImage, String> {
+  let monitors = xcap::Monitor::all().map_err(|error| error.to_string())?;
+  let displays = desktop_layout(&monitors)?;
+  let plan = desktop_capture::plan(&displays, anchor_id, region, OutputLimits::UNBOUNDED)?;
+  let mut pieces = Vec::with_capacity(plan.pieces.len());
+  for piece in plan.pieces.iter().copied() {
+    let monitor = monitors
+      .iter()
+      .find(|monitor| monitor.id().ok() == Some(piece.display_id))
+      .ok_or_else(|| "A composed display is no longer available".to_owned())?;
+    let rect = piece.source_pixels;
+    let image = monitor
+      .capture_region(rect.x, rect.y, rect.width, rect.height)
+      .map(captured)
+      .map_err(|error| error.to_string())?;
+    pieces.push((piece, image));
+  }
+  still_composition::compose(&plan, pieces)
 }
 
 pub fn capture(target: ScreenshotTarget, show_cursor: bool) -> Result<CapturedImage, String> {
@@ -47,8 +116,8 @@ pub fn capture(target: ScreenshotTarget, show_cursor: bool) -> Result<CapturedIm
         .map(captured)
         .map_err(|error| error.to_string())
     }
-    ScreenshotTarget::DesktopRegion { .. } => {
-      Err("Cross-display Region screenshots are not available on Windows yet".to_owned())
+    ScreenshotTarget::DesktopRegion { monitor_id, region } => {
+      capture_desktop_region(monitor_id, region)
     }
     ScreenshotTarget::Window { window_id } => xcap::Window::all()
       .map_err(|error| error.to_string())?
@@ -58,5 +127,26 @@ pub fn capture(target: ScreenshotTarget, show_cursor: bool) -> Result<CapturedIm
       .capture_image()
       .map(captured)
       .map_err(|error| error.to_string()),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn windows_physical_monitors_match_the_region_controllers_logical_plane() {
+    assert_eq!(
+      logical_display(7, -1920, 0, 3840, 2160, 2.0).unwrap(),
+      DesktopDisplay {
+        id: 7,
+        x: -960.0,
+        y: 0.0,
+        width: 1920.0,
+        height: 1080.0,
+        scale: 2.0,
+      }
+    );
+    assert!(logical_display(7, 0, 0, 1920, 1080, 0.0).is_err());
   }
 }

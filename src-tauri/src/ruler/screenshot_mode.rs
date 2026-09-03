@@ -12,6 +12,10 @@ use crate::capture_overlays;
 
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 
+pub(super) fn is_active() -> bool {
+  ACTIVE.load(Ordering::Acquire)
+}
+
 pub(super) fn reset() {
   ACTIVE.store(false, Ordering::Release);
 }
@@ -28,6 +32,12 @@ pub(super) async fn set(app: &AppHandle, active: bool) -> Result<(), String> {
       },
     )?;
     super::adapter::set_screenshot_mode(&window, active)?;
+  }
+  #[cfg(target_os = "windows")]
+  if active {
+    // Display affinity is committed by DWM. Let that compositor frame land
+    // before the shutter, as the Region overlay does for its exclusion.
+    tokio::time::sleep(std::time::Duration::from_millis(75)).await;
   }
   Ok(())
 }

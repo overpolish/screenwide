@@ -151,17 +151,58 @@ fn is_edge(
   across: u32,
   threshold: u8,
 ) -> bool {
-  (-1..=1)
+  let sustained = (-1..=1)
     .filter(|offset| {
       let Some(across) = across.checked_add_signed(*offset) else {
         return false;
       };
-      let value = gradient_at(maps, axis, position, across);
-      value > 0 && edge_mass(maps, axis, position, across) >= u16::from(threshold) * 2
+      clears_threshold(maps, axis, position, across, threshold)
     })
     .take(NEIGHBOUR_HITS)
     .count()
-    >= NEIGHBOUR_HITS
+    >= NEIGHBOUR_HITS;
+  sustained || thin_stroke_edge(maps, axis, position, across, threshold)
+}
+
+fn clears_threshold(
+  maps: &GradientMaps,
+  axis: ProbeAxis,
+  position: u32,
+  across: u32,
+  threshold: u8,
+) -> bool {
+  gradient_at(maps, axis, position, across) > 0
+    && edge_mass(maps, axis, position, across) >= u16::from(threshold) * 2
+}
+
+/// A one-pixel stroke has only one hit across its endpoint, so the normal
+/// neighbour rule deliberately mistakes it for a speckle. A real stroke has
+/// a perpendicular edge continuing along at least two nearby pixels; an
+/// isolated pixel has only one. Use that local corroboration without relaxing
+/// the speckle filter for arbitrary single-pixel gradients.
+fn thin_stroke_edge(
+  maps: &GradientMaps,
+  axis: ProbeAxis,
+  position: u32,
+  across: u32,
+  threshold: u8,
+) -> bool {
+  if !clears_threshold(maps, axis, position, across, threshold) {
+    return false;
+  }
+  (-2..=2)
+    .filter_map(|offset| position.checked_add_signed(offset))
+    .filter(|along| match axis {
+      ProbeAxis::Horizontal => {
+        clears_threshold(maps, ProbeAxis::Vertical, across, *along, threshold)
+      }
+      ProbeAxis::Vertical => {
+        clears_threshold(maps, ProbeAxis::Horizontal, across, *along, threshold)
+      }
+    })
+    .take(2)
+    .count()
+    >= 2
 }
 
 fn edge_mass(maps: &GradientMaps, axis: ProbeAxis, position: u32, across: u32) -> u16 {
@@ -235,6 +276,28 @@ mod tests {
     maps.gx[(2 * maps.width + 7) as usize] = 255;
     let horizontal = ProbeIndex::new(&maps, 24).probes_at(4, 2)[0];
     assert_eq!((horizontal.start, horizontal.end), (0, 9));
+  }
+
+  #[test]
+  fn a_bright_one_pixel_stroke_still_has_detectable_endpoints() {
+    let (width, height) = (37, 26);
+    let mut rgba = vec![51; width * height * 4];
+    for pixel in rgba.chunks_exact_mut(4) {
+      pixel[3] = 255;
+    }
+    for x in 14..=23 {
+      let value = if x == 14 || x == 23 { 120 } else { 125 };
+      let offset = (13 * width + x) * 4;
+      rgba[offset..offset + 4].copy_from_slice(&[value, value, value, 255]);
+    }
+    let maps = super::super::analysis::compute_gradients(
+      &rgba,
+      width.try_into().unwrap(),
+      height.try_into().unwrap(),
+    );
+    let horizontal = probes_at_threshold(&maps, 18, 13, 5)[0];
+    assert!(horizontal.start >= 14 && horizontal.start <= 15);
+    assert!(horizontal.end >= 23 && horizontal.end <= 24);
   }
 
   #[test]

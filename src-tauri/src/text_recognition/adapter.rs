@@ -12,7 +12,10 @@ use tauri::Manager;
 #[cfg(target_os = "macos")]
 #[path = "adapter/macos.rs"]
 mod platform;
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+#[path = "adapter/windows.rs"]
+mod platform;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 #[path = "adapter/unavailable.rs"]
 mod platform;
 
@@ -37,10 +40,11 @@ mod tests {
   use super::*;
   use crate::screenshots::CapturedImage;
 
+  type Install = fn(&tauri::WebviewWindow, u32, &[(u32, CapturedImage)]) -> Result<bool, String>;
+
   #[test]
   fn selected_platform_satisfies_the_ocr_surface_contract() {
-    let _: fn(&tauri::WebviewWindow, u32, &[(u32, CapturedImage)]) -> Result<bool, String> =
-      platform::install;
+    let _: Install = platform::install;
     let _: fn(&tauri::AppHandle, super::super::visual::RenderPacket) = platform::render;
     let _: fn(&tauri::WebviewWindow, super::super::visual::RenderPacket) = platform::render_window;
     let _: fn(&tauri::WebviewWindow) -> Result<(), String> = platform::present;

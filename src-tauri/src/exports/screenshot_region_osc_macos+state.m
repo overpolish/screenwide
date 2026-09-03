@@ -3,22 +3,29 @@
 #import "screenshot_region_osc_macos_private.h"
 
 int screenwide_region_osc_set_magnifier_source(
-    void *view_ptr, const uint8_t *rgba, size_t length, uint32_t width,
-    uint32_t height) {
-  ScreenwideRegionOSC *s = screenwide_region_osc_for_view(view_ptr);
+    void *view_ptr, uint32_t display_id, const uint8_t *rgba, size_t length,
+    uint32_t width, uint32_t height) {
+  ScreenwideRegionOSC *root =
+      screenwide_region_osc_root(screenwide_region_osc_for_view(view_ptr));
   size_t expected = (size_t)width * height * 4;
-  if (!s || !rgba || width == 0 || height == 0 || length != expected)
+  if (!root || !rgba || width == 0 || height == 0 || length != expected)
+    return 0;
+  ScreenwideRegionOSC *target = nil;
+  for (ScreenwideRegionOSC *surface in screenwide_region_osc_surfaces(root))
+    if (surface.displayID == display_id) {
+      target = surface;
+      break;
+    }
+  if (!target)
     return 0;
   id<MTLBuffer> source =
-      [s.device newBufferWithBytes:rgba
-                            length:length
-                           options:MTLResourceStorageModeShared];
-  for (ScreenwideRegionOSC *surface in screenwide_region_osc_surfaces(s)) {
-    surface.magnifierSource = source;
-    surface.magnifierSourceWidth = width;
-    surface.magnifierSourceHeight = height;
-    screenwide_region_osc_draw(surface);
-  }
+      [target.device newBufferWithBytes:rgba
+                                 length:length
+                                options:MTLResourceStorageModeShared];
+  target.magnifierSource = source;
+  target.magnifierSourceWidth = width;
+  target.magnifierSourceHeight = height;
+  screenwide_region_osc_draw(target);
   return source != nil;
 }
 

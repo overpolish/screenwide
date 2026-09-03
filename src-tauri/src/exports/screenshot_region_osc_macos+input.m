@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #import "screenshot_region_osc_macos_private.h"
+
+BOOL screenwide_region_osc_update_magnifier(
+    ScreenwideRegionOSC *surface, NativeOscResult result,
+    NSPoint desktop_point, uint32_t phase, uint32_t edges);
 #include <math.h>
 #include <stddef.h>
 
@@ -64,33 +68,6 @@ static void setCursorHidden(ScreenwideRegionOSC *s, BOOL hidden) {
     [NSCursor hide];
   else
     [NSCursor unhide];
-}
-static BOOL updateMagnifier(ScreenwideRegionOSC *s, NativeOscResult result,
-                            NSPoint point, uint32_t phase) {
-  BOOL visible = s == screenwide_region_osc_root(s) && phase == 3 &&
-                 result.gesture == 3 &&
-                 result.has_region != 0 && result.handle != 0;
-  if (!visible) {
-    BOOL changed = s.magnifier.active != 0;
-    ScreenwideRegionMagnifier magnifier = s.magnifier;
-    magnifier.active = 0;
-    s.magnifier = magnifier;
-    return changed;
-  }
-  uint32_t edges = edgesForHandle(result.handle);
-  NSRect frame = NSMakeRect(result.x, result.y, result.width, result.height);
-  NSPoint anchor = screenwide_region_magnifier_anchor(point, frame, edges);
-  CGFloat scale = s.host.window.backingScaleFactor ?: 1.0;
-  NSString *appearance = [s.host.effectiveAppearance
-      bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua,
-                                           NSAppearanceNameDarkAqua ]];
-  uint32_t lightMode =
-      [appearance isEqualToString:NSAppearanceNameAqua] ? 1 : 0;
-  s.magnifier = screenwide_region_magnifier_make(
-      anchor, scale, edges, lightMode, 0, 0, 0,
-      anchor.x / MAX(s.host.bounds.size.width, 1.0),
-      anchor.y / MAX(s.host.bounds.size.height, 1.0), 0, 0, 1, 1);
-  return YES;
 }
 void screenwide_region_osc_cursor_claim(ScreenwideRegionOSC *s) {
   ScreenwideRegionOSC *root = screenwide_region_osc_root(s);
@@ -277,11 +254,13 @@ static void processInput(ScreenwideRegionOSC *s, NSEvent *event,
     s.gestureActive = NO;
   if (result.cursor && screenwide_region_osc_root(s).inputEnabled)
     applyCursor(result);
-  NativeOscResult localResult = result;
-  localResult.x -= s.desktopOffset.x;
-  localResult.y -= s.desktopOffset.y;
-  BOOL magnifierChanged = updateMagnifier(s, localResult, point, phase);
-  setCursorHidden(s, s.magnifier.active != 0);
+  BOOL magnifierChanged = screenwide_region_osc_update_magnifier(
+      s, result, desktopPoint, phase, edgesForHandle(result.handle));
+  BOOL magnifierVisible = NO;
+  for (ScreenwideRegionOSC *surface in
+       screenwide_region_osc_surfaces(root))
+    magnifierVisible |= surface.magnifier.active != 0;
+  setCursorHidden(s, magnifierVisible);
   if ((result.ruler_flags & 1) == 0 &&
       (result.status == 1 || result.status == 2 || result.status == 3)) {
     screenwide_region_osc_apply_region(
@@ -291,7 +270,9 @@ static void processInput(ScreenwideRegionOSC *s, NSEvent *event,
             : NSZeroRect,
         screenwide_region_osc_root(s).visible);
   } else if (magnifierChanged)
-    screenwide_region_osc_draw(s);
+    for (ScreenwideRegionOSC *surface in
+         screenwide_region_osc_surfaces(root))
+      screenwide_region_osc_draw(surface);
 }
 
 static NSPoint eventPoint(ScreenwideRegionOSC *surface, NSEvent *event);

@@ -197,12 +197,12 @@ fragment float4 region_osc_fragment(
     return float4(sampled.rgb / sampled.a,
                   sampled.a * ruler_animation.w);
   }
-  if (in.kind == 11 || in.kind == 15) {
+  if (in.kind == 11 || in.kind == 15 || in.kind == 48) {
     float4 sampled = in.kind == 15
         ? secondary_label.sample(label_sampler, in.uv)
         : label.sample(label_sampler, in.uv);
     if (sampled.a <= 0.002) discard_fragment();
-    float opacity = in.kind == 11 ? 1.0 - ruler_animation.w : 1.0;
+    float opacity = in.kind == 48 ? 1.0 - ruler_animation.w : 1.0;
     return float4(sampled.rgb / sampled.a, sampled.a * opacity);
   }
   if (in.kind == 28) return ruler.primary;

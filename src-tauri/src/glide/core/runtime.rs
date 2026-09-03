@@ -55,6 +55,14 @@ impl GlideRuntime {
     !cancelled && self.detector.pending() == Some(GlideAction::Minimize)
   }
 
+  /// Whether the committed fold leaves no on-screen window under the original
+  /// grip. Full screen has no useful grip to preserve, while minimize removes
+  /// the window entirely, so both keep the cursor at the session anchor.
+  pub fn commits_terminal_action(&self, cancelled: bool) -> bool {
+    self.should_minimize(cancelled)
+      || (!cancelled && self.moved.is_some_and(super::regions::is_full_screen))
+  }
+
   fn effects(&mut self, detection: GlideDetection) -> GlideEffects {
     let reveal =
       !self.reveal_requested && (detection.region.is_some() || detection.pending.is_some());

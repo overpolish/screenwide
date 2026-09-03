@@ -96,10 +96,13 @@ export function useNativeScreenshotRegion({
           ({ payload }) => {
             nativeGestureRef.current =
               payload.status === "changed" && payload.gesture !== null;
-            if (payload.monitorId !== undefined)
+            // Changing the frontend anchor while the native desktop controller
+            // owns a drag rebuilds that controller around an in-flight local
+            // rectangle. Defer ownership changes until the gesture or layout
+            // reconciliation has completed.
+            if (payload.monitorId !== undefined && payload.status !== "changed")
               callbacksRef.current.onMonitorChange?.(payload.monitorId);
             const next = nativeRegion(payload.region);
-            callbacksRef.current.onRegionChange(next ?? emptyRegion());
             if (payload.status === "layout") {
               nativeGestureRef.current = false;
               callbacksRef.current.onGesture({
@@ -107,10 +110,14 @@ export function useNativeScreenshotRegion({
                 drawing: false,
                 resizeDirection: undefined,
               });
-              callbacksRef.current.onReconciled?.(next ?? emptyRegion());
+              callbacksRef.current.onReconciled?.(
+                next ?? emptyRegion(),
+                payload.monitorId,
+              );
               return;
             }
             if (payload.status === "changed") {
+              callbacksRef.current.onRegionChange(next ?? emptyRegion());
               const resizeDirection =
                 payload.gesture && typeof payload.gesture === "object"
                   ? resizeDirections[payload.gesture.resizing.handle]
@@ -132,6 +139,7 @@ export function useNativeScreenshotRegion({
                   payload.gesture,
                   payload.monitorId,
                 );
+              else callbacksRef.current.onRegionChange(next ?? emptyRegion());
             }
           },
           { target: windowLabel },

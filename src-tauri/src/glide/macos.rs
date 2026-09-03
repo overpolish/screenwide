@@ -6,7 +6,7 @@ use std::time::Duration;
 use core_foundation::runloop::{kCFRunLoopDefaultMode, CFRunLoop};
 use core_graphics::event::{
   CGEvent, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
-  CallbackResult, EventField, KeyCode,
+  CallbackResult, EventField,
 };
 use tauri::AppHandle;
 
@@ -14,8 +14,14 @@ use tauri::AppHandle;
 mod center;
 #[path = "macos/commands.rs"]
 mod commands;
+#[path = "macos/control.rs"]
+mod control;
+#[path = "macos/control_keys.rs"]
+mod control_keys;
 #[path = "macos/cursor.rs"]
 mod cursor;
+#[path = "macos/key.rs"]
+mod key;
 #[path = "macos/multitouch.rs"]
 mod multitouch;
 #[path = "macos/native_settings.rs"]
@@ -80,11 +86,15 @@ fn run(app: AppHandle) {
     CGEventTapOptions::Default,
     vec![
       CGEventType::MouseMoved,
+      CGEventType::OtherMouseDragged,
       CGEventType::ScrollWheel,
       CGEventType::FlagsChanged,
       CGEventType::KeyDown,
+      CGEventType::KeyUp,
       CGEventType::LeftMouseDown,
       CGEventType::LeftMouseUp,
+      CGEventType::OtherMouseDown,
+      CGEventType::OtherMouseUp,
     ],
     move |_, event_type, event| handle_event(&event_app, &event_state, event_type, event),
     || loop {
@@ -105,24 +115,20 @@ fn handle_event(
   event_type: CGEventType,
   event: &CGEvent,
 ) -> CallbackResult {
-  if matches!(event_type, CGEventType::KeyDown)
-    && event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE)
-      == i64::from(KeyCode::ESCAPE)
-  {
-    // Esc is the one end that cancels. The gesture that was driving the session
-    // is still live, so the rest of it is suppressed: without that, the very
-    // next scroll or Cmd movement would open a session straight back up.
-    if let Some(input) = active_input(state) {
-      end_session(app, state, true);
-      set_suppression(state, input, true);
-      return CallbackResult::Drop;
-    }
+  native_settings::observe(event_type, event);
+  if matches!(event_type, CGEventType::KeyDown | CGEventType::KeyUp) {
+    return control_keys::handle_key(app, state, event_type, event);
   }
-
+  if matches!(
+    event_type,
+    CGEventType::OtherMouseDown | CGEventType::OtherMouseUp
+  ) {
+    return control_keys::handle_mouse_button(app, state, event_type, event);
+  }
   match event_type {
     CGEventType::ScrollWheel => handle_scroll(app, state, event),
-    CGEventType::MouseMoved => handle_mouse(app, state, event),
-    CGEventType::FlagsChanged => handle_flags_changed(app, state, event),
+    CGEventType::MouseMoved | CGEventType::OtherMouseDragged => handle_mouse(app, state, event),
+    CGEventType::FlagsChanged => control_keys::handle_flags_changed(app, state),
     CGEventType::LeftMouseDown => handle_mouse_down(app, state, event),
     CGEventType::LeftMouseUp => handle_mouse_up(state),
     _ => CallbackResult::Keep,
@@ -185,30 +191,8 @@ fn handle_scroll(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callb
   CallbackResult::Drop
 }
 
-fn handle_flags_changed(app: &AppHandle, state: &SharedState, event: &CGEvent) -> CallbackResult {
-  let modifier_down = event
-    .get_flags()
-    .contains(native_settings::snapshot().mouse_modifier);
-  if !modifier_down {
-    if active_input(state) == Some(InputKind::Mouse) {
-      end_session(app, state, false);
-    }
-    // Releasing the modifier retires an Esc cancellation with it, so pressing it
-    // again is a fresh glide.
-    set_suppression(state, InputKind::Mouse, false);
-  }
-  // A session that survived the release re-grids on the modifier alone, so
-  // pressing Shift with resting fingers still switches to thirds.
-  if is_active(state) {
-    set_detector_thirds(app, state, is_thirds(event));
-  }
-  CallbackResult::Keep
-}
-
 fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> CallbackResult {
-  let modifier_down = event
-    .get_flags()
-    .contains(native_settings::snapshot().mouse_modifier);
+  let modifier_down = native_settings::is_down(native_settings::snapshot().mouse_modifier);
   if active_input(state) == Some(InputKind::Mouse) && !modifier_down {
     end_session(app, state, false);
     return CallbackResult::Keep;
@@ -250,7 +234,7 @@ fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callba
   CallbackResult::Drop
 }
 
-/// The glide modifier and a double click on a titlebar center the window the
+/// The Glide mouse control and a double click on a titlebar center the window the
 /// same way a trackpad double tap does. Both events of the second click are
 /// dropped, so the application below never sees the double click it would zoom
 /// on; every other press, single clicks included, passes straight through.
@@ -261,7 +245,7 @@ fn handle_mouse_down(app: &AppHandle, state: &SharedState, event: &CGEvent) -> C
   if !settings.enabled || !settings.double_tap_center {
     return CallbackResult::Keep;
   }
-  if !event.get_flags().contains(settings.mouse_modifier)
+  if !native_settings::is_down(settings.mouse_modifier)
     || event.get_integer_value_field(EventField::MOUSE_EVENT_CLICK_STATE) != DOUBLE_CLICK_STATE
   {
     return CallbackResult::Keep;
@@ -291,7 +275,10 @@ fn handle_mouse_up(state: &SharedState) -> CallbackResult {
 }
 
 fn is_thirds(event: &CGEvent) -> bool {
-  event
-    .get_flags()
-    .contains(native_settings::snapshot().thirds_modifier)
+  let _ = event;
+  native_settings::is_down(native_settings::snapshot().thirds_modifier)
+}
+
+pub(super) fn supports_control(control: crate::glide::settings::GlideControl) -> bool {
+  control::NativeControl::from_control(control).is_some()
 }

@@ -518,7 +518,7 @@ pub fn restore_normal_region_scene(view: *mut c_void) -> bool {
       .scene
       .lock()
       .ok()
-      .map(|state| state.normal_presentation())
+      .and_then(|state| state.normal_presentation())
   })
   .flatten() else {
     return false;
@@ -640,16 +640,6 @@ pub fn set_allow_drawing(view: *mut c_void, allow_drawing: bool) -> bool {
     }
   })
   .is_some()
-}
-
-pub fn set_magnifier_source(view: *mut c_void, rgba: &[u8], width: u32, height: u32) -> bool {
-  if with_context(view, |_| ()).is_none() {
-    return false;
-  }
-  unsafe {
-    ffi::screenwide_region_osc_set_magnifier_source(view, rgba.as_ptr(), rgba.len(), width, height)
-      != 0
-  }
 }
 
 pub fn set_aspect(view: *mut c_void, aspect: Option<f64>) -> bool {

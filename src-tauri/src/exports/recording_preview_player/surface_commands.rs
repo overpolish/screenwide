@@ -290,7 +290,7 @@ pub async fn layout_recording_preview_surface(
   // Hold the pane size while a new composed or live frame is on its way.
   let defer_resize = needs_decoder_still || redraw_still || manager.is_playing;
   surface.set_scale(scale);
-  surface.set_selection(selection.map(RecordingPreviewSelection::into_native));
+  let selection = selection.map(RecordingPreviewSelection::into_native);
   let selection_targets = selection_targets.map(|targets| {
     targets
       .into_iter()
@@ -298,6 +298,7 @@ pub async fn layout_recording_preview_surface(
       .collect::<Vec<_>>()
   });
   surface.set_selection_targets(selection_targets.as_deref());
+  surface.set_selection(selection);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor);
   surface.begin_layout();

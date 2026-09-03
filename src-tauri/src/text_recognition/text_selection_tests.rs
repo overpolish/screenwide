@@ -62,6 +62,52 @@ fn position_matches_character_midpoints_and_nearest_line() {
 }
 
 #[test]
+fn line_hit_testing_uses_both_axes_for_columns_on_the_same_row() {
+  let result = TextRecognitionResult {
+    lines: vec![
+      line("left", bounds(0.06, 0.22, 0.05, 0.02), Vec::new()),
+      line("right", bounds(0.45, 0.22, 0.08, 0.02), Vec::new()),
+    ],
+    qr_codes: Vec::new(),
+    text: "left\nright".to_owned(),
+  };
+
+  assert_eq!(
+    text_position_at(&result, Point { x: 0.46, y: 0.23 }),
+    Some(TextPosition { line: 1, offset: 1 })
+  );
+}
+
+#[test]
+fn overlapping_character_boxes_advance_at_ordered_caret_boundaries() {
+  let result = TextRecognitionResult {
+    lines: vec![line(
+      "ab",
+      bounds(0.1, 0.1, 0.4, 0.1),
+      vec![
+        RecognizedCharacter {
+          start: 0,
+          end: 1,
+          bounds: bounds(0.1, 0.1, 0.3, 0.1),
+        },
+        RecognizedCharacter {
+          start: 1,
+          end: 2,
+          bounds: bounds(0.2, 0.1, 0.3, 0.1),
+        },
+      ],
+    )],
+    qr_codes: Vec::new(),
+    text: "ab".to_owned(),
+  };
+
+  assert_eq!(
+    text_position_at(&result, Point { x: 0.37, y: 0.15 }),
+    Some(TextPosition { line: 0, offset: 2 })
+  );
+}
+
+#[test]
 fn reverse_ranges_use_character_boxes_and_fallback_slices() {
   let result = result();
   let range = ordered_range(

@@ -237,6 +237,7 @@ pub async fn capture_still(
   let image = match capture(&app, target, show_cursor, include_ruler).await {
     Ok(image) => image,
     Err(error) => {
+      eprintln!("Screenshot capture failed for {target:?}: {error}");
       crate::exports::release_screenshot_workspace(&app);
       return Err(error);
     }
