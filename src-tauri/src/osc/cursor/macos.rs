@@ -4,8 +4,8 @@
 //! macOS presentation for the portable cursor lease.
 //!
 //! AppKit cursor changes only reach WindowServer reliably while Screenwide is
-//! active. The first lease therefore captures and activates over the current
-//! foreground application; the final release restores it. Transfers retain
+//! active. The first lease captures the foreground application; presentation
+//! activates once the overlay is key, and the final release restores the app. Transfers retain
 //! that foreground ownership and only replace the generation and cursor.
 
 use std::{
@@ -30,10 +30,29 @@ struct Coordinator {
 static COORDINATOR: OnceLock<Mutex<Coordinator>> = OnceLock::new();
 
 unsafe extern "C" {
+  fn screenwide_cursor_session_present(window: *mut std::ffi::c_void);
   fn screenwide_cursor_session_acquire(generation: u64, icon: u8) -> c_int;
   fn screenwide_cursor_session_update(generation: u64, icon: u8) -> c_int;
   fn screenwide_cursor_session_release(generation: u64) -> c_int;
   fn screenwide_cursor_session_transfer(from: u64, to: u64, icon: u8) -> c_int;
+}
+
+/// Called on the main thread after configuring the interactive overlay.
+pub(crate) fn present_window(window: &tauri::WebviewWindow) -> tauri::Result<()> {
+  let native_window = window.ns_window()?;
+  unsafe { screenwide_cursor_session_present(native_window) };
+  Ok(())
+}
+
+/// Relinquish focus before closing an overlay, while its native window still
+/// exists. Closing a key/main window otherwise promotes Settings/Export before
+/// the asynchronous application restoration has finished.
+pub(crate) fn prepare_window_close(window: &tauri::WebviewWindow) {
+  if let Ok(raw_window) = window.ns_window() {
+    let native_window: &objc2_app_kit::NSWindow = unsafe { &*raw_window.cast() };
+    native_window.resignKeyWindow();
+    native_window.resignMainWindow();
+  }
 }
 
 fn coordinator() -> &'static Mutex<Coordinator> {

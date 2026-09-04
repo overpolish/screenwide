@@ -3,8 +3,9 @@
 
 use super::{
   recording_controls_may_raise, recording_controls_may_restore, recording_ui_may_hide,
-  region_scene_owner, region_selector_capturable_after_opacity, region_selector_is_interactive,
+  region_scene_owner, region_selector_capture_affinity, region_selector_is_interactive,
   region_selector_may_show, region_selector_restores_opacity, screenshot_region_may_restore,
+  RegionSelectorCaptureAffinity,
 };
 use crate::osc::scene::RegionSceneOwner;
 
@@ -68,10 +69,27 @@ fn a_running_region_keeps_its_scene_when_the_recording_bar_hides() {
 
 #[test]
 fn the_shutter_excludes_region_then_restores_the_global_capture_preference() {
-  assert!(!region_selector_capturable_after_opacity(0.0, false));
-  assert!(!region_selector_capturable_after_opacity(0.0, true));
-  assert!(!region_selector_capturable_after_opacity(1.0, false));
-  assert!(region_selector_capturable_after_opacity(1.0, true));
+  assert_eq!(
+    region_selector_capture_affinity(0.0, false),
+    RegionSelectorCaptureAffinity {
+      other_windows: false,
+      region_selector: false,
+    }
+  );
+  assert_eq!(
+    region_selector_capture_affinity(0.0, true),
+    RegionSelectorCaptureAffinity {
+      other_windows: true,
+      region_selector: false,
+    }
+  );
+  assert_eq!(
+    region_selector_capture_affinity(1.0, true),
+    RegionSelectorCaptureAffinity {
+      other_windows: true,
+      region_selector: true,
+    }
+  );
 }
 
 #[test]

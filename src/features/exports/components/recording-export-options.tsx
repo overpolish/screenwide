@@ -71,7 +71,7 @@ export function VideoExportSettings({
       <div className="flex flex-col gap-1.5">
         <span className="shrink-0 text-xs text-content-fg">Compression</span>
         <PillGroup
-          ariaLabel="Compression"
+          aria-label="Compression"
           className="grid grid-cols-3"
           display="label"
           isDisabled={isDisabled}
@@ -89,7 +89,7 @@ export function VideoExportSettings({
         <div className="flex flex-col gap-1.5">
           <span className="shrink-0 text-xs text-content-fg">Resolution</span>
           <PillGroup
-            ariaLabel="Resolution"
+            aria-label="Resolution"
             display="label"
             isDisabled={isDisabled}
             items={resolutionScales.map((scale, index) => {

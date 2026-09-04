@@ -9,10 +9,19 @@ import {
   SquareDashed,
 } from "lucide-react";
 
-import { RadioGroup } from "../../../components/base/radio-group/radio-group";
+import {
+  PillGroup,
+  type PillGroupItem,
+} from "../../../components/base/pill-group/pill-group";
 import { RecordingMode } from "../../recording-sources/types";
 
-import { IconRadio } from "./icon-radio";
+const items: PillGroupItem[] = [
+  { icon: <Monitor />, id: "screen", label: "Screen" },
+  { icon: <SquareDashed />, id: "region", label: "Region" },
+  { icon: <AppWindowMac />, id: "window", label: "Window" },
+  { icon: <Camera />, id: "camera", label: "Camera only" },
+  { icon: <AudioLines />, id: "audio", label: "Audio only" },
+];
 
 export function RecordingModePicker({
   isDisabled,
@@ -23,61 +32,18 @@ export function RecordingModePicker({
   mode: RecordingMode;
   onChange: (mode: RecordingMode) => void;
 }) {
-  const buttonClassName = "size-full";
-  const fieldClassName = "size-[70px]";
-  const iconClassName = "size-10 [&>svg]:size-full!";
-
   return (
-    <RadioGroup
+    <PillGroup
       aria-label="Recording type"
-      className="gap-tight min-w-0 grow items-start justify-center self-stretch"
+      className="min-w-0 grow items-start justify-center self-stretch"
+      display="icon"
       isDisabled={isDisabled}
-      onChange={(value) => {
-        onChange(value as RecordingMode);
+      itemClassName="size-[70px] rounded-2xl [&_svg]:size-10!"
+      items={items}
+      onSelectionChange={(id) => {
+        onChange(id as RecordingMode);
       }}
-      orientation="horizontal"
-      value={mode}
-    >
-      <IconRadio
-        aria-label="Screen"
-        buttonClassName={buttonClassName}
-        className={fieldClassName}
-        icon={<Monitor />}
-        iconClassName={iconClassName}
-        value="screen"
-      />
-      <IconRadio
-        aria-label="Region"
-        buttonClassName={buttonClassName}
-        className={fieldClassName}
-        icon={<SquareDashed />}
-        iconClassName={iconClassName}
-        value="region"
-      />
-      <IconRadio
-        aria-label="Window"
-        buttonClassName={buttonClassName}
-        className={fieldClassName}
-        icon={<AppWindowMac />}
-        iconClassName={iconClassName}
-        value="window"
-      />
-      <IconRadio
-        aria-label="Camera only"
-        buttonClassName={buttonClassName}
-        className={fieldClassName}
-        icon={<Camera />}
-        iconClassName={iconClassName}
-        value="camera"
-      />
-      <IconRadio
-        aria-label="Audio only"
-        buttonClassName={buttonClassName}
-        className={fieldClassName}
-        icon={<AudioLines />}
-        iconClassName={iconClassName}
-        value="audio"
-      />
-    </RadioGroup>
+      selected={mode}
+    />
   );
 }

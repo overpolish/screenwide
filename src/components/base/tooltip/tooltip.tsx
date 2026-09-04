@@ -18,7 +18,7 @@ import {
 } from "react-aria-components";
 
 const tooltipClassName = [
-  "bg-content-fg text-content m-2 rounded-lg px-2 py-1 text-xs shadow-md",
+  "bg-content-fg text-content m-2 px-control-inset py-control rounded-lg text-xs shadow-md",
   "data-[placement=top]:origin-bottom",
   "data-[placement=bottom]:origin-top",
   "data-[placement=left]:origin-right",

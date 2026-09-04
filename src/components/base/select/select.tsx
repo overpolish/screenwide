@@ -29,12 +29,13 @@ const selectVariants = tv({
     size: "default",
   },
   slots: {
-    base: "flex shrink-0 flex-col gap-1",
+    base: "gap-control flex shrink-0 flex-col data-[disabled]:cursor-not-allowed",
     controls: "text-muted",
     field: [
       "relative inline-flex shrink-0 items-stretch bg-neutral text-content-fg outline-none transition-colors",
       "has-[button[data-hovered]]:bg-neutral-hover has-[button[data-pressed]]:bg-neutral-pressed",
       "has-[button[data-disabled]]:bg-neutral-subtle has-[button[data-disabled]]:text-neutral-disabled-fg",
+      "has-[button[data-disabled]]:cursor-not-allowed",
       "has-[[data-select-clear]]:[&>[data-select-trigger]]:pr-0",
       focusStyles,
     ],
@@ -64,15 +65,15 @@ const selectVariants = tv({
         controls: "[&_svg]:size-icon-compact",
         field: "h-6 rounded-lg",
         label: "text-xs",
-        trigger: "px-2 text-xs",
-        value: "gap-2",
+        trigger: "px-control-inset text-xs",
+        value: "gap-control-inset",
       },
       default: {
         controls: "[&_svg]:size-icon-default",
         field: "rounded-xl",
         label: "text-sm",
-        trigger: "px-3 py-2 text-sm",
-        value: "gap-3",
+        trigger: "px-section py-control-inset text-sm",
+        value: "gap-section",
       },
     },
   },
@@ -159,7 +160,7 @@ export const Select = <T extends object>({
       className={base({ className })}
       data-control-size={size ?? "default"}
     >
-      {({ isOpen }) => (
+      {({ isDisabled, isOpen }) => (
         <>
           {label && <Label className={_label()}>{label}</Label>}
 
@@ -204,6 +205,7 @@ export const Select = <T extends object>({
                     scale: 0,
                   }}
                   initial={{ opacity: 0 }}
+                  isDisabled={isDisabled}
                   onClear={onClear}
                   size={size}
                 />

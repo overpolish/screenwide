@@ -4,9 +4,15 @@
 import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
+export const compactButtonControlStyles =
+  "h-6 rounded-lg px-control-inset text-xs [&_svg]:size-icon-compact [&_svg]:shrink-0";
+
+export const defaultButtonControlStyles =
+  "rounded-xl px-section py-control-inset text-sm [&_svg]:size-icon-default [&_svg]:shrink-0";
+
 export const buttonVariants = tv({
   base: [
-    "inline-flex items-center justify-center gap-2 font-semibold transition select-none",
+    "gap-control-inset inline-flex items-center justify-center font-semibold transition select-none",
     focusStyles,
     elementFocusVisible,
   ],
@@ -33,10 +39,8 @@ export const buttonVariants = tv({
       true: "cursor-not-allowed! bg-neutral-subtle text-neutral-disabled-fg",
     },
     size: {
-      compact:
-        "h-6 rounded-lg px-2 text-xs [&_svg]:size-icon-compact [&_svg]:shrink-0",
-      default:
-        "rounded-xl px-3 py-2 text-sm [&_svg]:size-icon-default [&_svg]:shrink-0",
+      compact: compactButtonControlStyles,
+      default: defaultButtonControlStyles,
     },
     variant: {
       ghost: [

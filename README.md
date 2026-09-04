@@ -45,18 +45,6 @@
 
 <br />
 
-# Glide
-
-Glide makes arranging windows feel like one continuous gesture. Start over a window's title bar, then move it into a half, quarter, third or full-screen layout—or glide down to minimize it. A live preview shows where the window will land before you release it.
-
-- **Trackpad:** use a two-finger gesture over the title bar.
-- **Mouse:** hold your configured Glide control while moving over the title bar.
-- **Thirds:** hold the configured Thirds control during a glide to switch from halves to thirds.
-
-Glide is enabled by default on macOS and Windows. Open **Settings → Glide** to change its controls, add spacing between windows, choose whether the cursor follows the window, and configure the extra options available on your platform.
-
-<br />
-
 # Roadmap
 
 <div>

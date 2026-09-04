@@ -86,13 +86,8 @@ pub(super) fn show_interactive(window: &tauri::WebviewWindow) -> Result<(), Stri
   let (sender, receiver) = std::sync::mpsc::sync_channel(1);
   app
     .run_on_main_thread(move || {
-      let result = window
-        .ns_window()
-        .map_err(|error| error.to_string())
-        .map(|raw_window| {
-          let native_window: &objc2_app_kit::NSWindow = unsafe { &*raw_window.cast() };
-          native_window.makeKeyAndOrderFront(None);
-        });
+      let result =
+        crate::osc::cursor::macos::present_window(&window).map_err(|error| error.to_string());
       let _ = sender.send(result);
     })
     .map_err(|error| error.to_string())?;
@@ -102,6 +97,7 @@ pub(super) fn show_interactive(window: &tauri::WebviewWindow) -> Result<(), Stri
 fn close_windows(windows: Vec<tauri::WebviewWindow>) {
   let empty = CString::new("").expect("empty OCR status");
   for window in windows {
+    crate::osc::cursor::macos::prepare_window_close(&window);
     if let Ok(view) = window.ns_view() {
       let view = view.cast();
       let _ = native_region::set_input_enabled(view, false);

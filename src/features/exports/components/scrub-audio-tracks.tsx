@@ -63,7 +63,6 @@ export function ScrubAudioTracks({
                   } else next.add(track.streamIndex);
                   onEnabledTracksChange(next);
                 }}
-                size="xs"
               />
               <Icon className="shrink-0 text-muted" size={14} />
               <span className="min-w-0 grow truncate">{track.label}</span>

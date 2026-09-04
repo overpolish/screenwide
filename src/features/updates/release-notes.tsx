@@ -99,12 +99,7 @@ export function ReleaseNotes({ html }: ReleaseNotesProps) {
       <SanitizedReleaseNotes html={html} notesRef={notesRef} />
       {taskMarkers.map(({ label, selected, target }, index) =>
         createPortal(
-          <Checkbox
-            aria-label={label}
-            isReadOnly
-            isSelected={selected}
-            size="xs"
-          />,
+          <Checkbox aria-label={label} isReadOnly isSelected={selected} />,
           target,
           `${label}-${String(index)}`,
         ),

@@ -132,7 +132,6 @@ export function CameraTrackSettings({
               dropShadow,
             });
           }}
-          size="sm"
         >
           <span className="text-xs">Drop shadow</span>
         </Checkbox>

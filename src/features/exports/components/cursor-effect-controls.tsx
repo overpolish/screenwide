@@ -28,7 +28,6 @@ export function CursorEffectControls({
         onChange={(bake) => {
           update({ bake });
         }}
-        size="sm"
       >
         <span className="flex flex-col">
           <span className="text-xs">Bake cursor into recording</span>
@@ -41,7 +40,6 @@ export function CursorEffectControls({
         onChange={(clipAtVideoEdge) => {
           update({ clipAtVideoEdge });
         }}
-        size="sm"
       >
         <span className="text-xs">Clip at video edge</span>
       </Checkbox>
@@ -51,7 +49,6 @@ export function CursorEffectControls({
         onChange={(smoothMovement) => {
           update({ smoothMovement });
         }}
-        size="sm"
       >
         <span className="flex flex-col">
           <span className="text-xs">Smooth movement</span>
@@ -60,25 +57,31 @@ export function CursorEffectControls({
           </span>
         </span>
       </Checkbox>
-      <Slider
-        isDisabled={isSaving || !settings.bake}
-        label="Cursor size"
-        maxValue={500}
-        minValue={50}
-        onChange={(nextSizePercent) => {
-          update({ sizePercent: nextSizePercent });
-        }}
-        renderValue={(value) => `${value.toString()}%`}
-        step={5}
-        value={sizePercent}
-      />
+      <div className="gap-control flex flex-col">
+        <div className="gap-section flex items-center justify-between text-xs">
+          <span>Cursor size</span>
+          <span className="text-muted tabular-nums">
+            {sizePercent.toString()}%
+          </span>
+        </div>
+        <Slider
+          aria-label="Cursor size"
+          isDisabled={isSaving || !settings.bake}
+          maxValue={500}
+          minValue={50}
+          onChange={(nextSizePercent) => {
+            update({ sizePercent: nextSizePercent });
+          }}
+          step={5}
+          value={sizePercent}
+        />
+      </div>
       <Checkbox
         isDisabled={isSaving || !settings.bake}
         isSelected={settings.motionBlur}
         onChange={(motionBlur) => {
           update({ motionBlur });
         }}
-        size="sm"
       >
         <span className="text-xs">Motion blur</span>
       </Checkbox>
@@ -88,7 +91,6 @@ export function CursorEffectControls({
         onChange={(clickAnimation) => {
           update({ clickAnimation });
         }}
-        size="sm"
       >
         <span className="text-xs">Click animation</span>
       </Checkbox>

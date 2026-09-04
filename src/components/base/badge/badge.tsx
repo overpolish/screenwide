@@ -13,7 +13,7 @@ export function Badge({ children, className }: BadgeProps) {
   return (
     <div
       className={clsx(
-        "flex flex-row items-center justify-center gap-1 rounded-xl bg-neutral px-2 py-0.5 text-xs",
+        "gap-control px-control-inset py-tight flex flex-row items-center justify-center rounded-xl bg-neutral text-xs",
         className,
       )}
     >

@@ -39,7 +39,6 @@ export function GlideSettingsPanel({
           onChange={(enabled) => {
             update({ enabled });
           }}
-          size="sm"
         />
       </SettingRow>
       <SettingRow
@@ -80,7 +79,10 @@ export function GlideSettingsPanel({
         description="Breathing room around every window Glide places."
         label="Window gap"
       >
-        <div className="w-44">
+        <div className="gap-control flex w-44 flex-col">
+          <span className="text-right text-xs text-muted tabular-nums">
+            {settings.windowGap.toString()} px
+          </span>
           <Slider
             aria-label="Window gap"
             isDisabled={isOff}
@@ -89,7 +91,6 @@ export function GlideSettingsPanel({
             onChange={(windowGap) => {
               update({ windowGap });
             }}
-            renderValue={(value) => `${String(value)} px`}
             step={1}
             value={settings.windowGap}
           />
@@ -105,7 +106,6 @@ export function GlideSettingsPanel({
           onChange={(cursorFollows) => {
             update({ cursorFollows });
           }}
-          size="sm"
         />
       </SettingRow>
       {isMac && (
@@ -119,7 +119,6 @@ export function GlideSettingsPanel({
             onChange={(haptics) => {
               update({ haptics });
             }}
-            size="sm"
           />
         </SettingRow>
       )}
@@ -134,7 +133,6 @@ export function GlideSettingsPanel({
             onChange={(doubleTapCenter) => {
               update({ doubleTapCenter });
             }}
-            size="sm"
           />
         </SettingRow>
       )}

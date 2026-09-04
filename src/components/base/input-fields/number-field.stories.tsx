@@ -78,3 +78,7 @@ export const Sections: Story = {
   },
   parameters: { controls: { include: ["showSteppers", "size"] } },
 };
+
+export const Disabled: Story = {
+  args: { isDisabled: true },
+};

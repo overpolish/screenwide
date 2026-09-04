@@ -1,47 +1,42 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Meta, StoryObj } from "@storybook/react";
-
 import { Switch } from "./switch";
 
-const sizes: React.ComponentProps<typeof Switch>["size"][] = ["md", "xs"];
+import type { Meta, StoryObj } from "@storybook/react";
 
 const meta = {
-  argTypes: {
-    className: { control: { disable: true } },
-    size: {
-      control: "inline-radio",
-      options: sizes,
-      table: { defaultValue: { summary: "md" } },
-    },
-  },
-  args: { children: "Label" },
+  args: { children: "Setting" },
   component: Switch,
   parameters: {
-    controls: { include: ["size"] },
     layout: "centered",
   },
-  title: "Legacy/Switch",
+  title: "Primitives/Switch",
 } satisfies Meta<typeof Switch>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/* --------------------------------- Stories -------------------------------- */
-export const Default: Story = {
-  args: { size: "md" },
+export const Off: Story = {};
+
+export const On: Story = {
+  args: { defaultSelected: true },
 };
 
-export const Sizes: Story = {
-  parameters: {
-    controls: { disable: true },
+export const WithoutVisibleLabel: Story = {
+  args: {
+    "aria-label": "Setting",
+    children: undefined,
   },
-  render: (args) => (
-    <div className="flex gap-6 items-center">
-      {sizes.map((size) => (
-        <Switch key={size} size={size} {...args} />
-      ))}
+};
+
+export const Disabled: Story = {
+  render: () => (
+    <div className="gap-section flex flex-col items-start">
+      <Switch isDisabled>Unavailable</Switch>
+      <Switch isDisabled isSelected>
+        Enabled but unavailable
+      </Switch>
     </div>
   ),
 };

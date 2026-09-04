@@ -329,14 +329,21 @@ pub async fn set_region_selector_opacity(
 ) -> Result<(), String> {
   #[cfg(target_os = "windows")]
   {
-    let capturable = region_selector_capturable_after_opacity(
+    let affinity = region_selector_capture_affinity(
       opacity,
       crate::settings::current(window.app_handle()).record_screenwide_windows,
     );
-    super::sync_capture_affinity(window.app_handle(), capturable)
+    // The shutter only excludes the borrowed Region overlay. Every other
+    // Screenwide window continues to follow the user's capture preference.
+    super::sync_capture_affinity(window.app_handle(), affinity.other_windows)
       .map_err(|error| error.to_string())?;
-    super::screenshot_region::set_recording_overlay_capture_affinity(&window, capturable)
+    super::set_window_capture_affinity(&window, affinity.region_selector)
       .map_err(|error| error.to_string())?;
+    super::screenshot_region::set_recording_overlay_capture_affinity(
+      &window,
+      affinity.region_selector,
+    )
+    .map_err(|error| error.to_string())?;
     if opacity <= 0.0 {
       // Display affinity is committed asynchronously by DWM. Let that frame
       // land before the shutter without changing anything visible onscreen.
@@ -355,11 +362,21 @@ pub async fn set_region_selector_opacity(
 }
 
 #[cfg(any(test, target_os = "windows"))]
-const fn region_selector_capturable_after_opacity(
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct RegionSelectorCaptureAffinity {
+  other_windows: bool,
+  region_selector: bool,
+}
+
+#[cfg(any(test, target_os = "windows"))]
+const fn region_selector_capture_affinity(
   opacity: f64,
   record_screenwide_windows: bool,
-) -> bool {
-  opacity > 0.0 && record_screenwide_windows
+) -> RegionSelectorCaptureAffinity {
+  RegionSelectorCaptureAffinity {
+    other_windows: record_screenwide_windows,
+    region_selector: opacity > 0.0 && record_screenwide_windows,
+  }
 }
 
 /// Temporarily removes the recording-control window graph while Quick

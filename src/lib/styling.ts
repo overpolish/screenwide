@@ -25,7 +25,7 @@ export const elementFocusVisible =
   "data-[focus-visible]:focus-visible:ring-offset-1 data-[focus-visible]:focus-visible:ring-1";
 
 export const groupFocusVisible =
-  "group-data-[focus-visible]:group-focus-visible:ring-offset-1 group-data-[focus-visible]:group-focus-visible:ring-1";
+  "group-data-[focus-visible]:ring-offset-1 group-data-[focus-visible]:ring-1";
 
 export const focusWithin =
   "data-[focus-within]:ring-offset-1 data-[focus-within]:ring-1";

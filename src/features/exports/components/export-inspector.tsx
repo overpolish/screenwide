@@ -165,7 +165,7 @@ export function ExportInspector({
       <OverflowShadow rootClassName="min-h-0 grow">
         <div className="flex flex-col gap-4 p-4">
           <PillGroup
-            ariaLabel="Inspector section"
+            aria-label="Inspector section"
             isDisabled={isSaving}
             items={availableInspectorTabs}
             onSelectionChange={setInspectorTab}
@@ -179,7 +179,6 @@ export function ExportInspector({
                   isDisabled={isSaving || !canBakeCamera}
                   isSelected={bakeCamera && canBakeCamera}
                   onChange={onBakeCameraChange}
-                  size="sm"
                 >
                   <span className="flex flex-col">
                     <span className="text-xs">Bake camera into recording</span>
@@ -195,7 +194,6 @@ export function ExportInspector({
                   isDisabled={isSaving || enabledAudioTrackCount < 2}
                   isSelected={collapseAudio}
                   onChange={onCollapseAudioChange}
-                  size="sm"
                 >
                   <span className="flex flex-col">
                     <span className="text-xs">Collapse audio tracks</span>
@@ -244,7 +242,7 @@ export function ExportInspector({
           {tabs.length > 0 ? (
             <div className="flex flex-col gap-3 border-t border-muted/15 pt-4">
               <PillGroup
-                ariaLabel="Recording tracks"
+                aria-label="Recording tracks"
                 isDisabled={isSaving}
                 items={tabs}
                 onSelectionChange={(trackId) => {
@@ -307,21 +305,25 @@ export function ExportInspector({
               ) : null}
 
               {selectedAudioTrack ? (
-                <Slider
-                  aria-label={`${selectedAudioTrack.label} volume`}
-                  isDisabled={isSaving}
-                  label="Volume"
-                  maxValue={12}
-                  minValue={-60}
-                  onChange={onSelectedTrackVolumeChange}
-                  renderValue={(value) =>
-                    value <= -60
-                      ? "Muted"
-                      : `${value > 0 ? "+" : ""}${value.toString()} dB`
-                  }
-                  step={1}
-                  value={selectedTrackVolume}
-                />
+                <div className="gap-control flex flex-col">
+                  <div className="gap-section flex items-center justify-between text-xs">
+                    <span>Volume</span>
+                    <span className="text-muted tabular-nums">
+                      {selectedTrackVolume <= -60
+                        ? "Muted"
+                        : `${selectedTrackVolume > 0 ? "+" : ""}${selectedTrackVolume.toString()} dB`}
+                    </span>
+                  </div>
+                  <Slider
+                    aria-label={`${selectedAudioTrack.label} volume`}
+                    isDisabled={isSaving}
+                    maxValue={12}
+                    minValue={-60}
+                    onChange={onSelectedTrackVolumeChange}
+                    step={1}
+                    value={selectedTrackVolume}
+                  />
+                </div>
               ) : null}
             </div>
           ) : null}

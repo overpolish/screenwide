@@ -110,7 +110,7 @@ export function ScreenshotOutputControls({
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-content-fg">Background</span>
         <PillGroup
-          ariaLabel="Screenshot background type"
+          aria-label="Screenshot background type"
           display="label"
           isDisabled={isSaving}
           items={backgroundTypes}
@@ -151,7 +151,6 @@ export function ScreenshotOutputControls({
           onChange={(dropShadow) => {
             update({ dropShadow });
           }}
-          size="sm"
         >
           <span className="text-xs">Drop shadow</span>
         </Checkbox>

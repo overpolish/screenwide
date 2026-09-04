@@ -1,116 +1,68 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { motion, useMotionValue, Variants } from "motion/react";
-import { useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   SwitchButton as AriaSwitchButton,
   SwitchField as AriaSwitchField,
-  SwitchFieldProps as AriaSwitchFieldProps,
+  type SwitchFieldProps as AriaSwitchFieldProps,
 } from "react-aria-components";
-import { VariantProps } from "tailwind-variants";
 
-import { focusStyles, groupFocusVisible } from "../../../lib/styling";
-import { tv } from "../../../lib/variants";
+import {
+  motionDurationCss,
+  motionDurations,
+  motionEasings,
+} from "../../../lib/motion";
+import { cn, focusStyles, groupFocusVisible } from "../../../lib/styling";
 
-const switchVariants = tv({
-  defaultVariants: {
-    color: "success",
-    size: "md",
-  },
-  slots: {
-    base: "group flex gap-2 items-center text-content-fg outline-none",
-    container: [
-      "relative flex cursor-default rounded-full shadow-inner bg-neutral transition-colors items-center border-1 border-neutral/5 transition-all",
-      focusStyles,
-      groupFocusVisible,
-    ],
-    innerLabel:
-      "absolute text-black font-black opacity-0 group-data-[selected]:opacity-20 transition-all",
-    thumb: "rounded-full bg-white shadow-sm shadow-inner z-1",
-  },
-  variants: {
-    color: {
-      success: {
-        container: "group-data-[selected]:bg-success",
-      },
-    },
-    size: {
-      md: {
-        base: "text-sm",
-        container: "h-[26px] w-[46px] p-[3px]",
-        innerLabel: "left-0.75 text-xs",
-        thumb: "h-[20px]",
-      },
-      xs: {
-        base: "text-xs",
-        container: "h-[17px] w-[28px] p-[1px]",
-        innerLabel: "text-[4px] left-0.75",
-        thumb: "h-[13px]",
-      },
-    },
-  },
-});
-
-type SwitchProps = AriaSwitchFieldProps &
-  VariantProps<typeof switchVariants> & {
-    children?: React.ReactNode;
-    className?: string;
-  };
-
-const sizeToWidth = (
-  size: SwitchProps["size"],
-): { animate: number; rest: number } => {
-  if (size === "md") return { animate: 22, rest: 20 };
-  if (size === "xs") return { animate: 15, rest: 13 };
-  return { animate: 22, rest: 20 };
+type SwitchProps = Omit<AriaSwitchFieldProps, "children" | "className"> & {
+  children?: React.ReactNode;
+  className?: string;
 };
 
-export const Switch = ({
-  children,
-  className,
-  size,
-  ...props
-}: SwitchProps) => {
-  const { base, container, innerLabel, thumb } = switchVariants({ size });
-  // Track if animating, otherwise initial render and tap cancel cause animate to run
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  const { animate, rest } = sizeToWidth(size);
-  // Allows smooth start for animation
-  const width = useMotionValue(rest);
-  const thumbAnimations: Variants = {
-    motion: { width: [width.get(), animate, rest] },
-    rest: { width: rest },
-    tapped: { width: animate },
-  };
+export const Switch = ({ children, className, ...props }: SwitchProps) => {
+  const prefersReducedMotion = useReducedMotion();
 
   return (
-    <AriaSwitchField {...props} className={base({ className })}>
-      {children}
-      <AriaSwitchButton className="contents">
+    <AriaSwitchField {...props} className="contents">
+      <AriaSwitchButton
+        className={cn(
+          "group gap-control-inset inline-flex cursor-pointer items-center text-sm text-content-fg outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-disabled-fg",
+          className,
+        )}
+      >
         {({ isPressed, isSelected }) => (
-          <motion.div
-            className={container()}
-            layout
-            style={{ justifyContent: isSelected ? "flex-end" : "flex-start" }}
-          >
-            <span className={innerLabel()}>ON</span>
-            <motion.div
-              animate={isAnimating ? "motion" : isPressed ? "tapped" : "rest"}
-              className={thumb()}
-              layout
-              onLayoutAnimationComplete={() => {
-                setIsAnimating(false);
+          <>
+            {children}
+            <span
+              className={cn(
+                "relative inline-flex h-6 w-10 shrink-0 items-center rounded-full bg-neutral p-control transition-colors",
+                "group-data-[hovered]:bg-neutral-hover group-data-[pressed]:bg-neutral-pressed",
+                "group-data-[selected]:bg-primary-surface group-data-[selected]:group-data-[hovered]:bg-primary-surface-hover group-data-[selected]:group-data-[pressed]:bg-primary-surface-pressed",
+                "group-data-[disabled]:bg-neutral-subtle",
+                focusStyles,
+                groupFocusVisible,
+              )}
+              style={{
+                transitionDuration: prefersReducedMotion
+                  ? "0s"
+                  : motionDurationCss("state"),
               }}
-              onLayoutAnimationStart={() => {
-                setIsAnimating(true);
-              }}
-              style={{ width }}
-              transition={{ duration: 0.2 }}
-              variants={thumbAnimations}
-            />
-          </motion.div>
+            >
+              <motion.span
+                animate={{
+                  scale: isPressed ? 0.875 : 1,
+                  x: isSelected ? 16 : 0,
+                }}
+                className="size-4 rounded-full bg-content-fg group-data-[selected]:bg-primary-fg group-data-[disabled]:bg-neutral-disabled-fg"
+                initial={false}
+                transition={{
+                  duration: prefersReducedMotion ? 0 : motionDurations.state,
+                  ease: motionEasings.out,
+                }}
+              />
+            </span>
+          </>
         )}
       </AriaSwitchButton>
     </AriaSwitchField>

@@ -73,7 +73,6 @@ export function KeyboardEffectControls({
         onChange={(bake) => {
           update({ bake });
         }}
-        size="sm"
       >
         <span className="flex flex-col">
           <span className="text-xs">Bake shortcuts into recording</span>
@@ -82,18 +81,25 @@ export function KeyboardEffectControls({
           </span>
         </span>
       </Checkbox>
-      <Slider
-        isDisabled={isSaving || !settings.bake}
-        label="Shortcut size"
-        maxValue={maximumSizePercent}
-        minValue={Math.min(50, maximumSizePercent)}
-        onChange={(value) => {
-          update({ sizePercent: value });
-        }}
-        renderValue={(value) => `${value.toString()}%`}
-        step={5}
-        value={sizePercent}
-      />
+      <div className="gap-control flex flex-col">
+        <div className="gap-section flex items-center justify-between text-xs">
+          <span>Shortcut size</span>
+          <span className="text-muted tabular-nums">
+            {sizePercent.toString()}%
+          </span>
+        </div>
+        <Slider
+          aria-label="Shortcut size"
+          isDisabled={isSaving || !settings.bake}
+          maxValue={maximumSizePercent}
+          minValue={Math.min(50, maximumSizePercent)}
+          onChange={(value) => {
+            update({ sizePercent: value });
+          }}
+          step={5}
+          value={sizePercent}
+        />
+      </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-content-fg">Position</span>
         <div className="flex gap-2">
@@ -134,7 +140,7 @@ export function KeyboardEffectControls({
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-content-fg">Animation</span>
         <PillGroup
-          ariaLabel="Shortcut animation"
+          aria-label="Shortcut animation"
           display="label"
           isDisabled={isSaving || !settings.bake}
           items={animationOptions}
@@ -147,7 +153,7 @@ export function KeyboardEffectControls({
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-content-fg">Appearance</span>
         <PillGroup
-          ariaLabel="Shortcut appearance"
+          aria-label="Shortcut appearance"
           display="label"
           isDisabled={isSaving || !settings.bake}
           items={appearanceOptions}

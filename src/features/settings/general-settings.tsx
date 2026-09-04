@@ -117,7 +117,6 @@ export function GeneralSettingsPanel({
           onChange={(openLocationAfterExport) => {
             update({ openLocationAfterExport });
           }}
-          size="sm"
         />
       </SettingRow>
       <SettingRow
@@ -130,7 +129,6 @@ export function GeneralSettingsPanel({
           onChange={(showRecordingConfidenceChecks) => {
             update({ showRecordingConfidenceChecks });
           }}
-          size="sm"
         />
       </SettingRow>
       <SettingRow
@@ -143,7 +141,6 @@ export function GeneralSettingsPanel({
           onChange={(recordScreenwideWindows) => {
             update({ recordScreenwideWindows });
           }}
-          size="sm"
         />
       </SettingRow>
       <SettingRow
@@ -156,7 +153,6 @@ export function GeneralSettingsPanel({
           onChange={(launchAtLogin) => {
             update({ launchAtLogin });
           }}
-          size="sm"
         />
       </SettingRow>
       <SettingRow
@@ -169,7 +165,6 @@ export function GeneralSettingsPanel({
           onChange={(showRecordingBarOnLaunch) => {
             update({ showRecordingBarOnLaunch });
           }}
-          size="sm"
         />
       </SettingRow>
       <SettingRow
@@ -177,7 +172,7 @@ export function GeneralSettingsPanel({
         label="Recording countdown"
       >
         <PillGroup
-          ariaLabel="Recording countdown"
+          aria-label="Recording countdown"
           display="label"
           isDisabled={isSaving}
           items={[

@@ -7,11 +7,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   args: {
+    "aria-label": "Value",
     defaultValue: 40,
-    label: "Compression",
     maxValue: 100,
     minValue: 0,
-    renderValue: (value: number) => `${value.toString()}%`,
   },
   component: Slider,
   decorators: [
@@ -24,7 +23,7 @@ const meta = {
   parameters: {
     layout: "centered",
   },
-  title: "Legacy/Slider",
+  title: "Primitives/Slider",
 } satisfies Meta<typeof Slider>;
 
 export default meta;
@@ -32,10 +31,9 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const Original: Story = {
+export const SetValue: Story = {
   args: {
-    defaultValue: 0,
-    renderValue: () => "Original",
+    defaultValue: 75,
   },
 };
 
@@ -43,4 +41,14 @@ export const Disabled: Story = {
   args: {
     isDisabled: true,
   },
+};
+
+export const ConstrainedWidth: Story = {
+  decorators: [
+    (Story) => (
+      <div className="w-40">
+        <Story />
+      </div>
+    ),
+  ],
 };

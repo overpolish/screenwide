@@ -42,6 +42,20 @@ tauri_panel! {
     }
   })
 
+  // Quick Screenshot must own main as well as key status during activation;
+  // otherwise AppKit restores a background Settings/Export window as main.
+  // Normal recording presentation remains nonactivating and never asks for main.
+  panel!(RegionSelectorPanel {
+    config: {
+      can_become_key_window: true,
+      can_become_main_window: true,
+      becomes_key_only_if_needed: true,
+      hides_on_deactivate: false,
+      is_floating_panel: true,
+      works_when_modal: true
+    }
+  })
+
   // The dock is buttons only: it never needs the keyboard, so it refuses key
   // status outright. That way nothing it does can pull keyboard focus off the
   // app the user is recording.
@@ -205,6 +219,8 @@ fn ensure_recording_panel(window: &WebviewWindow) -> tauri::Result<PanelHandle<t
   let level = recording_panel_level(window).ok_or(tauri::Error::WindowNotFound)?;
   if matches!(window.label(), "glide" | "recording-dock") {
     configure_panel::<RecordingDockPanel>(window, level)?;
+  } else if window.label() == "region-selector" {
+    configure_panel::<RegionSelectorPanel>(window, level)?;
   } else {
     configure_panel::<RecordingBarPanel>(window, level)?;
   }
@@ -307,17 +323,20 @@ pub fn raise_without_activation(window: &WebviewWindow) -> tauri::Result<()> {
 /// explicit interactive-tool lease.
 ///
 /// Recording UI must continue to use [`show`]. Only a cursor lease that has
-/// already activated Screenwide may enter this path, and it must call
+/// already captured foreground ownership may enter this path, and it must call
 /// [`restore_nonactivating_overlay`] before returning foreground ownership.
 #[cfg(target_os = "macos")]
 pub fn show_interactive_overlay(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
   window.set_ignore_cursor_events(false)?;
   let panel = ensure_recording_panel(window)?;
   let app = window.app_handle().clone();
+  let window = window.clone();
   app.run_on_main_thread(move || {
     panel.set_style_mask(StyleMask::empty().into());
     panel.set_alpha_value(opacity);
-    panel.make_key_and_order_front();
+    if let Err(error) = crate::osc::cursor::macos::present_window(&window) {
+      eprintln!("Could not present interactive overlay: {error}");
+    }
   })
 }
 
@@ -329,6 +348,7 @@ pub fn restore_nonactivating_overlay(window: &WebviewWindow) -> tauri::Result<()
   let app = window.app_handle().clone();
   app.run_on_main_thread(move || {
     panel.resign_key_window();
+    panel.resign_main_window();
     panel.set_style_mask(StyleMask::empty().nonactivating_panel().into());
   })
 }

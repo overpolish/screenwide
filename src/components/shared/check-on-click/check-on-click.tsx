@@ -111,7 +111,7 @@ export function CheckOnClick({
       <>
         <span
           className={cn(
-            "inline-flex items-center justify-center gap-2",
+            "gap-control-inset inline-flex items-center justify-center",
             status === "pending" && "animate-pulse",
           )}
         >

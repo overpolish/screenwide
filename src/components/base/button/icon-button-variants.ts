@@ -4,6 +4,12 @@
 import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
+export const compactIconControlStyles =
+  "h-6 w-6 rounded-lg p-control [&_svg]:size-icon-compact";
+
+export const defaultIconControlStyles =
+  "h-9 w-9 rounded-xl p-control-inset [&_svg]:size-icon-default";
+
 export const iconButtonVariants = tv({
   base: [
     "relative inline-flex origin-center transform-gpu cursor-pointer items-center justify-center backface-hidden will-change-transform transition select-none",
@@ -20,7 +26,7 @@ export const iconButtonVariants = tv({
       isToggle: true,
     },
     {
-      class: "p-0.5 [&_svg]:size-icon-prominent [&_svg]:shrink-0",
+      class: "p-tight! [&_svg]:size-icon-prominent! [&_svg]:shrink-0",
       iconSize: "prominent",
       size: "default",
     },
@@ -58,8 +64,8 @@ export const iconButtonVariants = tv({
       true: "text-muted data-[selected]:text-content-fg",
     },
     size: {
-      compact: "h-6 w-6 rounded-lg p-1 [&_svg]:size-icon-compact",
-      default: "h-9 w-9 rounded-xl p-1.5 [&_svg]:size-icon-default",
+      compact: compactIconControlStyles,
+      default: defaultIconControlStyles,
     },
   },
 });

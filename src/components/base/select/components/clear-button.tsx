@@ -9,11 +9,17 @@ import { SelectStateContext } from "react-aria-components";
 import { IconButton } from "../../button/icon-button";
 
 type ClearButtonProps = MotionProps & {
+  isDisabled?: boolean;
   onClear?: () => void;
   size?: "compact" | "default";
 };
 
-export const ClearButton = ({ onClear, size, ...props }: ClearButtonProps) => {
+export const ClearButton = ({
+  isDisabled,
+  onClear,
+  size,
+  ...props
+}: ClearButtonProps) => {
   const state = use(SelectStateContext);
 
   if (!state?.selectedItems.length) return null;
@@ -23,6 +29,7 @@ export const ClearButton = ({ onClear, size, ...props }: ClearButtonProps) => {
       <IconButton
         {...props}
         aria-label="Clear selection"
+        isDisabled={isDisabled}
         onPress={() => {
           state.setValue(null);
           if (onClear) onClear();

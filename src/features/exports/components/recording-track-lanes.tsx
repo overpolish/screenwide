@@ -249,7 +249,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
                       } else next.add(trackId);
                       onEnabledVideoTracksChange(next);
                     }}
-                    size="xs"
                   />
                   <Icon className="shrink-0 text-muted" size={14} />
                   <span className="min-w-0 grow truncate">{label}</span>

@@ -74,18 +74,12 @@ pub(super) fn install(
 
 pub(super) fn show_interactive(window: &tauri::WebviewWindow) -> Result<(), String> {
   let window = window.clone();
-  let native_window = window.clone();
   let app = window.app_handle().clone();
   let (sender, receiver) = std::sync::mpsc::sync_channel(1);
   app
     .run_on_main_thread(move || {
-      let result = native_window
-        .ns_window()
-        .map_err(|error| error.to_string())
-        .map(|raw_window| {
-          let native_window: &objc2_app_kit::NSWindow = unsafe { &*raw_window.cast() };
-          native_window.makeKeyAndOrderFront(None);
-        });
+      let result =
+        crate::osc::cursor::macos::present_window(&window).map_err(|error| error.to_string());
       let _ = sender.send(result);
     })
     .map_err(|error| error.to_string())?;
@@ -159,6 +153,7 @@ pub(super) fn set_screenshot_mode(
 
 fn close_windows(windows: Vec<tauri::WebviewWindow>) {
   for window in windows {
+    crate::osc::cursor::macos::prepare_window_close(&window);
     if let Ok(view) = window.ns_view() {
       let view = view.cast();
       let _ = native_region::set_input_enabled(view, false);

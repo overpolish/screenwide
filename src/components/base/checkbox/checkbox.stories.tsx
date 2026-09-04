@@ -5,63 +5,45 @@ import { Checkbox } from "./checkbox";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-const sizes: NonNullable<React.ComponentProps<typeof Checkbox>["size"]>[] = [
-  "md",
-  "sm",
-  "xs",
-] as const;
-
 const meta = {
-  argTypes: {
-    size: {
-      control: "inline-radio",
-      options: sizes,
-      table: { defaultValue: { summary: "md" } },
-    },
-  },
   args: {
     children: "Label",
   },
   component: Checkbox,
   parameters: {
-    controls: {
-      controls: ["className"],
-    },
     layout: "centered",
   },
-  title: "Legacy/Checkbox",
+  title: "Primitives/Checkbox",
 } satisfies Meta<typeof Checkbox>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
-  args: {
-    size: "md",
-  },
-};
+export const Default: Story = {};
 
-export const Sizes: Story = {
-  parameters: {
-    controls: { disable: true },
-  },
-  render: (args) => (
-    <div className="flex flex-col items-center gap-4">
-      {sizes.map((size) => (
-        <Checkbox key={size} size={size} {...args} />
-      ))}
+export const States: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div className="gap-section flex flex-col items-start">
+      <Checkbox>Unchecked</Checkbox>
+      <Checkbox isReadOnly isSelected>
+        Checked
+      </Checkbox>
+      <Checkbox isIndeterminate isReadOnly>
+        Indeterminate
+      </Checkbox>
+      <Checkbox isDisabled>Disabled</Checkbox>
+      <Checkbox isDisabled isSelected>
+        Disabled checked
+      </Checkbox>
     </div>
   ),
 };
 
-export const Disabled: Story = {
+export const WithoutLabel: Story = {
   args: {
-    isDisabled: true,
-    isSelected: true,
-  },
-  parameters: {
-    controls: {
-      exclude: ["children"],
-    },
+    "aria-label": "Selected",
+    children: undefined,
+    defaultSelected: true,
   },
 };

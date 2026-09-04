@@ -15,14 +15,14 @@ import { ListBoxSizeContext } from "../listbox/listbox-context";
 
 const listBoxItemVariants = tv({
   base: [
-    "inline-flex shrink-0 cursor-default items-center justify-between gap-2 bg-transparent text-content-fg transition-colors",
+    "gap-control-inset inline-flex shrink-0 cursor-default items-center justify-between bg-transparent text-content-fg transition-colors",
     "truncate",
     "data-[hovered]:bg-neutral",
     "data-[pressed]:bg-neutral-hover",
     "data-[selected]:bg-neutral",
     "data-[selected]:data-[hovered]:bg-neutral-hover",
     "data-[selected]:data-[pressed]:bg-neutral-pressed",
-    "data-[disabled]:bg-neutral-subtle data-[disabled]:text-neutral-disabled-fg",
+    "data-[disabled]:cursor-not-allowed! data-[disabled]:bg-neutral-subtle data-[disabled]:text-neutral-disabled-fg",
     focusStyles,
     elementFocusVisible,
   ],
@@ -31,8 +31,8 @@ const listBoxItemVariants = tv({
   },
   variants: {
     size: {
-      compact: "rounded-lg px-2 py-1 text-xs",
-      default: "rounded-xl px-3 py-2 text-sm",
+      compact: "px-control-inset py-control rounded-lg text-xs",
+      default: "px-section py-control-inset rounded-xl text-sm",
     },
   },
 });

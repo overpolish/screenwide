@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 static uint64_t activeGeneration = 0;
+static uint8_t activeIcon = 7;
 static NSRunningApplication *previousApplication = nil;
 
 static NSCursor *cursorForIcon(uint8_t icon) {
@@ -39,24 +40,40 @@ int screenwide_cursor_session_acquire(uint64_t generation, uint8_t icon) {
     previousApplication = nil;
 
   activeGeneration = generation;
+  activeIcon = icon;
+  return 1;
+}
+
+void screenwide_cursor_session_present(NSWindow *window) {
+  if (!NSThread.isMainThread || activeGeneration == 0 || window == nil)
+    return;
+
+  // Activation restores both main and key windows. Merely resigning main
+  // while inactive cannot clear AppKit's remembered main window. Nominate the overlay for
+  // both roles instead, before requesting activation without ActivateAllWindows.
+  [window orderFrontRegardless];
+  [window makeMainWindow];
+  [window makeKeyWindow];
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  [NSApp activateIgnoringOtherApps:YES];
+  [NSRunningApplication.currentApplication
+      activateWithOptions:NSApplicationActivateIgnoringOtherApps];
 #pragma clang diagnostic pop
-  applyCursorForGeneration(generation, icon);
+  uint64_t generation = activeGeneration;
+  applyCursorForGeneration(generation, activeIcon);
 
   // Activation is committed by AppKit at the end of this main-loop turn.
   // Reapply only if this exact lease still owns presentation by then.
   dispatch_async(dispatch_get_main_queue(), ^{
-    applyCursorForGeneration(generation, icon);
+    applyCursorForGeneration(generation, activeIcon);
   });
-  return 1;
 }
 
 int screenwide_cursor_session_update(uint64_t generation, uint8_t icon) {
   if (!NSThread.isMainThread || activeGeneration != generation ||
       cursorForIcon(icon) == nil)
     return 0;
+  activeIcon = icon;
   applyCursorForGeneration(generation, icon);
   return 1;
 }
@@ -67,6 +84,7 @@ int screenwide_cursor_session_transfer(uint64_t from, uint64_t to,
       cursorForIcon(icon) == nil)
     return 0;
   activeGeneration = to;
+  activeIcon = icon;
   applyCursorForGeneration(to, icon);
   return 1;
 }

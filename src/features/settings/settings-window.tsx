@@ -174,7 +174,7 @@ export function SettingsWindow() {
         border={false}
         center={
           <PillGroup
-            ariaLabel="Settings section"
+            aria-label="Settings section"
             display="icon-label"
             items={[
               { icon: <Settings size={15} />, id: "general", label: "General" },
