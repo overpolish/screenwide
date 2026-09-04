@@ -5,7 +5,7 @@ use super::*;
 
 const DOCK: PhysicalSize<u32> = PhysicalSize {
   width: 198,
-  height: 44,
+  height: 60,
 };
 const WORK_AREA: PhysicalSize<u32> = PhysicalSize {
   width: 1440,
@@ -27,7 +27,7 @@ fn scales_the_default_gap_with_the_monitor() {
   };
   let dock = PhysicalSize {
     width: 432,
-    height: 88,
+    height: 120,
   };
   let (x, y) = recording_dock_local_position(work_area, dock, 2.0, None);
   assert_eq!(x, (2880 - 432) / 2);
@@ -50,7 +50,7 @@ fn keeps_a_saved_offset_the_same_visual_distance_on_a_retina_monitor() {
   };
   let dock = PhysicalSize {
     width: 432,
-    height: 88,
+    height: 120,
   };
   let (x, y) = recording_dock_local_position(work_area, dock, 2.0, offset);
   assert_eq!((x, y), (400, 120));
@@ -67,7 +67,7 @@ fn clamps_a_saved_offset_onto_a_smaller_monitor() {
     height: 700,
   };
   let (x, y) = recording_dock_local_position(work_area, DOCK, 1.0, offset);
-  assert_eq!((x, y), (1280 - 198, 700 - 44));
+  assert_eq!((x, y), (1280 - 198, 700 - 60));
 }
 
 #[test]

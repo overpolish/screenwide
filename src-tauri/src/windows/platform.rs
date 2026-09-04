@@ -22,7 +22,7 @@ use objc2_app_kit::NSWindowOrderingMode;
 #[cfg(target_os = "macos")]
 use tauri_nspanel::{
   tauri_panel, CollectionBehavior, ManagerExt as PanelManagerExt, PanelHandle, PanelLevel,
-  StyleMask, TrackingAreaOptions, WebviewWindowExt,
+  StyleMask, WebviewWindowExt,
 };
 
 #[cfg(target_os = "macos")]
@@ -40,16 +40,6 @@ tauri_panel! {
       is_floating_panel: true,
       works_when_modal: true
     }
-    with: {
-      tracking_area: {
-        options: TrackingAreaOptions::new()
-          .active_always()
-          .mouse_entered_and_exited()
-          .mouse_moved()
-          .cursor_update(),
-        auto_resize: true
-      }
-    }
   })
 
   // The dock is buttons only: it never needs the keyboard, so it refuses key
@@ -64,18 +54,96 @@ tauri_panel! {
       is_floating_panel: true,
       works_when_modal: true
     }
-    with: {
-      tracking_area: {
-        options: TrackingAreaOptions::new()
-          .active_always()
-          .mouse_entered_and_exited()
-          .mouse_moved()
-          .cursor_update(),
-        auto_resize: true
-      }
-    }
   })
 
+  panel_event!(InactiveWebviewHoverHandler {})
+}
+
+/// WebKit suppresses page hover whenever its macOS window is not key, even
+/// though AppKit continues tracking the pointer. A dedicated tracking owner
+/// sends window-local positions to the page bridge without activating the
+/// window, matching native AppKit control hover without taking keyboard focus.
+#[cfg(target_os = "macos")]
+fn enable_inactive_webview_hover(window: &WebviewWindow) -> tauri::Result<()> {
+  let content_view = window.ns_view()? as usize;
+  let native_window = window.ns_window()? as usize;
+  let bridge_window = window.clone();
+  window.with_webview(move |_webview| unsafe {
+    use objc2::{runtime::AnyObject, AnyThread};
+    use objc2_app_kit::{NSTrackingArea, NSTrackingAreaOptions, NSView, NSWindow};
+
+    unsafe extern "C" {
+      fn objc_getAssociatedObject(
+        object: *const AnyObject,
+        key: *const std::ffi::c_void,
+      ) -> *mut AnyObject;
+      fn objc_setAssociatedObject(
+        object: *const AnyObject,
+        key: *const std::ffi::c_void,
+        value: *const AnyObject,
+        policy: usize,
+      );
+    }
+
+    static HOVER_HANDLER_KEY: u8 = 0;
+    const OBJC_ASSOCIATION_RETAIN_NONATOMIC: usize = 1;
+
+    let content_view: &NSView = &*(content_view as *const NSView);
+    let association_key = (&raw const HOVER_HANDLER_KEY).cast();
+    if !objc_getAssociatedObject(
+      content_view as *const NSView as *const AnyObject,
+      association_key,
+    )
+    .is_null()
+    {
+      return;
+    }
+
+    let native_window: &NSWindow = &*(native_window as *const NSWindow);
+    native_window.setAcceptsMouseMovedEvents(true);
+
+    let handler = InactiveWebviewHoverHandler::new();
+    let entered_window = bridge_window.clone();
+    handler.on_mouse_entered(move |event| {
+      let location = event.locationInWindow();
+      let _ = entered_window.eval(format!(
+        "globalThis.__SCREENWIDE_INACTIVE_HOVER__?.move({:.3},{:.3})",
+        location.x, location.y
+      ));
+    });
+    let exited_window = bridge_window.clone();
+    handler.on_mouse_exited(move |_event| {
+      let _ = exited_window.eval("globalThis.__SCREENWIDE_INACTIVE_HOVER__?.clear()");
+    });
+    let moved_window = bridge_window.clone();
+    handler.on_mouse_moved(move |event| {
+      let location = event.locationInWindow();
+      let _ = moved_window.eval(format!(
+        "globalThis.__SCREENWIDE_INACTIVE_HOVER__?.move({:.3},{:.3})",
+        location.x, location.y
+      ));
+    });
+
+    let options = NSTrackingAreaOptions::MouseEnteredAndExited
+      | NSTrackingAreaOptions::MouseMoved
+      | NSTrackingAreaOptions::CursorUpdate
+      | NSTrackingAreaOptions::ActiveAlways
+      | NSTrackingAreaOptions::InVisibleRect;
+    let tracking_area = NSTrackingArea::initWithRect_options_owner_userInfo(
+      NSTrackingArea::alloc(),
+      content_view.bounds(),
+      options,
+      Some(&handler),
+      None,
+    );
+    content_view.addTrackingArea(&tracking_area);
+    objc_setAssociatedObject(
+      content_view as *const NSView as *const AnyObject,
+      association_key,
+      (&*handler as *const InactiveWebviewHoverHandler).cast(),
+      OBJC_ASSOCIATION_RETAIN_NONATOMIC,
+    );
+  })
 }
 
 #[cfg(target_os = "macos")]
@@ -100,6 +168,7 @@ fn configure_panel<T: tauri_nspanel::FromWindow<tauri::Wry> + 'static>(
   panel.set_hides_on_deactivate(false);
   panel.set_works_when_modal(true);
   panel.set_accepts_mouse_moved_events(true);
+  enable_inactive_webview_hover(window)?;
   panel.hide();
 
   Ok(())
@@ -266,6 +335,7 @@ pub fn restore_nonactivating_overlay(window: &WebviewWindow) -> tauri::Result<()
 
 #[cfg(target_os = "macos")]
 pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
+  let _ = window.eval("globalThis.__SCREENWIDE_INACTIVE_HOVER__?.clear()");
   window.set_ignore_cursor_events(true)?;
   let Ok(panel) = registered_panel(window) else {
     return window.hide();
@@ -373,8 +443,8 @@ fn disable_show_transitions(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 #[cfg(target_os = "macos")]
-pub fn prepare_to_show(_window: &WebviewWindow) -> tauri::Result<()> {
-  Ok(())
+pub fn prepare_to_show(window: &WebviewWindow) -> tauri::Result<()> {
+  enable_inactive_webview_hover(window)
 }
 
 #[cfg(target_os = "windows")]

@@ -43,7 +43,7 @@ const meta: Meta<typeof ContentRotate> = {
     controls: { exclude: ["className", "children"] },
     layout: "centered",
   },
-  title: "Legacy/Word Rotate",
+  title: "Primitives/Content Rotate",
 };
 
 export default meta;

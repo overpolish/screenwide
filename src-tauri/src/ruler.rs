@@ -87,10 +87,14 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   }
 
   dismiss(app);
-  #[cfg(target_os = "macos")]
-  crate::osc::cursor::macos::acquire_ruler(app)?;
   capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::Ruler));
   let generation = app.state::<RulerState>().begin();
+  crate::glide::suspend_for_capture(app);
+  #[cfg(target_os = "macos")]
+  if let Err(error) = crate::osc::cursor::macos::acquire_ruler(app) {
+    dismiss(app);
+    return Err(error);
+  }
   let result = start_native(app, generation).await;
   if result.is_err() || !is_active(app) {
     dismiss(app);

@@ -70,6 +70,13 @@ pub fn dismiss_all(app: &AppHandle) {
   dismiss_except(app, None);
 }
 
+/// Whether a frozen-desktop tool currently owns input. Glide's global input
+/// monitors remain installed for the life of the app, so they must consult
+/// this shared boundary before starting any gesture of their own.
+pub fn blocks_glide(app: &AppHandle) -> bool {
+  crate::ruler::is_active(app) || crate::text_recognition::is_active(app)
+}
+
 pub fn emit_lifecycle(app: &AppHandle, active: bool) {
   let event = if active {
     "capture-overlay://started"

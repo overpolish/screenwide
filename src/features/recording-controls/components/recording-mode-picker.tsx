@@ -23,10 +23,14 @@ export function RecordingModePicker({
   mode: RecordingMode;
   onChange: (mode: RecordingMode) => void;
 }) {
+  const buttonClassName = "size-full";
+  const fieldClassName = "size-[70px]";
+  const iconClassName = "size-10 [&>svg]:size-full!";
+
   return (
     <RadioGroup
       aria-label="Recording type"
-      className="min-w-0 grow self-stretch"
+      className="gap-tight min-w-0 grow items-start justify-center self-stretch"
       isDisabled={isDisabled}
       onChange={(value) => {
         onChange(value as RecordingMode);
@@ -36,32 +40,42 @@ export function RecordingModePicker({
     >
       <IconRadio
         aria-label="Screen"
+        buttonClassName={buttonClassName}
+        className={fieldClassName}
         icon={<Monitor />}
-        subtext="Screen"
+        iconClassName={iconClassName}
         value="screen"
       />
       <IconRadio
         aria-label="Region"
+        buttonClassName={buttonClassName}
+        className={fieldClassName}
         icon={<SquareDashed />}
-        subtext="Region"
+        iconClassName={iconClassName}
         value="region"
       />
       <IconRadio
         aria-label="Window"
+        buttonClassName={buttonClassName}
+        className={fieldClassName}
         icon={<AppWindowMac />}
-        subtext="Window"
+        iconClassName={iconClassName}
         value="window"
       />
       <IconRadio
         aria-label="Camera only"
+        buttonClassName={buttonClassName}
+        className={fieldClassName}
         icon={<Camera />}
-        subtext="Camera"
+        iconClassName={iconClassName}
         value="camera"
       />
       <IconRadio
         aria-label="Audio only"
+        buttonClassName={buttonClassName}
+        className={fieldClassName}
         icon={<AudioLines />}
-        subtext="Audio"
+        iconClassName={iconClassName}
         value="audio"
       />
     </RadioGroup>

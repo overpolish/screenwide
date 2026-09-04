@@ -40,7 +40,7 @@ const meta = {
   component: RecordingBar,
   decorators: [
     (Story, context) => (
-      <FeatureStoryStage height={120} viewMode={context.viewMode} width={672}>
+      <FeatureStoryStage height={120} viewMode={context.viewMode} width={680}>
         <Story />
       </FeatureStoryStage>
     ),

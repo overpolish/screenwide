@@ -11,7 +11,6 @@ import { IconRadio } from "./icon-radio";
 const meta = {
   args: {
     icon: <Rabbit />,
-    subtext: "Fast",
     value: "fast",
   },
   component: IconRadio,
@@ -27,9 +26,14 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
-    <RadioGroup aria-label="Speed" defaultValue="fast" orientation="horizontal">
-      <IconRadio icon={<Rabbit />} subtext="Fast" value="fast" />
-      <IconRadio icon={<Snail />} subtext="Slow" value="slow" />
+    <RadioGroup
+      aria-label="Speed"
+      className="gap-tight"
+      defaultValue="fast"
+      orientation="horizontal"
+    >
+      <IconRadio aria-label="Fast" icon={<Rabbit />} value="fast" />
+      <IconRadio aria-label="Slow" icon={<Snail />} value="slow" />
     </RadioGroup>
   ),
 };

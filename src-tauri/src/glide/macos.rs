@@ -64,6 +64,10 @@ pub(super) fn apply_settings(settings: &crate::glide::settings::GlideSettings) {
   native_settings::apply(settings);
 }
 
+pub(super) fn suspend_for_capture(app: &AppHandle) {
+  session::cancel_current(app);
+}
+
 pub(super) fn start(app: AppHandle) -> Result<(), String> {
   tween::start();
   multitouch::start(&app);
@@ -242,7 +246,8 @@ fn handle_mouse_down(app: &AppHandle, state: &SharedState, event: &CGEvent) -> C
   let settings = native_settings::snapshot();
   // The double tap and this click are one action under two inputs, so the one
   // setting turns both of them off.
-  if !settings.enabled || !settings.double_tap_center {
+  if crate::capture_overlays::blocks_glide(app) || !settings.enabled || !settings.double_tap_center
+  {
     return CallbackResult::Keep;
   }
   if !native_settings::is_down(settings.mouse_modifier)

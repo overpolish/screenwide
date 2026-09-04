@@ -4,6 +4,8 @@
 import { Channel } from "@tauri-apps/api/core";
 import { type RefObject, useEffect, useRef, useState } from "react";
 
+import { CameraPreviewDimensions } from "../recording-inputs/camera-preview-fit";
+
 import { startRecordingMonitor, stopRecordingMonitor } from "./api";
 
 const SOURCES_EVENT = 0;
@@ -19,6 +21,7 @@ let nextSubscriptionId = Date.now() * 1_000;
 
 export type RecordingMonitorSnapshot = {
   cameraCanvasRef: RefObject<HTMLCanvasElement | null>;
+  cameraFrameSize: CameraPreviewDimensions | null;
   hasCamera: boolean;
   hasCameraFrame: boolean;
   hasMicrophone: boolean;
@@ -30,6 +33,8 @@ export type RecordingMonitorSnapshot = {
 export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
   const cameraCanvasRef = useRef<HTMLCanvasElement>(null);
   const latestCameraFrameRef = useRef<ImageData | null>(null);
+  const [cameraFrameSize, setCameraFrameSize] =
+    useState<CameraPreviewDimensions | null>(null);
   const [hasCamera, setHasCamera] = useState(false);
   const [hasCameraFrame, setHasCameraFrame] = useState(false);
   const [hasMicrophone, setHasMicrophone] = useState(false);
@@ -42,7 +47,6 @@ export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
   useEffect(() => {
     if (!enabled) return;
     let disposed = false;
-    let frameRequest = 0;
     const subscriptionId = ++nextSubscriptionId;
     const channel = new Channel<ArrayBuffer>();
 
@@ -58,7 +62,6 @@ export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
         latestCameraFrameRef.current = null;
         setHasCameraFrame(true);
       }
-      frameRequest = requestAnimationFrame(renderCameraFrame);
     };
 
     channel.onmessage = (payload) => {
@@ -72,6 +75,7 @@ export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
         setHasMicrophone((flags & MICROPHONE_FLAG) !== 0);
         setHasCamera(camera);
         setHasCameraFrame(false);
+        setCameraFrameSize(null);
         latestCameraFrameRef.current = null;
         setMicrophoneDecibels(SILENCE_DECIBELS);
         setSystemAudioDecibels(SILENCE_DECIBELS);
@@ -95,18 +99,22 @@ export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
         const pixels = new Uint8ClampedArray(payload, bytes.byteOffset + 5);
         if (pixels.byteLength === width * height * 4) {
           latestCameraFrameRef.current = new ImageData(pixels, width, height);
+          setCameraFrameSize((current) =>
+            current?.width === width && current.height === height
+              ? current
+              : { height, width },
+          );
+          renderCameraFrame();
         }
       }
     };
 
-    frameRequest = requestAnimationFrame(renderCameraFrame);
     startRecordingMonitor(subscriptionId, channel).catch((error: unknown) => {
       console.error("Could not monitor the active recording", error);
     });
 
     return () => {
       disposed = true;
-      cancelAnimationFrame(frameRequest);
       latestCameraFrameRef.current = null;
       void stopRecordingMonitor(subscriptionId);
     };
@@ -114,6 +122,7 @@ export function useRecordingMonitor(enabled = true): RecordingMonitorSnapshot {
 
   return {
     cameraCanvasRef,
+    cameraFrameSize,
     hasCamera,
     hasCameraFrame,
     hasMicrophone,

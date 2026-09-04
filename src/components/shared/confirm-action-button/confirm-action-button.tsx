@@ -4,6 +4,7 @@
 import { AnimatePresence, motion, MotionProps } from "motion/react";
 import { ReactNode, useEffect, useRef, useState } from "react";
 
+import { cn } from "../../../lib/styling";
 import { IconButton, IconButtonProps } from "../../base/button/icon-button";
 
 const DEFAULT_CONFIRM_TIMEOUT_MS = 2_000;
@@ -14,6 +15,7 @@ const ICON_SWAP_ANIMATION: MotionProps = {
 };
 
 export function ConfirmActionButton({
+  armedClassName,
   armedIcon,
   armedLabel,
   className,
@@ -28,6 +30,7 @@ export function ConfirmActionButton({
   armedLabel: string;
   idleIcon: ReactNode;
   idleLabel: string;
+  armedClassName?: string;
   className?: string;
   isDisabled?: boolean;
   onConfirm?: () => void;
@@ -47,7 +50,7 @@ export function ConfirmActionButton({
   return (
     <IconButton
       aria-label={isArmed ? armedLabel : idleLabel}
-      className={className}
+      className={cn(className, isArmed && armedClassName)}
       isDisabled={isDisabled}
       onPress={() => {
         window.clearTimeout(disarmRef.current);

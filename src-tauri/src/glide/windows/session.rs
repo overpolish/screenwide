@@ -43,7 +43,7 @@ static NEXT_SESSION_ID: AtomicU64 = AtomicU64::new(1);
 static STATE: std::sync::Mutex<Option<Session>> = std::sync::Mutex::new(None);
 
 pub(super) fn begin(app: &AppHandle, input: InputKind) -> bool {
-  if !native_settings::snapshot().enabled {
+  if crate::capture_overlays::blocks_glide(app) || !native_settings::snapshot().enabled {
     return false;
   }
   if active_input().is_some() {

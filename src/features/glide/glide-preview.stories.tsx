@@ -1,13 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef, useState } from "react";
-
 import { FeatureStoryStage } from "../../storybook/feature-story-stage";
 
-import { type GlideAction, GlideDetector } from "./glide-detection";
 import { GlidePreview } from "./glide-preview";
-import { describeRegion, type GlideRegion } from "./glide-regions";
+import { type GlideRegion } from "./glide-regions";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
@@ -51,7 +48,7 @@ const meta = {
       ),
   ],
   parameters: { layout: "fullscreen" },
-  title: "Features/Glide/Preview",
+  title: "Features/Glide Preview",
 } satisfies Meta<typeof GlidePreview>;
 
 export default meta;
@@ -124,99 +121,4 @@ export const MinimizeOverBottomRow: Story = {
 /** The glided app named in the middle of its own destination. */
 export const WithAppIcon: Story = {
   args: { iconSrc: sampleIcon },
-};
-
-function GesturePlayground() {
-  const activeRef = useRef(false);
-  const detectorRef = useRef(new GlideDetector());
-  const lastPointRef = useRef({ x: 0, y: 0 });
-  const restTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
-  const [active, setActive] = useState(false);
-  const [anchor, setAnchor] = useState({ x: 0, y: 0 });
-  const [current, setCurrent] = useState<GlideRegion | null>(null);
-  const [pending, setPending] = useState<GlideAction | null>(null);
-  const [pulse, setPulse] = useState(0);
-
-  // The playground's tick is the visual one: the same rest timer the real
-  // window runs, minus the haptic it has no trackpad to deliver.
-  const scheduleRest = () => {
-    clearTimeout(restTimerRef.current);
-    restTimerRef.current = setTimeout(() => {
-      if (detectorRef.current.settle(performance.now()).becameReady) {
-        setPulse((count) => count + 1);
-      }
-    }, detectorRef.current.restRemaining(performance.now()));
-  };
-
-  return (
-    <div
-      className={`relative h-96 w-[640px] overflow-hidden rounded-xl border border-muted/25 bg-neutral-subtle ${active ? "cursor-none" : "cursor-crosshair"}`}
-      onPointerDown={(event) => {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        clearTimeout(restTimerRef.current);
-        detectorRef.current.reset();
-        setCurrent(null);
-        setPending(null);
-        setAnchor({
-          x: event.nativeEvent.offsetX,
-          y: event.nativeEvent.offsetY,
-        });
-        lastPointRef.current = { x: event.clientX, y: event.clientY };
-        activeRef.current = true;
-        setActive(true);
-      }}
-      onPointerMove={(event) => {
-        if (!activeRef.current) return;
-        const previous = lastPointRef.current;
-        lastPointRef.current = { x: event.clientX, y: event.clientY };
-        const detection = detectorRef.current.update({
-          deltaX: event.clientX - previous.x,
-          deltaY: event.clientY - previous.y,
-          // Shift is the thirds modifier, as it is in the real gesture.
-          thirds: event.shiftKey,
-          timestamp: event.timeStamp,
-        });
-        if (detection.becameReady) setPulse((count) => count + 1);
-        if (detection.phase === "settling") scheduleRest();
-        if (!detection.changed) return;
-        setCurrent(detection.region);
-        setPending(detection.pending);
-      }}
-      onPointerUp={() => {
-        clearTimeout(restTimerRef.current);
-        activeRef.current = false;
-        setActive(false);
-      }}
-    >
-      <div className="pointer-events-none absolute inset-x-0 top-8 text-center text-sm text-muted">
-        Drag sideways then fold up or down, swipe up to fill, down to minimize,
-        hold Shift for thirds - one move per pause
-      </div>
-      {active ? (
-        <div
-          className="pointer-events-none absolute h-8 w-12 -translate-x-1/2 -translate-y-1/2"
-          style={{ left: anchor.x, top: anchor.y }}
-        >
-          <GlidePreview
-            fit={null}
-            iconSrc={null}
-            pending={pending}
-            pulse={pulse}
-            region={current}
-          />
-        </div>
-      ) : null}
-      <div className="pointer-events-none absolute inset-x-0 bottom-8 text-center font-mono text-xs text-muted">
-        {pending ??
-          (current ? describeRegion(current) : "Press and drag anywhere")}
-      </div>
-    </div>
-  );
-}
-
-export const FeelTest: Story = {
-  parameters: { layout: "centered", productionStage: false },
-  render: () => <GesturePlayground />,
 };

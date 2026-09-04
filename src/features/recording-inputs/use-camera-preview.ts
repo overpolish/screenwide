@@ -62,13 +62,13 @@ export const useCameraPreview = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const latestFrameRef = useRef<ArrayBuffer | null>(null);
   const operationsRef = useRef(Promise.resolve());
+  const renderLatestFrameRef = useRef<() => void>(() => undefined);
   const [hasFrame, setHasFrame] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let decodeInFlight = false;
     let disposed = false;
-    let frameRequest = 0;
 
     const renderLatestFrame = () => {
       const canvas = canvasRef.current;
@@ -83,15 +83,15 @@ export const useCameraPreview = ({
           .catch(() => undefined)
           .finally(() => {
             decodeInFlight = false;
+            if (!disposed && latestFrameRef.current) renderLatestFrame();
           });
       }
-      frameRequest = requestAnimationFrame(renderLatestFrame);
     };
 
-    frameRequest = requestAnimationFrame(renderLatestFrame);
+    renderLatestFrameRef.current = renderLatestFrame;
     return () => {
       disposed = true;
-      cancelAnimationFrame(frameRequest);
+      renderLatestFrameRef.current = () => undefined;
     };
   }, []);
 
@@ -109,7 +109,10 @@ export const useCameraPreview = ({
 
         const channel = new Channel<ArrayBuffer>();
         channel.onmessage = (frame) => {
-          if (!cancelled) latestFrameRef.current = frame;
+          if (!cancelled) {
+            latestFrameRef.current = frame;
+            renderLatestFrameRef.current();
+          }
         };
         await startCameraPreview(
           deviceId,

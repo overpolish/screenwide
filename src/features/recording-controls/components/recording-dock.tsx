@@ -1,34 +1,23 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Camera,
-  Check,
-  CirclePause,
-  CirclePlay,
-  CircleStop,
-  GripVertical,
-  LoaderCircle,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Camera, Check, Pause, Play, Square, Trash2, X } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 
-import { Button } from "../../../components/base/button/button";
 import {
   IconButton,
   IconToggleButton,
 } from "../../../components/base/button/icon-button";
+import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { ContentRotate } from "../../../components/base/content-rotate/content-rotate";
 import { Overlay } from "../../../components/base/overlay/overlay";
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { cn } from "../../../lib/styling";
 import { AudioMeter } from "../../audio-inputs/components/audio-meter";
+import { cameraPreviewFitClassName } from "../../recording-inputs/camera-preview-fit";
 import { formatElapsedTime } from "../elapsed-time";
 import { RecordingStatus } from "../types";
 import { RecordingMonitorSnapshot } from "../use-recording-monitor";
-
-const ICON_SIZE = 18;
 
 /**
  * Rotates each digit on its own, so a tick only animates what actually
@@ -60,11 +49,10 @@ type DiscardButtonProps = {
 function DiscardButton({ isDisabled, onDiscard }: DiscardButtonProps) {
   return (
     <ConfirmActionButton
-      armedIcon={
-        <Check className="text-error" size={ICON_SIZE} strokeWidth={3} />
-      }
+      armedClassName="bg-error-surface text-error data-[hovered]:bg-error-surface-hover data-[pressed]:bg-error-surface-pressed"
+      armedIcon={<Check />}
       armedLabel="Confirm discarding"
-      idleIcon={<Trash2 size={ICON_SIZE} />}
+      idleIcon={<Trash2 />}
       idleLabel="Discard recording"
       isDisabled={isDisabled}
       onConfirm={onDiscard}
@@ -128,7 +116,8 @@ export function RecordingDock({
 
   return (
     <main
-      className="window-surface relative flex h-full min-h-11 w-max items-center overflow-hidden rounded-[10px] pr-1 text-content-fg"
+      className="window-surface p-section gap-section relative flex h-full w-max cursor-grab items-center overflow-hidden rounded-window text-content-fg"
+      data-tauri-drag-region="deep"
       onPointerUpCapture={onPointerUp}
       ref={dockRef}
     >
@@ -136,34 +125,21 @@ export function RecordingDock({
         aria-label={
           status === "starting" ? "Starting recording" : "Finishing recording"
         }
-        className={`z-60 rounded-[10px] bg-content/70 text-content-fg ${countdownSeconds > 0 ? "" : "gap-2 text-xs font-semibold"}`}
+        className="z-60 rounded-window text-content-fg"
         contained
         isOpen={isBusy}
       >
         {status === "starting" && countdownSeconds > 0 ? (
-          <>
-            <ContentRotate
-              className="absolute inset-0 flex items-center justify-center text-2xl font-semibold tabular-nums"
-              contentKey={String(countdownSeconds)}
-            >
-              {countdownSeconds}
-            </ContentRotate>
-            <Button
-              aria-label="Cancel recording countdown"
-              className="absolute right-1 h-9 w-9"
-              onPress={onDiscard}
-              size="compact"
-              variant="ghost"
-            >
-              <X size={ICON_SIZE} />
-            </Button>
-          </>
+          <ContentRotate
+            className="flex h-full items-center justify-center font-mono text-xl font-bold tabular-nums"
+            containerClassName="absolute inset-0"
+            contentKey={String(countdownSeconds)}
+          >
+            {countdownSeconds}
+          </ContentRotate>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center gap-2 text-xs font-semibold">
-            <LoaderCircle
-              className="animate-spin text-muted"
-              size={ICON_SIZE}
-            />
+          <div className="gap-control-inset flex items-center justify-center text-sm">
+            <CircularProgress isIndeterminate size="compact" />
             {/*
              * Fixed-width label, so the centred row is a whole number of pixels
              * wide and the spinner lands on a whole pixel. WebKit re-rasterises
@@ -178,56 +154,48 @@ export function RecordingDock({
             </span>
           </div>
         )}
-        {countdownSeconds === 0 ? (
-          <Button
-            aria-label={
-              status === "starting"
+        <IconButton
+          aria-label={
+            status === "starting" && countdownSeconds > 0
+              ? "Cancel recording countdown"
+              : status === "starting"
                 ? "Cancel starting recording"
                 : "Cancel finishing recording"
-            }
-            className="absolute right-1 h-9 w-9"
-            onPress={onDiscard}
-            size="compact"
-            variant="ghost"
-          >
-            <X size={ICON_SIZE} />
-          </Button>
-        ) : null}
-      </Overlay>
-      <div
-        className="flex h-full shrink-0 cursor-grab items-center pl-0.5 text-muted"
-        data-tauri-drag-region
-      >
-        <GripVertical className="pointer-events-none" size={20} />
-      </div>
-      {hasConfidenceChecks && (
-        <div
-          className="flex h-full shrink-0 cursor-grab items-center gap-1 py-2 pr-1"
-          data-tauri-drag-region
+          }
+          className="right-section absolute top-1/2 -translate-y-1/2"
+          onPress={onDiscard}
         >
+          <X />
+        </IconButton>
+      </Overlay>
+      {hasConfidenceChecks && (
+        <div className="gap-control flex h-full shrink-0 items-center">
           {monitor.hasCamera && (
-            <div className="relative flex h-7 w-10 items-center justify-center overflow-hidden rounded bg-muted/12">
+            <div className="shadow-preview relative flex aspect-video w-12 items-center justify-center overflow-hidden">
               <canvas
                 aria-label="Camera confidence preview"
                 className={cn(
-                  "pointer-events-none h-full w-full object-cover transition-opacity",
+                  "pointer-events-none block shrink-0 transition-opacity",
+                  monitor.cameraFrameSize
+                    ? cameraPreviewFitClassName(monitor.cameraFrameSize)
+                    : "h-full w-auto max-w-full",
                   (!monitor.hasCameraFrame || confidenceDisabled) &&
-                    "opacity-35",
+                    "opacity-50",
                 )}
                 ref={monitor.cameraCanvasRef}
               />
               {!monitor.hasCameraFrame && (
-                <Camera className="absolute text-muted" size={12} />
+                <Camera className="absolute size-icon-compact text-muted" />
               )}
             </div>
           )}
           {(monitor.hasSystemAudio || monitor.hasMicrophone) && (
-            <div className="flex gap-0.5">
+            <div className="gap-tight flex">
               {monitor.hasSystemAudio && (
                 <AudioMeter
                   decibels={monitor.systemAudioDecibels}
                   disabled={confidenceDisabled}
-                  height={28}
+                  height={24}
                   hidePeakTick
                   hideTicks
                   orientation="vertical"
@@ -238,7 +206,7 @@ export function RecordingDock({
                 <AudioMeter
                   decibels={monitor.microphoneDecibels}
                   disabled={confidenceDisabled}
-                  height={28}
+                  height={24}
                   hidePeakTick
                   hideTicks
                   orientation="vertical"
@@ -250,54 +218,41 @@ export function RecordingDock({
         </div>
       )}
 
-      <div
-        className="flex w-[64px] cursor-grab justify-center text-xs font-semibold tabular-nums"
-        data-tauri-drag-region
-      >
+      <div className="flex w-16 justify-center font-mono text-sm tabular-nums">
         <div className={cn("flex transition-colors", isPaused && "text-muted")}>
           <RotatingDigits value={hours} />:<RotatingDigits value={minutes} />:
           <RotatingDigits value={seconds} />
         </div>
       </div>
 
-      <IconToggleButton
-        aria-label={isPaused ? "Resume recording" : "Pause recording"}
-        isDisabled={isBusy}
-        isSelected={isPaused}
-        off={<CirclePause size={ICON_SIZE} />}
-        onChange={(selected) => {
-          onPauseChange?.(selected);
-        }}
-      >
-        <CirclePlay
-          className={cn(
-            "transition-colors",
-            isPaused && "animate-pulse text-warning",
-          )}
-          size={ICON_SIZE}
-        />
-      </IconToggleButton>
+      <div className="gap-control flex items-center">
+        <IconToggleButton
+          aria-label={isPaused ? "Resume recording" : "Pause recording"}
+          isDisabled={isBusy}
+          isSelected={isPaused}
+          off={<Pause />}
+          onChange={(selected) => {
+            onPauseChange?.(selected);
+          }}
+        >
+          <Play />
+        </IconToggleButton>
 
-      <IconButton
-        aria-label="Stop recording"
-        className="cursor-default"
-        isDisabled={isBusy}
-        onPress={onStop}
-      >
-        <CircleStop
-          className={cn(
-            "transition-colors",
-            isRecording && "animate-pulse text-error",
-          )}
-          size={ICON_SIZE}
-        />
-      </IconButton>
+        <IconButton
+          aria-label="Stop recording"
+          color="primary"
+          isDisabled={isBusy}
+          onPress={onStop}
+        >
+          <Square />
+        </IconButton>
 
-      <DiscardButton
-        isDisabled={isBusy}
-        key={sessionKey}
-        onDiscard={onDiscard}
-      />
+        <DiscardButton
+          isDisabled={isBusy}
+          key={sessionKey}
+          onDiscard={onDiscard}
+        />
+      </div>
     </main>
   );
 }

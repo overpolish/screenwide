@@ -125,7 +125,7 @@ pub struct CameraPreviewState(Mutex<CameraPreviewManager>);
 
 const PREVIEW_MAX_WIDTH: u32 = 384;
 const PREVIEW_MAX_HEIGHT: u32 = 240;
-const PREVIEW_INTERVAL: Duration = Duration::from_millis(33);
+const PREVIEW_INTERVAL: Duration = Duration::from_millis(16);
 
 fn preview_dimensions(width: u32, height: u32) -> (u32, u32) {
   let scale = (f64::from(PREVIEW_MAX_WIDTH) / f64::from(width.max(1)))

@@ -10,8 +10,8 @@ use std::{
 
 use crate::recording::monitor::RecordingMonitor;
 
-const MAX_WIDTH: u32 = 48;
-const MAX_HEIGHT: u32 = 30;
+const MAX_WIDTH: u32 = 96;
+const MAX_HEIGHT: u32 = 54;
 
 pub(super) struct CameraFrame {
   pub(super) flipped: bool,

@@ -6,42 +6,41 @@ import {
   RadioField as AriaRadioField,
   RadioFieldProps as AriaRadioFieldProps,
 } from "react-aria-components";
-import { VariantProps } from "tailwind-variants";
 
-import { elementFocusVisible, focusStyles } from "../../../lib/styling";
-import { tv } from "../../../lib/variants";
+import { iconButtonVariants } from "../../../components/base/button/icon-button-variants";
+import { cn } from "../../../lib/styling";
 
-const radioVariants = tv({
-  slots: {
-    base: [
-      "group p-control relative grid h-full grow grid-rows-[minmax(0,1fr)_auto] justify-items-center rounded-xl text-muted transition-colors select-none",
-      "data-[hovered]:bg-neutral",
-      "data-[pressed]:bg-neutral-hover",
-      "data-[selected]:bg-neutral data-[selected]:text-content-fg",
-      "data-[selected]:data-[hovered]:bg-neutral-hover",
-      "data-[selected]:data-[pressed]:bg-neutral-pressed",
-      focusStyles,
-      elementFocusVisible,
-    ],
-    icon: "flex h-full min-h-0 items-center justify-center [&_svg]:size-icon-prominent",
-    subtext: "text-xs font-semibold",
-  },
-});
+type IconRadioProps = AriaRadioFieldProps & {
+  icon: React.ReactNode;
+  buttonClassName?: string;
+  iconClassName?: string;
+};
 
-type IconRadioProps = AriaRadioFieldProps &
-  VariantProps<typeof radioVariants> & {
-    icon: React.ReactNode;
-    subtext: string;
-  };
-
-export const IconRadio = ({ icon, subtext, ...props }: IconRadioProps) => {
-  const { base, icon: _icon, subtext: _subtext } = radioVariants();
-
+export const IconRadio = ({
+  buttonClassName,
+  icon,
+  iconClassName,
+  ...props
+}: IconRadioProps) => {
   return (
-    <AriaRadioField {...props} className="flex grow self-stretch">
-      <AriaRadioButton className={base()}>
-        <div className={_icon()}>{icon}</div>
-        <div className={_subtext()}>{subtext}</div>
+    <AriaRadioField {...props}>
+      <AriaRadioButton
+        className={({ isDisabled }) =>
+          iconButtonVariants({
+            className: buttonClassName,
+            isDisabled,
+            isToggle: true,
+          })
+        }
+      >
+        <span
+          className={cn(
+            "flex shrink-0 items-center justify-center",
+            iconClassName,
+          )}
+        >
+          {icon}
+        </span>
       </AriaRadioButton>
     </AriaRadioField>
   );

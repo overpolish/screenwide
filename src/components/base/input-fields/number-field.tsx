@@ -31,7 +31,7 @@ const numberFieldVariants = tv({
       "hover:bg-neutral-hover active:bg-neutral-pressed",
       "group-data-[disabled]:bg-neutral-subtle group-data-[disabled]:text-neutral-disabled-fg",
       focusStyles,
-      "has-[input[data-focus-visible]]:ring-1 has-[input[data-focus-visible]]:ring-offset-1",
+      "has-[input[data-focus-visible]:focus-visible]:ring-1 has-[input[data-focus-visible]:focus-visible]:ring-offset-1",
     ],
     input: [
       "w-full min-w-0 bg-transparent text-right text-content-fg tabular-nums outline-none selection:bg-transparent focus:selection:bg-accent",

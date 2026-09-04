@@ -6,9 +6,11 @@ import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
 import "./index.css";
+import { installInactiveWindowHoverBridge } from "./lib/inactive-window-hover";
 import { synchronizeSystemTheme } from "./lib/theme";
 
 synchronizeSystemTheme();
+installInactiveWindowHoverBridge();
 
 // Screenwide provides its own right-click interactions where needed. Never
 // expose the browser context menu from an app webview.

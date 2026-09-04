@@ -5,11 +5,12 @@
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 
-// The recording bar shows a camera confidence thumbnail no larger than 48 × 30.
-// Doing that on the CPU meant a full-frame format conversion plus a ColorSync
-// colour match per frame, so the scale runs on the GPU instead: the camera
-// pixel buffer is wrapped as Metal textures and a compute pass samples it
-// straight into an RGBA readback buffer.
+// The recording bar shows a 48 × 27 CSS-pixel camera confidence thumbnail.
+// A 96 × 54 backing image keeps it crisp on Retina displays. Doing that on the
+// CPU meant a full-frame format conversion plus a ColorSync colour match per
+// frame, so the scale runs on the GPU instead: the camera pixel buffer is
+// wrapped as Metal textures and a compute pass samples it straight into an
+// RGBA readback buffer.
 static NSString *const shader_source = @R"METAL(
 #include <metal_stdlib>
 using namespace metal;
@@ -137,10 +138,10 @@ void *screenwide_confidence_scaler_create(char *error_text,
                                                          @"scale_biplanar"]
                                       error:&error];
     scaler->queue = [scaler->device newCommandQueue];
-    // 48 × 30 RGBA is the largest thumbnail the recording bar asks for, so the
+    // 96 × 54 RGBA is the largest thumbnail the recording bar asks for, so the
     // readback buffer is allocated once and only grows if that ever changes.
     scaler->readback =
-        [scaler->device newBufferWithLength:48 * 30 * 4
+        [scaler->device newBufferWithLength:96 * 54 * 4
                                     options:MTLResourceStorageModeShared];
     CVReturn cache = CVMetalTextureCacheCreate(
         kCFAllocatorDefault, NULL, scaler->device, NULL, &scaler->texture_cache);

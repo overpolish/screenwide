@@ -28,7 +28,7 @@ const meta = {
   parameters: {
     layout: "centered",
   },
-  title: "Legacy/Recording Dock",
+  title: "Features/Recording Dock",
 } satisfies Meta<typeof RecordingDock>;
 
 export default meta;
@@ -42,6 +42,10 @@ export const Starting: Story = {
   args: { status: "starting" },
 };
 
+export const Countdown: Story = {
+  args: { countdownSeconds: 3, status: "starting" },
+};
+
 export const Recording: Story = {
   args: { elapsedMs: 42_000, status: "recording" },
 };
@@ -51,6 +55,7 @@ export const RecordingWithConfidenceChecks: Story = {
     elapsedMs: 42_000,
     monitor: {
       cameraCanvasRef: { current: null },
+      cameraFrameSize: { height: 54, width: 96 },
       hasCamera: true,
       hasCameraFrame: false,
       hasMicrophone: true,

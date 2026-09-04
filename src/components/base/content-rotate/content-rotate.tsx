@@ -26,15 +26,15 @@ export const ContentRotate = ({
   }, []);
 
   return (
-    <div className={cn("overflow-hidden", containerClassName)}>
-      <AnimatePresence mode="wait">
+    <div className={cn("relative overflow-hidden", containerClassName)}>
+      <AnimatePresence mode="popLayout">
         <motion.div
           animate={{ opacity: 1, y: 0 }}
           className={className}
           exit={{ opacity: 0, y: 25 }}
           initial={isFirstMountRef.current ? false : { opacity: 0, y: -25 }}
           key={contentKey}
-          transition={{ duration: 0.175, ease: "easeOut" }}
+          transition={{ duration: 0.12, ease: "easeOut" }}
           {...props}
         >
           {children}

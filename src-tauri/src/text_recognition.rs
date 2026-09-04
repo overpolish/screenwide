@@ -129,19 +129,22 @@ pub fn dismiss(app: &AppHandle) {
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
   dismiss(app);
+  capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::TextRecognition));
+  let generation = app.state::<TextRecognitionState>().begin();
+  crate::glide::suspend_for_capture(app);
   #[cfg(target_os = "macos")]
-  crate::osc::cursor::macos::acquire_text_recognition(app)?;
-  let result = start_session(app).await;
+  if let Err(error) = crate::osc::cursor::macos::acquire_text_recognition(app) {
+    dismiss(app);
+    return Err(error);
+  }
+  let result = start_session(app, generation).await;
   if result.is_err() || !is_active(app) {
     dismiss(app);
   }
   result
 }
 
-async fn start_session(app: &AppHandle) -> Result<(), String> {
-  capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::TextRecognition));
-  let generation = app.state::<TextRecognitionState>().begin();
-
+async fn start_session(app: &AppHandle, generation: u64) -> Result<(), String> {
   let monitors = capture_overlays::monitor_layout(app)?;
   let mut snapshots = Vec::with_capacity(monitors.len());
   for (monitor_id, scale, _) in &monitors {

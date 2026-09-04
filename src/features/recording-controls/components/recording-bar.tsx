@@ -197,7 +197,7 @@ export function RecordingBar({
 
   return (
     <main
-      className="window-surface p-section flex h-full min-h-[120px] w-full min-w-[672px] flex-col overflow-hidden text-content-fg"
+      className="window-surface px-section pt-section pb-control flex h-full min-h-[120px] w-full min-w-[680px] flex-col overflow-hidden text-content-fg"
       data-tauri-drag-region="deep"
       onKeyDownCapture={(event) => {
         if (
@@ -274,7 +274,7 @@ export function RecordingBar({
         <div className="gap-tight flex min-w-[120px] flex-col">
           <ButtonGroup
             aria-label="Recording inputs"
-            className="gap-tight px-control justify-between"
+            className="gap-tight justify-between"
           >
             <InputToggle
               hasWarning={hasSystemAudioWarning}

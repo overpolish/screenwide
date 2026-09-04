@@ -20,7 +20,7 @@ use super::{geometry::monitor_with_most_overlap, platform, WindowLabel};
 const RECORDING_DOCK_POSITION_FILE: &str = "recording-dock-position.json";
 const RECORDING_DOCK_MIN_WIDTH: f64 = 198.0;
 const RECORDING_DOCK_MAX_WIDTH: f64 = 320.0;
-const RECORDING_DOCK_HEIGHT: f64 = 44.0;
+const RECORDING_DOCK_HEIGHT: f64 = 60.0;
 const RECORDING_DOCK_TOP_GAP: f64 = 8.0;
 
 #[cfg(target_os = "windows")]

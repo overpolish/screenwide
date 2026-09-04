@@ -277,6 +277,10 @@ pub(super) fn end_session(app: &AppHandle) {
   session::end(app, true);
 }
 
+pub(super) fn suspend_for_capture(app: &AppHandle) {
+  session::end(app, true);
+}
+
 pub(super) fn supports_control(control: crate::glide::settings::GlideControl) -> bool {
   control::NativeControl::from_control(control).is_some()
 }

@@ -65,6 +65,13 @@ pub fn initialize(app: &AppHandle) -> Result<(), String> {
   platform::start(app.clone())
 }
 
+/// Cancels a gesture that was already in flight when a capture overlay took
+/// ownership of the desktop. The input monitors stay installed, but their
+/// platform session entry points reject further gestures while it is active.
+pub(crate) fn suspend_for_capture(app: &AppHandle) {
+  platform::suspend_for_capture(app);
+}
+
 #[cfg(target_os = "macos")]
 fn begin_logical(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Result<(), String> {
   let (result_tx, result_rx) = std::sync::mpsc::sync_channel(1);

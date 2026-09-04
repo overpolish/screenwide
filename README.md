@@ -90,6 +90,11 @@ Glide is enabled by default on macOS and Windows. Open **Settings → Glide** to
 </div>
 
 <div>
+	<h3>Custom Glide Grids</h3>
+	Create custom Glide grid layouts beyond 2×2 and 3×3.
+</div>
+
+<div>
 	<h3>Shader Filters</h3>
 	GLSL shader support for filters (CRT)/custom backgrounds.
 </div>

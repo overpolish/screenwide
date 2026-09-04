@@ -56,7 +56,7 @@ const selectVariants = tv({
     showFocus: {
       true: {
         field:
-          "has-[[data-select-trigger][data-focus-visible]]:ring-1 has-[[data-select-trigger][data-focus-visible]]:ring-offset-1",
+          "has-[[data-select-trigger][data-focus-visible]:focus-visible]:ring-1 has-[[data-select-trigger][data-focus-visible]:focus-visible]:ring-offset-1",
       },
     },
     size: {

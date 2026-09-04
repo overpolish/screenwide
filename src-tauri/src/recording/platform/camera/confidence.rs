@@ -11,8 +11,8 @@ use cidre::{arc, cv};
 
 use crate::recording::monitor::RecordingMonitor;
 
-const MAX_WIDTH: usize = 48;
-const MAX_HEIGHT: usize = 30;
+const MAX_WIDTH: usize = 96;
+const MAX_HEIGHT: usize = 54;
 
 pub(super) struct CameraFrame(pub(super) arc::R<cv::PixelBuf>);
 
@@ -210,7 +210,7 @@ mod tests {
     }
 
     let (width, height) = thumbnail_size(&buffer).expect("a thumbnail size");
-    assert_eq!((width, height), (40, 30));
+    assert_eq!((width, height), (72, 54));
     let mut pixels = vec![0_u8; usize::from(width) * usize::from(height) * 4];
     assert!(scaler.thumbnail(&buffer, width, height, &mut pixels));
     for pixel in pixels.chunks_exact(4) {

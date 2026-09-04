@@ -30,6 +30,7 @@ import { AudioMeter } from "../audio-inputs/components/audio-meter";
 import { StandaloneMultiSelect } from "../standalone-listbox/standalone-multi-select";
 import { StandaloneSelect } from "../standalone-listbox/standalone-select";
 
+import { cameraPreviewFitClassName } from "./camera-preview-fit";
 import {
   CameraDevice,
   CameraResolution,
@@ -256,10 +257,6 @@ export function RecordingOptions({
   systemAudioPeak = -Infinity,
   systemAudioPreviewEnabled = false,
 }: RecordingOptionsProps) {
-  const previewIsWiderThanStage =
-    selectedCameraResolution !== null &&
-    selectedCameraResolution.width * 9 >= selectedCameraResolution.height * 16;
-
   return (
     <main className="window-surface gap-section p-section flex w-full min-w-[240px] flex-col overflow-hidden text-content-fg">
       <section className="gap-section relative flex flex-col">
@@ -276,9 +273,8 @@ export function RecordingOptions({
               aria-label="Camera preview"
               className={cn(
                 "shadow-preview block shrink-0 self-center",
-                previewIsWiderThanStage
-                  ? "h-auto max-h-full w-full"
-                  : "h-full w-auto max-w-full",
+                selectedCameraResolution &&
+                  cameraPreviewFitClassName(selectedCameraResolution),
                 cameraFlipped && "-scale-x-100",
               )}
               hidden={!cameraPreviewActive}

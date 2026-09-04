@@ -113,6 +113,9 @@ pub(super) fn begin_if_titlebar(
   input: InputKind,
   anchor: CGPoint,
 ) -> bool {
+  if crate::capture_overlays::blocks_glide(app) {
+    return false;
+  }
   // Turned off, no session ever opens - for either input. The tap keeps
   // running and keeps passing everything through, which is all "off" has to
   // mean.
@@ -181,6 +184,12 @@ pub(super) fn begin_if_titlebar(
     release_cursor(anchor, false);
     finish(app, anchor.x, anchor.y, false);
     false
+  }
+}
+
+pub(super) fn cancel_current(app: &AppHandle) {
+  if let Some(state) = STATE.get() {
+    end_session(app, state, true);
   }
 }
 
