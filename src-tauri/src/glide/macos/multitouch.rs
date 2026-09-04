@@ -16,9 +16,12 @@ use tauri::AppHandle;
 
 use super::session;
 
+#[path = "multitouch/pointer.rs"]
+mod pointer;
 #[path = "multitouch/recognizer.rs"]
 mod recognizer;
 
+use pointer::PointerEpisode;
 use recognizer::TapRecognizer;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(16);
@@ -80,7 +83,14 @@ extern "C" {
 static APP: std::sync::OnceLock<AppHandle> = std::sync::OnceLock::new();
 /// One recogniser per device, keyed by the device pointer, so two trackpads
 /// cannot interleave their episodes into one state machine.
-static RECOGNIZERS: Mutex<Vec<(usize, TapRecognizer)>> = Mutex::new(Vec::new());
+static MONITORS: Mutex<Vec<DeviceMonitor>> = Mutex::new(Vec::new());
+static POINTER_EPISODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+struct DeviceMonitor {
+  device: usize,
+  pointer: PointerEpisode,
+  taps: TapRecognizer,
+}
 
 pub(super) fn start(app: &AppHandle) {
   let _ = APP.set(app.clone());
@@ -139,8 +149,15 @@ extern "C" fn contact_frame(
 ) -> i32 {
   let count = num_touches.max(0) as usize;
   let centroid = centroid(touches, count);
-  let tapped = RECOGNIZERS.lock().ok().and_then(|mut recognizers| {
-    recognizer_for(&mut recognizers, device as usize).update(count, centroid, timestamp)
+  let tapped = MONITORS.lock().ok().and_then(|mut monitors| {
+    let monitor = monitor_for(&mut monitors, device as usize);
+    monitor.pointer.update(count, centroid);
+    let tapped = monitor.taps.update(count, centroid, timestamp);
+    POINTER_EPISODE.store(
+      monitors.iter().any(|monitor| monitor.pointer.active()),
+      std::sync::atomic::Ordering::Release,
+    );
+    tapped
   });
   if tapped.is_some() {
     if let (Some(app), Some(point)) = (APP.get(), cursor_position()) {
@@ -150,18 +167,23 @@ extern "C" fn contact_frame(
   0
 }
 
-fn recognizer_for(
-  recognizers: &mut Vec<(usize, TapRecognizer)>,
-  device: usize,
-) -> &mut TapRecognizer {
-  let index = match recognizers.iter().position(|(key, _)| *key == device) {
+fn monitor_for(monitors: &mut Vec<DeviceMonitor>, device: usize) -> &mut DeviceMonitor {
+  let index = match monitors.iter().position(|monitor| monitor.device == device) {
     Some(index) => index,
     None => {
-      recognizers.push((device, TapRecognizer::default()));
-      recognizers.len() - 1
+      monitors.push(DeviceMonitor {
+        device,
+        pointer: PointerEpisode::default(),
+        taps: TapRecognizer::default(),
+      });
+      monitors.len() - 1
     }
   };
-  &mut recognizers[index].1
+  &mut monitors[index]
+}
+
+pub(super) fn pointer_episode_active() -> bool {
+  POINTER_EPISODE.load(std::sync::atomic::Ordering::Acquire)
 }
 
 /// The average of the frame's contacts, in normalised 0..1 trackpad units.

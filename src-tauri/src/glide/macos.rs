@@ -32,6 +32,8 @@ mod own_window;
 mod session;
 #[path = "macos/titlebar.rs"]
 mod titlebar;
+#[path = "macos/trackpad.rs"]
+mod trackpad;
 #[path = "macos/tween.rs"]
 mod tween;
 
@@ -170,15 +172,21 @@ fn handle_scroll(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callb
       return CallbackResult::Drop;
     }
   }
+  let phase = event.get_integer_value_field(SCROLL_PHASE_FIELD);
+  let mouse_modifier_down = native_settings::is_down(native_settings::snapshot().mouse_modifier);
+  if trackpad::ignore_episode(phase, mouse_modifier_down) {
+    if active_input(state) == Some(InputKind::Trackpad) {
+      end_session(app, state, true);
+    }
+    return CallbackResult::Keep;
+  }
   if !is_active(state) && !begin_if_titlebar(app, state, InputKind::Trackpad, event.location()) {
     return CallbackResult::Keep;
   }
   if active_input(state) != Some(InputKind::Trackpad) {
     return CallbackResult::Keep;
   }
-
-  // Point deltas already follow physical finger travel, including when natural
-  // scrolling is enabled. Glide should feel spatial, not like content scroll.
+  // Point deltas follow physical finger travel regardless of scroll direction.
   let delta_x =
     event.get_integer_value_field(EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_2) as f64;
   let delta_y =
@@ -187,7 +195,6 @@ fn handle_scroll(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callb
     update_detector(app, state, delta_x, delta_y, is_thirds(event));
   }
 
-  let phase = event.get_integer_value_field(SCROLL_PHASE_FIELD);
   if phase & (SCROLL_PHASE_ENDED | SCROLL_PHASE_CANCELLED) != 0 {
     set_momentum_suppression(state, true);
     end_session(app, state, false);
@@ -197,6 +204,9 @@ fn handle_scroll(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callb
 
 fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> CallbackResult {
   let modifier_down = native_settings::is_down(native_settings::snapshot().mouse_modifier);
+  if trackpad::ignore_pointer(app, state, modifier_down) {
+    return CallbackResult::Keep;
+  }
   if active_input(state) == Some(InputKind::Mouse) && !modifier_down {
     end_session(app, state, false);
     return CallbackResult::Keep;

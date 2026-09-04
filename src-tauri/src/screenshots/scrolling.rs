@@ -32,6 +32,10 @@ mod platform;
 // pages with sticky headers. Acquisition remains fast because each pair's
 // matching overlaps the next scroll's settle and the settle itself is short.
 const SCROLL_FRACTION: f64 = 0.30;
+// Boundary frames are only used to find the document origin, so they do not
+// need the three-way overlap required by reconstruction. Keep some overlap for
+// reliable movement matching while reaching the top-left substantially faster.
+const BOUNDARY_SEEK_FRACTION: f64 = 0.70;
 const SETTLE_DELAY: Duration = Duration::from_millis(80);
 /// Carried by the ordinary error path when Escape stops a capture. The text is
 /// never shown - `cancel::was_requested` is what the command believes - but a
@@ -163,8 +167,9 @@ async fn capture_canvas(
     progress::emit(app, progress::WORKING);
     tokio::time::sleep(Duration::from_millis(120)).await;
     let first = capture_frame(target).await?;
-    let horizontal_amount = (f64::from(first.width) / scale * SCROLL_FRACTION).round() as u32;
-    let vertical_amount = (f64::from(first.height) / scale * SCROLL_FRACTION).round() as u32;
+    let horizontal_amount =
+      (f64::from(first.width) / scale * BOUNDARY_SEEK_FRACTION).round() as u32;
+    let vertical_amount = (f64::from(first.height) / scale * BOUNDARY_SEEK_FRACTION).round() as u32;
     let first = prepare_frame(first).await?;
     let top = seek_boundary(target, point, Axis::Vertical, vertical_amount, scale, first).await?;
     let top_left = seek_boundary(

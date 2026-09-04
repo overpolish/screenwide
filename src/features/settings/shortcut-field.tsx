@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "../../components/base/button/button";
 import { IconButton } from "../../components/base/button/icon-button";
-import { Keyboard } from "../../components/base/keyboard/keyboard";
+import { Keyboard, Shortcut } from "../../components/base/keyboard/keyboard";
 
 import { beginShortcutCapture, endShortcutCapture } from "./api";
 
@@ -32,11 +32,11 @@ const displayShortcut = (shortcut: string | null) => {
   if (!shortcut) return [];
   const mac = navigator.userAgent.includes("Mac");
   return shortcut.split("+").map((part) => {
-    if (part === "CommandOrControl") return mac ? "⌘" : "Ctrl";
-    if (part === "Command" || part === "Super") return mac ? "⌘" : "Win";
-    if (part === "Control") return mac ? "⌃" : "Ctrl";
+    if (part === "CommandOrControl") return mac ? "Command" : "Control";
+    if (part === "Command" || part === "Super") return "Meta";
+    if (part === "Control") return "Control";
     if (part === "Alt") return mac ? "⌥" : "Alt";
-    if (part === "Shift") return "⇧";
+    if (part === "Shift") return "Shift";
     return keyName(part);
   });
 };
@@ -96,13 +96,11 @@ export function ShortcutField({
         {listening ? (
           <span className="text-xs text-muted">Press shortcut…</span>
         ) : keys.length > 0 ? (
-          <span className="flex items-center gap-1">
+          <Shortcut>
             {keys.map((key, index) => (
-              <Keyboard key={`${key}-${index.toString()}`} size="sm">
-                {key}
-              </Keyboard>
+              <Keyboard key={`${key}-${index.toString()}`}>{key}</Keyboard>
             ))}
-          </span>
+          </Shortcut>
         ) : (
           <span className="text-xs text-muted">Not set</span>
         )}

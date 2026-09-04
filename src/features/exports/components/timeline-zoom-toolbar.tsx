@@ -43,11 +43,7 @@ function TimelineToolbarTooltip({
       <Tooltip placement="bottom">
         <span className="flex items-center gap-2">
           {label}
-          {shortcut ? (
-            <Keyboard size="xs" variant="tooltip">
-              {shortcut}
-            </Keyboard>
-          ) : null}
+          {shortcut ? <Keyboard>{shortcut}</Keyboard> : null}
         </span>
       </Tooltip>
     </TooltipTrigger>

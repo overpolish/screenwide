@@ -18,6 +18,10 @@ pub fn frame_fits(achieved: GlideFrame, destination: GlideFrame, epsilon: f64) -
     && (achieved.height - destination.height).abs() <= epsilon
 }
 
+pub fn frames_match(a: GlideFrame, b: GlideFrame, epsilon: f64) -> bool {
+  (a.x - b.x).abs() <= epsilon && (a.y - b.y).abs() <= epsilon && frame_fits(a, b, epsilon)
+}
+
 pub fn corrected_origin(
   destination: GlideFrame,
   achieved: GlideFrame,

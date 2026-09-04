@@ -122,9 +122,7 @@ export function RecordingCanvasTools({
         <Tooltip placement="bottom">
           <span className="flex items-center gap-2">
             Select
-            <Keyboard size="xs" variant="tooltip">
-              V
-            </Keyboard>
+            <Keyboard>V</Keyboard>
           </span>
         </Tooltip>
       </TooltipTrigger>
@@ -146,9 +144,7 @@ export function RecordingCanvasTools({
         <Tooltip placement="bottom">
           <span className="flex items-center gap-2">
             Resize frame
-            <Keyboard size="xs" variant="tooltip">
-              F
-            </Keyboard>
+            <Keyboard>F</Keyboard>
           </span>
         </Tooltip>
       </TooltipTrigger>
@@ -170,9 +166,7 @@ export function RecordingCanvasTools({
         <Tooltip placement="bottom">
           <span className="flex items-center gap-2">
             Crop
-            <Keyboard size="xs" variant="tooltip">
-              C
-            </Keyboard>
+            <Keyboard>C</Keyboard>
           </span>
         </Tooltip>
       </TooltipTrigger>
@@ -194,9 +188,7 @@ export function RecordingCanvasTools({
         <Tooltip placement="bottom">
           <span className="flex items-center gap-2">
             Recenter from current frame
-            <Keyboard size="xs" variant="tooltip">
-              R
-            </Keyboard>
+            <Keyboard>R</Keyboard>
           </span>
         </Tooltip>
       </TooltipTrigger>

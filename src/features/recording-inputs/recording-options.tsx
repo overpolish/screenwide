@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
-  Activity,
   Camera,
   CameraOff,
-  FlipHorizontal2,
   Lock,
   Mic,
+  MirrorRectangular,
   Scan,
   Volume2,
 } from "lucide-react";
@@ -314,10 +313,11 @@ export function RecordingOptions({
                 <IconToggleButton
                   aria-label="Flip camera horizontally"
                   isSelected={cameraFlipped}
+                  off={<MirrorRectangular className="transform-gpu" />}
                   onChange={onCameraFlippedChange}
                   size="compact"
                 >
-                  <FlipHorizontal2 />
+                  <MirrorRectangular className="-scale-x-100 transform-gpu" />
                 </IconToggleButton>
                 <Tooltip placement="top">Flip camera</Tooltip>
               </TooltipTrigger>
@@ -341,14 +341,15 @@ export function RecordingOptions({
             <FieldGroupAction>
               <TooltipTrigger delay={400}>
                 <IconToggleButton
-                  aria-label="Anti-flicker"
+                  aria-label="Anti-flicker frequency"
                   isSelected={cameraPal}
+                  off={<span className="text-xs tabular-nums">60</span>}
                   onChange={onCameraPalChange}
                   size="compact"
                 >
-                  <Activity className="transform-gpu" />
+                  <span className="text-xs tabular-nums">50</span>
                 </IconToggleButton>
-                <Tooltip placement="top">Anti-flicker</Tooltip>
+                <Tooltip placement="top">Anti-flicker frequency</Tooltip>
               </TooltipTrigger>
             </FieldGroupAction>
           ) : null}

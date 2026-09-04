@@ -9,19 +9,21 @@ use tauri::AppHandle;
 
 use super::{
   center::work_area_at,
-  cursor::{hide_cursor, is_cursor_pinned, landing_point, pin_cursor, release_cursor},
+  cursor::{hide_cursor, is_cursor_pinned, pin_cursor, release_cursor},
   native_settings,
   own_window::own_window_at,
   titlebar::{ax_titlebar_at, AxTitlebar},
-  tween::{animate_to, WindowTarget},
+  tween::WindowTarget,
 };
 use crate::glide::core::{GlideDetectorOptions, GlideRuntime};
-use crate::glide::{begin_logical, finish, finish_with_fade, icon::spawn_icon_lookup};
+use crate::glide::{begin_logical, finish, icon::spawn_icon_lookup};
 
 #[path = "session/access.rs"]
 mod access;
 #[path = "session/detector.rs"]
 mod detector;
+#[path = "session/end.rs"]
+mod end;
 #[path = "session/flags.rs"]
 mod flags;
 #[path = "session/requests.rs"]
@@ -33,6 +35,7 @@ pub(super) use access::{accumulate_pointer_travel, active_input, is_active, sess
 pub(super) use detector::{
   set_thirds as set_detector_thirds, settle as settle_detector, update as update_detector,
 };
+pub(super) use end::end_session;
 pub(super) use flags::{
   is_suppressing, is_suppressing_momentum, set_momentum_suppression, set_mouse_up_swallow,
   set_suppression, take_mouse_up_swallow,
@@ -70,6 +73,7 @@ pub(super) struct Session {
   /// Whether any region was ever applied. Without one there is nothing for a
   /// cancel to undo, and the window should not be written to at all.
   moved: bool,
+  returned_to_origin: bool,
 }
 
 #[derive(Default)]
@@ -175,6 +179,7 @@ pub(super) fn begin_if_titlebar(
       work_origin: (work_position.x, work_position.y),
       work_size: (work_size.width, work_size.height),
       moved: false,
+      returned_to_origin: false,
     });
     // A session that got through leaves no cancellation behind it.
     state.suppress_gesture = false;
@@ -212,93 +217,4 @@ fn target_at(app: &AppHandle, anchor: CGPoint) -> Option<(WindowTarget, cg::Rect
       .map(|(window, frame)| (WindowTarget::own(window), frame, Some(std::process::id()))),
     AxTitlebar::Miss => None,
   }
-}
-
-/// Ends the live session, if there is one. `cancelled` rides out with the end
-/// so the detector knows whether to commit what it had armed.
-pub(super) fn end_session(app: &AppHandle, state: &SharedState, cancelled: bool) {
-  let minimize = state.lock().is_ok_and(|state| {
-    state
-      .session
-      .as_ref()
-      .is_some_and(|session| session.runtime.should_minimize(cancelled))
-  });
-  // Only a revealed glide breaks a double tap in the making. A tap sheds a few
-  // scroll events of its own, and the invisible session they open must not
-  // clear the candidate that same tap just stored.
-  let Some(mut session) = take_session(app, state, cancelled) else {
-    return;
-  };
-  if minimize {
-    session.target.minimize();
-  }
-  if session.revealed {
-    if let Ok(mut state) = state.lock() {
-      state.tap_candidate = None;
-    }
-  }
-}
-
-fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option<Session> {
-  let session = state
-    .lock()
-    .ok()
-    .and_then(|mut state| state.session.take())?;
-  // A cancel undoes the whole gesture: the window animates back to the frame
-  // the session captured, out of wherever the last transition left it. A commit
-  // stops nothing, so the tween that is still arriving finishes on its own.
-  if cancelled && session.moved {
-    // The restore puts back a frame the window already held, so it needs no
-    // gravity correction, and the preview it would report to is going away.
-    animate_to(&session.target, session.original_frame, None);
-  }
-  // A committed glide that had something on screen fades out, and the cursor
-  // waits for it so it never appears over a half-faded preview. Cancelled ends
-  // and sessions that were never revealed dismiss instantly, as before.
-  if cancelled || !session.revealed {
-    release_cursor(session.anchor, session.revealed);
-    finish(app, session.anchor.x, session.anchor.y, cancelled);
-    return Some(session);
-  }
-
-  if let Ok(mut state) = state.lock() {
-    state.fading = true;
-  }
-  let anchor = session.anchor;
-  let moved = session.moved;
-  let grip = session.target.duplicate();
-  let original = session.original_frame;
-  // Read here rather than inside the closure: the setting that counts is the
-  // one in force when the gesture ended.
-  let cursor_follows = native_settings::snapshot().cursor_follows
-    && !session.runtime.commits_terminal_action(cancelled);
-  finish_with_fade(
-    app,
-    anchor.x,
-    anchor.y,
-    // The cursor comes back a beat into the fade - and a commit that carried
-    // the window lands it there, holding the same grip, ready to keep using
-    // what it just placed. A frame that cannot be read falls back to the
-    // anchor, as does a commit that moved nothing or one the user asked to
-    // leave the cursor behind.
-    Box::new(move || {
-      let landing = if moved && cursor_follows {
-        grip
-          .frame()
-          .map(|achieved| landing_point(anchor, original, achieved))
-          .unwrap_or(anchor)
-      } else {
-        anchor
-      };
-      release_cursor(landing, true);
-    }),
-    Box::new(move || {
-      if let Some(state) = STATE.get() {
-        if let Ok(mut state) = state.lock() {
-          state.fading = false;
-        }
-      }
-    }),
-  );
-  Some(session)
 }

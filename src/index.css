@@ -16,6 +16,7 @@
 }
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant inverse (&:is([data-surface="inverse"] *));
 
 @theme {
   --font-sans:
@@ -164,7 +165,7 @@
     --color-error-surface-hover: rgb(255 69 58 / 38%);
     --color-error-surface-pressed: rgb(255 69 58 / 46%);
 
-    --color-muted: var(--color-neutral-400);
+    --color-muted: var(--color-neutral-300);
   }
 }
 

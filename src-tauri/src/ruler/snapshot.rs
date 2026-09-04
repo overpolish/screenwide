@@ -2655,7 +2655,7 @@ fn snap_bounds(boxes: &[Rect], drag: Rect) -> Rect {
     .filter(|candidate| contains(grown, *candidate))
     .reduce(union_rect);
   if let Some(bounds) = contained {
-    return bounds;
+    return clamp_to_drawn_bounds(bounds, drag);
   }
   if let Some((_, bounds)) = boxes
     .iter()
@@ -2664,9 +2664,25 @@ fn snap_bounds(boxes: &[Rect], drag: Rect) -> Rect {
     .filter(|(score, _)| *score >= MINIMUM_IOU)
     .max_by(|(left, _), (right, _)| left.total_cmp(right))
   {
-    return bounds;
+    return clamp_to_drawn_bounds(bounds, drag);
   }
-  snap_to_nearby_box_edges(boxes, drag)
+  clamp_to_drawn_bounds(snap_to_nearby_box_edges(boxes, drag), drag)
+}
+
+/// The user's drag is a hard analysis boundary. Snapping may tighten a
+/// measurement around detected content inside it, but content beside or around
+/// the drag must never make the committed measurement larger than what the
+/// user drew.
+fn clamp_to_drawn_bounds(bounds: Rect, drag: Rect) -> Rect {
+  let left = bounds.origin.x.max(drag.origin.x);
+  let top = bounds.origin.y.max(drag.origin.y);
+  let right = bounds.right().min(drag.right());
+  let bottom = bounds.bottom().min(drag.bottom());
+  if right <= left || bottom <= top {
+    drag
+  } else {
+    Rect::from_xywh(left, top, right - left, bottom - top)
+  }
 }
 
 fn union_rect(a: Rect, b: Rect) -> Rect {
@@ -3495,12 +3511,18 @@ mod tests {
   }
 
   #[test]
-  fn snapping_uses_the_best_overlapping_container() {
+  fn snapping_never_grows_to_an_overlapping_container() {
     let boxes = [Rect::from_xywh(20.0, 20.0, 80.0, 60.0)];
-    assert_eq!(
-      snap_bounds(&boxes, Rect::from_xywh(24.0, 24.0, 70.0, 50.0)),
-      boxes[0]
-    );
+    let drag = Rect::from_xywh(24.0, 24.0, 70.0, 50.0);
+    assert_eq!(snap_bounds(&boxes, drag), drag);
+  }
+
+  #[test]
+  fn snapping_ignores_nearby_edges_outside_the_drawn_bounds() {
+    let boxes = [Rect::from_xywh(7.0, 20.0, 106.0, 60.0)];
+    let drag = Rect::from_xywh(10.0, 25.0, 100.0, 50.0);
+
+    assert_eq!(snap_bounds(&boxes, drag), drag);
   }
 
   #[test]

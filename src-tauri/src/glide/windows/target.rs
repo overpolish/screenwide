@@ -160,19 +160,22 @@ impl WindowTarget {
 
   /// Where the cursor lands after a commit: the same grip on the window it had
   /// at the anchor. A window still travelling is judged by its destination.
-  pub fn landing(self, anchor: POINT) -> POINT {
+  pub fn landing(self, anchor: POINT) -> Option<POINT> {
     let achieved = tween::in_flight_destination()
       .or_else(|| self.frame().ok())
       .unwrap_or(self.original);
+    if crate::glide::core::frames_match(self.original, achieved, 1.0) {
+      return None;
+    }
     let (x, y) = landing_point(
       (f64::from(anchor.x), f64::from(anchor.y)),
       self.original,
       achieved,
     );
-    POINT {
+    Some(POINT {
       x: x.round() as i32,
       y: y.round() as i32,
-    }
+    })
   }
 
   /// Readies the window for a tween and reads the frame it starts from. A

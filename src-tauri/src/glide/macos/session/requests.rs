@@ -11,7 +11,7 @@ use cidre::cg;
 use tauri::AppHandle;
 
 use super::super::tween::{animate_to, FitContext};
-use super::{Session, STATE};
+use super::{super::cursor::returns_to_origin, Session, STATE};
 use crate::glide::region_rect::{region_gravity, region_rect, PlacedRegion};
 
 /// Shows the preview once the detector has a destination to draw. Until then a
@@ -69,7 +69,7 @@ pub fn region_moved(app: &AppHandle, session_id: u64, region: &PlacedRegion) -> 
   // Everything the animation needs leaves the lock with the destination: the
   // Accessibility calls it makes must never run while the event tap is waiting
   // on this same mutex.
-  let (target, origin, size, fit) = {
+  let (target, destination, fit) = {
     let mut monitor = state
       .lock()
       .map_err(|_| "The Glide session state is unavailable".to_owned())?;
@@ -85,6 +85,8 @@ pub fn region_moved(app: &AppHandle, session_id: u64, region: &PlacedRegion) -> 
       // placement so a change lands on the next transition.
       super::super::native_settings::snapshot().window_gap,
     );
+    let destination = rect(origin, size);
+    session.returned_to_origin = returns_to_origin(session.original_frame, destination);
     // Read out with the destination, so the settle can place a constrained
     // window and report the frame it got without touching the session again.
     let fit = FitContext {
@@ -94,12 +96,12 @@ pub fn region_moved(app: &AppHandle, session_id: u64, region: &PlacedRegion) -> 
       work_origin: session.work_origin,
       work_size: session.work_size,
     };
-    (session.target.duplicate(), origin, size, fit)
+    (session.target.duplicate(), destination, fit)
   };
 
   // Every destination animates the same way - one mechanism for the whole
   // grid, out of whatever frame the window is in.
-  animate_to(&target, rect(origin, size), Some(fit));
+  animate_to(&target, destination, Some(fit));
   Ok(())
 }
 

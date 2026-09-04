@@ -54,8 +54,7 @@ mod wheel_hook;
 use input_kind::InputKind;
 
 static APP: OnceLock<AppHandle> = OnceLock::new();
-/// Scrolling never moves the pointer, so any real pointer travel during a
-/// trackpad session is the hand leaving the gesture and commits it.
+/// Real pointer travel during a trackpad session commits the gesture.
 const POINTER_DISMISS_DISTANCE: f64 = 3.0;
 const ABSOLUTE_RANGE: f64 = 65_535.0;
 static WHEEL_HOOK_ACTIVE: AtomicBool = AtomicBool::new(false);
@@ -119,9 +118,8 @@ fn handle_mouse(mouse: RAWMOUSE) {
   let button_flags = u32::from(unsafe { mouse.Anonymous.Anonymous.usButtonFlags });
   let button_data = unsafe { mouse.Anonymous.Anonymous.usButtonData } as i16;
   let wheel_x = if button_flags & RI_MOUSE_HWHEEL != 0 {
-    // Raw horizontal wheel data follows scroll-content direction. Glide is
-    // direct manipulation, so convert the default content direction back to
-    // finger travel. Per-session normalization below handles reversed scroll.
+    // Convert content direction to finger travel; session normalization below
+    // handles the user's reversed-scroll preference.
     -f64::from(button_data)
   } else {
     0.0
@@ -144,15 +142,13 @@ fn handle_mouse(mouse: RAWMOUSE) {
   {
     return;
   }
-
   if mouse.usFlags.0 & MOUSE_MOVE_ABSOLUTE.0 == 0 {
     if mouse.lLastX != 0 || mouse.lLastY != 0 {
       handle_mouse_delta(mouse.lLastX, mouse.lLastY);
     }
     return;
   }
-  // Remote-desktop and tablet drivers report where the pointer is rather than
-  // how far it moved; the motion is the difference between reports.
+  // Remote and tablet drivers report position, so derive motion between reports.
   let position = absolute_position(mouse);
   let previous = LAST_ABSOLUTE
     .lock()
@@ -209,6 +205,10 @@ fn handle_mouse_delta(delta_x: i32, delta_y: i32) {
   }
   let settings = native_settings::snapshot();
   let modifier_down = native_settings::is_down(settings.mouse_modifier);
+  if native_trackpad::blocks_mouse_glide(modifier_down) {
+    finish_current_session(true);
+    return;
+  }
   if session::active_input() == Some(InputKind::Mouse) && !modifier_down {
     finish_current_session(false);
     return;

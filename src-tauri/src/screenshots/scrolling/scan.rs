@@ -13,9 +13,9 @@ use super::{
 };
 use crate::screenshots::{CapturedImage, ScreenshotTarget};
 
-/// How far back the seek may travel before giving up. Each step covers
-/// `SCROLL_FRACTION` of a viewport, so this bound is measured in viewports
-/// rather than steps and has to grow whenever that fraction shrinks.
+/// How many backward scroll attempts may be made on each axis before giving
+/// up. Boundary seeking uses larger steps than capture, so this is deliberately
+/// independent of the retained-tile ceiling below.
 const MAX_BOUNDARY_STEPS: usize = 128;
 /// Retained frames dominate the memory a capture holds, and 96 of them already
 /// approaches a gigabyte, so the tile ceiling stays put even as smaller steps

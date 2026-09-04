@@ -75,6 +75,10 @@ pub(super) fn landing_point(anchor: CGPoint, original: cg::Rect, achieved: cg::R
   CGPoint::new(x, y)
 }
 
+pub(super) fn returns_to_origin(original: cg::Rect, destination: cg::Rect) -> bool {
+  crate::glide::core::frames_match(frame(original), frame(destination), 1.0)
+}
+
 fn frame(rect: cg::Rect) -> crate::glide::core::GlideFrame {
   crate::glide::core::GlideFrame {
     x: rect.origin.x,
@@ -125,5 +129,14 @@ mod tests {
       rect(0.0, 0.0, 200.0, 100.0),
     );
     assert_eq!((landing.x, landing.y), (200.0, 100.0));
+  }
+
+  #[test]
+  fn recognises_a_destination_that_returns_to_the_original_frame() {
+    assert!(returns_to_origin(ORIGINAL, rect(100.5, 49.5, 800.5, 599.5)));
+    assert!(!returns_to_origin(
+      ORIGINAL,
+      rect(102.0, 50.0, 800.0, 600.0)
+    ));
   }
 }

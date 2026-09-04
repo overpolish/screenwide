@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
-import { Keyboard } from "../../components/base/keyboard/keyboard";
+import { Keyboard, Shortcut } from "../../components/base/keyboard/keyboard";
 
 import { ScrollingCapturePhase } from "./scrolling-capture-events";
 
 const phaseLabels: Record<ScrollingCapturePhase, string> = {
-  capturing: "Capturing…",
-  stitching: "Stitching…",
-  working: "Working…",
+  capturing: "Capturing",
+  stitching: "Stitching",
+  working: "Working",
 };
 
 type ScrollingCaptureOverlayProps = {
@@ -19,7 +19,7 @@ type ScrollingCaptureOverlayProps = {
 };
 
 /**
- * The card shown over the region being captured. The backend cannot know how
+ * The window shown over the region being captured. The backend cannot know how
  * far a page scrolls before it stops, so there is no percentage to show and the
  * spinner carries the whole "still working" signal.
  */
@@ -28,30 +28,22 @@ export function ScrollingCaptureOverlay({
   finished = false,
   phase,
 }: ScrollingCaptureOverlayProps) {
-  const label = finished
-    ? "Finishing…"
-    : phase
-      ? phaseLabels[phase]
-      : "Working…";
+  const label = finished ? "Finishing" : phase ? phaseLabels[phase] : "Working";
 
   return (
-    <main className="flex h-full w-full flex-col items-center justify-center gap-3 overflow-hidden">
+    <main className="window-surface gap-section p-section flex h-full w-full items-center overflow-hidden rounded-window text-content-fg">
       <CircularProgress
         aria-label="Scrolling capture progress"
         isIndeterminate
-        size="large"
       />
-      {/*
-        Only the text is backed. The ring reads clearly against whatever it is
-        over, so darkening the whole region would hide more of the page than it
-        helps.
-      */}
-      <div className="flex flex-col items-center gap-0.5 rounded-md bg-content/92 px-3 py-2">
-        <span className="text-sm text-content-fg">{label}</span>
+      <div className="gap-tight flex flex-col">
+        <span className="text-sm">{label}</span>
         {cancellable && !finished ? (
-          <span className="flex items-center gap-1 text-xs text-muted">
-            <Keyboard size="sm">Esc</Keyboard>
-            to cancel
+          <span className="gap-control flex items-center whitespace-nowrap text-xs text-muted">
+            <Shortcut>
+              <Keyboard>Esc</Keyboard>
+            </Shortcut>
+            <span>to cancel</span>
           </span>
         ) : null}
       </div>

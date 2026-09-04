@@ -3,21 +3,22 @@
 
 import { type Meta, type StoryObj } from "@storybook/react-vite";
 
+import { FeatureStoryStage } from "../../storybook/feature-story-stage";
+
 import { ScrollingCaptureOverlay } from "./scrolling-capture-overlay";
 
 const meta = {
   args: { cancellable: true, phase: "working" },
   component: ScrollingCaptureOverlay,
-  // The real window is 260x200 logical points and paints its own card.
   decorators: [
-    (Story) => (
-      <div className="h-[200px] w-[260px]">
+    (Story, context) => (
+      <FeatureStoryStage height={66} viewMode={context.viewMode} width={160}>
         <Story />
-      </div>
+      </FeatureStoryStage>
     ),
   ],
-  parameters: { layout: "centered" },
-  title: "Legacy/Scrolling Capture Overlay",
+  parameters: { layout: "fullscreen" },
+  title: "Features/Scrolling Capture Overlay",
 } satisfies Meta<typeof ScrollingCaptureOverlay>;
 
 export default meta;

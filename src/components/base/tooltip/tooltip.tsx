@@ -73,6 +73,7 @@ export const Tooltip = ({
           arrowBoundaryOffset={arrowBoundaryOffset}
           className={clsx(tooltipClassName, className)}
           custom={placement}
+          data-surface="inverse"
           exit="closed"
           initial="closed"
           isOpen

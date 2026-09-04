@@ -3,7 +3,6 @@
 
 use crate::osc::geometry::{Point, Rect};
 
-const ALIGNMENT_SLACK: f64 = 1.0;
 const SELF_SLACK: f64 = 3.0;
 const MINIMUM_OBJECT_SIZE: f64 = 3.0;
 const CLUSTER_GAP: f64 = 6.0;
@@ -29,6 +28,10 @@ fn center(bounds: Rect) -> Point {
     x: bounds.origin.x + bounds.size.width * 0.5,
     y: bounds.origin.y + bounds.size.height * 0.5,
   }
+}
+
+fn shares_rendered_center(left: f64, right: f64, scale: f64) -> bool {
+  (left * scale).round() == (right * scale).round()
 }
 
 fn contains(outer: Rect, inner: Rect) -> bool {
@@ -118,16 +121,15 @@ pub(crate) fn analyze(
   objects.truncate(MAXIMUM_OBJECTS);
 
   let outer_center = center(bounds);
-  let slack = ALIGNMENT_SLACK / scale;
   let union = objects.iter().copied().reduce(union);
   let x_accent = peers
     .iter()
-    .any(|peer| (center(*peer).x - outer_center.x).abs() <= slack)
-    || union.is_some_and(|inner| (center(inner).x - outer_center.x).abs() <= slack);
+    .any(|peer| shares_rendered_center(center(*peer).x, outer_center.x, scale))
+    || union.is_some_and(|inner| shares_rendered_center(center(inner).x, outer_center.x, scale));
   let y_accent = peers
     .iter()
-    .any(|peer| (center(*peer).y - outer_center.y).abs() <= slack)
-    || union.is_some_and(|inner| (center(inner).y - outer_center.y).abs() <= slack);
+    .any(|peer| shares_rendered_center(center(*peer).y, outer_center.y, scale))
+    || union.is_some_and(|inner| shares_rendered_center(center(inner).y, outer_center.y, scale));
   CenterlineAnalysis {
     objects: objects
       .into_iter()
@@ -135,8 +137,8 @@ pub(crate) fn analyze(
         let inner_center = center(inner);
         InnerObject {
           bounds: inner,
-          aligned_x: (inner_center.x - outer_center.x).abs() <= slack,
-          aligned_y: (inner_center.y - outer_center.y).abs() <= slack,
+          aligned_x: shares_rendered_center(inner_center.x, outer_center.x, scale),
+          aligned_y: shares_rendered_center(inner_center.y, outer_center.y, scale),
         }
       })
       .collect(),
@@ -175,5 +177,15 @@ mod tests {
     let result = analyze(bounds, &[], &[Rect::from_xywh(10.0, 80.0, 40.0, 20.0)], 2.0);
     assert!(result.x_accent);
     assert!(!result.y_accent);
+  }
+
+  #[test]
+  fn a_one_device_pixel_offset_is_not_reported_as_centered() {
+    let bounds = Rect::from_xywh(10.0, 10.0, 40.0, 40.0);
+    let result = analyze(bounds, &[Rect::from_xywh(11.0, 15.0, 39.0, 30.0)], &[], 2.0);
+    assert!(!result.x_accent);
+    assert!(result.y_accent);
+    assert!(!result.objects[0].aligned_x);
+    assert!(result.objects[0].aligned_y);
   }
 }

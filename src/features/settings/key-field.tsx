@@ -17,13 +17,11 @@ const keyName = (code: string) => {
   if (code === "MouseForward") return "Mouse Forward";
   if (code.startsWith("Key")) return code.slice(3);
   if (code.startsWith("Digit")) return code.slice(5);
-  if (code.startsWith("Meta"))
-    return navigator.userAgent.includes("Mac") ? "⌘" : "Win";
-  if (code.startsWith("Control"))
-    return navigator.userAgent.includes("Mac") ? "⌃" : "Ctrl";
+  if (code.startsWith("Meta")) return "Meta";
+  if (code.startsWith("Control")) return "Control";
   if (code.startsWith("Alt"))
     return navigator.userAgent.includes("Mac") ? "⌥" : "Alt";
-  if (code.startsWith("Shift")) return "⇧";
+  if (code.startsWith("Shift")) return "Shift";
   return code.replace("Arrow", "").replace("Numpad", "Num ");
 };
 
@@ -145,7 +143,7 @@ export function KeyField({
             </span>
           )
         ) : (
-          <Keyboard size="sm">{keyName(value)}</Keyboard>
+          <Keyboard>{keyName(value)}</Keyboard>
         )}
       </Button>
       {unsupported ? (

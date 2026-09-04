@@ -2,9 +2,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::glide::{
-  core::{corrected_origin, frame_fits, frame_fractions, landing_point, GlideFrame},
+  core::{corrected_origin, frame_fits, frame_fractions, frames_match, landing_point, GlideFrame},
   region_rect::{Gravity, RegionGravity},
 };
+
+#[test]
+fn matching_frames_include_position_and_size_with_rounding_tolerance() {
+  let original = frame(10.0, 20.0, 800.0, 600.0);
+  assert!(frames_match(original, frame(10.5, 19.5, 800.5, 599.5), 1.0));
+  assert!(!frames_match(
+    original,
+    frame(12.0, 20.0, 800.0, 600.0),
+    1.0
+  ));
+}
 
 fn frame(x: f64, y: f64, width: f64, height: f64) -> GlideFrame {
   GlideFrame {

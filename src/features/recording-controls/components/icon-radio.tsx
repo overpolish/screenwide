@@ -27,7 +27,10 @@ export const IconRadio = ({
       <AriaRadioButton
         className={({ isDisabled }) =>
           iconButtonVariants({
-            className: buttonClassName,
+            className: cn(
+              "data-[selected]:bg-neutral data-[selected]:data-[hovered]:bg-neutral-hover data-[selected]:data-[pressed]:bg-neutral-pressed",
+              buttonClassName,
+            ),
             isDisabled,
             isToggle: true,
           })

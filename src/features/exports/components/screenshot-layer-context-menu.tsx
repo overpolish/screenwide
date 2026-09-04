@@ -111,7 +111,7 @@ function Item({
     >
       {icon}
       <span className="grow">{label}</span>
-      <Keyboard size="xs">{shortcut}</Keyboard>
+      <Keyboard>{shortcut}</Keyboard>
     </button>
   );
 }

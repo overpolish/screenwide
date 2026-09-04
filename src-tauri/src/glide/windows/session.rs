@@ -158,12 +158,14 @@ pub(super) fn end(app: &AppHandle, cancelled: bool) {
   {
     session.target.landing(session.anchor)
   } else {
-    session.anchor
+    None
   };
   if minimize {
     session.target.minimize();
   }
-  tween::land_cursor(landing);
+  if let Some(landing) = landing {
+    tween::land_cursor(landing);
+  }
   if session.revealed {
     cursor::show_cursor();
   }

@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use tauri::utils::config::WindowEffectsConfig;
+use tauri::window::{Effect, EffectState};
 use tauri::{AppHandle, LogicalPosition, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::screenshots::ScreenshotTarget;
 
 pub(super) const LABEL: &str = "scrolling-capture-overlay";
-const WIDTH: f64 = 260.0;
-const HEIGHT: f64 = 200.0;
+const WIDTH: f64 = 160.0;
+const HEIGHT: f64 = 66.0;
 
 fn centred_origin(centre_x: f64, centre_y: f64) -> LogicalPosition<f64> {
   LogicalPosition::new(centre_x - WIDTH / 2.0, centre_y - HEIGHT / 2.0)
@@ -46,6 +48,11 @@ pub(super) fn show(
 ) -> Result<(), String> {
   close(app);
   let origin = position(app, target)?;
+  let effect = if cfg!(target_os = "windows") {
+    Effect::Mica
+  } else {
+    Effect::UnderWindowBackground
+  };
   let window = WebviewWindowBuilder::new(
     app,
     LABEL,
@@ -63,10 +70,16 @@ pub(super) fn show(
   .inner_size(WIDTH, HEIGHT)
   .position(origin.x, origin.y)
   .resizable(false)
-  .shadow(false)
+  .shadow(true)
   .skip_taskbar(true)
   .transparent(true)
   .visible(false)
+  .effects(WindowEffectsConfig {
+    color: None,
+    effects: vec![effect],
+    radius: Some(10.0),
+    state: Some(EffectState::Active),
+  })
   .build()
   .map_err(|error| error.to_string())?;
 

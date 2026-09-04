@@ -8,6 +8,7 @@
 use std::{
   cell::RefCell,
   collections::HashMap,
+  sync::atomic::{AtomicBool, Ordering},
   time::{Duration, Instant},
 };
 
@@ -19,16 +20,23 @@ const FALLBACK_SUPPRESSION: Duration = Duration::from_millis(180);
 
 #[path = "native_trackpad/hid.rs"]
 mod hid;
+#[path = "native_trackpad/pointer.rs"]
+mod pointer;
+
+use pointer::PointerEpisode;
 
 thread_local! {
   static DEVICES: RefCell<HashMap<isize, Device>> = RefCell::new(HashMap::new());
   static LAST_NATIVE_CONTACT: RefCell<Option<Instant>> = const { RefCell::new(None) };
 }
+static POINTER_EPISODE: AtomicBool = AtomicBool::new(false);
 
 struct Device {
   hid: hid::ContactParser,
   last_centroid: Option<(f64, f64)>,
   driving: bool,
+  ignored: bool,
+  pointer: PointerEpisode,
 }
 
 pub(super) fn handle_raw_input(header: &RAWINPUTHEADER, hid: &RAWHID, packet_bytes: usize) {
@@ -53,7 +61,19 @@ pub(super) fn handle_raw_input(header: &RAWINPUTHEADER, hid: &RAWHID, packet_byt
     for report in reports.chunks_exact(hid.dwSizeHid as usize) {
       device.handle_report(report);
     }
+    POINTER_EPISODE.store(
+      devices.values().any(|device| device.pointer.active()),
+      Ordering::Release,
+    );
   });
+}
+
+pub(super) fn blocks_mouse_glide(mouse_modifier_down: bool) -> bool {
+  mouse_glide_blocked(mouse_modifier_down, POINTER_EPISODE.load(Ordering::Acquire))
+}
+
+fn mouse_glide_blocked(mouse_modifier_down: bool, pointer_episode: bool) -> bool {
+  mouse_modifier_down && pointer_episode
 }
 
 pub(super) fn suppresses_scroll_fallback() -> bool {
@@ -78,6 +98,8 @@ impl Device {
       hid,
       last_centroid: None,
       driving: false,
+      ignored: false,
+      pointer: PointerEpisode::default(),
     })
   }
 
@@ -89,8 +111,13 @@ impl Device {
       LAST_NATIVE_CONTACT.with_borrow_mut(|last| *last = Some(Instant::now()));
     }
     let contacts = frame.contacts;
+    self.pointer.update(
+      contacts.len(),
+      contacts.first().map(|contact| (contact.x, contact.y)),
+    );
     if contacts.len() != 2 {
       self.last_centroid = None;
+      self.ignored = false;
       if self.driving {
         self.driving = false;
         if session::active_input() == Some(InputKind::TrackpadContacts) {
@@ -106,6 +133,21 @@ impl Device {
       (contacts[0].y + contacts[1].y) * 0.5,
     );
     let previous = self.last_centroid.replace(centroid);
+    let settings = native_settings::snapshot();
+    if native_settings::is_down(settings.mouse_modifier) {
+      self.ignored = true;
+      if self.driving {
+        self.driving = false;
+        if session::active_input() == Some(InputKind::TrackpadContacts) {
+          if let Some(app) = APP.get() {
+            session::end(app, true);
+          }
+        }
+      }
+    }
+    if self.ignored {
+      return;
+    }
     if !self.driving {
       self.driving = if session::active_input() == Some(InputKind::TrackpadScroll) {
         session::promote_scroll_to_contacts()
@@ -122,7 +164,6 @@ impl Device {
     let (delta_x, delta_y) = (centroid.0 - previous_x, centroid.1 - previous_y);
     if (delta_x != 0.0 || delta_y != 0.0) && delta_x.abs() < 250.0 && delta_y.abs() < 250.0 {
       if let Some(app) = APP.get() {
-        let settings = native_settings::snapshot();
         session::update(
           app,
           delta_x,
@@ -138,7 +179,14 @@ impl Device {
 mod tests {
   use std::time::{Duration, Instant};
 
-  use super::extend_suppression;
+  use super::{extend_suppression, mouse_glide_blocked};
+
+  #[test]
+  fn only_a_controlled_one_finger_episode_blocks_mouse_glide() {
+    assert!(mouse_glide_blocked(true, true));
+    assert!(!mouse_glide_blocked(true, false));
+    assert!(!mouse_glide_blocked(false, true));
+  }
 
   #[test]
   fn synthesized_wheel_tail_stays_suppressed_until_it_goes_quiet() {
