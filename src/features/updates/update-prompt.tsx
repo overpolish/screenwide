@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Ban, Clock3, Download } from "lucide-react";
+import { ArrowRight, Ban, Clock3, Download } from "lucide-react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
+import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
+import { Text } from "../../components/base/text/text";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
 
 import { ReleaseNotes } from "./release-notes";
@@ -53,6 +55,23 @@ export function UpdatePrompt({
   return (
     <main className="window-surface gap-section flex h-full w-full flex-col overflow-hidden rounded-window text-content-fg">
       <WindowHeader
+        actions={
+          currentVersion || updateVersion ? (
+            <Text
+              className="gap-control-inset flex shrink-0 items-center font-mono"
+              variant="help"
+            >
+              {currentVersion ? <span>v{currentVersion}</span> : null}
+              {currentVersion && updateVersion ? (
+                <ArrowRight
+                  aria-label="to"
+                  className="size-icon-compact shrink-0"
+                />
+              ) : null}
+              {updateVersion ? <span>v{updateVersion}</span> : null}
+            </Text>
+          ) : null
+        }
         leadingSection={
           <img
             alt="Screenwide"
@@ -62,64 +81,49 @@ export function UpdatePrompt({
           />
         }
         onClose={busy ? undefined : onRemindLater}
-        title="Software Update"
+        title="Update available"
       />
-      <div className="px-window-inset pb-window-inset flex min-h-0 grow flex-col gap-4">
-        <Alert color="neutral">
-          <div>
-            <p className="font-semibold">
-              {updateVersion
-                ? `Screenwide version ${updateVersion} is available`
-                : "A new Screenwide version is available"}
-            </p>
-            {currentVersion || released ? (
-              <p className="mt-0.5 text-muted">
-                {currentVersion
-                  ? `You are currently using version ${currentVersion}.`
-                  : null}
-                {released ? ` Released ${released}.` : null}
-              </p>
-            ) : null}
+      <div className="gap-section px-window-inset pb-window-inset flex min-h-0 grow flex-col">
+        <section
+          aria-label="What's new"
+          className="gap-section flex min-h-0 grow flex-col"
+        >
+          <div className="gap-section flex shrink-0 flex-wrap items-center justify-between">
+            <h2 className="m-0 text-lg font-semibold">What’s new</h2>
+            {released ? <Text variant="help">Released {released}</Text> : null}
           </div>
-        </Alert>
-
-        <section className="flex min-h-0 grow flex-col overflow-hidden rounded-lg border border-muted/20 bg-neutral">
-          <div className="border-b border-muted/15 px-4 py-2.5 text-xs font-semibold text-muted">
-            What’s new
-          </div>
-          <ScrollArea className="px-4 py-3" rootClassName="min-h-0 grow">
+          <ScrollArea
+            edgeEffect="inset"
+            rootClassName="min-h-0 grow"
+            scrollbarAutoHide="never"
+          >
             {releaseNotes ? (
               <ReleaseNotes html={releaseNotes} />
             ) : (
-              <p className="text-xs leading-relaxed text-muted">
-                This update includes improvements and fixes for Screenwide.
-              </p>
+              <Text>Improvements and fixes for Screenwide.</Text>
             )}
           </ScrollArea>
         </section>
 
         {status === "downloading" ? (
-          <div>
-            <div className="mb-1.5 flex justify-between text-xs text-muted">
-              <span>Downloading and installing…</span>
-              {downloadProgress === null ? null : (
-                <span>{Math.round(downloadProgress * 100)}%</span>
-              )}
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-muted/15">
-              <div
-                className={`h-full rounded-full bg-info transition-[width] ${
-                  downloadProgress === null ? "w-1/3 animate-pulse" : ""
-                }`}
-                style={
-                  downloadProgress === null
-                    ? undefined
-                    : {
-                        width: `${String(Math.round(downloadProgress * 100))}%`,
-                      }
-                }
-              />
-            </div>
+          <div
+            className="gap-control-inset flex shrink-0 items-center"
+            role="status"
+          >
+            <CircularProgress
+              aria-label="Downloading and installing"
+              isIndeterminate={downloadProgress === null}
+              size="compact"
+              value={
+                downloadProgress === null ? undefined : downloadProgress * 100
+              }
+            />
+            <Text variant="help">Downloading and installing</Text>
+            {downloadProgress !== null ? (
+              <Text className="ml-auto font-mono" variant="help">
+                {Math.round(downloadProgress * 100)}%
+              </Text>
+            ) : null}
           </div>
         ) : null}
 
@@ -129,28 +133,18 @@ export function UpdatePrompt({
           </Alert>
         ) : null}
 
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            isDisabled={busy}
-            onPress={onSkipVersion}
-            size="compact"
-            variant="ghost"
-          >
-            <Ban size={14} />
+        <div className="gap-control-inset flex shrink-0 flex-wrap items-center justify-end">
+          <Button isDisabled={busy} onPress={onSkipVersion} variant="ghost">
+            <Ban />
             Skip this version
           </Button>
-          <Button isDisabled={busy} onPress={onRemindLater} size="compact">
-            <Clock3 size={14} />
-            Not right now
+          <Button isDisabled={busy} onPress={onRemindLater}>
+            <Clock3 />
+            Later
           </Button>
-          <Button
-            color="primary"
-            isDisabled={busy}
-            onPress={onInstall}
-            size="compact"
-          >
-            <Download size={14} />
-            {busy ? "Installing…" : "Update and restart"}
+          <Button color="primary" isDisabled={busy} onPress={onInstall}>
+            <Download />
+            {busy ? "Installing" : "Update and restart"}
           </Button>
         </div>
       </div>
