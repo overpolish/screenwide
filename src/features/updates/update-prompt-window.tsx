@@ -5,6 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { hideUpdatePrompt, showUpdatePrompt } from "./api";
+import { useUpdateBridge } from "./update-bridge";
 import { updateDebug } from "./update-debug";
 import {
   remindAboutUpdateLater,
@@ -51,6 +52,8 @@ function LiveUpdatePromptWindow() {
   const [checkOnLaunch] = useState(startupUpdateCheckDue);
   const reminderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shownVersionRef = useRef<string | null>(null);
+  const update = useUpdate({ autoCheck: checkOnLaunch });
+  useUpdateBridge(update);
   const {
     checkForUpdates,
     currentVersion,
@@ -62,7 +65,7 @@ function LiveUpdatePromptWindow() {
     releaseNotes,
     status,
     updateVersion,
-  } = useUpdate({ autoCheck: checkOnLaunch });
+  } = update;
   const busy = status === "downloading";
 
   const scheduleUpdateCheck = useCallback(

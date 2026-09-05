@@ -14,7 +14,7 @@ import {
 const keyboardClassName = [
   "gap-tight inline-flex min-h-5 min-w-5 items-center justify-center rounded-md border border-content-fg/20 border-b-2 border-b-content-fg/35 bg-content-fg/[7%] px-control font-mono text-xs leading-none text-content-fg shadow-xs tabular-nums",
   "inverse:border-content/20 inverse:border-b-content/35 inverse:bg-content/[7%] inverse:text-content",
-  "[&_svg]:size-3 [&_svg]:shrink-0 [&_svg]:transform-gpu",
+  "[&_svg]:size-3! [&_svg]:shrink-0 [&_svg]:transform-gpu",
 ];
 
 const isMacOS =

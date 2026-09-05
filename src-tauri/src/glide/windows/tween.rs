@@ -137,7 +137,12 @@ pub(super) fn land_cursor(point: POINT) {
       .is_some()
   });
   if !deferred {
+    crate::recording::cursor::glide_cursor_visibility(false, None);
     let _ = unsafe { SetCursorPos(point.x, point.y) };
+    crate::recording::cursor::glide_cursor_visibility(
+      true,
+      Some((f64::from(point.x), f64::from(point.y))),
+    );
   }
 }
 
@@ -178,7 +183,12 @@ fn step() {
       settle(&tween.target, tween.requested, tween.generation, &context);
     }
     if let Some(point) = tween.landing {
+      crate::recording::cursor::glide_cursor_visibility(false, None);
       let _ = unsafe { SetCursorPos(point.x, point.y) };
+      crate::recording::cursor::glide_cursor_visibility(
+        true,
+        Some((f64::from(point.x), f64::from(point.y))),
+      );
     }
     return;
   }

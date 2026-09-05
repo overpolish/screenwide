@@ -263,10 +263,10 @@ fn released_scale(elapsed_seconds: f64, released_from: f64) -> f64 {
 mod tests {
   use super::*;
   use crate::recording::cursor::CursorSourceKind;
-
   fn compositor(positions: Vec<Position>, button_events: Vec<ButtonEvent>) -> CursorCompositor {
     let raw_positions = positions.clone();
     CursorCompositor {
+      visibility: Vec::new(),
       appearances: Vec::new(),
       button_events,
       dwell_anchors: Vec::new(),

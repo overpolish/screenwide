@@ -7,7 +7,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-pub(crate) const FORMAT_VERSION: u16 = 1;
+pub(crate) const FORMAT_VERSION: u16 = 2;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -94,6 +94,12 @@ pub enum CursorRecord {
     timestamp_us: u64,
     width: f64,
   },
+  Visibility {
+    timestamp_us: u64,
+    visible: bool,
+    x: f64,
+    y: f64,
+  },
   Position {
     timestamp_us: u64,
     x: f64,
@@ -129,7 +135,9 @@ pub fn read(path: &Path) -> Result<Vec<CursorRecord>, String> {
     }
   }
   match records.first() {
-    Some(CursorRecord::Header { version, .. }) if *version == FORMAT_VERSION => Ok(records),
+    Some(CursorRecord::Header { version, .. }) if (1..=FORMAT_VERSION).contains(version) => {
+      Ok(records)
+    }
     Some(CursorRecord::Header { version, .. }) => Err(format!(
       "Cursor recording version {version} is not supported"
     )),

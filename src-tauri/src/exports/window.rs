@@ -22,7 +22,7 @@ pub fn show(app: &AppHandle, kind: ExportKind) -> tauri::Result<()> {
 
 pub fn hide(app: &AppHandle, kind: ExportKind) -> tauri::Result<()> {
   if let Some(window) = app.get_webview_window(kind.window_label().as_str()) {
-    window.hide()?;
+    windows::hide_without_focus_transfer(&window)?;
   }
 
   windows::sync_dock_visibility(app)?;

@@ -24,6 +24,7 @@ const errorMessage = (reason: unknown) =>
 
 export function useUpdate({ autoCheck = true } = {}) {
   const checkRequestRef = useRef(0);
+  const checkInFlightRef = useRef(false);
   const updateRef = useRef<Update | null>(null);
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
@@ -36,6 +37,8 @@ export function useUpdate({ autoCheck = true } = {}) {
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
 
   const checkForUpdates = useCallback(async () => {
+    if (checkInFlightRef.current) return;
+    checkInFlightRef.current = true;
     const request = ++checkRequestRef.current;
     updateDebug("Starting update check", { request });
     setError(null);
@@ -89,6 +92,8 @@ export function useUpdate({ autoCheck = true } = {}) {
       updateDebug("Update check failed", { error: errorMessage(reason) });
       setError(errorMessage(reason));
       setStatus("error");
+    } finally {
+      checkInFlightRef.current = false;
     }
   }, []);
 

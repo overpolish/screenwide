@@ -720,7 +720,7 @@ impl Compositor {
         [cursor.x, cursor.y, cursor.width, cursor.height]
       }),
       cursor_effects: composition.cursor.map_or([0.0; 4], |cursor| {
-        [0.0, 0.0, cursor.rotation_radians, cursor.scale]
+        [cursor.opacity, 0.0, cursor.rotation_radians, cursor.scale]
       }),
       cursor_blur: composition.cursor.map_or([0.0; 4], |cursor| {
         [cursor.blur_delta_x, cursor.blur_delta_y, 0.0, 0.0]

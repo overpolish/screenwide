@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react";
 
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
+import { Text } from "../../components/base/text/text";
 import { CopyableText } from "../../components/shared/copyable-text/copyable-text";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
 
@@ -39,14 +40,11 @@ export function QrDetails({
     error ?? (payload.kind === "unsupported" ? payload.reason : undefined);
 
   return (
-    <main className="window-surface flex h-full w-full flex-col overflow-hidden rounded-window text-content-fg">
-      <WindowHeader
-        description={description(payload)}
-        onClose={onClose}
-        title={payload.label}
-      />
+    <main className="window-surface gap-section flex h-full w-full flex-col overflow-hidden rounded-window text-content-fg">
+      <WindowHeader onClose={onClose} title={payload.label} />
 
       <div className="gap-section px-window-inset pb-window-inset flex min-h-0 grow flex-col">
+        <Text>{description(payload)}</Text>
         {status ? (
           <Alert color="error" role="alert">
             {status}

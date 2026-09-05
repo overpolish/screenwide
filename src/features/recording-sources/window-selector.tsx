@@ -7,7 +7,7 @@ import { AppWindowMac, CircleSlash2 } from "lucide-react";
 import { Button } from "../../components/base/button/button";
 import { ButtonGrid } from "../../components/base/button-group/button-group";
 import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
-import { OverflowShadow } from "../../components/base/overflow-shadow/overflow-shadow";
+import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 
 import { WindowDetails } from "./types";
 
@@ -68,7 +68,7 @@ export function WindowSelector({
     : orderedWindows[0]?.id;
 
   return (
-    <OverflowShadow orientation="vertical" rootClassName="rounded-xl">
+    <ScrollArea edgeEffect="inset" orientation="vertical">
       <ButtonGrid aria-label="Windows" className="gap-control" columns={3}>
         {orderedWindows.map((window) => {
           const isSelected = selectedWindow?.id === window.id;
@@ -122,6 +122,6 @@ export function WindowSelector({
           );
         })}
       </ButtonGrid>
-    </OverflowShadow>
+    </ScrollArea>
   );
 }

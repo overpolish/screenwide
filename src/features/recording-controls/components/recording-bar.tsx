@@ -21,7 +21,6 @@ import { Button } from "../../../components/base/button/button";
 import { IconButton } from "../../../components/base/button/icon-button";
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { Overlay } from "../../../components/base/overlay/overlay";
-import { cn } from "../../../lib/styling";
 import { RecordingFps, RecordingInputs } from "../../recording-inputs/types";
 import { RecordingMode } from "../../recording-sources/types";
 import { canStartRecording } from "../can-record";
@@ -197,7 +196,7 @@ export function RecordingBar({
 
   return (
     <main
-      className="window-surface px-section pt-section pb-control flex h-full min-h-[120px] w-full min-w-[680px] flex-col overflow-hidden text-content-fg"
+      className="window-surface gap-control px-section pt-section pb-control flex h-full min-h-[120px] w-full min-w-[680px] flex-col overflow-hidden text-content-fg"
       data-tauri-drag-region="deep"
       onKeyDownCapture={(event) => {
         if (
@@ -235,13 +234,13 @@ export function RecordingBar({
         </IconButton>
       </Overlay>
 
-      <div
-        className={cn(
-          "gap-section relative flex min-h-0 w-full grow items-center justify-center",
-          sourceSelector &&
-            "pt-[calc(var(--spacing-window-inset)+var(--spacing-control))]",
-        )}
-      >
+      {sourceSelector ? (
+        <div className="gap-control flex h-6 shrink-0" ref={sourceSelectorRef}>
+          {sourceSelector}
+        </div>
+      ) : null}
+
+      <div className="gap-section relative flex min-h-0 w-full grow items-center justify-center">
         <RecordingModePicker
           isDisabled={isRecordingActive}
           mode={mode}
@@ -252,15 +251,6 @@ export function RecordingBar({
             onModeChange?.(nextMode);
           }}
         />
-
-        {sourceSelector ? (
-          <div
-            className="gap-control absolute inset-x-0 top-0 flex h-6"
-            ref={sourceSelectorRef}
-          >
-            {sourceSelector}
-          </div>
-        ) : null}
 
         <IconButton
           aria-label="Cancel"

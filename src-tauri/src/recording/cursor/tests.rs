@@ -87,6 +87,8 @@ fn initial_snapshot_starts_at_zero_and_motion_keeps_hardware_cadence() {
     last_appearance: None,
     last_flush: origin,
     last_move: None,
+    last_visibility: None,
+    last_position: None,
     writer: BufWriter::new(file),
   };
 
@@ -179,4 +181,78 @@ fn windows_sampler_writes_a_live_semantic_snapshot() {
   assert!(records
     .iter()
     .any(|record| matches!(record, CursorRecord::Position { .. })));
+}
+
+#[test]
+fn visibility_records_exact_landings_and_keeps_hidden_button_releases() {
+  let origin = Instant::now();
+  let shared_origin = Arc::new(OnceLock::new());
+  shared_origin.set(origin).unwrap();
+  let path = std::env::temp_dir().join(format!(
+    "screenwide-cursor-visibility-{}.jsonl",
+    std::process::id()
+  ));
+  let mut stream = StreamWriter {
+    clock: CursorClock::new(shared_origin),
+    failure: None,
+    last_appearance: None,
+    last_flush: origin,
+    last_move: None,
+    last_visibility: None,
+    last_position: None,
+    writer: BufWriter::new(File::create(&path).unwrap()),
+  };
+  stream
+    .record(test_event(origin, RawCursorEventKind::Snapshot))
+    .unwrap();
+  stream.record_visibility(10_000, false, None).unwrap();
+  stream
+    .record(test_event(
+      origin + Duration::from_millis(20),
+      RawCursorEventKind::Move,
+    ))
+    .unwrap();
+  stream
+    .record(test_event(
+      origin + Duration::from_millis(30),
+      RawCursorEventKind::Button {
+        button: CursorButton::Left,
+        click_count: 1,
+        state: ButtonState::Up,
+      },
+    ))
+    .unwrap();
+  stream
+    .record_visibility(40_000, true, Some((900.0, 800.0)))
+    .unwrap();
+  stream.writer.flush().unwrap();
+  let records: Vec<CursorRecord> = std::fs::read_to_string(&path)
+    .unwrap()
+    .lines()
+    .map(|line| serde_json::from_str(line).unwrap())
+    .collect();
+  std::fs::remove_file(path).unwrap();
+  assert!(records.iter().any(|record| matches!(
+    record,
+    CursorRecord::Button {
+      state: ButtonState::Up,
+      ..
+    }
+  )));
+  assert!(!records.iter().any(|record| matches!(
+    record,
+    CursorRecord::Position {
+      timestamp_us: 20_000,
+      ..
+    }
+  )));
+  assert!(matches!(
+    records.last().unwrap(),
+    CursorRecord::Visibility {
+      timestamp_us: 40_000,
+      visible: true,
+      x: 900.0,
+      y: 800.0
+    }
+  ));
 }

@@ -28,7 +28,7 @@ export function MonitorSelector({
 }: MonitorSelectorProps) {
   if (monitors.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-xs text-muted">
+      <div className="inset-shadow-full p-section flex h-full w-full items-center justify-center rounded-window text-xs text-muted">
         No displays found
       </div>
     );
@@ -65,57 +65,59 @@ export function MonitorSelector({
     : orderedMonitors[0]?.id;
 
   return (
-    <ButtonGroup
-      aria-label="Displays"
-      className="relative max-h-full max-w-full"
-      orientation={orientation}
-      style={{
-        aspectRatio: layoutWidth / layoutHeight,
-        height: `min(84%, 84vw / ${String(layoutWidth / layoutHeight)})`,
-        width: `min(88%, 88vh * ${String(layoutWidth / layoutHeight)})`,
-      }}
-    >
-      {orderedMonitors.map((monitor) => {
-        const isSelected = selectedMonitor?.id === monitor.id;
+    <div className="inset-shadow-full p-section flex h-full w-full items-center justify-center overflow-hidden rounded-window">
+      <ButtonGroup
+        aria-label="Displays"
+        className="relative max-h-full max-w-full"
+        orientation={orientation}
+        style={{
+          aspectRatio: layoutWidth / layoutHeight,
+          height: `min(84%, 84vw / ${String(layoutWidth / layoutHeight)})`,
+          width: `min(88%, 88vh * ${String(layoutWidth / layoutHeight)})`,
+        }}
+      >
+        {orderedMonitors.map((monitor) => {
+          const isSelected = selectedMonitor?.id === monitor.id;
 
-        return (
-          <Button
-            aria-label={`Select ${monitor.name}`}
-            className={cn(
-              "px-control absolute min-h-8 min-w-12 transform-gpu justify-center overflow-hidden shadow-md",
-              focusContents &&
-                monitor.id === focusTargetId &&
-                "focus:ring-1 focus:ring-offset-1",
-            )}
-            color={isSelected ? "primary" : "neutral"}
-            data-source-selector-focus-target={
-              monitor.id === focusTargetId ? "true" : undefined
-            }
-            key={monitor.id}
-            onPress={(event) => {
-              onCommit(
-                monitor,
-                ["keyboard", "virtual"].includes(event.pointerType),
-              );
-            }}
-            onPressStart={() => {
-              onSelect(monitor);
-            }}
-            style={{
-              height: `${String((monitor.layoutSize.height / layoutHeight) * 100)}%`,
-              left: `${String(((monitor.layoutPosition.x - bounds.minX) / layoutWidth) * 100)}%`,
-              top: `${String(((monitor.layoutPosition.y - bounds.minY) / layoutHeight) * 100)}%`,
-              width: `${String((monitor.layoutSize.width / layoutWidth) * 100)}%`,
-            }}
-          >
-            <span className="gap-control flex min-w-0 flex-col items-center">
-              <Monitor aria-hidden className="size-icon-compact" />
-              <span className="max-w-full truncate">{monitor.name}</span>
-              {monitor.isPrimary ? <Badge>Primary</Badge> : null}
-            </span>
-          </Button>
-        );
-      })}
-    </ButtonGroup>
+          return (
+            <Button
+              aria-label={`Select ${monitor.name}`}
+              className={cn(
+                "px-control absolute min-h-8 min-w-12 transform-gpu justify-center overflow-hidden shadow-md",
+                focusContents &&
+                  monitor.id === focusTargetId &&
+                  "focus:ring-1 focus:ring-offset-1",
+              )}
+              color={isSelected ? "primary" : "neutral"}
+              data-source-selector-focus-target={
+                monitor.id === focusTargetId ? "true" : undefined
+              }
+              key={monitor.id}
+              onPress={(event) => {
+                onCommit(
+                  monitor,
+                  ["keyboard", "virtual"].includes(event.pointerType),
+                );
+              }}
+              onPressStart={() => {
+                onSelect(monitor);
+              }}
+              style={{
+                height: `${String((monitor.layoutSize.height / layoutHeight) * 100)}%`,
+                left: `${String(((monitor.layoutPosition.x - bounds.minX) / layoutWidth) * 100)}%`,
+                top: `${String(((monitor.layoutPosition.y - bounds.minY) / layoutHeight) * 100)}%`,
+                width: `${String((monitor.layoutSize.width / layoutWidth) * 100)}%`,
+              }}
+            >
+              <span className="gap-control flex min-w-0 flex-col items-center">
+                <Monitor aria-hidden className="size-icon-compact" />
+                <span className="max-w-full truncate">{monitor.name}</span>
+                {monitor.isPrimary ? <Badge>Primary</Badge> : null}
+              </span>
+            </Button>
+          );
+        })}
+      </ButtonGroup>
+    </div>
   );
 }

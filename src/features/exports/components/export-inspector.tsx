@@ -6,8 +6,8 @@ import { useState } from "react";
 
 import { Alert } from "../../../components/base/alert/alert";
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
-import { OverflowShadow } from "../../../components/base/overflow-shadow/overflow-shadow";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
+import { ScrollArea } from "../../../components/base/scroll-area/scroll-area";
 import { Slider } from "../../../components/base/slider/slider";
 import { resizeCameraOverlayCentered } from "../camera-overlay-geometry";
 import { resolutionScales, scaledDimensions } from "../resolution";
@@ -162,7 +162,7 @@ export function ExportInspector({
 
   return (
     <aside className="flex min-h-0 min-w-0 flex-col border-r border-muted/15 bg-content/35">
-      <OverflowShadow rootClassName="min-h-0 grow">
+      <ScrollArea rootClassName="min-h-0 grow">
         <div className="flex flex-col gap-4 p-4">
           <PillGroup
             aria-label="Inspector section"
@@ -334,7 +334,7 @@ export function ExportInspector({
             </p>
           ) : null}
         </div>
-      </OverflowShadow>
+      </ScrollArea>
     </aside>
   );
 }

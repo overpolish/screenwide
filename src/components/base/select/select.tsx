@@ -19,7 +19,7 @@ import { focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 import { FieldGroupContext } from "../field-group/field-group-context";
 import { ListBox } from "../listbox/listbox";
-import { OverflowShadow } from "../overflow-shadow/overflow-shadow";
+import { ScrollArea } from "../scroll-area/scroll-area";
 
 import { ClearButton } from "./components/clear-button";
 
@@ -232,7 +232,7 @@ export const Select = <T extends object>({
             shouldFlip={popoverShouldFlip}
           >
             {scrollShadow ? (
-              <OverflowShadow
+              <ScrollArea
                 constrainHeight
                 rootClassName={clsx(
                   "rounded-xl bg-content shadow-md",
@@ -240,7 +240,7 @@ export const Select = <T extends object>({
                 )}
               >
                 {listBox}
-              </OverflowShadow>
+              </ScrollArea>
             ) : (
               listBox
             )}

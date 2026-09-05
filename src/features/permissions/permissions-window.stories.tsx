@@ -41,7 +41,7 @@ const meta = {
     (Story, context) => {
       applyPreviewTheme(context.globals.theme);
       return (
-        <FeatureStoryStage height={388} viewMode={context.viewMode} width={540}>
+        <FeatureStoryStage height={400} viewMode={context.viewMode} width={540}>
           <Story />
         </FeatureStoryStage>
       );

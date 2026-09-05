@@ -18,6 +18,10 @@
 @custom-variant dark (&:is(.dark *));
 @custom-variant inverse (&:is([data-surface="inverse"] *));
 
+@theme inline {
+  --color-overlay: color-mix(in oklab, var(--color-content) 30%, transparent);
+}
+
 @theme {
   --font-sans:
     "Inter Variable", ui-sans-serif, system-ui, -apple-system,
@@ -31,6 +35,8 @@
   --spacing-control: 0.25rem;
   --spacing-control-inset: 0.5rem;
   --spacing-section: 0.75rem;
+  /* Separation between major layout areas, such as navigation and content. */
+  --spacing-layout: 1.5rem;
   --spacing-window-inset: 1.5rem;
   --spacing-focus-safe: 0.125rem;
   --spacing-icon-indicator: 0.625rem;
@@ -466,7 +472,10 @@ html[data-platform="windows"] .glide-app-icon-windows-boost {
   --os-track-border-radius: 10px;
   --os-handle-interactive-area-offset: 4px;
   --os-handle-border-radius: 10px;
-  --os-handle-bg: var(--color-muted);
-  --os-handle-bg-hover: var(--color-content-fg);
-  --os-handle-bg-active: var(--color-content-fg);
+  --os-track-bg: transparent;
+  --os-track-bg-hover: transparent;
+  --os-track-bg-active: transparent;
+  --os-handle-bg: var(--color-neutral);
+  --os-handle-bg-hover: var(--color-neutral-hover);
+  --os-handle-bg-active: var(--color-neutral-pressed);
 }

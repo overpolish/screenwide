@@ -24,7 +24,7 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
 pub fn hide_settings(app: AppHandle) -> tauri::Result<()> {
   let _ = crate::shortcuts::end_shortcut_capture(app.clone());
   if let Some(window) = app.get_webview_window(WindowLabel::Settings.as_str()) {
-    window.hide()?;
+    windows::hide_without_focus_transfer(&window)?;
   }
   windows::sync_dock_visibility(&app)
 }

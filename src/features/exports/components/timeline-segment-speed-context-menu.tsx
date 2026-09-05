@@ -5,7 +5,7 @@ import { Check } from "lucide-react";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
-import { OverflowShadow } from "../../../components/base/overflow-shadow/overflow-shadow";
+import { ScrollArea } from "../../../components/base/scroll-area/scroll-area";
 
 const TIMELINE_SEGMENT_PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
@@ -51,7 +51,7 @@ export function TimelineSegmentSpeedContextMenu({
         top: menu.y,
       }}
     >
-      <OverflowShadow
+      <ScrollArea
         constrainHeight
         rootClassName="max-h-[inherit] border-1 border-muted/25 bg-content shadow-lg"
       >
@@ -80,7 +80,7 @@ export function TimelineSegmentSpeedContextMenu({
             );
           })}
         </div>
-      </OverflowShadow>
+      </ScrollArea>
     </div>,
     document.body,
   );

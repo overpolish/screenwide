@@ -44,7 +44,7 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
             let _ = crate::permissions::dismiss_permissions_window(app.clone());
           }
           _ => {
-            let _ = window_to_hide.hide();
+            let _ = super::hide_without_focus_transfer(&window_to_hide);
           }
         }
       }
@@ -86,6 +86,8 @@ where
 }
 
 pub fn show(window: &WebviewWindow, focus: bool) -> tauri::Result<()> {
+  #[cfg(target_os = "macos")]
+  super::dismissal::cancel_pending_dismissal(window)?;
   platform::prepare_to_show(window)?;
   window.show()?;
   window.unminimize()?;

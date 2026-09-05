@@ -18,6 +18,8 @@ mod platform;
 mod platform;
 
 mod format;
+mod visibility;
+pub(crate) use visibility::glide_cursor_visibility;
 #[cfg(test)]
 mod tests;
 
@@ -126,6 +128,8 @@ struct StreamWriter {
   last_appearance: Option<CursorAppearance>,
   last_flush: Instant,
   last_move: Option<Instant>,
+  last_visibility: Option<bool>,
+  last_position: Option<(f64, f64)>,
   writer: BufWriter<File>,
 }
 
@@ -149,6 +153,15 @@ impl StreamWriter {
       return Ok(false);
     };
 
+    if self.last_visibility == Some(false)
+      && matches!(
+        event.kind,
+        RawCursorEventKind::Move | RawCursorEventKind::Appearance
+      )
+    {
+      return Ok(true);
+    }
+    self.last_position = Some((event.x, event.y));
     if self.last_appearance.as_ref() != Some(&event.appearance) {
       self.write(&CursorRecord::Appearance {
         height: event.appearance.height,
@@ -246,27 +259,11 @@ impl CursorRecorder {
       last_appearance: None,
       last_flush: Instant::now(),
       last_move: None,
+      last_visibility: None,
+      last_position: None,
       writer,
     }));
-    let sink_state = Arc::clone(&state);
-    let sink: EventSink = Arc::new(move |event| {
-      let mut state = sink_state
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-      if state.failure.is_some() {
-        return false;
-      }
-      match state.record(event) {
-        Ok(recording) => recording,
-        Err(error) => {
-          if state.failure.is_none() {
-            eprintln!("Cursor recording stopped writing: {error}");
-            state.failure = Some(error);
-          }
-          false
-        }
-      }
-    });
+    let sink = visibility::sink(&state);
     let stop = Arc::new(AtomicBool::new(false));
     let worker = platform::start(Arc::clone(&stop), sink).inspect_err(|_| {
       let _ = std::fs::remove_file(&path);

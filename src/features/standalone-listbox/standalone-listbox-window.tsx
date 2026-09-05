@@ -8,7 +8,7 @@ import { useLayoutEffect, useRef } from "react";
 
 import { ListBox } from "../../components/base/listbox/listbox";
 import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
-import { OverflowShadow } from "../../components/base/overflow-shadow/overflow-shadow";
+import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 
 import { hideStandaloneListbox } from "./api";
 import {
@@ -118,7 +118,7 @@ export function StandaloneListboxWindow() {
   };
 
   return (
-    <OverflowShadow
+    <ScrollArea
       key={active.id}
       rootClassName="window-surface rounded-window"
     >
@@ -160,6 +160,6 @@ export function StandaloneListboxWindow() {
           </ListBoxItem>
         ))}
       </ListBox>
-    </OverflowShadow>
+    </ScrollArea>
   );
 }

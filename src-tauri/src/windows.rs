@@ -7,6 +7,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WindowEvent};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
+mod dismissal;
 pub(crate) mod dock;
 mod escape;
 mod geometry;
@@ -25,6 +26,7 @@ mod source_selector_layout;
 mod topology;
 mod transient_popover;
 
+pub use dismissal::hide_without_focus_transfer;
 #[cfg(not(target_os = "macos"))]
 pub use dock::initialize_recording_dock;
 pub use dock::{hide_recording_dock, manage_recording_dock_movement, show_recording_dock};

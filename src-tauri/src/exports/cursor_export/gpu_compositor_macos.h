@@ -56,6 +56,7 @@ typedef struct {
   uint32_t style;
   uint32_t clip_at_video_edge;
   uint32_t visible;
+  float opacity;
 } ScreenwideGpuCursor;
 
 /// One cursor style's artwork. `pixels` is tightly packed RGBA owned by the

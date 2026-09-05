@@ -32,6 +32,7 @@
     "lint:fix": "eslint . --fix",
     "knip": "knip",
     "license:check": "node scripts/check-spdx.mjs",
+    "tray-icons:prepare": "node scripts/prepare-tray-menu-icons.mjs",
     "macos-icon:prepare": "node scripts/prepare-macos-icon.mjs",
     "preview": "vite preview",
     "release:check-version": "node scripts/check-release-version.mjs",
@@ -64,6 +65,7 @@
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^5.18.3",
     "@eslint/js": "^10.0.1",
+    "@resvg/resvg-js": "^2.6.2",
     "@storybook/addon-docs": "10.5.7",
     "@storybook/addon-themes": "^10.5.7",
     "@storybook/react": "^10.5.7",

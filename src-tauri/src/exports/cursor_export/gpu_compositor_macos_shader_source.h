@@ -22,6 +22,7 @@ struct GpuCursor {
   uint style;
   uint clip_at_video_edge;
   uint visible;
+  float opacity;
 };
 
 struct CursorArtwork {
@@ -1078,8 +1079,11 @@ static float4 cursor_pixel(texture2d_array<float, access::read> images,
   // MAX_BLUR_DISTANCE (cursor_effects.rs:36). The settings gate lives on the
   // CPU: a disabled motion blur arrives here as a zero delta.
   float distance = min(travel, 80.0);
-  if (!(distance > 1.25 && travel > 0.0))
-    return cursor_draw_sample(images, u, point, anchor);
+  if (!(distance > 1.25 && travel > 0.0)) {
+    float4 sample = cursor_draw_sample(images, u, point, anchor);
+    sample.a *= u.cursor.opacity;
+    return sample;
+  }
   float2 direction = delta / travel;
   // motion_blur_sample_count (cursor_effects.rs:323-325).
   uint count = uint(clamp(ceil(distance / 2.0) + 1.0, 8.0, 48.0));
@@ -1098,7 +1102,7 @@ static float4 cursor_pixel(texture2d_array<float, access::read> images,
   }
   alpha /= total_weight;
   if (alpha <= 0.0) return 0.0;
-  return float4(colour / (total_weight * alpha), alpha);
+  return float4(colour / (total_weight * alpha), alpha * u.cursor.opacity);
 }
 
 kernel void overlay_luma(texture2d_array<float, access::read> cursor [[texture(0)]],

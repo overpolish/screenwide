@@ -18,7 +18,7 @@ import {
 } from "react-aria-components";
 
 const tooltipClassName = [
-  "bg-content-fg text-content m-2 px-control-inset py-control rounded-lg text-xs shadow-md",
+  "bg-content-fg text-content px-control-inset py-control rounded-lg text-xs shadow-md",
   "data-[placement=top]:origin-bottom",
   "data-[placement=bottom]:origin-top",
   "data-[placement=left]:origin-right",
@@ -56,6 +56,7 @@ export const Tooltip = ({
   arrowBoundaryOffset = 8,
   children,
   className,
+  offset = 8,
   withArrow = true,
   ...props
 }: TooltipProps) => {
@@ -77,6 +78,7 @@ export const Tooltip = ({
           exit="closed"
           initial="closed"
           isOpen
+          offset={offset}
           transition={
             prefersReducedMotion
               ? { duration: 0 }

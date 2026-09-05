@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Ban, Clock3, Download, Sparkle } from "lucide-react";
+import { Ban, Clock3, Download } from "lucide-react";
 
+import logoUrl from "../../assets/screenwide-mark.svg";
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
-import { OverflowShadow } from "../../components/base/overflow-shadow/overflow-shadow";
-import { Sparkles } from "../../components/base/sparkles/sparkles";
-import { WindowTitlebar } from "../../components/shared/window-titlebar/window-titlebar";
+import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
+import { WindowHeader } from "../../components/shared/window-header/window-header";
 
 import { ReleaseNotes } from "./release-notes";
 
@@ -51,12 +51,20 @@ export function UpdatePrompt({
   const released = displayDate(releaseDate);
 
   return (
-    <main className="window-surface flex h-full w-full flex-col overflow-hidden rounded-[10px] text-content-fg">
-      <WindowTitlebar
+    <main className="window-surface gap-section flex h-full w-full flex-col overflow-hidden rounded-window text-content-fg">
+      <WindowHeader
+        leadingSection={
+          <img
+            alt="Screenwide"
+            className="brightness-0 dark:invert"
+            draggable={false}
+            src={logoUrl}
+          />
+        }
         onClose={busy ? undefined : onRemindLater}
         title="Software Update"
       />
-      <div className="flex min-h-0 grow flex-col gap-4 px-6 pt-5 pb-6">
+      <div className="px-window-inset pb-window-inset flex min-h-0 grow flex-col gap-4">
         <Alert color="neutral">
           <div>
             <p className="font-semibold">
@@ -79,7 +87,7 @@ export function UpdatePrompt({
           <div className="border-b border-muted/15 px-4 py-2.5 text-xs font-semibold text-muted">
             What’s new
           </div>
-          <OverflowShadow className="px-4 py-3" rootClassName="min-h-0 grow">
+          <ScrollArea className="px-4 py-3" rootClassName="min-h-0 grow">
             {releaseNotes ? (
               <ReleaseNotes html={releaseNotes} />
             ) : (
@@ -87,7 +95,7 @@ export function UpdatePrompt({
                 This update includes improvements and fixes for Screenwide.
               </p>
             )}
-          </OverflowShadow>
+          </ScrollArea>
         </section>
 
         {status === "downloading" ? (
@@ -135,23 +143,15 @@ export function UpdatePrompt({
             <Clock3 size={14} />
             Not right now
           </Button>
-          <Sparkles
-            icon={Sparkle}
-            offset={{ x: { max: 80, min: 0 }, y: { max: 60, min: -15 } }}
-            opacity={0.55}
-            scale={{ max: 0.5, min: 0.2 }}
-            sparklesCount={busy ? 0 : 2}
+          <Button
+            color="primary"
+            isDisabled={busy}
+            onPress={onInstall}
+            size="compact"
           >
-            <Button
-              color="primary"
-              isDisabled={busy}
-              onPress={onInstall}
-              size="compact"
-            >
-              <Download size={14} />
-              {busy ? "Installing…" : "Update and restart"}
-            </Button>
-          </Sparkles>
+            <Download size={14} />
+            {busy ? "Installing…" : "Update and restart"}
+          </Button>
         </div>
       </div>
     </main>

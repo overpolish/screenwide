@@ -11,9 +11,10 @@
 //! it ends.
 
 use windows::Win32::UI::WindowsAndMessaging::{
-  CreateCursor, SetSystemCursor, SystemParametersInfoW, OCR_APPSTARTING, OCR_CROSS, OCR_HAND,
-  OCR_IBEAM, OCR_NO, OCR_NORMAL, OCR_SIZEALL, OCR_SIZENESW, OCR_SIZENS, OCR_SIZENWSE, OCR_SIZEWE,
-  OCR_UP, OCR_WAIT, SPI_SETCURSORS, SYSTEM_CURSOR_ID, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
+  CreateCursor, GetCursorPos, SetSystemCursor, SystemParametersInfoW, OCR_APPSTARTING, OCR_CROSS,
+  OCR_HAND, OCR_IBEAM, OCR_NO, OCR_NORMAL, OCR_SIZEALL, OCR_SIZENESW, OCR_SIZENS, OCR_SIZENWSE,
+  OCR_SIZEWE, OCR_UP, OCR_WAIT, SPI_SETCURSORS, SYSTEM_CURSOR_ID,
+  SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
 };
 
 const CURSOR_IDS: [SYSTEM_CURSOR_ID; 13] = [
@@ -34,6 +35,7 @@ const CURSOR_IDS: [SYSTEM_CURSOR_ID; 13] = [
 const BLANK_SIZE: i32 = 32;
 
 pub(super) fn hide_cursor() {
+  crate::recording::cursor::glide_cursor_visibility(false, None);
   for id in CURSOR_IDS {
     // `SetSystemCursor` takes ownership of the handle and destroys it when the
     // scheme changes again, so every slot needs its own cursor.
@@ -44,6 +46,11 @@ pub(super) fn hide_cursor() {
 }
 
 pub(super) fn show_cursor() {
+  let mut point = windows::Win32::Foundation::POINT::default();
+  let position = unsafe { GetCursorPos(&mut point) }
+    .ok()
+    .map(|()| (f64::from(point.x), f64::from(point.y)));
+  crate::recording::cursor::glide_cursor_visibility(true, position);
   let restored = unsafe {
     SystemParametersInfoW(
       SPI_SETCURSORS,

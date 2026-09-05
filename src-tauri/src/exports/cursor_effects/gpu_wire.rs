@@ -19,6 +19,7 @@ pub(crate) struct NativeGpuCursor {
   pub style: u32,
   pub clip_at_video_edge: u32,
   pub visible: u32,
+  pub opacity: f32,
 }
 
 impl From<Option<GpuCursor>> for NativeGpuCursor {
@@ -37,6 +38,7 @@ impl From<Option<GpuCursor>> for NativeGpuCursor {
       style: cursor.style,
       clip_at_video_edge: u32::from(cursor.clip_at_video_edge),
       visible: 1,
+      opacity: cursor.opacity,
     })
   }
 }

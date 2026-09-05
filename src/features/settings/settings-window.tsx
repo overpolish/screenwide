@@ -1,28 +1,26 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Info, Keyboard, LayoutGrid, Settings } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-
-import { OverflowShadow } from "../../components/base/overflow-shadow/overflow-shadow";
-import { PillGroup } from "../../components/base/pill-group/pill-group";
-import { WindowTitlebar } from "../../components/shared/window-titlebar/window-titlebar";
-import { UpdatePanel } from "../updates/update-panel";
-
+import { Keyboard, LayoutGrid, Settings } from "lucide-react";
 import {
-  getGeneralSettings,
-  getGlideSettings,
-  getShortcutSettings,
-  endShortcutCapture,
-  hideSettings,
-  setGeneralSettings,
-  setGlideSettings,
-  setShortcutBinding,
-} from "./api";
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import logoUrl from "../../assets/screenwide-mark.svg";
+import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
+import { SidebarNav } from "../../components/base/sidebar-nav/sidebar-nav";
+import { Text } from "../../components/base/text/text";
+import { WindowHeader } from "../../components/shared/window-header/window-header";
+
 import { GeneralSettingsPanel } from "./general-settings";
 import { GlideSettingsPanel } from "./glide-settings";
-import { ShortcutField } from "./shortcut-field";
+import { HotkeySettingsPanel } from "./hotkey-settings";
+import { useSettingsApi } from "./settings-api-context";
+import { LiveSettingsUpdateActions } from "./settings-update-actions";
 import {
   GeneralSettings,
   GlideSettings,
@@ -30,72 +28,31 @@ import {
   ShortcutSettings,
 } from "./types";
 
-const actions: {
-  action: ShortcutAction;
-  description: string;
-  label: string;
-}[] = [
-  {
-    action: "toggleRecordingBar",
-    description: "Show or hide the recording controls.",
-    label: "Show or hide recording bar",
-  },
-  {
-    action: "startStopRecording",
-    description: "Start with the current setup, or stop the active recording.",
-    label: "Start or stop recording",
-  },
-  {
-    action: "pauseResumeRecording",
-    description: "Pause or resume the active recording.",
-    label: "Pause or resume recording",
-  },
-  {
-    action: "takeScreenshot",
-    description: "Pick a region on screen, then capture it.",
-    label: "Take screenshot",
-  },
-  {
-    action: "takeScreenshotToClipboard",
-    description: "Pick a region and copy it without opening Export.",
-    label: "Take screenshot to clipboard",
-  },
-  {
-    action: "recognizeText",
-    description: "Draw around text or a QR code anywhere on screen.",
-    label: "Recognize Text/QR",
-  },
-  {
-    action: "rulerOverlay",
-    description: "Measure distances and align elements anywhere on screen.",
-    label: "Ruler overlay",
-  },
-];
+type SettingsSection = "general" | "glide" | "hotkeys";
 
-type SettingsSection = "about" | "general" | "glide" | "hotkeys";
-
-type SectionCopy = { subtitle: string; title: string };
-
-const sectionCopy: Record<SettingsSection, SectionCopy> = {
-  about: {
-    subtitle: "Version information and software updates.",
-    title: "About",
-  },
-  general: {
-    subtitle: "Defaults for capture, export and launch behaviour.",
-    title: "General",
-  },
-  glide: {
-    subtitle: "Move and size windows by gliding them from their titlebars.",
-    title: "Glide",
-  },
-  hotkeys: {
-    subtitle: "These work globally while Screenwide is running.",
-    title: "Hotkeys",
-  },
+const sectionTitles: Record<SettingsSection, string> = {
+  general: "General",
+  glide: "Glide",
+  hotkeys: "Shortcuts",
 };
 
-export function SettingsWindow() {
+export function SettingsWindow({
+  updateActions = <LiveSettingsUpdateActions />,
+}: {
+  updateActions?: ReactNode;
+}) {
+  const {
+    beginShortcutCapture,
+    endShortcutCapture,
+    getGeneralSettings,
+    getGlideSettings,
+    getShortcutSettings,
+    hideSettings,
+    minimize,
+    setGeneralSettings,
+    setGlideSettings,
+    setShortcutBinding,
+  } = useSettingsApi();
   const [section, setSection] = useState<SettingsSection>("general");
   const [general, setGeneral] = useState<GeneralSettings | null>(null);
   const [glide, setGlide] = useState<GlideSettings | null>(null);
@@ -104,6 +61,28 @@ export function SettingsWindow() {
   const [settings, setSettings] = useState<ShortcutSettings | null>(null);
   const [saving, setSaving] = useState<ShortcutAction | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const captureQueueRef = useRef(Promise.resolve());
+  const captureCountRef = useRef(0);
+  const glideSaveRef = useRef<{
+    pending: GlideSettings | null;
+    running: boolean;
+  }>({ pending: null, running: false });
+  const onCaptureChange = useCallback(
+    (capturing: boolean) => {
+      captureCountRef.current += capturing ? 1 : -1;
+      // A closing field may still be releasing while the next one prepares.
+      if (capturing ? captureCountRef.current > 1 : captureCountRef.current > 0)
+        return captureQueueRef.current;
+      const operation = captureQueueRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          await (capturing ? beginShortcutCapture() : endShortcutCapture());
+        });
+      captureQueueRef.current = operation;
+      return operation;
+    },
+    [beginShortcutCapture, endShortcutCapture],
+  );
 
   useEffect(() => {
     Promise.all([
@@ -119,7 +98,7 @@ export function SettingsWindow() {
       .catch((reason: unknown) => {
         setError(String(reason));
       });
-  }, []);
+  }, [getGeneralSettings, getGlideSettings, getShortcutSettings]);
 
   const changeBinding = useCallback(
     (action: ShortcutAction, shortcut: string | null) => {
@@ -132,133 +111,146 @@ export function SettingsWindow() {
         })
         .finally(() => {
           setSaving(null);
-          void endShortcutCapture();
         });
     },
-    [],
+    [setShortcutBinding],
   );
 
-  const changeGeneral = useCallback((next: GeneralSettings) => {
-    setGeneral(next);
-    setSavingGeneral(true);
-    setError(null);
-    setGeneralSettings(next)
-      .then(setGeneral)
-      .catch((reason: unknown) => {
-        setError(String(reason));
-        void getGeneralSettings().then(setGeneral);
-      })
-      .finally(() => {
-        setSavingGeneral(false);
-      });
-  }, []);
+  const changeGeneral = useCallback(
+    (next: GeneralSettings) => {
+      setGeneral(next);
+      setSavingGeneral(true);
+      setError(null);
+      setGeneralSettings(next)
+        .then(setGeneral)
+        .catch((reason: unknown) => {
+          setError(String(reason));
+          void getGeneralSettings().then(setGeneral);
+        })
+        .finally(() => {
+          setSavingGeneral(false);
+        });
+    },
+    [getGeneralSettings, setGeneralSettings],
+  );
 
-  const changeGlide = useCallback((next: GlideSettings) => {
-    setGlide(next);
-    setSavingGlide(true);
-    setError(null);
-    setGlideSettings(next)
-      .then(setGlide)
-      .catch((reason: unknown) => {
-        setError(String(reason));
-        void getGlideSettings().then(setGlide);
-      })
-      .finally(() => {
-        setSavingGlide(false);
-      });
-  }, []);
+  const changeGlide = useCallback(
+    (next: GlideSettings) => {
+      setGlide(next);
+      setError(null);
+      const queue = glideSaveRef.current;
+      queue.pending = next;
+      if (queue.running) return;
+      queue.running = true;
+      setSavingGlide(true);
+      // Keep pointer-rate slider edits live; persist in order and coalesce drafts.
+      const save = async () => {
+        const hasPending = () => glideSaveRef.current.pending !== null;
+        try {
+          while (queue.pending) {
+            const draft = queue.pending;
+            queue.pending = null;
+            try {
+              const saved = await setGlideSettings(draft);
+              if (!hasPending()) setGlide(saved);
+            } catch (reason: unknown) {
+              setError(String(reason));
+              if (!hasPending()) {
+                const saved = await getGlideSettings();
+                if (!hasPending()) setGlide(saved);
+              }
+            }
+          }
+        } catch (reason: unknown) {
+          setError(String(reason));
+        } finally {
+          queue.running = false;
+          setSavingGlide(false);
+        }
+      };
+      void save();
+    },
+    [getGlideSettings, setGlideSettings],
+  );
 
   return (
-    <main className="window-surface flex h-screen w-screen flex-col overflow-hidden rounded-[10px] text-content-fg">
-      <WindowTitlebar
-        border={false}
-        center={
-          <PillGroup
-            aria-label="Settings section"
-            display="icon-label"
-            items={[
-              { icon: <Settings size={15} />, id: "general", label: "General" },
-              { icon: <LayoutGrid size={15} />, id: "glide", label: "Glide" },
-              { icon: <Keyboard size={15} />, id: "hotkeys", label: "Hotkeys" },
-              { icon: <Info size={15} />, id: "about", label: "About" },
-            ]}
-            onSelectionChange={(id) => {
-              setSection(id as SettingsSection);
-            }}
-            selected={section}
+    <main className="window-surface gap-section flex h-full w-full flex-col overflow-hidden rounded-window text-content-fg">
+      <WindowHeader
+        actions={updateActions}
+        leadingSection={
+          <img
+            alt="Screenwide"
+            className="brightness-0 dark:invert"
+            draggable={false}
+            src={logoUrl}
           />
         }
         onClose={() => void hideSettings()}
-        onMinimize={() => void getCurrentWindow().minimize()}
+        onMinimize={() => void minimize()}
+        title="Settings"
       />
-      <div className="flex min-h-0 grow flex-col">
-        <header className="mx-auto w-full max-w-2xl shrink-0 px-6 pt-3 pb-4">
-          <h1 className="text-lg font-semibold">
-            {sectionCopy[section].title}
-          </h1>
-          <p className="mt-1 text-xs text-muted">
-            {sectionCopy[section].subtitle}
-          </p>
-        </header>
-        <section className="min-h-0 min-w-0 grow px-6 pb-6">
-          <div className="mx-auto flex h-full max-w-2xl flex-col">
-            {section === "general" && general ? (
-              <OverflowShadow rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral">
+      <div className="gap-layout px-window-inset pb-window-inset flex min-h-0 grow">
+        <SidebarNav
+          aria-label="Settings sections"
+          isExpandable={false}
+          items={[
+            { icon: <Settings />, id: "general", label: "General" },
+            { icon: <LayoutGrid />, id: "glide", label: "Glide" },
+            { icon: <Keyboard />, id: "hotkeys", label: "Shortcuts" },
+          ]}
+          onSelectionChange={(id) => {
+            setSection(id as SettingsSection);
+          }}
+          selected={section}
+        />
+        <div className="gap-section flex min-h-0 min-w-0 grow flex-col">
+          <header className="w-full shrink-0">
+            <h1 className="m-0 text-lg font-semibold">
+              {sectionTitles[section]}
+            </h1>
+          </header>
+          <section
+            aria-label={sectionTitles[section]}
+            className="gap-section flex min-h-0 min-w-0 grow flex-col"
+          >
+            <ScrollArea
+              edgeEffect="inset"
+              key={section}
+              rootClassName="min-h-0 grow"
+              scrollbarAutoHide="never"
+            >
+              {section === "general" && general ? (
                 <GeneralSettingsPanel
                   isSaving={savingGeneral}
                   onChange={changeGeneral}
+                  onError={setError}
                   settings={general}
                 />
-              </OverflowShadow>
-            ) : null}
-            {section === "glide" && glide ? (
-              <OverflowShadow rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral">
+              ) : null}
+              {section === "glide" && glide ? (
                 <GlideSettingsPanel
                   isSaving={savingGlide}
+                  onCaptureChange={onCaptureChange}
                   onChange={changeGlide}
                   settings={glide}
                 />
-              </OverflowShadow>
+              ) : null}
+              {section === "hotkeys" ? (
+                <HotkeySettingsPanel
+                  onCaptureChange={onCaptureChange}
+                  onChange={changeBinding}
+                  saving={saving}
+                  settings={settings}
+                />
+              ) : null}
+            </ScrollArea>
+            {error ? (
+              <Text className="text-error" role="alert" variant="help">
+                {error}
+              </Text>
             ) : null}
-            {section === "hotkeys" ? (
-              <OverflowShadow rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral">
-                <div className="divide-y divide-muted/15 px-4">
-                  {actions.map(({ action, description, label }) => {
-                    const binding = settings?.bindings.find(
-                      (candidate) => candidate.action === action,
-                    );
-                    return (
-                      <div
-                        className="flex min-h-16 items-center gap-4 py-3"
-                        key={action}
-                      >
-                        <div className="min-w-0 grow">
-                          <div className="text-sm font-medium">{label}</div>
-                          <div className="mt-0.5 text-xs text-muted">
-                            {description}
-                          </div>
-                        </div>
-                        <ShortcutField
-                          isDisabled={!settings || saving !== null}
-                          onChange={(shortcut) => {
-                            changeBinding(action, shortcut);
-                          }}
-                          value={binding?.shortcut ?? null}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </OverflowShadow>
-            ) : null}
-            {section === "about" ? (
-              <OverflowShadow rootClassName="min-h-0 grow rounded-lg border border-muted/20 bg-neutral">
-                <UpdatePanel />
-              </OverflowShadow>
-            ) : null}
-            {error ? <p className="mt-3 text-xs text-error">{error}</p> : null}
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </main>
   );

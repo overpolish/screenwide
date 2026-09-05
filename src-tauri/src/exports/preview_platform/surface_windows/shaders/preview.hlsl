@@ -13,7 +13,7 @@ cbuffer Canvas : register(b0) {
   float4 effects; // image radius, background radius, warp, shadow sigma
   float4 motion; // timeline seconds
   float4 cursor_geometry; // source-space anchor x/y, artwork width/height
-  float4 cursor_effects; // reserved x/y, rotation radians, scale
+  float4 cursor_effects; // opacity, reserved y, rotation radians, scale
   float4 cursor_blur; // source-space frame delta x/y
   float4 camera_frame; // output-space x/y/width/height
   float4 camera_crop; // camera source-space x/y/width/height
@@ -392,6 +392,7 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
     result = lerp(result, float4(video.rgb, 1.0), video.a * image_alpha);
   }
   float4 cursor = cursor_layer(pixel);
+  cursor.a *= cursor_effects.x;
   if (cursor_options.z != 0) cursor.a *= image_alpha;
   result.rgb = lerp(result.rgb, cursor.rgb, cursor.a);
   result.a = cursor.a + result.a * (1.0 - cursor.a);

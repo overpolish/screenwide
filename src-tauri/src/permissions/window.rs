@@ -15,7 +15,7 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
       WebviewUrl::App("/permissions".into()),
     )
     .title("Screenwide Permissions")
-    .inner_size(540.0, 388.0)
+    .inner_size(540.0, 400.0)
     .center()
     .always_on_top(false)
     .closable(true)
@@ -39,7 +39,7 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
 
 pub fn hide(app: &AppHandle) -> tauri::Result<()> {
   if let Some(window) = app.get_webview_window(WindowLabel::Permissions.as_str()) {
-    window.hide()?;
+    windows::hide_without_focus_transfer(&window)?;
   }
 
   Ok(())

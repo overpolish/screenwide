@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef } from "react";
-import { AriaOverlayProps, useOverlay } from "react-aria";
+import { type HTMLAttributes, useRef } from "react";
+import { useOverlay } from "react-aria";
 import { VariantProps } from "tailwind-variants";
 
 import { tv } from "../../../lib/variants";
 
 const overlayVariants = tv({
-  base: "fixed inset-0 flex items-center justify-center z-50 backdrop-filter bg-content/30",
+  base: "fixed inset-0 z-50 flex items-center justify-center bg-overlay text-content-fg",
   defaultVariants: {
     blur: "sm",
   },
@@ -25,10 +25,11 @@ const overlayVariants = tv({
   },
 });
 
-type OverlayProps = AriaOverlayProps &
+export type OverlayProps = HTMLAttributes<HTMLDivElement> &
   VariantProps<typeof overlayVariants> & {
     children?: React.ReactNode;
     className?: string;
+    isOpen?: boolean;
   };
 
 export const Overlay = ({
@@ -43,6 +44,7 @@ export const Overlay = ({
   const { overlayProps } = useOverlay(
     {
       isDismissable: false,
+      isKeyboardDismissDisabled: true,
       isOpen: isOpen ?? false,
     },
     ref,

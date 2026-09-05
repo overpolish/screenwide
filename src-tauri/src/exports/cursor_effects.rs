@@ -20,6 +20,7 @@ mod settings;
 #[path = "cursor_effects/tests.rs"]
 mod tests;
 mod timing;
+mod visibility;
 pub use settings::CursorEffectSettings;
 
 const APPEARANCE_STABILITY_US: u64 = 300_000;
@@ -117,6 +118,7 @@ fn output_hotspot(appearance: Appearance) -> (f64, f64) {
 /// animation, blur and blending remain entirely in the graphics shader.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct GpuCursor {
+  pub opacity: f32,
   pub blur_delta_x: f32,
   pub blur_delta_y: f32,
   pub height: f32,
@@ -133,6 +135,7 @@ pub(crate) struct GpuCursor {
 
 #[derive(Clone)]
 pub struct CursorCompositor {
+  visibility: Vec<(u64, bool)>,
   appearances: Vec<Appearance>,
   button_events: Vec<ButtonEvent>,
   dwell_anchors: Vec<DwellAnchor>,
@@ -320,10 +323,14 @@ impl CursorCompositor {
       .collect();
     appearances.sort_by_key(|appearance| appearance.timestamp_us);
     normalize_custom_fallback_size(&mut appearances);
+    let visibility = visibility::events(records);
     let mut raw_positions: Vec<_> = records
       .iter()
       .filter_map(|record| match record {
-        CursorRecord::Position { timestamp_us, x, y }
+        CursorRecord::Visibility {
+          timestamp_us, x, y, ..
+        }
+        | CursorRecord::Position { timestamp_us, x, y }
         | CursorRecord::Button {
           timestamp_us, x, y, ..
         } => Some(Position {
@@ -338,19 +345,21 @@ impl CursorCompositor {
     raw_positions.sort_by_key(|position| position.timestamp_us);
     // macOS's cursor smoothing is already tuned and shipped. Windows polling
     // exposes explicit held intervals that must remain exact anchors.
-    let dwell_anchors = if cfg!(target_os = "windows") {
+    let dwell_anchors = if visibility.is_empty() && cfg!(target_os = "windows") {
       dwell_anchors(&raw_positions)
     } else {
       Vec::new()
     };
     segment_raw_positions(&mut raw_positions);
-    let positions = if cfg!(target_os = "windows") {
+    let mut positions = if visibility.is_empty() && cfg!(target_os = "windows") {
       stabilise_positions(&raw_positions, source.width)
     } else {
       // Event-driven macOS cursor positions are already the canonical path.
       // Keep its proven smoothing input free of Windows polling heuristics.
       raw_positions.clone()
     };
+    visibility::segment(&mut raw_positions, &visibility);
+    visibility::segment(&mut positions, &visibility);
     let recording_end_us = raw_positions
       .last()
       .map_or(0, |position| position.timestamp_us);
@@ -394,6 +403,7 @@ impl CursorCompositor {
       }
     }
     Ok(Self {
+      visibility,
       appearances: stable,
       button_events,
       dwell_anchors,
@@ -472,6 +482,11 @@ impl CursorCompositor {
     #[cfg(not(target_os = "macos"))]
     let rotation_adjustment = 0.0;
     Some(GpuCursor {
+      opacity: self.visibility_opacity(
+        position_ms
+          .saturating_mul(1_000)
+          .saturating_sub(SCREEN_REACTION_US),
+      ),
       blur_delta_x: if settings.motion_blur {
         output.delta_x as f32
       } else {
@@ -500,6 +515,9 @@ impl CursorCompositor {
   }
 
   fn evaluate(&self, timestamp_us: u64, settings: CursorEffectSettings) -> Option<EvaluatedCursor> {
+    if self.visibility_opacity(timestamp_us) <= 0.0 {
+      return None;
+    }
     let appearance = *self.appearances.get(last_at_or_before(
       &self.appearances,
       timestamp_us,

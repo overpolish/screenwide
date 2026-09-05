@@ -3,8 +3,8 @@
 
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import { ColorSwatch } from "../../../components/base/input-fields/color-swatch";
-import { OverflowShadow } from "../../../components/base/overflow-shadow/overflow-shadow";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
+import { ScrollArea } from "../../../components/base/scroll-area/scroll-area";
 import { Dimensions } from "../../../components/shared/dimensions/dimensions";
 import { ScreenshotOutputSettings } from "../screenshot-output";
 
@@ -32,7 +32,7 @@ export function ScreenshotInspector({
 }) {
   return (
     <aside className="flex min-h-0 min-w-0 flex-col border-r border-muted/15 bg-content/35">
-      <OverflowShadow rootClassName="min-h-0 grow">
+      <ScrollArea rootClassName="min-h-0 grow">
         <ScreenshotOutputControls
           isSaving={isSaving}
           onChange={onChange}
@@ -41,7 +41,7 @@ export function ScreenshotInspector({
           sourceHeight={sourceHeight}
           sourceWidth={sourceWidth}
         />
-      </OverflowShadow>
+      </ScrollArea>
     </aside>
   );
 }

@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder};
+use tauri::menu::{IconMenuItemBuilder, Menu, MenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Wry};
 
 use crate::recording::RecordingStatus;
 use crate::windows;
+
+mod icons;
 
 const DISCARD_MENU_ID: &str = "discard-recording";
 const OPEN_CLIPBOARD_SCREENSHOT_MENU_ID: &str = "open-clipboard-screenshot";
@@ -58,10 +60,11 @@ const fn status_tooltip(status: RecordingStatus) -> &'static str {
 /// control. Quit always stays, because the tray is not the only way out.
 fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wry>> {
   let mut builder = MenuBuilder::new(app)
-    .text(OPEN_MENU_ID, "Open Screenwide")
-    .text(
+    .icon(OPEN_MENU_ID, "Open Screenwide", icons::load(icons::OPEN)?)
+    .icon(
       OPEN_CLIPBOARD_SCREENSHOT_MENU_ID,
       "Open Screenshot from Clipboard",
+      icons::load(icons::CLIPBOARD)?,
     );
 
   if matches!(status, RecordingStatus::Recording | RecordingStatus::Paused) {
@@ -72,16 +75,32 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
     };
     builder = builder
       .separator()
-      .text(PAUSE_MENU_ID, pause_label)
-      .text(STOP_MENU_ID, "Stop Recording")
-      .text(DISCARD_MENU_ID, "Discard Recording");
+      .icon(
+        PAUSE_MENU_ID,
+        pause_label,
+        icons::load(if status == RecordingStatus::Paused {
+          icons::RESUME
+        } else {
+          icons::PAUSE
+        })?,
+      )
+      .icon(STOP_MENU_ID, "Stop Recording", icons::load(icons::STOP)?)
+      .icon(
+        DISCARD_MENU_ID,
+        "Discard Recording",
+        icons::load(icons::DISCARD)?,
+      );
   } else if status == RecordingStatus::Starting {
-    builder = builder
-      .separator()
-      .text(DISCARD_MENU_ID, "Cancel Recording");
+    builder = builder.separator().icon(
+      DISCARD_MENU_ID,
+      "Cancel Recording",
+      icons::load(icons::CANCEL)?,
+    );
   }
 
-  let mut recognize_text = MenuItemBuilder::with_id(RECOGNIZE_TEXT_MENU_ID, "Recognize Text/QR");
+  let mut recognize_text =
+    IconMenuItemBuilder::with_id(RECOGNIZE_TEXT_MENU_ID, "Recognize Text/QR")
+      .icon(icons::load(icons::TEXT)?);
   if let Some(shortcut) =
     crate::shortcuts::shortcut_for(app, crate::shortcuts::ShortcutAction::RecognizeText)
   {
@@ -89,7 +108,8 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   }
   let recognize_text = recognize_text.build(app)?;
 
-  let mut ruler_overlay = MenuItemBuilder::with_id(RULER_OVERLAY_MENU_ID, "Ruler Overlay");
+  let mut ruler_overlay = IconMenuItemBuilder::with_id(RULER_OVERLAY_MENU_ID, "Ruler Overlay")
+    .icon(icons::load(icons::RULER)?);
   if let Some(shortcut) =
     crate::shortcuts::shortcut_for(app, crate::shortcuts::ShortcutAction::RulerOverlay)
   {
@@ -101,16 +121,16 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
     .separator()
     .item(&recognize_text)
     .item(&ruler_overlay)
-    .text(SETTINGS_MENU_ID, "Settings…")
+    .icon(SETTINGS_MENU_ID, "Settings…", icons::load(icons::SETTINGS)?)
     .separator()
-    .text(QUIT_MENU_ID, "Quit Screenwide")
+    .icon(QUIT_MENU_ID, "Quit Screenwide", icons::load(icons::QUIT)?)
     .build()
 }
 
 pub fn initialize(app: &mut App) -> tauri::Result<()> {
   let menu = build_menu(app.handle(), RecordingStatus::Idle)?;
 
-  TrayIconBuilder::with_id(TRAY_ID)
+  let tray = TrayIconBuilder::with_id(TRAY_ID)
     .icon(status_icon(RecordingStatus::Idle)?)
     .icon_as_template(cfg!(target_os = "macos"))
     .menu(&menu)
@@ -158,6 +178,11 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
     })
     .build(app)?;
 
+  #[cfg(target_os = "macos")]
+  icons::apply_templates(&tray)?;
+  #[cfg(not(target_os = "macos"))]
+  let _ = tray;
+
   Ok(())
 }
 
@@ -183,6 +208,8 @@ pub fn apply_recording_status(app: &AppHandle, status: RecordingStatus) {
 
     if let Ok(menu) = build_menu(&app, status) {
       let _ = tray.set_menu(Some(menu));
+      #[cfg(target_os = "macos")]
+      let _ = icons::apply_templates(&tray);
     }
   });
 }

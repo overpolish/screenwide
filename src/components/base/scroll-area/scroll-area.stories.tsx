@@ -7,7 +7,7 @@ import { Button } from "../button/button";
 import { ListBox } from "../listbox/listbox";
 import { ListBoxItem } from "../listbox-item/listbox-item";
 
-import { OverflowShadow } from "./overflow-shadow";
+import { ScrollArea } from "./scroll-area";
 
 const items = Array.from(
   { length: 12 },
@@ -15,17 +15,18 @@ const items = Array.from(
 );
 
 const meta = {
-  component: OverflowShadow,
+  args: { edgeEffect: "shadow", orientation: "vertical" },
+  component: ScrollArea,
   parameters: { layout: "centered" },
-  title: "Primitives/Overflow Shadow",
-} satisfies Meta<typeof OverflowShadow>;
+  title: "Primitives/Scroll Area",
+} satisfies Meta<typeof ScrollArea>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Vertical: Story = {
-  render: () => (
-    <OverflowShadow rootClassName="h-32 w-64 rounded-xl bg-content shadow-md">
+  render: (args) => (
+    <ScrollArea {...args} rootClassName="h-32 w-64 rounded-xl bg-content">
       <ListBox
         aria-label="Overflowing items"
         className="w-full overflow-visible rounded-none bg-transparent shadow-none"
@@ -36,22 +37,33 @@ export const Vertical: Story = {
           </ListBoxItem>
         ))}
       </ListBox>
-    </OverflowShadow>
+    </ScrollArea>
   ),
 };
 
 export const Horizontal: Story = {
-  render: () => (
-    <OverflowShadow
+  args: { orientation: "horizontal" },
+  render: (args) => (
+    <ScrollArea
+      {...args}
       className="gap-control p-control flex w-max"
-      orientation="horizontal"
-      rootClassName="h-9 w-64 rounded-xl bg-content shadow-md"
+      rootClassName="h-9 w-64 rounded-xl bg-content"
     >
       {items.map((item) => (
         <Button key={item} size="compact">
           {item}
         </Button>
       ))}
-    </OverflowShadow>
+    </ScrollArea>
   ),
+};
+
+export const NoEffect: Story = {
+  ...Vertical,
+  args: { edgeEffect: "none", scrollbarAutoHide: "never" },
+};
+
+export const Inset: Story = {
+  ...Vertical,
+  args: { edgeEffect: "inset", scrollbarAutoHide: "never" },
 };

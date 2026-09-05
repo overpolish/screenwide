@@ -61,7 +61,9 @@ pub(super) fn hide_cursor() -> Result<(), String> {
   allow_background_cursor_changes();
   CGDisplay::main()
     .hide_cursor()
-    .map_err(|error| format!("Could not hide the Glide cursor: {error}"))
+    .map_err(|error| format!("Could not hide the Glide cursor: {error}"))?;
+  crate::recording::cursor::glide_cursor_visibility(false, None);
+  Ok(())
 }
 
 /// Where the cursor lands after a commit: the same grip on the window it
@@ -93,6 +95,7 @@ pub(super) fn release_cursor(anchor: CGPoint, revealed: bool) {
   PINNED.store(false, std::sync::atomic::Ordering::Release);
   if revealed {
     let _ = CGDisplay::main().show_cursor();
+    crate::recording::cursor::glide_cursor_visibility(true, Some((anchor.x, anchor.y)));
   }
 }
 

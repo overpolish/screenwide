@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Disc, Mic, PersonStanding, Video, X } from "lucide-react";
+import { Disc, Mic, PersonStanding, Video } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
 import { Button } from "../../components/base/button/button";
-import { IconButton } from "../../components/base/button/icon-button";
+import { WindowHeader } from "../../components/shared/window-header/window-header";
 
 import {
   dismissPermissionsWindow,
@@ -61,28 +61,9 @@ export function PermissionsWindow({
     permissions.accessibility.granted && permissions.screenRecording.granted;
 
   return (
-    <main className="window-surface h-full overflow-hidden">
-      <div
-        className="px-window-inset pt-window-inset pb-section flex items-center justify-between"
-        data-tauri-drag-region="deep"
-      >
-        <div className="gap-section flex items-center" data-tauri-drag-region>
-          <img
-            alt="Screenwide"
-            className="size-7 shrink-0 brightness-0 dark:invert"
-            data-tauri-drag-region
-            draggable={false}
-            src={logoUrl}
-          />
-          <h1
-            className="from-accent-heading-warm via-accent-heading to-accent-heading-vivid m-0 animate-gradient bg-linear-to-r bg-clip-text bg-size-[300%] text-3xl font-bold text-transparent"
-            data-tauri-drag-region
-          >
-            Permissions
-          </h1>
-        </div>
-
-        <div className="gap-control flex items-center" data-tauri-drag-region>
+    <main className="window-surface gap-section flex h-full flex-col overflow-hidden">
+      <WindowHeader
+        actions={
           <AnimatePresence>
             {hasRequired ? (
               <motion.div
@@ -97,19 +78,18 @@ export function PermissionsWindow({
               </motion.div>
             ) : null}
           </AnimatePresence>
-          <IconButton
-            aria-label="Close permissions"
-            className="group"
-            onPress={onClose}
-            size="compact"
-          >
-            <X
-              className="transform-gpu text-muted transition-[color,transform,scale] group-data-[hovered]:scale-110 group-data-[hovered]:text-content-fg"
-              size={18}
-            />
-          </IconButton>
-        </div>
-      </div>
+        }
+        leadingSection={
+          <img
+            alt="Screenwide"
+            className="brightness-0 dark:invert"
+            draggable={false}
+            src={logoUrl}
+          />
+        }
+        onClose={onClose}
+        title="Permissions"
+      />
 
       <div className="gap-section px-window-inset pb-window-inset flex flex-col">
         <PermissionRow
