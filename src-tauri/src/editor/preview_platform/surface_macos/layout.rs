@@ -24,10 +24,9 @@ impl RecordingPreviewSurface {
         backdrop[0],
         backdrop[1],
         backdrop[2],
-        // The editor window is transparent, so re-blending the sampled CSS
-        // stack against AppKit's backing material shifts #1c1c1c to #1d1d1d.
-        // Its RGB is already the final composited WebView colour.
-        1.0,
+        // Preserve the CSS stack's alpha so AppKit's window material shows
+        // through the workspace, just as it does through the webview.
+        backdrop[3],
       );
     }
   }

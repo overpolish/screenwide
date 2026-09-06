@@ -58,13 +58,12 @@ void screenwide_preview_surface_set_viewport(void *handle,
     surface.container.frame = nextFrame;
     surface.interaction.frame = surface.container.frame;
     surface.selectionActionMaterialContainer.frame = surface.container.frame;
-    // An opaque backstop: while the webview's mask holes and the native pane
-    // layout briefly disagree (pan, zoom, resize), the gap shows the app's
-    // dark backdrop instead of seeing through the window.
+    // Reproduce the masked CSS backdrop over the native window material,
+    // preserving its alpha outside the panes during pan, zoom, and resize.
     surface.container.layer.backgroundColor =
         CGColorCreateSRGB(red, green, blue, alpha);
     // The webview punches the whole viewport out of its backdrop, so the
-    // backstop must be there from the first layout on, not only from the
+    // backdrop must be there from the first layout on, not only from the
     // first presented frame. The panes themselves stay hidden until then.
     if (width > 0 && height > 0) surface.container.hidden = NO;
     if (surface.editorEnabled && width > 0 && height > 0)

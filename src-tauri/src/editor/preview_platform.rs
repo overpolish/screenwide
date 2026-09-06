@@ -35,7 +35,7 @@
 //!    `WebView2` controller's HWND. The surface must provide batched pane
 //!    layout ([`RecordingPreviewSurface::begin_layout`] / `layout` /
 //!    `finish_layout`, so a resize is one atomic reposition and never tears
-//!    against the webview), a viewport with an opaque backstop colour
+//!    against the webview), a viewport with an alpha-preserving backdrop
 //!    ([`RecordingPreviewSurface::set_viewport`] - the backstop is what shows
 //!    through the webview's mask holes outside the panes),
 //!    [`RecordingPreviewSurface::hide`], and the present-composed entry points
