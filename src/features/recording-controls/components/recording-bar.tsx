@@ -51,7 +51,7 @@ type RecordingBarProps = {
   mode?: RecordingMode;
   onCameraLockedPress?: () => void;
   onCancel?: () => void;
-  onFocusPendingExport?: () => void;
+  onFocusPendingEditor?: () => void;
   onFpsChange?: (fps: RecordingFps) => void;
   onInputChange?: (input: keyof RecordingInputs, selected: boolean) => void;
   onInteract?: () => void;
@@ -68,7 +68,7 @@ type RecordingBarProps = {
    * Which workspaces are holding unsaved work. Each has a window of its own,
    * so only a pending recording stands in the way of starting another.
    */
-  pendingExports?: { recording: boolean; screenshot: boolean };
+  pendingEditors?: { recording: boolean; screenshot: boolean };
   screenshotAction?: ScreenshotAction;
   screenshotState?: ScreenshotState;
   sourceSelector?: ReactNode;
@@ -101,7 +101,7 @@ export function RecordingBar({
   mode: controlledMode,
   onCameraLockedPress,
   onCancel,
-  onFocusPendingExport,
+  onFocusPendingEditor,
   onFpsChange,
   onInputChange,
   onInteract,
@@ -114,8 +114,8 @@ export function RecordingBar({
   onScreenshot,
   onScreenshotToClipboard,
   onScrollingScreenshot,
-  pendingExports = { recording: false, screenshot: false },
-  screenshotAction = "export",
+  pendingEditors = { recording: false, screenshot: false },
+  screenshotAction = "editor",
   screenshotState = "idle",
   sourceSelector,
   status = "idle",
@@ -152,10 +152,10 @@ export function RecordingBar({
   // The bar is hidden by Rust while a recording runs; disabling it as well
   // keeps a stale window from starting a second one.
   const isRecordingActive = status !== "idle";
-  const isRecordingWorkspaceOpen = pendingExports.recording;
+  const isRecordingWorkspaceOpen = pendingEditors.recording;
   const isCapturingStill = screenshotState === "pending";
-  const exportScreenshotState =
-    screenshotAction === "export" ? screenshotState : "idle";
+  const editorScreenshotState =
+    screenshotAction === "editor" ? screenshotState : "idle";
   const clipboardScreenshotState =
     screenshotAction === "clipboard" ? screenshotState : "idle";
   const scrollingScreenshotState =
@@ -169,11 +169,11 @@ export function RecordingBar({
     !isRecordingActive;
   // A pending recording no longer stands in a screenshot's way: it waits in
   // its own window while the screenshot workspace opens beside it.
-  const canExportScreenshot = canCaptureStill;
+  const canEditorScreenshot = canCaptureStill;
   const canCopyScreenshot = canCaptureStill;
   const canCaptureScrollingScreenshot =
     canCaptureStill && mode === "region" && onScrollingScreenshot !== undefined;
-  const canRecordIgnoringExport =
+  const canRecordIgnoringEditor =
     !isRecordingActive &&
     canStartRecording({
       hasCameraWarning,
@@ -187,12 +187,12 @@ export function RecordingBar({
       isScreenLocked: Boolean(isLocked),
       mode,
     });
-  const canRecord = canRecordIgnoringExport && !isRecordingWorkspaceOpen;
+  const canRecord = canRecordIgnoringEditor && !isRecordingWorkspaceOpen;
   // Recording that only the pending recording stands in the way of: the button
-  // stays pressable and brings that export forward rather than going dead,
+  // stays pressable and brings that editor forward rather than going dead,
   // which is the same escape hatch the global shortcuts take.
-  const isRecordBlockedByExport =
-    canRecordIgnoringExport && isRecordingWorkspaceOpen;
+  const isRecordBlockedByEditor =
+    canRecordIgnoringEditor && isRecordingWorkspaceOpen;
 
   return (
     <main
@@ -359,9 +359,9 @@ export function RecordingBar({
         <RecordingBarScreenshotActions
           canCaptureScrollingScreenshot={canCaptureScrollingScreenshot}
           canCopyScreenshot={canCopyScreenshot}
-          canExportScreenshot={canExportScreenshot}
+          canEditorScreenshot={canEditorScreenshot}
           clipboardScreenshotState={clipboardScreenshotState}
-          exportScreenshotState={exportScreenshotState}
+          editorScreenshotState={editorScreenshotState}
           isCapturingStill={isCapturingStill}
           onScreenshot={onScreenshot}
           onScreenshotToClipboard={onScreenshotToClipboard}
@@ -373,8 +373,8 @@ export function RecordingBar({
           <RecordingBarRecordAction
             canRecord={canRecord}
             isLocked={Boolean(isLocked)}
-            isRecordBlockedByExport={isRecordBlockedByExport}
-            onFocusPendingExport={onFocusPendingExport}
+            isRecordBlockedByEditor={isRecordBlockedByEditor}
+            onFocusPendingEditor={onFocusPendingEditor}
             onRecord={onRecord}
             onRequiredPermissionsPress={onRequiredPermissionsPress}
           />

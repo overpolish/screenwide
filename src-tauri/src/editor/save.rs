@@ -1,0 +1,433 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+use super::*;
+
+mod cursor;
+mod lifecycle;
+mod location;
+mod recording_file;
+
+pub(super) use recording_file::{
+  delivered_extension, save_primary_recording, save_recording_copy, save_selected_recording_copy,
+  scale_percent, PrimaryRecordingSaveRequest,
+};
+
+#[cfg(test)]
+pub(super) use recording_file::{save_recording, save_selected_recording};
+
+#[tauri::command]
+pub async fn save_export(
+  app: AppHandle,
+  window: tauri::WebviewWindow,
+  file_stem: String,
+  options: RecordingExportOptions,
+) -> Result<Option<PathBuf>, String> {
+  let kind = kind_of_window(&window)?;
+  let RecordingExportOptions {
+    audio_track_volumes,
+    bake_camera,
+    camera_compression,
+    camera_overlay,
+    camera_resolution_scale_percent,
+    collapse_audio,
+    compression,
+    cursor_effects,
+    keyboard_effects,
+    enabled_stream_indices,
+    include_camera,
+    include_primary_video,
+    resolution_scale_percent,
+    recording_output,
+    screenshot_output,
+    timeline_edit: timeline_model,
+  } = options;
+  if compression > 4 || camera_compression > 4 {
+    return Err("Compression must be between 0 and 4".to_owned());
+  }
+  let stem =
+    sanitize_file_stem(&file_stem).ok_or_else(|| "That file name cannot be used".to_owned())?;
+  let directory =
+    current_directory(&app, kind).ok_or_else(|| "There is nowhere to save this".to_owned())?;
+  let artifact = take_artifact(&app, kind).ok_or_else(|| "There is nothing to save".to_owned())?;
+  let artifact_id = match &artifact {
+    EditorArtifact::Screenshot { id, .. } | EditorArtifact::Recording { id, .. } => *id,
+  };
+  let screenshot_preference =
+    matches!(&artifact, EditorArtifact::Screenshot { .. }).then(|| screenshot_output.clone());
+  let recording_preference =
+    matches!(&artifact, EditorArtifact::Recording { .. }).then(|| recording_output.clone());
+  let cancelled = Arc::new(AtomicBool::new(false));
+  {
+    let state = app.state::<EditorState>();
+    let mut active = state
+      .slot(kind)
+      .active_export
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    // Per workspace: a recording encode and a screenshot save are independent
+    // jobs, and only a second save of the same workspace is a contradiction.
+    if active.is_some() {
+      *state
+        .slot(kind)
+        .artifact
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(artifact);
+      drop(active);
+      emit_snapshot(&app, kind);
+      return Err("Another export is already running".to_owned());
+    }
+    *active = Some(ActiveExportJob {
+      artifact_id,
+      cancelled: Arc::clone(&cancelled),
+    });
+  }
+
+  let writing = directory.clone();
+  let export_app = app.clone();
+  let progress_app = app.clone();
+  let job_cancellation = Arc::clone(&cancelled);
+  // The artifact travels back with an error. Saving used to take it before the
+  // write and lose its source on a disk or mux failure, making Retry impossible
+  // even though the recording remained on disk.
+  let (result, artifact) = tauri::async_runtime::spawn_blocking(move || {
+    let result = (|| -> Result<Option<PathBuf>, String> {
+      std::fs::create_dir_all(&writing).map_err(|error| error.to_string())?;
+
+      match &artifact {
+        EditorArtifact::Screenshot { items, .. } => {
+          let path = unique_path(&writing, &stem, SCREENSHOT_EXTENSION, &|candidate| {
+            candidate.exists()
+          });
+          let composed = compose_screenshot_workspace(&export_app, items, &screenshot_output)?;
+          std::fs::write(&path, encode_png(&composed)?).map_err(|error| error.to_string())?;
+          Ok(Some(path))
+        }
+        EditorArtifact::Recording {
+          audio_tracks,
+          camera,
+          cursor,
+          keyboard,
+          duration_ms,
+          height,
+          id,
+          path: working,
+          primary_kind,
+          source_scale_percent,
+          width,
+          ..
+        } => {
+          validate_primary_resolution_scale(
+            resolution_scale_percent,
+            *source_scale_percent,
+            *primary_kind,
+          )?;
+          validate_camera_resolution_scale(camera_resolution_scale_percent)?;
+          validate_camera_overlay(camera_overlay)?;
+          let selection = track_selection::TrackSelection::with_volumes(
+            audio_tracks,
+            &enabled_stream_indices,
+            &audio_track_volumes,
+          )?;
+          let layout = if collapse_audio {
+            track_selection::AudioLayout::Mixdown
+          } else {
+            track_selection::AudioLayout::SeparateTracks
+          };
+          let baked_cursor = cursor
+            .as_ref()
+            .filter(|_| cursor_effects.bake)
+            .map(|cursor| cursor.path.as_path());
+          let baked_keyboard = keyboard
+            .as_ref()
+            .filter(|_| keyboard_effects.bake)
+            .map(|keyboard| keyboard.path.as_path());
+          let primary_output = &recording_output.primary;
+          let camera_output = &recording_output.camera;
+          let persisted_timeline;
+          let timeline_edit = if let Some(edit) = timeline_model
+            .as_ref()
+            .filter(|edit| edit.artifact_id == *id)
+          {
+            Some(edit)
+          } else {
+            persisted_timeline = timeline_edit::for_recording(working, *id).map(|(_, edit)| edit);
+            persisted_timeline.as_ref()
+          };
+          let timeline = timeline_edit
+            .and_then(|edit| timeline_edit::TimelinePlan::from_edit(edit, *duration_ms));
+          let export_duration_ms = timeline
+            .as_ref()
+            .map_or(*duration_ms, timeline_edit::TimelinePlan::duration_ms);
+
+          if !include_primary_video && !include_camera && enabled_stream_indices.is_empty() {
+            return Err("Select at least one track to export".to_owned());
+          }
+
+          if *primary_kind == PrimaryRecordingKind::Audio {
+            if include_primary_video || include_camera || bake_camera {
+              return Err("This audio recording has no video track to export".to_owned());
+            }
+            return audio_save::save_audio(audio_save::AudioSaveRequest {
+              app: &progress_app,
+              cancelled: &job_cancellation,
+              directory: &writing,
+              duration_ms: export_duration_ms,
+              id: *id,
+              layout,
+              selected_any: !enabled_stream_indices.is_empty(),
+              selection: &selection,
+              stem: &stem,
+              timeline: timeline.as_ref(),
+              working,
+            });
+          }
+
+          if !include_primary_video {
+            if include_camera {
+              let camera = camera
+                .as_ref()
+                .ok_or_else(|| "There is no camera track to export".to_owned())?;
+              let saved = camera_save::save_camera_as_primary(
+                working,
+                camera,
+                &writing,
+                &stem,
+                &selection,
+                layout,
+                *id,
+                &progress_app,
+                &job_cancellation,
+                camera_compression,
+                camera_resolution_scale_percent,
+                camera_output,
+                timeline.as_ref(),
+              )?;
+              if saved.is_some() {
+                let _ = std::fs::remove_file(working);
+                let _ = std::fs::remove_file(&camera.path);
+                recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
+              }
+              return Ok(saved);
+            }
+
+            let saved = audio_save::save_audio(audio_save::AudioSaveRequest {
+              app: &progress_app,
+              cancelled: &job_cancellation,
+              directory: &writing,
+              duration_ms: export_duration_ms,
+              id: *id,
+              layout,
+              selected_any: !enabled_stream_indices.is_empty(),
+              selection: &selection,
+              stem: &stem,
+              timeline: timeline.as_ref(),
+              working,
+            })?;
+            if saved.is_some() {
+              if let Some(camera) = camera {
+                let _ = std::fs::remove_file(&camera.path);
+              }
+              recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
+            }
+            return Ok(saved);
+          }
+
+          if bake_camera {
+            if !include_camera {
+              return Err("Select the camera track before baking it in".to_owned());
+            }
+            let camera = camera
+              .as_ref()
+              .ok_or_else(|| "There is no camera recording to bake in".to_owned())?;
+            let saved = camera_save::save_baked_recording(
+              working,
+              camera,
+              &writing,
+              &stem,
+              &selection,
+              layout,
+              *id,
+              *duration_ms,
+              (*width, *height),
+              camera_overlay,
+              camera_output.drop_shadow,
+              recording_output.camera_on_top,
+              (compression, resolution_scale_percent, *source_scale_percent),
+              baked_cursor.map(|cursor| (cursor, cursor_effects)),
+              baked_keyboard.map(|keyboard| (keyboard, keyboard_effects)),
+              primary_output,
+              &progress_app,
+              &job_cancellation,
+              timeline.as_ref(),
+            )?;
+            if saved.is_some() {
+              let _ = std::fs::remove_file(working);
+              let _ = std::fs::remove_file(&camera.path);
+              recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
+            }
+            return Ok(saved);
+          }
+
+          let screen_progress_share = if include_camera && camera.is_some() {
+            50.0
+          } else {
+            99.0
+          };
+          let saved = save_primary_recording(PrimaryRecordingSaveRequest {
+            app: &progress_app,
+            artifact_id: *id,
+            audio_tracks,
+            cancelled: &job_cancellation,
+            compression,
+            cursor: baked_cursor,
+            cursor_effects,
+            keyboard: baked_keyboard,
+            keyboard_effects,
+            directory: &writing,
+            duration_ms: *duration_ms,
+            height: *height,
+            layout,
+            output: primary_output,
+            progress_share: screen_progress_share,
+            resolution_scale_percent,
+            screen: working,
+            selection: &selection,
+            source_scale_percent: *source_scale_percent,
+            stem: &stem,
+            timeline: timeline.as_ref(),
+            width: *width,
+          })?;
+          let Some(saved) = saved else {
+            return Ok(None);
+          };
+
+          let next_phase = if include_camera && camera.is_some() {
+            "camera"
+          } else {
+            "finalizing"
+          };
+          let _ = progress_app.emit(
+            EXPORT_PROGRESS_EVENT,
+            ExportProgress {
+              artifact_id: *id,
+              phase: next_phase,
+              progress_percent: screen_progress_share,
+            },
+          );
+
+          let mut saved_camera = None;
+          if include_camera {
+            let camera = camera
+              .as_ref()
+              .ok_or_else(|| "There is no camera track to export".to_owned())?;
+            // The camera remains a separate file, with its own compression
+            // and resolution choice. It shares the transaction and progress
+            // timeline with the screen recording but not its encode settings.
+            let camera_path = camera_save::save_camera_copy(
+              camera,
+              &writing,
+              &stem,
+              *id,
+              &progress_app,
+              &job_cancellation,
+              screen_progress_share,
+              camera_compression,
+              camera_resolution_scale_percent,
+              camera_output,
+              timeline.as_ref(),
+            )
+            .inspect_err(|_| {
+              let _ = std::fs::remove_file(&saved);
+            })?;
+            let Some(camera_path) = camera_path else {
+              let _ = std::fs::remove_file(&saved);
+              return Ok(None);
+            };
+            saved_camera = Some(camera_path);
+          }
+          let _ = progress_app.emit(
+            EXPORT_PROGRESS_EVENT,
+            ExportProgress {
+              artifact_id: *id,
+              phase: "finalizing",
+              progress_percent: 99.0,
+            },
+          );
+          if !saved.is_file() || saved_camera.as_ref().is_some_and(|path| !path.is_file()) {
+            let _ = std::fs::remove_file(&saved);
+            if let Some(path) = saved_camera {
+              let _ = std::fs::remove_file(path);
+            }
+            return Err("The exported recording did not finish publishing".to_owned());
+          }
+          let _ = std::fs::remove_file(working);
+          if !include_camera {
+            if let Some(camera) = camera {
+              let _ = std::fs::remove_file(&camera.path);
+            }
+          }
+          recording_sidecar::remove_working_files(cursor.as_ref(), keyboard.as_ref());
+          Ok(Some(saved))
+        }
+      }
+    })();
+
+    (result, artifact)
+  })
+  .await
+  .map_err(|error| error.to_string())?;
+
+  lifecycle::clear_active_export(&app, kind, artifact_id);
+
+  let path = match result {
+    Ok(Some(path)) => path,
+    Ok(None) => {
+      *app
+        .state::<EditorState>()
+        .slot(kind)
+        .artifact
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(artifact);
+      emit_snapshot(&app, kind);
+      return Ok(None);
+    }
+    Err(error) => {
+      *app
+        .state::<EditorState>()
+        .slot(kind)
+        .artifact
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(artifact);
+      emit_snapshot(&app, kind);
+      return Err(error);
+    }
+  };
+
+  if let EditorArtifact::Recording { path: working, .. } = &artifact {
+    timeline_edit::remove_for_recording(working);
+  }
+
+  store_export_directory(&app, kind, directory)?;
+  remember_completed_export(
+    &app,
+    cursor_effects,
+    recording_preference,
+    screenshot_preference.map(|output| output.canvas),
+  );
+  // Saving is transactional: keep the native player alive while the artifact
+  // may still be restored by Cancel or an export error, then retire it only
+  // once the finished files have been published.
+  if kind == EditorKind::Recording {
+    artifact::clear_recording_preview(&app);
+  }
+  let _ = window::hide(&app, kind);
+  emit_snapshot(&app, kind);
+
+  if crate::settings::current(&app).open_location_after_export {
+    if let Err(error) = location::open_containing_folder(&path) {
+      eprintln!("Could not open the export location: {error}");
+    }
+  }
+  Ok(Some(path))
+}

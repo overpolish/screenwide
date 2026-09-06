@@ -9,7 +9,7 @@ Keep a short entry here whenever adding or changing a vendored dependency patch.
 
 **Source:** crates.io `wry` 0.55.1, vendored in `wry-0.55.1/`.
 
-**Reason:** Creating a macOS webview unconditionally activated Screenwide, even with `.focused(false)`. Ruler and OCR create hidden webviews, so Settings/Export rose above other apps before the overlay was ready. The patch respects the focus flag; Screenwide's overlay presentation code activates the app after selecting the overlay as main/key. Windows and iOS behavior is unchanged.
+**Reason:** Creating a macOS webview unconditionally activated Screenwide, even with `.focused(false)`. Ruler and OCR create hidden webviews, so Settings/Editor rose above other apps before the overlay was ready. The patch respects the focus flag; Screenwide's overlay presentation code activates the app after selecting the overlay as main/key. Windows and iOS behavior is unchanged.
 
 All paths below are relative to `wry-0.55.1/src/wkwebview/`.
 

@@ -4,12 +4,12 @@
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
-import { focusExportWindow } from "../../exports/api";
+import { focusEditorWindow } from "../../editor/api";
 import {
   selectHasPendingRecording,
   selectHasPendingScreenshot,
-  useExportStore,
-} from "../../exports/store";
+  useEditorStore,
+} from "../../editor/store";
 import {
   openPermissionsWindow,
   openPermissionSettings,
@@ -177,8 +177,8 @@ const grantPermission = (
 };
 
 export function RecordingBarWindow() {
-  const hasPendingRecording = useExportStore(selectHasPendingRecording);
-  const hasPendingScreenshot = useExportStore(selectHasPendingScreenshot);
+  const hasPendingRecording = useEditorStore(selectHasPendingRecording);
+  const hasPendingScreenshot = useEditorStore(selectHasPendingScreenshot);
   const canRecordCamera = usePermissionStore(selectCanRecordCamera);
   const canRecordMicrophone = usePermissionStore(selectCanRecordMicrophone);
   const canRecordScreen = usePermissionStore(selectCanRecordScreen);
@@ -304,7 +304,7 @@ export function RecordingBarWindow() {
 
   useEffect(() => {
     // Returning to idle does not mean the controls should return: a completed
-    // capture hands ownership to the export window. Explicitly showing the
+    // capture hands ownership to the editor window. Explicitly showing the
     // recording UI emits the event below and synchronizes it at that point.
     void synchronizeRecordingUi();
   }, [recordingMode, selectedMonitor]);
@@ -505,11 +505,11 @@ export function RecordingBarWindow() {
       onCancel={() => {
         dismissRecordingUi();
       }}
-      onFocusPendingExport={() => {
+      onFocusPendingEditor={() => {
         // Only a pending recording routes here now; a screenshot workspace
         // never blocks a capture.
-        focusExportWindow("recording").catch((error: unknown) => {
-          console.error("Could not focus the export window", error);
+        focusEditorWindow("recording").catch((error: unknown) => {
+          console.error("Could not focus the editor window", error);
         });
       }}
       onFpsChange={setFps}
@@ -545,7 +545,7 @@ export function RecordingBarWindow() {
         void openPermissionsWindow();
       }}
       onScreenshot={() => {
-        takeScreenshot("export");
+        takeScreenshot("editor");
       }}
       onScreenshotToClipboard={() => {
         takeScreenshot("clipboard");
@@ -557,7 +557,7 @@ export function RecordingBarWindow() {
         }
         takeScrollingScreenshot();
       }}
-      pendingExports={{
+      pendingEditors={{
         recording: hasPendingRecording,
         screenshot: hasPendingScreenshot,
       }}

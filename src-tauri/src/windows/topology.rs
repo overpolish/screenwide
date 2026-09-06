@@ -35,8 +35,8 @@ enum Policy {
 
 const fn policy(label: WindowLabel) -> Policy {
   match label {
-    WindowLabel::ExportRecording
-    | WindowLabel::ExportScreenshot
+    WindowLabel::EditorRecording
+    | WindowLabel::EditorScreenshot
     | WindowLabel::QrDetails
     | WindowLabel::Settings
     | WindowLabel::Update => Policy::Contained,

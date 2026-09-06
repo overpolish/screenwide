@@ -23,7 +23,7 @@ type ScreenshotShortcutAction = Extract<
   "takeScreenshot" | "takeScreenshotToClipboard"
 >;
 type CleanupStep = () => Promise<unknown>;
-let sessionDestination: ScreenshotDestination = "export";
+let sessionDestination: ScreenshotDestination = "editor";
 let sessionAction: ScreenshotShortcutAction | null = null;
 let shortcutTransition: Promise<void> = Promise.resolve();
 
@@ -31,7 +31,7 @@ export const screenshotCaptureDestination = () => sessionDestination;
 
 const selectScreenshotAction = (action: ScreenshotShortcutAction) => {
   sessionDestination =
-    action === "takeScreenshotToClipboard" ? "clipboard" : "export";
+    action === "takeScreenshotToClipboard" ? "clipboard" : "editor";
   sessionAction = action;
 };
 

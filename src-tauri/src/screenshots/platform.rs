@@ -7,8 +7,8 @@ use std::ffi::c_char;
 mod desktop_capture;
 
 use crate::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
-use crate::exports::cursor_effects::{GpuArtwork, GpuCursor, NativeGpuArtwork, NativeGpuCursor};
-use crate::exports::keyboard_effects::KeyboardOverlay;
+use crate::editor::cursor_effects::{GpuArtwork, GpuCursor, NativeGpuArtwork, NativeGpuCursor};
+use crate::editor::keyboard_effects::KeyboardOverlay;
 use crate::screenshots::{
   output_placement, parse_hex_colour, physical_capture_rect, CapturedImage,
   ScreenshotOutputSettings, ScreenshotTarget,

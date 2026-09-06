@@ -112,7 +112,8 @@ pub enum ScreenshotTarget {
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ScreenshotDestination {
-  Export,
+  #[serde(alias = "export")]
+  Editor,
   #[default]
   Clipboard,
   Both,
@@ -228,7 +229,7 @@ pub async fn capture_still(
   if !crate::recording::is_idle(&app) {
     return Err("A screenshot cannot be taken while a recording is active".to_owned());
   }
-  crate::exports::reserve_screenshot_workspace(&app)?;
+  crate::editor::reserve_screenshot_workspace(&app)?;
   let include_ruler = crate::ruler::is_active(&app);
   crate::capture_overlays::dismiss_except(
     &app,
@@ -238,7 +239,7 @@ pub async fn capture_still(
     Ok(image) => image,
     Err(error) => {
       eprintln!("Screenshot capture failed for {target:?}: {error}");
-      crate::exports::release_screenshot_workspace(&app);
+      crate::editor::release_screenshot_workspace(&app);
       return Err(error);
     }
   };
@@ -253,22 +254,22 @@ pub async fn capture_still(
       .write_image(&Image::new(&image.rgba, image.width, image.height))
       .map_err(|error| error.to_string())
     {
-      crate::exports::release_screenshot_workspace(&app);
+      crate::editor::release_screenshot_workspace(&app);
       return Err(error);
     }
     if matches!(destination, ScreenshotDestination::Clipboard) {
-      crate::exports::release_screenshot_workspace(&app);
+      crate::editor::release_screenshot_workspace(&app);
       let _ = crate::windows::hide_recording_ui(app.clone());
       return Ok(None);
     }
   }
 
-  // With the clipboard off, the export window takes over: the user names the
+  // With the clipboard off, the editor window takes over: the user names the
   // file and picks where it goes, so nothing is written here.
   if let Err(error) =
-    crate::exports::present_screenshot(&app, image, capture_file_stem(Local::now().naive_local()))
+    crate::editor::present_screenshot(&app, image, capture_file_stem(Local::now().naive_local()))
   {
-    crate::exports::release_screenshot_workspace(&app);
+    crate::editor::release_screenshot_workspace(&app);
     return Err(error);
   }
 

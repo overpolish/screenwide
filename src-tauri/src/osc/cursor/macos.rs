@@ -45,7 +45,7 @@ pub(crate) fn present_window(window: &tauri::WebviewWindow) -> tauri::Result<()>
 }
 
 /// Relinquish focus before closing an overlay, while its native window still
-/// exists. Closing a key/main window otherwise promotes Settings/Export before
+/// exists. Closing a key/main window otherwise promotes Settings/Editor before
 /// the asynchronous application restoration has finished.
 pub(crate) fn prepare_window_close(window: &tauri::WebviewWindow) {
   if let Ok(raw_window) = window.ns_window() {

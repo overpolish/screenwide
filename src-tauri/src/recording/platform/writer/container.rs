@@ -87,7 +87,7 @@ impl Container {
   /// actually decode - so nothing may read a frame count out of the container.
   /// Durations stay exact, which is what everything here uses anyway.
   ///
-  /// The saved file is still an .mp4: see `exports::save_recording`, which
+  /// The saved file is still an .mp4: see `editor::save_recording`, which
   /// stream-copies the working movie into one rather than renaming it.
   pub(in crate::recording::platform) fn quicktime_fragmented() -> Self {
     Self {

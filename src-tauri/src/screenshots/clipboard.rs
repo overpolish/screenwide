@@ -11,7 +11,7 @@ use super::{capture_file_stem, CapturedImage};
 /// the screenshot workspace. `present_screenshot` appends when that workspace
 /// already exists and opens it when it does not.
 pub(crate) fn open_in_export(app: &AppHandle) {
-  if let Err(error) = crate::exports::reserve_screenshot_workspace(app) {
+  if let Err(error) = crate::editor::reserve_screenshot_workspace(app) {
     eprintln!("Could not open the clipboard screenshot: {error}");
     return;
   }
@@ -35,10 +35,10 @@ pub(crate) fn open_in_export(app: &AppHandle) {
     .and_then(|result| result);
 
     let result = image.and_then(|image| {
-      crate::exports::present_screenshot(&app, image, capture_file_stem(Local::now().naive_local()))
+      crate::editor::present_screenshot(&app, image, capture_file_stem(Local::now().naive_local()))
     });
     if let Err(error) = result {
-      crate::exports::release_screenshot_workspace(&app);
+      crate::editor::release_screenshot_workspace(&app);
       eprintln!("Could not open the clipboard screenshot: {error}");
     }
   });

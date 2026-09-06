@@ -65,18 +65,18 @@ fn abandon_start(app: &AppHandle, error: &str) {
   discard_capture(take_handles(app));
   restore_windows(app);
   let _ = transition(app, RecordingStatus::Idle, None);
-  crate::exports::release_recording_workspace(app);
+  crate::editor::release_recording_workspace(app);
   show_recording_ui(app);
 }
 
 pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), String> {
   crate::capture_overlays::dismiss_all(app);
   validate_options(&options)?;
-  crate::exports::reserve_recording_workspace(app)?;
+  crate::editor::reserve_recording_workspace(app)?;
   // A second start while `Starting` is rejected here, not merely by a
   // disabled button.
   if let Err(error) = transition(app, RecordingStatus::Starting, Some(options.mode)) {
-    crate::exports::release_recording_workspace(app);
+    crate::editor::release_recording_workspace(app);
     return Err(error);
   }
   let generation = state(app).begin_start();
@@ -234,19 +234,19 @@ pub fn stop(app: &AppHandle) -> Result<(), String> {
 
     match finalized {
       Some(Ok((info, suggested_file_stem))) => {
-        if let Err(error) = crate::exports::present_recording(&app, info, suggested_file_stem) {
-          crate::exports::release_recording_workspace(&app);
+        if let Err(error) = crate::editor::present_recording(&app, info, suggested_file_stem) {
+          crate::editor::release_recording_workspace(&app);
           emit_error(&app, "stop", &error);
           show_recording_ui(&app);
         }
       }
       Some(Err(error)) => {
-        crate::exports::release_recording_workspace(&app);
+        crate::editor::release_recording_workspace(&app);
         emit_error(&app, "stop", &error);
         show_recording_ui(&app);
       }
       None => {
-        crate::exports::release_recording_workspace(&app);
+        crate::editor::release_recording_workspace(&app);
         show_recording_ui(&app);
       }
     }
@@ -282,7 +282,7 @@ pub fn cancel(app: &AppHandle) -> Result<(), String> {
   }
   restore_windows(app);
   transition(app, RecordingStatus::Idle, None)?;
-  crate::exports::release_recording_workspace(app);
+  crate::editor::release_recording_workspace(app);
   show_recording_ui(app);
 
   // Closing Windows Graphics Capture and joining encoder workers can block,

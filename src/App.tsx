@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ExportSync } from "./features/exports/export-sync";
-import { ExportWindow } from "./features/exports/export-window";
+import { EditorSync } from "./features/editor/editor-sync";
+import { EditorWindow } from "./features/editor/editor-window";
 import { GlideWindow } from "./features/glide/glide-window";
 import { PermissionSync } from "./features/permissions/permission-sync";
 import { PermissionsWindow } from "./features/permissions/permissions-window";
@@ -24,8 +24,8 @@ import { UpdatePromptWindow } from "./features/updates/update-prompt-window";
 export function App() {
   const content = (() => {
     switch (window.location.pathname) {
-      case "/export":
-        return <ExportWindow />;
+      case "/editor":
+        return <EditorWindow />;
       case "/glide":
         return <GlideWindow />;
       case "/permissions":
@@ -63,7 +63,7 @@ export function App() {
 
   return (
     <>
-      <ExportSync />
+      <EditorSync />
       <PermissionSync />
       <RecordingInputSync />
       <RecordingSourceSync />

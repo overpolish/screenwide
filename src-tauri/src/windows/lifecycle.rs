@@ -13,8 +13,8 @@ use super::{
   platform, WindowLabel,
 };
 
-/// The export windows currently being dragged, by label. Per window rather
-/// than one flag for all of them: two export workspaces can be open at once,
+/// The editor windows currently being dragged, by label. Per window rather
+/// than one flag for all of them: two editor workspaces can be open at once,
 /// and a drag of one must not swallow the containment pass of the other.
 static EXPORT_DRAGS_ACTIVE: Mutex<Option<HashSet<String>>> = Mutex::new(None);
 
@@ -29,12 +29,12 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
           WindowLabel::RecordingOptions => {
             let _ = super::hide_recording_options(app.clone());
           }
-          // Closing an export window cancels only its own pending capture.
-          WindowLabel::ExportRecording => {
-            crate::exports::discard(&app, crate::exports::ExportKind::Recording);
+          // Closing an editor window cancels only its own pending capture.
+          WindowLabel::EditorRecording => {
+            crate::editor::discard(&app, crate::editor::EditorKind::Recording);
           }
-          WindowLabel::ExportScreenshot => {
-            crate::exports::discard(&app, crate::exports::ExportKind::Screenshot);
+          WindowLabel::EditorScreenshot => {
+            crate::editor::discard(&app, crate::editor::EditorKind::Screenshot);
           }
           WindowLabel::Settings => {
             let _ = crate::settings::hide_settings(app.clone());
@@ -169,14 +169,14 @@ pub fn initialize_standalone_listbox(app: &AppHandle) -> tauri::Result<()> {
   Ok(())
 }
 
-pub fn initialize_export(window: &WebviewWindow) -> tauri::Result<()> {
-  platform::initialize_export(window)?;
+pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
+  platform::initialize_editor(window)?;
   // A bundled macOS application can order its ordinary main window onscreen
   // during application activation even when it was configured as invisible.
   // Export only becomes visible when an artifact is presented.
   window.hide()?;
 
-  crate::exports::preview_platform::prewarm(window.clone());
+  crate::editor::preview_platform::prewarm(window.clone());
 
   let app = window.app_handle().clone();
   let export = window.clone();
@@ -190,7 +190,7 @@ pub fn initialize_export(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 pub fn initialize_normal_window(window: &WebviewWindow) -> tauri::Result<()> {
-  platform::initialize_export(window)?;
+  platform::initialize_editor(window)?;
   window.hide()
 }
 
@@ -237,7 +237,7 @@ fn watch_for_export_mouse_up(app: AppHandle, export: WebviewWindow) {
   let _ = contain_window_in_work_area(&app, &export);
 }
 
-pub fn contain_export(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
+pub fn contain_editor(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
   contain_window_in_work_area(app, window)
 }
 
@@ -249,8 +249,8 @@ pub fn sync_dock_visibility(_app: &AppHandle) -> tauri::Result<()> {
   #[cfg(target_os = "macos")]
   {
     let visible = [
-      WindowLabel::ExportRecording,
-      WindowLabel::ExportScreenshot,
+      WindowLabel::EditorRecording,
+      WindowLabel::EditorScreenshot,
       WindowLabel::Settings,
       WindowLabel::Update,
     ]

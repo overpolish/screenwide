@@ -43,7 +43,7 @@ tauri_panel! {
   })
 
   // Quick Screenshot must own main as well as key status during activation;
-  // otherwise AppKit restores a background Settings/Export window as main.
+  // otherwise AppKit restores a background Settings/Editor window as main.
   // Normal recording presentation remains nonactivating and never asks for main.
   panel!(RegionSelectorPanel {
     config: {
@@ -258,12 +258,12 @@ pub fn set_frame(
   window.set_position(position)
 }
 
-/// The export window is an ordinary focusable window, so it gets none of the
+/// The editor window is an ordinary focusable window, so it gets none of the
 /// panel treatment - only the capture exclusion, so that taking a screenshot
 /// while it is open never pictures it. On macOS every window this process owns
 /// is already excluded by owning-process, so there is nothing to do.
 #[cfg(target_os = "macos")]
-pub fn initialize_export(_window: &WebviewWindow) -> tauri::Result<()> {
+pub fn initialize_editor(_window: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 
@@ -554,7 +554,7 @@ pub fn initialize_recording_dock(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 #[cfg(target_os = "windows")]
-pub fn initialize_export(window: &WebviewWindow) -> tauri::Result<()> {
+pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
   initialize_capture_affinity(window)
 }
 
@@ -653,7 +653,7 @@ pub fn initialize_recording_dock(_window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn initialize_export(_window: &WebviewWindow) -> tauri::Result<()> {
+pub fn initialize_editor(_window: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 

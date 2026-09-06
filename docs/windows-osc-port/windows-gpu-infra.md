@@ -13,7 +13,7 @@ The repo already contains a complete, production D3D11 + DirectComposition compo
 
 ### 1.1 Device / DXGI / DirectComposition creation
 
-`src/exports/preview_platform/surface_windows.rs:479-544` (`Gpu::new`) — canonical bootstrap, copy wholesale:
+`src/editor/preview_platform/surface_windows.rs:479-544` (`Gpu::new`) — canonical bootstrap, copy wholesale:
 
 | Step | Line | Notes |
 | --- | --- | --- |
@@ -201,7 +201,7 @@ Consistent idiom: `adapter.rs` with `#[cfg]`-selected platform submodule + compi
 - Region OSC: `src/windows/screenshot_region/adapter.rs:17-28`, contract at `:182-190`. Stub `unavailable.rs:19-54`.
 - Rulers: `src/ruler/adapter.rs:10-19` — `install`/`present`/`set_screenshot_mode`/`show_interactive`/`close`/`available`, contract `:26-36`.
 - OCR overlays: `src/text_recognition/adapter.rs:12-19` — `install`/`present`/`render`/`render_window`/`show_interactive`/`close`, contract `:35-49`. **The OCR engine itself is already implemented for Windows** (`platform_windows.rs`, `Media::Ocr::OcrEngine`) — only overlay rendering is missing.
-- Preview surface (the implemented twin): `src/exports/preview_platform.rs:71-82`; module doc `:19-66` is an explicit porting guide.
+- Preview surface (the implemented twin): `src/editor/preview_platform.rs:71-82`; module doc `:19-66` is an explicit porting guide.
 - Prewarm precedent: `preview_platform::prewarm()` `:127-137` builds the D3D/DComp pipeline on a blocking thread while the window is hidden — worth mirroring.
 
 ## 8. Gaps / cautions

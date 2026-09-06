@@ -88,7 +88,7 @@ export const ScreenshotFailed: Story = {
  * both capture buttons stay live.
  */
 export const ScreenshotWorkspaceOpen: Story = {
-  args: { pendingExports: { recording: false, screenshot: true } },
+  args: { pendingEditors: { recording: false, screenshot: true } },
 };
 
 /**
@@ -96,7 +96,7 @@ export const ScreenshotWorkspaceOpen: Story = {
  * that window instead, while screenshots go on being taken beside it.
  */
 export const RecordingWorkspaceOpen: Story = {
-  args: { pendingExports: { recording: true, screenshot: false } },
+  args: { pendingEditors: { recording: true, screenshot: false } },
 };
 
 export const ClipboardScreenshotPending: Story = {

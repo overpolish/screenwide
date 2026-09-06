@@ -40,8 +40,8 @@ const GLIDABLE_WINDOW_LABELS: &[WindowLabel] = &[
   WindowLabel::Settings,
   WindowLabel::RecordingBar,
   WindowLabel::RecordingDock,
-  WindowLabel::ExportRecording,
-  WindowLabel::ExportScreenshot,
+  WindowLabel::EditorRecording,
+  WindowLabel::EditorScreenshot,
 ];
 
 const fn uses_full_surface(label: WindowLabel) -> bool {

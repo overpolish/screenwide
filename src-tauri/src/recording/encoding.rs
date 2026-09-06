@@ -18,7 +18,7 @@ use serde::Serialize;
 pub type FailureReport = Arc<dyn Fn(String) + Send + Sync>;
 
 /// What a finished recording leaves behind. Platform-independent on purpose:
-/// it is what the export window is handed, and the export window knows nothing
+/// it is what the editor window is handed, and the editor window knows nothing
 /// about how the file was made.
 pub struct FinalizeInfo {
   pub camera: Option<CameraFinalizeInfo>,
@@ -84,7 +84,7 @@ pub fn bitrate_bps(width: u32, height: u32, fps: u32) -> i32 {
 /// written in fragments and only a fragmented file is worth anything if the
 /// app dies mid-recording. The saved file is still an .mp4 - the working movie
 /// is stream-copied into one when the user keeps it. See
-/// `platform::Container::quicktime_fragmented` and `exports::save_recording`.
+/// `platform::Container::quicktime_fragmented` and `editor::save_recording`.
 pub fn temp_file_name(started_at: NaiveDateTime) -> String {
   started_at
     .format(if cfg!(target_os = "windows") {

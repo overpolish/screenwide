@@ -15,7 +15,7 @@ mod capture_overlays;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod cursor_scrub;
 mod desktop_capture;
-mod exports;
+mod editor;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod glide;
 mod image_analysis;
@@ -65,9 +65,9 @@ pub fn run() {
   let app = builder
     .manage(audio_preview::AudioPreviewState::default())
     .manage(camera_preview::CameraPreviewState::default())
-    .manage(exports::ExportState::default())
-    .manage(exports::recording_preview_player::RecordingPreviewPlayerState::default())
-    .manage(exports::screenshot_preview::ScreenshotPreviewState::default())
+    .manage(editor::EditorState::default())
+    .manage(editor::recording_preview_player::RecordingPreviewPlayerState::default())
+    .manage(editor::screenshot_preview::ScreenshotPreviewState::default())
     .manage(permissions::PermissionState::default())
     .manage(recording::RecordingState::default())
     .manage(ruler::RulerState::default())
@@ -84,42 +84,42 @@ pub fn run() {
       cursor_scrub::begin_cursor_scrub,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       cursor_scrub::end_cursor_scrub,
-      exports::commands::browse_export_directory,
-      exports::commands::cancel_export,
-      exports::commands::cancel_export_job,
-      exports::commands::copy_export_to_clipboard,
-      exports::commands::focus_export_window,
-      exports::commands::get_screenshot_content_bounds,
-      exports::recording_preview_player::recenter::get_recording_content_bounds,
-      exports::preview::estimate_recording_export,
-      exports::preview::get_export_snapshot,
-      exports::recording_preview::get_recording_preview,
-      exports::recording_preview::get_recording_keyboard_timeline,
-      exports::recording_preview_player::commands::pause_recording_preview,
-      exports::recording_preview_player::surface_commands::layout_recording_preview_surface,
-      exports::recording_preview_player::surface_commands::set_recording_preview_zoom,
-      exports::recording_preview_player::commands::playback::play_recording_preview,
-      exports::recording_preview_player::commands::seek_recording_preview,
-      exports::recording_preview_player::commands::select_recording_preview_audio,
-      exports::recording_preview_player::commands::set_recording_preview_audio_volumes,
-      exports::recording_preview_player::commands::set_recording_preview_cursor_effects,
-      exports::recording_preview_player::keyboard_command::set_recording_preview_keyboard_effects,
-      exports::recording_preview_player::keyboard_command::set_recording_preview_deleted_keyboard_shortcuts,
-      exports::recording_preview_player::commands::set_recording_preview_composition,
-      exports::recording_preview_player::commands::start_recording_preview_player,
-      exports::recording_preview_player::commands::stop_recording_preview_player,
-        exports::recording_preview_player::timeline_thumbnails::copy_recording_preview_frame_to_clipboard,
-      exports::recording_preview_player::timeline_thumbnails::stream_recording_timeline_thumbnails,
-      exports::save::save_export,
-      exports::screenshot_preview::layout_screenshot_preview_surface,
-      exports::screenshot_preview::refresh_screenshot_preview_sources,
-      exports::screenshot_preview::set_screenshot_preview_zoom,
-      exports::screenshot_preview::start_screenshot_preview,
-      exports::screenshot_preview::stop_screenshot_preview,
-      exports::commands::set_export_directory,
-      exports::commands::set_recording_timeline_edit,
-      exports::commands::set_screenshot_background_radius,
-      exports::commands::set_screenshot_radius,
+      editor::commands::browse_export_directory,
+      editor::commands::discard_editor,
+      editor::commands::cancel_export_job,
+      editor::commands::copy_editor_to_clipboard,
+      editor::commands::focus_editor_window,
+      editor::commands::get_screenshot_content_bounds,
+      editor::recording_preview_player::recenter::get_recording_content_bounds,
+      editor::preview::estimate_recording_export,
+      editor::preview::get_editor_snapshot,
+      editor::recording_preview::get_recording_preview,
+      editor::recording_preview::get_recording_keyboard_timeline,
+      editor::recording_preview_player::commands::pause_recording_preview,
+      editor::recording_preview_player::surface_commands::layout_recording_preview_surface,
+      editor::recording_preview_player::surface_commands::set_recording_preview_zoom,
+      editor::recording_preview_player::commands::playback::play_recording_preview,
+      editor::recording_preview_player::commands::seek_recording_preview,
+      editor::recording_preview_player::commands::select_recording_preview_audio,
+      editor::recording_preview_player::commands::set_recording_preview_audio_volumes,
+      editor::recording_preview_player::commands::set_recording_preview_cursor_effects,
+      editor::recording_preview_player::keyboard_command::set_recording_preview_keyboard_effects,
+      editor::recording_preview_player::keyboard_command::set_recording_preview_deleted_keyboard_shortcuts,
+      editor::recording_preview_player::commands::set_recording_preview_composition,
+      editor::recording_preview_player::commands::start_recording_preview_player,
+      editor::recording_preview_player::commands::stop_recording_preview_player,
+        editor::recording_preview_player::timeline_thumbnails::copy_recording_preview_frame_to_clipboard,
+      editor::recording_preview_player::timeline_thumbnails::stream_recording_timeline_thumbnails,
+      editor::save::save_export,
+      editor::screenshot_preview::layout_screenshot_preview_surface,
+      editor::screenshot_preview::refresh_screenshot_preview_sources,
+      editor::screenshot_preview::set_screenshot_preview_zoom,
+      editor::screenshot_preview::start_screenshot_preview,
+      editor::screenshot_preview::stop_screenshot_preview,
+      editor::commands::set_export_directory,
+      editor::commands::set_recording_timeline_edit,
+      editor::commands::set_screenshot_background_radius,
+      editor::commands::set_screenshot_radius,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       glide::settings::get_glide_settings,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -205,7 +205,7 @@ pub fn run() {
 
       #[cfg(target_os = "macos")]
       {
-        exports::initialize_cursor_artwork();
+        editor::initialize_cursor_artwork();
       }
       #[cfg(desktop)]
       tray::initialize(app)?;
@@ -238,11 +238,11 @@ pub fn run() {
         windows::initialize_normal_window(&window)?;
       }
       for label in [
-        windows::WindowLabel::ExportRecording,
-        windows::WindowLabel::ExportScreenshot,
+        windows::WindowLabel::EditorRecording,
+        windows::WindowLabel::EditorScreenshot,
       ] {
         if let Some(window) = app.get_webview_window(label.as_str()) {
-          windows::initialize_export(&window)?;
+          windows::initialize_editor(&window)?;
         }
       }
       windows::hide_instead_of_close(app.handle(), windows::WindowLabel::RecordingBar);
@@ -251,15 +251,15 @@ pub fn run() {
       windows::hide_instead_of_close(app.handle(), windows::WindowLabel::RecordingOptions);
       windows::hide_instead_of_close(app.handle(), windows::WindowLabel::StandaloneListbox);
       windows::hide_instead_of_close(app.handle(), windows::WindowLabel::RecordingDock);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::ExportRecording);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::ExportScreenshot);
+      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::EditorRecording);
+      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::EditorScreenshot);
       windows::hide_instead_of_close(app.handle(), windows::WindowLabel::Settings);
       windows::initialize_recording_bar_position(app.handle())?;
       windows::initialize_topology_management(app.handle());
       windows::manage_recording_bar_movement(app.handle());
       windows::manage_recording_dock_movement(app.handle());
-      exports::initialize(app.handle());
-      let has_pending_export = exports::has_pending_workspace(app.handle());
+      editor::initialize(app.handle());
+      let has_pending_export = editor::has_pending_workspace(app.handle());
       shortcuts::initialize(app.handle());
       windows::manage_transient_popover_dismissal(app.handle());
 
@@ -285,10 +285,10 @@ pub fn run() {
         // the one presentation the user did ask for, so it alone is spared.
         let mut labels = vec![windows::WindowLabel::Settings];
         labels.extend(
-          exports::ExportKind::ALL
+          editor::EditorKind::ALL
             .into_iter()
-            .filter(|kind| !exports::has_pending_workspace_kind(app.handle(), *kind))
-            .map(exports::ExportKind::window_label),
+            .filter(|kind| !editor::has_pending_workspace_kind(app.handle(), *kind))
+            .map(editor::EditorKind::window_label),
         );
         app.handle().run_on_main_thread(move || {
           for label in &labels {
@@ -307,7 +307,7 @@ pub fn run() {
   #[cfg(target_os = "macos")]
   let mut app = app;
   #[cfg(target_os = "macos")]
-  if !exports::has_pending_workspace(app.handle()) {
+  if !editor::has_pending_workspace(app.handle()) {
     app.set_dock_visibility(false);
   }
   app.run(|_, _| {});

@@ -4,7 +4,7 @@ Source: crates.io `wry` 0.55.1. Upstream licenses are preserved.
 
 In `src/wkwebview/mod.rs`, gate macOS application activation during webview
 creation on `attributes.focused`. Upstream activates unconditionally, even
-for hidden windows built with `.focused(false)`. This raises Settings/Export
+for hidden windows built with `.focused(false)`. This raises Settings/Editor
 before Ruler or OCR has a chance to become main/key.
 
 The overlay presentation code performs activation once the overlay is ready.

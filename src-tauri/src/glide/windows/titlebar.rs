@@ -163,8 +163,8 @@ mod tests {
         "settings",
         "recording-bar",
         "recording-dock",
-        "export-recording",
-        "export-screenshot"
+        "editor-recording",
+        "editor-screenshot"
       ]
     );
     assert!(!labels.contains(&"glide"));

@@ -28,7 +28,7 @@ pub async fn capture_scrolling_still(
     return Err("Scrolling capture requires a region".to_owned());
   }
 
-  crate::exports::reserve_screenshot_workspace(&app)?;
+  crate::editor::reserve_screenshot_workspace(&app)?;
   // After the dismissal, so the overlay this capture owns is not swept away
   // with the capture tools it just closed.
   crate::capture_overlays::dismiss_all(&app);
@@ -38,7 +38,7 @@ pub async fn capture_scrolling_still(
   let cancellable = cancel::arm(&app);
   if let Err(error) = overlay::show(&app, target, cancellable) {
     cancel::disarm(&app);
-    crate::exports::release_screenshot_workspace(&app);
+    crate::editor::release_screenshot_workspace(&app);
     let _ = crate::windows::show_recording_ui(&app);
     return Err(error);
   }
@@ -50,19 +50,19 @@ pub async fn capture_scrolling_still(
       // so the toolbar never flashes an error at someone who asked for this.
       let cancelled = cancel::was_requested();
       finish(&app);
-      crate::exports::release_screenshot_workspace(&app);
+      crate::editor::release_screenshot_workspace(&app);
       let _ = crate::windows::show_recording_ui(&app);
       return if cancelled { Ok(()) } else { Err(error) };
     }
   };
 
-  if let Err(error) = crate::exports::present_screenshot(
+  if let Err(error) = crate::editor::present_screenshot(
     &app,
     image,
     crate::screenshots::capture_file_stem(Local::now().naive_local()),
   ) {
     finish(&app);
-    crate::exports::release_screenshot_workspace(&app);
+    crate::editor::release_screenshot_workspace(&app);
     let _ = crate::windows::show_recording_ui(&app);
     return Err(error);
   }

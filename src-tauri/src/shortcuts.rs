@@ -180,7 +180,7 @@ fn run_action(app: &AppHandle, action: ShortcutAction) {
     action,
     ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard
   ) && (!crate::recording::is_idle(app)
-    || crate::exports::focus_if_screenshot_workspace_blocked(app))
+    || crate::editor::focus_if_screenshot_workspace_blocked(app))
   {
     return;
   }
@@ -210,7 +210,7 @@ fn run_action(app: &AppHandle, action: ShortcutAction) {
     }
     ShortcutAction::StartStopRecording => match crate::recording::snapshot(app).status {
       crate::recording::RecordingStatus::Idle => {
-        if !crate::exports::focus_pending_workspace(app) {
+        if !crate::editor::focus_pending_workspace(app) {
           notify_frontend(app, action);
         }
       }

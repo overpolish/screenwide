@@ -43,7 +43,7 @@ body.sb-main-fullscreen {
  * Every preview surface - screenshot and recording alike - is painted by the
  * native compositor, which cannot run outside the desktop app, so those areas
  * render blank in Storybook. `withGpuPreviewPlaceholder`
- * (export-panel.stories.tsx) wraps the stories that have a viewport in
+ * (editor-panel.stories.tsx) wraps the stories that have a viewport in
  * `.sb-gpu-preview`, and this rule labels the blank container. The label sits
  * inside the viewport (which is `position: relative`) and is
  * `pointer-events: none`, so it cannot break layout or intercept interaction

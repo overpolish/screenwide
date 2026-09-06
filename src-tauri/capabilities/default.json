@@ -3,8 +3,8 @@
   "identifier": "default",
   "description": "Capability for Screenwide windows",
   "windows": [
-    "export-recording",
-    "export-screenshot",
+    "editor-recording",
+    "editor-screenshot",
     "glide",
     "recording-bar",
     "recording-dock",

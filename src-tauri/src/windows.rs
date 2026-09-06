@@ -35,7 +35,7 @@ use geometry::monitor_with_most_overlap;
 #[cfg(target_os = "macos")]
 pub use lifecycle::get_or_create;
 pub use lifecycle::{
-  contain_export, contain_normal_window, hide_instead_of_close, initialize_export,
+  contain_editor, contain_normal_window, hide_instead_of_close, initialize_editor,
   initialize_normal_window, initialize_recording_bar_position, show, sync_dock_visibility,
 };
 #[cfg(not(target_os = "macos"))]
@@ -132,10 +132,10 @@ pub(crate) fn conceal_disposable_overlay(window: &WebviewWindow) -> tauri::Resul
 
 #[derive(Clone, Copy)]
 pub enum WindowLabel {
-  /// The recording workspace's window. Each export workspace has one of its
+  /// The recording workspace's window. Each editor workspace has one of its
   /// own so a recording can wait for a decision while a screenshot is edited.
-  ExportRecording,
-  ExportScreenshot,
+  EditorRecording,
+  EditorScreenshot,
   #[cfg(target_os = "macos")]
   Permissions,
   Glide,
@@ -154,8 +154,8 @@ pub enum WindowLabel {
 
 impl WindowLabel {
   pub const ALL: &'static [Self] = &[
-    Self::ExportRecording,
-    Self::ExportScreenshot,
+    Self::EditorRecording,
+    Self::EditorScreenshot,
     #[cfg(target_os = "macos")]
     Self::Permissions,
     Self::Glide,
@@ -174,8 +174,8 @@ impl WindowLabel {
 
   pub const fn as_str(self) -> &'static str {
     match self {
-      Self::ExportRecording => "export-recording",
-      Self::ExportScreenshot => "export-screenshot",
+      Self::EditorRecording => "editor-recording",
+      Self::EditorScreenshot => "editor-screenshot",
       #[cfg(target_os = "macos")]
       Self::Permissions => "permissions",
       Self::Glide => "glide",
@@ -538,7 +538,7 @@ pub fn is_recording_ui_visible() -> bool {
 #[tauri::command]
 pub fn toggle_recording_ui(app: AppHandle) -> tauri::Result<()> {
   crate::capture_overlays::dismiss_all(&app);
-  if !crate::recording::is_idle(&app) || crate::exports::focus_pending_workspace(&app) {
+  if !crate::recording::is_idle(&app) || crate::editor::focus_pending_workspace(&app) {
     return Ok(());
   }
 

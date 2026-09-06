@@ -508,7 +508,7 @@ fn mux_file(
     .and_then(|value| value.to_str())
     .unwrap_or("recording");
   let output = parent.join(format!("{stem}.audio-mux.mp4"));
-  let mut command = Command::new(crate::exports::ffmpeg_path());
+  let mut command = Command::new(crate::editor::ffmpeg_path());
   command.args(["-hide_banner", "-loglevel", "error", "-nostdin", "-y"]);
   if include_video {
     command.arg("-i").arg(destination);

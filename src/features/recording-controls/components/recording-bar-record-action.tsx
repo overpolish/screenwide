@@ -8,8 +8,8 @@ import { IconButton } from "../../../components/base/button/icon-button";
 type RecordingBarRecordActionProps = {
   canRecord: boolean;
   isLocked: boolean;
-  isRecordBlockedByExport: boolean;
-  onFocusPendingExport?: () => void;
+  isRecordBlockedByEditor: boolean;
+  onFocusPendingEditor?: () => void;
   onRecord?: () => void;
   onRequiredPermissionsPress?: () => void;
 };
@@ -17,8 +17,8 @@ type RecordingBarRecordActionProps = {
 export function RecordingBarRecordAction({
   canRecord,
   isLocked,
-  isRecordBlockedByExport,
-  onFocusPendingExport,
+  isRecordBlockedByEditor,
+  onFocusPendingEditor,
   onRecord,
   onRequiredPermissionsPress,
 }: RecordingBarRecordActionProps) {
@@ -27,18 +27,18 @@ export function RecordingBarRecordAction({
       aria-label={
         isLocked
           ? "Open permissions"
-          : isRecordBlockedByExport
-            ? "Show export window"
+          : isRecordBlockedByEditor
+            ? "Show editor window"
             : "Start recording"
       }
       color="primary"
       iconSize="prominent"
-      isDisabled={!canRecord && !isRecordBlockedByExport && !isLocked}
+      isDisabled={!canRecord && !isRecordBlockedByEditor && !isLocked}
       onPress={
         isLocked
           ? onRequiredPermissionsPress
-          : isRecordBlockedByExport
-            ? onFocusPendingExport
+          : isRecordBlockedByEditor
+            ? onFocusPendingEditor
             : onRecord
       }
     >

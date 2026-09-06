@@ -22,9 +22,9 @@ const failedActionClassName =
 type RecordingBarScreenshotActionsProps = {
   canCaptureScrollingScreenshot: boolean;
   canCopyScreenshot: boolean;
-  canExportScreenshot: boolean;
+  canEditorScreenshot: boolean;
   clipboardScreenshotState: ScreenshotState;
-  exportScreenshotState: ScreenshotState;
+  editorScreenshotState: ScreenshotState;
   isCapturingStill: boolean;
   scrollingScreenshotState: ScreenshotState;
   onScreenshot?: () => void;
@@ -51,9 +51,9 @@ function FeedbackIcon({
 export function RecordingBarScreenshotActions({
   canCaptureScrollingScreenshot,
   canCopyScreenshot,
-  canExportScreenshot,
+  canEditorScreenshot,
   clipboardScreenshotState,
-  exportScreenshotState,
+  editorScreenshotState,
   isCapturingStill,
   onScreenshot,
   onScreenshotToClipboard,
@@ -63,9 +63,9 @@ export function RecordingBarScreenshotActions({
   const effectiveClipboardState = screenshotFailurePreviewEnabled
     ? "failed"
     : clipboardScreenshotState;
-  const effectiveExportState = screenshotFailurePreviewEnabled
+  const effectiveEditorState = screenshotFailurePreviewEnabled
     ? "failed"
-    : exportScreenshotState;
+    : editorScreenshotState;
   const effectiveScrollingState = screenshotFailurePreviewEnabled
     ? "failed"
     : scrollingScreenshotState;
@@ -75,16 +75,16 @@ export function RecordingBarScreenshotActions({
       <IconButton
         aria-label="Take screenshot"
         className={
-          effectiveExportState === "failed" ? failedActionClassName : undefined
+          effectiveEditorState === "failed" ? failedActionClassName : undefined
         }
         iconSize="prominent"
-        isDisabled={!canExportScreenshot || isCapturingStill}
+        isDisabled={!canEditorScreenshot || isCapturingStill}
         onPress={onScreenshot}
       >
         <FeedbackIcon
           icon={ImageDown}
           isCapturing={isCapturingStill}
-          state={effectiveExportState}
+          state={effectiveEditorState}
         />
       </IconButton>
 

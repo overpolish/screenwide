@@ -14,9 +14,9 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "label": "export-recording",
-        "title": "Screenwide",
-        "url": "/export",
+        "label": "editor-recording",
+        "title": "Screenwide Editor",
+        "url": "/editor",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -36,9 +36,9 @@
         "visible": false
       },
       {
-        "label": "export-screenshot",
-        "title": "Screenwide",
-        "url": "/export",
+        "label": "editor-screenshot",
+        "title": "Screenwide Editor",
+        "url": "/editor",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

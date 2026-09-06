@@ -9,7 +9,7 @@ Research snapshot 2026-09-01. Paths relative to `src-tauri\`.
 
 | File | Lines | Role |
 | --- | --- | --- |
-| `src/exports/screenshot_region_osc_macos.m` | 324 | Object lifecycle, layer attach, master frame draw |
+| `src/editor/screenshot_region_osc_macos.m` | 324 | Object lifecycle, layer attach, master frame draw |
 | `…_private.h` | 386 | ObjC class `ScreenwideRegionOSC` + all FFI structs / prototypes |
 | `…+appearance.m` | 39 | Dark/light change observer |
 | `…+desktop.m` | 271 | Multi-display peer windows |

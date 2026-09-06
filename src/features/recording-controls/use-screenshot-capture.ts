@@ -36,7 +36,7 @@ export function useScreenshotCapture() {
   const [screenshotFeedback, setScreenshotFeedback] = useState<{
     action: ScreenshotAction;
     state: ScreenshotState;
-  }>({ action: "export", state: "idle" });
+  }>({ action: "editor", state: "idle" });
   const resetRef = useRef<number | undefined>(undefined);
 
   useEffect(
