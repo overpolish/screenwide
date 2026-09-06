@@ -136,7 +136,7 @@ export function CircularProgress({
             (percentage !== undefined &&
             !isIndeterminate &&
             resolvedSize === "large" ? (
-              <span className={label()}>{percentage.toFixed(0)}</span>
+              <span className={label()}>{percentage.toFixed(0)}%</span>
             ) : null)}
         </>
       )}

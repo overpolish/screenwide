@@ -21,6 +21,9 @@ pub fn show(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
 }
 
 pub fn hide(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
+  // An open options window is a child of this one: left attached, it would
+  // come back with the editor the next time it is shown.
+  let _ = super::export_window::hide(app, kind);
   if let Some(window) = app.get_webview_window(kind.window_label().as_str()) {
     windows::hide_without_focus_transfer(&window)?;
   }

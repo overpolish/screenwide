@@ -7,6 +7,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WindowEvent};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
+mod boot;
 mod dismissal;
 pub(crate) mod dock;
 mod escape;
@@ -26,6 +27,7 @@ mod source_selector_layout;
 mod topology;
 mod transient_popover;
 
+pub use boot::initialize_predefined_windows;
 pub use dismissal::hide_without_focus_transfer;
 #[cfg(not(target_os = "macos"))]
 pub use dock::initialize_recording_dock;
@@ -136,6 +138,10 @@ pub enum WindowLabel {
   /// own so a recording can wait for a decision while a screenshot is edited.
   EditorRecording,
   EditorScreenshot,
+  /// Each editor workspace's export options window, a non-movable child of the
+  /// editor it belongs to.
+  ExportRecording,
+  ExportScreenshot,
   #[cfg(target_os = "macos")]
   Permissions,
   Glide,
@@ -156,6 +162,8 @@ impl WindowLabel {
   pub const ALL: &'static [Self] = &[
     Self::EditorRecording,
     Self::EditorScreenshot,
+    Self::ExportRecording,
+    Self::ExportScreenshot,
     #[cfg(target_os = "macos")]
     Self::Permissions,
     Self::Glide,
@@ -176,6 +184,8 @@ impl WindowLabel {
     match self {
       Self::EditorRecording => "editor-recording",
       Self::EditorScreenshot => "editor-screenshot",
+      Self::ExportRecording => "export-recording",
+      Self::ExportScreenshot => "export-screenshot",
       #[cfg(target_os = "macos")]
       Self::Permissions => "permissions",
       Self::Glide => "glide",

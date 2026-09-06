@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #import "recording_preview_surface_macos_private.h"
-
+#import <QuartzCore/CATransaction.h>
 #include <math.h>
 
 SCREENWIDE_PREVIEW_PRIVATE void restore_workspace_transform(
@@ -49,6 +49,8 @@ void screenwide_preview_surface_set_viewport(void *handle,
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   on_main_async(^{
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
     CGFloat host_height = surface.host.bounds.size.height;
     NSRect nextFrame = NSMakeRect(x, host_height - y - height, width, height);
     if (!NSEqualRects(surface.interaction.frame, nextFrame)) {
@@ -58,39 +60,19 @@ void screenwide_preview_surface_set_viewport(void *handle,
     surface.container.frame = nextFrame;
     surface.interaction.frame = surface.container.frame;
     surface.selectionActionMaterialContainer.frame = surface.container.frame;
-    // Reproduce the masked CSS backdrop over the native window material,
-    // preserving its alpha outside the panes during pan, zoom, and resize.
-    surface.container.layer.backgroundColor =
-        CGColorCreateSRGB(red, green, blue, alpha);
-    // The webview punches the whole viewport out of its backdrop, so the
-    // backdrop must be there from the first layout on, not only from the
-    // first presented frame. The panes themselves stay hidden until then.
+    // Preserve the CSS backdrop's alpha over the native window material.
+    CGColorRef backdrop = CGColorCreateSRGB(red, green, blue, alpha);
+    surface.container.layer.backgroundColor = backdrop;
+    CGColorRelease(backdrop);
+    // Fill the webview's viewport hole even before the first pane is ready.
     if (width > 0 && height > 0) surface.container.hidden = NO;
-    if (surface.editorEnabled && width > 0 && height > 0)
+    // A resize must not lift the suspension's hidden interaction view back
+    // over React's overlay; the suspend setter is the only thing that shows it.
+    if (surface.editorEnabled && !surface.editorSuspended && width > 0 &&
+        height > 0)
       surface.interaction.hidden = NO;
     invalidate_selection_cursor_rects(surface);
-  });
-}
-
-void screenwide_preview_surface_enable_editor(
-    void *handle, screenwide_preview_transform_callback callback,
-    void *context) {
-  if (handle == NULL) return;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  on_main_async(^{
-    surface.editorEnabled = callback != NULL;
-    surface.transformCallback = callback;
-    surface.transformContext = context;
-    surface.interaction.hidden = !surface.editorEnabled;
-    if (!surface.editorEnabled)
-      surface.selectionActionMaterialContainer.hidden = YES;
-    if (!surface.editorEnabled) {
-      [surface.interaction releaseCursorControl];
-      surface.editorPanX = 0;
-      surface.editorPanY = 0;
-      surface.editorZoom = 1.0;
-    }
-    redraw_selection(surface);
+    [CATransaction commit];
   });
 }
 
@@ -144,25 +126,6 @@ void screenwide_preview_surface_set_selection_snapping(void *handle,
       clear_selection_snap_guides(surface);
       redraw_selection(surface);
     }
-  });
-}
-
-void screenwide_preview_surface_set_editor_zoom(void *handle,
-                                                double zoom_percent) {
-  if (handle == NULL) return;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  on_main_async(^{
-    if (!surface.editorEnabled) return;
-    // A native selection gesture (Frame resize, auto-fit Move) re-fits the
-    // transform on every pointer sample and has already reported the exact
-    // zoom to React; anything React sends back mid-gesture is that echo
-    // rounded to a whole percent, and re-anchoring on it fights the gesture
-    // (a visible flicker of the clip). Native owns the transform until
-    // mouse-up.
-    if (surface.interaction.selectionDragActive) return;
-    NSPoint center = NSMakePoint(NSMidX(surface.interaction.bounds),
-                                 NSMidY(surface.interaction.bounds));
-    set_editor_zoom(surface, zoom_percent / 100.0, center);
   });
 }
 

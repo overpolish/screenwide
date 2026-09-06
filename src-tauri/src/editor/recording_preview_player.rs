@@ -17,6 +17,7 @@ use tauri::{ipc::Channel, AppHandle, Manager};
 
 mod audio;
 pub(crate) mod commands;
+pub(crate) mod editor_suspend;
 pub(crate) mod keyboard_command;
 mod layout;
 mod lifecycle;

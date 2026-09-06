@@ -104,10 +104,13 @@ export function useRecordingExportEstimate({
         ].join(":")
       : null;
 
+  // Keyed on the id: a cancelled or failed save re-emits the same recording
+  // as a new object, and its estimates are still good.
+  const artifactId = artifact?.id;
   useEffect(() => {
     cacheRef.current.clear();
     setState(null);
-  }, [artifact]);
+  }, [artifactId]);
 
   useEffect(() => {
     if (

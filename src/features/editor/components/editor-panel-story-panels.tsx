@@ -11,10 +11,24 @@ import {
 
 import { EditorPanel } from "./editor-panel";
 
+export function ScreenshotStoryPanel(args: ComponentProps<typeof EditorPanel>) {
+  const [fileStem, setFileStem] = useState(args.fileStem);
+  return (
+    <EditorPanel
+      {...args}
+      fileStem={fileStem}
+      onCopy={() => undefined}
+      onFileStemChange={setFileStem}
+      onSave={() => undefined}
+    />
+  );
+}
+
 export function AudioRecordingStoryPanel(
   args: ComponentProps<typeof EditorPanel>,
 ) {
   const [enabledTracks, setEnabledTracks] = useState([0, 1]);
+  const [fileStem, setFileStem] = useState(args.fileStem);
   const [selectedTrack, setSelectedTrack] = useState<RecordingTrackId | null>(
     () => recordingAudioTrackId(0),
   );
@@ -30,7 +44,9 @@ export function AudioRecordingStoryPanel(
       )}
       enabledAudioTrackCount={enabledTracks.length}
       enabledStreamIndices={enabledTracks}
+      fileStem={fileStem}
       onEnabledTracksChange={setEnabledTracks}
+      onFileStemChange={setFileStem}
       onSelectedTrackChange={setSelectedTrack}
       onSelectedTrackVolumeChange={(decibels) => {
         const streamIndex = recordingAudioStreamIndex(selectedTrack);
@@ -44,6 +60,7 @@ export function AudioRecordingStoryPanel(
 
 export function RecordingStoryPanel(args: ComponentProps<typeof EditorPanel>) {
   const recording = args.artifact?.kind === "recording" ? args.artifact : null;
+  const [fileStem, setFileStem] = useState(args.fileStem);
   const [bakeCamera, setBakeCamera] = useState(args.bakeCamera ?? false);
   const [cameraCompression, setCameraCompression] = useState(
     args.cameraCompression ?? 0,
@@ -90,6 +107,7 @@ export function RecordingStoryPanel(args: ComponentProps<typeof EditorPanel>) {
       enabledAudioTrackCount={enabledAudio.length}
       enabledStreamIndices={enabledAudio}
       enabledVideoTracks={enabledVideo}
+      fileStem={fileStem}
       onBakeCameraChange={setBakeCamera}
       onCameraCompressionChange={setCameraCompression}
       onCameraOverlayChange={setCameraOverlay}
@@ -98,6 +116,7 @@ export function RecordingStoryPanel(args: ComponentProps<typeof EditorPanel>) {
       onCompressionChange={setCompression}
       onEnabledTracksChange={setEnabledAudio}
       onEnabledVideoTracksChange={setEnabledVideo}
+      onFileStemChange={setFileStem}
       onResolutionScaleChange={setResolution}
       onSelectedTrackChange={setSelectedTrack}
       resolutionScalePercent={resolution}

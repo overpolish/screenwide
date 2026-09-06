@@ -3,6 +3,8 @@
 
 import { EditorSync } from "./features/editor/editor-sync";
 import { EditorWindow } from "./features/editor/editor-window";
+import { ExportOptionsSync } from "./features/editor/export-options/export-options-sync";
+import { ExportOptionsWindow } from "./features/editor/export-options/export-options-window";
 import { GlideWindow } from "./features/glide/glide-window";
 import { PermissionSync } from "./features/permissions/permission-sync";
 import { PermissionsWindow } from "./features/permissions/permissions-window";
@@ -26,6 +28,8 @@ export function App() {
     switch (window.location.pathname) {
       case "/editor":
         return <EditorWindow />;
+      case "/export-options":
+        return <ExportOptionsWindow />;
       case "/glide":
         return <GlideWindow />;
       case "/permissions":
@@ -64,6 +68,7 @@ export function App() {
   return (
     <>
       <EditorSync />
+      <ExportOptionsSync />
       <PermissionSync />
       <RecordingInputSync />
       <RecordingSourceSync />

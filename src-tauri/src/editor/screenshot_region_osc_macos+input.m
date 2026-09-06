@@ -551,11 +551,11 @@ void screenwide_region_osc_input_install(ScreenwideRegionOSC *s) {
                                            processKeyboardCommand(
                                                strong,
                                                event.keyCode == 0 ? 6 : 7);
-                                           // Tao force-delivers Command key-up
-                                           // directly to the key window. Let
-                                           // the passive webview receive the
-                                           // matching key-down as well.
-                                           return event;
+                                           // Copy dismisses OCR and restores
+                                           // focus. Consume the key-down so
+                                           // the newly focused editor cannot
+                                           // also handle the same shortcut.
+                                           return nil;
                                          }
                                        }
                                        return event;

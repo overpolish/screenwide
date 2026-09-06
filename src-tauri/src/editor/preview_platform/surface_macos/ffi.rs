@@ -101,6 +101,10 @@ unsafe extern "C" {
     callback: Option<unsafe extern "C" fn(f64, *mut std::ffi::c_void)>,
     context: *mut std::ffi::c_void,
   );
+  pub(super) fn screenwide_preview_surface_set_editor_suspended(
+    handle: *mut std::ffi::c_void,
+    suspended: i32,
+  );
   pub(super) fn screenwide_preview_surface_set_editor_zoom(
     handle: *mut std::ffi::c_void,
     zoom_percent: f64,

@@ -58,6 +58,46 @@
         "visible": false
       },
       {
+        "label": "export-recording",
+        "title": "Export recording",
+        "url": "/export-options",
+        "width": 480,
+        "height": 640,
+        "acceptFirstMouse": true,
+        "alwaysOnTop": false,
+        "decorations": false,
+        "resizable": false,
+        "shadow": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["underWindowBackground", "mica"],
+          "radius": 10,
+          "state": "active"
+        },
+        "visible": false
+      },
+      {
+        "label": "export-screenshot",
+        "title": "Export screenshot",
+        "url": "/export-options",
+        "width": 480,
+        "height": 420,
+        "acceptFirstMouse": true,
+        "alwaysOnTop": false,
+        "decorations": false,
+        "resizable": false,
+        "shadow": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["underWindowBackground", "mica"],
+          "radius": 10,
+          "state": "active"
+        },
+        "visible": false
+      },
+      {
         "label": "settings",
         "title": "Screenwide Settings",
         "url": "/settings",

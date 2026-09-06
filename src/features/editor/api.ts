@@ -17,7 +17,6 @@ import {
 import {
   CameraOverlaySettings,
   AudioTrackVolume,
-  EditorKind,
   EditorSnapshots,
   RecordingPreview,
   CursorEffectSettings,
@@ -493,36 +492,31 @@ export const saveExport = ({
     },
   });
 
-export const copyEditorToClipboard = async (
-  screenshotOutput: ScreenshotWorkspaceOutputSettings,
-) => {
-  await invoke<null>("copy_editor_to_clipboard", {
-    screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
+export {
+  browseExportDirectory,
+  cancelExportJob,
+  copyEditorToClipboard,
+  discardEditor,
+  focusEditorWindow,
+  setExportDirectory,
+  setScreenshotBackgroundRadius,
+  setScreenshotRadius,
+} from "./api/editor-actions";
+
+export const setRecordingPreviewEditorSuspended = (
+  sessionId: number,
+  suspended: boolean,
+) =>
+  invoke<null>("set_recording_preview_editor_suspended", {
+    sessionId,
+    suspended,
   });
-};
 
-export const setScreenshotRadius = async (radiusPercent: number) => {
-  await invoke<null>("set_screenshot_radius", { radiusPercent });
-};
-
-export const setScreenshotBackgroundRadius = async (radiusPercent: number) => {
-  await invoke<null>("set_screenshot_background_radius", { radiusPercent });
-};
-
-export const discardEditor = async () => {
-  await invoke<null>("discard_editor");
-};
-
-export const cancelExportJob = () => invoke<boolean>("cancel_export_job");
-
-/** Named explicitly: the recording bar asks on another window's behalf. */
-export const focusEditorWindow = async (kind: EditorKind) => {
-  await invoke<null>("focus_editor_window", { kind });
-};
-
-export const browseExportDirectory = () =>
-  invoke<string | null>("browse_export_directory");
-
-export const setExportDirectory = async (directory: string) => {
-  await invoke<null>("set_export_directory", { directory });
-};
+export const setScreenshotPreviewEditorSuspended = (
+  sessionId: number,
+  suspended: boolean,
+) =>
+  invoke<null>("set_screenshot_preview_editor_suspended", {
+    sessionId,
+    suspended,
+  });

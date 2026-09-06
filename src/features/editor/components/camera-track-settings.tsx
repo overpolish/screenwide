@@ -3,56 +3,32 @@
 
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import {
-  cameraResolutionScales,
-  scaledDimensions,
-  scaledVideoDimensions,
-} from "../resolution";
-import {
   RecordingOutputSettings,
   resizeScreenshotOutputCentered,
   ScreenshotOutputSettings,
 } from "../screenshot-output";
 import { EditorArtifact } from "../types";
 
-import { VideoExportSettings } from "./recording-export-options";
 import { ScreenshotOutputControls } from "./screenshot-inspector";
 
 type RecordingArtifact = Extract<EditorArtifact, { kind: "recording" }>;
 
 export function CameraTrackSettings({
   artifact,
-  availableResolutionScales,
   baked,
-  cameraCompression,
-  cameraResolutionScalePercent,
-  compression,
-  effectiveResolutionScale,
   isSaving,
-  onCameraCompressionChange,
-  onCameraResolutionScaleChange,
-  onCompressionChange,
   onRecordingOutputChange,
-  onResolutionScaleChange,
   recordingOutput,
   resizePrimaryOutput,
 }: {
   artifact: RecordingArtifact;
-  availableResolutionScales: number[];
   baked: boolean;
-  cameraCompression: number;
-  cameraResolutionScalePercent: number;
-  compression: number;
-  effectiveResolutionScale: number;
   resizePrimaryOutput: (width: number, height: number) => void;
   isSaving?: boolean;
-  onCameraCompressionChange?: (compression: number) => void;
-  onCameraResolutionScaleChange?: (scale: number) => void;
-  onCompressionChange?: (compression: number) => void;
   onRecordingOutputChange?: (
     trackId: "camera" | "primary",
     settings: ScreenshotOutputSettings,
   ) => void;
-  onResolutionScaleChange?: (scale: number) => void;
   recordingOutput?: RecordingOutputSettings;
 }) {
   const camera = artifact.camera;
@@ -64,36 +40,6 @@ export function CameraTrackSettings({
 
   return (
     <div className="flex flex-col gap-4">
-      <VideoExportSettings
-        compression={baked ? compression : cameraCompression}
-        isDisabled={!artifact.canCompress || isSaving}
-        onCompressionChange={
-          baked ? onCompressionChange : onCameraCompressionChange
-        }
-        onResolutionScaleChange={
-          baked ? onResolutionScaleChange : onCameraResolutionScaleChange
-        }
-        resolutionDimensions={(scale) =>
-          baked
-            ? scaledDimensions(artifact, scale)
-            : scaledVideoDimensions({
-                height: camera.height,
-                scale,
-                sourceScale: 100,
-                width: camera.width,
-              })
-        }
-        resolutionScale={
-          baked ? effectiveResolutionScale : cameraResolutionScalePercent
-        }
-        resolutionScales={
-          recordingOutput
-            ? []
-            : baked
-              ? availableResolutionScales
-              : cameraResolutionScales
-        }
-      />
       {output ? (
         <ScreenshotOutputControls
           className=""

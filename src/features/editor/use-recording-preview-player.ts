@@ -7,22 +7,17 @@ import { RefObject, useCallback, useEffect, useRef, useState } from "react";
 import {
   pauseRecordingPreview,
   seekRecordingPreview,
-  selectRecordingPreviewAudio,
-  setRecordingPreviewAudioVolumes,
-  setRecordingPreviewComposition,
-  setRecordingPreviewCursorEffects,
-  setRecordingPreviewKeyboardEffects,
-  setRecordingPreviewZoom,
   startRecordingPreviewPlayer,
   stopRecordingPreviewPlayer,
 } from "./api";
 import { ScrubPhase } from "./components/scrub-timeline";
-import {
-  recordingPreviewKeyboardDeletions as keyboardDeletionsFor,
-  setRecordingPreviewDeletedKeyboardShortcuts,
-} from "./recording-keyboard-timeline-api";
+import { recordingPreviewKeyboardDeletions as keyboardDeletionsFor } from "./recording-keyboard-timeline-api";
 import { playRecordingPreview } from "./recording-preview-playback-api";
 import { RecordingPreviewPlayerEvent } from "./recording-preview-player-contract";
+import {
+  pushRecordingPreviewSessionState,
+  resendRecordingPreviewSettings,
+} from "./recording-preview-session-start";
 import { recordingPreviewSettingsKey } from "./recording-preview-settings-key";
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import { recordingTimelinePlaybackRangesFrom } from "./recording-timeline-playback";
@@ -113,6 +108,8 @@ export function useRecordingPreviewPlayer({
   const settleRequestRef = useRef<number | null>(null);
   const sessionIdRef = useRef(0);
   const startedRef = useRef(false);
+  const editorSuspendedRef = useRef(isEditorSuspended);
+  editorSuspendedRef.current = isEditorSuspended;
   const [durationMs, setDurationMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -328,17 +325,17 @@ export function useRecordingPreviewPlayer({
         timingRef.current = [info.durationMs, info.framesPerSecond];
         setDurationMs(info.durationMs);
         startedRef.current = true;
-        if (
-          nativeEditorOwnsLayout &&
-          !isEditorSuspended &&
-          zoomPercent !== undefined
-        ) {
-          void setRecordingPreviewZoom(sessionId, zoomPercent).catch(
-            (cause: unknown) => {
-              if (!disposed) setError(String(cause));
-            },
-          );
-        }
+        pushRecordingPreviewSessionState({
+          // Read live: the suspension can be lifted while the restart is still
+          // in flight, and the captured value would leave native suspended.
+          isEditorSuspended: editorSuspendedRef.current,
+          nativeEditorOwnsLayout,
+          onError: (cause) => {
+            if (!disposed) setError(String(cause));
+          },
+          sessionId,
+          zoomPercent,
+        });
         const latestSettingsKey = recordingPreviewSettingsKey({
           audioTrackVolumes: audioTrackVolumesRef.current,
           bakeCamera: compositionRef.current.bakeCamera,
@@ -350,31 +347,17 @@ export function useRecordingPreviewPlayer({
           recordingOutput: compositionRef.current.recordingOutput,
         });
         if (latestSettingsKey === initialSettingsKey) return;
-        void Promise.all([
-          selectRecordingPreviewAudio(
-            enabledStreamIndicesRef.current,
-            sessionId,
-          ),
-          setRecordingPreviewAudioVolumes(
-            audioTrackVolumesRef.current,
-            sessionId,
-          ),
-          setRecordingPreviewCursorEffects(cursorEffectsRef.current, sessionId),
-          setRecordingPreviewKeyboardEffects(
-            keyboardEffectsRef.current,
-            sessionId,
-          ),
-          setRecordingPreviewDeletedKeyboardShortcuts(
-            keyboardDeletions(),
-            sessionId,
-          ),
-          setRecordingPreviewComposition({
-            bakeCamera: compositionRef.current.bakeCamera,
-            cameraOverlay: compositionRef.current.cameraOverlay,
-            recordingOutput: compositionRef.current.recordingOutput,
-            sessionId,
-          }),
-        ]).catch((cause: unknown) => {
+        void resendRecordingPreviewSettings({
+          audioTrackVolumes: audioTrackVolumesRef.current,
+          bakeCamera: compositionRef.current.bakeCamera,
+          cameraOverlay: compositionRef.current.cameraOverlay,
+          cursorEffects: cursorEffectsRef.current,
+          enabledStreamIndices: enabledStreamIndicesRef.current,
+          keyboardDeletions: keyboardDeletions(),
+          keyboardEffects: keyboardEffectsRef.current,
+          recordingOutput: compositionRef.current.recordingOutput,
+          sessionId,
+        }).catch((cause: unknown) => {
           if (!disposed) setError(String(cause));
         });
       })

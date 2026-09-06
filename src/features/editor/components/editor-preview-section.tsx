@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
-import { ReactNode, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
-import { RecordingTimelineEdit } from "../recording-timeline-edit";
 import {
   scaledDimensions,
   scaledVideoDimensions,
@@ -12,27 +11,18 @@ import {
 } from "../resolution";
 import { resetCommittedScreenshotCrop } from "../screenshot-crop";
 import {
-  RecordingOutputSettings,
   resetScreenshotTransform,
   resizeScreenshotWorkspaceCentered,
-  ScreenshotOutputSettings,
-  ScreenshotWorkspaceOutputSettings,
   screenshotOutputDimensions,
   screenshotWorkspaceItemOutput,
+  ScreenshotOutputSettings,
 } from "../screenshot-output";
-import {
-  AudioTrackVolume,
-  CameraOverlaySettings,
-  CursorEffectSettings,
-  KeyboardEffectSettings,
-  EditorArtifact,
-  PreparedAudioTrack,
-  RecordingPreviewLayout,
-  RecordingTrackId,
-  RecordingVideoTrackId,
-} from "../types";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
 
+import {
+  RecordingSectionProps,
+  ScreenshotSectionProps,
+} from "./editor-preview-section-props";
 import { PreviewToolbar } from "./preview-toolbar";
 import { maximumZoom, MINIMUM_ZOOM_CEILING } from "./preview-transform";
 import { PreviewViewport } from "./preview-viewport";
@@ -54,6 +44,7 @@ import { useScreenshotRecenter } from "./use-screenshot-recenter";
  */
 export function ScreenshotSection({
   artifact,
+  isExportOpen = false,
   isSaving = false,
   onBackgroundRadiusChange,
   onBackgroundRadiusChangeEnd,
@@ -63,21 +54,7 @@ export function ScreenshotSection({
   onSelectedItemChange,
   screenshotOutput,
   selectedItemId = null,
-}: {
-  artifact: Extract<EditorArtifact, { kind: "screenshot" }>;
-  isSaving?: boolean;
-  onBackgroundRadiusChange?: (radiusPercent: number) => void;
-  onBackgroundRadiusChangeEnd?: () => void;
-  onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
-  onOutputChange?: (
-    settings: ScreenshotOutputSettings,
-    itemId?: number,
-  ) => void;
-  onRadiusChangeEnd?: () => void;
-  onSelectedItemChange?: (itemId: number | null) => void;
-  screenshotOutput?: ScreenshotWorkspaceOutputSettings;
-  selectedItemId?: number | null;
-}) {
+}: ScreenshotSectionProps) {
   const [zoomPercent, setZoomPercent] = useState(100);
   const [maximumZoomPercent, setMaximumZoomPercent] = useState(
     MINIMUM_ZOOM_CEILING * 100,
@@ -292,6 +269,7 @@ export function ScreenshotSection({
         alt="Screenshot preview"
         artifactId={artifact.id}
         isEditing={tool === "crop"}
+        isExportOpen={isExportOpen}
         isRecentering={tool === "recenter"}
         isResizingCanvas={tool === "canvas"}
         isSaving={isSaving}
@@ -338,6 +316,7 @@ export function RecordingSection({
   hasCursorData,
   hasKeyboardData,
   inspector,
+  isExportOpen,
   isPreparingRecordingAudio,
   isPreparingRecordingPreview,
   isSaving,
@@ -357,41 +336,7 @@ export function RecordingSection({
   recordingTimelineEdit,
   resolutionScalePercent,
   selectedTrack,
-}: {
-  artifact: Extract<EditorArtifact, { kind: "recording" }>;
-  audioTrackVolumes?: AudioTrackVolume[];
-  bakeCamera?: boolean;
-  cameraOverlay?: CameraOverlaySettings;
-  cameraResolutionScalePercent?: number;
-  cursorEffects?: CursorEffectSettings;
-  enabledStreamIndices?: number[];
-  enabledVideoTracks?: RecordingVideoTrackId[];
-  hasCursorData?: boolean;
-  hasKeyboardData?: boolean;
-  inspector?: ReactNode;
-  isPreparingRecordingAudio?: boolean;
-  isPreparingRecordingPreview?: boolean;
-  isSaving?: boolean;
-  keyboardEffects?: KeyboardEffectSettings;
-  onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
-  onEnabledTracksChange?: (streamIndices: number[]) => void;
-  onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;
-  onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
-  onRecordingOutputChange?: (
-    trackId: RecordingVideoTrackId,
-    settings: RecordingOutputSettings[RecordingVideoTrackId],
-  ) => void;
-  onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
-  onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
-  onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
-  recordingOutput?: RecordingOutputSettings;
-  recordingPreviewError?: string | null;
-  recordingPreviewLayout?: RecordingPreviewLayout;
-  recordingPreviewTracks?: PreparedAudioTrack[];
-  recordingTimelineEdit?: RecordingTimelineEdit | null;
-  resolutionScalePercent?: number;
-  selectedTrack?: RecordingTrackId | null;
-}) {
+}: RecordingSectionProps) {
   const [dimensionsChannel] = useState(createRecordingOutputDimensionsChannel);
   const primaryOutputDimensions = recordingOutput
     ? {
@@ -433,6 +378,7 @@ export function RecordingSection({
           hasCursorData={hasCursorData}
           hasKeyboardData={hasKeyboardData}
           inspector={inspector}
+          isExportOpen={isExportOpen}
           isPreparingAudio={isPreparingRecordingAudio}
           isPreparingPreview={isPreparingRecordingPreview}
           isSaving={isSaving}

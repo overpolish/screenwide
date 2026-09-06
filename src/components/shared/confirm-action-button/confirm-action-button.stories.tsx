@@ -27,3 +27,10 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 export const Disabled: Story = { args: { isDisabled: true } };
+
+export const Text: Story = { args: { variant: "text" } };
+
+/** The confirming label is the wider one, so the width never changes. */
+export const TextDisabled: Story = {
+  args: { isDisabled: true, variant: "text" },
+};

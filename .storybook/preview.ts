@@ -32,11 +32,17 @@ if (isNativePreview) {
 // `invoke`, `transformCallback`, `unregisterCallback`, `runCallback`, and the
 // event-plugin handler. Without it, e.g. `new Channel()` throws because
 // `transformCallback` is undefined. Run as a module-load side effect so the
-// runtime exists before the first story's effects fire. Commands need not
-// return real data - components render for layout, not live pixels - so unknown
-// commands resolve to `null` and never throw.
+// runtime exists before the first story's effects fire. Data queries must keep
+// their response shape, even without native content. Unknown commands resolve
+// to `null`; these stories render layout rather than live pixels.
 if (!isNativePreview) {
-  mockIPC(() => null, { shouldMockEvents: true });
+  mockIPC(
+    (command) => {
+      if (command === "get_recording_keyboard_timeline") return [];
+      return null;
+    },
+    { shouldMockEvents: true },
+  );
 }
 
 // Initialize React Aria's focus tracking before Storybook's test loader wraps

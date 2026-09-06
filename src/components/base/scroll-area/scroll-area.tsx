@@ -17,6 +17,8 @@ type ScrollAreaProps = {
   children?: ReactNode;
   className?: string;
   constrainHeight?: boolean;
+  /** Classes for the edge overlays only, e.g. a radius the content must not get. */
+  edgeClassName?: string;
   edgeEffect?: "shadow" | "inset" | "none";
   orientation?: "horizontal" | "vertical";
   rootClassName?: string;
@@ -27,6 +29,7 @@ export function ScrollArea({
   children,
   className,
   constrainHeight,
+  edgeClassName,
   edgeEffect = "shadow",
   orientation = "vertical",
   rootClassName,
@@ -75,6 +78,7 @@ export function ScrollArea({
         aria-hidden
         className={cn(
           "pointer-events-none absolute z-100 rounded-[inherit]",
+          edgeClassName,
           !horizontal && start && "rounded-tl-md",
           horizontal ? "inset-y-0" : "inset-x-0",
           horizontal

@@ -36,6 +36,15 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
           WindowLabel::EditorScreenshot => {
             crate::editor::discard(&app, crate::editor::EditorKind::Screenshot);
           }
+          // Closing an export options window returns to its editor.
+          WindowLabel::ExportRecording => {
+            let _ =
+              crate::editor::hide_export_options_for(&app, crate::editor::EditorKind::Recording);
+          }
+          WindowLabel::ExportScreenshot => {
+            let _ =
+              crate::editor::hide_export_options_for(&app, crate::editor::EditorKind::Screenshot);
+          }
           WindowLabel::Settings => {
             let _ = crate::settings::hide_settings(app.clone());
           }
@@ -182,6 +191,9 @@ pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
   let export = window.clone();
   window.on_window_event(move |event| {
     if matches!(event, WindowEvent::Moved(_) | WindowEvent::Resized(_)) {
+      // An open export options window is a child of this one, so it follows
+      // the editor's frame rather than keeping the place it was opened at.
+      crate::editor::export_window::recenter_for_editor_label(&app, export.label());
       watch_for_export_mouse_up(app.clone(), export.clone());
     }
   });

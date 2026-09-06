@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useState } from "react";
+
 import logoUrl from "../../../assets/screenwide-mark.svg";
 
 import { WindowHeader } from "./window-header";
@@ -61,5 +63,44 @@ export const WindowControls: Story = {
     onMinimize: () => undefined,
     onToggleMaximize: () => undefined,
     title: "Settings",
+  },
+};
+
+function EditableTitlePreview() {
+  const [title, setTitle] = useState("Untitled recording");
+
+  return (
+    <WindowHeader
+      leadingSection={
+        <img
+          alt="Screenwide"
+          className="brightness-0 dark:invert"
+          draggable={false}
+          src={logoUrl}
+        />
+      }
+      onClose={() => undefined}
+      onTitleChange={setTitle}
+      title={title}
+    />
+  );
+}
+
+export const EditableTitle: Story = {
+  render: () => <EditableTitlePreview />,
+};
+
+export const LongTitle: Story = {
+  args: {
+    leadingSection: (
+      <img
+        alt="Screenwide"
+        className="brightness-0 dark:invert"
+        draggable={false}
+        src={logoUrl}
+      />
+    ),
+    title:
+      "Screenwide product walkthrough — recording and screenshot editing — September 2026",
   },
 };

@@ -12,10 +12,6 @@ import type { GeneralSettings } from "./types";
 
 const toggles = [
   {
-    key: "openLocationAfterExport",
-    title: "Open folder after saving",
-  },
-  {
     description:
       "Check your camera, microphone and computer sound are working.",
     key: "showRecordingConfidenceChecks",

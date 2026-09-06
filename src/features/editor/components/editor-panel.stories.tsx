@@ -7,51 +7,19 @@ import {
   type StoryObj,
 } from "@storybook/react-vite";
 
-import { defaultScreenshotOutput } from "../screenshot-output";
 import { EditorArtifact } from "../types";
 
 import { EditorPanel } from "./editor-panel";
 import {
   AudioRecordingStoryPanel,
   RecordingStoryPanel,
+  ScreenshotStoryPanel,
 } from "./editor-panel-story-panels";
-
-const screenshot: EditorArtifact = {
-  extension: "png",
-  height: 2234,
-  id: 1,
-  items: [{ height: 2234, id: 2, width: 3456 }],
-  kind: "screenshot",
-  suggestedFileStem: "Screenwide 2026-08-08 at 14.32.05",
-  width: 3456,
-};
-const screenshotOutput = defaultScreenshotOutput(3456, 2234);
-
-const recording: Extract<EditorArtifact, { kind: "recording" }> = {
-  audioTracks: [
-    { kind: "system-audio", label: "System audio", streamIndex: 0 },
-    { kind: "microphone", label: "Microphone", streamIndex: 1 },
-  ],
-  camera: null,
-  canCompress: true,
-  cursorDataVersion: 1,
-  durationMs: 3_845_000,
-  extension: "mp4",
-  hasCursorData: true,
-  hasKeyboardData: true,
-  height: 2160,
-  id: 2,
-  keyboardDataVersion: 1,
-  kind: "recording",
-  originalSizeBytes: 186_400_000,
-  // The working file is a QuickTime movie; `extension` is what saving it
-  // delivers, which is not the same thing.
-  path: "/tmp/Recordings/recording-20260808-143205.000.mov",
-  primaryKind: "screen",
-  sourceScalePercent: 200,
-  suggestedFileStem: "Screenwide 2026-08-08 at 14.32.05",
-  width: 3840,
-};
+import {
+  recording,
+  screenshot,
+  screenshotOutput,
+} from "./editor-story-fixtures";
 
 const screenPreviewLayout = {
   height: 720,
@@ -136,6 +104,9 @@ const meta = {
     artifact: screenshot,
     directory: "/Users/dom/Desktop",
     fileStem: screenshot.suggestedFileStem,
+    onCancel: () => undefined,
+    onMinimize: () => undefined,
+    onToggleMaximize: () => undefined,
     screenshotOutput: { ...screenshotOutput, items: [] },
   },
   component: EditorPanel,
@@ -151,6 +122,10 @@ type Story = StoryObj<typeof meta>;
 
 export const NothingPending: Story = {
   args: { artifact: null, fileStem: "" },
+};
+
+export const Screenshot: Story = {
+  render: (args) => <ScreenshotStoryPanel {...args} />,
 };
 
 export const Recording: Story = {
@@ -187,6 +162,7 @@ export const Recording: Story = {
   render: (args) => <RecordingStoryPanel {...args} />,
 };
 
+/** The save runs in the export window now; the editor only stands down. */
 export const Saving: Story = {
   args: {
     ...Recording.args,
@@ -211,23 +187,13 @@ export const WithError: Story = {
   render: (args) => <RecordingStoryPanel {...args} />,
 };
 
-export const LongDestinationMac: Story = {
+export const LongFileName: Story = {
   args: {
     ...Recording.args,
-    directory:
-      "/Users/dom/Library/Mobile Documents/com~apple~CloudDocs/Screenshots/2026/August",
+    fileStem:
+      "Screenwide recording with a deliberately long editable filename 2026-08-08",
   },
-  name: "Long Destination (Mac)",
-  render: (args) => <RecordingStoryPanel {...args} />,
-};
-
-export const LongDestinationWindows: Story = {
-  args: {
-    ...Recording.args,
-    directory:
-      "C:\\Users\\dom\\OneDrive\\Documents\\Screen Recordings\\2026\\August",
-  },
-  name: "Long Destination (Windows)",
+  name: "Long File Name",
   render: (args) => <RecordingStoryPanel {...args} />,
 };
 
@@ -314,29 +280,6 @@ export const RecordingWithCamera: Story = {
     recordingPreviewLayout: cameraPreviewLayout,
   },
   render: (args) => <RecordingStoryPanel {...args} />,
-};
-export const SavingRecording: Story = {
-  args: {
-    ...Recording.args,
-    etaSeconds: 128,
-    isSaving: true,
-    saveProgress: 58,
-  },
-};
-export const SavingCamera: Story = {
-  args: {
-    ...RecordingWithCamera.args,
-    etaSeconds: 45,
-    isSaving: true,
-    savePhase: "camera",
-    saveProgress: 68,
-  },
-};
-export const CancelingRecording: Story = {
-  args: {
-    ...SavingRecording.args,
-    isCancelingSave: true,
-  },
 };
 export const EstimatingCompressedSize: Story = {
   args: {

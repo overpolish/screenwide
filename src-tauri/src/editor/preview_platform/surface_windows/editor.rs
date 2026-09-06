@@ -3,6 +3,7 @@
 
 //! Non-activating native input window for the DirectComposition workspace.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 
 use windows::{
@@ -81,6 +82,11 @@ pub(super) enum Input {
 
 pub(super) struct EditorWindow {
   hwnd: HWND,
+  /// Set while the frontend covers the workarea with its own chrome. The
+  /// window stays hidden for as long as it is set, whatever the editor's
+  /// active state does, so a layout cannot raise it back over that chrome.
+  /// Unlike deactivating the editor this leaves the workspace transform alone.
+  suspended: AtomicBool,
 }
 
 unsafe impl Send for EditorWindow {}
@@ -124,7 +130,10 @@ impl EditorWindow {
     // A freshly created child lands at the bottom of the sibling z-order, so
     // raise it above WebView2 before the first `set_frame` arrives.
     raise(hwnd);
-    Ok(Self { hwnd })
+    Ok(Self {
+      hwnd,
+      suspended: AtomicBool::new(false),
+    })
   }
 
   pub(super) fn hwnd(&self) -> HWND {
@@ -134,6 +143,7 @@ impl EditorWindow {
   /// `ShowWindowAsync` posts rather than sends, so callers off the event-loop
   /// thread never block inside the main thread while holding surface state.
   pub(super) fn set_active(&self, active: bool) {
+    let active = active && !self.suspended.load(Ordering::Relaxed);
     let _ = unsafe { ShowWindowAsync(self.hwnd, if active { SW_SHOWNOACTIVATE } else { SW_HIDE }) };
     if active {
       raise(self.hwnd);
@@ -144,7 +154,7 @@ impl EditorWindow {
   /// non-owning thread. The z-order is deliberately re-asserted to `HWND_TOP`
   /// on every move: the editor must stay above the sibling WebView2 child.
   pub(super) fn set_frame(&self, x: i32, y: i32, width: i32, height: i32, active: bool) {
-    let visibility = if active {
+    let visibility = if active && !self.suspended.load(Ordering::Relaxed) {
       SWP_SHOWWINDOW
     } else {
       Default::default()
@@ -161,6 +171,13 @@ impl EditorWindow {
         flags,
       )
     };
+  }
+
+  /// Hides the input window for the duration of a suspension and restores it
+  /// to `active` afterwards.
+  pub(super) fn set_suspended(&self, suspended: bool, active: bool) {
+    self.suspended.store(suspended, Ordering::Relaxed);
+    self.set_active(active);
   }
 
   pub(super) fn set_cursor(kind: CursorKind) {
@@ -212,3 +229,20 @@ fn raise(hwnd: HWND) {
 }
 
 static CLASS: OnceLock<u16> = OnceLock::new();
+
+impl super::RecordingPreviewSurface {
+  /// The Windows analogue of the macOS editor suspension: the input window
+  /// goes away (and with it the selection chrome it paints) while the frontend
+  /// owns the workarea, and the workspace transform is untouched, so nothing
+  /// has to be restored on resume. Deactivating the editor would do the same
+  /// here today, but a layout re-asserts the active state on every resize.
+  /// TODO(windows): verify on Windows hardware alongside the macOS pass.
+  pub(crate) fn set_editor_suspended(&self, suspended: bool) {
+    if let Ok(state) = self.inner.state.lock() {
+      self
+        .inner
+        .editor
+        .set_suspended(suspended, state.editor_active);
+    }
+  }
+}

@@ -462,6 +462,16 @@ html[data-platform="windows"] .glide-app-icon-windows-boost {
   display: block;
 }
 
+/*
+ * The library sets `contain: size layout` on the scrollbar box. WebKit then
+ * skips re-laying it out when only its host changes width (an intrinsically
+ * sized host growing with its content), so the track keeps its old width
+ * until a full layout such as a window resize.
+ */
+.os-scrollbar.os-theme-screenwide {
+  contain: none;
+}
+
 .os-theme-screenwide {
   --os-size: 10px;
   --os-padding-perpendicular: 2px;

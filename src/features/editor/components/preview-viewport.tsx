@@ -35,9 +35,10 @@ type PreviewViewportProps = {
   naturalHeight: number;
   naturalWidth: number;
   isEditing?: boolean;
+  /** Suspends native input, so the DOM over the viewport stays clickable. */
+  isExportOpen?: boolean;
   isRecentering?: boolean;
   isResizingCanvas?: boolean;
-  /** A save suspends native input so its DOM Cancel button remains clickable. */
   isSaving?: boolean;
   isSelecting?: boolean;
   onBackgroundRadiusChange?: (radiusPercent: number) => void;
@@ -65,6 +66,7 @@ export function PreviewViewport({
   alt,
   artifactId,
   isEditing = false,
+  isExportOpen = false,
   isRecentering = false,
   isResizingCanvas = false,
   isSaving = false,
@@ -480,7 +482,7 @@ export function PreviewViewport({
     artifactId,
     canvasRef: nativeFrameRef,
     interactionOutput: workspaceOutput,
-    isEditorSuspended: isSaving,
+    isEditorSuspended: isSaving || isExportOpen,
     isEnabled: workspaceOutput !== undefined,
     onPaneFitChange,
     onSelectionChange: (paneIndex) => {

@@ -16,6 +16,7 @@ export type PathFieldProps = {
   value: string | null;
   className?: string;
   emptyLabel?: string;
+  fullWidth?: boolean;
   isDisabled?: boolean;
   kind?: "file" | "folder";
   maxLabelLength?: number;
@@ -31,6 +32,7 @@ export function PathField({
   "aria-label": label,
   className,
   emptyLabel,
+  fullWidth,
   isDisabled,
   kind = "folder",
   maxLabelLength = 30,
@@ -41,13 +43,16 @@ export function PathField({
   const display = value
     ? truncatePath(value, maxLabelLength, kind)
     : (emptyLabel ?? `Choose ${kind}`);
+  // The tooltip only earns its place when the label hides part of the path.
+  const isTruncated = value !== null && display !== value;
   return (
     <div
       className={cn("gap-control-inset inline-flex items-center", className)}
     >
-      <TooltipTrigger isDisabled={!value}>
+      <TooltipTrigger isDisabled={!isTruncated}>
         <Button
           aria-label={`${label}: ${value || display}`}
+          className={fullWidth ? "w-full justify-start" : undefined}
           isDisabled={isDisabled}
           onPress={onBrowse}
         >

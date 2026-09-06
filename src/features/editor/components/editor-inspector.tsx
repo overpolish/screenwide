@@ -29,10 +29,6 @@ import {
 import { CameraTrackSettings } from "./camera-track-settings";
 import { CursorEffectControls } from "./cursor-effect-controls";
 import { KeyboardEffectControls } from "./keyboard-effect-controls";
-import {
-  RecordingSizeEstimate,
-  VideoExportSettings,
-} from "./recording-export-options";
 import { recordingTrackTabs } from "./recording-track-tabs";
 import { ScreenshotOutputControls } from "./screenshot-inspector";
 
@@ -46,31 +42,19 @@ const inspectorTabs = [
 export function EditorInspector({
   artifact,
   bakeCamera,
-  cameraCompression,
   cameraOverlay,
-  cameraResolutionScalePercent,
   canRestoreKeyboardShortcuts,
-  collapseAudio,
-  compression,
   cursorEffects,
-  enabledAudioTrackCount = 0,
   enabledVideoTracks = [],
   error,
-  estimatedSizeBytes,
-  isEstimatingSize,
   isSaving,
   keyboardEffects,
   onBakeCameraChange,
-  onCameraCompressionChange,
   onCameraOverlayChange,
-  onCameraResolutionScaleChange,
-  onCollapseAudioChange,
-  onCompressionChange,
   onCursorEffectsChange,
   onKeyboardEffectsChange,
   onRecordingOutputChange,
   onResetKeyboardShortcuts,
-  onResolutionScaleChange,
   onRestoreKeyboardShortcuts,
   onSelectedTrackChange,
   onSelectedTrackVolumeChange,
@@ -81,27 +65,17 @@ export function EditorInspector({
 }: {
   artifact: RecordingArtifact;
   bakeCamera: boolean;
-  cameraCompression: number;
   cameraOverlay: CameraOverlaySettings;
-  cameraResolutionScalePercent: number;
-  compression: number;
   cursorEffects: CursorEffectSettings;
   keyboardEffects: KeyboardEffectSettings;
   selectedTrack: RecordingTrackId | null;
   canRestoreKeyboardShortcuts?: boolean;
-  collapseAudio?: boolean;
   enabledAudioTrackCount?: number;
   enabledVideoTracks?: RecordingVideoTrackId[];
   error?: string | null;
-  estimatedSizeBytes?: number | null;
-  isEstimatingSize?: boolean;
   isSaving?: boolean;
   onBakeCameraChange?: (bake: boolean) => void;
-  onCameraCompressionChange?: (compression: number) => void;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
-  onCameraResolutionScaleChange?: (scale: number) => void;
-  onCollapseAudioChange?: (collapse: boolean) => void;
-  onCompressionChange?: (compression: number) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
   onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onRecordingOutputChange?: (
@@ -109,7 +83,6 @@ export function EditorInspector({
     settings: ScreenshotOutputSettings,
   ) => void;
   onResetKeyboardShortcuts?: () => void;
-  onResolutionScaleChange?: (scale: number) => void;
   onRestoreKeyboardShortcuts?: () => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
   onSelectedTrackVolumeChange?: (decibels: number) => void;
@@ -189,32 +162,11 @@ export function EditorInspector({
                 </Checkbox>
               ) : null}
 
-              {artifact.audioTracks.length > 1 ? (
-                <Checkbox
-                  isDisabled={isSaving || enabledAudioTrackCount < 2}
-                  isSelected={collapseAudio}
-                  onChange={onCollapseAudioChange}
-                >
-                  <span className="flex flex-col">
-                    <span className="text-xs">Collapse audio tracks</span>
-                    <span className="text-xs text-muted">
-                      Mix the selected tracks into one.
-                    </span>
-                  </span>
-                </Checkbox>
-              ) : null}
-
               {!hasRecordingSettings ? (
                 <Alert color="neutral" role="status">
                   No additional options are available for this recording.
                 </Alert>
               ) : null}
-
-              <RecordingSizeEstimate
-                estimatedSizeBytes={estimatedSizeBytes}
-                isEstimatingSize={isEstimatingSize}
-                originalSizeBytes={artifact.originalSizeBytes}
-              />
             </>
           ) : null}
 
@@ -253,19 +205,6 @@ export function EditorInspector({
 
               {effectiveSelectedTrack === "primary" ? (
                 <div className="flex flex-col gap-4">
-                  <VideoExportSettings
-                    compression={compression}
-                    isDisabled={!artifact.canCompress || isSaving}
-                    onCompressionChange={onCompressionChange}
-                    onResolutionScaleChange={onResolutionScaleChange}
-                    resolutionDimensions={(scale) =>
-                      scaledDimensions(artifact, scale)
-                    }
-                    resolutionScale={effectiveResolutionScale}
-                    resolutionScales={
-                      recordingOutput ? [] : availableResolutionScales
-                    }
-                  />
                   {recordingOutput ? (
                     <ScreenshotOutputControls
                       className=""
@@ -287,18 +226,9 @@ export function EditorInspector({
               {effectiveSelectedTrack === "camera" && artifact.camera ? (
                 <CameraTrackSettings
                   artifact={artifact}
-                  availableResolutionScales={availableResolutionScales}
                   baked={bakeCamera && canBakeCamera}
-                  cameraCompression={cameraCompression}
-                  cameraResolutionScalePercent={cameraResolutionScalePercent}
-                  compression={compression}
-                  effectiveResolutionScale={effectiveResolutionScale}
                   isSaving={isSaving}
-                  onCameraCompressionChange={onCameraCompressionChange}
-                  onCameraResolutionScaleChange={onCameraResolutionScaleChange}
-                  onCompressionChange={onCompressionChange}
                   onRecordingOutputChange={onRecordingOutputChange}
-                  onResolutionScaleChange={onResolutionScaleChange}
                   recordingOutput={recordingOutput}
                   resizePrimaryOutput={resizePrimaryOutput}
                 />

@@ -89,6 +89,9 @@ pub fn run() {
       editor::commands::cancel_export_job,
       editor::commands::copy_editor_to_clipboard,
       editor::commands::focus_editor_window,
+      editor::export_window::hide_export_options,
+      editor::export_window::resize_export_options,
+      editor::export_window::show_export_options,
       editor::commands::get_screenshot_content_bounds,
       editor::recording_preview_player::recenter::get_recording_content_bounds,
       editor::preview::estimate_recording_export,
@@ -98,6 +101,7 @@ pub fn run() {
       editor::recording_preview_player::commands::pause_recording_preview,
       editor::recording_preview_player::surface_commands::layout_recording_preview_surface,
       editor::recording_preview_player::surface_commands::set_recording_preview_zoom,
+      editor::recording_preview_player::editor_suspend::set_recording_preview_editor_suspended,
       editor::recording_preview_player::commands::playback::play_recording_preview,
       editor::recording_preview_player::commands::seek_recording_preview,
       editor::recording_preview_player::commands::select_recording_preview_audio,
@@ -113,6 +117,7 @@ pub fn run() {
       editor::save::save_export,
       editor::screenshot_preview::layout_screenshot_preview_surface,
       editor::screenshot_preview::refresh_screenshot_preview_sources,
+      editor::screenshot_preview::set_screenshot_preview_editor_suspended,
       editor::screenshot_preview::set_screenshot_preview_zoom,
       editor::screenshot_preview::start_screenshot_preview,
       editor::screenshot_preview::stop_screenshot_preview,
@@ -231,29 +236,7 @@ pub fn run() {
         windows::initialize_standalone_listbox(app.handle())?;
         windows::initialize_recording_dock(app.handle())?;
       }
-      if let Some(window) = app.get_webview_window(windows::WindowLabel::Settings.as_str()) {
-        windows::initialize_normal_window(&window)?;
-      }
-      if let Some(window) = app.get_webview_window(windows::WindowLabel::Update.as_str()) {
-        windows::initialize_normal_window(&window)?;
-      }
-      for label in [
-        windows::WindowLabel::EditorRecording,
-        windows::WindowLabel::EditorScreenshot,
-      ] {
-        if let Some(window) = app.get_webview_window(label.as_str()) {
-          windows::initialize_editor(&window)?;
-        }
-      }
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::RecordingBar);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::RecordingSourceSelector);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::RegionSelector);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::RecordingOptions);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::StandaloneListbox);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::RecordingDock);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::EditorRecording);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::EditorScreenshot);
-      windows::hide_instead_of_close(app.handle(), windows::WindowLabel::Settings);
+      windows::initialize_predefined_windows(app.handle())?;
       windows::initialize_recording_bar_position(app.handle())?;
       windows::initialize_topology_management(app.handle());
       windows::manage_recording_bar_movement(app.handle());
@@ -284,6 +267,7 @@ pub fn run() {
         // Recovery may have put an artifact in one workspace; that window is
         // the one presentation the user did ask for, so it alone is spared.
         let mut labels = vec![windows::WindowLabel::Settings];
+        labels.extend(editor::export_window::LABELS);
         labels.extend(
           editor::EditorKind::ALL
             .into_iter()

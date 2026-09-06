@@ -35,6 +35,7 @@ export type ScrubPreviewProps = {
   hasCursorData?: boolean;
   hasKeyboardData?: boolean;
   inspector?: ReactNode;
+  isExportOpen?: boolean;
   isPreparingAudio?: boolean;
   isPreparingPreview?: boolean;
   isSaving?: boolean;

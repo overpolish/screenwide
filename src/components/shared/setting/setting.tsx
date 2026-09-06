@@ -15,6 +15,7 @@ export type SettingProps = {
   children: (controlProps: SettingControlProps) => ReactNode;
   title: string;
   className?: string;
+  controlClassName?: string;
   description?: string;
 };
 
@@ -24,6 +25,7 @@ export type SettingProps = {
 export function Setting({
   children,
   className,
+  controlClassName,
   description,
   title,
 }: SettingProps) {
@@ -43,7 +45,7 @@ export function Setting({
           </Text>
         ) : null}
       </div>
-      <div className="flex shrink-0 items-center">
+      <div className={cn("flex shrink-0 items-center", controlClassName)}>
         {children({
           "aria-describedby": descriptionId,
           "aria-labelledby": titleId,

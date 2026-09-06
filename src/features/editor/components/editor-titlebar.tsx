@@ -1,38 +1,21 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  ClipboardCopy,
-  Folder,
-  Minus,
-  Square,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react";
-import { Input, TextField } from "react-aria-components";
+import { Check, ClipboardCopy, Upload, X } from "lucide-react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
 import { Button } from "../../../components/base/button/button";
-import { IconButton } from "../../../components/base/button/icon-button";
-import { inputFieldVariants } from "../../../components/base/input-fields/input-field";
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
-import { truncateDirectoryPath } from "../directory-path";
+import { WindowHeader } from "../../../components/shared/window-header/window-header";
 import { EditorArtifact } from "../types";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
 
-const directoryLabel = (directory: string | null) =>
-  directory ? truncateDirectoryPath(directory) : "Choose folder";
-
 export function EditorTitlebar({
   artifact,
-  directory,
-  extension,
+  canExport,
   fileStem,
-  hasExportableContent,
-  isPreviewPreparing,
   isSaving,
-  onBrowse,
   onClose,
   onCopy,
   onExport,
@@ -41,13 +24,9 @@ export function EditorTitlebar({
   onToggleMaximize,
 }: {
   artifact: EditorArtifact | null;
-  directory: string | null;
+  canExport: boolean;
   fileStem: string;
-  hasExportableContent: boolean;
-  extension?: string;
-  isPreviewPreparing?: boolean;
   isSaving?: boolean;
-  onBrowse?: () => void;
   onClose?: () => void;
   onCopy?: () => void;
   onExport?: () => void;
@@ -55,122 +34,72 @@ export function EditorTitlebar({
   onMinimize?: () => void;
   onToggleMaximize?: () => void;
 }) {
-  const styles = inputFieldVariants({ size: "md", variant: "ghost" });
-  const canExport =
-    Boolean(artifact) &&
-    hasExportableContent &&
-    fileStem.trim().length > 0 &&
-    !isPreviewPreparing &&
-    !isSaving;
+  const canExportRef = useRef(canExport);
+  const onExportRef = useRef(onExport);
+  useLayoutEffect(() => {
+    canExportRef.current = canExport;
+    onExportRef.current = onExport;
+  }, [canExport, onExport]);
+  /** Opening the dialog from the shortcut still commits an in-progress rename. */
+  const onShortcutExport = useCallback(() => {
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLElement &&
+      activeElement.isContentEditable
+    ) {
+      activeElement.blur();
+      requestAnimationFrame(() => {
+        if (canExportRef.current) onExportRef.current?.();
+      });
+      return;
+    }
+    if (canExportRef.current) onExportRef.current?.();
+  }, []);
   useEditorWindowShortcuts({
     onCopy: artifact?.kind === "screenshot" && !isSaving ? onCopy : undefined,
-    onExport: canExport ? onExport : undefined,
+    onExport: canExport ? onShortcutExport : undefined,
   });
 
   return (
-    <header
-      className="flex h-12 min-w-0 shrink-0 items-center gap-2 border-b border-muted/15 px-3"
-      data-tauri-drag-region="deep"
-    >
-      <img
-        alt="Screenwide"
-        className="pointer-events-none size-5 shrink-0 brightness-0 dark:invert"
-        data-tauri-drag-region
-        draggable={false}
-        src={logoUrl}
-      />
-
-      <TextField
-        aria-label="File name"
-        className="min-w-40 max-w-88 grow"
-        isDisabled={!artifact || isSaving}
-        onChange={onFileStemChange}
-        value={fileStem}
-      >
-        <div className={styles.field()}>
-          <div className={styles.inputWrapper()}>
-            <Input
-              className={styles.input()}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter" && event.key !== "Escape") return;
-                event.preventDefault();
-                event.stopPropagation();
-                event.currentTarget.blur();
-              }}
-            />
-            <span className="shrink-0 text-xs text-muted">
-              .{extension ?? artifact?.extension ?? "png"}
-            </span>
-          </div>
+    <WindowHeader
+      actions={
+        <div className="gap-control flex shrink-0 items-center">
+          {artifact?.kind === "screenshot" ? (
+            <Button isDisabled={isSaving} onPress={onCopy} variant="ghost">
+              <ClipboardCopy />
+              Copy
+            </Button>
+          ) : null}
+          <Button color="primary" isDisabled={!canExport} onPress={onExport}>
+            <Upload />
+            Export
+          </Button>
         </div>
-      </TextField>
-
-      <Button
-        aria-label={
-          directory ? `Choose export folder, currently ${directory}` : undefined
-        }
-        className="min-w-0 max-w-56 shrink"
-        isDisabled={isSaving}
-        onPress={onBrowse}
-        size="compact"
-      >
-        <Folder className="shrink-0" size={15} />
-        <span className="truncate">{directoryLabel(directory)}</span>
-      </Button>
-
-      <div className="min-w-4 grow" data-tauri-drag-region />
-
-      {artifact?.kind === "screenshot" ? (
-        <Button
-          isDisabled={isSaving}
-          onPress={onCopy}
+      }
+      closeAction={
+        <ConfirmActionButton
+          armedClassName="bg-error-surface text-error data-[hovered]:bg-error-surface-hover data-[pressed]:bg-error-surface-pressed"
+          armedIcon={<Check />}
+          armedLabel="Confirm deleting capture"
+          idleIcon={<X />}
+          idleLabel="Close"
+          key={artifact?.id ?? "empty"}
+          onConfirm={onClose}
           size="compact"
-          variant="ghost"
-        >
-          <ClipboardCopy size={15} />
-          Copy
-        </Button>
-      ) : null}
-      <Button
-        color="primary"
-        isDisabled={!canExport}
-        onPress={onExport}
-        size="compact"
-      >
-        <Upload size={15} />
-        Export
-      </Button>
-      <IconButton
-        aria-label="Minimize"
-        className="group"
-        onPress={onMinimize}
-        size="compact"
-      >
-        <Minus
-          className="transform-gpu text-muted transition-[color,transform,scale] group-data-[hovered]:scale-110 group-data-[hovered]:text-content-fg"
-          size={18}
         />
-      </IconButton>
-      <IconButton
-        aria-label="Maximize or restore"
-        className="group"
-        onPress={onToggleMaximize}
-        size="compact"
-      >
-        <Square
-          className="transform-gpu text-muted transition-[color,transform,scale] group-data-[hovered]:scale-110 group-data-[hovered]:text-content-fg"
-          size={14}
+      }
+      leadingSection={
+        <img
+          alt="Screenwide"
+          className="brightness-0 dark:invert"
+          draggable={false}
+          src={logoUrl}
         />
-      </IconButton>
-      <ConfirmActionButton
-        armedIcon={<Trash2 className="text-error" size={18} />}
-        armedLabel="Confirm deleting capture"
-        idleIcon={<X size={18} />}
-        idleLabel="Close"
-        key={artifact?.id ?? "empty"}
-        onConfirm={onClose}
-        size="compact"
-      />
-    </header>
+      }
+      onMinimize={onMinimize}
+      onTitleChange={artifact && !isSaving ? onFileStemChange : undefined}
+      onToggleMaximize={onToggleMaximize}
+      title={fileStem}
+    />
   );
 }

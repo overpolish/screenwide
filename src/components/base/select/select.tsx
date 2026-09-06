@@ -91,6 +91,7 @@ type SelectProps<T extends object> = Omit<AriaSelectProps<T>, "children"> & {
   onPress?: ComponentProps<typeof Button>["onPress"];
   popoverPlacement?: PopoverProps["placement"];
   popoverShouldFlip?: boolean;
+  renderValue?: (item: T | null) => ReactNode;
   scrollShadow?: boolean;
   showFocus?: boolean;
   size?: "compact" | "default";
@@ -119,6 +120,7 @@ export const Select = <T extends object>({
   placeholder,
   popoverPlacement,
   popoverShouldFlip,
+  renderValue,
   scrollShadow,
   showFocus,
   size,
@@ -174,9 +176,18 @@ export const Select = <T extends object>({
               <div className={value()}>
                 {leftSection != null && <div>{leftSection}</div>}
 
-                <SelectValue className="data-[placeholder]:text-muted truncate">
-                  {({ defaultChildren, isPlaceholder }) =>
-                    isPlaceholder ? placeholder : defaultChildren
+                <SelectValue<T>
+                  className={clsx(
+                    "data-[placeholder]:text-muted truncate",
+                    renderValue && "min-w-0 flex-1",
+                  )}
+                >
+                  {({ defaultChildren, isPlaceholder, selectedItems }) =>
+                    isPlaceholder
+                      ? placeholder
+                      : renderValue
+                        ? renderValue(selectedItems[0] ?? null)
+                        : defaultChildren
                   }
                 </SelectValue>
               </div>

@@ -72,7 +72,7 @@ export function PermissionsWindow({
                 exit={{ opacity: 0 }}
                 initial={{ opacity: 0, scale: 0 }}
               >
-                <Button color="primary" onPress={onRestart} size="compact">
+                <Button color="primary" onPress={onRestart}>
                   Restart Screenwide
                 </Button>
               </motion.div>

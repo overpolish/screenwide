@@ -53,6 +53,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+selection.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+workspace.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+layout.m");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+editor_state.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+zoom.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+appearance.m");
@@ -112,6 +113,7 @@ fn main() {
       .file("src/editor/recording_preview_surface_macos+selection.m")
       .file("src/editor/recording_preview_surface_macos+workspace.m")
       .file("src/editor/recording_preview_surface_macos+layout.m")
+      .file("src/editor/recording_preview_surface_macos+editor_state.m")
       .file("src/editor/recording_preview_surface_macos+zoom.m")
       .file("src/editor/screenshot_region_osc_macos.m")
       .file("src/editor/screenshot_region_osc_macos+appearance.m")

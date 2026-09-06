@@ -10,9 +10,9 @@ use super::callbacks::{
   transform_callback,
 };
 use super::ffi::{
-  screenwide_preview_surface_enable_editor, screenwide_preview_surface_set_editor_zoom,
-  screenwide_preview_surface_set_pointer_down_callback, screenwide_preview_surface_set_selection,
-  screenwide_preview_surface_set_selection_callback,
+  screenwide_preview_surface_enable_editor, screenwide_preview_surface_set_editor_suspended,
+  screenwide_preview_surface_set_editor_zoom, screenwide_preview_surface_set_pointer_down_callback,
+  screenwide_preview_surface_set_selection, screenwide_preview_surface_set_selection_callback,
   screenwide_preview_surface_set_selection_gesture_callback,
   screenwide_preview_surface_set_selection_snapping,
   screenwide_preview_surface_set_selection_targets,
@@ -46,6 +46,16 @@ impl RecordingPreviewSurface {
     };
     unsafe {
       screenwide_preview_surface_enable_editor(self.handle, callback, context);
+    }
+  }
+
+  /// Takes the native editor's input and chrome away while React covers the
+  /// workarea, keeping the workspace transform intact. Distinct from
+  /// `set_editor_active(false)`, which tears the editor down and resets the
+  /// pan and zoom.
+  pub(crate) fn set_editor_suspended(&self, suspended: bool) {
+    unsafe {
+      screenwide_preview_surface_set_editor_suspended(self.handle, i32::from(suspended));
     }
   }
 

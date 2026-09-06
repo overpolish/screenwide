@@ -10,6 +10,7 @@ pub(crate) mod cursor_effects;
 mod cursor_export;
 mod directory;
 pub(crate) mod effect_animation;
+pub(crate) mod export_window;
 pub(crate) mod keyboard_effects;
 mod media_preview;
 mod naming;
@@ -35,6 +36,7 @@ pub use artifact_snapshot::EditorArtifactSnapshot;
 use camera_save::validate_camera_overlay;
 use commands::store_export_directory;
 use directory::current_directory;
+pub use export_window::hide as hide_export_options_for;
 #[cfg(target_os = "windows")]
 pub(crate) use media_preview::ffmpeg_path;
 use naming::sanitize_file_stem;

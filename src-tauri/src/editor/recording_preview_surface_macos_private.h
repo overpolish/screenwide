@@ -172,6 +172,11 @@ typedef struct {
 @property(nonatomic) ScreenwideRegionMagnifier workspaceMagnifier;
 @property(nonatomic, strong) ScreenwidePreviewInteractionView *interaction;
 @property(nonatomic) BOOL editorEnabled;
+/// Set while React covers the workarea with its own chrome (a save sheet,
+/// the export window). Input and native chrome go away; `editorEnabled`, the
+/// transform callback and the pan/zoom stay exactly as they were, so the
+/// workspace comes back where the user left it.
+@property(nonatomic) BOOL editorSuspended;
 @property(nonatomic, strong) NSMutableArray<NSValue *> *editorBaseRects;
 @property(nonatomic) double editorPanX;
 @property(nonatomic) double editorPanY;

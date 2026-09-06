@@ -506,6 +506,10 @@ void *screenwide_preview_surface_create(void *host_view) {
     surface.container = [[ScreenwidePreviewView alloc] initWithFrame:NSZeroRect];
     surface.container.wantsLayer = YES;
     surface.container.layer.masksToBounds = YES;
+    // Follow AppKit's window resize before WebKit's measured layout crosses
+    // IPC. Keep the current chrome insets while resizing the clipping bounds;
+    // the next DOM layout reconciles responsive inspector/timeline changes.
+    surface.container.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     surface.container.hidden = YES;
     // The panes live directly BELOW the webview: the DOM keeps every control
     // and just mask-punches holes over the pane rects, exactly like FCP
@@ -542,10 +546,13 @@ void *screenwide_preview_surface_create(void *host_view) {
     surface.interaction.surface = surface;
     surface.interaction.wantsLayer = YES;
     surface.interaction.layer.masksToBounds = YES;
+    surface.interaction.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     surface.selectionActionMaterialContainer =
         [[NSView alloc] initWithFrame:NSZeroRect];
     surface.selectionActionMaterialContainer.wantsLayer = YES;
     surface.selectionActionMaterialContainer.layer.masksToBounds = YES;
+    surface.selectionActionMaterialContainer.autoresizingMask =
+        NSViewWidthSizable | NSViewHeightSizable;
     NSMutableArray<ScreenwideOscMaterialSurfaceView *> *materials =
         [NSMutableArray arrayWithCapacity:2];
     for (NSUInteger index = 0; index < 2; index++) {

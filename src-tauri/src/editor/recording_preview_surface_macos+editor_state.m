@@ -1,0 +1,86 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+#import "recording_preview_surface_macos_private.h"
+
+SCREENWIDE_PREVIEW_PRIVATE void on_main_async(dispatch_block_t block);
+
+/// Turns the native editor on or off. Off is a full teardown: no transform
+/// callback, no interaction view, and the workspace returns to its base rects
+/// at 100% with no pan. Use `set_editor_suspended` to take input and chrome
+/// away without disturbing the transform.
+void screenwide_preview_surface_enable_editor(
+    void *handle, screenwide_preview_transform_callback callback,
+    void *context) {
+  if (handle == NULL) return;
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  on_main_async(^{
+    surface.editorEnabled = callback != NULL;
+    surface.transformCallback = callback;
+    surface.transformContext = context;
+    // Every layout re-asserts the editor state, so an enable that ignored the
+    // suspension would flash the interaction view back over React's overlay on
+    // the next resize. Suspension stays orthogonal: only its own setter clears
+    // it, this just refuses to undo what it hid.
+    surface.interaction.hidden = !surface.editorEnabled || surface.editorSuspended;
+    if (!surface.editorEnabled)
+      surface.selectionActionMaterialContainer.hidden = YES;
+    if (!surface.editorEnabled) {
+      [surface.interaction releaseCursorControl];
+      surface.editorPanX = 0;
+      surface.editorPanY = 0;
+      surface.editorZoom = 1.0;
+    }
+    redraw_selection(surface);
+  });
+}
+
+/// Suspends the editor for as long as React owns the workarea. Everything that
+/// takes input or paints native chrome goes quiet; everything that applies or
+/// draws the transform keeps running, and the pan/zoom are never touched, so
+/// resuming needs no restore step.
+void screenwide_preview_surface_set_editor_suspended(void *handle,
+                                                     int suspended) {
+  if (handle == NULL) return;
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  const BOOL next = suspended != 0;
+  on_main_async(^{
+    if (surface.editorSuspended == next) return;
+    surface.editorSuspended = next;
+    if (next) {
+      surface.interaction.hidden = YES;
+      surface.selectionActionMaterialContainer.hidden = YES;
+      // The hidden view keeps no mouse tracking, so hand the window's cursor
+      // rects back or the workarea cursor would stay frozen under React.
+      [surface.interaction releaseCursorControl];
+    } else {
+      surface.interaction.hidden = !surface.editorEnabled;
+    }
+    // Decides the selection layer and the action material together, in both
+    // directions: hiding them here, restoring whichever the state calls for.
+    redraw_selection(surface);
+  });
+}
+
+void screenwide_preview_surface_set_editor_zoom(void *handle,
+                                                double zoom_percent) {
+  if (handle == NULL) return;
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  on_main_async(^{
+    if (!surface.editorEnabled) return;
+    // React must not drive the transform while its own overlay owns the
+    // workarea: the zoom it holds is a snapshot from before the suspension and
+    // re-anchoring on it would move the workspace behind the overlay.
+    if (surface.editorSuspended) return;
+    // A native selection gesture (Frame resize, auto-fit Move) re-fits the
+    // transform on every pointer sample and has already reported the exact
+    // zoom to React; anything React sends back mid-gesture is that echo
+    // rounded to a whole percent, and re-anchoring on it fights the gesture
+    // (a visible flicker of the clip). Native owns the transform until
+    // mouse-up.
+    if (surface.interaction.selectionDragActive) return;
+    NSPoint center = NSMakePoint(NSMidX(surface.interaction.bounds),
+                                 NSMidY(surface.interaction.bounds));
+    set_editor_zoom(surface, zoom_percent / 100.0, center);
+  });
+}

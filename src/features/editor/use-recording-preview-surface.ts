@@ -4,7 +4,11 @@
 import { listen } from "@tauri-apps/api/event";
 import { RefObject, useEffect, useRef } from "react";
 
-import { layoutRecordingPreviewSurface, setRecordingPreviewZoom } from "./api";
+import {
+  layoutRecordingPreviewSurface,
+  setRecordingPreviewEditorSuspended,
+  setRecordingPreviewZoom,
+} from "./api";
 import { RecordingOutputSettings } from "./screenshot-output";
 import { CameraOverlaySettings } from "./types";
 
@@ -242,10 +246,9 @@ export function useRecordingPreviewSurface({
    * Temporarily hands input back to the webview without giving up ownership
    * of the layout: the native interaction view sits above the webview, so
    * while it is showing, DOM controls painted over the viewport (the save
-   * overlay's Cancel button) never see the click. The next layout turns the
-   * native editor off, and the one after the suspension clears turns it back
-   * on - along with the workspace zoom, which the native side resets while
-   * the editor is inactive.
+   * overlay's Cancel button) never see the click. Suspending takes that view
+   * and the native chrome away and nothing else - the workspace transform
+   * keeps running and is still there, untouched, when the suspension clears.
    */
   isEditorSuspended?: boolean;
   isPlaying?: boolean;
@@ -267,13 +270,9 @@ export function useRecordingPreviewSurface({
   const onSelectionGestureRef = useRef(onSelectionGesture);
   onSelectionGestureRef.current = onSelectionGesture;
   const selectionGestureActiveRef = useRef(false);
-  const editorSuspendedRef = useRef(isEditorSuspended);
-  const pendingZoomRestoreRef = useRef(false);
   const layoutRequestIdRef = useRef(0);
   const measureRef = useRef<() => void>(() => undefined);
   const lastNativeZoomRef = useRef<number | undefined>(undefined);
-  const zoomPercentRef = useRef(zoomPercent);
-  zoomPercentRef.current = zoomPercent;
   compositionRef.current = { bakeCamera, cameraOverlay, recordingOutput };
 
   useEffect(() => {
@@ -302,6 +301,23 @@ export function useRecordingPreviewSurface({
       unlisten?.();
     };
   }, [isEnabled, nativeEditorOwnsLayout, onZoomChange, sessionIdRef]);
+
+  useEffect(() => {
+    if (!isEnabled || !nativeEditorOwnsLayout || !startedRef.current) return;
+    void setRecordingPreviewEditorSuspended(
+      sessionIdRef.current,
+      isEditorSuspended,
+    ).catch((cause: unknown) => {
+      onError(String(cause));
+    });
+  }, [
+    isEditorSuspended,
+    isEnabled,
+    nativeEditorOwnsLayout,
+    onError,
+    sessionIdRef,
+    startedRef,
+  ]);
 
   useEffect(() => {
     if (
@@ -425,15 +441,9 @@ export function useRecordingPreviewSurface({
     let disposed = false;
     let inFlight = false;
     let lastLayout = "";
-    const nativeEditorActive = nativeEditorOwnsLayout && !isEditorSuspended;
-    // The native editor keeps no transform while it is inactive, so the zoom
-    // React still shows has to be pushed again once this layout has turned the
-    // editor back on. Riding the layout's completion rather than a second
-    // effect keeps the two in order: the zoom command is dropped outright if
-    // it reaches the surface first.
-    if (nativeEditorActive && editorSuspendedRef.current && startedRef.current)
-      pendingZoomRestoreRef.current = true;
-    editorSuspendedRef.current = isEditorSuspended;
+    // Enabling is ownership, not suspension: a suspended editor stays enabled
+    // and keeps its transform, and only its input and chrome go away.
+    const nativeEditorActive = nativeEditorOwnsLayout;
     let pendingLayout:
       Parameters<typeof layoutRecordingPreviewSurface>[0] | null = null;
     const queueLayout = (
@@ -456,21 +466,6 @@ export function useRecordingPreviewSurface({
           if (!disposed) onError(String(cause));
         })
         .finally(() => {
-          if (
-            !disposed &&
-            nativeEditorActive &&
-            pendingZoomRestoreRef.current
-          ) {
-            pendingZoomRestoreRef.current = false;
-            const zoom = zoomPercentRef.current;
-            if (zoom !== undefined) {
-              void setRecordingPreviewZoom(sessionIdRef.current, zoom).catch(
-                (cause: unknown) => {
-                  if (!disposed) onError(String(cause));
-                },
-              );
-            }
-          }
           inFlight = false;
           flush();
         });
@@ -657,7 +652,6 @@ export function useRecordingPreviewSurface({
     };
   }, [
     cameraCanvasRef,
-    isEditorSuspended,
     isEnabled,
     nativeEditorOwnsLayout,
     nativeLayoutHasPanes,

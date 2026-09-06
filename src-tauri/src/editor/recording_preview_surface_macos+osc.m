@@ -70,8 +70,11 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
             containsObject:@(surface.selection.pane_index)]
       : surface.selection.pane_index < surface.views.count &&
             surface.views[surface.selection.pane_index].active;
+  // Chrome is off while suspended: this branch clears the action rects and
+  // hides both the OSC layer and its material, which is the whole visible
+  // editor overlay.
   if (!surface.hasSelection || !surface.selectionVisible ||
-      !surface.editorEnabled ||
+      !surface.editorEnabled || surface.editorSuspended ||
       surface.selectionLayer == nil || surface.selectionPipeline == nil ||
       surface.selection.pane_index >= surface.editorBaseRects.count ||
       !selectedPaneActive) {
@@ -295,14 +298,15 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       surface.selectionDrawInFlight = NO;
       BOOL redrawPending = surface.selectionDrawPending;
       surface.selectionDrawPending = NO;
+      // A draw started before the suspension must not un-hide the OSC after it.
       if (surface.hasSelection && surface.selectionVisible &&
-          surface.editorEnabled)
+          surface.editorEnabled && !surface.editorSuspended)
         surface.selectionLayer.hidden = NO;
       if (redrawPending) {
         redraw_selection(surface);
       } else if (surface.selectionDrawRevision == revision &&
                  surface.hasSelection && surface.selectionVisible &&
-                 surface.editorEnabled) {
+                 surface.editorEnabled && !surface.editorSuspended) {
         surface.selectionLayer.hidden = NO;
       }
     });

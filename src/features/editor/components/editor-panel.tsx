@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Button } from "../../../components/base/button/button";
-import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { Overlay } from "../../../components/base/overlay/overlay";
-import { formatEta } from "../duration";
+import { useExportOptionsBridge } from "../export-options/use-export-options-bridge";
+import { useExportOptionsOpen } from "../export-options/use-export-options-open";
 import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
@@ -14,6 +13,7 @@ import {
   resizeScreenshotWorkspaceCentered,
   screenshotWorkspaceItemOutput,
 } from "../screenshot-output";
+import { currentEditorKind } from "../window-kind";
 
 import { EditorInspector } from "./editor-inspector";
 import { EditorPanelProps } from "./editor-panel-props";
@@ -30,7 +30,7 @@ export function EditorPanel({
   cameraCompression = 0,
   cameraOverlay = defaultCameraOverlay(),
   cameraResolutionScalePercent = 100,
-  collapseAudio,
+  collapseAudio = false,
   compression = 0,
   cursorEffects = DEFAULT_CURSOR_EFFECTS,
   directory,
@@ -103,36 +103,78 @@ export function EditorPanel({
   const isAudioOnly = isRecording && enabledVideoTrackCount === 0;
   const hasContent =
     !isRecording || enabledVideoTrackCount + (enabledAudioTrackCount ?? 0) > 0;
+  // The titlebar button, its shortcut and the form all gate on this one test.
+  const canExport =
+    Boolean(artifact) &&
+    hasContent &&
+    fileStem.trim().length > 0 &&
+    !isPreviewPreparing &&
+    !isSaving;
+  // The options window is a separate webview owning none of this: it is shown
+  // what the editor holds and asks the editor to change it, keyed on this
+  // window's own workspace rather than the artifact's, so an editor with
+  // nothing in it cannot publish over the other workspace's settings.
+  const workspace = currentEditorKind() ?? artifact?.kind ?? "recording";
+  const { isExportOpen, open: openExportOptions } =
+    useExportOptionsOpen(workspace);
+  useExportOptionsBridge(
+    workspace,
+    {
+      bakeCamera,
+      cameraCompression,
+      cameraResolutionScalePercent,
+      canExport,
+      collapseAudio,
+      compression,
+      directory,
+      enabledAudioTrackCount: enabledAudioTrackCount ?? 0,
+      estimatedSizeBytes: estimatedSizeBytes ?? null,
+      // Rounded before it crosses: the mirror is a `localStorage` write per
+      // change, and progress arrives per encoded frame. A whole percent and a
+      // whole second are all the ring and the estimate ever show.
+      etaSeconds: etaSeconds === null ? null : Math.round(etaSeconds),
+      extension: isAudioOnly ? "m4a" : (artifact?.extension ?? ""),
+      fileStem,
+      includeCamera: enabledVideoTracks.includes("camera"),
+      isAudioOnly,
+      isCancelingSave,
+      isEstimatingSize: Boolean(isEstimatingSize),
+      isSaving: Boolean(isSaving),
+      resolutionScalePercent: resolutionScalePercent ?? 100,
+      savePhase,
+      saveProgress: saveProgress === null ? null : Math.round(saveProgress),
+    },
+    {
+      onBrowse,
+      onCameraCompressionChange,
+      onCameraResolutionScaleChange,
+      onCancelSave,
+      onCollapseAudioChange,
+      onCompressionChange,
+      onExport: onSave,
+      onFileStemChange,
+      onResolutionScaleChange,
+    },
+  );
   const inspector =
     artifact?.kind === "recording" ? (
       <EditorInspector
         artifact={artifact}
         bakeCamera={bakeCamera}
-        cameraCompression={cameraCompression}
         cameraOverlay={cameraOverlay}
-        cameraResolutionScalePercent={cameraResolutionScalePercent}
         canRestoreKeyboardShortcuts={canRestoreKeyboardShortcuts}
-        collapseAudio={collapseAudio}
-        compression={compression}
         cursorEffects={cursorEffects}
         enabledAudioTrackCount={enabledAudioTrackCount}
         enabledVideoTracks={enabledVideoTracks}
         error={error}
-        estimatedSizeBytes={estimatedSizeBytes}
-        isEstimatingSize={isEstimatingSize}
         isSaving={isSaving}
         keyboardEffects={keyboardEffects}
         onBakeCameraChange={onBakeCameraChange}
-        onCameraCompressionChange={onCameraCompressionChange}
         onCameraOverlayChange={onCameraOverlayChange}
-        onCameraResolutionScaleChange={onCameraResolutionScaleChange}
-        onCollapseAudioChange={onCollapseAudioChange}
-        onCompressionChange={onCompressionChange}
         onCursorEffectsChange={onCursorEffectsChange}
         onKeyboardEffectsChange={onKeyboardEffectsChange}
         onRecordingOutputChange={onRecordingOutputChange}
         onResetKeyboardShortcuts={resetKeyboardShortcuts}
-        onResolutionScaleChange={onResolutionScaleChange}
         onRestoreKeyboardShortcuts={restoreKeyboardShortcuts}
         onSelectedTrackChange={onSelectedTrackChange}
         onSelectedTrackVolumeChange={onSelectedTrackVolumeChange}
@@ -146,74 +188,28 @@ export function EditorPanel({
       />
     ) : null;
   return (
-    <main className="window-surface relative flex h-screen w-screen flex-col overflow-hidden rounded-[10px] text-content-fg">
+    <main className="window-surface relative flex h-screen w-screen flex-col gap-section overflow-hidden rounded-[10px] text-content-fg">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
         data-preview-backdrop
         data-preview-window-backdrop
       />
-      <Overlay blur="lg" contained isOpen={isSaving}>
-        <div className="flex flex-col items-center gap-3">
-          <CircularProgress
-            aria-label="Save progress"
-            isIndeterminate={saveProgress === null}
-            renderLabel={(percentage) =>
-              percentage === undefined ? null : (
-                <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-content-fg tabular-nums">
-                  {percentage.toFixed(0)}%
-                </span>
-              )
-            }
-            size="large"
-            value={saveProgress ?? undefined}
-          />
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="text-sm text-content-fg">
-              {isAudioOnly
-                ? "Saving audio…"
-                : isRecording
-                  ? savePhase === "camera"
-                    ? "Saving camera…"
-                    : savePhase === "finalizing"
-                      ? "Finalizing recording…"
-                      : "Saving recording…"
-                  : "Saving screenshot…"}
-            </span>
-            {etaSeconds === null ? null : (
-              <span className="text-xs text-muted tabular-nums">
-                {formatEta(etaSeconds)}
-              </span>
-            )}
-          </div>
-          <Button
-            isDisabled={isCancelingSave}
-            onPress={onCancelSave}
-            size="compact"
-          >
-            {isCancelingSave ? "Canceling…" : "Cancel"}
-          </Button>
-        </div>
-      </Overlay>
+      {/* The options window sits over the editor, and carries the save's own
+          progress, so the editor recedes for both. */}
+      <Overlay blur="lg" contained isOpen={isExportOpen} />
       <EditorTitlebar
         artifact={artifact}
-        directory={directory}
-        extension={
-          isRecording && enabledVideoTrackCount === 0 ? "m4a" : undefined
-        }
+        canExport={canExport}
         fileStem={fileStem}
-        hasExportableContent={hasContent}
-        isPreviewPreparing={isPreviewPreparing}
         isSaving={isSaving}
-        onBrowse={onBrowse}
         onClose={onCancel}
         onCopy={onCopy}
-        onExport={onSave}
+        onExport={openExportOptions}
         onFileStemChange={onFileStemChange}
         onMinimize={onMinimize}
         onToggleMaximize={onToggleMaximize}
       />
-
       {artifact?.kind === "recording" ? (
         <RecordingSection
           artifact={artifact}
@@ -227,6 +223,7 @@ export function EditorPanel({
           hasCursorData={artifact.hasCursorData}
           hasKeyboardData={artifact.hasKeyboardData}
           inspector={inspector}
+          isExportOpen={isExportOpen}
           isPreparingRecordingAudio={isPreparingRecordingAudio}
           isPreparingRecordingPreview={isPreparingRecordingPreview}
           isSaving={isSaving}
@@ -274,6 +271,7 @@ export function EditorPanel({
           ) : null}
           <ScreenshotSection
             artifact={artifact}
+            isExportOpen={isExportOpen}
             isSaving={isSaving}
             onBackgroundRadiusChange={onScreenshotBackgroundRadiusChange}
             onBackgroundRadiusChangeEnd={onScreenshotBackgroundRadiusChangeEnd}

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
 import { Keyboard, Shortcut } from "../../components/base/keyboard/keyboard";
+import { ProgressPanel } from "../../components/shared/progress-panel/progress-panel";
 
 import { ScrollingCapturePhase } from "./scrolling-capture-events";
 
@@ -31,22 +31,23 @@ export function ScrollingCaptureOverlay({
   const label = finished ? "Finishing" : phase ? phaseLabels[phase] : "Working";
 
   return (
-    <main className="window-surface gap-section p-section flex h-full w-full items-center overflow-hidden rounded-window text-content-fg">
-      <CircularProgress
-        aria-label="Scrolling capture progress"
-        isIndeterminate
+    <main className="window-surface p-section flex h-full w-full items-center overflow-hidden rounded-window text-content-fg">
+      <ProgressPanel
+        label={label}
+        orientation="row"
+        progress={null}
+        progressLabel="Scrolling capture progress"
+        secondary={
+          cancellable && !finished ? (
+            <span className="gap-control flex items-center whitespace-nowrap">
+              <Shortcut>
+                <Keyboard>Esc</Keyboard>
+              </Shortcut>
+              <span>to cancel</span>
+            </span>
+          ) : undefined
+        }
       />
-      <div className="gap-tight flex flex-col">
-        <span className="text-sm">{label}</span>
-        {cancellable && !finished ? (
-          <span className="gap-control flex items-center whitespace-nowrap text-xs text-muted">
-            <Shortcut>
-              <Keyboard>Esc</Keyboard>
-            </Shortcut>
-            <span>to cancel</span>
-          </span>
-        ) : null}
-      </div>
     </main>
   );
 }

@@ -89,7 +89,10 @@
   NSPoint point = self.dragOrigin;
   NSRect selectionFrame = selection_display_frame(self.surface);
   uint32_t handleEdges = selection_handle_edges(self.surface, point);
+  // Belt and braces: a suspended editor hides this view, so it should see no
+  // clicks at all, but never start a native gesture behind React's overlay.
   BOOL canGesture = self.surface.editorEnabled &&
+                    !self.surface.editorSuspended &&
                     self.surface.selectionGestureCallback != NULL &&
                     self.surface.hasSelection &&
                     self.surface.selection.pane_index < self.surface.editorBaseRects.count;

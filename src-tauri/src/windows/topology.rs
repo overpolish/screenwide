@@ -43,7 +43,11 @@ const fn policy(label: WindowLabel) -> Policy {
     #[cfg(target_os = "macos")]
     WindowLabel::Permissions => Policy::Contained,
     WindowLabel::RecordingBar | WindowLabel::RecordingDock => Policy::PersistentControl,
-    WindowLabel::Glide
+    // An export options window is derived from the editor it hangs off and is
+    // recentred on it whenever that moves, so it never carries stale geometry.
+    WindowLabel::ExportRecording
+    | WindowLabel::ExportScreenshot
+    | WindowLabel::Glide
     | WindowLabel::RecordingOptions
     | WindowLabel::RecordingSourceSelector
     | WindowLabel::StandaloneListbox => Policy::OwnedTransient,
