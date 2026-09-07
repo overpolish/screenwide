@@ -10,6 +10,10 @@ use crate::recording::RecordingStatus;
 use crate::windows;
 
 mod icons;
+#[cfg(target_os = "windows")]
+mod windows_menu;
+#[cfg(target_os = "windows")]
+mod windows_theme;
 
 const DISCARD_MENU_ID: &str = "discard-recording";
 const OPEN_CLIPBOARD_SCREENSHOT_MENU_ID: &str = "open-clipboard-screenshot";
@@ -24,14 +28,15 @@ const TRAY_ID: &str = "screenwide";
 
 #[cfg(target_os = "windows")]
 fn status_icon(status: RecordingStatus) -> tauri::Result<Image<'static>> {
-  Image::from_bytes(match status {
+  let image = Image::from_bytes(match status {
     RecordingStatus::Idle => include_bytes!("../icons/tray-default.ico").as_slice(),
     RecordingStatus::Starting | RecordingStatus::Stopping => {
       include_bytes!("../icons/tray-loading.ico").as_slice()
     }
     RecordingStatus::Recording => include_bytes!("../icons/tray-recording.ico").as_slice(),
     RecordingStatus::Paused => include_bytes!("../icons/tray-paused.ico").as_slice(),
-  })
+  })?;
+  Ok(icons::apply_system_foreground(image))
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -117,14 +122,17 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   }
   let ruler_overlay = ruler_overlay.build(app)?;
 
-  builder
+  let menu = builder
     .separator()
     .item(&recognize_text)
     .item(&ruler_overlay)
     .icon(SETTINGS_MENU_ID, "Settings…", icons::load(icons::SETTINGS)?)
     .separator()
     .icon(QUIT_MENU_ID, "Quit Screenwide", icons::load(icons::QUIT)?)
-    .build()
+    .build()?;
+  #[cfg(target_os = "windows")]
+  icons::apply_menu_style(&menu);
+  Ok(menu)
 }
 
 pub fn initialize(app: &mut App) -> tauri::Result<()> {
@@ -178,6 +186,11 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
     })
     .build(app)?;
 
+  #[cfg(target_os = "windows")]
+  windows_menu::register(&menu);
+  #[cfg(target_os = "windows")]
+  windows_theme::install(&tray)?;
+
   #[cfg(target_os = "macos")]
   icons::apply_templates(&tray)?;
   #[cfg(not(target_os = "macos"))]
@@ -207,7 +220,12 @@ pub fn apply_recording_status(app: &AppHandle, status: RecordingStatus) {
     let _ = tray.set_tooltip(Some(status_tooltip(status)));
 
     if let Ok(menu) = build_menu(&app, status) {
-      let _ = tray.set_menu(Some(menu));
+      #[cfg(target_os = "windows")]
+      let menu_for_registration = menu.clone();
+      if tray.set_menu(Some(menu)).is_ok() {
+        #[cfg(target_os = "windows")]
+        windows_menu::register(&menu_for_registration);
+      }
       #[cfg(target_os = "macos")]
       let _ = icons::apply_templates(&tray);
     }

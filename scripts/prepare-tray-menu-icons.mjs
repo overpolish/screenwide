@@ -22,11 +22,16 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const output = new URL("../src-tauri/icons/menu/", import.meta.url);
+const windowsOutput = new URL(
+  "../src-tauri/icons/menu/windows/",
+  import.meta.url,
+);
 await mkdir(output, { recursive: true });
+await mkdir(windowsOutput, { recursive: true });
 
-// Keep the native menu gutter, with a 14-point glyph inside its 18-point slot
-// (rendered at 2×). Windows gets the same proportional reduction. Partial
-// opacity softens the native tint to neutral while retaining state contrast.
+// macOS renders menu images at 2×.
+// The Windows adapter resizes this 64px source into DPI-sized native bitmaps,
+// bypassing muda's fixed 16px conversion.
 // Commit the PNGs so normal builds need neither Node nor an SVG renderer.
 for (const [name, icon] of Object.entries({
   cancel: X,
@@ -54,6 +59,21 @@ for (const [name, icon] of Object.entries({
   await writeFile(
     new URL(`${name}.png`, output),
     new Resvg(svg).render().asPng(),
+  );
+
+  const windowsGlyph = renderToStaticMarkup(
+    createElement(icon, {
+      color: "black",
+      size: 56,
+      strokeWidth: 2,
+      x: 4,
+      y: 4,
+    }),
+  );
+  const windowsSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">${windowsGlyph}</svg>`;
+  await writeFile(
+    new URL(`${name}.png`, windowsOutput),
+    new Resvg(windowsSvg).render().asPng(),
   );
 }
 
