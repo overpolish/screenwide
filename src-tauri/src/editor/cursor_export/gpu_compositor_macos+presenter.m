@@ -472,6 +472,21 @@ int screenwide_gpu_still_presenter_update_workspace_canvas(
     [updated[index] getValue:&layer size:sizeof(layer)];
     if (layer.pane_index != pane_index) continue;
     if (presenter.workspaceSources[@(layer.source_token)] == nil) return 0;
+    // Retained cursors are in canvas pixels. Carry them through the same
+    // image transform as the clip when reset/undo replaces its placement.
+    if (layer.cursor.visible && layer.canvas.image_width > 0 &&
+        layer.canvas.image_height > 0) {
+      double sx = (double)canvas->image_width / layer.canvas.image_width;
+      double sy = (double)canvas->image_height / layer.canvas.image_height;
+      layer.cursor.x = canvas->image_x + (layer.cursor.x - layer.canvas.image_x) * sx;
+      layer.cursor.y = canvas->image_y + (layer.cursor.y - layer.canvas.image_y) * sy;
+      layer.cursor.width *= sx;
+      layer.cursor.height *= sy;
+      layer.cursor.hotspot_x *= sx;
+      layer.cursor.hotspot_y *= sy;
+      layer.cursor.blur_delta_x *= sx;
+      layer.cursor.blur_delta_y *= sy;
+    }
     layer.canvas_width = canvas_width;
     layer.canvas_height = canvas_height;
     layer.canvas = *canvas;
