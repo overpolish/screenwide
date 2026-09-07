@@ -44,8 +44,65 @@ struct TouchpadParametersV1 {
 }
 
 pub(super) fn handle_legacy_wheel(horizontal: bool, delta: i16) {
+  if super::native_trackpad::suppresses_scroll_fallback() {
+    return;
+  }
+  let settings = native_settings::snapshot();
+  if super::spaces::active_input().is_some() || native_settings::is_down(settings.spaces_modifier) {
+    let (x, y) = super::navigation::wheel_delta(horizontal, delta);
+    handle_spaces_wheel(x, y);
+    return;
+  }
+  if super::session::monitor_mode() || native_settings::is_down(settings.monitors_modifier) {
+    let step = f64::from(delta) / 120.0 * 36.0;
+    let (x, y) = if horizontal {
+      (step, 0.0)
+    } else {
+      (0.0, -step)
+    };
+    handle_monitor_wheel(x, y);
+    return;
+  }
   let (delta_x, delta_y) = legacy_wheel_delta(horizontal, delta);
   handle_delta(delta_x, delta_y);
+}
+
+fn handle_spaces_wheel(x: f64, y: f64) {
+  let Some(app) = APP.get() else {
+    return;
+  };
+  let active = super::spaces::active_input();
+  if !super::navigation::owns(active, InputKind::TrackpadScroll) {
+    return;
+  }
+  if active.is_none() {
+    let mut point = windows::Win32::Foundation::POINT::default();
+    if unsafe { windows::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut point) }.is_err() {
+      return;
+    }
+    let Some((target, _)) = super::target::WindowTarget::at(app, point) else {
+      return;
+    };
+    if !super::spaces::begin(app, target, point, InputKind::TrackpadScroll) {
+      return;
+    }
+  }
+  super::spaces::handle_event(app, x, y);
+}
+
+fn handle_monitor_wheel(x: f64, y: f64) {
+  let Some(app) = APP.get() else {
+    return;
+  };
+  if !super::navigation::owns(super::session::active_input(), InputKind::TrackpadScroll) {
+    return;
+  }
+  if super::session::active_input().is_none() && !begin_session(InputKind::TrackpadScroll) {
+    return;
+  }
+  if super::session::active_input() == Some(InputKind::TrackpadScroll) {
+    super::session::update(app, x, y, false);
+  }
 }
 
 fn legacy_wheel_delta(horizontal: bool, delta: i16) -> (f64, f64) {
@@ -63,6 +120,35 @@ pub(super) fn handle_delta(delta_x: f64, delta_y: f64) {
     return;
   }
   let settings = native_settings::snapshot();
+  if super::spaces::active_input().is_some() || native_settings::is_down(settings.spaces_modifier) {
+    let active = super::spaces::active_input();
+    if !super::navigation::owns(active, InputKind::TrackpadScroll) {
+      super::center::trace(&format!("scroll navigation rejected active={active:?}"));
+      return;
+    }
+    let Some(app) = APP.get() else {
+      return;
+    };
+    if super::spaces::active_input().is_none() {
+      let mut point = windows::Win32::Foundation::POINT::default();
+      if unsafe { windows::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut point) }.is_err() {
+        return;
+      }
+      let Some((target, _)) = super::target::WindowTarget::at(app, point) else {
+        return;
+      };
+      if !super::spaces::begin(app, target, point, InputKind::TrackpadScroll) {
+        return;
+      }
+    }
+    let (mut x, mut y) = physical_delta(delta_x, delta_y, scroll_reversed());
+    if x == 0.0 {
+      x = y;
+      y = 0.0;
+    }
+    super::spaces::handle_event(app, x, y);
+    return;
+  }
   let mouse_modifier_down = native_settings::is_down(settings.mouse_modifier);
   let ignored = LAST_CONTROLLED_SCROLL
     .with_borrow_mut(|last| ignore_controlled_scroll(last, Instant::now(), mouse_modifier_down));

@@ -116,7 +116,10 @@ export function RecordingDock({
 
   return (
     <main
-      className="window-surface p-section gap-section relative flex h-full w-max cursor-grab items-center overflow-hidden rounded-window text-content-fg"
+      className="window-surface p-section gap-section relative flex h-full w-max cursor-grab items-center overflow-hidden rounded-window text-content-fg [--overlay-content-blur:var(--blur-sm)]"
+      // Windows cannot backdrop-blur over a transparent page, so the dock's
+      // controls blur themselves while the overlay is up (see index.css).
+      data-overlay-open={isBusy ? "" : undefined}
       data-tauri-drag-region="deep"
       onPointerUpCapture={onPointerUp}
       ref={dockRef}

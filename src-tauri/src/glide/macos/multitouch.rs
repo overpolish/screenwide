@@ -18,11 +18,9 @@ use super::session;
 
 #[path = "multitouch/pointer.rs"]
 mod pointer;
-#[path = "multitouch/recognizer.rs"]
-mod recognizer;
 
+use crate::glide::core::taps::TapRecognizer;
 use pointer::PointerEpisode;
-use recognizer::TapRecognizer;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(16);
 

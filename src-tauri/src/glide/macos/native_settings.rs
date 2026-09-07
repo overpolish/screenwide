@@ -9,8 +9,9 @@
 //! `macos.rs` that promised to become a user setting one day; this is that day.
 
 use std::{
-  collections::HashSet,
+  collections::HashMap,
   sync::{LazyLock, Mutex, RwLock},
+  time::{Duration, Instant},
 };
 
 use core_graphics::event::{CGEvent, CGEventType, EventField};
@@ -36,7 +37,13 @@ pub(super) struct NativeGlideSettings {
 /// the tap starting and the stored settings being applied.
 static NATIVE: LazyLock<RwLock<NativeGlideSettings>> =
   LazyLock::new(|| RwLock::new(native(&GlideSettings::default())));
-static PRESSED: LazyLock<Mutex<HashSet<i64>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
+#[derive(Clone, Copy)]
+struct Observed {
+  since: Instant,
+  up_samples: u8,
+}
+static PRESSED: LazyLock<Mutex<HashMap<i64, Observed>>> =
+  LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// The settings as they stand, cheap enough to take once per event.
 pub(super) fn snapshot() -> NativeGlideSettings {
@@ -82,24 +89,61 @@ pub(super) fn observe(event_type: CGEventType, event: &CGEvent) {
     CGEventType::OtherMouseUp => (mouse_code(event), false),
     CGEventType::FlagsChanged => {
       let code = keyboard_code(event);
-      let currently_pressed = PRESSED.lock().is_ok_and(|pressed| pressed.contains(&code));
-      (code, !currently_pressed)
+      (code, flags_pressed(code, event.get_flags()))
     }
     _ => return,
   };
   if let Ok(mut keys) = PRESSED.lock() {
     if pressed {
-      keys.insert(code);
+      keys.insert(
+        code,
+        Observed {
+          since: Instant::now(),
+          up_samples: 0,
+        },
+      );
     } else {
       keys.remove(&code);
     }
   }
 }
 
+pub(super) fn reconcile() -> Vec<i64> {
+  let now = Instant::now();
+  let mut recovered = Vec::new();
+  if let Ok(mut keys) = PRESSED.lock() {
+    keys.retain(|code, observed| {
+      let hardware = if *code >= MOUSE_STATE_BASE {
+        super::hardware::button_down((*code - MOUSE_STATE_BASE) as u32)
+      } else {
+        super::hardware::key_down(*code as u16)
+      };
+      if hardware {
+        observed.up_samples = 0;
+        true
+      } else if now.duration_since(observed.since) < Duration::from_millis(40) {
+        true
+      } else {
+        observed.up_samples = observed.up_samples.saturating_add(1);
+        if observed.up_samples >= 2 {
+          recovered.push(*code);
+          false
+        } else {
+          true
+        }
+      }
+    });
+  }
+  for code in &recovered {
+    crate::glide::core::trace::input("mac-release", format!("recovered code={code}"));
+  }
+  recovered
+}
+
 pub(super) fn is_down(key: NativeControl) -> bool {
   PRESSED
     .lock()
-    .is_ok_and(|pressed| pressed.iter().any(|code| key.matches_state(*code)))
+    .is_ok_and(|pressed| pressed.keys().any(|code| key.matches_state(*code)))
 }
 
 fn keyboard_code(event: &CGEvent) -> i64 {
@@ -108,4 +152,16 @@ fn keyboard_code(event: &CGEvent) -> i64 {
 
 fn mouse_code(event: &CGEvent) -> i64 {
   MOUSE_STATE_BASE + event.get_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER)
+}
+
+fn flags_pressed(code: i64, flags: core_graphics::event::CGEventFlags) -> bool {
+  let flag = match code {
+    54 | 55 => core_graphics::event::CGEventFlags::CGEventFlagCommand,
+    56 | 60 => core_graphics::event::CGEventFlags::CGEventFlagShift,
+    59 | 62 => core_graphics::event::CGEventFlags::CGEventFlagControl,
+    58 | 61 => core_graphics::event::CGEventFlags::CGEventFlagAlternate,
+    57 => core_graphics::event::CGEventFlags::CGEventFlagAlphaShift,
+    _ => return false,
+  };
+  flags.contains(flag)
 }

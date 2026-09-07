@@ -129,8 +129,15 @@ pub fn show(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
   // Presented invisible: the configured height is only a starting point, and
   // `resize_export_options` is what both fits the window and reveals it. Focus
   // is still taken, so the form's autofocus is in place by the time it is seen.
-  presentation::conceal(app, &options)?;
-  windows::show(&options, true)?;
+  let present = || -> tauri::Result<()> {
+    presentation::conceal(app, &options)?;
+    windows::show(&options, true)
+  };
+  if let Err(error) = present() {
+    let _ = presentation::detach(app, &editor, &options);
+    let _ = windows::hide_without_focus_transfer(&options);
+    return Err(error);
+  }
   notify_opened(app, kind);
   Ok(())
 }

@@ -30,12 +30,17 @@ mod flags;
 pub(super) mod monitor_input;
 #[path = "session/monitors.rs"]
 pub(super) mod monitors;
+#[path = "session/mouse_preview.rs"]
+pub(super) mod mouse_preview;
 #[path = "session/requests.rs"]
 mod requests;
 #[path = "session/taps.rs"]
 mod taps;
 
-pub(super) use access::{accumulate_pointer_travel, active_input, is_active, session_anchor};
+pub(super) use access::{
+  accumulate_pointer_travel, active_input, is_active, monitor_mode, mouse_center_context,
+  session_anchor, session_id,
+};
 pub(super) use detector::{
   set_thirds as set_detector_thirds, settle as settle_detector, update as update_detector,
 };
@@ -47,7 +52,7 @@ pub(super) use flags::{
 pub(super) use requests::{region_moved, reveal};
 pub(super) use taps::register_tap;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum InputKind {
   Mouse,
   Trackpad,
@@ -135,6 +140,9 @@ pub(super) fn begin_if_titlebar(
   // The preview the last commit is fading out is the one this session would
   // have to show, and its cursor is still held. Let the fade finish.
   if state.lock().is_ok_and(|state| state.fading) {
+    return false;
+  }
+  if crate::glide::core::activity::BusyLease::is_busy() {
     return false;
   }
   // No session, but the cursor is still pinned from the last one: its release

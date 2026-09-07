@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 
@@ -14,6 +14,31 @@ export function EditableWindowTitle({
 }) {
   const titleRef = useRef<HTMLSpanElement>(null);
   const originalRef = useRef(title);
+  useEffect(() => {
+    const blurEditable = () => {
+      const active = document.activeElement;
+      const titleElement = titleRef.current;
+      if (titleElement && active === titleElement) titleElement.blur();
+    };
+    const blurOnOutsidePointer = (event: PointerEvent) => {
+      const active = document.activeElement;
+      const titleElement = titleRef.current;
+      if (
+        !titleElement ||
+        active !== titleElement ||
+        active.contains(event.target as Node)
+      ) {
+        return;
+      }
+      titleElement.blur();
+    };
+    document.addEventListener("pointerdown", blurOnOutsidePointer, true);
+    window.addEventListener("blur", blurEditable);
+    return () => {
+      document.removeEventListener("pointerdown", blurOnOutsidePointer, true);
+      window.removeEventListener("blur", blurEditable);
+    };
+  }, []);
   useLayoutEffect(() => {
     if (titleRef.current && document.activeElement !== titleRef.current) {
       titleRef.current.textContent = title;
@@ -24,6 +49,7 @@ export function EditableWindowTitle({
     <span
       aria-label="Document name"
       aria-multiline={false}
+      autoCorrect="off"
       className={cn(
         "pointer-events-auto block cursor-text select-text whitespace-nowrap rounded-lg text-left outline-none caret-content-fg focus:selection:bg-content-fg/25",
         focusStyles,
@@ -69,6 +95,7 @@ export function EditableWindowTitle({
       }}
       ref={titleRef}
       role="textbox"
+      spellCheck={false}
       suppressContentEditableWarning
       tabIndex={0}
     />

@@ -12,6 +12,12 @@
 
 use tauri::{AppHandle, WebviewWindow};
 
+#[cfg(target_os = "windows")]
+use std::sync::atomic::{AtomicU64, Ordering};
+
+#[cfg(target_os = "windows")]
+static PRESENTATION_GENERATION: AtomicU64 = AtomicU64::new(0);
+
 /// Runs an AppKit closure on the main thread, without blocking when the caller
 /// is already there. Synchronous commands arrive on the main thread, so the
 /// common path never leaves it and never waits on it.
@@ -132,9 +138,67 @@ pub(super) fn reveal_after_resize(options: &WebviewWindow) -> tauri::Result<()> 
   Ok(())
 }
 
-// TODO(windows): parent the options window to its editor so the pair orders
-// and minimises together, as `addChildWindow:` already does on macOS.
-#[cfg(not(target_os = "macos"))]
+/// Makes the export window owned by its editor on Windows. Owned top-level
+/// windows stay above their owner and follow its activation/minimisation;
+/// disabling the owner makes clicks outside Export a no-op while it is open.
+#[cfg(target_os = "windows")]
+pub(super) fn attach(
+  _app: &AppHandle,
+  editor: &WebviewWindow,
+  options: &WebviewWindow,
+) -> tauri::Result<()> {
+  use windows::Win32::{
+    Foundation::{GetLastError, SetLastError, HWND, WIN32_ERROR},
+    UI::{
+      Input::KeyboardAndMouse::EnableWindow,
+      WindowsAndMessaging::{SetWindowLongPtrW, GWLP_HWNDPARENT},
+    },
+  };
+
+  let options_hwnd = HWND(options.hwnd()?.0);
+  let editor_hwnd = HWND(editor.hwnd()?.0);
+  unsafe {
+    SetLastError(WIN32_ERROR(0));
+    let previous = SetWindowLongPtrW(options_hwnd, GWLP_HWNDPARENT, editor_hwnd.0 as isize);
+    let error = GetLastError();
+    if previous == 0 && error.0 != 0 {
+      return Err(std::io::Error::from_raw_os_error(error.0 as i32).into());
+    }
+    let _ = EnableWindow(editor_hwnd, false);
+  }
+  Ok(())
+}
+
+#[cfg(target_os = "windows")]
+pub(super) fn detach(
+  _app: &AppHandle,
+  _editor: &WebviewWindow,
+  options: &WebviewWindow,
+) -> tauri::Result<()> {
+  use windows::Win32::{
+    Foundation::{GetLastError, SetLastError, HWND, WIN32_ERROR},
+    UI::{
+      Input::KeyboardAndMouse::EnableWindow,
+      WindowsAndMessaging::{SetWindowLongPtrW, GWLP_HWNDPARENT},
+    },
+  };
+
+  let options_hwnd = HWND(options.hwnd()?.0);
+  let editor_hwnd = HWND(_editor.hwnd()?.0);
+  PRESENTATION_GENERATION.store(0, Ordering::Release);
+  unsafe {
+    SetLastError(WIN32_ERROR(0));
+    let previous = SetWindowLongPtrW(options_hwnd, GWLP_HWNDPARENT, 0);
+    let error = GetLastError();
+    let _ = EnableWindow(editor_hwnd, true);
+    if previous == 0 && error.0 != 0 {
+      return Err(std::io::Error::from_raw_os_error(error.0 as i32).into());
+    }
+  }
+  Ok(())
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(super) fn attach(
   _app: &AppHandle,
   _editor: &WebviewWindow,
@@ -143,7 +207,7 @@ pub(super) fn attach(
   Ok(())
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(super) fn detach(
   _app: &AppHandle,
   _editor: &WebviewWindow,
@@ -152,16 +216,82 @@ pub(super) fn detach(
   Ok(())
 }
 
-// TODO(windows): hold the window back the same way. `WS_EX_LAYERED` alpha is
-// available (see `windows::platform::set_opacity`) but has to be reconciled
-// with the window's own transparency before it can be used here, so until then
-// Windows shows the configured height and takes the jump.
-#[cfg(not(target_os = "macos"))]
+/// Keeps the configured-size window hidden until the frontend has measured
+/// its actual form height, matching the AppKit alpha choreography.
+#[cfg(target_os = "windows")]
+pub(super) fn conceal(_app: &AppHandle, options: &WebviewWindow) -> tauri::Result<()> {
+  use windows::{
+    core::BOOL,
+    Win32::{
+      Foundation::HWND,
+      Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_CLOAK},
+    },
+  };
+
+  let hwnd = HWND(options.hwnd()?.0);
+  let cloaked = BOOL(1);
+  unsafe {
+    DwmSetWindowAttribute(
+      hwnd,
+      DWMWA_CLOAK,
+      (&raw const cloaked).cast(),
+      std::mem::size_of::<BOOL>() as u32,
+    )
+  }
+  .map_err(std::io::Error::other)?;
+  let generation = PRESENTATION_GENERATION.fetch_add(1, Ordering::AcqRel) + 1;
+  // A failed frontend measurement must not leave a visible, disabled, cloaked
+  // window forever. The normal resize path reveals sooner; this is only the
+  // bounded fallback, and hidden windows are left untouched.
+  let app = _app.clone();
+  let fallback = options.clone();
+  std::thread::spawn(move || {
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    if PRESENTATION_GENERATION.load(Ordering::Acquire) == generation
+      && fallback.is_visible().unwrap_or(false)
+    {
+      let _ = app.run_on_main_thread(move || {
+        if PRESENTATION_GENERATION.load(Ordering::Acquire) == generation {
+          let _ = reveal_after_resize(&fallback);
+          let _ = fallback.set_focus();
+        }
+      });
+    }
+  });
+  Ok(())
+}
+
+#[cfg(target_os = "windows")]
+pub(super) fn reveal_after_resize(options: &WebviewWindow) -> tauri::Result<()> {
+  use windows::{
+    core::BOOL,
+    Win32::{
+      Foundation::HWND,
+      Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_CLOAK},
+    },
+  };
+
+  let hwnd = HWND(options.hwnd()?.0);
+  let cloaked = BOOL(0);
+  unsafe {
+    DwmSetWindowAttribute(
+      hwnd,
+      DWMWA_CLOAK,
+      (&raw const cloaked).cast(),
+      std::mem::size_of::<BOOL>() as u32,
+    )
+  }
+  .map_err(std::io::Error::other)?;
+  PRESENTATION_GENERATION.store(0, Ordering::Release);
+  Ok(())
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(super) fn conceal(_app: &AppHandle, _options: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(super) fn reveal_after_resize(_options: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }

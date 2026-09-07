@@ -20,8 +20,12 @@ mod control;
 mod control_keys;
 #[path = "macos/cursor.rs"]
 mod cursor;
+#[path = "macos/hardware.rs"]
+mod hardware;
 #[path = "macos/key.rs"]
 mod key;
+#[path = "macos/mouse_click.rs"]
+mod mouse_click;
 #[path = "macos/multitouch.rs"]
 mod multitouch;
 #[path = "macos/native_settings.rs"]
@@ -39,16 +43,16 @@ mod trackpad;
 #[path = "macos/tween.rs"]
 mod tween;
 
-use center::center_window_at;
+use center::{center_captured, center_window_at};
 pub(super) use commands::haptic;
 pub(super) use control::supports_control;
 use control_keys::is_thirds;
 use own_window::any_titlebar;
 use session::{
   accumulate_pointer_travel, active_input, begin_if_titlebar, end_session, is_active,
-  is_suppressing, is_suppressing_momentum, session_anchor, set_momentum_suppression,
-  set_mouse_up_swallow, set_suppression, settle_detector, take_mouse_up_swallow, update_detector,
-  InputKind, SharedState,
+  is_suppressing, is_suppressing_momentum, mouse_center_context, session_anchor,
+  set_momentum_suppression, set_mouse_up_swallow, set_suppression, settle_detector,
+  take_mouse_up_swallow, update_detector, InputKind, SharedState,
 };
 
 const POLL_INTERVAL: Duration = Duration::from_millis(16);
@@ -109,8 +113,11 @@ fn run(app: AppHandle) {
       unsafe {
         CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, POLL_INTERVAL, false);
       }
+      native_settings::reconcile();
       settle_detector(&poll_app, &poll_state);
-      spaces::poll(&poll_app);
+      session::monitor_input::poll(&poll_app, &poll_state);
+      spaces::poll(&poll_app, &poll_state);
+      session::mouse_preview::poll(&poll_app, &poll_state);
     },
   );
   if result.is_err() {
@@ -261,34 +268,7 @@ fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callba
 /// same way a trackpad double tap does. Both events of the second click are
 /// dropped, so the application below never sees the double click it would zoom
 /// on; every other press, single clicks included, passes straight through.
-fn handle_mouse_down(app: &AppHandle, state: &SharedState, event: &CGEvent) -> CallbackResult {
-  let settings = native_settings::snapshot();
-  // The double tap and this click are one action under two inputs, so the one
-  // setting turns both of them off.
-  if crate::capture_overlays::blocks_glide(app) || !settings.enabled || !settings.double_tap_center
-  {
-    return CallbackResult::Keep;
-  }
-  if !native_settings::is_down(settings.mouse_modifier)
-    || event.get_integer_value_field(EventField::MOUSE_EVENT_CLICK_STATE) != DOUBLE_CLICK_STATE
-  {
-    return CallbackResult::Keep;
-  }
-  let point = event.location();
-  // One of ours answers natively, a foreign one through Accessibility; either
-  // titlebar is a titlebar as far as this click is concerned.
-  if !any_titlebar(app, point) {
-    return CallbackResult::Keep;
-  }
-  // An internal takeover, not a commit: minimizing the window this click is
-  // about to center would be two destinations at once. The cancel's restore, if
-  // the click landed on a glide that had already moved something, is preempted
-  // by the centering below before the tween thread can take a single step.
-  end_session(app, state, true);
-  set_mouse_up_swallow(state, true);
-  center_window_at(app, point);
-  CallbackResult::Drop
-}
+pub(super) use mouse_click::handle_mouse_down;
 
 fn handle_mouse_up(state: &SharedState) -> CallbackResult {
   if take_mouse_up_swallow(state) {

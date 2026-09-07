@@ -148,6 +148,13 @@ mod tests {
     assert_eq!(offsets[0].0, offsets[1].0);
     assert!(offsets[1].1 < offsets[0].1);
   }
+
+  #[test]
+  fn singleton_display_stays_as_one_source_preview_without_destination() {
+    let displays = vec![screen(0.0, 0.0)];
+    assert_eq!(neighbour(&displays, 0, (1, 0)), None);
+    assert_eq!(preview_offsets(&displays), vec![(0.0, 0.0)]);
+  }
   #[test]
   fn preserves_large_windows_and_clamps_their_destination_travel() {
     let result = carry_frame(

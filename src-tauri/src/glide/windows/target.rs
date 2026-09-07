@@ -23,25 +23,17 @@ use windows::Win32::{
 };
 
 use super::{titlebar, tween};
+#[path = "target/geometry.rs"]
+mod geometry;
 use crate::glide::{
   core::{landing_point, GlideFrame},
   region_rect::{region_gravity, region_rect, PlacedRegion, RegionGravity},
 };
+use geometry::{frame, frame_insets, outer_frame, visible_frame, FrameInsets};
 
 const WINDOWS_DPI: f64 = 96.0;
 
-/// How far the window's invisible resize border extends past its visible
-/// frame on each side. `GetWindowRect` and `SetWindowPos` speak in the outer
-/// rectangle; Glide places the visible one, so two windows placed edge to
-/// edge really touch and a window at the work area's edge really reaches it.
-#[derive(Clone, Copy, Default)]
-struct FrameInsets {
-  left: f64,
-  top: f64,
-  right: f64,
-  bottom: f64,
-}
-
+/// The visible frame the session found the window in.
 #[derive(Clone, Copy)]
 pub(super) struct WindowTarget {
   hwnd: isize,
@@ -66,6 +58,11 @@ pub(super) struct Destination {
 impl WindowTarget {
   pub fn at(app: &AppHandle, point: POINT) -> Option<(Self, Option<u32>)> {
     let hwnd = titlebar::window_at(app, point)?;
+    let target = Self::from_hwnd(hwnd, point)?;
+    Some((target, titlebar::process_id(hwnd)))
+  }
+
+  pub(super) fn from_hwnd(hwnd: HWND, point: POINT) -> Option<Self> {
     let mut outer = RECT::default();
     unsafe { GetWindowRect(hwnd, &mut outer) }.ok()?;
     let insets = frame_insets(hwnd, outer);
@@ -82,18 +79,15 @@ impl WindowTarget {
       return None;
     }
     let dpi = unsafe { GetDpiForWindow(hwnd) }.max(WINDOWS_DPI as u32);
-    Some((
-      Self {
-        hwnd: hwnd.0 as isize,
-        original,
-        insets,
-        work: info.rcWork,
-        dpi,
-        resizable: unsafe { GetWindowLongPtrW(hwnd, GWL_STYLE) } & WS_THICKFRAME.0 as isize != 0,
-        was_maximized: unsafe { IsZoomed(hwnd) }.as_bool(),
-      },
-      titlebar::process_id(hwnd),
-    ))
+    Some(Self {
+      hwnd: hwnd.0 as isize,
+      original,
+      insets,
+      work: info.rcWork,
+      dpi,
+      resizable: unsafe { GetWindowLongPtrW(hwnd, GWL_STYLE) } & WS_THICKFRAME.0 as isize != 0,
+      was_maximized: unsafe { IsZoomed(hwnd) }.as_bool(),
+    })
   }
 
   pub fn destination(self, region: &PlacedRegion, gap: u32) -> Destination {
@@ -196,6 +190,10 @@ impl WindowTarget {
     Ok(visible_frame(frame(rect), self.insets))
   }
 
+  pub fn work_area(self) -> GlideFrame {
+    frame(self.work)
+  }
+
   /// Places the window so that its visible frame is `frame`.
   pub fn set_frame(self, frame: GlideFrame) -> Result<(), String> {
     set_window_frame(self.hwnd(), outer_frame(frame, self.insets), false)
@@ -220,6 +218,9 @@ impl WindowTarget {
   fn hwnd(self) -> HWND {
     HWND(self.hwnd as *mut core::ffi::c_void)
   }
+  pub(super) fn native_hwnd(self) -> HWND {
+    self.hwnd()
+  }
 }
 
 fn set_window_frame(hwnd: HWND, frame: GlideFrame, position_only: bool) -> Result<(), String> {
@@ -240,54 +241,4 @@ fn set_window_frame(hwnd: HWND, frame: GlideFrame, position_only: bool) -> Resul
     )
   }
   .map_err(|error| format!("Could not place the Glide window: {error}"))
-}
-
-/// The invisible border around the visible frame, from the extended frame
-/// bounds DWM reports. A window DWM does not describe has none.
-fn frame_insets(hwnd: HWND, outer: RECT) -> FrameInsets {
-  let mut visible = RECT::default();
-  let read = unsafe {
-    DwmGetWindowAttribute(
-      hwnd,
-      DWMWA_EXTENDED_FRAME_BOUNDS,
-      std::ptr::from_mut(&mut visible).cast(),
-      std::mem::size_of::<RECT>() as u32,
-    )
-  };
-  if read.is_err() {
-    return FrameInsets::default();
-  }
-  FrameInsets {
-    left: f64::from(visible.left - outer.left).max(0.0),
-    top: f64::from(visible.top - outer.top).max(0.0),
-    right: f64::from(outer.right - visible.right).max(0.0),
-    bottom: f64::from(outer.bottom - visible.bottom).max(0.0),
-  }
-}
-
-fn visible_frame(outer: GlideFrame, insets: FrameInsets) -> GlideFrame {
-  GlideFrame {
-    x: outer.x + insets.left,
-    y: outer.y + insets.top,
-    width: (outer.width - insets.left - insets.right).max(0.0),
-    height: (outer.height - insets.top - insets.bottom).max(0.0),
-  }
-}
-
-fn outer_frame(visible: GlideFrame, insets: FrameInsets) -> GlideFrame {
-  GlideFrame {
-    x: visible.x - insets.left,
-    y: visible.y - insets.top,
-    width: visible.width + insets.left + insets.right,
-    height: visible.height + insets.top + insets.bottom,
-  }
-}
-
-fn frame(rect: RECT) -> GlideFrame {
-  GlideFrame {
-    x: f64::from(rect.left),
-    y: f64::from(rect.top),
-    width: f64::from(rect.right - rect.left),
-    height: f64::from(rect.bottom - rect.top),
-  }
 }

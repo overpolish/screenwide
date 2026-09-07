@@ -58,7 +58,11 @@ export const Overlay = ({
       {isOpen ? (
         <motion.div
           animate={{ opacity: 1 }}
-          className={overlayVariants({ blur, className, contained })}
+          className={overlayVariants({
+            blur,
+            className: `screenwide-overlay ${className ?? ""}`,
+            contained,
+          })}
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           transition={{

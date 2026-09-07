@@ -5,6 +5,8 @@
   reason = "inspection methods support parity tests and future platform adapters"
 )]
 
+pub(crate) mod activity;
+pub(crate) mod armed;
 pub(crate) mod desktop_gesture;
 pub(crate) mod desktop_selection;
 pub(crate) mod desktops;
@@ -17,6 +19,8 @@ pub(crate) mod monitors;
 mod regions;
 mod runtime;
 mod settling;
+pub(crate) mod taps;
+pub(crate) mod trace;
 mod travel;
 
 // Checkpoint 1 builds and verifies the shared policy before checkpoint 2 makes

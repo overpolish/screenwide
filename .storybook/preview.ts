@@ -10,6 +10,10 @@ import type { Decorator, Preview } from "@storybook/react-vite";
 import "../src/index.css";
 import "./styles.css";
 
+if (navigator.userAgent.includes("Windows")) {
+  document.documentElement.dataset.platform = "windows";
+}
+
 const isNativePreview =
   new URLSearchParams(window.location.search).get("screenwide-native") === "1";
 

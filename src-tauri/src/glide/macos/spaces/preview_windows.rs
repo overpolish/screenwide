@@ -186,7 +186,7 @@ pub(in crate::glide::platform) fn show_arranged(
       .cloned()
       .collect::<Vec<_>>()
   };
-  for preview in ready {
+  if let Some(preview) = ready.into_iter().next() {
     render(app, preview);
   }
   Ok(())
@@ -196,22 +196,43 @@ fn render(app: &AppHandle, preview: Preview) {
   let app = app.clone();
   let main = app.clone();
   let _ = app.run_on_main_thread(move || {
-    let latest = POOL.lock().ok().and_then(|pool| {
+    let Some(session) = POOL.lock().ok().and_then(|pool| {
       if !pool.active {
         return None;
       }
-      pool
+      let session = pool
         .previews
         .iter()
-        .find(|item| item.session_id == preview.session_id && item.index == preview.index)
+        .filter(|item| item.session_id == preview.session_id)
         .cloned()
-    });
-    let Some(preview) = latest else {
+        .collect::<Vec<_>>();
+      if session.is_empty()
+        || !session
+          .iter()
+          .all(|item| pool.ready.contains(&label(item.index)))
+      {
+        return None;
+      }
+      Some(session)
+    }) else {
       return;
     };
-    if let Some(window) = main.get_webview_window(&label(preview.index)) {
-      let _ = main.emit_to(window.label(), "glide://space-preview", preview);
-      let _ = crate::windows::platform::show_glide(&window, 1.0, false);
+    for preview in &session {
+      if let Some(window) = main.get_webview_window(&label(preview.index)) {
+        if main
+          .emit_to(window.label(), "glide://space-preview", preview)
+          .is_err()
+        {
+          return;
+        }
+      }
+    }
+    for preview in session {
+      if let Some(window) = main.get_webview_window(&label(preview.index)) {
+        if crate::windows::platform::show_glide(&window, 1.0, false).is_err() {
+          return;
+        }
+      }
     }
   });
 }

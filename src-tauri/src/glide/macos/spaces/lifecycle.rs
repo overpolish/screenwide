@@ -7,6 +7,8 @@ use crate::glide::{
   icon::spawn_icon_lookup,
   platform::{cursor, native_settings, session},
 };
+use core_graphics::event::CGEvent;
+use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
 use core_graphics::geometry::CGPoint;
 use std::{
   sync::{
@@ -21,6 +23,7 @@ pub(super) fn begin(app: &AppHandle, input: Input, anchor: CGPoint) -> bool {
   if CLOSING.load(Ordering::Acquire)
     || preview_windows::is_dismissing()
     || cursor::is_cursor_pinned()
+    || crate::glide::core::activity::BusyLease::is_busy()
   {
     return false;
   }
@@ -56,11 +59,63 @@ pub(super) fn begin(app: &AppHandle, input: Input, anchor: CGPoint) -> bool {
     ending: false,
     revealed: false,
     cancelled: Arc::new(AtomicBool::new(false)),
+    armed: false,
   });
   drop(state);
   spawn_icon_lookup(app, id, pid);
   transport::inspect(app, id);
   true
+}
+
+pub(super) fn arm(app: &AppHandle, anchor: CGPoint) -> bool {
+  if !begin(app, Input::Wheel, anchor) {
+    return false;
+  }
+  if let Ok(mut state) = SESSION.lock() {
+    if let Some(session) = state.as_mut() {
+      session.armed = true;
+    }
+  }
+  true
+}
+
+pub(super) fn promote_armed_to_mouse() -> bool {
+  SESSION.lock().is_ok_and(|mut state| {
+    let Some(session) = state.as_mut() else {
+      return false;
+    };
+    if session.input == Input::Wheel
+      && crate::glide::core::armed::claim(
+        &mut session.armed,
+        crate::glide::core::armed::Owner::Mouse,
+      )
+      .is_some()
+    {
+      session.armed = false;
+      session.input = Input::Mouse;
+      true
+    } else {
+      false
+    }
+  })
+}
+
+pub(super) fn claim_armed(input: Input) -> bool {
+  SESSION.lock().is_ok_and(|mut state| {
+    let Some(session) = state.as_mut() else {
+      return false;
+    };
+    let owner = match input {
+      Input::Mouse => crate::glide::core::armed::Owner::Mouse,
+      Input::Wheel => crate::glide::core::armed::Owner::Wheel,
+      Input::Trackpad => crate::glide::core::armed::Owner::Trackpad,
+    };
+    if crate::glide::core::armed::claim(&mut session.armed, owner).is_none() {
+      return false;
+    }
+    session.input = input;
+    true
+  })
 }
 
 pub(super) fn request_end(app: &AppHandle, cancel: bool) {
@@ -76,6 +131,7 @@ pub(super) fn request_end(app: &AppHandle, cancel: bool) {
 }
 
 pub(super) fn close(app: &AppHandle) {
+  let completion = crate::glide::core::activity::BusyLease::acquire();
   let Some(session) = SESSION.lock().ok().and_then(|mut state| state.take()) else {
     return;
   };
@@ -83,8 +139,12 @@ pub(super) fn close(app: &AppHandle) {
   let anchor = session.anchor;
   let cancelled = session.cancelled.load(Ordering::Acquire);
   preview_windows::dismiss(app, cancelled);
+  let done_completion = completion.clone();
   let done = move || {
-    preview_windows::after_dismissed(Box::new(|| CLOSING.store(false, Ordering::Release)));
+    preview_windows::after_dismissed(Box::new(move || {
+      let _completion = done_completion;
+      CLOSING.store(false, Ordering::Release)
+    }));
   };
   if cancelled || !session.revealed {
     cursor::release_cursor(anchor, session.revealed);
@@ -93,27 +153,52 @@ pub(super) fn close(app: &AppHandle) {
       CLOSING.store(false, Ordering::Release);
     }
   } else {
+    let cursor_completion = completion.clone();
     finish_with_fade(
       app,
       anchor.x,
       anchor.y,
-      Box::new(move || cursor::release_cursor(anchor, true)),
+      Box::new(move || {
+        let _completion = cursor_completion;
+        cursor::release_cursor(anchor, true)
+      }),
       Box::new(done),
     );
   }
 }
 
-pub(in crate::glide::platform) fn poll(app: &AppHandle) {
+pub(in crate::glide::platform) fn poll(app: &AppHandle, normal: &session::SharedState) {
+  super::input::clear_cancelled_if_released();
+  let settings = native_settings::snapshot();
+  if !super::input::cancelled_until_release()
+    && native_settings::is_down(settings.spaces_modifier)
+    && SESSION.lock().is_ok_and(|state| state.is_none())
+    && settings.enabled
+    && !session::is_active(normal)
+    && !crate::capture_overlays::blocks_glide(app)
+    && !crate::shortcuts::is_capturing()
+  {
+    if let Ok(source) = CGEventSource::new(CGEventSourceStateID::CombinedSessionState) {
+      if let Ok(event) = CGEvent::new(source) {
+        arm(app, event.location());
+      }
+    }
+  }
   let mut ready = None;
   let mut end = false;
   if let Ok(mut state) = SESSION.lock() {
     if let Some(session) = state.as_mut() {
       let settings = native_settings::snapshot();
+      if !native_settings::is_down(settings.spaces_modifier) {
+        session.ending = true;
+      }
       if !settings.enabled || crate::capture_overlays::blocks_glide(app) {
         session.cancelled.store(true, Ordering::Release);
         session.ending = true;
       }
-      if session.input == Input::Wheel && session.last_input.elapsed() >= Duration::from_millis(300)
+      if !session.armed
+        && session.input == Input::Wheel
+        && session.last_input.elapsed() >= Duration::from_millis(300)
       {
         session.ending = true;
       }

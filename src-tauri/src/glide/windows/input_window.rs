@@ -168,6 +168,36 @@ unsafe extern "system" fn window_proc(
       super::handle_mouse_delta(wparam.0 as u32 as i32, lparam.0 as i32);
       LRESULT(0)
     }
+    wheel_hook::WM_GLIDE_CENTER => {
+      let request = wheel_hook::take_center_request();
+      if let Some((hwnd, (x, y), input)) = request {
+        let point = windows::Win32::Foundation::POINT { x, y };
+        let target = (input == super::InputKind::Mouse
+          && super::session::target_hwnd() == Some(hwnd))
+        .then(super::session::target)
+        .flatten()
+        .or_else(|| super::target::WindowTarget::from_hwnd(super::center::hwnd(hwnd), point));
+        if let (Some(app), Some(target)) = (super::APP.get(), target) {
+          if !super::center::allowed(app, input) {
+            super::center::trace("consume rejected by eligibility");
+            return LRESULT(0);
+          }
+          let Ok(frame) = target.frame() else {
+            super::center::trace("consume rejected: frame unavailable");
+            return LRESULT(0);
+          };
+          let work = target.work_area();
+          super::finish_current_session(true);
+          super::center::center_target(target, frame, work);
+        }
+      }
+      LRESULT(0)
+    }
+    wheel_hook::WM_GLIDE_CANCEL => {
+      super::navigation::cancel_until_release();
+      super::finish_current_session(true);
+      LRESULT(0)
+    }
     key_hook::WM_GLIDE_KEY => {
       super::keyboard::handle_transition(wparam.0 as u32, lparam.0 != 0, lparam.0 == 0);
       LRESULT(0)

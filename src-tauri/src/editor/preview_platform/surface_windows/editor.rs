@@ -180,6 +180,12 @@ impl EditorWindow {
     self.set_active(active);
   }
 
+  /// Whether the frontend currently owns the workarea. The composed panes
+  /// blur themselves while it does.
+  pub(super) fn is_suspended(&self) -> bool {
+    self.suspended.load(Ordering::Relaxed)
+  }
+
   pub(super) fn set_cursor(kind: CursorKind) {
     let name = match kind {
       CursorKind::Arrow => IDC_ARROW,
@@ -237,12 +243,21 @@ impl super::RecordingPreviewSurface {
   /// has to be restored on resume. Deactivating the editor would do the same
   /// here today, but a layout re-asserts the active state on every resize.
   /// TODO(windows): verify on Windows hardware alongside the macOS pass.
+  /// The pane blur is baked into the presented pixels, so the state change
+  /// only becomes visible once every pane re-presents - and a suspended
+  /// editor presents nothing else. One batch, so the panes flip together.
   pub(crate) fn set_editor_suspended(&self, suspended: bool) {
-    if let Ok(state) = self.inner.state.lock() {
+    let batch = self.present_batch();
+    {
+      let Ok(mut state) = self.inner.state.lock() else {
+        return;
+      };
       self
         .inner
         .editor
         .set_suspended(suspended, state.editor_active);
+      super::redraw_composed_panes(&self.inner, &mut state);
     }
+    drop(batch);
   }
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! macOS supplies monitor geometry and applies the shared destination policy.
-use super::{Session, STATE};
+use super::{Session, SharedState, STATE};
 use crate::glide::{
   core::{
     monitors::{self, Monitor},
@@ -22,7 +22,9 @@ pub(super) struct Selection {
   source: usize,
   selected: usize,
   pub active: bool,
+  pub armed: bool,
   icon_path: Option<PathBuf>,
+  preview_phase: &'static str,
   landing_frame: Option<cidre::cg::Rect>,
 }
 
@@ -74,7 +76,7 @@ fn snapshot(app: &AppHandle) -> Vec<Monitor> {
 
 pub(super) fn capture(app: &AppHandle, point: CGPoint) -> Option<Selection> {
   let displays = snapshot(app);
-  if displays.len() < 2 {
+  if displays.is_empty() {
     return None;
   }
   let source = displays.iter().position(|monitor| {
@@ -86,7 +88,9 @@ pub(super) fn capture(app: &AppHandle, point: CGPoint) -> Option<Selection> {
     source,
     selected: source,
     active: false,
+    armed: false,
     icon_path: None,
+    preview_phase: "idle",
     landing_frame: None,
   })
 }
@@ -103,8 +107,14 @@ pub(super) fn update(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bo
     let Some(selection) = session.monitors.as_mut() else {
       return false;
     };
+    if ready {
+      selection.active = true;
+      selection.preview_phase = "ready";
+    }
     if let Some(direction) = step {
       selection.active = true;
+      selection.armed = false;
+      selection.preview_phase = "settling";
       if let Some(next) = monitors::neighbour(&selection.displays, selection.selected, direction) {
         selection.selected = next;
       }
@@ -112,70 +122,15 @@ pub(super) fn update(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bo
     selection.active
   });
   if active && (step.is_some() || ready) {
-    publish(app, id, if ready { "ready" } else { "settling" });
+    publish(app, id);
   }
   active
 }
 
-fn publish(app: &AppHandle, id: u64, phase: &'static str) {
-  let Some(state) = STATE.get() else {
-    return;
-  };
-  let context = state.lock().ok().and_then(|mut state| {
-    let session = state.session.as_mut().filter(|session| session.id == id)?;
-    let selection = session
-      .monitors
-      .as_ref()
-      .filter(|selection| selection.active)?;
-    if !session.revealed {
-      if let Err(error) = cursor::hide_cursor() {
-        eprintln!("{error}");
-        return None;
-      }
-      session.revealed = true;
-    }
-    let previews = selection
-      .displays
-      .iter()
-      .enumerate()
-      .map(|(index, monitor)| Preview {
-        session_id: id,
-        desktop: monitor.id.clone(),
-        selected: selection.selected == index,
-        origin: selection.source == index,
-        index,
-        count: selection.displays.len(),
-        phase,
-        icon_path: selection.icon_path.clone(),
-      })
-      .collect();
-    Some((
-      session.anchor,
-      previews,
-      monitors::preview_offsets(&selection.displays),
-    ))
-  });
-  let Some((anchor, previews, offsets)) = context else {
-    return;
-  };
-  let main = app.clone();
-  let _ = app.run_on_main_thread(move || {
-    if !state.lock().is_ok_and(|state| {
-      state
-        .session
-        .as_ref()
-        .is_some_and(|session| session.id == id)
-    }) {
-      return;
-    }
-    let _ = crate::windows::hide_glide_preview(&main);
-    if let Err(error) =
-      preview_windows::show_arranged(&main, previews, anchor.x, anchor.y, &offsets)
-    {
-      eprintln!("Could not show Glide monitor previews: {error}");
-    }
-  });
-}
+#[path = "monitors/arming.rs"]
+mod arming;
+use arming::publish;
+pub(super) use arming::{arm_preview, claim_armed, current_id, is_armed};
 
 pub(in crate::glide::platform) fn set_icon(app: &AppHandle, id: u64, path: Option<PathBuf>) {
   let Some(state) = STATE.get() else {
@@ -194,12 +149,23 @@ pub(in crate::glide::platform) fn set_icon(app: &AppHandle, id: u64, path: Optio
     selection.active
   });
   if active {
-    publish(app, id, "idle");
+    publish(app, id);
   }
 }
 
 /// Revalidate the selected physical display on release before applying a frame.
 pub(super) fn commit(app: &AppHandle, session: &mut Session) {
+  crate::glide::core::trace::input(
+    "mac-monitor",
+    format!(
+      "commit id={} active={}",
+      session.id,
+      session
+        .monitors
+        .as_ref()
+        .is_some_and(|selection| selection.active)
+    ),
+  );
   let Some(selection) = session
     .monitors
     .as_ref()

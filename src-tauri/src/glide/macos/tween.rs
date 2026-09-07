@@ -52,6 +52,7 @@ struct Tween {
   /// resize, and to report the frame it ended up with. A move that belongs to
   /// no region carries none.
   fit: Option<FitContext>,
+  busy: crate::glide::core::activity::BusyLease,
 }
 
 /// The one tween in flight, if any. Never held across an Accessibility call:
@@ -121,6 +122,7 @@ pub(super) fn animate_to(target: &WindowTarget, destination: cg::Rect, fit: Opti
       resizes,
       generation,
       fit,
+      busy: crate::glide::core::activity::BusyLease::acquire(),
     });
   }
 }

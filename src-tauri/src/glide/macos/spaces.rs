@@ -27,11 +27,15 @@ use std::{
   time::Instant,
 };
 
+pub(super) use input::clear_cancelled_if_released;
 pub(super) use input::handle_event;
 pub(super) use lifecycle::poll;
 pub(super) use preview_windows::preload;
 pub(super) fn cancel(app: &tauri::AppHandle) {
   lifecycle::request_end(app, true);
+}
+pub(super) fn is_active() -> bool {
+  SESSION.lock().ok().is_some_and(|session| session.is_some())
 }
 pub(super) fn is_synthetic(event: &core_graphics::event::CGEvent) -> bool {
   event.get_integer_value_field(core_graphics::event::EventField::EVENT_SOURCE_USER_DATA)
@@ -61,6 +65,7 @@ struct Session {
   ending: bool,
   revealed: bool,
   cancelled: Arc<AtomicBool>,
+  armed: bool,
 }
 static SESSION: LazyLock<Mutex<Option<Session>>> = LazyLock::new(|| Mutex::new(None));
 static CLOSING: AtomicBool = AtomicBool::new(false);

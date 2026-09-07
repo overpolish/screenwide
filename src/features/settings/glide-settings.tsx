@@ -23,10 +23,10 @@ const toggles = [
     title: "Trackpad feedback",
   },
   {
-    description: "Double-tap with two fingers over a window's top bar.",
+    description: "Two fingers, or hold mouse control while double-clicking.",
     key: "doubleTapCenter",
-    macOnly: true,
-    title: "Double-tap to center",
+    macOnly: false,
+    title: "Double-tap or double-click to center",
   },
 ] as const;
 
@@ -84,10 +84,10 @@ export function GlideSettingsPanel({
             : key === "thirdsModifier"
               ? "Control for screen thirds"
               : key === "spacesModifier"
-                ? "Modifier for Spaces"
+                ? isMac
+                  ? "Modifier for Spaces"
+                  : "Modifier for virtual desktops"
                 : "Modifier for Monitors";
-        const macOnly = key === "spacesModifier" || key === "monitorsModifier";
-        if (macOnly && !isMac) return null;
         return (
           <Setting
             description={
@@ -96,7 +96,9 @@ export function GlideSettingsPanel({
                 : key === "thirdsModifier"
                   ? "Hold during Glide to use thirds instead of halves."
                   : key === "spacesModifier"
-                    ? "Hold while moving between Spaces."
+                    ? isMac
+                      ? "Hold while moving between Spaces."
+                      : "Hold while moving between virtual desktops."
                     : "Hold while moving between monitors."
             }
             key={key}

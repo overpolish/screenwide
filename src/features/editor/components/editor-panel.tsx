@@ -188,7 +188,12 @@ export function EditorPanel({
       />
     ) : null;
   return (
-    <main className="window-surface relative flex h-screen w-screen flex-col gap-section overflow-hidden rounded-[10px] text-content-fg">
+    <main
+      className="window-surface relative flex h-screen w-screen flex-col gap-section overflow-hidden rounded-[10px] text-content-fg"
+      // Windows cannot backdrop-blur over a transparent page, so the chrome
+      // blurs itself while the export window is open (see index.css).
+      data-overlay-open={isExportOpen ? "" : undefined}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"

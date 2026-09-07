@@ -36,6 +36,7 @@ mod text_recognition;
 mod tray;
 mod updates;
 mod windows;
+#[cfg(target_os = "macos")]
 use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

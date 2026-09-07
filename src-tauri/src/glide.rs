@@ -14,6 +14,8 @@ mod platform;
 mod platform;
 
 mod core;
+
+pub(crate) use core::activity::BusyLease;
 #[path = "glide/events.rs"]
 mod events;
 #[path = "glide/settings.rs"]
@@ -164,14 +166,6 @@ fn finish(app: &AppHandle, anchor_x: f64, anchor_y: f64, cancelled: bool) {
       cancelled,
     },
   );
-  #[cfg(target_os = "macos")]
-  {
-    let main_app = app.clone();
-    let _ = app.run_on_main_thread(move || {
-      let _ = crate::windows::hide_glide_preview(&main_app);
-    });
-  }
-  #[cfg(target_os = "windows")]
   crate::windows::defer_hide_glide_preview(app);
 }
 
@@ -232,10 +226,7 @@ fn finish_with_fade(
   });
   if let Err(error) = crate::windows::fade_glide_preview(app, completion) {
     eprintln!("Could not fade Glide out: {error}");
-    let main_app = app.clone();
-    let _ = app.run_on_main_thread(move || {
-      let _ = crate::windows::hide_glide_preview(&main_app);
-    });
+    crate::windows::defer_hide_glide_preview(app);
     run_once(&on_restore);
     run_once(&on_faded);
   }
@@ -255,45 +246,5 @@ fn run_once(completion: &std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>>) {
 mod input_event_tests;
 
 #[cfg(all(test, target_os = "windows"))]
-mod windows_preview_tests {
-  use super::*;
-
-  #[test]
-  fn preview_is_contained_at_each_work_area_edge() {
-    let work_origin = PhysicalPosition::new(-1_920, 40);
-    let work_size = PhysicalSize::new(1_920, 1_040);
-    let preview_size = PhysicalSize::new(72, 48);
-
-    assert_eq!(
-      contained_origin(
-        PhysicalPosition::new(-1_956, 16),
-        preview_size,
-        work_origin,
-        work_size,
-      ),
-      PhysicalPosition::new(-1_920, 40),
-    );
-    assert_eq!(
-      contained_origin(
-        PhysicalPosition::new(-20, 1_060),
-        preview_size,
-        work_origin,
-        work_size,
-      ),
-      PhysicalPosition::new(-72, 1_032),
-    );
-  }
-
-  #[test]
-  fn preview_larger_than_work_area_pins_to_its_origin() {
-    assert_eq!(
-      contained_origin(
-        PhysicalPosition::new(40, 50),
-        PhysicalSize::new(400, 300),
-        PhysicalPosition::new(100, 80),
-        PhysicalSize::new(200, 100),
-      ),
-      PhysicalPosition::new(100, 80),
-    );
-  }
-}
+#[path = "glide/windows_preview_tests.rs"]
+mod windows_preview_tests;

@@ -14,12 +14,12 @@ use windows::{
     Direct3D11::{
       ID3D11BlendState, ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11PixelShader,
       ID3D11RenderTargetView, ID3D11Resource, ID3D11SamplerState, ID3D11ShaderResourceView,
-      ID3D11Texture2D, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_SHADER_RESOURCE,
-      D3D11_BLEND_DESC, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD,
-      D3D11_BUFFER_DESC, D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-      D3D11_RENDER_TARGET_BLEND_DESC, D3D11_SAMPLER_DESC, D3D11_SUBRESOURCE_DATA,
-      D3D11_TEXTURE2D_DESC, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT,
-      D3D11_USAGE_IMMUTABLE, D3D11_VIEWPORT,
+      ID3D11Texture2D, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_RENDER_TARGET,
+      D3D11_BIND_SHADER_RESOURCE, D3D11_BLEND_DESC, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE,
+      D3D11_BLEND_OP_ADD, D3D11_BUFFER_DESC, D3D11_COLOR_WRITE_ENABLE_ALL,
+      D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_RENDER_TARGET_BLEND_DESC, D3D11_SAMPLER_DESC,
+      D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC, D3D11_TEXTURE_ADDRESS_CLAMP,
+      D3D11_USAGE_DEFAULT, D3D11_USAGE_IMMUTABLE, D3D11_VIEWPORT,
     },
     Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SAMPLE_DESC},
     Gdi::{
@@ -47,6 +47,13 @@ use crate::screenshots::{
 
 const VERTEX_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/recording_preview_vs.cso"));
 const PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/recording_preview_ps.cso"));
+const BLUR_VERTEX_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/preview_blur_vs.cso"));
+const BLUR_PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/preview_blur_ps.cso"));
+
+/// Hardware samples per blur pass, per side of the kernel. Each covers two
+/// Gaussian taps, so this budget spans a 128-pane-pixel radius at one tap per
+/// pixel; wider kernels keep the budget and space their taps out instead.
+const BLUR_TAP_PAIRS: u32 = 32;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -76,7 +83,17 @@ struct Constants {
   cursor_options: [u32; 4],
 }
 
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct BlurConstants {
+  texel: [f32; 4],
+  axis: [f32; 4],
+}
+
 pub(super) struct Compositor {
+  blur_constants: ID3D11Buffer,
+  blur_pixel_shader: ID3D11PixelShader,
+  blur_vertex_shader: ID3D11VertexShader,
   constants: ID3D11Buffer,
   cursor_hotspots: [[f32; 4]; 8],
   cursor_view: ID3D11ShaderResourceView,
@@ -90,6 +107,25 @@ pub(super) struct Compositor {
   sampler: ID3D11SamplerState,
   point_sampler: ID3D11SamplerState,
   vertex_shader: ID3D11VertexShader,
+}
+
+/// Ping-pong targets for the suspended-pane blur. The composed frame lands in
+/// `composed` instead of the back buffer, the horizontal pass writes
+/// `scratch`, and the vertical pass writes the back buffer. Allocated only
+/// while a pane is blurred and released as soon as it is not.
+pub(super) struct BlurTargets {
+  pub(super) size: (u32, u32),
+  composed: ID3D11Texture2D,
+  composed_view: ID3D11ShaderResourceView,
+  scratch: ID3D11Texture2D,
+  scratch_view: ID3D11ShaderResourceView,
+}
+
+impl BlurTargets {
+  /// The texture the ordinary compositor pass draws into while blurring.
+  pub(super) fn composed(&self) -> &ID3D11Texture2D {
+    &self.composed
+  }
 }
 
 #[derive(Clone)]
@@ -332,6 +368,8 @@ impl Compositor {
   pub(super) fn new(device: &ID3D11Device) -> Result<Self, String> {
     let mut vertex_shader = None;
     let mut pixel_shader = None;
+    let mut blur_vertex_shader = None;
+    let mut blur_pixel_shader = None;
     unsafe {
       device
         .CreateVertexShader(VERTEX_SHADER, None, Some(&mut vertex_shader))
@@ -339,7 +377,27 @@ impl Compositor {
       device
         .CreatePixelShader(PIXEL_SHADER, None, Some(&mut pixel_shader))
         .map_err(|error| error.to_string())?;
+      device
+        .CreateVertexShader(BLUR_VERTEX_SHADER, None, Some(&mut blur_vertex_shader))
+        .map_err(|error| error.to_string())?;
+      device
+        .CreatePixelShader(BLUR_PIXEL_SHADER, None, Some(&mut blur_pixel_shader))
+        .map_err(|error| error.to_string())?;
     }
+    let mut blur_constants = None;
+    unsafe {
+      device.CreateBuffer(
+        &D3D11_BUFFER_DESC {
+          ByteWidth: size_of::<BlurConstants>() as u32,
+          Usage: D3D11_USAGE_DEFAULT,
+          BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
+          ..Default::default()
+        },
+        None,
+        Some(&mut blur_constants),
+      )
+    }
+    .map_err(|error| error.to_string())?;
     let description = D3D11_BUFFER_DESC {
       ByteWidth: size_of::<Constants>() as u32,
       Usage: D3D11_USAGE_DEFAULT,
@@ -512,6 +570,12 @@ impl Compositor {
       [hotspot[0], hotspot[1], 0.0, 0.0]
     });
     Ok(Self {
+      blur_constants: blur_constants
+        .ok_or_else(|| "D3D11 created no preview blur constant buffer".to_owned())?,
+      blur_pixel_shader: blur_pixel_shader
+        .ok_or_else(|| "D3D11 created no preview blur pixel shader".to_owned())?,
+      blur_vertex_shader: blur_vertex_shader
+        .ok_or_else(|| "D3D11 created no preview blur vertex shader".to_owned())?,
       constants: constants.ok_or_else(|| "D3D11 created no preview constant buffer".to_owned())?,
       cursor_hotspots,
       cursor_view: cursor_view
@@ -889,6 +953,147 @@ impl Compositor {
     }
     Ok(())
   }
+
+  pub(super) fn blur_targets(
+    &self,
+    device: &ID3D11Device,
+    size: (u32, u32),
+  ) -> Result<BlurTargets, String> {
+    let description = D3D11_TEXTURE2D_DESC {
+      Width: size.0.max(1),
+      Height: size.1.max(1),
+      MipLevels: 1,
+      ArraySize: 1,
+      // The back buffer's format, so the vertical pass writes it unconverted.
+      Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+      SampleDesc: DXGI_SAMPLE_DESC {
+        Count: 1,
+        Quality: 0,
+      },
+      Usage: D3D11_USAGE_DEFAULT,
+      BindFlags: (D3D11_BIND_RENDER_TARGET.0 | D3D11_BIND_SHADER_RESOURCE.0) as u32,
+      ..Default::default()
+    };
+    let mut targets = Vec::with_capacity(2);
+    for _ in 0..2 {
+      let mut texture = None;
+      unsafe { device.CreateTexture2D(&description, None, Some(&mut texture)) }
+        .map_err(|error| format!("The suspended preview blur has no target: {error}"))?;
+      let texture = texture.ok_or_else(|| "D3D11 created no preview blur target".to_owned())?;
+      let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
+      let mut view = None;
+      unsafe { device.CreateShaderResourceView(&resource, None, Some(&mut view)) }
+        .map_err(|error| error.to_string())?;
+      let view = view.ok_or_else(|| "D3D11 created no preview blur view".to_owned())?;
+      targets.push((texture, view));
+    }
+    let (scratch, scratch_view) = targets.pop().expect("two blur targets were created");
+    let (composed, composed_view) = targets.pop().expect("two blur targets were created");
+    Ok(BlurTargets {
+      size,
+      composed,
+      composed_view,
+      scratch,
+      scratch_view,
+    })
+  }
+
+  /// Blurs the frame already drawn into `targets.composed()` into `target`
+  /// with a separable Gaussian of `sigma` pane pixels.
+  pub(super) fn blur(
+    &self,
+    context: &ID3D11DeviceContext,
+    targets: &BlurTargets,
+    target: &ID3D11Texture2D,
+    size: (u32, u32),
+    sigma: f32,
+  ) -> Result<(), String> {
+    // Three sigma covers the Gaussian to well under a 8-bit quantum, which is
+    // also where a CSS `filter: blur()` truncates its kernel.
+    let radius = (sigma * 3.0).ceil().max(1.0);
+    let pairs = ((radius / 2.0).ceil() as u32).clamp(1, BLUR_TAP_PAIRS);
+    let spacing = (radius / (pairs * 2) as f32).max(1.0);
+    let texel = [
+      1.0 / size.0.max(1) as f32,
+      1.0 / size.1.max(1) as f32,
+      sigma,
+      pairs as f32,
+    ];
+    self.blur_pass(
+      context,
+      &targets.composed_view,
+      &targets.scratch,
+      size,
+      texel,
+      [1.0, 0.0, spacing, 0.0],
+    )?;
+    self.blur_pass(
+      context,
+      &targets.scratch_view,
+      target,
+      size,
+      texel,
+      [0.0, 1.0, spacing, 0.0],
+    )
+  }
+
+  fn blur_pass(
+    &self,
+    context: &ID3D11DeviceContext,
+    source: &ID3D11ShaderResourceView,
+    target: &ID3D11Texture2D,
+    size: (u32, u32),
+    texel: [f32; 4],
+    axis: [f32; 4],
+  ) -> Result<(), String> {
+    let values = BlurConstants { texel, axis };
+    unsafe {
+      self
+        .blur_constants
+        .cast::<ID3D11Resource>()
+        .map_err(|error| error.to_string())
+        .map(|resource| {
+          context.UpdateSubresource(
+            &resource,
+            0,
+            None,
+            (&raw const values).cast::<c_void>(),
+            0,
+            0,
+          );
+        })?;
+    }
+    let resource: ID3D11Resource = target.cast().map_err(|error| error.to_string())?;
+    let device = unsafe { target.GetDevice() }.map_err(|error| error.to_string())?;
+    let mut render_target: Option<ID3D11RenderTargetView> = None;
+    unsafe { device.CreateRenderTargetView(&resource, None, Some(&mut render_target)) }
+      .map_err(|error| format!("The suspended preview blur has no render target: {error}"))?;
+    let render_target =
+      render_target.ok_or_else(|| "D3D11 created no preview blur render target".to_owned())?;
+    let viewport = D3D11_VIEWPORT {
+      Width: size.0 as f32,
+      Height: size.1 as f32,
+      MaxDepth: 1.0,
+      ..Default::default()
+    };
+    unsafe {
+      context.OMSetRenderTargets(Some(&[Some(render_target)]), None);
+      // The pass replaces the target outright; a layer pane's premultiplied
+      // transparency is carried in the blurred pixels themselves.
+      context.OMSetBlendState(None::<&ID3D11BlendState>, None, u32::MAX);
+      context.RSSetViewports(Some(&[viewport]));
+      context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+      context.VSSetShader(&self.blur_vertex_shader, None);
+      context.PSSetShader(&self.blur_pixel_shader, None);
+      context.PSSetConstantBuffers(0, Some(&[Some(self.blur_constants.clone())]));
+      context.PSSetShaderResources(0, Some(&[Some(source.clone())]));
+      context.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
+      context.Draw(3, 0);
+      context.PSSetShaderResources(0, Some(&[None]));
+      context.OMSetRenderTargets(None, None);
+    }
+    Ok(())
+  }
 }
 
 #[cfg(test)]
@@ -899,5 +1104,7 @@ mod tests {
   fn preview_shader_is_embedded_as_compiled_bytecode() {
     assert_eq!(&VERTEX_SHADER[..4], b"DXBC");
     assert_eq!(&PIXEL_SHADER[..4], b"DXBC");
+    assert_eq!(&BLUR_VERTEX_SHADER[..4], b"DXBC");
+    assert_eq!(&BLUR_PIXEL_SHADER[..4], b"DXBC");
   }
 }

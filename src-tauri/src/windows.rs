@@ -224,10 +224,11 @@ pub fn hide_glide_preview(app: &AppHandle) -> tauri::Result<()> {
   platform::hide(&window)
 }
 
-#[cfg(target_os = "windows")]
 pub fn defer_hide_glide_preview(app: &AppHandle) {
   let main_app = app.clone();
+  let busy = crate::glide::BusyLease::acquire();
   let _ = app.run_on_main_thread(move || {
+    let _busy = busy;
     let _ = hide_glide_preview(&main_app);
   });
 }

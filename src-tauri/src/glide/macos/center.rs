@@ -24,15 +24,31 @@ pub(super) fn center_window_at(app: &AppHandle, point: CGPoint) {
     return;
   };
 
-  let (x, y) = centered_origin(position, size, (frame.size.width, frame.size.height));
-  animate_to(
+  center_captured(
     &target,
+    frame,
+    (position.x, position.y),
+    (size.width, size.height),
+  );
+}
+
+pub(super) fn center_captured(
+  target: &WindowTarget,
+  frame: cg::Rect,
+  work_position: (f64, f64),
+  work_size: (f64, f64),
+) {
+  let (x, y) = centered_origin(
+    LogicalPosition::new(work_position.0, work_position.1),
+    LogicalSize::new(work_size.0, work_size.1),
+    (frame.size.width, frame.size.height),
+  );
+  animate_to(
+    target,
     cg::Rect {
       origin: cg::Point { x, y },
       size: frame.size,
     },
-    // A centering is not a region placement: it keeps the window's own size, so
-    // there is no fit to correct and nothing for the preview to hear about.
     None,
   );
 }

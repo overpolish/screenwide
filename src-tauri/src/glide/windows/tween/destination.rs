@@ -25,6 +25,53 @@ pub(super) fn travel(
   )
 }
 
+pub(super) fn interpolate(start: GlideFrame, destination: GlideFrame, fraction: f64) -> GlideFrame {
+  GlideFrame {
+    x: lerp(start.x, destination.x, fraction),
+    y: lerp(start.y, destination.y, fraction),
+    width: lerp(start.width, destination.width, fraction),
+    height: lerp(start.height, destination.height, fraction),
+  }
+}
+
+fn lerp(from: f64, to: f64, fraction: f64) -> f64 {
+  from + (to - from) * fraction
+}
+
+pub(super) fn eased(fraction: f64) -> f64 {
+  let remaining = 1.0 - fraction.clamp(0.0, 1.0);
+  1.0 - remaining * remaining * remaining
+}
+
+#[cfg(test)]
+mod motion_tests {
+  use super::*;
+
+  #[test]
+  fn ease_starts_and_ends_on_endpoints() {
+    assert_eq!(eased(0.0), 0.0);
+    assert_eq!(eased(1.0), 1.0);
+  }
+
+  #[test]
+  fn interpolation_lands_on_destination() {
+    let start = GlideFrame {
+      x: 0.0,
+      y: 0.0,
+      width: 100.0,
+      height: 100.0,
+    };
+    let destination = GlideFrame {
+      x: 40.0,
+      y: 20.0,
+      width: 300.0,
+      height: 200.0,
+    };
+    assert_eq!(interpolate(start, destination, 1.0), destination);
+    assert_eq!(interpolate(start, destination, 0.0), start);
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

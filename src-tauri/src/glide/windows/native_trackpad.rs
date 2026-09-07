@@ -15,6 +15,7 @@ use std::{
 use windows::Win32::UI::Input::{RAWHID, RAWINPUT, RAWINPUTHEADER};
 
 use super::{begin_session, native_settings, session, InputKind, APP};
+use crate::glide::core::taps::TapRecognizer;
 
 const FALLBACK_SUPPRESSION: Duration = Duration::from_millis(180);
 
@@ -37,6 +38,9 @@ struct Device {
   driving: bool,
   ignored: bool,
   pointer: PointerEpisode,
+  taps: TapRecognizer,
+  tap_clock: Instant,
+  tap_blocked: bool,
 }
 
 pub(super) fn handle_raw_input(header: &RAWINPUTHEADER, hid: &RAWHID, packet_bytes: usize) {
@@ -72,6 +76,10 @@ pub(super) fn blocks_mouse_glide(mouse_modifier_down: bool) -> bool {
   mouse_glide_blocked(mouse_modifier_down, POINTER_EPISODE.load(Ordering::Acquire))
 }
 
+pub(super) fn pointer_episode_active() -> bool {
+  POINTER_EPISODE.load(Ordering::Acquire)
+}
+
 fn mouse_glide_blocked(mouse_modifier_down: bool, pointer_episode: bool) -> bool {
   mouse_modifier_down && pointer_episode
 }
@@ -100,6 +108,9 @@ impl Device {
       driving: false,
       ignored: false,
       pointer: PointerEpisode::default(),
+      taps: TapRecognizer::default(),
+      tap_clock: Instant::now(),
+      tap_blocked: false,
     })
   }
 
@@ -111,10 +122,52 @@ impl Device {
       LAST_NATIVE_CONTACT.with_borrow_mut(|last| *last = Some(Instant::now()));
     }
     let contacts = frame.contacts;
+    let settings = native_settings::snapshot();
+    if !settings.enabled
+      || native_settings::is_down(settings.monitors_modifier)
+      || native_settings::is_down(settings.spaces_modifier)
+      || super::session::revealed()
+      || super::spaces::active_input().is_some()
+      || super::spaces::is_closing()
+      || !settings.double_tap_center
+      || crate::shortcuts::is_capturing()
+      || APP.get().is_some_and(crate::capture_overlays::blocks_glide)
+    {
+      self.tap_blocked = true;
+      super::clear_trackpad_tap_candidate();
+    }
+    let centroid = contacts
+      .get(0)
+      .zip(contacts.get(1))
+      .map(|(a, b)| (((a.x + b.x) * 0.0005) as f32, ((a.y + b.y) * 0.0005) as f32));
+    let tap = self.taps.update(
+      contacts.len(),
+      centroid,
+      self.tap_clock.elapsed().as_secs_f64(),
+    );
+    if tap.is_some() && !self.tap_blocked {
+      // The registration function performs the final overlay/titlebar and
+      // settings checks. Calling it only when the shared recognizer closes a
+      // valid episode prevents every two-finger lift from becoming a tap.
+      super::register_trackpad_tap();
+    }
+    if contacts.is_empty() {
+      self.tap_blocked = false;
+    }
     self.pointer.update(
       contacts.len(),
       contacts.first().map(|contact| (contact.x, contact.y)),
     );
+    if contacts.len() != 2 && super::spaces::active_input() == Some(InputKind::TrackpadContacts) {
+      if let Some(app) = APP.get() {
+        super::spaces::end(app, false);
+      }
+      self.last_centroid = None;
+      self.driving = false;
+      return;
+    }
+    let spaces_down = native_settings::is_down(native_settings::snapshot().spaces_modifier);
+    let monitors_down = native_settings::is_down(native_settings::snapshot().monitors_modifier);
     if contacts.len() != 2 {
       self.last_centroid = None;
       self.ignored = false;
@@ -133,8 +186,28 @@ impl Device {
       (contacts[0].y + contacts[1].y) * 0.5,
     );
     let previous = self.last_centroid.replace(centroid);
+    if spaces_down || super::spaces::active_input().is_some() {
+      if super::spaces::active_input().is_none() {
+        let mut point = windows::Win32::Foundation::POINT::default();
+        if unsafe { windows::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut point) }.is_ok() {
+          if let Some(app) = APP.get() {
+            if let Some((target, _)) = super::target::WindowTarget::at(app, point) {
+              self.driving |= super::spaces::begin(app, target, point, InputKind::TrackpadContacts);
+            }
+          }
+        }
+      } else if super::spaces::active_input() == Some(InputKind::TrackpadScroll) {
+        self.driving |= super::spaces::promote_scroll_to_contacts();
+      }
+      if super::spaces::active_input() == Some(InputKind::TrackpadContacts) {
+        if let (Some(app), Some((px, py))) = (APP.get(), previous) {
+          super::spaces::handle_event(app, centroid.0 - px, centroid.1 - py);
+        }
+      }
+      return;
+    }
     let settings = native_settings::snapshot();
-    if native_settings::is_down(settings.mouse_modifier) {
+    if native_settings::is_down(settings.mouse_modifier) && !monitors_down {
       self.ignored = true;
       if self.driving {
         self.driving = false;

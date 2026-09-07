@@ -41,6 +41,9 @@ export function ExportOptionsWindowView({
   return (
     <main
       className="window-surface gap-section relative flex w-full flex-col overflow-hidden rounded-window text-content-fg"
+      // Windows cannot backdrop-blur over a transparent page (Mica lives
+      // outside the webview), so the content blurs itself while this is set.
+      data-overlay-open={isSaving && progress !== undefined ? "" : undefined}
       ref={contentRef}
     >
       <WindowHeader

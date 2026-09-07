@@ -166,6 +166,10 @@ fn compile_windows_preview_shaders() {
     "src/editor/preview_platform/surface_windows/shaders/preview.hlsl",
     "recording_preview",
   );
+  compile_shader(
+    "src/editor/preview_platform/surface_windows/shaders/blur.hlsl",
+    "preview_blur",
+  );
   compile_shader("src/osc/gpu/windows/shaders/osc.hlsl", "osc_gpu");
   compile_shader(
     "src/recording/platform_windows/shaders/desktop_compositor.hlsl",

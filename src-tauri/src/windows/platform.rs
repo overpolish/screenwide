@@ -3,6 +3,9 @@
 
 use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
 
+#[cfg(target_os = "windows")]
+#[path = "platform/composition.rs"]
+mod composition;
 #[path = "platform/glide_preview.rs"]
 mod glide_preview;
 
@@ -565,27 +568,7 @@ pub fn restore_recording_level(window: &WebviewWindow) -> tauri::Result<()> {
 
 #[cfg(target_os = "windows")]
 pub fn set_opacity(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
-  use windows::Win32::{
-    Foundation::{COLORREF, HWND},
-    UI::WindowsAndMessaging::{
-      GetWindowLongPtrW, SetLayeredWindowAttributes, SetWindowLongPtrW, GWL_EXSTYLE, LWA_ALPHA,
-      WS_EX_LAYERED,
-    },
-  };
-
-  let hwnd = HWND(window.hwnd()?.0);
-  unsafe {
-    let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED.0 as isize);
-    SetLayeredWindowAttributes(
-      hwnd,
-      COLORREF(0),
-      (opacity.clamp(0.0, 1.0) * 255.0).round() as u8,
-      LWA_ALPHA,
-    )
-    .map_err(std::io::Error::other)?;
-  }
-  Ok(())
+  composition::set_opacity(window, opacity)
 }
 
 #[cfg(target_os = "windows")]
@@ -619,6 +602,7 @@ pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
 pub fn show(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
   set_opacity(window, opacity)?;
   prepare_to_show(window)?;
+  composition::refresh(window)?;
   window.show()
 }
 

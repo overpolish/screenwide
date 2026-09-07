@@ -168,6 +168,9 @@ struct Backdrop {
 struct Pane {
   /// Stable viewport-local geometry before the shared workspace transform.
   base_rect: PreviewSurfaceRect,
+  /// Ping-pong targets for the suspended blur, held only while the pane is
+  /// blurred so the ordinary path allocates nothing.
+  blur: Option<compositor::BlurTargets>,
   /// Retained swap-chain allocation; `content_size` is the presented region.
   buffer_size: (u32, u32),
   clip: IDCompositionRectangleClip,
@@ -195,6 +198,9 @@ struct Pane {
   /// the next layout - a fresh capture of a different shape showed the old
   /// OSC until the user dragged it.
   selection_stale: bool,
+  /// The window's device-pixel scale as of the pane's last layout, so a blur
+  /// expressed in CSS pixels can be converted without the surface state.
+  scale: f64,
   scale_transform: IDCompositionScaleTransform,
   seen: bool,
   source: Option<compositor::SourceTexture>,
@@ -604,6 +610,7 @@ impl Gpu {
         x: 0.0,
         y: 0.0,
       },
+      blur: None,
       buffer_size: (2, 2),
       clip,
       clip_edges: (0, 0, 2, 2),
@@ -616,6 +623,7 @@ impl Gpu {
       pending_geometry: false,
       pending_present: false,
       position: (0, 0),
+      scale: 1.0,
       scale_transform,
       selection_stale: false,
       seen: true,
@@ -781,6 +789,7 @@ fn set_pane_geometry(
   let (viewport_y, viewport_bottom) = window::scaled_edges(viewport.y, viewport.height, scale);
   pane.position = (x, y);
   pane.display_size = (width, height);
+  pane.scale = scale;
   pane.clip_edges = (
     (viewport_x - x).clamp(0, width),
     (viewport_y - y).clamp(0, height),
@@ -908,6 +917,54 @@ fn update_magnifier(state: &mut SurfaceState) {
       0.0,
     ],
   });
+}
+
+/// The Gaussian sigma the suspended pane blurs with, in the pane's own
+/// composed pixels, or zero when the editor is not suspended. Matches the
+/// `filter: blur(var(--blur-lg))` the Windows chrome applies to itself, whose
+/// sigma is the CSS length.
+fn suspended_blur_sigma(inner: &SurfaceInner, pane: &Pane) -> f64 {
+  /// The CSS `--blur-lg` the DOM chrome blurs itself by, in CSS pixels.
+  const SUSPENDED_BLUR_CSS_SIGMA: f64 = 5.0;
+  if !inner.editor.is_suspended() {
+    return 0.0;
+  }
+  // Two conversions: CSS pixels to device pixels by the window's scale, then
+  // device pixels to pane pixels by the visual's own scale transform, which
+  // maps the composed canvas onto its laid-out box.
+  let device = SUSPENDED_BLUR_CSS_SIGMA * pane.scale;
+  let content = f64::from(pane.content_size.0.max(1));
+  let display = f64::from(pane.display_size.0.max(1) as u32);
+  device * content / display
+}
+
+/// Redraws every visible pane from its cached source and composition, without
+/// a decode. The suspension blur is applied inside the present path, and a
+/// suspended editor presents nothing else, so toggling it has to re-present.
+fn redraw_composed_panes(inner: &std::sync::Arc<SurfaceInner>, state: &mut SurfaceState) {
+  let camera_source = state.camera_source.clone();
+  let surface = RecordingPreviewSurface {
+    inner: std::sync::Arc::clone(inner),
+  };
+  for pane in state.panes.iter_mut().flatten().filter(|pane| pane.seen) {
+    let (Some(settings), Some(composition), true) = (
+      pane.settings.clone(),
+      pane.last_composition,
+      pane.source.is_some(),
+    ) else {
+      continue;
+    };
+    // As in `redraw_magnifier`: redraw exactly what the last present composed
+    // rather than dropping a baked camera for a frame.
+    let camera = match (pane.last_camera, camera_source.as_ref()) {
+      (Some((geometry, drop_shadow, camera_on_top)), Some(source)) => {
+        Some((source, geometry, drop_shadow, camera_on_top))
+      }
+      (Some(_), None) => continue,
+      (None, _) => None,
+    };
+    let _ = surface.present_cached_source_with_camera(pane, &settings, composition, camera);
+  }
 }
 
 fn redraw_magnifier(inner: &std::sync::Arc<SurfaceInner>, state: &mut SurfaceState) {
@@ -2432,6 +2489,27 @@ impl RecordingPreviewSurface {
     pane.last_camera = camera
       .map(|(_, geometry, drop_shadow, camera_on_top)| (geometry, drop_shadow, camera_on_top));
     pane.settings = Some(settings.clone());
+    // WebView2's Chromium compositor cannot sample the DirectComposition swap
+    // chains beneath it, so a `backdrop-filter` over the pane hole blurs
+    // nothing the way CoreAnimation blurs the Metal pane on macOS. While the
+    // frontend covers the workarea the pane therefore blurs its own presented
+    // pixels, matching the CSS blur the Windows chrome applies to itself.
+    let blur_sigma = suspended_blur_sigma(&self.inner, pane);
+    let blur = if blur_sigma > 0.05 {
+      match pane.blur.take() {
+        Some(targets) if targets.size == output_size => Some(targets),
+        _ => Some(
+          self
+            .inner
+            .gpu
+            .compositor
+            .blur_targets(&self.inner.gpu.device, output_size)?,
+        ),
+      }
+    } else {
+      pane.blur = None;
+      None
+    };
     let source = pane
       .source
       .as_ref()
@@ -2439,11 +2517,16 @@ impl RecordingPreviewSurface {
     let buffer_index = unsafe { pane.swap_chain.GetCurrentBackBufferIndex() };
     let target = unsafe { pane.swap_chain.GetBuffer::<ID3D11Texture2D>(buffer_index) }
       .map_err(|error| format!("The composed preview has no back buffer: {error}"))?;
+    // While blurring, the composed frame goes to the intermediate target and
+    // only the vertical blur pass writes the back buffer.
+    let composed = blur
+      .as_ref()
+      .map_or(&target, compositor::BlurTargets::composed);
     // A foreground layer blends over the existing target, and a flip-discard
     // back buffer is undefined after each present: its uncovered pixels must
     // read as transparent, not as stale frame data.
     if composition.foreground_only {
-      let resource: ID3D11Resource = target.cast().map_err(|error| error.to_string())?;
+      let resource: ID3D11Resource = composed.cast().map_err(|error| error.to_string())?;
       let mut view: Option<ID3D11RenderTargetView> = None;
       unsafe {
         self
@@ -2465,13 +2548,23 @@ impl RecordingPreviewSurface {
     }
     self.inner.gpu.compositor.draw_with_camera(
       &self.inner.gpu.context,
-      &target,
+      composed,
       source,
       settings,
       composition,
       camera,
       pane.magnifier,
     )?;
+    if let Some(targets) = blur.as_ref() {
+      self.inner.gpu.compositor.blur(
+        &self.inner.gpu.context,
+        targets,
+        &target,
+        output_size,
+        blur_sigma as f32,
+      )?;
+    }
+    pane.blur = blur;
     unsafe { self.inner.gpu.context.Flush() };
     // Inside an open batch the frame is parked: the closing guard presents
     // every pane and commits every pending geometry in one flush, so sibling

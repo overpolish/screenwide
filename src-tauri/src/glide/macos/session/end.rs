@@ -23,6 +23,7 @@ pub(in crate::glide::platform) fn end_session(
   if !cancelled {
     super::detector::finish_opening(app, state);
   }
+  let completion = crate::glide::core::activity::BusyLease::acquire();
   let minimize = state.lock().is_ok_and(|state| {
     state
       .session
@@ -32,7 +33,7 @@ pub(in crate::glide::platform) fn end_session(
   // Only a revealed glide breaks a double tap in the making. A tap sheds a few
   // scroll events of its own, and the invisible session they open must not
   // clear the candidate that same tap just stored.
-  let Some(mut session) = take_session(app, state, cancelled) else {
+  let Some(mut session) = take_session(app, state, cancelled, completion) else {
     return;
   };
   if minimize {
@@ -45,7 +46,12 @@ pub(in crate::glide::platform) fn end_session(
   }
 }
 
-fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option<Session> {
+fn take_session(
+  app: &AppHandle,
+  state: &SharedState,
+  cancelled: bool,
+  completion: crate::glide::core::activity::BusyLease,
+) -> Option<Session> {
   let mut session = state
     .lock()
     .ok()
@@ -82,7 +88,11 @@ fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option
   let monitor_landing = super::monitors::landing(&session);
   let cursor_follows = native_settings::snapshot().cursor_follows
     && !session.runtime.commits_terminal_action(cancelled);
-  let returned_to_origin = session.returned_to_origin;
+  let cursor_completion = completion.clone();
+  // A monitor release that selected its source, or lost its destination
+  // during revalidation, performed no move and must release the cursor now.
+  let returned_to_origin =
+    releases_cursor_immediately(monitor_selection, session.moved, session.returned_to_origin);
   if returned_to_origin {
     // Nothing has to chase the window, so restore association immediately;
     // a delayed warp would pull back the user's next physical mouse move.
@@ -93,6 +103,7 @@ fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option
     anchor.x,
     anchor.y,
     Box::new(move || {
+      let _completion = cursor_completion;
       if returned_to_origin {
         return;
       }
@@ -110,6 +121,7 @@ fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option
     }),
     Box::new(move || {
       crate::glide::platform::spaces::preview_windows::after_dismissed(Box::new(|| {
+        let _completion = completion;
         if let Some(state) = STATE.get() {
           if let Ok(mut state) = state.lock() {
             state.fading = false;
@@ -119,4 +131,20 @@ fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option
     }),
   );
   Some(session)
+}
+
+fn releases_cursor_immediately(monitor_selection: bool, moved: bool, returned: bool) -> bool {
+  returned || (monitor_selection && !moved)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::releases_cursor_immediately;
+
+  #[test]
+  fn monitor_noop_release_does_not_defer_cursor_release() {
+    assert!(releases_cursor_immediately(true, false, false));
+    assert!(releases_cursor_immediately(true, true, true));
+    assert!(!releases_cursor_immediately(false, false, false));
+  }
 }

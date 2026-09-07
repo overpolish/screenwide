@@ -7,6 +7,12 @@ use keyboard_types::Code;
 pub(super) struct NativeKey(i64, Option<i64>);
 
 impl NativeKey {
+  pub(super) fn hardware_down(self) -> bool {
+    crate::glide::platform::hardware::key_down(self.0 as u16)
+      || self
+        .1
+        .is_some_and(|code| crate::glide::platform::hardware::key_down(code as u16))
+  }
   pub(super) fn from_code(code: Code) -> Option<Self> {
     let first = match code {
       Code::KeyA => 0x00,
