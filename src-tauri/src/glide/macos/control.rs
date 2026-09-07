@@ -13,12 +13,6 @@ pub(super) enum NativeControl {
 }
 
 impl NativeControl {
-  pub(super) fn hardware_down(self) -> bool {
-    match self {
-      Self::Key(key) => key.hardware_down(),
-      Self::Mouse(button) => crate::glide::platform::hardware::button_down(button as u32),
-    }
-  }
   pub(super) fn from_control(control: GlideControl) -> Option<Self> {
     Some(match control {
       GlideControl::Key(code) => Self::Key(NativeKey::from_code(code)?),

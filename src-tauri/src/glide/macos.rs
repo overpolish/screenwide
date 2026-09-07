@@ -268,7 +268,7 @@ fn handle_mouse(app: &AppHandle, state: &SharedState, event: &CGEvent) -> Callba
 /// same way a trackpad double tap does. Both events of the second click are
 /// dropped, so the application below never sees the double click it would zoom
 /// on; every other press, single clicks included, passes straight through.
-pub(super) use mouse_click::handle_mouse_down;
+use mouse_click::handle_mouse_down;
 
 fn handle_mouse_up(state: &SharedState) -> CallbackResult {
   if take_mouse_up_swallow(state) {

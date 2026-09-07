@@ -51,13 +51,6 @@ pub(in crate::glide::platform) fn monitor_mode(state: &SharedState) -> bool {
   })
 }
 
-pub(in crate::glide::platform) fn session_id(state: &SharedState) -> Option<u64> {
-  state
-    .lock()
-    .ok()
-    .and_then(|state| state.session.as_ref().map(|session| session.id))
-}
-
 pub(in crate::glide::platform) fn mouse_center_context(
   state: &SharedState,
 ) -> Option<(

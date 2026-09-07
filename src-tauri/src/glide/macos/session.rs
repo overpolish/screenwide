@@ -39,7 +39,7 @@ mod taps;
 
 pub(super) use access::{
   accumulate_pointer_travel, active_input, is_active, monitor_mode, mouse_center_context,
-  session_anchor, session_id,
+  session_anchor,
 };
 pub(super) use detector::{
   set_thirds as set_detector_thirds, settle as settle_detector, update as update_detector,

@@ -41,6 +41,7 @@ static NATIVE: LazyLock<RwLock<NativeGlideSettings>> =
 struct Observed {
   since: Instant,
   up_samples: u8,
+  recover_release: bool,
 }
 static PRESSED: LazyLock<Mutex<HashMap<i64, Observed>>> =
   LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -100,6 +101,10 @@ pub(super) fn observe(event_type: CGEventType, event: &CGEvent) {
         Observed {
           since: Instant::now(),
           up_samples: 0,
+          recover_release: matches!(
+            event_type,
+            CGEventType::FlagsChanged | CGEventType::OtherMouseDown
+          ),
         },
       );
     } else {
@@ -113,6 +118,11 @@ pub(super) fn reconcile() -> Vec<i64> {
   let mut recovered = Vec::new();
   if let Ok(mut keys) = PRESSED.lock() {
     keys.retain(|code, observed| {
+      // Ordinary key-downs can be swallowed by our tap. Polling can then
+      // report them as released while held; only their key-up ends the hold.
+      if !observed.recover_release {
+        return true;
+      }
       let hardware = if *code >= MOUSE_STATE_BASE {
         super::hardware::button_down((*code - MOUSE_STATE_BASE) as u32)
       } else {
