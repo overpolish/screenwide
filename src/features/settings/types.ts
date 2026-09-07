@@ -26,7 +26,9 @@ export type GlideSettings = {
   doubleTapCenter: boolean;
   enabled: boolean;
   haptics: boolean;
+  monitorsModifier: GlideControl;
   mouseModifier: GlideControl;
+  spacesModifier: GlideControl;
   thirdsModifier: GlideControl;
   windowGap: number;
 };

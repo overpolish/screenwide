@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
+use super::monitor_intent;
 use super::{
   folds::{self, GlideAction, GlideDetectorOptions},
   intent::{CornerRefinement, OpeningGate},
@@ -45,6 +46,8 @@ pub struct GlideDetector {
   pending: Option<GlideAction>,
   region: Option<GlideRegion>,
   thirds: bool,
+  monitor_navigation: bool,
+  monitor_step: Option<(i8, i8)>,
 }
 impl GlideDetector {
   pub fn new(options: GlideDetectorOptions) -> Self {
@@ -59,6 +62,8 @@ impl GlideDetector {
       pending: None,
       region: None,
       thirds: false,
+      monitor_navigation: false,
+      monitor_step: None,
     }
   }
   fn detection(
@@ -99,6 +104,15 @@ impl GlideDetector {
     Some(())
   }
   fn transition(&mut self, timestamp: f64, force: bool) -> Option<()> {
+    if self.monitor_navigation {
+      self.monitor_step = monitor_intent::deliberate_direction(
+        self.horizontal.travel(),
+        self.vertical.travel(),
+        self.options.horizontal_threshold,
+        self.options.vertical_threshold,
+      );
+      return self.monitor_step.map(|_| ());
+    }
     if self.pending.is_some() {
       let step = self.vertical.step(self.options.vertical_threshold);
       if step == 0 {
@@ -153,6 +167,7 @@ impl GlideDetector {
     let previous_region = self.region;
     let previous_pending = self.pending;
     let became_ready = self.rest.settle(timestamp);
+    self.monitor_step = None;
     if became_ready {
       // Start fresh when the hand has rested, so discarded travel
       // cannot immediately trigger the next step.

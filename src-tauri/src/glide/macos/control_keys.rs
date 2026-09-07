@@ -112,3 +112,7 @@ pub(super) fn handle_flags_changed(app: &AppHandle, state: &SharedState) -> Call
   }
   CallbackResult::Keep
 }
+
+pub(super) fn is_thirds(_event: &CGEvent) -> bool {
+  native_settings::is_down(native_settings::snapshot().thirds_modifier)
+}

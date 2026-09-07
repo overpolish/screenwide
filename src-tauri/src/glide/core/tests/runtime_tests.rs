@@ -117,6 +117,69 @@ fn continuous_drag_delays_the_tick_but_small_jitter_does_not() {
 }
 
 #[test]
+fn monitor_navigation_starts_with_a_direct_cardinal_step() {
+  let mut runtime = runtime();
+  runtime.begin_monitor_navigation();
+  let step = runtime.update(sample(0.0, -45.0, false, 0.0));
+  assert_eq!(step.monitor_step, Some((0, -1)));
+  assert_eq!(step.detection.region, None);
+  assert_eq!(step.detection.pending, None);
+  assert!(runtime.monitor_navigation_active());
+  assert_eq!(step.move_to, None);
+  assert!(!runtime.should_minimize(false));
+  assert!(!runtime.commits_terminal_action(false));
+}
+
+#[test]
+fn monitor_navigation_does_not_resize_or_minimize() {
+  let mut runtime = runtime();
+  runtime.begin_monitor_navigation();
+  let step = runtime.update(sample(0.0, 45.0, false, 0.0));
+  assert_eq!(step.monitor_step, Some((0, 1)));
+  assert_eq!(step.detection.region, None);
+  assert_eq!(step.detection.pending, None);
+  assert_eq!(step.move_to, None);
+  assert!(!runtime.should_minimize(false));
+}
+
+#[test]
+fn navigation_waits_for_stillness_and_accepts_a_diagonal_corner_repeat() {
+  let mut runtime = runtime();
+  runtime.begin_monitor_navigation();
+
+  let mut dragging = runtime.update(sample(-45.0, -45.0, false, 0.0));
+  assert_eq!(dragging.monitor_step, Some((-1, -1)));
+  dragging = runtime.update(sample(-20.0, -20.0, false, 10.0));
+  assert_eq!(dragging.monitor_step, None);
+  assert!(runtime.settle(110.0).ready);
+  assert_eq!(
+    runtime
+      .update(sample(-45.0, -45.0, false, 111.0))
+      .monitor_step,
+    Some((-1, -1))
+  );
+}
+
+#[test]
+fn side_regions_keep_corner_refinement_and_two_thirds_keep_the_ladder() {
+  let mut side = runtime();
+  side.update(sample(-45.0, 0.0, false, 0.0));
+  side.settle(100.0);
+  let corner = side.update(sample(0.0, -45.0, false, 101.0));
+  assert_eq!(corner.monitor_step, None);
+  assert!(corner.move_to.is_some());
+
+  let mut two_thirds = runtime();
+  two_thirds.update(sample(45.0, 0.0, true, 0.0));
+  two_thirds.settle(100.0);
+  two_thirds.update(sample(-45.0, 0.0, true, 101.0));
+  two_thirds.settle(201.0);
+  let narrowed = two_thirds.update(sample(45.0, 0.0, true, 202.0));
+  assert_eq!(narrowed.monitor_step, None);
+  assert!(narrowed.move_to.is_some());
+}
+
+#[test]
 fn noise_floor_counts_both_axes_and_includes_the_boundary() {
   let mut runtime = runtime();
   runtime.update(sample(45.0, 0.0, false, 0.0));

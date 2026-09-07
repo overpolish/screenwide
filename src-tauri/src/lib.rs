@@ -19,6 +19,7 @@ mod editor;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod glide;
 mod image_analysis;
+mod monitor_topology;
 mod osc;
 mod permissions;
 mod recording;

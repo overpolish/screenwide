@@ -5,6 +5,7 @@ import { EditorSync } from "./features/editor/editor-sync";
 import { EditorWindow } from "./features/editor/editor-window";
 import { ExportOptionsSync } from "./features/editor/export-options/export-options-sync";
 import { ExportOptionsWindow } from "./features/editor/export-options/export-options-window";
+import { GlideSpaceWindow } from "./features/glide/glide-spaces-preview";
 import { GlideWindow } from "./features/glide/glide-window";
 import { PermissionSync } from "./features/permissions/permission-sync";
 import { PermissionsWindow } from "./features/permissions/permissions-window";
@@ -32,6 +33,8 @@ export function App() {
         return <ExportOptionsWindow />;
       case "/glide":
         return <GlideWindow />;
+      case "/glide-space":
+        return <GlideSpaceWindow />;
       case "/permissions":
         return <PermissionsWindow />;
       case "/recording-dock":

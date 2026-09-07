@@ -115,6 +115,7 @@ const describeDestination = (
 export function GlidePreview({
   fit,
   iconSrc,
+  neutralFill = false,
   pending,
   pulse,
   region,
@@ -127,6 +128,8 @@ export function GlidePreview({
   /** Counts the rests completed; each one plays the ready breath. */
   pulse: number;
   region: GlideRegion | null;
+  /** A neutral full-window reference surface, such as the original Space. */
+  neutralFill?: boolean;
 }) {
   const [segment, animate] = useAnimate();
   const destination = destinationGeometry(region, pending);
@@ -163,6 +166,7 @@ export function GlidePreview({
       className="window-surface rounded-window relative h-full w-full overflow-hidden"
       role="img"
     >
+      {neutralFill ? <div className="absolute inset-0 bg-neutral" /> : null}
       {destination ? (
         <motion.div
           animate={{

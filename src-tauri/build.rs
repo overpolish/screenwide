@@ -81,7 +81,14 @@ fn main() {
     println!("cargo:rerun-if-changed=src/recording/platform/camera/confidence_scaler_macos.m");
     println!("cargo:rerun-if-changed=src/recording/platform/desktop_compositor_macos.m");
     println!("cargo:rerun-if-changed=src/ruler/cursor_guard_macos.m");
+    println!("cargo:rerun-if-changed=src/glide/macos/spaces/native.m");
+    println!("cargo:rerun-if-changed=src/glide/macos/spaces/carry.m");
+    println!("cargo:rerun-if-changed=src/glide/macos/spaces/drag_point.m");
+    println!("cargo:rerun-if-changed=src/glide/macos/spaces/target.h");
     cc::Build::new()
+      .file("src/glide/macos/spaces/native.m")
+      .file("src/glide/macos/spaces/carry.m")
+      .file("src/glide/macos/spaces/drag_point.m")
       .file("src/editor/cursor_export/gpu_compositor_macos.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_keyboard.m")

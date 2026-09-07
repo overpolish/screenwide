@@ -46,10 +46,20 @@ pub(in crate::glide::platform) fn end_session(
 }
 
 fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option<Session> {
-  let session = state
+  let mut session = state
     .lock()
     .ok()
     .and_then(|mut state| state.session.take())?;
+  let monitor_selection = session
+    .monitors
+    .as_ref()
+    .is_some_and(|selection| selection.active);
+  if monitor_selection {
+    crate::glide::platform::spaces::preview_windows::dismiss(app, cancelled);
+    if !cancelled {
+      super::monitors::commit(app, &mut session);
+    }
+  }
   // A cancel undoes the whole gesture: the window animates back to the frame
   // the session captured, out of wherever the last transition left it. A commit
   // stops nothing, so the tween that is still arriving finishes on its own.
@@ -69,6 +79,7 @@ fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option
   let moved = session.moved;
   let grip = session.target.duplicate();
   let original = session.original_frame;
+  let monitor_landing = super::monitors::landing(&session);
   let cursor_follows = native_settings::snapshot().cursor_follows
     && !session.runtime.commits_terminal_action(cancelled);
   let returned_to_origin = session.returned_to_origin;
@@ -86,21 +97,25 @@ fn take_session(app: &AppHandle, state: &SharedState, cancelled: bool) -> Option
         return;
       }
       let landing = if moved && cursor_follows {
-        grip
-          .frame()
-          .map(|achieved| landing_point(anchor, original, achieved))
-          .unwrap_or(anchor)
+        monitor_landing.unwrap_or_else(|| {
+          grip
+            .frame()
+            .map(|achieved| landing_point(anchor, original, achieved))
+            .unwrap_or(anchor)
+        })
       } else {
         anchor
       };
       release_cursor(landing, true);
     }),
     Box::new(move || {
-      if let Some(state) = STATE.get() {
-        if let Ok(mut state) = state.lock() {
-          state.fading = false;
+      crate::glide::platform::spaces::preview_windows::after_dismissed(Box::new(|| {
+        if let Some(state) = STATE.get() {
+          if let Ok(mut state) = state.lock() {
+            state.fading = false;
+          }
         }
-      }
+      }));
     }),
   );
   Some(session)

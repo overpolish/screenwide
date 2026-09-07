@@ -205,7 +205,7 @@ fn recording_panel_level(window: &WebviewWindow) -> Option<i32> {
     "recording-options" => Some(30),
     "standalone-listbox" => Some(31),
     "recording-dock" => Some(32),
-    "glide" => Some(34),
+    label if label == "glide" || label.starts_with("glide-space-") => Some(34),
     _ => None,
   }
 }
@@ -217,7 +217,7 @@ fn ensure_recording_panel(window: &WebviewWindow) -> tauri::Result<PanelHandle<t
   }
 
   let level = recording_panel_level(window).ok_or(tauri::Error::WindowNotFound)?;
-  if matches!(window.label(), "glide" | "recording-dock") {
+  if window.label().starts_with("glide") || window.label() == "recording-dock" {
     configure_panel::<RecordingDockPanel>(window, level)?;
   } else if window.label() == "region-selector" {
     configure_panel::<RegionSelectorPanel>(window, level)?;

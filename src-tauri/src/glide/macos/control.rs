@@ -37,3 +37,7 @@ impl NativeControl {
     }
   }
 }
+
+pub(in crate::glide) fn supports_control(control: crate::glide::settings::GlideControl) -> bool {
+  NativeControl::from_control(control).is_some()
+}

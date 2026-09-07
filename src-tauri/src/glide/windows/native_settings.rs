@@ -16,6 +16,8 @@ pub(super) struct NativeGlideSettings {
   pub cursor_follows: bool,
   pub enabled: bool,
   pub mouse_modifier: NativeControl,
+  pub monitors_modifier: NativeControl,
+  pub spaces_modifier: NativeControl,
   pub thirds_modifier: NativeControl,
   pub window_gap: u32,
 }
@@ -68,6 +70,10 @@ fn native(settings: &GlideSettings) -> NativeGlideSettings {
     enabled: settings.enabled,
     mouse_modifier: NativeControl::from_control(settings.mouse_modifier)
       .expect("validated Glide mouse control"),
+    monitors_modifier: NativeControl::from_control(settings.monitors_modifier)
+      .expect("validated Glide monitors control"),
+    spaces_modifier: NativeControl::from_control(settings.spaces_modifier)
+      .expect("validated Glide Spaces control"),
     thirds_modifier: NativeControl::from_control(settings.thirds_modifier)
       .expect("validated Glide thirds control"),
     window_gap: settings.window_gap,

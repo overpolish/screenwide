@@ -28,7 +28,9 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     doubleTapCenter: true,
     enabled: true,
     haptics: true,
+    monitorsModifier: "KeyZ",
     mouseModifier: "AltLeft",
+    spacesModifier: "MetaLeft",
     thirdsModifier: "ShiftLeft",
     windowGap: 12,
   };

@@ -14,7 +14,7 @@ pub fn set_suppression(state: &SharedState, input: InputKind, suppress: bool) {
   if let Ok(mut state) = state.lock() {
     match input {
       InputKind::Trackpad => state.suppress_gesture = suppress,
-      InputKind::Mouse => state.suppress_mouse = suppress,
+      InputKind::Mouse | InputKind::Wheel => state.suppress_mouse = suppress,
     }
   }
 }
@@ -22,7 +22,7 @@ pub fn set_suppression(state: &SharedState, input: InputKind, suppress: bool) {
 pub fn is_suppressing(state: &SharedState, input: InputKind) -> bool {
   state.lock().ok().is_some_and(|state| match input {
     InputKind::Trackpad => state.suppress_gesture,
-    InputKind::Mouse => state.suppress_mouse,
+    InputKind::Mouse | InputKind::Wheel => state.suppress_mouse,
   })
 }
 

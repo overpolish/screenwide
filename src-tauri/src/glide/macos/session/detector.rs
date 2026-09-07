@@ -47,7 +47,8 @@ pub(in crate::glide::platform) fn settle(app: &AppHandle, state: &SharedState) {
     let session = state.session.as_mut()?;
     let timestamp = session.runtime_clock.elapsed().as_secs_f64() * 1_000.0;
     let effects = session.runtime.settle(timestamp);
-    (effects.ready || effects.detection.changed).then_some((session.id, effects))
+    (effects.ready || effects.detection.changed || effects.monitor_step.is_some())
+      .then_some((session.id, effects))
   });
   apply(app, result);
 }
@@ -70,6 +71,9 @@ fn apply(app: &AppHandle, result: Option<(u64, GlideEffects)>) {
   // starts another fold must not tick while the detector is settling again.
   if effects.ready && super::super::native_settings::snapshot().haptics {
     let _ = super::super::haptic(app);
+  }
+  if super::monitors::update(app, session_id, effects.monitor_step, effects.ready) {
+    return;
   }
   if effects.reveal {
     if let Err(error) = super::reveal(app, session_id) {

@@ -17,7 +17,7 @@ pub(crate) mod monitor_capture;
 pub(crate) mod options;
 #[cfg(target_os = "macos")]
 mod panel_presentation_macos;
-mod platform;
+pub(crate) mod platform;
 mod recording_options_layout;
 pub(crate) mod region;
 pub(crate) mod region_gesture;

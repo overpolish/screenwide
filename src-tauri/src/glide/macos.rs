@@ -30,6 +30,8 @@ mod native_settings;
 mod own_window;
 #[path = "macos/session.rs"]
 mod session;
+#[path = "macos/spaces.rs"]
+pub(super) mod spaces;
 #[path = "macos/titlebar.rs"]
 mod titlebar;
 #[path = "macos/trackpad.rs"]
@@ -39,6 +41,8 @@ mod tween;
 
 use center::center_window_at;
 pub(super) use commands::haptic;
+pub(super) use control::supports_control;
+use control_keys::is_thirds;
 use own_window::any_titlebar;
 use session::{
   accumulate_pointer_travel, active_input, begin_if_titlebar, end_session, is_active,
@@ -52,25 +56,22 @@ const POINTER_DISMISS_DISTANCE: f64 = 15.0;
 const SCROLL_PHASE_FIELD: u32 = 99;
 const SCROLL_MOMENTUM_PHASE_FIELD: u32 = 123;
 const SCROLL_IS_CONTINUOUS_FIELD: u32 = 88;
-// The phase field carries CGScrollPhase values, not the NSEventPhase ones a
-// gesture recogniser would see: Began=1, Changed=2, Ended=4, Cancelled=8.
+// CGScrollPhase: Began=1, Changed=2, Ended=4, Cancelled=8.
 const SCROLL_PHASE_ENDED: i64 = 4;
 const SCROLL_PHASE_CANCELLED: i64 = 8;
-/// The click state a double click carries, as the second press of the pair.
 const DOUBLE_CLICK_STATE: i64 = 2;
 
-/// Hands the saved settings to the tap's snapshot. The tap itself keeps running
-/// whatever they say: a CGEventTap cannot be cheaply stopped and started again,
-/// and one that passes every event through is behaviour-identical to none.
 pub(super) fn apply_settings(settings: &crate::glide::settings::GlideSettings) {
   native_settings::apply(settings);
 }
 
 pub(super) fn suspend_for_capture(app: &AppHandle) {
   session::cancel_current(app);
+  spaces::cancel(app);
 }
 
 pub(super) fn start(app: AppHandle) -> Result<(), String> {
+  spaces::preload(&app);
   tween::start();
   multitouch::start(&app);
   std::thread::Builder::new()
@@ -92,6 +93,7 @@ fn run(app: AppHandle) {
     CGEventTapOptions::Default,
     vec![
       CGEventType::MouseMoved,
+      CGEventType::LeftMouseDragged,
       CGEventType::OtherMouseDragged,
       CGEventType::ScrollWheel,
       CGEventType::FlagsChanged,
@@ -108,6 +110,7 @@ fn run(app: AppHandle) {
         CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, POLL_INTERVAL, false);
       }
       settle_detector(&poll_app, &poll_state);
+      spaces::poll(&poll_app);
     },
   );
   if result.is_err() {
@@ -122,6 +125,12 @@ fn handle_event(
   event: &CGEvent,
 ) -> CallbackResult {
   native_settings::observe(event_type, event);
+  if let Some(result) = spaces::handle_event(app, state, event_type, event) {
+    return result;
+  }
+  if let Some(result) = session::monitor_input::handle_event(app, state, event_type, event) {
+    return result;
+  }
   if matches!(event_type, CGEventType::KeyDown | CGEventType::KeyUp) {
     return control_keys::handle_key(app, state, event_type, event);
   }
@@ -287,13 +296,4 @@ fn handle_mouse_up(state: &SharedState) -> CallbackResult {
   } else {
     CallbackResult::Keep
   }
-}
-
-fn is_thirds(event: &CGEvent) -> bool {
-  let _ = event;
-  native_settings::is_down(native_settings::snapshot().thirds_modifier)
-}
-
-pub(super) fn supports_control(control: crate::glide::settings::GlideControl) -> bool {
-  control::NativeControl::from_control(control).is_some()
 }

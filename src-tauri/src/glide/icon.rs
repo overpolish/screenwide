@@ -44,6 +44,8 @@ pub(super) fn spawn_icon_lookup(app: &AppHandle, session_id: u64, pid: Option<u3
 }
 
 fn emit_icon(app: &AppHandle, session_id: u64, icon_path: Option<PathBuf>) -> Result<(), String> {
+  #[cfg(target_os = "macos")]
+  super::platform::spaces::set_icon(app, session_id, icon_path.clone());
   app
     .emit_to(
       WindowLabel::Glide.as_str(),

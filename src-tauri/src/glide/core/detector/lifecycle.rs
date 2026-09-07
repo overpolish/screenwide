@@ -4,6 +4,16 @@
 use super::*;
 
 impl GlideDetector {
+  pub fn begin_monitor_navigation(&mut self) {
+    self.reset();
+    self.monitor_navigation = true;
+  }
+  pub fn monitor_navigation_active(&self) -> bool {
+    self.monitor_navigation
+  }
+  pub fn monitor_step(&self) -> Option<(i8, i8)> {
+    self.monitor_step
+  }
   pub fn pending(&self) -> Option<GlideAction> {
     self.pending
   }
@@ -20,6 +30,8 @@ impl GlideDetector {
     let changed = self.region.is_some() || self.pending.is_some();
     self.region = None;
     self.pending = None;
+    self.monitor_navigation = false;
+    self.monitor_step = None;
     self.opening.reset();
     self.refinement.arm(false);
     self.horizontal.reset();
@@ -35,6 +47,7 @@ impl GlideDetector {
     }
   }
   pub fn settle(&mut self, timestamp: f64) -> GlideDetection {
+    self.monitor_step = None;
     let previous_region = self.region;
     let previous_pending = self.pending;
     if self.opening.pending() && self.transition(timestamp, false).is_some() {
@@ -49,6 +62,7 @@ impl GlideDetector {
     self.detection(previous_region, previous_pending, became_ready)
   }
   pub fn set_thirds(&mut self, thirds: bool) -> GlideDetection {
+    self.monitor_step = None;
     let previous_region = self.region;
     let previous_pending = self.pending;
     self.thirds = thirds;
@@ -66,6 +80,7 @@ impl GlideDetector {
   /// A short flick can lift before the opening grace expires. Commit its last
   /// direction on release, while cancellation leaves it unapplied.
   pub fn finish_opening(&mut self, timestamp: f64) -> GlideDetection {
+    self.monitor_step = None;
     let previous_region = self.region;
     let previous_pending = self.pending;
     if self.opening.pending() && self.transition(timestamp, true).is_some() {

@@ -62,19 +62,42 @@ export function GlideSettingsPanel({
           />
         )}
       </Setting>
-      {(["mouseModifier", "thirdsModifier"] as const).map((key) => {
-        const otherKey =
-          key === "mouseModifier" ? "thirdsModifier" : "mouseModifier";
+      {(
+        [
+          "mouseModifier",
+          "thirdsModifier",
+          "spacesModifier",
+          "monitorsModifier",
+        ] as const
+      ).map((key) => {
+        const otherKeys = (
+          [
+            "mouseModifier",
+            "thirdsModifier",
+            "spacesModifier",
+            "monitorsModifier",
+          ] as const
+        ).filter((candidate) => candidate !== key);
         const title =
           key === "mouseModifier"
             ? "Glide control for mouse"
-            : "Control for screen thirds";
+            : key === "thirdsModifier"
+              ? "Control for screen thirds"
+              : key === "spacesModifier"
+                ? "Modifier for Spaces"
+                : "Modifier for Monitors";
+        const macOnly = key === "spacesModifier" || key === "monitorsModifier";
+        if (macOnly && !isMac) return null;
         return (
           <Setting
             description={
               key === "mouseModifier"
                 ? "Hold while moving from a window's top bar."
-                : "Hold during Glide to use thirds instead of halves."
+                : key === "thirdsModifier"
+                  ? "Hold during Glide to use thirds instead of halves."
+                  : key === "spacesModifier"
+                    ? "Hold while moving between Spaces."
+                    : "Hold while moving between monitors."
             }
             key={key}
             title={title}
@@ -89,11 +112,13 @@ export function GlideSettingsPanel({
                 onCaptureChange={onCaptureChange}
                 onChange={(value) => {
                   if (value === null) return;
-                  update(
-                    value === settings[otherKey]
-                      ? { [key]: value, [otherKey]: settings[key] }
-                      : { [key]: value },
+                  const collidingKey = otherKeys.find(
+                    (candidate) => settings[candidate] === value,
                   );
+                  update({
+                    [key]: value,
+                    ...(collidingKey ? { [collidingKey]: settings[key] } : {}),
+                  });
                 }}
                 value={settings[key]}
               />

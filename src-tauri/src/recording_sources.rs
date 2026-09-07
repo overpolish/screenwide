@@ -83,40 +83,29 @@ pub struct ApplicationDetails {
 
 #[tauri::command]
 pub fn list_monitors(app: AppHandle) -> Result<Vec<MonitorDetails>, String> {
-  let capture_monitors = xcap::Monitor::all().map_err(|error| error.to_string())?;
-  let tauri_monitors = app
-    .available_monitors()
-    .map_err(|error| error.to_string())?;
-
-  if capture_monitors.len() != tauri_monitors.len() {
-    return Err("Tauri and xcap returned different monitor counts".into());
-  }
-
-  // Tauri does not expose a capture API identifier, so monitor ordering is the
-  // only cross-API mapping available on both platforms.
-  capture_monitors
+  crate::monitor_topology::snapshot(&app)?
     .into_iter()
-    .zip(tauri_monitors)
-    .map(|(monitor, tauri_monitor)| {
-      let scale_factor = tauri_monitor.scale_factor();
-      let physical_position = tauri_monitor.position();
-      let physical_size = tauri_monitor.size();
+    .map(|display| {
+      let scale_factor = display.native.scale_factor();
+      let physical_position = display.native.position();
+      let physical_size = display.native.size();
       let logical_position = physical_position.to_logical::<f64>(scale_factor);
       let logical_size = physical_size.to_logical::<f64>(scale_factor);
 
       Ok(MonitorDetails {
-        id: monitor.id().map_err(|error| error.to_string())?,
-        name: monitor
+        id: display.id,
+        name: display
+          .capture
           .friendly_name()
-          .or_else(|_| monitor.name())
+          .or_else(|_| display.capture.name())
           .map_err(|error| error.to_string())?,
         layout_position: Position {
-          x: monitor.x().map_err(|error| error.to_string())?,
-          y: monitor.y().map_err(|error| error.to_string())?,
+          x: display.layout_position.0.round() as i32,
+          y: display.layout_position.1.round() as i32,
         },
         layout_size: Size {
-          width: monitor.width().map_err(|error| error.to_string())?,
-          height: monitor.height().map_err(|error| error.to_string())?,
+          width: display.layout_size.0.round() as u32,
+          height: display.layout_size.1.round() as u32,
         },
         position: Position {
           x: logical_position.x.round() as i32,
@@ -135,8 +124,14 @@ pub fn list_monitors(app: AppHandle) -> Result<Vec<MonitorDetails>, String> {
           height: logical_size.height.round() as u32,
         },
         scale_factor: scale_factor as f32,
-        is_primary: monitor.is_primary().map_err(|error| error.to_string())?,
-        is_builtin: monitor.is_builtin().map_err(|error| error.to_string())?,
+        is_primary: display
+          .capture
+          .is_primary()
+          .map_err(|error| error.to_string())?,
+        is_builtin: display
+          .capture
+          .is_builtin()
+          .map_err(|error| error.to_string())?,
       })
     })
     .collect()

@@ -18,6 +18,7 @@ pub struct GlideEffects {
   pub move_to: Option<GlideRegion>,
   pub ready: bool,
   pub reveal: bool,
+  pub monitor_step: Option<(i8, i8)>,
 }
 
 pub struct GlideRuntime {
@@ -40,6 +41,12 @@ impl GlideRuntime {
     self.effects(detection)
   }
 
+  pub fn begin_monitor_navigation(&mut self) {
+    self.detector.begin_monitor_navigation();
+  }
+  pub fn monitor_navigation_active(&self) -> bool {
+    self.detector.monitor_navigation_active()
+  }
   pub fn set_thirds(&mut self, thirds: bool) -> GlideEffects {
     let detection = self.detector.set_thirds(thirds);
     self.effects(detection)
@@ -57,15 +64,18 @@ impl GlideRuntime {
 
   /// Whether this session's lift commits the action it has armed.
   pub fn should_minimize(&self, cancelled: bool) -> bool {
-    !cancelled && self.detector.pending() == Some(GlideAction::Minimize)
+    !cancelled
+      && !self.detector.monitor_navigation_active()
+      && self.detector.pending() == Some(GlideAction::Minimize)
   }
 
   /// Whether the committed fold leaves no on-screen window under the original
   /// grip. Full screen has no useful grip to preserve, while minimize removes
   /// the window entirely, so both keep the cursor at the session anchor.
   pub fn commits_terminal_action(&self, cancelled: bool) -> bool {
-    self.should_minimize(cancelled)
-      || (!cancelled && self.moved.is_some_and(super::regions::is_full_screen))
+    !self.detector.monitor_navigation_active()
+      && (self.should_minimize(cancelled)
+        || (!cancelled && self.moved.is_some_and(super::regions::is_full_screen)))
   }
 
   fn effects(&mut self, detection: GlideDetection) -> GlideEffects {
@@ -75,7 +85,8 @@ impl GlideRuntime {
       self.reveal_requested = true;
     }
 
-    let move_to = if detection.pending.is_none()
+    let move_to = if !self.detector.monitor_navigation_active()
+      && detection.pending.is_none()
       && detection.region.is_some()
       && detection.region != self.moved
     {
@@ -90,6 +101,7 @@ impl GlideRuntime {
       move_to,
       ready: detection.became_ready,
       reveal,
+      monitor_step: self.detector.monitor_step(),
     }
   }
 }

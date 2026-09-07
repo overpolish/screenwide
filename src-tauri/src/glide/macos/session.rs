@@ -26,6 +26,10 @@ mod detector;
 mod end;
 #[path = "session/flags.rs"]
 mod flags;
+#[path = "session/monitor_input.rs"]
+pub(super) mod monitor_input;
+#[path = "session/monitors.rs"]
+pub(super) mod monitors;
 #[path = "session/requests.rs"]
 mod requests;
 #[path = "session/taps.rs"]
@@ -47,6 +51,7 @@ pub(super) use taps::register_tap;
 pub(super) enum InputKind {
   Mouse,
   Trackpad,
+  Wheel,
 }
 
 pub(super) struct Session {
@@ -54,6 +59,7 @@ pub(super) struct Session {
   anchor: CGPoint,
   input: InputKind,
   runtime: GlideRuntime,
+  monitors: Option<monitors::Selection>,
   runtime_clock: Instant,
   pointer_travel: f64,
   /// Whether the preview was ever shown. A session that ends before the
@@ -134,7 +140,7 @@ pub(super) fn begin_if_titlebar(
   // No session, but the cursor is still pinned from the last one: its release
   // has not landed yet, and every event still reports the old anchor as its
   // location. Beginning now would open the session at a point the hand left.
-  if is_cursor_pinned() {
+  if is_cursor_pinned() || super::spaces::preview_windows::is_dismissing() {
     return false;
   }
   // A titlebar point whose window cannot be resolved has nothing to glide, so
@@ -143,6 +149,15 @@ pub(super) fn begin_if_titlebar(
   // preview names is simply ours.
   let Some((target, original_frame, pid)) = target_at(app, anchor) else {
     return false;
+  };
+  let monitor_mode = native_settings::is_down(native_settings::snapshot().monitors_modifier);
+  let monitors = if monitor_mode {
+    let Some(selection) = monitors::capture(app, anchor) else {
+      return false;
+    };
+    Some(selection)
+  } else {
+    None
   };
   target.raise();
   let Some((work_position, work_size)) = work_area_at(app, anchor) else {
@@ -159,15 +174,17 @@ pub(super) fn begin_if_titlebar(
     eprintln!("Could not present Glide: {error}");
     return false;
   }
-  // The icon lookup is left to run on its own and catch up with the session it
-  // names.
-  spawn_icon_lookup(app, id, pid);
+  let mut runtime = GlideRuntime::default();
+  if monitors.is_some() {
+    runtime.begin_monitor_navigation();
+  }
   if let Ok(mut state) = state.lock() {
     state.session = Some(Session {
       id,
       anchor,
       input,
-      runtime: GlideRuntime::default(),
+      runtime,
+      monitors,
       runtime_clock: Instant::now(),
       pointer_travel: 0.0,
       revealed: false,
@@ -181,6 +198,7 @@ pub(super) fn begin_if_titlebar(
     // A session that got through leaves no cancellation behind it.
     state.suppress_gesture = false;
     state.suppress_mouse = false;
+    spawn_icon_lookup(app, id, pid);
     true
   } else {
     release_cursor(anchor, false);
@@ -200,7 +218,10 @@ pub(super) fn cancel_current(app: &AppHandle) {
 /// should show. One of Screenwide's own windows is resolved natively and names
 /// this very process; everything else comes from the Accessibility hit test,
 /// which rejects our own windows outright.
-fn target_at(app: &AppHandle, anchor: CGPoint) -> Option<(WindowTarget, cg::Rect, Option<u32>)> {
+pub(super) fn target_at(
+  app: &AppHandle,
+  anchor: CGPoint,
+) -> Option<(WindowTarget, cg::Rect, Option<u32>)> {
   match ax_titlebar_at(anchor) {
     AxTitlebar::Titlebar(window, frame) => {
       // The owning process, read before the target takes the element over, so

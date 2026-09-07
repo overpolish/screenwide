@@ -23,7 +23,10 @@ const TAP_RADIUS: f64 = 20.0;
 /// screen, centers the window under it; a glide in between breaks the pair.
 pub fn register_tap(app: &AppHandle, point: CGPoint) {
   let settings = native_settings::snapshot();
-  if crate::capture_overlays::blocks_glide(app) || !settings.enabled || !settings.double_tap_center
+  if crate::capture_overlays::blocks_glide(app)
+    || !settings.enabled
+    || !settings.double_tap_center
+    || native_settings::is_down(settings.monitors_modifier)
   {
     return;
   }

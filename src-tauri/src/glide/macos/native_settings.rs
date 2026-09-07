@@ -24,6 +24,8 @@ pub(super) struct NativeGlideSettings {
   pub enabled: bool,
   pub haptics: bool,
   pub mouse_modifier: NativeControl,
+  pub monitors_modifier: NativeControl,
+  pub spaces_modifier: NativeControl,
   pub thirds_modifier: NativeControl,
   pub window_gap: u32,
   pub cursor_follows: bool,
@@ -57,6 +59,10 @@ fn native(settings: &GlideSettings) -> NativeGlideSettings {
     haptics: settings.haptics,
     mouse_modifier: NativeControl::from_control(settings.mouse_modifier)
       .expect("validated Glide mouse control"),
+    monitors_modifier: NativeControl::from_control(settings.monitors_modifier)
+      .expect("validated Glide monitors control"),
+    spaces_modifier: NativeControl::from_control(settings.spaces_modifier)
+      .expect("validated Glide Spaces control"),
     thirds_modifier: NativeControl::from_control(settings.thirds_modifier)
       .expect("validated Glide thirds control"),
     window_gap: settings.window_gap,
@@ -66,6 +72,9 @@ fn native(settings: &GlideSettings) -> NativeGlideSettings {
 }
 
 pub(super) fn observe(event_type: CGEventType, event: &CGEvent) {
+  if super::spaces::is_synthetic(event) {
+    return;
+  }
   let (code, pressed) = match event_type {
     CGEventType::KeyDown => (keyboard_code(event), true),
     CGEventType::KeyUp => (keyboard_code(event), false),

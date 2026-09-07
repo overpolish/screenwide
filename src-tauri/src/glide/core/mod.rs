@@ -5,10 +5,15 @@
   reason = "inspection methods support parity tests and future platform adapters"
 )]
 
+pub(crate) mod desktop_gesture;
+pub(crate) mod desktop_selection;
+pub(crate) mod desktops;
 mod detector;
 mod folds;
 mod geometry;
 mod intent;
+mod monitor_intent;
+pub(crate) mod monitors;
 mod regions;
 mod runtime;
 mod settling;

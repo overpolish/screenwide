@@ -65,19 +65,106 @@ impl<'de> Deserialize<'de> for GlideControl {
   }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct GlideSettings {
   pub enabled: bool,
   pub mouse_modifier: GlideControl,
+  pub monitors_modifier: GlideControl,
+  pub spaces_modifier: GlideControl,
   pub thirds_modifier: GlideControl,
-  /// The uniform gap between placed windows, in logical pixels. Outer edges are
-  /// inset by the whole gap and shared edges by half each, so two adjacent
-  /// windows sit exactly one gap apart.
+  /// Uniform gap between placed windows, in logical pixels.
   pub window_gap: u32,
   pub cursor_follows: bool,
   pub haptics: bool,
   pub double_tap_center: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+struct GlideSettingsInput {
+  enabled: bool,
+  mouse_modifier: GlideControl,
+  monitors_modifier: Option<GlideControl>,
+  spaces_modifier: Option<GlideControl>,
+  thirds_modifier: GlideControl,
+  window_gap: u32,
+  cursor_follows: bool,
+  haptics: bool,
+  double_tap_center: bool,
+}
+
+impl Default for GlideSettingsInput {
+  fn default() -> Self {
+    let defaults = GlideSettings::default();
+    Self {
+      enabled: defaults.enabled,
+      mouse_modifier: defaults.mouse_modifier,
+      monitors_modifier: None,
+      spaces_modifier: None,
+      thirds_modifier: defaults.thirds_modifier,
+      window_gap: defaults.window_gap,
+      cursor_follows: defaults.cursor_follows,
+      haptics: defaults.haptics,
+      double_tap_center: defaults.double_tap_center,
+    }
+  }
+}
+
+impl<'de> Deserialize<'de> for GlideSettings {
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    let input = GlideSettingsInput::deserialize(deserializer)?;
+    Ok(Self {
+      enabled: input.enabled,
+      mouse_modifier: input.mouse_modifier,
+      monitors_modifier: input.monitors_modifier.unwrap_or_else(|| {
+        free_monitors_modifier(
+          input.mouse_modifier,
+          input.thirds_modifier,
+          input
+            .spaces_modifier
+            .unwrap_or_else(|| free_spaces_modifier(input.mouse_modifier, input.thirds_modifier)),
+        )
+      }),
+      spaces_modifier: input
+        .spaces_modifier
+        .unwrap_or_else(|| free_spaces_modifier(input.mouse_modifier, input.thirds_modifier)),
+      thirds_modifier: input.thirds_modifier,
+      window_gap: input.window_gap,
+      cursor_follows: input.cursor_follows,
+      haptics: input.haptics,
+      double_tap_center: input.double_tap_center,
+    })
+  }
+}
+
+fn free_monitors_modifier(
+  mouse: GlideControl,
+  thirds: GlideControl,
+  spaces: GlideControl,
+) -> GlideControl {
+  [
+    GlideControl::Key(keyboard_types::Code::KeyZ),
+    GlideControl::Key(keyboard_types::Code::KeyX),
+    GlideControl::Key(keyboard_types::Code::KeyC),
+    GlideControl::CONTROL,
+    GlideControl::SHIFT,
+  ]
+  .into_iter()
+  .find(|candidate| *candidate != mouse && *candidate != thirds && *candidate != spaces)
+  .expect("three controls cannot exhaust five modifier defaults")
+}
+
+fn free_spaces_modifier(mouse: GlideControl, thirds: GlideControl) -> GlideControl {
+  [
+    GlideControl::Key(keyboard_types::Code::AltLeft),
+    GlideControl::CONTROL,
+    GlideControl::SHIFT,
+    GlideControl::COMMAND,
+  ]
+  .into_iter()
+  .find(|candidate| *candidate != mouse && *candidate != thirds)
+  .expect("two controls cannot exhaust four modifier defaults")
 }
 
 impl Default for GlideSettings {
@@ -89,6 +176,8 @@ impl Default for GlideSettings {
       } else {
         GlideControl::COMMAND
       },
+      monitors_modifier: GlideControl::Key(keyboard_types::Code::KeyZ),
+      spaces_modifier: GlideControl::Key(keyboard_types::Code::AltLeft),
       thirds_modifier: GlideControl::SHIFT,
       window_gap: 0,
       cursor_follows: true,
@@ -126,16 +215,32 @@ fn write(app: &AppHandle, settings: &GlideSettings) -> Result<(), String> {
   std::fs::write(path, contents).map_err(|error| error.to_string())
 }
 
-/// Clamps what has a range and rejects what has no sensible correction. One
-/// modifier cannot drive both gestures: the grid would switch to thirds the
-/// moment a glide began, and there would be no way back to halves.
+/// Clamps ranges and rejects controls that cannot be corrected sensibly.
 fn validate(settings: &mut GlideSettings) -> Result<(), String> {
   settings.window_gap = settings.window_gap.min(MAXIMUM_WINDOW_GAP);
-  if settings.mouse_modifier == settings.thirds_modifier {
-    return Err("The glide and thirds controls must be different".to_owned());
+  if [
+    settings.mouse_modifier,
+    settings.thirds_modifier,
+    settings.spaces_modifier,
+    settings.monitors_modifier,
+  ]
+  .iter()
+  .enumerate()
+  .any(|(index, control)| {
+    [
+      settings.mouse_modifier,
+      settings.thirds_modifier,
+      settings.spaces_modifier,
+      settings.monitors_modifier,
+    ][index + 1..]
+      .contains(control)
+  }) {
+    return Err("The Glide controls must be different".to_owned());
   }
   if !super::platform::supports_control(settings.mouse_modifier)
     || !super::platform::supports_control(settings.thirds_modifier)
+    || !super::platform::supports_control(settings.spaces_modifier)
+    || !super::platform::supports_control(settings.monitors_modifier)
   {
     return Err("That control is not available for Glide on this platform".to_owned());
   }

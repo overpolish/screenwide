@@ -15,7 +15,9 @@ fn an_empty_file_is_the_defaults() {
     GlideControl::COMMAND
   };
   assert_eq!(settings.mouse_modifier, mouse_default);
+  assert_eq!(settings.monitors_modifier, GlideControl::Key(Code::KeyZ));
   assert_eq!(settings.thirds_modifier, GlideControl::SHIFT);
+  assert_eq!(settings.spaces_modifier, GlideControl::Key(Code::AltLeft));
   assert_eq!(settings.window_gap, 0);
   assert!(settings.cursor_follows);
   assert!(settings.haptics);
@@ -46,6 +48,28 @@ fn a_setting_it_does_not_know_falls_back_to_its_default() {
 }
 
 #[test]
+fn migrates_missing_spaces_modifier_without_resetting_existing_controls() {
+  let mut settings: GlideSettings =
+    serde_json::from_str(r#"{"mouseModifier":"AltLeft","thirdsModifier":"ShiftLeft"}"#).unwrap();
+
+  assert_eq!(settings.mouse_modifier, GlideControl::Key(Code::AltLeft));
+  assert_eq!(settings.thirds_modifier, GlideControl::SHIFT);
+  assert_eq!(settings.spaces_modifier, GlideControl::CONTROL);
+  assert!(validate(&mut settings).is_ok());
+}
+
+#[test]
+fn migrates_missing_monitors_modifier_to_the_first_free_default() {
+  let mut settings: GlideSettings = serde_json::from_str(
+    r#"{"mouseModifier":"KeyZ","thirdsModifier":"ShiftLeft","spacesModifier":"AltLeft"}"#,
+  )
+  .unwrap();
+
+  assert_eq!(settings.monitors_modifier, GlideControl::Key(Code::KeyX));
+  assert!(validate(&mut settings).is_ok());
+}
+
+#[test]
 fn clamps_a_gap_wider_than_the_grid_would_survive() {
   let mut settings = GlideSettings {
     window_gap: 900,
@@ -72,6 +96,28 @@ fn refuses_one_modifier_driving_both_gestures() {
   let mut settings = GlideSettings {
     mouse_modifier: GlideControl::Key(Code::KeyQ),
     thirds_modifier: GlideControl::Key(Code::KeyQ),
+    ..GlideSettings::default()
+  };
+
+  assert!(validate(&mut settings).is_err());
+}
+
+#[test]
+fn refuses_one_modifier_driving_spaces() {
+  let mut settings = GlideSettings {
+    spaces_modifier: GlideControl::Key(Code::KeyQ),
+    mouse_modifier: GlideControl::Key(Code::KeyQ),
+    ..GlideSettings::default()
+  };
+
+  assert!(validate(&mut settings).is_err());
+}
+
+#[test]
+fn refuses_one_modifier_driving_monitors() {
+  let mut settings = GlideSettings {
+    monitors_modifier: GlideControl::Key(Code::KeyQ),
+    mouse_modifier: GlideControl::Key(Code::KeyQ),
     ..GlideSettings::default()
   };
 
