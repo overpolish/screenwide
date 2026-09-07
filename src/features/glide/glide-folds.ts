@@ -50,11 +50,10 @@ export type GlideFoldInput = {
   thirds: boolean;
 };
 
-/** What a first fold produced, and how its settle should behave. */
+/** What a fold produced. */
 export type GlideFold = {
+  canRefine: boolean;
   pending: GlideAction | null;
-  /** Whether the settle that follows stays open to the vertical axis. */
-  porous: boolean;
   region: GlideRegion | null;
 };
 
@@ -118,7 +117,7 @@ const foldVertical = ({
 
   // Straight down is fill's opposite: it arms a minimize that the lift
   // commits, in either grid. Folding on down again converts it to a row.
-  if (down > 0) return { pending: "minimize", porous: false, region: null };
+  if (down > 0) return { canRefine: false, pending: "minimize", region: null };
 
   // Straight up fills the screen; thirds takes the middle cell instead,
   // which the ladder also reaches in two steps.
@@ -126,8 +125,8 @@ const foldVertical = ({
   const middle = thirds ? 1 : 0;
   const colSpan = middle === 1 ? 1 : 2;
   return {
+    canRefine: false,
     pending: null,
-    porous: false,
     region: { ...fullHeight, colSpan, colStart: middle, gridCols },
   };
 };
@@ -141,13 +140,10 @@ const foldVertical = ({
  */
 export const detectFirstFold = (input: GlideFoldInput): GlideFold | null => {
   const corner = foldCorner(input);
-  if (corner) return { pending: null, porous: false, region: corner };
+  if (corner) return { canRefine: false, pending: null, region: corner };
 
-  // Only the opening sideways fold leaves its settle porous, so an L-shaped
-  // motion that turns without stopping can still buy its row: see
-  // GlideDetector's porous settle.
   const sideways = foldHorizontal(input);
-  if (sideways) return { pending: null, porous: true, region: sideways };
+  if (sideways) return { canRefine: true, pending: null, region: sideways };
 
   return foldVertical(input);
 };
@@ -162,8 +158,8 @@ export const stepLadder = (
   const sideways = axisStep(across, horizontalThreshold);
   if (sideways !== 0) {
     return {
+      canRefine: true,
       pending: null,
-      porous: false,
       region: stepColumns(from, sideways),
     };
   }
@@ -180,5 +176,5 @@ export const stepLadder = (
   // ladder loops: it arms the minimize over the region instead of no-opping.
   const region = stepRows(from, step);
   const looped = step > 0 && region === from;
-  return { pending: looped ? "minimize" : null, porous: false, region };
+  return { canRefine: false, pending: looped ? "minimize" : null, region };
 };

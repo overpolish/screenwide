@@ -26,7 +26,7 @@ pub(super) use target::WindowTarget;
 
 /// How long a move takes, end to end. Short enough to feel like a response to
 /// the gesture rather than a transition being watched.
-const TWEEN_SECONDS: f64 = 0.18;
+const TWEEN_SECONDS: f64 = 0.22;
 /// One step per display frame, near enough.
 const STEP_INTERVAL: Duration = Duration::from_millis(16);
 

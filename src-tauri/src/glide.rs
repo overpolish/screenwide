@@ -30,12 +30,6 @@ mod icon;
 #[path = "glide/fit.rs"]
 mod fit;
 
-/// How long the hand rests before the detector commits a transition. One
-/// timing on every platform: short enough that a multi-fold reads as one
-/// gesture, long enough that a flick's overshoot never chains into the next
-/// fold.
-const REST_MS: f64 = 40.0;
-
 const GLIDABLE_WINDOW_LABELS: &[WindowLabel] = &[
   WindowLabel::Settings,
   WindowLabel::RecordingBar,

@@ -113,6 +113,7 @@ fn sideways_escape_drops_the_arm_and_steps_the_retained_region() {
 #[test]
 fn pending_escape_never_reuses_vertical_first_fold_policy() {
   let options = GlideDetectorOptions {
+    opening_grace_ms: 0.0,
     vertical_fill_threshold: 20.0,
     vertical_threshold: 100.0,
     ..GlideDetectorOptions::default()
@@ -140,7 +141,7 @@ fn repeated_sideways_steps_wipe_vertical_drift() {
 }
 
 #[test]
-fn reset_clears_pending_region_and_porosity() {
+fn reset_clears_pending_region_and_settling() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(50.0, 0.0));
   let reset = gesture.detector.reset();

@@ -47,7 +47,16 @@ pub(in crate::glide::platform) fn settle(app: &AppHandle, state: &SharedState) {
     let session = state.session.as_mut()?;
     let timestamp = session.runtime_clock.elapsed().as_secs_f64() * 1_000.0;
     let effects = session.runtime.settle(timestamp);
-    effects.ready.then_some((session.id, effects))
+    (effects.ready || effects.detection.changed).then_some((session.id, effects))
+  });
+  apply(app, result);
+}
+
+pub(in crate::glide::platform) fn finish_opening(app: &AppHandle, state: &SharedState) {
+  let result = state.lock().ok().and_then(|mut state| {
+    let session = state.session.as_mut()?;
+    let timestamp = session.runtime_clock.elapsed().as_secs_f64() * 1_000.0;
+    Some((session.id, session.runtime.finish_opening(timestamp)))
   });
   apply(app, result);
 }
@@ -57,6 +66,8 @@ fn apply(app: &AppHandle, result: Option<(u64, GlideEffects)>) {
     return;
   };
   events::detection(app, effects.detection);
+  // Readiness is shared with the preview pulse; a sample that immediately
+  // starts another fold must not tick while the detector is settling again.
   if effects.ready && super::super::native_settings::snapshot().haptics {
     let _ = super::super::haptic(app);
   }

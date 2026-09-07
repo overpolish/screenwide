@@ -91,65 +91,33 @@ fn reversal_is_measured_from_the_turn_point() {
 }
 
 #[test]
-fn direction_changes_fold_without_waiting_for_rest() {
-  let mut gesture = Gesture::new();
-  assert_eq!(
-    gesture.move_by(stroke(45.0, -45.0)).region,
-    Some(region(2, 1, 1, 0, 1))
-  );
-
-  // Down reverses the diagonal's vertical component, then left changes axis
-  // from that row fold. Neither transition needs a timer boundary.
-  assert_eq!(
-    gesture.move_by(stroke(0.0, 45.0)).region,
-    Some(region(2, 1, 1, 0, 2))
-  );
-  assert_eq!(
-    gesture.move_by(stroke(-36.0, 0.0)).region,
-    Some(region(2, 0, 1, 0, 2))
-  );
+fn curves_reversals_and_axis_changes_wait_for_readiness() {
+  for (opening, follow_up) in [
+    (stroke(45.0, 0.0), stroke(-50.0, 0.0)),
+    (stroke(0.0, -45.0), stroke(50.0, 0.0)),
+    (stroke(45.0, -45.0), stroke(0.0, 50.0)),
+  ] {
+    let mut gesture = Gesture::new();
+    let first = gesture.move_by(opening);
+    let settling = gesture.move_by(follow_up);
+    assert!(!settling.changed);
+    assert!(!settling.became_ready);
+    assert_eq!(settling.region, first.region);
+    assert!(gesture.rest());
+    assert!(gesture.move_by(follow_up).changed);
+  }
 }
 
 #[test]
-fn orthogonal_change_uses_the_normal_threshold() {
-  let mut gesture = Gesture::new();
-  gesture.move_by(stroke(0.0, -45.0));
-
-  assert!(!gesture.move_by(stroke(35.0, 0.0)).changed);
-  assert_eq!(
-    gesture.move_by(stroke(1.0, 0.0)).region,
-    Some(region(2, 1, 1, 0, 2))
-  );
-}
-
-#[test]
-fn decisive_reversal_keeps_the_normal_threshold() {
+fn discarded_motion_cannot_spend_the_next_ready_step() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(45.0, 0.0));
-
+  gesture.move_by(stroke(100.0, -100.0));
+  assert!(gesture.rest());
+  assert!(!gesture.move_by(stroke(0.0, -35.0)).changed);
   assert_eq!(
-    gesture.move_by(stroke(-36.0, 0.0)).region,
-    Some(region(2, 0, 1, 0, 2))
-  );
-}
-
-#[test]
-fn same_direction_still_needs_a_quiet_beat() {
-  let mut gesture = Gesture::new();
-  gesture.move_by(stroke(45.0, -45.0));
-  gesture.move_by(stroke(0.0, 45.0));
-
-  // Continuing down is one stroke, so it cannot cascade to the bottom row.
-  assert!(!gesture.move_by(stroke(0.0, 80.0)).changed);
-  assert_eq!(gesture.detector.region(), Some(region(2, 1, 1, 0, 2)));
-
-  assert_eq!(
-    gesture.flick(stroke(0.0, 45.0)).region,
-    Some(region(2, 1, 1, 1, 1))
-  );
-  assert_eq!(
-    gesture.flick(stroke(0.0, 45.0)).pending,
-    Some(GlideAction::Minimize)
+    gesture.move_by(stroke(0.0, -1.0)).region,
+    Some(region(2, 1, 1, 0, 1))
   );
 }
 
@@ -157,6 +125,7 @@ fn same_direction_still_needs_a_quiet_beat() {
 fn settling_discards_motion_until_the_hand_is_quiet() {
   let options = GlideDetectorOptions {
     rest_ms: 120.0,
+    opening_grace_ms: 0.0,
     ..GlideDetectorOptions::default()
   };
   let mut gesture = Gesture::with_options(options);
@@ -172,12 +141,12 @@ fn settling_discards_motion_until_the_hand_is_quiet() {
   assert_eq!(gesture.detector.pending(), Some(GlideAction::Minimize));
   gesture.advance(120.0);
   let result = gesture.move_by(stroke(0.0, 60.0));
-  assert!(result.became_ready);
+  assert!(!result.became_ready);
   assert_eq!(result.region, Some(region(2, 0, 2, 1, 1)));
 }
 
 #[test]
-fn sub_noise_jitter_counts_as_rest() {
+fn sub_noise_jitter_does_not_reset_the_rest() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(0.0, 45.0));
   assert_eq!(gesture.detector.phase(), GlidePhase::Settling);
@@ -186,8 +155,8 @@ fn sub_noise_jitter_counts_as_rest() {
     gesture.move_by(stroke(1.0, 0.0)).phase,
     GlidePhase::Settling
   );
-  assert_eq!(gesture.detector.rest_remaining(40.0), 20.0);
-  gesture.advance(20.0);
+  assert_eq!(gesture.detector.rest_remaining(40.0), 60.0);
+  gesture.advance(60.0);
   assert!(gesture.settle());
 }
 
@@ -195,73 +164,47 @@ fn sub_noise_jitter_counts_as_rest() {
 fn readiness_is_reported_once_whether_timer_or_sample_wins() {
   let mut timer = Gesture::new();
   timer.move_by(stroke(45.0, 0.0));
-  timer.advance(60.0);
+  timer.advance(100.0);
   assert!(timer.settle());
   assert!(!timer.settle());
   assert!(!timer.move_by(stroke(-50.0, 0.0)).became_ready);
 
   let mut sample = Gesture::new();
   sample.move_by(stroke(45.0, 0.0));
-  sample.advance(60.0);
-  assert!(sample.move_by(stroke(-50.0, 0.0)).became_ready);
+  sample.advance(100.0);
+  let ready = sample.move_by(stroke(-5.0, 0.0));
+  assert!(ready.became_ready);
+  assert_eq!(ready.phase, GlidePhase::Ready);
   assert!(!sample.settle());
 }
 
 #[test]
-fn opening_sideways_settle_accepts_each_new_direction_once() {
+fn spending_readiness_in_the_same_sample_does_not_announce_it() {
   let mut gesture = Gesture::new();
-  gesture.move_by(stroke(50.0, 0.0));
-  let corner = gesture.move_by(stroke(0.0, -50.0));
-  assert!(corner.changed);
-  assert_eq!(corner.region, Some(region(2, 1, 1, 0, 1)));
-
-  assert!(!gesture.move_by(stroke(0.0, -50.0)).changed);
-  assert_eq!(
-    gesture.move_by(stroke(-60.0, 0.0)).region,
-    Some(region(2, 0, 2, 0, 1))
-  );
-}
-
-#[test]
-fn column_step_settle_accepts_each_new_direction_once() {
-  let mut gesture = Gesture::new();
-  gesture.move_by(stroke(-50.0, 0.0));
-  gesture.rest();
-  let stepped = gesture.move_by(stroke(50.0, 0.0));
-  assert_eq!(stepped.region, Some(region(2, 1, 1, 0, 2)));
-
-  let corner = gesture.move_by(stroke(0.0, -50.0));
-  assert!(corner.changed);
-  assert_eq!(corner.region, Some(region(2, 1, 1, 0, 1)));
-
-  assert!(!gesture.move_by(stroke(0.0, -50.0)).changed);
-  assert_eq!(
-    gesture.move_by(stroke(-60.0, 0.0)).region,
-    Some(region(2, 0, 2, 0, 1))
-  );
-}
-
-#[test]
-fn porous_conversion_restarts_rest_and_emits_one_ready_tick() {
-  let mut gesture = Gesture::new();
-  gesture.move_by(stroke(50.0, 0.0));
-  gesture.advance(50.0);
-  assert!(!gesture.move_by(stroke(0.0, -50.0)).became_ready);
-  gesture.advance(50.0);
+  gesture.move_by(stroke(45.0, 0.0));
+  gesture.advance(100.0);
+  let next = gesture.move_by(stroke(-50.0, 0.0));
+  assert!(next.changed);
+  assert!(!next.became_ready);
+  assert_eq!(next.phase, GlidePhase::Settling);
   assert!(!gesture.settle());
-  gesture.advance(10.0);
+  assert!(gesture.rest());
+  assert!(!gesture.settle());
+}
+
+#[test]
+fn one_vertical_turn_refines_a_half_then_waits_for_rest() {
+  let mut gesture = Gesture::new();
+  gesture.move_by(stroke(50.0, 0.0));
+  gesture.advance(80.0);
+  let curve = gesture.move_by(stroke(0.0, -50.0));
+  assert_eq!(curve.region, Some(region(2, 1, 1, 0, 1)));
+  assert!(!curve.became_ready);
+  gesture.advance(40.0);
+  assert!(!gesture.move_by(stroke(0.0, 100.0)).changed);
+  gesture.advance(99.0);
+  assert!(!gesture.settle());
+  gesture.advance(1.0);
   assert!(gesture.settle());
   assert!(!gesture.settle());
-}
-
-#[test]
-fn rest_closes_porosity_before_the_next_flick() {
-  let mut gesture = Gesture::new();
-  gesture.move_by(stroke(50.0, 0.0));
-  gesture.rest();
-  assert!(!gesture.move_by(stroke(0.0, -20.0)).changed);
-  assert_eq!(
-    gesture.move_by(stroke(0.0, -30.0)).region,
-    Some(region(2, 1, 1, 0, 1))
-  );
 }

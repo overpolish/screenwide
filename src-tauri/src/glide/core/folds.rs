@@ -23,6 +23,7 @@ pub struct GlideDetectorOptions {
   pub vertical_threshold: f64,
   pub motion_noise_floor: f64,
   pub rest_ms: f64,
+  pub opening_grace_ms: f64,
   pub reversal_hysteresis: f64,
 }
 impl Default for GlideDetectorOptions {
@@ -35,14 +36,15 @@ impl Default for GlideDetectorOptions {
       vertical_release_threshold: 20.,
       vertical_threshold: 36.,
       motion_noise_floor: 2.,
-      rest_ms: 60.,
+      rest_ms: 100.,
+      opening_grace_ms: 30.,
       reversal_hysteresis: 10.,
     }
   }
 }
 pub(super) struct GlideFold {
+  pub can_refine: bool,
   pub pending: Option<GlideAction>,
-  pub porous: bool,
   pub region: Option<GlideRegion>,
 }
 pub(crate) fn fold_horizontal(
@@ -104,16 +106,16 @@ fn fold_vertical(
   }
   if down > 0.0 {
     return Some(GlideFold {
+      can_refine: false,
       pending: Some(GlideAction::Minimize),
-      porous: false,
       region: None,
     });
   }
   let cols = if thirds { 3 } else { 2 };
   let middle = if thirds { 1 } else { 0 };
   Some(GlideFold {
+    can_refine: false,
     pending: None,
-    porous: false,
     region: Some(GlideRegion {
       col_span: if middle == 1 { 1 } else { 2 },
       col_start: middle,
@@ -131,15 +133,15 @@ pub(super) fn detect_first_fold(
 ) -> Option<GlideFold> {
   if let Some(region) = fold_corner(across, down, options, thirds) {
     return Some(GlideFold {
+      can_refine: false,
       pending: None,
-      porous: false,
       region: Some(region),
     });
   }
   if let Some(region) = fold_horizontal(across, down, options, thirds) {
     return Some(GlideFold {
+      can_refine: true,
       pending: None,
-      porous: true,
       region: Some(region),
     });
   }
@@ -153,12 +155,9 @@ pub(super) fn step_ladder(
 ) -> Option<GlideFold> {
   let side = axis_step(across, options.horizontal_threshold);
   if side != 0 {
-    // A sideways step settles like the opening sideways fold: the hand often
-    // turns straight up or down for a corner without resting in between, so
-    // that one vertical step is allowed through before the rest closes it.
     return Some(GlideFold {
       pending: None,
-      porous: true,
+      can_refine: region.row_span == regions::GRID_ROWS,
       region: Some(regions::step_columns(region, side)),
     });
   }
@@ -176,12 +175,12 @@ pub(super) fn step_ladder(
   }
   let next = regions::step_rows(region, step);
   Some(GlideFold {
+    can_refine: false,
     pending: if step > 0 && next == region {
       Some(GlideAction::Minimize)
     } else {
       None
     },
-    porous: false,
     region: Some(next),
   })
 }

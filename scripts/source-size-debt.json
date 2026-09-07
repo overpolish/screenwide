@@ -63,7 +63,6 @@
   "src-tauri/src/editor/screenshot_region_osc_macos_private.h": 387,
   "src-tauri/src/editor/timeline_edit.rs": 358,
   "src-tauri/src/editor.rs": 528,
-  "src-tauri/src/glide/core/detector.rs": 319,
   "src-tauri/src/osc/cursor.rs": 384,
   "src-tauri/src/osc/gpu/windows/renderer.rs": 336,
   "src-tauri/src/osc/keyboard_windows.rs": 396,

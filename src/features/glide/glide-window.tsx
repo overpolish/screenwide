@@ -67,7 +67,7 @@ export function GlideWindow() {
       const detection = payload.detection;
 
       // The transitions themselves are silent - the preview is their feedback.
-      // The tick says the fingers have rested and the next gesture will land.
+      // The tick says the hand has rested and the next gesture will land.
       if (detection.becameReady) tickReady();
       if (!detection.changed) return;
 

@@ -21,7 +21,10 @@ struct Gesture {
 
 impl Gesture {
   fn new() -> Self {
-    Self::with_options(GlideDetectorOptions::default())
+    Self::with_options(GlideDetectorOptions {
+      opening_grace_ms: 0.0,
+      ..GlideDetectorOptions::default()
+    })
   }
 
   fn with_options(options: GlideDetectorOptions) -> Self {
@@ -93,3 +96,6 @@ mod lifecycle_tests;
 mod regions_tests;
 #[path = "tests/runtime_tests.rs"]
 mod runtime_tests;
+
+#[path = "tests/intent_tests.rs"]
+mod intent_tests;

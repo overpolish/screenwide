@@ -15,7 +15,7 @@ use super::{
   titlebar::{ax_titlebar_at, AxTitlebar},
   tween::WindowTarget,
 };
-use crate::glide::core::{GlideDetectorOptions, GlideRuntime};
+use crate::glide::core::GlideRuntime;
 use crate::glide::{begin_logical, finish, icon::spawn_icon_lookup};
 
 #[path = "session/access.rs"]
@@ -167,10 +167,7 @@ pub(super) fn begin_if_titlebar(
       id,
       anchor,
       input,
-      runtime: GlideRuntime::new(GlideDetectorOptions {
-        rest_ms: crate::glide::REST_MS,
-        ..GlideDetectorOptions::default()
-      }),
+      runtime: GlideRuntime::default(),
       runtime_clock: Instant::now(),
       pointer_travel: 0.0,
       revealed: false,

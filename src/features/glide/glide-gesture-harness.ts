@@ -19,7 +19,7 @@ const label = (region: GlideRegion | null) => region && describeRegion(region);
  * buys a single transition - while `move` keeps feeding the same window.
  */
 export const glideGesture = (options: Partial<GlideDetectorOptions> = {}) => {
-  const detector = new GlideDetector(options);
+  const detector = new GlideDetector({ openingGraceMs: 0, ...options });
   let now = 0;
 
   const advance = (ms: number) => {

@@ -8,6 +8,7 @@
 mod detector;
 mod folds;
 mod geometry;
+mod intent;
 mod regions;
 mod runtime;
 mod settling;

@@ -1,21 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-/** Whether the detector acts on travel, or is waiting for the fingers to rest. */
+/** Whether the detector acts on travel, or is waiting for the hand to rest. */
 export type GlidePhase = "ready" | "settling";
 
 export type GlideRestOptions = {
-  /** Movement in one sample that still counts as fingers moving, not resting. */
+  /** Combined absolute axis movement per sample that resets the rest timer. */
   motionNoiseFloor: number;
   /** Quiet time that re-arms the detector after a transition. */
   restMs: number;
 };
 
 /**
- * One gesture, one transition: a transition locks the detector until the
- * fingers have held still for `restMs`, so a long flick cannot chain through
- * several phases. Any motion pushes the rest back, and the return to `ready`
- * is what the trackpad ticks - the gesture announcing it will listen again.
+ * Each transition waits for stillness, allowing small input jitter;
+ * the return to `ready` drives the trackpad tick and preview pulse.
  */
 export class RestGate {
   #lastActiveAt = 0;
@@ -36,7 +34,7 @@ export class RestGate {
     this.#phase = "settling";
   }
 
-  /** Milliseconds of quiet still owed before the gesture is ready again. */
+  /** Milliseconds remaining before the gesture is ready again. */
   remaining(timestamp: number) {
     if (this.#phase === "ready") return 0;
     return Math.max(this.#options.restMs - (timestamp - this.#lastActiveAt), 0);
@@ -57,8 +55,7 @@ export class RestGate {
     this.#phase = "ready";
     return true;
   }
-
-  /** Movement worth more than the noise floor pushes the rest back. */
+  /** Movement at or above the noise floor restarts the quiet period. */
   stir(timestamp: number, motion: number) {
     if (
       this.#phase === "settling" &&

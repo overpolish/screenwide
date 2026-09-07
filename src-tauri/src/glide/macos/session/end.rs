@@ -20,6 +20,9 @@ pub(in crate::glide::platform) fn end_session(
   state: &SharedState,
   cancelled: bool,
 ) {
+  if !cancelled {
+    super::detector::finish_opening(app, state);
+  }
   let minimize = state.lock().is_ok_and(|state| {
     state
       .session

@@ -20,7 +20,7 @@ use super::{
 };
 use crate::glide::{
   begin_physical,
-  core::{GlideDetectorOptions, GlideEffects, GlideRuntime, GlideSample},
+  core::{GlideEffects, GlideRuntime, GlideSample},
   events, finish,
   icon::spawn_icon_lookup,
   region_rect::PlacedRegion,
@@ -71,10 +71,7 @@ pub(super) fn begin(app: &AppHandle, input: InputKind) -> bool {
     moved: false,
     pointer_travel: 0.0,
     revealed: false,
-    runtime: GlideRuntime::new(GlideDetectorOptions {
-      rest_ms: crate::glide::REST_MS,
-      ..GlideDetectorOptions::default()
-    }),
+    runtime: GlideRuntime::default(),
     runtime_clock: Instant::now(),
     target,
   };
@@ -135,13 +132,21 @@ pub(super) fn tick(app: &AppHandle) {
       let session = state.as_mut()?;
       let timestamp = session.runtime_clock.elapsed().as_secs_f64() * 1_000.0;
       let effects = session.runtime.settle(timestamp);
-      Some(effects.ready.then_some((session.id, effects)))
+      Some((effects.ready || effects.detection.changed).then_some((session.id, effects)))
     })
     .flatten();
   apply(app, result);
 }
 
 pub(super) fn end(app: &AppHandle, cancelled: bool) {
+  if !cancelled {
+    let result = STATE.lock().ok().and_then(|mut state| {
+      let session = state.as_mut()?;
+      let timestamp = session.runtime_clock.elapsed().as_secs_f64() * 1_000.0;
+      Some((session.id, session.runtime.finish_opening(timestamp)))
+    });
+    apply(app, result);
+  }
   let session = STATE.lock().ok().and_then(|mut state| state.take());
   let Some(session) = session else {
     return;

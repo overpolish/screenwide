@@ -50,6 +50,11 @@ impl GlideRuntime {
     self.effects(detection)
   }
 
+  pub fn finish_opening(&mut self, timestamp: f64) -> GlideEffects {
+    let detection = self.detector.finish_opening(timestamp);
+    self.effects(detection)
+  }
+
   /// Whether this session's lift commits the action it has armed.
   pub fn should_minimize(&self, cancelled: bool) -> bool {
     !cancelled && self.detector.pending() == Some(GlideAction::Minimize)
