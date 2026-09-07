@@ -2,12 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
-import { MouseEvent as ReactMouseEvent } from "react";
-import { TooltipTrigger } from "react-aria-components";
 
-import { IconToggleButton } from "../../../components/base/button/icon-button";
-import { Keyboard } from "../../../components/base/keyboard/keyboard";
-import { Tooltip } from "../../../components/base/tooltip/tooltip";
 import {
   cameraOverlayForDimensions,
   defaultCameraOverlay,
@@ -23,6 +18,9 @@ import {
   RecordingPreviewPane,
   RecordingVideoTrackId,
 } from "../types";
+
+import { PreviewToolReset } from "./preview-tool-reset";
+import { PreviewToolToggle } from "./preview-tool-toggle";
 
 export type RecordingCanvasTool =
   "canvas" | "crop" | "recenter" | "select" | null;
@@ -61,8 +59,28 @@ export function RecordingCanvasTools({
   outputs?: RecordingOutputSettings;
   screenPane?: RecordingPreviewPane;
 }) {
-  const reset = (event: ReactMouseEvent<HTMLSpanElement>) => {
-    event.preventDefault();
+  const resetEnabled =
+    tool === "canvas"
+      ? isFrameEnabled
+      : tool === "select"
+        ? isSelectEnabled
+        : tool === "recenter"
+          ? isRecenterEnabled
+          : tool === "crop" && isEnabled;
+  const targetTrack = bakeCamera && tool === "canvas" ? "primary" : activeTrack;
+  const canReset =
+    tool === "recenter"
+      ? Boolean(onRecenterReset)
+      : activeTrack === "camera" && bakeCamera && tool !== "canvas"
+        ? Boolean(onCameraOverlayReset)
+        : Boolean(
+            onChange &&
+            outputs &&
+            targetTrack &&
+            (targetTrack === "primary" ? screenPane : cameraPane),
+          );
+  const reset = () => {
+    if (!tool || !resetEnabled || !canReset) return;
     if (tool === "recenter") {
       onRecenterReset?.();
       return;
@@ -103,95 +121,61 @@ export function RecordingCanvasTools({
     onChange?.(targetTrack, next);
   };
   return (
-    <div className="flex items-center gap-1">
-      <TooltipTrigger delay={400}>
-        <span className="inline-flex" onContextMenu={reset}>
-          <IconToggleButton
-            aria-keyshortcuts="V"
-            aria-label="Select recording clip"
-            isDisabled={!isSelectEnabled}
-            isSelected={tool === "select" && isSelectEnabled}
-            onChange={(selected) => {
-              onToolChange(selected ? "select" : null);
-            }}
-            size="compact"
-          >
-            <MousePointer2 size={15} />
-          </IconToggleButton>
-        </span>
-        <Tooltip placement="bottom">
-          <span className="flex items-center gap-2">
-            Select
-            <Keyboard>V</Keyboard>
-          </span>
-        </Tooltip>
-      </TooltipTrigger>
-      <TooltipTrigger delay={400}>
-        <span className="inline-flex" onContextMenu={reset}>
-          <IconToggleButton
-            aria-keyshortcuts="F"
-            aria-label="Resize recording frame"
-            isDisabled={!isFrameEnabled}
-            isSelected={tool === "canvas" && isFrameEnabled}
-            onChange={(selected) => {
-              onToolChange(selected ? "canvas" : null);
-            }}
-            size="compact"
-          >
-            <ScanSquare size={15} />
-          </IconToggleButton>
-        </span>
-        <Tooltip placement="bottom">
-          <span className="flex items-center gap-2">
-            Resize frame
-            <Keyboard>F</Keyboard>
-          </span>
-        </Tooltip>
-      </TooltipTrigger>
-      <TooltipTrigger delay={400}>
-        <span className="inline-flex" onContextMenu={reset}>
-          <IconToggleButton
-            aria-keyshortcuts="C"
-            aria-label="Crop recording clip"
-            isDisabled={!isEnabled}
-            isSelected={tool === "crop" && isEnabled}
-            onChange={(selected) => {
-              onToolChange(selected ? "crop" : null);
-            }}
-            size="compact"
-          >
-            <Crop size={15} />
-          </IconToggleButton>
-        </span>
-        <Tooltip placement="bottom">
-          <span className="flex items-center gap-2">
-            Crop
-            <Keyboard>C</Keyboard>
-          </span>
-        </Tooltip>
-      </TooltipTrigger>
-      <TooltipTrigger delay={400}>
-        <span className="inline-flex" onContextMenu={reset}>
-          <IconToggleButton
-            aria-keyshortcuts="R"
-            aria-label="Recenter recording from current frame"
-            isDisabled={!isRecenterEnabled}
-            isSelected={tool === "recenter" && isRecenterEnabled}
-            onChange={(selected) => {
-              onToolChange(selected ? "recenter" : null);
-            }}
-            size="compact"
-          >
-            <CircleDotDashed size={15} />
-          </IconToggleButton>
-        </span>
-        <Tooltip placement="bottom">
-          <span className="flex items-center gap-2">
-            Recenter from current frame
-            <Keyboard>R</Keyboard>
-          </span>
-        </Tooltip>
-      </TooltipTrigger>
-    </div>
+    <>
+      <PreviewToolToggle
+        isDisabled={!isSelectEnabled}
+        isSelected={tool === "select" && isSelectEnabled}
+        label="Select"
+        name="Select recording clip"
+        onSelectedChange={(selected) => {
+          onToolChange(selected ? "select" : null);
+        }}
+        shortcut="V"
+      >
+        <MousePointer2 />
+      </PreviewToolToggle>
+      <PreviewToolToggle
+        isDisabled={!isFrameEnabled}
+        isSelected={tool === "canvas" && isFrameEnabled}
+        label="Resize frame"
+        name="Resize recording frame"
+        onSelectedChange={(selected) => {
+          onToolChange(selected ? "canvas" : null);
+        }}
+        shortcut="F"
+      >
+        <ScanSquare />
+      </PreviewToolToggle>
+      <PreviewToolToggle
+        isDisabled={!isEnabled}
+        isSelected={tool === "crop" && isEnabled}
+        label="Crop"
+        name="Crop recording clip"
+        onSelectedChange={(selected) => {
+          onToolChange(selected ? "crop" : null);
+        }}
+        shortcut="C"
+      >
+        <Crop />
+      </PreviewToolToggle>
+      <PreviewToolToggle
+        isDisabled={!isRecenterEnabled}
+        isSelected={tool === "recenter" && isRecenterEnabled}
+        label="Recenter from current frame"
+        name="Recenter recording from current frame"
+        onSelectedChange={(selected) => {
+          onToolChange(selected ? "recenter" : null);
+        }}
+        shortcut="R"
+      >
+        <CircleDotDashed />
+      </PreviewToolToggle>
+      <PreviewToolReset
+        canvasLabel="Reset frame"
+        isDisabled={!resetEnabled || !canReset}
+        onReset={reset}
+        tool={tool}
+      />
+    </>
   );
 }

@@ -16,7 +16,7 @@ import { iconButtonVariants } from "./icon-button-variants";
 
 type IconButtonStyleProps = Omit<
   VariantProps<typeof iconButtonVariants>,
-  "isGrouped" | "isToggle"
+  "hasSelectedBackground" | "isGrouped" | "isToggle"
 > & {
   className?: string;
 };
@@ -31,6 +31,7 @@ type IconButtonProps = AriaButtonProps &
 type IconToggleButtonProps = AriaToggleButtonProps &
   Omit<IconButtonStyleProps, "color"> &
   MotionProps & {
+    /** Alternate deselected icon. Without one, selection adds a background. */
     off?: ReactNode;
     ref?: Ref<HTMLButtonElement>;
   };
@@ -87,6 +88,11 @@ export const IconToggleButton = ({
       className={iconButtonVariants({
         className,
         color: "neutral",
+        hasSelectedBackground:
+          off == null &&
+          !props.isDisabled &&
+          props["aria-disabled"] !== true &&
+          props["aria-disabled"] !== "true",
         iconSize,
         isDisabled: props.isDisabled,
         isGrouped,

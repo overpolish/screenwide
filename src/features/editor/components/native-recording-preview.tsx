@@ -1199,11 +1199,6 @@ export function NativeRecordingPreview({
       <div className="grid min-h-0 grow grid-cols-[var(--recording-inspector-width)_minmax(0,1fr)]">
         {inspector}
         <section className="relative flex min-h-0 min-w-0 flex-col">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10 bg-black/5 dark:bg-black/25"
-            data-preview-backdrop
-          />
           {visibleLayout && visibleLayout.panes.length > 0 ? (
             <PreviewToolbar
               onZoomChange={setZoomPercent}

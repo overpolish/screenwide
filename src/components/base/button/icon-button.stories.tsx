@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Meta, StoryObj } from "@storybook/react";
-import { DoorOpen, Pause, Play } from "lucide-react";
+import { Crop, DoorOpen, Pause, Play } from "lucide-react";
 
 import { IconButton, IconToggleButton } from "./icon-button";
 
@@ -91,5 +91,32 @@ export const Toggle: Story = {
         <Pause />
       </IconToggleButton>
     </div>
+  ),
+};
+
+export const SingleIconToggle: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <div className="flex items-center gap-control-inset">
+      {sizes.map((size) => (
+        <IconToggleButton
+          aria-label={`Crop (${size ?? "default"})`}
+          defaultSelected
+          key={size}
+          size={size}
+        >
+          <Crop />
+        </IconToggleButton>
+      ))}
+    </div>
+  ),
+};
+
+export const DisabledSingleIconToggle: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => (
+    <IconToggleButton aria-label="Crop" defaultSelected isDisabled>
+      <Crop />
+    </IconToggleButton>
   ),
 };

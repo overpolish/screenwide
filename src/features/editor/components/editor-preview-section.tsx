@@ -9,10 +9,7 @@ import {
   scaledVideoDimensions,
   sourceScalePercent,
 } from "../resolution";
-import { resetCommittedScreenshotCrop } from "../screenshot-crop";
 import {
-  resetScreenshotTransform,
-  resizeScreenshotWorkspaceCentered,
   screenshotOutputDimensions,
   screenshotWorkspaceItemOutput,
   ScreenshotOutputSettings,
@@ -23,6 +20,7 @@ import {
   RecordingSectionProps,
   ScreenshotSectionProps,
 } from "./editor-preview-section-props";
+import { PreviewToolToggle } from "./preview-tool-toggle";
 import { PreviewToolbar } from "./preview-toolbar";
 import { maximumZoom, MINIMUM_ZOOM_CEILING } from "./preview-transform";
 import { PreviewViewport } from "./preview-viewport";
@@ -34,7 +32,7 @@ import {
   deleteScreenshotLayer,
   moveScreenshotLayer,
 } from "./screenshot-layer-actions";
-import { ScreenshotToolToggle } from "./screenshot-tool-toggle";
+import { ScreenshotToolReset } from "./screenshot-tool-reset";
 import { ScrubPreview } from "./scrub-preview";
 import { useScreenshotRecenter } from "./use-screenshot-recenter";
 
@@ -190,58 +188,33 @@ export function ScreenshotSection({
         maximumZoomPercent={maximumZoomPercent}
         onZoomChange={setZoomPercent}
         tools={
-          <div className="flex items-center gap-1">
-            <ScreenshotToolToggle
+          <>
+            <PreviewToolToggle
               isSelected={tool === "select"}
               label="Select"
               name="Select screenshot"
-              onReset={() => {
-                if (!selectedItem || !selectedOutput) return;
-                onOutputChange?.(
-                  resetScreenshotTransform(selectedOutput, selectedItem),
-                  selectedItem.id,
-                );
-              }}
               onSelectedChange={(selected) => {
                 setTool(selected ? "select" : null);
               }}
               shortcut="V"
             >
-              <MousePointer2 size={15} />
-            </ScreenshotToolToggle>
-            <ScreenshotToolToggle
+              <MousePointer2 />
+            </PreviewToolToggle>
+            <PreviewToolToggle
               isSelected={tool === "canvas"}
               label="Resize canvas"
               name="Resize canvas"
-              onReset={() => {
-                if (!screenshotOutput) return;
-                onCanvasResize?.(
-                  resizeScreenshotWorkspaceCentered({
-                    height: artifact.height,
-                    settings: screenshotOutput,
-                    sources: artifact.items,
-                    width: artifact.width,
-                  }),
-                );
-              }}
               onSelectedChange={(selected) => {
                 setTool(selected ? "canvas" : null);
               }}
               shortcut="F"
             >
-              <ScanSquare size={15} />
-            </ScreenshotToolToggle>
-            <ScreenshotToolToggle
+              <ScanSquare />
+            </PreviewToolToggle>
+            <PreviewToolToggle
               isSelected={tool === "crop"}
               label="Crop"
               name="Crop screenshot"
-              onReset={() => {
-                if (!selectedItem || !selectedOutput) return;
-                onOutputChange?.(
-                  resetCommittedScreenshotCrop(selectedOutput, selectedItem),
-                  selectedItem.id,
-                );
-              }}
               onSelectedChange={(selected) => {
                 if (selectedItemId === null)
                   onSelectedItemChange?.(newestItemId);
@@ -249,19 +222,29 @@ export function ScreenshotSection({
               }}
               shortcut="C"
             >
-              <Crop size={15} />
-            </ScreenshotToolToggle>
-            <ScreenshotToolToggle
+              <Crop />
+            </PreviewToolToggle>
+            <PreviewToolToggle
               isSelected={tool === "recenter"}
               label="Recenter"
               name="Recenter screenshot"
-              onReset={recenter.reset}
               onSelectedChange={setRecenterSelected}
               shortcut="R"
             >
-              <CircleDotDashed size={15} />
-            </ScreenshotToolToggle>
-          </div>
+              <CircleDotDashed />
+            </PreviewToolToggle>
+            <ScreenshotToolReset
+              artifact={artifact}
+              isSaving={isSaving}
+              onCanvasResize={onCanvasResize}
+              onOutputChange={onOutputChange}
+              onRecenterReset={recenter.reset}
+              screenshotOutput={screenshotOutput}
+              selectedItem={selectedItem}
+              selectedOutput={selectedOutput}
+              tool={tool}
+            />
+          </>
         }
         zoomPercent={zoomPercent}
       />

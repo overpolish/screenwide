@@ -48,6 +48,13 @@ export const iconButtonVariants = tv({
         "data-[pressed]:bg-primary-surface-pressed",
       ],
     },
+    hasSelectedBackground: {
+      true: [
+        "data-[selected]:bg-neutral",
+        "data-[selected]:data-[hovered]:bg-neutral-hover",
+        "data-[selected]:data-[pressed]:bg-neutral-pressed",
+      ],
+    },
     iconSize: {
       prominent: "",
     },

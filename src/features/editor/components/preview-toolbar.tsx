@@ -4,6 +4,7 @@
 import { ZoomIn } from "lucide-react";
 import { memo, ReactNode } from "react";
 
+import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { NumberField } from "../../../components/base/input-fields/number-field";
 
 import { MINIMUM_ZOOM_CEILING } from "./preview-transform";
@@ -30,12 +31,17 @@ export const PreviewToolbar = memo(function PreviewToolbar({
   tools?: ReactNode;
 }) {
   return (
-    <div className="flex h-9 shrink-0 items-center justify-between border-b border-muted/15 px-3 text-muted">
-      <div className="flex min-w-0 items-center gap-1">{tools}</div>
+    <div className="relative flex shrink-0 items-center justify-between gap-section bg-transparent px-section py-control-inset">
+      <ButtonGroup
+        aria-label="Editor tools"
+        className="min-w-0 items-center gap-control"
+      >
+        {tools}
+      </ButtonGroup>
       <NumberField
         aria-label="Preview zoom"
-        className="w-24 font-light tabular-nums"
-        leftSection={<ZoomIn size={14} />}
+        className="w-28"
+        leftSection={<ZoomIn className="size-icon-default" />}
         maxValue={maximumZoomPercent}
         minValue={10}
         onChange={(value) => {
@@ -43,7 +49,6 @@ export const PreviewToolbar = memo(function PreviewToolbar({
         }}
         rightSection="%"
         showSteppers={false}
-        size="compact"
         step={1}
         value={zoomPercent}
       />
