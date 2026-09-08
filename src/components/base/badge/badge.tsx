@@ -13,7 +13,9 @@ export function Badge({ children, className }: BadgeProps) {
   return (
     <div
       className={clsx(
-        "gap-control px-control-inset py-tight flex flex-row items-center justify-center rounded-xl bg-neutral text-xs",
+        // A native badge: a capsule of subheadline text in the secondary label
+        // colour on a faint fill, as in sidebar counts and toolbar item badges.
+        "flex flex-row items-center justify-center gap-control rounded-full bg-fill px-control-inset py-tight text-subheadline text-content-fg-secondary [&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu",
         className,
       )}
     >

@@ -15,8 +15,6 @@ import {
   motionEasings,
 } from "../../../lib/motion";
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
-import { defaultButtonControlStyles } from "../button/button-variants";
-import { defaultIconControlStyles } from "../button/icon-button-variants";
 
 export type PillGroupItem = {
   id: string;
@@ -60,7 +58,15 @@ export function PillGroup({
   return (
     <ToggleButtonGroup
       aria-label={ariaLabel}
-      className={cn("gap-tight flex items-center", className)}
+      // A macOS 26 segmented control, measured from a live capture: a track on
+      // the fill, 24px tall with a 2px inset, and the selected segment filled
+      // with the accent under white content. The track sizes from its
+      // segments so larger geometry, such as the screen recording mode
+      // picker, keeps the same construction.
+      className={cn(
+        "flex items-stretch gap-tight rounded-control bg-fill p-tight",
+        className,
+      )}
       disallowEmptySelection
       isDisabled={isDisabled}
       onSelectionChange={(selection) => {
@@ -74,12 +80,10 @@ export function PillGroup({
         <ToggleButton
           aria-label={item.ariaLabel ?? item.label}
           className={cn(
-            "group relative flex items-center justify-center font-semibold text-muted outline-none transition-colors select-none",
-            display === "icon"
-              ? defaultIconControlStyles
-              : defaultButtonControlStyles,
-            "data-[hovered]:text-content-fg data-[selected]:text-content-fg",
-            "data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-disabled-fg data-[disabled]:data-[hovered]:text-neutral-disabled-fg",
+            "group relative flex h-5 cursor-default items-center justify-center rounded-[calc(var(--radius-control)-var(--spacing-tight))] text-body text-content-fg outline-none transition-colors select-none",
+            display === "icon" ? "w-icon-large" : "px-control-inset",
+            "data-[selected]:text-primary-fg data-[disabled]:text-content-fg-tertiary data-[disabled]:data-[selected]:text-content-fg-tertiary",
+            "[&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
             focusStyles,
             elementFocusVisible,
             itemClassName,
@@ -98,7 +102,7 @@ export function PillGroup({
               {isSelected ? (
                 <motion.span
                   aria-hidden="true"
-                  className="absolute inset-0 transform-gpu rounded-[inherit] bg-neutral backface-hidden group-data-[disabled]:bg-neutral-subtle will-change-transform"
+                  className="absolute inset-0 transform-gpu rounded-[inherit] bg-primary-surface backface-hidden group-data-[disabled]:bg-fill-quaternary will-change-transform"
                   layoutId={`pill-selection-${selectionId}`}
                   transition={{
                     duration: prefersReducedMotion ? 0 : motionDurations.travel,
@@ -106,7 +110,7 @@ export function PillGroup({
                   }}
                 />
               ) : null}
-              <span className="gap-control-inset relative z-10 flex min-w-0 items-center justify-center whitespace-nowrap">
+              <span className="relative z-10 flex min-w-0 items-center justify-center gap-control whitespace-nowrap">
                 {display !== "label" ? item.icon : null}
                 {display !== "icon" ? item.label : null}
               </span>

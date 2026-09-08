@@ -16,11 +16,6 @@
 }
 
 @custom-variant dark (&:is(.dark *));
-@custom-variant inverse (&:is([data-surface="inverse"] *));
-
-@theme inline {
-  --color-overlay: color-mix(in oklab, var(--color-content) 30%, transparent);
-}
 
 @theme {
   --font-sans:
@@ -32,7 +27,7 @@
 
   /* Semantic type scale following Apple's macOS text styles: title for window
      titles, headline for section headers, body for labels/controls/body text,
-     subheadline for secondary/help text, label for inspector group labels, and
+     subheadline for secondary/help text, section for small group headings inside a panel, and
      footnote for timeline/status readouts. Resetting --text-* drops Tailwind's
      default sizes (text-xs, text-sm, ...) so only these roles are available. */
   --text-*: initial;
@@ -48,9 +43,9 @@
   --text-subheadline: 11px;
   --text-subheadline--line-height: 14px;
   --text-subheadline--font-weight: 400;
-  --text-label: 11px;
-  --text-label--line-height: 14px;
-  --text-label--font-weight: 700;
+  --text-section: 11px;
+  --text-section--line-height: 14px;
+  --text-section--font-weight: 700;
   --text-footnote: 10px;
   --text-footnote--line-height: 13px;
   --text-footnote--font-weight: 400;
@@ -127,7 +122,6 @@
   --blur-md: 4px;
   --blur-lg: 5px;
 
-  --inset-shadow-full: inset 0 0 8px rgb(0 0 0 / 25%);
   --shadow-preview: 0 2px 12px var(--color-shadow);
 
   --color-content: white;
@@ -276,6 +270,17 @@ body {
   line-height: var(--text-body--line-height);
 }
 
+/* Icons keep one stroke weight at every size, the way SF Symbols do, so a
+   glyph next to a label matches the label's stems. Non-scaling strokes are
+   measured in screen pixels rather than the icon's 24-unit grid. */
+.lucide {
+  stroke-width: 1.5px;
+}
+
+.lucide * {
+  vector-effect: non-scaling-stroke;
+}
+
 html,
 body {
   margin: 0;
@@ -285,14 +290,6 @@ body {
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
-}
-
-.field-group:has([data-pressed]) {
-  background-color: var(--color-fill-secondary);
-}
-
-.field-group:has(> [data-field-group-action]) [data-select-trigger] {
-  padding-right: 0;
 }
 
 html {
@@ -497,32 +494,6 @@ html[data-platform="windows"] .window-surface {
   border-radius: 0;
 }
 
-/*
- * Chromium's backdrop-filter only samples pixels the page painted, and draws
- * the blurred copy over the unblurred backdrop rather than replacing it. Over
- * a transparent page (Mica is drawn by DWM, outside the webview) that leaves
- * text with a sharp core and a soft halo. So on Windows the overlay keeps its
- * tint only, and the content beneath blurs itself, which works over
- * transparency and keeps Mica visible behind the blurred form.
- */
-html[data-platform="windows"]
-  .window-surface
-  > :not(.screenwide-overlay, [data-preview-backdrop]) {
-  transition: filter 0.22s ease-out;
-}
-
-html[data-platform="windows"]
-  .window-surface[data-overlay-open]
-  > :not(.screenwide-overlay, [data-preview-backdrop]) {
-  filter: blur(var(--overlay-content-blur, var(--blur-lg)));
-}
-
-html[data-platform="windows"]
-  .window-surface[data-overlay-open]
-  > .screenwide-overlay {
-  backdrop-filter: none;
-}
-
 .glide-app-icon-windows-boost {
   display: none;
 }
@@ -560,10 +531,12 @@ html[data-platform="windows"] .glide-app-icon-windows-boost {
   --os-track-border-radius: 10px;
   --os-handle-interactive-area-offset: 4px;
   --os-handle-border-radius: 10px;
+  /* Native overlay scrollbars: a thumb at the secondary label colour and a
+     faint track that appears only while the pointer is over it. */
   --os-track-bg: transparent;
-  --os-track-bg-hover: transparent;
-  --os-track-bg-active: transparent;
-  --os-handle-bg: var(--color-content-fg-tertiary);
-  --os-handle-bg-hover: var(--color-content-fg-secondary);
-  --os-handle-bg-active: var(--color-content-fg-secondary);
+  --os-track-bg-hover: var(--color-fill-quaternary);
+  --os-track-bg-active: var(--color-fill-quaternary);
+  --os-handle-bg: var(--color-content-fg-secondary);
+  --os-handle-bg-hover: var(--color-content-fg);
+  --os-handle-bg-active: var(--color-content-fg);
 }

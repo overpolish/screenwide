@@ -11,7 +11,7 @@ const meta = {
   },
   component: Checkbox,
   parameters: {
-    layout: "centered",
+    layout: "padded",
   },
   title: "Primitives/Checkbox",
 } satisfies Meta<typeof Checkbox>;

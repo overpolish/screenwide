@@ -6,13 +6,20 @@ import { Meta, StoryObj } from "@storybook/react-vite";
 import { CircularProgress } from "./circular-progress";
 
 const meta = {
+  argTypes: {
+    isIndeterminate: { control: "boolean" },
+    size: { control: "inline-radio", options: ["small", "regular"] },
+    value: { control: { max: 100, min: 0, type: "range" } },
+  },
   args: {
     "aria-label": "Example progress",
     isIndeterminate: true,
+    size: "regular",
+    value: 62,
   },
   component: CircularProgress,
   parameters: {
-    controls: { exclude: ["aria-label", "renderLabel"] },
+    controls: { include: ["isIndeterminate", "size", "value"] },
     layout: "centered",
   },
   title: "Primitives/Circular Progress",
@@ -23,28 +30,37 @@ type Story = StoryObj<typeof meta>;
 
 export const Indeterminate: Story = {};
 
+export const Determinate: Story = {
+  args: { isIndeterminate: false },
+};
+
 export const Sizes: Story = {
+  parameters: {
+    controls: { disable: true },
+    layout: "padded",
+  },
   render: () => (
     <div className="flex items-center gap-section">
       <CircularProgress
-        aria-label="Compact progress"
+        aria-label="Small indeterminate progress"
         isIndeterminate
-        size="compact"
+        size="small"
       />
-      <CircularProgress aria-label="Default progress" isIndeterminate />
       <CircularProgress
-        aria-label="Large progress"
+        aria-label="Regular indeterminate progress"
         isIndeterminate
-        size="large"
+        size="regular"
+      />
+      <CircularProgress
+        aria-label="Small determinate progress"
+        size="small"
+        value={62}
+      />
+      <CircularProgress
+        aria-label="Regular determinate progress"
+        size="regular"
+        value={62}
       />
     </div>
   ),
-};
-
-export const Determinate: Story = {
-  args: {
-    isIndeterminate: false,
-    size: "large",
-    value: 62,
-  },
 };

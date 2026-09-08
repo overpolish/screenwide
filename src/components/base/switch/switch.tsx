@@ -27,19 +27,24 @@ export const Switch = ({ children, className, ...props }: SwitchProps) => {
     <AriaSwitchField {...props} className="contents">
       <AriaSwitchButton
         className={cn(
-          "group gap-control-inset inline-flex cursor-pointer items-center text-sm text-content-fg outline-none data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-disabled-fg",
+          "group inline-flex cursor-default items-center gap-control-inset text-body text-content-fg outline-none data-[disabled]:text-content-fg-tertiary",
           className,
         )}
       >
-        {({ isPressed, isSelected }) => (
+        {({ isSelected }) => (
           <>
             {children}
             <span
+              // The macOS 26 mini switch, the size used in grouped settings
+              // rows, measured from a live capture: a 36 by 16 track on the
+              // fill when off and the accent when on, with a white 21 by 12
+              // capsule knob inset 2px. No hover; a press darkens the track;
+              // disabled dims the control.
               className={cn(
-                "relative inline-flex h-6 w-10 shrink-0 items-center rounded-full bg-neutral p-control transition-colors",
-                "group-data-[hovered]:bg-neutral-hover group-data-[pressed]:bg-neutral-pressed",
-                "group-data-[selected]:bg-primary-surface group-data-[selected]:group-data-[hovered]:bg-primary-surface-hover group-data-[selected]:group-data-[pressed]:bg-primary-surface-pressed",
-                "group-data-[disabled]:bg-neutral-subtle",
+                "relative inline-flex h-4 w-9 shrink-0 items-center rounded-full bg-fill p-0.5 transition-colors",
+                "group-data-[pressed]:bg-fill-secondary",
+                "group-data-[selected]:bg-primary-surface group-data-[selected]:group-data-[pressed]:bg-primary-surface-pressed",
+                "group-data-[disabled]:opacity-50",
                 focusStyles,
                 groupFocusVisible,
               )}
@@ -50,11 +55,8 @@ export const Switch = ({ children, className, ...props }: SwitchProps) => {
               }}
             >
               <motion.span
-                animate={{
-                  scale: isPressed ? 0.875 : 1,
-                  x: isSelected ? 16 : 0,
-                }}
-                className="size-4 rounded-full bg-content-fg group-data-[selected]:bg-primary-fg group-data-[disabled]:bg-neutral-disabled-fg"
+                animate={{ x: isSelected ? 11 : 0 }}
+                className="h-3 w-[21px] rounded-full bg-white shadow-sm"
                 initial={false}
                 transition={{
                   duration: prefersReducedMotion ? 0 : motionDurations.state,

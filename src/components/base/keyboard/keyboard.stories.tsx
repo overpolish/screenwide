@@ -44,8 +44,8 @@ export const ShortcutKeys: Story = {
   ),
 };
 
-export const InverseSurface: Story = {
-  name: "Inverse Surface",
+export const InTooltip: Story = {
+  name: "In Tooltip",
   parameters: {
     controls: { disable: true },
     docs: { story: { height: "140px", inline: false } },

@@ -4,21 +4,13 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { Ruler } from "lucide-react";
 
-import { NumberField } from "./number-field";
+import { Text } from "../text/text";
 
-const sizes: React.ComponentProps<typeof NumberField>["size"][] = [
-  "default",
-  "compact",
-] as const;
+import { NumberField } from "./number-field";
 
 const meta = {
   argTypes: {
     showSteppers: { control: "boolean" },
-    size: {
-      control: "inline-radio",
-      options: sizes,
-      table: { defaultValue: { summary: "default" } },
-    },
   },
   args: {
     defaultValue: 5,
@@ -45,21 +37,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     showSteppers: true,
-    size: "default",
   },
-};
-
-export const Sizes: Story = {
-  parameters: {
-    controls: { disable: true },
-  },
-  render: (args) => (
-    <div className="flex gap-2 items-center">
-      {sizes.map((size) => (
-        <NumberField key={size} size={size} {...args} />
-      ))}
-    </div>
-  ),
 };
 
 export const WithoutSteppers: Story = {
@@ -72,13 +50,46 @@ export const WithoutSteppers: Story = {
 
 export const Sections: Story = {
   args: {
-    leftSection: <Ruler size={18} />,
+    leftSection: <Ruler />,
     rightSection: "px",
     showSteppers: false,
   },
-  parameters: { controls: { include: ["showSteppers", "size"] } },
+  parameters: { controls: { include: ["showSteppers"] } },
 };
 
 export const Disabled: Story = {
   args: { isDisabled: true },
+};
+
+export const States: Story = {
+  parameters: { controls: { disable: true }, layout: "padded" },
+  render: () => (
+    <div className="flex flex-col gap-section">
+      {(
+        [
+          { label: "Rest", props: { defaultValue: 5 } },
+          {
+            label: "Empty",
+            props: { defaultValue: Number.NaN, placeholder: "Amount" },
+          },
+          { label: "Invalid", props: { defaultValue: 5, isInvalid: true } },
+          { label: "Disabled", props: { defaultValue: 5, isDisabled: true } },
+        ] as const
+      ).map((row) => (
+        <div className="flex items-center gap-section" key={row.label}>
+          <Text className="w-16" variant="footnote">
+            {row.label}
+          </Text>
+          <NumberField
+            className="w-48"
+            label="Amount"
+            maxValue={100}
+            minValue={0}
+            step={1}
+            {...row.props}
+          />
+        </div>
+      ))}
+    </div>
+  ),
 };

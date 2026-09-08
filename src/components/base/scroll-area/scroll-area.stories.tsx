@@ -26,7 +26,10 @@ type Story = StoryObj<typeof meta>;
 
 export const Vertical: Story = {
   render: (args) => (
-    <ScrollArea {...args} rootClassName="h-32 w-64 rounded-xl bg-content">
+    <ScrollArea
+      {...args}
+      rootClassName="h-32 w-64 rounded-control bg-fill-quaternary"
+    >
       <ListBox
         aria-label="Overflowing items"
         className="w-full overflow-visible rounded-none bg-transparent shadow-none"
@@ -47,12 +50,10 @@ export const Horizontal: Story = {
     <ScrollArea
       {...args}
       className="gap-control p-control flex w-max"
-      rootClassName="h-9 w-64 rounded-xl bg-content"
+      rootClassName="h-control-height w-64 rounded-control bg-fill-quaternary"
     >
       {items.map((item) => (
-        <Button key={item} size="compact">
-          {item}
-        </Button>
+        <Button key={item}>{item}</Button>
       ))}
     </ScrollArea>
   ),
@@ -61,9 +62,4 @@ export const Horizontal: Story = {
 export const NoEffect: Story = {
   ...Vertical,
   args: { edgeEffect: "none", scrollbarAutoHide: "never" },
-};
-
-export const Inset: Story = {
-  ...Vertical,
-  args: { edgeEffect: "inset", scrollbarAutoHide: "never" },
 };

@@ -19,7 +19,7 @@ type ScrollAreaProps = {
   constrainHeight?: boolean;
   /** Classes for the edge overlays only, e.g. a radius the content must not get. */
   edgeClassName?: string;
-  edgeEffect?: "shadow" | "inset" | "none";
+  edgeEffect?: "shadow" | "none";
   orientation?: "horizontal" | "vertical";
   rootClassName?: string;
   scrollbarAutoHide?: "scroll" | "never";
@@ -50,7 +50,7 @@ export function ScrollArea({
         : viewport.scrollHeight - viewport.clientHeight;
       const rtl = horizontal && getComputedStyle(viewport).direction === "rtl";
       const opacity = getEdgeOpacities(rtl ? -position : position, maximum, {
-        effect: edgeEffect === "inset" ? "shadow" : edgeEffect,
+        effect: edgeEffect,
       });
       // Start/end overlays are positioned at physical left/right edges.
       startRef.current.style.setProperty(
@@ -79,7 +79,6 @@ export function ScrollArea({
         className={cn(
           "pointer-events-none absolute z-100 rounded-[inherit]",
           edgeClassName,
-          !horizontal && start && "rounded-tl-md",
           horizontal ? "inset-y-0" : "inset-x-0",
           horizontal
             ? start
@@ -89,7 +88,7 @@ export function ScrollArea({
               ? "top-0"
               : "bottom-0",
           "from-shadow to-transparent opacity-0",
-          horizontal ? "w-[10px]" : "h-[10px]",
+          horizontal ? "w-control-inset" : "h-control-inset",
           horizontal
             ? start
               ? "bg-gradient-to-r"
@@ -105,11 +104,7 @@ export function ScrollArea({
 
   return (
     <div
-      className={cn(
-        "relative h-full w-full overflow-hidden",
-        edgeEffect === "inset" && "rounded-window",
-        rootClassName,
-      )}
+      className={cn("relative h-full w-full overflow-hidden", rootClassName)}
     >
       <OverlayScrollbarsComponent
         className={cn("h-full w-full", constrainHeight && "max-h-[inherit]")}
@@ -132,24 +127,12 @@ export function ScrollArea({
         }}
         ref={scrollRef}
       >
-        <div
-          className={cn(
-            horizontal && "text-nowrap",
-            edgeEffect === "inset" && "p-section",
-            className,
-          )}
-        >
+        <div className={cn(horizontal && "text-nowrap", className)}>
           {children}
         </div>
       </OverlayScrollbarsComponent>
-      {edgeEffect === "inset" && (
-        <div
-          aria-hidden
-          className="inset-shadow-full pointer-events-none absolute inset-0 z-100 rounded-[inherit]"
-        />
-      )}
-      {edgeEffect !== "none" && edge("start")}
-      {edgeEffect !== "none" && edge("end")}
+      {edgeEffect === "shadow" && edge("start")}
+      {edgeEffect === "shadow" && edge("end")}
     </div>
   );
 }

@@ -26,8 +26,10 @@ export function ButtonGroup({
   return (
     <AriaToolbar
       {...props}
+      // A group is one cluster of related controls, spaced like items that
+      // share a native toolbar pill.
       className={cn(
-        "flex",
+        "gap-tight flex",
         orientation === "horizontal" ? "flex-row" : "flex-col",
         className,
       )}
@@ -109,7 +111,11 @@ export function ButtonGrid({
     <div className="contents" onKeyDownCapture={handleKeyDownCapture}>
       <AriaToolbar
         {...props}
-        className={cn("grid [&>*]:scroll-m-focus-safe", className)}
+        // Independent buttons sit at the standard sibling spacing.
+        className={cn(
+          "gap-control-inset grid [&>*]:scroll-m-focus-safe",
+          className,
+        )}
         orientation="horizontal"
         style={{
           ...style,

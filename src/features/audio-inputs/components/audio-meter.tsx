@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { SVGAttributes, use, useEffect, useRef, useState } from "react";
+import { SVGAttributes, useEffect, useRef, useState } from "react";
 
-import { FieldGroupContext } from "../../../components/base/field-group/field-group-context";
+import { Text } from "../../../components/base/text/text";
 
 const decibelToPercentage = (decibel: number): number => {
   if (decibel < -60) return 0;
@@ -25,57 +25,33 @@ const ticksForLength = (length: number) => {
 
 type TickProps = {
   tick: number;
-  display?: string;
-  labelClassName?: string;
-  maxTick?: number;
   orientation?: "horizontal" | "vertical";
-  position?: "above" | "below";
 };
-const Tick = ({
-  display,
-  labelClassName,
-  maxTick,
-  orientation = "horizontal",
-  position = "below",
-  tick,
-}: TickProps) => {
-  const percentage = decibelToPercentage(Math.min(maxTick ?? Infinity, tick));
-  const clipping = tick > 0;
+/**
+ * Native level indicators draw unlabelled tick marks: a hairline per stop.
+ * Vertical marks are anchored by `bottom`, so centring them shifts downward.
+ */
+const Tick = ({ orientation = "horizontal", tick }: TickProps) => {
+  const percentage = decibelToPercentage(tick);
   const vertical = orientation === "vertical";
   return (
     <div
-      className={`pointer-events-none absolute flex items-center text-muted select-none ${
+      className={`pointer-events-none absolute bg-content-fg-quaternary select-none ${
         vertical
-          ? "-translate-y-1/2 flex-row"
-          : position === "above"
-            ? "-translate-x-1/2 flex-col-reverse"
-            : "mt-[1.5px] -translate-x-1/2 flex-col"
+          ? "h-px w-control translate-y-1/2"
+          : "h-control w-px -translate-x-1/2"
       }`}
-      key={tick}
       style={
         vertical
           ? { bottom: `${percentage.toString()}%` }
           : { left: `${percentage.toString()}%` }
       }
-    >
-      <span
-        className={`relative px-0.25 text-[6px]/2 text-shadow-2xs transition-colors ${
-          vertical
-            ? `ml-px ${tick === -3 ? "top-0.5" : ""}`
-            : position === "above"
-              ? "mb-px"
-              : ""
-        } ${clipping ? "text-error" : ""} ${labelClassName ?? ""}`}
-      >
-        {display ?? tick}
-      </span>
-    </div>
+    />
   );
 };
 
 type AudioMeterProps = {
   decibels: number;
-  compact?: boolean;
   disabled?: boolean;
   height?: number;
   hidePeakTick?: boolean;
@@ -87,7 +63,6 @@ type AudioMeterProps = {
 };
 
 export const AudioMeter = ({
-  compact = false,
   decibels,
   disabled,
   height,
@@ -98,7 +73,6 @@ export const AudioMeter = ({
   radius = 2,
   width,
 }: AudioMeterProps) => {
-  const grouped = use(FieldGroupContext);
   const vertical = orientation === "vertical";
   const meterHeight = height ?? (vertical ? 150 : 10);
   const meterWidth = width ?? (vertical ? 10 : 150);
@@ -205,11 +179,7 @@ export const AudioMeter = ({
           </clipPath>
         </defs>
 
-        <rect
-          className={grouped ? "fill-neutral-pressed" : "fill-neutral"}
-          {...METER}
-          width="100%"
-        />
+        <rect className="fill-fill" {...METER} width="100%" />
         <rect
           clipPath={`url(#${meterClipId})`}
           fill={`url(#${fillId})`}
@@ -225,28 +195,33 @@ export const AudioMeter = ({
       {(!hideTicks || !hidePeakTick) && (
         <div
           className={
-            vertical ? `relative ${compact ? "w-3" : "w-7"}` : "relative h-3"
+            vertical
+              ? `relative ${hidePeakTick ? "w-control" : "w-8"}`
+              : `relative ${hidePeakTick ? "h-control" : "h-6"}`
           }
         >
           {!hideTicks &&
             [...ticks].map((tick) => (
-              <Tick
-                key={tick}
-                labelClassName={compact ? "text-[5px]" : undefined}
-                orientation={orientation}
-                tick={tick}
-              />
+              <Tick key={tick} orientation={orientation} tick={tick} />
             ))}
 
           {!hidePeakTick && !disabled && peak >= -60 && (
-            <Tick
-              display={peak.toFixed(1)}
-              labelClassName="bg-content"
-              maxTick={-0.5}
-              orientation={orientation}
-              position="below"
-              tick={peak}
-            />
+            <Text
+              as="span"
+              className={`pointer-events-none absolute tabular-nums select-none ${
+                vertical
+                  ? `translate-y-1/2 ${hideTicks ? "" : "ml-control"}`
+                  : `-translate-x-1/2 ${hideTicks ? "" : "mt-control"}`
+              }`}
+              style={
+                vertical
+                  ? { bottom: `${peakPercentage.toString()}%` }
+                  : { left: `${peakPercentage.toString()}%` }
+              }
+              variant="footnote"
+            >
+              {peak.toFixed(1)}
+            </Text>
           )}
         </div>
       )}

@@ -23,7 +23,10 @@ export const focusStyles =
 
 // Interactive elements where focus is not required on non-keyboard interaction, e.g., buttons
 // AppKit draws the focus ring as a 3px halo from the control edge, no gap.
-export const elementFocusVisible = "data-[focus-visible]:focus-visible:ring-3";
+// React Aria's keyboard-modality tracking decides visibility on its own:
+// WebKit's native :focus-visible does not reliably follow focus that a key
+// handler moves programmatically, e.g. arrow keys inside a toolbar.
+export const elementFocusVisible = "data-[focus-visible]:ring-3";
 
 export const groupFocusVisible = "group-data-[focus-visible]:ring-3";
 

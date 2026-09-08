@@ -11,10 +11,12 @@ import {
   type Ref,
 } from "react";
 
+// A minimal keycap: a small rounded fill with the key in the label colour,
+// as Mac apps draw shortcut hints. No border, bottom edge or shadow; native
+// shortcut text is flat, and the fill alone sets the key apart from prose.
 const keyboardClassName = [
-  "gap-tight inline-flex min-h-5 min-w-5 items-center justify-center rounded-md border border-content-fg/20 border-b-2 border-b-content-fg/35 bg-content-fg/[7%] px-control font-mono text-xs leading-none text-content-fg shadow-xs tabular-nums",
-  "inverse:border-content/20 inverse:border-b-content/35 inverse:bg-content/[7%] inverse:text-content",
-  "[&_svg]:size-3! [&_svg]:shrink-0 [&_svg]:transform-gpu",
+  "inline-flex h-5 min-w-5 items-center justify-center gap-tight rounded-sm bg-fill px-control text-body text-content-fg tabular-nums",
+  "[&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu",
 ];
 
 const isMacOS =
@@ -75,7 +77,7 @@ export const Keyboard = ({
       className={clsx(keyboardClassName, className)}
       ref={ref}
     >
-      <span className="inline-flex -translate-y-px transform-gpu items-center justify-center">
+      <span className="inline-flex items-center justify-center">
         {key.children}
       </span>
     </kbd>
@@ -116,7 +118,7 @@ export const Shortcut = ({
         child === "+" ? (
           <Plus
             aria-hidden
-            className="size-3 shrink-0 transform-gpu"
+            className="size-icon-mini shrink-0 transform-gpu text-content-fg-secondary"
             key={`separator-${index.toString()}`}
           />
         ) : (

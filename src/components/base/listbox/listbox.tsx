@@ -7,64 +7,44 @@ import {
   ListBox as AriaListBox,
   ListBoxProps as AriaListBoxProps,
 } from "react-aria-components";
-import { VariantProps } from "tailwind-variants";
 
 import { tv } from "../../../lib/variants";
 
-import { type ListBoxSize, ListBoxSizeContext } from "./listbox-context";
-
 const listBoxVariants = tv({
   base: [
-    "gap-control p-control flex w-(--trigger-width) flex-col overflow-auto text-content-fg outline-none",
+    // Native menus pad the panel and let the items touch, so the highlight of
+    // adjacent items forms one continuous run. The list draws no surface of
+    // its own: the panel window it lives in supplies the material.
+    "flex w-(--trigger-width) flex-col overflow-auto p-control text-content-fg outline-none",
     "scroll-py-5",
-    "data-[empty]:py-section data-[empty]:text-xs data-[empty]:text-muted data-[empty]:flex data-[empty]:flex-row data-[empty]:items-center data-[empty]:justify-center",
+    "data-[empty]:flex data-[empty]:flex-row data-[empty]:items-center data-[empty]:justify-center data-[empty]:gap-control data-[empty]:py-section data-[empty]:text-subheadline data-[empty]:text-content-fg-secondary",
   ],
-  defaultVariants: {
-    size: "default",
-    variant: "filled",
-  },
-  variants: {
-    size: {
-      compact: "rounded-lg",
-      default: "rounded-xl",
-    },
-    variant: {
-      filled: "bg-content shadow-md",
-      transparent: "bg-transparent shadow-none",
-    },
-  },
 });
 
-type ListBoxProps<T extends object> = AriaListBoxProps<T> &
-  VariantProps<typeof listBoxVariants> & {
-    className?: string;
-    ref?: Ref<HTMLDivElement>;
-    size?: ListBoxSize;
-  };
+type ListBoxProps<T extends object> = AriaListBoxProps<T> & {
+  className?: string;
+  ref?: Ref<HTMLDivElement>;
+};
 
 export const ListBox = <T extends object>({
   children,
   className,
   ref,
-  size = "default",
-  variant,
   ...props
 }: ListBoxProps<T>) => {
   return (
-    <ListBoxSizeContext value={size}>
-      <AriaListBox
-        ref={ref}
-        renderEmptyState={() => (
-          <>
-            <SearchSlash className="size-icon-compact" />
-            No items found.
-          </>
-        )}
-        {...props}
-        className={listBoxVariants({ className, size, variant })}
-      >
-        {children}
-      </AriaListBox>
-    </ListBoxSizeContext>
+    <AriaListBox
+      ref={ref}
+      renderEmptyState={() => (
+        <>
+          <SearchSlash className="size-icon-small" />
+          No items found.
+        </>
+      )}
+      {...props}
+      className={listBoxVariants({ className })}
+    >
+      {children}
+    </AriaListBox>
   );
 };

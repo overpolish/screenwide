@@ -42,12 +42,6 @@ type Story = StoryObj<typeof meta>;
 /* --------------------------------- Stories -------------------------------- */
 export const Default: Story = {};
 
-export const Compact: Story = {
-  args: {
-    size: "compact",
-  },
-};
-
 export const Clearable: Story = {
   args: {
     clearable: true,
@@ -58,7 +52,7 @@ export const Clearable: Story = {
 
 export const LeftSection: Story = {
   args: {
-    leftSection: <Volume2 size={14} />,
+    leftSection: <Volume2 />,
   },
   parameters: isolatedDocsStory,
 };
@@ -72,7 +66,7 @@ export const LongValue: Story = {
         </ListBoxItem>
       </>
     ),
-    leftSection: <Volume2 size={14} />,
+    leftSection: <Volume2 />,
   },
   parameters: isolatedDocsStory,
 };

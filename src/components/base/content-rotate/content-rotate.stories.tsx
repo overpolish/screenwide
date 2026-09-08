@@ -13,7 +13,7 @@ const childrenOptions: Record<string, ReactNode> = {
   textOnly: "Chocolate",
   withIcon: (
     <>
-      <IceCream size={18} />
+      <IceCream className="size-icon" />
       Vanilla
     </>
   ),
@@ -35,7 +35,7 @@ const meta: Meta<typeof ContentRotate> = {
   },
   args: {
     children: childrenOptions.withIcon,
-    className: "text-content-fg flex gap-2 items-center",
+    className: "flex items-center gap-control-inset text-content-fg",
     contentKey: "textOnly",
   },
   component: ContentRotate,

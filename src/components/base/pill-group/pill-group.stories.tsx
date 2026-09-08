@@ -67,11 +67,3 @@ export const Disabled: Story = {
   },
   render: (args) => <PillGroupExample {...args} />,
 };
-
-export const CustomItemGeometry: Story = {
-  args: {
-    ...Icons.args,
-    itemClassName: "size-12 rounded-xl [&_svg]:size-icon-prominent!",
-  },
-  render: (args) => <PillGroupExample {...args} />,
-};

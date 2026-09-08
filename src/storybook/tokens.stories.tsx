@@ -22,7 +22,7 @@ const typographyTokens: { token: string; variant: TextProps["variant"] }[] = [
   { token: "text-headline", variant: "headline" },
   { token: "text-body", variant: "body" },
   { token: "text-subheadline", variant: "subheadline" },
-  { token: "text-label", variant: "label" },
+  { token: "text-section", variant: "section" },
   { token: "text-footnote", variant: "footnote" },
 ];
 

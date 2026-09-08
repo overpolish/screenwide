@@ -30,19 +30,13 @@ const meta = {
   argTypes: {
     children: { control: { disable: true } },
     className: { control: { disable: true } },
-    withArrow: {
-      control: "boolean",
-      table: {
-        defaultValue: { summary: "true" },
-      },
-    },
   },
   args: {
     children: "World!",
   },
   component: Tooltip,
   parameters: {
-    controls: { include: ["withArrow"] },
+    controls: { disable: true },
     layout: "centered",
   },
   title: "Primitives/Tooltip",
@@ -53,9 +47,6 @@ type Story = StoryObj<typeof meta>;
 
 /* --------------------------------- Stories -------------------------------- */
 export const Default: Story = {
-  args: {
-    withArrow: true,
-  },
   render: (args) => (
     <TooltipTrigger>
       <Button>Hello</Button>
@@ -71,7 +62,7 @@ export const Placements: Story = {
     ...isolatedDocsStory,
   },
   render: (args) => (
-    <div className="flex gap-2 items-center">
+    <div className="flex items-center gap-section">
       {placements.map((placement) => (
         <TooltipTrigger isOpen key={placement}>
           <Button>Hello</Button>
@@ -79,18 +70,5 @@ export const Placements: Story = {
         </TooltipTrigger>
       ))}
     </div>
-  ),
-};
-
-export const NoArrow: Story = {
-  args: {
-    withArrow: false,
-  },
-  parameters: isolatedDocsStory,
-  render: (args) => (
-    <TooltipTrigger isOpen>
-      <Button>Hello</Button>
-      <Tooltip {...args} />
-    </TooltipTrigger>
   ),
 };

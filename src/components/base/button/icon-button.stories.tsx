@@ -4,19 +4,13 @@
 import { Meta, StoryObj } from "@storybook/react";
 import { Crop, DoorOpen, Pause, Play } from "lucide-react";
 
+import { Text } from "../text/text";
+
 import { IconButton, IconToggleButton } from "./icon-button";
 
-const sizes: React.ComponentProps<typeof IconButton>["size"][] = [
-  "default",
-  "compact",
-] as const;
 const colors: React.ComponentProps<typeof IconButton>["color"][] = [
   "neutral",
   "primary",
-] as const;
-const iconSizes: React.ComponentProps<typeof IconButton>["iconSize"][] = [
-  undefined,
-  "prominent",
 ] as const;
 
 const meta = {
@@ -28,7 +22,6 @@ const meta = {
     children: <DoorOpen />,
     color: "neutral",
     isDisabled: false,
-    size: "default",
   },
   component: IconButton,
   parameters: {
@@ -43,21 +36,10 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const Sizes: Story = {
-  parameters: { controls: { disable: true } },
-  render: (args) => (
-    <div className="flex items-center gap-2">
-      {sizes.map((size) => (
-        <IconButton key={size} {...args} size={size} />
-      ))}
-    </div>
-  ),
-};
-
 export const Colors: Story = {
   parameters: { controls: { disable: true } },
   render: (args) => (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-section">
       {colors.map((color) => (
         <IconButton key={color} {...args} color={color} />
       ))}
@@ -65,13 +47,39 @@ export const Colors: Story = {
   ),
 };
 
-export const IconSizes: Story = {
-  parameters: { controls: { disable: true } },
+export const States: Story = {
+  // Padded rather than centered: centering lands the row on a fractional
+  // pixel, which makes the bezel and glyph snap differently.
+  parameters: { controls: { disable: true }, layout: "padded" },
   render: (args) => (
-    <div className="flex items-center gap-2">
-      {iconSizes.map((iconSize) => (
-        <IconButton key={iconSize ?? "default"} {...args} iconSize={iconSize} />
+    <div className="flex flex-col gap-section">
+      {colors.map((color) => (
+        <div className="flex items-center gap-section" key={color}>
+          <Text className="w-16" variant="footnote">
+            {color}
+          </Text>
+          <IconButton {...args} color={color} />
+          <IconButton {...args} color={color} isDisabled />
+        </div>
       ))}
+      <div className="flex items-center gap-section">
+        <Text className="w-16" variant="footnote">
+          toggle
+        </Text>
+        <IconToggleButton aria-label="Crop (off)" defaultSelected={false}>
+          <Crop />
+        </IconToggleButton>
+        <IconToggleButton aria-label="Crop (on)" defaultSelected>
+          <Crop />
+        </IconToggleButton>
+        <IconToggleButton
+          aria-label="Crop (disabled)"
+          defaultSelected
+          isDisabled
+        >
+          <Crop />
+        </IconToggleButton>
+      </div>
     </div>
   ),
 };
@@ -79,7 +87,7 @@ export const IconSizes: Story = {
 export const Toggle: Story = {
   parameters: { controls: { disable: true } },
   render: () => (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-section">
       <IconToggleButton
         aria-label="Play"
         defaultSelected={false}
@@ -97,18 +105,9 @@ export const Toggle: Story = {
 export const SingleIconToggle: Story = {
   parameters: { controls: { disable: true } },
   render: () => (
-    <div className="flex items-center gap-control-inset">
-      {sizes.map((size) => (
-        <IconToggleButton
-          aria-label={`Crop (${size ?? "default"})`}
-          defaultSelected
-          key={size}
-          size={size}
-        >
-          <Crop />
-        </IconToggleButton>
-      ))}
-    </div>
+    <IconToggleButton aria-label="Crop" defaultSelected>
+      <Crop />
+    </IconToggleButton>
   ),
 };
 

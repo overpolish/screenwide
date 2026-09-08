@@ -3,7 +3,7 @@
 
 import { isTauri } from "@tauri-apps/api/core";
 import { Minus, Plus } from "lucide-react";
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Button,
   Group,
@@ -16,70 +16,26 @@ import { VariantProps } from "tailwind-variants";
 
 import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
-import { FieldGroupContext } from "../field-group/field-group-context";
 
+import { fieldVariants } from "./input-field";
 import { useNumberFieldScrub } from "./use-number-field-scrub";
 
 const numberFieldVariants = tv({
-  defaultVariants: {
-    size: "default",
-  },
+  extend: fieldVariants,
   slots: {
-    base: "group gap-control flex shrink-0 flex-col",
-    field: [
-      "relative flex flex-row items-center bg-neutral text-content-fg outline-none transition-colors",
-      "hover:bg-neutral-hover active:bg-neutral-pressed",
-      "group-data-[disabled]:bg-neutral-subtle! group-data-[disabled]:text-neutral-disabled-fg",
-      "group-data-[disabled]:cursor-not-allowed!",
-      focusStyles,
-      "has-[input[data-focus-visible]:focus-visible]:ring-1 has-[input[data-focus-visible]:focus-visible]:ring-offset-1",
-    ],
-    input: [
-      "w-full min-w-0 bg-transparent text-right text-content-fg tabular-nums outline-none selection:bg-transparent focus:selection:bg-accent",
-      "placeholder:font-extralight placeholder:italic",
-      "group-data-[disabled]:text-neutral-disabled-fg",
-      "group-data-[disabled]:cursor-not-allowed!",
-    ],
-    inputWrapper:
-      "gap-control-inset flex min-w-0 flex-1 flex-row items-center justify-between outline-none",
-    label: "font-medium text-muted tabular-nums",
-    section: "shrink-0 text-muted",
+    input: "text-right tabular-nums",
+    // Units and glyphs read as part of the value, so they share its size.
+    section:
+      "shrink-0 text-content-fg-secondary [&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
     stepper: [
-      "px-control-inset self-stretch text-muted transition-colors outline-none",
-      "data-[hovered]:text-content-fg",
-      "data-[disabled]:cursor-not-allowed! data-[disabled]:text-neutral-disabled-fg!",
+      "flex h-full shrink-0 cursor-default items-center px-control text-content-fg-secondary outline-none transition-colors",
+      "data-[hovered]:bg-fill-tertiary data-[hovered]:text-content-fg",
+      "data-[pressed]:bg-fill",
+      "data-[disabled]:text-content-fg-tertiary",
+      "[&_svg]:size-icon-mini [&_svg]:transform-gpu",
       focusStyles,
       elementFocusVisible,
     ],
-  },
-  variants: {
-    grouped: {
-      true: {
-        field: [
-          "rounded-none bg-transparent",
-          "hover:bg-transparent active:bg-transparent",
-          "group-data-[disabled]:bg-transparent!",
-        ],
-      },
-    },
-    size: {
-      compact: {
-        field: "h-6 rounded-lg",
-        input: "text-xs placeholder:text-xs",
-        inputWrapper: "px-control-inset",
-        label: "text-xs",
-        section: "text-xs",
-        stepper: "[&_svg]:size-icon-compact",
-      },
-      default: {
-        field: "rounded-xl",
-        input: "py-control-inset text-sm placeholder:text-xs",
-        inputWrapper: "px-section",
-        label: "text-sm",
-        section: "text-sm",
-        stepper: "[&_svg]:size-icon-default",
-      },
-    },
   },
 });
 
@@ -92,7 +48,6 @@ export type NumberFieldProps = AriaNumberFieldProps &
     leftSection?: React.ReactNode;
     rightSection?: React.ReactNode;
     showSteppers?: boolean;
-    size?: "compact" | "default";
   };
 
 export const NumberField = ({
@@ -107,13 +62,12 @@ export const NumberField = ({
   onChange,
   rightSection,
   showSteppers = true,
-  size,
   step,
   value,
   ...props
 }: NumberFieldProps) => {
-  const grouped = use(FieldGroupContext);
-  const nativeScrubbing = isTauri();
+  // A disabled field neither scrubs nor advertises it with the cursor.
+  const nativeScrubbing = isTauri() && !props.isDisabled;
   const nativeSelectionRepaint =
     nativeScrubbing && navigator.userAgent.includes("Mac");
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue ?? 0);
@@ -180,13 +134,12 @@ export const NumberField = ({
     label: _label,
     section,
     stepper,
-  } = numberFieldVariants({ grouped, size });
+  } = numberFieldVariants();
 
   return (
     <AriaNumberField
       {...props}
       className={base({ className })}
-      data-control-size={size ?? "default"}
       maxValue={maxValue}
       minValue={minValue}
       onChange={changeValue}
@@ -201,11 +154,15 @@ export const NumberField = ({
         className={field({
           className: [nativeScrubbing && "cursor-ns-resize", fieldClassName],
         })}
-        onPointerDown={handlePointerDown}
+        onPointerDown={nativeScrubbing ? handlePointerDown : undefined}
         ref={groupRef}
       >
         {showSteppers && (
-          <Button aria-label="Decrement" className={stepper()} slot="decrement">
+          <Button
+            aria-label="Decrement"
+            className={stepper({ className: "rounded-l-[inherit]" })}
+            slot="decrement"
+          >
             <Minus />
           </Button>
         )}
@@ -252,7 +209,11 @@ export const NumberField = ({
         </div>
 
         {showSteppers && (
-          <Button aria-label="Increment" className={stepper()} slot="increment">
+          <Button
+            aria-label="Increment"
+            className={stepper({ className: "rounded-r-[inherit]" })}
+            slot="increment"
+          >
             <Plus />
           </Button>
         )}

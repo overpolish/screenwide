@@ -13,7 +13,7 @@ const fontSizes = [
   "headline",
   "body",
   "subheadline",
-  "label",
+  "section",
   "footnote",
 ];
 

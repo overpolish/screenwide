@@ -1,70 +1,37 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { focusStyles, focusWithin } from "../../../lib/styling";
+import { focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
-export const inputFieldVariants = tv({
-  compoundVariants: [
-    { class: { input: "py-1.5" }, size: "md", variant: "line" },
-    { class: { input: "py-1.5" }, size: "sm", variant: "line" },
-    { class: { inputWrapper: "px-1" }, variant: "line" },
-    {
-      class: {
-        field: "border border-error focus-within:border-error ring-error/75",
-      },
-      isInvalid: true,
-      variant: "solid",
-    },
-    {
-      class: { line: "shadow-error group-data-[focus-within]:shadow-error" },
-      isInvalid: true,
-      variant: "line",
-    },
-  ],
-  defaultVariants: {
-    size: "md",
-    variant: "solid",
-  },
+/**
+ * Shared bezel, label, and input styling for the text-entry fields. Native
+ * text fields show the focus ring for any focus, keyboard or click, so the
+ * bezel rings on the CSS focus-within pseudo-class, which works whether or
+ * not the bezel is a React Aria Group. A bezeled control does not react to
+ * hover.
+ */
+export const fieldVariants = tv({
   slots: {
-    base: "flex flex-col gap-1 w-full",
-    field: "group relative flex flex-row items-center",
+    base: "group flex min-w-0 flex-col gap-control",
+    field: [
+      "relative flex h-control-height flex-row items-center rounded-control bg-fill text-content-fg outline-none transition-colors",
+      focusStyles,
+      "focus-within:ring-3",
+      "group-data-[invalid]:ring-3 group-data-[invalid]:ring-error",
+      "group-data-[disabled]:bg-fill-quaternary group-data-[disabled]:text-content-fg-tertiary",
+    ],
     input: [
-      "text-content-fg outline-none w-full",
-      "placeholder:font-extralight placeholder:italic",
+      "w-full min-w-0 bg-transparent text-body text-content-fg outline-none",
+      "placeholder:text-content-fg-secondary selection:bg-primary-tint",
+      "group-data-[disabled]:text-content-fg-tertiary",
     ],
     inputWrapper:
-      "outline-none text-muted/75 flex flex-row items-center justify-between w-full gap-2",
-    label: "text-muted font-medium tabular-nums",
-    line: [
-      "absolute bottom-0 inset-x-0 bg-transparent h-[2px] pointer-events-none transition-shadow shadow-[0_1px_0_0] shadow-muted/30",
-      "group-data-[focus-within]:shadow-[0_2px_0_0] group-data-[focus-within]:shadow-content-fg/75",
-    ],
+      "flex min-w-0 flex-1 flex-row items-center justify-between gap-control-inset px-control-inset outline-none",
+    label: "text-body text-content-fg",
   },
   variants: {
     centered: { true: { input: "text-center" } },
-    isInvalid: { true: "" },
     rightAligned: { true: { input: "text-right" } },
-    size: {
-      md: {
-        input: "text-sm py-2 placeholder:text-xs",
-        inputWrapper: "px-3 gap-3",
-        label: "text-sm",
-      },
-      sm: {
-        input: "py-2 text-xs placeholder:text-xs",
-        inputWrapper: "px-2 gap-2",
-        label: "text-xs",
-      },
-    },
-    variant: {
-      ghost: {
-        inputWrapper: "px-1",
-      },
-      line: {},
-      solid: {
-        field: ["border border-muted/30 rounded-md", focusStyles, focusWithin],
-      },
-    },
   },
 });

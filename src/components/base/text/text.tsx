@@ -8,14 +8,14 @@ import { cn } from "../../../lib/styling";
 export type TextProps = ComponentPropsWithoutRef<"p"> & {
   as?: "h1" | "h2" | "h3" | "p" | "span";
   variant?:
-    "body" | "footnote" | "headline" | "label" | "subheadline" | "title";
+    "body" | "footnote" | "headline" | "section" | "subheadline" | "title";
 };
 
 const variants = {
   body: "text-body text-content-fg",
   footnote: "text-footnote text-content-fg-secondary",
   headline: "text-headline text-content-fg",
-  label: "text-label text-content-fg-secondary",
+  section: "text-section text-content-fg-secondary",
   subheadline: "text-subheadline text-content-fg-secondary",
   title: "text-title text-content-fg",
 } as const;

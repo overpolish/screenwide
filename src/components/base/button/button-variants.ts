@@ -4,50 +4,53 @@
 import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
-export const compactButtonControlStyles =
-  "h-6 rounded-lg px-control-inset text-xs [&_svg]:size-icon-compact [&_svg]:shrink-0";
-
-export const defaultButtonControlStyles =
-  "rounded-xl px-section py-control-inset text-sm [&_svg]:size-icon-default [&_svg]:shrink-0";
+export const buttonControlStyles =
+  "h-control-height rounded-control px-section text-body [&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu";
 
 export const buttonVariants = tv({
   base: [
-    "gap-control-inset inline-flex items-center justify-center font-semibold transition select-none",
+    "gap-control inline-flex cursor-default items-center justify-center select-none relative transition",
     focusStyles,
     elementFocusVisible,
+    buttonControlStyles,
+  ],
+  compoundVariants: [
+    {
+      // Bezeled controls do not react to hover; a press stacks the secondary
+      // fill behind the label rather than replacing the bezel. The overlay is
+      // always present and only gains its colour while pressed, so the change
+      // transitions like any other background.
+      class: [
+        "isolate after:pointer-events-none after:absolute after:inset-0 after:-z-10",
+        "after:rounded-[inherit] after:transition-colors after:content-['']",
+        "aria-pressed:after:bg-fill-secondary data-[pressed]:after:bg-fill-secondary",
+      ],
+      color: "neutral",
+      variant: "solid",
+    },
+    {
+      // A ghost button has no bezel to dim.
+      class: "bg-transparent",
+      isDisabled: true,
+      variant: "ghost",
+    },
   ],
   defaultVariants: {
     color: "neutral",
-    size: "default",
     variant: "solid",
   },
   variants: {
     color: {
-      neutral: [
-        "text-content-fg bg-neutral",
-        "aria-pressed:bg-neutral-hover",
-        "data-[hovered]:bg-neutral-hover",
-        "data-[pressed]:bg-neutral-pressed",
-      ],
-      primary: [
-        "text-primary-fg bg-primary-surface",
-        "data-[hovered]:bg-primary-surface-hover",
-        "data-[pressed]:bg-primary-surface-pressed",
-      ],
+      neutral: "bg-fill text-content-fg",
+      primary:
+        "bg-primary-surface text-primary-fg data-[pressed]:bg-primary-surface-pressed",
     },
     isDisabled: {
-      true: "cursor-not-allowed! bg-neutral-subtle text-neutral-disabled-fg",
-    },
-    size: {
-      compact: compactButtonControlStyles,
-      default: defaultButtonControlStyles,
+      true: "bg-fill-quaternary text-content-fg-tertiary",
     },
     variant: {
-      ghost: [
-        "bg-transparent cursor-pointer",
-        "data-[hovered]:bg-neutral",
-        "data-[pressed]:bg-neutral-hover",
-      ],
+      ghost:
+        "bg-transparent data-[hovered]:bg-fill-tertiary data-[pressed]:bg-fill",
       solid: "border-none",
     },
   },

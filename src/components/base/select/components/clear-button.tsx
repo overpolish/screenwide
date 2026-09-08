@@ -11,13 +11,11 @@ import { IconButton } from "../../button/icon-button";
 type ClearButtonProps = MotionProps & {
   isDisabled?: boolean;
   onClear?: () => void;
-  size?: "compact" | "default";
 };
 
 export const ClearButton = ({
   isDisabled,
   onClear,
-  size,
   ...props
 }: ClearButtonProps) => {
   const state = use(SelectStateContext);
@@ -34,7 +32,6 @@ export const ClearButton = ({
           state.setValue(null);
           if (onClear) onClear();
         }}
-        size={size}
         slot={null}
       >
         <X />

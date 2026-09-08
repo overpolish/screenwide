@@ -43,32 +43,6 @@ export const Default: Story = {
   },
 };
 
-export const Compact: Story = {
-  args: {
-    "aria-label": "Milkshake flavor",
-    children: (
-      <>
-        <ListBoxItem textValue="Chocolate">Chocolate</ListBoxItem>
-        <ListBoxItem textValue="Strawberry">Strawberry</ListBoxItem>
-      </>
-    ),
-    size: "compact",
-  },
-};
-
-export const Transparent: Story = {
-  args: {
-    "aria-label": "Milkshake flavor",
-    children: (
-      <>
-        <ListBoxItem textValue="Chocolate">Chocolate</ListBoxItem>
-        <ListBoxItem textValue="Strawberry">Strawberry</ListBoxItem>
-      </>
-    ),
-    variant: "transparent",
-  },
-};
-
 export const Empty: Story = {
   parameters: { controls: { disable: true } },
 };

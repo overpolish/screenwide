@@ -13,7 +13,7 @@ const meta = {
     children: Array.from({ length: 8 }, (_, index) => (
       <Button key={index}>Item {String(index + 1)}</Button>
     )),
-    className: "gap-control w-72",
+    className: "w-72",
     columns: 3,
   },
   component: ButtonGrid,

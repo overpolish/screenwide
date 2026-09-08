@@ -37,6 +37,16 @@ export const SetValue: Story = {
   },
 };
 
+export const Stepped: Story = {
+  args: {
+    defaultValue: 4,
+    maxValue: 10,
+    minValue: 0,
+    showTicks: true,
+    step: 1,
+  },
+};
+
 export const Disabled: Story = {
   args: {
     isDisabled: true,

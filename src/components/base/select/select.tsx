@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { clsx } from "clsx";
-import { ChevronDown } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { type ComponentProps, type ReactNode, type Ref, use } from "react";
+import { ChevronsUpDown } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import { type ComponentProps, type ReactNode, type Ref } from "react";
 import {
   Select as AriaSelect,
   SelectProps as AriaSelectProps,
@@ -17,63 +17,46 @@ import {
 
 import { focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
-import { FieldGroupContext } from "../field-group/field-group-context";
 import { ListBox } from "../listbox/listbox";
 import { ScrollArea } from "../scroll-area/scroll-area";
 
 import { ClearButton } from "./components/clear-button";
 
+// In-page fallback when the list is not hosted in its own panel window. Opaque:
+// a backdrop blur is not reliable over a transparent material window.
+const popoverSurface = "rounded-panel bg-content shadow-md";
+
 const selectVariants = tv({
   defaultVariants: {
     showFocus: true,
-    size: "default",
   },
   slots: {
-    base: "gap-control flex shrink-0 flex-col data-[disabled]:cursor-not-allowed",
-    controls: "text-muted",
+    base: "gap-control flex shrink-0 flex-col",
+    controls:
+      "text-content-fg-secondary [&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu",
     field: [
-      "relative inline-flex shrink-0 items-stretch bg-neutral text-content-fg outline-none transition-colors",
-      "has-[button[data-hovered]]:bg-neutral-hover has-[button[data-pressed]]:bg-neutral-pressed",
-      "has-[button[data-disabled]]:bg-neutral-subtle has-[button[data-disabled]]:text-neutral-disabled-fg",
-      "has-[button[data-disabled]]:cursor-not-allowed",
+      "relative isolate inline-flex h-control-height shrink-0 items-stretch rounded-control bg-fill text-content-fg outline-none transition-colors",
+      // Bezeled controls do not react to hover; a press stacks the secondary
+      // fill behind the label rather than replacing the bezel, as a native
+      // pop-up button darkens its bezel.
+      "after:pointer-events-none after:absolute after:inset-0 after:-z-10",
+      "after:rounded-[inherit] after:transition-colors after:content-['']",
+      "has-[button[data-pressed]]:after:bg-fill-secondary",
+      "has-[button[data-disabled]]:bg-fill-quaternary has-[button[data-disabled]]:text-content-fg-tertiary",
       "has-[[data-select-clear]]:[&>[data-select-trigger]]:pr-0",
       focusStyles,
     ],
-    label: "text-muted font-medium",
-    trigger: [
-      "group gap-control relative inline-flex min-w-0 flex-1 shrink-0 flex-row items-center justify-between bg-transparent text-content-fg outline-none",
-    ],
-    value: "inline-flex min-w-0 flex-1 flex-row items-center",
+    label: "text-body text-content-fg",
+    trigger:
+      "group relative inline-flex min-w-0 flex-1 shrink-0 cursor-default flex-row items-center justify-between gap-control-inset bg-transparent px-section text-body text-content-fg outline-none",
+    value:
+      "inline-flex min-w-0 flex-1 flex-row items-center gap-control-inset [&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
   },
   variants: {
-    grouped: {
-      true: {
-        field: [
-          "rounded-none bg-transparent",
-          "has-[button[data-hovered]]:bg-transparent has-[button[data-pressed]]:bg-transparent",
-        ],
-      },
-    },
     showFocus: {
       true: {
-        field:
-          "has-[[data-select-trigger][data-focus-visible]:focus-visible]:ring-1 has-[[data-select-trigger][data-focus-visible]:focus-visible]:ring-offset-1",
-      },
-    },
-    size: {
-      compact: {
-        controls: "[&_svg]:size-icon-compact",
-        field: "h-6 rounded-lg",
-        label: "text-xs",
-        trigger: "px-control-inset text-xs",
-        value: "gap-control-inset",
-      },
-      default: {
-        controls: "[&_svg]:size-icon-default",
-        field: "rounded-xl",
-        label: "text-sm",
-        trigger: "px-section py-control-inset text-sm",
-        value: "gap-section",
+        // The trigger is a button, so the ring is keyboard-only.
+        field: "has-[[data-select-trigger][data-focus-visible]]:ring-3",
       },
     },
   },
@@ -94,7 +77,6 @@ type SelectProps<T extends object> = Omit<AriaSelectProps<T>, "children"> & {
   renderValue?: (item: T | null) => ReactNode;
   scrollShadow?: boolean;
   showFocus?: boolean;
-  size?: "compact" | "default";
   /**
    * @default false
    * @type boolean
@@ -123,13 +105,11 @@ export const Select = <T extends object>({
   renderValue,
   scrollShadow,
   showFocus,
-  size,
   standalone,
   triggerClassName,
   triggerRef,
   ...props
 }: SelectProps<T>) => {
-  const grouped = use(FieldGroupContext);
   const {
     base,
     controls,
@@ -137,31 +117,18 @@ export const Select = <T extends object>({
     label: _label,
     trigger,
     value,
-  } = selectVariants({
-    grouped,
-    showFocus,
-    size,
-  });
+  } = selectVariants({ showFocus });
   const listBox = (
     <ListBox
-      className={
-        scrollShadow
-          ? "w-full overflow-visible rounded-none bg-transparent shadow-none"
-          : listBoxClassName
-      }
+      className={scrollShadow ? "w-full overflow-visible" : listBoxClassName}
       items={items}
-      size={size}
     >
       {children}
     </ListBox>
   );
 
   return (
-    <AriaSelect
-      {...props}
-      className={base({ className })}
-      data-control-size={size ?? "default"}
-    >
+    <AriaSelect {...props} className={base({ className })}>
       {({ isDisabled, isOpen }) => (
         <>
           {label && <Label className={_label()}>{label}</Label>}
@@ -178,7 +145,7 @@ export const Select = <T extends object>({
 
                 <SelectValue<T>
                   className={clsx(
-                    "data-[placeholder]:text-muted truncate",
+                    "truncate data-[placeholder]:text-content-fg-secondary",
                     renderValue && "min-w-0 flex-1",
                   )}
                 >
@@ -192,19 +159,10 @@ export const Select = <T extends object>({
                 </SelectValue>
               </div>
 
-              <motion.div
-                animate={{
-                  rotate: isOpen ? 180 : 0,
-                  y: isOpen ? -0.5 : 0,
-                }}
-                aria-hidden="true"
-                className={controls()}
-                transition={{
-                  duration: 0.2,
-                }}
-              >
-                <ChevronDown />
-              </motion.div>
+              {/* Native pop-up buttons show a static up/down chevron pair. */}
+              <span aria-hidden className={controls()}>
+                <ChevronsUpDown />
+              </span>
             </Button>
 
             <AnimatePresence>
@@ -218,7 +176,6 @@ export const Select = <T extends object>({
                   initial={{ opacity: 0 }}
                   isDisabled={isDisabled}
                   onClear={onClear}
-                  size={size}
                 />
               )}
             </AnimatePresence>
@@ -245,15 +202,12 @@ export const Select = <T extends object>({
             {scrollShadow ? (
               <ScrollArea
                 constrainHeight
-                rootClassName={clsx(
-                  "rounded-xl bg-content shadow-md",
-                  listBoxClassName,
-                )}
+                rootClassName={clsx(popoverSurface, listBoxClassName)}
               >
                 {listBox}
               </ScrollArea>
             ) : (
-              listBox
+              <div className={popoverSurface}>{listBox}</div>
             )}
           </Popover>
         </>

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { AnimatePresence, motion, MotionProps } from "motion/react";
-import { ReactNode, Ref, use } from "react";
+import { ReactNode, Ref } from "react";
 import { AriaButtonProps, AriaToggleButtonProps } from "react-aria";
 import {
   Button as AriaButton,
@@ -10,13 +10,11 @@ import {
 } from "react-aria-components";
 import { VariantProps } from "tailwind-variants";
 
-import { FieldGroupContext } from "../field-group/field-group-context";
-
 import { iconButtonVariants } from "./icon-button-variants";
 
 type IconButtonStyleProps = Omit<
   VariantProps<typeof iconButtonVariants>,
-  "hasSelectedBackground" | "isGrouped" | "isToggle"
+  "hasSelectedBackground" | "isToggle"
 > & {
   className?: string;
 };
@@ -39,24 +37,14 @@ type IconToggleButtonProps = AriaToggleButtonProps &
 const MotionAriaButton = motion.create(AriaButton);
 const MotionAriaToggleButton = motion.create(AriaToggleButton);
 
-export const IconButton = ({
-  className,
-  color,
-  iconSize,
-  size,
-  ...props
-}: IconButtonProps) => {
-  const isGrouped = use(FieldGroupContext);
+export const IconButton = ({ className, color, ...props }: IconButtonProps) => {
   return (
     <MotionAriaButton
       {...props}
       className={iconButtonVariants({
         className,
         color,
-        iconSize,
         isDisabled: props.isDisabled,
-        isGrouped,
-        size,
       })}
     />
   );
@@ -65,12 +53,9 @@ export const IconButton = ({
 export const IconToggleButton = ({
   children,
   className,
-  iconSize,
   off,
-  size,
   ...props
 }: IconToggleButtonProps) => {
-  const isGrouped = use(FieldGroupContext);
   const scaleAnimation: MotionProps = {
     animate: { opacity: 1, scale: 1 },
     exit: { opacity: 0, scale: 0 },
@@ -93,40 +78,43 @@ export const IconToggleButton = ({
           !props.isDisabled &&
           props["aria-disabled"] !== true &&
           props["aria-disabled"] !== "true",
-        iconSize,
         isDisabled: props.isDisabled,
-        isGrouped,
         isToggle: true,
-        size,
       })}
     >
-      {({ isSelected }) => (
-        <>
-          <span className="invisible flex items-center justify-center">
-            {children}
-          </span>
-          <AnimatePresence initial={false}>
-            {isSelected ? (
-              <motion.span
-                key="selected"
-                {...scaleAnimation}
-                className="absolute inset-0 flex items-center justify-center"
-                exit={fadeAnimation.exit}
-              >
-                {children}
-              </motion.span>
-            ) : (
-              <motion.span
-                key="deselected"
-                {...fadeAnimation}
-                className="absolute inset-0 flex items-center justify-center"
-              >
-                {off ?? children}
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </>
-      )}
+      {({ isSelected }) =>
+        off == null ? (
+          // Same glyph either way: selection is a colour change, which the
+          // button's transition already animates.
+          children
+        ) : (
+          <>
+            <span className="invisible flex items-center justify-center">
+              {children}
+            </span>
+            <AnimatePresence initial={false}>
+              {isSelected ? (
+                <motion.span
+                  key="selected"
+                  {...scaleAnimation}
+                  className="absolute inset-0 flex items-center justify-center"
+                  exit={fadeAnimation.exit}
+                >
+                  {children}
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="deselected"
+                  {...fadeAnimation}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  {off}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </>
+        )
+      }
     </MotionAriaToggleButton>
   );
 };

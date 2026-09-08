@@ -15,7 +15,7 @@ const meta = {
         "headline",
         "body",
         "subheadline",
-        "label",
+        "section",
         "footnote",
       ],
     },
@@ -65,7 +65,7 @@ export const Scale: Story = {
       </Text>
       <Text variant="body">Body</Text>
       <Text variant="subheadline">Subheadline</Text>
-      <Text variant="label">Label</Text>
+      <Text variant="section">Section</Text>
       <Text variant="footnote">Footnote</Text>
     </div>
   ),

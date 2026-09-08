@@ -28,7 +28,7 @@ export const WithIcon: Story = {
   args: {
     children: (
       <>
-        <Check size={12} />
+        <Check />
         Default
       </>
     ),

@@ -19,7 +19,6 @@ import {
 } from "../../../lib/motion";
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { IconButton } from "../button/icon-button";
-import { defaultIconControlStyles } from "../button/icon-button-variants";
 import { Tooltip } from "../tooltip/tooltip";
 
 export type SidebarNavItem = {
@@ -67,7 +66,7 @@ export function SidebarNav({
 
   return (
     <motion.nav
-      animate={{ width: expanded ? "12rem" : "2.25rem" }}
+      animate={{ width: expanded ? "12rem" : "2rem" }}
       aria-label={label}
       className={cn(
         "gap-section flex min-h-0 shrink-0 flex-col text-content-fg",
@@ -79,7 +78,7 @@ export function SidebarNav({
       <div id={groupId}>
         <ToggleButtonGroup
           aria-label={label}
-          className="gap-tight flex flex-col"
+          className="flex flex-col gap-tight"
           disallowEmptySelection
           isDisabled={isDisabled}
           onSelectionChange={(keys) => {
@@ -94,12 +93,14 @@ export function SidebarNav({
             <TooltipTrigger isDisabled={expanded} key={item.id}>
               <ToggleButton
                 aria-label={item.label}
+                // A source-list row: 32px, inset and gap on the control-inset
+                // step, label and symbol in the label colour. Rows do not react
+                // to hover; the selected row is the accent tint with white
+                // label and symbol, as System Settings draws it.
                 className={cn(
-                  defaultIconControlStyles,
-                  "gap-control-inset flex w-full items-center overflow-hidden text-left text-sm font-semibold text-muted outline-none transition-colors",
-                  "data-[hovered]:bg-neutral data-[hovered]:text-content-fg data-[pressed]:bg-neutral-hover",
-                  "data-[selected]:bg-neutral data-[selected]:text-content-fg",
-                  "data-[disabled]:cursor-not-allowed! data-[disabled]:text-neutral-disabled-fg! data-[disabled]:data-[selected]:bg-neutral-subtle",
+                  "group flex h-8 w-full cursor-default items-center gap-control-inset overflow-hidden rounded-control px-control-inset text-left text-body text-content-fg outline-none transition-colors",
+                  "data-[pressed]:bg-fill-secondary data-[selected]:bg-primary-tint data-[selected]:text-primary-fg",
+                  "data-[disabled]:text-content-fg-tertiary data-[disabled]:data-[selected]:bg-fill-quaternary",
                   focusStyles,
                   elementFocusVisible,
                 )}
@@ -113,7 +114,7 @@ export function SidebarNav({
               >
                 <span
                   aria-hidden
-                  className="flex size-5 shrink-0 transform-gpu items-center justify-center"
+                  className="flex size-icon shrink-0 transform-gpu items-center justify-center [&_svg]:size-icon [&_svg]:transform-gpu"
                 >
                   {item.icon}
                 </span>

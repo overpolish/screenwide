@@ -2,39 +2,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Check } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { use } from "react";
 import {
   ListBoxItem as AriaListBoxItem,
   ListBoxItemProps as AriaListBoxItemProps,
 } from "react-aria-components";
 
-import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
-import { ListBoxSizeContext } from "../listbox/listbox-context";
 
 const listBoxItemVariants = tv({
   base: [
-    "gap-control-inset inline-flex shrink-0 cursor-default items-center justify-between bg-transparent text-content-fg transition-colors",
-    "truncate",
-    "data-[hovered]:bg-neutral",
-    "data-[pressed]:bg-neutral-hover",
-    "data-[selected]:bg-neutral",
-    "data-[selected]:data-[hovered]:bg-neutral-hover",
-    "data-[selected]:data-[pressed]:bg-neutral-pressed",
-    "data-[disabled]:cursor-not-allowed! data-[disabled]:bg-neutral-subtle data-[disabled]:text-neutral-disabled-fg",
-    focusStyles,
-    elementFocusVisible,
+    "inline-flex h-control-height shrink-0 cursor-default items-center gap-control-inset truncate rounded-control bg-transparent px-control-inset text-body text-content-fg outline-none transition-colors",
+    // As in a native menu, the accent highlight is the focus indicator: it
+    // follows the pointer and the keyboard alike, so there is no separate
+    // focus ring.
+    "data-[hovered]:bg-primary-surface data-[hovered]:text-primary-fg",
+    "data-[focus-visible]:bg-primary-surface data-[focus-visible]:text-primary-fg",
+    "data-[pressed]:bg-primary-surface data-[pressed]:text-primary-fg",
+    "data-[disabled]:bg-transparent data-[disabled]:text-content-fg-tertiary",
   ],
-  defaultVariants: {
-    size: "default",
-  },
-  variants: {
-    size: {
-      compact: "px-control-inset py-control rounded-lg text-xs",
-      default: "px-section py-control-inset rounded-xl text-sm",
-    },
-  },
 });
 
 type ListBoxItemProps = AriaListBoxItemProps & {
@@ -47,31 +32,16 @@ export const ListBoxItem = ({
   className,
   ...props
 }: ListBoxItemProps) => {
-  const size = use(ListBoxSizeContext);
-
   return (
-    <AriaListBoxItem
-      {...props}
-      className={listBoxItemVariants({ className, size })}
-    >
+    <AriaListBoxItem {...props} className={listBoxItemVariants({ className })}>
       {({ isSelected }) => (
         <>
-          <div className="truncate">{children}</div>
-          <AnimatePresence>
-            {isSelected && (
-              <motion.div
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
-                initial={{ scale: 0 }}
-              >
-                <Check
-                  className="text-content-fg transition-colors"
-                  size={size === "compact" ? 14 : 16}
-                  strokeWidth={3}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* The gutter is always present so labels line up whether or not
+              the item carries a checkmark, as in a native menu. */}
+          <span className="flex w-icon shrink-0 items-center justify-center">
+            {isSelected && <Check className="size-icon-small" />}
+          </span>
+          <span className="truncate">{children}</span>
         </>
       )}
     </AriaListBoxItem>

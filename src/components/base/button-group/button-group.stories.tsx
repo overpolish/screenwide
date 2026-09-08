@@ -32,6 +32,5 @@ export const Default: Story = {
         </IconToggleButton>
       </>
     ),
-    className: "gap-tight",
   },
 };
