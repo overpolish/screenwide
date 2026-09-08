@@ -13,7 +13,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 const frontendFiles = [
-  ".storybook/**/*.ts",
+  ".storybook/**/*.{ts,tsx}",
   "src/**/*.{ts,tsx}",
   "*.config.ts",
 ];
@@ -136,7 +136,7 @@ export default defineConfig([
     files: ["src/**/*.{ts,tsx}"],
   },
   {
-    files: [".storybook/**/*.ts", "*.config.{js,ts}"],
+    files: [".storybook/**/*.{ts,tsx}", "*.config.{js,ts}"],
     rules: {
       "no-restricted-exports": "off",
     },

@@ -85,8 +85,23 @@ const stopStorybook = () => {
   if (storybook != null && !storybook.killed) storybook.kill("SIGTERM");
 };
 
-process.on("SIGINT", stopStorybook);
-process.on("SIGTERM", stopStorybook);
+// `tauri dev` is a chain (pnpm -> tauri CLI -> cargo -> app), so a signal to
+// the parent alone orphans the app. It runs in its own process group so the
+// whole chain can be stopped when this script is terminated.
+let tauri;
+const stopTauri = () => {
+  if (tauri == null || tauri.killed) return;
+  if (platform === "win32") tauri.kill("SIGTERM");
+  else process.kill(-tauri.pid, "SIGTERM");
+};
+
+const stop = () => {
+  stopTauri();
+  stopStorybook();
+};
+
+process.on("SIGINT", stop);
+process.on("SIGTERM", stop);
 
 try {
   const index = await waitForStorybook();
@@ -100,7 +115,7 @@ try {
   previewUrl.searchParams.set("screenwide-native", "1");
 
   console.log(`Opening native preview for ${story}`);
-  const tauri = spawn(
+  tauri = spawn(
     command,
     [
       "tauri",
@@ -110,6 +125,7 @@ try {
       ...tauriArguments,
     ],
     {
+      detached: platform !== "win32",
       env: {
         ...env,
         SCREENWIDE_STORYBOOK_NATIVE_URL: previewUrl.toString(),

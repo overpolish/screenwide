@@ -5,7 +5,8 @@
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true
   },
-  "include": [".storybook/**/*.ts", "*.config.ts"]
+  "include": [".storybook/**/*.ts", ".storybook/**/*.tsx", "*.config.ts"]
 }

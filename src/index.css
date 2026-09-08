@@ -20,6 +20,24 @@
 
 @theme inline {
   --color-overlay: color-mix(in oklab, var(--color-content) 30%, transparent);
+
+  /* Text hierarchy as stepped opacities of the foreground, so every tier
+     reads consistently over the window material in both themes. */
+  --color-content-fg-secondary: color-mix(
+    in oklab,
+    var(--color-content-fg) 55%,
+    transparent
+  );
+  --color-content-fg-tertiary: color-mix(
+    in oklab,
+    var(--color-content-fg) 30%,
+    transparent
+  );
+  --color-content-fg-quaternary: color-mix(
+    in oklab,
+    var(--color-content-fg) 12%,
+    transparent
+  );
 }
 
 @theme {
@@ -29,6 +47,31 @@
   --font-mono:
     "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
+
+  /* Semantic type scale following Apple's macOS text styles: title for window
+     titles, headline for section headers, body for labels/controls/body text,
+     subheadline for secondary/help text, label for inspector group labels, and
+     footnote for timeline/status readouts. Resetting --text-* drops Tailwind's
+     default sizes (text-xs, text-sm, ...) so only these roles are available. */
+  --text-*: initial;
+  --text-title: 15px;
+  --text-title--line-height: 20px;
+  --text-title--font-weight: 700;
+  --text-headline: 13px;
+  --text-headline--line-height: 16px;
+  --text-headline--font-weight: 700;
+  --text-body: 13px;
+  --text-body--line-height: 16px;
+  --text-body--font-weight: 400;
+  --text-subheadline: 11px;
+  --text-subheadline--line-height: 14px;
+  --text-subheadline--font-weight: 400;
+  --text-label: 11px;
+  --text-label--line-height: 14px;
+  --text-label--font-weight: 700;
+  --text-footnote: 10px;
+  --text-footnote--line-height: 13px;
+  --text-footnote--font-weight: 400;
 
   /* Shared layout rhythm: compact peers, related content, and sections. */
   --spacing-tight: 0.125rem;
@@ -127,8 +170,6 @@
   --color-error-surface: rgb(255 59 48 / 18%);
   --color-error-surface-hover: rgb(255 59 48 / 24%);
   --color-error-surface-pressed: rgb(255 59 48 / 30%);
-
-  --color-muted: var(--color-neutral-700);
 }
 
 @layer themes {
@@ -170,8 +211,6 @@
     --color-error-surface: rgb(255 69 58 / 30%);
     --color-error-surface-hover: rgb(255 69 58 / 38%);
     --color-error-surface-pressed: rgb(255 69 58 / 46%);
-
-    --color-muted: var(--color-neutral-300);
   }
 }
 
@@ -231,6 +270,8 @@
 
 html,
 body {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   margin: 0;
   width: 100%;
   height: 100%;
@@ -298,8 +339,8 @@ body {
 
 /* Compact GitHub-rendered release notes for the updater surfaces. */
 .release-notes {
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
   overflow-wrap: anywhere;
 }
 
@@ -434,7 +475,7 @@ body {
   padding: var(--spacing-section);
   border-radius: var(--radius-md);
   background: var(--color-neutral);
-  color: var(--color-muted);
+  color: var(--color-content-fg-secondary);
 }
 
 .release-notes blockquote > :first-child {
@@ -474,7 +515,9 @@ html[data-platform="windows"]
   filter: blur(var(--overlay-content-blur, var(--blur-lg)));
 }
 
-html[data-platform="windows"] .window-surface[data-overlay-open] > .screenwide-overlay {
+html[data-platform="windows"]
+  .window-surface[data-overlay-open]
+  > .screenwide-overlay {
   backdrop-filter: none;
 }
 

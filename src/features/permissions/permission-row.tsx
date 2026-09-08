@@ -4,11 +4,11 @@
 import { Check } from "lucide-react";
 import { ReactNode } from "react";
 import { TooltipTrigger } from "react-aria-components";
-import { twMerge } from "tailwind-merge";
 
 import { Badge } from "../../components/base/badge/badge";
 import { Button } from "../../components/base/button/button";
 import { Tooltip } from "../../components/base/tooltip/tooltip";
+import { cn } from "../../lib/styling";
 
 import { PermissionKind, PermissionStatus } from "./types";
 
@@ -40,7 +40,7 @@ export function PermissionRow({
   return (
     <div className="gap-section flex items-center">
       <div
-        className={twMerge(
+        className={cn(
           "flex size-16 items-center justify-center rounded-2xl text-white",
           color,
         )}

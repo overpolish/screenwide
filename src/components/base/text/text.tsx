@@ -6,13 +6,18 @@ import type { ComponentPropsWithoutRef } from "react";
 import { cn } from "../../../lib/styling";
 
 export type TextProps = ComponentPropsWithoutRef<"p"> & {
-  as?: "p" | "span";
-  variant?: "body" | "help";
+  as?: "h1" | "h2" | "h3" | "p" | "span";
+  variant?:
+    "body" | "footnote" | "headline" | "label" | "subheadline" | "title";
 };
 
 const variants = {
-  body: "text-sm text-content-fg",
-  help: "text-xs text-muted",
+  body: "text-body text-content-fg",
+  footnote: "text-footnote text-content-fg-secondary",
+  headline: "text-headline text-content-fg",
+  label: "text-label text-content-fg-secondary",
+  subheadline: "text-subheadline text-content-fg-secondary",
+  title: "text-title text-content-fg",
 } as const;
 
 /** Typography only: the containing layout provides spacing. */
@@ -23,9 +28,6 @@ export function Text({
   ...props
 }: TextProps) {
   return (
-    <Element
-      {...props}
-      className={cn("m-0 font-normal", variants[variant], className)}
-    />
+    <Element {...props} className={cn("m-0", variants[variant], className)} />
   );
 }
