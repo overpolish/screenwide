@@ -6,6 +6,8 @@ import { ComponentProps, useId } from "react";
 
 import { cn } from "../../../lib/styling";
 import { IconButton } from "../../base/button/icon-button";
+import { ScrollArea } from "../../base/scroll-area/scroll-area";
+import { Text } from "../../base/text/text";
 import { CheckOnClick } from "../check-on-click/check-on-click";
 
 type CopyableTextProps = Omit<ComponentProps<"section">, "children"> & {
@@ -17,7 +19,7 @@ type CopyableTextProps = Omit<ComponentProps<"section">, "children"> & {
 
 export function CopyableText({
   className,
-  emptyText = "(empty)",
+  emptyText = "No Content",
   label,
   onCopy,
   value,
@@ -29,29 +31,41 @@ export function CopyableText({
     <section
       aria-labelledby={labelId}
       className={cn(
-        "gap-control p-section flex min-h-0 flex-col overflow-hidden rounded-xl bg-neutral",
+        "flex min-h-0 flex-col gap-control overflow-hidden rounded-control bg-fill-quaternary p-section",
         className,
       )}
       {...props}
     >
-      <div className="gap-control-inset flex items-center justify-between">
-        <div className="text-xs font-bold text-muted" id={labelId}>
+      <div className="flex items-center justify-between gap-control-inset">
+        <Text as="span" id={labelId} variant="section">
           {label}
-        </div>
+        </Text>
         <CheckOnClick onPress={onCopy}>
           <IconButton
             aria-label={`Copy ${label.toLocaleLowerCase()}`}
             isDisabled={!value}
-            size="compact"
           >
             <Copy aria-hidden />
           </IconButton>
         </CheckOnClick>
       </div>
 
-      <pre className="min-h-20 grow overflow-auto font-mono text-sm leading-relaxed break-words whitespace-pre-wrap select-text">
-        {value || emptyText}
-      </pre>
+      {/* Long content scrolls inside the box rather than growing it. The
+          scroll view bleeds to the box edges and the padding scrolls with the
+          content, so text clips at the edge as a native scroll view does. */}
+      <ScrollArea
+        className="px-section pb-section"
+        constrainHeight
+        rootClassName="-mx-section -mb-section w-auto max-h-40 min-h-20"
+      >
+        {value ? (
+          <pre className="font-sans text-body text-content-fg break-words whitespace-pre-wrap select-text">
+            {value}
+          </pre>
+        ) : (
+          <Text variant="subheadline">{emptyText}</Text>
+        )}
+      </ScrollArea>
     </section>
   );
 }

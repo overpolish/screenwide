@@ -9,8 +9,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   args: {
-    armedClassName:
-      "bg-error-surface text-error data-[hovered]:bg-error-surface-hover data-[pressed]:bg-error-surface-pressed",
     armedIcon: <Check />,
     armedLabel: "Confirm discarding",
     idleIcon: <Trash2 />,

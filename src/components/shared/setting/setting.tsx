@@ -34,13 +34,19 @@ export function Setting({
   const descriptionId = description ? `${id}-description` : undefined;
 
   return (
-    <div className={cn("gap-layout flex items-center", className)}>
-      <div className="gap-control flex min-w-0 flex-1 flex-col">
+    // A settings row as System Settings lays one out: title with its
+    // description directly beneath, and the control trailing.
+    <div className={cn("flex items-center gap-layout", className)}>
+      <div className="flex min-w-0 flex-1 flex-col gap-tight">
         <Text className="break-words" id={titleId}>
           {title}
         </Text>
         {description ? (
-          <Text className="break-words" id={descriptionId} variant="help">
+          <Text
+            className="break-words"
+            id={descriptionId}
+            variant="subheadline"
+          >
             {description}
           </Text>
         ) : null}

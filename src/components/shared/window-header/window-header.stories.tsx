@@ -4,10 +4,20 @@
 import { useState } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
+import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
 
 import { WindowHeader } from "./window-header";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+
+const mark = (
+  <img
+    alt="Screenwide"
+    className="brightness-0 dark:invert"
+    draggable={false}
+    src={logoUrl}
+  />
+);
 
 const meta = {
   args: {
@@ -16,52 +26,51 @@ const meta = {
   },
   component: WindowHeader,
   decorators: [
-    (Story) => (
-      <div className="window-surface w-[480px] text-content-fg">
-        <Story />
-      </div>
+    (Story, context) => (
+      <FeatureStoryStage height={52} viewMode={context.viewMode} width={672}>
+        <div className="window-surface text-content-fg">
+          <Story />
+        </div>
+      </FeatureStoryStage>
     ),
   ],
-  parameters: { layout: "centered" },
+  parameters: { layout: "fullscreen" },
   title: "Components/Window Header",
 } satisfies Meta<typeof WindowHeader>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
-
-export const Compact: Story = {
+export const Default: Story = {
   args: { variant: "compact" },
 };
 
 export const Display: Story = {
   args: {
-    leadingSection: (
-      <img
-        alt="Screenwide"
-        className="brightness-0 dark:invert"
-        draggable={false}
-        src={logoUrl}
-      />
-    ),
+    leadingSection: mark,
     title: "Permissions",
+    variant: "display",
   },
 };
 
-export const WindowControls: Story = {
+/** macOS: the OS draws the traffic lights over the inset the header leaves. */
+export const MacOS: Story = {
   args: {
-    isMaximized: false,
-    leadingSection: (
-      <img
-        alt="Screenwide"
-        className="brightness-0 dark:invert"
-        draggable={false}
-        src={logoUrl}
-      />
-    ),
+    leadingSection: mark,
     onMinimize: () => undefined,
     onToggleMaximize: () => undefined,
+    platform: "macos",
+    title: "Settings",
+  },
+};
+
+/** Windows: the header draws the caption buttons and keeps no inset. */
+export const Windows: Story = {
+  args: {
+    leadingSection: mark,
+    onMinimize: () => undefined,
+    onToggleMaximize: () => undefined,
+    platform: "windows",
     title: "Settings",
   },
 };
@@ -71,14 +80,7 @@ function EditableTitlePreview() {
 
   return (
     <WindowHeader
-      leadingSection={
-        <img
-          alt="Screenwide"
-          className="brightness-0 dark:invert"
-          draggable={false}
-          src={logoUrl}
-        />
-      }
+      leadingSection={mark}
       onClose={() => undefined}
       onTitleChange={setTitle}
       title={title}
@@ -92,14 +94,7 @@ export const EditableTitle: Story = {
 
 export const LongTitle: Story = {
   args: {
-    leadingSection: (
-      <img
-        alt="Screenwide"
-        className="brightness-0 dark:invert"
-        draggable={false}
-        src={logoUrl}
-      />
-    ),
+    leadingSection: mark,
     title:
       "Screenwide product walkthrough — recording and screenshot editing — September 2026",
   },

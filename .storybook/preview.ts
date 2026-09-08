@@ -19,6 +19,16 @@ if (navigator.userAgent.includes("Windows")) {
 const isNativePreview =
   new URLSearchParams(window.location.search).get("screenwide-native") === "1";
 
+// The theme decorator applies its class only once the manager has sent the
+// globals, so every reload rendered light first and then flipped. The iframe
+// URL already carries the chosen theme in `globals`, so the class is applied
+// here, before any story renders; the decorator takes over from there.
+if (!isNativePreview) {
+  const globals = new URLSearchParams(window.location.search).get("globals");
+  const theme = /(?:^|;)theme:(\w+)/.exec(globals ?? "")?.[1] ?? "dark";
+  document.documentElement.classList.add(theme === "light" ? "light" : "dark");
+}
+
 if (isNativePreview) {
   document.documentElement.classList.add("screenwide-native-preview");
   const systemDarkMode = window.matchMedia("(prefers-color-scheme: dark)");

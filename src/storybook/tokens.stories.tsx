@@ -17,7 +17,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
  * sample and the label.
  */
 
-const typographyTokens: { token: string; variant: TextProps["variant"] }[] = [
+const typographyTokens: {
+  token: string;
+  className?: string;
+  variant?: TextProps["variant"];
+}[] = [
   { token: "text-title", variant: "title" },
   { token: "text-headline", variant: "headline" },
   { token: "text-body", variant: "body" },
@@ -41,9 +45,9 @@ const colorTokens = [
   "bg-info",
   "bg-warning",
   "bg-error",
-  "bg-accent",
-  "bg-accent-warm",
-  "bg-accent-vivid",
+  "bg-accent-heading-warm",
+  "bg-accent-heading",
+  "bg-accent-heading-vivid",
 ];
 
 const contentForegroundTokens = [
@@ -68,6 +72,8 @@ const spacingTokens = [
   "w-layout",
   "w-window-inset",
   "w-control-height",
+  "w-title-bar",
+  "w-traffic-lights",
 ];
 
 const radiusTokens = ["rounded-window", "rounded-panel", "rounded-control"];
@@ -100,9 +106,11 @@ function Typography() {
   return (
     <Group title="Typography">
       <div className="flex flex-col gap-control-inset">
-        {typographyTokens.map(({ token, variant }) => (
+        {typographyTokens.map(({ className, token, variant }) => (
           <div className="flex items-baseline gap-control-inset" key={token}>
-            <Text variant={variant}>The quick brown fox</Text>
+            <Text className={className} variant={variant}>
+              The quick brown fox
+            </Text>
             <Text variant="footnote">{token}</Text>
           </div>
         ))}

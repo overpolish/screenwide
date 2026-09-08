@@ -6,8 +6,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { cn } from "../../../lib/styling";
 import { IconButton, IconToggleButton } from "../../base/button/icon-button";
-import { FieldGroup } from "../../base/field-group/field-group";
 import { NumberField } from "../../base/input-fields/number-field";
+import { Text } from "../../base/text/text";
 
 import {
   AspectRatioParts,
@@ -20,7 +20,6 @@ const numberFieldStyles: React.ComponentProps<typeof NumberField> = {
   className: "w-20",
   rightSection: "px",
   showSteppers: false,
-  size: "compact",
 };
 
 type DimensionsProps = {
@@ -222,44 +221,40 @@ export const Dimensions = ({
     }
   }, [linked, widthValue, heightValue]);
 
+  // Width and height as two fields with the constrain toggle between them,
+  // laid out as neighbours the way an inspector does rather than fused into
+  // one bezel.
   const dimensionFields = (
-    <div className="flex flex-row items-center">
+    <div className="flex flex-row items-center gap-control">
       {onReset ? (
-        <IconButton
-          aria-label="Reset dimensions"
-          onPress={onReset}
-          size="compact"
-        >
+        <IconButton aria-label="Reset dimensions" onPress={onReset}>
           <RotateCcw />
         </IconButton>
       ) : null}
-      <FieldGroup className="flex items-center">
-        <NumberField
-          {...numberFieldStyles}
-          aria-label="Aspect Ratio Width"
-          onChange={onChangeWidth}
-          value={widthValue}
-        />
+      <NumberField
+        {...numberFieldStyles}
+        aria-label="Aspect Ratio Width"
+        onChange={onChangeWidth}
+        value={widthValue}
+      />
 
-        <IconToggleButton
-          aria-label={linked ? "Unlink dimensions" : "Link dimensions"}
-          isSelected={linked}
-          off={<Unlink />}
-          onChange={(isSelected) => {
-            setLinked(isSelected);
-          }}
-          size="compact"
-        >
-          <Link />
-        </IconToggleButton>
+      <IconToggleButton
+        aria-label={linked ? "Unlink dimensions" : "Link dimensions"}
+        isSelected={linked}
+        off={<Unlink />}
+        onChange={(isSelected) => {
+          setLinked(isSelected);
+        }}
+      >
+        <Link />
+      </IconToggleButton>
 
-        <NumberField
-          {...numberFieldStyles}
-          aria-label="Aspect Ratio Height"
-          onChange={onChangeHeight}
-          value={heightValue}
-        />
-      </FieldGroup>
+      <NumberField
+        {...numberFieldStyles}
+        aria-label="Aspect Ratio Height"
+        onChange={onChangeHeight}
+        value={heightValue}
+      />
     </div>
   );
   return (
@@ -273,7 +268,7 @@ export const Dimensions = ({
     >
       {layout === "stacked" ? (
         <div className="flex items-center">
-          <span className="text-xs text-content-fg">{label}</span>
+          <Text as="span">{label}</Text>
           <div className="grow" />
           {dimensionFields}
         </div>

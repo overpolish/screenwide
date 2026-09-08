@@ -3,7 +3,7 @@
 
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, LogicalPosition, Manager, TitleBarStyle, WebviewUrl, WebviewWindowBuilder};
 
 use crate::windows::{self, WindowLabel};
 
@@ -19,7 +19,12 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
     .center()
     .always_on_top(false)
     .closable(true)
-    .decorations(false)
+    // The page's header leaves room for the real traffic lights, so this
+    // window keeps a native title bar, drawn over its content.
+    .decorations(true)
+    .title_bar_style(TitleBarStyle::Overlay)
+    .hidden_title(true)
+    .traffic_light_position(LogicalPosition::new(20.0, 20.0))
     .resizable(false)
     .shadow(true)
     .skip_taskbar(true)

@@ -13,32 +13,8 @@ import {
   useState,
 } from "react";
 import { PressEvent } from "react-aria";
-import { VariantProps } from "tailwind-variants";
 
-import { availableVariants, cn } from "../../../lib/styling";
-import { tv } from "../../../lib/variants";
-
-const checkOnClickOverlay = tv({
-  base: "absolute inset-0 flex items-center justify-center rounded-[inherit] transition-all backdrop-blur-none",
-  compoundVariants: [
-    {
-      blur: "md",
-      class: "backdrop-blur-md",
-      isChecked: true,
-    },
-    {
-      blur: "xs",
-      class: "backdrop-blur-xs",
-      isChecked: true,
-    },
-  ],
-  variants: {
-    blur: availableVariants("md", "xs"),
-    isChecked: {
-      true: "bg-content/50",
-    },
-  },
-});
+import { cn } from "../../../lib/styling";
 
 type CheckableElementProps = {
   children?: ReactNode;
@@ -46,21 +22,18 @@ type CheckableElementProps = {
   onPress?: (event: PressEvent) => unknown;
 };
 
-type CheckOnClickProps = VariantProps<typeof checkOnClickOverlay> & {
+type CheckOnClickProps = {
   children: ReactElement<CheckableElementProps>;
   onPress: (event: PressEvent) => unknown;
 };
 
 /**
  * Adds confirmation feedback to one pressable child without introducing a
- * wrapper element or any button styling. The overlay lives inside the child,
- * so its dimensions and inherited radius always match that control.
+ * wrapper element or any button styling: the control's content briefly gives
+ * way to a checkmark, as native copy actions confirm themselves. The check
+ * lives inside the child, so its dimensions always match that control.
  */
-export function CheckOnClick({
-  blur = "md",
-  children,
-  onPress,
-}: CheckOnClickProps) {
+export function CheckOnClick({ children, onPress }: CheckOnClickProps) {
   const [status, setStatus] = useState<"checked" | "idle" | "pending">("idle");
   const pressTokenRef = useRef(0);
   const isMountedRef = useRef(false);
@@ -111,24 +84,25 @@ export function CheckOnClick({
       <>
         <span
           className={cn(
-            "gap-control-inset inline-flex items-center justify-center",
+            "inline-flex items-center justify-center gap-control-inset transition-opacity",
             status === "pending" && "animate-pulse",
+            isChecked && "opacity-0",
           )}
         >
           {children.props.children}
         </span>
 
-        <span className={checkOnClickOverlay({ blur, isChecked })}>
+        <span className="absolute inset-0 flex items-center justify-center">
           <AnimatePresence>
             {isChecked ? (
               <motion.span
-                animate={{ opacity: 1, y: 0 }}
-                className="flex h-full items-center justify-center"
-                exit={{ opacity: 0, y: -5 }}
-                initial={{ opacity: 0, y: 5 }}
-                transition={{ duration: 0.2 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center justify-center"
+                exit={{ opacity: 0, scale: 0.8 }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15 }}
               >
-                <Check className="h-1/2 w-auto text-success" strokeWidth={3} />
+                <Check className="size-icon transform-gpu" />
               </motion.span>
             ) : null}
           </AnimatePresence>

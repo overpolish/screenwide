@@ -27,7 +27,42 @@ const DISMISSED_ON_CLOSE: &[WindowLabel] = &[
   WindowLabel::RecordingDock,
 ];
 
+/// The windows whose page carries the title bar. On macOS they are configured
+/// with a native overlay title bar, so the real traffic lights sit over the
+/// page; on Windows the page draws its own caption buttons and wants no native
+/// frame. `decorations` is a single configuration key for both platforms, so
+/// the Windows half is undone here.
+#[cfg(target_os = "windows")]
+const TITLE_BAR_IN_PAGE: &[WindowLabel] = &[
+  WindowLabel::EditorRecording,
+  WindowLabel::EditorScreenshot,
+  WindowLabel::ExportRecording,
+  WindowLabel::ExportScreenshot,
+  WindowLabel::Settings,
+  WindowLabel::Update,
+];
+
+/// Takes the native frame back off the title-bar windows. Every one of them is
+/// created hidden, so nothing is on screen while the frame changes.
+#[cfg(target_os = "windows")]
+fn remove_native_frames(app: &AppHandle) -> tauri::Result<()> {
+  for &label in TITLE_BAR_IN_PAGE {
+    let Some(window) = app.get_webview_window(label.as_str()) else {
+      continue;
+    };
+    // Dropping the frame keeps the outer size, which would hand the page the
+    // caption's height as extra content. Put the configured size back.
+    let inner = window.inner_size()?;
+    window.set_decorations(false)?;
+    window.set_size(inner)?;
+  }
+
+  Ok(())
+}
+
 pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
+  #[cfg(target_os = "windows")]
+  remove_native_frames(app)?;
   for &label in NORMAL.iter().chain(HIDDEN_ON_LAUNCH) {
     if let Some(window) = app.get_webview_window(label.as_str()) {
       initialize_normal_window(&window)?;

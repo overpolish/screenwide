@@ -30,8 +30,8 @@ export const ButtonExample: Story = {
 export const IconButtonExample: Story = {
   args: {
     children: (
-      <IconButton aria-label="Apply" size="compact">
-        <WandSparkles size={14} />
+      <IconButton aria-label="Apply">
+        <WandSparkles />
       </IconButton>
     ),
     onPress: () =>

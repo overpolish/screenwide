@@ -77,7 +77,8 @@ pub fn show(
     } else {
       Effect::UnderWindowBackground
     };
-    let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/qr-details".into()))
+    #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
+    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/qr-details".into()))
       .title("QR Details")
       .inner_size(480.0, 360.0)
       .center()
@@ -94,9 +95,18 @@ pub fn show(
         effects: vec![effect],
         radius: Some(10.0),
         state: Some(EffectState::Active),
-      })
-      .build()
-      .map_err(|error| error.to_string())?;
+      });
+    // The page's header leaves room for the real traffic lights, so on macOS
+    // the window keeps a native title bar, drawn over its content.
+    #[cfg(target_os = "macos")]
+    {
+      builder = builder
+        .decorations(true)
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(20.0, 20.0));
+    }
+    let window = builder.build().map_err(|error| error.to_string())?;
     let close_app = app.clone();
     window.on_window_event(move |event| {
       if let WindowEvent::CloseRequested { api, .. } = event {

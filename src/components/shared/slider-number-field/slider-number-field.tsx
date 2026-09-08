@@ -65,7 +65,7 @@ export function SliderNumberField({
   return (
     <div
       aria-label={label}
-      className={cn("gap-section flex min-w-0 items-center", className)}
+      className={cn("flex min-w-0 items-center gap-control-inset", className)}
       onPointerDownCapture={(event) => {
         // Prevent native scrubbing from starting on a disabled Number Field.
         if (isDisabled) event.stopPropagation();
@@ -74,7 +74,7 @@ export function SliderNumberField({
     >
       <Slider
         aria-label={`${label} slider`}
-        className="mx-control-inset min-w-0 flex-1"
+        className="min-w-0 flex-1"
         formatOptions={formatOptions}
         isDisabled={isDisabled}
         maxValue={sliderMaxValue}
@@ -94,7 +94,6 @@ export function SliderNumberField({
         onChange={changeValue}
         rightSection={rightSection}
         showSteppers={false}
-        size="compact"
         step={step}
         value={value}
       />

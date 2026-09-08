@@ -12,39 +12,31 @@ import { ReactNode } from "react";
 import { motionDurations, motionEasings } from "../../../lib/motion";
 import { cn } from "../../../lib/styling";
 import { Button } from "../../base/button/button";
-import { IconButton, IconButtonProps } from "../../base/button/icon-button";
+import { IconButton } from "../../base/button/icon-button";
 
 import { useConfirmAction } from "./use-confirm-action";
 
+// A state change crossfades; native controls do not scale their content.
 const SWAP_ANIMATION: MotionProps = {
-  animate: { opacity: 1, scale: 1 },
-  exit: { opacity: 0, scale: 0 },
-  initial: { opacity: 0, scale: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  initial: { opacity: 0 },
 };
-
-/**
- * The sizes both renderings offer. `Button` and `IconButton` name their sizes
- * alike, so the text variant is checked against the same union.
- */
-type ConfirmActionButtonSize = NonNullable<IconButtonProps["size"]>;
 
 type ConfirmActionButtonProps = {
   armedIcon: ReactNode;
   armedLabel: string;
   idleIcon: ReactNode;
   idleLabel: string;
-  armedClassName?: string;
   className?: string;
   isDisabled?: boolean;
   onConfirm?: () => void;
-  size?: ConfirmActionButtonSize;
   timeoutMs?: number;
   /** Icon-only, or an icon beside the label it is confirming. */
   variant?: "icon" | "text";
 };
 
 export function ConfirmActionButton({
-  armedClassName,
   armedIcon,
   armedLabel,
   className,
@@ -52,7 +44,6 @@ export function ConfirmActionButton({
   idleLabel,
   isDisabled,
   onConfirm,
-  size = "default",
   timeoutMs,
   variant = "icon",
 }: ConfirmActionButtonProps) {
@@ -67,10 +58,14 @@ export function ConfirmActionButton({
     duration: reducedMotion ? 0 : motionDurations.state,
     ease: motionEasings.out,
   };
-  const buttonClassName = cn(
-    className,
-    isArmed && !isDisabled && armedClassName,
-    focusClassName,
+  const buttonClassName = cn(className, focusClassName);
+  // Armed, the control reads as destructive the native way: red content on
+  // an otherwise unchanged bezel. The colour lives on the armed content, which
+  // crossfades, rather than on the button, whose colour would lerp into the
+  // idle content as it returns.
+  const contentClassName = cn(
+    "absolute inset-0 flex items-center justify-center",
+    isArmed && !isDisabled && "text-error",
   );
 
   if (variant === "text") {
@@ -82,11 +77,10 @@ export function ConfirmActionButton({
         aria-label={isArmed ? armedLabel : undefined}
         className={cn("relative", buttonClassName)}
         isDisabled={isDisabled}
-        size={size}
       >
         <span
           aria-hidden
-          className="gap-control-inset invisible inline-flex items-center"
+          className="invisible inline-flex items-center gap-control"
         >
           {idleIcon}
           {idleLabel}
@@ -95,7 +89,7 @@ export function ConfirmActionButton({
           <motion.span
             key={isArmed ? "armed" : "idle"}
             {...SWAP_ANIMATION}
-            className="gap-control-inset absolute inset-0 flex items-center justify-center"
+            className={cn(contentClassName, "gap-control")}
             transition={transition}
           >
             {isArmed ? armedIcon : idleIcon}
@@ -112,7 +106,6 @@ export function ConfirmActionButton({
       aria-label={isArmed ? armedLabel : idleLabel}
       className={buttonClassName}
       isDisabled={isDisabled}
-      size={size}
     >
       <span aria-hidden className="invisible flex items-center justify-center">
         {idleIcon}
@@ -122,7 +115,7 @@ export function ConfirmActionButton({
           aria-hidden
           key={isArmed ? "armed" : "idle"}
           {...SWAP_ANIMATION}
-          className="absolute inset-0 flex items-center justify-center"
+          className={contentClassName}
           transition={transition}
         >
           {isArmed ? armedIcon : idleIcon}

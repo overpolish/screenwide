@@ -14,10 +14,18 @@ import {
 // A minimal keycap: a small rounded fill with the key in the label colour,
 // as Mac apps draw shortcut hints. No border, bottom edge or shadow; native
 // shortcut text is flat, and the fill alone sets the key apart from prose.
-const keyboardClassName = [
-  "inline-flex h-5 min-w-5 items-center justify-center gap-tight rounded-sm bg-fill px-control text-body text-content-fg tabular-nums",
-  "[&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu",
-];
+// The plain variant drops the fill for keys shown inside a control, where
+// native draws the shortcut as bare glyphs.
+// `kbd` inherits the monospace family from the browser reset, so the sans
+// family is set explicitly.
+const keyboardClassName = {
+  keycap:
+    "inline-flex h-5 min-w-5 items-center justify-center gap-tight rounded-sm bg-fill px-control font-sans text-body text-content-fg tabular-nums",
+  plain:
+    "inline-flex items-center justify-center gap-tight font-sans text-body tabular-nums",
+};
+const keyboardIconClassName =
+  "[&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu";
 
 const isMacOS =
   typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
@@ -59,6 +67,7 @@ const mappedKey = (children: ReactNode) => {
 
 export type KeyboardProps = HTMLAttributes<HTMLElement> & {
   ref?: Ref<HTMLElement>;
+  variant?: "keycap" | "plain";
 };
 
 export const Keyboard = ({
@@ -66,6 +75,7 @@ export const Keyboard = ({
   children,
   className,
   ref,
+  variant = "keycap",
   ...rest
 }: KeyboardProps) => {
   const key = mappedKey(children);
@@ -74,7 +84,11 @@ export const Keyboard = ({
     <kbd
       {...rest}
       aria-label={ariaLabel ?? key.accessibleName}
-      className={clsx(keyboardClassName, className)}
+      className={clsx(
+        keyboardClassName[variant],
+        keyboardIconClassName,
+        className,
+      )}
       ref={ref}
     >
       <span className="inline-flex items-center justify-center">

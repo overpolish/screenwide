@@ -33,8 +33,11 @@ export const Short: Story = {};
 
 export const Multiline: Story = {
   args: {
-    value:
-      "WIFI:T:WPA;S:Screenwide Studio;P:correct-horse-battery-staple;;\n\nThis second paragraph demonstrates how longer detected content wraps inside the preview.",
+    value: Array.from(
+      { length: 12 },
+      (_, index) =>
+        `Line ${String(index + 1)}: WIFI:T:WPA;S:Screenwide Studio;P:correct-horse-battery-staple;; and a longer trailing sentence so that wrapping is exercised as well as scrolling.`,
+    ).join("\n\n"),
   },
 };
 

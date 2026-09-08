@@ -3,43 +3,26 @@
 
 import { ReactNode } from "react";
 
-import { tv } from "../../../lib/variants";
-import { CircularProgress } from "../../base/circular-progress/circular-progress";
+import { cn } from "../../../lib/styling";
+import { ProgressBar } from "../../base/progress-bar/progress-bar";
 import { Text } from "../../base/text/text";
-
-const progressPanelVariants = tv({
-  defaultVariants: { orientation: "column" },
-  slots: {
-    base: "gap-section flex",
-    secondary: "tabular-nums",
-    text: "gap-tight flex flex-col",
-  },
-  variants: {
-    orientation: {
-      column: { base: "flex-col items-center", text: "items-center" },
-      row: { base: "items-center" },
-    },
-  },
-});
 
 export type ProgressPanelProps = {
   /** What is happening, in one short phrase. */
   label: string;
   /** Percent complete, or `null` when the work cannot report how far it is. */
   progress: number | null;
-  /** Offered below the text, typically a single button. */
+  /** Offered at the end of the bar row, typically a single button. */
   action?: ReactNode;
-  orientation?: "column" | "row";
-  /** The accessible name of the ring, when the label is too terse to serve. */
+  /** The accessible name of the bar, when the label is too terse to serve. */
   progressLabel?: string;
-  /** A second line under the label: an estimate, a shortcut hint. */
+  /** A line under the bar: an estimate, a shortcut hint. */
   secondary?: ReactNode;
-  /** The large ring shows its own percentage while determinate. */
-  size?: "default" | "large";
 };
 
 /**
- * A ring with what it is measuring beside or beneath it.
+ * The Finder copy-dialog layout: the label above, the bar beneath with the
+ * action at the end of its row, and the estimate below.
  *
  * Presentational: it neither owns the work nor decides how to describe it, so
  * every phrase, estimate and action arrives from the feature that is waiting.
@@ -47,31 +30,37 @@ export type ProgressPanelProps = {
 export function ProgressPanel({
   action,
   label,
-  orientation,
   progress,
   progressLabel,
   secondary,
-  size = "default",
 }: ProgressPanelProps) {
-  const styles = progressPanelVariants({ orientation });
-
   return (
-    <div className={styles.base()}>
-      <CircularProgress
-        aria-label={progressLabel ?? label}
-        isIndeterminate={progress === null}
-        size={size}
-        value={progress ?? undefined}
-      />
-      <div className={styles.text()}>
-        <Text as="span">{label}</Text>
-        {secondary === undefined ? null : (
-          <Text as="span" className={styles.secondary()} variant="help">
-            {secondary}
-          </Text>
+    <div className="flex w-full flex-col gap-tight">
+      <Text as="span" className="mb-tight">
+        {label}
+      </Text>
+      {/* The action trails the bar, where Finder and Safari put the stop. It
+          is taller than the bar, so its overhang is pulled in and the gaps
+          above and below measure from the bar rather than the button. */}
+      <div
+        className={cn(
+          "flex items-center gap-control-inset",
+          action != null && "-my-2.25",
         )}
+      >
+        <ProgressBar
+          aria-label={progressLabel ?? label}
+          className="flex-1"
+          isIndeterminate={progress === null}
+          value={progress ?? undefined}
+        />
+        {action}
       </div>
-      {action}
+      {secondary === undefined ? null : (
+        <Text as="span" className="tabular-nums" variant="subheadline">
+          {secondary}
+        </Text>
+      )}
     </div>
   );
 }

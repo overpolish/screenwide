@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 
+import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
 import { PillGroup } from "../../base/pill-group/pill-group";
 import { Switch } from "../../base/switch/switch";
 import { HotkeyField } from "../hotkey-field/hotkey-field";
@@ -21,12 +22,14 @@ const meta = {
     title: "Open location after export",
   },
   component: Setting,
-  parameters: { layout: "centered" },
-  render: (args) => (
-    <div className="w-xl max-w-full">
-      <Setting {...args} />
-    </div>
-  ),
+  decorators: [
+    (Story, context) => (
+      <FeatureStoryStage height={64} viewMode={context.viewMode} width={576}>
+        <Story />
+      </FeatureStoryStage>
+    ),
+  ],
+  parameters: { layout: "fullscreen" },
   title: "Components/Setting",
 } satisfies Meta<typeof Setting>;
 

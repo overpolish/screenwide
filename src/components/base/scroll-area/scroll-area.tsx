@@ -23,6 +23,8 @@ type ScrollAreaProps = {
   orientation?: "horizontal" | "vertical";
   rootClassName?: string;
   scrollbarAutoHide?: "scroll" | "never";
+  /** Scroll without a visible scrollbar, for strips with no room for one. */
+  scrollbarHidden?: boolean;
 };
 
 export function ScrollArea({
@@ -34,6 +36,7 @@ export function ScrollArea({
   orientation = "vertical",
   rootClassName,
   scrollbarAutoHide = "scroll",
+  scrollbarHidden = false,
 }: ScrollAreaProps) {
   const scrollRef = useRef<OverlayScrollbarsComponentRef>(null);
   const startRef = useRef<HTMLDivElement>(null);
@@ -122,7 +125,7 @@ export function ScrollArea({
           scrollbars: {
             autoHide: scrollbarAutoHide,
             theme: "os-theme-screenwide",
-            visibility: "auto",
+            visibility: scrollbarHidden ? "hidden" : "auto",
           },
         }}
         ref={scrollRef}

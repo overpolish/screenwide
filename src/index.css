@@ -60,6 +60,10 @@
   --spacing-window-inset: 1.25rem;
   /* Regular control height, measured from an AppKit push button on macOS 26. */
   --spacing-control-height: 1.5rem;
+  /* A native title bar carrying toolbar items, measured on macOS 26. */
+  --spacing-title-bar: 3.25rem;
+  /* Leading inset that clears the three traffic lights, which sit at x 20. */
+  --spacing-traffic-lights: 5rem;
   --spacing-focus-safe: 0.125rem;
   /* Icon sizes matched to SF Symbols in AppKit controls, measured on macOS 26:
      a 13pt regular control draws its symbol in a 17x16 box, small (11pt) in
@@ -117,11 +121,6 @@
     }
   }
 
-  --blur-xs: 2px;
-  --blur-sm: 3px;
-  --blur-md: 4px;
-  --blur-lg: 5px;
-
   --shadow-preview: 0 2px 12px var(--color-shadow);
 
   --color-content: white;
@@ -133,13 +132,6 @@
   --color-content-fg-tertiary: rgb(0 0 0 / 25%);
   --color-content-fg-quaternary: rgb(0 0 0 / 10%);
   --color-shadow: rgb(0 0 0 / 30%);
-
-  --color-accent: #ff2970;
-  --color-accent-warm: #ff5c5a;
-  --color-accent-vivid: #ff009d;
-  --color-accent-heading: var(--color-accent);
-  --color-accent-heading-warm: var(--color-accent-warm);
-  --color-accent-heading-vivid: var(--color-accent-vivid);
 
   /* Primary follows the operating system accent when the user has chosen one;
      the brand colour is the fallback. `--system-accent` is set on the document
@@ -160,6 +152,20 @@
     in oklab,
     var(--color-primary),
     black 20%
+  );
+  /* The window title's gradient: the accent with a lighter and a deeper stop
+     around it, so the identity moment follows the OS accent like everything
+     else. */
+  --color-accent-heading: var(--color-primary);
+  --color-accent-heading-warm: color-mix(
+    in oklab,
+    var(--color-primary),
+    white 25%
+  );
+  --color-accent-heading-vivid: color-mix(
+    in oklab,
+    var(--color-primary),
+    black 15%
   );
   --color-primary-tint: color-mix(
     in oklab,

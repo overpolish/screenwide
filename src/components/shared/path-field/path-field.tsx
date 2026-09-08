@@ -46,9 +46,7 @@ export function PathField({
   // The tooltip only earns its place when the label hides part of the path.
   const isTruncated = value !== null && display !== value;
   return (
-    <div
-      className={cn("gap-control-inset inline-flex items-center", className)}
-    >
+    <div className={cn("inline-flex items-center gap-control", className)}>
       <TooltipTrigger isDisabled={!isTruncated}>
         <Button
           aria-label={`${label}: ${value || display}`}

@@ -51,7 +51,7 @@ export function EditableWindowTitle({
       aria-multiline={false}
       autoCorrect="off"
       className={cn(
-        "pointer-events-auto block cursor-text select-text whitespace-nowrap rounded-lg text-left outline-none caret-content-fg focus:selection:bg-content-fg/25",
+        "pointer-events-auto block cursor-text select-text whitespace-nowrap rounded-control text-left outline-none caret-content-fg focus:selection:bg-content-fg/25",
         focusStyles,
         elementFocusVisible,
       )}

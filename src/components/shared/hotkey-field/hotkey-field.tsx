@@ -186,7 +186,7 @@ export function HotkeyField({
               <>
                 <CircularProgress
                   aria-label="Testing button hold"
-                  size="compact"
+                  size="small"
                   value={mouseProgress}
                 />
                 Keep holding
@@ -199,7 +199,9 @@ export function HotkeyField({
           ) : keys.length ? (
             <Shortcut>
               {keys.map((key, index) => (
-                <Keyboard key={`${key}-${index.toString()}`}>{key}</Keyboard>
+                <Keyboard key={`${key}-${index.toString()}`} variant="plain">
+                  {key}
+                </Keyboard>
               ))}
             </Shortcut>
           ) : (
@@ -226,7 +228,7 @@ export function HotkeyField({
         <Text
           className="max-w-64 text-right text-error"
           role="alert"
-          variant="help"
+          variant="subheadline"
         >
           {captureError}
         </Text>
