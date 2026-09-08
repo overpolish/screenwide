@@ -20,24 +20,6 @@
 
 @theme inline {
   --color-overlay: color-mix(in oklab, var(--color-content) 30%, transparent);
-
-  /* Text hierarchy as stepped opacities of the foreground, so every tier
-     reads consistently over the window material in both themes. */
-  --color-content-fg-secondary: color-mix(
-    in oklab,
-    var(--color-content-fg) 55%,
-    transparent
-  );
-  --color-content-fg-tertiary: color-mix(
-    in oklab,
-    var(--color-content-fg) 30%,
-    transparent
-  );
-  --color-content-fg-quaternary: color-mix(
-    in oklab,
-    var(--color-content-fg) 12%,
-    transparent
-  );
 }
 
 @theme {
@@ -80,13 +62,29 @@
   --spacing-section: 0.75rem;
   /* Separation between major layout areas, such as navigation and content. */
   --spacing-layout: 1.5rem;
-  --spacing-window-inset: 1.5rem;
+  --spacing-window-inset: 1.25rem;
+  /* Regular control height, measured from an AppKit push button on macOS 26. */
+  --spacing-control-height: 1.5rem;
   --spacing-focus-safe: 0.125rem;
-  --spacing-icon-indicator: 0.625rem;
-  --spacing-icon-compact: 0.875rem;
-  --spacing-icon-default: 1.125rem;
-  --spacing-icon-prominent: 1.75rem;
-  --radius-window: 0.625rem;
+  /* Icon sizes matched to SF Symbols in AppKit controls, measured on macOS 26:
+     a 13pt regular control draws its symbol in a 17x16 box, small (11pt) in
+     14x14, mini (9pt) in 12x11, and the large symbol scale in 24x24. Lucide
+     fills about 20/24 of its box, so these edge lengths give the same visible
+     glyph size. */
+  --spacing-icon: 1rem;
+  --spacing-icon-small: 0.875rem;
+  --spacing-icon-mini: 0.75rem;
+  --spacing-icon-large: 1.5rem;
+  /* Measured on macOS 26: HUD panels 15px, plain windows 16px, toolbar
+     windows 26px. Tuned by eye to 14px, which reads as a match on the app's
+     small panels. */
+  --radius-window: 0.875rem;
+  /* Small HUD-style panels such as the glide preview. Tuned by eye (the
+     approved radius was 14px rendered at a 13px root, i.e. ~11px). */
+  --radius-panel: 0.6875rem;
+  /* Bezeled controls. macOS 26 keeps a rounded rectangle at the regular size;
+     tuned by eye against a native push button. */
+  --radius-control: 0.5rem;
 
   --animate-gradient: gradient 10s ease-in-out infinite;
   --animate-mesh-drift: mesh-drift 18s ease-in-out infinite alternate;
@@ -133,7 +131,13 @@
   --shadow-preview: 0 2px 12px var(--color-shadow);
 
   --color-content: white;
-  --color-content-fg: var(--color-neutral-800);
+  /* Label ladder measured from AppKit on macOS 26: alphas of pure black in
+     light and pure white in dark (85 / 50 / 25 / 10%, secondary 55% in dark).
+     Tertiary is also the disabled and placeholder text colour. */
+  --color-content-fg: rgb(0 0 0 / 85%);
+  --color-content-fg-secondary: rgb(0 0 0 / 50%);
+  --color-content-fg-tertiary: rgb(0 0 0 / 25%);
+  --color-content-fg-quaternary: rgb(0 0 0 / 10%);
   --color-shadow: rgb(0 0 0 / 30%);
 
   --color-accent: #ff2970;
@@ -143,74 +147,71 @@
   --color-accent-heading-warm: var(--color-accent-warm);
   --color-accent-heading-vivid: var(--color-accent-vivid);
 
-  --color-primary: #d81b60;
+  /* Primary follows the operating system accent when the user has chosen one;
+     the brand colour is the fallback. `--system-accent` is set on the document
+     element at runtime by `src/lib/system-accent.ts`. Kept outside
+     `@theme inline` so the value resolves at use time. */
+  --color-primary: var(--system-accent, #d81b60);
   --color-primary-fg: white;
-  --color-primary-surface: rgb(216 27 96 / 85%);
-  --color-primary-surface-hover: rgb(194 24 91 / 90%);
-  --color-primary-surface-pressed: rgb(173 20 87 / 95%);
+  /* Fills use the accent opaque, as native controls do; the translucent tint
+     is for transient states such as a pulse. The OS accent already resolves
+     lighter in dark appearance, so these need no dark override. */
+  --color-primary-surface: var(--color-primary);
+  --color-primary-surface-hover: color-mix(
+    in oklab,
+    var(--color-primary),
+    black 10%
+  );
+  --color-primary-surface-pressed: color-mix(
+    in oklab,
+    var(--color-primary),
+    black 20%
+  );
+  --color-primary-tint: color-mix(
+    in oklab,
+    var(--color-primary) 50%,
+    transparent
+  );
+  /* Keyboard focus ring, matching AppKit's focus indicator: accent at 50%. */
+  --color-focus-ring: color-mix(
+    in oklab,
+    var(--color-primary) 50%,
+    transparent
+  );
+  /* Fill ladder over the window material, matching AppKit's system fills
+     (10 / 8 / 5 / 3%): fill for bezels and selected rows, secondary for a
+     pressed bezel, tertiary for row and icon-button hover, quaternary for
+     grouping backgrounds. Bezeled controls do not react to hover. */
+  --color-fill: rgb(0 0 0 / 10%);
+  --color-fill-secondary: rgb(0 0 0 / 8%);
+  --color-fill-tertiary: rgb(0 0 0 / 5%);
+  --color-fill-quaternary: rgb(0 0 0 / 3%);
 
-  /* Shared material-aware component surfaces. The native window material is
-     the base layer; these fills establish interaction hierarchy above it. */
-  --color-neutral: rgb(0 0 0 / 9%);
-  --color-neutral-hover: rgb(0 0 0 / 13%);
-  --color-neutral-pressed: rgb(0 0 0 / 17%);
-  --color-neutral-subtle: rgb(0 0 0 / 5%);
-  --color-neutral-disabled-fg: #a8a8a8;
-
-  --color-success: #248a3d;
-  --color-success-hover: #207c37;
-  --color-success-pressed: #1c6e31;
-  --color-info: #0068c9;
-  --color-info-solid: #0668c2;
-  --color-info-solid-fg: white;
-  --color-info-solid-hover: #075eaf;
-  --color-info-solid-pressed: #08539c;
-  --color-warning: var(--color-yellow-500);
-  --color-error: #d70015;
-  --color-error-surface: rgb(255 59 48 / 18%);
-  --color-error-surface-hover: rgb(255 59 48 / 24%);
-  --color-error-surface-pressed: rgb(255 59 48 / 30%);
+  /* Semantic colours are the AppKit system palette, measured on macOS 26.
+     Native uses them solid, for text and glyphs, never as tinted surfaces. */
+  --color-success: rgb(52 199 89);
+  --color-info: rgb(0 136 255);
+  --color-warning: rgb(255 204 0);
+  --color-error: rgb(255 56 60);
 }
 
 @layer themes {
   .dark {
-    --color-content: var(--color-neutral-800);
-    --color-content-fg: white;
+    --color-content: rgb(30 30 30);
+    --color-content-fg: rgb(255 255 255 / 85%);
+    --color-content-fg-secondary: rgb(255 255 255 / 55%);
+    --color-content-fg-tertiary: rgb(255 255 255 / 25%);
+    --color-content-fg-quaternary: rgb(255 255 255 / 10%);
 
-    --color-primary-surface: color-mix(
-      in srgb,
-      var(--color-accent) 55%,
-      transparent
-    );
-    --color-primary-surface-hover: color-mix(
-      in srgb,
-      var(--color-accent) 65%,
-      transparent
-    );
-    --color-primary-surface-pressed: color-mix(
-      in srgb,
-      var(--color-accent) 75%,
-      transparent
-    );
+    --color-fill: rgb(255 255 255 / 10%);
+    --color-fill-secondary: rgb(255 255 255 / 8%);
+    --color-fill-tertiary: rgb(255 255 255 / 5%);
+    --color-fill-quaternary: rgb(255 255 255 / 3%);
 
-    --color-neutral: rgb(255 255 255 / 12%);
-    --color-neutral-hover: rgb(255 255 255 / 17%);
-    --color-neutral-pressed: rgb(255 255 255 / 22%);
-    --color-neutral-subtle: rgb(255 255 255 / 7%);
-    --color-neutral-disabled-fg: #777777;
-
-    --color-success: #7ee787;
-    --color-success-hover: #8bea95;
-    --color-success-pressed: #98eda3;
-    --color-info: #66b7ff;
-    --color-info-solid: #1473c9;
-    --color-info-solid-hover: #2c82d0;
-    --color-info-solid-pressed: #438fd6;
-    --color-warning: var(--color-yellow-500);
-    --color-error: #ff6961;
-    --color-error-surface: rgb(255 69 58 / 30%);
-    --color-error-surface-hover: rgb(255 69 58 / 38%);
-    --color-error-surface-pressed: rgb(255 69 58 / 46%);
+    --color-success: rgb(48 209 88);
+    --color-info: rgb(0 145 255);
+    --color-warning: rgb(255 214 0);
+    --color-error: rgb(255 66 69);
   }
 }
 
@@ -268,10 +269,15 @@
   top: round(down, calc(50% - var(--spinner-size) / 2), 1px);
 }
 
-html,
+/* The body default lives on `body`, not `html`: rem-based tokens scale with
+   the root font size, which must stay at the browser default. */
 body {
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
+}
+
+html,
+body {
   margin: 0;
   width: 100%;
   height: 100%;
@@ -281,12 +287,8 @@ body {
   -webkit-user-select: none;
 }
 
-.field-group:has([data-hovered]) {
-  background-color: var(--color-neutral-hover);
-}
-
 .field-group:has([data-pressed]) {
-  background-color: var(--color-neutral-pressed);
+  background-color: var(--color-fill-secondary);
 }
 
 .field-group:has(> [data-field-group-action]) [data-select-trigger] {
@@ -445,7 +447,7 @@ body {
 .release-notes code {
   padding: var(--spacing-tight) var(--spacing-control);
   border-radius: var(--radius-md);
-  background: var(--color-neutral);
+  background: var(--color-fill-tertiary);
   font-family: var(--font-mono);
   font-size: 0.88em;
 }
@@ -455,7 +457,7 @@ body {
   padding: var(--spacing-section);
   overflow-x: auto;
   border-radius: var(--radius-md);
-  background: var(--color-neutral);
+  background: var(--color-fill-tertiary);
   font-size: 0.88em;
   line-height: 1.45;
 }
@@ -474,7 +476,7 @@ body {
   margin: var(--spacing-control-inset) 0;
   padding: var(--spacing-section);
   border-radius: var(--radius-md);
-  background: var(--color-neutral);
+  background: var(--color-fill-quaternary);
   color: var(--color-content-fg-secondary);
 }
 
@@ -549,7 +551,7 @@ html[data-platform="windows"] .glide-app-icon-windows-boost {
   --os-track-bg: transparent;
   --os-track-bg-hover: transparent;
   --os-track-bg-active: transparent;
-  --os-handle-bg: var(--color-neutral);
-  --os-handle-bg-hover: var(--color-neutral-hover);
-  --os-handle-bg-active: var(--color-neutral-pressed);
+  --os-handle-bg: var(--color-content-fg-tertiary);
+  --os-handle-bg-hover: var(--color-content-fg-secondary);
+  --os-handle-bg-active: var(--color-content-fg-secondary);
 }

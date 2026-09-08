@@ -134,9 +134,6 @@ pub(in crate::glide::platform) fn handle_event(
         sample_scroll(app, event, effective_input);
         let phase = event.get_integer_value_field(99);
         if effective_input == Input::Trackpad && phase & (4 | 8) != 0 {
-          if phase & 8 == 0 && native_settings::is_down(settings.spaces_modifier) {
-            CANCELLED_UNTIL_RELEASE.store(true, Ordering::Release);
-          }
           session::set_momentum_suppression(normal, true);
           lifecycle::request_end(app, phase & 8 != 0);
         }

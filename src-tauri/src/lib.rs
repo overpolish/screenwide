@@ -31,6 +31,7 @@ mod settings;
 mod shortcuts;
 #[cfg(debug_assertions)]
 mod storybook_native;
+mod system_accent;
 mod text_recognition;
 #[cfg(desktop)]
 mod tray;
@@ -175,6 +176,7 @@ pub fn run() {
       shortcuts::begin_shortcut_capture,
       shortcuts::end_shortcut_capture,
       shortcuts::set_shortcut_binding,
+      system_accent::get_system_accent,
       windows::source_selector::collapse_recording_source_selector,
       windows::source_selector::get_recording_source_selector_state,
       windows::region_gesture::begin_region_selector_gesture,
@@ -246,6 +248,7 @@ pub fn run() {
       editor::initialize(app.handle());
       let has_pending_export = editor::has_pending_workspace(app.handle());
       shortcuts::initialize(app.handle());
+      system_accent::initialize(app.handle());
       windows::manage_transient_popover_dismissal(app.handle());
 
       #[cfg(target_os = "macos")]

@@ -152,7 +152,7 @@ export function GlidePreview({
       {
         backgroundColor: [
           "var(--color-primary-surface)",
-          "var(--color-primary-surface-hover)",
+          "var(--color-primary-tint)",
           "var(--color-primary-surface)",
         ],
       },
@@ -163,15 +163,15 @@ export function GlidePreview({
   return (
     <div
       aria-label={describeDestination(region, pending)}
-      className="window-surface rounded-window relative h-full w-full overflow-hidden"
+      className="window-surface rounded-panel relative h-full w-full overflow-hidden"
       role="img"
     >
-      {neutralFill ? <div className="absolute inset-0 bg-neutral" /> : null}
+      {neutralFill ? <div className="absolute inset-0 bg-fill" /> : null}
       {destination ? (
         <motion.div
           animate={{
             backgroundColor: constrained
-              ? "var(--color-neutral)"
+              ? "var(--color-fill)"
               : "var(--color-primary-surface)",
             height: destination.height,
             left: destination.left,
@@ -190,7 +190,7 @@ export function GlidePreview({
         <>
           <motion.div
             animate={{ opacity: 1 }}
-            className={`absolute bg-neutral ${rectCornerClasses(constrained.actual)}`}
+            className={`absolute bg-fill ${rectCornerClasses(constrained.actual)}`}
             initial={{ opacity: 0 }}
             style={rectGeometry(constrained.actual)}
             transition={{ duration: 0.06, ease: "easeOut" }}
@@ -208,7 +208,9 @@ export function GlidePreview({
         </>
       ) : null}
       {/* Centered over whatever the fill is doing: which app is moving is one
-          fact about the whole preview, not about the destination. */}
+          fact about the whole preview, not about the destination. App icon
+          artwork has its own margin, so it takes the large size rather than
+          the glyph size. */}
       {iconSrc ? (
         <>
           {/* Some Windows executables expose unusually low-alpha icon artwork.
@@ -216,12 +218,12 @@ export function GlidePreview({
               changing opaque icons or baking in an app-specific backdrop. */}
           <img
             alt=""
-            className="glide-app-icon-windows-boost pointer-events-none absolute inset-0 m-auto size-icon-default object-contain"
+            className="glide-app-icon-windows-boost pointer-events-none absolute inset-0 m-auto size-icon-large object-contain"
             src={iconSrc}
           />
           <img
             alt=""
-            className="pointer-events-none absolute inset-0 m-auto size-icon-default object-contain"
+            className="pointer-events-none absolute inset-0 m-auto size-icon-large object-contain"
             src={iconSrc}
           />
         </>

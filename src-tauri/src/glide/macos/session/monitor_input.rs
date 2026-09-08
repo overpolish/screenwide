@@ -15,7 +15,6 @@ use tauri::AppHandle;
 static RESERVED: AtomicBool = AtomicBool::new(false);
 static CANCELLED: AtomicBool = AtomicBool::new(false);
 static CONTACT_OPEN: AtomicBool = AtomicBool::new(false);
-static COMMITTED_UNTIL_RELEASE: AtomicBool = AtomicBool::new(false);
 
 pub(in crate::glide::platform) fn poll(app: &AppHandle, state: &SharedState) {
   let settings = native_settings::snapshot();
@@ -37,7 +36,6 @@ pub(in crate::glide::platform) fn poll(app: &AppHandle, state: &SharedState) {
   if !native_settings::is_down(settings.monitors_modifier) {
     RESERVED.store(false, Ordering::Relaxed);
     CANCELLED.store(false, Ordering::Relaxed);
-    COMMITTED_UNTIL_RELEASE.store(false, Ordering::Relaxed);
     if active {
       finish(app, state, !settings.enabled);
     }
@@ -51,7 +49,6 @@ pub(in crate::glide::platform) fn poll(app: &AppHandle, state: &SharedState) {
     && !native_settings::is_down(settings.spaces_modifier)
     && !multitouch::pointer_episode_active()
     && !CANCELLED.load(Ordering::Relaxed)
-    && !COMMITTED_UNTIL_RELEASE.load(Ordering::Relaxed)
   {
     if let Ok(source) = CGEventSource::new(CGEventSourceStateID::CombinedSessionState) {
       if let Ok(event) = CGEvent::new(source) {
@@ -95,7 +92,6 @@ pub(in crate::glide::platform) fn handle_event(
   if !down {
     RESERVED.store(false, Ordering::Relaxed);
     CANCELLED.store(false, Ordering::Relaxed);
-    COMMITTED_UNTIL_RELEASE.store(false, Ordering::Relaxed);
     if active {
       finish(app, state, !settings.enabled);
     }
@@ -105,16 +101,8 @@ pub(in crate::glide::platform) fn handle_event(
     && (is_active(state)
       || !settings.enabled
       || crate::shortcuts::is_capturing()
-      || crate::capture_overlays::blocks_glide(app)
-      || COMMITTED_UNTIL_RELEASE.load(Ordering::Relaxed))
+      || crate::capture_overlays::blocks_glide(app))
   {
-    if COMMITTED_UNTIL_RELEASE.load(Ordering::Relaxed) {
-      return Some(if matches!(kind, CGEventType::ScrollWheel) {
-        CallbackResult::Drop
-      } else {
-        CallbackResult::Keep
-      });
-    }
     return None;
   }
   if key || button {
@@ -242,7 +230,6 @@ pub(in crate::glide::platform) fn handle_event(
       CANCELLED.store(true, Ordering::Relaxed);
       finish(app, state, true);
     } else {
-      COMMITTED_UNTIL_RELEASE.store(true, Ordering::Relaxed);
       finish(app, state, false);
     }
     super::set_suppression(state, InputKind::Trackpad, false);

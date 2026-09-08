@@ -5,6 +5,8 @@ import { withThemeByClassName } from "@storybook/addon-themes";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import { themes } from "storybook/theming";
 
+import { synchronizeSystemAccent } from "../src/lib/system-accent";
+
 import type { Decorator, Preview } from "@storybook/react-vite";
 
 import "../src/index.css";
@@ -29,6 +31,8 @@ if (isNativePreview) {
 
   synchronizeNativeTheme(systemDarkMode);
   systemDarkMode.addEventListener("change", synchronizeNativeTheme);
+  // The native preview runs inside the app shell, so the OS accent is real.
+  synchronizeSystemAccent();
 }
 
 // Stub the Tauri runtime so stories mounting Tauri-touching components render

@@ -75,6 +75,7 @@ windows = { version = "0.62.2", features = [
   "Graphics_DirectX_Direct3D11",
   "Media_Ocr",
   "Storage_Streams",
+  "UI_ViewManagement",
   "Win32_Foundation",
   "Win32_Devices_HumanInterfaceDevice",
   "Win32_Graphics_Direct3D",

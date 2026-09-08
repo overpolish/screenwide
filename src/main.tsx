@@ -7,9 +7,11 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./index.css";
 import { installInactiveWindowHoverBridge } from "./lib/inactive-window-hover";
+import { synchronizeSystemAccent } from "./lib/system-accent";
 import { synchronizeSystemTheme } from "./lib/theme";
 
 synchronizeSystemTheme();
+synchronizeSystemAccent();
 installInactiveWindowHoverBridge();
 
 // Screenwide provides its own right-click interactions where needed. Never
