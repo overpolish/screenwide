@@ -4,8 +4,8 @@
 //! Region OSC surfaces. The anchor display draws into a
 //! `WS_EX_NOREDIRECTIONBITMAP` child of the Tauri window; every other display
 //! gets a `WS_POPUP` peer, the Win32 twin of the macOS `NSPanel` peers. All of
-//! them share one [`Gpu`] — one D3D11 device, one DirectComposition device and
-//! one pipeline — and own only their window, target, visual and swap chain.
+//! them share one [`Gpu`] - one D3D11 device, one DirectComposition device and
+//! one pipeline - and own only their window, target, visual and swap chain.
 //!
 //! Port of `screenshot_region_osc_macos.m`'s attach and master frame draw
 //! (`:39-174`), `+desktop.m` and `+snapshot.m`, minus OCR and ruler.
@@ -270,7 +270,7 @@ pub(crate) struct Surface {
   magnifier_source: Option<Texture>,
   snapshot: Option<Texture>,
 
-  // Presentation mirror — the fields `+state.m` kept on the ObjC object.
+  // Presentation mirror - the fields `+state.m` kept on the ObjC object.
   pub(crate) display_id: u32,
   pub(crate) region: Rect,
   pub(crate) visible: bool,
@@ -285,7 +285,7 @@ pub(crate) struct Surface {
   /// ignores this, its window is the webview's own.
   pub(crate) desktop_presented: bool,
   /// This surface's origin in the desktop plane. `region` is desktop-global, so
-  /// drawing subtracts the offset and input adds it — the macOS
+  /// drawing subtracts the offset and input adds it - the macOS
   /// `desktopOffset`.
   desktop_offset: Point,
   pub(crate) gesture_active: bool,
@@ -306,7 +306,7 @@ pub(crate) struct Surface {
 impl Surface {
   pub(crate) fn root(gpu: Arc<Gpu>, host: HWND, overlay: HWND) -> Result<Self, String> {
     // The overlay child is `WS_EX_NOREDIRECTIONBITMAP`, so DirectComposition
-    // owns all of its content and the target is created topmost — that is what
+    // owns all of its content and the target is created topmost - that is what
     // keeps the region frame above the WebView2 sibling.
     Self::new(gpu, Kind::Root { host }, overlay, 0)
   }
@@ -576,7 +576,7 @@ impl Surface {
 
   /// Keeps the root overlay sized to the host client area and above its
   /// WebView2 sibling, and each peer covering its own monitor above everything
-  /// else — the Win32 form of `orderFrontRegardless` with the parent's level.
+  /// else - the Win32 form of `orderFrontRegardless` with the parent's level.
   fn raise(&self) {
     match self.kind {
       Kind::Root { .. } => {
@@ -880,7 +880,7 @@ impl Surface {
       .map_or_else(|| gpu.placeholder.clone(), |source| source.view.clone());
     // macOS puts a non-composited OCR snapshot in an opaque CALayer beneath
     // its transparent Metal layer. Windows folds both into this target, so
-    // every presented snapshot—not only Ruler's composited one—must retain
+    // every presented snapshot-not only Ruler's composited one-must retain
     // opaque destination alpha as translucent shading is drawn over it.
     let blend = if opaque_snapshot_target(self.snapshot_presented, self.snapshot.is_some()) {
       &gpu.opaque_blend

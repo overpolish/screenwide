@@ -144,7 +144,7 @@ pub(super) fn clamp_label(
   )
 }
 
-/// Measurement, probe, guide gap then radius — the order the macOS hit test
+/// Measurement, probe, guide gap then radius - the order the macOS hit test
 /// walked its four label arrays in.
 pub(crate) fn label_hit(rects: &[LabelRect], point: Point) -> Option<LabelHit> {
   for kind in 1..=4_u8 {

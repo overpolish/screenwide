@@ -110,7 +110,7 @@ pub(crate) struct Context {
   probes: Mutex<Vec<MonitorProbe>>,
   /// Set when a configure found a *different* desktop than the one already
   /// bound. Establishing the first binding is not a topology change, so it
-  /// never notifies — AppKit only fired the callback from its screen-parameters
+  /// never notifies - AppKit only fired the callback from its screen-parameters
   /// notification.
   pending_layout_notice: Mutex<bool>,
   layout_notified: Mutex<Option<Instant>>,
@@ -643,7 +643,7 @@ pub(crate) fn configure_desktop(
 }
 
 /// Port of `rebuild_surfaces` (`+desktop.m:113-186`): a topology change tears
-/// the peers down — cancelling their gestures, lens and cursor first — and
+/// the peers down - cancelling their gestures, lens and cursor first - and
 /// rebuilds them from the new binding.
 fn sync_peers(window: &WebviewWindow, binding: &DesktopBinding) {
   let Some(context) = context_arc(window) else {
@@ -957,7 +957,7 @@ fn set_exclusion_rect(window: &WebviewWindow, rect: Rect) -> bool {
 }
 
 /// Port of `screenwide_region_osc_set_desktop_presented` (`+desktop.m:247-271`):
-/// window ordering only. With no peers — the single-monitor case — this stays
+/// window ordering only. With no peers - the single-monitor case - this stays
 /// a scene mirror and nothing is ordered.
 pub(crate) fn set_desktop_presented(window: &WebviewWindow, presented: bool) -> bool {
   with_context(window, |context| {

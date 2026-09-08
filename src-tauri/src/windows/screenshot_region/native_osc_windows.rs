@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Windows D3D11 twin of `native_osc_macos`: the region scene, the desktop
-//! peers and snapshots, the OCR overlay and the Ruler — surface, state,
+//! peers and snapshots, the OCR overlay and the Ruler - surface, state,
 //! pointer and keyboard input, cursors, text and chrome.
 
 mod desktop;

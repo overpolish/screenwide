@@ -96,6 +96,6 @@ export const LongTitle: Story = {
   args: {
     leadingSection: mark,
     title:
-      "Screenwide product walkthrough — recording and screenshot editing — September 2026",
+      "Screenwide product walkthrough - recording and screenshot editing - September 2026",
   },
 };

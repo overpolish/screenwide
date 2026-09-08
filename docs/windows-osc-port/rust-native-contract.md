@@ -5,7 +5,7 @@
 
 Research snapshot 2026-09-01. Paths relative to `src-tauri\`.
 
-Note for the Windows port: the §1g C export list exists only because macOS's native side is Obj-C. On Windows the native side is Rust — implement the §1a–1e `native::*` functions directly and skip the C ABI. The `OscResult`/`OcrRectPacket` layouts still matter because portable Rust constructs them.
+Note for the Windows port: the §1g C export list exists only because macOS's native side is Obj-C. On Windows the native side is Rust - implement the §1a–1e `native::*` functions directly and skip the C ABI. The `OscResult`/`OcrRectPacket` layouts still matter because portable Rust constructs them.
 
 ---
 
@@ -24,7 +24,7 @@ Re-exports (`native_osc_macos.rs:23-45`):
 
 ## 1a. Attachment / lifecycle (`state.rs`)
 
-All take `view: *mut c_void` — on macOS the `NSView*` from `WebviewWindow::ns_view()`. On Windows the analogue is the HWND; the pointer is opaque to Rust, but it must be the key by which the native side stores and returns the Rust context pointer.
+All take `view: *mut c_void` - on macOS the `NSView*` from `WebviewWindow::ns_view()`. On Windows the analogue is the HWND; the pointer is opaque to Rust, but it must be the key by which the native side stores and returns the Rust context pointer.
 
 | fn | file:line | signature | semantics |
 | --- | --- | --- | --- |
@@ -34,7 +34,7 @@ All take `view: *mut c_void` — on macOS the `NSView*` from `WebviewWindow::ns_
 | `attach` (private) | `state.rs:384` |  | `Box::into_raw(OscRuntime::new(window,w,h,purpose))` then `ffi::attach`. **The native side owns the Box** and must call the supplied `release` fn (`ffi::release_context`, `ffi.rs:108`) on teardown. |
 | `with_context` | `state.rs:419` | `pub(super) fn <T>(view, impl FnOnce(&Context)->T) -> Option<T>` | Fetches the stored `*mut OscRuntime`; `None` when unattached. Every other function uses this as its "is the compositor attached" probe. |
 
-**Threading:** every one of these is called from `app.run_on_main_thread(...)` closures in `adapter/macos.rs`, `text_recognition/native_overlay_macos.rs`, `ruler/native_overlay_macos.rs`. No internal main-thread assertion in Rust — the contract is enforced by callers, who synchronise back via `std::sync::mpsc::sync_channel(1)`.
+**Threading:** every one of these is called from `app.run_on_main_thread(...)` closures in `adapter/macos.rs`, `text_recognition/native_overlay_macos.rs`, `ruler/native_overlay_macos.rs`. No internal main-thread assertion in Rust - the contract is enforced by callers, who synchronise back via `std::sync::mpsc::sync_channel(1)`.
 
 ## 1b. Geometry & presentation
 
@@ -49,7 +49,7 @@ All take `view: *mut c_void` — on macOS the `NSView*` from `WebviewWindow::ns_
 | `region_scene_request_base` | `state.rs:486` | `(view, RegionSceneOwner) -> Option<RegionScene>` | `Screenshot` → presented; other owners → retained `requested_normal`. |
 | `reconcile_region_scene_request` | `state.rs:500` | `(view, RegionScene, RegionSceneOwner) -> Option<RegionScene>` | Delegates to `RegionSceneState::reconcile_request`; `None` means "stale owner, drop the update". |
 
-`apply_region_scene` ordering contract (`state.rs:532-596`) — preserve exactly:
+`apply_region_scene` ordering contract (`state.rs:532-596`) - preserve exactly:
 
 1. Reject if `next.overlay != overlay_palette()` (`:533`).
 2. Under lock: read `previous = scene.presented()`, `scene.set_presented(next)`, store `allow_drawing` atomic, `controller.set_aspect(next.interaction.aspect)`.
@@ -61,19 +61,19 @@ All take `view: *mut c_void` — on macOS the `NSView*` from `WebviewWindow::ns_
 
 | fn | file:line | signature |
 | --- | --- | --- |
-| `configure_desktop` | `state.rs:598` | `(view, DesktopBinding, local: Option<Rect>) -> bool` — rebuilds `RegionController::new(binding.virtual_monitor(), global_committed(binding, local), None)` and stores the binding. Returns false if `binding.anchor()` is `None`. No native call. |
-| `set_monitor` | `state.rs:618` | `(view, width, height) -> bool` — controller-only (non-desktop path). |
-| `set_allow_drawing` | `state.rs:633` | `(view, bool) -> bool` — atomic + scene, no native call. |
-| `set_aspect` | `state.rs:655` | `(view, Option<f64>) -> bool` — scene + controller, no native call. |
+| `configure_desktop` | `state.rs:598` | `(view, DesktopBinding, local: Option<Rect>) -> bool` - rebuilds `RegionController::new(binding.virtual_monitor(), global_committed(binding, local), None)` and stores the binding. Returns false if `binding.anchor()` is `None`. No native call. |
+| `set_monitor` | `state.rs:618` | `(view, width, height) -> bool` - controller-only (non-desktop path). |
+| `set_allow_drawing` | `state.rs:633` | `(view, bool) -> bool` - atomic + scene, no native call. |
+| `set_aspect` | `state.rs:655` | `(view, Option<f64>) -> bool` - scene + controller, no native call. |
 | `set_input_enabled` | `state.rs:672` | `(view, bool) -> bool` |
 | `set_show_handles` | `state.rs:686` | `(view, bool) -> bool` |
 | `set_show_frame` | `state.rs:700` | `(view, bool) -> bool` |
 | `set_desktop_presented` | `state.rs:714` | `(view, bool) -> bool` |
-| `set_snapshot` | `state.rs:752` | `(view, display_id: u32, rgba: &[u8], width: u32, height: u32) -> bool` — uploads a frozen per-display texture. No scene mirror. |
+| `set_snapshot` | `state.rs:752` | `(view, display_id: u32, rgba: &[u8], width: u32, height: u32) -> bool` - uploads a frozen per-display texture. No scene mirror. |
 | `set_snapshot_presented` | `state.rs:774` | `(view, bool) -> bool` |
 | `set_snapshot_composited` | `state.rs:788` | `(view, bool) -> bool` |
-| `set_magnifier_source` | `state.rs:645` | `(view, rgba: &[u8], width: u32, height: u32) -> bool` — **buffer borrowed for the duration of the call only; copy it.** |
-| `claim_pointer_surface` | `state.rs:728` | `(view) -> bool` — makes the native surface the pointer/cursor owner. |
+| `set_magnifier_source` | `state.rs:645` | `(view, rgba: &[u8], width: u32, height: u32) -> bool` - **buffer borrowed for the duration of the call only; copy it.** |
+| `claim_pointer_surface` | `state.rs:728` | `(view) -> bool` - makes the native surface the pointer/cursor owner. |
 | `refresh_ruler_pointer` | `state.rs:736` | `(view) -> bool` (Ruler only) |
 | `set_ruler_transient_chrome` | `state.rs:744` | `(view, visible: bool) -> bool` (Ruler only) |
 
@@ -81,9 +81,9 @@ All take `view: *mut c_void` — on macOS the `NSView*` from `WebviewWindow::ns_
 
 | fn | line | signature |
 | --- | --- | --- |
-| `set_ocr` | `ocr.rs:8` | `(view, phase: u32, rects: &[OcrRectPacket], message: &CStr) -> bool` — `phase` is `VisualPhase as u32`. |
+| `set_ocr` | `ocr.rs:8` | `(view, phase: u32, rects: &[OcrRectPacket], message: &CStr) -> bool` - `phase` is `VisualPhase as u32`. |
 | `set_cancel_visible` | `ocr.rs:23` | `(view, bool) -> bool` |
-| `reset_input` | `ocr.rs:33` | `(view) -> bool` — **`Purpose::TextRecognition` only**; clears `completed` atomic and controller committed rect. |
+| `reset_input` | `ocr.rs:33` | `(view) -> bool` - **`Purpose::TextRecognition` only**; clears `completed` atomic and controller committed rect. |
 
 ## 1e. Desktop discovery (`native_osc_macos\desktop.rs`)
 
@@ -97,8 +97,8 @@ All take `view: *mut c_void` — on macOS the `NSView*` from `WebviewWindow::ns_
 
 Declared in `state.rs`, wired at attach time (`ffi.rs:114-124`). All wrap `catch_unwind` and tolerate null `context`/`out`.
 
-- `native_osc_input(context, phase: u32, x: f64, y: f64, modifiers: u8, out: *mut OscResult)` — `state.rs:25`. The whole pointer/command pipeline.
-- `native_osc_layout_changed(context)` — `state.rs:362`. Purpose-dependent: TextRecognition → `text_recognition::restart_after_topology_change`; Ruler → `ruler::restart_after_topology_change`; Region → emits `NATIVE_OSC_LAYOUT_EVENT` with `()` payload to its own webview.
+- `native_osc_input(context, phase: u32, x: f64, y: f64, modifiers: u8, out: *mut OscResult)` - `state.rs:25`. The whole pointer/command pipeline.
+- `native_osc_layout_changed(context)` - `state.rs:362`. Purpose-dependent: TextRecognition → `text_recognition::restart_after_topology_change`; Ruler → `ruler::restart_after_topology_change`; Region → emits `NATIVE_OSC_LAYOUT_EVENT` with `()` payload to its own webview.
 - Ruler draw-data pulls (all `(context, output: *mut T, capacity: usize) -> usize`, returning the full count so the caller can size buffers; return 0 unless `purpose == Purpose::Ruler`): `native_osc_ruler_measurements` `:48`, `_viewports` `:78`, `_probes` `:108`, `_guides` `:138`, `_guide_gaps` `:168`, `_radii` `:198`, `_centerlines` `:228`, `_inner_objects` `:258`.
 - `native_osc_ruler_viewport_input(context, display_id, operation: u32, anchor_x/y, delta_x/y, out) -> i32` `:288` (returns "handled").
 - `native_osc_ruler_label_input(context, operation: u32, kind: u8, id: u64, pointer_x/y, label_center_x/y, out)` `:326`.
@@ -135,7 +135,7 @@ ABI asserts that must hold: `size_of::<OscResult>() == 48`, `offset_of!(OscResul
 
 # 2. Portable data types crossing the boundary
 
-## `RegionScene` — `src\osc\scene.rs:41-49`
+## `RegionScene` - `src\osc\scene.rs:41-49`
 
 ```
 region: Rect          // meaningful even while hidden (lifecycle restore)
@@ -151,12 +151,12 @@ overlay: OverlayPalette
 
 Sub-structs:
 
-- `RegionChrome` `scene.rs:16` — `frame_visible: bool`, `handles_visible: bool`
-- `RegionInteraction` `scene.rs:22` — `input_enabled: bool`, `allow_drawing: bool`, `aspect: Option<f64>`, `exclusion_rect: Option<Rect>`
-- `SnapshotPresentation` `scene.rs:30` — `presented: bool`, `composited: bool`
-- `OverlayPalette` `src\osc\style.rs:19` — `#[repr(C)] shade: [f32;4]`; `overlay_palette()` = `[0,0,0,0.48]` (`style.rs:32-38`)
+- `RegionChrome` `scene.rs:16` - `frame_visible: bool`, `handles_visible: bool`
+- `RegionInteraction` `scene.rs:22` - `input_enabled: bool`, `allow_drawing: bool`, `aspect: Option<f64>`, `exclusion_rect: Option<Rect>`
+- `SnapshotPresentation` `scene.rs:30` - `presented: bool`, `composited: bool`
+- `OverlayPalette` `src\osc\style.rs:19` - `#[repr(C)] shade: [f32;4]`; `overlay_palette()` = `[0,0,0,0.48]` (`style.rs:32-38`)
 
-## `RegionSceneOwner` state machine — `scene.rs:52-58`, `:136-143`, `:171-185`
+## `RegionSceneOwner` state machine - `scene.rs:52-58`, `:136-143`, `:171-185`
 
 Variants: `Normal` (default), `DormantNormal`, `Screenshot`, `RestoringNormal`.
 
@@ -165,17 +165,17 @@ Variants: `Normal` (default), `DormantNormal`, `Screenshot`, `RestoringNormal`.
 
 Owner selection lives in `src\windows\region.rs:23-33` (`screenshot_region_scene_owner`), driven by three atomics: `SCREENSHOT_REGION_SESSION` → `Screenshot`; else `SCREENSHOT_REGION_RESTORING` → `RestoringNormal`; else `!RECORDING_CONTROLS_VISIBLE` → `DormantNormal`; else `Normal`. `finish_screenshot_region_restore()` (`region.rs:35`) clears the restoring flag and is called from `adapter\macos.rs:66` once the restored scene actually presented.
 
-## `RegionSceneState` — `scene.rs:67-134`
+## `RegionSceneState` - `scene.rs:67-134`
 
 Two-scene container: `presented` + `requested_normal`. `Deref`/`DerefMut` target `presented` (`:82-94`).
 
 - `presented()` `:97`
-- `request_base(owner)` `:101` — `Screenshot` → presented, otherwise `requested_normal`
-- `reconcile_request(requested, owner)` `:110` — rejects wrong-owner scenes; retains `requested_normal` for non-Screenshot owners; returns `requested.reconcile_owner(owner)`
-- `normal_presentation()` `:124` — `requested_normal.reconcile_owner(Normal).expect(...)`
+- `request_base(owner)` `:101` - `Screenshot` → presented, otherwise `requested_normal`
+- `reconcile_request(requested, owner)` `:110` - rejects wrong-owner scenes; retains `requested_normal` for non-Screenshot owners; returns `requested.reconcile_owner(owner)`
+- `normal_presentation()` `:124` - `requested_normal.reconcile_owner(Normal).expect(...)`
 - `set_presented(scene)` `:131`
 
-## `RegionSceneRequest` — `adapter.rs:31-43`
+## `RegionSceneRequest` - `adapter.rs:31-43`
 
 Built in `osc_command.rs:66-78`:
 
@@ -188,7 +188,7 @@ desktop_anchor: Option<u32>
 
 `RegionSceneResolution` (`adapter.rs:45-49`): `scene: RegionScene`, `controller_committed: Option<Rect>`, `layout_event: Option<SemanticEvent>`. `resolve_region_scene(request, base_scene, Option<&DesktopBinding>)` (`adapter.rs:51-91`) is fully portable and reused by any platform.
 
-## `DesktopBinding` — `src\osc\desktop.rs:21-26`
+## `DesktopBinding` - `src\osc\desktop.rs:21-26`
 
 ```
 displays: Vec<DesktopDisplay>, anchor_id: u32, size: Size, layout_changed: bool
@@ -198,36 +198,36 @@ displays: Vec<DesktopDisplay>, anchor_id: u32, size: Size, layout_changed: bool
 
 Native display record: `NativeDesktopDisplay` `#[repr(C)] { id: u32, x, y, width, height, scale: f64 }` (`ffi.rs:26-33`).
 
-## Semantic events — `src\osc\semantic.rs`
+## Semantic events - `src\osc\semantic.rs`
 
-- `SemanticStatus` `:19` — `Changed | Finished | Cancelled | Layout`, serde lowercase
-- `SemanticGesture` `:28` — `Drawing | Moving | Resizing { handle: SemanticHandle }`
-- `SemanticHandle` `:37` — `#[repr(u8)]` `Body=1, North=2, South=3, East=4, West=5, NorthEast=6, NorthWest=7, SouthEast=8, SouthWest=9`, serde lowercase (`"northeast"` etc.)
-- `SemanticRegion` `:50` — `x, y, width, height: f64`
-- `SemanticEvent` `:59` — `#[serde(rename_all="camelCase")] { status, gesture: Option<SemanticGesture>, region: Option<SemanticRegion>, monitor_id: Option<u32> }`
+- `SemanticStatus` `:19` - `Changed | Finished | Cancelled | Layout`, serde lowercase
+- `SemanticGesture` `:28` - `Drawing | Moving | Resizing { handle: SemanticHandle }`
+- `SemanticHandle` `:37` - `#[repr(u8)]` `Body=1, North=2, South=3, East=4, West=5, NorthEast=6, NorthWest=7, SouthEast=8, SouthWest=9`, serde lowercase (`"northeast"` etc.)
+- `SemanticRegion` `:50` - `x, y, width, height: f64`
+- `SemanticEvent` `:59` - `#[serde(rename_all="camelCase")] { status, gesture: Option<SemanticGesture>, region: Option<SemanticRegion>, monitor_id: Option<u32> }`
 - `semantic_handle(Handle)` `:75`, `event_payload(&ControllerEvent, Option<u32>)` `:99`
 
 ## Protocol / geometry
 
-- `Purpose` `protocol.rs:11` — `Region | Ruler | TextRecognition`
-- `InputPhase` `protocol.rs:19-53` — `#[repr(u32)]` 1..=33; 1-5 pointer, 6-12 OCR commands, 13-33 Ruler commands. `from_raw` `:56`, `pointer()` `:95`.
-- `InputModifiers::from_bits(u8)` `:109` — bit0 free_aspect(shift), bit1 additive(cmd/ctrl), bit2 double_click, bit3 option/alt
-- `CursorIcon` `:121` — `#[repr(u8)]` `Unchanged=0, Crosshair=1, OpenHand=2, ClosedHand=3, HorizontalResize=4, VerticalResize=5, DiagonalResize=6, Arrow=7, IBeam=8, PointingHand=9`
-- `ResultStatus` `:137` — `None=0, Changed=1, Finished=2, Cancelled=3, Invalid=255`
+- `Purpose` `protocol.rs:11` - `Region | Ruler | TextRecognition`
+- `InputPhase` `protocol.rs:19-53` - `#[repr(u32)]` 1..=33; 1-5 pointer, 6-12 OCR commands, 13-33 Ruler commands. `from_raw` `:56`, `pointer()` `:95`.
+- `InputModifiers::from_bits(u8)` `:109` - bit0 free_aspect(shift), bit1 additive(cmd/ctrl), bit2 double_click, bit3 option/alt
+- `CursorIcon` `:121` - `#[repr(u8)]` `Unchanged=0, Crosshair=1, OpenHand=2, ClosedHand=3, HorizontalResize=4, VerticalResize=5, DiagonalResize=6, Arrow=7, IBeam=8, PointingHand=9`
+- `ResultStatus` `:137` - `None=0, Changed=1, Finished=2, Cancelled=3, Invalid=255`
 - `RESULT_GESTURE_DRAWING=1 / MOVING=2 / RESIZING=3` `:145-147`
-- `OscResult` `#[repr(C)]` `:151-164` — `status,gesture,handle,cursor,has_region: u8` then `x,y,width,height: f64`, `ruler_color: u32`, `ruler_flags: u8`, `ruler_padding: [u8;3]`
-- `Point/Size/Rect/Monitor/Handle` — `src\osc\geometry.rs:8-107`; `Rect::committed()` = valid && w>1 && h>1 (`:60`); `clamp` `:69`, `snap` `:83`, `drawn_region` `:109`.
+- `OscResult` `#[repr(C)]` `:151-164` - `status,gesture,handle,cursor,has_region: u8` then `x,y,width,height: f64`, `ruler_color: u32`, `ruler_flags: u8`, `ruler_padding: [u8;3]`
+- `Point/Size/Rect/Monitor/Handle` - `src\osc\geometry.rs:8-107`; `Rect::committed()` = valid && w>1 && h>1 (`:60`); `clamp` `:69`, `snap` `:83`, `drawn_region` `:109`.
 
-## OCR visual types — `src\text_recognition\visual.rs`
+## OCR visual types - `src\text_recognition\visual.rs`
 
-- `VisualPhase` `:13` — `#[repr(u32)]` `Idle=0, Loading=1, Ready=2, Error=3`
-- `VisualKind` `:23` — `#[repr(u8)]` `Line=1, Qr=2, QrError=3, Selection=4`
-- `VisualRect` `:31` — `{ rect: Rect, kind: VisualKind }`
-- `VisualSnapshot` `:37` — `{ selection: Rect, rects: Vec<VisualRect> }`
-- `OcrRectPacket` `#[repr(C)]` `:44-51` — `x,y,width,height: f64, kind: u8, padding: [u8;7]` (40 bytes)
-- `SurfacePresentation` `:67-72` — `frame: Option<bool>, input: Option<bool>, reset: bool, claim_crosshair: bool`
-- `RenderPacket` `:75-80` — `phase, rects: Vec<OcrRectPacket>, message: String, presentation`; constructors `loading()` `:83` (frame=false,input=false), `ready(&VisualSnapshot)` `:96` (frame=false,input=true), `error()` `:109` (frame=true,input=true,reset=true,claim_crosshair=true).
-- `snapshot(selection, &TextRecognitionResult, &[TextRect]) -> VisualSnapshot` `:124` — projects normalized OCR rects into desktop-space, dropping non-`committed()` rects.
+- `VisualPhase` `:13` - `#[repr(u32)]` `Idle=0, Loading=1, Ready=2, Error=3`
+- `VisualKind` `:23` - `#[repr(u8)]` `Line=1, Qr=2, QrError=3, Selection=4`
+- `VisualRect` `:31` - `{ rect: Rect, kind: VisualKind }`
+- `VisualSnapshot` `:37` - `{ selection: Rect, rects: Vec<VisualRect> }`
+- `OcrRectPacket` `#[repr(C)]` `:44-51` - `x,y,width,height: f64, kind: u8, padding: [u8;7]` (40 bytes)
+- `SurfacePresentation` `:67-72` - `frame: Option<bool>, input: Option<bool>, reset: bool, claim_crosshair: bool`
+- `RenderPacket` `:75-80` - `phase, rects: Vec<OcrRectPacket>, message: String, presentation`; constructors `loading()` `:83` (frame=false,input=false), `ready(&VisualSnapshot)` `:96` (frame=false,input=true), `error()` `:109` (frame=true,input=true,reset=true,claim_crosshair=true).
+- `snapshot(selection, &TextRecognitionResult, &[TextRect]) -> VisualSnapshot` `:124` - projects normalized OCR rects into desktop-space, dropping non-`committed()` rects.
 
 ---
 
@@ -256,7 +256,7 @@ Interaction loop, driven entirely by `native_osc_input`:
 native_osc_input  (state.rs:25)
   → OscRuntime::input (runtime.rs:64)
       purpose==TextRecognition && InputPhase::Down → qr_details::hide_without_resume (:87)
-      dispatch_control(window, phase)  (input.rs:36)  — OCR command phases 8..12
+      dispatch_control(window, phase)  (input.rs:36)  - OCR command phases 8..12
       if completed:  native_text_input → input::dispatch_text_input (input.rs:135)
            state.text_input(action, point) → update.snapshot
            → adapter::render_window(window, RenderPacket::ready(&snapshot))   (input.rs:153)
@@ -267,14 +267,14 @@ native_osc_input  (state.rs:25)
 
 `selection_finished` (`input.rs:94`):
 
-1. `adapter::render_window(&window, RenderPacket::loading("Finding text and QR codes…"))` — `:100`
+1. `adapter::render_window(&window, RenderPacket::loading("Finding text and QR codes…"))` - `:100`
 2. async: `select_desktop_region` (`snapshot.rs:107`, composes the frozen monitor crops across displays), on error `adapter::show_error` → `RenderPacket::error` (`adapter.rs:31`)
 3. `recognize_current` (`text_recognition.rs:246`) → `platform_macos/platform_windows::recognize` + `qr::recognize`; on success `install_result` then `adapter::show_ready(app, generation)` (`adapter.rs:21`) which pulls `visual_snapshot(generation)` and renders `RenderPacket::ready`.
 
-Final leg into the compositor — `native_overlay_macos.rs:149 apply_packet`:
+Final leg into the compositor - `native_overlay_macos.rs:149 apply_packet`:
 
 1. `CString` of `packet.message` with NULs replaced by spaces
-2. `native::set_ocr(view, packet.phase as u32, &packet.rects, &message)` — bails on false
+2. `native::set_ocr(view, packet.phase as u32, &packet.rects, &message)` - bails on false
 3. `presentation.frame` → `set_show_frame`
 4. `presentation.reset` → `reset_text_recognition_input`
 5. `presentation.input` → `set_input_enabled`
@@ -282,9 +282,9 @@ Final leg into the compositor — `native_overlay_macos.rs:149 apply_packet`:
 
 `render` (`:170`) hops to the main thread and applies to the first window that accepts; `render_window` (`:143`) applies directly with no thread hop (already on the UI thread from the input callback).
 
-Teardown `close_windows` (`:103`): `set_input_enabled(false)`, `set_ocr(Idle, &[], "")`, `set_snapshot_presented(false)`, `clear_region`, `set_desktop_presented(false)`, then `window.close()` — native surfaces must be concealed **before** the webview closes (comment at `text_recognition.rs:100-102`).
+Teardown `close_windows` (`:103`): `set_input_enabled(false)`, `set_ocr(Idle, &[], "")`, `set_snapshot_presented(false)`, `clear_region`, `set_desktop_presented(false)`, then `window.close()` - native surfaces must be concealed **before** the webview closes (comment at `text_recognition.rs:100-102`).
 
-`text_recognition\adapter\unavailable.rs` (Windows today) makes `install` return `Ok(false)` and `render`/`render_window` no-ops, so `text_recognition.rs:194` falls through to `crate::windows::show(&window, true)` — the webview-only path.
+`text_recognition\adapter\unavailable.rs` (Windows today) makes `install` return `Ok(false)` and `render`/`render_window` no-ops, so `text_recognition.rs:194` falls through to `crate::windows::show(&window, true)` - the webview-only path.
 
 ---
 
@@ -292,12 +292,12 @@ Teardown `close_windows` (`:103`): `set_input_enabled(false)`, `set_ocr(Idle, &[
 
 ## Magnifier
 
-Purely a texture handoff — Rust computes nothing about the loupe.
+Purely a texture handoff - Rust computes nothing about the loupe.
 
 - Frontend `src\features\recording-sources\api.ts:140` → `prepare_screenshot_region_magnifier(app, window, monitor_id)` (`magnifier.rs:7`, registered `lib.rs:191`).
-- `monitor_capture::capture_monitor_screenshot(app, monitor_id).await` → `screenshots::CapturedImage { rgba: Vec<u8>, width: u32, height: u32 }` — full monitor RGBA8.
+- `monitor_capture::capture_monitor_screenshot(app, monitor_id).await` → `screenshots::CapturedImage { rgba: Vec<u8>, width: u32, height: u32 }` - full monitor RGBA8.
 - `adapter::set_magnifier_source(&target, image)` → main thread → `native::set_magnifier_source(view, &image.rgba, image.width, image.height)`.
-- Buffer borrowed for the duration of the call only — copy into a texture before returning.
+- Buffer borrowed for the duration of the call only - copy into a texture before returning.
 
 ## Desktop anchor / desktop windows
 
@@ -306,37 +306,37 @@ Purely a texture handoff — Rust computes nothing about the loupe.
   1. `native::ensure_attached(view, target, monitor_width, monitor_height)`
   2. if `desktop_anchor`: `native::configure_desktop_window(view, anchor)` → `DesktopBinding`
   3. `owner = region::screenshot_region_scene_owner()`; `base = native::region_scene_request_base(view, owner)`
-  4. `resolve_region_scene(request, base, binding.as_ref())` — portable
+  4. `resolve_region_scene(request, base, binding.as_ref())` - portable
   5. desktop path → `native::configure_desktop(view, binding, resolved.controller_committed)`; non-desktop path → `native::set_monitor(view, w, h)`
   6. non-desktop + visible → `native::set_committed(view, Some(rect))`
-  7. `native::reconcile_region_scene_request(view, resolved.scene, owner)` — `None` ⇒ stale, return `Ok(true)` without touching the compositor
+  7. `native::reconcile_region_scene_request(view, resolved.scene, owner)` - `None` ⇒ stale, return `Ok(true)` without touching the compositor
   8. `native::apply_region_scene(view, scene)`
   9. if presented && visible && allow_drawing && input_enabled → `native::claim_pointer_surface`
   10. if presented && owner == `RestoringNormal` → `region::finish_screenshot_region_restore()`
   11. if presented && `resolved.layout_event` → `emit_to(webview_window(label), NATIVE_OSC_EVENT, payload)`
-- "Desktop windows" are compositor peer surfaces, one per display, not Tauri windows — Rust only toggles them as a unit via `set_desktop_presented`. Gating logic in `adapter\macos.rs:85-117`: restore the normal scene first when `presented && owner == Normal`, refuse to present unless the scene is `visible`, owner-consistent (`owner.accepts_drawing`) and (during a screenshot session) has no handles, then present and optionally claim the pointer.
+- "Desktop windows" are compositor peer surfaces, one per display, not Tauri windows - Rust only toggles them as a unit via `set_desktop_presented`. Gating logic in `adapter\macos.rs:85-117`: restore the normal scene first when `presented && owner == Normal`, refuse to present unless the scene is `visible`, owner-consistent (`owner.accepts_drawing`) and (during a screenshot session) has no handles, then present and optionally claim the pointer.
 - Region cross-display projection: `DesktopBinding::reconcile_local` gives `anchor_local` (controller/persistence), `owner_local` (frontend `SemanticEvent`) and `global` (compositor `RegionScene.region`).
 - Quick Screenshot transitions: `prepare_for_screenshot` (`adapter\macos.rs:139`) clears the region _then_ hides desktop peers (order is load-bearing); `prepare_for_region_restore` (`:119`) only sets `input_enabled=false` and re-applies, retaining the last visual frame until the normal scene atomically replaces it.
 
 ---
 
-# 5. Platform gating — what compiles on Windows today
+# 5. Platform gating - what compiles on Windows today
 
 ## macOS-only modules (not compiled on Windows)
 
-- `src\windows\screenshot_region.rs:6-7` — `native_osc_macos` (and submodules)
-- `src\windows\screenshot_region\adapter.rs:17-22` — `adapter/macos.rs` vs `adapter/unavailable.rs`
-- `src\text_recognition.rs:14-18` — `native_overlay_macos`, `platform_macos`; `platform_windows` is windows-gated
-- `src\text_recognition\adapter.rs:12-17` — macos vs unavailable
-- `src\ruler.rs:12-13` — `native_overlay_macos`; `src\ruler\adapter.rs:10-15` — macos vs unavailable
-- `src\osc\cursor.rs:18-19` — `cursor::macos`
+- `src\windows\screenshot_region.rs:6-7` - `native_osc_macos` (and submodules)
+- `src\windows\screenshot_region\adapter.rs:17-22` - `adapter/macos.rs` vs `adapter/unavailable.rs`
+- `src\text_recognition.rs:14-18` - `native_overlay_macos`, `platform_macos`; `platform_windows` is windows-gated
+- `src\text_recognition\adapter.rs:12-17` - macos vs unavailable
+- `src\ruler.rs:12-13` - `native_overlay_macos`; `src\ruler\adapter.rs:10-15` - macos vs unavailable
+- `src\osc\cursor.rs:18-19` - `cursor::macos`
 - Call sites in `src\windows\region.rs` gated at `:5, 69, 73, 87, 93, 96, 106, 217, 223, 230, 251, 253, 294, 313`
 
 ## Fully portable (compiles on Windows now)
 
 The **entire `src\osc\` tree** except `cursor::macos`: `controller.rs`, `controls/` (incl. the `#[no_mangle]` C exports), `desktop.rs`, `geometry.rs`, `gesture.rs`, `protocol.rs`, `resize.rs`, `runtime.rs` + `runtime/desktop.rs`, `scene.rs`, `semantic.rs`, `session.rs`, `style.rs`. Also portable: `screenshot_region\adapter.rs` (`resolve_region_scene`, `RegionSceneRequest`), `osc_command.rs`, `presentation.rs`, `magnifier.rs`, `text_recognition\visual.rs`, `input.rs`, `interaction.rs`, `snapshot.rs`, `text_selection.rs`, `toolbar.rs`, `qr*.rs`, the whole `ruler\` document/analysis/render layer.
 
-The ~300 dead-code warnings on Windows are the portable OSC engine with its only consumer compiled out — a fairly accurate inventory of the contract to satisfy. A Windows `native_osc_windows` module wired into `screenshot_region.rs` and `adapter.rs` reactivates essentially all of it.
+The ~300 dead-code warnings on Windows are the portable OSC engine with its only consumer compiled out - a fairly accurate inventory of the contract to satisfy. A Windows `native_osc_windows` module wired into `screenshot_region.rs` and `adapter.rs` reactivates essentially all of it.
 
 ---
 
@@ -357,12 +357,12 @@ Payload = `SemanticEvent`, camelCase JSON:
 
 Emission sites:
 
-- `runtime.rs:236-242 emit_region_event` — from `dispatch_event` for `Purpose::Region` (`:251`), and from the `Down`-with-no-event path (`:145-152`) that re-broadcasts the current committed rect.
-- `adapter\macos.rs:71-75` — the desktop **layout** event synthesised by `resolve_region_scene` (`adapter.rs:73-85`), with `status: "layout"`, `region` = the region in the _new owner's_ local space, `monitorId` = the new owner display.
+- `runtime.rs:236-242 emit_region_event` - from `dispatch_event` for `Purpose::Region` (`:251`), and from the `Down`-with-no-event path (`:145-152`) that re-broadcasts the current committed rect.
+- `adapter\macos.rs:71-75` - the desktop **layout** event synthesised by `resolve_region_scene` (`adapter.rs:73-85`), with `status: "layout"`, `region` = the region in the _new owner's_ local space, `monitorId` = the new owner display.
 
 Region coordinates are always **display-local for the reported `monitorId`** (`runtime\desktop.rs:10-47` `project_desktop_event`, which also mutates `binding.anchor_id` to follow the region across a seam).
 
-Frontend consumer: `src\features\region-selector\use-native-screenshot-region.ts:95-135` — maps `status`/`gesture` onto `onRegionChange`, `onGesture`, `onMonitorChange`, `onFinished`, `onReconciled` (the last only for `"layout"`).
+Frontend consumer: `src\features\region-selector\use-native-screenshot-region.ts:95-135` - maps `status`/`gesture` onto `onRegionChange`, `onGesture`, `onMonitorChange`, `onFinished`, `onReconciled` (the last only for `"layout"`).
 
 ## `NATIVE_OSC_LAYOUT_EVENT` = `"screenshot-region-desktop-layout"` (`semantic.rs:15`)
 
@@ -371,7 +371,7 @@ Payload: `()` (unit). Emitted from `native_osc_layout_changed` (`state.rs:376-38
 ## Non-OSC events triggered by the same paths (context)
 
 - `capture_overlays::emit_lifecycle(app, bool)` from `text_recognition::dismiss` / `start_session` (`text_recognition.rs:123, 200`) and the ruler equivalent.
-- No event is emitted for OCR render results — the OCR overlay is entirely native; the webview only handles QR details via commands (`get_qr_details`, `close_qr_details`).
+- No event is emitted for OCR render results - the OCR overlay is entirely native; the webview only handles QR details via commands (`get_qr_details`, `close_qr_details`).
 
 ---
 

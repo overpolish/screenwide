@@ -37,7 +37,7 @@
 
 - **Screen recording.** Record all of the screen or just the part you need. Camera and audio are optional.
 - **Screenshots.** Capture a selected area or a scrolling page. Combine several captures if needed.
-- **Glide.** Move and resize windows with a fluid trackpad or mouse gesture. Snap them into halves, quarters, thirds or full screen—or glide down to minimize.
+- **Glide.** Move and resize windows with a fluid trackpad or mouse gesture. Snap them into halves, quarters, thirds or full screen-or glide down to minimize.
 - **Better cursors.** Make the cursor easier to follow, with control over its size and movement.
 - **Keyboard shortcuts.** Show pressed shortcuts on the recording.
 - **Ruler.** Measure anything on screen and copy the result.

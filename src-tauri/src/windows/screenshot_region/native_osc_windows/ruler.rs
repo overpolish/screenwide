@@ -36,8 +36,8 @@ use crate::ruler::render::{
   RadiusPacket, ViewportPacket,
 };
 
-/// Every ruler transition — the copied checkmark, the hover pulse and the
-/// tolerance notice — runs over this window (`+ruler.m:7-9`).
+/// Every ruler transition - the copied checkmark, the hover pulse and the
+/// tolerance notice - runs over this window (`+ruler.m:7-9`).
 pub(crate) const ANIMATION_DURATION: Duration = Duration::from_millis(160);
 /// How long a copied checkmark or a tolerance notice stays up before it fades
 /// back out (`+ruler.m:1044-1070`).
@@ -49,7 +49,7 @@ const HOVER_WIDTH_MAX: f64 = 8.0;
 
 /// `screenwide_osc_control_spacing`, reached through the `#[no_mangle]` export
 /// because `osc::controls::style` is a private module of the frozen portable
-/// tree — the same route the icon atlas takes in `surface.rs`.
+/// tree - the same route the icon atlas takes in `surface.rs`.
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct NativeControlSpacing {

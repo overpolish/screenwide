@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Windows twin of `native_overlay_macos.rs`. The compositor calls are the
-//! same in the same order; only the handle differs — the Windows module keys
+//! same in the same order; only the handle differs - the Windows module keys
 //! its contexts by the Tauri window rather than by `ns_view()`, so the window
 //! itself is passed straight through.
 
@@ -100,7 +100,7 @@ pub(super) fn present(window: &tauri::WebviewWindow) -> Result<(), String> {
 
 /// While a screenshot is taken through the frozen desktop the overlay stops
 /// taking input and hides its transient chrome, then resumes only once the
-/// window is hit-testable again — claiming earlier leaves the readout dormant
+/// window is hit-testable again - claiming earlier leaves the readout dormant
 /// until the first click.
 pub(super) fn set_screenshot_mode(
   window: &tauri::WebviewWindow,

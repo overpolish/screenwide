@@ -35,7 +35,7 @@ use crate::osc::{
   protocol::OscResult,
 };
 
-/// 16ms control-transition frames — the Win32 form of the self-rescheduling
+/// 16ms control-transition frames - the Win32 form of the self-rescheduling
 /// `dispatch_after` chains the macOS chrome used.
 pub(crate) const ANIMATION_TIMER: usize = 1;
 /// The armed close button's two-second expiry (`+ocr_toolbar_input.m:20-34`).
@@ -997,7 +997,7 @@ fn confirm_expired(hwnd: HWND) {
 }
 
 /// The ruler's keyboard phases first, then Ctrl+A / Ctrl+C while a recognition
-/// is ready — the Windows spelling of the macOS key-down monitor
+/// is ready - the Windows spelling of the macOS key-down monitor
 /// (`+input.m:472-581`).
 fn keyboard_command(hwnd: HWND, wparam: WPARAM, lparam: LPARAM) -> bool {
   let command = (unsafe { GetKeyState(VK_CONTROL.0 as i32) }) < 0;

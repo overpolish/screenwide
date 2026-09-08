@@ -340,7 +340,7 @@ impl InnerWebView {
         data_store.setValue_forKey(Some(&proxies), ns_string!("proxyConfigurations"));
       }
 
-      // NOTE: Private API — `allowsPictureInPictureMediaPlayback` is a private KVC key on WKPreferences.
+      // NOTE: Private API - `allowsPictureInPictureMediaPlayback` is a private KVC key on WKPreferences.
       _preference.setValue_forKey(
         Some(&_yes),
         ns_string!("allowsPictureInPictureMediaPlayback"),
@@ -371,20 +371,20 @@ impl InnerWebView {
         {
           let version = util::operating_system_version();
           if version.0 > 10 || (version.0 == 10 && version.1 >= 14) {
-            // NOTE: Private API — `drawsBackground`.
+            // NOTE: Private API - `drawsBackground`.
             // Available: macOS 10.14+ (no public doc).
             config.setValue_forKey(Some(&no), ns_string!("drawsBackground"));
           }
         }
         #[cfg(target_os = "ios")]
         {
-          // NOTE: Private API — `drawsBackground`.
+          // NOTE: Private API - `drawsBackground`.
           config.setValue_forKey(Some(&no), ns_string!("drawsBackground"));
         }
       }
 
       #[cfg(feature = "fullscreen")]
-      // NOTE: Private API — `fullScreenEnabled` is a private KVC key on WKPreferences.
+      // NOTE: Private API - `fullScreenEnabled` is a private KVC key on WKPreferences.
       _preference.setValue_forKey(Some(&_yes), ns_string!("fullScreenEnabled"));
 
       #[cfg(target_os = "macos")]
@@ -543,7 +543,7 @@ impl InnerWebView {
         if has_inspectable_property {
           webview.setInspectable(true);
         }
-        // NOTE: Private API — `developerExtrasEnabled` is a private KVC key on WKPreferences.
+        // NOTE: Private API - `developerExtrasEnabled` is a private KVC key on WKPreferences.
         // this cannot be on an `else` statement, it does not work on macOS :(
         let dev = ns_string!("developerExtrasEnabled");
         _preference.setValue_forKey(Some(&_yes), dev);
@@ -969,7 +969,7 @@ r#"Object.defineProperty(window, 'ipc', {
 
       // Disable the default white background using the same drawsBackground KVC key
       // as the `transparent` feature. On the webview instance (vs config) for runtime changes.
-      // NOTE: Private API — `drawsBackground` is a private KVC key on WKWebView instance.
+      // NOTE: Private API - `drawsBackground` is a private KVC key on WKWebView instance.
       let no = NSNumber::numberWithBool(false);
       self
         .webview

@@ -9,7 +9,7 @@
 //! `CAMetalLayer` on top. Here all of it folds into the surface's single swap
 //! chain (plan decision 10): the chrome is a run of extra quads, and because
 //! each control carries its own fill and foreground, the run is split into one
-//! draw call per control with the constant buffer re-pushed between them —
+//! draw call per control with the constant buffer re-pushed between them -
 //! exactly what `+ocr_toolbar.m:126-156` did for the crossfading confirm
 //! icons.
 //!
@@ -46,7 +46,7 @@ pub(crate) const PHASE_LOADING: u32 = 1;
 pub(crate) const PHASE_READY: u32 = 2;
 pub(crate) const PHASE_ERROR: u32 = 3;
 
-/// The status pill: 28pt tall, 8pt radius, 13pt text on a 20pt line box —
+/// The status pill: 28pt tall, 8pt radius, 13pt text on a 20pt line box -
 /// the `NSTextField` metrics of `+ocr.m:40-66`.
 const STATUS_HEIGHT: f64 = 28.0;
 const STATUS_RADIUS: f64 = 8.0;
@@ -696,7 +696,7 @@ pub(crate) fn status_rect(label_width: f64, view: Size, region: Rect) -> Rect {
   Rect::from_xywh(left, top, width, STATUS_HEIGHT)
 }
 
-/// A plate, its icon and — for text buttons — its label, laid out the way
+/// A plate, its icon and - for text buttons - its label, laid out the way
 /// `render_control` (`+ocr_toolbar.m:78-101`) did.
 fn add_control(
   out: &mut Vec<Vertex>,
