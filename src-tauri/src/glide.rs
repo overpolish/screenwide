@@ -187,14 +187,6 @@ fn finish_with_fade(
   on_restore: Box<dyn FnOnce() + Send>,
   on_faded: Box<dyn FnOnce() + Send>,
 ) {
-  let _ = emit(
-    app,
-    GlideInputEvent::End {
-      anchor_x,
-      anchor_y,
-      cancelled: false,
-    },
-  );
   // The scheduled paths and the fallback all hold the completions; whichever
   // gets there first takes one, so each runs exactly once however this ends.
   let on_restore = std::sync::Arc::new(std::sync::Mutex::new(Some(on_restore)));
@@ -212,6 +204,7 @@ fn finish_with_fade(
       run_once(&restore);
     });
 
+  let faded_app = app.clone();
   let faded = on_faded.clone();
   let restore_first = on_restore.clone();
   let completion = Box::new(move || {
@@ -222,12 +215,28 @@ fn finish_with_fade(
     // location. Running it here first (a no-op if the timer won) pins the
     // order.
     run_once(&restore_first);
+    let _ = emit(
+      &faded_app,
+      GlideInputEvent::End {
+        anchor_x,
+        anchor_y,
+        cancelled: false,
+      },
+    );
     run_once(&faded);
   });
   if let Err(error) = crate::windows::fade_glide_preview(app, completion) {
     eprintln!("Could not fade Glide out: {error}");
     crate::windows::defer_hide_glide_preview(app);
     run_once(&on_restore);
+    let _ = emit(
+      app,
+      GlideInputEvent::End {
+        anchor_x,
+        anchor_y,
+        cancelled: false,
+      },
+    );
     run_once(&on_faded);
   }
 }

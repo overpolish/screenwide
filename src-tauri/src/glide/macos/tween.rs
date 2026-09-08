@@ -16,6 +16,11 @@ use std::{
 
 use cidre::cg;
 
+#[path = "tween/completion.rs"]
+mod completion;
+
+pub(super) use completion::after_current;
+
 #[path = "tween/fit.rs"]
 mod fit;
 #[path = "tween/target.rs"]
@@ -53,6 +58,7 @@ struct Tween {
   /// no region carries none.
   fit: Option<FitContext>,
   _busy: crate::glide::core::activity::BusyLease,
+  _completion: completion::Ticket,
 }
 
 /// The one tween in flight, if any. Never held across an Accessibility call:
@@ -123,6 +129,7 @@ pub(super) fn animate_to(target: &WindowTarget, destination: cg::Rect, fit: Opti
       generation,
       fit,
       _busy: crate::glide::core::activity::BusyLease::acquire(),
+      _completion: completion::begin(),
     });
   }
 }

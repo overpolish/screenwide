@@ -42,13 +42,14 @@ pub fn reveal(app: &AppHandle, session_id: u64) -> Result<(), String> {
   let main_app = app.clone();
   app
     .run_on_main_thread(move || {
-      // The session can end between this command arriving and the main-thread
-      // hop, and `finish`'s hide is already queued ahead of a late show.
+      // A committed session still owns its queued reveal while settling and
+      // fading. Cancellation must continue to invalidate a late show.
       let active = state.lock().is_ok_and(|monitor| {
         monitor
           .session
           .as_ref()
           .is_some_and(|session| session.id == session_id)
+          || monitor.fading == Some(session_id)
       });
       if active {
         if let Err(error) = crate::windows::show_glide_preview(&main_app, blocks_hover) {

@@ -9,7 +9,7 @@ use super::{Session, SharedState, STATE};
 use crate::glide::platform::{
   cursor::{landing_point, release_cursor},
   native_settings,
-  tween::animate_to,
+  tween::{after_current, animate_to},
 };
 use crate::glide::{finish, finish_with_fade};
 
@@ -52,10 +52,13 @@ fn take_session(
   cancelled: bool,
   completion: crate::glide::core::activity::BusyLease,
 ) -> Option<Session> {
-  let mut session = state
-    .lock()
-    .ok()
-    .and_then(|mut state| state.session.take())?;
+  let mut session = state.lock().ok().and_then(|mut state| {
+    let session = state.session.take()?;
+    if !cancelled && session.revealed {
+      state.fading = Some(session.id);
+    }
+    Some(session)
+  })?;
   let monitor_selection = session
     .monitors
     .as_ref()
@@ -78,9 +81,6 @@ fn take_session(
     return Some(session);
   }
 
-  if let Ok(mut state) = state.lock() {
-    state.fading = true;
-  }
   let anchor = session.anchor;
   let moved = session.moved;
   let grip = session.target.duplicate();
@@ -98,38 +98,43 @@ fn take_session(
     // a delayed warp would pull back the user's next physical mouse move.
     release_cursor(anchor, true);
   }
-  finish_with_fade(
-    app,
-    anchor.x,
-    anchor.y,
-    Box::new(move || {
-      let _completion = cursor_completion;
-      if returned_to_origin {
-        return;
-      }
-      let landing = if moved && cursor_follows {
-        monitor_landing.unwrap_or_else(|| {
-          grip
-            .frame()
-            .map(|achieved| landing_point(anchor, original, achieved))
-            .unwrap_or(anchor)
-        })
-      } else {
-        anchor
-      };
-      release_cursor(landing, true);
-    }),
-    Box::new(move || {
-      crate::glide::platform::spaces::preview_windows::after_dismissed(Box::new(|| {
-        let _completion = completion;
-        if let Some(state) = STATE.get() {
-          if let Ok(mut state) = state.lock() {
-            state.fading = false;
-          }
+  let app = app.clone();
+  // A quick lift can start the move itself. Read the cursor's destination only
+  // after that tween and its fit correction finish, keeping the preview alive.
+  after_current(Box::new(move || {
+    finish_with_fade(
+      &app,
+      anchor.x,
+      anchor.y,
+      Box::new(move || {
+        let _completion = cursor_completion;
+        if returned_to_origin {
+          return;
         }
-      }));
-    }),
-  );
+        let landing = if moved && cursor_follows {
+          monitor_landing.unwrap_or_else(|| {
+            grip
+              .frame()
+              .map(|achieved| landing_point(anchor, original, achieved))
+              .unwrap_or(anchor)
+          })
+        } else {
+          anchor
+        };
+        release_cursor(landing, true);
+      }),
+      Box::new(move || {
+        crate::glide::platform::spaces::preview_windows::after_dismissed(Box::new(|| {
+          let _completion = completion;
+          if let Some(state) = STATE.get() {
+            if let Ok(mut state) = state.lock() {
+              state.fading = None;
+            }
+          }
+        }));
+      }),
+    )
+  }));
   Some(session)
 }
 

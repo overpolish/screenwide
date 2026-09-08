@@ -102,10 +102,9 @@ pub(super) struct MonitorState {
   /// Whether the mouse release that ends an intercepted double click still has
   /// to be dropped, so the target application never sees half a click.
   swallow_mouse_up: bool,
-  /// Whether a committed preview is still fading out, with the cursor held back
-  /// until it is gone. A new session would have to show the very window that is
-  /// fading, so it is refused for those few frames instead.
-  fading: bool,
+  /// The committed session still presenting while its move settles and fades.
+  /// Its queued reveal remains valid, and new sessions wait for teardown.
+  fading: Option<u64>,
 }
 
 /// The shared handle the event tap and the reveal command hold the state by.
@@ -139,7 +138,7 @@ pub(super) fn begin_if_titlebar(
   }
   // The preview the last commit is fading out is the one this session would
   // have to show, and its cursor is still held. Let the fade finish.
-  if state.lock().is_ok_and(|state| state.fading) {
+  if state.lock().is_ok_and(|state| state.fading.is_some()) {
     return false;
   }
   if crate::glide::core::activity::BusyLease::is_busy() {
