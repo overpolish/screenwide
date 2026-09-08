@@ -256,21 +256,3 @@ pub fn contain_editor(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<
 pub fn contain_normal_window(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
   contain_window_in_work_area(app, window)
 }
-
-pub fn sync_dock_visibility(_app: &AppHandle) -> tauri::Result<()> {
-  #[cfg(target_os = "macos")]
-  {
-    let visible = [
-      WindowLabel::EditorRecording,
-      WindowLabel::EditorScreenshot,
-      WindowLabel::Settings,
-      WindowLabel::Update,
-    ]
-    .iter()
-    .filter_map(|label| _app.get_webview_window(label.as_str()))
-    .any(|window| window.is_visible().unwrap_or(false));
-    _app.set_dock_visibility(visible)?;
-  }
-
-  Ok(())
-}

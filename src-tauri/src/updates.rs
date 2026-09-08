@@ -26,5 +26,5 @@ pub fn hide_update_prompt(app: AppHandle) -> tauri::Result<()> {
   if let Some(window) = app.get_webview_window(WindowLabel::Update.as_str()) {
     windows::hide_without_focus_transfer(&window)?;
   }
-  windows::sync_dock_visibility(&app)
+  Ok(())
 }

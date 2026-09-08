@@ -26,7 +26,7 @@ pub fn hide_settings(app: AppHandle) -> tauri::Result<()> {
   if let Some(window) = app.get_webview_window(WindowLabel::Settings.as_str()) {
     windows::hide_without_focus_transfer(&window)?;
   }
-  windows::sync_dock_visibility(&app)
+  Ok(())
 }
 
 #[tauri::command]

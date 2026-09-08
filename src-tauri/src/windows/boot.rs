@@ -42,7 +42,11 @@ pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
     // Closing an editor window cancels only its own pending capture.
     hide_instead_of_close(app, label);
   }
-  for &label in DISMISSED_ON_CLOSE.iter().chain(NORMAL) {
+  for &label in DISMISSED_ON_CLOSE
+    .iter()
+    .chain(NORMAL)
+    .chain(HIDDEN_ON_LAUNCH)
+  {
     hide_instead_of_close(app, label);
   }
 

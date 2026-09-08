@@ -19,7 +19,7 @@ pub fn hide_without_focus_transfer(window: &WebviewWindow) -> tauri::Result<()> 
         let window = unsafe { Box::from_raw(context.cast::<WebviewWindow>()) };
         if hidden {
           use tauri::Manager;
-          let _ = super::sync_dock_visibility(window.app_handle());
+          let _ = super::dock_visibility::sync_after_dismissal(window.app_handle());
         }
       }
       let raw_window = window.ns_window()?;

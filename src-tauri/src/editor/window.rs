@@ -28,7 +28,5 @@ pub fn hide(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
     windows::hide_without_focus_transfer(&window)?;
   }
 
-  windows::sync_dock_visibility(app)?;
-
   Ok(())
 }
