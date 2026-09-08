@@ -24,7 +24,7 @@ use super::{
 use crate::glide::{
   begin_physical,
   core::{GlideEffects, GlideRuntime, GlideSample},
-  events, finish,
+  events, finish, finish_with_fade,
   icon::spawn_icon_lookup,
   region_rect::PlacedRegion,
 };
@@ -33,6 +33,9 @@ use crate::glide::{
 mod access;
 #[path = "session/effects.rs"]
 mod effects;
+#[path = "session/end.rs"]
+mod end;
+pub(super) use end::end;
 
 struct Session {
   anchor: POINT,
@@ -203,94 +206,9 @@ pub(super) fn tick(app: &AppHandle) {
   apply(app, result);
 }
 
-pub(super) fn end(app: &AppHandle, cancelled: bool) {
-  let completion = crate::glide::core::activity::BusyLease::acquire();
-  crate::glide::core::trace::input(
-    "windows-session",
-    format!(
-      "end cancelled={cancelled} active={:?} monitor={}",
-      active_input(),
-      monitor_mode()
-    ),
-  );
-  if !cancelled {
-    let result = STATE.lock().ok().and_then(|mut state| {
-      let session = state.as_mut()?;
-      let timestamp = session.runtime_clock.elapsed().as_secs_f64() * 1_000.0;
-      Some((session.id, session.runtime.finish_opening(timestamp)))
-    });
-    apply(app, result);
-  }
-  let session = STATE.lock().ok().and_then(|mut state| state.take());
-  let Some(mut session) = session else {
-    return;
-  };
-  if !cancelled
-    && session.monitors.is_some()
-    && session.input == InputKind::TrackpadContacts
-    && native_settings::is_down(native_settings::snapshot().monitors_modifier)
-  {
-    access::latch_monitor_commit();
-  }
-  if !cancelled {
-    if let Some(selection) = session.monitors.as_ref() {
-      if selection.selected != selection.source {
-        if let Some(frame) = monitors::commit_frame(app, selection, session.original_frame) {
-          tween::animate_to(session.target, frame, None);
-          session.moved = true;
-        }
-      }
-      preview_windows::hide(app);
-    }
-  } else if session.monitors.is_some() {
-    preview_windows::hide(app);
-  }
-  let minimize = session.runtime.should_minimize(cancelled);
-  if cancelled && session.moved {
-    session.target.restore();
-  }
-  let settings = native_settings::snapshot();
-  let landing = if !session.runtime.commits_terminal_action(cancelled)
-    && !cancelled
-    && session.moved
-    && settings.cursor_follows
-  {
-    session.target.landing(session.anchor)
-  } else {
-    None
-  };
-  if minimize {
-    session.target.minimize();
-  }
-  if let Some(landing) = landing {
-    tween::land_cursor(landing, completion.clone());
-  }
-  if session.monitors.is_some() && !session.moved {
-    let _ = unsafe {
-      windows::Win32::UI::WindowsAndMessaging::SetCursorPos(session.anchor.x, session.anchor.y)
-    };
-  }
-  if session.revealed {
-    cursor::show_cursor();
-  }
-  finish(
-    app,
-    f64::from(session.anchor.x),
-    f64::from(session.anchor.y),
-    cancelled,
-  );
-}
-
 pub(super) use access::{
   accumulate_pointer_travel, active_input, anchor, clear_monitor_commit,
   clear_monitor_commit_if_released, monitor_mode, next_id, pointer_displacement,
   promote_armed_to_mouse, promote_scroll_to_contacts, revealed, set_icon, target, target_hwnd,
 };
 use effects::apply;
-
-fn session_mut(session: &mut Option<Session>, session_id: u64) -> Result<&mut Session, String> {
-  session
-    .as_mut()
-    .filter(|session| session.id == session_id)
-    .ok_or_else(|| "The Glide session has already ended".to_owned())
-}

@@ -3,6 +3,13 @@
 
 use super::*;
 
+fn session_mut(session: &mut Option<Session>, session_id: u64) -> Result<&mut Session, String> {
+  session
+    .as_mut()
+    .filter(|session| session.id == session_id)
+    .ok_or_else(|| "The Glide session has already ended".to_owned())
+}
+
 pub(crate) fn reveal(app: &AppHandle, session_id: u64) -> Result<(), String> {
   let blocks_hover = {
     let mut state = STATE

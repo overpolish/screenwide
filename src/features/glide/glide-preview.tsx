@@ -209,8 +209,8 @@ export function GlidePreview({
       ) : null}
       {/* Centered over whatever the fill is doing: which app is moving is one
           fact about the whole preview, not about the destination. App icon
-          artwork has its own margin, so it takes the large size rather than
-          the glyph size. */}
+          artwork has platform-specific margins, so macOS takes the large size
+          while Windows uses the regular icon size. */}
       {iconSrc ? (
         <>
           {/* Some Windows executables expose unusually low-alpha icon artwork.
@@ -218,12 +218,12 @@ export function GlidePreview({
               changing opaque icons or baking in an app-specific backdrop. */}
           <img
             alt=""
-            className="glide-app-icon-windows-boost pointer-events-none absolute inset-0 m-auto size-icon-large object-contain"
+            className="glide-app-icon glide-app-icon-windows-boost pointer-events-none absolute inset-0 m-auto size-icon object-contain"
             src={iconSrc}
           />
           <img
             alt=""
-            className="pointer-events-none absolute inset-0 m-auto size-icon-large object-contain"
+            className="glide-app-icon pointer-events-none absolute inset-0 m-auto size-icon object-contain"
             src={iconSrc}
           />
         </>

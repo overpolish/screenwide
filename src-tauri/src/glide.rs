@@ -171,7 +171,7 @@ fn finish(app: &AppHandle, anchor_x: f64, anchor_y: f64, cancelled: bool) {
 
 /// The cursor returns this far into the fade, so its arrival overlaps the
 /// preview's last visible frames instead of trailing an already-empty screen.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 const CURSOR_RESTORE_DELAY: std::time::Duration = std::time::Duration::from_millis(90);
 
 /// Ends a committed session with a fade rather than an instant hide, running
@@ -179,7 +179,7 @@ const CURSOR_RESTORE_DELAY: std::time::Duration = std::time::Duration::from_mill
 /// preview is gone. Every failure here still runs both - immediately, and
 /// exactly once each - rather than leaving the cursor hidden behind a stuck
 /// panel.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn finish_with_fade(
   app: &AppHandle,
   anchor_x: f64,
@@ -242,7 +242,7 @@ fn finish_with_fade(
 }
 
 /// Runs a shared one-shot completion, if it has not been run already.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn run_once(completion: &std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>>) {
   let taken = completion.lock().ok().and_then(|mut slot| slot.take());
   if let Some(completion) = taken {

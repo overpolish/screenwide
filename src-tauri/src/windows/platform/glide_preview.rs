@@ -3,6 +3,9 @@
 
 use tauri::WebviewWindow;
 
+#[cfg(target_os = "windows")]
+use tauri::Manager;
+
 #[cfg(target_os = "macos")]
 use std::{cell::Cell, ptr::NonNull};
 
@@ -77,6 +80,55 @@ pub fn fade_out(window: &WebviewWindow, completion: Box<dyn FnOnce() + Send>) ->
 
 #[cfg(target_os = "windows")]
 pub fn show_glide(window: &WebviewWindow, _opacity: f64, blocks_hover: bool) -> tauri::Result<()> {
+  super::composition::set_opacity(window, 1.0)?;
   window.set_ignore_cursor_events(!blocks_hover)?;
   window.show()
+}
+
+#[cfg(target_os = "windows")]
+pub fn fade_out(window: &WebviewWindow, completion: Box<dyn FnOnce() + Send>) -> tauri::Result<()> {
+  use std::sync::{Arc, Mutex};
+  use std::time::Duration;
+
+  let window = window.clone();
+  let app = window.app_handle().clone();
+  let completion = Arc::new(Mutex::new(Some(completion)));
+  let fallback = completion.clone();
+  std::thread::Builder::new()
+    .name("glide-preview-fade".to_owned())
+    .spawn(move || {
+      const STEPS: u32 = 8;
+      for step in (0..STEPS).rev() {
+        std::thread::sleep(Duration::from_millis(20));
+        let opacity = f64::from(step) / f64::from(STEPS);
+        let next = window.clone();
+        if app
+          .run_on_main_thread(move || {
+            let _ = super::composition::set_opacity(&next, opacity);
+          })
+          .is_err()
+        {
+          break;
+        }
+      }
+      if app
+        .run_on_main_thread(move || {
+          let _ = window.set_ignore_cursor_events(true);
+          let _ = window.hide();
+          let _ = super::composition::set_opacity(&window, 1.0);
+          if let Some(completion) = completion.lock().ok().and_then(|mut value| value.take()) {
+            completion();
+          }
+        })
+        .is_err()
+      {
+        // Keep the lifecycle one-shot even if the UI thread is already
+        // shutting down; the caller still needs to release its activity lease.
+        if let Some(completion) = fallback.lock().ok().and_then(|mut value| value.take()) {
+          completion();
+        }
+      }
+    })
+    .map_err(std::io::Error::other)?;
+  Ok(())
 }

@@ -9,7 +9,7 @@ mod composition;
 #[path = "platform/glide_preview.rs"]
 mod glide_preview;
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use glide_preview::fade_out as fade_glide_preview;
 pub use glide_preview::{initialize_glide_preview, show_glide};
 

@@ -6,7 +6,27 @@ import process, { argv, env, exit, platform } from "node:process";
 
 const DEFAULT_STORY = "primitives-alert--paragraph";
 const STORYBOOK_ORIGIN = "http://localhost:6006";
-const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
+
+// Node refuses to spawn the `pnpm.cmd` shim without a shell
+// (CVE-2024-27980), so pnpm is reached through the entry point it reports
+// when it runs this script: a standalone executable or a script for node. Only
+// a bare `node scripts/...` invocation falls back to the shim, via the shell.
+const pnpm = (() => {
+  const entry = env.npm_execpath;
+  if (entry == null) {
+    return { command: "pnpm", prefix: [], shell: platform === "win32" };
+  }
+  if (/\.[cm]?js$/i.test(entry)) {
+    return { command: process.execPath, prefix: [entry], shell: false };
+  }
+  return { command: entry, prefix: [], shell: false };
+})();
+
+const spawnPnpm = (pnpmArguments, options) =>
+  spawn(pnpm.command, [...pnpm.prefix, ...pnpmArguments], {
+    ...options,
+    shell: pnpm.shell,
+  });
 
 const arguments_ = argv.slice(2);
 if (arguments_[0] === "--") arguments_.shift();
@@ -74,8 +94,7 @@ try {
   console.log(`Reusing Storybook at ${STORYBOOK_ORIGIN}`);
 } catch {
   console.log(`Starting Storybook at ${STORYBOOK_ORIGIN}`);
-  storybook = spawn(
-    command,
+  storybook = spawnPnpm(
     ["exec", "storybook", "dev", "-p", "6006", "--no-open"],
     { env, stdio: "inherit" },
   );
@@ -115,8 +134,7 @@ try {
   previewUrl.searchParams.set("screenwide-native", "1");
 
   console.log(`Opening native preview for ${story}`);
-  tauri = spawn(
-    command,
+  tauri = spawnPnpm(
     [
       "tauri",
       "dev",

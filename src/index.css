@@ -527,6 +527,18 @@ html[data-platform="windows"]
   display: none;
 }
 
+/* macOS app icons include their own generous artwork margin. Windows uses the
+ * regular icon token because its extracted artwork fills the box more fully. */
+.glide-app-icon {
+  height: var(--spacing-icon-large);
+  width: var(--spacing-icon-large);
+}
+
+html[data-platform="windows"] .glide-app-icon {
+  height: var(--spacing-icon);
+  width: var(--spacing-icon);
+}
+
 html[data-platform="windows"] .glide-app-icon-windows-boost {
   display: block;
 }

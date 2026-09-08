@@ -26,8 +26,15 @@ use crate::glide::{
   region_rect::RegionGravity,
 };
 
+#[path = "tween/completion.rs"]
+mod completion;
 #[path = "tween/destination.rs"]
 mod destination;
+#[path = "tween/settle.rs"]
+mod settle;
+use settle::settle;
+
+pub(super) use completion::after_current;
 
 /// How long a move takes, end to end. Short enough to feel like a response to
 /// the gesture rather than a transition being watched.
@@ -64,6 +71,7 @@ struct Tween {
   /// the window is still travelling leaves the cursor for the settle to place,
   /// so it never sits on a frame the window has not reached.
   _busy: BusyLease,
+  _completion: completion::Ticket,
 }
 
 struct Active {
@@ -124,6 +132,7 @@ pub(super) fn animate_to(target: WindowTarget, destination: GlideFrame, fit: Opt
       generation,
       fit,
       _busy: BusyLease::acquire(),
+      _completion: completion::begin(),
     });
     if let Ok(mut active) = ACTIVE.lock() {
       *active = Some(Active {
@@ -135,8 +144,6 @@ pub(super) fn animate_to(target: WindowTarget, destination: GlideFrame, fit: Opt
   }
 }
 
-/// Where the window in flight is headed, so a commit that lands while it is
-/// still travelling can aim the cursor at the frame it will end up with.
 pub(super) fn in_flight_destination() -> Option<GlideFrame> {
   ACTIVE
     .lock()
@@ -144,8 +151,6 @@ pub(super) fn in_flight_destination() -> Option<GlideFrame> {
     .and_then(|slot| slot.as_ref().map(|active| active.destination))
 }
 
-/// Puts the cursor at its landing point: now, or once the window in flight
-/// has arrived there.
 pub(super) fn land_cursor(point: POINT, busy: BusyLease) {
   let mut busy = Some(busy);
   let deferred = ACTIVE.lock().ok().is_some_and(|mut slot| {
@@ -234,51 +239,6 @@ fn step() {
     if slot.is_none() && is_current(tween.generation) {
       *slot = Some(tween);
     }
-  }
-}
-
-/// Reads the settled frame, corrects its origin if the window came out a
-/// different size than asked for, and reports the result to the preview. The
-/// generation is re-checked around every window call: a retarget that landed
-/// while the frame was being read owns the window now.
-fn settle(target: &WindowTarget, requested: GlideFrame, generation: u64, context: &FitContext) {
-  let Ok(achieved) = target.frame() else {
-    return;
-  };
-  if !is_current(generation) {
-    return;
-  }
-  let fits = frame_fits(achieved, requested, FIT_EPSILON);
-  let mut frame = achieved;
-  if !fits {
-    let (x, y) = corrected_origin(requested, achieved, context.gravity);
-    frame.x = x;
-    frame.y = y;
-    if target.set_origin(frame).is_err() || !is_current(generation) {
-      return;
-    }
-  }
-  let Some(actual) = frame_fractions(
-    frame,
-    (context.work.x, context.work.y),
-    (context.work.width, context.work.height),
-  ) else {
-    return;
-  };
-  if let Err(error) = emit_fit(
-    &context.app,
-    GlideFitEvent {
-      session_id: context.session_id,
-      fits,
-      actual: FitRect {
-        x: actual.x,
-        y: actual.y,
-        width: actual.width,
-        height: actual.height,
-      },
-    },
-  ) {
-    eprintln!("Could not report the Glide placement: {error}");
   }
 }
 

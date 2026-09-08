@@ -238,7 +238,7 @@ pub fn defer_hide_glide_preview(app: &AppHandle) {
 /// Fades the preview out instead of hiding it outright, then runs `completion`
 /// once it is gone. Committed gestures dismiss this way; a cancelled one still
 /// takes the instant `hide_glide_preview` path.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) fn fade_glide_preview(
   app: &AppHandle,
   completion: Box<dyn FnOnce() + Send>,

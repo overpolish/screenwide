@@ -9,7 +9,10 @@ use super::SystemAccent;
 
 /// Windows always exposes an accent colour; it has no Multicolour setting.
 pub(super) fn current() -> Option<SystemAccent> {
-  let color = UISettings::new().ok()?.GetColorValue(UIColorType::Accent).ok()?;
+  let color = UISettings::new()
+    .ok()?
+    .GetColorValue(UIColorType::Accent)
+    .ok()?;
   Some(SystemAccent {
     red: color.R,
     green: color.G,
