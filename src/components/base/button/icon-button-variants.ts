@@ -5,7 +5,7 @@ import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
 export const iconButtonControlStyles =
-  "size-control-height rounded-control p-control [&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu";
+  "h-control-height w-control-height rounded-control p-control [&_svg.lucide]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu";
 
 export const iconButtonVariants = tv({
   base: [
@@ -26,6 +26,7 @@ export const iconButtonVariants = tv({
   ],
   defaultVariants: {
     color: "neutral",
+    size: "regular",
   },
   variants: {
     color: {
@@ -49,6 +50,13 @@ export const iconButtonVariants = tv({
     },
     isToggle: {
       true: "text-content-fg-secondary data-[selected]:text-content-fg",
+    },
+    // Capture is the recording bar's control: a 48 by 40 landscape box under
+    // a 28px glyph, on the panel radius a standalone control of that height
+    // takes.
+    size: {
+      capture: "h-10 w-12 rounded-panel [&_svg.lucide]:size-icon-xl",
+      regular: "",
     },
   },
 });

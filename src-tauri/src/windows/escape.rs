@@ -122,10 +122,6 @@ pub(super) fn arm(app: &AppHandle) {
           let _ = super::options::close_standalone_listbox(app.clone(), true);
           return;
         }
-        if super::options::is_recording_options_open() {
-          let _ = super::options::close_recording_options(app.clone(), true);
-          return;
-        }
         // Teardown runs on the bar's later IPC turn rather than unregistering
         // the shortcut from inside its native callback.
         let _ = app.emit_to(

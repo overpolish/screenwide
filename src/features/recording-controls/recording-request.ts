@@ -42,13 +42,15 @@ export const startRecordingOptions = (): StartRecordingOptions => {
         ? (cameraPalById[selectedCamera.id] ?? false)
         : false,
     cameraWidth: wantsCamera ? (selectedCameraMode?.width ?? null) : null,
-    captureKeyboardShortcuts: inputs.keyboardShortcuts,
+    // The cursor and the keyboard overlay are always recorded; the editor
+    // decides whether either is shown.
+    captureKeyboardShortcuts: true,
     fps,
     microphoneId: inputs.microphone ? (selectedMicrophone?.id ?? null) : null,
     mode: recordingMode,
     monitorId: selectedMonitor?.id ?? null,
     region: recordingMode === "region" ? region : null,
-    showCursor: inputs.showCursor,
+    showCursor: true,
     systemAudio: inputs.systemAudio,
     systemAudioApplicationIds: inputs.systemAudio
       ? selectedApplications.map((source) => source.id)

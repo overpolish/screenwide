@@ -27,7 +27,7 @@ pub fn initialize_glide_preview(window: &WebviewWindow) -> tauri::Result<()> {
   #[cfg(target_os = "macos")]
   super::ensure_recording_panel(window)?;
   window.set_ignore_cursor_events(true)?;
-  window.hide()
+  crate::windows::hide(window)
 }
 
 #[cfg(target_os = "macos")]
@@ -35,7 +35,9 @@ pub fn show_glide(window: &WebviewWindow, opacity: f64, blocks_hover: bool) -> t
   window.set_ignore_cursor_events(!blocks_hover)?;
   let panel = super::ensure_recording_panel(window)?;
   let app = window.app_handle().clone();
+  let window = window.clone();
   app.run_on_main_thread(move || {
+    let _ = crate::windows::webview_visibility::show_webview(&window);
     panel.set_alpha_value(opacity);
     panel.show();
   })
@@ -67,7 +69,7 @@ pub fn fade_out(window: &WebviewWindow, completion: Box<dyn FnOnce() + Send>) ->
     let finished = RcBlock::new(move || {
       panel.set_alpha_value(0.0);
       let _ = window.set_ignore_cursor_events(true);
-      let _ = window.hide();
+      let _ = crate::windows::hide(&window);
       panel.hide();
       if let Some(completion) = completion.take() {
         completion();

@@ -5,22 +5,27 @@ import { Channel } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 
 import { startCameraPreview, stopCameraPreview } from "./camera-preview-api";
+import { CameraPreviewDimensions } from "./camera-preview-fit";
 import { CameraResolution } from "./types";
 
 const FRAME_HEADER_LENGTH = 9;
 const FRAME_TYPE_MJPEG = 0;
 
-const drawFrame = async (canvas: HTMLCanvasElement, frame: ArrayBuffer) => {
-  if (frame.byteLength <= FRAME_HEADER_LENGTH) return false;
+/** Returns the shape the frame was drawn at, or `null` if it was not drawn. */
+const drawFrame = async (
+  canvas: HTMLCanvasElement,
+  frame: ArrayBuffer,
+): Promise<CameraPreviewDimensions | null> => {
+  if (frame.byteLength <= FRAME_HEADER_LENGTH) return null;
 
   const header = new DataView(frame, 0, FRAME_HEADER_LENGTH);
   const width = header.getUint32(0, true);
   const height = header.getUint32(4, true);
   const frameType = header.getUint8(8);
-  if (width === 0 || height === 0) return false;
+  if (width === 0 || height === 0) return null;
 
   const context = canvas.getContext("2d", { alpha: false });
-  if (!context) return false;
+  if (!context) return null;
   if (canvas.width !== width) canvas.width = width;
   if (canvas.height !== height) canvas.height = height;
 
@@ -38,7 +43,7 @@ const drawFrame = async (canvas: HTMLCanvasElement, frame: ArrayBuffer) => {
         );
   context.drawImage(bitmap, 0, 0);
   bitmap.close();
-  return true;
+  return { height, width };
 };
 
 type UseCameraPreviewOptions = {
@@ -64,6 +69,9 @@ export const useCameraPreview = ({
   const operationsRef = useRef(Promise.resolve());
   const renderLatestFrameRef = useRef<() => void>(() => undefined);
   const [hasFrame, setHasFrame] = useState(false);
+  const [frameSize, setFrameSize] = useState<CameraPreviewDimensions | null>(
+    null,
+  );
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -78,7 +86,13 @@ export const useCameraPreview = ({
         decodeInFlight = true;
         void drawFrame(canvas, frame)
           .then((drawn) => {
-            if (!disposed && drawn) setHasFrame(true);
+            if (disposed || !drawn) return;
+            setHasFrame(true);
+            setFrameSize((current) =>
+              current?.width === drawn.width && current.height === drawn.height
+                ? current
+                : drawn,
+            );
           })
           .catch(() => undefined)
           .finally(() => {
@@ -101,6 +115,7 @@ export const useCameraPreview = ({
     operationsRef.current = operationsRef.current
       .then(async () => {
         setHasFrame(false);
+        setFrameSize(null);
         setFailed(false);
         await stopCameraPreview();
         if (!active || !deviceId || cancelled) return;
@@ -148,5 +163,5 @@ export const useCameraPreview = ({
     !hasFrame &&
     !failed;
 
-  return { canvasRef, hasFrame, isStarting };
+  return { canvasRef, frameSize, hasFrame, isStarting };
 };

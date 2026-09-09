@@ -25,25 +25,37 @@ const listBoxItemVariants = tv({
 type ListBoxItemProps = AriaListBoxItemProps & {
   children?: React.ReactNode;
   className?: string;
+  /**
+   * @default true
+   * @description
+   * Whether the item reserves a leading check gutter. A menu of actions keeps
+   * no selection, so it turns this off and the content starts at the inset.
+   */
+  showsSelection?: boolean;
 };
 
 export const ListBoxItem = ({
   children,
   className,
+  showsSelection = true,
   ...props
 }: ListBoxItemProps) => {
   return (
     <AriaListBoxItem {...props} className={listBoxItemVariants({ className })}>
-      {({ isSelected }) => (
-        <>
-          {/* The gutter is always present so labels line up whether or not
-              the item carries a checkmark, as in a native menu. */}
-          <span className="flex w-icon shrink-0 items-center justify-center">
-            {isSelected && <Check className="size-icon-small" />}
-          </span>
+      {({ isSelected }) =>
+        showsSelection ? (
+          <>
+            {/* The gutter is always present so labels line up whether or not
+                the item carries a checkmark, as in a native menu. */}
+            <span className="flex w-icon shrink-0 items-center justify-center">
+              {isSelected && <Check className="size-icon-small" />}
+            </span>
+            <span className="truncate">{children}</span>
+          </>
+        ) : (
           <span className="truncate">{children}</span>
-        </>
-      )}
+        )
+      }
     </AriaListBoxItem>
   );
 };

@@ -56,8 +56,6 @@ export const cameraRequestFps = (fps: RecordingFps, pal: boolean): number[] =>
 
 export type RecordingInputs = {
   camera: boolean;
-  keyboardShortcuts: boolean;
   microphone: boolean;
-  showCursor: boolean;
   systemAudio: boolean;
 };

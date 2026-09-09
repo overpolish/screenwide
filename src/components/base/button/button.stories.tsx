@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Meta, StoryObj } from "@storybook/react";
-import { DoorOpen } from "lucide-react";
+import { Circle, DoorOpen } from "lucide-react";
 
 import { Text } from "../text/text";
 
@@ -103,6 +103,34 @@ export const States: Story = {
           </Button>
           <Button {...args} color={color} isDisabled variant="ghost">
             Ghost disabled
+          </Button>
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+/** The recording bar's 40px control next to the regular size. */
+export const Sizes: Story = {
+  parameters: { controls: { disable: true }, layout: "padded" },
+  render: (args) => (
+    <div className="flex flex-col gap-section">
+      {(["regular", "capture"] as const).map((size) => (
+        <div className="flex gap-section items-center" key={size}>
+          <Text className="w-16" variant="footnote">
+            {size}
+          </Text>
+          <Button {...args} size={size}>
+            <DoorOpen />
+            Sign out
+          </Button>
+          <Button {...args} color="primary" size={size}>
+            Record
+          </Button>
+          {/* Icon only: the capture size is exactly 48 wide with a lone
+              28px glyph. */}
+          <Button {...args} aria-label="Record" color="primary" size={size}>
+            <Circle />
           </Button>
         </div>
       ))}

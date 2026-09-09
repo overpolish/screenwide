@@ -8,10 +8,10 @@ use super::WindowLabel;
 
 pub(super) const SELECTOR_GAP: f64 = 6.0;
 
-const SELECTOR_HEIGHT: f64 = 250.0;
-const SELECTOR_WIDTH: f64 = 500.0;
-const WINDOW_SELECTOR_EXPANDED_HEIGHT: f64 = 500.0;
-const WINDOW_SELECTOR_EXPANDED_WIDTH: f64 = 750.0;
+const SELECTOR_HEIGHT: f64 = 200.0;
+const SELECTOR_WIDTH: f64 = 400.0;
+const WINDOW_SELECTOR_EXPANDED_HEIGHT: f64 = 400.0;
+const WINDOW_SELECTOR_EXPANDED_WIDTH: f64 = 600.0;
 
 #[derive(Clone, Copy, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -109,11 +109,11 @@ mod tests {
 
   #[test]
   fn monitor_selector_uses_its_content_size() {
-    assert_eq!(selector_dimensions(false, 1_920.0), (500.0, 250.0));
+    assert_eq!(selector_dimensions(false, 1_920.0), (400.0, 200.0));
   }
 
   #[test]
   fn selector_never_outgrows_the_monitor() {
-    assert_eq!(selector_dimensions(true, 640.0), (640.0, 500.0));
+    assert_eq!(selector_dimensions(true, 640.0), (600.0, 400.0));
   }
 }

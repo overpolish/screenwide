@@ -84,6 +84,26 @@ export const States: Story = {
   ),
 };
 
+/** The recording bar's 40px control next to the regular size. */
+export const Sizes: Story = {
+  parameters: { controls: { disable: true }, layout: "padded" },
+  render: (args) => (
+    <div className="flex flex-col gap-section">
+      {(["regular", "capture"] as const).map((size) => (
+        <div className="flex items-center gap-section" key={size}>
+          <Text className="w-16" variant="footnote">
+            {size}
+          </Text>
+          <IconButton {...args} size={size} />
+          <IconToggleButton aria-label="Crop" defaultSelected size={size}>
+            <Crop />
+          </IconToggleButton>
+        </div>
+      ))}
+    </div>
+  ),
+};
+
 export const Toggle: Story = {
   parameters: { controls: { disable: true } },
   render: () => (

@@ -26,9 +26,6 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
       if let WindowEvent::CloseRequested { api, .. } = event {
         api.prevent_close();
         match label {
-          WindowLabel::RecordingOptions => {
-            let _ = super::hide_recording_options(app.clone());
-          }
           // Closing an editor window cancels only its own pending capture.
           WindowLabel::EditorRecording => {
             crate::editor::discard(&app, crate::editor::EditorKind::Recording);
@@ -161,15 +158,6 @@ pub fn initialize_region_selector(app: &AppHandle) -> tauri::Result<()> {
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn initialize_recording_options(app: &AppHandle) -> tauri::Result<()> {
-  if let Some(window) = app.get_webview_window(WindowLabel::RecordingOptions.as_str()) {
-    platform::initialize_recording_options(&window)?;
-  }
-
-  Ok(())
-}
-
-#[cfg(not(target_os = "macos"))]
 pub fn initialize_standalone_listbox(app: &AppHandle) -> tauri::Result<()> {
   if let Some(window) = app.get_webview_window(WindowLabel::StandaloneListbox.as_str()) {
     platform::initialize_standalone_listbox(&window)?;
@@ -183,7 +171,7 @@ pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
   // A bundled macOS application can order its ordinary main window onscreen
   // during application activation even when it was configured as invisible.
   // Export only becomes visible when an artifact is presented.
-  window.hide()?;
+  super::hide(window)?;
 
   crate::editor::preview_platform::prewarm(window.clone());
 
@@ -203,7 +191,7 @@ pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
 
 pub fn initialize_normal_window(window: &WebviewWindow) -> tauri::Result<()> {
   platform::initialize_editor(window)?;
-  window.hide()
+  super::hide(window)
 }
 
 #[cfg(target_os = "macos")]

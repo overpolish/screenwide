@@ -122,6 +122,7 @@
   --spacing-icon-small: 0.875rem;
   --spacing-icon-mini: 0.75rem;
   --spacing-icon-large: 1.5rem;
+  --spacing-icon-xl: 28px;
   /* Measured on macOS 26: HUD panels 15px, plain windows 16px, toolbar
      windows 26px. Tuned by eye to 14px, which reads as a match on the app's
      small panels. */
@@ -335,18 +336,23 @@ body {
 /* Icons keep one stroke weight at every size, the way SF Symbols do, so a
    glyph next to a label matches the label's stems. Non-scaling strokes are
    measured in screen pixels rather than the icon's 24-unit grid. */
-.lucide {
-  stroke-width: 1.5px;
-  /* Lucide draws separate strokes that cross, and a translucent colour on
-     each stroke doubles up where they do. SF Symbols are single outlines with
-     no overlaps. So an icon is drawn in the opaque form of its colour and the
-     tier's alpha is applied once to the whole glyph. */
-  color: rgb(from currentColor r g b / 1);
-  opacity: var(--icon-alpha, 1);
-}
+/* In the base layer so a colour utility placed on the icon itself still
+   wins; unlayered rules would override it. */
+@layer base {
+  .lucide {
+    stroke-width: 1.5px;
+    /* Lucide draws separate strokes that cross, and a translucent colour on
+       each stroke doubles up where they do. SF Symbols are single outlines
+       with no overlaps. So an icon is drawn in the opaque form of the colour
+       it inherits and the tier's alpha is applied once to the whole glyph.
+       Label-tier colours therefore belong on a wrapper, not on the icon. */
+    color: rgb(from currentColor r g b / 1);
+    opacity: var(--icon-alpha, 1);
+  }
 
-.lucide * {
-  vector-effect: non-scaling-stroke;
+  .lucide * {
+    vector-effect: non-scaling-stroke;
+  }
 }
 
 html,
@@ -595,7 +601,9 @@ html[data-platform="windows"] .glide-app-icon-windows-boost {
 .os-theme-screenwide {
   --os-size: 10px;
   --os-padding-perpendicular: 2px;
-  --os-padding-axis: 2px;
+  /* A scroll area inside rounded corners sets `--scrollbar-inset` so the
+     bar stops short of the corner, as native overlay scrollbars do. */
+  --os-padding-axis: var(--scrollbar-inset, 2px);
   --os-track-border-radius: 10px;
   --os-handle-interactive-area-offset: 4px;
   --os-handle-border-radius: 10px;

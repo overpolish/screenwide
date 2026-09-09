@@ -3,6 +3,7 @@
 
 import { Meta, StoryObj } from "@storybook/react-vite";
 
+import { displayThumbnail } from "../../storybook/display-thumbnail";
 import { FeatureStoryStage } from "../../storybook/feature-story-stage";
 
 import { MonitorSelector } from "./monitor-selector";
@@ -37,6 +38,12 @@ const monitors: MonitorDetails[] = [
   },
 ];
 
+/** Stands in for the captured still of each display. */
+const thumbnails: Record<number, string> = {
+  1: displayThumbnail("#2f7d63", "#123f36", 16 / 9),
+  2: displayThumbnail("#3b6fd4", "#8f5bd6"),
+};
+
 const meta = {
   args: {
     focusContents: false,
@@ -44,6 +51,7 @@ const meta = {
     onCommit: () => undefined,
     onSelect: () => undefined,
     selectedMonitor: monitors[1],
+    thumbnails,
   },
   component: MonitorSelector,
   decorators: [
@@ -63,3 +71,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+/** Before the stills have been captured, each display keeps its plain fill. */
+export const WithoutThumbnails: Story = {
+  args: { thumbnails: {} },
+};

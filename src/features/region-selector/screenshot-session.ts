@@ -3,7 +3,6 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-import { useRecordingInputStore } from "../recording-inputs/store";
 import {
   hideRegionSelector,
   setRegionSelectorOpacity,
@@ -181,12 +180,10 @@ export const captureScreenshotRegion = (
   // shot; Windows keeps it visible but temporarily excludes its native window
   // graph from capture, avoiding a flash.
   const capture = async () => {
-    const showCursor = useRecordingInputStore.getState().inputs.showCursor;
     try {
       await setRegionSelectorOpacity(0);
       await captureStill({
         destination,
-        showCursor,
         target: { kind: "desktopRegion", monitorId, region },
       });
     } catch (error: unknown) {

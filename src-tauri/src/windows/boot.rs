@@ -22,7 +22,6 @@ const DISMISSED_ON_CLOSE: &[WindowLabel] = &[
   WindowLabel::RecordingBar,
   WindowLabel::RecordingSourceSelector,
   WindowLabel::RegionSelector,
-  WindowLabel::RecordingOptions,
   WindowLabel::StandaloneListbox,
   WindowLabel::RecordingDock,
 ];
@@ -83,6 +82,14 @@ pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
     .chain(HIDDEN_ON_LAUNCH)
   {
     hide_instead_of_close(app, label);
+  }
+
+  // Predefined pages start hidden, including panels converted lazily later.
+  #[cfg(target_os = "macos")]
+  for window in app.webview_windows().into_values() {
+    if !window.is_visible()? {
+      super::webview_visibility::hide_webview(&window)?;
+    }
   }
 
   Ok(())

@@ -6,29 +6,27 @@ import {
   LogicalPosition,
   LogicalSize,
 } from "@tauri-apps/api/window";
-import { ReactNode, useEffect, useMemo, useRef } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 
 import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { Select } from "../../components/base/select/select";
 
-import { hideStandaloneListbox, showStandaloneListbox } from "./api";
-import { initialStandaloneListboxHeight } from "./layout";
-import { StandaloneListboxItem, useStandaloneListboxStore } from "./store";
+import { hidePopupPanel, showPopupPanel } from "./api";
+import { initialPopupPanelHeight } from "./layout";
+import { PopupPanelItem, usePopupPanelStore } from "./store";
 
-type StandaloneMultiSelectProps = {
-  exclusiveId: string;
+type PopupSelectProps = {
   id: string;
-  items: StandaloneListboxItem[];
+  items: PopupPanelItem[];
   label: string;
-  onSelectionChange: (items: StandaloneListboxItem[]) => void;
+  onSelectionChange: (item: PopupPanelItem) => void;
   placeholder: string;
-  selectedIds: string[];
+  selectedId: string | null;
   leftSection?: ReactNode;
-  onOpen?: () => Promise<StandaloneListboxItem[]>;
+  onOpen?: () => Promise<PopupPanelItem[]>;
 };
 
-export function StandaloneMultiSelect({
-  exclusiveId,
+export function PopupSelect({
   id,
   items,
   label,
@@ -36,29 +34,16 @@ export function StandaloneMultiSelect({
   onOpen,
   onSelectionChange,
   placeholder,
-  selectedIds,
-}: StandaloneMultiSelectProps) {
-  const active = useStandaloneListboxStore((state) => state.active);
-  const close = useStandaloneListboxStore((state) => state.close);
-  const lastSelection = useStandaloneListboxStore(
-    (state) => state.lastSelection,
-  );
-  const open = useStandaloneListboxStore((state) => state.open);
+  selectedId,
+}: PopupSelectProps) {
+  const active = usePopupPanelStore((state) => state.active);
+  const lastSelection = usePopupPanelStore((state) => state.lastSelection);
+  const close = usePopupPanelStore((state) => state.close);
+  const open = usePopupPanelStore((state) => state.open);
   const handledEventRef = useRef(lastSelection?.eventId ?? null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const selectedItems = useMemo(
-    () => items.filter((item) => selectedIds.includes(item.id)),
-    [items, selectedIds],
-  );
-  const triggerItem = useMemo<StandaloneListboxItem | null>(() => {
-    if (selectedItems.length === 0) return null;
-    if (selectedItems.length === 1) return selectedItems[0];
-    return {
-      id: selectedItems.map((item) => item.id).join(","),
-      label: `${selectedItems.length.toString()} applications`,
-    };
-  }, [selectedItems]);
+  const selectedItem = items.find((item) => item.id === selectedId) ?? null;
 
   useEffect(() => {
     if (
@@ -70,9 +55,10 @@ export function StandaloneMultiSelect({
     }
 
     handledEventRef.current = lastSelection.eventId;
-    onSelectionChange(
-      items.filter((item) => lastSelection.selectedIds.includes(item.id)),
+    const item = items.find(
+      (candidate) => candidate.id === lastSelection.selectedIds[0],
     );
+    if (item) onSelectionChange(item);
   }, [id, items, lastSelection, onSelectionChange]);
 
   const showListbox = async (focusContents: boolean) => {
@@ -81,18 +67,24 @@ export function StandaloneMultiSelect({
 
     const bounds = trigger.getBoundingClientRect();
     const currentItems = onOpen ? await onOpen() : items;
-    const height = initialStandaloneListboxHeight(currentItems.length);
+    const height = initialPopupPanelHeight(currentItems.length);
 
     open({
-      exclusiveId,
       focusContents,
       id,
       items: currentItems,
       label,
-      selectedIds,
-      selectionMode: "multiple",
+      mode: "select",
+      selectedIds: selectedId ? [selectedId] : [],
+      selectionMode: "single",
     });
-    await showStandaloneListbox({
+    await showPopupPanel({
+      anchor: {
+        height: bounds.height,
+        width: bounds.width,
+        x: bounds.left,
+        y: bounds.top,
+      },
       focusContents,
       offset: new LogicalPosition(bounds.left, bounds.bottom + 4),
       parentWindowLabel: getCurrentWindow().label,
@@ -102,11 +94,11 @@ export function StandaloneMultiSelect({
   };
 
   const toggleListbox = async (focusContents: boolean) => {
-    const current = useStandaloneListboxStore.getState().active;
+    const current = usePopupPanelStore.getState().active;
     const isOpen = current?.id === id;
     if (isOpen) {
       close();
-      await hideStandaloneListbox(current.focusContents);
+      await hidePopupPanel(current.focusContents);
     } else {
       await showListbox(focusContents);
     }
@@ -115,7 +107,7 @@ export function StandaloneMultiSelect({
   return (
     <div
       className="w-full"
-      data-standalone-listbox-trigger={id}
+      data-popup-panel-trigger={id}
       onPointerDown={(event) => {
         event.stopPropagation();
       }}
@@ -125,7 +117,7 @@ export function StandaloneMultiSelect({
         className="w-full"
         clearable={false}
         isOpen={active?.id === id}
-        items={triggerItem ? [triggerItem] : []}
+        items={selectedItem ? [selectedItem] : []}
         leftSection={leftSection}
         onPress={(event) => {
           void toggleListbox(
@@ -133,12 +125,11 @@ export function StandaloneMultiSelect({
           );
         }}
         placeholder={placeholder}
-        size="compact"
         standalone
         triggerRef={triggerRef}
-        value={triggerItem?.id ?? null}
+        value={selectedId}
       >
-        {(item: StandaloneListboxItem) => (
+        {(item: PopupPanelItem) => (
           <ListBoxItem id={item.id} textValue={item.label}>
             {item.label}
           </ListBoxItem>

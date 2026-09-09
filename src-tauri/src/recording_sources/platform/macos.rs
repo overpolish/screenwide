@@ -6,13 +6,12 @@ use std::path::{Path, PathBuf};
 
 #[cfg(target_os = "macos")]
 use {
-  cidre::{ax, cf, cg, sc},
+  cidre::{cg, sc},
   objc2::AnyThread,
   objc2_app_kit::{
     NSApplicationActivationPolicy, NSBitmapImageFileType, NSBitmapImageRep, NSRunningApplication,
   },
   objc2_foundation::{NSDictionary, NSString},
-  rapidfuzz::fuzz::ratio,
   std::collections::HashSet,
 };
 
@@ -115,60 +114,4 @@ fn sanitize_filename(value: &str) -> String {
       }
     })
     .collect()
-}
-
-#[cfg(target_os = "macos")]
-fn find_ax_window(pid: u32, title: &str) -> Result<(cidre::arc::R<ax::UiElement>, usize), String> {
-  let app = ax::UiElement::with_app_pid(pid as i32);
-  let windows = app.children().map_err(|error| error.to_string())?;
-  let mut best = None;
-
-  for (index, window) in windows.iter().enumerate() {
-    if window
-      .role()
-      .ok()
-      .is_none_or(|role| role.to_string() != "AXWindow")
-    {
-      continue;
-    }
-    let Ok(value) = window.attr_value(ax::attr::title()) else {
-      continue;
-    };
-    let current_title: cidre::arc::R<cf::String> = unsafe { cf::Type::retain(&value) };
-    let score = ratio(current_title.to_string().chars(), title.chars());
-    if best.is_none_or(|(_, best_score)| score > best_score) {
-      best = Some((index, score));
-    }
-  }
-
-  best
-    .map(|(index, _)| (app, index))
-    .ok_or_else(|| format!("Could not find an accessible window for process {pid}"))
-}
-
-#[cfg(target_os = "macos")]
-pub fn resize_window(
-  _id: u32,
-  pid: u32,
-  title: &str,
-  width: u32,
-  height: u32,
-) -> Result<(), String> {
-  let (app, index) = find_ax_window(pid, title)?;
-  let mut windows = app.children().map_err(|error| error.to_string())?;
-  let window = &mut windows[index];
-  if !window
-    .is_settable(ax::attr::size())
-    .map_err(|error| error.to_string())?
-  {
-    return Err("The selected application does not allow resizing this window".into());
-  }
-
-  let size = ax::Value::with_cg_size(&cg::Size {
-    width: f64::from(width),
-    height: f64::from(height),
-  });
-  window
-    .set_attr(ax::attr::size(), size.as_ref())
-    .map_err(|error| error.to_string())
 }

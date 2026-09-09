@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Camera, Check, Pause, Play, Square, Trash2, X } from "lucide-react";
+import { Check, Pause, Play, Square, Trash2, X } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 
 import {
@@ -13,7 +13,7 @@ import { ContentRotate } from "../../../components/base/content-rotate/content-r
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { cn } from "../../../lib/styling";
 import { AudioMeter } from "../../audio-inputs/components/audio-meter";
-import { cameraPreviewFitClassName } from "../../recording-inputs/camera-preview-fit";
+import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 import { formatElapsedTime } from "../elapsed-time";
 import { RecordingStatus } from "../types";
 import { RecordingMonitorSnapshot } from "../use-recording-monitor";
@@ -174,23 +174,14 @@ export function RecordingDock({
       {hasConfidenceChecks && (
         <div className="gap-control flex h-full shrink-0 items-center">
           {monitor.hasCamera && (
-            <div className="shadow-preview relative flex aspect-video w-12 items-center justify-center overflow-hidden">
-              <canvas
-                aria-label="Camera confidence preview"
-                className={cn(
-                  "pointer-events-none block shrink-0 transition-opacity",
-                  monitor.cameraFrameSize
-                    ? cameraPreviewFitClassName(monitor.cameraFrameSize)
-                    : "h-full w-auto max-w-full",
-                  (!monitor.hasCameraFrame || confidenceDisabled) &&
-                    "opacity-50",
-                )}
-                ref={monitor.cameraCanvasRef}
-              />
-              {!monitor.hasCameraFrame && (
-                <Camera className="absolute size-icon-compact text-muted" />
-              )}
-            </div>
+            <CameraThumbnail
+              aria-label="Camera confidence preview"
+              canvasRef={monitor.cameraCanvasRef}
+              className="shadow-preview w-12"
+              frameSize={monitor.cameraFrameSize}
+              hasFrame={monitor.hasCameraFrame}
+              isDimmed={confidenceDisabled}
+            />
           )}
           {(monitor.hasSystemAudio || monitor.hasMicrophone) && (
             <div className="gap-tight flex">

@@ -4,22 +4,35 @@
 import { invoke } from "@tauri-apps/api/core";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 
-type ShowStandaloneListboxOptions = {
+/** The trigger's bounds in logical px, relative to the parent window's
+ * content, the way `offset` is expressed. Rust excludes a press inside it
+ * from outside dismissal so the trigger can toggle the panel on mouse-up. */
+type PopupPanelAnchor = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+type ShowPopupPanelOptions = {
   focusContents: boolean;
   offset: LogicalPosition;
   parentWindowLabel: string;
   size: LogicalSize;
   triggerId: string;
+  anchor?: PopupPanelAnchor;
 };
 
-export const showStandaloneListbox = ({
+export const showPopupPanel = ({
+  anchor,
   focusContents,
   offset,
   parentWindowLabel,
   size,
   triggerId,
-}: ShowStandaloneListboxOptions) =>
+}: ShowPopupPanelOptions) =>
   invoke<null>("show_standalone_listbox", {
+    anchor: anchor ?? null,
     focusContents,
     offset,
     parentWindowLabel,
@@ -27,5 +40,5 @@ export const showStandaloneListbox = ({
     triggerId,
   });
 
-export const hideStandaloneListbox = (returnFocus = false) =>
+export const hidePopupPanel = (returnFocus = false) =>
   invoke<null>("hide_standalone_listbox", { returnFocus });

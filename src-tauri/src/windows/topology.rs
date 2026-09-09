@@ -48,7 +48,6 @@ const fn policy(label: WindowLabel) -> Policy {
     WindowLabel::ExportRecording
     | WindowLabel::ExportScreenshot
     | WindowLabel::Glide
-    | WindowLabel::RecordingOptions
     | WindowLabel::RecordingSourceSelector
     | WindowLabel::StandaloneListbox => Policy::OwnedTransient,
     WindowLabel::RegionSelector | WindowLabel::Ruler | WindowLabel::TextRecognition => {
@@ -59,7 +58,6 @@ const fn policy(label: WindowLabel) -> Policy {
 
 fn close_transients(app: &AppHandle) {
   let _ = super::source_selector::collapse(app.clone(), Some(false));
-  let _ = super::options::hide_recording_options(app.clone());
   let _ = super::options::hide_standalone_listbox(app.clone(), Some(false));
 }
 

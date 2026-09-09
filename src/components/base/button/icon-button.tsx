@@ -37,7 +37,12 @@ type IconToggleButtonProps = AriaToggleButtonProps &
 const MotionAriaButton = motion.create(AriaButton);
 const MotionAriaToggleButton = motion.create(AriaToggleButton);
 
-export const IconButton = ({ className, color, ...props }: IconButtonProps) => {
+export const IconButton = ({
+  className,
+  color,
+  size,
+  ...props
+}: IconButtonProps) => {
   return (
     <MotionAriaButton
       {...props}
@@ -45,6 +50,7 @@ export const IconButton = ({ className, color, ...props }: IconButtonProps) => {
         className,
         color,
         isDisabled: props.isDisabled,
+        size,
       })}
     />
   );
@@ -54,6 +60,7 @@ export const IconToggleButton = ({
   children,
   className,
   off,
+  size,
   ...props
 }: IconToggleButtonProps) => {
   const scaleAnimation: MotionProps = {
@@ -80,6 +87,7 @@ export const IconToggleButton = ({
           props["aria-disabled"] !== "true",
         isDisabled: props.isDisabled,
         isToggle: true,
+        size,
       })}
     >
       {({ isSelected }) =>

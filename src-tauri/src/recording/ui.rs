@@ -17,7 +17,6 @@ pub(super) fn prepare_windows(
 ) -> Result<(), String> {
   let to_message = |error: tauri::Error| error.to_string();
 
-  windows::hide_recording_options(app.clone()).map_err(to_message)?;
   windows::source_selector::collapse(app.clone(), Some(false)).map_err(to_message)?;
   windows::source_selector::set_recording_source_selector_visible(app.clone(), false)
     .map_err(to_message)?;

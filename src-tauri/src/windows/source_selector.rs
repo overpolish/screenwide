@@ -25,8 +25,24 @@ static WINDOW_SELECTOR_ACTIVE: AtomicBool = AtomicBool::new(false);
 pub struct SelectorState {
   expanded: bool,
   focus_contents: bool,
+  /// True while the popover is open but still waiting to be ordered onscreen.
+  /// The webview reveals it once it has painted the matching content.
   placement: SelectorPlacement,
   revision: u64,
+  /// Which selector the popover was sized and opened for, so the webview can
+  /// avoid revealing the previous mode's content.
+  window_selector: bool,
+}
+
+fn selector_state(placement: SelectorPlacement) -> SelectorState {
+  let expanded = POPOVER.is_open();
+  SelectorState {
+    expanded,
+    focus_contents: KEYBOARD_FOCUS.load(Ordering::Relaxed),
+    placement,
+    revision: POPOVER.revision(),
+    window_selector: WINDOW_SELECTOR_ACTIVE.load(Ordering::Relaxed),
+  }
 }
 
 fn frame(app: &AppHandle) -> tauri::Result<(SelectorPlacement, SelectorFrame)> {
@@ -41,24 +57,14 @@ fn emit_state(app: &AppHandle, placement: SelectorPlacement) -> tauri::Result<()
   app.emit_to(
     WindowLabel::RecordingSourceSelector.as_str(),
     "recording-source-selector://state",
-    SelectorState {
-      expanded: POPOVER.is_open(),
-      focus_contents: KEYBOARD_FOCUS.load(Ordering::Relaxed),
-      placement,
-      revision: POPOVER.revision(),
-    },
+    selector_state(placement),
   )
 }
 
 #[tauri::command]
 pub fn get_recording_source_selector_state(app: AppHandle) -> tauri::Result<SelectorState> {
   let (placement, _) = frame(&app)?;
-  Ok(SelectorState {
-    expanded: POPOVER.is_open(),
-    focus_contents: KEYBOARD_FOCUS.load(Ordering::Relaxed),
-    placement,
-    revision: POPOVER.revision(),
-  })
+  Ok(selector_state(placement))
 }
 
 pub(super) fn reposition(app: &AppHandle) -> tauri::Result<()> {
@@ -108,6 +114,9 @@ pub fn expand_recording_source_selector(
   WINDOW_SELECTOR_ACTIVE.store(window_selector, Ordering::Relaxed);
   let (placement, expanded) = frame(&app)?;
   apply_frame(&window, expanded)?;
+  // Shown at once so the popover feels immediate; the webview paints a
+  // spinner while collapsed, so nothing stale can show, and swaps in the
+  // selector the emitted state names.
   platform::show(&window, 1.0)?;
   if focus_contents {
     if let Err(error) = window.set_focus() {
@@ -132,6 +141,8 @@ pub fn collapse(app: AppHandle, return_focus: Option<bool>) -> tauri::Result<()>
     .ok_or_else(|| tauri::Error::WindowNotFound)?;
   let return_focus = return_focus.unwrap_or_else(|| KEYBOARD_FOCUS.load(Ordering::Relaxed));
   KEYBOARD_FOCUS.store(false, Ordering::Relaxed);
+  // Hiding a panel that was never revealed is a no-op, so collapse does not
+  // care whether the webview got as far as painting.
   let (placement, _) = frame(&app)?;
   platform::hide(&window)?;
   POPOVER.set_open(false);

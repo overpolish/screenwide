@@ -3,7 +3,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { useRecordingInputStore } from "../recording-inputs/store";
 import {
   hideRecordingUi,
   setRegionSelectorOscFrameVisible,
@@ -61,11 +60,7 @@ export function useScreenshotCapture() {
     void (async () => {
       if (target.kind === "desktopRegion") await setRegionCaptureFrame(false);
       try {
-        await captureStill({
-          destination,
-          showCursor: useRecordingInputStore.getState().inputs.showCursor,
-          target,
-        });
+        await captureStill({ destination, target });
         setScreenshotFeedback({
           action: destination,
           state: destination === "clipboard" ? "done" : "idle",

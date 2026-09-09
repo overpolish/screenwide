@@ -20,7 +20,6 @@ pub(crate) mod options;
 #[cfg(target_os = "macos")]
 mod panel_presentation_macos;
 pub(crate) mod platform;
-mod recording_options_layout;
 pub(crate) mod region;
 pub(crate) mod region_gesture;
 pub(crate) mod screenshot_region;
@@ -28,6 +27,9 @@ pub(crate) mod source_selector;
 mod source_selector_layout;
 mod topology;
 mod transient_popover;
+mod webview_visibility;
+
+pub(crate) use webview_visibility::hide_window as hide;
 
 pub use boot::initialize_predefined_windows;
 pub use dismissal::hide_without_focus_transfer;
@@ -44,10 +46,9 @@ pub use lifecycle::{
 };
 #[cfg(not(target_os = "macos"))]
 pub use lifecycle::{
-  initialize_recording_bar, initialize_recording_options, initialize_recording_source_selector,
-  initialize_region_selector, initialize_standalone_listbox,
+  initialize_recording_bar, initialize_recording_source_selector, initialize_region_selector,
+  initialize_standalone_listbox,
 };
-pub use options::hide_recording_options;
 pub use region::{
   hide_region_selector, is_region_selector_visible, set_region_selector_passthrough,
 };
@@ -149,7 +150,6 @@ pub enum WindowLabel {
   Glide,
   RecordingBar,
   RecordingDock,
-  RecordingOptions,
   Ruler,
   QrDetails,
   Settings,
@@ -171,7 +171,6 @@ impl WindowLabel {
     Self::Glide,
     Self::RecordingBar,
     Self::RecordingDock,
-    Self::RecordingOptions,
     Self::Ruler,
     Self::QrDetails,
     Self::Settings,
@@ -193,7 +192,6 @@ impl WindowLabel {
       Self::Glide => "glide",
       Self::RecordingBar => "recording-bar",
       Self::RecordingDock => "recording-dock",
-      Self::RecordingOptions => "recording-options",
       Self::Ruler => "ruler",
       Self::QrDetails => "qr-details",
       Self::Settings => "settings",
@@ -355,6 +353,9 @@ pub fn manage_recording_bar_movement(app: &AppHandle) {
   let Some(window) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) else {
     return;
   };
+  // AppKit repositions the source selector itself, so the handler captures
+  // nothing there.
+  #[cfg(not(target_os = "macos"))]
   let app = app.clone();
 
   window.on_window_event(move |event| {
@@ -366,7 +367,6 @@ pub fn manage_recording_bar_movement(app: &AppHandle) {
     // the visible delay caused by chasing Moved events with a second window.
     #[cfg(not(target_os = "macos"))]
     let _ = source_selector::reposition(&app);
-    let _ = hide_recording_options(app.clone());
 
     #[cfg(target_os = "windows")]
     watch_for_recording_bar_mouse_up(app.clone());
@@ -375,21 +375,21 @@ pub fn manage_recording_bar_movement(app: &AppHandle) {
 
 #[derive(Clone, Copy, Default)]
 struct PopoversOpenOnPress {
-  recording_options: bool,
   source_selector: bool,
+  standalone_listbox: bool,
 }
 
 impl PopoversOpenOnPress {
   fn capture() -> Self {
     Self {
-      recording_options: options::is_recording_options_open(),
       source_selector: source_selector::is_expanded(),
+      standalone_listbox: options::is_standalone_listbox_open(),
     }
   }
 
   fn dismiss_outside(self, app: &AppHandle, x: f64, y: f64) {
     source_selector::dismiss_if_outside(app, self.source_selector, x, y);
-    options::dismiss_recording_options_if_outside(app, self.recording_options, x, y);
+    options::dismiss_standalone_listbox_if_outside(app, self.standalone_listbox, x, y);
   }
 }
 
@@ -506,7 +506,6 @@ pub fn hide_recording_ui(app: AppHandle) -> tauri::Result<()> {
   }
 
   RECORDING_CONTROLS_VISIBLE.store(false, Ordering::Relaxed);
-  hide_recording_options(app.clone())?;
   source_selector::hide(&app)?;
   hide_recording_bar(&app)?;
   region::hide_region_selector(app.clone())?;
@@ -534,7 +533,6 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
   // Asserted rather than assumed: a screenshot session may have borrowed and
   // hidden the bar. Coming back to idle is where its complete presentation is
   // put right.
-  platform::set_opacity(&bar, 1.0)?;
   platform::restore_recording_level(&bar)?;
 
   app.emit_to(

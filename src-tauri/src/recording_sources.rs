@@ -6,7 +6,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use image::DynamicImage;
+use image::{DynamicImage, RgbaImage};
 use rayon::prelude::*;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
@@ -57,6 +57,13 @@ pub struct Position {
 pub struct Size {
   width: u32,
   height: u32,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MonitorThumbnail {
+  id: u32,
+  path: PathBuf,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -148,6 +155,43 @@ pub async fn list_windows(app: AppHandle) -> Result<Vec<WindowDetails>, String> 
   tauri::async_runtime::spawn_blocking(move || enumerate_windows(&cache_dir))
     .await
     .map_err(|error| error.to_string())?
+}
+
+/// A still of every attached display for the Screen segment and the display
+/// chooser. The capture and PNG encoding are the slow parts, so they run off
+/// the main thread; the display list comes straight from xcap rather than
+/// `monitor_topology::snapshot`, which pairs against Tauri's window API and
+/// would have to hop back to the main thread to do it.
+#[tauri::command]
+pub async fn list_monitor_thumbnails(app: AppHandle) -> Result<Vec<MonitorThumbnail>, String> {
+  let cache_dir = app
+    .path()
+    .temp_dir()
+    .map_err(|error| error.to_string())?
+    .join("Screenwide")
+    .join("monitor-selector");
+  tauri::async_runtime::spawn_blocking(move || capture_monitor_thumbnails(&cache_dir))
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+fn capture_monitor_thumbnails(cache_dir: &Path) -> Result<Vec<MonitorThumbnail>, String> {
+  std::fs::create_dir_all(cache_dir).map_err(|error| error.to_string())?;
+
+  Ok(
+    xcap::Monitor::all()
+      .map_err(|error| error.to_string())?
+      .into_par_iter()
+      .filter_map(|monitor| {
+        let id = monitor.id().ok()?;
+        let image = monitor.capture_image().ok()?;
+        // A square box lets the longer edge set the scale, so the still keeps
+        // the display's aspect ratio whichever way it is oriented.
+        let path = write_thumbnail(image, 320, 320, cache_dir, &format!("monitor-{id}.png"))?;
+        Some(MonitorThumbnail { id, path })
+      })
+      .collect(),
+  )
 }
 
 #[tauri::command]
@@ -328,26 +372,23 @@ fn enumerate_windows(cache_dir: &Path) -> Result<Vec<WindowDetails>, String> {
 }
 
 fn create_thumbnail(window: &xcap::Window, cache_dir: &Path, id: u32) -> Option<PathBuf> {
-  let path = cache_dir.join(format!("window-{id}.png"));
   let image = window.capture_image().ok()?;
+  write_thumbnail(image, 320, 180, cache_dir, &format!("window-{id}.png"))
+}
+
+/// Scales a capture into the given box and writes it to the picker cache, so
+/// window and display previews share one encoder and one naming scheme.
+fn write_thumbnail(
+  image: RgbaImage,
+  width: u32,
+  height: u32,
+  cache_dir: &Path,
+  file_name: &str,
+) -> Option<PathBuf> {
+  let path = cache_dir.join(file_name);
   DynamicImage::ImageRgba8(image)
-    .thumbnail(320, 180)
+    .thumbnail(width, height)
     .save(&path)
     .ok()?;
   Some(path)
-}
-
-#[tauri::command]
-pub async fn resize_window(
-  id: u32,
-  pid: u32,
-  title: String,
-  width: u32,
-  height: u32,
-) -> Result<(), String> {
-  tauri::async_runtime::spawn_blocking(move || {
-    platform::resize_window(id, pid, &title, width, height)
-  })
-  .await
-  .map_err(|error| error.to_string())?
 }

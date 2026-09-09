@@ -4,6 +4,7 @@
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
+import { useFitWindowWidth } from "../../../lib/use-fit-window-height";
 import { focusEditorWindow } from "../../editor/api";
 import {
   selectHasPendingRecording,
@@ -23,17 +24,12 @@ import {
   usePermissionStore,
 } from "../../permissions/store";
 import { PermissionKind, PermissionStatus } from "../../permissions/types";
-import {
-  hideRecordingOptions,
-  toggleRecordingOptions,
-} from "../../recording-inputs/api";
 import { useRecordingInputStore } from "../../recording-inputs/store";
 import { cameraRequestFps } from "../../recording-inputs/types";
 import {
   collapseRecordingSourceSelector,
   expandRecordingSourceSelector,
   finishRecordingBarDrag,
-  getRecordingSourceSelectorState,
   hideRecordingUi,
   hideRegionSelector,
   listMonitors,
@@ -44,14 +40,12 @@ import {
   toggleRecordingUi,
 } from "../../recording-sources/api";
 import { findCurrentMonitor } from "../../recording-sources/monitor-selection";
-import { RecordingSourceTrigger } from "../../recording-sources/recording-source-trigger";
-import { RegionSourceControls } from "../../recording-sources/region-source-controls";
-import { useRecordingSourceStore } from "../../recording-sources/store";
 import {
-  type RecordingMode,
-  SelectorState,
-} from "../../recording-sources/types";
-import { WindowSourceControls } from "../../recording-sources/window-source-controls";
+  MONITOR_THUMBNAIL_INTERVAL_MS,
+  refreshMonitorThumbnails,
+} from "../../recording-sources/monitor-thumbnails";
+import { useRecordingSourceStore } from "../../recording-sources/store";
+import { type RecordingMode } from "../../recording-sources/types";
 import { cancelRuler } from "../../region-selector/ruler-screenshot-mode";
 import { ShortcutAction } from "../../settings/types";
 import {
@@ -156,15 +150,18 @@ const synchronizeRecordingUi = async (
   // borrows it regardless of the recording mode.
   if (useRecordingSourceStore.getState().isScreenshotCapture) return;
 
-  const hasSourceSelector = !["audio", "camera"].includes(mode);
-
-  await setRecordingSourceSelectorVisible(hasSourceSelector);
+  // Displays are chosen from a native menu now, so only the window list still
+  // needs the selector panel armed.
+  await setRecordingSourceSelectorVisible(!["audio", "camera"].includes(mode));
   if (mode === "region" && monitor) {
     await showRegionSelector(monitor, true);
   } else {
     await hideRegionSelector();
   }
 };
+
+/** The last mode change's collapse and re-sync, awaited before an expand. */
+let pendingModeChange: Promise<void> = Promise.resolve();
 
 const grantPermission = (
   permission: PermissionKind,
@@ -177,6 +174,10 @@ const grantPermission = (
 };
 
 export function RecordingBarWindow() {
+  const barRef = useRef<HTMLElement>(null);
+  // The bar is as wide as its controls: a label that changes with state
+  // moves the trailing edge rather than leaving slack in the bar.
+  useFitWindowWidth(barRef);
   const hasPendingRecording = useEditorStore(selectHasPendingRecording);
   const hasPendingScreenshot = useEditorStore(selectHasPendingScreenshot);
   const canRecordCamera = usePermissionStore(selectCanRecordCamera);
@@ -190,17 +191,16 @@ export function RecordingBarWindow() {
     useScreenshotCapture();
   const [isCaptureOverlayActive, setIsCaptureOverlayActive] = useState(false);
   const [isRecordingUiVisible, setIsRecordingUiVisible] = useState(false);
-  const [isSourceSelectorExpanded, setIsSourceSelectorExpanded] =
-    useState(false);
-  const isSourceSelectorExpandedRef = useRef(false);
   const {
     isScreenshotCapture,
+    monitorThumbnails,
     recordingMode,
     selectedMonitor,
     selectedWindow,
     setRecordingMode,
     setScreenshotCapture,
   } = useRecordingSourceStore((state) => state);
+  const isScreenMode = recordingMode === "screen";
   const {
     cameraPalById,
     fps,
@@ -208,7 +208,6 @@ export function RecordingBarWindow() {
     selectedCamera,
     selectedMicrophone,
     selectedSystemAudio,
-    setFps,
     setInput,
   } = useRecordingInputStore((state) => state);
   const inputAvailability = useRecordingInputAvailability({
@@ -239,34 +238,6 @@ export function RecordingBarWindow() {
     // that is gone.
     setScreenshotCapture(false);
   }, [setScreenshotCapture]);
-
-  useEffect(() => {
-    let disposed = false;
-    let unlisten: UnlistenFn | undefined;
-
-    const initialize = async () => {
-      unlisten = await listen<SelectorState>(
-        "recording-source-selector://state",
-        ({ payload }) => {
-          isSourceSelectorExpandedRef.current = payload.expanded;
-          setIsSourceSelectorExpanded(payload.expanded);
-        },
-      );
-      const state = await getRecordingSourceSelectorState();
-      if (!disposed) {
-        isSourceSelectorExpandedRef.current = state.expanded;
-        setIsSourceSelectorExpanded(state.expanded);
-      }
-      if (disposed) unlisten();
-    };
-
-    void initialize();
-
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, []);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -362,6 +333,22 @@ export function RecordingBarWindow() {
       unlistenCaptureStarted?.();
     };
   }, []);
+
+  // The Screen segment shows a still of the chosen display whatever mode is
+  // current, so one is captured when the bar appears. While a display is what
+  // is being set up, the still is retaken on the chooser's cadence so the two
+  // pictures stay live together.
+  useEffect(() => {
+    if (!isRecordingUiVisible) return;
+    void refreshMonitorThumbnails();
+    if (!isScreenMode || status !== "idle") return;
+    const interval = window.setInterval(() => {
+      void refreshMonitorThumbnails();
+    }, MONITOR_THUMBNAIL_INTERVAL_MS);
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [isRecordingUiVisible, isScreenMode, status]);
 
   useEffect(() => {
     if (!isRecordingUiVisible || status !== "idle") return;
@@ -486,7 +473,6 @@ export function RecordingBarWindow() {
 
   return (
     <RecordingBar
-      fps={fps}
       hasCameraWarning={inputAvailability.cameraMissing}
       hasMicrophoneWarning={inputAvailability.microphoneMissing}
       hasSelectedMonitor={selectedMonitor !== null}
@@ -497,13 +483,27 @@ export function RecordingBarWindow() {
       isCameraLocked={!hydrated || !canRecordCamera}
       isLocked={hydrated && !canRecordScreen}
       isMicrophoneLocked={!hydrated || !canRecordMicrophone}
+      // The window is only hidden, never unmounted: the previews stop when the
+      // bar goes away rather than streaming on behind it.
+      isPreviewActive={isRecordingUiVisible && status === "idle"}
       isScreenshotLocked={hydrated && !canScreenshot}
       mode={recordingMode}
+      monitorThumbnails={monitorThumbnails}
       onCameraLockedPress={() => {
         grantPermission("camera", permissions.camera);
       }}
       onCancel={() => {
         dismissRecordingUi();
+      }}
+      onChooseMonitor={(_anchor, fromKeyboard) => {
+        void pendingModeChange.then(() =>
+          expandRecordingSourceSelector(false, fromKeyboard),
+        );
+      }}
+      onChooseWindow={(_anchor, fromKeyboard) => {
+        void pendingModeChange.then(() =>
+          expandRecordingSourceSelector(true, fromKeyboard),
+        );
       }}
       onFocusPendingEditor={() => {
         // Only a pending recording routes here now; a screenshot workspace
@@ -512,26 +512,21 @@ export function RecordingBarWindow() {
           console.error("Could not focus the editor window", error);
         });
       }}
-      onFpsChange={setFps}
       onInputChange={setInput}
       onInteract={() => {
         void collapseRecordingSourceSelector();
-        void hideRecordingOptions();
       }}
       onMicrophoneLockedPress={() => {
         grantPermission("microphone", permissions.microphone);
       }}
       onModeChange={(mode) => {
         setRecordingMode(mode);
-        void Promise.all([
-          collapseRecordingSourceSelector(),
-          hideRecordingOptions(),
-        ]).then(() => synchronizeRecordingUi(mode, selectedMonitor));
-      }}
-      onOptions={(anchor, focusContents) => {
-        void collapseRecordingSourceSelector().then(() =>
-          toggleRecordingOptions(anchor, focusContents),
+        // Remembered so a chevron press on the same gesture can expand the
+        // selector after this collapse and re-sync, not racing them.
+        pendingModeChange = collapseRecordingSourceSelector().then(() =>
+          synchronizeRecordingUi(mode, selectedMonitor),
         );
+        void pendingModeChange;
       }}
       onPointerUp={() => {
         void finishRecordingBarDrag();
@@ -561,43 +556,11 @@ export function RecordingBarWindow() {
         recording: hasPendingRecording,
         screenshot: hasPendingScreenshot,
       }}
+      ref={barRef}
       screenshotAction={screenshotFeedback.action}
       screenshotState={screenshotFeedback.state}
-      sourceSelector={
-        <>
-          <RecordingSourceTrigger
-            isExpanded={isSourceSelectorExpanded}
-            mode={recordingMode}
-            onPress={(event) => {
-              void hideRecordingOptions();
-              const expanded = !isSourceSelectorExpandedRef.current;
-              const focusContents = ["keyboard", "virtual"].includes(
-                event.pointerType,
-              );
-              isSourceSelectorExpandedRef.current = expanded;
-              setIsSourceSelectorExpanded(expanded);
-              const transition = expanded
-                ? expandRecordingSourceSelector(
-                    recordingMode === "window",
-                    focusContents,
-                  )
-                : collapseRecordingSourceSelector(focusContents);
-              void transition.catch(() =>
-                getRecordingSourceSelectorState().then((state) => {
-                  isSourceSelectorExpandedRef.current = state.expanded;
-                  setIsSourceSelectorExpanded(state.expanded);
-                }),
-              );
-            }}
-            selectedMonitor={selectedMonitor}
-            selectedWindow={selectedWindow}
-          />
-          {recordingMode === "region" ? <RegionSourceControls /> : null}
-          {recordingMode === "window" ? (
-            <WindowSourceControls selectedWindow={selectedWindow} />
-          ) : null}
-        </>
-      }
+      selectedMonitor={selectedMonitor}
+      selectedWindow={selectedWindow}
       status={status}
     />
   );

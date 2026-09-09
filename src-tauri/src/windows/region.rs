@@ -392,7 +392,6 @@ pub fn set_recording_controls_borrowed(app: AppHandle, borrowed: bool) -> tauri:
   RECORDING_CONTROLS_BORROWED.store(borrowed, Ordering::Release);
 
   if borrowed {
-    super::hide_recording_options(app.clone())?;
     super::options::hide_standalone_listbox(app.clone(), Some(false))?;
     source_selector::hide(&app)?;
     if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {

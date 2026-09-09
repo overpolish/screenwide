@@ -3,9 +3,17 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-import { MonitorDetails, SelectorState, WindowDetails } from "./types";
+import {
+  MonitorDetails,
+  MonitorThumbnail,
+  SelectorState,
+  WindowDetails,
+} from "./types";
 
 export const listMonitors = () => invoke<MonitorDetails[]>("list_monitors");
+
+export const listMonitorThumbnails = () =>
+  invoke<MonitorThumbnail[]>("list_monitor_thumbnails");
 
 export const listWindows = () => invoke<WindowDetails[]>("list_windows");
 
@@ -13,23 +21,6 @@ export const selectedWindowAvailable = (window: WindowDetails) =>
   invoke<boolean>("selected_window_available", {
     id: window.id,
     pid: window.pid,
-  });
-
-const windowIdentity = (window: WindowDetails) => ({
-  id: window.id,
-  pid: window.pid,
-  title: window.title,
-});
-
-export const resizeWindow = (
-  window: WindowDetails,
-  width: number,
-  height: number,
-) =>
-  invoke<null>("resize_window", {
-    ...windowIdentity(window),
-    height,
-    width,
   });
 
 export const expandRecordingSourceSelector = (
@@ -40,6 +31,10 @@ export const expandRecordingSourceSelector = (
     focusContents,
     windowSelector,
   });
+
+/** Orders the expanded popover onscreen once the painted content matches the
+ * mode it was opened for. `revision` is the state revision that was painted, so
+ * a reveal from a superseded state is ignored. */
 
 export const collapseRecordingSourceSelector = (returnFocus?: boolean) =>
   invoke<null>("collapse_recording_source_selector", { returnFocus });

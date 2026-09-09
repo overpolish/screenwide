@@ -3,19 +3,20 @@
 
 import { type Meta, type StoryObj } from "@storybook/react-vite";
 
+import { displayThumbnail } from "../../../storybook/display-thumbnail";
 import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
-import { RecordingSourceTrigger } from "../../recording-sources/recording-source-trigger";
-import { MonitorDetails } from "../../recording-sources/types";
+import { seedRecordingInputDevices } from "../../../storybook/recording-input-fixtures";
+import { MonitorDetails, WindowDetails } from "../../recording-sources/types";
 
 import { RecordingBar } from "./recording-bar";
 
-const selectedMonitor: MonitorDetails = {
+const builtInDisplay: MonitorDetails = {
   id: 1,
   isBuiltin: true,
   isPrimary: true,
   layoutPosition: { x: 0, y: 0 },
   layoutSize: { height: 982, width: 1512 },
-  name: "Built-in Retina Display",
+  name: "Built-in Display",
   physicalPosition: { x: 0, y: 0 },
   physicalSize: { height: 1964, width: 3024 },
   position: { x: 0, y: 0 },
@@ -23,27 +24,43 @@ const selectedMonitor: MonitorDetails = {
   size: { height: 982, width: 1512 },
 };
 
+/** Stands in for the captured still of the display that is chosen. */
+const displayThumbnails: Record<number, string> = {
+  [builtInDisplay.id]: displayThumbnail("#3b6fd4", "#8f5bd6"),
+};
+
+/** A window whose app has no icon on hand, so the segment keeps its glyph. */
+const longTitledWindow: WindowDetails = {
+  appIconPath: null,
+  appName: "Safari",
+  id: 42,
+  pid: 900,
+  position: { x: 120, y: 80 },
+  size: { height: 720, width: 1180 },
+  thumbnailPath: null,
+  title: "Quarterly Planning Notes and Follow-ups — Safari",
+};
+
 const meta = {
   args: {
     hasSelectedMonitor: true,
+    monitorThumbnails: displayThumbnails,
     onScrollingScreenshot: () => undefined,
-    sourceSelector: (
-      <RecordingSourceTrigger
-        isExpanded={false}
-        mode="screen"
-        onPress={() => undefined}
-        selectedMonitor={selectedMonitor}
-        selectedWindow={null}
-      />
-    ),
+    selectedMonitor: builtInDisplay,
+    selectedWindow: null,
   },
   component: RecordingBar,
   decorators: [
-    (Story, context) => (
-      <FeatureStoryStage height={120} viewMode={context.viewMode} width={680}>
-        <Story />
-      </FeatureStoryStage>
-    ),
+    (Story, context) => {
+      // Storybook's Tauri stub lists no devices, so the inputs would all
+      // read as absent; the store is seeded with a typical Mac's instead.
+      seedRecordingInputDevices();
+      return (
+        <FeatureStoryStage height={56} viewMode={context.viewMode} width={843}>
+          <Story />
+        </FeatureStoryStage>
+      );
+    },
   ],
   parameters: {
     layout: "fullscreen",
@@ -57,10 +74,15 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const NoMonitorSelected: Story = {
-  args: { hasSelectedMonitor: false },
+  args: {
+    hasSelectedMonitor: false,
+    monitorThumbnails: {},
+    selectedMonitor: null,
+  },
 };
 
-/** Screen recording denied: nothing on the bar works, so it blurs. */
+/** Screen recording denied: setting up is disabled, and the record button
+ * carries a lock that opens the permissions window. */
 export const PermissionsLocked: Story = {
   args: { isLocked: true, isScreenshotLocked: true },
 };
@@ -70,7 +92,8 @@ export const ScreenshotOnly: Story = {
   args: { isLocked: true },
 };
 
-/** Mid-save: the button is inert and pulsing until the file actually exists. */
+/** Mid-capture: the button is inert and pulsing until the file exists. The
+ * three screenshot actions share these states, so one set stands for all. */
 export const ScreenshotPending: Story = {
   args: { screenshotState: "pending" },
 };
@@ -99,34 +122,6 @@ export const RecordingWorkspaceOpen: Story = {
   args: { pendingEditors: { recording: true, screenshot: false } },
 };
 
-export const ClipboardScreenshotPending: Story = {
-  args: { screenshotAction: "clipboard", screenshotState: "pending" },
-};
-
-export const ClipboardScreenshotDone: Story = {
-  args: { screenshotAction: "clipboard", screenshotState: "done" },
-};
-
-export const ClipboardScreenshotFailed: Story = {
-  args: { screenshotAction: "clipboard", screenshotState: "failed" },
-};
-
-export const ScrollingScreenshotPending: Story = {
-  args: {
-    initialMode: "region",
-    screenshotAction: "scrolling",
-    screenshotState: "pending",
-  },
-};
-
-export const ScrollingScreenshotFailed: Story = {
-  args: {
-    initialMode: "region",
-    screenshotAction: "scrolling",
-    screenshotState: "failed",
-  },
-};
-
 export const OptionalPermissionsLocked: Story = {
   args: { isCameraLocked: true, isMicrophoneLocked: true },
 };
@@ -135,9 +130,7 @@ export const InputsEnabled: Story = {
   args: {
     initialInputs: {
       camera: true,
-      keyboardShortcuts: true,
       microphone: true,
-      showCursor: true,
       systemAudio: true,
     },
   },
@@ -150,9 +143,7 @@ export const MissingEnabledInputs: Story = {
     hasSystemAudioWarning: true,
     initialInputs: {
       camera: true,
-      keyboardShortcuts: true,
       microphone: true,
-      showCursor: true,
       systemAudio: true,
     },
   },
@@ -171,17 +162,16 @@ export const Region: Story = {
   args: { initialMode: "region" },
 };
 
-/** Scrolling capture is an alternate region-only screenshot action. */
-export const ScrollingCapture: Story = {
-  args: { initialMode: "region" },
-};
-
 export const Window: Story = {
   args: { initialMode: "window" },
 };
 
 export const WindowSelected: Story = {
-  args: { hasSelectedWindow: true, initialMode: "window" },
+  args: {
+    hasSelectedWindow: true,
+    initialMode: "window",
+    selectedWindow: longTitledWindow,
+  },
 };
 
 export const CameraOnly: Story = {
@@ -240,9 +230,4 @@ export const AudioOnlyWithOneValidSource: Story = {
 
 export const Starting: Story = {
   args: { status: "starting" },
-};
-
-/** Half the frames, half the file. */
-export const HalfFrameRate: Story = {
-  args: { initialFps: 30 },
 };

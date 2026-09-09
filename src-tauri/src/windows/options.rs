@@ -1,31 +1,35 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::{
-  atomic::{AtomicBool, Ordering},
-  Mutex, MutexGuard,
-};
+use std::sync::{Mutex, MutexGuard};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager};
 
-use super::{
-  platform,
-  recording_options_layout::{self, PopoverAnchor},
-  transient_popover::{TransientPopover, TransientPopoverState},
-  WindowLabel,
-};
+use super::{platform, transient_popover::TransientPopover, WindowLabel};
 
-static OPTIONS_KEYBOARD_FOCUS: AtomicBool = AtomicBool::new(false);
-static RECORDING_OPTIONS: TransientPopover = TransientPopover::new();
 static STANDALONE_LISTBOX: TransientPopover = TransientPopover::new();
 static STANDALONE_LISTBOX_CONTEXT: Mutex<Option<StandaloneListboxContext>> = Mutex::new(None);
 
 #[derive(Clone)]
 struct StandaloneListboxContext {
+  /// The trigger's bounds in logical px, relative to the parent window's
+  /// content, the way `offset` is expressed. A press inside it belongs to the
+  /// trigger, which toggles the panel on mouse-up, so an outside press must
+  /// not dismiss it first.
+  anchor: Option<AnchorRect>,
   focus_contents: bool,
   parent_window_label: String,
   trigger_id: String,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnchorRect {
+  x: f64,
+  y: f64,
+  width: f64,
+  height: f64,
 }
 
 #[derive(Clone, Serialize)]
@@ -35,141 +39,10 @@ struct StandaloneListboxClosed {
   trigger_id: String,
 }
 
-#[derive(Clone, Copy, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RecordingOptionsState {
-  focus_contents: bool,
-  open: bool,
-  revision: u64,
-}
-
-fn state() -> RecordingOptionsState {
-  let TransientPopoverState { open, revision } = RECORDING_OPTIONS.state();
-  RecordingOptionsState {
-    focus_contents: OPTIONS_KEYBOARD_FOCUS.load(Ordering::Relaxed),
-    open,
-    revision,
-  }
-}
-
-fn emit_state(app: &AppHandle) -> tauri::Result<()> {
-  app.emit_to(
-    WindowLabel::RecordingOptions.as_str(),
-    "recording-options://state",
-    state(),
-  )
-}
-
 fn standalone_listbox_context() -> MutexGuard<'static, Option<StandaloneListboxContext>> {
   STANDALONE_LISTBOX_CONTEXT
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
-#[tauri::command]
-pub fn get_recording_options_state() -> RecordingOptionsState {
-  state()
-}
-
-#[tauri::command]
-pub fn toggle_recording_options(
-  app: AppHandle,
-  anchor: PopoverAnchor,
-  focus_contents: bool,
-) -> tauri::Result<()> {
-  if !crate::recording::is_idle(&app) {
-    return Ok(());
-  }
-
-  let _lifecycle = RECORDING_OPTIONS.lock();
-  if RECORDING_OPTIONS.is_open() {
-    return close_recording_options_locked(&app, focus_contents);
-  }
-
-  let layout = recording_options_layout::set_anchor(anchor);
-  let window = app
-    .get_webview_window(WindowLabel::RecordingOptions.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  let position = recording_options_layout::frame(&app, layout)?;
-  platform::set_frame(
-    &window,
-    position,
-    LogicalSize::new(recording_options_layout::WIDTH, layout.height),
-  )?;
-  platform::show(&window, 1.0)?;
-  if let Err(error) = platform::restore_recording_level(&window) {
-    let _ = platform::hide(&window);
-    return Err(error);
-  }
-  if focus_contents {
-    if let Err(error) = window.set_focus() {
-      let _ = platform::hide(&window);
-      return Err(error);
-    }
-  }
-
-  OPTIONS_KEYBOARD_FOCUS.store(focus_contents, Ordering::Relaxed);
-  RECORDING_OPTIONS.set_open(true);
-  emit_state(&app)
-}
-
-fn close_recording_options_locked(app: &AppHandle, return_focus: bool) -> tauri::Result<()> {
-  if !RECORDING_OPTIONS.is_open() {
-    return Ok(());
-  }
-
-  close_standalone_listbox(app.clone(), false)?;
-  crate::audio_preview::stop_all(app);
-  crate::camera_preview::stop_all(app);
-  if let Some(window) = app.get_webview_window(WindowLabel::RecordingOptions.as_str()) {
-    platform::hide(&window)?;
-  }
-  OPTIONS_KEYBOARD_FOCUS.store(false, Ordering::Relaxed);
-  RECORDING_OPTIONS.set_open(false);
-  emit_state(app)?;
-
-  if return_focus {
-    if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
-      bar.set_focus()?;
-    }
-  }
-
-  Ok(())
-}
-
-pub(super) fn close_recording_options(app: AppHandle, return_focus: bool) -> tauri::Result<()> {
-  let _lifecycle = RECORDING_OPTIONS.lock();
-  close_recording_options_locked(&app, return_focus)
-}
-
-#[tauri::command]
-pub fn hide_recording_options(app: AppHandle) -> tauri::Result<()> {
-  close_recording_options(app, false)
-}
-
-#[tauri::command]
-pub fn set_recording_options_content_height(app: AppHandle, height: f64) -> tauri::Result<()> {
-  if !height.is_finite() || height <= 0.0 {
-    return Ok(());
-  }
-  let height = height.ceil().clamp(1.0, 10_000.0);
-  let _lifecycle = RECORDING_OPTIONS.lock();
-  let Some(layout) = recording_options_layout::set_height(height) else {
-    return Ok(());
-  };
-
-  if !RECORDING_OPTIONS.is_open() {
-    return Ok(());
-  }
-  let window = app
-    .get_webview_window(WindowLabel::RecordingOptions.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  let position = recording_options_layout::frame(&app, layout)?;
-  platform::set_frame(
-    &window,
-    position,
-    LogicalSize::new(recording_options_layout::WIDTH, layout.height),
-  )
 }
 
 #[tauri::command]
@@ -180,6 +53,7 @@ pub fn show_standalone_listbox(
   trigger_id: String,
   offset: LogicalPosition<f64>,
   size: LogicalSize<f64>,
+  anchor: Option<AnchorRect>,
 ) -> tauri::Result<()> {
   let _lifecycle = STANDALONE_LISTBOX.lock();
   let parent = app
@@ -213,6 +87,7 @@ pub fn show_standalone_listbox(
     }
   }
   *standalone_listbox_context() = Some(StandaloneListboxContext {
+    anchor,
     focus_contents,
     parent_window_label,
     trigger_id,
@@ -263,32 +138,50 @@ pub fn hide_standalone_listbox(app: AppHandle, return_focus: Option<bool>) -> ta
   close_standalone_listbox(app, return_focus.unwrap_or(false))
 }
 
-pub(super) fn is_recording_options_open() -> bool {
-  RECORDING_OPTIONS.is_open()
-}
-
 pub(super) fn is_standalone_listbox_open() -> bool {
   STANDALONE_LISTBOX.is_open()
 }
 
-pub(super) fn dismiss_recording_options_if_outside(
+/// Hit-tests the stored trigger bounds for a listbox whose anchor travels
+/// with whichever window opened it.
+fn standalone_listbox_anchor_contains(app: &AppHandle, x: f64, y: f64) -> bool {
+  let Some(context) = standalone_listbox_context().clone() else {
+    return false;
+  };
+  let Some(anchor) = context.anchor else {
+    return false;
+  };
+  let Some(parent) = app.get_webview_window(&context.parent_window_label) else {
+    return false;
+  };
+  let Ok(position) = parent.outer_position() else {
+    return false;
+  };
+  let Ok(scale) = parent.scale_factor() else {
+    return false;
+  };
+  let position = position.to_logical::<f64>(scale);
+  let left = position.x + anchor.x;
+  let top = position.y + anchor.y;
+
+  x >= left && x <= left + anchor.width && y >= top && y <= top + anchor.height
+}
+
+pub(super) fn dismiss_standalone_listbox_if_outside(
   app: &AppHandle,
   open_on_press: bool,
   x: f64,
   y: f64,
 ) {
-  let inside_anchor = recording_options_layout::anchor_contains(app, x, y);
-  if RECORDING_OPTIONS.should_dismiss(
+  let inside_anchor = standalone_listbox_anchor_contains(app, x, y);
+  if STANDALONE_LISTBOX.should_dismiss(
     app,
     open_on_press,
     inside_anchor,
     x,
     y,
-    &[
-      WindowLabel::RecordingOptions,
-      WindowLabel::StandaloneListbox,
-    ],
+    &[WindowLabel::StandaloneListbox],
   ) {
-    let _ = close_recording_options(app.clone(), false);
+    let _ = close_standalone_listbox(app.clone(), false);
   }
 }

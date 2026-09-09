@@ -5,9 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{AppHandle, Manager};
 
-use super::{
-  hide_recording_options, platform, source_selector, WindowLabel, RECORDING_CONTROLS_VISIBLE,
-};
+use super::{platform, source_selector, WindowLabel, RECORDING_CONTROLS_VISIBLE};
 
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 
@@ -56,7 +54,6 @@ pub fn begin_region_selector_gesture(app: AppHandle) -> tauri::Result<()> {
     if let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
       region.set_focus()?;
     }
-    hide_recording_options(app.clone())?;
     source_selector::collapse(app.clone(), Some(false))?;
     if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
       conceal_recording_bar(&bar)?;

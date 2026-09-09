@@ -35,10 +35,18 @@ const spacing = [
   "icon-small",
   "icon-mini",
   "icon-large",
+  "icon-xl",
 ];
 
+/**
+ * Semantic radii declared as `--radius-*` in `index.css`. Without these, two
+ * `rounded-*` classes on different tokens are both kept and CSS order decides
+ * which corner a control ends up with.
+ */
+const radii = ["window", "panel", "control"];
+
 export const twMergeConfig = {
-  extend: { theme: { spacing, text: fontSizes } },
+  extend: { theme: { radius: radii, spacing, text: fontSizes } },
 };
 
 export const twMerge = extendTailwindMerge(twMergeConfig);

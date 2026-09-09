@@ -182,6 +182,14 @@ const DELIVERY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 /// last session on it ends; only then does it accept a higher frame rate.
 const CONTINUITY_CAMERA_COLD_START: Duration = Duration::from_millis(3500);
 
+/// The least time a device is given between one session ending and the next
+/// opening on it. Opened sooner, as when the preview's resolution is switched
+/// and the new session follows the old one within milliseconds, the device
+/// accepts the session but has not let go of the old one: it delivers either
+/// nothing or black frames until it is closed and opened again after a pause.
+/// Switching the input off and on by hand always leaves at least this long.
+const DEVICE_REOPEN_GAP: Duration = Duration::from_millis(1000);
+
 /// Whether `device_id` is a camera that keeps its last frame rate across
 /// sessions (Continuity Camera).
 #[cfg(target_os = "macos")]
@@ -431,10 +439,19 @@ pub async fn start_camera_preview(
     // The previous session is usually stopped by the front end before this
     // start arrives, hence the manager's memory rather than `previous`.
     let cold_start_wait = last_ended
+      .as_ref()
       .filter(|ended| ended.device_id == device_id && fps > ended.fps)
       .and_then(|ended| CONTINUITY_CAMERA_COLD_START.checked_sub(ended.ended_at.elapsed()))
       .filter(|_| camera_frame_rate_is_sticky(&device_id));
-    if let Some(wait) = cold_start_wait {
+    let reopen_wait = last_ended
+      .as_ref()
+      .filter(|ended| ended.device_id == device_id)
+      .and_then(|ended| DEVICE_REOPEN_GAP.checked_sub(ended.ended_at.elapsed()));
+    let wait = match (cold_start_wait, reopen_wait) {
+      (Some(cold), Some(reopen)) => Some(cold.max(reopen)),
+      (cold, reopen) => cold.or(reopen),
+    };
+    if let Some(wait) = wait {
       std::thread::sleep(wait);
     }
     build_camera_preview(&device_id, width, height, fps, pal, channel)

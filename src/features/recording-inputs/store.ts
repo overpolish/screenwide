@@ -19,32 +19,27 @@ const STORE_NAME = "screenwide-recording-inputs";
 /** Smooth by default; halving it is an explicit choice to make a smaller file. */
 const DEFAULT_FPS: RecordingFps = 60;
 
-export const DEFAULT_CAMERA_MODE: CameraResolution = {
-  fps: DEFAULT_FPS,
-  height: 1080,
-  id: "1920x1080@60",
-  isDefault: true,
-  label: "1920 × 1080",
-  width: 1920,
-};
-
-export const DEFAULT_CAMERA: CameraDevice = {
-  id: "default",
-  isDefault: true,
-  label: "Default camera",
-  modes: [DEFAULT_CAMERA_MODE],
-};
-
-export const DEFAULT_MICROPHONE: InputDevice = {
-  id: "default",
-  isDefault: true,
-  label: "Default microphone",
-};
-
 export const ALL_SYSTEM_AUDIO: SystemAudioSource = {
   id: "all",
   kind: "all",
   label: "All audio",
+};
+
+/** Older builds persisted inputs that are no longer offered, such as the
+ * cursor and keyboard overlays that are now always recorded. Only the inputs
+ * still in the type are carried across. */
+const mergeInputs = (
+  current: RecordingInputs,
+  persisted: unknown,
+): RecordingInputs => {
+  const stored = (
+    persisted && typeof persisted === "object" ? persisted : {}
+  ) as Partial<RecordingInputs>;
+  return {
+    camera: stored.camera ?? current.camera,
+    microphone: stored.microphone ?? current.microphone,
+    systemAudio: stored.systemAudio ?? current.systemAudio,
+  };
 };
 
 const isCameraResolution = (value: unknown): value is CameraResolution => {
@@ -101,9 +96,7 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
       fps: DEFAULT_FPS,
       inputs: {
         camera: false,
-        keyboardShortcuts: false,
         microphone: false,
-        showCursor: true,
         systemAudio: false,
       },
       selectedCamera: null,
@@ -190,10 +183,7 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
           fps: recordingFpsOptions.includes(persisted.fps as RecordingFps)
             ? (persisted.fps as RecordingFps)
             : DEFAULT_FPS,
-          inputs: {
-            ...currentState.inputs,
-            ...(persisted.inputs ?? {}),
-          },
+          inputs: mergeInputs(currentState.inputs, persisted.inputs),
           // Older builds persisted only a physical camera. A formatless
           // camera cannot faithfully preview or record, so discovery chooses
           // a real mode instead of guessing behind the user's back.

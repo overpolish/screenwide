@@ -134,6 +134,6 @@ pub fn hide_and_resume(app: &AppHandle) {
 pub fn hide_without_resume(app: &AppHandle) {
   app.state::<QrDetailsState>().set(None);
   if let Some(window) = app.get_webview_window(WindowLabel::QrDetails.as_str()) {
-    let _ = window.hide();
+    let _ = crate::windows::hide(&window);
   }
 }

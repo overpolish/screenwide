@@ -15,6 +15,12 @@ export type MonitorDetails = {
   size: { height: number; width: number };
 };
 
+/** Where the cached still of one display sits on disk. */
+export type MonitorThumbnail = {
+  id: number;
+  path: string;
+};
+
 export type Region = {
   position: { x: number; y: number };
   size: { height: number; width: number };
@@ -27,8 +33,12 @@ export type SelectorPlacement = "above" | "below";
 export type SelectorState = {
   expanded: boolean;
   focusContents: boolean;
+  /** The popover is open but still offscreen, waiting for the webview to paint
+   * the mode it was opened for and ask for the reveal. */
   placement: SelectorPlacement;
   revision: number;
+  /** Which selector the popover was opened for. */
+  windowSelector: boolean;
 };
 
 export type WindowDetails = {

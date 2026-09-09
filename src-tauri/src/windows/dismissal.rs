@@ -18,6 +18,7 @@ pub fn hide_without_focus_transfer(window: &WebviewWindow) -> tauri::Result<()> 
       extern "C" fn completed(context: *mut std::ffi::c_void, hidden: bool) {
         let window = unsafe { Box::from_raw(context.cast::<WebviewWindow>()) };
         if hidden {
+          let _ = super::webview_visibility::hide_webview(&window);
           use tauri::Manager;
           let _ = super::dock_visibility::sync_after_dismissal(window.app_handle());
         }

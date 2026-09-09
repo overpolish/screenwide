@@ -150,9 +150,9 @@ pub fn run() {
       recording_inputs::list_cameras,
       recording_inputs::list_microphones,
       recording_sources::list_applications,
+      recording_sources::list_monitor_thumbnails,
       recording_sources::list_monitors,
       recording_sources::list_windows,
-      recording_sources::resize_window,
       recording_sources::selected_window_available,
       ruler::cancel_ruler,
       ruler::set_ruler_screenshot_mode,
@@ -184,8 +184,6 @@ pub fn run() {
       windows::region_gesture::finish_region_selector_gesture,
       windows::dock::finish_recording_dock_drag,
       windows::dock::resize_recording_dock,
-      windows::options::hide_recording_options,
-      windows::options::get_recording_options_state,
       windows::hide_recording_ui,
       windows::recording_ui_visible,
       windows::toggle_recording_ui,
@@ -201,9 +199,7 @@ pub fn run() {
       windows::screenshot_region::osc_command::set_screenshot_region_osc,
       windows::screenshot_region::presentation::set_region_selector_osc_frame_visible,
       windows::options::show_standalone_listbox,
-      windows::options::set_recording_options_content_height,
       windows::source_selector::expand_recording_source_selector,
-      windows::options::toggle_recording_options,
     ])
     .setup(|app| {
       #[cfg(debug_assertions)]
@@ -236,7 +232,6 @@ pub fn run() {
         windows::initialize_recording_bar(app.handle())?;
         windows::initialize_recording_source_selector(app.handle())?;
         windows::initialize_region_selector(app.handle())?;
-        windows::initialize_recording_options(app.handle())?;
         windows::initialize_standalone_listbox(app.handle())?;
         windows::initialize_recording_dock(app.handle())?;
       }
@@ -282,7 +277,7 @@ pub fn run() {
         app.handle().run_on_main_thread(move || {
           for label in &labels {
             if let Some(window) = app_handle.get_webview_window(label.as_str()) {
-              let _ = window.hide();
+              let _ = windows::hide(&window);
             }
           }
         })?;

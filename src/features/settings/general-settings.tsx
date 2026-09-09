@@ -5,6 +5,8 @@ import { PillGroup } from "../../components/base/pill-group/pill-group";
 import { Switch } from "../../components/base/switch/switch";
 import { PathField } from "../../components/shared/path-field/path-field";
 import { Setting } from "../../components/shared/setting/setting";
+import { useRecordingInputStore } from "../recording-inputs/store";
+import { RecordingFps } from "../recording-inputs/types";
 
 import { useSettingsApi } from "./settings-api-context";
 
@@ -44,6 +46,10 @@ export function GeneralSettingsPanel({
   settings: GeneralSettings;
 }) {
   const { browseDefaultLocation } = useSettingsApi();
+  // The frame rate lives with the recording inputs the bar records with, not
+  // in the stored preferences; settings only offers the choice.
+  const fps = useRecordingInputStore((state) => state.fps);
+  const setFps = useRecordingInputStore((state) => state.setFps);
   const update = (changes: Partial<GeneralSettings>) => {
     onChange({ ...settings, ...changes });
   };
@@ -125,6 +131,27 @@ export function GeneralSettingsPanel({
                 });
               }}
               selected={String(settings.recordingCountdownSeconds)}
+            />
+          </div>
+        )}
+      </Setting>
+      <Setting
+        description="More frames look smoother and make a larger file."
+        title="Frame rate"
+      >
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <PillGroup
+              aria-label="Frame rate"
+              display="label"
+              items={[
+                { id: "30", label: "30 fps" },
+                { id: "60", label: "60 fps" },
+              ]}
+              onSelectionChange={(selected) => {
+                setFps(Number(selected) as RecordingFps);
+              }}
+              selected={String(fps)}
             />
           </div>
         )}

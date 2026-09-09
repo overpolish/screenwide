@@ -1,12 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::{ffi::c_void, sync::Mutex, time::Duration};
+use std::{ffi::c_void, sync::Mutex};
 
-use core_foundation::{
-  array::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef},
-  runloop::{kCFRunLoopDefaultMode, CFRunLoop},
-};
+use core_foundation::array::{CFArrayGetCount, CFArrayGetValueAtIndex, CFArrayRef};
 use core_graphics::{
   event::CGEvent,
   event_source::{CGEventSource, CGEventSourceStateID},
@@ -21,8 +18,6 @@ mod pointer;
 
 use crate::glide::core::taps::TapRecognizer;
 use pointer::PointerEpisode;
-
-const POLL_INTERVAL: Duration = Duration::from_millis(16);
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -94,27 +89,23 @@ pub(super) fn start(app: &AppHandle) {
   let _ = APP.set(app.clone());
   if let Err(error) = std::thread::Builder::new()
     .name("glide-multitouch".to_owned())
-    .spawn(run)
+    .spawn(register_devices)
   {
     eprintln!("Could not start Glide tap monitoring: {error}");
   }
 }
 
-/// Registers every trackpad with the frame callback and then services the run
-/// loop the devices deliver on. The thread lives as long as the app.
-fn run() {
+/// Registers every trackpad, then lets the setup thread exit. `MTDeviceStart`
+/// delivers callbacks on framework-owned threads; our static callback state and
+/// retained device list outlive setup. Pumping an empty run loop here spins
+/// because its timeout does not make it wait without sources or timers.
+fn register_devices() {
   for device in devices() {
     // SAFETY: the device came from the list MultitouchSupport created and is
     // kept alive for the process lifetime, and the callback is a static fn.
     unsafe {
       MTRegisterContactFrameCallback(device, contact_frame);
       MTDeviceStart(device, 0);
-    }
-  }
-  loop {
-    // SAFETY: Core Foundation owns this process-global constant.
-    unsafe {
-      CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, POLL_INTERVAL, false);
     }
   }
 }

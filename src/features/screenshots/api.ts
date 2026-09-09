@@ -16,19 +16,16 @@ type ScrollingScreenshotTarget = Extract<ScreenshotTarget, { kind: "region" }>;
 
 type CaptureStillOptions = {
   destination: ScreenshotDestination;
-  showCursor: boolean;
   target: ScreenshotTarget;
 };
 
 /** Resolves to the saved file's path, or null when it went to the clipboard. */
-export const captureStill = ({
-  destination,
-  showCursor,
-  target,
-}: CaptureStillOptions) =>
+export const captureStill = ({ destination, target }: CaptureStillOptions) =>
   invoke<string | null>("capture_still", {
     destination,
-    showCursor,
+    // The pointer is part of what a screenshot is showing, so it is always
+    // captured.
+    showCursor: true,
     target,
   });
 

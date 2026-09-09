@@ -82,6 +82,7 @@ const iconTokens = [
   "size-icon-small",
   "size-icon",
   "size-icon-large",
+  "size-icon-xl",
 ];
 
 function Group({ children, title }: { children: ReactNode; title: string }) {

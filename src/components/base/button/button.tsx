@@ -23,6 +23,7 @@ export const Button = ({
   children,
   className,
   color,
+  size,
   variant,
   ...props
 }: ButtonProps) => {
@@ -33,6 +34,7 @@ export const Button = ({
         className,
         color,
         isDisabled: props.isDisabled,
+        size,
         variant,
       })}
     >

@@ -8,17 +8,9 @@ use std::sync::{
   Mutex, MutexGuard,
 };
 
-use serde::Serialize;
 use tauri::{AppHandle, Manager, WebviewWindow};
 
 use super::WindowLabel;
-
-#[derive(Clone, Copy, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TransientPopoverState {
-  pub open: bool,
-  pub revision: u64,
-}
 
 pub struct TransientPopover {
   lifecycle: Mutex<()>,
@@ -53,13 +45,6 @@ impl TransientPopover {
   pub fn set_open(&self, open: bool) {
     self.open.store(open, Ordering::Relaxed);
     self.touch();
-  }
-
-  pub fn state(&self) -> TransientPopoverState {
-    TransientPopoverState {
-      open: self.is_open(),
-      revision: self.revision(),
-    }
   }
 
   pub fn touch(&self) {
@@ -115,14 +100,14 @@ mod tests {
   #[test]
   fn state_changes_are_revisioned() {
     let popover = TransientPopover::new();
-    assert!(!popover.state().open);
-    assert_eq!(popover.state().revision, 0);
+    assert!(!popover.is_open());
+    assert_eq!(popover.revision(), 0);
 
     popover.set_open(true);
-    assert!(popover.state().open);
-    assert_eq!(popover.state().revision, 1);
+    assert!(popover.is_open());
+    assert_eq!(popover.revision(), 1);
 
     popover.touch();
-    assert_eq!(popover.state().revision, 2);
+    assert_eq!(popover.revision(), 2);
   }
 }

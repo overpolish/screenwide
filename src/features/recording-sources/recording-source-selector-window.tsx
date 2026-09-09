@@ -4,6 +4,8 @@
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
+
 import {
   collapseRecordingSourceSelector,
   getRecordingSourceSelectorState,
@@ -12,11 +14,13 @@ import {
 } from "./api";
 import { findCurrentMonitor } from "./monitor-selection";
 import { MonitorSelector } from "./monitor-selector";
+import {
+  MONITOR_THUMBNAIL_INTERVAL_MS,
+  refreshMonitorThumbnails,
+} from "./monitor-thumbnails";
 import { useRecordingSourceStore } from "./store";
 import { MonitorDetails, SelectorState, WindowDetails } from "./types";
 import { WindowSelector } from "./window-selector";
-
-const REFRESH_INTERVAL_MS = 1_500;
 
 const clearSelectorFocus = () => {
   if (document.activeElement instanceof HTMLElement) {
@@ -31,6 +35,7 @@ export function RecordingSourceSelectorWindow() {
     focusContents: false,
     placement: "above",
     revision: 0,
+    windowSelector: false,
   });
   const selectorStateRef = useRef(selectorState);
   const focusedRevisionRef = useRef<number | null>(null);
@@ -39,15 +44,18 @@ export function RecordingSourceSelectorWindow() {
   const [windowsError, setWindowsError] = useState<string | null>(null);
   const [windowsLoading, setWindowsLoading] = useState(false);
   const {
-    recordingMode,
+    monitorThumbnails,
     selectedMonitor,
     selectedWindow,
     setSelectedMonitor,
     setSelectedWindow,
   } = useRecordingSourceStore((state) => state);
-  const { expanded: isExpanded, focusContents } = selectorState;
+  const { expanded: isExpanded, focusContents, windowSelector } = selectorState;
 
   const refreshMonitors = useCallback(async () => {
+    // The tiles draw what is on each display, so the stills are recaptured
+    // whenever the arrangement is; a failed capture leaves the plain fill.
+    void refreshMonitorThumbnails();
     const available = await listMonitors();
     setMonitors(available);
     const { selectedMonitor, setSelectedMonitor } =
@@ -99,7 +107,7 @@ export function RecordingSourceSelectorWindow() {
       selectorStateRef.current = state;
       setSelectorState(state);
       if (!becameExpanded) return;
-      if (useRecordingSourceStore.getState().recordingMode === "window") {
+      if (state.windowSelector) {
         void refreshWindows();
       } else {
         void refreshMonitors();
@@ -128,22 +136,27 @@ export function RecordingSourceSelectorWindow() {
     };
   }, [refreshMonitors, refreshWindows]);
 
+  // The popover is expanded offscreen and only ordered onscreen once this
+  // webview has painted the mode it was expanded for. Revealing on a mismatch
+  // is what made the previous mode's selector flash; the store sync arrives as
+  // a storage event, which re-runs this effect once the mode catches up.
+
   useEffect(() => {
-    if (!isExpanded || recordingMode === "window") return;
+    if (!isExpanded || windowSelector) return;
 
     const interval = window.setInterval(() => {
       void refreshMonitors();
-    }, REFRESH_INTERVAL_MS);
+    }, MONITOR_THUMBNAIL_INTERVAL_MS);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [isExpanded, recordingMode, refreshMonitors]);
+  }, [isExpanded, refreshMonitors, windowSelector]);
 
   useEffect(() => {
     if (
       !isExpanded ||
-      recordingMode !== "window" ||
+      !windowSelector ||
       windowsLoading ||
       revealedRevisionRef.current === selectorState.revision
     ) {
@@ -168,8 +181,8 @@ export function RecordingSourceSelectorWindow() {
     };
   }, [
     isExpanded,
-    recordingMode,
     selectorState.revision,
+    windowSelector,
     windows,
     windowsLoading,
   ]);
@@ -198,14 +211,20 @@ export function RecordingSourceSelectorWindow() {
     focusContents,
     isExpanded,
     monitors,
-    recordingMode,
     selectorState.revision,
+    windowSelector,
     windows,
   ]);
 
+  // Collapsed, the webview holds a spinner rather than the last selector, so
+  // the next expand shows the spinner until the requested selector paints
+  // instead of flashing stale content.
+  const showsWindows = isExpanded && windowSelector;
+  const showsMonitors = isExpanded && !windowSelector;
+
   return (
-    <main className="window-surface p-section fixed inset-0 flex overflow-hidden text-content-fg">
-      {recordingMode === "window" ? (
+    <main className="window-surface fixed inset-0 flex overflow-hidden text-content-fg">
+      {showsWindows ? (
         <div className="min-h-0 grow overflow-hidden">
           <WindowSelector
             error={windowsError}
@@ -219,7 +238,7 @@ export function RecordingSourceSelectorWindow() {
             windows={windows}
           />
         </div>
-      ) : recordingMode === "screen" ? (
+      ) : showsMonitors ? (
         <div className="flex min-h-0 grow items-center justify-center overflow-hidden">
           <MonitorSelector
             focusContents={focusContents}
@@ -232,9 +251,14 @@ export function RecordingSourceSelectorWindow() {
               setSelectedMonitor(monitor);
             }}
             selectedMonitor={selectedMonitor}
+            thumbnails={monitorThumbnails}
           />
         </div>
-      ) : null}
+      ) : (
+        <div className="flex grow items-center justify-center">
+          <CircularProgress aria-label="Loading" isIndeterminate />
+        </div>
+      )}
     </main>
   );
 }

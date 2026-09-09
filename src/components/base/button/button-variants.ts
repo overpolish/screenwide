@@ -5,7 +5,7 @@ import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
 export const buttonControlStyles =
-  "h-control-height rounded-control px-section text-body [&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu";
+  "h-control-height rounded-control px-section text-body [&_svg.lucide]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu";
 
 export const buttonVariants = tv({
   base: [
@@ -37,6 +37,7 @@ export const buttonVariants = tv({
   ],
   defaultVariants: {
     color: "neutral",
+    size: "regular",
     variant: "solid",
   },
   variants: {
@@ -47,6 +48,14 @@ export const buttonVariants = tv({
     },
     isDisabled: {
       true: "bg-fill-quaternary text-content-fg-tertiary",
+    },
+    // Capture is the recording bar's own control: 48 by 40 under a 28px
+    // glyph, taking the panel radius a standalone control of that height
+    // carries rather than the tighter segment corner.
+    size: {
+      capture:
+        "h-10 min-w-12 gap-control-inset rounded-panel px-control-inset text-body [&_svg.lucide]:size-icon-xl",
+      regular: "",
     },
     variant: {
       ghost:

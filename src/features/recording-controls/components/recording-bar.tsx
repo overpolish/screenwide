@@ -1,62 +1,52 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Camera,
-  CameraOff,
-  CircleX,
-  Keyboard,
-  KeyboardOff,
-  Lock,
-  Mic,
-  MicOff,
-  MousePointer2,
-  MousePointer2Off,
-  Volume2,
-  VolumeOff,
-} from "lucide-react";
-import { ReactNode, useRef, useState } from "react";
+import { X } from "lucide-react";
+import { Ref, useState } from "react";
 
-import { Button } from "../../../components/base/button/button";
 import { IconButton } from "../../../components/base/button/icon-button";
-import { ButtonGroup } from "../../../components/base/button-group/button-group";
-import { RecordingFps, RecordingInputs } from "../../recording-inputs/types";
-import { RecordingMode } from "../../recording-sources/types";
+import { RecordingInputs } from "../../recording-inputs/types";
+import {
+  MonitorDetails,
+  RecordingMode,
+  WindowDetails,
+} from "../../recording-sources/types";
 import { canStartRecording } from "../can-record";
 import { RecordingStatus, ScreenshotAction, ScreenshotState } from "../types";
 
-import { RecordingBarInputToggle as InputToggle } from "./recording-bar-input-toggle";
-import { RecordingBarRecordAction } from "./recording-bar-record-action";
-import { RecordingBarScreenshotActions } from "./recording-bar-screenshot-actions";
-import { RecordingModePicker } from "./recording-mode-picker";
-
-type Anchor = Pick<DOMRect, "height" | "width" | "x" | "y">;
+import { RecordingBarCaptureActions } from "./recording-bar-capture-actions";
+import { RecordingBarInputs } from "./recording-bar-inputs";
+import { RecordingTypePicker } from "./recording-type-picker";
 
 type RecordingBarProps = {
-  fps?: RecordingFps;
   hasCameraWarning?: boolean;
   hasMicrophoneWarning?: boolean;
   hasSelectedMonitor?: boolean;
   hasSelectedWindow?: boolean;
   hasSystemAudioWarning?: boolean;
-  initialFps?: RecordingFps;
   initialInputs?: Partial<RecordingInputs>;
   initialMode?: RecordingMode;
   inputs?: RecordingInputs;
   isCameraLocked?: boolean;
   isLocked?: boolean;
   isMicrophoneLocked?: boolean;
+  /** Whether the bar is on screen: its camera and audio previews are native
+   * streams, and a dismissed bar stays mounted. */
+  isPreviewActive?: boolean;
   isScreenshotLocked?: boolean;
   mode?: RecordingMode;
+  /** A still of each attached display by its id, drawn as the Screen
+   * segment's icon for whichever display is chosen. */
+  monitorThumbnails?: Record<number, string>;
   onCameraLockedPress?: () => void;
   onCancel?: () => void;
+  onChooseMonitor?: (anchor: DOMRect, fromKeyboard: boolean) => void;
+  onChooseWindow?: (anchor: DOMRect, fromKeyboard: boolean) => void;
   onFocusPendingEditor?: () => void;
-  onFpsChange?: (fps: RecordingFps) => void;
   onInputChange?: (input: keyof RecordingInputs, selected: boolean) => void;
   onInteract?: () => void;
   onMicrophoneLockedPress?: () => void;
   onModeChange?: (mode: RecordingMode) => void;
-  onOptions?: (anchor: Anchor, focusContents: boolean) => void;
   onPointerUp?: () => void;
   onRecord?: () => void;
   onRequiredPermissionsPress?: () => void;
@@ -68,112 +58,96 @@ type RecordingBarProps = {
    * so only a pending recording stands in the way of starting another.
    */
   pendingEditors?: { recording: boolean; screenshot: boolean };
+  /** The bar's root, which a window can measure to size itself to it. */
+  ref?: Ref<HTMLElement>;
   screenshotAction?: ScreenshotAction;
   screenshotState?: ScreenshotState;
-  sourceSelector?: ReactNode;
+  selectedMonitor?: MonitorDetails | null;
+  selectedWindow?: WindowDetails | null;
   status?: RecordingStatus;
 };
 
 const defaultInputs: RecordingInputs = {
   camera: false,
-  keyboardShortcuts: false,
   microphone: false,
-  showCursor: true,
   systemAudio: false,
 };
 
-export function RecordingBar({
-  fps: controlledFps,
-  hasCameraWarning = false,
-  hasMicrophoneWarning = false,
-  hasSelectedMonitor = false,
-  hasSelectedWindow = false,
-  hasSystemAudioWarning = false,
-  initialFps = 60,
-  initialInputs,
-  initialMode = "screen",
-  inputs: controlledInputs,
-  isCameraLocked,
-  isLocked,
-  isMicrophoneLocked,
-  isScreenshotLocked,
-  mode: controlledMode,
-  onCameraLockedPress,
-  onCancel,
-  onFocusPendingEditor,
-  onFpsChange,
-  onInputChange,
-  onInteract,
-  onMicrophoneLockedPress,
-  onModeChange,
-  onOptions,
-  onPointerUp,
-  onRecord,
-  onRequiredPermissionsPress,
-  onScreenshot,
-  onScreenshotToClipboard,
-  onScrollingScreenshot,
-  pendingEditors = { recording: false, screenshot: false },
-  screenshotAction = "editor",
-  screenshotState = "idle",
-  sourceSelector,
-  status = "idle",
-}: RecordingBarProps) {
-  const [uncontrolledMode, setUncontrolledMode] =
-    useState<RecordingMode>(initialMode);
-  const [uncontrolledFps, setUncontrolledFps] =
-    useState<RecordingFps>(initialFps);
+/**
+ * The recording bar is being rebuilt one section at a time on the native
+ * primitives. The props are the full contract the window and stories drive;
+ * sections return as they are redesigned.
+ */
+export function RecordingBar(props: RecordingBarProps) {
+  const {
+    hasCameraWarning = false,
+    hasMicrophoneWarning = false,
+    hasSelectedMonitor = false,
+    hasSelectedWindow = false,
+    hasSystemAudioWarning = false,
+    initialInputs,
+    initialMode = "screen",
+    inputs: controlledInputs,
+    isCameraLocked,
+    isLocked,
+    isMicrophoneLocked,
+    isPreviewActive = true,
+    isScreenshotLocked,
+    mode: controlledMode,
+    monitorThumbnails = {},
+    onCameraLockedPress,
+    onCancel,
+    onChooseMonitor,
+    onChooseWindow,
+    onFocusPendingEditor,
+    onInputChange,
+    onInteract,
+    onMicrophoneLockedPress,
+    onModeChange,
+    onPointerUp,
+    onRecord,
+    onRequiredPermissionsPress,
+    onScreenshot,
+    onScreenshotToClipboard,
+    onScrollingScreenshot,
+    pendingEditors = { recording: false, screenshot: false },
+    ref,
+    screenshotState = "idle",
+    selectedMonitor = null,
+    selectedWindow = null,
+    status = "idle",
+  } = props;
   const [uncontrolledInputs, setUncontrolledInputs] = useState<RecordingInputs>(
-    {
-      ...defaultInputs,
-      ...initialInputs,
-    },
+    { ...defaultInputs, ...initialInputs },
   );
-  const optionsButtonRef = useRef<HTMLButtonElement>(null);
-  const sourceSelectorRef = useRef<HTMLDivElement>(null);
-
-  const mode = controlledMode ?? uncontrolledMode;
-  const fps = controlledFps ?? uncontrolledFps;
   const inputs = controlledInputs ?? uncontrolledInputs;
-
-  const setInput = (input: keyof RecordingInputs, selected: boolean) => {
+  const changeInput = (input: keyof RecordingInputs, selected: boolean) => {
     if (controlledInputs === undefined) {
-      setUncontrolledInputs((current) => ({
-        ...current,
-        [input]: selected,
-      }));
+      setUncontrolledInputs((current) => ({ ...current, [input]: selected }));
     }
     onInputChange?.(input, selected);
   };
+  const [uncontrolledMode, setUncontrolledMode] =
+    useState<RecordingMode>(initialMode);
+  const mode = controlledMode ?? uncontrolledMode;
+  const selectMode = (nextMode: RecordingMode) => {
+    if (nextMode === mode) return;
+    if (controlledMode === undefined) {
+      setUncontrolledMode(nextMode);
+    }
+    onModeChange?.(nextMode);
+  };
 
-  const isAudioOnly = mode === "audio";
-  const isScreenCapture = ["screen", "region", "window"].includes(mode);
+  const isScreenCapture = ["region", "screen", "window"].includes(mode);
+  const hasSource = mode === "window" ? hasSelectedWindow : hasSelectedMonitor;
+  const canScreenshot =
+    isScreenCapture && hasSource && !isScreenshotLocked && status === "idle";
+  const canScrollingScreenshot = canScreenshot && mode === "region";
+  const isCapturing = screenshotState === "pending";
   // The bar is hidden by Rust while a recording runs; disabling it as well
   // keeps a stale window from starting a second one.
-  const isRecordingActive = status !== "idle";
-  const isRecordingWorkspaceOpen = pendingEditors.recording;
-  const isCapturingStill = screenshotState === "pending";
-  const editorScreenshotState =
-    screenshotAction === "editor" ? screenshotState : "idle";
-  const clipboardScreenshotState =
-    screenshotAction === "clipboard" ? screenshotState : "idle";
-  const scrollingScreenshotState =
-    screenshotAction === "scrolling" ? screenshotState : "idle";
-  const hasScreenshotSource =
-    mode === "window" ? hasSelectedWindow : hasSelectedMonitor;
-  const canCaptureStill =
-    isScreenCapture &&
-    hasScreenshotSource &&
-    !isScreenshotLocked &&
-    !isRecordingActive;
-  // A pending recording no longer stands in a screenshot's way: it waits in
-  // its own window while the screenshot workspace opens beside it.
-  const canEditorScreenshot = canCaptureStill;
-  const canCopyScreenshot = canCaptureStill;
-  const canCaptureScrollingScreenshot =
-    canCaptureStill && mode === "region" && onScrollingScreenshot !== undefined;
   const canRecordIgnoringEditor =
-    !isRecordingActive &&
+    status === "idle" &&
     canStartRecording({
       hasCameraWarning,
       hasMicrophoneWarning,
@@ -186,6 +160,7 @@ export function RecordingBar({
       isScreenLocked: Boolean(isLocked),
       mode,
     });
+  const isRecordingWorkspaceOpen = pendingEditors.recording;
   const canRecord = canRecordIgnoringEditor && !isRecordingWorkspaceOpen;
   // Recording that only the pending recording stands in the way of: the button
   // stays pressable and brings that editor forward rather than going dead,
@@ -195,201 +170,82 @@ export function RecordingBar({
 
   return (
     <main
-      className="window-surface gap-control px-section pt-section pb-control flex h-full min-h-[120px] w-full min-w-[680px] flex-col overflow-hidden text-content-fg"
+      // One row of 40px controls with 8px on every side, which makes the bar
+      // 56pt tall. The four groups are set apart by the section gap, half
+      // again the gap inside a group, which is how a toolbar shows grouping
+      // without separators. The row is as wide as its controls and the
+      // window follows it, so no state leaves slack.
+      className="window-surface flex h-full w-max items-center gap-section overflow-hidden p-control-inset text-content-fg"
       data-tauri-drag-region="deep"
-      onKeyDownCapture={(event) => {
-        if (
-          optionsButtonRef.current?.contains(event.target as Node) ||
-          sourceSelectorRef.current?.contains(event.target as Node)
-        ) {
-          return;
-        }
+      onKeyDownCapture={() => {
         onInteract?.();
       }}
-      onPointerDownCapture={(event) => {
-        if (
-          optionsButtonRef.current?.contains(event.target as Node) ||
-          sourceSelectorRef.current?.contains(event.target as Node)
-        ) {
-          return;
-        }
+      onPointerDownCapture={() => {
         onInteract?.();
       }}
-      onPointerUpCapture={(event) => {
-        if (sourceSelectorRef.current?.contains(event.target as Node)) return;
+      onPointerUpCapture={() => {
         onPointerUp?.();
       }}
+      ref={ref}
     >
-      {Boolean(isScreenshotLocked) && isScreenCapture ? (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-content">
-          <IconButton
-            aria-label="Open permissions"
-            onPress={onRequiredPermissionsPress}
-          >
-            <Lock />
-          </IconButton>
-        </div>
-      ) : null}
+      <IconButton aria-label="Cancel" onPress={onCancel} size="capture">
+        <X />
+      </IconButton>
 
-      {sourceSelector ? (
-        <div className="gap-control flex h-6 shrink-0" ref={sourceSelectorRef}>
-          {sourceSelector}
-        </div>
-      ) : null}
+      <RecordingTypePicker
+        isDisabled={status !== "idle" || Boolean(isLocked)}
+        mode={mode}
+        monitorThumbnails={monitorThumbnails}
+        // Pressing a segment that already owns the selection opens its source
+        // list; pressing it from another mode selects it first, because the
+        // choice only makes sense in its own mode.
+        onChooseMonitor={(anchor, fromKeyboard) => {
+          selectMode("screen");
+          onChooseMonitor?.(anchor, fromKeyboard);
+        }}
+        onChooseWindow={(anchor, fromKeyboard) => {
+          selectMode("window");
+          onChooseWindow?.(anchor, fromKeyboard);
+        }}
+        onModeChange={(nextMode) => {
+          selectMode(nextMode);
+        }}
+        selectedMonitor={selectedMonitor}
+        selectedWindow={selectedWindow}
+      />
 
-      <div className="gap-section relative flex min-h-0 w-full grow items-center justify-center">
-        <RecordingModePicker
-          isDisabled={isRecordingActive}
-          mode={mode}
-          onChange={(nextMode) => {
-            if (controlledMode === undefined) {
-              setUncontrolledMode(nextMode);
-            }
-            onModeChange?.(nextMode);
-          }}
-        />
+      <RecordingBarInputs
+        hasCameraWarning={hasCameraWarning}
+        hasMicrophoneWarning={hasMicrophoneWarning}
+        hasSystemAudioWarning={hasSystemAudioWarning}
+        inputs={inputs}
+        isCameraLocked={Boolean(isCameraLocked)}
+        isDisabled={status !== "idle" || Boolean(isLocked)}
+        isMicrophoneLocked={Boolean(isMicrophoneLocked)}
+        isPreviewActive={isPreviewActive}
+        mode={mode}
+        onCameraLockedPress={onCameraLockedPress}
+        onInputChange={changeInput}
+        onMicrophoneLockedPress={onMicrophoneLockedPress}
+      />
 
-        <IconButton
-          aria-label="Cancel"
-          className="order-first"
-          iconSize="prominent"
-          onPress={onCancel}
-        >
-          <CircleX />
-        </IconButton>
-
-        <div className="gap-tight flex min-w-[120px] flex-col">
-          <ButtonGroup
-            aria-label="Recording inputs"
-            className="gap-tight justify-between"
-          >
-            <InputToggle
-              hasWarning={hasSystemAudioWarning}
-              isDisabled={isRecordingActive}
-              isSelected={inputs.systemAudio}
-              label="System audio"
-              off={<VolumeOff />}
-              on={<Volume2 />}
-              onChange={(selected) => {
-                setInput("systemAudio", selected);
-              }}
-              warningLabel="One or more selected system audio applications are not detected"
-            />
-            <InputToggle
-              hasWarning={hasMicrophoneWarning}
-              isDisabled={isRecordingActive}
-              isLocked={isMicrophoneLocked}
-              isSelected={inputs.microphone}
-              label="Microphone"
-              off={<MicOff />}
-              on={<Mic />}
-              onChange={(selected) => {
-                setInput("microphone", selected);
-              }}
-              onLockedPress={onMicrophoneLockedPress}
-              warningLabel="Selected microphone is not detected"
-            />
-            <InputToggle
-              hasWarning={hasCameraWarning}
-              isDisabled={isAudioOnly || isRecordingActive}
-              isLocked={isCameraLocked}
-              isReadOnly={mode === "camera"}
-              isSelected={mode === "camera" || (!isAudioOnly && inputs.camera)}
-              label="Camera"
-              off={<CameraOff />}
-              on={<Camera />}
-              onChange={(selected) => {
-                setInput("camera", selected);
-              }}
-              onLockedPress={onCameraLockedPress}
-              warningLabel="Selected camera is not detected"
-            />
-            <InputToggle
-              isDisabled={!isScreenCapture || isRecordingActive}
-              isSelected={isScreenCapture && inputs.showCursor}
-              label="Show cursor"
-              off={<MousePointer2Off />}
-              on={<MousePointer2 />}
-              onChange={(selected) => {
-                setInput("showCursor", selected);
-              }}
-            />
-            <InputToggle
-              isDisabled={!isScreenCapture || isRecordingActive}
-              isSelected={isScreenCapture && inputs.keyboardShortcuts}
-              label="Keyboard shortcuts"
-              off={<KeyboardOff />}
-              on={<Keyboard />}
-              onChange={(selected) => {
-                setInput("keyboardShortcuts", selected);
-              }}
-            />
-          </ButtonGroup>
-
-          <div
-            className="flex justify-center"
-            onPointerDown={(event) => {
-              event.stopPropagation();
-            }}
-          >
-            <Button
-              isDisabled={isRecordingActive}
-              onPress={(event) => {
-                const bounds =
-                  optionsButtonRef.current?.getBoundingClientRect();
-                if (bounds) {
-                  onOptions?.(
-                    bounds.toJSON() as Anchor,
-                    ["keyboard", "virtual"].includes(event.pointerType),
-                  );
-                }
-              }}
-              ref={optionsButtonRef}
-              size="compact"
-              variant="ghost"
-            >
-              Options
-            </Button>
-          </div>
-        </div>
-
-        <RecordingBarScreenshotActions
-          canCaptureScrollingScreenshot={canCaptureScrollingScreenshot}
-          canCopyScreenshot={canCopyScreenshot}
-          canEditorScreenshot={canEditorScreenshot}
-          clipboardScreenshotState={clipboardScreenshotState}
-          editorScreenshotState={editorScreenshotState}
-          isCapturingStill={isCapturingStill}
-          onScreenshot={onScreenshot}
-          onScreenshotToClipboard={onScreenshotToClipboard}
-          onScrollingScreenshot={onScrollingScreenshot}
-          scrollingScreenshotState={scrollingScreenshotState}
-        />
-
-        <div className="gap-tight flex flex-col items-center justify-center self-stretch">
-          <RecordingBarRecordAction
-            canRecord={canRecord}
-            isLocked={Boolean(isLocked)}
-            isRecordBlockedByEditor={isRecordBlockedByEditor}
-            onFocusPendingEditor={onFocusPendingEditor}
-            onRecord={onRecord}
-            onRequiredPermissionsPress={onRequiredPermissionsPress}
-          />
-
-          <InputToggle
-            isDisabled={isRecordingActive}
-            isSelected={fps === 60}
-            label="Frames per second"
-            off={<span className="text-xs tabular-nums">30</span>}
-            on={<span className="text-xs tabular-nums">60</span>}
-            onChange={(smooth) => {
-              const nextFps: RecordingFps = smooth ? 60 : 30;
-              if (controlledFps === undefined) setUncontrolledFps(nextFps);
-              onFpsChange?.(nextFps);
-            }}
-          />
-        </div>
-      </div>
+      <RecordingBarCaptureActions
+        canRecord={canRecord}
+        canScreenshot={canScreenshot}
+        canScrollingScreenshot={canScrollingScreenshot}
+        isCapturing={isCapturing}
+        isLocked={Boolean(isLocked)}
+        isRecordBlockedByEditor={isRecordBlockedByEditor}
+        onFocusPendingEditor={onFocusPendingEditor}
+        onRecord={onRecord}
+        onRequiredPermissionsPress={onRequiredPermissionsPress}
+        onScreenshot={onScreenshot}
+        onScreenshotToClipboard={onScreenshotToClipboard}
+        onScrollingScreenshot={onScrollingScreenshot}
+        screenshotState={screenshotState}
+      />
     </main>
   );
 }
+
+export type { RecordingBarProps };

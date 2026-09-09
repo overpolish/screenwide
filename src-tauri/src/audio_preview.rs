@@ -8,7 +8,7 @@ use cpal::{
   Device, FromSample, Sample, SampleFormat, SizedSample, Stream, StreamConfig,
 };
 use serde::{Deserialize, Serialize};
-use tauri::{ipc::Channel, AppHandle, Manager};
+use tauri::ipc::Channel;
 
 #[cfg(target_os = "macos")]
 mod platform;
@@ -67,11 +67,6 @@ impl AudioPreviewManager {
         self.system.take();
       }
     }
-  }
-
-  fn stop_all(&mut self) {
-    self.microphone.take();
-    self.system.take();
   }
 }
 
@@ -265,12 +260,6 @@ pub fn stop_audio_preview(
     .map_err(|_| "Audio preview state is unavailable".to_owned())?
     .stop(kind);
   Ok(())
-}
-
-pub fn stop_all(app: &AppHandle) {
-  if let Ok(mut manager) = app.state::<AudioPreviewState>().0.lock() {
-    manager.stop_all();
-  }
 }
 
 #[cfg(test)]

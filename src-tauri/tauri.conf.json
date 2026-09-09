@@ -170,8 +170,8 @@
         "label": "recording-bar",
         "title": "Screenwide Recording Bar",
         "url": "/recording-bar",
-        "width": 680,
-        "height": 120,
+        "width": 843,
+        "height": 56,
         "acceptFirstMouse": true,
         "alwaysOnTop": false,
         "decorations": false,
@@ -212,8 +212,8 @@
         "label": "recording-source-selector",
         "title": "Screenwide Recording Source Selector",
         "url": "/recording-source-selector",
-        "width": 500,
-        "height": 250,
+        "width": 400,
+        "height": 200,
         "acceptFirstMouse": true,
         "alwaysOnTop": false,
         "decorations": false,
@@ -243,27 +243,6 @@
         "skipTaskbar": true,
         "transparent": true,
         "visible": false
-      },
-      {
-        "label": "recording-options",
-        "title": "Screenwide Recording Options",
-        "url": "/recording-options",
-        "width": 240,
-        "height": 324,
-        "acceptFirstMouse": true,
-        "alwaysOnTop": false,
-        "decorations": false,
-        "focus": false,
-        "resizable": false,
-        "shadow": true,
-        "skipTaskbar": true,
-        "transparent": true,
-        "visible": false,
-        "windowEffects": {
-          "effects": ["underWindowBackground", "mica"],
-          "radius": 10,
-          "state": "active"
-        }
       },
       {
         "label": "standalone-listbox",
@@ -314,6 +293,7 @@
         "scope": [
           "$APPDATA/Recordings/*",
           "$TEMP/Screenwide/application-sources/**",
+          "$TEMP/Screenwide/monitor-selector/**",
           "$TEMP/Screenwide/window-selector/**"
         ]
       },

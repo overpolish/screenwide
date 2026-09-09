@@ -182,29 +182,7 @@ mod windows_platform {
       let _ = DeleteDC(dc);
     }
   }
-
-  pub fn resize_window(
-    id: u32,
-    pid: u32,
-    title: &str,
-    width: u32,
-    height: u32,
-  ) -> Result<(), String> {
-    let window = find_window(id, pid, title)?;
-    unsafe {
-      SetWindowPos(
-        window,
-        None,
-        0,
-        0,
-        width as i32,
-        height as i32,
-        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE,
-      )
-      .map_err(|error| error.to_string())
-    }
-  }
 }
 
 #[cfg(target_os = "windows")]
-pub use windows_platform::{app_icon, app_identity, resize_window, selectable_window_ids};
+pub use windows_platform::{app_icon, app_identity, selectable_window_ids};

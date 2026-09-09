@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Monitor } from "lucide-react";
+import { RefObject, useLayoutEffect, useRef, useState } from "react";
 
-import { Badge } from "../../components/base/badge/badge";
 import { Button } from "../../components/base/button/button";
 import { ButtonGroup } from "../../components/base/button-group/button-group";
+import { Text } from "../../components/base/text/text";
 import { cn } from "../../lib/styling";
 
 import { orderMonitorsForNavigation } from "./monitor-selection";
@@ -17,7 +17,46 @@ type MonitorSelectorProps = {
   onCommit: (monitor: MonitorDetails, returnFocus: boolean) => void;
   onSelect: (monitor: MonitorDetails) => void;
   selectedMonitor: MonitorDetails | null;
+  /** A still of each display by its id, drawn in its tile. A display without
+   * one keeps the plain fill. */
+  thumbnails?: Record<number, string>;
 };
+
+/**
+ * The largest box of the given aspect ratio that fits the container, so the
+ * arrangement is never squashed however the window is proportioned.
+ */
+function useFittedSize(
+  containerRef: RefObject<HTMLDivElement | null>,
+  ratio: number,
+) {
+  const [size, setSize] = useState<{ height: number; width: number }>();
+  useLayoutEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+    const fit = () => {
+      const { clientHeight, clientWidth } = element;
+      const style = getComputedStyle(element);
+      const width =
+        clientWidth -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight);
+      const height =
+        clientHeight -
+        parseFloat(style.paddingTop) -
+        parseFloat(style.paddingBottom);
+      const boxWidth = Math.min(width, height * ratio);
+      setSize({ height: boxWidth / ratio, width: boxWidth });
+    };
+    // ResizeObserver reports once on observe, which covers the first layout.
+    const observer = new ResizeObserver(fit);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, [containerRef, ratio]);
+  return size;
+}
 
 export function MonitorSelector({
   focusContents,
@@ -25,15 +64,8 @@ export function MonitorSelector({
   onCommit,
   onSelect,
   selectedMonitor,
+  thumbnails = {},
 }: MonitorSelectorProps) {
-  if (monitors.length === 0) {
-    return (
-      <div className="inset-shadow-full p-section flex h-full w-full items-center justify-center rounded-window text-xs text-muted">
-        No displays found
-      </div>
-    );
-  }
-
   const bounds = monitors.reduce(
     (current, monitor) => ({
       maxX: Math.max(
@@ -56,6 +88,21 @@ export function MonitorSelector({
   );
   const layoutWidth = bounds.maxX - bounds.minX;
   const layoutHeight = bounds.maxY - bounds.minY;
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Hooks run before the empty-state return; an empty layout has no ratio.
+  const fitted = useFittedSize(
+    containerRef,
+    monitors.length > 0 ? layoutWidth / layoutHeight : 1,
+  );
+
+  if (monitors.length === 0) {
+    return (
+      <div className="flex h-full w-full items-center justify-center rounded-panel p-control-inset">
+        <Text variant="subheadline">No Displays</Text>
+      </div>
+    );
+  }
+
   const orientation = layoutWidth >= layoutHeight ? "horizontal" : "vertical";
   const orderedMonitors = orderMonitorsForNavigation(monitors, orientation);
   const focusTargetId = orderedMonitors.some(
@@ -65,16 +112,17 @@ export function MonitorSelector({
     : orderedMonitors[0]?.id;
 
   return (
-    <div className="inset-shadow-full p-section flex h-full w-full items-center justify-center overflow-hidden rounded-window">
+    // The display arrangement as Displays settings draws it: tiles laid out
+    // as the displays sit, with the chosen one on the accent.
+    <div
+      className="flex h-full w-full items-center justify-center overflow-hidden rounded-panel p-control-inset"
+      ref={containerRef}
+    >
       <ButtonGroup
         aria-label="Displays"
-        className="relative max-h-full max-w-full"
+        className="relative"
         orientation={orientation}
-        style={{
-          aspectRatio: layoutWidth / layoutHeight,
-          height: `min(84%, 84vw / ${String(layoutWidth / layoutHeight)})`,
-          width: `min(88%, 88vh * ${String(layoutWidth / layoutHeight)})`,
-        }}
+        style={fitted}
       >
         {orderedMonitors.map((monitor) => {
           const isSelected = selectedMonitor?.id === monitor.id;
@@ -83,10 +131,8 @@ export function MonitorSelector({
             <Button
               aria-label={`Select ${monitor.name}`}
               className={cn(
-                "px-control absolute min-h-8 min-w-12 transform-gpu justify-center overflow-hidden shadow-md",
-                focusContents &&
-                  monitor.id === focusTargetId &&
-                  "focus:ring-1 focus:ring-offset-1",
+                "absolute h-auto min-h-8 min-w-12 transform-gpu justify-center overflow-hidden px-control",
+                focusContents && monitor.id === focusTargetId && "focus:ring-3",
               )}
               color={isSelected ? "primary" : "neutral"}
               data-source-selector-focus-target={
@@ -109,11 +155,21 @@ export function MonitorSelector({
                 width: `${String((monitor.layoutSize.width / layoutWidth) * 100)}%`,
               }}
             >
-              <span className="gap-control flex min-w-0 flex-col items-center">
-                <Monitor aria-hidden className="size-icon-compact" />
-                <span className="max-w-full truncate">{monitor.name}</span>
-                {monitor.isPrimary ? <Badge>Primary</Badge> : null}
-              </span>
+              {/* The still is the tile: position and picture say which
+                  display this is, as the Displays settings arrangement does,
+                  and the name is left to the accessible label. Without a
+                  still the name is all there is to show. */}
+              {thumbnails[monitor.id] ? (
+                <img
+                  alt=""
+                  className="absolute inset-0 size-full object-cover"
+                  src={thumbnails[monitor.id]}
+                />
+              ) : (
+                <span className="relative max-w-full truncate text-subheadline">
+                  {monitor.name}
+                </span>
+              )}
             </Button>
           );
         })}
