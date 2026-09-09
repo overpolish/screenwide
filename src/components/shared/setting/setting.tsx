@@ -17,6 +17,10 @@ export type SettingProps = {
   className?: string;
   controlClassName?: string;
   description?: string;
+  /** An icon tile or glyph before the text, as the Privacy list shows one. */
+  leading?: ReactNode;
+  /** Something beside the title, such as a badge. */
+  titleAccessory?: ReactNode;
 };
 
 /** Spread controlProps onto the actual control, not its layout wrapper.
@@ -27,7 +31,9 @@ export function Setting({
   className,
   controlClassName,
   description,
+  leading,
   title,
+  titleAccessory,
 }: SettingProps) {
   const id = useId();
   const titleId = `${id}-title`;
@@ -37,10 +43,16 @@ export function Setting({
     // A settings row as System Settings lays one out: title with its
     // description directly beneath, and the control trailing.
     <div className={cn("flex items-center gap-layout", className)}>
+      {leading ? (
+        <div className="-mr-section flex shrink-0 items-center">{leading}</div>
+      ) : null}
       <div className="flex min-w-0 flex-1 flex-col gap-tight">
-        <Text className="break-words" id={titleId}>
-          {title}
-        </Text>
+        <div className="flex items-center gap-control">
+          <Text className="break-words" id={titleId}>
+            {title}
+          </Text>
+          {titleAccessory}
+        </div>
         {description ? (
           <Text
             className="break-words"

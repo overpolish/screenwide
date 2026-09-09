@@ -4,7 +4,6 @@
 import { RefObject, useEffect, useRef, useState } from "react";
 
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
-import { Overlay } from "../../../components/base/overlay/overlay";
 
 /** A pane's geometry is expressed in the unscaled workspace coordinate space. */
 type NativeRecordingWorkspacePane = {
@@ -119,14 +118,14 @@ export function NativeRecordingWorkspaceViewport({
           />
         ))}
       </div>
-      <Overlay
-        blur="sm"
-        className="pointer-events-none"
-        contained
-        isOpen={isBusy}
-      >
-        <CircularProgress aria-label="Preparing the preview" isIndeterminate />
-      </Overlay>
+      {isBusy ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <CircularProgress
+            aria-label="Preparing the preview"
+            isIndeterminate
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

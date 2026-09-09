@@ -8,6 +8,7 @@ import { TooltipTrigger } from "react-aria-components";
 import { Badge } from "../../components/base/badge/badge";
 import { Button } from "../../components/base/button/button";
 import { Tooltip } from "../../components/base/tooltip/tooltip";
+import { Setting } from "../../components/shared/setting/setting";
 import { cn } from "../../lib/styling";
 
 import { PermissionKind, PermissionStatus } from "./types";
@@ -38,37 +39,35 @@ export function PermissionRow({
   };
 
   return (
-    <div className="gap-section flex items-center">
-      <div
-        className={cn(
-          "flex size-16 items-center justify-center rounded-2xl text-white",
-          color,
-        )}
-      >
-        {icon}
-      </div>
-      <div className="flex grow flex-col text-content-fg">
-        <div className="gap-control flex items-center">
-          <span className="font-semibold">{title}</span>
-          {isOptional ? <Badge>Optional</Badge> : null}
+    <Setting
+      description={description}
+      leading={
+        <div
+          className={cn(
+            "flex size-8 items-center justify-center rounded-control text-white [&_svg]:size-icon",
+            color,
+          )}
+        >
+          {icon}
         </div>
-        {description ? (
-          <span className="text-sm text-muted">{description}</span>
-        ) : null}
-      </div>
-
-      {status.granted ? (
-        <div className="flex w-[62px] justify-center">
-          <Check className="text-success" size={32} />
-        </div>
-      ) : (
-        <TooltipTrigger isDisabled={status.canRequest}>
-          <Button onPress={grant}>
-            {status.canRequest ? "Grant" : "Open System Settings"}
-          </Button>
-          <Tooltip>Enable manually</Tooltip>
-        </TooltipTrigger>
-      )}
-    </div>
+      }
+      title={title}
+      titleAccessory={isOptional ? <Badge>Optional</Badge> : undefined}
+    >
+      {(controlProps) =>
+        status.granted ? (
+          <div className="flex h-control-height shrink-0 items-center">
+            <Check className="size-icon text-success" />
+          </div>
+        ) : (
+          <TooltipTrigger isDisabled={status.canRequest}>
+            <Button {...controlProps} onPress={grant}>
+              {status.canRequest ? "Grant" : "Open System Settings"}
+            </Button>
+            <Tooltip>Enable manually</Tooltip>
+          </TooltipTrigger>
+        )
+      }
+    </Setting>
   );
 }

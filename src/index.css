@@ -57,13 +57,12 @@
   --spacing-section: 0.75rem;
   /* Separation between major layout areas, such as navigation and content. */
   --spacing-layout: 1.5rem;
-  --spacing-window-inset: 1.25rem;
+  --spacing-window-inset: 0.875rem;
   /* Regular control height, measured from an AppKit push button on macOS 26. */
   --spacing-control-height: 1.5rem;
-  /* A native title bar carrying toolbar items, measured on macOS 26. */
-  --spacing-title-bar: 3.25rem;
-  /* Leading inset that clears the three traffic lights, which sit at x 20. */
-  --spacing-traffic-lights: 5rem;
+  /* Leading inset that clears the three traffic lights, which sit at x 14,
+     plus the window inset before the first toolbar item. Tuned live. */
+  --spacing-traffic-lights: 5.5rem;
   --spacing-focus-safe: 0.125rem;
   /* Icon sizes matched to SF Symbols in AppKit controls, measured on macOS 26:
      a 13pt regular control draws its symbol in a 17x16 box, small (11pt) in

@@ -82,10 +82,12 @@ fn main() {
     println!("cargo:rerun-if-changed=src/recording/platform/desktop_compositor_macos.m");
     println!("cargo:rerun-if-changed=src/ruler/cursor_guard_macos.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/native.m");
+    println!("cargo:rerun-if-changed=src/glide/macos/drag_start.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/carry.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/drag_point.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/target.h");
     cc::Build::new()
+      .file("src/glide/macos/drag_start.m")
       .file("src/glide/macos/spaces/native.m")
       .file("src/glide/macos/spaces/carry.m")
       .file("src/glide/macos/spaces/drag_point.m")

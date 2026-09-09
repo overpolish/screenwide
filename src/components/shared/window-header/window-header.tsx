@@ -60,7 +60,9 @@ export function WindowHeader({
   return (
     <header
       className={cn(
-        "h-title-bar gap-section px-window-inset flex shrink-0 items-center text-content-fg",
+        // The title bar is the window inset around 24px controls on every
+        // side, so the content below needs no top padding of its own.
+        "flex shrink-0 items-center gap-section p-window-inset text-content-fg",
         !isWindows && "pl-traffic-lights",
         className,
       )}
@@ -82,7 +84,12 @@ export function WindowHeader({
           edgeClassName="rounded-control"
           edgeEffect="shadow"
           orientation="horizontal"
-          rootClassName="pointer-events-auto w-max min-w-0 max-w-full shrink"
+          // A plain title is part of the drag region like the logo; only an
+          // editable one takes the pointer.
+          rootClassName={cn(
+            "w-max min-w-0 max-w-full shrink",
+            onTitleChange && "pointer-events-auto",
+          )}
           scrollbarHidden
         >
           <Text

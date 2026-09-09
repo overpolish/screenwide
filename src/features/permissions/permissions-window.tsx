@@ -3,10 +3,13 @@
 
 import { Disc, Mic, PersonStanding, Video } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useRef } from "react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
 import { Button } from "../../components/base/button/button";
+import { GroupBox } from "../../components/base/group-box/group-box";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
+import { useFitWindowHeight } from "../../lib/use-fit-window-height";
 
 import {
   dismissPermissionsWindow,
@@ -19,7 +22,6 @@ import { permissionsPreviewSnapshot } from "./permissions-preview";
 import { usePermissionStore } from "./store";
 import { PermissionKind, PermissionSnapshot, PermissionStatus } from "./types";
 
-const ICON_SIZE = 40;
 const gradients = {
   blue: "bg-linear-0 from-[#3B83F7] from-20% to-[#5DA3F8]",
   gray: "bg-linear-0 from-[#98989D] from-20% to-[#C0C0C4]",
@@ -59,9 +61,16 @@ export function PermissionsWindow({
     (permissionsPreviewEnabled ? permissionsPreviewSnapshot : livePermissions);
   const hasRequired =
     permissions.accessibility.granted && permissions.screenRecording.granted;
+  // A fixed-size window would leave empty space beneath the list, so the
+  // window is fitted to the list like a native panel.
+  const contentRef = useRef<HTMLElement>(null);
+  useFitWindowHeight(contentRef);
 
   return (
-    <main className="window-surface gap-section flex h-full flex-col overflow-hidden">
+    <main
+      className="window-surface flex w-full flex-col overflow-hidden"
+      ref={contentRef}
+    >
       <WindowHeader
         actions={
           <AnimatePresence>
@@ -91,42 +100,47 @@ export function PermissionsWindow({
         title="Permissions"
       />
 
-      <div className="gap-section px-window-inset pb-window-inset flex flex-col">
-        <PermissionRow
-          color={gradients.blue}
-          description="For capturing cursor events."
-          icon={<PersonStanding size={ICON_SIZE} />}
-          onGrant={onGrant}
-          permission="accessibility"
-          status={permissions.accessibility}
-          title="Accessibility"
-        />
-        <PermissionRow
-          color={gradients.red}
-          icon={<Disc size={ICON_SIZE} />}
-          onGrant={onGrant}
-          permission="screenRecording"
-          status={permissions.screenRecording}
-          title="Screen Recording"
-        />
-        <PermissionRow
-          color={gradients.gray}
-          icon={<Video size={ICON_SIZE} />}
-          isOptional
-          onGrant={onGrant}
-          permission="camera"
-          status={permissions.camera}
-          title="Camera"
-        />
-        <PermissionRow
-          color={gradients.gray}
-          icon={<Mic size={ICON_SIZE} />}
-          isOptional
-          onGrant={onGrant}
-          permission="microphone"
-          status={permissions.microphone}
-          title="Microphone"
-        />
+      <div className="flex flex-col px-window-inset pb-window-inset">
+        <GroupBox>
+          <PermissionRow
+            color={gradients.blue}
+            description="Cursor and keyboard events in recordings."
+            icon={<PersonStanding />}
+            onGrant={onGrant}
+            permission="accessibility"
+            status={permissions.accessibility}
+            title="Accessibility"
+          />
+          <PermissionRow
+            color={gradients.red}
+            description="Screen and system audio in recordings."
+            icon={<Disc />}
+            onGrant={onGrant}
+            permission="screenRecording"
+            status={permissions.screenRecording}
+            title="Screen Recording"
+          />
+          <PermissionRow
+            color={gradients.gray}
+            description="Camera overlay in recordings."
+            icon={<Video />}
+            isOptional
+            onGrant={onGrant}
+            permission="camera"
+            status={permissions.camera}
+            title="Camera"
+          />
+          <PermissionRow
+            color={gradients.gray}
+            description="Voice in recordings."
+            icon={<Mic />}
+            isOptional
+            onGrant={onGrant}
+            permission="microphone"
+            status={permissions.microphone}
+            title="Microphone"
+          />
+        </GroupBox>
       </div>
     </main>
   );

@@ -72,7 +72,6 @@ const spacingTokens = [
   "w-layout",
   "w-window-inset",
   "w-control-height",
-  "w-title-bar",
   "w-traffic-lights",
 ];
 

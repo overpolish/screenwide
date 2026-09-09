@@ -75,6 +75,14 @@ pub(super) fn suspend_for_capture(app: &AppHandle) {
 }
 
 pub(super) fn start(app: AppHandle) -> Result<(), String> {
+  app
+    .run_on_main_thread(|| unsafe {
+      extern "C" {
+        fn sw_glide_install_drag_start();
+      }
+      sw_glide_install_drag_start();
+    })
+    .map_err(|error| error.to_string())?;
   spaces::preload(&app);
   tween::start();
   multitouch::start(&app);

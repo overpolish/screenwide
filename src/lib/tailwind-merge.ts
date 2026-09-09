@@ -17,8 +17,28 @@ const fontSizes = [
   "footnote",
 ];
 
+/**
+ * Semantic spacing declared as `--spacing-*` in `index.css`. Without these,
+ * two padding classes on different tokens are both kept and CSS order decides.
+ */
+const spacing = [
+  "tight",
+  "control",
+  "control-inset",
+  "section",
+  "layout",
+  "window-inset",
+  "control-height",
+  "traffic-lights",
+  "focus-safe",
+  "icon",
+  "icon-small",
+  "icon-mini",
+  "icon-large",
+];
+
 export const twMergeConfig = {
-  extend: { theme: { text: fontSizes } },
+  extend: { theme: { spacing, text: fontSizes } },
 };
 
 export const twMerge = extendTailwindMerge(twMergeConfig);

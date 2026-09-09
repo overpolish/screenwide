@@ -5,9 +5,10 @@ import { ReactNode } from "react";
 
 type FeatureStoryStageProps = {
   children: ReactNode;
-  height: number;
   viewMode: string;
   width: number;
+  /** Omit for a window that is fitted to its content. */
+  height?: number;
 };
 
 /**

@@ -16,11 +16,6 @@ import { TooltipTrigger } from "react-aria-components";
 import { Button } from "../../components/base/button/button";
 import { IconToggleButton } from "../../components/base/button/icon-button";
 import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
-import {
-  FieldGroup,
-  FieldGroupAction,
-  FieldGroupFooter,
-} from "../../components/base/field-group/field-group";
 import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { Select } from "../../components/base/select/select";
 import { Tooltip } from "../../components/base/tooltip/tooltip";
@@ -293,7 +288,7 @@ export function RecordingOptions({
           ) : null}
         </div>
 
-        <FieldGroup className="flex items-center">
+        <div className="flex items-center gap-control">
           <div className="min-w-0 flex-1">
             <InputSelect
               icon={<Camera className="size-icon-compact" />}
@@ -308,7 +303,7 @@ export function RecordingOptions({
             />
           </div>
           {selectedCamera && onCameraFlippedChange ? (
-            <FieldGroupAction>
+            <div className="flex shrink-0 items-center">
               <TooltipTrigger delay={400}>
                 <IconToggleButton
                   aria-label="Flip camera horizontally"
@@ -321,10 +316,10 @@ export function RecordingOptions({
                 </IconToggleButton>
                 <Tooltip placement="top">Flip camera</Tooltip>
               </TooltipTrigger>
-            </FieldGroupAction>
+            </div>
           ) : null}
-        </FieldGroup>
-        <FieldGroup className="flex items-center">
+        </div>
+        <div className="flex items-center gap-control">
           <div className="min-w-0 flex-1">
             <InputSelect
               icon={<Scan className="size-icon-compact" />}
@@ -338,7 +333,7 @@ export function RecordingOptions({
             />
           </div>
           {selectedCamera && onCameraPalChange ? (
-            <FieldGroupAction>
+            <div className="flex shrink-0 items-center">
               <TooltipTrigger delay={400}>
                 <IconToggleButton
                   aria-label="Anti-flicker frequency"
@@ -351,9 +346,9 @@ export function RecordingOptions({
                 </IconToggleButton>
                 <Tooltip placement="top">Anti-flicker frequency</Tooltip>
               </TooltipTrigger>
-            </FieldGroupAction>
+            </div>
           ) : null}
-        </FieldGroup>
+        </div>
       </section>
 
       <section className="relative">
@@ -364,7 +359,7 @@ export function RecordingOptions({
           />
         ) : null}
 
-        <FieldGroup className="gap-control flex flex-col">
+        <div className="flex flex-col gap-control">
           <InputSelect
             icon={<Mic className="size-icon-compact" />}
             id="microphone"
@@ -376,7 +371,7 @@ export function RecordingOptions({
             selected={selectedMicrophone}
             standalone={standalone}
           />
-          <FieldGroupFooter>
+          <div>
             <AudioMeter
               decibels={microphoneDecibels}
               disabled={!microphonePreviewEnabled}
@@ -386,12 +381,12 @@ export function RecordingOptions({
               peak={microphonePeak}
               width="100%"
             />
-          </FieldGroupFooter>
-        </FieldGroup>
+          </div>
+        </div>
       </section>
 
       <section>
-        <FieldGroup className="gap-control flex flex-col">
+        <div className="flex flex-col gap-control">
           <SystemAudioSelect
             items={audioSources}
             onChange={onSystemAudioChange}
@@ -399,7 +394,7 @@ export function RecordingOptions({
             selected={selectedSystemAudio}
             standalone={standalone}
           />
-          <FieldGroupFooter>
+          <div>
             <AudioMeter
               decibels={systemAudioDecibels}
               disabled={!systemAudioPreviewEnabled}
@@ -409,8 +404,8 @@ export function RecordingOptions({
               peak={systemAudioPeak}
               width="100%"
             />
-          </FieldGroupFooter>
-        </FieldGroup>
+          </div>
+        </div>
       </section>
     </main>
   );

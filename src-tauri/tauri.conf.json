@@ -26,10 +26,7 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": {
-          "x": 20,
-          "y": 20
-        },
+        "trafficLightPosition": { "x": 14, "y": 27 },
         "resizable": true,
         "shadow": true,
         "skipTaskbar": false,
@@ -54,10 +51,7 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": {
-          "x": 20,
-          "y": 20
-        },
+        "trafficLightPosition": { "x": 14, "y": 27 },
         "resizable": true,
         "shadow": true,
         "skipTaskbar": false,
@@ -80,10 +74,7 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": {
-          "x": 20,
-          "y": 20
-        },
+        "trafficLightPosition": { "x": 14, "y": 27 },
         "minimizable": false,
         "maximizable": false,
         "resizable": false,
@@ -108,10 +99,7 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": {
-          "x": 20,
-          "y": 20
-        },
+        "trafficLightPosition": { "x": 14, "y": 27 },
         "minimizable": false,
         "maximizable": false,
         "resizable": false,
@@ -138,10 +126,7 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": {
-          "x": 20,
-          "y": 20
-        },
+        "trafficLightPosition": { "x": 14, "y": 27 },
         "resizable": true,
         "shadow": true,
         "skipTaskbar": false,
@@ -167,10 +152,7 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": {
-          "x": 20,
-          "y": 20
-        },
+        "trafficLightPosition": { "x": 14, "y": 27 },
         "minimizable": false,
         "maximizable": false,
         "resizable": true,

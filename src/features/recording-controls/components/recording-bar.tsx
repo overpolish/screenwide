@@ -20,7 +20,6 @@ import { ReactNode, useRef, useState } from "react";
 import { Button } from "../../../components/base/button/button";
 import { IconButton } from "../../../components/base/button/icon-button";
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
-import { Overlay } from "../../../components/base/overlay/overlay";
 import { RecordingFps, RecordingInputs } from "../../recording-inputs/types";
 import { RecordingMode } from "../../recording-sources/types";
 import { canStartRecording } from "../can-record";
@@ -221,18 +220,16 @@ export function RecordingBar({
         onPointerUp?.();
       }}
     >
-      <Overlay
-        blur="sm"
-        isOpen={Boolean(isScreenshotLocked) && isScreenCapture}
-      >
-        <IconButton
-          aria-label="Open permissions"
-          className="group"
-          onPress={onRequiredPermissionsPress}
-        >
-          <Lock className="transition-transform group-data-[hovered]:scale-110" />
-        </IconButton>
-      </Overlay>
+      {Boolean(isScreenshotLocked) && isScreenCapture ? (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-content">
+          <IconButton
+            aria-label="Open permissions"
+            onPress={onRequiredPermissionsPress}
+          >
+            <Lock />
+          </IconButton>
+        </div>
+      ) : null}
 
       {sourceSelector ? (
         <div className="gap-control flex h-6 shrink-0" ref={sourceSelectorRef}>

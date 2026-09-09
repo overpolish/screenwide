@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Overlay } from "../../../components/base/overlay/overlay";
 import { useExportOptionsBridge } from "../export-options/use-export-options-bridge";
 import { useExportOptionsOpen } from "../export-options/use-export-options-open";
 import {
@@ -200,9 +199,6 @@ export function EditorPanel({
         data-preview-backdrop
         data-preview-window-backdrop
       />
-      {/* The options window sits over the editor, and carries the save's own
-          progress, so the editor recedes for both. */}
-      <Overlay blur="lg" contained isOpen={isExportOpen} />
       <EditorTitlebar
         artifact={artifact}
         canExport={canExport}

@@ -10,7 +10,6 @@ import {
 } from "../../../components/base/button/icon-button";
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { ContentRotate } from "../../../components/base/content-rotate/content-rotate";
-import { Overlay } from "../../../components/base/overlay/overlay";
 import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { cn } from "../../../lib/styling";
 import { AudioMeter } from "../../audio-inputs/components/audio-meter";
@@ -124,53 +123,54 @@ export function RecordingDock({
       onPointerUpCapture={onPointerUp}
       ref={dockRef}
     >
-      <Overlay
-        aria-label={
-          status === "starting" ? "Starting recording" : "Finishing recording"
-        }
-        className="z-60 rounded-window text-content-fg"
-        contained
-        isOpen={isBusy}
-      >
-        {status === "starting" && countdownSeconds > 0 ? (
-          <ContentRotate
-            className="flex h-full items-center justify-center font-mono text-xl font-bold tabular-nums"
-            containerClassName="absolute inset-0"
-            contentKey={String(countdownSeconds)}
-          >
-            {countdownSeconds}
-          </ContentRotate>
-        ) : (
-          <div className="gap-control-inset flex items-center justify-center text-sm">
-            <CircularProgress isIndeterminate size="compact" />
-            {/*
-             * Fixed-width label, so the centred row is a whole number of pixels
-             * wide and the spinner lands on a whole pixel. WebKit re-rasterises
-             * a rotating element sitting on a fractional pixel once per frame,
-             * and the snapping makes it wobble by about half a pixel; Chromium
-             * does not, which is why this only ever showed up in the app. The
-             * width also has to stay independent of the text, since measured
-             * glyph widths differ per engine.
-             */}
-            <span className="w-14 text-center">
-              {status === "starting" ? "Starting" : "Finishing"}
-            </span>
-          </div>
-        )}
-        <IconButton
+      {isBusy ? (
+        <div
           aria-label={
-            status === "starting" && countdownSeconds > 0
-              ? "Cancel recording countdown"
-              : status === "starting"
-                ? "Cancel starting recording"
-                : "Cancel finishing recording"
+            status === "starting" ? "Starting recording" : "Finishing recording"
           }
-          className="right-section absolute top-1/2 -translate-y-1/2"
-          onPress={onDiscard}
+          className="absolute inset-0 z-60 flex items-center justify-center rounded-window bg-content text-content-fg"
+          role="status"
         >
-          <X />
-        </IconButton>
-      </Overlay>
+          {status === "starting" && countdownSeconds > 0 ? (
+            <ContentRotate
+              className="flex h-full items-center justify-center font-mono text-xl font-bold tabular-nums"
+              containerClassName="absolute inset-0"
+              contentKey={String(countdownSeconds)}
+            >
+              {countdownSeconds}
+            </ContentRotate>
+          ) : (
+            <div className="gap-control-inset flex items-center justify-center text-sm">
+              <CircularProgress isIndeterminate size="small" />
+              {/*
+               * Fixed-width label, so the centred row is a whole number of pixels
+               * wide and the spinner lands on a whole pixel. WebKit re-rasterises
+               * a rotating element sitting on a fractional pixel once per frame,
+               * and the snapping makes it wobble by about half a pixel; Chromium
+               * does not, which is why this only ever showed up in the app. The
+               * width also has to stay independent of the text, since measured
+               * glyph widths differ per engine.
+               */}
+              <span className="w-14 text-center">
+                {status === "starting" ? "Starting" : "Finishing"}
+              </span>
+            </div>
+          )}
+          <IconButton
+            aria-label={
+              status === "starting" && countdownSeconds > 0
+                ? "Cancel recording countdown"
+                : status === "starting"
+                  ? "Cancel starting recording"
+                  : "Cancel finishing recording"
+            }
+            className="right-section absolute top-1/2 -translate-y-1/2"
+            onPress={onDiscard}
+          >
+            <X />
+          </IconButton>
+        </div>
+      ) : null}
       {hasConfidenceChecks && (
         <div className="gap-control flex h-full shrink-0 items-center">
           {monitor.hasCamera && (

@@ -104,7 +104,7 @@ pub fn show(
         .decorations(true)
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         .hidden_title(true)
-        .traffic_light_position(tauri::LogicalPosition::new(20.0, 20.0));
+        .traffic_light_position(tauri::LogicalPosition::new(14.0, 27.0));
     }
     let window = builder.build().map_err(|error| error.to_string())?;
     let close_app = app.clone();

@@ -15,7 +15,7 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
       WebviewUrl::App("/permissions".into()),
     )
     .title("Screenwide Permissions")
-    .inner_size(540.0, 400.0)
+    .inner_size(480.0, 320.0)
     .center()
     .always_on_top(false)
     .closable(true)
@@ -24,7 +24,7 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
     .decorations(true)
     .title_bar_style(TitleBarStyle::Overlay)
     .hidden_title(true)
-    .traffic_light_position(LogicalPosition::new(20.0, 20.0))
+    .traffic_light_position(LogicalPosition::new(14.0, 27.0))
     .resizable(false)
     .shadow(true)
     .skip_taskbar(true)
