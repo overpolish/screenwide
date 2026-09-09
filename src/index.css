@@ -17,6 +17,55 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The label tiers also carry their alpha for icons, which apply it to the
+   whole glyph rather than per stroke (see the `.lucide` rule). Opaque colours
+   reset it, so an icon recoloured inside a secondary-coloured container is
+   not faded as well. */
+@utility text-content-fg {
+  color: var(--color-content-fg);
+  --icon-alpha: var(--alpha-content-fg);
+}
+@utility text-content-fg-secondary {
+  color: var(--color-content-fg-secondary);
+  --icon-alpha: var(--alpha-content-fg-secondary);
+}
+@utility text-content-fg-tertiary {
+  color: var(--color-content-fg-tertiary);
+  --icon-alpha: var(--alpha-content-fg-tertiary);
+}
+@utility text-content-fg-quaternary {
+  color: var(--color-content-fg-quaternary);
+  --icon-alpha: var(--alpha-content-fg-quaternary);
+}
+@utility text-primary-fg {
+  color: var(--color-primary-fg);
+  --icon-alpha: 1;
+}
+@utility text-primary {
+  color: var(--color-primary);
+  --icon-alpha: 1;
+}
+@utility text-success {
+  color: var(--color-success);
+  --icon-alpha: 1;
+}
+@utility text-info {
+  color: var(--color-info);
+  --icon-alpha: 1;
+}
+@utility text-warning {
+  color: var(--color-warning);
+  --icon-alpha: 1;
+}
+@utility text-error {
+  color: var(--color-error);
+  --icon-alpha: 1;
+}
+@utility text-white {
+  color: white;
+  --icon-alpha: 1;
+}
+
 @theme {
   --font-sans:
     "Inter Variable", ui-sans-serif, system-ui, -apple-system,
@@ -130,6 +179,10 @@
   --color-content-fg-secondary: rgb(0 0 0 / 50%);
   --color-content-fg-tertiary: rgb(0 0 0 / 25%);
   --color-content-fg-quaternary: rgb(0 0 0 / 10%);
+  --alpha-content-fg: 0.85;
+  --alpha-content-fg-secondary: 0.5;
+  --alpha-content-fg-tertiary: 0.25;
+  --alpha-content-fg-quaternary: 0.1;
   --color-shadow: rgb(0 0 0 / 30%);
 
   /* Primary follows the operating system accent when the user has chosen one;
@@ -201,6 +254,10 @@
     --color-content-fg-secondary: rgb(255 255 255 / 55%);
     --color-content-fg-tertiary: rgb(255 255 255 / 25%);
     --color-content-fg-quaternary: rgb(255 255 255 / 10%);
+    --alpha-content-fg: 0.85;
+    --alpha-content-fg-secondary: 0.55;
+    --alpha-content-fg-tertiary: 0.25;
+    --alpha-content-fg-quaternary: 0.1;
 
     --color-fill: rgb(255 255 255 / 10%);
     --color-fill-secondary: rgb(255 255 255 / 8%);
@@ -280,6 +337,12 @@ body {
    measured in screen pixels rather than the icon's 24-unit grid. */
 .lucide {
   stroke-width: 1.5px;
+  /* Lucide draws separate strokes that cross, and a translucent colour on
+     each stroke doubles up where they do. SF Symbols are single outlines with
+     no overlaps. So an icon is drawn in the opaque form of its colour and the
+     tier's alpha is applied once to the whole glyph. */
+  color: rgb(from currentColor r g b / 1);
+  opacity: var(--icon-alpha, 1);
 }
 
 .lucide * {

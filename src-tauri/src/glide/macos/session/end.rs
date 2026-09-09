@@ -139,7 +139,7 @@ fn take_session(
 }
 
 fn releases_cursor_immediately(monitor_selection: bool, moved: bool, returned: bool) -> bool {
-  returned || (monitor_selection && !moved)
+  monitor_selection && (!moved || returned)
 }
 
 #[cfg(test)]
@@ -151,5 +151,11 @@ mod tests {
     assert!(releases_cursor_immediately(true, false, false));
     assert!(releases_cursor_immediately(true, true, true));
     assert!(!releases_cursor_immediately(false, false, false));
+  }
+
+  #[test]
+  fn flick_into_occupied_slot_keeps_cursor_hidden_through_completion() {
+    assert!(!releases_cursor_immediately(false, true, true));
+    assert!(!releases_cursor_immediately(false, true, false));
   }
 }

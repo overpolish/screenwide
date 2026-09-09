@@ -55,7 +55,9 @@ for (const [name, icon] of Object.entries({
       y: 4,
     }),
   );
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><g opacity="0.72">${glyph}</g></svg>`;
+  // A full-alpha mask: as a template image, AppKit paints it in the menu's
+  // label colour, so the glyph matches the item text exactly.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36">${glyph}</svg>`;
   await writeFile(
     new URL(`${name}.png`, output),
     new Resvg(svg).render().asPng(),
