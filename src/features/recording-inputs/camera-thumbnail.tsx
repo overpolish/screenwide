@@ -26,6 +26,10 @@ type CameraThumbnailProps = {
   /** Sets the stage's width; its height follows the aspect ratio. */
   className?: string;
   isDimmed?: boolean;
+  /** Mirrors the picture, as a flipped camera is recorded. The preview
+   * stream itself is not flipped; the recording is, so the stage shows what
+   * will be kept. */
+  isFlipped?: boolean;
 };
 
 /**
@@ -39,6 +43,7 @@ export function CameraThumbnail({
   frameSize,
   hasFrame,
   isDimmed = false,
+  isFlipped = false,
 }: CameraThumbnailProps) {
   return (
     <span
@@ -61,6 +66,7 @@ export function CameraThumbnail({
             ? cameraPreviewFitClassName(frameSize)
             : "max-h-full max-w-full",
           isDimmed && "opacity-50",
+          isFlipped && "-scale-x-100",
         )}
         hidden={!hasFrame}
         ref={canvasRef}

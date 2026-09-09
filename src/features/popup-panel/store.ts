@@ -17,6 +17,9 @@ export type PopupPanelItem = {
   /** Heads the run of consecutive items that name the same section. Items
    * without one sit in an unheaded group. */
   section?: string;
+  /** A toggle in a single-selection list: a press flips its tick and leaves
+   * the panel open, so several can be set in one visit. */
+  togglesInPlace?: boolean;
 };
 
 type OpenPopupPanel = {
@@ -36,6 +39,10 @@ type PopupPanelSelection = {
   eventId: string;
   id: string;
   selectedIds: string[];
+  /** The item the press landed on. In a single-selection list this is the
+   * choice; a toggle reports itself here while `selectedIds` carries the
+   * whole tick list it belongs to. */
+  pressedId?: string;
 };
 
 type PopupPanelStore = {
@@ -43,7 +50,7 @@ type PopupPanelStore = {
   close: () => void;
   lastSelection: PopupPanelSelection | null;
   open: (listbox: OpenPopupPanel) => void;
-  select: (id: string, selectedIds: string[]) => void;
+  select: (id: string, selectedIds: string[], pressedId?: string) => void;
 };
 
 const STORE_NAME = "screenwide-standalone-listbox";
@@ -60,10 +67,11 @@ export const usePopupPanelStore = create<PopupPanelStore>()(
       open: (active) => {
         set({ active });
       },
-      select: (id, selectedIds) => {
+      select: (id, selectedIds, pressedId) => {
         const lastSelection = {
           eventId: crypto.randomUUID(),
           id,
+          pressedId,
           selectedIds,
         };
         set((state) => ({

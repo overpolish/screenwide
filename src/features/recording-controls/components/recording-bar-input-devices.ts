@@ -160,7 +160,9 @@ export function useRecordingBarInputDevices({
     }
 
     handledEventRef.current = lastSelection.eventId;
-    const [selectedId] = lastSelection.selectedIds;
+    // The pressed item is the choice; the tick list only stands in for
+    // panels that predate it reporting one.
+    const selectedId = lastSelection.pressedId ?? lastSelection.selectedIds[0];
 
     if (lastSelection.id === CAMERA_PANEL_ID) {
       if (selectedId.startsWith(OPTION_ID_PREFIX)) {

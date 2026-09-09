@@ -214,6 +214,7 @@ export function RecordingBarInputs({
               }
               frameSize={cameraStageSize}
               hasFrame={cameraPreview.hasFrame}
+              isFlipped={cameraFlipped}
             />
           </span>
         </ToggleMenuButton>

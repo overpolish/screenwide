@@ -124,11 +124,21 @@ export function PopupPanelWindow() {
     );
   }
 
-  const selectItem = (selectedId: number | string) => {
+  const selectItem = (item: PopupPanelItem) => {
     if (selectingRef.current) return;
 
+    // A toggle flips its own tick in the list it belongs to and stays open;
+    // the listener reads which item was pressed rather than the tick list.
+    if (item.togglesInPlace) {
+      const selectedIds = active.selectedIds.includes(item.id)
+        ? active.selectedIds.filter((id) => id !== item.id)
+        : [...active.selectedIds, item.id];
+      select(active.id, selectedIds, item.id);
+      return;
+    }
+
     selectingRef.current = true;
-    select(active.id, [selectedId.toString()]);
+    select(active.id, [item.id], item.id);
     close();
     void hidePopupPanel(active.focusContents).finally(() => {
       selectingRef.current = false;
@@ -137,13 +147,10 @@ export function PopupPanelWindow() {
 
   const onSelectionChange = (selection: "all" | Set<number | string>) => {
     if (selection === "all") return;
-    if (active.selectionMode === "single") {
-      const selected = selection.values().next();
-      if (!selected.done) {
-        select(active.id, [selected.value.toString()]);
-      }
-      return;
-    }
+    // A single choice is reported by the item's own press, which also fires
+    // for the item already chosen; reporting it here as well sent every press
+    // twice, which flipped a toggle straight back.
+    if (active.selectionMode === "single") return;
 
     const selectedIds = new Set(
       [...selection].map((selectedId) => selectedId.toString()),
@@ -171,7 +178,7 @@ export function PopupPanelWindow() {
       id={item.id}
       key={item.id}
       onPress={() => {
-        if (active.selectionMode === "single") selectItem(item.id);
+        if (active.selectionMode === "single") selectItem(item);
       }}
       showsSelection={showsSelection}
       textValue={item.label}

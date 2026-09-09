@@ -25,6 +25,15 @@ function TickingDock({ fromMs }: { fromMs: number }) {
 
 const meta = {
   component: RecordingDock,
+  decorators: [
+    // The dock is as wide as its content, so the stage only fixes the pill's
+    // production height and lets the width follow the state on show.
+    (Story) => (
+      <div className="flex h-10 w-max">
+        <Story />
+      </div>
+    ),
+  ],
   parameters: {
     layout: "centered",
   },
@@ -117,6 +126,6 @@ export const Paused: Story = {
   args: { elapsedMs: 42_000, status: "paused" },
 };
 
-export const Stopping: Story = {
+export const Finishing: Story = {
   args: { elapsedMs: 42_000, status: "stopping" },
 };

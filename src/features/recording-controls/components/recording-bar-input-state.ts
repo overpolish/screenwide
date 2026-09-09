@@ -29,8 +29,18 @@ export const OPTION_ID_PREFIX = "option:";
 export const FLIP_OPTION_ID = `${OPTION_ID_PREFIX}flip`;
 export const PAL_OPTION_ID = `${OPTION_ID_PREFIX}pal`;
 export const CAMERA_OPTION_ITEMS: PopupPanelItem[] = [
-  { id: FLIP_OPTION_ID, label: "Flip Horizontally", section: OPTIONS_SECTION },
-  { id: PAL_OPTION_ID, label: "Anti-Flicker 50 Hz", section: OPTIONS_SECTION },
+  {
+    id: FLIP_OPTION_ID,
+    label: "Flip Horizontally",
+    section: OPTIONS_SECTION,
+    togglesInPlace: true,
+  },
+  {
+    id: PAL_OPTION_ID,
+    label: "Anti-Flicker 50 Hz",
+    section: OPTIONS_SECTION,
+    togglesInPlace: true,
+  },
 ];
 
 /** Turning the input off is the first choice in a device list. */

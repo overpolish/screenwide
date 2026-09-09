@@ -270,7 +270,7 @@
         "title": "Screenwide Recording Dock",
         "url": "/recording-dock",
         "width": 200,
-        "height": 60,
+        "height": 40,
         "acceptFirstMouse": true,
         "alwaysOnTop": true,
         "decorations": false,
