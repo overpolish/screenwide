@@ -11,6 +11,9 @@ type PopupPanelMode = "menu" | "select";
 export type PopupPanelItem = {
   id: string;
   label: string;
+  /** A short note after the label, drawn as a badge at the trailing edge:
+   * a scale beside a size, say. */
+  detail?: string;
   /** A glyph from the popup panel window's registry, for items without artwork. */
   icon?: PopupPanelIcon;
   iconPath?: string | null;

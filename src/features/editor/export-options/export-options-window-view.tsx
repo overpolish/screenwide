@@ -5,6 +5,7 @@ import { Ref } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
 import { WindowHeader } from "../../../components/shared/window-header/window-header";
+import { WindowShell } from "../../../components/shared/window-shell/window-shell";
 import { cn } from "../../../lib/styling";
 import {
   EditorExportForm,
@@ -39,24 +40,27 @@ export function ExportOptionsWindowView({
   progress,
 }: ExportOptionsWindowViewProps) {
   return (
-    <main
-      className="window-surface gap-section relative flex w-full flex-col overflow-hidden rounded-window text-content-fg"
+    <WindowShell
+      className="relative"
+      header={
+        <WindowHeader
+          isDraggable={false}
+          leadingSection={
+            <img
+              alt="Screenwide"
+              className="brightness-0 dark:invert"
+              draggable={false}
+              src={logoUrl}
+            />
+          }
+          // The save is watched from here, so there is no way out until it ends.
+          onClose={isSaving ? undefined : onClose}
+          title="Export"
+        />
+      }
+      height="content"
       ref={contentRef}
     >
-      <WindowHeader
-        isDraggable={false}
-        leadingSection={
-          <img
-            alt="Screenwide"
-            className="brightness-0 dark:invert"
-            draggable={false}
-            src={logoUrl}
-          />
-        }
-        // The save is watched from here, so there is no way out until it ends.
-        onClose={isSaving ? undefined : onClose}
-        title="Export"
-      />
       {/* While saving, the sheet shows its progress in place of the form, as
           a native sheet doing work does. The form stays mounted but hidden so
           the window keeps its size and cancelling lands back on it. */}
@@ -75,6 +79,6 @@ export function ExportOptionsWindowView({
           </div>
         ) : null}
       </div>
-    </main>
+    </WindowShell>
   );
 }

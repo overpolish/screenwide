@@ -104,6 +104,33 @@ pub(super) fn sweep_cancelled_recordings(directory: &Path) {
   }
 }
 
+/// Removes metadata sidecars whose recording is no longer there.
+///
+/// The sidecar describes one movie and is consumed the moment that movie is
+/// finished or offered back, so any left next to nothing are the residue of a
+/// crash or of a recording swept away for age.
+pub(super) fn sweep_orphaned_meta(directory: &Path) {
+  let Ok(entries) = std::fs::read_dir(directory) else {
+    return;
+  };
+  for entry in entries.flatten() {
+    let path = entry.path();
+    let Some(stem) = path
+      .file_name()
+      .and_then(|name| name.to_str())
+      .and_then(|name| name.strip_suffix(crate::recording::meta_sidecar::SUFFIX))
+    else {
+      continue;
+    };
+    let has_recording = WORKING_RECORDING_EXTENSIONS
+      .iter()
+      .any(|extension| path.with_file_name(format!("{stem}.{extension}")).exists());
+    if !has_recording {
+      let _ = std::fs::remove_file(path);
+    }
+  }
+}
+
 pub(super) fn camera_for_recording(recording: &Path) -> Option<PathBuf> {
   let name = recording.file_name()?.to_str()?;
   let suffix = name.strip_prefix("recording-")?;
@@ -167,6 +194,9 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
     timeline_edit::remove_for_recording(&path);
     let _ = std::fs::remove_file(path);
   }
+  // After the deletions, so a swept recording takes its metadata with it, and
+  // before the recovery below, which still needs the survivor's own.
+  sweep_orphaned_meta(&directory);
   let Some(path) = plan.present else {
     sweep_unclaimed_cameras(&directory, None);
     sweep_unclaimed_cursors(&directory, None);
@@ -189,7 +219,13 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
       chrono::DateTime::<chrono::Local>::from,
     );
   let suggested_file_stem = crate::screenshots::capture_file_stem(recorded_at.naive_local());
-  let primary_kind = if path
+  // Written while the capture was running, and the only record of things the
+  // container itself cannot say. A recording made before this existed, or one
+  // whose sidecar did not survive, falls back to what the name implies.
+  let meta = crate::recording::meta_sidecar::read(&path);
+  let primary_kind = if let Some(meta) = &meta {
+    meta.primary_kind
+  } else if path
     .file_name()
     .and_then(|name| name.to_str())
     .is_some_and(|name| name.starts_with("audio-"))
@@ -208,6 +244,7 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
     // preview layout. It is an incomplete container, not a recoverable movie.
     let _ = std::fs::remove_file(&path);
     timeline_edit::remove_for_recording(&path);
+    crate::recording::meta_sidecar::remove(&path);
     if let Some(path) = camera_path {
       let _ = std::fs::remove_file(path);
     }
@@ -248,19 +285,40 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
       camera: recovered_camera,
       cursor_path,
       keyboard_path,
-      has_microphone: false,
-      has_system_audio: false,
+      has_microphone: meta.as_ref().is_some_and(|meta| meta.has_microphone),
+      has_system_audio: meta.as_ref().is_some_and(|meta| meta.has_system_audio),
       duration_ms,
       height,
-      path,
+      path: path.clone(),
       primary_kind,
-      source_scale_factor: 1.0,
+      source_scale_factor: meta
+        .as_ref()
+        .map(|meta| meta.source_scale_factor)
+        // A nonsense factor would size the export list off a division by
+        // something impossible. Without a sidecar, from before there was
+        // one, the main display's scale is the likeliest reading: a
+        // recording is nearly always made on the Mac that recovers it.
+        .filter(|factor| factor.is_finite() && *factor > 0.0)
+        .unwrap_or_else(|| display_scale_factor(app)),
       width,
     },
     suggested_file_stem,
   ) {
     eprintln!("Could not offer back an unsaved recording: {error}");
+  } else {
+    // Its values now live in the artifact the editor holds. Unlike the cursor
+    // and keyboard sidecars, which the editor goes on reading from disk, this
+    // one has nothing left to say.
+    crate::recording::meta_sidecar::remove(&path);
   }
+}
+
+fn display_scale_factor(app: &AppHandle) -> f32 {
+  app
+    .primary_monitor()
+    .ok()
+    .flatten()
+    .map_or(1.0, |monitor| monitor.scale_factor() as f32)
 }
 
 pub fn initialize(app: &AppHandle) {

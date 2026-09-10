@@ -11,7 +11,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use chrono::NaiveDateTime;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Told once, from the writer thread, when a recording stops being able to
 /// accept frames. The user sees one message however many frames follow.
@@ -36,9 +36,10 @@ pub struct FinalizeInfo {
   pub width: u32,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum PrimaryRecordingKind {
+  #[default]
   Screen,
   Camera,
   Audio,

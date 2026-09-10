@@ -6,7 +6,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import { cn } from "../../../lib/styling";
 
 export type TextProps = ComponentPropsWithoutRef<"p"> & {
-  as?: "h1" | "h2" | "h3" | "p" | "span";
+  as?: "h1" | "h2" | "h3" | "label" | "p" | "span";
   variant?:
     "body" | "footnote" | "headline" | "section" | "subheadline" | "title";
 };
@@ -22,11 +22,15 @@ const variants = {
 
 /** Typography only: the containing layout provides spacing. */
 export function Text({
-  as: Element = "p",
+  as = "p",
   className,
   variant = "body",
   ...props
 }: TextProps) {
+  // The tag varies, so the props are typed against the paragraph the text
+  // normally is; every tag offered takes the same global attributes, so the
+  // tag is checked as that paragraph too.
+  const Element = as as "p";
   return (
     <Element {...props} className={cn("m-0", variants[variant], className)} />
   );

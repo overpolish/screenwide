@@ -54,14 +54,12 @@ export function ExportProgress({
       action={
         cancellable ? (
           <ConfirmActionButton
-            armedClassName="bg-error-surface text-error data-[hovered]:bg-error-surface-hover data-[pressed]:bg-error-surface-pressed"
             armedIcon={<Check />}
             armedLabel="Confirm cancel"
             idleIcon={<X />}
             idleLabel={isCancelingSave ? "Canceling" : "Cancel"}
             isDisabled={isCancelingSave}
             onConfirm={onCancel}
-            size="compact"
             variant="text"
           />
         ) : undefined
@@ -70,7 +68,6 @@ export function ExportProgress({
       progress={progress}
       progressLabel="Save progress"
       secondary={etaSeconds === null ? undefined : formatEta(etaSeconds)}
-      size="large"
     />
   );
 }

@@ -3,7 +3,6 @@
 
 import { ArrowUpRight, X } from "lucide-react";
 
-import { Badge } from "../../../components/base/badge/badge";
 import { Button } from "../../../components/base/button/button";
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import { TextField } from "../../../components/base/input-fields/text-field";
@@ -11,6 +10,7 @@ import { PillGroup } from "../../../components/base/pill-group/pill-group";
 import { Text } from "../../../components/base/text/text";
 import { PathField } from "../../../components/shared/path-field/path-field";
 import { formatBytes } from "../duration";
+import { RecordingOutputSettings } from "../screenshot-output";
 import { EditorArtifact } from "../types";
 
 import { CompressionSelect, ExportRow } from "./editor-export-dialog-rows";
@@ -51,6 +51,10 @@ export type EditorExportFormProps = {
   onResolutionScaleChange?: (scale: number) => void;
   /** Reveals the saved file once it has been written. A stored preference. */
   openLocationAfterExport?: boolean;
+  /** The canvases the editor's Dimensions setting gives the video and the
+   * camera, which is what the size choices scale; absent, the source sizes
+   * stand in. */
+  recordingOutput?: RecordingOutputSettings | null;
   resolutionScalePercent?: number;
 };
 
@@ -82,17 +86,22 @@ export function EditorExportForm({
   onOpenLocationAfterExportChange,
   onResolutionScaleChange,
   openLocationAfterExport = false,
+  recordingOutput,
   resolutionScalePercent,
 }: EditorExportFormProps) {
   if (!artifact) return null;
   const recording = artifact.kind === "recording" ? artifact : null;
   const camera =
     recording && includeCamera && !bakeCamera ? recording.camera : null;
-  const resolutionItems = recording ? outputResolutionItems(recording) : [];
+  const resolutionItems = recording
+    ? outputResolutionItems(recording, recordingOutput?.primary)
+    : [];
+  // Shown whenever there is a picture, even with one choice: the row is
+  // also where the output size is read.
   const showResolution =
     recording !== null &&
     recording.primaryKind !== "audio" &&
-    resolutionItems.length > 1;
+    resolutionItems.length > 0;
   const showCompression =
     recording !== null && recording.primaryKind !== "audio";
   const compressionDisabled = Boolean(isSaving) || !recording?.canCompress;
@@ -103,8 +112,8 @@ export function EditorExportForm({
       : "Unavailable";
 
   return (
-    <div className="gap-layout flex flex-col outline-none">
-      <div className="gap-x-layout gap-y-section grid grid-cols-[max-content_minmax(0,1fr)]">
+    <div className="flex flex-col gap-layout outline-none">
+      <div className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-section gap-y-section">
         <ExportRow title="File name">
           {(props) => (
             <TextField
@@ -134,7 +143,6 @@ export function EditorExportForm({
           {() => (
             <PillGroup
               aria-label="Format"
-              className="ml-auto"
               display="label"
               isDisabled
               items={[{ id: extension, label: extension.toUpperCase() }]}
@@ -148,6 +156,7 @@ export function EditorExportForm({
             {(props) => (
               <ExportResolutionSelect
                 {...props}
+                id="export-size"
                 isDisabled={isSaving}
                 items={resolutionItems}
                 onChange={(value) => {
@@ -165,8 +174,9 @@ export function EditorExportForm({
             {(props) => (
               <ExportResolutionSelect
                 {...props}
+                id="export-camera-size"
                 isDisabled={isSaving}
-                items={cameraResolutionItems(camera)}
+                items={cameraResolutionItems(camera, recordingOutput?.camera)}
                 onChange={(value) => {
                   onCameraResolutionScaleChange?.(Number(value));
                 }}
@@ -180,6 +190,7 @@ export function EditorExportForm({
             {(props) => (
               <CompressionSelect
                 {...props}
+                id="export-quality"
                 isDisabled={compressionDisabled}
                 onChange={onCompressionChange}
                 value={compression}
@@ -192,6 +203,7 @@ export function EditorExportForm({
             {(props) => (
               <CompressionSelect
                 {...props}
+                id="export-camera-quality"
                 isDisabled={compressionDisabled}
                 onChange={onCameraCompressionChange}
                 value={cameraCompression}
@@ -201,7 +213,7 @@ export function EditorExportForm({
         ) : null}
         {recording && recording.audioTracks.length > 1 ? (
           <ExportRow
-            controlClassName="justify-end"
+            controlClassName="items-start py-1"
             description="Mix the selected tracks into one."
             title="Collapse audio tracks"
           >
@@ -216,7 +228,7 @@ export function EditorExportForm({
           </ExportRow>
         ) : null}
         <ExportRow
-          controlClassName="justify-end"
+          controlClassName="items-start py-1"
           title="Open folder after saving"
         >
           {(props) => (
@@ -229,12 +241,14 @@ export function EditorExportForm({
           )}
         </ExportRow>
       </div>
-      <div className="gap-control flex items-center justify-end">
+      <div className="flex items-center justify-end gap-control-inset">
         {recording ? (
-          <div className="gap-control mr-auto flex items-center">
-            <Text variant="help">Estimated size</Text>
-            <Badge className="font-mono">{estimate}</Badge>
-          </div>
+          <Text
+            className="mr-auto tabular-nums text-content-fg-secondary"
+            variant="subheadline"
+          >
+            Estimated size {estimate}
+          </Text>
         ) : null}
         <Button onPress={onCancel}>
           <X />

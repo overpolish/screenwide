@@ -183,6 +183,7 @@ export function ExportOptionsWindow() {
           patch({ resolutionScalePercent });
         },
         openLocationAfterExport: general?.openLocationAfterExport ?? false,
+        recordingOutput: options.recordingOutput,
         resolutionScalePercent: options.resolutionScalePercent,
       }}
       isSaving={isSaving}

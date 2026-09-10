@@ -12,8 +12,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{
-  capture, encoding, snapshot, state, CameraCaptureMode, CaptureStartupConfig, FinalizeInfo,
-  PrimaryCaptureSource, RecordingMode, RecordingStatus, StartRecordingOptions,
+  capture, encoding, meta_sidecar, snapshot, state, CameraCaptureMode, CaptureStartupConfig,
+  FinalizeInfo, PrimaryCaptureSource, RecordingMode, RecordingStatus, StartRecordingOptions,
   SystemAudioSelection,
 };
 
@@ -333,7 +333,9 @@ pub(super) fn begin_capture(
       }
     };
 
-  if system_audio_skipped.load(std::sync::atomic::Ordering::Acquire) {
+  let system_audio_recorded =
+    options.system_audio && !system_audio_skipped.load(std::sync::atomic::Ordering::Acquire);
+  if options.system_audio && !system_audio_recorded {
     skipped_inputs.push("systemAudio");
     // The dock was configured before startup discovered the drop; align its
     // layout with what is actually being recorded.
@@ -353,6 +355,23 @@ pub(super) fn begin_capture(
       },
     );
   }
+
+  // The scale factor, and which inputs actually made it into the capture, are
+  // known only here. Recording them next to the movie is what lets a recovered
+  // recording be offered back as what it was rather than as a 1x guess.
+  meta_sidecar::write(
+    &output_path,
+    &meta_sidecar::RecordingMetaSidecar {
+      has_microphone: options.microphone_id.is_some(),
+      has_system_audio: system_audio_recorded,
+      primary_kind: match options.mode {
+        RecordingMode::Audio => crate::recording::PrimaryRecordingKind::Audio,
+        RecordingMode::Camera => crate::recording::PrimaryRecordingKind::Camera,
+        _ => crate::recording::PrimaryRecordingKind::Screen,
+      },
+      source_scale_factor,
+    },
+  );
 
   Ok((
     CaptureHandles {
@@ -380,6 +399,19 @@ pub(super) fn resume_capture(handles: &CaptureHandles) -> Result<(), String> {
 }
 
 pub(super) fn finalize_capture(
+  handles: CaptureHandles,
+  stopped_at: Instant,
+) -> Result<(FinalizeInfo, String), String> {
+  // Whatever this stop turns out to be, the metadata sidecar has done its job:
+  // either the values reach the editor through `FinalizeInfo` below, or there
+  // is no longer a recording for them to describe.
+  let meta_path = handles.output_path.clone();
+  let finalized = finalize_stopped_capture(handles, stopped_at);
+  meta_sidecar::remove(&meta_path);
+  finalized
+}
+
+fn finalize_stopped_capture(
   handles: CaptureHandles,
   stopped_at: Instant,
 ) -> Result<(FinalizeInfo, String), String> {

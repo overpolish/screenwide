@@ -11,7 +11,7 @@ import { tv } from "../../../lib/variants";
 
 const listBoxItemVariants = tv({
   base: [
-    "inline-flex h-control-height shrink-0 cursor-default items-center gap-control-inset truncate rounded-control bg-transparent px-control-inset text-body text-content-fg outline-none transition-colors",
+    "flex h-control-height shrink-0 cursor-default items-center gap-control-inset truncate rounded-control bg-transparent px-control-inset text-body text-content-fg outline-none transition-colors",
     // As in a native menu, the accent highlight is the focus indicator: it
     // follows the pointer and the keyboard alike, so there is no separate
     // focus ring.
@@ -50,10 +50,10 @@ export const ListBoxItem = ({
             <span className="flex w-icon shrink-0 items-center justify-center">
               {isSelected && <Check className="size-icon-small" />}
             </span>
-            <span className="truncate">{children}</span>
+            <span className="min-w-0 flex-1 truncate">{children}</span>
           </>
         ) : (
-          <span className="truncate">{children}</span>
+          <span className="min-w-0 flex-1 truncate">{children}</span>
         )
       }
     </AriaListBoxItem>

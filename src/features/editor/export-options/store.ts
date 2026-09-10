@@ -4,6 +4,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { RecordingOutputSettings } from "../screenshot-output";
 import { EditorKind } from "../types";
 import { ExportPhase } from "../use-export-progress";
 
@@ -35,6 +36,8 @@ export type ExportOptionsSnapshot = {
   isCancelingSave: boolean;
   isEstimatingSize: boolean;
   isSaving: boolean;
+  /** Current editor frames, including edits not yet saved to the artifact. */
+  recordingOutput: RecordingOutputSettings | null;
   resolutionScalePercent: number;
   savePhase: ExportPhase;
   /** Percent complete, or `null` while the save cannot report a figure. */
@@ -85,6 +88,7 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptionsSnapshot = {
   isCancelingSave: false,
   isEstimatingSize: false,
   isSaving: false,
+  recordingOutput: null,
   resolutionScalePercent: 100,
   savePhase: "recording",
   saveProgress: null,

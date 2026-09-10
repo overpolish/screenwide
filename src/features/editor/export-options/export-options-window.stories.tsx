@@ -5,6 +5,10 @@ import { useState } from "react";
 
 import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
 import { recording, screenshot } from "../components/editor-story-fixtures";
+import {
+  defaultRecordingOutput,
+  RecordingOutputSettings,
+} from "../screenshot-output";
 import { EditorArtifact } from "../types";
 
 import { ExportOptionsWindowView } from "./export-options-window-view";
@@ -41,6 +45,7 @@ function EditorExportPreview({
   extension,
   includeCamera = false,
   progress,
+  recordingOutput,
 }: {
   artifact: EditorArtifact;
   enabledAudioTrackCount?: number;
@@ -49,6 +54,7 @@ function EditorExportPreview({
   includeCamera?: boolean;
   /** When given, the window shows the running save instead of the form. */
   progress?: ExportProgressProps;
+  recordingOutput?: RecordingOutputSettings;
 }) {
   const [fileStem, setFileStem] = useState(artifact.suggestedFileStem);
   const [directory, setDirectory] = useState<string | null>(
@@ -90,6 +96,7 @@ function EditorExportPreview({
         onOpenLocationAfterExportChange: setOpenLocation,
         onResolutionScaleChange: setResolution,
         openLocationAfterExport: openLocation,
+        recordingOutput,
         resolutionScalePercent: resolution,
       }}
       isSaving={Boolean(progress)}
@@ -129,6 +136,17 @@ export const Screenshot: Story = {
 /** The camera stays a separate output, so it gets its own size and quality. */
 export const SeparateCamera: Story = {
   args: { artifact: cameraRecording, includeCamera: true },
+};
+
+export const EditedFrames: Story = {
+  args: {
+    artifact: cameraRecording,
+    includeCamera: true,
+    recordingOutput: defaultRecordingOutput({
+      camera: { height: 1280, width: 720 },
+      primary: { height: 1200, width: 1600 },
+    }),
+  },
 };
 
 export const AudioOnly: Story = {

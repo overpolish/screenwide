@@ -38,6 +38,7 @@ pub(in crate::recording) fn discard_capture(handles: Option<CaptureHandles>) {
   let _ = std::fs::write(&marker, []);
   session.cancel();
   sidecars.cancel();
+  crate::recording::meta_sidecar::remove(&output_path);
   let removed = std::fs::remove_file(output_path).is_ok();
   if removed {
     let _ = std::fs::remove_file(marker);

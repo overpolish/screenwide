@@ -139,6 +139,7 @@ export function EditorPanel({
       isCancelingSave,
       isEstimatingSize: Boolean(isEstimatingSize),
       isSaving: Boolean(isSaving),
+      recordingOutput: recordingOutput ?? null,
       resolutionScalePercent: resolutionScalePercent ?? 100,
       savePhase,
       saveProgress: saveProgress === null ? null : Math.round(saveProgress),
@@ -187,12 +188,7 @@ export function EditorPanel({
       />
     ) : null;
   return (
-    <main
-      className="window-surface relative flex h-screen w-screen flex-col gap-section overflow-hidden rounded-[10px] text-content-fg"
-      // Windows cannot backdrop-blur over a transparent page, so the chrome
-      // blurs itself while the export window is open (see index.css).
-      data-overlay-open={isExportOpen ? "" : undefined}
-    >
+    <main className="window-surface relative flex h-screen w-screen flex-col gap-section overflow-hidden rounded-[10px] text-content-fg">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
@@ -211,84 +207,94 @@ export function EditorPanel({
         onMinimize={onMinimize}
         onToggleMaximize={onToggleMaximize}
       />
-      {artifact?.kind === "recording" ? (
-        <RecordingSection
-          artifact={artifact}
-          audioTrackVolumes={audioTrackVolumes}
-          bakeCamera={bakeCamera}
-          cameraOverlay={cameraOverlay}
-          cameraResolutionScalePercent={cameraResolutionScalePercent}
-          cursorEffects={cursorEffects}
-          enabledStreamIndices={enabledStreamIndices}
-          enabledVideoTracks={enabledVideoTracks}
-          hasCursorData={artifact.hasCursorData}
-          hasKeyboardData={artifact.hasKeyboardData}
-          inspector={inspector}
-          isExportOpen={isExportOpen}
-          isPreparingRecordingAudio={isPreparingRecordingAudio}
-          isPreparingRecordingPreview={isPreparingRecordingPreview}
-          isSaving={isSaving}
-          key={artifact.id}
-          keyboardEffects={keyboardEffects}
-          onCameraOverlayChange={onCameraOverlayChange}
-          onEnabledTracksChange={onEnabledTracksChange}
-          onEnabledVideoTracksChange={onEnabledVideoTracksChange}
-          onKeyboardEffectsChange={onKeyboardEffectsChange}
-          onRecordingOutputChange={onRecordingOutputChange}
-          onRecordingTimelineEditChange={onRecordingTimelineEditChange}
-          onSelectedTrackChange={onSelectedTrackChange}
-          onVideoTrackOrderChange={onVideoTrackOrderChange}
-          recordingOutput={recordingOutput}
-          recordingPreviewError={recordingPreviewError}
-          recordingPreviewLayout={recordingPreviewLayout}
-          recordingPreviewTracks={recordingPreviewTracks}
-          recordingTimelineEdit={recordingTimelineEdit}
-          resolutionScalePercent={resolutionScalePercent}
-          selectedTrack={selectedTrack}
-        />
-      ) : artifact ? (
-        <section className="grid min-h-0 grow grid-cols-[clamp(350px,28vw,400px)_minmax(0,1fr)]">
-          {screenshotOutput ? (
-            <ScreenshotInspector
-              isSaving={isSaving}
-              onChange={onScreenshotOutputChange}
-              onDimensionsChange={(width, height) => {
-                onCanvasResize?.(
-                  resizeScreenshotWorkspaceCentered({
-                    height,
-                    settings: screenshotOutput,
-                    sources: artifact.items,
-                    width,
-                  }),
-                );
-              }}
-              settings={screenshotWorkspaceItemOutput(
-                screenshotOutput,
-                selectedScreenshotItemId ?? -1,
-              )}
-              sourceHeight={artifact.height}
-              sourceWidth={artifact.width}
-            />
-          ) : null}
-          <ScreenshotSection
+      {/* The export sheet is modal to the content the way a native sheet is:
+          nothing below the title bar responds, and nothing dims. The title
+          bar stays live so the window can still be moved. */}
+      <div
+        className="flex min-h-0 grow flex-col gap-section"
+        inert={isExportOpen}
+      >
+        {artifact?.kind === "recording" ? (
+          <RecordingSection
             artifact={artifact}
+            audioTrackVolumes={audioTrackVolumes}
+            bakeCamera={bakeCamera}
+            cameraOverlay={cameraOverlay}
+            cameraResolutionScalePercent={cameraResolutionScalePercent}
+            cursorEffects={cursorEffects}
+            enabledStreamIndices={enabledStreamIndices}
+            enabledVideoTracks={enabledVideoTracks}
+            hasCursorData={artifact.hasCursorData}
+            hasKeyboardData={artifact.hasKeyboardData}
+            inspector={inspector}
             isExportOpen={isExportOpen}
+            isPreparingRecordingAudio={isPreparingRecordingAudio}
+            isPreparingRecordingPreview={isPreparingRecordingPreview}
             isSaving={isSaving}
-            onBackgroundRadiusChange={onScreenshotBackgroundRadiusChange}
-            onBackgroundRadiusChangeEnd={onScreenshotBackgroundRadiusChangeEnd}
-            onCanvasResize={onCanvasResize}
-            onOutputChange={onScreenshotOutputChange}
-            onRadiusChangeEnd={onScreenshotRadiusChangeEnd}
-            onSelectedItemChange={onSelectedScreenshotItemChange}
-            screenshotOutput={screenshotOutput}
-            selectedItemId={selectedScreenshotItemId}
+            key={artifact.id}
+            keyboardEffects={keyboardEffects}
+            onCameraOverlayChange={onCameraOverlayChange}
+            onEnabledTracksChange={onEnabledTracksChange}
+            onEnabledVideoTracksChange={onEnabledVideoTracksChange}
+            onKeyboardEffectsChange={onKeyboardEffectsChange}
+            onRecordingOutputChange={onRecordingOutputChange}
+            onRecordingTimelineEditChange={onRecordingTimelineEditChange}
+            onSelectedTrackChange={onSelectedTrackChange}
+            onVideoTrackOrderChange={onVideoTrackOrderChange}
+            recordingOutput={recordingOutput}
+            recordingPreviewError={recordingPreviewError}
+            recordingPreviewLayout={recordingPreviewLayout}
+            recordingPreviewTracks={recordingPreviewTracks}
+            recordingTimelineEdit={recordingTimelineEdit}
+            resolutionScalePercent={resolutionScalePercent}
+            selectedTrack={selectedTrack}
           />
-        </section>
-      ) : (
-        <div className="flex min-h-0 grow items-center justify-center text-sm text-muted">
-          Nothing to export
-        </div>
-      )}
+        ) : artifact ? (
+          <section className="grid min-h-0 grow grid-cols-[clamp(350px,28vw,400px)_minmax(0,1fr)]">
+            {screenshotOutput ? (
+              <ScreenshotInspector
+                isSaving={isSaving}
+                onChange={onScreenshotOutputChange}
+                onDimensionsChange={(width, height) => {
+                  onCanvasResize?.(
+                    resizeScreenshotWorkspaceCentered({
+                      height,
+                      settings: screenshotOutput,
+                      sources: artifact.items,
+                      width,
+                    }),
+                  );
+                }}
+                settings={screenshotWorkspaceItemOutput(
+                  screenshotOutput,
+                  selectedScreenshotItemId ?? -1,
+                )}
+                sourceHeight={artifact.height}
+                sourceWidth={artifact.width}
+              />
+            ) : null}
+            <ScreenshotSection
+              artifact={artifact}
+              isExportOpen={isExportOpen}
+              isSaving={isSaving}
+              onBackgroundRadiusChange={onScreenshotBackgroundRadiusChange}
+              onBackgroundRadiusChangeEnd={
+                onScreenshotBackgroundRadiusChangeEnd
+              }
+              onCanvasResize={onCanvasResize}
+              onOutputChange={onScreenshotOutputChange}
+              onRadiusChangeEnd={onScreenshotRadiusChangeEnd}
+              onSelectedItemChange={onSelectedScreenshotItemChange}
+              screenshotOutput={screenshotOutput}
+              selectedItemId={selectedScreenshotItemId}
+            />
+          </section>
+        ) : (
+          <div className="flex min-h-0 grow items-center justify-center text-sm text-muted">
+            Nothing to export
+          </div>
+        )}
+      </div>
     </main>
   );
 }

@@ -3,8 +3,8 @@
 
 use super::{
   recovery::{
-    camera_for_recording, orphaned_recordings, sweep_cancelled_recordings, sweep_preview_files,
-    sweep_unclaimed_cameras, OrphanPlan,
+    camera_for_recording, orphaned_recordings, sweep_cancelled_recordings, sweep_orphaned_meta,
+    sweep_preview_files, sweep_unclaimed_cameras, OrphanPlan,
   },
   save::{save_recording, save_selected_recording},
   *,
@@ -134,6 +134,45 @@ fn recovers_an_unsaved_recording_whichever_container_it_was_written_in() {
   expected.sort();
 
   assert_eq!(found, expected);
+}
+
+#[test]
+fn keeps_a_metadata_sidecar_out_of_the_recovery_candidates() {
+  let directory = test_directory("meta-sidecar-orphans");
+  let recording = directory.join("recording-20260808-143205.000.mov");
+  let meta = directory.join("recording-20260808-143205.000.meta.json");
+  std::fs::write(&recording, b"movie").unwrap();
+  crate::recording::meta_sidecar::write(
+    &recording,
+    &crate::recording::meta_sidecar::RecordingMetaSidecar {
+      has_microphone: false,
+      has_system_audio: false,
+      primary_kind: PrimaryRecordingKind::Screen,
+      source_scale_factor: 2.0,
+    },
+  );
+  assert!(meta.is_file());
+
+  // The sidecar sits next to the recording under the same stem, and is not a
+  // recording of its own to be offered back.
+  let found: Vec<PathBuf> = orphaned_recordings(&directory)
+    .into_iter()
+    .map(|(path, _)| path)
+    .collect();
+  assert_eq!(found, vec![recording.clone()]);
+
+  // Its recording is still there, so it is still worth something.
+  sweep_orphaned_meta(&directory);
+  assert!(meta.is_file());
+  assert_eq!(
+    crate::recording::meta_sidecar::read(&recording).map(|meta| meta.source_scale_factor),
+    Some(2.0)
+  );
+
+  // Once the recording goes, the sidecar describes nothing.
+  std::fs::remove_file(&recording).unwrap();
+  sweep_orphaned_meta(&directory);
+  assert!(!meta.exists());
 }
 
 #[test]

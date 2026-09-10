@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ReactNode } from "react";
+import { ReactNode, useId } from "react";
 
-import { ListBoxItem } from "../../../components/base/listbox-item/listbox-item";
-import { Select } from "../../../components/base/select/select";
-import { Setting } from "../../../components/shared/setting/setting";
+import { Text } from "../../../components/base/text/text";
+import { cn } from "../../../lib/styling";
+import { PopupSelect } from "../../popup-panel/popup-select";
 
 import type { SettingControlProps } from "../../../components/shared/setting/setting";
 
@@ -18,10 +18,14 @@ const compressionOptions = [
   { id: "smallest", label: "Smallest file" },
 ];
 
-/** Rows share the dialog's subgrid so labels and controls line up. */
+/**
+ * A row of a save sheet: the label right-aligned in the first column and the
+ * control in the second. Rows share the sheet's subgrid so every label ends
+ * and every control begins on the same line.
+ */
 export function ExportRow({
   children,
-  controlClassName = "min-w-0 w-full",
+  controlClassName,
   description,
   title,
 }: {
@@ -30,48 +34,69 @@ export function ExportRow({
   controlClassName?: string;
   description?: string;
 }) {
+  const id = useId();
+  const titleId = `${id}-title`;
+  const descriptionId = description ? `${id}-description` : undefined;
+
   return (
-    <Setting
-      className="col-span-2 grid grid-cols-subgrid"
-      controlClassName={controlClassName}
-      description={description}
-      title={title}
-    >
-      {children}
-    </Setting>
+    <div className="col-span-2 grid grid-cols-subgrid">
+      {/* The label sits with the first line of its control: 16px of text
+          padded to the 24px a control is tall, so the two share a centre. */}
+      <Text
+        as="label"
+        className="py-1 text-right whitespace-nowrap"
+        id={titleId}
+      >
+        {title}
+      </Text>
+      <div className={cn("flex min-w-0 flex-col gap-tight", controlClassName)}>
+        {children({
+          "aria-describedby": descriptionId,
+          "aria-labelledby": titleId,
+        })}
+        {description ? (
+          <Text
+            className="text-content-fg-secondary"
+            id={descriptionId}
+            variant="subheadline"
+          >
+            {description}
+          </Text>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
+/** A pop-up button whose choices open in the popup panel window. */
 export function CompressionSelect({
+  id,
   isDisabled,
   onChange,
   value,
   ...props
 }: SettingControlProps & {
+  /** Names the pop-up to the panel window; unique per control. */
+  id: string;
   value: number;
   isDisabled?: boolean;
   onChange?: (compression: number) => void;
 }) {
   return (
-    <Select
+    <PopupSelect
       {...props}
-      className="w-full"
-      clearable={false}
+      id={id}
       isDisabled={isDisabled}
       items={compressionOptions}
-      onChange={(key) => {
+      label="Quality"
+      onSelectionChange={(item) => {
         const index = compressionOptions.findIndex(
-          (option) => option.id === String(key),
+          (option) => option.id === item.id,
         );
         if (index >= 0) onChange?.(index);
       }}
-      value={compressionOptions[value]?.id ?? compressionOptions[0].id}
-    >
-      {(item) => (
-        <ListBoxItem id={item.id} textValue={item.label}>
-          {item.label}
-        </ListBoxItem>
-      )}
-    </Select>
+      placeholder="Quality"
+      selectedId={compressionOptions[value]?.id ?? compressionOptions[0].id}
+    />
   );
 }

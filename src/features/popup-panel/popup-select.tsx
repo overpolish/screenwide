@@ -8,6 +8,7 @@ import {
 } from "@tauri-apps/api/window";
 import { ReactNode, useEffect, useRef } from "react";
 
+import { Badge } from "../../components/base/badge/badge";
 import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { Select } from "../../components/base/select/select";
 
@@ -22,12 +23,19 @@ type PopupSelectProps = {
   onSelectionChange: (item: PopupPanelItem) => void;
   placeholder: string;
   selectedId: string | null;
+  /** A form row's title and note, when the pop-up sits in one. */
+  "aria-describedby"?: string;
+  "aria-labelledby"?: string;
+  isDisabled?: boolean;
   leftSection?: ReactNode;
   onOpen?: () => Promise<PopupPanelItem[]>;
 };
 
 export function PopupSelect({
+  "aria-describedby": ariaDescribedBy,
+  "aria-labelledby": ariaLabelledBy,
   id,
+  isDisabled = false,
   items,
   label,
   leftSection,
@@ -113,9 +121,12 @@ export function PopupSelect({
       }}
     >
       <Select
-        aria-label={label}
+        aria-describedby={ariaDescribedBy}
+        aria-label={ariaLabelledBy ? undefined : label}
+        aria-labelledby={ariaLabelledBy}
         className="w-full"
         clearable={false}
+        isDisabled={isDisabled}
         isOpen={active?.id === id}
         items={selectedItem ? [selectedItem] : []}
         leftSection={leftSection}
@@ -125,6 +136,14 @@ export function PopupSelect({
           );
         }}
         placeholder={placeholder}
+        renderValue={(item) =>
+          item ? (
+            <span className="flex w-full items-center justify-between gap-control">
+              <span className="truncate">{item.label}</span>
+              {item.detail ? <Badge>{item.detail}</Badge> : null}
+            </span>
+          ) : null
+        }
         standalone
         triggerRef={triggerRef}
         value={selectedId}

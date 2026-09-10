@@ -16,6 +16,7 @@ import {
   ListBoxSection as AriaListBoxSection,
 } from "react-aria-components";
 
+import { Badge } from "../../components/base/badge/badge";
 import { ListBox } from "../../components/base/listbox/listbox";
 import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
@@ -183,7 +184,7 @@ export function PopupPanelWindow() {
       showsSelection={showsSelection}
       textValue={item.label}
     >
-      <span className="flex min-w-0 items-center gap-control-inset [&_svg]:size-icon [&_svg]:shrink-0">
+      <span className="flex w-full min-w-0 items-center gap-control-inset [&_svg]:size-icon [&_svg]:shrink-0">
         {item.iconPath ? (
           <img
             alt=""
@@ -198,6 +199,7 @@ export function PopupPanelWindow() {
           <AppWindowMac />
         ) : null}
         <span className="truncate">{item.label}</span>
+        {item.detail ? <Badge className="ml-auto">{item.detail}</Badge> : null}
       </span>
     </ListBoxItem>
   );

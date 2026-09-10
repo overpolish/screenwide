@@ -31,23 +31,40 @@ const scaleItem = (
   width,
 });
 
-/** The first scale is the captured one, so it is the "Original" choice. */
-export const outputResolutionItems = (artifact: RecordingArtifact) =>
+/** The first scale is the captured one, so it is the "Original" choice.
+ * The sizes are those of the canvas the editor's Dimensions setting gives the
+ * video, when it has one; the source size only stands in before then. */
+export const outputResolutionItems = (
+  artifact: RecordingArtifact,
+  output?: { height: number; width: number } | null,
+) =>
   resolutionScales(artifact).map((scale, _index, scales) =>
-    scaleItem(scaledDimensions(artifact, scale), scale, scales[0]),
+    scaleItem(
+      output
+        ? scaledVideoDimensions({
+            height: output.height,
+            scale,
+            sourceScale: scales[0],
+            width: output.width,
+          })
+        : scaledDimensions(artifact, scale),
+      scale,
+      scales[0],
+    ),
   );
 
-export const cameraResolutionItems = (camera: {
-  height: number;
-  width: number;
-}) =>
+/** As above: the camera's canvas from the Dimensions setting when set. */
+export const cameraResolutionItems = (
+  camera: { height: number; width: number },
+  output?: { height: number; width: number } | null,
+) =>
   cameraResolutionScales.map((scale) =>
     scaleItem(
       scaledVideoDimensions({
-        height: camera.height,
+        height: (output ?? camera).height,
         scale,
         sourceScale: 100,
-        width: camera.width,
+        width: (output ?? camera).width,
       }),
       scale,
       100,

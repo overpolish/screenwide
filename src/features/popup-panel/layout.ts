@@ -5,7 +5,8 @@ export const popupPanelMaxHeight = 150;
 export const emptyPopupPanelHeight = 64;
 
 const compactItemHeight = 24;
-const itemGap = 4;
+/** Items touch, as a native menu's do; only headers stand off their items. */
+const itemGap = 0;
 const listboxPadding = 8;
 const focusSafeInset = 4;
 /** A section header is one line of `text-section` inside `py-control`. */
