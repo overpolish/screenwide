@@ -12,6 +12,7 @@ mod capture_geometry;
 #[cfg(target_os = "macos")]
 mod capture_kit;
 mod capture_overlays;
+mod confirm_sheet;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod cursor_scrub;
 mod desktop_capture;
@@ -69,6 +70,7 @@ pub fn run() {
   let app = builder
     .manage(audio_preview::AudioPreviewState::default())
     .manage(camera_preview::CameraPreviewState::default())
+    .manage(confirm_sheet::ConfirmSheetState::default())
     .manage(editor::EditorState::default())
     .manage(editor::recording_preview_player::RecordingPreviewPlayerState::default())
     .manage(editor::screenshot_preview::ScreenshotPreviewState::default())
@@ -88,8 +90,10 @@ pub fn run() {
       cursor_scrub::begin_cursor_scrub,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       cursor_scrub::end_cursor_scrub,
+      confirm_sheet::fit_confirm_sheet,
+      confirm_sheet::get_confirm_sheet,
+      confirm_sheet::resolve_confirm_sheet,
       editor::commands::browse_export_directory,
-      editor::commands::discard_editor,
       editor::commands::cancel_export_job,
       editor::commands::copy_editor_to_clipboard,
       editor::commands::focus_editor_window,

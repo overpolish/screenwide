@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, ClipboardCopy, Upload, X } from "lucide-react";
+import { ClipboardCopy, Upload } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
 import { Button } from "../../../components/base/button/button";
-import { ConfirmActionButton } from "../../../components/shared/confirm-action-button/confirm-action-button";
 import { WindowHeader } from "../../../components/shared/window-header/window-header";
 import { EditorArtifact } from "../types";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
@@ -76,18 +75,6 @@ export function EditorTitlebar({
           </Button>
         </div>
       }
-      closeAction={
-        <ConfirmActionButton
-          armedClassName="bg-error-surface text-error data-[hovered]:bg-error-surface-hover data-[pressed]:bg-error-surface-pressed"
-          armedIcon={<Check />}
-          armedLabel="Confirm deleting capture"
-          idleIcon={<X />}
-          idleLabel="Close"
-          key={artifact?.id ?? "empty"}
-          onConfirm={onClose}
-          size="compact"
-        />
-      }
       leadingSection={
         <img
           alt="Screenwide"
@@ -96,6 +83,7 @@ export function EditorTitlebar({
           src={logoUrl}
         />
       }
+      onClose={onClose}
       onMinimize={onMinimize}
       onTitleChange={artifact && !isSaving ? onFileStemChange : undefined}
       onToggleMaximize={onToggleMaximize}

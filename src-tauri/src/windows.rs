@@ -145,6 +145,8 @@ pub enum WindowLabel {
   /// editor it belongs to.
   ExportRecording,
   ExportScreenshot,
+  /// The shared confirmation sheet, a child of whichever window asked.
+  ConfirmSheet,
   #[cfg(target_os = "macos")]
   Permissions,
   Glide,
@@ -166,6 +168,7 @@ impl WindowLabel {
     Self::EditorScreenshot,
     Self::ExportRecording,
     Self::ExportScreenshot,
+    Self::ConfirmSheet,
     #[cfg(target_os = "macos")]
     Self::Permissions,
     Self::Glide,
@@ -187,6 +190,7 @@ impl WindowLabel {
       Self::EditorScreenshot => "editor-screenshot",
       Self::ExportRecording => "export-recording",
       Self::ExportScreenshot => "export-screenshot",
+      Self::ConfirmSheet => "confirm-sheet",
       #[cfg(target_os = "macos")]
       Self::Permissions => "permissions",
       Self::Glide => "glide",

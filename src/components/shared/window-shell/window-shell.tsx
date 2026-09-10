@@ -7,9 +7,10 @@ import { cn } from "../../../lib/styling";
 
 type WindowShellProps = {
   children: ReactNode;
-  /** The window's `WindowHeader`. */
-  header: ReactNode;
   className?: string;
+  /** The window's `WindowHeader`. Left out by a sheet, which is placed by the
+   * window that opened it and has no title bar of its own. */
+  header?: ReactNode;
   /** `fill` takes the window's height, for a window sized in its config;
    * `content` lets the shell be as tall as what it holds, for a window that
    * fits itself to it (see `useFitWindowHeight`). */

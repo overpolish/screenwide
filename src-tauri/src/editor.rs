@@ -51,7 +51,6 @@ pub use recovery::initialize;
 use recovery::orphan_plan;
 use save::{delivered_extension, scale_percent};
 use validation::{validate_camera_resolution_scale, validate_primary_resolution_scale};
-#[cfg(target_os = "macos")]
 pub use workspace::has_pending_kind as has_pending_workspace_kind;
 pub use workspace::{
   focus_if_pending as focus_pending_workspace,

@@ -33,7 +33,7 @@ fn on_main_thread<F: FnOnce() + Send + 'static>(app: &AppHandle, work: F) -> tau
 /// Attaches the options window to its editor as a native child, and takes away
 /// its ability to be dragged: it belongs where the editor puts it.
 #[cfg(target_os = "macos")]
-pub(super) fn attach(
+pub(crate) fn attach(
   app: &AppHandle,
   editor: &WebviewWindow,
   options: &WebviewWindow,
@@ -59,7 +59,7 @@ pub(super) fn attach(
 /// Detaches before hiding: ordering a still-attached child out drags its
 /// parent with it.
 #[cfg(target_os = "macos")]
-pub(super) fn detach(
+pub(crate) fn detach(
   app: &AppHandle,
   editor: &WebviewWindow,
   options: &WebviewWindow,
@@ -85,7 +85,7 @@ pub(super) fn detach(
 /// `makeKeyAndOrderFront:` through `run_on_main`, which is likewise immediate
 /// on the main thread.
 #[cfg(target_os = "macos")]
-pub(super) fn conceal(app: &AppHandle, options: &WebviewWindow) -> tauri::Result<()> {
+pub(crate) fn conceal(app: &AppHandle, options: &WebviewWindow) -> tauri::Result<()> {
   let window = options.ns_window()? as usize;
   on_main_thread(app, move || {
     use objc2_app_kit::NSWindow;
@@ -127,7 +127,7 @@ pub(super) fn conceal(app: &AppHandle, options: &WebviewWindow) -> tauri::Result
 /// The pointer outlives the hop because these windows are never destroyed:
 /// closing one hides it (see `initialize`).
 #[cfg(target_os = "macos")]
-pub(super) fn reveal_after_resize(options: &WebviewWindow) -> tauri::Result<()> {
+pub(crate) fn reveal_after_resize(options: &WebviewWindow) -> tauri::Result<()> {
   let window = options.ns_window()? as usize;
   dispatch2::DispatchQueue::main().exec_async(move || {
     use objc2_app_kit::NSWindow;
@@ -142,7 +142,7 @@ pub(super) fn reveal_after_resize(options: &WebviewWindow) -> tauri::Result<()> 
 /// windows stay above their owner and follow its activation/minimisation;
 /// disabling the owner makes clicks outside Export a no-op while it is open.
 #[cfg(target_os = "windows")]
-pub(super) fn attach(
+pub(crate) fn attach(
   _app: &AppHandle,
   editor: &WebviewWindow,
   options: &WebviewWindow,
@@ -170,7 +170,7 @@ pub(super) fn attach(
 }
 
 #[cfg(target_os = "windows")]
-pub(super) fn detach(
+pub(crate) fn detach(
   _app: &AppHandle,
   _editor: &WebviewWindow,
   options: &WebviewWindow,
@@ -199,7 +199,7 @@ pub(super) fn detach(
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub(super) fn attach(
+pub(crate) fn attach(
   _app: &AppHandle,
   _editor: &WebviewWindow,
   _options: &WebviewWindow,
@@ -208,7 +208,7 @@ pub(super) fn attach(
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub(super) fn detach(
+pub(crate) fn detach(
   _app: &AppHandle,
   _editor: &WebviewWindow,
   _options: &WebviewWindow,
@@ -219,7 +219,7 @@ pub(super) fn detach(
 /// Keeps the configured-size window hidden until the frontend has measured
 /// its actual form height, matching the AppKit alpha choreography.
 #[cfg(target_os = "windows")]
-pub(super) fn conceal(_app: &AppHandle, options: &WebviewWindow) -> tauri::Result<()> {
+pub(crate) fn conceal(_app: &AppHandle, options: &WebviewWindow) -> tauri::Result<()> {
   use windows::{
     core::BOOL,
     Win32::{
@@ -262,7 +262,7 @@ pub(super) fn conceal(_app: &AppHandle, options: &WebviewWindow) -> tauri::Resul
 }
 
 #[cfg(target_os = "windows")]
-pub(super) fn reveal_after_resize(options: &WebviewWindow) -> tauri::Result<()> {
+pub(crate) fn reveal_after_resize(options: &WebviewWindow) -> tauri::Result<()> {
   use windows::{
     core::BOOL,
     Win32::{
@@ -287,11 +287,11 @@ pub(super) fn reveal_after_resize(options: &WebviewWindow) -> tauri::Result<()> 
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub(super) fn conceal(_app: &AppHandle, _options: &WebviewWindow) -> tauri::Result<()> {
+pub(crate) fn conceal(_app: &AppHandle, _options: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub(super) fn reveal_after_resize(_options: &WebviewWindow) -> tauri::Result<()> {
+pub(crate) fn reveal_after_resize(_options: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }

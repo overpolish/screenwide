@@ -27,10 +27,6 @@ export const setScreenshotBackgroundRadius = async (radiusPercent: number) => {
   await invoke<null>("set_screenshot_background_radius", { radiusPercent });
 };
 
-export const discardEditor = async () => {
-  await invoke<null>("discard_editor");
-};
-
 export const cancelExportJob = () => invoke<boolean>("cancel_export_job");
 
 /** Named explicitly: the recording bar asks on another window's behalf. */

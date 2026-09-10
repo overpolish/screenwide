@@ -48,7 +48,8 @@ const fn policy(label: WindowLabel) -> Policy {
     WindowLabel::RecordingBar | WindowLabel::RecordingDock => Policy::PersistentControl,
     // An export options window is derived from the editor it hangs off and is
     // recentred on it whenever that moves, so it never carries stale geometry.
-    WindowLabel::ExportRecording
+    WindowLabel::ConfirmSheet
+    | WindowLabel::ExportRecording
     | WindowLabel::ExportScreenshot
     | WindowLabel::Glide
     | WindowLabel::RecordingSourceSelector

@@ -39,12 +39,6 @@ pub async fn get_screenshot_content_bounds(
   .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
-pub fn discard_editor(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
-  discard(&app, kind_of_window(&window)?);
-  Ok(())
-}
-
 /// Brings the window holding a pending artifact to the front.
 ///
 /// The recording bar keeps its capture buttons enabled while an editor is

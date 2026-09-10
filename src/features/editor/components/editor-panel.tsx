@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useConfirmSheetModal } from "../../confirm-sheet/use-confirm-sheet-modal";
 import { useExportOptionsBridge } from "../export-options/use-export-options-bridge";
 import { useExportOptionsOpen } from "../export-options/use-export-options-open";
 import {
@@ -116,6 +117,7 @@ export function EditorPanel({
   const workspace = currentEditorKind() ?? artifact?.kind ?? "recording";
   const { isExportOpen, open: openExportOptions } =
     useExportOptionsOpen(workspace);
+  const isConfirmSheetModal = useConfirmSheetModal();
   useExportOptionsBridge(
     workspace,
     {
@@ -212,7 +214,7 @@ export function EditorPanel({
           bar stays live so the window can still be moved. */}
       <div
         className="flex min-h-0 grow flex-col gap-section"
-        inert={isExportOpen}
+        inert={isExportOpen || isConfirmSheetModal}
       >
         {artifact?.kind === "recording" ? (
           <RecordingSection

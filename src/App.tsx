@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { ConfirmSheetWindow } from "./features/confirm-sheet/confirm-sheet-window";
 import { EditorSync } from "./features/editor/editor-sync";
 import { EditorWindow } from "./features/editor/editor-window";
 import { ExportOptionsSync } from "./features/editor/export-options/export-options-sync";
@@ -26,6 +27,8 @@ import { UpdatePromptWindow } from "./features/updates/update-prompt-window";
 export function App() {
   const content = (() => {
     switch (window.location.pathname) {
+      case "/confirm-sheet":
+        return <ConfirmSheetWindow />;
       case "/editor":
         return <EditorWindow />;
       case "/export-options":

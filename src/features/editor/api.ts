@@ -496,7 +496,6 @@ export {
   browseExportDirectory,
   cancelExportJob,
   copyEditorToClipboard,
-  discardEditor,
   focusEditorWindow,
   setExportDirectory,
   setScreenshotBackgroundRadius,

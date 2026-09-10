@@ -13,7 +13,9 @@ use tauri::{
 use super::EditorKind;
 use crate::windows::{self, WindowLabel};
 
-mod presentation;
+// The confirmation sheet hangs off its parent exactly the way this window
+// hangs off its editor, so the native attachment lives here for both.
+pub(crate) mod presentation;
 
 /// Told to an editor when its options window comes up, and again when it goes
 /// away by any route: Escape, close, Cancel, Export, or a stood-down workspace.

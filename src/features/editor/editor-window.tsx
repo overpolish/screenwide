@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   browseExportDirectory,
-  discardEditor,
   cancelExportJob,
   copyEditorToClipboard,
   saveExport,
@@ -545,7 +544,13 @@ export function EditorWindow() {
           setError(null);
         }}
         onCancel={() => {
-          discardEditor().catch(report("cancel"));
+          // Asking to close the window rather than discarding outright: Rust
+          // owns the close request, and that is where the confirmation is.
+          getCurrentWindow()
+            .close()
+            .catch((cause: unknown) => {
+              console.error("Could not close the editor window", cause);
+            });
         }}
         onCancelSave={() => {
           setIsCancelingSave(true);
