@@ -85,6 +85,10 @@ pub fn show(
       .always_on_top(true)
       .closable(true)
       .decorations(false)
+      // A sheet-sized detail window: closing is the only way out, on every
+      // platform, so the header draws no minimise or zoom button.
+      .minimizable(false)
+      .maximizable(false)
       .resizable(false)
       .shadow(true)
       .skip_taskbar(true)

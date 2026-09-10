@@ -25,6 +25,10 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
     .title_bar_style(TitleBarStyle::Overlay)
     .hidden_title(true)
     .traffic_light_position(LogicalPosition::new(14.0, 27.0))
+    // A fixed-size dialog: closing is the only way out, so the header draws
+    // no minimise or zoom button on any platform.
+    .minimizable(false)
+    .maximizable(false)
     .resizable(false)
     .shadow(true)
     .skip_taskbar(true)
