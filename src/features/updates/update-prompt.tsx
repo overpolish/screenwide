@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowRight, Ban, Clock3, Download } from "lucide-react";
-
 import logoUrl from "../../assets/screenwide-mark.svg";
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
-import { CircularProgress } from "../../components/base/circular-progress/circular-progress";
+import { GroupBox } from "../../components/base/group-box/group-box";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 import { Text } from "../../components/base/text/text";
+import { ProgressPanel } from "../../components/shared/progress-panel/progress-panel";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
+import { WindowShell } from "../../components/shared/window-shell/window-shell";
 
 import { ReleaseNotes } from "./release-notes";
 
@@ -37,6 +37,15 @@ const displayDate = (date: string | null) => {
   );
 };
 
+const availabilityLine = (
+  currentVersion: string | null,
+  updateVersion: string | null,
+) => {
+  if (!updateVersion) return "A new version of Screenwide is available.";
+  if (!currentVersion) return `Screenwide ${updateVersion} is available.`;
+  return `Screenwide ${updateVersion} is available. You have ${currentVersion}.`;
+};
+
 export function UpdatePrompt({
   currentVersion,
   downloadProgress,
@@ -51,51 +60,55 @@ export function UpdatePrompt({
 }: UpdatePromptProps) {
   const busy = status === "downloading";
   const released = displayDate(releaseDate);
+  const percent =
+    downloadProgress === null ? null : Math.round(downloadProgress * 100);
 
   return (
-    <main className="window-surface gap-section flex h-full w-full flex-col overflow-hidden rounded-window text-content-fg">
-      <WindowHeader
-        actions={
-          currentVersion || updateVersion ? (
-            <Text
-              className="gap-control-inset flex shrink-0 items-center font-mono"
-              variant="help"
-            >
-              {currentVersion ? <span>v{currentVersion}</span> : null}
-              {currentVersion && updateVersion ? (
-                <ArrowRight
-                  aria-label="to"
-                  className="size-icon-compact shrink-0"
-                />
-              ) : null}
-              {updateVersion ? <span>v{updateVersion}</span> : null}
-            </Text>
-          ) : null
-        }
-        leadingSection={
-          <img
-            alt="Screenwide"
-            className="brightness-0 dark:invert"
-            draggable={false}
-            src={logoUrl}
+    <WindowShell
+      header={
+        <WindowHeader
+          leadingSection={
+            <img
+              alt="Screenwide"
+              className="brightness-0 dark:invert"
+              draggable={false}
+              src={logoUrl}
+            />
+          }
+          onClose={busy ? undefined : onRemindLater}
+          title="Update Available"
+        />
+      }
+    >
+      <div className="flex min-h-0 grow flex-col gap-section px-window-inset pb-window-inset">
+        {busy ? (
+          <ProgressPanel
+            label="Downloading and installing"
+            progress={percent}
+            progressLabel="Update download progress"
+            secondary={percent === null ? undefined : `${String(percent)}%`}
           />
-        }
-        onClose={busy ? undefined : onRemindLater}
-        title="Update available"
-      />
-      <div className="gap-section px-window-inset pb-window-inset flex min-h-0 grow flex-col">
-        <section
-          aria-label="What's new"
-          className="gap-section flex min-h-0 grow flex-col"
-        >
-          <div className="gap-section flex shrink-0 flex-wrap items-center justify-between">
-            <h2 className="m-0 text-lg font-semibold">What’s new</h2>
-            {released ? <Text variant="help">Released {released}</Text> : null}
+        ) : (
+          <div className="flex flex-col gap-tight">
+            <Text>{availabilityLine(currentVersion, updateVersion)}</Text>
+            {released ? (
+              <Text className="text-content-fg-secondary" variant="subheadline">
+                Released {released}
+              </Text>
+            ) : null}
           </div>
+        )}
+
+        {/* The box owns the notes' inset, so the scroll area reaches its inner
+            edge and the scrollbar rides there rather than floating inside. */}
+        <GroupBox
+          className="flex min-h-0 grow flex-col [&>div]:min-h-0 [&>div]:grow [&>div>*]:px-0 [&>div>*]:py-0"
+          title="Release Notes"
+        >
           <ScrollArea
-            edgeEffect="inset"
+            className="px-section"
+            edgeEffect="none"
             rootClassName="min-h-0 grow"
-            scrollbarAutoHide="never"
           >
             {releaseNotes ? (
               <ReleaseNotes html={releaseNotes} />
@@ -103,29 +116,7 @@ export function UpdatePrompt({
               <Text>Improvements and fixes for Screenwide.</Text>
             )}
           </ScrollArea>
-        </section>
-
-        {status === "downloading" ? (
-          <div
-            className="gap-control-inset flex shrink-0 items-center"
-            role="status"
-          >
-            <CircularProgress
-              aria-label="Downloading and installing"
-              isIndeterminate={downloadProgress === null}
-              size="compact"
-              value={
-                downloadProgress === null ? undefined : downloadProgress * 100
-              }
-            />
-            <Text variant="help">Downloading and installing</Text>
-            {downloadProgress !== null ? (
-              <Text className="ml-auto font-mono" variant="help">
-                {Math.round(downloadProgress * 100)}%
-              </Text>
-            ) : null}
-          </div>
-        ) : null}
+        </GroupBox>
 
         {status === "error" && error ? (
           <Alert color="error">
@@ -133,21 +124,23 @@ export function UpdatePrompt({
           </Alert>
         ) : null}
 
-        <div className="gap-control-inset flex shrink-0 flex-wrap items-center justify-end">
-          <Button isDisabled={busy} onPress={onSkipVersion} variant="ghost">
-            <Ban />
-            Skip this version
+        <div className="flex shrink-0 items-center gap-control-inset">
+          <Button
+            className="mr-auto"
+            isDisabled={busy}
+            onPress={onSkipVersion}
+            variant="ghost"
+          >
+            Skip This Version
           </Button>
           <Button isDisabled={busy} onPress={onRemindLater}>
-            <Clock3 />
-            Later
+            Remind Me Later
           </Button>
           <Button color="primary" isDisabled={busy} onPress={onInstall}>
-            <Download />
-            {busy ? "Installing" : "Update and restart"}
+            {busy ? "Installing" : "Install Update"}
           </Button>
         </div>
       </div>
-    </main>
+    </WindowShell>
   );
 }

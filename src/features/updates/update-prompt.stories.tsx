@@ -10,54 +10,39 @@ import { UpdatePrompt } from "./update-prompt";
 const previewWidth = 620;
 const previewHeight = 520;
 
-// Mirrors GitHub's sanitized `body_html` for the v0.1.0 formatting test
-// release. Keep the original attachment URL because GitHub's rendered response
-// replaces it with a signed URL that expires after a few minutes.
-const githubFormattingReleaseNotes = `
-  <h1>Heading 1</h1>
-  <h2>Heading 2</h2>
-  <h3>Heading 3</h3>
-  <h4>Heading 4</h4>
-  <h5>Heading 5</h5>
-  <h6>Heading 6</h6>
+// Shaped like GitHub's sanitized `body_html`: headings, paragraphs, lists and
+// inline code, so the capped type scale is visible in the story.
+const releaseNotesHtml = `
+  <h2>Highlights</h2>
+  <p>Recording is steadier on every display, and exports finish sooner.</p>
   <ul>
-    <li><del>Testing</del> <code>release</code></li>
+    <li>Capture windows and regions more reliably.</li>
     <li>
-      Some other <strong>item</strong>
+      Added smoother cursor movement to exported recordings.
       <ul>
-        <li><em>Nested</em></li>
+        <li>Cursor size follows the <strong>zoom level</strong>.</li>
       </ul>
     </li>
+    <li>Press <code>CommandOrControl+Shift+R</code> to start recording.</li>
   </ul>
-  <a href="https://github.com/user-attachments/assets/1180102d-d7a1-408c-9a9a-05cc413828df" rel="noopener noreferrer" target="_blank">
-    <img alt="image" height="120" src="https://github.com/user-attachments/assets/1180102d-d7a1-408c-9a9a-05cc413828df" width="227" />
-  </a>
+  <h2>Fixes</h2>
   <ol>
-    <li>Numbered</li>
-    <li>List</li>
+    <li>Fixed occasional blank frames at the start of recordings.</li>
+    <li>Fixed window capture when an application changes size.</li>
   </ol>
   <ul class="contains-task-list">
     <li class="task-list-item">
       <input aria-label="Incomplete task" class="task-list-item-checkbox" disabled type="checkbox" />
-      Task list
+      Windows parity for glide
     </li>
     <li class="task-list-item">
       <input aria-label="Completed task" checked class="task-list-item-checkbox" disabled type="checkbox" />
-      List
+      Anti-flicker toggle
     </li>
   </ul>
-  <blockquote>
-    <p>Record before you run. This is a blockquote with enough text to demonstrate how longer quoted release notes wrap across lines.</p>
-  </blockquote>
-  <p>Use <code>CommandOrControl+Shift+R</code> to start recording.</p>
-  <pre><code>const recording = await startRecording({
-  captureSystemAudio: true,
-  showCursor: true,
-});</code></pre>
-  <p><a href="https://google.com" rel="nofollow">Custom Url</a></p>
   <p>
     <strong>Full Changelog</strong>:
-    <a href="https://github.com/overpolish/screenwide/commits/v0.1.0">https://github.com/overpolish/screenwide/commits/v0.1.0</a>
+    <a href="https://github.com/overpolish/screenwide/commits/v1.0.0">https://github.com/overpolish/screenwide/commits/v1.0.0</a>
   </p>
 `;
 
@@ -70,8 +55,7 @@ const meta = {
     onRemindLater: () => undefined,
     onSkipVersion: () => undefined,
     releaseDate: "2026-08-18T12:00:00Z",
-    releaseNotes:
-      '<ul><li>Capture windows and regions more reliably.</li><li>Added smoother cursor movement to exported recordings.</li><li>Remembered the last selected microphone and camera.</li><li>Improved export performance for <strong>longer recordings</strong>.</li><li>Added clearer feedback while preparing an export.</li><li>Improved recording controls on smaller displays.</li><li>Fixed occasional blank frames at the start of recordings.</li><li>Fixed window capture when an application changes size.</li><li>Fixed keyboard shortcuts after waking the computer.</li><li>Updated translations and <a href="https://github.com/overpolish/screenwide">accessibility labels</a>.</li></ul>',
+    releaseNotes: releaseNotesHtml,
     status: "available" as const,
     updateVersion: "1.0.0",
   },
@@ -96,32 +80,19 @@ type Story = StoryObj<typeof meta>;
 
 export const Available: Story = {};
 
-export const GitHubFormatting: Story = {
-  args: {
-    currentVersion: "0.0.1",
-    releaseDate: "2026-08-21T05:24:02Z",
-    releaseNotes: githubFormattingReleaseNotes,
-    updateVersion: "0.1.0",
-  },
-  name: "GitHub Formatting",
-};
-
-export const Installing: Story = {
-  args: {
-    downloadProgress: 0.62,
-    status: "downloading",
-  },
-};
-
-export const Preparing: Story = {
-  args: { downloadProgress: null, status: "downloading" },
-};
-
 export const NoReleaseNotes: Story = {
   args: { releaseNotes: null },
 };
 
-export const InstallFailure: Story = {
+export const Downloading: Story = {
+  args: { downloadProgress: null, status: "downloading" },
+};
+
+export const DownloadingWithProgress: Story = {
+  args: { downloadProgress: 0.42, status: "downloading" },
+};
+
+export const Error: Story = {
   args: {
     error: "The downloaded update could not be verified.",
     status: "error",

@@ -427,8 +427,12 @@ body {
 
 .release-notes p {
   margin: var(--spacing-control-inset) 0;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
+/* GitHub's release HTML arrives with its own heading scale; every level is
+   capped to the app's headline role so the notes read as app text. */
 .release-notes h1,
 .release-notes h2,
 .release-notes h3,
@@ -436,38 +440,24 @@ body {
 .release-notes h5,
 .release-notes h6 {
   margin: var(--spacing-section) 0 var(--spacing-control);
+  font-size: var(--text-headline);
   font-weight: 700;
-  line-height: 1.3;
-}
-
-.release-notes h1 {
-  font-size: 2em;
-}
-
-.release-notes h2 {
-  font-size: 1.5em;
-}
-
-.release-notes h3 {
-  font-size: 1.25em;
-}
-
-.release-notes h4 {
-  font-size: 1em;
-}
-
-.release-notes h5 {
-  font-size: 0.875em;
-}
-
-.release-notes h6 {
-  font-size: 0.85em;
+  line-height: var(--text-headline--line-height);
 }
 
 .release-notes ul,
 .release-notes ol {
   margin: var(--spacing-control-inset) 0;
   padding-left: var(--spacing-layout);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+.release-notes ul ul,
+.release-notes ul ol,
+.release-notes ol ul,
+.release-notes ol ol {
+  margin-top: var(--spacing-control);
 }
 
 .release-notes ul {
@@ -480,6 +470,8 @@ body {
 
 .release-notes li {
   margin: var(--spacing-control) 0;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .release-notes a,
@@ -520,7 +512,7 @@ body {
   border-radius: var(--radius-md);
   background: var(--color-fill-tertiary);
   font-family: var(--font-mono);
-  font-size: 0.88em;
+  font-size: var(--text-footnote);
 }
 
 .release-notes pre {
@@ -529,7 +521,7 @@ body {
   overflow-x: auto;
   border-radius: var(--radius-md);
   background: var(--color-fill-tertiary);
-  font-size: 0.88em;
+  font-size: var(--text-footnote);
   line-height: 1.45;
 }
 
