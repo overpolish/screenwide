@@ -33,19 +33,10 @@ const actions: {
     description: "Choose an area to copy, ready to paste elsewhere.",
     label: "Copy a screenshot",
   },
-  {
-    action: "recognizeText",
-    description: "Select text or a QR code on your screen.",
-    label: "Read text or a QR code",
-  },
-  {
-    action: "rulerOverlay",
-    description: "Measure sizes and distances on your screen.",
-    label: "Show ruler",
-  },
 ];
 
 export function HotkeySettingsPanel({
+  defaults,
   onCaptureChange,
   onChange,
   saving,
@@ -55,6 +46,7 @@ export function HotkeySettingsPanel({
   onChange: (action: ShortcutAction, shortcut: string | null) => void;
   saving: ShortcutAction | null;
   settings: ShortcutSettings | null;
+  defaults?: ShortcutSettings | null;
 }) {
   return (
     <div className="gap-layout flex flex-col">
@@ -64,6 +56,10 @@ export function HotkeySettingsPanel({
             <HotkeyField
               aria-describedby={controlProps["aria-describedby"]}
               aria-label={label}
+              defaultValue={
+                defaults?.bindings.find((binding) => binding.action === action)
+                  ?.shortcut
+              }
               isDisabled={!settings || saving !== null}
               onCaptureChange={onCaptureChange}
               onChange={(shortcut) => {

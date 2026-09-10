@@ -19,6 +19,40 @@ export type ShortcutSettings = {
   bindings: ShortcutBinding[];
 };
 
+export type RulerAction =
+  | "toggleCrosshair"
+  | "copyColour"
+  | "deleteMeasurement"
+  | "copyMeasurement"
+  | "undo"
+  | "redo"
+  | "stampHorizontal"
+  | "stampVertical"
+  | "guideVertical"
+  | "guideHorizontal"
+  | "cycleTolerance"
+  | "measureRadius"
+  | "toggleCenterlines";
+
+export type RulerSettings = {
+  bindings: Record<RulerAction, string | null>;
+  enabled: boolean;
+};
+
+export type OcrAction = "selectAll" | "copyText";
+
+export type OcrSettings = {
+  bindings: Record<OcrAction, string | null>;
+  enabled: boolean;
+};
+
+export type ShortcutDefaults = {
+  glide: GlideSettings;
+  ocr: OcrSettings;
+  ruler: RulerSettings;
+  shortcuts: ShortcutSettings;
+};
+
 export type GlideControl = string;
 
 export type GlideSettings = {

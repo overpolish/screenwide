@@ -29,6 +29,8 @@ mod ruler;
 mod screenshots;
 mod settings;
 mod shortcuts;
+#[cfg(target_os = "macos")]
+mod startup;
 #[cfg(debug_assertions)]
 mod storybook_native;
 mod system_accent;
@@ -38,7 +40,6 @@ mod tray;
 mod updates;
 mod windows;
 #[cfg(target_os = "macos")]
-use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let builder = tauri::Builder::default()
@@ -154,6 +155,12 @@ pub fn run() {
       recording_sources::list_monitors,
       recording_sources::list_windows,
       recording_sources::selected_window_available,
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      settings::shortcut_defaults::get_shortcut_defaults,
+      text_recognition::settings::get_ocr_settings,
+      text_recognition::settings::set_ocr_settings,
+      ruler::settings::get_ruler_settings,
+      ruler::settings::set_ruler_settings,
       ruler::cancel_ruler,
       ruler::set_ruler_screenshot_mode,
       screenshots::scrolling::command::capture_scrolling_still,
@@ -215,8 +222,7 @@ pub fn run() {
       #[cfg(desktop)]
       tray::initialize(app)?;
       settings::initialize(app.handle());
-      // Before the input monitoring starts, so the very first event already
-      // sees the stored settings rather than the defaults.
+      // Load controls before native input monitoring starts.
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       glide::settings::initialize(app.handle());
       #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -260,28 +266,7 @@ pub fn run() {
       permissions::start_watcher(app.handle().clone());
 
       #[cfg(target_os = "macos")]
-      {
-        // Native effects can order ordinary app windows during setup. Their
-        // first presentation always belongs to an explicit user action.
-        let app_handle = app.handle().clone();
-        // Recovery may have put an artifact in one workspace; that window is
-        // the one presentation the user did ask for, so it alone is spared.
-        let mut labels = vec![windows::WindowLabel::Settings];
-        labels.extend(editor::export_window::LABELS);
-        labels.extend(
-          editor::EditorKind::ALL
-            .into_iter()
-            .filter(|kind| !editor::has_pending_workspace_kind(app.handle(), *kind))
-            .map(editor::EditorKind::window_label),
-        );
-        app.handle().run_on_main_thread(move || {
-          for label in &labels {
-            if let Some(window) = app_handle.get_webview_window(label.as_str()) {
-              let _ = windows::hide(&window);
-            }
-          }
-        })?;
-      }
+      startup::hide_unrequested_windows(app.handle())?;
 
       Ok(())
     })

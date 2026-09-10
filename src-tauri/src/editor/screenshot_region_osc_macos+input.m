@@ -2,6 +2,18 @@
 
 #import "screenshot_region_osc_macos_private.h"
 
+extern uint32_t screenwide_ocr_key_phase(uint16_t key, uint32_t modifiers, bool repeat);
+
+static uint32_t overlayKeyModifiers(NSEvent *event) {
+  NSEventModifierFlags flags = event.modifierFlags;
+  return ((flags & NSEventModifierFlagCommand) ? 1 : 0) |
+         ((flags & NSEventModifierFlagControl) ? 2 : 0) |
+         ((flags & NSEventModifierFlagOption) ? 4 : 0) |
+         ((flags & NSEventModifierFlagShift) ? 8 : 0);
+}
+
+extern uint32_t screenwide_ruler_key_phase(uint16_t key, uint32_t modifiers, bool repeat, bool latched);
+
 BOOL screenwide_region_osc_update_magnifier(
     ScreenwideRegionOSC *surface, NativeOscResult result,
     NSPoint desktop_point, uint32_t phase, uint32_t edges);
@@ -423,7 +435,7 @@ void screenwide_region_osc_input_install(ScreenwideRegionOSC *s) {
                                            screenwide_region_osc_root(strong);
                                        if (strong == root &&
                                            root.rulerRangeKeyCode != 0 &&
-                                           event.keyCode ==
+                                           event.keyCode + 1 ==
                                                root.rulerRangeKeyCode) {
                                          root.rulerRangeKeyCode = 0;
                                          if (root.visible && root.inputEnabled)
@@ -432,7 +444,7 @@ void screenwide_region_osc_input_install(ScreenwideRegionOSC *s) {
                                        }
                                        if (strong == root &&
                                            root.rulerGuideKeyCode != 0 &&
-                                           event.keyCode ==
+                                           event.keyCode + 1 ==
                                                root.rulerGuideKeyCode) {
                                          root.rulerGuideKeyCode = 0;
                                          if (root.visible && root.inputEnabled)
@@ -441,7 +453,7 @@ void screenwide_region_osc_input_install(ScreenwideRegionOSC *s) {
                                        }
                                        if (strong == root &&
                                            root.rulerRadiusKeyCode != 0 &&
-                                           event.keyCode ==
+                                           event.keyCode + 1 ==
                                                root.rulerRadiusKeyCode) {
                                          root.rulerRadiusKeyCode = 0;
                                          if (root.visible && root.inputEnabled)
@@ -455,102 +467,35 @@ void screenwide_region_osc_input_install(ScreenwideRegionOSC *s) {
                                            screenwide_region_osc_root(strong);
                                        if (strong == root && root.visible &&
                                            root.inputEnabled) {
-                                         BOOL command =
-                                             (event.modifierFlags &
-                                              (NSEventModifierFlagCommand |
-                                               NSEventModifierFlagControl)) != 0;
-                                         BOOL shift =
-                                             (event.modifierFlags &
-                                              NSEventModifierFlagShift) != 0;
-                                         if (!command &&
-                                             root.rulerRangeKeyCode != 0 &&
-                                             event.keyCode ==
-                                                 root.rulerRangeKeyCode)
-                                           return nil;
-                                         if (!command &&
-                                             root.rulerGuideKeyCode != 0 &&
-                                             event.keyCode ==
-                                                 root.rulerGuideKeyCode)
-                                           return nil;
-                                         if (!command &&
-                                             root.rulerRadiusKeyCode != 0 &&
-                                             event.keyCode ==
-                                                 root.rulerRadiusKeyCode)
-                                           return nil;
-                                         uint32_t rulerPhase = 0;
-                                         if (!command && event.keyCode == 7)
-                                           rulerPhase = 13;
-                                         else if (!command && event.keyCode == 48)
-                                           rulerPhase = 14;
-                                         else if (!command &&
-                                                  (event.keyCode == 51 ||
-                                                   event.keyCode == 117))
-                                           rulerPhase = 16;
-                                         else if (command && event.keyCode == 8)
-                                           rulerPhase = 17;
-                                         else if (command && event.keyCode == 6)
-                                           rulerPhase = shift ? 19 : 18;
-                                         else if (command && event.keyCode == 16)
-                                           rulerPhase = 19;
-                                         else if (!command && !event.isARepeat &&
-                                                  event.keyCode == 17)
-                                           rulerPhase = 29;
-                                         else if (!command && !event.isARepeat &&
-                                                  event.keyCode == 46)
-                                           rulerPhase = 33;
-                                         else if (!command && !event.isARepeat &&
-                                                  root.rulerRangeKeyCode == 0 &&
-                                                  root.rulerGuideKeyCode == 0 &&
-                                                  root.rulerRadiusKeyCode == 0 &&
-                                                  (event.keyCode == 18 ||
-                                                   event.keyCode == 19))
-                                           rulerPhase = event.keyCode == 18
-                                               ? 20
-                                               : 21;
-                                         else if (!command && !event.isARepeat &&
-                                                  root.rulerRangeKeyCode == 0 &&
-                                                  root.rulerGuideKeyCode == 0 &&
-                                                  root.rulerRadiusKeyCode == 0 &&
-                                                  (event.keyCode == 9 ||
-                                                   event.keyCode == 4))
-                                           rulerPhase = event.keyCode == 9
-                                               ? 26
-                                               : 27;
-                                         else if (!command && !event.isARepeat &&
-                                                  root.rulerRangeKeyCode == 0 &&
-                                                  root.rulerGuideKeyCode == 0 &&
-                                                  root.rulerRadiusKeyCode == 0 &&
-                                                  event.keyCode == 15)
-                                           rulerPhase = 31;
+                                         if ((root.rulerRangeKeyCode != 0 && event.keyCode + 1 == root.rulerRangeKeyCode) ||
+                                             (root.rulerGuideKeyCode != 0 && event.keyCode + 1 == root.rulerGuideKeyCode) ||
+                                             (root.rulerRadiusKeyCode != 0 && event.keyCode + 1 == root.rulerRadiusKeyCode)) return nil;
+                                         uint32_t rulerPhase = screenwide_ruler_key_phase(
+                                             event.keyCode, overlayKeyModifiers(event), event.isARepeat,
+                                             root.rulerRangeKeyCode != 0 || root.rulerGuideKeyCode != 0 || root.rulerRadiusKeyCode != 0);
                                          if (rulerPhase != 0 &&
                                              processKeyboardCommand(
                                                  strong, rulerPhase)) {
                                            if (rulerPhase == 20 ||
                                                rulerPhase == 21)
                                              root.rulerRangeKeyCode =
-                                                 event.keyCode;
+                                                 event.keyCode + 1;
                                            else if (rulerPhase == 26 ||
                                                     rulerPhase == 27)
                                              root.rulerGuideKeyCode =
-                                                 event.keyCode;
+                                                 event.keyCode + 1;
                                            else if (rulerPhase == 31)
                                              root.rulerRadiusKeyCode =
-                                                 event.keyCode;
+                                                 event.keyCode + 1;
                                            return nil;
                                          }
                                        }
                                        if (event.window == strong.host.window &&
                                            strong.inputEnabled) {
-                                         BOOL command =
-                                             (event.modifierFlags &
-                                              (NSEventModifierFlagCommand |
-                                               NSEventModifierFlagControl)) != 0;
-                                         if (strong.ocrPhase == 2 && command &&
-                                             (event.keyCode == 0 ||
-                                              event.keyCode == 8)) {
-                                           processKeyboardCommand(
-                                               strong,
-                                               event.keyCode == 0 ? 6 : 7);
+                                         uint32_t ocrPhase = screenwide_ocr_key_phase(
+                                             event.keyCode, overlayKeyModifiers(event), event.isARepeat);
+                                         if (strong.ocrPhase == 2 && ocrPhase != 0) {
+                                           processKeyboardCommand(strong, ocrPhase);
                                            // Copy dismisses OCR and restores
                                            // focus. Consume the key-down so
                                            // the newly focused editor cannot

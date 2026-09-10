@@ -33,6 +33,9 @@ pub(crate) use input::{
 };
 pub(crate) use interaction::{copy_all_and_dismiss, copy_selection_and_dismiss};
 pub use snapshot::TextRecognitionState;
+mod recognition_worker;
+pub(crate) mod settings;
+use recognition_worker::recognize;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -128,6 +131,9 @@ pub fn dismiss(app: &AppHandle) {
 }
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
+  if !settings::enabled() {
+    return Ok(());
+  }
   dismiss(app);
   capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::TextRecognition));
   let generation = app.state::<TextRecognitionState>().begin();
@@ -278,24 +284,4 @@ async fn recognize_current(app: &AppHandle) -> Result<TextRecognitionResult, Str
     adapter::show_ready(app, generation);
   }
   Ok(result)
-}
-
-async fn recognize(
-  rgba: Vec<u8>,
-  width: u32,
-  height: u32,
-) -> Result<(Vec<RecognizedLine>, Vec<RecognizedQrCode>), String> {
-  tauri::async_runtime::spawn_blocking(move || {
-    let qr_codes = qr::recognize(&rgba, width, height);
-    #[cfg(target_os = "macos")]
-    return platform_macos::recognize(&rgba, width, height).map(|lines| (lines, qr_codes));
-
-    #[cfg(target_os = "windows")]
-    return platform_windows::recognize(&rgba, width, height).map(|lines| (lines, qr_codes));
-
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    Err("Text recognition is not available on this platform".to_owned())
-  })
-  .await
-  .map_err(|error| error.to_string())?
 }

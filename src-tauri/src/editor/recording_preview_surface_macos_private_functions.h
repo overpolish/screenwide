@@ -29,6 +29,10 @@ NSRect keyboard_hit_frame(ScreenwidePreviewSurface *surface,
 BOOL keyboard_body_contains(ScreenwidePreviewSurface *surface,
                             ScreenwidePreviewSelection selection,
                             NSPoint point);
+double keyboard_resize_limit(ScreenwidePreviewSelection start,
+    double anchorX, double anchorY, double maximum);
+void clamp_keyboard_move(ScreenwidePreviewSurface *surface,
+    ScreenwidePreviewSelection start, double *x, double *y);
 void begin_keyboard_transform(ScreenwidePreviewSurface *surface);
 void update_keyboard_transform(
     ScreenwidePreviewSurface *surface, ScreenwidePreviewSelection selection,

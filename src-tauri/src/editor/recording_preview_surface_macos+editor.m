@@ -545,6 +545,7 @@
         minimumScale = MAX(minimumScale, start.minimum_scale);
       if (start.maximum_scale > 0.0)
         maximumScale = MIN(maximumScale, start.maximum_scale);
+      maximumScale = keyboard_resize_limit(start, anchorX, anchorY, maximumScale);
       maximumScale = MAX(maximumScale, 0.01);
       double effectiveMinimumScale = MIN(minimumScale, maximumScale);
       scale = fmin(maximumScale, fmax(effectiveMinimumScale, scale));
@@ -631,6 +632,7 @@
                                   NSEventModifierFlagControl)) != 0;
       if (snapping) snap_selection_move(self.surface, &x, &y);
       else clear_selection_snap_guides(self.surface);
+      clamp_keyboard_move(self.surface, self.selectionDragStart, &x, &y);
       // Auto-fit renormalizes the live OSC into each enlarged canvas. Always
       // derive the next sample from mouse-down geometry; reusing the already
       // renormalized width compounds that normalization and collapses the OSC.

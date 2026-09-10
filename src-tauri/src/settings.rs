@@ -2,8 +2,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 pub(crate) mod preferences;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) mod shortcut_defaults;
 
-pub use preferences::{current, initialize, GeneralSettingsState};
+pub use preferences::{current, GeneralSettingsState};
+
+pub fn initialize(app: &tauri::AppHandle) {
+  preferences::initialize(app);
+  crate::ruler::settings::initialize(app);
+  crate::text_recognition::settings::initialize(app);
+}
 
 use tauri::{AppHandle, Manager};
 
@@ -17,7 +25,7 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
   #[cfg(target_os = "macos")]
   app.set_dock_visibility(true)?;
   windows::show(&window, true)?;
-  windows::contain_normal_window(app, &window)
+  windows::recover_window_position(app, &window)
 }
 
 #[tauri::command]

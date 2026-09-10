@@ -44,9 +44,9 @@ fn place_on_display(
     .transpose()?
     .flatten()
   else {
-    // Generic topology containment remains the fallback when input did not
+    // Off-screen recovery remains the fallback when input did not
     // originate from a native desktop surface or that display disappeared.
-    return crate::windows::contain_normal_window(app, window).map_err(|error| error.to_string());
+    return crate::windows::recover_window_position(app, window).map_err(|error| error.to_string());
   };
   let size = LogicalSize::new(480.0, 360.0);
   let work_area = monitor.work_area();

@@ -207,6 +207,7 @@ pub(super) fn selection_resize(
     minimum,
     centered,
   );
+  super::keyboard_hit::resize_limit(start, &mut resize);
   if start.maximum_scale > 0.0 {
     resize.maximum_scale = resize.maximum_scale.min(start.maximum_scale);
     resize.minimum_scale = resize.minimum_scale.min(resize.maximum_scale);

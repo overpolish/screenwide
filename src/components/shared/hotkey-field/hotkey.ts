@@ -13,7 +13,47 @@ type KeyEvent = Pick<
   | "isComposing"
 >;
 
-export type HotkeyCaptureMode = "shortcut" | "single-control";
+export type HotkeyCaptureMode =
+  "shortcut" | "single-control" | "local-shortcut";
+
+/** Compare persisted shortcuts without treating equivalent aliases/order as edits. */
+export function normalizeHotkey(
+  value: string | null,
+  isMac = typeof navigator !== "undefined" &&
+    navigator.userAgent.includes("Mac"),
+): string | null {
+  if (value === null) return null;
+  const parts = value.split("+");
+  const key = parts[parts.length - 1] ?? "";
+  const modifiers = parts
+    .slice(0, -1)
+    .map((part) =>
+      part === "CommandOrControl"
+        ? isMac
+          ? "Super"
+          : "Control"
+        : part === "Command" || part === "Meta"
+          ? "Super"
+          : part === "Control"
+            ? "Control"
+            : part === "Alt"
+              ? "Alt"
+              : part === "Shift"
+                ? "Shift"
+                : part,
+    )
+    .sort();
+  return [...modifiers, key].join("+");
+}
+
+export function hotkeysEqual(
+  value: string | null,
+  defaultValue: string | null,
+  isMac = typeof navigator !== "undefined" &&
+    navigator.userAgent.includes("Mac"),
+): boolean {
+  return normalizeHotkey(value, isMac) === normalizeHotkey(defaultValue, isMac);
+}
 
 export function hotkeyFromEvent(
   event: KeyEvent,
@@ -36,7 +76,8 @@ export function hotkeyFromEvent(
     event.altKey ? "Alt" : null,
     event.shiftKey ? "Shift" : null,
   ].filter(Boolean);
-  return modifiers.length ? [...modifiers, event.code].join("+") : null;
+  if (!modifiers.length) return mode === "local-shortcut" ? event.code : null;
+  return [...modifiers, event.code].join("+");
 }
 
 export function hotkeyKeys(value: string | null, isMac: boolean): string[] {

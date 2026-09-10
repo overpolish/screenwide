@@ -41,8 +41,8 @@ use geometry::monitor_with_most_overlap;
 #[cfg(target_os = "macos")]
 pub use lifecycle::get_or_create;
 pub use lifecycle::{
-  contain_editor, contain_normal_window, hide_instead_of_close, initialize_editor,
-  initialize_normal_window, initialize_recording_bar_position, show,
+  hide_instead_of_close, initialize_editor, initialize_normal_window,
+  initialize_recording_bar_position, recover_window_position, show,
 };
 #[cfg(not(target_os = "macos"))]
 pub use lifecycle::{

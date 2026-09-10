@@ -9,7 +9,14 @@ import { SettingsApiContext } from "./settings-api-context";
 import { SettingsUpdateActions } from "./settings-update-actions";
 import { SettingsWindow } from "./settings-window";
 
-import type { GeneralSettings, GlideSettings, ShortcutSettings } from "./types";
+import type {
+  GeneralSettings,
+  GlideSettings,
+  RulerSettings,
+  OcrSettings,
+  ShortcutDefaults,
+  ShortcutSettings,
+} from "./types";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 function createPreviewApi(): ContextType<typeof SettingsApiContext> {
@@ -36,9 +43,52 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
   };
   let shortcuts: ShortcutSettings = {
     bindings: [
-      { action: "toggleRecordingBar", shortcut: "CommandOrControl+Shift+KeyR" },
+      {
+        action: "toggleRecordingBar",
+        shortcut: "CommandOrControl+Shift+Digit6",
+      },
+      { action: "startStopRecording", shortcut: null },
+      { action: "pauseResumeRecording", shortcut: null },
+      {
+        action: "recognizeText",
+        shortcut: "CommandOrControl+Shift+KeyT",
+      },
+      { action: "rulerOverlay", shortcut: "CommandOrControl+Shift+KeyR" },
       { action: "takeScreenshot", shortcut: "CommandOrControl+Shift+KeyS" },
     ],
+  };
+  let ruler: RulerSettings = {
+    bindings: {
+      copyColour: "Tab",
+      copyMeasurement: "CommandOrControl+KeyC",
+      cycleTolerance: "KeyT",
+      deleteMeasurement: "Backspace",
+      guideHorizontal: "KeyH",
+      guideVertical: "KeyV",
+      measureRadius: "KeyR",
+      redo: "CommandOrControl+Shift+KeyZ",
+      stampHorizontal: "Digit1",
+      stampVertical: "Digit2",
+      toggleCenterlines: "KeyM",
+      toggleCrosshair: "KeyX",
+      undo: "CommandOrControl+KeyZ",
+    },
+    enabled: true,
+  };
+  let ocr: OcrSettings = {
+    bindings: {
+      copyText: "CommandOrControl+KeyC",
+      selectAll: "CommandOrControl+KeyA",
+    },
+    enabled: true,
+  };
+  const defaults: ShortcutDefaults = {
+    glide: { ...glide },
+    ocr: { bindings: { ...ocr.bindings }, enabled: ocr.enabled },
+    ruler: { bindings: { ...ruler.bindings }, enabled: ruler.enabled },
+    shortcuts: {
+      bindings: shortcuts.bindings.map((binding) => ({ ...binding })),
+    },
   };
   return {
     beginShortcutCapture: () => Promise.resolve(null),
@@ -49,6 +99,9 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     endShortcutCapture: () => Promise.resolve(null),
     getGeneralSettings: () => Promise.resolve(general),
     getGlideSettings: () => Promise.resolve(glide),
+    getOcrSettings: () => Promise.resolve(ocr),
+    getRulerSettings: () => Promise.resolve(ruler),
+    getShortcutDefaults: () => Promise.resolve(defaults),
     getShortcutSettings: () => Promise.resolve(shortcuts),
     hideSettings: () => Promise.resolve(null),
     minimize: () => Promise.resolve(),
@@ -58,6 +111,14 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     },
     setGlideSettings: (next) => {
       glide = next;
+      return Promise.resolve(next);
+    },
+    setOcrSettings: (next) => {
+      ocr = next;
+      return Promise.resolve(next);
+    },
+    setRulerSettings: (next) => {
+      ruler = next;
       return Promise.resolve(next);
     },
     setShortcutBinding: (action, shortcut) => {
@@ -91,6 +152,7 @@ const meta = {
     return (
       <SettingsApiContext value={api}>
         <SettingsWindow
+          initialSection={args.initialSection}
           updateActions={
             args.updateActions ?? (
               <SettingsUpdateActions
@@ -129,3 +191,6 @@ export const UpdateAvailable: Story = {
     ),
   },
 };
+
+export const Ruler: Story = { args: { initialSection: "ruler" } };
+export const Ocr: Story = { args: { initialSection: "ocr" } };

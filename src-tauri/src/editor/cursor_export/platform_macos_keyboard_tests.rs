@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::editor::keyboard_effects::KeyboardEffectSettings;
+use crate::editor::keyboard_effects::{KeyboardAppearance, KeyboardEffectSettings};
 use std::process::Command;
 
 fn keyboard_output(width: u32, height: u32) -> crate::screenshots::ScreenshotOutputSettings {
@@ -34,6 +34,7 @@ fn keeps_a_five_hundred_percent_keyboard_edge_sharp_at_4k() {
   let mut keyboard = KeyboardOverlay {
     key_count: 1,
     animation: KeyboardOverlay::ANIMATION_POP,
+    // A light backed cap on black measures the outer edge at high contrast.
     appearance: KeyboardOverlay::APPEARANCE_LIGHT,
     scale: 5.0,
     progress: 1.0,
@@ -134,7 +135,10 @@ fn exports_keyboard_shortcuts_into_a_real_movie() {
     duration_ms: 2_000,
     height: 360,
     keyboard: Some(&keyboard),
-    keyboard_effects: KeyboardEffectSettings::default(),
+    keyboard_effects: KeyboardEffectSettings {
+      appearance: KeyboardAppearance::Dark,
+      ..Default::default()
+    },
     on_progress: &mut |_| {},
     output: &output,
     screen: &source,
@@ -172,8 +176,18 @@ fn exports_keyboard_shortcuts_into_a_real_movie() {
     .filter(|(index, pixel)| index / 640 > 300 && pixel.iter().all(|channel| *channel > 170))
     .count();
   assert!(
-    bright_bottom > 200,
-    "the rendered frame should contain the light shortcut near the bottom"
+    bright_bottom > 40,
+    "the rendered frame should contain bright shortcut glyphs near the bottom ({bright_bottom})"
+  );
+  let keycap_bottom = frame
+    .stdout
+    .chunks_exact(3)
+    .enumerate()
+    .filter(|(index, pixel)| index / 640 > 300 && pixel.iter().all(|channel| *channel > 10))
+    .count();
+  assert!(
+    keycap_bottom > 500,
+    "the backed keycaps should remain visible"
   );
   let _ = std::fs::remove_dir_all(directory);
 }

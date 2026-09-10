@@ -3,6 +3,9 @@
 
 use super::*;
 
+#[path = "soft_edges_tests.rs"]
+mod soft_edges_tests;
+
 const SIZE: u32 = 120;
 
 struct Canvas {

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { X } from "lucide-react";
+import { RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { VisuallyHidden } from "react-aria";
 
@@ -13,7 +13,12 @@ import { CircularProgress } from "../../base/circular-progress/circular-progress
 import { Keyboard, Shortcut } from "../../base/keyboard/keyboard";
 import { Text } from "../../base/text/text";
 
-import { type HotkeyCaptureMode, hotkeyFromEvent, hotkeyKeys } from "./hotkey";
+import {
+  type HotkeyCaptureMode,
+  hotkeyFromEvent,
+  hotkeyKeys,
+  hotkeysEqual,
+} from "./hotkey";
 import { useMouseControlCapture } from "./use-mouse-control-capture";
 
 export type HotkeyFieldProps = {
@@ -23,6 +28,7 @@ export type HotkeyFieldProps = {
   "aria-describedby"?: string;
   captureMode?: HotkeyCaptureMode;
   className?: string;
+  defaultValue?: string | null;
   isClearable?: boolean;
   isDisabled?: boolean;
   /** Capture waits for the host to suspend shortcuts; cleanup reports false. */
@@ -34,6 +40,7 @@ export function HotkeyField({
   "aria-label": label,
   captureMode = "shortcut",
   className,
+  defaultValue,
   isClearable = true,
   isDisabled = false,
   onCaptureChange,
@@ -48,15 +55,17 @@ export function HotkeyField({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const capturing = listening && !isDisabled;
   const single = captureMode === "single-control";
+  const local = captureMode === "local-shortcut";
+  const isMac =
+    typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
   const instructions = single
     ? "Press a key or hold and release an auxiliary mouse button. Escape cancels; Tab leaves."
-    : `Use a modifier and a key. Escape cancels; Tab leaves.${isClearable ? " Delete clears." : ""}`;
+    : local
+      ? "Press a key or use a modifier and a key. Escape cancels."
+      : `Use a modifier and a key. Escape cancels; Tab leaves.${isClearable ? " Delete clears." : ""}`;
   // Reset during render so re-enabling cannot resume an old capture session.
   if (isDisabled && listening) setListening(false);
-  const keys = hotkeyKeys(
-    value,
-    typeof navigator !== "undefined" && navigator.userAgent.includes("Mac"),
-  );
+  const keys = hotkeyKeys(value, isMac);
   const commit = (next: string) => {
     setListening(false);
     setReady(false);
@@ -114,8 +123,9 @@ export function HotkeyField({
           interactionFocus.onKeyDown(false);
           return;
         }
-        // Tab remains available to leave the control without trapping focus.
+        // Local shortcuts capture Tab; Escape always cancels capture.
         if (
+          !local &&
           event.key === "Tab" &&
           !event.altKey &&
           !event.ctrlKey &&
@@ -139,6 +149,7 @@ export function HotkeyField({
         if (!ready) return;
         if (
           !single &&
+          !local &&
           isClearable &&
           (event.key === "Backspace" || event.key === "Delete")
         ) {
@@ -221,6 +232,22 @@ export function HotkeyField({
             }}
           >
             <X />
+          </IconButton>
+        ) : null}
+        {defaultValue !== undefined &&
+        !hotkeysEqual(value, defaultValue, isMac) ? (
+          <IconButton
+            aria-label={`Reset ${label}`}
+            isDisabled={isDisabled}
+            onPress={() => {
+              setListening(false);
+              setReady(false);
+              onChange(defaultValue);
+              setFeedback("Shortcut reset.");
+              buttonRef.current?.focus();
+            }}
+          >
+            <RotateCcw />
           </IconButton>
         ) : null}
       </div>

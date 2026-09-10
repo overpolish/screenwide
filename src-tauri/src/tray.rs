@@ -105,7 +105,8 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
 
   let mut recognize_text =
     IconMenuItemBuilder::with_id(RECOGNIZE_TEXT_MENU_ID, "Recognize Text/QR")
-      .icon(icons::load(icons::TEXT)?);
+      .icon(icons::load(icons::TEXT)?)
+      .enabled(crate::text_recognition::settings::enabled());
   if let Some(shortcut) =
     crate::shortcuts::shortcut_for(app, crate::shortcuts::ShortcutAction::RecognizeText)
   {
@@ -114,7 +115,8 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   let recognize_text = recognize_text.build(app)?;
 
   let mut ruler_overlay = IconMenuItemBuilder::with_id(RULER_OVERLAY_MENU_ID, "Ruler Overlay")
-    .icon(icons::load(icons::RULER)?);
+    .icon(icons::load(icons::RULER)?)
+    .enabled(crate::ruler::settings::enabled());
   if let Some(shortcut) =
     crate::shortcuts::shortcut_for(app, crate::shortcuts::ShortcutAction::RulerOverlay)
   {

@@ -15,7 +15,7 @@ pub fn show(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
   app.set_dock_visibility(true)?;
 
   windows::show(&window, true)?;
-  let _ = windows::contain_editor(app, &window);
+  let _ = windows::recover_window_position(app, &window);
 
   Ok(())
 }

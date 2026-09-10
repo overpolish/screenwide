@@ -19,6 +19,7 @@ fn main() {
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m"
     );
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard.m");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork_helpers.h");
     println!(
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork.m"
     );

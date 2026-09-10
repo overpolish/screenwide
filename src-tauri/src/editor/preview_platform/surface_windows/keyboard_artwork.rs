@@ -32,25 +32,23 @@ use windows::{
 
 use crate::editor::keyboard_effects::{KeyboardKey, KeyboardOverlay};
 
+#[path = "keyboard_artwork/icons.rs"]
+mod icons;
 #[path = "keyboard_artwork/visible_bounds.rs"]
 mod visible_bounds;
 
-/// Must match the `keyboard_key_*` array lengths in `preview.hlsl`.
 const MAX_KEYS: usize = 8;
-/// The React Keyboard's default variant: Inter text-sm/5 with tracking-wider
-/// inside a `px-1 rounded-sm` cap on a 20pt line box.
 const DESIGN_HEIGHT: f64 = 20.0;
+const DESIGN_MINIMUM_WIDTH: f64 = 20.0;
 const DESIGN_INSET: f64 = 4.0;
 const DESIGN_GAP: f64 = 4.0;
 const DESIGN_RADIUS: f64 = 4.0;
-const FONT_SIZE: f64 = 14.0;
-const FONT_KERN: f64 = 0.7;
+const FONT_SIZE: f64 = 13.0;
+const FILL_ALPHA: f64 = 0.10;
+const TEXT_ALPHA: f64 = 0.85;
 const CACHE_ENTRIES: usize = 64;
 const CACHE_BYTES: usize = 64 * 1024 * 1024;
 
-/// The `Keyboard` constant buffer (b1) of `preview.hlsl`. HLSL pads each
-/// element of a struct array to 16 bytes, so the per-key fields are stored as
-/// parallel `uint4`/`float4` arrays rather than as one struct array.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub(super) struct KeyboardConstants {
@@ -79,17 +77,13 @@ impl Default for KeyboardConstants {
   }
 }
 
-/// One rasterised artwork strip: premultiplied BGRA pixels plus the artwork-space
-/// span of every key cap.
 pub(super) struct KeyboardRaster {
   pub(super) pixels: Vec<u8>,
   pub(super) size: (u32, u32),
-  /// Artwork-space `(x, width)` of every key, in the prepared order.
   pub(super) keys: Vec<(u32, u32)>,
 }
 
 pub(super) struct KeyboardArtwork {
-  /// Kept alive for the view; never read back.
   _texture: ID3D11Texture2D,
   bytes: usize,
   keys: Vec<(u32, u32)>,
@@ -102,9 +96,6 @@ pub(super) struct KeyboardArtworkCache {
   entries: Mutex<HashMap<String, std::sync::Arc<KeyboardArtwork>>>,
 }
 
-/// Windows virtual keys are normalised to macOS virtual keycodes at capture
-/// time, so this table matches the macOS rasteriser except for the modifier
-/// names, which follow the Windows keyboard.
 fn key_label(code: u16) -> String {
   let label = match code {
     0 => "A",
@@ -160,7 +151,10 @@ fn key_label(code: u16) -> String {
     51 => "Backspace",
     53 => "Esc",
     54 | 55 => "Win",
-    56 | 60 => "Shift",
+    // The shared Keyboard maps Shift to its 12px ArrowBigUp icon on both
+    // platforms; this compact glyph keeps the Windows cap from becoming a
+    // text-only variant while retaining the existing Win/Ctrl labels.
+    56 | 60 => "⇧",
     57 => "Caps Lock",
     58 | 61 => "Alt",
     59 | 62 => "Ctrl",
@@ -243,9 +237,6 @@ fn prepared_shortcut(overlay: &KeyboardOverlay) -> Vec<(u16, KeyboardKey)> {
   prepared
 }
 
-/// Density the strip is rasterised at. The pop spring peaks just below 1.073,
-/// so covering 1.08 guarantees animation never enlarges artwork past its own
-/// source pixels.
 pub(super) fn keyboard_backing_scale(output_height: u32, overlay: &KeyboardOverlay) -> f64 {
   const MAXIMUM_ANIMATED_SCALE: f64 = 1.08;
   let requested = if overlay.requested_scale > 0.0 {
@@ -318,10 +309,7 @@ impl TextDevice {
       return Err("Windows could not create the keyboard artwork font".to_owned());
     }
     let old_font = unsafe { SelectObject(dc, font.into()) };
-    // GDI has no per-run kerning attribute; intercharacter spacing is the
-    // equivalent of AppKit's `NSKernAttributeName` and is applied to both
-    // measurement and drawing, so the two stay consistent.
-    unsafe { SetTextCharacterExtra(dc, (FONT_KERN * backing_scale).round() as i32) };
+    unsafe { SetTextCharacterExtra(dc, 0) };
     Ok(Self { dc, font, old_font })
   }
 
@@ -335,8 +323,7 @@ impl TextDevice {
   }
 }
 
-/// Rasterises the shortcut strip at `backing_scale` device pixels per design
-/// point. Needs no D3D device, so the geometry it produces is unit-testable.
+/// Rasterises the shortcut strip at device pixels per design point.
 pub(super) fn rasterize_keyboard(
   labels: &[String],
   light: bool,
@@ -354,15 +341,20 @@ pub(super) fn rasterize_keyboard(
   for text in &wide {
     measured.push(device.measure(text)?);
   }
-  // Widths are decided in design points exactly as on macOS so the fitted
-  // maximum width from the shared geometry table stays meaningful.
   let text_widths: Vec<f64> = measured
     .iter()
-    .map(|(cx, _)| f64::from(*cx) / backing_scale)
+    .zip(labels)
+    .map(|((cx, _), label)| {
+      if label == "⇧" {
+        12.0
+      } else {
+        f64::from(*cx) / backing_scale
+      }
+    })
     .collect();
   let key_widths: Vec<f64> = text_widths
     .iter()
-    .map(|width| width.ceil() + DESIGN_INSET * 2.0)
+    .map(|width| (width.ceil() + DESIGN_INSET * 2.0).max(DESIGN_MINIMUM_WIDTH))
     .collect();
   let design_width =
     key_widths.iter().sum::<f64>() + DESIGN_GAP * (key_widths.len().saturating_sub(1)) as f64;
@@ -396,11 +388,8 @@ pub(super) fn rasterize_keyboard(
   let old_bitmap = unsafe { SelectObject(device.dc, bitmap.into()) };
   let length = (width as usize) * (height as usize) * 4;
   let raster = unsafe { std::slice::from_raw_parts_mut(bits.cast::<u8>(), length) };
-  // Black, opaque ground: GDI blends white glyphs into it, so the red channel
-  // of the result is plain coverage.
   for pixel in raster.chunks_exact_mut(4) {
     pixel.fill(0);
-    pixel[3] = 255;
   }
   let mut key_x = 0.0_f64;
   let mut drawn = true;
@@ -413,15 +402,19 @@ pub(super) fn rasterize_keyboard(
     let key_width = key_widths[index];
     let text_x = key_x + (key_width - text_widths[index]) * 0.5;
     let y = (height as i32 - measured[index].1) / 2;
-    drawn &=
-      unsafe { TextOutW(device.dc, (text_x * backing_scale).round() as i32, y, text) }.as_bool();
+    drawn &= if labels[index] == "⇧" {
+      true // Modifier coverage is drawn below, independently of GDI text.
+    } else {
+      unsafe { TextOutW(device.dc, (text_x * backing_scale).round() as i32, y, text) }.as_bool()
+    };
     keys.push((
       (key_x * backing_scale).round() as u32,
       (key_width * backing_scale).round() as u32,
     ));
     key_x += key_width + DESIGN_GAP;
   }
-  let coverage: Vec<u8> = raster.chunks_exact(4).map(|pixel| pixel[2]).collect();
+  let mut coverage: Vec<u8> = raster.chunks_exact(4).map(|pixel| pixel[2]).collect();
+  icons::draw_modifiers(&mut coverage, width, height, &keys, labels, backing_scale);
   unsafe {
     SelectObject(device.dc, old_bitmap);
     let _ = DeleteObject(bitmap.into());
@@ -430,7 +423,9 @@ pub(super) fn rasterize_keyboard(
     return Err("Windows could not draw a keyboard shortcut label".to_owned());
   }
 
-  let (background, foreground) = if light { (229.0, 64.0) } else { (64.0, 163.0) };
+  // Resolve bg-fill over the Storybook window backing (#FFFFFF / #252525).
+  let (backing, foreground) = if light { (255.0, 0.0) } else { (37.0, 255.0) };
+  let background = backing * (1.0 - FILL_ALPHA) + foreground * FILL_ALPHA;
   let radius = DESIGN_RADIUS * backing_scale;
   let mut pixels = vec![0_u8; length];
   for (cap_x, cap_pixels) in &keys {
@@ -465,7 +460,7 @@ pub(super) fn rasterize_keyboard(
     if text == 0 {
       continue;
     }
-    let text = f64::from(text) / 255.0;
+    let text = f64::from(text) / 255.0 * TEXT_ALPHA;
     let keep = 1.0 - text;
     let alpha = text + (f64::from(pixel[3]) / 255.0) * keep;
     for channel in pixel[..3].iter_mut() {
@@ -561,9 +556,6 @@ impl KeyboardArtworkCache {
     )
   }
 
-  /// Returns the artwork strip for `overlay` and the shader uniforms that
-  /// place it, rasterising and uploading only when the appearance, density or
-  /// shortcut changed.
   pub(super) fn resolve(
     &self,
     device: &ID3D11Device,
@@ -651,7 +643,7 @@ mod tests {
 
   #[test]
   fn key_caps_advance_by_a_four_point_gap_at_the_backing_scale() {
-    let labels = ["Ctrl".to_owned(), "Shift".to_owned(), "P".to_owned()];
+    let labels = ["Ctrl".to_owned(), "⇧".to_owned(), "P".to_owned()];
     let raster = rasterize_keyboard(&labels, true, 12.0).unwrap();
 
     assert_eq!(raster.keys.len(), labels.len());
@@ -680,7 +672,10 @@ mod tests {
       .pixels
       .chunks_exact(4)
       .all(|pixel| pixel[0] <= pixel[3] && pixel[1] <= pixel[3] && pixel[2] <= pixel[3]));
-    assert!(raster.pixels.chunks_exact(4).any(|pixel| pixel[3] == 255));
+    assert!(raster
+      .pixels
+      .chunks_exact(4)
+      .any(|pixel| pixel[3] > 0 && pixel[3] < 255));
     assert!(raster.pixels.chunks_exact(4).any(|pixel| pixel[3] == 0));
   }
 

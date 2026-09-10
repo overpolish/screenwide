@@ -11,24 +11,13 @@
 //! deliberately unused here because the cost is paid once per freeze and the
 //! connected-component labeling that dominates the rest is CPU-bound anyway.
 
-use rayon::prelude::*;
+mod soft_edges;
+mod supported_bounds;
+
+mod gradients;
+pub use gradients::{compute_gradients, GradientMaps};
 use serde::Serialize;
 use std::{cmp::Reverse, collections::HashMap};
-
-/// Per-axis neighbour deltas. `gx[y * width + x]` is the largest absolute
-/// per-channel difference between pixel `x` and pixel `x - 1` on the same row
-/// (column 0 is always 0); `gy` is the same against the row above (row 0 is
-/// always 0).
-///
-/// An element covering columns `L..=R` therefore peaks at `x == L` and at
-/// `x == R + 1`, so a component bounding box is naturally half-open `[L, R + 1)`
-/// and its reported width matches the element's true width.
-pub struct GradientMaps {
-  pub gx: Vec<u8>,
-  pub gy: Vec<u8>,
-  pub width: u32,
-  pub height: u32,
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -42,42 +31,6 @@ pub struct ComponentBox {
 const MAX_BOXES: usize = 8192;
 const EDGE_SLACK: u32 = 2;
 const BUCKET: u32 = 4;
-
-fn channel_delta(a: &[u8], b: &[u8]) -> u8 {
-  let red = a[0].abs_diff(b[0]);
-  let green = a[1].abs_diff(b[1]);
-  let blue = a[2].abs_diff(b[2]);
-  red.max(green).max(blue)
-}
-
-pub fn compute_gradients(rgba: &[u8], width: u32, height: u32) -> GradientMaps {
-  let (w, h) = (width as usize, height as usize);
-  let mut gx = vec![0u8; w * h];
-  let mut gy = vec![0u8; w * h];
-  if w > 0 && h > 0 && rgba.len() >= w * h * 4 {
-    gx.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
-      let base = y * w * 4;
-      for x in 1..w {
-        row[x] = channel_delta(&rgba[base + (x - 1) * 4..], &rgba[base + x * 4..]);
-      }
-    });
-    gy.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
-      if y == 0 {
-        return;
-      }
-      let (above, base) = ((y - 1) * w * 4, y * w * 4);
-      for x in 0..w {
-        row[x] = channel_delta(&rgba[above + x * 4..], &rgba[base + x * 4..]);
-      }
-    });
-  }
-  GradientMaps {
-    gx,
-    gy,
-    width,
-    height,
-  }
-}
 
 /// 3x3 dilation, applied separably (horizontal pass then vertical pass).
 fn dilate(source: &[bool], w: usize, h: usize) -> Vec<bool> {
@@ -259,6 +212,10 @@ pub fn detect_boxes(maps: &GradientMaps, threshold: u8) -> Vec<ComponentBox> {
     .map(|index| {
       (maps.gx[index] > 0 && edge_mass_x(&maps.gx, index, w) >= double)
         || (maps.gy[index] > 0 && edge_mass_y(&maps.gy, index, w, h) >= double)
+        || maps
+          .soft_edges
+          .as_ref()
+          .is_some_and(|(gx, gy)| gx[index].max(gy[index]) >= threshold)
     })
     .collect();
   let closed = erode(&dilate(&binary, w, h), w, h);
@@ -272,6 +229,7 @@ pub fn detect_boxes(maps: &GradientMaps, threshold: u8) -> Vec<ComponentBox> {
         width: (component.max_x - component.min_x) as u32,
         height: (component.max_y - component.min_y) as u32,
       };
+      let candidate = supported_bounds::refine(maps, candidate, threshold);
       let too_small = candidate.width < 3 || candidate.height < 3 || area(&candidate) < 16;
       let whole_frame = u64::from(candidate.width) * 100 >= maps.width as u64 * 95
         && u64::from(candidate.height) * 100 >= maps.height as u64 * 95;

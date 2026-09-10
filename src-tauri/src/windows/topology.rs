@@ -7,7 +7,10 @@ use std::time::Duration;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
-use super::{geometry::contain_window_in_work_area, WindowLabel};
+use super::{
+  geometry::{contain_window_in_work_area, keep_window_on_a_monitor},
+  WindowLabel,
+};
 
 #[cfg(target_os = "macos")]
 #[path = "topology/platform_macos.rs"]
@@ -23,8 +26,8 @@ static REVISION: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Policy {
-  /// A normal app window remains fully usable on the nearest surviving work area.
-  Contained,
+  /// A normal app window is recovered only if it is completely off-screen.
+  Recoverable,
   /// A persistent floating control keeps its location when valid and is saved after correction.
   PersistentControl,
   /// A transient is derived from another window and should not preserve stale topology geometry.
@@ -39,9 +42,9 @@ const fn policy(label: WindowLabel) -> Policy {
     | WindowLabel::EditorScreenshot
     | WindowLabel::QrDetails
     | WindowLabel::Settings
-    | WindowLabel::Update => Policy::Contained,
+    | WindowLabel::Update => Policy::Recoverable,
     #[cfg(target_os = "macos")]
-    WindowLabel::Permissions => Policy::Contained,
+    WindowLabel::Permissions => Policy::Recoverable,
     WindowLabel::RecordingBar | WindowLabel::RecordingDock => Policy::PersistentControl,
     // An export options window is derived from the editor it hangs off and is
     // recentred on it whenever that moves, so it never carries stale geometry.
@@ -66,13 +69,16 @@ fn reconcile(app: &AppHandle) {
   let mut persistent_position_may_have_changed = false;
   for &label in WindowLabel::ALL {
     match policy(label) {
-      Policy::Contained | Policy::PersistentControl => {
+      Policy::Recoverable => {
+        if let Some(window) = app.get_webview_window(label.as_str()) {
+          let _ = keep_window_on_a_monitor(app, &window);
+        }
+      }
+      Policy::PersistentControl => {
         let Some(window) = app.get_webview_window(label.as_str()) else {
           continue;
         };
-        if contain_window_in_work_area(app, &window).is_ok()
-          && policy(label) == Policy::PersistentControl
-        {
+        if contain_window_in_work_area(app, &window).is_ok() {
           persistent_position_may_have_changed = true;
         }
       }

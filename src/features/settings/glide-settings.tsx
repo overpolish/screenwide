@@ -31,6 +31,7 @@ const toggles = [
 ] as const;
 
 export function GlideSettingsPanel({
+  defaults,
   isSaving,
   onCaptureChange,
   onChange,
@@ -40,6 +41,7 @@ export function GlideSettingsPanel({
   onCaptureChange: (capturing: boolean) => Promise<void>;
   onChange: (settings: GlideSettings) => void;
   settings: GlideSettings;
+  defaults?: GlideSettings;
 }) {
   const update = (changes: Partial<GlideSettings>) => {
     onChange({ ...settings, ...changes });
@@ -109,6 +111,7 @@ export function GlideSettingsPanel({
                 aria-describedby={controlProps["aria-describedby"]}
                 aria-label={title}
                 captureMode="single-control"
+                defaultValue={defaults?.[key]}
                 isClearable={false}
                 isDisabled={isOff}
                 onCaptureChange={onCaptureChange}

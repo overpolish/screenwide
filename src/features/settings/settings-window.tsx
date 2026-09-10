@@ -1,14 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Keyboard, LayoutGrid, Settings } from "lucide-react";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { Keyboard, LayoutGrid, Ruler, ScanText, Settings } from "lucide-react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
@@ -19,26 +13,39 @@ import { WindowHeader } from "../../components/shared/window-header/window-heade
 import { GeneralSettingsPanel } from "./general-settings";
 import { GlideSettingsPanel } from "./glide-settings";
 import { HotkeySettingsPanel } from "./hotkey-settings";
+import { OcrSettingsPanel } from "./ocr-settings";
+import { RulerSettingsPanel } from "./ruler-settings";
 import { useSettingsApi } from "./settings-api-context";
 import { LiveSettingsUpdateActions } from "./settings-update-actions";
 import {
   GeneralSettings,
   GlideSettings,
+  RulerSettings,
+  OcrSettings,
+  ShortcutDefaults,
   ShortcutAction,
   ShortcutSettings,
 } from "./types";
+import { useGlideSettingsSave } from "./use-glide-settings-save";
+import { useOcrSettingsSave } from "./use-ocr-settings-save";
+import { useRulerSettingsSave } from "./use-ruler-settings-save";
+import { useShortcutCapture } from "./use-shortcut-capture";
 
-type SettingsSection = "general" | "glide" | "hotkeys";
+type SettingsSection = "general" | "glide" | "ruler" | "ocr" | "hotkeys";
 
 const sectionTitles: Record<SettingsSection, string> = {
   general: "General",
   glide: "Glide",
   hotkeys: "Shortcuts",
+  ocr: "OCR",
+  ruler: "Ruler",
 };
 
 export function SettingsWindow({
+  initialSection = "general",
   updateActions = <LiveSettingsUpdateActions />,
 }: {
+  initialSection?: SettingsSection;
   updateActions?: ReactNode;
 }) {
   const {
@@ -46,59 +53,83 @@ export function SettingsWindow({
     endShortcutCapture,
     getGeneralSettings,
     getGlideSettings,
+    getOcrSettings,
+    getRulerSettings,
+    getShortcutDefaults,
     getShortcutSettings,
     hideSettings,
     minimize,
     setGeneralSettings,
     setGlideSettings,
+    setOcrSettings,
     setShortcutBinding,
   } = useSettingsApi();
-  const [section, setSection] = useState<SettingsSection>("general");
+  const [section, setSection] = useState<SettingsSection>(initialSection);
   const [general, setGeneral] = useState<GeneralSettings | null>(null);
   const [glide, setGlide] = useState<GlideSettings | null>(null);
-  const [savingGlide, setSavingGlide] = useState(false);
+  const [ruler, setRuler] = useState<RulerSettings | null>(null);
+  const [ocr, setOcr] = useState<OcrSettings | null>(null);
+  const [defaults, setDefaults] = useState<ShortcutDefaults | null>(null);
+
   const [savingGeneral, setSavingGeneral] = useState(false);
   const [settings, setSettings] = useState<ShortcutSettings | null>(null);
   const [saving, setSaving] = useState<ShortcutAction | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const captureQueueRef = useRef(Promise.resolve());
-  const captureCountRef = useRef(0);
-  const glideSaveRef = useRef<{
-    pending: GlideSettings | null;
-    running: boolean;
-  }>({ pending: null, running: false });
-  const onCaptureChange = useCallback(
-    (capturing: boolean) => {
-      captureCountRef.current += capturing ? 1 : -1;
-      // A closing field may still be releasing while the next one prepares.
-      if (capturing ? captureCountRef.current > 1 : captureCountRef.current > 0)
-        return captureQueueRef.current;
-      const operation = captureQueueRef.current
-        .catch(() => undefined)
-        .then(async () => {
-          await (capturing ? beginShortcutCapture() : endShortcutCapture());
-        });
-      captureQueueRef.current = operation;
-      return operation;
-    },
-    [beginShortcutCapture, endShortcutCapture],
+  const { changeRuler, savingRuler } = useRulerSettingsSave(setRuler, setError);
+  const onCaptureChange = useShortcutCapture(
+    beginShortcutCapture,
+    endShortcutCapture,
   );
+  const { change: changeGlide, saving: savingGlide } = useGlideSettingsSave({
+    reloadSettings: getGlideSettings,
+    saveSettings: setGlideSettings,
+    setError,
+    setGlide,
+  });
+  const { change: changeOcr, saving: savingOcr } = useOcrSettingsSave({
+    getSettings: getOcrSettings,
+    saveSettings: setOcrSettings,
+    setError,
+    setSettings: setOcr,
+  });
 
   useEffect(() => {
     Promise.all([
       getGeneralSettings(),
       getGlideSettings(),
+      getRulerSettings(),
       getShortcutSettings(),
+      getOcrSettings(),
+      getShortcutDefaults(),
     ])
-      .then(([generalSettings, glideSettings, shortcutSettings]) => {
-        setGeneral(generalSettings);
-        setGlide(glideSettings);
-        setSettings(shortcutSettings);
-      })
+      .then(
+        ([
+          generalSettings,
+          glideSettings,
+          rulerSettings,
+          shortcutSettings,
+          ocrSettings,
+          shortcutDefaults,
+        ]) => {
+          setGeneral(generalSettings);
+          setGlide(glideSettings);
+          setRuler(rulerSettings);
+          setSettings(shortcutSettings);
+          setOcr(ocrSettings);
+          setDefaults(shortcutDefaults);
+        },
+      )
       .catch((reason: unknown) => {
         setError(String(reason));
       });
-  }, [getGeneralSettings, getGlideSettings, getShortcutSettings]);
+  }, [
+    getGeneralSettings,
+    getGlideSettings,
+    getRulerSettings,
+    getShortcutSettings,
+    getOcrSettings,
+    getShortcutDefaults,
+  ]);
 
   const changeBinding = useCallback(
     (action: ShortcutAction, shortcut: string | null) => {
@@ -134,45 +165,6 @@ export function SettingsWindow({
     [getGeneralSettings, setGeneralSettings],
   );
 
-  const changeGlide = useCallback(
-    (next: GlideSettings) => {
-      setGlide(next);
-      setError(null);
-      const queue = glideSaveRef.current;
-      queue.pending = next;
-      if (queue.running) return;
-      queue.running = true;
-      setSavingGlide(true);
-      // Keep pointer-rate slider edits live; persist in order and coalesce drafts.
-      const save = async () => {
-        const hasPending = () => glideSaveRef.current.pending !== null;
-        try {
-          while (queue.pending) {
-            const draft = queue.pending;
-            queue.pending = null;
-            try {
-              const saved = await setGlideSettings(draft);
-              if (!hasPending()) setGlide(saved);
-            } catch (reason: unknown) {
-              setError(String(reason));
-              if (!hasPending()) {
-                const saved = await getGlideSettings();
-                if (!hasPending()) setGlide(saved);
-              }
-            }
-          }
-        } catch (reason: unknown) {
-          setError(String(reason));
-        } finally {
-          queue.running = false;
-          setSavingGlide(false);
-        }
-      };
-      void save();
-    },
-    [getGlideSettings, setGlideSettings],
-  );
-
   return (
     <main className="window-surface gap-section flex h-full w-full flex-col overflow-hidden rounded-window text-content-fg">
       <WindowHeader
@@ -196,6 +188,8 @@ export function SettingsWindow({
           items={[
             { icon: <Settings />, id: "general", label: "General" },
             { icon: <LayoutGrid />, id: "glide", label: "Glide" },
+            { icon: <Ruler />, id: "ruler", label: "Ruler" },
+            { icon: <ScanText />, id: "ocr", label: "OCR" },
             { icon: <Keyboard />, id: "hotkeys", label: "Shortcuts" },
           ]}
           onSelectionChange={(id) => {
@@ -229,14 +223,59 @@ export function SettingsWindow({
               ) : null}
               {section === "glide" && glide ? (
                 <GlideSettingsPanel
+                  defaults={defaults?.glide}
                   isSaving={savingGlide}
                   onCaptureChange={onCaptureChange}
                   onChange={changeGlide}
                   settings={glide}
                 />
               ) : null}
+              {section === "ruler" && ruler ? (
+                <RulerSettingsPanel
+                  activationDefault={
+                    defaults?.shortcuts.bindings.find(
+                      (binding) => binding.action === "rulerOverlay",
+                    )?.shortcut
+                  }
+                  defaults={defaults?.ruler}
+                  isSaving={savingRuler}
+                  onActivationChange={(value) => {
+                    changeBinding("rulerOverlay", value);
+                  }}
+                  onCaptureChange={onCaptureChange}
+                  onChange={(next) => {
+                    void changeRuler(next);
+                  }}
+                  savingShortcut={saving !== null}
+                  settings={ruler}
+                  shortcuts={settings}
+                />
+              ) : null}
+              {section === "ocr" && ocr ? (
+                <OcrSettingsPanel
+                  activation={
+                    settings?.bindings.find(
+                      (binding) => binding.action === "recognizeText",
+                    )?.shortcut ?? null
+                  }
+                  activationDefault={
+                    defaults?.shortcuts.bindings.find(
+                      (binding) => binding.action === "recognizeText",
+                    )?.shortcut
+                  }
+                  defaults={defaults?.ocr}
+                  isSaving={savingOcr || saving !== null}
+                  onActivationChange={(value) => {
+                    changeBinding("recognizeText", value);
+                  }}
+                  onCaptureChange={onCaptureChange}
+                  onChange={changeOcr}
+                  settings={ocr}
+                />
+              ) : null}
               {section === "hotkeys" ? (
                 <HotkeySettingsPanel
+                  defaults={defaults?.shortcuts}
                   onCaptureChange={onCaptureChange}
                   onChange={changeBinding}
                   saving={saving}

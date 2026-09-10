@@ -3,7 +3,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { hotkeyFromEvent, hotkeyKeys, mouseControlFromButton } from "./hotkey";
+import {
+  hotkeyFromEvent,
+  hotkeyKeys,
+  hotkeysEqual,
+  mouseControlFromButton,
+} from "./hotkey";
 
 const key = {
   altKey: false,
@@ -65,6 +70,14 @@ describe("hotkey capture", () => {
       "Super+Shift+KeyR",
     );
   });
+  it("allows local unmodified keys and preserves the pressed modifier", () => {
+    expect(
+      hotkeyFromEvent({ ...key, code: "Tab", key: "Tab" }, "local-shortcut"),
+    ).toBe("Tab");
+    expect(hotkeyFromEvent({ ...key, metaKey: true }, "local-shortcut")).toBe(
+      "Super+KeyR",
+    );
+  });
   it("ignores modifiers, repeats, composition and unidentified keys", () => {
     for (const overrides of [
       { code: "ShiftLeft", key: "Shift" },
@@ -90,5 +103,11 @@ describe("hotkey capture", () => {
     ]);
     expect(hotkeyKeys("Super+ArrowUp", false)).toEqual(["Win", "Up"]);
     expect(hotkeyKeys(null, true)).toEqual([]);
+  });
+  it("recognizes equivalent modifier aliases and order", () => {
+    expect(
+      hotkeysEqual("Shift+Super+KeyR", "CommandOrControl+Shift+KeyR", true),
+    ).toBe(true);
+    expect(hotkeysEqual(null, "KeyR")).toBe(false);
   });
 });

@@ -54,6 +54,7 @@ mod editor;
 mod keyboard_artwork;
 #[path = "surface_windows/keyboard_hit.rs"]
 mod keyboard_hit;
+use keyboard_hit::{keyboard_transform_start, redraw_keyboard_transform};
 #[path = "surface_windows/recenter.rs"]
 mod recenter;
 #[path = "surface_windows/selection.rs"]
@@ -998,66 +999,6 @@ fn redraw_magnifier(inner: &std::sync::Arc<SurfaceInner>, state: &mut SurfaceSta
   redraw_stale_selection(inner, state);
 }
 
-fn redraw_keyboard_transform(
-  inner: &std::sync::Arc<SurfaceInner>,
-  state: &mut SurfaceState,
-  start: Option<crate::editor::keyboard_effects::KeyboardOverlay>,
-  selection: PreviewSelection,
-  scale: f64,
-) {
-  let Some(mut keyboard) = start else {
-    return;
-  };
-  let camera_source = state.camera_source.clone();
-  let Some(pane) = state
-    .panes
-    .get_mut(selection.pane_index as usize)
-    .and_then(Option::as_mut)
-  else {
-    return;
-  };
-  let (Some(settings), Some(mut composition)) = (pane.settings.clone(), pane.last_composition)
-  else {
-    return;
-  };
-  keyboard.center_x = (selection.x + selection.width / 2.0) as f32;
-  keyboard.center_y = (selection.y + selection.height / 2.0) as f32;
-  keyboard.requested_scale *= scale as f32;
-  keyboard.scale *= scale as f32;
-  let key_count = keyboard.key_count.min(keyboard.keys.len() as u32) as usize;
-  for key in &mut keyboard.keys[..key_count] {
-    key.scale *= scale as f32;
-  }
-  composition.keyboard = Some(keyboard);
-  let camera = match (pane.last_camera, camera_source.as_ref()) {
-    (Some((geometry, drop_shadow, camera_on_top)), Some(source)) => {
-      Some((source, geometry, drop_shadow, camera_on_top))
-    }
-    (Some(_), None) => return,
-    (None, _) => None,
-  };
-  let surface = RecordingPreviewSurface {
-    inner: std::sync::Arc::clone(inner),
-  };
-  let _ = surface.present_cached_source_with_camera(pane, &settings, composition, camera);
-}
-
-fn keyboard_transform_start(
-  state: &SurfaceState,
-  selection: PreviewSelection,
-) -> Option<crate::editor::keyboard_effects::KeyboardOverlay> {
-  (selection.layer_id == u32::MAX - 1)
-    .then(|| {
-      state
-        .panes
-        .get(selection.pane_index as usize)
-        .and_then(Option::as_ref)
-        .and_then(|pane| pane.last_composition)
-        .and_then(|composition| composition.keyboard)
-    })
-    .flatten()
-}
-
 fn radius_point(frame: PreviewSurfaceRect, radius_percent: f64) -> (f64, f64) {
   let offset =
     frame.width.min(frame.height) * radius_percent.clamp(0.0, 50.0) / 100.0 * 0.55 + 10.0;
@@ -2000,6 +1941,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                     } else {
                       clear_selection_snap_guides(&mut state);
                     }
+                    keyboard_hit::clamp_move(&mut selection, &mut gesture, &mut state);
                     gesture.edges = if auto_fit { AUTO_FIT_MOVE_EDGE } else { 0 };
                     if auto_fit {
                       // Grow the canvas around the move: the pane box follows

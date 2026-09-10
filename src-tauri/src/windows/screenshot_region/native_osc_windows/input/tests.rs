@@ -34,11 +34,11 @@ fn modifier_bits_carry_shift_control_double_click_and_alt() {
 
 #[test]
 fn ocr_shortcuts_map_control_a_and_control_c_once() {
-  assert_eq!(ocr_keyboard_phase(0x41, true, false), Some(6));
-  assert_eq!(ocr_keyboard_phase(0x43, true, false), Some(7));
-  assert_eq!(ocr_keyboard_phase(0x41, false, false), None);
-  assert_eq!(ocr_keyboard_phase(0x41, true, true), None);
-  assert_eq!(ocr_keyboard_phase(0x56, true, false), None);
+  assert_eq!(ocr_keyboard_phase(0x41, 2, false), Some(6));
+  assert_eq!(ocr_keyboard_phase(0x43, 2, false), Some(7));
+  assert_eq!(ocr_keyboard_phase(0x41, 0, false), None);
+  assert_eq!(ocr_keyboard_phase(0x41, 2, true), None);
+  assert_eq!(ocr_keyboard_phase(0x56, 2, false), None);
 }
 
 #[test]

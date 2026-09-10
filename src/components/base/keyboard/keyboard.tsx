@@ -37,20 +37,20 @@ const mappedKey = (children: ReactNode) => {
   if (key === "shift" || key === "⇧") {
     return {
       accessibleName: "Shift",
-      children: <ArrowBigUp aria-hidden />,
+      children: <ArrowBigUp aria-hidden className="stroke-1" />,
     };
   }
   if (key === "command" || key === "cmd" || key === "⌘") {
     return {
       accessibleName: "Command",
-      children: <Command aria-hidden />,
+      children: <Command aria-hidden className="stroke-1" />,
     };
   }
   if (key === "meta" || key === "super") {
     return isMacOS
       ? {
           accessibleName: "Command",
-          children: <Command aria-hidden />,
+          children: <Command aria-hidden className="stroke-1" />,
         }
       : { children: "Win" };
   }
@@ -58,7 +58,7 @@ const mappedKey = (children: ReactNode) => {
     return isMacOS
       ? {
           accessibleName: "Control",
-          children: <ChevronUp aria-hidden />,
+          children: <ChevronUp aria-hidden className="stroke-1" />,
         }
       : { children: "Ctrl" };
   }

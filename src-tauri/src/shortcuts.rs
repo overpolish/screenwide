@@ -14,6 +14,8 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 use crate::windows::WindowLabel;
+mod feature_availability;
+pub(crate) use feature_availability::{sync_ocr_enabled, sync_ruler_enabled};
 
 const SHORTCUTS_FILE: &str = "shortcuts.json";
 const SHORTCUT_ACTION_EVENT: &str = "global-shortcut://action";
@@ -165,6 +167,9 @@ const fn requires_frontend_turn(action: ShortcutAction) -> bool {
 }
 
 fn run_action(app: &AppHandle, action: ShortcutAction) {
+  if !feature_availability::action_enabled(action) {
+    return;
+  }
   if crate::windows::region::is_screenshot_region_session() {
     // The borrowed Region window owns screenshot teardown. Resume the action
     // through `resume_shortcut_action` only after that later IPC turn has
@@ -246,6 +251,9 @@ pub fn shortcut_for(app: &AppHandle, action: ShortcutAction) -> Option<String> {
 }
 
 fn register_binding(app: &AppHandle, action: ShortcutAction, shortcut: &str) -> Result<(), String> {
+  if !feature_availability::action_enabled(action) {
+    return Ok(());
+  }
   let parsed = shortcut
     .parse::<Shortcut>()
     .map_err(|error| error.to_string())?;

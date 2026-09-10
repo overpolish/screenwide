@@ -21,6 +21,7 @@ pub(crate) mod render;
 #[cfg(test)]
 mod render_tests;
 mod screenshot_mode;
+pub(crate) mod settings;
 pub(crate) mod snapshot;
 pub(crate) mod viewport;
 pub(crate) use input::{dispatch_input, dispatch_label, dispatch_viewport, visual_result};
@@ -82,7 +83,7 @@ pub async fn set_ruler_screenshot_mode(app: AppHandle, active: bool) -> Result<(
 }
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
-  if !adapter::available() {
+  if !settings::enabled() || !adapter::available() {
     return Ok(());
   }
 

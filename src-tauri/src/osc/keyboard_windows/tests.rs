@@ -1,0 +1,144 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+use super::{routes_to_overlay, Overlay};
+
+#[test]
+fn routes_plain_latched_and_command_shortcuts() {
+  assert!(routes_to_overlay(
+    Overlay::Ruler,
+    0x31,
+    0,
+    false,
+    true,
+    false
+  ));
+  assert!(routes_to_overlay(
+    Overlay::Ruler,
+    0x31,
+    0,
+    true,
+    true,
+    false
+  ));
+  assert!(routes_to_overlay(
+    Overlay::Ruler,
+    0x31,
+    0,
+    false,
+    false,
+    true
+  ));
+  assert!(routes_to_overlay(
+    Overlay::Ruler,
+    0x43,
+    2,
+    false,
+    true,
+    false
+  ));
+  assert!(routes_to_overlay(
+    Overlay::Ruler,
+    0x43,
+    0,
+    false,
+    false,
+    true
+  ));
+  assert!(!routes_to_overlay(
+    Overlay::Ruler,
+    0x43,
+    0,
+    false,
+    true,
+    false
+  ));
+  assert!(!routes_to_overlay(
+    Overlay::Ruler,
+    0x41,
+    2,
+    false,
+    true,
+    false
+  ));
+  assert!(routes_to_overlay(
+    Overlay::Ruler,
+    0x12,
+    0,
+    false,
+    true,
+    false
+  ));
+  assert!(routes_to_overlay(
+    Overlay::Ruler,
+    0x12,
+    0,
+    false,
+    false,
+    true
+  ));
+}
+
+#[test]
+fn consumed_key_release_is_matched_after_modifiers_are_released() {
+  assert!(routes_to_overlay(
+    Overlay::Ruler,
+    0x31,
+    0,
+    false,
+    true,
+    false
+  ));
+  assert!(routes_to_overlay(
+    Overlay::Ruler,
+    0x31,
+    8,
+    false,
+    false,
+    true
+  ));
+  assert!(!routes_to_overlay(
+    Overlay::Ruler,
+    0x31,
+    0,
+    false,
+    false,
+    true
+  ));
+}
+
+#[test]
+fn text_recognition_routes_only_control_a_and_control_c_down() {
+  assert!(routes_to_overlay(
+    Overlay::TextRecognition,
+    0x41,
+    2,
+    false,
+    true,
+    false
+  ));
+  assert!(routes_to_overlay(
+    Overlay::TextRecognition,
+    0x43,
+    2,
+    false,
+    true,
+    false
+  ));
+  assert!(!routes_to_overlay(
+    Overlay::TextRecognition,
+    0x41,
+    0,
+    false,
+    true,
+    false
+  ));
+  assert!(!routes_to_overlay(
+    Overlay::TextRecognition,
+    0x41,
+    2,
+    false,
+    false,
+    true
+  ));
+}

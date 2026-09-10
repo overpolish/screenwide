@@ -15,6 +15,7 @@ mod frame_resize;
 mod geometry;
 mod hit_test;
 mod inset_resize;
+pub(crate) mod keyboard_bounds;
 mod limits;
 #[cfg(any(target_os = "windows", test))]
 mod magnifier;

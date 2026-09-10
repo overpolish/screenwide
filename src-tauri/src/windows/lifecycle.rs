@@ -1,22 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::collections::HashSet;
-use std::sync::Mutex;
-use std::time::Duration;
-
 use tauri::{AppHandle, Manager, PhysicalPosition, WebviewWindow, WindowEvent};
 use tauri_plugin_window_state::{StateFlags, WindowExt};
 
-use super::{
-  geometry::{contain_window_in_work_area, keep_window_on_a_monitor},
-  platform, WindowLabel,
-};
-
-/// The editor windows currently being dragged, by label. Per window rather
-/// than one flag for all of them: two editor workspaces can be open at once,
-/// and a drag of one must not swallow the containment pass of the other.
-static EXPORT_DRAGS_ACTIVE: Mutex<Option<HashSet<String>>> = Mutex::new(None);
+use super::{geometry::keep_window_on_a_monitor, platform, WindowLabel};
 
 pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
   if let Some(window) = app.get_webview_window(label.as_str()) {
@@ -56,25 +44,6 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
       }
     });
   }
-}
-
-/// Claims the drag watch for `label`, reporting whether one was already running.
-#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
-fn export_drag_begin(label: &str) -> bool {
-  !EXPORT_DRAGS_ACTIVE
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-    .get_or_insert_with(HashSet::new)
-    .insert(label.to_owned())
-}
-
-#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
-fn export_drag_end(label: &str) {
-  EXPORT_DRAGS_ACTIVE
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-    .get_or_insert_with(HashSet::new)
-    .remove(label);
 }
 
 #[cfg(target_os = "macos")]
@@ -182,7 +151,6 @@ pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
       // An open export options window is a child of this one, so it follows
       // the editor's frame rather than keeping the place it was opened at.
       crate::editor::export_window::recenter_for_editor_label(&app, export.label());
-      watch_for_export_mouse_up(app.clone(), export.clone());
     }
   });
 
@@ -194,53 +162,8 @@ pub fn initialize_normal_window(window: &WebviewWindow) -> tauri::Result<()> {
   super::hide(window)
 }
 
-#[cfg(target_os = "macos")]
-fn watch_for_export_mouse_up(app: AppHandle, export: WebviewWindow) {
-  use cidre::cg::{EventSrcState, MouseButton};
-
-  let label = export.label().to_owned();
-  if export_drag_begin(&label) {
-    return;
-  }
-  tauri::async_runtime::spawn_blocking(move || {
-    while EventSrcState::CombinedSession.button_state(MouseButton::Left) {
-      std::thread::sleep(Duration::from_millis(8));
-    }
-    let _ = contain_window_in_work_area(&app, &export);
-    export_drag_end(&label);
-  });
-}
-
-#[cfg(target_os = "windows")]
-fn watch_for_export_mouse_up(app: AppHandle, export: WebviewWindow) {
-  use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
-
-  let label = export.label().to_owned();
-  if unsafe { GetAsyncKeyState(VK_LBUTTON.0.into()) } >= 0 || export_drag_begin(&label) {
-    return;
-  }
-  tauri::async_runtime::spawn_blocking(move || {
-    loop {
-      let is_pressed = unsafe { GetAsyncKeyState(VK_LBUTTON.0.into()) } < 0;
-      if !is_pressed {
-        break;
-      }
-      std::thread::sleep(Duration::from_millis(8));
-    }
-    let _ = contain_window_in_work_area(&app, &export);
-    export_drag_end(&label);
-  });
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn watch_for_export_mouse_up(app: AppHandle, export: WebviewWindow) {
-  let _ = contain_window_in_work_area(&app, &export);
-}
-
-pub fn contain_editor(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
-  contain_window_in_work_area(app, window)
-}
-
-pub fn contain_normal_window(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
-  contain_window_in_work_area(app, window)
+/// Recover a window only when it no longer overlaps any connected display.
+/// Partially off-screen positions remain under the user's control.
+pub fn recover_window_position(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
+  keep_window_on_a_monitor(app, window)
 }

@@ -18,7 +18,7 @@ pub fn show_update_prompt(app: AppHandle) -> tauri::Result<()> {
   #[cfg(target_os = "macos")]
   app.set_dock_visibility(true)?;
   windows::show(&window, true)?;
-  windows::contain_normal_window(&app, &window)
+  windows::recover_window_position(&app, &window)
 }
 
 #[tauri::command]

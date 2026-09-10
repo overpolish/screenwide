@@ -36,6 +36,8 @@ const FLAG_REPEAT: isize = 4;
 const FLAG_RELEASE: isize = 8;
 const FLAG_MODIFIER: isize = 16;
 const FLAG_ALT_DOWN: isize = 32;
+const FLAG_CONTROL_DOWN: isize = 64;
+const FLAG_SUPER_DOWN: isize = 128;
 
 static TARGET: AtomicIsize = AtomicIsize::new(0);
 static OVERLAY: AtomicU8 = AtomicU8::new(0);
@@ -68,6 +70,7 @@ fn active_overlay() -> Option<Overlay> {
 
 thread_local! {
   static PRESSED: RefCell<[bool; 256]> = const { RefCell::new([false; 256]) };
+  static CONSUMED: RefCell<[bool; 256]> = const { RefCell::new([false; 256]) };
   static LAST_ALT_HOOK: RefCell<Option<Instant>> = const { RefCell::new(None) };
 }
 
@@ -129,7 +132,7 @@ unsafe extern "system" fn hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -
     let down = matches!(wparam.0 as u32, WM_KEYDOWN | WM_SYSKEYDOWN);
     let up = matches!(wparam.0 as u32, WM_KEYUP | WM_SYSKEYUP);
     if down || up {
-      let (command, shift, repeat) = update_pressed(data.vkCode, down);
+      let (modifiers, repeat) = update_pressed(data.vkCode, down);
       let overlay = active_overlay();
       let alt = overlay == Some(Overlay::Ruler) && matches!(data.vkCode, 0x12 | 0xa4 | 0xa5);
       if alt {
@@ -140,15 +143,26 @@ unsafe extern "system" fn hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -
           return LRESULT(1);
         }
       }
-      if overlay.is_some_and(|overlay| routes_to_overlay(overlay, data.vkCode, command, down, up)) {
+      if overlay
+        .is_some_and(|overlay| routes_to_overlay(overlay, data.vkCode, modifiers, repeat, down, up))
+      {
         let target = TARGET.load(Ordering::Acquire);
         if target != 0 {
           let mut flags = 0;
-          if command {
+          if modifiers & 2 != 0 {
             flags |= FLAG_COMMAND;
           }
-          if shift {
+          if modifiers & 8 != 0 {
             flags |= FLAG_SHIFT;
+          }
+          if modifiers & 4 != 0 {
+            flags |= FLAG_ALT_DOWN;
+          }
+          if modifiers & 1 != 0 {
+            flags |= FLAG_SUPER_DOWN;
+          }
+          if modifiers & 2 != 0 {
+            flags |= FLAG_CONTROL_DOWN;
           }
           if repeat {
             flags |= FLAG_REPEAT;
@@ -181,39 +195,59 @@ pub(crate) fn alt_pressed() -> bool {
   ALT_DOWN.load(Ordering::Acquire)
 }
 
-fn update_pressed(vk: u32, down: bool) -> (bool, bool, bool) {
+fn update_pressed(vk: u32, down: bool) -> (u32, bool) {
   PRESSED.with(|pressed| {
     let mut pressed = pressed.borrow_mut();
     let index = (vk as usize).min(pressed.len() - 1);
     let repeat = down && pressed[index];
     pressed[index] = down;
-    let command = pressed[0x11] || pressed[0xa2] || pressed[0xa3];
+    let control = pressed[0x11] || pressed[0xa2] || pressed[0xa3];
     let shift = pressed[0x10] || pressed[0xa0] || pressed[0xa1];
-    (command, shift, repeat)
+    let alt = pressed[0x12] || pressed[0xa4] || pressed[0xa5];
+    let super_key = pressed[0x5b] || pressed[0x5c];
+    let modifiers =
+      u32::from(control) * 2 | u32::from(shift) * 8 | u32::from(alt) * 4 | u32::from(super_key);
+    (modifiers, repeat)
   })
 }
 
-fn routes_to_overlay(overlay: Overlay, vk: u32, command: bool, down: bool, up: bool) -> bool {
+fn routes_to_overlay(
+  overlay: Overlay,
+  vk: u32,
+  modifiers: u32,
+  repeat: bool,
+  down: bool,
+  up: bool,
+) -> bool {
   if overlay == Overlay::TextRecognition {
-    return down && command && matches!(vk, 0x41 | 0x43);
+    return down
+      && crate::text_recognition::settings::key_phase(vk as u16, modifiers, false, false)
+        .is_some();
   }
   if matches!(vk, 0x12 | 0xa4 | 0xa5) {
     return down || up;
   }
+  let index = (vk as usize).min(255);
   if up {
-    return matches!(vk, 0x31 | 0x32 | 0x56 | 0x48 | 0x52);
+    return CONSUMED.with(|consumed| {
+      let mut consumed = consumed.borrow_mut();
+      let was_consumed = consumed[index];
+      consumed[index] = false;
+      was_consumed
+    });
   }
   if !down {
     return false;
   }
-  if command {
-    matches!(vk, 0x43 | 0x5a | 0x59)
-  } else {
-    matches!(
-      vk,
-      0x58 | 0x09 | 0x08 | 0x2e | 0x54 | 0x4d | 0x31 | 0x32 | 0x56 | 0x48 | 0x52
-    )
+  if CONSUMED.with(|consumed| consumed.borrow()[index]) {
+    return true;
   }
+  let matched =
+    crate::ruler::settings::key_command(vk as u16, modifiers, false, repeat, false).is_some();
+  if matched {
+    CONSUMED.with(|consumed| consumed.borrow_mut()[index] = true);
+  }
+  matched
 }
 
 fn run_monitor(
@@ -275,6 +309,7 @@ fn run_monitor(
   }
   let _ = unsafe { UnhookWindowsHookEx(hook) };
   PRESSED.with(|pressed| pressed.borrow_mut().fill(false));
+  CONSUMED.with(|consumed| consumed.borrow_mut().fill(false));
   LAST_ALT_HOOK.with(|at| *at.borrow_mut() = None);
   ALT_DOWN.store(false, Ordering::Release);
 }
@@ -347,49 +382,5 @@ fn stop_current() {
 }
 
 #[cfg(test)]
-mod tests {
-  use super::{routes_to_overlay, Overlay};
-
-  #[test]
-  fn routes_plain_latched_and_command_shortcuts() {
-    assert!(routes_to_overlay(Overlay::Ruler, 0x31, false, true, false));
-    assert!(routes_to_overlay(Overlay::Ruler, 0x31, false, false, true));
-    assert!(routes_to_overlay(Overlay::Ruler, 0x43, true, true, false));
-    assert!(!routes_to_overlay(Overlay::Ruler, 0x43, false, true, false));
-    assert!(!routes_to_overlay(Overlay::Ruler, 0x41, true, true, false));
-    assert!(routes_to_overlay(Overlay::Ruler, 0x12, false, true, false));
-    assert!(routes_to_overlay(Overlay::Ruler, 0x12, false, false, true));
-  }
-
-  #[test]
-  fn text_recognition_routes_only_control_a_and_control_c_down() {
-    assert!(routes_to_overlay(
-      Overlay::TextRecognition,
-      0x41,
-      true,
-      true,
-      false
-    ));
-    assert!(routes_to_overlay(
-      Overlay::TextRecognition,
-      0x43,
-      true,
-      true,
-      false
-    ));
-    assert!(!routes_to_overlay(
-      Overlay::TextRecognition,
-      0x41,
-      false,
-      true,
-      false
-    ));
-    assert!(!routes_to_overlay(
-      Overlay::TextRecognition,
-      0x41,
-      true,
-      false,
-      true
-    ));
-  }
-}
+#[path = "keyboard_windows/tests.rs"]
+mod tests;

@@ -6,6 +6,7 @@
 #include <math.h>
 
 #import "gpu_compositor_macos_keyboard.h"
+#import "gpu_compositor_macos_keyboard_artwork_helpers.h"
 
 @implementation ScreenwideKeyboardArtwork
 @end
@@ -156,26 +157,30 @@ ScreenwideKeyboardArtwork *screenwide_keyboard_artwork(
     return known;
   }
 
-  // Match the React Keyboard's default variant: text-sm/5, px-1,
-  // rounded-sm, tracking-wider, Inter, bg-neutral and text-muted. Artwork is
-  // rasterised once at the density its output canvas and animation require;
-  // every subsequent frame remains a GPU-only composition.
+  // Match the React Keyboard's keycap variant from
+  // `src/components/base/keyboard/keyboard.tsx`: `h-5 min-w-5 gap-tight
+  // rounded-sm bg-fill px-control font-sans text-body text-content-fg
+  // tabular-nums`, i.e. Inter regular at 13/16 with tabular figures and no
+  // letter spacing, inside a 20pt-tall cap with 4pt padding and a 4pt radius.
+  // Artwork is rasterised once at the density its output canvas and animation
+  // require; every subsequent frame remains a GPU-only composition.
   register_inter_font();
-  NSFont *font = [NSFont fontWithName:@"Inter" size:14.0]
-      ?: [NSFont systemFontOfSize:14.0 weight:NSFontWeightRegular];
   BOOL light = overlay.appearance == 1;
   NSDictionary *attributes = @{
-    NSFontAttributeName: font,
-    NSKernAttributeName: @0.7,
-    NSForegroundColorAttributeName:
-        light ? [NSColor colorWithSRGBRed:0.251 green:0.251 blue:0.251 alpha:1.0]
-              : [NSColor colorWithSRGBRed:0.639 green:0.639 blue:0.639 alpha:1.0],
+    NSFontAttributeName: keycap_font(),
+    NSForegroundColorAttributeName: keycap_text_color(light),
   };
-  const CGFloat height = 20.0, inset = 4.0, gap = 4.0;
+  const CGFloat height = SCREENWIDE_KEYCAP_HEIGHT;
+  const CGFloat inset = SCREENWIDE_KEYCAP_PADDING;
+  const CGFloat gap = SCREENWIDE_KEYCAP_GAP;
   NSMutableArray<NSNumber *> *widths = [NSMutableArray arrayWithCapacity:labels.count];
   CGFloat width = 0.0;
-  for (NSString *label in labels) {
-    CGFloat keyWidth = ceil([label sizeWithAttributes:attributes].width) + inset * 2.0;
+  for (NSUInteger index = 0; index < labels.count; ++index) {
+    NSString *label = labels[index];
+    CGFloat contentWidth = modifier_icon(prepared.keys[index].keyCode)
+        ? 12.0 : [label sizeWithAttributes:attributes].width;
+    CGFloat keyWidth = MAX(SCREENWIDE_KEYCAP_MINIMUM_WIDTH,
+                           ceil(contentWidth) + inset * 2.0);
     [widths addObject:@(keyWidth)];
     width += keyWidth;
   }
@@ -188,25 +193,34 @@ ScreenwideKeyboardArtwork *screenwide_keyboard_artwork(
       (CGBitmapInfo)kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
   CGColorSpaceRelease(space);
   if (context == NULL) return nil;
+  // Grayscale antialiasing, as the OSC text rasteriser and the frontend use.
+  CGContextSetShouldSmoothFonts(context, false);
   CGContextScaleCTM(context, backingScale, backingScale);
   NSGraphicsContext *graphics = [NSGraphicsContext graphicsContextWithCGContext:context
                                                                         flipped:NO];
   [NSGraphicsContext saveGraphicsState];
   [NSGraphicsContext setCurrentContext:graphics];
   CGFloat x = 0.0;
-  NSColor *background = light
-      ? [NSColor colorWithSRGBRed:0.898 green:0.898 blue:0.898 alpha:1.0]
-      : [NSColor colorWithSRGBRed:0.251 green:0.251 blue:0.251 alpha:1.0];
+  NSColor *background = keycap_fill_color(light);
   for (NSUInteger index = 0; index < labels.count; ++index) {
     CGFloat keyWidth = widths[index].doubleValue;
     NSRect rect = NSMakeRect(x, 0.0, keyWidth, height);
     [background setFill];
-    [[NSBezierPath bezierPathWithRoundedRect:rect xRadius:4.0 yRadius:4.0] fill];
+    [[NSBezierPath bezierPathWithRoundedRect:rect
+                                     xRadius:SCREENWIDE_KEYCAP_RADIUS
+                                     yRadius:SCREENWIDE_KEYCAP_RADIUS] fill];
     NSString *label = labels[index];
-    NSSize text = [label sizeWithAttributes:attributes];
-    [label drawAtPoint:NSMakePoint(x + (keyWidth - text.width) / 2.0,
-                                  (height - text.height) / 2.0)
-        withAttributes:attributes];
+    if (modifier_icon(prepared.keys[index].keyCode)) {
+      [keycap_text_color(light) setStroke];
+      draw_modifier_icon(prepared.keys[index].keyCode,
+                         NSMakePoint(x + (keyWidth - 12.0) * 0.5,
+                                     (height - 12.0) * 0.5), 12.0);
+    } else {
+      NSSize text = [label sizeWithAttributes:attributes];
+      [label drawAtPoint:NSMakePoint(x + (keyWidth - text.width) / 2.0,
+                                    (height - text.height) / 2.0)
+          withAttributes:attributes];
+    }
     x += keyWidth + gap;
   }
   [NSGraphicsContext restoreGraphicsState];

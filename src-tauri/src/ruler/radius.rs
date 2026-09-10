@@ -292,9 +292,9 @@ pub(crate) fn corner_radius_at(
 #[cfg(test)]
 mod tests {
   use super::*;
-
   fn maps() -> GradientMaps {
     GradientMaps {
+      soft_edges: None,
       gx: vec![0; 80 * 80],
       gy: vec![0; 80 * 80],
       width: 80,

@@ -13,7 +13,9 @@ use windows::{
   Win32::{
     Foundation::{HWND, LPARAM, LRESULT, WPARAM},
     UI::{
-      Input::KeyboardAndMouse::{GetKeyState, ReleaseCapture, SetCapture, VK_CONTROL, VK_SHIFT},
+      Input::KeyboardAndMouse::{
+        GetKeyState, ReleaseCapture, SetCapture, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
+      },
       WindowsAndMessaging::{
         DefWindowProcW, KillTimer, LoadCursorW, SetCursor, SetTimer, HTCLIENT, HTTRANSPARENT,
         IDC_ARROW, IDC_CROSS, IDC_HAND, IDC_IBEAM, IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS,
@@ -360,8 +362,10 @@ pub(super) unsafe extern "system" fn window_proc(
           overlay_keyboard_command(
             hwnd,
             wparam.0 as u16,
-            flags & 1 != 0,
-            flags & 2 != 0,
+            (if flags & 64 != 0 { 2 } else { 0 })
+              | (if flags & 128 != 0 { 1 } else { 0 })
+              | (if flags & 32 != 0 { 4 } else { 0 })
+              | (if flags & 2 != 0 { 8 } else { 0 }),
             flags & 4 != 0,
           )
         })
@@ -1000,24 +1004,29 @@ fn confirm_expired(hwnd: HWND) {
 /// is ready - the Windows spelling of the macOS key-down monitor
 /// (`+input.m:472-581`).
 fn keyboard_command(hwnd: HWND, wparam: WPARAM, lparam: LPARAM) -> bool {
-  let command = (unsafe { GetKeyState(VK_CONTROL.0 as i32) }) < 0;
+  let control = (unsafe { GetKeyState(VK_CONTROL.0 as i32) }) < 0;
   let shift = (unsafe { GetKeyState(VK_SHIFT.0 as i32) }) < 0;
+  let alt = (unsafe { GetKeyState(VK_MENU.0 as i32) }) < 0;
+  let super_key = (unsafe { GetKeyState(VK_LWIN.0 as i32) }) < 0
+    || (unsafe { GetKeyState(VK_RWIN.0 as i32) }) < 0;
+  let modifiers =
+    u32::from(control) * 2 | u32::from(shift) * 8 | u32::from(alt) * 4 | u32::from(super_key);
   // Bit 30 of `lparam` is set when this key-down is an auto-repeat.
   let repeat = lparam.0 & (1 << 30) != 0;
-  overlay_keyboard_command(hwnd, wparam.0 as u16, command, shift, repeat)
+  overlay_keyboard_command(hwnd, wparam.0 as u16, modifiers, repeat)
 }
 
-fn overlay_keyboard_command(hwnd: HWND, vk: u16, command: bool, shift: bool, repeat: bool) -> bool {
+fn overlay_keyboard_command(hwnd: HWND, vk: u16, modifiers: u32, repeat: bool) -> bool {
   let Some(context) = state::context_for_surface(hwnd) else {
     return false;
   };
   if context.is_ruler() {
-    return ruler_keyboard_command(&context, hwnd, vk, command, shift, repeat);
+    return ruler_keyboard_command(&context, hwnd, vk, modifiers, repeat);
   }
   if !context.is_text_recognition() {
     return false;
   }
-  let Some(phase) = ocr_keyboard_phase(vk, command, repeat) else {
+  let Some(phase) = ocr_keyboard_phase(vk, modifiers, repeat) else {
     return false;
   };
   let ready = context
@@ -1040,8 +1049,7 @@ fn ruler_keyboard_command(
   context: &Context,
   hwnd: HWND,
   vk: u16,
-  command: bool,
-  shift: bool,
+  modifiers: u32,
   repeat: bool,
 ) -> bool {
   let latched = context
@@ -1049,7 +1057,7 @@ fn ruler_keyboard_command(
     .lock()
     .map(|session| session.latched())
     .unwrap_or(false);
-  let Some(key) = ruler::key_command(vk, command, shift, repeat, latched) else {
+  let Some(key) = ruler::key_command(vk, modifiers, repeat, latched) else {
     return false;
   };
   if !ruler_keyboard_phase(context, hwnd, key.phase) {
@@ -1070,15 +1078,8 @@ fn ruler_keyboard_command(
   true
 }
 
-fn ocr_keyboard_phase(vk: u16, command: bool, repeat: bool) -> Option<u32> {
-  if !command || repeat {
-    return None;
-  }
-  match vk {
-    0x41 => Some(6),
-    0x43 => Some(7),
-    _ => None,
-  }
+fn ocr_keyboard_phase(vk: u16, modifiers: u32, repeat: bool) -> Option<u32> {
+  crate::text_recognition::settings::key_phase(vk, modifiers, false, repeat)
 }
 
 /// The key-up half of a latched range, guide or radius key (`+input.m:440-471`).

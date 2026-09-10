@@ -8,6 +8,27 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL selection_is_keyboard(
   return selection.layer_id == UINT32_MAX - 1;
 }
 
+extern double screenwide_keyboard_clamp_origin(double origin, double extent);
+extern double screenwide_keyboard_resize_limit(double x, double y, double width,
+    double height, double anchorX, double anchorY);
+
+SCREENWIDE_PREVIEW_PRIVATE double keyboard_resize_limit(
+    ScreenwidePreviewSelection start, double anchorX, double anchorY, double maximum) {
+  if (!selection_is_keyboard(start)) return maximum;
+  return MIN(maximum, screenwide_keyboard_resize_limit(
+      start.x, start.y, start.width, start.height, anchorX, anchorY));
+}
+
+SCREENWIDE_PREVIEW_PRIVATE void clamp_keyboard_move(
+    ScreenwidePreviewSurface *surface, ScreenwidePreviewSelection start,
+    double *x, double *y) {
+  if (!selection_is_keyboard(start)) return;
+  double nextX = screenwide_keyboard_clamp_origin(*x, start.width);
+  double nextY = screenwide_keyboard_clamp_origin(*y, start.height);
+  if (nextX != *x || nextY != *y) clear_selection_snap_guides(surface);
+  *x = nextX; *y = nextY;
+}
+
 static BOOL keyboard_visible_hit_rect(
     ScreenwidePreviewSurface *surface, ScreenwidePreviewSelection selection,
     NSRect *rect) {
