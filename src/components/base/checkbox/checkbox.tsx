@@ -18,7 +18,7 @@ const boxStyles = [
   "relative isolate flex size-icon shrink-0 transform-gpu items-center justify-center rounded-sm bg-fill text-primary-fg transition-[background-color,box-shadow]",
   "after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-[inherit] after:transition-colors after:content-['']",
   "group-data-[pressed]:after:bg-fill-secondary",
-  "group-data-[selected]:bg-primary-surface group-data-[selected]:group-data-[pressed]:bg-primary-surface-pressed",
+  "group-data-[selected]:bg-primary-surface group-data-[selected]:group-data-[pressed]:bg-primary-surface-pressed group-data-[selected]:group-data-[focus-visible]:ring-offset-2 group-data-[selected]:group-data-[focus-visible]:ring-offset-content",
   "group-data-[indeterminate]:bg-primary-surface group-data-[indeterminate]:group-data-[pressed]:bg-primary-surface-pressed",
   "group-data-[disabled]:bg-fill-quaternary group-data-[disabled]:text-content-fg-tertiary",
   "group-data-[disabled]:group-data-[selected]:bg-fill-quaternary group-data-[disabled]:group-data-[indeterminate]:bg-fill-quaternary",

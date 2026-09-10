@@ -68,6 +68,7 @@ export type GlideSettings = {
 };
 
 export type GeneralSettings = {
+  accent: "screenwide" | "system";
   launchAtLogin: boolean;
   openLocationAfterExport: boolean;
   recordScreenwideWindows: boolean;

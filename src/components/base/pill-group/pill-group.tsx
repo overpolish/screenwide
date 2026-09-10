@@ -68,7 +68,9 @@ const variantClassName = {
     // A bezeled control does not react to hover.
     hover: "",
     knob: `${knobBase} bg-primary-surface`,
-    selectedText: "data-[selected]:text-primary-fg",
+    // The ring shares the knob's accent, so a selected segment gets a gap.
+    selectedText:
+      "data-[selected]:text-primary-fg data-[selected]:data-[focus-visible]:ring-offset-2 data-[selected]:data-[focus-visible]:ring-offset-content",
     track: "bg-fill",
   },
   ghost: {

@@ -6,7 +6,7 @@ import { type ContextType, useState } from "react";
 import { FeatureStoryStage } from "../../storybook/feature-story-stage";
 
 import { SettingsApiContext } from "./settings-api-context";
-import { SettingsUpdateActions } from "./settings-update-actions";
+import { SoftwareUpdateSetting } from "./settings-update-actions";
 import { SettingsWindow } from "./settings-window";
 
 import type {
@@ -21,6 +21,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 function createPreviewApi(): ContextType<typeof SettingsApiContext> {
   let general: GeneralSettings = {
+    accent: "system",
     launchAtLogin: false,
     openLocationAfterExport: true,
     recordScreenwideWindows: true,
@@ -143,7 +144,7 @@ const meta = {
     ),
   ],
   parameters: {
-    controls: { exclude: ["updateActions"] },
+    controls: { exclude: ["updateSetting"] },
     layout: "fullscreen",
   },
   render: function Render(args) {
@@ -153,9 +154,9 @@ const meta = {
       <SettingsApiContext value={api}>
         <SettingsWindow
           initialSection={args.initialSection}
-          updateActions={
-            args.updateActions ?? (
-              <SettingsUpdateActions
+          updateSetting={
+            args.updateSetting ?? (
+              <SoftwareUpdateSetting
                 currentVersion="0.1.0"
                 error={null}
                 onPress={() => {
@@ -178,10 +179,15 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+export const Glide: Story = { args: { initialSection: "glide" } };
+export const Ruler: Story = { args: { initialSection: "ruler" } };
+export const Ocr: Story = { args: { initialSection: "ocr" } };
+export const Shortcuts: Story = { args: { initialSection: "hotkeys" } };
+
 export const UpdateAvailable: Story = {
   args: {
-    updateActions: (
-      <SettingsUpdateActions
+    updateSetting: (
+      <SoftwareUpdateSetting
         currentVersion="0.1.0"
         error={null}
         onPress={() => undefined}
@@ -192,5 +198,30 @@ export const UpdateAvailable: Story = {
   },
 };
 
-export const Ruler: Story = { args: { initialSection: "ruler" } };
-export const Ocr: Story = { args: { initialSection: "ocr" } };
+export const UpdateChecking: Story = {
+  args: {
+    updateSetting: (
+      <SoftwareUpdateSetting
+        currentVersion="0.1.0"
+        error={null}
+        onPress={() => undefined}
+        status="checking"
+        updateVersion={null}
+      />
+    ),
+  },
+};
+
+export const UpdateError: Story = {
+  args: {
+    updateSetting: (
+      <SoftwareUpdateSetting
+        currentVersion="0.1.0"
+        error="Could not reach the update server."
+        onPress={() => undefined}
+        status="error"
+        updateVersion={null}
+      />
+    ),
+  },
+};

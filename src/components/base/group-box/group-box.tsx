@@ -30,7 +30,7 @@ export function GroupBox({
           {title}
         </Text>
       ) : null}
-      <div className="flex flex-col rounded-control bg-fill-quaternary py-control [&>*]:px-section [&>*]:py-control-inset">
+      <div className="flex flex-col rounded-panel bg-fill-quaternary py-control [&>*]:px-section [&>*]:py-control-inset">
         {children}
       </div>
     </section>

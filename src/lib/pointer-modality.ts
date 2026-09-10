@@ -25,11 +25,13 @@ export function installPointerModalityGuard() {
   let lastPressAt = Number.NEGATIVE_INFINITY;
   let pointerFocusBeforeBlur: Element | null = null;
   let pointerBeforeHide = false;
+  let pointerEscapeReleaseTarget: Element | null = null;
   let inputVersion = 0;
   const declarePointer = () => {
     inputVersion++;
     pointerFocusBeforeBlur = null;
     pointerBeforeHide = false;
+    pointerEscapeReleaseTarget = null;
     lastPressAt = performance.now();
     setInteractionModality("pointer");
   };
@@ -43,17 +45,35 @@ export function installPointerModalityGuard() {
       lastPressAt = Number.NEGATIVE_INFINITY;
       pointerFocusBeforeBlur = null;
       pointerBeforeHide = false;
+      pointerEscapeReleaseTarget = null;
+    },
+    { capture: true },
+  );
+  document.addEventListener(
+    "keyup",
+    (event) => {
+      const target = pointerEscapeReleaseTarget;
+      pointerEscapeReleaseTarget = null;
+      if (event.key !== "Escape") return;
+      // Native dismissal consumes Escape-down, then restores this window
+      // before Escape-up. React Aria also changes modality on keyup. Restate
+      // pointer modality after its listener, without swallowing the event.
+      if (target && document.hasFocus() && document.activeElement === target)
+        setInteractionModality("pointer");
     },
     { capture: true },
   );
   window.addEventListener("blur", () => {
     pointerFocusBeforeBlur =
       getInteractionModality() === "pointer" ? document.activeElement : null;
+    pointerEscapeReleaseTarget = pointerFocusBeforeBlur;
   });
   window.addEventListener(
     "focus",
     (event) => {
       if (event.target === window || event.target === document) return;
+      if (event.target !== pointerEscapeReleaseTarget)
+        pointerEscapeReleaseTarget = null;
       const restoringHiddenPointer =
         pointerBeforeHide && document.visibilityState === "hidden";
       const restoredPointerFocus =

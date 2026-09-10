@@ -5,18 +5,15 @@ import { Keyboard, LayoutGrid, Ruler, ScanText, Settings } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
+import { Alert } from "../../components/base/alert/alert";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 import { SidebarNav } from "../../components/base/sidebar-nav/sidebar-nav";
-import { Text } from "../../components/base/text/text";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
+import { WindowShell } from "../../components/shared/window-shell/window-shell";
 
-import { GeneralSettingsPanel } from "./general-settings";
-import { GlideSettingsPanel } from "./glide-settings";
-import { HotkeySettingsPanel } from "./hotkey-settings";
-import { OcrSettingsPanel } from "./ocr-settings";
-import { RulerSettingsPanel } from "./ruler-settings";
 import { useSettingsApi } from "./settings-api-context";
-import { LiveSettingsUpdateActions } from "./settings-update-actions";
+import { SettingsPanes } from "./settings-panes";
+import { sectionTitles, type SettingsSection } from "./settings-sections";
 import {
   GeneralSettings,
   GlideSettings,
@@ -31,22 +28,12 @@ import { useOcrSettingsSave } from "./use-ocr-settings-save";
 import { useRulerSettingsSave } from "./use-ruler-settings-save";
 import { useShortcutCapture } from "./use-shortcut-capture";
 
-type SettingsSection = "general" | "glide" | "ruler" | "ocr" | "hotkeys";
-
-const sectionTitles: Record<SettingsSection, string> = {
-  general: "General",
-  glide: "Glide",
-  hotkeys: "Shortcuts",
-  ocr: "OCR",
-  ruler: "Ruler",
-};
-
 export function SettingsWindow({
   initialSection = "general",
-  updateActions = <LiveSettingsUpdateActions />,
+  updateSetting,
 }: {
   initialSection?: SettingsSection;
-  updateActions?: ReactNode;
+  updateSetting?: ReactNode;
 }) {
   const {
     beginShortcutCapture,
@@ -166,25 +153,32 @@ export function SettingsWindow({
   );
 
   return (
-    <main className="window-surface gap-section flex h-full w-full flex-col overflow-hidden rounded-window text-content-fg">
-      <WindowHeader
-        actions={updateActions}
-        leadingSection={
-          <img
-            alt="Screenwide"
-            className="brightness-0 dark:invert"
-            draggable={false}
-            src={logoUrl}
-          />
-        }
-        onClose={() => void hideSettings()}
-        onMinimize={() => void minimize()}
-        title="Settings"
-      />
-      <div className="gap-layout px-window-inset pb-window-inset flex min-h-0 grow">
+    <WindowShell
+      header={
+        <WindowHeader
+          leadingSection={
+            <img
+              alt="Screenwide"
+              className="brightness-0 dark:invert"
+              draggable={false}
+              src={logoUrl}
+            />
+          }
+          onClose={() => void hideSettings()}
+          onMinimize={() => void minimize()}
+          title={sectionTitles[section]}
+        />
+      }
+    >
+      {/* Only the sidebar keeps the window inset; the content column runs to
+          the window's right and bottom edges so its scroll shadow lands there,
+          and carries the inset on the scrolled content instead. */}
+      <div className="gap-layout pl-window-inset flex min-h-0 grow">
         <SidebarNav
           aria-label="Settings sections"
+          className="pb-window-inset"
           isExpandable={false}
+          isExpanded
           items={[
             { icon: <Settings />, id: "general", label: "General" },
             { icon: <LayoutGrid />, id: "glide", label: "Glide" },
@@ -198,99 +192,52 @@ export function SettingsWindow({
           selected={section}
         />
         <div className="gap-section flex min-h-0 min-w-0 grow flex-col">
-          <header className="w-full shrink-0">
-            <h1 className="m-0 text-lg font-semibold">
-              {sectionTitles[section]}
-            </h1>
-          </header>
-          <section
-            aria-label={sectionTitles[section]}
-            className="gap-section flex min-h-0 min-w-0 grow flex-col"
+          <ScrollArea
+            edgeEffect="shadow"
+            key={section}
+            rootClassName="min-h-0 min-w-0 grow"
           >
-            <ScrollArea
-              edgeEffect="inset"
-              key={section}
-              rootClassName="min-h-0 grow"
-              scrollbarAutoHide="never"
+            <section
+              aria-label={sectionTitles[section]}
+              className="pr-window-inset pb-window-inset flex flex-col"
             >
-              {section === "general" && general ? (
-                <GeneralSettingsPanel
-                  isSaving={savingGeneral}
-                  onChange={changeGeneral}
-                  onError={setError}
-                  settings={general}
-                />
-              ) : null}
-              {section === "glide" && glide ? (
-                <GlideSettingsPanel
-                  defaults={defaults?.glide}
-                  isSaving={savingGlide}
-                  onCaptureChange={onCaptureChange}
-                  onChange={changeGlide}
-                  settings={glide}
-                />
-              ) : null}
-              {section === "ruler" && ruler ? (
-                <RulerSettingsPanel
-                  activationDefault={
-                    defaults?.shortcuts.bindings.find(
-                      (binding) => binding.action === "rulerOverlay",
-                    )?.shortcut
-                  }
-                  defaults={defaults?.ruler}
-                  isSaving={savingRuler}
-                  onActivationChange={(value) => {
-                    changeBinding("rulerOverlay", value);
-                  }}
-                  onCaptureChange={onCaptureChange}
-                  onChange={(next) => {
-                    void changeRuler(next);
-                  }}
-                  savingShortcut={saving !== null}
-                  settings={ruler}
-                  shortcuts={settings}
-                />
-              ) : null}
-              {section === "ocr" && ocr ? (
-                <OcrSettingsPanel
-                  activation={
-                    settings?.bindings.find(
-                      (binding) => binding.action === "recognizeText",
-                    )?.shortcut ?? null
-                  }
-                  activationDefault={
-                    defaults?.shortcuts.bindings.find(
-                      (binding) => binding.action === "recognizeText",
-                    )?.shortcut
-                  }
-                  defaults={defaults?.ocr}
-                  isSaving={savingOcr || saving !== null}
-                  onActivationChange={(value) => {
-                    changeBinding("recognizeText", value);
-                  }}
-                  onCaptureChange={onCaptureChange}
-                  onChange={changeOcr}
-                  settings={ocr}
-                />
-              ) : null}
-              {section === "hotkeys" ? (
-                <HotkeySettingsPanel
-                  defaults={defaults?.shortcuts}
-                  onCaptureChange={onCaptureChange}
-                  onChange={changeBinding}
-                  saving={saving}
-                  settings={settings}
-                />
-              ) : null}
-            </ScrollArea>
-            {error ? (
-              <Text className="text-error" role="alert" variant="help">
-                {error}
-              </Text>
-            ) : null}
-          </section>
+              <SettingsPanes
+                defaults={defaults}
+                general={general}
+                glide={glide}
+                ocr={ocr}
+                onCaptureChange={onCaptureChange}
+                onChangeBinding={changeBinding}
+                onChangeGeneral={changeGeneral}
+                onChangeGlide={changeGlide}
+                onChangeOcr={changeOcr}
+                onChangeRuler={(next) => {
+                  void changeRuler(next);
+                }}
+                onError={setError}
+                ruler={ruler}
+                savingGeneral={savingGeneral}
+                savingGlide={savingGlide}
+                savingOcr={savingOcr}
+                savingRuler={savingRuler}
+                savingShortcut={saving}
+                section={section}
+                shortcuts={settings}
+                updateSetting={updateSetting}
+              />
+            </section>
+          </ScrollArea>
+          {error ? (
+            <Alert
+              className="mr-window-inset mb-window-inset"
+              color="error"
+              role="alert"
+            >
+              {error}
+            </Alert>
+          ) : null}
         </div>
       </div>
-    </main>
+    </WindowShell>
   );
 }

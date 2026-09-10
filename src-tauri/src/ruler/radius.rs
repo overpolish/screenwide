@@ -6,6 +6,9 @@ use crate::{
   ruler::analysis::{ComponentBox, GradientMaps},
 };
 
+mod sampling;
+use sampling::curve_points;
+
 const MAXIMUM_RADIUS: u32 = 128;
 const MAXIMUM_CURSOR_DISTANCE: f64 = 96.0;
 const MAXIMUM_ARC_DISTANCE: f64 = 24.0;
@@ -66,74 +69,6 @@ fn pixel_at(bounds: ComponentBox, corner: Corner, point: LocalPoint) -> (u32, u3
       bounds.y + point.v
     },
   )
-}
-
-fn gradient_at(maps: &GradientMaps, horizontal: bool, position: u32, across: u32) -> u8 {
-  let (x, y, plane) = if horizontal {
-    (position, across, &maps.gx)
-  } else {
-    (across, position, &maps.gy)
-  };
-  if x >= maps.width || y >= maps.height {
-    return 0;
-  }
-  plane[(y * maps.width + x) as usize]
-}
-
-fn edge_mass(maps: &GradientMaps, horizontal: bool, position: u32, across: u32) -> u16 {
-  let center = u16::from(gradient_at(maps, horizontal, position, across));
-  let before = position.checked_sub(1).map_or(0, |value| {
-    u16::from(gradient_at(maps, horizontal, value, across))
-  });
-  let after = position.checked_add(1).map_or(0, |value| {
-    u16::from(gradient_at(maps, horizontal, value, across))
-  });
-  center * 2 + before + after
-}
-
-fn clears_threshold(maps: &GradientMaps, horizontal: bool, x: u32, y: u32, threshold: u8) -> bool {
-  let (position, across) = if horizontal { (x, y) } else { (y, x) };
-  gradient_at(maps, horizontal, position, across) > 0
-    && edge_mass(maps, horizontal, position, across) >= u16::from(threshold)
-}
-
-fn curve_points(
-  bounds: ComponentBox,
-  corner: Corner,
-  maps: &GradientMaps,
-  limit: u32,
-  threshold: u8,
-) -> Vec<LocalPoint> {
-  let mut points = Vec::new();
-  let mut add = |point: LocalPoint| {
-    if point.u > 0
-      && point.v > 0
-      && !points
-        .iter()
-        .any(|item: &LocalPoint| item.u == point.u && item.v == point.v)
-    {
-      points.push(point);
-    }
-  };
-  for v in 0..=limit {
-    for u in 0..=limit {
-      let (x, y) = pixel_at(bounds, corner, LocalPoint { u, v });
-      if clears_threshold(maps, true, x, y, threshold) {
-        add(LocalPoint { u, v });
-        break;
-      }
-    }
-  }
-  for u in 0..=limit {
-    for v in 0..=limit {
-      let (x, y) = pixel_at(bounds, corner, LocalPoint { u, v });
-      if clears_threshold(maps, false, x, y, threshold) {
-        add(LocalPoint { u, v });
-        break;
-      }
-    }
-  }
-  points
 }
 
 fn median(mut values: Vec<f64>) -> f64 {
@@ -264,6 +199,7 @@ pub(crate) fn corner_radius_at(
   candidates.truncate(MAXIMUM_CANDIDATES);
   let mut best: Option<(RadiusEstimate, f64)> = None;
   for (bounds, corner, _) in candidates {
+    let bounds = sampling::aligned_bounds(maps, bounds);
     let limit = MAXIMUM_RADIUS.min(bounds.width.min(bounds.height) / 2);
     if limit < 2 {
       continue;
@@ -290,93 +226,4 @@ pub(crate) fn corner_radius_at(
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-  fn maps() -> GradientMaps {
-    GradientMaps {
-      soft_edges: None,
-      gx: vec![0; 80 * 80],
-      gy: vec![0; 80 * 80],
-      width: 80,
-      height: 80,
-    }
-  }
-
-  fn paint_corner(
-    maps: &mut GradientMaps,
-    bounds: ComponentBox,
-    corner: Corner,
-    radius: u32,
-    strength: u8,
-  ) {
-    for step in 0..=90 {
-      let angle = f64::from(step) / 90.0 * std::f64::consts::FRAC_PI_2;
-      let point = LocalPoint {
-        u: (f64::from(radius) - f64::from(radius) * angle.cos()).round() as u32,
-        v: (f64::from(radius) - f64::from(radius) * angle.sin()).round() as u32,
-      };
-      let (x, y) = pixel_at(bounds, corner, point);
-      let index = (y * maps.width + x) as usize;
-      maps.gx[index] = (f64::from(strength) * angle.cos()).round() as u8;
-      maps.gy[index] = (f64::from(strength) * angle.sin()).round() as u8;
-    }
-    for v in radius..=bounds.height {
-      let (x, y) = pixel_at(bounds, corner, LocalPoint { u: 0, v });
-      maps.gx[(y * maps.width + x) as usize] = strength;
-    }
-    for u in radius..=bounds.width {
-      let (x, y) = pixel_at(bounds, corner, LocalPoint { u, v: 0 });
-      maps.gy[(y * maps.width + x) as usize] = strength;
-    }
-  }
-
-  #[test]
-  fn fits_all_corner_orientations() {
-    let bounds = ComponentBox {
-      x: 10,
-      y: 10,
-      width: 50,
-      height: 40,
-    };
-    for corner in [
-      Corner::TopLeft,
-      Corner::TopRight,
-      Corner::BottomLeft,
-      Corner::BottomRight,
-    ] {
-      let mut field = maps();
-      paint_corner(&mut field, bounds, corner, 8, 30);
-      let origin = corner_origin(bounds, corner);
-      let cursor = Point {
-        x: origin.x + if corner.right() { -2.0 } else { 2.0 },
-        y: origin.y + if corner.bottom() { -2.0 } else { 2.0 },
-      };
-      assert_eq!(
-        corner_radius_at(&[bounds], cursor, &field, 24, 1.0, 1.0)
-          .map(|value| (value.corner, value.radius)),
-        Some((corner, 8))
-      );
-    }
-  }
-
-  #[test]
-  fn sensitivity_and_cursor_distance_are_respected() {
-    let bounds = ComponentBox {
-      x: 10,
-      y: 10,
-      width: 50,
-      height: 40,
-    };
-    let mut field = maps();
-    paint_corner(&mut field, bounds, Corner::TopLeft, 8, 10);
-    assert!(
-      corner_radius_at(&[bounds], Point { x: 12.0, y: 12.0 }, &field, 24, 1.0, 1.0).is_none()
-    );
-    assert_eq!(
-      corner_radius_at(&[bounds], Point { x: 12.0, y: 12.0 }, &field, 5, 1.0, 1.0)
-        .map(|value| value.radius),
-      Some(8)
-    );
-    assert!(corner_radius_at(&[bounds], Point { x: 70.0, y: 70.0 }, &field, 5, 1.0, 1.0).is_none());
-  }
-}
+mod tests;

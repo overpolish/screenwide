@@ -33,7 +33,7 @@ export const iconButtonVariants = tv({
       neutral:
         "bg-transparent text-content-fg data-[hovered]:bg-fill-tertiary data-[pressed]:bg-fill",
       primary:
-        "bg-primary-surface text-primary-fg data-[pressed]:bg-primary-surface-pressed",
+        "bg-primary-surface text-primary-fg data-[pressed]:bg-primary-surface-pressed data-[focus-visible]:ring-offset-2 data-[focus-visible]:ring-offset-content",
     },
     hasSelectedBackground: {
       true: [

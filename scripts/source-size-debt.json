@@ -82,7 +82,6 @@
   "src-tauri/src/screenshots/output.rs": 509,
   "src-tauri/src/screenshots/platform.rs": 448,
   "src-tauri/src/shortcuts.rs": 403,
-  "src-tauri/src/ruler/radius.rs": 383,
   "src-tauri/src/ruler/snapshot.rs": 3836,
   "src-tauri/src/text_recognition/interaction.rs": 333,
   "src-tauri/src/text_recognition/snapshot.rs": 328,

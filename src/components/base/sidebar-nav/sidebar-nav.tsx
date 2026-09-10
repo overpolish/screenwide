@@ -55,7 +55,9 @@ export function SidebarNav({
   selected,
 }: SidebarNavProps) {
   const [localExpanded, setLocalExpanded] = useState(defaultExpanded);
-  const expanded = isExpandable && (isExpanded ?? localExpanded);
+  // A sidebar that cannot collapse can still be held open, the way System
+  // Settings always shows its labels; only the toggle needs `isExpandable`.
+  const expanded = isExpanded ?? (isExpandable && localExpanded);
   const groupId = useId();
   const reducedMotion = useReducedMotion();
   const transition = {
@@ -103,6 +105,10 @@ export function SidebarNav({
                   "data-[disabled]:text-content-fg-tertiary data-[disabled]:data-[selected]:bg-fill-quaternary",
                   focusStyles,
                   elementFocusVisible,
+                  // The selected row is already the accent tint, so its ring
+                  // would merge with it; a gap in the window colour keeps the
+                  // ring readable there.
+                  "data-[selected]:data-[focus-visible]:ring-offset-2 data-[selected]:data-[focus-visible]:ring-offset-content",
                 )}
                 id={item.id}
                 isDisabled={item.isDisabled}

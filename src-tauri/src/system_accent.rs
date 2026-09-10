@@ -3,7 +3,7 @@
 
 use std::sync::RwLock;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 
 #[cfg(target_os = "macos")]
@@ -23,6 +23,44 @@ const ACCENT_CHANGED_EVENT: &str = "system-accent-changed";
 /// The brand accent, used wherever the platform has no accent of its own.
 /// Matches `--color-primary`'s fallback in `src/index.css`.
 const BRAND_ACCENT: [u8; 3] = [0xd8, 0x1b, 0x60];
+
+/// Whether the app follows the operating system accent or paints with its own
+/// brand colour. Stored with the general settings and mirrored here so native
+/// code can read it without touching the settings state.
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AccentPreference {
+  #[default]
+  System,
+  Screenwide,
+}
+
+/// The accent the user asked for. Kept beside the accent cache because the
+/// C entry points below have no way to reach the settings state.
+static PREFERENCE: RwLock<AccentPreference> = RwLock::new(AccentPreference::System);
+
+fn preference() -> AccentPreference {
+  PREFERENCE
+    .read()
+    .map_or(AccentPreference::System, |preference| *preference)
+}
+
+/// Stores the accent preference and drops the cached accent, so the next read
+/// reflects it. Called when the stored preferences load, before any window
+/// exists to tell.
+pub fn set_preference(preference: AccentPreference) {
+  if let Ok(mut stored) = PREFERENCE.write() {
+    *stored = preference;
+  }
+  screenwide_system_accent_invalidate();
+}
+
+/// Stores the accent preference and tells every window, so the web UI and the
+/// native chrome swap accents together.
+pub fn preference_changed(app: &AppHandle, preference: AccentPreference) {
+  set_preference(preference);
+  let _ = app.emit(ACCENT_CHANGED_EVENT, current());
+}
 
 /// The operating system accent colour, in sRGB.
 #[derive(Clone, Copy, Serialize)]
@@ -52,6 +90,9 @@ static CACHE: RwLock<Option<Option<SystemAccent>>> = RwLock::new(None);
 /// Reads the current accent. `None` means the platform has no accent to
 /// follow, so the app keeps its own brand colour.
 pub fn current() -> Option<SystemAccent> {
+  if preference() == AccentPreference::Screenwide {
+    return None;
+  }
   if let Ok(cache) = CACHE.read() {
     if let Some(accent) = *cache {
       return accent;

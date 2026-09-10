@@ -66,4 +66,35 @@ impl GradientMaps {
       plane.get(index).copied().unwrap_or(0)
     })
   }
+
+  /// The two directional peaks of a diagonal transition can be one pixel
+  /// apart. Combine their contrast only at existing peaks, so flat pixels
+  /// between transitions cannot become candidate edge pixels.
+  pub(crate) fn has_soft_edge(&self, index: usize, threshold: u8) -> bool {
+    let Some((gx, gy)) = &self.soft_edges else {
+      return false;
+    };
+    let (x, y) = (index % self.width as usize, index / self.width as usize);
+    let (sx, sy) = (gx[index], gy[index]);
+    if sx.max(sy) >= threshold {
+      return true;
+    }
+    if sx == 0 && sy == 0 {
+      return false;
+    }
+    let mut other_x = sx;
+    let mut other_y = sy;
+    for row in y.saturating_sub(1)..=(y + 1).min(self.height as usize - 1) {
+      for col in x.saturating_sub(1)..=(x + 1).min(self.width as usize - 1) {
+        let nearby = row * self.width as usize + col;
+        if sy > 0 {
+          other_x = other_x.max(gx[nearby]);
+        }
+        if sx > 0 {
+          other_y = other_y.max(gy[nearby]);
+        }
+      }
+    }
+    u32::from(other_x).pow(2) + u32::from(other_y).pow(2) >= u32::from(threshold).pow(2)
+  }
 }

@@ -23,6 +23,7 @@ describe("pointer focus restoration", () => {
     interaction.modality = "pointer";
     page = Object.assign(new EventTarget(), {
       activeElement: closeButton,
+      hasFocus: () => true,
       visibilityState: "visible",
     });
     panel = new EventTarget();
@@ -32,6 +33,12 @@ describe("pointer focus restoration", () => {
     panel.addEventListener("focus", (event) => {
       if (event.target !== panel) interaction.modality = "virtual";
     });
+    // React Aria processes both phases, before the guard's document listener.
+    for (const type of ["keydown", "keyup"]) {
+      page.addEventListener(type, () => {
+        interaction.modality = "keyboard";
+      });
+    }
     installPointerModalityGuard();
   });
 
@@ -46,6 +53,67 @@ describe("pointer focus restoration", () => {
     Object.defineProperty(event, "target", { value: element });
     panel.dispatchEvent(event);
   }
+
+  function keyEvent(type: "keydown" | "keyup", key: string) {
+    const event = new Event(type);
+    Object.defineProperty(event, "key", { value: key });
+    page.dispatchEvent(event);
+  }
+
+  function restorePointerFocus() {
+    panel.dispatchEvent(new Event("blur"));
+    panel.dispatchEvent(new Event("focus"));
+    focusElement(closeButton);
+    vi.runAllTimers();
+  }
+
+  it("preserves pointer focus when native dismissal delivers only Escape-up", () => {
+    restorePointerFocus();
+    vi.advanceTimersByTime(75);
+    keyEvent("keyup", "Escape");
+    expect(interaction.modality).toBe("pointer");
+    // Protection belongs to one release only.
+    keyEvent("keyup", "Escape");
+    expect(interaction.modality).toBe("keyboard");
+  });
+
+  it.each(["Escape", "Tab", "ArrowDown"])(
+    "lets a fresh %s keydown cancel trailing-release protection",
+    (key) => {
+      restorePointerFocus();
+      keyEvent("keydown", key);
+      keyEvent("keyup", "Escape");
+      expect(interaction.modality).toBe("keyboard");
+    },
+  );
+
+  it("does not suppress Escape-up without a window restoration", () => {
+    keyEvent("keyup", "Escape");
+    expect(interaction.modality).toBe("keyboard");
+  });
+
+  it("does not suppress other key releases after restoration", () => {
+    restorePointerFocus();
+    keyEvent("keyup", "Tab");
+    expect(interaction.modality).toBe("keyboard");
+    keyEvent("keyup", "Escape");
+    expect(interaction.modality).toBe("keyboard");
+  });
+
+  it("does not suppress Escape-up after virtual focus moves elsewhere", () => {
+    restorePointerFocus();
+    focusElement({});
+    focusElement(closeButton);
+    keyEvent("keyup", "Escape");
+    expect(interaction.modality).toBe("keyboard");
+  });
+
+  it("preserves keyboard focus through dismissal and Escape-up", () => {
+    interaction.modality = "keyboard";
+    restorePointerFocus();
+    keyEvent("keyup", "Escape");
+    expect(interaction.modality).toBe("keyboard");
+  });
 
   it("keeps a mouse-focused close button ring-free after a delayed reopen", () => {
     page.dispatchEvent(new Event("pointerdown"));

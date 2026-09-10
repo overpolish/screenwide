@@ -9,6 +9,7 @@ import logoUrl from "../../assets/screenwide-mark.svg";
 import { Button } from "../../components/base/button/button";
 import { GroupBox } from "../../components/base/group-box/group-box";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
+import { WindowShell } from "../../components/shared/window-shell/window-shell";
 import { useFitWindowHeight } from "../../lib/use-fit-window-height";
 
 import {
@@ -67,39 +68,40 @@ export function PermissionsWindow({
   useFitWindowHeight(contentRef);
 
   return (
-    <main
-      className="window-surface flex w-full flex-col overflow-hidden"
+    <WindowShell
+      header={
+        <WindowHeader
+          actions={
+            <AnimatePresence>
+              {hasRequired ? (
+                <motion.div
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex"
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0, scale: 0 }}
+                >
+                  <Button color="primary" onPress={onRestart}>
+                    Restart Screenwide
+                  </Button>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          }
+          leadingSection={
+            <img
+              alt="Screenwide"
+              className="brightness-0 dark:invert"
+              draggable={false}
+              src={logoUrl}
+            />
+          }
+          onClose={onClose}
+          title="Permissions"
+        />
+      }
+      height="content"
       ref={contentRef}
     >
-      <WindowHeader
-        actions={
-          <AnimatePresence>
-            {hasRequired ? (
-              <motion.div
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex"
-                exit={{ opacity: 0 }}
-                initial={{ opacity: 0, scale: 0 }}
-              >
-                <Button color="primary" onPress={onRestart}>
-                  Restart Screenwide
-                </Button>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        }
-        leadingSection={
-          <img
-            alt="Screenwide"
-            className="brightness-0 dark:invert"
-            draggable={false}
-            src={logoUrl}
-          />
-        }
-        onClose={onClose}
-        title="Permissions"
-      />
-
       <div className="flex flex-col px-window-inset pb-window-inset">
         <GroupBox>
           <PermissionRow
@@ -142,6 +144,6 @@ export function PermissionsWindow({
           />
         </GroupBox>
       </div>
-    </main>
+    </WindowShell>
   );
 }

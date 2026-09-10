@@ -44,7 +44,9 @@ export const buttonVariants = tv({
     color: {
       neutral: "bg-fill text-content-fg",
       primary:
-        "bg-primary-surface text-primary-fg data-[pressed]:bg-primary-surface-pressed",
+        // The ring is the accent too, so on an accent fill it gets a gap in
+        // the window colour to stay readable.
+        "bg-primary-surface text-primary-fg data-[pressed]:bg-primary-surface-pressed data-[focus-visible]:ring-offset-2 data-[focus-visible]:ring-offset-content",
     },
     isDisabled: {
       true: "bg-fill-quaternary text-content-fg-tertiary",

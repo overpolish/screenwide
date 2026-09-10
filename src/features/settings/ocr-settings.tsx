@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { GroupBox } from "../../components/base/group-box/group-box";
 import { Switch } from "../../components/base/switch/switch";
 import { HotkeyField } from "../../components/shared/hotkey-field/hotkey-field";
 import { Setting } from "../../components/shared/setting/setting";
@@ -45,54 +46,58 @@ export function OcrSettingsPanel({
   const isOff = isSaving || !settings.enabled;
   return (
     <div className="gap-layout flex flex-col">
-      <Setting
-        description="Select text or a QR code on your screen."
-        title="Use OCR"
-      >
-        {(controlProps) => (
-          <Switch
-            {...controlProps}
-            isDisabled={isSaving}
-            isSelected={settings.enabled}
-            onChange={(enabled) => {
-              update({ enabled });
-            }}
-          />
-        )}
-      </Setting>
-      <Setting title="Read text or a QR code">
-        {(controlProps) => (
-          <HotkeyField
-            aria-describedby={controlProps["aria-describedby"]}
-            aria-label="Read text or a QR code"
-            defaultValue={activationDefault}
-            isDisabled={isOff}
-            onCaptureChange={onCaptureChange}
-            onChange={onActivationChange}
-            value={activation}
-          />
-        )}
-      </Setting>
-      {actions.map(({ action, description, label }) => (
-        <Setting description={description} key={action} title={label}>
+      <GroupBox title="OCR">
+        <Setting
+          description="Select text or a QR code on your screen."
+          title="Use OCR"
+        >
           {(controlProps) => (
-            <HotkeyField
-              aria-describedby={controlProps["aria-describedby"]}
-              aria-label={label}
-              captureMode="local-shortcut"
-              defaultValue={defaults?.bindings[action]}
-              isDisabled={isOff}
-              onCaptureChange={onCaptureChange}
-              onChange={(shortcut) => {
-                update({
-                  bindings: { ...settings.bindings, [action]: shortcut },
-                });
+            <Switch
+              {...controlProps}
+              isDisabled={isSaving}
+              isSelected={settings.enabled}
+              onChange={(enabled) => {
+                update({ enabled });
               }}
-              value={settings.bindings[action]}
             />
           )}
         </Setting>
-      ))}
+        <Setting title="Read text or a QR code">
+          {(controlProps) => (
+            <HotkeyField
+              aria-describedby={controlProps["aria-describedby"]}
+              aria-label="Read text or a QR code"
+              defaultValue={activationDefault}
+              isDisabled={isOff}
+              onCaptureChange={onCaptureChange}
+              onChange={onActivationChange}
+              value={activation}
+            />
+          )}
+        </Setting>
+      </GroupBox>
+      <GroupBox title="Shortcuts">
+        {actions.map(({ action, description, label }) => (
+          <Setting description={description} key={action} title={label}>
+            {(controlProps) => (
+              <HotkeyField
+                aria-describedby={controlProps["aria-describedby"]}
+                aria-label={label}
+                captureMode="local-shortcut"
+                defaultValue={defaults?.bindings[action]}
+                isDisabled={isOff}
+                onCaptureChange={onCaptureChange}
+                onChange={(shortcut) => {
+                  update({
+                    bindings: { ...settings.bindings, [action]: shortcut },
+                  });
+                }}
+                value={settings.bindings[action]}
+              />
+            )}
+          </Setting>
+        ))}
+      </GroupBox>
     </div>
   );
 }

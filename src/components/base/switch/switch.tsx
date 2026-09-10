@@ -43,7 +43,7 @@ export const Switch = ({ children, className, ...props }: SwitchProps) => {
               className={cn(
                 "relative inline-flex h-4 w-9 shrink-0 items-center rounded-full bg-fill p-0.5 transition-colors",
                 "group-data-[pressed]:bg-fill-secondary",
-                "group-data-[selected]:bg-primary-surface group-data-[selected]:group-data-[pressed]:bg-primary-surface-pressed",
+                "group-data-[selected]:bg-primary-surface group-data-[selected]:group-data-[pressed]:bg-primary-surface-pressed group-data-[selected]:group-data-[focus-visible]:ring-offset-2 group-data-[selected]:group-data-[focus-visible]:ring-offset-content",
                 "group-data-[disabled]:opacity-50",
                 focusStyles,
                 groupFocusVisible,

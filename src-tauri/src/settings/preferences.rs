@@ -7,12 +7,15 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
+use crate::system_accent::AccentPreference;
+
 const SETTINGS_FILE: &str = "settings.json";
 const SETTINGS_CHANGED_EVENT: &str = "settings://changed";
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct GeneralSettings {
+  pub accent: AccentPreference,
   pub recording_directory: Option<PathBuf>,
   pub screenshot_directory: Option<PathBuf>,
   pub open_location_after_export: bool,
@@ -26,6 +29,7 @@ pub struct GeneralSettings {
 impl Default for GeneralSettings {
   fn default() -> Self {
     Self {
+      accent: AccentPreference::System,
       recording_directory: None,
       screenshot_directory: None,
       open_location_after_export: true,
@@ -87,6 +91,7 @@ fn validate(settings: &GeneralSettings) -> Result<(), String> {
 pub fn initialize(app: &AppHandle) {
   let mut settings = read(app);
   settings.launch_at_login = app.autolaunch().is_enabled().unwrap_or(false);
+  crate::system_accent::set_preference(settings.accent);
   *app
     .state::<GeneralSettingsState>()
     .0
@@ -147,6 +152,9 @@ pub fn set_general_settings(
     .0
     .write()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = settings.clone();
+  if settings.accent != current_settings.accent {
+    crate::system_accent::preference_changed(&app, settings.accent);
+  }
   let _ = app.emit(SETTINGS_CHANGED_EVENT, &settings);
   Ok(settings)
 }
@@ -182,13 +190,27 @@ pub async fn browse_default_location(
 
 #[cfg(test)]
 mod tests {
-  use super::GeneralSettings;
+  use super::{AccentPreference, GeneralSettings};
 
   #[test]
   fn opens_export_location_when_the_setting_is_missing() {
     let settings: GeneralSettings = serde_json::from_str("{}").unwrap();
 
     assert!(settings.open_location_after_export);
+  }
+
+  #[test]
+  fn follows_the_system_accent_when_the_setting_is_missing() {
+    let settings: GeneralSettings = serde_json::from_str("{}").unwrap();
+
+    assert_eq!(settings.accent, AccentPreference::System);
+  }
+
+  #[test]
+  fn reads_a_stored_brand_accent_choice() {
+    let settings: GeneralSettings = serde_json::from_str(r#"{"accent":"screenwide"}"#).unwrap();
+
+    assert_eq!(settings.accent, AccentPreference::Screenwide);
   }
 
   #[test]

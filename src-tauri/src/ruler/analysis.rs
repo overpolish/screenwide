@@ -212,10 +212,7 @@ pub fn detect_boxes(maps: &GradientMaps, threshold: u8) -> Vec<ComponentBox> {
     .map(|index| {
       (maps.gx[index] > 0 && edge_mass_x(&maps.gx, index, w) >= double)
         || (maps.gy[index] > 0 && edge_mass_y(&maps.gy, index, w, h) >= double)
-        || maps
-          .soft_edges
-          .as_ref()
-          .is_some_and(|(gx, gy)| gx[index].max(gy[index]) >= threshold)
+        || maps.has_soft_edge(index, threshold)
     })
     .collect();
   let closed = erode(&dilate(&binary, w, h), w, h);

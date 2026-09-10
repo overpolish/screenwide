@@ -8,6 +8,7 @@ import { Button } from "../../components/base/button/button";
 import { Text } from "../../components/base/text/text";
 import { CopyableText } from "../../components/shared/copyable-text/copyable-text";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
+import { WindowShell } from "../../components/shared/window-shell/window-shell";
 
 import type { QrPayload } from "./qr-code-payload";
 
@@ -40,9 +41,9 @@ export function QrDetails({
     error ?? (payload.kind === "unsupported" ? payload.reason : undefined);
 
   return (
-    <main className="window-surface gap-section flex h-full w-full flex-col overflow-hidden rounded-window text-content-fg">
-      <WindowHeader onClose={onClose} title={payload.label} />
-
+    <WindowShell
+      header={<WindowHeader onClose={onClose} title={payload.label} />}
+    >
       <div className="gap-section px-window-inset pb-window-inset flex min-h-0 grow flex-col">
         <Text>{description(payload)}</Text>
         {status ? (
@@ -67,6 +68,6 @@ export function QrDetails({
           </footer>
         ) : null}
       </div>
-    </main>
+    </WindowShell>
   );
 }
