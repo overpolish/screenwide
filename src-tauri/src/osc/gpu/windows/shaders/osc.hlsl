@@ -371,7 +371,7 @@ float4 ps_main(VertexOut input) : SV_Target {
   if (input.kind >= 17 && input.kind <= 20) {
     float2 dimensions = 1.0 / max(fwidth(input.uv), float2(0.0001, 0.0001));
     float2 half_size = dimensions * 0.5;
-    float radius = min(2.0, min(half_size.x, half_size.y));
+    float radius = min(4.0, min(half_size.x, half_size.y));
     float distance =
         rounded_distance((input.uv - 0.5) * dimensions, half_size, radius);
     float aa = max(fwidth(distance), 0.0001);
@@ -383,7 +383,7 @@ float4 ps_main(VertexOut input) : SV_Target {
     float4 outline = input.kind == 20 ? ocr_colors[7]
         : input.kind == 19 ? ocr_colors[5]
         : input.kind == 18 ? ocr_colors[3] : ocr_colors[1];
-    float outline_width = input.kind == 17 || input.kind == 18 ? 2.0 : 1.0;
+    float outline_width = input.kind == 18 ? 2.0 : 1.0;
     float outline_mix = clamp(0.5 + (distance + outline_width) / aa, 0.0, 1.0);
     float4 color = lerp(fill, outline, outline_mix);
     color.a *= coverage;

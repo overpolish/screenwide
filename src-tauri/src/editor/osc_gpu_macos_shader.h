@@ -290,7 +290,7 @@ fragment float4 region_osc_fragment(
   if (in.kind >= 17 && in.kind <= 20) {
     float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
     float2 half_size = dimensions * 0.5;
-    float radius = min(2.0, min(half_size.x, half_size.y));
+    float radius = min(4.0, min(half_size.x, half_size.y));
     float2 point = abs((in.uv - 0.5) * dimensions) - (half_size - radius);
     float distance = length(max(point, 0.0)) +
                      min(max(point.x, point.y), 0.0) - radius;
@@ -303,7 +303,7 @@ fragment float4 region_osc_fragment(
     float4 outline = in.kind == 20 ? ocr.selection_outline
         : in.kind == 19 ? ocr.error_outline
         : in.kind == 18 ? ocr.qr_outline : ocr.primary_outline;
-    float outline_width = in.kind == 17 || in.kind == 18 ? 2.0 : 1.0;
+    float outline_width = in.kind == 18 ? 2.0 : 1.0;
     float outline_mix =
         clamp(0.5 + (distance + outline_width) / aa, 0.0, 1.0);
     float4 color = mix(fill, outline, outline_mix);

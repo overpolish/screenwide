@@ -2,6 +2,7 @@
 
 #import <AppKit/AppKit.h>
 #import <QuartzCore/CAMetalLayer.h>
+#import <QuartzCore/CAShapeLayer.h>
 #include <stddef.h>
 #import "osc_controls.h"
 #import "osc_gpu_macos.h"
@@ -183,6 +184,7 @@ void screenwide_set_region_expected_cursor(NSCursor *cursor);
 @property(nonatomic) uint32_t ocrPhase;
 @property(nonatomic, strong) ScreenwideOscMaterialSurfaceView *ocrStatusSurface;
 @property(nonatomic, strong) NSTextField *ocrStatusLabel;
+@property(nonatomic, strong) CAShapeLayer *ocrStatusSpinner;
 @property(nonatomic, strong) ScreenwideOscMaterialSurfaceView *ocrCancelSurface;
 @property(nonatomic) void *ocrCancelControls;
 @property(nonatomic) NSRect ocrCancelRect;

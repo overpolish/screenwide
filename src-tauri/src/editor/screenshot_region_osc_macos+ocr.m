@@ -1,10 +1,60 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #import "screenshot_region_osc_macos_private.h"
+#import <QuartzCore/CAAnimation.h>
 #import <QuartzCore/CATransaction.h>
 
 static CGColorRef color(const float rgba[4]) {
   return CGColorCreateSRGB(rgba[0], rgba[1], rgba[2], rgba[3]);
+}
+
+/// The recognising indicator: an `--spacing-icon-small` ring drawn as a three
+/// quarter stroke and spun once a second, the OSC stand-in for AppKit's
+/// indeterminate progress spinner. It is a plain CAShapeLayer rather than an
+/// NSProgressIndicator so it can carry the label colour exactly and sit inside
+/// the pill's own content layer.
+static const CGFloat kStatusSpinnerSize = 14.0;
+static const CGFloat kStatusSpinnerLineWidth = 1.5;
+static const CFTimeInterval kStatusSpinnerPeriod = 1.0;
+static NSString *const kStatusSpinnerKey = @"screenwide.ocr.status.spin";
+
+static CAShapeLayer *status_spinner(ScreenwideRegionOSC *surface) {
+  if (surface.ocrStatusSpinner || !surface.ocrStatusSurface)
+    return surface.ocrStatusSpinner;
+  CAShapeLayer *ring = [CAShapeLayer layer];
+  ring.fillColor = NULL;
+  ring.lineWidth = kStatusSpinnerLineWidth;
+  ring.lineCap = kCALineCapRound;
+  ring.bounds = CGRectMake(0.0, 0.0, kStatusSpinnerSize, kStatusSpinnerSize);
+  ring.anchorPoint = CGPointMake(0.5, 0.5);
+  CGFloat center = kStatusSpinnerSize * 0.5;
+  CGFloat radius = center - kStatusSpinnerLineWidth * 0.5;
+  CGMutablePathRef path = CGPathCreateMutable();
+  CGPathAddArc(path, NULL, center, center, radius, M_PI_2, -M_PI, YES);
+  ring.path = path;
+  CGPathRelease(path);
+  [surface.ocrStatusSurface.contentView.layer addSublayer:ring];
+  surface.ocrStatusSpinner = ring;
+  return ring;
+}
+
+static void spin_status_spinner(CAShapeLayer *ring, BOOL running) {
+  if (!ring)
+    return;
+  if (!running) {
+    [ring removeAnimationForKey:kStatusSpinnerKey];
+    return;
+  }
+  if ([ring animationForKey:kStatusSpinnerKey])
+    return;
+  CABasicAnimation *spin =
+      [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
+  spin.fromValue = @0.0;
+  spin.toValue = @(-M_PI * 2.0);
+  spin.duration = kStatusSpinnerPeriod;
+  spin.repeatCount = HUGE_VALF;
+  spin.removedOnCompletion = NO;
+  [ring addAnimation:spin forKey:kStatusSpinnerKey];
 }
 
 void screenwide_region_osc_ocr_update_appearance(
@@ -14,22 +64,20 @@ void screenwide_region_osc_ocr_update_appearance(
                                            NSAppearanceNameDarkAqua ]];
   uint32_t light = [appearance isEqualToString:NSAppearanceNameAqua] ? 1 : 0;
   ScreenwideOscOcrPalette palette = screenwide_osc_ocr_palette(light);
-  const float *fill = surface.ocrPhase == 3 ? palette.status_error_fill
-                                            : palette.loading_fill;
-  const float *foreground = surface.ocrPhase == 3
-                                ? palette.status_error_foreground
-                                : palette.loading_foreground;
-  const float *outline = surface.ocrPhase == 3 ? palette.error_outline
-                                               : palette.primary_outline;
-  CGColorRef fillColor = color(fill);
-  CGColorRef outlineColor = color(outline);
+  BOOL failed = surface.ocrPhase == 3;
+  const float *foreground = failed ? palette.status_error_foreground
+                                   : palette.loading_foreground;
   CGColorRef foregroundColor = color(foreground);
-  surface.ocrStatusSurface.contentLayer.backgroundColor = fillColor;
-  surface.ocrStatusSurface.contentLayer.borderColor = outlineColor;
-  surface.ocrStatusSurface.contentLayer.borderWidth = 1.0;
+  // The material surface is the pill's backing, so the content layer stays
+  // clear and unbordered: only the label and the ring carry a colour.
+  surface.ocrStatusSurface.contentLayer.backgroundColor = NULL;
+  surface.ocrStatusSurface.contentLayer.borderColor = NULL;
+  surface.ocrStatusSurface.contentLayer.borderWidth = 0.0;
   surface.ocrStatusLabel.textColor = [NSColor colorWithCGColor:foregroundColor];
-  CGColorRelease(fillColor);
-  CGColorRelease(outlineColor);
+  CAShapeLayer *ring = status_spinner(surface);
+  ring.strokeColor = foregroundColor;
+  ring.hidden = failed;
+  spin_status_spinner(ring, !failed && !surface.ocrStatusSurface.hidden);
   CGColorRelease(foregroundColor);
   screenwide_region_osc_ocr_cancel_update_appearance(surface);
   if (surface.ocrToolbarVisible)
@@ -41,27 +89,46 @@ static void layout_status(ScreenwideRegionOSC *surface, NSString *message,
                           BOOL visible) {
   ScreenwideOscMaterialSurfaceView *status = surface.ocrStatusSurface;
   status.hidden = !visible;
-  if (!visible)
+  if (!visible) {
+    spin_status_spinner(surface.ocrStatusSpinner, NO);
     return;
+  }
   surface.ocrStatusLabel.stringValue = message;
   surface.ocrStatusLabel.toolTip = message;
   screenwide_region_osc_ocr_update_appearance(surface);
+  ScreenwideOscControlMetrics metrics = screenwide_osc_control_metrics(0, 0);
+  ScreenwideOscControlSpacing spacing = screenwide_osc_control_spacing();
   NSSize host = surface.host.bounds.size;
-  CGFloat width = MIN(MAX(surface.ocrStatusLabel.intrinsicContentSize.width + 24.0,
-                          128.0),
-                      MAX(host.width - 16.0, 0.0));
-  CGFloat height = 28.0;
-  CGFloat top = MIN(MAX(NSMidY(surface.region) - height * 0.5, 8.0),
-                    MAX(host.height - height - 8.0, 8.0));
-  CGFloat left = MIN(MAX(NSMidX(surface.region) - width * 0.5, 8.0),
-                     MAX(host.width - width - 8.0, 8.0));
+  // The ring only shows while a recognition is running, so an error message
+  // starts at the same padding a plain label would.
+  BOOL spinning = surface.ocrPhase != 3;
+  CGFloat leading = spinning ? kStatusSpinnerSize + spacing.control : 0.0;
+  CGFloat height = metrics.height;
+  CGFloat inset = spacing.control_inset;
+  CGFloat width = MIN(surface.ocrStatusLabel.intrinsicContentSize.width +
+                          spacing.section * 2.0 + leading,
+                      MAX(host.width - inset * 2.0, 0.0));
+  CGFloat top = MIN(MAX(NSMidY(surface.region) - height * 0.5, inset),
+                    MAX(host.height - height - inset, inset));
+  CGFloat left = MIN(MAX(NSMidX(surface.region) - width * 0.5, inset),
+                     MAX(host.width - width - inset, inset));
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
   status.frame = NSMakeRect(left, host.height - top - height, width, height);
-  status.layer.cornerRadius = 8.0;
-  status.contentLayer.cornerRadius = 8.0;
+  status.layer.cornerRadius = metrics.radius;
+  status.contentLayer.cornerRadius = metrics.radius;
   status.contentView.frame = status.bounds;
-  surface.ocrStatusLabel.frame = NSInsetRect(status.contentView.bounds, 12.0, 4.0);
+  NSRect content = status.contentView.bounds;
+  CAShapeLayer *ring = surface.ocrStatusSpinner;
+  ring.contentsScale = surface.host.window.backingScaleFactor ?: 1.0;
+  ring.position = CGPointMake(spacing.section + kStatusSpinnerSize * 0.5,
+                              NSMidY(content));
+  CGFloat labelHeight = surface.ocrStatusLabel.intrinsicContentSize.height;
+  surface.ocrStatusLabel.frame = NSMakeRect(
+      spacing.section + leading,
+      floor((NSHeight(content) - labelHeight) * 0.5),
+      MAX(NSWidth(content) - spacing.section * 2.0 - leading, 0.0),
+      labelHeight);
   [CATransaction commit];
 }
 
@@ -84,6 +151,8 @@ void screenwide_region_osc_ocr_teardown(ScreenwideRegionOSC *surface) {
   [surface.ocrStatusSurface removeFromSuperview];
   surface.ocrStatusSurface = nil;
   surface.ocrStatusLabel = nil;
+  [surface.ocrStatusSpinner removeFromSuperlayer];
+  surface.ocrStatusSpinner = nil;
   screenwide_region_osc_ocr_cancel_teardown(surface);
   screenwide_region_osc_ocr_toolbar_teardown(surface);
   surface.ocrRects = nil;

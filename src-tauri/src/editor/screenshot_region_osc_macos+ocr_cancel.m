@@ -114,7 +114,8 @@ static void layout(ScreenwideRegionOSC *surface) {
   update_label(surface);
   ScreenwideOscControlMetrics value = metrics();
   NSSize host = surface.host.bounds.size;
-  CGFloat top = 48.0;
+  // `--spacing-layout`: the separation between major layout areas.
+  CGFloat top = screenwide_osc_control_spacing().layout;
   CGFloat width = value.padding_x * 2.0 + value.icon_size + value.gap +
                   surface.ocrCancelLabel.size.width;
   CGFloat left = floor((host.width - width) * 0.5);

@@ -25,8 +25,8 @@ use super::renderer::{self, Vertex};
 use super::text::TextCache;
 use crate::osc::{
   controls::{
-    control_metrics, Appearance, ConfirmAction, ConfirmActionSpec, ControlColor, ControlGroup,
-    ControlIcon, ControlKind, ControlMetrics, ControlSize, ControlSpec, ControlStyle,
+    control_metrics, control_spacing, Appearance, ConfirmAction, ConfirmActionSpec, ControlColor,
+    ControlGroup, ControlIcon, ControlKind, ControlMetrics, ControlSize, ControlSpec, ControlStyle,
     ControlVisual,
   },
   geometry::{Point, Rect, Size},
@@ -46,17 +46,20 @@ pub(crate) const PHASE_LOADING: u32 = 1;
 pub(crate) const PHASE_READY: u32 = 2;
 pub(crate) const PHASE_ERROR: u32 = 3;
 
-/// The status pill: 28pt tall, 8pt radius, 13pt text on a 20pt line box -
-/// the `NSTextField` metrics of `+ocr.m:40-66`.
-const STATUS_HEIGHT: f64 = 28.0;
-const STATUS_RADIUS: f64 = 8.0;
-const STATUS_FONT_SIZE: f64 = 13.0;
-const STATUS_LINE_HEIGHT: f64 = 20.0;
-const STATUS_PADDING_X: f64 = 12.0;
-const STATUS_MIN_WIDTH: f64 = 128.0;
-const STATUS_MARGIN: f64 = 8.0;
-/// The cancel button sits 48pt below the top edge, centred horizontally.
-const CANCEL_TOP: f64 = 48.0;
+/// The status pill takes the regular control metrics: `--spacing-control-height`
+/// tall, `--radius-control` round, `--spacing-section` of side padding, and the
+/// body role for its label - the geometry of `+ocr.m:87-132`. It has no minimum
+/// width: the label plus its padding is the pill.
+const STATUS_HEIGHT: f64 = control_metrics(ControlKind::Button, ControlSize::Regular).height;
+const STATUS_RADIUS: f64 = control_metrics(ControlKind::Button, ControlSize::Regular).radius;
+const STATUS_FONT_SIZE: f64 = control_metrics(ControlKind::Button, ControlSize::Regular).font_size;
+const STATUS_LINE_HEIGHT: f64 =
+  control_metrics(ControlKind::Button, ControlSize::Regular).line_height;
+const STATUS_PADDING_X: f64 = control_spacing().section;
+const STATUS_MARGIN: f64 = control_spacing().control_inset;
+/// The cancel button sits `--spacing-layout` below the top edge, centred
+/// horizontally.
+const CANCEL_TOP: f64 = control_spacing().layout;
 /// OCR controls sit over a much busier, unzoomed desktop than Ruler labels.
 /// Request the material-emphasis pass so their backing reads as the same
 /// muted plate before the semantic hover/press fill is applied.
@@ -440,19 +443,19 @@ impl Chrome {
       return;
     };
     let palette = ocr_palette(light_mode);
-    let (fill, foreground, outline) = if self.phase == PHASE_ERROR {
-      (
-        palette.status_error_fill,
-        palette.status_error_foreground,
-        palette.error_outline,
-      )
+    // The plate keeps its material backing untinted and unbordered: both status
+    // fills are transparent and the outline alpha of 0 skips the border in the
+    // shader, matching the macOS pill.
+    // No spinner yet: macOS spins a CAShapeLayer inside the pill's own layer,
+    // and this compositor has no per-frame animated chrome primitive to hang
+    // an equivalent arc on. Follow-up, tracked with the rest of the Windows
+    // parity pass.
+    let (fill, foreground) = if self.phase == PHASE_ERROR {
+      (palette.status_error_fill, palette.status_error_foreground)
     } else {
-      (
-        palette.loading_fill,
-        palette.loading_foreground,
-        palette.primary_outline,
-      )
+      (palette.loading_fill, palette.loading_foreground)
     };
+    let outline = [0.0; 4];
     let plate = status_rect(label.size.width, view, region);
     let start = out.len();
     renderer::add_plate(out, view, renderer::pixel_aligned_rect(plate, scale));
@@ -674,11 +677,10 @@ impl Chrome {
 }
 
 /// The pill is centred on the selection and kept a margin inside the surface
-/// (`+ocr.m:49-57`).
+/// (`+ocr.m:106-113`).
 pub(crate) fn status_rect(label_width: f64, view: Size, region: Rect) -> Rect {
-  let width = (label_width + STATUS_PADDING_X * 2.0)
-    .max(STATUS_MIN_WIDTH)
-    .min((view.width - STATUS_MARGIN * 2.0).max(0.0));
+  let width =
+    (label_width + STATUS_PADDING_X * 2.0).min((view.width - STATUS_MARGIN * 2.0).max(0.0));
   let top = (region.origin.y + region.size.height * 0.5 - STATUS_HEIGHT * 0.5).clamp(
     STATUS_MARGIN,
     (view.height - STATUS_HEIGHT - STATUS_MARGIN).max(STATUS_MARGIN),

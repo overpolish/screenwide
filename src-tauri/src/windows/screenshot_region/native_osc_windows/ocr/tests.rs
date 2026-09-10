@@ -72,24 +72,37 @@ fn the_target_surface_is_the_one_showing_most_of_the_selection() {
 }
 
 #[test]
+fn the_status_pill_takes_the_regular_control_geometry() {
+  assert_eq!(STATUS_HEIGHT, 24.0);
+  assert_eq!(STATUS_RADIUS, 8.0);
+  assert_eq!(STATUS_PADDING_X, 12.0);
+  assert_eq!(STATUS_FONT_SIZE, 13.0);
+  assert_eq!(STATUS_LINE_HEIGHT, 16.0);
+  assert_eq!(CANCEL_TOP, 24.0);
+}
+
+#[test]
 fn the_status_pill_stays_inside_its_surface() {
   let view = Size {
     width: 800.0,
     height: 600.0,
   };
+  // No minimum width: the label plus its side padding is the whole pill.
   let centred = status_rect(100.0, view, Rect::from_xywh(300.0, 200.0, 200.0, 200.0));
-  assert_eq!(centred.size.width, 128.0);
-  assert_eq!(centred.origin.x, 400.0 - 64.0);
-  assert_eq!(centred.origin.y, 300.0 - 14.0);
+  assert_eq!(centred.size.width, 124.0);
+  assert_eq!(centred.origin.x, 400.0 - 62.0);
+  assert_eq!(centred.origin.y, 300.0 - 12.0);
 
   // A selection in the corner pushes the pill back inside the margins.
   let clamped = status_rect(100.0, view, Rect::from_xywh(780.0, 590.0, 10.0, 10.0));
-  assert_eq!(clamped.origin.x, 800.0 - 128.0 - 8.0);
-  assert_eq!(clamped.origin.y, 600.0 - 28.0 - 8.0);
+  assert_eq!(clamped.origin.x, 800.0 - 124.0 - 8.0);
+  assert_eq!(clamped.origin.y, 600.0 - 24.0 - 8.0);
 
-  // A long message widens the pill instead of clipping it.
+  // A long message widens the pill instead of clipping it, up to the margins.
   let wide = status_rect(400.0, view, Rect::from_xywh(0.0, 0.0, 800.0, 600.0));
   assert_eq!(wide.size.width, 424.0);
+  let capped = status_rect(900.0, view, Rect::from_xywh(0.0, 0.0, 800.0, 600.0));
+  assert_eq!(capped.size.width, 784.0);
 }
 
 #[test]

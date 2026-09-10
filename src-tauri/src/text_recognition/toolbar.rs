@@ -5,11 +5,14 @@
 //! host the material surfaces, while placement remains shared for the later
 //! Windows adapter. Reusable confirmation behavior lives in `osc::controls`.
 
+use crate::osc::controls::control_spacing;
 use crate::osc::geometry::{Rect, Size};
 
 pub const CONTROL_COUNT: usize = 4;
-const GAP: f64 = 4.0;
-const MARGIN: f64 = 8.0;
+/// `--spacing-control`, the gap between neighbouring controls in a row.
+const GAP: f64 = control_spacing().control;
+/// `--spacing-control-inset`, the inset from the selection and the viewport.
+const MARGIN: f64 = control_spacing().control_inset;
 
 pub fn layout(
   selection: Rect,
