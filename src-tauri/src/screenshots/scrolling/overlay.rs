@@ -9,7 +9,7 @@ use crate::screenshots::ScreenshotTarget;
 
 pub(super) const LABEL: &str = "scrolling-capture-overlay";
 const WIDTH: f64 = 160.0;
-const HEIGHT: f64 = 66.0;
+const HEIGHT: f64 = 72.0;
 
 fn centred_origin(centre_x: f64, centre_y: f64) -> LogicalPosition<f64> {
   LogicalPosition::new(centre_x - WIDTH / 2.0, centre_y - HEIGHT / 2.0)

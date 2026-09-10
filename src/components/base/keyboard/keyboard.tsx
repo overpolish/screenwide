@@ -17,12 +17,14 @@ import {
 // The plain variant drops the fill for keys shown inside a control, where
 // native draws the shortcut as bare glyphs.
 // `kbd` inherits the monospace family from the browser reset, so the sans
-// family is set explicitly.
+// family is set explicitly. The size is inherited: a key in body text is a
+// 20px cap on a 16px line, and one in a subheadline hint shrinks with it,
+// so the cap is always a quarter taller than the line it sits in.
 const keyboardClassName = {
   keycap:
-    "inline-flex h-5 min-w-5 items-center justify-center gap-tight rounded-sm bg-fill px-control font-sans text-body text-content-fg tabular-nums",
+    "inline-flex h-[1.25lh] min-w-[1.25lh] items-center justify-center gap-tight rounded-sm bg-fill px-control font-sans text-content-fg tabular-nums",
   plain:
-    "inline-flex items-center justify-center gap-tight font-sans text-body tabular-nums",
+    "inline-flex items-center justify-center gap-tight font-sans tabular-nums",
 };
 const keyboardIconClassName =
   "[&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu";

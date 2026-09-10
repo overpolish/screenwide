@@ -35,10 +35,10 @@ export function ProgressPanel({
   secondary,
 }: ProgressPanelProps) {
   return (
-    <div className="flex w-full flex-col gap-tight">
-      <Text as="span" className="mb-tight">
-        {label}
-      </Text>
+    // One control gap between each row: the secondary line can carry a
+    // keycap, which has no leading of its own to space it from the bar.
+    <div className="flex w-full flex-col gap-control">
+      <Text as="span">{label}</Text>
       {/* The action trails the bar, where Finder and Safari put the stop. It
           is taller than the bar, so its overhang is pulled in and the gaps
           above and below measure from the bar rather than the button. */}

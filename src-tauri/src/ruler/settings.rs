@@ -176,6 +176,22 @@ fn resolve(
         && binding.modifiers == modifiers
     })
     .or_else(|| {
+      // Option/Alt changes probe boundaries while stamping. Prefer an exact
+      // shortcut above, then allow it alongside the configured stamp binding.
+      runtime.bindings.iter().find(|(action, binding)| {
+        matches!(
+          action,
+          RulerAction::StampHorizontal | RulerAction::StampVertical
+        ) && (if mac {
+          binding.mac_key
+        } else {
+          binding.windows_key
+        }) == key
+          && modifiers & 4 != 0
+          && binding.modifiers == modifiers & !4
+      })
+    })
+    .or_else(|| {
       // Preserve familiar alternative keys only while the action retains its
       // default binding. An explicit binding above always takes precedence.
       runtime

@@ -47,6 +47,57 @@ fn disabled_ruler_does_not_resolve_commands() {
 }
 
 #[test]
+fn stamping_accepts_boundary_modifier_on_both_platforms() {
+  let runtime = Runtime::new(RulerSettings::default()).unwrap();
+  for (key, mac, phase) in [
+    (0x12, true, 20),
+    (0x13, true, 21),
+    (0x31, false, 20),
+    (0x32, false, 21),
+  ] {
+    let expected = Some(KeyCommand {
+      phase,
+      release: Some(22),
+    });
+    assert_eq!(resolve(&runtime, key, 0, mac, false, false), expected);
+    assert_eq!(resolve(&runtime, key, 4, mac, false, false), expected);
+    assert!(resolve(&runtime, key, 4, mac, true, false).is_none());
+    assert!(resolve(&runtime, key, 4, mac, false, true).is_none());
+    assert!(resolve(&runtime, key, 12, mac, false, false).is_none());
+  }
+}
+
+#[test]
+fn boundary_modifier_preserves_remapped_stamps_and_explicit_shortcuts() {
+  let mut settings = RulerSettings::default();
+  settings
+    .bindings
+    .insert(RulerAction::StampHorizontal, Some("Shift+KeyA".into()));
+  let runtime = Runtime::new(settings.clone()).unwrap();
+  for (key, mac) in [(0, true), (0x41, false)] {
+    assert_eq!(
+      resolve(&runtime, key, 12, mac, false, false).unwrap().phase,
+      20
+    );
+    assert!(resolve(&runtime, key, 4, mac, false, false).is_none());
+  }
+  settings
+    .bindings
+    .insert(RulerAction::CopyColour, Some("Alt+Shift+KeyA".into()));
+  let runtime = Runtime::new(settings).unwrap();
+  for (key, mac) in [(0, true), (0x41, false)] {
+    assert_eq!(
+      resolve(&runtime, key, 12, mac, false, false).unwrap().phase,
+      14
+    );
+    assert_eq!(
+      resolve(&runtime, key, 8, mac, false, false).unwrap().phase,
+      20
+    );
+  }
+}
+
+#[test]
 fn invalid_and_conflicting_bindings_are_rejected() {
   for value in [
     "Escape",

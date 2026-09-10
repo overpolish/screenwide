@@ -12,7 +12,7 @@ const meta = {
   component: ScrollingCaptureOverlay,
   decorators: [
     (Story, context) => (
-      <FeatureStoryStage height={66} viewMode={context.viewMode} width={160}>
+      <FeatureStoryStage height={72} viewMode={context.viewMode} width={160}>
         <Story />
       </FeatureStoryStage>
     ),

@@ -31,15 +31,15 @@ export function ScrollingCaptureOverlay({
   const label = finished ? "Finishing" : phase ? phaseLabels[phase] : "Working";
 
   return (
-    <main className="window-surface p-section flex h-full w-full items-center overflow-hidden rounded-window text-content-fg">
+    // The Finder copy-dialog column: phrase, bar, and the way out beneath.
+    <main className="window-surface flex h-full w-full items-center overflow-hidden rounded-window p-section text-content-fg">
       <ProgressPanel
         label={label}
-        orientation="row"
         progress={null}
         progressLabel="Scrolling capture progress"
         secondary={
           cancellable && !finished ? (
-            <span className="gap-control flex items-center whitespace-nowrap">
+            <span className="flex items-center gap-control whitespace-nowrap">
               <Shortcut>
                 <Keyboard>Esc</Keyboard>
               </Shortcut>
