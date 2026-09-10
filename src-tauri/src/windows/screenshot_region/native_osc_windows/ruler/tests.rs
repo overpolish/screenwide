@@ -165,29 +165,16 @@ fn the_snapshot_uv_window_is_the_viewport_expressed_in_texture_space() {
 }
 
 #[test]
-fn label_widths_are_padded_to_the_desktops_digit_count() {
-  assert_eq!(decimal_digit_count(0.0), 1);
-  assert_eq!(decimal_digit_count(9.0), 1);
-  assert_eq!(decimal_digit_count(10.0), 2);
-  assert_eq!(decimal_digit_count(3840.0), 4);
-  assert_eq!(
-    reserved_dimensions_length(Size {
-      width: 3840.0,
-      height: 2160.0
-    }),
-    14
-  );
-
+fn a_readout_shows_only_the_digits_it_has() {
   let global = Rect::from_xywh(0.0, 0.0, 42.0, 300.0);
-  assert_eq!(measurement_text(global, false, 4, 4), "42 × 300 px");
-  assert_eq!(measurement_text(global, true, 4, 4), "  42 ×  300 px");
+  assert_eq!(measurement_text(global), "42 × 300 px");
   // A flat measurement reports only its long side.
   assert_eq!(
-    measurement_text(Rect::from_xywh(0.0, 0.0, 42.0, 2.0), false, 4, 4),
+    measurement_text(Rect::from_xywh(0.0, 0.0, 42.0, 2.0)),
     "42 px"
   );
   assert_eq!(
-    measurement_text(Rect::from_xywh(0.0, 0.0, 2.0, 42.0), false, 4, 4),
+    measurement_text(Rect::from_xywh(0.0, 0.0, 2.0, 42.0)),
     "42 px"
   );
 }
@@ -197,7 +184,7 @@ fn readout_text_covers_only_characters_the_atlas_has_cells_for() {
   let text = format!(
     "{}{}{}{}",
     hex_text(0x12AB_34FF),
-    measurement_text(Rect::from_xywh(0.0, 0.0, 42.0, 300.0), true, 4, 4),
+    measurement_text(Rect::from_xywh(0.0, 0.0, 42.0, 300.0)),
     stamped_probe_text(probe(1, 1, 0.0, 96.0, 0.0)),
     radius_text(RadiusPacket {
       radius: 12.0,
@@ -548,23 +535,16 @@ fn live_probes_only_draw_on_their_own_display_and_with_chrome_shown() {
 
 #[test]
 fn the_dimensions_row_needs_both_live_probes() {
-  let desktop = Size {
-    width: 1920.0,
-    height: 1080.0,
-  };
   let mut horizontal = probe(0, 1, 100.0, 300.0, 50.0);
   horizontal.flags = 4;
   let mut vertical = probe(0, 2, 20.0, 80.0, 200.0);
   vertical.flags = 4;
 
   assert_eq!(
-    probe_dimensions_text(&[horizontal, vertical], 1, desktop),
-    Some(" 200 ×   60 px".to_owned())
+    probe_dimensions_text(&[horizontal, vertical], 1),
+    Some("200 × 60 px".to_owned())
   );
-  assert_eq!(probe_dimensions_text(&[horizontal], 1, desktop), None);
+  assert_eq!(probe_dimensions_text(&[horizontal], 1), None);
   // Another display's live probes never reach this readout.
-  assert_eq!(
-    probe_dimensions_text(&[horizontal, vertical], 2, desktop),
-    None
-  );
+  assert_eq!(probe_dimensions_text(&[horizontal, vertical], 2), None);
 }

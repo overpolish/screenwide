@@ -1,32 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#import <CoreText/CoreText.h>
+#import "osc_text_texture_macos.h"
 
 #import "recording_preview_surface_macos_private.h"
 
-static const CGFloat ScreenwideSelectionLabelFontSize = 11.0;
-static const CGFloat ScreenwideSelectionActionFontSize = 12.0;
 static const CGFloat ScreenwideSelectionLabelStroke = 2.0;
-
-static void register_inter_font(void) {
-  static dispatch_once_t once;
-  dispatch_once(&once, ^{
-    NSURL *url = [[NSBundle mainBundle]
-        URLForResource:@"Inter-VariableFont_opsz,wght"
-         withExtension:@"ttf"
-          subdirectory:@"fonts"];
-    if (url != nil)
-      CTFontManagerRegisterFontsForURL((__bridge CFURLRef)url,
-                                      kCTFontManagerScopeProcess, NULL);
-  });
-}
 
 /// (Re)builds `selectionLabelTexture` for `text`. Returns NO when the bitmap
 /// could not be produced, in which case no label must be drawn.
 ///
-/// Rasterised exactly like Keyframeless's OSC label: dimensions use a
-/// monospaced face while action text uses the app's proportional UI family.
+/// Dimensions and action text share the app's regular Inter body font.
 /// Dimensions receive the contrast halo; action text is drawn cleanly over its
 /// button fill, matching the React component.
 static BOOL update_selection_label(ScreenwidePreviewSurface *surface,
@@ -53,26 +37,7 @@ static BOOL update_selection_label(ScreenwidePreviewSurface *surface,
   NSColor *halo = lightMode != 0
       ? [NSColor colorWithSRGBRed:1.0 green:1.0 blue:1.0 alpha:1.0]
       : [NSColor colorWithSRGBRed:0.0 green:0.0 blue:0.0 alpha:0.8];
-  NSFont *font;
-  if (action) {
-    register_inter_font();
-    NSFont *inter = [NSFont fontWithName:@"Inter"
-                                   size:ScreenwideSelectionActionFontSize];
-    NSFontDescriptor *descriptor = [inter.fontDescriptor
-        fontDescriptorByAddingAttributes:@{
-          NSFontTraitsAttribute : @{
-            NSFontWeightTrait : @(NSFontWeightSemibold),
-          },
-        }];
-    font = [NSFont fontWithDescriptor:descriptor
-                                size:ScreenwideSelectionActionFontSize];
-    if (font == nil)
-      font = [NSFont systemFontOfSize:ScreenwideSelectionActionFontSize
-                              weight:NSFontWeightSemibold];
-  } else {
-    font = [NSFont monospacedSystemFontOfSize:ScreenwideSelectionLabelFontSize
-                                       weight:NSFontWeightMedium];
-  }
+  NSFont *font = screenwide_osc_body_font();
   // A positive stroke width strokes the glyph without filling it, so this pass
   // lays down only the outline the fill pass then sits inside.
   NSDictionary *strokeAttributes = @{
@@ -80,7 +45,7 @@ static BOOL update_selection_label(ScreenwidePreviewSurface *surface,
     NSForegroundColorAttributeName : halo,
     NSStrokeColorAttributeName : halo,
     NSStrokeWidthAttributeName :
-        @(ScreenwideSelectionLabelStroke / ScreenwideSelectionLabelFontSize * 100.0),
+        @(ScreenwideSelectionLabelStroke / font.pointSize * 100.0),
   };
   NSDictionary *fillAttributes = @{
     NSFontAttributeName : font,
@@ -100,6 +65,7 @@ static BOOL update_selection_label(ScreenwidePreviewSurface *surface,
       (CGBitmapInfo)kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
   CGColorSpaceRelease(space);
   if (context == NULL) return NO;
+  CGContextSetShouldSmoothFonts(context, false);
   CGContextScaleCTM(context, scale, scale);
   NSGraphicsContext *graphics =
       [NSGraphicsContext graphicsContextWithCGContext:context flipped:NO];

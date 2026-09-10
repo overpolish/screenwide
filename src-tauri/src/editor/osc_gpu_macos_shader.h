@@ -37,12 +37,18 @@ kernel void region_magnifier(
       output_point.y >= int(output.get_height())) return;
   float2 box_size = float2(magnifier.box_width, magnifier.box_height);
   float2 local = float2(gid) + 0.5;
-  float radius = 4.0;
+  // The loupe box is 96 device-independent points wide and its corners are
+  // the control radius, 8, so the backing scale falls out of the box size.
+  float radius = max(box_size.x / 12.0, 1.0);
   float2 half_size = box_size * 0.5;
   float2 rounded = abs(local - half_size) - (half_size - radius);
   float distance = length(max(rounded, 0.0)) +
                    min(max(rounded.x, rounded.y), 0.0) - radius;
-  if (distance > 0.0) return;
+  // One device pixel of feathering on the outer edge. The render pass keeps
+  // drawing the scene wherever this is below 1, using the same expression, so
+  // the cutout and the loupe meet on exactly one edge.
+  float coverage = 1.0 - smoothstep(-0.5, 0.5, distance);
+  if (coverage <= 0.0) return;
   float2 source_center = float2(magnifier.sample_u, magnifier.sample_v) *
                          float2(source_dimensions);
   float2 source_point = source_center +
@@ -68,7 +74,17 @@ kernel void region_magnifier(
         ? float3(0.0) : float3(1.0);
     pixel.rgb = mix(pixel.rgb, shade_color, 0.1);
   }
-  if (distance > -1.0) pixel = float4(0.15, 0.15, 0.16, 1.0);
+  // The border is the bounding box's palette: a 1 px white core with a 1 px
+  // dark hairline outside it, so the loupe reads over any desktop content.
+  // Each boundary is feathered over the same one device pixel as the outer
+  // edge, which is what keeps the corners from stepping.
+  float core = smoothstep(-2.5, -1.5, distance);
+  float hairline = smoothstep(-1.5, -0.5, distance);
+  pixel.rgb = mix(pixel.rgb, float3(1.0), core);
+  pixel.rgb = mix(pixel.rgb, float3(0.15, 0.15, 0.16), hairline);
+  // The drawable holds premultiplied alpha, and the render pass composites
+  // the scene over this with source-over blending.
+  pixel = float4(pixel.rgb * coverage, coverage);
   output.write(pixel, uint2(output_point));
 }
 
@@ -184,12 +200,18 @@ fragment float4 region_osc_fragment(
     return color;
   }
   if (magnifier_box.z > 0.0) {
+    // Same radius and the same feathered coverage the compute pass rounds the
+    // loupe with. The scene keeps drawing wherever the loupe is not fully
+    // opaque, so the two edges blend into each other instead of meeting at a
+    // hard step.
+    float radius = max(magnifier_box.z / 12.0, 1.0);
     float2 half_size = magnifier_box.zw * 0.5;
     float2 local = abs(in.position.xy - (magnifier_box.xy + half_size)) -
-                   (half_size - 4.0);
+                   (half_size - radius);
     float distance = length(max(local, 0.0)) +
-                     min(max(local.x, local.y), 0.0) - 4.0;
-    if (distance <= 0.0) discard_fragment();
+                     min(max(local.x, local.y), 0.0) - radius;
+    float coverage = 1.0 - smoothstep(-0.5, 0.5, distance);
+    if (coverage >= 1.0) discard_fragment();
   }
   if (in.kind == 37) {
     float4 sampled = secondary_label.sample(label_sampler, in.uv);

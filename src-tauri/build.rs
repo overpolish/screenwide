@@ -30,6 +30,7 @@ fn main() {
     );
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos.m");
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos.h");
+    println!("cargo:rerun-if-changed=src/editor/osc_pixel_alignment_macos.h");
     println!("cargo:rerun-if-changed=src/editor/osc_controls.h");
     println!("cargo:rerun-if-changed=src/editor/osc_material_surface_macos.h");
     println!("cargo:rerun-if-changed=src/editor/osc_material_surface_macos.m");

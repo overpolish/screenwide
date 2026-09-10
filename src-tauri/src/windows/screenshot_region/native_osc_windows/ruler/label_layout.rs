@@ -25,8 +25,7 @@ pub(crate) fn loupe_origin(point: Point, width: f64, height: f64, view: Size, in
 pub(super) fn measurement_label_rect(
   ruler: &Ruler,
   measurement: MeasurementPacket,
-  text: &str,
-  cell: f64,
+  text_width: f64,
   value: ControlMetrics,
   control: f64,
   inset: f64,
@@ -46,7 +45,7 @@ pub(super) fn measurement_label_rect(
     measurement.height,
     offset,
   );
-  let width = value.padding_x * 2.0 + cell * text.chars().count() as f64;
+  let width = value.padding_x * 2.0 + text_width;
   let height = value.height;
   let horizontal = global.size.height < inset;
   let vertical = global.size.width < inset;
@@ -80,15 +79,14 @@ pub(super) fn probe_label_rect(
   ruler: &Ruler,
   probe: ProbePacket,
   radius: Option<RadiusPacket>,
-  text: &str,
-  cell: f64,
+  text_width: f64,
   value: ControlMetrics,
   control: f64,
   inset: f64,
   view: Size,
   offset: Point,
 ) -> Rect {
-  let width = value.padding_x * 2.0 + cell * text.chars().count() as f64;
+  let width = value.padding_x * 2.0 + text_width;
   let height = value.height;
   let (start, end, position) = ruler.project_probe(probe, offset);
   let mut left = if probe.axis == 1 {

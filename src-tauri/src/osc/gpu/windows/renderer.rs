@@ -217,15 +217,6 @@ fn push_quad_with_aux(
   ]);
 }
 
-fn rect_corners(view: Size, rect: Rect) -> [[f32; 2]; 4] {
-  [
-    ndc(view, rect.origin.x, rect.origin.y),
-    ndc(view, rect.right(), rect.origin.y),
-    ndc(view, rect.right(), rect.bottom()),
-    ndc(view, rect.origin.x, rect.bottom()),
-  ]
-}
-
 const UNIT_UVS: [[f32; 2]; 4] = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
 
 fn is_empty(rect: Rect) -> bool {
@@ -303,15 +294,19 @@ pub(crate) fn add_line(
 }
 
 mod chrome;
+mod pixel;
+use pixel::rect_corners;
 mod ruler;
 mod selection;
 
 pub(crate) use chrome::{add_coverage_label, add_icon, add_label, add_outlined_label, add_plate};
+pub(crate) use pixel::{
+  add_pixel_aligned_quad, add_pixel_aligned_texture_quad, pixel_aligned_rect,
+};
 pub(crate) use ruler::{add_ruler_arc, add_ruler_box};
 pub(crate) use selection::{add_crop, add_crop_with_handles, add_selection};
 
-/// The lens replaces Metal's compute pass, so it is a quad over
-/// `RenderConstants::magnifier_box` and must be emitted last.
+/// The lens is emitted last as a quad over `magnifier_box`.
 pub(crate) fn add_magnifier(out: &mut Vec<Vertex>, view: Size, constants: &RenderConstants) {
   let [x, y, width, height] = constants.magnifier_box;
   if constants.magnifier_flags[1] == 0 || width <= 0.0 || height <= 0.0 {

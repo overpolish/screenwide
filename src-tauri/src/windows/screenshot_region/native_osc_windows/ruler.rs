@@ -23,7 +23,7 @@ use windows::Win32::Graphics::Direct3D11::{ID3D11Device, ID3D11ShaderResourceVie
 
 use super::ocr::Segment;
 use super::renderer::{self, Vertex};
-use super::text::TextCache;
+use super::text::{AtlasMetrics, TextCache};
 use crate::osc::{
   controls::{
     control_metrics, control_visual, Appearance, ControlColor, ControlKind, ControlMetrics,
@@ -57,6 +57,7 @@ struct NativeControlSpacing {
   control: f64,
   control_inset: f64,
   section: f64,
+  layout: f64,
   window_inset: f64,
 }
 
@@ -70,7 +71,7 @@ fn spacing() -> (f64, f64) {
 }
 
 fn metrics() -> ControlMetrics {
-  control_metrics(ControlKind::Button, ControlSize::Compact)
+  control_metrics(ControlKind::Button, ControlSize::Regular)
 }
 
 /// The eight datasets a ruler-flagged result pulls from the document. macOS
@@ -192,9 +193,6 @@ pub(crate) struct Ruler {
   hover_started: Instant,
   pub viewport_zoom: f64,
   pub viewport_origin: Point,
-  /// The desktop union, which fixes the label width so numbers never resize
-  /// the plate (`reserved_dimensions_length`).
-  pub desktop_size: Size,
   data: RulerData,
   labels: Vec<LabelItem>,
   label_rects: Vec<LabelRect>,
@@ -219,7 +217,6 @@ impl Default for Ruler {
       hover_started: settled(),
       viewport_zoom: 1.0,
       viewport_origin: Point::default(),
-      desktop_size: Size::default(),
       data: RulerData::default(),
       labels: Vec::new(),
       label_rects: Vec::new(),
@@ -661,22 +658,20 @@ impl Ruler {
       return;
     }
     let value = metrics();
+    // Every readout assembled from this atlas - the callout's two lines and
+    // the measurement, probe and radius labels - sits one tier below a
+    // control label, so the atlas is rasterized at the readout role.
     let Some(atlas) = self.text.hex_atlas(
       device,
       scale,
       light_mode,
-      value.font_size,
-      value.line_height,
+      value.readout_font_size,
+      value.readout_line_height,
     ) else {
       return;
     };
-    let Some(cell) = atlas.atlas.map(|metrics| metrics.glyph_width) else {
+    let Some(cells) = atlas.atlas else {
       return;
-    };
-    let glyph_rect = |index: usize| {
-      atlas
-        .atlas
-        .map_or_else(Rect::default, |metrics| metrics.glyph_texture_rect(index))
     };
     let appearance = if light_mode {
       Appearance::Light
@@ -686,34 +681,26 @@ impl Ruler {
     // macOS read these from a one-control `ControlGroup` that nothing ever
     // hovered, so the resolved visual is the normal one.
     let visual = control_visual(
-      ControlStyle::button(ControlColor::Neutral, ControlSize::Compact),
+      ControlStyle::button(ControlColor::Neutral, ControlSize::Regular),
       Interaction::Normal,
       appearance,
     );
     let fills = [visual.fill, visual.foreground];
     let (control, inset) = spacing();
-    let width_digits = decimal_digit_count(self.desktop_size.width);
-    let height_digits = decimal_digit_count(self.desktop_size.height);
 
     for item in self.labels.clone() {
       let (id, kind, text, frame) = match item {
         LabelItem::Measurement(measurement) => {
-          let text = measurement_text(
-            Rect::from_xywh(
-              measurement.x,
-              measurement.y,
-              measurement.width,
-              measurement.height,
-            ),
-            measurement.flags & 1 != 0,
-            width_digits,
-            height_digits,
-          );
+          let text = measurement_text(Rect::from_xywh(
+            measurement.x,
+            measurement.y,
+            measurement.width,
+            measurement.height,
+          ));
           let plate = measurement_label_rect(
             self,
             measurement,
-            &text,
-            cell,
+            cells.text_width(&text),
             value,
             control,
             inset,
@@ -725,7 +712,15 @@ impl Ruler {
         LabelItem::Probe(probe) | LabelItem::GuideGap(probe) => {
           let text = stamped_probe_text(probe);
           let plate = probe_label_rect(
-            self, probe, None, &text, cell, value, control, inset, view, offset,
+            self,
+            probe,
+            None,
+            cells.text_width(&text),
+            value,
+            control,
+            inset,
+            view,
+            offset,
           );
           (
             probe.id,
@@ -745,8 +740,7 @@ impl Ruler {
             self,
             probe,
             Some(radius),
-            &text,
-            cell,
+            cells.text_width(&text),
             value,
             control,
             inset,
@@ -762,22 +756,20 @@ impl Ruler {
         rect: frame,
       });
       let start = out.len();
-      renderer::add_plate(out, view, frame);
+      renderer::add_plate(out, view, renderer::pixel_aligned_rect(frame, scale));
       let text_top = frame.origin.y + (frame.size.height - atlas.size.height) * 0.5;
-      for (index, glyph) in text.chars().enumerate() {
-        renderer::add_texture_quad(
-          out,
-          view,
-          Rect::from_xywh(
-            frame.origin.x + value.padding_x + cell * index as f64,
-            text_top,
-            cell,
-            atlas.size.height,
-          ),
-          glyph_rect(super::text::glyph_index(glyph).unwrap_or(0)),
-          11,
-        );
-      }
+      add_atlas_text(
+        out,
+        view,
+        &cells,
+        &text,
+        frame.origin.x + value.padding_x,
+        text_top,
+        atlas.size.height,
+        0.0,
+        scale,
+        11,
+      );
       push_segment(
         segments,
         out,
@@ -790,8 +782,8 @@ impl Ruler {
     }
 
     self.add_loupe(
-      device, out, segments, view, display_id, scale, light_mode, now, &atlas, cell, fills, value,
-      inset,
+      device, out, segments, view, display_id, scale, light_mode, now, &atlas, &cells, fills,
+      value, control, inset,
     );
   }
 
@@ -810,9 +802,10 @@ impl Ruler {
     light_mode: bool,
     now: Instant,
     atlas: &super::text::TextTexture,
-    cell: f64,
+    cells: &AtlasMetrics,
     fills: [[f32; 4]; 2],
     value: ControlMetrics,
+    control: f64,
     inset: f64,
   ) {
     if !self.transient_chrome
@@ -837,76 +830,69 @@ impl Ruler {
       .flatten();
 
     let colour = hex_text(self.color);
-    let dimensions = probe_dimensions_text(&self.data.probes, display_id, self.desktop_size);
-    let colour_width = value.icon_size + value.gap + cell * 7.0;
-    let reserved = reserved_dimensions_length(self.desktop_size);
-    let dimensions_width = cell
-      * dimensions
-        .as_ref()
-        .map_or(0, |text| text.chars().count())
-        .max(if dimensions.is_some() { reserved } else { 0 }) as f64;
-    let width = value.padding_x * 2.0 + colour_width.max(dimensions_width);
-    let height = if dimensions.is_some() {
-      value.height + value.line_height
-    } else {
-      value.height
-    };
+    let dimensions = probe_dimensions_text(&self.data.probes, display_id);
+    // A ToggleMenuButton at its capture size: the swatch in the leading glyph
+    // slot, then the dimensions over the hex on the readout tier. The glyph
+    // slot carries the control's side inset outside the swatch and half the
+    // icon-to-label gap inside it; the text takes the other half and the side
+    // inset closes the right edge. The hex is seven cells of one pitch, so
+    // only the dimensions change the width, and the callout follows the
+    // pointer anyway.
+    let pitch = hex_pitch(cells);
+    let colour_width = pitch * colour.chars().count() as f64;
+    let dimensions_width = dimensions
+      .as_ref()
+      .map_or(0.0, |text| cells.text_width(text));
+    let text_offset = inset + value.icon_size + control + control;
+    let width = text_offset + colour_width.max(dimensions_width) + inset;
+    let height = value.callout_height;
     let origin = loupe_origin(self.point, width, height, view, inset);
     let plate = Rect::from_xywh(origin.x, origin.y, width, height);
 
     let start = out.len();
-    renderer::add_plate(out, view, plate);
-    let colour_top = if dimensions.is_some() {
-      value.line_height
-    } else {
-      0.0
-    };
-    let icon_top = colour_top + (value.height - value.icon_size) * 0.5;
+    renderer::add_plate(out, view, renderer::pixel_aligned_rect(plate, scale));
+    let icon_top = (height - value.icon_size) * 0.5;
     let swatch = Rect::from_xywh(
-      origin.x + value.padding_x,
+      origin.x + inset,
       origin.y + icon_top,
       value.icon_size,
       value.icon_size,
     );
-    renderer::add_quad(out, view, swatch, 29);
+    renderer::add_pixel_aligned_quad(out, view, swatch, scale, 29);
 
-    let glyph_rect = |index: usize| {
-      atlas
-        .atlas
-        .map_or_else(Rect::default, |metrics| metrics.glyph_texture_rect(index))
-    };
-    let text_left = origin.x + value.padding_x + value.icon_size + value.gap;
-    let text_top = origin.y + colour_top + (value.height - atlas.size.height) * 0.5;
-    for (index, glyph) in colour.chars().enumerate() {
-      renderer::add_texture_quad(
+    // The lines stack with no gap between them, and the block they make is
+    // centred in the taller control.
+    let text_left = origin.x + text_offset;
+    let line_height = atlas.size.height;
+    let lines = if dimensions.is_some() { 2.0 } else { 1.0 };
+    let mut text_top = origin.y + (height - line_height * lines) * 0.5;
+    if let Some(dimensions) = dimensions.as_ref() {
+      add_atlas_text(
         out,
         view,
-        Rect::from_xywh(
-          text_left + cell * index as f64,
-          text_top,
-          cell,
-          atlas.size.height,
-        ),
-        glyph_rect(super::text::glyph_index(glyph).unwrap_or(0)),
+        cells,
+        dimensions,
+        text_left,
+        text_top,
+        line_height,
+        0.0,
+        scale,
         48,
       );
+      text_top += line_height;
     }
-    if let Some(dimensions) = dimensions.as_ref() {
-      let count = dimensions.chars().count();
-      let left = origin.x + (width - cell * count as f64) * 0.5;
-      let top = origin.y
-        + (value.height - value.line_height) * 0.5
-        + (value.line_height - atlas.size.height) * 0.5;
-      for (index, glyph) in dimensions.chars().enumerate() {
-        renderer::add_texture_quad(
-          out,
-          view,
-          Rect::from_xywh(left + cell * index as f64, top, cell, atlas.size.height),
-          glyph_rect(super::text::glyph_index(glyph).unwrap_or(0)),
-          48,
-        );
-      }
-    }
+    add_atlas_text(
+      out,
+      view,
+      cells,
+      &colour,
+      text_left,
+      text_top,
+      line_height,
+      pitch,
+      scale,
+      48,
+    );
 
     // Matches CheckOnClick: scale and fade in, then only fade on expiry.
     let copied = self.copied.amount(now);
@@ -939,7 +925,7 @@ impl Ruler {
           width: label.size.width * label_scale,
           height: label.size.height * label_scale,
         };
-        renderer::add_texture_quad(
+        renderer::add_pixel_aligned_texture_quad(
           out,
           view,
           Rect::from_xywh(
@@ -949,6 +935,7 @@ impl Ruler {
             size.height,
           ),
           Rect::from_xywh(0.0, 0.0, 1.0, 1.0),
+          scale,
           37,
         );
         label.view.clone()
@@ -959,7 +946,7 @@ impl Ruler {
       out,
       start,
       fills,
-      value.radius,
+      value.callout_radius,
       Some(atlas.view.clone()),
       secondary,
     );
@@ -1004,10 +991,12 @@ impl Ruler {
 }
 
 mod assignment;
+mod atlas_layout;
 mod commands;
 mod data;
 mod label_layout;
 mod labels;
+use atlas_layout::{add_atlas_text, hex_pitch};
 mod world;
 
 pub(crate) use assignment::assign_labels;
@@ -1017,8 +1006,8 @@ use commands::KeyCommand;
 pub(crate) use data::DataChange;
 pub(crate) use label_layout::{label_hit, loupe_origin};
 pub(crate) use labels::{
-  decimal_digit_count, hex_text, measurement_text, probe_dimensions_text, radius_text,
-  reserved_dimensions_length, stamped_probe_text, tolerance_text,
+  hex_text, measurement_text, probe_dimensions_text, radius_text, stamped_probe_text,
+  tolerance_text,
 };
 pub(crate) use world::{
   animation_active, guide_gap_probe, hovered_artifact_key, project_world_rect, radius_center,

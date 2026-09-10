@@ -235,7 +235,6 @@ void screenwide_set_region_expected_cursor(NSCursor *cursor);
 @property(nonatomic, strong) NSMutableArray<ScreenwideRegionOSC *> *desktopPeers;
 @property(nonatomic, strong) NSMutableArray<NSWindow *> *desktopWindows;
 @property(nonatomic) NSPoint desktopOffset;
-@property(nonatomic) NSSize desktopSize;
 @property(nonatomic) NSRect desktopRegion;
 @property(nonatomic) uint32_t displayID;
 @property(nonatomic, strong) id screenObserver;

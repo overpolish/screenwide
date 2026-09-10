@@ -102,15 +102,13 @@ static void render_control(ScreenwideRegionOSC *surface, NSUInteger index) {
   CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
   control.contentLayer.contentsScale = scale;
   control.contentLayer.drawableSize =
-      CGSizeMake(MAX(size.width * scale, 2.0),
-                 MAX(size.height * scale, 2.0));
+      CGSizeMake(MAX(round(size.width * scale), 2.0),
+                 MAX(round(size.height * scale), 2.0));
   id<CAMetalDrawable> drawable = [control.contentLayer nextDrawable];
   if (!drawable)
     return;
-  id<MTLBuffer> buffer = [surface.device
-      newBufferWithBytes:vertices
-                   length:sizeof(ScreenwideRegionOscVertex) * count
-                  options:MTLResourceStorageModeShared];
+  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
+      surface.device, vertices, count, size, scale);
   MTLRenderPassDescriptor *pass =
       [MTLRenderPassDescriptor renderPassDescriptor];
   pass.colorAttachments[0].texture = drawable.texture;
@@ -138,10 +136,8 @@ static void render_control(ScreenwideRegionOSC *surface, NSUInteger index) {
           iconVertices, &iconCount, size, layer.icon,
           (size.width - iconSize) * 0.5, (size.height - iconSize) * 0.5,
           iconSize);
-      id<MTLBuffer> iconBuffer = [surface.device
-          newBufferWithBytes:iconVertices
-                       length:sizeof(ScreenwideRegionOscVertex) * iconCount
-                      options:MTLResourceStorageModeShared];
+      id<MTLBuffer> iconBuffer = screenwide_osc_vertex_buffer(
+          surface.device, iconVertices, iconCount, size, scale);
       memcpy(state.action_fills + 4, layer.foreground,
              sizeof(layer.foreground));
       state.action_fills[7] *= layer.opacity;

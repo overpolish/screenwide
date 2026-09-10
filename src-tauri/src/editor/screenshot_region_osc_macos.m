@@ -62,7 +62,7 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
   s.layer.frame = s.host.bounds;
   s.layer.contentsScale = scale;
   s.layer.drawableSize =
-      CGSizeMake(MAX(size.width * scale, 2.0), MAX(size.height * scale, 2.0));
+      CGSizeMake(MAX(round(size.width * scale), 2.0), MAX(round(size.height * scale), 2.0));
 
   NSUInteger capacity = 262 + screenwide_region_osc_ocr_vertex_capacity(s) +
                         screenwide_region_osc_ruler_vertex_capacity(s);
@@ -123,10 +123,8 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
     [magnifierEncoder endEncoding];
   }
 
-  id<MTLBuffer> buffer =
-      [s.device newBufferWithBytes:vertices
-                            length:count * sizeof(*vertices)
-                           options:MTLResourceStorageModeShared];
+  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
+      s.device, vertices, count, size, scale);
   free(vertices);
   MTLRenderPassDescriptor *pass =
       [MTLRenderPassDescriptor renderPassDescriptor];

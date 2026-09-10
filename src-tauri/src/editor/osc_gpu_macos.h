@@ -153,3 +153,5 @@ void screenwide_region_magnifier_encode(
     id<MTLComputePipelineState> pipeline, id<MTLBuffer> source,
     id<MTLTexture> output, const uint32_t source_dimensions[2],
     ScreenwideRegionMagnifier magnifier);
+
+#import "osc_pixel_alignment_macos.h"

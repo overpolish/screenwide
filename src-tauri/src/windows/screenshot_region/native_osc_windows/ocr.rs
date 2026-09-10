@@ -57,9 +57,6 @@ const STATUS_MIN_WIDTH: f64 = 128.0;
 const STATUS_MARGIN: f64 = 8.0;
 /// The cancel button sits 48pt below the top edge, centred horizontally.
 const CANCEL_TOP: f64 = 48.0;
-/// OCR's dense 24pt toolbar is squarer than the general compact control.
-/// Keep this local so Ruler and editor controls retain their existing shape.
-const TOOLBAR_RADIUS: f64 = 6.0;
 /// OCR controls sit over a much busier, unzoomed desktop than Ruler labels.
 /// Request the material-emphasis pass so their backing reads as the same
 /// muted plate before the semantic hover/press fill is applied.
@@ -165,22 +162,14 @@ pub(crate) fn overlap_area(region: Rect, bounds: Size) -> f64 {
   width * height
 }
 
-fn cancel_metrics() -> ControlMetrics {
-  control_metrics(ControlKind::Button, ControlSize::Default)
-}
+use self::button_metrics as cancel_metrics;
 
 fn button_metrics() -> ControlMetrics {
-  ControlMetrics {
-    radius: TOOLBAR_RADIUS,
-    ..control_metrics(ControlKind::Button, ControlSize::Compact)
-  }
+  control_metrics(ControlKind::Button, ControlSize::Regular)
 }
 
 fn icon_metrics() -> ControlMetrics {
-  ControlMetrics {
-    radius: TOOLBAR_RADIUS,
-    ..control_metrics(ControlKind::IconButton, ControlSize::Compact)
-  }
+  control_metrics(ControlKind::IconButton, ControlSize::Regular)
 }
 
 /// What a pointer event did to the chrome, so the caller can redraw, retime
@@ -361,9 +350,7 @@ impl Chrome {
     }
   }
 
-  /// The world-space half of `screenwide_region_osc_ocr_add_vertices`
-  /// (`+ocr.m:100-135`): the 1px selection border during phases 1 and 2, then
-  /// one quad per highlight.
+  /// World-space OCR border and highlight quads.
   pub(crate) fn add_world_vertices(
     &self,
     out: &mut Vec<Vertex>,
@@ -394,11 +381,11 @@ impl Chrome {
           height + half * 2.0,
         ),
       ] {
-        renderer::add_quad(out, view, edge, 18);
+        renderer::add_pixel_aligned_quad(out, view, edge, scale, 18);
       }
     }
     for highlight in &self.rects {
-      renderer::add_quad(out, view, highlight.rect, rect_kind(highlight.kind));
+      renderer::add_pixel_aligned_quad(out, view, highlight.rect, scale, rect_kind(highlight.kind));
     }
   }
 
@@ -468,15 +455,18 @@ impl Chrome {
     };
     let plate = status_rect(label.size.width, view, region);
     let start = out.len();
-    renderer::add_plate(out, view, plate);
+    renderer::add_plate(out, view, renderer::pixel_aligned_rect(plate, scale));
     renderer::add_label(
       out,
       view,
-      Rect::from_xywh(
-        plate.origin.x + (plate.size.width - label.size.width) * 0.5,
-        plate.origin.y + (plate.size.height - label.size.height) * 0.5,
-        label.size.width,
-        label.size.height,
+      renderer::pixel_aligned_rect(
+        Rect::from_xywh(
+          plate.origin.x + (plate.size.width - label.size.width) * 0.5,
+          plate.origin.y + (plate.size.height - label.size.height) * 0.5,
+          label.size.width,
+          label.size.height,
+        ),
+        scale,
       ),
     );
     push_segment(
@@ -520,7 +510,7 @@ impl Chrome {
     let plate = Rect::from_xywh(left, CANCEL_TOP, width, metrics.height);
     self.cancel.layout(&[ControlSpec {
       rect: plate,
-      style: ControlStyle::button(ControlColor::Neutral, ControlSize::Default),
+      style: ControlStyle::button(ControlColor::Neutral, ControlSize::Regular),
       icon: ControlIcon::X,
     }]);
     let Some(visual) = self.cancel.visuals(appearance).first().copied() else {
@@ -535,6 +525,7 @@ impl Chrome {
       ControlIcon::X,
       Some(&*label),
       true,
+      scale,
     );
     push_segment(
       segments,
@@ -588,9 +579,9 @@ impl Chrome {
     let specs = std::array::from_fn::<_, CONTROL_COUNT, _>(|index| ControlSpec {
       rect: rects[index],
       style: if index < 2 {
-        ControlStyle::button(ControlColor::Neutral, ControlSize::Compact)
+        ControlStyle::button(ControlColor::Neutral, ControlSize::Regular)
       } else {
-        ControlStyle::icon_button(ControlColor::Neutral, ControlSize::Compact)
+        ControlStyle::icon_button(ControlColor::Neutral, ControlSize::Regular)
       },
       icon: toolbar_icon(index),
     });
@@ -612,6 +603,7 @@ impl Chrome {
         toolbar_icon(index),
         label.map(|texture| &**texture),
         is_button,
+        scale,
       );
       push_segment(
         segments,
@@ -634,6 +626,7 @@ impl Chrome {
           &metrics,
           visuals[index],
           appearance,
+          scale,
         );
       }
     }
@@ -649,6 +642,7 @@ impl Chrome {
     metrics: &ControlMetrics,
     visual: ControlVisual,
     appearance: Appearance,
+    scale: f64,
   ) {
     for layer in self.confirm.layers(Instant::now(), appearance) {
       if layer.opacity <= 0.002 || layer.scale <= 0.002 {
@@ -660,9 +654,9 @@ impl Chrome {
         out,
         view,
         layer.icon as u8,
-        rect.origin.x + (rect.size.width - size) * 0.5,
-        rect.origin.y + (rect.size.height - size) * 0.5,
-        size,
+        ((rect.origin.x + (rect.size.width - size) * 0.5) * scale).round() / scale,
+        ((rect.origin.y + (rect.size.height - size) * 0.5) * scale).round() / scale,
+        (size * scale).round().max(1.0) / scale,
       );
       let mut foreground = layer.foreground;
       foreground[3] *= layer.opacity;
@@ -706,7 +700,9 @@ fn add_control(
   icon: ControlIcon,
   label: Option<&super::text::TextTexture>,
   is_button: bool,
+  scale: f64,
 ) {
+  let rect = renderer::pixel_aligned_rect(rect, scale);
   renderer::add_plate(out, view, rect);
   let icon_left = if is_button {
     rect.origin.x + metrics.padding_x
@@ -717,19 +713,22 @@ fn add_control(
     out,
     view,
     icon as u8,
-    icon_left,
-    rect.origin.y + (rect.size.height - metrics.icon_size) * 0.5,
-    metrics.icon_size,
+    (icon_left * scale).round() / scale,
+    ((rect.origin.y + (rect.size.height - metrics.icon_size) * 0.5) * scale).round() / scale,
+    (metrics.icon_size * scale).round() / scale,
   );
   if let Some(label) = label {
     renderer::add_label(
       out,
       view,
-      Rect::from_xywh(
-        rect.origin.x + metrics.padding_x + metrics.icon_size + metrics.gap,
-        rect.origin.y + (rect.size.height - label.size.height) * 0.5,
-        label.size.width,
-        label.size.height,
+      renderer::pixel_aligned_rect(
+        Rect::from_xywh(
+          rect.origin.x + metrics.padding_x + metrics.icon_size + metrics.gap,
+          rect.origin.y + (rect.size.height - label.size.height) * 0.5,
+          label.size.width,
+          label.size.height,
+        ),
+        scale,
       ),
     );
   }

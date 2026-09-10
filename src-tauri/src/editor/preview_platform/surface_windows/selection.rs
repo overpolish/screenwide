@@ -51,7 +51,7 @@ use label::{build_label_texture, label_scale_key, LABEL_STROKE};
 use label_texture::{upload_label_texture, LabelTexture};
 
 fn action_label_insets(scale: f32) -> (f32, f32) {
-  let metrics = control_metrics(ControlKind::Button, ControlSize::Compact);
+  let metrics = control_metrics(ControlKind::Button, ControlSize::Regular);
   // The GDI texture already owns the label's 2pt horizontal inset. Complete
   // the portable control's padding around it instead of duplicating it.
   let horizontal = (metrics.padding_x as f32 - 2.0).max(0.0) * scale;
@@ -483,7 +483,7 @@ impl SelectionOverlay {
         f64::from(label[3] + action_padding_y * 2.0),
       ),
       icon: crate::osc::controls::ControlIcon::None,
-      style: ControlStyle::button(ControlColor::Neutral, ControlSize::Compact),
+      style: ControlStyle::button(ControlColor::Neutral, ControlSize::Regular),
     };
     let mut actions = Vec::with_capacity(2);
     if label_action && label_rect[2] > 0.0 {
@@ -547,25 +547,31 @@ impl SelectionOverlay {
       let half = 0.5 / scale;
       if let Some(x) = x {
         let x = f64::from(x) / scale;
-        osc_gpu::add_quad(
+        osc_gpu::add_pixel_aligned_quad(
           &mut vertices,
           view,
           Rect::from_xywh(x - half, 0.0, half * 2.0, view.height),
+          scale,
           if x_object { 5 } else { 4 },
         );
       }
       if let Some(y) = y {
         let y = f64::from(y) / scale;
-        osc_gpu::add_quad(
+        osc_gpu::add_pixel_aligned_quad(
           &mut vertices,
           view,
           Rect::from_xywh(0.0, y - half, view.width, half * 2.0),
+          scale,
           if y_object { 5 } else { 4 },
         );
       }
     }
     if !label_action && label_rect[2] > 0.0 {
-      osc_gpu::add_outlined_label(&mut vertices, view, logical_rect(label_rect, scale));
+      osc_gpu::add_outlined_label(
+        &mut vertices,
+        view,
+        osc_gpu::pixel_aligned_rect(logical_rect(label_rect, scale), scale),
+      );
     }
     let placeholder = self.label_placeholder.view.clone();
     let mut segments = Vec::with_capacity(3);
@@ -578,7 +584,7 @@ impl SelectionOverlay {
         start: 0,
       });
     }
-    let action_metrics = control_metrics(ControlKind::Button, ControlSize::Compact);
+    let action_metrics = control_metrics(ControlKind::Button, ControlSize::Regular);
     for (index, visual) in visuals.iter().enumerate() {
       let label = if index == 0 {
         label_rect
@@ -593,14 +599,22 @@ impl SelectionOverlay {
       osc_gpu::add_plate(
         &mut vertices,
         view,
-        Rect::from_xywh(
-          button.origin.x / scale,
-          button.origin.y / scale,
-          button.size.width / scale,
-          button.size.height / scale,
+        osc_gpu::pixel_aligned_rect(
+          Rect::from_xywh(
+            button.origin.x / scale,
+            button.origin.y / scale,
+            button.size.width / scale,
+            button.size.height / scale,
+          ),
+          scale,
         ),
       );
-      osc_gpu::add_coverage_label(&mut vertices, view, logical_rect(label, scale), false);
+      osc_gpu::add_coverage_label(
+        &mut vertices,
+        view,
+        osc_gpu::pixel_aligned_rect(logical_rect(label, scale), scale),
+        false,
+      );
       let mut action_constants = RenderConstants::new(light);
       action_constants.action_fills = [visual.fill, visual.foreground];
       action_constants.chrome[0] = action_metrics.radius as f32 * scale as f32;

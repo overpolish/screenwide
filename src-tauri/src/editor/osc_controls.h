@@ -37,8 +37,16 @@ typedef struct {
   double padding_x;
   double gap;
   double icon_size;
+  /// A control label: the body role.
   double font_size;
   double line_height;
+  /// A numeric readout assembled from the glyph atlas: the subheadline role.
+  double readout_font_size;
+  double readout_line_height;
+  /// The ruler callout: a ToggleMenuButton at its capture size, a glyph slot
+  /// beside two stacked readout lines.
+  double callout_height;
+  double callout_radius;
 } ScreenwideOscControlMetrics;
 
 typedef struct {
@@ -46,6 +54,7 @@ typedef struct {
   double control;
   double control_inset;
   double section;
+  double layout;
   double window_inset;
 } ScreenwideOscControlSpacing;
 

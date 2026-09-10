@@ -150,7 +150,7 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     ScreenwideOscControlMetrics metrics = screenwide_osc_control_metrics(0, 0);
     ScreenwideOscControlSpacing spacing = screenwide_osc_control_spacing();
     // Label textures already contain 2pt horizontal inset. Complete the
-    // shared compact button padding around that intrinsic texture.
+    // shared regular button padding around that intrinsic texture.
     CGFloat labelInsetX = MAX(metrics.padding_x - 2.0, 0.0);
     CGFloat buttonGap = spacing.control;
     CGFloat buttonHeight = metrics.height;
@@ -241,9 +241,8 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         surface.selectionSnapGuideYIsObject ? 5 : 4);
   }
   if (workspaceEncoding) {
-    id<MTLBuffer> buffer = [surface.device newBufferWithBytes:vertices
-        length:count * sizeof(*vertices)
-        options:MTLResourceStorageModeShared];
+    id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
+        surface.device, vertices, count, size, scale);
     MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
     pass.colorAttachments[0].texture = surface.workspaceEncodingTexture;
     pass.colorAttachments[0].loadAction = MTLLoadActionLoad;
@@ -267,16 +266,15 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   }
   surface.selectionLayer.frame = surface.interaction.bounds;
   surface.selectionLayer.contentsScale = scale;
-  surface.selectionLayer.drawableSize = CGSizeMake(MAX(size.width * scale, 2.0),
-                                                    MAX(size.height * scale, 2.0));
+  surface.selectionLayer.drawableSize = CGSizeMake(MAX(round(size.width * scale), 2.0),
+                                                    MAX(round(size.height * scale), 2.0));
   id<CAMetalDrawable> drawable = [surface.selectionLayer nextDrawable];
   if (drawable == nil) {
     surface.selectionDrawInFlight = NO;
     return;
   }
-  id<MTLBuffer> buffer = [surface.device newBufferWithBytes:vertices
-                                                      length:count * sizeof(*vertices)
-                                                     options:MTLResourceStorageModeShared];
+  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
+      surface.device, vertices, count, size, scale);
   MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
   pass.colorAttachments[0].texture = drawable.texture;
   pass.colorAttachments[0].loadAction = MTLLoadActionClear;

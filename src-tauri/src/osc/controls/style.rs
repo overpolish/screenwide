@@ -23,11 +23,13 @@ pub enum ControlColor {
   Error = 2,
 }
 
+/// One control size, matching the regular AppKit control height. Native OSC
+/// chrome has no second size, so this exists to keep the metric lookup and the
+/// C ABI explicit rather than to offer a choice.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ControlSize {
-  Compact = 0,
-  Default = 1,
+  Regular = 0,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,6 +68,7 @@ impl ControlStyle {
   }
 }
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ControlMetrics {
   pub height: f64,
@@ -73,8 +76,20 @@ pub struct ControlMetrics {
   pub padding_x: f64,
   pub gap: f64,
   pub icon_size: f64,
+  /// A control label: the body role, `--text-body`.
   pub font_size: f64,
   pub line_height: f64,
+  /// A numeric readout assembled from the glyph atlas, such as the ruler's
+  /// callout and its measurement labels: the subheadline role,
+  /// `--text-subheadline`. Secondary to the label beside it, and the tier the
+  /// ruler was measured at on screen.
+  pub readout_font_size: f64,
+  pub readout_line_height: f64,
+  /// The ruler callout is a `ToggleMenuButton` at its capture size: a glyph
+  /// slot beside two stacked readout lines, so it is taller and more rounded
+  /// than the one-row control it otherwise shares its metrics with.
+  pub callout_height: f64,
+  pub callout_radius: f64,
 }
 
 #[repr(C)]
@@ -84,6 +99,9 @@ pub struct ControlSpacing {
   pub control: f64,
   pub control_inset: f64,
   pub section: f64,
+  /// Separation between major layout areas, `--spacing-layout`.
+  pub layout: f64,
+  /// Inset from a window edge to its content, `--spacing-window-inset`.
   pub window_inset: f64,
 }
 
@@ -93,7 +111,8 @@ pub const fn control_spacing() -> ControlSpacing {
     control: 4.0,
     control_inset: 8.0,
     section: 12.0,
-    window_inset: 24.0,
+    layout: 24.0,
+    window_inset: 14.0,
   }
 }
 
@@ -103,42 +122,33 @@ pub extern "C" fn screenwide_osc_control_spacing() -> ControlSpacing {
 }
 
 pub const fn control_metrics(kind: ControlKind, size: ControlSize) -> ControlMetrics {
-  match (kind, size) {
-    (ControlKind::Button, ControlSize::Compact) => ControlMetrics {
+  let ControlSize::Regular = size;
+  match kind {
+    ControlKind::Button => ControlMetrics {
       height: 24.0,
       radius: 8.0,
-      padding_x: 8.0,
-      gap: 8.0,
-      icon_size: 14.0,
-      font_size: 12.0,
-      line_height: 16.0,
-    },
-    (ControlKind::Button, ControlSize::Default) => ControlMetrics {
-      height: 36.0,
-      radius: 12.0,
       padding_x: 12.0,
-      gap: 8.0,
-      icon_size: 18.0,
-      font_size: 14.0,
-      line_height: 20.0,
+      gap: 4.0,
+      icon_size: 16.0,
+      font_size: 13.0,
+      line_height: 16.0,
+      readout_font_size: 11.0,
+      readout_line_height: 14.0,
+      callout_height: 40.0,
+      callout_radius: 11.0,
     },
-    (ControlKind::IconButton, ControlSize::Compact) => ControlMetrics {
+    ControlKind::IconButton => ControlMetrics {
       height: 24.0,
       radius: 8.0,
       padding_x: 4.0,
       gap: 0.0,
-      icon_size: 14.0,
+      icon_size: 16.0,
       font_size: 0.0,
       line_height: 16.0,
-    },
-    (ControlKind::IconButton, ControlSize::Default) => ControlMetrics {
-      height: 36.0,
-      radius: 12.0,
-      padding_x: 6.0,
-      gap: 0.0,
-      icon_size: 18.0,
-      font_size: 0.0,
-      line_height: 24.0,
+      readout_font_size: 11.0,
+      readout_line_height: 14.0,
+      callout_height: 40.0,
+      callout_radius: 11.0,
     },
   }
 }
@@ -164,45 +174,56 @@ impl ControlVisual {
   }
 }
 
-const CONTENT_DARK: [f32; 4] = [38.0 / 255.0, 38.0 / 255.0, 38.0 / 255.0, 1.0];
+/// Label ladder from `src/index.css`: pure black in light, pure white in
+/// dark, carried at the tier's alpha. Tertiary is also the disabled tier.
+const CONTENT_ALPHA: f32 = 0.85;
+const DISABLED_ALPHA: f32 = 0.25;
 const WHITE: [f32; 4] = [1.0; 4];
-const DISABLED_LIGHT: [f32; 4] = [168.0 / 255.0, 168.0 / 255.0, 168.0 / 255.0, 1.0];
-const DISABLED_DARK: [f32; 4] = [119.0 / 255.0, 119.0 / 255.0, 119.0 / 255.0, 1.0];
-const ERROR_LIGHT: [f32; 4] = [215.0 / 255.0, 0.0, 21.0 / 255.0, 1.0];
-const ERROR_DARK: [f32; 4] = [1.0, 105.0 / 255.0, 97.0 / 255.0, 1.0];
 
-const fn neutral_fill(appearance: Appearance, interaction: Interaction) -> [f32; 4] {
+/// `--color-error`, the AppKit system red measured for each appearance.
+const ERROR_LIGHT: [f32; 4] = [1.0, 56.0 / 255.0, 60.0 / 255.0, 1.0];
+const ERROR_DARK: [f32; 4] = [1.0, 66.0 / 255.0, 69.0 / 255.0, 1.0];
+
+/// The fill ladder is black in light and white in dark, so every neutral fill
+/// and every label tier is one channel value with a tier alpha.
+const fn content_channel(appearance: Appearance) -> f32 {
   match appearance {
-    Appearance::Light => match interaction {
-      Interaction::Normal => [0.0, 0.0, 0.0, 0.09],
-      Interaction::Hovered => [0.0, 0.0, 0.0, 0.13],
-      Interaction::Pressed => [0.0, 0.0, 0.0, 0.17],
-      Interaction::Disabled => [0.0, 0.0, 0.0, 0.05],
-    },
-    Appearance::Dark => match interaction {
-      Interaction::Normal => [1.0, 1.0, 1.0, 0.12],
-      Interaction::Hovered => [1.0, 1.0, 1.0, 0.17],
-      Interaction::Pressed => [1.0, 1.0, 1.0, 0.22],
-      Interaction::Disabled => [1.0, 1.0, 1.0, 0.07],
-    },
+    Appearance::Light => 0.0,
+    Appearance::Dark => 1.0,
   }
 }
 
-const fn primary_fill(appearance: Appearance, interaction: Interaction) -> [f32; 4] {
-  match appearance {
-    Appearance::Light => match interaction {
-      Interaction::Normal => [216.0 / 255.0, 27.0 / 255.0, 96.0 / 255.0, 0.85],
-      Interaction::Hovered => [194.0 / 255.0, 24.0 / 255.0, 91.0 / 255.0, 0.90],
-      Interaction::Pressed => [173.0 / 255.0, 20.0 / 255.0, 87.0 / 255.0, 0.95],
-      Interaction::Disabled => [0.0, 0.0, 0.0, 0.05],
-    },
-    Appearance::Dark => match interaction {
-      Interaction::Normal => [1.0, 41.0 / 255.0, 112.0 / 255.0, 0.55],
-      Interaction::Hovered => [1.0, 41.0 / 255.0, 112.0 / 255.0, 0.65],
-      Interaction::Pressed => [1.0, 41.0 / 255.0, 112.0 / 255.0, 0.75],
-      Interaction::Disabled => [1.0, 1.0, 1.0, 0.07],
-    },
+const fn content_color(appearance: Appearance, alpha: f32) -> [f32; 4] {
+  let channel = content_channel(appearance);
+  [channel, channel, channel, alpha]
+}
+
+/// AppKit's system fills, `--color-fill` and friends: 10 / 8 / 5 / 3%. A
+/// bezeled control does not react to hover, so hovered repeats the resting
+/// fill; pressed is the resting fill with a second 8% layer over it, which
+/// composites to 0.10 + 0.08 * (1 - 0.10).
+const fn neutral_fill(appearance: Appearance, interaction: Interaction) -> [f32; 4] {
+  let alpha = match interaction {
+    Interaction::Normal | Interaction::Hovered => 0.10,
+    Interaction::Pressed => 0.172,
+    Interaction::Disabled => 0.03,
+  };
+  content_color(appearance, alpha)
+}
+
+/// `--color-primary-surface` and its hover and pressed states: the accent
+/// opaque, then mixed 10% and 20% toward black.
+fn primary_fill(appearance: Appearance, interaction: Interaction) -> [f32; 4] {
+  if interaction == Interaction::Disabled {
+    return neutral_fill(appearance, Interaction::Disabled);
   }
+  let shade = match interaction {
+    Interaction::Hovered => 0.90,
+    Interaction::Pressed => 0.80,
+    _ => 1.0,
+  };
+  let [red, green, blue] = crate::system_accent::accent_rgb();
+  [red * shade, green * shade, blue * shade, 1.0]
 }
 
 pub fn control_visual(
@@ -211,17 +232,13 @@ pub fn control_visual(
   appearance: Appearance,
 ) -> ControlVisual {
   let foreground = if interaction == Interaction::Disabled {
-    match appearance {
-      Appearance::Light => DISABLED_LIGHT,
-      Appearance::Dark => DISABLED_DARK,
-    }
+    content_color(appearance, DISABLED_ALPHA)
   } else {
     match (style.color, appearance) {
       (ControlColor::Primary, _) => WHITE,
       (ControlColor::Error, Appearance::Light) => ERROR_LIGHT,
       (ControlColor::Error, Appearance::Dark) => ERROR_DARK,
-      (ControlColor::Neutral, Appearance::Light) => CONTENT_DARK,
-      (ControlColor::Neutral, Appearance::Dark) => WHITE,
+      (ControlColor::Neutral, _) => content_color(appearance, CONTENT_ALPHA),
     }
   };
   let fill = match style.color {

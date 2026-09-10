@@ -171,7 +171,7 @@ impl ConfirmAction {
     appearance: Appearance,
   ) -> ConfirmLayer {
     let foreground = control_visual(
-      ControlStyle::icon_button(color, ControlSize::Compact),
+      ControlStyle::icon_button(color, ControlSize::Regular),
       Interaction::Normal,
       appearance,
     )
@@ -219,10 +219,7 @@ mod tests {
     let middle = action.layers(now + Duration::from_millis(80), Appearance::Light);
     assert!(middle[0].opacity < 1.0 && middle[0].opacity > 0.0);
     assert!(middle[1].scale > 0.0 && middle[1].scale < 1.0);
-    assert_eq!(
-      middle[1].foreground,
-      [215.0 / 255.0, 0.0, 21.0 / 255.0, 1.0]
-    );
+    assert_eq!(middle[1].foreground, [1.0, 56.0 / 255.0, 60.0 / 255.0, 1.0]);
   }
 
   #[test]

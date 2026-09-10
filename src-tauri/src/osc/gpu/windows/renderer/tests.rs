@@ -141,6 +141,32 @@ fn snapping_separates_hairlines_from_handle_centers() {
 }
 
 #[test]
+fn pixel_aligned_rect_rounds_logical_edges_to_device_pixels() {
+  let rect = pixel_aligned_rect(Rect::from_xywh(10.24, 4.26, 20.51, 8.49), 2.0);
+  assert_eq!(rect.origin, Point { x: 10.0, y: 4.5 });
+  assert_eq!(rect.right(), 31.0);
+  assert_eq!(rect.bottom(), 13.0);
+
+  for scale in [1.0, 1.25, 1.5, 2.0] {
+    let rect = pixel_aligned_rect(Rect::from_xywh(10.24, 4.26, 20.51, 8.49), scale);
+    for edge in [rect.origin.x, rect.origin.y, rect.right(), rect.bottom()] {
+      assert!((edge * scale - (edge * scale).round()).abs() < 1e-9);
+    }
+  }
+  // A non-positive scale leaves callers' geometry untouched.
+  let original = Rect::from_xywh(1.25, 2.5, 3.75, 4.25);
+  assert_eq!(pixel_aligned_rect(original, 0.0), original);
+  let thin = pixel_aligned_rect(Rect::from_xywh(4.1, 2.0, 0.1, 0.1), 2.0);
+  assert_eq!(
+    thin.size,
+    Size {
+      width: 0.5,
+      height: 0.5
+    }
+  );
+}
+
+#[test]
 fn marquee_edges_form_one_closed_boundary_aware_pattern() {
   let mut out = Vec::new();
   let scale = 2.0;

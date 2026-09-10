@@ -15,8 +15,8 @@ use windows::{
         AddFontMemResourceEx, CreateCompatibleDC, CreateDIBSection, CreateFontW, DeleteDC,
         DeleteObject, GetTextExtentPoint32W, SelectObject, SetBkMode, SetTextColor, TextOutW,
         ANTIALIASED_QUALITY, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CLIP_DEFAULT_PRECIS,
-        DEFAULT_CHARSET, DIB_RGB_COLORS, FF_MODERN, FF_SWISS, FIXED_PITCH, FW_MEDIUM, FW_SEMIBOLD,
-        OUT_DEFAULT_PRECIS, TRANSPARENT, VARIABLE_PITCH,
+        DEFAULT_CHARSET, DIB_RGB_COLORS, FF_SWISS, FW_NORMAL, OUT_DEFAULT_PRECIS, TRANSPARENT,
+        VARIABLE_PITCH,
       },
     },
   },
@@ -24,10 +24,6 @@ use windows::{
 
 use super::label_texture::{upload_label_texture, LabelTexture};
 
-/// Point size of the size readout's monospaced font, as on macOS.
-const LABEL_FONT_SIZE: f64 = 11.0;
-/// React's compact Button uses `text-xs` (12px) and `font-semibold`.
-const ACTION_FONT_SIZE: f64 = 12.0;
 /// Width of the halo stroke in points; it is centred on the glyph outline, so
 /// half of it spills outside the glyph and is what the shader dilates by.
 pub(super) const LABEL_STROKE: f64 = 2.0;
@@ -55,52 +51,36 @@ pub(in crate::editor::preview_platform::surface) fn register_inter_font() {
 }
 
 /// Rasterises `text` with GDI as white-on-black grayscale coverage: a
-/// appropriately weighted face scaled by the display scale,
-/// padded by `LABEL_PADDING` points on every side. Dimension readouts remain
-/// monospaced; action text uses the app's proportional UI family. The red
+/// regular Inter body font scaled by the display scale,
+/// padded by `LABEL_PADDING` points on every side. The red
 /// channel of the returned BGRA bitmap is the glyph coverage.
-fn rasterize_label(text: &str, scale: f64, action: bool) -> Result<(Vec<u8>, (u32, u32)), String> {
+fn rasterize_label(text: &str, scale: f64) -> Result<(Vec<u8>, (u32, u32)), String> {
   let wide: Vec<u16> = text.encode_utf16().collect();
-  // GDI's grayscale grid fitting is visibly coarse for 12px semibold text.
-  // Rasterise action labels at twice the physical resolution and resolve the
+  // Rasterise body text at twice the physical resolution and resolve the
   // coverage back to the actual texture size. This approximates DirectWrite's
   // natural antialiasing without colour fringes, which would be incorrect as
   // the opaque button colour animates underneath the label.
-  let raster_factor = if action { 2 } else { 1 };
+  let raster_factor = 2;
   let raster_scale = scale * f64::from(raster_factor);
   let dc = unsafe { CreateCompatibleDC(None) };
   if dc.is_invalid() {
     return Err("Windows could not create a label drawing context".to_owned());
   }
-  if action {
-    register_inter_font();
-  }
-  // Use the same family and weight as the web UI. This asset is a variable
-  // font: `Inter SemiBold` is not a real face name in it, and asking GDI for
-  // that name can select a substituted or synthesized static face with much
-  // heavier grid fitting at text-xs sizes. Select the family and let lfWeight
-  // choose the variable font's 600 axis instead.
-  let face: Vec<u16> = if action { "Inter\0" } else { "Consolas\0" }
-    .encode_utf16()
-    .collect();
-  let family = if action {
-    VARIABLE_PITCH.0 | FF_SWISS.0
-  } else {
-    FIXED_PITCH.0 | FF_MODERN.0
-  };
+  register_inter_font();
+  let face: Vec<u16> = "Inter\0".encode_utf16().collect();
+  let family = VARIABLE_PITCH.0 | FF_SWISS.0;
   let font = unsafe {
-    let font_size = if action {
-      ACTION_FONT_SIZE
-    } else {
-      LABEL_FONT_SIZE
-    };
-    let font_weight = if action { FW_SEMIBOLD } else { FW_MEDIUM };
+    let font_size = crate::osc::controls::control_metrics(
+      crate::osc::controls::ControlKind::Button,
+      crate::osc::controls::ControlSize::Regular,
+    )
+    .font_size;
     CreateFontW(
       -((font_size * raster_scale).round() as i32).max(1),
       0,
       0,
       0,
-      font_weight.0 as i32,
+      FW_NORMAL.0 as i32,
       0,
       0,
       0,
@@ -129,13 +109,13 @@ fn rasterize_label(text: &str, scale: f64, action: bool) -> Result<(Vec<u8>, (u3
   }
   let padding = (LABEL_PADDING * scale).ceil() as i32;
   let output_width = ((extent.cx + raster_factor - 1) / raster_factor + padding * 2).max(1);
-  // React text-xs has a 16px line box; GDI reports only the glyph cell. Give
-  // actions that same line box before the button's py-1 is applied.
+  // The body role has a 16px line box; GDI reports only the glyph cell. Give
+  // actions that same line box before the button's vertical padding.
   let output_height = if action {
-    // The web button's text-xs line box is fixed at 16px. GDI includes
-    // internal leading in `extent.cy` (and reports proportionally more at the
-    // supersampled size), so using that metric would inflate the compact
-    // button even though the glyph ink fits the intended line box.
+    // The web button's body line box is fixed at 16px. GDI includes internal
+    // leading in `extent.cy` (and reports proportionally more at the
+    // supersampled size), so using that metric would inflate the button even
+    // though the glyph ink fits the intended line box.
     ((16.0 * scale).round() as i32).max(1)
   } else {
     (extent.cy + padding * 2).max(1)
@@ -236,7 +216,7 @@ pub(super) fn build_label_texture(
   scale: f64,
   action: bool,
 ) -> Result<LabelTexture, String> {
-  let (pixels, size) = rasterize_label(text, scale, action)?;
+  let (pixels, size) = rasterize_label(text, scale)?;
   upload_label_texture(device, &pixels, size, text, label_scale_key(scale), action)
 }
 
@@ -246,7 +226,7 @@ mod tests {
 
   #[test]
   fn action_label_resolves_supersampled_grayscale_coverage() {
-    let (pixels, (width, height)) = rasterize_label("Recenter", 1.0, true).unwrap();
+    let (pixels, (width, height)) = rasterize_label("Recenter", 1.0).unwrap();
 
     assert_eq!(height, 16);
     assert_eq!(pixels.len(), (width * height * 4) as usize);

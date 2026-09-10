@@ -46,6 +46,10 @@ pub struct NativeControlMetrics {
   pub icon_size: f64,
   pub font_size: f64,
   pub line_height: f64,
+  pub readout_font_size: f64,
+  pub readout_line_height: f64,
+  pub callout_height: f64,
+  pub callout_radius: f64,
 }
 
 impl From<ControlMetrics> for NativeControlMetrics {
@@ -58,6 +62,10 @@ impl From<ControlMetrics> for NativeControlMetrics {
       icon_size: metrics.icon_size,
       font_size: metrics.font_size,
       line_height: metrics.line_height,
+      readout_font_size: metrics.readout_font_size,
+      readout_line_height: metrics.readout_line_height,
+      callout_height: metrics.callout_height,
+      callout_radius: metrics.callout_radius,
     }
   }
 }
@@ -70,8 +78,7 @@ fn style(spec: NativeControlSpec) -> Option<ControlStyle> {
   };
   let color = parse_color(spec.color)?;
   let size = match spec.size {
-    0 => ControlSize::Compact,
-    1 => ControlSize::Default,
+    0 => ControlSize::Regular,
     _ => return None,
   };
   let mut style = match kind {
@@ -129,8 +136,7 @@ pub extern "C" fn screenwide_osc_control_metrics(kind: u8, size: u8) -> NativeCo
     _ => return NativeControlMetrics::default(),
   };
   let size = match size {
-    0 => ControlSize::Compact,
-    1 => ControlSize::Default,
+    0 => ControlSize::Regular,
     _ => return NativeControlMetrics::default(),
   };
   control_metrics(kind, size).into()

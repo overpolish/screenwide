@@ -104,8 +104,12 @@ float4 ps_main(VertexOut input) : SV_Target {
   if (input.kind != 45 && magnifier_flags.y != 0u && magnifier_box.z > 0.0) {
     float2 half_size = magnifier_box.zw * 0.5;
     float2 local = input.position.xy - (magnifier_box.xy + half_size);
-    if (rounded_distance(local, half_size,
-                         max(magnifier_box.z / 24.0, 1.0)) <= 0.0)
+    // Same radius and the same feathered coverage the lens rounds itself
+    // with. The scene keeps drawing wherever the lens is not fully opaque, so
+    // the two edges blend into each other instead of meeting at a hard step.
+    float distance = rounded_distance(local, half_size,
+                                      max(magnifier_box.z / 12.0, 1.0));
+    if (1.0 - smoothstep(-0.5, 0.5, distance) >= 1.0)
       discard;
   }
   if (input.kind == 45) {
@@ -114,8 +118,14 @@ float4 ps_main(VertexOut input) : SV_Target {
     float2 box_size = max(magnifier_box.zw, 1.0);
     float2 local = input.position.xy - magnifier_box.xy;
     float2 half_size = box_size * 0.5;
-    float distance = rounded_distance(local - half_size, half_size, 4.0);
-    if (distance > 0.0) discard;
+    // The loupe box is 96 device-independent points wide and its corners are
+    // the control radius, 8, so the backing scale falls out of the box size.
+    float radius = max(box_size.x / 12.0, 1.0);
+    float distance = rounded_distance(local - half_size, half_size, radius);
+    // One device pixel of feathering on the outer edge, the same expression
+    // the cutout above uses.
+    float coverage = 1.0 - smoothstep(-0.5, 0.5, distance);
+    if (coverage <= 0.0) discard;
     float2 source_dimensions = max(magnifier_source.xy, 1.0);
     float2 source_center = magnifier_sample.xy * source_dimensions;
     float2 source_point = source_center + (local / box_size - 0.5) * 40.0;
@@ -139,8 +149,17 @@ float4 ps_main(VertexOut input) : SV_Target {
                                               : float3(1.0, 1.0, 1.0);
       pixel.rgb = lerp(pixel.rgb, shade_color, 0.1);
     }
-    if (distance > -1.0) pixel = float4(0.15, 0.15, 0.16, 1.0);
-    return pixel;
+    // The border is the bounding box's palette: a 1 px white core with a 1 px
+    // dark hairline outside it, so the loupe reads over any desktop content.
+    // Each boundary is feathered over the same one device pixel as the outer
+    // edge, which is what keeps the corners from stepping.
+    float core = smoothstep(-2.5, -1.5, distance);
+    float hairline = smoothstep(-1.5, -0.5, distance);
+    pixel.rgb = lerp(pixel.rgb, float3(1.0, 1.0, 1.0), core);
+    pixel.rgb = lerp(pixel.rgb, float3(0.15, 0.15, 0.16), hairline);
+    // Source-over blending takes the straight alpha, so the lens quad fades
+    // into the scene it is drawn over.
+    return float4(pixel.rgb, coverage);
   }
   if (input.kind == 33) {
     // A frozen desktop is an opaque backing plane. Capture APIs may leave

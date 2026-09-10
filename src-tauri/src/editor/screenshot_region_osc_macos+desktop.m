@@ -130,7 +130,6 @@ static BOOL rebuild_surfaces(ScreenwideRegionOSC *root,
   [parent.contentView layoutSubtreeIfNeeded];
   root.displayID = anchor_id;
   root.desktopOffset = local_origin(desktop, anchor.frame);
-  root.desktopSize = desktop.size;
   root.desktopPeers = [NSMutableArray array];
   root.desktopWindows = [NSMutableArray array];
 
@@ -149,7 +148,6 @@ static BOOL rebuild_surfaces(ScreenwideRegionOSC *root,
         screenwide_region_osc_for_view((__bridge void *)panel.contentView);
     peer.desktopRoot = root;
     peer.desktopOffset = local_origin(desktop, screen.frame);
-    peer.desktopSize = desktop.size;
     peer.displayID = display_id(screen);
     peer.showFrame = root.showFrame;
     peer.showHandles = root.showHandles;
@@ -219,7 +217,6 @@ size_t screenwide_region_osc_configure_desktop(
   if (changed && !rebuild_surfaces(root, screens, desktop, anchor_id))
       return 0;
 
-  root.desktopSize = desktop.size;
   if (resolved_anchor_id)
     *resolved_anchor_id = anchor_id;
   if (layout_changed)

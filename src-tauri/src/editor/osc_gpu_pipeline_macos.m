@@ -22,7 +22,7 @@ ScreenwideRegionOscRenderState screenwide_region_osc_render_state(
 }
 
 static id<MTLRenderPipelineState> make_pipeline(
-    id<MTLDevice> device, id<MTLLibrary> library, BOOL opaque_composition,
+    id<MTLDevice> device, id<MTLLibrary> library,
     NSError **error) {
   MTLRenderPipelineDescriptor *descriptor =
       [MTLRenderPipelineDescriptor new];
@@ -36,8 +36,10 @@ static id<MTLRenderPipelineState> make_pipeline(
       MTLBlendFactorSourceAlpha;
   descriptor.colorAttachments[0].destinationRGBBlendFactor =
       MTLBlendFactorOneMinusSourceAlpha;
-  descriptor.colorAttachments[0].sourceAlphaBlendFactor =
-      opaque_composition ? MTLBlendFactorOne : MTLBlendFactorSourceAlpha;
+  // RGB becomes premultiplied through SourceAlpha above; alpha itself must
+  // use source-over (a + dst.a * (1 - a)), not square the source alpha.
+  // CAMetalLayer composites this premultiplied result over the native material.
+  descriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorOne;
   descriptor.colorAttachments[0].destinationAlphaBlendFactor =
       MTLBlendFactorOneMinusSourceAlpha;
   return [device newRenderPipelineStateWithDescriptor:descriptor error:error];
@@ -45,10 +47,10 @@ static id<MTLRenderPipelineState> make_pipeline(
 
 id<MTLRenderPipelineState> screenwide_region_osc_make_pipeline(
     id<MTLDevice> device, id<MTLLibrary> library, NSError **error) {
-  return make_pipeline(device, library, NO, error);
+  return make_pipeline(device, library, error);
 }
 
 id<MTLRenderPipelineState> screenwide_region_osc_make_snapshot_pipeline(
     id<MTLDevice> device, id<MTLLibrary> library, NSError **error) {
-  return make_pipeline(device, library, YES, error);
+  return make_pipeline(device, library, error);
 }

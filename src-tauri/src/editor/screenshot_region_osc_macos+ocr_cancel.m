@@ -11,7 +11,7 @@ static uint32_t light_mode(ScreenwideRegionOSC *surface) {
 }
 
 static ScreenwideOscControlMetrics metrics(void) {
-  return screenwide_osc_control_metrics(0, 1);
+  return screenwide_osc_control_metrics(0, 0);
 }
 
 static void update_label(ScreenwideRegionOSC *surface) {
@@ -62,15 +62,13 @@ static void render(ScreenwideRegionOSC *surface) {
   CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
   control.contentLayer.contentsScale = scale;
   control.contentLayer.drawableSize =
-      CGSizeMake(MAX(size.width * scale, 2.0),
-                 MAX(size.height * scale, 2.0));
+      CGSizeMake(MAX(round(size.width * scale), 2.0),
+                 MAX(round(size.height * scale), 2.0));
   id<CAMetalDrawable> drawable = [control.contentLayer nextDrawable];
   if (!drawable)
     return;
-  id<MTLBuffer> buffer = [surface.device
-      newBufferWithBytes:vertices
-                   length:sizeof(ScreenwideRegionOscVertex) * count
-                  options:MTLResourceStorageModeShared];
+  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
+      surface.device, vertices, count, size, scale);
   MTLRenderPassDescriptor *pass =
       [MTLRenderPassDescriptor renderPassDescriptor];
   pass.colorAttachments[0].texture = drawable.texture;
@@ -122,7 +120,7 @@ static void layout(ScreenwideRegionOSC *surface) {
   CGFloat left = floor((host.width - width) * 0.5);
   surface.ocrCancelRect = NSMakeRect(left, top, width, value.height);
   ScreenwideOscControlSpec spec = {
-      left, top, width, value.height, 0, 0, 1, 0, 1};
+      left, top, width, value.height, 0, 0, 0, 0, 1};
   screenwide_osc_control_group_layout(surface.ocrCancelControls, &spec, 1);
   [CATransaction begin];
   [CATransaction setDisableActions:YES];

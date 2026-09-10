@@ -3,6 +3,29 @@
 #import "osc_material_surface_macos.h"
 
 @implementation ScreenwideOscMaterialSurfaceView
+- (void)setFrame:(NSRect)frame {
+  NSView *parent = self.superview;
+  if (parent.window) {
+    NSRect pixels = [parent convertRectToBacking:frame];
+    pixels.origin.x = round(pixels.origin.x);
+    pixels.origin.y = round(pixels.origin.y);
+    pixels.size.width = ceil(pixels.size.width);
+    pixels.size.height = ceil(pixels.size.height);
+    frame = [parent convertRectFromBacking:pixels];
+  }
+  [super setFrame:frame];
+}
+
+- (void)viewDidChangeBackingProperties {
+  [super viewDidChangeBackingProperties];
+  self.frame = self.frame;
+}
+
+- (void)viewDidMoveToWindow {
+  [super viewDidMoveToWindow];
+  self.frame = self.frame;
+}
+
 - (NSView *)hitTest:(NSPoint)point {
   (void)point;
   return nil;

@@ -139,23 +139,18 @@ static NSPoint latest_pointer_point(ScreenwideRegionOSC *surface) {
   return point;
 }
 
+/// The hex readout changes with every pointer sample, so its cells share one
+/// pitch. Per-glyph advances would shuffle the code's columns and shove the
+/// dimensions along beside it as the sampled colour changed.
+static CGFloat hex_pitch(ScreenwideOscTextTexture *atlas) {
+  return screenwide_osc_atlas_pitch(atlas, @"#0123456789ABCDEF");
+}
+
 static NSString *hex_text(ScreenwideRegionOSC *surface) {
   return [NSString stringWithFormat:@"#%02X%02X%02X",
                                     (surface.rulerColor >> 24) & 0xFF,
                                     (surface.rulerColor >> 16) & 0xFF,
                                     (surface.rulerColor >> 8) & 0xFF];
-}
-
-static NSUInteger glyph_index(unichar glyph) {
-  if (glyph == '#') return 0;
-  if (glyph >= '0' && glyph <= '9') return 1 + glyph - '0';
-  if (glyph >= 'A' && glyph <= 'F') return 11 + glyph - 'A';
-  if (glyph == 0x00D7) return 17;
-  if (glyph == ' ') return 18;
-  if (glyph == 'p') return 19;
-  if (glyph == 'x') return 20;
-  if (glyph == 0x2248) return 21;
-  return 0;
 }
 
 static NSRect glyph_texture_rect(ScreenwideOscTextTexture *atlas,
@@ -165,14 +160,50 @@ static NSRect glyph_texture_rect(ScreenwideOscTextTexture *atlas,
                     atlas.atlasGlyphUWidth, 1.0);
 }
 
+/// Lays `text` out from `left`, stepping by each glyph's own advance, or by
+/// `pitch` when the field needs one uniform column, and returns the width it
+/// covered. The texture stores every glyph centred in
+/// one uniform cell, so each quad is a whole cell centred over the glyph's
+/// advance box; neighbouring quads only ever overlap where both are
+/// transparent.
+static CGFloat add_atlas_text(ScreenwideRegionOscVertex *vertices,
+                              NSUInteger *count, NSSize size,
+                              ScreenwideOscTextTexture *atlas, NSString *text,
+                              CGFloat left, CGFloat top, CGFloat pitch,
+                              uint32_t kind) {
+  CGFloat cell = atlas.atlasGlyphWidth;
+  CGFloat scale = atlas.texture.height / atlas.size.height;
+  // Preserve fractional advances, but place each bitmap on physical pixels.
+  // Otherwise linear filtering antialiases the already-rasterized glyph again.
+  top = round(top * scale) / scale;
+  CGFloat x = left;
+  for (NSUInteger index = 0; index < text.length; index++) {
+    NSUInteger glyph =
+        screenwide_osc_atlas_glyph_index([text characterAtIndex:index]);
+    CGFloat advance =
+        pitch > 0.0 ? pitch : screenwide_osc_atlas_advance(atlas, glyph);
+    screenwide_region_osc_add_texture_quad(
+        vertices, count, size,
+        NSMakeRect(round((x + (advance - cell) * 0.5) * scale) / scale,
+                   top, cell, atlas.size.height),
+        glyph_texture_rect(atlas, glyph), kind);
+    x += advance;
+  }
+  return x - left;
+}
+
 static void update_label(ScreenwideRegionOSC *surface, CGFloat scale) {
   uint32_t light = light_mode(surface);
   if (surface.rulerLabel && surface.rulerLabelScale == scale &&
       surface.rulerLabelLightMode == light)
     return;
+  // Every readout assembled from this atlas - the callout's two lines and the
+  // measurement, probe and radius labels - sits one tier below a control
+  // label, so the atlas is rasterized at the readout role.
   ScreenwideOscControlMetrics value = metrics();
   surface.rulerLabel = screenwide_osc_mono_hex_atlas(
-      surface.device, scale, light, value.font_size, value.line_height);
+      surface.device, scale, light, value.readout_font_size,
+      value.readout_line_height);
   surface.rulerLabelScale = scale;
   surface.rulerLabelLightMode = light;
 }
@@ -429,8 +460,6 @@ static NSData *labelled_probe_data(NSData *data) {
   return labelled;
 }
 
-static NSUInteger decimal_digit_count(CGFloat value);
-
 static NSString *probe_dimensions_text(ScreenwideRegionOSC *surface) {
   const NativeRulerProbe *items = probes(surface);
   NSUInteger count = probe_count(surface);
@@ -451,28 +480,8 @@ static NSString *probe_dimensions_text(ScreenwideRegionOSC *surface) {
       MAX((NSInteger)llround(fabs(horizontal->end - horizontal->start)), 0);
   NSInteger height =
       MAX((NSInteger)llround(fabs(vertical->end - vertical->start)), 0);
-  int widthDigits = (int)decimal_digit_count(surface.desktopSize.width);
-  int heightDigits = (int)decimal_digit_count(surface.desktopSize.height);
-  return [NSString stringWithFormat:@"%*ld × %*ld px", widthDigits,
-                                    (long)width, heightDigits,
+  return [NSString stringWithFormat:@"%ld × %ld px", (long)width,
                                     (long)height];
-}
-
-static NSUInteger decimal_digit_count(CGFloat value) {
-  uint64_t magnitude = (uint64_t)MAX(ceil(fabs(value)), 0.0);
-  NSUInteger digits = 1;
-  while (magnitude >= 10) {
-    magnitude /= 10;
-    digits += 1;
-  }
-  return digits;
-}
-
-static NSUInteger reserved_dimensions_length(ScreenwideRegionOSC *surface) {
-  // Every desktop peer receives the same union size, so the loupe keeps one
-  // width while crossing monitors. Six characters cover " × " and " px".
-  return decimal_digit_count(surface.desktopSize.width) +
-         decimal_digit_count(surface.desktopSize.height) + 6;
 }
 
 static NSData *viewport_data(ScreenwideRegionOSC *root) {
@@ -643,10 +652,13 @@ static void layout(ScreenwideRegionOSC *surface, CGFloat width,
   ScreenwideOscControlMetrics value = metrics();
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
+  CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
   surface.rulerSurface.frame =
-      NSMakeRect(left, size.height - top - height, width, height);
-  surface.rulerSurface.layer.cornerRadius = value.radius;
-  surface.rulerSurface.contentLayer.cornerRadius = value.radius;
+      NSMakeRect(round(left * scale) / scale,
+                 round((size.height - top - height) * scale) / scale,
+                 width, height);
+  surface.rulerSurface.layer.cornerRadius = value.callout_radius;
+  surface.rulerSurface.contentLayer.cornerRadius = value.callout_radius;
   surface.rulerSurface.contentView.frame = surface.rulerSurface.bounds;
   [CATransaction commit];
 }
@@ -669,14 +681,13 @@ static void render(ScreenwideRegionOSC *surface) {
       (!surface.rulerToleranceLabel ||
        surface.rulerToleranceLabelScale != scale ||
        surface.rulerToleranceLabelLightMode != light)) {
-    surface.rulerToleranceLabel = screenwide_osc_mono_text_texture(
+    surface.rulerToleranceLabel = screenwide_osc_text_texture(
         surface.device, tolerance_text(surface.rulerToleranceMode), scale,
         light, value.font_size, value.line_height);
     surface.rulerToleranceLabelScale = scale;
     surface.rulerToleranceLabelLightMode = light;
   }
-  CGFloat cellWidth = surface.rulerLabel.atlasGlyphWidth;
-  CGFloat labelWidth = cellWidth * 7.0;
+  ScreenwideOscControlSpacing spacing = screenwide_osc_control_spacing();
   NSString *dimensions = probe_dimensions_text(surface);
   NSString *colour = hex_text(surface);
   control.accessibilityElement = YES;
@@ -685,12 +696,25 @@ static void render(ScreenwideRegionOSC *surface) {
   control.accessibilityValue = dimensions
       ? [NSString stringWithFormat:@"%@, %@", dimensions, colour]
       : colour;
-  CGFloat colourWidth = value.icon_size + value.gap + labelWidth;
-  NSUInteger dimensionsLength =
-      MAX(dimensions.length, reserved_dimensions_length(surface));
-  CGFloat dimensionsWidth = cellWidth * dimensionsLength;
-  CGFloat width = value.padding_x * 2.0 + MAX(colourWidth, dimensionsWidth);
-  CGFloat height = dimensions ? value.height + value.line_height : value.height;
+  // A ToggleMenuButton at its capture size: the swatch in the leading glyph
+  // slot, then the dimensions over the hex on the readout tier. The glyph
+  // slot carries the control's side inset outside the swatch and half the
+  // icon-to-label gap inside it; the text takes the other half and the side
+  // inset closes the right edge. The hex is seven cells of one pitch, so only
+  // the dimensions change the width, and the callout follows the pointer
+  // anyway.
+  CGFloat labelWidth = hex_pitch(surface.rulerLabel) * colour.length;
+  CGFloat dimensionsWidth =
+      dimensions
+          ? screenwide_osc_atlas_text_width(surface.rulerLabel, dimensions)
+          : 0.0;
+  CGFloat textLeft = spacing.control_inset + value.icon_size +
+                     spacing.control + spacing.control;
+  CGFloat width =
+      textLeft + MAX(labelWidth, dimensionsWidth) + spacing.control_inset;
+  // Keep the drawable and its view the same integral number of pixels wide.
+  width = ceil(width * scale) / scale;
+  CGFloat height = value.callout_height;
   layout(surface, width, height);
   control.hidden = NO;
   ScreenwideOscControlVisual visual = {0};
@@ -725,40 +749,23 @@ static void render(ScreenwideRegionOSC *surface) {
   NSSize size = NSMakeSize(width, height);
   screenwide_region_osc_add_quad(
       vertices, &count, size, NSMakeRect(0, 0, width, height), 12);
-  CGFloat colourTop = dimensions ? value.line_height : 0.0;
-  CGFloat iconTop = colourTop + (value.height - value.icon_size) * 0.5;
-  NSRect swatch = NSMakeRect(value.padding_x, iconTop, value.icon_size,
+  CGFloat iconTop = (height - value.icon_size) * 0.5;
+  NSRect swatch = NSMakeRect(spacing.control_inset, iconTop, value.icon_size,
                             value.icon_size);
   screenwide_region_osc_add_quad(vertices, &count, size, swatch, 29);
 
-  NSString *text = colour;
-  CGFloat textLeft = value.padding_x + value.icon_size + value.gap;
-  CGFloat textTop = colourTop +
-      (value.height - surface.rulerLabel.size.height) * 0.5;
-  for (NSUInteger index = 0; index < text.length; index++) {
-    screenwide_region_osc_add_texture_quad(
-        vertices, &count, size,
-        NSMakeRect(textLeft + cellWidth * index, textTop, cellWidth,
-                   surface.rulerLabel.size.height),
-        glyph_texture_rect(surface.rulerLabel,
-                           glyph_index([text characterAtIndex:index])),
-        48);
-  }
+  // The lines stack with no gap between them, and the block they make is
+  // centred in the taller control.
+  CGFloat lineHeight = surface.rulerLabel.size.height;
+  CGFloat textTop =
+      (height - lineHeight * (dimensions ? 2.0 : 1.0)) * 0.5;
   if (dimensions) {
-    CGFloat dimensionsLeft = (width - cellWidth * dimensions.length) * 0.5;
-    CGFloat dimensionsTop =
-        (value.height - value.line_height) * 0.5 +
-        (value.line_height - surface.rulerLabel.size.height) * 0.5;
-    for (NSUInteger index = 0; index < dimensions.length; index++) {
-      screenwide_region_osc_add_texture_quad(
-          vertices, &count, size,
-          NSMakeRect(dimensionsLeft + cellWidth * index, dimensionsTop,
-                     cellWidth, surface.rulerLabel.size.height),
-          glyph_texture_rect(surface.rulerLabel,
-                             glyph_index([dimensions characterAtIndex:index])),
-          48);
-    }
+    add_atlas_text(vertices, &count, size, surface.rulerLabel, dimensions,
+                   textLeft, textTop, 0.0, 48);
+    textTop += lineHeight;
   }
+  add_atlas_text(vertices, &count, size, surface.rulerLabel, colour, textLeft,
+                 textTop, hex_pitch(surface.rulerLabel), 48);
 
   // Match CheckOnClick: scale/fade in, then only fade away on expiry.
   CGFloat checkScale = surface.rulerAnimationTarget ? copied : 1.0;
@@ -791,16 +798,14 @@ static void render(ScreenwideRegionOSC *surface) {
 
   control.contentLayer.contentsScale = scale;
   control.contentLayer.drawableSize =
-      CGSizeMake(MAX(width * scale, 2.0), MAX(height * scale, 2.0));
+      CGSizeMake(MAX(round(width * scale), 2.0), MAX(round(height * scale), 2.0));
   id<CAMetalDrawable> drawable = [control.contentLayer nextDrawable];
   if (!drawable) {
     surface.rulerDrawInFlight = NO;
     return;
   }
-  id<MTLBuffer> buffer = [surface.device
-      newBufferWithBytes:vertices
-                   length:sizeof(ScreenwideRegionOscVertex) * count
-                  options:MTLResourceStorageModeShared];
+  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
+      surface.device, vertices, count, size, scale);
   MTLRenderPassDescriptor *pass =
       [MTLRenderPassDescriptor renderPassDescriptor];
   pass.colorAttachments[0].texture = drawable.texture;
@@ -1259,28 +1264,16 @@ static ScreenwideRegionOSC *measurement_label_surface(
   return best;
 }
 
-static NSString *measurement_text(ScreenwideRegionOSC *surface,
-                                  NSRect frame, BOOL reserveWidth) {
+/// A readout shows the digits it has. The label resizes when a number gains
+/// one, which the surface it lives on follows.
+static NSString *measurement_text(NSRect frame) {
   NSInteger width = MAX((NSInteger)llround(NSWidth(frame)), 0);
   NSInteger height = MAX((NSInteger)llround(NSHeight(frame)), 0);
-  if (!reserveWidth) {
-    if (NSHeight(frame) < 8.0)
-      return [NSString stringWithFormat:@"%ld px", (long)width];
-    if (NSWidth(frame) < 8.0)
-      return [NSString stringWithFormat:@"%ld px", (long)height];
-    return [NSString stringWithFormat:@"%ld × %ld px", (long)width,
-                                      (long)height];
-  }
-  int widthDigits = (int)decimal_digit_count(surface.desktopSize.width);
-  int heightDigits = (int)decimal_digit_count(surface.desktopSize.height);
   if (NSHeight(frame) < 8.0)
-    return [NSString stringWithFormat:@"%*ld px", widthDigits,
-                                      (long)width];
+    return [NSString stringWithFormat:@"%ld px", (long)width];
   if (NSWidth(frame) < 8.0)
-    return [NSString stringWithFormat:@"%*ld px", heightDigits,
-                                      (long)height];
-  return [NSString stringWithFormat:@"%*ld × %*ld px", widthDigits,
-                                    (long)width, heightDigits,
+    return [NSString stringWithFormat:@"%ld px", (long)height];
+  return [NSString stringWithFormat:@"%ld × %ld px", (long)width,
                                     (long)height];
 }
 
@@ -1297,16 +1290,17 @@ static void render_measurement_label(ScreenwideRegionOSC *surface,
   NSRect global = NSMakeRect(measurement.x, measurement.y,
                              measurement.width, measurement.height);
   NSRect frame = project_measurement(surface, measurement);
-  NSString *text = measurement_text(surface, global,
-                                    (measurement.flags & 1) != 0);
+  NSString *text = measurement_text(global);
   control.accessibilityElement = YES;
   control.accessibilityRole = NSAccessibilityStaticTextRole;
   control.accessibilityLabel = @"Measurement";
   control.accessibilityValue = [text stringByTrimmingCharactersInSet:
       NSCharacterSet.whitespaceCharacterSet];
-  CGFloat cellWidth = surface.rulerLabel.atlasGlyphWidth;
   ScreenwideOscControlMetrics value = metrics();
-  CGFloat width = value.padding_x * 2.0 + cellWidth * text.length;
+  CGFloat width = value.padding_x * 2.0 +
+                  screenwide_osc_atlas_text_width(surface.rulerLabel, text);
+  // Keep the drawable and its view the same integral number of pixels wide.
+  width = ceil(width * scale) / scale;
   CGFloat height = value.height;
   ScreenwideOscControlSpacing spacing = screenwide_osc_control_spacing();
   BOOL horizontal = NSHeight(global) < spacing.control_inset;
@@ -1337,7 +1331,9 @@ static void render_measurement_label(ScreenwideRegionOSC *surface,
 
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
-  control.frame = NSMakeRect(left, host.height - top - height, width, height);
+  control.frame = NSMakeRect(round(left * scale) / scale,
+                             round((host.height - top - height) * scale) / scale,
+                             width, height);
   control.layer.cornerRadius = value.radius;
   control.contentLayer.cornerRadius = value.radius;
   control.contentView.frame = control.bounds;
@@ -1362,30 +1358,20 @@ static void render_measurement_label(ScreenwideRegionOSC *surface,
   NSSize size = NSMakeSize(width, height);
   screenwide_region_osc_add_quad(
       vertices, &count, size, NSMakeRect(0.0, 0.0, width, height), 12);
-  CGFloat textLeft = value.padding_x;
   CGFloat textTop = (height - surface.rulerLabel.size.height) * 0.5;
-  for (NSUInteger index = 0; index < text.length; index++) {
-    screenwide_region_osc_add_texture_quad(
-        vertices, &count, size,
-        NSMakeRect(textLeft + cellWidth * index, textTop, cellWidth,
-                   surface.rulerLabel.size.height),
-        glyph_texture_rect(surface.rulerLabel,
-                           glyph_index([text characterAtIndex:index])),
-        11);
-  }
+  add_atlas_text(vertices, &count, size, surface.rulerLabel, text,
+                 value.padding_x, textTop, 0.0, 11);
 
   control.contentLayer.contentsScale = scale;
   control.contentLayer.drawableSize =
-      CGSizeMake(MAX(width * scale, 2.0), MAX(height * scale, 2.0));
+      CGSizeMake(MAX(round(width * scale), 2.0), MAX(round(height * scale), 2.0));
   id<CAMetalDrawable> drawable = [control.contentLayer nextDrawable];
   if (!drawable) {
     renderState.inFlight = NO;
     return;
   }
-  id<MTLBuffer> buffer = [surface.device
-      newBufferWithBytes:vertices
-                   length:sizeof(ScreenwideRegionOscVertex) * count
-                  options:MTLResourceStorageModeShared];
+  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
+      surface.device, vertices, count, size, scale);
   MTLRenderPassDescriptor *pass =
       [MTLRenderPassDescriptor renderPassDescriptor];
   pass.colorAttachments[0].texture = drawable.texture;
@@ -1505,10 +1491,12 @@ static void render_probe_label(ScreenwideRegionOSC *surface,
       ? @"Corner radius"
       : labelKind == 3 ? @"Guide spacing" : @"Distance";
   control.accessibilityValue = text;
-  CGFloat cellWidth = surface.rulerLabel.atlasGlyphWidth;
   ScreenwideOscControlMetrics value = metrics();
   ScreenwideOscControlSpacing spacing = screenwide_osc_control_spacing();
-  CGFloat width = value.padding_x * 2.0 + cellWidth * text.length;
+  CGFloat width = value.padding_x * 2.0 +
+                  screenwide_osc_atlas_text_width(surface.rulerLabel, text);
+  // Keep the drawable and its view the same integral number of pixels wide.
+  width = ceil(width * scale) / scale;
   CGFloat height = value.height;
   CGFloat start = 0.0, end = 0.0, position = 0.0;
   project_probe(surface, probe, &start, &end, &position);
@@ -1547,7 +1535,9 @@ static void render_probe_label(ScreenwideRegionOSC *surface,
 
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
-  control.frame = NSMakeRect(left, host.height - top - height, width, height);
+  control.frame = NSMakeRect(round(left * scale) / scale,
+                             round((host.height - top - height) * scale) / scale,
+                             width, height);
   control.layer.cornerRadius = value.radius;
   control.contentLayer.cornerRadius = value.radius;
   control.contentView.frame = control.bounds;
@@ -1568,30 +1558,20 @@ static void render_probe_label(ScreenwideRegionOSC *surface,
   NSSize size = NSMakeSize(width, height);
   screenwide_region_osc_add_quad(
       vertices, &count, size, NSMakeRect(0.0, 0.0, width, height), 12);
-  CGFloat textLeft = value.padding_x;
   CGFloat textTop = (height - surface.rulerLabel.size.height) * 0.5;
-  for (NSUInteger index = 0; index < text.length; index++) {
-    screenwide_region_osc_add_texture_quad(
-        vertices, &count, size,
-        NSMakeRect(textLeft + cellWidth * index, textTop, cellWidth,
-                   surface.rulerLabel.size.height),
-        glyph_texture_rect(surface.rulerLabel,
-                           glyph_index([text characterAtIndex:index])),
-        11);
-  }
+  add_atlas_text(vertices, &count, size, surface.rulerLabel, text,
+                 value.padding_x, textTop, 0.0, 11);
 
   control.contentLayer.contentsScale = scale;
   control.contentLayer.drawableSize =
-      CGSizeMake(MAX(width * scale, 2.0), MAX(height * scale, 2.0));
+      CGSizeMake(MAX(round(width * scale), 2.0), MAX(round(height * scale), 2.0));
   id<CAMetalDrawable> drawable = [control.contentLayer nextDrawable];
   if (!drawable) {
     renderState.inFlight = NO;
     return;
   }
-  id<MTLBuffer> buffer = [surface.device
-      newBufferWithBytes:vertices
-                   length:sizeof(ScreenwideRegionOscVertex) * count
-                  options:MTLResourceStorageModeShared];
+  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
+      surface.device, vertices, count, size, scale);
   MTLRenderPassDescriptor *pass =
       [MTLRenderPassDescriptor renderPassDescriptor];
   pass.colorAttachments[0].texture = drawable.texture;

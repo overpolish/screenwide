@@ -11,7 +11,7 @@ fn spec(x: f64, disabled: bool) -> ControlSpec {
     icon: ControlIcon::None,
     style: ControlStyle {
       disabled,
-      ..ControlStyle::button(ControlColor::Neutral, ControlSize::Compact)
+      ..ControlStyle::button(ControlColor::Neutral, ControlSize::Regular)
     },
   }
 }
@@ -39,22 +39,36 @@ fn lucide_icons_share_one_supersampled_alpha_atlas() {
 }
 
 #[test]
-fn metrics_match_the_current_react_components() {
-  let compact = control_metrics(ControlKind::Button, ControlSize::Compact);
+fn one_regular_size_matches_the_appkit_control_metrics() {
+  let button = control_metrics(ControlKind::Button, ControlSize::Regular);
   assert_eq!(
-    (compact.height, compact.radius, compact.padding_x),
-    (24.0, 8.0, 8.0)
+    (button.height, button.radius, button.padding_x, button.gap),
+    (24.0, 8.0, 12.0, 4.0)
   );
   assert_eq!(
-    (compact.font_size, compact.line_height, compact.icon_size),
-    (12.0, 16.0, 14.0)
+    (button.font_size, button.line_height, button.icon_size),
+    (13.0, 16.0, 16.0)
   );
+  // Readouts assembled from the glyph atlas sit one tier below their labels.
+  assert_eq!(
+    (button.readout_font_size, button.readout_line_height),
+    (11.0, 14.0)
+  );
+  // The ruler callout is the capture-size ToggleMenuButton: two readout lines
+  // with the same 6pt breathing room above and below.
+  assert_eq!((button.callout_height, button.callout_radius), (40.0, 11.0));
 
-  let icon = control_metrics(ControlKind::IconButton, ControlSize::Default);
+  let icon = control_metrics(ControlKind::IconButton, ControlSize::Regular);
   assert_eq!(
     (icon.height, icon.radius, icon.padding_x, icon.icon_size),
-    (36.0, 12.0, 6.0, 18.0)
+    (24.0, 8.0, 4.0, 16.0)
   );
+  assert_eq!(icon.gap, 0.0);
+  assert_eq!(
+    (icon.readout_font_size, icon.readout_line_height),
+    (11.0, 14.0)
+  );
+  assert_eq!((icon.callout_height, icon.callout_radius), (40.0, 11.0));
 }
 
 #[test]
@@ -64,66 +78,78 @@ fn spacing_matches_the_semantic_css_tokens() {
   assert_eq!(spacing.control, 4.0);
   assert_eq!(spacing.control_inset, 8.0);
   assert_eq!(spacing.section, 12.0);
-  assert_eq!(spacing.window_inset, 24.0);
+  assert_eq!(spacing.layout, 24.0);
+  assert_eq!(spacing.window_inset, 14.0);
 }
 
 #[test]
-fn neutral_tokens_match_the_translucent_css_values() {
+fn neutral_labels_use_the_content_tier_over_the_system_fill() {
   let light = control_visual(
-    ControlStyle::button(ControlColor::Neutral, ControlSize::Compact),
-    Interaction::Pressed,
+    ControlStyle::button(ControlColor::Neutral, ControlSize::Regular),
+    Interaction::Normal,
     Appearance::Light,
   );
-  assert_eq!(light.fill, [0.0, 0.0, 0.0, 0.17]);
-  assert_eq!(
-    light.foreground,
-    [38.0 / 255.0, 38.0 / 255.0, 38.0 / 255.0, 1.0]
-  );
+  assert_eq!(light.fill, [0.0, 0.0, 0.0, 0.10]);
+  assert_eq!(light.foreground, [0.0, 0.0, 0.0, 0.85]);
 
   let dark = control_visual(
-    ControlStyle::button(ControlColor::Neutral, ControlSize::Compact),
-    Interaction::Pressed,
+    ControlStyle::button(ControlColor::Neutral, ControlSize::Regular),
+    Interaction::Normal,
     Appearance::Dark,
   );
-  assert_eq!(dark.fill, [1.0, 1.0, 1.0, 0.22]);
-  assert_eq!(dark.foreground, [1.0; 4]);
+  assert_eq!(dark.fill, [1.0, 1.0, 1.0, 0.10]);
+  assert_eq!(dark.foreground, [1.0, 1.0, 1.0, 0.85]);
 }
 
 #[test]
-fn neutral_icon_buttons_keep_the_material_backing_fill() {
-  let style = ControlStyle::icon_button(ControlColor::Neutral, ControlSize::Compact);
+fn bezeled_controls_ignore_hover_and_darken_only_when_pressed() {
+  let style = ControlStyle::icon_button(ControlColor::Neutral, ControlSize::Regular);
   let normal = control_visual(style, Interaction::Normal, Appearance::Light);
   let hovered = control_visual(style, Interaction::Hovered, Appearance::Light);
+  let pressed = control_visual(style, Interaction::Pressed, Appearance::Light);
 
-  assert_eq!(normal.fill, [0.0, 0.0, 0.0, 0.09]);
-  assert_eq!(hovered.fill, [0.0, 0.0, 0.0, 0.13]);
+  assert_eq!(hovered.fill, normal.fill);
+  assert_eq!(pressed.fill, [0.0, 0.0, 0.0, 0.172]);
 }
 
 #[test]
-fn primary_tokens_match_the_translucent_css_values() {
-  let style = ControlStyle::button(ControlColor::Primary, ControlSize::Compact);
-  let light = control_visual(style, Interaction::Normal, Appearance::Light);
-  let dark = control_visual(style, Interaction::Normal, Appearance::Dark);
+fn disabled_controls_drop_to_the_tertiary_label_and_quaternary_fill() {
+  let style = ControlStyle {
+    disabled: true,
+    ..ControlStyle::button(ControlColor::Primary, ControlSize::Regular)
+  };
+  let visual = control_visual(style, Interaction::Disabled, Appearance::Dark);
+  assert_eq!(visual.fill, [1.0, 1.0, 1.0, 0.03]);
+  assert_eq!(visual.foreground, [1.0, 1.0, 1.0, 0.25]);
+}
 
-  assert_eq!(
-    light.fill,
-    [216.0 / 255.0, 27.0 / 255.0, 96.0 / 255.0, 0.85]
-  );
-  assert_eq!(dark.fill, [1.0, 41.0 / 255.0, 112.0 / 255.0, 0.55]);
-  assert_eq!(light.foreground, [1.0; 4]);
-  assert_eq!(dark.foreground, [1.0; 4]);
+#[test]
+fn primary_fills_paint_the_accent_opaque_and_darken_on_press() {
+  let style = ControlStyle::button(ControlColor::Primary, ControlSize::Regular);
+  let normal = control_visual(style, Interaction::Normal, Appearance::Light);
+  let hovered = control_visual(style, Interaction::Hovered, Appearance::Light);
+  let pressed = control_visual(style, Interaction::Pressed, Appearance::Light);
+
+  let accent = crate::system_accent::accent_rgb();
+  assert_eq!(normal.fill, [accent[0], accent[1], accent[2], 1.0]);
+  assert_eq!(normal.fill[3], 1.0);
+  for (channel, expected) in accent.iter().enumerate() {
+    assert!((hovered.fill[channel] - expected * 0.90).abs() < 1e-6);
+    assert!((pressed.fill[channel] - expected * 0.80).abs() < 1e-6);
+  }
+  assert_eq!(normal.foreground, [1.0; 4]);
 }
 
 #[test]
 fn armed_icon_button_keeps_neutral_chrome_with_error_foreground() {
-  let style = ControlStyle::icon_button(ControlColor::Error, ControlSize::Compact);
+  let style = ControlStyle::icon_button(ControlColor::Error, ControlSize::Regular);
   let normal = control_visual(style, Interaction::Normal, Appearance::Light);
   let hovered = control_visual(style, Interaction::Hovered, Appearance::Dark);
 
-  assert_eq!(normal.fill, [0.0, 0.0, 0.0, 0.09]);
-  assert_eq!(normal.foreground, [215.0 / 255.0, 0.0, 21.0 / 255.0, 1.0]);
-  assert_eq!(hovered.fill, [1.0, 1.0, 1.0, 0.17]);
-  assert_eq!(hovered.foreground, [1.0, 105.0 / 255.0, 97.0 / 255.0, 1.0]);
+  assert_eq!(normal.fill, [0.0, 0.0, 0.0, 0.10]);
+  assert_eq!(normal.foreground, [1.0, 56.0 / 255.0, 60.0 / 255.0, 1.0]);
+  assert_eq!(hovered.fill, [1.0, 1.0, 1.0, 0.10]);
+  assert_eq!(hovered.foreground, [1.0, 66.0 / 255.0, 69.0 / 255.0, 1.0]);
 }
 
 #[test]

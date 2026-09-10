@@ -1,9 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-/// Native controls reuse the inverse tooltip palette: tooltip background for
-/// the fill and tooltip text for the outline. Keeping this platform-neutral
-/// lets later ruler, OCR, and Windows compositors share the exact same tokens.
+/// The bounding box, its handles, and the loupe border: a white fill with a
+/// dark hairline outline in both appearances. Capture chrome sits over
+/// arbitrary desktop content rather than over a window material, so it does
+/// not follow the appearance the way window controls do. Keeping this
+/// platform-neutral lets the ruler, OCR, and Windows compositors share the
+/// exact same tokens.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ControlPalette {
@@ -21,7 +24,7 @@ pub struct OverlayPalette {
 }
 
 /// Shared ruler crosshair token. The callout itself resolves through the OSC
-/// compact neutral control tokens so it cannot drift from native buttons.
+/// neutral control tokens so it cannot drift from native buttons.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RulerPalette {
@@ -42,17 +45,16 @@ pub extern "C" fn screenwide_osc_overlay_palette() -> OverlayPalette {
   overlay_palette()
 }
 
-pub const fn ruler_palette(light_appearance: bool) -> RulerPalette {
-  if light_appearance {
-    RulerPalette {
-      primary: [216.0 / 255.0, 27.0 / 255.0, 96.0 / 255.0, 1.0],
-      info: [0.0, 104.0 / 255.0, 201.0 / 255.0, 1.0],
-    }
+pub fn ruler_palette(light_appearance: bool) -> RulerPalette {
+  let [red, green, blue] = crate::system_accent::accent_rgb();
+  let info = if light_appearance {
+    [0.0, 136.0 / 255.0, 1.0, 1.0]
   } else {
-    RulerPalette {
-      primary: [1.0, 41.0 / 255.0, 112.0 / 255.0, 1.0],
-      info: [102.0 / 255.0, 183.0 / 255.0, 1.0, 1.0],
-    }
+    [0.0, 145.0 / 255.0, 1.0, 1.0]
+  };
+  RulerPalette {
+    primary: [red, green, blue, 1.0],
+    info,
   }
 }
 
@@ -84,18 +86,10 @@ const NEUTRAL_800: f32 = 38.0 / 255.0;
 const WHITE: f32 = 1.0;
 
 pub const fn control_palette(light_appearance: bool) -> ControlPalette {
-  let dark = [NEUTRAL_800, NEUTRAL_800, NEUTRAL_800, 1.0];
-  let light = [WHITE, WHITE, WHITE, 1.0];
-  if light_appearance {
-    ControlPalette {
-      fill: dark,
-      outline: light,
-    }
-  } else {
-    ControlPalette {
-      fill: light,
-      outline: dark,
-    }
+  let _ = light_appearance;
+  ControlPalette {
+    fill: [WHITE, WHITE, WHITE, 1.0],
+    outline: [NEUTRAL_800, NEUTRAL_800, NEUTRAL_800, 1.0],
   }
 }
 
@@ -146,14 +140,13 @@ mod tests {
   use super::*;
 
   #[test]
-  fn controls_follow_the_inverse_tooltip_tokens() {
-    let light = control_palette(true);
-    assert_eq!(light.fill, [NEUTRAL_800, NEUTRAL_800, NEUTRAL_800, 1.0]);
-    assert_eq!(light.outline, [WHITE; 4]);
-
-    let dark = control_palette(false);
-    assert_eq!(dark.fill, [WHITE; 4]);
-    assert_eq!(dark.outline, [NEUTRAL_800, NEUTRAL_800, NEUTRAL_800, 1.0]);
+  fn capture_chrome_is_white_over_a_dark_hairline_in_both_appearances() {
+    let outline = [NEUTRAL_800, NEUTRAL_800, NEUTRAL_800, 1.0];
+    for light_appearance in [true, false] {
+      let palette = control_palette(light_appearance);
+      assert_eq!(palette.fill, [WHITE; 4]);
+      assert_eq!(palette.outline, outline);
+    }
   }
 
   #[test]
@@ -186,15 +179,13 @@ mod tests {
   }
 
   #[test]
-  fn ruler_crosshair_uses_the_shared_primary_accent() {
+  fn ruler_crosshair_follows_the_system_accent_and_the_info_token() {
+    let [red, green, blue] = crate::system_accent::accent_rgb();
     let light = ruler_palette(true);
-    assert_eq!(
-      light.primary,
-      [216.0 / 255.0, 27.0 / 255.0, 96.0 / 255.0, 1.0]
-    );
     let dark = ruler_palette(false);
-    assert_eq!(dark.primary, [1.0, 41.0 / 255.0, 112.0 / 255.0, 1.0]);
-    assert_eq!(light.info, [0.0, 104.0 / 255.0, 201.0 / 255.0, 1.0]);
-    assert_eq!(dark.info, [102.0 / 255.0, 183.0 / 255.0, 1.0, 1.0]);
+    assert_eq!(light.primary, [red, green, blue, 1.0]);
+    assert_eq!(dark.primary, [red, green, blue, 1.0]);
+    assert_eq!(light.info, [0.0, 136.0 / 255.0, 1.0, 1.0]);
+    assert_eq!(dark.info, [0.0, 145.0 / 255.0, 1.0, 1.0]);
   }
 }

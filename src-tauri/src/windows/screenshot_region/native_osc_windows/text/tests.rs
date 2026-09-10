@@ -5,7 +5,7 @@ use super::*;
 
 #[test]
 fn the_atlas_covers_every_character_a_readout_can_contain() {
-  assert_eq!(glyph_count(), 22);
+  assert_eq!(glyph_count(), ATLAS_CELLS);
   assert_eq!(glyph_index('#'), Some(0));
   assert_eq!(glyph_index('0'), Some(1));
   assert_eq!(glyph_index('F'), Some(16));
@@ -16,13 +16,13 @@ fn the_atlas_covers_every_character_a_readout_can_contain() {
 }
 
 #[test]
-fn cell_sampling_starts_inside_the_gutter_and_stops_a_texel_short() {
-  // A 10px glyph in a 12px cell across 24 cells: the offset skips the
-  // gutter by half a texel and the width loses one texel at the far edge.
+fn cell_sampling_maps_each_destination_pixel_to_its_source_texel() {
   let (offset, width) = atlas_uv(10, 288);
-  assert!((f64::from(offset) - 1.5 / 288.0).abs() < 1e-9);
-  assert!((f64::from(width) - 9.0 / 288.0).abs() < 1e-9);
-  // Degenerate inputs never produce a negative sampling window.
+  for pixel in 0..10 {
+    let destination_center = (f64::from(pixel) + 0.5) / 10.0;
+    let source_center = (f64::from(offset) + destination_center * f64::from(width)) * 288.0;
+    assert!((source_center - (1.0 + f64::from(pixel) + 0.5)).abs() < 1e-6);
+  }
   assert_eq!(atlas_uv(0, 288).1, 0.0);
   assert_eq!(atlas_uv(10, 0), (0.0, 0.0));
 }
@@ -31,6 +31,7 @@ fn cell_sampling_starts_inside_the_gutter_and_stops_a_texel_short() {
 fn glyph_rectangles_walk_evenly_spaced_cells() {
   let metrics = AtlasMetrics {
     glyph_width: 8.0,
+    advances: [8.0; ATLAS_CELLS],
     u_offset: 0.01,
     u_width: 0.03,
     count: 4,

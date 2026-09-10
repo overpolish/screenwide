@@ -1169,16 +1169,6 @@ pub(crate) fn apply_ruler_result(context: &Context, result: &OscResult) -> bool 
   let tolerance_mode = (result.ruler_flags >> 4) & 3;
   let (hover_key, hover_opacity) = ruler::hovered_artifact_key(&data);
   let animating = ruler::animation_active(&data, result.ruler_flags);
-  // Every peer gets the same union size, so the loupe keeps one width while
-  // the pointer crosses monitors (`reserved_dimensions_length`).
-  let desktop_size = context
-    .runtime
-    .desktop
-    .lock()
-    .ok()
-    .and_then(|binding| binding.as_ref().map(|binding| binding.size))
-    .unwrap_or_default();
-
   let Ok(mut set) = context.surfaces.lock() else {
     return false;
   };
@@ -1212,7 +1202,6 @@ pub(crate) fn apply_ruler_result(context: &Context, result: &OscResult) -> bool 
     surface.ruler.crosshair = crosshair;
     surface.ruler.interaction_active = interaction_active;
     surface.ruler.color = result.ruler_color;
-    surface.ruler.desktop_size = desktop_size;
     let offset = surface.desktop_offset();
     surface.ruler.point = Point {
       x: result.x - offset.x,

@@ -145,13 +145,12 @@ SCREENWIDE_PREVIEW_PRIVATE void selection_action_render_surfaces(
         index == 0 ? 11 : 15);
     control.contentLayer.contentsScale = scale;
     control.contentLayer.drawableSize =
-        CGSizeMake(MAX(size.width * scale, 2.0),
-                   MAX(size.height * scale, 2.0));
+        CGSizeMake(MAX(round(size.width * scale), 2.0),
+                   MAX(round(size.height * scale), 2.0));
     id<CAMetalDrawable> drawable = [control.contentLayer nextDrawable];
     if (drawable == nil) continue;
-    id<MTLBuffer> buffer = [surface.device
-        newBufferWithBytes:vertices length:sizeof(vertices)
-                   options:MTLResourceStorageModeShared];
+    id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
+        surface.device, vertices, count, size, scale);
     MTLRenderPassDescriptor *pass =
         [MTLRenderPassDescriptor renderPassDescriptor];
     pass.colorAttachments[0].texture = drawable.texture;

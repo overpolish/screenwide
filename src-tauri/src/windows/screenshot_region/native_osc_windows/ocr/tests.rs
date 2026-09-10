@@ -105,9 +105,9 @@ fn toolbar_activation_maps_onto_the_command_phases() {
       ControlSpec {
         rect: Rect::from_xywh(index as f64 * 100.0, 0.0, 90.0, 24.0),
         style: if index < 2 {
-          ControlStyle::button(ControlColor::Neutral, ControlSize::Compact)
+          ControlStyle::button(ControlColor::Neutral, ControlSize::Regular)
         } else {
-          ControlStyle::icon_button(ControlColor::Neutral, ControlSize::Compact)
+          ControlStyle::icon_button(ControlColor::Neutral, ControlSize::Regular)
         },
         icon: toolbar_icon(index),
       }
@@ -146,7 +146,7 @@ fn the_cancel_button_is_only_offered_events_while_it_is_visible() {
   let mut chrome = Chrome::default();
   chrome.cancel.layout(&[ControlSpec {
     rect: Rect::from_xywh(0.0, 0.0, 100.0, 36.0),
-    style: ControlStyle::button(ControlColor::Neutral, ControlSize::Default),
+    style: ControlStyle::button(ControlColor::Neutral, ControlSize::Regular),
     icon: ControlIcon::X,
   }]);
   let inside = Point { x: 10.0, y: 10.0 };

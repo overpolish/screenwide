@@ -70,8 +70,7 @@ void screenwide_region_osc_ocr_attach(ScreenwideRegionOSC *surface) {
   surface.ocrStatusSurface = screenwide_osc_material_surface(surface.device);
   surface.ocrStatusLabel = [NSTextField labelWithString:@""];
   surface.ocrStatusLabel.alignment = NSTextAlignmentCenter;
-  surface.ocrStatusLabel.font = [NSFont systemFontOfSize:13.0
-                                                  weight:NSFontWeightMedium];
+  surface.ocrStatusLabel.font = screenwide_osc_body_font();
   surface.ocrStatusLabel.lineBreakMode = NSLineBreakByTruncatingTail;
   surface.ocrStatusLabel.maximumNumberOfLines = 1;
   [surface.ocrStatusSurface.contentView addSubview:surface.ocrStatusLabel];
