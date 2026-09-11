@@ -2,18 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { screenshotLayout } from "./screenshot-layout";
-import {
-  screenshotOutputDimensions,
-  ScreenshotOutputSettings,
-} from "./screenshot-output";
+import { ScreenshotOutputSettings } from "./screenshot-output";
 
 /**
  * Where the selected layer sits in the finished picture, in output pixels.
  *
- * The output stores placement as percentages of the canvas, and it stores two
- * rectangles: the visible crop by its top left corner, and the image behind it
- * by its centre. A panel shows one rectangle by its top left, so the crop is
- * what it reads and writes, and the image travels with it.
+ * The output stores placement in those same pixels, and it stores two
+ * rectangles: the visible crop and the image behind it, both by their top left
+ * corner. A panel shows one rectangle, so the crop is what it reads and
+ * writes, and the image travels with it.
  */
 export type SelectionPlacement = {
   height: number;
@@ -29,17 +26,12 @@ const whole = (value: number) => Math.round(value);
 
 export const selectionPlacement = (
   settings: ScreenshotOutputSettings,
-  source: { height: number; width: number },
-): SelectionPlacement => {
-  const output = screenshotOutputDimensions(settings);
-  const { crop } = screenshotLayout(source, output, settings);
-  return {
-    height: whole(crop.height),
-    width: whole(crop.width),
-    x: whole(crop.x),
-    y: whole(crop.y),
-  };
-};
+): SelectionPlacement => ({
+  height: whole(settings.cropHeight),
+  width: whole(settings.cropWidth),
+  x: whole(settings.cropX),
+  y: whole(settings.cropY),
+});
 
 /**
  * Place the selection at the asked-for size and position.
@@ -55,8 +47,7 @@ export const withSelectionPlacement = (
   source: { height: number; width: number },
   patch: SelectionPlacementPatch,
 ): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(settings);
-  const { crop, image } = screenshotLayout(source, output, settings);
+  const { crop, image } = screenshotLayout(source, settings);
   const requestedScale =
     patch.width !== undefined && crop.width > 0
       ? patch.width / crop.width
@@ -67,20 +58,14 @@ export const withSelectionPlacement = (
     Number.isFinite(requestedScale) && requestedScale > 0 ? requestedScale : 1;
   const x = patch.x ?? crop.x;
   const y = patch.y ?? crop.y;
-  const width = crop.width * scale;
-  const height = crop.height * scale;
-  const imageWidth = image.width * scale;
-  const imageHeight = image.height * scale;
-  const imageX = x + (image.x - crop.x) * scale;
-  const imageY = y + (image.y - crop.y) * scale;
   return {
     ...settings,
-    screenshotCropHeightPercent: (height * 100) / output.height,
-    screenshotCropWidthPercent: (width * 100) / output.width,
-    screenshotCropXPercent: (x * 100) / output.width,
-    screenshotCropYPercent: (y * 100) / output.height,
-    screenshotImageWidthPercent: (imageWidth * 100) / output.width,
-    screenshotImageXPercent: ((imageX + imageWidth / 2) * 100) / output.width,
-    screenshotImageYPercent: ((imageY + imageHeight / 2) * 100) / output.height,
+    cropHeight: crop.height * scale,
+    cropWidth: crop.width * scale,
+    cropX: x,
+    cropY: y,
+    imageWidth: image.width * scale,
+    imageX: x + (image.x - crop.x) * scale,
+    imageY: y + (image.y - crop.y) * scale,
   };
 };

@@ -39,11 +39,13 @@ fn exports_recenter_inset_pixels_outside_the_source_crop() {
   settings.background_color = "#000000".to_owned();
   settings.drop_shadow = false;
   settings.recenter_inset_color = Some("#00ff00".to_owned());
-  settings.screenshot_crop_height_percent = 100.0;
-  settings.screenshot_crop_width_percent = 100.0;
-  settings.screenshot_crop_x_percent = 0.0;
-  settings.screenshot_crop_y_percent = 0.0;
-  settings.screenshot_image_width_percent = 100.0;
+  settings.crop_height = 180.0;
+  settings.crop_width = 320.0;
+  settings.crop_x = 0.0;
+  settings.crop_y = 0.0;
+  settings.image_width = 320.0;
+  settings.image_x = 0.0;
+  settings.image_y = 0.0;
   settings.source_crop = crate::screenshots::NormalizedSourceRect {
     height: 0.5,
     width: 0.5,

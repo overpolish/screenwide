@@ -20,8 +20,8 @@ pub(crate) fn resized_recenter_geometry(
 ) -> LayerGeometry {
   let image_width = start.image_width * canvas.0;
   let image_height = image_width * source.1 / source.0.max(1.0);
-  let image_x = start.image_center_x - image_width / canvas.0 / 2.0;
-  let image_y = start.image_center_y - image_height / canvas.1 / 2.0;
+  let image_x = start.image_x;
+  let image_y = start.image_y;
   let visible = NormalizedRect {
     x: image_x + image_width * source_crop.x / canvas.0,
     y: image_y + image_height * source_crop.y / canvas.1,
@@ -99,9 +99,9 @@ mod tests {
         x: 0.25,
         y: 0.25,
       },
-      image_center_x: 0.5,
-      image_center_y: 0.5,
       image_width: 0.8,
+      image_x: 0.1,
+      image_y: 0.1,
       radius_percent: 0.0,
     };
     let geometry = resized_recenter_geometry(
@@ -120,8 +120,8 @@ mod tests {
     let horizontal = (geometry.crop.width * 1_000.0 - 400.0) / 2.0;
     let vertical = (geometry.crop.height * 500.0 - 200.0) / 2.0;
     assert!((horizontal - vertical).abs() < 1e-9);
-    assert_eq!(geometry.image_center_x, start.image_center_x);
-    assert_eq!(geometry.image_center_y, start.image_center_y);
+    assert_eq!(geometry.image_x, start.image_x);
+    assert_eq!(geometry.image_y, start.image_y);
     assert_eq!(geometry.image_width, start.image_width);
   }
 }

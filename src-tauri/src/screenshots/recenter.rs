@@ -86,7 +86,7 @@ mod tests {
   fn inset_stays_distinct_from_the_canvas_background() {
     let mut settings = super::super::output::tests::settings(400, 400);
     settings.recenter_inset_color = Some("#445566".to_owned());
-    settings.screenshot_image_x_percent = 25.0;
+    settings.image_x = 100.0 - settings.image_width / 2.0;
     let output = super::super::output::compose_screenshot(
       &super::super::output::tests::solid_image(200, 100, [200, 100, 50, 255]),
       &settings,

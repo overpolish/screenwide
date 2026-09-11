@@ -33,9 +33,10 @@ export const DEFAULT_KEYBOARD_EFFECTS: KeyboardEffectSettings = {
 
 /**
  * A camera overlay whose crop frame exactly matches the camera image for the
- * given geometry. Using the real output and camera dimensions matters: static
- * percentages put the frame outside the camera for other aspect ratios, which
- * the compositor then has to clamp away from the on-screen controls.
+ * given geometry, in the screen output's own pixels. Using the real output and
+ * camera dimensions matters: a fixed share of the canvas puts the frame
+ * outside the camera for other aspect ratios, which the compositor then has to
+ * clamp away from the on-screen controls.
  */
 export const cameraOverlayForDimensions = ({
   cameraHeight,
@@ -48,29 +49,21 @@ export const cameraOverlayForDimensions = ({
   screenHeight: number;
   screenWidth: number;
 }): CameraOverlaySettings => {
-  const requestedWidthPercent = 25;
-  const requestedHeightPercent =
-    ((screenWidth * requestedWidthPercent) / 100) *
-    (cameraHeight / cameraWidth) *
-    (100 / screenHeight);
-  const frameHeightPercent = Math.min(80, requestedHeightPercent);
-  const frameWidthPercent =
-    requestedWidthPercent * (frameHeightPercent / requestedHeightPercent);
-  const frameXPercent =
-    ((screenWidth - (screenWidth * frameWidthPercent) / 100) * 0.96 * 100) /
-    screenWidth;
-  const frameYPercent =
-    ((screenHeight - (screenHeight * frameHeightPercent) / 100) * 0.04 * 100) /
-    screenHeight;
+  const requestedWidth = screenWidth * 0.25;
+  const requestedHeight = requestedWidth * (cameraHeight / cameraWidth);
+  const frameHeight = Math.min(screenHeight * 0.8, requestedHeight);
+  const frameWidth = requestedWidth * (frameHeight / requestedHeight);
+  const frameX = (screenWidth - frameWidth) * 0.96;
+  const frameY = (screenHeight - frameHeight) * 0.04;
 
   return {
-    cameraWidthPercent: frameWidthPercent,
-    cameraXPercent: frameXPercent + frameWidthPercent / 2,
-    cameraYPercent: frameYPercent + frameHeightPercent / 2,
-    frameHeightPercent,
-    frameWidthPercent,
-    frameXPercent,
-    frameYPercent,
+    cameraWidth: frameWidth,
+    cameraX: frameX + frameWidth / 2,
+    cameraY: frameY + frameHeight / 2,
+    frameHeight,
+    frameWidth,
+    frameX,
+    frameY,
     radiusPercent: 8,
   };
 };
@@ -80,11 +73,14 @@ export const defaultCameraOverlay = (
 ): CameraOverlaySettings => {
   const recording = artifact?.kind === "recording" ? artifact : null;
   const camera = recording?.camera;
+  // Placement is in the screen output's own pixels, so a standing-in canvas
+  // has to be a real one: a 16 by 9 stand-in would put the overlay inside a
+  // single pixel.
   return cameraOverlayForDimensions({
-    cameraHeight: camera?.height || 9,
-    cameraWidth: camera?.width || 16,
-    screenHeight: recording?.height || 9,
-    screenWidth: recording?.width || 16,
+    cameraHeight: camera?.height || 1_080,
+    cameraWidth: camera?.width || 1_920,
+    screenHeight: recording?.height || 1_080,
+    screenWidth: recording?.width || 1_920,
   });
 };
 

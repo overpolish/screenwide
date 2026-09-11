@@ -26,18 +26,30 @@ import {
 const finite = (value: number, fallback: number) =>
   Number.isFinite(value) ? value : fallback;
 
+/**
+ * Guard the overlay against a value that is not a number.
+ *
+ * Its placement is in the screen output's own pixels, so the canvas is what a
+ * fallback has to be measured against: the shares below are the ones the
+ * overlay used to be written in.
+ */
 const normalizedCameraOverlay = (
   settings: CameraOverlaySettings,
-): CameraOverlaySettings => ({
-  cameraWidthPercent: finite(settings.cameraWidthPercent, 25),
-  cameraXPercent: finite(settings.cameraXPercent, 85),
-  cameraYPercent: finite(settings.cameraYPercent, 15),
-  frameHeightPercent: finite(settings.frameHeightPercent, 25),
-  frameWidthPercent: finite(settings.frameWidthPercent, 25),
-  frameXPercent: finite(settings.frameXPercent, 72),
-  frameYPercent: finite(settings.frameYPercent, 3),
-  radiusPercent: finite(settings.radiusPercent, 8),
-});
+  canvas: { height: number; width: number },
+): CameraOverlaySettings => {
+  const width = Math.max(1, canvas.width);
+  const height = Math.max(1, canvas.height);
+  return {
+    cameraWidth: finite(settings.cameraWidth, width * 0.25),
+    cameraX: finite(settings.cameraX, width * 0.85),
+    cameraY: finite(settings.cameraY, height * 0.15),
+    frameHeight: finite(settings.frameHeight, height * 0.25),
+    frameWidth: finite(settings.frameWidth, width * 0.25),
+    frameX: finite(settings.frameX, width * 0.72),
+    frameY: finite(settings.frameY, height * 0.03),
+    radiusPercent: finite(settings.radiusPercent, 8),
+  };
+};
 
 const normalizedCursorEffects = (
   settings: CursorEffectSettings,
@@ -117,7 +129,10 @@ export const startRecordingPreviewPlayer = ({
         enabledStreamIndices,
       },
       bakeCamera,
-      cameraOverlay: normalizedCameraOverlay(cameraOverlay),
+      cameraOverlay: normalizedCameraOverlay(
+        cameraOverlay,
+        recordingOutput.primary,
+      ),
       cursorEffects: normalizedCursorEffects(cursorEffects),
       keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
       ...keyboardTimeline,
@@ -175,7 +190,10 @@ export const layoutRecordingPreviewSurface = ({
     layout: {
       backdrop,
       bakeCamera,
-      cameraOverlay: normalizedCameraOverlay(cameraOverlay),
+      cameraOverlay: normalizedCameraOverlay(
+        cameraOverlay,
+        recordingOutput.primary,
+      ),
       nativeEditor,
       panes,
       recordingOutput: {
@@ -264,7 +282,10 @@ export const setRecordingPreviewComposition = ({
 }) =>
   invoke<null>("set_recording_preview_composition", {
     bakeCamera,
-    cameraOverlay: normalizedCameraOverlay(cameraOverlay),
+    cameraOverlay: normalizedCameraOverlay(
+      cameraOverlay,
+      recordingOutput.primary,
+    ),
     recordingOutput: {
       camera: normalizedScreenshotOutput(recordingOutput.camera),
       cameraOnTop: recordingOutput.cameraOnTop,
@@ -293,7 +314,10 @@ export const copyRecordingPreviewFrameToClipboard = ({
   invoke<null>("copy_recording_preview_frame_to_clipboard", {
     artifactId,
     bakeCamera,
-    cameraOverlay: normalizedCameraOverlay(cameraOverlay),
+    cameraOverlay: normalizedCameraOverlay(
+      cameraOverlay,
+      recordingOutput.primary,
+    ),
     cursorEffects: normalizedCursorEffects(cursorEffects),
     keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
     positionMs: Math.max(0, Math.round(positionMs)),

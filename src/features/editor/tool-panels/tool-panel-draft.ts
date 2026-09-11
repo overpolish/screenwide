@@ -27,6 +27,21 @@ const placedSelection = (
   return next;
 };
 
+/** The same rule for the canvas: a width being typed does not pin the height
+ * a drag on the picture is still moving. */
+const sizedFrame = (
+  frame: ToolPanelSnapshot["frame"],
+  size: { height?: number; width?: number },
+) => {
+  if (!frame) return frame;
+  const next = { ...frame };
+  for (const key of ["height", "width"] as const) {
+    const value = size[key];
+    if (value !== undefined) next[key] = value;
+  }
+  return next;
+};
+
 /** Only pending edits override the mirror; metadata stays live throughout. */
 export function resolveToolPanelSnapshot(
   snapshot: ToolPanelSnapshot,
@@ -40,12 +55,19 @@ export function resolveToolPanelSnapshot(
     return snapshot;
   // A reset is an action rather than a value: nothing of it is shown locally,
   // and the editor's answer arrives as the next published placement.
-  const { resetSelection: _reset, selectionOutput, ...values } = draft.values;
+  const {
+    frameSize,
+    resetFrame: _resetFrame,
+    resetSelection: _resetSelection,
+    selectionOutput,
+    ...values
+  } = draft.values;
   const resolved = { ...snapshot, ...values };
-  return selectionOutput
-    ? {
-        ...resolved,
-        selection: placedSelection(resolved.selection, selectionOutput),
-      }
-    : resolved;
+  return {
+    ...resolved,
+    ...(frameSize ? { frame: sizedFrame(resolved.frame, frameSize) } : {}),
+    ...(selectionOutput
+      ? { selection: placedSelection(resolved.selection, selectionOutput) }
+      : {}),
+  };
 }

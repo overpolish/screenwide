@@ -25,8 +25,13 @@ impl Default for EditorPreferences {
   }
 }
 
+/// Remembered output settings are discarded rather than converted when they
+/// were written before placement moved into output pixels: the app is
+/// unreleased, and a blob with no placement in it is not worth guessing at.
 pub(super) fn load_recording_output(app: &AppHandle) -> Option<RecordingOutputSettings> {
-  load_preferences(app).and_then(|preferences| preferences.recording_output)
+  load_preferences(app)
+    .and_then(|preferences| preferences.recording_output)
+    .filter(|output| output.primary.has_placement() && output.camera.has_placement())
 }
 
 pub(super) fn load_screenshot_background_radius(app: &AppHandle) -> f64 {
@@ -53,10 +58,11 @@ pub(super) fn load_screenshot_output(app: &AppHandle) -> Option<ScreenshotOutput
   load_preferences(app)
     .and_then(|preferences| preferences.screenshot_output)
     .filter(|output| {
-      output
-        .legacy_mode
-        .as_deref()
-        .is_none_or(|mode| mode == "custom")
+      output.has_placement()
+        && output
+          .legacy_mode
+          .as_deref()
+          .is_none_or(|mode| mode == "custom")
     })
 }
 

@@ -140,8 +140,8 @@ export function ScreenshotSection({
   ) => {
     if (!selectedItem || !selectedOutput) return;
     const pixels = coarse ? 10 : 1;
-    const deltaX = (directionX * pixels * 100) / outputDimensions.width;
-    const deltaY = (directionY * pixels * 100) / outputDimensions.height;
+    const deltaX = directionX * pixels;
+    const deltaY = directionY * pixels;
     // Key repeat can outrun React. While the committed settings have not come
     // back yet the props still hold the previous press's starting point, so
     // continue from what that press sent instead of repeating it.
@@ -149,21 +149,21 @@ export function ScreenshotSection({
     const base =
       pending &&
       pending.itemId === selectedItem.id &&
-      pending.beforeX === selectedOutput.screenshotCropXPercent &&
-      pending.beforeY === selectedOutput.screenshotCropYPercent
+      pending.beforeX === selectedOutput.cropX &&
+      pending.beforeY === selectedOutput.cropY
         ? pending.after
         : selectedOutput;
     const next = {
       ...base,
-      screenshotCropXPercent: base.screenshotCropXPercent + deltaX,
-      screenshotCropYPercent: base.screenshotCropYPercent + deltaY,
-      screenshotImageXPercent: base.screenshotImageXPercent + deltaX,
-      screenshotImageYPercent: base.screenshotImageYPercent + deltaY,
+      cropX: base.cropX + deltaX,
+      cropY: base.cropY + deltaY,
+      imageX: base.imageX + deltaX,
+      imageY: base.imageY + deltaY,
     };
     nudgeRef.current = {
       after: next,
-      beforeX: selectedOutput.screenshotCropXPercent,
-      beforeY: selectedOutput.screenshotCropYPercent,
+      beforeX: selectedOutput.cropX,
+      beforeY: selectedOutput.cropY,
       itemId: selectedItem.id,
     };
     onOutputChange?.(next, selectedItem.id);

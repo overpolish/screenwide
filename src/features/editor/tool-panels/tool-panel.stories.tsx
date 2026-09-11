@@ -37,6 +37,7 @@ export const Cursor: Story = {
   beforeEach: () => {
     seed({
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
       hasCursorData: true,
       isSaving: false,
       selection: null,
@@ -50,6 +51,7 @@ export const WithoutCursorData: Story = {
   beforeEach: () => {
     seed({
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
       hasCursorData: false,
       isSaving: false,
       selection: null,
@@ -64,6 +66,7 @@ export const Selection: Story = {
   beforeEach: () => {
     seed({
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
       hasCursorData: true,
       isSaving: false,
       selection: {
@@ -87,6 +90,27 @@ export const SelectionEmpty: Story = {
   beforeEach: () => {
     seed({
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      hasCursorData: true,
+      isSaving: false,
+      selection: null,
+    });
+  },
+};
+
+/** The finished picture's own size, with the capture's size under it: what a
+ * reset puts the canvas back to. */
+export const Frame: Story = {
+  args: { tool: "frame", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: {
+        height: 2338,
+        sourceHeight: 2338,
+        sourceWidth: 3600,
+        width: 3600,
+      },
       hasCursorData: true,
       isSaving: false,
       selection: null,

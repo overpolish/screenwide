@@ -117,15 +117,15 @@ type RecordingCamera = {
 };
 
 export type CameraOverlaySettings = {
-  /** Camera image centre in screen-recording coordinates. */
-  cameraWidthPercent: number;
-  cameraXPercent: number;
-  cameraYPercent: number;
-  /** Crop-window rectangle in screen-recording coordinates. */
-  frameHeightPercent: number;
-  frameWidthPercent: number;
-  frameXPercent: number;
-  frameYPercent: number;
+  /** Camera image centre, in the screen output's own pixels. */
+  cameraWidth: number;
+  cameraX: number;
+  cameraY: number;
+  /** Crop-window rectangle, in the screen output's own pixels. */
+  frameHeight: number;
+  frameWidth: number;
+  frameX: number;
+  frameY: number;
   /** Corner radius as a percentage of the camera frame's shorter edge. */
   radiusPercent: number;
 };

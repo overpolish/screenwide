@@ -16,11 +16,13 @@ fn output(width: u32, height: u32) -> crate::screenshots::ScreenshotOutputSettin
   output.mesh_points.clear();
   output.mesh_seed = 0;
   output.mesh_warp_percent = 0.0;
-  output.screenshot_crop_height_percent = 100.0;
-  output.screenshot_crop_width_percent = 100.0;
-  output.screenshot_crop_x_percent = 0.0;
-  output.screenshot_crop_y_percent = 0.0;
-  output.screenshot_image_width_percent = 100.0;
+  output.crop_height = f64::from(height);
+  output.crop_width = f64::from(width);
+  output.crop_x = 0.0;
+  output.crop_y = 0.0;
+  output.image_width = f64::from(width);
+  output.image_x = 0.0;
+  output.image_y = 0.0;
   output
 }
 
@@ -63,11 +65,13 @@ fn mesh_output(width: u32, height: u32) -> crate::screenshots::ScreenshotOutputS
   ];
   output.mesh_seed = 12_345;
   output.mesh_warp_percent = 8.0;
-  output.screenshot_crop_height_percent = 84.0;
-  output.screenshot_crop_width_percent = 84.0;
-  output.screenshot_crop_x_percent = 8.0;
-  output.screenshot_crop_y_percent = 8.0;
-  output.screenshot_image_width_percent = 84.0;
+  output.crop_height = f64::from(height) * 0.84;
+  output.crop_width = f64::from(width) * 0.84;
+  output.crop_x = f64::from(width) * 0.08;
+  output.crop_y = f64::from(height) * 0.08;
+  output.image_width = f64::from(width) * 0.84;
+  output.image_x = f64::from(width) * 0.08;
+  output.image_y = f64::from(height) * 0.08;
   output
 }
 
@@ -569,13 +573,13 @@ fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
           camera_height: 120,
           camera_width: 160,
           overlay: CameraOverlaySettings {
-            camera_width_percent: 25.0,
-            camera_x_percent: 31.25,
-            camera_y_percent: 38.888_89,
-            frame_height_percent: 33.333_33,
-            frame_width_percent: 25.0,
-            frame_x_percent: 18.75,
-            frame_y_percent: 22.222_22,
+            camera_width: 80.0,
+            camera_x: 100.0,
+            camera_y: 70.0,
+            frame_height: 60.0,
+            frame_width: 80.0,
+            frame_x: 60.0,
+            frame_y: 40.0,
             radius_percent: 10.0,
           },
           screen_height: 180,
@@ -777,11 +781,13 @@ fn benchmarks_animated_mesh_export() {
   for (name, output) in [
     ("solid", {
       let mut settings = output(width, height);
-      settings.screenshot_crop_height_percent = 84.0;
-      settings.screenshot_crop_width_percent = 84.0;
-      settings.screenshot_crop_x_percent = 8.0;
-      settings.screenshot_crop_y_percent = 8.0;
-      settings.screenshot_image_width_percent = 84.0;
+      settings.crop_height = f64::from(height) * 0.84;
+      settings.crop_width = f64::from(width) * 0.84;
+      settings.crop_x = f64::from(width) * 0.08;
+      settings.crop_y = f64::from(height) * 0.08;
+      settings.image_width = f64::from(width) * 0.84;
+      settings.image_x = f64::from(width) * 0.08;
+      settings.image_y = f64::from(height) * 0.08;
       settings
     }),
     ("mesh", mesh_output(width, height)),

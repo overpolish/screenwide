@@ -198,12 +198,25 @@ export function PreviewViewport({
       if (active.operation === "frameRadius") {
         onBackgroundRadiusChange?.(Math.min(50, Math.max(0, event.scale)));
       } else {
+        console.debug("[frame-resize] screenshot", event.phase, {
+          deltaX: event.deltaX,
+          deltaY: event.deltaY,
+          edges: event.edges,
+        });
         const next = resizeScreenshotWorkspaceCanvasEdges({
           deltaX: event.deltaX,
           deltaY: event.deltaY,
           edges: event.edges,
           settings: active.snapshot,
-          sources: items,
+        });
+        console.debug("[frame-resize] screenshot result", {
+          canvas: { height: next.height, width: next.width },
+          layers: next.items.map((item) => ({
+            id: item.id,
+            w: item.output.cropWidth,
+            x: item.output.cropX,
+            y: item.output.cropY,
+          })),
         });
         setCanvasResizeDraft(next);
         onCanvasResize?.(next);
@@ -316,8 +329,11 @@ export function PreviewViewport({
       event.operation === "cropMove" || event.operation === "cropResize";
     const shouldApply =
       event.phase === "end" ? cropOperation || differsFromLastUpdate : changed;
-    const cropX = active.snapshot.screenshotCropXPercent + event.deltaX * 100;
-    const cropY = active.snapshot.screenshotCropYPercent + event.deltaY * 100;
+    // Native gesture deltas arrive as a share of the canvas.
+    const moveX = event.deltaX * output.width;
+    const moveY = event.deltaY * output.height;
+    const cropX = active.snapshot.cropX + moveX;
+    const cropY = active.snapshot.cropY + moveY;
     let next: ScreenshotOutputSettings;
     const recentered = isRecentering
       ? applyScreenshotRecenterGesture({
@@ -365,34 +381,21 @@ export function PreviewViewport({
       };
       next = {
         ...active.snapshot,
-        screenshotCropHeightPercent:
-          active.snapshot.screenshotCropHeightPercent * scale,
-        screenshotCropWidthPercent:
-          active.snapshot.screenshotCropWidthPercent * scale,
-        screenshotCropXPercent: cropX,
-        screenshotCropYPercent: cropY,
-        screenshotImageWidthPercent:
-          active.snapshot.screenshotImageWidthPercent * scale,
-        screenshotImageXPercent: transform(
-          active.snapshot.screenshotImageXPercent,
-          active.snapshot.screenshotCropXPercent,
-          cropX,
-        ),
-        screenshotImageYPercent: transform(
-          active.snapshot.screenshotImageYPercent,
-          active.snapshot.screenshotCropYPercent,
-          cropY,
-        ),
+        cropHeight: active.snapshot.cropHeight * scale,
+        cropWidth: active.snapshot.cropWidth * scale,
+        cropX,
+        cropY,
+        imageWidth: active.snapshot.imageWidth * scale,
+        imageX: transform(active.snapshot.imageX, active.snapshot.cropX, cropX),
+        imageY: transform(active.snapshot.imageY, active.snapshot.cropY, cropY),
       };
     } else {
       next = {
         ...active.snapshot,
-        screenshotCropXPercent: cropX,
-        screenshotCropYPercent: cropY,
-        screenshotImageXPercent:
-          active.snapshot.screenshotImageXPercent + event.deltaX * 100,
-        screenshotImageYPercent:
-          active.snapshot.screenshotImageYPercent + event.deltaY * 100,
+        cropX,
+        cropY,
+        imageX: active.snapshot.imageX + moveX,
+        imageY: active.snapshot.imageY + moveY,
       };
     }
     if (shouldApply) {
@@ -405,7 +408,6 @@ export function PreviewViewport({
           initial: active.workspaceSnapshot,
           movedItemId: active.itemId,
           movedItemOutput: next,
-          sources: orderedItems,
         });
         active.autoFitUsed = true;
         active.lastAutoFitOutput = fitted.output;
@@ -450,7 +452,7 @@ export function PreviewViewport({
             radiusPercent: selectedItemOutput.radiusPercent,
             recenterMode: isRecentering,
             ...normalizedScreenshotSelection(
-              screenshotLayout(selectedItem, output, selectedItemOutput),
+              screenshotLayout(selectedItem, selectedItemOutput),
               output,
               isRecentering ? "recenter" : isEditing ? "crop" : "select",
             ),
@@ -463,7 +465,7 @@ export function PreviewViewport({
             (candidate) => candidate.id === itemOutput.id,
           );
           if (!item) return [];
-          const layout = screenshotLayout(item, output, itemOutput.output);
+          const layout = screenshotLayout(item, itemOutput.output);
           return [
             {
               cropMode: isEditing,

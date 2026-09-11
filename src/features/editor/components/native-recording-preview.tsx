@@ -655,6 +655,17 @@ export function NativeRecordingPreview({
       return;
     }
     if (event.operation === "frameResize" && event.recordingOutput) {
+      const next = event.recordingOutput[active.trackId];
+      console.debug("[frame-resize] recording", event.phase, {
+        canvas: { height: next.height, width: next.width },
+        crop: {
+          h: next.cropHeight,
+          w: next.cropWidth,
+          x: next.cropX,
+          y: next.cropY,
+        },
+        image: { w: next.imageWidth, x: next.imageX, y: next.imageY },
+      });
       onRecordingOutputChange?.(
         active.trackId,
         event.recordingOutput[active.trackId],
@@ -681,30 +692,37 @@ export function NativeRecordingPreview({
     }
     if (active.cameraOverlaySnapshot) {
       const start = active.cameraOverlaySnapshot;
-      const frameX = start.frameXPercent + event.deltaX * 100;
-      const frameY = start.frameYPercent + event.deltaY * 100;
+      // A baked overlay is placed in the screen output's own pixels, and the
+      // native gesture reports its deltas as a share of that canvas.
+      const canvas = screenshotOutputDimensions(
+        effectiveRecordingOutput.primary,
+      );
+      const moveX = event.deltaX * canvas.width;
+      const moveY = event.deltaY * canvas.height;
+      const frameX = start.frameX + moveX;
+      const frameY = start.frameY + moveY;
       let next: CameraOverlaySettings;
       if (event.operation === "cropMove") {
         next = {
           ...start,
-          frameXPercent: frameX,
-          frameYPercent: frameY,
+          frameX,
+          frameY,
         };
       } else if (event.operation === "cropResize") {
-        let left = start.frameXPercent;
-        let top = start.frameYPercent;
-        let right = left + start.frameWidthPercent;
-        let bottom = top + start.frameHeightPercent;
-        if ((event.edges & 1) !== 0) left += event.deltaX * 100;
-        if ((event.edges & 2) !== 0) right += event.deltaX * 100;
-        if ((event.edges & 4) !== 0) top += event.deltaY * 100;
-        if ((event.edges & 8) !== 0) bottom += event.deltaY * 100;
+        let left = start.frameX;
+        let top = start.frameY;
+        let right = left + start.frameWidth;
+        let bottom = top + start.frameHeight;
+        if ((event.edges & 1) !== 0) left += moveX;
+        if ((event.edges & 2) !== 0) right += moveX;
+        if ((event.edges & 4) !== 0) top += moveY;
+        if ((event.edges & 8) !== 0) bottom += moveY;
         next = {
           ...start,
-          frameHeightPercent: bottom - top,
-          frameWidthPercent: right - left,
-          frameXPercent: left,
-          frameYPercent: top,
+          frameHeight: bottom - top,
+          frameWidth: right - left,
+          frameX: left,
+          frameY: top,
         };
       } else if (event.operation === "radius") {
         next = {
@@ -724,29 +742,21 @@ export function NativeRecordingPreview({
         };
         next = {
           ...start,
-          cameraWidthPercent: start.cameraWidthPercent * scale,
-          cameraXPercent: transform(
-            start.cameraXPercent,
-            start.frameXPercent,
-            frameX,
-          ),
-          cameraYPercent: transform(
-            start.cameraYPercent,
-            start.frameYPercent,
-            frameY,
-          ),
-          frameHeightPercent: start.frameHeightPercent * scale,
-          frameWidthPercent: start.frameWidthPercent * scale,
-          frameXPercent: frameX,
-          frameYPercent: frameY,
+          cameraWidth: start.cameraWidth * scale,
+          cameraX: transform(start.cameraX, start.frameX, frameX),
+          cameraY: transform(start.cameraY, start.frameY, frameY),
+          frameHeight: start.frameHeight * scale,
+          frameWidth: start.frameWidth * scale,
+          frameX,
+          frameY,
         };
       } else {
         next = {
           ...start,
-          cameraXPercent: start.cameraXPercent + event.deltaX * 100,
-          cameraYPercent: start.cameraYPercent + event.deltaY * 100,
-          frameXPercent: frameX,
-          frameYPercent: frameY,
+          cameraX: start.cameraX + moveX,
+          cameraY: start.cameraY + moveY,
+          frameX,
+          frameY,
         };
       }
       if (shouldApply) onCameraOverlayChange?.(next);
@@ -777,8 +787,12 @@ export function NativeRecordingPreview({
       }
       return;
     }
-    const cropX = snapshot.screenshotCropXPercent + event.deltaX * 100;
-    const cropY = snapshot.screenshotCropYPercent + event.deltaY * 100;
+    // Native gesture deltas arrive as a share of the layer's own canvas.
+    const canvas = screenshotOutputDimensions(snapshot);
+    const moveX = event.deltaX * canvas.width;
+    const moveY = event.deltaY * canvas.height;
+    const cropX = snapshot.cropX + moveX;
+    const cropY = snapshot.cropY + moveY;
     let next: RecordingOutputSettings[RecordingVideoTrackId];
     if (event.operation === "cropMove" || event.operation === "cropResize") {
       const source =
@@ -796,11 +810,6 @@ export function NativeRecordingPreview({
       if (event.phase === "end")
         next = commitScreenshotCrop(snapshot, next, source);
     } else if (event.operation === "frameResize") {
-      const source =
-        active.trackId === "primary"
-          ? previewSourceDimensions.primary
-          : previewSourceDimensions.camera;
-      if (!source) return;
       const workspace = {
         ...snapshot,
         items: [{ id: 0, output: snapshot }],
@@ -810,7 +819,6 @@ export function NativeRecordingPreview({
         deltaY: event.deltaY,
         edges: event.edges,
         settings: workspace,
-        sources: [{ ...source, id: 0 }],
       });
       next = screenshotWorkspaceItemOutput(resized, 0);
     } else if (event.operation === "radius") {
@@ -831,33 +839,21 @@ export function NativeRecordingPreview({
       };
       next = {
         ...snapshot,
-        screenshotCropHeightPercent:
-          snapshot.screenshotCropHeightPercent * scale,
-        screenshotCropWidthPercent: snapshot.screenshotCropWidthPercent * scale,
-        screenshotCropXPercent: cropX,
-        screenshotCropYPercent: cropY,
-        screenshotImageWidthPercent:
-          snapshot.screenshotImageWidthPercent * scale,
-        screenshotImageXPercent: transform(
-          snapshot.screenshotImageXPercent,
-          snapshot.screenshotCropXPercent,
-          cropX,
-        ),
-        screenshotImageYPercent: transform(
-          snapshot.screenshotImageYPercent,
-          snapshot.screenshotCropYPercent,
-          cropY,
-        ),
+        cropHeight: snapshot.cropHeight * scale,
+        cropWidth: snapshot.cropWidth * scale,
+        cropX,
+        cropY,
+        imageWidth: snapshot.imageWidth * scale,
+        imageX: transform(snapshot.imageX, snapshot.cropX, cropX),
+        imageY: transform(snapshot.imageY, snapshot.cropY, cropY),
       };
     } else {
       next = {
         ...snapshot,
-        screenshotCropXPercent: cropX,
-        screenshotCropYPercent: cropY,
-        screenshotImageXPercent:
-          snapshot.screenshotImageXPercent + event.deltaX * 100,
-        screenshotImageYPercent:
-          snapshot.screenshotImageYPercent + event.deltaY * 100,
+        cropX,
+        cropY,
+        imageX: snapshot.imageX + moveX,
+        imageY: snapshot.imageY + moveY,
       };
     }
     if (shouldApply) {

@@ -123,7 +123,13 @@ pub async fn save_export(
             *primary_kind,
           )?;
           validate_camera_resolution_scale(camera_resolution_scale_percent)?;
-          validate_camera_overlay(camera_overlay)?;
+          validate_camera_overlay(
+            camera_overlay,
+            (
+              recording_output.primary.width,
+              recording_output.primary.height,
+            ),
+          )?;
           let selection = track_selection::TrackSelection::with_volumes(
             audio_tracks,
             &enabled_stream_indices,

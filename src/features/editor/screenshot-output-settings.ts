@@ -9,12 +9,27 @@ import { fullSourceRect, sourceRect, SourceRect } from "./screenshot-geometry";
 
 type ScreenshotBackgroundType = "mesh" | "solid";
 
+/**
+ * One layer's canvas and its placement in it.
+ *
+ * Placement is in output pixels, not in shares of the canvas, so the canvas
+ * can be resized without moving or rescaling anything placed in it: the crop
+ * is the visible rectangle, and the image behind it is given by its top left
+ * corner and its width, its height following the source's aspect.
+ */
 export type ScreenshotOutputSettings = {
   backgroundColor: string;
   backgroundRadiusPercent: number;
   backgroundType: ScreenshotBackgroundType;
+  cropHeight: number;
+  cropWidth: number;
+  cropX: number;
+  cropY: number;
   dropShadow: boolean;
   height: number;
+  imageWidth: number;
+  imageX: number;
+  imageY: number;
   meshColors: string[];
   meshLockedColors: boolean[];
   meshPoints: MeshGradientPoint[];
@@ -22,13 +37,6 @@ export type ScreenshotOutputSettings = {
   meshWarpPercent: number;
   radiusPercent: number;
   recenterInsetColor: string | null;
-  screenshotCropHeightPercent: number;
-  screenshotCropWidthPercent: number;
-  screenshotCropXPercent: number;
-  screenshotCropYPercent: number;
-  screenshotImageWidthPercent: number;
-  screenshotImageXPercent: number;
-  screenshotImageYPercent: number;
   sourceCrop: SourceRect;
   width: number;
 };
@@ -44,18 +52,18 @@ export const defaultScreenshotOutput = (
     backgroundColor: "#171717",
     backgroundRadiusPercent: radii.background ?? 0,
     backgroundType: "solid",
+    cropHeight: height,
+    cropWidth: width,
+    cropX: 0,
+    cropY: 0,
     dropShadow: true,
     height,
+    imageWidth: width,
+    imageX: 0,
+    imageY: 0,
     meshLockedColors: mesh.meshColors.map(() => false),
     radiusPercent: radii.screenshot ?? 0,
     recenterInsetColor: null,
-    screenshotCropHeightPercent: 100,
-    screenshotCropWidthPercent: 100,
-    screenshotCropXPercent: 0,
-    screenshotCropYPercent: 0,
-    screenshotImageWidthPercent: 100,
-    screenshotImageXPercent: 50,
-    screenshotImageYPercent: 50,
     sourceCrop: fullSourceRect(),
     width,
   };
@@ -108,15 +116,15 @@ export const normalizedScreenshotOutput = (
   };
   for (const key of [
     "backgroundRadiusPercent",
+    "cropHeight",
+    "cropWidth",
+    "cropX",
+    "cropY",
+    "imageWidth",
+    "imageX",
+    "imageY",
     "meshWarpPercent",
     "radiusPercent",
-    "screenshotCropHeightPercent",
-    "screenshotCropWidthPercent",
-    "screenshotCropXPercent",
-    "screenshotCropYPercent",
-    "screenshotImageWidthPercent",
-    "screenshotImageXPercent",
-    "screenshotImageYPercent",
   ] as const)
     normalized[key] = finite(settings[key], defaults[key]);
   normalized.height = Math.max(

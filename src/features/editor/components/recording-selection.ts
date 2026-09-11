@@ -26,7 +26,7 @@ export function normalizedRecordingSelection({
 }) {
   const dimensions = screenshotOutputDimensions(output);
   const selection = normalizedScreenshotSelection(
-    screenshotLayout(source, dimensions, output),
+    screenshotLayout(source, output),
     dimensions,
     mode,
   );

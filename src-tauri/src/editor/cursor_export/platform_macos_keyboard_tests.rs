@@ -13,11 +13,13 @@ fn keyboard_output(width: u32, height: u32) -> crate::screenshots::ScreenshotOut
   output.mesh_points.clear();
   output.mesh_seed = 0;
   output.mesh_warp_percent = 0.0;
-  output.screenshot_crop_height_percent = 100.0;
-  output.screenshot_crop_width_percent = 100.0;
-  output.screenshot_crop_x_percent = 0.0;
-  output.screenshot_crop_y_percent = 0.0;
-  output.screenshot_image_width_percent = 100.0;
+  output.crop_height = f64::from(height);
+  output.crop_width = f64::from(width);
+  output.crop_x = 0.0;
+  output.crop_y = 0.0;
+  output.image_width = f64::from(width);
+  output.image_x = 0.0;
+  output.image_y = 0.0;
   output
 }
 

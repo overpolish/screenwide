@@ -10,12 +10,8 @@ import {
   DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
 } from "../recording-export-settings";
-import {
-  editorSelectionTarget,
-  selectionPanelHandlers,
-} from "../tool-panels/selection-target";
-import { useToolPanelBridge } from "../tool-panels/tool-panel-bridge";
 import { ToolPanelPlacement } from "../tool-panels/tool-panel-placement";
+import { useEditorToolPanels } from "../tool-panels/use-editor-tool-panels";
 import { currentEditorKind } from "../window-kind";
 
 import { EditorPanelProps } from "./editor-panel-props";
@@ -154,32 +150,24 @@ export function EditorPanel({
       onResolutionScaleChange,
     },
   );
-  // Which layer the selection panel is placing, and the handler that commits
-  // a new placement for it. Both workspaces already own one; this only says
-  // which of them the current selection means.
-  const selectionTarget = editorSelectionTarget({
+  // The tool panels are the same arrangement one step further out: settings
+  // the editor owns, shown in a window of their own and changed from there.
+  useEditorToolPanels({
     artifact,
     bakeCamera,
+    cursorEffects,
     enabledVideoTracks,
+    isSaving: Boolean(isSaving),
+    onCanvasResize,
+    onCursorEffectsChange,
     onRecordingOutputChange,
     onScreenshotOutputChange,
     recordingOutput,
     screenshotOutput,
     selectedScreenshotItemId,
     selectedTrack,
-  });
-  // The tool panels are the same arrangement one step further out: settings
-  // the editor owns, shown in a window of their own and changed from there.
-  useToolPanelBridge(
     workspace,
-    {
-      cursorEffects,
-      hasCursorData: isRecording && artifact.hasCursorData,
-      isSaving: Boolean(isSaving),
-      selection: selectionTarget?.selection ?? null,
-    },
-    { onCursorEffectsChange, ...selectionPanelHandlers(selectionTarget) },
-  );
+  });
   return (
     // The title bar carries the visible workspace's tools, so the provider has
     // to stand around the shell rather than inside its content.

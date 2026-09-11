@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   content: null as {
     kind: "tool";
-    tool: "cursor" | "selection";
+    tool: "cursor" | "frame" | "selection";
     workspace: string;
   } | null,
   dispose: (): void => undefined,
@@ -85,4 +85,13 @@ it("keeps Select in hand while its own panel is open", () => {
   state.listener();
   expect(state.set).not.toHaveBeenCalled();
   expect(useCanvasTool("recording", "select")[0]).toBe("select");
+});
+
+it("keeps the canvas tool in hand while the Frame panel is open", () => {
+  expect(useCanvasTool("screenshot", "canvas")[0]).toBe("canvas");
+  state.workspace = "screenshot";
+  state.content = { kind: "tool", tool: "frame", workspace: "screenshot" };
+  state.listener();
+  expect(state.set).not.toHaveBeenCalled();
+  expect(useCanvasTool("screenshot", "canvas")[0]).toBe("canvas");
 });

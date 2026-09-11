@@ -10,7 +10,6 @@ import {
 import {
   ScreenshotOutputSettings,
   screenshotLayout,
-  screenshotOutputDimensions,
 } from "./screenshot-output";
 import {
   screenshotSourceCrop,
@@ -36,7 +35,7 @@ export const applyScreenshotCropGesture = ({
   settings,
   source,
 }: CropGesture): ScreenshotOutputSettings => {
-  const image = screenshotLayout(source, output, settings).image;
+  const image = screenshotLayout(source, settings).image;
   const sourceDeltaX = (deltaX * output.width) / image.width;
   const sourceDeltaY = (deltaY * output.height) / image.height;
   const current = screenshotSourceCrop(settings);
@@ -68,9 +67,8 @@ export const commitScreenshotCrop = (
   after: ScreenshotOutputSettings,
   source: { height: number; width: number },
 ): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(after);
-  const previous = screenshotLayout(source, output, before);
-  const next = screenshotLayout(source, output, after);
+  const previous = screenshotLayout(source, before);
+  const next = screenshotLayout(source, after);
   const left = previous.crop.x + next.sourceCrop.x - previous.sourceCrop.x;
   const top = previous.crop.y + next.sourceCrop.y - previous.sourceCrop.y;
   const right =
@@ -89,10 +87,10 @@ export const commitScreenshotCrop = (
       next.sourceCrop.height);
   return {
     ...after,
-    screenshotCropHeightPercent: ((bottom - top) * 100) / output.height,
-    screenshotCropWidthPercent: ((right - left) * 100) / output.width,
-    screenshotCropXPercent: (left * 100) / output.width,
-    screenshotCropYPercent: (top * 100) / output.height,
+    cropHeight: bottom - top,
+    cropWidth: right - left,
+    cropX: left,
+    cropY: top,
   };
 };
 
@@ -114,16 +112,15 @@ export const uncroppedScreenshotPreviewOutput = (
   source: { height: number; width: number },
   settings: ScreenshotOutputSettings,
 ): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(settings);
   const previewSettings = withScreenshotSourceCrop(settings, fullSourceRect());
-  const { image } = screenshotLayout(source, output, previewSettings);
+  const { image } = screenshotLayout(source, previewSettings);
   return {
     ...previewSettings,
+    cropHeight: image.height,
+    cropWidth: image.width,
+    cropX: image.x,
+    cropY: image.y,
     dropShadow: false,
     radiusPercent: 0,
-    screenshotCropHeightPercent: (image.height * 100) / output.height,
-    screenshotCropWidthPercent: (image.width * 100) / output.width,
-    screenshotCropXPercent: (image.x * 100) / output.width,
-    screenshotCropYPercent: (image.y * 100) / output.height,
   };
 };

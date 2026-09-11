@@ -44,11 +44,7 @@ describe("persisted screenshot source crop", () => {
       defaultScreenshotOutput(1_000, 1_000),
       sourceRect({ height: 0.5, width: 0.4, x: 0.2, y: 0.3 }),
     );
-    const layout = screenshotLayout(
-      { height: 1_000, width: 1_000 },
-      { height: 1_000, width: 1_000 },
-      canonical,
-    );
+    const layout = screenshotLayout({ height: 1_000, width: 1_000 }, canonical);
 
     expectRectClose(layout.sourceCrop, {
       height: 500,
@@ -96,14 +92,14 @@ describe("Crop and Recenter composition", () => {
     const settings = withScreenshotSourceCrop(
       {
         ...defaultScreenshotOutput(1_000, 1_000),
-        screenshotCropHeightPercent: 40,
-        screenshotCropWidthPercent: 40,
-        screenshotCropXPercent: 30,
-        screenshotCropYPercent: 30,
+        cropHeight: 400,
+        cropWidth: 400,
+        cropX: 300,
+        cropY: 300,
       },
       sourceRect({ height: 0.4, width: 0.4, x: 0.3, y: 0.3 }),
     );
-    const before = screenshotLayout(source, source, settings);
+    const before = screenshotLayout(source, settings);
 
     const resized = applyScreenshotRecenterGesture({
       deltaX: 0,
@@ -118,16 +114,10 @@ describe("Crop and Recenter composition", () => {
     expect(resized).not.toBeNull();
     if (!resized) throw new Error("Expected Recenter resize settings");
     expect(resized.sourceCrop).toEqual(settings.sourceCrop);
-    expect(resized.screenshotImageWidthPercent).toBe(
-      settings.screenshotImageWidthPercent,
-    );
-    expect(resized.screenshotImageXPercent).toBe(
-      settings.screenshotImageXPercent,
-    );
-    expect(resized.screenshotImageYPercent).toBe(
-      settings.screenshotImageYPercent,
-    );
-    const after = screenshotLayout(source, source, resized);
+    expect(resized.imageWidth).toBe(settings.imageWidth);
+    expect(resized.imageX).toBe(settings.imageX);
+    expect(resized.imageY).toBe(settings.imageY);
+    const after = screenshotLayout(source, resized);
     expectRectClose(after.sourceCrop, before.sourceCrop);
     expectRectClose(after.crop, {
       height: 600,
@@ -142,10 +132,10 @@ describe("Crop and Recenter composition", () => {
     const settings = withScreenshotSourceCrop(
       {
         ...defaultScreenshotOutput(1_000, 1_000),
-        screenshotCropHeightPercent: 80,
-        screenshotCropWidthPercent: 80,
-        screenshotCropXPercent: 10,
-        screenshotCropYPercent: 10,
+        cropHeight: 800,
+        cropWidth: 800,
+        cropX: 100,
+        cropY: 100,
       },
       sourceRect({ height: 0.8, width: 0.8, x: 0.1, y: 0.1 }),
     );
@@ -162,7 +152,7 @@ describe("Crop and Recenter composition", () => {
 
     expect(resized).not.toBeNull();
     if (!resized) throw new Error("Expected clamped Recenter settings");
-    expectRectClose(screenshotLayout(source, source, resized).crop, {
+    expectRectClose(screenshotLayout(source, resized).crop, {
       height: 1_000,
       width: 1_000,
       x: 0,
@@ -175,10 +165,10 @@ describe("Crop and Recenter composition", () => {
     const settings = withScreenshotSourceCrop(
       {
         ...defaultScreenshotOutput(1_000, 1_000),
-        screenshotCropHeightPercent: 80,
-        screenshotCropWidthPercent: 80,
-        screenshotCropXPercent: 10,
-        screenshotCropYPercent: 10,
+        cropHeight: 800,
+        cropWidth: 800,
+        cropX: 100,
+        cropY: 100,
       },
       sourceRect({ height: 0.2, width: 0.2, x: 0.4, y: 0.4 }),
     );
@@ -195,7 +185,7 @@ describe("Crop and Recenter composition", () => {
 
     expect(resized).not.toBeNull();
     if (!resized) throw new Error("Expected contracted Recenter settings");
-    const layout = screenshotLayout(source, source, resized);
+    const layout = screenshotLayout(source, resized);
     expectRectClose(layout.crop, layout.sourceCrop);
   });
 
@@ -223,10 +213,10 @@ describe("Crop and Recenter composition", () => {
 
     const inset = {
       ...recentered,
-      screenshotCropHeightPercent: 60,
-      screenshotCropWidthPercent: 60,
-      screenshotCropXPercent: 20,
-      screenshotCropYPercent: 20,
+      cropHeight: 600,
+      cropWidth: 600,
+      cropX: 200,
+      cropY: 200,
     };
     const reset = resetScreenshotRecenter(inset, {
       height: 1_000,
@@ -235,16 +225,8 @@ describe("Crop and Recenter composition", () => {
     expect(reset.sourceCrop).toEqual(detectedCrop);
     expect(reset.recenterInsetColor).toBeNull();
     expectRectClose(
-      screenshotLayout(
-        { height: 1_000, width: 1_000 },
-        { height: 1_000, width: 1_000 },
-        reset,
-      ).crop,
-      screenshotLayout(
-        { height: 1_000, width: 1_000 },
-        { height: 1_000, width: 1_000 },
-        reset,
-      ).sourceCrop,
+      screenshotLayout({ height: 1_000, width: 1_000 }, reset).crop,
+      screenshotLayout({ height: 1_000, width: 1_000 }, reset).sourceCrop,
     );
   });
 
@@ -253,11 +235,11 @@ describe("Crop and Recenter composition", () => {
     const settings = withScreenshotSourceCrop(
       {
         ...defaultScreenshotOutput(source.width, source.height),
+        cropHeight: 600,
+        cropWidth: 600,
+        cropX: 200,
+        cropY: 200,
         recenterInsetColor: "#ffffff",
-        screenshotCropHeightPercent: 60,
-        screenshotCropWidthPercent: 60,
-        screenshotCropXPercent: 20,
-        screenshotCropYPercent: 20,
       },
       sourceRect({ height: 0.4, width: 0.4, x: 0.3, y: 0.3 }),
     );
@@ -268,7 +250,7 @@ describe("Crop and Recenter composition", () => {
       x: 400,
       y: 400,
     });
-    const layout = screenshotLayout(source, source, recentered);
+    const layout = screenshotLayout(source, recentered);
 
     expect((layout.crop.width - layout.sourceCrop.width) / 2).toBeCloseTo(100);
     expect((layout.crop.height - layout.sourceCrop.height) / 2).toBeCloseTo(

@@ -151,9 +151,9 @@ fn n(x: f64, y: f64, width: f64, height: f64) -> NormalizedRect {
 fn geometry(crop: NormalizedRect) -> LayerGeometry {
   LayerGeometry {
     crop,
-    image_center_x: crop.x + crop.width / 2.0,
-    image_center_y: crop.y + crop.height / 2.0,
     image_width: crop.width,
+    image_x: crop.x,
+    image_y: crop.y,
     radius_percent: 0.0,
   }
 }
@@ -220,8 +220,8 @@ fn layer_resize_uses_one_transform_for_crop_and_image() {
   assert!((result.crop.y - 0.2).abs() < 1e-9);
   assert_eq!((result.crop.width, result.crop.height), (0.2, 0.25));
   assert_eq!(result.image_width, 0.2);
-  assert!((result.image_center_x - 0.4).abs() < 1e-9);
-  assert!((result.image_center_y - 0.325).abs() < 1e-9);
+  assert!((result.image_x - 0.3).abs() < 1e-9);
+  assert!((result.image_y - 0.2).abs() < 1e-9);
 }
 #[test]
 fn layer_gesture_allows_off_canvas_move() {
@@ -232,7 +232,7 @@ fn layer_gesture_allows_off_canvas_move() {
     1.0,
   );
   assert_eq!((result.crop.x, result.crop.y), (-0.9, 2.1));
-  assert_eq!((result.image_center_x, result.image_center_y), (-0.8, 2.2));
+  assert_eq!((result.image_x, result.image_y), (-0.9, 2.1));
 }
 #[test]
 fn frame_resize_top_edge_is_undo_symmetric() {
@@ -345,24 +345,36 @@ fn frame_resize_respects_max_area() {
   assert!(result.output_size.0 >= FRAME_MIN_SIZE as u32);
 }
 #[test]
-fn layer_geometry_rebase_preserves_absolute_image_transform() {
-  let old = r(100.0, 50.0, 200.0, 100.0);
-  let new = r(50.0, 25.0, 400.0, 200.0);
-  let start = LayerGeometry {
-    crop: n(0.25, 0.25, 0.5, 0.5),
-    image_center_x: 0.5,
-    image_center_y: 0.5,
-    image_width: 0.75,
-    radius_percent: 12.0,
+fn frame_resize_holds_layers_in_place() {
+  // A near-edge drag moves the frame's origin. What the frame holds does not
+  // move on screen: the layer keeps its world position and size, so its
+  // offset from the new corner shrinks by exactly what the corner moved.
+  let layer = WorkspaceLayer {
+    id: LayerId(1),
+    frame_id: FrameId(0),
+    rect: n(0.25, 0.25, 0.5, 0.5),
+    radius_percent: 0.0,
+    z_index: 0,
   };
-  let rebased = rebase_layer_geometry(start, old, new);
-  assert_eq!(rebased.crop, n(0.25, 0.25, 0.25, 0.25));
-  assert_eq!(
-    (rebased.image_center_x, rebased.image_center_y),
-    (0.375, 0.375)
-  );
-  assert_eq!(rebased.image_width, 0.375);
-  assert_eq!(rebased.radius_percent, 12.0);
+  let s = WorkspaceScene::screenshot(
+    r(0.0, 0.0, 800.0, 800.0),
+    r(100.0, 100.0, 200.0, 200.0),
+    vec![layer],
+  )
+  .unwrap();
+  let result = s
+    .resized_frame(FrameId(0), FRAME_EDGE_LEFT, (100.0, 0.0))
+    .unwrap();
+
+  assert_eq!(result.new_rect.width, 100.0);
+  assert_eq!(result.new_rect.x, 200.0);
+  let rect = result.scene.layers[0].rect;
+  // The layer began at world x 150 (100 + 0.25 × 200) and 100 wide. The
+  // corner moved from 100 to 200, so the layer is now 50 pixels before it.
+  assert_eq!(result.new_rect.x + rect.x * result.new_rect.width, 150.0);
+  assert_eq!(rect.width * result.new_rect.width, 100.0);
+  assert_eq!(rect.y, 0.25);
+  assert_eq!(rect.height, 0.5);
 }
 
 #[test]
@@ -461,17 +473,17 @@ fn display_fit_rebase_recalculates_relative_zoom_for_a_resized_canvas() {
 fn canvas_fit_preserves_absolute_layer_geometry() {
   let layer = LayerGeometry {
     crop: n(0.25, -0.5, 0.5, 1.0),
-    image_center_x: 0.5,
-    image_center_y: 0.0,
     image_width: 0.75,
+    image_x: 0.5,
+    image_y: 0.0,
     radius_percent: 12.0,
   };
   let ((width, height), layers) = fit_canvas_to_layers((400, 200), &[layer]);
   assert_eq!((width, height), (400, 300));
   let fitted = layers[0];
   assert_eq!(fitted.crop, n(0.25, 0.0, 0.5, 2.0 / 3.0));
-  assert_eq!(fitted.image_center_x, 0.5);
-  assert_eq!(fitted.image_center_y, 1.0 / 3.0);
+  assert_eq!(fitted.image_x, 0.5);
+  assert_eq!(fitted.image_y, 1.0 / 3.0);
   assert_eq!(fitted.image_width, 0.75);
   assert_eq!(fitted.radius_percent, 12.0);
 }

@@ -50,8 +50,7 @@ export const recenterScreenshotContent = (
   source: { height: number; width: number },
   content: ScreenshotContentBounds,
 ): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(settings);
-  const layout = screenshotLayout(source, output, settings);
+  const layout = screenshotLayout(source, settings);
   const inset = Math.max(
     0,
     Math.min(
@@ -82,18 +81,12 @@ export const recenterScreenshotContent = (
   return withScreenshotSourceCrop(
     {
       ...settings,
-      screenshotCropHeightPercent:
-        ((contentRect.height + inset * 2) * 100) / output.height,
-      screenshotCropWidthPercent:
-        ((contentRect.width + inset * 2) * 100) / output.width,
-      screenshotCropXPercent:
-        ((contentRect.x + deltaX - inset) * 100) / output.width,
-      screenshotCropYPercent:
-        ((contentRect.y + deltaY - inset) * 100) / output.height,
-      screenshotImageXPercent:
-        settings.screenshotImageXPercent + (deltaX * 100) / output.width,
-      screenshotImageYPercent:
-        settings.screenshotImageYPercent + (deltaY * 100) / output.height,
+      cropHeight: contentRect.height + inset * 2,
+      cropWidth: contentRect.width + inset * 2,
+      cropX: contentRect.x + deltaX - inset,
+      cropY: contentRect.y + deltaY - inset,
+      imageX: settings.imageX + deltaX,
+      imageY: settings.imageY + deltaY,
     },
     sourceCrop,
   );
@@ -104,15 +97,14 @@ export const resetScreenshotRecenter = (
   settings: ScreenshotOutputSettings,
   source: { height: number; width: number },
 ): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(settings);
-  const { sourceCrop } = screenshotLayout(source, output, settings);
+  const { sourceCrop } = screenshotLayout(source, settings);
   return {
     ...settings,
+    cropHeight: sourceCrop.height,
+    cropWidth: sourceCrop.width,
+    cropX: sourceCrop.x,
+    cropY: sourceCrop.y,
     recenterInsetColor: null,
-    screenshotCropHeightPercent: (sourceCrop.height * 100) / output.height,
-    screenshotCropWidthPercent: (sourceCrop.width * 100) / output.width,
-    screenshotCropXPercent: (sourceCrop.x * 100) / output.width,
-    screenshotCropYPercent: (sourceCrop.y * 100) / output.height,
   };
 };
 
@@ -129,7 +121,7 @@ const resizeRecenteredScreenshot = ({
 }): ScreenshotOutputSettings => {
   const output = screenshotOutputDimensions(settings);
   if (!source) return settings;
-  const { crop, sourceCrop } = screenshotLayout(source, output, settings);
+  const { crop, sourceCrop } = screenshotLayout(source, settings);
   const scale = Math.max(0, requestedScale);
   const verticalOnly = (edges & (4 | 8)) !== 0 && (edges & (1 | 2)) === 0;
   const sourceSize = verticalOnly ? sourceCrop.height : sourceCrop.width;
@@ -147,12 +139,10 @@ const resizeRecenteredScreenshot = ({
   const inset = Math.min(maximumInset, Math.max(0, requestedInset));
   return {
     ...settings,
-    screenshotCropHeightPercent:
-      ((sourceCrop.height + inset * 2) * 100) / output.height,
-    screenshotCropWidthPercent:
-      ((sourceCrop.width + inset * 2) * 100) / output.width,
-    screenshotCropXPercent: ((sourceCrop.x - inset) * 100) / output.width,
-    screenshotCropYPercent: ((sourceCrop.y - inset) * 100) / output.height,
+    cropHeight: sourceCrop.height + inset * 2,
+    cropWidth: sourceCrop.width + inset * 2,
+    cropX: sourceCrop.x - inset,
+    cropY: sourceCrop.y - inset,
   };
 };
 
@@ -172,16 +162,18 @@ export const applyScreenshotRecenterGesture = ({
   scale: number;
   settings: ScreenshotOutputSettings;
   source?: { height: number; width: number };
-}): ScreenshotOutputSettings | null =>
-  operation === "move"
+}): ScreenshotOutputSettings | null => {
+  // Native gesture deltas arrive as a share of the canvas.
+  const output = screenshotOutputDimensions(settings);
+  const moveX = deltaX * output.width;
+  const moveY = deltaY * output.height;
+  return operation === "move"
     ? {
         ...settings,
-        screenshotCropXPercent: settings.screenshotCropXPercent + deltaX * 100,
-        screenshotCropYPercent: settings.screenshotCropYPercent + deltaY * 100,
-        screenshotImageXPercent:
-          settings.screenshotImageXPercent + deltaX * 100,
-        screenshotImageYPercent:
-          settings.screenshotImageYPercent + deltaY * 100,
+        cropX: settings.cropX + moveX,
+        cropY: settings.cropY + moveY,
+        imageX: settings.imageX + moveX,
+        imageY: settings.imageY + moveY,
       }
     : operation === "resize"
       ? resizeRecenteredScreenshot({
@@ -191,3 +183,4 @@ export const applyScreenshotRecenterGesture = ({
           source,
         })
       : null;
+};

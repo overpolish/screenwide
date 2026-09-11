@@ -28,7 +28,7 @@ type EditorTool = {
 export const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
   crop: { resetsView: true },
   cursor: { panel: "cursor", resetsView: true },
-  frame: { resetsView: true },
+  frame: { panel: "frame", resetsView: true },
   keyboard: { resetsView: true },
   recenter: { resetsView: true },
   select: { panel: "selection", resetsView: false },

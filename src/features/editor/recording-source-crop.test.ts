@@ -19,11 +19,11 @@ describe("recording Crop and Recenter parity", () => {
   it("uses the canonical screenshot Crop transaction", () => {
     const settings = {
       ...defaultScreenshotOutput(1_000, 1_000),
+      cropHeight: 800,
+      cropWidth: 800,
+      cropX: 100,
+      cropY: 100,
       recenterInsetColor: "#ffffff",
-      screenshotCropHeightPercent: 80,
-      screenshotCropWidthPercent: 80,
-      screenshotCropXPercent: 10,
-      screenshotCropYPercent: 10,
     };
     const live = applyScreenshotCropGesture({
       deltaX: 0.1,
@@ -35,7 +35,7 @@ describe("recording Crop and Recenter parity", () => {
       source,
     });
     const committed = commitScreenshotCrop(settings, live, source);
-    const layout = screenshotLayout(source, source, committed);
+    const layout = screenshotLayout(source, committed);
 
     expect(committed.sourceCrop).toEqual(
       sourceRect({ height: 1, width: 0.9, x: 0.1, y: 0 }),

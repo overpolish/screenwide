@@ -15,13 +15,13 @@ export const hasOutputComposition = (
     settings.backgroundRadiusPercent > 0 ||
     settings.radiusPercent > 0 ||
     settings.recenterInsetColor !== null ||
-    Math.abs(settings.screenshotCropHeightPercent - 100) > 0.000_001 ||
-    Math.abs(settings.screenshotCropWidthPercent - 100) > 0.000_001 ||
-    Math.abs(settings.screenshotCropXPercent) > 0.000_001 ||
-    Math.abs(settings.screenshotCropYPercent) > 0.000_001 ||
-    Math.abs(settings.screenshotImageWidthPercent - 100) > 0.000_001 ||
-    Math.abs(settings.screenshotImageXPercent - 50) > 0.000_001 ||
-    Math.abs(settings.screenshotImageYPercent - 50) > 0.000_001 ||
+    Math.abs(settings.cropHeight - settings.height) > 0.000_001 ||
+    Math.abs(settings.cropWidth - settings.width) > 0.000_001 ||
+    Math.abs(settings.cropX) > 0.000_001 ||
+    Math.abs(settings.cropY) > 0.000_001 ||
+    Math.abs(settings.imageWidth - settings.width) > 0.000_001 ||
+    Math.abs(settings.imageX) > 0.000_001 ||
+    Math.abs(settings.imageY) > 0.000_001 ||
     Math.abs(sourceCrop.height - 1) > 0.000_001 ||
     Math.abs(sourceCrop.width - 1) > 0.000_001 ||
     Math.abs(sourceCrop.x) > 0.000_001 ||

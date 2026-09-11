@@ -14,21 +14,37 @@ use super::{mesh::mesh_canvas, rounded_corners};
 
 const MAX_OUTPUT_PIXELS: u64 = 120_000_000;
 
-const fn default_hundred() -> f64 {
-  100.0
-}
-const fn default_fifty() -> f64 {
-  50.0
-}
-
+/// One layer's canvas and its placement in it.
+///
+/// Placement is in output pixels rather than in shares of the canvas, so the
+/// canvas can be resized without moving or rescaling anything placed in it.
+/// The crop is the visible rectangle; the image behind it is given by its top
+/// left corner and its width, its height following the source's aspect.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotOutputSettings {
   pub background_color: String,
   pub background_type: String,
   pub background_radius_percent: f64,
+  /// The visible rectangle, in output pixels. Zero width or height marks a
+  /// settings blob written before placement moved into pixels.
+  #[serde(default)]
+  pub crop_height: f64,
+  #[serde(default)]
+  pub crop_width: f64,
+  #[serde(default)]
+  pub crop_x: f64,
+  #[serde(default)]
+  pub crop_y: f64,
   pub drop_shadow: bool,
   pub height: u32,
+  /// The whole image's top left corner and width, in output pixels.
+  #[serde(default)]
+  pub image_width: f64,
+  #[serde(default)]
+  pub image_x: f64,
+  #[serde(default)]
+  pub image_y: f64,
   #[serde(default, rename = "mode", skip_serializing)]
   pub legacy_mode: Option<String>,
   pub mesh_colors: Vec<String>,
@@ -40,22 +56,17 @@ pub struct ScreenshotOutputSettings {
   pub radius_percent: f64,
   #[serde(default)]
   pub recenter_inset_color: Option<String>,
-  #[serde(default = "default_hundred")]
-  pub screenshot_crop_height_percent: f64,
-  #[serde(default = "default_hundred")]
-  pub screenshot_crop_width_percent: f64,
-  #[serde(default)]
-  pub screenshot_crop_x_percent: f64,
-  #[serde(default)]
-  pub screenshot_crop_y_percent: f64,
-  #[serde(default = "default_hundred")]
-  pub screenshot_image_width_percent: f64,
-  #[serde(default = "default_fifty")]
-  pub screenshot_image_x_percent: f64,
-  #[serde(default = "default_fifty")]
-  pub screenshot_image_y_percent: f64,
   pub source_crop: NormalizedSourceRect,
   pub width: u32,
+}
+
+impl ScreenshotOutputSettings {
+  /// Whether this carries a placement at all. Settings written before
+  /// placement was measured in output pixels deserialize without one, and are
+  /// discarded rather than converted.
+  pub fn has_placement(&self) -> bool {
+    self.crop_width > 0.0 && self.crop_height > 0.0 && self.image_width > 0.0
+  }
 }
 
 pub(crate) fn parse_hex_colour(value: &str) -> Result<[u8; 4], String> {
@@ -253,15 +264,25 @@ pub(crate) mod tests {
   }
 
   pub(crate) fn settings(width: u32, height: u32) -> ScreenshotOutputSettings {
-    let placed_width_percent = 80.0;
-    let placed_height_percent =
-      f64::from(width) * placed_width_percent / 100.0 / 2.0 / f64::from(height) * 100.0;
+    // Eighty percent of the canvas wide, and the height a 2:1 source takes at
+    // that width, placed ten percent in from the left and vertically centred.
+    let placed_width = f64::from(width) * 0.8;
+    let placed_height = placed_width / 2.0;
+    let placed_x = f64::from(width) * 0.1;
+    let placed_y = (f64::from(height) - placed_height) / 2.0;
     ScreenshotOutputSettings {
       background_color: "#112233".to_owned(),
       background_type: "solid".to_owned(),
       background_radius_percent: 0.0,
+      crop_height: placed_height,
+      crop_width: placed_width,
+      crop_x: placed_x,
+      crop_y: placed_y,
       drop_shadow: false,
       height,
+      image_width: placed_width,
+      image_x: placed_x,
+      image_y: placed_y,
       legacy_mode: None,
       mesh_colors: vec![
         "#FF0000".to_owned(),
@@ -305,13 +326,6 @@ pub(crate) mod tests {
       mesh_warp_percent: 9.0,
       radius_percent: 0.0,
       recenter_inset_color: None,
-      screenshot_crop_height_percent: placed_height_percent,
-      screenshot_crop_width_percent: placed_width_percent,
-      screenshot_crop_x_percent: 10.0,
-      screenshot_crop_y_percent: (100.0 - placed_height_percent) / 2.0,
-      screenshot_image_width_percent: placed_width_percent,
-      screenshot_image_x_percent: 50.0,
-      screenshot_image_y_percent: 50.0,
       source_crop: NormalizedSourceRect {
         height: 1.0,
         width: 1.0,
@@ -344,14 +358,14 @@ pub(crate) mod tests {
   fn snaps_a_one_pixel_preview_rounding_gap_but_keeps_a_real_crop() {
     let mut output_settings = settings(401, 401);
     let exact = output_placement(200, 100, &output_settings).unwrap();
-    output_settings.screenshot_crop_height_percent += 100.0 / 401.0;
+    output_settings.crop_height += 1.0;
     let snapped = output_placement(200, 100, &output_settings).unwrap();
     assert_eq!(snapped.crop_x, exact.image_x.round() as i32);
     assert_eq!(snapped.crop_y, exact.image_y.round() as i32);
     assert_eq!(snapped.crop_width, exact.image_width);
     assert_eq!(snapped.crop_height, exact.image_height);
 
-    output_settings.screenshot_crop_height_percent += 300.0 / 401.0;
+    output_settings.crop_height += 3.0;
     let deliberate = output_placement(200, 100, &output_settings).unwrap();
     assert_ne!(deliberate.crop_height, deliberate.image_height);
   }
@@ -376,8 +390,9 @@ pub(crate) mod tests {
   #[test]
   fn clips_an_artistically_placed_screenshot_at_the_canvas_edge() {
     let mut output_settings = settings(400, 400);
-    output_settings.screenshot_crop_x_percent = -20.0;
-    output_settings.screenshot_image_x_percent = 20.0;
+    output_settings.crop_x = -80.0;
+    // The image's centre at a fifth of the canvas: its left edge is off it.
+    output_settings.image_x = 80.0 - output_settings.image_width / 2.0;
     let output = compose_screenshot(
       &solid_image(200, 100, [200, 100, 50, 255]),
       &output_settings,
@@ -395,7 +410,7 @@ pub(crate) mod tests {
   #[test]
   fn allows_the_image_to_cover_only_part_of_its_crop_window() {
     let mut output_settings = settings(400, 400);
-    output_settings.screenshot_image_x_percent = 25.0;
+    output_settings.image_x = 100.0 - output_settings.image_width / 2.0;
     let output = compose_screenshot(
       &solid_image(200, 100, [200, 100, 50, 255]),
       &output_settings,

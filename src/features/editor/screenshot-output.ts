@@ -105,48 +105,86 @@ const CENTERED_RESIZE_EDGE = 1 << 16;
 const MAXIMUM_CANVAS_PIXELS = 120_000_000;
 const MINIMUM_CANVAS_SIZE = 64;
 
-/** Resize the output canvas without moving or scaling the screenshot in it. */
-const resizeScreenshotCanvas = (
-  source: { height: number; width: number },
+/**
+ * Move a canvas's origin, carrying everything placed in it.
+ *
+ * Placement is measured from the canvas's top left, so whenever that corner
+ * moves, as when the near edges are dragged or the canvas grows around its
+ * items, every layer is renumbered by the same amount and stays put on
+ * screen. A resize of the far edges leaves the origin, and placement, alone.
+ */
+const rebaseScreenshotCanvas = (
   settings: ScreenshotOutputSettings,
   bounds: ScreenshotCanvasBounds,
-): ScreenshotOutputSettings => {
-  const previousOutput = screenshotOutputDimensions(settings);
-  const layout = screenshotLayout(source, previousOutput, settings);
-  const width = Math.max(1, Math.round(bounds.width));
-  const height = Math.max(1, Math.round(bounds.height));
-  const cropX = layout.crop.x - bounds.originX;
-  const cropY = layout.crop.y - bounds.originY;
-  const imageCenterX = layout.image.x + layout.image.width / 2 - bounds.originX;
-  const imageCenterY =
-    layout.image.y + layout.image.height / 2 - bounds.originY;
+): ScreenshotOutputSettings => ({
+  ...settings,
+  cropX: settings.cropX - bounds.originX,
+  cropY: settings.cropY - bounds.originY,
+  height: Math.max(1, Math.round(bounds.height)),
+  imageX: settings.imageX - bounds.originX,
+  imageY: settings.imageY - bounds.originY,
+  width: Math.max(1, Math.round(bounds.width)),
+});
+
+/** Resize the output canvas, leaving every layer exactly where it is. */
+export const resizeScreenshotCanvas = ({
+  height,
+  settings,
+  width,
+}: {
+  height: number;
+  settings: ScreenshotOutputSettings;
+  width: number;
+}): ScreenshotOutputSettings => ({
+  ...settings,
+  height: Math.max(1, Math.round(height)),
+  width: Math.max(1, Math.round(width)),
+});
+
+/** Resize a workspace canvas, leaving every layer exactly where it is. */
+export const resizeScreenshotWorkspaceCanvas = ({
+  height,
+  settings,
+  width,
+}: {
+  height: number;
+  settings: ScreenshotWorkspaceOutputSettings;
+  width: number;
+}): ScreenshotWorkspaceOutputSettings => {
+  const nextWidth = Math.max(1, Math.round(width));
+  const nextHeight = Math.max(1, Math.round(height));
   return {
     ...settings,
-    height,
-    screenshotCropHeightPercent: (layout.crop.height * 100) / height,
-    screenshotCropWidthPercent: (layout.crop.width * 100) / width,
-    screenshotCropXPercent: (cropX * 100) / width,
-    screenshotCropYPercent: (cropY * 100) / height,
-    screenshotImageWidthPercent: (layout.image.width * 100) / width,
-    screenshotImageXPercent: (imageCenterX * 100) / width,
-    screenshotImageYPercent: (imageCenterY * 100) / height,
-    width,
+    height: nextHeight,
+    items: settings.items.map((item) => ({
+      ...item,
+      output: {
+        ...item.output,
+        height: nextHeight,
+        width: nextWidth,
+      },
+    })),
+    width: nextWidth,
   };
 };
 
-/** Resize a workspace canvas from a native frame-handle gesture. */
+/**
+ * Resize a workspace canvas from a native frame-handle gesture.
+ *
+ * The gesture only ever says how big the canvas should now be. What is in it
+ * keeps the pixels it was placed at, so growing the canvas opens empty space
+ * at the right and the bottom and shrinking it clips whatever falls outside.
+ */
 export const resizeScreenshotWorkspaceCanvasEdges = ({
   deltaX,
   deltaY,
   edges: encodedEdges,
   settings,
-  sources,
 }: {
   deltaX: number;
   deltaY: number;
   edges: number;
   settings: ScreenshotWorkspaceOutputSettings;
-  sources: { height: number; id: number; width: number }[];
 }): ScreenshotWorkspaceOutputSettings => {
   const centered = (encodedEdges & CENTERED_RESIZE_EDGE) !== 0;
   const edges = encodedEdges & ~CENTERED_RESIZE_EDGE;
@@ -162,10 +200,7 @@ export const resizeScreenshotWorkspaceCanvasEdges = ({
           : size - MINIMUM_CANVAS_SIZE,
         delta,
       );
-      return {
-        far: centered ? size - movement : size,
-        near: movement,
-      };
+      return centered ? size - movement * 2 : size - movement;
     }
     if (edge.far) {
       const movement = Math.max(
@@ -174,40 +209,28 @@ export const resizeScreenshotWorkspaceCanvasEdges = ({
           : MINIMUM_CANVAS_SIZE - size,
         delta,
       );
-      return {
-        far: size + movement,
-        near: centered ? -movement : 0,
-      };
+      return centered ? size + movement * 2 : size + movement;
     }
-    return { far: size, near: 0 };
-  };
-  const resizeAxisToSize = (
-    size: number,
-    nextSize: number,
-    edge: { far: boolean; near: boolean },
-  ) => {
-    if (centered && (edge.near || edge.far)) {
-      const inset = (size - nextSize) / 2;
-      return { far: size - inset, near: inset };
-    }
-    if (edge.near) return { far: size, near: size - nextSize };
-    if (edge.far) return { far: nextSize, near: 0 };
-    return { far: size, near: 0 };
+    return size;
   };
   const startWidth = Math.max(1, settings.width);
   const startHeight = Math.max(1, settings.height);
-  const horizontal = resizeAxis(startWidth, deltaX * startWidth, {
-    far: (edges & 2) !== 0,
-    near: (edges & 1) !== 0,
-  });
-  const vertical = resizeAxis(startHeight, deltaY * startHeight, {
-    far: (edges & 8) !== 0,
-    near: (edges & 4) !== 0,
-  });
   const horizontalActive = (edges & 3) !== 0;
   const verticalActive = (edges & 12) !== 0;
-  let width = Math.max(MINIMUM_CANVAS_SIZE, horizontal.far - horizontal.near);
-  let height = Math.max(MINIMUM_CANVAS_SIZE, vertical.far - vertical.near);
+  let width = Math.max(
+    MINIMUM_CANVAS_SIZE,
+    resizeAxis(startWidth, deltaX * startWidth, {
+      far: (edges & 2) !== 0,
+      near: (edges & 1) !== 0,
+    }),
+  );
+  let height = Math.max(
+    MINIMUM_CANVAS_SIZE,
+    resizeAxis(startHeight, deltaY * startHeight, {
+      far: (edges & 8) !== 0,
+      near: (edges & 4) !== 0,
+    }),
+  );
   if (width * height > MAXIMUM_CANVAS_PIXELS) {
     if (horizontalActive && verticalActive) {
       const factor = Math.sqrt(MAXIMUM_CANVAS_PIXELS / (width * height));
@@ -219,153 +242,46 @@ export const resizeScreenshotWorkspaceCanvasEdges = ({
       height = Math.floor(MAXIMUM_CANVAS_PIXELS / width);
     }
   }
-  width = Math.round(width);
-  height = Math.round(height);
-  const constrainedHorizontal = resizeAxisToSize(startWidth, width, {
-    far: (edges & 2) !== 0,
-    near: (edges & 1) !== 0,
-  });
-  const constrainedVertical = resizeAxisToSize(startHeight, height, {
-    far: (edges & 8) !== 0,
-    near: (edges & 4) !== 0,
-  });
-  const bounds = {
-    height,
-    originX: constrainedHorizontal.near,
-    originY: constrainedVertical.near,
-    width,
-  };
+  // The drag moved the near edges by what the size did not absorb at the
+  // far ones: the origin shifts by that, and the layers shift with it so
+  // they hold their place on screen, as they did while the drag was live.
+  const horizontalNear = (edges & 1) !== 0;
+  const verticalNear = (edges & 4) !== 0;
+  const originX = centered
+    ? (startWidth - width) / 2
+    : horizontalNear
+      ? startWidth - width
+      : 0;
+  const originY = centered
+    ? (startHeight - height) / 2
+    : verticalNear
+      ? startHeight - height
+      : 0;
+  const bounds = { height, originX, originY, width };
   return {
-    ...settings,
-    height,
-    items: settings.items.map((itemOutput) => {
-      const source = sources.find(
-        (candidate) => candidate.id === itemOutput.id,
-      );
-      return source
-        ? {
-            ...itemOutput,
-            output: resizeScreenshotCanvas(
-              source,
-              screenshotWorkspaceItemOutput(settings, itemOutput.id),
-              bounds,
-            ),
-          }
-        : itemOutput;
-    }),
-    width,
+    ...rebaseScreenshotCanvas(settings, bounds),
+    items: settings.items.map((item) => ({
+      id: item.id,
+      output: rebaseScreenshotCanvas(item.output, bounds),
+    })),
   };
 };
-
-/** Uniformly scale the composition into inspector-entered canvas dimensions. */
-export const resizeScreenshotWorkspaceCentered = ({
-  height,
-  settings,
-  sources,
-  width,
-}: {
-  height: number;
-  settings: ScreenshotWorkspaceOutputSettings;
-  sources: { height: number; id: number; width: number }[];
-  width: number;
-}): ScreenshotWorkspaceOutputSettings => {
-  const previous = screenshotOutputDimensions(settings);
-  const nextWidth = Math.max(1, Math.round(width));
-  const nextHeight = Math.max(1, Math.round(height));
-  const scale = Math.min(
-    nextWidth / previous.width,
-    nextHeight / previous.height,
-  );
-  const nextCenterX = nextWidth / 2;
-  const nextCenterY = nextHeight / 2;
-  return {
-    ...settings,
-    height: nextHeight,
-    items: settings.items.map((itemOutput) => {
-      const source = sources.find(
-        (candidate) => candidate.id === itemOutput.id,
-      );
-      if (!source) return itemOutput;
-      const itemSettings = screenshotWorkspaceItemOutput(
-        settings,
-        itemOutput.id,
-      );
-      const layout = screenshotLayout(source, previous, itemSettings);
-      const transformPoint = (x: number, y: number) => ({
-        x: nextCenterX + (x - previous.width / 2) * scale,
-        y: nextCenterY + (y - previous.height / 2) * scale,
-      });
-      const cropOrigin = transformPoint(layout.crop.x, layout.crop.y);
-      const imageCenter = transformPoint(
-        layout.image.x + layout.image.width / 2,
-        layout.image.y + layout.image.height / 2,
-      );
-      return {
-        ...itemOutput,
-        output: {
-          ...itemSettings,
-          height: nextHeight,
-          screenshotCropHeightPercent:
-            (layout.crop.height * scale * 100) / nextHeight,
-          screenshotCropWidthPercent:
-            (layout.crop.width * scale * 100) / nextWidth,
-          screenshotCropXPercent: (cropOrigin.x * 100) / nextWidth,
-          screenshotCropYPercent: (cropOrigin.y * 100) / nextHeight,
-          screenshotImageWidthPercent:
-            (layout.image.width * scale * 100) / nextWidth,
-          screenshotImageXPercent: (imageCenter.x * 100) / nextWidth,
-          screenshotImageYPercent: (imageCenter.y * 100) / nextHeight,
-          width: nextWidth,
-        },
-      };
-    }),
-    width: nextWidth,
-  };
-};
-
-/** Uniformly resize a single recording output around its current centre. */
-export const resizeScreenshotOutputCentered = ({
-  height,
-  settings,
-  source,
-  width,
-}: {
-  height: number;
-  settings: ScreenshotOutputSettings;
-  source: { height: number; width: number };
-  width: number;
-}): ScreenshotOutputSettings =>
-  screenshotWorkspaceItemOutput(
-    resizeScreenshotWorkspaceCentered({
-      height,
-      settings: {
-        ...settings,
-        items: [{ id: 0, output: settings }],
-      },
-      sources: [{ ...source, id: 0 }],
-      width,
-    }),
-    0,
-  );
 
 /** Grow around visible items, using the gesture-start canvas as the floor. */
 export const fitScreenshotWorkspaceToItems = ({
   initial,
   movedItemId,
   movedItemOutput,
-  sources,
 }: {
   initial: ScreenshotWorkspaceOutputSettings;
   movedItemId: number;
   movedItemOutput: ScreenshotOutputSettings;
-  sources: { height: number; id: number; width: number }[];
 }): {
   bounds: ScreenshotCanvasBounds;
   movedItemOutput: ScreenshotOutputSettings;
   output: ScreenshotWorkspaceOutputSettings;
 } => {
   const initialSize = screenshotOutputDimensions(initial);
-  const sourceById = new Map(sources.map((source) => [source.id, source]));
   const movedItems = initial.items.map((item) => ({
     ...item,
     output:
@@ -378,13 +294,11 @@ export const fitScreenshotWorkspaceToItems = ({
   let right = initialSize.width;
   let bottom = initialSize.height;
   for (const item of movedItems) {
-    const source = sourceById.get(item.id);
-    if (!source) continue;
-    const crop = screenshotLayout(source, initialSize, item.output).crop;
-    left = Math.min(left, Math.floor(crop.x));
-    top = Math.min(top, Math.floor(crop.y));
-    right = Math.max(right, Math.ceil(crop.x + crop.width));
-    bottom = Math.max(bottom, Math.ceil(crop.y + crop.height));
+    const { output } = item;
+    left = Math.min(left, Math.floor(output.cropX));
+    top = Math.min(top, Math.floor(output.cropY));
+    right = Math.max(right, Math.ceil(output.cropX + output.cropWidth));
+    bottom = Math.max(bottom, Math.ceil(output.cropY + output.cropHeight));
   }
   const bounds = {
     height: bottom - top,
@@ -392,12 +306,10 @@ export const fitScreenshotWorkspaceToItems = ({
     originY: top,
     width: right - left,
   };
-  const items = movedItems.map((item) => {
-    const source = sourceById.get(item.id);
-    return source
-      ? { ...item, output: resizeScreenshotCanvas(source, item.output, bounds) }
-      : item;
-  });
+  const items = movedItems.map((item) => ({
+    ...item,
+    output: rebaseScreenshotCanvas(item.output, bounds),
+  }));
   const output = {
     ...initial,
     height: bounds.height,
@@ -436,16 +348,14 @@ export const resetScreenshotLayout = (
   return withScreenshotSourceCrop(
     {
       ...settings,
+      cropHeight: placement.height,
+      cropWidth: placement.width,
+      cropX: placement.x,
+      cropY: placement.y,
+      imageWidth: placement.width,
+      imageX: placement.x,
+      imageY: placement.y,
       recenterInsetColor: null,
-      screenshotCropHeightPercent: (placement.height * 100) / output.height,
-      screenshotCropWidthPercent: (placement.width * 100) / output.width,
-      screenshotCropXPercent: (placement.x * 100) / output.width,
-      screenshotCropYPercent: (placement.y * 100) / output.height,
-      screenshotImageWidthPercent: (placement.width * 100) / output.width,
-      screenshotImageXPercent:
-        ((placement.x + placement.width / 2) * 100) / output.width,
-      screenshotImageYPercent:
-        ((placement.y + placement.height / 2) * 100) / output.height,
     },
     fullSourceRect(),
   );
@@ -455,12 +365,8 @@ export const resetScreenshotLayout = (
 export const resetScreenshotCrop = (
   settings: ScreenshotOutputSettings,
   _source: { height: number; width: number },
-): ScreenshotOutputSettings => {
-  return withScreenshotSourceCrop(
-    { ...settings, radiusPercent: 0 },
-    fullSourceRect(),
-  );
-};
+): ScreenshotOutputSettings =>
+  withScreenshotSourceCrop({ ...settings, radiusPercent: 0 }, fullSourceRect());
 
 /** Reset the selected item's scale and position while retaining its crop:
  * back to its real size, centred, as it was placed. */
@@ -469,7 +375,7 @@ export const resetScreenshotTransform = (
   source: { height: number; width: number },
 ): ScreenshotOutputSettings => {
   const output = screenshotOutputDimensions(settings);
-  const current = screenshotLayout(source, output, settings);
+  const current = screenshotLayout(source, settings);
   // The crop's real size is its share of the source's own pixels.
   const cropSource = screenshotSourceCrop(settings);
   const target = naturalPlacement(
@@ -480,19 +386,15 @@ export const resetScreenshotTransform = (
     output,
   );
   const scale = target.width / Math.max(1, current.crop.width);
-  const imageX = target.x + (current.image.x - current.crop.x) * scale;
-  const imageY = target.y + (current.image.y - current.crop.y) * scale;
-  const imageWidth = current.image.width * scale;
-  const imageHeight = current.image.height * scale;
   return {
     ...settings,
-    screenshotCropHeightPercent: (target.height * 100) / output.height,
-    screenshotCropWidthPercent: (target.width * 100) / output.width,
-    screenshotCropXPercent: (target.x * 100) / output.width,
-    screenshotCropYPercent: (target.y * 100) / output.height,
-    screenshotImageWidthPercent: (imageWidth * 100) / output.width,
-    screenshotImageXPercent: ((imageX + imageWidth / 2) * 100) / output.width,
-    screenshotImageYPercent: ((imageY + imageHeight / 2) * 100) / output.height,
+    cropHeight: target.height,
+    cropWidth: target.width,
+    cropX: target.x,
+    cropY: target.y,
+    imageWidth: current.image.width * scale,
+    imageX: target.x + (current.image.x - current.crop.x) * scale,
+    imageY: target.y + (current.image.y - current.crop.y) * scale,
   };
 };
 

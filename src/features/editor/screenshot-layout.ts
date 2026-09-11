@@ -13,21 +13,24 @@ export type ScreenshotLayout = {
   sourceCrop: Rect;
 };
 
+/**
+ * The three rectangles a layer draws, in output pixels.
+ *
+ * Crop and image are stored in those pixels already, so the only thing left to
+ * work out is the image's height, which always follows the source's aspect,
+ * and where the source crop falls inside the image.
+ */
 export const screenshotLayout = (
   source: { height: number; width: number },
-  output: { height: number; width: number },
   settings: ScreenshotOutputSettings,
 ): ScreenshotLayout => {
-  const imageWidth =
-    (output.width * Math.max(1, settings.screenshotImageWidthPercent)) / 100;
+  const imageWidth = Math.max(1, settings.imageWidth);
   const imageHeight = imageWidth * (source.height / Math.max(1, source.width));
   const image = {
     height: imageHeight,
     width: imageWidth,
-    x: (output.width * settings.screenshotImageXPercent) / 100 - imageWidth / 2,
-    y:
-      (output.height * settings.screenshotImageYPercent) / 100 -
-      imageHeight / 2,
+    x: settings.imageX,
+    y: settings.imageY,
   };
   const cropSource = screenshotSourceCrop(settings);
   const sourceCrop = {
@@ -38,10 +41,10 @@ export const screenshotLayout = (
   };
   return {
     crop: {
-      height: (output.height * settings.screenshotCropHeightPercent) / 100,
-      width: (output.width * settings.screenshotCropWidthPercent) / 100,
-      x: (output.width * settings.screenshotCropXPercent) / 100,
-      y: (output.height * settings.screenshotCropYPercent) / 100,
+      height: settings.cropHeight,
+      width: settings.cropWidth,
+      x: settings.cropX,
+      y: settings.cropY,
     },
     image,
     sourceCrop,

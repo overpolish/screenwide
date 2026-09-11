@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::preview_platform::workspace_editor::{
-  apply_layer_gesture, GestureOperation as WorkspaceGestureOperation, LayerGeometry,
-  NormalizedRect, WorldRect,
+  apply_layer_gesture, GestureOperation as WorkspaceGestureOperation, WorldRect,
 };
 use super::super::preview_platform::{SelectionGestureOperation, SelectionGesturePhase};
+use super::super::preview_workspace_model::{apply_output_geometry, output_geometry};
 use super::super::ScreenshotWorkspaceOutputSettings;
 use super::geometry::fit_workspace_to_items;
 use super::state::PreviewManager;
@@ -203,18 +203,7 @@ impl PreviewManager {
           | SelectionGestureOperation::ResetAction
           | SelectionGestureOperation::ApplyToAllAction => return Ok(()),
         };
-        let start_geometry = LayerGeometry {
-          crop: NormalizedRect {
-            x: start.screenshot_crop_x_percent / 100.0,
-            y: start.screenshot_crop_y_percent / 100.0,
-            width: start.screenshot_crop_width_percent / 100.0,
-            height: start.screenshot_crop_height_percent / 100.0,
-          },
-          image_center_x: start.screenshot_image_x_percent / 100.0,
-          image_center_y: start.screenshot_image_y_percent / 100.0,
-          image_width: start.screenshot_image_width_percent / 100.0,
-          radius_percent: start.radius_percent,
-        };
+        let start_geometry = output_geometry(start);
         let geometry = if recenter_mode {
           super::recenter::apply_recenter_gesture(
             &snapshot,
@@ -234,14 +223,7 @@ impl PreviewManager {
             scale,
           )
         };
-        item.output.screenshot_crop_x_percent = geometry.crop.x * 100.0;
-        item.output.screenshot_crop_y_percent = geometry.crop.y * 100.0;
-        item.output.screenshot_crop_width_percent = geometry.crop.width * 100.0;
-        item.output.screenshot_crop_height_percent = geometry.crop.height * 100.0;
-        item.output.screenshot_image_x_percent = geometry.image_center_x * 100.0;
-        item.output.screenshot_image_y_percent = geometry.image_center_y * 100.0;
-        item.output.screenshot_image_width_percent = geometry.image_width * 100.0;
-        item.output.radius_percent = geometry.radius_percent;
+        apply_output_geometry(&mut item.output, geometry);
         // Keep the canvas presentation fields consistent with the selected item.
         let moved_output = item.output.clone();
         next.canvas = moved_output.clone();

@@ -20,6 +20,9 @@ import {
  */
 export type ToolPanelHandlers = {
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
+  onFrameReset?: () => void;
+  /** Size the output canvas to what a field asked for. */
+  onFrameSizeChange?: (size: { height?: number; width?: number }) => void;
   /** Place the selection at the size and position a field asked for. */
   onSelectionPlacementChange?: (placement: SelectionPlacementPatch) => void;
   onSelectionReset?: () => void;
@@ -35,6 +38,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.cursorEffects !== undefined) {
     on.onCursorEffectsChange?.(values.cursorEffects);
   }
+  if (values.frameSize !== undefined) on.onFrameSizeChange?.(values.frameSize);
+  if (values.resetFrame) on.onFrameReset?.();
   if (values.selectionOutput !== undefined) {
     on.onSelectionPlacementChange?.(values.selectionOutput);
   }

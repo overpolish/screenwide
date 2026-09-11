@@ -6,13 +6,13 @@ use super::{
     FRAME_EDGE_BOTTOM, FRAME_EDGE_CENTERED, FRAME_EDGE_LEFT, FRAME_EDGE_RIGHT, FRAME_EDGE_TOP,
     FRAME_MAX_AREA, FRAME_MIN_SIZE,
   },
-  FrameId, WorkspaceScene, WorldRect,
+  FrameId, NormalizedRect, WorkspaceScene, WorldRect,
 };
 
 #[derive(Clone, Debug)]
 pub struct FrameResizeResult {
   pub scene: WorkspaceScene,
-  pub old_rect: WorldRect,
+  #[cfg_attr(not(test), allow(dead_code))]
   pub new_rect: WorldRect,
   /// Integer output dimensions used by the media/render surface.
   pub output_size: (u32, u32),
@@ -99,23 +99,31 @@ pub fn resize_frame(
   if let Some(frame) = next.frames.iter_mut().find(|frame| frame.id == frame_id) {
     frame.rect = new_rect;
   }
+  // A layer is placed in output pixels and a resize never moves or rescales
+  // what the frame holds: it opens or clips space at whichever edges moved.
+  // The rect is kept normalised to its frame, so it is re-expressed against
+  // the new frame from the layer's world position, which is what stays put.
+  // A near edge or a centred resize moves the frame's corner, and the layer's
+  // offset from that corner changes by exactly the amount the corner moved.
   for layer in &mut next.layers {
     if layer.frame_id != frame_id {
       continue;
     }
-    let world = old_rect.normalized(
-      layer.rect.x,
-      layer.rect.y,
-      layer.rect.width,
-      layer.rect.height,
-    );
-    layer.rect = new_rect.to_normalized(world);
+    let world_x = old_rect.x + layer.rect.x * old_rect.width;
+    let world_y = old_rect.y + layer.rect.y * old_rect.height;
+    let world_width = layer.rect.width * old_rect.width;
+    let world_height = layer.rect.height * old_rect.height;
+    layer.rect = NormalizedRect {
+      x: (world_x - new_rect.x) / new_rect.width,
+      y: (world_y - new_rect.y) / new_rect.height,
+      width: world_width / new_rect.width,
+      height: world_height / new_rect.height,
+    };
   }
   next.revision = source.revision.saturating_add(1);
   next.validate()?;
   Ok(FrameResizeResult {
     scene: next,
-    old_rect,
     new_rect,
     output_size: (new_rect.width as u32, new_rect.height as u32),
   })

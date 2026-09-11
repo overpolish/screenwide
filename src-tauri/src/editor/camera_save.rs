@@ -8,25 +8,37 @@ use super::*;
 mod baked;
 pub(in crate::editor) use baked::save_baked_recording;
 
-pub(super) fn validate_camera_overlay(settings: CameraOverlaySettings) -> Result<(), String> {
+/// Check a baked overlay against the screen canvas it is placed in.
+///
+/// Placement is in that canvas's own pixels, so the bounds are the same shares
+/// of it the window has always been able to produce: nothing smaller than a
+/// thirtieth of the canvas, and nothing farther out than eight canvases.
+pub(super) fn validate_camera_overlay(
+  settings: CameraOverlaySettings,
+  canvas: (u32, u32),
+) -> Result<(), String> {
   let values = [
-    settings.camera_x_percent,
-    settings.camera_y_percent,
-    settings.camera_width_percent,
-    settings.frame_height_percent,
-    settings.frame_width_percent,
-    settings.frame_x_percent,
-    settings.frame_y_percent,
+    settings.camera_x,
+    settings.camera_y,
+    settings.camera_width,
+    settings.frame_height,
+    settings.frame_width,
+    settings.frame_x,
+    settings.frame_y,
     settings.radius_percent,
   ];
+  let width = f64::from(canvas.0.max(1));
+  let height = f64::from(canvas.1.max(1));
+  let horizontal = -width * 8.0..=width * 8.0;
+  let vertical = -height * 8.0..=height * 8.0;
   if values.iter().any(|value| !value.is_finite())
-    || !(-800.0..=800.0).contains(&settings.camera_x_percent)
-    || !(-800.0..=800.0).contains(&settings.camera_y_percent)
-    || !(3.0..=800.0).contains(&settings.camera_width_percent)
-    || !(3.0..=800.0).contains(&settings.frame_height_percent)
-    || !(3.0..=800.0).contains(&settings.frame_width_percent)
-    || !(-800.0..=800.0).contains(&settings.frame_x_percent)
-    || !(-800.0..=800.0).contains(&settings.frame_y_percent)
+    || !horizontal.contains(&settings.camera_x)
+    || !vertical.contains(&settings.camera_y)
+    || !(width * 0.03..=width * 8.0).contains(&settings.camera_width)
+    || !(height * 0.03..=height * 8.0).contains(&settings.frame_height)
+    || !(width * 0.03..=width * 8.0).contains(&settings.frame_width)
+    || !horizontal.contains(&settings.frame_x)
+    || !vertical.contains(&settings.frame_y)
     || !(0.0..=50.0).contains(&settings.radius_percent)
   {
     return Err("The camera overlay settings are not valid".to_owned());

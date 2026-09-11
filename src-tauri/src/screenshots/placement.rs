@@ -19,54 +19,55 @@ pub(crate) struct OutputPlacement {
   pub source_crop_y: i32,
 }
 
+/// Resolve a layer's stored pixel placement into whole output pixels.
+///
+/// Placement arrives in the output's own pixels, so the work here is limited
+/// to validating it, deriving the image's height from the source's aspect and
+/// rounding to the integer rectangles the compositor draws.
 pub(crate) fn output_placement(
   source_width: u32,
   source_height: u32,
   settings: &ScreenshotOutputSettings,
 ) -> Result<OutputPlacement, String> {
   let (output_width, output_height) = output_dimensions(settings)?;
-  let percentages = [
-    settings.screenshot_crop_height_percent,
-    settings.screenshot_crop_width_percent,
-    settings.screenshot_crop_x_percent,
-    settings.screenshot_crop_y_percent,
-    settings.screenshot_image_width_percent,
-    settings.screenshot_image_x_percent,
-    settings.screenshot_image_y_percent,
+  let pixels = [
+    settings.crop_height,
+    settings.crop_width,
+    settings.crop_x,
+    settings.crop_y,
+    settings.image_width,
+    settings.image_x,
+    settings.image_y,
   ];
   settings.source_crop.validate()?;
   let source_crop = settings.source_crop;
+  // Placement may sit outside the canvas, but never by more than the same
+  // eight canvases the percentages used to allow.
+  let width_limit = f64::from(output_width) * 8.0;
+  let height_limit = f64::from(output_height) * 8.0;
   if source_width == 0
     || source_height == 0
-    || percentages.iter().any(|value| !value.is_finite())
-    || !(1.0..=800.0).contains(&settings.screenshot_crop_width_percent)
-    || !(1.0..=800.0).contains(&settings.screenshot_crop_height_percent)
-    || settings.screenshot_crop_x_percent.abs() > 800.0
-    || settings.screenshot_crop_y_percent.abs() > 800.0
-    || !(1.0..=800.0).contains(&settings.screenshot_image_width_percent)
+    || pixels.iter().any(|value| !value.is_finite())
+    || !(1.0..=width_limit).contains(&settings.crop_width)
+    || !(1.0..=height_limit).contains(&settings.crop_height)
+    || settings.crop_x.abs() > width_limit
+    || settings.crop_y.abs() > height_limit
+    || !(1.0..=width_limit).contains(&settings.image_width)
+    || settings.image_x.abs() > width_limit
+    || settings.image_y.abs() > height_limit
   {
     return Err("The screenshot placement is not valid".to_owned());
   }
-  let image_width = (f64::from(output_width) * settings.screenshot_image_width_percent / 100.0)
-    .round()
-    .max(1.0) as u32;
+  let image_width = settings.image_width.round().max(1.0) as u32;
   let image_height = (f64::from(image_width) * f64::from(source_height) / f64::from(source_width))
     .round()
     .max(1.0) as u32;
-  let mut crop_height = (f64::from(output_height) * settings.screenshot_crop_height_percent / 100.0)
-    .round()
-    .max(1.0) as u32;
-  let mut crop_width = (f64::from(output_width) * settings.screenshot_crop_width_percent / 100.0)
-    .round()
-    .max(1.0) as u32;
-  let mut crop_x =
-    (f64::from(output_width) * settings.screenshot_crop_x_percent / 100.0).round() as i32;
-  let mut crop_y =
-    (f64::from(output_height) * settings.screenshot_crop_y_percent / 100.0).round() as i32;
-  let image_x = f64::from(output_width) * settings.screenshot_image_x_percent / 100.0
-    - f64::from(image_width) / 2.0;
-  let image_y = f64::from(output_height) * settings.screenshot_image_y_percent / 100.0
-    - f64::from(image_height) / 2.0;
+  let mut crop_height = settings.crop_height.round().max(1.0) as u32;
+  let mut crop_width = settings.crop_width.round().max(1.0) as u32;
+  let mut crop_x = settings.crop_x.round() as i32;
+  let mut crop_y = settings.crop_y.round() as i32;
+  let image_x = settings.image_x;
+  let image_y = settings.image_y;
   let source_crop_x = image_x + f64::from(image_width) * source_crop.x;
   let source_crop_y = image_y + f64::from(image_height) * source_crop.y;
   let source_crop_width = (f64::from(image_width) * source_crop.width)

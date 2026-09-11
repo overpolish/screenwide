@@ -46,17 +46,19 @@ pub(in crate::editor) fn bake_geometry(
     options.video.resolution_scale_percent,
     options.video.source_scale_percent,
   );
-  let frame_x = f64::from(output_width) * options.overlay.frame_x_percent / 100.0;
-  let frame_y = f64::from(output_height) * options.overlay.frame_y_percent / 100.0;
-  let frame_width = f64::from(output_width) * options.overlay.frame_width_percent / 100.0;
-  let frame_height = f64::from(output_height) * options.overlay.frame_height_percent / 100.0;
-  let camera_width = f64::from(output_width) * options.overlay.camera_width_percent / 100.0;
+  // The overlay is placed in the screen output's own pixels. A bake may render
+  // at a scaled size, so carry the placement across at that same scale.
+  let horizontal = f64::from(output_width) / f64::from(options.screen_width.max(1));
+  let vertical = f64::from(output_height) / f64::from(options.screen_height.max(1));
+  let frame_x = options.overlay.frame_x * horizontal;
+  let frame_y = options.overlay.frame_y * vertical;
+  let frame_width = options.overlay.frame_width * horizontal;
+  let frame_height = options.overlay.frame_height * vertical;
+  let camera_width = options.overlay.camera_width * horizontal;
   let camera_height =
     camera_width * f64::from(options.camera_height) / f64::from(options.camera_width.max(1));
-  let camera_x =
-    f64::from(output_width) * options.overlay.camera_x_percent / 100.0 - camera_width / 2.0;
-  let camera_y =
-    f64::from(output_height) * options.overlay.camera_y_percent / 100.0 - camera_height / 2.0;
+  let camera_x = options.overlay.camera_x * horizontal - camera_width / 2.0;
+  let camera_y = options.overlay.camera_y * vertical - camera_height / 2.0;
   // The frame is gently clamped into the camera image instead of rejected:
   // aspect-dependent defaults (and a crop-tool reset) can land the frame
   // slightly outside the camera, and failing every composition over that
@@ -110,25 +112,23 @@ mod tests {
 
   #[test]
   fn accepts_a_crop_fitted_in_a_rounded_region_preview() {
-    let screen_preview = (2_104.0, 720.0);
+    let screen = (2_700.0, 924.0);
     let camera_preview = (954.0, 720.0);
-    let frame_width_percent = 25.0;
-    let frame_height =
-      screen_preview.0 * frame_width_percent / 100.0 * camera_preview.1 / camera_preview.0;
-    let frame_height_percent = frame_height * 100.0 / screen_preview.1;
+    let frame_width = screen.0 * 0.25;
+    let frame_height = frame_width * camera_preview.1 / camera_preview.0;
 
     let geometry = bake_geometry(BakedVideoExportOptions {
       camera_drop_shadow: false,
       camera_height: 1_328,
       camera_width: 1_760,
       overlay: CameraOverlaySettings {
-        camera_width_percent: frame_width_percent,
-        camera_x_percent: 50.0,
-        camera_y_percent: 50.0,
-        frame_height_percent,
-        frame_width_percent,
-        frame_x_percent: 50.0 - frame_width_percent / 2.0,
-        frame_y_percent: 50.0 - frame_height_percent / 2.0,
+        camera_width: frame_width,
+        camera_x: screen.0 / 2.0,
+        camera_y: screen.1 / 2.0,
+        frame_height,
+        frame_width,
+        frame_x: (screen.0 - frame_width) / 2.0,
+        frame_y: (screen.1 - frame_height) / 2.0,
         radius_percent: 8.0,
       },
       screen_height: 924,
@@ -156,13 +156,13 @@ mod tests {
       camera_height: 1_080,
       camera_width: 1_920,
       overlay: CameraOverlaySettings {
-        camera_width_percent: 40.0,
-        camera_x_percent: 0.0,
-        camera_y_percent: 50.0,
-        frame_height_percent: 30.0,
-        frame_width_percent: 40.0,
-        frame_x_percent: -20.0,
-        frame_y_percent: 35.0,
+        camera_width: 768.0,
+        camera_x: 0.0,
+        camera_y: 540.0,
+        frame_height: 324.0,
+        frame_width: 768.0,
+        frame_x: -384.0,
+        frame_y: 378.0,
         radius_percent: 10.0,
       },
       screen_height: 1_080,

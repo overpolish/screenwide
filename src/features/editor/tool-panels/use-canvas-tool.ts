@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import {
   activePopupPanel,
   PopupPanelContent,
+  ToolPanelKind,
   usePopupPanelStore,
 } from "../../popup-panel/store";
 import { EditorKind } from "../types";
@@ -14,16 +15,19 @@ import { toolPanelLabel } from "./tool-panel-window";
 
 /**
  * Panel activation retires the canvas tool, including its native interaction.
- * The selection panel is the one that does not: it is the Select tool's own
- * controls, and the drag it describes has to stay live underneath it.
+ * The exceptions are the panels that are a canvas tool's own controls - Select
+ * and Frame: the drag each of them describes has to stay live underneath the
+ * panel that names it.
  */
+const canvasToolPanels: ToolPanelKind[] = ["frame", "selection"];
+
 const retiresCanvasTool = (
   content: PopupPanelContent | undefined,
   workspace: EditorKind,
 ) =>
   content?.kind === "tool" &&
   content.workspace === workspace &&
-  content.tool !== "selection";
+  !canvasToolPanels.includes(content.tool);
 
 export function useCanvasTool<T extends string>(
   workspace: EditorKind,

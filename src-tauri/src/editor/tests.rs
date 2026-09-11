@@ -216,37 +216,50 @@ fn accepts_only_the_camera_resolution_choices_the_window_offers() {
 
 #[test]
 fn accepts_only_camera_overlay_values_the_window_can_produce() {
+  let canvas = (1_000_u32, 1_000_u32);
   let valid = CameraOverlaySettings {
-    camera_x_percent: 50.0,
-    camera_y_percent: 50.0,
-    camera_width_percent: 60.0,
-    frame_height_percent: 40.0,
-    frame_width_percent: 60.0,
-    frame_x_percent: 40.0,
-    frame_y_percent: 30.0,
+    camera_x: 500.0,
+    camera_y: 500.0,
+    camera_width: 600.0,
+    frame_height: 400.0,
+    frame_width: 600.0,
+    frame_x: 400.0,
+    frame_y: 300.0,
     radius_percent: 50.0,
   };
-  assert!(validate_camera_overlay(valid).is_ok());
-  assert!(validate_camera_overlay(CameraOverlaySettings {
-    camera_width_percent: 2.0,
-    ..valid
-  })
+  assert!(validate_camera_overlay(valid, canvas).is_ok());
+  assert!(validate_camera_overlay(
+    CameraOverlaySettings {
+      camera_width: 20.0,
+      ..valid
+    },
+    canvas
+  )
   .is_err());
-  assert!(validate_camera_overlay(CameraOverlaySettings {
-    frame_width_percent: 801.0,
-    ..valid
-  })
+  assert!(validate_camera_overlay(
+    CameraOverlaySettings {
+      frame_width: 8_010.0,
+      ..valid
+    },
+    canvas
+  )
   .is_err());
-  assert!(validate_camera_overlay(CameraOverlaySettings {
-    camera_x_percent: -20.0,
-    frame_x_percent: -30.0,
-    ..valid
-  })
+  assert!(validate_camera_overlay(
+    CameraOverlaySettings {
+      camera_x: -200.0,
+      frame_x: -300.0,
+      ..valid
+    },
+    canvas
+  )
   .is_ok());
-  assert!(validate_camera_overlay(CameraOverlaySettings {
-    camera_x_percent: f64::NAN,
-    ..valid
-  })
+  assert!(validate_camera_overlay(
+    CameraOverlaySettings {
+      camera_x: f64::NAN,
+      ..valid
+    },
+    canvas
+  )
   .is_err());
 }
 

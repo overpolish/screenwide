@@ -7,6 +7,7 @@ import { ToolPanelKind } from "../../popup-panel/store";
 import { EditorKind } from "../types";
 
 import { CursorPanel } from "./cursor-panel";
+import { FramePanel } from "./frame-panel";
 import { SelectionPanel } from "./selection-panel";
 import { usePanelShortcuts } from "./use-panel-shortcuts";
 
@@ -15,6 +16,7 @@ const toolPanels: Record<
   (props: { workspace: EditorKind }) => ReactNode
 > = {
   cursor: CursorPanel,
+  frame: FramePanel,
   selection: SelectionPanel,
 };
 

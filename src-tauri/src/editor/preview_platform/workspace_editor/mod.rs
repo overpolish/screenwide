@@ -38,8 +38,8 @@ pub use display::{
 #[allow(unused_imports)]
 pub use frame_resize::FrameResizeResult;
 pub use geometry::{
-  apply_layer_gesture, fit_canvas_to_layers, rebase_layer_geometry, GestureOperation,
-  LayerGeometry, NormalizedRect, WorldRect,
+  apply_layer_gesture, fit_canvas_to_layers, GestureOperation, LayerGeometry, NormalizedRect,
+  WorldRect,
 };
 #[allow(unused_imports)]
 pub use hit_test::hit_test_display;

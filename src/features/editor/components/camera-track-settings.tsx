@@ -4,7 +4,7 @@
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import {
   RecordingOutputSettings,
-  resizeScreenshotOutputCentered,
+  resizeScreenshotCanvas,
   ScreenshotOutputSettings,
 } from "../screenshot-output";
 import { EditorArtifact } from "../types";
@@ -53,10 +53,9 @@ export function CameraTrackSettings({
               : (width, height) => {
                   onRecordingOutputChange?.(
                     "camera",
-                    resizeScreenshotOutputCentered({
+                    resizeScreenshotCanvas({
                       height,
                       settings: output,
-                      source,
                       width,
                     }),
                   );

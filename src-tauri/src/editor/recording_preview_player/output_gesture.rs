@@ -3,8 +3,9 @@
 
 use super::layout::PreviewPane;
 use crate::editor::preview_platform::workspace_editor::{
-  apply_layer_gesture, fit_canvas_to_layers, GestureOperation, LayerGeometry, NormalizedRect,
+  apply_layer_gesture, fit_canvas_to_layers, GestureOperation, NormalizedRect,
 };
+use crate::editor::preview_workspace_model::{apply_output_geometry, output_geometry};
 use crate::screenshots::ScreenshotOutputSettings;
 
 #[allow(clippy::too_many_arguments)]
@@ -19,18 +20,7 @@ pub(super) fn apply(
   delta: (f64, f64),
   auto_fit_edge: u32,
 ) -> bool {
-  let start_geometry = LayerGeometry {
-    crop: NormalizedRect {
-      x: start.screenshot_crop_x_percent / 100.0,
-      y: start.screenshot_crop_y_percent / 100.0,
-      width: start.screenshot_crop_width_percent / 100.0,
-      height: start.screenshot_crop_height_percent / 100.0,
-    },
-    image_center_x: start.screenshot_image_x_percent / 100.0,
-    image_center_y: start.screenshot_image_y_percent / 100.0,
-    image_width: start.screenshot_image_width_percent / 100.0,
-    radius_percent: start.radius_percent,
-  };
+  let start_geometry = output_geometry(start);
   let mut geometry = if recenter_mode && operation == GestureOperation::Resize {
     let Some(source) = source else {
       return false;
@@ -67,13 +57,6 @@ pub(super) fn apply(
     output.width = width;
     output.height = height;
   }
-  output.screenshot_crop_x_percent = geometry.crop.x * 100.0;
-  output.screenshot_crop_y_percent = geometry.crop.y * 100.0;
-  output.screenshot_crop_width_percent = geometry.crop.width * 100.0;
-  output.screenshot_crop_height_percent = geometry.crop.height * 100.0;
-  output.screenshot_image_x_percent = geometry.image_center_x * 100.0;
-  output.screenshot_image_y_percent = geometry.image_center_y * 100.0;
-  output.screenshot_image_width_percent = geometry.image_width * 100.0;
-  output.radius_percent = geometry.radius_percent;
+  apply_output_geometry(output, geometry);
   true
 }

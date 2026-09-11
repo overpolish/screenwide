@@ -6,9 +6,11 @@ use super::{AUTO_FIT_COMMIT_EDGE, AUTO_FIT_MOVE_EDGE};
 use crate::editor::preview_platform::{
   workspace_editor::{
     apply_layer_gesture, fit_canvas_to_layers, GestureOperation as WorkspaceGestureOperation,
-    LayerGeometry, NormalizedRect,
   },
   SelectionGestureOperation, SelectionGesturePhase,
+};
+use crate::editor::preview_workspace_model::{
+  apply_camera_geometry, apply_output_geometry, camera_geometry, output_canvas, output_geometry,
 };
 impl PreviewPlayerManager {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -121,7 +123,6 @@ impl PreviewPlayerManager {
               &scene,
               &snapshot.recording_output,
               snapshot.camera_overlay,
-              snapshot.bake_camera,
               layer_id,
               edges,
               (delta_x, delta_y),
@@ -152,66 +153,29 @@ impl PreviewPlayerManager {
             }
             _ => return Ok(()),
           };
+          // A baked overlay is placed in the screen output's own pixels, so
+          // its canvas is the one the gesture is normalized against.
+          let mut canvas = output_canvas(&snapshot.recording_output.primary);
           let mut geometry = apply_layer_gesture(
-            LayerGeometry {
-              crop: NormalizedRect {
-                x: start.frame_x_percent / 100.0,
-                y: start.frame_y_percent / 100.0,
-                width: start.frame_width_percent / 100.0,
-                height: start.frame_height_percent / 100.0,
-              },
-              image_center_x: start.camera_x_percent / 100.0,
-              image_center_y: start.camera_y_percent / 100.0,
-              image_width: start.camera_width_percent / 100.0,
-              radius_percent: start.radius_percent,
-            },
+            camera_geometry(start, canvas),
             operation,
             (delta_x, delta_y),
             scale,
           );
           if operation == WorkspaceGestureOperation::Move && edges & AUTO_FIT_MOVE_EDGE != 0 {
             let primary = &snapshot.recording_output.primary;
-            let primary_geometry = LayerGeometry {
-              crop: NormalizedRect {
-                x: primary.screenshot_crop_x_percent / 100.0,
-                y: primary.screenshot_crop_y_percent / 100.0,
-                width: primary.screenshot_crop_width_percent / 100.0,
-                height: primary.screenshot_crop_height_percent / 100.0,
-              },
-              image_center_x: primary.screenshot_image_x_percent / 100.0,
-              image_center_y: primary.screenshot_image_y_percent / 100.0,
-              image_width: primary.screenshot_image_width_percent / 100.0,
-              radius_percent: primary.radius_percent,
-            };
             let ((width, height), fitted) = fit_canvas_to_layers(
               (primary.width, primary.height),
-              &[primary_geometry, geometry],
+              &[output_geometry(primary), geometry],
             );
             let fitted_primary = fitted[0];
             geometry = fitted[1];
             next.recording_output.primary.width = width;
             next.recording_output.primary.height = height;
-            next.recording_output.primary.screenshot_crop_x_percent = fitted_primary.crop.x * 100.0;
-            next.recording_output.primary.screenshot_crop_y_percent = fitted_primary.crop.y * 100.0;
-            next.recording_output.primary.screenshot_crop_width_percent =
-              fitted_primary.crop.width * 100.0;
-            next.recording_output.primary.screenshot_crop_height_percent =
-              fitted_primary.crop.height * 100.0;
-            next.recording_output.primary.screenshot_image_x_percent =
-              fitted_primary.image_center_x * 100.0;
-            next.recording_output.primary.screenshot_image_y_percent =
-              fitted_primary.image_center_y * 100.0;
-            next.recording_output.primary.screenshot_image_width_percent =
-              fitted_primary.image_width * 100.0;
+            apply_output_geometry(&mut next.recording_output.primary, fitted_primary);
+            canvas = output_canvas(&next.recording_output.primary);
           }
-          next.camera_overlay.frame_x_percent = geometry.crop.x * 100.0;
-          next.camera_overlay.frame_y_percent = geometry.crop.y * 100.0;
-          next.camera_overlay.frame_width_percent = geometry.crop.width * 100.0;
-          next.camera_overlay.frame_height_percent = geometry.crop.height * 100.0;
-          next.camera_overlay.camera_x_percent = geometry.image_center_x * 100.0;
-          next.camera_overlay.camera_y_percent = geometry.image_center_y * 100.0;
-          next.camera_overlay.camera_width_percent = geometry.image_width * 100.0;
-          next.camera_overlay.radius_percent = geometry.radius_percent;
+          apply_camera_geometry(&mut next.camera_overlay, geometry, canvas);
           *settings
             .write()
             .map_err(|_| "The recording preview composition is unavailable".to_owned())? = next;

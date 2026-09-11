@@ -130,13 +130,13 @@ pub(super) fn needs_composition(
     || settings.height != source_height
     || settings.background_radius_percent > 0.0
     || settings.radius_percent > 0.0
-    || (settings.screenshot_crop_height_percent - 100.0).abs() > 0.000_001
-    || (settings.screenshot_crop_width_percent - 100.0).abs() > 0.000_001
-    || settings.screenshot_crop_x_percent.abs() > 0.000_001
-    || settings.screenshot_crop_y_percent.abs() > 0.000_001
-    || (settings.screenshot_image_width_percent - 100.0).abs() > 0.000_001
-    || (settings.screenshot_image_x_percent - 50.0).abs() > 0.000_001
-    || (settings.screenshot_image_y_percent - 50.0).abs() > 0.000_001
+    || (settings.crop_height - f64::from(settings.height)).abs() > 0.000_001
+    || (settings.crop_width - f64::from(settings.width)).abs() > 0.000_001
+    || settings.crop_x.abs() > 0.000_001
+    || settings.crop_y.abs() > 0.000_001
+    || (settings.image_width - f64::from(settings.width)).abs() > 0.000_001
+    || settings.image_x.abs() > 0.000_001
+    || settings.image_y.abs() > 0.000_001
     || settings.recenter_inset_color.is_some()
     || settings.source_crop.x.abs() > 0.000_001
     || settings.source_crop.y.abs() > 0.000_001
@@ -154,8 +154,15 @@ mod tests {
       background_color: "#000000".to_owned(),
       background_type: "color".to_owned(),
       background_radius_percent: 0.0,
+      crop_height: f64::from(height),
+      crop_width: f64::from(width),
+      crop_x: 0.0,
+      crop_y: 0.0,
       drop_shadow: false,
       height,
+      image_width: f64::from(width),
+      image_x: 0.0,
+      image_y: 0.0,
       legacy_mode: None,
       mesh_colors: Vec::new(),
       mesh_locked_colors: Vec::new(),
@@ -164,13 +171,6 @@ mod tests {
       mesh_warp_percent: 0.0,
       radius_percent: 0.0,
       recenter_inset_color: None,
-      screenshot_crop_height_percent: 100.0,
-      screenshot_crop_width_percent: 100.0,
-      screenshot_crop_x_percent: 0.0,
-      screenshot_crop_y_percent: 0.0,
-      screenshot_image_width_percent: 100.0,
-      screenshot_image_x_percent: 50.0,
-      screenshot_image_y_percent: 50.0,
       source_crop: NormalizedSourceRect {
         height: 1.0,
         width: 1.0,

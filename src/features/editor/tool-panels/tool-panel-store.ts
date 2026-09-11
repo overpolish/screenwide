@@ -26,6 +26,17 @@ export type ToolPanelSelection = {
 };
 
 /**
+ * What the frame panel shows: the output canvas the workspace renders into,
+ * and the source size a reset puts it back to.
+ */
+export type ToolPanelFrame = {
+  height: number;
+  sourceHeight: number;
+  sourceWidth: number;
+  width: number;
+};
+
+/**
  * Everything the tool panels show that the editor window owns.
  *
  * One snapshot per workspace, published by the editor and read by the panel
@@ -34,6 +45,8 @@ export type ToolPanelSelection = {
  */
 export type ToolPanelSnapshot = {
   cursorEffects: CursorEffectSettings;
+  /** Null until the workspace has an output canvas to size. */
+  frame: ToolPanelFrame | null;
   hasCursorData: boolean;
   isSaving: boolean;
   /** Null while the workspace has nothing selected to place. */
@@ -46,6 +59,10 @@ export type ToolPanelSnapshot = {
 export type ToolPanelPatch = Partial<
   Pick<ToolPanelSnapshot, "cursorEffects">
 > & {
+  /** Size the output canvas, leaving what is in it where it sits. */
+  frameSize?: { height?: number; width?: number };
+  /** Put the canvas back to the source size, refitting what is in it. */
+  resetFrame?: true;
   /** Put the selection's size and position back to its source framing. */
   resetSelection?: true;
   selectionOutput?: SelectionPlacementPatch;
@@ -64,6 +81,7 @@ export type ToolPanelMessage = {
 
 export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   cursorEffects: DEFAULT_CURSOR_EFFECTS,
+  frame: null,
   hasCursorData: false,
   isSaving: false,
   selection: null,

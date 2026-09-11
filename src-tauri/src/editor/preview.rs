@@ -40,7 +40,13 @@ pub async fn estimate_recording_export(
   if compression > 4 || camera_compression > 4 {
     return Err("Compression must be between 0 and 4".to_owned());
   }
-  validate_camera_overlay(camera_overlay)?;
+  validate_camera_overlay(
+    camera_overlay,
+    (
+      recording_output.primary.width,
+      recording_output.primary.height,
+    ),
+  )?;
 
   tauri::async_runtime::spawn_blocking(move || {
     let state = app.state::<EditorState>();

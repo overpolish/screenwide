@@ -62,7 +62,7 @@ const target = ({
 }): EditorSelectionTarget => ({
   apply,
   selection: {
-    ...selectionPlacement(settings, source),
+    ...selectionPlacement(settings),
     kind,
     label,
     sourceHeight: source.height,
@@ -151,9 +151,7 @@ export const selectionPanelHandlers = (
 > => ({
   onSelectionPlacementChange: (placement) => {
     console.debug("[selection-panel] placement request", {
-      before: target
-        ? selectionPlacement(target.settings, target.source)
-        : null,
+      before: target ? selectionPlacement(target.settings) : null,
       hasTarget: Boolean(target),
       placement,
     });
@@ -163,10 +161,7 @@ export const selectionPanelHandlers = (
       target.source,
       placement,
     );
-    console.debug(
-      "[selection-panel] applying",
-      selectionPlacement(next, target.source),
-    );
+    console.debug("[selection-panel] applying", selectionPlacement(next));
     target.apply(next);
   },
   // The reset the Select tool has always had: the layer back to the framing

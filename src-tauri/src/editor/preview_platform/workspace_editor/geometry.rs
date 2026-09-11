@@ -12,20 +12,13 @@ pub struct WorldRect {
 }
 
 impl WorldRect {
+  #[cfg_attr(not(test), allow(dead_code))]
   pub fn normalized(self, x: f64, y: f64, width: f64, height: f64) -> Self {
     Self {
       x: self.x + x * self.width,
       y: self.y + y * self.height,
       width: width * self.width,
       height: height * self.height,
-    }
-  }
-  pub fn to_normalized(self, world: WorldRect) -> NormalizedRect {
-    NormalizedRect {
-      x: (world.x - self.x) / self.width,
-      y: (world.y - self.y) / self.height,
-      width: world.width / self.width,
-      height: world.height / self.height,
     }
   }
 }
@@ -70,8 +63,8 @@ pub fn fit_canvas_to_layers(
         width: layer.crop.width * width / next_width_f,
         height: layer.crop.height * height / next_height_f,
       },
-      image_center_x: (layer.image_center_x * width - left) / next_width_f,
-      image_center_y: (layer.image_center_y * height - top) / next_height_f,
+      image_x: (layer.image_x * width - left) / next_width_f,
+      image_y: (layer.image_y * height - top) / next_height_f,
       image_width: layer.image_width * width / next_width_f,
       radius_percent: layer.radius_percent,
     })
@@ -88,13 +81,15 @@ pub enum GestureOperation {
 
 /// The complete editable geometry of a visual layer, normalized to its frame.
 /// Keeping the crop and underlying image transform together prevents pixels
-/// and OSCs from being advanced by different gesture equations.
+/// and OSCs from being advanced by different gesture equations. The image is
+/// given by its top left corner and its width, as the settings store it; its
+/// height follows the source's aspect and is not carried here.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LayerGeometry {
   pub crop: NormalizedRect,
-  pub image_center_x: f64,
-  pub image_center_y: f64,
   pub image_width: f64,
+  pub image_x: f64,
+  pub image_y: f64,
   pub radius_percent: f64,
 }
 
@@ -113,8 +108,8 @@ pub fn apply_layer_gesture(
     GestureOperation::Move => {
       next.crop.x += delta.0;
       next.crop.y += delta.1;
-      next.image_center_x += delta.0;
-      next.image_center_y += delta.1;
+      next.image_x += delta.0;
+      next.image_y += delta.1;
     }
     GestureOperation::Resize => {
       let scale = scale.clamp(0.0, 8.0);
@@ -134,35 +129,11 @@ pub fn apply_layer_gesture(
         width: start.crop.width * scale,
         height: start.crop.height * scale,
       };
-      next.image_center_x = transform(start.image_center_x, start.crop.x, next_x);
-      next.image_center_y = transform(start.image_center_y, start.crop.y, next_y);
+      next.image_x = transform(start.image_x, start.crop.x, next_x);
+      next.image_y = transform(start.image_y, start.crop.y, next_y);
       next.image_width = start.image_width * scale;
     }
     GestureOperation::Radius => next.radius_percent = scale.clamp(0.0, 50.0),
   }
   next
-}
-
-/// Rebase a normalized layer geometry while preserving its absolute
-/// workspace-space crop and image transform.
-pub fn rebase_layer_geometry(
-  geometry: LayerGeometry,
-  old_frame: WorldRect,
-  new_frame: WorldRect,
-) -> LayerGeometry {
-  let crop_world = old_frame.normalized(
-    geometry.crop.x,
-    geometry.crop.y,
-    geometry.crop.width,
-    geometry.crop.height,
-  );
-  let image_center_world =
-    old_frame.normalized(geometry.image_center_x, geometry.image_center_y, 0.0, 0.0);
-  LayerGeometry {
-    crop: new_frame.to_normalized(crop_world),
-    image_center_x: (image_center_world.x - new_frame.x) / new_frame.width,
-    image_center_y: (image_center_world.y - new_frame.y) / new_frame.height,
-    image_width: geometry.image_width * old_frame.width / new_frame.width,
-    radius_percent: geometry.radius_percent,
-  }
 }

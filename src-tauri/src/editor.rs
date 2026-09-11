@@ -330,16 +330,18 @@ pub struct RecordingCamera {
   pub width: u32,
 }
 
+/// A baked camera's placement, in the screen output's own pixels: the camera
+/// image by its centre and width, and the crop window that frames it.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CameraOverlaySettings {
-  pub camera_x_percent: f64,
-  pub camera_y_percent: f64,
-  pub camera_width_percent: f64,
-  pub frame_height_percent: f64,
-  pub frame_width_percent: f64,
-  pub frame_x_percent: f64,
-  pub frame_y_percent: f64,
+  pub camera_x: f64,
+  pub camera_y: f64,
+  pub camera_width: f64,
+  pub frame_height: f64,
+  pub frame_width: f64,
+  pub frame_x: f64,
+  pub frame_y: f64,
   pub radius_percent: f64,
 }
 

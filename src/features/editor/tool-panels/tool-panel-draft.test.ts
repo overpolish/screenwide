@@ -14,6 +14,7 @@ const snapshot = (
 ): ToolPanelSnapshot => ({
   acknowledgedSeq,
   cursorEffects: { ...DEFAULT_CURSOR_EFFECTS, sizePercent },
+  frame: null,
   hasCursorData: true,
   isSaving: false,
   selection: null,
@@ -126,5 +127,67 @@ describe("selection placement while a field is open", () => {
 
     expect(resolved.selection).toMatchObject(live);
     expect(resolved).not.toHaveProperty("resetSelection");
+  });
+});
+
+describe("canvas size while a field is open", () => {
+  const sized = (
+    frame: { height: number; width: number },
+    acknowledgedSeq = 0,
+  ): ToolPanelSnapshot => ({
+    ...snapshot(100, acknowledgedSeq),
+    frame: { ...frame, sourceHeight: 2338, sourceWidth: 3600 },
+  });
+  const live = { height: 2338, width: 3600 };
+
+  it("holds only the field being edited over a live frame drag", () => {
+    const editing: ToolPanelDraft = {
+      seq: 4,
+      values: { frameSize: { width: 1800 } },
+      workspace: "recording",
+    };
+
+    expect(
+      resolve(sized({ height: 1200, width: 1849 }), editing).frame,
+    ).toEqual({
+      height: 1200,
+      sourceHeight: 2338,
+      sourceWidth: 3600,
+      width: 1800,
+    });
+  });
+
+  it("lets the editor's answer through once it is acknowledged", () => {
+    const editing: ToolPanelDraft = {
+      seq: 4,
+      values: { frameSize: { width: 1800 } },
+      workspace: "recording",
+    };
+
+    expect(resolve(sized(live, 4), editing).frame).toMatchObject(live);
+  });
+
+  it("never shows a frame reset as a local value", () => {
+    const reset: ToolPanelDraft = {
+      seq: 5,
+      values: { resetFrame: true },
+      workspace: "recording",
+    };
+    const resolved = resolve(sized(live), reset);
+
+    expect(resolved.frame).toMatchObject(live);
+    expect(resolved).not.toHaveProperty("resetFrame");
+  });
+
+  it("leaves a selection edit alone while a size is pending", () => {
+    const editing: ToolPanelDraft = {
+      seq: 6,
+      values: { frameSize: { height: 1000 } },
+      workspace: "recording",
+    };
+
+    expect(
+      resolve(placed({ height: 2338, width: 3600, x: 0, y: 0 }), editing),
+    ).toMatchObject({ frame: null, selection: { width: 3600 } });
   });
 });
