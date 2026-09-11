@@ -87,3 +87,26 @@ pub fn reset_screenshot_preview_view(
   }
   Ok(())
 }
+
+/// Screenshot counterpart of `set_recording_preview_fit_basis`: moves the
+/// basis a double-click reset returns to without moving the view.
+#[tauri::command]
+pub fn set_screenshot_preview_fit_basis(
+  state: tauri::State<'_, ScreenshotPreviewState>,
+  session_id: u64,
+  fit_width: Option<f64>,
+) -> Result<(), String> {
+  let surface = {
+    let manager = state
+      .0
+      .lock()
+      .map_err(|_| "The screenshot preview is unavailable".to_owned())?;
+    manager.require_session(session_id)?;
+    manager.surface.clone()
+  };
+  if let Some(surface) = surface {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    surface.set_editor_fit_basis(fit_width);
+  }
+  Ok(())
+}

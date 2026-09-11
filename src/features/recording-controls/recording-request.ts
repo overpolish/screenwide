@@ -50,7 +50,9 @@ export const startRecordingOptions = (): StartRecordingOptions => {
     mode: recordingMode,
     monitorId: selectedMonitor?.id ?? null,
     region: recordingMode === "region" ? region : null,
-    showCursor: true,
+    // The recording never carries the system cursor: cursor movement is
+    // recorded beside it and Screenwide's own cursor is drawn at export.
+    showCursor: false,
     systemAudio: inputs.systemAudio,
     systemAudioApplicationIds: inputs.systemAudio
       ? selectedApplications.map((source) => source.id)

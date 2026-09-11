@@ -8,6 +8,18 @@ import { growEditorForPanel } from "../api";
 
 export const toolPanelGutter = toolPanelWidth + popupPanelSpacing;
 
+/** At minimum width the workspace is width-limited. Adding only the gutter
+ * grows the picture too, so request its height-limited width in the same move. */
+export function panelGrowthDelta(
+  viewportWidth: number,
+  fitWidth: number,
+  gutter: number,
+) {
+  return Number.isFinite(fitWidth) && fitWidth > 0
+    ? Math.max(gutter, fitWidth + gutter - viewportWidth)
+    : gutter;
+}
+
 /** Grow once, waiting for the webview to receive its new bounds before fitting.
  * A constrained display can refuse growth; fitting then uses the space left.
  * Closing a panel does not undo either the window size or the captured fit. */

@@ -13,7 +13,10 @@ import {
   stopScreenshotPreview,
 } from "./api";
 import { fitPreviewPane, PreviewPaneFit } from "./components/preview-transform";
-import { resetScreenshotPreviewView } from "./preview-view-api";
+import {
+  resetScreenshotPreviewView,
+  setScreenshotPreviewFitBasis,
+} from "./preview-view-api";
 import {
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
@@ -439,13 +442,14 @@ export function useScreenshotPreviewSurface({
     return clearBackdropMasks;
   }, [isEnabled]);
 
-  const fitPreview = useNativePreviewFit({
+  const { fitPreview, setFitBasis } = useNativePreviewFit({
     layoutRef,
     measureRef,
     reset: resetScreenshotPreviewView,
     sessionIdRef,
+    setBasis: setScreenshotPreviewFitBasis,
     startedRef,
   });
 
-  return { fitPreview };
+  return { fitPreview, setFitBasis };
 }

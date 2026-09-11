@@ -46,8 +46,9 @@ import { useRecordingTimelineThumbnails } from "../use-recording-timeline-thumbn
 
 import { AudioVisualizer } from "./audio-visualizer";
 import { BakedCameraPreviewViewport } from "./baked-camera-preview-viewport";
+import { useProvideEditorToolbarTools } from "./editor-toolbar-context";
 import { useRegisterPreviewFit } from "./preview-fit-context";
-import { PreviewToolbar, RecordingOutputSize } from "./preview-toolbar";
+import { PreviewZoomField, RecordingOutputSize } from "./preview-readouts";
 import {
   RecordingCanvasTools,
   RecordingCanvasTool,
@@ -943,7 +944,7 @@ export function NativeRecordingPreview({
     timelineEdit: recordingTimelineEdit,
     zoomPercent,
   });
-  useRegisterPreviewFit(player.fitPreview);
+  useRegisterPreviewFit(player.fitPreview, player.setFitBasis);
   const isPlaying = player.isPlaying;
   const getPlayerPositionMs = player.getPositionMs;
   previewPlayingRef.current = isPlaying;
@@ -1100,10 +1101,22 @@ export function NativeRecordingPreview({
     changeCanvasTool(canvasToolRef.current === "recenter" ? null : "recenter");
   }, [changeCanvasTool, pause]);
 
+  // The readouts sit at the left of the transport row. The size subscribes to
+  // the output channel itself, so a frame resize running at pointer rate never
+  // reaches the memoized controls around it.
+  const readouts = useMemo(
+    () => (
+      <>
+        <RecordingOutputSize />
+        <PreviewZoomField onChange={setZoomPercent} zoomPercent={zoomPercent} />
+      </>
+    ),
+    [zoomPercent],
+  );
+
   // The tools read the committed `recordingOutput`, never the resize draft, so
-  // holding the element keeps the memoized toolbar's props stable mid-gesture.
-  // Held as one element so the toolbar's memo sees the same prop every render.
-  const outputSize = useMemo(() => <RecordingOutputSize />, []);
+  // holding the element keeps the title bar's tools stable mid-gesture. Held as
+  // one element so the bar re-renders only when a tool actually changes.
   const cropToggle = useMemo(
     () =>
       visiblePaneEntries.length > 0 ? (
@@ -1114,40 +1127,29 @@ export function NativeRecordingPreview({
             </ButtonGroup>
           ) : null}
           <RecordingCanvasTools
-            activeTrack={activeVideoTrack}
-            bakeCamera={bakeCamera}
-            cameraPane={cameraPane}
             isEnabled={canEditActiveTrack}
             isFrameEnabled={canResizeActiveTrack}
             isRecenterEnabled={canRecenterPrimary}
             isSelectEnabled={visiblePaneEntries.length > 0}
-            onCameraOverlayReset={onCameraOverlayChange}
-            onChange={onRecordingOutputChange}
-            onRecenterReset={recenter.reset}
             onToolChange={changeCanvasTool}
-            outputs={recordingOutput}
-            screenPane={screenPane}
             tool={canvasTool}
           />
         </>
       ) : undefined,
     [
-      activeVideoTrack,
-      bakeCamera,
-      cameraPane,
       canEditActiveTrack,
       canResizeActiveTrack,
       canRecenterPrimary,
       canvasTool,
       changeCanvasTool,
       hasCursorData,
-      onCameraOverlayChange,
-      onRecordingOutputChange,
-      recenter.reset,
-      recordingOutput,
-      screenPane,
       visiblePaneEntries.length,
     ],
+  );
+  // The tools belong to the title bar above, the way a unified toolbar carries
+  // them. They are offered only while there is a picture to point them at.
+  useProvideEditorToolbarTools(
+    visibleLayout && visibleLayout.panes.length > 0 ? cropToggle : null,
   );
   useEffect(() => {
     playhead.publish(0, 0);
@@ -1229,13 +1231,6 @@ export function NativeRecordingPreview({
   return (
     <div className="flex min-h-0 grow flex-col">
       <section className="relative flex min-h-0 min-w-0 grow flex-col">
-        {visibleLayout && visibleLayout.panes.length > 0 ? (
-          <PreviewToolbar
-            outputSize={outputSize}
-            tools={cropToggle}
-            zoomPercent={zoomPercent}
-          />
-        ) : null}
         <div className="flex min-h-0 grow items-stretch justify-center">
           {!layout ? (
             <div className="flex grow items-center justify-center gap-3 text-xs text-muted">
@@ -1318,6 +1313,7 @@ export function NativeRecordingPreview({
             onPlaybackRateChange={player.setPlaybackRate}
             playbackRate={player.playbackRate}
             playhead={playhead}
+            readouts={readouts}
           />
           {isPreparingAudio ? (
             <div className="flex h-24 shrink-0 items-center justify-center gap-2 text-xs text-muted">

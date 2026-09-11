@@ -9,7 +9,10 @@ import {
   setRecordingPreviewEditorSuspended,
   setRecordingPreviewZoom,
 } from "./api";
-import { resetRecordingPreviewView } from "./preview-view-api";
+import {
+  resetRecordingPreviewView,
+  setRecordingPreviewFitBasis,
+} from "./preview-view-api";
 import { RecordingOutputSettings } from "./screenshot-output";
 import { CameraOverlaySettings } from "./types";
 import { useNativePreviewFit } from "./use-native-preview-fit";
@@ -692,14 +695,15 @@ export function useRecordingPreviewSurface({
     selectionTargets,
   ]);
 
-  const fitPreview = useNativePreviewFit({
+  const { fitPreview, setFitBasis } = useNativePreviewFit({
     layoutRef,
     measureRef,
     onError,
     reset: resetRecordingPreviewView,
     sessionIdRef,
+    setBasis: setRecordingPreviewFitBasis,
     startedRef,
   });
 
-  return { fitPreview };
+  return { fitPreview, setFitBasis };
 }

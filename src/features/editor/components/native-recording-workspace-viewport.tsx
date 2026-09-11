@@ -84,6 +84,12 @@ export function NativeRecordingWorkspaceViewport({
     <div
       aria-label={ariaLabel}
       className={`relative flex min-h-0 grow overflow-hidden ${isSelecting ? "cursor-move" : ""}`}
+      data-preview-fit-width={
+        workspaceHeight > 0
+          ? (availableHeight * workspaceWidth) / workspaceHeight +
+            VIEWPORT_GUTTER * 2
+          : undefined
+      }
       data-recording-preview-viewport
       ref={viewportRef}
       role="img"

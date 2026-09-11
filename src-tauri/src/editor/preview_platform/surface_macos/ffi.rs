@@ -113,6 +113,10 @@ unsafe extern "C" {
     handle: *mut std::ffi::c_void,
     fit_width: f64,
   );
+  pub(super) fn screenwide_preview_surface_set_editor_fit_basis(
+    handle: *mut std::ffi::c_void,
+    fit_width: f64,
+  );
   pub(super) fn screenwide_preview_surface_set_selection_visible(
     handle: *mut std::ffi::c_void,
     visible: i32,

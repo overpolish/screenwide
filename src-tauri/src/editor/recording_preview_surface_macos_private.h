@@ -192,6 +192,10 @@ typedef struct {
 @property(nonatomic) double editorPanX;
 @property(nonatomic) double editorPanY;
 @property(nonatomic) double editorZoom;
+/// The width the double-click reset fits into: the space beside an open tool
+/// panel while one holds the basis, 0 for the whole viewport. Only the fit
+/// commands move it; a resize or a gesture never does.
+@property(nonatomic) double editorPanelFitWidth;
 @property(nonatomic) screenwide_preview_transform_callback transformCallback;
 @property(nonatomic) void *transformContext;
 @property(nonatomic) screenwide_preview_selection_gesture_callback selectionGestureCallback;

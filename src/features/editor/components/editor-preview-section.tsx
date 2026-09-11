@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { useRef, useState } from "react";
 
-import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import {
   scaledDimensions,
   scaledVideoDimensions,
@@ -24,8 +22,7 @@ import {
   RecordingSectionProps,
   ScreenshotSectionProps,
 } from "./editor-preview-section-props";
-import { PreviewToolToggle } from "./preview-tool-toggle";
-import { PreviewOutputSize, PreviewToolbar } from "./preview-toolbar";
+import { useProvideEditorToolbarTools } from "./editor-toolbar-context";
 import { PreviewViewport } from "./preview-viewport";
 import {
   createRecordingOutputDimensionsChannel,
@@ -35,11 +32,10 @@ import {
   deleteScreenshotLayer,
   moveScreenshotLayer,
 } from "./screenshot-layer-actions";
-import { ScreenshotToolReset } from "./screenshot-tool-reset";
+import { ScreenshotStatusBar } from "./screenshot-status-bar";
+import { ScreenshotTool, useScreenshotTools } from "./screenshot-tools";
 import { ScrubPreview } from "./scrub-preview";
 import { useScreenshotRecenter } from "./use-screenshot-recenter";
-
-type ScreenshotTool = "canvas" | "crop" | "recenter" | "select" | null;
 
 /** The toolbar's own name for a tool, in the registry's vocabulary. */
 const screenshotToolId = (tool: ScreenshotTool): EditorToolId | null =>
@@ -174,6 +170,17 @@ export function ScreenshotSection({
     };
     onOutputChange?.(next, selectedItem.id);
   };
+  const tools = useScreenshotTools({
+    newestItemId,
+    onSelectedItemChange,
+    selectedItemId,
+    setRecenterSelected,
+    setTool,
+    tool,
+  });
+  // The tools are drawn in the title bar, the way a unified toolbar carries
+  // them, while their behaviour stays here with the picture they act on.
+  useProvideEditorToolbarTools(tools);
   useEditorWindowShortcuts({
     onDelete: deleteSelectedLayer,
     onMoveBackward: () => {
@@ -203,74 +210,6 @@ export function ScreenshotSection({
 
   return (
     <div className="flex min-h-0 min-w-0 grow flex-col">
-      <PreviewToolbar
-        outputSize={
-          <PreviewOutputSize
-            height={outputDimensions.height}
-            width={outputDimensions.width}
-          />
-        }
-        tools={
-          <ButtonGroup aria-label="View tools" className="gap-control">
-            <PreviewToolToggle
-              isSelected={tool === "select"}
-              label="Select"
-              name="Select screenshot"
-              onSelectedChange={(selected) => {
-                setTool(selected ? "select" : null);
-              }}
-              shortcut="V"
-            >
-              <MousePointer2 />
-            </PreviewToolToggle>
-            <PreviewToolToggle
-              isSelected={tool === "canvas"}
-              label="Resize canvas"
-              name="Resize canvas"
-              onSelectedChange={(selected) => {
-                setTool(selected ? "canvas" : null);
-              }}
-              shortcut="F"
-            >
-              <ScanSquare />
-            </PreviewToolToggle>
-            <PreviewToolToggle
-              isSelected={tool === "crop"}
-              label="Crop"
-              name="Crop screenshot"
-              onSelectedChange={(selected) => {
-                if (selectedItemId === null)
-                  onSelectedItemChange?.(newestItemId);
-                setTool(selected ? "crop" : null);
-              }}
-              shortcut="C"
-            >
-              <Crop />
-            </PreviewToolToggle>
-            <PreviewToolToggle
-              isSelected={tool === "recenter"}
-              label="Recenter"
-              name="Recenter screenshot"
-              onSelectedChange={setRecenterSelected}
-              shortcut="R"
-            >
-              <CircleDotDashed />
-            </PreviewToolToggle>
-            <ScreenshotToolReset
-              artifact={artifact}
-              isSaving={isSaving}
-              onCanvasResize={onCanvasResize}
-              onOutputChange={onOutputChange}
-              onRecenterReset={recenter.reset}
-              screenshotOutput={screenshotOutput}
-              selectedItem={selectedItem}
-              selectedOutput={selectedOutput}
-              tool={tool}
-            />
-          </ButtonGroup>
-        }
-        zoomPercent={zoomPercent}
-      />
       <PreviewViewport
         alt="Screenshot preview"
         artifactId={artifact.id}
@@ -294,6 +233,12 @@ export function ScreenshotSection({
         onZoomChange={setZoomPercent}
         screenshotOutput={screenshotOutput}
         selectedItemId={selectedItemId}
+        zoomPercent={zoomPercent}
+      />
+      <ScreenshotStatusBar
+        height={outputDimensions.height}
+        onZoomChange={setZoomPercent}
+        width={outputDimensions.width}
         zoomPercent={zoomPercent}
       />
     </div>

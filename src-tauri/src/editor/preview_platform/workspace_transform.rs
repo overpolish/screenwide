@@ -211,6 +211,27 @@ mod tests {
     assert_eq!((shown.x, shown.width, reset.zoom), (50.0, 900.0, 1.0));
   }
 
+  /// The double-click reset applies the stored basis: a panel width while a
+  /// tool panel holds one, zero once it hands the basis back.
+  #[test]
+  fn a_reset_follows_the_stored_fit_basis() {
+    let viewport = rect(0.0, 0.0, 1_000.0, 600.0);
+    let base = rect(50.0, 50.0, 900.0, 500.0);
+    let opened = WorkspaceTransform::for_panel(base, viewport, 680.0);
+    let reset_again = WorkspaceTransform::for_panel(base, viewport, 680.0);
+    assert_eq!(
+      (reset_again.pan_x, reset_again.pan_y, reset_again.zoom),
+      (opened.pan_x, opened.pan_y, opened.zoom)
+    );
+    assert_eq!(opened.apply(viewport, base).x + base.width / 2.0, 340.0);
+
+    let cleared = WorkspaceTransform::for_panel(base, viewport, 0.0);
+    assert_eq!(
+      (cleared.pan_x, cleared.pan_y, cleared.zoom),
+      (0.0, 0.0, 1.0)
+    );
+  }
+
   #[test]
   fn invalid_fit_inputs_are_identity_and_do_not_panic() {
     for width in [0.0, -1.0, f64::NAN, f64::INFINITY] {

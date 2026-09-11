@@ -21,52 +21,37 @@ export function CursorEffectControls({
     onChange?.({ ...settings, ...change });
   };
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-section">
       <Checkbox
+        description="Hides it where it leaves the recorded area instead of drawing it over the frame."
         isDisabled={isSaving}
-        isSelected={settings.bake}
-        onChange={(bake) => {
-          update({ bake });
-        }}
-      >
-        <span className="flex flex-col">
-          <span className="text-xs">Bake cursor into recording</span>
-          <span className="text-xs text-muted">Dynamic Screenwide cursor</span>
-        </span>
-      </Checkbox>
-      <Checkbox
-        isDisabled={isSaving || !settings.bake}
         isSelected={settings.clipAtVideoEdge}
         onChange={(clipAtVideoEdge) => {
           update({ clipAtVideoEdge });
         }}
       >
-        <span className="text-xs">Clip at video edge</span>
+        Keep cursor inside the recording
       </Checkbox>
       <Checkbox
-        isDisabled={isSaving || !settings.bake}
+        description="Adds natural smoothing and momentum."
+        isDisabled={isSaving}
         isSelected={settings.smoothMovement}
         onChange={(smoothMovement) => {
           update({ smoothMovement });
         }}
       >
-        <span className="flex flex-col">
-          <span className="text-xs">Smooth movement</span>
-          <span className="text-xs text-muted">
-            Adds natural smoothing and momentum.
-          </span>
-        </span>
+        Smooth movement
       </Checkbox>
-      <div className="gap-control flex flex-col">
-        <div className="gap-section flex items-center justify-between text-xs">
+      <div className="flex flex-col gap-control">
+        <div className="flex items-center justify-between gap-section text-body">
           <span>Cursor size</span>
-          <span className="text-muted tabular-nums">
+          <span className="text-content-fg-secondary tabular-nums">
             {sizePercent.toString()}%
           </span>
         </div>
         <Slider
           aria-label="Cursor size"
-          isDisabled={isSaving || !settings.bake}
+          isDisabled={isSaving}
           maxValue={500}
           minValue={50}
           onChange={(nextSizePercent) => {
@@ -77,22 +62,22 @@ export function CursorEffectControls({
         />
       </div>
       <Checkbox
-        isDisabled={isSaving || !settings.bake}
+        isDisabled={isSaving}
         isSelected={settings.motionBlur}
         onChange={(motionBlur) => {
           update({ motionBlur });
         }}
       >
-        <span className="text-xs">Motion blur</span>
+        Motion blur
       </Checkbox>
       <Checkbox
-        isDisabled={isSaving || !settings.bake}
+        isDisabled={isSaving}
         isSelected={settings.clickAnimation}
         onChange={(clickAnimation) => {
           update({ clickAnimation });
         }}
       >
-        <span className="text-xs">Click animation</span>
+        Click animation
       </Checkbox>
     </div>
   );

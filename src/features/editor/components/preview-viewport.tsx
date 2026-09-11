@@ -479,7 +479,7 @@ export function PreviewViewport({
           ];
         })
       : null;
-  const { fitPreview } = useScreenshotPreviewSurface({
+  const { fitPreview, setFitBasis } = useScreenshotPreviewSurface({
     artifactId,
     canvasRef: nativeFrameRef,
     interactionOutput: workspaceOutput,
@@ -503,7 +503,7 @@ export function PreviewViewport({
       .join(":"),
     zoomPercent,
   });
-  useRegisterPreviewFit(fitPreview);
+  useRegisterPreviewFit(fitPreview, setFitBasis);
   return (
     <div
       aria-label={alt}

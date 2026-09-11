@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #import "recording_preview_surface_macos_private.h"
+#include <math.h>
 
 SCREENWIDE_PREVIEW_PRIVATE void on_main_async(dispatch_block_t block);
 
@@ -30,6 +31,7 @@ void screenwide_preview_surface_enable_editor(
       surface.editorPanX = 0;
       surface.editorPanY = 0;
       surface.editorZoom = 1.0;
+      surface.editorPanelFitWidth = 0;
     }
     redraw_selection(surface);
   });
@@ -62,8 +64,26 @@ void screenwide_preview_surface_set_editor_suspended(void *handle,
   });
 }
 
-/// Fit once using native zoom/pan. Base geometry stays relative to the full
-/// viewport, so a later double-click can reset it normally.
+/// Applies whatever the current fit basis is: the panel fit while a tool panel
+/// holds one, otherwise 100% centred in the whole viewport. Base geometry stays
+/// relative to the full viewport either way, so the basis is the only thing
+/// that decides where a reset lands. Publishes the resulting zoom.
+void apply_editor_fit_basis(ScreenwidePreviewSurface *surface) {
+  NSRect base = editor_base_bounds(surface);
+  NSSize viewport = surface.container.bounds.size;
+  ScreenwideViewTransform fit = screenwide_workspace_panel_fit(
+      viewport.width, viewport.height, base.origin.x, base.origin.y,
+      base.size.width, base.size.height, surface.editorPanelFitWidth);
+  surface.editorPanX = fit.pan_x;
+  surface.editorPanY = fit.pan_y;
+  surface.editorZoom = fit.zoom;
+  apply_editor_transform(surface);
+  if (surface.transformCallback)
+    surface.transformCallback(surface.editorZoom * 100.0, surface.transformContext);
+}
+
+/// Fit once using native zoom/pan, and take the width as the new basis, so a
+/// later double-click returns to the same place.
 void screenwide_preview_surface_reset_editor_view(void *handle, double fitWidth) {
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
@@ -72,17 +92,20 @@ void screenwide_preview_surface_reset_editor_view(void *handle, double fitWidth)
     // Native owns the transform for the length of a gesture; see
     // `screenwide_preview_surface_set_editor_zoom`.
     if (surface.interaction.selectionDragActive) return;
-    NSRect base = editor_base_bounds(surface);
-    NSSize viewport = surface.container.bounds.size;
-    ScreenwideViewTransform fit = screenwide_workspace_panel_fit(
-        viewport.width, viewport.height, base.origin.x, base.origin.y,
-        base.size.width, base.size.height, fitWidth);
-    surface.editorPanX = fit.pan_x;
-    surface.editorPanY = fit.pan_y;
-    surface.editorZoom = fit.zoom;
-    apply_editor_transform(surface);
-    if (surface.transformCallback)
-      surface.transformCallback(surface.editorZoom * 100.0, surface.transformContext);
+    surface.editorPanelFitWidth = fitWidth > 0 && isfinite(fitWidth) ? fitWidth : 0;
+    apply_editor_fit_basis(surface);
+  });
+}
+
+/// Moves the basis without moving the view: closing a tool panel leaves the
+/// picture where the user left it but hands the next reset back to the full
+/// viewport. A width of 0 is that full-viewport basis.
+void screenwide_preview_surface_set_editor_fit_basis(void *handle,
+                                                     double fitWidth) {
+  if (handle == NULL) return;
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  on_main_async(^{
+    surface.editorPanelFitWidth = fitWidth > 0 && isfinite(fitWidth) ? fitWidth : 0;
   });
 }
 

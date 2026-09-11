@@ -18,7 +18,11 @@ import { ToolPanelKind, usePopupPanelStore } from "../../popup-panel/store";
 import { usePreviewFit } from "../components/preview-fit-context";
 import { EditorKind } from "../types";
 
-import { openToolPanelSpace, toolPanelGutter } from "./tool-panel-space";
+import {
+  openToolPanelSpace,
+  panelGrowthDelta,
+  toolPanelGutter,
+} from "./tool-panel-space";
 import { toolPanelTitles } from "./tool-panel-titles";
 import { EditorToolId, toolPanel, toolResetsView } from "./tool-registry";
 
@@ -57,20 +61,32 @@ export const panelOffset = (bounds: DOMRect) =>
 export function useToolPanel(workspace: EditorKind) {
   const active = usePopupPanelStore((state) => state.active);
   const openTool = active?.content.kind === "tool" ? active.content.tool : null;
-  const { fitPreview } = usePreviewFit();
+  const { fitPreview, setFitBasis } = usePreviewFit();
 
-  /** Puts the open panel away without resetting the current zoom or pan. */
+  /** Puts the open panel away without resetting the current zoom or pan. The
+   * view stays where it is, but the basis a double-click resets to goes back
+   * to the full viewport the panel is no longer taking a bite out of. */
   const close = useCallback(async () => {
     const current = usePopupPanelStore.getState().active;
     if (current?.content.kind !== "tool") return;
     usePopupPanelStore.getState().close();
+    setFitBasis();
     await hidePopupPanel();
-  }, []);
+  }, [setFitBasis]);
 
   const openPanel = useCallback(
     async (tool: ToolPanelKind, anchor: DOMRect, fitsView: boolean) => {
       const id = toolPanelId(tool);
-      if (fitsView) await openToolPanelSpace(toolPanelGutter);
+      if (fitsView) {
+        const viewport = previewViewport();
+        await openToolPanelSpace(
+          panelGrowthDelta(
+            viewport?.getBoundingClientRect().width ?? anchor.width,
+            Number(viewport?.dataset.previewFitWidth),
+            toolPanelGutter,
+          ),
+        );
+      }
       const bounds = previewViewport()?.getBoundingClientRect() ?? anchor;
       if (fitsView) fitPreview(Math.max(1, bounds.width - toolPanelGutter));
       usePopupPanelStore.getState().open({

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ClipboardCopy, Pause, Play } from "lucide-react";
-import { memo } from "react";
+import { memo, ReactNode } from "react";
 
 import { Button } from "../../../components/base/button/button";
 import { IconToggleButton } from "../../../components/base/button/icon-button";
@@ -24,6 +24,8 @@ type RecordingPlaybackControlsProps = {
   playhead: Playhead;
   // Returning a promise makes the copy button await the copy before it checks.
   onCopyCurrentFrame?: () => Promise<unknown> | undefined;
+  /** What the picture measures, at the left of the row. */
+  readouts?: ReactNode;
 };
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => ({
@@ -46,9 +48,17 @@ export const RecordingPlaybackControls = memo(
     onPlaybackRateChange,
     playbackRate,
     playhead,
+    readouts,
   }: RecordingPlaybackControlsProps) {
     return (
-      <div className="relative flex h-7 shrink-0 items-center justify-center gap-1.5">
+      // The band's first row: 24px controls inside the control inset, with the
+      // transport on the window's centre line whatever stands either side.
+      <div className="relative flex min-h-control-height shrink-0 items-center justify-center gap-1.5 py-control-inset">
+        {readouts ? (
+          <div className="absolute left-0 flex items-center gap-section">
+            {readouts}
+          </div>
+        ) : null}
         <IconToggleButton
           aria-keyshortcuts="P"
           aria-label={isPlaying ? "Pause preview" : "Play preview"}

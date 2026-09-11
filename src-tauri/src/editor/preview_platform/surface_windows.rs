@@ -79,6 +79,7 @@ use super::{
 };
 use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
+use view_fit::fit_basis_transform;
 use workspace_layout::{
   apply_workspace_transform, aspect_fit_rect, rebase_workspace_fit, reflow_workspace_panes,
   union_rect,
@@ -229,6 +230,10 @@ struct SurfaceState {
   /// `None` once the move ends or an Alt release commits the grown canvas.
   move_auto_fit: Option<MoveAutoFit>,
   panes: Vec<Option<Pane>>,
+  /// The width the double-click reset fits into: the space beside an open tool
+  /// panel while one holds the basis, 0 for the whole viewport. Only the fit
+  /// commands move it; a resize or a gesture never does.
+  panel_fit_width: f64,
   primary_composition: Option<ComposedFrame>,
   scale: f64,
   selection: Option<PreviewSelection>,
@@ -2337,11 +2342,16 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       if recenter::action_hit(inner, (x, y)) {
         return;
       }
+      // Back to the current fit basis: the space beside an open tool panel
+      // while one is up, the whole viewport otherwise.
+      let mut zoom = 1.0;
       if let Ok(mut state) = inner.state.lock() {
-        state.workspace_transform = WorkspaceTransform::default();
+        let transform = fit_basis_transform(&state);
+        state.workspace_transform = transform;
+        zoom = transform.zoom;
         apply_workspace_transform(inner, &mut state, false);
       }
-      emit_transform(inner, 1.0);
+      emit_transform(inner, zoom);
     }
   }
 }
@@ -2580,6 +2590,7 @@ impl RecordingPreviewSurface {
             gesture: None,
             last_pointer: (0.0, 0.0),
             panes: Vec::new(),
+            panel_fit_width: 0.0,
             primary_composition: None,
             scale: 1.0,
             selection: None,
@@ -2682,6 +2693,7 @@ impl RecordingPreviewSurface {
       state.frame_resize = None;
       state.frame_resize_committed = false;
       state.move_auto_fit = None;
+      state.panel_fit_width = 0.0;
       state.workspace_transform = WorkspaceTransform::default();
       state.workspace_natural_size = None;
       state.workspace_transforms.clear();

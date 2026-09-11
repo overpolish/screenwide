@@ -25,6 +25,12 @@ const detectedPlatform: "macos" | "windows" = navigator.userAgent.includes(
 export type WindowHeaderProps = {
   title: string;
   actions?: ReactNode;
+  /**
+   * Tools carried in the title bar itself, centred in the window the way a
+   * unified toolbar sets them. Given one, the bar becomes three columns so the
+   * centre is the window's true middle and the title truncates to make room.
+   */
+  center?: ReactNode;
   className?: string;
   closeAction?: ReactNode;
   /** Off for windows the OS positions itself, such as a child sheet. */
@@ -42,6 +48,7 @@ export type WindowHeaderProps = {
 
 export function WindowHeader({
   actions,
+  center,
   className,
   closeAction,
   isDraggable = true,
@@ -56,61 +63,59 @@ export function WindowHeader({
   variant = "display",
 }: WindowHeaderProps) {
   const isWindows = platform === "windows";
+  const hasTrailing =
+    Boolean(actions) ||
+    Boolean(closeAction) ||
+    (isWindows && Boolean(onMinimize || onToggleMaximize || onClose));
 
-  return (
-    <header
-      className={cn(
-        // The title bar is the window inset around 24px controls on every
-        // side, so the content below needs no top padding of its own.
-        "flex shrink-0 items-center gap-section p-window-inset text-content-fg",
-        !isWindows && "pl-traffic-lights",
-        className,
-      )}
-      data-tauri-drag-region={isDraggable ? "deep" : undefined}
+  const leading = (
+    <div
+      className="pointer-events-none flex min-w-0 grow items-center gap-control-inset"
+      data-tauri-drag-region={isDraggable ? "" : undefined}
     >
-      <div
-        className="pointer-events-none flex min-w-0 grow items-center gap-control-inset"
-        data-tauri-drag-region={isDraggable ? "" : undefined}
+      {/* The proxy icon of a native title bar is drawn at the standard
+          symbol size. */}
+      {leadingSection ? (
+        <span className="flex shrink-0 items-center [&_img]:size-icon [&_svg]:size-icon">
+          {leadingSection}
+        </span>
+      ) : null}
+      <ScrollArea
+        className="flex w-max items-center"
+        edgeClassName="rounded-control"
+        edgeEffect="shadow"
+        orientation="horizontal"
+        // A plain title is part of the drag region like the logo; only an
+        // editable one takes the pointer.
+        rootClassName={cn(
+          "w-max min-w-0 max-w-full shrink",
+          onTitleChange && "pointer-events-auto",
+        )}
+        scrollbarHidden
       >
-        {/* The proxy icon of a native title bar is drawn at the standard
-            symbol size. */}
-        {leadingSection ? (
-          <span className="flex shrink-0 items-center [&_img]:size-icon [&_svg]:size-icon">
-            {leadingSection}
-          </span>
-        ) : null}
-        <ScrollArea
-          className="flex w-max items-center"
-          edgeClassName="rounded-control"
-          edgeEffect="shadow"
-          orientation="horizontal"
-          // A plain title is part of the drag region like the logo; only an
-          // editable one takes the pointer.
-          rootClassName={cn(
-            "w-max min-w-0 max-w-full shrink",
-            onTitleChange && "pointer-events-auto",
+        <Text
+          as="h1"
+          className={cn(
+            variant === "display" &&
+              "from-accent-heading-warm via-accent-heading to-accent-heading-vivid animate-gradient bg-linear-to-r bg-clip-text bg-size-[300%] text-transparent motion-reduce:animate-none",
           )}
-          scrollbarHidden
+          variant="title"
         >
-          <Text
-            as="h1"
-            className={cn(
-              variant === "display" &&
-                "from-accent-heading-warm via-accent-heading to-accent-heading-vivid animate-gradient bg-linear-to-r bg-clip-text bg-size-[300%] text-transparent motion-reduce:animate-none",
-            )}
-            variant="title"
-          >
-            {onTitleChange ? (
-              <EditableWindowTitle onChange={onTitleChange} title={title} />
-            ) : (
-              title
-            )}
-          </Text>
-        </ScrollArea>
-      </div>
-      {/* Controls are 24 tall against a 20px title line. Pulling their
-          overhang into the inset keeps every title bar the same 48px, the
-          way a toolbar button overhangs its bar rather than growing it. */}
+          {onTitleChange ? (
+            <EditableWindowTitle onChange={onTitleChange} title={title} />
+          ) : (
+            title
+          )}
+        </Text>
+      </ScrollArea>
+    </div>
+  );
+
+  // Controls are 24 tall against a 20px title line. Pulling their overhang
+  // into the inset keeps every title bar the same 48px, the way a toolbar
+  // button overhangs its bar rather than growing it.
+  const trailing = hasTrailing ? (
+    <div className="flex shrink-0 items-center justify-end gap-section">
       {actions ? (
         <div className="-my-tight flex shrink-0 items-center">{actions}</div>
       ) : null}
@@ -142,6 +147,31 @@ export function WindowHeader({
             ) : null)}
         </div>
       ) : null}
+    </div>
+  ) : null;
+
+  return (
+    <header
+      className={cn(
+        // The title bar is the window inset around 24px controls on every
+        // side, so the content below needs no top padding of its own.
+        "shrink-0 items-center gap-section p-window-inset text-content-fg",
+        // With tools in the bar the three columns are measured from the
+        // window, not from the title: the centre stays put while the title
+        // clips. Without them the bar is the flex row it has always been.
+        center ? "grid grid-cols-[1fr_auto_1fr]" : "flex",
+        !isWindows && "pl-traffic-lights",
+        className,
+      )}
+      data-tauri-drag-region={isDraggable ? "deep" : undefined}
+    >
+      {leading}
+      {center ? (
+        <div className="-my-tight flex shrink-0 items-center justify-center gap-section">
+          {center}
+        </div>
+      ) : null}
+      {center ? (trailing ?? <div />) : trailing}
     </header>
   );
 }

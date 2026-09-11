@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { useState } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
 import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
+import { IconToggleButton } from "../../base/button/icon-button";
+import { ButtonGroup } from "../../base/button-group/button-group";
 
 import { WindowHeader } from "./window-header";
 
@@ -94,6 +97,31 @@ export const EditableTitle: Story = {
 
 export const LongTitle: Story = {
   args: {
+    leadingSection: mark,
+    title:
+      "Screenwide product walkthrough - recording and screenshot editing - September 2026",
+  },
+};
+
+/**
+ * A unified toolbar: the tools take the window's centre and the title clips
+ * against them rather than pushing them off it.
+ */
+export const WithCenter: Story = {
+  args: {
+    center: (
+      <ButtonGroup aria-label="View tools" className="gap-control">
+        <IconToggleButton aria-label="Select" isSelected>
+          <MousePointer2 />
+        </IconToggleButton>
+        <IconToggleButton aria-label="Resize canvas">
+          <ScanSquare />
+        </IconToggleButton>
+        <IconToggleButton aria-label="Crop">
+          <Crop />
+        </IconToggleButton>
+      </ButtonGroup>
+    ),
     leadingSection: mark,
     title:
       "Screenwide product walkthrough - recording and screenshot editing - September 2026",

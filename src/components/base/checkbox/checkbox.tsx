@@ -9,7 +9,7 @@ import {
   type CheckboxFieldProps as AriaCheckboxFieldProps,
 } from "react-aria-components";
 
-import { focusStyles, groupFocusVisible } from "../../../lib/styling";
+import { cn, focusStyles, groupFocusVisible } from "../../../lib/styling";
 
 // A native checkbox: a 16px box on the fill ladder, the accent with a white
 // bold check when selected, a 13pt label in the label colour. No hover; a
@@ -29,12 +29,26 @@ const boxStyles = [
 
 type CheckboxProps = Omit<AriaCheckboxFieldProps, "children"> & {
   children?: React.ReactNode;
+  /** A line under the label explaining the choice, in the secondary tone,
+   * as System Settings sets a checkbox's fine print. */
+  description?: React.ReactNode;
 };
 
-export const Checkbox = ({ children, ...props }: CheckboxProps) => {
+export const Checkbox = ({
+  children,
+  description,
+  ...props
+}: CheckboxProps) => {
   return (
     <AriaCheckboxField {...props} className="contents">
-      <AriaCheckboxButton className="group inline-flex cursor-default items-center gap-control-inset text-body text-content-fg outline-none data-[disabled]:text-content-fg-tertiary">
+      {/* With a description the box lines up with the label's first line
+          rather than the block's middle. */}
+      <AriaCheckboxButton
+        className={cn(
+          "group inline-flex cursor-default gap-control-inset text-body text-content-fg outline-none data-[disabled]:text-content-fg-tertiary",
+          description ? "items-start" : "items-center",
+        )}
+      >
         {({ isIndeterminate, isSelected }) => {
           const state = isIndeterminate
             ? "indeterminate"
@@ -60,7 +74,16 @@ export const Checkbox = ({ children, ...props }: CheckboxProps) => {
                   ) : null}
                 </AnimatePresence>
               </span>
-              {children}
+              {description ? (
+                <span className="flex min-w-0 flex-col">
+                  <span>{children}</span>
+                  <span className="text-subheadline text-content-fg-secondary group-data-[disabled]:text-content-fg-tertiary">
+                    {description}
+                  </span>
+                </span>
+              ) : (
+                children
+              )}
             </>
           );
         }}

@@ -47,3 +47,13 @@ export const WithoutLabel: Story = {
     defaultSelected: true,
   },
 };
+
+/** Fine print under the label, in the secondary tone; the box lines up with
+ * the label's first line. */
+export const WithDescription: Story = {
+  args: {
+    children: "Bake cursor into recording",
+    defaultSelected: true,
+    description: "Dynamic Screenwide cursor",
+  },
+};

@@ -5,7 +5,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { growEditorForPanel } from "../api";
 
-import { openToolPanelSpace, toolPanelGutter } from "./tool-panel-space";
+import {
+  openToolPanelSpace,
+  panelGrowthDelta,
+  toolPanelGutter,
+} from "./tool-panel-space";
 
 const windowMock = vi.hoisted(() => ({
   onResized: vi.fn(),
@@ -52,6 +56,27 @@ describe("one-time panel growth", () => {
       );
       expect(windowMock.unlisten).toHaveBeenCalledOnce();
       expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+});
+
+describe("panel growth target", () => {
+  it("makes enough room from minimum width in one activation", () => {
+    const width = 400;
+    const fitWidth = 960;
+    const growth = panelGrowthDelta(width, fitWidth, 320);
+    expect(growth).toBe(880);
+    expect(width + growth - 320).toBe(fitWidth);
+  });
+
+  it("adds just the gutter when the full-height preview already fits", () => {
+    expect(panelGrowthDelta(1200, 960, 320)).toBe(320);
+  });
+
+  it.each([NaN, 0, -1, Infinity])(
+    "falls back to gutter for unavailable geometry %s",
+    (width) => {
+      expect(panelGrowthDelta(400, width, 320)).toBe(320);
     },
   );
 });

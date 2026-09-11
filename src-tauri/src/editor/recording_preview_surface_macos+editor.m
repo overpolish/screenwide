@@ -98,13 +98,9 @@
                     self.surface.selection.pane_index < self.surface.editorBaseRects.count;
   if (canGesture && selection_action_begin(self.surface, event.buttonNumber, point)) return;
   if (event.clickCount == 2) {
-    self.surface.editorPanX = 0;
-    self.surface.editorPanY = 0;
-    self.surface.editorZoom = 1.0;
-    apply_editor_transform(self.surface);
-    if (self.surface.transformCallback)
-      self.surface.transformCallback(100.0,
-                                     self.surface.transformContext);
+    // Back to the current fit basis: the space beside an open tool panel while
+    // one is up, the whole viewport otherwise.
+    apply_editor_fit_basis(self.surface);
     return;
   }
   if (event.buttonNumber == 0 && self.surface.selectionHitTestingEnabled) {

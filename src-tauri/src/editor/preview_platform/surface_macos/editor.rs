@@ -11,9 +11,9 @@ use super::callbacks::{
 };
 use super::ffi::{
   screenwide_preview_surface_enable_editor, screenwide_preview_surface_reset_editor_view,
-  screenwide_preview_surface_set_editor_suspended, screenwide_preview_surface_set_editor_zoom,
-  screenwide_preview_surface_set_pointer_down_callback, screenwide_preview_surface_set_selection,
-  screenwide_preview_surface_set_selection_callback,
+  screenwide_preview_surface_set_editor_fit_basis, screenwide_preview_surface_set_editor_suspended,
+  screenwide_preview_surface_set_editor_zoom, screenwide_preview_surface_set_pointer_down_callback,
+  screenwide_preview_surface_set_selection, screenwide_preview_surface_set_selection_callback,
   screenwide_preview_surface_set_selection_gesture_callback,
   screenwide_preview_surface_set_selection_snapping,
   screenwide_preview_surface_set_selection_targets,
@@ -66,10 +66,18 @@ impl RecordingPreviewSurface {
     }
   }
 
-  /// One-time native fit; base pane geometry remains relative to the full viewport.
+  /// One-time native fit; base pane geometry remains relative to the full
+  /// viewport. The width also becomes the basis a double-click resets to.
   pub(crate) fn reset_editor_view(&self, fit_width: Option<f64>) {
     unsafe {
       screenwide_preview_surface_reset_editor_view(self.handle, fit_width.unwrap_or(0.0));
+    }
+  }
+
+  /// Moves the double-click reset basis without moving the view.
+  pub(crate) fn set_editor_fit_basis(&self, fit_width: Option<f64>) {
+    unsafe {
+      screenwide_preview_surface_set_editor_fit_basis(self.handle, fit_width.unwrap_or(0.0));
     }
   }
 

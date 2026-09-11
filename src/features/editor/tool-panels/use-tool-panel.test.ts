@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   } | null,
   close: vi.fn(),
   fitPreview: vi.fn(),
+  fitWidth: "",
   getBoundingClientRect: vi.fn(),
   getCurrentWindow: vi.fn(() => ({ label: "editor", onResized: vi.fn() })),
   hidePopupPanel: vi.fn(() => Promise.resolve()),
@@ -23,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   panelByTool: {} as Record<string, "cursor" | undefined>,
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   resetByTool: {} as Record<string, boolean>,
+  setFitBasis: vi.fn(),
   showPopupPanel: vi.fn(() => Promise.resolve()),
 }));
 
@@ -68,12 +70,14 @@ vi.mock("../../popup-panel/store", () => ({
 vi.mock("../components/preview-fit-context", () => ({
   usePreviewFit: () => ({
     fitPreview: mocks.fitPreview,
+    setFitBasis: mocks.setFitBasis,
   }),
 }));
 
 vi.mock("../api", () => ({ growEditorForPanel: vi.fn() }));
 
-vi.mock("./tool-panel-space", () => ({
+vi.mock("./tool-panel-space", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./tool-panel-space")>()),
   openToolPanelSpace: mocks.openToolPanelSpace,
   toolPanelGutter: 320,
 }));
@@ -106,6 +110,7 @@ const setViewportWidth = (width: number) => {
   });
   vi.stubGlobal("document", {
     querySelector: vi.fn(() => ({
+      dataset: { previewFitWidth: mocks.fitWidth },
       getBoundingClientRect: mocks.getBoundingClientRect,
     })),
   });
@@ -120,6 +125,7 @@ const useCursorPanel = () => {
 
 beforeEach(() => {
   mocks.active = null;
+  mocks.fitWidth = "";
   mocks.panelByTool = {};
   mocks.resetByTool = {};
   setViewportWidth(800);
@@ -132,6 +138,18 @@ afterEach(() => {
 });
 
 describe("useToolPanel", () => {
+  it("grows a narrow viewport to the complete panel target before fitting", async () => {
+    mocks.fitWidth = "960";
+    setViewportWidth(400);
+    mocks.openToolPanelSpace.mockImplementation(() => {
+      setViewportWidth(1280);
+      return Promise.resolve();
+    });
+    await useCursorPanel();
+    expect(mocks.openToolPanelSpace).toHaveBeenCalledExactlyOnceWith(880);
+    expect(mocks.fitPreview).toHaveBeenCalledExactlyOnceWith(960);
+  });
+
   it("fits and grows once when an opted-in panel opens", async () => {
     mocks.openToolPanelSpace.mockImplementation(() => {
       setViewportWidth(1220);
@@ -190,6 +208,33 @@ describe("useToolPanel", () => {
     expect(mocks.hidePopupPanel).toHaveBeenCalledOnce();
     expect(mocks.fitPreview).not.toHaveBeenCalled();
     expect(mocks.openToolPanelSpace).not.toHaveBeenCalled();
+  });
+
+  it("hands the reset basis back to the full viewport on closing", async () => {
+    mocks.active = {
+      content: { kind: "tool", tool: "cursor", workspace: "recording" },
+      id: "tool:cursor",
+    };
+    mocks.panelByTool.cursor = "cursor";
+    mocks.resetByTool.cursor = true;
+
+    await useToolPanel("recording").toggle("cursor", anchor);
+
+    expect(mocks.setFitBasis).toHaveBeenCalledOnce();
+    expect(mocks.setFitBasis).toHaveBeenCalledWith();
+    expect(mocks.fitPreview).not.toHaveBeenCalled();
+  });
+
+  it("leaves the panel's own basis alone while it opens", async () => {
+    mocks.openToolPanelSpace.mockImplementation(() => {
+      setViewportWidth(1220);
+      return Promise.resolve();
+    });
+
+    await useCursorPanel();
+
+    expect(mocks.fitPreview).toHaveBeenCalledWith(900);
+    expect(mocks.setFitBasis).not.toHaveBeenCalled();
   });
 
   it("leaves Cursor open when Select is deactivated", async () => {

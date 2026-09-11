@@ -51,6 +51,7 @@ void rebase_recording_workspace_fit(
     double zoom, NSPoint pan);
 void redraw_selection(ScreenwidePreviewSurface *surface);
 void apply_editor_transform(ScreenwidePreviewSurface *surface);
+void apply_editor_fit_basis(ScreenwidePreviewSurface *surface);
 NSRect selection_display_frame_for(
     ScreenwidePreviewSurface *surface,
     ScreenwidePreviewSelection selection);

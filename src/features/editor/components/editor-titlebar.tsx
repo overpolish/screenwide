@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ClipboardCopy, Upload } from "lucide-react";
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { ReactNode, useCallback, useLayoutEffect, useRef } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
 import { Button } from "../../../components/base/button/button";
 import { WindowHeader } from "../../../components/shared/window-header/window-header";
 import { EditorArtifact } from "../types";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
+
+import { useEditorToolbarTools } from "./editor-toolbar-context";
 
 export function EditorTitlebar({
   artifact,
@@ -21,6 +23,7 @@ export function EditorTitlebar({
   onFileStemChange,
   onMinimize,
   onToggleMaximize,
+  tools,
 }: {
   artifact: EditorArtifact | null;
   canExport: boolean;
@@ -32,6 +35,9 @@ export function EditorTitlebar({
   onFileStemChange?: (fileStem: string) => void;
   onMinimize?: () => void;
   onToggleMaximize?: () => void;
+  /** The workspace's tools, carried in the bar. Defaults to what the visible
+   * section is offering through `EditorToolbarContext`. */
+  tools?: ReactNode;
 }) {
   const canExportRef = useRef(canExport);
   const onExportRef = useRef(onExport);
@@ -59,6 +65,8 @@ export function EditorTitlebar({
     onExport: canExport ? onShortcutExport : undefined,
   });
 
+  const sectionTools = useEditorToolbarTools();
+
   return (
     <WindowHeader
       actions={
@@ -75,6 +83,7 @@ export function EditorTitlebar({
           </Button>
         </div>
       }
+      center={tools ?? sectionTools}
       leadingSection={
         <img
           alt="Screenwide"
