@@ -57,9 +57,9 @@ export function TimelineItemLane<
   const rowHeightPx = 32;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center">
       <div
-        className={`flex h-8 w-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-1.25rem)] shrink-0 items-center gap-2 rounded px-2 text-xs font-medium text-content-fg ${selectedFragmentIds?.size ? "bg-info/15" : ""}`}
+        className={`flex h-8 w-timeline-gutter shrink-0 items-center gap-2 rounded px-2 text-xs font-medium text-content-fg ${selectedFragmentIds?.size ? "bg-info/15" : ""}`}
       >
         <span className="shrink-0 text-muted">{icon}</span>
         <span className="min-w-0 grow truncate">{label}</span>
@@ -80,7 +80,8 @@ export function TimelineItemLane<
             // minimum width and label padding - the run as a whole stays
             // clickable, and an inflated sliver would overlap the fragment
             // it continues into.
-            const inRun = fragment.continuesPrevious || fragment.continuedByNext;
+            const inRun =
+              fragment.continuesPrevious || fragment.continuedByNext;
             const seam = `${
               fragment.continuesPrevious ? "rounded-l-none border-l-0 " : ""
             }${fragment.continuedByNext ? "rounded-r-none " : ""}${

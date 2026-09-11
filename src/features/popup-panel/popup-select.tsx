@@ -78,13 +78,16 @@ export function PopupSelect({
     const height = initialPopupPanelHeight(currentItems.length);
 
     open({
+      content: {
+        items: currentItems,
+        kind: "list",
+        mode: "select",
+        selectedIds: selectedId ? [selectedId] : [],
+        selectionMode: "single",
+      },
       focusContents,
       id,
-      items: currentItems,
       label,
-      mode: "select",
-      selectedIds: selectedId ? [selectedId] : [],
-      selectionMode: "single",
     });
     await showPopupPanel({
       anchor: {

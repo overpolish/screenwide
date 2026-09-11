@@ -57,14 +57,17 @@ const openPanel = async ({
 }: OpenPanelOptions) => {
   const { open } = usePopupPanelStore.getState();
   open({
-    exclusiveId,
+    content: {
+      exclusiveId,
+      items,
+      kind: "list",
+      mode: "select",
+      selectedIds,
+      selectionMode,
+    },
     focusContents,
     id,
-    items,
     label,
-    mode: "select",
-    selectedIds,
-    selectionMode,
   });
   await showPopupPanel({
     anchor: {

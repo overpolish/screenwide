@@ -49,6 +49,7 @@ const fn policy(label: WindowLabel) -> Policy {
     // An export options window is derived from the editor it hangs off and is
     // recentred on it whenever that moves, so it never carries stale geometry.
     WindowLabel::ConfirmSheet
+    | WindowLabel::Tooltip
     | WindowLabel::ExportRecording
     | WindowLabel::ExportScreenshot
     | WindowLabel::Glide

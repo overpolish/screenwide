@@ -1,57 +1,78 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ZoomIn } from "lucide-react";
 import { memo, ReactNode } from "react";
 
-import { ButtonGroup } from "../../../components/base/button-group/button-group";
-import { NumberField } from "../../../components/base/input-fields/number-field";
+import { Text } from "../../../components/base/text/text";
 
-import { MINIMUM_ZOOM_CEILING } from "./preview-transform";
+import { useRecordingOutputDimensions } from "./recording-output-dimensions-channel";
+
+/** The output size in pixels, as the finished file will measure. */
+export function PreviewOutputSize({
+  height,
+  width,
+}: {
+  height: number;
+  width: number;
+}) {
+  return (
+    <Text
+      className="tabular-nums text-content-fg-secondary"
+      variant="subheadline"
+    >
+      {width} × {height}
+    </Text>
+  );
+}
 
 /**
- * Memoized: the zoom field and the tool buttons are react-aria trees that cost
- * more to re-render than the whole native preview pane, and none of their props
- * change while a canvas-resize gesture updates the output draft at pointer rate.
+ * The recording workspace's size readout. It subscribes to the output channel
+ * rather than taking the size as a prop, so a frame resize running at pointer
+ * rate re-renders this line alone and leaves the toolbar's memo intact.
+ */
+export const RecordingOutputSize = memo(function RecordingOutputSize() {
+  const dimensions = useRecordingOutputDimensions();
+  if (!dimensions) return null;
+  return (
+    <PreviewOutputSize height={dimensions.height} width={dimensions.width} />
+  );
+});
+
+/**
+ * The editor's toolbar row: what the pointer does on the left, what the picture
+ * measures on the right.
+ *
+ * Memoized: the tool buttons are react-aria trees that cost more to re-render
+ * than the whole native preview pane, and none of their props change while a
+ * canvas-resize gesture updates the output draft at pointer rate.
  */
 export const PreviewToolbar = memo(function PreviewToolbar({
-  maximumZoomPercent = MINIMUM_ZOOM_CEILING * 100,
-  onZoomChange,
+  outputSize,
   tools,
   zoomPercent,
 }: {
-  onZoomChange: (zoomPercent: number) => void;
   zoomPercent: number;
-  /**
-   * Content-aware ceiling for the zoom field. A workspace that fits far below
-   * actual pixels - a tall scrolling capture - raises it so the user can still
-   * reach its own pixels.
-   */
-  maximumZoomPercent?: number;
+  outputSize?: ReactNode;
   tools?: ReactNode;
 }) {
   return (
-    <div className="relative flex shrink-0 items-center justify-between gap-section bg-transparent px-section py-control-inset">
-      <ButtonGroup
-        aria-label="Editor tools"
-        className="min-w-0 items-center gap-control"
-      >
+    <div className="relative flex shrink-0 items-center justify-between gap-section px-window-inset pb-control-inset">
+      {/* Groups of tools sit a section apart, as the recording bar's do:
+          effects with their panels first, then the view tools. */}
+      <div className="flex h-control-height min-w-0 items-center gap-section">
         {tools}
-      </ButtonGroup>
-      <NumberField
-        aria-label="Preview zoom"
-        className="w-28"
-        leftSection={<ZoomIn className="size-icon-default" />}
-        maxValue={maximumZoomPercent}
-        minValue={10}
-        onChange={(value) => {
-          onZoomChange(Math.round(value));
-        }}
-        rightSection="%"
-        showSteppers={false}
-        step={1}
-        value={zoomPercent}
-      />
+      </div>
+      <div className="flex h-control-height shrink-0 items-center gap-section">
+        {outputSize}
+        {/* Read-only: the native surface owns the transform, and a pinch on it
+            publishes the zoom back here. */}
+        <Text
+          className="tabular-nums text-content-fg-secondary"
+          variant="subheadline"
+        >
+          {zoomPercent}%
+        </Text>
+      </div>
     </div>
   );
 });

@@ -20,10 +20,13 @@ mod start;
 mod state;
 
 pub use controls::{
-  __cmd__set_screenshot_preview_editor_suspended, __cmd__set_screenshot_preview_zoom,
-  __cmd__stop_screenshot_preview, __tauri_command_name_set_screenshot_preview_editor_suspended,
+  __cmd__reset_screenshot_preview_view, __cmd__set_screenshot_preview_editor_suspended,
+  __cmd__set_screenshot_preview_zoom, __cmd__stop_screenshot_preview,
+  __tauri_command_name_reset_screenshot_preview_view,
+  __tauri_command_name_set_screenshot_preview_editor_suspended,
   __tauri_command_name_set_screenshot_preview_zoom, __tauri_command_name_stop_screenshot_preview,
-  set_screenshot_preview_editor_suspended, set_screenshot_preview_zoom, stop_screenshot_preview,
+  reset_screenshot_preview_view, set_screenshot_preview_editor_suspended,
+  set_screenshot_preview_zoom, stop_screenshot_preview,
 };
 pub use layout::{
   __cmd__layout_screenshot_preview_surface, __tauri_command_name_layout_screenshot_preview_surface,

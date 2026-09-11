@@ -10,9 +10,10 @@ use super::callbacks::{
   transform_callback,
 };
 use super::ffi::{
-  screenwide_preview_surface_enable_editor, screenwide_preview_surface_set_editor_suspended,
-  screenwide_preview_surface_set_editor_zoom, screenwide_preview_surface_set_pointer_down_callback,
-  screenwide_preview_surface_set_selection, screenwide_preview_surface_set_selection_callback,
+  screenwide_preview_surface_enable_editor, screenwide_preview_surface_reset_editor_view,
+  screenwide_preview_surface_set_editor_suspended, screenwide_preview_surface_set_editor_zoom,
+  screenwide_preview_surface_set_pointer_down_callback, screenwide_preview_surface_set_selection,
+  screenwide_preview_surface_set_selection_callback,
   screenwide_preview_surface_set_selection_gesture_callback,
   screenwide_preview_surface_set_selection_snapping,
   screenwide_preview_surface_set_selection_targets,
@@ -62,6 +63,13 @@ impl RecordingPreviewSurface {
   pub(crate) fn set_editor_zoom(&self, zoom_percent: f64) {
     unsafe {
       screenwide_preview_surface_set_editor_zoom(self.handle, zoom_percent);
+    }
+  }
+
+  /// One-time native fit; base pane geometry remains relative to the full viewport.
+  pub(crate) fn reset_editor_view(&self, fit_width: Option<f64>) {
+    unsafe {
+      screenwide_preview_surface_reset_editor_view(self.handle, fit_width.unwrap_or(0.0));
     }
   }
 

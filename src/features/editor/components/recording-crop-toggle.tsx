@@ -3,6 +3,7 @@
 
 import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
 
+import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import {
   cameraOverlayForDimensions,
   defaultCameraOverlay,
@@ -121,7 +122,7 @@ export function RecordingCanvasTools({
     onChange?.(targetTrack, next);
   };
   return (
-    <>
+    <ButtonGroup aria-label="View tools" className="gap-control">
       <PreviewToolToggle
         isDisabled={!isSelectEnabled}
         isSelected={tool === "select" && isSelectEnabled}
@@ -176,6 +177,6 @@ export function RecordingCanvasTools({
         onReset={reset}
         tool={tool}
       />
-    </>
+    </ButtonGroup>
   );
 }

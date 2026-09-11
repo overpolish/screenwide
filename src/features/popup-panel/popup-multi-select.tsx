@@ -82,14 +82,17 @@ export function PopupMultiSelect({
     const height = initialPopupPanelHeight(currentItems.length);
 
     open({
-      exclusiveId,
+      content: {
+        exclusiveId,
+        items: currentItems,
+        kind: "list",
+        mode: "select",
+        selectedIds,
+        selectionMode: "multiple",
+      },
       focusContents,
       id,
-      items: currentItems,
       label,
-      mode: "select",
-      selectedIds,
-      selectionMode: "multiple",
     });
     await showPopupPanel({
       anchor: {

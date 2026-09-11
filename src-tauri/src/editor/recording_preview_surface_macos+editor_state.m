@@ -62,6 +62,30 @@ void screenwide_preview_surface_set_editor_suspended(void *handle,
   });
 }
 
+/// Fit once using native zoom/pan. Base geometry stays relative to the full
+/// viewport, so a later double-click can reset it normally.
+void screenwide_preview_surface_reset_editor_view(void *handle, double fitWidth) {
+  if (handle == NULL) return;
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  on_main_async(^{
+    if (!surface.editorEnabled || surface.editorSuspended) return;
+    // Native owns the transform for the length of a gesture; see
+    // `screenwide_preview_surface_set_editor_zoom`.
+    if (surface.interaction.selectionDragActive) return;
+    NSRect base = editor_base_bounds(surface);
+    NSSize viewport = surface.container.bounds.size;
+    ScreenwideViewTransform fit = screenwide_workspace_panel_fit(
+        viewport.width, viewport.height, base.origin.x, base.origin.y,
+        base.size.width, base.size.height, fitWidth);
+    surface.editorPanX = fit.pan_x;
+    surface.editorPanY = fit.pan_y;
+    surface.editorZoom = fit.zoom;
+    apply_editor_transform(surface);
+    if (surface.transformCallback)
+      surface.transformCallback(surface.editorZoom * 100.0, surface.transformContext);
+  });
+}
+
 void screenwide_preview_surface_set_editor_zoom(void *handle,
                                                 double zoom_percent) {
   if (handle == NULL) return;

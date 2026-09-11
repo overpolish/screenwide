@@ -61,6 +61,8 @@ mod recenter;
 mod selection;
 #[path = "surface_windows/snapping.rs"]
 mod snapping;
+#[path = "surface_windows/view_fit.rs"]
+mod view_fit;
 #[path = "surface_windows/window.rs"]
 mod window;
 #[path = "surface_windows/workspace_layout.rs"]

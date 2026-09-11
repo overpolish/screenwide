@@ -45,6 +45,17 @@ typedef struct {
   double pan_y;
 } ScreenwideDisplayFitRebase;
 
+typedef struct {
+  double pan_x;
+  double pan_y;
+  double zoom;
+} ScreenwideViewTransform;
+extern ScreenwideViewTransform screenwide_workspace_panel_fit(
+    double viewport_width, double viewport_height, double base_x, double base_y,
+    double base_width, double base_height, double fit_width);
+_Static_assert(sizeof(ScreenwideViewTransform) == 24,
+               "Rust/C view transform layout mismatch");
+
 extern ScreenwideDisplayHit screenwide_workspace_hit_test(
     const ScreenwideDisplayTarget *targets, size_t count, double x, double y,
     double handle_size);

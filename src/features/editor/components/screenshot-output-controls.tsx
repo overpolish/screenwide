@@ -4,7 +4,6 @@
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import { ColorSwatch } from "../../../components/base/input-fields/color-swatch";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
-import { ScrollArea } from "../../../components/base/scroll-area/scroll-area";
 import { Dimensions } from "../../../components/shared/dimensions/dimensions";
 import { ScreenshotOutputSettings } from "../screenshot-output";
 
@@ -15,37 +14,10 @@ const backgroundTypes = [
   { id: "mesh", label: "Mesh" },
 ];
 
-export function ScreenshotInspector({
-  isSaving,
-  onChange,
-  onDimensionsChange,
-  settings,
-  sourceHeight,
-  sourceWidth,
-}: {
-  settings: ScreenshotOutputSettings;
-  sourceHeight: number;
-  sourceWidth: number;
-  isSaving?: boolean;
-  onChange?: (settings: ScreenshotOutputSettings) => void;
-  onDimensionsChange?: (width: number, height: number) => void;
-}) {
-  return (
-    <aside className="flex min-h-0 min-w-0 flex-col border-r border-muted/15 bg-content/35">
-      <ScrollArea rootClassName="min-h-0 grow">
-        <ScreenshotOutputControls
-          isSaving={isSaving}
-          onChange={onChange}
-          onDimensionsChange={onDimensionsChange}
-          settings={settings}
-          sourceHeight={sourceHeight}
-          sourceWidth={sourceWidth}
-        />
-      </ScrollArea>
-    </aside>
-  );
-}
-
+/**
+ * Canvas size and background for one screenshot or recording output. Shared by
+ * the camera track settings and, from stage three, the editor's tool panels.
+ */
 export function ScreenshotOutputControls({
   className = "p-4",
   isSaving,

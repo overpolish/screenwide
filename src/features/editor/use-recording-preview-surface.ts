@@ -9,8 +9,10 @@ import {
   setRecordingPreviewEditorSuspended,
   setRecordingPreviewZoom,
 } from "./api";
+import { resetRecordingPreviewView } from "./preview-view-api";
 import { RecordingOutputSettings } from "./screenshot-output";
 import { CameraOverlaySettings } from "./types";
+import { useNativePreviewFit } from "./use-native-preview-fit";
 
 /**
  * The native video panes render BELOW the webview. Every element that paints
@@ -272,6 +274,7 @@ export function useRecordingPreviewSurface({
   const selectionGestureActiveRef = useRef(false);
   const layoutRequestIdRef = useRef(0);
   const measureRef = useRef<() => void>(() => undefined);
+  const layoutRef = useRef<Promise<unknown>>(Promise.resolve());
   const lastNativeZoomRef = useRef<number | undefined>(undefined);
   compositionRef.current = { bakeCamera, cameraOverlay, recordingOutput };
 
@@ -461,7 +464,7 @@ export function useRecordingPreviewSurface({
       const next = pendingLayout;
       pendingLayout = null;
       inFlight = true;
-      void layoutRecordingPreviewSurface(next)
+      layoutRef.current = layoutRecordingPreviewSurface(next)
         .catch((cause: unknown) => {
           if (!disposed) onError(String(cause));
         })
@@ -688,4 +691,15 @@ export function useRecordingPreviewSurface({
     selection,
     selectionTargets,
   ]);
+
+  const fitPreview = useNativePreviewFit({
+    layoutRef,
+    measureRef,
+    onError,
+    reset: resetRecordingPreviewView,
+    sessionIdRef,
+    startedRef,
+  });
+
+  return { fitPreview };
 }

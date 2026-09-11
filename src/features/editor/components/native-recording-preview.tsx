@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { copyRecordingPreviewFrameToClipboard } from "../api";
 import {
@@ -36,6 +30,10 @@ import {
   screenshotWorkspaceItemOutput,
 } from "../screenshot-output";
 import { applyScreenshotRecenterGesture } from "../screenshot-recenter";
+import { CursorToolToggle } from "../tool-panels/cursor-tool-toggle";
+import { EditorToolId } from "../tool-panels/tool-registry";
+import { useCanvasTool } from "../tool-panels/use-canvas-tool";
+import { useToolPanel } from "../tool-panels/use-tool-panel";
 import {
   CameraOverlaySettings,
   RecordingTrackId,
@@ -48,7 +46,8 @@ import { useRecordingTimelineThumbnails } from "../use-recording-timeline-thumbn
 
 import { AudioVisualizer } from "./audio-visualizer";
 import { BakedCameraPreviewViewport } from "./baked-camera-preview-viewport";
-import { PreviewToolbar } from "./preview-toolbar";
+import { useRegisterPreviewFit } from "./preview-fit-context";
+import { PreviewToolbar, RecordingOutputSize } from "./preview-toolbar";
 import {
   RecordingCanvasTools,
   RecordingCanvasTool,
@@ -78,6 +77,10 @@ const FRAME_LAYER_ID = 0xffffffff;
 const AUTO_FIT_MOVE_EDGE = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE = 1 << 18;
 
+/** The toolbar's own name for a tool, in the registry's vocabulary. */
+const recordingToolId = (tool: RecordingCanvasTool): EditorToolId | null =>
+  tool === "canvas" ? "frame" : tool;
+
 /** Editor playback whose decode, audio output and timeline are all owned by Rust. */
 export function NativeRecordingPreview({
   artifactId,
@@ -97,8 +100,8 @@ export function NativeRecordingPreview({
   durationMs,
   enabledStreamIndices,
   enabledVideoTracks = [],
+  hasCursorData = false,
   hasKeyboardData = false,
-  inspector,
   isExportOpen = false,
   isPreparingAudio = false,
   isPreparingPreview = false,
@@ -119,7 +122,7 @@ export function NativeRecordingPreview({
   recordingOutput,
   recordingTimelineEdit,
   selectedTrack = null,
-}: ScrubPreviewProps & { inspector?: ReactNode }) {
+}: ScrubPreviewProps) {
   const screenCanvasRef = useRef<HTMLCanvasElement>(null);
   const cameraCanvasRef = useRef<HTMLCanvasElement>(null);
   const selectionGestureRef = useRef<{
@@ -146,7 +149,19 @@ export function NativeRecordingPreview({
     totalDurationRef,
   });
   const [zoomPercent, setZoomPercent] = useState(100);
-  const [canvasTool, setCanvasTool] = useState<RecordingCanvasTool>("select");
+  const [canvasTool, setCanvasTool] = useCanvasTool<
+    Exclude<RecordingCanvasTool, null>
+  >("recording", "select");
+  const { select: selectToolPanel, toggle: toggleToolPanel } =
+    useToolPanel("recording");
+  // The shortcut opens the panel from the toolbar button's own bounds, the
+  // same anchor a press would give it.
+  const toggleCursorPanel = useCallback(() => {
+    const bounds = document
+      .querySelector("[data-editor-tool=cursor]")
+      ?.getBoundingClientRect();
+    if (bounds) void toggleToolPanel("cursor", bounds);
+  }, [toggleToolPanel]);
   // A canvas resize runs at pointer rate; committing every move to the export
   // window's state re-renders the inspector, lanes and timeline and starves
   // the native pane's layout loop. The gesture renders from this draft and
@@ -928,6 +943,7 @@ export function NativeRecordingPreview({
     timelineEdit: recordingTimelineEdit,
     zoomPercent,
   });
+  useRegisterPreviewFit(player.fitPreview);
   const isPlaying = player.isPlaying;
   const getPlayerPositionMs = player.getPositionMs;
   previewPlayingRef.current = isPlaying;
@@ -1054,20 +1070,11 @@ export function NativeRecordingPreview({
   const moveActiveVideoTrackForward = useCallback(() => {
     moveActiveVideoTrack("forward");
   }, [moveActiveVideoTrack]);
-  const toggleCanvasTool = useCallback(() => {
-    setCanvasTool((current) => (current === "canvas" ? null : "canvas"));
-  }, []);
-  const toggleSelectTool = useCallback(() => {
-    setCanvasTool((current) => (current === "select" ? null : "select"));
-  }, []);
-  const toggleCropTool = useCallback(() => {
-    setCanvasTool((current) => (current === "crop" ? null : "crop"));
-  }, []);
-  const toggleRecenterTool = useCallback(() => {
-    pause();
-    if (canvasTool !== "recenter") recenter.prepare();
-    setCanvasTool((current) => (current === "recenter" ? null : "recenter"));
-  }, [canvasTool, pause, recenter]);
+  // Every way into a tool goes through here, so choosing one always settles
+  // the panel and the view together. The current tool is read from a ref so
+  // the shortcut handlers keep the stable identity the hook above relies on.
+  const canvasToolRef = useRef(canvasTool);
+  canvasToolRef.current = canvasTool;
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
       if (next === "recenter") {
@@ -1075,31 +1082,54 @@ export function NativeRecordingPreview({
         recenter.prepare();
       }
       setCanvasTool(next);
+      void selectToolPanel(recordingToolId(next));
     },
-    [pause, recenter],
+    [pause, recenter, selectToolPanel, setCanvasTool],
   );
+  const toggleCanvasTool = useCallback(() => {
+    changeCanvasTool(canvasToolRef.current === "canvas" ? null : "canvas");
+  }, [changeCanvasTool]);
+  const toggleSelectTool = useCallback(() => {
+    changeCanvasTool(canvasToolRef.current === "select" ? null : "select");
+  }, [changeCanvasTool]);
+  const toggleCropTool = useCallback(() => {
+    changeCanvasTool(canvasToolRef.current === "crop" ? null : "crop");
+  }, [changeCanvasTool]);
+  const toggleRecenterTool = useCallback(() => {
+    pause();
+    changeCanvasTool(canvasToolRef.current === "recenter" ? null : "recenter");
+  }, [changeCanvasTool, pause]);
 
   // The tools read the committed `recordingOutput`, never the resize draft, so
   // holding the element keeps the memoized toolbar's props stable mid-gesture.
+  // Held as one element so the toolbar's memo sees the same prop every render.
+  const outputSize = useMemo(() => <RecordingOutputSize />, []);
   const cropToggle = useMemo(
     () =>
       visiblePaneEntries.length > 0 ? (
-        <RecordingCanvasTools
-          activeTrack={activeVideoTrack}
-          bakeCamera={bakeCamera}
-          cameraPane={cameraPane}
-          isEnabled={canEditActiveTrack}
-          isFrameEnabled={canResizeActiveTrack}
-          isRecenterEnabled={canRecenterPrimary}
-          isSelectEnabled={visiblePaneEntries.length > 0}
-          onCameraOverlayReset={onCameraOverlayChange}
-          onChange={onRecordingOutputChange}
-          onRecenterReset={recenter.reset}
-          onToolChange={changeCanvasTool}
-          outputs={recordingOutput}
-          screenPane={screenPane}
-          tool={canvasTool}
-        />
+        <>
+          {hasCursorData ? (
+            <ButtonGroup aria-label="Effects" className="gap-control">
+              <CursorToolToggle />
+            </ButtonGroup>
+          ) : null}
+          <RecordingCanvasTools
+            activeTrack={activeVideoTrack}
+            bakeCamera={bakeCamera}
+            cameraPane={cameraPane}
+            isEnabled={canEditActiveTrack}
+            isFrameEnabled={canResizeActiveTrack}
+            isRecenterEnabled={canRecenterPrimary}
+            isSelectEnabled={visiblePaneEntries.length > 0}
+            onCameraOverlayReset={onCameraOverlayChange}
+            onChange={onRecordingOutputChange}
+            onRecenterReset={recenter.reset}
+            onToolChange={changeCanvasTool}
+            outputs={recordingOutput}
+            screenPane={screenPane}
+            tool={canvasTool}
+          />
+        </>
       ) : undefined,
     [
       activeVideoTrack,
@@ -1110,6 +1140,7 @@ export function NativeRecordingPreview({
       canRecenterPrimary,
       canvasTool,
       changeCanvasTool,
+      hasCursorData,
       onCameraOverlayChange,
       onRecordingOutputChange,
       recenter.reset,
@@ -1139,6 +1170,7 @@ export function NativeRecordingPreview({
     onSelectTool: hasVisiblePanes ? toggleSelectTool : undefined,
     onStep: !canNudgeActiveTrack && layout ? timelineBlade.step : undefined,
     onToggleCrop: hasVisiblePanes ? toggleCropTool : undefined,
+    onToggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
   });
   const changeEnabledTracks = useCallback(
@@ -1195,135 +1227,134 @@ export function NativeRecordingPreview({
   }, [artifactId, getPositionMs]);
 
   return (
-    <div className="flex min-h-0 grow flex-col [--recording-inspector-width:clamp(270px,23vw,300px)]">
-      <div className="grid min-h-0 grow grid-cols-[var(--recording-inspector-width)_minmax(0,1fr)]">
-        {inspector}
-        <section className="relative flex min-h-0 min-w-0 flex-col">
-          {visibleLayout && visibleLayout.panes.length > 0 ? (
-            <PreviewToolbar
-              onZoomChange={setZoomPercent}
-              tools={cropToggle}
-              zoomPercent={zoomPercent}
-            />
-          ) : null}
-          <div className="flex min-h-0 grow items-stretch justify-center">
-            {!layout ? (
-              <div className="flex grow items-center justify-center gap-3 text-xs text-muted">
-                <CircularProgress
-                  aria-label="Preparing recording preview"
-                  isIndeterminate
-                />
-                Preparing recording preview
-              </div>
-            ) : canPreviewBakedCamera && screenPane && cameraPane ? (
-              <div className="flex min-h-0 min-w-0 grow flex-col">
-                <BakedCameraPreviewViewport
-                  isBusy={
-                    previewLayout === undefined &&
-                    (player.isPreparing || isPreparingPreview)
-                  }
-                  outputSettings={
-                    // Draft output keeps the frame and workspace on the resize
-                    // before it reaches the editor window's state.
-                    activeRecordingOutput?.primary ??
-                    defaultScreenshotOutput(screenPane.width, screenPane.height)
-                  }
-                  screenCanvasRef={screenCanvasRef}
-                  tool={canvasTool}
-                />
-              </div>
-            ) : visibleLayout &&
-              visibleLayout.panes.length > 0 &&
-              activeRecordingOutput ? (
-              <div className="flex min-h-0 min-w-0 grow flex-col">
-                <RecordingOutputPreviewViewport
-                  entries={visiblePaneEntries}
-                  outputs={activeRecordingOutput}
-                  tool={canvasTool}
-                />
-              </div>
-            ) : visibleLayout && visibleLayout.panes.length > 0 ? (
-              <div className="flex min-h-0 min-w-0 grow flex-col">
-                <RecordingPreviewViewport
-                  canvasRefs={visibleCanvasRefs}
-                  isBusy={
-                    previewLayout === undefined &&
-                    (player.isPreparing || isPreparingPreview)
-                  }
-                  layout={visibleLayout}
-                />
-              </div>
-            ) : (
-              <AudioVisualizer
-                audioTracks={audioTracks}
-                enabledTracks={enabledTracks}
-                playhead={playhead}
-                volumes={audioVolumeByStream}
-              />
-            )}
-          </div>
-
-          {audioError ? (
-            <p className="m-0 px-4 pb-2 text-xs text-error">{audioError}</p>
-          ) : null}
-          {player.error ? (
-            <p className="m-0 px-4 pb-2 text-xs text-error">{player.error}</p>
-          ) : null}
-          {copyError ? (
-            <p className="m-0 px-4 pb-2 text-xs text-error">{copyError}</p>
-          ) : null}
-
-          {layout ? (
-            <RecordingPlaybackControls
-              durationMs={timelineBlade.timelineDurationMs}
-              isPlaying={player.isPlaying}
-              onCopyCurrentFrame={copyCurrentFrame}
-              onPause={player.pause}
-              onPlay={player.play}
-              onPlaybackRateChange={player.setPlaybackRate}
-              playbackRate={player.playbackRate}
-              playhead={playhead}
-            />
-          ) : null}
-        </section>
-      </div>
-
-      {layout ? (
-        isPreparingAudio ? (
-          <div className="flex h-24 shrink-0 items-center justify-center gap-2 border-t border-muted/15 text-xs text-muted">
-            <CircularProgress
-              aria-label="Preparing audio preview"
-              isIndeterminate
-              size="compact"
-            />
-            Preparing audio tracks
-          </div>
-        ) : (
-          <RecordingTrackLanes
-            adjustedKeyboardFragmentIds={keyboardTimeline.adjustedFragmentIds}
-            audioTracks={audioTracks}
-            blade={timelineBlade.blade}
-            durationMs={timelineBlade.timelineDurationMs}
-            enabledTracks={enabledTracks}
-            enabledVideoTracks={selectedVideoTracks}
-            hiddenKeyboardFragmentIds={keyboardTimeline.hiddenFragmentIds}
-            hiddenKeyboardItemIds={keyboardTimeline.hiddenItemIds}
-            keyboardItems={keyboardTimeline.items}
-            keyboardSelection={keyboardTimeline.selection}
-            layout={layout}
-            onEnabledTracksChange={changeEnabledTracks}
-            onEnabledVideoTracksChange={changeEnabledVideoTracks}
-            onSeek={timelineBlade.seek}
-            onSelectedTrackChange={changeSelectedTrack}
-            onVideoTrackOrderChange={onVideoTrackOrderChange}
-            playhead={playhead}
-            selectedTrack={selectedTrack}
-            sourceDurationMs={durationMs}
-            thumbnails={timelineThumbnails}
-            videoTrackOrder={videoTrackOrderList}
-            volumes={audioVolumeByStream}
+    <div className="flex min-h-0 grow flex-col">
+      <section className="relative flex min-h-0 min-w-0 grow flex-col">
+        {visibleLayout && visibleLayout.panes.length > 0 ? (
+          <PreviewToolbar
+            outputSize={outputSize}
+            tools={cropToggle}
+            zoomPercent={zoomPercent}
           />
-        )
+        ) : null}
+        <div className="flex min-h-0 grow items-stretch justify-center">
+          {!layout ? (
+            <div className="flex grow items-center justify-center gap-3 text-xs text-muted">
+              <CircularProgress
+                aria-label="Preparing recording preview"
+                isIndeterminate
+              />
+              Preparing recording preview
+            </div>
+          ) : canPreviewBakedCamera && screenPane && cameraPane ? (
+            <div className="flex min-h-0 min-w-0 grow flex-col">
+              <BakedCameraPreviewViewport
+                isBusy={
+                  previewLayout === undefined &&
+                  (player.isPreparing || isPreparingPreview)
+                }
+                outputSettings={
+                  // Draft output keeps the frame and workspace on the resize
+                  // before it reaches the editor window's state.
+                  activeRecordingOutput?.primary ??
+                  defaultScreenshotOutput(screenPane.width, screenPane.height)
+                }
+                screenCanvasRef={screenCanvasRef}
+                tool={canvasTool}
+              />
+            </div>
+          ) : visibleLayout &&
+            visibleLayout.panes.length > 0 &&
+            activeRecordingOutput ? (
+            <div className="flex min-h-0 min-w-0 grow flex-col">
+              <RecordingOutputPreviewViewport
+                entries={visiblePaneEntries}
+                outputs={activeRecordingOutput}
+                tool={canvasTool}
+              />
+            </div>
+          ) : visibleLayout && visibleLayout.panes.length > 0 ? (
+            <div className="flex min-h-0 min-w-0 grow flex-col">
+              <RecordingPreviewViewport
+                canvasRefs={visibleCanvasRefs}
+                isBusy={
+                  previewLayout === undefined &&
+                  (player.isPreparing || isPreparingPreview)
+                }
+                layout={visibleLayout}
+              />
+            </div>
+          ) : (
+            <AudioVisualizer
+              audioTracks={audioTracks}
+              enabledTracks={enabledTracks}
+              playhead={playhead}
+              volumes={audioVolumeByStream}
+            />
+          )}
+        </div>
+
+        {audioError ? (
+          <p className="m-0 px-4 pb-2 text-xs text-error">{audioError}</p>
+        ) : null}
+        {player.error ? (
+          <p className="m-0 px-4 pb-2 text-xs text-error">{player.error}</p>
+        ) : null}
+        {copyError ? (
+          <p className="m-0 px-4 pb-2 text-xs text-error">{copyError}</p>
+        ) : null}
+      </section>
+
+      {/* The timeline band: transport first, then the lanes it drives. It is
+          set off by the fill ladder alone, with no rule between it and the
+          preview above. */}
+      {layout ? (
+        <div className="shrink-0 bg-fill-quaternary px-window-inset">
+          <RecordingPlaybackControls
+            durationMs={timelineBlade.timelineDurationMs}
+            isPlaying={player.isPlaying}
+            onCopyCurrentFrame={copyCurrentFrame}
+            onPause={player.pause}
+            onPlay={player.play}
+            onPlaybackRateChange={player.setPlaybackRate}
+            playbackRate={player.playbackRate}
+            playhead={playhead}
+          />
+          {isPreparingAudio ? (
+            <div className="flex h-24 shrink-0 items-center justify-center gap-2 text-xs text-muted">
+              <CircularProgress
+                aria-label="Preparing audio preview"
+                isIndeterminate
+                size="compact"
+              />
+              Preparing audio tracks
+            </div>
+          ) : (
+            <RecordingTrackLanes
+              adjustedKeyboardFragmentIds={keyboardTimeline.adjustedFragmentIds}
+              audioTracks={audioTracks}
+              blade={timelineBlade.blade}
+              durationMs={timelineBlade.timelineDurationMs}
+              enabledTracks={enabledTracks}
+              enabledVideoTracks={selectedVideoTracks}
+              hiddenKeyboardFragmentIds={keyboardTimeline.hiddenFragmentIds}
+              hiddenKeyboardItemIds={keyboardTimeline.hiddenItemIds}
+              keyboardItems={keyboardTimeline.items}
+              keyboardSelection={keyboardTimeline.selection}
+              layout={layout}
+              onEnabledTracksChange={changeEnabledTracks}
+              onEnabledVideoTracksChange={changeEnabledVideoTracks}
+              onSeek={timelineBlade.seek}
+              onSelectedTrackChange={changeSelectedTrack}
+              onVideoTrackOrderChange={onVideoTrackOrderChange}
+              playhead={playhead}
+              selectedTrack={selectedTrack}
+              sourceDurationMs={durationMs}
+              thumbnails={timelineThumbnails}
+              videoTrackOrder={videoTrackOrderList}
+              volumes={audioVolumeByStream}
+            />
+          )}
+        </div>
       ) : null}
     </div>
   );

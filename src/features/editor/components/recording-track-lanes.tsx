@@ -175,7 +175,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   return (
     <section
       aria-label="Recording timeline"
-      className="shrink-0 border-t border-muted/15 bg-content/55 pt-0.5 pr-3 pb-2 pl-3 [&_*]:outline-none! [&_*]:ring-0! [&_*]:ring-offset-0!"
+      className="shrink-0 pt-0.5 pb-2 [&_*]:outline-none! [&_*]:ring-0! [&_*]:ring-offset-0!"
       {...timeline.interactionProps}
     >
       <div className="flex items-stretch gap-2">
@@ -200,7 +200,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               enabledTracks.size === 0;
             return (
               <div
-                className={`relative flex items-center gap-2 transition-opacity ${drag?.source === trackId ? "opacity-55" : ""}`}
+                className={`relative flex items-center transition-opacity ${drag?.source === trackId ? "opacity-55" : ""}`}
                 key={trackId}
                 onContextMenu={(event) => {
                   event.preventDefault();
@@ -224,7 +224,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
                   <div className="pointer-events-none absolute -bottom-0.5 right-0 left-0 z-20 h-0.5 rounded bg-info" />
                 ) : null}
                 <div
-                  className={`flex h-8 w-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-1.25rem)] shrink-0 cursor-grab items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors active:cursor-grabbing ${selectedTrack === trackId ? "bg-info/15" : ""}`}
+                  className={`flex h-8 w-timeline-gutter shrink-0 cursor-grab items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors active:cursor-grabbing ${selectedTrack === trackId ? "bg-info/15" : ""}`}
                   onClick={() => {
                     onSelectedTrackChange(trackId);
                   }}

@@ -519,3 +519,20 @@ export const setScreenshotPreviewEditorSuspended = (
     sessionId,
     suspended,
   });
+
+/**
+ * Widens an editor window by `delta` logical px so an opening tool panel costs
+ * the preview none of its usable width. Resolves to whether it grew: the
+ * display may have no room to its right, and the picture then fits smaller
+ * instead.
+ */
+export const growEditorForPanel = (label: string, delta: number) =>
+  invoke<boolean>("grow_editor_for_panel", { delta, label });
+
+/** Takes that width back, but only from a window still exactly as wide as the
+ * growth left it: a resize in between is the size the user chose. */
+export const shrinkEditorAfterPanel = (
+  label: string,
+  delta: number,
+  expectedWidth: number,
+) => invoke<null>("shrink_editor_after_panel", { delta, expectedWidth, label });

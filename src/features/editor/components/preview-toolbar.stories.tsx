@@ -9,7 +9,7 @@ import { defaultRecordingOutput } from "../screenshot-output";
 
 import { PreviewToolReset } from "./preview-tool-reset";
 import { PreviewToolToggle } from "./preview-tool-toggle";
-import { PreviewToolbar } from "./preview-toolbar";
+import { PreviewOutputSize, PreviewToolbar } from "./preview-toolbar";
 import {
   RecordingCanvasTool,
   RecordingCanvasTools,
@@ -53,17 +53,24 @@ function ToolbarPreview({
   initialTool = "select",
   isDisabled = false,
   kind = "screenshot",
+  outputHeight = 1080,
+  outputWidth = 1920,
+  zoomPercent = 100,
 }: {
   initialTool?: RecordingCanvasTool;
   isDisabled?: boolean;
   kind?: "screenshot" | "recording";
+  outputHeight?: number;
+  outputWidth?: number;
+  zoomPercent?: number;
 }) {
   const [tool, setTool] = useState<RecordingCanvasTool>(initialTool);
-  const [zoom, setZoom] = useState(100);
 
   return (
     <PreviewToolbar
-      onZoomChange={setZoom}
+      outputSize={
+        <PreviewOutputSize height={outputHeight} width={outputWidth} />
+      }
       tools={
         kind === "recording" ? (
           <RecordingCanvasTools
@@ -110,7 +117,7 @@ function ToolbarPreview({
           </>
         )
       }
-      zoomPercent={zoom}
+      zoomPercent={zoomPercent}
     />
   );
 }
@@ -139,3 +146,7 @@ export const RecordingToolsDisabled: Story = {
 
 export const NoToolSelected: Story = { args: { initialTool: null } };
 export const CropSelected: Story = { args: { initialTool: "crop" } };
+/** A workspace zoomed past its own pixels, with a portrait output size. */
+export const ZoomedIn: Story = {
+  args: { outputHeight: 2160, outputWidth: 1170, zoomPercent: 240 },
+};

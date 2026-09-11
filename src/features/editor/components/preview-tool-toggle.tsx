@@ -2,15 +2,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ReactNode } from "react";
-import { TooltipTrigger } from "react-aria-components";
 
 import { IconToggleButton } from "../../../components/base/button/icon-button";
-import { Keyboard } from "../../../components/base/keyboard/keyboard";
-import { Tooltip } from "../../../components/base/tooltip/tooltip";
+import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
 
 /**
  * One Editor tool in the preview toolbar: a toggle whose tooltip
  * names its keyboard shortcut.
+ *
+ * The tooltip is a window of its own: the preview it stands over is a native
+ * surface layered above the webview, which nothing drawn in the page can
+ * appear over.
  */
 export function PreviewToolToggle({
   children,
@@ -32,24 +34,16 @@ export function PreviewToolToggle({
   shortcut?: string;
 }) {
   return (
-    <TooltipTrigger delay={400}>
-      <span className="inline-flex">
-        <IconToggleButton
-          aria-keyshortcuts={shortcut}
-          aria-label={name}
-          isDisabled={isDisabled}
-          isSelected={isSelected}
-          onChange={onSelectedChange}
-        >
-          {children}
-        </IconToggleButton>
-      </span>
-      <Tooltip placement="top">
-        <span className="flex items-center gap-control-inset">
-          {label}
-          {shortcut ? <Keyboard>{shortcut}</Keyboard> : null}
-        </span>
-      </Tooltip>
-    </TooltipTrigger>
+    <NativeTooltipTrigger tooltip={{ label, shortcut }}>
+      <IconToggleButton
+        aria-keyshortcuts={shortcut}
+        aria-label={name}
+        isDisabled={isDisabled}
+        isSelected={isSelected}
+        onChange={onSelectedChange}
+      >
+        {children}
+      </IconToggleButton>
+    </NativeTooltipTrigger>
   );
 }

@@ -19,6 +19,7 @@ pub(crate) mod monitor_capture;
 pub(crate) mod options;
 #[cfg(target_os = "macos")]
 mod panel_presentation_macos;
+pub(crate) mod panel_space;
 pub(crate) mod platform;
 pub(crate) mod region;
 pub(crate) mod region_gesture;
@@ -147,6 +148,8 @@ pub enum WindowLabel {
   ExportScreenshot,
   /// The shared confirmation sheet, a child of whichever window asked.
   ConfirmSheet,
+  /// The shared tooltip, a floating panel that describes whatever is hovered.
+  Tooltip,
   #[cfg(target_os = "macos")]
   Permissions,
   Glide,
@@ -169,6 +172,7 @@ impl WindowLabel {
     Self::ExportRecording,
     Self::ExportScreenshot,
     Self::ConfirmSheet,
+    Self::Tooltip,
     #[cfg(target_os = "macos")]
     Self::Permissions,
     Self::Glide,
@@ -191,6 +195,7 @@ impl WindowLabel {
       Self::ExportRecording => "export-recording",
       Self::ExportScreenshot => "export-screenshot",
       Self::ConfirmSheet => "confirm-sheet",
+      Self::Tooltip => "tooltip",
       #[cfg(target_os = "macos")]
       Self::Permissions => "permissions",
       Self::Glide => "glide",

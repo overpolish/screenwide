@@ -29,6 +29,7 @@ const spacing = [
   "layout",
   "window-inset",
   "control-height",
+  "timeline-gutter",
   "traffic-lights",
   "focus-safe",
   "icon",

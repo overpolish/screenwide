@@ -13,10 +13,12 @@ import {
   stopScreenshotPreview,
 } from "./api";
 import { fitPreviewPane, PreviewPaneFit } from "./components/preview-transform";
+import { resetScreenshotPreviewView } from "./preview-view-api";
 import {
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
 } from "./screenshot-output";
+import { useNativePreviewFit } from "./use-native-preview-fit";
 import {
   applyBackdropMask,
   clearBackdropMasks,
@@ -118,6 +120,7 @@ export function useScreenshotPreviewSurface({
   const editorSuspendedRef = useRef(isEditorSuspended);
   editorSuspendedRef.current = isEditorSuspended;
   const measureRef = useRef<() => void>(() => undefined);
+  const layoutRef = useRef<Promise<unknown>>(Promise.resolve());
   const outputKey = JSON.stringify(output);
 
   useEffect(() => {
@@ -296,7 +299,7 @@ export function useScreenshotPreviewSurface({
       const next = pendingLayout;
       pendingLayout = null;
       inFlight = true;
-      void layoutScreenshotPreviewSurface(next)
+      layoutRef.current = layoutScreenshotPreviewSurface(next)
         .catch(() => undefined)
         .finally(() => {
           inFlight = false;
@@ -435,4 +438,14 @@ export function useScreenshotPreviewSurface({
     if (!isEnabled) return;
     return clearBackdropMasks;
   }, [isEnabled]);
+
+  const fitPreview = useNativePreviewFit({
+    layoutRef,
+    measureRef,
+    reset: resetScreenshotPreviewView,
+    sessionIdRef,
+    startedRef,
+  });
+
+  return { fitPreview };
 }

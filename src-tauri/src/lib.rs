@@ -36,6 +36,7 @@ mod startup;
 mod storybook_native;
 mod system_accent;
 mod text_recognition;
+mod tooltip_window;
 #[cfg(desktop)]
 mod tray;
 mod updates;
@@ -81,6 +82,7 @@ pub fn run() {
     .manage(shortcuts::ShortcutSettingsState::default())
     .manage(text_recognition::TextRecognitionState::default())
     .manage(text_recognition::qr_details::QrDetailsState::default())
+    .manage(tooltip_window::TooltipState::default())
     .invoke_handler(tauri::generate_handler![
       audio_preview::start_audio_preview,
       audio_preview::stop_audio_preview,
@@ -109,6 +111,7 @@ pub fn run() {
       editor::recording_preview_player::commands::pause_recording_preview,
       editor::recording_preview_player::surface_commands::layout_recording_preview_surface,
       editor::recording_preview_player::surface_commands::set_recording_preview_zoom,
+      editor::recording_preview_player::surface_commands::reset_recording_preview_view,
       editor::recording_preview_player::editor_suspend::set_recording_preview_editor_suspended,
       editor::recording_preview_player::commands::playback::play_recording_preview,
       editor::recording_preview_player::commands::seek_recording_preview,
@@ -127,6 +130,7 @@ pub fn run() {
       editor::screenshot_preview::refresh_screenshot_preview_sources,
       editor::screenshot_preview::set_screenshot_preview_editor_suspended,
       editor::screenshot_preview::set_screenshot_preview_zoom,
+      editor::screenshot_preview::reset_screenshot_preview_view,
       editor::screenshot_preview::start_screenshot_preview,
       editor::screenshot_preview::stop_screenshot_preview,
       editor::commands::set_export_directory,
@@ -174,6 +178,10 @@ pub fn run() {
       text_recognition::copy_recognition_content,
       text_recognition::get_qr_details,
       text_recognition::start_text_recognition,
+      tooltip_window::fit_tooltip,
+      tooltip_window::get_tooltip,
+      tooltip_window::hide_tooltip,
+      tooltip_window::show_tooltip,
       updates::update_checks_enabled,
       updates::hide_update_prompt,
       updates::show_update_prompt,
@@ -210,6 +218,9 @@ pub fn run() {
       windows::screenshot_region::osc_command::set_screenshot_region_osc,
       windows::screenshot_region::presentation::set_region_selector_osc_frame_visible,
       windows::options::show_standalone_listbox,
+      windows::options::placement::move_standalone_listbox,
+      windows::panel_space::grow_editor_for_panel,
+      windows::panel_space::shrink_editor_after_panel,
       windows::source_selector::expand_recording_source_selector,
     ])
     .setup(|app| {

@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ReactNode } from "react";
-
 import { RecordingTimelineEdit } from "../recording-timeline-edit";
 import { RecordingOutputSettings } from "../screenshot-output";
 import {
@@ -34,7 +32,6 @@ export type ScrubPreviewProps = {
   enabledVideoTracks?: RecordingVideoTrackId[];
   hasCursorData?: boolean;
   hasKeyboardData?: boolean;
-  inspector?: ReactNode;
   isExportOpen?: boolean;
   isPreparingAudio?: boolean;
   isPreparingPreview?: boolean;

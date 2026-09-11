@@ -63,7 +63,7 @@ export function TimelineLaneSelectionOverlay({
   viewport: TimelineViewportState;
 }) {
   return (
-    <div className="pointer-events-none absolute top-9 right-0 bottom-0 left-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-0.75rem)] z-[9] overflow-hidden">
+    <div className="pointer-events-none absolute top-9 right-0 bottom-0 left-timeline-gutter z-[9] overflow-hidden">
       <TimelineViewportContent viewport={viewport}>
         <TimelineSegmentSelection
           edit={edit}

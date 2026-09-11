@@ -68,7 +68,7 @@ export function TimelineZoomToolbar({
   viewport: TimelineViewportState;
 }) {
   return (
-    <div className="flex h-9 w-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-1.25rem)] shrink-0 items-center pl-1">
+    <div className="flex h-9 w-timeline-gutter shrink-0 items-center pl-1">
       <TimelineToolbarTooltip label="Blade" shortcut="B">
         <IconToggleButton
           aria-keyshortcuts="B"
@@ -162,7 +162,7 @@ export function TimelineHeader({
   viewport: TimelineViewportState;
 }) {
   return (
-    <div className="flex h-9 items-center gap-2">
+    <div className="flex h-9 items-center">
       <TimelineZoomToolbar
         isBladeActive={blade.isActive}
         isRangeActive={blade.isRangeActive}

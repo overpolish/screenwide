@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ReactNode } from "react";
-
 import { RecordingTimelineEdit } from "../recording-timeline-edit";
 import {
   RecordingOutputSettings,
@@ -51,7 +49,6 @@ export type RecordingSectionProps = {
   enabledVideoTracks?: RecordingVideoTrackId[];
   hasCursorData?: boolean;
   hasKeyboardData?: boolean;
-  inspector?: ReactNode;
   isExportOpen?: boolean;
   isPreparingRecordingAudio?: boolean;
   isPreparingRecordingPreview?: boolean;

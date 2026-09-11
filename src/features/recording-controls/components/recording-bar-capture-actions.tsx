@@ -121,13 +121,16 @@ export function RecordingBarCaptureActions({
     }
 
     open({
+      content: {
+        items,
+        kind: "list",
+        mode: "menu",
+        selectedIds: [],
+        selectionMode: "single",
+      },
       focusContents,
       id: SCREENSHOT_MENU_ID,
-      items,
       label: "Screenshot options",
-      mode: "menu",
-      selectedIds: [],
-      selectionMode: "single",
     });
     await showPopupPanel({
       anchor: {

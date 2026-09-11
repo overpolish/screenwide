@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { RotateCcw } from "lucide-react";
-import { TooltipTrigger } from "react-aria-components";
 
 import { IconButton } from "../../../components/base/button/icon-button";
-import { Tooltip } from "../../../components/base/tooltip/tooltip";
+import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
 
 const resetLabels = {
   canvas: "Reset canvas",
@@ -32,7 +31,7 @@ export function PreviewToolReset({
       aria-hidden={tool === null || undefined}
       className={`absolute top-1/2 left-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 ${tool === null ? "invisible" : ""}`}
     >
-      <TooltipTrigger delay={400}>
+      <NativeTooltipTrigger tooltip={label}>
         <IconButton
           aria-label={label}
           isDisabled={tool === null || isDisabled || !onReset}
@@ -40,8 +39,7 @@ export function PreviewToolReset({
         >
           <RotateCcw />
         </IconButton>
-        <Tooltip placement="top">{label}</Tooltip>
-      </TooltipTrigger>
+      </NativeTooltipTrigger>
     </span>
   );
 }

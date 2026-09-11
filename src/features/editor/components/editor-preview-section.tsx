@@ -4,6 +4,7 @@
 import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import {
   scaledDimensions,
   scaledVideoDimensions,
@@ -14,6 +15,9 @@ import {
   screenshotWorkspaceItemOutput,
   ScreenshotOutputSettings,
 } from "../screenshot-output";
+import { EditorToolId } from "../tool-panels/tool-registry";
+import { useCanvasTool } from "../tool-panels/use-canvas-tool";
+import { useToolPanel } from "../tool-panels/use-tool-panel";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
 
 import {
@@ -21,8 +25,7 @@ import {
   ScreenshotSectionProps,
 } from "./editor-preview-section-props";
 import { PreviewToolToggle } from "./preview-tool-toggle";
-import { PreviewToolbar } from "./preview-toolbar";
-import { maximumZoom, MINIMUM_ZOOM_CEILING } from "./preview-transform";
+import { PreviewOutputSize, PreviewToolbar } from "./preview-toolbar";
 import { PreviewViewport } from "./preview-viewport";
 import {
   createRecordingOutputDimensionsChannel,
@@ -35,6 +38,12 @@ import {
 import { ScreenshotToolReset } from "./screenshot-tool-reset";
 import { ScrubPreview } from "./scrub-preview";
 import { useScreenshotRecenter } from "./use-screenshot-recenter";
+
+type ScreenshotTool = "canvas" | "crop" | "recenter" | "select" | null;
+
+/** The toolbar's own name for a tool, in the registry's vocabulary. */
+const screenshotToolId = (tool: ScreenshotTool): EditorToolId | null =>
+  tool === "canvas" ? "frame" : tool;
 
 /**
  * The screenshot section. Sibling to `RecordingSection`, and the reason the
@@ -54,12 +63,22 @@ export function ScreenshotSection({
   selectedItemId = null,
 }: ScreenshotSectionProps) {
   const [zoomPercent, setZoomPercent] = useState(100);
-  const [maximumZoomPercent, setMaximumZoomPercent] = useState(
-    MINIMUM_ZOOM_CEILING * 100,
-  );
-  const [tool, setTool] = useState<
-    "canvas" | "crop" | "recenter" | "select" | null
-  >("select");
+  const [activeTool, setActiveTool] = useCanvasTool<
+    Exclude<ScreenshotTool, null>
+  >("screenshot", "select");
+  const tool = activeTool;
+  const { select } = useToolPanel("screenshot");
+  // Every way into a tool goes through here, so choosing one always settles
+  // the panel and the view together.
+  const toolRef = useRef(tool);
+  toolRef.current = tool;
+  const setTool = (
+    next: ScreenshotTool | ((current: ScreenshotTool) => ScreenshotTool),
+  ) => {
+    const resolved = typeof next === "function" ? next(toolRef.current) : next;
+    setActiveTool(resolved);
+    void select(screenshotToolId(resolved));
+  };
   const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
   const moveSelectedLayer = (
     direction: "backward" | "forward",
@@ -185,10 +204,14 @@ export function ScreenshotSection({
   return (
     <div className="flex min-h-0 min-w-0 grow flex-col">
       <PreviewToolbar
-        maximumZoomPercent={maximumZoomPercent}
-        onZoomChange={setZoomPercent}
+        outputSize={
+          <PreviewOutputSize
+            height={outputDimensions.height}
+            width={outputDimensions.width}
+          />
+        }
         tools={
-          <>
+          <ButtonGroup aria-label="View tools" className="gap-control">
             <PreviewToolToggle
               isSelected={tool === "select"}
               label="Select"
@@ -244,7 +267,7 @@ export function ScreenshotSection({
               selectedOutput={selectedOutput}
               tool={tool}
             />
-          </>
+          </ButtonGroup>
         }
         zoomPercent={zoomPercent}
       />
@@ -266,9 +289,6 @@ export function ScreenshotSection({
         onCropChangeEnd={recenter.refresh}
         onItemSelect={onSelectedItemChange}
         onOutputChange={onOutputChange}
-        onPaneFitChange={(fit) => {
-          setMaximumZoomPercent(Math.round(maximumZoom(fit) * 100));
-        }}
         onRadiusChangeEnd={onRadiusChangeEnd}
         onRecenter={recenter.begin}
         onZoomChange={setZoomPercent}
@@ -298,7 +318,6 @@ export function RecordingSection({
   enabledVideoTracks,
   hasCursorData,
   hasKeyboardData,
-  inspector,
   isExportOpen,
   isPreparingRecordingAudio,
   isPreparingRecordingPreview,
@@ -360,7 +379,6 @@ export function RecordingSection({
           enabledVideoTracks={enabledVideoTracks}
           hasCursorData={hasCursorData}
           hasKeyboardData={hasKeyboardData}
-          inspector={inspector}
           isExportOpen={isExportOpen}
           isPreparingAudio={isPreparingRecordingAudio}
           isPreparingPreview={isPreparingRecordingPreview}

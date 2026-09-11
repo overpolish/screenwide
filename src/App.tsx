@@ -6,6 +6,7 @@ import { EditorSync } from "./features/editor/editor-sync";
 import { EditorWindow } from "./features/editor/editor-window";
 import { ExportOptionsSync } from "./features/editor/export-options/export-options-sync";
 import { ExportOptionsWindow } from "./features/editor/export-options/export-options-window";
+import { ToolPanelSync } from "./features/editor/tool-panels/tool-panel-sync";
 import { GlideSpaceWindow } from "./features/glide/glide-spaces-preview";
 import { GlideWindow } from "./features/glide/glide-window";
 import { PermissionSync } from "./features/permissions/permission-sync";
@@ -22,6 +23,7 @@ import { RegionSelectorWindow } from "./features/region-selector/region-selector
 import { ScrollingCaptureOverlayWindow } from "./features/screenshots/scrolling-capture-overlay-window";
 import { SettingsWindow } from "./features/settings/settings-window";
 import { QrDetailsWindow } from "./features/text-recognition/qr-details-window";
+import { TooltipWindow } from "./features/tooltip/tooltip-window";
 import { UpdatePromptWindow } from "./features/updates/update-prompt-window";
 
 export function App() {
@@ -55,6 +57,8 @@ export function App() {
         return <SettingsWindow />;
       case "/standalone-listbox":
         return <PopupPanelWindow />;
+      case "/tooltip":
+        return <TooltipWindow />;
       case "/text-recognition":
         // Native capture surfaces use this transparent webview only as their
         // platform host. It deliberately has no React overlay or input path.
@@ -72,6 +76,7 @@ export function App() {
     <>
       <EditorSync />
       <ExportOptionsSync />
+      <ToolPanelSync />
       <PermissionSync />
       <RecordingInputSync />
       <RecordingSourceSync />

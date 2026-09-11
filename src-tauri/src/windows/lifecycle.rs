@@ -194,6 +194,14 @@ pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
       // the editor's frame rather than keeping the place it was opened at.
       crate::editor::export_window::recenter_for_editor_label(&app, export.label());
     }
+    // A panel attached to this editor follows it around the screen by itself.
+    // It is placed against the preview area rather than the window frame, so a
+    // resize leaves it in the wrong corner - the editor answers that by
+    // re-placing it, which is why a resize no longer puts it away. Minimising
+    // is the resize Tauri reports, and that one still takes the panel with it.
+    if matches!(event, WindowEvent::Resized(_)) && export.is_minimized().unwrap_or(false) {
+      super::options::close_standalone_listbox_for_parent(&app, export.label());
+    }
   });
 
   Ok(())

@@ -308,6 +308,25 @@ pub fn release_key_focus(window: &WebviewWindow) -> tauri::Result<()> {
   })
 }
 
+/// Drops a panel to the ordinary window level, so one attached to a parent
+/// window sits with it in the window order instead of floating over every
+/// other application. `restore_recording_level` puts the floating level back.
+/// The tooltip's panel. It floats just above ordinary windows, so it clears
+/// the editor it describes without reaching the recording overlays, and it
+/// refuses key status outright: a tooltip appearing must never take the
+/// keyboard away from the control the pointer is over.
+#[cfg(target_os = "macos")]
+pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
+  configure_panel::<RecordingDockPanel>(window, PanelLevel::Floating.value() as i32)
+}
+
+#[cfg(target_os = "macos")]
+pub fn set_normal_level(window: &WebviewWindow) -> tauri::Result<()> {
+  let panel = ensure_recording_panel(window)?;
+  panel.set_level(PanelLevel::Normal.value());
+  Ok(())
+}
+
 #[cfg(target_os = "macos")]
 pub fn restore_recording_level(window: &WebviewWindow) -> tauri::Result<()> {
   let Some(level) = recording_panel_level(window) else {
@@ -456,6 +475,13 @@ pub fn initialize_recording_dock(window: &WebviewWindow) -> tauri::Result<()> {
   initialize_overlay(window)
 }
 
+/// The tooltip is an overlay like the rest, and never activated: it is shown
+/// with `raise_without_activation`, which keeps focus where the user left it.
+#[cfg(target_os = "windows")]
+pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
+  initialize_overlay(window)
+}
+
 #[cfg(target_os = "windows")]
 pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
   initialize_capture_affinity(window)
@@ -528,6 +554,11 @@ pub fn initialize_standalone_listbox(_window: &WebviewWindow) -> tauri::Result<(
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn initialize_recording_dock(_window: &WebviewWindow) -> tauri::Result<()> {
+  Ok(())
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub fn initialize_tooltip(_window: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 

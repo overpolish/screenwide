@@ -109,6 +109,9 @@
   --spacing-window-inset: 0.875rem;
   /* Regular control height, measured from an AppKit push button on macOS 26. */
   --spacing-control-height: 1.5rem;
+  /* The timeline's label column: track names on the left, clips to the right
+     of it. Every lane, the scrubber and its overlays measure from this. */
+  --spacing-timeline-gutter: 12rem;
   /* Leading inset that clears the three traffic lights, which sit at x 14,
      plus the window inset before the first toolbar item. Tuned live. */
   --spacing-traffic-lights: 5.5rem;

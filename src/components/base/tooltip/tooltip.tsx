@@ -18,8 +18,17 @@ import {
 // A native tooltip: a small panel on the window colour with the label in the
 // small text style, a control radius and a soft shadow. No arrow, no colour
 // inversion, and it fades rather than springs.
-const tooltipClassName =
-  "rounded-control bg-content px-control-inset py-control text-subheadline text-content-fg shadow-md";
+//
+// Exported because the Editor draws its tooltips in a window of their own,
+// over the native preview surface the page cannot reach. That window is built
+// from these same classes, so the two cannot drift apart.
+/** The tooltip's shape and type, shared with the native tooltip window. */
+export const tooltipShapeClassName =
+  "rounded-control px-control-inset py-control text-subheadline text-content-fg";
+
+/** In the DOM a tooltip has no material behind it, so it paints its own
+ * opaque panel; the native window shows the window material instead. */
+export const tooltipPanelClassName = `${tooltipShapeClassName} bg-content shadow-md`;
 
 type TooltipProps = Omit<AriaTooltipProps, keyof MotionProps> &
   MotionProps & {
@@ -45,7 +54,7 @@ export const Tooltip = ({
         <MotionAriaTooltip
           {...props}
           animate={{ opacity: 1 }}
-          className={clsx(tooltipClassName, className)}
+          className={clsx(tooltipPanelClassName, className)}
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           isOpen

@@ -25,6 +25,7 @@ import {
   useScreenshotPreviewSurface,
 } from "../use-screenshot-preview-surface";
 
+import { useRegisterPreviewFit } from "./preview-fit-context";
 import { PreviewPaneFit } from "./preview-transform";
 import { normalizedScreenshotSelection } from "./screenshot-selection";
 
@@ -478,7 +479,7 @@ export function PreviewViewport({
           ];
         })
       : null;
-  useScreenshotPreviewSurface({
+  const { fitPreview } = useScreenshotPreviewSurface({
     artifactId,
     canvasRef: nativeFrameRef,
     interactionOutput: workspaceOutput,
@@ -502,6 +503,7 @@ export function PreviewViewport({
       .join(":"),
     zoomPercent,
   });
+  useRegisterPreviewFit(fitPreview);
   return (
     <div
       aria-label={alt}

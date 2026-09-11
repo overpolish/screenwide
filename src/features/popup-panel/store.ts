@@ -4,6 +4,8 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { EditorKind } from "../editor/types";
+
 export type PopupPanelIcon = "clipboard" | "image" | "scrolling";
 
 type PopupPanelMode = "menu" | "select";
@@ -25,17 +27,38 @@ export type PopupPanelItem = {
   togglesInPlace?: boolean;
 };
 
-type OpenPopupPanel = {
-  focusContents: boolean;
-  id: string;
+/** The editor tools that own a panel. One for now, with room for the
+ * background, keyboard, camera and audio panels that follow. */
+export type ToolPanelKind = "cursor";
+
+/** A list of choices: the panel as it has always been. */
+export type PopupPanelListContent = {
   items: PopupPanelItem[];
-  label: string;
+  kind: "list";
   /** `select` shows a check gutter and keeps the pick; `menu` runs an action
    * and dismisses, so nothing is ever drawn as selected. */
   mode: PopupPanelMode;
   selectedIds: string[];
   selectionMode: "multiple" | "single";
   exclusiveId?: string;
+};
+
+/** An editor tool's own controls, rendered by the workspace that owns them
+ * and kept open while the user works in the editor. */
+export type PopupPanelToolContent = {
+  kind: "tool";
+  tool: ToolPanelKind;
+  workspace: EditorKind;
+};
+
+type PopupPanelContent = PopupPanelListContent | PopupPanelToolContent;
+
+type OpenPopupPanel = {
+  /** What the panel window draws: a list of choices, or a tool's controls. */
+  content: PopupPanelContent;
+  focusContents: boolean;
+  id: string;
+  label: string;
 };
 
 type PopupPanelSelection = {
@@ -79,8 +102,11 @@ export const usePopupPanelStore = create<PopupPanelStore>()(
         };
         set((state) => ({
           active:
-            state.active?.id === id
-              ? { ...state.active, selectedIds }
+            state.active?.id === id && state.active.content.kind === "list"
+              ? {
+                  ...state.active,
+                  content: { ...state.active.content, selectedIds },
+                }
               : state.active,
           lastSelection,
         }));
@@ -91,9 +117,13 @@ export const usePopupPanelStore = create<PopupPanelStore>()(
       },
     }),
     {
+      // The open panel is presentation state, never worth carrying across a
+      // shape change: an upgrade drops whatever the last run left behind.
+      migrate: () => ({ active: null }),
       name: STORE_NAME,
       partialize: (state) => ({ active: state.active }),
       storage: createJSONStorage(() => localStorage),
+      version: 1,
     },
   ),
 );

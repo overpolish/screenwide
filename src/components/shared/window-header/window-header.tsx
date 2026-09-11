@@ -108,7 +108,12 @@ export function WindowHeader({
           </Text>
         </ScrollArea>
       </div>
-      {actions}
+      {/* Controls are 24 tall against a 20px title line. Pulling their
+          overhang into the inset keeps every title bar the same 48px, the
+          way a toolbar button overhangs its bar rather than growing it. */}
+      {actions ? (
+        <div className="-my-tight flex shrink-0 items-center">{actions}</div>
+      ) : null}
       {(isWindows && (onMinimize || onToggleMaximize || onClose)) ||
       closeAction ? (
         <div className="gap-control flex shrink-0 items-center">

@@ -17,6 +17,7 @@
                            lightMode:(uint32_t)lightMode;
 @end
 NSRect editor_frame(ScreenwidePreviewSurface *surface, NSRect base);
+NSRect editor_base_bounds(ScreenwidePreviewSurface *surface);
 void selection_action_layout(ScreenwidePreviewSurface *surface);
 void selection_action_material_layout(ScreenwidePreviewSurface *surface);
 void selection_action_render_surfaces(

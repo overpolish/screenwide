@@ -64,3 +64,26 @@ pub fn set_screenshot_preview_editor_suspended(
   }
   Ok(())
 }
+
+/// Screenshot counterpart of `reset_recording_preview_view`: zoom to fit, pan
+/// reset, inside whatever the open tool panel leaves of the viewport.
+#[tauri::command]
+pub fn reset_screenshot_preview_view(
+  state: tauri::State<'_, ScreenshotPreviewState>,
+  session_id: u64,
+  fit_width: Option<f64>,
+) -> Result<(), String> {
+  let surface = {
+    let manager = state
+      .0
+      .lock()
+      .map_err(|_| "The screenshot preview is unavailable".to_owned())?;
+    manager.require_session(session_id)?;
+    manager.surface.clone()
+  };
+  if let Some(surface) = surface {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    surface.reset_editor_view(fit_width);
+  }
+  Ok(())
+}

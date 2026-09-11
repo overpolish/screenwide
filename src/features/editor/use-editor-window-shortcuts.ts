@@ -3,6 +3,7 @@
 
 import { useEffect, useRef } from "react";
 
+import { preserveEscapeFocus } from "./escape-focus";
 import {
   ownsActivationKeys,
   ownsArrowKeys,
@@ -27,13 +28,16 @@ export function useEditorWindowShortcuts({
   onMoveForward,
   onNudge,
   onRecenter,
+  onRedo,
   onResizeCanvas,
   onSelectTool,
   onStep,
   onToggleBladeTool,
   onToggleCrop,
+  onToggleCursorPanel,
   onTogglePlayback,
   onToggleRangeTool,
+  onUndo,
 }: {
   onCopy?: () => void;
   onCutTimeline?: () => void;
@@ -45,22 +49,47 @@ export function useEditorWindowShortcuts({
   /** Moves the selected layer by one arrow press; `coarse` is the Shift jump. */
   onNudge?: (directionX: number, directionY: number, coarse: boolean) => void;
   onRecenter?: () => void;
+  onRedo?: () => void;
   onResizeCanvas?: () => void;
   onSelectTool?: () => void;
   /** Moves the playhead by one arrow press; `coarse` is the Shift jump. */
   onStep?: (direction: -1 | 1, coarse: boolean) => void;
   onToggleBladeTool?: () => void;
   onToggleCrop?: () => void;
+  /** M: the cursor panel, on or away. */
+  onToggleCursorPanel?: () => void;
   onTogglePlayback?: () => void;
   onToggleRangeTool?: () => void;
+  onUndo?: () => void;
 }) {
   const focusIntentRef = useRef<"keyboard" | "pointer">("keyboard");
+  const consumedKeysRef = useRef(new Set<string>());
+  useEffect(preserveEscapeFocus, []);
 
   useEffect(() => {
+    const consumedKeys = consumedKeysRef.current;
+    const consume = (event: KeyboardEvent) => {
+      event.preventDefault();
+      // Stop before document-level navigation and React Aria modality tracking.
+      // Other editor handlers on this window still receive the event.
+      event.stopPropagation();
+      consumedKeys.add(event.code);
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (consumedKeys.delete(event.code)) event.stopPropagation();
+    };
     const onPointerDown = () => {
       focusIntentRef.current = "pointer";
     };
     const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.repeat &&
+        consumedKeys.has(event.code) &&
+        !arrowDirections.has(event.code)
+      ) {
+        consume(event);
+        return;
+      }
       if (
         event.code === "Tab" ||
         (arrowDirections.has(event.code) && ownsArrowKeys(event.target))
@@ -91,10 +120,7 @@ export function useEditorWindowShortcuts({
               }
             : null;
         if (!handled) return;
-        event.preventDefault();
-        // The timeline ruler keeps its own arrow handler for when it has focus;
-        // stop the event here so a bubbling copy cannot seek a second time.
-        event.stopPropagation();
+        consume(event);
         handled();
         return;
       }
@@ -106,23 +132,35 @@ export function useEditorWindowShortcuts({
         onDeselect &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onDeselect();
         return;
       }
 
       const commandKey = event.ctrlKey || event.metaKey;
+      if (
+        commandKey &&
+        event.code === "KeyZ" &&
+        !ownsTextEditingKeys(event.target)
+      ) {
+        const action = event.shiftKey ? onRedo : onUndo;
+        if (action) {
+          consume(event);
+          action();
+        }
+        return;
+      }
       if (commandKey && !event.shiftKey) {
         if (event.code === "KeyB" && onCutTimeline) {
           if (ownsTextEditingKeys(event.target)) return;
-          event.preventDefault();
+          consume(event);
           onCutTimeline();
         } else if (event.code === "KeyC" && onCopy) {
           if (ownsTextEditingKeys(event.target)) return;
-          event.preventDefault();
+          consume(event);
           onCopy();
         } else if (event.code === "KeyE" && onExport) {
-          event.preventDefault();
+          consume(event);
           onExport();
         }
         return;
@@ -135,7 +173,7 @@ export function useEditorWindowShortcuts({
         onToggleRangeTool &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onToggleRangeTool();
         return;
       }
@@ -154,8 +192,7 @@ export function useEditorWindowShortcuts({
         ) {
           return;
         }
-        event.preventDefault();
-        event.stopPropagation();
+        consume(event);
         onTogglePlayback();
         return;
       }
@@ -165,7 +202,7 @@ export function useEditorWindowShortcuts({
         onDelete &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onDelete();
         return;
       }
@@ -175,7 +212,7 @@ export function useEditorWindowShortcuts({
         onMoveForward &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onMoveForward();
         return;
       }
@@ -185,7 +222,7 @@ export function useEditorWindowShortcuts({
         onMoveBackward &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onMoveBackward();
         return;
       }
@@ -195,51 +232,60 @@ export function useEditorWindowShortcuts({
         onToggleBladeTool &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onToggleBladeTool();
       } else if (
         event.code === "KeyP" &&
         onTogglePlayback &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onTogglePlayback();
       } else if (
         event.code === "KeyR" &&
         onRecenter &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onRecenter();
       } else if (
         event.code === "KeyF" &&
         onResizeCanvas &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onResizeCanvas();
       } else if (
         event.code === "KeyC" &&
         onToggleCrop &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onToggleCrop();
       } else if (
         event.code === "KeyV" &&
         onSelectTool &&
         !ownsTextEditingKeys(event.target)
       ) {
-        event.preventDefault();
+        consume(event);
         onSelectTool();
+      } else if (
+        event.code === "KeyM" &&
+        onToggleCursorPanel &&
+        !ownsTextEditingKeys(event.target)
+      ) {
+        consume(event);
+        onToggleCursorPanel();
       }
     };
 
     window.addEventListener("pointerdown", onPointerDown, true);
     window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("keyup", onKeyUp, true);
     return () => {
       window.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("keyup", onKeyUp, true);
     };
   }, [
     onCopy,
@@ -251,12 +297,15 @@ export function useEditorWindowShortcuts({
     onMoveForward,
     onNudge,
     onRecenter,
+    onRedo,
     onResizeCanvas,
     onSelectTool,
     onStep,
     onToggleCrop,
+    onToggleCursorPanel,
     onToggleBladeTool,
     onTogglePlayback,
     onToggleRangeTool,
+    onUndo,
   ]);
 }

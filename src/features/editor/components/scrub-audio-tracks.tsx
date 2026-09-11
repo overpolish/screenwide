@@ -40,9 +40,9 @@ export function ScrubAudioTracks({
           enabled && enabledTracks.size === 1 && !hasEnabledVideo;
         const Icon = track.kind === "microphone" ? Mic : Volume2;
         return (
-          <div className="flex items-center gap-2" key={track.streamIndex}>
+          <div className="flex items-center" key={track.streamIndex}>
             <div
-              className={`flex h-8 w-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-1.25rem)] shrink-0 items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors ${selectedTrack === track.streamIndex ? "bg-info/15" : ""}`}
+              className={`flex h-8 w-timeline-gutter shrink-0 items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors ${selectedTrack === track.streamIndex ? "bg-info/15" : ""}`}
               onClick={() => {
                 onSelectTrack(track.streamIndex);
               }}

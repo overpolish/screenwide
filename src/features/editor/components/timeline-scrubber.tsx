@@ -83,7 +83,7 @@ export function TimelineScrubberOverlay(
         selectedSegmentId={blade.selectedSegmentId}
         viewport={props.viewport}
       />
-      <div className="pointer-events-none absolute inset-y-0 right-0 left-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-0.75rem)] z-[5] overflow-hidden">
+      <div className="pointer-events-none absolute inset-y-0 right-0 left-timeline-gutter z-[5] overflow-hidden">
         <TimelineScrubber {...scrubber} />
       </div>
       <TimelineRangeOverlay blade={blade} viewport={props.viewport} />
@@ -126,7 +126,7 @@ function TimelineRangeOverlay({
       {blade.rangeSelection ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 left-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-0.75rem)] z-10 overflow-hidden"
+          className="pointer-events-none absolute inset-y-0 right-0 left-timeline-gutter z-10 overflow-hidden"
         >
           <div
             className="absolute inset-y-0 border-x border-info/70 bg-info/15"
@@ -139,7 +139,7 @@ function TimelineRangeOverlay({
       ) : null}
       <div
         aria-label="Select timeline range"
-        className="absolute top-9 right-0 bottom-0 left-[calc(var(--recording-inspector-width,clamp(270px,23vw,300px))-0.75rem)] z-10 cursor-crosshair touch-none"
+        className="absolute top-9 right-0 bottom-0 left-timeline-gutter z-10 cursor-crosshair touch-none"
         onContextMenu={(event) => {
           const selection = blade.rangeSelection;
           const position = positionAt(event);

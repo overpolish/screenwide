@@ -9,7 +9,7 @@ import {
 } from "../screenshot-output";
 import { EditorArtifact } from "../types";
 
-import { ScreenshotOutputControls } from "./screenshot-inspector";
+import { ScreenshotOutputControls } from "./screenshot-output-controls";
 
 type RecordingArtifact = Extract<EditorArtifact, { kind: "recording" }>;
 

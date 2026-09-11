@@ -11,7 +11,7 @@ static const double ScreenwideNativePixelZoomHeadroom = 4.0;
 /// The union of the pane rects the workspace is currently composed from, in
 /// pre-zoom points - the same bounds `selection_pixel_size` converts output
 /// pixels with.
-static NSRect editor_base_bounds(ScreenwidePreviewSurface *surface) {
+SCREENWIDE_PREVIEW_PRIVATE NSRect editor_base_bounds(ScreenwidePreviewSurface *surface) {
   NSRect bounds = NSZeroRect;
   BOOL hasBounds = NO;
   for (NSUInteger index = 0; index < surface.editorBaseRects.count; index++) {

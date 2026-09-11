@@ -48,7 +48,7 @@ export const RecordingPlaybackControls = memo(
     playhead,
   }: RecordingPlaybackControlsProps) {
     return (
-      <div className="relative flex h-7 shrink-0 items-center justify-center gap-1.5 border-t border-muted/15 px-3">
+      <div className="relative flex h-7 shrink-0 items-center justify-center gap-1.5">
         <IconToggleButton
           aria-keyshortcuts="P"
           aria-label={isPlaying ? "Pause preview" : "Play preview"}
@@ -100,7 +100,7 @@ export const RecordingPlaybackControls = memo(
           <CheckOnClick onPress={() => onCopyCurrentFrame()}>
             <Button
               aria-label="Copy current frame"
-              className="absolute right-3"
+              className="absolute right-0"
               size="compact"
               variant="ghost"
             >
