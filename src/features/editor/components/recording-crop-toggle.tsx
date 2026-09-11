@@ -27,18 +27,22 @@ export function RecordingCanvasTools({
 }) {
   return (
     <ButtonGroup aria-label="View tools" className="gap-control">
-      <PreviewToolToggle
-        isDisabled={!isSelectEnabled}
-        isSelected={tool === "select" && isSelectEnabled}
-        label="Select"
-        name="Select recording clip"
-        onSelectedChange={(selected) => {
-          onToolChange(selected ? "select" : null);
-        }}
-        shortcut="V"
-      >
-        <MousePointer2 />
-      </PreviewToolToggle>
+      {/* The marker is the anchor Select's panel hangs from: taking the tool
+          up opens it, however the tool was taken up. */}
+      <span className="inline-flex" data-editor-tool="select">
+        <PreviewToolToggle
+          isDisabled={!isSelectEnabled}
+          isSelected={tool === "select" && isSelectEnabled}
+          label="Select"
+          name="Select recording clip"
+          onSelectedChange={(selected) => {
+            onToolChange(selected ? "select" : null);
+          }}
+          shortcut="V"
+        >
+          <MousePointer2 />
+        </PreviewToolToggle>
+      </span>
       <PreviewToolToggle
         isDisabled={!isFrameEnabled}
         isSelected={tool === "canvas" && isFrameEnabled}

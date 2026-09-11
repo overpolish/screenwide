@@ -1,20 +1,38 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+//! The panel windows opened from another window: the shared listbox every
+//! pop-up button borrows, and one tool panel per editor workspace.
+//!
+//! Every command names the panel window it means, so two editors can each
+//! have their own tool panel up at once. A caller that names none gets the
+//! shared listbox, which is what a pop-up button has always opened.
+
+use std::collections::BTreeMap;
 use std::sync::{Mutex, MutexGuard};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager};
+use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager};
 
 use super::{platform, transient_popover::TransientPopover, WindowLabel};
 
+pub(crate) mod dismissal;
+pub(crate) mod lifecycle;
 pub(crate) mod placement;
 
+pub(super) use dismissal::dismiss_standalone_listbox_if_outside;
+pub(crate) use lifecycle::{
+  close_all_standalone_listboxes, close_standalone_listbox, close_standalone_listbox_for_parent,
+};
+
+/// Serializes every open and close across all the panel windows, so a show
+/// racing a hide cannot leave one attached to a window that is going away.
 static STANDALONE_LISTBOX: TransientPopover = TransientPopover::new();
-static STANDALONE_LISTBOX_CONTEXT: Mutex<Option<StandaloneListboxContext>> = Mutex::new(None);
+static STANDALONE_LISTBOX_CONTEXTS: Mutex<BTreeMap<String, StandaloneListboxContext>> =
+  Mutex::new(BTreeMap::new());
 
 #[derive(Clone)]
-struct StandaloneListboxContext {
+pub(super) struct StandaloneListboxContext {
   /// The window this panel is a native child of, when it is one the user
   /// works alongside. A menu is attached to nothing and floats over
   /// everything; a sticky panel belongs with the window it was opened from,
@@ -26,6 +44,9 @@ struct StandaloneListboxContext {
   /// not dismiss it first.
   anchor: Option<AnchorRect>,
   focus_contents: bool,
+  /// Whether this window is showing a panel. An entry outlives its panel so
+  /// that closing one window's panel says nothing about the others.
+  open: bool,
   parent_window_label: String,
   /// A panel the user works alongside rather than a menu they answer: an
   /// outside press leaves it alone. It still closes on Escape, from its own
@@ -46,14 +67,54 @@ pub struct AnchorRect {
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct StandaloneListboxClosed {
+  /// Which panel window closed, so a window listening for its own panel can
+  /// ignore another's.
+  panel: String,
   return_focus: bool,
   trigger_id: String,
 }
 
-fn standalone_listbox_context() -> MutexGuard<'static, Option<StandaloneListboxContext>> {
-  STANDALONE_LISTBOX_CONTEXT
+pub(super) fn standalone_listbox_contexts(
+) -> MutexGuard<'static, BTreeMap<String, StandaloneListboxContext>> {
+  STANDALONE_LISTBOX_CONTEXTS
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// The window a command means. The shared listbox is the default, so every
+/// pop-up button keeps calling exactly as it did.
+pub(super) fn panel_label(panel: Option<String>) -> String {
+  panel.unwrap_or_else(|| WindowLabel::StandaloneListbox.as_str().to_owned())
+}
+
+pub(super) fn context_for(panel: &str) -> Option<StandaloneListboxContext> {
+  standalone_listbox_contexts()
+    .get(panel)
+    .filter(|context| context.open)
+    .cloned()
+}
+
+/// The panel windows showing something, in a stable order.
+pub(super) fn open_panel_labels() -> Vec<String> {
+  standalone_listbox_contexts()
+    .iter()
+    .filter(|(_, context)| context.open)
+    .map(|(label, _)| label.clone())
+    .collect()
+}
+
+/// Whether any panel window is open. Escape and the outside-press watcher ask
+/// this before doing any work at all.
+pub(super) fn is_standalone_listbox_open() -> bool {
+  STANDALONE_LISTBOX.is_open()
+}
+
+/// Keeps the shared "anything open" flag in step with the per-window entries.
+pub(super) fn synchronize_open_flag() {
+  let any_open = standalone_listbox_contexts()
+    .values()
+    .any(|context| context.open);
+  STANDALONE_LISTBOX.set_open(any_open);
 }
 
 /// A sticky panel stands with the window it belongs to instead of floating
@@ -85,7 +146,7 @@ fn attach_to_parent(
 /// Ordering a still-attached child out drags its parent with it, so this runs
 /// before the panel is hidden.
 #[cfg(target_os = "macos")]
-fn detach_from_parent(
+pub(super) fn detach_from_parent(
   app: &AppHandle,
   parent: &tauri::WebviewWindow,
   panel: &tauri::WebviewWindow,
@@ -94,7 +155,7 @@ fn detach_from_parent(
 }
 
 #[cfg(not(target_os = "macos"))]
-fn detach_from_parent(
+pub(super) fn detach_from_parent(
   _app: &AppHandle,
   _parent: &tauri::WebviewWindow,
   _panel: &tauri::WebviewWindow,
@@ -116,13 +177,15 @@ pub fn show_standalone_listbox(
   size: LogicalSize<f64>,
   anchor: Option<AnchorRect>,
   sticky: Option<bool>,
+  panel: Option<String>,
 ) -> tauri::Result<()> {
+  let panel = panel_label(panel);
   let _lifecycle = STANDALONE_LISTBOX.lock();
   let parent = app
     .get_webview_window(&parent_window_label)
     .ok_or_else(|| tauri::Error::WindowNotFound)?;
   let window = app
-    .get_webview_window(WindowLabel::StandaloneListbox.as_str())
+    .get_webview_window(&panel)
     .ok_or_else(|| tauri::Error::WindowNotFound)?;
   let scale = parent.scale_factor()?;
   let parent_position = parent.outer_position()?.to_logical::<f64>(scale);
@@ -139,12 +202,12 @@ pub fn show_standalone_listbox(
     position.y = position.y.clamp(monitor_position.y, max_y);
   }
 
-  // The one panel window is reused, so a panel still attached to another
-  // window has to be let go before this one is placed: left attached it would
-  // follow that window, and ordering it out would drag it along.
+  // A panel window is reused, so one still attached to another window has to
+  // be let go before this one is placed: left attached it would follow that
+  // window, and ordering it out would drag it along.
   let sticky = sticky.unwrap_or(false);
-  let previously_attached = standalone_listbox_context()
-    .as_ref()
+  let previously_attached = standalone_listbox_contexts()
+    .get(&panel)
     .and_then(|context| context.attached_to.clone())
     .filter(|label| !sticky || label != &parent_window_label);
   if let Some(previous) = previously_attached.and_then(|label| app.get_webview_window(&label)) {
@@ -170,160 +233,41 @@ pub fn show_standalone_listbox(
       return Err(error);
     }
   }
-  *standalone_listbox_context() = Some(StandaloneListboxContext {
-    anchor,
-    attached_to,
-    focus_contents,
-    parent_window_label,
-    sticky,
-    trigger_id,
-  });
-  STANDALONE_LISTBOX.set_open(true);
+  standalone_listbox_contexts().insert(
+    panel,
+    StandaloneListboxContext {
+      anchor,
+      attached_to,
+      focus_contents,
+      open: true,
+      parent_window_label,
+      sticky,
+      trigger_id,
+    },
+  );
+  synchronize_open_flag();
   Ok(())
 }
 
-pub(super) fn close_standalone_listbox(app: AppHandle, return_focus: bool) -> tauri::Result<()> {
-  let _lifecycle = STANDALONE_LISTBOX.lock();
-  if !STANDALONE_LISTBOX.is_open() {
-    return Ok(());
-  }
-  let context = standalone_listbox_context().clone();
-  if let Some(window) = app.get_webview_window(WindowLabel::StandaloneListbox.as_str()) {
-    let attached_parent = context
-      .as_ref()
-      .and_then(|context| context.attached_to.as_ref())
-      .and_then(|label| app.get_webview_window(label));
-    if let Some(parent) = attached_parent.as_ref() {
-      let _ = detach_from_parent(&app, parent, &window);
-    }
-    platform::hide(&window)?;
-    if attached_parent.is_some() {
-      // The next panel to open in this window may well be a menu, which is
-      // expected to float over everything again.
-      let _ = platform::restore_recording_level(&window);
-    }
-  }
-  STANDALONE_LISTBOX.set_open(false);
-  *standalone_listbox_context() = None;
-  let should_return_focus = return_focus
-    && context
-      .as_ref()
-      .is_some_and(|context| context.focus_contents);
-  let focus_result = if should_return_focus {
-    if let Some(parent) = context
-      .as_ref()
-      .and_then(|context| app.get_webview_window(&context.parent_window_label))
-    {
-      parent.set_focus()
-    } else {
-      Ok(())
-    }
-  } else {
-    Ok(())
-  };
-  app.emit(
-    "standalone-listbox://closed",
-    StandaloneListboxClosed {
-      return_focus: should_return_focus,
-      trigger_id: context.map_or_else(String::new, |context| context.trigger_id),
-    },
-  )?;
-  focus_result
-}
-
-/// Puts away a panel that hangs off a window being hidden, minimised or
-/// closed. A sticky panel outlives an outside press, so nothing else would
-/// take it with its parent.
-pub fn close_standalone_listbox_for_parent(app: &AppHandle, parent_window_label: &str) {
-  let belongs_to_parent = standalone_listbox_context()
-    .as_ref()
-    .is_some_and(|context| context.parent_window_label == parent_window_label);
-  if belongs_to_parent {
-    let _ = close_standalone_listbox(app.clone(), false);
-  }
-}
-
 #[tauri::command]
-pub fn hide_standalone_listbox(app: AppHandle, return_focus: Option<bool>) -> tauri::Result<()> {
-  close_standalone_listbox(app, return_focus.unwrap_or(false))
-}
-
-pub(super) fn is_standalone_listbox_open() -> bool {
-  STANDALONE_LISTBOX.is_open()
-}
-
-/// Whether the open panel is one the user works alongside, which an outside
-/// press must leave alone.
-fn is_sticky(context: Option<&StandaloneListboxContext>) -> bool {
-  context.is_some_and(|context| context.sticky)
-}
-
-/// Hit-tests the stored trigger bounds for a listbox whose anchor travels
-/// with whichever window opened it.
-fn standalone_listbox_anchor_contains(app: &AppHandle, x: f64, y: f64) -> bool {
-  let Some(context) = standalone_listbox_context().clone() else {
-    return false;
-  };
-  let Some(anchor) = context.anchor else {
-    return false;
-  };
-  let Some(parent) = app.get_webview_window(&context.parent_window_label) else {
-    return false;
-  };
-  let Ok(position) = parent.outer_position() else {
-    return false;
-  };
-  let Ok(scale) = parent.scale_factor() else {
-    return false;
-  };
-  let position = position.to_logical::<f64>(scale);
-  let left = position.x + anchor.x;
-  let top = position.y + anchor.y;
-
-  x >= left && x <= left + anchor.width && y >= top && y <= top + anchor.height
-}
-
-pub(super) fn dismiss_standalone_listbox_if_outside(
-  app: &AppHandle,
-  open_on_press: bool,
-  x: f64,
-  y: f64,
-) {
-  if is_sticky(standalone_listbox_context().as_ref()) {
-    return;
-  }
-  let inside_anchor = standalone_listbox_anchor_contains(app, x, y);
-  if STANDALONE_LISTBOX.should_dismiss(
-    app,
-    open_on_press,
-    inside_anchor,
-    x,
-    y,
-    &[WindowLabel::StandaloneListbox],
-  ) {
-    let _ = close_standalone_listbox(app.clone(), false);
-  }
+pub fn hide_standalone_listbox(
+  app: AppHandle,
+  return_focus: Option<bool>,
+  panel: Option<String>,
+) -> tauri::Result<()> {
+  close_standalone_listbox(app, return_focus.unwrap_or(false), &panel_label(panel))
 }
 
 #[cfg(test)]
 mod tests {
-  use super::{is_sticky, StandaloneListboxContext};
-
-  fn context(sticky: bool) -> StandaloneListboxContext {
-    StandaloneListboxContext {
-      anchor: None,
-      attached_to: None,
-      focus_contents: false,
-      parent_window_label: "editor-recording".to_owned(),
-      sticky,
-      trigger_id: "tool:cursor".to_owned(),
-    }
-  }
+  use super::{panel_label, WindowLabel};
 
   #[test]
-  fn only_a_sticky_panel_survives_an_outside_press() {
-    assert!(!is_sticky(None));
-    assert!(!is_sticky(Some(&context(false))));
-    assert!(is_sticky(Some(&context(true))));
+  fn a_command_without_a_panel_means_the_shared_listbox() {
+    assert_eq!(panel_label(None), WindowLabel::StandaloneListbox.as_str());
+    assert_eq!(
+      panel_label(Some("tool-panel-screenshot".to_owned())),
+      "tool-panel-screenshot"
+    );
   }
 }

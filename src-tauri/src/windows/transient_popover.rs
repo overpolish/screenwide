@@ -71,7 +71,7 @@ impl TransientPopover {
   }
 }
 
-fn coordinate_is_in_visible_window(x: f64, y: f64, window: &WebviewWindow) -> bool {
+pub(super) fn coordinate_is_in_visible_window(x: f64, y: f64, window: &WebviewWindow) -> bool {
   if !window.is_visible().unwrap_or(false) {
     return false;
   }

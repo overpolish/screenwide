@@ -16,6 +16,7 @@ const snapshot = (
   cursorEffects: { ...DEFAULT_CURSOR_EFFECTS, sizePercent },
   hasCursorData: true,
   isSaving: false,
+  selection: null,
 });
 const draft = (sizePercent: number, seq: number): ToolPanelDraft => ({
   seq,
@@ -24,6 +25,20 @@ const draft = (sizePercent: number, seq: number): ToolPanelDraft => ({
 });
 const resolve = (value: ToolPanelSnapshot, pending: ToolPanelDraft | null) =>
   resolveToolPanelSnapshot(value, pending, "recording");
+
+const placed = (
+  placement: { height: number; width: number; x: number; y: number },
+  acknowledgedSeq = 0,
+): ToolPanelSnapshot => ({
+  ...snapshot(100, acknowledgedSeq),
+  selection: {
+    ...placement,
+    kind: "primary",
+    label: "Screen",
+    sourceHeight: 2338,
+    sourceWidth: 3600,
+  },
+});
 
 describe("panel input during delayed editor replies", () => {
   it("shows the newest input immediately and ignores earlier drag replies", () => {
@@ -69,5 +84,47 @@ describe("panel input during delayed editor replies", () => {
     expect(resolveToolPanelSnapshot(reply, draft(250, 3), "screenshot")).toBe(
       reply,
     );
+  });
+});
+
+describe("selection placement while a field is open", () => {
+  const live = { height: 2338, width: 3600, x: 0, y: 0 };
+
+  it("holds only the field being edited over a live drag", () => {
+    const editing: ToolPanelDraft = {
+      seq: 4,
+      values: { selectionOutput: { width: 1800 } },
+      workspace: "recording",
+    };
+    const dragged = placed({ height: 1200, width: 1849, x: 40, y: 12 });
+
+    expect(resolve(dragged, editing).selection).toMatchObject({
+      height: 1200,
+      width: 1800,
+      x: 40,
+      y: 12,
+    });
+  });
+
+  it("lets the editor's answer through once it is acknowledged", () => {
+    const editing: ToolPanelDraft = {
+      seq: 4,
+      values: { selectionOutput: { width: 1800 } },
+      workspace: "recording",
+    };
+
+    expect(resolve(placed(live, 4), editing).selection).toMatchObject(live);
+  });
+
+  it("never shows a reset as a local value", () => {
+    const reset: ToolPanelDraft = {
+      seq: 5,
+      values: { resetSelection: true },
+      workspace: "recording",
+    };
+    const resolved = resolve(placed(live), reset);
+
+    expect(resolved.selection).toMatchObject(live);
+    expect(resolved).not.toHaveProperty("resetSelection");
   });
 });

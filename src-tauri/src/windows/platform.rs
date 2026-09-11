@@ -208,7 +208,7 @@ fn recording_panel_level(window: &WebviewWindow) -> Option<i32> {
     "region-selector" => Some(27),
     "recording-bar" => Some(28),
     "recording-source-selector" => Some(29),
-    "standalone-listbox" => Some(31),
+    label if label == "standalone-listbox" || label.starts_with("tool-panel-") => Some(31),
     "recording-dock" => Some(32),
     label if label == "glide" || label.starts_with("glide-space-") => Some(34),
     _ => None,

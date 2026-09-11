@@ -168,10 +168,19 @@ pub fn initialize_region_selector(app: &AppHandle) -> tauri::Result<()> {
   Ok(())
 }
 
+/// The shared listbox and both editors' tool panels come up the same way:
+/// each is a panel opened from another window, so each gets the overlay
+/// treatment the listbox has always had.
 #[cfg(not(target_os = "macos"))]
 pub fn initialize_standalone_listbox(app: &AppHandle) -> tauri::Result<()> {
-  if let Some(window) = app.get_webview_window(WindowLabel::StandaloneListbox.as_str()) {
-    platform::initialize_standalone_listbox(&window)?;
+  for label in [
+    WindowLabel::StandaloneListbox,
+    WindowLabel::ToolPanelRecording,
+    WindowLabel::ToolPanelScreenshot,
+  ] {
+    if let Some(window) = app.get_webview_window(label.as_str()) {
+      platform::initialize_standalone_listbox(&window)?;
+    }
   }
 
   Ok(())

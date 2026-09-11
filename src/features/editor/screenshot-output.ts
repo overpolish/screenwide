@@ -7,6 +7,7 @@ import {
   defaultScreenshotOutput,
   normalizedScreenshotOutput,
   ScreenshotOutputSettings,
+  screenshotSourceCrop,
   withScreenshotSourceCrop,
 } from "./screenshot-output-settings";
 
@@ -411,12 +412,27 @@ export const fitScreenshotWorkspaceToItems = ({
   };
 };
 
+/** The image at its own size, centred, however that sits against the
+ * canvas: a capture placed into an open workspace is not shrunk to fit. */
+const naturalPlacement = (
+  source: { height: number; width: number },
+  output: { height: number; width: number },
+) => ({
+  height: Math.max(1, source.height),
+  width: Math.max(1, source.width),
+  x: (output.width - source.width) / 2,
+  y: (output.height - source.height) / 2,
+});
+
 export const resetScreenshotLayout = (
   settings: ScreenshotOutputSettings,
   source: { height: number; width: number },
+  { fit = true }: { fit?: boolean } = {},
 ): ScreenshotOutputSettings => {
   const output = screenshotOutputDimensions(settings);
-  const placement = screenshotPlacement(source, output);
+  const placement = fit
+    ? screenshotPlacement(source, output)
+    : naturalPlacement(source, output);
   return withScreenshotSourceCrop(
     {
       ...settings,
@@ -446,15 +462,21 @@ export const resetScreenshotCrop = (
   );
 };
 
-/** Reset the selected item's scale and position while retaining its crop. */
+/** Reset the selected item's scale and position while retaining its crop:
+ * back to its real size, centred, as it was placed. */
 export const resetScreenshotTransform = (
   settings: ScreenshotOutputSettings,
   source: { height: number; width: number },
 ): ScreenshotOutputSettings => {
   const output = screenshotOutputDimensions(settings);
   const current = screenshotLayout(source, output, settings);
-  const target = screenshotPlacement(
-    { height: current.crop.height, width: current.crop.width },
+  // The crop's real size is its share of the source's own pixels.
+  const cropSource = screenshotSourceCrop(settings);
+  const target = naturalPlacement(
+    {
+      height: source.height * cropSource.height,
+      width: source.width * cropSource.width,
+    },
     output,
   );
   const scale = target.width / Math.max(1, current.crop.width);

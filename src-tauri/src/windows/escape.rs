@@ -119,7 +119,7 @@ pub(super) fn arm(app: &AppHandle) {
           return;
         }
         if super::options::is_standalone_listbox_open() {
-          let _ = super::options::close_standalone_listbox(app.clone(), true);
+          let _ = super::options::close_all_standalone_listboxes(app.clone(), true);
           return;
         }
         // Teardown runs on the bar's later IPC turn rather than unregistering

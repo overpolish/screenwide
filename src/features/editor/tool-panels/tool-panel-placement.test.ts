@@ -23,11 +23,20 @@ vi.mock("@tauri-apps/api/window", () => ({
 }));
 vi.mock("../../popup-panel/api", () => ({ movePopupPanel: mocks.move }));
 vi.mock("../../popup-panel/store", () => ({
+  activePopupPanel: (
+    state: { active: Record<string, unknown> },
+    panel: string,
+  ) => state.active[panel] ?? null,
   usePopupPanelStore: (select: (state: unknown) => unknown) =>
     select({
-      active: mocks.active
-        ? { content: { kind: "tool", tool: "cursor" } }
-        : null,
+      active: {
+        // The other workspace's panel is open throughout: this one follows
+        // its own window and nothing else.
+        "tool-panel-recording": mocks.active
+          ? { content: { kind: "tool", tool: "cursor" } }
+          : null,
+        "tool-panel-screenshot": { content: { kind: "tool", tool: "cursor" } },
+      },
     }),
 }));
 vi.mock("../components/preview-fit-context", () => ({
@@ -71,18 +80,25 @@ afterEach(() => {
 });
 
 it("updates the reset destination after narrowing without moving the current view", () => {
-  ToolPanelPlacement();
+  ToolPanelPlacement({ workspace: "recording" });
   mocks.resize();
   expect(mocks.setBasis).toHaveBeenLastCalledWith(880);
   mocks.width = 600;
   mocks.resize();
   expect(mocks.setBasis).toHaveBeenLastCalledWith(280);
+  // The move names this workspace's own panel window, never the other's.
+  expect(mocks.move).toHaveBeenNthCalledWith(
+    1,
+    "editor",
+    { width: 1200 },
+    "tool-panel-recording",
+  );
   expect(mocks.fit).not.toHaveBeenCalled();
 });
 
 it("returns reset to the full viewport after dismissal without resetting the view", () => {
   mocks.active = false;
-  ToolPanelPlacement();
+  ToolPanelPlacement({ workspace: "recording" });
   expect(mocks.setBasis).toHaveBeenCalledExactlyOnceWith();
   expect(mocks.fit).not.toHaveBeenCalled();
 });

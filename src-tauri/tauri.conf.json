@@ -266,6 +266,48 @@
         }
       },
       {
+        "label": "tool-panel-recording",
+        "title": "Screenwide Tool Panel (Recording)",
+        "url": "/standalone-listbox",
+        "width": 320,
+        "height": 40,
+        "acceptFirstMouse": true,
+        "alwaysOnTop": false,
+        "decorations": false,
+        "focus": false,
+        "resizable": false,
+        "shadow": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "visible": false,
+        "windowEffects": {
+          "effects": ["underWindowBackground", "mica"],
+          "radius": 10,
+          "state": "active"
+        }
+      },
+      {
+        "label": "tool-panel-screenshot",
+        "title": "Screenwide Tool Panel (Screenshot)",
+        "url": "/standalone-listbox",
+        "width": 320,
+        "height": 40,
+        "acceptFirstMouse": true,
+        "alwaysOnTop": false,
+        "decorations": false,
+        "focus": false,
+        "resizable": false,
+        "shadow": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "visible": false,
+        "windowEffects": {
+          "effects": ["underWindowBackground", "mica"],
+          "radius": 10,
+          "state": "active"
+        }
+      },
+      {
         "label": "recording-dock",
         "title": "Screenwide Recording Dock",
         "url": "/recording-dock",

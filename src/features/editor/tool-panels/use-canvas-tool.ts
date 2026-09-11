@@ -3,27 +3,50 @@
 
 import { useEffect, useState } from "react";
 
-import { usePopupPanelStore } from "../../popup-panel/store";
+import {
+  activePopupPanel,
+  PopupPanelContent,
+  usePopupPanelStore,
+} from "../../popup-panel/store";
 import { EditorKind } from "../types";
 
-/** Panel activation retires the canvas tool, including its native interaction. */
+import { toolPanelLabel } from "./tool-panel-window";
+
+/**
+ * Panel activation retires the canvas tool, including its native interaction.
+ * The selection panel is the one that does not: it is the Select tool's own
+ * controls, and the drag it describes has to stay live underneath it.
+ */
+const retiresCanvasTool = (
+  content: PopupPanelContent | undefined,
+  workspace: EditorKind,
+) =>
+  content?.kind === "tool" &&
+  content.workspace === workspace &&
+  content.tool !== "selection";
+
 export function useCanvasTool<T extends string>(
   workspace: EditorKind,
   initialTool: T,
 ) {
-  const [tool, setTool] = useState<T | null>(() => {
-    const content = usePopupPanelStore.getState().active?.content;
-    return content?.kind === "tool" && content.workspace === workspace
+  const panel = toolPanelLabel(workspace);
+  const [tool, setTool] = useState<T | null>(() =>
+    retiresCanvasTool(
+      activePopupPanel(usePopupPanelStore.getState(), panel)?.content,
+      workspace,
+    )
       ? null
-      : initialTool;
-  });
+      : initialTool,
+  );
   useEffect(() => {
     const synchronize = () => {
-      const content = usePopupPanelStore.getState().active?.content;
-      if (content?.kind === "tool" && content.workspace === workspace)
-        setTool(null);
+      const content = activePopupPanel(
+        usePopupPanelStore.getState(),
+        panel,
+      )?.content;
+      if (retiresCanvasTool(content, workspace)) setTool(null);
     };
     return usePopupPanelStore.subscribe(synchronize);
-  }, [workspace]);
+  }, [panel, workspace]);
   return [tool, setTool] as const;
 }

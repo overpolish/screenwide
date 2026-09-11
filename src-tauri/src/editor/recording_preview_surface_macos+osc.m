@@ -17,43 +17,6 @@ static NSRect selection_image_frame_for(
   return selection_display_frame_for(surface, image);
 }
 
-/// Size of the current selection in OUTPUT pixels, or NO when the workspace
-/// has no pixel scale to convert with.
-///
-/// `workspaceNaturalWidth/Height` is the canvas size in output pixels and the
-/// pane rects are pre-zoom points, so pixels-per-point is simply natural over
-/// the union of the ACTIVE pane rects. That relation holds in every gesture
-/// path by construction: the screenshot workspace has a single pane whose rect
-/// is the canvas (and `update_workspace_frame_resize` /
-/// `update_workspace_auto_fit_move` keep natural live during a drag), and the
-/// recording workspace's `rebase_recording_workspace_fit` scales natural by
-/// exactly the union-bounds ratio it rebases the pane rects with.
-static BOOL selection_pixel_size(ScreenwidePreviewSurface *surface,
-                                 double *width, double *height) {
-  if (!surface.workspaceMode || !surface.hasSelection) return NO;
-  if (surface.workspaceNaturalWidth <= 0.0 ||
-      surface.workspaceNaturalHeight <= 0.0) return NO;
-  if (surface.selection.pane_index >= surface.editorBaseRects.count) return NO;
-  NSRect bounds = NSZeroRect;
-  BOOL hasBounds = NO;
-  for (NSNumber *value in surface.workspaceActivePaneIndices) {
-    NSUInteger index = value.unsignedIntegerValue;
-    if (index >= surface.editorBaseRects.count) continue;
-    NSRect frame = surface.editorBaseRects[index].rectValue;
-    if (NSIsEmptyRect(frame)) continue;
-    bounds = hasBounds ? NSUnionRect(bounds, frame) : frame;
-    hasBounds = YES;
-  }
-  if (!hasBounds || NSIsEmptyRect(bounds)) return NO;
-  NSRect pane = surface.editorBaseRects[surface.selection.pane_index].rectValue;
-  double perPointX = surface.workspaceNaturalWidth / bounds.size.width;
-  double perPointY = surface.workspaceNaturalHeight / bounds.size.height;
-  *width = surface.selection.width * pane.size.width * perPointX;
-  *height = surface.selection.height * pane.size.height * perPointY;
-  return YES;
-}
-
-
 static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   surface.selectionDrawRevision += 1;
   uint64_t revision = surface.selectionDrawRevision;
@@ -130,13 +93,12 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         vertices, &count, size, frame, scale,
         surface.selection.radius_percent,
         surface.selection.radius_disabled == 0);
-  double pixelWidth = 0.0;
-  double pixelHeight = 0.0;
   BOOL keyboardAction = surface.selection.layer_id == UINT32_MAX - 1;
   BOOL recenterAction = surface.selection.recenter_mode != 0;
   BOOL compactAction = recenterAction || keyboardAction;
-  BOOL hasLabel = compactAction ||
-      selection_pixel_size(surface, &pixelWidth, &pixelHeight);
+  // Only an action earns a label on the frame. The selection's size is read
+  // and set in the Selection panel, so the frame no longer repeats it.
+  BOOL hasLabel = compactAction;
   surface.selectionActionRect = NSZeroRect;
   surface.selectionSecondaryActionRect = NSZeroRect;
   surface.selectionActionOperation = keyboardAction ? 8 : recenterAction ? 7 : 0;
@@ -171,10 +133,7 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         actionX + primaryWidth + buttonGap, actionY,
         secondaryWidth, buttonHeight);
   } else if (hasLabel && !keyboardAction) {
-    NSString *text = compactAction ? @"Recenter" :
-        [NSString stringWithFormat:@"%lld × %lld",
-         (long long)MAX(1, llround(pixelWidth)),
-         (long long)MAX(1, llround(pixelHeight))];
+    NSString *text = @"Recenter";
     if ([surface updateSelectionLabel:text
                                 scale:scale
                             lightMode:lightMode

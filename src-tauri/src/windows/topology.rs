@@ -54,7 +54,9 @@ const fn policy(label: WindowLabel) -> Policy {
     | WindowLabel::ExportScreenshot
     | WindowLabel::Glide
     | WindowLabel::RecordingSourceSelector
-    | WindowLabel::StandaloneListbox => Policy::OwnedTransient,
+    | WindowLabel::StandaloneListbox
+    | WindowLabel::ToolPanelRecording
+    | WindowLabel::ToolPanelScreenshot => Policy::OwnedTransient,
     WindowLabel::RegionSelector | WindowLabel::Ruler | WindowLabel::TextRecognition => {
       Policy::DesktopSurface
     }
@@ -63,7 +65,7 @@ const fn policy(label: WindowLabel) -> Policy {
 
 fn close_transients(app: &AppHandle) {
   let _ = super::source_selector::collapse(app.clone(), Some(false));
-  let _ = super::options::hide_standalone_listbox(app.clone(), Some(false));
+  let _ = super::options::close_all_standalone_listboxes(app.clone(), false);
 }
 
 fn reconcile(app: &AppHandle) {

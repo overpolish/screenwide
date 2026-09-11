@@ -5,23 +5,26 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect } from "react";
 
 import { movePopupPanel } from "../../popup-panel/api";
-import { usePopupPanelStore } from "../../popup-panel/store";
+import { activePopupPanel, usePopupPanelStore } from "../../popup-panel/store";
 import { usePreviewFit } from "../components/preview-fit-context";
+import { EditorKind } from "../types";
 
 import { toolPanelGutter } from "./tool-panel-space";
-import { toolResetsView } from "./tool-registry";
+import { toolPanelLabel } from "./tool-panel-window";
+import { panelResetsView } from "./tool-registry";
 import { panelOffset, previewViewport } from "./use-tool-panel";
 
 /** Keeps the panel attached to the preview's corner as the window resizes.
  * Moving it never changes the preview fit, including when it overlaps. */
-export function ToolPanelPlacement() {
-  const active = usePopupPanelStore((state) => state.active);
+export function ToolPanelPlacement({ workspace }: { workspace: EditorKind }) {
+  const panel = toolPanelLabel(workspace);
+  const active = usePopupPanelStore((state) => activePopupPanel(state, panel));
   const openTool = active?.content.kind === "tool" ? active.content.tool : null;
   const { setFitBasis } = usePreviewFit();
 
-  // A panel can also go away from outside the editor - Escape, another window
-  // taking the one panel over. However it went, the reset basis is the whole
-  // viewport again; the view itself never moves.
+  // A panel can also go away from outside the editor - Escape, the editor
+  // being minimised. However it went, the reset basis is the whole viewport
+  // again; the view itself never moves.
   useEffect(() => {
     if (openTool === null) setFitBasis();
   }, [openTool, setFitBasis]);
@@ -41,7 +44,11 @@ export function ToolPanelPlacement() {
       const next = pending;
       pending = null;
       inFlight = true;
-      void movePopupPanel(getCurrentWindow().label, panelOffset(next.bounds))
+      void movePopupPanel(
+        getCurrentWindow().label,
+        panelOffset(next.bounds),
+        panel,
+      )
         .catch(() => undefined)
         .finally(() => {
           inFlight = false;
@@ -51,7 +58,7 @@ export function ToolPanelPlacement() {
     const queueMove = () => {
       const bounds = previewViewport()?.getBoundingClientRect();
       if (!bounds) return;
-      if (toolResetsView(openTool))
+      if (panelResetsView(openTool))
         setFitBasis(Math.max(1, bounds.width - toolPanelGutter));
       pending = { bounds };
       flush();
@@ -69,7 +76,7 @@ export function ToolPanelPlacement() {
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [openTool, setFitBasis]);
+  }, [openTool, panel, setFitBasis]);
 
   return null;
 }

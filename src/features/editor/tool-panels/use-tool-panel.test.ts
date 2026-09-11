@@ -3,15 +3,17 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+type OpenToolPanel = {
+  content: {
+    kind: "tool";
+    tool: "cursor" | "keyboard" | "selection";
+    workspace: "recording" | "screenshot";
+  };
+  id: string;
+} | null;
+
 const mocks = vi.hoisted(() => ({
-  active: null as {
-    content: {
-      kind: "tool";
-      tool: "cursor" | "keyboard";
-      workspace: "recording";
-    };
-    id: string;
-  } | null,
+  active: null as OpenToolPanel,
   close: vi.fn(),
   fitPreview: vi.fn(),
   fitWidth: "",
@@ -21,9 +23,10 @@ const mocks = vi.hoisted(() => ({
   open: vi.fn(),
   openToolPanelSpace: vi.fn(() => Promise.resolve()),
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  panelByTool: {} as Record<string, "cursor" | undefined>,
+  panelByTool: {} as Record<string, "cursor" | "selection" | undefined>,
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   resetByTool: {} as Record<string, boolean>,
+  screenshotActive: null as OpenToolPanel,
   setFitBasis: vi.fn(),
   showPopupPanel: vi.fn(() => Promise.resolve()),
 }));
@@ -53,13 +56,21 @@ vi.mock("../../popup-panel/api", () => ({
   showPopupPanel: mocks.showPopupPanel,
 }));
 
+const panels = () => ({
+  "tool-panel-recording": mocks.active,
+  "tool-panel-screenshot": mocks.screenshotActive,
+});
+
 vi.mock("../../popup-panel/store", () => ({
+  activePopupPanel: (
+    state: { active: Record<string, unknown> },
+    panel: string,
+  ) => state.active[panel] ?? null,
   usePopupPanelStore: Object.assign(
-    (selector: (state: unknown) => unknown) =>
-      selector({ active: mocks.active }),
+    (selector: (state: unknown) => unknown) => selector({ active: panels() }),
     {
       getState: () => ({
-        active: mocks.active,
+        active: panels(),
         close: mocks.close,
         open: mocks.open,
       }),
@@ -82,16 +93,18 @@ vi.mock("./tool-panel-space", async (importOriginal) => ({
   toolPanelGutter: 320,
 }));
 
-vi.mock("./tool-panel-titles", () => ({
-  toolPanelTitles: { cursor: "Cursor" },
-}));
-
 vi.mock("./tool-registry", () => ({
   toolPanel: (tool: string) => mocks.panelByTool[tool],
   toolResetsView: (tool: string) => mocks.resetByTool[tool] ?? false,
 }));
 
 import { useToolPanel } from "./use-tool-panel";
+
+/** The recording workspace with its cursor panel up. */
+const cursorPanelOpen: OpenToolPanel = {
+  content: { kind: "tool", tool: "cursor", workspace: "recording" },
+  id: "tool:cursor",
+};
 
 const anchor = {
   height: 32,
@@ -125,6 +138,7 @@ const useCursorPanel = () => {
 
 beforeEach(() => {
   mocks.active = null;
+  mocks.screenshotActive = null;
   mocks.fitWidth = "";
   mocks.panelByTool = {};
   mocks.resetByTool = {};
@@ -169,10 +183,7 @@ describe("useToolPanel", () => {
       return Promise.resolve();
     });
     await useCursorPanel();
-    mocks.active = {
-      content: { kind: "tool", tool: "cursor", workspace: "recording" },
-      id: "tool:cursor",
-    };
+    mocks.active = cursorPanelOpen;
     await useToolPanel("recording").toggle("cursor", anchor);
     expect(mocks.openToolPanelSpace).toHaveBeenCalledOnce();
     mocks.active = null;
@@ -194,15 +205,11 @@ describe("useToolPanel", () => {
     expect(mocks.open).toHaveBeenCalledOnce();
   });
 
-  it("closes without changing the view, including select(null)", async () => {
-    mocks.active = {
-      content: { kind: "tool", tool: "cursor", workspace: "recording" },
-      id: "tool:cursor",
-    };
+  it("closes an open panel without changing the view", async () => {
+    mocks.active = cursorPanelOpen;
     const panel = useToolPanel("recording");
 
     await panel.toggle("cursor", anchor);
-    await panel.select(null);
 
     expect(mocks.close).toHaveBeenCalledOnce();
     expect(mocks.hidePopupPanel).toHaveBeenCalledOnce();
@@ -211,10 +218,7 @@ describe("useToolPanel", () => {
   });
 
   it("hands the reset basis back to the full viewport on closing", async () => {
-    mocks.active = {
-      content: { kind: "tool", tool: "cursor", workspace: "recording" },
-      id: "tool:cursor",
-    };
+    mocks.active = cursorPanelOpen;
     mocks.panelByTool.cursor = "cursor";
     mocks.resetByTool.cursor = true;
 
@@ -237,17 +241,6 @@ describe("useToolPanel", () => {
     expect(mocks.setFitBasis).not.toHaveBeenCalled();
   });
 
-  it("leaves Cursor open when Select is deactivated", async () => {
-    mocks.active = {
-      content: { kind: "tool", tool: "cursor", workspace: "recording" },
-      id: "tool:cursor",
-    };
-    await useToolPanel("recording").select(null);
-    expect(mocks.close).not.toHaveBeenCalled();
-    expect(mocks.hidePopupPanel).not.toHaveBeenCalled();
-    expect(mocks.fitPreview).not.toHaveBeenCalled();
-  });
-
   it("switches tools according to the destination policy", async () => {
     mocks.active = {
       content: { kind: "tool", tool: "keyboard", workspace: "recording" },
@@ -262,18 +255,30 @@ describe("useToolPanel", () => {
     expect(mocks.open).toHaveBeenCalledOnce();
     expect(mocks.showPopupPanel).toHaveBeenCalledOnce();
     expect(mocks.hidePopupPanel).not.toHaveBeenCalled();
+  });
 
-    mocks.active = null;
-    mocks.resetByTool.select = false;
-    await panel.select("select");
-    expect(mocks.fitPreview).toHaveBeenCalledOnce();
+  it("opens in its own workspace's panel window, leaving the other alone", async () => {
+    mocks.active = cursorPanelOpen;
+    mocks.panelByTool.cursor = "cursor";
+    mocks.resetByTool.cursor = false;
+
+    await useToolPanel("screenshot").toggle("cursor", anchor);
+
+    expect(mocks.close).not.toHaveBeenCalled();
+    expect(mocks.hidePopupPanel).not.toHaveBeenCalled();
+    const panel = "tool-panel-screenshot";
+    expect(mocks.open).toHaveBeenCalledExactlyOnceWith(panel, {
+      content: { kind: "tool", tool: "cursor", workspace: "screenshot" },
+      focusContents: false,
+      id: "tool:cursor",
+    });
+    expect(mocks.showPopupPanel).toHaveBeenCalledWith(
+      expect.objectContaining({ panel }),
+    );
   });
 
   it("does not refit when an already open panel is toggled closed", async () => {
-    mocks.active = {
-      content: { kind: "tool", tool: "cursor", workspace: "recording" },
-      id: "tool:cursor",
-    };
+    mocks.active = cursorPanelOpen;
     mocks.panelByTool.cursor = "cursor";
     mocks.resetByTool.cursor = true;
     const panel = useToolPanel("recording");

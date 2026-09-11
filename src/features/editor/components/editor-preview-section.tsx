@@ -15,7 +15,7 @@ import {
 } from "../screenshot-output";
 import { EditorToolId } from "../tool-panels/tool-registry";
 import { useCanvasTool } from "../tool-panels/use-canvas-tool";
-import { useToolPanel } from "../tool-panels/use-tool-panel";
+import { useToolPanelFollowsTool } from "../tool-panels/use-tool-panel-follows-tool";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
 
 import {
@@ -63,17 +63,15 @@ export function ScreenshotSection({
     Exclude<ScreenshotTool, null>
   >("screenshot", "select");
   const tool = activeTool;
-  const { select } = useToolPanel("screenshot");
-  // Every way into a tool goes through here, so choosing one always settles
-  // the panel and the view together.
+  // The panel follows the tool in hand, so choosing one is all a button or a
+  // shortcut has to do.
+  useToolPanelFollowsTool("screenshot", screenshotToolId(tool));
   const toolRef = useRef(tool);
   toolRef.current = tool;
   const setTool = (
     next: ScreenshotTool | ((current: ScreenshotTool) => ScreenshotTool),
   ) => {
-    const resolved = typeof next === "function" ? next(toolRef.current) : next;
-    setActiveTool(resolved);
-    void select(screenshotToolId(resolved));
+    setActiveTool(typeof next === "function" ? next(toolRef.current) : next);
   };
   const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
   const moveSelectedLayer = (

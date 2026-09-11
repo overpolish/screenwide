@@ -418,7 +418,8 @@ export function EditorWindow() {
           ...current.items,
           ...added.map((item) => ({
             id: item.id,
-            output: resetScreenshotLayout(current, item),
+            // Placed at its real size: fitting is the user's to do.
+            output: resetScreenshotLayout(current, item, { fit: false }),
           })),
         ],
       };

@@ -392,7 +392,14 @@ pub fn set_recording_controls_borrowed(app: AppHandle, borrowed: bool) -> tauri:
   RECORDING_CONTROLS_BORROWED.store(borrowed, Ordering::Release);
 
   if borrowed {
-    super::options::hide_standalone_listbox(app.clone(), Some(false))?;
+    // The capture flow puts the bar's own menus away with the bar. A tool
+    // panel belongs to an editor, not to the bar, and stays with its editor:
+    // a capture that lands in that editor must find the panel still there.
+    super::options::close_standalone_listbox(
+      app.clone(),
+      false,
+      WindowLabel::StandaloneListbox.as_str(),
+    )?;
     source_selector::hide(&app)?;
     if let Some(bar) = app.get_webview_window(WindowLabel::RecordingBar.as_str()) {
       platform::hide(&bar)?;

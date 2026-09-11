@@ -14,7 +14,12 @@ import { Select } from "../../components/base/select/select";
 
 import { hidePopupPanel, showPopupPanel } from "./api";
 import { initialPopupPanelHeight } from "./layout";
-import { PopupPanelItem, usePopupPanelStore } from "./store";
+import {
+  activePopupPanel,
+  PopupPanelItem,
+  SHARED_POPUP_PANEL,
+  usePopupPanelStore,
+} from "./store";
 
 type PopupSelectProps = {
   id: string;
@@ -44,7 +49,9 @@ export function PopupSelect({
   placeholder,
   selectedId,
 }: PopupSelectProps) {
-  const active = usePopupPanelStore((state) => state.active);
+  const active = usePopupPanelStore((state) =>
+    activePopupPanel(state, SHARED_POPUP_PANEL),
+  );
   const lastSelection = usePopupPanelStore((state) => state.lastSelection);
   const close = usePopupPanelStore((state) => state.close);
   const open = usePopupPanelStore((state) => state.open);
@@ -77,7 +84,7 @@ export function PopupSelect({
     const currentItems = onOpen ? await onOpen() : items;
     const height = initialPopupPanelHeight(currentItems.length);
 
-    open({
+    open(SHARED_POPUP_PANEL, {
       content: {
         items: currentItems,
         kind: "list",
@@ -105,11 +112,14 @@ export function PopupSelect({
   };
 
   const toggleListbox = async (focusContents: boolean) => {
-    const current = usePopupPanelStore.getState().active;
+    const current = activePopupPanel(
+      usePopupPanelStore.getState(),
+      SHARED_POPUP_PANEL,
+    );
     const isOpen = current?.id === id;
     if (isOpen) {
-      close();
-      await hidePopupPanel(current.focusContents);
+      close(SHARED_POPUP_PANEL);
+      await hidePopupPanel(current.focusContents, SHARED_POPUP_PANEL);
     } else {
       await showListbox(focusContents);
     }

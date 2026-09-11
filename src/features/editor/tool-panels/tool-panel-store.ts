@@ -5,7 +5,25 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { DEFAULT_CURSOR_EFFECTS } from "../recording-export-settings";
+import { SelectionPlacementPatch } from "../selection-placement";
 import { CursorEffectSettings, EditorKind } from "../types";
+
+/**
+ * What the selection panel shows: the selected layer, its size and position in
+ * output pixels, and the source it was captured at, which is what a reset
+ * puts it back to.
+ */
+export type ToolPanelSelection = {
+  height: number;
+  /** Which of the workspace's layers this is, for wording that fits it. */
+  kind: "camera" | "layer" | "primary";
+  label: string;
+  sourceHeight: number;
+  sourceWidth: number;
+  width: number;
+  x: number;
+  y: number;
+};
 
 /**
  * Everything the tool panels show that the editor window owns.
@@ -18,12 +36,20 @@ export type ToolPanelSnapshot = {
   cursorEffects: CursorEffectSettings;
   hasCursorData: boolean;
   isSaving: boolean;
+  /** Null while the workspace has nothing selected to place. */
+  selection: ToolPanelSelection | null;
   /** Latest panel request committed with this snapshot. */
   acknowledgedSeq?: number;
 };
 
 /** The settings a panel may ask the editor to change. */
-export type ToolPanelPatch = Partial<Pick<ToolPanelSnapshot, "cursorEffects">>;
+export type ToolPanelPatch = Partial<
+  Pick<ToolPanelSnapshot, "cursorEffects">
+> & {
+  /** Put the selection's size and position back to its source framing. */
+  resetSelection?: true;
+  selectionOutput?: SelectionPlacementPatch;
+};
 
 export type ToolPanelRequest =
   | { type: "patch"; values: ToolPanelPatch }
@@ -40,6 +66,7 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   cursorEffects: DEFAULT_CURSOR_EFFECTS,
   hasCursorData: false,
   isSaving: false,
+  selection: null,
 };
 
 type ToolPanelStore = {

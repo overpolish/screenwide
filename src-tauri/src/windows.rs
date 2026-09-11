@@ -146,6 +146,11 @@ pub enum WindowLabel {
   /// editor it belongs to.
   ExportRecording,
   ExportScreenshot,
+  /// Each editor workspace's tool panel window, a sticky panel attached to
+  /// the editor it belongs to. One per workspace, so a tool in hand in one
+  /// editor cannot take the other's panel away.
+  ToolPanelRecording,
+  ToolPanelScreenshot,
   /// The shared confirmation sheet, a child of whichever window asked.
   ConfirmSheet,
   /// The shared tooltip, a floating panel that describes whatever is hovered.
@@ -171,6 +176,8 @@ impl WindowLabel {
     Self::EditorScreenshot,
     Self::ExportRecording,
     Self::ExportScreenshot,
+    Self::ToolPanelRecording,
+    Self::ToolPanelScreenshot,
     Self::ConfirmSheet,
     Self::Tooltip,
     #[cfg(target_os = "macos")]
@@ -194,6 +201,8 @@ impl WindowLabel {
       Self::EditorScreenshot => "editor-screenshot",
       Self::ExportRecording => "export-recording",
       Self::ExportScreenshot => "export-screenshot",
+      Self::ToolPanelRecording => "tool-panel-recording",
+      Self::ToolPanelScreenshot => "tool-panel-screenshot",
       Self::ConfirmSheet => "confirm-sheet",
       Self::Tooltip => "tooltip",
       #[cfg(target_os = "macos")]

@@ -31,10 +31,16 @@ export const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
   frame: { resetsView: true },
   keyboard: { resetsView: true },
   recenter: { resetsView: true },
-  select: { resetsView: false },
+  select: { panel: "selection", resetsView: false },
 };
 
 export const toolResetsView = (id: EditorToolId) =>
   EDITOR_TOOLS[id].resetsView === true;
 
 export const toolPanel = (id: EditorToolId) => EDITOR_TOOLS[id].panel;
+
+/** The same view policy, asked of an open panel rather than of a tool. */
+export const panelResetsView = (panel: ToolPanelKind) =>
+  (Object.keys(EDITOR_TOOLS) as EditorToolId[]).some(
+    (id) => EDITOR_TOOLS[id].panel === panel && toolResetsView(id),
+  );

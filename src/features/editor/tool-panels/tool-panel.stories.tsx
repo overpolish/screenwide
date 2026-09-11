@@ -39,6 +39,7 @@ export const Cursor: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       hasCursorData: true,
       isSaving: false,
+      selection: null,
     });
   },
 };
@@ -51,6 +52,44 @@ export const WithoutCursorData: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       hasCursorData: false,
       isSaving: false,
+      selection: null,
+    });
+  },
+};
+
+/** The screen track of a recording, at the size and position the preview
+ * would be showing it. */
+export const Selection: Story = {
+  args: { tool: "selection", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      hasCursorData: true,
+      isSaving: false,
+      selection: {
+        height: 2338,
+        kind: "primary",
+        label: "Screen",
+        sourceHeight: 2338,
+        sourceWidth: 3600,
+        width: 3600,
+        x: 0,
+        y: 0,
+      },
+    });
+  },
+};
+
+/** The tool is in hand with nothing under it: the panel says so rather than
+ * offering fields that would place nothing. */
+export const SelectionEmpty: Story = {
+  args: { tool: "selection", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      hasCursorData: true,
+      isSaving: false,
+      selection: null,
     });
   },
 };

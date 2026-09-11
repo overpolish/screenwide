@@ -21,7 +21,12 @@ import { IconButton } from "../../../components/base/button/icon-button";
 import { cn } from "../../../lib/styling";
 import { hidePopupPanel, showPopupPanel } from "../../popup-panel/api";
 import { initialPopupPanelHeight } from "../../popup-panel/layout";
-import { PopupPanelItem, usePopupPanelStore } from "../../popup-panel/store";
+import {
+  activePopupPanel,
+  PopupPanelItem,
+  SHARED_POPUP_PANEL,
+  usePopupPanelStore,
+} from "../../popup-panel/store";
 import { ScreenshotState } from "../types";
 
 /** Identifies this trigger in the shared popup panel window. */
@@ -94,11 +99,12 @@ export function RecordingBarCaptureActions({
     }
 
     handledEventRef.current = lastSelection.eventId;
-    const { active, close: closeListbox } = usePopupPanelStore.getState();
+    const state = usePopupPanelStore.getState();
+    const active = activePopupPanel(state, SHARED_POPUP_PANEL);
     // The panel is a menu, not a select: picking an action dismisses it.
     if (active?.id === SCREENSHOT_MENU_ID) {
-      closeListbox();
-      void hidePopupPanel(active.focusContents);
+      state.close(SHARED_POPUP_PANEL);
+      void hidePopupPanel(active.focusContents, SHARED_POPUP_PANEL);
     }
 
     const selected = lastSelection.selectedIds[0];
@@ -113,14 +119,17 @@ export function RecordingBarCaptureActions({
   ]);
 
   const showMenu = async (anchor: DOMRect, focusContents: boolean) => {
-    const current = usePopupPanelStore.getState().active;
+    const current = activePopupPanel(
+      usePopupPanelStore.getState(),
+      SHARED_POPUP_PANEL,
+    );
     if (current?.id === SCREENSHOT_MENU_ID) {
-      close();
-      await hidePopupPanel(current.focusContents);
+      close(SHARED_POPUP_PANEL);
+      await hidePopupPanel(current.focusContents, SHARED_POPUP_PANEL);
       return;
     }
 
-    open({
+    open(SHARED_POPUP_PANEL, {
       content: {
         items,
         kind: "list",

@@ -10,6 +10,10 @@ import {
   DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
 } from "../recording-export-settings";
+import {
+  editorSelectionTarget,
+  selectionPanelHandlers,
+} from "../tool-panels/selection-target";
 import { useToolPanelBridge } from "../tool-panels/tool-panel-bridge";
 import { ToolPanelPlacement } from "../tool-panels/tool-panel-placement";
 import { currentEditorKind } from "../window-kind";
@@ -150,6 +154,20 @@ export function EditorPanel({
       onResolutionScaleChange,
     },
   );
+  // Which layer the selection panel is placing, and the handler that commits
+  // a new placement for it. Both workspaces already own one; this only says
+  // which of them the current selection means.
+  const selectionTarget = editorSelectionTarget({
+    artifact,
+    bakeCamera,
+    enabledVideoTracks,
+    onRecordingOutputChange,
+    onScreenshotOutputChange,
+    recordingOutput,
+    screenshotOutput,
+    selectedScreenshotItemId,
+    selectedTrack,
+  });
   // The tool panels are the same arrangement one step further out: settings
   // the editor owns, shown in a window of their own and changed from there.
   useToolPanelBridge(
@@ -158,8 +176,9 @@ export function EditorPanel({
       cursorEffects,
       hasCursorData: isRecording && artifact.hasCursorData,
       isSaving: Boolean(isSaving),
+      selection: selectionTarget?.selection ?? null,
     },
-    { onCursorEffectsChange },
+    { onCursorEffectsChange, ...selectionPanelHandlers(selectionTarget) },
   );
   return (
     // The title bar carries the visible workspace's tools, so the provider has
@@ -196,7 +215,7 @@ export function EditorPanel({
             className="flex min-h-0 grow flex-col gap-section"
             inert={isExportOpen || isConfirmSheetModal}
           >
-            <ToolPanelPlacement />
+            <ToolPanelPlacement workspace={workspace} />
             {artifact?.kind === "recording" ? (
               <RecordingSection
                 artifact={artifact}

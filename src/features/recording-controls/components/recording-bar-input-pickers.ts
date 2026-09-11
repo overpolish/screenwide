@@ -9,7 +9,12 @@ import {
 
 import { hidePopupPanel, showPopupPanel } from "../../popup-panel/api";
 import { initialPopupPanelHeight } from "../../popup-panel/layout";
-import { PopupPanelItem, usePopupPanelStore } from "../../popup-panel/store";
+import {
+  activePopupPanel,
+  PopupPanelItem,
+  SHARED_POPUP_PANEL,
+  usePopupPanelStore,
+} from "../../popup-panel/store";
 import { ALL_SYSTEM_AUDIO } from "../../recording-inputs/store";
 import {
   CameraDevice,
@@ -56,7 +61,7 @@ const openPanel = async ({
   selectionMode = "single",
 }: OpenPanelOptions) => {
   const { open } = usePopupPanelStore.getState();
-  open({
+  open(SHARED_POPUP_PANEL, {
     content: {
       exclusiveId,
       items,
@@ -98,10 +103,13 @@ const openPanel = async ({
  * The toggle beside a picker dismisses it too: the press lands inside the
  * picker's own trigger, which the outside-press watcher leaves alone. */
 export const closeIfOpen = async (id: string) => {
-  const current = usePopupPanelStore.getState().active;
+  const current = activePopupPanel(
+    usePopupPanelStore.getState(),
+    SHARED_POPUP_PANEL,
+  );
   if (current?.id !== id) return false;
-  usePopupPanelStore.getState().close();
-  await hidePopupPanel(current.focusContents);
+  usePopupPanelStore.getState().close(SHARED_POPUP_PANEL);
+  await hidePopupPanel(current.focusContents, SHARED_POPUP_PANEL);
   return true;
 };
 

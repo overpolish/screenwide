@@ -14,7 +14,11 @@ import {
   popupPanelSpacing,
   toolPanelWidth,
 } from "../../popup-panel/layout";
-import { ToolPanelKind, usePopupPanelStore } from "../../popup-panel/store";
+import {
+  activePopupPanel,
+  ToolPanelKind,
+  usePopupPanelStore,
+} from "../../popup-panel/store";
 import { usePreviewFit } from "../components/preview-fit-context";
 import { EditorKind } from "../types";
 
@@ -23,7 +27,7 @@ import {
   panelGrowthDelta,
   toolPanelGutter,
 } from "./tool-panel-space";
-import { toolPanelTitles } from "./tool-panel-titles";
+import { toolPanelLabel } from "./tool-panel-window";
 import { EditorToolId, toolPanel, toolResetsView } from "./tool-registry";
 
 /** Both workspaces mark their preview area with this, and a tool panel is
@@ -50,16 +54,22 @@ export const panelOffset = (bounds: DOMRect) =>
  * Opening and closing the editor's tool panels, and what the preview does
  * about it.
  *
- * The panel is the one panel window, so opening a second tool replaces the
- * first in place. Which tool is up is read back out of the panel store, so it
- * survives the panel being closed from anywhere else: Escape, the editor
- * being put away, or another window opening a list in the same panel.
+ * The panel is this workspace's own panel window, so opening a second tool
+ * replaces the first in place while the other editor's panel stays as it is.
+ * Which tool is up is read back out of the panel store, so it survives the
+ * panel being closed from anywhere else: the editor being put away, or
+ * Escape.
+ *
+ * A canvas tool never opens its own panel from here: `useToolPanelFollowsTool`
+ * watches the tool in hand and keeps the panel matched to it. What is left
+ * here is the panel-only tools' button behaviour and the primitives both use.
  *
  * Opted-in tools grow and fit once on opening. Panel visibility and later
  * resizes never reserve layout space or reset the user's transform.
  */
 export function useToolPanel(workspace: EditorKind) {
-  const active = usePopupPanelStore((state) => state.active);
+  const panel = toolPanelLabel(workspace);
+  const active = usePopupPanelStore((state) => activePopupPanel(state, panel));
   const openTool = active?.content.kind === "tool" ? active.content.tool : null;
   const { fitPreview, setFitBasis } = usePreviewFit();
 
@@ -67,12 +77,12 @@ export function useToolPanel(workspace: EditorKind) {
    * view stays where it is, but the basis a double-click resets to goes back
    * to the full viewport the panel is no longer taking a bite out of. */
   const close = useCallback(async () => {
-    const current = usePopupPanelStore.getState().active;
+    const current = activePopupPanel(usePopupPanelStore.getState(), panel);
     if (current?.content.kind !== "tool") return;
-    usePopupPanelStore.getState().close();
+    usePopupPanelStore.getState().close(panel);
     setFitBasis();
-    await hidePopupPanel();
-  }, [setFitBasis]);
+    await hidePopupPanel(false, panel);
+  }, [panel, setFitBasis]);
 
   const openPanel = useCallback(
     async (tool: ToolPanelKind, anchor: DOMRect, fitsView: boolean) => {
@@ -89,11 +99,10 @@ export function useToolPanel(workspace: EditorKind) {
       }
       const bounds = previewViewport()?.getBoundingClientRect() ?? anchor;
       if (fitsView) fitPreview(Math.max(1, bounds.width - toolPanelGutter));
-      usePopupPanelStore.getState().open({
+      usePopupPanelStore.getState().open(panel, {
         content: { kind: "tool", tool, workspace },
         focusContents: false,
         id,
-        label: toolPanelTitles[tool],
       });
       await showPopupPanel({
         anchor: {
@@ -104,6 +113,7 @@ export function useToolPanel(workspace: EditorKind) {
         },
         focusContents: false,
         offset: panelOffset(bounds),
+        panel,
         parentWindowLabel: getCurrentWindow().label,
         size: new LogicalSize(toolPanelWidth, initialToolPanelHeight),
         // The editor keeps working while a tool panel is up, so a press
@@ -112,7 +122,7 @@ export function useToolPanel(workspace: EditorKind) {
         triggerId: id,
       });
     },
-    [fitPreview, workspace],
+    [fitPreview, panel, workspace],
   );
 
   /**
@@ -122,38 +132,21 @@ export function useToolPanel(workspace: EditorKind) {
    */
   const toggle = useCallback(
     async (tool: EditorToolId, anchor: DOMRect) => {
-      const panel = toolPanel(tool);
-      const current = usePopupPanelStore.getState().active;
+      const kind = toolPanel(tool);
+      const current = activePopupPanel(usePopupPanelStore.getState(), panel);
       const openContent =
         current?.content.kind === "tool" ? current.content : null;
       const isOpen =
-        panel !== undefined &&
-        current?.id === toolPanelId(panel) &&
-        openContent;
-      if (isOpen || panel === undefined) {
+        kind !== undefined && current?.id === toolPanelId(kind) && openContent;
+      if (isOpen || kind === undefined) {
         await close();
       } else {
-        await openPanel(panel, anchor, toolResetsView(tool));
+        await openPanel(kind, anchor, toolResetsView(tool));
       }
-      if (!isOpen && panel === undefined && toolResetsView(tool)) fitPreview();
+      if (!isOpen && kind === undefined && toolResetsView(tool)) fitPreview();
     },
-    [close, fitPreview, openPanel],
+    [close, fitPreview, openPanel, panel],
   );
 
-  /**
-   * Activating a canvas tool replaces the panel. Panel activation already
-   * clears the canvas tool; that null update must not close the new panel.
-   * Only the destination can request a fit.
-   */
-  const select = useCallback(
-    async (tool: EditorToolId | null) => {
-      // Clearing canvas interaction is also part of activating a panel.
-      if (tool === null) return;
-      await close();
-      if (toolResetsView(tool)) fitPreview();
-    },
-    [close, fitPreview],
-  );
-
-  return { close, openTool, select, toggle };
+  return { close, openPanel, openTool, toggle };
 }

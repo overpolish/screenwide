@@ -34,6 +34,7 @@ import { CursorToolToggle } from "../tool-panels/cursor-tool-toggle";
 import { EditorToolId } from "../tool-panels/tool-registry";
 import { useCanvasTool } from "../tool-panels/use-canvas-tool";
 import { useToolPanel } from "../tool-panels/use-tool-panel";
+import { useToolPanelFollowsTool } from "../tool-panels/use-tool-panel-follows-tool";
 import {
   CameraOverlaySettings,
   RecordingTrackId,
@@ -153,16 +154,11 @@ export function NativeRecordingPreview({
   const [canvasTool, setCanvasTool] = useCanvasTool<
     Exclude<RecordingCanvasTool, null>
   >("recording", "select");
-  const { select: selectToolPanel, toggle: toggleToolPanel } =
+  const { openTool: openToolPanel, toggle: toggleToolPanel } =
     useToolPanel("recording");
-  // The shortcut opens the panel from the toolbar button's own bounds, the
-  // same anchor a press would give it.
-  const toggleCursorPanel = useCallback(() => {
-    const bounds = document
-      .querySelector("[data-editor-tool=cursor]")
-      ?.getBoundingClientRect();
-    if (bounds) void toggleToolPanel("cursor", bounds);
-  }, [toggleToolPanel]);
+  // The panel follows the tool in hand, so choosing one is all a button or a
+  // shortcut has to do.
+  useToolPanelFollowsTool("recording", recordingToolId(canvasTool));
   // A canvas resize runs at pointer rate; committing every move to the export
   // window's state re-renders the inspector, lanes and timeline and starves
   // the native pane's layout loop. The gesture renders from this draft and
@@ -1072,8 +1068,8 @@ export function NativeRecordingPreview({
     moveActiveVideoTrack("forward");
   }, [moveActiveVideoTrack]);
   // Every way into a tool goes through here, so choosing one always settles
-  // the panel and the view together. The current tool is read from a ref so
-  // the shortcut handlers keep the stable identity the hook above relies on.
+  // the view with it. The current tool is read from a ref so the shortcut
+  // handlers keep the stable identity the hook above relies on.
   const canvasToolRef = useRef(canvasTool);
   canvasToolRef.current = canvasTool;
   const changeCanvasTool = useCallback(
@@ -1083,10 +1079,26 @@ export function NativeRecordingPreview({
         recenter.prepare();
       }
       setCanvasTool(next);
-      void selectToolPanel(recordingToolId(next));
     },
-    [pause, recenter, selectToolPanel, setCanvasTool],
+    [pause, recenter, setCanvasTool],
   );
+  // Cursor is a panel without a canvas tool behind it, so putting it away
+  // hands the canvas back to Select rather than leaving the editor toolless.
+  const dismissCursorPanel = useCallback(() => {
+    changeCanvasTool("select");
+  }, [changeCanvasTool]);
+  // The shortcut opens the panel from the toolbar button's own bounds, the
+  // same anchor a press would give it.
+  const toggleCursorPanel = useCallback(() => {
+    if (openToolPanel === "cursor") {
+      dismissCursorPanel();
+      return;
+    }
+    const bounds = document
+      .querySelector("[data-editor-tool=cursor]")
+      ?.getBoundingClientRect();
+    if (bounds) void toggleToolPanel("cursor", bounds);
+  }, [dismissCursorPanel, openToolPanel, toggleToolPanel]);
   const toggleCanvasTool = useCallback(() => {
     changeCanvasTool(canvasToolRef.current === "canvas" ? null : "canvas");
   }, [changeCanvasTool]);
@@ -1123,7 +1135,7 @@ export function NativeRecordingPreview({
         <>
           {hasCursorData ? (
             <ButtonGroup aria-label="Effects" className="gap-control">
-              <CursorToolToggle />
+              <CursorToolToggle onDismiss={dismissCursorPanel} />
             </ButtonGroup>
           ) : null}
           <RecordingCanvasTools
@@ -1142,6 +1154,7 @@ export function NativeRecordingPreview({
       canRecenterPrimary,
       canvasTool,
       changeCanvasTool,
+      dismissCursorPanel,
       hasCursorData,
       visiblePaneEntries.length,
     ],

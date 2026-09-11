@@ -5,8 +5,7 @@
 
 use tauri::{AppHandle, LogicalPosition, Manager};
 
-use super::super::WindowLabel;
-use super::{standalone_listbox_context, STANDALONE_LISTBOX};
+use super::{context_for, panel_label, STANDALONE_LISTBOX};
 
 /// Re-places an open panel against its parent's content without touching its
 /// attachment, level or visibility.
@@ -19,14 +18,12 @@ pub async fn move_standalone_listbox(
   app: AppHandle,
   parent_window_label: String,
   offset: LogicalPosition<f64>,
+  panel: Option<String>,
 ) -> tauri::Result<()> {
+  let panel = panel_label(panel);
   let _lifecycle = STANDALONE_LISTBOX.lock();
-  if !STANDALONE_LISTBOX.is_open() {
-    return Ok(());
-  }
-  let belongs_to_parent = standalone_listbox_context()
-    .as_ref()
-    .is_some_and(|context| context.parent_window_label == parent_window_label);
+  let belongs_to_parent =
+    context_for(&panel).is_some_and(|context| context.parent_window_label == parent_window_label);
   if !belongs_to_parent {
     return Ok(());
   }
@@ -34,7 +31,7 @@ pub async fn move_standalone_listbox(
     .get_webview_window(&parent_window_label)
     .ok_or(tauri::Error::WindowNotFound)?;
   let window = app
-    .get_webview_window(WindowLabel::StandaloneListbox.as_str())
+    .get_webview_window(&panel)
     .ok_or(tauri::Error::WindowNotFound)?;
   let scale = parent.scale_factor()?;
   let parent_position = parent.outer_position()?.to_logical::<f64>(scale);

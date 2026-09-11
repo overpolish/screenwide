@@ -69,15 +69,19 @@ export function useScreenshotTools({
   return useMemo(
     () => (
       <ButtonGroup aria-label="View tools" className="gap-control">
-        <PreviewToolToggle
-          isSelected={tool === "select"}
-          label="Select"
-          name="Select screenshot"
-          onSelectedChange={chooseSelectTool}
-          shortcut="V"
-        >
-          <MousePointer2 />
-        </PreviewToolToggle>
+        {/* The marker is the anchor Select's panel hangs from: taking the
+            tool up opens it, however the tool was taken up. */}
+        <span className="inline-flex" data-editor-tool="select">
+          <PreviewToolToggle
+            isSelected={tool === "select"}
+            label="Select"
+            name="Select screenshot"
+            onSelectedChange={chooseSelectTool}
+            shortcut="V"
+          >
+            <MousePointer2 />
+          </PreviewToolToggle>
+        </span>
         <PreviewToolToggle
           isSelected={tool === "canvas"}
           label="Resize canvas"

@@ -75,11 +75,15 @@ export function PopupPanelList({
   focusContents,
   id: activeId,
   label,
+  panel,
 }: {
   content: PopupPanelListContent;
   focusContents: boolean;
   id: string;
   label: string;
+  /** The window this list is drawn in, so a selection or a dismissal names
+   * its own panel rather than whichever was opened last. */
+  panel: string;
 }) {
   const close = usePopupPanelStore((state) => state.close);
   const select = usePopupPanelStore((state) => state.select);
@@ -147,14 +151,19 @@ export function PopupPanelList({
       const selectedIds = content.selectedIds.includes(item.id)
         ? content.selectedIds.filter((id) => id !== item.id)
         : [...content.selectedIds, item.id];
-      select(activeId, selectedIds, item.id);
+      select({ id: activeId, panel, pressedId: item.id, selectedIds });
       return;
     }
 
     selectingRef.current = true;
-    select(activeId, [item.id], item.id);
-    close();
-    void hidePopupPanel(focusContents).finally(() => {
+    select({
+      id: activeId,
+      panel,
+      pressedId: item.id,
+      selectedIds: [item.id],
+    });
+    close(panel);
+    void hidePopupPanel(focusContents, panel).finally(() => {
       selectingRef.current = false;
     });
   };
@@ -174,17 +183,18 @@ export function PopupPanelList({
       ? content.selectedIds.includes(exclusiveId)
       : false;
     if (exclusiveId && selectedIds.has(exclusiveId) && !previouslyExclusive) {
-      select(activeId, [exclusiveId]);
+      select({ id: activeId, panel, selectedIds: [exclusiveId] });
       return;
     }
     if (exclusiveId) selectedIds.delete(exclusiveId);
     if (selectedIds.size === 0 && exclusiveId) selectedIds.add(exclusiveId);
-    select(
-      activeId,
-      content.items
+    select({
+      id: activeId,
+      panel,
+      selectedIds: content.items
         .map((item) => item.id)
         .filter((itemId) => selectedIds.has(itemId)),
-    );
+    });
   };
 
   const renderItem = (item: PopupPanelItem): ReactNode => (

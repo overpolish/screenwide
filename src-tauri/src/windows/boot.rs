@@ -23,6 +23,8 @@ const DISMISSED_ON_CLOSE: &[WindowLabel] = &[
   WindowLabel::RecordingSourceSelector,
   WindowLabel::RegionSelector,
   WindowLabel::StandaloneListbox,
+  WindowLabel::ToolPanelRecording,
+  WindowLabel::ToolPanelScreenshot,
   WindowLabel::RecordingDock,
 ];
 

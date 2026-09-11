@@ -27,9 +27,9 @@ export type PopupPanelItem = {
   togglesInPlace?: boolean;
 };
 
-/** The editor tools that own a panel. One for now, with room for the
- * background, keyboard, camera and audio panels that follow. */
-export type ToolPanelKind = "cursor";
+/** The editor tools that own a panel, with room for the background,
+ * keyboard, camera and audio panels that follow. */
+export type ToolPanelKind = "cursor" | "selection";
 
 /** A list of choices: the panel as it has always been. */
 export type PopupPanelListContent = {
@@ -51,14 +51,20 @@ export type PopupPanelToolContent = {
   workspace: EditorKind;
 };
 
-type PopupPanelContent = PopupPanelListContent | PopupPanelToolContent;
+export type PopupPanelContent = PopupPanelListContent | PopupPanelToolContent;
 
-type OpenPopupPanel = {
+/** The one panel window every pop-up button borrows. A caller that names no
+ * panel means this one. */
+export const SHARED_POPUP_PANEL = "standalone-listbox";
+
+export type OpenPopupPanel = {
   /** What the panel window draws: a list of choices, or a tool's controls. */
   content: PopupPanelContent;
   focusContents: boolean;
   id: string;
-  label: string;
+  /** Names a list of choices for assistive technology. A tool panel is the
+   * tool in hand and carries no chrome of its own to name. */
+  label?: string;
 };
 
 type PopupPanelSelection = {
@@ -72,12 +78,33 @@ type PopupPanelSelection = {
 };
 
 type PopupPanelStore = {
-  active: OpenPopupPanel | null;
-  close: () => void;
+  /** What each panel window is showing, keyed by its window label. The
+   * editors have one each, so a tool in hand in one workspace cannot take the
+   * other's panel away, and neither disturbs the shared listbox. */
+  active: Record<string, OpenPopupPanel | null>;
+  close: (panel: string) => void;
+  /** Every panel window at once, for the app launch that must not inherit
+   * whatever the last run left open. */
+  closeAll: () => void;
   lastSelection: PopupPanelSelection | null;
-  open: (listbox: OpenPopupPanel) => void;
-  select: (id: string, selectedIds: string[], pressedId?: string) => void;
+  open: (panel: string, listbox: OpenPopupPanel) => void;
+  select: (selection: PopupPanelSelectionRequest) => void;
 };
+
+/** A press in a list: which panel window reported it, which list it was, and
+ * what that leaves selected. */
+type PopupPanelSelectionRequest = {
+  id: string;
+  panel: string;
+  selectedIds: string[];
+  pressedId?: string;
+};
+
+/** What one panel window is showing, or nothing. */
+export const activePopupPanel = (
+  state: Pick<PopupPanelStore, "active">,
+  panel: string,
+) => state.active[panel] ?? null;
 
 const STORE_NAME = "screenwide-standalone-listbox";
 const SELECTION_STORE_NAME = `${STORE_NAME}-selection`;
@@ -85,31 +112,40 @@ const SELECTION_STORE_NAME = `${STORE_NAME}-selection`;
 export const usePopupPanelStore = create<PopupPanelStore>()(
   persist(
     (set) => ({
-      active: null,
-      close: () => {
-        set({ active: null });
+      active: {},
+      close: (panel) => {
+        set((state) => ({ active: { ...state.active, [panel]: null } }));
+      },
+      closeAll: () => {
+        set({ active: {} });
       },
       lastSelection: null,
-      open: (active) => {
-        set({ active });
+      open: (panel, active) => {
+        set((state) => ({ active: { ...state.active, [panel]: active } }));
       },
-      select: (id, selectedIds, pressedId) => {
+      select: ({ id, panel, pressedId, selectedIds }) => {
         const lastSelection = {
           eventId: crypto.randomUUID(),
           id,
           pressedId,
           selectedIds,
         };
-        set((state) => ({
-          active:
-            state.active?.id === id && state.active.content.kind === "list"
-              ? {
-                  ...state.active,
-                  content: { ...state.active.content, selectedIds },
-                }
-              : state.active,
-          lastSelection,
-        }));
+        set((state) => {
+          const open = state.active[panel] ?? null;
+          return {
+            active:
+              open?.id === id && open.content.kind === "list"
+                ? {
+                    ...state.active,
+                    [panel]: {
+                      ...open,
+                      content: { ...open.content, selectedIds },
+                    },
+                  }
+                : state.active,
+            lastSelection,
+          };
+        });
         localStorage.setItem(
           SELECTION_STORE_NAME,
           JSON.stringify(lastSelection),
@@ -119,11 +155,11 @@ export const usePopupPanelStore = create<PopupPanelStore>()(
     {
       // The open panel is presentation state, never worth carrying across a
       // shape change: an upgrade drops whatever the last run left behind.
-      migrate: () => ({ active: null }),
+      migrate: () => ({ active: {} }),
       name: STORE_NAME,
       partialize: (state) => ({ active: state.active }),
       storage: createJSONStorage(() => localStorage),
-      version: 1,
+      version: 2,
     },
   ),
 );

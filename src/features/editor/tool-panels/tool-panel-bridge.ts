@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { SelectionPlacementPatch } from "../selection-placement";
 import { CursorEffectSettings, EditorKind } from "../types";
 
 import {
@@ -19,6 +20,9 @@ import {
  */
 export type ToolPanelHandlers = {
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
+  /** Place the selection at the size and position a field asked for. */
+  onSelectionPlacementChange?: (placement: SelectionPlacementPatch) => void;
+  onSelectionReset?: () => void;
 };
 
 /**
@@ -31,6 +35,10 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.cursorEffects !== undefined) {
     on.onCursorEffectsChange?.(values.cursorEffects);
   }
+  if (values.selectionOutput !== undefined) {
+    on.onSelectionPlacementChange?.(values.selectionOutput);
+  }
+  if (values.resetSelection) on.onSelectionReset?.();
 };
 
 /**

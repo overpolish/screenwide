@@ -21,6 +21,9 @@ type ShowPopupPanelOptions = {
   size: LogicalSize;
   triggerId: string;
   anchor?: PopupPanelAnchor;
+  /** Which panel window to show this in. Omitted means the shared listbox
+   * every pop-up button borrows; an editor names its own tool panel. */
+  panel?: string;
   /** A panel the user works alongside, which an outside press must not take
    * away. It closes on Escape, on its own trigger, or with its parent
    * window. */
@@ -31,6 +34,7 @@ export const showPopupPanel = ({
   anchor,
   focusContents,
   offset,
+  panel,
   parentWindowLabel,
   size,
   sticky = false,
@@ -40,6 +44,7 @@ export const showPopupPanel = ({
     anchor: anchor ?? null,
     focusContents,
     offset,
+    panel: panel ?? null,
     parentWindowLabel,
     size,
     sticky,
@@ -57,7 +62,16 @@ export const showPopupPanel = ({
 export const movePopupPanel = (
   parentWindowLabel: string,
   offset: LogicalPosition,
-) => invoke<null>("move_standalone_listbox", { offset, parentWindowLabel });
+  panel?: string,
+) =>
+  invoke<null>("move_standalone_listbox", {
+    offset,
+    panel: panel ?? null,
+    parentWindowLabel,
+  });
 
-export const hidePopupPanel = (returnFocus = false) =>
-  invoke<null>("hide_standalone_listbox", { returnFocus });
+export const hidePopupPanel = (returnFocus = false, panel?: string) =>
+  invoke<null>("hide_standalone_listbox", {
+    panel: panel ?? null,
+    returnFocus,
+  });
