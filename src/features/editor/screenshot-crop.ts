@@ -107,20 +107,28 @@ export const resetCommittedScreenshotCrop = (
     source,
   );
 
-/** Show the full source while the OSC marks the committed screenshot crop. */
+/**
+ * Show the full source while the OSC marks the committed screenshot crop.
+ *
+ * The whole source becomes the visible rectangle so nothing being cropped away
+ * disappears while the tool is open, and `cropPreview` keeps the committed crop
+ * so the compositor can draw the layer the crop actually produces over that
+ * ghost, rounded and shadowed. Both rectangles are in the same output pixels:
+ * the source crop only moves the window, never the image behind it.
+ */
 export const uncroppedScreenshotPreviewOutput = (
   source: { height: number; width: number },
   settings: ScreenshotOutputSettings,
 ): ScreenshotOutputSettings => {
+  const cropPreview = screenshotLayout(source, settings).sourceCrop;
   const previewSettings = withScreenshotSourceCrop(settings, fullSourceRect());
   const { image } = screenshotLayout(source, previewSettings);
   return {
     ...previewSettings,
     cropHeight: image.height,
+    cropPreview,
     cropWidth: image.width,
     cropX: image.x,
     cropY: image.y,
-    dropShadow: false,
-    radiusPercent: 0,
   };
 };

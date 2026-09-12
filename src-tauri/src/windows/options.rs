@@ -178,6 +178,7 @@ pub fn show_standalone_listbox(
   anchor: Option<AnchorRect>,
   sticky: Option<bool>,
   panel: Option<String>,
+  fitted: Option<bool>,
 ) -> tauri::Result<()> {
   let panel = panel_label(panel);
   let _lifecycle = STANDALONE_LISTBOX.lock();
@@ -215,13 +216,24 @@ pub fn show_standalone_listbox(
   }
 
   platform::set_frame(&window, position, size)?;
+  // A panel that fits itself to its contents opens unseen at the size it was
+  // asked for, lays out, and is revealed by `fit_standalone_listbox` once it
+  // is the size of what it holds: showing it at one height and settling at
+  // another reads as a flicker. One already on screen keeps its pixels: a
+  // swap of contents resizes in place rather than blinking out. Concealed
+  // before attachment, because AppKit can order a child on screen as it is
+  // attached.
+  let conceal = fitted.unwrap_or(false) && !window.is_visible().unwrap_or(false);
+  if conceal {
+    crate::editor::export_window::presentation::conceal(&app, &window)?;
+  }
   let attached_to = if sticky {
     attach_to_parent(&app, &parent, &window)?;
     Some(parent_window_label.clone())
   } else {
     None
   };
-  platform::show(&window, 1.0)?;
+  platform::show(&window, if conceal { 0.0 } else { 1.0 })?;
   // A menu floats over every application; an attached panel keeps the
   // ordinary level it was just given, so it travels with its parent.
   if attached_to.is_none() {
@@ -247,6 +259,26 @@ pub fn show_standalone_listbox(
   );
   synchronize_open_flag();
   Ok(())
+}
+
+/// A fitted panel's content reporting the height it needs: the window is
+/// sized to it and revealed once that resize has landed.
+#[tauri::command]
+pub fn fit_standalone_listbox(
+  app: AppHandle,
+  panel: Option<String>,
+  height: f64,
+) -> tauri::Result<()> {
+  if !height.is_finite() || height <= 0.0 {
+    return Ok(());
+  }
+  let window = app
+    .get_webview_window(&panel_label(panel))
+    .ok_or_else(|| tauri::Error::WindowNotFound)?;
+  let scale = window.scale_factor()?;
+  let width = window.inner_size()?.to_logical::<f64>(scale).width;
+  window.set_size(LogicalSize::new(width, height.ceil()))?;
+  crate::editor::export_window::presentation::reveal_after_resize(&window)
 }
 
 #[tauri::command]

@@ -15,6 +15,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
     });
   };
   useEditorWindowShortcuts({
+    onConfirm: () => {
+      forward("Enter");
+    },
     onCopy: () => {
       forward("KeyC", { ctrlKey: true });
     },

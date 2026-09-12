@@ -1173,6 +1173,11 @@ fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       (selection.image_height * image.height * scale) as f32,
     ])
   });
+  // Crop mode keeps the layer's own radius so the shade can round with it.
+  let crop_radius_percent = state
+    .selection
+    .filter(|selection| selection.crop_mode != 0 && selection.radius_disabled == 0)
+    .map_or(0.0, |selection| selection.radius_percent);
   let guides = display.and_then(|_| {
     let selection = state.selection?;
     let pane = state.panes.get(selection.pane_index as usize)?.as_ref()?;
@@ -1240,6 +1245,7 @@ fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       frame,
       radius.filter(|point| point[0].is_finite() && point[1].is_finite()),
       crop_image,
+      crop_radius_percent,
       guides,
       magnifier_box,
       label_text.as_deref(),

@@ -10,6 +10,7 @@ import {
   cameraOverlayGeometry,
   uncroppedCameraPreviewOverlay,
 } from "../camera-overlay-geometry";
+import { useRecenterInsetRefresh } from "../recenter-inset-channel";
 import {
   DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
@@ -947,6 +948,8 @@ export function NativeRecordingPreview({
   });
   recenterActionRef.current = recenter.begin;
   recenterRefreshRef.current = recenter.refresh;
+  // The crop panel's commit reaches the same analysis a crop drag ends with.
+  useRecenterInsetRefresh("recording", recenter.refresh);
   const timelineThumbnails = useRecordingTimelineThumbnails({
     artifactId,
     isEnabled: previewLayout === undefined,
@@ -1093,6 +1096,14 @@ export function NativeRecordingPreview({
   const toggleCropTool = useCallback(() => {
     changeCanvasTool(canvasToolRef.current === "crop" ? null : "crop");
   }, [changeCanvasTool]);
+  // The crop tool is the one tool you are "in": Enter accepts what is framed
+  // and Escape backs out of it, and both simply put the tool down - the crop
+  // itself was committed as each handle was released. While it is in hand that
+  // Escape outranks the timeline's own deselects.
+  const isCropping = canvasTool === "crop";
+  const leaveCropTool = useCallback(() => {
+    if (canvasToolRef.current === "crop") changeCanvasTool(null);
+  }, [changeCanvasTool]);
   const toggleRecenterTool = useCallback(() => {
     pause();
     changeCanvasTool(canvasToolRef.current === "recenter" ? null : "recenter");
@@ -1158,6 +1169,8 @@ export function NativeRecordingPreview({
   const canNudgeActiveTrack =
     canvasTool === "select" && canMoveActiveVideoTrack && !isPlaying;
   useEditorWindowShortcuts({
+    onConfirm: isCropping ? leaveCropTool : undefined,
+    onDeselect: isCropping ? leaveCropTool : undefined,
     onMoveBackward: canMoveActiveVideoTrack
       ? moveActiveVideoTrackBackward
       : undefined,
@@ -1172,6 +1185,7 @@ export function NativeRecordingPreview({
     onToggleCrop: hasVisiblePanes ? toggleCropTool : undefined,
     onToggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
+    ownsEscape: isCropping,
   });
   const changeEnabledTracks = useCallback(
     (tracks: Set<number>) => {

@@ -52,11 +52,21 @@ typedef struct {
   /// reads them, from the table in `screenshots/mesh_generator.rs`. The
   /// classic mesh is 1.0 and drifts with the seconds as they come.
   float mesh_generator_speed;
+  /// Non-zero while the crop tool previews the whole uncropped source. The
+  /// fields below are the cropped layer, drawn a second time over that ghost
+  /// with the rounding and shadow the ghost gives up.
+  uint32_t crop_preview;
+  float crop_preview_x;
+  float crop_preview_y;
+  float crop_preview_width;
+  float crop_preview_height;
+  float crop_preview_radius;
+  uint32_t crop_preview_drop_shadow;
 } ScreenwideCanvas;
 // The same fields in the same order as Rust's `NativeCanvas` and Metal's
 // `CanvasUniforms`. Every one is four bytes wide, so the generator ids landing
 // between `mesh_point_count` and `mesh_points` move all three or none.
-_Static_assert(sizeof(ScreenwideCanvas) == 348,
+_Static_assert(sizeof(ScreenwideCanvas) == 376,
                "ScreenwideCanvas ABI must match Rust");
 _Static_assert(offsetof(ScreenwideCanvas, mesh_generator) == 108,
                "ScreenwideCanvas.mesh_generator ABI must match Rust");
@@ -64,6 +74,8 @@ _Static_assert(offsetof(ScreenwideCanvas, mesh_points) == 116,
                "ScreenwideCanvas.mesh_points ABI must match Rust");
 _Static_assert(offsetof(ScreenwideCanvas, mesh_generator_speed) == 344,
                "ScreenwideCanvas.mesh_generator_speed ABI must match Rust");
+_Static_assert(offsetof(ScreenwideCanvas, crop_preview) == 348,
+               "ScreenwideCanvas.crop_preview ABI must match Rust");
 
 /// One output frame's cursor, evaluated from the recorded event timeline.
 /// Positions and sizes are canvas pixels; the compositor's shader owns every

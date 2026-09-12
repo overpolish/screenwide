@@ -27,6 +27,10 @@ export type ToolPanelHandlers = {
   onBackgroundChange?: (background: Background) => void;
   onBackgroundPresetRemove?: (id: string) => void;
   onBackgroundPresetSave?: (preset: BackgroundPreset) => void;
+  /** Show the whole source again, the committed crop taken away. */
+  onCropReset?: () => void;
+  /** Cut a crop of the size a field asked for, in source pixels. */
+  onCropSizeChange?: (size: { height?: number; width?: number }) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
   onFrameReset?: () => void;
   /** Size the output canvas to what a field asked for. */
@@ -58,6 +62,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   }
   if (values.frameSize !== undefined) on.onFrameSizeChange?.(values.frameSize);
   if (values.resetFrame) on.onFrameReset?.();
+  if (values.cropSize !== undefined) on.onCropSizeChange?.(values.cropSize);
+  if (values.resetCrop) on.onCropReset?.();
   if (values.selectionDropShadow !== undefined) {
     on.onSelectionDropShadowChange?.(values.selectionDropShadow);
   }

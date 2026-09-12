@@ -87,7 +87,7 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
     screenwide_region_osc_add_quad(vertices, &count, size, canvas, 6);
   else
     screenwide_region_osc_add_crop_with_handles(
-        vertices, &count, size, s.region, canvas, scale, s.showFrame,
+        vertices, &count, size, s.region, canvas, scale, 0.0, s.showFrame,
         s.showHandles);
   screenwide_region_osc_ocr_add_vertices(s, vertices, &count, size, scale);
   screenwide_region_osc_ruler_add_vertices(s, vertices, &count, size, scale);

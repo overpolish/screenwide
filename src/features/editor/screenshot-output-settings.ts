@@ -19,6 +19,14 @@ type ScreenshotBackgroundType = "image" | "mesh" | "solid";
  * is the visible rectangle, and the image behind it is given by its top left
  * corner and its width, its height following the source's aspect.
  */
+/** The crop tool's live result rectangle, in output pixels. */
+export type CropPreviewRect = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
 export type ScreenshotOutputSettings = {
   backgroundColor: string;
   /** A picture of your own behind the layers, or null for a painted one. */
@@ -47,6 +55,13 @@ export type ScreenshotOutputSettings = {
   recenterInsetColor: string | null;
   sourceCrop: SourceRect;
   width: number;
+  /**
+   * Where the cropped layer lands while the crop tool previews the whole
+   * uncropped source, so the compositor can draw it over that ghost with its
+   * real corner radius and drop shadow. Only the crop-mode preview payload
+   * carries one; it is never persisted.
+   */
+  cropPreview?: CropPreviewRect;
 };
 
 export const defaultScreenshotOutput = (
@@ -164,5 +179,16 @@ export const normalizedScreenshotOutput = (
     normalized.meshGenerator.trim() || DEFAULT_GENERATOR_ID;
   normalized.backgroundImagePath = settings.backgroundImagePath ?? null;
   normalized.recenterInsetColor = settings.recenterInsetColor ?? null;
+  // Display-only, and never persisted: a rectangle that is not wholly finite
+  // is no rectangle at all rather than something the compositor has to guard.
+  const cropPreview = settings.cropPreview;
+  if (
+    cropPreview &&
+    [cropPreview.height, cropPreview.width, cropPreview.x, cropPreview.y].every(
+      (value) => Number.isFinite(value),
+    )
+  )
+    normalized.cropPreview = cropPreview;
+  else delete normalized.cropPreview;
   return withScreenshotSourceCrop(normalized, sourceCrop);
 };

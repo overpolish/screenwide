@@ -43,6 +43,18 @@ export type ToolPanelFrame = {
 };
 
 /**
+ * What the crop panel shows: the visible rectangle of the source, in source
+ * pixels, and the whole source it is cut from - which is what a reset puts it
+ * back to.
+ */
+export type ToolPanelCrop = {
+  height: number;
+  sourceHeight: number;
+  sourceWidth: number;
+  width: number;
+};
+
+/**
  * Everything the tool panels show that the editor window owns.
  *
  * One snapshot per workspace, published by the editor and read by the panel
@@ -54,6 +66,8 @@ export type ToolPanelSnapshot = {
   background: Background;
   /** The backgrounds saved from the picker, in the order they were saved. */
   backgroundPresets: BackgroundPreset[];
+  /** Null until the workspace has a source to cut a crop out of. */
+  crop: ToolPanelCrop | null;
   cursorEffects: CursorEffectSettings;
   /** Null until the workspace has an output canvas to size. */
   frame: ToolPanelFrame | null;
@@ -69,10 +83,14 @@ export type ToolPanelSnapshot = {
 export type ToolPanelPatch = Partial<
   Pick<ToolPanelSnapshot, "background" | "cursorEffects">
 > & {
+  /** Cut a crop of this size, in source pixels, keeping it where it sits. */
+  cropSize?: { height?: number; width?: number };
   /** Size the output canvas, leaving what is in it where it sits. */
   frameSize?: { height?: number; width?: number };
   /** Forget a saved background, by its id. */
   removePreset?: string;
+  /** Show the whole source again, the committed crop taken away. */
+  resetCrop?: true;
   /** Put the canvas back to the source size, refitting what is in it. */
   resetFrame?: true;
   /** Put the selection's size and position back to its source framing. */
@@ -98,6 +116,7 @@ export type ToolPanelMessage = {
 export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   background: { color: "#171717", kind: "solid" },
   backgroundPresets: [],
+  crop: null,
   cursorEffects: DEFAULT_CURSOR_EFFECTS,
   frame: null,
   hasCursorData: false,

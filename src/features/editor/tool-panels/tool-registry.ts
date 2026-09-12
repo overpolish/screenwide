@@ -26,7 +26,7 @@ type EditorTool = {
  * gains the kind.
  */
 export const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
-  crop: { resetsView: true },
+  crop: { panel: "crop", resetsView: true },
   cursor: { panel: "cursor", resetsView: true },
   frame: { panel: "frame", resetsView: true },
   keyboard: { resetsView: true },

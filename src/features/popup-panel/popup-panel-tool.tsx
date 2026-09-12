@@ -1,15 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  currentMonitor,
-  getCurrentWindow,
-  LogicalSize,
-} from "@tauri-apps/api/window";
+import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { useLayoutEffect, useRef } from "react";
 
 import { ToolPanel } from "../editor/tool-panels/tool-panel";
 
+import { fitPopupPanel } from "./api";
 import { popupPanelSpacing } from "./layout";
 import { PopupPanelToolContent } from "./store";
 
@@ -40,20 +37,20 @@ export function PopupPanelTool({
     if (!contentRef.current) return;
 
     const panel = contentRef.current;
-    const window = getCurrentWindow();
+    const { label } = getCurrentWindow();
     let cancelled = false;
 
+    // The window opened unseen at a guessed height: the fit is what sizes it
+    // to these controls and lets it be seen, in that order.
     const resize = async () => {
       const maximumHeight = await maximumToolPanelHeight();
-      const scaleFactor = await window.scaleFactor();
-      const currentSize = (await window.innerSize()).toLogical(scaleFactor);
       if (cancelled) return;
 
       const measured = panel.getBoundingClientRect().height;
       const height =
         maximumHeight === null ? measured : Math.min(measured, maximumHeight);
       if (height <= 0) return;
-      await window.setSize(new LogicalSize(currentSize.width, height));
+      await fitPopupPanel(height, label);
     };
 
     void resize();

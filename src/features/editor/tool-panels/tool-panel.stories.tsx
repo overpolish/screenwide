@@ -133,3 +133,24 @@ export const Frame: Story = {
     });
   },
 };
+
+/** The Crop tool's panel: how much of the capture is kept, in source pixels,
+ * with the whole capture behind it for a reset to return to. */
+export const Crop: Story = {
+  args: { tool: "crop", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      crop: {
+        height: 1800,
+        sourceHeight: 2338,
+        sourceWidth: 3600,
+        width: 2880,
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      hasCursorData: true,
+      isSaving: false,
+      selection: null,
+    });
+  },
+};

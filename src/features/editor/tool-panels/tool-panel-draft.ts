@@ -27,17 +27,17 @@ const placedSelection = (
   return next;
 };
 
-/** The same rule for the canvas: a width being typed does not pin the height
- * a drag on the picture is still moving. */
-const sizedFrame = (
-  frame: ToolPanelSnapshot["frame"],
+/** The same rule for the canvas and the crop: a width being typed does not pin
+ * the height a drag on the picture is still moving. */
+const sized = <Value extends { height: number; width: number }>(
+  value: Value | null,
   size: { height?: number; width?: number },
 ) => {
-  if (!frame) return frame;
-  const next = { ...frame };
+  if (!value) return value;
+  const next = { ...value };
   for (const key of ["height", "width"] as const) {
-    const value = size[key];
-    if (value !== undefined) next[key] = value;
+    const typed = size[key];
+    if (typed !== undefined) next[key] = typed;
   }
   return next;
 };
@@ -56,8 +56,10 @@ export function resolveToolPanelSnapshot(
   // A reset is an action rather than a value: nothing of it is shown locally,
   // and the editor's answer arrives as the next published placement.
   const {
+    cropSize,
     frameSize,
     removePreset: _removePreset,
+    resetCrop: _resetCrop,
     resetFrame: _resetFrame,
     resetSelection: _resetSelection,
     savePreset: _savePreset,
@@ -73,7 +75,8 @@ export function resolveToolPanelSnapshot(
   return {
     ...resolved,
     selection,
-    ...(frameSize ? { frame: sizedFrame(resolved.frame, frameSize) } : {}),
+    ...(cropSize ? { crop: sized(resolved.crop, cropSize) } : {}),
+    ...(frameSize ? { frame: sized(resolved.frame, frameSize) } : {}),
     ...(selectionOutput
       ? { selection: placedSelection(selection, selectionOutput) }
       : {}),

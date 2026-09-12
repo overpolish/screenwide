@@ -15,11 +15,11 @@ import { toolPanelLabel } from "./tool-panel-window";
 
 /**
  * Panel activation retires the canvas tool, including its native interaction.
- * The exceptions are the panels that are a canvas tool's own controls - Select
- * and Frame: the drag each of them describes has to stay live underneath the
- * panel that names it.
+ * The exceptions are the panels that are a canvas tool's own controls - Select,
+ * Frame and Crop: the drag each of them describes has to stay live underneath
+ * the panel that names it.
  */
-const canvasToolPanels: ToolPanelKind[] = ["frame", "selection"];
+const canvasToolPanels: ToolPanelKind[] = ["crop", "frame", "selection"];
 
 const retiresCanvasTool = (
   content: PopupPanelContent | undefined,

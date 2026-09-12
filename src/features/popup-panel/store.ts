@@ -29,7 +29,7 @@ export type PopupPanelItem = {
 
 /** The editor tools that own a panel, with room for the background,
  * keyboard, camera and audio panels that follow. */
-export type ToolPanelKind = "cursor" | "frame" | "selection";
+export type ToolPanelKind = "crop" | "cursor" | "frame" | "selection";
 
 /** A list of choices: the panel as it has always been. */
 export type PopupPanelListContent = {

@@ -189,6 +189,43 @@ fn deserializes_every_target_the_bar_can_send() {
   assert_eq!(region.position.x, -12.0);
 }
 
+/// The crop tool shows the whole source, and the layer the crop will actually
+/// produce over it.
+///
+/// The ghost underneath has to be flat - rounding and shadowing the uncropped
+/// source would say the wrong thing about the result - so the canvas moves
+/// both onto the second draw, and sizes the radius from the crop rectangle
+/// rather than from the whole image.
+#[cfg(target_os = "macos")]
+#[test]
+fn a_crop_preview_moves_the_rounding_and_the_shadow_onto_the_cropped_layer() {
+  let mut settings = crate::screenshots::test_output_settings(400, 200);
+  settings.drop_shadow = true;
+  settings.radius_percent = 10.0;
+  let plain = platform::native_canvas(2, 1, &settings, true).unwrap();
+  assert!(plain.radius > 0);
+  assert_eq!(plain.drop_shadow, 1);
+  assert_eq!(plain.crop_preview, 0);
+
+  settings.crop_preview = Some(output::CropPreviewRect {
+    height: 80.0,
+    width: 200.0,
+    x: 50.0,
+    y: 40.0,
+  });
+  let cropped = platform::native_canvas(2, 1, &settings, true).unwrap();
+  assert_eq!(cropped.radius, 0);
+  assert_eq!(cropped.drop_shadow, 0);
+  assert_eq!(cropped.crop_preview, 1);
+  assert_eq!(cropped.crop_preview_drop_shadow, 1);
+  assert_eq!(cropped.crop_preview_x, 50.0);
+  assert_eq!(cropped.crop_preview_y, 40.0);
+  assert_eq!(cropped.crop_preview_width, 200.0);
+  assert_eq!(cropped.crop_preview_height, 80.0);
+  // Ten percent of the crop rectangle's shorter side, not of the whole image.
+  assert_eq!(cropped.crop_preview_radius, 8.0);
+}
+
 /// The Metal canvas paints the same generators as the shared renderer.
 ///
 /// The two are separate ports of the same reference shaders, so the only way

@@ -393,6 +393,9 @@ impl SelectionOverlay {
     frame: Option<[f32; 4]>,
     radius_point: Option<[f32; 2]>,
     crop_image: Option<[f32; 4]>,
+    /// The selected layer's corner radius, as a percentage of the crop
+    /// rectangle's shorter side, so the shade rounds with the result.
+    crop_radius_percent: f64,
     guides: Option<(Option<f32>, Option<f32>, bool, bool)>,
     magnifier_box: Option<[f32; 4]>,
     label_text: Option<&str>,
@@ -520,6 +523,7 @@ impl SelectionOverlay {
           logical_frame,
           logical_rect(image, scale),
           scale,
+          crop_radius_percent,
         );
       } else {
         let radius_percent = radius_point

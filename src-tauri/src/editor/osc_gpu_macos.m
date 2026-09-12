@@ -352,10 +352,51 @@ void screenwide_region_osc_add_selection(
   }
 }
 
+/// Shades the sliver between a crop corner and the rounded corner the layer
+/// will actually have.
+///
+/// The four shade quads stop at the crop rectangle, so with a corner radius
+/// the little wedge inside the rectangle but outside the rounded shape would
+/// read as kept. `uv` is the distance from the arc centre in radii, which
+/// lets the fragment shade exactly what falls outside the arc.
+static void add_crop_corner_shade(ScreenwideRegionOscVertex *vertices,
+                                  NSUInteger *count, NSSize size,
+                                  NSPoint center, CGFloat radius,
+                                  CGFloat sign_x, CGFloat sign_y) {
+  if (radius <= 0.0)
+    return;
+  CGFloat outer_x = center.x + radius * sign_x;
+  CGFloat outer_y = center.y + radius * sign_y;
+  CGFloat min_x = MIN(center.x, outer_x), max_x = MAX(center.x, outer_x);
+  CGFloat min_y = MIN(center.y, outer_y), max_y = MAX(center.y, outer_y);
+  ScreenwideRegionOscPoint a = ndc(size, min_x, min_y);
+  ScreenwideRegionOscPoint b = ndc(size, max_x, min_y);
+  ScreenwideRegionOscPoint c = ndc(size, max_x, max_y);
+  ScreenwideRegionOscPoint d = ndc(size, min_x, max_y);
+  ScreenwideRegionOscPoint uv_a = {
+      (float)((min_x - center.x) * sign_x / radius),
+      (float)((min_y - center.y) * sign_y / radius)};
+  ScreenwideRegionOscPoint uv_b = {
+      (float)((max_x - center.x) * sign_x / radius),
+      (float)((min_y - center.y) * sign_y / radius)};
+  ScreenwideRegionOscPoint uv_c = {
+      (float)((max_x - center.x) * sign_x / radius),
+      (float)((max_y - center.y) * sign_y / radius)};
+  ScreenwideRegionOscPoint uv_d = {
+      (float)((min_x - center.x) * sign_x / radius),
+      (float)((max_y - center.y) * sign_y / radius)};
+  ScreenwideRegionOscVertex quad[6] = {
+      {a, uv_a, 45, 0}, {b, uv_b, 45, 0}, {c, uv_c, 45, 0},
+      {a, uv_a, 45, 0}, {c, uv_c, 45, 0}, {d, uv_d, 45, 0},
+  };
+  memcpy(vertices + *count, quad, sizeof(quad));
+  *count += 6;
+}
+
 void screenwide_region_osc_add_crop_with_handles(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
-    NSRect crop, NSRect image, CGFloat scale, BOOL show_frame,
-    BOOL show_handles) {
+    NSRect crop, NSRect image, CGFloat scale, double radius_percent,
+    BOOL show_frame, BOOL show_handles) {
   NSRect shade[4] = {
       NSMakeRect(NSMinX(image), NSMinY(image), image.size.width,
                  MAX(NSMinY(crop) - NSMinY(image), 0.0)),
@@ -369,6 +410,23 @@ void screenwide_region_osc_add_crop_with_handles(
   for (NSUInteger index = 0; index < 4; index++)
     if (!NSIsEmptyRect(shade[index]))
       screenwide_region_osc_add_quad(vertices, count, size, shade[index], 6);
+
+  CGFloat shortest = MIN(crop.size.width, crop.size.height);
+  CGFloat corner_radius =
+      MIN(MAX(radius_percent, 0.0), 50.0) / 100.0 * shortest;
+  if (corner_radius > 0.0) {
+    const CGFloat signs[4][2] = {{-1.0, -1.0}, {1.0, -1.0},
+                                 {-1.0, 1.0}, {1.0, 1.0}};
+    NSPoint centers[4] = {
+        {NSMinX(crop) + corner_radius, NSMinY(crop) + corner_radius},
+        {NSMaxX(crop) - corner_radius, NSMinY(crop) + corner_radius},
+        {NSMinX(crop) + corner_radius, NSMaxY(crop) - corner_radius},
+        {NSMaxX(crop) - corner_radius, NSMaxY(crop) - corner_radius},
+    };
+    for (NSUInteger index = 0; index < 4; index++)
+      add_crop_corner_shade(vertices, count, size, centers[index],
+                            corner_radius, signs[index][0], signs[index][1]);
+  }
 
   if (!show_frame)
     return;
@@ -414,9 +472,10 @@ void screenwide_region_osc_add_crop_with_handles(
 
 void screenwide_region_osc_add_crop(ScreenwideRegionOscVertex *vertices,
                                     NSUInteger *count, NSSize size,
-                                    NSRect crop, NSRect image, CGFloat scale) {
+                                    NSRect crop, NSRect image, CGFloat scale,
+                                    double radius_percent) {
   screenwide_region_osc_add_crop_with_handles(
-      vertices, count, size, crop, image, scale, YES, YES);
+      vertices, count, size, crop, image, scale, radius_percent, YES, YES);
 }
 
 static void encode(

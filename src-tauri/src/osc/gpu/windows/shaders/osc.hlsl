@@ -368,6 +368,17 @@ float4 ps_main(VertexOut input) : SV_Target {
     return input.kind == 13 ? action_fills[1] : action_fills[0];
   }
   if (input.kind == 6) return overlay_shade;
+  if (input.kind == 45) {
+    // A crop corner: uv is the distance from the arc centre in radii, so what
+    // lies outside the arc is what the rounded layer will not keep.
+    float corner_distance = length(input.uv);
+    float corner_aa = max(fwidth(corner_distance), 0.0001);
+    float outside = clamp((corner_distance - 1.0) / corner_aa + 0.5, 0.0, 1.0);
+    if (outside <= 0.0) discard;
+    float4 corner_color = overlay_shade;
+    corner_color.a *= outside;
+    return corner_color;
+  }
   if (input.kind >= 17 && input.kind <= 20) {
     float2 dimensions = 1.0 / max(fwidth(input.uv), float2(0.0001, 0.0001));
     float2 half_size = dimensions * 0.5;

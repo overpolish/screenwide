@@ -11,6 +11,18 @@ import {
   ownsTextEditingKeys,
 } from "./keyboard-target";
 
+/**
+ * How many mounted hooks have claimed Escape for a tool that is in the middle
+ * of something - the crop tool, today.
+ *
+ * Module state because the several shortcut hooks on one editor window are
+ * siblings on the same listener target: `stopPropagation` cannot hold one back
+ * from another, and which of them registered first is an accident of render
+ * order. A claim is asked about at event time instead, so a claimed Escape
+ * leaves the tool and every plain deselect on the window stands down.
+ */
+let escapeClaims = 0;
+
 const arrowDirections = new Map([
   ["ArrowDown", { x: 0, y: 1 }],
   ["ArrowLeft", { x: -1, y: 0 }],
@@ -19,6 +31,7 @@ const arrowDirections = new Map([
 ]);
 
 export function useEditorWindowShortcuts({
+  onConfirm,
   onCopy,
   onCutTimeline,
   onDelete,
@@ -38,7 +51,10 @@ export function useEditorWindowShortcuts({
   onTogglePlayback,
   onToggleRangeTool,
   onUndo,
+  ownsEscape = false,
 }: {
+  /** Enter: done with whatever this window is in the middle of. */
+  onConfirm?: () => void;
   onCopy?: () => void;
   onCutTimeline?: () => void;
   onDelete?: () => void;
@@ -61,8 +77,17 @@ export function useEditorWindowShortcuts({
   onTogglePlayback?: () => void;
   onToggleRangeTool?: () => void;
   onUndo?: () => void;
+  /** This hook's Escape outranks every plain `onDeselect` on the window:
+   * leaving the tool in hand comes before clearing a selection under it. */
+  ownsEscape?: boolean;
 }) {
   const focusIntentRef = useRef<"keyboard" | "pointer">("keyboard");
+  useEffect(() => {
+    if (ownsEscape) escapeClaims += 1;
+    return () => {
+      if (ownsEscape) escapeClaims -= 1;
+    };
+  }, [ownsEscape]);
   const consumedKeysRef = useRef(new Set<string>());
   useEffect(preserveEscapeFocus, []);
 
@@ -127,13 +152,24 @@ export function useEditorWindowShortcuts({
 
       if (event.repeat || event.isComposing || event.altKey) return;
 
+      if (event.code === "Escape" && !ownsTextEditingKeys(event.target)) {
+        // A claimed Escape is the only one that runs: the hook that owns it
+        // takes the event, and the plain deselects elsewhere on the window
+        // let it through rather than racing it.
+        if (onDeselect && (ownsEscape || escapeClaims === 0)) {
+          consume(event);
+          onDeselect();
+        }
+        if (ownsEscape || escapeClaims > 0) return;
+      }
+
       if (
-        event.code === "Escape" &&
-        onDeselect &&
+        (event.code === "Enter" || event.code === "NumpadEnter") &&
+        onConfirm &&
         !ownsTextEditingKeys(event.target)
       ) {
         consume(event);
-        onDeselect();
+        onConfirm();
         return;
       }
 
@@ -288,6 +324,7 @@ export function useEditorWindowShortcuts({
       window.removeEventListener("keyup", onKeyUp, true);
     };
   }, [
+    onConfirm,
     onCopy,
     onCutTimeline,
     onDelete,
@@ -307,5 +344,6 @@ export function useEditorWindowShortcuts({
     onTogglePlayback,
     onToggleRangeTool,
     onUndo,
+    ownsEscape,
   ]);
 }

@@ -15,6 +15,7 @@ import {
   RecordingVideoTrackId,
 } from "../types";
 
+import { cropPanelHandlers, editorCropTarget } from "./crop-target";
 import { editorFrameTarget, framePanelHandlers } from "./frame-target";
 import {
   editorSelectionTarget,
@@ -90,6 +91,20 @@ export function useEditorToolPanels({
     selectedScreenshotItemId,
     selectedTrack,
   });
+  // The source rectangle the crop panel cuts, and the workspace's own commit
+  // path for it: the selected recording track's output, or the selected
+  // screenshot layer's.
+  const cropTarget = editorCropTarget({
+    artifact,
+    bakeCamera,
+    enabledVideoTracks,
+    onRecordingOutputChange,
+    onScreenshotOutputChange,
+    recordingOutput,
+    screenshotOutput,
+    selectedScreenshotItemId,
+    selectedTrack,
+  });
   // The output canvas the frame panel sizes, and the workspace's own resize
   // path for it: the recording's primary output, or the screenshot canvas.
   const frameTarget = editorFrameTarget({
@@ -109,6 +124,7 @@ export function useEditorToolPanels({
       background:
         frameTarget?.background ?? DEFAULT_TOOL_PANEL_SNAPSHOT.background,
       backgroundPresets,
+      crop: cropTarget?.snapshot ?? null,
       cursorEffects,
       frame: frameTarget?.snapshot ?? null,
       hasCursorData: artifact?.kind === "recording" && artifact.hasCursorData,
@@ -130,6 +146,7 @@ export function useEditorToolPanels({
         ]);
       },
       onCursorEffectsChange,
+      ...cropPanelHandlers(cropTarget),
       ...framePanelHandlers(frameTarget),
       ...selectionPanelHandlers(selectionTarget),
     },

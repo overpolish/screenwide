@@ -111,6 +111,7 @@ export function useToolPanel(workspace: EditorKind) {
           x: anchor.left,
           y: anchor.top,
         },
+        fitted: true,
         focusContents: false,
         offset: panelOffset(bounds),
         panel,

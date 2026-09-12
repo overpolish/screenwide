@@ -87,7 +87,10 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   if (surface.selection.crop_mode != 0)
     screenwide_region_osc_add_crop(
         vertices, &count, size, frame,
-        selection_image_frame_for(surface, surface.selection), scale);
+        selection_image_frame_for(surface, surface.selection), scale,
+        surface.selection.radius_disabled == 0
+            ? surface.selection.radius_percent
+            : 0.0);
   else
     screenwide_region_osc_add_selection(
         vertices, &count, size, frame, scale,

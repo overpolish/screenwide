@@ -3,6 +3,7 @@
 
 import { useRef, useState } from "react";
 
+import { useRecenterInsetRefresh } from "../recenter-inset-channel";
 import {
   scaledDimensions,
   scaledVideoDimensions,
@@ -179,8 +180,20 @@ export function ScreenshotSection({
   // The tools are drawn in the title bar, the way a unified toolbar carries
   // them, while their behaviour stays here with the picture they act on.
   useProvideEditorToolbarTools(tools);
+  // The crop tool is the one tool you are "in": Enter accepts what is framed
+  // and Escape backs out of it, and both simply put the tool down - the crop
+  // itself was committed as each handle was released.
+  const isCropping = tool === "crop";
+  const leaveCropTool = () => {
+    setTool((current) => (current === "crop" ? null : current));
+  };
+  // The panel's commit reaches the recenter analysis through this, the same
+  // refresh a crop drag ends with.
+  useRecenterInsetRefresh("screenshot", recenter.refresh);
   useEditorWindowShortcuts({
+    onConfirm: isCropping ? leaveCropTool : undefined,
     onDelete: deleteSelectedLayer,
+    onDeselect: isCropping ? leaveCropTool : undefined,
     onMoveBackward: () => {
       moveSelectedLayer("backward");
     },
@@ -204,6 +217,7 @@ export function ScreenshotSection({
       if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
       setTool((current) => (current === "crop" ? null : "crop"));
     },
+    ownsEscape: isCropping,
   });
 
   return (

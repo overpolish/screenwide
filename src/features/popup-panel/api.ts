@@ -21,6 +21,10 @@ type ShowPopupPanelOptions = {
   size: LogicalSize;
   triggerId: string;
   anchor?: PopupPanelAnchor;
+  /** A panel that sizes itself to its contents. It opens unseen and is
+   * revealed by `fitPopupPanel` once it is the height of what it holds, so
+   * it never shows at one size and settles at another. */
+  fitted?: boolean;
   /** Which panel window to show this in. Omitted means the shared listbox
    * every pop-up button borrows; an editor names its own tool panel. */
   panel?: string;
@@ -32,6 +36,7 @@ type ShowPopupPanelOptions = {
 
 export const showPopupPanel = ({
   anchor,
+  fitted = false,
   focusContents,
   offset,
   panel,
@@ -42,6 +47,7 @@ export const showPopupPanel = ({
 }: ShowPopupPanelOptions) =>
   invoke<null>("show_standalone_listbox", {
     anchor: anchor ?? null,
+    fitted,
     focusContents,
     offset,
     panel: panel ?? null,
@@ -69,6 +75,11 @@ export const movePopupPanel = (
     panel: panel ?? null,
     parentWindowLabel,
   });
+
+/** A fitted panel's content reporting the height it needs. The window is
+ * sized to it and, if it opened unseen, revealed once the resize has landed. */
+export const fitPopupPanel = (height: number, panel?: string) =>
+  invoke<null>("fit_standalone_listbox", { height, panel: panel ?? null });
 
 export const hidePopupPanel = (returnFocus = false, panel?: string) =>
   invoke<null>("hide_standalone_listbox", {

@@ -177,6 +177,7 @@ fn marquee_edges_form_one_closed_boundary_aware_pattern() {
     Rect::from_xywh(100.0, 50.0, 96.0, 48.0),
     Rect::from_xywh(0.0, 0.0, 400.0, 200.0),
     scale,
+    0.0,
     true,
     false,
   );
@@ -291,7 +292,7 @@ fn selection_and_crop_share_identical_handle_primitives() {
   let mut crop = Vec::new();
   // Image equal to crop emits no shade, leaving four marquee quads followed
   // by the same shared handle run Export and Region both consume.
-  add_crop(&mut crop, VIEW, frame, frame, 2.0);
+  add_crop(&mut crop, VIEW, frame, frame, 2.0, 0.0);
 
   assert_eq!(&selection[8 * 6..16 * 6], &crop[4 * 6..12 * 6]);
   assert_eq!(
@@ -348,6 +349,37 @@ fn ruler_box_pairs_a_halo_with_four_hairlines() {
 }
 
 #[test]
+fn a_rounded_crop_shades_its_corners() {
+  let mut square = Vec::new();
+  add_crop(
+    &mut square,
+    VIEW,
+    Rect::from_xywh(50.0, 40.0, 200.0, 80.0),
+    Rect::from_xywh(0.0, 0.0, 400.0, 200.0),
+    1.0,
+    0.0,
+  );
+  let mut rounded = Vec::new();
+  add_crop(
+    &mut rounded,
+    VIEW,
+    Rect::from_xywh(50.0, 40.0, 200.0, 80.0),
+    Rect::from_xywh(0.0, 0.0, 400.0, 200.0),
+    1.0,
+    25.0,
+  );
+  // The four bands are unchanged; four corner wedges follow them.
+  assert_eq!(&rounded[..4 * 6], &square[..4 * 6]);
+  assert_eq!(quad_kinds(&rounded[4 * 6..8 * 6]), vec![45, 45, 45, 45]);
+  assert_eq!(rounded.len(), square.len() + 4 * 6);
+  // Each wedge spans one radius - a quarter of the 80pt shorter side - and its
+  // uv runs from the arc centre out to the corner.
+  let wedge = &rounded[4 * 6];
+  assert_eq!(wedge.uv, [0.0, 0.0]);
+  assert_eq!(rounded[4 * 6 + 2].uv, [1.0, 1.0]);
+}
+
+#[test]
 fn crop_shade_skips_empty_bands_and_keeps_handles_optional() {
   let mut flush = Vec::new();
   add_crop_with_handles(
@@ -356,6 +388,7 @@ fn crop_shade_skips_empty_bands_and_keeps_handles_optional() {
     Rect::from_xywh(0.0, 0.0, 400.0, 100.0),
     Rect::from_xywh(0.0, 0.0, 400.0, 200.0),
     1.0,
+    0.0,
     false,
     false,
   );
@@ -368,6 +401,7 @@ fn crop_shade_skips_empty_bands_and_keeps_handles_optional() {
     Rect::from_xywh(50.0, 40.0, 200.0, 80.0),
     Rect::from_xywh(0.0, 0.0, 400.0, 200.0),
     1.0,
+    0.0,
   );
   assert_eq!(
     quad_kinds(&full),

@@ -128,13 +128,17 @@ void screenwide_region_osc_add_ruler_arc(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count,
     NSSize view_size, NSPoint center, CGFloat radius, uint8_t corner,
     CGFloat scale, BOOL hovered, CGFloat hover_width, BOOL low_confidence);
+/// `radius_percent` is the layer's corner radius as a percentage of the crop
+/// rectangle's shorter side. The shade follows it into the corners so the
+/// preview under the crop window matches the rounded result.
 void screenwide_region_osc_add_crop(ScreenwideRegionOscVertex *vertices,
                                     NSUInteger *count, NSSize view_size,
-                                    NSRect crop, NSRect image, CGFloat scale);
+                                    NSRect crop, NSRect image, CGFloat scale,
+                                    double radius_percent);
 void screenwide_region_osc_add_crop_with_handles(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
-    NSRect crop, NSRect image, CGFloat scale, BOOL show_frame,
-    BOOL show_handles);
+    NSRect crop, NSRect image, CGFloat scale, double radius_percent,
+    BOOL show_frame, BOOL show_handles);
 
 void screenwide_region_osc_encode(
     id<MTLRenderCommandEncoder> encoder,

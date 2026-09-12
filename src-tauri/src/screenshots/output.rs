@@ -15,6 +15,21 @@ use super::{mesh::mesh_canvas, rounded_corners};
 
 const MAX_OUTPUT_PIXELS: u64 = 120_000_000;
 
+/// The crop tool's live result rectangle, in output pixels.
+///
+/// Crop mode previews the whole source so the part being cropped away stays
+/// visible. This is where the cropped layer itself lands inside that canvas,
+/// so the compositor can draw it a second time with its real corner radius
+/// and drop shadow.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CropPreviewRect {
+  pub height: f64,
+  pub width: f64,
+  pub x: f64,
+  pub y: f64,
+}
+
 /// One layer's canvas and its placement in it.
 ///
 /// Placement is in output pixels rather than in shares of the canvas, so the
@@ -36,6 +51,13 @@ pub struct ScreenshotOutputSettings {
   /// settings blob written before placement moved into pixels.
   #[serde(default)]
   pub crop_height: f64,
+  /// While the crop tool is open the preview draws the whole uncropped source
+  /// flat as a ghost; this is the committed crop rectangle, in output pixels,
+  /// that the compositor draws over it with the real corner radius and drop
+  /// shadow. Only the crop-mode preview payload carries one - it is never
+  /// persisted and never reaches an export.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub crop_preview: Option<CropPreviewRect>,
   #[serde(default)]
   pub crop_width: f64,
   #[serde(default)]
@@ -302,6 +324,7 @@ pub(crate) mod tests {
       background_radius_percent: 0.0,
       crop_height: placed_height,
       crop_width: placed_width,
+      crop_preview: None,
       crop_x: placed_x,
       crop_y: placed_y,
       drop_shadow: false,

@@ -46,6 +46,38 @@ describe("recording Crop and Recenter parity", () => {
     ).toEqual(sourceRect({ height: 1, width: 1, x: 0, y: 0 }));
   });
 
+  it("keeps the cropped layer's own frame, radius and shadow for the preview", () => {
+    const settings = {
+      ...defaultScreenshotOutput(1_000, 1_000),
+      dropShadow: true,
+      radiusPercent: 12,
+    };
+    const live = applyScreenshotCropGesture({
+      deltaX: 0.1,
+      deltaY: 0,
+      edges: 1,
+      operation: "cropResize",
+      output: source,
+      settings,
+      source,
+    });
+    const committed = commitScreenshotCrop(settings, live, source);
+    const preview = uncroppedScreenshotPreviewOutput(source, committed);
+    const layout = screenshotLayout(source, committed);
+
+    // The whole source is what the preview shows, so its visible rectangle is
+    // the whole image and its crop window moves to `cropPreview`.
+    expect({
+      height: preview.cropHeight,
+      width: preview.cropWidth,
+      x: preview.cropX,
+      y: preview.cropY,
+    }).toEqual({ height: 1_000, width: 1_000, x: 0, y: 0 });
+    expect(preview.cropPreview).toEqual(layout.sourceCrop);
+    expect(preview.dropShadow).toBe(true);
+    expect(preview.radiusPercent).toBe(12);
+  });
+
   it("does not let Recenter recover source excluded by manual Crop", () => {
     const settings = defaultScreenshotOutput(1_000, 1_000);
     const live = applyScreenshotCropGesture({

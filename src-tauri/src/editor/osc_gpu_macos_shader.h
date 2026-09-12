@@ -287,6 +287,17 @@ fragment float4 region_osc_fragment(
     return color;
   }
   if (in.kind == 6) return overlay_shade;
+  if (in.kind == 45) {
+    // A crop corner: uv is the distance from the arc centre in radii, so what
+    // lies outside the arc is what the rounded layer will not keep.
+    float distance = length(in.uv);
+    float aa = max(fwidth(distance), 0.0001);
+    float outside = clamp((distance - 1.0) / aa + 0.5, 0.0, 1.0);
+    if (outside <= 0.0) discard_fragment();
+    float4 color = overlay_shade;
+    color.a *= outside;
+    return color;
+  }
   if (in.kind >= 17 && in.kind <= 20) {
     float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
     float2 half_size = dimensions * 0.5;

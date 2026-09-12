@@ -157,6 +157,7 @@ mod tests {
       background_radius_percent: 0.0,
       crop_height: f64::from(height),
       crop_width: f64::from(width),
+      crop_preview: None,
       crop_x: 0.0,
       crop_y: 0.0,
       drop_shadow: false,

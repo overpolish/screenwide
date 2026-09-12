@@ -52,6 +52,15 @@ pub(crate) struct NativeCanvas {
   /// reads them, from the table in `mesh_generator.rs`. The classic mesh is
   /// 1.0 and drifts with the seconds as they come.
   pub(crate) mesh_generator_speed: f32,
+  /// Non-zero while the crop tool previews the whole source: the fields below
+  /// are the cropped layer drawn a second time over that ghost.
+  pub(crate) crop_preview: u32,
+  pub(crate) crop_preview_x: f32,
+  pub(crate) crop_preview_y: f32,
+  pub(crate) crop_preview_width: f32,
+  pub(crate) crop_preview_height: f32,
+  pub(crate) crop_preview_radius: f32,
+  pub(crate) crop_preview_drop_shadow: u32,
 }
 
 #[repr(C)]
@@ -148,10 +157,15 @@ pub(crate) fn native_canvas(
     source_crop_y: placement.source_crop_y,
     source_crop_width: placement.source_crop_width,
     source_crop_height: placement.source_crop_height,
-    radius: (f64::from(placement.crop_width.min(placement.crop_height)) * settings.radius_percent
-      / 100.0)
-      .round() as u32,
-    drop_shadow: u32::from(settings.drop_shadow),
+    // Crop mode flattens the ghost underneath: its rounding and shadow move
+    // to the cropped layer drawn over it, below.
+    radius: if settings.crop_preview.is_some() {
+      0
+    } else {
+      (f64::from(placement.crop_width.min(placement.crop_height)) * settings.radius_percent / 100.0)
+        .round() as u32
+    },
+    drop_shadow: u32::from(settings.drop_shadow && settings.crop_preview.is_none()),
     mesh_enabled: u32::from(settings.background_type == "mesh"),
     mesh_seed: settings.mesh_seed,
     mesh_warp_percent: settings.mesh_warp_percent as f32,
@@ -162,6 +176,19 @@ pub(crate) fn native_canvas(
     transparent_background: u32::from(transparent_background),
     ..Default::default()
   };
+  if let Some(crop) = settings.crop_preview {
+    // The radius is a percentage of the layer's shorter side, and in crop mode
+    // that layer is the crop rectangle rather than the whole source.
+    canvas.crop_preview = 1;
+    canvas.crop_preview_x = crop.x as f32;
+    canvas.crop_preview_y = crop.y as f32;
+    canvas.crop_preview_width = crop.width.max(0.0) as f32;
+    canvas.crop_preview_height = crop.height.max(0.0) as f32;
+    canvas.crop_preview_radius = (crop.width.min(crop.height).max(0.0)
+      * settings.radius_percent.clamp(0.0, 50.0)
+      / 100.0) as f32;
+    canvas.crop_preview_drop_shadow = u32::from(settings.drop_shadow);
+  }
   (canvas.has_background_image, canvas.background_image_id) =
     super::background_image::native::canvas_picture(settings);
   for (index, point) in settings.mesh_points.iter().take(4).enumerate() {
