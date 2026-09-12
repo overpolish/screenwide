@@ -10,6 +10,7 @@ import {
   cameraOverlayGeometry,
   uncroppedCameraPreviewOverlay,
 } from "../camera-overlay-geometry";
+import { usePublishKeyboardShortcut } from "../keyboard-shortcut-channel";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
   DEFAULT_KEYBOARD_EFFECTS,
@@ -31,6 +32,7 @@ import {
   screenshotWorkspaceItemOutput,
 } from "../screenshot-output";
 import { CursorToolToggle } from "../tool-panels/cursor-tool-toggle";
+import { KeyboardToolToggle } from "../tool-panels/keyboard-tool-toggle";
 import { EditorToolId } from "../tool-panels/tool-registry";
 import { useCanvasTool } from "../tool-panels/use-canvas-tool";
 import { useToolPanel } from "../tool-panels/use-tool-panel";
@@ -79,6 +81,10 @@ const EMPTY_AUDIO_TRACKS: NonNullable<ScrubPreviewProps["audioTracks"]> = [];
 const FRAME_LAYER_ID = 0xffffffff;
 const AUTO_FIT_MOVE_EDGE = 1 << 17;
 const AUTO_FIT_COMMIT_EDGE = 1 << 18;
+
+/** A normalized coordinate as the panel's percent field shows it, held to two
+ * decimals so a redrawn frame is not published as a new value. */
+const roundedPercent = (value: number) => Math.round(value * 10000) / 100;
 
 /** The toolbar's own name for a tool, in the registry's vocabulary. */
 const recordingToolId = (tool: RecordingCanvasTool): EditorToolId | null =>
@@ -503,21 +509,39 @@ export function NativeRecordingPreview({
     selectedVideoTracks,
   ]);
   const keyboardSelection = keyboardPreview.selection;
-  const selectionOverlay =
+  // The shortcut is drawn for whichever fragment is on screen, but it is in
+  // hand only once it has been picked out.
+  const hasKeyboardSelection = Boolean(
     keyboardSelection &&
     keyboardTimeline.selection.ids.has(
       visibleKeyboardFragment?.fragmentId ?? "",
-    )
-      ? keyboardSelection
-      : videoSelectionOverlay;
+    ),
+  );
+  const selectionOverlay = hasKeyboardSelection
+    ? keyboardSelection
+    : videoSelectionOverlay;
   const selectionTargets = keyboardSelection
     ? [...(videoSelectionTargets ?? []), keyboardSelection]
     : videoSelectionTargets;
+  // The shortcut in hand, for the Selection panel in the panel window.
+  const keyboardGeometry = keyboardPreview.geometry;
+  usePublishKeyboardShortcut(
+    "recording",
+    hasKeyboardSelection && keyboardGeometry
+      ? {
+          kind: "shortcut",
+          label: "Shortcut",
+          maximumSizePercent: keyboardGeometry.maximumSizePercent,
+          minimumSizePercent: keyboardGeometry.minimumSizePercent,
+          positionXPercent: roundedPercent(keyboardGeometry.center.x),
+          positionYPercent: roundedPercent(keyboardGeometry.center.y),
+          sizePercent: keyboardGeometry.sizePercent,
+        }
+      : null,
+    keyboardCanvas,
+  );
   const selectionGesture = (event: RecordingSelectionGestureEvent) => {
     if (keyboardCanvas.applyGesture(event)) return;
-    // Dead native plumbing: padding is the Select panel's now, and nothing
-    // puts the preview in the mode that offers this action.
-    if (event.operation === "recenterAction") return;
     const trackId =
       event.paneIndex === 0
         ? "primary"
@@ -1033,23 +1057,34 @@ export function NativeRecordingPreview({
     },
     [setCanvasTool],
   );
-  // Cursor is a panel without a canvas tool behind it, so putting it away
-  // hands the canvas back to Select rather than leaving the editor toolless.
-  const dismissCursorPanel = useCallback(() => {
+  // Cursor and Keyboard are panels without a canvas tool behind them, so
+  // putting one away hands the canvas back to Select rather than leaving the
+  // editor toolless.
+  const dismissToolPanel = useCallback(() => {
     changeCanvasTool("select");
   }, [changeCanvasTool]);
   // The shortcut opens the panel from the toolbar button's own bounds, the
   // same anchor a press would give it.
   const toggleCursorPanel = useCallback(() => {
     if (openToolPanel === "cursor") {
-      dismissCursorPanel();
+      dismissToolPanel();
       return;
     }
     const bounds = document
       .querySelector("[data-editor-tool=cursor]")
       ?.getBoundingClientRect();
     if (bounds) void toggleToolPanel("cursor", bounds);
-  }, [dismissCursorPanel, openToolPanel, toggleToolPanel]);
+  }, [dismissToolPanel, openToolPanel, toggleToolPanel]);
+  const toggleKeyboardPanel = useCallback(() => {
+    if (openToolPanel === "keyboard") {
+      dismissToolPanel();
+      return;
+    }
+    const bounds = document
+      .querySelector("[data-editor-tool=keyboard]")
+      ?.getBoundingClientRect();
+    if (bounds) void toggleToolPanel("keyboard", bounds);
+  }, [dismissToolPanel, openToolPanel, toggleToolPanel]);
   const toggleCanvasTool = useCallback(() => {
     changeCanvasTool(canvasToolRef.current === "canvas" ? null : "canvas");
   }, [changeCanvasTool]);
@@ -1088,9 +1123,14 @@ export function NativeRecordingPreview({
     () =>
       visiblePaneEntries.length > 0 ? (
         <>
-          {hasCursorData ? (
+          {hasCursorData || hasKeyboardData ? (
             <ButtonGroup aria-label="Effects" className="gap-control">
-              <CursorToolToggle onDismiss={dismissCursorPanel} />
+              {hasCursorData ? (
+                <CursorToolToggle onDismiss={dismissToolPanel} />
+              ) : null}
+              {hasKeyboardData ? (
+                <KeyboardToolToggle onDismiss={dismissToolPanel} />
+              ) : null}
             </ButtonGroup>
           ) : null}
           <RecordingCanvasTools
@@ -1107,8 +1147,9 @@ export function NativeRecordingPreview({
       canResizeActiveTrack,
       canvasTool,
       changeCanvasTool,
-      dismissCursorPanel,
+      dismissToolPanel,
       hasCursorData,
+      hasKeyboardData,
       visiblePaneEntries.length,
     ],
   );
@@ -1140,6 +1181,7 @@ export function NativeRecordingPreview({
     onStep: !canNudgeActiveTrack && layout ? timelineBlade.step : undefined,
     onToggleCrop: hasVisiblePanes ? toggleCropTool : undefined,
     onToggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
+    onToggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
     ownsEscape: isCropping,
   });
@@ -1302,7 +1344,9 @@ export function NativeRecordingPreview({
               enabledVideoTracks={selectedVideoTracks}
               hiddenKeyboardFragmentIds={keyboardTimeline.hiddenFragmentIds}
               hiddenKeyboardItemIds={keyboardTimeline.hiddenItemIds}
-              keyboardItems={keyboardTimeline.items}
+              // Shortcuts turned off leave nothing to place, so the lane goes
+              // with them rather than showing items that are not drawn.
+              keyboardItems={keyboardEffects.bake ? keyboardTimeline.items : []}
               keyboardSelection={keyboardTimeline.selection}
               layout={layout}
               onEnabledTracksChange={changeEnabledTracks}

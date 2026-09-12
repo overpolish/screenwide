@@ -52,6 +52,8 @@ mod background_image;
 mod compositor;
 #[path = "surface_windows/editor.rs"]
 mod editor;
+#[path = "surface_windows/font.rs"]
+mod font;
 #[path = "surface_windows/keyboard_artwork.rs"]
 mod keyboard_artwork;
 #[path = "surface_windows/keyboard_hit.rs"]
@@ -1218,22 +1220,6 @@ fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
         height * scale as f32,
       ]
     });
-  // Only an action earns a label below the box. The selection's size is read
-  // and set in the Selection panel, so the frame no longer repeats it.
-  let recenter_action = recenter::action_visible(state);
-  let label_text = display.and_then(|_| {
-    if !recenter_action {
-      return None;
-    }
-    Some(
-      if state.selection?.layer_id == u32::MAX - 1 {
-        "Reset"
-      } else {
-        "Recenter"
-      }
-      .to_owned(),
-    )
-  });
   if let Ok(mut overlay) = inner.gpu.selection.lock() {
     let _ = overlay.draw(
       &inner.gpu.device,
@@ -1248,8 +1234,6 @@ fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       crop_radius_percent,
       guides,
       magnifier_box,
-      label_text.as_deref(),
-      recenter_action,
       scale,
       luminance > 0.5,
     );
@@ -1432,22 +1416,12 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
     .map_or(1.0, |state| state.scale.max(0.1));
   let logical = |x: f64, y: f64| (x / scale, y / scale);
   match input {
-    editor::Input::AnimateAction => {
-      if !recenter::animate_action(inner) {
-        editor::EditorWindow::stop_action_animation(editor_hwnd);
-      }
-    }
     editor::Input::Down {
       centered: _,
       x,
       y,
       snapping: _,
     } => {
-      if recenter::begin_action(inner, (x, y)) {
-        editor::EditorWindow::animate_action(editor_hwnd);
-        editor::EditorWindow::set_cursor(editor::CursorKind::Arrow);
-        return;
-      }
       let point = logical(x, y);
       let mut selected = None;
       let mut began = None;
@@ -1635,14 +1609,6 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       snapping,
     } => {
       let point = logical(x, y);
-      let (over_action, action_changed) = recenter::update_action(inner, (x, y));
-      if action_changed {
-        editor::EditorWindow::animate_action(editor_hwnd);
-      }
-      if over_action {
-        editor::EditorWindow::set_cursor(editor::CursorKind::Arrow);
-        return;
-      }
       let mut update = None;
       let mut zoom = None;
       if let Ok(mut state) = inner.state.lock() {
@@ -1842,10 +1808,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                     selection.x += dx;
                     selection.y += dy;
                     gesture.last_delta = (dx, dy);
-                    if gesture.selection_start.recenter_mode == 0
-                      && state.selection_snapping_enabled
-                      && snapping
-                    {
+                    if state.selection_snapping_enabled && snapping {
                       let targets_x = selection_snap_targets(&state, gesture.selection_start, true);
                       let targets_y =
                         selection_snap_targets(&state, gesture.selection_start, false);
@@ -2002,96 +1965,84 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
                 } else {
                   let edges = gesture.edges;
                   let start = gesture.selection_start;
-                  if start.recenter_mode != 0 {
-                    clear_selection_snap_guides(&mut state);
-                    let (next, factor) =
-                      recenter::inset_resize(start, edges, (dx, dy), (pane.width, pane.height));
-                    selection.x = next.x;
-                    selection.y = next.y;
-                    selection.width = next.width;
-                    selection.height = next.height;
-                    gesture.last_delta = (selection.x - start.x, selection.y - start.y);
-                    gesture.last_scale = factor;
-                  } else {
-                    let resize = recenter::selection_resize(
-                      start,
-                      edges,
-                      (dx, dy),
-                      (pane.width, pane.height),
-                      state.workspace_transform.zoom,
-                      centered,
-                    );
-                    let (anchor_x, anchor_y) = resize.anchor;
-                    let (vx, vy) = resize.vector;
-                    let maximum = resize.maximum_scale;
-                    let mut factor = resize.scale;
-                    if state.selection_snapping_enabled && snapping {
-                      let targets_x = selection_snap_targets(&state, start, true);
-                      let targets_y = selection_snap_targets(&state, start, false);
-                      let horizontal = snapping::resize_axis(snapping::ResizeAxis {
-                        anchor: anchor_x,
-                        vector: vx,
-                        raw_scale: factor,
-                        pane_width: pane.width,
-                        pane_height: pane.height,
-                        zoom: state.workspace_transform.zoom,
-                        minimum: resize.minimum_scale,
-                        maximum,
-                        targets: &targets_x,
-                        layer_id: start.layer_id,
-                      });
-                      let vertical = snapping::resize_axis(snapping::ResizeAxis {
-                        anchor: anchor_y,
-                        vector: vy,
-                        raw_scale: factor,
-                        pane_width: pane.height,
-                        pane_height: pane.width,
-                        zoom: state.workspace_transform.zoom,
-                        minimum: resize.minimum_scale,
-                        maximum,
-                        targets: &targets_y,
-                        layer_id: start.layer_id,
-                      });
-                      let chosen = if horizontal.found
-                        && (!vertical.found || horizontal.distance <= vertical.distance)
-                      {
-                        horizontal
-                      } else {
-                        vertical
-                      };
-                      if chosen.found {
-                        factor = chosen.adjustment;
-                      }
-                      let x_difference = if horizontal.found {
-                        (horizontal.adjustment - factor).abs()
-                          * vx.abs()
-                          * pane.width
-                          * state.workspace_transform.zoom
-                      } else {
-                        f64::INFINITY
-                      };
-                      let y_difference = if vertical.found {
-                        (vertical.adjustment - factor).abs()
-                          * vy.abs()
-                          * pane.height
-                          * state.workspace_transform.zoom
-                      } else {
-                        f64::INFINITY
-                      };
-                      state.selection_snap_guide_x =
-                        (horizontal.found && x_difference <= 0.5).then_some(horizontal);
-                      state.selection_snap_guide_y =
-                        (vertical.found && y_difference <= 0.5).then_some(vertical);
+                  let resize = recenter::selection_resize(
+                    start,
+                    edges,
+                    (dx, dy),
+                    (pane.width, pane.height),
+                    state.workspace_transform.zoom,
+                    centered,
+                  );
+                  let (anchor_x, anchor_y) = resize.anchor;
+                  let (vx, vy) = resize.vector;
+                  let maximum = resize.maximum_scale;
+                  let mut factor = resize.scale;
+                  if state.selection_snapping_enabled && snapping {
+                    let targets_x = selection_snap_targets(&state, start, true);
+                    let targets_y = selection_snap_targets(&state, start, false);
+                    let horizontal = snapping::resize_axis(snapping::ResizeAxis {
+                      anchor: anchor_x,
+                      vector: vx,
+                      raw_scale: factor,
+                      pane_width: pane.width,
+                      pane_height: pane.height,
+                      zoom: state.workspace_transform.zoom,
+                      minimum: resize.minimum_scale,
+                      maximum,
+                      targets: &targets_x,
+                      layer_id: start.layer_id,
+                    });
+                    let vertical = snapping::resize_axis(snapping::ResizeAxis {
+                      anchor: anchor_y,
+                      vector: vy,
+                      raw_scale: factor,
+                      pane_width: pane.height,
+                      pane_height: pane.width,
+                      zoom: state.workspace_transform.zoom,
+                      minimum: resize.minimum_scale,
+                      maximum,
+                      targets: &targets_y,
+                      layer_id: start.layer_id,
+                    });
+                    let chosen = if horizontal.found
+                      && (!vertical.found || horizontal.distance <= vertical.distance)
+                    {
+                      horizontal
                     } else {
-                      clear_selection_snap_guides(&mut state);
+                      vertical
+                    };
+                    if chosen.found {
+                      factor = chosen.adjustment;
                     }
-                    selection.x = anchor_x + (start.x - anchor_x) * factor;
-                    selection.y = anchor_y + (start.y - anchor_y) * factor;
-                    selection.width = start.width * factor;
-                    selection.height = start.height * factor;
-                    gesture.last_delta = (selection.x - start.x, selection.y - start.y);
-                    gesture.last_scale = factor;
+                    let x_difference = if horizontal.found {
+                      (horizontal.adjustment - factor).abs()
+                        * vx.abs()
+                        * pane.width
+                        * state.workspace_transform.zoom
+                    } else {
+                      f64::INFINITY
+                    };
+                    let y_difference = if vertical.found {
+                      (vertical.adjustment - factor).abs()
+                        * vy.abs()
+                        * pane.height
+                        * state.workspace_transform.zoom
+                    } else {
+                      f64::INFINITY
+                    };
+                    state.selection_snap_guide_x =
+                      (horizontal.found && x_difference <= 0.5).then_some(horizontal);
+                    state.selection_snap_guide_y =
+                      (vertical.found && y_difference <= 0.5).then_some(vertical);
+                  } else {
+                    clear_selection_snap_guides(&mut state);
                   }
+                  selection.x = anchor_x + (start.x - anchor_x) * factor;
+                  selection.y = anchor_y + (start.y - anchor_y) * factor;
+                  selection.width = start.width * factor;
+                  selection.height = start.height * factor;
+                  gesture.last_delta = (selection.x - start.x, selection.y - start.y);
+                  gesture.last_scale = factor;
                 }
                 redraw_keyboard_transform(
                   inner,
@@ -2151,11 +2102,6 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
     }
     editor::Input::Up { x, y } => {
       let point = logical(x, y);
-      if recenter::release_action(inner, (x, y), point) {
-        editor::EditorWindow::animate_action(editor_hwnd);
-        editor::EditorWindow::set_cursor(editor::CursorKind::Arrow);
-        return;
-      }
       let mut ended = None;
       if let Ok(mut state) = inner.state.lock() {
         state.last_pointer = point;
@@ -2272,10 +2218,7 @@ fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
         emit_transform(inner, zoom);
       }
     }
-    editor::Input::DoubleClick { x, y } => {
-      if recenter::action_hit(inner, (x, y)) {
-        return;
-      }
+    editor::Input::DoubleClick { .. } => {
       // Back to the current fit basis: the space beside an open tool panel
       // while one is up, the whole viewport otherwise.
       let mut zoom = 1.0;

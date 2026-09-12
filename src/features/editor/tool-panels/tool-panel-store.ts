@@ -8,16 +8,23 @@ import {
   Background,
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
-import { DEFAULT_CURSOR_EFFECTS } from "../recording-export-settings";
+import {
+  DEFAULT_CURSOR_EFFECTS,
+  DEFAULT_KEYBOARD_EFFECTS,
+} from "../recording-export-settings";
 import { SelectionPlacementPatch } from "../selection-placement";
-import { CursorEffectSettings, EditorKind } from "../types";
+import {
+  CursorEffectSettings,
+  EditorKind,
+  KeyboardEffectSettings,
+} from "../types";
 
 /**
- * What the selection panel shows: the selected layer, its size and position in
- * output pixels, and the source it was captured at, which is what a reset
- * puts it back to.
+ * What the selection panel shows for a placed layer: the selected layer, its
+ * size and position in output pixels, and the source it was captured at, which
+ * is what a reset puts it back to.
  */
-export type ToolPanelSelection = {
+export type ToolPanelLayerSelection = {
   /** Whether this layer casts a shadow onto the canvas behind it. */
   dropShadow: boolean;
   height: number;
@@ -38,6 +45,27 @@ export type ToolPanelSelection = {
   x: number;
   y: number;
 };
+
+/**
+ * What the selection panel shows for the keyboard shortcut on screen.
+ *
+ * A shortcut is drawn rather than placed: it has no source pixels, no corners
+ * and no pad, so it is sized as a share of its natural size and positioned by
+ * its centre, both in percent - the very numbers the drag on it sets.
+ */
+export type ToolPanelShortcutSelection = {
+  kind: "shortcut";
+  label: string;
+  /** As big as this recording's widest shortcut may be drawn. */
+  maximumSizePercent: number;
+  minimumSizePercent: number;
+  /** The shortcut's centre, as a share of the output canvas. */
+  positionXPercent: number;
+  positionYPercent: number;
+  sizePercent: number;
+};
+
+type ToolPanelSelection = ToolPanelLayerSelection | ToolPanelShortcutSelection;
 
 /**
  * What the frame panel shows: the output canvas the workspace renders into,
@@ -74,13 +102,20 @@ export type ToolPanelSnapshot = {
   background: Background;
   /** The backgrounds saved from the picker, in the order they were saved. */
   backgroundPresets: BackgroundPreset[];
+  /** Whether any shortcut deleted from the timeline can be brought back. */
+  canRestoreShortcuts: boolean;
   /** Null until the workspace has a source to cut a crop out of. */
   crop: ToolPanelCrop | null;
   cursorEffects: CursorEffectSettings;
   /** Null until the workspace has an output canvas to size. */
   frame: ToolPanelFrame | null;
   hasCursorData: boolean;
+  hasKeyboardData: boolean;
   isSaving: boolean;
+  keyboardEffects: KeyboardEffectSettings;
+  /** As big as a shortcut may be drawn in this recording's canvas, in percent:
+   * the point past which the widest shortcut would run off the edge. */
+  keyboardMaximum: number;
   /** Null while the workspace has nothing selected to place. */
   selection: ToolPanelSelection | null;
   /** Latest panel request committed with this snapshot. */
@@ -91,20 +126,33 @@ export type ToolPanelSnapshot = {
 export type ToolPanelPatch = Partial<
   Pick<ToolPanelSnapshot, "background" | "cursorEffects">
 > & {
+  /** Put every shortcut back where the recording drew it. */
+  applyShortcutToAll?: true;
   /** Cut a crop of this size, in source pixels, keeping it where it sits. */
   cropSize?: { height?: number; width?: number };
   /** Size the output canvas, leaving what is in it where it sits. */
   frameSize?: { height?: number; width?: number };
+  /** The shortcut settings every shortcut is drawn with, changed a field at a
+   * time so a panel never has to send the whole group back. */
+  keyboardEffects?: Partial<KeyboardEffectSettings>;
   /** Put the selected layer's content in the middle of its padded frame. */
   recenterSelection?: true;
   /** Forget a saved background, by its id. */
   removePreset?: string;
+  /** Put every shortcut's own placement away, the global one left as it is. */
+  resetAllShortcuts?: true;
   /** Show the whole source again, the committed crop taken away. */
   resetCrop?: true;
   /** Put the canvas back to the source size, refitting what is in it. */
   resetFrame?: true;
+  /** Put the shortcuts back where the recording draws them by default. */
+  resetKeyboardPosition?: true;
   /** Put the selection's size and position back to its source framing. */
   resetSelection?: true;
+  /** Put the selected shortcut back where the recording drew it. */
+  resetShortcut?: true;
+  /** Bring back every shortcut deleted from the timeline. */
+  restoreShortcuts?: true;
   /** Keep the background being shown under a name. */
   savePreset?: BackgroundPreset;
   /** Cast the selected layer's shadow onto the canvas, or take it away. */
@@ -114,6 +162,12 @@ export type ToolPanelPatch = Partial<
   selectionOutput?: SelectionPlacementPatch;
   /** Round the selected layer's corners by this share of its shorter side. */
   selectionRadius?: number;
+  /** Draw the selected shortcut at this size and centre, all in percent. */
+  shortcutPlacement?: {
+    positionXPercent?: number;
+    positionYPercent?: number;
+    sizePercent?: number;
+  };
 };
 
 export type ToolPanelRequest =
@@ -130,11 +184,15 @@ export type ToolPanelMessage = {
 export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   background: { color: "#171717", kind: "solid" },
   backgroundPresets: [],
+  canRestoreShortcuts: false,
   crop: null,
   cursorEffects: DEFAULT_CURSOR_EFFECTS,
   frame: null,
   hasCursorData: false,
+  hasKeyboardData: false,
   isSaving: false,
+  keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
+  keyboardMaximum: 500,
   selection: null,
 };
 

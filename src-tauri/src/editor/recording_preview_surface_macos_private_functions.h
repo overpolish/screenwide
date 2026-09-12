@@ -7,23 +7,8 @@
 @interface ScreenwidePreviewSurface (OSC)
 - (void)redrawSelection;
 @end
-@interface ScreenwidePreviewSurface (Label)
-- (BOOL)updateSelectionLabel:(NSString *)text
-                      scale:(CGFloat)scale
-                  lightMode:(uint32_t)lightMode
-                     action:(BOOL)action;
-- (BOOL)updateSelectionSecondaryLabel:(NSString *)text
-                               scale:(CGFloat)scale
-                           lightMode:(uint32_t)lightMode;
-@end
 NSRect editor_frame(ScreenwidePreviewSurface *surface, NSRect base);
 NSRect editor_base_bounds(ScreenwidePreviewSurface *surface);
-void selection_action_layout(ScreenwidePreviewSurface *surface);
-void selection_action_material_layout(ScreenwidePreviewSurface *surface);
-void selection_action_render_surfaces(
-    ScreenwidePreviewSurface *surface, CGFloat scale, uint32_t light_mode);
-void selection_action_fills(ScreenwidePreviewSurface *surface,
-                            uint32_t light_mode, float fills[8]);
 BOOL selection_is_keyboard(ScreenwidePreviewSelection selection);
 NSRect keyboard_hit_frame(ScreenwidePreviewSurface *surface,
                           ScreenwidePreviewSelection selection);
@@ -90,18 +75,6 @@ void set_selection_cursor(NSCursor *cursor);
 void set_selection_move_cursor(void);
 void set_selection_cursor_at_point(ScreenwidePreviewSurface *surface,
                                    NSPoint point);
-BOOL selection_action_hover(ScreenwidePreviewSurface *surface, NSPoint point);
-BOOL selection_action_hit(ScreenwidePreviewSurface *surface, NSPoint point);
-BOOL selection_action_clear_hover(ScreenwidePreviewSurface *surface);
-BOOL selection_action_begin(ScreenwidePreviewSurface *surface, NSInteger button, NSPoint point);
-BOOL selection_action_drag(ScreenwidePreviewSurface *surface, NSPoint point);
-BOOL selection_action_end(ScreenwidePreviewSurface *surface, NSPoint point);
-ScreenwidePreviewSelection selection_recenter_resize(
-    ScreenwidePreviewSelection start, uint32_t edges, double delta_x,
-    double delta_y, NSSize pane, double *scale);
-double selection_recenter_scale(ScreenwidePreviewSelection start, ScreenwidePreviewSelection resized, uint32_t edges);
-void selection_recenter_drag(ScreenwidePreviewSurface *surface,
-    ScreenwidePreviewSelection start, uint32_t edges, double delta_x, double delta_y, NSSize pane);
 void invalidate_selection_cursor_rects(ScreenwidePreviewSurface *surface);
 void set_editor_zoom(ScreenwidePreviewSurface *surface,
                             double zoom, NSPoint anchor);

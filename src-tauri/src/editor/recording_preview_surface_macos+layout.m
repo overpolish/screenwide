@@ -59,7 +59,6 @@ void screenwide_preview_surface_set_viewport(void *handle,
     }
     surface.container.frame = nextFrame;
     surface.interaction.frame = surface.container.frame;
-    surface.selectionActionMaterialContainer.frame = surface.container.frame;
     // Preserve the CSS backdrop's alpha over the native window material.
     CGColorRef backdrop = CGColorCreateSRGB(red, green, blue, alpha);
     surface.container.layer.backgroundColor = backdrop;

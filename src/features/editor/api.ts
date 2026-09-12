@@ -87,7 +87,6 @@ type PreviewSelectionLayout = {
   maximumScale?: number;
   minimumScale?: number;
   recenterBounds?: { height: number; width: number; x: number; y: number };
-  recenterMode?: boolean;
 };
 export const getEditorSnapshot = () =>
   invoke<EditorSnapshots>("get_editor_snapshot");

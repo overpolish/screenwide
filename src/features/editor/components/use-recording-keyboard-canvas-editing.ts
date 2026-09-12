@@ -73,6 +73,72 @@ export function useRecordingKeyboardCanvasEditing<Item extends TimedLaneItem>({
     onChange(next);
     editGesture.endGesture();
   }, [edit, editGesture, onChange]);
+  /** The fragments a panel edit acts on: whatever is selected, or the one on
+   * screen when the selection has drifted away from it. */
+  const editedIds = useCallback(() => {
+    const selected = selectedIdsRef.current;
+    if (selected.size > 0) return selected;
+    return new Set(visibleFragment ? [visibleFragment.fragmentId] : []);
+  }, [visibleFragment]);
+  /**
+   * The Selection panel's own size and position fields, committed through the
+   * very edit functions the drag on the shortcut uses, so a number typed there
+   * and a drag out here are the same edit.
+   */
+  const applyPlacement = useCallback(
+    (placement: {
+      positionXPercent?: number;
+      positionYPercent?: number;
+      sizePercent?: number;
+    }) => {
+      if (!geometry || !onChange) return;
+      const ids = editedIds();
+      if (ids.size === 0) return;
+      const center = {
+        x:
+          placement.positionXPercent === undefined
+            ? geometry.center.x
+            : placement.positionXPercent / 100,
+        y:
+          placement.positionYPercent === undefined
+            ? geometry.center.y
+            : placement.positionYPercent / 100,
+      };
+      let next = edit;
+      if (placement.sizePercent !== undefined) {
+        next = resizeRecordingKeyboardShortcutFragments({
+          center,
+          edit: next,
+          fragmentIds: ids,
+          maximumSizePercent: geometry.maximumSizePercent,
+          minimumSizePercent: geometry.minimumSizePercent,
+          sizePercent: placement.sizePercent,
+        });
+      }
+      if (
+        placement.positionXPercent !== undefined ||
+        placement.positionYPercent !== undefined
+      ) {
+        next = moveRecordingKeyboardShortcutFragments({
+          bounds: geometry.rect,
+          delta: {
+            x: center.x - geometry.center.x,
+            y: center.y - geometry.center.y,
+          },
+          edit: next,
+          fragmentIds: ids,
+          leaderCenter: geometry.center,
+        });
+      }
+      if (next === edit) return;
+      // Not a gesture of its own: a slider in the panel arrives one value at
+      // a time, and the history groups a run of edits to the same key into
+      // one step, the way it does for every other panel field. Opening a
+      // gesture per value would close that group each time.
+      onChange(next);
+    },
+    [edit, editedIds, geometry, onChange],
+  );
   const applyToAll = useCallback(() => {
     if (!geometry || !onChange || !onKeyboardEffectsChange) return;
     editGesture.beginGesture();
@@ -95,14 +161,6 @@ export function useRecordingKeyboardCanvasEditing<Item extends TimedLaneItem>({
   const applyGesture = useCallback(
     (event: RecordingSelectionGestureEvent) => {
       if (event.paneIndex !== KEYBOARD_LAYER_ID) return false;
-      if (event.operation === "resetAction") {
-        if (event.phase === "begin") reset();
-        return true;
-      }
-      if (event.operation === "applyToAllAction") {
-        if (event.phase === "begin") applyToAll();
-        return true;
-      }
       if (
         (event.operation !== "move" && event.operation !== "resize") ||
         !geometry ||
@@ -134,6 +192,18 @@ export function useRecordingKeyboardCanvasEditing<Item extends TimedLaneItem>({
         return true;
       }
       if (event.phase === "end") {
+        // A press that never travelled is a selection, not a placement: an
+        // explicit position written for it would mark the shortcut as
+        // adjusted in the timeline while it sits exactly where it was.
+        const untouched =
+          event.deltaX === 0 &&
+          event.deltaY === 0 &&
+          (event.operation !== "resize" || event.scale === 1);
+        if (untouched) {
+          gestureRef.current = null;
+          requestAnimationFrame(editGesture.endGesture);
+          return true;
+        }
         const next =
           event.operation === "resize"
             ? resizeRecordingKeyboardShortcutFragments({
@@ -166,18 +236,9 @@ export function useRecordingKeyboardCanvasEditing<Item extends TimedLaneItem>({
       }
       return true;
     },
-    [
-      edit,
-      editGesture,
-      geometry,
-      onChange,
-      applyToAll,
-      reset,
-      selectVisible,
-      visibleFragment,
-    ],
+    [edit, editGesture, geometry, onChange, selectVisible, visibleFragment],
   );
-  return { applyGesture, applyToAll, reset, selectVisible };
+  return { applyGesture, applyPlacement, applyToAll, reset, selectVisible };
 }
 
 export function useRecordingKeyboardPreviewEditing({
@@ -290,5 +351,12 @@ export function useRecordingKeyboardPreviewEditing({
           rect: geometry.rect,
         }
       : null;
-  return { canvas, effectiveEdit, selection, timeline, visibleFragment };
+  return {
+    canvas,
+    effectiveEdit,
+    geometry,
+    selection,
+    timeline,
+    visibleFragment,
+  };
 }

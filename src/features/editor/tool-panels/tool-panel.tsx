@@ -9,6 +9,7 @@ import { EditorKind } from "../types";
 import { CropPanel } from "./crop-panel";
 import { CursorPanel } from "./cursor-panel";
 import { FramePanel } from "./frame-panel";
+import { KeyboardPanel } from "./keyboard-panel";
 import { SelectionPanel } from "./selection-panel";
 import { usePanelShortcuts } from "./use-panel-shortcuts";
 
@@ -19,6 +20,7 @@ const toolPanels: Record<
   crop: CropPanel,
   cursor: CursorPanel,
   frame: FramePanel,
+  keyboard: KeyboardPanel,
   selection: SelectionPanel,
 };
 

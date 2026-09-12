@@ -3,15 +3,26 @@
 
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { useEditableGeneralSettings } from "../../settings/use-general-settings";
+import { useRestoreRecordingKeyboardShortcuts } from "../components/use-restore-recording-keyboard-shortcuts";
+import { keyboardMaximumSizePercent } from "../keyboard-effect-geometry";
+import {
+  applyKeyboardShortcutToAll,
+  placeKeyboardShortcut,
+  resetKeyboardShortcut,
+  useKeyboardShortcutSelection,
+} from "../keyboard-shortcut-channel";
+import { RecordingTimelineEdit } from "../recording-timeline-edit";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
+  screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
 } from "../screenshot-output";
 import {
   CursorEffectSettings,
   EditorArtifact,
   EditorKind,
+  KeyboardEffectSettings,
   RecordingVideoTrackId,
 } from "../types";
 
@@ -30,17 +41,21 @@ type EditorToolPanelInputs = {
   cursorEffects: CursorEffectSettings;
   enabledVideoTracks: RecordingVideoTrackId[];
   isSaving: boolean;
+  keyboardEffects: KeyboardEffectSettings;
   recordingOutput: RecordingOutputSettings | null | undefined;
+  recordingTimelineEdit: RecordingTimelineEdit | null | undefined;
   screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
   selectedScreenshotItemId: number | null;
   selectedTrack: string | null;
   workspace: EditorKind;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
+  onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onRecordingOutputChange?: (
     track: RecordingVideoTrackId,
     next: ScreenshotOutputSettings,
   ) => void;
+  onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
   onScreenshotOutputChange?: (
     next: ScreenshotOutputSettings,
     itemId: number,
@@ -60,11 +75,15 @@ export function useEditorToolPanels({
   cursorEffects,
   enabledVideoTracks,
   isSaving,
+  keyboardEffects,
   onCanvasResize,
   onCursorEffectsChange,
+  onKeyboardEffectsChange,
   onRecordingOutputChange,
+  onRecordingTimelineEditChange,
   onScreenshotOutputChange,
   recordingOutput,
+  recordingTimelineEdit,
   screenshotOutput,
   selectedScreenshotItemId,
   selectedTrack,
@@ -118,18 +137,46 @@ export function useEditorToolPanels({
     selectedScreenshotItemId,
     selectedTrack,
   });
+  // The shortcut the preview has in hand, and the edits that move it. Both
+  // live with the preview, which is the only place that knows which fragment
+  // is on screen; the panel reaches them the way the padding controls reach
+  // the recentre calls.
+  const shortcutSelection = useKeyboardShortcutSelection(workspace);
+  // Restoring and resetting every shortcut is an edit to the timeline the
+  // editor already owns, so the panel asks for it here rather than through the
+  // preview.
+  const shortcuts = useRestoreRecordingKeyboardShortcuts(
+    recordingTimelineEdit,
+    onRecordingTimelineEditChange,
+  );
+  const keyboardOutput = recordingOutput
+    ? screenshotOutputDimensions(recordingOutput.primary)
+    : null;
   useToolPanelBridge(
     workspace,
     {
       background:
         frameTarget?.background ?? DEFAULT_TOOL_PANEL_SNAPSHOT.background,
       backgroundPresets,
+      canRestoreShortcuts: shortcuts.canRestore,
       crop: cropTarget?.snapshot ?? null,
       cursorEffects,
       frame: frameTarget?.snapshot ?? null,
       hasCursorData: artifact?.kind === "recording" && artifact.hasCursorData,
+      hasKeyboardData:
+        artifact?.kind === "recording" && artifact.hasKeyboardData,
       isSaving,
-      selection: selectionTarget?.selection ?? null,
+      keyboardEffects,
+      keyboardMaximum:
+        artifact?.kind === "recording" && keyboardOutput
+          ? keyboardMaximumSizePercent({
+              ...keyboardOutput,
+              maximumWidthUnits: artifact.keyboardMaximumWidthUnits,
+            })
+          : DEFAULT_TOOL_PANEL_SNAPSHOT.keyboardMaximum,
+      // A selected shortcut is what the Select tool has in hand, so it is the
+      // selection the panel shows rather than the layer underneath it.
+      selection: shortcutSelection ?? selectionTarget?.selection ?? null,
     },
     {
       onBackgroundPresetRemove: (id) => {
@@ -146,6 +193,30 @@ export function useEditorToolPanels({
         ]);
       },
       onCursorEffectsChange,
+      onKeyboardEffectsChange: (settings) => {
+        onKeyboardEffectsChange?.({ ...keyboardEffects, ...settings });
+      },
+      // The default place is the absence of a position: the bridge is JSON,
+      // which cannot carry an undefined, so the reset is its own request.
+      onKeyboardPositionReset: () => {
+        const {
+          positionXPercent: _x,
+          positionYPercent: _y,
+          ...rest
+        } = keyboardEffects;
+        onKeyboardEffectsChange?.(rest);
+      },
+      onKeyboardShortcutsResetAll: shortcuts.reset,
+      onKeyboardShortcutsRestore: shortcuts.restore,
+      onShortcutApplyToAll: () => {
+        applyKeyboardShortcutToAll(workspace);
+      },
+      onShortcutPlacementChange: (placement) => {
+        placeKeyboardShortcut(workspace, placement);
+      },
+      onShortcutReset: () => {
+        resetKeyboardShortcut(workspace);
+      },
       ...cropPanelHandlers(cropTarget),
       ...framePanelHandlers(frameTarget),
       ...selectionPanelHandlers(selectionTarget),

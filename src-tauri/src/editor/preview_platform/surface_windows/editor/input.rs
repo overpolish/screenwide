@@ -12,12 +12,12 @@ use windows::Win32::{
       DefWindowProcW, GetAncestor, GetForegroundWindow, SetForegroundWindow, GA_ROOT, HTCLIENT,
       MA_NOACTIVATE, WM_CANCELMODE, WM_CAPTURECHANGED, WM_DESTROY, WM_LBUTTONDBLCLK,
       WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEMOVE,
-      WM_MOUSEWHEEL, WM_NCHITTEST, WM_SETCURSOR, WM_TIMER,
+      WM_MOUSEWHEEL, WM_NCHITTEST, WM_SETCURSOR,
     },
   },
 };
 
-use super::{EditorWindow, Input};
+use super::Input;
 
 const MK_LBUTTON_MASK: usize = 0x0001;
 const MK_CONTROL_MASK: usize = 0x0008;
@@ -41,10 +41,6 @@ pub(super) unsafe extern "system" fn window_proc(
 ) -> LRESULT {
   match message {
     WM_DESTROY => LRESULT(0),
-    WM_TIMER if wparam.0 == EditorWindow::ACTION_TIMER => {
-      dispatch(hwnd, Input::AnimateAction);
-      LRESULT(0)
-    }
     WM_NCHITTEST => LRESULT(HTCLIENT as isize),
     WM_MOUSEACTIVATE => {
       // The editor itself never takes activation or focus (keyboard input

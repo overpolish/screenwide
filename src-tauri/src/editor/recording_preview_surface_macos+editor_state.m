@@ -24,8 +24,6 @@ void screenwide_preview_surface_enable_editor(
     // the next resize. Suspension stays orthogonal: only its own setter clears
     // it, this just refuses to undo what it hid.
     surface.interaction.hidden = !surface.editorEnabled || surface.editorSuspended;
-    if (!surface.editorEnabled)
-      surface.selectionActionMaterialContainer.hidden = YES;
     if (!surface.editorEnabled) {
       [surface.interaction releaseCursorControl];
       surface.editorPanX = 0;
@@ -51,7 +49,6 @@ void screenwide_preview_surface_set_editor_suspended(void *handle,
     surface.editorSuspended = next;
     if (next) {
       surface.interaction.hidden = YES;
-      surface.selectionActionMaterialContainer.hidden = YES;
       // The hidden view keeps no mouse tracking, so hand the window's cursor
       // rects back or the workarea cursor would stay frozen under React.
       [surface.interaction releaseCursorControl];

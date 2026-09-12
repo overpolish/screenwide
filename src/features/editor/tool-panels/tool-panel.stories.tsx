@@ -4,7 +4,10 @@
 import { BUILT_IN_BACKGROUND_PRESETS } from "../../../components/shared/background-picker/background-presets";
 import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../popup-panel/layout";
-import { DEFAULT_CURSOR_EFFECTS } from "../recording-export-settings";
+import {
+  DEFAULT_CURSOR_EFFECTS,
+  DEFAULT_KEYBOARD_EFFECTS,
+} from "../recording-export-settings";
 
 import { ToolPanel } from "./tool-panel";
 import {
@@ -60,6 +63,40 @@ export const WithoutCursorData: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasCursorData: false,
+      isSaving: false,
+      selection: null,
+    });
+  },
+};
+
+/** The Keyboard tool's panel: how every captured shortcut is drawn, with the
+ * two ways back from what the timeline and the canvas have done to them. */
+export const Keyboard: Story = {
+  args: { tool: "keyboard", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      canRestoreShortcuts: true,
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      hasCursorData: true,
+      hasKeyboardData: true,
+      isSaving: false,
+      keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
+      keyboardMaximum: 240,
+      selection: null,
+    });
+  },
+};
+
+/** A recording captured without keyboard shortcuts: the tool has nothing to
+ * offer, and says so rather than showing controls that do nothing. */
+export const WithoutKeyboardData: Story = {
+  args: { tool: "keyboard", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      hasKeyboardData: false,
       isSaving: false,
       selection: null,
     });
@@ -154,6 +191,32 @@ export const Crop: Story = {
       hasCursorData: true,
       isSaving: false,
       selection: null,
+    });
+  },
+};
+
+/** A keyboard shortcut picked out with the Select tool: drawn rather than
+ * placed, so it is sized and centred in percent and offered neither a shadow,
+ * nor corners, nor a pad. */
+export const SelectionShortcut: Story = {
+  args: { tool: "selection", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      hasKeyboardData: true,
+      isSaving: false,
+      keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
+      keyboardMaximum: 240,
+      selection: {
+        kind: "shortcut",
+        label: "Shortcut",
+        maximumSizePercent: 240,
+        minimumSizePercent: 50,
+        positionXPercent: 50,
+        positionYPercent: 91.2,
+        sizePercent: 100,
+      },
     });
   },
 };

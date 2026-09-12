@@ -50,12 +50,10 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos.m");
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_pipeline_macos.m");
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader.h");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+action.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+callbacks.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+magnifier.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+editor.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+keyboard.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+label.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+osc.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+selection.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+workspace.m");
@@ -131,12 +129,10 @@ fn main() {
       .file("src/windows/color_panel_macos.m")
       .file("src/windows/dismissal_macos.m")
       .file("src/editor/region_magnifier_macos.m")
-      .file("src/editor/recording_preview_surface_macos+action.m")
       .file("src/editor/recording_preview_surface_macos+callbacks.m")
       .file("src/editor/recording_preview_surface_macos+magnifier.m")
       .file("src/editor/recording_preview_surface_macos+editor.m")
       .file("src/editor/recording_preview_surface_macos+keyboard.m")
-      .file("src/editor/recording_preview_surface_macos+label.m")
       .file("src/editor/recording_preview_surface_macos+osc.m")
       .file("src/editor/recording_preview_surface_macos+selection.m")
       .file("src/editor/recording_preview_surface_macos+workspace.m")

@@ -8,6 +8,7 @@ import { Dimensions } from "../../../components/shared/dimensions/dimensions";
 import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
 import { EditorKind } from "../types";
 
+import { ShortcutSelectionRows } from "./shortcut-selection-rows";
 import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
 
 /**
@@ -23,6 +24,10 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  * Padding is the same idea one step out: the frame the layer is placed by can
  * be grown past the picture in it, filled with the colour behind that picture,
  * and the content inside it put back in the middle.
+ *
+ * A keyboard shortcut is drawn rather than placed: it has no source pixels to
+ * be sized against, no corners and no pad, so it is shown as the share of the
+ * canvas it takes and the point it is centred on.
  */
 export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
@@ -32,10 +37,17 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
     return <Text variant="body">Nothing selected</Text>;
   }
 
+  if (selection.kind === "shortcut") {
+    return (
+      <ShortcutSelectionRows
+        change={change}
+        isSaving={isSaving}
+        selection={selection}
+      />
+    );
+  }
+
   const place = (placement: { height?: number; width?: number }) => {
-    console.debug("[selection-panel] change", placement, {
-      shown: { height: selection.height, width: selection.width },
-    });
     change({ selectionOutput: placement });
   };
 

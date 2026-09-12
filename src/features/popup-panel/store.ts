@@ -27,9 +27,10 @@ export type PopupPanelItem = {
   togglesInPlace?: boolean;
 };
 
-/** The editor tools that own a panel, with room for the background,
- * keyboard, camera and audio panels that follow. */
-export type ToolPanelKind = "crop" | "cursor" | "frame" | "selection";
+/** The editor tools that own a panel, with room for the background, camera
+ * and audio panels that follow. */
+export type ToolPanelKind =
+  "crop" | "cursor" | "frame" | "keyboard" | "selection";
 
 /** A list of choices: the panel as it has always been. */
 export type PopupPanelListContent = {

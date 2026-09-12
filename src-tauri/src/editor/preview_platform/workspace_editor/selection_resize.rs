@@ -13,24 +13,14 @@ pub struct SelectionResize {
 
 pub fn selection_resize(
   start: NormalizedRect,
-  constraint: Option<NormalizedRect>,
   edges: u32,
   delta: (f64, f64),
   minimum_scale: f64,
   centered: bool,
 ) -> SelectionResize {
   let start_center = (start.x + start.width / 2.0, start.y + start.height / 2.0);
-  let pivot = constraint.map_or_else(
-    || start_center,
-    |bounds| {
-      (
-        bounds.x + bounds.width / 2.0,
-        bounds.y + bounds.height / 2.0,
-      )
-    },
-  );
-  let anchor = if constraint.is_some() || centered {
-    pivot
+  let anchor = if centered {
+    start_center
   } else {
     (
       if edges & 1 != 0 {
@@ -72,11 +62,7 @@ pub fn selection_resize(
   } else {
     1.0
   };
-  let maximum_scale = constraint.map_or(8.0, |bounds| {
-    (bounds.width / start.width.max(0.000_001))
-      .min(bounds.height / start.height.max(0.000_001))
-      .max(0.01)
-  });
+  let maximum_scale = 8.0;
   SelectionResize {
     anchor,
     maximum_scale,
@@ -91,7 +77,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn constraint_centres_and_clamps_the_live_selection() {
+  fn the_opposite_corner_anchors_a_handle_drag() {
     let resize = selection_resize(
       NormalizedRect {
         height: 0.2,
@@ -99,22 +85,34 @@ mod tests {
         x: 0.3,
         y: 0.4,
       },
-      Some(NormalizedRect {
-        height: 0.4,
-        width: 0.8,
-        x: 0.1,
-        y: 0.3,
-      }),
       2 | 8,
-      (2.0, 2.0),
+      (0.2, 0.1),
       0.1,
       false,
     );
-    assert_eq!(resize.anchor, (0.5, 0.5));
-    assert_eq!(resize.maximum_scale, 2.0);
+    assert_eq!(resize.anchor, (0.3, 0.4));
+    assert_eq!(resize.maximum_scale, 8.0);
     assert_eq!(resize.minimum_scale, 0.1);
-    assert_eq!(resize.scale, 2.0);
-    assert!((resize.vector.0 - 0.2).abs() < 1e-9);
-    assert!((resize.vector.1 - 0.1).abs() < 1e-9);
+    assert!((resize.scale - 1.5).abs() < 1e-9);
+    assert!((resize.vector.0 - 0.4).abs() < 1e-9);
+    assert!((resize.vector.1 - 0.2).abs() < 1e-9);
+  }
+
+  #[test]
+  fn a_centred_drag_pivots_on_the_selection_centre() {
+    let resize = selection_resize(
+      NormalizedRect {
+        height: 0.2,
+        width: 0.4,
+        x: 0.3,
+        y: 0.4,
+      },
+      2 | 8,
+      (0.0, 0.0),
+      0.1,
+      true,
+    );
+    assert_eq!(resize.anchor, (0.5, 0.5));
+    assert_eq!(resize.scale, 1.0);
   }
 }

@@ -25,7 +25,7 @@ impl PreviewPlayerManager {
     delta_x: f64,
     delta_y: f64,
   ) -> Result<(), String> {
-    if operation.is_action() || layer_id == u32::MAX - 1 {
+    if layer_id == u32::MAX - 1 {
       self.selection_gesture = None;
       return Ok(());
     }
@@ -52,10 +52,7 @@ impl PreviewPlayerManager {
           self.selection_gesture = None;
           return Ok(());
         }
-        self.selection_gesture = Some(RecordingSelectionGesture {
-          recenter_mode: self.recenter_mode,
-          snapshot,
-        });
+        self.selection_gesture = Some(RecordingSelectionGesture { snapshot });
         Ok(())
       }
       SelectionGesturePhase::Update | SelectionGesturePhase::End => {
@@ -74,15 +71,9 @@ impl PreviewPlayerManager {
             .read()
             .map_err(|_| "The recording preview composition is unavailable".to_owned())?
             .clone();
-          self.selection_gesture = Some(RecordingSelectionGesture {
-            recenter_mode: self.recenter_mode,
-            snapshot,
-          });
+          self.selection_gesture = Some(RecordingSelectionGesture { snapshot });
         }
-        if operation == SelectionGestureOperation::Move
-          && !self.recenter_mode
-          && edges & AUTO_FIT_COMMIT_EDGE != 0
-        {
+        if operation == SelectionGestureOperation::Move && edges & AUTO_FIT_COMMIT_EDGE != 0 {
           let current = settings
             .read()
             .map_err(|_| "The recording preview composition is unavailable".to_owned())?
@@ -95,7 +86,6 @@ impl PreviewPlayerManager {
         let Some(gesture) = self.selection_gesture.as_ref() else {
           return Ok(());
         };
-        let recenter_mode = gesture.recenter_mode;
         let snapshot = &gesture.snapshot;
         let mut next = snapshot.clone();
         if matches!(
@@ -151,7 +141,6 @@ impl PreviewPlayerManager {
             SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
               unreachable!("crop gestures are mirrored by the frontend")
             }
-            _ => return Ok(()),
           };
           // A baked overlay is placed in the screen output's own pixels, so
           // its canvas is the one the gesture is normalized against.
@@ -212,29 +201,20 @@ impl PreviewPlayerManager {
           SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
             unreachable!("crop gestures are mirrored by the frontend")
           }
-          _ => return Ok(()),
         };
-        let source = self
-          .sources
-          .as_ref()
-          .and_then(|sources| sources.layout.panes.get(layer_id as usize));
-        if !super::output_gesture::apply(
+        super::output_gesture::apply(
           start,
           output,
-          source,
-          recenter_mode,
           operation,
           edges,
           scale,
           (delta_x, delta_y),
           AUTO_FIT_MOVE_EDGE,
-        ) {
-          return Ok(());
-        }
+        );
         *settings
           .write()
           .map_err(|_| "The recording preview composition is unavailable".to_owned())? = next;
-        if !recenter_mode && edges & AUTO_FIT_MOVE_EDGE != 0 {
+        if edges & AUTO_FIT_MOVE_EDGE != 0 {
           if ending {
             self.selection_gesture = None;
           }

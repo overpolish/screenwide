@@ -14,7 +14,6 @@ mod ffi;
 mod frame_resize;
 mod geometry;
 mod hit_test;
-mod inset_resize;
 pub(crate) mod keyboard_bounds;
 mod limits;
 #[cfg(any(target_os = "windows", test))]
@@ -43,10 +42,6 @@ pub use geometry::{
 };
 #[allow(unused_imports)]
 pub use hit_test::hit_test_display;
-pub use inset_resize::resize_uniform_inset_from_scale;
-#[cfg(any(target_os = "windows", test))]
-#[allow(unused_imports)]
-pub use inset_resize::{resize_uniform_inset, InsetResize};
 #[allow(unused_imports)]
 pub use limits::{
   FRAME_EDGE_BOTTOM, FRAME_EDGE_CENTERED, FRAME_EDGE_LEFT, FRAME_EDGE_RIGHT, FRAME_EDGE_TOP,

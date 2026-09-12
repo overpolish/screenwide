@@ -18,9 +18,28 @@ const placedSelection = (
   selection: ToolPanelSnapshot["selection"],
   placement: SelectionPlacementPatch,
 ) => {
-  if (!selection) return selection;
+  if (!selection || selection.kind === "shortcut") return selection;
   const next = { ...selection };
   for (const key of ["height", "width", "x", "y"] as const) {
+    const value = placement[key];
+    if (value !== undefined) next[key] = value;
+  }
+  return next;
+};
+
+/** The same rule for the shortcut: a size being typed leaves the position the
+ * drag on the picture is still moving alone. */
+const placedShortcut = (
+  selection: ToolPanelSnapshot["selection"],
+  placement: NonNullable<ToolPanelPatch["shortcutPlacement"]>,
+) => {
+  if (selection?.kind !== "shortcut") return selection;
+  const next = { ...selection };
+  for (const key of [
+    "positionXPercent",
+    "positionYPercent",
+    "sizePercent",
+  ] as const) {
     const value = placement[key];
     if (value !== undefined) next[key] = value;
   }
@@ -56,35 +75,53 @@ export function resolveToolPanelSnapshot(
   // A reset is an action rather than a value: nothing of it is shown locally,
   // and the editor's answer arrives as the next published placement.
   const {
+    applyShortcutToAll: _applyShortcutToAll,
     cropSize,
     frameSize,
+    keyboardEffects,
     recenterSelection: _recenterSelection,
     removePreset: _removePreset,
+    resetAllShortcuts: _resetAllShortcuts,
     resetCrop: _resetCrop,
     resetFrame: _resetFrame,
+    resetKeyboardPosition: _resetKeyboardPosition,
     resetSelection: _resetSelection,
+    resetShortcut: _resetShortcut,
+    restoreShortcuts: _restoreShortcuts,
     savePreset: _savePreset,
     selectionDropShadow,
     selectionInset,
     selectionOutput,
     selectionRadius,
+    shortcutPlacement,
     ...values
   } = draft.values;
-  const resolved = { ...snapshot, ...values };
+  const resolved = {
+    ...snapshot,
+    ...values,
+    // A shortcut setting is sent one field at a time, so the rest of the group
+    // keeps whatever the editor last published for it.
+    ...(keyboardEffects
+      ? { keyboardEffects: { ...snapshot.keyboardEffects, ...keyboardEffects } }
+      : {}),
+  };
   // A dragged inset holds its own value until the editor acknowledges it, so
   // the knob stays under the pointer rather than snapping back a frame.
+  const placed =
+    resolved.selection?.kind === "shortcut" ? null : resolved.selection;
   const held =
-    resolved.selection && selectionInset !== undefined
-      ? { ...resolved.selection, inset: selectionInset }
-      : resolved.selection;
+    placed && selectionInset !== undefined
+      ? { ...placed, inset: selectionInset }
+      : placed;
   const rounded =
     held && selectionRadius !== undefined
       ? { ...held, radius: selectionRadius }
       : held;
-  const selection =
+  const layer =
     rounded && selectionDropShadow !== undefined
       ? { ...rounded, dropShadow: selectionDropShadow }
       : rounded;
+  const selection = layer ?? resolved.selection;
   return {
     ...resolved,
     selection,
@@ -92,6 +129,9 @@ export function resolveToolPanelSnapshot(
     ...(frameSize ? { frame: sized(resolved.frame, frameSize) } : {}),
     ...(selectionOutput
       ? { selection: placedSelection(selection, selectionOutput) }
+      : {}),
+    ...(shortcutPlacement
+      ? { selection: placedShortcut(selection, shortcutPlacement) }
       : {}),
   };
 }

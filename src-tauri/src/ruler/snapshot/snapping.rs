@@ -3,19 +3,9 @@
 
 use crate::osc::geometry::Rect;
 
-#[cfg(not(test))]
-mod trace;
-
 const CONTAINMENT_SLACK: f64 = 12.0;
 const MINIMUM_IOU: f64 = 0.25;
 const EDGE_SEARCH: f64 = 20.0;
-
-fn finish(_boxes: &[Rect], drag: Rect, selected: Rect, _branch: &str) -> Rect {
-  let result = clamp_to_drawn_bounds(selected, drag);
-  #[cfg(not(test))]
-  trace::record(_boxes, drag, selected, result, _branch);
-  result
-}
 
 fn rect_area(rect: Rect) -> f64 {
   rect.size.width.max(0.0) * rect.size.height.max(0.0)
@@ -55,7 +45,7 @@ pub(super) fn snap_bounds(boxes: &[Rect], drag: Rect) -> Rect {
     .filter(|candidate| contains(grown, *candidate) && intersection_over(drag, *candidate) > 0.0)
     .reduce(union_rect);
   if let Some(bounds) = contained {
-    return finish(boxes, drag, bounds, "contained-union");
+    return clamp_to_drawn_bounds(bounds, drag);
   }
   if let Some((_, bounds)) = boxes
     .iter()
@@ -64,14 +54,9 @@ pub(super) fn snap_bounds(boxes: &[Rect], drag: Rect) -> Rect {
     .filter(|(score, _)| *score >= MINIMUM_IOU)
     .max_by(|(left, _), (right, _)| left.total_cmp(right))
   {
-    return finish(boxes, drag, bounds, "overlap");
+    return clamp_to_drawn_bounds(bounds, drag);
   }
-  finish(
-    boxes,
-    drag,
-    snap_to_nearby_box_edges(boxes, drag),
-    "nearby-edges",
-  )
+  clamp_to_drawn_bounds(snap_to_nearby_box_edges(boxes, drag), drag)
 }
 
 /// The user's drag is a hard analysis boundary. Snapping may tighten a

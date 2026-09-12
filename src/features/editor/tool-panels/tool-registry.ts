@@ -19,16 +19,12 @@ type EditorTool = {
  *
  * One table rather than a condition at each toolbar button, so a tool added
  * later states its behaviour in the same place as the rest.
- *
- * The keyboard panel is still to come: its tool is listed here so the view
- * behaviour is already settled, and it gains its `panel` when `ToolPanelKind`
- * gains the kind.
  */
 export const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
   crop: { panel: "crop", resetsView: true },
   cursor: { panel: "cursor", resetsView: true },
   frame: { panel: "frame", resetsView: true },
-  keyboard: { resetsView: true },
+  keyboard: { panel: "keyboard", resetsView: true },
   select: { panel: "selection", resetsView: false },
 };
 

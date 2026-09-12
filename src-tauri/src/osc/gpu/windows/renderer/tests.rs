@@ -21,7 +21,7 @@ fn shared_osc_shader_is_embedded_as_compiled_bytecode() {
 #[test]
 fn constants_match_the_shader_register_packing() {
   use std::mem::offset_of;
-  assert_eq!(size_of::<RenderConstants>(), 448);
+  assert_eq!(size_of::<RenderConstants>(), 432);
   assert_eq!(offset_of!(RenderConstants, light_mode), 0);
   assert_eq!(offset_of!(RenderConstants, magnifier_box), 16);
   assert_eq!(offset_of!(RenderConstants, action_fills), 32);
@@ -40,7 +40,6 @@ fn constants_match_the_shader_register_packing() {
   assert_eq!(offset_of!(RenderConstants, chrome_outline), 384);
   assert_eq!(offset_of!(RenderConstants, chrome_backdrop), 400);
   assert_eq!(offset_of!(RenderConstants, chrome_source), 416);
-  assert_eq!(offset_of!(RenderConstants, outlined_label), 432);
 }
 
 #[test]
@@ -299,16 +298,6 @@ fn selection_and_crop_share_identical_handle_primitives() {
     quad_kinds(&selection[8 * 6..16 * 6]),
     vec![3, 16, 3, 16, 3, 16, 3, 16]
   );
-}
-
-#[test]
-fn shared_text_primitives_distinguish_actions_and_readouts() {
-  let rect = Rect::from_xywh(10.0, 12.0, 80.0, 24.0);
-  let mut out = Vec::new();
-  add_coverage_label(&mut out, VIEW, rect, false);
-  add_coverage_label(&mut out, VIEW, rect, true);
-  add_outlined_label(&mut out, VIEW, rect);
-  assert_eq!(quad_kinds(&out), vec![49, 50, 51]);
 }
 
 #[test]

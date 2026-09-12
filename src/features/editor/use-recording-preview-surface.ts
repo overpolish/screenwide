@@ -191,10 +191,7 @@ export type RecordingSelectionGestureEvent = {
     | "frameResize"
     | "move"
     | "radius"
-    | "resize"
-    | "recenterAction"
-    | "resetAction"
-    | "applyToAllAction";
+    | "resize";
   paneIndex: number;
   phase: "begin" | "update" | "end" | "cancel";
   scale: number;
@@ -212,7 +209,6 @@ export type RecordingPreviewSelection = {
   maximumScale?: number;
   minimumScale?: number;
   recenterBounds?: { height: number; width: number; x: number; y: number };
-  recenterMode?: boolean;
 };
 
 export function useRecordingPreviewSurface({
@@ -414,9 +410,6 @@ export function useRecordingPreviewSurface({
           "frameRadius",
           "cropMove",
           "cropResize",
-          "recenterAction",
-          "resetAction",
-          "applyToAllAction",
         ][payload.operation] as RecordingSelectionGestureEvent["operation"],
         paneIndex: payload.paneIndex,
         phase: payload.phase,

@@ -23,8 +23,6 @@ pub struct ScreenshotSelectionOverlay {
   pub(super) radius_percent: f64,
   #[serde(default)]
   pub(super) recenter_bounds: Option<PreviewSurfaceRect>,
-  #[serde(default)]
-  pub(super) recenter_mode: bool,
   pub(super) rect: PreviewSurfaceRect,
 }
 

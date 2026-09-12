@@ -281,12 +281,19 @@ export function EditorWindow() {
     },
     [setRecordingTimelineEdit],
   );
+  // The history starts over when the seeded settings for an artifact land,
+  // not when the artifact arrives: the seeding is a separate commit, and a
+  // reset keyed on arrival could lift before it, leaving the placeholder
+  // canvas as the first thing undo goes back to.
+  const [seededArtifactId, setSeededArtifactId] = useState<number | undefined>(
+    undefined,
+  );
   const editGesture = useEditorEditHistory({
     apply: applyEditState,
     resetKey:
-      artifact?.kind === "screenshot"
-        ? `${artifact.id.toString()}:${artifact.items.map((item) => item.id).join(":")}`
-        : artifactId,
+      artifact?.kind === "screenshot" && seededArtifactId !== undefined
+        ? `${seededArtifactId.toString()}:${artifact.items.map((item) => item.id).join(":")}`
+        : seededArtifactId,
     state: editState,
   });
   const { estimatedSizeBytes, isEstimatingSize } = useRecordingExportEstimate({
@@ -390,6 +397,7 @@ export function EditorWindow() {
         ? artifact.items.map((item) => item.id)
         : [],
     );
+    setSeededArtifactId(artifactId);
     /* eslint-enable @eslint-react/set-state-in-effect */
     // A cancelled or failed save restores the same artifact through a fresh
     // snapshot. Its controls are still the user's current editing session and

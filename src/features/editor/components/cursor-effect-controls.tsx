@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
-import { Slider } from "../../../components/base/slider/slider";
+import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
 import { CursorEffectSettings } from "../types";
 
 export function CursorEffectControls({
@@ -42,21 +42,18 @@ export function CursorEffectControls({
       >
         Smooth movement
       </Checkbox>
-      <div className="flex flex-col gap-control">
-        <div className="flex items-center justify-between gap-section text-body">
-          <span>Cursor size</span>
-          <span className="text-content-fg-secondary tabular-nums">
-            {sizePercent.toString()}%
-          </span>
-        </div>
-        <Slider
+      <div className="flex items-center justify-between gap-section">
+        <span className="text-body text-content-fg">Size</span>
+        <SliderNumberField
           aria-label="Cursor size"
+          className="w-48"
           isDisabled={isSaving}
           maxValue={500}
           minValue={50}
           onChange={(nextSizePercent) => {
             update({ sizePercent: nextSizePercent });
           }}
+          rightSection="%"
           step={5}
           value={sizePercent}
         />

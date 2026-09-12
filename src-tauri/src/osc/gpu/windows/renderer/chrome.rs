@@ -41,20 +41,3 @@ pub(crate) fn add_label(out: &mut Vec<Vertex>, view: Size, rect: Rect) {
   }
   add_quad(out, view, rect, 47);
 }
-
-/// A CPU-rasterised coverage label tinted by the shared OSC shader. The
-/// secondary form samples t1 so paired controls share one draw contract.
-pub(crate) fn add_coverage_label(out: &mut Vec<Vertex>, view: Size, rect: Rect, secondary: bool) {
-  if is_empty(rect) {
-    return;
-  }
-  add_quad(out, view, rect, if secondary { 50 } else { 49 });
-}
-
-/// A contrast-safe text readout with a theme-aware halo.
-pub(crate) fn add_outlined_label(out: &mut Vec<Vertex>, view: Size, rect: Rect) {
-  if is_empty(rect) {
-    return;
-  }
-  add_quad(out, view, rect, 51);
-}

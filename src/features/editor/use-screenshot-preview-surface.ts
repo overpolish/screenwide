@@ -42,7 +42,6 @@ export type ScreenshotSelectionGestureEvent = {
     | "frameRadius"
     | "frameResize"
     | "move"
-    | "recenterAction"
     | "radius"
     | "resize";
   paneIndex: number;
@@ -248,7 +247,6 @@ export function useScreenshotPreviewSurface({
           "frameRadius",
           "cropMove",
           "cropResize",
-          "recenterAction",
         ][payload.operation] as ScreenshotSelectionGestureEvent["operation"],
         paneIndex: payload.paneIndex,
         phase: payload.phase,

@@ -89,11 +89,9 @@ pub fn start_screenshot_preview(
             // would invert those locks and freeze the entire application.
             match manager.0.try_lock() {
               Ok(mut manager) => {
-                if operation != SelectionGestureOperation::RecenterAction {
-                  let _ = manager.handle_selection_gesture(
-                    phase, pane_index, operation, edges, scale, delta_x, delta_y,
-                  );
-                }
+                let _ = manager.handle_selection_gesture(
+                  phase, pane_index, operation, edges, scale, delta_x, delta_y,
+                );
               }
               Err(_) if matches!(phase, SelectionGesturePhase::End) => {
                 let deferred_app = event_app.clone();
@@ -125,9 +123,6 @@ pub fn start_screenshot_preview(
                   SelectionGestureOperation::FrameRadius => 4,
                   SelectionGestureOperation::CropMove => 5,
                   SelectionGestureOperation::CropResize => 6,
-                  SelectionGestureOperation::RecenterAction => 7,
-                  SelectionGestureOperation::ResetAction => 8,
-                  SelectionGestureOperation::ApplyToAllAction => 9,
                 },
                 pane_index,
                 phase: phase_name,

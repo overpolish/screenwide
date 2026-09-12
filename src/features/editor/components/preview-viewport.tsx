@@ -219,9 +219,6 @@ export function PreviewViewport({
     return true;
   };
   const selectionGesture = (event: ScreenshotSelectionGestureEvent) => {
-    // Dead native plumbing: the padding controls live in the Select panel now,
-    // and nothing puts the preview in the mode that offers this action.
-    if (event.operation === "recenterAction") return;
     if (frameGesture(event)) return;
     if (event.phase === "begin") {
       const itemOutput = workspaceOutput?.items[event.paneIndex];

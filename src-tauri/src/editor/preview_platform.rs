@@ -104,18 +104,6 @@ pub(crate) enum SelectionGestureOperation {
   FrameRadius = 4,
   CropMove = 5,
   CropResize = 6,
-  RecenterAction = 7,
-  ResetAction = 8,
-  ApplyToAllAction = 9,
-}
-
-impl SelectionGestureOperation {
-  pub(crate) fn is_action(self) -> bool {
-    matches!(
-      self,
-      Self::RecenterAction | Self::ResetAction | Self::ApplyToAllAction
-    )
-  }
 }
 
 pub(crate) type SelectionGestureCallback = Box<
@@ -167,8 +155,6 @@ pub(crate) struct PreviewSelection {
   pub crop_mode: u32,
   /// Non-zero when this selection has no corner-radius gesture or OSC.
   pub radius_disabled: u32,
-  /// Non-zero when resize uses the supplied bounds as its pivot and ceiling.
-  pub recenter_mode: u32,
   pub x: f64,
   pub y: f64,
   pub width: f64,
@@ -178,6 +164,8 @@ pub(crate) struct PreviewSelection {
   pub image_y: f64,
   pub image_width: f64,
   pub image_height: f64,
+  /// The uncropped picture this rectangle is cut from, in pane fractions.
+  /// Only crop selections carry it; it bounds the crop magnifier.
   pub recenter_x: f64,
   pub recenter_y: f64,
   pub recenter_width: f64,

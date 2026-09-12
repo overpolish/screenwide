@@ -280,7 +280,7 @@ impl Drop for TextDevice {
 
 impl TextDevice {
   fn new(backing_scale: f64) -> Result<Self, String> {
-    super::selection::label::register_inter_font();
+    super::font::register_inter_font();
     let dc = unsafe { CreateCompatibleDC(None) };
     if dc.is_invalid() {
       return Err("Windows could not create a keyboard artwork drawing context".to_owned());

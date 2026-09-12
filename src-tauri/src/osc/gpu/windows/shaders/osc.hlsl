@@ -24,7 +24,6 @@ cbuffer OscGpu : register(b0) {
   float4 chrome_outline;     // plate outline; alpha 0 means no outline
   float4 chrome_backdrop;    // viewport width/height, source texel width/height
   float4 chrome_source;      // snapshot UV x/y/width/height after pan/zoom
-  float4 outlined_label;     // .x: halo sample radius in physical pixels
 };
 
 Texture2D label : register(t0);
@@ -203,41 +202,6 @@ float4 ps_main(VertexOut input) : SV_Target {
     float4 color = action_fills[1];
     color.a *= coverage;
     return color;
-  }
-  if (input.kind == 49 || input.kind == 50) {
-    float coverage = input.kind == 50
-        ? secondary_label.SampleLevel(linear_sampler, input.uv, 0).r
-        : label.SampleLevel(linear_sampler, input.uv, 0).r;
-    if (coverage <= 0.002) discard;
-    float4 color = action_fills[1];
-    color.a *= coverage;
-    return color;
-  }
-  if (input.kind == 51) {
-    float fill_coverage = label.SampleLevel(linear_sampler, input.uv, 0).r;
-    float2 dimensions = 1.0 / max(fwidth(input.uv), float2(0.0001, 0.0001));
-    float2 texel = 1.0 / dimensions;
-    float ring = 0.0;
-    [unroll]
-    for (uint tap = 0; tap < 8; ++tap) {
-      float angle = tap * 0.78539816;
-      float2 direction = float2(cos(angle), sin(angle));
-      ring += label.SampleLevel(
-          linear_sampler, input.uv + direction * outlined_label.x * texel, 0).r;
-    }
-    float halo_coverage = max(fill_coverage, saturate(ring * 0.5));
-    float3 fill = light_mode.x != 0u ? float3(0.149, 0.149, 0.149)
-                                     : float3(1.0, 1.0, 1.0);
-    float3 halo = light_mode.x != 0u ? float3(1.0, 1.0, 1.0)
-                                     : float3(0.0, 0.0, 0.0);
-    float halo_alpha = halo_coverage * (light_mode.x != 0u ? 1.0 : 0.8);
-    float combined_alpha = fill_coverage + halo_alpha * (1.0 - fill_coverage);
-    float3 premultiplied = fill * fill_coverage +
-                           halo * halo_alpha * (1.0 - fill_coverage);
-    return float4(combined_alpha > 0.0001
-                      ? premultiplied / combined_alpha
-                      : float3(0.0, 0.0, 0.0),
-                  combined_alpha);
   }
   if (input.kind == 34 || input.kind == 35) {
     float2 dimensions = 1.0 / max(fwidth(input.uv), float2(0.0001, 0.0001));

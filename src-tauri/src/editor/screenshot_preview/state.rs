@@ -15,7 +15,6 @@ pub(super) struct PreviewManager {
   pub(super) output: Option<ScreenshotWorkspaceOutputSettings>,
   pub(super) pane_target_size: Option<(u32, u32)>,
   pub(super) react_output: Option<ScreenshotWorkspaceOutputSettings>,
-  pub(super) recenter_mode: bool,
   pub(super) session_id: Option<u64>,
   pub(super) sources: Vec<(u64, Arc<CapturedImage>)>,
   pub(super) surface: Option<Arc<RecordingPreviewSurface>>,
@@ -38,7 +37,6 @@ impl PreviewManager {
     self.output = None;
     self.pane_target_size = None;
     self.react_output = None;
-    self.recenter_mode = false;
     self.session_id = None;
     self.sources.clear();
     self.surface = None;

@@ -12,15 +12,14 @@ use windows::{
     Direct3D11::{
       ID3D11BlendState, ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11InputLayout,
       ID3D11PixelShader, ID3D11RasterizerState, ID3D11RenderTargetView, ID3D11Resource,
-      ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11Texture2D, ID3D11VertexShader,
-      D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_VERTEX_BUFFER, D3D11_BLEND_DESC,
-      D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD, D3D11_BLEND_SRC_ALPHA, D3D11_BUFFER_DESC,
-      D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_CPU_ACCESS_WRITE, D3D11_CULL_NONE, D3D11_FILL_SOLID,
-      D3D11_FILTER, D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_FILTER_MIN_MAG_MIP_POINT,
-      D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_MAPPED_SUBRESOURCE,
-      D3D11_MAP_WRITE_DISCARD, D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
-      D3D11_SAMPLER_DESC, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC,
-      D3D11_VIEWPORT,
+      ID3D11SamplerState, ID3D11Texture2D, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER,
+      D3D11_BIND_VERTEX_BUFFER, D3D11_BLEND_DESC, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD,
+      D3D11_BLEND_SRC_ALPHA, D3D11_BUFFER_DESC, D3D11_COLOR_WRITE_ENABLE_ALL,
+      D3D11_CPU_ACCESS_WRITE, D3D11_CULL_NONE, D3D11_FILL_SOLID, D3D11_FILTER,
+      D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_INPUT_ELEMENT_DESC,
+      D3D11_INPUT_PER_VERTEX_DATA, D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_WRITE_DISCARD,
+      D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC, D3D11_SAMPLER_DESC,
+      D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC, D3D11_VIEWPORT,
     },
     DirectComposition::{IDCompositionDevice, IDCompositionVisual},
     Dxgi::{
@@ -34,37 +33,19 @@ use windows::{
   },
 };
 
-#[path = "selection/label.rs"]
-pub(super) mod label;
-#[path = "selection/label_texture.rs"]
-mod label_texture;
+#[path = "selection/placeholder.rs"]
+mod placeholder;
 
 use crate::osc::{
-  controls::{
-    control_metrics, Appearance, ControlColor, ControlGroup, ControlKind, ControlSize, ControlSpec,
-    ControlStyle,
-  },
   geometry::{Rect, Size},
   gpu::windows::{self as osc_gpu, RenderConstants, Vertex, PIXEL_SHADER, VERTEX_SHADER},
 };
-use label::{build_label_texture, label_scale_key, LABEL_STROKE};
-use label_texture::{upload_label_texture, LabelTexture};
-
-fn action_label_insets(scale: f32) -> (f32, f32) {
-  let metrics = control_metrics(ControlKind::Button, ControlSize::Regular);
-  // The GDI texture already owns the label's 2pt horizontal inset. Complete
-  // the portable control's padding around it instead of duplicating it.
-  let horizontal = (metrics.padding_x as f32 - 2.0).max(0.0) * scale;
-  let vertical = ((metrics.height - metrics.line_height) as f32 * 0.5).max(0.0) * scale;
-  (horizontal, vertical)
-}
+use placeholder::{placeholder_texture, PlaceholderTexture};
 
 #[derive(Clone)]
 struct Segment {
   constants: RenderConstants,
   count: u32,
-  label: ID3D11ShaderResourceView,
-  secondary: ID3D11ShaderResourceView,
   start: u32,
 }
 
@@ -191,51 +172,14 @@ fn logical_rect(rect: [f32; 4], scale: f64) -> Rect {
   )
 }
 
-fn split_action_label_rects(
-  frame: [f32; 4],
-  primary: (u32, u32),
-  secondary: (u32, u32),
-  viewport: (f32, f32),
-  scale: f32,
-) -> ([f32; 4], [f32; 4]) {
-  let (padding_x, padding_y) = action_label_insets(scale);
-  let gap = 4.0 * scale;
-  let primary = (primary.0 as f32, primary.1 as f32);
-  let secondary = (secondary.0 as f32, secondary.1 as f32);
-  let primary_button = primary.0 + padding_x * 2.0;
-  let secondary_button = secondary.0 + padding_x * 2.0;
-  let total_width = primary_button + gap + secondary_button;
-  let button_height = primary.1.max(secondary.1) + padding_y * 2.0;
-  let x = (frame[0] + (frame[2] - total_width) * 0.5)
-    .clamp(0.0, (viewport.0 - total_width).max(0.0))
-    .floor();
-  let mut y = frame[1] + frame[3] + 6.0 * scale;
-  if y + button_height > viewport.1 {
-    y = frame[1] - 6.0 * scale - button_height;
-  }
-  y = y.clamp(0.0, (viewport.1 - button_height).max(0.0)).floor();
-  (
-    [x + padding_x, y + padding_y, primary.0, primary.1],
-    [
-      x + primary_button + gap + padding_x,
-      y + padding_y,
-      secondary.0,
-      secondary.1,
-    ],
-  )
-}
-
 pub(super) struct SelectionOverlay {
-  pub(super) action: ControlGroup,
   blend: ID3D11BlendState,
   buffer_size: (u32, u32),
   constants: ID3D11Buffer,
   layout: ID3D11InputLayout,
-  label: Option<LabelTexture>,
-  secondary_label: Option<LabelTexture>,
-  /// Bound whenever there is no label, so the pixel shader's texture slot is
-  /// always filled with a real (transparent 1x1) view.
-  label_placeholder: LabelTexture,
+  /// Bound to every pixel-shader texture slot, which the overlay's own quads
+  /// never sample.
+  placeholder: PlaceholderTexture,
   linear_sampler: ID3D11SamplerState,
   pixel_shader: ID3D11PixelShader,
   point_sampler: ID3D11SamplerState,
@@ -318,16 +262,13 @@ impl SelectionOverlay {
     let point_sampler = sampler(device, D3D11_FILTER_MIN_MAG_MIP_POINT)?;
     let vertex_capacity = 256;
     let vertex_buffer = create_vertex_buffer(device, vertex_capacity)?;
-    let label_placeholder = upload_label_texture(device, &[0u8; 4], (1, 1), "", 0, false)?;
+    let placeholder = placeholder_texture(device)?;
     Ok(Self {
-      action: ControlGroup::default(),
       blend,
       buffer_size: (2, 2),
       constants: constants.ok_or_else(|| "D3D11 created no selection constants".to_owned())?,
       layout: layout.ok_or_else(|| "D3D11 created no shared OSC input layout".to_owned())?,
-      label: None,
-      secondary_label: None,
-      label_placeholder,
+      placeholder,
       linear_sampler,
       pixel_shader: pixel_shader
         .ok_or_else(|| "D3D11 created no selection pixel shader".to_owned())?,
@@ -340,48 +281,6 @@ impl SelectionOverlay {
         .ok_or_else(|| "D3D11 created no selection vertex shader".to_owned())?,
       _visual: visual,
     })
-  }
-
-  /// Returns the label texture for `text` at `scale`, building it only when
-  /// either changed since the last draw. `None` when GDI could not rasterise
-  /// it, in which case no label is drawn.
-  fn label_texture(
-    &mut self,
-    device: &ID3D11Device,
-    text: &str,
-    scale: f64,
-    action: bool,
-  ) -> Option<&LabelTexture> {
-    let key = label_scale_key(scale);
-    let stale = self
-      .label
-      .as_ref()
-      .is_none_or(|label| label.scale_key != key || label.text != text || label.action != action);
-    if stale {
-      self.label = build_label_texture(device, text, scale, action)
-        .inspect_err(|error| eprintln!("The selection size readout could not be drawn: {error}"))
-        .ok();
-    }
-    self.label.as_ref()
-  }
-
-  fn secondary_label_texture(
-    &mut self,
-    device: &ID3D11Device,
-    text: &str,
-    scale: f64,
-  ) -> Option<&LabelTexture> {
-    let key = label_scale_key(scale);
-    let stale = self
-      .secondary_label
-      .as_ref()
-      .is_none_or(|label| label.scale_key != key || label.text != text || !label.action);
-    if stale {
-      self.secondary_label = build_label_texture(device, text, scale, true)
-        .inspect_err(|error| eprintln!("The secondary OSC action could not be drawn: {error}"))
-        .ok();
-    }
-    self.secondary_label.as_ref()
   }
 
   #[allow(clippy::too_many_arguments)]
@@ -398,8 +297,6 @@ impl SelectionOverlay {
     crop_radius_percent: f64,
     guides: Option<(Option<f32>, Option<f32>, bool, bool)>,
     magnifier_box: Option<[f32; 4]>,
-    label_text: Option<&str>,
-    label_action: bool,
     scale: f64,
     light: bool,
   ) -> Result<(), String> {
@@ -418,95 +315,11 @@ impl SelectionOverlay {
       self.buffer_size = size;
     }
     let scale = scale.max(0.1);
-    // The readout hangs 4pt below the box, trailing edge flush with the box's
-    // right edge (Keyframeless's placement), flips above the box when it would
-    // run off the bottom, and is clamped into the viewport. Everything here is
-    // already in physical pixels, so snapping to the pixel grid is a floor:
-    // the glyphs then land on the grid they were rasterised on and stay crisp.
-    let split_actions = label_action && label_text.is_some_and(|text| text.starts_with("Reset"));
-    let split_label = if let Some(frame) = frame.filter(|_| split_actions) {
-      let primary = self
-        .label_texture(device, "Reset", scale, true)
-        .map(|label| (label.view.clone(), label.size));
-      let secondary = self
-        .secondary_label_texture(device, "Apply to all", scale)
-        .map(|label| (label.view.clone(), label.size));
-      primary.zip(secondary).map(|(primary, secondary)| {
-        let (primary_rect, secondary_rect) = split_action_label_rects(
-          frame,
-          primary.1,
-          secondary.1,
-          (size.0 as f32, size.1 as f32),
-          scale as f32,
-        );
-        (primary.0, primary_rect, secondary.0, secondary_rect)
-      })
-    } else {
-      None
-    };
-    let label = match (frame, label_text.filter(|_| !split_actions)) {
-      (Some(frame), Some(text)) => self
-        .label_texture(device, text, scale, label_action)
-        .map(|label| (label.view.clone(), label.size))
-        .map(|(view, (width, height))| {
-          let width = width as f32;
-          let height = height as f32;
-          // Keep the visible button 6pt from the frame after its 4pt top
-          // padding is included, matching the previous OSC placement.
-          let gap = ((if label_action { 10.0 } else { 4.0 }) * scale) as f32;
-          let (x, y) = super::recenter::label_origin(
-            frame,
-            (width, height),
-            (size.0 as f32, size.1 as f32),
-            gap,
-            label_action,
-          );
-          (view, [x.floor(), y.floor(), width, height])
-        }),
-      _ => None,
-    };
-    let (label_view, label_rect, secondary_label_view, secondary_label_rect) = match split_label {
-      Some((primary, primary_rect, secondary, secondary_rect)) => {
-        (primary, primary_rect, secondary, secondary_rect)
-      }
-      None => {
-        let (view, rect) = label.map_or(
-          (self.label_placeholder.view.clone(), [0.0; 4]),
-          |(view, rect)| (view, rect),
-        );
-        (view, rect, self.label_placeholder.view.clone(), [0.0; 4])
-      }
-    };
-    let (action_padding_x, action_padding_y) = action_label_insets(scale as f32);
-    let action_spec = |label: [f32; 4]| ControlSpec {
-      rect: Rect::from_xywh(
-        f64::from(label[0] - action_padding_x),
-        f64::from(label[1] - action_padding_y),
-        f64::from(label[2] + action_padding_x * 2.0),
-        f64::from(label[3] + action_padding_y * 2.0),
-      ),
-      icon: crate::osc::controls::ControlIcon::None,
-      style: ControlStyle::button(ControlColor::Neutral, ControlSize::Regular),
-    };
-    let mut actions = Vec::with_capacity(2);
-    if label_action && label_rect[2] > 0.0 {
-      actions.push(action_spec(label_rect));
-      if secondary_label_rect[2] > 0.0 {
-        actions.push(action_spec(secondary_label_rect));
-      }
-    }
-    self.action.layout(&actions);
-    let visuals = self.action.visuals(if light {
-      Appearance::Light
-    } else {
-      Appearance::Dark
-    });
     let view = Size {
       width: f64::from(size.0) / scale,
       height: f64::from(size.1) / scale,
     };
     let mut constants = RenderConstants::new(light);
-    constants.outlined_label[0] = (LABEL_STROKE * 0.5 * 0.75 * scale) as f32;
     if let Some(box_rect) = magnifier_box.filter(|rect| rect[2] > 0.0) {
       constants.magnifier_box = box_rect;
       // The magnifier pixels are composed into the pane below this transparent
@@ -570,68 +383,12 @@ impl SelectionOverlay {
         );
       }
     }
-    if !label_action && label_rect[2] > 0.0 {
-      osc_gpu::add_outlined_label(
-        &mut vertices,
-        view,
-        osc_gpu::pixel_aligned_rect(logical_rect(label_rect, scale), scale),
-      );
-    }
-    let placeholder = self.label_placeholder.view.clone();
-    let mut segments = Vec::with_capacity(3);
+    let mut segments = Vec::with_capacity(1);
     if !vertices.is_empty() {
       segments.push(Segment {
         constants,
         count: vertices.len() as u32,
-        label: label_view.clone(),
-        secondary: placeholder.clone(),
         start: 0,
-      });
-    }
-    let action_metrics = control_metrics(ControlKind::Button, ControlSize::Regular);
-    for (index, visual) in visuals.iter().enumerate() {
-      let label = if index == 0 {
-        label_rect
-      } else {
-        secondary_label_rect
-      };
-      if label[2] <= 0.0 {
-        continue;
-      }
-      let button = action_spec(label).rect;
-      let start = vertices.len();
-      osc_gpu::add_plate(
-        &mut vertices,
-        view,
-        osc_gpu::pixel_aligned_rect(
-          Rect::from_xywh(
-            button.origin.x / scale,
-            button.origin.y / scale,
-            button.size.width / scale,
-            button.size.height / scale,
-          ),
-          scale,
-        ),
-      );
-      osc_gpu::add_coverage_label(
-        &mut vertices,
-        view,
-        osc_gpu::pixel_aligned_rect(logical_rect(label, scale), scale),
-        false,
-      );
-      let mut action_constants = RenderConstants::new(light);
-      action_constants.action_fills = [visual.fill, visual.foreground];
-      action_constants.chrome[0] = action_metrics.radius as f32 * scale as f32;
-      segments.push(Segment {
-        constants: action_constants,
-        count: (vertices.len() - start) as u32,
-        label: if index == 0 {
-          label_view.clone()
-        } else {
-          secondary_label_view.clone()
-        },
-        secondary: placeholder.clone(),
-        start: start as u32,
       });
     }
     if vertices.len() > self.vertex_capacity {
@@ -652,6 +409,7 @@ impl SelectionOverlay {
         context.Unmap(&resource, 0);
       }
     }
+    let placeholder = self.placeholder.view.clone();
     let constant_resource: ID3D11Resource =
       self.constants.cast().map_err(|error| error.to_string())?;
     let index = unsafe { self.swap_chain.GetCurrentBackBufferIndex() };
@@ -707,8 +465,8 @@ impl SelectionOverlay {
         context.PSSetShaderResources(
           0,
           Some(&[
-            Some(segment.label.clone()),
-            Some(segment.secondary.clone()),
+            Some(placeholder.clone()),
+            Some(placeholder.clone()),
             Some(placeholder.clone()),
             Some(placeholder.clone()),
             Some(placeholder.clone()),

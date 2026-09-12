@@ -8,7 +8,11 @@ import {
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
 import { SelectionPlacementPatch } from "../selection-placement";
-import { CursorEffectSettings, EditorKind } from "../types";
+import {
+  CursorEffectSettings,
+  EditorKind,
+  KeyboardEffectSettings,
+} from "../types";
 
 import {
   ToolPanelPatch,
@@ -35,6 +39,14 @@ export type ToolPanelHandlers = {
   onFrameReset?: () => void;
   /** Size the output canvas to what a field asked for. */
   onFrameSizeChange?: (size: { height?: number; width?: number }) => void;
+  /** Draw every shortcut with these settings. */
+  onKeyboardEffectsChange?: (settings: Partial<KeyboardEffectSettings>) => void;
+  /** Put the shortcuts back where the recording draws them by default. */
+  onKeyboardPositionReset?: () => void;
+  /** Put every shortcut's own placement away, the global one left as it is. */
+  onKeyboardShortcutsResetAll?: () => void;
+  /** Bring back every shortcut deleted from the timeline. */
+  onKeyboardShortcutsRestore?: () => void;
   /** Cast the selected layer's shadow onto the canvas, or take it away. */
   onSelectionDropShadowChange?: (dropShadow: boolean) => void;
   /** Pad the selected layer by this many output pixels on each side. */
@@ -46,6 +58,14 @@ export type ToolPanelHandlers = {
   /** Put the layer's content in the middle of its padded frame. */
   onSelectionRecenter?: () => void;
   onSelectionReset?: () => void;
+  /** Give every shortcut the selected one's size and position. */
+  onShortcutApplyToAll?: () => void;
+  /** Draw the selected shortcut at this size and centre, all in percent. */
+  onShortcutPlacementChange?: (
+    placement: NonNullable<ToolPanelPatch["shortcutPlacement"]>,
+  ) => void;
+  /** Put the selected shortcut back where the recording drew it. */
+  onShortcutReset?: () => void;
 };
 
 /**
@@ -84,6 +104,17 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   }
   if (values.recenterSelection) on.onSelectionRecenter?.();
   if (values.resetSelection) on.onSelectionReset?.();
+  if (values.keyboardEffects !== undefined) {
+    on.onKeyboardEffectsChange?.(values.keyboardEffects);
+  }
+  if (values.restoreShortcuts) on.onKeyboardShortcutsRestore?.();
+  if (values.resetAllShortcuts) on.onKeyboardShortcutsResetAll?.();
+  if (values.resetKeyboardPosition) on.onKeyboardPositionReset?.();
+  if (values.shortcutPlacement !== undefined) {
+    on.onShortcutPlacementChange?.(values.shortcutPlacement);
+  }
+  if (values.resetShortcut) on.onShortcutReset?.();
+  if (values.applyShortcutToAll) on.onShortcutApplyToAll?.();
 };
 
 /**

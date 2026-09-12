@@ -12,12 +12,11 @@ use windows::{
     Foundation::{HINSTANCE, HWND},
     System::LibraryLoader::GetModuleHandleW,
     UI::WindowsAndMessaging::{
-      CreateWindowExW, DestroyWindow, KillTimer, LoadCursorW, RegisterClassW, SetCursor, SetTimer,
-      SetWindowPos, ShowWindowAsync, CS_DBLCLKS, CW_USEDEFAULT, HMENU, HWND_TOP, IDC_ARROW,
-      IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, SWP_ASYNCWINDOWPOS,
-      SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_SHOWWINDOW, SW_HIDE,
-      SW_SHOWNOACTIVATE, WNDCLASSW, WS_CHILD, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE,
-      WS_EX_NOREDIRECTIONBITMAP,
+      CreateWindowExW, DestroyWindow, LoadCursorW, RegisterClassW, SetCursor, SetWindowPos,
+      ShowWindowAsync, CS_DBLCLKS, CW_USEDEFAULT, HMENU, HWND_TOP, IDC_ARROW, IDC_SIZEALL,
+      IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE,
+      SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_SHOWWINDOW, SW_HIDE, SW_SHOWNOACTIVATE,
+      WNDCLASSW, WS_CHILD, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP,
     },
   },
 };
@@ -39,7 +38,6 @@ pub(super) enum CursorKind {
 // Payloads mirror the Win32 messages; not every field is consumed yet.
 #[allow(dead_code)]
 pub(super) enum Input {
-  AnimateAction,
   DoubleClick {
     x: f64,
     y: f64,
@@ -93,8 +91,6 @@ unsafe impl Send for EditorWindow {}
 unsafe impl Sync for EditorWindow {}
 
 impl EditorWindow {
-  const ACTION_TIMER: usize = 1;
-
   pub(super) fn new(parent: HWND) -> Result<Self, String> {
     let instance = unsafe { GetModuleHandleW(None) }.map_err(|error| error.to_string())?;
     let atom = *CLASS.get_or_init(|| unsafe {
@@ -198,14 +194,6 @@ impl EditorWindow {
     if let Ok(cursor) = unsafe { LoadCursorW(None, name) } {
       unsafe { SetCursor(Some(cursor)) };
     }
-  }
-
-  pub(super) fn animate_action(hwnd: HWND) {
-    let _ = unsafe { SetTimer(Some(hwnd), Self::ACTION_TIMER, 16, None) };
-  }
-
-  pub(super) fn stop_action_animation(hwnd: HWND) {
-    let _ = unsafe { KillTimer(Some(hwnd), Self::ACTION_TIMER) };
   }
 }
 

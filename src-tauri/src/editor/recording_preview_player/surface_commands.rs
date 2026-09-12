@@ -134,9 +134,6 @@ pub async fn layout_recording_preview_surface(
     return Ok(());
   }
   manager.latest_layout_request = request_id;
-  manager.recenter_mode = selection
-    .as_ref()
-    .is_some_and(RecordingPreviewSelection::is_recenter);
   let settings = manager
     .sources
     .as_ref()

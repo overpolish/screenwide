@@ -18,7 +18,6 @@ const AUTO_FIT_COMMIT_EDGE: u32 = 1 << 18;
 pub(super) struct SelectionGestureOverride {
   pub(super) native_workspace_owns_presentation: bool,
   pub(super) operation: SelectionGestureOperation,
-  pub(super) recenter_mode: bool,
   pub(super) snapshot: ScreenshotWorkspaceOutputSettings,
 }
 
@@ -63,7 +62,6 @@ impl PreviewManager {
         self.selection_gesture = Some(SelectionGestureOverride {
           native_workspace_owns_presentation: false,
           operation,
-          recenter_mode: self.recenter_mode,
           snapshot: current.clone(),
         });
         return if operation == SelectionGestureOperation::FrameResize {
@@ -91,13 +89,9 @@ impl PreviewManager {
           .get_or_insert_with(|| SelectionGestureOverride {
             native_workspace_owns_presentation: false,
             operation,
-            recenter_mode: self.recenter_mode,
             snapshot: current.clone(),
           });
-        if operation == SelectionGestureOperation::Move
-          && !self.recenter_mode
-          && edges & AUTO_FIT_COMMIT_EDGE != 0
-        {
+        if operation == SelectionGestureOperation::Move && edges & AUTO_FIT_COMMIT_EDGE != 0 {
           if let Some(gesture) = self.selection_gesture.as_mut() {
             // Option release accepts the native workspace geometry as the
             // origin for the remainder of this same pointer/history gesture.
@@ -107,15 +101,13 @@ impl PreviewManager {
           return Ok(());
         }
         if let Some(gesture) = self.selection_gesture.as_mut() {
-          gesture.native_workspace_owns_presentation = operation == SelectionGestureOperation::Move
-            && !gesture.recenter_mode
-            && edges & AUTO_FIT_MOVE_EDGE != 0;
+          gesture.native_workspace_owns_presentation =
+            operation == SelectionGestureOperation::Move && edges & AUTO_FIT_MOVE_EDGE != 0;
         }
         let Some(gesture) = self.selection_gesture.as_ref() else {
           return Ok(());
         };
         let mut next = gesture.snapshot.clone();
-        let recenter_mode = gesture.recenter_mode;
         let snapshot = gesture.snapshot.clone();
         if operation == SelectionGestureOperation::FrameResize {
           let viewport = self.workspace_scene.as_ref().map_or(
@@ -150,7 +142,6 @@ impl PreviewManager {
             self.selection_gesture = Some(SelectionGestureOverride {
               native_workspace_owns_presentation: false,
               operation,
-              recenter_mode,
               snapshot,
             });
           }
@@ -172,7 +163,6 @@ impl PreviewManager {
             self.selection_gesture = Some(SelectionGestureOverride {
               native_workspace_owns_presentation: false,
               operation,
-              recenter_mode,
               snapshot,
             });
           }
@@ -199,39 +189,20 @@ impl PreviewManager {
           SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
             unreachable!("crop gestures are mirrored by the frontend")
           }
-          SelectionGestureOperation::RecenterAction
-          | SelectionGestureOperation::ResetAction
-          | SelectionGestureOperation::ApplyToAllAction => return Ok(()),
         };
         let start_geometry = output_geometry(start);
-        let geometry = if recenter_mode {
-          super::recenter::apply_recenter_gesture(
-            &snapshot,
-            &self.sources,
-            pane_index as usize,
-            workspace_operation,
-            edges,
-            (delta_x, delta_y),
-            scale,
-            start_geometry,
-          )
-        } else {
-          apply_layer_gesture(
-            start_geometry,
-            workspace_operation,
-            (delta_x, delta_y),
-            scale,
-          )
-        };
+        let geometry = apply_layer_gesture(
+          start_geometry,
+          workspace_operation,
+          (delta_x, delta_y),
+          scale,
+        );
         apply_output_geometry(&mut item.output, geometry);
         // Keep the canvas presentation fields consistent with the selected item.
         let moved_output = item.output.clone();
         next.canvas = moved_output.clone();
         next.canvas.background_radius_percent = background_radius_percent;
-        if operation == SelectionGestureOperation::Move
-          && !recenter_mode
-          && edges & AUTO_FIT_MOVE_EDGE != 0
-        {
+        if operation == SelectionGestureOperation::Move && edges & AUTO_FIT_MOVE_EDGE != 0 {
           next = fit_workspace_to_items(&snapshot, pane_index as usize, &moved_output);
         }
         self.output = Some(next);
@@ -243,17 +214,12 @@ impl PreviewManager {
         } else {
           self.selection_gesture = Some(SelectionGestureOverride {
             native_workspace_owns_presentation: operation == SelectionGestureOperation::Move
-              && !recenter_mode
               && edges & AUTO_FIT_MOVE_EDGE != 0,
             operation,
-            recenter_mode,
             snapshot,
           });
         }
-        if operation == SelectionGestureOperation::Move
-          && !recenter_mode
-          && edges & AUTO_FIT_MOVE_EDGE != 0
-        {
+        if operation == SelectionGestureOperation::Move && edges & AUTO_FIT_MOVE_EDGE != 0 {
           // The native workspace presenter owns this complete live scene:
           // frame resize, selected-layer movement and OSC are encoded from
           // one immutable gesture snapshot. Replacing it here would race a

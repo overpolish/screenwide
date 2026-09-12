@@ -55,8 +55,6 @@ pub(crate) struct RenderConstants {
   pub chrome_backdrop: [f32; 4],
   /// The snapshot UV window after Ruler pan/zoom.
   pub chrome_source: [f32; 4],
-  /// Halo sample radius for contrast-safe, CPU-rasterised text readouts.
-  pub outlined_label: [f32; 4],
 }
 
 const _: () = assert!(std::mem::size_of::<RenderConstants>().is_multiple_of(16));
@@ -99,7 +97,6 @@ impl RenderConstants {
       chrome_outline: [0.0; 4],
       chrome_backdrop: [0.0; 4],
       chrome_source: [0.0, 0.0, 1.0, 1.0],
-      outlined_label: [0.0; 4],
     }
   }
 
@@ -299,7 +296,7 @@ use pixel::rect_corners;
 mod ruler;
 mod selection;
 
-pub(crate) use chrome::{add_coverage_label, add_icon, add_label, add_outlined_label, add_plate};
+pub(crate) use chrome::{add_icon, add_label, add_plate};
 pub(crate) use pixel::{
   add_pixel_aligned_quad, add_pixel_aligned_texture_quad, pixel_aligned_rect,
 };

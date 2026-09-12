@@ -24,7 +24,7 @@ import {
 import { EditorArtifact, EditorKind, RecordingVideoTrackId } from "../types";
 
 import { ToolPanelHandlers } from "./tool-panel-bridge";
-import { ToolPanelSelection } from "./tool-panel-store";
+import { ToolPanelLayerSelection } from "./tool-panel-store";
 
 /**
  * The one layer the selection panel acts on: what to show for it, the output
@@ -40,7 +40,7 @@ export type EditorSelectionTarget = {
   applyInset: (inset: number) => void;
   /** Put the layer's content in the middle of its padded frame. */
   recenter: () => void;
-  selection: ToolPanelSelection;
+  selection: ToolPanelLayerSelection;
   settings: ScreenshotOutputSettings;
   source: { height: number; width: number };
 };
@@ -71,7 +71,7 @@ const target = ({
   source,
   workspace,
 }: Pick<EditorSelectionTarget, "apply" | "settings" | "source"> & {
-  kind: ToolPanelSelection["kind"];
+  kind: ToolPanelLayerSelection["kind"];
   label: string;
   /** The workspace whose padding analysis this layer's pad is filled from, or
    * null where a layer there carries no pad. */
@@ -210,18 +210,12 @@ export const selectionPanelHandlers = (
     target?.applyInset(inset);
   },
   onSelectionPlacementChange: (placement) => {
-    console.debug("[selection-panel] placement request", {
-      before: target ? selectionPlacement(target.settings) : null,
-      hasTarget: Boolean(target),
-      placement,
-    });
     if (!target) return;
     const next = withSelectionPlacement(
       target.settings,
       target.source,
       placement,
     );
-    console.debug("[selection-panel] applying", selectionPlacement(next));
     target.apply(next);
   },
   onSelectionRadiusChange: (radius) => {

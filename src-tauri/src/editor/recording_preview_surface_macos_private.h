@@ -10,7 +10,6 @@
 #include <stdint.h>
 
 #import "cursor_export/gpu_compositor_macos.h"
-#import "osc_material_surface_macos.h"
 #import "osc_gpu_macos.h"
 
 #define SCREENWIDE_PREVIEW_PRIVATE __attribute__((visibility("hidden")))
@@ -94,7 +93,7 @@ typedef void (*screenwide_preview_pointer_down_callback)(void *context);
 typedef struct {
   uint32_t pane_index;
   uint32_t layer_id;
-  uint32_t crop_mode, radius_disabled, recenter_mode;
+  uint32_t crop_mode, radius_disabled;
   double x, y, width, height;
   double radius_percent;
   double image_x, image_y, image_width, image_height;
@@ -220,26 +219,9 @@ typedef struct {
 @property(nonatomic) BOOL selectionVisible;
 @property(nonatomic) ScreenwidePreviewSelection selection;
 @property(nonatomic, strong) CAMetalLayer *selectionLayer;
-/// Cached selection label texture and the inputs that invalidate it.
-@property(nonatomic, strong) id<MTLTexture> selectionLabelTexture;
-@property(nonatomic, strong) id<MTLTexture> selectionSecondaryLabelTexture;
-/// Transparent texture bound whenever the selection has no label.
-@property(nonatomic, strong) id<MTLTexture> selectionLabelPlaceholder;
-@property(nonatomic, strong) NSString *selectionLabelText;
-@property(nonatomic, strong) NSString *selectionSecondaryLabelText;
-@property(nonatomic) CGFloat selectionLabelScale;
-@property(nonatomic) uint32_t selectionLabelLightMode;
-@property(nonatomic) NSSize selectionLabelSize;
-@property(nonatomic) NSSize selectionSecondaryLabelSize;
-@property(nonatomic) NSRect selectionActionRect;
-@property(nonatomic) NSRect selectionSecondaryActionRect;
-@property(nonatomic) uint32_t selectionActionOperation;
-@property(nonatomic) void *selectionActionControls;
-/// Native backdrop hosts contain their own retained Metal action layer. Their geometry is
-/// driven by the same Rust control metrics as the rendered controls.
-@property(nonatomic, strong) NSView *selectionActionMaterialContainer;
-@property(nonatomic, strong) NSArray<ScreenwideOscMaterialSurfaceView *> *selectionActionSurfaces;
-@property(nonatomic) uint64_t selectionActionAnimationRevision;
+/// Transparent 1x1 texture bound to the shared OSC fragment interface's text
+/// slots: the preview overlay draws no text quads of its own.
+@property(nonatomic, strong) id<MTLTexture> selectionTexturePlaceholder;
 @property(nonatomic) uint64_t selectionDrawRevision;
 @property(nonatomic) BOOL selectionDrawInFlight;
 @property(nonatomic) BOOL selectionDrawPending;

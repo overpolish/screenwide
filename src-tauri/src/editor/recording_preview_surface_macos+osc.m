@@ -33,19 +33,14 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
             containsObject:@(surface.selection.pane_index)]
       : surface.selection.pane_index < surface.views.count &&
             surface.views[surface.selection.pane_index].active;
-  // Chrome is off while suspended: this branch clears the action rects and
-  // hides both the OSC layer and its material, which is the whole visible
-  // editor overlay.
+  // Chrome is off while suspended: this branch hides the OSC layer, which is
+  // the whole visible editor overlay.
   if (!surface.hasSelection || !surface.selectionVisible ||
       !surface.editorEnabled || surface.editorSuspended ||
       surface.selectionLayer == nil || surface.selectionPipeline == nil ||
       surface.selection.pane_index >= surface.editorBaseRects.count ||
       !selectedPaneActive) {
     surface.selectionDrawPending = NO;
-    surface.selectionActionRect = NSZeroRect;
-    surface.selectionSecondaryActionRect = NSZeroRect;
-    surface.selectionActionOperation = 0;
-    selection_action_material_layout(surface);
     surface.selectionLayer.hidden = YES;
     return;
   }
@@ -73,8 +68,8 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
                             size.height - transformed.origin.y - transformed.size.height,
                             transformed.size.width, transformed.size.height);
   CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
-  // Resolved before the vertices are built because the size readout rasterises
-  // its own colours from it; both encode paths below reuse this value.
+  // Resolved once here because both encode paths below reuse it for the
+  // render state's palette.
   NSString *appearance = [surface.interaction.effectiveAppearance
       bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua,
                                           NSAppearanceNameDarkAqua]];
@@ -96,84 +91,6 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         vertices, &count, size, frame, scale,
         surface.selection.radius_percent,
         surface.selection.radius_disabled == 0);
-  BOOL keyboardAction = surface.selection.layer_id == UINT32_MAX - 1;
-  BOOL recenterAction = surface.selection.recenter_mode != 0;
-  BOOL compactAction = recenterAction || keyboardAction;
-  // Only an action earns a label on the frame. The selection's size is read
-  // and set in the Selection panel, so the frame no longer repeats it.
-  BOOL hasLabel = compactAction;
-  surface.selectionActionRect = NSZeroRect;
-  surface.selectionSecondaryActionRect = NSZeroRect;
-  surface.selectionActionOperation = keyboardAction ? 8 : recenterAction ? 7 : 0;
-  if (keyboardAction &&
-      [surface updateSelectionLabel:@"Reset" scale:scale
-                          lightMode:lightMode action:YES] &&
-      [surface updateSelectionSecondaryLabel:@"Apply to all" scale:scale
-                                    lightMode:lightMode]) {
-    NSSize primaryLabel = surface.selectionLabelSize;
-    NSSize secondaryLabel = surface.selectionSecondaryLabelSize;
-    ScreenwideOscControlMetrics metrics = screenwide_osc_control_metrics(0, 0);
-    ScreenwideOscControlSpacing spacing = screenwide_osc_control_spacing();
-    // Label textures already contain 2pt horizontal inset. Complete the
-    // shared regular button padding around that intrinsic texture.
-    CGFloat labelInsetX = MAX(metrics.padding_x - 2.0, 0.0);
-    CGFloat buttonGap = spacing.control;
-    CGFloat buttonHeight = metrics.height;
-    CGFloat primaryWidth = primaryLabel.width + labelInsetX * 2.0;
-    CGFloat secondaryWidth = secondaryLabel.width + labelInsetX * 2.0;
-    CGFloat totalWidth = primaryWidth + buttonGap + secondaryWidth;
-    CGFloat actionX = NSMidX(frame) - totalWidth / 2.0;
-    CGFloat actionY = NSMaxY(frame) + 6.0;
-    if (actionY + buttonHeight > size.height)
-      actionY = NSMinY(frame) - 6.0 - buttonHeight;
-    actionX = MAX(0.0, MIN(actionX, size.width - totalWidth));
-    actionY = MAX(0.0, MIN(actionY, size.height - buttonHeight));
-    actionX = floor(actionX * scale) / scale;
-    actionY = floor(actionY * scale) / scale;
-    surface.selectionActionRect = NSMakeRect(
-        actionX, actionY, primaryWidth, buttonHeight);
-    surface.selectionSecondaryActionRect = NSMakeRect(
-        actionX + primaryWidth + buttonGap, actionY,
-        secondaryWidth, buttonHeight);
-  } else if (hasLabel && !keyboardAction) {
-    NSString *text = @"Recenter";
-    if ([surface updateSelectionLabel:text
-                                scale:scale
-                            lightMode:lightMode
-                               action:compactAction]) {
-      NSSize label = surface.selectionLabelSize;
-      // The compact action's 4pt top padding leaves the visible button at the
-      // same 6pt distance from the selection frame as before.
-      CGFloat gap = compactAction ? 10.0 : 4.0;
-      CGFloat x = compactAction ? NSMidX(frame) - label.width / 2.0
-                                 : NSMaxX(frame) - label.width;
-      CGFloat y = NSMaxY(frame) + gap;
-      if (y + label.height > size.height)
-        y = NSMaxY(frame) - gap - label.height;
-      x = MAX(0.0, MIN(x, size.width - label.width));
-      CGFloat minimumX = NSMinX(frame);
-      CGFloat maximumX = NSMaxX(frame) - label.width;
-      if (minimumX <= maximumX)
-        x = MAX(minimumX, MIN(x, maximumX));
-      else
-        x = NSMidX(frame) - label.width / 2.0;
-      y = MIN(MAX(0.0, y), NSMaxY(frame) + gap);
-      x = floor(x * scale) / scale;
-      y = floor(y * scale) / scale;
-      NSRect labelRect = NSMakeRect(x, y, label.width, label.height);
-      if (compactAction) {
-        // The label bitmap has 2pt horizontal inset and a 16pt text-xs line
-        // box; these insets complete React's px-2/py-1 compact Button geometry.
-        NSRect actionRect = NSInsetRect(labelRect, -6.0, -4.0);
-        surface.selectionActionRect = actionRect;
-      }
-      if (!compactAction)
-        screenwide_region_osc_add_quad(vertices, &count, size, labelRect, 11);
-    }
-  }
-  selection_action_layout(surface);
-  selection_action_material_layout(surface);
-  selection_action_render_surfaces(surface, scale, lightMode);
   if (surface.hasSelectionSnapGuideX) {
     ScreenwidePreviewSelection guide = surface.selection;
     guide.x = surface.selectionSnapGuideX;
@@ -220,9 +137,8 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     state.magnifier_box[3] = magnifier.active != 0 ? magnifier.box_height : 0;
     screenwide_region_osc_encode(
         encoder, surface.selectionPipeline, buffer, count, state,
-        surface.selectionLabelTexture ?: surface.selectionLabelPlaceholder,
-        surface.selectionSecondaryLabelTexture ?:
-            surface.selectionLabelPlaceholder);
+        surface.selectionTexturePlaceholder,
+        surface.selectionTexturePlaceholder);
     [encoder endEncoding];
     return;
   }
@@ -248,9 +164,8 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       screenwide_region_osc_render_state(lightMode);
   screenwide_region_osc_encode(
       encoder, surface.selectionPipeline, buffer, count, state,
-      surface.selectionLabelTexture ?: surface.selectionLabelPlaceholder,
-      surface.selectionSecondaryLabelTexture ?:
-          surface.selectionLabelPlaceholder);
+      surface.selectionTexturePlaceholder,
+      surface.selectionTexturePlaceholder);
   [encoder endEncoding];
   [command presentDrawable:drawable];
   [command addCompletedHandler:^(__unused id<MTLCommandBuffer> completed) {

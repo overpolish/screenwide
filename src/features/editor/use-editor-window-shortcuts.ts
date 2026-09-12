@@ -47,6 +47,7 @@ export function useEditorWindowShortcuts({
   onToggleBladeTool,
   onToggleCrop,
   onToggleCursorPanel,
+  onToggleKeyboardPanel,
   onTogglePlayback,
   onToggleRangeTool,
   onUndo,
@@ -72,6 +73,8 @@ export function useEditorWindowShortcuts({
   onToggleCrop?: () => void;
   /** M: the cursor panel, on or away. */
   onToggleCursorPanel?: () => void;
+  /** K: the keyboard panel, on or away. */
+  onToggleKeyboardPanel?: () => void;
   onTogglePlayback?: () => void;
   onToggleRangeTool?: () => void;
   onUndo?: () => void;
@@ -303,6 +306,13 @@ export function useEditorWindowShortcuts({
       ) {
         consume(event);
         onToggleCursorPanel();
+      } else if (
+        event.code === "KeyK" &&
+        onToggleKeyboardPanel &&
+        !ownsTextEditingKeys(event.target)
+      ) {
+        consume(event);
+        onToggleKeyboardPanel();
       }
     };
 
@@ -330,6 +340,7 @@ export function useEditorWindowShortcuts({
     onStep,
     onToggleCrop,
     onToggleCursorPanel,
+    onToggleKeyboardPanel,
     onToggleBladeTool,
     onTogglePlayback,
     onToggleRangeTool,
