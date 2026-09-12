@@ -131,6 +131,66 @@ export const Selection: Story = {
   },
 };
 
+/** The camera track of a recording, carried as a picture of its own: baking
+ * is off, so it is placed and padded the way any other layer is. */
+export const SelectionCamera: Story = {
+  args: { tool: "selection", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      hasCursorData: true,
+      isSaving: false,
+      selection: {
+        canBake: true,
+        dropShadow: true,
+        height: 720,
+        inset: 0,
+        insetMaximum: 720,
+        isBaked: false,
+        kind: "camera",
+        label: "Camera",
+        radius: 8,
+        sourceHeight: 720,
+        sourceWidth: 1280,
+        width: 1280,
+        x: 2200,
+        y: 1500,
+      },
+    });
+  },
+};
+
+/** The same camera drawn into the screen's picture: the overlay is what is
+ * placed, so the size is the window it is drawn in and there is no pad. */
+export const SelectionBakedCamera: Story = {
+  args: { tool: "selection", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      hasCursorData: true,
+      isSaving: false,
+      selection: {
+        canBake: true,
+        dropShadow: true,
+        height: 506,
+        inset: 0,
+        insetMaximum: 0,
+        isBaked: true,
+        kind: "camera",
+        label: "Camera",
+        radius: 8,
+        sourceHeight: 720,
+        sourceWidth: 1280,
+        width: 900,
+        x: 2592,
+        y: 73,
+      },
+    });
+  },
+};
+
 /** The tool is in hand with nothing under it: the panel says so rather than
  * offering fields that would place nothing. */
 export const SelectionEmpty: Story = {

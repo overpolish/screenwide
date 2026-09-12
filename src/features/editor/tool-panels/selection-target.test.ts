@@ -3,6 +3,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
+import { defaultCameraOverlay } from "../recording-export-settings";
 import { sourceRect } from "../screenshot-geometry";
 import { screenshotLayout } from "../screenshot-layout";
 import {
@@ -40,6 +41,7 @@ const targetFor = (output: ScreenshotOutputSettings) => {
   const target = editorSelectionTarget({
     artifact,
     bakeCamera: false,
+    cameraOverlay: defaultCameraOverlay(),
     enabledVideoTracks: [],
     onScreenshotOutputChange: apply,
     recordingOutput: null,

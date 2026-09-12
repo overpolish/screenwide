@@ -10,6 +10,7 @@ import {
   cameraOverlayGeometry,
   uncroppedCameraPreviewOverlay,
 } from "../camera-overlay-geometry";
+import { scaledCameraOverlay } from "../camera-overlay-placement";
 import { usePublishKeyboardShortcut } from "../keyboard-shortcut-channel";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
@@ -722,26 +723,11 @@ export function NativeRecordingPreview({
           radiusPercent: Math.min(50, Math.max(0, event.scale)),
         };
       } else if (event.operation === "resize") {
-        const scale = Math.min(8, Math.max(0, event.scale));
-        const transform = (
-          value: number,
-          startFrame: number,
-          nextFrame: number,
-        ) => {
-          if (Math.abs(scale - 1) < 1e-9) return value;
-          const anchor = (nextFrame - startFrame * scale) / (1 - scale);
-          return anchor + (value - anchor) * scale;
-        };
-        next = {
-          ...start,
-          cameraWidth: start.cameraWidth * scale,
-          cameraX: transform(start.cameraX, start.frameX, frameX),
-          cameraY: transform(start.cameraY, start.frameY, frameY),
-          frameHeight: start.frameHeight * scale,
-          frameWidth: start.frameWidth * scale,
-          frameX,
-          frameY,
-        };
+        next = scaledCameraOverlay(
+          start,
+          Math.min(8, Math.max(0, event.scale)),
+          { x: frameX, y: frameY },
+        );
       } else {
         next = {
           ...start,

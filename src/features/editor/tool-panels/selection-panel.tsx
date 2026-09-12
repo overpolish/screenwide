@@ -3,6 +3,7 @@
 
 import { Button } from "../../../components/base/button/button";
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
+import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
 import { Dimensions } from "../../../components/shared/dimensions/dimensions";
 import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
@@ -53,6 +54,24 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
 
   return (
     <div className="flex flex-col gap-section">
+      {/* The camera is a layer like any other, and baking is what kind of
+          layer it is: drawn into the screen's picture, or carried as a track
+          of its own. It takes both tracks, so it is out of reach with either
+          one left out. */}
+      {selection.kind === "camera" ? (
+        <div className="flex items-center justify-between gap-section">
+          <span className="text-body text-content-fg">Combine with screen</span>
+          <Switch
+            aria-label="Combine with screen"
+            isDisabled={isSaving || !selection.canBake}
+            isSelected={Boolean(selection.isBaked)}
+            onChange={(bake) => {
+              change({ bakeCamera: bake });
+            }}
+          />
+        </div>
+      ) : null}
+
       {/* `Dimensions` has no disabled state of its own: a save takes the whole
           group out of reach the way the output controls do. */}
       <div className={isSaving ? "pointer-events-none opacity-50" : ""}>

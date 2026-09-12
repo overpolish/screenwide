@@ -44,6 +44,12 @@ export type ToolPanelLayerSelection = {
   width: number;
   x: number;
   y: number;
+  /** Camera only: whether baking it in is on the table at all. Baking draws
+   * the camera into the screen's picture, so it needs both tracks kept. */
+  canBake?: boolean;
+  /** Camera only: whether it is drawn into the screen's picture rather than
+   * carried as a track of its own. */
+  isBaked?: boolean;
 };
 
 /**
@@ -128,6 +134,9 @@ export type ToolPanelPatch = Partial<
 > & {
   /** Put every shortcut back where the recording drew it. */
   applyShortcutToAll?: true;
+  /** Draw the camera into the screen's picture, or carry it as a track of its
+   * own. */
+  bakeCamera?: boolean;
   /** Cut a crop of this size, in source pixels, keeping it where it sits. */
   cropSize?: { height?: number; width?: number };
   /** Size the output canvas, leaving what is in it where it sits. */

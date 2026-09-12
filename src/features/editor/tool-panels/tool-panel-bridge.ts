@@ -31,6 +31,9 @@ export type ToolPanelHandlers = {
   onBackgroundChange?: (background: Background) => void;
   onBackgroundPresetRemove?: (id: string) => void;
   onBackgroundPresetSave?: (preset: BackgroundPreset) => void;
+  /** Draw the camera into the screen's picture, or carry it as a track of its
+   * own. The placement of each is carried across the change. */
+  onBakeCameraChange?: (bake: boolean) => void;
   /** Show the whole source again, the committed crop taken away. */
   onCropReset?: () => void;
   /** Cut a crop of the size a field asked for, in source pixels. */
@@ -75,6 +78,8 @@ export type ToolPanelHandlers = {
 const appliedSeq: Record<EditorKind, number> = { recording: 0, screenshot: 0 };
 
 const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
+  if (values.bakeCamera !== undefined)
+    on.onBakeCameraChange?.(values.bakeCamera);
   if (values.background !== undefined)
     on.onBackgroundChange?.(values.background);
   if (values.savePreset !== undefined) {

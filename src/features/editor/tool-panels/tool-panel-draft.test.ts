@@ -198,4 +198,38 @@ describe("canvas size while a field is open", () => {
       resolve(placed({ height: 2338, width: 3600, x: 0, y: 0 }), editing),
     ).toMatchObject({ frame: null, selection: { width: 3600 } });
   });
+  it("keeps the bake switch flipped until the editor answers", () => {
+    const flipping: ToolPanelDraft = {
+      seq: 7,
+      values: { bakeCamera: true },
+      workspace: "recording",
+    };
+    const camera: ToolPanelSnapshot = {
+      ...snapshot(100),
+      selection: {
+        canBake: true,
+        dropShadow: true,
+        height: 506,
+        inset: 0,
+        insetMaximum: 0,
+        isBaked: false,
+        kind: "camera",
+        label: "Camera",
+        radius: 8,
+        sourceHeight: 720,
+        sourceWidth: 1280,
+        width: 900,
+        x: 2592,
+        y: 73,
+      },
+    };
+
+    expect(resolve(camera, flipping).selection).toMatchObject({
+      isBaked: true,
+    });
+    // Once the editor has answered, the switch shows what it committed.
+    expect(
+      resolve({ ...camera, acknowledgedSeq: 7 }, flipping).selection,
+    ).toMatchObject({ isBaked: false });
+  });
 });

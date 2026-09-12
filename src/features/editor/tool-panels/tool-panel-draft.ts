@@ -76,6 +76,7 @@ export function resolveToolPanelSnapshot(
   // and the editor's answer arrives as the next published placement.
   const {
     applyShortcutToAll: _applyShortcutToAll,
+    bakeCamera,
     cropSize,
     frameSize,
     keyboardEffects,
@@ -121,7 +122,13 @@ export function resolveToolPanelSnapshot(
     rounded && selectionDropShadow !== undefined
       ? { ...rounded, dropShadow: selectionDropShadow }
       : rounded;
-  const selection = layer ?? resolved.selection;
+  // The bake switch is the same idea: the flip is shown at once, and the
+  // placement the editor carries across arrives with its answer.
+  const baked =
+    layer?.kind === "camera" && bakeCamera !== undefined
+      ? { ...layer, isBaked: bakeCamera }
+      : layer;
+  const selection = baked ?? resolved.selection;
   return {
     ...resolved,
     selection,

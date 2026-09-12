@@ -19,6 +19,7 @@ import {
   ScreenshotWorkspaceOutputSettings,
 } from "../screenshot-output";
 import {
+  CameraOverlaySettings,
   CursorEffectSettings,
   EditorArtifact,
   EditorKind,
@@ -38,6 +39,7 @@ import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
 type EditorToolPanelInputs = {
   artifact: EditorArtifact | null;
   bakeCamera: boolean;
+  cameraOverlay: CameraOverlaySettings;
   cursorEffects: CursorEffectSettings;
   enabledVideoTracks: RecordingVideoTrackId[];
   isSaving: boolean;
@@ -48,6 +50,8 @@ type EditorToolPanelInputs = {
   selectedScreenshotItemId: number | null;
   selectedTrack: string | null;
   workspace: EditorKind;
+  onBakeCameraChange?: (bake: boolean) => void;
+  onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
   onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
@@ -72,10 +76,13 @@ type EditorToolPanelInputs = {
 export function useEditorToolPanels({
   artifact,
   bakeCamera,
+  cameraOverlay,
   cursorEffects,
   enabledVideoTracks,
   isSaving,
   keyboardEffects,
+  onBakeCameraChange,
+  onCameraOverlayChange,
   onCanvasResize,
   onCursorEffectsChange,
   onKeyboardEffectsChange,
@@ -102,7 +109,10 @@ export function useEditorToolPanels({
   const selectionTarget = editorSelectionTarget({
     artifact,
     bakeCamera,
+    cameraOverlay,
     enabledVideoTracks,
+    onBakeCameraChange,
+    onCameraOverlayChange,
     onRecordingOutputChange,
     onScreenshotOutputChange,
     recordingOutput,

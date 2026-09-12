@@ -2,57 +2,37 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
-  prepareRecenterInset,
-  recenterWorkspaceContent,
-} from "../recenter-inset-channel";
-import { screenshotLayout } from "../screenshot-layout";
-import {
   RecordingOutputSettings,
-  resetScreenshotTransform,
   ScreenshotOutputSettings,
   screenshotWorkspaceItemOutput,
   ScreenshotWorkspaceOutputSettings,
 } from "../screenshot-output";
 import {
-  insetScreenshotPadding,
-  screenshotPaddingInset,
-} from "../screenshot-recenter";
+  CameraOverlaySettings,
+  EditorArtifact,
+  RecordingVideoTrackId,
+} from "../types";
+
+import { bakedCameraSelectionTarget } from "./baked-camera-target";
 import {
-  selectionPlacement,
-  withSelectionPlacement,
-} from "../selection-placement";
-import { EditorArtifact, EditorKind, RecordingVideoTrackId } from "../types";
-
+  EditorSelectionTarget,
+  placedSelectionTarget,
+} from "./placed-selection-target";
 import { ToolPanelHandlers } from "./tool-panel-bridge";
-import { ToolPanelLayerSelection } from "./tool-panel-store";
 
-/**
- * The one layer the selection panel acts on: what to show for it, the output
- * it is placed in, and the editor handler that commits a new placement.
- *
- * The editor already owns every one of those; this only says which of them the
- * current selection means, so the panel never has to know whether it is
- * looking at a recording track or a screenshot layer.
- */
-export type EditorSelectionTarget = {
-  apply: (next: ScreenshotOutputSettings) => void;
-  /** Pad the layer by this many output pixels on each side. */
-  applyInset: (inset: number) => void;
-  /** Put the layer's content in the middle of its padded frame. */
-  recenter: () => void;
-  selection: ToolPanelLayerSelection;
-  settings: ScreenshotOutputSettings;
-  source: { height: number; width: number };
-};
+export type { EditorSelectionTarget } from "./placed-selection-target";
 
 type SelectionTargetInputs = {
   artifact: EditorArtifact | null;
   bakeCamera: boolean;
+  cameraOverlay: CameraOverlaySettings;
   enabledVideoTracks: RecordingVideoTrackId[];
   recordingOutput: RecordingOutputSettings | null | undefined;
   screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
   selectedScreenshotItemId: number | null;
   selectedTrack: string | null;
+  onBakeCameraChange?: (bake: boolean) => void;
+  onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onRecordingOutputChange?: (
     track: RecordingVideoTrackId,
     next: ScreenshotOutputSettings,
@@ -61,55 +41,6 @@ type SelectionTargetInputs = {
     next: ScreenshotOutputSettings,
     itemId: number,
   ) => void;
-};
-
-const target = ({
-  apply,
-  kind,
-  label,
-  settings,
-  source,
-  workspace,
-}: Pick<EditorSelectionTarget, "apply" | "settings" | "source"> & {
-  kind: ToolPanelLayerSelection["kind"];
-  label: string;
-  /** The workspace whose padding analysis this layer's pad is filled from, or
-   * null where a layer there carries no pad. */
-  workspace: EditorKind | null;
-}): EditorSelectionTarget => {
-  const layout = screenshotLayout(source, settings);
-  return {
-    apply,
-    applyInset: (inset) => {
-      apply(insetScreenshotPadding(settings, source, inset));
-      // The pad is filled with the colour detected behind the content, so the
-      // first pixel of padding asks for that colour if none was read yet. It
-      // is asked for after the padding is committed, so the colour lands on
-      // the padded layer rather than on the one before it.
-      if (inset > 0 && !settings.recenterInsetColor && workspace)
-        prepareRecenterInset(workspace);
-    },
-    recenter: () => {
-      if (workspace) recenterWorkspaceContent(workspace);
-    },
-    selection: {
-      ...selectionPlacement(settings),
-      dropShadow: settings.dropShadow,
-      inset: Math.round(screenshotPaddingInset(settings, source)),
-      // The padding is measured against the layer's own picture rather than
-      // its padded frame, so the range does not move as the knob is dragged.
-      insetMaximum: Math.round(
-        Math.min(layout.sourceCrop.width, layout.sourceCrop.height),
-      ),
-      kind,
-      label,
-      radius: settings.radiusPercent,
-      sourceHeight: source.height,
-      sourceWidth: source.width,
-    },
-    settings,
-    source,
-  };
 };
 
 const recordingSelectionTarget = (
@@ -123,15 +54,29 @@ const recordingSelectionTarget = (
   const output = inputs.recordingOutput;
   if (!track || !output || !inputs.enabledVideoTracks.includes(track))
     return null;
+  // Baking draws the camera into the screen's picture, so it takes both
+  // tracks; with either one left out the switch has nothing to offer.
+  const canBake =
+    inputs.enabledVideoTracks.includes("primary") &&
+    inputs.enabledVideoTracks.includes("camera") &&
+    artifact.camera !== null;
   // A baked camera is placed by its overlay rather than by an output of its
-  // own, so there is no placement here to show for it.
-  if (track === "camera" && inputs.bakeCamera) return null;
+  // own, so it is read and written there instead.
+  if (track === "camera" && inputs.bakeCamera)
+    return bakedCameraSelectionTarget({
+      artifact,
+      cameraOutput: output.camera,
+      cameraOverlay: inputs.cameraOverlay,
+      onBakeCameraChange: inputs.onBakeCameraChange,
+      onCameraOverlayChange: inputs.onCameraOverlayChange,
+      onRecordingOutputChange: inputs.onRecordingOutputChange,
+    });
   const source =
     track === "primary"
       ? { height: artifact.height, width: artifact.width }
       : artifact.camera;
   if (!source) return null;
-  return target({
+  const target = placedSelectionTarget({
     apply: (next) => {
       inputs.onRecordingOutputChange?.(track, next);
     },
@@ -143,6 +88,14 @@ const recordingSelectionTarget = (
     // one with.
     workspace: track === "primary" ? "recording" : null,
   });
+  if (track !== "camera") return target;
+  return {
+    ...target,
+    applyBake: (bake) => {
+      inputs.onBakeCameraChange?.(bake);
+    },
+    selection: { ...target.selection, canBake, isBaked: false },
+  };
 };
 
 const screenshotSelectionTarget = (
@@ -157,7 +110,7 @@ const screenshotSelectionTarget = (
   const item = artifact.items[index];
   // A composite carries no layer names, so a layer is known by where it sits
   // in the stack, counted from the bottom the way the layer actions count it.
-  return target({
+  return placedSelectionTarget({
     apply: (next) => {
       inputs.onScreenshotOutputChange?.(next, item.id);
     },
@@ -183,7 +136,7 @@ export const editorSelectionTarget = (
 /**
  * The selection panel's asks, answered against whatever is selected now.
  *
- * Both go back out through the workspace's own output handler, so a number
+ * Each goes back out through the editor's own handler for it, so a number
  * typed in the panel takes the identical path through the editor's state as
  * the drag that would have produced it.
  */
@@ -191,6 +144,7 @@ export const selectionPanelHandlers = (
   target: EditorSelectionTarget | null,
 ): Pick<
   ToolPanelHandlers,
+  | "onBakeCameraChange"
   | "onSelectionDropShadowChange"
   | "onSelectionInsetChange"
   | "onSelectionPlacementChange"
@@ -198,11 +152,11 @@ export const selectionPanelHandlers = (
   | "onSelectionRecenter"
   | "onSelectionReset"
 > => ({
-  // The shadow is the layer's own, cast onto whatever the canvas is wearing,
-  // so it travels with the layer's output rather than with the canvas.
+  onBakeCameraChange: (bake) => {
+    target?.applyBake(bake);
+  },
   onSelectionDropShadowChange: (dropShadow) => {
-    if (!target) return;
-    target.apply({ ...target.settings, dropShadow });
+    target?.applyDropShadow(dropShadow);
   },
   // The pad is the layer's own frame grown past its picture, so it travels
   // with the layer's output the way its size and position do.
@@ -210,28 +164,15 @@ export const selectionPanelHandlers = (
     target?.applyInset(inset);
   },
   onSelectionPlacementChange: (placement) => {
-    if (!target) return;
-    const next = withSelectionPlacement(
-      target.settings,
-      target.source,
-      placement,
-    );
-    target.apply(next);
+    target?.applyPlacement(placement);
   },
   onSelectionRadiusChange: (radius) => {
-    if (!target) return;
-    target.apply({
-      ...target.settings,
-      radiusPercent: Math.min(50, Math.max(0, radius)),
-    });
+    target?.applyRadius(Math.min(50, Math.max(0, radius)));
   },
   onSelectionRecenter: () => {
     target?.recenter();
   },
-  // The reset the Select tool has always had: the layer back to the framing
-  // its source arrived in, its crop kept.
   onSelectionReset: () => {
-    if (!target) return;
-    target.apply(resetScreenshotTransform(target.settings, target.source));
+    target?.reset();
   },
 });
