@@ -68,17 +68,17 @@ fn timeline_position(duration_ms: u64, index: u32, count: u32) -> u64 {
   duration_ms.saturating_mul(u64::from(index)) / u64::from(count.max(1))
 }
 
-pub(super) fn source_frame_jpeg(
+pub(crate) fn source_frame_image(
   path: &std::path::Path,
   position_ms: u64,
   duration_ms: u64,
-) -> Result<Vec<u8>, String> {
+) -> Result<crate::screenshots::CapturedImage, String> {
   let position_ms = position_ms.min(duration_ms.saturating_sub(1));
   let mut reader = NativeVideoReader::open(path, 0, 0, position_ms)?;
   let frame = reader
     .frame_at(position_ms)?
     .ok_or_else(|| "Media Foundation returned no source frame".to_owned())?;
-  encoded_jpeg(&frame, 92)
+  Ok(frame)
 }
 
 #[cfg(test)]

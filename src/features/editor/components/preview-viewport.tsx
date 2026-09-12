@@ -3,6 +3,7 @@
 
 import { useRef, useState } from "react";
 
+import { PreviewZoomRequest } from "../preview-zoom-state";
 import {
   applyScreenshotCropGesture,
   commitScreenshotCrop,
@@ -18,7 +19,6 @@ import {
   screenshotWorkspaceItemOutput,
   screenshotOutputDimensions,
 } from "../screenshot-output";
-import { applyScreenshotRecenterGesture } from "../screenshot-recenter";
 import { useEditorEditGesture } from "../use-editor-edit-history";
 import {
   ScreenshotSelectionGestureEvent,
@@ -38,7 +38,6 @@ type PreviewViewportProps = {
   isEditing?: boolean;
   /** Suspends native input, so the DOM over the viewport stays clickable. */
   isExportOpen?: boolean;
-  isRecentering?: boolean;
   isResizingCanvas?: boolean;
   isSaving?: boolean;
   isSelecting?: boolean;
@@ -53,11 +52,10 @@ type PreviewViewportProps = {
   ) => void;
   onPaneFitChange?: (fit: PreviewPaneFit) => void;
   onRadiusChangeEnd?: () => void;
-  onRecenter?: () => void;
   onZoomChange?: (zoomPercent: number) => void;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
   selectedItemId?: number | null;
-  zoomPercent?: number;
+  zoomRequest?: PreviewZoomRequest;
 };
 
 const AUTO_FIT_MOVE_EDGE = 1 << 17;
@@ -68,7 +66,6 @@ export function PreviewViewport({
   artifactId,
   isEditing = false,
   isExportOpen = false,
-  isRecentering = false,
   isResizingCanvas = false,
   isSaving = false,
   isSelecting = false,
@@ -83,11 +80,10 @@ export function PreviewViewport({
   onOutputChange,
   onPaneFitChange,
   onRadiusChangeEnd,
-  onRecenter,
   onZoomChange,
   screenshotOutput,
   selectedItemId = null,
-  zoomPercent,
+  zoomRequest,
 }: PreviewViewportProps) {
   const nativeFrameRef = useRef<HTMLDivElement | null>(null);
   const selectionGestureRef = useRef<{
@@ -223,14 +219,16 @@ export function PreviewViewport({
     return true;
   };
   const selectionGesture = (event: ScreenshotSelectionGestureEvent) => {
-    if (event.operation === "recenterAction") return onRecenter?.();
+    // Dead native plumbing: the padding controls live in the Select panel now,
+    // and nothing puts the preview in the mode that offers this action.
+    if (event.operation === "recenterAction") return;
     if (frameGesture(event)) return;
     if (event.phase === "begin") {
       const itemOutput = workspaceOutput?.items[event.paneIndex];
       const cropGesture =
         event.operation === "cropMove" || event.operation === "cropResize";
       if (
-        (!isSelecting && !isRecentering && !(isEditing && cropGesture)) ||
+        (!isSelecting && !(isEditing && cropGesture)) ||
         !workspaceOutput ||
         !itemOutput
       )
@@ -321,23 +319,7 @@ export function PreviewViewport({
     const cropX = active.snapshot.cropX + moveX;
     const cropY = active.snapshot.cropY + moveY;
     let next: ScreenshotOutputSettings;
-    const recentered = isRecentering
-      ? applyScreenshotRecenterGesture({
-          deltaX: event.deltaX,
-          deltaY: event.deltaY,
-          edges: event.edges,
-          operation: event.operation,
-          scale: event.scale,
-          settings: active.snapshot,
-          source: items.find((item) => item.id === active.itemId),
-        })
-      : null;
-    if (recentered) {
-      next = recentered;
-    } else if (
-      event.operation === "cropMove" ||
-      event.operation === "cropResize"
-    ) {
+    if (event.operation === "cropMove" || event.operation === "cropResize") {
       const source = items.find((item) => item.id === active.itemId);
       if (!source) return;
       next = applyScreenshotCropGesture({
@@ -386,9 +368,7 @@ export function PreviewViewport({
     }
     if (shouldApply) {
       const autoFit =
-        !isRecentering &&
-        event.operation === "move" &&
-        (event.edges & AUTO_FIT_MOVE_EDGE) !== 0;
+        event.operation === "move" && (event.edges & AUTO_FIT_MOVE_EDGE) !== 0;
       if (autoFit) {
         const fitted = fitScreenshotWorkspaceToItems({
           initial: active.workspaceSnapshot,
@@ -428,7 +408,7 @@ export function PreviewViewport({
           radiusPercent: workspaceOutput.backgroundRadiusPercent,
           rect: { height: 1, width: 1, x: 0, y: 0 },
         }
-      : (isSelecting || isEditing || isRecentering) &&
+      : (isSelecting || isEditing) &&
           selectedItemIndex >= 0 &&
           selectedItem &&
           selectedItemOutput
@@ -436,16 +416,15 @@ export function PreviewViewport({
             cropMode: isEditing,
             paneIndex: selectedItemIndex,
             radiusPercent: selectedItemOutput.radiusPercent,
-            recenterMode: isRecentering,
             ...normalizedScreenshotSelection(
               screenshotLayout(selectedItem, selectedItemOutput),
               output,
-              isRecentering ? "recenter" : isEditing ? "crop" : "select",
+              isEditing ? "crop" : "select",
             ),
           }
         : null;
   const selectionTargets =
-    (isSelecting || isEditing || isRecentering) && workspaceOutput
+    (isSelecting || isEditing) && workspaceOutput
       ? workspaceOutput.items.flatMap((itemOutput, paneIndex) => {
           const item = items.find(
             (candidate) => candidate.id === itemOutput.id,
@@ -457,11 +436,10 @@ export function PreviewViewport({
               cropMode: isEditing,
               paneIndex,
               radiusPercent: itemOutput.output.radiusPercent,
-              recenterMode: isRecentering,
               ...normalizedScreenshotSelection(
                 layout,
                 output,
-                isRecentering ? "recenter" : isEditing ? "crop" : "select",
+                isEditing ? "crop" : "select",
               ),
             },
           ];
@@ -489,13 +467,13 @@ export function PreviewViewport({
       .map((item) => item.id)
       .sort((first, second) => first - second)
       .join(":"),
-    zoomPercent,
+    zoomRequest,
   });
   useRegisterPreviewFit(fitPreview, setFitBasis);
   return (
     <div
       aria-label={alt}
-      className={`relative flex min-h-0 grow overflow-hidden ${isSelecting || isRecentering ? "cursor-move" : "cursor-grab"}`}
+      className={`relative flex min-h-0 grow overflow-hidden ${isSelecting ? "cursor-move" : "cursor-grab"}`}
       data-recording-preview-viewport
       ref={nativeFrameRef}
       role="img"

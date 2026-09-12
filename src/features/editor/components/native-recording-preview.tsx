@@ -10,7 +10,7 @@ import {
   cameraOverlayGeometry,
   uncroppedCameraPreviewOverlay,
 } from "../camera-overlay-geometry";
-import { useRecenterInsetRefresh } from "../recenter-inset-channel";
+import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
   DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
@@ -30,7 +30,6 @@ import {
   screenshotOutputDimensions,
   screenshotWorkspaceItemOutput,
 } from "../screenshot-output";
-import { applyScreenshotRecenterGesture } from "../screenshot-recenter";
 import { CursorToolToggle } from "../tool-panels/cursor-tool-toggle";
 import { EditorToolId } from "../tool-panels/tool-registry";
 import { useCanvasTool } from "../tool-panels/use-canvas-tool";
@@ -43,6 +42,7 @@ import {
 } from "../types";
 import { useEditorEditGesture } from "../use-editor-edit-history";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
+import { usePreviewZoom } from "../use-preview-zoom";
 import { useRecordingPreviewPlayer } from "../use-recording-preview-player";
 import { useRecordingTimelineThumbnails } from "../use-recording-timeline-thumbnails";
 
@@ -136,10 +136,8 @@ export function NativeRecordingPreview({
     operation: RecordingSelectionGestureEvent["operation"];
     outputSnapshot: RecordingOutputSettings[RecordingVideoTrackId] | null;
     paneIndex: number;
-    recenterMode: boolean;
     trackId: RecordingVideoTrackId;
   } | null>(null);
-  const recenterActionRef = useRef<() => void>(() => undefined);
   const recenterRefreshRef = useRef<
     (crop: ScreenshotOutputSettings["sourceCrop"]) => void
   >(() => undefined);
@@ -151,7 +149,8 @@ export function NativeRecordingPreview({
     playhead,
     totalDurationRef,
   });
-  const [zoomPercent, setZoomPercent] = useState(100);
+  const { reportZoom, requestZoom, zoomPercent, zoomRequest } =
+    usePreviewZoom();
   const [canvasTool, setCanvasTool] = useCanvasTool<
     Exclude<RecordingCanvasTool, null>
   >("recording", "select");
@@ -329,11 +328,8 @@ export function NativeRecordingPreview({
       };
     }
     if (
-      (canvasTool !== "select" &&
-        canvasTool !== "crop" &&
-        canvasTool !== "recenter") ||
+      (canvasTool !== "select" && canvasTool !== "crop") ||
       !activeVideoTrack ||
-      (canvasTool === "recenter" && activeVideoTrack !== "primary") ||
       !selectedVideoTracks.has(activeVideoTrack)
     )
       return null;
@@ -429,18 +425,6 @@ export function NativeRecordingPreview({
             ]
           : [],
       );
-    if (canvasTool === "recenter") {
-      const source = previewSourceDimensions.primary;
-      if (!source || !selectedVideoTracks.has("primary")) return null;
-      return [
-        normalizedRecordingSelection({
-          mode: "recenter",
-          output: effectiveRecordingOutput.primary,
-          paneIndex: 0,
-          source,
-        }),
-      ];
-    }
     if (canvasTool !== "select" && canvasTool !== "crop") return null;
     if (canPreviewBakedCamera) {
       const primarySource = previewSourceDimensions.primary;
@@ -531,10 +515,9 @@ export function NativeRecordingPreview({
     : videoSelectionTargets;
   const selectionGesture = (event: RecordingSelectionGestureEvent) => {
     if (keyboardCanvas.applyGesture(event)) return;
-    if (event.operation === "recenterAction") {
-      if (event.phase === "begin") recenterActionRef.current();
-      return;
-    }
+    // Dead native plumbing: padding is the Select panel's now, and nothing
+    // puts the preview in the mode that offers this action.
+    if (event.operation === "recenterAction") return;
     const trackId =
       event.paneIndex === 0
         ? "primary"
@@ -545,10 +528,6 @@ export function NativeRecordingPreview({
       event.operation === "frameResize" || event.operation === "frameRadius";
     const isCropGesture =
       event.operation === "cropMove" || event.operation === "cropResize";
-    const isRecenterGesture =
-      canvasTool === "recenter" &&
-      trackId === "primary" &&
-      (event.operation === "move" || event.operation === "resize");
     if (event.phase === "begin") {
       if (
         !trackId ||
@@ -556,7 +535,7 @@ export function NativeRecordingPreview({
           ? canvasTool !== "canvas"
           : isCropGesture
             ? canvasTool !== "crop"
-            : !isRecenterGesture && canvasTool !== "select") ||
+            : canvasTool !== "select") ||
         !selectedVideoTracks.has(trackId)
       )
         return;
@@ -572,7 +551,6 @@ export function NativeRecordingPreview({
           ? null
           : effectiveRecordingOutput[trackId],
         paneIndex: event.paneIndex,
-        recenterMode: isRecenterGesture,
         trackId,
       };
       editGesture.beginGesture();
@@ -759,24 +737,6 @@ export function NativeRecordingPreview({
     }
     const snapshot = active.outputSnapshot;
     if (!snapshot) return;
-    if (active.recenterMode) {
-      const next = applyScreenshotRecenterGesture({
-        deltaX: event.deltaX,
-        deltaY: event.deltaY,
-        edges: event.edges,
-        operation: event.operation,
-        scale: event.scale,
-        settings: snapshot,
-        source: previewSourceDimensions.primary,
-      });
-      if (next && shouldApply) onRecordingOutputChange?.("primary", next);
-      if (event.phase === "update") finaliseGestureFrame();
-      if (event.phase === "end") {
-        selectionGestureRef.current = null;
-        requestAnimationFrame(editGesture.endGesture);
-      }
-      return;
-    }
     // Native gesture deltas arrive as a share of the layer's own canvas.
     const canvas = screenshotOutputDimensions(snapshot);
     const moveX = event.deltaX * canvas.width;
@@ -917,14 +877,14 @@ export function NativeRecordingPreview({
       if (selectedVideoTracks.has(trackId)) onSelectedTrackChange?.(trackId);
     },
     onSelectionGesture: selectionGesture,
-    onZoomChange: setZoomPercent,
+    onZoomChange: reportZoom,
     recordingOutput: previewRecordingOutput,
     screenCanvasRef,
     selection: selectionOverlay,
     selectionTargets,
     sourceDurationMs: durationMs,
     timelineEdit: recordingTimelineEdit,
-    zoomPercent,
+    zoomRequest,
   });
   useRegisterPreviewFit(player.fitPreview, player.setFitBasis);
   const isPlaying = player.isPlaying;
@@ -946,10 +906,21 @@ export function NativeRecordingPreview({
     output: effectiveRecordingOutput.primary,
     source: previewSourceDimensions.primary,
   });
-  recenterActionRef.current = recenter.begin;
   recenterRefreshRef.current = recenter.refresh;
-  // The crop panel's commit reaches the same analysis a crop drag ends with.
-  useRecenterInsetRefresh("recording", recenter.refresh);
+  // The crop panel's commit and the Select panel's padding controls reach the
+  // same analysis a crop drag ends with. Both read the frame under the
+  // playhead, so the picture is parked before it is read.
+  useRecenterInsetControls("recording", {
+    begin: () => {
+      pause();
+      recenter.begin();
+    },
+    prepare: () => {
+      pause();
+      recenter.prepare();
+    },
+    refresh: recenter.refresh,
+  });
   const timelineThumbnails = useRecordingTimelineThumbnails({
     artifactId,
     isEnabled: previewLayout === undefined,
@@ -1024,10 +995,6 @@ export function NativeRecordingPreview({
     activeVideoTrack !== null && selectedVideoTracks.has(activeVideoTrack);
   const canResizeActiveTrack =
     canEditActiveTrack && (!bakeCamera || canPreviewBakedCamera);
-  const canRecenterPrimary =
-    activeVideoTrack === "primary" &&
-    selectedVideoTracks.has("primary") &&
-    screenPane?.kind === "screen";
   const moveActiveVideoTrack = useCallback(
     (direction: "backward" | "forward") => {
       if (!activeVideoTrack) return;
@@ -1062,13 +1029,9 @@ export function NativeRecordingPreview({
   canvasToolRef.current = canvasTool;
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
-      if (next === "recenter") {
-        pause();
-        recenter.prepare();
-      }
       setCanvasTool(next);
     },
-    [pause, recenter, setCanvasTool],
+    [setCanvasTool],
   );
   // Cursor is a panel without a canvas tool behind it, so putting it away
   // hands the canvas back to Select rather than leaving the editor toolless.
@@ -1104,10 +1067,6 @@ export function NativeRecordingPreview({
   const leaveCropTool = useCallback(() => {
     if (canvasToolRef.current === "crop") changeCanvasTool(null);
   }, [changeCanvasTool]);
-  const toggleRecenterTool = useCallback(() => {
-    pause();
-    changeCanvasTool(canvasToolRef.current === "recenter" ? null : "recenter");
-  }, [changeCanvasTool, pause]);
 
   // The readouts sit at the left of the transport row. The size subscribes to
   // the output channel itself, so a frame resize running at pointer rate never
@@ -1116,10 +1075,10 @@ export function NativeRecordingPreview({
     () => (
       <>
         <RecordingOutputSize />
-        <PreviewZoomField onChange={setZoomPercent} zoomPercent={zoomPercent} />
+        <PreviewZoomField onChange={requestZoom} zoomPercent={zoomPercent} />
       </>
     ),
-    [zoomPercent],
+    [requestZoom, zoomPercent],
   );
 
   // The tools read the committed `recordingOutput`, never the resize draft, so
@@ -1137,7 +1096,6 @@ export function NativeRecordingPreview({
           <RecordingCanvasTools
             isEnabled={canEditActiveTrack}
             isFrameEnabled={canResizeActiveTrack}
-            isRecenterEnabled={canRecenterPrimary}
             isSelectEnabled={visiblePaneEntries.length > 0}
             onToolChange={changeCanvasTool}
             tool={canvasTool}
@@ -1147,7 +1105,6 @@ export function NativeRecordingPreview({
     [
       canEditActiveTrack,
       canResizeActiveTrack,
-      canRecenterPrimary,
       canvasTool,
       changeCanvasTool,
       dismissCursorPanel,
@@ -1178,7 +1135,6 @@ export function NativeRecordingPreview({
       ? moveActiveVideoTrackForward
       : undefined,
     onNudge: canNudgeActiveTrack ? nudgeActiveTrack : undefined,
-    onRecenter: canRecenterPrimary ? toggleRecenterTool : undefined,
     onResizeCanvas: canResizeActiveTrack ? toggleCanvasTool : undefined,
     onSelectTool: hasVisiblePanes ? toggleSelectTool : undefined,
     onStep: !canNudgeActiveTrack && layout ? timelineBlade.step : undefined,

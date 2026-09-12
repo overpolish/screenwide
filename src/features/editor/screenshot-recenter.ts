@@ -6,7 +6,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { sourceRect, SourceRect } from "./screenshot-geometry";
 import {
   screenshotLayout,
-  screenshotOutputDimensions,
   ScreenshotOutputSettings,
 } from "./screenshot-output";
 import { withScreenshotSourceCrop } from "./screenshot-output-settings";
@@ -92,95 +91,36 @@ export const recenterScreenshotContent = (
   );
 };
 
-/** Remove inset while retaining the current clip/screenshot bounds. */
-export const resetScreenshotRecenter = (
+/**
+ * The layer's crop rect grown past its source crop by `inset` output pixels on
+ * every side: the padded frame the Select tool treats as the layer.
+ *
+ * Nothing is clamped to the canvas. A padded layer is allowed to run past the
+ * frame edges exactly as an unpadded one is, and the pad is filled with the
+ * colour detected behind the content rather than cut to fit.
+ */
+export const insetScreenshotPadding = (
   settings: ScreenshotOutputSettings,
   source: { height: number; width: number },
+  inset: number,
 ): ScreenshotOutputSettings => {
   const { sourceCrop } = screenshotLayout(source, settings);
+  const padding = Math.max(0, inset);
   return {
     ...settings,
-    cropHeight: sourceCrop.height,
-    cropWidth: sourceCrop.width,
-    cropX: sourceCrop.x,
-    cropY: sourceCrop.y,
-    recenterInsetColor: null,
+    cropHeight: sourceCrop.height + padding * 2,
+    cropWidth: sourceCrop.width + padding * 2,
+    cropX: sourceCrop.x - padding,
+    cropY: sourceCrop.y - padding,
   };
 };
 
-const resizeRecenteredScreenshot = ({
-  edges,
-  scale: requestedScale,
-  settings,
-  source,
-}: {
-  edges: number;
-  scale: number;
-  settings: ScreenshotOutputSettings;
-  source?: { height: number; width: number };
-}): ScreenshotOutputSettings => {
-  const output = screenshotOutputDimensions(settings);
-  if (!source) return settings;
+/** The padding a layer is carrying now, in output pixels: half the difference
+ * between its padded frame and the source crop inside it. */
+export const screenshotPaddingInset = (
+  settings: ScreenshotOutputSettings,
+  source: { height: number; width: number },
+) => {
   const { crop, sourceCrop } = screenshotLayout(source, settings);
-  const scale = Math.max(0, requestedScale);
-  const verticalOnly = (edges & (4 | 8)) !== 0 && (edges & (1 | 2)) === 0;
-  const sourceSize = verticalOnly ? sourceCrop.height : sourceCrop.width;
-  const cropSize = verticalOnly ? crop.height : crop.width;
-  const requestedInset = (cropSize * scale - sourceSize) / 2;
-  const maximumInset = Math.max(
-    0,
-    Math.min(
-      sourceCrop.x,
-      sourceCrop.y,
-      output.width - sourceCrop.x - sourceCrop.width,
-      output.height - sourceCrop.y - sourceCrop.height,
-    ),
-  );
-  const inset = Math.min(maximumInset, Math.max(0, requestedInset));
-  return {
-    ...settings,
-    cropHeight: sourceCrop.height + inset * 2,
-    cropWidth: sourceCrop.width + inset * 2,
-    cropX: sourceCrop.x - inset,
-    cropY: sourceCrop.y - inset,
-  };
-};
-
-export const applyScreenshotRecenterGesture = ({
-  deltaX,
-  deltaY,
-  edges,
-  operation,
-  scale,
-  settings,
-  source,
-}: {
-  deltaX: number;
-  deltaY: number;
-  edges: number;
-  operation: string;
-  scale: number;
-  settings: ScreenshotOutputSettings;
-  source?: { height: number; width: number };
-}): ScreenshotOutputSettings | null => {
-  // Native gesture deltas arrive as a share of the canvas.
-  const output = screenshotOutputDimensions(settings);
-  const moveX = deltaX * output.width;
-  const moveY = deltaY * output.height;
-  return operation === "move"
-    ? {
-        ...settings,
-        cropX: settings.cropX + moveX,
-        cropY: settings.cropY + moveY,
-        imageX: settings.imageX + moveX,
-        imageY: settings.imageY + moveY,
-      }
-    : operation === "resize"
-      ? resizeRecenteredScreenshot({
-          edges,
-          scale,
-          settings,
-          source,
-        })
-      : null;
+  return Math.max(0, (crop.width - sourceCrop.width) / 2);
 };

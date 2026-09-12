@@ -37,8 +37,14 @@ export type ToolPanelHandlers = {
   onFrameSizeChange?: (size: { height?: number; width?: number }) => void;
   /** Cast the selected layer's shadow onto the canvas, or take it away. */
   onSelectionDropShadowChange?: (dropShadow: boolean) => void;
+  /** Pad the selected layer by this many output pixels on each side. */
+  onSelectionInsetChange?: (inset: number) => void;
   /** Place the selection at the size and position a field asked for. */
   onSelectionPlacementChange?: (placement: SelectionPlacementPatch) => void;
+  /** Round the selected layer's corners by this share of its shorter side. */
+  onSelectionRadiusChange?: (radius: number) => void;
+  /** Put the layer's content in the middle of its padded frame. */
+  onSelectionRecenter?: () => void;
   onSelectionReset?: () => void;
 };
 
@@ -67,9 +73,16 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.selectionDropShadow !== undefined) {
     on.onSelectionDropShadowChange?.(values.selectionDropShadow);
   }
+  if (values.selectionInset !== undefined) {
+    on.onSelectionInsetChange?.(values.selectionInset);
+  }
   if (values.selectionOutput !== undefined) {
     on.onSelectionPlacementChange?.(values.selectionOutput);
   }
+  if (values.selectionRadius !== undefined) {
+    on.onSelectionRadiusChange?.(values.selectionRadius);
+  }
+  if (values.recenterSelection) on.onSelectionRecenter?.();
   if (values.resetSelection) on.onSelectionReset?.();
 };
 

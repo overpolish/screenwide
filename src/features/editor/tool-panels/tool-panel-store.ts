@@ -21,9 +21,17 @@ export type ToolPanelSelection = {
   /** Whether this layer casts a shadow onto the canvas behind it. */
   dropShadow: boolean;
   height: number;
+  /** How far the padded frame runs past the layer's own picture, in output
+   * pixels, on each side. */
+  inset: number;
+  /** As far as the padding may be taken: the layer's shorter side. */
+  insetMaximum: number;
   /** Which of the workspace's layers this is, for wording that fits it. */
   kind: "camera" | "layer" | "primary";
   label: string;
+  /** How rounded the layer's corners are, as a share of its shorter side,
+   * 0 to 50. The same number the corner drag in the preview sets. */
+  radius: number;
   sourceHeight: number;
   sourceWidth: number;
   width: number;
@@ -87,6 +95,8 @@ export type ToolPanelPatch = Partial<
   cropSize?: { height?: number; width?: number };
   /** Size the output canvas, leaving what is in it where it sits. */
   frameSize?: { height?: number; width?: number };
+  /** Put the selected layer's content in the middle of its padded frame. */
+  recenterSelection?: true;
   /** Forget a saved background, by its id. */
   removePreset?: string;
   /** Show the whole source again, the committed crop taken away. */
@@ -99,7 +109,11 @@ export type ToolPanelPatch = Partial<
   savePreset?: BackgroundPreset;
   /** Cast the selected layer's shadow onto the canvas, or take it away. */
   selectionDropShadow?: boolean;
+  /** Pad the selected layer by this many output pixels on each side. */
+  selectionInset?: number;
   selectionOutput?: SelectionPlacementPatch;
+  /** Round the selected layer's corners by this share of its shorter side. */
+  selectionRadius?: number;
 };
 
 export type ToolPanelRequest =

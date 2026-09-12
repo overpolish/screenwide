@@ -287,7 +287,6 @@ export function useRecordingKeyboardPreviewEditing({
           minimumScale: geometry.minimumSizePercent / geometry.sizePercent,
           paneIndex: 0,
           radiusPercent: 0,
-          recenterMode: false,
           rect: geometry.rect,
         }
       : null;

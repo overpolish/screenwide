@@ -4,8 +4,7 @@
 import { ToolPanelKind } from "../../popup-panel/store";
 
 /** Every tool the editor toolbar offers, under one name each. */
-export type EditorToolId =
-  "crop" | "cursor" | "frame" | "keyboard" | "recenter" | "select";
+export type EditorToolId = "crop" | "cursor" | "frame" | "keyboard" | "select";
 
 type EditorTool = {
   /** The panel this tool opens, for the tools that have one. */
@@ -30,7 +29,6 @@ export const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
   cursor: { panel: "cursor", resetsView: true },
   frame: { panel: "frame", resetsView: true },
   keyboard: { resetsView: true },
-  recenter: { resetsView: true },
   select: { panel: "selection", resetsView: false },
 };
 

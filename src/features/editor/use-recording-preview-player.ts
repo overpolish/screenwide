@@ -11,6 +11,7 @@ import {
   stopRecordingPreviewPlayer,
 } from "./api";
 import { ScrubPhase } from "./components/scrub-timeline";
+import { PreviewZoomRequest } from "./preview-zoom-state";
 import { recordingPreviewKeyboardDeletions as keyboardDeletionsFor } from "./recording-keyboard-timeline-api";
 import { playRecordingPreview } from "./recording-preview-playback-api";
 import { RecordingPreviewPlayerEvent } from "./recording-preview-player-contract";
@@ -60,7 +61,7 @@ export function useRecordingPreviewPlayer({
   selectionTargets,
   sourceDurationMs,
   timelineEdit,
-  zoomPercent,
+  zoomRequest,
 }: {
   artifactId: number;
   audioTrackVolumes: AudioTrackVolume[];
@@ -85,7 +86,7 @@ export function useRecordingPreviewPlayer({
   selection?: RecordingPreviewSelection | null;
   selectionTargets?: RecordingPreviewSelection[] | null;
   timelineEdit?: RecordingTimelineEdit | null;
-  zoomPercent?: number;
+  zoomRequest?: PreviewZoomRequest;
 }) {
   const isPlayingRef = useRef(false);
   const wantsPlaybackRef = useRef(false);
@@ -182,7 +183,7 @@ export function useRecordingPreviewPlayer({
     selectionTargets,
     sessionIdRef,
     startedRef,
-    zoomPercent,
+    zoomRequest,
   });
   const updatePlaying = (playing: boolean) => {
     isPlayingRef.current = playing;
@@ -334,7 +335,7 @@ export function useRecordingPreviewPlayer({
             if (!disposed) setError(String(cause));
           },
           sessionId,
-          zoomPercent,
+          zoomRequest,
         });
         const latestSettingsKey = recordingPreviewSettingsKey({
           audioTrackVolumes: audioTrackVolumesRef.current,

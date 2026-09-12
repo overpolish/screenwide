@@ -6,11 +6,7 @@ import {
   commitScreenshotCrop,
   resetCommittedScreenshotCrop,
 } from "../screenshot-crop";
-import {
-  fullSourceRect,
-  sourceRect,
-  SourceRect,
-} from "../screenshot-geometry";
+import { fullSourceRect, sourceRect, SourceRect } from "../screenshot-geometry";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,

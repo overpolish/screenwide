@@ -40,7 +40,6 @@ export function useEditorWindowShortcuts({
   onMoveBackward,
   onMoveForward,
   onNudge,
-  onRecenter,
   onRedo,
   onResizeCanvas,
   onSelectTool,
@@ -64,7 +63,6 @@ export function useEditorWindowShortcuts({
   onMoveForward?: () => void;
   /** Moves the selected layer by one arrow press; `coarse` is the Shift jump. */
   onNudge?: (directionX: number, directionY: number, coarse: boolean) => void;
-  onRecenter?: () => void;
   onRedo?: () => void;
   onResizeCanvas?: () => void;
   onSelectTool?: () => void;
@@ -278,13 +276,6 @@ export function useEditorWindowShortcuts({
         consume(event);
         onTogglePlayback();
       } else if (
-        event.code === "KeyR" &&
-        onRecenter &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onRecenter();
-      } else if (
         event.code === "KeyF" &&
         onResizeCanvas &&
         !ownsTextEditingKeys(event.target)
@@ -333,7 +324,6 @@ export function useEditorWindowShortcuts({
     onMoveBackward,
     onMoveForward,
     onNudge,
-    onRecenter,
     onRedo,
     onResizeCanvas,
     onSelectTool,

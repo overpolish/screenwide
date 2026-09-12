@@ -26,23 +26,21 @@ type RecordingViewResetInputs = {
   tool: RecordingCanvasTool;
   cameraPane?: RecordingPreviewPane;
   isFrameEnabled?: boolean;
-  isRecenterEnabled?: boolean;
   isSelectEnabled?: boolean;
   onCameraOverlayReset?: (settings: CameraOverlaySettings) => void;
   onChange?: (
     track: RecordingVideoTrackId,
     next: RecordingOutputSettings[RecordingVideoTrackId],
   ) => void;
-  onRecenterReset?: () => void;
   outputs?: RecordingOutputSettings;
   screenPane?: RecordingPreviewPane;
 };
 
 /**
  * What resetting the view tool in hand means for a recording: the frame back
- * to the source size, the selection's transform or crop cleared, a baked
- * camera overlay re-fitted, or the recentre undone. The toolbar no longer
- * carries a reset; each tool's panel will, and this is what it calls.
+ * to the source size, the selection's transform or crop cleared, or a baked
+ * camera overlay re-fitted. The toolbar no longer carries a reset; each tool's
+ * panel will, and this is what it calls.
  */
 export function recordingViewReset({
   activeTrack,
@@ -50,11 +48,9 @@ export function recordingViewReset({
   cameraPane,
   isEnabled,
   isFrameEnabled = isEnabled,
-  isRecenterEnabled = false,
   isSelectEnabled = isEnabled,
   onCameraOverlayReset,
   onChange,
-  onRecenterReset,
   outputs,
   screenPane,
   tool,
@@ -64,27 +60,19 @@ export function recordingViewReset({
       ? isFrameEnabled
       : tool === "select"
         ? isSelectEnabled
-        : tool === "recenter"
-          ? isRecenterEnabled
-          : tool === "crop" && isEnabled;
+        : tool === "crop" && isEnabled;
   const targetTrack = bakeCamera && tool === "canvas" ? "primary" : activeTrack;
   const canReset =
-    tool === "recenter"
-      ? Boolean(onRecenterReset)
-      : activeTrack === "camera" && bakeCamera && tool !== "canvas"
-        ? Boolean(onCameraOverlayReset)
-        : Boolean(
-            onChange &&
-            outputs &&
-            targetTrack &&
-            (targetTrack === "primary" ? screenPane : cameraPane),
-          );
+    activeTrack === "camera" && bakeCamera && tool !== "canvas"
+      ? Boolean(onCameraOverlayReset)
+      : Boolean(
+          onChange &&
+          outputs &&
+          targetTrack &&
+          (targetTrack === "primary" ? screenPane : cameraPane),
+        );
   const reset = () => {
     if (!tool || !resetEnabled || !canReset) return;
-    if (tool === "recenter") {
-      onRecenterReset?.();
-      return;
-    }
     if (activeTrack === "camera" && bakeCamera && tool !== "canvas") {
       // The reset must be computed from the real output and camera geometry:
       // generic 16:9 defaults land the crop frame outside the camera image

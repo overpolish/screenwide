@@ -39,8 +39,11 @@ const placed = (
   selection: {
     ...placement,
     dropShadow: true,
+    inset: 0,
+    insetMaximum: 2338,
     kind: "primary",
     label: "Screen",
+    radius: 0,
     sourceHeight: 2338,
     sourceWidth: 3600,
   },

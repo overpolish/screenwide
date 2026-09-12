@@ -22,8 +22,8 @@
 //!   constructed.
 //! - [`playback_factors`] - how far each pane's decode shrinks toward its
 //!   on-screen size.
-//! - [`generate_thumbnails`] and a `source_frame_jpeg` - the timeline strip
-//!   and the one-off full-resolution frame the crop magnifier needs.
+//! - [`generate_thumbnails`] and [`source_frame_image`] - the timeline strip
+//!   and the full-resolution decoded frame used for inset analysis.
 //!
 //! Geometry, layout and settings math deliberately stay above this line, in
 //! [`super::layout`] and the shared output validation, so a new backend never
@@ -43,6 +43,6 @@ pub(super) use backend::composed_frame_image;
 #[cfg(target_os = "windows")]
 pub(crate) use backend::GpuVideoReader;
 pub(super) use backend::{
-  generate_thumbnails, playback_factors, send_frame, source_frame_jpeg, spawn_video, StillDecoder,
+  generate_thumbnails, playback_factors, send_frame, source_frame_image, spawn_video, StillDecoder,
   VideoFramePayload, NATIVE_STILLS,
 };

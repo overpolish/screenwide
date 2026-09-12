@@ -83,3 +83,41 @@ SCREENWIDE_PREVIEW_PRIVATE void clamp_editor_zoom_to_ceiling(
                   NSMakePoint(NSMidX(surface.interaction.bounds),
                               NSMidY(surface.interaction.bounds)));
 }
+
+@implementation ScreenwidePreviewInteractionView (Zoom)
+- (void)scrollWheel:(NSEvent *)event {
+  if (self.pinching) return;
+  // Discard the overlapping scroll sequence, including its momentum tail.
+  // A fresh finger scroll (or a phase-less mouse wheel) can pan again.
+  if (event.phase & NSEventPhaseBegan ||
+      (event.phase == NSEventPhaseNone &&
+       event.momentumPhase == NSEventPhaseNone))
+    self.suppressPinchScroll = NO;
+  if (self.suppressPinchScroll) return;
+  if (event.modifierFlags & NSEventModifierFlagControl) {
+    NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+    set_editor_zoom(self.surface,
+                    self.surface.editorZoom * exp(-event.scrollingDeltaY * 0.01),
+                    point);
+  } else {
+    self.surface.editorPanX += event.scrollingDeltaX;
+    self.surface.editorPanY += event.scrollingDeltaY;
+    apply_editor_transform(self.surface);
+  }
+}
+- (void)magnifyWithEvent:(NSEvent *)event {
+  BOOL finished = (event.phase & (NSEventPhaseEnded | NSEventPhaseCancelled)) != 0;
+  if (!self.pinching || (event.phase & NSEventPhaseBegan)) {
+    if (finished) return;
+    self.pinchAnchor = [self convertPoint:event.locationInWindow fromView:nil];
+    self.pinching = YES;
+  }
+  self.suppressPinchScroll = YES;
+  // Keep the same canvas point under the initial anchor for the whole pinch.
+  if (!(event.phase & NSEventPhaseCancelled))
+    set_editor_zoom(self.surface,
+                    self.surface.editorZoom * (1.0 + event.magnification),
+                    self.pinchAnchor);
+  if (finished) self.pinching = NO;
+}
+@end

@@ -7,7 +7,7 @@ import { ScreenshotLayout } from "../screenshot-output";
 export function normalizedScreenshotSelection(
   layout: ScreenshotLayout,
   output: { height: number; width: number },
-  mode: "crop" | "recenter" | "select" = "select",
+  mode: "crop" | "select" = "select",
 ) {
   const height = Math.max(1, output.height);
   const width = Math.max(1, output.width);
@@ -20,11 +20,11 @@ export function normalizedScreenshotSelection(
   const image = fractions(layout.image);
   const bounds = fractions(layout.crop);
   const sourceCrop = fractions(layout.sourceCrop);
-  const canvas = { height: 1, width: 1, x: 0, y: 0 };
   return {
-    image: mode === "crop" ? image : mode === "recenter" ? sourceCrop : image,
-    recenterBounds:
-      mode === "recenter" ? canvas : mode === "crop" ? image : undefined,
-    rect: mode === "recenter" || mode === "select" ? bounds : sourceCrop,
+    image,
+    // The crop overlay is bounded by the whole uncropped picture it is cut
+    // from; the select overlay is bounded by nothing.
+    recenterBounds: mode === "crop" ? image : undefined,
+    rect: mode === "select" ? bounds : sourceCrop,
   };
 }

@@ -7,32 +7,49 @@ import { SourceRect } from "./screenshot-geometry";
 import { EditorKind } from "./types";
 
 /**
- * The workspace's own "the crop moved, look at the inset again" call, reachable
- * from outside the preview that owns it.
+ * The workspace's own padding calls, reachable from outside the preview that
+ * owns them.
  *
- * A crop drag ends inside the preview and can call the recenter hook directly.
- * A crop committed from the tool panel arrives by another road entirely - the
- * panel window, through the editor's bridge - and has to reach the same hook,
- * so each workspace leaves its refresh here for the panel's commit to find.
+ * The analysis lives with the preview: it knows which layer is in hand, where
+ * the playhead is, and which request is still the current one. The Select
+ * panel's padding controls arrive by another road entirely - the panel window,
+ * through the editor's bridge - and have to reach the same hook, so each
+ * workspace leaves its calls here for the panel to find.
  */
-type RecenterInsetRefresh = (crop: SourceRect) => void;
+export type RecenterInsetControls = {
+  /** Detect the content and pull it to the middle of its padded frame. */
+  begin: () => void;
+  /** Read the colour behind the layer, so a pad drawn now has one to use. */
+  prepare: () => void;
+  /** Re-read the inset colour behind a crop that was just committed. */
+  refresh: (crop: SourceRect) => void;
+};
 
-const refreshers = new Map<EditorKind, RecenterInsetRefresh>();
+const workspaces = new Map<EditorKind, RecenterInsetControls>();
 
-/** Publish this workspace's refresh for as long as its preview is mounted. */
-export function useRecenterInsetRefresh(
+/** Publish this workspace's padding calls for as long as its preview is
+ * mounted. */
+export function useRecenterInsetControls(
   workspace: EditorKind,
-  refresh: RecenterInsetRefresh,
+  controls: RecenterInsetControls,
 ) {
-  const refreshRef = useRef(refresh);
-  refreshRef.current = refresh;
+  const controlsRef = useRef(controls);
+  controlsRef.current = controls;
   useEffect(() => {
-    const call: RecenterInsetRefresh = (crop) => {
-      refreshRef.current(crop);
+    const published: RecenterInsetControls = {
+      begin: () => {
+        controlsRef.current.begin();
+      },
+      prepare: () => {
+        controlsRef.current.prepare();
+      },
+      refresh: (crop) => {
+        controlsRef.current.refresh(crop);
+      },
     };
-    refreshers.set(workspace, call);
+    workspaces.set(workspace, published);
     return () => {
-      if (refreshers.get(workspace) === call) refreshers.delete(workspace);
+      if (workspaces.get(workspace) === published) workspaces.delete(workspace);
     };
   }, [workspace]);
 }
@@ -43,5 +60,15 @@ export const refreshRecenterInset = (
   workspace: EditorKind,
   crop: SourceRect,
 ) => {
-  refreshers.get(workspace)?.(crop);
+  workspaces.get(workspace)?.refresh(crop);
+};
+
+/** Detect the colour a pad about to be drawn should be filled with. */
+export const prepareRecenterInset = (workspace: EditorKind) => {
+  workspaces.get(workspace)?.prepare();
+};
+
+/** Put the layer's content in the middle of its padded frame. */
+export const recenterWorkspaceContent = (workspace: EditorKind) => {
+  workspaces.get(workspace)?.begin();
 };

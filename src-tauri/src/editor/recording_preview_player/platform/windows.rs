@@ -10,6 +10,8 @@ mod gpu_decoder;
 mod still;
 mod thumbnails;
 
+pub(crate) use thumbnails::source_frame_image;
+
 use std::{
   process::Child,
   sync::{
@@ -281,16 +283,6 @@ pub(crate) fn playback_factors(
 
 pub(crate) fn generate_thumbnails(sources: PlayerSources, count: u32, channel: Channel) {
   thumbnails::generate(sources, count, channel);
-}
-
-// Backend-parity shim; the Windows player does not call it yet.
-#[allow(dead_code)]
-pub(crate) fn source_frame_jpeg(
-  path: &std::path::Path,
-  position_ms: u64,
-  duration_ms: u64,
-) -> Result<Vec<u8>, String> {
-  thumbnails::source_frame_jpeg(path, position_ms, duration_ms)
 }
 
 pub(crate) fn composed_frame_image(

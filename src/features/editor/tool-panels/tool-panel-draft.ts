@@ -58,20 +58,33 @@ export function resolveToolPanelSnapshot(
   const {
     cropSize,
     frameSize,
+    recenterSelection: _recenterSelection,
     removePreset: _removePreset,
     resetCrop: _resetCrop,
     resetFrame: _resetFrame,
     resetSelection: _resetSelection,
     savePreset: _savePreset,
     selectionDropShadow,
+    selectionInset,
     selectionOutput,
+    selectionRadius,
     ...values
   } = draft.values;
   const resolved = { ...snapshot, ...values };
-  const selection =
-    resolved.selection && selectionDropShadow !== undefined
-      ? { ...resolved.selection, dropShadow: selectionDropShadow }
+  // A dragged inset holds its own value until the editor acknowledges it, so
+  // the knob stays under the pointer rather than snapping back a frame.
+  const held =
+    resolved.selection && selectionInset !== undefined
+      ? { ...resolved.selection, inset: selectionInset }
       : resolved.selection;
+  const rounded =
+    held && selectionRadius !== undefined
+      ? { ...held, radius: selectionRadius }
+      : held;
+  const selection =
+    rounded && selectionDropShadow !== undefined
+      ? { ...rounded, dropShadow: selectionDropShadow }
+      : rounded;
   return {
     ...resolved,
     selection,

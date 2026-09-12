@@ -7,7 +7,6 @@ import { ScreenshotOutputSettings } from "../screenshot-output";
 import {
   getRecordingRecenterAnalysis,
   recenterScreenshotContent,
-  resetScreenshotRecenter,
 } from "../screenshot-recenter";
 
 export function useRecordingRecenter({
@@ -79,12 +78,5 @@ export function useRecordingRecenter({
     analyse(false, sourceCrop, true);
   };
 
-  const reset = () => {
-    const current = currentRef.current;
-    if (!current.source) return;
-    requestRef.current = null;
-    onOutputChange?.(resetScreenshotRecenter(current.output, current.source));
-  };
-
-  return { begin, prepare, refresh, reset };
+  return { begin, prepare, refresh };
 }

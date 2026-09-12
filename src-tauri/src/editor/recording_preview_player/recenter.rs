@@ -21,16 +21,12 @@ pub async fn get_recording_content_bounds(
   }
   tauri::async_runtime::spawn_blocking(move || {
     let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
-    let encoded =
-      platform::source_frame_jpeg(&sources.screen_path, position_ms, sources.duration_ms)?;
-    let rgba = image::load_from_memory(&encoded)
-      .map_err(|error| error.to_string())?
-      .into_rgba8();
-    let (width, height) = rgba.dimensions();
+    let frame =
+      platform::source_frame_image(&sources.screen_path, position_ms, sources.duration_ms)?;
     Ok(crate::editor::commands::recenter::analyse(
-      rgba.as_raw(),
-      width,
-      height,
+      &frame.rgba,
+      frame.width,
+      frame.height,
       source_crop,
       24,
     ))
@@ -38,3 +34,7 @@ pub async fn get_recording_content_bounds(
   .await
   .map_err(|error| error.to_string())?
 }
+
+#[cfg(all(test, target_os = "macos"))]
+#[path = "recenter_tests.rs"]
+mod tests;

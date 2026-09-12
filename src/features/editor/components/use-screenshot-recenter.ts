@@ -8,7 +8,6 @@ import { ScreenshotOutputSettings } from "../screenshot-output";
 import {
   getScreenshotRecenterAnalysis,
   recenterScreenshotContent,
-  resetScreenshotRecenter,
   ScreenshotRecenterAnalysis,
 } from "../screenshot-recenter";
 
@@ -133,13 +132,5 @@ export function useScreenshotRecenter({
         console.error("Could not refresh screenshot inset colour", error);
       });
   };
-  const reset = () => {
-    if (!selectedItem || !selectedOutput) return;
-    analysesRef.current.delete(selectedItem.id);
-    onOutputChange?.(
-      resetScreenshotRecenter(selectedOutput, selectedItem),
-      selectedItem.id,
-    );
-  };
-  return { begin, prepare, refresh, reset };
+  return { begin, prepare, refresh };
 }

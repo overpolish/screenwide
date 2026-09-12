@@ -12,10 +12,13 @@ mod composition;
 mod cursor;
 mod image;
 mod scrubber;
+mod source_frame;
 mod still;
 mod still_decode;
 mod thumbnails;
 mod video;
+
+pub(crate) use source_frame::source_frame_image;
 
 use std::{
   process::Child,

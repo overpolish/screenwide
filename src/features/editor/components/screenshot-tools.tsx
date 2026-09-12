@@ -1,20 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
+import { Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 
 import { PreviewToolToggle } from "./preview-tool-toggle";
 
-export type ScreenshotTool = "canvas" | "crop" | "recenter" | "select" | null;
+export type ScreenshotTool = "canvas" | "crop" | "select" | null;
 
 type ScreenshotToolActions = {
   /** The layer a crop falls back to when nothing is selected. */
   newestItemId: number | null;
   selectedItemId: number | null;
-  setRecenterSelected: (selected: boolean) => void;
   setTool: (tool: ScreenshotTool) => void;
   tool: ScreenshotTool;
   onSelectedItemChange?: (itemId: number | null) => void;
@@ -32,7 +31,6 @@ export function useScreenshotTools({
   newestItemId,
   onSelectedItemChange,
   selectedItemId,
-  setRecenterSelected,
   setTool,
   tool,
 }: ScreenshotToolActions): ReactNode {
@@ -40,14 +38,12 @@ export function useScreenshotTools({
     newestItemId,
     onSelectedItemChange,
     selectedItemId,
-    setRecenterSelected,
     setTool,
   });
   actionsRef.current = {
     newestItemId,
     onSelectedItemChange,
     selectedItemId,
-    setRecenterSelected,
     setTool,
   };
   const chooseSelectTool = useCallback((selected: boolean) => {
@@ -61,9 +57,6 @@ export function useScreenshotTools({
     if (actions.selectedItemId === null)
       actions.onSelectedItemChange?.(actions.newestItemId);
     actions.setTool(selected ? "crop" : null);
-  }, []);
-  const chooseRecenterTool = useCallback((selected: boolean) => {
-    actionsRef.current.setRecenterSelected(selected);
   }, []);
 
   return useMemo(
@@ -100,23 +93,8 @@ export function useScreenshotTools({
         >
           <Crop />
         </PreviewToolToggle>
-        <PreviewToolToggle
-          isSelected={tool === "recenter"}
-          label="Recenter"
-          name="Recenter screenshot"
-          onSelectedChange={chooseRecenterTool}
-          shortcut="R"
-        >
-          <CircleDotDashed />
-        </PreviewToolToggle>
       </ButtonGroup>
     ),
-    [
-      chooseCanvasTool,
-      chooseCropTool,
-      chooseRecenterTool,
-      chooseSelectTool,
-      tool,
-    ],
+    [chooseCanvasTool, chooseCropTool, chooseSelectTool, tool],
   );
 }

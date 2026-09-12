@@ -12,11 +12,7 @@ import {
   screenshotSourceCrop,
   withScreenshotSourceCrop,
 } from "./screenshot-output-settings";
-import {
-  applyScreenshotRecenterGesture,
-  recenterScreenshotContent,
-  resetScreenshotRecenter,
-} from "./screenshot-recenter";
+import { recenterScreenshotContent } from "./screenshot-recenter";
 
 const expectRectClose = (
   actual: { height: number; width: number; x: number; y: number } | null,
@@ -55,8 +51,8 @@ describe("persisted screenshot source crop", () => {
   });
 });
 
-describe("Crop and Recenter composition", () => {
-  it("describes Recenter as an outer frame around fixed visible content", () => {
+describe("Crop and padding composition", () => {
+  it("describes the padded frame as the layer the Select tool places", () => {
     const selection = normalizedScreenshotSelection(
       {
         crop: { height: 600, width: 600, x: 200, y: 200 },
@@ -64,7 +60,7 @@ describe("Crop and Recenter composition", () => {
         sourceCrop: { height: 400, width: 400, x: 300, y: 300 },
       },
       { height: 1_000, width: 1_000 },
-      "recenter",
+      "select",
     );
 
     expect(selection.rect).toEqual({
@@ -74,122 +70,15 @@ describe("Crop and Recenter composition", () => {
       y: 0.2,
     });
     expect(selection.image).toEqual({
-      height: 0.4,
-      width: 0.4,
-      x: 0.3,
-      y: 0.3,
-    });
-    expect(selection.recenterBounds).toEqual({
       height: 1,
       width: 1,
       x: 0,
       y: 0,
     });
+    expect(selection.recenterBounds).toBeUndefined();
   });
 
-  it("resizes the Recenter inset without changing the visible source", () => {
-    const source = { height: 1_000, width: 1_000 };
-    const settings = withScreenshotSourceCrop(
-      {
-        ...defaultScreenshotOutput(1_000, 1_000),
-        cropHeight: 400,
-        cropWidth: 400,
-        cropX: 300,
-        cropY: 300,
-      },
-      sourceRect({ height: 0.4, width: 0.4, x: 0.3, y: 0.3 }),
-    );
-    const before = screenshotLayout(source, settings);
-
-    const resized = applyScreenshotRecenterGesture({
-      deltaX: 0,
-      deltaY: 0,
-      edges: 2,
-      operation: "resize",
-      scale: 1.5,
-      settings,
-      source,
-    });
-
-    expect(resized).not.toBeNull();
-    if (!resized) throw new Error("Expected Recenter resize settings");
-    expect(resized.sourceCrop).toEqual(settings.sourceCrop);
-    expect(resized.imageWidth).toBe(settings.imageWidth);
-    expect(resized.imageX).toBe(settings.imageX);
-    expect(resized.imageY).toBe(settings.imageY);
-    const after = screenshotLayout(source, resized);
-    expectRectClose(after.sourceCrop, before.sourceCrop);
-    expectRectClose(after.crop, {
-      height: 600,
-      width: 600,
-      x: 200,
-      y: 200,
-    });
-  });
-
-  it("clamps a growing Recenter inset uniformly to the canvas", () => {
-    const source = { height: 1_000, width: 1_000 };
-    const settings = withScreenshotSourceCrop(
-      {
-        ...defaultScreenshotOutput(1_000, 1_000),
-        cropHeight: 800,
-        cropWidth: 800,
-        cropX: 100,
-        cropY: 100,
-      },
-      sourceRect({ height: 0.8, width: 0.8, x: 0.1, y: 0.1 }),
-    );
-
-    const resized = applyScreenshotRecenterGesture({
-      deltaX: 0,
-      deltaY: 0,
-      edges: 8,
-      operation: "resize",
-      scale: 10,
-      settings,
-      source,
-    });
-
-    expect(resized).not.toBeNull();
-    if (!resized) throw new Error("Expected clamped Recenter settings");
-    expectRectClose(screenshotLayout(source, resized).crop, {
-      height: 1_000,
-      width: 1_000,
-      x: 0,
-      y: 0,
-    });
-  });
-
-  it("contracts the Recenter frame no farther than the fixed content", () => {
-    const source = { height: 1_000, width: 1_000 };
-    const settings = withScreenshotSourceCrop(
-      {
-        ...defaultScreenshotOutput(1_000, 1_000),
-        cropHeight: 800,
-        cropWidth: 800,
-        cropX: 100,
-        cropY: 100,
-      },
-      sourceRect({ height: 0.2, width: 0.2, x: 0.4, y: 0.4 }),
-    );
-
-    const resized = applyScreenshotRecenterGesture({
-      deltaX: 0,
-      deltaY: 0,
-      edges: 1,
-      operation: "resize",
-      scale: 0,
-      settings,
-      source,
-    });
-
-    expect(resized).not.toBeNull();
-    if (!resized) throw new Error("Expected contracted Recenter settings");
-    const layout = screenshotLayout(source, resized);
-    expectRectClose(layout.crop, layout.sourceCrop);
-  });
-
-  it("writes Recenter into Crop and removes only its inset on reset", () => {
+  it("writes the detected content into the layer's crop", () => {
     const cropped = withScreenshotSourceCrop(
       {
         ...defaultScreenshotOutput(1_000, 1_000),
@@ -210,24 +99,9 @@ describe("Crop and Recenter composition", () => {
       y: 0.1,
     });
     expect(screenshotSourceCrop(recentered)).toEqual(detectedCrop);
-
-    const inset = {
-      ...recentered,
-      cropHeight: 600,
-      cropWidth: 600,
-      cropX: 200,
-      cropY: 200,
-    };
-    const reset = resetScreenshotRecenter(inset, {
-      height: 1_000,
-      width: 1_000,
-    });
-    expect(reset.sourceCrop).toEqual(detectedCrop);
-    expect(reset.recenterInsetColor).toBeNull();
-    expectRectClose(
-      screenshotLayout({ height: 1_000, width: 1_000 }, reset).crop,
-      screenshotLayout({ height: 1_000, width: 1_000 }, reset).sourceCrop,
-    );
+    // The colour the pad is filled with survives: it belongs to the layer
+    // rather than to any one inset.
+    expect(recentered.recenterInsetColor).toBe("#ffffff");
   });
 
   it("preserves the configured inset when Recenter detects new content", () => {

@@ -3,7 +3,7 @@
 
 import { useRef, useState } from "react";
 
-import { useRecenterInsetRefresh } from "../recenter-inset-channel";
+import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
   scaledDimensions,
   scaledVideoDimensions,
@@ -18,6 +18,7 @@ import { EditorToolId } from "../tool-panels/tool-registry";
 import { useCanvasTool } from "../tool-panels/use-canvas-tool";
 import { useToolPanelFollowsTool } from "../tool-panels/use-tool-panel-follows-tool";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
+import { usePreviewZoom } from "../use-preview-zoom";
 
 import {
   RecordingSectionProps,
@@ -59,7 +60,8 @@ export function ScreenshotSection({
   screenshotOutput,
   selectedItemId = null,
 }: ScreenshotSectionProps) {
-  const [zoomPercent, setZoomPercent] = useState(100);
+  const { reportZoom, requestZoom, zoomPercent, zoomRequest } =
+    usePreviewZoom();
   const [activeTool, setActiveTool] = useCanvasTool<
     Exclude<ScreenshotTool, null>
   >("screenshot", "select");
@@ -118,10 +120,6 @@ export function ScreenshotSection({
     selectedItem,
     selectedOutput,
   });
-  const setRecenterSelected = (selected: boolean) => {
-    setTool(selected ? "recenter" : null);
-    if (selected) recenter.prepare();
-  };
   // A keyboard nudge writes exactly the fields a select-tool drag writes - the
   // `move` branch of `selectionGesture` in preview-viewport.tsx. It is not
   // wrapped in an edit gesture on purpose: the history hook already groups
@@ -173,7 +171,6 @@ export function ScreenshotSection({
     newestItemId,
     onSelectedItemChange,
     selectedItemId,
-    setRecenterSelected,
     setTool,
     tool,
   });
@@ -187,9 +184,9 @@ export function ScreenshotSection({
   const leaveCropTool = () => {
     setTool((current) => (current === "crop" ? null : current));
   };
-  // The panel's commit reaches the recenter analysis through this, the same
-  // refresh a crop drag ends with.
-  useRecenterInsetRefresh("screenshot", recenter.refresh);
+  // The Select panel's padding controls reach this workspace's analysis
+  // through here, alongside the refresh a crop drag ends with.
+  useRecenterInsetControls("screenshot", recenter);
   useEditorWindowShortcuts({
     onConfirm: isCropping ? leaveCropTool : undefined,
     onDelete: deleteSelectedLayer,
@@ -204,9 +201,6 @@ export function ScreenshotSection({
       tool === "select" && selectedItem && selectedOutput
         ? nudgeSelectedLayer
         : undefined,
-    onRecenter: () => {
-      setRecenterSelected(tool !== "recenter");
-    },
     onResizeCanvas: () => {
       setTool((current) => (current === "canvas" ? null : "canvas"));
     },
@@ -227,7 +221,6 @@ export function ScreenshotSection({
         artifactId={artifact.id}
         isEditing={tool === "crop"}
         isExportOpen={isExportOpen}
-        isRecentering={tool === "recenter"}
         isResizingCanvas={tool === "canvas"}
         isSaving={isSaving}
         isSelecting={tool === "select"}
@@ -241,15 +234,14 @@ export function ScreenshotSection({
         onItemSelect={onSelectedItemChange}
         onOutputChange={onOutputChange}
         onRadiusChangeEnd={onRadiusChangeEnd}
-        onRecenter={recenter.begin}
-        onZoomChange={setZoomPercent}
+        onZoomChange={reportZoom}
         screenshotOutput={screenshotOutput}
         selectedItemId={selectedItemId}
-        zoomPercent={zoomPercent}
+        zoomRequest={zoomRequest}
       />
       <ScreenshotStatusBar
         height={outputDimensions.height}
-        onZoomChange={setZoomPercent}
+        onZoomChange={requestZoom}
         width={outputDimensions.width}
         zoomPercent={zoomPercent}
       />

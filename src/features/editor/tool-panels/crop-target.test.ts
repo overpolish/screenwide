@@ -9,12 +9,8 @@ import { centredSourceCrop } from "./crop-target";
 
 const source = { height: 1000, width: 2000 };
 
-const rect = (value: {
-  height: number;
-  width: number;
-  x: number;
-  y: number;
-}) => sourceRect(value);
+const rect = (value: { height: number; width: number; x: number; y: number }) =>
+  sourceRect(value);
 
 describe("centredSourceCrop", () => {
   it("grows and shrinks about the crop's own centre", () => {

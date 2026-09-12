@@ -67,7 +67,7 @@ export const WithoutCursorData: Story = {
 };
 
 /** The screen track of a recording, at the size and position the preview
- * would be showing it. */
+ * would be showing it, padded out past its own picture. */
 export const Selection: Story = {
   args: { tool: "selection", workspace: "recording" },
   beforeEach: () => {
@@ -78,14 +78,17 @@ export const Selection: Story = {
       isSaving: false,
       selection: {
         dropShadow: true,
-        height: 2338,
+        height: 2458,
+        inset: 60,
+        insetMaximum: 2338,
         kind: "primary",
         label: "Screen",
+        radius: 8,
         sourceHeight: 2338,
         sourceWidth: 3600,
-        width: 3600,
-        x: 0,
-        y: 0,
+        width: 3720,
+        x: -60,
+        y: -60,
       },
     });
   },

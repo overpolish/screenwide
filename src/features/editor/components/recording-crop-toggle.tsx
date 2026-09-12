@@ -1,19 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CircleDotDashed, Crop, MousePointer2, ScanSquare } from "lucide-react";
+import { Crop, MousePointer2, ScanSquare } from "lucide-react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 
 import { PreviewToolToggle } from "./preview-tool-toggle";
 
-export type RecordingCanvasTool =
-  "canvas" | "crop" | "recenter" | "select" | null;
+export type RecordingCanvasTool = "canvas" | "crop" | "select" | null;
 
 export function RecordingCanvasTools({
   isEnabled,
   isFrameEnabled = isEnabled,
-  isRecenterEnabled = false,
   isSelectEnabled = isEnabled,
   onToolChange,
   tool,
@@ -22,7 +20,6 @@ export function RecordingCanvasTools({
   onToolChange: (tool: RecordingCanvasTool) => void;
   tool: RecordingCanvasTool;
   isFrameEnabled?: boolean;
-  isRecenterEnabled?: boolean;
   isSelectEnabled?: boolean;
 }) {
   return (
@@ -66,18 +63,6 @@ export function RecordingCanvasTools({
         shortcut="C"
       >
         <Crop />
-      </PreviewToolToggle>
-      <PreviewToolToggle
-        isDisabled={!isRecenterEnabled}
-        isSelected={tool === "recenter" && isRecenterEnabled}
-        label="Recenter from current frame"
-        name="Recenter recording from current frame"
-        onSelectedChange={(selected) => {
-          onToolChange(selected ? "recenter" : null);
-        }}
-        shortcut="R"
-      >
-        <CircleDotDashed />
       </PreviewToolToggle>
     </ButtonGroup>
   );

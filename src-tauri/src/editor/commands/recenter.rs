@@ -1,9 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::image_analysis::{detect_background_where, ImageRegion, ImageView};
+use crate::image_analysis::ImageRegion;
+
 use crate::ruler::analysis::{compute_gradients, detect_boxes, ComponentBox};
 use crate::screenshots::NormalizedSourceRect;
+
+#[path = "recenter_background.rs"]
+mod background;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -76,32 +80,9 @@ fn analyse_cropped(
       height: bottom.saturating_sub(top),
     }
   });
-  let view = ImageView {
-    height,
-    rgba,
-    width,
-  };
-  let region = ImageRegion {
-    height,
-    width,
-    x: 0,
-    y: 0,
-  };
-  let step = width.min(height).div_ceil(256).max(1);
-  let sample = detect_background_where(view, region, step, |x, y| {
-    bounds.is_none_or(|content| {
-      x < content.x
-        || x >= content.x + content.width
-        || y < content.y
-        || y >= content.y + content.height
-    })
-  })
-  .or_else(|| detect_background_where(view, region, step, |_, _| true))?;
+  let colour = background::detect(rgba, width, height)?;
   Some(RecenterAnalysis {
-    background_color: format!(
-      "#{:02x}{:02x}{:02x}",
-      sample.colour[0], sample.colour[1], sample.colour[2]
-    ),
+    background_color: format!("#{:02x}{:02x}{:02x}", colour[0], colour[1], colour[2]),
     bounds,
   })
 }

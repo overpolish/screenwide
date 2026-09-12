@@ -13,6 +13,7 @@ import {
   resetRecordingPreviewView,
   setRecordingPreviewFitBasis,
 } from "./preview-view-api";
+import { PreviewZoomRequest } from "./preview-zoom-state";
 import { RecordingOutputSettings } from "./screenshot-output";
 import { CameraOverlaySettings } from "./types";
 import { useNativePreviewFit } from "./use-native-preview-fit";
@@ -234,7 +235,7 @@ export function useRecordingPreviewSurface({
   selectionTargets,
   sessionIdRef,
   startedRef,
-  zoomPercent,
+  zoomRequest,
 }: {
   bakeCamera: boolean;
   cameraCanvasRef: RefObject<HTMLCanvasElement | null>;
@@ -263,7 +264,7 @@ export function useRecordingPreviewSurface({
   onZoomChange?: (zoomPercent: number) => void;
   selection?: RecordingPreviewSelection | null;
   selectionTargets?: RecordingPreviewSelection[] | null;
-  zoomPercent?: number;
+  zoomRequest?: PreviewZoomRequest;
 }) {
   const compositionRef = useRef({ bakeCamera, cameraOverlay, recordingOutput });
   const selectionRef = useRef(selection);
@@ -278,7 +279,7 @@ export function useRecordingPreviewSurface({
   const layoutRequestIdRef = useRef(0);
   const measureRef = useRef<() => void>(() => undefined);
   const layoutRef = useRef<Promise<unknown>>(Promise.resolve());
-  const lastNativeZoomRef = useRef<number | undefined>(undefined);
+  const lastZoomRequestRef = useRef<PreviewZoomRequest | undefined>(undefined);
   compositionRef.current = { bakeCamera, cameraOverlay, recordingOutput };
 
   useEffect(() => {
@@ -294,7 +295,6 @@ export function useRecordingPreviewSurface({
           Number.isFinite(event.payload.zoomPercent)
         ) {
           const roundedZoom = Math.round(event.payload.zoomPercent);
-          lastNativeZoomRef.current = roundedZoom;
           onZoomChange?.(roundedZoom);
         }
       },
@@ -330,19 +330,20 @@ export function useRecordingPreviewSurface({
       !isEnabled ||
       !nativeEditorOwnsLayout ||
       isEditorSuspended ||
-      zoomPercent === undefined ||
+      zoomRequest === undefined ||
       !startedRef.current
     )
       return;
-    // React only ever holds native's zoom rounded to a whole percent. A value
-    // equal to the last one native reported is that echo, not a new request;
-    // sending it back would replace native's exact zoom with the rounded one.
-    if (zoomPercent === lastNativeZoomRef.current) return;
-    void setRecordingPreviewZoom(sessionIdRef.current, zoomPercent).catch(
-      (cause: unknown) => {
-        onError(String(cause));
-      },
-    );
+    // Reports never create requests. Consume each explicit request once,
+    // including across rerenders caused by newer native transform events.
+    if (zoomRequest === lastZoomRequestRef.current) return;
+    lastZoomRequestRef.current = zoomRequest;
+    void setRecordingPreviewZoom(
+      sessionIdRef.current,
+      zoomRequest.percent,
+    ).catch((cause: unknown) => {
+      onError(String(cause));
+    });
   }, [
     isEditorSuspended,
     isEnabled,
@@ -350,7 +351,7 @@ export function useRecordingPreviewSurface({
     onError,
     sessionIdRef,
     startedRef,
-    zoomPercent,
+    zoomRequest,
   ]);
 
   useEffect(() => {

@@ -17,6 +17,7 @@ import {
   resetScreenshotPreviewView,
   setScreenshotPreviewFitBasis,
 } from "./preview-view-api";
+import { PreviewZoomRequest } from "./preview-zoom-state";
 import {
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
@@ -69,7 +70,7 @@ export function useScreenshotPreviewSurface({
   selection,
   selectionTargets,
   sourceKey,
-  zoomPercent,
+  zoomRequest,
 }: {
   artifactId: number;
   canvasRef: RefObject<HTMLElement | null>;
@@ -97,7 +98,7 @@ export function useScreenshotPreviewSurface({
     typeof layoutScreenshotPreviewSurface
   >[0]["selectionTargets"];
   sourceKey?: string;
-  zoomPercent?: number;
+  zoomRequest?: PreviewZoomRequest;
 }) {
   const sessionIdRef = useRef(0);
   const startedRef = useRef(false);
@@ -107,7 +108,7 @@ export function useScreenshotPreviewSurface({
   interactionOutputRef.current = interactionOutput ?? output;
   const paneCountRef = useRef(paneCount);
   paneCountRef.current = paneCount;
-  const lastNativeZoomRef = useRef<number | undefined>(undefined);
+  const lastZoomRequestRef = useRef<PreviewZoomRequest | undefined>(undefined);
   const onZoomChangeRef = useRef(onZoomChange);
   onZoomChangeRef.current = onZoomChange;
   const onPaneFitChangeRef = useRef(onPaneFitChange);
@@ -173,7 +174,6 @@ export function useScreenshotPreviewSurface({
           Number.isFinite(event.payload.zoomPercent)
         ) {
           const roundedZoom = Math.round(event.payload.zoomPercent);
-          lastNativeZoomRef.current = roundedZoom;
           onZoomChangeRef.current?.(roundedZoom);
         }
       },
@@ -277,18 +277,19 @@ export function useScreenshotPreviewSurface({
       !isEnabled ||
       isEditorSuspended ||
       !startedRef.current ||
-      zoomPercent === undefined ||
+      zoomRequest === undefined ||
       sessionIdRef.current === 0
     )
       return;
-    // React only ever holds native's zoom rounded to a whole percent. A value
-    // equal to the last one native reported is that echo, not a new request;
-    // sending it back would replace native's exact zoom with the rounded one.
-    if (zoomPercent === lastNativeZoomRef.current) return;
-    void setScreenshotPreviewZoom(sessionIdRef.current, zoomPercent).catch(
-      () => undefined,
-    );
-  }, [isEditorSuspended, isEnabled, zoomPercent]);
+    // Reports never create requests. Consume each explicit request once,
+    // including across rerenders caused by newer native transform events.
+    if (zoomRequest === lastZoomRequestRef.current) return;
+    lastZoomRequestRef.current = zoomRequest;
+    void setScreenshotPreviewZoom(
+      sessionIdRef.current,
+      zoomRequest.percent,
+    ).catch(() => undefined);
+  }, [isEditorSuspended, isEnabled, zoomRequest]);
 
   useEffect(() => {
     if (!isEnabled) return;

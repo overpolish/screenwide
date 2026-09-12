@@ -37,7 +37,6 @@ export function normalizedRecordingSelection({
     paneIndex,
     radiusPercent: output.radiusPercent,
     recenterBounds: selection.recenterBounds,
-    recenterMode: mode === "recenter",
     rect: selection.rect,
   };
 }

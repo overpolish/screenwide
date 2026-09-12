@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  prepareRecenterInset,
+  recenterWorkspaceContent,
+} from "../recenter-inset-channel";
+import { screenshotLayout } from "../screenshot-layout";
+import {
   RecordingOutputSettings,
   resetScreenshotTransform,
   ScreenshotOutputSettings,
@@ -9,10 +14,14 @@ import {
   ScreenshotWorkspaceOutputSettings,
 } from "../screenshot-output";
 import {
+  insetScreenshotPadding,
+  screenshotPaddingInset,
+} from "../screenshot-recenter";
+import {
   selectionPlacement,
   withSelectionPlacement,
 } from "../selection-placement";
-import { EditorArtifact, RecordingVideoTrackId } from "../types";
+import { EditorArtifact, EditorKind, RecordingVideoTrackId } from "../types";
 
 import { ToolPanelHandlers } from "./tool-panel-bridge";
 import { ToolPanelSelection } from "./tool-panel-store";
@@ -27,6 +36,10 @@ import { ToolPanelSelection } from "./tool-panel-store";
  */
 export type EditorSelectionTarget = {
   apply: (next: ScreenshotOutputSettings) => void;
+  /** Pad the layer by this many output pixels on each side. */
+  applyInset: (inset: number) => void;
+  /** Put the layer's content in the middle of its padded frame. */
+  recenter: () => void;
   selection: ToolPanelSelection;
   settings: ScreenshotOutputSettings;
   source: { height: number; width: number };
@@ -56,22 +69,48 @@ const target = ({
   label,
   settings,
   source,
-}: Omit<EditorSelectionTarget, "selection"> & {
+  workspace,
+}: Pick<EditorSelectionTarget, "apply" | "settings" | "source"> & {
   kind: ToolPanelSelection["kind"];
   label: string;
-}): EditorSelectionTarget => ({
-  apply,
-  selection: {
-    ...selectionPlacement(settings),
-    dropShadow: settings.dropShadow,
-    kind,
-    label,
-    sourceHeight: source.height,
-    sourceWidth: source.width,
-  },
-  settings,
-  source,
-});
+  /** The workspace whose padding analysis this layer's pad is filled from, or
+   * null where a layer there carries no pad. */
+  workspace: EditorKind | null;
+}): EditorSelectionTarget => {
+  const layout = screenshotLayout(source, settings);
+  return {
+    apply,
+    applyInset: (inset) => {
+      apply(insetScreenshotPadding(settings, source, inset));
+      // The pad is filled with the colour detected behind the content, so the
+      // first pixel of padding asks for that colour if none was read yet. It
+      // is asked for after the padding is committed, so the colour lands on
+      // the padded layer rather than on the one before it.
+      if (inset > 0 && !settings.recenterInsetColor && workspace)
+        prepareRecenterInset(workspace);
+    },
+    recenter: () => {
+      if (workspace) recenterWorkspaceContent(workspace);
+    },
+    selection: {
+      ...selectionPlacement(settings),
+      dropShadow: settings.dropShadow,
+      inset: Math.round(screenshotPaddingInset(settings, source)),
+      // The padding is measured against the layer's own picture rather than
+      // its padded frame, so the range does not move as the knob is dragged.
+      insetMaximum: Math.round(
+        Math.min(layout.sourceCrop.width, layout.sourceCrop.height),
+      ),
+      kind,
+      label,
+      radius: settings.radiusPercent,
+      sourceHeight: source.height,
+      sourceWidth: source.width,
+    },
+    settings,
+    source,
+  };
+};
 
 const recordingSelectionTarget = (
   inputs: SelectionTargetInputs,
@@ -100,6 +139,9 @@ const recordingSelectionTarget = (
     label: track === "primary" ? "Screen" : "Camera",
     settings: output[track],
     source,
+    // Only the screen track carries a pad, so only it has a colour to fill
+    // one with.
+    workspace: track === "primary" ? "recording" : null,
   });
 };
 
@@ -124,6 +166,7 @@ const screenshotSelectionTarget = (
       artifact.items.length > 1 ? `Layer ${String(index + 1)}` : "Screenshot",
     settings: screenshotWorkspaceItemOutput(output, item.id),
     source: { height: item.height, width: item.width },
+    workspace: "screenshot",
   });
 };
 
@@ -149,7 +192,10 @@ export const selectionPanelHandlers = (
 ): Pick<
   ToolPanelHandlers,
   | "onSelectionDropShadowChange"
+  | "onSelectionInsetChange"
   | "onSelectionPlacementChange"
+  | "onSelectionRadiusChange"
+  | "onSelectionRecenter"
   | "onSelectionReset"
 > => ({
   // The shadow is the layer's own, cast onto whatever the canvas is wearing,
@@ -157,6 +203,11 @@ export const selectionPanelHandlers = (
   onSelectionDropShadowChange: (dropShadow) => {
     if (!target) return;
     target.apply({ ...target.settings, dropShadow });
+  },
+  // The pad is the layer's own frame grown past its picture, so it travels
+  // with the layer's output the way its size and position do.
+  onSelectionInsetChange: (inset) => {
+    target?.applyInset(inset);
   },
   onSelectionPlacementChange: (placement) => {
     console.debug("[selection-panel] placement request", {
@@ -172,6 +223,16 @@ export const selectionPanelHandlers = (
     );
     console.debug("[selection-panel] applying", selectionPlacement(next));
     target.apply(next);
+  },
+  onSelectionRadiusChange: (radius) => {
+    if (!target) return;
+    target.apply({
+      ...target.settings,
+      radiusPercent: Math.min(50, Math.max(0, radius)),
+    });
+  },
+  onSelectionRecenter: () => {
+    target?.recenter();
   },
   // The reset the Select tool has always had: the layer back to the framing
   // its source arrived in, its crop kept.

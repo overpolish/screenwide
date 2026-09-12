@@ -131,6 +131,9 @@ typedef struct {
 @property(nonatomic, strong) NSTrackingArea *selectionTrackingArea;
 @property(nonatomic) BOOL cursorRectsDisabled;
 @property(nonatomic) BOOL panning;
+@property(nonatomic) BOOL pinching;
+@property(nonatomic) BOOL suppressPinchScroll;
+@property(nonatomic) NSPoint pinchAnchor;
 @end
 
 @interface ScreenwidePreviewInteractionView (Editor)

@@ -14,6 +14,7 @@ import {
   setRecordingPreviewKeyboardEffects,
   setRecordingPreviewZoom,
 } from "./api";
+import { PreviewZoomRequest } from "./preview-zoom-state";
 import { setRecordingPreviewDeletedKeyboardShortcuts } from "./recording-keyboard-timeline-api";
 
 /**
@@ -27,18 +28,18 @@ export const pushRecordingPreviewSessionState = ({
   nativeEditorOwnsLayout,
   onError,
   sessionId,
-  zoomPercent,
+  zoomRequest,
 }: {
   isEditorSuspended: boolean;
   nativeEditorOwnsLayout: boolean;
   onError: (cause: unknown) => void;
   sessionId: number;
-  zoomPercent: number | undefined;
+  zoomRequest: PreviewZoomRequest | undefined;
 }) => {
   if (isEditorSuspended)
     void setRecordingPreviewEditorSuspended(sessionId, true).catch(onError);
-  else if (nativeEditorOwnsLayout && zoomPercent !== undefined)
-    void setRecordingPreviewZoom(sessionId, zoomPercent).catch(onError);
+  else if (nativeEditorOwnsLayout && zoomRequest !== undefined)
+    void setRecordingPreviewZoom(sessionId, zoomRequest.percent).catch(onError);
 };
 
 /**
