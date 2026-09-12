@@ -517,6 +517,7 @@ export const saveExport = ({
   });
 
 export {
+  browseBackgroundImage,
   browseExportDirectory,
   cancelExportJob,
   copyEditorToClipboard,

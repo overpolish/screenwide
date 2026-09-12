@@ -6,7 +6,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import { EditorKind } from "../editor/types";
 
-export type PopupPanelIcon = "clipboard" | "image" | "scrolling";
+export type PopupPanelIcon = "clipboard" | "image" | "scrolling" | "trash";
 
 type PopupPanelMode = "menu" | "select";
 

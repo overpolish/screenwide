@@ -1,11 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod background_image;
 mod clipboard;
 pub(crate) mod desktop;
 pub(crate) mod encoding;
+#[cfg(target_os = "macos")]
+mod image_decode_macos;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod mesh;
+mod mesh_generator;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod mesh_gpu;
 mod naming;
@@ -22,6 +26,9 @@ pub(crate) mod scrolling;
 mod source_crop;
 #[cfg(test)]
 mod tests;
+pub(crate) mod thumbnail;
+#[cfg(target_os = "macos")]
+pub(crate) mod video_still_macos;
 
 use std::path::PathBuf;
 
@@ -35,14 +42,17 @@ use crate::recording::Region;
 pub(crate) use crate::capture_geometry::physical_capture_rect;
 #[cfg(test)]
 pub(crate) use crate::capture_geometry::CaptureRect;
+pub(crate) use background_image::{background_image_canvas, background_image_swatch};
 pub(crate) use clipboard::open_in_export as open_clipboard_in_export;
 pub use encoding::encode_png;
-#[cfg(not(target_os = "macos"))]
 pub use encoding::rounded_corners;
 #[cfg(target_os = "windows")]
 pub(crate) use mesh::validate_mesh;
 #[cfg(test)]
 pub(crate) use mesh::MeshGradientPoint;
+pub(crate) use mesh_generator::default_generator as default_mesh_generator;
+#[cfg(target_os = "windows")]
+pub(crate) use mesh_generator::{generator_palette, mesh_generator};
 pub use naming::{capture_file_stem, screenshot_directory, unique_path};
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub use output::compose_screenshot;
@@ -86,8 +96,11 @@ pub(crate) fn validate_output_settings(
     return Err("The output corner radius is not valid".to_owned());
   }
   match settings.background_type.as_str() {
-    "solid" => Ok(()),
+    // A picture that cannot be loaded falls back to the solid colour at
+    // render time, so a missing file is not a settings error.
+    "image" | "solid" => Ok(()),
     "mesh" => mesh::validate_mesh(
+      &settings.mesh_generator,
       &settings.mesh_colors,
       &settings.mesh_points,
       settings.mesh_warp_percent,

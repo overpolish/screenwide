@@ -4,6 +4,10 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import {
+  Background,
+  BackgroundPreset,
+} from "../../../components/shared/background-picker/background";
 import { DEFAULT_CURSOR_EFFECTS } from "../recording-export-settings";
 import { SelectionPlacementPatch } from "../selection-placement";
 import { CursorEffectSettings, EditorKind } from "../types";
@@ -14,6 +18,8 @@ import { CursorEffectSettings, EditorKind } from "../types";
  * puts it back to.
  */
 export type ToolPanelSelection = {
+  /** Whether this layer casts a shadow onto the canvas behind it. */
+  dropShadow: boolean;
   height: number;
   /** Which of the workspace's layers this is, for wording that fits it. */
   kind: "camera" | "layer" | "primary";
@@ -44,6 +50,10 @@ export type ToolPanelFrame = {
  * and background settings each arrive as more keys, not another mirror.
  */
 export type ToolPanelSnapshot = {
+  /** What the workspace's canvas is filled with behind its layers. */
+  background: Background;
+  /** The backgrounds saved from the picker, in the order they were saved. */
+  backgroundPresets: BackgroundPreset[];
   cursorEffects: CursorEffectSettings;
   /** Null until the workspace has an output canvas to size. */
   frame: ToolPanelFrame | null;
@@ -57,14 +67,20 @@ export type ToolPanelSnapshot = {
 
 /** The settings a panel may ask the editor to change. */
 export type ToolPanelPatch = Partial<
-  Pick<ToolPanelSnapshot, "cursorEffects">
+  Pick<ToolPanelSnapshot, "background" | "cursorEffects">
 > & {
   /** Size the output canvas, leaving what is in it where it sits. */
   frameSize?: { height?: number; width?: number };
+  /** Forget a saved background, by its id. */
+  removePreset?: string;
   /** Put the canvas back to the source size, refitting what is in it. */
   resetFrame?: true;
   /** Put the selection's size and position back to its source framing. */
   resetSelection?: true;
+  /** Keep the background being shown under a name. */
+  savePreset?: BackgroundPreset;
+  /** Cast the selected layer's shadow onto the canvas, or take it away. */
+  selectionDropShadow?: boolean;
   selectionOutput?: SelectionPlacementPatch;
 };
 
@@ -80,6 +96,8 @@ export type ToolPanelMessage = {
 };
 
 export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
+  background: { color: "#171717", kind: "solid" },
+  backgroundPresets: [],
   cursorEffects: DEFAULT_CURSOR_EFFECTS,
   frame: null,
   hasCursorData: false,

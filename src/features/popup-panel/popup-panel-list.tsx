@@ -8,6 +8,7 @@ import {
   ArrowBigDownDash,
   ClipboardCopy,
   ImageDown,
+  Trash2,
   Volume2,
 } from "lucide-react";
 import { ReactNode, useLayoutEffect, useRef } from "react";
@@ -36,6 +37,7 @@ const itemGlyphs = {
   clipboard: ClipboardCopy,
   image: ImageDown,
   scrolling: ArrowBigDownDash,
+  trash: Trash2,
 };
 
 function ItemGlyph({ icon }: { icon: PopupPanelIcon }) {

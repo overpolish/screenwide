@@ -29,6 +29,10 @@ fn main() {
     println!(
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_shader_source.h"
     );
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_generators.h");
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_generators_layered.h"
+    );
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos.m");
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos.h");
     println!("cargo:rerun-if-changed=src/editor/osc_pixel_alignment_macos.h");
@@ -40,6 +44,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/osc_icon_renderer_macos.m");
     println!("cargo:rerun-if-changed=src/editor/region_cursor_macos.m");
     println!("cargo:rerun-if-changed=src/editor/cursor_session_macos.m");
+    println!("cargo:rerun-if-changed=src/windows/color_panel_macos.m");
     println!("cargo:rerun-if-changed=src/windows/dismissal_macos.m");
     println!("cargo:rerun-if-changed=src/editor/region_magnifier_macos.m");
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos.m");
@@ -74,6 +79,12 @@ fn main() {
     println!(
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos_private_functions.h"
     );
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_background_image.m"
+    );
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_background_image.h"
+    );
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos.h");
     println!(
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_types.h"
@@ -88,7 +99,11 @@ fn main() {
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/carry.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/drag_point.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/target.h");
+    println!("cargo:rerun-if-changed=src/screenshots/image_decode_macos.m");
+    println!("cargo:rerun-if-changed=src/screenshots/video_still_macos.m");
     cc::Build::new()
+      .file("src/screenshots/image_decode_macos.m")
+      .file("src/screenshots/video_still_macos.m")
       .file("src/glide/macos/drag_start.m")
       .file("src/glide/macos/spaces/native.m")
       .file("src/glide/macos/spaces/carry.m")
@@ -96,6 +111,7 @@ fn main() {
       .file("src/editor/cursor_export/gpu_compositor_macos.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_keyboard.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos_background_image.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_keyboard.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork.m")
@@ -112,6 +128,7 @@ fn main() {
       .file("src/editor/osc_gpu_pipeline_macos.m")
       .file("src/editor/region_cursor_macos.m")
       .file("src/editor/cursor_session_macos.m")
+      .file("src/windows/color_panel_macos.m")
       .file("src/windows/dismissal_macos.m")
       .file("src/editor/region_magnifier_macos.m")
       .file("src/editor/recording_preview_surface_macos+action.m")
@@ -150,8 +167,10 @@ fn main() {
       "CoreText",
       "CoreVideo",
       "Foundation",
+      "ImageIO",
       "Metal",
       "QuartzCore",
+      "UniformTypeIdentifiers",
       "VideoToolbox",
     ] {
       println!("cargo:rustc-link-lib=framework={framework}");
@@ -181,6 +200,34 @@ fn compile_windows_preview_shaders() {
   );
 }
 
+/// A shader with its `#include "..."` lines replaced by the files they name,
+/// resolved relative to the including file. `D3DCompile` is handed no include
+/// handler, so the includes have to be resolved before it sees the source.
+#[cfg(windows)]
+fn shader_source(source_path: &std::path::Path) -> String {
+  println!("cargo:rerun-if-changed={}", source_path.display());
+  let source = std::fs::read_to_string(source_path)
+    .unwrap_or_else(|error| panic!("read the shader {}: {error}", source_path.display()));
+  let directory = source_path.parent().map_or_else(
+    || std::path::PathBuf::from("."),
+    std::path::Path::to_path_buf,
+  );
+  let mut resolved = String::with_capacity(source.len());
+  for line in source.lines() {
+    let included = line
+      .trim()
+      .strip_prefix("#include \"")
+      .and_then(|rest| rest.strip_suffix('"'));
+    if let Some(name) = included {
+      resolved.push_str(&shader_source(&directory.join(name)));
+    } else {
+      resolved.push_str(line);
+    }
+    resolved.push('\n');
+  }
+  resolved
+}
+
 #[cfg(windows)]
 fn compile_shader(source_path: &str, output_prefix: &str) {
   use std::{ffi::CString, path::PathBuf};
@@ -189,8 +236,8 @@ fn compile_shader(source_path: &str, output_prefix: &str) {
     Win32::Graphics::Direct3D::{Fxc::D3DCompile, ID3DBlob},
   };
 
-  println!("cargo:rerun-if-changed={source_path}");
-  let source = std::fs::read(source_path).expect("read the Windows preview shader");
+  let source = shader_source(std::path::Path::new(source_path));
+  let source = source.as_bytes();
   let output = PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo supplied OUT_DIR"));
 
   for (entry, target, suffix) in [("vs_main", "vs_4_0", "vs"), ("ps_main", "ps_4_0", "ps")] {

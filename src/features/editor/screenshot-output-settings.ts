@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { DEFAULT_GENERATOR_ID } from "../../components/shared/background-picker/background-generators";
+
 import {
   MeshGradientPoint,
   randomMeshComposition,
 } from "./screenshot-background";
 import { fullSourceRect, sourceRect, SourceRect } from "./screenshot-geometry";
 
-type ScreenshotBackgroundType = "mesh" | "solid";
+type ScreenshotBackgroundType = "image" | "mesh" | "solid";
 
 /**
  * One layer's canvas and its placement in it.
@@ -19,6 +21,8 @@ type ScreenshotBackgroundType = "mesh" | "solid";
  */
 export type ScreenshotOutputSettings = {
   backgroundColor: string;
+  /** A picture of your own behind the layers, or null for a painted one. */
+  backgroundImagePath: string | null;
   backgroundRadiusPercent: number;
   backgroundType: ScreenshotBackgroundType;
   cropHeight: number;
@@ -31,6 +35,10 @@ export type ScreenshotOutputSettings = {
   imageX: number;
   imageY: number;
   meshColors: string[];
+  /** Which painter draws the mesh, by the name in the picker's generator
+   * table. The classic "mesh" is the only one that reads the points and the
+   * warp below. */
+  meshGenerator: string;
   meshLockedColors: boolean[];
   meshPoints: MeshGradientPoint[];
   meshSeed: number;
@@ -50,6 +58,7 @@ export const defaultScreenshotOutput = (
   return {
     ...mesh,
     backgroundColor: "#171717",
+    backgroundImagePath: null,
     backgroundRadiusPercent: radii.background ?? 0,
     backgroundType: "solid",
     cropHeight: height,
@@ -61,6 +70,7 @@ export const defaultScreenshotOutput = (
     imageWidth: width,
     imageX: 0,
     imageY: 0,
+    meshGenerator: DEFAULT_GENERATOR_ID,
     meshLockedColors: mesh.meshColors.map(() => false),
     radiusPercent: radii.screenshot ?? 0,
     recenterInsetColor: null,
@@ -148,6 +158,11 @@ export const normalizedScreenshotOutput = (
       y: finite(point.y, fallback.y),
     };
   });
+  // A canvas saved before the generators existed, or with the field emptied,
+  // is the composition mesh: that is what it was drawn as.
+  normalized.meshGenerator =
+    normalized.meshGenerator.trim() || DEFAULT_GENERATOR_ID;
+  normalized.backgroundImagePath = settings.backgroundImagePath ?? null;
   normalized.recenterInsetColor = settings.recenterInsetColor ?? null;
   return withScreenshotSourceCrop(normalized, sourceCrop);
 };

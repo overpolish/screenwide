@@ -101,7 +101,11 @@ fn schedule(app: AppHandle) {
     if REVISION.load(Ordering::Acquire) != revision {
       return;
     }
-    reconcile(&app);
+    // Closing a transient sets window levels and parents, which AppKit only
+    // accepts on the main thread, so the whole pass runs there. It is queued,
+    // not joined, so nothing on the main thread can wait on this task.
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || reconcile(&handle));
   });
 }
 

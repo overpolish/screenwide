@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+// Resolved textually by `compile_shader` in build.rs: D3DCompile is handed no
+// include handler.
+#include "generators.hlsl"
+
 cbuffer Canvas : register(b0) {
   float4 output_source; // output width/height, source width/height
   float4 image_rect;
@@ -11,7 +15,7 @@ cbuffer Canvas : register(b0) {
   float4 mesh_points[8];
   float4 mesh_colors[4];
   float4 effects; // image radius, background radius, warp, shadow sigma
-  float4 motion; // timeline seconds
+  float4 motion; // timeline seconds, generator speed
   float4 cursor_geometry; // source-space anchor x/y, artwork width/height
   float4 cursor_effects; // opacity, reserved y, rotation radians, scale
   float4 cursor_blur; // source-space frame delta x/y
@@ -22,11 +26,13 @@ cbuffer Canvas : register(b0) {
   float4 native_cursor_hotspots[8]; // normalized atlas hotspot x/y
   uint4 options; // seed, mesh enabled, point count, shadow enabled
   uint4 cursor_options; // artwork, enabled, clip to video, foreground only
+  uint4 background_options; // has background image, generator, palette size
 };
 Texture2D source_image : register(t0);
 Texture2DArray native_cursor_images : register(t1);
 Texture2D camera_image : register(t2);
 Texture2D keyboard_image : register(t3);
+Texture2D background_image : register(t4);
 // Mirrors the Metal `KeyboardUniforms` struct. HLSL pads struct array elements
 // to 16 bytes, so the per-key fields live in parallel uint4/float4 arrays whose
 // packing is identical on both backends.
@@ -120,8 +126,36 @@ float4 cursor_layer(float2 pixel) {
   accumulated.rgb = accumulated.a > 0.0 ? accumulated.rgb / (total_weight * accumulated.a) : 0.0;
   return accumulated;
 }
+// A chosen picture covers the canvas: it is scaled until both sides reach,
+// centred, and the overflowing axis is trimmed evenly, so it never letterboxes
+// and never stretches. The same framing as `cover_fit` in the CPU compose
+// path, done here in UVs so one upload serves every canvas size.
+float3 background_picture(float2 pixel) {
+  uint picture_width, picture_height;
+  background_image.GetDimensions(picture_width, picture_height);
+  if (picture_width == 0 || picture_height == 0) return solid_color.rgb;
+  float2 picture = float2(picture_width, picture_height);
+  float scale = max(output_source.x / picture.x, output_source.y / picture.y);
+  float2 covered = picture * scale;
+  float2 origin = (output_source.xy - covered) * 0.5;
+  return background_image.Sample(linear_sampler, (pixel - origin) / covered).rgb;
+}
 float3 background(float2 pixel) {
+  if (background_options.x != 0) return background_picture(pixel);
   if (options.y == 0) return solid_color.rgb;
+  // A ported generator reads its palette from the front of the mesh colours,
+  // the seed, and the same timeline seconds the classic mesh drifts with,
+  // which `gen_pixel` scales by the generator's own speed in `motion.y`.
+  if (background_options.y != 0) {
+    GenPalette palette;
+    palette.c0 = mesh_colors[0].rgb;
+    palette.c1 = mesh_colors[1].rgb;
+    palette.c2 = mesh_colors[2].rgb;
+    palette.c3 = mesh_colors[3].rgb;
+    palette.count = background_options.z;
+    return gen_pixel(background_options.y, pixel, output_source.xy, palette, options.x, motion.x,
+                     motion.y);
+  }
   float shortest = min(output_source.x, output_source.y);
   float2 dimensions = output_source.xy;
   float2 aspect = dimensions / shortest;

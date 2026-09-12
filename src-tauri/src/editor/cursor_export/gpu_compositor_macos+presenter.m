@@ -8,11 +8,12 @@
 #include <stdlib.h>
 
 #import "gpu_compositor_macos.h"
+#import "gpu_compositor_macos_background_image.h"
+#import "gpu_compositor_macos_generators_layered.h"
 #import "gpu_compositor_macos_cursor_resources.h"
 #import "gpu_compositor_macos_keyboard.h"
 #import "gpu_compositor_macos_presenter_private.h"
 
-extern __attribute__((visibility("hidden"))) NSString *const shader_source;
 
 @implementation ScreenwideStillPresenter
 - (void)dealloc {
@@ -25,7 +26,7 @@ void *screenwide_gpu_still_presenter_create(void) {
     ScreenwideStillPresenter *presenter = [ScreenwideStillPresenter new];
     presenter.device = MTLCreateSystemDefaultDevice();
     NSError *error = nil;
-    NSString *combinedShader = [shader_source
+    NSString *combinedShader = [screenwide_gpu_canvas_shader_source()
         stringByAppendingString:screenwide_region_osc_shader_source()];
     id<MTLLibrary> library = [presenter.device
         newLibraryWithSource:combinedShader
@@ -139,8 +140,6 @@ int screenwide_gpu_still_presenter_present_pixels(
     }
     ScreenwideStillOverlay empty_overlay = {0};
     if (overlay == NULL) overlay = &empty_overlay;
-    id<MTLBuffer> uniforms = [presenter.device newBufferWithBytes:canvas
-      length:sizeof(*canvas) options:MTLResourceStorageModeShared];
     id<MTLBuffer> cursor = cursor_rgba == NULL
       ? [presenter.device newBufferWithLength:4 options:MTLResourceStorageModeShared]
       : [presenter.device newBufferWithBytes:cursor_rgba
@@ -179,7 +178,7 @@ int screenwide_gpu_still_presenter_present_pixels(
     [encoder setComputePipelineState:presenter.pipeline];
     [encoder setBuffer:presenter.source offset:0 atIndex:0];
     [encoder setTexture:drawable.texture atIndex:0];
-    [encoder setBuffer:uniforms offset:0 atIndex:1];
+    screenwide_gpu_bind_canvas(encoder, presenter.device, canvas, 1, 1);
     [encoder setBytes:dimensions length:sizeof(dimensions) atIndex:2];
     [encoder setBytes:&time length:sizeof(time) atIndex:3];
     [encoder setBuffer:cursor offset:0 atIndex:4];
@@ -270,9 +269,6 @@ static int presenter_present_workspace_layers(
     }
     if (source == nil) return 0;
     if (item->placement.width == 0 || item->placement.height == 0) continue;
-    id<MTLBuffer> uniforms = [presenter.device newBufferWithBytes:&item->canvas
-        length:sizeof(item->canvas) options:MTLResourceStorageModeShared];
-    if (uniforms == nil) return 0;
     NSUInteger camera_length = (NSUInteger)item->overlay.camera_source_width *
         item->overlay.camera_source_height * 4;
     NSNumber *token = @(item->source_token);
@@ -301,7 +297,7 @@ static int presenter_present_workspace_layers(
     [encoder setComputePipelineState:presenter.workspaceLayerPipeline];
     [encoder setBuffer:source offset:0 atIndex:0];
     [encoder setTexture:drawable.texture atIndex:0];
-    [encoder setBuffer:uniforms offset:0 atIndex:1];
+    screenwide_gpu_bind_canvas(encoder, presenter.device, &item->canvas, 1, 2);
     [encoder setBytes:dimensions length:sizeof(dimensions) atIndex:2];
     [encoder setBytes:&item->placement length:sizeof(item->placement) atIndex:3];
     [encoder setBytes:&first length:sizeof(first) atIndex:4];
@@ -813,8 +809,6 @@ int screenwide_gpu_still_presenter_redraw_workspace(
       [clear endEncoding];
       for (uint32_t index = 0; index < placement_count; ++index) {
         id<MTLBuffer> source = presenter.workspaceSources[@(layers[index].source_token)];
-        id<MTLBuffer> uniforms = [presenter.device newBufferWithBytes:&layers[index].canvas
-            length:sizeof(layers[index].canvas) options:MTLResourceStorageModeShared];
         id<MTLBuffer> camera = presenter.workspaceCameraSources[@(layers[index].source_token)]
             ?: [presenter.device newBufferWithLength:4 options:MTLResourceStorageModeShared];
         id<MTLBuffer> overlay = [presenter.device newBufferWithBytes:&layers[index].overlay length:sizeof(layers[index].overlay) options:MTLResourceStorageModeShared];
@@ -825,7 +819,7 @@ int screenwide_gpu_still_presenter_redraw_workspace(
         [encoder setComputePipelineState:presenter.workspaceLayerPipeline];
         [encoder setBuffer:source offset:0 atIndex:0];
         [encoder setTexture:drawable.texture atIndex:0];
-        [encoder setBuffer:uniforms offset:0 atIndex:1];
+        screenwide_gpu_bind_canvas(encoder, presenter.device, &layers[index].canvas, 1, 2);
         [encoder setBytes:dimensions length:sizeof(dimensions) atIndex:2];
         [encoder setBytes:&layers[index].placement length:sizeof(layers[index].placement) atIndex:3];
         [encoder setBytes:&first length:sizeof(first) atIndex:4];
@@ -902,8 +896,6 @@ int screenwide_gpu_still_presenter_present(
     if (drawable == nil) return 0;
     ScreenwideStillOverlay empty_overlay = {0};
     if (overlay == NULL) overlay = &empty_overlay;
-    id<MTLBuffer> uniforms = [presenter.device newBufferWithBytes:canvas
-      length:sizeof(*canvas) options:MTLResourceStorageModeShared];
     id<MTLBuffer> cursor = cursor_rgba == NULL
       ? [presenter.device newBufferWithLength:4 options:MTLResourceStorageModeShared]
       : [presenter.device newBufferWithBytes:cursor_rgba
@@ -923,7 +915,7 @@ int screenwide_gpu_still_presenter_present(
     [encoder setComputePipelineState:presenter.pipeline];
     [encoder setBuffer:presenter.source offset:0 atIndex:0];
     [encoder setTexture:drawable.texture atIndex:0];
-    [encoder setBuffer:uniforms offset:0 atIndex:1];
+    screenwide_gpu_bind_canvas(encoder, presenter.device, canvas, 1, 1);
     [encoder setBytes:dimensions length:sizeof(dimensions) atIndex:2];
     [encoder setBytes:&time length:sizeof(time) atIndex:3];
     [encoder setBuffer:cursor offset:0 atIndex:4];

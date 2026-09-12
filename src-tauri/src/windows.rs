@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, Window
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 mod boot;
+pub(crate) mod color_panel;
 mod dismissal;
 pub(crate) mod dock;
 #[cfg(target_os = "macos")]

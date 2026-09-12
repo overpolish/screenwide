@@ -44,10 +44,12 @@ export const screenshotWorkspaceItemOutput = (
   return {
     ...output,
     backgroundColor: settings.backgroundColor,
+    backgroundImagePath: settings.backgroundImagePath,
     backgroundRadiusPercent: settings.backgroundRadiusPercent,
     backgroundType: settings.backgroundType,
     height: settings.height,
     meshColors: settings.meshColors,
+    meshGenerator: settings.meshGenerator,
     meshLockedColors: settings.meshLockedColors,
     meshPoints: settings.meshPoints,
     meshSeed: settings.meshSeed,

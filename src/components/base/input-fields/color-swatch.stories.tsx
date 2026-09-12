@@ -10,7 +10,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const meta = {
   component: ColorSwatch,
   parameters: { layout: "centered" },
-  title: "Legacy/Color Swatch",
+  title: "Components/Colour Well",
 } satisfies Meta<typeof ColorSwatch>;
 
 export default meta;

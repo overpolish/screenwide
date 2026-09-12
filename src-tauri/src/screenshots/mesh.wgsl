@@ -6,6 +6,24 @@ struct MeshUniforms {
   point_count: u32,
   seed: u32,
   warp_percent: f32,
+  // Which picture the mesh background paints. Zero is the app's own blob
+  // mesh, which alone reads `points` and `warp_percent`; every other id names
+  // a generator ported from the reference library, which reads only the
+  // colours and the seed.
+  generator: u32,
+  generator_color_count: u32,
+  // Canvas seconds. The classic mesh drifts with it and every generator
+  // animates from it; a thumbnail and a screenshot export pass zero.
+  time: f32,
+  // What `time` is multiplied by before a ported generator reads it, from
+  // the table in `mesh_generator.rs`. The classic mesh is 1.0 and reads the
+  // seconds as they come.
+  generator_speed: f32,
+  // Three pad words: a uniform `vec4` sits on a 16-byte boundary, and
+  // `generator_speed` has taken the word after `time`.
+  padding_0: f32,
+  padding_1: f32,
+  padding_2: f32,
   base_color: vec4<f32>,
   points: array<vec4<f32>, 8>,
   colors: array<vec4<f32>, 4>,
@@ -50,8 +68,22 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     return;
   }
   let dimensions = vec2<f32>(mesh.dimensions);
-  let shortest = min(dimensions.x, dimensions.y);
   let pixel = vec2<f32>(id.xy) + vec2<f32>(0.5);
+  if (mesh.generator != 0u) {
+    let palette = GenPalette(
+      mesh.colors[0].rgb,
+      mesh.colors[1].rgb,
+      mesh.colors[2].rgb,
+      mesh.colors[3].rgb,
+      mesh.generator_color_count,
+    );
+    let painted =
+      gen_pixel(mesh.generator, pixel, dimensions, palette, mesh.seed, mesh.time, mesh.generator_speed);
+    let grain = antibanding_dither(id.xy, mesh.seed ^ 0x8da6b343u);
+    textureStore(output, vec2<i32>(id.xy), vec4<f32>(clamp(painted + grain, vec3<f32>(0.0), vec3<f32>(1.0)), 1.0));
+    return;
+  }
+  let shortest = min(dimensions.x, dimensions.y);
   let aspect = vec2<f32>(dimensions.x / shortest, dimensions.y / shortest);
   let frequency = 3.5 / shortest;
   let warp_scale = shortest * mesh.warp_percent / 100.0;

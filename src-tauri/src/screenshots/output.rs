@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::mesh::MeshGradientPoint;
+use super::mesh_generator::default_generator;
 #[cfg(any(test, not(target_os = "macos")))]
 use super::placement::output_placement;
 #[cfg(any(test, not(target_os = "macos")))]
@@ -24,6 +25,11 @@ const MAX_OUTPUT_PIXELS: u64 = 120_000_000;
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotOutputSettings {
   pub background_color: String,
+  /// A picture of your own behind the layers. Absent for every background
+  /// that is painted rather than loaded, and for settings written before
+  /// pictures could be chosen.
+  #[serde(default)]
+  pub background_image_path: Option<String>,
   pub background_type: String,
   pub background_radius_percent: f64,
   /// The visible rectangle, in output pixels. Zero width or height marks a
@@ -48,6 +54,10 @@ pub struct ScreenshotOutputSettings {
   #[serde(default, rename = "mode", skip_serializing)]
   pub legacy_mode: Option<String>,
   pub mesh_colors: Vec<String>,
+  /// Which picture the mesh background paints. Settings written before the
+  /// ported generators existed carry none, and are the app's own blob mesh.
+  #[serde(default = "default_generator")]
+  pub mesh_generator: String,
   #[serde(default)]
   pub mesh_locked_colors: Vec<bool>,
   pub mesh_points: Vec<MeshGradientPoint>,
@@ -173,20 +183,35 @@ pub fn compose_screenshot(
     },
     settings.radius_percent,
   );
+  let solid_canvas = || -> Result<image::RgbaImage, String> {
+    Ok(image::RgbaImage::from_pixel(
+      output_width,
+      output_height,
+      image::Rgba(parse_hex_colour(&settings.background_color)?),
+    ))
+  };
   let mut canvas = match settings.background_type.as_str() {
+    // A picture that will not load leaves the canvas on the solid colour,
+    // so a background whose file has moved still exports.
+    "image" => match settings
+      .background_image_path
+      .as_deref()
+      .and_then(|path| super::background_image_canvas(path, output_width, output_height))
+    {
+      Some(picture) => picture,
+      None => solid_canvas()?,
+    },
     "mesh" => mesh_canvas(
       output_width,
       output_height,
+      &settings.mesh_generator,
       &settings.mesh_colors,
       &settings.mesh_points,
       settings.mesh_seed,
       settings.mesh_warp_percent,
+      0.0,
     )?,
-    "solid" => image::RgbaImage::from_pixel(
-      output_width,
-      output_height,
-      image::Rgba(parse_hex_colour(&settings.background_color)?),
-    ),
+    "solid" => solid_canvas()?,
     _ => return Err("The screenshot background type is not valid".to_owned()),
   };
   let foreground = image::RgbaImage::from_raw(crop_width, crop_height, rounded.rgba)
@@ -272,6 +297,7 @@ pub(crate) mod tests {
     let placed_y = (f64::from(height) - placed_height) / 2.0;
     ScreenshotOutputSettings {
       background_color: "#112233".to_owned(),
+      background_image_path: None,
       background_type: "solid".to_owned(),
       background_radius_percent: 0.0,
       crop_height: placed_height,
@@ -322,6 +348,7 @@ pub(crate) mod tests {
           y: 85.0,
         },
       ],
+      mesh_generator: default_generator(),
       mesh_seed: 42,
       mesh_warp_percent: 9.0,
       radius_percent: 0.0,

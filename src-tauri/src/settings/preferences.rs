@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
+use crate::settings::background_preset::BackgroundPreset;
 use crate::system_accent::AccentPreference;
 
 const SETTINGS_FILE: &str = "settings.json";
@@ -16,6 +17,10 @@ const SETTINGS_CHANGED_EVENT: &str = "settings://changed";
 #[serde(default, rename_all = "camelCase")]
 pub struct GeneralSettings {
   pub accent: AccentPreference,
+  /// Backgrounds saved from the editor's background picker, in the order
+  /// they were saved. The built-in ones are not kept here: they ship with
+  /// the app and would only go stale on disk.
+  pub background_presets: Vec<BackgroundPreset>,
   pub recording_directory: Option<PathBuf>,
   pub screenshot_directory: Option<PathBuf>,
   pub open_location_after_export: bool,
@@ -30,6 +35,7 @@ impl Default for GeneralSettings {
   fn default() -> Self {
     Self {
       accent: AccentPreference::System,
+      background_presets: Vec::new(),
       recording_directory: None,
       screenshot_directory: None,
       open_location_after_export: true,
@@ -219,6 +225,29 @@ mod tests {
       serde_json::from_str(r#"{"openLocationAfterExport":false}"#).unwrap();
 
     assert!(!settings.open_location_after_export);
+  }
+
+  #[test]
+  fn starts_with_no_saved_backgrounds() {
+    let settings: GeneralSettings = serde_json::from_str("{}").unwrap();
+
+    assert!(settings.background_presets.is_empty());
+  }
+
+  #[test]
+  fn keeps_a_saved_background_preset() {
+    let settings: GeneralSettings = serde_json::from_str(
+      r##"{"backgroundPresets":[{"id":"a","name":"Slate","background":{"kind":"solid","color":"#333333"}}]}"##,
+    )
+    .unwrap();
+    let serialized = serde_json::to_value(&settings).unwrap();
+
+    assert_eq!(settings.background_presets.len(), 1);
+    assert_eq!(settings.background_presets[0].name, "Slate");
+    assert_eq!(
+      serialized["backgroundPresets"][0]["background"]["kind"],
+      "solid"
+    );
   }
 
   #[test]

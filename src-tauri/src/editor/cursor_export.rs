@@ -152,6 +152,7 @@ mod tests {
   fn output_settings(width: u32, height: u32) -> ScreenshotOutputSettings {
     ScreenshotOutputSettings {
       background_color: "#000000".to_owned(),
+      background_image_path: None,
       background_type: "color".to_owned(),
       background_radius_percent: 0.0,
       crop_height: f64::from(height),
@@ -165,6 +166,7 @@ mod tests {
       image_y: 0.0,
       legacy_mode: None,
       mesh_colors: Vec::new(),
+      mesh_generator: String::new(),
       mesh_locked_colors: Vec::new(),
       mesh_points: Vec::<MeshGradientPoint>::new(),
       mesh_seed: 0,

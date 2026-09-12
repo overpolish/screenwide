@@ -225,10 +225,12 @@ impl ScreenshotWorkspaceOutputSettings {
       .find(|candidate| candidate.id == id)
       .map_or_else(|| self.canvas.clone(), |candidate| candidate.output.clone());
     output.background_color = self.canvas.background_color.clone();
+    output.background_image_path = self.canvas.background_image_path.clone();
     output.background_type = self.canvas.background_type.clone();
     output.background_radius_percent = self.canvas.background_radius_percent;
     output.height = self.canvas.height;
     output.mesh_colors = self.canvas.mesh_colors.clone();
+    output.mesh_generator = self.canvas.mesh_generator.clone();
     output.mesh_locked_colors = self.canvas.mesh_locked_colors.clone();
     output.mesh_points = self.canvas.mesh_points.clone();
     output.mesh_seed = self.canvas.mesh_seed;
@@ -236,6 +238,27 @@ impl ScreenshotWorkspaceOutputSettings {
     output.width = self.canvas.width;
     output
   }
+}
+
+/// The canvas's own background picture, filled to it. `None` whenever the
+/// background is a painted one, or the file behind it can no longer be read,
+/// in which case the compositor's solid colour stands in.
+#[cfg(target_os = "macos")]
+fn background_image_layer(canvas: &ScreenshotOutputSettings) -> Option<CapturedImage> {
+  if canvas.background_type != "image" {
+    return None;
+  }
+  let picture = crate::screenshots::background_image_canvas(
+    canvas.background_image_path.as_deref()?,
+    canvas.width,
+    canvas.height,
+  )?;
+  let (width, height) = picture.dimensions();
+  Some(CapturedImage {
+    height,
+    rgba: picture.into_raw(),
+    width,
+  })
 }
 
 fn compose_screenshot_workspace(
@@ -257,6 +280,13 @@ fn compose_screenshot_workspace(
     .ok_or_else(|| "The screenshot workspace is empty".to_owned())?;
   #[cfg(target_os = "macos")]
   {
+    // A chosen picture is the one background the compositor cannot paint: it
+    // draws from uniforms, not from a texture. So the layers are composed
+    // over nothing, the picture is filled to the canvas here, and the two are
+    // put together. The shadow survives that, since a background-less layer
+    // carries it as its own alpha, and the canvas corners are rounded last,
+    // exactly where the shader would have rounded them.
+    let picture = background_image_layer(&output.canvas);
     let mut composed = crate::screenshots::compose_output_layers(
       &first.image,
       &output.output_for(first),
@@ -267,7 +297,7 @@ fn compose_screenshot_workspace(
       None,
       None,
       false,
-      false,
+      picture.is_some(),
     )?;
     for item in &ordered_items[1..] {
       let layer = crate::screenshots::compose_output_layers(
@@ -284,7 +314,13 @@ fn compose_screenshot_workspace(
       )?;
       composed = crate::screenshots::alpha_composite(&composed, &layer)?;
     }
-    Ok(composed)
+    let Some(picture) = picture else {
+      return Ok(composed);
+    };
+    Ok(crate::screenshots::rounded_corners(
+      &crate::screenshots::alpha_composite(&picture, &composed)?,
+      output.canvas.background_radius_percent,
+    ))
   }
   #[cfg(target_os = "windows")]
   {

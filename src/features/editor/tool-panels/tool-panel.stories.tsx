@@ -1,19 +1,26 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { BUILT_IN_BACKGROUND_PRESETS } from "../../../components/shared/background-picker/background-presets";
 import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
 import { toolPanelWidth } from "../../popup-panel/layout";
 import { DEFAULT_CURSOR_EFFECTS } from "../recording-export-settings";
 
 import { ToolPanel } from "./tool-panel";
-import { ToolPanelSnapshot, useToolPanelStore } from "./tool-panel-store";
+import {
+  DEFAULT_TOOL_PANEL_SNAPSHOT,
+  ToolPanelSnapshot,
+  useToolPanelStore,
+} from "./tool-panel-store";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 /** The panel window reads what the editor published, so a story seeds the
  * mirror the same way a live editor fills it. */
-const seed = (snapshot: ToolPanelSnapshot) => {
-  useToolPanelStore.setState({ snapshots: { recording: snapshot } });
+const seed = (snapshot: Partial<ToolPanelSnapshot>) => {
+  useToolPanelStore.setState({
+    snapshots: { recording: { ...DEFAULT_TOOL_PANEL_SNAPSHOT, ...snapshot } },
+  });
 };
 
 const meta = {
@@ -70,6 +77,7 @@ export const Selection: Story = {
       hasCursorData: true,
       isSaving: false,
       selection: {
+        dropShadow: true,
         height: 2338,
         kind: "primary",
         label: "Screen",
@@ -104,6 +112,14 @@ export const Frame: Story = {
   args: { tool: "frame", workspace: "recording" },
   beforeEach: () => {
     seed({
+      background: BUILT_IN_BACKGROUND_PRESETS[0].background,
+      backgroundPresets: [
+        {
+          background: { color: "#0B3D2E", kind: "solid" },
+          id: "saved-forest",
+          name: "Forest",
+        },
+      ],
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: {
         height: 2338,

@@ -63,6 +63,7 @@ const target = ({
   apply,
   selection: {
     ...selectionPlacement(settings),
+    dropShadow: settings.dropShadow,
     kind,
     label,
     sourceHeight: source.height,
@@ -147,8 +148,16 @@ export const selectionPanelHandlers = (
   target: EditorSelectionTarget | null,
 ): Pick<
   ToolPanelHandlers,
-  "onSelectionPlacementChange" | "onSelectionReset"
+  | "onSelectionDropShadowChange"
+  | "onSelectionPlacementChange"
+  | "onSelectionReset"
 > => ({
+  // The shadow is the layer's own, cast onto whatever the canvas is wearing,
+  // so it travels with the layer's output rather than with the canvas.
+  onSelectionDropShadowChange: (dropShadow) => {
+    if (!target) return;
+    target.apply({ ...target.settings, dropShadow });
+  },
   onSelectionPlacementChange: (placement) => {
     console.debug("[selection-panel] placement request", {
       before: target ? selectionPlacement(target.settings) : null,

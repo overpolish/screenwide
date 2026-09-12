@@ -1,14 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CircleDashed, Cloud, Dices, Sun, WandSparkles } from "lucide-react";
+import { CircleDashed, Cloud, Dices, Sun } from "lucide-react";
 import { ReactNode } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
 import {
   generatePaletteFromLocked,
   PaletteMode,
-  varyPalette,
 } from "../../../lib/palette-generator";
 import { IconButton } from "../button/icon-button";
 import { Tooltip } from "../tooltip/tooltip";
@@ -43,16 +42,11 @@ export function ColorPaletteGenerator({
   onChange?: (colors: string[]) => void;
   onLockedChange?: (locked: boolean[]) => void;
 }) {
-  const preserveLocked = (nextColors: string[]) =>
-    nextColors.map((color, index) =>
-      locked[index] ? (colors[index] ?? color) : color,
-    );
-
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs text-content-fg">Palette</span>
-        <div className="flex items-center gap-1">
+    <div className="flex flex-col gap-control-inset">
+      <div className="flex items-center justify-between gap-section">
+        <span className="text-body text-content-fg">Colours</span>
+        <div className="flex gap-control">
           {colors.slice(0, swatchKeys.length).map((color, index) => (
             <ColorSwatch
               ariaLabel={`Palette colour ${(index + 1).toString()}`}
@@ -82,8 +76,8 @@ export function ColorPaletteGenerator({
           ))}
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between gap-section">
+        <div className="flex items-center gap-control">
           {paletteActions.map(({ icon: Icon, label, mode }) => (
             <TooltipTrigger delay={400} key={mode}>
               <IconButton
@@ -94,32 +88,19 @@ export function ColorPaletteGenerator({
                     generatePaletteFromLocked({ colors, locked, mode }),
                   );
                 }}
-                size="compact"
               >
-                <Icon size={14} />
+                <Icon />
               </IconButton>
               <Tooltip>{label}</Tooltip>
             </TooltipTrigger>
           ))}
-          <TooltipTrigger delay={400}>
-            <IconButton
-              aria-label="Vary palette"
-              isDisabled={isDisabled}
-              onPress={() => {
-                onChange?.(preserveLocked(varyPalette(colors)));
-              }}
-              size="compact"
-            >
-              <WandSparkles size={14} />
-            </IconButton>
-            <Tooltip>Vary palette</Tooltip>
-          </TooltipTrigger>
         </div>
-        {endContent}
+        {endContent ?? (
+          <span className="text-right text-footnote text-content-fg-secondary">
+            Right-click a colour to lock it
+          </span>
+        )}
       </div>
-      <span className="text-[10px] text-muted">
-        Right-click a colour to lock it
-      </span>
     </div>
   );
 }

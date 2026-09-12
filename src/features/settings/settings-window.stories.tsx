@@ -22,6 +22,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 function createPreviewApi(): ContextType<typeof SettingsApiContext> {
   let general: GeneralSettings = {
     accent: "system",
+    backgroundPresets: [],
     launchAtLogin: false,
     openLocationAfterExport: true,
     recordScreenwideWindows: true,

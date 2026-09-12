@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { BackgroundPreset } from "../../components/shared/background-picker/background";
+
 export type ShortcutAction =
   | "toggleRecordingBar"
   | "startStopRecording"
@@ -69,6 +71,8 @@ export type GlideSettings = {
 
 export type GeneralSettings = {
   accent: "screenwide" | "system";
+  /** Backgrounds saved from the editor's background picker. */
+  backgroundPresets: BackgroundPreset[];
   launchAtLogin: boolean;
   openLocationAfterExport: boolean;
   recordScreenwideWindows: boolean;

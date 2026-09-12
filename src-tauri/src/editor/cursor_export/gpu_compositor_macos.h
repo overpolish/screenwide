@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 #import <CoreMedia/CoreMedia.h>
@@ -32,12 +33,37 @@ typedef struct {
   uint32_t mesh_seed;
   float mesh_warp_percent;
   uint32_t mesh_point_count;
+  /// Which picture the mesh background paints. Zero is the app's own blob
+  /// mesh, which alone reads the points and the warp; every other id names a
+  /// generator that reads only `mesh_colors` and `mesh_seed`.
+  uint32_t mesh_generator;
+  uint32_t mesh_generator_color_count;
   float mesh_points[4][8];
   float mesh_colors[5][4];
   uint32_t clip_cursor_at_video_edge;
   uint32_t transparent_background;
   uint32_t foreground_only;
+  /// Non-zero when `background_image_id` names a picture registered through
+  /// `screenwide_gpu_register_background_image`. Zero paints the mesh or the
+  /// solid colour, which is also what an unregistered id falls back to.
+  uint32_t has_background_image;
+  uint32_t background_image_id;
+  /// What the canvas seconds are multiplied by before a ported generator
+  /// reads them, from the table in `screenshots/mesh_generator.rs`. The
+  /// classic mesh is 1.0 and drifts with the seconds as they come.
+  float mesh_generator_speed;
 } ScreenwideCanvas;
+// The same fields in the same order as Rust's `NativeCanvas` and Metal's
+// `CanvasUniforms`. Every one is four bytes wide, so the generator ids landing
+// between `mesh_point_count` and `mesh_points` move all three or none.
+_Static_assert(sizeof(ScreenwideCanvas) == 348,
+               "ScreenwideCanvas ABI must match Rust");
+_Static_assert(offsetof(ScreenwideCanvas, mesh_generator) == 108,
+               "ScreenwideCanvas.mesh_generator ABI must match Rust");
+_Static_assert(offsetof(ScreenwideCanvas, mesh_points) == 116,
+               "ScreenwideCanvas.mesh_points ABI must match Rust");
+_Static_assert(offsetof(ScreenwideCanvas, mesh_generator_speed) == 344,
+               "ScreenwideCanvas.mesh_generator_speed ABI must match Rust");
 
 /// One output frame's cursor, evaluated from the recorded event timeline.
 /// Positions and sizes are canvas pixels; the compositor's shader owns every

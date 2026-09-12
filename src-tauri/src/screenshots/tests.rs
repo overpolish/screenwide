@@ -188,3 +188,115 @@ fn deserializes_every_target_the_bar_can_send() {
   assert_eq!(monitor_id, 9);
   assert_eq!(region.position.x, -12.0);
 }
+
+/// The Metal canvas paints the same generators as the shared renderer.
+///
+/// The two are separate ports of the same reference shaders, so the only way
+/// to know they agree is to render a canvas through each and compare. A
+/// generator that read the wrong uniform, or a line that drifted while being
+/// translated, shows up here rather than as a preview that does not match the
+/// file it exports.
+///
+/// Both sides are asked for the same moment part way into a clip rather than
+/// for the still at zero, so the animation is compared too: a generator whose
+/// `time` reached one port's maths and not the other's would agree at zero and
+/// only diverge once a recording started playing.
+#[cfg(target_os = "macos")]
+#[test]
+fn the_native_canvas_paints_the_same_generators_as_the_shared_renderer() {
+  const EDGE: u32 = 64;
+  const SECONDS: f64 = 3.5;
+  let colors = [
+    "#0C1234".to_owned(),
+    "#2882C8".to_owned(),
+    "#DC78B4".to_owned(),
+    "#FAE6BE".to_owned(),
+  ];
+  let source = CapturedImage {
+    rgba: vec![255; 8],
+    width: 2,
+    height: 1,
+  };
+  for generator in mesh_generator::every_generator().iter().skip(1) {
+    let mut settings = crate::screenshots::test_output_settings(EDGE, EDGE);
+    settings.background_type = "mesh".to_owned();
+    settings.mesh_generator = generator.name.to_owned();
+    settings.mesh_colors = colors.to_vec();
+    settings.mesh_seed = 4_242;
+    // The screenshot is pushed into one corner so the rest of the canvas is
+    // background and nothing else.
+    settings.crop_width = 2.0;
+    settings.crop_height = 1.0;
+    settings.crop_x = 0.0;
+    settings.crop_y = 0.0;
+    settings.image_width = 2.0;
+    settings.image_x = 0.0;
+    settings.image_y = 0.0;
+    let native = platform::compose_output_layers(
+      &source, &settings, SECONDS, true, None, None, None, None, false, false,
+    )
+    .unwrap();
+    let shared = mesh::mesh_canvas(
+      EDGE,
+      EDGE,
+      generator.name,
+      &colors,
+      &[],
+      4_242,
+      0.0,
+      SECONDS,
+    )
+    .unwrap();
+    let mut worst = 0_i32;
+    for y in 4..EDGE {
+      for x in 4..EDGE {
+        let offset = ((y * EDGE + x) * 4) as usize;
+        for channel in 0..3 {
+          let difference =
+            i32::from(native.rgba[offset + channel]) - i32::from(shared.get_pixel(x, y).0[channel]);
+          worst = worst.max(difference.abs());
+        }
+      }
+    }
+    // Both paths add a dither of up to one eight-bit step, and the two
+    // backends round their own way, so a handful of steps apart is agreement
+    // and anything more is a port that drifted.
+    assert!(
+      worst <= 6,
+      "{} differs between the native canvas and the shared renderer by {worst}",
+      generator.name
+    );
+  }
+}
+
+/// A procedural generator's swatch is the picture, not a flat colour.
+///
+/// The app's own mesh is drawn from blobs and has nothing to draw without
+/// them, so a tile falls back to a colour there. A generator carries no blobs
+/// at all, and reading that fallback the same way would leave every one of
+/// its tiles a single flat tone.
+#[test]
+fn a_generator_tile_is_drawn_rather_than_filled() {
+  let background = crate::settings::background_preset::Background::Mesh {
+    colors: vec![
+      "#0C1234".to_owned(),
+      "#2882C8".to_owned(),
+      "#DC78B4".to_owned(),
+      "#FAE6BE".to_owned(),
+    ],
+    generator: "ribbons".to_owned(),
+    locked_colors: Vec::new(),
+    points: Vec::new(),
+    seed: 4_242,
+    warp_percent: 9.0,
+  };
+  let swatch = thumbnail::render(&background, 32, None).unwrap();
+  let spread = |channel: usize| {
+    let values = swatch.pixels().map(|pixel| pixel.0[channel]);
+    values.clone().max().unwrap() - values.min().unwrap()
+  };
+  assert!(
+    spread(0) > 16 || spread(1) > 16 || spread(2) > 16,
+    "the tile was filled with one colour"
+  );
+}

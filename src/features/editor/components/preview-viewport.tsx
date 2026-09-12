@@ -198,25 +198,11 @@ export function PreviewViewport({
       if (active.operation === "frameRadius") {
         onBackgroundRadiusChange?.(Math.min(50, Math.max(0, event.scale)));
       } else {
-        console.debug("[frame-resize] screenshot", event.phase, {
-          deltaX: event.deltaX,
-          deltaY: event.deltaY,
-          edges: event.edges,
-        });
         const next = resizeScreenshotWorkspaceCanvasEdges({
           deltaX: event.deltaX,
           deltaY: event.deltaY,
           edges: event.edges,
           settings: active.snapshot,
-        });
-        console.debug("[frame-resize] screenshot result", {
-          canvas: { height: next.height, width: next.width },
-          layers: next.items.map((item) => ({
-            id: item.id,
-            w: item.output.cropWidth,
-            x: item.output.cropX,
-            y: item.output.cropY,
-          })),
         });
         setCanvasResizeDraft(next);
         onCanvasResize?.(next);

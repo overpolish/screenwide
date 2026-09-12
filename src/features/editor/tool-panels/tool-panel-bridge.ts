@@ -3,6 +3,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import {
+  Background,
+  BackgroundPreset,
+} from "../../../components/shared/background-picker/background";
 import { SelectionPlacementPatch } from "../selection-placement";
 import { CursorEffectSettings, EditorKind } from "../types";
 
@@ -19,10 +23,16 @@ import {
  * identical path through the workspace's state.
  */
 export type ToolPanelHandlers = {
+  /** Fill the workspace's canvas with this background. */
+  onBackgroundChange?: (background: Background) => void;
+  onBackgroundPresetRemove?: (id: string) => void;
+  onBackgroundPresetSave?: (preset: BackgroundPreset) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
   onFrameReset?: () => void;
   /** Size the output canvas to what a field asked for. */
   onFrameSizeChange?: (size: { height?: number; width?: number }) => void;
+  /** Cast the selected layer's shadow onto the canvas, or take it away. */
+  onSelectionDropShadowChange?: (dropShadow: boolean) => void;
   /** Place the selection at the size and position a field asked for. */
   onSelectionPlacementChange?: (placement: SelectionPlacementPatch) => void;
   onSelectionReset?: () => void;
@@ -35,11 +45,22 @@ export type ToolPanelHandlers = {
 const appliedSeq: Record<EditorKind, number> = { recording: 0, screenshot: 0 };
 
 const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
+  if (values.background !== undefined)
+    on.onBackgroundChange?.(values.background);
+  if (values.savePreset !== undefined) {
+    on.onBackgroundPresetSave?.(values.savePreset);
+  }
+  if (values.removePreset !== undefined) {
+    on.onBackgroundPresetRemove?.(values.removePreset);
+  }
   if (values.cursorEffects !== undefined) {
     on.onCursorEffectsChange?.(values.cursorEffects);
   }
   if (values.frameSize !== undefined) on.onFrameSizeChange?.(values.frameSize);
   if (values.resetFrame) on.onFrameReset?.();
+  if (values.selectionDropShadow !== undefined) {
+    on.onSelectionDropShadowChange?.(values.selectionDropShadow);
+  }
   if (values.selectionOutput !== undefined) {
     on.onSelectionPlacementChange?.(values.selectionOutput);
   }

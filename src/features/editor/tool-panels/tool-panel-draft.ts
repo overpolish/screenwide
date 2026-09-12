@@ -57,17 +57,25 @@ export function resolveToolPanelSnapshot(
   // and the editor's answer arrives as the next published placement.
   const {
     frameSize,
+    removePreset: _removePreset,
     resetFrame: _resetFrame,
     resetSelection: _resetSelection,
+    savePreset: _savePreset,
+    selectionDropShadow,
     selectionOutput,
     ...values
   } = draft.values;
   const resolved = { ...snapshot, ...values };
+  const selection =
+    resolved.selection && selectionDropShadow !== undefined
+      ? { ...resolved.selection, dropShadow: selectionDropShadow }
+      : resolved.selection;
   return {
     ...resolved,
+    selection,
     ...(frameSize ? { frame: sizedFrame(resolved.frame, frameSize) } : {}),
     ...(selectionOutput
-      ? { selection: placedSelection(resolved.selection, selectionOutput) }
+      ? { selection: placedSelection(selection, selectionOutput) }
       : {}),
   };
 }

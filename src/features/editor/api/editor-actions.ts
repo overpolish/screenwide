@@ -37,6 +37,10 @@ export const focusEditorWindow = async (kind: EditorKind) => {
 export const browseExportDirectory = () =>
   invoke<string | null>("browse_export_directory");
 
+/** Choose a picture to put behind the canvas. Null when nothing was chosen. */
+export const browseBackgroundImage = () =>
+  invoke<string | null>("browse_background_image");
+
 export const setExportDirectory = async (directory: string) => {
   await invoke<null>("set_export_directory", { directory });
 };

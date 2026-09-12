@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { BackgroundPreset } from "../../../components/shared/background-picker/background";
+import { useEditableGeneralSettings } from "../../settings/use-general-settings";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -19,6 +21,7 @@ import {
   selectionPanelHandlers,
 } from "./selection-target";
 import { useToolPanelBridge } from "./tool-panel-bridge";
+import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
 
 type EditorToolPanelInputs = {
   artifact: EditorArtifact | null;
@@ -66,6 +69,13 @@ export function useEditorToolPanels({
   selectedTrack,
   workspace,
 }: EditorToolPanelInputs) {
+  // The saved backgrounds are a preference rather than a property of this
+  // capture, so they are read and written where every window can see them.
+  const [general, applyGeneralSettings] = useEditableGeneralSettings();
+  const backgroundPresets = general?.backgroundPresets ?? [];
+  const setBackgroundPresets = (presets: BackgroundPreset[]) => {
+    applyGeneralSettings({ backgroundPresets: presets });
+  };
   // Which layer the selection panel is placing, and the handler that commits
   // a new placement for it. Both workspaces already own one; this only says
   // which of them the current selection means.
@@ -96,6 +106,9 @@ export function useEditorToolPanels({
   useToolPanelBridge(
     workspace,
     {
+      background:
+        frameTarget?.background ?? DEFAULT_TOOL_PANEL_SNAPSHOT.background,
+      backgroundPresets,
       cursorEffects,
       frame: frameTarget?.snapshot ?? null,
       hasCursorData: artifact?.kind === "recording" && artifact.hasCursorData,
@@ -103,6 +116,19 @@ export function useEditorToolPanels({
       selection: selectionTarget?.selection ?? null,
     },
     {
+      onBackgroundPresetRemove: (id) => {
+        setBackgroundPresets(
+          backgroundPresets.filter((preset) => preset.id !== id),
+        );
+      },
+      onBackgroundPresetSave: (preset) => {
+        setBackgroundPresets([
+          ...backgroundPresets.filter(
+            (saved) => saved.id !== preset.id && saved.name !== preset.name,
+          ),
+          preset,
+        ]);
+      },
       onCursorEffectsChange,
       ...framePanelHandlers(frameTarget),
       ...selectionPanelHandlers(selectionTarget),

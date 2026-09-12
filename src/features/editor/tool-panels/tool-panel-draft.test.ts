@@ -6,12 +6,16 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CURSOR_EFFECTS } from "../recording-export-settings";
 
 import { resolveToolPanelSnapshot, ToolPanelDraft } from "./tool-panel-draft";
-import { ToolPanelSnapshot } from "./tool-panel-store";
+import {
+  DEFAULT_TOOL_PANEL_SNAPSHOT,
+  ToolPanelSnapshot,
+} from "./tool-panel-store";
 
 const snapshot = (
   sizePercent: number,
   acknowledgedSeq = 0,
 ): ToolPanelSnapshot => ({
+  ...DEFAULT_TOOL_PANEL_SNAPSHOT,
   acknowledgedSeq,
   cursorEffects: { ...DEFAULT_CURSOR_EFFECTS, sizePercent },
   frame: null,
@@ -34,6 +38,7 @@ const placed = (
   ...snapshot(100, acknowledgedSeq),
   selection: {
     ...placement,
+    dropShadow: true,
     kind: "primary",
     label: "Screen",
     sourceHeight: 2338,

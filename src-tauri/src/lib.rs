@@ -23,6 +23,7 @@ mod image_analysis;
 mod monitor_topology;
 mod osc;
 mod permissions;
+mod plugins;
 mod recording;
 mod recording_inputs;
 mod recording_sources;
@@ -44,28 +45,7 @@ mod windows;
 #[cfg(target_os = "macos")]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  let builder = tauri::Builder::default()
-    .plugin(tauri_plugin_autostart::init(
-      tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-      None,
-    ))
-    .plugin(tauri_plugin_clipboard_manager::init())
-    .plugin(tauri_plugin_dialog::init())
-    .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-    .plugin(tauri_plugin_opener::init())
-    .plugin(tauri_plugin_process::init())
-    .plugin(tauri_plugin_updater::Builder::new().build())
-    .plugin(
-      tauri_plugin_window_state::Builder::default()
-        .with_state_flags(tauri_plugin_window_state::StateFlags::POSITION)
-        .with_filter(|label| label == windows::WindowLabel::RecordingBar.as_str())
-        .skip_initial_state(windows::WindowLabel::RecordingBar.as_str())
-        .build(),
-    );
-  #[cfg(target_os = "macos")]
-  let builder = builder
-    .plugin(tauri_plugin_macos_permissions::init())
-    .plugin(tauri_nspanel::init());
+  let builder = plugins::with_plugins(tauri::Builder::default());
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let builder = builder.manage(glide::settings::GlideSettingsState::default());
   let app = builder
@@ -95,6 +75,7 @@ pub fn run() {
       confirm_sheet::fit_confirm_sheet,
       confirm_sheet::get_confirm_sheet,
       confirm_sheet::resolve_confirm_sheet,
+      editor::commands::browse_background_image,
       editor::commands::browse_export_directory,
       editor::commands::cancel_export_job,
       editor::commands::copy_editor_to_clipboard,
@@ -175,6 +156,7 @@ pub fn run() {
       ruler::set_ruler_screenshot_mode,
       screenshots::scrolling::command::capture_scrolling_still,
       screenshots::capture_still,
+      screenshots::thumbnail::render_background_thumbnail,
       text_recognition::cancel_text_recognition,
       text_recognition::close_qr_details,
       text_recognition::copy_recognition_content,
@@ -191,6 +173,7 @@ pub fn run() {
       settings::preferences::browse_default_location,
       settings::preferences::get_general_settings,
       settings::preferences::set_general_settings,
+      settings::wallpapers::list_system_wallpapers,
       settings::show_settings,
       shortcuts::get_shortcut_settings,
       shortcuts::resume_shortcut_action,
@@ -198,6 +181,8 @@ pub fn run() {
       shortcuts::end_shortcut_capture,
       shortcuts::set_shortcut_binding,
       system_accent::get_system_accent,
+      windows::color_panel::close_color_panel,
+      windows::color_panel::show_color_panel,
       windows::source_selector::collapse_recording_source_selector,
       windows::source_selector::get_recording_source_selector_state,
       windows::region_gesture::begin_region_selector_gesture,

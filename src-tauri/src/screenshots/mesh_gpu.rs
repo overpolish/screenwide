@@ -7,9 +7,23 @@ use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt;
 
 use super::mesh::MeshGradientPoint;
+use super::mesh_generator::MeshGenerator;
 
 const MAX_POINTS: usize = 4;
-const SHADER: &str = include_str!("mesh.wgsl");
+
+/// The shader is assembled rather than kept in one file: the ported
+/// generators are pure functions of a pixel and a palette, so they are
+/// declared ahead of the mesh module that calls them and each file stays
+/// readable on its own.
+fn shader_source() -> String {
+  [
+    include_str!("mesh_generator_common.wgsl"),
+    include_str!("mesh_generators.wgsl"),
+    include_str!("mesh_generators_layered.wgsl"),
+    include_str!("mesh.wgsl"),
+  ]
+  .join("\n")
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -18,7 +32,17 @@ struct MeshUniforms {
   point_count: u32,
   seed: u32,
   warp_percent: f32,
-  _padding: [f32; 3],
+  generator: u32,
+  generator_color_count: u32,
+  /// Canvas seconds, the value the animation reads. It sits where the struct
+  /// needed a pad word anyway, so the uniform is the same size it was.
+  time: f32,
+  /// What `time` is multiplied by before a ported generator reads it, from
+  /// the table in `mesh_generator.rs`.
+  generator_speed: f32,
+  /// WGSL puts a uniform `vec4` on a 16-byte boundary, which `base_color`
+  /// needs once `generator_speed` has taken the word after `time`.
+  padding: [f32; 3],
   base_color: [f32; 4],
   points: [[f32; 8]; MAX_POINTS],
   colors: [[f32; 4]; MAX_POINTS],
@@ -60,7 +84,7 @@ impl Renderer {
       .map_err(|error| format!("The graphics device could not be opened: {error}"))?;
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
       label: Some("Screenwide mesh shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
+      source: wgpu::ShaderSource::Wgsl(shader_source().into()),
     });
     let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
       label: Some("Screenwide mesh pipeline"),
@@ -184,24 +208,45 @@ fn color(value: &[u8; 4]) -> [f32; 4] {
   [channel(value[0]), channel(value[1]), channel(value[2]), 1.0]
 }
 
+/// `seconds` is where the canvas is on its timeline. Everything this renderer
+/// serves is a still, so its callers pass zero; the parameter is here so a
+/// test can ask for the moving picture the native backends paint.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn render(
   width: u32,
   height: u32,
+  generator: &MeshGenerator,
   colors: &[[u8; 4]],
   points: &[MeshGradientPoint],
   seed: u32,
   warp_percent: f64,
+  seconds: f64,
 ) -> Result<image::RgbaImage, String> {
   let mut uniforms = MeshUniforms {
     dimensions: [width, height],
     point_count: points.len() as u32,
     seed,
     warp_percent: warp_percent as f32,
-    _padding: [0.0; 3],
-    base_color: color(colors.last().expect("a validated mesh has a base colour")),
+    generator: generator.id,
+    generator_color_count: generator.color_count as u32,
+    time: seconds as f32,
+    generator_speed: generator.speed,
+    padding: [0.0; 3],
+    base_color: color(colors.last().unwrap_or(&[0, 0, 0, u8::MAX])),
     points: [[0.0; 8]; MAX_POINTS],
     colors: [[0.0; 4]; MAX_POINTS],
   };
+  // A ported generator reads its palette straight off the front of the
+  // colours, and reads neither the blobs nor the warp.
+  if generator.id != 0 {
+    let last = colors.last().copied().unwrap_or([0, 0, 0, u8::MAX]);
+    for index in 0..MAX_POINTS {
+      uniforms.colors[index] = color(colors.get(index).unwrap_or(&last));
+    }
+    let pixels = renderer()?.render(width, height, &uniforms)?;
+    return image::RgbaImage::from_raw(width, height, pixels)
+      .ok_or_else(|| "The GPU returned invalid mesh pixels".to_owned());
+  }
   for (index, point) in points.iter().enumerate() {
     let angle = point.rotation.to_radians() as f32;
     uniforms.points[index] = [
@@ -222,121 +267,4 @@ pub(super) fn render(
 }
 
 #[cfg(test)]
-mod tests {
-  use std::time::Instant;
-
-  use super::*;
-
-  #[test]
-  #[ignore = "4K GPU stress test"]
-  fn renders_and_encodes_a_4k_mesh_without_noise_bloat() {
-    let colors = [
-      [255, 46, 129, 255],
-      [34, 211, 238, 255],
-      [250, 204, 21, 255],
-      [99, 102, 241, 255],
-      [17, 24, 39, 255],
-    ];
-    let points = [
-      MeshGradientPoint {
-        radius_x: 80.0,
-        radius_y: 52.0,
-        rotation: 24.0,
-        x: 12.0,
-        y: 18.0,
-      },
-      MeshGradientPoint {
-        radius_x: 60.0,
-        radius_y: 88.0,
-        rotation: -38.0,
-        x: 88.0,
-        y: 14.0,
-      },
-      MeshGradientPoint {
-        radius_x: 94.0,
-        radius_y: 48.0,
-        rotation: 72.0,
-        x: 22.0,
-        y: 90.0,
-      },
-      MeshGradientPoint {
-        radius_x: 54.0,
-        radius_y: 82.0,
-        rotation: -12.0,
-        x: 92.0,
-        y: 84.0,
-      },
-    ];
-    let started = Instant::now();
-    let image = render(3840, 2160, &colors, &points, 42, 10.0).unwrap();
-    let rendered_in = started.elapsed();
-    let (width, height) = image.dimensions();
-    let mut image = crate::screenshots::CapturedImage {
-      height,
-      rgba: image.into_raw(),
-      width,
-    };
-    image.rgba[3] = 0;
-    let encoding_started = Instant::now();
-    let encoded = crate::screenshots::encoding::encode_png(&image).unwrap();
-    eprintln!(
-      "4K mesh: GPU render/readback {rendered_in:?}, PNG encode {:?}, {} bytes",
-      encoding_started.elapsed(),
-      encoded.len()
-    );
-    assert_eq!((image.width, image.height), (3840, 2160));
-    assert!(
-      encoded.len() < 3_000_000,
-      "anti-banding noise made the empty mesh PNG {} bytes",
-      encoded.len()
-    );
-  }
-
-  #[test]
-  fn mesh_contains_distinct_colour_regions() {
-    let colors = [
-      [255, 20, 40, 255],
-      [20, 255, 60, 255],
-      [30, 60, 255, 255],
-      [10, 10, 10, 255],
-    ];
-    let points = [
-      MeshGradientPoint {
-        radius_x: 48.0,
-        radius_y: 42.0,
-        rotation: 0.0,
-        x: 8.0,
-        y: 12.0,
-      },
-      MeshGradientPoint {
-        radius_x: 46.0,
-        radius_y: 52.0,
-        rotation: 24.0,
-        x: 92.0,
-        y: 18.0,
-      },
-      MeshGradientPoint {
-        radius_x: 54.0,
-        radius_y: 44.0,
-        rotation: -31.0,
-        x: 48.0,
-        y: 94.0,
-      },
-    ];
-    let image = render(640, 360, &colors, &points, 42, 7.0).unwrap();
-    let samples = [
-      image.get_pixel(48, 40).0,
-      image.get_pixel(590, 54).0,
-      image.get_pixel(320, 330).0,
-    ];
-    let channel_range = |channel: usize| {
-      let minimum = samples.iter().map(|pixel| pixel[channel]).min().unwrap();
-      let maximum = samples.iter().map(|pixel| pixel[channel]).max().unwrap();
-      maximum - minimum
-    };
-    assert!(
-      channel_range(0) > 80 && channel_range(1) > 80 && channel_range(2) > 80,
-      "mesh samples were unexpectedly flat: {samples:?}"
-    );
-  }
-}
+mod tests;

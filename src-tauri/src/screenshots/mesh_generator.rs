@@ -1,0 +1,323 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! Which picture a mesh background paints.
+//!
+//! The app's own blob mesh was the only one for a while, so the background is
+//! still called a mesh. It now names a generator alongside its colours: the
+//! original, which alone reads the blobs and the warp, and eight ported from
+//! the reference shader library, which read their colours, the seed, and the
+//! canvas seconds. The numbers are a wire format shared with three shading
+//! languages, so an id keeps its number for good and new ones are appended.
+//!
+//! # How fast each generator drifts
+//!
+//! Every backend hands a generator the same seconds the classic mesh already
+//! drifts with: the Metal canvas's `seconds`, the D3D canvas's `motion.x`, and
+//! the `time` word of the wgpu mesh uniform. The dispatch that switches on the
+//! id scales those seconds once by the generator's `speed` before the
+//! generator sees them, because the reference shaders assume `iTime` at full
+//! speed and a background behind a recording wants a drift, not a demo. The
+//! shaders carry no factor of their own; this table is the `speed` field, and
+//! the numbers are tuned by eye against the classic mesh, which is the
+//! reference for "subtle".
+//!
+//! | Generator  | `speed` | Where the seconds enter                         |
+//! | ---------- | ------- | ----------------------------------------------- |
+//! | `mesh`     | 1.00    | the classic blob drift, unscaled                |
+//! | `silk`     | 0.025   | the four phases of a sheet's fold               |
+//! | `aurora`   | 0.025   | the accumulator's starting value                |
+//! | `fluid`    | 0.025   | the third axis of every fbm lookup              |
+//! | `gentle`   | 0.075   | the two phases of the swirl angle               |
+//! | `currents` | 0.025   | the turbulence axis and the warp loop's phases  |
+//! | `paint`    | 0.025   | every octave's phase                            |
+//! | `ribbons`  | 0.025   | the flow offset and the two ripple phases       |
+//! | `strata`   | 0.025   | the tectonic warp's domain, compression, shear  |
+//!
+//! Zero is a still, which is what a thumbnail and a screenshot export ask
+//! for. There the seed shift alone tells two pictures of one generator apart.
+
+/// One generator: the name settings carry, the number every shader switches
+/// on, how many colours its palette takes, and how fast it drifts.
+pub(crate) struct MeshGenerator {
+  pub(crate) color_count: usize,
+  pub(crate) id: u32,
+  pub(crate) name: &'static str,
+  /// What the canvas seconds are multiplied by before the generator reads
+  /// them, tabled above. The dispatch applies it once, so a shader never
+  /// carries a factor of its own.
+  pub(crate) speed: f32,
+}
+
+const GENERATORS: [MeshGenerator; 9] = [
+  MeshGenerator {
+    color_count: 4,
+    id: 0,
+    name: "mesh",
+    speed: 1.0,
+  },
+  MeshGenerator {
+    color_count: 4,
+    id: 1,
+    name: "silk",
+    speed: 0.025,
+  },
+  MeshGenerator {
+    color_count: 3,
+    id: 2,
+    name: "aurora",
+    speed: 0.025,
+  },
+  MeshGenerator {
+    color_count: 4,
+    id: 3,
+    name: "fluid",
+    speed: 0.025,
+  },
+  MeshGenerator {
+    color_count: 3,
+    id: 4,
+    name: "gentle",
+    speed: 0.075,
+  },
+  MeshGenerator {
+    color_count: 4,
+    id: 5,
+    name: "currents",
+    speed: 0.025,
+  },
+  MeshGenerator {
+    color_count: 4,
+    id: 6,
+    name: "paint",
+    speed: 0.025,
+  },
+  MeshGenerator {
+    color_count: 4,
+    id: 7,
+    name: "ribbons",
+    speed: 0.025,
+  },
+  MeshGenerator {
+    color_count: 4,
+    id: 8,
+    name: "strata",
+    speed: 0.025,
+  },
+];
+
+/// The longest palette any generator reads, and the width of the colour
+/// array every backend hands them.
+pub(crate) const MAXIMUM_GENERATOR_COLORS: usize = 4;
+
+/// The name settings written before generators existed carry, and the one an
+/// absent field falls back to.
+pub(crate) const DEFAULT_GENERATOR: &str = "mesh";
+
+pub(crate) fn default_generator() -> String {
+  DEFAULT_GENERATOR.to_owned()
+}
+
+/// The generator a name asks for. `None` for a name this build does not know,
+/// which the caller reports rather than painting something else.
+pub(crate) fn mesh_generator(name: &str) -> Option<&'static MeshGenerator> {
+  let name = if name.is_empty() {
+    DEFAULT_GENERATOR
+  } else {
+    name
+  };
+  GENERATORS.iter().find(|generator| generator.name == name)
+}
+
+/// A ported generator's palette as the shaders read it: four opaque colours
+/// off the front of the settings, with the last repeated to fill a palette
+/// shorter than the shader has room for rather than leaving it black.
+///
+/// The original mesh is laid out the other way around, one colour per blob
+/// with the base behind them, so this is only for the ported generators.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+pub(crate) fn generator_palette(colors: &[String]) -> Result<[[f32; 4]; 4], String> {
+  let last = colors.last().map_or(Ok([0, 0, 0, u8::MAX]), |value| {
+    super::parse_hex_colour(value)
+  })?;
+  let mut palette = [[0.0; 4]; 4];
+  for (index, slot) in palette.iter_mut().enumerate() {
+    let colour = match colors.get(index) {
+      Some(value) => super::parse_hex_colour(value)?,
+      None => last,
+    };
+    let [red, green, blue, _] = colour.map(|channel| f32::from(channel) / 255.0);
+    *slot = [red, green, blue, 1.0];
+  }
+  Ok(palette)
+}
+
+/// The colours as the native canvas shaders read them.
+///
+/// The app's own mesh takes one colour per blob with the base behind them,
+/// which is how the settings carry them, so they are handed over as they are.
+/// A ported generator reads its palette off the front instead.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn canvas_colors(
+  generator: &MeshGenerator,
+  colors: &[String],
+) -> Result<[[f32; 4]; 5], String> {
+  let mut canvas = [[0.0, 0.0, 0.0, 1.0]; 5];
+  if generator.id == 0 {
+    for (index, value) in colors.iter().take(5).enumerate() {
+      let [red, green, blue, _] = super::parse_hex_colour(value)?.map(|c| f32::from(c) / 255.0);
+      canvas[index] = [red, green, blue, 1.0];
+    }
+    return Ok(canvas);
+  }
+  canvas[..4].copy_from_slice(&generator_palette(colors)?);
+  Ok(canvas)
+}
+
+#[cfg(test)]
+pub(crate) fn every_generator() -> &'static [MeshGenerator] {
+  &GENERATORS
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn numbers_are_the_wire_format() {
+    for (index, generator) in every_generator().iter().enumerate() {
+      assert_eq!(generator.id as usize, index);
+      assert!((2..=MAXIMUM_GENERATOR_COLORS).contains(&generator.color_count));
+    }
+  }
+
+  /// The picker's own table of generators, read off the TypeScript source:
+  /// each entry's `colorCount` followed by its `id`, in the order they are
+  /// written.
+  fn picker_generators() -> Vec<(String, usize)> {
+    let source = include_str!(concat!(
+      env!("CARGO_MANIFEST_DIR"),
+      "/../src/components/shared/background-picker/background-generators.ts"
+    ));
+    let mut found = Vec::new();
+    let mut count: Option<usize> = None;
+    for line in source.lines() {
+      let line = line.trim();
+      if let Some(value) = line
+        .strip_prefix("colorCount:")
+        .and_then(|rest| rest.trim().trim_end_matches(',').parse::<usize>().ok())
+      {
+        count = Some(value);
+      } else if let Some(rest) = line.strip_prefix("id: \"") {
+        let Some(name) = rest.split('"').next() else {
+          continue;
+        };
+        let Some(value) = count.take() else {
+          panic!("{name} has no colorCount before it");
+        };
+        found.push((name.to_owned(), value));
+      }
+    }
+    found
+  }
+
+  /// The shaders have their own parity tests; this one guards the two
+  /// generator tables, so adding a generator to one side alone fails loudly
+  /// rather than shipping a picker tile the backends cannot paint.
+  #[test]
+  fn the_picker_offers_the_generators_this_build_has() {
+    let rust: Vec<(String, usize)> = every_generator()
+      .iter()
+      .map(|generator| (generator.name.to_owned(), generator.color_count))
+      .collect();
+    for (index, generator) in every_generator().iter().enumerate() {
+      assert_eq!(generator.id as usize, index);
+    }
+    assert_eq!(picker_generators(), rust);
+  }
+
+  /// Every generator source, in the three shading languages. The ports are
+  /// meant to stay line for line, so a scan over one has to be a scan over
+  /// all three.
+  fn generator_sources() -> [(&'static str, &'static str); 6] {
+    [
+      (
+        "mesh_generator_common.wgsl",
+        include_str!("mesh_generator_common.wgsl"),
+      ),
+      ("mesh_generators.wgsl", include_str!("mesh_generators.wgsl")),
+      (
+        "mesh_generators_layered.wgsl",
+        include_str!("mesh_generators_layered.wgsl"),
+      ),
+      (
+        "gpu_compositor_macos_generators.h",
+        include_str!("../editor/cursor_export/gpu_compositor_macos_generators.h"),
+      ),
+      (
+        "gpu_compositor_macos_generators_layered.h",
+        include_str!("../editor/cursor_export/gpu_compositor_macos_generators_layered.h"),
+      ),
+      (
+        "generators.hlsl",
+        include_str!("../editor/preview_platform/surface_windows/shaders/generators.hlsl"),
+      ),
+    ]
+  }
+
+  /// The pace lives in `speed` and is applied once, where the dispatch
+  /// switches on the id. A generator multiplying its `time` by a number of
+  /// its own would be a second, hidden speed that this table cannot tune, so
+  /// no generator source may hold one.
+  #[test]
+  fn no_generator_hides_a_speed_in_its_shader() {
+    for (name, source) in generator_sources() {
+      for (number, line) in source.lines().enumerate() {
+        let Some(rest) = line.split("time *").nth(1) else {
+          continue;
+        };
+        let next = rest.trim_start();
+        assert!(
+          !next.starts_with(|character: char| character.is_ascii_digit() || character == '.'),
+          "{name}:{} scales its time by a constant: {}",
+          number + 1,
+          line.trim()
+        );
+      }
+    }
+  }
+
+  /// The three ports apply the speed at the same point, in a line that reads
+  /// the same but for the language's spelling of a local.
+  #[test]
+  fn every_port_scales_the_seconds_once_at_the_dispatch() {
+    let mut dispatches = Vec::new();
+    for (name, source) in generator_sources() {
+      let applications = source.matches("time * speed").count();
+      assert!(
+        applications <= 1,
+        "{name} applies the generator speed {applications} times"
+      );
+      if applications == 1 {
+        dispatches.push(name);
+      }
+    }
+    assert_eq!(
+      dispatches,
+      [
+        "mesh_generators_layered.wgsl",
+        "gpu_compositor_macos_generators_layered.h",
+        "generators.hlsl",
+      ],
+      "the speed belongs at the three dispatches, one per port"
+    );
+  }
+
+  #[test]
+  fn an_absent_name_is_the_original_mesh() {
+    assert_eq!(mesh_generator("").map(|one| one.id), Some(0));
+    assert_eq!(mesh_generator("mesh").map(|one| one.id), Some(0));
+    assert_eq!(mesh_generator("silk").map(|one| one.id), Some(1));
+    assert!(mesh_generator("nothing of the sort").is_none());
+  }
+}

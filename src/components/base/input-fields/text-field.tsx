@@ -16,9 +16,16 @@ export type TextFieldProps = Omit<
 > & {
   className?: string;
   label?: string;
+  /** Hint text in the empty field, for a field whose label is its aria name. */
+  placeholder?: string;
 };
 
-export function TextField({ className, label, ...props }: TextFieldProps) {
+export function TextField({
+  className,
+  label,
+  placeholder,
+  ...props
+}: TextFieldProps) {
   const {
     base,
     field,
@@ -32,7 +39,7 @@ export function TextField({ className, label, ...props }: TextFieldProps) {
       {label ? <Label className={labelSlot()}>{label}</Label> : null}
       <div className={field()}>
         <div className={inputWrapper()}>
-          <Input className={input()} />
+          <Input className={input()} placeholder={placeholder} />
         </div>
       </div>
     </AriaTextField>

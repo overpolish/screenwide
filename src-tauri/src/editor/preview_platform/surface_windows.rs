@@ -46,6 +46,8 @@ use windows::{
   },
 };
 
+#[path = "surface_windows/background_image.rs"]
+mod background_image;
 #[path = "surface_windows/compositor.rs"]
 mod compositor;
 #[path = "surface_windows/editor.rs"]

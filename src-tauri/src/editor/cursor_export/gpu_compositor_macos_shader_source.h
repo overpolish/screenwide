@@ -71,27 +71,25 @@ struct CameraUniforms {
 struct CanvasUniforms {
   packed_float4 background_color, recenter_inset_color;
   uint background_radius;
-  int crop_x;
-  int crop_y;
-  uint crop_width;
-  uint crop_height;
-  float image_x;
-  float image_y;
-  uint image_width;
-  uint image_height;
+  int crop_x, crop_y;
+  uint crop_width, crop_height;
+  float image_x, image_y;
+  uint image_width, image_height;
   int source_crop_x, source_crop_y;
   uint source_crop_width, source_crop_height;
   uint radius;
   uint drop_shadow;
-  uint mesh_enabled;
-  uint mesh_seed;
+  uint mesh_enabled, mesh_seed;
   float mesh_warp_percent;
-  uint mesh_point_count;
+  uint mesh_point_count, mesh_generator, mesh_generator_color_count;
   packed_float4 mesh_points[8];
   packed_float4 mesh_colors[5];
   uint clip_cursor_at_video_edge;
   uint transparent_background;
   uint foreground_only;
+  uint has_background_image;
+  uint background_image_id;
+  float mesh_generator_speed;
 };
 struct StillOverlayUniforms {
   int cursor_x;
@@ -212,6 +210,22 @@ static float visible_foreground_sigma(
     : 0.0;
 }
 
+/// The chosen picture, filled to the canvas: scaled until both sides reach,
+/// centred, and trimmed on the axis that overflows. Matches the CPU
+/// `cover_fit` framing so a picture frames the same way on every path.
+static float3 background_image_pixel(
+    texture2d<float, access::sample> picture, float2 point,
+    float2 dimensions) {
+  constexpr sampler picture_sampler(coord::normalized, address::clamp_to_edge,
+                                    filter::linear);
+  float2 size = float2(picture.get_width(), picture.get_height());
+  if (any(size <= 0.0) || any(dimensions <= 0.0)) return float3(0.0);
+  float scale = max(dimensions.x / size.x, dimensions.y / size.y);
+  float2 covered = size * scale;
+  return picture.sample(
+    picture_sampler, (point - (dimensions - covered) * 0.5) / covered).rgb;
+}
+
 static float3 mesh_pixel(float2 point, float2 dimensions,
                          constant CanvasUniforms &u, float seconds) {
   float shortest = min(dimensions.x, dimensions.y);
@@ -244,6 +258,22 @@ static float3 mesh_pixel(float2 point, float2 dimensions,
   float depth = fractal_noise((point + drift) * frequency * 0.7,
                               u.mesh_seed ^ 0xd1b54a35) * 13.0 / 255.0;
   return clamp(weighted / total + depth, 0.0, 1.0);
+}
+
+static float3 canvas_background(
+    texture2d<float, access::sample> picture, float2 point, float2 dimensions,
+    constant CanvasUniforms &u, float seconds) {
+  if (u.has_background_image != 0)
+    return background_image_pixel(picture, point, dimensions);
+  if (u.mesh_enabled == 0) return float3(u.background_color.rgb);
+  // A generator reads its colours, its seed and the same drifting seconds,
+  // which `gen_pixel` scales by the generator's own speed.
+  if (u.mesh_generator == 0) return mesh_pixel(point, dimensions, u, seconds);
+  return gen_pixel(u.mesh_generator, point, dimensions,
+                   gen_palette(u.mesh_colors[0], u.mesh_colors[1],
+                               u.mesh_colors[2], u.mesh_colors[3],
+                               u.mesh_generator_color_count), u.mesh_seed,
+                   seconds, u.mesh_generator_speed);
 }
 
 static float3 yuv_to_rgb(float y, float2 uv) {
@@ -300,10 +330,9 @@ static float rounded_coverage(float2 point, float2 size, float radius) {
 static float4 canvas_rgba_pixel(const device uchar4 *source,
                                 uint source_width, uint source_height,
                                 float2 point, float2 dimensions,
-                                constant CanvasUniforms &u, float seconds) {
-  float3 background = u.mesh_enabled != 0
-    ? mesh_pixel(point, dimensions, u, seconds)
-    : u.background_color.rgb;
+                                constant CanvasUniforms &u, float seconds,
+                                texture2d<float, access::sample> picture) {
+  float3 background = canvas_background(picture, point, dimensions, u, seconds);
   float background_alpha = u.foreground_only != 0 ? 0.0 : 1.0;
   float2 crop_point = point - float2(u.crop_x, u.crop_y), crop_size = float2(u.crop_width, u.crop_height);
   float2 crop_origin = float2(u.crop_x, u.crop_y);
@@ -425,12 +454,13 @@ kernel void compose_canvas_rgba(
     const device uchar4 *keyboard_pixels [[buffer(10)]],
     constant KeyboardUniforms &keyboard [[buffer(11)]],
     texture2d_array<float, access::read> cursor_images [[texture(0)]],
+    texture2d<float, access::sample> background_picture [[texture(1)]],
     uint2 gid [[thread_position_in_grid]],
     uint2 dimensions [[threads_per_grid]]) {
   if (any(gid >= dimensions)) return;
   float4 rgba = canvas_rgba_pixel(
     source, source_dimensions.x, source_dimensions.y, float2(gid) + 0.5,
-    float2(dimensions), u, seconds);
+    float2(dimensions), u, seconds, background_picture);
   float4 cursor_rgba = canvas_cursor_pixel(
     cursor_images, cursor, u, float2(gid) + 0.5);
   rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
@@ -492,6 +522,7 @@ kernel void present_canvas_rgba(
     const device uchar4 *camera [[buffer(5)]],
     constant StillOverlayUniforms &overlay [[buffer(6)]],
     texture2d<float, access::write> output [[texture(0)]],
+    texture2d<float, access::sample> background_picture [[texture(1)]],
     uint2 gid [[thread_position_in_grid]]) {
   uint2 dimensions(output.get_width(), output.get_height());
   if (any(gid >= dimensions)) return;
@@ -499,7 +530,8 @@ kernel void present_canvas_rgba(
   float2 point = float2(gid) + 0.5;
   float4 rgba = canvas_rgba_pixel(source, source_dimensions.x,
                                   source_dimensions.y, point,
-                                  canvas_dimensions, u, seconds);
+                                  canvas_dimensions, u, seconds,
+                                  background_picture);
   int2 cursor_point = int2(floor(point)) - int2(overlay.cursor_x, overlay.cursor_y);
   if (overlay.cursor_width > 0 && cursor_point.x >= 0 && cursor_point.y >= 0 &&
       cursor_point.x < int(overlay.cursor_width) &&
@@ -624,6 +656,7 @@ kernel void workspace_layer(
     const device uchar4 *keyboard_pixels [[buffer(10)]],
     constant KeyboardUniforms &keyboard [[buffer(11)]],
     texture2d_array<float, access::read> cursor_images [[texture(1)]],
+    texture2d<float, access::sample> background_picture [[texture(2)]],
     uint2 gid [[thread_position_in_grid]]) {
   uint2 dimensions(output.get_width(), output.get_height());
   if (any(gid >= dimensions) || placement.width == 0 || placement.height == 0)
@@ -641,7 +674,8 @@ kernel void workspace_layer(
   float4 rgba;
   if (first_layer != 0 || u.foreground_only == 0) {
     rgba = canvas_rgba_pixel(source, source_dimensions.x, source_dimensions.y,
-                             canvas_point, canvas_dimensions, u, seconds);
+                             canvas_point, canvas_dimensions, u, seconds,
+                             background_picture);
   } else {
     rgba = overlay_canvas_foreground_rgba(
         existing, source, source_dimensions.x, source_dimensions.y,
@@ -717,10 +751,9 @@ kernel void unpack_preview_bgra(
 static float3 canvas_pixel(texture2d<float, access::sample> source_y,
                            texture2d<float, access::sample> source_uv,
                            float2 point, float2 dimensions,
-                           constant CanvasUniforms &u, float seconds) {
-  float3 background = u.mesh_enabled != 0
-    ? mesh_pixel(point, dimensions, u, seconds)
-    : u.background_color.rgb;
+                           constant CanvasUniforms &u, float seconds,
+                           texture2d<float, access::sample> picture) {
+  float3 background = canvas_background(picture, point, dimensions, u, seconds);
   float canvas_coverage = rounded_coverage(
     point, dimensions, float(u.background_radius));
   float2 crop_point = point - float2(u.crop_x, u.crop_y), crop_size = float2(u.crop_width, u.crop_height);
@@ -753,11 +786,13 @@ kernel void compose_canvas_luma(
     texture2d<float, access::sample> source_uv [[texture(1)]],
     texture2d<float, access::write> output [[texture(2)]],
     constant CanvasUniforms &u [[buffer(0)]], constant float &seconds [[buffer(1)]],
+    texture2d<float, access::sample> background_picture [[texture(3)]],
     uint2 gid [[thread_position_in_grid]]) {
   uint2 dimensions(output.get_width(), output.get_height());
   if (any(gid >= dimensions)) return;
   float3 rgb = canvas_pixel(source_y, source_uv, float2(gid) + 0.5,
-                            float2(dimensions), u, seconds);
+                            float2(dimensions), u, seconds,
+                            background_picture);
   rgb = output_dither(rgb, float2(gid));
   output.write(16.0 / 255.0 + dot(rgb, float3(0.182586, 0.614231, 0.062007)), gid);
 }
@@ -767,6 +802,7 @@ kernel void compose_canvas_chroma(
     texture2d<float, access::sample> source_uv [[texture(1)]],
     texture2d<float, access::write> output [[texture(2)]],
     constant CanvasUniforms &u [[buffer(0)]], constant float &seconds [[buffer(1)]],
+    texture2d<float, access::sample> background_picture [[texture(3)]],
     uint2 gid [[thread_position_in_grid]]) {
   uint2 dimensions(output.get_width(), output.get_height());
   if (any(gid >= dimensions)) return;
@@ -774,7 +810,8 @@ kernel void compose_canvas_chroma(
   for (uint y = 0; y < 2; ++y)
     for (uint x = 0; x < 2; ++x)
       rgb += canvas_pixel(source_y, source_uv, float2(gid * 2 + uint2(x, y)) + 0.5,
-                          float2(dimensions * 2), u, seconds);
+                          float2(dimensions * 2), u, seconds,
+                          background_picture);
   rgb *= 0.25;
   rgb = output_dither(rgb, float2(gid * 2));
   output.write(float4(

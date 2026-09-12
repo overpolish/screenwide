@@ -9,6 +9,7 @@ mod desktop_capture;
 use crate::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
 use crate::editor::cursor_effects::{GpuArtwork, GpuCursor, NativeGpuArtwork, NativeGpuCursor};
 use crate::editor::keyboard_effects::KeyboardOverlay;
+use crate::screenshots::mesh_generator::{canvas_colors, mesh_generator};
 use crate::screenshots::{
   output_placement, parse_hex_colour, physical_capture_rect, CapturedImage,
   ScreenshotOutputSettings, ScreenshotTarget,
@@ -38,11 +39,19 @@ pub(crate) struct NativeCanvas {
   pub(crate) mesh_seed: u32,
   pub(crate) mesh_warp_percent: f32,
   pub(crate) mesh_point_count: u32,
+  pub(crate) mesh_generator: u32,
+  pub(crate) mesh_generator_color_count: u32,
   pub(crate) mesh_points: [[f32; 8]; 4],
   pub(crate) mesh_colors: [[f32; 4]; 5],
   pub(crate) clip_cursor_at_video_edge: u32,
   pub(crate) transparent_background: u32,
   pub(crate) foreground_only: u32,
+  pub(crate) has_background_image: u32,
+  pub(crate) background_image_id: u32,
+  /// What the canvas seconds are multiplied by before a ported generator
+  /// reads them, from the table in `mesh_generator.rs`. The classic mesh is
+  /// 1.0 and drifts with the seconds as they come.
+  pub(crate) mesh_generator_speed: f32,
 }
 
 #[repr(C)]
@@ -113,22 +122,16 @@ pub(crate) fn native_canvas(
     .as_deref()
     .map(parse_hex_colour)
     .transpose()?;
-  let channel = |value: u8| f32::from(value) / 255.0;
+  let generator =
+    mesh_generator(&settings.mesh_generator).ok_or("The mesh generator is unknown")?;
+  // The shader works in straight RGBA, and every canvas colour is opaque.
+  let opaque = |colour: [u8; 4]| {
+    let [red, green, blue, _] = colour.map(|value| f32::from(value) / 255.0);
+    [red, green, blue, 1.0]
+  };
   let mut canvas = NativeCanvas {
-    background_color: [
-      channel(colour[0]),
-      channel(colour[1]),
-      channel(colour[2]),
-      1.0,
-    ],
-    recenter_inset_color: inset_colour.map_or([0.0; 4], |colour| {
-      [
-        channel(colour[0]),
-        channel(colour[1]),
-        channel(colour[2]),
-        1.0,
-      ]
-    }),
+    background_color: opaque(colour),
+    recenter_inset_color: inset_colour.map_or([0.0; 4], opaque),
     background_radius: (f64::from(settings.width.min(settings.height))
       * settings.background_radius_percent
       / 100.0)
@@ -153,9 +156,14 @@ pub(crate) fn native_canvas(
     mesh_seed: settings.mesh_seed,
     mesh_warp_percent: settings.mesh_warp_percent as f32,
     mesh_point_count: settings.mesh_points.len() as u32,
+    mesh_generator: generator.id,
+    mesh_generator_color_count: generator.color_count as u32,
+    mesh_generator_speed: generator.speed,
     transparent_background: u32::from(transparent_background),
     ..Default::default()
   };
+  (canvas.has_background_image, canvas.background_image_id) =
+    super::background_image::native::canvas_picture(settings);
   for (index, point) in settings.mesh_points.iter().take(4).enumerate() {
     let angle = point.rotation.to_radians() as f32;
     canvas.mesh_points[index] = [
@@ -169,15 +177,7 @@ pub(crate) fn native_canvas(
       0.0,
     ];
   }
-  for (index, value) in settings.mesh_colors.iter().take(5).enumerate() {
-    let colour = parse_hex_colour(value)?;
-    canvas.mesh_colors[index] = [
-      channel(colour[0]),
-      channel(colour[1]),
-      channel(colour[2]),
-      1.0,
-    ];
-  }
+  canvas.mesh_colors = canvas_colors(generator, &settings.mesh_colors)?;
   Ok(canvas)
 }
 

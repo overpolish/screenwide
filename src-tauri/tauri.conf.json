@@ -333,10 +333,16 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
+          "$APPCACHE/background-thumbnails/*",
           "$APPDATA/Recordings/*",
           "$TEMP/Screenwide/application-sources/**",
           "$TEMP/Screenwide/monitor-selector/**",
-          "$TEMP/Screenwide/window-selector/**"
+          "$TEMP/Screenwide/window-selector/**",
+          "/System/Library/Desktop Pictures/**",
+          "/System/Library/Desktop Pictures/.thumbnails/**",
+          "/System/Library/Desktop Pictures/.wallpapers/**",
+          "/private/var/db/Wallpapers/**",
+          "C:/Windows/Web/**"
         ]
       },
       "csp": null

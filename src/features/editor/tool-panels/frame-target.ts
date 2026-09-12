@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Background } from "../../../components/shared/background-picker/background";
+import {
+  applyBackgroundToOutput,
+  backgroundFromOutput,
+} from "../background-adapters";
 import {
   RecordingOutputSettings,
   resizeScreenshotCanvas,
@@ -25,6 +30,11 @@ import { ToolPanelFrame } from "./tool-panel-store";
 export type EditorFrameTarget = {
   /** Commit a canvas of this size, leaving what is in it where it sits. */
   apply: (size: { height: number; width: number }) => void;
+  /** Fill the canvas with this background, leaving the other kinds' values
+   * where they were so a swap back finds them unchanged. */
+  applyBackground: (background: Background) => void;
+  /** The canvas's background, as the picker shows it. */
+  background: Background;
   /** Back to the source size, with what is in it refitted to the new canvas. */
   reset: () => void;
   /** The canvas as the panel shows it. */
@@ -48,14 +58,21 @@ type FrameTargetInputs = {
 
 const target = ({
   apply,
+  applyOutput,
   reset,
   settings,
   source,
-}: Omit<EditorFrameTarget, "snapshot"> & {
+}: Pick<EditorFrameTarget, "apply" | "reset"> & {
+  /** Commit a whole canvas, the path the workspace's own controls take. */
+  applyOutput: (next: ScreenshotOutputSettings) => void;
   settings: ScreenshotOutputSettings;
   source: { height: number; width: number };
 }): EditorFrameTarget => ({
   apply,
+  applyBackground: (background) => {
+    applyOutput(applyBackgroundToOutput(settings, background));
+  },
+  background: backgroundFromOutput(settings),
   reset,
   snapshot: {
     ...screenshotOutputDimensions(settings),
@@ -96,6 +113,9 @@ const recordingFrameTarget = (
         resizeScreenshotCanvas({ height, settings, width }),
       );
     },
+    applyOutput: (next) => {
+      inputs.onRecordingOutputChange?.(track, next);
+    },
     // Resetting the frame is resizing it back to the source size and no
     // more: the layer keeps the transform the Select tool gave it, as it
     // would through a typed size.
@@ -133,6 +153,11 @@ const screenshotFrameTarget = (
         resizeScreenshotWorkspaceCanvas({ height, settings: output, width }),
       );
     },
+    // The background is a property of the workspace canvas: every layer reads
+    // it from there, so it is written there and nowhere else.
+    applyOutput: (next) => {
+      inputs.onCanvasResize?.({ ...output, ...next });
+    },
     // Resetting the frame is resizing it back to the source size and no
     // more: every layer keeps the transform the Select tool gave it, as it
     // would through a typed size.
@@ -168,7 +193,13 @@ export const editorFrameTarget = (
  */
 export const framePanelHandlers = (
   target: EditorFrameTarget | null,
-): Pick<ToolPanelHandlers, "onFrameReset" | "onFrameSizeChange"> => ({
+): Pick<
+  ToolPanelHandlers,
+  "onBackgroundChange" | "onFrameReset" | "onFrameSizeChange"
+> => ({
+  onBackgroundChange: (background) => {
+    target?.applyBackground(background);
+  },
   onFrameReset: () => {
     target?.reset();
   },

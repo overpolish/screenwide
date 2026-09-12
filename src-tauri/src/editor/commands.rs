@@ -180,6 +180,39 @@ pub async fn browse_export_directory(
 }
 
 #[tauri::command]
+pub async fn browse_background_image(
+  app: AppHandle,
+  window: tauri::WebviewWindow,
+) -> Result<Option<PathBuf>, String> {
+  // Parented to the asking window for the same reason the export folder
+  // picker is: an unparented sheet attaches to whichever window comes first,
+  // which for an accessory app is usually a hidden one.
+  let parent = Some(window);
+  let picked = tauri::async_runtime::spawn_blocking(move || {
+    use tauri_plugin_dialog::DialogExt;
+
+    let mut dialog = app
+      .dialog()
+      .file()
+      .set_title("Choose a background picture")
+      .add_filter(
+        "Pictures",
+        &[
+          "png", "jpg", "jpeg", "heic", "heif", "webp", "tiff", "bmp", "gif",
+        ],
+      );
+    if let Some(parent) = &parent {
+      dialog = dialog.set_parent(parent);
+    }
+    dialog.blocking_pick_file()
+  })
+  .await
+  .map_err(|error| error.to_string())?;
+
+  Ok(picked.and_then(|path| path.into_path().ok()))
+}
+
+#[tauri::command]
 pub fn set_export_directory(
   app: AppHandle,
   window: tauri::WebviewWindow,

@@ -655,17 +655,6 @@ export function NativeRecordingPreview({
       return;
     }
     if (event.operation === "frameResize" && event.recordingOutput) {
-      const next = event.recordingOutput[active.trackId];
-      console.debug("[frame-resize] recording", event.phase, {
-        canvas: { height: next.height, width: next.width },
-        crop: {
-          h: next.cropHeight,
-          w: next.cropWidth,
-          x: next.cropX,
-          y: next.cropY,
-        },
-        image: { w: next.imageWidth, x: next.imageX, y: next.imageY },
-      });
       onRecordingOutputChange?.(
         active.trackId,
         event.recordingOutput[active.trackId],

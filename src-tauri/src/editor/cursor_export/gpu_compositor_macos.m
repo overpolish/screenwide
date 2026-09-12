@@ -8,6 +8,7 @@
 #include <math.h>
 
 #import "gpu_compositor_macos.h"
+#import "gpu_compositor_macos_background_image.h"
 #import "gpu_compositor_macos_cursor_resources.h"
 #import "gpu_compositor_macos_keyboard.h"
 
@@ -77,6 +78,7 @@ static bool timeline_presentation(
 }
 
 #import "gpu_compositor_macos_shader_source.h"
+#import "gpu_compositor_macos_generators_layered.h"
 
 static int fail(char *error, size_t capacity, NSString *message) {
   if (error != NULL && capacity > 0) {
@@ -524,9 +526,9 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
     [writer addInput:writer_input];
 
     id<MTLDevice> device = MTLCreateSystemDefaultDevice();
-    id<MTLLibrary> library = [device newLibraryWithSource:shader_source
-                                                  options:nil
-                                                    error:&error];
+    id<MTLLibrary> library =
+        [device newLibraryWithSource:screenwide_gpu_canvas_shader_source()
+                             options:nil error:&error];
     id<MTLComputePipelineState> luma_pipeline =
         [device newComputePipelineStateWithFunction:
                     [library newFunctionWithName:@"overlay_luma"]
@@ -672,7 +674,7 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
         [canvas_compute setTexture:source_y atIndex:0];
         [canvas_compute setTexture:source_uv atIndex:1];
         [canvas_compute setTexture:destination_y atIndex:2];
-        [canvas_compute setBytes:canvas length:sizeof(*canvas) atIndex:0];
+        screenwide_gpu_bind_canvas(canvas_compute, device, canvas, 0, 3);
         [canvas_compute setBytes:&seconds length:sizeof(seconds) atIndex:1];
         [canvas_compute dispatchThreads:MTLSizeMake(y_width, y_height, 1)
                      threadsPerThreadgroup:canvas_group];
@@ -682,7 +684,7 @@ int screenwide_gpu_composite_cursor(const char *screen_path,
         [canvas_compute setTexture:source_y atIndex:0];
         [canvas_compute setTexture:source_uv atIndex:1];
         [canvas_compute setTexture:destination_uv atIndex:2];
-        [canvas_compute setBytes:canvas length:sizeof(*canvas) atIndex:0];
+        screenwide_gpu_bind_canvas(canvas_compute, device, canvas, 0, 3);
         [canvas_compute setBytes:&seconds length:sizeof(seconds) atIndex:1];
         [canvas_compute dispatchThreads:MTLSizeMake(uv_width, uv_height, 1)
                      threadsPerThreadgroup:canvas_group];
@@ -895,9 +897,9 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
     dispatch_once(&once, ^{
       NSError *error = nil;
       device = MTLCreateSystemDefaultDevice();
-      id<MTLLibrary> library = [device newLibraryWithSource:shader_source
-                                                    options:nil
-                                                      error:&error];
+      id<MTLLibrary> library =
+          [device newLibraryWithSource:screenwide_gpu_canvas_shader_source()
+                               options:nil error:&error];
       id<MTLFunction> function =
           [library newFunctionWithName:@"compose_canvas_rgba"];
       pipeline =
@@ -920,9 +922,6 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
                                               options:MTLResourceStorageModeShared];
     id<MTLBuffer> output = [device newBufferWithLength:output_length
                                                options:MTLResourceStorageModeShared];
-    id<MTLBuffer> uniforms = [device newBufferWithBytes:canvas
-                                                 length:sizeof(*canvas)
-                                                options:MTLResourceStorageModeShared];
     ScreenwideStillOverlay empty_overlay = {0};
     if (overlay == NULL) overlay = &empty_overlay;
     ScreenwideKeyboardOverlay empty_keyboard = {0};
@@ -958,7 +957,7 @@ int screenwide_gpu_composite_still(const uint8_t *source_rgba,
     [encoder setComputePipelineState:pipeline];
     [encoder setBuffer:source offset:0 atIndex:0];
     [encoder setBuffer:output offset:0 atIndex:1];
-    [encoder setBuffer:uniforms offset:0 atIndex:2];
+    screenwide_gpu_bind_canvas(encoder, device, canvas, 2, 1);
     [encoder setBytes:source_dimensions length:sizeof(source_dimensions) atIndex:3];
     [encoder setBytes:&time length:sizeof(time) atIndex:4];
     [encoder setBuffer:cursor_uniforms offset:0 atIndex:5];
@@ -1006,9 +1005,9 @@ int screenwide_gpu_alpha_composite(const uint8_t *base_rgba,
     dispatch_once(&once, ^{
       NSError *error = nil;
       device = MTLCreateSystemDefaultDevice();
-      id<MTLLibrary> library = [device newLibraryWithSource:shader_source
-                                                    options:nil
-                                                      error:&error];
+      id<MTLLibrary> library =
+          [device newLibraryWithSource:screenwide_gpu_canvas_shader_source()
+                               options:nil error:&error];
       id<MTLFunction> function =
           [library newFunctionWithName:@"alpha_composite_rgba"];
       pipeline = [device newComputePipelineStateWithFunction:function error:&error];
