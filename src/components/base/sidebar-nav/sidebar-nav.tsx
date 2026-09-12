@@ -21,7 +21,7 @@ import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { IconButton } from "../button/icon-button";
 import { Tooltip } from "../tooltip/tooltip";
 
-export type SidebarNavItem = {
+type SidebarNavItem = {
   icon: ReactNode;
   id: string;
   label: string;

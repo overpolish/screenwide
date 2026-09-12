@@ -28,7 +28,7 @@ export const tooltipShapeClassName =
 
 /** In the DOM a tooltip has no material behind it, so it paints its own
  * opaque panel; the native window shows the window material instead. */
-export const tooltipPanelClassName = `${tooltipShapeClassName} bg-content shadow-md`;
+const tooltipPanelClassName = `${tooltipShapeClassName} bg-content shadow-md`;
 
 type TooltipProps = Omit<AriaTooltipProps, keyof MotionProps> &
   MotionProps & {

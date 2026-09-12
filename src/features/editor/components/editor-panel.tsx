@@ -77,6 +77,7 @@ export function EditorPanel({
   onScreenshotRadiusChangeEnd,
   onSelectedScreenshotItemChange,
   onSelectedTrackChange,
+  onSelectedTrackVolumeChange,
   onToggleMaximize,
   onVideoTrackOrderChange,
   recordingOutput,
@@ -155,6 +156,7 @@ export function EditorPanel({
   // the editor owns, shown in a window of their own and changed from there.
   useEditorToolPanels({
     artifact,
+    audioTrackVolumes,
     bakeCamera,
     cameraOverlay,
     cursorEffects,
@@ -169,6 +171,7 @@ export function EditorPanel({
     onRecordingOutputChange,
     onRecordingTimelineEditChange,
     onScreenshotOutputChange,
+    onSelectedTrackVolumeChange,
     recordingOutput,
     recordingTimelineEdit,
     screenshotOutput,

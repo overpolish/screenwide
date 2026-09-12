@@ -208,7 +208,6 @@ pub fn run() {
       windows::options::show_standalone_listbox,
       windows::options::placement::move_standalone_listbox,
       windows::panel_space::grow_editor_for_panel,
-      windows::panel_space::shrink_editor_after_panel,
       windows::source_selector::expand_recording_source_selector,
     ])
     .setup(|app| {

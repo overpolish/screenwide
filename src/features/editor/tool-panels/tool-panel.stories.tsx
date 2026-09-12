@@ -191,6 +191,21 @@ export const SelectionBakedCamera: Story = {
   },
 };
 
+/** An audio track picked out with the Select tool: nothing of it is placed,
+ * so the panel offers only how loud it is played back. */
+export const SelectionAudio: Story = {
+  args: { tool: "selection", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      hasCursorData: true,
+      isSaving: false,
+      selection: { decibels: 6, kind: "audio", label: "Microphone" },
+    });
+  },
+};
+
 /** The tool is in hand with nothing under it: the panel says so rather than
  * offering fields that would place nothing. */
 export const SelectionEmpty: Story = {

@@ -28,7 +28,7 @@ import type { TimelineItemSelection } from "./timeline-item-selection";
 
 export const KEYBOARD_LAYER_ID = 0xfffffffe;
 
-export function useRecordingKeyboardCanvasEditing<Item extends TimedLaneItem>({
+function useRecordingKeyboardCanvasEditing<Item extends TimedLaneItem>({
   edit,
   geometry,
   keyboardEffects,

@@ -18,7 +18,8 @@ const placedSelection = (
   selection: ToolPanelSnapshot["selection"],
   placement: SelectionPlacementPatch,
 ) => {
-  if (!selection || selection.kind === "shortcut") return selection;
+  if (!selection || selection.kind === "audio" || selection.kind === "shortcut")
+    return selection;
   const next = { ...selection };
   for (const key of ["height", "width", "x", "y"] as const) {
     const value = placement[key];
@@ -76,6 +77,7 @@ export function resolveToolPanelSnapshot(
   // and the editor's answer arrives as the next published placement.
   const {
     applyShortcutToAll: _applyShortcutToAll,
+    audioVolume,
     bakeCamera,
     cropSize,
     frameSize,
@@ -109,7 +111,10 @@ export function resolveToolPanelSnapshot(
   // A dragged inset holds its own value until the editor acknowledges it, so
   // the knob stays under the pointer rather than snapping back a frame.
   const placed =
-    resolved.selection?.kind === "shortcut" ? null : resolved.selection;
+    resolved.selection?.kind === "shortcut" ||
+    resolved.selection?.kind === "audio"
+      ? null
+      : resolved.selection;
   const held =
     placed && selectionInset !== undefined
       ? { ...placed, inset: selectionInset }
@@ -128,7 +133,13 @@ export function resolveToolPanelSnapshot(
     layer?.kind === "camera" && bakeCamera !== undefined
       ? { ...layer, isBaked: bakeCamera }
       : layer;
-  const selection = baked ?? resolved.selection;
+  // A dragged volume is held the same way: the knob stays where it was let go
+  // of until the editor answers with the level it committed.
+  const heard =
+    resolved.selection?.kind === "audio" && audioVolume !== undefined
+      ? { ...resolved.selection, decibels: audioVolume }
+      : null;
+  const selection = baked ?? heard ?? resolved.selection;
   return {
     ...resolved,
     selection,

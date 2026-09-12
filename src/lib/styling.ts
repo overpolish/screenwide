@@ -9,15 +9,6 @@ export function cn(...classes: ClassValue[]) {
   return twMerge(clsx(classes));
 }
 
-export function availableVariants<T extends readonly string[]>(
-  ...keys: T
-): Record<T[number], string> {
-  return Object.fromEntries(keys.map((key) => [key, ""])) as Record<
-    T[number],
-    string
-  >;
-}
-
 export const focusStyles =
   "outline-none ring-focus-ring transition-[box-shadow,background-color,color,border-color]";
 
@@ -29,5 +20,3 @@ export const focusStyles =
 export const elementFocusVisible = "data-[focus-visible]:ring-3";
 
 export const groupFocusVisible = "group-data-[focus-visible]:ring-3";
-
-export const focusWithin = "data-[focus-within]:ring-3";

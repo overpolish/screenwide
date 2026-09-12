@@ -7,7 +7,7 @@ import { useInteractionFocus } from "../../../lib/use-interaction-focus";
 
 import type { PressEvent } from "react-aria";
 
-export const DEFAULT_CONFIRM_TIMEOUT_MS = 2_000;
+const DEFAULT_CONFIRM_TIMEOUT_MS = 2_000;
 
 export type ConfirmActionTriggerProps = {
   className: string | undefined;

@@ -14,7 +14,11 @@ import {
 import { withScreenshotSourceCrop } from "../screenshot-output-settings";
 import { EditorArtifact } from "../types";
 
-import { editorSelectionTarget } from "./selection-target";
+import {
+  audioPanelHandlers,
+  editorAudioSelectionTarget,
+  editorSelectionTarget,
+} from "./selection-target";
 
 const source = { height: 1_000, width: 1_000 };
 
@@ -143,5 +147,98 @@ describe("selection padding", () => {
 
     expect(target.selection.inset).toBe(50);
     expect(target.selection.insetMaximum).toBe(600);
+  });
+});
+
+/** A recording of a screen with two audio tracks, the way the editor hands
+ * one to the panels. */
+const recording: EditorArtifact = {
+  audioTracks: [
+    { kind: "system-audio", label: "System audio", streamIndex: 0 },
+    { kind: "microphone", label: "Microphone", streamIndex: 1 },
+  ],
+  camera: null,
+  canCompress: true,
+  cursorDataVersion: null,
+  durationMs: 5_000,
+  extension: "mp4",
+  hasCursorData: false,
+  hasKeyboardData: false,
+  height: 2338,
+  id: 2,
+  keyboardDataVersion: null,
+  kind: "recording",
+  originalSizeBytes: 1_000,
+  path: "/tmp/recording.mp4",
+  primaryKind: "screen",
+  sourceScalePercent: 200,
+  suggestedFileStem: "recording",
+  width: 3600,
+};
+
+describe("audio selection", () => {
+  it("names the track the recording named and starts at the recorded level", () => {
+    const target = editorAudioSelectionTarget({
+      artifact: recording,
+      audioTrackVolumes: [],
+      selectedTrack: "audio:1",
+    });
+
+    expect(target?.selection).toEqual({
+      decibels: 0,
+      kind: "audio",
+      label: "Microphone",
+    });
+  });
+
+  it("shows the level the editor holds for that stream", () => {
+    const target = editorAudioSelectionTarget({
+      artifact: recording,
+      audioTrackVolumes: [
+        { decibels: -12, streamIndex: 0 },
+        { decibels: 6, streamIndex: 1 },
+      ],
+      selectedTrack: "audio:0",
+    });
+
+    expect(target?.selection).toMatchObject({
+      decibels: -12,
+      label: "System audio",
+    });
+  });
+
+  it("is nothing at all where a video track or no track is selected", () => {
+    for (const selectedTrack of ["primary", "camera", "audio:7", null]) {
+      expect(
+        editorAudioSelectionTarget({
+          artifact: recording,
+          audioTrackVolumes: [],
+          selectedTrack,
+        }),
+      ).toBeNull();
+    }
+    expect(
+      editorAudioSelectionTarget({
+        artifact,
+        audioTrackVolumes: [],
+        selectedTrack: "audio:0",
+      }),
+    ).toBeNull();
+  });
+
+  it("sends a volume back out through the editor's own handler", () => {
+    const onSelectedTrackVolumeChange = vi.fn<(decibels: number) => void>();
+    const target = editorAudioSelectionTarget({
+      artifact: recording,
+      audioTrackVolumes: [{ decibels: 6, streamIndex: 1 }],
+      onSelectedTrackVolumeChange,
+      selectedTrack: "audio:1",
+    });
+
+    audioPanelHandlers(target).onAudioVolumeChange?.(-3);
+    // The reset is the same request at the recorded level.
+    audioPanelHandlers(target).onAudioVolumeChange?.(0);
+
+    expect(onSelectedTrackVolumeChange.mock.calls).toEqual([[-3], [0]]);
   });
 });

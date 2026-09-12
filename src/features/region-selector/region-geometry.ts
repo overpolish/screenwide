@@ -4,7 +4,7 @@
 import { Region } from "../recording-sources/types";
 
 const wholePixel = (value: number) => Math.round(value);
-export const wholePixelSize = (value: number) => Math.max(1, wholePixel(value));
+const wholePixelSize = (value: number) => Math.max(1, wholePixel(value));
 
 /** The "no region yet" region a screenshot session starts from. */
 export const EMPTY_REGION: Region = {

@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { RotateCcw } from "lucide-react";
+
 import { Button } from "../../../components/base/button/button";
+import { IconButton } from "../../../components/base/button/icon-button";
 import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
@@ -26,6 +29,9 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  * be grown past the picture in it, filled with the colour behind that picture,
  * and the content inside it put back in the middle.
  *
+ * An audio track is heard rather than seen: there is nothing to place, so the
+ * panel offers only how loud it is played back.
+ *
  * A keyboard shortcut is drawn rather than placed: it has no source pixels to
  * be sized against, no corners and no pad, so it is shown as the share of the
  * canvas it takes and the point it is centred on.
@@ -45,6 +51,40 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
         isSaving={isSaving}
         selection={selection}
       />
+    );
+  }
+
+  // The track is played at the level it was recorded at until it is moved, so
+  // the reset is out of reach exactly while it is already there.
+  if (selection.kind === "audio") {
+    return (
+      <div className="flex items-center justify-between gap-section">
+        <span className="text-body text-content-fg">Volume</span>
+        <div className="flex items-center gap-control">
+          <IconButton
+            aria-label="Reset volume"
+            isDisabled={isSaving || selection.decibels === 0}
+            onPress={() => {
+              change({ audioVolume: 0 });
+            }}
+          >
+            <RotateCcw />
+          </IconButton>
+          <SliderNumberField
+            aria-label="Volume"
+            className="w-48"
+            isDisabled={isSaving}
+            maxValue={12}
+            minValue={-60}
+            onChange={(decibels) => {
+              change({ audioVolume: decibels });
+            }}
+            rightSection="dB"
+            step={1}
+            value={selection.decibels}
+          />
+        </div>
+      </div>
     );
   }
 

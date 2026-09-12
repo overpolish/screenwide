@@ -11,10 +11,6 @@ use tauri::{AppHandle, LogicalSize, Manager, PhysicalPosition};
 
 use super::geometry::monitor_with_most_overlap;
 
-/// Below a pixel is a rounding difference between what was asked for and what
-/// the window manager settled on, not a resize by the user.
-const WIDTH_TOLERANCE: f64 = 1.0;
-
 /// Minimum horizontal movement needed for growth, in one physical coordinate
 /// space. None means even repositioning cannot fit the enlarged window.
 fn growth_position(x: f64, width: f64, delta: f64, area_left: f64, area_width: f64) -> Option<f64> {
@@ -65,34 +61,6 @@ pub async fn grow_editor_for_panel(
   }
   window.set_size(LogicalSize::new(inner.width + delta, inner.height))?;
   Ok(true)
-}
-
-/// Takes the gutter back when the panel closes, but only from a window still
-/// exactly the width the growth produced: a resize by the user in between is
-/// the size they chose, and nothing here may overrule it.
-#[tauri::command]
-pub fn shrink_editor_after_panel(
-  app: AppHandle,
-  label: String,
-  delta: f64,
-  expected_width: f64,
-) -> tauri::Result<()> {
-  if !delta.is_finite() || delta <= 0.0 || !expected_width.is_finite() {
-    return Ok(());
-  }
-  let Some(window) = app.get_webview_window(&label) else {
-    return Ok(());
-  };
-  if window.is_fullscreen()? || window.is_maximized()? {
-    return Ok(());
-  }
-  let scale = window.scale_factor()?;
-  let size = window.outer_size()?.to_logical::<f64>(scale);
-  if (size.width - expected_width).abs() > WIDTH_TOLERANCE {
-    return Ok(());
-  }
-  window.set_size(LogicalSize::new((size.width - delta).max(1.0), size.height))?;
-  Ok(())
 }
 
 #[cfg(test)]

@@ -27,6 +27,9 @@ import {
  * identical path through the workspace's state.
  */
 export type ToolPanelHandlers = {
+  /** Play the selected audio track this much louder or quieter than it was
+   * recorded, in decibels. */
+  onAudioVolumeChange?: (decibels: number) => void;
   /** Fill the workspace's canvas with this background. */
   onBackgroundChange?: (background: Background) => void;
   onBackgroundPresetRemove?: (id: string) => void;
@@ -78,6 +81,8 @@ export type ToolPanelHandlers = {
 const appliedSeq: Record<EditorKind, number> = { recording: 0, screenshot: 0 };
 
 const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
+  if (values.audioVolume !== undefined)
+    on.onAudioVolumeChange?.(values.audioVolume);
   if (values.bakeCamera !== undefined)
     on.onBakeCameraChange?.(values.bakeCamera);
   if (values.background !== undefined)

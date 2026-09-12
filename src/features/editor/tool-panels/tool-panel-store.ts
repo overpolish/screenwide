@@ -71,7 +71,26 @@ export type ToolPanelShortcutSelection = {
   sizePercent: number;
 };
 
-type ToolPanelSelection = ToolPanelLayerSelection | ToolPanelShortcutSelection;
+/**
+ * What the selection panel shows for a recorded audio track.
+ *
+ * An audio track is neither placed nor drawn: it is heard, so the only thing
+ * there is to set for it is how loud it is played back, in decibels against
+ * the level it was recorded at.
+ */
+export type ToolPanelAudioSelection = {
+  /** How much the track is lifted or lowered, 0 being the recorded level. */
+  decibels: number;
+  kind: "audio";
+  /** The track's own name: "Microphone", "System audio", or "Audio" where the
+   * recording did not say. */
+  label: string;
+};
+
+type ToolPanelSelection =
+  | ToolPanelAudioSelection
+  | ToolPanelLayerSelection
+  | ToolPanelShortcutSelection;
 
 /**
  * What the frame panel shows: the output canvas the workspace renders into,
@@ -134,6 +153,9 @@ export type ToolPanelPatch = Partial<
 > & {
   /** Put every shortcut back where the recording drew it. */
   applyShortcutToAll?: true;
+  /** Play the selected audio track this much louder or quieter than it was
+   * recorded, in decibels. */
+  audioVolume?: number;
   /** Draw the camera into the screen's picture, or carry it as a track of its
    * own. */
   bakeCamera?: boolean;

@@ -20,7 +20,7 @@ const builtInCameraMode: CameraResolution = {
   width: 1920,
 };
 
-export const builtInCamera: CameraDevice = {
+const builtInCamera: CameraDevice = {
   id: "facetime-hd",
   isDefault: true,
   label: "FaceTime HD Camera",
@@ -43,7 +43,7 @@ export const builtInCamera: CameraDevice = {
   ],
 };
 
-export const builtInMicrophone: InputDevice = {
+const builtInMicrophone: InputDevice = {
   id: "builtin-mic",
   isDefault: true,
   label: "MacBook Pro Microphone",

@@ -38,7 +38,7 @@ export const DEFAULT_KEYBOARD_EFFECTS: KeyboardEffectSettings = {
  * outside the camera for other aspect ratios, which the compositor then has to
  * clamp away from the on-screen controls.
  */
-export const cameraOverlayForDimensions = ({
+const cameraOverlayForDimensions = ({
   cameraHeight,
   cameraWidth,
   screenHeight,

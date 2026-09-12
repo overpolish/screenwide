@@ -19,6 +19,7 @@ import {
   ScreenshotWorkspaceOutputSettings,
 } from "../screenshot-output";
 import {
+  AudioTrackVolume,
   CameraOverlaySettings,
   CursorEffectSettings,
   EditorArtifact,
@@ -30,6 +31,8 @@ import {
 import { cropPanelHandlers, editorCropTarget } from "./crop-target";
 import { editorFrameTarget, framePanelHandlers } from "./frame-target";
 import {
+  audioPanelHandlers,
+  editorAudioSelectionTarget,
   editorSelectionTarget,
   selectionPanelHandlers,
 } from "./selection-target";
@@ -38,6 +41,7 @@ import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
 
 type EditorToolPanelInputs = {
   artifact: EditorArtifact | null;
+  audioTrackVolumes: AudioTrackVolume[];
   bakeCamera: boolean;
   cameraOverlay: CameraOverlaySettings;
   cursorEffects: CursorEffectSettings;
@@ -64,6 +68,7 @@ type EditorToolPanelInputs = {
     next: ScreenshotOutputSettings,
     itemId: number,
   ) => void;
+  onSelectedTrackVolumeChange?: (decibels: number) => void;
 };
 
 /**
@@ -75,6 +80,7 @@ type EditorToolPanelInputs = {
  */
 export function useEditorToolPanels({
   artifact,
+  audioTrackVolumes,
   bakeCamera,
   cameraOverlay,
   cursorEffects,
@@ -89,6 +95,7 @@ export function useEditorToolPanels({
   onRecordingOutputChange,
   onRecordingTimelineEditChange,
   onScreenshotOutputChange,
+  onSelectedTrackVolumeChange,
   recordingOutput,
   recordingTimelineEdit,
   screenshotOutput,
@@ -118,6 +125,14 @@ export function useEditorToolPanels({
     recordingOutput,
     screenshotOutput,
     selectedScreenshotItemId,
+    selectedTrack,
+  });
+  // An audio track is heard rather than placed, so it is its own selection:
+  // the level the editor holds for it, and the editor's own way of setting it.
+  const audioTarget = editorAudioSelectionTarget({
+    artifact,
+    audioTrackVolumes,
+    onSelectedTrackVolumeChange,
     selectedTrack,
   });
   // The source rectangle the crop panel cuts, and the workspace's own commit
@@ -186,7 +201,11 @@ export function useEditorToolPanels({
           : DEFAULT_TOOL_PANEL_SNAPSHOT.keyboardMaximum,
       // A selected shortcut is what the Select tool has in hand, so it is the
       // selection the panel shows rather than the layer underneath it.
-      selection: shortcutSelection ?? selectionTarget?.selection ?? null,
+      selection:
+        shortcutSelection ??
+        audioTarget?.selection ??
+        selectionTarget?.selection ??
+        null,
     },
     {
       onBackgroundPresetRemove: (id) => {
@@ -227,6 +246,7 @@ export function useEditorToolPanels({
       onShortcutReset: () => {
         resetKeyboardShortcut(workspace);
       },
+      ...audioPanelHandlers(audioTarget),
       ...cropPanelHandlers(cropTarget),
       ...framePanelHandlers(frameTarget),
       ...selectionPanelHandlers(selectionTarget),

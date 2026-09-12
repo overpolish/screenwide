@@ -55,7 +55,7 @@ export type ShortcutDefaults = {
   shortcuts: ShortcutSettings;
 };
 
-export type GlideControl = string;
+type GlideControl = string;
 
 export type GlideSettings = {
   cursorFollows: boolean;

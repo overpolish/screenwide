@@ -232,4 +232,22 @@ describe("canvas size while a field is open", () => {
       resolve({ ...camera, acknowledgedSeq: 7 }, flipping).selection,
     ).toMatchObject({ isBaked: false });
   });
+
+  it("keeps a dragged volume until the editor answers", () => {
+    const dragging: ToolPanelDraft = {
+      seq: 8,
+      values: { audioVolume: -9 },
+      workspace: "recording",
+    };
+    const audio: ToolPanelSnapshot = {
+      ...snapshot(100),
+      selection: { decibels: 0, kind: "audio", label: "Microphone" },
+    };
+
+    expect(resolve(audio, dragging).selection).toMatchObject({ decibels: -9 });
+    // Once acknowledged, the knob shows the level the editor committed.
+    expect(
+      resolve({ ...audio, acknowledgedSeq: 8 }, dragging).selection,
+    ).toMatchObject({ decibels: 0 });
+  });
 });

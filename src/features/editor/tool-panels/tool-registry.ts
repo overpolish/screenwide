@@ -20,7 +20,7 @@ type EditorTool = {
  * One table rather than a condition at each toolbar button, so a tool added
  * later states its behaviour in the same place as the rest.
  */
-export const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
+const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
   crop: { panel: "crop", resetsView: true },
   cursor: { panel: "cursor", resetsView: true },
   frame: { panel: "frame", resetsView: true },

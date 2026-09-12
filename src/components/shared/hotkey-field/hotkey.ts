@@ -17,7 +17,7 @@ export type HotkeyCaptureMode =
   "shortcut" | "single-control" | "local-shortcut";
 
 /** Compare persisted shortcuts without treating equivalent aliases/order as edits. */
-export function normalizeHotkey(
+function normalizeHotkey(
   value: string | null,
   isMac = typeof navigator !== "undefined" &&
     navigator.userAgent.includes("Mac"),

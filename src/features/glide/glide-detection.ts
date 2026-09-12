@@ -23,7 +23,6 @@ import {
 import { type GlidePhase, RestGate } from "./glide-settling";
 import { TurnPointTracker } from "./glide-travel";
 
-export { defaultGlideDetectorOptions };
 export type { GlideAction, GlideDetectorOptions };
 
 export type GlideDetection = {

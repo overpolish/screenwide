@@ -62,9 +62,7 @@ export const isScreenshotShortcut = (
  * region are all left exactly as they were found. It starts with no region at
  * all - the overlay opens empty and the user draws the one shot's region.
  */
-export const beginScreenshotCapture = async (
-  action: ScreenshotShortcutAction,
-) => {
+const beginScreenshotCapture = async (action: ScreenshotShortcutAction) => {
   const { setScreenshotCapture } = useRecordingSourceStore.getState();
   selectScreenshotAction(action);
   try {

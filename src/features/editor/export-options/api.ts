@@ -7,8 +7,8 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { EditorKind } from "../types";
 
 /** What Rust tells an editor about its own options window. */
-export const EXPORT_OPTIONS_OPENED_EVENT = "export-options://opened";
-export const EXPORT_OPTIONS_CLOSED_EVENT = "export-options://closed";
+const EXPORT_OPTIONS_OPENED_EVENT = "export-options://opened";
+const EXPORT_OPTIONS_CLOSED_EVENT = "export-options://closed";
 
 type ExportOptionsVisibility = { kind: EditorKind };
 

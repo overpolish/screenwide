@@ -20,7 +20,7 @@ type ScreenshotBackgroundType = "image" | "mesh" | "solid";
  * corner and its width, its height following the source's aspect.
  */
 /** The crop tool's live result rectangle, in output pixels. */
-export type CropPreviewRect = {
+type CropPreviewRect = {
   height: number;
   width: number;
   x: number;

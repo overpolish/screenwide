@@ -552,11 +552,3 @@ export const setScreenshotPreviewEditorSuspended = (
  */
 export const growEditorForPanel = (label: string, delta: number) =>
   invoke<boolean>("grow_editor_for_panel", { delta, label });
-
-/** Takes that width back, but only from a window still exactly as wide as the
- * growth left it: a resize in between is the size the user chose. */
-export const shrinkEditorAfterPanel = (
-  label: string,
-  delta: number,
-  expectedWidth: number,
-) => invoke<null>("shrink_editor_after_panel", { delta, expectedWidth, label });

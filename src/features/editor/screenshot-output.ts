@@ -363,13 +363,6 @@ export const resetScreenshotLayout = (
   );
 };
 
-/** Reset only the visible crop, retaining the image's scale and position. */
-export const resetScreenshotCrop = (
-  settings: ScreenshotOutputSettings,
-  _source: { height: number; width: number },
-): ScreenshotOutputSettings =>
-  withScreenshotSourceCrop({ ...settings, radiusPercent: 0 }, fullSourceRect());
-
 /** Reset the selected item's scale and position while retaining its crop:
  * back to its real size, centred, as it was placed. */
 export const resetScreenshotTransform = (

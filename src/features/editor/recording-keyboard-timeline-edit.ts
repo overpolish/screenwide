@@ -3,7 +3,7 @@
 
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
 
-export type DeletedKeyboardShortcutFragment = {
+type DeletedKeyboardShortcutFragment = {
   segmentId: number;
   shortcutId: number;
 };
@@ -14,7 +14,7 @@ export type DeletedKeyboardShortcutRange = {
   startMs: number;
 };
 
-export type KeyboardShortcutPosition = {
+type KeyboardShortcutPosition = {
   centerX: number;
   centerY: number;
   segmentId: number;

@@ -28,7 +28,7 @@ export type Region = {
 
 export type RecordingMode = "screen" | "region" | "window" | "camera" | "audio";
 
-export type SelectorPlacement = "above" | "below";
+type SelectorPlacement = "above" | "below";
 
 export type SelectorState = {
   expanded: boolean;

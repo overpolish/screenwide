@@ -4,7 +4,7 @@
 import { elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
-export const buttonControlStyles =
+const buttonControlStyles =
   "h-control-height rounded-control px-section text-body [&_svg.lucide]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu";
 
 export const buttonVariants = tv({

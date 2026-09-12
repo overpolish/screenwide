@@ -135,7 +135,7 @@ const inGamut = (channels: number[]) =>
  * reach loses chroma until it fits rather than having its channels clipped,
  * which would drag both hue and lightness off with them.
  */
-export const oklchToHex = (color: Oklch) => {
+const oklchToHex = (color: Oklch) => {
   let channels = oklabToLinear(lchToLab(color));
   if (!inGamut(channels)) {
     let low = 0;

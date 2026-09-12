@@ -8,8 +8,11 @@ import {
   ScreenshotWorkspaceOutputSettings,
 } from "../screenshot-output";
 import {
+  AudioTrackVolume,
   CameraOverlaySettings,
   EditorArtifact,
+  recordingAudioStreamIndex,
+  RecordingTrackId,
   RecordingVideoTrackId,
 } from "../types";
 
@@ -19,6 +22,7 @@ import {
   placedSelectionTarget,
 } from "./placed-selection-target";
 import { ToolPanelHandlers } from "./tool-panel-bridge";
+import { ToolPanelAudioSelection } from "./tool-panel-store";
 
 export type { EditorSelectionTarget } from "./placed-selection-target";
 
@@ -123,6 +127,63 @@ const screenshotSelectionTarget = (
   });
 };
 
+/**
+ * The one audio track the selection panel acts on: what to show for it, and
+ * the editor's own way of changing how loud it is played.
+ *
+ * An audio track is heard rather than placed, so it is kept apart from the
+ * placed layers rather than given no-op placements of its own.
+ */
+export type EditorAudioSelectionTarget = {
+  /** Play the track this much louder or quieter than it was recorded. */
+  applyVolume: (decibels: number) => void;
+  selection: ToolPanelAudioSelection;
+};
+
+type AudioSelectionTargetInputs = {
+  artifact: EditorArtifact | null;
+  audioTrackVolumes: AudioTrackVolume[];
+  selectedTrack: string | null;
+  onSelectedTrackVolumeChange?: (decibels: number) => void;
+};
+
+/**
+ * The selected audio track, where an audio track is what is selected.
+ *
+ * The level is the one the editor holds for this stream, and no entry means
+ * the track is played at the level it was recorded at.
+ */
+export const editorAudioSelectionTarget = ({
+  artifact,
+  audioTrackVolumes,
+  onSelectedTrackVolumeChange,
+  selectedTrack,
+}: AudioSelectionTargetInputs): EditorAudioSelectionTarget | null => {
+  if (artifact?.kind !== "recording") return null;
+  // The selection travels as a plain string across the bridge, so the track
+  // id is read back the way the editor writes it.
+  const streamIndex = recordingAudioStreamIndex(
+    selectedTrack as RecordingTrackId | null,
+  );
+  if (streamIndex === null) return null;
+  const track = artifact.audioTracks.find(
+    (audio) => audio.streamIndex === streamIndex,
+  );
+  if (!track) return null;
+  return {
+    applyVolume: (decibels) => {
+      onSelectedTrackVolumeChange?.(decibels);
+    },
+    selection: {
+      decibels:
+        audioTrackVolumes.find((volume) => volume.streamIndex === streamIndex)
+          ?.decibels ?? 0,
+      kind: "audio",
+      label: track.label || "Audio",
+    },
+  };
+};
+
 export const editorSelectionTarget = (
   inputs: SelectionTargetInputs,
 ): EditorSelectionTarget | null => {
@@ -174,5 +235,15 @@ export const selectionPanelHandlers = (
   },
   onSelectionReset: () => {
     target?.reset();
+  },
+});
+
+/** The volume the audio selection offers, answered against the selected
+ * track. */
+export const audioPanelHandlers = (
+  target: EditorAudioSelectionTarget | null,
+): Pick<ToolPanelHandlers, "onAudioVolumeChange"> => ({
+  onAudioVolumeChange: (decibels) => {
+    target?.applyVolume(decibels);
   },
 });

@@ -15,7 +15,7 @@ type NativeHandle =
   | "southeast"
   | "southwest"
   | "west";
-export type NativeGesture =
+type NativeGesture =
   "drawing" | "moving" | { resizing: { handle: NativeHandle } };
 export type NativePayload = {
   gesture: NativeGesture | null;
@@ -33,7 +33,7 @@ type ResizeDirection =
   | "topLeft"
   | "topRight"
   | undefined;
-export type NativeGestureState = {
+type NativeGestureState = {
   dragging: boolean;
   drawing: boolean;
   resizeDirection: ResizeDirection;
