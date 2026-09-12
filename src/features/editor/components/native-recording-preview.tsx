@@ -53,12 +53,11 @@ import { AudioVisualizer } from "./audio-visualizer";
 import { BakedCameraPreviewViewport } from "./baked-camera-preview-viewport";
 import { useProvideEditorToolbarTools } from "./editor-toolbar-context";
 import { useRegisterPreviewFit } from "./preview-fit-context";
-import { PreviewZoomField, RecordingOutputSize } from "./preview-readouts";
+import { PreviewZoomField } from "./preview-readouts";
 import {
   RecordingCanvasTools,
   RecordingCanvasTool,
 } from "./recording-crop-toggle";
-import { usePublishRecordingOutputDimensions } from "./recording-output-dimensions-channel";
 import { RecordingOutputPreviewViewport } from "./recording-output-preview-viewport";
 import { RecordingPlaybackControls } from "./recording-playback-controls";
 import { RECORDING_PREVIEW_PANE_GAP } from "./recording-preview-layout";
@@ -161,8 +160,11 @@ export function NativeRecordingPreview({
   const [canvasTool, setCanvasTool] = useCanvasTool<
     Exclude<RecordingCanvasTool, null>
   >("recording", "select");
-  const { openTool: openToolPanel, toggle: toggleToolPanel } =
-    useToolPanel("recording");
+  const {
+    close: closeToolPanel,
+    openTool: openToolPanel,
+    toggle: toggleToolPanel,
+  } = useToolPanel("recording");
   // The panel follows the tool in hand, so choosing one is all a button or a
   // shortcut has to do.
   useToolPanelFollowsTool("recording", recordingToolId(canvasTool));
@@ -248,7 +250,6 @@ export function NativeRecordingPreview({
   const keyboardCanvas = keyboardPreview.canvas;
   const keyboardTimeline = keyboardPreview.timeline;
   const visibleKeyboardFragment = keyboardPreview.visibleFragment;
-  usePublishRecordingOutputDimensions(effectiveRecordingOutput.primary);
   // Resizing never changes layer order, so keep its identity across the drag.
   const videoTrackOrder = useMemo(
     () => recordingVideoTrackOrder(effectiveRecordingOutput),
@@ -1044,11 +1045,11 @@ export function NativeRecordingPreview({
     [setCanvasTool],
   );
   // Cursor and Keyboard are panels without a canvas tool behind them, so
-  // putting one away hands the canvas back to Select rather than leaving the
-  // editor toolless.
+  // putting one away closes the panel and leaves no tool in hand, the way
+  // pressing an active canvas tool does.
   const dismissToolPanel = useCallback(() => {
-    changeCanvasTool("select");
-  }, [changeCanvasTool]);
+    void closeToolPanel();
+  }, [closeToolPanel]);
   // The shortcut opens the panel from the toolbar button's own bounds, the
   // same anchor a press would give it.
   const toggleCursorPanel = useCallback(() => {
@@ -1089,16 +1090,10 @@ export function NativeRecordingPreview({
     if (canvasToolRef.current === "crop") changeCanvasTool(null);
   }, [changeCanvasTool]);
 
-  // The readouts sit at the left of the transport row. The size subscribes to
-  // the output channel itself, so a frame resize running at pointer rate never
-  // reaches the memoized controls around it.
-  const readouts = useMemo(
-    () => (
-      <>
-        <RecordingOutputSize />
-        <PreviewZoomField onChange={requestZoom} zoomPercent={zoomPercent} />
-      </>
-    ),
+  // The zoom field sits at the left of the transport row. Held as one element
+  // so the memoized controls re-render only when the zoom itself changes.
+  const zoomControl = useMemo(
+    () => <PreviewZoomField onChange={requestZoom} zoomPercent={zoomPercent} />,
     [requestZoom, zoomPercent],
   );
 
@@ -1299,7 +1294,7 @@ export function NativeRecordingPreview({
           set off by the fill ladder alone, with no rule between it and the
           preview above. */}
       {layout ? (
-        <div className="shrink-0 bg-fill-quaternary px-window-inset">
+        <div className="shrink-0 bg-fill-quaternary">
           <RecordingPlaybackControls
             durationMs={timelineBlade.timelineDurationMs}
             isPlaying={player.isPlaying}
@@ -1309,44 +1304,51 @@ export function NativeRecordingPreview({
             onPlaybackRateChange={player.setPlaybackRate}
             playbackRate={player.playbackRate}
             playhead={playhead}
-            readouts={readouts}
+            zoomControl={zoomControl}
           />
           {isPreparingAudio ? (
-            <div className="flex h-24 shrink-0 items-center justify-center gap-2 text-xs text-muted">
+            <div className="flex h-24 shrink-0 items-center justify-center gap-control-inset px-window-inset text-body text-content-fg-secondary">
               <CircularProgress
                 aria-label="Preparing audio preview"
                 isIndeterminate
-                size="compact"
+                size="small"
               />
               Preparing audio tracks
             </div>
           ) : (
-            <RecordingTrackLanes
-              adjustedKeyboardFragmentIds={keyboardTimeline.adjustedFragmentIds}
-              audioTracks={audioTracks}
-              blade={timelineBlade.blade}
-              durationMs={timelineBlade.timelineDurationMs}
-              enabledTracks={enabledTracks}
-              enabledVideoTracks={selectedVideoTracks}
-              hiddenKeyboardFragmentIds={keyboardTimeline.hiddenFragmentIds}
-              hiddenKeyboardItemIds={keyboardTimeline.hiddenItemIds}
-              // Shortcuts turned off leave nothing to place, so the lane goes
-              // with them rather than showing items that are not drawn.
-              keyboardItems={keyboardEffects.bake ? keyboardTimeline.items : []}
-              keyboardSelection={keyboardTimeline.selection}
-              layout={layout}
-              onEnabledTracksChange={changeEnabledTracks}
-              onEnabledVideoTracksChange={changeEnabledVideoTracks}
-              onSeek={timelineBlade.seek}
-              onSelectedTrackChange={changeSelectedTrack}
-              onVideoTrackOrderChange={onVideoTrackOrderChange}
-              playhead={playhead}
-              selectedTrack={selectedTrack}
-              sourceDurationMs={durationMs}
-              thumbnails={timelineThumbnails}
-              videoTrackOrder={videoTrackOrderList}
-              volumes={audioVolumeByStream}
-            />
+            // The transport row above owns its inset, so the lanes take theirs.
+            <div className="px-window-inset">
+              <RecordingTrackLanes
+                adjustedKeyboardFragmentIds={
+                  keyboardTimeline.adjustedFragmentIds
+                }
+                audioTracks={audioTracks}
+                blade={timelineBlade.blade}
+                durationMs={timelineBlade.timelineDurationMs}
+                enabledTracks={enabledTracks}
+                enabledVideoTracks={selectedVideoTracks}
+                hiddenKeyboardFragmentIds={keyboardTimeline.hiddenFragmentIds}
+                hiddenKeyboardItemIds={keyboardTimeline.hiddenItemIds}
+                // Shortcuts turned off leave nothing to place, so the lane goes
+                // with them rather than showing items that are not drawn.
+                keyboardItems={
+                  keyboardEffects.bake ? keyboardTimeline.items : []
+                }
+                keyboardSelection={keyboardTimeline.selection}
+                layout={layout}
+                onEnabledTracksChange={changeEnabledTracks}
+                onEnabledVideoTracksChange={changeEnabledVideoTracks}
+                onSeek={timelineBlade.seek}
+                onSelectedTrackChange={changeSelectedTrack}
+                onVideoTrackOrderChange={onVideoTrackOrderChange}
+                playhead={playhead}
+                selectedTrack={selectedTrack}
+                sourceDurationMs={durationMs}
+                thumbnails={timelineThumbnails}
+                videoTrackOrder={videoTrackOrderList}
+                volumes={audioVolumeByStream}
+              />
+            </div>
           )}
         </div>
       ) : null}

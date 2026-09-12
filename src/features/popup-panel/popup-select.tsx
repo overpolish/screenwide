@@ -31,19 +31,28 @@ type PopupSelectProps = {
   /** A form row's title and note, when the pop-up sits in one. */
   "aria-describedby"?: string;
   "aria-labelledby"?: string;
+  /** The trigger's width. A form row's pop-up fills the row; one standing in
+   * a toolbar is as wide as its own value. */
+  className?: string;
   isDisabled?: boolean;
   leftSection?: ReactNode;
+  /** The least the list may measure across. A list opens as wide as its
+   * trigger; a narrow trigger's list still needs room for the check gutter
+   * and the longest label. */
+  minimumListWidth?: number;
   onOpen?: () => Promise<PopupPanelItem[]>;
 };
 
 export function PopupSelect({
   "aria-describedby": ariaDescribedBy,
   "aria-labelledby": ariaLabelledBy,
+  className = "w-full",
   id,
   isDisabled = false,
   items,
   label,
   leftSection,
+  minimumListWidth = 0,
   onOpen,
   onSelectionChange,
   placeholder,
@@ -106,7 +115,7 @@ export function PopupSelect({
       focusContents,
       offset: new LogicalPosition(bounds.left, bounds.bottom + 4),
       parentWindowLabel: getCurrentWindow().label,
-      size: new LogicalSize(bounds.width, height),
+      size: new LogicalSize(Math.max(bounds.width, minimumListWidth), height),
       triggerId: id,
     });
   };
@@ -127,7 +136,7 @@ export function PopupSelect({
 
   return (
     <div
-      className="w-full"
+      className={className}
       data-popup-panel-trigger={id}
       onPointerDown={(event) => {
         event.stopPropagation();

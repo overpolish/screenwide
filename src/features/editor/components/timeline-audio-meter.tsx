@@ -56,7 +56,6 @@ export function TimelineAudioMeter({
   return (
     <div className="shrink-0 pt-1.5 pl-1">
       <AudioMeter
-        compact
         decibels={level}
         height={height}
         hidePeakTick

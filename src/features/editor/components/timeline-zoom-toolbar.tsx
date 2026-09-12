@@ -75,7 +75,6 @@ export function TimelineZoomToolbar({
           aria-label="Blade tool"
           isSelected={isBladeActive}
           onChange={onBladeActiveChange}
-          size="compact"
         >
           <Scissors size={15} />
         </IconToggleButton>
@@ -86,7 +85,6 @@ export function TimelineZoomToolbar({
           aria-label="Range tool"
           isSelected={isRangeActive}
           onChange={onRangeActiveChange}
-          size="compact"
         >
           <SquareDashed size={15} />
         </IconToggleButton>
@@ -102,7 +100,6 @@ export function TimelineZoomToolbar({
             onPress={() => {
               onZoom(0.8);
             }}
-            size="compact"
           >
             <ZoomOut size={15} />
           </IconButton>
@@ -117,7 +114,6 @@ export function TimelineZoomToolbar({
             aria-label="Fit timeline"
             isDisabled={viewport.zoom === 1 && viewport.panOffset === 0}
             onPress={onFit}
-            size="compact"
           >
             <Maximize2 size={14} />
           </IconButton>
@@ -132,7 +128,6 @@ export function TimelineZoomToolbar({
             onPress={() => {
               onZoom(1.25);
             }}
-            size="compact"
           >
             <ZoomIn size={15} />
           </IconButton>

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
@@ -10,7 +10,6 @@ import {
   sourceScalePercent,
 } from "../resolution";
 import {
-  screenshotOutputDimensions,
   screenshotWorkspaceItemOutput,
   ScreenshotOutputSettings,
 } from "../screenshot-output";
@@ -26,10 +25,6 @@ import {
 } from "./editor-preview-section-props";
 import { useProvideEditorToolbarTools } from "./editor-toolbar-context";
 import { PreviewViewport } from "./preview-viewport";
-import {
-  createRecordingOutputDimensionsChannel,
-  RecordingOutputDimensionsContext,
-} from "./recording-output-dimensions-channel";
 import {
   deleteScreenshotLayer,
   moveScreenshotLayer,
@@ -104,9 +99,6 @@ export function ScreenshotSection({
     onCanvasResize?.(result.settings);
     onSelectedItemChange?.(result.nextSelectedItemId);
   };
-  const outputDimensions = screenshotOutput
-    ? screenshotOutputDimensions(screenshotOutput)
-    : { height: artifact.height, width: artifact.width };
   const selectedItem = artifact.items.find(
     (item) => item.id === selectedItemId,
   );
@@ -240,9 +232,7 @@ export function ScreenshotSection({
         zoomRequest={zoomRequest}
       />
       <ScreenshotStatusBar
-        height={outputDimensions.height}
         onZoomChange={requestZoom}
-        width={outputDimensions.width}
         zoomPercent={zoomPercent}
       />
     </div>
@@ -288,7 +278,6 @@ export function RecordingSection({
   resolutionScalePercent,
   selectedTrack,
 }: RecordingSectionProps) {
-  const [dimensionsChannel] = useState(createRecordingOutputDimensionsChannel);
   const primaryOutputDimensions = recordingOutput
     ? {
         height: recordingOutput.primary.height,
@@ -313,59 +302,55 @@ export function RecordingSection({
       : undefined;
 
   return (
-    <RecordingOutputDimensionsContext value={dimensionsChannel}>
-      <div className="flex min-h-0 grow flex-col">
-        <ScrubPreview
-          artifactId={artifact.id}
-          audioError={recordingPreviewError}
-          audioTracks={recordingPreviewTracks}
-          audioTrackVolumes={audioTrackVolumes}
-          bakeCamera={bakeCamera}
-          cameraOverlay={cameraOverlay}
-          cursorEffects={cursorEffects}
-          durationMs={artifact.durationMs}
-          enabledStreamIndices={enabledStreamIndices}
-          enabledVideoTracks={enabledVideoTracks}
-          hasCursorData={hasCursorData}
-          hasKeyboardData={hasKeyboardData}
-          isExportOpen={isExportOpen}
-          isPreparingAudio={isPreparingRecordingAudio}
-          isPreparingPreview={isPreparingRecordingPreview}
-          isSaving={isSaving}
-          key={artifact.id}
-          keyboardEffects={keyboardEffects}
-          keyboardMaximumWidthUnits={artifact.keyboardMaximumWidthUnits}
-          onCameraOverlayChange={onCameraOverlayChange}
-          onEnabledTracksChange={onEnabledTracksChange}
-          onEnabledVideoTracksChange={onEnabledVideoTracksChange}
-          onKeyboardEffectsChange={onKeyboardEffectsChange}
-          onRecordingOutputChange={onRecordingOutputChange}
-          onRecordingTimelineEditChange={onRecordingTimelineEditChange}
-          onSelectedTrackChange={onSelectedTrackChange}
-          onVideoTrackOrderChange={onVideoTrackOrderChange}
-          previewLayout={recordingPreviewLayout}
-          previewOutputDimensions={{
-            primary: primaryOutputDimensions,
-            ...(cameraOutputDimensions
-              ? { camera: cameraOutputDimensions }
-              : {}),
-          }}
-          previewSourceDimensions={{
-            primary: { height: artifact.height, width: artifact.width },
-            ...(artifact.camera
-              ? {
-                  camera: {
-                    height: artifact.camera.height,
-                    width: artifact.camera.width,
-                  },
-                }
-              : {}),
-          }}
-          recordingOutput={recordingOutput}
-          recordingTimelineEdit={recordingTimelineEdit}
-          selectedTrack={selectedTrack}
-        />
-      </div>
-    </RecordingOutputDimensionsContext>
+    <div className="flex min-h-0 grow flex-col">
+      <ScrubPreview
+        artifactId={artifact.id}
+        audioError={recordingPreviewError}
+        audioTracks={recordingPreviewTracks}
+        audioTrackVolumes={audioTrackVolumes}
+        bakeCamera={bakeCamera}
+        cameraOverlay={cameraOverlay}
+        cursorEffects={cursorEffects}
+        durationMs={artifact.durationMs}
+        enabledStreamIndices={enabledStreamIndices}
+        enabledVideoTracks={enabledVideoTracks}
+        hasCursorData={hasCursorData}
+        hasKeyboardData={hasKeyboardData}
+        isExportOpen={isExportOpen}
+        isPreparingAudio={isPreparingRecordingAudio}
+        isPreparingPreview={isPreparingRecordingPreview}
+        isSaving={isSaving}
+        key={artifact.id}
+        keyboardEffects={keyboardEffects}
+        keyboardMaximumWidthUnits={artifact.keyboardMaximumWidthUnits}
+        onCameraOverlayChange={onCameraOverlayChange}
+        onEnabledTracksChange={onEnabledTracksChange}
+        onEnabledVideoTracksChange={onEnabledVideoTracksChange}
+        onKeyboardEffectsChange={onKeyboardEffectsChange}
+        onRecordingOutputChange={onRecordingOutputChange}
+        onRecordingTimelineEditChange={onRecordingTimelineEditChange}
+        onSelectedTrackChange={onSelectedTrackChange}
+        onVideoTrackOrderChange={onVideoTrackOrderChange}
+        previewLayout={recordingPreviewLayout}
+        previewOutputDimensions={{
+          primary: primaryOutputDimensions,
+          ...(cameraOutputDimensions ? { camera: cameraOutputDimensions } : {}),
+        }}
+        previewSourceDimensions={{
+          primary: { height: artifact.height, width: artifact.width },
+          ...(artifact.camera
+            ? {
+                camera: {
+                  height: artifact.camera.height,
+                  width: artifact.camera.width,
+                },
+              }
+            : {}),
+        }}
+        recordingOutput={recordingOutput}
+        recordingTimelineEdit={recordingTimelineEdit}
+        selectedTrack={selectedTrack}
+      />
+    </div>
   );
 }

@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ClipboardCopy, Pause, Play } from "lucide-react";
+import { Images, Pause, Play } from "lucide-react";
 import { memo, ReactNode } from "react";
 
-import { Button } from "../../../components/base/button/button";
-import { IconToggleButton } from "../../../components/base/button/icon-button";
-import { ListBoxItem } from "../../../components/base/listbox-item/listbox-item";
-import { Select } from "../../../components/base/select/select";
+import {
+  IconButton,
+  IconToggleButton,
+} from "../../../components/base/button/icon-button";
 import { CheckOnClick } from "../../../components/shared/check-on-click/check-on-click";
+import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { PopupSelect } from "../../popup-panel/popup-select";
 import { formatDuration } from "../duration";
 
 import { Playhead } from "./scrub-playhead";
@@ -24,8 +26,8 @@ type RecordingPlaybackControlsProps = {
   playhead: Playhead;
   // Returning a promise makes the copy button await the copy before it checks.
   onCopyCurrentFrame?: () => Promise<unknown> | undefined;
-  /** What the picture measures, at the left of the row. */
-  readouts?: ReactNode;
+  /** How close the picture is drawn, at the left of the row. */
+  zoomControl?: ReactNode;
 };
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => ({
@@ -48,76 +50,60 @@ export const RecordingPlaybackControls = memo(
     onPlaybackRateChange,
     playbackRate,
     playhead,
-    readouts,
+    zoomControl,
   }: RecordingPlaybackControlsProps) {
     return (
-      // The band's first row: 24px controls inside the control inset, with the
-      // transport on the window's centre line whatever stands either side.
-      <div className="relative flex min-h-control-height shrink-0 items-center justify-center gap-1.5 py-control-inset">
-        {readouts ? (
-          <div className="absolute left-0 flex items-center gap-section">
-            {readouts}
+      // The band's first row: standard controls inside the window inset, with
+      // the transport on the window's centre line whatever stands either side.
+      <div className="relative flex min-h-control-height shrink-0 items-center justify-center gap-control px-window-inset py-control-inset">
+        {zoomControl ? (
+          <div className="absolute left-window-inset flex items-center gap-section">
+            {zoomControl}
           </div>
         ) : null}
+        <PopupSelect
+          className="w-20"
+          id="preview-speed"
+          items={PLAYBACK_RATES}
+          label="Preview speed"
+          minimumListWidth={120}
+          onSelectionChange={(item) => {
+            const selected = PLAYBACK_RATES.find((rate) => rate.id === item.id);
+            if (selected) onPlaybackRateChange(selected.rate);
+          }}
+          placeholder="Speed"
+          selectedId={playbackRate.toString()}
+        />
         <IconToggleButton
           aria-keyshortcuts="P"
           aria-label={isPlaying ? "Pause preview" : "Play preview"}
-          className="size-6 shrink-0"
+          className="shrink-0"
           isSelected={isPlaying}
-          off={<Play className="fill-current" size={14} />}
+          off={<Play className="fill-current" />}
           onChange={(selected) => {
             if (selected) onPlay();
             else onPause();
           }}
-          size="compact"
         >
-          <Pause className="fill-current" size={14} />
+          <Pause className="fill-current" />
         </IconToggleButton>
-        <Select<(typeof PLAYBACK_RATES)[number]>
-          aria-label="Preview speed"
-          clearable={false}
-          items={PLAYBACK_RATES}
-          listBoxClassName="max-h-[inherit] min-w-20"
-          onChange={(selection) => {
-            const selected = PLAYBACK_RATES.find(
-              (rate) => rate.id === selection,
-            );
-            if (selected) onPlaybackRateChange(selected.rate);
-          }}
-          popoverPlacement="bottom start"
-          popoverShouldFlip={false}
-          scrollShadow
-          showFocus={false}
-          size="compact"
-          triggerClassName="h-6 gap-1 px-1.5 py-0"
-          value={playbackRate.toString()}
-        >
-          {(rate) => (
-            <ListBoxItem
-              className="shrink-0"
-              id={rate.id}
-              textValue={rate.label}
-            >
-              {rate.label}
-            </ListBoxItem>
-          )}
-        </Select>
-        <span className="min-w-24 text-xs font-light text-content-fg tabular-nums">
+        <span className="min-w-24 text-body text-content-fg tabular-nums">
           <ElapsedTime playhead={playhead} />
-          <span className="text-muted"> / {formatDuration(durationMs)}</span>
+          <span className="text-content-fg-secondary">
+            {" "}
+            / {formatDuration(durationMs)}
+          </span>
         </span>
         {onCopyCurrentFrame ? (
-          <CheckOnClick onPress={() => onCopyCurrentFrame()}>
-            <Button
-              aria-label="Copy current frame"
-              className="absolute right-0"
-              size="compact"
-              variant="ghost"
-            >
-              <ClipboardCopy size={13} />
-              Copy frame
-            </Button>
-          </CheckOnClick>
+          <div className="absolute right-window-inset flex items-center gap-section">
+            <NativeTooltipTrigger tooltip="Copy Frame">
+              <CheckOnClick onPress={() => onCopyCurrentFrame()}>
+                <IconButton aria-label="Copy current frame">
+                  <Images />
+                </IconButton>
+              </CheckOnClick>
+            </NativeTooltipTrigger>
+          </div>
         ) : null}
       </div>
     );
