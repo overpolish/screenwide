@@ -72,6 +72,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/recording_preview_audio_ribbon_shader.h");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_audio_ribbon_coverage_tests.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos.m");
+    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+draw.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+appearance.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+desktop.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+input.m");
@@ -160,6 +161,7 @@ fn main() {
       .file("src/editor/recording_preview_surface_macos+audio_ribbon_state.m")
       .file("src/editor/recording_preview_surface_macos+zoom.m")
       .file("src/editor/screenshot_region_osc_macos.m")
+      .file("src/editor/screenshot_region_osc_macos+draw.m")
       .file("src/editor/screenshot_region_osc_macos+appearance.m")
       .file("src/editor/screenshot_region_osc_macos+desktop.m")
       .file("src/editor/screenshot_region_osc_macos+input.m")

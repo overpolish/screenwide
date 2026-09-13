@@ -105,6 +105,7 @@ impl Surface {
       window_size: (0, 0),
       drawing: false,
       pending: false,
+      drawables_released: false,
     })
   }
 }

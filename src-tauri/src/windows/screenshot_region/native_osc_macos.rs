@@ -45,3 +45,9 @@ pub use state::{
 
 #[cfg(test)]
 mod tests;
+
+/// Release native resources before closing a transient overlay window.
+/// The caller must run on the owning main thread while the view is valid.
+pub fn detach(view: *mut std::ffi::c_void) {
+  unsafe { ffi::screenwide_region_osc_detach(view) };
+}

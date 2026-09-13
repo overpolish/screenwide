@@ -94,6 +94,7 @@ unsafe extern "C" {
     width: u32,
     height: u32,
   ) -> i32;
+  pub fn screenwide_region_osc_detach(view: *mut c_void);
   pub fn screenwide_region_osc_set_snapshot_presented(view: *mut c_void, presented: i32);
   pub fn screenwide_region_osc_set_snapshot_composited(view: *mut c_void, composited: i32);
   pub fn screenwide_region_osc_set_ocr(

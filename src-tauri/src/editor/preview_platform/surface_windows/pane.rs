@@ -112,6 +112,29 @@ impl Backdrop {
 }
 
 impl Pane {
+  pub(super) fn release_drawables(&mut self, context: &ID3D11DeviceContext) -> Result<(), String> {
+    self.blur = None;
+    unsafe {
+      let vertex_buffer: Option<ID3D11Buffer> = None;
+      let stride = 0_u32;
+      let offset = 0_u32;
+      context.IASetVertexBuffers(
+        0,
+        1,
+        Some(&raw const vertex_buffer),
+        Some(&raw const stride),
+        Some(&raw const offset),
+      );
+      context.PSSetShaderResources(0, Some(&[None, None, None, None, None]));
+      context.OMSetRenderTargets(None, None);
+      self
+        .swap_chain
+        .ResizeBuffers(2, 2, 2, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SWAP_CHAIN_FLAG(0))
+    }
+    .map_err(|error| format!("The Windows preview pane could not release buffers: {error}"))
+    .inspect(|()| self.buffer_size = (2, 2))
+  }
+
   pub(super) fn update_geometry(&self) -> windows::core::Result<()> {
     let content_width = self.content_size.0.max(1) as f32;
     let content_height = self.content_size.1.max(1) as f32;

@@ -98,6 +98,17 @@ impl AudioRibbon {
     self.dirty = true;
     if samples.is_empty() {
       self.pixels = None;
+      unsafe {
+        self.swap_chain.ResizeBuffers(
+          2,
+          2,
+          2,
+          DXGI_FORMAT_B8G8R8A8_UNORM,
+          windows::Win32::Graphics::Dxgi::DXGI_SWAP_CHAIN_FLAG(0),
+        )
+      }
+      .map_err(|error| format!("The Windows audio ribbon could not release buffers: {error}"))?;
+      self.viewport = (2, 2);
       return self.sync_visibility();
     }
     let desc = D3D11_TEXTURE2D_DESC {

@@ -32,8 +32,10 @@ impl Surface {
         self.shown = false;
         let _ = unsafe { ShowWindowAsync(self.hwnd, SW_HIDE) };
       }
+      self.release_drawables();
       return Ok(());
     }
+    self.drawables_released = false;
     // Layout is only re-asserted when it actually changes: a pointer move
     // must not post a `SetWindowPos` per frame.
     if !self.shown || self.window_size != (width, height) {

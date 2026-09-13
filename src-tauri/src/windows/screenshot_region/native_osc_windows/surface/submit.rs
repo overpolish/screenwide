@@ -4,6 +4,43 @@
 use super::*;
 
 impl Surface {
+  /// Releases session-sized presentation buffers while retaining captured
+  /// textures and interaction state for the next visible session.
+  pub(super) fn release_drawables(&mut self) {
+    if self.drawables_released {
+      return;
+    }
+    self.drawables_released = true;
+    self.vertex_buffer = None;
+    self.vertex_capacity = 0;
+    self.vertices.clear();
+    self.vertices.shrink_to_fit();
+
+    unsafe {
+      self
+        .gpu
+        .context
+        .IASetVertexBuffers(0, 1, Some(&None), Some(&0), Some(&0));
+      self
+        .gpu
+        .context
+        .PSSetShaderResources(0, Some(&[None, None, None, None, None]));
+      self.gpu.context.OMSetRenderTargets(None, None);
+      match self.swap_chain.ResizeBuffers(
+        2,
+        2,
+        2,
+        DXGI_FORMAT_B8G8R8A8_UNORM,
+        DXGI_SWAP_CHAIN_FLAG(0),
+      ) {
+        Ok(()) => self.buffer_size = (2, 2),
+        Err(error) => {
+          eprintln!("The Windows region OSC could not release swap-chain buffers: {error}")
+        }
+      }
+    }
+  }
+
   pub(super) fn submit(
     &mut self,
     vertices: &[Vertex],

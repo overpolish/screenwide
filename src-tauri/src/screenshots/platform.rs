@@ -11,6 +11,8 @@ use cidre::{cg, cv, sc};
 use std::ffi::c_char;
 
 mod desktop_capture;
+mod monitor_thumbnail;
+pub(crate) use monitor_thumbnail::capture_monitor_thumbnail;
 
 use crate::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
 use crate::editor::cursor_effects::{GpuArtwork, GpuCursor, NativeGpuArtwork, NativeGpuCursor};
