@@ -203,18 +203,6 @@ export function useEditorWindowShortcuts({
         return;
       }
 
-      if (
-        event.shiftKey &&
-        !commandKey &&
-        event.code === "KeyR" &&
-        onToggleRangeTool &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onToggleRangeTool();
-        return;
-      }
-
       if (event.ctrlKey || event.metaKey || event.shiftKey) return;
 
       if (
@@ -245,7 +233,7 @@ export function useEditorWindowShortcuts({
       }
 
       if (
-        event.code === "BracketLeft" &&
+        event.code === "BracketRight" &&
         onMoveForward &&
         !ownsTextEditingKeys(event.target)
       ) {
@@ -255,7 +243,7 @@ export function useEditorWindowShortcuts({
       }
 
       if (
-        event.code === "BracketRight" &&
+        event.code === "BracketLeft" &&
         onMoveBackward &&
         !ownsTextEditingKeys(event.target)
       ) {
@@ -292,6 +280,13 @@ export function useEditorWindowShortcuts({
       ) {
         consume(event);
         onToggleCrop();
+      } else if (
+        event.code === "KeyR" &&
+        onToggleRangeTool &&
+        !ownsTextEditingKeys(event.target)
+      ) {
+        consume(event);
+        onToggleRangeTool();
       } else if (
         event.code === "KeyV" &&
         onSelectTool &&

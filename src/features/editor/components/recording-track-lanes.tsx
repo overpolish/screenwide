@@ -9,24 +9,40 @@ import {
   useState,
 } from "react";
 
-import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import {
   recordingAudioStreamIndex,
   recordingAudioTrackId,
   RecordingVideoTrackId,
 } from "../types";
 
-import { RecordingTrackContextMenu } from "./recording-track-context-menu";
 import { RecordingTrackLanesProps } from "./recording-track-lanes-contract";
-import { LayerContextMenuState } from "./screenshot-layer-context-menu";
 import { ScrubAudioTracks } from "./scrub-audio-tracks";
+import { TIMED_LANE_ROW_HEIGHT_PX } from "./timed-lane-layout";
 import { TimelineAudioMeter } from "./timeline-audio-meter";
 import { TimelineItemLane } from "./timeline-item-lane";
 import { TimelineScrubberOverlay } from "./timeline-scrubber";
+import {
+  TIMELINE_TRACK_SWITCH_SELECTOR,
+  TimelineTrackHeader,
+} from "./timeline-track-header";
 import { TimelineVideoClip } from "./timeline-video-clip";
 import { TimelineHeader } from "./timeline-zoom-toolbar";
+import {
+  recordingTrackMoves,
+  useRecordingTrackMenu,
+} from "./use-recording-track-menu";
 import { useTimedLaneRows } from "./use-timed-lane-rows";
 import { useTimelineNavigation } from "./use-timeline-navigation";
+
+/**
+ * The band's row rhythm in CSS pixels. Every row is `--spacing-control-height`
+ * tall and rows are separated by `--spacing-control`; the meter beside the
+ * lanes is sized in JS, so it needs what those tokens resolve to.
+ */
+const ROW_GAP_PX = 4;
+
+/** Movement that turns a press on a track header into a reorder. */
+const DRAG_THRESHOLD_PX = 4;
 
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
@@ -53,8 +69,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   videoTrackOrder,
   volumes,
 }: RecordingTrackLanesProps) {
-  const [contextMenu, setContextMenu] =
-    useState<LayerContextMenuState<RecordingVideoTrackId> | null>(null);
   const [drag, setDrag] = useState<{
     dropIndex: number;
     source: RecordingVideoTrackId;
@@ -62,6 +76,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   const timeline = useTimelineNavigation(blade.edit.artifactId);
   const dragRef = useRef<{
     dropIndex: number;
+    pointerId: number;
     source: RecordingVideoTrackId;
     startY: number;
     started: boolean;
@@ -82,8 +97,12 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   const keyboardRowCount = keyboardItems.length > 0 ? keyboardRows.rowCount : 0;
   const rowCount =
     layout.panes.length + audioTracks.length + (keyboardRowCount > 0 ? 1 : 0);
+  // The meter stands beside the whole column: the toolbar row, every track
+  // row under it, and the sublanes the shortcut lane grows by.
   const meterHeight =
-    30 + rowCount * 34 + Math.max(0, keyboardRowCount - 1) * 32;
+    (rowCount + 1) * TIMED_LANE_ROW_HEIGHT_PX +
+    rowCount * ROW_GAP_PX +
+    Math.max(0, keyboardRowCount - 1) * TIMED_LANE_ROW_HEIGHT_PX;
   const videoRows = layout.panes
     .map((pane, index) => ({
       pane,
@@ -113,7 +132,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
     track: RecordingVideoTrackId,
     direction: "backward" | "forward",
   ) => {
-    setContextMenu(null);
     const index = videoTrackOrder.indexOf(track);
     const nextIndex = direction === "forward" ? index - 1 : index + 1;
     if (index === -1 || nextIndex < 0 || nextIndex >= videoTrackOrder.length)
@@ -122,27 +140,47 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
     [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
     onVideoTrackOrderChange?.(next);
   };
+  const openTrackMenu = useRecordingTrackMenu(moveTrack);
   const beginDrag =
     (source: RecordingVideoTrackId) =>
     (event: ReactPointerEvent<HTMLDivElement>) => {
       if (event.button !== 0 || videoRows.length < 2) return;
+      // The switch acts on the track it sits in, so a press on it is never
+      // the start of a reorder: capturing the pointer here would take the
+      // switch's click with it. The rest of the header is the drag handle,
+      // the button that selects the track included.
       if (
         event.target instanceof Element &&
-        event.target.closest("button, input, [role='checkbox']")
+        event.target.closest(TIMELINE_TRACK_SWITCH_SELECTOR)
       )
         return;
+      // Only the press point is recorded here. Capturing the pointer now
+      // would redirect the pointerup and the click that follows it to this
+      // row, and the header's button would never complete its press - the
+      // same mechanism that once swallowed the switch. The capture is taken
+      // when the press turns into a reorder, and a press that never moves
+      // stays an ordinary press on the button that selects the track.
       dragRef.current = {
         dropIndex: videoTrackOrder.indexOf(source),
+        pointerId: event.pointerId,
         source,
         startY: event.clientY,
         started: false,
       };
-      event.currentTarget.setPointerCapture(event.pointerId);
     };
   const updateDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     const active = dragRef.current;
     if (!active) return;
-    if (!active.started && Math.abs(event.clientY - active.startY) <= 4) return;
+    if (
+      !active.started &&
+      Math.abs(event.clientY - active.startY) <= DRAG_THRESHOLD_PX
+    )
+      return;
+    if (!active.started) {
+      // From here the row owns the pointer: the reorder has started, so the
+      // press it grew out of is meant to be cancelled.
+      event.currentTarget.setPointerCapture(active.pointerId);
+    }
     active.started = true;
     event.preventDefault();
     let dropIndex = videoRows.length;
@@ -175,11 +213,11 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   return (
     <section
       aria-label="Recording timeline"
-      className="shrink-0 pt-0.5 pb-2 [&_*]:outline-none! [&_*]:ring-0! [&_*]:ring-offset-0!"
+      className="shrink-0 pb-control-inset"
       {...timeline.interactionProps}
     >
-      <div className="flex items-stretch gap-2">
-        <div className="relative flex min-w-0 grow flex-col gap-0.5">
+      <div className="flex items-stretch gap-control">
+        <div className="relative flex min-w-0 grow flex-col gap-control">
           <TimelineHeader
             areaRef={timeline.areaRef}
             blade={blade}
@@ -200,59 +238,60 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               enabledTracks.size === 0;
             return (
               <div
-                className={`relative flex items-center transition-opacity ${drag?.source === trackId ? "opacity-55" : ""}`}
+                className={`relative flex items-center gap-section transition-opacity ${drag?.source === trackId ? "opacity-50" : ""}`}
                 key={trackId}
                 onContextMenu={(event) => {
                   event.preventDefault();
                   onSelectedTrackChange(trackId);
-                  setContextMenu({
-                    itemId: trackId,
-                    x: Math.min(event.clientX, window.innerWidth - 196),
-                    y: Math.min(event.clientY, window.innerHeight - 92),
-                  });
+                  void openTrackMenu(
+                    { x: event.clientX, y: event.clientY },
+                    trackId,
+                    recordingTrackMoves(videoTrackOrder, trackId),
+                  );
                 }}
                 ref={(element) => {
                   if (element) rowElementsRef.current.set(trackId, element);
                   else rowElementsRef.current.delete(trackId);
                 }}
               >
+                {/* Where the dragged track would land, drawn in the gap
+                    between rows in the accent the app selects with. */}
                 {drag?.dropIndex === rowIndex ? (
-                  <div className="pointer-events-none absolute -top-0.5 right-0 left-0 z-20 h-0.5 rounded bg-info" />
+                  <div className="pointer-events-none absolute -top-tight right-0 left-0 z-20 h-tight rounded-control bg-primary" />
                 ) : null}
                 {rowIndex === videoRows.length - 1 &&
                 drag?.dropIndex === videoRows.length ? (
-                  <div className="pointer-events-none absolute -bottom-0.5 right-0 left-0 z-20 h-0.5 rounded bg-info" />
+                  <div className="pointer-events-none absolute -bottom-tight right-0 left-0 z-20 h-tight rounded-control bg-primary" />
                 ) : null}
-                <div
-                  className={`flex h-8 w-timeline-gutter shrink-0 cursor-grab items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors active:cursor-grabbing ${selectedTrack === trackId ? "bg-info/15" : ""}`}
-                  onClick={() => {
-                    onSelectedTrackChange(trackId);
+                <TimelineTrackHeader
+                  // The press that starts a reorder is taken on the way down:
+                  // the button that selects the track stops the bubbling one.
+                  dragProps={{
+                    onPointerCancel: cancelDrag,
+                    onPointerDownCapture: beginDrag(trackId),
+                    onPointerMove: updateDrag,
+                    onPointerUp: finishDrag,
                   }}
-                  onPointerCancel={cancelDrag}
-                  onPointerDown={beginDrag(trackId)}
-                  onPointerMove={updateDrag}
-                  onPointerUp={finishDrag}
-                >
-                  <Checkbox
-                    aria-label={
-                      mustRemainEnabled
-                        ? `${label} must remain included`
-                        : `${enabled ? "Exclude" : "Include"} ${label}`
-                    }
-                    isDisabled={mustRemainEnabled}
-                    isSelected={enabled}
-                    onChange={() => {
+                  icon={<Icon />}
+                  inclusion={{
+                    isIncluded: enabled,
+                    isRequired: mustRemainEnabled,
+                    onChange: () => {
                       const next = new Set(enabledVideoTracks);
                       if (next.has(trackId)) {
-                        if (next.size === 1 && enabledTracks.size === 0) return;
+                        if (mustRemainEnabled) return;
                         next.delete(trackId);
                       } else next.add(trackId);
                       onEnabledVideoTracksChange(next);
-                    }}
-                  />
-                  <Icon className="shrink-0 text-muted" size={14} />
-                  <span className="min-w-0 grow truncate">{label}</span>
-                </div>
+                    },
+                  }}
+                  isDragging={drag?.source === trackId}
+                  isSelected={selectedTrack === trackId}
+                  label={label}
+                  onSelect={() => {
+                    onSelectedTrackChange(trackId);
+                  }}
+                />
                 <TimelineVideoClip
                   blade={blade}
                   enabled={enabled}
@@ -285,7 +324,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               edit={blade.edit}
               hiddenFragmentIds={hiddenKeyboardFragmentIds}
               hiddenItemIds={hiddenKeyboardItemIds}
-              icon={<Keyboard size={14} />}
+              icon={<Keyboard />}
               items={keyboardItems}
               label="Shortcuts"
               minimumItemWidthPx={48}
@@ -318,13 +357,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
           />
         ) : null}
       </div>
-      <RecordingTrackContextMenu
-        menu={contextMenu}
-        onClose={() => {
-          setContextMenu(null);
-        }}
-        onMove={moveTrack}
-      />
     </section>
   );
 });

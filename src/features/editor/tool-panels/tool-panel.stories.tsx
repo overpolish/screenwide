@@ -37,7 +37,7 @@ const meta = {
     ),
   ],
   parameters: { layout: "fullscreen" },
-  title: "Features/Editor Tool Panel",
+  title: "Features/Editor/Tool Panel",
 } satisfies Meta<typeof ToolPanel>;
 
 export default meta;

@@ -90,6 +90,13 @@ typedef void (*screenwide_preview_selection_gesture_callback)(uint32_t phase,
 typedef void (*screenwide_preview_selection_callback)(int32_t pane_index,
                                                        void *context);
 typedef void (*screenwide_preview_pointer_down_callback)(void *context);
+/// A right press (or Control-click) that landed on a video layer. `x` and `y`
+/// are logical points from the top-left of the window's content, the frame the
+/// webview reports pointer events in, so the web layer can open its own menu
+/// exactly where the press was.
+typedef void (*screenwide_preview_context_menu_callback)(uint32_t pane_index,
+                                                          double x, double y,
+                                                          void *context);
 
 typedef struct {
   uint32_t pane_index;
@@ -138,6 +145,7 @@ typedef struct {
 
 @interface ScreenwidePreviewInteractionView (Editor)
 - (void)releaseCursorControl;
+- (BOOL)reportContextMenuAtPoint:(NSPoint)point;
 @end
 @interface ScreenwidePreviewInteractionView (Keyboard)
 - (void)beginWorkspaceMove;
@@ -214,6 +222,8 @@ typedef struct {
 @property(nonatomic) void *selectionContext;
 @property(nonatomic) screenwide_preview_pointer_down_callback pointerDownCallback;
 @property(nonatomic) void *pointerDownContext;
+@property(nonatomic) screenwide_preview_context_menu_callback contextMenuCallback;
+@property(nonatomic) void *contextMenuContext;
 @property(nonatomic) BOOL selectionHitTestingEnabled;
 @property(nonatomic, strong) NSArray<NSValue *> *selectionTargets;
 @property(nonatomic) BOOL selectionSnappingEnabled;

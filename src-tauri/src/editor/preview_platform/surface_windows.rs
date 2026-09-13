@@ -78,8 +78,9 @@ use super::{
     rebase_display_fit_mode, DisplayRect, DisplayTarget, NormalizedRect,
   },
   workspace_transform::WorkspaceTransform,
-  PointerDownCallback, PreviewSelection, PreviewSurfaceRect, SelectionCallback,
-  SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
+  ContextMenuCallback, PointerDownCallback, PreviewSelection, PreviewSurfaceRect,
+  SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
+  TransformCallback,
 };
 use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
@@ -2622,6 +2623,13 @@ impl RecordingPreviewSurface {
     if let Ok(mut callbacks) = self.inner.callbacks.lock() {
       callbacks.pointer_down = Some(callback);
     }
+  }
+
+  /// Windows has no native right-press handling yet: the layer menu on the
+  /// canvas is macOS-only, so the shared player installs a callback this
+  /// backend simply drops.
+  pub(crate) fn set_context_menu_callback(&mut self, callback: ContextMenuCallback) {
+    drop(callback);
   }
 
   pub(crate) fn set_selection_gesture_callback(&mut self, callback: SelectionGestureCallback) {

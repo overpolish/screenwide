@@ -11,7 +11,7 @@
  * result can be kept directly in React state.
  */
 
-export const TIMELINE_MIN_ZOOM = 1;
+const TIMELINE_MIN_ZOOM = 1;
 export const TIMELINE_MAX_ZOOM = 20;
 
 export interface TimelineViewportState {
@@ -32,7 +32,7 @@ export const fitTimelineViewport = (): TimelineViewportState => ({
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
 
-export const clampTimelineZoom = (zoom: number): number =>
+const clampTimelineZoom = (zoom: number): number =>
   Number.isFinite(zoom)
     ? clamp(zoom, TIMELINE_MIN_ZOOM, TIMELINE_MAX_ZOOM)
     : TIMELINE_MIN_ZOOM;
@@ -126,5 +126,3 @@ export const panTimelineViewportByPixels = (
     zoom: current.zoom,
   };
 };
-
-export const resetTimelineViewport = fitTimelineViewport;

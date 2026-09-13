@@ -1,21 +1,22 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { RotateCcwClock } from "lucide-react";
-import { ReactNode, useState } from "react";
+import { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 
-import { Badge } from "../../../components/base/badge/badge";
 import {
   layoutRecordingTimelineSegments,
   RecordingTimelineEdit,
   RecordingTimelineTrimEdge,
 } from "../recording-timeline-edit";
 
+import { TIMELINE_LANE_LEFT_CLASS } from "./recording-track-lanes-contract";
+import { clamp } from "./scrub-playhead";
 import {
-  TimelineSegmentSpeedContextMenu,
-  TimelineSpeedMenuState,
-} from "./timeline-segment-speed-context-menu";
+  timelineXToFraction,
+  TimelineViewportState,
+} from "./timeline-viewport";
 import { useTimelineNativeTrim } from "./use-timeline-native-trim";
+import { useTimelineSpeedMenu } from "./use-timeline-speed-menu";
 
 export type TimelineBladeController = {
   beginTrim: (
@@ -25,12 +26,12 @@ export type TimelineBladeController = {
   ) => void;
   clearPreview: () => void;
   clearRangeSelection: () => void;
-  cutAt: (sourcePosition: number) => void;
+  cutAt: (outputPosition: number) => void;
   edit: RecordingTimelineEdit;
   endTrim: (outputPosition: number) => void;
   isActive: boolean;
   isRangeActive: boolean;
-  previewAt: (sourcePosition: number) => void;
+  previewAt: (outputPosition: number) => void;
   previewPosition: number | null;
   rangeSelection: TimelineRangeSelection | null;
   selectSegment: (segmentId: number | null) => void;
@@ -61,9 +62,19 @@ const SCISSORS_PATHS = `
 `;
 const isMacOS =
   typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
+// A cursor is rasterized from a data URI, which cannot reach the document's
+// custom properties, so these literals mirror the theme tokens the cursor is
+// drawn from: the glyph takes a label colour (`--color-content-fg`) and its
+// outline the window colour behind it (`--color-content`). macOS draws its
+// cursors dark on light, Windows the other way round, so each platform takes
+// the pair from the appearance its cursors read against.
+const CONTENT_FG_LIGHT = "rgba(0, 0, 0, 0.85)";
+const CONTENT_LIGHT = "rgb(255, 255, 255)";
+const CONTENT_FG_DARK = "rgba(255, 255, 255, 0.85)";
+const CONTENT_DARK = "rgb(30, 30, 30)";
 const cursorSvg = (paths: string, density: number) => {
-  const iconColor = isMacOS ? "#111827" : "#f9fafb";
-  const outlineColor = isMacOS ? "#f9fafb" : "#111827";
+  const iconColor = isMacOS ? CONTENT_FG_LIGHT : CONTENT_FG_DARK;
+  const outlineColor = isMacOS ? CONTENT_LIGHT : CONTENT_DARK;
   const size = 24 * density;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.toString()}" height="${size.toString()}" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="${outlineColor}" stroke-width="5">${paths}</g><g stroke="${iconColor}" stroke-width="2">${paths}</g></svg>`;
 };
@@ -75,14 +86,14 @@ const cursorImageSet = (paths: string) =>
     )
     .join(", ")})`;
 
-export const TIMELINE_BLADE_CURSOR = `${cursorImageSet(SCISSORS_PATHS)} 12 12, crosshair`;
+const TIMELINE_BLADE_CURSOR = `${cursorImageSet(SCISSORS_PATHS)} 12 12, crosshair`;
 
 const arrowLeftToLinePaths =
   '<path d="M3 19V5"/><path d="m13 6-6 6 6 6"/><path d="M7 12h14"/>';
 const arrowRightToLinePaths =
   '<path d="M17 12H3"/><path d="m11 18 6-6-6-6"/><path d="M21 5v14"/>';
-export const TRIM_LEFT_CURSOR = `${cursorImageSet(arrowLeftToLinePaths)} 12 12, ew-resize`;
-export const TRIM_RIGHT_CURSOR = `${cursorImageSet(arrowRightToLinePaths)} 12 12, ew-resize`;
+const TRIM_LEFT_CURSOR = `${cursorImageSet(arrowLeftToLinePaths)} 12 12, ew-resize`;
+const TRIM_RIGHT_CURSOR = `${cursorImageSet(arrowRightToLinePaths)} 12 12, ew-resize`;
 
 const segmentStyle = (sourceStart: number, sourceEnd: number) => ({
   left: `${(sourceStart * 100).toString()}%`,
@@ -106,12 +117,15 @@ export function TimelineSegments({
   renderContent: () => ReactNode;
   selectedSegmentId: number | null;
 }) {
-  const [speedMenu, setSpeedMenu] = useState<
-    (TimelineSpeedMenuState & { segmentId: number }) | null
-  >(null);
+  const openSpeedMenu = useTimelineSpeedMenu(
+    "segment",
+    (playbackRate, segmentId) => {
+      blade.setSegmentPlaybackRate(Number(segmentId), playbackRate);
+    },
+  );
   const handleEvents = isBladeActive
     ? "pointer-events-none"
-    : "pointer-events-auto transition hover:bg-info/40 active:bg-info/55";
+    : "pointer-events-auto transition hover:bg-primary/40 active:bg-primary/55";
   const beginTrim = useTimelineNativeTrim({ blade, outputPositionAt });
   const layout = layoutRecordingTimelineSegments(edit);
   const segments = layout.map((segment, index) => {
@@ -121,7 +135,7 @@ export function TimelineSegments({
       <div
         aria-label={`Timeline segment ${(index + 1).toString()}`}
         aria-pressed={isSelected}
-        className={`absolute inset-y-0 overflow-hidden rounded-sm bg-muted/8 ${isBladeActive ? "pointer-events-none" : "pointer-events-auto"}`}
+        className={`absolute inset-y-0 overflow-hidden rounded-control bg-fill-tertiary ${isBladeActive ? "pointer-events-none" : "pointer-events-auto"}`}
         data-timeline-segment-id={segment.id}
         key={segment.id}
         onClick={(event) => {
@@ -133,18 +147,11 @@ export function TimelineSegments({
           event.preventDefault();
           event.stopPropagation();
           onSelectSegment(segment.id);
-          const timelineTop =
-            event.currentTarget
-              .closest("section[aria-label='Recording timeline']")
-              ?.getBoundingClientRect().top ?? 0;
-          setSpeedMenu({
-            segmentId: segment.id,
-            x: Math.min(event.clientX, window.innerWidth - 120),
-            y: Math.max(
-              timelineTop + 4,
-              Math.min(event.clientY, window.innerHeight - 220),
-            ),
-          });
+          void openSpeedMenu(
+            { x: event.clientX, y: event.clientY },
+            segment.playbackRate ?? 1,
+            segment.id.toString(),
+          );
         }}
         onKeyDown={(event) => {
           if (event.key !== "Enter" && event.key !== " ") return;
@@ -164,26 +171,23 @@ export function TimelineSegments({
         >
           {renderContent()}
         </div>
-        {(segment.playbackRate ?? 1) !== 1 ? (
+        {/* A picked segment is tinted inside its own bounds: the accent
+            covers this segment in this lane and nothing else. */}
+        {isSelected ? (
           <span
-            className="pointer-events-none absolute top-1 left-1/2 z-20 -translate-x-1/2"
-            title={`Segment speed: ${(segment.playbackRate ?? 1).toString()}×`}
-          >
-            <Badge>
-              <RotateCcwClock size={10} />
-              {(segment.playbackRate ?? 1).toString()}×
-            </Badge>
-          </span>
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-10 bg-primary/15"
+          />
         ) : null}
         <span
-          className={`absolute inset-y-0 left-0 z-10 w-2.5 bg-info/25 ${handleEvents}`}
+          className={`absolute inset-y-0 left-0 z-10 w-control-inset bg-primary/25 ${handleEvents}`}
           onPointerDown={(event) => {
             beginTrim(segment.id, "start", event);
           }}
           style={{ cursor: TRIM_LEFT_CURSOR }}
         />
         <span
-          className={`absolute inset-y-0 right-0 z-10 w-2.5 bg-info/25 ${handleEvents}`}
+          className={`absolute inset-y-0 right-0 z-10 w-control-inset bg-primary/25 ${handleEvents}`}
           onPointerDown={(event) => {
             beginTrim(segment.id, "end", event);
           }}
@@ -192,39 +196,89 @@ export function TimelineSegments({
       </div>
     );
   });
-  const menuSegment = speedMenu
-    ? layout.find((segment) => segment.id === speedMenu.segmentId)
-    : null;
+  return <>{segments}</>;
+}
+
+/**
+ * The blade's hit area and its preview line: one layer over the whole lanes
+ * column, the way the range tool works.
+ *
+ * A cut acts on the timeline, not on the lane it was aimed at, so the tool
+ * has no reason to live inside a lane - and a per-lane overlay leaves every
+ * position between the lanes, and below the last of them, dead. This covers
+ * the same rectangle the range tool does: every lane row, the gaps between
+ * them, and the space under them. Positions map through the output timeline,
+ * which holds only retained ranges, so a cut always lands inside a segment
+ * however wide the band it was aimed at - the only position with no cut to
+ * make is a join, where one already exists, and the preview hides there
+ * rather than promising one.
+ */
+export function TimelineBladeOverlay({
+  blade,
+  viewport,
+}: {
+  blade: TimelineBladeController;
+  viewport: TimelineViewportState;
+}) {
+  if (!blade.isActive) return null;
+
+  const positionAt = (event: ReactMouseEvent<HTMLDivElement>) =>
+    clamp(
+      timelineXToFraction(
+        event.clientX,
+        viewport,
+        event.currentTarget.getBoundingClientRect(),
+      ),
+      0,
+      1,
+    );
+
   return (
     <>
-      {segments}
-      {speedMenu && menuSegment ? (
-        <TimelineSegmentSpeedContextMenu
-          menu={speedMenu}
-          onChange={(playbackRate) => {
-            blade.setSegmentPlaybackRate(speedMenu.segmentId, playbackRate);
-          }}
-          onClose={() => {
-            setSpeedMenu(null);
-          }}
-          playbackRate={menuSegment.playbackRate ?? 1}
-          title="Segment"
-        />
-      ) : null}
+      <TimelineBladePreview blade={blade} viewport={viewport} />
+      <div
+        aria-hidden
+        // Above everything the lanes draw - segments, their trim handles and
+        // their badges all sit at or below z-20 - so no part of a lane can
+        // take a press the blade was aimed at.
+        className={`absolute right-0 bottom-0 top-control-height ${TIMELINE_LANE_LEFT_CLASS} z-30`}
+        data-timeline-blade-overlay=""
+        onClick={(event) => {
+          const outputPosition = positionAt(event);
+          blade.cutAt(outputPosition);
+        }}
+        onMouseLeave={blade.clearPreview}
+        onMouseMove={(event) => {
+          blade.previewAt(positionAt(event));
+        }}
+        style={{ cursor: TIMELINE_BLADE_CURSOR }}
+      />
     </>
   );
 }
 
-export function TimelineBladePreview({
+/**
+ * The cut the click would make, drawn through the full column height so it
+ * reads across every lane the way the playhead does.
+ */
+function TimelineBladePreview({
   blade,
+  viewport,
 }: {
   blade: TimelineBladeController;
+  viewport: TimelineViewportState;
 }) {
-  return blade.isActive && blade.previewPosition !== null ? (
-    <span
+  return blade.previewPosition !== null ? (
+    <div
       aria-hidden
-      className="pointer-events-none absolute inset-y-0 z-20 w-px -translate-x-1/2 bg-content-fg/40"
-      style={{ left: `${(blade.previewPosition * 100).toString()}%` }}
-    />
+      className={`pointer-events-none absolute inset-y-0 right-0 ${TIMELINE_LANE_LEFT_CLASS} z-30 overflow-hidden`}
+    >
+      <span
+        className="absolute inset-y-0 w-px -translate-x-1/2 bg-content-fg-secondary"
+        style={{
+          left: `${((blade.previewPosition - viewport.panOffset) * viewport.zoom * 100).toString()}%`,
+        }}
+      />
+    </div>
   ) : null;
 }

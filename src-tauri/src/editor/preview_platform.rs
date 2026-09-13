@@ -85,6 +85,11 @@ pub(crate) type TransformCallback = Box<dyn FnMut(f64) + Send + 'static>;
 pub(crate) type SelectionCallback = Box<dyn FnMut(Option<u32>) + Send + 'static>;
 pub(crate) type PointerDownCallback = Box<dyn FnMut() + Send + 'static>;
 pub(crate) const NATIVE_POINTER_DOWN_EVENT: &str = "preview://native-pointer-down";
+/// A right press on a video layer in the native canvas: the pane it landed on
+/// and the point, in logical px from the top-left of the window's content, for
+/// the web layer to open its own layer menu at.
+pub(crate) type ContextMenuCallback = Box<dyn FnMut(u32, f64, f64) + Send + 'static>;
+pub(crate) const NATIVE_CONTEXT_MENU_EVENT: &str = "preview://context-menu";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SelectionGesturePhase {

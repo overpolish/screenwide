@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::{
-  PointerDownCallback, PreviewSelection, SelectionCallback, SelectionGestureCallback,
-  TransformCallback,
+  ContextMenuCallback, PointerDownCallback, PreviewSelection, SelectionCallback,
+  SelectionGestureCallback, TransformCallback,
 };
 use super::callbacks::{
-  pointer_down_callback, release_callback_on_main, selection_callback, selection_gesture_callback,
-  transform_callback,
+  context_menu_callback, pointer_down_callback, release_callback_on_main, selection_callback,
+  selection_gesture_callback, transform_callback,
 };
 use super::ffi::{
   screenwide_preview_surface_enable_editor, screenwide_preview_surface_reset_editor_view,
+  screenwide_preview_surface_set_context_menu_callback,
   screenwide_preview_surface_set_editor_fit_basis, screenwide_preview_surface_set_editor_suspended,
   screenwide_preview_surface_set_editor_zoom, screenwide_preview_surface_set_pointer_down_callback,
   screenwide_preview_surface_set_selection, screenwide_preview_surface_set_selection_callback,
@@ -139,6 +140,23 @@ impl RecordingPreviewSurface {
       );
     }
     release_callback_on_main(self.pointer_down_callback.replace(callback));
+  }
+
+  /// Installs the native right-press callback. A right press (or
+  /// Control-click) that lands on a video layer selects it and reports the
+  /// point, so the web layer can open the same layer menu the timeline row
+  /// opens; nothing is opened natively.
+  pub(crate) fn set_context_menu_callback(&mut self, callback: ContextMenuCallback) {
+    let mut callback = Box::new(callback);
+    let context = (&mut *callback) as *mut ContextMenuCallback as *mut std::ffi::c_void;
+    unsafe {
+      screenwide_preview_surface_set_context_menu_callback(
+        self.handle,
+        Some(context_menu_callback),
+        context,
+      );
+    }
+    release_callback_on_main(self.context_menu_callback.replace(callback));
   }
 
   /// Installs the native selection-body gesture callback. The callback is

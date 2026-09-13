@@ -80,6 +80,7 @@ export function useRecordingTimelineBlade({
   seekPlayerRef.current = seekPlayer;
   const previousEditRef = useRef(effectiveEdit);
   const parkedTrimOutputRef = useRef<number | null>(null);
+  // Logged only when it flips, so hovering the lane does not flood the console.
   const parkedTrimSourceRef = useRef<number | null>(null);
   const snap = useCallback(
     (sourcePosition: number) =>
@@ -187,7 +188,8 @@ export function useRecordingTimelineBlade({
 
   const cutSourceAt = useCallback(
     (sourcePosition: number) => {
-      const next = cutKeyboardTimeline(effectiveEdit, snap(sourcePosition));
+      const snapped = snap(sourcePosition);
+      const next = cutKeyboardTimeline(effectiveEdit, snapped);
       if (next === effectiveEdit || !onChange) return;
       setSelectedSegmentId(null);
       editGesture.beginGesture();
@@ -198,9 +200,11 @@ export function useRecordingTimelineBlade({
   );
   const cutAt = useCallback(
     (outputPosition: number) => {
-      cutSourceAt(
-        recordingTimelineOutputToSource(effectiveEdit, outputPosition),
+      const sourcePosition = recordingTimelineOutputToSource(
+        effectiveEdit,
+        outputPosition,
       );
+      cutSourceAt(sourcePosition);
     },
     [cutSourceAt, effectiveEdit],
   );
@@ -319,10 +323,25 @@ export function useRecordingTimelineBlade({
     setRangeSelection(null);
   }, []);
   const previewAt = useCallback(
-    (sourcePosition: number) => {
-      setPreviewPosition(snapOutput(sourcePosition));
+    (outputPosition: number) => {
+      // A join already carries a cut, so there is nothing to promise there:
+      // the line hides at the one position the blade cannot act on and
+      // follows the pointer everywhere else, edges included.
+      const snappedSource = snap(
+        recordingTimelineOutputToSource(effectiveEdit, outputPosition),
+      );
+      const cuttable = effectiveEdit.segments.some(
+        (segment) =>
+          snappedSource > segment.sourceStart &&
+          snappedSource < segment.sourceEnd,
+      );
+      setPreviewPosition(
+        cuttable
+          ? recordingTimelineSourceToOutput(effectiveEdit, snappedSource)
+          : null,
+      );
     },
-    [snapOutput],
+    [effectiveEdit, snap],
   );
   const clearPreview = useCallback(() => {
     setPreviewPosition(null);

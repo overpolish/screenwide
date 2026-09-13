@@ -9,7 +9,6 @@ import {
   fitTimelineViewport,
   normalizeTimelineViewport,
   panTimelineViewportByPixels,
-  resetTimelineViewport,
   timelineFractionToX,
   timelineXToFraction,
   zoomTimelineViewportAt,
@@ -80,7 +79,7 @@ describe("timeline viewport", () => {
   });
 
   it("supports fit/reset and safely handles unusable geometry", () => {
-    expect(resetTimelineViewport()).toEqual(fitTimelineViewport());
+    expect(fitTimelineViewport()).toEqual({ panOffset: 0, zoom: 1 });
     const state = { panOffset: 0.2, zoom: 3 };
     expect(
       zoomTimelineViewportAt(state, {

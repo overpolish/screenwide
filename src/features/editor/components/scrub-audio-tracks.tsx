@@ -3,12 +3,12 @@
 
 import { Mic, Volume2 } from "lucide-react";
 
-import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import { PreparedAudioTrack } from "../types";
 
 import { AudioTrackVolumes } from "./audio-level";
 import { Waveform } from "./scrub-timeline";
 import { TimelineBladeController } from "./timeline-blade";
+import { TimelineTrackHeader } from "./timeline-track-header";
 import { TimelineViewportState } from "./timeline-viewport";
 
 export function ScrubAudioTracks({
@@ -33,40 +33,37 @@ export function ScrubAudioTracks({
   volumes: AudioTrackVolumes;
 }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col gap-control">
       {audioTracks.map((track) => {
         const enabled = enabledTracks.has(track.streamIndex);
         const mustRemainEnabled =
           enabled && enabledTracks.size === 1 && !hasEnabledVideo;
         const Icon = track.kind === "microphone" ? Mic : Volume2;
         return (
-          <div className="flex items-center" key={track.streamIndex}>
-            <div
-              className={`flex h-8 w-timeline-gutter shrink-0 items-center gap-2 rounded px-2 text-xs font-medium text-content-fg transition-colors ${selectedTrack === track.streamIndex ? "bg-info/15" : ""}`}
-              onClick={() => {
-                onSelectTrack(track.streamIndex);
-              }}
-            >
-              <Checkbox
-                aria-label={
-                  mustRemainEnabled
-                    ? `${track.label} must remain included`
-                    : `${enabled ? "Exclude" : "Include"} ${track.label}`
-                }
-                isDisabled={mustRemainEnabled}
-                isSelected={enabled}
-                onChange={() => {
+          <div
+            className="flex items-center gap-section"
+            key={track.streamIndex}
+          >
+            <TimelineTrackHeader
+              icon={<Icon />}
+              inclusion={{
+                isIncluded: enabled,
+                isRequired: mustRemainEnabled,
+                onChange: () => {
                   const next = new Set(enabledTracks);
                   if (next.has(track.streamIndex)) {
                     if (mustRemainEnabled) return;
                     next.delete(track.streamIndex);
                   } else next.add(track.streamIndex);
                   onEnabledTracksChange(next);
-                }}
-              />
-              <Icon className="shrink-0 text-muted" size={14} />
-              <span className="min-w-0 grow truncate">{track.label}</span>
-            </div>
+                },
+              }}
+              isSelected={selectedTrack === track.streamIndex}
+              label={track.label}
+              onSelect={() => {
+                onSelectTrack(track.streamIndex);
+              }}
+            />
             <Waveform
               blade={blade}
               enabled={enabled}

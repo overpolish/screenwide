@@ -18,6 +18,7 @@ import {
 } from "react-aria-components";
 
 import { Badge } from "../../components/base/badge/badge";
+import { Keyboard } from "../../components/base/keyboard/keyboard";
 import { ListBox } from "../../components/base/listbox/listbox";
 import { ListBoxItem } from "../../components/base/listbox-item/listbox-item";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
@@ -225,6 +226,9 @@ export function PopupPanelList({
         ) : null}
         <span className="truncate">{item.label}</span>
         {item.detail ? <Badge className="ml-auto">{item.detail}</Badge> : null}
+        {item.shortcut ? (
+          <Keyboard className="ml-auto">{item.shortcut}</Keyboard>
+        ) : null}
       </span>
     </ListBoxItem>
   );

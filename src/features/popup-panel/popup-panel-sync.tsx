@@ -6,6 +6,7 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect } from "react";
 
+import { openPopupPanels } from "./api";
 import { synchronizePopupPanelStore, usePopupPanelStore } from "./store";
 
 type PopupPanelClosed = {
@@ -34,9 +35,13 @@ export function PopupPanelSync() {
     // launch. Every window mounts this, and one created later, such as the
     // tooltip's on its first hover, must not put away panels the editor has
     // open; so only the recording bar, which boots with the app and is never
-    // created lazily, does the reset.
+    // created lazily, does the reset. It keeps the panels Rust has on screen:
+    // an editor recovered after a crash may have its tool panel up before
+    // the bar has finished booting, and that panel is not a leftover.
     if (isTauri() && getCurrentWindow().label === "recording-bar") {
-      usePopupPanelStore.getState().closeAll();
+      void openPopupPanels().then((panels) => {
+        usePopupPanelStore.getState().keepOnly(panels);
+      });
     }
     window.addEventListener("storage", synchronizePopupPanelStore);
     void listen<PopupPanelClosed>(

@@ -9,6 +9,10 @@ import { PreparedAudioTrack } from "../types";
 import { AudioTrackVolumes, trackGain } from "./audio-level";
 import { Playhead } from "./scrub-playhead";
 
+/** The meter column's width in CSS pixels; it is the meter's own `width` prop,
+ * named here so the wrapper and the meter can never disagree about it. */
+const METER_WIDTH_PX = 8;
+
 const amplitudeToDecibels = (amplitude: number) =>
   Math.max(-60, 20 * Math.log10(Math.max(0.001, amplitude)));
 
@@ -54,14 +58,14 @@ export function TimelineAudioMeter({
   );
 
   return (
-    <div className="shrink-0 pt-1.5 pl-1">
+    <div className="shrink-0 pt-control pl-control">
       <AudioMeter
         decibels={level}
         height={height}
         hidePeakTick
         orientation="vertical"
         peak={peak}
-        width={8}
+        width={METER_WIDTH_PX}
       />
     </div>
   );

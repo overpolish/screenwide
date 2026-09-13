@@ -14,6 +14,16 @@ struct RecordingPreviewSelectionChangeEvent {
   pane_index: Option<u32>,
   session_id: u64,
 }
+/// A right press on a video layer in the native canvas. The point is in
+/// logical px from the top-left of the window's content, the frame the webview
+/// reports `clientX`/`clientY` in, so the menu opens under the pointer.
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RecordingPreviewContextMenuEvent {
+  pane_index: u32,
+  x: f64,
+  y: f64,
+}
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct RecordingPreviewSelectionGestureEvent {
@@ -66,10 +76,17 @@ pub async fn start_recording_preview_player(
     if let Some(event_window) =
       app.get_webview_window(EditorKind::Recording.window_label().as_str())
     {
+      let menu_window = event_window.clone();
       surface.set_pointer_down_callback(Box::new(move || {
         let _ = event_window.emit(
           super::super::preview_platform::NATIVE_POINTER_DOWN_EVENT,
           (),
+        );
+      }));
+      surface.set_context_menu_callback(Box::new(move |pane_index, x, y| {
+        let _ = menu_window.emit(
+          super::super::preview_platform::NATIVE_CONTEXT_MENU_EVENT,
+          RecordingPreviewContextMenuEvent { pane_index, x, y },
         );
       }));
     }

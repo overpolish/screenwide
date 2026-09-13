@@ -7,22 +7,21 @@ import {
   useCallback,
   useEffect,
   useRef,
-  useState,
 } from "react";
 
 import { recordingTimelineRangePlaybackRate } from "../recording-timeline-speed";
 
+import { TIMELINE_LANE_LEFT_CLASS } from "./recording-track-lanes-contract";
 import { clamp, Playhead } from "./scrub-playhead";
-import { TimelineBladeController } from "./timeline-blade";
-import { TimelineLaneSelectionOverlay } from "./timeline-segment-selection";
 import {
-  TimelineSegmentSpeedContextMenu,
-  TimelineSpeedMenuState,
-} from "./timeline-segment-speed-context-menu";
+  TimelineBladeController,
+  TimelineBladeOverlay,
+} from "./timeline-blade";
 import {
   timelineXToFraction,
   TimelineViewportState,
 } from "./timeline-viewport";
+import { useTimelineSpeedMenu } from "./use-timeline-speed-menu";
 
 /**
  * The playhead line across the track lanes. Purely visual: scrubbing happens
@@ -62,7 +61,7 @@ export function TimelineScrubber({
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <div
-        className="absolute inset-y-0 w-px -translate-x-1/2 bg-content-fg/80"
+        className="absolute inset-y-0 w-px -translate-x-1/2 bg-content-fg"
         ref={lineRef}
         style={{ left: "0%" }}
       />
@@ -78,15 +77,15 @@ export function TimelineScrubberOverlay(
   const { blade, ...scrubber } = props;
   return (
     <>
-      <TimelineLaneSelectionOverlay
-        edit={blade.edit}
-        selectedSegmentId={blade.selectedSegmentId}
-        viewport={props.viewport}
-      />
-      <div className="pointer-events-none absolute inset-y-0 right-0 left-timeline-gutter z-[5] overflow-hidden">
+      <div
+        className={`pointer-events-none absolute inset-y-0 right-0 ${TIMELINE_LANE_LEFT_CLASS} z-[5] overflow-hidden`}
+      >
         <TimelineScrubber {...scrubber} />
       </div>
       <TimelineRangeOverlay blade={blade} viewport={props.viewport} />
+      {/* One layer for the blade too, over the same rectangle: a cut acts on
+          the timeline, not on the lane the pointer happened to be over. */}
+      <TimelineBladeOverlay blade={blade} viewport={props.viewport} />
     </>
   );
 }
@@ -99,8 +98,9 @@ function TimelineRangeOverlay({
   viewport: TimelineViewportState;
 }) {
   const anchorRef = useRef<number | null>(null);
-  const [speedMenu, setSpeedMenu] = useState<TimelineSpeedMenuState | null>(
-    null,
+  const openSpeedMenu = useTimelineSpeedMenu(
+    "range",
+    blade.setRangePlaybackRate,
   );
   if (!blade.isRangeActive) return null;
 
@@ -126,20 +126,25 @@ function TimelineRangeOverlay({
       {blade.rangeSelection ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 left-timeline-gutter z-10 overflow-hidden"
+          className={`pointer-events-none absolute inset-y-0 right-0 ${TIMELINE_LANE_LEFT_CLASS} z-10 overflow-hidden`}
         >
           <div
-            className="absolute inset-y-0 border-x border-info/70 bg-info/15"
+            className="absolute inset-y-0 bg-primary/15"
             style={{
               left: `${((blade.rangeSelection.start - viewport.panOffset) * viewport.zoom * 100).toString()}%`,
               width: `${((blade.rangeSelection.end - blade.rangeSelection.start) * viewport.zoom * 100).toString()}%`,
             }}
-          />
+          >
+            {/* The range's own edges, drawn as filled lines rather than a
+                border so they read as part of the selection, not a rule. */}
+            <span className="absolute inset-y-0 left-0 w-px bg-primary" />
+            <span className="absolute inset-y-0 right-0 w-px bg-primary" />
+          </div>
         </div>
       ) : null}
       <div
         aria-label="Select timeline range"
-        className="absolute top-9 right-0 bottom-0 left-timeline-gutter z-10 cursor-crosshair touch-none"
+        className={`absolute right-0 bottom-0 top-control-height ${TIMELINE_LANE_LEFT_CLASS} z-10 cursor-crosshair touch-none`}
         onContextMenu={(event) => {
           const selection = blade.rangeSelection;
           const position = positionAt(event);
@@ -151,17 +156,14 @@ function TimelineRangeOverlay({
             return;
           event.preventDefault();
           event.stopPropagation();
-          const timelineTop =
-            event.currentTarget
-              .closest("section[aria-label='Recording timeline']")
-              ?.getBoundingClientRect().top ?? 0;
-          setSpeedMenu({
-            x: Math.min(event.clientX, window.innerWidth - 120),
-            y: Math.max(
-              timelineTop + 4,
-              Math.min(event.clientY, window.innerHeight - 220),
+          void openSpeedMenu(
+            { x: event.clientX, y: event.clientY },
+            recordingTimelineRangePlaybackRate(
+              blade.edit,
+              selection.start,
+              selection.end,
             ),
-          });
+          );
         }}
         onPointerCancel={(event) => {
           update(event);
@@ -184,21 +186,6 @@ function TimelineRangeOverlay({
             event.currentTarget.releasePointerCapture(event.pointerId);
         }}
       />
-      {speedMenu && blade.rangeSelection ? (
-        <TimelineSegmentSpeedContextMenu
-          menu={speedMenu}
-          onChange={blade.setRangePlaybackRate}
-          onClose={() => {
-            setSpeedMenu(null);
-          }}
-          playbackRate={recordingTimelineRangePlaybackRate(
-            blade.edit,
-            blade.rangeSelection.start,
-            blade.rangeSelection.end,
-          )}
-          title="Range"
-        />
-      ) : null}
     </>
   );
 }

@@ -5,10 +5,22 @@ import { ReactNode } from "react";
 
 import { RecordingTimelineEdit } from "../recording-timeline-edit";
 
-import { TimedLaneFragment, TimedLaneItem } from "./timed-lane-layout";
+import {
+  TIMED_LANE_ROW_HEIGHT_PX,
+  TimedLaneFragment,
+  TimedLaneItem,
+} from "./timed-lane-layout";
+import { TimelineTrackHeader } from "./timeline-track-header";
 import { TimelineViewportState } from "./timeline-viewport";
 import { TimelineViewportContent } from "./timeline-viewport-content";
 import { useTimedLaneRows } from "./use-timed-lane-rows";
+
+/**
+ * Mirrors `--spacing-control`, the gap that separates every row in the timeline
+ * band. A sublane badge is inset by it top and bottom so stacked rows read as
+ * separate rows without a rule between them.
+ */
+const ROW_GAP_PX = 4;
 
 export function TimelineItemLane<
   Item extends TimedLaneItem & { label: string },
@@ -54,20 +66,18 @@ export function TimelineItemLane<
     items,
     sourceDurationMs,
   });
-  const rowHeightPx = 32;
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-center gap-section">
+      <TimelineTrackHeader
+        icon={icon}
+        isSelected={(selectedFragmentIds?.size ?? 0) > 0}
+        label={label}
+      />
       <div
-        className={`flex h-8 w-timeline-gutter shrink-0 items-center gap-2 rounded px-2 text-xs font-medium text-content-fg ${selectedFragmentIds?.size ? "bg-info/15" : ""}`}
-      >
-        <span className="shrink-0 text-muted">{icon}</span>
-        <span className="min-w-0 grow truncate">{label}</span>
-      </div>
-      <div
-        className="relative min-w-0 grow overflow-hidden rounded-sm bg-muted/8 transition-[height] duration-200"
+        className="relative min-w-0 grow overflow-hidden rounded-control bg-fill-tertiary transition-[height] duration-200"
         onClick={onClearSelection}
-        style={{ height: rowCount * rowHeightPx }}
+        style={{ height: rowCount * TIMED_LANE_ROW_HEIGHT_PX }}
       >
         <TimelineViewportContent viewport={viewport}>
           {fragments.map((fragment) => {
@@ -75,7 +85,7 @@ export function TimelineItemLane<
             const selected = selectedFragmentIds?.has(fragmentId) ?? false;
             const warning = warningFragmentIds?.has(fragmentId) ?? false;
             // A segment split inside one item renders as a joined run: the
-            // seam keeps a single hairline divider and the label appears
+            // seam drops the rounding between the pair and the label appears
             // once, on the run's widest fragment. Run members also waive the
             // minimum width and label padding - the run as a whole stays
             // clickable, and an inflated sliver would overlap the fragment
@@ -83,22 +93,27 @@ export function TimelineItemLane<
             const inRun =
               fragment.continuesPrevious || fragment.continuedByNext;
             const seam = `${
-              fragment.continuesPrevious ? "rounded-l-none border-l-0 " : ""
+              fragment.continuesPrevious ? "rounded-l-none " : ""
             }${fragment.continuedByNext ? "rounded-r-none " : ""}${
-              inRun ? "" : "min-w-1.5 "
-            }${fragment.showLabel ? "px-1.5" : ""}`;
+              fragment.showLabel ? "px-control-inset" : ""
+            }`;
             return (
               <button
                 aria-label={item.label}
                 aria-pressed={selectedFragmentIds ? selected : undefined}
-                className={`absolute overflow-hidden rounded-sm border text-left text-[10px] leading-5 whitespace-nowrap transition-[left,width,top,color,background-color,border-color] duration-200 ${seam} ${
+                // A badge, built from the tokens the base Badge uses: footnote
+                // text on a fill. An adjusted fragment keeps its translucent
+                // warning fill whether or not it is selected, since text on
+                // the solid yellow cannot be read; its selection is a warning
+                // ring instead. Any other selected one takes the accent.
+                className={`absolute flex items-center overflow-hidden rounded-control text-left text-footnote whitespace-nowrap transition-[color,background-color] duration-200 ${seam} ${
                   warning
                     ? selected
-                      ? "border-warning bg-warning/35 text-content-fg shadow-[inset_0_0_0_1px] shadow-warning"
-                      : "border-warning/50 bg-warning/20 text-content-fg/90"
+                      ? "bg-warning/35 text-content-fg inset-ring-2 inset-ring-warning"
+                      : "bg-warning/35 text-content-fg"
                     : selected
-                      ? "border-info bg-info/40 text-content-fg shadow-[inset_0_0_0_1px] shadow-info"
-                      : "border-info/35 bg-info/18 text-content-fg/90"
+                      ? "bg-primary-surface text-primary-fg"
+                      : "bg-fill-secondary text-content-fg"
                 } ${onSelect ? "cursor-default" : "pointer-events-none"}`}
                 key={fragmentId}
                 onClick={(event) => {
@@ -110,10 +125,10 @@ export function TimelineItemLane<
                   );
                 }}
                 style={{
-                  height: rowHeightPx - 8,
+                  height: TIMED_LANE_ROW_HEIGHT_PX - ROW_GAP_PX * 2,
                   left: `${(outputStart * 100).toString()}%`,
                   minWidth: inRun ? undefined : minimumItemWidthPx,
-                  top: row * rowHeightPx + 4,
+                  top: row * TIMED_LANE_ROW_HEIGHT_PX + ROW_GAP_PX,
                   width: `${((outputEnd - outputStart) * 100).toString()}%`,
                 }}
                 title={item.label}

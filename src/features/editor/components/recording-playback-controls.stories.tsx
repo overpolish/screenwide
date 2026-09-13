@@ -78,7 +78,7 @@ const meta = {
       <PlaybackBarPreview />
     </FeatureStoryStage>
   ),
-  title: "Features/Editor Playback Bar",
+  title: "Features/Editor/Playback Bar",
 } satisfies Meta<typeof PlaybackBarPreview>;
 
 export default meta;

@@ -81,6 +81,10 @@ export const movePopupPanel = (
 export const fitPopupPanel = (height: number, panel?: string) =>
   invoke<null>("fit_standalone_listbox", { height, panel: panel ?? null });
 
+/** The panel windows showing something right now, by label. */
+export const openPopupPanels = () =>
+  invoke<string[]>("open_standalone_listboxes");
+
 export const hidePopupPanel = (returnFocus = false, panel?: string) =>
   invoke<null>("hide_standalone_listbox", {
     panel: panel ?? null,

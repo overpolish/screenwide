@@ -15,3 +15,14 @@ void screenwide_preview_surface_set_pointer_down_callback(
     surface.pointerDownContext = context;
   });
 }
+
+void screenwide_preview_surface_set_context_menu_callback(
+    void *handle, screenwide_preview_context_menu_callback callback,
+    void *context) {
+  if (handle == NULL) return;
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  on_main_async(^{
+    surface.contextMenuCallback = callback;
+    surface.contextMenuContext = context;
+  });
+}

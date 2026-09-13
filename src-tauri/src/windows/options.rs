@@ -281,6 +281,15 @@ pub fn fit_standalone_listbox(
   crate::editor::export_window::presentation::reveal_after_resize(&window)
 }
 
+/// The panel windows showing something right now, by label. A webview that
+/// has just come up asks this before it trusts the open-panel map it inherits
+/// from storage: what Rust has on screen is the truth, and anything else in
+/// the map is left over from a run that ended.
+#[tauri::command]
+pub fn open_standalone_listboxes() -> Vec<String> {
+  open_panel_labels()
+}
+
 #[tauri::command]
 pub fn hide_standalone_listbox(
   app: AppHandle,

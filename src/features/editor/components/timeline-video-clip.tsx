@@ -1,17 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { MouseEvent, useRef } from "react";
+import { PointerEvent as ReactPointerEvent, useRef } from "react";
 
 import { RecordingTimelineThumbnail, RecordingVideoTrackId } from "../types";
 
-import { clamp } from "./scrub-playhead";
-import {
-  TIMELINE_BLADE_CURSOR,
-  TimelineBladeController,
-  TimelineBladePreview,
-  TimelineSegments,
-} from "./timeline-blade";
+import { TimelineBladeController, TimelineSegments } from "./timeline-blade";
 import {
   timelineXToFraction,
   TimelineViewportState,
@@ -37,40 +31,31 @@ export function TimelineVideoClip({
   viewport: TimelineViewportState;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  // Unclamped: a trim drag that runs past the lane edge needs the overshoot,
+  // and the blade's own conversions clamp what they are given.
   const outputPositionAt = (clientX: number) => {
     const bounds = rootRef.current?.getBoundingClientRect();
     return bounds ? timelineXToFraction(clientX, viewport, bounds) : 0;
-  };
-  const sourcePositionAt = (event: MouseEvent<HTMLDivElement>) =>
-    clamp(
-      timelineXToFraction(
-        event.clientX,
-        viewport,
-        event.currentTarget.getBoundingClientRect(),
-      ),
-      0,
-      1,
-    );
-  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (!blade.isActive) {
-      blade.selectSegment(null);
-      onSelect(trackId);
-      return;
-    }
-    blade.cutAt(sourcePositionAt(event));
   };
 
   return (
     <div
       aria-selected={selected}
-      className="relative h-8 min-w-0 grow cursor-default overflow-hidden rounded-sm"
-      onClick={handleClick}
-      onMouseLeave={blade.clearPreview}
-      onMouseMove={(event) => {
-        if (blade.isActive) blade.previewAt(sourcePositionAt(event));
+      // No fill of its own: where no segment stands the lane is empty, so a
+      // cut leaves a gap rather than a band of backing colour.
+      className="relative h-control-height min-w-0 grow cursor-default overflow-hidden rounded-control"
+      onClick={() => {
+        // Only a press that no segment took gets here, so this is the lane
+        // itself: the track stays chosen and the segment choice is dropped.
+        if (!blade.isActive) blade.selectSegment(null);
+      }}
+      // Taken on the way down: a segment stops the click it handles, and a
+      // trim handle suppresses the click entirely, so the press is the only
+      // point at which every part of the lane can choose the track.
+      onPointerDownCapture={(event: ReactPointerEvent<HTMLDivElement>) => {
+        if (event.button === 0 && !blade.isActive) onSelect(trackId);
       }}
       ref={rootRef}
-      style={{ cursor: blade.isActive ? TIMELINE_BLADE_CURSOR : undefined }}
     >
       <TimelineViewportContent viewport={viewport}>
         <TimelineSegments
@@ -87,7 +72,6 @@ export function TimelineVideoClip({
           )}
           selectedSegmentId={blade.selectedSegmentId}
         />
-        <TimelineBladePreview blade={blade} />
       </TimelineViewportContent>
     </div>
   );

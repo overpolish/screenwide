@@ -129,7 +129,7 @@ function TimelinePreview() {
 
   return (
     <EditorEditGestureContext value={editGesture}>
-      <div className="w-[760px] bg-content text-content-fg">
+      <div className="w-[760px]">
         <RecordingTrackLanes
           adjustedKeyboardFragmentIds={new Set()}
           audioTracks={[
@@ -268,7 +268,7 @@ function TimelinePreview() {
 const meta = {
   component: TimelinePreview,
   parameters: { layout: "centered" },
-  title: "Legacy/Recording Timeline",
+  title: "Features/Editor/Timeline",
 } satisfies Meta<typeof TimelinePreview>;
 
 export default meta;

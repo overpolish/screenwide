@@ -1,10 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
+import { Text } from "../../../components/base/text/text";
+import { dismissPopupMenu } from "../../popup-panel/use-popup-menu";
 import { copyRecordingPreviewFrameToClipboard } from "../api";
 import {
   cameraOverlayGeometry,
@@ -72,6 +75,11 @@ import {
 import { useRecordingRecenter } from "./use-recording-recenter";
 import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
 import { useRecordingTimelineBlade } from "./use-recording-timeline-blade";
+import {
+  RECORDING_TRACK_MENU_PREFIX,
+  recordingTrackMoves,
+  useRecordingTrackMenu,
+} from "./use-recording-track-menu";
 import { useRecordingTrimPreview } from "./use-recording-trim-preview";
 
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
@@ -1006,13 +1014,17 @@ export function NativeRecordingPreview({
     activeVideoTrack !== null && selectedVideoTracks.has(activeVideoTrack);
   const canResizeActiveTrack =
     canEditActiveTrack && (!bakeCamera || canPreviewBakedCamera);
-  const moveActiveVideoTrack = useCallback(
-    (direction: "backward" | "forward") => {
-      if (!activeVideoTrack) return;
-      const currentIndex = videoTrackOrder.indexOf(activeVideoTrack);
+  const moveVideoTrack = useCallback(
+    (track: RecordingVideoTrackId, direction: "backward" | "forward") => {
+      const currentIndex = videoTrackOrder.indexOf(track);
       const nextIndex =
         direction === "forward" ? currentIndex - 1 : currentIndex + 1;
-      if (nextIndex < 0 || nextIndex >= videoTrackOrder.length) return;
+      if (
+        currentIndex < 0 ||
+        nextIndex < 0 ||
+        nextIndex >= videoTrackOrder.length
+      )
+        return;
       const next = [...videoTrackOrder];
       [next[currentIndex], next[nextIndex]] = [
         next[nextIndex],
@@ -1020,7 +1032,13 @@ export function NativeRecordingPreview({
       ];
       onVideoTrackOrderChange?.(next);
     },
-    [activeVideoTrack, onVideoTrackOrderChange, videoTrackOrder],
+    [onVideoTrackOrderChange, videoTrackOrder],
+  );
+  const moveActiveVideoTrack = useCallback(
+    (direction: "backward" | "forward") => {
+      if (activeVideoTrack) moveVideoTrack(activeVideoTrack, direction);
+    },
+    [activeVideoTrack, moveVideoTrack],
   );
   // The shortcut hook re-binds its window listener whenever a handler identity
   // changes, so these stay stable across the per-move draft renders.
@@ -1038,6 +1056,62 @@ export function NativeRecordingPreview({
   // handlers keep the stable identity the hook above relies on.
   const canvasToolRef = useRef(canvasTool);
   canvasToolRef.current = canvasTool;
+  // A right click on a pane in the native canvas opens the same layer menu the
+  // timeline row opens. The native side selects the layer it landed on and
+  // reports the point; the menu is drawn here, at the pointer.
+  const openTrackMenu = useRecordingTrackMenu(moveVideoTrack);
+  const openCanvasTrackMenuRef = useRef<
+    (paneIndex: number, x: number, y: number) => void
+  >(() => undefined);
+  openCanvasTrackMenuRef.current = (paneIndex, x, y) => {
+    if (canvasToolRef.current !== "select") return;
+    const trackId =
+      paneIndex === 0 ? "primary" : paneIndex === 1 ? "camera" : null;
+    if (
+      !trackId ||
+      !visiblePaneEntries.some((entry) => entry.trackId === trackId)
+    )
+      return;
+    onSelectedTrackChange?.(trackId);
+    void openTrackMenu(
+      { x, y },
+      trackId,
+      recordingTrackMoves(videoTrackOrderList, trackId),
+    );
+  };
+  // The layer menu belongs to the Select tool: putting the tool down takes
+  // the menu with it rather than leaving it open over nothing.
+  useEffect(() => {
+    if (canvasTool !== "select")
+      void dismissPopupMenu(RECORDING_TRACK_MENU_PREFIX);
+  }, [canvasTool]);
+  useEffect(() => {
+    // The subscription lands after a hop. A cleanup that runs before it
+    // lands, as React's development double-mount does, must still let go of
+    // it, or the window hears every click twice and the menu opens and
+    // closes in one go.
+    let unlisten: (() => void) | undefined;
+    let disposed = false;
+    void getCurrentWindow()
+      .listen<{ paneIndex: number; x: number; y: number }>(
+        "preview://context-menu",
+        ({ payload }) => {
+          openCanvasTrackMenuRef.current(
+            payload.paneIndex,
+            payload.x,
+            payload.y,
+          );
+        },
+      )
+      .then((dispose) => {
+        if (disposed) dispose();
+        else unlisten = dispose;
+      });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
       setCanvasTool(next);
@@ -1287,13 +1361,28 @@ export function NativeRecordingPreview({
         </div>
 
         {audioError ? (
-          <p className="m-0 px-4 pb-2 text-xs text-error">{audioError}</p>
+          <Text
+            className="px-window-inset pb-control-inset text-error"
+            variant="footnote"
+          >
+            {audioError}
+          </Text>
         ) : null}
         {player.error ? (
-          <p className="m-0 px-4 pb-2 text-xs text-error">{player.error}</p>
+          <Text
+            className="px-window-inset pb-control-inset text-error"
+            variant="footnote"
+          >
+            {player.error}
+          </Text>
         ) : null}
         {copyError ? (
-          <p className="m-0 px-4 pb-2 text-xs text-error">{copyError}</p>
+          <Text
+            className="px-window-inset pb-control-inset text-error"
+            variant="footnote"
+          >
+            {copyError}
+          </Text>
         ) : null}
       </section>
 
@@ -1314,7 +1403,7 @@ export function NativeRecordingPreview({
             zoomControl={zoomControl}
           />
           {isPreparingAudio ? (
-            <div className="flex h-24 shrink-0 items-center justify-center gap-control-inset px-window-inset text-body text-content-fg-secondary">
+            <div className="flex shrink-0 items-center justify-center gap-control-inset px-window-inset py-layout text-body text-content-fg-secondary">
               <CircularProgress
                 aria-label="Preparing audio preview"
                 isIndeterminate

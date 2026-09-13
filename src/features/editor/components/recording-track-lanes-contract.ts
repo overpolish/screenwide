@@ -40,3 +40,10 @@ export type RecordingTrackLanesProps = {
   volumes: AudioTrackVolumes;
   onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
 };
+
+/**
+ * Where the lanes begin, for an overlay that has to line up with them: the
+ * gutter column plus the section gap that separates it from the lanes.
+ */
+export const TIMELINE_LANE_LEFT_CLASS =
+  "left-[calc(var(--spacing-timeline-gutter)+var(--spacing-section))]";

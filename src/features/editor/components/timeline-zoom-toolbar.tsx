@@ -8,47 +8,16 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import { ReactNode, RefObject } from "react";
-import { TooltipTrigger } from "react-aria-components";
+import { RefObject } from "react";
 
-import {
-  IconButton,
-  IconToggleButton,
-} from "../../../components/base/button/icon-button";
-import { Keyboard } from "../../../components/base/keyboard/keyboard";
-import { Tooltip } from "../../../components/base/tooltip/tooltip";
+import { IconButton } from "../../../components/base/button/icon-button";
+import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
 
+import { PreviewToolToggle } from "./preview-tool-toggle";
 import { Playhead } from "./scrub-playhead";
 import { SeekHandler, TimelineRuler } from "./scrub-timeline";
 import { TimelineBladeController } from "./timeline-blade";
-import { TimelineViewportState } from "./timeline-viewport";
-
-function TimelineToolbarTooltip({
-  children,
-  isDisabled = false,
-  label,
-  shortcut,
-}: {
-  children: ReactNode;
-  label: string;
-  isDisabled?: boolean;
-  shortcut?: string;
-}) {
-  return (
-    <TooltipTrigger delay={400}>
-      <span className="relative inline-flex">
-        {children}
-        {isDisabled ? <span aria-hidden className="absolute inset-0" /> : null}
-      </span>
-      <Tooltip placement="bottom">
-        <span className="flex items-center gap-2">
-          {label}
-          {shortcut ? <Keyboard>{shortcut}</Keyboard> : null}
-        </span>
-      </Tooltip>
-    </TooltipTrigger>
-  );
-}
+import { TIMELINE_MAX_ZOOM, TimelineViewportState } from "./timeline-viewport";
 
 export function TimelineZoomToolbar({
   isBladeActive,
@@ -68,32 +37,27 @@ export function TimelineZoomToolbar({
   viewport: TimelineViewportState;
 }) {
   return (
-    <div className="flex h-9 w-timeline-gutter shrink-0 items-center pl-1">
-      <TimelineToolbarTooltip label="Blade" shortcut="B">
-        <IconToggleButton
-          aria-keyshortcuts="B"
-          aria-label="Blade tool"
-          isSelected={isBladeActive}
-          onChange={onBladeActiveChange}
-        >
-          <Scissors size={15} />
-        </IconToggleButton>
-      </TimelineToolbarTooltip>
-      <TimelineToolbarTooltip label="Range" shortcut="Shift+R">
-        <IconToggleButton
-          aria-keyshortcuts="Shift+R"
-          aria-label="Range tool"
-          isSelected={isRangeActive}
-          onChange={onRangeActiveChange}
-        >
-          <SquareDashed size={15} />
-        </IconToggleButton>
-      </TimelineToolbarTooltip>
-      <div className="ml-auto flex items-center gap-0.5">
-        <TimelineToolbarTooltip
-          isDisabled={viewport.zoom <= 1}
-          label="Zoom out"
-        >
+    <div className="flex h-control-height w-timeline-gutter shrink-0 items-center gap-control">
+      <PreviewToolToggle
+        isSelected={isBladeActive}
+        label="Blade"
+        name="Blade tool"
+        onSelectedChange={onBladeActiveChange}
+        shortcut="B"
+      >
+        <Scissors />
+      </PreviewToolToggle>
+      <PreviewToolToggle
+        isSelected={isRangeActive}
+        label="Range"
+        name="Range tool"
+        onSelectedChange={onRangeActiveChange}
+        shortcut="R"
+      >
+        <SquareDashed />
+      </PreviewToolToggle>
+      <div className="ml-auto flex items-center gap-control">
+        <NativeTooltipTrigger tooltip="Zoom out">
           <IconButton
             aria-label="Zoom timeline out"
             isDisabled={viewport.zoom <= 1}
@@ -101,13 +65,11 @@ export function TimelineZoomToolbar({
               onZoom(0.8);
             }}
           >
-            <ZoomOut size={15} />
+            <ZoomOut />
           </IconButton>
-        </TimelineToolbarTooltip>
-        <TimelineToolbarTooltip
-          isDisabled={viewport.zoom === 1 && viewport.panOffset === 0}
-          label="Fit timeline"
-          shortcut="Shift+Z"
+        </NativeTooltipTrigger>
+        <NativeTooltipTrigger
+          tooltip={{ label: "Fit timeline", shortcut: "Shift+Z" }}
         >
           <IconButton
             aria-keyshortcuts="Shift+Z"
@@ -115,23 +77,20 @@ export function TimelineZoomToolbar({
             isDisabled={viewport.zoom === 1 && viewport.panOffset === 0}
             onPress={onFit}
           >
-            <Maximize2 size={14} />
+            <Maximize2 />
           </IconButton>
-        </TimelineToolbarTooltip>
-        <TimelineToolbarTooltip
-          isDisabled={viewport.zoom >= 20}
-          label="Zoom in"
-        >
+        </NativeTooltipTrigger>
+        <NativeTooltipTrigger tooltip="Zoom in">
           <IconButton
             aria-label="Zoom timeline in"
-            isDisabled={viewport.zoom >= 20}
+            isDisabled={viewport.zoom >= TIMELINE_MAX_ZOOM}
             onPress={() => {
               onZoom(1.25);
             }}
           >
-            <ZoomIn size={15} />
+            <ZoomIn />
           </IconButton>
-        </TimelineToolbarTooltip>
+        </NativeTooltipTrigger>
       </div>
     </div>
   );
@@ -157,7 +116,7 @@ export function TimelineHeader({
   viewport: TimelineViewportState;
 }) {
   return (
-    <div className="flex h-9 items-center">
+    <div className="flex h-control-height items-center gap-section">
       <TimelineZoomToolbar
         isBladeActive={blade.isActive}
         isRangeActive={blade.isRangeActive}
@@ -173,7 +132,6 @@ export function TimelineHeader({
           edit={blade.edit}
           onSeek={onSeek}
           playhead={playhead}
-          selectedSegmentId={blade.selectedSegmentId}
           snapPosition={blade.snapPosition}
           viewport={viewport}
         />

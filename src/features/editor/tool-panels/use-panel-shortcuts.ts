@@ -34,10 +34,10 @@ export function usePanelShortcuts(workspace: EditorKind) {
       forward("KeyE", { ctrlKey: true });
     },
     onMoveBackward: () => {
-      forward("BracketRight");
+      forward("BracketLeft");
     },
     onMoveForward: () => {
-      forward("BracketLeft");
+      forward("BracketRight");
     },
     onNudge: (x, y, shiftKey) => {
       forward(
@@ -70,7 +70,7 @@ export function usePanelShortcuts(workspace: EditorKind) {
       forward("KeyP");
     },
     onToggleRangeTool: () => {
-      forward("KeyR", { shiftKey: true });
+      forward("KeyR");
     },
     onUndo: () => {
       forward("KeyZ", { ctrlKey: true, key: "z" });

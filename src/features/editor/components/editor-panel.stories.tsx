@@ -114,7 +114,7 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
-  title: "Legacy/Editor Panel",
+  title: "Features/Editor/Editor Panel",
 } satisfies Meta<typeof EditorPanel>;
 
 export default meta;

@@ -85,20 +85,28 @@ export function layoutTimedLaneItems<Item extends TimedLaneItem>({
 
 export type StackedLaneFragment<Item extends TimedLaneItem> =
   TimedLaneFragment<Item> & {
-    row: number;
+    continuedByNext: boolean;
     /**
      * The same item continuing seamlessly from the previous fragment on this
      * row - a segment split, not a separate occurrence - so the lane renders
      * the pair joined and carries the label only once.
      */
     continuesPrevious: boolean;
-    continuedByNext: boolean;
+    row: number;
     /**
      * Carries the item's label: the widest fragment of its seam run, so a
      * sliver at a segment boundary never swallows the whole run's label.
      */
     showLabel: boolean;
   };
+
+/**
+ * One sublane row's height in CSS pixels. Mirrors the `--spacing-control-height`
+ * token (1.5rem at the browser default root size), which every row in the
+ * timeline band is laid out to; the lane's absolutely positioned fragments need
+ * the number in JS, so it is kept here beside the stacking that produces rows.
+ */
+export const TIMED_LANE_ROW_HEIGHT_PX = 24;
 
 const SEAM_EPSILON = 1e-9;
 
@@ -138,7 +146,7 @@ export function stackTimedLaneFragments<Item extends TimedLaneItem>(
       row,
       showLabel: false,
     };
-    if (continuesPrevious && previous) {
+    if (continuesPrevious) {
       previous.continuedByNext = true;
       runs[rowRun[row] ?? -1]?.push(placed);
     } else {

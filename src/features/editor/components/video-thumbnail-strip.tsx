@@ -69,8 +69,11 @@ export function VideoThumbnailStrip({
   return (
     <div
       className={cn(
-        "absolute inset-0 flex overflow-hidden transition-[filter,opacity]",
-        !enabled && "opacity-35 grayscale",
+        // The segment clips the strip to its own bounds and rounds its own
+        // corners; the strip spans the whole recording behind it so the
+        // frames stay in the same places either side of a cut.
+        "absolute inset-0 flex overflow-hidden transition-opacity",
+        !enabled && "opacity-50",
       )}
       ref={containerRef}
     >
@@ -96,13 +99,13 @@ export function VideoThumbnailStrip({
           ) : (
             <span
               aria-hidden="true"
-              className="h-full min-w-0 flex-1 bg-muted/8"
+              className="h-full min-w-0 flex-1 bg-fill-quaternary"
               key={thumbnail.id}
             />
           ),
         )
       ) : (
-        <span className="size-full bg-muted/8" />
+        <span className="size-full bg-fill-quaternary" />
       )}
     </div>
   );

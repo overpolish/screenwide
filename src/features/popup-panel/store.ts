@@ -22,6 +22,9 @@ export type PopupPanelItem = {
   /** Heads the run of consecutive items that name the same section. Items
    * without one sit in an unheaded group. */
   section?: string;
+  /** The key that does the same as this item, drawn as a shortcut hint at
+   * the trailing edge the way a menu shows one. */
+  shortcut?: string;
   /** A toggle in a single-selection list: a press flips its tick and leaves
    * the panel open, so several can be set in one visit. */
   togglesInPlace?: boolean;
@@ -87,6 +90,7 @@ type PopupPanelStore = {
   /** Every panel window at once, for the app launch that must not inherit
    * whatever the last run left open. */
   closeAll: () => void;
+  keepOnly: (panels: string[]) => void;
   lastSelection: PopupPanelSelection | null;
   open: (panel: string, listbox: OpenPopupPanel) => void;
   select: (selection: PopupPanelSelectionRequest) => void;
@@ -110,19 +114,70 @@ export const activePopupPanel = (
 const STORE_NAME = "screenwide-standalone-listbox";
 const SELECTION_STORE_NAME = `${STORE_NAME}-selection`;
 
+/**
+ * The open panels as every window last agreed on them.
+ *
+ * Each window holds a copy of the map and writes the whole of it back on any
+ * change, so a window whose copy fell behind - a panel window that opened
+ * before another panel did - would write the newer panels out of existence.
+ * A change is therefore built on what is in storage now, and the window's
+ * own copy is only the fallback when storage cannot be read.
+ */
+const storedActive = (
+  current: PopupPanelStore["active"],
+): PopupPanelStore["active"] => {
+  try {
+    const raw = localStorage.getItem(STORE_NAME);
+    if (!raw) return current;
+    const parsed = JSON.parse(raw) as {
+      state?: { active?: PopupPanelStore["active"] };
+    };
+    const stored = parsed.state?.active;
+    if (!stored) return current;
+    // An entry this window already holds unchanged keeps its identity, so
+    // what subscribes to it is not re-rendered for a change elsewhere.
+    return Object.fromEntries(
+      Object.keys(stored).map((panel) => [
+        panel,
+        JSON.stringify(current[panel] ?? null) ===
+        JSON.stringify(stored[panel] ?? null)
+          ? (current[panel] ?? null)
+          : (stored[panel] ?? null),
+      ]),
+    );
+  } catch {
+    return current;
+  }
+};
+
 export const usePopupPanelStore = create<PopupPanelStore>()(
   persist(
     (set) => ({
       active: {},
       close: (panel) => {
-        set((state) => ({ active: { ...state.active, [panel]: null } }));
+        set((state) => ({
+          active: { ...storedActive(state.active), [panel]: null },
+        }));
       },
       closeAll: () => {
         set({ active: {} });
       },
+      /** Drops every entry but the panels named, which are the ones still on
+       * screen: the rest are left over from a run that ended. */
+      keepOnly: (panels) => {
+        set((state) => ({
+          active: Object.fromEntries(
+            Object.entries(storedActive(state.active)).filter(([panel]) =>
+              panels.includes(panel),
+            ),
+          ),
+        }));
+      },
       lastSelection: null,
       open: (panel, active) => {
-        set((state) => ({ active: { ...state.active, [panel]: active } }));
+        set((state) => ({
+          active: { ...storedActive(state.active), [panel]: active },
+        }));
       },
       select: ({ id, panel, pressedId, selectedIds }) => {
         const lastSelection = {
@@ -132,18 +187,19 @@ export const usePopupPanelStore = create<PopupPanelStore>()(
           selectedIds,
         };
         set((state) => {
-          const open = state.active[panel] ?? null;
+          const active = storedActive(state.active);
+          const open = active[panel] ?? null;
           return {
             active:
               open?.id === id && open.content.kind === "list"
                 ? {
-                    ...state.active,
+                    ...active,
                     [panel]: {
                       ...open,
                       content: { ...open.content, selectedIds },
                     },
                   }
-                : state.active,
+                : active,
             lastSelection,
           };
         });
