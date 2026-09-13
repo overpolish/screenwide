@@ -210,5 +210,7 @@ pub(super) fn apply_workspace_transform(
     set_pane_geometry(pane, viewport, rect, scale, defer_geometry);
   }
   draw_selection(inner, state);
-  let _ = unsafe { inner.gpu.composition.Commit() };
+  if inner.batch_depth.load(std::sync::atomic::Ordering::Acquire) == 0 {
+    let _ = unsafe { inner.gpu.composition.Commit() };
+  }
 }

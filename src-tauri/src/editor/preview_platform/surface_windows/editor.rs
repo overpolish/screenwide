@@ -38,6 +38,10 @@ pub(super) enum CursorKind {
 // Payloads mirror the Win32 messages; not every field is consumed yet.
 #[allow(dead_code)]
 pub(super) enum Input {
+  ContextMenu {
+    x: f64,
+    y: f64,
+  },
   DoubleClick {
     x: f64,
     y: f64,

@@ -198,10 +198,15 @@ pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
   let app = window.app_handle().clone();
   let export = window.clone();
   window.on_window_event(move |event| {
-    if matches!(event, WindowEvent::Moved(_) | WindowEvent::Resized(_)) {
+    if matches!(
+      event,
+      WindowEvent::Moved(_) | WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }
+    ) {
       // An open export options window is a child of this one, so it follows
       // the editor's frame rather than keeping the place it was opened at.
       crate::editor::export_window::recenter_for_editor_label(&app, export.label());
+      #[cfg(target_os = "windows")]
+      super::options::placement_windows::follow_parent(&app, &export);
     }
     // A panel attached to this editor follows it around the screen by itself.
     // It is placed against the preview area rather than the window frame, so a

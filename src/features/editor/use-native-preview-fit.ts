@@ -16,6 +16,51 @@ export async function afterPreviewLayout(
   await request();
 }
 
+export type ResizeFit = { gutter: number; revision: number; sessionId: number };
+let resizeFitRevision = 0;
+
+export function resizeFitWidth(
+  fit: ResizeFit | null,
+  viewportWidth: number,
+  sessionId: number,
+) {
+  return fit?.sessionId === sessionId
+    ? Math.max(1, viewportWidth - fit.gutter)
+    : undefined;
+}
+
+/** Mark every resize layout before growth starts, and keep the fit attached
+ * through the last coalesced layout. No separate transform can flash later. */
+export async function fitPreviewDuringResize({
+  fitRef,
+  gutter,
+  isCurrent,
+  layoutRef,
+  measure,
+  resize,
+  sessionId,
+}: {
+  fitRef: RefObject<ResizeFit | null>;
+  gutter: number;
+  isCurrent: () => boolean;
+  layoutRef: RefObject<Promise<unknown>>;
+  measure: () => void;
+  resize: () => Promise<void>;
+  sessionId: number;
+}) {
+  const fit = { gutter, revision: ++resizeFitRevision, sessionId };
+  fitRef.current = fit;
+  try {
+    await resize();
+    if (isCurrent() && fitRef.current === fit) {
+      measure();
+      await afterPreviewLayout(layoutRef, () => Promise.resolve());
+    }
+  } finally {
+    if (fitRef.current === fit) fitRef.current = null;
+  }
+}
+
 /**
  * A one-time native transform must use the post-resize base pane geometry.
  *
@@ -28,6 +73,7 @@ export function useNativePreviewFit({
   measureRef,
   onError,
   reset,
+  resizeFitRef,
   sessionIdRef,
   setBasis,
   startedRef,
@@ -35,6 +81,7 @@ export function useNativePreviewFit({
   layoutRef: RefObject<Promise<unknown>>;
   measureRef: RefObject<() => void>;
   reset: (sessionId: number, fitWidth?: number) => Promise<unknown>;
+  resizeFitRef: RefObject<ResizeFit | null>;
   sessionIdRef: RefObject<number>;
   setBasis: (sessionId: number, fitWidth?: number) => Promise<unknown>;
   startedRef: RefObject<boolean>;
@@ -65,5 +112,25 @@ export function useNativePreviewFit({
     [onError, sessionIdRef, setBasis, startedRef],
   );
 
-  return { fitPreview, setFitBasis };
+  const fitDuringResize = useCallback(
+    async (gutter: number, resize: () => Promise<void>) => {
+      if (!startedRef.current) return resize();
+      const sessionId = sessionIdRef.current;
+      await fitPreviewDuringResize({
+        fitRef: resizeFitRef,
+        gutter,
+        isCurrent: () =>
+          startedRef.current && sessionIdRef.current === sessionId,
+        layoutRef,
+        measure: () => {
+          measureRef.current();
+        },
+        resize,
+        sessionId,
+      });
+    },
+    [layoutRef, measureRef, resizeFitRef, sessionIdRef, startedRef],
+  );
+
+  return { fitDuringResize, fitPreview, setFitBasis };
 }

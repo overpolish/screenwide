@@ -43,7 +43,7 @@ export function RecordingCanvasTools({
       <PreviewToolToggle
         isDisabled={!isFrameEnabled}
         isSelected={tool === "canvas" && isFrameEnabled}
-        label="Resize frame"
+        label="Frame"
         name="Resize recording frame"
         onSelectedChange={(selected) => {
           onToolChange(selected ? "canvas" : null);

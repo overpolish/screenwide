@@ -71,7 +71,7 @@ export function useToolPanel(workspace: EditorKind) {
   const panel = toolPanelLabel(workspace);
   const active = usePopupPanelStore((state) => activePopupPanel(state, panel));
   const openTool = active?.content.kind === "tool" ? active.content.tool : null;
-  const { fitPreview, setFitBasis } = usePreviewFit();
+  const { fitDuringResize, fitPreview, setFitBasis } = usePreviewFit();
 
   /** Puts the open panel away without resetting the current zoom or pan. The
    * view stays where it is, but the basis a double-click resets to goes back
@@ -89,16 +89,17 @@ export function useToolPanel(workspace: EditorKind) {
       const id = toolPanelId(tool);
       if (fitsView) {
         const viewport = previewViewport();
-        await openToolPanelSpace(
-          panelGrowthDelta(
-            viewport?.getBoundingClientRect().width ?? anchor.width,
-            Number(viewport?.dataset.previewFitWidth),
-            toolPanelGutter,
+        await fitDuringResize(toolPanelGutter, () =>
+          openToolPanelSpace(
+            panelGrowthDelta(
+              viewport?.getBoundingClientRect().width ?? anchor.width,
+              Number(viewport?.dataset.previewFitWidth),
+              toolPanelGutter,
+            ),
           ),
         );
       }
       const bounds = previewViewport()?.getBoundingClientRect() ?? anchor;
-      if (fitsView) fitPreview(Math.max(1, bounds.width - toolPanelGutter));
       usePopupPanelStore.getState().open(panel, {
         content: { kind: "tool", tool, workspace },
         focusContents: false,
@@ -123,7 +124,7 @@ export function useToolPanel(workspace: EditorKind) {
         triggerId: id,
       });
     },
-    [fitPreview, panel, workspace],
+    [fitDuringResize, panel, workspace],
   );
 
   /**

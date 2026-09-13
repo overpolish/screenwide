@@ -12,7 +12,7 @@ use windows::Win32::{
       DefWindowProcW, GetAncestor, GetForegroundWindow, SetForegroundWindow, GA_ROOT, HTCLIENT,
       MA_NOACTIVATE, WM_CANCELMODE, WM_CAPTURECHANGED, WM_DESTROY, WM_LBUTTONDBLCLK,
       WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEMOVE,
-      WM_MOUSEWHEEL, WM_NCHITTEST, WM_SETCURSOR,
+      WM_MOUSEWHEEL, WM_NCHITTEST, WM_RBUTTONDOWN, WM_SETCURSOR,
     },
   },
 };
@@ -51,6 +51,11 @@ pub(super) unsafe extern "system" fn window_proc(
         let _ = SetForegroundWindow(root);
       }
       LRESULT(MA_NOACTIVATE as isize)
+    }
+    WM_RBUTTONDOWN => {
+      let (x, y) = point(lparam);
+      dispatch(hwnd, Input::ContextMenu { x, y });
+      LRESULT(0)
     }
     WM_LBUTTONDOWN => {
       SetCapture(hwnd);

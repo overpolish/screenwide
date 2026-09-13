@@ -132,7 +132,7 @@ impl PreviewPlayerManager {
         // The ribbon holds the viewport open for as long as it has
         // envelopes, so a player that is going away has to take them with
         // it: the next recording must not open onto the last one's audio.
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
         surface.set_audio_ribbon(&super::audio_visualizer::AudioRibbonEnvelopes::default());
         surface.hide();
       }

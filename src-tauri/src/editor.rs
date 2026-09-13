@@ -30,6 +30,25 @@ mod validation;
 mod workspace;
 
 pub use artifact::{discard, present_recording, present_screenshot};
+#[path = "editor/recording_model.rs"]
+mod recording_model;
+#[path = "editor/screenshot_composition.rs"]
+mod screenshot_composition;
+pub use recording_model::{
+  AudioTrackKind, AudioTrackVolume, CameraOverlaySettings, RecordingAudioTrack, RecordingCamera,
+  RecordingExportOptions, RecordingOutputSettings,
+};
+
+#[path = "editor/screenshot_model.rs"]
+mod screenshot_model;
+pub use screenshot_model::{ScreenshotItem, ScreenshotWorkspaceOutputSettings};
+#[path = "editor/workspace_kind.rs"]
+mod workspace_kind;
+use workspace_kind::kind_of_window;
+pub use workspace_kind::EditorKind;
+
+use screenshot_composition::compose_screenshot_workspace;
+
 use artifact::{emit_snapshot, snapshots, take_artifact};
 use artifact_snapshot::snapshot;
 pub use artifact_snapshot::EditorArtifactSnapshot;
@@ -106,53 +125,6 @@ const WORKING_RECORDING_EXTENSIONS: &[&str] = &["mov", "mp4"];
 const ORPHAN_MAX_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 const MAX_FILE_STEM: usize = 200;
 
-/// Which editor workspace something belongs to.
-///
-/// A recording and a screenshot are held apart, each in its own workspace with
-/// its own window, so one can sit waiting for a decision while the other is
-/// being made. The enum is what keys them; growing past two is a matter of
-/// widening it and the slot lookup, not of unpicking the callers.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum EditorKind {
-  Recording,
-  Screenshot,
-}
-
-impl EditorKind {
-  pub const ALL: [Self; 2] = [Self::Recording, Self::Screenshot];
-
-  pub const fn window_label(self) -> crate::windows::WindowLabel {
-    match self {
-      Self::Recording => crate::windows::WindowLabel::EditorRecording,
-      Self::Screenshot => crate::windows::WindowLabel::EditorScreenshot,
-    }
-  }
-
-  fn from_window_label(label: &str) -> Option<Self> {
-    Self::ALL
-      .into_iter()
-      .find(|kind| kind.window_label().as_str() == label)
-  }
-
-  fn of(artifact: &EditorArtifact) -> Self {
-    match artifact {
-      EditorArtifact::Recording { .. } => Self::Recording,
-      EditorArtifact::Screenshot { .. } => Self::Screenshot,
-    }
-  }
-}
-
-/// The workspace a command is addressed to, read off the window it came from.
-///
-/// Tauri injects the calling window, so the webview never has to name its own
-/// workspace and no `invoke` carries an argument that could disagree with the
-/// window it was sent from.
-fn kind_of_window(window: &tauri::WebviewWindow) -> Result<EditorKind, String> {
-  EditorKind::from_window_label(window.label())
-    .ok_or_else(|| "That window has no editor workspace".to_owned())
-}
-
 /// A capture waiting to be saved.
 ///
 /// The window renders itself by artifact kind rather than assuming a
@@ -185,241 +157,6 @@ pub enum EditorArtifact {
     suggested_file_stem: String,
     width: u32,
   },
-}
-
-/// One independently editable image in a screenshot workspace.
-/// Pixels remain owned by Rust and are uploaded to the native renderer once;
-/// the webview only ever needs this identity and the scene metadata added in
-/// the next slice.
-#[derive(Clone)]
-pub struct ScreenshotItem {
-  pub id: u64,
-  pub image: CapturedImage,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ScreenshotWorkspaceItemOutput {
-  pub id: u64,
-  pub output: ScreenshotOutputSettings,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct ScreenshotWorkspaceOutputSettings {
-  #[serde(flatten)]
-  pub canvas: ScreenshotOutputSettings,
-  #[serde(default)]
-  pub items: Vec<ScreenshotWorkspaceItemOutput>,
-}
-
-impl ScreenshotWorkspaceOutputSettings {
-  pub(super) fn output_for(&self, item: &ScreenshotItem) -> ScreenshotOutputSettings {
-    self.output_for_id(item.id)
-  }
-
-  pub(super) fn output_for_id(&self, id: u64) -> ScreenshotOutputSettings {
-    let mut output = self
-      .items
-      .iter()
-      .find(|candidate| candidate.id == id)
-      .map_or_else(|| self.canvas.clone(), |candidate| candidate.output.clone());
-    output.background_color = self.canvas.background_color.clone();
-    output.background_image_path = self.canvas.background_image_path.clone();
-    output.background_type = self.canvas.background_type.clone();
-    output.background_radius_percent = self.canvas.background_radius_percent;
-    output.height = self.canvas.height;
-    output.mesh_colors = self.canvas.mesh_colors.clone();
-    output.mesh_generator = self.canvas.mesh_generator.clone();
-    output.mesh_locked_colors = self.canvas.mesh_locked_colors.clone();
-    output.mesh_points = self.canvas.mesh_points.clone();
-    output.mesh_seed = self.canvas.mesh_seed;
-    output.mesh_warp_percent = self.canvas.mesh_warp_percent;
-    output.width = self.canvas.width;
-    output
-  }
-}
-
-/// The canvas's own background picture, filled to it. `None` whenever the
-/// background is a painted one, or the file behind it can no longer be read,
-/// in which case the compositor's solid colour stands in.
-#[cfg(target_os = "macos")]
-fn background_image_layer(canvas: &ScreenshotOutputSettings) -> Option<CapturedImage> {
-  if canvas.background_type != "image" {
-    return None;
-  }
-  let picture = crate::screenshots::background_image_canvas(
-    canvas.background_image_path.as_deref()?,
-    canvas.width,
-    canvas.height,
-  )?;
-  let (width, height) = picture.dimensions();
-  Some(CapturedImage {
-    height,
-    rgba: picture.into_raw(),
-    width,
-  })
-}
-
-fn compose_screenshot_workspace(
-  app: &AppHandle,
-  items: &[ScreenshotItem],
-  output: &ScreenshotWorkspaceOutputSettings,
-) -> Result<CapturedImage, String> {
-  #[cfg(not(target_os = "windows"))]
-  let _ = app;
-  let ordered_items = output
-    .items
-    .iter()
-    .filter_map(|item_output| items.iter().find(|item| item.id == item_output.id))
-    .collect::<Vec<_>>();
-  #[cfg(not(target_os = "windows"))]
-  let first = ordered_items
-    .first()
-    .copied()
-    .ok_or_else(|| "The screenshot workspace is empty".to_owned())?;
-  #[cfg(target_os = "macos")]
-  {
-    // A chosen picture is the one background the compositor cannot paint: it
-    // draws from uniforms, not from a texture. So the layers are composed
-    // over nothing, the picture is filled to the canvas here, and the two are
-    // put together. The shadow survives that, since a background-less layer
-    // carries it as its own alpha, and the canvas corners are rounded last,
-    // exactly where the shader would have rounded them.
-    let picture = background_image_layer(&output.canvas);
-    let mut composed = crate::screenshots::compose_output_layers(
-      &first.image,
-      &output.output_for(first),
-      0.0,
-      true,
-      None,
-      None,
-      None,
-      None,
-      false,
-      picture.is_some(),
-    )?;
-    for item in &ordered_items[1..] {
-      let layer = crate::screenshots::compose_output_layers(
-        &item.image,
-        &output.output_for(item),
-        0.0,
-        true,
-        None,
-        None,
-        None,
-        None,
-        false,
-        true,
-      )?;
-      composed = crate::screenshots::alpha_composite(&composed, &layer)?;
-    }
-    let Some(picture) = picture else {
-      return Ok(composed);
-    };
-    Ok(crate::screenshots::rounded_corners(
-      &crate::screenshots::alpha_composite(&picture, &composed)?,
-      output.canvas.background_radius_percent,
-    ))
-  }
-  #[cfg(target_os = "windows")]
-  {
-    let window = app
-      .get_webview_window(EditorKind::Screenshot.window_label().as_str())
-      .ok_or_else(|| "The editor window is unavailable".to_owned())?;
-    let surface = preview_platform::RecordingPreviewSurface::from_window(&window)?;
-    let layers = ordered_items
-      .iter()
-      .map(|item| (&item.image, output.output_for(item)))
-      .collect::<Vec<_>>();
-    surface.compose_screenshot_layers_to_image(&layers)
-  }
-  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-  {
-    compose_screenshot(&first.image, &output.output_for(first))
-  }
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum AudioTrackKind {
-  SystemAudio,
-  Microphone,
-  Unknown,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RecordingAudioTrack {
-  pub kind: AudioTrackKind,
-  pub label: String,
-  pub stream_index: usize,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RecordingCamera {
-  pub duration_ms: u64,
-  pub height: u32,
-  pub original_size_bytes: u64,
-  pub path: PathBuf,
-  pub width: u32,
-}
-
-/// A baked camera's placement, in the screen output's own pixels: the camera
-/// image by its centre and width, and the crop window that frames it.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CameraOverlaySettings {
-  pub camera_x: f64,
-  pub camera_y: f64,
-  pub camera_width: f64,
-  pub frame_height: f64,
-  pub frame_width: f64,
-  pub frame_x: f64,
-  pub frame_y: f64,
-  pub radius_percent: f64,
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct RecordingExportOptions {
-  pub audio_track_volumes: Vec<AudioTrackVolume>,
-  pub bake_camera: bool,
-  pub camera_compression: u8,
-  pub camera_overlay: CameraOverlaySettings,
-  pub camera_resolution_scale_percent: u16,
-  pub collapse_audio: bool,
-  pub compression: u8,
-  pub cursor_effects: cursor_effects::CursorEffectSettings,
-  pub keyboard_effects: keyboard_effects::KeyboardEffectSettings,
-  pub enabled_stream_indices: Vec<usize>,
-  pub include_camera: bool,
-  pub include_primary_video: bool,
-  pub resolution_scale_percent: u16,
-  pub recording_output: RecordingOutputSettings,
-  pub screenshot_output: ScreenshotWorkspaceOutputSettings,
-  #[serde(default)]
-  pub timeline_edit: Option<timeline_edit::RecordingTimelineEdit>,
-}
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RecordingOutputSettings {
-  pub camera: ScreenshotOutputSettings,
-  #[serde(default = "default_camera_on_top")]
-  pub camera_on_top: bool,
-  pub primary: ScreenshotOutputSettings,
-}
-
-fn default_camera_on_top() -> bool {
-  true
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct AudioTrackVolume {
-  pub decibels: i16,
-  pub stream_index: usize,
 }
 
 fn recording_audio_tracks(

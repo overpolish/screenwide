@@ -209,6 +209,10 @@ void screenwide_preview_surface_begin_layout(void *handle) {
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   on_main_async(^{
+    // Keep the layout transaction open across the queued viewport, geometry,
+    // fit and finish blocks so Core Animation publishes them together.
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
     for (ScreenwidePreviewView *view in surface.views) view.active = NO;
     surface.workspaceHasPanes = NO;
   });
@@ -383,6 +387,7 @@ void screenwide_preview_surface_finish_layout(void *handle) {
       redraw_selection(surface);
     surface.workspaceLayoutAwaitsPresent = NO;
     invalidate_selection_cursor_rects(surface);
+    [CATransaction commit];
   });
 }
 

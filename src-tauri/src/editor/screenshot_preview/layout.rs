@@ -20,6 +20,7 @@ pub async fn layout_screenshot_preview_surface(
   app: AppHandle,
   state: tauri::State<'_, ScreenshotPreviewState>,
   backdrop: Option<[f64; 4]>,
+  fit_width: Option<f64>,
   interaction_output: ScreenshotWorkspaceOutputSettings,
   // The native interaction view sits above the webview, so it swallows clicks
   // on DOM controls painted over the viewport (the save overlay's Cancel
@@ -176,6 +177,9 @@ pub async fn layout_screenshot_preview_surface(
   // pure pan) applies its frames at once, or they would never land.
   surface.set_scale(scale);
   surface.begin_layout();
+  // Open before viewport and pane geometry so a fit reset cannot publish an
+  // intermediate transform against the previous layout.
+  let batch = (will_present || fit_width.is_some()).then(|| surface.present_batch());
   surface.set_viewport(viewport, backdrop.unwrap_or([0.09, 0.09, 0.10, 1.0]));
   #[cfg(target_os = "macos")]
   if let Some(pane) = panes.first() {
@@ -199,7 +203,10 @@ pub async fn layout_screenshot_preview_surface(
   // Open the batch before `finish_layout` so the hides, the deferred pane
   // frames and the fresh layer presents all land in one commit - on Windows
   // that is also the invoke's single compositor wait.
-  let batch = will_present.then(|| surface.present_batch());
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  if let Some(fit_width) = fit_width {
+    surface.reset_editor_view(Some(fit_width));
+  }
   surface.finish_layout();
   if will_present {
     // Source refresh and structural layout are separate IPC calls. Snapshot

@@ -86,6 +86,8 @@ mod tests {
 
   fn context(parent: &str, open: bool, sticky: bool) -> StandaloneListboxContext {
     StandaloneListboxContext {
+      #[cfg(target_os = "windows")]
+      offset: tauri::LogicalPosition::new(0.0, 0.0),
       anchor: None,
       attached_to: None,
       focus_contents: false,

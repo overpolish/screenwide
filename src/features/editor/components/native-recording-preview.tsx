@@ -905,7 +905,7 @@ export function NativeRecordingPreview({
     timelineEdit: recordingTimelineEdit,
     zoomRequest,
   });
-  useRegisterPreviewFit(player.fitPreview, player.setFitBasis);
+  useRegisterPreviewFit(player);
   const isPlaying = player.isPlaying;
   const getPlayerPositionMs = player.getPositionMs;
   previewPlayingRef.current = isPlaying;

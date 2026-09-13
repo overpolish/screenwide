@@ -442,31 +442,32 @@ export function PreviewViewport({
           ];
         })
       : null;
-  const { fitPreview, setFitBasis } = useScreenshotPreviewSurface({
-    artifactId,
-    canvasRef: nativeFrameRef,
-    interactionOutput: workspaceOutput,
-    isEditorSuspended: isSaving || isExportOpen,
-    isEnabled: workspaceOutput !== undefined,
-    onPaneFitChange,
-    onSelectionChange: (paneIndex) => {
-      if (paneIndex === null) return;
-      const itemOutput = workspaceOutput?.items[paneIndex];
-      if (itemOutput) onItemSelect?.(itemOutput.id);
-    },
-    onSelectionGesture: selectionGesture,
-    onZoomChange,
-    output: previewOutput,
-    paneCount: orderedItems.length,
-    selection: selectionOverlay,
-    selectionTargets,
-    sourceKey: orderedItems
-      .map((item) => item.id)
-      .sort((first, second) => first - second)
-      .join(":"),
-    zoomRequest,
-  });
-  useRegisterPreviewFit(fitPreview, setFitBasis);
+  const { fitDuringResize, fitPreview, setFitBasis } =
+    useScreenshotPreviewSurface({
+      artifactId,
+      canvasRef: nativeFrameRef,
+      interactionOutput: workspaceOutput,
+      isEditorSuspended: isSaving || isExportOpen,
+      isEnabled: workspaceOutput !== undefined,
+      onPaneFitChange,
+      onSelectionChange: (paneIndex) => {
+        if (paneIndex === null) return;
+        const itemOutput = workspaceOutput?.items[paneIndex];
+        if (itemOutput) onItemSelect?.(itemOutput.id);
+      },
+      onSelectionGesture: selectionGesture,
+      onZoomChange,
+      output: previewOutput,
+      paneCount: orderedItems.length,
+      selection: selectionOverlay,
+      selectionTargets,
+      sourceKey: orderedItems
+        .map((item) => item.id)
+        .sort((first, second) => first - second)
+        .join(":"),
+      zoomRequest,
+    });
+  useRegisterPreviewFit({ fitDuringResize, fitPreview, setFitBasis });
   return (
     <div
       aria-label={alt}

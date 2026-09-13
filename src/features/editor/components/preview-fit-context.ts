@@ -10,13 +10,20 @@ import { createContext, use, useEffect } from "react";
  * reset the view call it back. A context rather than a module global, so each
  * editor window and each story fits its own preview and nothing else.
  */
+export type FitDuringResize = (
+  gutter: number,
+  resize: () => Promise<void>,
+) => Promise<void>;
+
 export type PreviewFit = {
+  fitDuringResize: FitDuringResize;
   /** Zoom to fit and pan reset. Omit width to use the current viewport. */
   fitPreview: (width?: number) => void;
   /** The preview's own fit and basis, held until it unmounts. */
   registerFitPreview: (
     fit: (width?: number) => void,
     setBasis: (width?: number) => void,
+    fitDuringResize: FitDuringResize,
   ) => () => void;
   /**
    * The width a double-click reset fits into from now on, without moving the
@@ -28,6 +35,7 @@ export type PreviewFit = {
 };
 
 export const PreviewFitContext = createContext<PreviewFit>({
+  fitDuringResize: async (_gutter, resize) => resize(),
   fitPreview: () => undefined,
   registerFitPreview: () => () => undefined,
   setFitBasis: () => undefined,
@@ -36,13 +44,14 @@ export const PreviewFitContext = createContext<PreviewFit>({
 export const usePreviewFit = () => use(PreviewFitContext);
 
 /** The preview's side of the arrangement: hands its fit to whoever asks. */
-export function useRegisterPreviewFit(
-  fit: (width?: number) => void,
-  setBasis: (width?: number) => void,
-) {
+export function useRegisterPreviewFit({
+  fitDuringResize,
+  fitPreview: fit,
+  setFitBasis: setBasis,
+}: Pick<PreviewFit, "fitDuringResize" | "fitPreview" | "setFitBasis">) {
   const { registerFitPreview } = use(PreviewFitContext);
   useEffect(
-    () => registerFitPreview(fit, setBasis),
-    [fit, registerFitPreview, setBasis],
+    () => registerFitPreview(fit, setBasis, fitDuringResize),
+    [fit, fitDuringResize, registerFitPreview, setBasis],
   );
 }

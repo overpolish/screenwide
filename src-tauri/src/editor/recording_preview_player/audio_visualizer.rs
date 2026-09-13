@@ -10,6 +10,11 @@
 
 use super::*;
 
+#[cfg(any(test, target_os = "windows"))]
+mod buckets;
+#[cfg(target_os = "windows")]
+pub(crate) use buckets::bucket_levels;
+
 /// One row per track, one column per envelope point. Both are clamped here so
 /// the native texture is bounded whatever the recording holds.
 pub(crate) const MAX_RIBBON_TRACKS: usize = 4;
@@ -114,24 +119,22 @@ pub async fn set_recording_audio_visualizer(
   else {
     return Ok(());
   };
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_audio_ribbon(&uploaded);
-  #[cfg(not(target_os = "macos"))]
-  {
-    let _ = (surface, uploaded);
-  }
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let _ = (surface, uploaded);
   Ok(())
 }
 
 /// Native playback presents this source position using the same sample clock
 /// as video. The webview only uploads envelopes; it never drives this position.
 pub(super) fn present_audio_position(sources: &PlayerSources, position_ms: u64) {
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   if let Some(surface) = &sources.preview_surface {
     let ratio = source_ratio(position_ms, sources.duration_ms);
     surface.set_audio_ribbon_playhead(ratio);
   }
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = (sources, position_ms);
 }
 

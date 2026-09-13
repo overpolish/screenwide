@@ -13,8 +13,12 @@ use super::{context_for, panel_label, STANDALONE_LISTBOX};
 /// A sticky panel is placed against the preview rather than the window frame,
 /// so an editor resize moves the corner it hangs from. Re-showing it would
 /// re-attach and re-order the window for a change that is only a position.
+// Keep this command synchronous so Tauri runs it on the main thread, like
+// show/hide. An async worker can hold STANDALONE_LISTBOX while a window query
+// waits for the main thread, which may itself be opening a panel and waiting
+// for that same lock.
 #[tauri::command]
-pub async fn move_standalone_listbox(
+pub fn move_standalone_listbox(
   app: AppHandle,
   parent_window_label: String,
   offset: LogicalPosition<f64>,
@@ -33,21 +37,32 @@ pub async fn move_standalone_listbox(
   let window = app
     .get_webview_window(&panel)
     .ok_or(tauri::Error::WindowNotFound)?;
-  let scale = parent.scale_factor()?;
-  let parent_position = parent.outer_position()?.to_logical::<f64>(scale);
-  let size = window
-    .outer_size()?
-    .to_logical::<f64>(window.scale_factor()?);
-  let mut position =
-    LogicalPosition::new(parent_position.x + offset.x, parent_position.y + offset.y);
-  if let Some(monitor) = parent.current_monitor()?.or(app.primary_monitor()?) {
-    let monitor_scale = monitor.scale_factor();
-    let monitor_position = monitor.position().to_logical::<f64>(monitor_scale);
-    let monitor_size = monitor.size().to_logical::<f64>(monitor_scale);
-    let max_x = monitor_position.x + (monitor_size.width - size.width).max(0.0);
-    let max_y = monitor_position.y + (monitor_size.height - size.height).max(0.0);
-    position.x = position.x.clamp(monitor_position.x, max_x);
-    position.y = position.y.clamp(monitor_position.y, max_y);
+  #[cfg(target_os = "windows")]
+  {
+    super::placement_windows::place(&app, &parent, &window, offset, None)?;
+    if let Some(context) = super::standalone_listbox_contexts().get_mut(&panel) {
+      context.offset = offset;
+    }
+    Ok(())
   }
-  window.set_position(position)
+  #[cfg(not(target_os = "windows"))]
+  {
+    let scale = parent.scale_factor()?;
+    let parent_position = parent.outer_position()?.to_logical::<f64>(scale);
+    let size = window
+      .outer_size()?
+      .to_logical::<f64>(window.scale_factor()?);
+    let mut position =
+      LogicalPosition::new(parent_position.x + offset.x, parent_position.y + offset.y);
+    if let Some(monitor) = parent.current_monitor()?.or(app.primary_monitor()?) {
+      let monitor_scale = monitor.scale_factor();
+      let monitor_position = monitor.position().to_logical::<f64>(monitor_scale);
+      let monitor_size = monitor.size().to_logical::<f64>(monitor_scale);
+      let max_x = monitor_position.x + (monitor_size.width - size.width).max(0.0);
+      let max_y = monitor_position.y + (monitor_size.height - size.height).max(0.0);
+      position.x = position.x.clamp(monitor_position.x, max_x);
+      position.y = position.y.clamp(monitor_position.y, max_y);
+    }
+    window.set_position(position)
+  }
 }

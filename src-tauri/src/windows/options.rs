@@ -8,6 +8,15 @@
 //! have their own tool panel up at once. A caller that names none gets the
 //! shared listbox, which is what a pop-up button has always opened.
 
+#[path = "options/registry.rs"]
+mod registry;
+pub(super) use registry::context_for;
+pub(super) use registry::is_standalone_listbox_open;
+pub(super) use registry::open_panel_labels;
+pub(super) use registry::panel_label;
+pub(super) use registry::standalone_listbox_contexts;
+pub(super) use registry::synchronize_open_flag;
+
 use std::collections::BTreeMap;
 use std::sync::{Mutex, MutexGuard};
 
@@ -16,9 +25,15 @@ use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager};
 
 use super::{platform, transient_popover::TransientPopover, WindowLabel};
 
+mod attachment;
 pub(crate) mod dismissal;
 pub(crate) mod lifecycle;
 pub(crate) mod placement;
+use attachment::{attach_to_parent, detach_from_parent};
+#[cfg(any(test, target_os = "windows"))]
+mod placement_geometry;
+#[cfg(target_os = "windows")]
+pub(crate) mod placement_windows;
 
 pub(super) use dismissal::dismiss_standalone_listbox_if_outside;
 pub(crate) use lifecycle::{
@@ -38,6 +53,8 @@ pub(super) struct StandaloneListboxContext {
   /// everything; a sticky panel belongs with the window it was opened from,
   /// and has to be detached again before it is ordered out.
   attached_to: Option<String>,
+  #[cfg(target_os = "windows")]
+  offset: LogicalPosition<f64>,
   /// The trigger's bounds in logical px, relative to the parent window's
   /// content, the way `offset` is expressed. A press inside it belongs to the
   /// trigger, which toggles the panel on mouse-up, so an outside press must
@@ -74,95 +91,6 @@ struct StandaloneListboxClosed {
   trigger_id: String,
 }
 
-pub(super) fn standalone_listbox_contexts(
-) -> MutexGuard<'static, BTreeMap<String, StandaloneListboxContext>> {
-  STANDALONE_LISTBOX_CONTEXTS
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
-/// The window a command means. The shared listbox is the default, so every
-/// pop-up button keeps calling exactly as it did.
-pub(super) fn panel_label(panel: Option<String>) -> String {
-  panel.unwrap_or_else(|| WindowLabel::StandaloneListbox.as_str().to_owned())
-}
-
-pub(super) fn context_for(panel: &str) -> Option<StandaloneListboxContext> {
-  standalone_listbox_contexts()
-    .get(panel)
-    .filter(|context| context.open)
-    .cloned()
-}
-
-/// The panel windows showing something, in a stable order.
-pub(super) fn open_panel_labels() -> Vec<String> {
-  standalone_listbox_contexts()
-    .iter()
-    .filter(|(_, context)| context.open)
-    .map(|(label, _)| label.clone())
-    .collect()
-}
-
-/// Whether any panel window is open. Escape and the outside-press watcher ask
-/// this before doing any work at all.
-pub(super) fn is_standalone_listbox_open() -> bool {
-  STANDALONE_LISTBOX.is_open()
-}
-
-/// Keeps the shared "anything open" flag in step with the per-window entries.
-pub(super) fn synchronize_open_flag() {
-  let any_open = standalone_listbox_contexts()
-    .values()
-    .any(|context| context.open);
-  STANDALONE_LISTBOX.set_open(any_open);
-}
-
-/// A sticky panel stands with the window it belongs to instead of floating
-/// over every other application: it drops to the ordinary window level and
-/// becomes a native child, the way the confirm sheet does.
-#[cfg(target_os = "macos")]
-fn attach_to_parent(
-  app: &AppHandle,
-  parent: &tauri::WebviewWindow,
-  panel: &tauri::WebviewWindow,
-) -> tauri::Result<()> {
-  platform::set_normal_level(panel)?;
-  crate::editor::export_window::presentation::attach(app, parent, panel)
-}
-
-/// Windows keeps the floating panel for now: `presentation::attach` there
-/// disables the parent window, which is right for a modal sheet and wrong for
-/// a panel the user works alongside. Owning it without disabling the editor
-/// belongs to the Windows pass.
-#[cfg(not(target_os = "macos"))]
-fn attach_to_parent(
-  _app: &AppHandle,
-  _parent: &tauri::WebviewWindow,
-  _panel: &tauri::WebviewWindow,
-) -> tauri::Result<()> {
-  Ok(())
-}
-
-/// Ordering a still-attached child out drags its parent with it, so this runs
-/// before the panel is hidden.
-#[cfg(target_os = "macos")]
-pub(super) fn detach_from_parent(
-  app: &AppHandle,
-  parent: &tauri::WebviewWindow,
-  panel: &tauri::WebviewWindow,
-) -> tauri::Result<()> {
-  crate::editor::export_window::presentation::detach(app, parent, panel)
-}
-
-#[cfg(not(target_os = "macos"))]
-pub(super) fn detach_from_parent(
-  _app: &AppHandle,
-  _parent: &tauri::WebviewWindow,
-  _panel: &tauri::WebviewWindow,
-) -> tauri::Result<()> {
-  Ok(())
-}
-
 #[tauri::command]
 #[expect(
   clippy::too_many_arguments,
@@ -188,20 +116,25 @@ pub fn show_standalone_listbox(
   let window = app
     .get_webview_window(&panel)
     .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  let scale = parent.scale_factor()?;
-  let parent_position = parent.outer_position()?.to_logical::<f64>(scale);
-  let mut position =
-    LogicalPosition::new(parent_position.x + offset.x, parent_position.y + offset.y);
+  #[cfg(not(target_os = "windows"))]
+  let position = {
+    let scale = parent.scale_factor()?;
+    let parent_position = parent.outer_position()?.to_logical::<f64>(scale);
+    let mut position =
+      LogicalPosition::new(parent_position.x + offset.x, parent_position.y + offset.y);
 
-  if let Some(monitor) = parent.current_monitor()?.or(app.primary_monitor()?) {
-    let monitor_scale = monitor.scale_factor();
-    let monitor_position = monitor.position().to_logical::<f64>(monitor_scale);
-    let monitor_size = monitor.size().to_logical::<f64>(monitor_scale);
-    let max_x = monitor_position.x + (monitor_size.width - size.width).max(0.0);
-    let max_y = monitor_position.y + (monitor_size.height - size.height).max(0.0);
-    position.x = position.x.clamp(monitor_position.x, max_x);
-    position.y = position.y.clamp(monitor_position.y, max_y);
-  }
+    if let Some(monitor) = parent.current_monitor()?.or(app.primary_monitor()?) {
+      let monitor_scale = monitor.scale_factor();
+      let monitor_position = monitor.position().to_logical::<f64>(monitor_scale);
+      let monitor_size = monitor.size().to_logical::<f64>(monitor_scale);
+      let max_x = monitor_position.x + (monitor_size.width - size.width).max(0.0);
+      let max_y = monitor_position.y + (monitor_size.height - size.height).max(0.0);
+      position.x = position.x.clamp(monitor_position.x, max_x);
+      position.y = position.y.clamp(monitor_position.y, max_y);
+    }
+
+    position
+  };
 
   // A panel window is reused, so one still attached to another window has to
   // be let go before this one is placed: left attached it would follow that
@@ -215,7 +148,10 @@ pub fn show_standalone_listbox(
     let _ = detach_from_parent(&app, &previous, &window);
   }
 
+  #[cfg(not(target_os = "windows"))]
   platform::set_frame(&window, position, size)?;
+  #[cfg(target_os = "windows")]
+  placement_windows::place(&app, &parent, &window, offset, Some(size))?;
   // A panel that fits itself to its contents opens unseen at the size it was
   // asked for, lays out, and is revealed by `fit_standalone_listbox` once it
   // is the size of what it holds: showing it at one height and settling at
@@ -233,7 +169,14 @@ pub fn show_standalone_listbox(
   } else {
     None
   };
-  platform::show(&window, if conceal { 0.0 } else { 1.0 })?;
+  // Windows concealment uses DWM cloaking, not alpha. Leaving alpha at zero
+  // would keep the fitted panel invisible even after it is uncloaked.
+  let opacity = if conceal && cfg!(target_os = "macos") {
+    0.0
+  } else {
+    1.0
+  };
+  platform::show(&window, opacity)?;
   // A menu floats over every application; an attached panel keeps the
   // ordinary level it was just given, so it travels with its parent.
   if attached_to.is_none() {
@@ -250,6 +193,8 @@ pub fn show_standalone_listbox(
     StandaloneListboxContext {
       anchor,
       attached_to,
+      #[cfg(target_os = "windows")]
+      offset,
       focus_contents,
       open: true,
       parent_window_label,

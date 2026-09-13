@@ -1,6 +1,25 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[path = "commands/composition.rs"]
+mod composition;
+pub use composition::set_recording_preview_composition;
+pub use composition::set_recording_preview_cursor_effects;
+pub use composition::{
+  __cmd__set_recording_preview_composition, __tauri_command_name_set_recording_preview_composition,
+};
+pub use composition::{
+  __cmd__set_recording_preview_cursor_effects,
+  __tauri_command_name_set_recording_preview_cursor_effects,
+};
+
+#[path = "commands/startup.rs"]
+mod startup;
+pub use startup::start_recording_preview_player;
+pub use startup::{
+  __cmd__start_recording_preview_player, __tauri_command_name_start_recording_preview_player,
+};
+
 use crate::editor::CameraOverlaySettings;
 use tauri::{ipc::Channel, AppHandle, Emitter, Manager};
 
@@ -37,248 +56,6 @@ struct RecordingPreviewSelectionGestureEvent {
   recording_output: Option<RecordingOutputSettings>,
   scale: f64,
   session_id: u64,
-}
-
-#[tauri::command]
-pub async fn start_recording_preview_player(
-  app: AppHandle,
-  state: tauri::State<'_, RecordingPreviewPlayerState>,
-  artifact_id: u64,
-  settings: PreviewPlayerSettings,
-  event_channel: Channel<RecordingPreviewPlayerEvent>,
-  session_id: u64,
-) -> Result<RecordingPreviewPlayerInfo, String> {
-  let mut sources = sources(&app, artifact_id, Some(&settings))?;
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  if let Some(surface) = sources.preview_surface.as_mut() {
-    let surface = Arc::get_mut(surface)
-      .ok_or_else(|| "The recording preview surface is already in use".to_owned())?;
-    let event_app = app.clone();
-    surface.enable_editor(Box::new(move |zoom_percent| {
-      let _ = event_app.emit(
-        "recording-preview://transform",
-        RecordingPreviewTransformEvent {
-          session_id,
-          zoom_percent,
-        },
-      );
-    }));
-    let event_app = app.clone();
-    surface.set_selection_callback(Box::new(move |pane_index| {
-      let _ = event_app.emit(
-        "recording-preview://selection-change",
-        RecordingPreviewSelectionChangeEvent {
-          pane_index,
-          session_id,
-        },
-      );
-    }));
-    if let Some(event_window) =
-      app.get_webview_window(EditorKind::Recording.window_label().as_str())
-    {
-      let menu_window = event_window.clone();
-      surface.set_pointer_down_callback(Box::new(move || {
-        let _ = event_window.emit(
-          super::super::preview_platform::NATIVE_POINTER_DOWN_EVENT,
-          (),
-        );
-      }));
-      surface.set_context_menu_callback(Box::new(move |pane_index, x, y| {
-        let _ = menu_window.emit(
-          super::super::preview_platform::NATIVE_CONTEXT_MENU_EVENT,
-          RecordingPreviewContextMenuEvent { pane_index, x, y },
-        );
-      }));
-    }
-    let event_app = app.clone();
-    surface.set_selection_gesture_callback(Box::new(
-      move |phase, pane_index, operation, edges, scale, delta_x, delta_y| {
-        let manager = event_app.state::<RecordingPreviewPlayerState>();
-        let composition = if let Ok(mut manager) = manager.0.try_lock() {
-          let updated = manager
-            .handle_selection_gesture(phase, pane_index, operation, edges, scale, delta_x, delta_y)
-            .is_ok();
-          // A Frame drag, or an Alt-drag Move growing the canvas around its
-          // layer, moves the pane box on every pointer move, so the composition
-          // follows it immediately. macOS recomposes natively; Windows redraws the
-          // paused still from its cached sources here, which also publishes
-          // the geometry the drag deferred. Without this the pane would show
-          // the previous canvas letterboxed into the new box until mouse-up.
-          #[cfg(target_os = "windows")]
-          if updated
-            && (operation == super::super::preview_platform::SelectionGestureOperation::FrameResize
-              || (operation == super::super::preview_platform::SelectionGestureOperation::Move
-                && edges & super::AUTO_FIT_MOVE_EDGE != 0))
-            && !matches!(
-              phase,
-              super::super::preview_platform::SelectionGesturePhase::Begin
-            )
-          {
-            // The surface state lock is not held here (`handle_editor_input`
-            // emits its gestures after that scope ends), and nothing under
-            // this call re-enters the manager, so the manager lock is only
-            // ever taken before the surface lock - the same order every
-            // command uses.
-            let _ = manager.redraw_still_now();
-          }
-          #[cfg(not(target_os = "windows"))]
-          let _ = updated;
-          manager.selection_composition()
-        } else {
-          None
-        };
-        let phase = match phase {
-          super::super::preview_platform::SelectionGesturePhase::Begin => "begin",
-          super::super::preview_platform::SelectionGesturePhase::Update => "update",
-          super::super::preview_platform::SelectionGesturePhase::End => "end",
-          super::super::preview_platform::SelectionGesturePhase::Cancel => "cancel",
-        };
-        let operation = operation as u32;
-        let _ = event_app.emit(
-          "recording-preview://selection-gesture",
-          RecordingPreviewSelectionGestureEvent {
-            camera_overlay: composition.as_ref().map(|value| value.camera_overlay),
-            delta_x,
-            delta_y,
-            edges,
-            operation,
-            pane_index,
-            phase,
-            recording_output: composition.map(|value| value.recording_output),
-            scale,
-            session_id,
-          },
-        );
-      },
-    ));
-    surface.set_selection_snapping(true);
-    surface.set_editor_active(false);
-  }
-  let info = RecordingPreviewPlayerInfo::from(&sources);
-  let mut manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  if session_id < manager.latest_session_id {
-    return Ok(info);
-  }
-  manager.stop();
-  manager.latest_session_id = session_id;
-  manager.artifact_id = Some(artifact_id);
-  manager.audio_indices = settings.audio.enabled_stream_indices;
-  manager.audio_volumes = settings.audio.audio_track_volumes;
-  manager.event_channel = Some(event_channel);
-  manager.latest_layout_request = 0;
-  manager.latest_seek_request = 0;
-  manager.playback_rate = 1.0;
-  manager.position_ms = 0;
-  manager.sources = Some(sources);
-  manager.session_id = Some(session_id);
-  manager.restart(PlaybackMode::Still)?;
-  Ok(info)
-}
-
-// Async for the same reason as `layout_recording_preview_surface`: a paused
-// redraw must not block the main thread's input pump.
-#[tauri::command]
-pub async fn set_recording_preview_composition(
-  state: tauri::State<'_, RecordingPreviewPlayerState>,
-  bake_camera: bool,
-  camera_overlay: CameraOverlaySettings,
-  recording_output: RecordingOutputSettings,
-  session_id: u64,
-) -> Result<(), String> {
-  let mut manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  manager.require_session(session_id)?;
-  let settings = manager
-    .sources
-    .as_ref()
-    .ok_or_else(|| "The recording preview player is not open".to_owned())?
-    .composition_settings
-    .clone()
-    .ok_or_else(|| "The recording preview composition is unavailable".to_owned())?;
-  let next = PreviewCompositionSettings {
-    bake_camera,
-    camera_overlay,
-    recording_output: recording_output.clone(),
-  };
-  let current = settings
-    .read()
-    .map_err(|_| "The recording preview composition is unavailable".to_owned())?;
-  if *current == next {
-    return Ok(());
-  }
-  #[cfg(target_os = "windows")]
-  let bake_changed = current.bake_camera != bake_camera;
-  drop(current);
-  *settings
-    .write()
-    .map_err(|_| "The recording preview composition is unavailable".to_owned())? = next;
-  if !manager.is_playing {
-    // A composition change leaves the decoded frame and its cursor valid, so
-    // Windows redraws the paused still synchronously from the cached sources
-    // instead of restarting the decoder; a full reopen per pointer move made
-    // camera drags trail the pointer. A bake toggle keeps the decoder path -
-    // the newly active mode's source cache is absent or stale - and so do
-    // cursor-effect changes, whose composition is stale by definition.
-    #[cfg(target_os = "windows")]
-    if !bake_changed {
-      let has_camera = manager
-        .sources
-        .as_ref()
-        .is_some_and(|sources| sources.camera_path.is_some());
-      let redrawn = manager
-        .sources
-        .as_ref()
-        .and_then(|sources| sources.preview_surface.as_ref())
-        .is_some_and(|surface| {
-          surface
-            .redraw_still(
-              bake_camera && has_camera,
-              &recording_output.primary,
-              &recording_output.camera,
-              camera_overlay,
-              recording_output.camera.drop_shadow,
-              recording_output.camera_on_top,
-            )
-            .unwrap_or(false)
-        });
-      if redrawn {
-        return Ok(());
-      }
-    }
-    manager.restart(PlaybackMode::InteractiveStill)?;
-  }
-  Ok(())
-}
-
-#[tauri::command]
-pub fn set_recording_preview_cursor_effects(
-  state: tauri::State<'_, RecordingPreviewPlayerState>,
-  cursor_effects: CursorEffectSettings,
-  session_id: u64,
-) -> Result<(), String> {
-  let mut manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  manager.require_session(session_id)?;
-  let settings = manager
-    .sources
-    .as_ref()
-    .ok_or_else(|| "The recording preview player is not open".to_owned())?
-    .cursor_settings
-    .clone();
-  *settings
-    .write()
-    .map_err(|_| "The cursor preview settings are unavailable".to_owned())? = cursor_effects;
-  if !manager.is_playing {
-    manager.restart(PlaybackMode::InteractiveStill)?;
-  }
-  Ok(())
 }
 
 /// Playback teardown kills the ffmpeg audio child, drops the CoreAudio output

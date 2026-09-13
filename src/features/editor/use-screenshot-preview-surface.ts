@@ -22,7 +22,12 @@ import {
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
 } from "./screenshot-output";
-import { useNativePreviewFit } from "./use-native-preview-fit";
+import { ScreenshotSelectionGestureEvent } from "./screenshot-preview-events";
+import {
+  ResizeFit,
+  resizeFitWidth,
+  useNativePreviewFit,
+} from "./use-native-preview-fit";
 import {
   applyBackdropMask,
   clearBackdropMasks,
@@ -30,24 +35,9 @@ import {
   Hole,
 } from "./use-recording-preview-surface";
 
-let sessionSequence = 0;
+export type { ScreenshotSelectionGestureEvent } from "./screenshot-preview-events";
 
-export type ScreenshotSelectionGestureEvent = {
-  deltaX: number;
-  deltaY: number;
-  edges: number;
-  operation:
-    | "cropMove"
-    | "cropResize"
-    | "frameRadius"
-    | "frameResize"
-    | "move"
-    | "radius"
-    | "resize";
-  paneIndex: number;
-  phase: "begin" | "update" | "end" | "cancel";
-  scale: number;
-};
+let sessionSequence = 0;
 
 /**
  * The native screenshot editing preview: the composed output renders on the
@@ -124,6 +114,7 @@ export function useScreenshotPreviewSurface({
   editorSuspendedRef.current = isEditorSuspended;
   const measureRef = useRef<() => void>(() => undefined);
   const layoutRef = useRef<Promise<unknown>>(Promise.resolve());
+  const resizeFitRef = useRef<ResizeFit | null>(null);
   const outputKey = JSON.stringify(output);
 
   useEffect(() => {
@@ -366,13 +357,19 @@ export function useScreenshotPreviewSurface({
           // reach the surface.
           const nextLayout = JSON.stringify({
             backdrop,
-            interactionOutput: interactionOutputRef.current,
             // A suspended editor stays enabled and keeps its transform;
             // only its input and chrome go away, and the suspend command
             // owns that.
+            fitWidth: resizeFitWidth(
+              resizeFitRef.current,
+              viewportRect.width,
+              sessionIdRef.current,
+            ),
+            interactionOutput: interactionOutputRef.current,
             nativeEditor: true,
             output: currentOutput,
             pane,
+            resizeFit: resizeFitRef.current,
             scale,
             selection: selectionRef.current,
             selectionTargets: selectionTargetsRef.current,
@@ -383,6 +380,11 @@ export function useScreenshotPreviewSurface({
             lastLayout = nextLayout;
             pendingLayout = {
               backdrop,
+              fitWidth: resizeFitWidth(
+                resizeFitRef.current,
+                viewportRect.width,
+                sessionIdRef.current,
+              ),
               interactionOutput: interactionOutputRef.current ?? currentOutput,
               nativeEditor: true,
               output: currentOutput,
@@ -441,14 +443,15 @@ export function useScreenshotPreviewSurface({
     return clearBackdropMasks;
   }, [isEnabled]);
 
-  const { fitPreview, setFitBasis } = useNativePreviewFit({
+  const { fitDuringResize, fitPreview, setFitBasis } = useNativePreviewFit({
     layoutRef,
     measureRef,
     reset: resetScreenshotPreviewView,
+    resizeFitRef,
     sessionIdRef,
     setBasis: setScreenshotPreviewFitBasis,
     startedRef,
   });
 
-  return { fitPreview, setFitBasis };
+  return { fitDuringResize, fitPreview, setFitBasis };
 }

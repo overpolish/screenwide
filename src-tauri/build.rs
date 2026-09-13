@@ -10,6 +10,7 @@ fn main() {
   // "what am I running on", not "what am I building for". Cross-compiling from
   // macOS to Windows must not hand the Objective-C sources to the MSVC target.
   if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
+    println!("cargo:rerun-if-changed=src/editor/cursor_export");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos.m");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos+presenter.m");
     println!(
@@ -117,6 +118,11 @@ fn main() {
       .file("src/glide/macos/spaces/carry.m")
       .file("src/glide/macos/spaces/drag_point.m")
       .file("src/editor/cursor_export/gpu_compositor_macos.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos+export_setup.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos+export_encoding.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos_export_cursor.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos_export_inflight.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos_export_still.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_keyboard.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_background_image.m")
@@ -202,6 +208,10 @@ fn compile_windows_preview_shaders() {
   compile_shader(
     "src/editor/preview_platform/surface_windows/shaders/blur.hlsl",
     "preview_blur",
+  );
+  compile_shader(
+    "src/editor/preview_platform/surface_windows/shaders/audio_ribbon.hlsl",
+    "preview_audio_ribbon",
   );
   compile_shader("src/osc/gpu/windows/shaders/osc.hlsl", "osc_gpu");
   compile_shader(

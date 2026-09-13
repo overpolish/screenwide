@@ -1,6 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[cfg(test)]
+#[path = "recording_inputs/tests.rs"]
+mod tests;
+
+#[path = "recording_inputs/mode_preferences.rs"]
+mod mode_preferences;
+#[cfg(any(test, target_os = "macos"))]
+use mode_preferences::choose_fps;
+use mode_preferences::{preferred_mode, sort_camera_modes};
+
 use cpal::{
   traits::{DeviceTrait, HostTrait},
   Device, DeviceDescription, InterfaceType, SampleFormat, StreamConfig,
@@ -167,69 +177,6 @@ fn enumerate_cameras(preferred_fps: &[u32]) -> Result<Vec<CameraDeviceDetails>, 
   Ok(result)
 }
 
-/// Picks the first preference a device can actually deliver.
-///
-/// Each range is `(min, max)` fps. A preference is deliverable when some range
-/// brackets it; the earliest such preference wins. When the device brackets
-/// none of them the leading preference is clamped into the closest range, which
-/// is the historical behaviour for cameras that advertise one fixed cadence.
-#[cfg(any(test, target_os = "macos"))]
-fn choose_fps(ranges: &[(f64, f64)], preferred: &[u32]) -> u32 {
-  for candidate in preferred {
-    let target = f64::from(*candidate);
-    if ranges
-      .iter()
-      .any(|(min, max)| *min <= target && *max >= target)
-    {
-      return *candidate;
-    }
-  }
-  let requested = leading_fps(preferred);
-  let target = f64::from(requested);
-  ranges
-    .iter()
-    .map(|(min, max)| {
-      if target < *min {
-        min.ceil().max(1.0) as u32
-      } else {
-        max.floor().max(1.0) as u32
-      }
-    })
-    .min_by_key(|fps| fps.abs_diff(requested))
-    .unwrap_or(requested)
-}
-
-fn preferred_mode(modes: &[(u32, u32, u32)], requested_fps: u32) -> Option<(u32, u32, u32)> {
-  modes.iter().copied().min_by_key(|(width, height, fps)| {
-    let aspect_error = u64::from(*width)
-      .saturating_mul(9)
-      .abs_diff(u64::from(*height).saturating_mul(16))
-      .saturating_mul(1_000_000)
-      / u64::from(*height).max(1);
-    (
-      fps.abs_diff(requested_fps),
-      aspect_error,
-      std::cmp::Reverse(u64::from(*width) * u64::from(*height)),
-    )
-  })
-}
-
-fn sort_camera_modes(modes: &mut [(u32, u32, u32)], requested_fps: u32) {
-  modes.sort_by_key(|(width, height, fps)| {
-    let orientation = match width.cmp(height) {
-      std::cmp::Ordering::Greater => 0,
-      std::cmp::Ordering::Equal => 1,
-      std::cmp::Ordering::Less => 2,
-    };
-    (
-      std::cmp::Reverse((*width).max(*height)),
-      orientation,
-      std::cmp::Reverse(u64::from(*width) * u64::from(*height)),
-      fps.abs_diff(requested_fps),
-    )
-  });
-}
-
 #[cfg(target_os = "macos")]
 fn camera_modes(camera: &CameraInfo, preferred_fps: &[u32]) -> Vec<(u32, u32, u32)> {
   let backend_id = ns::String::with_str(&camera_id(camera));
@@ -304,62 +251,5 @@ pub(crate) fn camera_id(camera: &CameraInfo) -> String {
     camera.index().as_string()
   } else {
     backend_id
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn hides_private_aggregate_devices_from_microphone_selection() {
-    let physical = cpal::DeviceDescriptionBuilder::new("Built-in Microphone").build();
-    let aggregate = cpal::DeviceDescriptionBuilder::new("Cpal loopback aggregate")
-      .interface_type(InterfaceType::Aggregate)
-      .build();
-
-    assert!(is_user_selectable_microphone(&physical));
-    assert!(!is_user_selectable_microphone(&aggregate));
-  }
-
-  #[test]
-  fn sorts_camera_modes_by_size_then_orientation() {
-    let mut modes = vec![
-      (640, 480, 60),
-      (1080, 1920, 60),
-      (1552, 1552, 60),
-      (1760, 1328, 60),
-      (1328, 1760, 60),
-      (1920, 1080, 60),
-    ];
-
-    sort_camera_modes(&mut modes, 60);
-
-    assert_eq!(
-      modes,
-      vec![
-        (1920, 1080, 60),
-        (1080, 1920, 60),
-        (1760, 1328, 60),
-        (1328, 1760, 60),
-        (1552, 1552, 60),
-        (640, 480, 60),
-      ]
-    );
-  }
-
-  #[test]
-  fn falls_back_to_the_next_preference_rather_than_the_nearest_rate() {
-    // A 30 fps-only camera under PAL lighting must land on 25, not on the
-    // numerically closer 30, which flickers.
-    assert_eq!(choose_fps(&[(1.0, 30.0)], &[50, 25]), 25);
-    assert_eq!(choose_fps(&[(1.0, 60.0)], &[50, 25]), 50);
-    assert_eq!(choose_fps(&[(1.0, 60.0)], &[60, 30]), 60);
-    assert_eq!(choose_fps(&[(15.0, 30.0)], &[60, 30]), 30);
-  }
-
-  #[test]
-  fn clamps_to_the_closest_rate_when_no_preference_is_supported() {
-    assert_eq!(choose_fps(&[(30.0, 30.0)], &[25]), 30);
   }
 }

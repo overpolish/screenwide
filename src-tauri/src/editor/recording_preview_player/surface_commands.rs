@@ -3,21 +3,41 @@
 
 //! Native preview surface layout and visibility commands.
 
+#[path = "surface_commands/geometry_helpers.rs"]
+mod geometry_helpers;
+#[path = "surface_commands/view_controls.rs"]
+mod view_controls;
+pub use view_controls::reset_recording_preview_view;
+pub use view_controls::set_recording_preview_fit_basis;
+pub use view_controls::set_recording_preview_zoom;
+pub use view_controls::{
+  __cmd__reset_recording_preview_view, __tauri_command_name_reset_recording_preview_view,
+};
+pub use view_controls::{
+  __cmd__set_recording_preview_fit_basis, __tauri_command_name_set_recording_preview_fit_basis,
+};
+pub use view_controls::{
+  __cmd__set_recording_preview_zoom, __tauri_command_name_set_recording_preview_zoom,
+};
+
+#[cfg(test)]
+#[path = "surface_commands/tests.rs"]
+mod tests;
+
+#[path = "surface_commands/layout_command.rs"]
+mod layout_command;
+pub use layout_command::layout_recording_preview_surface;
+pub use layout_command::{
+  __cmd__layout_recording_preview_surface, __tauri_command_name_layout_recording_preview_surface,
+};
+
+use geometry_helpers::{
+  clear_inactive_pane_targets, recording_workspace_geometry, workspace_topology,
+};
+
 use super::surface_selection::RecordingPreviewSelection;
 use super::*;
 
-fn workspace_topology(
-  panes: &[PreviewSurfacePane],
-  bake_camera: bool,
-) -> RecordingWorkspaceTopology {
-  let mut pane_indices = panes.iter().map(|pane| pane.index).collect::<Vec<_>>();
-  pane_indices.sort_unstable();
-  pane_indices.dedup();
-  RecordingWorkspaceTopology {
-    bake_camera,
-    pane_indices,
-  }
-}
 use crate::editor::preview_platform::workspace_editor::WorldRect;
 use crate::editor::preview_platform::PreviewSurfaceRect;
 use crate::editor::preview_workspace_model::WorkspacePane;
@@ -34,6 +54,8 @@ pub struct PreviewSurfacePane {
 pub struct RecordingPreviewSurfaceLayout {
   backdrop: Option<[f64; 4]>,
   bake_camera: bool,
+  #[serde(default)]
+  fit_width: Option<f64>,
   camera_overlay: CameraOverlaySettings,
   native_editor: bool,
   panes: Vec<PreviewSurfacePane>,
@@ -44,424 +66,4 @@ pub struct RecordingPreviewSurfaceLayout {
   selection_targets: Option<Vec<RecordingPreviewSelection>>,
   session_id: u64,
   viewport: PreviewSurfaceRect,
-}
-
-fn clear_inactive_pane_targets(targets: &mut [(u32, u32)], active: &[usize]) {
-  for (index, target) in targets.iter_mut().enumerate() {
-    if !active.contains(&index) {
-      *target = (0, 0);
-    }
-  }
-}
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-fn recording_workspace_geometry(
-  panes: &[PreviewSurfacePane],
-  output: &RecordingOutputSettings,
-) -> (PreviewSurfaceRect, (u32, u32)) {
-  let left = panes
-    .iter()
-    .map(|pane| pane.rect.x)
-    .fold(f64::INFINITY, f64::min);
-  let top = panes
-    .iter()
-    .map(|pane| pane.rect.y)
-    .fold(f64::INFINITY, f64::min);
-  let right = panes
-    .iter()
-    .map(|pane| pane.rect.x + pane.rect.width)
-    .fold(f64::NEG_INFINITY, f64::max);
-  let bottom = panes
-    .iter()
-    .map(|pane| pane.rect.y + pane.rect.height)
-    .fold(f64::NEG_INFINITY, f64::max);
-  let bounds = PreviewSurfaceRect {
-    x: left,
-    y: top,
-    width: (right - left).max(1.0),
-    height: (bottom - top).max(1.0),
-  };
-  let fit = panes
-    .iter()
-    .find_map(|pane| {
-      let width = if pane.index == 0 {
-        output.primary.width
-      } else {
-        output.camera.width
-      };
-      (width > 0 && pane.rect.width > 0.0).then_some(pane.rect.width / f64::from(width))
-    })
-    .unwrap_or(1.0)
-    .max(f64::EPSILON);
-  (
-    bounds,
-    (
-      (bounds.width / fit).round().max(1.0) as u32,
-      (bounds.height / fit).round().max(1.0) as u32,
-    ),
-  )
-}
-
-// Async so Tauri dispatches it off the main thread: this command blocks on a
-// DirectComposition commit, and the main thread pumps the Win32 messages that
-// deliver the webview's pointer input - blocking it there starves the very
-// drag this layout is following.
-#[tauri::command]
-pub async fn layout_recording_preview_surface(
-  state: tauri::State<'_, RecordingPreviewPlayerState>,
-  layout: RecordingPreviewSurfaceLayout,
-) -> Result<(), String> {
-  let RecordingPreviewSurfaceLayout {
-    backdrop,
-    bake_camera,
-    camera_overlay,
-    native_editor,
-    panes,
-    recording_output,
-    request_id,
-    scale,
-    selection,
-    selection_targets,
-    session_id,
-    viewport,
-  } = layout;
-  let mut manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  manager.require_session(session_id)?;
-  if request_id < manager.latest_layout_request {
-    return Ok(());
-  }
-  manager.latest_layout_request = request_id;
-  let settings = manager
-    .sources
-    .as_ref()
-    .ok_or_else(|| "The recording preview player is not open".to_owned())?
-    .composition_settings
-    .clone()
-    .ok_or_else(|| "The recording preview composition is unavailable".to_owned())?;
-  let (composition_changed, bake_changed) = {
-    let current = settings
-      .read()
-      .map_err(|_| "The recording preview composition is unavailable".to_owned())?;
-    (
-      current.bake_camera != bake_camera
-        || current.camera_overlay != camera_overlay
-        || current.recording_output != recording_output,
-      current.bake_camera != bake_camera,
-    )
-  };
-  *settings
-    .write()
-    .map_err(|_| "The recording preview composition is unavailable".to_owned())? =
-    PreviewCompositionSettings {
-      bake_camera,
-      camera_overlay,
-      recording_output: recording_output.clone(),
-    };
-  let scale = if scale.is_finite() && scale > 0.0 {
-    scale
-  } else {
-    1.0
-  };
-  // A layout with no panes is the audio-only preview: playback keeps its
-  // clock and its audio, but its frames stop being presented so the native
-  // ribbon owns the viewport.
-  if let Some(sources) = manager.sources.as_ref() {
-    sources
-      .video_muted
-      .store(panes.is_empty(), std::sync::atomic::Ordering::Release);
-  }
-  let active_pane_indices = panes
-    .iter()
-    .map(|pane| pane.index as usize)
-    .collect::<Vec<_>>();
-  let next_topology = workspace_topology(&panes, bake_camera);
-  let topology_changed = manager.workspace_topology.as_ref() != Some(&next_topology);
-  manager.workspace_topology = Some(next_topology);
-  clear_inactive_pane_targets(&mut manager.pane_target_sizes, &active_pane_indices);
-  let mut sizes_changed = false;
-  let needs_initial_frame = panes.iter().any(|pane| {
-    manager
-      .pane_target_sizes
-      .get(pane.index as usize)
-      .is_none_or(|size| *size == (0, 0))
-  });
-  for pane in &panes {
-    let index = pane.index as usize;
-    if manager.pane_target_sizes.len() <= index {
-      manager.pane_target_sizes.resize(index + 1, (0, 0));
-      sizes_changed = true;
-    }
-    let next = {
-      let output = if index == 0 {
-        &recording_output.primary
-      } else {
-        &recording_output.camera
-      };
-      (output.width, output.height)
-    };
-    if manager.pane_target_sizes[index] != next {
-      manager.pane_target_sizes[index] = next;
-      sizes_changed = true;
-    }
-  }
-  if !panes.is_empty() {
-    let revision = manager.workspace_scene.as_ref().map_or(0, |scene| {
-      scene
-        .revision
-        .saturating_add(u64::from(composition_changed))
-    });
-    let workspace_panes = panes
-      .iter()
-      .map(|pane| WorkspacePane {
-        id: pane.index,
-        rect: WorldRect {
-          x: pane.rect.x,
-          y: pane.rect.y,
-          width: pane.rect.width,
-          height: pane.rect.height,
-        },
-      })
-      .collect::<Vec<_>>();
-    manager.workspace_scene = Some(crate::editor::preview_workspace_model::recording_scene(
-      WorldRect {
-        x: viewport.x,
-        y: viewport.y,
-        width: viewport.width,
-        height: viewport.height,
-      },
-      &workspace_panes,
-      bake_camera,
-      camera_overlay,
-      &recording_output,
-      revision,
-    )?);
-  }
-  let Some(surface) = manager
-    .sources
-    .as_ref()
-    .and_then(|sources| sources.preview_surface.as_ref())
-  else {
-    return Ok(());
-  };
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  if topology_changed {
-    surface.clear_workspace_transform_history();
-  }
-  #[cfg(target_os = "macos")]
-  let retained_recomposition = if composition_changed && !bake_changed {
-    let active_outputs = panes
-      .iter()
-      .filter(|pane| !bake_camera || pane.index == 0)
-      .map(|pane| {
-        (
-          pane.index,
-          if pane.index == 0 {
-            &recording_output.primary
-          } else {
-            &recording_output.camera
-          },
-        )
-      })
-      .collect::<Vec<_>>();
-    surface.recompose_recording_workspace(
-      &active_outputs,
-      bake_camera.then_some((
-        camera_overlay,
-        recording_output.camera.drop_shadow,
-        recording_output.camera_on_top,
-      )),
-    )?
-  } else {
-    false
-  };
-  #[cfg(not(target_os = "macos"))]
-  let retained_recomposition = false;
-  let wants_still = (sizes_changed || composition_changed)
-    && !manager.is_playing
-    && manager.still_decoder.is_some();
-  // The decoder can produce its first still before the DOM has supplied a
-  // native pane, in which case there is nowhere to present it. Ask for that
-  // initial frame again once the first real layout exists. A bake toggle
-  // also needs the decoder: the newly active mode's source cache is absent
-  // or stale. Every other Windows change redraws synchronously from the
-  // cached sources below - the decoder only ever supplies frames.
-  let needs_decoder_still = wants_still
-    && !retained_recomposition
-    && (!cfg!(target_os = "windows") || needs_initial_frame || bake_changed);
-  let redraw_still = cfg!(target_os = "windows") && wants_still && !needs_decoder_still;
-  // Hold the pane size while a new composed or live frame is on its way.
-  let defer_resize = needs_decoder_still || redraw_still || manager.is_playing;
-  surface.set_scale(scale);
-  let selection = selection.map(RecordingPreviewSelection::into_native);
-  let selection_targets = selection_targets.map(|targets| {
-    targets
-      .into_iter()
-      .map(RecordingPreviewSelection::into_native)
-      .collect::<Vec<_>>()
-  });
-  surface.set_selection_targets(selection_targets.as_deref());
-  surface.set_selection(selection);
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  surface.set_editor_active(native_editor);
-  surface.begin_layout();
-  surface.set_viewport(viewport, backdrop.unwrap_or([0.09, 0.09, 0.10, 1.0]));
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  {
-    if !panes.is_empty() {
-      let (workspace, natural_size) = recording_workspace_geometry(&panes, &recording_output);
-      let pane_rects = panes
-        .iter()
-        .map(|pane| (pane.index, pane.rect))
-        .collect::<Vec<_>>();
-      surface.layout_recording_workspace(workspace, natural_size, &pane_rects, defer_resize);
-    }
-  }
-  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-  for pane in panes {
-    surface.layout(pane.index, pane.rect, defer_resize);
-  }
-  // One commit for the whole invoke: with the batch already open,
-  // `finish_layout` leaves its commit to the flush after the redraw, so the
-  // pane geometry and the re-composed still cost a single compositor wait.
-  // The decoder path keeps the batch closed - its present arrives later and
-  // must find the geometry still parked.
-  #[cfg(target_os = "windows")]
-  let layout_batch = redraw_still.then(|| surface.present_batch());
-  #[cfg(target_os = "macos")]
-  if retained_recomposition {
-    surface.redraw_recording_workspace();
-  }
-  surface.finish_layout();
-  // Same composition this invoke just wrote into `composition_settings`, so
-  // the shared helper draws exactly what the explicit arguments used to.
-  #[cfg(target_os = "windows")]
-  let redraw_failed = redraw_still && !manager.redraw_still_now().unwrap_or(false);
-  #[cfg(target_os = "windows")]
-  drop(layout_batch);
-  #[cfg(not(target_os = "windows"))]
-  let redraw_failed = redraw_still;
-  if needs_decoder_still || redraw_failed {
-    if let Some(decoder) = &manager.still_decoder {
-      decoder.seek(
-        manager.position_ms,
-        manager.latest_seek_request,
-        false,
-        manager.pane_target_sizes.clone(),
-      )?;
-    }
-  }
-  Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-  use super::{clear_inactive_pane_targets, workspace_topology, PreviewSurfacePane};
-  use crate::editor::preview_platform::PreviewSurfaceRect;
-
-  #[test]
-  fn reenabled_panes_require_a_fresh_present() {
-    let mut targets = [(3_840, 2_160), (1_920, 1_080)];
-    clear_inactive_pane_targets(&mut targets, &[0]);
-    assert_eq!(targets, [(3_840, 2_160), (0, 0)]);
-
-    let camera_needs_present = targets[1] == (0, 0);
-    assert!(camera_needs_present);
-  }
-
-  #[test]
-  fn workspace_topology_distinguishes_camera_modes_and_active_panes() {
-    let pane = |index| PreviewSurfacePane {
-      index,
-      rect: PreviewSurfaceRect {
-        height: 100.0,
-        width: 100.0,
-        x: 0.0,
-        y: 0.0,
-      },
-    };
-    let primary = workspace_topology(&[pane(0)], false);
-    let split = workspace_topology(&[pane(1), pane(0)], false);
-    let baked = workspace_topology(&[pane(0)], true);
-
-    assert_ne!(primary, split);
-    assert_ne!(primary, baked);
-    assert_eq!(split, workspace_topology(&[pane(0), pane(1)], false));
-  }
-}
-
-#[tauri::command]
-pub fn set_recording_preview_zoom(
-  state: tauri::State<'_, RecordingPreviewPlayerState>,
-  session_id: u64,
-  zoom_percent: f64,
-) -> Result<(), String> {
-  if !zoom_percent.is_finite() || !(10.0..=1_600.0).contains(&zoom_percent) {
-    return Err("The recording preview zoom is invalid".to_owned());
-  }
-  let manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  manager.require_session(session_id)?;
-  if let Some(surface) = manager
-    .sources
-    .as_ref()
-    .and_then(|sources| sources.preview_surface.as_ref())
-  {
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    surface.set_editor_zoom(zoom_percent);
-  }
-  Ok(())
-}
-
-/// Applies a one-time native fit after the editor makes room for a panel.
-/// Omit fit_width for the ordinary full-viewport reset.
-#[tauri::command]
-pub fn reset_recording_preview_view(
-  state: tauri::State<'_, RecordingPreviewPlayerState>,
-  session_id: u64,
-  fit_width: Option<f64>,
-) -> Result<(), String> {
-  let manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  manager.require_session(session_id)?;
-  if let Some(surface) = manager
-    .sources
-    .as_ref()
-    .and_then(|sources| sources.preview_surface.as_ref())
-  {
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    surface.reset_editor_view(fit_width);
-  }
-  Ok(())
-}
-
-/// Moves the basis a double-click reset returns to without moving the view:
-/// a tool panel that reserved space hands the basis back on closing, leaving
-/// the picture exactly where the user left it.
-#[tauri::command]
-pub fn set_recording_preview_fit_basis(
-  state: tauri::State<'_, RecordingPreviewPlayerState>,
-  session_id: u64,
-  fit_width: Option<f64>,
-) -> Result<(), String> {
-  let manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  manager.require_session(session_id)?;
-  if let Some(surface) = manager
-    .sources
-    .as_ref()
-    .and_then(|sources| sources.preview_surface.as_ref())
-  {
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    surface.set_editor_fit_basis(fit_width);
-  }
-  Ok(())
 }

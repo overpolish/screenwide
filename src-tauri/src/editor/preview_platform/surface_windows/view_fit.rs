@@ -32,7 +32,12 @@ impl RecordingPreviewSurface {
       state.panel_fit_width = fit_width.filter(|width| *width > 0.0).unwrap_or(0.0);
       let transform = fit_basis_transform(&state);
       state.workspace_transform = transform;
-      apply_workspace_transform(&self.inner, &mut state, false);
+      let in_batch = self
+        .inner
+        .batch_depth
+        .load(std::sync::atomic::Ordering::Acquire)
+        > 0;
+      apply_workspace_transform(&self.inner, &mut state, in_batch);
       transform.zoom
     };
     emit_transform(&self.inner, zoom);

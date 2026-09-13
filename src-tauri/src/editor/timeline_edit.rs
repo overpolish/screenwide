@@ -1,6 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[path = "timeline_edit/time_mapping.rs"]
+mod time_mapping;
+pub(crate) use time_mapping::source_to_output_us;
+#[path = "timeline_edit/validation.rs"]
+mod validation;
+use validation::validate;
+
+pub(crate) use time_mapping::source_after_output_duration_us;
+pub(crate) use time_mapping::source_before_output_duration_us;
+
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -60,63 +70,6 @@ pub struct TimelineRange {
   pub source_end_us: u64,
   pub source_start_us: u64,
   pub playback_rate: f64,
-}
-
-pub(crate) fn source_to_output_us(ranges: &[TimelineRange], source_us: u64) -> Option<u64> {
-  let range = ranges.iter().find(|range| {
-    source_us >= range.source_start_us
-      && (source_us < range.source_end_us
-        || source_us == range.source_end_us && range.source_end_us == range.source_start_us)
-  })?;
-  Some(range.output_start_us.saturating_add(
-    ((source_us.saturating_sub(range.source_start_us)) as f64 / range.playback_rate).round() as u64,
-  ))
-}
-
-fn output_to_source_us(ranges: &[TimelineRange], output_us: u64) -> Option<u64> {
-  for range in ranges {
-    let output_end_us = range.output_start_us.saturating_add(
-      ((range.source_end_us.saturating_sub(range.source_start_us)) as f64 / range.playback_rate)
-        .round() as u64,
-    );
-    if output_us <= output_end_us {
-      return Some(range.source_start_us.saturating_add(
-        ((output_us.saturating_sub(range.output_start_us)) as f64 * range.playback_rate).round()
-          as u64,
-      ));
-    }
-  }
-  ranges.last().map(|range| range.source_end_us)
-}
-
-/// Converts a source-time animation anchor plus an output-time duration back
-/// into a source coordinate. Timed lanes can map that coordinate normally and
-/// still match animations whose duration must not stretch with playback rate.
-pub(crate) fn source_after_output_duration_us(
-  ranges: Option<&[TimelineRange]>,
-  anchor_us: u64,
-  duration_us: u64,
-) -> Option<u64> {
-  let Some(ranges) = ranges else {
-    return Some(anchor_us.saturating_add(duration_us));
-  };
-  let output_anchor_us = source_to_output_us(ranges, anchor_us)?;
-  output_to_source_us(ranges, output_anchor_us.saturating_add(duration_us))
-}
-
-/// The reverse of [`source_after_output_duration_us`]: the source coordinate
-/// that lies an output-time duration BEFORE the anchor, so a fixed-length
-/// animation can be scheduled to finish exactly at the anchor at any rate.
-pub(crate) fn source_before_output_duration_us(
-  ranges: Option<&[TimelineRange]>,
-  anchor_us: u64,
-  duration_us: u64,
-) -> Option<u64> {
-  let Some(ranges) = ranges else {
-    return Some(anchor_us.saturating_sub(duration_us));
-  };
-  let output_anchor_us = source_to_output_us(ranges, anchor_us)?;
-  output_to_source_us(ranges, output_anchor_us.saturating_sub(duration_us))
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -228,41 +181,6 @@ struct PersistedTimelineEdit {
 fn sidecar_path(recording: &Path, slot: char) -> Option<PathBuf> {
   let stem = recording.file_stem()?.to_str()?;
   Some(recording.with_file_name(format!("{stem}.timeline-edit-{slot}.json")))
-}
-
-fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
-  if edit.segments.is_empty() || edit.segments.len() > MAX_SEGMENTS {
-    return Err("The timeline must contain a reasonable number of segments".to_owned());
-  }
-  let mut previous_end = 0.0;
-  let mut ids = std::collections::HashSet::with_capacity(edit.segments.len());
-  for segment in &edit.segments {
-    if !segment.source_start.is_finite()
-      || !segment.source_end.is_finite()
-      || segment.source_start < previous_end
-      || segment.source_start < 0.0
-      || segment.source_end <= segment.source_start
-      || segment.source_end > 1.0
-      || !segment.playback_rate.is_finite()
-      || !(0.25..=4.0).contains(&segment.playback_rate)
-      || !ids.insert(segment.id)
-    {
-      return Err("The timeline contains an invalid segment".to_owned());
-    }
-    previous_end = segment.source_end;
-  }
-  if edit.next_segment_id
-    <= edit
-      .segments
-      .iter()
-      .map(|segment| segment.id)
-      .max()
-      .unwrap_or(0)
-  {
-    return Err("The timeline's next segment identity is invalid".to_owned());
-  }
-  keyboard::validate(&edit.keyboard_deletions, MAX_SEGMENTS)?;
-  Ok(())
 }
 
 fn read_slot(recording: &Path, slot: char) -> Option<PersistedTimelineEdit> {

@@ -4,6 +4,12 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 
 import {
+  normalizedCameraOverlay,
+  normalizedCursorEffects,
+  normalizedKeyboardEffects,
+  normalizedAudioTrackVolumes,
+} from "./preview-settings-normalization";
+import {
   RecordingPreviewPlayerEvent,
   RecordingPreviewPlayerInfo,
 } from "./recording-preview-player-contract";
@@ -22,60 +28,6 @@ import {
   CursorEffectSettings,
   KeyboardEffectSettings,
 } from "./types";
-
-const finite = (value: number, fallback: number) =>
-  Number.isFinite(value) ? value : fallback;
-
-/**
- * Guard the overlay against a value that is not a number.
- *
- * Its placement is in the screen output's own pixels, so the canvas is what a
- * fallback has to be measured against: the shares below are the ones the
- * overlay used to be written in.
- */
-const normalizedCameraOverlay = (
-  settings: CameraOverlaySettings,
-  canvas: { height: number; width: number },
-): CameraOverlaySettings => {
-  const width = Math.max(1, canvas.width);
-  const height = Math.max(1, canvas.height);
-  return {
-    cameraWidth: finite(settings.cameraWidth, width * 0.25),
-    cameraX: finite(settings.cameraX, width * 0.85),
-    cameraY: finite(settings.cameraY, height * 0.15),
-    frameHeight: finite(settings.frameHeight, height * 0.25),
-    frameWidth: finite(settings.frameWidth, width * 0.25),
-    frameX: finite(settings.frameX, width * 0.72),
-    frameY: finite(settings.frameY, height * 0.03),
-    radiusPercent: finite(settings.radiusPercent, 8),
-  };
-};
-
-const normalizedCursorEffects = (
-  settings: CursorEffectSettings,
-): CursorEffectSettings => ({
-  ...settings,
-  sizePercent: finite(settings.sizePercent, 100),
-});
-
-const normalizedKeyboardEffects = (
-  settings: KeyboardEffectSettings,
-): KeyboardEffectSettings => ({
-  animation:
-    settings.animation === "fade" || settings.animation === "none"
-      ? settings.animation
-      : "pop",
-  appearance: settings.appearance === "dark" ? "dark" : "light",
-  bake: settings.bake,
-  positionXPercent: settings.positionXPercent,
-  positionYPercent: settings.positionYPercent,
-  sizePercent: finite(settings.sizePercent, 100),
-});
-const normalizedAudioTrackVolumes = (volumes: AudioTrackVolume[]) =>
-  volumes.map((volume) => ({
-    ...volume,
-    decibels: finite(volume.decibels, 0),
-  }));
 
 type PreviewSelectionLayout = {
   paneIndex: number;
@@ -159,6 +111,7 @@ export const layoutRecordingPreviewSurface = ({
   backdrop,
   bakeCamera,
   cameraOverlay,
+  fitWidth,
   nativeEditor,
   panes,
   recordingOutput,
@@ -182,6 +135,7 @@ export const layoutRecordingPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
+  fitWidth?: number;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
@@ -193,6 +147,7 @@ export const layoutRecordingPreviewSurface = ({
         cameraOverlay,
         recordingOutput.primary,
       ),
+      fitWidth,
       nativeEditor,
       panes,
       recordingOutput: {
@@ -332,6 +287,7 @@ export const startScreenshotPreview = (artifactId: number, sessionId: number) =>
 
 export const layoutScreenshotPreviewSurface = ({
   backdrop,
+  fitWidth,
   interactionOutput,
   nativeEditor,
   output,
@@ -353,11 +309,13 @@ export const layoutScreenshotPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
+  fitWidth?: number;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
   invoke<null>("layout_screenshot_preview_surface", {
     backdrop,
+    fitWidth,
     interactionOutput: normalizedScreenshotWorkspaceOutput(interactionOutput),
     nativeEditor,
     output: normalizedScreenshotWorkspaceOutput(output),

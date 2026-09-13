@@ -42,7 +42,6 @@ mod tooltip_window;
 mod tray;
 mod updates;
 mod windows;
-#[cfg(target_os = "macos")]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let builder = plugins::with_plugins(tauri::Builder::default());

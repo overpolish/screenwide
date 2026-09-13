@@ -164,7 +164,7 @@ export function useRecordingPreviewPlayer({
     setError,
     startedRef,
   });
-  const { fitPreview, setFitBasis } = useRecordingPreviewSurface({
+  const previewFit = useRecordingPreviewSurface({
     bakeCamera,
     cameraCanvasRef,
     cameraOverlay,
@@ -512,7 +512,7 @@ export function useRecordingPreviewPlayer({
   return {
     durationMs,
     error,
-    fitPreview,
+    ...previewFit,
     framesPerSecond: timingRef.current[1],
     getPositionMs,
     isPlaying: playbackStatus.isPlaying,
@@ -522,7 +522,6 @@ export function useRecordingPreviewPlayer({
     play,
     playbackRate,
     seek,
-    setFitBasis,
     setPlaybackRate,
   };
 }
