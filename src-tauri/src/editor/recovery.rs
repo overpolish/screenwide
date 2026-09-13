@@ -12,6 +12,8 @@ use super::{
   },
   *,
 };
+use crate::shortcuts::diagnostics::record;
+use serde_json::json;
 
 /// What to do with the recordings found in the working directory at startup.
 #[derive(Debug, Default, Eq, PartialEq)]
@@ -147,6 +149,7 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
     timeline_edit::sweep_unclaimed(&directory, None);
     return;
   };
+  record("recovery_candidate_found", json!({}));
   let camera_path = camera_for_recording(&path);
   let cursor_path = cursor_for_recording(&path);
   let keyboard_path = keyboard_for_recording(&path);
@@ -247,8 +250,10 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
     },
     suggested_file_stem,
   ) {
+    record("recovery_offer_failed", json!({"error": error.to_string()}));
     eprintln!("Could not offer back an unsaved recording: {error}");
   } else {
+    record("recovery_offered", json!({}));
     // Its values now live in the artifact the editor holds. Unlike the cursor
     // and keyboard sidecars, which the editor goes on reading from disk, this
     // one has nothing left to say.

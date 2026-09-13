@@ -25,7 +25,11 @@ pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel>
 
 pub(super) fn notify_frontend(app: &AppHandle, action: ShortcutAction) {
   if let Some(window) = action_window(action) {
-    let _ = app.emit_to(window.as_str(), SHORTCUT_ACTION_EVENT, action);
+    let result = app.emit_to(window.as_str(), SHORTCUT_ACTION_EVENT, action);
+    diagnostics::record(
+      "frontend_dispatch",
+      serde_json::json!({"action": action, "window": window.as_str(), "error": result.err().map(|error| error.to_string())}),
+    );
   }
 }
 
@@ -53,26 +57,45 @@ pub(super) const fn requires_frontend_turn(action: ShortcutAction) -> bool {
 
 pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
   if !feature_availability::action_enabled(action) {
+    diagnostics::record(
+      "action_blocked",
+      serde_json::json!({"action": action, "reason": "feature_disabled"}),
+    );
     return;
   }
   if crate::windows::region::is_screenshot_region_session() {
     // The borrowed Region window owns screenshot teardown. Resume the action
     // through `resume_shortcut_action` only after that later IPC turn has
     // cleared the session, so shortcuts never overlap two window graphs.
-    let _ = app.emit_to(
+    let result = app.emit_to(
       WindowLabel::RegionSelector.as_str(),
       SCREENSHOT_SHORTCUT_REQUESTED_EVENT,
       action,
+    );
+    diagnostics::record(
+      "screenshot_handoff",
+      serde_json::json!({"action": action, "error": result.err().map(|error| error.to_string())}),
     );
     return;
   }
   if matches!(
     action,
     ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard
-  ) && (!crate::recording::is_idle(app)
-    || crate::editor::focus_if_screenshot_workspace_blocked(app))
-  {
-    return;
+  ) {
+    let reason = if !crate::recording::is_idle(app) {
+      Some("recording_not_idle")
+    } else if crate::editor::focus_if_screenshot_workspace_blocked(app) {
+      Some("capture_reserved")
+    } else {
+      None
+    };
+    if let Some(reason) = reason {
+      diagnostics::record(
+        "action_blocked",
+        serde_json::json!({"action": action, "reason": reason}),
+      );
+      return;
+    }
   }
   if requires_frontend_turn(action) {
     // These operations create, show, or hide window graphs. Keep that work

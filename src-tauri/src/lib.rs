@@ -175,6 +175,7 @@ pub fn run() {
       settings::preferences::set_general_settings,
       settings::wallpapers::list_system_wallpapers,
       settings::show_settings,
+      shortcuts::diagnostics::report_shortcut_diagnostic,
       shortcuts::get_shortcut_settings,
       shortcuts::resume_shortcut_action,
       shortcuts::begin_shortcut_capture,
@@ -212,6 +213,7 @@ pub fn run() {
       windows::source_selector::expand_recording_source_selector,
     ])
     .setup(|app| {
+      shortcuts::diagnostics::initialize(app.handle());
       #[cfg(debug_assertions)]
       if let Some(preview_url) = std::env::var_os("SCREENWIDE_STORYBOOK_NATIVE_URL") {
         storybook_native::show(app.handle(), &preview_url.to_string_lossy())?;

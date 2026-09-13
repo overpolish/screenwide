@@ -11,6 +11,7 @@ use action_routing::preserved_capture_overlay;
 use action_routing::requires_frontend_turn;
 use action_routing::run_action;
 
+use serde::{Deserialize, Serialize};
 use std::{
   path::PathBuf,
   sync::{
@@ -18,12 +19,19 @@ use std::{
     Mutex,
   },
 };
-
-use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 use crate::windows::WindowLabel;
+pub(crate) mod diagnostics;
+mod registration;
+use registration::register_binding;
+pub use registration::{
+  __cmd__begin_shortcut_capture, __cmd__end_shortcut_capture,
+  __tauri_command_name_begin_shortcut_capture, __tauri_command_name_end_shortcut_capture,
+};
+pub use registration::{begin_shortcut_capture, end_shortcut_capture, initialize};
+
 mod feature_availability;
 pub(crate) use feature_availability::{sync_ocr_enabled, sync_ruler_enabled};
 
@@ -130,6 +138,7 @@ fn store(app: &AppHandle, settings: &ShortcutSettings) -> Result<(), String> {
 
 #[tauri::command]
 pub fn resume_shortcut_action(app: AppHandle, action: ShortcutAction) {
+  diagnostics::record("shortcut_resumed", serde_json::json!({"action": action}));
   run_action(&app, action);
 }
 
@@ -143,72 +152,6 @@ pub fn shortcut_for(app: &AppHandle, action: ShortcutAction) -> Option<String> {
     .iter()
     .find(|binding| binding.action == action)
     .and_then(|binding| binding.shortcut.clone())
-}
-
-fn register_binding(app: &AppHandle, action: ShortcutAction, shortcut: &str) -> Result<(), String> {
-  if !feature_availability::action_enabled(action) {
-    return Ok(());
-  }
-  let parsed = shortcut
-    .parse::<Shortcut>()
-    .map_err(|error| error.to_string())?;
-  app
-    .global_shortcut()
-    .on_shortcut(parsed, move |app, _, event| {
-      if event.state() == ShortcutState::Pressed {
-        run_action(app, action);
-      }
-    })
-    .map_err(|error| error.to_string())
-}
-
-pub fn initialize(app: &AppHandle) {
-  let settings = load(app);
-  for binding in &settings.bindings {
-    if let Some(shortcut) = binding.shortcut.as_deref() {
-      if let Err(error) = register_binding(app, binding.action, shortcut) {
-        eprintln!("Could not register {shortcut}: {error}");
-      }
-    }
-  }
-  *app
-    .state::<ShortcutSettingsState>()
-    .0
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner()) = settings;
-  crate::tray::refresh(app);
-}
-
-#[tauri::command]
-pub fn begin_shortcut_capture(app: AppHandle) -> Result<(), String> {
-  app
-    .global_shortcut()
-    .unregister_all()
-    .map_err(|error| error.to_string())?;
-  CAPTURING.store(true, Ordering::Release);
-  Ok(())
-}
-
-#[tauri::command]
-pub fn end_shortcut_capture(app: AppHandle) -> Result<(), String> {
-  CAPTURING.store(false, Ordering::Release);
-  let settings = app
-    .state::<ShortcutSettingsState>()
-    .0
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-    .clone();
-  for binding in settings.bindings {
-    if let Some(shortcut) = binding.shortcut {
-      let parsed = shortcut
-        .parse::<Shortcut>()
-        .map_err(|error| error.to_string())?;
-      if !app.global_shortcut().is_registered(parsed) {
-        register_binding(&app, binding.action, &shortcut)?;
-      }
-    }
-  }
-  Ok(())
 }
 
 pub(crate) fn is_capturing() -> bool {
@@ -232,6 +175,10 @@ pub fn set_shortcut_binding(
   shortcut: Option<String>,
 ) -> Result<ShortcutSettings, String> {
   let shortcut = shortcut.filter(|value| !value.trim().is_empty());
+  diagnostics::record(
+    "binding_requested",
+    serde_json::json!({"action": action, "shortcut": shortcut}),
+  );
   let mut settings = state
     .0
     .lock()
@@ -261,7 +208,11 @@ pub fn set_shortcut_binding(
   }
 
   if let Some(existing) = existing.as_deref() {
-    let _ = app.global_shortcut().unregister(existing);
+    let result = app.global_shortcut().unregister(existing);
+    diagnostics::record(
+      "binding_unregister",
+      serde_json::json!({"action": action, "shortcut": existing, "error": result.err().map(|error| error.to_string())}),
+    );
   }
   if let Some(shortcut) = shortcut.as_deref() {
     if let Err(error) = register_binding(&app, action, shortcut) {
@@ -284,6 +235,7 @@ pub fn set_shortcut_binding(
     .0
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = settings.clone();
+  diagnostics::snapshot(&app, "binding_saved");
   crate::tray::refresh(&app);
   Ok(settings)
 }
