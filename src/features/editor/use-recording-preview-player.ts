@@ -28,6 +28,7 @@ import {
   KeyboardEffectSettings,
   RecordingPreviewLayout,
 } from "./types";
+import { useRecordingPlaybackStatus } from "./use-recording-playback-status";
 import { useRecordingPreviewRate } from "./use-recording-preview-rate";
 import { useRecordingPreviewSettings } from "./use-recording-preview-settings";
 import {
@@ -88,7 +89,8 @@ export function useRecordingPreviewPlayer({
   timelineEdit?: RecordingTimelineEdit | null;
   zoomRequest?: PreviewZoomRequest;
 }) {
-  const isPlayingRef = useRef(false);
+  const playbackStatus = useRecordingPlaybackStatus();
+  const { isPlayingRef, updatePlaying } = playbackStatus;
   const wantsPlaybackRef = useRef(false);
   const resumeAfterSeekRef = useRef(false);
   const scrubFinishedRef = useRef(true);
@@ -113,7 +115,6 @@ export function useRecordingPreviewPlayer({
   editorSuspendedRef.current = isEditorSuspended;
   const [durationMs, setDurationMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [layout, setLayout] = useState<RecordingPreviewLayout | null>(null);
   const [isPreparing, setIsPreparing] = useState(true);
   const beginPreparing = useCallback(() => {
@@ -148,7 +149,7 @@ export function useRecordingPreviewPlayer({
     positionRef,
     sessionIdRef,
     setError,
-    setIsPlaying,
+    setIsPlaying: playbackStatus.setIsPlaying,
     timelineEditRef,
     timingRef,
     wantsPlaybackRef,
@@ -169,7 +170,7 @@ export function useRecordingPreviewPlayer({
     cameraOverlay,
     isEditorSuspended,
     isEnabled,
-    isPlaying,
+    isPlaying: playbackStatus.isPlaying,
     nativeEditorOwnsLayout,
     nativeLayoutHasPanes,
     nativeLayoutKey,
@@ -185,10 +186,6 @@ export function useRecordingPreviewPlayer({
     startedRef,
     zoomRequest,
   });
-  const updatePlaying = (playing: boolean) => {
-    isPlayingRef.current = playing;
-    setIsPlaying(playing);
-  };
   useEffect(() => {
     if (!isEnabled) return;
     let disposed = false;
@@ -292,17 +289,14 @@ export function useRecordingPreviewPlayer({
         }
         return;
       }
-      // The playhead is frontend-driven while a scrub is in progress; stale
-      // worker positions must not yank it backwards.
+      // Ignore stale worker positions during a frontend-driven scrub.
       if (!scrubFinishedRef.current) return;
       if (event.event === "position" && !isPlayingRef.current) return;
       positionRef.current = event.data.positionMs;
       onPositionRef.current(event.data.positionMs);
       if (event.event === "playing") {
-        // Starting audio has a short native prebuffer. If Pause won during
-        // that interval, its cancelled worker can still report that startup
-        // reached Playing; the latest UI intent remains authoritative.
-        if (wantsPlaybackRef.current) updatePlaying(true);
+        // A cancelled startup may still report Playing after Pause won.
+        if (wantsPlaybackRef.current) playbackStatus.confirmPlaying();
       }
       if (event.event === "paused" && !wantsPlaybackRef.current)
         updatePlaying(false);
@@ -426,7 +420,13 @@ export function useRecordingPreviewPlayer({
         setError(String(cause));
       }
     })();
-  }, [isEnabled, playbackRangeFrom, playbackRanges, playbackRateRef]);
+  }, [
+    isEnabled,
+    playbackRangeFrom,
+    playbackRanges,
+    playbackRateRef,
+    updatePlaying,
+  ]);
   const pause = useCallback(() => {
     if (!isEnabled) return;
     resumeAfterSeekRef.current = false;
@@ -439,7 +439,7 @@ export function useRecordingPreviewPlayer({
     void pauseRecordingPreview(sessionIdRef.current).catch((cause: unknown) => {
       setError(String(cause));
     });
-  }, [isEnabled]);
+  }, [isEnabled, updatePlaying]);
   const seek = (positionMs: number, phase: ScrubPhase) => {
     if (!isEnabled) return;
     const normalized = Math.max(0, Math.round(positionMs));
@@ -449,12 +449,8 @@ export function useRecordingPreviewPlayer({
       scrubFinishedRef.current = false;
     }
     positionRef.current = normalized;
-    // A seek that will resume playback keeps the UI in its playing state:
-    // flipping the button to "play" and revealing the paused chrome for the
-    // split second between click, still, and resumed playback reads as a
-    // stutter. Internally the backend still pauses and resumes; only the
-    // presented state holds steady. A seek from a genuine pause (or a resume
-    // that fails - its catch below drops the state) behaves as before.
+    // Keep the playing controls visible during a seek that will resume.
+    // The backend still pauses and resumes, without flashing paused chrome.
     if (!resumeAfterSeekRef.current) updatePlaying(false);
     const send = (nextPosition: number, nextPhase: ScrubPhase) => {
       // Start/end also carry native OSC visibility, so only movement samples
@@ -519,7 +515,7 @@ export function useRecordingPreviewPlayer({
     fitPreview,
     framesPerSecond: timingRef.current[1],
     getPositionMs,
-    isPlaying,
+    isPlaying: playbackStatus.isPlaying,
     isPreparing,
     layout,
     pause,

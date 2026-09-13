@@ -61,7 +61,10 @@ use tools::ffprobe_path;
 
 use super::{AudioTrackKind, RecordingAudioTrack};
 
-const WAVEFORM_POINTS: usize = 512;
+/// Enough points that the native audio ribbon reads as a curve rather than a
+/// staircase. The lanes and the meter only ever index into it, so a finer
+/// envelope costs them nothing.
+const WAVEFORM_POINTS: usize = 2_048;
 const WAVEFORM_SAMPLE_RATE: u64 = 8_000;
 
 #[derive(Clone, Copy, Debug)]

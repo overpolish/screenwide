@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+pub(super) mod clock;
 mod filter;
 
 use std::{
@@ -8,10 +9,10 @@ use std::{
   io::Read,
   process::{Child, Command, Stdio},
   sync::{
-    atomic::{AtomicBool, AtomicU64, Ordering},
+    atomic::{AtomicBool, Ordering},
     Arc, Mutex, RwLock,
   },
-  time::Duration,
+  time::{Duration, Instant},
 };
 
 use cpal::{
@@ -19,7 +20,7 @@ use cpal::{
   FromSample, SampleFormat, SizedSample, Stream, StreamConfig,
 };
 
-use self::filter::args;
+use self::{clock::AudioClock, filter::args};
 use super::{PlayerSources, RecordingPreviewPlaybackRange};
 use crate::editor::{media_preview, AudioTrackVolume};
 
@@ -27,8 +28,7 @@ const MAX_QUEUED_SECONDS: usize = 2;
 const PREBUFFER_MILLISECONDS: usize = 120;
 
 pub(super) struct AudioPlayback {
-  pub played_frames: Arc<AtomicU64>,
-  pub sample_rate: u32,
+  pub clock: Arc<AudioClock>,
   pub stream: Stream,
   pub thread: std::thread::JoinHandle<()>,
 }
@@ -37,7 +37,7 @@ fn build_output<T>(
   device: &cpal::Device,
   config: &StreamConfig,
   queue: Arc<Mutex<VecDeque<f32>>>,
-  played_frames: Arc<AtomicU64>,
+  clock: Arc<AudioClock>,
   selected_audio: Arc<RwLock<Vec<usize>>>,
   audio_volumes: Arc<RwLock<Vec<AudioTrackVolume>>>,
   stream_indices: Vec<usize>,
@@ -50,7 +50,8 @@ where
   device
     .build_output_stream(
       *config,
-      move |output: &mut [T], _| {
+      move |output: &mut [T], info| {
+        let received_at = Instant::now();
         let mut queue = queue.lock().unwrap_or_else(|value| value.into_inner());
         let selected = selected_audio
           .read()
@@ -76,8 +77,12 @@ where
           for sample in frame {
             *sample = T::from_sample(mixed);
           }
-          played_frames.fetch_add(1, Ordering::Relaxed);
         }
+        clock.submit(
+          info.timestamp(),
+          received_at,
+          output.len() / output_channels,
+        );
       },
       |_| {},
       None,
@@ -90,7 +95,7 @@ fn output_stream(
   selected_audio: Arc<RwLock<Vec<usize>>>,
   audio_volumes: Arc<RwLock<Vec<AudioTrackVolume>>>,
   stream_indices: Vec<usize>,
-) -> Result<(Stream, Arc<AtomicU64>, StreamConfig), String> {
+) -> Result<(Stream, Arc<AudioClock>, StreamConfig), String> {
   let device = cpal::default_host()
     .default_output_device()
     .ok_or_else(|| "No audio output device is available".to_owned())?;
@@ -98,13 +103,13 @@ fn output_stream(
     .default_output_config()
     .map_err(|error| error.to_string())?;
   let config: StreamConfig = supported.config();
-  let played = Arc::new(AtomicU64::new(0));
+  let clock = Arc::new(AudioClock::new(config.sample_rate));
   let build = |format| match format {
     SampleFormat::F32 => build_output::<f32>(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -113,7 +118,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -122,7 +127,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -131,7 +136,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -140,7 +145,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -149,7 +154,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -158,7 +163,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -167,7 +172,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -176,7 +181,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -185,7 +190,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -194,7 +199,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -203,7 +208,7 @@ fn output_stream(
       &device,
       &config,
       Arc::clone(&queue),
-      Arc::clone(&played),
+      Arc::clone(&clock),
       Arc::clone(&selected_audio),
       Arc::clone(&audio_volumes),
       stream_indices.clone(),
@@ -211,7 +216,7 @@ fn output_stream(
     format => Err(format!("Unsupported audio output format: {format}")),
   };
   let stream = build(supported.sample_format())?;
-  Ok((stream, played, config))
+  Ok((stream, clock, config))
 }
 
 pub(super) fn spawn(
@@ -230,7 +235,7 @@ pub(super) fn spawn(
     .map(|track| track.stream_index)
     .collect::<Vec<_>>();
   let track_count = stream_indices.len();
-  let (stream, played_frames, config) = output_stream(
+  let (stream, clock, config) = output_stream(
     Arc::clone(&queue),
     Arc::clone(&selected_audio),
     Arc::clone(&audio_volumes),
@@ -296,8 +301,7 @@ pub(super) fn spawn(
   }
   stream.play().map_err(|error| error.to_string())?;
   Ok(AudioPlayback {
-    played_frames,
-    sample_rate: config.sample_rate,
+    clock,
     stream,
     thread,
   })

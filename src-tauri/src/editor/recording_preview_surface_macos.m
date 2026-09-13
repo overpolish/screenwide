@@ -12,6 +12,7 @@
 #import "osc_controls.h"
 #import "recording_preview_surface_macos_private.h"
 #import "osc_gpu_macos.h"
+#import "recording_preview_audio_ribbon_shader.h"
 
 
 typedef struct {
@@ -278,6 +279,7 @@ static void refresh_for_window_display_change(
   } else {
     redraw_selection(surface);
   }
+  screenwide_audio_ribbon_layout(surface);
 }
 
 static NSString *const shader = @R"(
@@ -488,7 +490,8 @@ void *screenwide_preview_surface_create(void *host_view) {
     surface.queue = [surface.device newCommandQueue];
     NSError *error = nil;
     NSString *combinedShader =
-        [shader stringByAppendingString:screenwide_region_osc_shader_source()];
+        [[shader stringByAppendingString:screenwide_region_osc_shader_source()]
+            stringByAppendingString:screenwide_audio_bars_shader];
     id<MTLLibrary> library = [surface.device
         newLibraryWithSource:combinedShader
                      options:nil
@@ -580,6 +583,10 @@ void *screenwide_preview_surface_create(void *host_view) {
                     relativeTo:nil];
     }
     surface.editorZoom = 1.0;
+    // Until the first layout batch says otherwise, a decoded frame presents
+    // exactly as it always did; only a batch that lays out no pane at all
+    // parks the video path (see `workspaceHasPanes`).
+    surface.workspaceHasPanes = YES;
     surface.selectionVisible = YES;
     surface.editorBaseRects = [NSMutableArray array];
     surface.views = [NSMutableArray array];
@@ -589,6 +596,7 @@ void *screenwide_preview_surface_create(void *host_view) {
     surface.workspaceTransforms = [NSMutableDictionary dictionary];
     surface.batchDrawables = [NSMutableArray array];
     surface.batchViews = [NSMutableArray array];
+    screenwide_audio_ribbon_attach(surface, library);
     NSWindow *window = surface.host.window;
     if (window != nil) {
       __weak ScreenwidePreviewSurface *weakSurface = surface;
@@ -659,6 +667,7 @@ void screenwide_preview_surface_hide(void *handle) {
     surface.container.hidden = YES;
     surface.interaction.hidden = YES;
     for (ScreenwidePreviewView *view in surface.views) view.hidden = YES;
+    screenwide_audio_ribbon_update_visibility(surface);
   });
 }
 
@@ -689,6 +698,7 @@ void screenwide_preview_surface_destroy(void *handle) {
       screenwide_gpu_still_presenter_destroy(view.compositor);
       view.compositor = NULL;
     }
+    screenwide_audio_ribbon_detach(surface);
     [surface.container removeFromSuperview];
     [surface.interaction removeFromSuperview];
   });

@@ -60,6 +60,16 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+layout.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+editor_state.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+zoom.m");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+audio_ribbon.m");
+    println!(
+      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+audio_ribbon_draw.m"
+    );
+    println!(
+      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+audio_ribbon_state.m"
+    );
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_audio_ribbon_macos.h");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_audio_ribbon_shader.h");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_audio_ribbon_coverage_tests.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+appearance.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+desktop.m");
@@ -138,6 +148,10 @@ fn main() {
       .file("src/editor/recording_preview_surface_macos+workspace.m")
       .file("src/editor/recording_preview_surface_macos+layout.m")
       .file("src/editor/recording_preview_surface_macos+editor_state.m")
+      .file("src/editor/recording_preview_audio_ribbon_coverage_tests.m")
+      .file("src/editor/recording_preview_surface_macos+audio_ribbon.m")
+      .file("src/editor/recording_preview_surface_macos+audio_ribbon_draw.m")
+      .file("src/editor/recording_preview_surface_macos+audio_ribbon_state.m")
       .file("src/editor/recording_preview_surface_macos+zoom.m")
       .file("src/editor/screenshot_region_osc_macos.m")
       .file("src/editor/screenshot_region_osc_macos+appearance.m")

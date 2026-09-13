@@ -42,6 +42,19 @@ impl PreviewPlayerManager {
       .event_channel
       .clone()
       .ok_or_else(|| "The recording preview event channel is unavailable".to_owned())?;
+    if matches!(mode, PlaybackMode::Still | PlaybackMode::InteractiveStill)
+      && (sources.layout.panes.is_empty() || !sources.presents_video())
+    {
+      // Audio has no still frame to decode. Apply each accepted seek directly,
+      // including when a recording's video tracks are hidden.
+      self.rough_seek = false;
+      audio_visualizer::present_audio_position(&sources, self.position_ms);
+      let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {
+        position_ms: self.position_ms,
+        request_id: self.latest_seek_request,
+      });
+      return Ok(());
+    }
     if platform::NATIVE_STILLS
       && matches!(mode, PlaybackMode::Still | PlaybackMode::InteractiveStill)
       && !sources.layout.panes.is_empty()
@@ -114,7 +127,13 @@ impl PreviewPlayerManager {
     self.cancel_worker();
     if let Some(sources) = self.sources.as_ref() {
       sources.playing.store(false, Ordering::Release);
+      sources.video_muted.store(false, Ordering::Release);
       if let Some(surface) = sources.preview_surface.as_ref() {
+        // The ribbon holds the viewport open for as long as it has
+        // envelopes, so a player that is going away has to take them with
+        // it: the next recording must not open onto the last one's audio.
+        #[cfg(target_os = "macos")]
+        surface.set_audio_ribbon(&super::audio_visualizer::AudioRibbonEnvelopes::default());
         surface.hide();
       }
     }

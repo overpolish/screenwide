@@ -49,9 +49,9 @@ import { usePreviewZoom } from "../use-preview-zoom";
 import { useRecordingPreviewPlayer } from "../use-recording-preview-player";
 import { useRecordingTimelineThumbnails } from "../use-recording-timeline-thumbnails";
 
-import { AudioVisualizer } from "./audio-visualizer";
 import { BakedCameraPreviewViewport } from "./baked-camera-preview-viewport";
 import { useProvideEditorToolbarTools } from "./editor-toolbar-context";
+import { NativeAudioRibbon } from "./native-audio-ribbon";
 import { useRegisterPreviewFit } from "./preview-fit-context";
 import { PreviewZoomField } from "./preview-readouts";
 import {
@@ -1044,6 +1044,13 @@ export function NativeRecordingPreview({
     },
     [setCanvasTool],
   );
+  // A canvas tool acts on the panes on screen. When the last video track is
+  // switched off there is nothing left for it to act on, so the tool is put
+  // down and its panel goes with it rather than staying up over the ribbon
+  // saying nothing is selected.
+  useEffect(() => {
+    if (!hasVisiblePanes && canvasToolRef.current !== null) setCanvasTool(null);
+  }, [hasVisiblePanes, setCanvasTool]);
   // Cursor and Keyboard are panels without a canvas tool behind them, so
   // putting one away closes the panel and leaves no tool in hand, the way
   // pressing an active canvas tool does.
@@ -1270,10 +1277,10 @@ export function NativeRecordingPreview({
               />
             </div>
           ) : (
-            <AudioVisualizer
+            <NativeAudioRibbon
+              artifactId={artifactId}
               audioTracks={audioTracks}
               enabledTracks={enabledTracks}
-              playhead={playhead}
               volumes={audioVolumeByStream}
             />
           )}

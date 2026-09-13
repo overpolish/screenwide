@@ -165,6 +165,14 @@ pub async fn layout_recording_preview_surface(
   } else {
     1.0
   };
+  // A layout with no panes is the audio-only preview: playback keeps its
+  // clock and its audio, but its frames stop being presented so the native
+  // ribbon owns the viewport.
+  if let Some(sources) = manager.sources.as_ref() {
+    sources
+      .video_muted
+      .store(panes.is_empty(), std::sync::atomic::Ordering::Release);
+  }
   let active_pane_indices = panes
     .iter()
     .map(|pane| pane.index as usize)

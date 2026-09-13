@@ -14,6 +14,7 @@ use std::{
 use tauri::ipc::Channel;
 
 use super::{audio, platform, send_error, stop_child};
+use crate::editor::recording_preview_player::audio_visualizer::present_audio_position;
 use crate::editor::recording_preview_player::video::VideoFrame;
 use crate::editor::recording_preview_player::{
   AudioTrackVolume, PlayerSources, RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
@@ -127,6 +128,17 @@ pub(super) fn run(context: RunContext) {
       }
     }
   };
+  let display_clock = audio.as_ref().and_then(|audio| {
+    super::super::audio_visualizer_clock::install(
+      &context.sources,
+      &audio.clock,
+      &ranges,
+      context.playback_rate,
+      &context.cancelled,
+      &context.position_ms,
+      context.start_ms,
+    )
+  });
   let video_clock_start = Instant::now();
   let _ = context
     .event_channel
@@ -136,9 +148,7 @@ pub(super) fn run(context: RunContext) {
   let elapsed_ms = || {
     audio.as_ref().map_or_else(
       || video_clock_start.elapsed().as_millis() as u64,
-      |playback| {
-        playback.played_frames.load(Ordering::Acquire) * 1_000 / u64::from(playback.sample_rate)
-      },
+      |playback| (playback.clock.seconds() * 1_000.0) as u64,
     )
   };
   let mut next_video = ranges
@@ -170,8 +180,16 @@ pub(super) fn run(context: RunContext) {
           rate,
         ))
         .min(range.source_end_ms);
-      context.position_ms.store(current, Ordering::Release);
-      if !platform::send_frame(&context.sources, frame.payload) {
+      if context.sources.presents_video()
+        || !display_clock.as_ref().is_some_and(|clock| clock.active())
+      {
+        context.position_ms.store(current, Ordering::Release);
+      }
+      if !context.sources.presents_video() && display_clock.is_none() {
+        present_audio_position(&context.sources, current);
+      }
+      if context.sources.presents_video() && !platform::send_frame(&context.sources, frame.payload)
+      {
         failed = true;
         break;
       }

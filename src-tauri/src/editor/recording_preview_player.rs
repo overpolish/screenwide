@@ -16,6 +16,8 @@ use serde::{Deserialize, Serialize};
 use tauri::{ipc::Channel, AppHandle, Manager};
 
 mod audio;
+pub(crate) mod audio_visualizer;
+mod audio_visualizer_clock;
 pub(crate) mod commands;
 pub(crate) mod editor_suspend;
 pub(crate) mod keyboard_command;

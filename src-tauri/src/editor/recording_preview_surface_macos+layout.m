@@ -70,6 +70,8 @@ void screenwide_preview_surface_set_viewport(void *handle,
     if (surface.editorEnabled && !surface.editorSuspended && width > 0 &&
         height > 0)
       surface.interaction.hidden = NO;
+    screenwide_audio_ribbon_layout(surface);
+    screenwide_audio_ribbon_update_visibility(surface);
     invalidate_selection_cursor_rects(surface);
     [CATransaction commit];
   });
@@ -208,6 +210,7 @@ void screenwide_preview_surface_begin_layout(void *handle) {
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   on_main_async(^{
     for (ScreenwidePreviewView *view in surface.views) view.active = NO;
+    surface.workspaceHasPanes = NO;
   });
 }
 
@@ -218,6 +221,7 @@ void screenwide_preview_surface_layout(void *handle, uint32_t index,
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   on_main_async(^{
     surface.workspaceMode = NO;
+    surface.workspaceHasPanes = YES;
     while (surface.views.count <= index)
       [surface.views addObject:make_preview_view(surface)];
     ScreenwidePreviewView *view = surface.views[index];
@@ -262,6 +266,7 @@ void screenwide_preview_surface_layout_workspace(
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   on_main_async(^{
     surface.workspaceMode = YES;
+    surface.workspaceHasPanes = YES;
     surface.workspaceActivePaneIndices = [NSSet setWithObject:@0];
     surface.workspaceLayoutAwaitsPresent = defer_draw != 0;
     while (surface.views.count == 0)
@@ -319,6 +324,7 @@ void screenwide_preview_surface_layout_recording_workspace(
   on_main_async(^{
     const ScreenwideWorkspacePaneRect *copiedPanes = paneData.bytes;
     surface.workspaceMode = YES;
+    surface.workspaceHasPanes = YES;
     surface.workspaceLayoutAwaitsPresent = defer_draw != 0;
     BOOL ownsFrame = surface.interaction.selectionDragActive &&
         (surface.interaction.selectionDragOperation == 3 ||

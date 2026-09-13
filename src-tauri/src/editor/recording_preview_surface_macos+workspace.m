@@ -154,7 +154,7 @@ SCREENWIDE_PREVIEW_PRIVATE void end_workspace_frame_resize(
 
 SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surface) {
   if (!surface.workspaceMode || surface.workspaceLayerCount == 0 ||
-      surface.views.count == 0) return;
+      surface.views.count == 0 || !surface.workspaceHasPanes) return;
   ScreenwidePreviewView *workspace = surface.views[0];
   if (!workspace.active || workspace.hidden) return;
   [surface.workspaceLock lock];
@@ -250,6 +250,7 @@ int screenwide_preview_surface_present_screenshot_workspace(
   [surface.workspaceLock unlock];
   if (!drawInFlight) {
     dispatch_async(dispatch_get_main_queue(), ^{
+      if (!surface.workspaceHasPanes) return;
       workspace.hidden = NO;
       redraw_workspace(surface);
     });
@@ -295,6 +296,10 @@ int screenwide_preview_surface_present_recording_workspace(
   if (staged == 0) return 0;
   if (!drawInFlight) {
     dispatch_async(dispatch_get_main_queue(), ^{
+      // A frame decoded for a layout that has since dropped its panes is
+      // staged but never shown: un-hiding here would put a stale picture
+      // over the audio-only preview's ribbon.
+      if (!surface.workspaceHasPanes) return;
       workspace.hidden = NO;
       redraw_workspace(surface);
     });

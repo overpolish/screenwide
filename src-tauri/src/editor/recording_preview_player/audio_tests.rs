@@ -155,5 +155,50 @@ fn test_sources() -> PlayerSources {
     preview_surface: None,
     primary_kind: PrimaryRecordingKind::Screen,
     screen_path: "/tmp/recording.mov".into(),
+    video_muted: Default::default(),
+  }
+}
+
+#[test]
+fn audio_scrubs_acknowledge_each_position_without_a_video_decoder() {
+  use super::super::{worker::PlaybackMode, PreviewPlayerManager};
+  use tauri::ipc::{Channel, InvokeResponseBody};
+
+  for hidden_video in [false, true] {
+    let mut sources = test_sources();
+    if hidden_video {
+      sources.video_muted.store(true, Ordering::Release);
+    } else {
+      sources.layout.panes.clear();
+    }
+    let messages = Arc::new(Mutex::new(Vec::new()));
+    let received = Arc::clone(&messages);
+    let mut manager = PreviewPlayerManager {
+      sources: Some(sources),
+      event_channel: Some(Channel::new(move |message| {
+        if let InvokeResponseBody::Json(json) = message {
+          received
+            .lock()
+            .unwrap()
+            .push(serde_json::from_str::<serde_json::Value>(&json).unwrap());
+        }
+        Ok(())
+      })),
+      ..Default::default()
+    };
+    for (request, position) in [(1, 750), (2, 250), (3, 900)] {
+      manager.latest_seek_request = request;
+      manager.position_ms = position;
+      manager.rough_seek = true;
+      manager.restart(PlaybackMode::InteractiveStill).unwrap();
+      assert!(manager.worker.is_none());
+      assert!(manager.still_decoder.is_none());
+      assert!(!manager.rough_seek);
+      let messages = messages.lock().unwrap();
+      let last = messages.last().unwrap();
+      assert_eq!(last["event"], "ready");
+      assert_eq!(last["data"]["positionMs"], position);
+      assert_eq!(last["data"]["requestId"], request);
+    }
   }
 }

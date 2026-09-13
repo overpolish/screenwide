@@ -25,12 +25,21 @@ pub(super) struct PlayerSources {
   /// True while real-time playback owns the surface, so a late still decode
   /// never stomps a playing frame.
   pub(super) playing: Arc<AtomicBool>,
+  /// Set while the layout on screen has parked every pane - the window is
+  /// showing the audio-only preview. A decoded frame has nowhere to go, and
+  /// presenting it anyway paints over the ribbon.
+  pub(super) video_muted: Arc<AtomicBool>,
   pub(super) preview_surface: Option<Arc<RecordingPreviewSurface>>,
   pub(super) primary_kind: PrimaryRecordingKind,
   pub(super) screen_path: PathBuf,
 }
 
 impl PlayerSources {
+  /// Whether a decoded frame has a pane to land in.
+  pub(super) fn presents_video(&self) -> bool {
+    !self.video_muted.load(Ordering::Acquire)
+  }
+
   pub(super) fn keyboard_overlay(
     &self,
     position_ms: u64,
@@ -232,6 +241,7 @@ fn sources_with_surface(
     layout,
     playback_layout,
     playing: Arc::new(AtomicBool::new(false)),
+    video_muted: Arc::new(AtomicBool::new(false)),
     preview_surface,
     primary_kind,
     screen_path: path,

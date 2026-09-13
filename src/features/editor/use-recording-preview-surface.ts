@@ -172,6 +172,13 @@ export const effectiveBackdrop = (): PreviewBackdrop => {
   return compositeBackdrop("[data-preview-backdrop]");
 };
 
+/**
+ * The audio-only preview's viewport. It has no pane canvases of its own, so
+ * the native ribbon is laid out from this element directly.
+ */
+const audioRibbonViewport = () =>
+  document.querySelector<HTMLElement>("[data-audio-ribbon-viewport]");
+
 export const clearBackdropMasks = () => {
   for (const element of document.querySelectorAll<HTMLElement>(
     "[data-preview-backdrop]",
@@ -485,7 +492,12 @@ export function useRecordingPreviewSurface({
             ({ canvas }) =>
               canvas?.isConnected && canvas.getBoundingClientRect().width > 0,
           );
-        if (connected.length === 0) {
+        // A recording with no visible video still has a viewport: the native
+        // surface fills it with the audio ribbon. It carries no panes, so the
+        // marker canvases the video path measures do not exist.
+        const ribbonViewport =
+          connected.length === 0 ? audioRibbonViewport() : null;
+        if (connected.length === 0 && !ribbonViewport) {
           clearBackdropMasks();
           queueLayout({
             backdrop: effectiveBackdrop(),
@@ -500,9 +512,11 @@ export function useRecordingPreviewSurface({
           });
           return;
         }
-        const viewport = connected[0]?.canvas?.closest<HTMLElement>(
-          "[data-recording-preview-viewport]",
-        );
+        const viewport =
+          ribbonViewport ??
+          connected[0]?.canvas?.closest<HTMLElement>(
+            "[data-recording-preview-viewport]",
+          );
         if (viewport) {
           const viewportRect = viewport.getBoundingClientRect();
           const panes = connected.map(({ canvas, index }) => {
@@ -576,9 +590,9 @@ export function useRecordingPreviewSurface({
       }
     };
     measureRef.current = measure;
-    if (!nativeEditorOwnsLayout || !nativeLayoutHasPanes) {
-      // No panes to mirror (or a fixed Storybook layout): one measure is enough
-      // to hand the native side the empty viewport.
+    if (!nativeEditorOwnsLayout) {
+      // A fixed Storybook layout: one measure is enough to hand the native
+      // side the empty viewport.
       measure();
       return () => {
         disposed = true;
@@ -598,14 +612,18 @@ export function useRecordingPreviewSurface({
       ].filter(
         (canvas): canvas is HTMLCanvasElement => canvas?.isConnected === true,
       );
-      if (!startedRef.current || canvases.length === 0) {
+      // The audio-only viewport is the one case with a surface but no marker
+      // canvases; its own resizes are what the ribbon has to follow.
+      const ribbonViewport =
+        canvases.length === 0 ? audioRibbonViewport() : null;
+      if (!startedRef.current || (canvases.length === 0 && !ribbonViewport)) {
         animation = requestAnimationFrame(observeMarkers);
         return;
       }
       for (const canvas of canvases) observer.observe(canvas);
-      const viewport = canvases[0]?.closest<HTMLElement>(
-        "[data-recording-preview-viewport]",
-      );
+      const viewport =
+        ribbonViewport ??
+        canvases[0]?.closest<HTMLElement>("[data-recording-preview-viewport]");
       if (viewport) {
         observer.observe(viewport);
         mutationObserver = new MutationObserver((records) => {

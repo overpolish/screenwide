@@ -11,6 +11,7 @@
 
 #import "cursor_export/gpu_compositor_macos.h"
 #import "osc_gpu_macos.h"
+#import "recording_preview_audio_ribbon_macos.h"
 
 #define SCREENWIDE_PREVIEW_PRIVATE __attribute__((visibility("hidden")))
 
@@ -160,10 +161,17 @@ typedef struct {
 @property(nonatomic, weak) NSView *webview;
 @property(nonatomic, strong) ScreenwidePreviewView *container;
 @property(nonatomic, strong) NSMutableArray<ScreenwidePreviewView *> *views;
+/// The audio-only preview's bars. They fill the viewport when the layout has
+/// no video panes, and hide themselves whenever one appears.
+@property(nonatomic, strong) ScreenwideAudioRibbon *audioRibbon;
 @property(nonatomic) BOOL workspaceMode;
 @property(nonatomic) uint32_t workspaceLayerCount;
 @property(nonatomic) BOOL workspaceRedrawRetried;
 @property(nonatomic) BOOL workspaceExplicitPlacements;
+/// Whether the layout that is on screen laid out any pane at all. The
+/// audio-only preview lays out none, and a decoded frame that arrives anyway
+/// must not un-hide a pane view over the bars.
+@property(nonatomic) BOOL workspaceHasPanes;
 @property(nonatomic, strong) NSMutableData *workspacePlacements;
 @property(nonatomic, strong) NSArray<NSNumber *> *workspacePaneIndices;
 @property(nonatomic, strong) NSSet<NSNumber *> *workspaceActivePaneIndices;

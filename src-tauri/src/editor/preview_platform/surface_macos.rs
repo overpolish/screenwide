@@ -8,6 +8,8 @@
 //! `editor/recording_preview_surface_macos.m`; this file is only the FFI
 //! boundary around it.
 
+#[path = "surface_macos/audio_ribbon.rs"]
+mod audio_ribbon;
 #[path = "surface_macos/callbacks.rs"]
 mod callbacks;
 #[path = "surface_macos/editor.rs"]
@@ -126,6 +128,24 @@ mod tests {
   unsafe extern "C" {
     fn screenwide_gpu_still_presenter_create() -> *mut std::ffi::c_void;
     fn screenwide_gpu_still_presenter_destroy(handle: *mut std::ffi::c_void);
+    fn screenwide_audio_ribbon_shader_compiles() -> i32;
+    fn screenwide_audio_ribbon_accent_is_stable() -> i32;
+    fn screenwide_audio_ribbon_coverage_is_stable() -> i32;
+  }
+
+  #[test]
+  fn audio_bars_accent_uses_host_appearance_in_every_callback() {
+    assert_eq!(unsafe { screenwide_audio_ribbon_accent_is_stable() }, 1);
+  }
+
+  #[test]
+  fn audio_bars_brightness_is_stable_at_fractional_pixel_positions() {
+    assert_eq!(unsafe { screenwide_audio_ribbon_coverage_is_stable() }, 1);
+  }
+
+  #[test]
+  fn audio_bars_metal_shader_compiles() {
+    assert_eq!(unsafe { screenwide_audio_ribbon_shader_compiles() }, 1);
   }
 
   #[test]

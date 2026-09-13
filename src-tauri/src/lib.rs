@@ -90,6 +90,7 @@ pub fn run() {
       editor::recording_preview::get_recording_preview,
       editor::recording_preview::get_recording_keyboard_timeline,
       editor::recording_preview_player::commands::pause_recording_preview,
+      editor::recording_preview_player::audio_visualizer::set_recording_audio_visualizer,
       editor::recording_preview_player::surface_commands::layout_recording_preview_surface,
       editor::recording_preview_player::surface_commands::set_recording_preview_zoom,
       editor::recording_preview_player::surface_commands::reset_recording_preview_view,

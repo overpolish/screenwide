@@ -22,6 +22,12 @@ type NativeRecordingWorkspaceViewportProps = {
   panes: NativeRecordingWorkspacePane[];
   workspaceHeight: number;
   workspaceWidth: number;
+  /**
+   * The audio-only preview, whose surface draws the ribbon over the whole
+   * viewport. It has no panes, so the layout finds this element by its marker
+   * rather than through a pane canvas.
+   */
+  audioOnly?: boolean;
   isSelecting?: boolean;
 };
 
@@ -36,6 +42,7 @@ const VIEWPORT_GUTTER = 8;
  */
 export function NativeRecordingWorkspaceViewport({
   ariaLabel,
+  audioOnly = false,
   isBusy,
   isSelecting = false,
   panes,
@@ -84,6 +91,7 @@ export function NativeRecordingWorkspaceViewport({
     <div
       aria-label={ariaLabel}
       className={`relative flex min-h-0 grow overflow-hidden ${isSelecting ? "cursor-move" : ""}`}
+      data-audio-ribbon-viewport={audioOnly ? "" : undefined}
       data-preview-fit-width={
         workspaceHeight > 0
           ? (availableHeight * workspaceWidth) / workspaceHeight +

@@ -132,8 +132,13 @@ fn run(context: RunContext) {
       }
     };
     if let Ok(frame) = frame_rx.recv() {
-      if !cancelled.load(Ordering::Acquire) && platform::send_frame(&sources, frame.payload) {
+      if !cancelled.load(Ordering::Acquire)
+        && (!sources.presents_video() || platform::send_frame(&sources, frame.payload))
+      {
         position_ms.store(start_ms, Ordering::Release);
+        if !sources.presents_video() {
+          super::audio_visualizer::present_audio_position(&sources, start_ms);
+        }
         let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {
           position_ms: start_ms,
           request_id,

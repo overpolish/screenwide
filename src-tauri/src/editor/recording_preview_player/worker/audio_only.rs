@@ -13,6 +13,7 @@ use std::{
 use tauri::ipc::Channel;
 
 use super::{audio, send_error, stop_child, PlaybackMode};
+use crate::editor::recording_preview_player::audio_visualizer::present_audio_position;
 use crate::editor::recording_preview_player::{
   PlayerSources, RecordingPreviewPlaybackRange, RecordingPreviewPlayerEvent,
 };
@@ -86,7 +87,11 @@ pub(super) fn run(context: RunContext) {
     start_ms,
   } = context;
   if !plays_audio(mode) {
+    if cancelled.load(Ordering::Acquire) {
+      return;
+    }
     position_ms.store(start_ms, Ordering::Release);
+    present_audio_position(&sources, start_ms);
     let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {
       position_ms: start_ms,
       request_id,
@@ -123,36 +128,59 @@ pub(super) fn run(context: RunContext) {
     let _ = audio.thread.join();
     return;
   }
-  let _ = event_channel.send(RecordingPreviewPlayerEvent::Playing {
-    position_ms: start_ms,
-  });
+  let display_clock = super::super::audio_visualizer_clock::install(
+    &sources,
+    &audio.clock,
+    &ranges,
+    playback_rate,
+    &cancelled,
+    &position_ms,
+    start_ms,
+  );
+  let mut announced_playing = false;
+  let mut last_presented = start_ms;
   let output_duration_ms = ranges
     .iter()
     .map(|range| output_duration_ms(range.duration_ms(), effective_rate(*range, playback_rate)))
     .sum::<u64>();
   while !cancelled.load(Ordering::Acquire) {
-    let elapsed =
-      audio.played_frames.load(Ordering::Acquire) * 1_000 / u64::from(audio.sample_rate);
+    let elapsed = (audio.clock.seconds() * 1000.0) as u64;
     if elapsed >= output_duration_ms {
-      position_ms.store(
-        ranges.last().map_or(start_ms, |range| range.source_end_ms),
-        Ordering::Release,
-      );
+      let end = ranges.last().map_or(start_ms, |range| range.source_end_ms);
+      position_ms.store(end, Ordering::Release);
+      present_audio_position(&sources, end);
       break;
     }
     let current = position_at_elapsed(&ranges, elapsed, playback_rate, start_ms);
-    position_ms.store(current, Ordering::Release);
-    let _ = event_channel.send(RecordingPreviewPlayerEvent::Position {
-      position_ms: current,
-    });
+    if !announced_playing && elapsed > 0 {
+      announced_playing = true;
+      let _ = event_channel.send(RecordingPreviewPlayerEvent::Playing {
+        position_ms: current,
+      });
+    }
+    if current != last_presented {
+      if !display_clock.as_ref().is_some_and(|clock| clock.active()) {
+        position_ms.store(current, Ordering::Release);
+      }
+      if display_clock.is_none() {
+        present_audio_position(&sources, current);
+      }
+      last_presented = current;
+      let _ = event_channel.send(RecordingPreviewPlayerEvent::Position {
+        position_ms: current,
+      });
+    }
     std::thread::sleep(Duration::from_millis(
       output_duration_ms.saturating_sub(elapsed).clamp(1, 16),
     ));
   }
-  cancelled.store(true, Ordering::Release);
+  let was_cancelled = cancelled.swap(true, Ordering::AcqRel);
   stop_child(&audio_child);
   drop(audio.stream);
   let _ = audio.thread.join();
+  if was_cancelled {
+    return;
+  }
   let final_end_ms = ranges.last().map_or(start_ms, |range| range.source_end_ms);
   if final_end_ms < sources.duration_ms && position_ms.load(Ordering::Acquire) >= final_end_ms {
     let _ = event_channel.send(RecordingPreviewPlayerEvent::RangeEnded {
@@ -205,6 +233,27 @@ mod tests {
     ];
     assert_eq!(position_at_elapsed(&ranges, 500, 1.0, 0), 2_000);
     assert_eq!(position_at_elapsed(&ranges, 1_500, 1.0, 0), 2_500);
+  }
+
+  #[test]
+  fn delayed_audio_start_does_not_advance_and_resume_keeps_source_position() {
+    let ranges = [RecordingPreviewPlaybackRange {
+      source_start_ms: 7_018,
+      source_end_ms: 8_125,
+      playback_rate: 1.0,
+    }];
+    // The trace showed 130 ms of startup delay before the sample clock moved.
+    // Repeated polls during that delay must all present the same source frame.
+    for _ in 0..10 {
+      assert_eq!(position_at_elapsed(&ranges, 0, 1.0, 7_018), 7_018);
+    }
+    assert_eq!(position_at_elapsed(&ranges, 21, 1.0, 7_018), 7_039);
+    let resumed = [RecordingPreviewPlaybackRange {
+      source_start_ms: 7_039,
+      ..ranges[0]
+    }];
+    assert_eq!(position_at_elapsed(&resumed, 0, 1.0, 7_039), 7_039);
+    assert_eq!(position_at_elapsed(&resumed, 21, 1.0, 7_039), 7_060);
   }
 
   #[test]

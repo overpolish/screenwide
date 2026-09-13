@@ -152,6 +152,23 @@ unsafe extern "C" {
     >,
     context: *mut std::ffi::c_void,
   );
+  pub(super) fn screenwide_preview_surface_set_audio_ribbon(
+    handle: *mut std::ffi::c_void,
+    samples: *const f32,
+    track_count: u32,
+    point_count: u32,
+    gains: *const f32,
+  );
+  pub(super) fn screenwide_preview_surface_set_audio_ribbon_clock(
+    handle: *mut std::ffi::c_void,
+    context: *mut std::ffi::c_void,
+    read: unsafe extern "C" fn(*mut std::ffi::c_void, f64) -> f64,
+    release: unsafe extern "C" fn(*mut std::ffi::c_void),
+  );
+  pub(super) fn screenwide_preview_surface_set_audio_ribbon_playhead(
+    handle: *mut std::ffi::c_void,
+    ratio: f64,
+  );
   pub(super) fn screenwide_preview_surface_release_context_on_main(
     release: unsafe extern "C" fn(*mut std::ffi::c_void),
     context: *mut std::ffi::c_void,
