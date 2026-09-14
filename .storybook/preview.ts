@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { withThemeByClassName } from "@storybook/addon-themes";
-import { mockIPC } from "@tauri-apps/api/mocks";
+import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import { themes } from "storybook/theming";
 
 import { installKeyboardNavigationModality } from "../src/lib/keyboard-navigation-modality";
@@ -80,6 +80,11 @@ if (!isNativePreview) {
     },
     { shouldMockEvents: true },
   );
+  // `getCurrentWindow()` reads the label of the window this page runs in
+  // off the runtime's metadata, which the IPC mock alone does not install.
+  // The label is not an editor's, so `currentEditorKind()` stays null and
+  // an editor story takes its workspace from the artifact it is given.
+  mockWindows("storybook");
 }
 
 // Initialize React Aria's focus tracking before Storybook's test loader wraps
