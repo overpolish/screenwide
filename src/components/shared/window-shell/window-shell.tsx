@@ -38,7 +38,9 @@ export function WindowShell({
   return (
     <main
       className={cn(
-        "window-surface flex w-full flex-col overflow-hidden rounded-window text-content-fg",
+        // A framed window: on Windows, DWM draws the frame's corners, so the
+        // content is not clipped to a radius of its own.
+        "window-surface flex w-full flex-col overflow-hidden rounded-window text-content-fg windows:rounded-none",
         height === "fill" && "h-full",
         className,
       )}

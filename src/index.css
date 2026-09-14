@@ -871,10 +871,6 @@ body {
   border: 0;
 }
 
-html[data-platform="windows"] .window-surface {
-  border-radius: 0;
-}
-
 .glide-app-icon-windows-boost {
   display: none;
 }

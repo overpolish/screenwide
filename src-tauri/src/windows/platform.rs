@@ -207,6 +207,32 @@ fn disable_show_transitions(window: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 
+/// Asks DWM to round the window's corners, as it does for every framed
+/// window on Windows 11 but not for an undecorated one. The floating panels
+/// (recording bar and dock, pop-up lists, tooltips) are Fluent flyouts, which
+/// carry the 8px overlay corner; the DWM corner is the only one that clips
+/// the window's own material and shadow.
+#[cfg(target_os = "windows")]
+pub(crate) fn round_corners(window: &WebviewWindow) -> tauri::Result<()> {
+  use windows::Win32::{
+    Foundation::HWND,
+    Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND},
+  };
+
+  let hwnd = HWND(window.hwnd()?.0);
+  let preference = DWMWCP_ROUND;
+  unsafe {
+    DwmSetWindowAttribute(
+      hwnd,
+      DWMWA_WINDOW_CORNER_PREFERENCE,
+      (&raw const preference).cast(),
+      std::mem::size_of_val(&preference) as u32,
+    )
+  }
+  .map_err(std::io::Error::other)?;
+  Ok(())
+}
+
 #[cfg(target_os = "macos")]
 pub fn prepare_to_show(window: &WebviewWindow) -> tauri::Result<()> {
   enable_inactive_webview_hover(window)?;

@@ -239,7 +239,7 @@ export function PopupPanelList({
     <ScrollArea
       key={activeId}
       // The scrollbar keeps out of the rounded corners.
-      rootClassName="window-surface rounded-window [--scrollbar-inset:var(--radius-window)]"
+      rootClassName="window-surface rounded-window [--scrollbar-inset:var(--radius-window)] windows:inset-ring windows:inset-ring-popover-stroke"
     >
       <ListBox
         aria-label={label}

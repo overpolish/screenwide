@@ -175,7 +175,10 @@ export function RecordingBar(props: RecordingBarProps) {
       // again the gap inside a group, which is how a toolbar shows grouping
       // without separators. The row is as wide as its controls and the
       // window follows it, so no state leaves slack.
-      className="window-surface flex h-full w-max items-center gap-section overflow-hidden p-control-inset text-content-fg"
+      // On macOS the panel's corner is the material's own. On Windows the
+      // bar is a Fluent flyout: DWM rounds the window and the content clips
+      // to the same 8px corner, under the flyout's hairline stroke.
+      className="window-surface flex h-full w-max items-center gap-section overflow-hidden p-control-inset text-content-fg windows:rounded-window windows:inset-ring windows:inset-ring-popover-stroke"
       data-tauri-drag-region="deep"
       onKeyDownCapture={() => {
         onInteract?.();

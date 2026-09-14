@@ -48,12 +48,14 @@ pub fn prepare_to_show(window: &WebviewWindow) -> tauri::Result<()> {
 
 #[cfg(target_os = "windows")]
 pub fn initialize_recording_bar(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)
+  initialize_overlay(window)?;
+  super::round_corners(window)
 }
 
 #[cfg(target_os = "windows")]
 pub fn initialize_recording_source_selector(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)
+  initialize_overlay(window)?;
+  super::round_corners(window)
 }
 
 #[cfg(target_os = "windows")]
@@ -63,19 +65,22 @@ pub fn initialize_region_selector(window: &WebviewWindow) -> tauri::Result<()> {
 
 #[cfg(target_os = "windows")]
 pub fn initialize_standalone_listbox(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)
+  initialize_overlay(window)?;
+  super::round_corners(window)
 }
 
 #[cfg(target_os = "windows")]
 pub fn initialize_recording_dock(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)
+  initialize_overlay(window)?;
+  super::round_corners(window)
 }
 
 /// The tooltip is an overlay like the rest, and never activated: it is shown
 /// with `raise_without_activation`, which keeps focus where the user left it.
 #[cfg(target_os = "windows")]
 pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)
+  initialize_overlay(window)?;
+  super::round_corners(window)
 }
 
 #[cfg(target_os = "windows")]

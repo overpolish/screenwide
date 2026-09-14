@@ -131,7 +131,7 @@ export function RecordingDock({
 
   return (
     <main
-      className="window-surface flex h-full w-max items-center gap-control-inset rounded-window p-control-inset text-content-fg"
+      className="window-surface flex h-full w-max items-center gap-control-inset rounded-window p-control-inset text-content-fg windows:inset-ring windows:inset-ring-popover-stroke"
       data-tauri-drag-region="deep"
       onPointerUpCapture={onPointerUp}
       ref={dockRef}
