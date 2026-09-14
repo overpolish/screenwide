@@ -5,18 +5,32 @@ use tauri::AppHandle;
 use windows::Foundation::TypedEventHandler;
 use windows::UI::ViewManagement::{UIColorType, UISettings};
 
-use super::SystemAccent;
+use super::{AccentTones, SystemAccent};
 
 /// Windows always exposes an accent colour; it has no Multicolour setting.
+/// The tones are the ones WinUI's accent fills use: `AccentDark1` in light
+/// appearance and `AccentLight2` in dark.
 pub(super) fn current() -> Option<SystemAccent> {
-  let color = UISettings::new()
-    .ok()?
-    .GetColorValue(UIColorType::Accent)
-    .ok()?;
+  let settings = UISettings::new().ok()?;
+  let read = |kind: UIColorType| {
+    settings
+      .GetColorValue(kind)
+      .ok()
+      .map(|color| [color.R, color.G, color.B])
+  };
+  let [red, green, blue] = read(UIColorType::Accent)?;
+  let tones = match (
+    read(UIColorType::AccentDark1),
+    read(UIColorType::AccentLight2),
+  ) {
+    (Some(light), Some(dark)) => Some(AccentTones { light, dark }),
+    _ => None,
+  };
   Some(SystemAccent {
-    red: color.R,
-    green: color.G,
-    blue: color.B,
+    red,
+    green,
+    blue,
+    tones,
   })
 }
 

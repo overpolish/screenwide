@@ -25,6 +25,7 @@ pub(super) fn current() -> Option<SystemAccent> {
     red: channel(accent.redComponent()),
     green: channel(accent.greenComponent()),
     blue: channel(accent.blueComponent()),
+    tones: None,
   })
 }
 

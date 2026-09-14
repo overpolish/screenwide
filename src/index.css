@@ -55,6 +55,10 @@
   color: var(--color-control-fg-disabled);
   --icon-alpha: var(--alpha-control-fg-disabled);
 }
+@utility text-primary-fg-disabled {
+  color: var(--color-primary-fg-disabled);
+  --icon-alpha: var(--alpha-primary-fg-disabled);
+}
 
 /* A bezel's stroke: a hairline all round plus a second hairline on one edge
    (Fluent's "elevation border", darker at the bottom in light appearance and
@@ -164,6 +168,8 @@
   --spacing-icon-mini: 0.75rem;
   --spacing-icon-large: 1.5rem;
   --spacing-icon-xl: 28px;
+  /* A checkbox's box: 16px on macOS, 20px in Fluent. */
+  --spacing-checkbox: 1rem;
   /* Measured on macOS 26: HUD panels 15px, plain windows 16px, toolbar
      windows 26px. Tuned by eye to 14px, which reads as a match on the app's
      small panels. */
@@ -313,6 +319,21 @@
   --color-control-stroke-edge: transparent;
   --control-stroke-edge-offset: -1px;
 
+  /* Inset controls: a checkbox's box, later radios and fields. Fluent draws
+     these recessed, with a strong hairline stroke and a fill that darkens on
+     hover and press. On macOS the box is the plain fill with no stroke. */
+  --color-control-alt-fill: var(--color-fill);
+  --color-control-alt-fill-hover: var(--color-fill);
+  --color-control-alt-fill-pressed: rgb(0 0 0 / 17.2%);
+  --color-control-alt-fill-disabled: var(--color-fill-quaternary);
+  --color-control-alt-stroke: transparent;
+  --color-control-alt-stroke-pressed: transparent;
+  --color-control-alt-stroke-disabled: transparent;
+  /* A disabled accent fill and the glyph on it. */
+  --color-primary-surface-disabled: var(--color-fill-quaternary);
+  --color-primary-fg-disabled: var(--color-content-fg-tertiary);
+  --alpha-primary-fg-disabled: var(--alpha-content-fg-tertiary);
+
   /* Semantic colours are the AppKit system palette, measured on macOS 26.
      Native uses them solid, for text and glyphs, never as tinted surfaces. */
   --color-success: rgb(52 199 89);
@@ -338,6 +359,7 @@
     --color-fill-tertiary: rgb(255 255 255 / 5%);
     --color-fill-quaternary: rgb(255 255 255 / 3%);
     --color-control-fill-pressed: rgb(255 255 255 / 17.2%);
+    --color-control-alt-fill-pressed: rgb(255 255 255 / 17.2%);
 
     --color-success: rgb(48 209 88);
     --color-info: rgb(0 145 255);
@@ -401,10 +423,28 @@
     --color-control-stroke-edge: rgb(0 0 0 / 16.2%);
     --control-stroke-edge-offset: -1px;
 
-    /* WinUI shifts the accent a tone per appearance, but the brand colour
-       stays as is here, with white text in both appearances. Hover and press
-       are Fluent's: the fill at 90% and 80% opacity. */
-    --color-primary-surface: var(--color-primary);
+    --spacing-checkbox: 1.25rem;
+    --color-control-alt-fill: rgb(0 0 0 / 2.4%);
+    --color-control-alt-fill-hover: rgb(0 0 0 / 5.9%);
+    --color-control-alt-fill-pressed: rgb(0 0 0 / 9.4%);
+    --color-control-alt-fill-disabled: transparent;
+    --color-control-alt-stroke: rgb(0 0 0 / 44.7%);
+    --color-control-alt-stroke-pressed: rgb(0 0 0 / 21.6%);
+    --color-control-alt-stroke-disabled: rgb(0 0 0 / 21.6%);
+    --color-primary-surface-disabled: rgb(0 0 0 / 21.6%);
+    --color-primary-fg-disabled: white;
+    --alpha-primary-fg-disabled: 1;
+
+    /* WinUI fills accent controls with a tone of the accent per appearance
+       (AccentDark1 in light, AccentLight2 in dark), which the OS supplies
+       through `src/lib/system-accent.ts`. The brand colour, used when the
+       user opts out of the system accent, is painted as is. Text on the
+       fill is white in both appearances. Hover and press are Fluent's: the
+       fill at 90% and 80% opacity. */
+    --color-primary-surface: var(
+      --system-accent-light-tone,
+      var(--color-primary)
+    );
     --color-primary-surface-hover: color-mix(
       in srgb,
       var(--color-primary-surface) 90%,
@@ -446,7 +486,31 @@
     /* In dark appearance the lit edge is the top one. */
     --control-stroke-edge-offset: 1px;
 
+    /* An unchecked Fluent box is recessed below the surface in dark. */
+    --color-control-alt-fill: rgb(0 0 0 / 10%);
+    --color-control-alt-fill-hover: rgb(255 255 255 / 4.2%);
+    --color-control-alt-fill-pressed: rgb(255 255 255 / 7%);
+    --color-control-alt-stroke: rgb(255 255 255 / 54.4%);
+    --color-control-alt-stroke-pressed: rgb(255 255 255 / 15.8%);
+    --color-control-alt-stroke-disabled: rgb(255 255 255 / 15.8%);
+    --color-primary-surface-disabled: rgb(255 255 255 / 15.8%);
+    --color-primary-fg-disabled: rgb(255 255 255 / 53%);
+    --alpha-primary-fg-disabled: 0.53;
+
     --color-primary-stroke-edge: rgb(0 0 0 / 14%);
+    --color-primary-surface: var(
+      --system-accent-dark-tone,
+      var(--color-primary)
+    );
+    /* Black on the OS accent tone, as WinUI paints it; white on the brand
+       colour. Pressed text is the same colour at half strength. */
+    --color-primary-fg: var(--system-accent-dark-tone-fg, white);
+    --color-primary-fg-pressed: color-mix(
+      in srgb,
+      var(--color-primary-fg) 50%,
+      transparent
+    );
+    --alpha-primary-fg-pressed: 0.5;
 
     --color-focus-ring: white;
     --color-focus-ring-inner: rgb(0 0 0 / 70%);

@@ -68,6 +68,10 @@ const fillTokens = [
   "bg-control-fill-disabled",
   "bg-control-subtle-hover",
   "bg-control-subtle-pressed",
+  "bg-control-alt-fill",
+  "bg-control-alt-fill-hover",
+  "bg-control-alt-fill-pressed",
+  "bg-control-alt-fill-disabled",
 ];
 
 const spacingTokens = [

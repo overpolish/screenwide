@@ -4,16 +4,41 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
-type SystemAccent = { blue: number; green: number; red: number };
+type Rgb = [red: number, green: number, blue: number];
+type SystemAccent = {
+  blue: number;
+  green: number;
+  red: number;
+  /** The tones the platform's own controls fill with per appearance, where
+   * those differ from the accent (Windows). Absent on macOS. */
+  tones?: { dark: Rgb; light: Rgb };
+};
 
-// Removing the property lets the brand fallback in `--color-primary` apply.
+const rgb = (channels: Rgb) => `rgb(${channels.join(" ")})`;
+
+// Removing the properties lets the brand fallback in `--color-primary` and
+// the platform's fill tokens apply.
 const applySystemAccent = (accent: SystemAccent | null) => {
   const { style } = document.documentElement;
+  const tones = accent?.tones;
   if (accent) {
-    const channels = [accent.red, accent.green, accent.blue].join(" ");
-    style.setProperty("--system-accent", `rgb(${channels})`);
+    style.setProperty(
+      "--system-accent",
+      rgb([accent.red, accent.green, accent.blue]),
+    );
   } else {
     style.removeProperty("--system-accent");
+  }
+  if (tones) {
+    style.setProperty("--system-accent-light-tone", rgb(tones.light));
+    style.setProperty("--system-accent-dark-tone", rgb(tones.dark));
+    // WinUI sets black text on its dark-appearance accent tone; the brand
+    // colour keeps white text, so this only exists while the OS tones do.
+    style.setProperty("--system-accent-dark-tone-fg", "black");
+  } else {
+    style.removeProperty("--system-accent-light-tone");
+    style.removeProperty("--system-accent-dark-tone");
+    style.removeProperty("--system-accent-dark-tone-fg");
   }
 };
 

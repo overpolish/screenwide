@@ -64,10 +64,25 @@ pub fn preference_changed(app: &AppHandle, preference: AccentPreference) {
 
 /// The operating system accent colour, in sRGB.
 #[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemAccent {
   red: u8,
   green: u8,
   blue: u8,
+  /// The tones the platform's own controls paint with, where those differ
+  /// from the accent itself. WinUI fills an accent button one tone darker in
+  /// light appearance and two tones lighter in dark; macOS uses the accent
+  /// as is.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  tones: Option<AccentTones>,
+}
+
+/// Per-appearance accent tones as sRGB `[red, green, blue]`.
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccentTones {
+  light: [u8; 3],
+  dark: [u8; 3],
 }
 
 impl SystemAccent {

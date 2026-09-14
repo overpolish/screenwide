@@ -11,17 +11,21 @@ import {
 
 import { cn, focusStyles, groupFocusVisible } from "../../../lib/styling";
 
-// A native checkbox: a 16px box on the fill ladder, the accent with a white
-// bold check when selected, a 13pt label in the label colour. No hover; a
-// press stacks the secondary fill behind the box; disabled dims both parts.
+// A native checkbox: the inset-control box (16px plain fill on macOS, 20px
+// with a strong hairline stroke in Fluent), the accent with a white check
+// when selected, a body label. Every state colour is a platform token: on
+// macOS hover equals rest and the strokes are transparent; Fluent darkens
+// the box on hover and press and fades a checked box on hover. Disabled
+// dims both parts. The stroke is an inset ring so it composes with the
+// focus ring and adds no size.
 const boxStyles = [
-  "relative isolate flex size-icon shrink-0 transform-gpu items-center justify-center rounded-sm bg-fill text-primary-fg transition-[background-color,box-shadow]",
-  "after:pointer-events-none after:absolute after:inset-0 after:-z-10 after:rounded-[inherit] after:transition-colors after:content-['']",
-  "group-data-[pressed]:after:bg-fill-secondary",
-  "group-data-[selected]:bg-primary-surface group-data-[selected]:group-data-[pressed]:bg-primary-surface-pressed group-data-[selected]:group-data-[focus-visible]:ring-offset-2 group-data-[selected]:group-data-[focus-visible]:ring-offset-content",
-  "group-data-[indeterminate]:bg-primary-surface group-data-[indeterminate]:group-data-[pressed]:bg-primary-surface-pressed",
-  "group-data-[disabled]:bg-fill-quaternary group-data-[disabled]:text-content-fg-tertiary",
-  "group-data-[disabled]:group-data-[selected]:bg-fill-quaternary group-data-[disabled]:group-data-[indeterminate]:bg-fill-quaternary",
+  "relative flex size-checkbox shrink-0 transform-gpu items-center justify-center rounded-sm bg-control-alt-fill text-primary-fg inset-ring inset-ring-control-alt-stroke transition-[background-color,box-shadow]",
+  "group-data-[hovered]:bg-control-alt-fill-hover group-data-[pressed]:bg-control-alt-fill-pressed group-data-[pressed]:inset-ring-control-alt-stroke-pressed",
+  "group-data-[selected]:bg-primary-surface group-data-[selected]:inset-ring-transparent windows:group-data-[selected]:group-data-[hovered]:bg-primary-surface-hover group-data-[selected]:group-data-[pressed]:bg-primary-surface-pressed group-data-[selected]:group-data-[pressed]:text-primary-fg-pressed group-data-[selected]:group-data-[focus-visible]:ring-offset-2 group-data-[selected]:group-data-[focus-visible]:ring-offset-content",
+  "group-data-[indeterminate]:bg-primary-surface group-data-[indeterminate]:inset-ring-transparent windows:group-data-[indeterminate]:group-data-[hovered]:bg-primary-surface-hover group-data-[indeterminate]:group-data-[pressed]:bg-primary-surface-pressed group-data-[indeterminate]:group-data-[pressed]:text-primary-fg-pressed",
+  "group-data-[disabled]:bg-control-alt-fill-disabled group-data-[disabled]:inset-ring-control-alt-stroke-disabled group-data-[disabled]:text-primary-fg-disabled",
+  "group-data-[disabled]:group-data-[selected]:bg-primary-surface-disabled group-data-[disabled]:group-data-[selected]:inset-ring-control-alt-stroke-disabled",
+  "group-data-[disabled]:group-data-[indeterminate]:bg-primary-surface-disabled group-data-[disabled]:group-data-[indeterminate]:inset-ring-control-alt-stroke-disabled",
   "[&_svg]:size-icon-mini [&_svg]:stroke-2 [&_svg]:transform-gpu",
   focusStyles,
   groupFocusVisible,
@@ -45,7 +49,7 @@ export const Checkbox = ({
           rather than the block's middle. */}
       <AriaCheckboxButton
         className={cn(
-          "group inline-flex cursor-default gap-control-inset text-body text-content-fg outline-none data-[disabled]:text-content-fg-tertiary",
+          "group inline-flex cursor-default gap-control-inset text-body text-content-fg outline-none data-[disabled]:text-control-fg-disabled",
           description ? "items-start" : "items-center",
         )}
       >
