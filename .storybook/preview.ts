@@ -13,12 +13,25 @@ import type { Decorator, Preview } from "@storybook/react-vite";
 import "../src/index.css";
 import "./styles.css";
 
-if (navigator.userAgent.includes("Windows")) {
-  document.documentElement.dataset.platform = "windows";
-}
-
 const isNativePreview =
   new URLSearchParams(window.location.search).get("screenwide-native") === "1";
+
+// The skin is a token layer keyed off `data-platform`, as the app sets it in
+// `main.tsx`. Stories default to the host OS so a reviewer sees their own
+// platform first, and the toolbar switches to the other one. The native
+// preview runs inside the real app shell, so it always takes the host.
+type Platform = "macos" | "windows";
+const hostPlatform: Platform = navigator.userAgent.includes("Windows")
+  ? "windows"
+  : "macos";
+
+const applyPlatform = (platform: Platform) => {
+  if (platform === "windows") {
+    document.documentElement.dataset.platform = "windows";
+  } else {
+    delete document.documentElement.dataset.platform;
+  }
+};
 
 // The theme decorator applies its class only once the manager has sent the
 // globals, so every reload rendered light first and then flipped. The iframe
@@ -28,6 +41,10 @@ if (!isNativePreview) {
   const globals = new URLSearchParams(window.location.search).get("globals");
   const theme = /(?:^|;)theme:(\w+)/.exec(globals ?? "")?.[1] ?? "dark";
   document.documentElement.classList.add(theme === "light" ? "light" : "dark");
+  const platform = /(?:^|;)platform:(\w+)/.exec(globals ?? "")?.[1];
+  applyPlatform(
+    platform === "windows" || platform === "macos" ? platform : hostPlatform,
+  );
 }
 
 if (isNativePreview) {
@@ -42,6 +59,7 @@ if (isNativePreview) {
 
   synchronizeNativeTheme(systemDarkMode);
   systemDarkMode.addEventListener("change", synchronizeNativeTheme);
+  applyPlatform(hostPlatform);
   // The native preview runs inside the app shell, so the OS accent is real.
   synchronizeSystemAccent();
 }
@@ -80,6 +98,23 @@ const previewHot = (
 previewHot?.dispose(disposeKeyboardNavigation);
 
 const preview: Preview = {
+  globalTypes: isNativePreview
+    ? {}
+    : {
+        platform: {
+          description: "Platform skin",
+          toolbar: {
+            dynamicTitle: true,
+            icon: hostPlatform === "windows" ? "windows" : "apple",
+            items: [
+              { icon: "apple", title: "macOS", value: "macos" },
+              { icon: "windows", title: "Windows", value: "windows" },
+            ],
+            title: "Platform",
+          },
+        },
+      },
+  initialGlobals: isNativePreview ? {} : { platform: hostPlatform },
   parameters: {
     controls: {
       matchers: {
@@ -99,10 +134,16 @@ const preview: Preview = {
   tags: ["autodocs"],
 };
 
+const withPlatform: Decorator = (Story, { globals }) => {
+  applyPlatform(globals.platform === "windows" ? "windows" : "macos");
+  return Story();
+};
+
 export const decorators = (
   isNativePreview
     ? []
     : [
+        withPlatform,
         withThemeByClassName({
           defaultTheme: "dark",
           parentSelector: "html",

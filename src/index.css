@@ -16,6 +16,10 @@
 }
 
 @custom-variant dark (&:is(.dark *));
+/* The Windows skin. `main.tsx` stamps `data-platform` on the document and the
+   Storybook toolbar toggles it. Token values swap in `@layer themes`; this
+   variant is for the few places a component is shaped differently. */
+@custom-variant windows (&:is([data-platform="windows"] *));
 
 /* The label tiers also carry their alpha for icons, which apply it to the
    whole glyph rather than per stroke (see the `.lucide` rule). Opaque colours
