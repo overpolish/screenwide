@@ -77,12 +77,16 @@ pub struct SystemAccent {
   tones: Option<AccentTones>,
 }
 
-/// Per-appearance accent tones as sRGB `[red, green, blue]`.
+/// Per-appearance accent tones as sRGB `[red, green, blue]`: the fill a
+/// control takes, and the tone accent-coloured text is set in, which WinUI
+/// pushes further from the surface than the fill (`AccentTextFillColor`).
 #[derive(Clone, Copy, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AccentTones {
   light: [u8; 3],
   dark: [u8; 3],
+  light_text: [u8; 3],
+  dark_text: [u8; 3],
 }
 
 impl SystemAccent {

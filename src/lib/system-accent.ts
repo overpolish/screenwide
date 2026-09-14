@@ -9,9 +9,10 @@ type SystemAccent = {
   blue: number;
   green: number;
   red: number;
-  /** The tones the platform's own controls fill with per appearance, where
-   * those differ from the accent (Windows). Absent on macOS. */
-  tones?: { dark: Rgb; light: Rgb };
+  /** The tones the platform's own controls fill with per appearance, and
+   * the ones it sets accent text in, where those differ from the accent
+   * (Windows). Absent on macOS. */
+  tones?: { dark: Rgb; darkText: Rgb; light: Rgb; lightText: Rgb };
 };
 
 const rgb = (channels: Rgb) => `rgb(${channels.join(" ")})`;
@@ -32,12 +33,16 @@ const applySystemAccent = (accent: SystemAccent | null) => {
   if (tones) {
     style.setProperty("--system-accent-light-tone", rgb(tones.light));
     style.setProperty("--system-accent-dark-tone", rgb(tones.dark));
+    style.setProperty("--system-accent-light-text", rgb(tones.lightText));
+    style.setProperty("--system-accent-dark-text", rgb(tones.darkText));
     // WinUI sets black text on its dark-appearance accent tone; the brand
     // colour keeps white text, so this only exists while the OS tones do.
     style.setProperty("--system-accent-dark-tone-fg", "black");
   } else {
     style.removeProperty("--system-accent-light-tone");
     style.removeProperty("--system-accent-dark-tone");
+    style.removeProperty("--system-accent-light-text");
+    style.removeProperty("--system-accent-dark-text");
     style.removeProperty("--system-accent-dark-tone-fg");
   }
 };

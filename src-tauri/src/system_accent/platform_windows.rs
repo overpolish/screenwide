@@ -8,8 +8,9 @@ use windows::UI::ViewManagement::{UIColorType, UISettings};
 use super::{AccentTones, SystemAccent};
 
 /// Windows always exposes an accent colour; it has no Multicolour setting.
-/// The tones are the ones WinUI's accent fills use: `AccentDark1` in light
-/// appearance and `AccentLight2` in dark.
+/// The tones are the ones WinUI uses: fills take `AccentDark1` in light
+/// appearance and `AccentLight2` in dark; accent text takes `AccentDark2`
+/// and `AccentLight3`.
 pub(super) fn current() -> Option<SystemAccent> {
   let settings = UISettings::new().ok()?;
   let read = |kind: UIColorType| {
@@ -22,8 +23,15 @@ pub(super) fn current() -> Option<SystemAccent> {
   let tones = match (
     read(UIColorType::AccentDark1),
     read(UIColorType::AccentLight2),
+    read(UIColorType::AccentDark2),
+    read(UIColorType::AccentLight3),
   ) {
-    (Some(light), Some(dark)) => Some(AccentTones { light, dark }),
+    (Some(light), Some(dark), Some(light_text), Some(dark_text)) => Some(AccentTones {
+      light,
+      dark,
+      light_text,
+      dark_text,
+    }),
     _ => None,
   };
   Some(SystemAccent {

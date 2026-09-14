@@ -483,6 +483,23 @@
       --system-accent-light-tone,
       var(--color-primary)
     );
+    /* Accent-coloured text takes WinUI's text tone (AccentDark2 in light,
+       AccentLight3 in dark), which sits further from the surface than the
+       fill; the window title's gradient is built around it. */
+    --color-accent-heading: var(
+      --system-accent-light-text,
+      var(--color-primary)
+    );
+    --color-accent-heading-warm: color-mix(
+      in oklab,
+      var(--color-accent-heading),
+      white 15%
+    );
+    --color-accent-heading-vivid: color-mix(
+      in oklab,
+      var(--color-accent-heading),
+      black 10%
+    );
     --color-primary-surface-hover: color-mix(
       in srgb,
       var(--color-primary-surface) 90%,
@@ -549,6 +566,10 @@
     --color-primary-stroke-bottom: rgb(0 0 0 / 14%);
     --color-primary-surface: var(
       --system-accent-dark-tone,
+      var(--color-primary)
+    );
+    --color-accent-heading: var(
+      --system-accent-dark-text,
       var(--color-primary)
     );
     /* Black on the OS accent tone, as WinUI paints it; white on the brand
