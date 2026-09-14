@@ -42,7 +42,7 @@ export function ToolPanel({
   const Panel = toolPanels[tool];
 
   return (
-    <section className="window-surface flex w-full flex-col gap-section overflow-hidden rounded-window p-window-inset text-content-fg">
+    <section className="window-surface flex w-full flex-col gap-section overflow-hidden rounded-window p-window-inset text-content-fg windows:inset-ring windows:inset-ring-popover-stroke">
       <Panel workspace={workspace} />
     </section>
   );

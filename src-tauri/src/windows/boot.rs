@@ -86,6 +86,19 @@ pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
     hide_instead_of_close(app, label);
   }
 
+  // The tool panels are floating flyouts like the recording bar, but have no
+  // initialiser of their own: they are only ever shown. Their corners are
+  // rounded here, once, with the rest of the boot.
+  #[cfg(target_os = "windows")]
+  for label in [
+    WindowLabel::ToolPanelRecording,
+    WindowLabel::ToolPanelScreenshot,
+  ] {
+    if let Some(window) = app.get_webview_window(label.as_str()) {
+      super::platform::round_corners(&window)?;
+    }
+  }
+
   // Predefined pages start hidden, including panels converted lazily later.
   #[cfg(target_os = "macos")]
   for window in app.webview_windows().into_values() {
