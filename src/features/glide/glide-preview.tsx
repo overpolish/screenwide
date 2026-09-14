@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Lock } from "lucide-react";
 import { motion, useAnimate } from "motion/react";
 import { useEffect } from "react";
 
@@ -115,6 +116,7 @@ const describeDestination = (
 export function GlidePreview({
   fit,
   iconSrc,
+  locked = false,
   neutralFill = false,
   pending,
   pulse,
@@ -128,6 +130,11 @@ export function GlidePreview({
   /** Counts the rests completed; each one plays the ready breath. */
   pulse: number;
   region: GlideRegion | null;
+  /**
+   * The gesture found a window its platform will not let us place. There is no
+   * session behind this: the preview says only that, and nothing else.
+   */
+  locked?: boolean;
   /** A neutral full-window reference surface, such as the original Space. */
   neutralFill?: boolean;
 }) {
@@ -159,6 +166,21 @@ export function GlidePreview({
       { duration: 0.12, ease: "easeOut", times: [0, 0.4, 1] },
     );
   }, [animate, pulse, segment]);
+
+  // Nothing is going to move, so nothing is drawn about where to: no region
+  // fill, and no app icon naming a window that is staying put. Just the lock,
+  // centred the way the app icon is, for the beat the native side holds it.
+  if (locked) {
+    return (
+      <div
+        aria-label="This window cannot be moved"
+        className="window-surface rounded-panel relative h-full w-full overflow-hidden"
+        role="img"
+      >
+        <Lock className="pointer-events-none absolute inset-0 m-auto size-icon text-muted" />
+      </div>
+    );
+  }
 
   return (
     <div

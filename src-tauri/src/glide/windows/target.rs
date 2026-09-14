@@ -5,7 +5,7 @@
 
 use tauri::AppHandle;
 use windows::Win32::{
-  Foundation::{HWND, POINT, RECT},
+  Foundation::{ERROR_ACCESS_DENIED, HWND, POINT, RECT},
   Graphics::{
     Dwm::{DwmGetWindowAttribute, DWMWA_EXTENDED_FRAME_BOUNDS},
     Gdi::{GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTONEAREST},
@@ -16,8 +16,8 @@ use windows::Win32::{
     WindowsAndMessaging::{
       BringWindowToTop, GetForegroundWindow, GetWindowLongPtrW, GetWindowRect,
       GetWindowThreadProcessId, IsWindow, IsZoomed, SetForegroundWindow, SetWindowPos, ShowWindow,
-      ShowWindowAsync, GWL_STYLE, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_NOZORDER,
-      SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE, WS_THICKFRAME,
+      ShowWindowAsync, GWL_STYLE, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE,
+      SWP_NOZORDER, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE, WS_THICKFRAME,
     },
   },
 };
@@ -43,6 +43,7 @@ pub(super) struct WindowTarget {
   work: RECT,
   dpi: u32,
   resizable: bool,
+  movable: bool,
   was_maximized: bool,
 }
 
@@ -86,6 +87,7 @@ impl WindowTarget {
       work: info.rcWork,
       dpi,
       resizable: unsafe { GetWindowLongPtrW(hwnd, GWL_STYLE) } & WS_THICKFRAME.0 as isize != 0,
+      movable: probe_movable(hwnd),
       was_maximized: unsafe { IsZoomed(hwnd) }.as_bool(),
     })
   }
@@ -207,6 +209,11 @@ impl WindowTarget {
     self.resizable
   }
 
+  /// Whether this window will accept placement from us at all.
+  pub fn is_movable(self) -> bool {
+    self.movable
+  }
+
   fn ensure_window(self) -> Result<(), String> {
     if unsafe { IsWindow(Some(self.hwnd())) }.as_bool() {
       Ok(())
@@ -220,6 +227,38 @@ impl WindowTarget {
   }
   pub(super) fn native_hwnd(self) -> HWND {
     self.hwnd()
+  }
+}
+
+/// Asks the window whether it would take a placement, by making one that
+/// changes nothing: every flag is a "leave it alone", so a window that accepts
+/// is left exactly as it was found.
+///
+/// This is User Interface Privilege Isolation. An elevated, high-integrity
+/// window - Task Manager is the one people meet - refuses `SetWindowPos` from
+/// a medium-integrity process with `ERROR_ACCESS_DENIED`, while every read we
+/// make of it (`GetWindowRect`, the style bits, its monitor) succeeds
+/// perfectly. Nothing later in a session would notice: the tween writes,
+/// Windows declines, and the window simply never moves. So the refusal has to
+/// be asked for up front, here.
+///
+/// Any other failure is not a statement about permission - a window that has
+/// just gone away, say - and leaves the target movable, so nothing that worked
+/// before this probe existed stops working now.
+fn probe_movable(hwnd: HWND) -> bool {
+  match unsafe {
+    SetWindowPos(
+      hwnd,
+      None,
+      0,
+      0,
+      0,
+      0,
+      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE,
+    )
+  } {
+    Ok(()) => true,
+    Err(error) => error.code() != ERROR_ACCESS_DENIED.to_hresult(),
   }
 }
 

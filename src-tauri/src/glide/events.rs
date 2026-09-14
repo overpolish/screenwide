@@ -19,6 +19,12 @@ pub(super) enum GlideInputEvent {
   Start {
     session_id: u64,
   },
+  /// The gesture found a window its platform will not let us place. No
+  /// session opened; the preview only shows the lock until it fades.
+  #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
+  Locked {
+    session_id: u64,
+  },
   /// A state-machine result produced natively from a normalized input sample.
   Detection {
     detection: GlideDetection,

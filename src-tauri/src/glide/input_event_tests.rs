@@ -50,6 +50,16 @@ fn start_payload_carries_the_session_to_reveal() {
 }
 
 #[test]
+fn locked_payload_names_the_feedback_the_preview_shows() {
+  let payload = serde_json::to_value(GlideInputEvent::Locked { session_id: 12 }).unwrap();
+
+  assert_eq!(
+    payload,
+    serde_json::json!({ "sessionId": 12, "type": "locked" })
+  );
+}
+
+#[test]
 fn end_payload_carries_the_anchor_a_lift_commits_at() {
   let payload = serde_json::to_value(GlideInputEvent::End {
     anchor_x: 640.0,

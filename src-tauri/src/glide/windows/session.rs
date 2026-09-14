@@ -26,6 +26,7 @@ use crate::glide::{
   core::{GlideEffects, GlideRuntime, GlideSample},
   events, finish, finish_with_fade,
   icon::spawn_icon_lookup,
+  present_locked,
   region_rect::PlacedRegion,
 };
 
@@ -84,6 +85,19 @@ pub(super) fn begin(app: &AppHandle, input: InputKind) -> bool {
   let Some((target, pid)) = WindowTarget::at(app, anchor) else {
     return false;
   };
+  // A window Windows will not let us place has nothing to carry, so no session
+  // opens for it. The gesture still gets an answer: the preview shows the lock
+  // on the anchor and fades, holding the activity lease meanwhile.
+  if !target.is_movable() {
+    eprintln!("Windows does not allow moving this window");
+    present_locked(
+      app,
+      NEXT_SESSION_ID.fetch_add(1, Ordering::Relaxed),
+      f64::from(anchor.x),
+      f64::from(anchor.y),
+    );
+    return false;
+  }
   let Ok(original_frame) = target.frame() else {
     return false;
   };

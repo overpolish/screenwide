@@ -16,6 +16,13 @@ mod platform;
 mod core;
 
 pub(crate) use core::activity::BusyLease;
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[path = "glide/locked.rs"]
+mod locked;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) use locked::present_locked;
+
 #[path = "glide/events.rs"]
 mod events;
 #[path = "glide/settings.rs"]
@@ -90,6 +97,14 @@ fn begin_logical_on_main(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Re
 
 #[cfg(target_os = "windows")]
 fn begin_physical(app: &AppHandle, session_id: u64, x: i32, y: i32) -> Result<(), String> {
+  place_preview_physical(app, x, y)?;
+  emit(app, GlideInputEvent::Start { session_id })
+}
+
+/// Puts the still-hidden preview on the anchor without saying what it is about
+/// to show. A session's start and the lock feedback both begin here.
+#[cfg(target_os = "windows")]
+fn place_preview_physical(app: &AppHandle, x: i32, y: i32) -> Result<(), String> {
   let window = app
     .get_webview_window(WindowLabel::Glide.as_str())
     .ok_or_else(|| "The Glide preview window is unavailable".to_owned())?;
@@ -107,8 +122,7 @@ fn begin_physical(app: &AppHandle, session_id: u64, x: i32, y: i32) -> Result<()
   let origin = preview_origin(app, PhysicalPosition::new(x, y), size)?;
   window
     .set_position(origin)
-    .map_err(|error| error.to_string())?;
-  emit(app, GlideInputEvent::Start { session_id })
+    .map_err(|error| error.to_string())
 }
 
 #[cfg(target_os = "windows")]

@@ -12,6 +12,7 @@ import { type GlideRegion, sameRegion } from "./glide-regions";
 type GlideInputEvent =
   | { detection: GlideDetection; type: "detection" }
   | { anchorX: number; anchorY: number; cancelled: boolean; type: "end" }
+  | { sessionId: number; type: "locked" }
   | { sessionId: number; type: "start" };
 
 /** The glided app's icon, resolved off the gesture's path and sent once. */
@@ -23,6 +24,9 @@ type GlideFitEvent = GlideFit & { sessionId: number };
 export function GlideWindow() {
   const [fit, setFit] = useState<GlideFit | null>(null);
   const [iconSrc, setIconSrc] = useState<null | string>(null);
+  // No session is running behind this one: it is the whole of what the native
+  // side had to say about a window it cannot place.
+  const [locked, setLocked] = useState(false);
   const [pending, setPending] = useState<GlideAction | null>(null);
   const [readyPulse, setReadyPulse] = useState(0);
   const [region, setRegion] = useState<GlideRegion | null>(null);
@@ -49,6 +53,7 @@ export function GlideWindow() {
       moved = null;
       setFit(null);
       setIconSrc(null);
+      setLocked(false);
       setPending(null);
       setRegion(null);
     };
@@ -56,6 +61,14 @@ export function GlideWindow() {
       if (payload.type === "start") {
         sessionId = payload.sessionId;
         clear();
+        return;
+      }
+      // The lock replaces everything a session would have shown, so it is set
+      // after the clear rather than alongside it.
+      if (payload.type === "locked") {
+        sessionId = payload.sessionId;
+        clear();
+        setLocked(true);
         return;
       }
       if (payload.type === "end") {
@@ -126,6 +139,7 @@ export function GlideWindow() {
       <GlidePreview
         fit={fit}
         iconSrc={iconSrc}
+        locked={locked}
         pending={pending}
         pulse={readyPulse}
         region={region}

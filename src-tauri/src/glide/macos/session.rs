@@ -16,7 +16,7 @@ use super::{
   tween::WindowTarget,
 };
 use crate::glide::core::GlideRuntime;
-use crate::glide::{begin_logical, finish, icon::spawn_icon_lookup};
+use crate::glide::{begin_logical, finish, icon::spawn_icon_lookup, present_locked};
 
 #[path = "session/access.rs"]
 mod access;
@@ -157,6 +157,22 @@ pub(super) fn begin_if_titlebar(
   let Some((target, original_frame, pid)) = target_at(app, anchor) else {
     return false;
   };
+  // An application that refuses to have its window positioned has nothing to
+  // glide, so no session opens for it - the cursor is never pinned and nothing
+  // is raised. The gesture still gets an answer: the preview shows the lock on
+  // the anchor and fades, holding the activity lease meanwhile. `animate_to`
+  // keeps its own check as the backstop for a window that only starts refusing
+  // once a session is already under way.
+  if !target.is_movable() {
+    eprintln!("The application does not allow moving this window");
+    present_locked(
+      app,
+      NEXT_SESSION_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+      anchor.x,
+      anchor.y,
+    );
+    return false;
+  }
   let monitor_mode = native_settings::is_down(native_settings::snapshot().monitors_modifier);
   let monitors = if monitor_mode {
     let Some(selection) = monitors::capture(app, anchor) else {

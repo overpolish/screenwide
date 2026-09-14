@@ -122,3 +122,13 @@ export const MinimizeOverBottomRow: Story = {
 export const WithAppIcon: Story = {
   args: { iconSrc: sampleIcon },
 };
+
+/**
+ * A window the platform will not let us place - an elevated window on Windows,
+ * an application that refuses its position attribute on macOS. No session ran,
+ * so there is no destination and no app to name: the lock is the whole answer,
+ * and it fades on its own.
+ */
+export const Locked: Story = {
+  args: { iconSrc: sampleIcon, locked: true, region: null },
+};
