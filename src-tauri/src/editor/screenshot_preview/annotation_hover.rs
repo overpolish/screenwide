@@ -13,17 +13,51 @@ use super::annotation::{hover_width_points, AnnotationHover};
 use super::state::PreviewManager;
 
 impl PreviewManager {
+  /// The arrow the halo is on, by name. The pulse reports an index into the
+  /// layer the grips were published for; keyboard shortcuts live in React,
+  /// which knows arrows only by their id.
+  pub(super) fn hovered_annotation_id(&self) -> Option<String> {
+    let hover = self.annotation_hover?;
+    let pane_index = self.annotation_pane_index?;
+    Some(
+      self
+        .annotations_for(pane_index)?
+        .get(hover.index)?
+        .id
+        .clone(),
+    )
+  }
+
+  /// Lets the halo go, reporting whether there was one to let go of. Putting
+  /// the tool down retires it: the pointer may never move again to do it.
+  pub(super) fn clear_annotation_hover(&mut self) -> bool {
+    self.annotation_hover.take().is_some()
+  }
+
   /// One report from the native hover pulse. `index` is the arrow under the
   /// pointer, or negative for none; `image_points` is how wide the layer's
   /// picture is drawn on screen, which converts the halo's points into the
   /// canvas pixels the shader measures its distances in.
-  pub(crate) fn handle_annotation_hover(&mut self, index: i32, progress: f64, image_points: f64) {
+  ///
+  /// The answer is the arrow the pointer has moved onto, and only when that
+  /// changed: every frame of the pulse widens the halo, but the arrow under
+  /// it is the same one, and React is told about the arrow rather than the
+  /// animation.
+  pub(crate) fn handle_annotation_hover(
+    &mut self,
+    index: i32,
+    progress: f64,
+    image_points: f64,
+  ) -> Option<Option<String>> {
     let hover = self.annotation_hover_for(index, progress, image_points);
     if hover == self.annotation_hover {
-      return;
+      return None;
     }
+    let previous = self.hovered_annotation_id();
     self.annotation_hover = hover;
     let _ = self.present_batch();
+    let current = self.hovered_annotation_id();
+    (previous != current).then_some(current)
   }
 
   fn annotation_hover_for(

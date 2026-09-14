@@ -3,7 +3,7 @@
 
 //! The compositor's screenshot annotations, through a real Metal dispatch.
 
-use crate::screenshots::{
+use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
 };
 
@@ -162,7 +162,10 @@ fn cases() -> Vec<ArrowCase> {
       ),
       name: "a-straight",
       size: (960, 640),
-      zooms: &[("head", (820, 200, 140, 90)), ("middle", (440, 250, 120, 50))],
+      zooms: &[
+        ("head", (820, 200, 140, 90)),
+        ("middle", (440, 250, 120, 50)),
+      ],
     },
     ArrowCase {
       annotation: arrow(
@@ -174,7 +177,10 @@ fn cases() -> Vec<ArrowCase> {
       ),
       name: "b-nearly-straight",
       size: (960, 640),
-      zooms: &[("head", (820, 200, 140, 90)), ("middle", (440, 250, 120, 50))],
+      zooms: &[
+        ("head", (820, 200, 140, 90)),
+        ("middle", (440, 250, 120, 50)),
+      ],
     },
     ArrowCase {
       annotation: arrow(
@@ -186,10 +192,7 @@ fn cases() -> Vec<ArrowCase> {
       ),
       name: "c-curved",
       size: (960, 640),
-      zooms: &[
-        ("head", (520, 20, 140, 90)),
-        ("notch", (70, 440, 90, 110)),
-      ],
+      zooms: &[("head", (520, 20, 140, 90)), ("notch", (70, 440, 90, 110))],
     },
     ArrowCase {
       annotation: arrow(
@@ -241,13 +244,19 @@ fn cases() -> Vec<ArrowCase> {
       annotation: arrow(HAIRPIN.0, HAIRPIN.1, HAIRPIN.2, 6.0, AnnotationHead::End),
       name: "g-hairpin",
       size: HAIRPIN_SIZE,
-      zooms: &[("apex", (2000, 1100, 140, 200)), ("bend", (1900, 1010, 150, 120))],
+      zooms: &[
+        ("apex", (2000, 1100, 140, 200)),
+        ("bend", (1900, 1010, 150, 120)),
+      ],
     },
     ArrowCase {
       annotation: arrow(CUSP.0, CUSP.1, CUSP.2, 6.0, AnnotationHead::End),
       name: "h-near-cusp",
       size: CUSP_SIZE,
-      zooms: &[("apex", (690, 460, 90, 90)), ("throat", (620, 780, 180, 140))],
+      zooms: &[
+        ("apex", (690, 460, 90, 90)),
+        ("throat", (620, 780, 180, 140)),
+      ],
     },
   ]
 }
@@ -262,10 +271,7 @@ const HAIRPIN: (AnnotationPoint, AnnotationPoint, AnnotationPoint) = (
     x: 4200.0,
     y: 900.0,
   },
-  AnnotationPoint {
-    x: 0.0,
-    y: 2100.0,
-  },
+  AnnotationPoint { x: 0.0, y: 2100.0 },
 );
 /// A near-cusp: the two tips almost touch and the control is more than ten
 /// chords away, so |B'| very nearly falls to nothing while `a - 2b + c` is
@@ -379,10 +385,8 @@ fn shaft_offset(
   )
 }
 
-/// The head detached from the shaft because the shaft itself was solved in
-/// the wrong place, not because the head was misplaced: the head's base sits
-/// on the curve by construction. So the property worth holding is that the
-/// ink follows the curve, right up to where the head takes over.
+/// The shaft should follow its quadratic centreline up to the point where a
+/// head takes over.
 #[test]
 fn the_shaft_stays_centred_on_its_curve() {
   let curves = [
@@ -543,3 +547,7 @@ fn the_stroke_edge_is_feathered() {
     "the shaft never reaches full colour"
   );
 }
+
+#[cfg(test)]
+#[path = "platform_macos_annotation_regressions.rs"]
+mod annotation_regressions;

@@ -10,9 +10,9 @@
 /// retained workspace scene, so it is a fixed array rather than a pointer.
 #define SCREENWIDE_MAX_ANNOTATIONS 32
 
-/// One drawn mark, in the layout of Rust's `NativeAnnotation` and Metal's
-/// `AnnotationUniforms`. Points are in the source's own pixel space; the
-/// shader maps them through the canvas' image placement. Every member is
+/// One retained mark, matching Rust's `NativeAnnotation`. Points stay in
+/// source pixels; the binding step prepares draw geometry for the current
+/// canvas placement. Every member is
 /// four bytes wide, so the struct packs the same way everywhere.
 typedef struct {
   /// Zero is an arrow. The remaining shapes arrive with their tools.
@@ -33,13 +33,13 @@ typedef struct {
   float hover;
 } ScreenwideAnnotation;
 _Static_assert(sizeof(ScreenwideAnnotation) == 60,
-               "ScreenwideAnnotation ABI must match Rust and Metal");
+               "ScreenwideAnnotation ABI must match Rust");
 _Static_assert(offsetof(ScreenwideAnnotation, color) == 16,
-               "ScreenwideAnnotation.color ABI must match Rust and Metal");
+               "ScreenwideAnnotation.color ABI must match Rust");
 _Static_assert(offsetof(ScreenwideAnnotation, p0) == 32,
-               "ScreenwideAnnotation.p0 ABI must match Rust and Metal");
+               "ScreenwideAnnotation.p0 ABI must match Rust");
 _Static_assert(offsetof(ScreenwideAnnotation, hover) == 56,
-               "ScreenwideAnnotation.hover ABI must match Rust and Metal");
+               "ScreenwideAnnotation.hover ABI must match Rust");
 
 /// One layer's marks. `count` may be zero; the array is still valid memory,
 /// so the kernels never bind a nil buffer.

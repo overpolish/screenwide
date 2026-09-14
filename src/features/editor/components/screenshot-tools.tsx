@@ -106,6 +106,7 @@ export function useScreenshotTools({
           label="Arrow"
           name="Draw an arrow"
           onSelectedChange={chooseArrowTool}
+          shortcut="A"
         >
           <ArrowUpRight />
         </PreviewToolToggle>

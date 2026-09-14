@@ -3,6 +3,7 @@
 
 import { RefObject, useEffect, useRef } from "react";
 
+import { AnnotationStyle } from "./annotations";
 import {
   layoutScreenshotPreviewSurface,
   refreshScreenshotPreviewSources,
@@ -53,6 +54,7 @@ let sessionSequence = 0;
  * every settings change is a single GPU pass with no pixels crossing IPC.
  */
 export function useScreenshotPreviewSurface({
+  annotationDefaults,
   annotationTool,
   artifactId,
   canvasRef,
@@ -60,6 +62,7 @@ export function useScreenshotPreviewSurface({
   isEditorSuspended = false,
   isEnabled,
   onAnnotationChange,
+  onAnnotationHover,
   onPaneFitChange,
   onSelectionChange,
   onSelectionGesture,
@@ -75,6 +78,10 @@ export function useScreenshotPreviewSurface({
   artifactId: number;
   canvasRef: RefObject<HTMLElement | null>;
   isEnabled: boolean;
+  /** The dress the next fresh arrow is drawn in, when the editor has settled
+   * on one. It rides along with the layout so the native tool can draw a new
+   * arrow in it without a round trip of its own. */
+  annotationDefaults?: AnnotationStyle | null;
   /** The annotation tool in hand, when one is. */
   annotationTool?: "arrow" | "select";
   interactionOutput?: ScreenshotWorkspaceOutputSettings;
@@ -89,6 +96,8 @@ export function useScreenshotPreviewSurface({
   isEditorSuspended?: boolean;
   /** A finished arrow gesture: the layer's whole list, and what is chosen. */
   onAnnotationChange?: (event: ScreenshotAnnotationChangeEvent) => void;
+  /** Which mark the halo is on, or null for none. */
+  onAnnotationHover?: (annotationId: string | null) => void;
   /** How small the workspace was drawn to fit the pane, which the toolbar
    * turns into its zoom ceiling. */
   onPaneFitChange?: (fit: PreviewPaneFit) => void;
@@ -124,8 +133,12 @@ export function useScreenshotPreviewSurface({
   onSelectionChangeRef.current = onSelectionChange;
   const onAnnotationChangeRef = useRef(onAnnotationChange);
   onAnnotationChangeRef.current = onAnnotationChange;
+  const onAnnotationHoverRef = useRef(onAnnotationHover);
+  onAnnotationHoverRef.current = onAnnotationHover;
   const annotationToolRef = useRef(annotationTool);
   annotationToolRef.current = annotationTool;
+  const annotationDefaultsRef = useRef(annotationDefaults);
+  annotationDefaultsRef.current = annotationDefaults;
   const selectedAnnotationIdRef = useRef(selectedAnnotationId);
   selectedAnnotationIdRef.current = selectedAnnotationId;
   const selectionRef = useRef(selection);
@@ -176,6 +189,7 @@ export function useScreenshotPreviewSurface({
   useScreenshotPreviewEvents({
     isEnabled,
     onAnnotationChangeRef,
+    onAnnotationHoverRef,
     onSelectionChangeRef,
     onSelectionGestureRef,
     onZoomChangeRef,
@@ -269,6 +283,7 @@ export function useScreenshotPreviewSurface({
           // dedupe on the session makes the first layout of every session
           // reach the surface.
           const nextLayout = JSON.stringify({
+            annotationDefaults: annotationDefaultsRef.current,
             annotationTool: annotationToolRef.current,
             backdrop,
             // A suspended editor stays enabled and keeps its transform;
@@ -294,6 +309,7 @@ export function useScreenshotPreviewSurface({
           if (nextLayout !== lastLayout) {
             lastLayout = nextLayout;
             pendingLayout = {
+              annotationDefaults: annotationDefaultsRef.current,
               annotationTool: annotationToolRef.current,
               backdrop,
               fitWidth: resizeFitWidth(
@@ -338,6 +354,7 @@ export function useScreenshotPreviewSurface({
   useEffect(() => {
     measureRef.current();
   }, [
+    annotationDefaults,
     annotationTool,
     outputKey,
     paneCount,

@@ -71,6 +71,9 @@ export type GlideSettings = {
 
 export type GeneralSettings = {
   accent: "screenwide" | "system";
+  /** Colours the annotation tools were given that none of their presets
+   * offers, newest last. */
+  annotationColors: string[];
   /** Backgrounds saved from the editor's background picker. */
   backgroundPresets: BackgroundPreset[];
   launchAtLogin: boolean;

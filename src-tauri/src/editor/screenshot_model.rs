@@ -39,7 +39,17 @@ impl ScreenshotWorkspaceOutputSettings {
       .items
       .iter()
       .find(|candidate| candidate.id == id)
-      .map_or_else(|| self.canvas.clone(), |candidate| candidate.output.clone());
+      .map_or_else(
+        || {
+          // A layer the workspace holds no entry for takes the canvas as its
+          // template, and a template carries no marks: they were drawn on a
+          // layer, never on the canvas behind it.
+          let mut canvas = self.canvas.clone();
+          canvas.annotations.clear();
+          canvas
+        },
+        |candidate| candidate.output.clone(),
+      );
     output.background_color = self.canvas.background_color.clone();
     output.background_image_path = self.canvas.background_image_path.clone();
     output.background_type = self.canvas.background_type.clone();

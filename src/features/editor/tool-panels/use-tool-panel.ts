@@ -8,7 +8,11 @@ import {
 } from "@tauri-apps/api/window";
 import { useCallback } from "react";
 
-import { hidePopupPanel, showPopupPanel } from "../../popup-panel/api";
+import {
+  hidePopupPanel,
+  movePopupPanel,
+  showPopupPanel,
+} from "../../popup-panel/api";
 import {
   initialToolPanelHeight,
   popupPanelSpacing,
@@ -88,6 +92,27 @@ export function useToolPanel(workspace: EditorKind) {
   const openPanel = useCallback(
     async (tool: ToolPanelKind, anchor: DOMRect, fitsView: boolean) => {
       const id = toolPanelId(tool);
+      const current = activePopupPanel(usePopupPanelStore.getState(), panel);
+      // Already showing exactly these controls. Showing them again would size
+      // the window back to the height a panel opens at before it has been
+      // measured, and the panel window only measures itself when the controls
+      // it holds change - so a second open of the same panel would leave the
+      // window at that guess. It is a move, and the one-time growth below has
+      // already happened.
+      if (
+        current?.id === id &&
+        current.content.kind === "tool" &&
+        current.content.tool === tool &&
+        current.content.workspace === workspace
+      ) {
+        const bounds = previewViewport()?.getBoundingClientRect() ?? anchor;
+        await movePopupPanel(
+          getCurrentWindow().label,
+          panelOffset(bounds),
+          panel,
+        ).catch(() => undefined);
+        return;
+      }
       if (fitsView) {
         const viewport = previewViewport();
         await fitDuringResize(toolPanelGutter, () =>

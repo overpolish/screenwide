@@ -11,13 +11,12 @@ use super::ffi::{
 };
 use super::native_types::{NativeWorkspaceLayer, RecordingWorkspaceLayer};
 use super::RecordingPreviewSurface;
+use crate::editor::annotations::native::native_annotations;
 use crate::editor::{
   cursor_effects::{GpuArtwork, NativeGpuArtwork, NativeGpuCursor},
   media_preview, CameraOverlaySettings,
 };
-use crate::screenshots::{
-  native_annotations, native_canvas, ScreenshotOutputSettings, StillOverlay,
-};
+use crate::screenshots::{native_canvas, ScreenshotOutputSettings, StillOverlay};
 
 impl RecordingPreviewSurface {
   /// Presents a retained recording scene with explicit per-layer placements.
@@ -90,7 +89,7 @@ impl RecordingPreviewSurface {
         camera_rgba,
         camera_pixels,
         overlay,
-        annotations: native_annotations(&layer.settings),
+        annotations: native_annotations(&layer.settings.annotations),
       });
     }
     let native_artworks = artworks

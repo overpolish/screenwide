@@ -8,6 +8,7 @@ import {
   Background,
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
+import { AnnotationStyle } from "../annotations";
 import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
@@ -20,85 +21,23 @@ import {
 } from "../types";
 
 import { ToolPanelFrame } from "./tool-panel-frame";
-
-/**
- * What the selection panel shows for a placed layer: the selected layer, its
- * size and position in output pixels, and the source it was captured at, which
- * is what a reset puts it back to.
- */
-export type ToolPanelLayerSelection = {
-  /** Whether this layer casts a shadow onto the canvas behind it. */
-  dropShadow: boolean;
-  height: number;
-  /** How far the padded frame runs past the layer's own picture, in output
-   * pixels, on each side. */
-  inset: number;
-  /** As far as the padding may be taken: the layer's shorter side. */
-  insetMaximum: number;
-  /** Which of the workspace's layers this is, for wording that fits it. */
-  kind: "camera" | "layer" | "primary";
-  label: string;
-  /** How rounded the layer's corners are, as a share of its shorter side,
-   * 0 to 50. The same number the corner drag in the preview sets. */
-  radius: number;
-  sourceHeight: number;
-  sourceWidth: number;
-  width: number;
-  x: number;
-  y: number;
-  /** Camera only: whether baking it in is on the table at all. Baking draws
-   * the camera into the screen's picture, so it needs both tracks kept. */
-  canBake?: boolean;
-  /** Camera only: whether it is drawn into the screen's picture rather than
-   * carried as a track of its own. */
-  isBaked?: boolean;
-};
-
-/**
- * What the selection panel shows for the keyboard shortcut on screen.
- *
- * A shortcut is drawn rather than placed: it has no source pixels, no corners
- * and no pad, so it is sized as a share of its natural size and positioned by
- * its centre, both in percent - the very numbers the drag on it sets.
- */
-export type ToolPanelShortcutSelection = {
-  kind: "shortcut";
-  label: string;
-  /** As big as this recording's widest shortcut may be drawn. */
-  maximumSizePercent: number;
-  minimumSizePercent: number;
-  /** The shortcut's centre, as a share of the output canvas. */
-  positionXPercent: number;
-  positionYPercent: number;
-  sizePercent: number;
-};
-
-/**
- * What the selection panel shows for a recorded audio track.
- *
- * An audio track is neither placed nor drawn: it is heard, so the only thing
- * there is to set for it is how loud it is played back, in decibels against
- * the level it was recorded at.
- */
-export type ToolPanelAudioSelection = {
-  /** How much the track is lifted or lowered, 0 being the recorded level. */
-  decibels: number;
-  kind: "audio";
-  /** The track's own name: "Microphone", "System audio", or "Audio" where the
-   * recording did not say. */
-  label: string;
-};
-
-type ToolPanelSelection =
-  | ToolPanelAudioSelection
-  | ToolPanelLayerSelection
-  | ToolPanelShortcutSelection;
+import {
+  ToolPanelAnnotation,
+  ToolPanelSelection,
+} from "./tool-panel-selection";
 
 /**
  * What the frame panel shows: the output canvas the workspace renders into,
  * and the source size a reset puts it back to.
  */
 export type { ToolPanelFrame } from "./tool-panel-frame";
+
+/** What the selection panel places. */
+export type {
+  ToolPanelAudioSelection,
+  ToolPanelLayerSelection,
+  ToolPanelShortcutSelection,
+} from "./tool-panel-selection";
 
 /**
  * What the crop panel shows: the visible rectangle of the source, in source
@@ -120,6 +59,11 @@ export type ToolPanelCrop = {
  * and background settings each arrive as more keys, not another mirror.
  */
 export type ToolPanelSnapshot = {
+  /** The mark the preview has in hand, or null while it has none. Unlike
+   * every other panel, the arrow panel follows this rather than a tool. */
+  annotation: ToolPanelAnnotation | null;
+  /** Colours of your own the annotation tools were given, newest last. */
+  annotationColors: string[];
   /** What the workspace's canvas is filled with behind its layers. */
   background: Background;
   /** The backgrounds saved from the picker, in the order they were saved. */
@@ -148,6 +92,9 @@ export type ToolPanelSnapshot = {
 export type ToolPanelPatch = Partial<
   Pick<ToolPanelSnapshot, "background" | "cursorEffects">
 > & {
+  /** Dress the chosen mark, a field at a time so a panel never has to send
+   * the whole style back. Each one also becomes the next arrow's default. */
+  annotationStyle?: Partial<AnnotationStyle>;
   /** Put every shortcut back where the recording drew it. */
   applyShortcutToAll?: true;
   /** Play the selected audio track this much louder or quieter than it was
@@ -167,6 +114,8 @@ export type ToolPanelPatch = Partial<
   keyboardEffects?: Partial<KeyboardEffectSettings>;
   /** Put the selected layer's content in the middle of its padded frame. */
   recenterSelection?: true;
+  /** Forget a colour of your own, by the colour itself. */
+  removeAnnotationColor?: string;
   /** Forget a saved background, by its id. */
   removePreset?: string;
   /** Put every shortcut's own placement away, the global one left as it is. */
@@ -183,6 +132,9 @@ export type ToolPanelPatch = Partial<
   resetShortcut?: true;
   /** Bring back every shortcut deleted from the timeline. */
   restoreShortcuts?: true;
+  /** Keep a colour of your own, so it is on offer next time. Sent once a
+   * colour is settled on rather than on every step of a drag. */
+  saveAnnotationColor?: string;
   /** Keep the background being shown under a name. */
   savePreset?: BackgroundPreset;
   /** Cast the selected layer's shadow onto the canvas, or take it away. */
@@ -212,6 +164,8 @@ export type ToolPanelMessage = {
 };
 
 export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
+  annotation: null,
+  annotationColors: [],
   background: { color: "#171717", kind: "solid" },
   backgroundPresets: [],
   canRestoreShortcuts: false,

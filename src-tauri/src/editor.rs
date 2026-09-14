@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+pub(crate) mod annotations;
 mod artifact;
 mod artifact_snapshot;
 mod audio_save;

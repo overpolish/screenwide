@@ -17,6 +17,11 @@ const SETTINGS_CHANGED_EVENT: &str = "settings://changed";
 #[serde(default, rename_all = "camelCase")]
 pub struct GeneralSettings {
   pub accent: AccentPreference,
+  /// Colours the annotation tools were given that none of their presets
+  /// offers, newest last. Kept beside the saved backgrounds because they are
+  /// the same kind of thing: a choice made once that should be findable the
+  /// next time, rather than anything about the capture being edited.
+  pub annotation_colors: Vec<String>,
   /// Backgrounds saved from the editor's background picker, in the order
   /// they were saved. The built-in ones are not kept here: they ship with
   /// the app and would only go stale on disk.
@@ -35,6 +40,7 @@ impl Default for GeneralSettings {
   fn default() -> Self {
     Self {
       accent: AccentPreference::System,
+      annotation_colors: Vec::new(),
       background_presets: Vec::new(),
       recording_directory: None,
       screenshot_directory: None,

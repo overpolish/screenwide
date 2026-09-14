@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The annotation list the Metal kernels read.
+//! Source-space marks retained by the native compositor.
 //!
 //! The retained native workspace keeps a copy of every layer it presents and
 //! redraws it without asking Rust again, so the marks travel inline rather
@@ -9,18 +9,13 @@
 //! a pan or a zoom. The same cap applies to the export so what the editor
 //! previews is what the PNG gets.
 
-use super::super::annotation::annotation_colour;
-use super::super::{AnnotationHead, AnnotationShape};
-use super::ScreenshotOutputSettings;
-
-/// How many marks one layer can carry. Screenshots are annotated by hand, so
-/// this is a ceiling rather than a budget.
-pub(crate) const MAX_ANNOTATIONS: usize = 32;
+use super::{Annotation, MAX_ANNOTATIONS};
+use crate::editor::annotations::{annotation_colour, AnnotationHead, AnnotationShape};
 
 const KIND_ARROW: u32 = 0;
 
-/// One mark, in the exact layout of Metal's `AnnotationUniforms` and the C
-/// `ScreenwideAnnotation`. Every member is four bytes wide.
+/// One retained mark matching C's `ScreenwideAnnotation`. The native binding
+/// prepares separate draw geometry; every stored member is four bytes wide.
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 pub(crate) struct NativeAnnotation {
@@ -64,10 +59,10 @@ impl Default for NativeAnnotations {
   }
 }
 
-/// Flatten a layer's settings into the buffer the kernels read.
-pub(crate) fn native_annotations(settings: &ScreenshotOutputSettings) -> NativeAnnotations {
+/// Flatten a workspace's marks into the retained native scene.
+pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotations {
   let mut native = NativeAnnotations::default();
-  let annotations = settings.annotations.iter();
+  let annotations = annotations.iter();
   for (index, annotation) in annotations.take(MAX_ANNOTATIONS).enumerate() {
     let AnnotationShape::Arrow {
       start,
@@ -97,7 +92,7 @@ pub(crate) fn native_annotations(settings: &ScreenshotOutputSettings) -> NativeA
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::screenshots::{Annotation, AnnotationPoint, AnnotationStyle};
+  use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationStyle};
 
   #[test]
   fn flattens_an_arrow() {
@@ -116,7 +111,7 @@ mod tests {
         width: 9.0,
       },
     }];
-    let native = native_annotations(&settings);
+    let native = native_annotations(&settings.annotations);
     assert_eq!(native.count, 1);
     assert_eq!(native.items[0].head, 2);
     assert_eq!(native.items[0].above_camera, 1);

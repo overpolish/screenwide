@@ -3,6 +3,7 @@
 
 import { useRef, useState } from "react";
 
+import { useAnnotationDefaults } from "../annotation-defaults";
 import { PreviewZoomRequest } from "../preview-zoom-state";
 import {
   applyScreenshotCropGesture,
@@ -46,6 +47,7 @@ type PreviewViewportProps = {
   isResizingCanvas?: boolean;
   isSaving?: boolean;
   isSelecting?: boolean;
+  onAnnotationHover?: (annotationId: string | null) => void;
   onBackgroundRadiusChange?: (radiusPercent: number) => void;
   onBackgroundRadiusChangeEnd?: () => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
@@ -80,6 +82,7 @@ export function PreviewViewport({
   items,
   naturalHeight,
   naturalWidth,
+  onAnnotationHover,
   onBackgroundRadiusChange,
   onBackgroundRadiusChangeEnd,
   onCanvasResize,
@@ -119,6 +122,8 @@ export function PreviewViewport({
     snapshot: ScreenshotWorkspaceOutputSettings;
   } | null>(null);
   const editGesture = useEditorEditGesture();
+  // A fresh arrow's dress travels with the layout the native tool draws from.
+  const annotationDefaults = useAnnotationDefaults();
   const [canvasResizeDraft, setCanvasResizeDraft] =
     useState<ScreenshotWorkspaceOutputSettings | null>(null);
   const workspaceOutput =
@@ -417,9 +422,8 @@ export function PreviewViewport({
     const annotations = event.annotations;
     // Choosing an arrow reports the same list it was already holding. That is
     // a selection, not an edit, and must not land in the undo history.
-    if (JSON.stringify(held.annotations) === JSON.stringify(annotations))
-      return;
-    onOutputChange?.({ ...held, annotations }, itemOutput.id);
+    if (JSON.stringify(held.annotations) !== JSON.stringify(annotations))
+      onOutputChange?.({ ...held, annotations }, itemOutput.id);
   };
   const isDrawingArrows = annotationTool === "arrow";
   const selectionOverlay =
@@ -469,6 +473,7 @@ export function PreviewViewport({
       : null;
   const { fitDuringResize, fitPreview, setFitBasis } =
     useScreenshotPreviewSurface({
+      annotationDefaults,
       annotationTool,
       artifactId,
       canvasRef: nativeFrameRef,
@@ -476,6 +481,7 @@ export function PreviewViewport({
       isEditorSuspended: isSaving || isExportOpen,
       isEnabled: workspaceOutput !== undefined,
       onAnnotationChange: annotationChange,
+      onAnnotationHover,
       onPaneFitChange,
       onSelectionChange: (paneIndex) => {
         if (paneIndex === null) return;

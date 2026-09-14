@@ -10,21 +10,11 @@ import {
 } from "../recording-export-settings";
 
 import { ToolPanel } from "./tool-panel";
-import {
-  DEFAULT_TOOL_PANEL_SNAPSHOT,
-  ToolPanelSnapshot,
-  useToolPanelStore,
-} from "./tool-panel-store";
+import { seedToolPanel } from "./tool-panel-story-seed";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** The panel window reads what the editor published, so a story seeds the
- * mirror the same way a live editor fills it. */
-const seed = (snapshot: Partial<ToolPanelSnapshot>) => {
-  useToolPanelStore.setState({
-    snapshots: { recording: { ...DEFAULT_TOOL_PANEL_SNAPSHOT, ...snapshot } },
-  });
-};
+const seed = seedToolPanel;
 
 const meta = {
   args: { tool: "cursor", workspace: "recording" },
@@ -42,6 +32,45 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** The Arrow panel: the mark the preview has in hand, and what it is drawn
+ * in. It follows the chosen arrow rather than a tool, so it is the one panel
+ * that comes up over another. */
+export const Arrow: Story = {
+  args: { tool: "arrow", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      annotation: {
+        id: "arrow-1",
+        style: { color: "#ff383c", head: "end", width: 8 },
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isSaving: false,
+      selection: null,
+    });
+  },
+};
+
+/** The same panel wearing a colour of its own: colours chosen from the system
+ * panel are kept after the palette, and the Custom tile is the chosen one
+ * only while the mark matches no tile at all. */
+export const ArrowCustomColour: Story = {
+  args: { tool: "arrow", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      annotation: {
+        id: "arrow-1",
+        style: { color: "#2ec4b6", head: "both", width: 16 },
+      },
+      annotationColors: ["#2ec4b6", "#8b5e34"],
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isSaving: false,
+      selection: null,
+    });
+  },
+};
 
 export const Cursor: Story = {
   beforeEach: () => {
@@ -103,124 +132,6 @@ export const WithoutKeyboardData: Story = {
   },
 };
 
-/** The screen track of a recording, at the size and position the preview
- * would be showing it, padded out past its own picture. */
-export const Selection: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    seed({
-      cursorEffects: DEFAULT_CURSOR_EFFECTS,
-      frame: null,
-      hasCursorData: true,
-      isSaving: false,
-      selection: {
-        dropShadow: true,
-        height: 2458,
-        inset: 60,
-        insetMaximum: 2338,
-        kind: "primary",
-        label: "Screen",
-        radius: 8,
-        sourceHeight: 2338,
-        sourceWidth: 3600,
-        width: 3720,
-        x: -60,
-        y: -60,
-      },
-    });
-  },
-};
-
-/** The camera track of a recording, carried as a picture of its own: baking
- * is off, so it is placed and padded the way any other layer is. */
-export const SelectionCamera: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    seed({
-      cursorEffects: DEFAULT_CURSOR_EFFECTS,
-      frame: null,
-      hasCursorData: true,
-      isSaving: false,
-      selection: {
-        canBake: true,
-        dropShadow: true,
-        height: 720,
-        inset: 0,
-        insetMaximum: 720,
-        isBaked: false,
-        kind: "camera",
-        label: "Camera",
-        radius: 8,
-        sourceHeight: 720,
-        sourceWidth: 1280,
-        width: 1280,
-        x: 2200,
-        y: 1500,
-      },
-    });
-  },
-};
-
-/** The same camera drawn into the screen's picture: the overlay is what is
- * placed, so the size is the window it is drawn in and there is no pad. */
-export const SelectionBakedCamera: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    seed({
-      cursorEffects: DEFAULT_CURSOR_EFFECTS,
-      frame: null,
-      hasCursorData: true,
-      isSaving: false,
-      selection: {
-        canBake: true,
-        dropShadow: true,
-        height: 506,
-        inset: 0,
-        insetMaximum: 0,
-        isBaked: true,
-        kind: "camera",
-        label: "Camera",
-        radius: 8,
-        sourceHeight: 720,
-        sourceWidth: 1280,
-        width: 900,
-        x: 2592,
-        y: 73,
-      },
-    });
-  },
-};
-
-/** An audio track picked out with the Select tool: nothing of it is placed,
- * so the panel offers only how loud it is played back. */
-export const SelectionAudio: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    seed({
-      cursorEffects: DEFAULT_CURSOR_EFFECTS,
-      frame: null,
-      hasCursorData: true,
-      isSaving: false,
-      selection: { decibels: 6, kind: "audio", label: "Microphone" },
-    });
-  },
-};
-
-/** The tool is in hand with nothing under it: the panel says so rather than
- * offering fields that would place nothing. */
-export const SelectionEmpty: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    seed({
-      cursorEffects: DEFAULT_CURSOR_EFFECTS,
-      frame: null,
-      hasCursorData: true,
-      isSaving: false,
-      selection: null,
-    });
-  },
-};
-
 /** The finished picture's own size, with the capture's size under it: what a
  * reset puts the canvas back to. */
 export const Frame: Story = {
@@ -267,32 +178,6 @@ export const Crop: Story = {
       hasCursorData: true,
       isSaving: false,
       selection: null,
-    });
-  },
-};
-
-/** A keyboard shortcut picked out with the Select tool: drawn rather than
- * placed, so it is sized and centred in percent and offered neither a shadow,
- * nor corners, nor a pad. */
-export const SelectionShortcut: Story = {
-  args: { tool: "selection", workspace: "recording" },
-  beforeEach: () => {
-    seed({
-      cursorEffects: DEFAULT_CURSOR_EFFECTS,
-      frame: null,
-      hasKeyboardData: true,
-      isSaving: false,
-      keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
-      keyboardMaximum: 240,
-      selection: {
-        kind: "shortcut",
-        label: "Shortcut",
-        maximumSizePercent: 240,
-        minimumSizePercent: 50,
-        positionXPercent: 50,
-        positionYPercent: 91.2,
-        sizePercent: 100,
-      },
     });
   },
 };

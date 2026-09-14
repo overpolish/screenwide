@@ -3,7 +3,7 @@
 
 import { DEFAULT_GENERATOR_ID } from "../../components/shared/background-picker/background-generators";
 
-import { Annotation, validAnnotations } from "./screenshot-annotations";
+import { Annotation, validAnnotations } from "./annotations";
 import {
   MeshGradientPoint,
   randomMeshComposition,
@@ -97,6 +97,21 @@ export const defaultScreenshotOutput = (
     width,
   };
 };
+
+/**
+ * Settings borrowed as a template: for a new document, a layer added to one,
+ * or the look remembered from the last export.
+ *
+ * Marks are document content, not a preference. They are drawn on one layer
+ * of one capture and mean nothing on another, so anything copied as a default
+ * leaves them behind - otherwise the arrow drawn on yesterday's screenshot
+ * turns up on today's.
+ */
+export const screenshotOutputTemplate = <
+  Settings extends ScreenshotOutputSettings,
+>(
+  settings: Settings,
+): Settings => ({ ...settings, annotations: [] });
 
 const finite = (value: number, fallback: number) =>
   Number.isFinite(value) ? value : fallback;

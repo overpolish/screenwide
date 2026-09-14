@@ -7,6 +7,7 @@ import { RefObject, useEffect } from "react";
 import {
   ScreenshotAnnotationChangeEvent,
   screenshotAnnotationChange,
+  screenshotAnnotationHover,
   ScreenshotSelectionGestureEvent,
 } from "./screenshot-preview-events";
 
@@ -22,6 +23,7 @@ import {
 export function useScreenshotPreviewEvents({
   isEnabled,
   onAnnotationChangeRef,
+  onAnnotationHoverRef,
   onSelectionChangeRef,
   onSelectionGestureRef,
   onZoomChangeRef,
@@ -30,6 +32,9 @@ export function useScreenshotPreviewEvents({
   isEnabled: boolean;
   onAnnotationChangeRef: RefObject<
     ((event: ScreenshotAnnotationChangeEvent) => void) | undefined
+  >;
+  onAnnotationHoverRef: RefObject<
+    ((annotationId: string | null) => void) | undefined
   >;
   onSelectionChangeRef: RefObject<
     ((paneIndex: number | null) => void) | undefined
@@ -112,6 +117,30 @@ export function useScreenshotPreviewEvents({
       unlisten?.();
     };
   }, [isEnabled, onAnnotationChangeRef, sessionIdRef]);
+
+  // The halo is native, but the keyboard belongs to the webview: a delete
+  // acts on the mark the pointer is resting on, so React is told which one
+  // that is. Only a change reports one; the pulse itself is not news.
+  useEffect(() => {
+    if (!isEnabled) return;
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void listen<unknown>("screenshot-preview://annotation-hover", (event) => {
+      if (disposed) return;
+      const hover = screenshotAnnotationHover(
+        event.payload,
+        sessionIdRef.current,
+      );
+      if (hover) onAnnotationHoverRef.current?.(hover.annotationId);
+    }).then((dispose) => {
+      if (disposed) dispose();
+      else unlisten = dispose;
+    });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [isEnabled, onAnnotationHoverRef, sessionIdRef]);
 
   useEffect(() => {
     if (!isEnabled) return;

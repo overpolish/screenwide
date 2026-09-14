@@ -11,6 +11,10 @@ import { toolPanelLabel } from "./tool-panel-window";
 import { EditorToolId, toolPanel, toolResetsView } from "./tool-registry";
 import { previewViewport, useToolPanel } from "./use-tool-panel";
 
+/** What the panel was last settled against: the tool in hand, and whether a
+ * mark was chosen, whose panel outranks the tool's. */
+type Settled = { annotated: boolean; tool: EditorToolId | null };
+
 /** The toolbar button a tool's panel hangs from, for the tools that mark one.
  * Without it the panel is anchored on the picture itself. */
 const toolTrigger = (tool: EditorToolId) =>
@@ -31,28 +35,47 @@ const toolTrigger = (tool: EditorToolId) =>
  * The exception is the tools that are only a panel - Cursor today. Opening one
  * retires the canvas tool, and that null must not take the panel it just
  * opened away again: a cleared tool only ever closes its own panel.
+ *
+ * The other exception is the Arrow panel, which belongs to the mark in hand
+ * rather than to a tool: choosing an arrow shows it over whatever the tool
+ * would have shown, and letting the arrow go puts the tool's own panel back.
+ * It never refits the picture - neither on the way in nor on the way out -
+ * because nothing about the picture changed, only what is chosen in it.
  */
 export function useToolPanelFollowsTool(
   workspace: EditorKind,
   tool: EditorToolId | null,
+  hasSelectedAnnotation = false,
 ) {
   const { close, openPanel } = useToolPanel(workspace);
   const { fitPreview } = usePreviewFit();
-  // The tool the panel was last settled against. `undefined` until the first
+  // What the panel was last settled against. `undefined` until the first
   // pass, so the tool a session starts in opens its panel like any other.
-  const settledRef = useRef<EditorToolId | null | undefined>(undefined);
+  const settledRef = useRef<Settled | undefined>(undefined);
 
   useEffect(() => {
-    if (settledRef.current === tool) return;
+    const current = settledRef.current;
+    if (current?.tool === tool && current.annotated === hasSelectedAnnotation)
+      return;
     let disposed = false;
     let frame = 0;
 
-    const settle = async (previous: EditorToolId | null | undefined) => {
+    const settle = async (previous: Settled | undefined) => {
+      // Only taking up another tool applies that tool's fit policy. Letting a
+      // mark go is not picking the tool up again, and must not move the view.
+      const toolChanged = previous === undefined || previous.tool !== tool;
+      if (hasSelectedAnnotation) {
+        const anchor = previewViewport()?.getBoundingClientRect();
+        if (!anchor) return;
+        await openPanel("arrow", anchor, false);
+        return;
+      }
       if (tool === null) {
-        const previousPanel =
-          previous === null || previous === undefined
+        const previousPanel = previous?.annotated
+          ? "arrow"
+          : previous?.tool == null
             ? undefined
-            : toolPanel(previous);
+            : toolPanel(previous.tool);
         const open = activePopupPanel(
           usePopupPanelStore.getState(),
           toolPanelLabel(workspace),
@@ -69,13 +92,13 @@ export function useToolPanelFollowsTool(
       const panel = toolPanel(tool);
       if (panel === undefined) {
         await close();
-        if (toolResetsView(tool)) fitPreview();
+        if (toolChanged && toolResetsView(tool)) fitPreview();
         return;
       }
       const anchor =
         toolTrigger(tool) ?? previewViewport()?.getBoundingClientRect();
       if (!anchor) return;
-      await openPanel(panel, anchor, toolResetsView(tool));
+      await openPanel(panel, anchor, toolChanged && toolResetsView(tool));
     };
 
     // A panel is placed against the picture, so there is nowhere to put one
@@ -89,7 +112,7 @@ export function useToolPanelFollowsTool(
         return;
       }
       const previous = settledRef.current;
-      settledRef.current = tool;
+      settledRef.current = { annotated: hasSelectedAnnotation, tool };
       void settle(previous);
     };
     whenPlaceable();
@@ -98,5 +121,5 @@ export function useToolPanelFollowsTool(
       disposed = true;
       cancelAnimationFrame(frame);
     };
-  }, [close, fitPreview, openPanel, tool, workspace]);
+  }, [close, fitPreview, hasSelectedAnnotation, openPanel, tool, workspace]);
 }

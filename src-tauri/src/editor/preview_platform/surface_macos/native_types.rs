@@ -1,14 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use crate::editor::annotations::native::NativeAnnotations;
 use crate::{
   editor::{
     cursor_effects::{GpuCursor, NativeGpuCursor},
     keyboard_effects::KeyboardOverlay,
   },
-  screenshots::{
-    CapturedImage, NativeAnnotations, NativeCanvas, ScreenshotOutputSettings, StillOverlay,
-  },
+  screenshots::{CapturedImage, NativeCanvas, ScreenshotOutputSettings, StillOverlay},
 };
 
 #[repr(C)]

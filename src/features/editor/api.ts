@@ -3,6 +3,7 @@
 
 import { Channel, invoke } from "@tauri-apps/api/core";
 
+import { AnnotationStyle } from "./annotations";
 import {
   normalizedCameraOverlay,
   normalizedCursorEffects,
@@ -286,6 +287,7 @@ export const startScreenshotPreview = (artifactId: number, sessionId: number) =>
   invoke<null>("start_screenshot_preview", { artifactId, sessionId });
 
 export const layoutScreenshotPreviewSurface = ({
+  annotationDefaults,
   annotationTool,
   backdrop,
   fitWidth,
@@ -311,6 +313,10 @@ export const layoutScreenshotPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
+  /** The dress the next fresh arrow is drawn in: whatever the editor's last
+   * annotation edit settled on. Absent until it has settled on anything, and
+   * the native tool falls back to the accent at its own stroke. */
+  annotationDefaults?: AnnotationStyle | null;
   /** The annotation tool in hand. "select" hit-tests the arrows already on
    * the layer and lets every other press fall through to it; "arrow" also
    * draws a new one on empty picture. */
@@ -321,6 +327,7 @@ export const layoutScreenshotPreviewSurface = ({
   selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
   invoke<null>("layout_screenshot_preview_surface", {
+    annotationDefaults: annotationDefaults ?? null,
     annotationTool: annotationTool ?? null,
     backdrop,
     fitWidth,

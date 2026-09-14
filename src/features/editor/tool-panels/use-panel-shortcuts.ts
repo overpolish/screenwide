@@ -15,6 +15,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
     });
   };
   useEditorWindowShortcuts({
+    onArrowTool: () => {
+      forward("KeyA");
+    },
     onConfirm: () => {
       forward("Enter");
     },

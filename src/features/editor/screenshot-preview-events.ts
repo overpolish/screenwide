@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Annotation, validAnnotations } from "./screenshot-annotations";
+import { Annotation, validAnnotations } from "./annotations";
 
 /**
  * Reads one native annotation-change payload, dropping anything the
@@ -24,6 +24,25 @@ export const screenshotAnnotationChange = (
       typeof event.selectedAnnotationId === "string"
         ? event.selectedAnnotationId
         : null,
+  };
+};
+
+/**
+ * Reads one native hover payload. `null` means the payload was not this
+ * session's; an `annotationId` of null means the pointer rests on no mark.
+ */
+export const screenshotAnnotationHover = (
+  payload: unknown,
+  sessionId: number,
+): { annotationId: string | null } | null => {
+  const event = (payload ?? {}) as {
+    annotationId?: unknown;
+    sessionId?: number;
+  };
+  if (event.sessionId !== sessionId) return null;
+  return {
+    annotationId:
+      typeof event.annotationId === "string" ? event.annotationId : null,
   };
 };
 

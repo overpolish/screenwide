@@ -10,9 +10,8 @@
 use super::ffi::screenwide_preview_surface_present_screenshot_workspace;
 use super::native_types::{NativeWorkspaceLayer, NativeWorkspacePlacement};
 use super::RecordingPreviewSurface;
-use crate::screenshots::{
-  native_annotations, native_canvas, CapturedImage, ScreenshotOutputSettings, StillOverlay,
-};
+use crate::editor::annotations::native::native_annotations;
+use crate::screenshots::{native_canvas, CapturedImage, ScreenshotOutputSettings, StillOverlay};
 
 impl RecordingPreviewSurface {
   /// Composes every screenshot item into one workspace drawable and command
@@ -56,7 +55,7 @@ impl RecordingPreviewSurface {
         annotations: {
           // The hover halo never reaches the export: it is applied here, on
           // the preview's own copy of the flattened list.
-          let mut annotations = native_annotations(settings);
+          let mut annotations = native_annotations(&settings.annotations);
           if let Some((layer_id, index, width)) = hover {
             if layer_id == *source_token && index < annotations.count as usize {
               annotations.items[index].hover = width;

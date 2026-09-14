@@ -1,70 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { invoke, isTauri } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { Lock } from "lucide-react";
-import { MouseEventHandler, useEffect, useRef, useState } from "react";
+import { MouseEventHandler } from "react";
 import { useFocusRing } from "react-aria";
 import { Button } from "react-aria-components";
 
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 
-/** Tells the wells apart, so only the one that opened the panel hears it. */
-let nextToken = 0;
-
-/**
- * Whether the system Colours panel is available. WebKit's own colour popover
- * is a window we can neither place nor theme, so the Mac app asks AppKit for
- * the real panel instead; everywhere else keeps the native input.
- */
-function usesSystemColorPanel() {
-  return isTauri() && navigator.userAgent.includes("Mac");
-}
-
-/**
- * Subscribes to the system Colours panel while `token` owns it, reporting
- * every drag step to `onChange`. Returns the panel to nobody once it closes.
- */
-function useColorPanelEvents(
-  token: string | null,
-  onChange: ((value: string) => void) | undefined,
-  onClose: () => void,
-) {
-  const handlersRef = useRef({ onChange, onClose });
-  handlersRef.current = { onChange, onClose };
-
-  useEffect(() => {
-    if (token === null) return;
-    let listening = true;
-    let unlisteners: UnlistenFn[] = [];
-    const stop = () => {
-      listening = false;
-      for (const unlisten of unlisteners) unlisten();
-      unlisteners = [];
-    };
-    void Promise.all([
-      listen<{ color: string; token: string }>(
-        "color-panel-change",
-        (event) => {
-          if (event.payload.token !== token) return;
-          handlersRef.current.onChange?.(event.payload.color);
-        },
-      ),
-      listen<{ token: string }>("color-panel-close", (event) => {
-        if (event.payload.token !== token) return;
-        handlersRef.current.onClose();
-      }),
-    ]).then((registered) => {
-      if (!listening) {
-        for (const unlisten of registered) unlisten();
-        return;
-      }
-      unlisteners = registered;
-    });
-    return stop;
-  }, [token]);
-}
+import { useColorPanel, usesSystemColorPanel } from "./use-color-panel";
 
 /**
  * A colour well: a square of the colour itself, on the control height and
@@ -92,9 +36,10 @@ export function ColorSwatch({
 }) {
   const systemPanel = usesSystemColorPanel();
   const { focusProps, isFocusVisible } = useFocusRing();
-  const [token, setToken] = useState<string | null>(null);
-  useColorPanelEvents(token, onChange, () => {
-    setToken(null);
+  const colorPanel = useColorPanel({
+    onChange: (next) => {
+      onChange?.(next);
+    },
   });
 
   return (
@@ -119,10 +64,7 @@ export function ColorSwatch({
           )}
           isDisabled={isDisabled}
           onPress={() => {
-            nextToken += 1;
-            const requested = `color-well-${String(nextToken)}`;
-            setToken(requested);
-            void invoke("show_color_panel", { color: value, token: requested });
+            colorPanel.open(value);
           }}
         />
       ) : (

@@ -54,6 +54,17 @@ pub(super) fn load_screenshot_radius(app: &AppHandle) -> f64 {
   })
 }
 
+/// The remembered look, as a template for the next capture.
+///
+/// Marks are document content rather than a preference: they are drawn on one
+/// layer of one capture and mean nothing on another. They are dropped both on
+/// the way in and on the way out, so a file written before this rule existed
+/// stops handing yesterday's arrows to today's screenshot.
+fn screenshot_output_template(mut output: ScreenshotOutputSettings) -> ScreenshotOutputSettings {
+  output.annotations.clear();
+  output
+}
+
 pub(super) fn load_screenshot_output(app: &AppHandle) -> Option<ScreenshotOutputSettings> {
   load_preferences(app)
     .and_then(|preferences| preferences.screenshot_output)
@@ -64,6 +75,7 @@ pub(super) fn load_screenshot_output(app: &AppHandle) -> Option<ScreenshotOutput
           .as_deref()
           .is_none_or(|mode| mode == "custom")
     })
+    .map(screenshot_output_template)
 }
 
 pub(super) fn load_cursor_effects(app: &AppHandle) -> cursor_effects::CursorEffectSettings {
@@ -147,6 +159,7 @@ pub(super) fn remember_screenshot_output(
 ) -> Result<(), String> {
   let radius = validate_screenshot_radius(output.radius_percent)?;
   let background_radius = validate_screenshot_radius(output.background_radius_percent)?;
+  let output = screenshot_output_template(output);
   *app
     .state::<EditorState>()
     .screenshot_radius_percent
@@ -234,6 +247,28 @@ pub(super) fn remember_completed_export(
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// The look is remembered as a template. Marks are drawn on one layer of
+  /// one capture, so carrying them forward would put yesterday's arrow on
+  /// today's screenshot - which is exactly what it did.
+  #[test]
+  fn a_remembered_look_carries_none_of_the_marks_drawn_on_it() {
+    let preferences: EditorPreferences = serde_json::from_str(
+      r##"{"screenshot_output":{"annotations":[{"id":"a",
+        "shape":{"kind":"arrow","start":{"x":0,"y":0},"control":{"x":1,"y":1},
+        "end":{"x":2,"y":2}},"style":{"color":"#ff0000","width":6}}],
+        "backgroundColor":"#171717","backgroundType":"solid",
+        "backgroundRadiusPercent":0,"height":100,"width":100,
+        "imageWidth":100,"radiusPercent":0,"dropShadow":true,
+        "meshColors":[],"meshLockedColors":[],"meshPoints":[],"meshSeed":0,
+        "meshWarpPercent":0,"meshGenerator":"mesh",
+        "sourceCrop":{"x":0,"y":0,"width":1,"height":1}}}"##,
+    )
+    .unwrap();
+    let output = preferences.screenshot_output.unwrap();
+    assert_eq!(output.annotations.len(), 1, "the fixture has a mark on it");
+    assert!(screenshot_output_template(output).annotations.is_empty());
+  }
 
   #[test]
   fn loads_preferences_written_before_screenshot_output_was_remembered() {

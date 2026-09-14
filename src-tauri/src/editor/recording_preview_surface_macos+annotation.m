@@ -45,54 +45,7 @@ static BOOL annotation_normalised_point(ScreenwidePreviewSurface *surface,
   return YES;
 }
 
-/// The control point behind a reported middle handle, so the shaft can be
-/// sampled without asking Rust for the curve again.
-static NSPoint annotation_control_point(NSPoint start, NSPoint middle,
-                                        NSPoint end) {
-  return NSMakePoint(2.0 * middle.x - (start.x + end.x) / 2.0,
-                     2.0 * middle.y - (start.y + end.y) / 2.0);
-}
-
-static NSPoint annotation_curve_point(NSPoint start, NSPoint control,
-                                      NSPoint end, double t) {
-  double inverse = 1.0 - t;
-  return NSMakePoint(
-      inverse * inverse * start.x + 2.0 * inverse * t * control.x + t * t * end.x,
-      inverse * inverse * start.y + 2.0 * inverse * t * control.y + t * t * end.y);
-}
-
-static double annotation_segment_distance(NSPoint point, NSPoint start,
-                                          NSPoint end) {
-  double dx = end.x - start.x;
-  double dy = end.y - start.y;
-  double length = dx * dx + dy * dy;
-  double t = length <= 0.0
-      ? 0.0
-      : ((point.x - start.x) * dx + (point.y - start.y) * dy) / length;
-  t = fmax(0.0, fmin(1.0, t));
-  double nearestX = start.x + dx * t;
-  double nearestY = start.y + dy * t;
-  return hypot(point.x - nearestX, point.y - nearestY);
-}
-
-/// How far a point is from one arrow's shaft, in display points.
-static double annotation_shaft_distance(NSRect image,
-                                        ScreenwidePreviewAnnotation item,
-                                        NSPoint point) {
-  NSPoint start = annotation_display_point(image, item.start_x, item.start_y);
-  NSPoint middle = annotation_display_point(image, item.middle_x, item.middle_y);
-  NSPoint end = annotation_display_point(image, item.end_x, item.end_y);
-  NSPoint control = annotation_control_point(start, middle, end);
-  double best = INFINITY;
-  NSPoint previous = start;
-  for (NSUInteger sample = 1; sample <= kAnnotationShaftSamples; sample++) {
-    NSPoint next = annotation_curve_point(
-        start, control, end, (double)sample / (double)kAnnotationShaftSamples);
-    best = fmin(best, annotation_segment_distance(point, previous, next));
-    previous = next;
-  }
-  return best;
-}
+#include "recording_preview_annotation_geometry_macos.h"
 
 /// The chosen arrow's grip under `point`, or -1.
 SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
@@ -191,13 +144,15 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
   }
   if (shaft >= 0) {
     // Choosing an arrow is complete on the press: Rust commits the choice and
-    // the OSC moves to it, and the release adds nothing.
+    // the OSC moves to it. The press may still turn into a move of the whole
+    // arrow, which begins as its own gesture once it has travelled - exactly
+    // as a grip does, so a click never leaves an edit in the history.
     surface.annotationSelected = shaft;
     view.annotationDragTargetKind = ScreenwideAnnotationTargetExisting;
     view.annotationDragIndex = (uint32_t)shaft;
     view.annotationDragHandle = ScreenwideAnnotationHandleBody;
-    view.annotationDragBegun = YES;
-    emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetExisting,
+    view.annotationDragPending = YES;
+    emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetSelect,
                             (uint32_t)shaft, ScreenwideAnnotationHandleBody,
                             point);
     return YES;
@@ -214,7 +169,6 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_dragged(
     ScreenwidePreviewInteractionView *view, NSPoint point) {
   ScreenwidePreviewSurface *surface = view.surface;
   if (!view.annotationDragActive) return NO;
-  if (view.annotationDragHandle == ScreenwideAnnotationHandleBody) return YES;
   if (view.annotationDragPending) {
     if (hypot(point.x - view.annotationDragOrigin.x,
               point.y - view.annotationDragOrigin.y) < kAnnotationDragSlop)
@@ -236,8 +190,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_up(
   ScreenwidePreviewSurface *surface = view.surface;
   if (!view.annotationDragActive) return NO;
   BOOL begun = view.annotationDragBegun;
-  BOOL body = view.annotationDragHandle == ScreenwideAnnotationHandleBody;
-  if (begun && !body)
+  if (begun)
     emit_annotation_gesture(surface, 2, view.annotationDragTargetKind,
                             view.annotationDragIndex, view.annotationDragHandle,
                             point);

@@ -31,9 +31,10 @@ export type PopupPanelItem = {
 };
 
 /** The editor tools that own a panel, with room for the background, camera
- * and audio panels that follow. */
+ * and audio panels that follow. "arrow" is the one that belongs to what is
+ * selected rather than to a tool: it dresses the mark in hand. */
 export type ToolPanelKind =
-  "crop" | "cursor" | "frame" | "keyboard" | "selection";
+  "arrow" | "crop" | "cursor" | "frame" | "keyboard" | "selection";
 
 /** A list of choices: the panel as it has always been. */
 export type PopupPanelListContent = {

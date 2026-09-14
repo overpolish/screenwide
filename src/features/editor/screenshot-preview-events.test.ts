@@ -3,7 +3,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { screenshotAnnotationChange } from "./screenshot-preview-events";
+import {
+  screenshotAnnotationChange,
+  screenshotAnnotationHover,
+} from "./screenshot-preview-events";
 
 const arrow = {
   aboveCamera: false,
@@ -63,5 +66,25 @@ describe("screenshotAnnotationChange", () => {
       7,
     );
     expect(change?.selectedAnnotationId).toBeNull();
+  });
+});
+
+describe("screenshotAnnotationHover", () => {
+  it("reads which mark the halo is on", () => {
+    expect(
+      screenshotAnnotationHover({ annotationId: "arrow-1", sessionId: 7 }, 7),
+    ).toEqual({ annotationId: "arrow-1" });
+  });
+
+  it("reads a retired halo as nothing pointed at", () => {
+    expect(
+      screenshotAnnotationHover({ annotationId: null, sessionId: 7 }, 7),
+    ).toEqual({ annotationId: null });
+  });
+
+  it("ignores another session's halo", () => {
+    expect(
+      screenshotAnnotationHover({ annotationId: "arrow-1", sessionId: 8 }, 7),
+    ).toBeNull();
   });
 });

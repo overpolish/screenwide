@@ -7,13 +7,18 @@ import {
   defaultScreenshotOutput,
   normalizedScreenshotOutput,
   ScreenshotOutputSettings,
+  screenshotOutputTemplate,
   screenshotSourceCrop,
   withScreenshotSourceCrop,
 } from "./screenshot-output-settings";
 
 export { screenshotLayout } from "./screenshot-layout";
 export type { ScreenshotLayout } from "./screenshot-layout";
-export { defaultScreenshotOutput, normalizedScreenshotOutput };
+export {
+  defaultScreenshotOutput,
+  normalizedScreenshotOutput,
+  screenshotOutputTemplate,
+};
 export type { ScreenshotOutputSettings };
 
 type ScreenshotWorkspaceItemOutput = {
@@ -33,6 +38,28 @@ export const normalizedScreenshotWorkspaceOutput = (
     id: item.id,
     output: normalizedScreenshotOutput(item.output),
   })),
+});
+
+/**
+ * The workspace after one layer's settings changed.
+ *
+ * The layer takes them whole; the canvas takes only what it shares with every
+ * layer. Two things are the layer's alone and must never reach it: the colour
+ * behind its padding, and the marks drawn on it - the canvas is what a new
+ * layer and the next capture are built from, so anything left on it is
+ * inherited by pictures it was never drawn on.
+ */
+export const withScreenshotWorkspaceItemOutput = (
+  workspace: ScreenshotWorkspaceOutputSettings,
+  settings: ScreenshotOutputSettings,
+  itemId: number | null,
+): ScreenshotWorkspaceOutputSettings => ({
+  ...workspace,
+  ...screenshotOutputTemplate(settings),
+  items: workspace.items.map((item) =>
+    item.id === itemId ? { ...item, output: settings } : item,
+  ),
+  recenterInsetColor: workspace.recenterInsetColor,
 });
 
 export const screenshotWorkspaceItemOutput = (

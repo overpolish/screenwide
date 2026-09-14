@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
@@ -32,6 +32,7 @@ import {
 import { ScreenshotStatusBar } from "./screenshot-status-bar";
 import { ScreenshotTool, useScreenshotTools } from "./screenshot-tools";
 import { ScrubPreview } from "./scrub-preview";
+import { useScreenshotAnnotations } from "./use-screenshot-annotations";
 import { useScreenshotRecenter } from "./use-screenshot-recenter";
 
 /** The toolbar's own name for a tool, in the registry's vocabulary. */
@@ -61,15 +62,28 @@ export function ScreenshotSection({
     Exclude<ScreenshotTool, null>
   >("screenshot", "select");
   const tool = activeTool;
+  const selectedItem = artifact.items.find(
+    (item) => item.id === selectedItemId,
+  );
+  const selectedOutput =
+    screenshotOutput && selectedItem
+      ? screenshotWorkspaceItemOutput(screenshotOutput, selectedItem.id)
+      : null;
+  // Which arrow the native handles are on, which one the halo is under, and
+  // the edits that reach them.
+  const annotations = useScreenshotAnnotations({
+    onOutputChange,
+    selectedItemId,
+    selectedOutput,
+  });
   // The panel follows the tool in hand, so choosing one is all a button or a
-  // shortcut has to do.
-  useToolPanelFollowsTool("screenshot", screenshotToolId(tool));
-  // Which arrow the native handles are on. It belongs to the tools that
-  // hit-test arrows rather than to the document: it survives moving between
-  // Select and Arrow, and picking up any other tool lets it go.
-  const [selectedAnnotationId, setSelectedAnnotationId] = useState<
-    string | null
-  >(null);
+  // shortcut has to do - except while an arrow is chosen, whose own panel
+  // stands in front of the tool's until it is let go of.
+  useToolPanelFollowsTool(
+    "screenshot",
+    screenshotToolId(tool),
+    annotations.hasSelection,
+  );
   const toolRef = useRef(tool);
   toolRef.current = tool;
   const setTool = (
@@ -77,7 +91,7 @@ export function ScreenshotSection({
   ) => {
     const resolved = typeof next === "function" ? next(toolRef.current) : next;
     if (resolved !== "arrow" && resolved !== "select")
-      setSelectedAnnotationId(null);
+      annotations.clearSelection();
     setActiveTool(resolved);
   };
   const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
@@ -108,13 +122,6 @@ export function ScreenshotSection({
     onCanvasResize?.(result.settings);
     onSelectedItemChange?.(result.nextSelectedItemId);
   };
-  const selectedItem = artifact.items.find(
-    (item) => item.id === selectedItemId,
-  );
-  const selectedOutput =
-    screenshotOutput && selectedItem
-      ? screenshotWorkspaceItemOutput(screenshotOutput, selectedItem.id)
-      : null;
   const recenter = useScreenshotRecenter({
     artifactId: artifact.id,
     onOutputChange,
@@ -188,7 +195,7 @@ export function ScreenshotSection({
   // new one, and only it takes every press over the picture.
   const annotationTool =
     tool === "arrow" || tool === "select" ? tool : undefined;
-  const hasSelectedAnnotation = selectedAnnotationId !== null;
+  const hasSelectedAnnotation = annotations.hasSelection;
   const leaveCropTool = () => {
     setTool((current) => (current === "crop" ? null : current));
   };
@@ -196,7 +203,7 @@ export function ScreenshotSection({
   // and only a second press puts the tool itself down.
   const leaveModalTool = () => {
     if (hasSelectedAnnotation) {
-      setSelectedAnnotationId(null);
+      annotations.clearSelection();
       return;
     }
     setTool((current) =>
@@ -207,8 +214,18 @@ export function ScreenshotSection({
   // through here, alongside the refresh a crop drag ends with.
   useRecenterInsetControls("screenshot", recenter);
   useEditorWindowShortcuts({
+    // The arrow is drawn on a layer, so the key takes one in hand the way the
+    // crop key does.
+    onArrowTool: () => {
+      if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
+      setTool((current) => (current === "arrow" ? null : "arrow"));
+    },
     onConfirm: isCropping ? leaveCropTool : undefined,
-    onDelete: deleteSelectedLayer,
+    // Backspace and Delete take away the mark the hand is pointing at first,
+    // and only the layer when there is no mark under them.
+    onDelete: () => {
+      if (!annotations.deleteTargeted()) deleteSelectedLayer();
+    },
     onDeselect:
       isCropping || isAnnotating || hasSelectedAnnotation
         ? leaveModalTool
@@ -250,6 +267,7 @@ export function ScreenshotSection({
         items={artifact.items}
         naturalHeight={artifact.height}
         naturalWidth={artifact.width}
+        onAnnotationHover={annotations.onHoverChange}
         onBackgroundRadiusChange={onBackgroundRadiusChange}
         onBackgroundRadiusChangeEnd={onBackgroundRadiusChangeEnd}
         onCanvasResize={onCanvasResize}
@@ -257,10 +275,10 @@ export function ScreenshotSection({
         onItemSelect={onSelectedItemChange}
         onOutputChange={onOutputChange}
         onRadiusChangeEnd={onRadiusChangeEnd}
-        onSelectedAnnotationChange={setSelectedAnnotationId}
+        onSelectedAnnotationChange={annotations.onSelectedChange}
         onZoomChange={reportZoom}
         screenshotOutput={screenshotOutput}
-        selectedAnnotationId={selectedAnnotationId}
+        selectedAnnotationId={annotations.selectedId}
         selectedItemId={selectedItemId}
         zoomRequest={zoomRequest}
       />

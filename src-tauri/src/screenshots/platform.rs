@@ -1,9 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "platform/annotation.rs"]
-mod annotation;
-pub(crate) use annotation::{native_annotations, NativeAnnotations, MAX_ANNOTATIONS};
+use crate::editor::annotations::native::{native_annotations, NativeAnnotations};
 #[path = "platform/composition.rs"]
 mod composition;
 pub(crate) use composition::alpha_composite;

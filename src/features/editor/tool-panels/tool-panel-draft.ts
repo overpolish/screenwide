@@ -76,6 +76,7 @@ export function resolveToolPanelSnapshot(
   // A reset is an action rather than a value: nothing of it is shown locally,
   // and the editor's answer arrives as the next published placement.
   const {
+    annotationStyle,
     applyShortcutToAll: _applyShortcutToAll,
     audioVolume,
     bakeCamera,
@@ -84,6 +85,7 @@ export function resolveToolPanelSnapshot(
     frameSize,
     keyboardEffects,
     recenterSelection: _recenterSelection,
+    removeAnnotationColor: _removeAnnotationColor,
     removePreset: _removePreset,
     resetAllShortcuts: _resetAllShortcuts,
     resetCrop: _resetCrop,
@@ -92,6 +94,7 @@ export function resolveToolPanelSnapshot(
     resetSelection: _resetSelection,
     resetShortcut: _resetShortcut,
     restoreShortcuts: _restoreShortcuts,
+    saveAnnotationColor: _saveAnnotationColor,
     savePreset: _savePreset,
     selectionDropShadow,
     selectionInset,
@@ -143,6 +146,16 @@ export function resolveToolPanelSnapshot(
   const selection = baked ?? heard ?? resolved.selection;
   return {
     ...resolved,
+    // A colour being dragged in the system panel shows at once: the mirror
+    // catches up an edit later, and the swatch must not blink back meanwhile.
+    ...(annotationStyle && resolved.annotation
+      ? {
+          annotation: {
+            ...resolved.annotation,
+            style: { ...resolved.annotation.style, ...annotationStyle },
+          },
+        }
+      : {}),
     selection,
     ...(cropSize ? { crop: sized(resolved.crop, cropSize) } : {}),
     ...(frameSize ? { frame: sized(resolved.frame, frameSize) } : {}),

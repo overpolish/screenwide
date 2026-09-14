@@ -139,8 +139,9 @@ typedef struct {
 @property(nonatomic, strong) NSTrackingArea *selectionTrackingArea;
 @property(nonatomic) BOOL cursorRectsDisabled;
 /// The arrow tool's live drag. `annotationDragActive` covers the whole press,
-/// including one that only chooses an arrow; a new arrow waits for the press
-/// to travel far enough to be a drag before it exists at all.
+/// including one that only chooses an arrow; every edit - a new arrow, a grip,
+/// or the whole arrow carried by its shaft - waits for the press to travel far
+/// enough to be a drag before it begins at all.
 @property(nonatomic) BOOL annotationDragActive;
 @property(nonatomic) BOOL annotationDragPending;
 @property(nonatomic) BOOL annotationDragBegun;

@@ -3,8 +3,8 @@
 
 use super::super::PreviewSelection;
 use super::native_types::{NativeWorkspaceLayer, NativeWorkspacePaneRect};
+use crate::editor::annotations::handles::NativeAnnotationHandles;
 use crate::editor::cursor_effects::NativeGpuArtwork;
-use crate::editor::screenshot_preview::NativeAnnotationHandles;
 use crate::screenshots::{NativeCanvas, StillOverlay};
 
 unsafe extern "C" {

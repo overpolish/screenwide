@@ -154,6 +154,31 @@ describe("useToolPanel", () => {
     );
   });
 
+  // The panel window is sized to the controls it holds, and it measures
+  // itself when those controls change. Showing the panel it is already
+  // showing would put the window back to the height it opens at with nothing
+  // to trigger a fresh measurement, leaving it taller than what is in it.
+  it("re-places rather than re-shows the panel it is already showing", async () => {
+    mocks.active = cursorPanelOpen;
+    mocks.panelByTool.cursor = "cursor";
+    mocks.resetByTool.cursor = true;
+
+    await usePanel("recording").openPanel("cursor", anchor, true);
+
+    expect(mocks.showPopupPanel).not.toHaveBeenCalled();
+    expect(mocks.openToolPanelSpace).not.toHaveBeenCalled();
+    expect(mocks.movePopupPanel).toHaveBeenCalledOnce();
+  });
+
+  it("shows the panel when another workspace's window holds the same tool", async () => {
+    mocks.active = cursorPanelOpen;
+
+    await usePanel("screenshot").openPanel("cursor", anchor, false);
+
+    expect(mocks.showPopupPanel).toHaveBeenCalledOnce();
+    expect(mocks.movePopupPanel).not.toHaveBeenCalled();
+  });
+
   it("does not refit when an already open panel is toggled closed", async () => {
     mocks.active = cursorPanelOpen;
     mocks.panelByTool.cursor = "cursor";

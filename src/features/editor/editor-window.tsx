@@ -34,7 +34,9 @@ import {
   RecordingOutputSettings,
   resetScreenshotLayout,
   restoredRecordingOutput,
+  screenshotOutputTemplate,
   ScreenshotWorkspaceOutputSettings,
+  withScreenshotWorkspaceItemOutput,
 } from "./screenshot-output";
 import {
   selectArtifact,
@@ -362,7 +364,10 @@ export function EditorWindow() {
         ? resetScreenshotLayout(
             {
               ...screenshotDefaults,
-              ...persistedScreenshotOutput,
+              // The remembered look is a template, so it brings the colours
+              // and the corners and none of the marks: an arrow belongs to
+              // the capture it was drawn on.
+              ...screenshotOutputTemplate(persistedScreenshotOutput),
               backgroundRadiusPercent: persistedScreenshotBackgroundRadius,
               // A new capture starts at its own native canvas dimensions.
               // Persist visual preferences, not the previous artifact's
@@ -383,7 +388,10 @@ export function EditorWindow() {
         artifact?.kind === "screenshot"
           ? artifact.items.map((item) => ({
               id: item.id,
-              output: resetScreenshotLayout(firstOutput, item),
+              output: resetScreenshotLayout(
+                screenshotOutputTemplate(firstOutput),
+                item,
+              ),
             }))
           : [],
     });
@@ -426,8 +434,13 @@ export function EditorWindow() {
           ...current.items,
           ...added.map((item) => ({
             id: item.id,
-            // Placed at its real size: fitting is the user's to do.
-            output: resetScreenshotLayout(current, item, { fit: false }),
+            // Placed at its real size: fitting is the user's to do, and the
+            // marks on the layers already there are not copied onto it.
+            output: resetScreenshotLayout(
+              screenshotOutputTemplate(current),
+              item,
+              { fit: false },
+            ),
           })),
         ],
       };
@@ -679,15 +692,9 @@ export function EditorWindow() {
         onScreenshotOutputChange={(settings, itemId) => {
           const targetItemId = itemId ?? selectedScreenshotItemId;
           screenshotRadiusRef.current = settings.radiusPercent;
-          setScreenshotOutput((current) => ({
-            ...current,
-            ...settings,
-            items: current.items.map((item) =>
-              item.id === targetItemId ? { ...item, output: settings } : item,
-            ),
-            // Inset belongs to one screenshot layer, never the shared canvas.
-            recenterInsetColor: current.recenterInsetColor,
-          }));
+          setScreenshotOutput((current) =>
+            withScreenshotWorkspaceItemOutput(current, settings, targetItemId),
+          );
           setError(null);
         }}
         onScreenshotRadiusChangeEnd={() => {

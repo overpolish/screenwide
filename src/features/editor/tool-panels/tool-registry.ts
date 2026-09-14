@@ -22,8 +22,8 @@ type EditorTool = {
  * later states its behaviour in the same place as the rest.
  */
 const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
-  // No panel yet: the arrow draws with the style it is given, and its
-  // controls are a later slice.
+  // The Arrow tool owns no panel: its controls belong to the arrow in hand
+  // rather than to the tool, and follow the selection instead.
   arrow: { resetsView: true },
   crop: { panel: "crop", resetsView: true },
   cursor: { panel: "cursor", resetsView: true },

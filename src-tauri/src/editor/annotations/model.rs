@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Drawn marks a screenshot carries alongside its layer.
+//! Drawn marks carried by an editor layer.
 //!
 //! Annotations live in the source's own pixel space, the same space the crop
 //! is expressed in, so they stay glued to the picture while the frame is
@@ -53,7 +53,7 @@ pub enum AnnotationShape {
   },
 }
 
-/// One drawn mark on a screenshot layer.
+/// One drawn mark, independent of its workspace and timing.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Annotation {
@@ -66,9 +66,57 @@ pub struct Annotation {
   pub style: AnnotationStyle,
 }
 
+/// The stroke a fresh arrow is drawn with, in output pixels.
+#[cfg(any(target_os = "macos", test))]
+pub(crate) const NEW_ARROW_WIDTH: f64 = 8.0;
+
+/// The colour a fresh arrow is drawn in before anything has been chosen: the
+/// palette's yellow, which reads as a mark on almost any screenshot where the
+/// accent would sometimes be the very colour being pointed at. The twin of
+/// `ANNOTATION_SWATCHES` in `src/features/editor/annotation-palette.ts`.
+#[cfg(any(target_os = "macos", test))]
+const NEW_ARROW_COLOR: &str = "#ffcc00";
+
+/// The dress a fresh arrow is drawn in before anything has been chosen.
+#[cfg(any(target_os = "macos", test))]
+pub(crate) fn default_arrow_style() -> AnnotationStyle {
+  AnnotationStyle {
+    color: NEW_ARROW_COLOR.to_owned(),
+    head: crate::editor::annotations::AnnotationHead::End,
+    width: NEW_ARROW_WIDTH,
+  }
+}
+
+/// A straight arrow in `style`, or in the tool's own first dress where the
+/// editor has not settled on one yet.
+#[cfg(any(target_os = "macos", test))]
+pub(crate) fn new_arrow(
+  id: String,
+  start: AnnotationPoint,
+  end: AnnotationPoint,
+  style: Option<&AnnotationStyle>,
+) -> Annotation {
+  let mut arrow = Annotation {
+    above_camera: false,
+    id,
+    shape: AnnotationShape::Arrow {
+      start,
+      control: AnnotationPoint {
+        x: (start.x + end.x) / 2.0,
+        y: (start.y + end.y) / 2.0,
+      },
+      end,
+    },
+    style: style.cloned().unwrap_or_else(default_arrow_style),
+  };
+  super::bend::clamp_bend(&mut arrow);
+  arrow
+}
+
 /// An annotation colour as straight RGBA, from `#rrggbb` or `#rrggbbaa`.
 /// An unreadable colour is fully transparent rather than an error: one bad
 /// mark must not cost the whole composition.
+#[cfg(any(target_os = "macos", test))]
 pub(crate) fn annotation_colour(value: &str) -> [f32; 4] {
   let value = value.strip_prefix('#').unwrap_or(value);
   if !matches!(value.len(), 6 | 8) || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {

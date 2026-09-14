@@ -3,6 +3,14 @@
 
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { useEditableGeneralSettings } from "../../settings/use-general-settings";
+import {
+  applyAnnotationStyle,
+  useAnnotationSelection,
+} from "../annotation-channel";
+import {
+  withAnnotationColor,
+  withoutAnnotationColor,
+} from "../annotation-palette";
 import { useRestoreRecordingKeyboardShortcuts } from "../components/use-restore-recording-keyboard-shortcuts";
 import { keyboardMaximumSizePercent } from "../keyboard-effect-geometry";
 import {
@@ -106,6 +114,7 @@ export function useEditorToolPanels({
   // The saved backgrounds are a preference rather than a property of this
   // capture, so they are read and written where every window can see them.
   const [general, applyGeneralSettings] = useEditableGeneralSettings();
+  const annotationColors = general?.annotationColors ?? [];
   const backgroundPresets = general?.backgroundPresets ?? [];
   const setBackgroundPresets = (presets: BackgroundPreset[]) => {
     applyGeneralSettings({ backgroundPresets: presets });
@@ -167,6 +176,10 @@ export function useEditorToolPanels({
   // is on screen; the panel reaches them the way the padding controls reach
   // the recentre calls.
   const shortcutSelection = useKeyboardShortcutSelection(workspace);
+  // The mark the preview has in hand. It belongs to the tools that hit-test
+  // arrows rather than to the document, so it reaches the panel the way the
+  // selected shortcut does rather than through the workspace's settings.
+  const annotation = useAnnotationSelection(workspace);
   // Restoring and resetting every shortcut is an edit to the timeline the
   // editor already owns, so the panel asks for it here rather than through the
   // preview.
@@ -180,6 +193,8 @@ export function useEditorToolPanels({
   useToolPanelBridge(
     workspace,
     {
+      annotation,
+      annotationColors,
       background:
         frameTarget?.background ?? DEFAULT_TOOL_PANEL_SNAPSHOT.background,
       backgroundPresets,
@@ -208,6 +223,19 @@ export function useEditorToolPanels({
         null,
     },
     {
+      onAnnotationColorRemove: (color) => {
+        applyGeneralSettings({
+          annotationColors: withoutAnnotationColor(annotationColors, color),
+        });
+      },
+      onAnnotationColorSave: (color) => {
+        applyGeneralSettings({
+          annotationColors: withAnnotationColor(annotationColors, color),
+        });
+      },
+      onAnnotationStyleChange: (style) => {
+        applyAnnotationStyle(workspace, style);
+      },
       onBackgroundPresetRemove: (id) => {
         setBackgroundPresets(
           backgroundPresets.filter((preset) => preset.id !== id),

@@ -12,9 +12,10 @@ use super::placement::output_placement;
 #[cfg(any(test, not(target_os = "macos")))]
 use super::CapturedImage;
 use super::NormalizedSourceRect;
-use super::{annotation::Annotation, mesh::MeshGradientPoint, mesh_generator::default_generator};
 #[cfg(not(target_os = "macos"))]
 use super::{mesh::mesh_canvas, rounded_corners};
+use super::{mesh::MeshGradientPoint, mesh_generator::default_generator};
+use crate::editor::annotations::Annotation;
 
 const MAX_OUTPUT_PIXELS: u64 = 120_000_000;
 

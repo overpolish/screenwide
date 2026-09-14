@@ -4,6 +4,7 @@
 #pragma once
 #import "gpu_compositor_macos_keyboard_shader_source.h"
 #import "gpu_compositor_macos_shader_source_types.h"
+#import "gpu_compositor_macos_shader_source_annotation_curve.h"
 #import "gpu_compositor_macos_shader_source_annotations.h"
 #import "gpu_compositor_macos_shader_source_background.h"
 #import "gpu_compositor_macos_shader_source_composition.h"
@@ -21,6 +22,7 @@
 /// `AnnotationUniforms.kind`, drawn by both canvas kernels.
 __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_TYPES
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_CURVE
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATIONS
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_BACKGROUND
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_COMPOSITION

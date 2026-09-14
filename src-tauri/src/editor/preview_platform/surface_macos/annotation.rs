@@ -19,7 +19,7 @@ use super::ffi::{
   screenwide_preview_surface_set_annotations,
 };
 use super::RecordingPreviewSurface;
-use crate::editor::screenshot_preview::NativeAnnotationHandles;
+use crate::editor::annotations::handles::NativeAnnotationHandles;
 
 impl RecordingPreviewSurface {
   /// Publishes the selected layer's arrow grips. `selected_index` is the

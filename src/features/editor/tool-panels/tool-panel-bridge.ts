@@ -7,6 +7,7 @@ import {
   Background,
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
+import { AnnotationStyle } from "../annotations";
 import { SelectionPlacementPatch } from "../selection-placement";
 import {
   CursorEffectSettings,
@@ -27,6 +28,13 @@ import {
  * identical path through the workspace's state.
  */
 export type ToolPanelHandlers = {
+  /** Forget a colour of your own. */
+  onAnnotationColorRemove?: (color: string) => void;
+  /** Keep a colour of your own, so it is on offer next time. */
+  onAnnotationColorSave?: (color: string) => void;
+  /** Dress the chosen mark, a field at a time, through the same commit path
+   * the drag on the picture uses. */
+  onAnnotationStyleChange?: (style: Partial<AnnotationStyle>) => void;
   /** Play the selected audio track this much louder or quieter than it was
    * recorded, in decibels. */
   onAudioVolumeChange?: (decibels: number) => void;
@@ -83,6 +91,12 @@ export type ToolPanelHandlers = {
 const appliedSeq: Record<EditorKind, number> = { recording: 0, screenshot: 0 };
 
 const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
+  if (values.annotationStyle !== undefined)
+    on.onAnnotationStyleChange?.(values.annotationStyle);
+  if (values.saveAnnotationColor !== undefined)
+    on.onAnnotationColorSave?.(values.saveAnnotationColor);
+  if (values.removeAnnotationColor !== undefined)
+    on.onAnnotationColorRemove?.(values.removeAnnotationColor);
   if (values.audioVolume !== undefined)
     on.onAudioVolumeChange?.(values.audioVolume);
   if (values.bakeCamera !== undefined)

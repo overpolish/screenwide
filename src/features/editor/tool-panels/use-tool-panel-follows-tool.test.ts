@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   active: null as {
     kind: "tool";
-    tool: "cursor" | "selection";
+    tool: "arrow" | "cursor" | "selection";
     workspace: "recording" | "screenshot";
   } | null,
   close: vi.fn(() => Promise.resolve()),
@@ -66,9 +66,9 @@ import { useToolPanelFollowsTool } from "./use-tool-panel-follows-tool";
 type ToolInHand = Parameters<typeof useToolPanelFollowsTool>[1];
 
 /** One render of a workspace with `tool` in hand, settled. */
-const follow = async (tool: ToolInHand) => {
+const follow = async (tool: ToolInHand, hasSelectedAnnotation = false) => {
   // eslint-disable-next-line @eslint-react/rules-of-hooks
-  useToolPanelFollowsTool("recording", tool);
+  useToolPanelFollowsTool("recording", tool, hasSelectedAnnotation);
   await new Promise((resolve) => {
     setTimeout(resolve, 0);
   });
@@ -146,6 +146,45 @@ describe("useToolPanelFollowsTool", () => {
     await follow(null);
 
     expect(mocks.close).not.toHaveBeenCalled();
+  });
+
+  it("shows the chosen mark's own panel over the tool's, without refitting", async () => {
+    await follow("select");
+    mocks.active = { kind: "tool", tool: "selection", workspace: "recording" };
+    await follow("select", true);
+
+    expect(mocks.openPanel).toHaveBeenLastCalledWith(
+      "arrow",
+      mocks.viewport.getBoundingClientRect(),
+      false,
+    );
+    expect(mocks.close).not.toHaveBeenCalled();
+    expect(mocks.fitPreview).not.toHaveBeenCalled();
+  });
+
+  it("puts the tool's own panel back when the mark is let go", async () => {
+    await follow("select", true);
+    mocks.active = { kind: "tool", tool: "arrow", workspace: "recording" };
+    await follow("select");
+
+    expect(mocks.openPanel).toHaveBeenLastCalledWith(
+      "selection",
+      mocks.viewport.getBoundingClientRect(),
+      false,
+    );
+    expect(mocks.close).not.toHaveBeenCalled();
+  });
+
+  // The Arrow tool refits the picture when it is taken up; letting a mark go
+  // while holding it is not taking it up again.
+  it("closes the mark's panel without refitting for a tool that owns none", async () => {
+    mocks.resetByTool.arrow = true;
+    await follow("arrow", true);
+    mocks.active = { kind: "tool", tool: "arrow", workspace: "recording" };
+    await follow("arrow");
+
+    expect(mocks.close).toHaveBeenCalledOnce();
+    expect(mocks.fitPreview).not.toHaveBeenCalled();
   });
 
   it("settles once per tool, however often the workspace renders", async () => {

@@ -3,6 +3,7 @@
 
 import { useEffect, useRef } from "react";
 
+import { editorToolKeyAction, EditorToolKeys } from "./editor-tool-keys";
 import { preserveEscapeFocus } from "./escape-focus";
 import {
   ownsActivationKeys,
@@ -31,6 +32,7 @@ const arrowDirections = new Map([
 ]);
 
 export function useEditorWindowShortcuts({
+  onArrowTool,
   onConfirm,
   onCopy,
   onCutTimeline,
@@ -52,7 +54,7 @@ export function useEditorWindowShortcuts({
   onToggleRangeTool,
   onUndo,
   ownsEscape = false,
-}: {
+}: EditorToolKeys & {
   /** Enter: done with whatever this window is in the middle of. */
   onConfirm?: () => void;
   onCopy?: () => void;
@@ -65,18 +67,8 @@ export function useEditorWindowShortcuts({
   /** Moves the selected layer by one arrow press; `coarse` is the Shift jump. */
   onNudge?: (directionX: number, directionY: number, coarse: boolean) => void;
   onRedo?: () => void;
-  onResizeCanvas?: () => void;
-  onSelectTool?: () => void;
   /** Moves the playhead by one arrow press; `coarse` is the Shift jump. */
   onStep?: (direction: -1 | 1, coarse: boolean) => void;
-  onToggleBladeTool?: () => void;
-  onToggleCrop?: () => void;
-  /** M: the cursor panel, on or away. */
-  onToggleCursorPanel?: () => void;
-  /** K: the keyboard panel, on or away. */
-  onToggleKeyboardPanel?: () => void;
-  onTogglePlayback?: () => void;
-  onToggleRangeTool?: () => void;
   onUndo?: () => void;
   /** This hook's Escape outranks every plain `onDeselect` on the window:
    * leaving the tool in hand comes before clearing a selection under it. */
@@ -252,62 +244,20 @@ export function useEditorWindowShortcuts({
         return;
       }
 
-      if (
-        event.code === "KeyB" &&
-        onToggleBladeTool &&
-        !ownsTextEditingKeys(event.target)
-      ) {
+      const toolKey = editorToolKeyAction(event.code, {
+        onArrowTool,
+        onResizeCanvas,
+        onSelectTool,
+        onToggleBladeTool,
+        onToggleCrop,
+        onToggleCursorPanel,
+        onToggleKeyboardPanel,
+        onTogglePlayback,
+        onToggleRangeTool,
+      });
+      if (toolKey && !ownsTextEditingKeys(event.target)) {
         consume(event);
-        onToggleBladeTool();
-      } else if (
-        event.code === "KeyP" &&
-        onTogglePlayback &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onTogglePlayback();
-      } else if (
-        event.code === "KeyF" &&
-        onResizeCanvas &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onResizeCanvas();
-      } else if (
-        event.code === "KeyC" &&
-        onToggleCrop &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onToggleCrop();
-      } else if (
-        event.code === "KeyR" &&
-        onToggleRangeTool &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onToggleRangeTool();
-      } else if (
-        event.code === "KeyV" &&
-        onSelectTool &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onSelectTool();
-      } else if (
-        event.code === "KeyM" &&
-        onToggleCursorPanel &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onToggleCursorPanel();
-      } else if (
-        event.code === "KeyK" &&
-        onToggleKeyboardPanel &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onToggleKeyboardPanel();
+        toolKey();
       }
     };
 
@@ -320,6 +270,7 @@ export function useEditorWindowShortcuts({
       window.removeEventListener("keyup", onKeyUp, true);
     };
   }, [
+    onArrowTool,
     onConfirm,
     onCopy,
     onCutTimeline,

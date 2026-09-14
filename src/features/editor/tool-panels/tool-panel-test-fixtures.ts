@@ -6,7 +6,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 type OpenToolPanel = {
   content: {
     kind: "tool";
-    tool: "cursor" | "keyboard" | "selection";
+    tool: "arrow" | "cursor" | "keyboard" | "selection";
     workspace: "recording" | "screenshot";
   };
   id: string;
@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   getBoundingClientRect: vi.fn(),
   getCurrentWindow: vi.fn(() => ({ label: "editor", onResized: vi.fn() })),
   hidePopupPanel: vi.fn(() => Promise.resolve()),
+  movePopupPanel: vi.fn(() => Promise.resolve()),
   open: vi.fn(),
   openToolPanelSpace: vi.fn(() => Promise.resolve()),
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
@@ -56,6 +57,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 
 vi.mock("../../popup-panel/api", () => ({
   hidePopupPanel: mocks.hidePopupPanel,
+  movePopupPanel: mocks.movePopupPanel,
   showPopupPanel: mocks.showPopupPanel,
 }));
 

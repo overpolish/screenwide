@@ -15,13 +15,11 @@
 //! finished list back to React to commit into the document and its history.
 
 use super::super::preview_platform::SelectionGesturePhase;
-use super::super::ScreenshotWorkspaceOutputSettings;
-use super::annotation::{annotation_handles, new_arrow, source_point};
-use super::annotation_target::{
-  drag_handle, next_annotation_id, AnnotationGestureTarget, AnnotationHandle,
-};
 use super::state::PreviewManager;
-use crate::screenshots::{Annotation, AnnotationPoint, AnnotationShape};
+use crate::editor::annotations::edit::AnnotationEdit;
+use crate::editor::annotations::gesture::AnnotationGestureTarget;
+use crate::editor::annotations::handles::{annotation_handles, source_point};
+use crate::editor::annotations::Annotation;
 
 /// The list React is asked to commit when a gesture ends.
 #[derive(Clone, Debug)]
@@ -32,11 +30,8 @@ pub(crate) struct AnnotationCommit {
 }
 
 pub(super) struct AnnotationGestureOverride {
-  /// Where in the working copy's list the edited arrow lives.
-  index: usize,
   pane_index: u32,
-  snapshot: ScreenshotWorkspaceOutputSettings,
-  target: AnnotationGestureTarget,
+  edit: AnnotationEdit,
 }
 
 impl PreviewManager {
@@ -47,6 +42,20 @@ impl PreviewManager {
     let item = output.items.get(pane_index as usize)?;
     let (_, source) = self.sources.iter().find(|(id, _)| *id == item.id)?;
     Some((source.width, source.height))
+  }
+
+  /// How wide this pane's picture is drawn, in output pixels: what turns a
+  /// stroke in output pixels into a share of the picture.
+  pub(super) fn annotation_image_width(&self, pane_index: u32) -> Option<f64> {
+    Some(
+      self
+        .output
+        .as_ref()?
+        .items
+        .get(pane_index as usize)?
+        .output
+        .image_width,
+    )
   }
 
   pub(super) fn annotations_for(&self, pane_index: u32) -> Option<&Vec<Annotation>> {
@@ -67,16 +76,17 @@ impl PreviewManager {
   fn present_annotation_gesture(&self, pane_index: u32, selected: Option<&str>) {
     #[cfg(target_os = "macos")]
     {
-      if let (Some(surface), Some(source), Some(annotations)) = (
+      if let (Some(surface), Some(source), Some(image_width), Some(annotations)) = (
         self.surface.as_ref(),
         self.annotation_source(pane_index),
+        self.annotation_image_width(pane_index),
         self.annotations_for(pane_index),
       ) {
         let selected_index = selected
           .and_then(|id| annotations.iter().position(|item| item.id == id))
           .map_or(-1, |index| i32::try_from(index).unwrap_or(-1));
         surface.set_annotations(
-          &annotation_handles(annotations, source),
+          &annotation_handles(annotations, source, image_width),
           selected_index,
           self.annotation_mode,
         );
@@ -108,7 +118,14 @@ impl PreviewManager {
   ) -> Option<AnnotationCommit> {
     if matches!(phase, SelectionGesturePhase::Cancel) {
       let gesture = self.annotation_gesture.take()?;
-      self.output = Some(gesture.snapshot);
+      if let Some(annotations) = self
+        .output
+        .as_mut()
+        .and_then(|output| output.items.get_mut(gesture.pane_index as usize))
+        .map(|item| &mut item.output.annotations)
+      {
+        gesture.edit.cancel(annotations);
+      }
       self.present_annotation_gesture(gesture.pane_index, None);
       return None;
     }
@@ -116,37 +133,18 @@ impl PreviewManager {
       return self.begin_annotation_gesture(pane_index, target, x, y);
     }
     let gesture = self.annotation_gesture.as_ref()?;
-    let (pane_index, index, target) = (gesture.pane_index, gesture.index, gesture.target);
+    let pane_index = gesture.pane_index;
     let source = self.annotation_source(pane_index)?;
     let point = source_point(x, y, source);
-    let annotation = self
+    let annotations = &mut self
       .output
       .as_mut()?
       .items
       .get_mut(pane_index as usize)?
       .output
-      .annotations
-      .get_mut(index)?;
-    let id = annotation.id.clone();
-    match target {
-      AnnotationGestureTarget::NewArrow => {
-        // A straight arrow while it is being drawn: the control point stays
-        // on the midpoint so the bend is something you add afterwards.
-        let AnnotationShape::Arrow {
-          start,
-          control,
-          end,
-        } = &mut annotation.shape;
-        *end = point;
-        *control = AnnotationPoint {
-          x: (start.x + point.x) / 2.0,
-          y: (start.y + point.y) / 2.0,
-        };
-      }
-      AnnotationGestureTarget::Existing { handle, .. } => drag_handle(annotation, handle, point),
-      // A press on nothing never opens a gesture, so nothing can update it.
-      AnnotationGestureTarget::None => return None,
-    }
+      .annotations;
+    gesture.edit.update(annotations, point);
+    let id = gesture.edit.selected_id().to_owned();
     if matches!(phase, SelectionGesturePhase::End) {
       self.annotation_gesture = None;
       self.present_annotation_gesture(pane_index, Some(id.as_str()));
@@ -167,7 +165,7 @@ impl PreviewManager {
     // composition onto that same snapshot before accepting pointer input so
     // both Metal layers share one gesture origin.
     let base = self.react_output.clone().or_else(|| self.output.clone())?;
-    self.output = Some(base.clone());
+    self.output = Some(base);
     let source = self.annotation_source(pane_index)?;
     let point = source_point(x, y, source);
     if matches!(target, AnnotationGestureTarget::None) {
@@ -179,25 +177,16 @@ impl PreviewManager {
       self.present_annotation_gesture(pane_index, None);
       return self.commit_for(pane_index, None);
     }
-    if let AnnotationGestureTarget::Existing { handle, index } = target {
-      let annotations = self.annotations_for(pane_index)?;
-      let id = annotations.get(index)?.id.clone();
-      if handle == AnnotationHandle::Body {
-        // A press on the shaft only chooses the arrow. It commits straight
-        // away so the selection survives React's next layout.
-        self.annotation_gesture = None;
-        self.present_annotation_gesture(pane_index, Some(id.as_str()));
-        return self.commit_for(pane_index, Some(id));
-      }
-      self.annotation_gesture = Some(AnnotationGestureOverride {
-        index,
-        pane_index,
-        snapshot: base,
-        target,
-      });
+    if let AnnotationGestureTarget::Select { index } = target {
+      // A press on the shaft only chooses the arrow. It commits straight
+      // away so the selection survives React's next layout; the move it may
+      // turn into arrives as an `Existing` gesture of its own.
+      let id = self.annotations_for(pane_index)?.get(index)?.id.clone();
+      self.annotation_gesture = None;
       self.present_annotation_gesture(pane_index, Some(id.as_str()));
-      return None;
+      return self.commit_for(pane_index, Some(id));
     }
+    let defaults = self.annotation_defaults.clone();
     let annotations = &mut self
       .output
       .as_mut()?
@@ -205,19 +194,9 @@ impl PreviewManager {
       .get_mut(pane_index as usize)?
       .output
       .annotations;
-    if annotations.len() >= crate::screenshots::MAX_ANNOTATIONS {
-      return None;
-    }
-    let arrow = new_arrow(next_annotation_id(), point, point);
-    let id = arrow.id.clone();
-    annotations.push(arrow);
-    let index = annotations.len() - 1;
-    self.annotation_gesture = Some(AnnotationGestureOverride {
-      index,
-      pane_index,
-      snapshot: base,
-      target,
-    });
+    let edit = AnnotationEdit::begin(annotations, target, point, defaults.as_ref())?;
+    let id = edit.selected_id().to_owned();
+    self.annotation_gesture = Some(AnnotationGestureOverride { pane_index, edit });
     self.present_annotation_gesture(pane_index, Some(id.as_str()));
     None
   }

@@ -310,7 +310,8 @@ static int presenter_present_workspace_layers(
     float seconds = (float)item->seconds;
     [encoder setBytes:&seconds length:sizeof(seconds) atIndex:9];
     screenwide_bind_keyboard(encoder, presenter.device, presenter.keyboardArtworks, item->keyboard, item->canvas_height);
-    screenwide_bind_annotations(encoder, &item->annotations);
+    screenwide_bind_annotations(encoder, &item->annotations, &item->canvas,
+                               item->source_width, item->source_height);
     [encoder setTexture:presenter.cursorResources.texture atIndex:1];
     workspace_dispatch(encoder, presenter.workspaceLayerPipeline, grid);
     [encoder endEncoding];
@@ -834,7 +835,8 @@ int screenwide_gpu_still_presenter_redraw_workspace(
         float seconds = (float)layers[index].seconds;
         [encoder setBytes:&seconds length:sizeof(seconds) atIndex:9];
         screenwide_bind_keyboard(encoder, presenter.device, presenter.keyboardArtworks, layers[index].keyboard, layers[index].canvas_height);
-        screenwide_bind_annotations(encoder, &layers[index].annotations);
+        screenwide_bind_annotations(encoder, &layers[index].annotations, &layers[index].canvas,
+                                   layers[index].source_width, layers[index].source_height);
         [encoder setTexture:presenter.cursorResources.texture atIndex:1];
         workspace_dispatch(encoder, presenter.workspaceLayerPipeline, grid);
         [encoder endEncoding];

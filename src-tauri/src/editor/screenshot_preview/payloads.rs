@@ -52,9 +52,19 @@ pub(super) struct ScreenshotSelectionGestureEvent {
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct ScreenshotAnnotationChangeEvent {
-  pub(super) annotations: Vec<crate::screenshots::Annotation>,
+  pub(super) annotations: Vec<crate::editor::annotations::Annotation>,
   pub(super) pane_index: u32,
   pub(super) selected_annotation_id: Option<String>,
+  pub(super) session_id: u64,
+}
+
+/// Which mark the pointer is resting on, so the keyboard - which belongs to
+/// the webview - can act on what the halo is showing.
+#[cfg(target_os = "macos")]
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ScreenshotAnnotationHoverEvent {
+  pub(super) annotation_id: Option<String>,
   pub(super) session_id: u64,
 }
 

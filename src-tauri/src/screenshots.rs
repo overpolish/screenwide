@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-mod annotation;
 mod background_image;
 mod clipboard;
 pub(crate) mod desktop;
@@ -45,10 +44,6 @@ use crate::recording::Region;
 pub(crate) use crate::capture_geometry::physical_capture_rect;
 #[cfg(test)]
 pub(crate) use crate::capture_geometry::CaptureRect;
-#[cfg(any(target_os = "macos", test))]
-pub(crate) use annotation::{Annotation, AnnotationPoint, AnnotationStyle};
-#[cfg(any(target_os = "macos", test))]
-pub(crate) use annotation::{AnnotationHead, AnnotationShape};
 pub(crate) use background_image::{background_image_canvas, background_image_swatch};
 pub(crate) use clipboard::open_in_export as open_clipboard_in_export;
 pub use encoding::encode_png;
@@ -72,8 +67,7 @@ pub use output::ScreenshotOutputSettings;
 pub(crate) use placement::output_placement;
 #[cfg(target_os = "macos")]
 pub(crate) use platform::{
-  alpha_composite, compose_output_layers, native_annotations, native_canvas, NativeAnnotations,
-  NativeCanvas, StillOverlay, MAX_ANNOTATIONS,
+  alpha_composite, compose_output_layers, native_canvas, NativeCanvas, StillOverlay,
 };
 #[cfg(target_os = "windows")]
 pub(crate) use recenter::{colour_f32, foreground_bounds_f32, optional_colour_f32};

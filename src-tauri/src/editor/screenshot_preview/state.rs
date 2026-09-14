@@ -18,6 +18,11 @@ pub(super) struct PreviewManager {
   /// mid-drag cannot replace the working copy the gesture is drawing into.
   #[cfg(target_os = "macos")]
   pub(super) annotation_gesture: Option<AnnotationGestureOverride>,
+  /// The style the next fresh arrow is drawn in: whatever the editor's last
+  /// annotation edit settled on. `None` until it has settled on anything, in
+  /// which case the arrow tool's own first dress stands.
+  #[cfg(target_os = "macos")]
+  pub(super) annotation_defaults: Option<crate::editor::annotations::AnnotationStyle>,
   /// The arrow the pointer rests on, and how wide its halo has grown.
   #[cfg(target_os = "macos")]
   pub(super) annotation_hover: Option<AnnotationHover>,
@@ -53,6 +58,7 @@ impl PreviewManager {
     }
     #[cfg(target_os = "macos")]
     {
+      self.annotation_defaults = None;
       self.annotation_gesture = None;
       self.annotation_hover = None;
       self.annotation_mode = 0;

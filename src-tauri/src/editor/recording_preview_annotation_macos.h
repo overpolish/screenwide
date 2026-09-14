@@ -7,15 +7,19 @@
 #import <AppKit/AppKit.h>
 #include <stdint.h>
 
-/// One arrow's three grips, normalised over the whole source image: the two
-/// tips and the point the curve passes through at t = 0.5. Rust solves the
-/// Bezier; this side only places and hit-tests the points.
+/// One arrow's three grips, normalised over the whole source image - the two
+/// tips and the point the curve passes through at t = 0.5 - and how far each
+/// head reaches back from its tip, as a fraction of the image's drawn width.
+/// Zero means that end carries no head; the half-base is half the length,
+/// which is the shader's four-to-two proportions. Rust solves the Bezier and
+/// owns the stroke's units; this side only places and hit-tests the points.
 typedef struct {
   double start_x, start_y;
   double middle_x, middle_y;
   double end_x, end_y;
+  double start_head, end_head;
 } ScreenwidePreviewAnnotation;
-_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 48,
+_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 64,
                "Rust/C annotation handle layout mismatch");
 /// How many arrows one layer can carry, matching `MAX_ANNOTATIONS`.
 static const NSUInteger ScreenwideMaxAnnotations = 32;
@@ -35,11 +39,13 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationHandle) {
   ScreenwideAnnotationHandleBody = 3,
 };
 /// What a gesture acts on: a new arrow (0), a grip or shaft of the arrow at
-/// `index` (1), or nothing at all (2), which only clears the choice.
+/// `index` (1), nothing at all (2), which only clears the choice, or a press
+/// on the shaft of the arrow at `index` (3), which only chooses it.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationTarget) {
   ScreenwideAnnotationTargetNew = 0,
   ScreenwideAnnotationTargetExisting = 1,
   ScreenwideAnnotationTargetNone = 2,
+  ScreenwideAnnotationTargetSelect = 3,
 };
 typedef void (*screenwide_preview_annotation_gesture_callback)(
     uint32_t phase, uint32_t pane_index, uint32_t target_kind, uint32_t index,

@@ -69,6 +69,21 @@ describe("panel editor shortcuts", () => {
     });
   });
 
+  // A is the arrow tool. The panel window has its own keyboard, so a tool key
+  // pressed with the panel focused has to reach the editor that owns the
+  // picture rather than doing nothing.
+  it("forwards the arrow tool key from a focused panel", () => {
+    usePanelShortcuts("screenshot");
+    key("KeyA");
+    expect(hooks.send).toHaveBeenCalledExactlyOnceWith("screenshot", {
+      event: { code: "KeyA" },
+      type: "shortcut",
+    });
+    hooks.text = true;
+    expect(key("KeyA").event.defaultPrevented).toBe(false);
+    expect(hooks.send).toHaveBeenCalledOnce();
+  });
+
   it("preserves text editing and composition", () => {
     usePanelShortcuts("recording");
     hooks.text = true;

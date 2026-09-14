@@ -19,6 +19,9 @@ use super::state::{PreviewManager, ScreenshotPreviewState};
 pub async fn layout_screenshot_preview_surface(
   app: AppHandle,
   state: tauri::State<'_, ScreenshotPreviewState>,
+  // The style the next fresh arrow is drawn in: whatever the editor's last
+  // annotation edit settled on. Absent until it has settled on anything.
+  annotation_defaults: Option<crate::editor::annotations::AnnotationStyle>,
   // `annotation_tool` is the tool in hand, when one is. "select" hit-tests
   // the arrows already on the layer and lets every other press fall through
   // to it; "arrow" also draws a new one on empty picture.
@@ -46,8 +49,12 @@ pub async fn layout_screenshot_preview_surface(
     1.0
   };
   #[cfg(not(target_os = "macos"))]
-  let _ = (&annotation_tool, &selected_annotation_id);
-  let (surface, will_present, natural_size, annotation_layout) = {
+  let _ = (
+    &annotation_defaults,
+    &annotation_tool,
+    &selected_annotation_id,
+  );
+  let (surface, will_present, natural_size, annotation_layout, hover_cleared) = {
     let mut manager = state
       .0
       .lock()
@@ -116,28 +123,30 @@ pub async fn layout_screenshot_preview_surface(
       !frame_owns_presentation && (!manager.has_layout || output_changed || size_changed);
     let natural_size = (output.canvas.width, output.canvas.height);
     #[cfg(target_os = "macos")]
-    let annotation_layout = {
-      let mode = super::annotation::annotation_mode(annotation_tool.as_deref());
-      let pane_index = selection.as_ref().map(|overlay| overlay.pane_index);
-      manager.annotation_mode = mode;
-      manager.annotation_pane_index = pane_index;
-      // Putting the tool down retires the halo: the pointer may never move
-      // again to do it, and nothing else clears it.
-      if mode == super::annotation::ANNOTATION_MODE_NONE {
-        manager.annotation_hover = None;
-      }
-      super::annotation::annotation_layout(
-        &manager,
-        pane_index,
-        mode,
-        selected_annotation_id.as_deref(),
-      )
-    };
+    let (annotation_layout, hover_cleared) = super::annotation::apply_annotation_layout(
+      &mut manager,
+      annotation_defaults,
+      annotation_tool.as_deref(),
+      selection.as_ref().map(|overlay| overlay.pane_index),
+      selected_annotation_id.as_deref(),
+    );
     #[cfg(not(target_os = "macos"))]
-    let annotation_layout = ();
+    let (annotation_layout, hover_cleared) = ((), false);
     manager.has_layout = true;
-    (surface, will_present, natural_size, annotation_layout)
+    (
+      surface,
+      will_present,
+      natural_size,
+      annotation_layout,
+      hover_cleared,
+    )
   };
+  #[cfg(target_os = "macos")]
+  if hover_cleared {
+    super::start::emit_annotation_hover(&app, session_id, None);
+  }
+  #[cfg(not(target_os = "macos"))]
+  let _ = hover_cleared;
   let selection = selection.map(|overlay| PreviewSelection {
     recenter_height: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.height),
     recenter_width: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.width),
