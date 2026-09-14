@@ -5,6 +5,7 @@ import { withThemeByClassName } from "@storybook/addon-themes";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import { themes } from "storybook/theming";
 
+import { installKeyboardNavigationModality } from "../src/lib/keyboard-navigation-modality";
 import { synchronizeSystemAccent } from "../src/lib/system-accent";
 
 import type { Decorator, Preview } from "@storybook/react-vite";
@@ -71,6 +72,12 @@ const [reactAria, storybookComponents] = await Promise.all([
 ]);
 
 Object.freeze([reactAria.useOverlay, storybookComponents.Button]);
+
+const disposeKeyboardNavigation = installKeyboardNavigationModality();
+const previewHot = (
+  import.meta as { hot?: { dispose: (cb: () => void) => void } }
+).hot;
+previewHot?.dispose(disposeKeyboardNavigation);
 
 const preview: Preview = {
   parameters: {

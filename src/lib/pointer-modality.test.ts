@@ -18,20 +18,21 @@ describe("pointer focus restoration", () => {
   let panel: EventTarget;
   const closeButton = {};
 
-  beforeEach(() => {
+  function setup(visibilityState = "visible") {
     vi.useFakeTimers();
     interaction.modality = "pointer";
     page = Object.assign(new EventTarget(), {
       activeElement: closeButton,
       hasFocus: () => true,
-      visibilityState: "visible",
+      visibilityState,
     });
     panel = new EventTarget();
     vi.stubGlobal("document", page);
     vi.stubGlobal("window", panel);
     // Model React Aria interpreting an unsolicited element focus as virtual.
     panel.addEventListener("focus", (event) => {
-      if (event.target !== panel) interaction.modality = "virtual";
+      if (event.target !== panel && interaction.modality !== "keyboard")
+        interaction.modality = "virtual";
     });
     // React Aria processes both phases, before the guard's document listener.
     for (const type of ["keydown", "keyup"]) {
@@ -40,6 +41,10 @@ describe("pointer focus restoration", () => {
       });
     }
     installPointerModalityGuard();
+  }
+
+  beforeEach(() => {
+    setup();
   });
 
   afterEach(() => {
@@ -57,6 +62,9 @@ describe("pointer focus restoration", () => {
   function keyEvent(type: "keydown" | "keyup", key: string) {
     const event = new Event(type);
     Object.defineProperty(event, "key", { value: key });
+    // Window capture runs before React Aria's document listener and the
+    // modality guard's document restoration.
+    panel.dispatchEvent(event);
     page.dispatchEvent(event);
   }
 
@@ -67,6 +75,29 @@ describe("pointer focus restoration", () => {
     vi.runAllTimers();
   }
 
+  it("keeps the captured first-open focus sequence ring-free", () => {
+    setup("hidden");
+    // No preceding pointer, blur, or visibilitychange: this window starts hidden.
+    const general = {};
+    focusElement(general);
+    expect(interaction.modality).toBe("pointer");
+    panel.dispatchEvent(new Event("focus"));
+    focusElement(general);
+    expect(interaction.modality).toBe("pointer");
+    // WebKit reports visible focus before its visibilitychange notification.
+    page.visibilityState = "visible";
+    panel.dispatchEvent(new Event("focus"));
+    focusElement(general);
+    expect(interaction.modality).toBe("pointer");
+    page.dispatchEvent(new Event("visibilitychange"));
+    vi.runAllTimers();
+    expect(interaction.modality).toBe("pointer");
+    focusElement({});
+    expect(interaction.modality).toBe("virtual");
+    keyEvent("keydown", "Tab");
+    expect(interaction.modality).toBe("keyboard");
+  });
+
   it("preserves pointer focus when native dismissal delivers only Escape-up", () => {
     restorePointerFocus();
     vi.advanceTimersByTime(75);
@@ -74,22 +105,26 @@ describe("pointer focus restoration", () => {
     expect(interaction.modality).toBe("pointer");
     // Protection belongs to one release only.
     keyEvent("keyup", "Escape");
-    expect(interaction.modality).toBe("keyboard");
+    expect(interaction.modality).toBe("pointer");
   });
 
-  it.each(["Escape", "Tab", "ArrowDown"])(
+  it.each([
+    ["Escape", "pointer"],
+    ["Tab", "keyboard"],
+    ["ArrowDown", "keyboard"],
+  ])(
     "lets a fresh %s keydown cancel trailing-release protection",
-    (key) => {
+    (key, expectedModality) => {
       restorePointerFocus();
       keyEvent("keydown", key);
       keyEvent("keyup", "Escape");
-      expect(interaction.modality).toBe("keyboard");
+      expect(interaction.modality).toBe(expectedModality);
     },
   );
 
   it("does not suppress Escape-up without a window restoration", () => {
     keyEvent("keyup", "Escape");
-    expect(interaction.modality).toBe("keyboard");
+    expect(interaction.modality).toBe("pointer");
   });
 
   it("does not suppress other key releases after restoration", () => {
@@ -105,7 +140,7 @@ describe("pointer focus restoration", () => {
     focusElement({});
     focusElement(closeButton);
     keyEvent("keyup", "Escape");
-    expect(interaction.modality).toBe("keyboard");
+    expect(interaction.modality).toBe("virtual");
   });
 
   it("preserves keyboard focus through dismissal and Escape-up", () => {
@@ -155,7 +190,7 @@ describe("pointer focus restoration", () => {
     page.visibilityState = "hidden";
     panel.dispatchEvent(new Event("blur"));
     focusElement(closeButton);
-    page.dispatchEvent(new Event("keydown"));
+    keyEvent("keydown", "a");
     interaction.modality = "keyboard";
     page.visibilityState = "visible";
     page.dispatchEvent(new Event("visibilitychange"));
@@ -189,7 +224,7 @@ describe("pointer focus restoration", () => {
     page.dispatchEvent(new Event("visibilitychange"));
     focusElement({});
     panel.dispatchEvent(new Event("focus"));
-    page.dispatchEvent(new Event("keydown"));
+    keyEvent("keydown", "a");
     interaction.modality = "keyboard";
     page.visibilityState = "visible";
     page.dispatchEvent(new Event("visibilitychange"));

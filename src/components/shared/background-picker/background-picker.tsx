@@ -55,9 +55,9 @@ export function BackgroundPicker({
   const isImage = value.kind === "image";
   // The editor's visibility is a choice, not a comparison: it is open because
   // the Custom tile was pressed, and closes only when another tile is pressed.
-  // Nothing the editor itself hands back can shut it, so a value that happens
-  // to equal a preset highlights that preset's tile and leaves the editor
-  // where it is. A background that matches nothing on offer was built by hand,
+  // Nothing the editor itself hands back can shut it or select a preset,
+  // even when the edited value happens to match one.
+  // A background that matches nothing on offer was built by hand,
   // so the editor is already open on it; the Custom tile only opens it early.
   // A mesh always shows its colours: the generator is chosen in the grid,
   // and what it paints with is set here.
@@ -65,7 +65,7 @@ export function BackgroundPicker({
     isCustomOpen || value.kind === "mesh" || (!matched && !isImage);
   // An image always has a tile of its own once picked, so no chosen value
   // ever lands on the Image button; anything unmatched is a custom edit.
-  const selectedId = matched ? matched.id : "custom";
+  const selectedId = isCustomOpen ? "custom" : (matched?.id ?? "custom");
 
   /** A tile's own choice: it closes the editor, which only a tile can do. */
   const choose = (background: Background) => {

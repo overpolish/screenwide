@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Shuffle } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "../../base/button/button";
@@ -52,9 +51,8 @@ const generatorPalette = (colors: string[], generatorId: string) => {
 /**
  * A background built by hand, and saved under a name if it is worth keeping.
  *
- * The two kinds hold their own values while the other is being shown, so a
- * mesh is still there after a look at a flat colour: the editor keeps the one
- * it was last given of each.
+ * Returning to Mesh preserves its palette and generator while rerolling the
+ * arrangement, just like pressing Mesh when it is already selected.
  */
 export function BackgroundEditor({
   isDisabled,
@@ -89,13 +87,26 @@ export function BackgroundEditor({
           aria-label="Background type"
           display="label"
           isDisabled={isDisabled}
-          items={backgroundKinds}
+          items={backgroundKinds.map((item) =>
+            item.id === "mesh"
+              ? {
+                  ...item,
+                  onPress: () => {
+                    if (kind === "mesh" && mesh) {
+                      changeMesh(randomizeMeshBackground(mesh));
+                    }
+                  },
+                }
+              : item,
+          )}
           onSelectionChange={(nextKind) => {
             if (nextKind === "solid") {
               onChange({ color: solidColor, kind: "solid" });
               return;
             }
-            changeMesh(mesh ?? randomMeshBackground());
+            changeMesh(
+              mesh ? randomizeMeshBackground(mesh) : randomMeshBackground(),
+            );
           }}
           selected={kind}
         />
@@ -116,18 +127,6 @@ export function BackgroundEditor({
       ) : (
         <ColorPaletteGenerator
           colors={palette}
-          endContent={
-            <Button
-              aria-label="Randomize mesh"
-              isDisabled={isDisabled}
-              onPress={() => {
-                changeMesh(randomizeMeshBackground(mesh));
-              }}
-            >
-              <Shuffle />
-              Randomize
-            </Button>
-          }
           isDisabled={isDisabled}
           locked={palette.map((_, index) => mesh.lockedColors[index] ?? false)}
           onChange={(colors) => {

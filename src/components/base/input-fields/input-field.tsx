@@ -5,11 +5,9 @@ import { focusStyles } from "../../../lib/styling";
 import { tv } from "../../../lib/variants";
 
 /**
- * Shared bezel, label, and input styling for the text-entry fields. Native
- * text fields show the focus ring for any focus, keyboard or click, so the
- * bezel rings on the CSS focus-within pseudo-class, which works whether or
- * not the bezel is a React Aria Group. A bezeled control does not react to
- * hover.
+ * Shared bezel, label, and input styling for text-entry fields. The bezel
+ * follows React Aria's focus visibility on itself or its input, so pointer
+ * focus does not introduce a keyboard navigation ring.
  */
 export const fieldVariants = tv({
   slots: {
@@ -17,7 +15,7 @@ export const fieldVariants = tv({
     field: [
       "relative flex h-control-height flex-row items-center rounded-control bg-fill text-content-fg outline-none transition-colors",
       focusStyles,
-      "focus-within:ring-3",
+      "data-[focus-visible]:ring-3 has-[[data-focus-visible]]:ring-3",
       "group-data-[invalid]:ring-3 group-data-[invalid]:ring-error",
       "group-data-[disabled]:bg-fill-quaternary group-data-[disabled]:text-content-fg-tertiary",
     ],

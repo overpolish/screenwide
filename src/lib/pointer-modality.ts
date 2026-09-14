@@ -6,6 +6,8 @@ import {
   setInteractionModality,
 } from "react-aria/private/interactions/useFocusVisible";
 
+import { installKeyboardNavigationModality } from "./keyboard-navigation-modality";
+
 /** A window focus this soon after a press belongs to that press. */
 const PRESS_FOCUS_WINDOW_MS = 1000;
 
@@ -22,9 +24,13 @@ const PRESS_FOCUS_WINDOW_MS = 1000;
  * native restoration, new focus follows React Aria's normal rules.
  */
 export function installPointerModalityGuard() {
+  installKeyboardNavigationModality();
   let lastPressAt = Number.NEGATIVE_INFINITY;
   let pointerFocusBeforeBlur: Element | null = null;
-  let pointerBeforeHide = false;
+  // Precreated windows start hidden without emitting a hide notification.
+  let pointerBeforeHide =
+    document.visibilityState === "hidden" &&
+    getInteractionModality() === "pointer";
   let pointerEscapeReleaseTarget: Element | null = null;
   let inputVersion = 0;
   const declarePointer = () => {
@@ -74,8 +80,9 @@ export function installPointerModalityGuard() {
       if (event.target === window || event.target === document) return;
       if (event.target !== pointerEscapeReleaseTarget)
         pointerEscapeReleaseTarget = null;
-      const restoringHiddenPointer =
-        pointerBeforeHide && document.visibilityState === "hidden";
+      // WebKit focuses the control again after visibility flips, but before
+      // visibilitychange. Keep the snapshot until that notification arrives.
+      const restoringHiddenPointer = pointerBeforeHide;
       const restoredPointerFocus =
         restoringHiddenPointer || event.target === pointerFocusBeforeBlur;
       if (!restoredPointerFocus || document.visibilityState !== "hidden")

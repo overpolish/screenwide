@@ -5,6 +5,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { Lock } from "lucide-react";
 import { MouseEventHandler, useEffect, useRef, useState } from "react";
+import { useFocusRing } from "react-aria";
 import { Button } from "react-aria-components";
 
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
@@ -43,10 +44,13 @@ function useColorPanelEvents(
       unlisteners = [];
     };
     void Promise.all([
-      listen<{ color: string; token: string }>("color-panel-change", (event) => {
-        if (event.payload.token !== token) return;
-        handlersRef.current.onChange?.(event.payload.color);
-      }),
+      listen<{ color: string; token: string }>(
+        "color-panel-change",
+        (event) => {
+          if (event.payload.token !== token) return;
+          handlersRef.current.onChange?.(event.payload.color);
+        },
+      ),
       listen<{ token: string }>("color-panel-close", (event) => {
         if (event.payload.token !== token) return;
         handlersRef.current.onClose();
@@ -66,8 +70,7 @@ function useColorPanelEvents(
  * A colour well: a square of the colour itself, on the control height and
  * radius its neighbours take. On the Mac app pressing it opens the system
  * Colours panel; everywhere else a native `<input type="color">` sits over it
- * at zero opacity, and since that input is what takes focus, the well rings on
- * focus-within.
+ * at zero opacity. The well follows that input's keyboard focus visibility.
  *
  * A white colour would otherwise have no edge, so an inset hairline-free ring
  * keeps the well reading as a control whatever it holds.
@@ -88,6 +91,7 @@ export function ColorSwatch({
   onContextMenu?: MouseEventHandler<HTMLSpanElement>;
 }) {
   const systemPanel = usesSystemColorPanel();
+  const { focusProps, isFocusVisible } = useFocusRing();
   const [token, setToken] = useState<string | null>(null);
   useColorPanelEvents(token, onChange, () => {
     setToken(null);
@@ -99,7 +103,7 @@ export function ColorSwatch({
         "relative inline-block size-control-height shrink-0 cursor-default overflow-hidden rounded-control align-middle",
         "inset-ring-1 inset-ring-content-fg-quaternary",
         focusStyles,
-        systemPanel ? "has-[[data-focus-visible]]:ring-3" : "focus-within:ring-3",
+        "has-[[data-focus-visible]]:ring-3",
         isDisabled && "opacity-50",
       )}
       onContextMenu={onContextMenu}
@@ -123,8 +127,10 @@ export function ColorSwatch({
         />
       ) : (
         <input
+          {...focusProps}
           aria-label={ariaLabel}
           className="absolute inset-0 size-full cursor-default opacity-0 outline-none"
+          data-focus-visible={isFocusVisible || undefined}
           disabled={isDisabled}
           onChange={(event) => {
             onChange?.(event.currentTarget.value.toUpperCase());
