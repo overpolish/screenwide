@@ -58,28 +58,36 @@ const segmentRadius = {
 const segmentBase =
   "flex cursor-default items-center justify-center text-body text-content-fg outline-none transition-[color,background-color] select-none";
 
+// A Fluent selector bar item (WinUI's SelectorBar): no fill in any state,
+// the label going secondary under the pointer and tertiary while pressed,
+// 12px of side padding and 8px between items.
+const windowsSelectorItem =
+  "windows:data-[hovered]:not-data-[selected]:bg-transparent windows:data-[pressed]:not-data-[selected]:bg-transparent windows:data-[hovered]:text-content-fg-secondary windows:data-[pressed]:text-content-fg-tertiary";
+
+// The selection. On macOS it is the knob that fills the selected segment;
+// on Windows, a Fluent selector bar marks the selected item with a 16 by 3
+// accent pill centred under it instead, and that is what slides between
+// items.
 const knobBase =
-  "absolute inset-0 transform-gpu rounded-[inherit] backface-hidden will-change-transform";
+  "absolute inset-0 transform-gpu rounded-[inherit] backface-hidden will-change-transform windows:top-auto windows:right-auto windows:left-1/2 windows:h-[3px] windows:w-4 windows:-translate-x-1/2 windows:rounded-full windows:bg-primary-surface windows:group-data-[disabled]:bg-primary-surface-disabled";
 // Filled is the native segmented control: accent knob under white content.
 // Ghost is the capture-toolbar form QuickTime uses: no track, and the
 // selected segment sits on a neutral fill in the label colour.
 const variantClassName = {
   filled: {
-    // A bezeled control does not react to hover.
-    hover: "",
+    // A bezeled control does not react to hover on macOS.
+    hover: windowsSelectorItem,
     knob: `${knobBase} bg-primary-surface`,
     // The ring shares the knob's accent, so a selected segment gets a gap.
+    // Under the underline the label keeps its colour.
     selectedText:
-      "data-[selected]:text-primary-fg data-[selected]:data-[focus-visible]:ring-offset-2 data-[selected]:data-[focus-visible]:ring-offset-content",
-    // The bezel's fill and stroke are the platform tokens; Fluent has no
-    // sliding segmented control, so its form is this construction on a
-    // Fluent bezel.
-    track: "bg-control-fill control-stroke",
+      "data-[selected]:text-primary-fg data-[selected]:data-[focus-visible]:ring-offset-2 data-[selected]:data-[focus-visible]:ring-offset-content windows:data-[selected]:text-content-fg",
+    // Fluent's selector bar has no track at all.
+    track: "bg-fill windows:bg-transparent",
   },
   ghost: {
     // Ghost segments are toolbar items, which do.
-    hover:
-      "data-[hovered]:not-data-[selected]:bg-control-subtle-hover data-[pressed]:not-data-[selected]:bg-control-subtle-pressed",
+    hover: `data-[hovered]:not-data-[selected]:bg-control-subtle-hover data-[pressed]:not-data-[selected]:bg-control-subtle-pressed ${windowsSelectorItem}`,
     knob: `${knobBase} bg-fill`,
     selectedText: "data-[selected]:text-content-fg",
     track: "bg-transparent",
@@ -147,7 +155,7 @@ export function PillGroup({
       // segments so larger geometry, such as the screen recording mode
       // picker, keeps the same construction.
       className={cn(
-        "flex items-stretch gap-tight p-tight",
+        "flex items-stretch gap-tight p-tight windows:gap-control-inset windows:px-0 windows:py-control",
         trackRadius[radii],
         styles.track,
         className,
@@ -183,10 +191,12 @@ export function PillGroup({
               segmentBase,
               segmentHeight,
               segmentRadius[radii],
-              display === "icon" ? iconWidth : "px-control-inset",
+              display === "icon"
+                ? iconWidth
+                : "px-control-inset windows:px-section",
               styles.selectedText,
               styles.hover,
-              "data-[disabled]:text-content-fg-tertiary data-[disabled]:data-[selected]:text-content-fg-tertiary",
+              "data-[disabled]:text-control-fg-disabled data-[disabled]:data-[selected]:text-control-fg-disabled",
               glyphClassName,
               "[&_svg]:shrink-0 [&_svg]:transform-gpu",
               focusStyles,
