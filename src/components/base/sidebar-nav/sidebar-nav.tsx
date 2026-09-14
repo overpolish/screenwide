@@ -100,15 +100,22 @@ export function SidebarNav({
                 // to hover; the selected row is the accent tint with white
                 // label and symbol, as System Settings draws it.
                 className={cn(
-                  "group flex h-8 w-full cursor-default items-center gap-control-inset overflow-hidden rounded-control px-control-inset text-left text-body text-content-fg outline-none transition-colors",
+                  "group relative flex h-8 w-full cursor-default items-center gap-control-inset overflow-hidden rounded-control px-control-inset text-left text-body text-content-fg outline-none transition-colors",
                   "data-[pressed]:bg-fill-secondary data-[selected]:bg-primary-tint data-[selected]:text-primary-fg",
-                  "data-[disabled]:text-content-fg-tertiary data-[disabled]:data-[selected]:bg-fill-quaternary",
+                  "data-[disabled]:text-control-fg-disabled data-[disabled]:data-[selected]:bg-fill-quaternary",
+                  // A Fluent navigation item takes the subtle fill on hover
+                  // and press, and when selected keeps its label colour
+                  // under an accent pill in the gutter.
+                  "windows:data-[hovered]:bg-control-subtle-hover windows:data-[pressed]:bg-control-subtle-pressed",
+                  "windows:data-[selected]:bg-control-subtle-hover windows:data-[selected]:text-content-fg",
                   focusStyles,
                   elementFocusVisible,
                   // The selected row is already the accent tint, so its ring
                   // would merge with it; a gap in the window colour keeps the
-                  // ring readable there.
+                  // ring readable there. Fluent keeps its own two-stroke
+                  // ring, restated here as this rule ties with it.
                   "data-[selected]:data-[focus-visible]:ring-offset-2 data-[selected]:data-[focus-visible]:ring-offset-content",
+                  "windows:data-[selected]:data-[focus-visible]:ring-offset-1 windows:data-[selected]:data-[focus-visible]:ring-offset-focus-ring-inner",
                 )}
                 id={item.id}
                 isDisabled={item.isDisabled}
@@ -118,6 +125,12 @@ export function SidebarNav({
                     : motionDurationCss("state"),
                 }}
               >
+                {/* Fluent's selection indicator: a 3 by 16 accent pill on
+                    the leading edge. Only the Windows skin shows it. */}
+                <span
+                  aria-hidden
+                  className="absolute top-1/2 left-0 hidden h-4 w-[3px] -translate-y-1/2 rounded-full bg-primary-surface windows:group-data-[selected]:block"
+                />
                 <span
                   aria-hidden
                   className="flex size-icon shrink-0 transform-gpu items-center justify-center [&_svg]:size-icon [&_svg]:transform-gpu"

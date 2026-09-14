@@ -71,12 +71,15 @@ const variantClassName = {
     // The ring shares the knob's accent, so a selected segment gets a gap.
     selectedText:
       "data-[selected]:text-primary-fg data-[selected]:data-[focus-visible]:ring-offset-2 data-[selected]:data-[focus-visible]:ring-offset-content",
-    track: "bg-fill",
+    // The bezel's fill and stroke are the platform tokens; Fluent has no
+    // sliding segmented control, so its form is this construction on a
+    // Fluent bezel.
+    track: "bg-control-fill control-stroke",
   },
   ghost: {
     // Ghost segments are toolbar items, which do.
     hover:
-      "data-[hovered]:not-data-[selected]:bg-fill-tertiary data-[pressed]:not-data-[selected]:bg-fill",
+      "data-[hovered]:not-data-[selected]:bg-control-subtle-hover data-[pressed]:not-data-[selected]:bg-control-subtle-pressed",
     knob: `${knobBase} bg-fill`,
     selectedText: "data-[selected]:text-content-fg",
     track: "bg-transparent",

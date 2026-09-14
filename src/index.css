@@ -345,6 +345,10 @@
   --color-control-strong-fill: var(--color-fill);
   --color-control-strong-fill-disabled: var(--color-fill-quaternary);
   --color-control-solid-fill: white;
+  /* A grouped box of rows, as a settings pane draws. macOS: the faintest
+     fill; Fluent: a card on the layer fill with a hairline stroke. */
+  --color-layer: var(--color-fill-quaternary);
+  --color-layer-stroke: transparent;
   /* A pop-up's in-page surface (a select's list, a tooltip) when no panel
      window hosts it. macOS paints the window colour; Fluent draws a flyout
      one step lighter than the layer with a hairline stroke. */
@@ -463,6 +467,8 @@
     --alpha-primary-fg-disabled: 1;
     --color-popover: rgb(249 249 249);
     --color-popover-stroke: rgb(0 0 0 / 5.8%);
+    --color-layer: rgb(255 255 255 / 50%);
+    --color-layer-stroke: rgb(0 0 0 / 5.8%);
     --color-control-strong-fill: rgb(0 0 0 / 44.7%);
     --color-control-strong-fill-disabled: rgb(0 0 0 / 31.7%);
     --color-control-solid-fill: white;
@@ -534,6 +540,8 @@
     --alpha-primary-fg-disabled: 0.53;
     --color-popover: rgb(44 44 44);
     --color-popover-stroke: rgb(0 0 0 / 20%);
+    --color-layer: rgb(58 58 58 / 30%);
+    --color-layer-stroke: rgb(0 0 0 / 10%);
     --color-control-strong-fill: rgb(255 255 255 / 54.4%);
     --color-control-strong-fill-disabled: rgb(255 255 255 / 24.7%);
     --color-control-solid-fill: rgb(69 69 69);
