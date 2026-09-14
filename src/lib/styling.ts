@@ -17,6 +17,13 @@ export const focusStyles =
 // React Aria's keyboard-modality tracking decides visibility on its own:
 // WebKit's native :focus-visible does not reliably follow focus that a key
 // handler moves programmatically, e.g. arrow keys inside a toolbar.
-export const elementFocusVisible = "data-[focus-visible]:ring-3";
+// Fluent draws two strokes instead: a 1px inner in the opposite colour hugging
+// the control, then a 2px outer in the text colour. The ring offset is the
+// inner stroke. The `windows:` variant has higher specificity than a plain
+// data variant, so it also wins over a component's own ring offset. Written
+// out in full because Tailwind only generates classes it finds literally.
+export const elementFocusVisible =
+  "data-[focus-visible]:ring-3 windows:data-[focus-visible]:ring-2 windows:data-[focus-visible]:ring-offset-1 windows:data-[focus-visible]:ring-offset-focus-ring-inner";
 
-export const groupFocusVisible = "group-data-[focus-visible]:ring-3";
+export const groupFocusVisible =
+  "group-data-[focus-visible]:ring-3 windows:group-data-[focus-visible]:ring-2 windows:group-data-[focus-visible]:ring-offset-1 windows:group-data-[focus-visible]:ring-offset-focus-ring-inner";

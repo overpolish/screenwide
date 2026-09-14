@@ -19,7 +19,7 @@ import { RecordingStatus } from "../types";
 import { RecordingMonitorSnapshot } from "../use-recording-monitor";
 
 /**
- * "00:00:08" in 13px Inter tabular figures measures about 58px, so 64px holds
+ * "00:00:08" in 13px SF Pro tabular figures measures about 58px, so 64px holds
  * the longest timer with a little slack and the pill never breathes as the
  * digits change. It also gives the starting and finishing slot, which takes
  * the same width, room for its spinner and label.

@@ -30,7 +30,7 @@ const TICK_INTERVALS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
 const MINIMUM_TICK_SPACING = 70;
 /**
  * Estimated width of one footnote glyph in CSS pixels. A ruler label is
- * digits and colons only, which Inter draws on the tabular advance: at the
+ * digits and colons only, drawn on the system font's tabular advance: at the
  * 10px footnote size that is about 6px each. Estimated rather than measured
  * because it only decides whether a label still fits before the right edge.
  */

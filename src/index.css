@@ -3,8 +3,6 @@
 
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@fontsource-variable/inter/standard.css";
-@import "@fontsource-variable/inter/standard-italic.css";
 @import "overlayscrollbars/styles/overlayscrollbars.css";
 
 @font-face {
@@ -45,6 +43,42 @@
   color: var(--color-primary-fg);
   --icon-alpha: 1;
 }
+@utility text-primary-fg-pressed {
+  color: var(--color-primary-fg-pressed);
+  --icon-alpha: var(--alpha-primary-fg-pressed);
+}
+@utility text-control-fg-pressed {
+  color: var(--color-control-fg-pressed);
+  --icon-alpha: var(--alpha-control-fg-pressed);
+}
+@utility text-control-fg-disabled {
+  color: var(--color-control-fg-disabled);
+  --icon-alpha: var(--alpha-control-fg-disabled);
+}
+
+/* A bezel's stroke: a hairline all round plus a second hairline on one edge
+   (Fluent's "elevation border", darker at the bottom in light appearance and
+   lighter at the top in dark). Both are transparent on macOS, whose bezels
+   have no stroke. Composed like Tailwind's own inset shadows so the focus
+   ring can stack on top. */
+@utility control-stroke {
+  --tw-inset-shadow:
+    inset 0 0 0 1px var(--color-control-stroke),
+    inset 0 var(--control-stroke-edge-offset) 0 0
+      var(--color-control-stroke-edge);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+@utility primary-stroke {
+  --tw-inset-shadow:
+    inset 0 0 0 1px var(--color-primary-stroke),
+    inset 0 var(--control-stroke-edge-offset) 0 0
+      var(--color-primary-stroke-edge);
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
 @utility text-primary {
   color: var(--color-primary);
   --icon-alpha: 1;
@@ -71,9 +105,9 @@
 }
 
 @theme {
-  --font-sans:
-    "Inter Variable", ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* The system font, so text matches the OS around the window: SF Pro on
+     macOS. The Windows skin names Segoe UI Variable explicitly. */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:
     "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
@@ -213,6 +247,11 @@
     var(--color-primary),
     black 20%
   );
+  --color-primary-fg-pressed: var(--color-primary-fg);
+  --alpha-primary-fg-pressed: 1;
+  /* The accent bezel's stroke; see `--color-control-stroke`. */
+  --color-primary-stroke: transparent;
+  --color-primary-stroke-edge: transparent;
   /* The window title's gradient: the accent with a lighter and a deeper stop
      around it, so the identity moment follows the OS accent like everything
      else. */
@@ -238,6 +277,10 @@
     var(--color-primary) 50%,
     transparent
   );
+  /* Fluent's focus visual is two strokes: a 2px outer in the text colour and
+     a 1px inner in the opposite colour, hugging the control. macOS has only
+     the halo, so the inner stroke is invisible here. */
+  --color-focus-ring-inner: transparent;
   /* Fill ladder over the window material, matching AppKit's system fills
      (10 / 8 / 5 / 3%): fill for bezels and selected rows, secondary for a
      pressed bezel, tertiary for row and icon-button hover, quaternary for
@@ -246,6 +289,29 @@
   --color-fill-secondary: rgb(0 0 0 / 8%);
   --color-fill-tertiary: rgb(0 0 0 / 5%);
   --color-fill-quaternary: rgb(0 0 0 / 3%);
+
+  /* Bezeled control states. On macOS these map onto the fill ladder: a
+     bezel is the fill, ignores hover, and a press stacks the secondary fill
+     on top (10% over 8% composes to 17.2%). Windows swaps in Fluent's
+     per-state fills, which are not monotonic (a pressed Fluent bezel is
+     lighter than its rest state), so they cannot be a re-mapping of the
+     ladder. Subtle is the borderless (ghost) control. */
+  --color-control-fill: var(--color-fill);
+  --color-control-fill-hover: var(--color-fill);
+  --color-control-fill-pressed: rgb(0 0 0 / 17.2%);
+  --color-control-fill-disabled: var(--color-fill-quaternary);
+  --color-control-fg-pressed: var(--color-content-fg);
+  --alpha-control-fg-pressed: var(--alpha-content-fg);
+  --color-control-fg-disabled: var(--color-content-fg-tertiary);
+  --alpha-control-fg-disabled: var(--alpha-content-fg-tertiary);
+  --color-control-subtle-hover: var(--color-fill-tertiary);
+  --color-control-subtle-pressed: var(--color-fill);
+  /* macOS bezels have no stroke; see the `control-stroke` utility. The edge
+     offset picks which edge carries the second hairline: negative is the
+     bottom edge. */
+  --color-control-stroke: transparent;
+  --color-control-stroke-edge: transparent;
+  --control-stroke-edge-offset: -1px;
 
   /* Semantic colours are the AppKit system palette, measured on macOS 26.
      Native uses them solid, for text and glyphs, never as tinted surfaces. */
@@ -271,11 +337,119 @@
     --color-fill-secondary: rgb(255 255 255 / 8%);
     --color-fill-tertiary: rgb(255 255 255 / 5%);
     --color-fill-quaternary: rgb(255 255 255 / 3%);
+    --color-control-fill-pressed: rgb(255 255 255 / 17.2%);
 
     --color-success: rgb(48 209 88);
     --color-info: rgb(0 145 255);
     --color-warning: rgb(255 214 0);
     --color-error: rgb(255 66 69);
+  }
+
+  /* The Windows skin: Fluent values from WinUI 3's theme resources
+     (microsoft-ui-xaml, controls/dev/CommonStyles/Common_themeresources_any
+     and Button_themeresources). Same token names, different values, so
+     components stay platform-agnostic. The type ramp is Fluent's: body
+     14/20, caption 12/16, strong weights at 600. Footnote has no Fluent
+     role and keeps a size just under caption. */
+  [data-platform="windows"] {
+    --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+
+    --text-title: 14px;
+    --text-title--line-height: 20px;
+    --text-title--font-weight: 600;
+    --text-headline: 14px;
+    --text-headline--line-height: 20px;
+    --text-headline--font-weight: 600;
+    --text-body: 14px;
+    --text-body--line-height: 20px;
+    --text-subheadline: 12px;
+    --text-subheadline--line-height: 16px;
+    --text-section: 12px;
+    --text-section--line-height: 16px;
+    --text-section--font-weight: 600;
+    --text-footnote: 11px;
+    --text-footnote--line-height: 14px;
+
+    /* A WinUI button is 32 tall on a 4px corner; overlays sit on 8px. */
+    --spacing-control-height: 2rem;
+    --radius-control: 4px;
+    --radius-panel: 8px;
+    --radius-window: 8px;
+
+    /* The layer base Fluent draws controls over. A Fluent bezel in light
+       appearance is white at 70%, so the surface must sit below white for
+       the bezel to read at all. */
+    --color-content: rgb(243 243 243);
+    --color-content-fg: rgb(0 0 0 / 89.6%);
+    --color-content-fg-secondary: rgb(0 0 0 / 62%);
+    --color-content-fg-tertiary: rgb(0 0 0 / 44.7%);
+    --alpha-content-fg: 0.896;
+    --alpha-content-fg-secondary: 0.62;
+    --alpha-content-fg-tertiary: 0.447;
+
+    --color-control-fill: rgb(255 255 255 / 70%);
+    --color-control-fill-hover: rgb(249 249 249 / 50%);
+    --color-control-fill-pressed: rgb(249 249 249 / 30%);
+    --color-control-fill-disabled: rgb(249 249 249 / 30%);
+    --color-control-fg-pressed: var(--color-content-fg-secondary);
+    --alpha-control-fg-pressed: var(--alpha-content-fg-secondary);
+    --color-control-fg-disabled: rgb(0 0 0 / 36.1%);
+    --alpha-control-fg-disabled: 0.361;
+    --color-control-subtle-hover: rgb(0 0 0 / 3.7%);
+    --color-control-subtle-pressed: rgb(0 0 0 / 2.4%);
+    --color-control-stroke: rgb(0 0 0 / 5.8%);
+    --color-control-stroke-edge: rgb(0 0 0 / 16.2%);
+    --control-stroke-edge-offset: -1px;
+
+    /* WinUI shifts the accent a tone per appearance, but the brand colour
+       stays as is here, with white text in both appearances. Hover and press
+       are Fluent's: the fill at 90% and 80% opacity. */
+    --color-primary-surface: var(--color-primary);
+    --color-primary-surface-hover: color-mix(
+      in srgb,
+      var(--color-primary-surface) 90%,
+      transparent
+    );
+    --color-primary-surface-pressed: color-mix(
+      in srgb,
+      var(--color-primary-surface) 80%,
+      transparent
+    );
+    --color-primary-fg-pressed: rgb(255 255 255 / 70%);
+    --alpha-primary-fg-pressed: 0.7;
+    --color-primary-stroke: rgb(255 255 255 / 8%);
+    --color-primary-stroke-edge: rgb(0 0 0 / 40%);
+
+    --color-focus-ring: rgb(0 0 0 / 89.6%);
+    --color-focus-ring-inner: rgb(255 255 255 / 70%);
+  }
+
+  .dark[data-platform="windows"] {
+    --color-content: rgb(32 32 32);
+    --color-content-fg: rgb(255 255 255);
+    --color-content-fg-secondary: rgb(255 255 255 / 77.2%);
+    --color-content-fg-tertiary: rgb(255 255 255 / 53%);
+    --alpha-content-fg: 1;
+    --alpha-content-fg-secondary: 0.772;
+    --alpha-content-fg-tertiary: 0.53;
+
+    --color-control-fill: rgb(255 255 255 / 6%);
+    --color-control-fill-hover: rgb(255 255 255 / 8.4%);
+    --color-control-fill-pressed: rgb(255 255 255 / 3.3%);
+    --color-control-fill-disabled: rgb(255 255 255 / 4.2%);
+    --color-control-fg-disabled: rgb(255 255 255 / 36.3%);
+    --alpha-control-fg-disabled: 0.363;
+    --color-control-subtle-hover: rgb(255 255 255 / 6%);
+    --color-control-subtle-pressed: rgb(255 255 255 / 4.2%);
+    --color-control-stroke: rgb(255 255 255 / 7%);
+    --color-control-stroke-edge: rgb(255 255 255 / 9.3%);
+    /* In dark appearance the lit edge is the top one. */
+    --control-stroke-edge-offset: 1px;
+
+    --color-primary-stroke-edge: rgb(0 0 0 / 14%);
+
+    --color-focus-ring: white;
+    --color-focus-ring-inner: rgb(0 0 0 / 70%);
   }
 }
 
