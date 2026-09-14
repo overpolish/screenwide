@@ -23,7 +23,10 @@ const FADE_OUT_SECONDS: f64 = 0.16;
 
 pub fn initialize_glide_preview(window: &WebviewWindow) -> tauri::Result<()> {
   #[cfg(target_os = "windows")]
-  super::initialize_overlay(window)?;
+  {
+    super::initialize_overlay(window)?;
+    super::round_corners(window)?;
+  }
   #[cfg(target_os = "macos")]
   super::ensure_recording_panel(window)?;
   window.set_ignore_cursor_events(true)?;

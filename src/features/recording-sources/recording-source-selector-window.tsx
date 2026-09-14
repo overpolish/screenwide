@@ -223,7 +223,7 @@ export function RecordingSourceSelectorWindow() {
   const showsMonitors = isExpanded && !windowSelector;
 
   return (
-    <main className="window-surface fixed inset-0 flex overflow-hidden text-content-fg">
+    <main className="window-surface fixed inset-0 flex overflow-hidden text-content-fg windows:rounded-window windows:inset-ring windows:inset-ring-popover-stroke">
       {showsWindows ? (
         <div className="min-h-0 grow overflow-hidden">
           <WindowSelector

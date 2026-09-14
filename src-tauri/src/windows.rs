@@ -86,6 +86,8 @@ pub use lifecycle::{
   initialize_recording_bar, initialize_recording_source_selector, initialize_region_selector,
   initialize_standalone_listbox,
 };
+#[cfg(target_os = "windows")]
+pub(crate) use platform::round_corners;
 pub use region::{
   hide_region_selector, is_region_selector_visible, set_region_selector_passthrough,
 };

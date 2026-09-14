@@ -111,6 +111,9 @@ pub fn show(
         .traffic_light_position(tauri::LogicalPosition::new(14.0, 27.0));
     }
     let window = builder.build().map_err(|error| error.to_string())?;
+    // Frameless on Windows, so DWM is asked for the framed window's corner.
+    #[cfg(target_os = "windows")]
+    crate::windows::round_corners(&window).map_err(|error| error.to_string())?;
     let close_app = app.clone();
     window.on_window_event(move |event| {
       if let WindowEvent::CloseRequested { api, .. } = event {

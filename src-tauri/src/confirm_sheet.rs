@@ -100,6 +100,10 @@ fn get_or_create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
       state: Some(EffectState::Active),
     })
     .build()?;
+  // The effect's radius is macOS-only; on Windows the frameless sheet asks
+  // DWM for the corner it would give a framed window.
+  #[cfg(target_os = "windows")]
+  crate::windows::round_corners(&window)?;
 
   let close_app = app.clone();
   window.on_window_event(move |event| {
