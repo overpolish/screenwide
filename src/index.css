@@ -170,6 +170,10 @@
   /* The padding of a pop-up list around its items: 4px in a macOS menu,
      6px in a Fluent flyout (measured). */
   --spacing-list-inset: 0.25rem;
+  /* The room a switch knob travels in: the track's width inside its inset.
+     36 less 2 by 2 on macOS, 40 less a hairline and 3 each side in Fluent,
+     so both come to 32, and the knob lands at `travel - own width`. */
+  --spacing-switch-travel: 2rem;
   /* Measured on macOS 26: HUD panels 15px, plain windows 16px, toolbar
      windows 26px. Tuned by eye to 14px, which reads as a match on the app's
      small panels. */
