@@ -8,10 +8,8 @@ import logoUrl from "../../assets/screenwide-mark.svg";
 import { Alert } from "../../components/base/alert/alert";
 import { ScrollArea } from "../../components/base/scroll-area/scroll-area";
 import { SidebarNav } from "../../components/base/sidebar-nav/sidebar-nav";
-import { Text } from "../../components/base/text/text";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
 import { WindowShell } from "../../components/shared/window-shell/window-shell";
-import { detectedPlatform } from "../../lib/platform";
 
 import { useSettingsApi } from "./settings-api-context";
 import { SettingsPanes } from "./settings-panes";
@@ -29,8 +27,6 @@ import { useGlideSettingsSave } from "./use-glide-settings-save";
 import { useOcrSettingsSave } from "./use-ocr-settings-save";
 import { useRulerSettingsSave } from "./use-ruler-settings-save";
 import { useShortcutCapture } from "./use-shortcut-capture";
-
-const isWindows = detectedPlatform === "windows";
 
 export function SettingsWindow({
   initialSection = "general",
@@ -170,10 +166,7 @@ export function SettingsWindow({
           }
           onClose={() => void hideSettings()}
           onMinimize={() => void minimize()}
-          // macOS System Settings names the selected pane in the title bar;
-          // the Windows Settings app names the app there and heads the page
-          // itself, so the section title moves into the content column.
-          title={isWindows ? "Settings" : sectionTitles[section]}
+          title={sectionTitles[section]}
         />
       }
     >
@@ -208,11 +201,6 @@ export function SettingsWindow({
               aria-label={sectionTitles[section]}
               className="pr-window-inset pb-window-inset flex flex-col"
             >
-              {isWindows ? (
-                <Text as="h2" className="mb-section" variant="title">
-                  {sectionTitles[section]}
-                </Text>
-              ) : null}
               <SettingsPanes
                 defaults={defaults}
                 general={general}
