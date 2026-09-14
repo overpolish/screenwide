@@ -177,13 +177,14 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
               aria-label="Inset"
               className="w-48"
               isDisabled={isSaving}
-              maxValue={Math.max(1, selection.insetMaximum)}
+              maxValue={Number.MAX_SAFE_INTEGER}
               minValue={0}
               onChange={(inset) => {
                 change({ selectionInset: inset });
               }}
               rightSection="px"
-              value={Math.min(selection.inset, selection.insetMaximum)}
+              sliderMaxValue={Math.max(1, selection.insetMaximum)}
+              value={selection.inset}
             />
           </div>
           <div className="flex justify-end">

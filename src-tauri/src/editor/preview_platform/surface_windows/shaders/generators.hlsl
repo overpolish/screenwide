@@ -92,18 +92,6 @@ float2 gen_rotate(float2 position, float angle) {
   return float2(cosine * position.x + sine * position.y, -sine * position.x + cosine * position.y);
 }
 
-// The seed as a move of the domain: a turn and a slide, applied to the pattern
-// position before a generator reads it. The generators have no seed of their
-// own, so this is what a fresh seed changes, and it is what keeps two tiles of
-// the same generator distinct at time zero.
-float3 gen_seed_shift(uint seed) {
-  float value = (float)seed;
-  float first = frac(sin(value * 12.9898 + 4.1) * 43758.5453);
-  float second = frac(sin(value * 78.2330 + 1.7) * 43758.5453);
-  float third = frac(sin(value * 39.4250 + 9.3) * 43758.5453);
-  return float3((first - 0.5) * 1.5, (second - 0.5) * 1.5, third * 6.2831853);
-}
-
 float2 gen_place(float2 position, float3 shift) {
   float sine = sin(shift.z);
   float cosine = cos(shift.z);
@@ -152,15 +140,32 @@ float3 gen_gentle(float2 pixel, float2 dimensions, GenPalette palette, float3 sh
 }
 
 // Ribbons. Bands 6, ripple 100%, direction 225 degrees.
+float gen_ribbon_phase(float2 placed, float time) {
+  float2 direction = float2(cos(3.926990817), sin(3.926990817));
+  float flow = dot(placed, direction) * 3.0 + time;
+  float across = sin(placed.x * 12.0 + time) * cos(placed.y * 8.0) * 0.3;
+  float down = cos(placed.y * 10.0 - time * 0.8) * sin(placed.x * 7.0) * 0.4;
+  return flow + (across + down) * 0.5;
+}
+
 float3 gen_ribbons(float2 pixel, float2 dimensions, GenPalette palette, float3 shift, float time) {
   float2 placed = gen_centred(pixel, dimensions, shift);
-  float phase = time;
-  float2 direction = float2(cos(3.926990817), sin(3.926990817));
-  float flow = dot(placed, direction) * 3.0 + phase;
-  float across = sin(placed.x * 12.0 + phase) * cos(placed.y * 8.0) * 0.3;
-  float down = cos(placed.y * 10.0 - phase * 0.8) * sin(placed.x * 7.0) * 0.4;
-  float ramp = frac(flow + (across + down) * 0.5);
-  return gen_ramp(palette, floor(ramp * 6.0) / 5.0);
+  float ramp = frac(gen_ribbon_phase(placed, time));
+  float2 point_xp = gen_centred(pixel + float2(0.5, 0.0), dimensions, shift);
+  float2 point_xm = gen_centred(pixel - float2(0.5, 0.0), dimensions, shift);
+  float2 point_yp = gen_centred(pixel + float2(0.0, 0.5), dimensions, shift);
+  float2 point_ym = gen_centred(pixel - float2(0.0, 0.5), dimensions, shift);
+  float footprint = 0.5 * (abs(gen_ribbon_phase(point_xp, time) - gen_ribbon_phase(point_xm, time)) +
+                           abs(gen_ribbon_phase(point_yp, time) - gen_ribbon_phase(point_ym, time)));
+  float band = floor(ramp * 6.0);
+  float fraction = ramp * 6.0 - band;
+  float width = saturate(max(footprint * 6.0, 0.0001));
+  width = min(width, 0.5);
+  float3 color = gen_ramp(palette, band / 5.0);
+  float previous = band > 0.0 ? band - 1.0 : 5.0;
+  float next = band < 5.0 ? band + 1.0 : 0.0;
+  color = lerp(gen_ramp(palette, previous / 5.0), color, smoothstep(-width, width, fraction));
+  return lerp(color, gen_ramp(palette, next / 5.0), smoothstep(-width, width, fraction - 1.0));
 }
 
 // Currents. Detail 5, warp 100%, turbulence 100%.
@@ -398,7 +403,7 @@ float gen_strata_grain(float2 position, float layer) {
 }
 
 // Strata. Layers 12, tectonics 60%, texture 70%, saturation 82%, vignette 100%.
-float3 gen_strata(float2 pixel, float2 dimensions, GenPalette palette, float3 shift, float time) {
+float3 gen_strata_sample(float2 pixel, float2 dimensions, GenPalette palette, float3 shift, float time) {
   float2 frame = gen_place(pixel / dimensions - 0.5, shift) + 0.5;
   float2 warped = gen_strata_warp(float2(frame.x * dimensions.x / dimensions.y, frame.y), time);
   float spacing = 1.0 / 13.0;
@@ -432,6 +437,14 @@ float3 gen_strata(float2 pixel, float2 dimensions, GenPalette palette, float3 sh
   return lerp(luminance.xxx, color, 0.82);
 }
 
+float3 gen_strata(float2 pixel, float2 dimensions, GenPalette palette, float3 shift, float time) {
+  float2 quarter = float2(0.25, 0.25);
+  return (gen_strata_sample(pixel - quarter, dimensions, palette, shift, time) +
+          gen_strata_sample(pixel + float2(quarter.x, -quarter.y), dimensions, palette, shift, time) +
+          gen_strata_sample(pixel + float2(-quarter.x, quarter.y), dimensions, palette, shift, time) +
+          gen_strata_sample(pixel + quarter, dimensions, palette, shift, time)) * 0.25;
+}
+
 // The generator a canvas names, by the id the settings carry. Zero is the
 // app's own mesh, which the caller handles rather than this chain. The WGSL
 // switches; an if chain keeps every case a plain return under shader model 4.
@@ -440,9 +453,8 @@ float3 gen_strata(float2 pixel, float2 dimensions, GenPalette palette, float3 sh
 // table in `screenshots/mesh_generator.rs`; the two are multiplied here, once,
 // and every generator reads the product as its own `time`. Zero paints the
 // still.
-float3 gen_pixel(uint generator, float2 pixel, float2 dimensions, GenPalette palette, uint seed,
+float3 gen_pixel(uint generator, float2 pixel, float2 dimensions, GenPalette palette, float3 shift,
                  float time, float speed) {
-  float3 shift = gen_seed_shift(seed);
   float t = time * speed;
   if (generator == 1u) return gen_silk(pixel, dimensions, palette, shift, t);
   if (generator == 2u) return gen_aurora(pixel, dimensions, palette, shift, t);

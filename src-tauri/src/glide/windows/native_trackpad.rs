@@ -137,7 +137,7 @@ impl Device {
       super::clear_trackpad_tap_candidate();
     }
     let centroid = contacts
-      .get(0)
+      .first()
       .zip(contacts.get(1))
       .map(|(a, b)| (((a.x + b.x) * 0.0005) as f32, ((a.y + b.y) * 0.0005) as f32));
     let tap = self.taps.update(

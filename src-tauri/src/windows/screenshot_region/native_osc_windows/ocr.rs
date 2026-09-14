@@ -29,7 +29,7 @@ pub(crate) use drawing::status_rect;
 #[path = "ocr/vertices.rs"]
 mod vertices;
 
-use drawing::{add_control, push_segment, visual_fills};
+use drawing::{add_control, push_segment, visual_fills, ControlRender};
 
 use std::time::Instant;
 

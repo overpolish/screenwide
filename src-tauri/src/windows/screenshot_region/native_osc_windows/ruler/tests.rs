@@ -318,7 +318,7 @@ fn the_command_keys_match_the_macos_keycode_table() {
   let phase = |vk, command, shift| {
     key_command(
       vk,
-      u32::from(command) * 2 | u32::from(shift) * 8,
+      (u32::from(command) * 2) | (u32::from(shift) * 8),
       false,
       false,
     )

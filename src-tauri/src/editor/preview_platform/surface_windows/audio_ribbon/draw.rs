@@ -30,8 +30,7 @@ impl AudioRibbon {
     if !self.dirty && self.last_constants == Some(constants) {
       return Ok(());
     }
-    let index = unsafe { self.swap_chain.GetCurrentBackBufferIndex() };
-    let buffer = unsafe { self.swap_chain.GetBuffer::<ID3D11Texture2D>(index) }
+    let buffer = unsafe { self.swap_chain.GetBuffer::<ID3D11Texture2D>(0) }
       .map_err(|error| error.to_string())?;
     let mut target = None;
     unsafe {

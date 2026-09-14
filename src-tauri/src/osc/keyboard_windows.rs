@@ -16,8 +16,8 @@ pub(crate) use hooks::alt_pressed;
 use hooks::cancel_alt_menu_activation;
 use hooks::hook_proc;
 use hooks::post_alt_transition;
+#[cfg(test)]
 use hooks::routes_to_overlay;
-use hooks::update_pressed;
 
 use std::cell::RefCell;
 use std::mem::size_of;

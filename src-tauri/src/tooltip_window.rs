@@ -5,8 +5,8 @@
 //!
 //! The Editor's preview is a native surface layered above the webview, so a
 //! tooltip drawn in the page is covered by it. This one is a window instead:
-//! one window serves every trigger, built the first time something hovers and
-//! hidden and shown again from then on, the way the confirmation sheet works.
+//! one window serves every trigger, prebuilt during Windows startup and built
+//! on first hover on macOS, then hidden and shown again from then on.
 //!
 //! It never takes the keyboard. The window is built unfocused and, on macOS,
 //! converted into a non-activating panel that refuses key status outright, so
@@ -15,15 +15,12 @@
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
-use tauri::utils::config::WindowEffectsConfig;
-use tauri::window::{Effect, EffectState};
-use tauri::{
-  AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewUrl, WebviewWindow,
-  WebviewWindowBuilder,
-};
+use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewWindow};
 
 use crate::editor::export_window::presentation;
 use crate::windows::{platform, WindowLabel};
+
+mod creation;
 
 /// Sent to an already-loaded tooltip when it is asked to say something else.
 /// The first presentation has no one listening yet and reads the words itself.
@@ -84,45 +81,26 @@ fn pending_tooltip(app: &AppHandle) -> Option<(AnchorRect, String)> {
     .map(|pending| (pending.anchor, pending.parent_label.clone()))
 }
 
-/// The tooltip window, built on first use and reused from then on.
+/// The tooltip window is prebuilt on Windows so an IPC callback never creates
+/// a WebView synchronously. macOS keeps its lazy first-use construction.
 fn get_or_create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
   let label = WindowLabel::Tooltip.as_str();
   if let Some(window) = app.get_webview_window(label) {
     return Ok(window);
   }
+  #[cfg(target_os = "windows")]
+  {
+    Err(tauri::Error::Anyhow(
+      std::io::Error::other("The Windows tooltip window was not initialized").into(),
+    ))
+  }
+  #[cfg(not(target_os = "windows"))]
+  creation::build(app)
+}
 
-  let effect = if cfg!(target_os = "windows") {
-    Effect::Mica
-  } else {
-    Effect::UnderWindowBackground
-  };
-  let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/tooltip".into()))
-    .title("Screenwide")
-    .inner_size(MAX_WIDTH, INITIAL_HEIGHT)
-    .always_on_top(true)
-    .decorations(false)
-    // A tooltip is told about, never opened: it has no way in and no way out.
-    .focused(false)
-    .minimizable(false)
-    .maximizable(false)
-    .resizable(false)
-    .shadow(true)
-    .skip_taskbar(true)
-    .transparent(true)
-    .visible(false)
-    .effects(WindowEffectsConfig {
-      color: None,
-      effects: vec![effect],
-      radius: Some(8.0),
-      state: Some(EffectState::Active),
-    })
-    .build()?;
-
-  platform::initialize_tooltip(&window)?;
-  // Nothing in a tooltip is clickable, and a tooltip that swallowed a click
-  // would be worse than no tooltip at all.
-  window.set_ignore_cursor_events(true)?;
-  Ok(window)
+#[cfg(target_os = "windows")]
+pub fn initialize(app: &AppHandle) -> tauri::Result<()> {
+  creation::initialize(app)
 }
 
 /// Puts the window on screen without its pixels, so the page lays out and can

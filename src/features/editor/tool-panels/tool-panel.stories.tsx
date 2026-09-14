@@ -238,6 +238,7 @@ export const Frame: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: {
         height: 2338,
+        radius: 8,
         sourceHeight: 2338,
         sourceWidth: 3600,
         width: 3600,

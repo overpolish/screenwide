@@ -5,6 +5,7 @@
 mod glide_preview_control;
 pub use glide_preview_control::defer_hide_glide_preview;
 pub(crate) use glide_preview_control::fade_glide_preview;
+#[cfg(target_os = "macos")]
 pub use glide_preview_control::hide_glide_preview;
 pub use glide_preview_control::initialize_glide_preview;
 #[cfg(target_os = "macos")]
@@ -29,12 +30,8 @@ mod labels;
 mod recording_bar_movement;
 pub use labels::WindowLabel;
 
-#[cfg(target_os = "windows")]
-use recording_bar_movement::contain_recording_bar;
 pub use recording_bar_movement::finish_recording_bar_drag;
 pub use recording_bar_movement::manage_recording_bar_movement;
-#[cfg(target_os = "windows")]
-use recording_bar_movement::watch_for_recording_bar_mouse_up;
 pub use recording_bar_movement::{
   __cmd__finish_recording_bar_drag, __tauri_command_name_finish_recording_bar_drag,
 };
@@ -227,29 +224,35 @@ impl PopoversOpenOnPress {
 
 #[cfg(target_os = "windows")]
 pub fn manage_transient_popover_dismissal(app: &AppHandle) {
-  use std::sync::{Arc, Mutex};
+  use std::sync::mpsc;
 
   use rdev::{listen, Button, EventType};
 
-  let app = app.clone();
-  let mouse_position = Arc::new(Mutex::new((0.0, 0.0)));
+  let (dismiss_tx, dismiss_rx) = mpsc::channel::<(PopoversOpenOnPress, f64, f64)>();
+  let dismiss_app = app.clone();
   std::thread::spawn(move || {
-    let position = mouse_position.clone();
+    while let Ok((open_on_press, x, y)) = dismiss_rx.recv() {
+      open_on_press.dismiss_outside(&dismiss_app, x, y);
+    }
+  });
+  std::thread::spawn(move || {
+    let mut position = (0.0, 0.0);
     let mut open_on_press = PopoversOpenOnPress::default();
     let result = listen(move |event| match event.event_type {
       EventType::MouseMove { x, y } => {
-        if let Ok(mut position) = position.lock() {
-          *position = (x, y);
-        }
+        position = (x, y);
       }
       EventType::ButtonPress(Button::Left) => {
         open_on_press = PopoversOpenOnPress::capture();
       }
       EventType::ButtonRelease(Button::Left) => {
-        let Ok((x, y)) = position.lock().map(|position| *position) else {
-          return;
-        };
-        open_on_press.dismiss_outside(&app, x, y);
+        let (x, y) = position;
+        // rdev invokes this callback before CallNextHookEx. Defer dismissal
+        // because its window geometry queries synchronously wait for the UI
+        // thread, which cannot process them while the hook callback is live.
+        if open_on_press.source_selector || open_on_press.standalone_listbox {
+          let _ = dismiss_tx.send((open_on_press, x, y));
+        }
         open_on_press = PopoversOpenOnPress::default();
       }
       _ => {}

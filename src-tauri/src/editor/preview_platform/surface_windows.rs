@@ -12,6 +12,7 @@ mod batch;
 mod callbacks;
 #[path = "surface_windows/creation.rs"]
 mod creation;
+#[cfg(debug_assertions)]
 #[path = "surface_windows/editor_controls.rs"]
 mod editor_controls;
 #[path = "surface_windows/export.rs"]

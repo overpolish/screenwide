@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[cfg(any(test, target_os = "macos"))]
 use super::*;
 
 /// Picks the first preference a device can actually deliver.

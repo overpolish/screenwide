@@ -48,7 +48,7 @@ pub(super) fn keyboard_command(hwnd: HWND, wparam: WPARAM, lparam: LPARAM) -> bo
   let super_key = (unsafe { GetKeyState(VK_LWIN.0 as i32) }) < 0
     || (unsafe { GetKeyState(VK_RWIN.0 as i32) }) < 0;
   let modifiers =
-    u32::from(control) * 2 | u32::from(shift) * 8 | u32::from(alt) * 4 | u32::from(super_key);
+    (u32::from(control) * 2) | (u32::from(shift) * 8) | (u32::from(alt) * 4) | u32::from(super_key);
   // Bit 30 of `lparam` is set when this key-down is an auto-repeat.
   let repeat = lparam.0 & (1 << 30) != 0;
   overlay_keyboard_command(hwnd, wparam.0 as u16, modifiers, repeat)

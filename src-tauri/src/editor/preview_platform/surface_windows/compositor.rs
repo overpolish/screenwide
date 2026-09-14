@@ -178,3 +178,19 @@ mod tests {
     assert_eq!(&BLUR_PIXEL_SHADER[..4], b"DXBC");
   }
 }
+
+#[cfg(all(test, target_os = "windows", target_arch = "x86_64"))]
+#[path = "compositor/fpu_tests.rs"]
+mod fpu_tests;
+#[cfg(all(test, target_os = "windows"))]
+#[path = "compositor/render_test_helpers.rs"]
+mod render_test_helpers;
+#[cfg(all(test, target_os = "windows"))]
+#[path = "compositor/render_tests.rs"]
+mod render_tests;
+#[cfg(all(test, target_os = "windows"))]
+#[path = "compositor/selection_state_tests.rs"]
+mod selection_state_tests;
+#[cfg(all(test, target_os = "windows"))]
+#[path = "compositor/swapchain_tests.rs"]
+mod swapchain_tests;

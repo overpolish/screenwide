@@ -118,6 +118,31 @@ pub(crate) fn default_generator() -> String {
   DEFAULT_GENERATOR.to_owned()
 }
 
+/// Resolves a generator seed on the CPU so every D3D11 draw receives
+/// stable domain coordinates instead of recalculating a large GPU sine hash.
+#[cfg(any(target_os = "windows", test))]
+pub(crate) fn generator_seed_shift(seed: u32) -> [f32; 3] {
+  // Cache the wire-format f32 result so later preview/export calls on threads
+  // with a different rounding mode receive the exact same domain shift.
+  use std::collections::HashMap;
+  static SHIFTS: std::sync::OnceLock<std::sync::Mutex<HashMap<u32, [f32; 3]>>> =
+    std::sync::OnceLock::new();
+  let shifts = SHIFTS.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+  let mut shifts = shifts.lock().unwrap();
+  if let Some(shift) = shifts.get(&seed) {
+    return *shift;
+  }
+  let value = f64::from(seed);
+  let fract = |value: f64| value - value.floor();
+  let shift = [
+    ((fract((value * 12.9898 + 4.1).sin() * 43_758.5453) - 0.5) * 1.5) as f32,
+    ((fract((value * 78.233 + 1.7).sin() * 43_758.5453) - 0.5) * 1.5) as f32,
+    (fract((value * 39.425 + 9.3).sin() * 43_758.5453) * std::f64::consts::TAU) as f32,
+  ];
+  shifts.insert(seed, shift);
+  shift
+}
+
 /// The generator a name asks for. `None` for a name this build does not know,
 /// which the caller reports rather than painting something else.
 pub(crate) fn mesh_generator(name: &str) -> Option<&'static MeshGenerator> {

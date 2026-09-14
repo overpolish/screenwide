@@ -34,5 +34,11 @@ export const toolPanelWidth = 320;
  * and screen coordinates, where the CSS token cannot be read. */
 export const popupPanelSpacing = 12;
 
+/** Windows tool panels use the `--spacing-window-inset` right edge token. */
+export const toolPanelSpacing =
+  typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent)
+    ? 14
+    : popupPanelSpacing;
+
 /** What a tool panel opens at before its own content is measured. */
 export const initialToolPanelHeight = 200;

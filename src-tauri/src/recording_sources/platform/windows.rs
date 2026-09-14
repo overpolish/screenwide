@@ -5,17 +5,16 @@
 mod windows_platform {
   use std::{
     collections::HashSet,
-    ffi::{c_void, OsStr, OsString},
+    ffi::{OsStr, OsString},
     os::windows::ffi::{OsStrExt, OsStringExt},
     path::{Path, PathBuf},
   };
 
   use image::{ImageBuffer, Rgba};
-  use rapidfuzz::fuzz::ratio;
   use windows::{
     core::{PCWSTR, PWSTR},
     Win32::{
-      Foundation::{CloseHandle, HWND},
+      Foundation::CloseHandle,
       Graphics::Gdi::{
         CreateCompatibleDC, DeleteDC, DeleteObject, GetDIBits, GetObjectW, BITMAP, BITMAPINFO,
         BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
@@ -26,36 +25,13 @@ mod windows_platform {
       },
       UI::{
         Shell::ExtractIconExW,
-        WindowsAndMessaging::{
-          DestroyIcon, GetIconInfo, SetWindowPos, ICONINFO, SWP_NOACTIVATE, SWP_NOMOVE,
-          SWP_NOZORDER,
-        },
+        WindowsAndMessaging::{DestroyIcon, GetIconInfo, ICONINFO},
       },
     },
   };
 
   pub fn selectable_window_ids() -> Option<HashSet<u32>> {
     None
-  }
-
-  fn find_window(id: u32, pid: u32, title: &str) -> Result<HWND, String> {
-    let windows = xcap::Window::all().map_err(|error| error.to_string())?;
-    windows
-      .into_iter()
-      .filter(|window| window.pid().ok() == Some(pid))
-      .max_by(|left, right| {
-        let score = |window: &xcap::Window| {
-          if window.id().ok() == Some(id) {
-            f64::MAX
-          } else {
-            ratio(window.title().unwrap_or_default().chars(), title.chars())
-          }
-        };
-        score(left).total_cmp(&score(right))
-      })
-      .and_then(|window| window.id().ok())
-      .map(|window_id| HWND(window_id as usize as *mut c_void))
-      .ok_or_else(|| format!("Could not find window '{title}'"))
   }
 
   /// Full path of a process's executable image.

@@ -39,7 +39,12 @@ pub fn move_standalone_listbox(
     .ok_or(tauri::Error::WindowNotFound)?;
   #[cfg(target_os = "windows")]
   {
-    super::placement_windows::place(&app, &parent, &window, offset, None)?;
+    let policy = if context_for(&panel).is_some_and(|context| context.sticky) {
+      super::placement_windows::PlacementPolicy::PreserveAnchor
+    } else {
+      super::placement_windows::PlacementPolicy::WorkArea
+    };
+    super::placement_windows::place(&app, &parent, &window, offset, None, policy)?;
     if let Some(context) = super::standalone_listbox_contexts().get_mut(&panel) {
       context.offset = offset;
     }

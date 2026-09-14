@@ -176,7 +176,7 @@ static float gen_strata_grain(float2 position, float layer) {
 }
 
 /// Strata. Layers 12, tectonics 60%, texture 70%, saturation 82%, vignette 100%.
-static float3 gen_strata(float2 pixel, float2 dimensions, GenPalette palette, float3 shift, float time) {
+static float3 gen_strata_sample(float2 pixel, float2 dimensions, GenPalette palette, float3 shift, float time) {
   float2 frame = gen_place(pixel / dimensions - 0.5, shift) + 0.5;
   float2 warped = gen_strata_warp(float2(frame.x * dimensions.x / dimensions.y, frame.y), time);
   float spacing = 1.0 / 13.0;
@@ -206,6 +206,14 @@ static float3 gen_strata(float2 pixel, float2 dimensions, GenPalette palette, fl
   color *= clamp(1.0 - 0.3 * length((frame - 0.5) * 1.5), 0.0, 1.0);
   color += gen_noise2(pixel * 0.15) * 0.03 * 0.7 + (gen_hash21(pixel) - 0.5) * 0.015 * 0.7;
   return mix(float3(dot(color, float3(0.299, 0.587, 0.114))), color, 0.82);
+}
+
+static float3 gen_strata(float2 pixel, float2 dimensions, GenPalette palette, float3 shift, float time) {
+  float2 quarter = float2(0.25, 0.25);
+  return (gen_strata_sample(pixel - quarter, dimensions, palette, shift, time) +
+          gen_strata_sample(pixel + float2(quarter.x, -quarter.y), dimensions, palette, shift, time) +
+          gen_strata_sample(pixel + float2(-quarter.x, quarter.y), dimensions, palette, shift, time) +
+          gen_strata_sample(pixel + quarter, dimensions, palette, shift, time)) * 0.25;
 }
 
 /// The generator a canvas names, by the id the settings carry. Zero is the

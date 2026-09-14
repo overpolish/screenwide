@@ -14,6 +14,10 @@ import {
 } from "./api";
 import { fitPreviewPane, PreviewPaneFit } from "./components/preview-transform";
 import {
+  updatePreviewBackdropMasks,
+  updatePreviewFitMetadata,
+} from "./preview-fit-metadata";
+import {
   resetScreenshotPreviewView,
   setScreenshotPreviewFitBasis,
 } from "./preview-view-api";
@@ -29,10 +33,8 @@ import {
   useNativePreviewFit,
 } from "./use-native-preview-fit";
 import {
-  applyBackdropMask,
   clearBackdropMasks,
   effectiveBackdrop,
-  Hole,
 } from "./use-recording-preview-surface";
 
 export type { ScreenshotSelectionGestureEvent } from "./screenshot-preview-events";
@@ -313,6 +315,11 @@ export function useScreenshotPreviewSurface({
           : marker.closest<HTMLElement>("[data-recording-preview-viewport]");
         if (viewport) {
           const viewportRect = viewport.getBoundingClientRect();
+          updatePreviewFitMetadata(
+            viewport,
+            currentOutput.width,
+            currentOutput.height,
+          );
           const scale = window.devicePixelRatio || 1;
           const fit = fitPreviewPane({
             natural: screenshotOutputDimensions(currentOutput),
@@ -321,28 +328,7 @@ export function useScreenshotPreviewSurface({
           });
           const pane = fit.pane;
           onPaneFitChangeRef.current?.(fit);
-          for (const element of document.querySelectorAll<HTMLElement>(
-            "[data-preview-backdrop]",
-          )) {
-            const elementRect = element.getBoundingClientRect();
-            const holes: Hole[] =
-              viewportRect.width >= 1 && viewportRect.height >= 1
-                ? [
-                    {
-                      height: Math.round(viewportRect.height * 100) / 100,
-                      width: Math.round(viewportRect.width * 100) / 100,
-                      x:
-                        Math.round(
-                          (viewportRect.left - elementRect.left) * 100,
-                        ) / 100,
-                      y:
-                        Math.round((viewportRect.top - elementRect.top) * 100) /
-                        100,
-                    },
-                  ]
-                : [];
-            applyBackdropMask(element, holes);
-          }
+          updatePreviewBackdropMasks(viewportRect);
           const viewportSurface = {
             height: viewportRect.height,
             width: viewportRect.width,

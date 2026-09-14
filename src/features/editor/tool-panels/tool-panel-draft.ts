@@ -80,6 +80,7 @@ export function resolveToolPanelSnapshot(
     audioVolume,
     bakeCamera,
     cropSize,
+    frameRadius,
     frameSize,
     keyboardEffects,
     recenterSelection: _recenterSelection,
@@ -145,6 +146,9 @@ export function resolveToolPanelSnapshot(
     selection,
     ...(cropSize ? { crop: sized(resolved.crop, cropSize) } : {}),
     ...(frameSize ? { frame: sized(resolved.frame, frameSize) } : {}),
+    ...(frameRadius !== undefined && resolved.frame
+      ? { frame: { ...resolved.frame, radius: frameRadius } }
+      : {}),
     ...(selectionOutput
       ? { selection: placedSelection(selection, selectionOutput) }
       : {}),

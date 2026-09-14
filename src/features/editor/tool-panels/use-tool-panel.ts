@@ -12,6 +12,7 @@ import { hidePopupPanel, showPopupPanel } from "../../popup-panel/api";
 import {
   initialToolPanelHeight,
   popupPanelSpacing,
+  toolPanelSpacing,
   toolPanelWidth,
 } from "../../popup-panel/layout";
 import {
@@ -44,8 +45,8 @@ export const previewViewport = () =>
 export const panelOffset = (bounds: DOMRect) =>
   new LogicalPosition(
     Math.max(
-      bounds.right - toolPanelWidth - popupPanelSpacing,
-      popupPanelSpacing,
+      bounds.right - toolPanelWidth - toolPanelSpacing,
+      toolPanelSpacing,
     ),
     bounds.top + popupPanelSpacing,
   );

@@ -214,6 +214,8 @@ pub fn run() {
     ])
     .setup(|app| {
       shortcuts::diagnostics::initialize(app.handle());
+      #[cfg(target_os = "windows")]
+      tooltip_window::initialize(app.handle())?;
       #[cfg(debug_assertions)]
       if let Some(preview_url) = std::env::var_os("SCREENWIDE_STORYBOOK_NATIVE_URL") {
         storybook_native::show(app.handle(), &preview_url.to_string_lossy())?;

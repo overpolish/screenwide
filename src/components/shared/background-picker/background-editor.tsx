@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Shuffle } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "../../base/button/button";
@@ -13,7 +14,10 @@ import {
   backgroundGenerator,
   DEFAULT_GENERATOR_ID,
 } from "./background-generators";
-import { randomMeshBackground } from "./background-random";
+import {
+  randomMeshBackground,
+  randomizeMeshBackground,
+} from "./background-random";
 
 const backgroundKinds = [
   { id: "solid", label: "Solid" },
@@ -112,6 +116,18 @@ export function BackgroundEditor({
       ) : (
         <ColorPaletteGenerator
           colors={palette}
+          endContent={
+            <Button
+              aria-label="Randomize mesh"
+              isDisabled={isDisabled}
+              onPress={() => {
+                changeMesh(randomizeMeshBackground(mesh));
+              }}
+            >
+              <Shuffle />
+              Randomize
+            </Button>
+          }
           isDisabled={isDisabled}
           locked={palette.map((_, index) => mesh.lockedColors[index] ?? false)}
           onChange={(colors) => {

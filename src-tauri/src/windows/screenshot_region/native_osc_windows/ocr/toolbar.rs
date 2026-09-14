@@ -65,11 +65,13 @@ impl Chrome {
         out,
         view,
         rects[index],
-        &metrics,
-        toolbar_icon(index),
-        label.map(|texture| &**texture),
-        is_button,
-        scale,
+        ControlRender {
+          metrics: &metrics,
+          icon: toolbar_icon(index),
+          label: label.map(|texture| &**texture),
+          is_button,
+          scale,
+        },
       );
       push_segment(
         segments,

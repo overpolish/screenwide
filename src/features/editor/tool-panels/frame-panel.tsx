@@ -5,6 +5,7 @@ import { Text } from "../../../components/base/text/text";
 import { presetName } from "../../../components/shared/background-picker/background";
 import { BackgroundPicker } from "../../../components/shared/background-picker/background-picker";
 import { Dimensions } from "../../../components/shared/dimensions/dimensions";
+import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
 import { browseBackgroundImage } from "../api";
 import { EditorKind } from "../types";
 
@@ -62,6 +63,24 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
         }}
         width={frame.width}
       />
+
+      <div className="flex items-center justify-between gap-section">
+        <span className="text-body text-content-fg">Radius</span>
+        <SliderNumberField
+          aria-label="Radius"
+          className="w-48"
+          formatOptions={{ maximumFractionDigits: 1, minimumFractionDigits: 1 }}
+          isDisabled={isSaving}
+          maxValue={50}
+          minValue={0}
+          onChange={(radius) => {
+            change({ frameRadius: radius });
+          }}
+          rightSection="%"
+          step={0.1}
+          value={frame.radius ?? 0}
+        />
+      </div>
 
       <div className="flex flex-col gap-control">
         <Text as="h2" variant="section">

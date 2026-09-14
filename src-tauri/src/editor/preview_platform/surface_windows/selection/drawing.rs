@@ -133,8 +133,7 @@ impl SelectionOverlay {
     let placeholder = self.placeholder.view.clone();
     let constant_resource: ID3D11Resource =
       self.constants.cast().map_err(|error| error.to_string())?;
-    let index = unsafe { self.swap_chain.GetCurrentBackBufferIndex() };
-    let texture = unsafe { self.swap_chain.GetBuffer::<ID3D11Texture2D>(index) }
+    let texture = unsafe { self.swap_chain.GetBuffer::<ID3D11Texture2D>(0) }
       .map_err(|error| error.to_string())?;
     let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
     let mut target: Option<ID3D11RenderTargetView> = None;

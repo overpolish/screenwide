@@ -11,6 +11,8 @@
 mod controls;
 mod geometry;
 mod gesture;
+#[cfg(test)]
+mod gesture_tests;
 mod layout;
 mod payloads;
 mod presentation;

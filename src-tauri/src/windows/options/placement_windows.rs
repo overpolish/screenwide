@@ -7,12 +7,19 @@ use tauri::{
 
 use super::{placement_geometry::clamped_axis, standalone_listbox_contexts};
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum PlacementPolicy {
+  WorkArea,
+  PreserveAnchor,
+}
+
 pub(super) fn place(
   app: &AppHandle,
   parent: &WebviewWindow,
   panel: &WebviewWindow,
   offset: LogicalPosition<f64>,
   size: Option<LogicalSize<f64>>,
+  policy: PlacementPolicy,
 ) -> tauri::Result<()> {
   let scale = parent.scale_factor()?;
   let origin = parent.inner_position()?;
@@ -25,24 +32,26 @@ pub(super) fn place(
     (f64::from(origin.x) + offset.x * scale).round() as i32,
     (f64::from(origin.y) + offset.y * scale).round() as i32,
   );
-  if let Some(monitor) = parent.current_monitor()?.or(app.primary_monitor()?) {
-    let area = monitor.work_area();
-    position.x = clamped_axis(
-      origin.x,
-      offset.x,
-      scale,
-      size.width,
-      area.position.x,
-      area.size.width,
-    );
-    position.y = clamped_axis(
-      origin.y,
-      offset.y,
-      scale,
-      size.height,
-      area.position.y,
-      area.size.height,
-    );
+  if policy == PlacementPolicy::WorkArea {
+    if let Some(monitor) = parent.current_monitor()?.or(app.primary_monitor()?) {
+      let area = monitor.work_area();
+      position.x = clamped_axis(
+        origin.x,
+        offset.x,
+        scale,
+        size.width,
+        area.position.x,
+        area.size.width,
+      );
+      position.y = clamped_axis(
+        origin.y,
+        offset.y,
+        scale,
+        size.height,
+        area.position.y,
+        area.size.height,
+      );
+    }
   }
   panel.set_position(position)?;
   panel.set_size(size)
@@ -57,11 +66,16 @@ pub(crate) fn follow_parent(app: &AppHandle, parent: &WebviewWindow) {
   let panels = standalone_listbox_contexts()
     .iter()
     .filter(|(_, context)| context.open && context.attached_to.as_deref() == Some(parent.label()))
-    .map(|(label, context)| (label.clone(), context.offset))
+    .map(|(label, context)| (label.clone(), context.offset, context.sticky))
     .collect::<Vec<_>>();
-  for (label, offset) in panels {
+  for (label, offset, sticky) in panels {
     if let Some(panel) = app.get_webview_window(&label) {
-      if let Err(error) = place(app, parent, &panel, offset, None) {
+      let policy = if sticky {
+        PlacementPolicy::PreserveAnchor
+      } else {
+        PlacementPolicy::WorkArea
+      };
+      if let Err(error) = place(app, parent, &panel, offset, None, policy) {
         eprintln!("Could not move the editor tool panel: {error}");
       }
     }

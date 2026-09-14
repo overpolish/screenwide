@@ -111,25 +111,39 @@ export function WindowHeader({
     </div>
   );
 
-  // Controls are 24 tall against a 20px title line. Pulling their overhang
-  // into the inset keeps every title bar the same 48px, the way a toolbar
-  // button overhangs its bar rather than growing it.
+  // On macOS, controls overhang the title line into the inset. Windows uses
+  // full-height caption controls so the bar follows the native 40px frame.
   const trailing = hasTrailing ? (
-    <div className="flex shrink-0 items-center justify-end gap-section">
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-end gap-section",
+        isWindows && "self-stretch",
+      )}
+    >
       {actions ? (
         <div className="-my-tight flex shrink-0 items-center">{actions}</div>
       ) : null}
       {(isWindows && (onMinimize || onToggleMaximize || onClose)) ||
       closeAction ? (
-        <div className="gap-control flex shrink-0 items-center">
+        <div
+          className={cn(
+            "gap-control flex shrink-0 items-center",
+            isWindows && "h-full gap-0",
+          )}
+        >
           {isWindows && onMinimize ? (
-            <IconButton aria-label="Minimize" onPress={onMinimize}>
+            <IconButton
+              aria-label="Minimize"
+              className="h-full w-[46px] rounded-none p-0"
+              onPress={onMinimize}
+            >
               <Minus />
             </IconButton>
           ) : null}
           {isWindows && onToggleMaximize ? (
             <IconButton
               aria-label={isMaximized ? "Restore" : "Maximize"}
+              className="h-full w-[46px] rounded-none p-0"
               onPress={onToggleMaximize}
             >
               {isMaximized ? <Copy /> : <Square />}
@@ -139,7 +153,7 @@ export function WindowHeader({
             (isWindows && onClose ? (
               <IconButton
                 aria-label="Close"
-                className="shrink-0"
+                className="h-full w-[46px] shrink-0 rounded-none p-0 data-[hovered]:bg-error data-[hovered]:text-primary-fg data-[pressed]:bg-error data-[pressed]:text-primary-fg"
                 onPress={onClose}
               >
                 <X />
@@ -156,6 +170,7 @@ export function WindowHeader({
         // The title bar is the window inset around 24px controls on every
         // side, so the content below needs no top padding of its own.
         "shrink-0 items-center gap-section p-window-inset text-content-fg",
+        isWindows && "h-10 p-0 pl-window-inset",
         // With tools in the bar the three columns are measured from the
         // window, not from the title: the centre stays put while the title
         // clips. Without them the bar is the flex row it has always been.

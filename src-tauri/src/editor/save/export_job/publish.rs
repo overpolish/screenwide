@@ -14,7 +14,7 @@ pub(super) fn finish(
   keyboard: Option<&RecordingKeyboard>,
 ) -> Result<(), String> {
   if !saved.is_file() || saved_camera.as_ref().is_some_and(|path| !path.is_file()) {
-    let _ = std::fs::remove_file(&saved);
+    let _ = std::fs::remove_file(saved);
     if let Some(path) = saved_camera {
       let _ = std::fs::remove_file(path);
     }

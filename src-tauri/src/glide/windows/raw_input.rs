@@ -118,8 +118,7 @@ fn handle_mouse(mouse: RAWMOUSE) {
     (RI_MOUSE_BUTTON_4_UP, super::control::MOUSE_BACK),
     (RI_MOUSE_BUTTON_5_UP, super::control::MOUSE_FORWARD),
   ] {
-    if button_flags & u32::from(flag) != 0 && super::release_tracker::raw_release(button, timestamp)
-    {
+    if button_flags & flag != 0 && super::release_tracker::raw_release(button, timestamp) {
       super::native_settings::observe(button, false);
       key_hook::reserve(button, false, false, false);
       keyboard::handle_transition(button, false, true);

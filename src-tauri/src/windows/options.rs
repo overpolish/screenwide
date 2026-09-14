@@ -151,7 +151,14 @@ pub fn show_standalone_listbox(
   #[cfg(not(target_os = "windows"))]
   platform::set_frame(&window, position, size)?;
   #[cfg(target_os = "windows")]
-  placement_windows::place(&app, &parent, &window, offset, Some(size))?;
+  {
+    let placement_policy = if sticky {
+      placement_windows::PlacementPolicy::PreserveAnchor
+    } else {
+      placement_windows::PlacementPolicy::WorkArea
+    };
+    placement_windows::place(&app, &parent, &window, offset, Some(size), placement_policy)?;
+  }
   // A panel that fits itself to its contents opens unseen at the size it was
   // asked for, lays out, and is revealed by `fit_standalone_listbox` once it
   // is the size of what it holds: showing it at one height and settling at

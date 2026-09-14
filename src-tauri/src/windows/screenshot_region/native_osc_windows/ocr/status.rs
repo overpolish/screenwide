@@ -110,11 +110,13 @@ impl Chrome {
       out,
       view,
       plate,
-      &metrics,
-      ControlIcon::X,
-      Some(&*label),
-      true,
-      scale,
+      ControlRender {
+        metrics: &metrics,
+        icon: ControlIcon::X,
+        label: Some(&*label),
+        is_button: true,
+        scale,
+      },
     );
     push_segment(
       segments,

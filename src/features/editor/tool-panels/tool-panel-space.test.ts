@@ -69,8 +69,12 @@ describe("panel growth target", () => {
     expect(width + growth - 320).toBe(fitWidth);
   });
 
-  it("adds just the gutter when the full-height preview already fits", () => {
-    expect(panelGrowthDelta(1200, 960, 320)).toBe(320);
+  it("adds only the remaining width when the full-height preview nearly fits", () => {
+    expect(panelGrowthDelta(1200, 960, 320)).toBe(80);
+  });
+
+  it("does not grow again when the panel already has reserved room", () => {
+    expect(panelGrowthDelta(1280, 960, 320)).toBe(0);
   });
 
   it.each([NaN, 0, -1, Infinity])(

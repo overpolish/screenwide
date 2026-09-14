@@ -104,15 +104,15 @@ pub(super) fn save_recording_artifact(
       return Err("This audio recording has no video track to export".to_owned());
     }
     return audio_save::save_audio(audio_save::AudioSaveRequest {
-      app: &progress_app,
-      cancelled: &job_cancellation,
-      directory: &writing,
+      app: progress_app,
+      cancelled: job_cancellation,
+      directory: writing,
       duration_ms: export_duration_ms,
       id: *id,
       layout,
       selected_any: !enabled_stream_indices.is_empty(),
       selection: &selection,
-      stem: &stem,
+      stem,
       timeline: timeline.as_ref(),
       working,
     });
@@ -125,13 +125,13 @@ pub(super) fn save_recording_artifact(
       let saved = camera_save::save_camera_as_primary(
         working,
         camera,
-        &writing,
-        &stem,
+        writing,
+        stem,
         &selection,
         layout,
         *id,
-        &progress_app,
-        &job_cancellation,
+        progress_app,
+        job_cancellation,
         camera_compression,
         camera_resolution_scale_percent,
         camera_output,
@@ -146,15 +146,15 @@ pub(super) fn save_recording_artifact(
     }
 
     let saved = audio_save::save_audio(audio_save::AudioSaveRequest {
-      app: &progress_app,
-      cancelled: &job_cancellation,
-      directory: &writing,
+      app: progress_app,
+      cancelled: job_cancellation,
+      directory: writing,
       duration_ms: export_duration_ms,
       id: *id,
       layout,
       selected_any: !enabled_stream_indices.is_empty(),
       selection: &selection,
-      stem: &stem,
+      stem,
       timeline: timeline.as_ref(),
       working,
     })?;
@@ -177,8 +177,8 @@ pub(super) fn save_recording_artifact(
     let saved = camera_save::save_baked_recording(
       working,
       camera,
-      &writing,
-      &stem,
+      writing,
+      stem,
       &selection,
       layout,
       *id,
@@ -191,8 +191,8 @@ pub(super) fn save_recording_artifact(
       baked_cursor.map(|cursor| (cursor, cursor_effects)),
       baked_keyboard.map(|keyboard| (keyboard, keyboard_effects)),
       primary_output,
-      &progress_app,
-      &job_cancellation,
+      progress_app,
+      job_cancellation,
       timeline.as_ref(),
     )?;
     if saved.is_some() {
@@ -209,16 +209,16 @@ pub(super) fn save_recording_artifact(
     99.0
   };
   let saved = save_primary_recording(PrimaryRecordingSaveRequest {
-    app: &progress_app,
+    app: progress_app,
     artifact_id: *id,
     audio_tracks,
-    cancelled: &job_cancellation,
+    cancelled: job_cancellation,
     compression,
     cursor: baked_cursor,
     cursor_effects,
     keyboard: baked_keyboard,
     keyboard_effects,
-    directory: &writing,
+    directory: writing,
     duration_ms: *duration_ms,
     height: *height,
     layout,
@@ -228,7 +228,7 @@ pub(super) fn save_recording_artifact(
     screen: working,
     selection: &selection,
     source_scale_percent: *source_scale_percent,
-    stem: &stem,
+    stem,
     timeline: timeline.as_ref(),
     width: *width,
   })?;
@@ -256,11 +256,11 @@ pub(super) fn save_recording_artifact(
       .ok_or_else(|| "There is no camera track to export".to_owned())?;
     let camera_path = camera_save::save_camera_copy(
       camera,
-      &writing,
-      &stem,
+      writing,
+      stem,
       *id,
-      &progress_app,
-      &job_cancellation,
+      progress_app,
+      job_cancellation,
       screen_progress_share,
       camera_compression,
       camera_resolution_scale_percent,

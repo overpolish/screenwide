@@ -58,6 +58,10 @@ pub(crate) fn set_ocr(
   .unwrap_or(false)
 }
 
+#[expect(
+  dead_code,
+  reason = "kept as the Windows counterpart of the reusable OCR cancel control API"
+)]
 pub(crate) fn set_ocr_cancel_visible(window: &WebviewWindow, visible: bool) -> bool {
   with_surfaces(window, |set| {
     for surface in set.all_mut() {

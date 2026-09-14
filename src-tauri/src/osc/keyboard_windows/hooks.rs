@@ -146,8 +146,10 @@ pub(super) fn update_pressed(vk: u32, down: bool) -> (u32, bool) {
     let shift = pressed[0x10] || pressed[0xa0] || pressed[0xa1];
     let alt = pressed[0x12] || pressed[0xa4] || pressed[0xa5];
     let super_key = pressed[0x5b] || pressed[0x5c];
-    let modifiers =
-      u32::from(control) * 2 | u32::from(shift) * 8 | u32::from(alt) * 4 | u32::from(super_key);
+    let modifiers = (u32::from(control) * 2)
+      | (u32::from(shift) * 8)
+      | (u32::from(alt) * 4)
+      | u32::from(super_key);
     (modifiers, repeat)
   })
 }

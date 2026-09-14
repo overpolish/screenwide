@@ -45,15 +45,31 @@ fn gen_gentle(pixel: vec2<f32>, dimensions: vec2<f32>, palette: GenPalette, shif
 }
 
 /// Ribbons. Bands 6, ripple 100%, direction 225 degrees.
+fn gen_ribbon_phase(point: vec2<f32>, time: f32) -> f32 {
+  let direction = vec2<f32>(cos(3.926990817), sin(3.926990817));
+  let flow = dot(point, direction) * 3.0 + time;
+  let across = sin(point.x * 12.0 + time) * cos(point.y * 8.0) * 0.3;
+  let down = cos(point.y * 10.0 - time * 0.8) * sin(point.x * 7.0) * 0.4;
+  return flow + (across + down) * 0.5;
+}
+
 fn gen_ribbons(pixel: vec2<f32>, dimensions: vec2<f32>, palette: GenPalette, shift: vec3<f32>, time: f32) -> vec3<f32> {
   let point = gen_centred(pixel, dimensions, shift);
-  let phase = time;
-  let direction = vec2<f32>(cos(3.926990817), sin(3.926990817));
-  let flow = dot(point, direction) * 3.0 + phase;
-  let across = sin(point.x * 12.0 + phase) * cos(point.y * 8.0) * 0.3;
-  let down = cos(point.y * 10.0 - phase * 0.8) * sin(point.x * 7.0) * 0.4;
-  let ramp = fract(flow + (across + down) * 0.5);
-  return gen_ramp(palette, floor(ramp * 6.0) / 5.0);
+  let ramp = fract(gen_ribbon_phase(point, time));
+  let point_xp = gen_centred(pixel + vec2<f32>(0.5, 0.0), dimensions, shift);
+  let point_xm = gen_centred(pixel - vec2<f32>(0.5, 0.0), dimensions, shift);
+  let point_yp = gen_centred(pixel + vec2<f32>(0.0, 0.5), dimensions, shift);
+  let point_ym = gen_centred(pixel - vec2<f32>(0.0, 0.5), dimensions, shift);
+  let footprint = 0.5 * (abs(gen_ribbon_phase(point_xp, time) - gen_ribbon_phase(point_xm, time)) +
+                         abs(gen_ribbon_phase(point_yp, time) - gen_ribbon_phase(point_ym, time)));
+  let band = floor(ramp * 6.0);
+  let fraction = ramp * 6.0 - band;
+  let width = min(max(footprint * 6.0, 0.0001), 0.5);
+  let color = gen_ramp(palette, band / 5.0);
+  let previous = select(5.0, band - 1.0, band > 0.0);
+  let next = select(0.0, band + 1.0, band < 5.0);
+  let blended = mix(gen_ramp(palette, previous / 5.0), color, smoothstep(-width, width, fraction));
+  return mix(blended, gen_ramp(palette, next / 5.0), smoothstep(-width, width, fraction - 1.0));
 }
 
 /// Currents. Detail 5, warp 100%, turbulence 100%.

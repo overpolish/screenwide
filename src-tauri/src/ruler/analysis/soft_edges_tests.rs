@@ -9,22 +9,10 @@ fn a_four_pixel_soft_left_edge_of_a_rounded_card_is_detected_beside_a_plus() {
 
   // The card's visible solid bounds are x=30..83, y=28..69. Its left edge
   // fades in over four pixels, while the other edges remain easy to see.
-  for y in 28..70 {
-    for x in 30..84 {
-      let dx = if x < 37 {
-        37 - x
-      } else if x > 76 {
-        x - 76
-      } else {
-        0
-      };
-      let dy = if y < 35 {
-        35 - y
-      } else if y > 62 {
-        y - 62
-      } else {
-        0
-      };
+  for y in 28_u32..70 {
+    for x in 30_u32..84 {
+      let dx = if x < 37 { 37 - x } else { x.saturating_sub(76) };
+      let dy = if y < 35 { 35 - y } else { y.saturating_sub(62) };
       if dx * dx + dy * dy <= 49 {
         canvas.set(x, y, 0xE5);
       }

@@ -24,7 +24,7 @@ impl Compositor {
       .map(|overlay| {
         self
           .keyboard_cache
-          .resolve(&device, &overlay, settings.height)
+          .resolve(device, &overlay, settings.height)
       })
       .transpose()?
       .flatten();

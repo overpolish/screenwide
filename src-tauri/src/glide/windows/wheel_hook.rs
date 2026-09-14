@@ -30,7 +30,8 @@ static TARGET: AtomicIsize = AtomicIsize::new(0);
 static LAST_MOUSE_POINT: Mutex<Option<(i32, i32)>> = Mutex::new(None);
 static LAST_LEFT_CLICK: Mutex<super::center::Matcher> = Mutex::new(super::center::Matcher::new());
 static SWALLOW_LEFT_UP: AtomicBool = AtomicBool::new(false);
-static CENTER_REQUEST: Mutex<Option<(isize, (i32, i32), super::InputKind)>> = Mutex::new(None);
+type CenterRequest = (isize, (i32, i32), super::InputKind);
+static CENTER_REQUEST: Mutex<Option<CenterRequest>> = Mutex::new(None);
 pub(super) const WM_GLIDE_CENTER: u32 = WM_APP + 5;
 
 pub(super) struct WheelHook(HHOOK);
@@ -64,7 +65,7 @@ pub(super) fn hook_owns_mouse_motion() -> bool {
   .any(|control| control.is_mouse_button() && super::native_settings::is_down(control))
 }
 
-pub(super) fn take_center_request() -> Option<(isize, (i32, i32), super::InputKind)> {
+pub(super) fn take_center_request() -> Option<CenterRequest> {
   CENTER_REQUEST
     .lock()
     .ok()
@@ -140,7 +141,7 @@ unsafe extern "system" fn callback(code: i32, wparam: WPARAM, lparam: LPARAM) ->
           point: (packet.pt.x, packet.pt.y),
           hwnd,
         });
-        let paired = current.is_some_and(|current| {
+        current.is_some_and(|current| {
           last.observe(
             current,
             Duration::from_millis(unsafe { GetDoubleClickTime() as u64 }),
@@ -149,8 +150,7 @@ unsafe extern "system" fn callback(code: i32, wparam: WPARAM, lparam: LPARAM) ->
               (unsafe { GetSystemMetrics(SM_CYDOUBLECLK) }.max(1) / 2).max(1),
             ),
           )
-        });
-        paired
+        })
       });
       let app = super::APP.get();
       if double_click

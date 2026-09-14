@@ -71,10 +71,12 @@ pub(super) fn pointer_move(
                 &mut state,
                 &mut gesture,
                 &mut selection,
-                pane,
-                point,
-                centered,
-                snapping,
+                super::selection_move::MoveSample {
+                  pane,
+                  point,
+                  centered,
+                  snapping,
+                },
                 &mut zoom,
               );
             } else if gesture.operation == SelectionGestureOperation::CropMove {

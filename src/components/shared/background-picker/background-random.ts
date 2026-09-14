@@ -98,3 +98,14 @@ export const randomMeshForGenerator = (
   };
 };
 
+/** Roll a mesh's arrangement while keeping its palette and generator intact. */
+export const randomizeMeshBackground = (mesh: Mesh): Mesh => {
+  const rolled = randomMeshForGenerator(mesh.generator, mesh.colors.length);
+  return {
+    ...mesh,
+    ...(mesh.generator === DEFAULT_GENERATOR_ID
+      ? { points: rolled.points }
+      : {}),
+    seed: rolled.seed,
+  };
+};

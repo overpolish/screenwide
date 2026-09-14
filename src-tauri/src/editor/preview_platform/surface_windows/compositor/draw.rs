@@ -66,6 +66,10 @@ impl Compositor {
         }
       } else {
         mesh_colors = generator_palette(&settings.mesh_colors)?;
+        // Ported generators reuse the classic mesh point slot for their
+        // CPU-resolved seed domain shift; they do not read classic points.
+        let shift = crate::screenshots::generator_seed_shift(settings.mesh_seed);
+        mesh_points[0] = [shift[0], shift[1], shift[2], 0.0];
       }
     }
     let shortest_output = settings.width.min(settings.height) as f32;

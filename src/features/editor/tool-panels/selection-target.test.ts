@@ -140,13 +140,36 @@ describe("selection padding", () => {
     expect(next.recenterInsetColor).toBe("#ffffff");
   });
 
-  it("shows the padding it has and the layer's shorter side as its limit", () => {
+  it("shows the padding it has and the output bounds as its limit", () => {
     const { target } = targetFor(
       croppedLayer({ cropHeight: 700, cropWidth: 700, cropX: 150, cropY: 150 }),
     );
 
     expect(target.selection.inset).toBe(50);
-    expect(target.selection.insetMaximum).toBe(600);
+    expect(target.selection.insetMaximum).toBe(1_000);
+  });
+
+  it("allows useful padding around a small source", () => {
+    const { target } = targetFor(
+      croppedLayer({ cropHeight: 40, cropWidth: 40, cropX: 480, cropY: 480 }),
+    );
+
+    expect(target.selection.insetMaximum).toBe(1_000);
+  });
+
+  it("keeps typed padding above the slider range visible", () => {
+    const settings = withScreenshotSourceCrop(
+      {
+        ...defaultScreenshotOutput(source.width, source.height),
+        cropHeight: 3_040,
+        cropWidth: 3_040,
+      },
+      sourceRect({ height: 0.04, width: 0.04, x: 0.48, y: 0.48 }),
+    );
+    const { target } = targetFor(settings);
+
+    expect(target.selection.inset).toBe(1_500);
+    expect(target.selection.insetMaximum).toBe(1_000);
   });
 });
 

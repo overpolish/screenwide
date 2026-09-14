@@ -42,6 +42,8 @@ export type ToolPanelHandlers = {
   /** Cut a crop of the size a field asked for, in source pixels. */
   onCropSizeChange?: (size: { height?: number; width?: number }) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
+  /** Round the output canvas corners by this share of its shorter side. */
+  onFrameRadiusChange?: (radius: number) => void;
   onFrameReset?: () => void;
   /** Size the output canvas to what a field asked for. */
   onFrameSizeChange?: (size: { height?: number; width?: number }) => void;
@@ -97,6 +99,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onCursorEffectsChange?.(values.cursorEffects);
   }
   if (values.frameSize !== undefined) on.onFrameSizeChange?.(values.frameSize);
+  if (values.frameRadius !== undefined)
+    on.onFrameRadiusChange?.(values.frameRadius);
   if (values.resetFrame) on.onFrameReset?.();
   if (values.cropSize !== undefined) on.onCropSizeChange?.(values.cropSize);
   if (values.resetCrop) on.onCropReset?.();

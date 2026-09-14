@@ -3,10 +3,10 @@
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-import { popupPanelSpacing, toolPanelWidth } from "../../popup-panel/layout";
+import { toolPanelSpacing, toolPanelWidth } from "../../popup-panel/layout";
 import { growEditorForPanel } from "../api";
 
-export const toolPanelGutter = toolPanelWidth + popupPanelSpacing;
+export const toolPanelGutter = toolPanelWidth + toolPanelSpacing;
 
 /** At minimum width the workspace is width-limited. Adding only the gutter
  * grows the picture too, so request its height-limited width in the same move. */
@@ -16,7 +16,7 @@ export function panelGrowthDelta(
   gutter: number,
 ) {
   return Number.isFinite(fitWidth) && fitWidth > 0
-    ? Math.max(gutter, fitWidth + gutter - viewportWidth)
+    ? Math.max(0, fitWidth + gutter - viewportWidth)
     : gutter;
 }
 

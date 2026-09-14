@@ -83,8 +83,9 @@ impl RecordingPreviewSurface {
       .source
       .as_ref()
       .ok_or_else(|| "The preview source texture is unavailable".to_owned())?;
-    let buffer_index = unsafe { pane.swap_chain.GetCurrentBackBufferIndex() };
-    let target = unsafe { pane.swap_chain.GetBuffer::<ID3D11Texture2D>(buffer_index) }
+    // D3D11 flip-discard rotates the buffer identities after Present; buffer
+    // zero is the writable back buffer for the next draw.
+    let target = unsafe { pane.swap_chain.GetBuffer::<ID3D11Texture2D>(0) }
       .map_err(|error| format!("The composed preview has no back buffer: {error}"))?;
     // While blurring, the composed frame goes to the intermediate target and
     // only the vertical blur pass writes the back buffer.

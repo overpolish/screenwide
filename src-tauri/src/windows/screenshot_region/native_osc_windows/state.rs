@@ -283,10 +283,6 @@ pub(crate) fn dispatch_input(
 }
 
 /// Port of `screenwide_region_osc_ocr_set_cancel_visible` (`+ocr_cancel.m:166`).
-#[expect(
-  dead_code,
-  reason = "the reusable cancel OSC is intentionally not shown by OCR"
-)]
 #[cfg(test)]
 #[path = "state/tests.rs"]
 mod tests;

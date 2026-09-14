@@ -6,7 +6,7 @@
 //! can keep monitor support available without making desktop movement a hard
 //! dependency.
 
-use std::{collections::HashMap, ffi::c_void, sync::Mutex};
+use std::{collections::HashMap, sync::Mutex};
 
 use crate::glide::core::desktops::{Desktop, DesktopAdapter, DesktopGroup, MoveError, Snapshot};
 use windows::Win32::Foundation::HWND;
@@ -82,7 +82,7 @@ impl DesktopAdapter for Adapter {
       .lock()
       .ok()
       .and_then(|ids| ids.get(destination).copied())
-      .ok_or_else(|| MoveError::AmbiguousWindow)?;
+      .ok_or(MoveError::AmbiguousWindow)?;
     let source = winvd::get_desktop_by_window(legacy(self.hwnd))
       .and_then(|desktop| desktop.get_id())
       .map_err(|error| MoveError::Unavailable(format!("{error:?}")))?;
@@ -97,7 +97,7 @@ impl DesktopAdapter for Adapter {
 }
 
 fn legacy(hwnd: HWND) -> windows058::Win32::Foundation::HWND {
-  windows058::Win32::Foundation::HWND(hwnd.0 as *mut c_void)
+  windows058::Win32::Foundation::HWND(hwnd.0)
 }
 
 fn build_supported() -> bool {

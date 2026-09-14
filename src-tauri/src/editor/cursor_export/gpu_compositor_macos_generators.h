@@ -169,15 +169,31 @@ static float3 gen_gentle(float2 pixel, float2 dimensions, GenPalette palette, fl
 }
 
 /// Ribbons. Bands 6, ripple 100%, direction 225 degrees.
+static float gen_ribbon_phase(float2 point, float time) {
+  float2 direction = float2(cos(3.926990817), sin(3.926990817));
+  float flow = dot(point, direction) * 3.0 + time;
+  float across = sin(point.x * 12.0 + time) * cos(point.y * 8.0) * 0.3;
+  float down = cos(point.y * 10.0 - time * 0.8) * sin(point.x * 7.0) * 0.4;
+  return flow + (across + down) * 0.5;
+}
+
 static float3 gen_ribbons(float2 pixel, float2 dimensions, GenPalette palette, float3 shift, float time) {
   float2 point = gen_centred(pixel, dimensions, shift);
-  float phase = time;
-  float2 direction = float2(cos(3.926990817), sin(3.926990817));
-  float flow = dot(point, direction) * 3.0 + phase;
-  float across = sin(point.x * 12.0 + phase) * cos(point.y * 8.0) * 0.3;
-  float down = cos(point.y * 10.0 - phase * 0.8) * sin(point.x * 7.0) * 0.4;
-  float ramp = fract(flow + (across + down) * 0.5);
-  return gen_ramp(palette, floor(ramp * 6.0) / 5.0);
+  float ramp = fract(gen_ribbon_phase(point, time));
+  float2 point_xp = gen_centred(pixel + float2(0.5, 0.0), dimensions, shift);
+  float2 point_xm = gen_centred(pixel - float2(0.5, 0.0), dimensions, shift);
+  float2 point_yp = gen_centred(pixel + float2(0.0, 0.5), dimensions, shift);
+  float2 point_ym = gen_centred(pixel - float2(0.0, 0.5), dimensions, shift);
+  float footprint = 0.5 * (abs(gen_ribbon_phase(point_xp, time) - gen_ribbon_phase(point_xm, time)) +
+                           abs(gen_ribbon_phase(point_yp, time) - gen_ribbon_phase(point_ym, time)));
+  float band = floor(ramp * 6.0);
+  float fraction = ramp * 6.0 - band;
+  float width = clamp(max(footprint * 6.0, 0.0001), 0.0, 0.5);
+  float3 color = gen_ramp(palette, band / 5.0);
+  float previous = band > 0.0 ? band - 1.0 : 5.0;
+  float next = band < 5.0 ? band + 1.0 : 0.0;
+  color = mix(gen_ramp(palette, previous / 5.0), color, smoothstep(-width, width, fraction));
+  return mix(color, gen_ramp(palette, next / 5.0), smoothstep(-width, width, fraction - 1.0));
 }
 
 /// Currents. Detail 5, warp 100%, turbulence 100%.

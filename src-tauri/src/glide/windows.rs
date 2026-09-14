@@ -156,10 +156,9 @@ pub(super) fn tick() {
       && native_settings::is_down(settings.monitors_modifier)
       && !native_trackpad::pointer_episode_active()
       && !navigation::cancelled()
+      && begin_session(InputKind::TrackpadScroll)
     {
-      if begin_session(InputKind::TrackpadScroll) {
-        session::arm_monitor(app);
-      }
+      session::arm_monitor(app);
     }
     if session::monitor_mode() && !native_settings::is_down(settings.monitors_modifier) {
       session::end(app, false);

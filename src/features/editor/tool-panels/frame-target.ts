@@ -33,6 +33,8 @@ export type EditorFrameTarget = {
   /** Fill the canvas with this background, leaving the other kinds' values
    * where they were so a swap back finds them unchanged. */
   applyBackground: (background: Background) => void;
+  /** Round the canvas corners by this share of its shorter side. */
+  applyRadius: (radius: number) => void;
   /** The canvas's background, as the picker shows it. */
   background: Background;
   /** Back to the source size, with what is in it refitted to the new canvas. */
@@ -72,10 +74,14 @@ const target = ({
   applyBackground: (background) => {
     applyOutput(applyBackgroundToOutput(settings, background));
   },
+  applyRadius: (radius) => {
+    applyOutput({ ...settings, backgroundRadiusPercent: radius });
+  },
   background: backgroundFromOutput(settings),
   reset,
   snapshot: {
     ...screenshotOutputDimensions(settings),
+    radius: settings.backgroundRadiusPercent,
     sourceHeight: source.height,
     sourceWidth: source.width,
   },
@@ -195,10 +201,16 @@ export const framePanelHandlers = (
   target: EditorFrameTarget | null,
 ): Pick<
   ToolPanelHandlers,
-  "onBackgroundChange" | "onFrameReset" | "onFrameSizeChange"
+  | "onBackgroundChange"
+  | "onFrameRadiusChange"
+  | "onFrameReset"
+  | "onFrameSizeChange"
 > => ({
   onBackgroundChange: (background) => {
     target?.applyBackground(background);
+  },
+  onFrameRadiusChange: (radius) => {
+    target?.applyRadius(radius);
   },
   onFrameReset: () => {
     target?.reset();

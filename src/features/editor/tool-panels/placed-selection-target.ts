@@ -5,7 +5,6 @@ import {
   prepareRecenterInset,
   recenterWorkspaceContent,
 } from "../recenter-inset-channel";
-import { screenshotLayout } from "../screenshot-layout";
 import {
   resetScreenshotTransform,
   ScreenshotOutputSettings,
@@ -22,6 +21,8 @@ import {
 import { EditorKind } from "../types";
 
 import { ToolPanelLayerSelection } from "./tool-panel-store";
+
+const insetSliderMaximum = 1_000;
 
 /**
  * The one layer the selection panel acts on: what to show for it, and the
@@ -75,7 +76,6 @@ export const placedSelectionTarget = ({
    * null where a layer there carries no pad. */
   workspace: EditorKind | null;
 }): EditorSelectionTarget => {
-  const layout = screenshotLayout(source, settings);
   return {
     applyBake: () => {
       // A layer carried as its own picture has nothing to bake.
@@ -114,9 +114,10 @@ export const placedSelectionTarget = ({
       inset: Math.round(screenshotPaddingInset(settings, source)),
       // The padding is measured against the layer's own picture rather than
       // its padded frame, so the range does not move as the knob is dragged.
-      insetMaximum: Math.round(
-        Math.min(layout.sourceCrop.width, layout.sourceCrop.height),
-      ),
+      // Keep the slider useful on small captures without making typed values
+      // depend on the source dimensions. Number entry remains unbounded by
+      // this soft slider range.
+      insetMaximum: insetSliderMaximum,
       kind,
       label,
       radius: settings.radiusPercent,

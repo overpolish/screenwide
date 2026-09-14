@@ -19,6 +19,8 @@ import {
   KeyboardEffectSettings,
 } from "../types";
 
+import { ToolPanelFrame } from "./tool-panel-frame";
+
 /**
  * What the selection panel shows for a placed layer: the selected layer, its
  * size and position in output pixels, and the source it was captured at, which
@@ -96,12 +98,7 @@ type ToolPanelSelection =
  * What the frame panel shows: the output canvas the workspace renders into,
  * and the source size a reset puts it back to.
  */
-export type ToolPanelFrame = {
-  height: number;
-  sourceHeight: number;
-  sourceWidth: number;
-  width: number;
-};
+export type { ToolPanelFrame } from "./tool-panel-frame";
 
 /**
  * What the crop panel shows: the visible rectangle of the source, in source
@@ -161,6 +158,8 @@ export type ToolPanelPatch = Partial<
   bakeCamera?: boolean;
   /** Cut a crop of this size, in source pixels, keeping it where it sits. */
   cropSize?: { height?: number; width?: number };
+  /** Round the output canvas corners by this share of its shorter side. */
+  frameRadius?: number;
   /** Size the output canvas, leaving what is in it where it sits. */
   frameSize?: { height?: number; width?: number };
   /** The shortcut settings every shortcut is drawn with, changed a field at a

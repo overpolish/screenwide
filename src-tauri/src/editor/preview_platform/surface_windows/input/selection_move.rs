@@ -3,17 +3,27 @@
 
 use super::*;
 
+pub(super) struct MoveSample {
+  pub pane: PreviewSurfaceRect,
+  pub point: (f64, f64),
+  pub centered: bool,
+  pub snapping: bool,
+}
+
 pub(super) fn apply(
   inner: &std::sync::Arc<SurfaceInner>,
   state: &mut SurfaceState,
   gesture: &mut EditorGesture,
   selection: &mut PreviewSelection,
-  pane: PreviewSurfaceRect,
-  point: (f64, f64),
-  centered: bool,
-  snapping: bool,
+  sample: MoveSample,
   zoom: &mut Option<f64>,
 ) {
+  let MoveSample {
+    pane,
+    point,
+    centered,
+    snapping,
+  } = sample;
   let auto_fit_active = state.move_auto_fit.as_ref().is_some_and(|fit| fit.active);
   if auto_fit_active && !centered {
     // Rebase the remaining drag onto the accepted grown canvas

@@ -82,35 +82,6 @@ pub(super) fn is_down(key: NativeControl) -> bool {
     .is_ok_and(|pressed| pressed.iter().any(|value| key.matches(*value)))
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::glide::settings::GlideControl;
-  use keyboard_types::Code;
-
-  #[test]
-  fn observed_controls_ignore_stale_async_state_until_fresh_transition() {
-    let z = NativeControl::from_control(GlideControl::Key(Code::KeyZ)).unwrap();
-    observe(90, false);
-    assert!(!is_down(z));
-    observe(90, true);
-    assert!(is_down(z));
-    observe(90, false);
-    assert!(!is_down(z));
-  }
-
-  #[test]
-  fn mouse_controls_are_transition_owned() {
-    let mouse = NativeControl::from_control(GlideControl::MouseMiddle).unwrap();
-    observe(super::super::control::MOUSE_MIDDLE, false);
-    assert!(!is_down(mouse));
-    observe(super::super::control::MOUSE_MIDDLE, true);
-    assert!(is_down(mouse));
-    observe(super::super::control::MOUSE_MIDDLE, false);
-    assert!(!is_down(mouse));
-  }
-}
-
 pub(super) fn observe(key: u32, pressed: bool) {
   if let Ok(mut keys) = PRESSED.lock() {
     if pressed {
@@ -139,5 +110,34 @@ fn native(settings: &GlideSettings) -> NativeGlideSettings {
     thirds_modifier: NativeControl::from_control(settings.thirds_modifier)
       .expect("validated Glide thirds control"),
     window_gap: settings.window_gap,
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::glide::settings::GlideControl;
+  use keyboard_types::Code;
+
+  #[test]
+  fn observed_controls_ignore_stale_async_state_until_fresh_transition() {
+    let z = NativeControl::from_control(GlideControl::Key(Code::KeyZ)).unwrap();
+    observe(90, false);
+    assert!(!is_down(z));
+    observe(90, true);
+    assert!(is_down(z));
+    observe(90, false);
+    assert!(!is_down(z));
+  }
+
+  #[test]
+  fn mouse_controls_are_transition_owned() {
+    let mouse = NativeControl::from_control(GlideControl::MouseMiddle).unwrap();
+    observe(super::super::control::MOUSE_MIDDLE, false);
+    assert!(!is_down(mouse));
+    observe(super::super::control::MOUSE_MIDDLE, true);
+    assert!(is_down(mouse));
+    observe(super::super::control::MOUSE_MIDDLE, false);
+    assert!(!is_down(mouse));
   }
 }

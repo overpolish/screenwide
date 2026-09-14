@@ -153,7 +153,9 @@ float3 background(float2 pixel) {
     palette.c2 = mesh_colors[2].rgb;
     palette.c3 = mesh_colors[3].rgb;
     palette.count = background_options.z;
-    return gen_pixel(background_options.y, pixel, output_source.xy, palette, options.x, motion.x,
+    // Ported generators reuse the classic mesh point slot for the CPU-resolved
+    // seed domain shift; only the classic generator reads its point geometry.
+    return gen_pixel(background_options.y, pixel, output_source.xy, palette, mesh_points[0].xyz, motion.x,
                      motion.y);
   }
   float shortest = min(output_source.x, output_source.y);

@@ -21,16 +21,27 @@ pub(crate) fn status_rect(label_width: f64, view: Size, region: Rect) -> Rect {
 
 /// A plate, its icon and - for text buttons - its label, laid out the way
 /// `render_control` (`+ocr_toolbar.m:78-101`) did.
+pub(super) struct ControlRender<'a> {
+  pub(super) metrics: &'a ControlMetrics,
+  pub(super) icon: ControlIcon,
+  pub(super) label: Option<&'a super::super::text::TextTexture>,
+  pub(super) is_button: bool,
+  pub(super) scale: f64,
+}
+
 pub(super) fn add_control(
   out: &mut Vec<Vertex>,
   view: Size,
   rect: Rect,
-  metrics: &ControlMetrics,
-  icon: ControlIcon,
-  label: Option<&super::super::text::TextTexture>,
-  is_button: bool,
-  scale: f64,
+  render: ControlRender<'_>,
 ) {
+  let ControlRender {
+    metrics,
+    icon,
+    label,
+    is_button,
+    scale,
+  } = render;
   let rect = renderer::pixel_aligned_rect(rect, scale);
   renderer::add_plate(out, view, rect);
   let icon_left = if is_button {

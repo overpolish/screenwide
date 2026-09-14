@@ -59,8 +59,7 @@ impl Backdrop {
     context: &ID3D11DeviceContext,
     colour: [f64; 4],
   ) -> Result<(), String> {
-    let index = unsafe { self.swap_chain.GetCurrentBackBufferIndex() };
-    let target = unsafe { self.swap_chain.GetBuffer::<ID3D11Texture2D>(index) }
+    let target = unsafe { self.swap_chain.GetBuffer::<ID3D11Texture2D>(0) }
       .map_err(|error| format!("The Windows preview backstop has no buffer: {error}"))?;
     let resource: ID3D11Resource = target.cast().map_err(|error| error.to_string())?;
     let device = unsafe { target.GetDevice() }.map_err(|error| error.to_string())?;

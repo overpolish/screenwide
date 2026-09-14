@@ -175,7 +175,6 @@ impl PreviewManager {
         else {
           return Ok(());
         };
-        let background_radius_percent = next.canvas.background_radius_percent;
         let Some(item) = next.items.get_mut(pane_index as usize) else {
           return Ok(());
         };
@@ -198,10 +197,7 @@ impl PreviewManager {
           scale,
         );
         apply_output_geometry(&mut item.output, geometry);
-        // Keep the canvas presentation fields consistent with the selected item.
         let moved_output = item.output.clone();
-        next.canvas = moved_output.clone();
-        next.canvas.background_radius_percent = background_radius_percent;
         if operation == SelectionGestureOperation::Move && edges & AUTO_FIT_MOVE_EDGE != 0 {
           next = fit_workspace_to_items(&snapshot, pane_index as usize, &moved_output);
         }
