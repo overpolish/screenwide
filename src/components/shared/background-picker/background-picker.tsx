@@ -135,7 +135,9 @@ export function BackgroundPicker({
     <div className="flex flex-col gap-control-inset">
       <ToggleButtonGroup
         aria-label="Background"
-        className="flex flex-wrap gap-control"
+        // Centred rows: the tiles keep their size and gap, and whatever the
+        // row cannot fill is split evenly between the two edges.
+        className="flex flex-wrap justify-center gap-control"
         disallowEmptySelection
         isDisabled={isDisabled}
         selectedKeys={new Set([selectedId])}
