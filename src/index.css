@@ -60,28 +60,25 @@
   --icon-alpha: var(--alpha-primary-fg-disabled);
 }
 
-/* A bezel's stroke: a hairline all round plus a second hairline on one edge
-   (Fluent's "elevation border", darker at the bottom in light appearance and
-   lighter at the top in dark). Both are transparent on macOS, whose bezels
-   have no stroke. Composed like Tailwind's own inset shadows so the focus
-   ring can stack on top. */
+/* A bezel's stroke: Fluent's "elevation border", a hairline whose top and
+   bottom edges differ (darker at the bottom in light appearance, lighter at
+   the top in dark). A real border rather than inset shadows: a shadow offset
+   by a pixel is the rounded rectangle shifted, which leaves crescents at the
+   corners, and a shadow under a composited child can seam. macOS bezels have
+   no stroke, so the width is zero there and the box is unchanged. */
 @utility control-stroke {
-  --tw-inset-shadow:
-    inset 0 0 0 1px var(--color-control-stroke),
-    inset 0 var(--control-stroke-edge-offset) 0 0
-      var(--color-control-stroke-edge);
-  box-shadow:
-    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
-    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  border-width: var(--control-stroke-width);
+  border-style: solid;
+  border-color: var(--color-control-stroke);
+  border-top-color: var(--color-control-stroke-top);
+  border-bottom-color: var(--color-control-stroke-bottom);
 }
 @utility primary-stroke {
-  --tw-inset-shadow:
-    inset 0 0 0 1px var(--color-primary-stroke),
-    inset 0 var(--control-stroke-edge-offset) 0 0
-      var(--color-primary-stroke-edge);
-  box-shadow:
-    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
-    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  border-width: var(--control-stroke-width);
+  border-style: solid;
+  border-color: var(--color-primary-stroke);
+  border-top-color: var(--color-primary-stroke-top);
+  border-bottom-color: var(--color-primary-stroke-bottom);
 }
 @utility text-primary {
   color: var(--color-primary);
@@ -170,6 +167,9 @@
   --spacing-icon-xl: 28px;
   /* A checkbox's box: 16px on macOS, 20px in Fluent. */
   --spacing-checkbox: 1rem;
+  /* The padding of a pop-up list around its items: 4px in a macOS menu,
+     6px in a Fluent flyout (measured). */
+  --spacing-list-inset: 0.25rem;
   /* Measured on macOS 26: HUD panels 15px, plain windows 16px, toolbar
      windows 26px. Tuned by eye to 14px, which reads as a match on the app's
      small panels. */
@@ -257,7 +257,8 @@
   --alpha-primary-fg-pressed: 1;
   /* The accent bezel's stroke; see `--color-control-stroke`. */
   --color-primary-stroke: transparent;
-  --color-primary-stroke-edge: transparent;
+  --color-primary-stroke-top: transparent;
+  --color-primary-stroke-bottom: transparent;
   /* The window title's gradient: the accent with a lighter and a deeper stop
      around it, so the identity moment follows the OS accent like everything
      else. */
@@ -312,12 +313,11 @@
   --alpha-control-fg-disabled: var(--alpha-content-fg-tertiary);
   --color-control-subtle-hover: var(--color-fill-tertiary);
   --color-control-subtle-pressed: var(--color-fill);
-  /* macOS bezels have no stroke; see the `control-stroke` utility. The edge
-     offset picks which edge carries the second hairline: negative is the
-     bottom edge. */
+  /* macOS bezels have no stroke; see the `control-stroke` utility. */
+  --control-stroke-width: 0px;
   --color-control-stroke: transparent;
-  --color-control-stroke-edge: transparent;
-  --control-stroke-edge-offset: -1px;
+  --color-control-stroke-top: transparent;
+  --color-control-stroke-bottom: transparent;
 
   /* Inset controls: a checkbox's box, later radios and fields. Fluent draws
      these recessed, with a strong hairline stroke and a fill that darkens on
@@ -329,6 +329,11 @@
   --color-control-alt-stroke: transparent;
   --color-control-alt-stroke-pressed: transparent;
   --color-control-alt-stroke-disabled: transparent;
+  /* A pop-up's in-page surface (a select's list, a tooltip) when no panel
+     window hosts it. macOS paints the window colour; Fluent draws a flyout
+     one step lighter than the layer with a hairline stroke. */
+  --color-popover: var(--color-content);
+  --color-popover-stroke: transparent;
   /* A disabled accent fill and the glyph on it. */
   --color-primary-surface-disabled: var(--color-fill-quaternary);
   --color-primary-fg-disabled: var(--color-content-fg-tertiary);
@@ -419,11 +424,14 @@
     --alpha-control-fg-disabled: 0.361;
     --color-control-subtle-hover: rgb(0 0 0 / 3.7%);
     --color-control-subtle-pressed: rgb(0 0 0 / 2.4%);
+    /* The elevation border: darker along the bottom in light appearance. */
+    --control-stroke-width: 1px;
     --color-control-stroke: rgb(0 0 0 / 5.8%);
-    --color-control-stroke-edge: rgb(0 0 0 / 16.2%);
-    --control-stroke-edge-offset: -1px;
+    --color-control-stroke-top: var(--color-control-stroke);
+    --color-control-stroke-bottom: rgb(0 0 0 / 16.2%);
 
     --spacing-checkbox: 1.25rem;
+    --spacing-list-inset: 0.375rem;
     --color-control-alt-fill: rgb(0 0 0 / 2.4%);
     --color-control-alt-fill-hover: rgb(0 0 0 / 5.9%);
     --color-control-alt-fill-pressed: rgb(0 0 0 / 9.4%);
@@ -434,6 +442,8 @@
     --color-primary-surface-disabled: rgb(0 0 0 / 21.6%);
     --color-primary-fg-disabled: white;
     --alpha-primary-fg-disabled: 1;
+    --color-popover: rgb(249 249 249);
+    --color-popover-stroke: rgb(0 0 0 / 5.8%);
 
     /* WinUI fills accent controls with a tone of the accent per appearance
        (AccentDark1 in light, AccentLight2 in dark), which the OS supplies
@@ -457,8 +467,11 @@
     );
     --color-primary-fg-pressed: rgb(255 255 255 / 70%);
     --alpha-primary-fg-pressed: 0.7;
+    /* The accent bezel's stroke is darker along the bottom in both
+       appearances. */
     --color-primary-stroke: rgb(255 255 255 / 8%);
-    --color-primary-stroke-edge: rgb(0 0 0 / 40%);
+    --color-primary-stroke-top: var(--color-primary-stroke);
+    --color-primary-stroke-bottom: rgb(0 0 0 / 40%);
 
     --color-focus-ring: rgb(0 0 0 / 89.6%);
     --color-focus-ring-inner: rgb(255 255 255 / 70%);
@@ -481,10 +494,10 @@
     --alpha-control-fg-disabled: 0.363;
     --color-control-subtle-hover: rgb(255 255 255 / 6%);
     --color-control-subtle-pressed: rgb(255 255 255 / 4.2%);
-    --color-control-stroke: rgb(255 255 255 / 7%);
-    --color-control-stroke-edge: rgb(255 255 255 / 9.3%);
     /* In dark appearance the lit edge is the top one. */
-    --control-stroke-edge-offset: 1px;
+    --color-control-stroke: rgb(255 255 255 / 7%);
+    --color-control-stroke-top: rgb(255 255 255 / 9.3%);
+    --color-control-stroke-bottom: var(--color-control-stroke);
 
     /* An unchecked Fluent box is recessed below the surface in dark. */
     --color-control-alt-fill: rgb(0 0 0 / 10%);
@@ -496,8 +509,10 @@
     --color-primary-surface-disabled: rgb(255 255 255 / 15.8%);
     --color-primary-fg-disabled: rgb(255 255 255 / 53%);
     --alpha-primary-fg-disabled: 0.53;
+    --color-popover: rgb(44 44 44);
+    --color-popover-stroke: rgb(0 0 0 / 20%);
 
-    --color-primary-stroke-edge: rgb(0 0 0 / 14%);
+    --color-primary-stroke-bottom: rgb(0 0 0 / 14%);
     --color-primary-surface: var(
       --system-accent-dark-tone,
       var(--color-primary)

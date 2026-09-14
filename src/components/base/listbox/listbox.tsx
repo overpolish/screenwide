@@ -15,7 +15,10 @@ const listBoxVariants = tv({
     // Native menus pad the panel and let the items touch, so the highlight of
     // adjacent items forms one continuous run. The list draws no surface of
     // its own: the panel window it lives in supplies the material.
-    "flex w-(--trigger-width) flex-col overflow-auto p-control text-content-fg outline-none",
+    "flex w-(--trigger-width) flex-col overflow-auto p-list-inset text-content-fg outline-none",
+    // A Fluent flyout keeps a 4px gap between its items, so each highlight
+    // stands alone rather than forming a run.
+    "windows:gap-control",
     "scroll-py-5",
     "data-[empty]:flex data-[empty]:flex-row data-[empty]:items-center data-[empty]:justify-center data-[empty]:gap-control data-[empty]:py-section data-[empty]:text-subheadline data-[empty]:text-content-fg-secondary",
   ],

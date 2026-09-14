@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { clsx } from "clsx";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronDown, ChevronsUpDown } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { type ComponentProps, type ReactNode, type Ref } from "react";
 import {
@@ -23,8 +23,10 @@ import { ScrollArea } from "../scroll-area/scroll-area";
 import { ClearButton } from "./components/clear-button";
 
 // In-page fallback when the list is not hosted in its own panel window. Opaque:
-// a backdrop blur is not reliable over a transparent material window.
-const popoverSurface = "rounded-panel bg-content shadow-md";
+// a backdrop blur is not reliable over a transparent material window. The
+// stroke is Fluent's flyout hairline, transparent on macOS.
+const popoverSurface =
+  "rounded-panel bg-popover shadow-md inset-ring inset-ring-popover-stroke";
 
 const selectVariants = tv({
   defaultVariants: {
@@ -35,14 +37,14 @@ const selectVariants = tv({
     controls:
       "text-content-fg-secondary [&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu",
     field: [
-      "relative isolate inline-flex h-control-height shrink-0 items-stretch rounded-control bg-fill text-content-fg outline-none transition-colors",
-      // Bezeled controls do not react to hover; a press stacks the secondary
-      // fill behind the label rather than replacing the bezel, as a native
-      // pop-up button darkens its bezel.
-      "after:pointer-events-none after:absolute after:inset-0 after:-z-10",
-      "after:rounded-[inherit] after:transition-colors after:content-['']",
-      "has-[button[data-pressed]]:after:bg-fill-secondary",
-      "has-[button[data-disabled]]:bg-fill-quaternary has-[button[data-disabled]]:text-content-fg-tertiary",
+      "relative inline-flex h-control-height shrink-0 items-stretch rounded-control bg-control-fill text-content-fg outline-none transition-[background-color,box-shadow,color] control-stroke",
+      // The bezel's states are the platform tokens, as on a button: a
+      // pop-up button on macOS darkens its bezel on press and ignores hover,
+      // a Fluent combo box reacts to both. The trigger button carries the
+      // interaction state; the field wrapping it and the clear button paints.
+      "has-[[data-select-trigger][data-hovered]]:bg-control-fill-hover",
+      "has-[[data-select-trigger][data-pressed]]:bg-control-fill-pressed has-[[data-select-trigger][data-pressed]]:text-control-fg-pressed",
+      "has-[[data-select-trigger][data-disabled]]:bg-control-fill-disabled has-[[data-select-trigger][data-disabled]]:text-control-fg-disabled",
       "has-[[data-select-clear]]:[&>[data-select-trigger]]:pr-0",
       focusStyles,
     ],
@@ -55,8 +57,10 @@ const selectVariants = tv({
   variants: {
     showFocus: {
       true: {
-        // The trigger is a button, so the ring is keyboard-only.
-        field: "has-[[data-select-trigger][data-focus-visible]]:ring-3",
+        // The trigger is a button, so the ring is keyboard-only. The Windows
+        // form mirrors `elementFocusVisible` for a wrapper.
+        field:
+          "has-[[data-select-trigger][data-focus-visible]]:ring-3 windows:has-[[data-select-trigger][data-focus-visible]]:ring-2 windows:has-[[data-select-trigger][data-focus-visible]]:ring-offset-1 windows:has-[[data-select-trigger][data-focus-visible]]:ring-offset-focus-ring-inner",
       },
     },
   },
@@ -159,9 +163,11 @@ export const Select = <T extends object>({
                 </SelectValue>
               </div>
 
-              {/* Native pop-up buttons show a static up/down chevron pair. */}
+              {/* A macOS pop-up button shows a static up/down chevron pair;
+                  a Fluent combo box a single down chevron. */}
               <span aria-hidden className={controls()}>
-                <ChevronsUpDown />
+                <ChevronsUpDown className="windows:hidden" />
+                <ChevronDown className="hidden windows:block" />
               </span>
             </Button>
 
