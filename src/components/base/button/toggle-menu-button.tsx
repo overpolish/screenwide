@@ -53,14 +53,21 @@ type ToggleMenuButtonProps = {
 const partBase = cn(
   "relative z-10 inline-flex cursor-default items-center justify-center bg-transparent",
   "select-none [&_svg]:shrink-0 [&_svg]:transform-gpu",
-  "data-[disabled]:text-content-fg-tertiary",
+  "data-[disabled]:text-control-fg-disabled",
   focusStyles,
   elementFocusVisible,
 );
 
 // Without a bezel each part lights up on its own, the way a ghost button
 // does; with one, the shared bezel takes the press instead.
-const bezellessPart = "data-[hovered]:bg-fill-tertiary data-[pressed]:bg-fill";
+const bezellessPart =
+  "data-[hovered]:bg-control-subtle-hover data-[pressed]:bg-control-subtle-pressed";
+
+// A Fluent split button lights the part under the pointer on its own bezel,
+// so the Windows skin gives each part the bezel's hover and press fills and
+// keeps the shared bezel at rest (see the bezel below).
+const bezeledPart =
+  "windows:data-[hovered]:bg-control-fill-hover windows:data-[pressed]:bg-control-fill-pressed";
 
 const glyphBox = "absolute inset-y-0 flex items-center justify-center";
 
@@ -125,7 +132,7 @@ export function ToggleMenuButton({
         size === "capture"
           ? "h-10 w-[calc(var(--spacing-icon)+var(--spacing-control-inset)+var(--spacing-control))]"
           : "h-control-height w-[calc(var(--spacing-icon)+var(--spacing-control)+var(--spacing-tight))]",
-        isFullyDisabled || hasBezel ? undefined : bezellessPart,
+        isFullyDisabled ? undefined : hasBezel ? bezeledPart : bezellessPart,
       )}
       isDisabled={isToggleDisabled}
       isSelected={isSelected}
@@ -165,15 +172,17 @@ export function ToggleMenuButton({
     <div
       className={cn(
         "relative isolate inline-flex items-stretch transition",
-        size === "capture" ? "rounded-panel" : "rounded-control",
-        "after:pointer-events-none after:absolute after:inset-0 after:-z-10",
-        "after:rounded-[inherit] after:transition-colors after:content-['']",
+        size === "capture" ? "rounded-capture" : "rounded-control",
+        // The bezel's colours are the platform tokens, as on a button. On
+        // macOS a press on either part darkens the whole bezel; a Fluent
+        // split button keeps the bezel at rest and lights the pressed part,
+        // so the Windows form pins the bezel fill and the parts take over.
         isFullyDisabled
           ? hasBezel
-            ? "bg-fill-quaternary text-content-fg-tertiary"
-            : "bg-transparent text-content-fg-tertiary"
+            ? "bg-control-fill-disabled text-control-fg-disabled control-stroke"
+            : "bg-transparent text-control-fg-disabled"
           : hasBezel
-            ? "bg-fill text-content-fg has-[[data-pressed]]:after:bg-fill-secondary"
+            ? "bg-control-fill text-content-fg control-stroke has-[[data-pressed]]:bg-control-fill-pressed windows:has-[[data-pressed]]:bg-control-fill"
             : "bg-transparent text-content-fg",
         className,
       )}
@@ -211,7 +220,7 @@ export function ToggleMenuButton({
           // An input that is off reads quiet, name and all, while staying
           // pressable.
           isSelected ? undefined : "text-content-fg-secondary",
-          isFullyDisabled || hasBezel ? undefined : bezellessPart,
+          isFullyDisabled ? undefined : hasBezel ? bezeledPart : bezellessPart,
         )}
         isDisabled={isMenuDisabled}
         // A native pop-up hangs off the whole control, not the label, so the

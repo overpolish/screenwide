@@ -44,7 +44,7 @@ const selectedId = (selection: Selection) => {
  * segment's corner is the track's less that inset. The capture size is a
  * larger control and takes the next radius up. */
 const trackRadius = {
-  capture: "rounded-panel",
+  capture: "rounded-capture",
   default: "rounded-control",
 };
 const segmentRadius = {

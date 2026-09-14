@@ -55,7 +55,7 @@ export const iconButtonVariants = tv({
     // a 28px glyph, on the panel radius a standalone control of that height
     // takes.
     size: {
-      capture: "h-10 w-12 rounded-panel [&_svg.lucide]:size-icon-xl",
+      capture: "h-10 w-12 rounded-capture [&_svg.lucide]:size-icon-xl",
       regular: "",
     },
   },

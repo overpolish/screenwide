@@ -69,7 +69,7 @@ export const buttonVariants = tv({
     // carries rather than the tighter segment corner.
     size: {
       capture:
-        "h-10 min-w-12 gap-control-inset rounded-panel px-control-inset text-body [&_svg.lucide]:size-icon-xl",
+        "h-10 min-w-12 gap-control-inset rounded-capture px-control-inset text-body [&_svg.lucide]:size-icon-xl",
       regular: "",
     },
     variant: {

@@ -180,6 +180,9 @@
   /* Bezeled controls. macOS 26 keeps a rounded rectangle at the regular size;
      tuned by eye against a native push button. */
   --radius-control: 0.5rem;
+  /* The recording bar's 40px controls. macOS rounds a taller control more,
+     up to the panel radius; Fluent keeps the control corner at any height. */
+  --radius-capture: var(--radius-panel);
 
   --animate-gradient: gradient 10s ease-in-out infinite;
   --animate-mesh-drift: mesh-drift 18s ease-in-out infinite alternate;
@@ -400,6 +403,7 @@
     /* A WinUI button is 32 tall on a 4px corner; overlays sit on 8px. */
     --spacing-control-height: 2rem;
     --radius-control: 4px;
+    --radius-capture: var(--radius-control);
     --radius-panel: 8px;
     --radius-window: 8px;
 
