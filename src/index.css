@@ -336,6 +336,12 @@
   --color-control-alt-stroke: transparent;
   --color-control-alt-stroke-pressed: transparent;
   --color-control-alt-stroke-disabled: transparent;
+  /* A slider's track and its knob. Fluent's track is the strong fill and
+     its knob a solid disc; macOS draws the track on the plain fill and a
+     white knob (light grey in dark). */
+  --color-control-strong-fill: var(--color-fill);
+  --color-control-strong-fill-disabled: var(--color-fill-quaternary);
+  --color-control-solid-fill: white;
   /* A pop-up's in-page surface (a select's list, a tooltip) when no panel
      window hosts it. macOS paints the window colour; Fluent draws a flyout
      one step lighter than the layer with a hairline stroke. */
@@ -372,6 +378,7 @@
     --color-fill-quaternary: rgb(255 255 255 / 3%);
     --color-control-fill-pressed: rgb(255 255 255 / 17.2%);
     --color-control-alt-fill-pressed: rgb(255 255 255 / 17.2%);
+    --color-control-solid-fill: var(--color-neutral-300);
 
     --color-success: rgb(48 209 88);
     --color-info: rgb(0 145 255);
@@ -452,6 +459,9 @@
     --alpha-primary-fg-disabled: 1;
     --color-popover: rgb(249 249 249);
     --color-popover-stroke: rgb(0 0 0 / 5.8%);
+    --color-control-strong-fill: rgb(0 0 0 / 44.7%);
+    --color-control-strong-fill-disabled: rgb(0 0 0 / 31.7%);
+    --color-control-solid-fill: white;
 
     /* WinUI fills accent controls with a tone of the accent per appearance
        (AccentDark1 in light, AccentLight2 in dark), which the OS supplies
@@ -519,6 +529,9 @@
     --alpha-primary-fg-disabled: 0.53;
     --color-popover: rgb(44 44 44);
     --color-popover-stroke: rgb(0 0 0 / 20%);
+    --color-control-strong-fill: rgb(255 255 255 / 54.4%);
+    --color-control-strong-fill-disabled: rgb(255 255 255 / 24.7%);
+    --color-control-solid-fill: rgb(69 69 69);
 
     --color-primary-stroke-bottom: rgb(0 0 0 / 14%);
     --color-primary-surface: var(
