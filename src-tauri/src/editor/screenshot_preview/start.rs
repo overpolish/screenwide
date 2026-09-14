@@ -9,10 +9,32 @@ use super::super::preview_platform::{
   RecordingPreviewSurface, SelectionGestureOperation, SelectionGesturePhase,
 };
 use super::super::{EditorArtifact, EditorKind, EditorState};
+#[cfg(target_os = "macos")]
+use super::annotation_gesture::AnnotationCommit;
+#[cfg(target_os = "macos")]
+use super::annotation_target::AnnotationGestureTarget;
+#[cfg(target_os = "macos")]
+use super::payloads::ScreenshotAnnotationChangeEvent;
 use super::payloads::{
   ScreenshotPreviewTransformEvent, ScreenshotSelectionChangeEvent, ScreenshotSelectionGestureEvent,
 };
 use super::state::ScreenshotPreviewState;
+
+/// Hands a finished arrow gesture to React. Only the end of a gesture reports
+/// one: everything in between is drawn natively from the manager's own
+/// working copy, so the document takes exactly one edit per drag.
+#[cfg(target_os = "macos")]
+fn emit_annotation_change(app: &AppHandle, session_id: u64, commit: AnnotationCommit) {
+  let _ = app.emit(
+    "screenshot-preview://annotation-change",
+    ScreenshotAnnotationChangeEvent {
+      annotations: commit.annotations,
+      pane_index: commit.pane_index,
+      selected_annotation_id: commit.selected_annotation_id,
+      session_id,
+    },
+  );
+}
 
 #[tauri::command]
 pub fn start_screenshot_preview(
@@ -132,6 +154,65 @@ pub fn start_screenshot_preview(
             );
           },
         ));
+        #[cfg(target_os = "macos")]
+        {
+          let event_app = app.clone();
+          let hover_app = app.clone();
+          surface.set_annotation_hover_callback(Box::new(
+            move |index, progress, image_points| {
+              let state = hover_app.state::<ScreenshotPreviewState>();
+              // Never wait on this mutex from AppKit's main thread: a halo
+              // frame is the most droppable work there is, and the next one
+              // is sixteen milliseconds away.
+              let Ok(mut manager) = state.0.try_lock() else {
+                return;
+              };
+              if manager.session_id == Some(session_id) {
+                manager.handle_annotation_hover(index, progress, image_points);
+              }
+            },
+          ));
+          surface.set_annotation_gesture_callback(Box::new(
+            move |phase, pane_index, target_kind, index, handle, x, y| {
+              let Some(target) = AnnotationGestureTarget::from_raw(target_kind, index, handle)
+              else {
+                return;
+              };
+              let state = event_app.state::<ScreenshotPreviewState>();
+              // Never wait for this mutex from AppKit's main thread: see the
+              // selection gesture above for why that inverts the locks.
+              match state.0.try_lock() {
+                Ok(mut manager) => {
+                  if let Some(commit) =
+                    manager.handle_annotation_gesture(phase, pane_index, target, x, y)
+                  {
+                    emit_annotation_change(&event_app, session_id, commit);
+                  }
+                }
+                Err(_) if matches!(phase, SelectionGesturePhase::End) => {
+                  // The commit is the whole point of a mouse-up, so a
+                  // contended lock defers it rather than dropping it.
+                  let deferred_app = event_app.clone();
+                  tauri::async_runtime::spawn_blocking(move || {
+                    let state = deferred_app.state::<ScreenshotPreviewState>();
+                    let Ok(mut manager) = state.0.lock() else {
+                      return;
+                    };
+                    if manager.session_id != Some(session_id) {
+                      return;
+                    }
+                    if let Some(commit) =
+                      manager.handle_annotation_gesture(phase, pane_index, target, x, y)
+                    {
+                      emit_annotation_change(&deferred_app, session_id, commit);
+                    }
+                  });
+                }
+                Err(_) => {}
+              };
+            },
+          ));
+        }
       }
       Ok::<_, String>(Arc::new(surface))
     })

@@ -4,7 +4,8 @@
 import { ToolPanelKind } from "../../popup-panel/store";
 
 /** Every tool the editor toolbar offers, under one name each. */
-export type EditorToolId = "crop" | "cursor" | "frame" | "keyboard" | "select";
+export type EditorToolId =
+  "arrow" | "crop" | "cursor" | "frame" | "keyboard" | "select";
 
 type EditorTool = {
   /** The panel this tool opens, for the tools that have one. */
@@ -21,6 +22,9 @@ type EditorTool = {
  * later states its behaviour in the same place as the rest.
  */
 const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
+  // No panel yet: the arrow draws with the style it is given, and its
+  // controls are a later slice.
+  arrow: { resetsView: true },
   crop: { panel: "crop", resetsView: true },
   cursor: { panel: "cursor", resetsView: true },
   frame: { panel: "frame", resetsView: true },

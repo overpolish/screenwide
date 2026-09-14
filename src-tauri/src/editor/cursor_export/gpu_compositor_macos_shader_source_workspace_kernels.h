@@ -47,6 +47,8 @@ kernel void workspace_layer(
     constant float &seconds [[buffer(9)]],
     const device uchar4 *keyboard_pixels [[buffer(10)]],
     constant KeyboardUniforms &keyboard [[buffer(11)]],
+    const device AnnotationUniforms *annotations [[buffer(12)]],
+    constant uint &annotation_count [[buffer(13)]],
     texture2d_array<float, access::read> cursor_images [[texture(1)]],
     texture2d<float, access::sample> background_picture [[texture(2)]],
     uint2 gid [[thread_position_in_grid]]) {
@@ -89,6 +91,16 @@ kernel void workspace_layer(
       rgba = mix(rgba, pixel, pixel.a);
     }
   }
+  // The layer is drawn into `placement`, which is rarely its canvas' own size:
+  // zoomed out, one drawn pixel covers several canvas pixels, and an edge
+  // feathered over one canvas pixel would land inside a single drawn one.
+  float2 annotation_pixel_steps =
+      canvas_dimensions / float2(placement.width, placement.height);
+  float annotation_pixel_scale =
+      max(annotation_pixel_steps.x, annotation_pixel_steps.y);
+  rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
+                               canvas_point, u, float2(source_dimensions),
+                               annotation_pixel_scale);
   float2 camera_point = canvas_point - float2(overlay.camera_frame_x,
                                                 overlay.camera_frame_y);
   float2 camera_size = float2(overlay.camera_frame_width,
@@ -119,9 +131,17 @@ kernel void workspace_layer(
     rgba = overlay_canvas_foreground_rgba(
       rgba, source, source_dimensions.x, source_dimensions.y,
       canvas_point, canvas_dimensions, u);
+    // The redrawn foreground covers the pass above, so the marks under the
+    // camera go back over it exactly as the cursor does.
+    rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
+                                 canvas_point, u, float2(source_dimensions),
+                                 annotation_pixel_scale);
   }
   rgba = composite_keyboard(rgba, keyboard_pixels, keyboard, canvas_point,
                             canvas_dimensions);
+  rgba = composite_annotations(rgba, annotations, annotation_count, 1u,
+                               canvas_point, u, float2(source_dimensions),
+                               annotation_pixel_scale);
   if (u.foreground_only == 0) rgba.rgb = output_dither(rgba.rgb, global_point);
   rgba.rgb *= canvas_coverage;
   rgba.a = u.foreground_only != 0 || u.transparent_background != 0

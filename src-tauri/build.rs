@@ -53,8 +53,17 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader.h");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+callbacks.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+magnifier.m");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+context_menu.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+editor.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+keyboard.m");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation.m");
+    println!(
+      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_chrome.m"
+    );
+    println!(
+      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_state.m"
+    );
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_macos.h");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+osc.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+selection.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+workspace.m");
@@ -148,8 +157,12 @@ fn main() {
       .file("src/editor/region_magnifier_macos.m")
       .file("src/editor/recording_preview_surface_macos+callbacks.m")
       .file("src/editor/recording_preview_surface_macos+magnifier.m")
+      .file("src/editor/recording_preview_surface_macos+context_menu.m")
       .file("src/editor/recording_preview_surface_macos+editor.m")
       .file("src/editor/recording_preview_surface_macos+keyboard.m")
+      .file("src/editor/recording_preview_surface_macos+annotation.m")
+      .file("src/editor/recording_preview_surface_macos+annotation_chrome.m")
+      .file("src/editor/recording_preview_surface_macos+annotation_state.m")
       .file("src/editor/recording_preview_surface_macos+osc.m")
       .file("src/editor/recording_preview_surface_macos+selection.m")
       .file("src/editor/recording_preview_surface_macos+workspace.m")

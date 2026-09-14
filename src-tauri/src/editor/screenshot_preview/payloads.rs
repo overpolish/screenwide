@@ -46,6 +46,18 @@ pub(super) struct ScreenshotSelectionGestureEvent {
   pub(super) session_id: u64,
 }
 
+/// The layer's marks after a pointer gesture, for React to commit into the
+/// document and its edit history.
+#[cfg(target_os = "macos")]
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ScreenshotAnnotationChangeEvent {
+  pub(super) annotations: Vec<crate::screenshots::Annotation>,
+  pub(super) pane_index: u32,
+  pub(super) selected_annotation_id: Option<String>,
+  pub(super) session_id: u64,
+}
+
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct ScreenshotSelectionChangeEvent {

@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { listen } from "@tauri-apps/api/event";
 import { RefObject, useEffect, useRef } from "react";
 
 import {
@@ -26,7 +25,10 @@ import {
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
 } from "./screenshot-output";
-import { ScreenshotSelectionGestureEvent } from "./screenshot-preview-events";
+import {
+  ScreenshotAnnotationChangeEvent,
+  ScreenshotSelectionGestureEvent,
+} from "./screenshot-preview-events";
 import {
   ResizeFit,
   resizeFitWidth,
@@ -36,8 +38,12 @@ import {
   clearBackdropMasks,
   effectiveBackdrop,
 } from "./use-recording-preview-surface";
+import { useScreenshotPreviewEvents } from "./use-screenshot-preview-events";
 
-export type { ScreenshotSelectionGestureEvent } from "./screenshot-preview-events";
+export type {
+  ScreenshotAnnotationChangeEvent,
+  ScreenshotSelectionGestureEvent,
+} from "./screenshot-preview-events";
 
 let sessionSequence = 0;
 
@@ -47,17 +53,20 @@ let sessionSequence = 0;
  * every settings change is a single GPU pass with no pixels crossing IPC.
  */
 export function useScreenshotPreviewSurface({
+  annotationTool,
   artifactId,
   canvasRef,
   interactionOutput,
   isEditorSuspended = false,
   isEnabled,
+  onAnnotationChange,
   onPaneFitChange,
   onSelectionChange,
   onSelectionGesture,
   onZoomChange,
   output,
   paneCount = 1,
+  selectedAnnotationId,
   selection,
   selectionTargets,
   sourceKey,
@@ -66,6 +75,8 @@ export function useScreenshotPreviewSurface({
   artifactId: number;
   canvasRef: RefObject<HTMLElement | null>;
   isEnabled: boolean;
+  /** The annotation tool in hand, when one is. */
+  annotationTool?: "arrow" | "select";
   interactionOutput?: ScreenshotWorkspaceOutputSettings;
   /**
    * Temporarily hands input back to the webview without giving up the native
@@ -76,6 +87,8 @@ export function useScreenshotPreviewSurface({
    * is still there, untouched, when the suspension clears.
    */
   isEditorSuspended?: boolean;
+  /** A finished arrow gesture: the layer's whole list, and what is chosen. */
+  onAnnotationChange?: (event: ScreenshotAnnotationChangeEvent) => void;
   /** How small the workspace was drawn to fit the pane, which the toolbar
    * turns into its zoom ceiling. */
   onPaneFitChange?: (fit: PreviewPaneFit) => void;
@@ -84,6 +97,7 @@ export function useScreenshotPreviewSurface({
   onZoomChange?: (zoomPercent: number) => void;
   output?: ScreenshotWorkspaceOutputSettings;
   paneCount?: number;
+  selectedAnnotationId?: string | null;
   selection?: Parameters<typeof layoutScreenshotPreviewSurface>[0]["selection"];
   selectionTargets?: Parameters<
     typeof layoutScreenshotPreviewSurface
@@ -108,6 +122,12 @@ export function useScreenshotPreviewSurface({
   onSelectionGestureRef.current = onSelectionGesture;
   const onSelectionChangeRef = useRef(onSelectionChange);
   onSelectionChangeRef.current = onSelectionChange;
+  const onAnnotationChangeRef = useRef(onAnnotationChange);
+  onAnnotationChangeRef.current = onAnnotationChange;
+  const annotationToolRef = useRef(annotationTool);
+  annotationToolRef.current = annotationTool;
+  const selectedAnnotationIdRef = useRef(selectedAnnotationId);
+  selectedAnnotationIdRef.current = selectedAnnotationId;
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   const selectionTargetsRef = useRef(selectionTargets);
@@ -153,107 +173,14 @@ export function useScreenshotPreviewSurface({
     ).catch(() => undefined);
   }, [artifactId, isEnabled, sourceKey]);
 
-  useEffect(() => {
-    if (!isEnabled) return;
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-    void listen<{ sessionId: number; zoomPercent: number }>(
-      "screenshot-preview://transform",
-      (event) => {
-        if (
-          !disposed &&
-          event.payload.sessionId === sessionIdRef.current &&
-          Number.isFinite(event.payload.zoomPercent)
-        ) {
-          const roundedZoom = Math.round(event.payload.zoomPercent);
-          onZoomChangeRef.current?.(roundedZoom);
-        }
-      },
-    ).then((dispose) => {
-      if (disposed) dispose();
-      else unlisten = dispose;
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [isEnabled]);
-
-  useEffect(() => {
-    if (!isEnabled) return;
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-    void listen<{ paneIndex: number | null; sessionId: number }>(
-      "screenshot-preview://selection-change",
-      (event) => {
-        const payload = event.payload;
-        if (
-          disposed ||
-          payload.sessionId !== sessionIdRef.current ||
-          (payload.paneIndex !== null && !Number.isInteger(payload.paneIndex))
-        )
-          return;
-        onSelectionChangeRef.current?.(payload.paneIndex);
-      },
-    ).then((dispose) => {
-      if (disposed) dispose();
-      else unlisten = dispose;
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [isEnabled]);
-
-  useEffect(() => {
-    if (!isEnabled) return;
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-    void listen<
-      Omit<ScreenshotSelectionGestureEvent, "operation"> & {
-        operation: number;
-        sessionId: number;
-      }
-    >("screenshot-preview://selection-gesture", (event) => {
-      const payload = event.payload;
-      if (
-        disposed ||
-        payload.sessionId !== sessionIdRef.current ||
-        !Number.isFinite(payload.deltaX) ||
-        !Number.isFinite(payload.deltaY) ||
-        !Number.isInteger(payload.edges) ||
-        ![0, 1, 2, 3, 4, 5, 6, 7].includes(payload.operation) ||
-        !Number.isInteger(payload.paneIndex) ||
-        !Number.isFinite(payload.scale) ||
-        !["begin", "update", "end", "cancel"].includes(payload.phase)
-      )
-        return;
-      onSelectionGestureRef.current?.({
-        deltaX: payload.deltaX,
-        deltaY: payload.deltaY,
-        edges: payload.edges,
-        operation: [
-          "move",
-          "resize",
-          "radius",
-          "frameResize",
-          "frameRadius",
-          "cropMove",
-          "cropResize",
-        ][payload.operation] as ScreenshotSelectionGestureEvent["operation"],
-        paneIndex: payload.paneIndex,
-        phase: payload.phase,
-        scale: payload.scale,
-      });
-    }).then((dispose) => {
-      if (disposed) dispose();
-      else unlisten = dispose;
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, [isEnabled]);
+  useScreenshotPreviewEvents({
+    isEnabled,
+    onAnnotationChangeRef,
+    onSelectionChangeRef,
+    onSelectionGestureRef,
+    onZoomChangeRef,
+    sessionIdRef,
+  });
 
   useEffect(() => {
     if (!isEnabled || !startedRef.current || sessionIdRef.current === 0) return;
@@ -342,6 +269,7 @@ export function useScreenshotPreviewSurface({
           // dedupe on the session makes the first layout of every session
           // reach the surface.
           const nextLayout = JSON.stringify({
+            annotationTool: annotationToolRef.current,
             backdrop,
             // A suspended editor stays enabled and keeps its transform;
             // only its input and chrome go away, and the suspend command
@@ -357,6 +285,7 @@ export function useScreenshotPreviewSurface({
             pane,
             resizeFit: resizeFitRef.current,
             scale,
+            selectedAnnotationId: selectedAnnotationIdRef.current,
             selection: selectionRef.current,
             selectionTargets: selectionTargetsRef.current,
             sessionId: sessionIdRef.current,
@@ -365,6 +294,7 @@ export function useScreenshotPreviewSurface({
           if (nextLayout !== lastLayout) {
             lastLayout = nextLayout;
             pendingLayout = {
+              annotationTool: annotationToolRef.current,
               backdrop,
               fitWidth: resizeFitWidth(
                 resizeFitRef.current,
@@ -382,6 +312,7 @@ export function useScreenshotPreviewSurface({
                 }),
               ),
               scale,
+              selectedAnnotationId: selectedAnnotationIdRef.current,
               selection: selectionRef.current,
               selectionTargets: selectionTargetsRef.current,
               sessionId: sessionIdRef.current,
@@ -406,7 +337,14 @@ export function useScreenshotPreviewSurface({
 
   useEffect(() => {
     measureRef.current();
-  }, [outputKey, paneCount, selection, selectionTargets]);
+  }, [
+    annotationTool,
+    outputKey,
+    paneCount,
+    selectedAnnotationId,
+    selection,
+    selectionTargets,
+  ]);
 
   useEffect(() => {
     if (!isEnabled) return;

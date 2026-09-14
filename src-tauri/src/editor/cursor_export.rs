@@ -151,6 +151,7 @@ mod tests {
 
   fn output_settings(width: u32, height: u32) -> ScreenshotOutputSettings {
     ScreenshotOutputSettings {
+      annotations: Vec::new(),
       background_color: "#000000".to_owned(),
       background_image_path: None,
       background_type: "color".to_owned(),

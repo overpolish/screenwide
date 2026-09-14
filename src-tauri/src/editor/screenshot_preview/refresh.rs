@@ -58,17 +58,24 @@ pub async fn refresh_screenshot_preview_sources(
       .map_err(|_| "The screenshot preview is unavailable".to_owned())?;
     manager.require_session(session_id)?;
     manager.sources = sources;
+    #[cfg(target_os = "macos")]
+    let hover = manager
+      .annotation_hover
+      .map(|hover| (hover.layer_id, hover.index, hover.width));
+    #[cfg(not(target_os = "macos"))]
+    let hover = None;
     manager.has_layout.then(|| {
       (
         manager.surface.clone(),
         manager.output.clone(),
         manager.sources.clone(),
+        hover,
       )
     })
   };
-  if let Some((Some(surface), Some(output), sources)) = presentation {
+  if let Some((Some(surface), Some(output), sources, hover)) = presentation {
     let batch = surface.present_batch();
-    let staged = PreviewManager::present_snapshot(&surface, &output, &sources)?;
+    let staged = PreviewManager::present_snapshot(&surface, &output, &sources, hover)?;
     drop(batch);
     if !staged {
       PreviewManager::present_once_pane_exists(&app, session_id, 0);

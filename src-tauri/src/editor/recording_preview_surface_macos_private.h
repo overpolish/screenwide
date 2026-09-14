@@ -11,6 +11,7 @@
 
 #import "cursor_export/gpu_compositor_macos.h"
 #import "osc_gpu_macos.h"
+#import "recording_preview_annotation_macos.h"
 #import "recording_preview_audio_ribbon_macos.h"
 
 #define SCREENWIDE_PREVIEW_PRIVATE __attribute__((visibility("hidden")))
@@ -137,6 +138,16 @@ typedef struct {
 @property(nonatomic) uint32_t selectionDragEdges;
 @property(nonatomic, strong) NSTrackingArea *selectionTrackingArea;
 @property(nonatomic) BOOL cursorRectsDisabled;
+/// The arrow tool's live drag. `annotationDragActive` covers the whole press,
+/// including one that only chooses an arrow; a new arrow waits for the press
+/// to travel far enough to be a drag before it exists at all.
+@property(nonatomic) BOOL annotationDragActive;
+@property(nonatomic) BOOL annotationDragPending;
+@property(nonatomic) BOOL annotationDragBegun;
+@property(nonatomic) NSPoint annotationDragOrigin;
+@property(nonatomic) uint32_t annotationDragTargetKind;
+@property(nonatomic) uint32_t annotationDragIndex;
+@property(nonatomic) uint32_t annotationDragHandle;
 @property(nonatomic) BOOL panning;
 @property(nonatomic) BOOL pinching;
 @property(nonatomic) BOOL suppressPinchScroll;
@@ -145,6 +156,8 @@ typedef struct {
 
 @interface ScreenwidePreviewInteractionView (Editor)
 - (void)releaseCursorControl;
+@end
+@interface ScreenwidePreviewInteractionView (ContextMenu)
 - (BOOL)reportContextMenuAtPoint:(NSPoint)point;
 @end
 @interface ScreenwidePreviewInteractionView (Keyboard)
@@ -233,6 +246,20 @@ typedef struct {
 @property(nonatomic) BOOL selectionSnapGuideYIsObject;
 @property(nonatomic) double selectionSnapGuideX;
 @property(nonatomic) double selectionSnapGuideY;
+/// The arrow tool's scene: every arrow's grips on the selected layer, which
+/// one is chosen, and whether the tool has the pointer.
+@property(nonatomic, strong) NSMutableData *annotations;
+@property(nonatomic) NSInteger annotationSelected;
+@property(nonatomic) ScreenwideAnnotationMode annotationMode;
+@property(nonatomic) screenwide_preview_annotation_gesture_callback annotationGestureCallback;
+@property(nonatomic) void *annotationGestureContext;
+/// The arrow the pointer is resting on, its pulse, and the revision that
+/// retires a pulse the pointer has already moved away from.
+@property(nonatomic) NSInteger annotationHovered;
+@property(nonatomic) CFTimeInterval annotationHoverStarted;
+@property(nonatomic) uint64_t annotationHoverRevision;
+@property(nonatomic) screenwide_preview_annotation_hover_callback annotationHoverCallback;
+@property(nonatomic) void *annotationHoverContext;
 @property(nonatomic) BOOL hasSelection;
 @property(nonatomic) BOOL selectionVisible;
 @property(nonatomic) ScreenwidePreviewSelection selection;

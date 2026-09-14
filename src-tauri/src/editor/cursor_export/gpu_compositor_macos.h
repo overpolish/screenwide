@@ -8,6 +8,7 @@
 
 #import <CoreMedia/CoreMedia.h>
 
+#import "gpu_compositor_macos_annotation_types.h"
 #import "gpu_compositor_macos_keyboard_types.h"
 #import "../osc_gpu_macos.h"
 
@@ -211,6 +212,7 @@ typedef struct {
   const uint8_t *camera_rgba;
   void *camera_pixels;
   ScreenwideStillOverlay overlay;
+  ScreenwideAnnotations annotations;
 } ScreenwideWorkspaceLayer;
 
 void *screenwide_gpu_still_presenter_create(void);

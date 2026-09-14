@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Crop, MousePointer2, ScanSquare } from "lucide-react";
+import { ArrowUpRight, Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 
 import { PreviewToolToggle } from "./preview-tool-toggle";
 
-export type ScreenshotTool = "canvas" | "crop" | "select" | null;
+export type ScreenshotTool = "arrow" | "canvas" | "crop" | "select" | null;
 
 type ScreenshotToolActions = {
   /** The layer a crop falls back to when nothing is selected. */
@@ -52,6 +52,14 @@ export function useScreenshotTools({
   const chooseCanvasTool = useCallback((selected: boolean) => {
     actionsRef.current.setTool(selected ? "canvas" : null);
   }, []);
+  // The arrow is drawn on a layer, so the tool needs one in hand the way the
+  // crop does.
+  const chooseArrowTool = useCallback((selected: boolean) => {
+    const actions = actionsRef.current;
+    if (actions.selectedItemId === null)
+      actions.onSelectedItemChange?.(actions.newestItemId);
+    actions.setTool(selected ? "arrow" : null);
+  }, []);
   const chooseCropTool = useCallback((selected: boolean) => {
     const actions = actionsRef.current;
     if (actions.selectedItemId === null)
@@ -93,8 +101,16 @@ export function useScreenshotTools({
         >
           <Crop />
         </PreviewToolToggle>
+        <PreviewToolToggle
+          isSelected={tool === "arrow"}
+          label="Arrow"
+          name="Draw an arrow"
+          onSelectedChange={chooseArrowTool}
+        >
+          <ArrowUpRight />
+        </PreviewToolToggle>
       </ButtonGroup>
     ),
-    [chooseCanvasTool, chooseCropTool, chooseSelectTool, tool],
+    [chooseArrowTool, chooseCanvasTool, chooseCropTool, chooseSelectTool, tool],
   );
 }

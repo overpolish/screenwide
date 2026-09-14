@@ -286,6 +286,7 @@ export const startScreenshotPreview = (artifactId: number, sessionId: number) =>
   invoke<null>("start_screenshot_preview", { artifactId, sessionId });
 
 export const layoutScreenshotPreviewSurface = ({
+  annotationTool,
   backdrop,
   fitWidth,
   interactionOutput,
@@ -293,6 +294,7 @@ export const layoutScreenshotPreviewSurface = ({
   output,
   panes,
   scale,
+  selectedAnnotationId,
   selection,
   selectionTargets,
   sessionId,
@@ -309,11 +311,17 @@ export const layoutScreenshotPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
+  /** The annotation tool in hand. "select" hit-tests the arrows already on
+   * the layer and lets every other press fall through to it; "arrow" also
+   * draws a new one on empty picture. */
+  annotationTool?: "arrow" | "select";
   fitWidth?: number;
+  selectedAnnotationId?: string | null;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
   invoke<null>("layout_screenshot_preview_surface", {
+    annotationTool: annotationTool ?? null,
     backdrop,
     fitWidth,
     interactionOutput: normalizedScreenshotWorkspaceOutput(interactionOutput),
@@ -321,6 +329,7 @@ export const layoutScreenshotPreviewSurface = ({
     output: normalizedScreenshotWorkspaceOutput(output),
     panes,
     scale,
+    selectedAnnotationId: selectedAnnotationId ?? null,
     selection: selection ?? null,
     selectionTargets: selectionTargets ?? null,
     sessionId,

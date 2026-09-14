@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[path = "platform/annotation.rs"]
+mod annotation;
+pub(crate) use annotation::{native_annotations, NativeAnnotations, MAX_ANNOTATIONS};
 #[path = "platform/composition.rs"]
 mod composition;
 pub(crate) use composition::alpha_composite;
@@ -110,6 +113,7 @@ unsafe extern "C" {
     camera_rgba: *const u8,
     overlay: *const StillOverlay,
     keyboard: *const KeyboardOverlay,
+    annotations: *const NativeAnnotations,
     output_rgba: *mut u8,
     error_text: *mut c_char,
     error_capacity: usize,

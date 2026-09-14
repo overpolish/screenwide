@@ -42,10 +42,12 @@
 - (void)mouseMoved:(NSEvent *)event {
   [self claimCursorControl];
   NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+  annotation_update_hover(self.surface, point, self.annotationDragActive);
   set_selection_cursor_at_point(self.surface, point);
 }
 - (void)mouseEntered:(NSEvent *)event { [self mouseMoved:event]; }
 - (void)mouseExited:(NSEvent *)event {
+  annotation_update_hover(self.surface, NSZeroPoint, YES);
   [self releaseCursorControl];
   [[NSCursor arrowCursor] set];
   (void)event;
@@ -72,53 +74,6 @@
     NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
     set_selection_cursor_at_point(self.surface, point);
   }
-}
-/// The layer under a right press, handed to the web layer so it can open the
-/// app's own layer menu there. Nothing opens natively.
-///
-/// The press selects exactly what a left press would select first, so the menu
-/// always acts on the layer it was opened on. A press on the shortcut layer,
-/// on a canvas frame, or on empty canvas has no layer order to change and is
-/// left alone.
-- (BOOL)reportContextMenuAtPoint:(NSPoint)point {
-  if (self.surface.contextMenuCallback == NULL ||
-      !self.surface.editorEnabled || self.surface.editorSuspended ||
-      !self.surface.selectionHitTestingEnabled)
-    return NO;
-  NSView *reference = self.surface.webview != nil ? self.surface.webview
-                                                  : self.window.contentView;
-  if (reference == nil) return NO;
-  ScreenwidePreviewSelection target;
-  uint8_t sharedHandle = 0;
-  if (!shared_selection_hit(self.surface, point, &target, &sharedHandle) &&
-      !selection_target_at_point(self.surface, point, &target))
-    return NO;
-  if (target.layer_id == ScreenwideFrameLayerId || selection_is_keyboard(target))
-    return NO;
-  if (!self.surface.hasSelection ||
-      self.surface.selection.pane_index != target.pane_index ||
-      self.surface.selection.layer_id != target.layer_id) {
-    self.surface.hasSelection = YES;
-    self.surface.selection = target;
-    clear_selection_snap_guides(self.surface);
-    if (self.surface.selectionCallback != NULL)
-      self.surface.selectionCallback((int32_t)target.layer_id,
-                                     self.surface.selectionContext);
-    redraw_selection(self.surface);
-    invalidate_selection_cursor_rects(self.surface);
-  }
-  self.selectionDragActive = NO;
-  self.panning = NO;
-  // The webview reports pointer coordinates from the top-left of the window's
-  // content, with y growing downwards; this view is flipped and inset inside
-  // that content, so the point goes through window base coordinates and is
-  // measured against the webview's own rect there.
-  NSPoint windowPoint = [self convertPoint:point toView:nil];
-  NSRect referenceRect = [reference convertRect:reference.bounds toView:nil];
-  self.surface.contextMenuCallback(
-      target.layer_id, windowPoint.x - NSMinX(referenceRect),
-      NSMaxY(referenceRect) - windowPoint.y, self.surface.contextMenuContext);
-  return YES;
 }
 - (void)rightMouseDown:(NSEvent *)event {
   if (self.surface.pointerDownCallback)
@@ -161,6 +116,10 @@
     apply_editor_fit_basis(self.surface);
     return;
   }
+  // The arrow chrome sees every left press over the picture first: drawing,
+  // choosing and dragging a grip are all its own. A press that lands on no
+  // arrow with only the select tool in hand falls through to the layer.
+  if (event.buttonNumber == 0 && annotation_mouse_down(self, point)) return;
   if (event.buttonNumber == 0 && self.surface.selectionHitTestingEnabled) {
     ScreenwidePreviewSelection target;
     uint8_t sharedHandle = 0;
@@ -359,6 +318,7 @@
 }
 - (void)mouseDragged:(NSEvent *)event {
   NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+  if (annotation_mouse_dragged(self, point)) return;
   if (self.selectionDragActive) {
     NSPoint delta = NSMakePoint(point.x - self.selectionDragOrigin.x,
                                 point.y - self.selectionDragOrigin.y);
@@ -772,6 +732,9 @@
   apply_editor_transform(self.surface);
 }
 - (void)mouseUp:(NSEvent *)event {
+  if (annotation_mouse_up(self, [self convertPoint:event.locationInWindow
+                                          fromView:nil]))
+    return;
   BOOL hadSnapGuides = self.surface.hasSelectionSnapGuideX ||
                        self.surface.hasSelectionSnapGuideY;
   BOOL hadMagnifier = self.surface.workspaceMagnifier.active != 0;

@@ -6,7 +6,9 @@ use crate::{
     cursor_effects::{GpuCursor, NativeGpuCursor},
     keyboard_effects::KeyboardOverlay,
   },
-  screenshots::{CapturedImage, NativeCanvas, ScreenshotOutputSettings, StillOverlay},
+  screenshots::{
+    CapturedImage, NativeAnnotations, NativeCanvas, ScreenshotOutputSettings, StillOverlay,
+  },
 };
 
 #[repr(C)]
@@ -48,6 +50,9 @@ pub(super) struct NativeWorkspaceLayer {
   pub(super) camera_rgba: *const u8,
   pub(super) camera_pixels: *mut std::ffi::c_void,
   pub(super) overlay: StillOverlay,
+  /// The layer's marks, inline: the presenter retains its scene and redraws
+  /// it without Rust, so a borrowed pointer would dangle on the next pan.
+  pub(super) annotations: NativeAnnotations,
 }
 
 /// Input for one layer in the retained recording workspace. A decoded RGBA

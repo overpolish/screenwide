@@ -480,6 +480,10 @@ static NSCursor *selection_move_cursor(void) {
 
 static NSCursor *selection_cursor(ScreenwidePreviewSurface *surface,
                                    NSPoint point) {
+  // An arrow under the pointer, or the arrow tool's empty picture, answers
+  // first; everything else is the layer's own choice.
+  NSCursor *annotation = annotation_cursor(surface, point);
+  if (annotation != nil) return annotation;
   ScreenwidePreviewSelection target;
   uint8_t handle = 0;
   if (!shared_selection_hit(surface, point, &target, &handle))

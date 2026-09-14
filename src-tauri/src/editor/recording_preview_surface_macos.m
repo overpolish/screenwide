@@ -485,6 +485,10 @@ void *screenwide_preview_surface_create(void *host_view) {
   __block ScreenwidePreviewSurface *surface;
   on_main(^{
     surface = [ScreenwidePreviewSurface new];
+    // No arrow is chosen and none is hovered until one is, and zero is a
+    // perfectly good arrow index.
+    surface.annotationSelected = -1;
+    surface.annotationHovered = -1;
     surface.host = (__bridge NSView *)host_view;
     surface.device = MTLCreateSystemDefaultDevice();
     surface.queue = [surface.device newCommandQueue];

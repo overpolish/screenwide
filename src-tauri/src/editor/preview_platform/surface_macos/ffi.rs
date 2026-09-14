@@ -4,6 +4,7 @@
 use super::super::PreviewSelection;
 use super::native_types::{NativeWorkspaceLayer, NativeWorkspacePaneRect};
 use crate::editor::cursor_effects::NativeGpuArtwork;
+use crate::editor::screenshot_preview::NativeAnnotationHandles;
 use crate::screenshots::{NativeCanvas, StillOverlay};
 
 unsafe extern "C" {
@@ -154,6 +155,25 @@ unsafe extern "C" {
     handle: *mut std::ffi::c_void,
     callback: Option<
       unsafe extern "C" fn(u32, u32, u32, u32, f64, f64, f64, *mut std::ffi::c_void),
+    >,
+    context: *mut std::ffi::c_void,
+  );
+  pub(super) fn screenwide_preview_surface_set_annotations(
+    handle: *mut std::ffi::c_void,
+    handles: *const NativeAnnotationHandles,
+    count: usize,
+    selected_index: i32,
+    mode: i32,
+  );
+  pub(super) fn screenwide_preview_surface_set_annotation_hover_callback(
+    handle: *mut std::ffi::c_void,
+    callback: Option<unsafe extern "C" fn(i32, f64, f64, *mut std::ffi::c_void)>,
+    context: *mut std::ffi::c_void,
+  );
+  pub(super) fn screenwide_preview_surface_set_annotation_gesture_callback(
+    handle: *mut std::ffi::c_void,
+    callback: Option<
+      unsafe extern "C" fn(u32, u32, u32, u32, u32, f64, f64, *mut std::ffi::c_void),
     >,
     context: *mut std::ffi::c_void,
   );

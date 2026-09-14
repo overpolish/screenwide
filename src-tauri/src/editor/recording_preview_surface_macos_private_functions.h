@@ -91,4 +91,41 @@ BOOL update_workspace_auto_fit_move(
 void end_workspace_frame_resize(
     ScreenwidePreviewSurface *surface, BOOL commit);
 void redraw_workspace(ScreenwidePreviewSurface *surface);
+NSRect selection_image_frame_for(ScreenwidePreviewSurface *surface,
+                                 ScreenwidePreviewSelection selection);
+/// The arrow tool's pointer handling. Each returns YES when the press,
+/// movement or release belonged to the tool and nothing else should see it.
+BOOL annotation_mouse_down(ScreenwidePreviewInteractionView *view,
+                           NSPoint point);
+BOOL annotation_mouse_dragged(ScreenwidePreviewInteractionView *view,
+                              NSPoint point);
+BOOL annotation_mouse_up(ScreenwidePreviewInteractionView *view, NSPoint point);
+/// The three grips of the chosen arrow, in the same handle shape the
+/// selection OSC draws its corners with.
+void annotation_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
+                        NSSize size, ScreenwidePreviewSurface *surface,
+                        CGFloat scale);
+/// What the pointer does over the picture right now, or `None` when no tool
+/// is in hand or the surface cannot place a mark.
+ScreenwideAnnotationMode annotation_active_mode(
+    ScreenwidePreviewSurface *surface);
+/// Whether the arrow chrome replaces the layer's own: always while the arrow
+/// tool is in hand, and while the select tool holds an arrow.
+BOOL annotation_owns_chrome(ScreenwidePreviewSurface *surface);
+/// The cursor the arrow chrome asks for under `point`, or nil to leave the
+/// choice to the layer.
+NSCursor *annotation_cursor(ScreenwidePreviewSurface *surface, NSPoint point);
+/// Re-reads which arrow the pointer rests on and, when it changed, starts the
+/// hover pulse that grows the halo. `dragging` reports no arrow at all.
+void annotation_update_hover(ScreenwidePreviewSurface *surface, NSPoint point,
+                             BOOL dragging);
+/// The chosen arrow's grip under `point`, or -1.
+NSInteger annotation_handle_at_point(ScreenwidePreviewSurface *surface,
+                                     NSPoint point);
+/// The topmost arrow whose shaft `point` lands on, or -1.
+NSInteger annotation_shaft_at_point(ScreenwidePreviewSurface *surface,
+                                    NSPoint point);
+/// The whole source image's rectangle on screen, in the flipped interaction
+/// view's coordinates.
+NSRect annotation_image_frame(ScreenwidePreviewSurface *surface);
 #endif

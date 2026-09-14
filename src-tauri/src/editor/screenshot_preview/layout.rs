@@ -19,6 +19,10 @@ use super::state::{PreviewManager, ScreenshotPreviewState};
 pub async fn layout_screenshot_preview_surface(
   app: AppHandle,
   state: tauri::State<'_, ScreenshotPreviewState>,
+  // `annotation_tool` is the tool in hand, when one is. "select" hit-tests
+  // the arrows already on the layer and lets every other press fall through
+  // to it; "arrow" also draws a new one on empty picture.
+  annotation_tool: Option<String>,
   backdrop: Option<[f64; 4]>,
   fit_width: Option<f64>,
   interaction_output: ScreenshotWorkspaceOutputSettings,
@@ -30,6 +34,7 @@ pub async fn layout_screenshot_preview_surface(
   output: ScreenshotWorkspaceOutputSettings,
   panes: Vec<ScreenshotSurfacePane>,
   scale: f64,
+  selected_annotation_id: Option<String>,
   selection: Option<ScreenshotSelectionOverlay>,
   selection_targets: Option<Vec<ScreenshotSelectionOverlay>>,
   session_id: u64,
@@ -40,7 +45,9 @@ pub async fn layout_screenshot_preview_surface(
   } else {
     1.0
   };
-  let (surface, will_present, natural_size) = {
+  #[cfg(not(target_os = "macos"))]
+  let _ = (&annotation_tool, &selected_annotation_id);
+  let (surface, will_present, natural_size, annotation_layout) = {
     let mut manager = state
       .0
       .lock()
@@ -50,7 +57,12 @@ pub async fn layout_screenshot_preview_surface(
     // Pointer ownership stays native for the complete gesture. React layouts
     // may update the inspector and display-only preview model meanwhile, but
     // they cannot replace the pixel gesture snapshot until mouse-up.
-    let output = if manager.selection_gesture.is_some() {
+    #[cfg(target_os = "macos")]
+    let native_owns_output =
+      manager.selection_gesture.is_some() || manager.annotation_gesture.is_some();
+    #[cfg(not(target_os = "macos"))]
+    let native_owns_output = manager.selection_gesture.is_some();
+    let output = if native_owns_output {
       manager.output.clone().unwrap_or(output)
     } else {
       output
@@ -103,8 +115,28 @@ pub async fn layout_screenshot_preview_surface(
     let will_present =
       !frame_owns_presentation && (!manager.has_layout || output_changed || size_changed);
     let natural_size = (output.canvas.width, output.canvas.height);
+    #[cfg(target_os = "macos")]
+    let annotation_layout = {
+      let mode = super::annotation::annotation_mode(annotation_tool.as_deref());
+      let pane_index = selection.as_ref().map(|overlay| overlay.pane_index);
+      manager.annotation_mode = mode;
+      manager.annotation_pane_index = pane_index;
+      // Putting the tool down retires the halo: the pointer may never move
+      // again to do it, and nothing else clears it.
+      if mode == super::annotation::ANNOTATION_MODE_NONE {
+        manager.annotation_hover = None;
+      }
+      super::annotation::annotation_layout(
+        &manager,
+        pane_index,
+        mode,
+        selected_annotation_id.as_deref(),
+      )
+    };
+    #[cfg(not(target_os = "macos"))]
+    let annotation_layout = ();
     manager.has_layout = true;
-    (surface, will_present, natural_size)
+    (surface, will_present, natural_size, annotation_layout)
   };
   let selection = selection.map(|overlay| PreviewSelection {
     recenter_height: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.height),
@@ -163,6 +195,14 @@ pub async fn layout_screenshot_preview_surface(
   // the draw, so this publishes one coherent OSC state after undo/selection.
   surface.set_selection_targets(selection_targets.as_deref());
   surface.set_selection(selection);
+  #[cfg(target_os = "macos")]
+  surface.set_annotations(
+    &annotation_layout.handles,
+    annotation_layout.selected_index,
+    annotation_layout.mode,
+  );
+  #[cfg(not(target_os = "macos"))]
+  let _ = annotation_layout;
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor.unwrap_or(true));
   // No interaction view exists off the two native preview backends.
@@ -218,10 +258,16 @@ pub async fn layout_screenshot_preview_surface(
         .lock()
         .map_err(|_| "The screenshot preview is unavailable".to_owned())?;
       manager.require_session(session_id)?;
-      (manager.output.clone(), manager.sources.clone())
+      #[cfg(target_os = "macos")]
+      let hover = manager
+        .annotation_hover
+        .map(|hover| (hover.layer_id, hover.index, hover.width));
+      #[cfg(not(target_os = "macos"))]
+      let hover = None;
+      (manager.output.clone(), manager.sources.clone(), hover)
     };
-    if let (Some(output), sources) = presentation {
-      let staged = PreviewManager::present_snapshot(&surface, &output, &sources)?;
+    if let (Some(output), sources, hover) = presentation {
+      let staged = PreviewManager::present_snapshot(&surface, &output, &sources, hover)?;
       if !staged {
         PreviewManager::present_once_pane_exists(&app, session_id, 0);
       }

@@ -3,21 +3,28 @@
 
 //! Native screenshot workspace presentation.
 //!
-//! Future screenshot annotation primitives enter through this retained GPU
-//! workspace; React remains semantic state and command/event transport.
+//! Screenshot annotations enter through this retained GPU workspace, flattened
+//! from each layer's settings so the preview draws what the export will;
+//! React remains semantic state and command/event transport.
 
 use super::ffi::screenwide_preview_surface_present_screenshot_workspace;
 use super::native_types::{NativeWorkspaceLayer, NativeWorkspacePlacement};
 use super::RecordingPreviewSurface;
-use crate::screenshots::{native_canvas, CapturedImage, ScreenshotOutputSettings, StillOverlay};
+use crate::screenshots::{
+  native_annotations, native_canvas, CapturedImage, ScreenshotOutputSettings, StillOverlay,
+};
 
 impl RecordingPreviewSurface {
   /// Composes every screenshot item into one workspace drawable and command
   /// buffer. The native presenter retains the immutable source buffers, so a
   /// later pan/zoom redraw never requires React or another source upload.
+  #[allow(clippy::type_complexity)]
   pub(crate) fn present_screenshot_workspace(
     &self,
     layers: &[(u64, &CapturedImage, ScreenshotOutputSettings)],
+    // The hovered arrow's halo: its layer, its place in that layer's list,
+    // and the halo's width in canvas pixels.
+    hover: Option<(u64, usize, f32)>,
   ) -> Result<bool, String> {
     let mut native_layers = Vec::with_capacity(layers.len());
     for (index, (source_token, source, settings)) in layers.iter().enumerate() {
@@ -46,6 +53,17 @@ impl RecordingPreviewSurface {
         camera_rgba: std::ptr::null(),
         camera_pixels: std::ptr::null_mut(),
         overlay: StillOverlay::default(),
+        annotations: {
+          // The hover halo never reaches the export: it is applied here, on
+          // the preview's own copy of the flattened list.
+          let mut annotations = native_annotations(settings);
+          if let Some((layer_id, index, width)) = hover {
+            if layer_id == *source_token && index < annotations.count as usize {
+              annotations.items[index].hover = width;
+            }
+          }
+          annotations
+        },
       });
     }
     Ok(unsafe {

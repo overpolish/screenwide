@@ -3,6 +3,7 @@
 
 #pragma once
 #import "gpu_compositor_macos.h"
+#import "gpu_compositor_macos_annotations.h"
 #import "gpu_compositor_macos_background_image.h"
 #import "gpu_compositor_macos_cursor_resources.h"
 #import "gpu_compositor_macos_keyboard.h"

@@ -6,7 +6,7 @@
 #import "recording_preview_surface_macos_private.h"
 
 
-static NSRect selection_image_frame_for(
+SCREENWIDE_PREVIEW_PRIVATE NSRect selection_image_frame_for(
     ScreenwidePreviewSurface *surface,
     ScreenwidePreviewSelection selection) {
   ScreenwidePreviewSelection image = selection;
@@ -28,6 +28,9 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     redraw_workspace(surface);
     return;
   }
+  // The arrow chrome draws only its own grips: the layer's selection and crop
+  // chrome stand down for as long as it has the pointer.
+  BOOL annotationMode = annotation_owns_chrome(surface);
   BOOL selectedPaneActive = surface.workspaceMode
       ? [surface.workspaceActivePaneIndices
             containsObject:@(surface.selection.pane_index)]
@@ -79,7 +82,9 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   // Match Keyframeless's contrast-safe OSC construction: hard-edged quads
   // snapped to drawable-pixel centres, with a 3px dark halo underneath a 1px
   // white core. Handles keep their 8pt fill and gain a 1-device-pixel ring.
-  if (surface.selection.crop_mode != 0)
+  if (annotationMode)
+    annotation_add_osc(vertices, &count, size, surface, scale);
+  else if (surface.selection.crop_mode != 0)
     screenwide_region_osc_add_crop(
         vertices, &count, size, frame,
         selection_image_frame_for(surface, surface.selection), scale,
@@ -91,7 +96,7 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         vertices, &count, size, frame, scale,
         surface.selection.radius_percent,
         surface.selection.radius_disabled == 0);
-  if (surface.hasSelectionSnapGuideX) {
+  if (!annotationMode && surface.hasSelectionSnapGuideX) {
     ScreenwidePreviewSelection guide = surface.selection;
     guide.x = surface.selectionSnapGuideX;
     guide.y = 0.0;
@@ -105,7 +110,7 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         NSMakeRect(x - half, 0.0, half * 2.0, size.height),
         surface.selectionSnapGuideXIsObject ? 5 : 4);
   }
-  if (surface.hasSelectionSnapGuideY) {
+  if (!annotationMode && surface.hasSelectionSnapGuideY) {
     ScreenwidePreviewSelection guide = surface.selection;
     guide.x = 0.0;
     guide.y = surface.selectionSnapGuideY;

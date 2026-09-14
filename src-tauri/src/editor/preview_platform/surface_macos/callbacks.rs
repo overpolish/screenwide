@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::{
-  ContextMenuCallback, PointerDownCallback, SelectionCallback, SelectionGestureCallback,
-  SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
+  AnnotationGestureCallback, AnnotationHoverCallback, ContextMenuCallback, PointerDownCallback, SelectionCallback,
+  SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
 };
 use super::ffi::screenwide_preview_surface_release_context_on_main;
 
@@ -110,5 +110,39 @@ pub(super) unsafe extern "C" fn selection_gesture_callback(
       _ => return,
     };
     callback(phase, pane_index, operation, edges, scale, delta_x, delta_y);
+  }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) unsafe extern "C" fn annotation_gesture_callback(
+  phase: u32,
+  pane_index: u32,
+  target_kind: u32,
+  index: u32,
+  handle: u32,
+  x: f64,
+  y: f64,
+  context: *mut std::ffi::c_void,
+) {
+  if let Some(callback) = (context as *mut AnnotationGestureCallback).as_mut() {
+    let phase = match phase {
+      0 => SelectionGesturePhase::Begin,
+      1 => SelectionGesturePhase::Update,
+      2 => SelectionGesturePhase::End,
+      3 => SelectionGesturePhase::Cancel,
+      _ => return,
+    };
+    callback(phase, pane_index, target_kind, index, handle, x, y);
+  }
+}
+
+pub(super) unsafe extern "C" fn annotation_hover_callback(
+  index: i32,
+  progress: f64,
+  image_points: f64,
+  context: *mut std::ffi::c_void,
+) {
+  if let Some(callback) = (context as *mut AnnotationHoverCallback).as_mut() {
+    callback(index, progress, image_points);
   }
 }

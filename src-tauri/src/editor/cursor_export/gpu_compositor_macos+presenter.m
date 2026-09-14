@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #import "gpu_compositor_macos.h"
+#import "gpu_compositor_macos_annotations.h"
 #import "gpu_compositor_macos_background_image.h"
 #import "gpu_compositor_macos_generators_layered.h"
 #import "gpu_compositor_macos_cursor_resources.h"
@@ -309,6 +310,7 @@ static int presenter_present_workspace_layers(
     float seconds = (float)item->seconds;
     [encoder setBytes:&seconds length:sizeof(seconds) atIndex:9];
     screenwide_bind_keyboard(encoder, presenter.device, presenter.keyboardArtworks, item->keyboard, item->canvas_height);
+    screenwide_bind_annotations(encoder, &item->annotations);
     [encoder setTexture:presenter.cursorResources.texture atIndex:1];
     workspace_dispatch(encoder, presenter.workspaceLayerPipeline, grid);
     [encoder endEncoding];
@@ -832,6 +834,7 @@ int screenwide_gpu_still_presenter_redraw_workspace(
         float seconds = (float)layers[index].seconds;
         [encoder setBytes:&seconds length:sizeof(seconds) atIndex:9];
         screenwide_bind_keyboard(encoder, presenter.device, presenter.keyboardArtworks, layers[index].keyboard, layers[index].canvas_height);
+        screenwide_bind_annotations(encoder, &layers[index].annotations);
         [encoder setTexture:presenter.cursorResources.texture atIndex:1];
         workspace_dispatch(encoder, presenter.workspaceLayerPipeline, grid);
         [encoder endEncoding];

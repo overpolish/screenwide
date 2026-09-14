@@ -5,11 +5,29 @@ use std::sync::{Arc, Mutex};
 
 use super::super::preview_platform::{workspace_editor::WorkspaceScene, RecordingPreviewSurface};
 use super::super::ScreenshotWorkspaceOutputSettings;
+#[cfg(target_os = "macos")]
+use super::annotation::AnnotationHover;
+#[cfg(target_os = "macos")]
+use super::annotation_gesture::AnnotationGestureOverride;
 use super::gesture::SelectionGestureOverride;
 use crate::screenshots::CapturedImage;
 
 #[derive(Default)]
 pub(super) struct PreviewManager {
+  /// Set while the arrow tool owns the pointer, so a React layout arriving
+  /// mid-drag cannot replace the working copy the gesture is drawing into.
+  #[cfg(target_os = "macos")]
+  pub(super) annotation_gesture: Option<AnnotationGestureOverride>,
+  /// The arrow the pointer rests on, and how wide its halo has grown.
+  #[cfg(target_os = "macos")]
+  pub(super) annotation_hover: Option<AnnotationHover>,
+  /// What the pointer does over the picture, from the tool React has in hand.
+  #[cfg(target_os = "macos")]
+  pub(super) annotation_mode: u32,
+  /// The pane the arrow chrome is drawn against, which is the only one its
+  /// grips and its hit tests know about.
+  #[cfg(target_os = "macos")]
+  pub(super) annotation_pane_index: Option<u32>,
   pub(super) has_layout: bool,
   pub(super) latest_session_id: u64,
   pub(super) output: Option<ScreenshotWorkspaceOutputSettings>,
@@ -32,6 +50,13 @@ impl PreviewManager {
   pub(super) fn stop(&mut self) {
     if let Some(surface) = self.surface.as_ref() {
       surface.hide();
+    }
+    #[cfg(target_os = "macos")]
+    {
+      self.annotation_gesture = None;
+      self.annotation_hover = None;
+      self.annotation_mode = 0;
+      self.annotation_pane_index = None;
     }
     self.has_layout = false;
     self.output = None;

@@ -15,7 +15,13 @@ impl PreviewManager {
     let (Some(surface), Some(output)) = (self.surface.as_ref(), self.output.as_ref()) else {
       return Ok(());
     };
-    Self::present_snapshot(surface, output, &self.sources).map(|_| ())
+    #[cfg(target_os = "macos")]
+    let hover = self
+      .annotation_hover
+      .map(|hover| (hover.layer_id, hover.index, hover.width));
+    #[cfg(not(target_os = "macos"))]
+    let hover = None;
+    Self::present_snapshot(surface, output, &self.sources, hover).map(|_| ())
   }
 
   /// Stages the current sources on the native workspace. `Ok(false)` means the
@@ -25,6 +31,9 @@ impl PreviewManager {
     surface: &RecordingPreviewSurface,
     output: &ScreenshotWorkspaceOutputSettings,
     sources: &[(u64, Arc<CapturedImage>)],
+    // The hovered arrow's halo: its layer, its place in that layer's list, and
+    // the halo's width in canvas pixels. Preview chrome only.
+    hover: Option<(u64, usize, f32)>,
   ) -> Result<bool, String> {
     if output.canvas.width < 64 || output.canvas.height < 64 {
       return Ok(true);
@@ -46,9 +55,11 @@ impl PreviewManager {
       if layers.is_empty() {
         return Ok(true);
       }
-      let staged = surface.present_screenshot_workspace(&layers)?;
+      let staged = surface.present_screenshot_workspace(&layers, hover)?;
       return Ok(staged);
     }
+    #[cfg(not(target_os = "macos"))]
+    let _ = hover;
     #[cfg(not(target_os = "macos"))]
     let mut staged = true;
     #[cfg(not(target_os = "macos"))]
@@ -104,16 +115,23 @@ impl PreviewManager {
         if manager.require_session(session_id).is_err() {
           return;
         }
+        #[cfg(target_os = "macos")]
+        let hover = manager
+          .annotation_hover
+          .map(|hover| (hover.layer_id, hover.index, hover.width));
+        #[cfg(not(target_os = "macos"))]
+        let hover = None;
         (
           manager.surface.clone(),
           manager.output.clone(),
           manager.sources.clone(),
+          hover,
         )
       };
-      let (Some(surface), Some(output), sources) = presentation else {
+      let (Some(surface), Some(output), sources, hover) = presentation else {
         return;
       };
-      let staged = Self::present_snapshot(&surface, &output, &sources).unwrap_or(true);
+      let staged = Self::present_snapshot(&surface, &output, &sources, hover).unwrap_or(true);
       if !staged && attempt + 1 < ATTEMPT_LIMIT {
         Self::present_once_pane_exists(&handle, session_id, attempt + 1);
       } else if !staged {

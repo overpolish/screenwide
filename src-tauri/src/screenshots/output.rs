@@ -7,13 +7,12 @@ pub(crate) mod tests;
 
 use serde::{Deserialize, Serialize};
 
-use super::mesh::MeshGradientPoint;
-use super::mesh_generator::default_generator;
 #[cfg(any(test, not(target_os = "macos")))]
 use super::placement::output_placement;
 #[cfg(any(test, not(target_os = "macos")))]
 use super::CapturedImage;
 use super::NormalizedSourceRect;
+use super::{annotation::Annotation, mesh::MeshGradientPoint, mesh_generator::default_generator};
 #[cfg(not(target_os = "macos"))]
 use super::{mesh::mesh_canvas, rounded_corners};
 
@@ -43,6 +42,9 @@ pub struct CropPreviewRect {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotOutputSettings {
+  /// Marks drawn over this layer, in the source's own pixel space.
+  #[serde(default)]
+  pub annotations: Vec<Annotation>,
   pub background_color: String,
   /// A picture of your own behind the layers. Absent for every background
   /// that is painted rather than loaded, and for settings written before

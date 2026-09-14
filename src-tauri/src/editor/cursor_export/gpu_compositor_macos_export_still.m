@@ -12,7 +12,8 @@ int screenwide_gpu_composite_still(
     const ScreenwideCursorArtwork *cursor_artworks,
     uint32_t cursor_artwork_count, const uint8_t *camera_rgba,
     const ScreenwideStillOverlay *overlay,
-    const ScreenwideKeyboardOverlay *keyboard, uint8_t *output_rgba,
+    const ScreenwideKeyboardOverlay *keyboard,
+    const ScreenwideAnnotations *annotations, uint8_t *output_rgba,
     char *error_text, size_t error_capacity) {
   @autoreleasepool {
     if (source_rgba == NULL || output_rgba == NULL || canvas == NULL ||
@@ -63,6 +64,11 @@ int screenwide_gpu_composite_still(
     ScreenwideKeyboardOverlay empty_keyboard = {0};
     if (keyboard == NULL)
       keyboard = &empty_keyboard;
+    // Metal rejects a nil buffer even where the kernel skips every read, so
+    // an empty list still binds the zeroed array with a count of zero.
+    ScreenwideAnnotations empty_annotations = {0};
+    if (annotations == NULL)
+      annotations = &empty_annotations;
     ScreenwideCursorResources *cursor_resources = screenwide_cursor_resources(
         device, cursor_artworks, cursor_artwork_count);
     if (cursor_resources == nil ||
@@ -108,6 +114,7 @@ int screenwide_gpu_composite_still(
     [encoder setBuffer:overlay_uniforms offset:0 atIndex:7];
     screenwide_bind_keyboard(encoder, device, keyboard_cache, *keyboard,
                              output_height);
+    screenwide_bind_annotations(encoder, annotations);
     [encoder setTexture:cursor_resources.texture atIndex:0];
     MTLSize grid = MTLSizeMake(output_width, output_height, 1);
     NSUInteger width = MIN(pipeline.threadExecutionWidth, output_width);

@@ -4,6 +4,7 @@
 #pragma once
 #import "gpu_compositor_macos_keyboard_shader_source.h"
 #import "gpu_compositor_macos_shader_source_types.h"
+#import "gpu_compositor_macos_shader_source_annotations.h"
 #import "gpu_compositor_macos_shader_source_background.h"
 #import "gpu_compositor_macos_shader_source_composition.h"
 #import "gpu_compositor_macos_shader_source_cursor.h"
@@ -15,9 +16,12 @@
 #import "gpu_compositor_macos_shader_source_cursor_kernels.h"
 #import "gpu_compositor_macos_shader_source_cursor_overlay_kernels.h"
 
-/// Native Metal shader extension point for future screenshot annotation tools.
+/// The compositor's Metal library, assembled from its parts. Screenshot
+/// annotation tools extend `..._shader_source_annotations.h`: one shape per
+/// `AnnotationUniforms.kind`, drawn by both canvas kernels.
 __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_TYPES
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATIONS
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_BACKGROUND
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_COMPOSITION
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_CURSOR

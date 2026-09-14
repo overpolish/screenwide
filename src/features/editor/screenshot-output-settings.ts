@@ -3,6 +3,7 @@
 
 import { DEFAULT_GENERATOR_ID } from "../../components/shared/background-picker/background-generators";
 
+import { Annotation, validAnnotations } from "./screenshot-annotations";
 import {
   MeshGradientPoint,
   randomMeshComposition,
@@ -28,6 +29,8 @@ type CropPreviewRect = {
 };
 
 export type ScreenshotOutputSettings = {
+  /** Marks drawn over this layer, in the source's own pixel space. */
+  annotations: Annotation[];
   backgroundColor: string;
   /** A picture of your own behind the layers, or null for a painted one. */
   backgroundImagePath: string | null;
@@ -72,6 +75,7 @@ export const defaultScreenshotOutput = (
   const mesh = randomMeshComposition();
   return {
     ...mesh,
+    annotations: [],
     backgroundColor: "#171717",
     backgroundImagePath: null,
     backgroundRadiusPercent: radii.background ?? 0,
@@ -177,6 +181,7 @@ export const normalizedScreenshotOutput = (
   // is the composition mesh: that is what it was drawn as.
   normalized.meshGenerator =
     normalized.meshGenerator.trim() || DEFAULT_GENERATOR_ID;
+  normalized.annotations = validAnnotations(settings.annotations);
   normalized.backgroundImagePath = settings.backgroundImagePath ?? null;
   normalized.recenterInsetColor = settings.recenterInsetColor ?? null;
   // Display-only, and never persisted: a rectangle that is not wholly finite

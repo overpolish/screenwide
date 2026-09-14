@@ -21,6 +21,7 @@ import {
 } from "../screenshot-output";
 import { useEditorEditGesture } from "../use-editor-edit-history";
 import {
+  ScreenshotAnnotationChangeEvent,
   ScreenshotSelectionGestureEvent,
   useScreenshotPreviewSurface,
 } from "../use-screenshot-preview-surface";
@@ -35,6 +36,10 @@ type PreviewViewportProps = {
   items: { height: number; id: number; width: number }[];
   naturalHeight: number;
   naturalWidth: number;
+  /** The annotation tool in hand. "select" hit-tests the arrows already on
+   * the layer; "arrow" also draws a new one on empty picture, and the layer's
+   * own chrome stands down for as long as it is held. */
+  annotationTool?: "arrow" | "select";
   isEditing?: boolean;
   /** Suspends native input, so the DOM over the viewport stays clickable. */
   isExportOpen?: boolean;
@@ -52,8 +57,10 @@ type PreviewViewportProps = {
   ) => void;
   onPaneFitChange?: (fit: PreviewPaneFit) => void;
   onRadiusChangeEnd?: () => void;
+  onSelectedAnnotationChange?: (annotationId: string | null) => void;
   onZoomChange?: (zoomPercent: number) => void;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
+  selectedAnnotationId?: string | null;
   selectedItemId?: number | null;
   zoomRequest?: PreviewZoomRequest;
 };
@@ -63,6 +70,7 @@ const AUTO_FIT_COMMIT_EDGE = 1 << 18;
 
 export function PreviewViewport({
   alt,
+  annotationTool,
   artifactId,
   isEditing = false,
   isExportOpen = false,
@@ -80,8 +88,10 @@ export function PreviewViewport({
   onOutputChange,
   onPaneFitChange,
   onRadiusChangeEnd,
+  onSelectedAnnotationChange,
   onZoomChange,
   screenshotOutput,
+  selectedAnnotationId = null,
   selectedItemId = null,
   zoomRequest,
 }: PreviewViewportProps) {
@@ -397,6 +407,21 @@ export function PreviewViewport({
     }
     return;
   };
+  // A finished arrow gesture is one edit: the native tool drew every frame of
+  // it, and only the list it ends with reaches the document.
+  const annotationChange = (event: ScreenshotAnnotationChangeEvent) => {
+    onSelectedAnnotationChange?.(event.selectedAnnotationId);
+    const itemOutput = workspaceOutput?.items[event.paneIndex];
+    if (!workspaceOutput || !itemOutput) return;
+    const held = screenshotWorkspaceItemOutput(workspaceOutput, itemOutput.id);
+    const annotations = event.annotations;
+    // Choosing an arrow reports the same list it was already holding. That is
+    // a selection, not an edit, and must not land in the undo history.
+    if (JSON.stringify(held.annotations) === JSON.stringify(annotations))
+      return;
+    onOutputChange?.({ ...held, annotations }, itemOutput.id);
+  };
+  const isDrawingArrows = annotationTool === "arrow";
   const selectionOverlay =
     isResizingCanvas && workspaceOutput
       ? {
@@ -405,7 +430,7 @@ export function PreviewViewport({
           radiusPercent: workspaceOutput.backgroundRadiusPercent,
           rect: { height: 1, width: 1, x: 0, y: 0 },
         }
-      : (isSelecting || isEditing) &&
+      : (isSelecting || isEditing || isDrawingArrows) &&
           selectedItemIndex >= 0 &&
           selectedItem &&
           selectedItemOutput
@@ -444,11 +469,13 @@ export function PreviewViewport({
       : null;
   const { fitDuringResize, fitPreview, setFitBasis } =
     useScreenshotPreviewSurface({
+      annotationTool,
       artifactId,
       canvasRef: nativeFrameRef,
       interactionOutput: workspaceOutput,
       isEditorSuspended: isSaving || isExportOpen,
       isEnabled: workspaceOutput !== undefined,
+      onAnnotationChange: annotationChange,
       onPaneFitChange,
       onSelectionChange: (paneIndex) => {
         if (paneIndex === null) return;
@@ -459,6 +486,7 @@ export function PreviewViewport({
       onZoomChange,
       output: previewOutput,
       paneCount: orderedItems.length,
+      selectedAnnotationId,
       selection: selectionOverlay,
       selectionTargets,
       sourceKey: orderedItems
@@ -471,7 +499,7 @@ export function PreviewViewport({
   return (
     <div
       aria-label={alt}
-      className={`relative flex min-h-0 grow overflow-hidden ${isSelecting ? "cursor-move" : "cursor-grab"}`}
+      className={`relative flex min-h-0 grow overflow-hidden ${isDrawingArrows ? "cursor-crosshair" : isSelecting ? "cursor-move" : "cursor-grab"}`}
       data-recording-preview-viewport
       ref={nativeFrameRef}
       role="img"

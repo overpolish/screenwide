@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
@@ -64,12 +64,21 @@ export function ScreenshotSection({
   // The panel follows the tool in hand, so choosing one is all a button or a
   // shortcut has to do.
   useToolPanelFollowsTool("screenshot", screenshotToolId(tool));
+  // Which arrow the native handles are on. It belongs to the tools that
+  // hit-test arrows rather than to the document: it survives moving between
+  // Select and Arrow, and picking up any other tool lets it go.
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<
+    string | null
+  >(null);
   const toolRef = useRef(tool);
   toolRef.current = tool;
   const setTool = (
     next: ScreenshotTool | ((current: ScreenshotTool) => ScreenshotTool),
   ) => {
-    setActiveTool(typeof next === "function" ? next(toolRef.current) : next);
+    const resolved = typeof next === "function" ? next(toolRef.current) : next;
+    if (resolved !== "arrow" && resolved !== "select")
+      setSelectedAnnotationId(null);
+    setActiveTool(resolved);
   };
   const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
   const moveSelectedLayer = (
@@ -173,8 +182,26 @@ export function ScreenshotSection({
   // and Escape backs out of it, and both simply put the tool down - the crop
   // itself was committed as each handle was released.
   const isCropping = tool === "crop";
+  // The arrow tool is the other tool you are "in": Escape puts it down.
+  const isAnnotating = tool === "arrow";
+  // Both tools hit-test the arrows on the layer; only the arrow tool draws a
+  // new one, and only it takes every press over the picture.
+  const annotationTool =
+    tool === "arrow" || tool === "select" ? tool : undefined;
+  const hasSelectedAnnotation = selectedAnnotationId !== null;
   const leaveCropTool = () => {
     setTool((current) => (current === "crop" ? null : current));
+  };
+  // Escape backs out one layer at a time: an arrow in hand is let go first,
+  // and only a second press puts the tool itself down.
+  const leaveModalTool = () => {
+    if (hasSelectedAnnotation) {
+      setSelectedAnnotationId(null);
+      return;
+    }
+    setTool((current) =>
+      current === "arrow" || current === "crop" ? null : current,
+    );
   };
   // The Select panel's padding controls reach this workspace's analysis
   // through here, alongside the refresh a crop drag ends with.
@@ -182,7 +209,10 @@ export function ScreenshotSection({
   useEditorWindowShortcuts({
     onConfirm: isCropping ? leaveCropTool : undefined,
     onDelete: deleteSelectedLayer,
-    onDeselect: isCropping ? leaveCropTool : undefined,
+    onDeselect:
+      isCropping || isAnnotating || hasSelectedAnnotation
+        ? leaveModalTool
+        : undefined,
     onMoveBackward: () => {
       moveSelectedLayer("backward");
     },
@@ -203,13 +233,14 @@ export function ScreenshotSection({
       if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
       setTool((current) => (current === "crop" ? null : "crop"));
     },
-    ownsEscape: isCropping,
+    ownsEscape: isCropping || isAnnotating || hasSelectedAnnotation,
   });
 
   return (
     <div className="flex min-h-0 min-w-0 grow flex-col">
       <PreviewViewport
         alt="Screenshot preview"
+        annotationTool={annotationTool}
         artifactId={artifact.id}
         isEditing={tool === "crop"}
         isExportOpen={isExportOpen}
@@ -226,8 +257,10 @@ export function ScreenshotSection({
         onItemSelect={onSelectedItemChange}
         onOutputChange={onOutputChange}
         onRadiusChangeEnd={onRadiusChangeEnd}
+        onSelectedAnnotationChange={setSelectedAnnotationId}
         onZoomChange={reportZoom}
         screenshotOutput={screenshotOutput}
+        selectedAnnotationId={selectedAnnotationId}
         selectedItemId={selectedItemId}
         zoomRequest={zoomRequest}
       />

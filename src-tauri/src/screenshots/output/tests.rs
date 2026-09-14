@@ -26,6 +26,7 @@ pub(crate) fn settings(width: u32, height: u32) -> ScreenshotOutputSettings {
   let placed_x = f64::from(width) * 0.1;
   let placed_y = (f64::from(height) - placed_height) / 2.0;
   ScreenshotOutputSettings {
+    annotations: Vec::new(),
     background_color: "#112233".to_owned(),
     background_image_path: None,
     background_type: "solid".to_owned(),

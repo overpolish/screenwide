@@ -8,6 +8,16 @@
 //! uses: the source uploads once (the presenter caches it by token), and each
 //! settings change is a uniform-only compute pass. No pixels ever cross IPC.
 
+#[cfg(target_os = "macos")]
+mod annotation;
+#[cfg(target_os = "macos")]
+mod annotation_gesture;
+#[cfg(target_os = "macos")]
+mod annotation_hover;
+#[cfg(target_os = "macos")]
+mod annotation_target;
+#[cfg(all(target_os = "macos", test))]
+mod annotation_gesture_tests;
 mod controls;
 mod geometry;
 mod gesture;
@@ -20,6 +30,8 @@ mod refresh;
 mod start;
 mod state;
 
+#[cfg(target_os = "macos")]
+pub(crate) use annotation::NativeAnnotationHandles;
 pub use controls::{
   __cmd__reset_screenshot_preview_view, __cmd__set_screenshot_preview_editor_suspended,
   __cmd__set_screenshot_preview_fit_basis, __cmd__set_screenshot_preview_zoom,
