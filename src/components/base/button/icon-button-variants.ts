@@ -10,8 +10,8 @@ const iconButtonControlStyles =
 export const iconButtonVariants = tv({
   base: [
     "relative inline-flex origin-center transform-gpu cursor-default items-center justify-center backface-hidden will-change-transform transition select-none",
-    "aria-disabled:bg-transparent aria-disabled:text-content-fg-tertiary",
-    "aria-disabled:data-[selected]:text-content-fg-tertiary",
+    "aria-disabled:bg-transparent aria-disabled:text-control-fg-disabled",
+    "aria-disabled:data-[selected]:text-control-fg-disabled",
     iconButtonControlStyles,
     focusStyles,
     elementFocusVisible,
@@ -19,7 +19,7 @@ export const iconButtonVariants = tv({
   compoundVariants: [
     {
       class:
-        "text-content-fg-tertiary data-[disabled]:data-[selected]:bg-fill-quaternary data-[disabled]:data-[selected]:text-content-fg-tertiary",
+        "text-control-fg-disabled data-[disabled]:data-[selected]:bg-control-fill-disabled data-[disabled]:data-[selected]:text-control-fg-disabled",
       isDisabled: true,
       isToggle: true,
     },
@@ -30,10 +30,12 @@ export const iconButtonVariants = tv({
   },
   variants: {
     color: {
+      // A borderless control: the subtle hover and press tokens, which are
+      // the fill ladder on macOS and Fluent's subtle fills on Windows.
       neutral:
-        "bg-transparent text-content-fg data-[hovered]:bg-fill-tertiary data-[pressed]:bg-fill",
+        "bg-transparent text-content-fg data-[hovered]:bg-control-subtle-hover data-[pressed]:bg-control-subtle-pressed",
       primary:
-        "bg-primary-surface text-primary-fg data-[pressed]:bg-primary-surface-pressed data-[focus-visible]:ring-offset-2 data-[focus-visible]:ring-offset-content",
+        "bg-primary-surface text-primary-fg primary-stroke windows:data-[hovered]:bg-primary-surface-hover data-[pressed]:bg-primary-surface-pressed data-[pressed]:text-primary-fg-pressed data-[focus-visible]:ring-offset-2 data-[focus-visible]:ring-offset-content",
     },
     hasSelectedBackground: {
       true: [
@@ -44,8 +46,8 @@ export const iconButtonVariants = tv({
     },
     isDisabled: {
       true: [
-        "bg-transparent text-content-fg-tertiary",
-        "data-[disabled]:data-[selected]:text-content-fg-tertiary",
+        "bg-transparent text-control-fg-disabled",
+        "data-[disabled]:data-[selected]:text-control-fg-disabled",
       ],
     },
     isToggle: {

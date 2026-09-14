@@ -31,7 +31,7 @@ export function CopyableText({
     <section
       aria-labelledby={labelId}
       className={cn(
-        "flex min-h-0 flex-col gap-control overflow-hidden rounded-control bg-fill-quaternary p-section",
+        "flex min-h-0 flex-col gap-control overflow-hidden rounded-control bg-layer inset-ring inset-ring-layer-stroke p-section",
         className,
       )}
       {...props}
