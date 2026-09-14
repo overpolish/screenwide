@@ -135,9 +135,9 @@ pub(crate) fn generator_seed_shift(seed: u32) -> [f32; 3] {
   let value = f64::from(seed);
   let fract = |value: f64| value - value.floor();
   let shift = [
-    ((fract((value * 12.9898 + 4.1).sin() * 43_758.5453) - 0.5) * 1.5) as f32,
-    ((fract((value * 78.233 + 1.7).sin() * 43_758.5453) - 0.5) * 1.5) as f32,
-    (fract((value * 39.425 + 9.3).sin() * 43_758.5453) * std::f64::consts::TAU) as f32,
+    ((fract((value * 12.9898 + 4.1).sin() * 43_758.545_3) - 0.5) * 1.5) as f32,
+    ((fract((value * 78.233 + 1.7).sin() * 43_758.545_3) - 0.5) * 1.5) as f32,
+    (fract((value * 39.425 + 9.3).sin() * 43_758.545_3) * std::f64::consts::TAU) as f32,
   ];
   shifts.insert(seed, shift);
   shift
