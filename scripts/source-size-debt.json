@@ -10,7 +10,6 @@
   "src-tauri/src/editor/recording_preview_surface_macos.m": 752,
   "src-tauri/src/editor/screenshot_region_osc_macos+input.m": 703,
   "src-tauri/src/editor/screenshot_region_osc_macos+ruler.m": 2016,
-  "src-tauri/src/editor/screenshot_region_osc_macos.m": 325,
   "src-tauri/src/editor/screenshot_region_osc_macos_private.h": 387,
   "src/features/editor/api.ts": 529,
   "src/features/editor/components/editor-panel.stories.tsx": 372,

@@ -155,11 +155,7 @@ fn close_windows(windows: Vec<tauri::WebviewWindow>) {
   for window in windows {
     crate::osc::cursor::macos::prepare_window_close(&window);
     if let Ok(view) = window.ns_view() {
-      let view = view.cast();
-      let _ = native_region::set_input_enabled(view, false);
-      let _ = native_region::set_snapshot_presented(view, false);
-      let _ = native_region::clear_region(view);
-      let _ = native_region::set_desktop_presented(view, false);
+      native_region::detach(view.cast());
     }
     let _ = window.close();
   }

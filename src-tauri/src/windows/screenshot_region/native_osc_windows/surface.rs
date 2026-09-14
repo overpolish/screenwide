@@ -217,6 +217,7 @@ pub(crate) struct Surface {
   window_size: (u32, u32),
   drawing: bool,
   pending: bool,
+  drawables_released: bool,
 }
 
 impl Drop for Surface {

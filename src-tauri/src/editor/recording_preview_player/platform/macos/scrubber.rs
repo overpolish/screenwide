@@ -31,13 +31,39 @@ unsafe extern "C" {
   fn screenwide_preview_scrubber_destroy(handle: *mut std::ffi::c_void);
 }
 
-pub(super) struct NativePixelFrame {
+pub(crate) struct NativePixelFrame {
   handle: *mut std::ffi::c_void,
   pub(super) height: u32,
   pub(super) width: u32,
 }
 
 impl NativePixelFrame {
+  pub(super) fn from_sample(sample: &cidre::cm::SampleBuf) -> Result<Self, String> {
+    let pixels = sample
+      .image_buf()
+      .ok_or_else(|| "AVFoundation returned a video sample without pixels".to_owned())?;
+    let width = pixels.width() as u32;
+    let height = pixels.height() as u32;
+    if width == 0 || height == 0 {
+      return Err("AVFoundation returned an empty video frame".to_owned());
+    }
+    // Own one Core Video reference across the presentation queue. Drop uses
+    // the same release operation as frames returned by the scrubber.
+    Ok(Self {
+      handle: pixels.retained().into_raw().cast(),
+      width,
+      height,
+    })
+  }
+
+  pub(super) fn metadata(&self) -> crate::screenshots::CapturedImage {
+    crate::screenshots::CapturedImage {
+      width: self.width,
+      height: self.height,
+      rgba: Vec::new(),
+    }
+  }
+
   pub(super) fn as_ptr(&self) -> *mut std::ffi::c_void {
     self.handle
   }

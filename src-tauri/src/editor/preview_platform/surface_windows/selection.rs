@@ -91,6 +91,28 @@ pub(super) struct SelectionOverlay {
 }
 
 impl SelectionOverlay {
+  pub(super) fn release_drawables(&mut self, context: &ID3D11DeviceContext) -> Result<(), String> {
+    unsafe {
+      let vertex_buffer: Option<ID3D11Buffer> = None;
+      let stride = 0_u32;
+      let offset = 0_u32;
+      context.IASetVertexBuffers(
+        0,
+        1,
+        Some(&raw const vertex_buffer),
+        Some(&raw const stride),
+        Some(&raw const offset),
+      );
+      context.PSSetShaderResources(0, Some(&[None, None, None, None, None]));
+      context.OMSetRenderTargets(None, None);
+      self
+        .swap_chain
+        .ResizeBuffers(2, 2, 2, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SWAP_CHAIN_FLAG(0))
+    }
+    .map_err(|error| format!("The Windows selection overlay could not release buffers: {error}"))
+    .inspect(|()| self.buffer_size = (2, 2))
+  }
+
   pub(super) fn new(
     device: &ID3D11Device,
     factory: &IDXGIFactory2,

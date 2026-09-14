@@ -33,7 +33,7 @@ unsafe extern "C" {
 }
 pub(super) struct NativeVideoReader {
   _reader: arc::R<av::AssetReader>,
-  last_frame: Option<CapturedImage>,
+  last_sample: Option<arc::R<cm::SampleBuf>>,
   output: arc::R<av::AssetReaderTrackOutput>,
   pending: Option<arc::R<cm::SampleBuf>>,
 }
@@ -103,7 +103,7 @@ impl NativeVideoReader {
     }
     Ok(Self {
       _reader: reader,
-      last_frame: None,
+      last_sample: None,
       output,
       pending: None,
     })
@@ -114,7 +114,7 @@ impl NativeVideoReader {
   /// avoids paying AVAssetReader construction cost for every backward jump.
   pub(super) fn reset(&mut self, start_ms: u64, duration_ms: u64) -> Result<(), String> {
     self.pending = None;
-    self.last_frame = None;
+    self.last_sample = None;
     let reset = unsafe {
       screenwide_preview_reader_reset_range(
         self.output.as_ptr().cast(),
@@ -130,6 +130,20 @@ impl NativeVideoReader {
   }
 
   pub(super) fn frame_at(&mut self, target_ms: u64) -> Result<Option<CapturedImage>, String> {
+    self.sample_at(target_ms)?.map(Self::converted).transpose()
+  }
+
+  pub(super) fn pixel_frame_at(
+    &mut self,
+    target_ms: u64,
+  ) -> Result<Option<super::scrubber::NativePixelFrame>, String> {
+    self
+      .sample_at(target_ms)?
+      .map(|sample| super::scrubber::NativePixelFrame::from_sample(&sample))
+      .transpose()
+  }
+
+  fn sample_at(&mut self, target_ms: u64) -> Result<Option<arc::R<cm::SampleBuf>>, String> {
     loop {
       if self.pending.is_none() {
         self.pending = self
@@ -138,17 +152,18 @@ impl NativeVideoReader {
           .map_err(|error| error.to_string())?;
       }
       let Some(sample) = self.pending.as_ref() else {
-        return Ok(self.last_frame.clone());
+        return Ok(self.last_sample.clone());
       };
       let pts_ms = (sample.pts().as_secs().max(0.0) * 1_000.0).round() as u64;
-      if pts_ms > target_ms.saturating_add(2) && self.last_frame.is_some() {
-        return Ok(self.last_frame.clone());
+      if pts_ms > target_ms.saturating_add(2) && self.last_sample.is_some() {
+        return Ok(self.last_sample.clone());
       }
       let sample = self.pending.take().expect("the pending sample exists");
-      let frame = Self::converted(sample)?;
-      self.last_frame = Some(frame.clone());
+      // Cache the native sample, not a deep copy of its full RGBA image.
+      // Samples skipped while seeking never need CPU pixel conversion.
+      self.last_sample = Some(sample.clone());
       if pts_ms.saturating_add(2) >= target_ms {
-        return Ok(Some(frame));
+        return Ok(Some(sample));
       }
     }
   }
@@ -190,3 +205,7 @@ impl NativeVideoReader {
     }
   }
 }
+
+#[cfg(test)]
+#[path = "video/tests.rs"]
+mod tests;

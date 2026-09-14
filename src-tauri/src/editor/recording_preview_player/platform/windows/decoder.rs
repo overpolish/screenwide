@@ -61,7 +61,7 @@ impl Drop for MediaFoundation {
 
 pub(super) struct NativeVideoReader {
   height: u32,
-  last_frame: Option<CapturedImage>,
+  last_sample: Option<IMFSample>,
   reader: IMFSourceReader,
   width: u32,
   // Fields drop in declaration order. Keep the process-wide MF reference
@@ -125,7 +125,7 @@ impl NativeVideoReader {
     }
     let mut value = Self {
       height,
-      last_frame: None,
+      last_sample: None,
       reader,
       width,
       _runtime: runtime,
@@ -143,7 +143,7 @@ impl NativeVideoReader {
         .saturating_mul(HUNDRED_NS_PER_MS),
     );
     win(unsafe { self.reader.SetCurrentPosition(&GUID::zeroed(), &position) })?;
-    self.last_frame = None;
+    self.last_sample = None;
     Ok(())
   }
 
@@ -163,13 +163,18 @@ impl NativeVideoReader {
         )
       })?;
       if flags & MF_SOURCE_READERF_ENDOFSTREAM.0 as u32 != 0 {
-        return Ok(self.last_frame.clone());
+        return self
+          .last_sample
+          .as_ref()
+          .map(|sample| sample_image(sample, self.width, self.height))
+          .transpose();
       }
       if flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED.0 as u32 != 0 {
         let negotiated = win(unsafe { self.reader.GetCurrentMediaType(VIDEO_STREAM) })?;
         let packed = win(unsafe { negotiated.GetUINT64(&MF_MT_FRAME_SIZE) })?;
         self.width = (packed >> 32) as u32;
         self.height = packed as u32;
+        self.last_sample = None;
         if self.width == 0 || self.height == 0 {
           return Err("Media Foundation changed to an empty preview frame".to_owned());
         }
@@ -178,12 +183,12 @@ impl NativeVideoReader {
         continue;
       };
       let timestamp_ms = u64::try_from(timestamp.max(0) / HUNDRED_NS_PER_MS).unwrap_or_default();
-      let frame = sample_image(&sample, self.width, self.height)?;
+      // Retain the native sample; copying a full RGBA frame just to cache
+      // the last image doubles the allocation for every requested frame.
+      self.last_sample = Some(sample.clone());
       if timestamp_ms.saturating_add(2) >= target_ms {
-        self.last_frame = Some(frame.clone());
-        return Ok(Some(frame));
+        return sample_image(&sample, self.width, self.height).map(Some);
       }
-      self.last_frame = Some(frame);
     }
   }
 }

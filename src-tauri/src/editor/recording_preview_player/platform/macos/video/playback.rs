@@ -69,12 +69,12 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
           .read()
           .map(|settings| settings.clone())
           .unwrap_or_else(|poisoned| poisoned.into_inner().clone());
-        let raw_screen = match screen.frame_at(target_ms) {
+        let raw_screen = match screen.pixel_frame_at(target_ms) {
           Ok(Some(frame)) => frame,
           Ok(None) | Err(_) => break,
         };
         let raw_camera = match camera.as_mut() {
-          Some(reader) => match reader.frame_at(target_ms) {
+          Some(reader) => match reader.pixel_frame_at(target_ms) {
             Ok(Some(frame)) => Some(frame),
             Ok(None) => None,
             Err(_) => break,
@@ -105,13 +105,15 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
           &composition.recording_output.primary,
           screen_factor,
         );
+        let screen_metadata = raw_screen.metadata();
+        let camera_metadata = raw_camera.as_ref().map(|frame| frame.metadata());
         let (cursor, overlay) = match gpu_still_overlay(
-          &raw_screen,
+          &screen_metadata,
           &screen_output,
           cursor_frame.as_ref(),
           composition
             .bake_camera
-            .then_some(raw_camera.as_ref())
+            .then_some(camera_metadata.as_ref())
             .flatten(),
           composition
             .bake_camera

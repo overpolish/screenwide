@@ -44,8 +44,8 @@ pub(crate) type StillDecoder = still::NativeStillDecoder;
 
 pub(crate) enum VideoFramePayload {
   Native {
-    screen: crate::screenshots::CapturedImage,
-    camera: Option<crate::screenshots::CapturedImage>,
+    screen: scrubber::NativePixelFrame,
+    camera: Option<scrubber::NativePixelFrame>,
     screen_output: crate::screenshots::ScreenshotOutputSettings,
     camera_output: crate::screenshots::ScreenshotOutputSettings,
     cursor: Option<crate::editor::cursor_effects::GpuCursor>,
@@ -77,15 +77,18 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
         let mut layers = vec![RecordingWorkspaceLayer {
           pane_index: 0,
           source_token: source_token << 2,
-          source: Some(&screen),
-          source_pixels: None,
+          source: None,
+          source_pixels: Some((screen.as_ptr(), (screen.width, screen.height))),
           settings: screen_output,
           placement: NativeWorkspacePlacement::default(),
           seconds,
           cursor,
           keyboard,
-          camera: bake_camera.then_some(camera.as_ref()).flatten(),
-          camera_pixels: None,
+          camera: None,
+          camera_pixels: bake_camera
+            .then_some(camera.as_ref())
+            .flatten()
+            .map(|frame| (frame.as_ptr(), (frame.width, frame.height))),
           overlay: overlay.as_ref(),
           clip_cursor_at_video_edge,
           foreground_only: false,
@@ -95,8 +98,8 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
             layers.push(RecordingWorkspaceLayer {
               pane_index: 1,
               source_token: (source_token << 2) | 1,
-              source: Some(camera),
-              source_pixels: None,
+              source: None,
+              source_pixels: Some((camera.as_ptr(), (camera.width, camera.height))),
               settings: camera_output,
               placement: NativeWorkspacePlacement::default(),
               seconds,

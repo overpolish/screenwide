@@ -19,6 +19,8 @@ pub(crate) use output::tests::settings as test_output_settings;
 mod placement;
 #[cfg(target_os = "macos")]
 mod platform;
+#[cfg(target_os = "macos")]
+pub(crate) use platform::capture_monitor_thumbnail;
 #[cfg(target_os = "windows")]
 mod platform_windows;
 mod recenter;
