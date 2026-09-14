@@ -163,12 +163,14 @@ pub(crate) fn label_hit(rects: &[LabelRect], point: Point) -> Option<LabelHit> {
   None
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn push_segment(
   segments: &mut Vec<Segment>,
   out: &[Vertex],
   start: usize,
   action_fills: [[f32; 4]; 2],
   radius: f64,
+  outline: [f32; 4],
   label: Option<ID3D11ShaderResourceView>,
   secondary: Option<ID3D11ShaderResourceView>,
 ) {
@@ -180,7 +182,7 @@ pub(super) fn push_segment(
     count: (out.len() - start) as u32,
     action_fills,
     chrome: [radius as f32, 0.0, 0.0, 0.0],
-    chrome_outline: [0.0; 4],
+    chrome_outline: outline,
     label,
     secondary,
   });

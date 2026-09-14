@@ -153,7 +153,19 @@ fragment float4 region_osc_fragment(
     texture2d<float> icons [[texture(2)]],
     texture2d<float> snapshot [[texture(3)]]) {
   constexpr sampler label_sampler(filter::linear, address::clamp_to_edge);
-  if (in.kind == 33) return snapshot.sample(label_sampler, in.uv);
+  if (in.kind == 33) {
+    // Zoomed in, the frozen desktop's pixels are magnified as pixels, the
+    // way a zoomed screenshot shows them, rather than smeared by bilinear
+    // filtering. Magnification is read off the uv derivatives: fewer than
+    // one texel per screen pixel. At one-to-one the linear sample resolves
+    // the same texels.
+    constexpr sampler pixel_sampler(filter::nearest, address::clamp_to_edge);
+    float2 texels_per_pixel =
+        fwidth(in.uv) * float2(snapshot.get_width(), snapshot.get_height());
+    bool magnified = max(texels_per_pixel.x, texels_per_pixel.y) < 0.999;
+    return magnified ? snapshot.sample(pixel_sampler, in.uv)
+                     : snapshot.sample(label_sampler, in.uv);
+  }
   if (in.kind == 34 || in.kind == 35) {
     float2 dimensions = 1.0 / max(fwidth(in.uv), float2(0.0001));
     float width = in.kind == 34 ? max(ruler_animation.z, 1.0) : 3.0;

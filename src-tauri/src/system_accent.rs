@@ -151,6 +151,42 @@ pub fn accent_rgb() -> [f32; 3] {
   )
 }
 
+/// The fill an accent control takes on the Windows skin: the OS accent's tone
+/// for the appearance (`AccentDark1` in light, `AccentLight2` in dark) when
+/// the user follows the OS accent, the brand colour as is otherwise. The
+/// Rust twin of `--color-primary-surface` under `[data-platform="windows"]`.
+pub fn accent_fill_rgb(light_appearance: bool) -> [f32; 3] {
+  match current() {
+    Some(SystemAccent {
+      tones: Some(tones), ..
+    }) => {
+      let [red, green, blue] = if light_appearance {
+        tones.light
+      } else {
+        tones.dark
+      };
+      [
+        f32::from(red) / 255.0,
+        f32::from(green) / 255.0,
+        f32::from(blue) / 255.0,
+      ]
+    }
+    _ => accent_rgb(),
+  }
+}
+
+/// Text on that fill: WinUI sets black on its dark-appearance tone; the
+/// brand colour and every light-appearance fill take white. The twin of
+/// `--color-primary-fg` on the Windows skin.
+pub fn text_on_accent_fill(light_appearance: bool) -> [f32; 4] {
+  let follows_os_tone = matches!(current(), Some(SystemAccent { tones: Some(_), .. }));
+  if !light_appearance && follows_os_tone {
+    [0.0, 0.0, 0.0, 1.0]
+  } else {
+    [1.0, 1.0, 1.0, 1.0]
+  }
+}
+
 /// Drops the cached accent so the next read goes back to the platform.
 /// Native observers of the platform's accent notification call this before
 /// they redraw, because the notification reaches every observer in an

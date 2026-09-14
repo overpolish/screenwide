@@ -39,9 +39,9 @@ use super::renderer::{self, Vertex};
 use super::text::TextCache;
 use crate::osc::{
   controls::{
-    control_metrics, control_spacing, Appearance, ConfirmAction, ConfirmActionSpec, ControlColor,
-    ControlGroup, ControlIcon, ControlKind, ControlMetrics, ControlSize, ControlSpec, ControlStyle,
-    ControlVisual,
+    control_metrics, control_spacing, control_stroke, Appearance, ConfirmAction, ConfirmActionSpec,
+    ControlColor, ControlGroup, ControlIcon, ControlKind, ControlMetrics, ControlSize, ControlSpec,
+    ControlStyle, ControlVisual,
   },
   geometry::{Point, Rect, Size},
   style::ocr_palette,

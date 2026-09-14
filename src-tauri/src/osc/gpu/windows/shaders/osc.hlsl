@@ -164,7 +164,14 @@ float4 ps_main(VertexOut input) : SV_Target {
     // A frozen desktop is an opaque backing plane. Capture APIs may leave
     // alpha unspecified, but exposing it through a premultiplied composition
     // swap chain would reveal the live desktop beneath the snapshot.
-    float4 sampled = snapshot.SampleLevel(linear_sampler, input.uv, 0);
+    // Zoomed in (the uv window narrower than the whole snapshot), the
+    // desktop's pixels are magnified as pixels, the way a zoomed screenshot
+    // shows them, rather than smeared by bilinear filtering; at one-to-one
+    // the linear sampler resolves the same texels.
+    bool magnified = chrome_source.z < 0.999 || chrome_source.w < 0.999;
+    float4 sampled = magnified
+        ? snapshot.SampleLevel(point_sampler, input.uv, 0)
+        : snapshot.SampleLevel(linear_sampler, input.uv, 0);
     return float4(sampled.rgb, 1.0);
   }
   if (input.kind == 46) {

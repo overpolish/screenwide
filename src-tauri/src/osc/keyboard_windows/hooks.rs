@@ -75,6 +75,12 @@ pub(super) unsafe extern "system" fn hook_proc(
     if down || up {
       let (modifiers, repeat) = update_pressed(data.vkCode, down);
       let overlay = active_overlay();
+      if down && !matches!(data.vkCode, 0x10 | 0x11 | 0x12 | 0xa0..=0xa5 | 0x5b | 0x5c) {
+        eprintln!(
+          "Overlay hook saw vk 0x{:x} modifiers {modifiers} for {overlay:?}",
+          data.vkCode
+        );
+      }
       let alt = overlay == Some(Overlay::Ruler) && matches!(data.vkCode, 0x12 | 0xa4 | 0xa5);
       if alt {
         LAST_ALT_HOOK.with(|at| *at.borrow_mut() = Some(Instant::now()));
@@ -163,9 +169,14 @@ pub(super) fn routes_to_overlay(
   up: bool,
 ) -> bool {
   if overlay == Overlay::TextRecognition {
-    return down
-      && crate::text_recognition::settings::key_phase(vk as u16, modifiers, false, false)
-        .is_some();
+    let phase = crate::text_recognition::settings::key_phase(vk as u16, modifiers, false, false);
+    if down && !matches!(vk, 0x10 | 0x11 | 0x12 | 0xa0..=0xa5 | 0x5b | 0x5c) {
+      eprintln!(
+        "OCR hook: vk 0x{vk:x} modifiers {modifiers} -> phase {phase:?}, target {}",
+        TARGET.load(Ordering::Acquire)
+      );
+    }
+    return down && phase.is_some();
   }
   if matches!(vk, 0x12 | 0xa4 | 0xa5) {
     return down || up;

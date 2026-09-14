@@ -124,7 +124,7 @@ impl Chrome {
       start,
       visual_fills(visual),
       metrics.radius,
-      [0.0; 4],
+      control_stroke(appearance),
       Some(label.view.clone()),
     );
   }

@@ -55,8 +55,9 @@ impl Ruler {
     // inset closes the right edge. The hex is seven cells of one pitch, so
     // only the dimensions change the width, and the callout follows the
     // pointer anyway.
-    let pitch = hex_pitch(cells);
-    let colour_width = pitch * colour.chars().count() as f64;
+    // Proportional, as the dimensions line and the macOS readout are: a
+    // fixed pitch made the hex read as tabular digits in a monospaced face.
+    let colour_width = cells.text_width(&colour);
     let dimensions_width = dimensions
       .as_ref()
       .map_or(0.0, |text| cells.text_width(text));
@@ -106,7 +107,7 @@ impl Ruler {
       text_left,
       text_top,
       line_height,
-      pitch,
+      0.0,
       scale,
       48,
     );
@@ -164,6 +165,11 @@ impl Ruler {
       start,
       fills,
       value.callout_radius,
+      control_stroke(if light_mode {
+        Appearance::Light
+      } else {
+        Appearance::Dark
+      }),
       Some(atlas.view.clone()),
       secondary,
     );

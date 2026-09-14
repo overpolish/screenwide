@@ -61,8 +61,10 @@ pub(crate) const ATLAS_CELLS: usize = 22;
 /// never bleed the neighbouring glyph in.
 const GUTTER: i32 = 1;
 /// Rasterisation happens at this multiple of the physical resolution and is
-/// box-downsampled back, the `label.rs` precedent.
-const SUPERSAMPLE: i32 = 2;
+/// box-downsampled back, the `label.rs` precedent. Four rather than two: a
+/// 2x2 box gives a pixel only five coverage levels, which shows as jagged
+/// edges on 14px text; 4x4 gives seventeen, close to a real rasteriser's.
+const SUPERSAMPLE: i32 = 4;
 /// macOS baked near-black glyphs in light mode and white in dark mode.
 /// The label tier from `src/index.css`: pure black or pure white, carried at
 /// `LABEL_ALPHA`, the same colour the control foreground resolves to.
@@ -123,17 +125,6 @@ impl AtlasMetrics {
       .chars()
       .map(|glyph| self.advance(glyph_index(glyph).unwrap_or(0)))
       .sum()
-  }
-
-  /// The widest advance among `glyphs`. A field whose value changes under the
-  /// pointer, such as a hex colour, is laid out on this single pitch so its
-  /// columns cannot shuffle; fields that only ever hold digits and fixed
-  /// separators use the per-glyph advances instead.
-  pub(crate) fn pitch(&self, glyphs: &str) -> f64 {
-    glyphs
-      .chars()
-      .map(|glyph| self.advance(glyph_index(glyph).unwrap_or(0)))
-      .fold(0.0_f64, f64::max)
   }
 
   /// The uv rectangle of one cell. Cells are evenly spaced, so the stride is

@@ -65,15 +65,19 @@ pub(super) fn overlay_keyboard_command(hwnd: HWND, vk: u16, modifiers: u32, repe
     return false;
   }
   let Some(phase) = ocr_keyboard_phase(vk, modifiers, repeat) else {
+    eprintln!("OCR key: vk 0x{vk:x} modifiers {modifiers} repeat {repeat} matches no shortcut");
     return false;
   };
   let ready = context
     .surfaces
     .lock()
     .map(|mut set| {
-      set
-        .find_mut(hwnd)
-        .is_some_and(|surface| surface.input_enabled && surface.ocr.phase == ocr::PHASE_READY)
+      let surface = set.find_mut(hwnd);
+      let state = surface
+        .as_ref()
+        .map(|surface| (surface.input_enabled, surface.ocr.phase));
+      eprintln!("OCR key: phase {phase} for surface {hwnd:?}, input/ocr phase {state:?}");
+      surface.is_some_and(|surface| surface.input_enabled && surface.ocr.phase == ocr::PHASE_READY)
     })
     .unwrap_or(false);
   if !ready {

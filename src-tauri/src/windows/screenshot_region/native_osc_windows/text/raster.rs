@@ -13,7 +13,10 @@ impl Context {
     if dc.is_invalid() {
       return None;
     }
-    let face: Vec<u16> = if mono { "Roboto Mono\0" } else { "Inter\0" }
+    // The page's `--font-sans` on the Windows skin is Segoe UI Variable, but
+    // GDI does not resolve the variable family by name and substitutes a
+    // stranger; the static Segoe UI is the same design at these sizes.
+    let face: Vec<u16> = if mono { "Roboto Mono\0" } else { "Segoe UI\0" }
       .encode_utf16()
       .collect();
     let family = if mono {
@@ -119,7 +122,7 @@ impl Context {
               total += u32::from(pixels[source + 2]);
             }
           }
-          coverage[(y * output_width + x) as usize] = (total / samples) as u8;
+          coverage[(y * output_width + x) as usize] = enhance_contrast((total / samples) as u8);
         }
       }
       coverage
@@ -130,6 +133,19 @@ impl Context {
     }
     resolved
   }
+}
+
+/// Lifts partial coverage the way DirectWrite's contrast enhancement does
+/// for small text. GDI's grayscale antialiasing, box-filtered down from the
+/// supersample, leaves a 14px stem at a third to a half coverage, which reads
+/// as thin and grey beside the webview's text; a gamma of 1/1.6 on the
+/// coverage brings the stems up without touching solid or empty pixels.
+fn enhance_contrast(coverage: u8) -> u8 {
+  const GAMMA: f32 = 1.0 / 1.6;
+  if coverage == 0 || coverage == 255 {
+    return coverage;
+  }
+  ((f32::from(coverage) / 255.0).powf(GAMMA) * 255.0).round() as u8
 }
 
 impl Drop for Context {

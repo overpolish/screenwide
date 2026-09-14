@@ -105,6 +105,10 @@ fn run_monitor(
     return;
   }
   let _ = ready.send(Ok(()));
+  eprintln!(
+    "Overlay keyboard monitor started for {overlay:?}, target {}",
+    TARGET.load(Ordering::Acquire)
+  );
 
   let mut message = MSG::default();
   while unsafe { GetMessageW(&mut message, None, 0, 0) }.0 > 0 {

@@ -40,8 +40,8 @@ use super::renderer::{self, Vertex};
 use super::text::{AtlasMetrics, TextCache};
 use crate::osc::{
   controls::{
-    control_metrics, control_visual, Appearance, ControlColor, ControlKind, ControlMetrics,
-    ControlSize, ControlStyle, Interaction,
+    control_metrics, control_stroke, control_visual, Appearance, ControlColor, ControlKind,
+    ControlMetrics, ControlSize, ControlStyle, Interaction,
   },
   geometry::{Point, Rect, Size},
 };
@@ -238,7 +238,7 @@ mod commands;
 mod data;
 mod label_layout;
 mod labels;
-use atlas_layout::{add_atlas_text, hex_pitch};
+use atlas_layout::add_atlas_text;
 mod world;
 
 pub(crate) use assignment::assign_labels;

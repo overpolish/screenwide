@@ -121,8 +121,46 @@ pub extern "C" fn screenwide_osc_control_spacing() -> ControlSpacing {
   control_spacing()
 }
 
+/// Whether the Windows skin's values apply. The same tokens the page reads
+/// from `src/index.css` under `[data-platform="windows"]`: Fluent's 32px
+/// control on a 4px corner and body text at 14/20, with the taller callout
+/// keeping the control corner, as `--radius-capture` does. The readouts keep
+/// the label's 14px size on a tighter 18px line, so the callout's two lines
+/// still sit inside its 40px with a little room, as they do on macOS.
+pub(crate) const WINDOWS_SKIN: bool = cfg!(target_os = "windows");
+
 pub const fn control_metrics(kind: ControlKind, size: ControlSize) -> ControlMetrics {
   let ControlSize::Regular = size;
+  if WINDOWS_SKIN {
+    return match kind {
+      ControlKind::Button => ControlMetrics {
+        height: 32.0,
+        radius: 4.0,
+        padding_x: 12.0,
+        gap: 4.0,
+        icon_size: 16.0,
+        font_size: 14.0,
+        line_height: 20.0,
+        readout_font_size: 14.0,
+        readout_line_height: 18.0,
+        callout_height: 40.0,
+        callout_radius: 4.0,
+      },
+      ControlKind::IconButton => ControlMetrics {
+        height: 32.0,
+        radius: 4.0,
+        padding_x: 8.0,
+        gap: 0.0,
+        icon_size: 16.0,
+        font_size: 0.0,
+        line_height: 20.0,
+        readout_font_size: 14.0,
+        readout_line_height: 18.0,
+        callout_height: 40.0,
+        callout_radius: 4.0,
+      },
+    };
+  }
   match kind {
     ControlKind::Button => ControlMetrics {
       height: 24.0,
@@ -202,7 +240,26 @@ const fn content_color(appearance: Appearance, alpha: f32) -> [f32; 4] {
 /// bezeled control does not react to hover, so hovered repeats the resting
 /// fill; pressed is the resting fill with a second 8% layer over it, which
 /// composites to 0.10 + 0.08 * (1 - 0.10).
+///
+/// On the Windows skin these are Fluent's control fills, `--color-control-fill`
+/// and its states: white at 70% resting in light appearance, a near-white at
+/// 50% under the pointer and 30% pressed; white at 6 / 8.4 / 3.3% in dark.
+/// Disabled is the pressed tier in light and 4.2% white in dark.
 const fn neutral_fill(appearance: Appearance, interaction: Interaction) -> [f32; 4] {
+  if WINDOWS_SKIN {
+    const NEAR_WHITE: f32 = 249.0 / 255.0;
+    return match (appearance, interaction) {
+      (Appearance::Light, Interaction::Normal) => [1.0, 1.0, 1.0, 0.70],
+      (Appearance::Light, Interaction::Hovered) => [NEAR_WHITE, NEAR_WHITE, NEAR_WHITE, 0.50],
+      (Appearance::Light, Interaction::Pressed | Interaction::Disabled) => {
+        [NEAR_WHITE, NEAR_WHITE, NEAR_WHITE, 0.30]
+      }
+      (Appearance::Dark, Interaction::Normal) => [1.0, 1.0, 1.0, 0.06],
+      (Appearance::Dark, Interaction::Hovered) => [1.0, 1.0, 1.0, 0.084],
+      (Appearance::Dark, Interaction::Pressed) => [1.0, 1.0, 1.0, 0.033],
+      (Appearance::Dark, Interaction::Disabled) => [1.0, 1.0, 1.0, 0.042],
+    };
+  }
   let alpha = match interaction {
     Interaction::Normal | Interaction::Hovered => 0.10,
     Interaction::Pressed => 0.172,
@@ -212,8 +269,25 @@ const fn neutral_fill(appearance: Appearance, interaction: Interaction) -> [f32;
 }
 
 /// `--color-primary-surface` and its hover and pressed states: the accent
-/// opaque, then mixed 10% and 20% toward black.
+/// opaque, then mixed 10% and 20% toward black. On the Windows skin the fill
+/// is the OS accent's tone for the appearance, hover and press are that fill
+/// at 90% and 80%, and disabled is Fluent's accent-disabled fill.
 fn primary_fill(appearance: Appearance, interaction: Interaction) -> [f32; 4] {
+  if WINDOWS_SKIN {
+    if interaction == Interaction::Disabled {
+      return match appearance {
+        Appearance::Light => [0.0, 0.0, 0.0, 0.216],
+        Appearance::Dark => [1.0, 1.0, 1.0, 0.158],
+      };
+    }
+    let alpha = match interaction {
+      Interaction::Hovered => 0.90,
+      Interaction::Pressed => 0.80,
+      _ => 1.0,
+    };
+    let [red, green, blue] = crate::system_accent::accent_fill_rgb(appearance == Appearance::Light);
+    return [red, green, blue, alpha];
+  }
   if interaction == Interaction::Disabled {
     return neutral_fill(appearance, Interaction::Disabled);
   }
@@ -226,19 +300,54 @@ fn primary_fill(appearance: Appearance, interaction: Interaction) -> [f32; 4] {
   [red * shade, green * shade, blue * shade, 1.0]
 }
 
+/// The label's alpha at its tier: 85% and 25% disabled on macOS; on the
+/// Windows skin Fluent's text at 89.6% black in light and pure white in dark,
+/// and disabled text at 36%.
+const fn content_alpha(appearance: Appearance, disabled: bool) -> f32 {
+  if WINDOWS_SKIN {
+    return match (appearance, disabled) {
+      (Appearance::Light, false) => 0.896,
+      (Appearance::Dark, false) => 1.0,
+      (Appearance::Light, true) => 0.361,
+      (Appearance::Dark, true) => 0.363,
+    };
+  }
+  if disabled {
+    DISABLED_ALPHA
+  } else {
+    CONTENT_ALPHA
+  }
+}
+
+/// A bezel's hairline stroke, the web skin's `control-stroke`: Fluent's
+/// control stroke on the Windows skin, nothing on macOS, whose bezels have
+/// no stroke. The compositor draws it as the plate's outline.
+pub const fn control_stroke(appearance: Appearance) -> [f32; 4] {
+  if !WINDOWS_SKIN {
+    return [0.0; 4];
+  }
+  match appearance {
+    Appearance::Light => [0.0, 0.0, 0.0, 0.058],
+    Appearance::Dark => [1.0, 1.0, 1.0, 0.07],
+  }
+}
+
 pub fn control_visual(
   style: ControlStyle,
   interaction: Interaction,
   appearance: Appearance,
 ) -> ControlVisual {
   let foreground = if interaction == Interaction::Disabled {
-    content_color(appearance, DISABLED_ALPHA)
+    content_color(appearance, content_alpha(appearance, true))
   } else {
     match (style.color, appearance) {
+      (ControlColor::Primary, _) if WINDOWS_SKIN => {
+        crate::system_accent::text_on_accent_fill(appearance == Appearance::Light)
+      }
       (ControlColor::Primary, _) => WHITE,
       (ControlColor::Error, Appearance::Light) => ERROR_LIGHT,
       (ControlColor::Error, Appearance::Dark) => ERROR_DARK,
-      (ControlColor::Neutral, _) => content_color(appearance, CONTENT_ALPHA),
+      (ControlColor::Neutral, _) => content_color(appearance, content_alpha(appearance, false)),
     }
   };
   let fill = match style.color {

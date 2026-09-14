@@ -78,6 +78,11 @@ pub(super) fn present(window: &tauri::WebviewWindow) -> Result<(), String> {
     .run_on_main_thread(move || {
       let _ = native_region::set_desktop_presented(&window, true);
       let _ = native_region::claim_pointer_surface(&window);
+      // Keyboard focus on the compositor child, as the Ruler takes it, so
+      // Ctrl+A and Ctrl+C arrive as WM_KEYDOWN on the surface itself. The
+      // low-level hook is only the fallback for focus changes, and on this
+      // machine it sees no keys at all while the overlay is up.
+      let _ = native_region::focus_ruler_input(&window);
     })
     .map_err(|error| error.to_string())
 }

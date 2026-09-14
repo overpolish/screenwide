@@ -79,7 +79,7 @@ impl Chrome {
         start,
         visual_fills(visuals[index]),
         metrics.radius,
-        [0.0; 4],
+        control_stroke(appearance),
         label.map(|label| label.view.clone()),
       );
       // The close button's icon is owned by the confirm state machine, which
@@ -134,7 +134,7 @@ impl Chrome {
         start,
         [visual.fill, foreground],
         metrics.radius,
-        [0.0; 4],
+        control_stroke(appearance),
         None,
       );
     }

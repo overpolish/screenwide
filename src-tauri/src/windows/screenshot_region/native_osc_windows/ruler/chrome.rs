@@ -142,6 +142,7 @@ impl Ruler {
         start,
         fills,
         value.radius,
+        control_stroke(appearance),
         Some(atlas.view.clone()),
         None,
       );

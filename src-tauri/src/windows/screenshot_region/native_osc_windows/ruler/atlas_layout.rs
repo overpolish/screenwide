@@ -38,10 +38,3 @@ pub(super) fn add_atlas_text(
   }
   x - left
 }
-
-/// The hex readout changes with every pointer sample, so its cells share one
-/// pitch. Per-glyph advances would shuffle the code's columns and shove the
-/// dimensions along beside it as the sampled colour changed.
-pub(super) fn hex_pitch(cells: &AtlasMetrics) -> f64 {
-  cells.pitch("#0123456789ABCDEF")
-}
