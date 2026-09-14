@@ -4,6 +4,7 @@
 import { Copy, Minus, Square, X } from "lucide-react";
 import { ReactNode } from "react";
 
+import { detectedPlatform } from "../../../lib/platform";
 import { cn } from "../../../lib/styling";
 import { IconButton } from "../../base/button/icon-button";
 import { ScrollArea } from "../../base/scroll-area/scroll-area";
@@ -11,16 +12,8 @@ import { Text } from "../../base/text/text";
 
 import { EditableWindowTitle } from "./editable-window-title";
 
-/**
- * The platform this build runs on, read the same way `main.tsx` reads it.
- * macOS windows that show this header wear the real traffic lights, so the
- * header leaves room for them and draws no window buttons of its own.
- */
-const detectedPlatform: "macos" | "windows" = navigator.userAgent.includes(
-  "Windows",
-)
-  ? "windows"
-  : "macos";
+// macOS windows that show this header wear the real traffic lights, so the
+// header leaves room for them and draws no window buttons of its own.
 
 export type WindowHeaderProps = {
   title: string;
