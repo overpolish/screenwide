@@ -314,6 +314,9 @@
   --color-control-fill-hover: var(--color-fill);
   --color-control-fill-pressed: rgb(0 0 0 / 17.2%);
   --color-control-fill-disabled: var(--color-fill-quaternary);
+  /* A text field being edited. Fluent lifts it to a solid fill; macOS keeps
+     the bezel as it is. */
+  --color-control-fill-active: var(--color-fill);
   --color-control-fg-pressed: var(--color-content-fg);
   --alpha-control-fg-pressed: var(--alpha-content-fg);
   --color-control-fg-disabled: var(--color-content-fg-tertiary);
@@ -433,6 +436,7 @@
     --color-control-fill-hover: rgb(249 249 249 / 50%);
     --color-control-fill-pressed: rgb(249 249 249 / 30%);
     --color-control-fill-disabled: rgb(249 249 249 / 30%);
+    --color-control-fill-active: white;
     --color-control-fg-pressed: var(--color-content-fg-secondary);
     --alpha-control-fg-pressed: var(--alpha-content-fg-secondary);
     --color-control-fg-disabled: rgb(0 0 0 / 36.1%);
@@ -508,6 +512,7 @@
     --color-control-fill-hover: rgb(255 255 255 / 8.4%);
     --color-control-fill-pressed: rgb(255 255 255 / 3.3%);
     --color-control-fill-disabled: rgb(255 255 255 / 4.2%);
+    --color-control-fill-active: rgb(30 30 30);
     --color-control-fg-disabled: rgb(255 255 255 / 36.3%);
     --alpha-control-fg-disabled: 0.363;
     --color-control-subtle-hover: rgb(255 255 255 / 6%);

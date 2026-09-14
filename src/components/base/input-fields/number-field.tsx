@@ -29,9 +29,9 @@ const numberFieldVariants = tv({
       "shrink-0 text-content-fg-secondary [&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
     stepper: [
       "flex h-full shrink-0 cursor-default items-center px-control text-content-fg-secondary outline-none transition-colors",
-      "data-[hovered]:bg-fill-tertiary data-[hovered]:text-content-fg",
-      "data-[pressed]:bg-fill",
-      "data-[disabled]:text-content-fg-tertiary",
+      "data-[hovered]:bg-control-subtle-hover data-[hovered]:text-content-fg",
+      "data-[pressed]:bg-control-subtle-pressed",
+      "data-[disabled]:text-control-fg-disabled",
       "[&_svg]:size-icon-mini [&_svg]:transform-gpu",
       focusStyles,
       elementFocusVisible,
