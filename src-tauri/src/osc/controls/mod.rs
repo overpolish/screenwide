@@ -17,9 +17,11 @@ use super::geometry::{Point, Rect};
 
 pub use confirm::{ConfirmAction, ConfirmActionSpec, ConfirmLayer, ConfirmUpdate};
 pub use icons::ControlIcon;
+#[cfg(target_os = "windows")]
+pub use style::control_stroke;
 pub use style::{
-  control_metrics, control_spacing, control_stroke, control_visual, Appearance, ControlColor,
-  ControlKind, ControlMetrics, ControlSize, ControlStyle, ControlVisual, Interaction,
+  control_metrics, control_spacing, control_visual, Appearance, ControlColor, ControlKind,
+  ControlMetrics, ControlSize, ControlStyle, ControlVisual, Interaction,
 };
 
 const TRANSITION_DURATION: Duration = Duration::from_millis(150);
