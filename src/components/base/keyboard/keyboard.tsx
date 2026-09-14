@@ -21,13 +21,21 @@ import {
 // 20px cap on a 16px line, and one in a subheadline hint shrinks with it,
 // so the cap is always a quarter taller than the line it sits in.
 const keyboardClassName = {
+  // A keycap on the bezel tokens: the plain fill on macOS, Fluent's fill
+  // with its elevation stroke on Windows. 1.25 line-heights is 20px on
+  // macOS; on Windows it would be 25, an odd height that puts a 12px glyph
+  // on a half pixel inside the stroke, so the Windows keycap is 24.
   keycap:
-    "inline-flex h-[1.25lh] min-w-[1.25lh] items-center justify-center gap-tight rounded-sm bg-fill px-control font-sans text-content-fg tabular-nums",
+    "inline-flex h-[1.25lh] min-w-[1.25lh] items-center justify-center gap-tight rounded-sm bg-control-fill control-stroke px-control font-sans text-content-fg tabular-nums windows:h-6 windows:min-w-6",
   plain:
     "inline-flex items-center justify-center gap-tight font-sans tabular-nums",
 };
 const keyboardIconClassName =
   "[&_svg]:size-icon-mini [&_svg]:shrink-0 [&_svg]:transform-gpu";
+
+// A modifier glyph is drawn light beside SF Pro's thin keycap text; Segoe is
+// heavier, so on Windows the glyph keeps the icon set's regular stroke.
+const keyGlyphClassName = "stroke-1 windows:stroke-[1.5px]";
 
 const isMacOS =
   typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
@@ -39,20 +47,20 @@ const mappedKey = (children: ReactNode) => {
   if (key === "shift" || key === "⇧") {
     return {
       accessibleName: "Shift",
-      children: <ArrowBigUp aria-hidden className="stroke-1" />,
+      children: <ArrowBigUp aria-hidden className={keyGlyphClassName} />,
     };
   }
   if (key === "command" || key === "cmd" || key === "⌘") {
     return {
       accessibleName: "Command",
-      children: <Command aria-hidden className="stroke-1" />,
+      children: <Command aria-hidden className={keyGlyphClassName} />,
     };
   }
   if (key === "meta" || key === "super") {
     return isMacOS
       ? {
           accessibleName: "Command",
-          children: <Command aria-hidden className="stroke-1" />,
+          children: <Command aria-hidden className={keyGlyphClassName} />,
         }
       : { children: "Win" };
   }
@@ -60,7 +68,7 @@ const mappedKey = (children: ReactNode) => {
     return isMacOS
       ? {
           accessibleName: "Control",
-          children: <ChevronUp aria-hidden className="stroke-1" />,
+          children: <ChevronUp aria-hidden className={keyGlyphClassName} />,
         }
       : { children: "Ctrl" };
   }

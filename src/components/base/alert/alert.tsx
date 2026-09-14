@@ -15,7 +15,9 @@ const alertVariants = tv({
     color: "neutral",
   },
   slots: {
-    base: "flex items-start gap-control-inset rounded-control bg-fill-quaternary p-section text-body text-content-fg",
+    // On the layer tokens: the faintest fill on macOS, a Fluent info bar's
+    // card fill and hairline stroke on Windows.
+    base: "flex items-start gap-control-inset rounded-control bg-layer inset-ring inset-ring-layer-stroke p-section text-body text-content-fg",
     content: "min-w-0",
     icon: "flex h-[1lh] w-icon shrink-0 items-center justify-center [&>svg]:size-icon [&>svg]:transform-gpu",
   },

@@ -29,8 +29,12 @@ export function ProgressBar({
 
   return (
     <AriaProgressBar
+      // Fluent's bar is a 4px accent value on a hairline track in the strong
+      // fill, so on Windows the track is a centred 1px line rather than a
+      // capsule; the value keeps its capsule.
       className={cn(
         "relative h-1.5 w-full overflow-hidden rounded-full bg-fill",
+        "windows:h-1 windows:bg-transparent windows:bg-[linear-gradient(var(--color-control-strong-fill),var(--color-control-strong-fill))] windows:bg-[length:100%_1px] windows:bg-center windows:bg-no-repeat",
         className,
       )}
       isIndeterminate={isIndeterminate}
