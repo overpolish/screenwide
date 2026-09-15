@@ -18,6 +18,67 @@ type VideoSourceDimensions = Partial<
 >;
 
 /**
+ * Where the baked camera sits inside the screen output, as shares of it.
+ *
+ * The overlay draws this rect and the hit targets test against it, so both
+ * measure it here rather than each deriving it from the overlay geometry.
+ */
+function bakedCameraSelection({
+  cameraOverlay,
+  cameraSource,
+  isCropping,
+  output,
+  primarySource,
+}: {
+  cameraOverlay: CameraOverlaySettings;
+  cameraSource: { height: number; width: number };
+  isCropping: boolean;
+  output: { height: number; width: number };
+  primarySource: { height: number; width: number };
+}) {
+  const geometry = cameraOverlayGeometry(
+    {
+      height: output.height,
+      kind: "screen",
+      sourceHeight: primarySource.height,
+      sourceWidth: primarySource.width,
+      width: output.width,
+      x: 0,
+      y: 0,
+    },
+    {
+      height: cameraSource.height,
+      kind: "camera",
+      sourceHeight: cameraSource.height,
+      sourceWidth: cameraSource.width,
+      width: cameraSource.width,
+      x: 0,
+      y: 0,
+    },
+    cameraOverlay,
+  );
+  const share = (rect: {
+    height: number;
+    width: number;
+    x: number;
+    y: number;
+  }) => ({
+    height: rect.height / Math.max(1, output.height),
+    width: rect.width / Math.max(1, output.width),
+    x: rect.x / Math.max(1, output.width),
+    y: rect.y / Math.max(1, output.height),
+  });
+  return {
+    cropMode: isCropping,
+    image: share(geometry.camera),
+    layerId: 1,
+    paneIndex: 0,
+    radiusPercent: cameraOverlay.radiusPercent,
+    rect: share(geometry.frame),
+  };
+}
+
+/**
  * The one selection the native overlay draws for the video panes: the frame
  * handle under the Frame tool, the baked camera's own rect when the camera is
  * composited into the screen output, or the selected pane's own rect.
@@ -76,45 +137,13 @@ export function recordingVideoSelectionOverlay({
     }
     const cameraSource = previewSourceDimensions.camera;
     if (!cameraSource) return null;
-    const geometry = cameraOverlayGeometry(
-      {
-        height: primaryOutput.height,
-        kind: "screen",
-        sourceHeight: primarySource.height,
-        sourceWidth: primarySource.width,
-        width: primaryOutput.width,
-        x: 0,
-        y: 0,
-      },
-      {
-        height: cameraSource.height,
-        kind: "camera",
-        sourceHeight: cameraSource.height,
-        sourceWidth: cameraSource.width,
-        width: cameraSource.width,
-        x: 0,
-        y: 0,
-      },
+    return bakedCameraSelection({
       cameraOverlay,
-    );
-    return {
-      cropMode: canvasTool === "crop",
-      image: {
-        height: geometry.camera.height / Math.max(1, primaryOutput.height),
-        width: geometry.camera.width / Math.max(1, primaryOutput.width),
-        x: geometry.camera.x / Math.max(1, primaryOutput.width),
-        y: geometry.camera.y / Math.max(1, primaryOutput.height),
-      },
-      layerId: 1,
-      paneIndex: 0,
-      radiusPercent: cameraOverlay.radiusPercent,
-      rect: {
-        height: geometry.frame.height / Math.max(1, primaryOutput.height),
-        width: geometry.frame.width / Math.max(1, primaryOutput.width),
-        x: geometry.frame.x / Math.max(1, primaryOutput.width),
-        y: geometry.frame.y / Math.max(1, primaryOutput.height),
-      },
-    };
+      cameraSource,
+      isCropping: canvasTool === "crop",
+      output: primaryOutput,
+      primarySource,
+    });
   }
   const paneIndex = activeVideoTrack === "primary" ? 0 : 1;
   const source =
@@ -168,27 +197,6 @@ export function recordingVideoSelectionTargets({
     const cameraSource = previewSourceDimensions.camera;
     if (!primarySource || !cameraSource) return null;
     const output = screenshotOutputDimensions(effectiveRecordingOutput.primary);
-    const cameraGeometry = cameraOverlayGeometry(
-      {
-        height: output.height,
-        kind: "screen",
-        sourceHeight: primarySource.height,
-        sourceWidth: primarySource.width,
-        width: output.width,
-        x: 0,
-        y: 0,
-      },
-      {
-        height: cameraSource.height,
-        kind: "camera",
-        sourceHeight: cameraSource.height,
-        sourceWidth: cameraSource.width,
-        width: cameraSource.width,
-        x: 0,
-        y: 0,
-      },
-      cameraOverlay,
-    );
     return [
       normalizedRecordingSelection({
         mode: canvasTool,
@@ -196,24 +204,13 @@ export function recordingVideoSelectionTargets({
         paneIndex: 0,
         source: primarySource,
       }),
-      {
-        cropMode: canvasTool === "crop",
-        image: {
-          height: cameraGeometry.camera.height / Math.max(1, output.height),
-          width: cameraGeometry.camera.width / Math.max(1, output.width),
-          x: cameraGeometry.camera.x / Math.max(1, output.width),
-          y: cameraGeometry.camera.y / Math.max(1, output.height),
-        },
-        layerId: 1,
-        paneIndex: 0,
-        radiusPercent: cameraOverlay.radiusPercent,
-        rect: {
-          height: cameraGeometry.frame.height / Math.max(1, output.height),
-          width: cameraGeometry.frame.width / Math.max(1, output.width),
-          x: cameraGeometry.frame.x / Math.max(1, output.width),
-          y: cameraGeometry.frame.y / Math.max(1, output.height),
-        },
-      },
+      bakedCameraSelection({
+        cameraOverlay,
+        cameraSource,
+        isCropping: canvasTool === "crop",
+        output,
+        primarySource,
+      }),
     ];
   }
   return (["primary", "camera"] as const).flatMap((trackId) => {
