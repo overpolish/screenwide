@@ -14,7 +14,7 @@
   "src/features/editor/api.ts": 529,
   "src/features/editor/components/editor-panel.stories.tsx": 372,
   "src/features/editor/components/editor-preview-section.tsx": 422,
-  "src/features/editor/components/native-recording-preview.tsx": 1360,
+  "src/features/editor/components/native-recording-preview.tsx": 893,
   "src/features/editor/components/preview-viewport.tsx": 521,
   "src/features/editor/components/use-recording-timeline-blade.ts": 395,
   "src/features/editor/editor-window.tsx": 733,

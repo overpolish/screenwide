@@ -5,11 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { Text } from "../../../components/base/text/text";
-import {
-  cameraOverlayGeometry,
-  uncroppedCameraPreviewOverlay,
-} from "../camera-overlay-geometry";
-import { scaledCameraOverlay } from "../camera-overlay-placement";
+import { uncroppedCameraPreviewOverlay } from "../camera-overlay-geometry";
 import { usePublishKeyboardShortcut } from "../keyboard-shortcut-channel";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
@@ -17,25 +13,18 @@ import {
   defaultCameraOverlay,
 } from "../recording-export-settings";
 import { createRecordingTimelineEdit } from "../recording-timeline-edit";
-import {
-  applyScreenshotCropGesture,
-  commitScreenshotCrop,
-  uncroppedScreenshotPreviewOutput,
-} from "../screenshot-crop";
+import { uncroppedScreenshotPreviewOutput } from "../screenshot-crop";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
   defaultScreenshotOutput,
   defaultRecordingOutput,
   recordingVideoTrackOrder,
-  resizeScreenshotWorkspaceCanvasEdges,
-  screenshotOutputDimensions,
-  screenshotWorkspaceItemOutput,
 } from "../screenshot-output";
 import { EditorToolId } from "../tool-panels/tool-registry";
 import { useCanvasTool } from "../tool-panels/use-canvas-tool";
 import { useToolPanelFollowsTool } from "../tool-panels/use-tool-panel-follows-tool";
-import { CameraOverlaySettings, RecordingVideoTrackId } from "../types";
+import { RecordingVideoTrackId } from "../types";
 import { useCopyRecordingFrame } from "../use-copy-recording-frame";
 import { useEditorEditGesture } from "../use-editor-edit-history";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
@@ -53,7 +42,10 @@ import { RecordingOutputPreviewViewport } from "./recording-output-preview-viewp
 import { RecordingPlaybackControls } from "./recording-playback-controls";
 import { RECORDING_PREVIEW_PANE_GAP } from "./recording-preview-layout";
 import { RecordingPreviewViewport } from "./recording-preview-viewport";
-import { normalizedRecordingSelection } from "./recording-selection";
+import {
+  recordingVideoSelectionOverlay,
+  recordingVideoSelectionTargets,
+} from "./recording-selection-overlay";
 import { RecordingTrackLanes } from "./recording-track-lanes";
 import { ResizableRecordingTimelineArea } from "./resizable-recording-timeline-area";
 import { createPlayhead } from "./scrub-playhead";
@@ -63,19 +55,16 @@ import {
   useRecordingKeyboardPreviewEditing,
 } from "./use-recording-keyboard-canvas-editing";
 import { useRecordingRecenter } from "./use-recording-recenter";
+import { useRecordingSelectionGesture } from "./use-recording-selection-gesture";
 import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
 import { useRecordingTimelineBlade } from "./use-recording-timeline-blade";
 import { useRecordingToolbar } from "./use-recording-toolbar";
 import { useRecordingTrackSelection } from "./use-recording-track-selection";
 import { useRecordingTrimPreview } from "./use-recording-trim-preview";
 
-import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 import type { ScrubPreviewProps } from "./scrub-preview";
 
 const EMPTY_AUDIO_TRACKS: NonNullable<ScrubPreviewProps["audioTracks"]> = [];
-const FRAME_LAYER_ID = 0xffffffff;
-const AUTO_FIT_MOVE_EDGE = 1 << 17;
-const AUTO_FIT_COMMIT_EDGE = 1 << 18;
 
 /** A normalized coordinate as the panel's percent field shows it, held to two
  * decimals so a redrawn frame is not published as a new value. */
@@ -143,16 +132,6 @@ export function NativeRecordingPreview({
 }: ScrubPreviewProps) {
   const screenCanvasRef = useRef<HTMLCanvasElement>(null);
   const cameraCanvasRef = useRef<HTMLCanvasElement>(null);
-  const selectionGestureRef = useRef<{
-    cameraOverlaySnapshot: CameraOverlaySettings | null;
-    lastDeltaX: number;
-    lastDeltaY: number;
-    lastScale: number;
-    operation: RecordingSelectionGestureEvent["operation"];
-    outputSnapshot: RecordingOutputSettings[RecordingVideoTrackId] | null;
-    paneIndex: number;
-    trackId: RecordingVideoTrackId;
-  } | null>(null);
   const recenterRefreshRef = useRef<
     (crop: ScreenshotOutputSettings["sourceCrop"]) => void
   >(() => undefined);
@@ -321,197 +300,50 @@ export function NativeRecordingPreview({
     effectiveRecordingOutput.primary,
     previewSourceDimensions.camera,
   ]);
-  const videoSelectionOverlay = useMemo(() => {
-    if (canvasTool === "canvas") {
-      // Frame is a synthetic selection, just as in the screenshot workspace.
-      // In baked mode it always belongs to the primary output; in split mode
-      // it belongs to the currently selected video frame.
-      const frameTrack = canPreviewBakedCamera ? "primary" : activeVideoTrack;
-      if (!frameTrack || !selectedVideoTracks.has(frameTrack)) return null;
-      return {
-        layerId: FRAME_LAYER_ID,
-        paneIndex: frameTrack === "primary" ? 0 : 1,
-        radiusPercent: 0,
-        rect: { height: 1, width: 1, x: 0, y: 0 },
-      };
-    }
-    if (
-      (canvasTool !== "select" &&
-        canvasTool !== "crop" &&
-        canvasTool !== "arrow") ||
-      !activeVideoTrack ||
-      !selectedVideoTracks.has(activeVideoTrack)
-    )
-      return null;
-    const primaryOutput = screenshotOutputDimensions(
-      effectiveRecordingOutput.primary,
-    );
-    const primarySource = previewSourceDimensions.primary;
-    if (!primarySource) return null;
-    if (canPreviewBakedCamera) {
-      if (activeVideoTrack === "primary") {
-        return normalizedRecordingSelection({
-          mode: canvasTool === "arrow" ? "select" : canvasTool,
-          output: effectiveRecordingOutput.primary,
-          paneIndex: 0,
-          source: primarySource,
-        });
-      }
-      const cameraSource = previewSourceDimensions.camera;
-      if (!cameraSource) return null;
-      const geometry = cameraOverlayGeometry(
-        {
-          height: primaryOutput.height,
-          kind: "screen",
-          sourceHeight: primarySource.height,
-          sourceWidth: primarySource.width,
-          width: primaryOutput.width,
-          x: 0,
-          y: 0,
-        },
-        {
-          height: cameraSource.height,
-          kind: "camera",
-          sourceHeight: cameraSource.height,
-          sourceWidth: cameraSource.width,
-          width: cameraSource.width,
-          x: 0,
-          y: 0,
-        },
+  const videoSelectionOverlay = useMemo(
+    () =>
+      recordingVideoSelectionOverlay({
+        activeVideoTrack,
         cameraOverlay,
-      );
-      return {
-        cropMode: canvasTool === "crop",
-        image: {
-          height: geometry.camera.height / Math.max(1, primaryOutput.height),
-          width: geometry.camera.width / Math.max(1, primaryOutput.width),
-          x: geometry.camera.x / Math.max(1, primaryOutput.width),
-          y: geometry.camera.y / Math.max(1, primaryOutput.height),
+        canPreviewBakedCamera,
+        canvasTool,
+        effectiveRecordingOutput,
+        previewSourceDimensions: {
+          camera: previewSourceDimensions.camera,
+          primary: previewSourceDimensions.primary,
         },
-        layerId: 1,
-        paneIndex: 0,
-        radiusPercent: cameraOverlay.radiusPercent,
-        rect: {
-          height: geometry.frame.height / Math.max(1, primaryOutput.height),
-          width: geometry.frame.width / Math.max(1, primaryOutput.width),
-          x: geometry.frame.x / Math.max(1, primaryOutput.width),
-          y: geometry.frame.y / Math.max(1, primaryOutput.height),
-        },
-      };
-    }
-    const paneIndex = activeVideoTrack === "primary" ? 0 : 1;
-    const source =
-      activeVideoTrack === "primary"
-        ? primarySource
-        : previewSourceDimensions.camera;
-    if (!source) return null;
-    return normalizedRecordingSelection({
-      mode: canvasTool === "arrow" ? "select" : canvasTool,
-      output: effectiveRecordingOutput[activeVideoTrack],
-      paneIndex,
-      source,
-    });
-  }, [
-    activeVideoTrack,
-    canPreviewBakedCamera,
-    cameraOverlay,
-    canvasTool,
-    effectiveRecordingOutput,
-    previewSourceDimensions.camera,
-    previewSourceDimensions.primary,
-    selectedVideoTracks,
-  ]);
-  const videoSelectionTargets = useMemo(() => {
-    if (canvasTool === "canvas")
-      return (["primary", "camera"] as const).flatMap((trackId) =>
-        selectedVideoTracks.has(trackId) && previewSourceDimensions[trackId]
-          ? [
-              {
-                layerId: FRAME_LAYER_ID,
-                paneIndex: trackId === "primary" ? 0 : 1,
-                radiusPercent: 0,
-                rect: { height: 1, width: 1, x: 0, y: 0 },
-              },
-            ]
-          : [],
-      );
-    if (canvasTool !== "select" && canvasTool !== "crop") return null;
-    if (canPreviewBakedCamera) {
-      const primarySource = previewSourceDimensions.primary;
-      const cameraSource = previewSourceDimensions.camera;
-      if (!primarySource || !cameraSource) return null;
-      const output = screenshotOutputDimensions(
-        effectiveRecordingOutput.primary,
-      );
-      const cameraGeometry = cameraOverlayGeometry(
-        {
-          height: output.height,
-          kind: "screen",
-          sourceHeight: primarySource.height,
-          sourceWidth: primarySource.width,
-          width: output.width,
-          x: 0,
-          y: 0,
-        },
-        {
-          height: cameraSource.height,
-          kind: "camera",
-          sourceHeight: cameraSource.height,
-          sourceWidth: cameraSource.width,
-          width: cameraSource.width,
-          x: 0,
-          y: 0,
-        },
+        selectedVideoTracks,
+      }),
+    [
+      activeVideoTrack,
+      canPreviewBakedCamera,
+      cameraOverlay,
+      canvasTool,
+      effectiveRecordingOutput,
+      previewSourceDimensions.camera,
+      previewSourceDimensions.primary,
+      selectedVideoTracks,
+    ],
+  );
+  const videoSelectionTargets = useMemo(
+    () =>
+      recordingVideoSelectionTargets({
         cameraOverlay,
-      );
-      return [
-        normalizedRecordingSelection({
-          mode: canvasTool,
-          output: effectiveRecordingOutput.primary,
-          paneIndex: 0,
-          source: primarySource,
-        }),
-        {
-          cropMode: canvasTool === "crop",
-          image: {
-            height: cameraGeometry.camera.height / Math.max(1, output.height),
-            width: cameraGeometry.camera.width / Math.max(1, output.width),
-            x: cameraGeometry.camera.x / Math.max(1, output.width),
-            y: cameraGeometry.camera.y / Math.max(1, output.height),
-          },
-          layerId: 1,
-          paneIndex: 0,
-          radiusPercent: cameraOverlay.radiusPercent,
-          rect: {
-            height: cameraGeometry.frame.height / Math.max(1, output.height),
-            width: cameraGeometry.frame.width / Math.max(1, output.width),
-            x: cameraGeometry.frame.x / Math.max(1, output.width),
-            y: cameraGeometry.frame.y / Math.max(1, output.height),
-          },
-        },
-      ];
-    }
-    return (["primary", "camera"] as const).flatMap((trackId) => {
-      if (!selectedVideoTracks.has(trackId)) return [];
-      const source = previewSourceDimensions[trackId];
-      if (!source) return [];
-      return [
-        normalizedRecordingSelection({
-          mode: canvasTool,
-          output: effectiveRecordingOutput[trackId],
-          paneIndex: trackId === "primary" ? 0 : 1,
-          source,
-        }),
-      ];
-    });
-  }, [
-    canPreviewBakedCamera,
-    cameraOverlay,
-    canvasTool,
-    effectiveRecordingOutput,
-    previewSourceDimensions,
-    selectedVideoTracks,
-  ]);
+        canPreviewBakedCamera,
+        canvasTool,
+        effectiveRecordingOutput,
+        previewSourceDimensions,
+        selectedVideoTracks,
+      }),
+    [
+      canPreviewBakedCamera,
+      cameraOverlay,
+      canvasTool,
+      effectiveRecordingOutput,
+      previewSourceDimensions,
+      selectedVideoTracks,
+    ],
+  );
   const keyboardSelection = keyboardPreview.selection;
   // The shortcut is drawn for whichever fragment is on screen, but it is in
   // hand only once it has been picked out.
@@ -544,319 +376,28 @@ export function NativeRecordingPreview({
       : null,
     keyboardCanvas,
   );
-  const selectionGesture = (event: RecordingSelectionGestureEvent) => {
-    if (keyboardCanvas.applyGesture(event)) return;
-    const trackId =
-      event.paneIndex === 0
-        ? "primary"
-        : event.paneIndex === 1
-          ? "camera"
-          : null;
-    const isFrameGesture =
-      event.operation === "frameResize" || event.operation === "frameRadius";
-    const isCropGesture =
-      event.operation === "cropMove" || event.operation === "cropResize";
-    if (event.phase === "begin") {
-      if (
-        !trackId ||
-        (isFrameGesture
-          ? canvasTool !== "canvas"
-          : isCropGesture
-            ? canvasTool !== "crop"
-            : canvasTool !== "select") ||
-        !selectedVideoTracks.has(trackId)
-      )
-        return;
-      const editsBakedCamera =
-        !isFrameGesture && canPreviewBakedCamera && trackId === "camera";
-      selectionGestureRef.current = {
-        cameraOverlaySnapshot: editsBakedCamera ? cameraOverlay : null,
-        lastDeltaX: 0,
-        lastDeltaY: 0,
-        lastScale: event.scale,
-        operation: event.operation,
-        outputSnapshot: editsBakedCamera
-          ? null
-          : effectiveRecordingOutput[trackId],
-        paneIndex: event.paneIndex,
-        trackId,
-      };
-      editGesture.beginGesture();
-      return;
-    }
-    const active = selectionGestureRef.current;
-    if (
-      !active ||
-      event.paneIndex !== active.paneIndex ||
-      event.operation !== active.operation
-    )
-      return;
-    if (event.phase === "cancel") {
-      if (active.cameraOverlaySnapshot)
-        onCameraOverlayChange?.(active.cameraOverlaySnapshot);
-      else if (active.outputSnapshot) {
-        onRecordingOutputChange?.(active.trackId, active.outputSnapshot);
-        if (
-          active.operation === "frameRadius" ||
-          active.operation === "frameResize"
-        )
-          setCanvasResizeDraft(null);
-      }
-      selectionGestureRef.current = null;
-      requestAnimationFrame(editGesture.endGesture);
-      return;
-    }
-    const finaliseGestureFrame = () => {
-      active.lastDeltaX = event.deltaX;
-      active.lastDeltaY = event.deltaY;
-      active.lastScale = event.scale;
-    };
-    const changed =
-      Math.abs(event.deltaX) > 1e-9 ||
-      Math.abs(event.deltaY) > 1e-9 ||
-      ((event.operation === "resize" || event.operation === "frameResize") &&
-        Math.abs(event.scale - 1) > 1e-9) ||
-      ((event.operation === "radius" || event.operation === "frameRadius") &&
-        Math.abs(event.scale - active.lastScale) > 1e-9);
-    const differsFromLastUpdate =
-      Math.abs(event.deltaX - active.lastDeltaX) > 1e-9 ||
-      Math.abs(event.deltaY - active.lastDeltaY) > 1e-9 ||
-      ((event.operation === "resize" ||
-        event.operation === "frameResize" ||
-        event.operation === "radius" ||
-        event.operation === "frameRadius") &&
-        Math.abs(event.scale - active.lastScale) > 1e-9);
-    // The final native transform can legitimately be the original snapshot
-    // after snapping. Apply it when it differs from the last live frame even
-    // though its delta is zero, or React will re-send stale geometry.
-    const shouldApply =
-      event.phase === "end" ? isCropGesture || differsFromLastUpdate : changed;
-    const autoFitMove =
-      event.operation === "move" && (event.edges & AUTO_FIT_MOVE_EDGE) !== 0;
-    const autoFitCommit =
-      event.operation === "move" && (event.edges & AUTO_FIT_COMMIT_EDGE) !== 0;
-    if ((autoFitMove || autoFitCommit) && event.recordingOutput) {
-      if (active.cameraOverlaySnapshot) {
-        onRecordingOutputChange?.("primary", event.recordingOutput.primary);
-        if (event.cameraOverlay) {
-          onCameraOverlayChange?.(event.cameraOverlay);
-          if (autoFitCommit) active.cameraOverlaySnapshot = event.cameraOverlay;
-        }
-      } else {
-        onRecordingOutputChange?.(
-          active.trackId,
-          event.recordingOutput[active.trackId],
-        );
-        if (autoFitCommit)
-          active.outputSnapshot = event.recordingOutput[active.trackId];
-      }
-      if (autoFitCommit) {
-        active.lastDeltaX = 0;
-        active.lastDeltaY = 0;
-        active.lastScale = 1;
-      } else if (event.phase === "update") finaliseGestureFrame();
-      if (event.phase === "end") {
-        selectionGestureRef.current = null;
-        requestAnimationFrame(editGesture.endGesture);
-      }
-      return;
-    }
-    if (event.operation === "frameResize" && event.recordingOutput) {
-      onRecordingOutputChange?.(
-        active.trackId,
-        event.recordingOutput[active.trackId],
-      );
-      // Resizing the baked primary frame rebases the camera overlay in the
-      // same native scene. Mirror that authoritative geometry as well, or
-      // React's pre-gesture percentages will move the camera at mouse-up.
-      if (
-        canPreviewBakedCamera &&
-        active.trackId === "primary" &&
-        event.cameraOverlay
-      )
-        onCameraOverlayChange?.(event.cameraOverlay);
-      setCanvasResizeDraft(event.recordingOutput);
-      if (event.phase === "update") finaliseGestureFrame();
-      if (event.phase === "end") {
-        selectionGestureRef.current = null;
-        requestAnimationFrame(() => {
-          setCanvasResizeDraft(null);
-          editGesture.endGesture();
-        });
-      }
-      return;
-    }
-    if (active.cameraOverlaySnapshot) {
-      const start = active.cameraOverlaySnapshot;
-      // A baked overlay is placed in the screen output's own pixels, and the
-      // native gesture reports its deltas as a share of that canvas.
-      const canvas = screenshotOutputDimensions(
-        effectiveRecordingOutput.primary,
-      );
-      const moveX = event.deltaX * canvas.width;
-      const moveY = event.deltaY * canvas.height;
-      const frameX = start.frameX + moveX;
-      const frameY = start.frameY + moveY;
-      let next: CameraOverlaySettings;
-      if (event.operation === "cropMove") {
-        next = {
-          ...start,
-          frameX,
-          frameY,
-        };
-      } else if (event.operation === "cropResize") {
-        let left = start.frameX;
-        let top = start.frameY;
-        let right = left + start.frameWidth;
-        let bottom = top + start.frameHeight;
-        if ((event.edges & 1) !== 0) left += moveX;
-        if ((event.edges & 2) !== 0) right += moveX;
-        if ((event.edges & 4) !== 0) top += moveY;
-        if ((event.edges & 8) !== 0) bottom += moveY;
-        next = {
-          ...start,
-          frameHeight: bottom - top,
-          frameWidth: right - left,
-          frameX: left,
-          frameY: top,
-        };
-      } else if (event.operation === "radius") {
-        next = {
-          ...start,
-          radiusPercent: Math.min(50, Math.max(0, event.scale)),
-        };
-      } else if (event.operation === "resize") {
-        next = scaledCameraOverlay(
-          start,
-          Math.min(8, Math.max(0, event.scale)),
-          { x: frameX, y: frameY },
-        );
-      } else {
-        next = {
-          ...start,
-          cameraX: start.cameraX + moveX,
-          cameraY: start.cameraY + moveY,
-          frameX,
-          frameY,
-        };
-      }
-      if (shouldApply) onCameraOverlayChange?.(next);
-      if (event.phase === "update") finaliseGestureFrame();
-      if (event.phase === "end") {
-        selectionGestureRef.current = null;
-        requestAnimationFrame(editGesture.endGesture);
-      }
-      return;
-    }
-    const snapshot = active.outputSnapshot;
-    if (!snapshot) return;
-    // Native gesture deltas arrive as a share of the layer's own canvas.
-    const canvas = screenshotOutputDimensions(snapshot);
-    const moveX = event.deltaX * canvas.width;
-    const moveY = event.deltaY * canvas.height;
-    const cropX = snapshot.cropX + moveX;
-    const cropY = snapshot.cropY + moveY;
-    let next: RecordingOutputSettings[RecordingVideoTrackId];
-    if (event.operation === "cropMove" || event.operation === "cropResize") {
-      const source =
-        active.trackId === "primary"
-          ? previewSourceDimensions.primary
-          : previewSourceDimensions.camera;
-      if (!source) return;
-      next = applyScreenshotCropGesture({
-        ...event,
-        operation: event.operation,
-        output: screenshotOutputDimensions(snapshot),
-        settings: snapshot,
-        source,
-      });
-      if (event.phase === "end")
-        next = commitScreenshotCrop(snapshot, next, source);
-    } else if (event.operation === "frameResize") {
-      const workspace = {
-        ...snapshot,
-        items: [{ id: 0, output: snapshot }],
-      };
-      const resized = resizeScreenshotWorkspaceCanvasEdges({
-        deltaX: event.deltaX,
-        deltaY: event.deltaY,
-        edges: event.edges,
-        settings: workspace,
-      });
-      next = screenshotWorkspaceItemOutput(resized, 0);
-    } else if (event.operation === "radius") {
-      next = {
-        ...snapshot,
-        radiusPercent: Math.min(50, Math.max(0, event.scale)),
-      };
-    } else if (event.operation === "resize") {
-      const scale = Math.min(8, Math.max(0, event.scale));
-      const transform = (
-        value: number,
-        startFrame: number,
-        nextFrame: number,
-      ) => {
-        if (Math.abs(scale - 1) < 1e-9) return value;
-        const anchor = (nextFrame - startFrame * scale) / (1 - scale);
-        return anchor + (value - anchor) * scale;
-      };
-      next = {
-        ...snapshot,
-        cropHeight: snapshot.cropHeight * scale,
-        cropWidth: snapshot.cropWidth * scale,
-        cropX,
-        cropY,
-        imageWidth: snapshot.imageWidth * scale,
-        imageX: transform(snapshot.imageX, snapshot.cropX, cropX),
-        imageY: transform(snapshot.imageY, snapshot.cropY, cropY),
-      };
-    } else {
-      next = {
-        ...snapshot,
-        cropX,
-        cropY,
-        imageX: snapshot.imageX + moveX,
-        imageY: snapshot.imageY + moveY,
-      };
-    }
-    if (shouldApply) {
-      onRecordingOutputChange?.(active.trackId, next);
-      if (
-        active.operation === "frameRadius" ||
-        active.operation === "frameResize"
-      ) {
-        setCanvasResizeDraft({
-          ...effectiveRecordingOutput,
-          [active.trackId]: next,
-        });
-      }
-    }
-    if (event.phase === "update") finaliseGestureFrame();
-    if (event.phase === "end") {
-      if (isCropGesture && active.trackId === "primary")
-        recenterRefreshRef.current(next.sourceCrop);
-      // Mouse-up is the authoritative native transform. Apply it once more,
-      // then keep the history gesture open through React's commit so a late
-      // pointer update cannot become a tiny second undo entry.
-      selectionGestureRef.current = null;
-      requestAnimationFrame(() => {
-        if (
-          active.operation === "frameRadius" ||
-          active.operation === "frameResize"
-        )
-          setCanvasResizeDraft(null);
-        editGesture.endGesture();
-      });
-    }
-  };
+  const selectionGesture = useRecordingSelectionGesture({
+    cameraOverlay,
+    canPreviewBakedCamera,
+    canvasTool,
+    editGesture,
+    effectiveRecordingOutput,
+    keyboardCanvas,
+    onCameraOverlayChange,
+    onRecordingOutputChange,
+    previewSourceDimensions,
+    recenterRefreshRef,
+    selectedVideoTracks,
+    setCanvasResizeDraft,
+  });
   const editsBakedCameraOverlay =
     canPreviewBakedCamera && activeVideoTrack === "camera";
   const nudgeActiveTrack = useRecordingSelectionNudge({
     activeTrack: activeVideoTrack,
-    applyGesture: selectionGesture,
+    applyGesture: selectionGesture.applyGesture,
     cameraOverlay,
     editsBakedCamera: editsBakedCameraOverlay,
-    gestureAccepted: () => selectionGestureRef.current !== null,
+    gestureAccepted: selectionGesture.gestureAccepted,
     output: effectiveRecordingOutput,
     outputDimensions: previewOutputDimensions,
   });
@@ -891,7 +432,7 @@ export function NativeRecordingPreview({
       const trackId = paneIndex === 0 ? "primary" : "camera";
       if (selectedVideoTracks.has(trackId)) onSelectedTrackChange?.(trackId);
     },
-    onSelectionGesture: selectionGesture,
+    onSelectionGesture: selectionGesture.applyGesture,
     onZoomChange: reportZoom,
     recordingOutput: previewRecordingOutput,
     screenCanvasRef,
