@@ -7,6 +7,7 @@ import { RecordingTimelineEdit } from "../recording-timeline-edit";
 
 import {
   TIMED_LANE_ROW_HEIGHT_PX,
+  timedLaneFragmentBox,
   TimedLaneFragment,
   TimedLaneItem,
 } from "./timed-lane-layout";
@@ -20,7 +21,6 @@ import { useTimedLaneRows } from "./use-timed-lane-rows";
  * band. A sublane badge is inset by it top and bottom so stacked rows read as
  * separate rows without a rule between them.
  */
-const ROW_GAP_PX = 4;
 
 export function TimelineItemLane<
   Item extends TimedLaneItem & { label: string },
@@ -125,10 +125,9 @@ export function TimelineItemLane<
                   );
                 }}
                 style={{
-                  height: TIMED_LANE_ROW_HEIGHT_PX - ROW_GAP_PX * 2,
+                  ...timedLaneFragmentBox(row),
                   left: `${(outputStart * 100).toString()}%`,
                   minWidth: inRun ? undefined : minimumItemWidthPx,
-                  top: row * TIMED_LANE_ROW_HEIGHT_PX + ROW_GAP_PX,
                   width: `${((outputEnd - outputStart) * 100).toString()}%`,
                 }}
                 title={item.label}

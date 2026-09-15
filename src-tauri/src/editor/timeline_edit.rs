@@ -57,6 +57,8 @@ pub struct DeletedKeyboardShortcutRange {
 #[serde(rename_all = "camelCase")]
 pub struct RecordingTimelineEdit {
   pub artifact_id: u64,
+  #[serde(default)]
+  pub annotation_clips: Vec<super::annotations::timing::RecordingAnnotationClip>,
   #[serde(flatten)]
   pub keyboard_deletions: Box<RecordingTimelineKeyboardDeletions>,
   pub next_segment_id: u64,
@@ -74,6 +76,7 @@ pub struct TimelineRange {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TimelinePlan {
+  annotation_clips: Vec<super::annotations::timing::RecordingAnnotationClip>,
   deleted_keyboard_shortcut_ids: Vec<u64>,
   deleted_keyboard_shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
   keyboard_shortcut_positions: Vec<KeyboardShortcutPositionRange>,
@@ -117,6 +120,7 @@ impl TimelinePlan {
       )
     });
     let plan = Self {
+      annotation_clips: edit.annotation_clips.clone(),
       deleted_keyboard_shortcut_ids: edit.keyboard_deletions.shortcut_ids.clone(),
       deleted_keyboard_shortcut_ranges: keyboard::ranges(
         &edit.keyboard_deletions,
@@ -131,11 +135,16 @@ impl TimelinePlan {
       duration_us,
       ranges,
     };
-    (!plan.is_identity(source_duration_us)
+    (!plan.annotation_clips.is_empty()
+      || !plan.is_identity(source_duration_us)
       || !plan.deleted_keyboard_shortcut_ids.is_empty()
       || !plan.deleted_keyboard_shortcut_ranges.is_empty()
       || !plan.keyboard_shortcut_positions.is_empty())
     .then_some(plan)
+  }
+
+  pub(crate) fn annotation_clips(&self) -> &[super::annotations::timing::RecordingAnnotationClip] {
+    &self.annotation_clips
   }
 
   pub fn duration_ms(&self) -> u64 {

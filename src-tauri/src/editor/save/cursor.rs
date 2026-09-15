@@ -48,6 +48,7 @@ pub(super) fn save_baked(request: CursorSaveRequest<'_>) -> Result<Option<PathBu
     );
   };
   match cursor_export::export(cursor_export::CursorExportRequest {
+    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: request.layout,
     audio_source: None,
     camera: None,

@@ -108,6 +108,26 @@ export type StackedLaneFragment<Item extends TimedLaneItem> =
  */
 export const TIMED_LANE_ROW_HEIGHT_PX = 24;
 
+/**
+ * The breathing space a fragment leaves above and below itself inside its row,
+ * so stacked sublanes read as separate bars rather than one block. Mirrors
+ * `--spacing-control`. It is the inset within a row, NOT the gap between the
+ * band's rows - `CONTROL_GAP_PX` in `timeline-band-metrics.ts` is that one, and
+ * the two carrying the same number today is a coincidence, not a shared idea.
+ */
+const TIMED_LANE_ROW_INSET_PX = 4;
+
+/**
+ * Where one fragment sits in its lane, in CSS pixels: every timed lane places
+ * its bars absolutely against the same row grid, so they all measure it here
+ * rather than each repeating the arithmetic. Shortcuts and annotations use it
+ * today; the captions and zoom lanes planned next are its other callers.
+ */
+export const timedLaneFragmentBox = (row: number) => ({
+  height: TIMED_LANE_ROW_HEIGHT_PX - 2 * TIMED_LANE_ROW_INSET_PX,
+  top: row * TIMED_LANE_ROW_HEIGHT_PX + TIMED_LANE_ROW_INSET_PX,
+});
+
 const SEAM_EPSILON = 1e-9;
 
 /**

@@ -162,7 +162,21 @@ pub fn cancel_ruler(app: AppHandle) {
 pub fn start_detached(app: &AppHandle) {
   let app = app.clone();
   tauri::async_runtime::spawn(async move {
-    if let Err(error) = start(&app).await {
+    let result = start(&app).await;
+    // Diagnostics probe (duplicate-delivery investigation): the ruler is the
+    // most-pressed shortcut and is carried out entirely in Rust, so the
+    // shortcut log otherwise ends at the press. Recorded here rather than at
+    // the call site because only this task sees the settled outcome; a
+    // tray-triggered start records the same entry with no press before it.
+    crate::shortcuts::diagnostics::record(
+      "native_action_result",
+      serde_json::json!({
+        "action": "rulerOverlay",
+        "outcome": if result.is_ok() { "started" } else { "failed" },
+        "error": result.as_ref().err(),
+      }),
+    );
+    if let Err(error) = result {
       eprintln!("Could not start ruler overlay: {error}");
     }
   });

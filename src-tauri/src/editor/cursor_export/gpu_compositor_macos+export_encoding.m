@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #import "gpu_compositor_macos_export_private.h"
+#import "gpu_compositor_macos_export_annotations.h"
 
 static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
                               CVPixelBufferRef pixels, MTLPixelFormat format,
@@ -74,6 +75,9 @@ static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
       command, luma_pipeline, chroma_pipeline, destination_y, destination_uv,
       cursor_artwork, cursor, artworks, artwork_count, canvas, output_width,
       output_height);
+  uint64_t annotation_ms = (uint64_t)llround(CMTimeGetSeconds(pts) * 1000.0);
+  screenwide_export_annotations(self, command, destination_y, destination_uv,
+      (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms, 0);
   CVMetalTextureRef camera_ref = NULL;
   if (camera_sample != NULL && camera_overlay != NULL) {
     CVPixelBufferRef camera_pixels =
@@ -144,6 +148,11 @@ static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
         cursor_artwork, cursor, artworks, artwork_count, canvas, output_width,
         output_height);
   }
+  if (camera_sample != NULL && camera_overlay != NULL && camera_overlay->camera_on_top == 0)
+    screenwide_export_annotations(self, command, destination_y, destination_uv,
+        (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms, 0);
+  screenwide_export_annotations(self, command, destination_y, destination_uv,
+      (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms, 1);
   screenwide_encode_keyboard_overlay(command, device, keyboard_luma_pipeline,
                                      keyboard_chroma_pipeline, destination_y,
                                      destination_uv, keyboard_cache, keyboard,
@@ -161,7 +170,7 @@ static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
   frame.destinationLuma = destination_y_ref;
   frame.destinationChroma = destination_uv_ref;
   frame.cameraTexture = camera_ref;
-  frame.screenSample = screen_sample;
+  frame.screenSample = (CMSampleBufferRef)CFRetain(screen_sample);
   frame.cameraSample =
       camera_sample == NULL ? NULL : (CMSampleBufferRef)CFRetain(camera_sample);
   return frame;

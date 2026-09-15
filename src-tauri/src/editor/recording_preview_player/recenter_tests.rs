@@ -76,6 +76,7 @@ fn recenter_detected_dark_background_matches_native_composition() {
   };
   let cancelled = AtomicBool::new(false);
   let result = export(CursorExportRequest {
+    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
     camera: None,

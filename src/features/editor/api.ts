@@ -166,6 +166,7 @@ export const layoutRecordingPreviewSurface = ({
   });
 
 export const seekRecordingPreview = ({
+  annotationClips,
   positionMs,
   requestId,
   rough = false,
@@ -175,10 +176,12 @@ export const seekRecordingPreview = ({
   positionMs: number;
   requestId: number;
   sessionId: number;
+  annotationClips?: RecordingTimelineEdit["annotationClips"];
   rough?: boolean;
   selectionVisible?: boolean;
 }) =>
   invoke<null>("seek_recording_preview", {
+    annotationClips,
     positionMs: Number.isFinite(positionMs)
       ? Math.max(0, Math.round(positionMs))
       : 0,
@@ -249,39 +252,7 @@ export const setRecordingPreviewComposition = ({
     sessionId,
   });
 
-export const copyRecordingPreviewFrameToClipboard = ({
-  artifactId,
-  bakeCamera,
-  cameraOverlay,
-  cursorEffects,
-  keyboardEffects,
-  positionMs,
-  recordingOutput,
-}: {
-  artifactId: number;
-  bakeCamera: boolean;
-  cameraOverlay: CameraOverlaySettings;
-  cursorEffects: CursorEffectSettings;
-  keyboardEffects: KeyboardEffectSettings;
-  positionMs: number;
-  recordingOutput: RecordingOutputSettings;
-}) =>
-  invoke<null>("copy_recording_preview_frame_to_clipboard", {
-    artifactId,
-    bakeCamera,
-    cameraOverlay: normalizedCameraOverlay(
-      cameraOverlay,
-      recordingOutput.primary,
-    ),
-    cursorEffects: normalizedCursorEffects(cursorEffects),
-    keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
-    positionMs: Math.max(0, Math.round(positionMs)),
-    recordingOutput: {
-      camera: normalizedScreenshotOutput(recordingOutput.camera),
-      cameraOnTop: recordingOutput.cameraOnTop,
-      primary: normalizedScreenshotOutput(recordingOutput.primary),
-    },
-  });
+export { copyRecordingPreviewFrameToClipboard } from "./recording-frame-api";
 
 export const startScreenshotPreview = (artifactId: number, sessionId: number) =>
   invoke<null>("start_screenshot_preview", { artifactId, sessionId });

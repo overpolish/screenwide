@@ -133,6 +133,7 @@
     if (inactiveFrame) {
       self.surface.hasSelection = YES;
       self.surface.selection = target;
+      self.surface.annotationSelected = -1;
       self.selectionDragActive = NO;
       self.panning = NO;
       clear_selection_snap_guides(self.surface);
@@ -147,11 +148,12 @@
     if (hasSharedHit &&
         !(sharedHandle == 0 &&
           target.layer_id == ScreenwideFrameLayerId)) {
-      BOOL changed = !self.surface.hasSelection ||
+      BOOL changed = self.surface.annotationSelected != -1 || !self.surface.hasSelection ||
                      self.surface.selection.pane_index != target.pane_index ||
                      self.surface.selection.layer_id != target.layer_id;
       self.surface.hasSelection = YES;
       self.surface.selection = target;
+      self.surface.annotationSelected = -1;
       self.selectionDragActive = YES;
       self.selectionDragEdges = shared_handle_edges(sharedHandle);
       self.panning = NO;
@@ -247,12 +249,13 @@
   if (event.buttonNumber == 0 && self.surface.selectionHitTestingEnabled) {
     ScreenwidePreviewSelection target;
     if (selection_target_at_point(self.surface, point, &target)) {
-      BOOL changed = !self.surface.hasSelection ||
+      BOOL changed = self.surface.annotationSelected != -1 || !self.surface.hasSelection ||
                      self.surface.selection.pane_index != target.pane_index ||
                      self.surface.selection.layer_id != target.layer_id;
       if (target.layer_id == ScreenwideFrameLayerId) {
         self.surface.hasSelection = YES;
         self.surface.selection = target;
+        self.surface.annotationSelected = -1;
         self.selectionDragActive = NO;
         self.panning = NO;
         clear_selection_snap_guides(self.surface);
@@ -272,6 +275,7 @@
           !changed ? self.surface.selection : target;
       self.surface.hasSelection = YES;
       self.surface.selection = dragTarget;
+      self.surface.annotationSelected = -1;
       self.selectionDragActive = YES;
       self.selectionDragOperation = dragTarget.crop_mode != 0 ? 5 : 0;
       self.selectionDragEdges = 0;

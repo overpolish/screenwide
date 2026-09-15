@@ -14,12 +14,15 @@ use super::composition::gpu_still_overlay;
 use super::cursor::gpu_cursor_preview;
 use super::image::frame_position;
 use super::still_decode::{scaled_output, DecodedFrame, PaneDecoder};
+use crate::editor::annotations::timing::RecordingAnnotationClip;
 use crate::editor::preview_platform::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
 use crate::editor::recording_preview_player::{PlayerSources, RecordingPreviewPlayerEvent};
+use std::sync::{Arc, RwLock};
 use std::{sync::atomic::Ordering, sync::mpsc, thread::JoinHandle};
 use tauri::ipc::Channel;
 enum DecoderCommand {
   Seek {
+    annotation_clips: Vec<RecordingAnnotationClip>,
     position_ms: u64,
     request_id: u64,
     target_sizes: Vec<(u32, u32)>,
@@ -30,6 +33,7 @@ enum DecoderCommand {
   Stop,
 }
 pub(crate) struct NativeStillDecoder {
+  annotation_clips: Arc<RwLock<Vec<RecordingAnnotationClip>>>,
   sender: mpsc::Sender<DecoderCommand>,
   thread: Option<JoinHandle<()>>,
 }
@@ -47,11 +51,13 @@ impl NativeStillDecoder {
     event_channel: Channel<RecordingPreviewPlayerEvent>,
   ) -> Result<Self, String> {
     let (sender, receiver) = mpsc::channel();
+    let annotation_clips = Arc::clone(&sources.annotation_clips);
     let thread = std::thread::Builder::new()
       .name("recording-preview-still".to_owned())
       .spawn(move || run(sources, receiver, event_channel))
       .map_err(|error| error.to_string())?;
     Ok(Self {
+      annotation_clips,
       sender,
       thread: Some(thread),
     })
@@ -67,6 +73,11 @@ impl NativeStillDecoder {
     self
       .sender
       .send(DecoderCommand::Seek {
+        annotation_clips: self
+          .annotation_clips
+          .read()
+          .map_err(|_| "The annotations are unavailable")?
+          .clone(),
         position_ms,
         request_id,
         rough,
@@ -89,3 +100,7 @@ impl NativeStillDecoder {
     }
   }
 }
+
+#[cfg(test)]
+#[path = "still_tests.rs"]
+mod tests;

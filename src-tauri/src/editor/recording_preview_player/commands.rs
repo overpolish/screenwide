@@ -127,6 +127,7 @@ mod tests {
 
 #[tauri::command]
 pub async fn seek_recording_preview(
+  annotation_clips: Option<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>,
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   position_ms: u64,
   request_id: u64,
@@ -156,6 +157,15 @@ pub async fn seek_recording_preview(
         surface.set_selection_visible(visible);
       }
     }
+    if let Some(clips) = annotation_clips {
+      crate::editor::annotations::timing::validate_clips(&clips)?;
+      if let Some(sources) = &manager.sources {
+        *sources
+          .annotation_clips
+          .write()
+          .map_err(|_| "The annotations are unavailable")? = clips;
+      }
+    }
     manager.latest_seek_request = request_id;
     manager.rough_seek = rough;
     let worker = manager.take_worker();
@@ -165,6 +175,8 @@ pub async fn seek_recording_preview(
       .map_or(0, |value| value.duration_ms);
     manager.position_ms = position_ms.min(duration_ms.saturating_sub(1));
     manager.is_playing = false;
+    #[cfg(target_os = "macos")]
+    manager.publish_annotation_handles();
     (worker, manager.restart(PlaybackMode::InteractiveStill))
   };
   if let Some(worker) = worker {

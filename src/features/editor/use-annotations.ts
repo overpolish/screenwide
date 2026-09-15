@@ -47,6 +47,8 @@ export function useAnnotations({
   );
 
   return {
+    canDelete:
+      annotationDeleteTarget(annotations, hoveredId, selectedId) !== null,
     clearSelection: () => {
       setSelectedId(null);
     },

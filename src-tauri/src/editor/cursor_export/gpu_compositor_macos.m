@@ -5,31 +5,7 @@
 
 #import "gpu_compositor_macos_shader_source.h"
 
-static bool timeline_presentation(CMTime source,
-                                  const ScreenwideTimelineRange *ranges,
-                                  uint32_t count, CMTime *output) {
-  if (ranges == NULL || count == 0) {
-    *output = source;
-    return true;
-  }
-  double source_us = CMTimeGetSeconds(source) * 1000000.0;
-  if (!isfinite(source_us) || source_us < 0.0)
-    return false;
-  uint64_t rounded_source_us = (uint64_t)llround(source_us);
-  for (uint32_t index = 0; index < count; ++index) {
-    const ScreenwideTimelineRange *range = &ranges[index];
-    if (rounded_source_us < range->source_start_us ||
-        rounded_source_us >= range->source_end_us)
-      continue;
-    uint64_t output_us =
-        range->output_start_us +
-        (uint64_t)llround((rounded_source_us - range->source_start_us) /
-                          range->playback_rate);
-    *output = CMTimeMake((int64_t)output_us, 1000000);
-    return true;
-  }
-  return false;
-}
+#import "gpu_compositor_macos_export_cadence.h"
 
 /// How many composited frames may sit on the GPU while the loop keeps
 /// decoding. A four second sample of the old fully serial loop (decode ->
@@ -52,7 +28,8 @@ int screenwide_gpu_composite_cursor(
     const char *screen_path, const ScreenwideGpuCursor *cursors,
     uint32_t cursor_count, const ScreenwideCursorArtwork *artworks,
     uint32_t artwork_count, const ScreenwideKeyboardOverlay *keyboards,
-    uint32_t keyboard_count, const ScreenwideTimelineRange *timeline_ranges,
+    uint32_t keyboard_count, const ScreenwideTimedAnnotation *annotations,
+    uint32_t annotation_count, const ScreenwideTimelineRange *timeline_ranges,
     uint32_t timeline_range_count, const char *camera_path,
     const ScreenwideCameraOverlay *camera_overlay,
     const ScreenwideCanvas *canvas, const char *output_path,
@@ -65,6 +42,8 @@ int screenwide_gpu_composite_cursor(
   @autoreleasepool {
     ScreenwideVideoExport *session = [ScreenwideVideoExport new];
     session->canvas = canvas;
+    session->annotations = annotations;
+    session->annotation_count = annotation_count;
     session->camera_overlay = camera_overlay;
     session->artworks = artworks;
     session->artwork_count = artwork_count;
@@ -102,21 +81,25 @@ int screenwide_gpu_composite_cursor(
             ? NULL
             : [session->camera_output copyNextSampleBuffer];
     bool cancelled = false;
-    CMSampleBufferRef screen_sample = NULL;
-    while ((screen_sample = [session->screen_output copyNextSampleBuffer]) !=
-           NULL) {
+    CMSampleBufferRef screen_sample = [session->screen_output copyNextSampleBuffer];
+    CMSampleBufferRef next_screen_sample = [session->screen_output copyNextSampleBuffer];
+    uint64_t duration_us = export_duration_us(session->source_duration_us, timeline_ranges, timeline_range_count);
+    int32_t fps = (int32_t)llround(session->source_frame_rate);
+    for (int64_t index = 0; screen_sample != NULL; index++) {
+      CMTime output_pts = CMTimeMake(index, fps);
+      if (CMTimeGetSeconds(output_pts) * 1000000.0 >= duration_us) break;
       @autoreleasepool {
         if (should_cancel != NULL && should_cancel(context)) {
           cancelled = true;
-          CFRelease(screen_sample);
           break;
         }
-        CMTime pts = CMSampleBufferGetPresentationTimeStamp(screen_sample);
-        CMTime output_pts = kCMTimeInvalid;
-        if (!timeline_presentation(pts, timeline_ranges, timeline_range_count,
-                                   &output_pts)) {
+        CMTime pts = export_source_time(output_pts, timeline_ranges, timeline_range_count);
+        if (!CMTIME_IS_VALID(pts)) continue;
+        while (next_screen_sample != NULL && CMTimeCompare(
+            CMSampleBufferGetPresentationTimeStamp(next_screen_sample), pts) <= 0) {
           CFRelease(screen_sample);
-          continue;
+          screen_sample = next_screen_sample;
+          next_screen_sample = [session->screen_output copyNextSampleBuffer];
         }
         const ScreenwideGpuCursor *cursor =
             screenwide_export_cursor_at(cursors, cursor_count, pts);
@@ -136,7 +119,6 @@ int screenwide_gpu_composite_cursor(
                 kCFAllocatorDefault, session->adaptor.pixelBufferPool,
                 &destination) != kCVReturnSuccess ||
             destination == NULL) {
-          CFRelease(screen_sample);
           error =
               [NSError errorWithDomain:@"ScreenwideGPUCompositor"
                                   code:2
@@ -191,6 +173,8 @@ int screenwide_gpu_composite_cursor(
     for (ScreenwideInflightFrame *abandoned in ring)
       [abandoned.command waitUntilCompleted];
     [ring removeAllObjects];
+    if (screen_sample != NULL) CFRelease(screen_sample);
+    if (next_screen_sample != NULL) CFRelease(next_screen_sample);
     if (camera_sample != NULL)
       CFRelease(camera_sample);
     if (next_camera_sample != NULL)

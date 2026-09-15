@@ -253,7 +253,7 @@ pub(super) fn sweep_orphaned_recordings(app: &AppHandle) {
     record("recovery_offer_failed", json!({"error": error.to_string()}));
     eprintln!("Could not offer back an unsaved recording: {error}");
   } else {
-    record("recovery_offered", json!({}));
+    crate::shortcuts::diagnostics::recovery_offered(app);
     // Its values now live in the artifact the editor holds. Unlike the cursor
     // and keyboard sidecars, which the editor goes on reading from disk, this
     // one has nothing left to say.

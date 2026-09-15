@@ -49,6 +49,8 @@ pub(in crate::editor) fn save_baked_recording(
     screen_width: output.width,
     video: media_preview::VideoExportOptions {
       compression: video_settings.0,
+      // Camera geometry is calculated at the reference size. The requested
+      // output/source scales are passed separately to the compositor below.
       resolution_scale_percent: 100,
       source_scale_percent: 100,
     },
@@ -62,6 +64,7 @@ pub(in crate::editor) fn save_baked_recording(
     |(path, settings)| (Some(path), settings),
   );
   let result = cursor_export::export(cursor_export::CursorExportRequest {
+    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: layout,
     audio_source: None,
     camera: Some((&camera.path, baked)),
@@ -79,7 +82,11 @@ pub(in crate::editor) fn save_baked_recording(
     screen,
     selection,
     timeline,
-    video: baked.video,
+    video: media_preview::VideoExportOptions {
+      compression: video_settings.0,
+      resolution_scale_percent: video_settings.1,
+      source_scale_percent: video_settings.2,
+    },
     width: screen_size.0,
   })?;
   match result {

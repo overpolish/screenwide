@@ -1,32 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-export type RecordingTimelineSegment = {
-  id: number;
-  /** Normalized position in the original recording, before magnetic edits. */
-  sourceEnd: number;
-  /** Normalized position in the original recording, before magnetic edits. */
-  sourceStart: number;
-  /** Playback rate for this retained source range. */
-  playbackRate?: number;
-};
-
-export type RecordingTimelineEdit = {
-  artifactId: number;
-  nextSegmentId: number;
-  segments: RecordingTimelineSegment[];
-};
-
-export type RecordingTimelineTrimEdge = "end" | "start";
-
+import {
+  RecordingTimelineEdit,
+  RecordingTimelineSegment,
+  RecordingTimelineLayoutSegment,
+  RecordingTimelineTrimEdge,
+} from "./recording-timeline-types";
+export type {
+  RecordingTimelineEdit,
+  RecordingTimelineSegment,
+  RecordingTimelineLayoutSegment,
+  RecordingTimelineTrimEdge,
+} from "./recording-timeline-types";
 const TIMELINE_POSITION_EPSILON = 1e-9;
-
-export type RecordingTimelineLayoutSegment = RecordingTimelineSegment & {
-  /** Normalized position in the retained, magnetic output timeline. */
-  outputEnd: number;
-  /** Normalized position in the retained, magnetic output timeline. */
-  outputStart: number;
-};
 
 export const createRecordingTimelineEdit = (
   artifactId: number,

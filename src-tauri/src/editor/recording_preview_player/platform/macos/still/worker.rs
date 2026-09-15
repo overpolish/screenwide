@@ -44,6 +44,7 @@ pub(super) fn run(
       command = next;
     }
     let DecoderCommand::Seek {
+      annotation_clips,
       position_ms,
       request_id,
       rough,
@@ -56,10 +57,10 @@ pub(super) fn run(
       .preview_surface
       .as_ref()
       .map(|surface| surface.present_batch());
-    let composition = sources
-      .composition_settings
-      .as_ref()
-      .and_then(|settings| settings.read().ok().map(|settings| settings.clone()));
+    let composition = sources.annotated_composition(
+      frame_position(position_ms, sources.duration_ms),
+      &annotation_clips,
+    );
     // Paused editing keeps one native-resolution source frame resident. Frame,
     // crop and OSC gestures then only rerun the Metal composition instead of
     // invalidating the decoder cache for every changing pane size. Live
@@ -159,13 +160,20 @@ pub(super) fn run(
         0,
         composition.recording_output.primary.width,
       );
-      let screen_output = scaled_output(&composition.recording_output.primary, screen_factor);
+      let mut screen_output = scaled_output(&composition.recording_output.primary, screen_factor);
       // Placeholder settings below the compositor's validation floor mean the
       // webview has not sent real output dimensions yet; wait quietly.
       if screen_output.width < 64 || screen_output.height < 64 {
         continue;
       }
       let screen_metadata = cache.screen.metadata();
+      let source = &sources.playback_layout.panes[0];
+      crate::editor::recording_preview_player::annotation_preview::remap_source(
+        &mut screen_output,
+        (source.source_width, source.source_height),
+        (screen_metadata.width, screen_metadata.height),
+        composition.recording_output.primary.width,
+      );
       let camera_metadata = cache.camera.as_ref().map(DecodedFrame::metadata);
       let (cursor, overlay) = match gpu_still_overlay(
         &screen_metadata,
@@ -197,7 +205,19 @@ pub(super) fn run(
           1,
           composition.recording_output.camera.width,
         );
-        scaled_output(&composition.recording_output.camera, factor)
+        let mut output = scaled_output(&composition.recording_output.camera, factor);
+        if let (Some(source), Some(metadata)) = (
+          sources.playback_layout.panes.get(1),
+          camera_metadata.as_ref(),
+        ) {
+          crate::editor::recording_preview_player::annotation_preview::remap_source(
+            &mut output,
+            (source.source_width, source.source_height),
+            (metadata.width, metadata.height),
+            composition.recording_output.camera.width,
+          );
+        }
+        output
       });
       let (screen_source, screen_pixels) = match cache.screen.rgba() {
         Some(source) => (Some(source), None),

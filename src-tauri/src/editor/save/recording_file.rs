@@ -63,7 +63,11 @@ pub(in crate::editor) fn save_primary_recording(
       width: request.width,
     });
   }
-  if cursor_export::needs_composition(request.output, request.width, request.height) {
+  if cursor_export::needs_composition(request.output, request.width, request.height)
+    || request
+      .timeline
+      .is_some_and(|plan| !plan.annotation_clips().is_empty())
+  {
     let path = unique_path(
       request.directory,
       request.stem,
@@ -82,6 +86,7 @@ pub(in crate::editor) fn save_primary_recording(
       );
     };
     return match cursor_export::export(cursor_export::CursorExportRequest {
+      annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
       audio_layout: request.layout,
       audio_source: None,
       camera: None,

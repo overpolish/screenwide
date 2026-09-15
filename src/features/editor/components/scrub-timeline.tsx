@@ -15,6 +15,7 @@ import { PreparedAudioTrack } from "../types";
 
 import { clamp, Playhead } from "./scrub-playhead";
 import { TimelineBladeController, TimelineSegments } from "./timeline-blade";
+import { ScrubPhase, SeekHandler } from "./timeline-seek";
 import { speedMarkedSegments } from "./timeline-speed-markers";
 import {
   timelineXToFraction,
@@ -23,8 +24,7 @@ import {
 import { TimelineViewportContent } from "./timeline-viewport-content";
 import { timelineWaveformPath } from "./timeline-waveform-path";
 
-export type ScrubPhase = "end" | "move" | "start";
-export type SeekHandler = (ratio: number, phase: ScrubPhase) => void;
+export type { ScrubPhase, SeekHandler } from "./timeline-seek";
 
 const TICK_INTERVALS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
 const MINIMUM_TICK_SPACING = 70;

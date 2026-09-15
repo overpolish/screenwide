@@ -5,6 +5,8 @@ use super::*;
 
 #[derive(Clone)]
 pub(super) struct PlayerSources {
+  pub(super) annotation_clips:
+    Arc<RwLock<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>>,
   pub(super) audio_tracks: Vec<RecordingAudioTrack>,
   pub(super) camera_duration_ms: Option<u64>,
   pub(super) camera_path: Option<PathBuf>,
@@ -141,10 +143,20 @@ fn sources_with_surface(
   // editor window's NSView/HWND. Never do that while holding the artifact
   // mutex: the main thread may simultaneously be serving a snapshot request
   // that needs the same mutex, which deadlocks crash recovery on startup.
+  let annotation_clips = Arc::new(RwLock::new(
+    crate::editor::timeline_edit::for_recording(&path, artifact_id)
+      .map(|(_, edit)| edit.annotation_clips)
+      .unwrap_or_default(),
+  ));
   let preview_surface = if create_surface {
     app
       .get_webview_window(EditorKind::Recording.window_label().as_str())
-      .map(|window| RecordingPreviewSurface::from_window(&window).map(Arc::new))
+      .map(|window| {
+        let mut surface = RecordingPreviewSurface::from_window(&window)?;
+        #[cfg(target_os = "macos")]
+        super::annotation_bridge::install(&mut surface, app.clone(), Arc::clone(&annotation_clips));
+        Ok::<_, String>(Arc::new(surface))
+      })
       .transpose()?
   } else {
     None
@@ -209,6 +221,7 @@ fn sources_with_surface(
     .as_ref()
     .map(|_| Arc::new(crate::editor::cursor_effects::gpu_artworks()));
   Ok(PlayerSources {
+    annotation_clips,
     audio_tracks,
     camera_duration_ms: camera.as_ref().map(|value| value.duration_ms),
     camera_path: camera.as_ref().map(|value| value.path.clone()),

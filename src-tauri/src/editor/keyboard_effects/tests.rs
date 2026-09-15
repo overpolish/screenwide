@@ -12,6 +12,7 @@ use crate::editor::timeline_edit::{
 fn speed_plan(rate: f64) -> TimelinePlan {
   TimelinePlan::from_edit(
     &RecordingTimelineEdit {
+      annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::<RecordingTimelineKeyboardDeletions>::default(),
       next_segment_id: 2,

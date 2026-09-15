@@ -77,8 +77,11 @@ export function TimelineScrubberOverlay(
   const { blade, ...scrubber } = props;
   return (
     <>
+      {/* Above the ruler: the playhead is the one mark that has to stay
+          readable across it, and it takes no presses, so nothing below it
+          loses a click to this layer. */}
       <div
-        className={`pointer-events-none absolute inset-y-0 right-0 ${TIMELINE_LANE_LEFT_CLASS} z-[5] overflow-hidden`}
+        className={`pointer-events-none absolute inset-y-0 right-0 ${TIMELINE_LANE_LEFT_CLASS} z-30 overflow-hidden`}
       >
         <TimelineScrubber {...scrubber} />
       </div>

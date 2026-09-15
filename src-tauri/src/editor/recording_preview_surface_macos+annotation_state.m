@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #import "recording_preview_surface_macos_private.h"
+#include "recording_preview_annotation_layers_macos.h"
 
 SCREENWIDE_PREVIEW_PRIVATE void on_main_async(dispatch_block_t block);
 
 void screenwide_preview_surface_set_annotations(
     void *handle, const ScreenwidePreviewAnnotation *items, size_t count,
-    int32_t selected_index, int32_t mode) {
+    int32_t selected_index, int32_t mode, int32_t active_layer) {
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   // The block outlives this call, so the caller's array is copied here while
@@ -19,6 +20,12 @@ void screenwide_preview_surface_set_annotations(
   NSInteger selected = selected_index;
   ScreenwideAnnotationMode next = (ScreenwideAnnotationMode)mode;
   on_main_async(^{
+    // Selection and its annotation chrome change in the same main-queue turn.
+    ScreenwidePreviewSelection target;
+    if (next != ScreenwideAnnotationModeNone && active_layer >= 0 && annotation_layer_selection(surface, active_layer, &target)) {
+      surface.selection = target;
+      surface.hasSelection = YES;
+    }
     surface.annotations = data;
     surface.annotationSelected = selected;
     BOOL changed = surface.annotationMode != next;

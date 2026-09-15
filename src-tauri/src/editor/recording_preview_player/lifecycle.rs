@@ -148,6 +148,10 @@ impl PreviewPlayerManager {
     {
       self.selection_gesture = None;
     }
+    #[cfg(target_os = "macos")]
+    {
+      self.annotation = Default::default();
+    }
     self.sources = None;
     self.session_id = None;
     self.workspace_topology = None;

@@ -6,7 +6,7 @@ use std::thread;
 use tauri::{image::Image, ipc::Channel, AppHandle};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-use super::{platform, sources, sources::headless_sources};
+use super::{platform, sources::headless_sources};
 use crate::editor::{
   cursor_effects::CursorEffectSettings, keyboard_effects::KeyboardEffectSettings,
   CameraOverlaySettings, RecordingOutputSettings,
@@ -50,9 +50,24 @@ pub async fn copy_recording_preview_frame_to_clipboard(
   camera_overlay: CameraOverlaySettings,
   cursor_effects: CursorEffectSettings,
   keyboard_effects: KeyboardEffectSettings,
-  recording_output: RecordingOutputSettings,
+  mut recording_output: RecordingOutputSettings,
+  annotation_clips: Option<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>,
 ) -> Result<(), String> {
-  let sources = sources(&app, artifact_id, None)?;
+  let sources = headless_sources(&app, artifact_id)?;
+  if let Some(clips) = annotation_clips {
+    use crate::editor::annotations::timing::{active_annotations, validate_clips, AnnotationTrack};
+    validate_clips(&clips)?;
+    recording_output.primary.annotations = active_annotations(
+      &clips,
+      AnnotationTrack::Primary,
+      position_ms.min(sources.duration_ms.saturating_sub(1)),
+    );
+    recording_output.camera.annotations = active_annotations(
+      &clips,
+      AnnotationTrack::Camera,
+      position_ms.min(sources.duration_ms.saturating_sub(1)),
+    );
+  }
   let composed = tauri::async_runtime::spawn_blocking(move || {
     platform::composed_frame_image(
       &sources,

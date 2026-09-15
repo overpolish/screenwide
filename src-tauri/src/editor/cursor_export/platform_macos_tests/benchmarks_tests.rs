@@ -68,6 +68,7 @@ fn benchmarks_retina_gpu_cursor_export() {
   let cancelled = AtomicBool::new(false);
   let started = std::time::Instant::now();
   let result = export(CursorExportRequest {
+    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
     camera: None,
@@ -143,6 +144,7 @@ fn benchmarks_animated_mesh_export() {
     let destination = directory.join(format!("{name}.mp4"));
     let started = std::time::Instant::now();
     let result = export(CursorExportRequest {
+      annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
       audio_layout: AudioLayout::SeparateTracks,
       audio_source: None,
       camera: None,

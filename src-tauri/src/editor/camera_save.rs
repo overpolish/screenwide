@@ -101,11 +101,14 @@ pub(super) fn save_camera_copy(
     );
   };
 
-  if cursor_export::needs_composition(output, camera.width, camera.height) {
+  if cursor_export::needs_composition(output, camera.width, camera.height)
+    || timeline.is_some_and(|plan| !plan.annotation_clips().is_empty())
+  {
     let path = unique_path(directory, &camera_stem, RECORDING_EXTENSION, &|candidate| {
       candidate.exists()
     });
     let result = cursor_export::export(cursor_export::CursorExportRequest {
+      annotation_track: crate::editor::annotations::timing::AnnotationTrack::Camera,
       audio_layout: track_selection::AudioLayout::SeparateTracks,
       audio_source: None,
       camera: None,
@@ -194,7 +197,9 @@ pub(super) fn save_camera_as_primary(
 ) -> Result<Option<PathBuf>, String> {
   let progress_duration_ms =
     timeline.map_or(camera.duration_ms, timeline_edit::TimelinePlan::duration_ms);
-  if cursor_export::needs_composition(output, camera.width, camera.height) {
+  if cursor_export::needs_composition(output, camera.width, camera.height)
+    || timeline.is_some_and(|plan| !plan.annotation_clips().is_empty())
+  {
     let path = unique_path(directory, stem, RECORDING_EXTENSION, &|candidate| {
       candidate.exists()
     });
@@ -210,6 +215,7 @@ pub(super) fn save_camera_as_primary(
       );
     };
     return match cursor_export::export(cursor_export::CursorExportRequest {
+      annotation_track: crate::editor::annotations::timing::AnnotationTrack::Camera,
       audio_layout: layout,
       audio_source: Some(audio_source),
       camera: None,

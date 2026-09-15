@@ -44,7 +44,14 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
   let sources_keyboard_animation_ranges = Arc::clone(&sources.keyboard_animation_ranges);
   let keyboard_settings = Arc::clone(&sources.keyboard_settings);
   let composition_settings = sources.composition_settings.clone();
+  let annotation_clips = Arc::clone(&sources.annotation_clips);
   let duration_ms = sources.duration_ms;
+  let source_dimensions: Vec<_> = sources
+    .playback_layout
+    .panes
+    .iter()
+    .map(|p| (p.source_width, p.source_height))
+    .collect();
   let cursor_output = (
     sources.playback_layout.panes[0].source_width,
     sources.playback_layout.panes[0].source_height,
@@ -63,12 +70,19 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
           .read()
           .map(|settings| *settings)
           .unwrap_or_default();
-        let composition = composition_settings
+        let mut composition = composition_settings
           .as_ref()
           .expect("the recording player always has composition settings")
           .read()
           .map(|settings| settings.clone())
           .unwrap_or_else(|poisoned| poisoned.into_inner().clone());
+        if let Ok(clips) = annotation_clips.read() {
+          crate::editor::recording_preview_player::annotation_preview::apply_clips(
+            &mut composition,
+            &clips,
+            target_ms,
+          );
+        }
         let raw_screen = match screen.pixel_frame_at(target_ms) {
           Ok(Some(frame)) => frame,
           Ok(None) | Err(_) => break,
@@ -101,11 +115,17 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
             (!ranges.is_empty()).then_some(ranges.as_slice()),
           )
         });
-        let screen_output = super::super::still_decode::scaled_output(
+        let mut screen_output = super::super::still_decode::scaled_output(
           &composition.recording_output.primary,
           screen_factor,
         );
         let screen_metadata = raw_screen.metadata();
+        crate::editor::recording_preview_player::annotation_preview::remap_source(
+          &mut screen_output,
+          source_dimensions[0],
+          (screen_metadata.width, screen_metadata.height),
+          composition.recording_output.primary.width,
+        );
         let camera_metadata = raw_camera.as_ref().map(|frame| frame.metadata());
         let (cursor, overlay) = match gpu_still_overlay(
           &screen_metadata,
@@ -124,10 +144,19 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
           Ok(value) => value,
           Err(_) => break,
         };
-        let camera_output = super::super::still_decode::scaled_output(
+        let mut camera_output = super::super::still_decode::scaled_output(
           &composition.recording_output.camera,
           camera_factor,
         );
+        if let (Some(source), Some(metadata)) = (source_dimensions.get(1), camera_metadata.as_ref())
+        {
+          crate::editor::recording_preview_player::annotation_preview::remap_source(
+            &mut camera_output,
+            *source,
+            (metadata.width, metadata.height),
+            composition.recording_output.camera.width,
+          );
+        }
         let mut frame = VideoFrame {
           presentation_elapsed_ms: presentation_elapsed_ms(index),
           payload: VideoFramePayload::Native {

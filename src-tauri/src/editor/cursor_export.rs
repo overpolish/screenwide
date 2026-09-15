@@ -32,6 +32,7 @@ mod platform;
 
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(super) struct CursorExportRequest<'a> {
+  pub annotation_track: super::annotations::timing::AnnotationTrack,
   pub audio_layout: AudioLayout,
   pub audio_source: Option<&'a Path>,
   pub camera: Option<(&'a Path, BakedVideoExportOptions)>,

@@ -1,14 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { Text } from "../../../components/base/text/text";
-import { dismissPopupMenu } from "../../popup-panel/use-popup-menu";
-import { copyRecordingPreviewFrameToClipboard } from "../api";
 import {
   cameraOverlayGeometry,
   uncroppedCameraPreviewOverlay,
@@ -20,6 +16,7 @@ import {
   DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
 } from "../recording-export-settings";
+import { createRecordingTimelineEdit } from "../recording-timeline-edit";
 import {
   applyScreenshotCropGesture,
   commitScreenshotCrop,
@@ -35,39 +32,32 @@ import {
   screenshotOutputDimensions,
   screenshotWorkspaceItemOutput,
 } from "../screenshot-output";
-import { CursorToolToggle } from "../tool-panels/cursor-tool-toggle";
-import { KeyboardToolToggle } from "../tool-panels/keyboard-tool-toggle";
 import { EditorToolId } from "../tool-panels/tool-registry";
 import { useCanvasTool } from "../tool-panels/use-canvas-tool";
-import { useToolPanel } from "../tool-panels/use-tool-panel";
 import { useToolPanelFollowsTool } from "../tool-panels/use-tool-panel-follows-tool";
-import {
-  CameraOverlaySettings,
-  RecordingTrackId,
-  RecordingVideoTrackId,
-} from "../types";
+import { CameraOverlaySettings, RecordingVideoTrackId } from "../types";
+import { useCopyRecordingFrame } from "../use-copy-recording-frame";
 import { useEditorEditGesture } from "../use-editor-edit-history";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
 import { usePreviewZoom } from "../use-preview-zoom";
+import { useRecordingAnnotations } from "../use-recording-annotations";
 import { useRecordingPreviewPlayer } from "../use-recording-preview-player";
 import { useRecordingTimelineThumbnails } from "../use-recording-timeline-thumbnails";
 
 import { BakedCameraPreviewViewport } from "./baked-camera-preview-viewport";
-import { useProvideEditorToolbarTools } from "./editor-toolbar-context";
 import { NativeAudioRibbon } from "./native-audio-ribbon";
 import { useRegisterPreviewFit } from "./preview-fit-context";
 import { PreviewZoomField } from "./preview-readouts";
-import {
-  RecordingCanvasTools,
-  RecordingCanvasTool,
-} from "./recording-crop-toggle";
+import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { RecordingOutputPreviewViewport } from "./recording-output-preview-viewport";
 import { RecordingPlaybackControls } from "./recording-playback-controls";
 import { RECORDING_PREVIEW_PANE_GAP } from "./recording-preview-layout";
 import { RecordingPreviewViewport } from "./recording-preview-viewport";
 import { normalizedRecordingSelection } from "./recording-selection";
 import { RecordingTrackLanes } from "./recording-track-lanes";
+import { ResizableRecordingTimelineArea } from "./resizable-recording-timeline-area";
 import { createPlayhead } from "./scrub-playhead";
+import { useRecordingCanvasContextMenu } from "./use-recording-canvas-context-menu";
 import {
   KEYBOARD_LAYER_ID,
   useRecordingKeyboardPreviewEditing,
@@ -75,11 +65,8 @@ import {
 import { useRecordingRecenter } from "./use-recording-recenter";
 import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
 import { useRecordingTimelineBlade } from "./use-recording-timeline-blade";
-import {
-  RECORDING_TRACK_MENU_PREFIX,
-  recordingTrackMoves,
-  useRecordingTrackMenu,
-} from "./use-recording-track-menu";
+import { useRecordingToolbar } from "./use-recording-toolbar";
+import { useRecordingTrackSelection } from "./use-recording-track-selection";
 import { useRecordingTrimPreview } from "./use-recording-trim-preview";
 
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
@@ -97,6 +84,20 @@ const roundedPercent = (value: number) => Math.round(value * 10000) / 100;
 /** The toolbar's own name for a tool, in the registry's vocabulary. */
 const recordingToolId = (tool: RecordingCanvasTool): EditorToolId | null =>
   tool === "canvas" ? "frame" : tool;
+
+/** One line of trouble under the preview: the audio, the player and the frame
+ * copier each report their own, and each reads the same way. */
+function PreviewError({ message }: { message?: string | null }) {
+  if (!message) return null;
+  return (
+    <Text
+      className="px-window-inset pb-control-inset text-error"
+      variant="footnote"
+    >
+      {message}
+    </Text>
+  );
+}
 
 /** Editor playback whose decode, audio output and timeline are all owned by Rust. */
 export function NativeRecordingPreview({
@@ -168,21 +169,12 @@ export function NativeRecordingPreview({
   const [canvasTool, setCanvasTool] = useCanvasTool<
     Exclude<RecordingCanvasTool, null>
   >("recording", "select");
-  const {
-    close: closeToolPanel,
-    openTool: openToolPanel,
-    toggle: toggleToolPanel,
-  } = useToolPanel("recording");
-  // The panel follows the tool in hand, so choosing one is all a button or a
-  // shortcut has to do.
-  useToolPanelFollowsTool("recording", recordingToolId(canvasTool));
   // A canvas resize runs at pointer rate; committing every move to the export
   // window's state re-renders the inspector, lanes and timeline and starves
   // the native pane's layout loop. The gesture renders from this draft and
   // commits once on release, exactly like the screenshot editor.
   const [canvasResizeDraft, setCanvasResizeDraft] =
     useState<RecordingOutputSettings | null>(null);
-  const [copyError, setCopyError] = useState<string | null>(null);
   const [previewPositionMs, setPreviewPositionMs] = useState(0);
   const previewPlayingRef = useRef(false);
   // Everything derived below feeds memoized children. A canvas-resize gesture
@@ -344,7 +336,9 @@ export function NativeRecordingPreview({
       };
     }
     if (
-      (canvasTool !== "select" && canvasTool !== "crop") ||
+      (canvasTool !== "select" &&
+        canvasTool !== "crop" &&
+        canvasTool !== "arrow") ||
       !activeVideoTrack ||
       !selectedVideoTracks.has(activeVideoTrack)
     )
@@ -357,7 +351,7 @@ export function NativeRecordingPreview({
     if (canPreviewBakedCamera) {
       if (activeVideoTrack === "primary") {
         return normalizedRecordingSelection({
-          mode: canvasTool,
+          mode: canvasTool === "arrow" ? "select" : canvasTool,
           output: effectiveRecordingOutput.primary,
           paneIndex: 0,
           source: primarySource,
@@ -412,7 +406,7 @@ export function NativeRecordingPreview({
         : previewSourceDimensions.camera;
     if (!source) return null;
     return normalizedRecordingSelection({
-      mode: canvasTool,
+      mode: canvasTool === "arrow" ? "select" : canvasTool,
       output: effectiveRecordingOutput[activeVideoTrack],
       paneIndex,
       source,
@@ -866,6 +860,7 @@ export function NativeRecordingPreview({
     output: effectiveRecordingOutput,
     outputDimensions: previewOutputDimensions,
   });
+  const clearAnnotationRef = useRef(() => {});
   const player = useRecordingPreviewPlayer({
     artifactId,
     audioTrackVolumes,
@@ -886,6 +881,7 @@ export function NativeRecordingPreview({
     },
     onSelectionChange: (paneIndex) => {
       if (paneIndex === null) return;
+      clearAnnotationRef.current();
       if (paneIndex === KEYBOARD_LAYER_ID) {
         keyboardCanvas.selectVisible();
         onSelectedTrackChange?.(null);
@@ -905,6 +901,36 @@ export function NativeRecordingPreview({
     timelineEdit: recordingTimelineEdit,
     zoomRequest,
   });
+  const annotationEdit = useMemo(
+    () => recordingTimelineEdit ?? createRecordingTimelineEdit(artifactId),
+    [recordingTimelineEdit, artifactId],
+  );
+  const annotations = useRecordingAnnotations({
+    edit: annotationEdit,
+    isPlaying: player.isPlaying,
+    onEdit: (next) => onRecordingTimelineEditChange?.(next),
+    onSelectTrack: (track) => {
+      if (player.isPlaying) player.pause();
+      keyboardTimeline.selection.onClear();
+      timelineBlade.blade.clearRangeSelection();
+      timelineBlade.blade.selectSegment(null);
+      onSelectedTrackChange?.(track);
+    },
+    sessionId: player.sessionId,
+    sourceDurationMs: durationMs,
+    tool: bakeCamera && activeVideoTrack === "camera" ? null : canvasTool,
+    trackId: activeVideoTrack
+      ? bakeCamera
+        ? "primary"
+        : activeVideoTrack
+      : null,
+  });
+  clearAnnotationRef.current = annotations.clearSelection;
+  useToolPanelFollowsTool(
+    "recording",
+    recordingToolId(canvasTool),
+    annotations.hasSelection,
+  );
   useRegisterPreviewFit(player);
   const isPlaying = player.isPlaying;
   const getPlayerPositionMs = player.getPositionMs;
@@ -957,7 +983,7 @@ export function NativeRecordingPreview({
     onTrimPreviewStart: trimPreview.start,
     playhead,
     seekPlayer: player.seek,
-    shortcutsEnabled: Boolean(layout),
+    shortcutsEnabled: Boolean(layout) && !annotations.canDelete,
     totalDurationMs,
   });
   const canvasRefs = useMemo(
@@ -1051,72 +1077,32 @@ export function NativeRecordingPreview({
   const moveActiveVideoTrackForward = useCallback(() => {
     moveActiveVideoTrack("forward");
   }, [moveActiveVideoTrack]);
-  // Every way into a tool goes through here, so choosing one always settles
-  // the view with it. The current tool is read from a ref so the shortcut
-  // handlers keep the stable identity the hook above relies on.
   const canvasToolRef = useRef(canvasTool);
   canvasToolRef.current = canvasTool;
-  // A right click on a pane in the native canvas opens the same layer menu the
-  // timeline row opens. The native side selects the layer it landed on and
-  // reports the point; the menu is drawn here, at the pointer.
-  const openTrackMenu = useRecordingTrackMenu(moveVideoTrack);
-  const openCanvasTrackMenuRef = useRef<
-    (paneIndex: number, x: number, y: number) => void
-  >(() => undefined);
-  openCanvasTrackMenuRef.current = (paneIndex, x, y) => {
-    if (canvasToolRef.current !== "select") return;
-    const trackId =
-      paneIndex === 0 ? "primary" : paneIndex === 1 ? "camera" : null;
-    if (
-      !trackId ||
-      !visiblePaneEntries.some((entry) => entry.trackId === trackId)
-    )
-      return;
-    onSelectedTrackChange?.(trackId);
-    void openTrackMenu(
-      { x, y },
-      trackId,
-      recordingTrackMoves(videoTrackOrderList, trackId),
-    );
-  };
-  // The layer menu belongs to the Select tool: putting the tool down takes
-  // the menu with it rather than leaving it open over nothing.
-  useEffect(() => {
-    if (canvasTool !== "select")
-      void dismissPopupMenu(RECORDING_TRACK_MENU_PREFIX);
-  }, [canvasTool]);
-  useEffect(() => {
-    // The subscription lands after a hop. A cleanup that runs before it
-    // lands, as React's development double-mount does, must still let go of
-    // it, or the window hears every click twice and the menu opens and
-    // closes in one go.
-    let unlisten: (() => void) | undefined;
-    let disposed = false;
-    void getCurrentWindow()
-      .listen<{ paneIndex: number; x: number; y: number }>(
-        "preview://context-menu",
-        ({ payload }) => {
-          openCanvasTrackMenuRef.current(
-            payload.paneIndex,
-            payload.x,
-            payload.y,
-          );
-        },
-      )
-      .then((dispose) => {
-        if (disposed) dispose();
-        else unlisten = dispose;
-      });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, []);
+  useRecordingCanvasContextMenu({
+    canvasTool,
+    moveVideoTrack,
+    onSelectedTrackChange,
+    videoTrackOrderList,
+    visiblePaneEntries,
+  });
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
+      if (next === "arrow") {
+        keyboardTimeline.selection.onClear();
+        onSelectedTrackChange?.(
+          bakeCamera ? "primary" : (activeVideoTrack ?? "primary"),
+        );
+      } else if (next !== "select") clearAnnotationRef.current();
       setCanvasTool(next);
     },
-    [setCanvasTool],
+    [
+      setCanvasTool,
+      keyboardTimeline.selection,
+      onSelectedTrackChange,
+      bakeCamera,
+      activeVideoTrack,
+    ],
   );
   // A canvas tool acts on the panes on screen. When the last video track is
   // switched off there is nothing left for it to act on, so the tool is put
@@ -1125,42 +1111,19 @@ export function NativeRecordingPreview({
   useEffect(() => {
     if (!hasVisiblePanes && canvasToolRef.current !== null) setCanvasTool(null);
   }, [hasVisiblePanes, setCanvasTool]);
-  // Cursor and Keyboard are panels without a canvas tool behind them, so
-  // putting one away closes the panel and leaves no tool in hand, the way
-  // pressing an active canvas tool does.
-  const dismissToolPanel = useCallback(() => {
-    void closeToolPanel();
-  }, [closeToolPanel]);
-  // The shortcut opens the panel from the toolbar button's own bounds, the
-  // same anchor a press would give it.
-  const toggleCursorPanel = useCallback(() => {
-    if (openToolPanel === "cursor") {
-      dismissToolPanel();
-      return;
-    }
-    const bounds = document
-      .querySelector("[data-editor-tool=cursor]")
-      ?.getBoundingClientRect();
-    if (bounds) void toggleToolPanel("cursor", bounds);
-  }, [dismissToolPanel, openToolPanel, toggleToolPanel]);
-  const toggleKeyboardPanel = useCallback(() => {
-    if (openToolPanel === "keyboard") {
-      dismissToolPanel();
-      return;
-    }
-    const bounds = document
-      .querySelector("[data-editor-tool=keyboard]")
-      ?.getBoundingClientRect();
-    if (bounds) void toggleToolPanel("keyboard", bounds);
-  }, [dismissToolPanel, openToolPanel, toggleToolPanel]);
-  const toggleCanvasTool = useCallback(() => {
-    changeCanvasTool(canvasToolRef.current === "canvas" ? null : "canvas");
-  }, [changeCanvasTool]);
-  const toggleSelectTool = useCallback(() => {
-    changeCanvasTool(canvasToolRef.current === "select" ? null : "select");
-  }, [changeCanvasTool]);
-  const toggleCropTool = useCallback(() => {
-    changeCanvasTool(canvasToolRef.current === "crop" ? null : "crop");
+  // One toggle apiece, built from one function: picking up the tool already in
+  // hand puts it down. A new canvas tool joins the record rather than copying
+  // the body a fifth time.
+  const toggleTool = useMemo(() => {
+    const toggle = (tool: RecordingCanvasTool) => () => {
+      changeCanvasTool(canvasToolRef.current === tool ? null : tool);
+    };
+    return {
+      arrow: toggle("arrow"),
+      canvas: toggle("canvas"),
+      crop: toggle("crop"),
+      select: toggle("select"),
+    };
   }, [changeCanvasTool]);
   // The crop tool is the one tool you are "in": Enter accepts what is framed
   // and Escape backs out of it, and both simply put the tool down - the crop
@@ -1171,66 +1134,40 @@ export function NativeRecordingPreview({
     if (canvasToolRef.current === "crop") changeCanvasTool(null);
   }, [changeCanvasTool]);
 
-  // The zoom field sits at the left of the transport row. Held as one element
-  // so the memoized controls re-render only when the zoom itself changes.
+  // Keep the transport zoom control stable between zoom changes.
   const zoomControl = useMemo(
     () => <PreviewZoomField onChange={requestZoom} zoomPercent={zoomPercent} />,
     [requestZoom, zoomPercent],
   );
 
-  // The tools read the committed `recordingOutput`, never the resize draft, so
-  // holding the element keeps the title bar's tools stable mid-gesture. Held as
-  // one element so the bar re-renders only when a tool actually changes.
-  const cropToggle = useMemo(
-    () =>
-      visiblePaneEntries.length > 0 ? (
-        <>
-          {hasCursorData || hasKeyboardData ? (
-            <ButtonGroup aria-label="Effects" className="gap-control">
-              {hasCursorData ? (
-                <CursorToolToggle onDismiss={dismissToolPanel} />
-              ) : null}
-              {hasKeyboardData ? (
-                <KeyboardToolToggle onDismiss={dismissToolPanel} />
-              ) : null}
-            </ButtonGroup>
-          ) : null}
-          <RecordingCanvasTools
-            isEnabled={canEditActiveTrack}
-            isFrameEnabled={canResizeActiveTrack}
-            isSelectEnabled={visiblePaneEntries.length > 0}
-            onToolChange={changeCanvasTool}
-            tool={canvasTool}
-          />
-        </>
-      ) : undefined,
-    [
-      canEditActiveTrack,
-      canResizeActiveTrack,
-      canvasTool,
-      changeCanvasTool,
-      dismissToolPanel,
-      hasCursorData,
-      hasKeyboardData,
-      visiblePaneEntries.length,
-    ],
-  );
-  // The tools belong to the title bar above, the way a unified toolbar carries
-  // them. They are offered only while there is a picture to point them at.
-  useProvideEditorToolbarTools(
-    visibleLayout && visibleLayout.panes.length > 0 ? cropToggle : null,
-  );
+  const { toggleCursorPanel, toggleKeyboardPanel } = useRecordingToolbar({
+    canEditActiveTrack,
+    canResizeActiveTrack,
+    canvasTool,
+    changeCanvasTool,
+    hasCursorData,
+    hasKeyboardData,
+    hasVisiblePanes,
+    isPlaying,
+  });
   useEffect(() => {
     playhead.publish(0, 0);
   }, [artifactId, playhead]);
 
-  // Arrows either move the selected layer or the playhead, never both: nudging
-  // needs the selection tool, a movable layer and a parked playhead.
   const canNudgeActiveTrack =
-    canvasTool === "select" && canMoveActiveVideoTrack && !isPlaying;
+    canvasTool === "select" &&
+    canMoveActiveVideoTrack &&
+    !isPlaying &&
+    !annotations.hasSelection;
   useEditorWindowShortcuts({
+    onArrowTool: hasVisiblePanes && !isPlaying ? toggleTool.arrow : undefined,
     onConfirm: isCropping ? leaveCropTool : undefined,
-    onDeselect: isCropping ? leaveCropTool : undefined,
+    onDelete: annotations.canDelete ? annotations.deleteTargeted : undefined,
+    onDeselect: annotations.hasSelection
+      ? annotations.clearSelection
+      : isCropping
+        ? leaveCropTool
+        : undefined,
     onMoveBackward: canMoveActiveVideoTrack
       ? moveActiveVideoTrackBackward
       : undefined,
@@ -1238,14 +1175,14 @@ export function NativeRecordingPreview({
       ? moveActiveVideoTrackForward
       : undefined,
     onNudge: canNudgeActiveTrack ? nudgeActiveTrack : undefined,
-    onResizeCanvas: canResizeActiveTrack ? toggleCanvasTool : undefined,
-    onSelectTool: hasVisiblePanes ? toggleSelectTool : undefined,
+    onResizeCanvas: canResizeActiveTrack ? toggleTool.canvas : undefined,
+    onSelectTool: hasVisiblePanes ? toggleTool.select : undefined,
     onStep: !canNudgeActiveTrack && layout ? timelineBlade.step : undefined,
-    onToggleCrop: hasVisiblePanes ? toggleCropTool : undefined,
+    onToggleCrop: hasVisiblePanes ? toggleTool.crop : undefined,
     onToggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
     onToggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
-    ownsEscape: isCropping,
+    ownsEscape: isCropping || annotations.hasSelection,
   });
   const changeEnabledTracks = useCallback(
     (tracks: Set<number>) => {
@@ -1259,46 +1196,22 @@ export function NativeRecordingPreview({
     },
     [onEnabledVideoTracksChange],
   );
-  const changeSelectedTrack = useCallback(
-    (trackId: RecordingTrackId) => {
-      keyboardTimeline.selection.onClear();
-      onSelectedTrackChange?.(trackId);
-    },
-    [keyboardTimeline.selection, onSelectedTrackChange],
-  );
-  // The copied frame must use the output on screen, which during a resize is
-  // the draft; a ref keeps the handler stable without staling the payload.
-  const copyPayloadRef = useRef({
+  const changeSelectedTrack = useRecordingTrackSelection({
+    clearAnnotations: clearAnnotationRef,
+    clearKeyboard: keyboardTimeline.selection.onClear,
+    onSelectedTrackChange,
+    setTool: changeCanvasTool,
+  });
+  const { copyCurrentFrame, copyError } = useCopyRecordingFrame({
+    annotationClips: annotations.clips,
+    artifactId,
     bakeCamera,
     cameraOverlay,
     cursorEffects,
+    getPositionMs: player.getPositionMs,
     keyboardEffects,
     recordingOutput: effectiveRecordingOutput,
   });
-  copyPayloadRef.current = {
-    bakeCamera,
-    cameraOverlay,
-    cursorEffects,
-    keyboardEffects,
-    recordingOutput: effectiveRecordingOutput,
-  };
-  const getPositionMs = player.getPositionMs;
-  const copyCurrentFrame = useCallback(() => {
-    setCopyError(null);
-    return copyRecordingPreviewFrameToClipboard({
-      artifactId,
-      bakeCamera: copyPayloadRef.current.bakeCamera,
-      cameraOverlay: copyPayloadRef.current.cameraOverlay,
-      cursorEffects: copyPayloadRef.current.cursorEffects,
-      keyboardEffects: copyPayloadRef.current.keyboardEffects,
-      positionMs: getPositionMs(),
-      recordingOutput: copyPayloadRef.current.recordingOutput,
-    }).catch((cause: unknown) => {
-      setCopyError(cause instanceof Error ? cause.message : String(cause));
-      // Rethrown so the copy button knows the press failed and skips its check.
-      throw cause;
-    });
-  }, [artifactId, getPositionMs]);
 
   return (
     <div className="flex min-h-0 grow flex-col">
@@ -1360,50 +1273,31 @@ export function NativeRecordingPreview({
           )}
         </div>
 
-        {audioError ? (
-          <Text
-            className="px-window-inset pb-control-inset text-error"
-            variant="footnote"
-          >
-            {audioError}
-          </Text>
-        ) : null}
-        {player.error ? (
-          <Text
-            className="px-window-inset pb-control-inset text-error"
-            variant="footnote"
-          >
-            {player.error}
-          </Text>
-        ) : null}
-        {copyError ? (
-          <Text
-            className="px-window-inset pb-control-inset text-error"
-            variant="footnote"
-          >
-            {copyError}
-          </Text>
-        ) : null}
+        <PreviewError message={audioError} />
+        <PreviewError message={player.error} />
+        <PreviewError message={copyError} />
       </section>
 
-      {/* The timeline band: transport first, then the lanes it drives. It is
-          set off by the fill ladder alone, with no rule between it and the
-          preview above. */}
       {layout ? (
-        <div className="shrink-0 bg-fill-quaternary">
-          <RecordingPlaybackControls
-            durationMs={timelineBlade.timelineDurationMs}
-            isPlaying={player.isPlaying}
-            onCopyCurrentFrame={copyCurrentFrame}
-            onPause={player.pause}
-            onPlay={player.play}
-            onPlaybackRateChange={player.setPlaybackRate}
-            playbackRate={player.playbackRate}
-            playhead={playhead}
-            zoomControl={zoomControl}
-          />
+        <ResizableRecordingTimelineArea
+          artifactId={artifactId}
+          header={
+            <RecordingPlaybackControls
+              durationMs={timelineBlade.timelineDurationMs}
+              isPlaying={player.isPlaying}
+              onCopyCurrentFrame={copyCurrentFrame}
+              onPause={player.pause}
+              onPlay={player.play}
+              onPlaybackRateChange={player.setPlaybackRate}
+              playbackRate={player.playbackRate}
+              playhead={playhead}
+              zoomControl={zoomControl}
+            />
+          }
+          ready={!isPreparingAudio}
+        >
           {isPreparingAudio ? (
-            <div className="flex shrink-0 items-center justify-center gap-control-inset px-window-inset py-layout text-body text-content-fg-secondary">
+            <div className="flex shrink-0 items-center justify-center gap-control-inset py-layout text-body text-content-fg-secondary">
               <CircularProgress
                 aria-label="Preparing audio preview"
                 isIndeterminate
@@ -1412,41 +1306,45 @@ export function NativeRecordingPreview({
               Preparing audio tracks
             </div>
           ) : (
-            // The transport row above owns its inset, so the lanes take theirs.
-            <div className="px-window-inset">
-              <RecordingTrackLanes
-                adjustedKeyboardFragmentIds={
-                  keyboardTimeline.adjustedFragmentIds
-                }
-                audioTracks={audioTracks}
-                blade={timelineBlade.blade}
-                durationMs={timelineBlade.timelineDurationMs}
-                enabledTracks={enabledTracks}
-                enabledVideoTracks={selectedVideoTracks}
-                hiddenKeyboardFragmentIds={keyboardTimeline.hiddenFragmentIds}
-                hiddenKeyboardItemIds={keyboardTimeline.hiddenItemIds}
-                // Shortcuts turned off leave nothing to place, so the lane goes
-                // with them rather than showing items that are not drawn.
-                keyboardItems={
-                  keyboardEffects.bake ? keyboardTimeline.items : []
-                }
-                keyboardSelection={keyboardTimeline.selection}
-                layout={layout}
-                onEnabledTracksChange={changeEnabledTracks}
-                onEnabledVideoTracksChange={changeEnabledVideoTracks}
-                onSeek={timelineBlade.seek}
-                onSelectedTrackChange={changeSelectedTrack}
-                onVideoTrackOrderChange={onVideoTrackOrderChange}
-                playhead={playhead}
-                selectedTrack={selectedTrack}
-                sourceDurationMs={durationMs}
-                thumbnails={timelineThumbnails}
-                videoTrackOrder={videoTrackOrderList}
-                volumes={audioVolumeByStream}
-              />
-            </div>
+            <RecordingTrackLanes
+              adjustedKeyboardFragmentIds={keyboardTimeline.adjustedFragmentIds}
+              annotationClips={annotations.clips}
+              audioTracks={audioTracks}
+              blade={timelineBlade.blade}
+              durationMs={timelineBlade.timelineDurationMs}
+              enabledTracks={enabledTracks}
+              enabledVideoTracks={selectedVideoTracks}
+              hiddenKeyboardFragmentIds={keyboardTimeline.hiddenFragmentIds}
+              hiddenKeyboardItemIds={keyboardTimeline.hiddenItemIds}
+              // Shortcuts turned off leave nothing to place, so the lane goes
+              // with them rather than showing items that are not drawn.
+              keyboardItems={keyboardEffects.bake ? keyboardTimeline.items : []}
+              keyboardSelection={keyboardTimeline.selection}
+              layout={layout}
+              onAnnotationsChange={annotations.onClipsChange}
+              // Choosing a mark from its lane picks the Select tool up, the
+              // way choosing a camera or screen clip does, so the mark is in
+              // hand rather than merely highlighted.
+              onAnnotationSelect={(id) => {
+                annotations.onSelect(id);
+                changeCanvasTool("select");
+              }}
+              onAnnotationsPreview={annotations.onPreviewClips}
+              onEnabledTracksChange={changeEnabledTracks}
+              onEnabledVideoTracksChange={changeEnabledVideoTracks}
+              onSeek={timelineBlade.seek}
+              onSelectedTrackChange={changeSelectedTrack}
+              onVideoTrackOrderChange={onVideoTrackOrderChange}
+              playhead={playhead}
+              selectedAnnotationId={annotations.selectedId}
+              selectedTrack={annotations.hasSelection ? null : selectedTrack}
+              sourceDurationMs={durationMs}
+              thumbnails={timelineThumbnails}
+              videoTrackOrder={videoTrackOrderList}
+              volumes={audioVolumeByStream}
+            />
           )}
-        </div>
+        </ResizableRecordingTimelineArea>
       ) : null}
     </div>
   );

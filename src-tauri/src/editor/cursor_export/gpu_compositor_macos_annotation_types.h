@@ -47,3 +47,10 @@ typedef struct {
   ScreenwideAnnotation items[SCREENWIDE_MAX_ANNOTATIONS];
   uint32_t count;
 } ScreenwideAnnotations;
+
+/// Source-time clip bounds used by video export. A cut never restarts a clip.
+typedef struct {
+  ScreenwideAnnotation annotation;
+  uint64_t start_ms, end_ms;
+} ScreenwideTimedAnnotation;
+_Static_assert(sizeof(ScreenwideTimedAnnotation) == 80, "Timed annotation ABI");

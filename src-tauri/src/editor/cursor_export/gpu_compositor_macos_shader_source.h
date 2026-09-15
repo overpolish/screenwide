@@ -6,6 +6,7 @@
 #import "gpu_compositor_macos_shader_source_types.h"
 #import "gpu_compositor_macos_shader_source_annotation_curve.h"
 #import "gpu_compositor_macos_shader_source_annotations.h"
+#import "gpu_compositor_macos_shader_source_annotation_video.h"
 #import "gpu_compositor_macos_shader_source_background.h"
 #import "gpu_compositor_macos_shader_source_composition.h"
 #import "gpu_compositor_macos_shader_source_cursor.h"
@@ -24,6 +25,7 @@ __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_TYPES
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_CURVE
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATIONS
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_VIDEO
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_BACKGROUND
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_COMPOSITION
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_CURSOR

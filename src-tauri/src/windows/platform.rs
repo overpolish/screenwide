@@ -91,45 +91,6 @@ pub fn initialize_editor(_window: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 
-#[cfg(target_os = "macos")]
-pub fn set_opacity(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
-  let panel = ensure_recording_panel(window)?;
-  let app = window.app_handle().clone();
-  app.run_on_main_thread(move || panel.set_alpha_value(opacity))
-}
-
-/// Hands keyboard focus back to whatever app owned it before this panel took
-/// key status, without hiding the overlay.
-///
-/// `resignKeyWindow` is a notification AppKit sends itself; calling it directly
-/// tells the window it lost focus while WindowServer still routes keystrokes
-/// here. For a non-activating panel the only public way to actually give focus
-/// up is to leave the window list and come back: ordering the key panel out
-/// makes AppKit pick a new key window - the frontmost app's, since this process
-/// is not active - and `orderFrontRegardless` then puts the overlay back on
-/// screen without asking for key again.
-///
-/// A panel that is not key is left alone; ordering it out and in would be a
-/// pointless flicker.
-#[cfg(target_os = "macos")]
-pub fn release_key_focus(window: &WebviewWindow) -> tauri::Result<()> {
-  let panel = ensure_recording_panel(window)?;
-  let app = window.app_handle().clone();
-  app.run_on_main_thread(move || {
-    if !panel.as_panel().isKeyWindow() {
-      return;
-    }
-    // `Panel::hide` is `orderOut:nil` and `Panel::show` is
-    // `orderFrontRegardless`; neither touches alpha, so the overlay stays as
-    // visible as it was.
-    panel.hide();
-    panel.show();
-  })
-}
-
-/// Drops a panel to the ordinary window level, so one attached to a parent
-/// window sits with it in the window order instead of floating over every
-/// other application. `restore_recording_level` puts the floating level back.
 /// The tooltip's panel. It floats just above ordinary windows, so it clears
 /// the editor it describes without reaching the recording overlays, and it
 /// refuses key status outright: a tooltip appearing must never take the
@@ -140,21 +101,11 @@ pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 #[cfg(target_os = "macos")]
-pub fn set_normal_level(window: &WebviewWindow) -> tauri::Result<()> {
-  let panel = ensure_recording_panel(window)?;
-  panel.set_level(PanelLevel::Normal.value());
-  Ok(())
-}
-
+mod panel_properties_macos;
 #[cfg(target_os = "macos")]
-pub fn restore_recording_level(window: &WebviewWindow) -> tauri::Result<()> {
-  let Some(level) = recording_panel_level(window) else {
-    return Ok(());
-  };
-  let panel = ensure_recording_panel(window)?;
-  panel.set_level(PanelLevel::Custom(level).value());
-  Ok(())
-}
+pub use panel_properties_macos::{
+  release_key_focus, restore_recording_level, set_normal_level, set_opacity,
+};
 
 /// Every window this app floats over the desktop is an overlay: always on top,
 /// and off the taskbar. Its capture affinity follows the user's persistent

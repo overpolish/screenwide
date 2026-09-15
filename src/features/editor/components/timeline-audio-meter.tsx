@@ -25,6 +25,7 @@ export function TimelineAudioMeter({
 }: {
   audioTracks: PreparedAudioTrack[];
   enabledTracks: Set<number>;
+  /** The strip of lanes on screen; the meter never stretches past it. */
   height: number;
   playhead: Playhead;
   volumes: AudioTrackVolumes;
@@ -58,7 +59,10 @@ export function TimelineAudioMeter({
   );
 
   return (
-    <div className="shrink-0 pt-control pl-control">
+    // The meter stands beside the lanes rather than stretching to the column
+    // it is in: its own column already holds a row standing in for the ruler,
+    // so it begins beside the first lane.
+    <div className="shrink-0 self-start pl-control">
       <AudioMeter
         decibels={level}
         height={height}

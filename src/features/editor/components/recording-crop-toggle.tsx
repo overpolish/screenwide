@@ -1,16 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Crop, MousePointer2, ScanSquare } from "lucide-react";
+import { ArrowUpRight, Crop, MousePointer2, ScanSquare } from "lucide-react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 
 import { PreviewToolToggle } from "./preview-tool-toggle";
 
-export type RecordingCanvasTool = "canvas" | "crop" | "select" | null;
+export type RecordingCanvasTool = "arrow" | "canvas" | "crop" | "select" | null;
 
 export function RecordingCanvasTools({
   isEnabled,
+  isArrowEnabled = isEnabled,
   isFrameEnabled = isEnabled,
   isSelectEnabled = isEnabled,
   onToolChange,
@@ -19,6 +20,7 @@ export function RecordingCanvasTools({
   isEnabled: boolean;
   onToolChange: (tool: RecordingCanvasTool) => void;
   tool: RecordingCanvasTool;
+  isArrowEnabled?: boolean;
   isFrameEnabled?: boolean;
   isSelectEnabled?: boolean;
 }) {
@@ -64,6 +66,20 @@ export function RecordingCanvasTools({
       >
         <Crop />
       </PreviewToolToggle>
+      <span className="inline-flex" data-editor-tool="arrow">
+        <PreviewToolToggle
+          isDisabled={!isArrowEnabled}
+          isSelected={tool === "arrow" && isArrowEnabled}
+          label="Arrow"
+          name="Draw arrow"
+          onSelectedChange={(selected) => {
+            onToolChange(selected ? "arrow" : null);
+          }}
+          shortcut="A"
+        >
+          <ArrowUpRight />
+        </PreviewToolToggle>
+      </span>
     </ButtonGroup>
   );
 }

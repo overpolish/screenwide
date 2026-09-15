@@ -338,6 +338,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
   let timeline_destination = directory.join("timeline.mp4");
   let timeline = crate::editor::timeline_edit::TimelinePlan::from_edit(
     &crate::editor::timeline_edit::RecordingTimelineEdit {
+      annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),
       next_segment_id: 2,
@@ -383,6 +384,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
   let single_range_destination = directory.join("timeline-single-range.mp4");
   let single_range = crate::editor::timeline_edit::TimelinePlan::from_edit(
     &crate::editor::timeline_edit::RecordingTimelineEdit {
+      annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),
       next_segment_id: 1,

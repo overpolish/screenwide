@@ -164,6 +164,7 @@ unsafe extern "C" {
     count: usize,
     selected_index: i32,
     mode: i32,
+    active_layer: i32,
   );
   pub(super) fn screenwide_preview_surface_set_annotation_hover_callback(
     handle: *mut std::ffi::c_void,

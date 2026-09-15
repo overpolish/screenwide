@@ -55,6 +55,18 @@ pub(super) const fn requires_frontend_turn(action: ShortcutAction) -> bool {
   )
 }
 
+/// Diagnostics probe (duplicate-delivery investigation): an action carried out
+/// in Rust never reaches a frontend that could acknowledge it, so the log
+/// otherwise stops at `native_shortcut_pressed`. `outcome` names the branch
+/// that ran; `error` is set when that branch reported one. Remove with the
+/// rest of the probe.
+fn record_native_result(action: ShortcutAction, outcome: &str, error: Option<String>) {
+  diagnostics::record(
+    "native_action_result",
+    serde_json::json!({"action": action, "outcome": outcome, "error": error}),
+  );
+}
+
 pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
   if !feature_availability::action_enabled(action) {
     diagnostics::record(
@@ -118,24 +130,35 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
         crate::recording::snapshot(app).status,
         crate::recording::RecordingStatus::Recording | crate::recording::RecordingStatus::Paused
       ) {
-        let _ = crate::recording::toggle_pause(app);
+        let result = crate::recording::toggle_pause(app);
+        record_native_result(action, "pause_toggled", result.err());
+      } else {
+        record_native_result(action, "skipped_not_recording", None);
       }
     }
     ShortcutAction::StartStopRecording => match crate::recording::snapshot(app).status {
       crate::recording::RecordingStatus::Idle => {
-        if !crate::editor::focus_pending_workspace(app) {
+        if crate::editor::focus_pending_workspace(app) {
+          record_native_result(action, "focused_pending_workspace", None);
+        } else {
           notify_frontend(app, action);
         }
       }
       crate::recording::RecordingStatus::Recording | crate::recording::RecordingStatus::Paused => {
-        let _ = crate::recording::stop(app);
+        let result = crate::recording::stop(app);
+        record_native_result(action, "stopped", result.err());
       }
       crate::recording::RecordingStatus::Starting => {
-        let _ = crate::recording::cancel(app);
+        let result = crate::recording::cancel(app);
+        record_native_result(action, "cancelled", result.err());
       }
-      crate::recording::RecordingStatus::Stopping => {}
+      crate::recording::RecordingStatus::Stopping => {
+        record_native_result(action, "skipped_stopping", None);
+      }
     },
     ShortcutAction::RulerOverlay => {
+      // `start_detached` spawns the real work, and records the settled
+      // `native_action_result` itself once the overlay has opened or failed.
       crate::ruler::start_detached(app);
     }
   }

@@ -4,6 +4,7 @@
 use super::*;
 
 pub(super) fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
+  crate::editor::annotations::timing::validate_clips(&edit.annotation_clips)?;
   if edit.segments.is_empty() || edit.segments.len() > MAX_SEGMENTS {
     return Err("The timeline must contain a reasonable number of segments".to_owned());
   }

@@ -121,12 +121,16 @@ screenwide_export_encode_cursor_overlay(
   AVAssetWriterInputPixelBufferAdaptor *adaptor;
   NSURL *output_url;
   float source_frame_rate;
+  uint64_t source_duration_us;
   id<MTLDevice> device;
   id<MTLCommandQueue> queue;
   id<MTLTexture> cursor_artwork;
   NSMutableDictionary *keyboard_cache;
   CVMetalTextureCacheRef texture_cache;
   const ScreenwideCanvas *canvas;
+  const ScreenwideTimedAnnotation *annotations;
+  uint32_t annotation_count;
+  id<MTLComputePipelineState> annotation_luma_pipeline, annotation_chroma_pipeline;
   const ScreenwideCameraOverlay *camera_overlay;
   const ScreenwideCursorArtwork *artworks;
   uint32_t artwork_count;

@@ -15,6 +15,7 @@ import { formatDuration } from "../duration";
 
 import { Playhead } from "./scrub-playhead";
 import { ElapsedTime } from "./scrub-timeline";
+import { useRegisterTimelinePlaybackRow } from "./timeline-band-playback-row";
 
 type RecordingPlaybackControlsProps = {
   durationMs: number;
@@ -52,10 +53,18 @@ export const RecordingPlaybackControls = memo(
     playhead,
     zoomControl,
   }: RecordingPlaybackControlsProps) {
+    // Inside the resizable band this row stands above the scroller, and
+    // reports its height so the band can count it towards its own.
+    const registerPlaybackRow = useRegisterTimelinePlaybackRow();
     return (
       // The band's first row: standard controls inside the window inset, with
       // the transport on the window's centre line whatever stands either side.
-      <div className="relative flex min-h-control-height shrink-0 items-center justify-center gap-control px-window-inset py-control-inset">
+      <div
+        // No fill of its own: the band already paints one, and a second copy
+        // tints this strip twice and breaks the band into tones.
+        className="relative flex min-h-control-height shrink-0 items-center justify-center gap-control px-window-inset py-control-inset"
+        ref={registerPlaybackRow}
+      >
         {zoomControl ? (
           <div className="absolute left-window-inset flex items-center gap-section">
             {zoomControl}

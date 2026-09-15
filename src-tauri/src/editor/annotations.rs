@@ -26,3 +26,5 @@ pub(crate) const MAX_ANNOTATIONS: usize = 32;
 
 #[cfg(target_os = "macos")]
 pub(crate) mod native;
+
+pub(crate) mod timing;

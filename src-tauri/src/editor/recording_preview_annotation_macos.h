@@ -18,11 +18,13 @@ typedef struct {
   double middle_x, middle_y;
   double end_x, end_y;
   double start_head, end_head;
+  int32_t layer_id;
+  uint32_t index;
 } ScreenwidePreviewAnnotation;
-_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 64,
+_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 72,
                "Rust/C annotation handle layout mismatch");
 /// How many arrows one layer can carry, matching `MAX_ANNOTATIONS`.
-static const NSUInteger ScreenwideMaxAnnotations = 32;
+static const NSUInteger ScreenwideMaxAnnotations = 64;
 /// What the pointer does over the picture. `Select` hit-tests the arrows
 /// that are already there and lets everything else fall through to the
 /// layer; `Arrow` also draws a new one on empty picture.

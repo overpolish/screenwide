@@ -54,6 +54,7 @@ fn exports_recenter_inset_pixels_outside_the_source_crop() {
   };
   let cancelled = AtomicBool::new(false);
   let result = export(CursorExportRequest {
+    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
     camera: None,

@@ -25,6 +25,7 @@ import { clamp, Playhead } from "./scrub-playhead";
 import { SeekHandler } from "./scrub-timeline";
 import { TimelineRangeSelection } from "./timeline-blade";
 import { useRecordingTimelineTrim } from "./use-recording-timeline-trim";
+import { useTimelineSeek } from "./use-timeline-seek";
 
 export function useRecordingTimelineBlade({
   artifactId,
@@ -43,7 +44,7 @@ export function useRecordingTimelineBlade({
   framesPerSecond: number | null;
   getPositionMs: () => number;
   playhead: Playhead;
-  seekPlayer: (positionMs: number, phase: "end" | "move" | "start") => void;
+  seekPlayer: SeekHandler;
   shortcutsEnabled: boolean;
   totalDurationMs: number;
   edit?: RecordingTimelineEdit | null;
@@ -139,17 +140,12 @@ export function useRecordingTimelineBlade({
     totalDurationMs,
   });
 
-  const seek = useCallback<SeekHandler>(
-    (ratio, phase) => {
-      const sourcePosition = recordingTimelineOutputToSource(
-        effectiveEdit,
-        ratio,
-      );
-      playhead.publish((ratio * timelineDurationMs) / 1_000, ratio);
-      seekPlayerRef.current(sourcePosition * totalDurationMs, phase);
-    },
-    [effectiveEdit, playhead, timelineDurationMs, totalDurationMs],
-  );
+  const seek = useTimelineSeek({
+    durationMs: totalDurationMs,
+    edit: effectiveEdit,
+    player: seekPlayerRef,
+    playhead,
+  });
 
   useEffect(() => {
     const previous = previousEditRef.current;

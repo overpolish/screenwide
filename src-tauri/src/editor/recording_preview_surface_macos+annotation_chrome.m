@@ -15,8 +15,7 @@ static const CFTimeInterval kAnnotationHoverDuration = 0.160;
 SCREENWIDE_PREVIEW_PRIVATE ScreenwideAnnotationMode annotation_active_mode(
     ScreenwidePreviewSurface *surface) {
   if (surface == nil || !surface.editorEnabled || surface.editorSuspended ||
-      !surface.hasSelection ||
-      surface.selection.pane_index >= surface.editorBaseRects.count)
+      surface.editorBaseRects.count == 0)
     return ScreenwideAnnotationModeNone;
   return surface.annotationMode;
 }
@@ -28,7 +27,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_owns_chrome(
   // is holding an arrow, so an ordinary layer selection is untouched.
   return mode == ScreenwideAnnotationModeArrow ||
          (mode == ScreenwideAnnotationModeSelect &&
-          surface.annotationSelected >= 0);
+          surface.annotationSelected != -1);
 }
 
 SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(

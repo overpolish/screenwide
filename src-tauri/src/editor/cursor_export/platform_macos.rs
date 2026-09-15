@@ -13,6 +13,10 @@ use crate::editor::cursor_effects::{NativeGpuArtwork, NativeGpuCursor};
 #[path = "platform_macos/mux.rs"]
 mod mux;
 
+#[path = "timed_annotations.rs"]
+mod timed_annotations;
+use timed_annotations::NativeTimedAnnotation;
+
 const GPU_PROGRESS_PERCENT: u64 = 95;
 static GPU_EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
 
@@ -59,6 +63,8 @@ unsafe extern "C" {
     artwork_count: u32,
     keyboards: *const crate::editor::keyboard_effects::KeyboardOverlay,
     keyboard_count: u32,
+    annotations: *const NativeTimedAnnotation,
+    annotation_count: u32,
     timeline_ranges: *const crate::editor::timeline_edit::TimelineRange,
     timeline_range_count: u32,
     camera_path: *const c_char,
@@ -122,6 +128,7 @@ fn render_gpu_video(
   let keyboards = keyboard_timeline
     .map(|timeline| timeline.frames.as_slice())
     .unwrap_or_default();
+  let annotations = timed_annotations::for_request(request);
   let camera = request.camera.map(|(path, _)| c_path(path)).transpose()?;
   let camera_overlay = request
     .camera
@@ -172,6 +179,8 @@ fn render_gpu_video(
       artworks.len() as u32,
       keyboards.as_ptr(),
       keyboards.len() as u32,
+      annotations.as_ptr(),
+      annotations.len() as u32,
       timeline_ranges.as_ptr(),
       timeline_ranges.len() as u32,
       camera
@@ -258,7 +267,12 @@ fn export_gpu(mut request: CursorExportRequest<'_>) -> Result<ExportRunResult, S
 }
 
 pub(super) fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
-  export_gpu(request)
+  let output = export_output::scaled(&request);
+  export_gpu(CursorExportRequest {
+    output: &output,
+    on_progress: &mut *request.on_progress,
+    ..request
+  })
 }
 
 #[cfg(test)]
@@ -273,3 +287,10 @@ mod recenter_tests;
 #[cfg(test)]
 #[path = "platform_macos_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "platform_macos_timed_annotation_tests.rs"]
+mod timed_annotation_tests;
+
+#[path = "export_output.rs"]
+mod export_output;

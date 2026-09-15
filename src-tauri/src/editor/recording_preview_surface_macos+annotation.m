@@ -4,6 +4,7 @@
 #import "osc_gpu_macos.h"
 #import "recording_preview_surface_macos_private.h"
 #include <math.h>
+#include "recording_preview_annotation_layers_macos.h"
 
 /// A press has to travel this far before it draws an arrow rather than
 /// clearing the choice: a click and a very short drag are the same gesture to
@@ -26,7 +27,11 @@ static const ScreenwidePreviewAnnotation *annotation_items(
 /// coordinates. Every normalised handle is placed inside it.
 SCREENWIDE_PREVIEW_PRIVATE NSRect annotation_image_frame(
     ScreenwidePreviewSurface *surface) {
-  return selection_image_frame_for(surface, surface.selection);
+  NSUInteger count = 0;
+  const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
+  NSInteger selected = surface.annotationSelected;
+  int32_t layer = selected >= 0 && (NSUInteger)selected < count ? items[selected].layer_id : -1;
+  return annotation_layer_image(surface, layer);
 }
 
 static NSPoint annotation_display_point(NSRect image, double x, double y) {
@@ -81,9 +86,9 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
   NSUInteger count = 0;
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
   if (items == NULL) return -1;
-  NSRect image = annotation_image_frame(surface);
-  if (image.size.width <= 0.0 || image.size.height <= 0.0) return -1;
   for (NSInteger index = (NSInteger)count - 1; index >= 0; index--) {
+    NSRect image = annotation_layer_image(surface, items[index].layer_id);
+    if (image.size.width <= 0.0 || image.size.height <= 0.0) continue;
     if (annotation_shaft_distance(image, items[(NSUInteger)index], point) <= 6.0)
       return index;
   }
@@ -101,7 +106,14 @@ static void emit_annotation_gesture(ScreenwidePreviewSurface *surface,
   // The macOS workspace draws every layer into one pane, so the selection's
   // `pane_index` is always 0 and `layer_id` carries the workspace order the
   // gesture addresses - the same identity `emit_selection_gesture` reports.
-  surface.annotationGestureCallback(phase, surface.selection.layer_id,
+  uint32_t layer = surface.selection.layer_id;
+  NSUInteger count = 0;
+  const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
+  if ((targetKind == ScreenwideAnnotationTargetExisting || targetKind == ScreenwideAnnotationTargetSelect) && index < count) {
+    if (items[index].layer_id >= 0) layer = (uint32_t)items[index].layer_id;
+    index = items[index].index;
+  }
+  surface.annotationGestureCallback(phase, layer,
                                     targetKind, index, handle, x, y,
                                     surface.annotationGestureContext);
 }
@@ -117,8 +129,13 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
   NSInteger shaft = handle >= 0 ? -1 : annotation_shaft_at_point(surface, point);
   if (handle < 0 && shaft < 0 && mode != ScreenwideAnnotationModeArrow) {
     // Empty picture with only the select tool in hand: the arrow chrome lets
-    // go, and the press carries on to the layer underneath.
-    if (surface.annotationSelected >= 0) {
+    // go, and the press carries on to the layer underneath. Recording
+    // selection clears the mark together with the new layer; screenshots
+    // still publish their selected-image annotation document separately.
+    NSUInteger count = 0;
+    const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
+    NSInteger selected = surface.annotationSelected;
+    if (selected >= 0 && (NSUInteger)selected < count && items[selected].layer_id < 0) {
       surface.annotationSelected = -1;
       emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetNone, 0,
                               ScreenwideAnnotationHandleBody, point);
@@ -148,6 +165,13 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
     // arrow, which begins as its own gesture once it has travelled - exactly
     // as a grip does, so a click never leaves an edit in the history.
     surface.annotationSelected = shaft;
+    NSUInteger count = 0;
+    const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
+    ScreenwidePreviewSelection target;
+    if (annotation_layer_selection(surface, items[shaft].layer_id, &target)) {
+      surface.selection = target;
+      surface.hasSelection = YES;
+    }
     view.annotationDragTargetKind = ScreenwideAnnotationTargetExisting;
     view.annotationDragIndex = (uint32_t)shaft;
     view.annotationDragHandle = ScreenwideAnnotationHandleBody;

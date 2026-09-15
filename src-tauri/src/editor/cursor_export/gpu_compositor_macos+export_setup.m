@@ -112,8 +112,9 @@ reader_output(AVAssetReader *reader, AVAssetTrack *track, OSType format,
     return fail(error_text, error_capacity, error.localizedDescription);
   writer.shouldOptimizeForNetworkUse = YES;
   source_frame_rate = screen_track.nominalFrameRate;
-  if (!isfinite(source_frame_rate) || source_frame_rate < 1.0)
+  if (!isfinite(source_frame_rate) || source_frame_rate < 60.0)
     source_frame_rate = 60.0;
+  source_duration_us = (uint64_t)llround(CMTimeGetSeconds(CMTimeRangeGetEnd(screen_track.timeRange)) * 1000000.0);
   NSNumber *expected_frame_rate = @((NSInteger)llround(source_frame_rate));
   NSDictionary *video_settings = @{
     AVVideoCodecKey : AVVideoCodecTypeH264,
@@ -163,6 +164,8 @@ reader_output(AVAssetReader *reader, AVAssetTrack *track, OSType format,
       device, library, @"overlay_keyboard_luma", &error);
   keyboard_chroma_pipeline = screenwide_keyboard_pipeline(
       device, library, @"overlay_keyboard_chroma", &error);
+  annotation_luma_pipeline = screenwide_keyboard_pipeline(device, library, @"overlay_annotation_luma", &error);
+  annotation_chroma_pipeline = screenwide_keyboard_pipeline(device, library, @"overlay_annotation_chroma", &error);
   camera_luma_pipeline =
       [device newComputePipelineStateWithFunction:
                   [library newFunctionWithName:@"overlay_camera_luma"]
@@ -200,6 +203,7 @@ reader_output(AVAssetReader *reader, AVAssetTrack *track, OSType format,
       camera_chroma_pipeline == nil || queue == nil ||
       canvas_luma_pipeline == nil || canvas_chroma_pipeline == nil ||
       screen_luma_pipeline == nil || screen_chroma_pipeline == nil ||
+      annotation_luma_pipeline == nil || annotation_chroma_pipeline == nil ||
       texture_cache == NULL)
     return fail(error_text, error_capacity,
                 error.localizedDescription

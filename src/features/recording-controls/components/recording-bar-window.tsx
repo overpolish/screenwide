@@ -37,7 +37,6 @@ import {
   setRecordingSourceSelectorVisible,
   showRegionSelector,
   selectedWindowAvailable,
-  toggleRecordingUi,
 } from "../../recording-sources/api";
 import { findCurrentMonitor } from "../../recording-sources/monitor-selection";
 import {
@@ -47,15 +46,12 @@ import {
 import { useRecordingSourceStore } from "../../recording-sources/store";
 import { type RecordingMode } from "../../recording-sources/types";
 import { cancelRuler } from "../../region-selector/ruler-screenshot-mode";
-import { ShortcutAction } from "../../settings/types";
-import {
-  cancelTextRecognition,
-  startTextRecognition,
-} from "../../text-recognition/api";
+import { cancelTextRecognition } from "../../text-recognition/api";
 import { startRecording } from "../api";
 import { startRecordingOptions } from "../recording-request";
 import { selectStatus, useRecordingStore } from "../store";
 import { RecordingError } from "../types";
+import { useRecordingBarShortcuts } from "../use-recording-bar-shortcuts";
 import { useRecordingInputAvailability } from "../use-recording-input-availability";
 import { useScreenshotCapture } from "../use-screenshot-capture";
 
@@ -79,7 +75,6 @@ const SKIPPED_INPUT_LABELS: Record<string, string> = {
   microphone: "microphone",
   systemAudio: "system audio",
 };
-const SHORTCUT_ACTION_EVENT = "global-shortcut://action";
 const validateSelectedWindow = async (isActive: () => boolean) => {
   const selected = useRecordingSourceStore.getState().selectedWindow;
   if (!selected) return;
@@ -210,6 +205,7 @@ export function RecordingBarWindow() {
     selectedSystemAudio,
     setInput,
   } = useRecordingInputStore((state) => state);
+  useRecordingBarShortcuts();
   const inputAvailability = useRecordingInputAvailability({
     active:
       isRecordingUiVisible &&
@@ -387,40 +383,6 @@ export function RecordingBarWindow() {
       },
     );
 
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, []);
-
-  useEffect(() => {
-    let unlisten: UnlistenFn | undefined;
-    let disposed = false;
-    // Emitting to a window does not scope delivery: `listen` registers for any
-    // target, so every window sees every shortcut action and each listener has
-    // to match the one it owns exactly.
-    void listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
-      if (payload === "toggleRecordingBar") {
-        void toggleRecordingUi();
-        return;
-      }
-      if (payload === "recognizeText") {
-        void (async () => {
-          await hideRecordingUi();
-          await startTextRecognition();
-        })().catch((error: unknown) => {
-          console.error("Could not start text recognition", error);
-        });
-        return;
-      }
-      if (payload !== "startStopRecording") return;
-      startRecording(startRecordingOptions()).catch((error: unknown) => {
-        console.error("Could not start the recording", error);
-      });
-    }).then((listener) => {
-      if (disposed) listener();
-      else unlisten = listener;
-    });
     return () => {
       disposed = true;
       unlisten?.();

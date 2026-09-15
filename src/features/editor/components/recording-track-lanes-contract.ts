@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { RecordingAnnotationClip } from "../recording-annotations";
 import {
   PreparedAudioTrack,
   RecordingKeyboardTimelineItem,
@@ -38,12 +39,19 @@ export type RecordingTrackLanesProps = {
   thumbnails: RecordingTimelineThumbnails;
   videoTrackOrder: RecordingVideoTrackId[];
   volumes: AudioTrackVolumes;
+  annotationClips?: RecordingAnnotationClip[];
+  onAnnotationSelect?: (id: string) => void;
+  onAnnotationsChange?: (clips: RecordingAnnotationClip[]) => void;
+  onAnnotationsPreview?: (clips: RecordingAnnotationClip[] | null) => void;
   onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
+  selectedAnnotationId?: string | null;
 };
 
 /**
  * Where the lanes begin, for an overlay that has to line up with them: the
- * gutter column plus the section gap that separates it from the lanes.
+ * window's own inset, which the rows carry rather than the scroll area around
+ * them, plus the gutter column and the section gap that separates it from the
+ * lanes.
  */
 export const TIMELINE_LANE_LEFT_CLASS =
-  "left-[calc(var(--spacing-timeline-gutter)+var(--spacing-section))]";
+  "left-[calc(var(--spacing-window-inset)+var(--spacing-timeline-gutter)+var(--spacing-section))]";

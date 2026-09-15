@@ -78,6 +78,7 @@ fn fragment_deletions_map_to_their_segment_source_range() {
 
 fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
   RecordingTimelineEdit {
+    annotation_clips: Vec::new(),
     artifact_id,
     keyboard_deletions: Box::default(),
     next_segment_id: 2,

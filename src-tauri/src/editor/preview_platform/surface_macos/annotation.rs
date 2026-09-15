@@ -33,6 +33,16 @@ impl RecordingPreviewSurface {
     selected_index: i32,
     mode: u32,
   ) {
+    self.set_annotation_layer(handles, selected_index, mode, -1);
+  }
+
+  pub(crate) fn set_annotation_layer(
+    &self,
+    handles: &[NativeAnnotationHandles],
+    selected_index: i32,
+    mode: u32,
+    active_layer: i32,
+  ) {
     unsafe {
       screenwide_preview_surface_set_annotations(
         self.handle,
@@ -40,6 +50,7 @@ impl RecordingPreviewSurface {
         handles.len(),
         selected_index,
         mode as i32,
+        active_layer,
       );
     }
   }

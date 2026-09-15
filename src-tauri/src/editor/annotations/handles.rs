@@ -30,7 +30,8 @@ pub(crate) fn normalised_point(point: AnnotationPoint, source: (u32, u32)) -> (f
 /// The heads travel as a length rather than as a triangle because the native
 /// side already has the tips and can take the aim from them; zero means that
 /// end carries no head. The half-base is half the length, which is the
-/// shader's four-to-two proportions. Eight doubles, matching the C
+/// shader's four-to-two proportions. Layer identity and local index follow
+/// the eight geometry doubles, matching the C
 /// `ScreenwidePreviewAnnotation`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -43,9 +44,11 @@ pub(crate) struct NativeAnnotationHandles {
   pub(crate) end_y: f64,
   pub(crate) start_head: f64,
   pub(crate) end_head: f64,
+  pub(crate) layer_id: i32,
+  pub(crate) index: u32,
 }
 
-const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 64);
+const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 72);
 
 /// How far a head reaches back from its tip, as a fraction of the image's
 /// drawn width. The stroke is in output pixels and the image is drawn
@@ -70,7 +73,8 @@ pub(crate) fn annotation_handles(
 ) -> Vec<NativeAnnotationHandles> {
   annotations
     .iter()
-    .map(|annotation| {
+    .enumerate()
+    .map(|(index, annotation)| {
       let head = annotation.style.head;
       let AnnotationShape::Arrow {
         start,
@@ -81,6 +85,8 @@ pub(crate) fn annotation_handles(
       let (middle_x, middle_y) = normalised_point(curve_midpoint(*start, *control, *end), source);
       let (end_x, end_y) = normalised_point(*end, source);
       NativeAnnotationHandles {
+        layer_id: -1,
+        index: index as u32,
         start_x,
         start_y,
         middle_x,

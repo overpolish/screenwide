@@ -87,7 +87,7 @@ fn append(directory: &Path, entry: &Value, limit: u64) -> std::io::Result<()> {
     .write_all(&line)
 }
 
-pub(super) fn snapshot(app: &AppHandle, reason: &str) {
+pub(crate) fn snapshot(app: &AppHandle, reason: &str) {
   let settings = app
     .state::<super::ShortcutSettingsState>()
     .0
@@ -114,6 +114,18 @@ pub(super) fn snapshot(app: &AppHandle, reason: &str) {
   );
 }
 
+/// Diagnostics probe (duplicate-delivery investigation): the one session that
+/// handled a press twice was a crash-recovery session, so the binding state
+/// after recovery is worth comparing with the state at startup. Recovery runs
+/// from `editor::initialize`, which the setup order puts *before*
+/// `shortcuts::initialize`, so this snapshot precedes the
+/// `startup_registration_complete` one and reads the pre-registration state.
+/// Remove with the rest of the probe.
+pub(crate) fn recovery_offered(app: &AppHandle) {
+  record("recovery_offered", json!({}));
+  snapshot(app, "recovery_offered");
+}
+
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FrontendPhase {
@@ -127,19 +139,30 @@ pub enum FrontendPhase {
 }
 
 /// Persist acknowledgements so event delivery can be distinguished from a
-/// registered shortcut that never reached the screenshot frontend.
+/// registered shortcut that never reached the frontend that owns the action.
+///
+/// `context_id`, `listener_id` and `live_listeners` are a temporary probe for
+/// the duplicate-delivery bug: one press producing two `received` entries.
+/// They tell apart two subscriptions in one webview (same `context_id`,
+/// different `listener_id`), one subscription delivered twice (both fields
+/// equal) and two webviews sharing a label (different `context_id`). Remove
+/// all three when that is settled.
 #[tauri::command]
 pub fn report_shortcut_diagnostic(
   window: tauri::WebviewWindow,
   phase: FrontendPhase,
   action: Option<super::ShortcutAction>,
   error: Option<String>,
+  context_id: Option<String>,
+  listener_id: Option<u32>,
+  live_listeners: Option<u32>,
 ) {
   record(
     "screenshot_frontend",
     json!({
       "window": window.label(), "phase": phase, "action": action,
       "error": error.map(|text| text.chars().take(2000).collect::<String>()),
+      "contextId": context_id, "listenerId": listener_id, "liveListeners": live_listeners,
     }),
   );
 }

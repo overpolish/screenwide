@@ -153,6 +153,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
   let cancelled = AtomicBool::new(false);
   let mut progress = Vec::new();
   let result = export(CursorExportRequest {
+    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
     camera: None,
@@ -191,7 +192,22 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
     "the delivered cursor-baked recording must use compatible H.264 video"
   );
 
-  for (timestamp, expected_x) in [("0", 80), ("0.5", 160)] {
+  // The export honours the resolution scale, so the delivered movie is
+  // smaller than the canvas the cursor was recorded against. Read the
+  // delivered size from the same helper the export sizes itself with, and
+  // measure the cursor in those pixels rather than in the canvas's.
+  let (exported_width, exported_height) = super::super::output_dimensions(
+    320,
+    180,
+    VideoExportOptions {
+      compression: 1,
+      resolution_scale_percent: 50,
+      source_scale_percent: 100,
+    },
+  );
+  let scale = f64::from(exported_width) / 320.0;
+  let scaled = |value: u32| (f64::from(value) * scale).round() as u32;
+  for (timestamp, expected_x) in [("0", scaled(80)), ("0.5", scaled(160))] {
     let frame = Command::new(media_preview::ffmpeg_path())
       .args(["-hide_banner", "-loglevel", "error", "-ss", timestamp, "-i"])
       .arg(&destination)
@@ -207,13 +223,16 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       .output()
       .unwrap();
     assert!(frame.status.success());
-    assert_eq!(frame.stdout.len(), 320 * 180 * 3);
+    assert_eq!(
+      frame.stdout.len(),
+      exported_width as usize * exported_height as usize * 3
+    );
     let lit = frame
       .stdout
       .chunks_exact(3)
       .enumerate()
       .filter(|(_, pixel)| pixel.iter().any(|channel| *channel > 200))
-      .map(|(index, _)| (index % 320, index / 320))
+      .map(|(index, _)| (index % exported_width as usize, index / exported_width as usize))
       .collect::<Vec<_>>();
     assert!(
       !lit.is_empty(),
@@ -223,22 +242,29 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
     let right = lit.iter().map(|(x, _)| *x).max().unwrap();
     let top = lit.iter().map(|(_, y)| *y).min().unwrap();
     // Sample early while keeping the recorded hotspot at the drawn tip.
+    let expected_x = expected_x as usize;
+    let expected_y = scaled(80) as usize;
+    // The tolerances travel with the picture: a half-size export draws a
+    // half-size cursor, so the slack that framed it at full size would
+    // otherwise let a badly placed one through.
+    let slack = scaled(12) as usize;
     assert!(
-      left.abs_diff(expected_x) <= 12,
+      left.abs_diff(expected_x) <= slack,
       "the cursor at {timestamp}s starts at x={left}, expected about {expected_x}"
     );
     assert!(
-      top.abs_diff(80) <= 12,
-      "the cursor at {timestamp}s starts at y={top}, expected about 80"
+      top.abs_diff(expected_y) <= slack,
+      "the cursor at {timestamp}s starts at y={top}, expected about {expected_y}"
     );
     assert!(
-      right - left <= 48,
+      right - left <= scaled(48) as usize,
       "the cursor at {timestamp}s smeared from x={left} to x={right}"
     );
   }
   let timeline_destination = directory.join("timeline-output.mp4");
   let timeline = crate::editor::timeline_edit::TimelinePlan::from_edit(
     &crate::editor::timeline_edit::RecordingTimelineEdit {
+      annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),
       next_segment_id: 2,
@@ -261,6 +287,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
   )
   .unwrap();
   let result = export(CursorExportRequest {
+    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
     camera: None,
@@ -371,6 +398,7 @@ fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
 
   let cancelled = AtomicBool::new(false);
   let result = export(CursorExportRequest {
+    annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
     audio_layout: AudioLayout::SeparateTracks,
     audio_source: None,
     camera: None,
@@ -518,6 +546,7 @@ fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
       "screen-on-top.mp4"
     });
     let result = export(CursorExportRequest {
+      annotation_track: crate::editor::annotations::timing::AnnotationTrack::Primary,
       audio_layout: AudioLayout::SeparateTracks,
       audio_source: None,
       camera: Some((
