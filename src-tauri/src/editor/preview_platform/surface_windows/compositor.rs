@@ -74,6 +74,10 @@ struct Constants {
   image_rect: [f32; 4],
   crop_rect: [f32; 4],
   source_crop_rect: [f32; 4],
+  /// The crop tool's result layer: its output-pixel rectangle, then its
+  /// radius, an enabled flag, the shadow sigma and one spare word.
+  crop_preview_rect: [f32; 4],
+  crop_preview_effects: [f32; 4],
   solid_color: [f32; 4],
   base_color: [f32; 4],
   recenter_inset_color: [f32; 4],
@@ -162,6 +166,9 @@ mod tests {
   }
 }
 
+#[cfg(all(test, target_os = "windows"))]
+#[path = "compositor/crop_preview_tests.rs"]
+mod crop_preview_tests;
 #[cfg(all(test, target_os = "windows", target_arch = "x86_64"))]
 #[path = "compositor/fpu_tests.rs"]
 mod fpu_tests;

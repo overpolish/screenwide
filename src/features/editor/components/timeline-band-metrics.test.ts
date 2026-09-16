@@ -22,7 +22,9 @@ const headerHeight = 44;
 
 describe("the height a lanes block asks the band for", () => {
   it("counts the fixed ruler row above the rows that scroll", () => {
-    expect(timelineLanesHeight(200)).toBe(200 + TIMELINE_HEADER_BLOCK_HEIGHT_PX);
+    expect(timelineLanesHeight(200)).toBe(
+      200 + TIMELINE_HEADER_BLOCK_HEIGHT_PX,
+    );
   });
 
   it("is the whole band once the transport row is added to it", () => {
@@ -40,8 +42,11 @@ describe("the height a lanes block asks the band for", () => {
 describe("the band's minimum height", () => {
   it("lands near two lanes' worth of band", () => {
     // Pinned so the sum below cannot drift silently when a token moves. The
-    // transport row leaving the scroller did not change what must stay visible.
-    expect(TIMELINE_MIN_HEIGHT_PX).toBe(128);
+    // Windows skin's 2rem rows make the minimum 160; macOS's 1.5rem rows make
+    // 128. Both keep the transport, the ruler and two lane rows on screen.
+    expect(TIMELINE_MIN_HEIGHT_PX).toBe(
+      /Windows/i.test(navigator.userAgent) ? 160 : 128,
+    );
   });
 
   it("is the sum of the rows that must stay visible", () => {
@@ -155,20 +160,10 @@ describe("timelineMaximumHeight", () => {
 
 describe("timelineMeterHeight", () => {
   it("stops where the rows' own bottom inset begins", () => {
-    expect(
-      timelineMeterHeight({ laneContentHeight: 500, visibleHeight: 200 }),
-    ).toBe(200 - CONTROL_INSET_PX);
-  });
-
-  it("never stands taller than the lanes it measures", () => {
-    expect(
-      timelineMeterHeight({ laneContentHeight: 60, visibleHeight: 400 }),
-    ).toBe(60);
+    expect(timelineMeterHeight(200)).toBe(200 - CONTROL_INSET_PX);
   });
 
   it("keeps a row's worth however little of the band is left", () => {
-    expect(
-      timelineMeterHeight({ laneContentHeight: 500, visibleHeight: 4 }),
-    ).toBe(TIMED_LANE_ROW_HEIGHT_PX);
+    expect(timelineMeterHeight(4)).toBe(TIMED_LANE_ROW_HEIGHT_PX);
   });
 });

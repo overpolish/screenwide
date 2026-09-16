@@ -4,7 +4,6 @@
 import {
   ReactNode,
   useCallback,
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -25,6 +24,7 @@ import {
   RegisterPlaybackRow,
   RegisterPlaybackRowContext,
 } from "./timeline-band-playback-row";
+import { useTimelineBandDrag } from "./use-timeline-band-drag";
 
 const MIN_PREVIEW_HEIGHT = 160;
 const INITIAL_HEIGHT = 200;
@@ -62,7 +62,6 @@ function TimelineArea({
   const rootRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
-  const dragRef = useRef<{ height: number; y: number } | null>(null);
   const [height, setHeight] = useState(INITIAL_HEIGHT);
   // Two stops, measured separately: what the preview can spare above the band,
   // and how tall the timeline block inside it actually is.
@@ -75,6 +74,18 @@ function TimelineArea({
     setReportedHeight(height);
   }, []);
   const contentHeight = reportedHeight ?? measuredHeight;
+  // A band that is not ready shows a placeholder whose height means nothing, so
+  // it is not measured into the band's stops, and the one-time fit flag is
+  // dropped with it. Adjusted during render so a band that re-prepares fits
+  // again against its block's own reported height, never the placeholder's.
+  const [previousReady, setPreviousReady] = useState(ready);
+  if (previousReady !== ready) {
+    setPreviousReady(ready);
+    if (!ready) {
+      setMeasuredHeight(0);
+      initializedRef.current = false;
+    }
+  }
   // The transport row is measured rather than assumed: a control can grow it,
   // and the band's height is that row plus the block under it.
   const playbackObserverRef = useRef<ResizeObserver | null>(null);
@@ -118,8 +129,11 @@ function TimelineArea({
     };
   }, []);
   // The block's own height is the band's other stop, and it moves: a track
-  // added or a lane grown changes what "the whole timeline" means.
+  // added or a lane grown changes what "the whole timeline" means. The
+  // placeholder a not-ready band shows is skipped above, so there is nothing to
+  // observe until the real block is mounted.
   useLayoutEffect(() => {
+    if (!ready) return;
     const content = contentRef.current;
     if (!content) return;
     // No eager call: observing reports the block's size straight away, the
@@ -131,7 +145,7 @@ function TimelineArea({
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [ready]);
   /** Size the band to the whole timeline block, as far as the stops allow. */
   const fit = () => {
     if (!contentRef.current) return;
@@ -153,68 +167,11 @@ function TimelineArea({
     initializedRef.current = true;
     fitRef.current();
   }, [contentHeight, ready]);
-  const cancel = () => {
-    if (!dragRef.current) return;
-    setHeight(dragRef.current.height);
-    dragRef.current = null;
-  };
-  const cancelRef = useRef(cancel);
-  cancelRef.current = cancel;
-  useEffect(() => {
-    const blur = () => {
-      cancelRef.current();
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || !dragRef.current) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      blur();
-    };
-    window.addEventListener("keydown", escape, true);
-    window.addEventListener("blur", blur);
-    return () => {
-      window.removeEventListener("keydown", escape, true);
-      window.removeEventListener("blur", blur);
-    };
-  }, []);
-  const update = (y: number) => {
-    if (dragRef.current)
-      setHeight(clamp(dragRef.current.height + dragRef.current.y - y));
-  };
-  const updateRef = useRef(update);
-  updateRef.current = update;
-  // The pointer is followed on the window rather than through the handle's own
-  // pointer capture: the handle is a few pixels tall and slides under the
-  // pointer as the band grows, so tracking that depends on it staying the
-  // capture target loses the drag the moment the edge moves past the pointer.
-  const releaseRef = useRef<(() => void) | null>(null);
-  const beginDrag = (y: number) => {
-    releaseRef.current?.();
-    dragRef.current = { height: visibleHeight, y };
-    const move = (event: PointerEvent) => {
-      updateRef.current(event.clientY);
-    };
-    const finish = (event: PointerEvent) => {
-      updateRef.current(event.clientY);
-      dragRef.current = null;
-      releaseRef.current?.();
-    };
-    const stop = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", finish);
-      window.removeEventListener("pointercancel", abandon);
-      releaseRef.current = null;
-    };
-    function abandon() {
-      cancelRef.current();
-      stop();
-    }
-    releaseRef.current = stop;
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", finish);
-    window.addEventListener("pointercancel", abandon);
-  };
-  useEffect(() => () => releaseRef.current?.(), []);
+  const { beginDrag, dropDrag } = useTimelineBandDrag({
+    clamp,
+    height: visibleHeight,
+    setHeight,
+  });
   return (
     <div
       className="relative flex shrink-0 flex-col bg-fill-quaternary"
@@ -249,7 +206,7 @@ function TimelineArea({
           // pointerup, so the drag that press opened is already closed - this
           // only drops whatever a stray move or cancel might have left.
           if (event.detail < 2) return;
-          dragRef.current = null;
+          dropDrag();
           fit();
         }}
         onKeyDown={(event) => {

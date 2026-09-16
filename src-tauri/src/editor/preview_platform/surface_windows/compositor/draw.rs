@@ -90,8 +90,32 @@ impl Compositor {
     let shadow_sigma = (visible_width.min(visible_height) * 0.055)
       .clamp(10.0, 110.0)
       .min(shadow_margin * 0.45);
-    let shadow =
-      settings.drop_shadow && visible_width > 0.0 && visible_height > 0.0 && shadow_sigma > 1.0;
+    // While the crop tool is open the ghost is the whole uncropped source, so
+    // the rounding and the shadow move to the cropped layer drawn over it.
+    let crop_preview = settings.crop_preview.as_ref().filter(|rect| {
+      [rect.height, rect.width, rect.x, rect.y]
+        .iter()
+        .all(|value| value.is_finite())
+        && rect.width > 0.0
+        && rect.height > 0.0
+    });
+    let shadow = settings.drop_shadow
+      && crop_preview.is_none()
+      && visible_width > 0.0
+      && visible_height > 0.0
+      && shadow_sigma > 1.0;
+    let preview_shadow_sigma = crop_preview
+      .filter(|_| settings.drop_shadow)
+      .map_or(0.0, |rect| {
+        let margin = (rect.x as f32)
+          .min(rect.y as f32)
+          .min(settings.width as f32 - (rect.x + rect.width) as f32)
+          .min(settings.height as f32 - (rect.y + rect.height) as f32)
+          .max(0.0);
+        ((rect.width.min(rect.height) as f32) * 0.055)
+          .clamp(10.0, 110.0)
+          .min(margin * 0.45)
+      });
     let shortest_crop = placement.crop_width.min(placement.crop_height) as f32;
     let device = unsafe { target.GetDevice() }.map_err(|error| error.to_string())?;
     // A chosen picture is filled to the canvas by the shader, from a texture
@@ -127,6 +151,24 @@ impl Compositor {
         placement.source_crop_width as f32,
         placement.source_crop_height as f32,
       ],
+      crop_preview_rect: crop_preview.map_or([0.0; 4], |rect| {
+        [
+          rect.x as f32,
+          rect.y as f32,
+          rect.width as f32,
+          rect.height as f32,
+        ]
+      }),
+      // The radius is a percentage of the layer's shorter side, and in crop
+      // mode that layer is the crop rectangle rather than the whole source.
+      crop_preview_effects: crop_preview.map_or([0.0; 4], |rect| {
+        [
+          (rect.width.min(rect.height) as f32) * (settings.radius_percent as f32 / 100.0),
+          1.0,
+          preview_shadow_sigma,
+          0.0,
+        ]
+      }),
       solid_color: colour_f32(&settings.background_color)?,
       base_color: if mesh && generator_id == 0 {
         colour_f32(
@@ -142,7 +184,11 @@ impl Compositor {
       mesh_points,
       mesh_colors,
       effects: [
-        shortest_crop * (settings.radius_percent as f32 / 100.0),
+        if crop_preview.is_some() {
+          0.0
+        } else {
+          shortest_crop * (settings.radius_percent as f32 / 100.0)
+        },
         shortest_output * (settings.background_radius_percent as f32 / 100.0),
         settings.mesh_warp_percent as f32,
         shadow_sigma,

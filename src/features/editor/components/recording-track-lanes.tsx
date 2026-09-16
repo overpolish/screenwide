@@ -7,21 +7,16 @@ import { memo } from "react";
 import { recordingAudioStreamIndex, recordingAudioTrackId } from "../types";
 
 import { RecordingAnnotationLane } from "./recording-annotation-lane";
-import { recordingAnnotationRows } from "./recording-annotation-layout";
 import { RecordingTrackLanesProps } from "./recording-track-lanes-contract";
 import { RecordingVideoTrackRows } from "./recording-video-track-rows";
 import { ScrubAudioTracks } from "./scrub-audio-tracks";
-import {
-  TIMED_LANE_ROW_HEIGHT_PX,
-  timedLaneMinimumSpan,
-} from "./timed-lane-layout";
+import { timedLaneMinimumSpan } from "./timed-lane-layout";
 import { TimelineAudioMeter } from "./timeline-audio-meter";
-import { CONTROL_GAP_PX, timelineMeterHeight } from "./timeline-band-metrics";
+import { timelineMeterHeight } from "./timeline-band-metrics";
 import { TimelineItemLane } from "./timeline-item-lane";
 import { TimelineLanesFrame } from "./timeline-lanes-frame";
 import { TimelineScrubberOverlay } from "./timeline-scrubber";
 import { TimelineHeader } from "./timeline-zoom-toolbar";
-import { useTimedLaneRows } from "./use-timed-lane-rows";
 import { useTimelineNavigation } from "./use-timeline-navigation";
 
 /** The narrowest a shortcut badge is drawn, in pixels; kept here beside the
@@ -60,45 +55,13 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   volumes,
 }: RecordingTrackLanesProps) {
   const timeline = useTimelineNavigation(blade.edit.artifactId);
-  // The shortcut lane stacks overlapping badges into sublanes, so the meter
-  // must cover however tall it grows; derived from the same shared stacking
-  // the lane itself renders from.
+  // Overlapping shortcut badges stack into sublanes, so the lane is told the
+  // span a badge needs; derived from the same shared stacking it renders from.
   const keyboardMinimumSpan = timedLaneMinimumSpan({
     contentWidthPx: timeline.areaWidthPx,
     minimumItemWidthPx: KEYBOARD_MINIMUM_ITEM_WIDTH_PX,
     zoom: timeline.viewport.zoom,
   });
-  const keyboardRows = useTimedLaneRows({
-    edit: blade.edit,
-    hiddenFragmentIds: hiddenKeyboardFragmentIds,
-    hiddenItemIds: hiddenKeyboardItemIds,
-    items: keyboardItems,
-    minimumSpan: keyboardMinimumSpan,
-    sourceDurationMs,
-  });
-  const keyboardRowCount = keyboardItems.length > 0 ? keyboardRows.rowCount : 0;
-  const annotationRowCount =
-    onAnnotationSelect && onAnnotationsChange
-      ? Math.max(
-          1,
-          recordingAnnotationRows(annotationClips, blade.edit, sourceDurationMs)
-            .rowCount,
-        )
-      : 0;
-  const rowCount =
-    layout.panes.length +
-    audioTracks.length +
-    (keyboardRowCount > 0 ? 1 : 0) +
-    (annotationRowCount > 0 ? 1 : 0);
-  // The lane strip under the ruler: every track row, the gaps between them,
-  // and the sublanes the shortcut lane grows by. The meter beside the lanes is
-  // sized to it, so it never stretches past the lanes it measures - and never
-  // past the strip of rows on screen either, since it no longer scrolls.
-  const laneContentHeight =
-    rowCount * TIMED_LANE_ROW_HEIGHT_PX +
-    Math.max(0, rowCount - 1) * CONTROL_GAP_PX +
-    (Math.max(0, keyboardRowCount - 1) + Math.max(0, annotationRowCount - 1)) *
-      TIMED_LANE_ROW_HEIGHT_PX;
   return (
     <section
       aria-label="Recording timeline"
@@ -112,10 +75,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
                 <TimelineAudioMeter
                   audioTracks={audioTracks}
                   enabledTracks={enabledTracks}
-                  height={timelineMeterHeight({
-                    laneContentHeight,
-                    visibleHeight,
-                  })}
+                  height={timelineMeterHeight(visibleHeight)}
                   playhead={playhead}
                   volumes={volumes}
                 />

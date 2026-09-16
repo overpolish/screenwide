@@ -90,20 +90,13 @@ export const fitTimelineHeight = ({
 /**
  * How tall the meter beside the lanes stands. It does not scroll with them, so
  * it is sized to the strip of rows on screen - stopping where those rows' own
- * bottom inset begins rather than running to the band's edge - and never grows
- * taller than the lanes it measures.
+ * bottom inset begins rather than running to the band's edge. The viewport is
+ * measured, so it already accounts for every lane and sublane whatever the
+ * platform's control height is; no lane-height cap is needed here, because the
+ * band's own maximum never lets the viewport grow past the rows it holds.
  */
-export const timelineMeterHeight = ({
-  laneContentHeight,
-  visibleHeight,
-}: {
-  laneContentHeight: number;
-  visibleHeight: number;
-}) =>
-  Math.max(
-    TIMED_LANE_ROW_HEIGHT_PX,
-    Math.min(laneContentHeight, visibleHeight - CONTROL_INSET_PX),
-  );
+export const timelineMeterHeight = (visibleHeight: number) =>
+  Math.max(TIMED_LANE_ROW_HEIGHT_PX, visibleHeight - CONTROL_INSET_PX);
 
 /**
  * The largest useful band: never taller than the transport row plus the

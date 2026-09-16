@@ -10,6 +10,9 @@ cbuffer Canvas : register(b0) {
   float4 output_source; // output width/height, source width/height
   float4 image_rect;
   float4 crop_rect, source_crop_rect;
+  // The crop tool's result layer: output-pixel rectangle, then its radius,
+  // an enabled flag, the shadow sigma and one spare word.
+  float4 crop_preview_rect, crop_preview_effects;
   float4 solid_color;
   float4 base_color;
   float4 recenter_inset_color;
@@ -86,6 +89,35 @@ float visible_shadow(float2 pixel, float sigma) {
   float image_distance = rounded_distance(shadow_pixel, image_rect, 0.0);
   float distance = max(recenter_inset_color.a > 0.0 ? crop_distance : max(crop_distance, image_distance), 0.0);
   return (36.0 / 255.0) * exp(-0.5 * distance * distance / (sigma * sigma));
+}
+/// The crop tool's result layer, drawn over the uncropped ghost.
+///
+/// Crop mode shows the whole source so what is being cropped away stays
+/// visible, which leaves the ghost underneath flat: no rounding, no shadow.
+/// The layer the crop actually produces is drawn a second time here, at its
+/// place in the same canvas, carrying the radius and the shadow the ghost
+/// gives up. It samples the same source through the same image mapping, so
+/// the crop rectangle is a rounded window onto pixels already in place.
+float4 crop_preview_layer(float4 result, float2 pixel) {
+  if (crop_preview_effects.y == 0.0) return result;
+  float radius = crop_preview_effects.x;
+  float coverage = rounded_coverage(pixel, crop_preview_rect, radius);
+  float sigma = crop_preview_effects.z;
+  if (sigma > 1.0) {
+    float2 shadow_pixel = pixel - float2(0, sigma * 0.35);
+    float distance = max(
+      rounded_distance(shadow_pixel, crop_preview_rect, radius), 0.0);
+    // The shadow belongs to what lies outside the layer, so the layer itself
+    // is never tinted by it.
+    float shadow = (36.0 / 255.0) * exp(-0.5 * distance * distance / (sigma * sigma));
+    result.rgb *= 1.0 - shadow * (1.0 - coverage);
+  }
+  if (coverage > 0.0) {
+    float2 uv = (pixel - image_rect.xy) / image_rect.zw;
+    float4 video = source_image.Sample(linear_sampler, uv);
+    result = lerp(result, float4(video.rgb, 1.0), video.a * coverage);
+  }
+  return result;
 }
 float4 cursor_sample(float2 source_pixel, float2 anchor) {
   // The D3D preview's screen-space rotation convention is opposite to the
@@ -431,6 +463,7 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
     float4 video = source_image.Sample(linear_sampler, uv);
     result = lerp(result, float4(video.rgb, 1.0), video.a * image_alpha);
   }
+  result = crop_preview_layer(result, pixel);
   float4 cursor = cursor_layer(pixel);
   cursor.a *= cursor_effects.x;
   if (cursor_options.z != 0) cursor.a *= image_alpha;
