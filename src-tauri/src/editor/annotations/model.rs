@@ -8,6 +8,7 @@
 //! moved, resized or re-cropped. The compositor draws them, which is what
 //! keeps the editor's preview and the exported PNG the same image.
 
+use super::reveal::AnnotationReveal;
 use serde::{Deserialize, Serialize};
 
 /// A point in the screenshot source's pixel space.
@@ -61,9 +62,25 @@ pub struct Annotation {
   /// Screenshots have no bubble; the recording kernel will honour this.
   #[serde(default)]
   pub above_camera: bool,
+  /// Whether a timed mark draws itself in at the start of its clip and
+  /// undraws at the end. Stills have no clip to animate over, so they ignore
+  /// it and draw whole.
+  #[serde(default = "default_animated")]
+  pub animated: bool,
   pub id: String,
+  /// How much of the path is showing this frame. Derived from the clip's
+  /// bounds and the frame's source time every frame and never stored, so a
+  /// scrub backwards lands on exactly the frame playing forwards drew.
+  #[serde(skip)]
+  pub reveal: AnnotationReveal,
   pub shape: AnnotationShape,
   pub style: AnnotationStyle,
+}
+
+/// A mark animates unless a document from before the reveal, or the editor,
+/// says otherwise.
+fn default_animated() -> bool {
+  true
 }
 
 /// The stroke a fresh arrow is drawn with, in output pixels.
@@ -98,7 +115,9 @@ pub(crate) fn new_arrow(
 ) -> Annotation {
   let mut arrow = Annotation {
     above_camera: false,
+    animated: true,
     id,
+    reveal: AnnotationReveal::default(),
     shape: AnnotationShape::Arrow {
       start,
       control: AnnotationPoint {
@@ -148,7 +167,9 @@ mod tests {
   fn round_trips_an_arrow_in_camel_case() {
     let annotation = Annotation {
       above_camera: false,
+      animated: true,
       id: "a".to_owned(),
+      reveal: AnnotationReveal::default(),
       shape: AnnotationShape::Arrow {
         start: AnnotationPoint { x: 1.0, y: 2.0 },
         control: AnnotationPoint { x: 3.0, y: 4.0 },
@@ -162,6 +183,9 @@ mod tests {
     };
     let json = serde_json::to_string(&annotation).unwrap();
     assert!(json.contains("\"aboveCamera\":false"), "{json}");
+    assert!(json.contains("\"animated\":true"), "{json}");
+    // The reveal is this frame's state, not the document's.
+    assert!(!json.contains("reveal"), "{json}");
     assert!(json.contains("\"kind\":\"arrow\""), "{json}");
     assert!(json.contains("\"head\":\"both\""), "{json}");
     assert_eq!(
@@ -179,6 +203,9 @@ mod tests {
     )
     .unwrap();
     assert!(!annotation.above_camera);
+    // A document written before marks could animate still animates.
+    assert!(annotation.animated);
+    assert!(annotation.reveal.is_whole());
     assert_eq!(annotation.style.head, AnnotationHead::End);
   }
 }

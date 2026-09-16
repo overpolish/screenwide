@@ -43,6 +43,10 @@ export type RecordingTrackLanesProps = {
   onAnnotationSelect?: (id: string) => void;
   onAnnotationsChange?: (clips: RecordingAnnotationClip[]) => void;
   onAnnotationsPreview?: (clips: RecordingAnnotationClip[] | null) => void;
+  /** Picking a keyboard shortcut puts it in hand: the caller clears the
+   * annotation selection and takes up the Select tool, mirroring what the
+   * annotation lane's select does. */
+  onSelectKeyboardShortcut?: () => void;
   onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
   selectedAnnotationId?: string | null;
 };

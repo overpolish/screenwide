@@ -76,6 +76,7 @@ export function resolveToolPanelSnapshot(
   // A reset is an action rather than a value: nothing of it is shown locally,
   // and the editor's answer arrives as the next published placement.
   const {
+    annotationAnimated,
     annotationStyle,
     applyShortcutToAll: _applyShortcutToAll,
     audioVolume,
@@ -148,10 +149,16 @@ export function resolveToolPanelSnapshot(
     ...resolved,
     // A colour being dragged in the system panel shows at once: the mirror
     // catches up an edit later, and the swatch must not blink back meanwhile.
-    ...(annotationStyle && resolved.annotation
+    // The Animate switch is held the same way, so it does not flick back
+    // between the press and the commit.
+    ...((annotationStyle || annotationAnimated !== undefined) &&
+    resolved.annotation
       ? {
           annotation: {
             ...resolved.annotation,
+            ...(annotationAnimated === undefined
+              ? {}
+              : { animated: annotationAnimated }),
             style: { ...resolved.annotation.style, ...annotationStyle },
           },
         }

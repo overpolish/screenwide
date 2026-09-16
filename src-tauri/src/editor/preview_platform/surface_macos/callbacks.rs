@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::{
-  AnnotationGestureCallback, AnnotationHoverCallback, ContextMenuCallback, PointerDownCallback, SelectionCallback,
-  SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
+  AnnotationGestureCallback, AnnotationHoverCallback, ContextMenuCallback, PointerDownCallback,
+  SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
+  TransformCallback,
 };
 use super::ffi::screenwide_preview_surface_release_context_on_main;
 

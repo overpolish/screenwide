@@ -55,17 +55,23 @@ pub async fn copy_recording_preview_frame_to_clipboard(
 ) -> Result<(), String> {
   let sources = headless_sources(&app, artifact_id)?;
   if let Some(clips) = annotation_clips {
-    use crate::editor::annotations::timing::{active_annotations, validate_clips, AnnotationTrack};
+    use crate::editor::annotations::timing::{
+      revealed_annotations, validate_clips, AnnotationTrack,
+    };
     validate_clips(&clips)?;
-    recording_output.primary.annotations = active_annotations(
+    // A thumbnail is one frame standing still, so it shows the reveal this
+    // instant holds and nothing is moving for the blur to fade.
+    recording_output.primary.annotations = revealed_annotations(
       &clips,
       AnnotationTrack::Primary,
       position_ms.min(sources.duration_ms.saturating_sub(1)),
+      0.0,
     );
-    recording_output.camera.annotations = active_annotations(
+    recording_output.camera.annotations = revealed_annotations(
       &clips,
       AnnotationTrack::Camera,
       position_ms.min(sources.duration_ms.saturating_sub(1)),
+      0.0,
     );
   }
   let composed = tauri::async_runtime::spawn_blocking(move || {

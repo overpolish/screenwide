@@ -5,18 +5,23 @@
 
 use super::*;
 use crate::editor::annotations::timing::{
-  active_annotations, AnnotationTrack, RecordingAnnotationClip,
+  revealed_annotations, AnnotationTrack, RecordingAnnotationClip,
 };
 
+/// How much source time one drawn frame covers, which is what the reveal's
+/// motion blur is measured over. A paused composition passes zero: nothing
+/// is moving, so nothing is blurred.
+///
 pub(super) fn apply_clips(
   composition: &mut PreviewCompositionSettings,
   clips: &[RecordingAnnotationClip],
   source_ms: u64,
+  frame_ms: f32,
 ) {
   composition.recording_output.primary.annotations =
-    active_annotations(clips, AnnotationTrack::Primary, source_ms);
+    revealed_annotations(clips, AnnotationTrack::Primary, source_ms, frame_ms);
   composition.recording_output.camera.annotations =
-    active_annotations(clips, AnnotationTrack::Camera, source_ms);
+    revealed_annotations(clips, AnnotationTrack::Camera, source_ms, frame_ms);
 }
 
 impl PlayerSources {
@@ -26,7 +31,7 @@ impl PlayerSources {
     clips: &[RecordingAnnotationClip],
   ) -> Option<PreviewCompositionSettings> {
     let mut composition = self.composition_settings.as_ref()?.read().ok()?.clone();
-    apply_clips(&mut composition, clips, source_ms);
+    apply_clips(&mut composition, clips, source_ms, 0.0);
     Some(composition)
   }
 }

@@ -18,6 +18,7 @@ import {
 
 const arrow = (id: string): Annotation => ({
   aboveCamera: false,
+  animated: true,
   id,
   shape: {
     control: { x: 5, y: 0 },

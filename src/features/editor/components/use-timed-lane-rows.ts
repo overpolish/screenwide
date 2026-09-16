@@ -23,6 +23,7 @@ export function useTimedLaneRows<Item extends TimedLaneItem>({
   hiddenFragmentIds,
   hiddenItemIds,
   items,
+  minimumSpan = 0,
   sourceDurationMs,
 }: {
   edit: RecordingTimelineEdit;
@@ -30,6 +31,8 @@ export function useTimedLaneRows<Item extends TimedLaneItem>({
   sourceDurationMs: number;
   hiddenFragmentIds?: ReadonlySet<string>;
   hiddenItemIds?: ReadonlySet<Item["id"]>;
+  /** The on-screen floor each fragment is painted at, as an output-ratio span. */
+  minimumSpan?: number;
 }) {
   return useMemo(
     () =>
@@ -39,7 +42,15 @@ export function useTimedLaneRows<Item extends TimedLaneItem>({
             !hiddenFragmentIds?.has(fragment.fragmentId) &&
             !hiddenItemIds?.has(fragment.item.id),
         ),
+        { minimumSpan },
       ),
-    [edit, hiddenFragmentIds, hiddenItemIds, items, sourceDurationMs],
+    [
+      edit,
+      hiddenFragmentIds,
+      hiddenItemIds,
+      items,
+      minimumSpan,
+      sourceDurationMs,
+    ],
   );
 }

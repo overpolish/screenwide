@@ -232,7 +232,12 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       .chunks_exact(3)
       .enumerate()
       .filter(|(_, pixel)| pixel.iter().any(|channel| *channel > 200))
-      .map(|(index, _)| (index % exported_width as usize, index / exported_width as usize))
+      .map(|(index, _)| {
+        (
+          index % exported_width as usize,
+          index / exported_width as usize,
+        )
+      })
       .collect::<Vec<_>>();
     assert!(
       !lit.is_empty(),

@@ -7,7 +7,7 @@ pub(super) struct NativeTimedAnnotation {
   start_ms: u64,
   end_ms: u64,
 }
-const _: () = assert!(std::mem::size_of::<NativeTimedAnnotation>() == 80);
+const _: () = assert!(std::mem::size_of::<NativeTimedAnnotation>() == 112);
 
 pub(super) fn for_request(request: &CursorExportRequest<'_>) -> Vec<NativeTimedAnnotation> {
   request

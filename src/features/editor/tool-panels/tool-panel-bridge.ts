@@ -28,10 +28,15 @@ import {
  * identical path through the workspace's state.
  */
 export type ToolPanelHandlers = {
+  /** Draw the chosen mark in and out over its clip, or leave it standing. */
+  onAnnotationAnimatedChange?: (animated: boolean) => void;
   /** Forget a colour of your own. */
   onAnnotationColorRemove?: (color: string) => void;
   /** Keep a colour of your own, so it is on offer next time. */
   onAnnotationColorSave?: (color: string) => void;
+  /** Turn the chosen mark round, through the same commit path the drag on
+   * the picture uses. */
+  onAnnotationReverse?: () => void;
   /** Dress the chosen mark, a field at a time, through the same commit path
    * the drag on the picture uses. */
   onAnnotationStyleChange?: (style: Partial<AnnotationStyle>) => void;
@@ -91,8 +96,11 @@ export type ToolPanelHandlers = {
 const appliedSeq: Record<EditorKind, number> = { recording: 0, screenshot: 0 };
 
 const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
+  if (values.annotationAnimated !== undefined)
+    on.onAnnotationAnimatedChange?.(values.annotationAnimated);
   if (values.annotationStyle !== undefined)
     on.onAnnotationStyleChange?.(values.annotationStyle);
+  if (values.reverseAnnotation) on.onAnnotationReverse?.();
   if (values.saveAnnotationColor !== undefined)
     on.onAnnotationColorSave?.(values.saveAnnotationColor);
   if (values.removeAnnotationColor !== undefined)

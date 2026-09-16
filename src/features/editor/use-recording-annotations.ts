@@ -5,7 +5,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
-import { useAnnotationDefaults } from "./annotation-defaults";
+import {
+  useAnnotationAnimatedDefault,
+  useAnnotationDefaults,
+} from "./annotation-defaults";
 import { Annotation } from "./annotations";
 import {
   mergeRecordingAnnotationClips,
@@ -46,6 +49,10 @@ export function useRecordingAnnotations({
 }) {
   const clips = edit.annotationClips ?? EMPTY_CLIPS;
   const defaults = useAnnotationDefaults();
+  // A fresh arrow's dress and whether it animates both travel with the layout
+  // the native tool draws from; animation is the mark's own property, so it
+  // rides beside the style rather than inside it.
+  const animated = useAnnotationAnimatedDefault();
   const [previewClips, setPreviewClips] = useState<
     RecordingAnnotationClip[] | null
   >(null);
@@ -130,6 +137,7 @@ export function useRecordingAnnotations({
   useEffect(() => {
     if (sessionId === null) return;
     void invoke("set_recording_preview_annotations", {
+      animated,
       clips: nativeClips,
       defaults,
       paneIndex: trackId === null ? null : trackId === "primary" ? 0 : 1,
@@ -140,6 +148,7 @@ export function useRecordingAnnotations({
       console.error("Could not update recording annotations", cause);
     });
   }, [
+    animated,
     nativeClips,
     defaults,
     isPlaying,

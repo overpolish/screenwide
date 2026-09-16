@@ -7,6 +7,17 @@ pub(crate) fn ease_out_cubic(value: f32) -> f32 {
   1.0 - (1.0 - value).powi(3)
 }
 
+/// Cubic ease-in-out: slow away from both ends, quickest through the middle.
+/// Its peak speed is the same three times the average that [`ease_out_cubic`]
+/// starts at, moved to the midpoint.
+pub(crate) fn ease_in_out_cubic(value: f32) -> f32 {
+  if value < 0.5 {
+    4.0 * value * value * value
+  } else {
+    1.0 - (-2.0 * value + 2.0).powi(3) / 2.0
+  }
+}
+
 pub(crate) fn damped_spring(value: f32, decay: f32, angular_frequency: f32) -> f32 {
   if value >= 1.0 {
     1.0

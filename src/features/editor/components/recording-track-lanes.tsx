@@ -11,18 +11,22 @@ import { recordingAnnotationRows } from "./recording-annotation-layout";
 import { RecordingTrackLanesProps } from "./recording-track-lanes-contract";
 import { RecordingVideoTrackRows } from "./recording-video-track-rows";
 import { ScrubAudioTracks } from "./scrub-audio-tracks";
-import { TIMED_LANE_ROW_HEIGHT_PX } from "./timed-lane-layout";
-import { TimelineAudioMeter } from "./timeline-audio-meter";
 import {
-  CONTROL_GAP_PX,
-  timelineMeterHeight,
-} from "./timeline-band-metrics";
+  TIMED_LANE_ROW_HEIGHT_PX,
+  timedLaneMinimumSpan,
+} from "./timed-lane-layout";
+import { TimelineAudioMeter } from "./timeline-audio-meter";
+import { CONTROL_GAP_PX, timelineMeterHeight } from "./timeline-band-metrics";
 import { TimelineItemLane } from "./timeline-item-lane";
 import { TimelineLanesFrame } from "./timeline-lanes-frame";
 import { TimelineScrubberOverlay } from "./timeline-scrubber";
 import { TimelineHeader } from "./timeline-zoom-toolbar";
 import { useTimedLaneRows } from "./use-timed-lane-rows";
 import { useTimelineNavigation } from "./use-timeline-navigation";
+
+/** The narrowest a shortcut badge is drawn, in pixels; kept here beside the
+ * lane that carries it so the lane and the meter agree on one number. */
+const KEYBOARD_MINIMUM_ITEM_WIDTH_PX = 48;
 
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
@@ -44,6 +48,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
   onSeek,
+  onSelectKeyboardShortcut,
   onSelectedTrackChange,
   onVideoTrackOrderChange,
   playhead,
@@ -58,11 +63,17 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   // The shortcut lane stacks overlapping badges into sublanes, so the meter
   // must cover however tall it grows; derived from the same shared stacking
   // the lane itself renders from.
+  const keyboardMinimumSpan = timedLaneMinimumSpan({
+    contentWidthPx: timeline.areaWidthPx,
+    minimumItemWidthPx: KEYBOARD_MINIMUM_ITEM_WIDTH_PX,
+    zoom: timeline.viewport.zoom,
+  });
   const keyboardRows = useTimedLaneRows({
     edit: blade.edit,
     hiddenFragmentIds: hiddenKeyboardFragmentIds,
     hiddenItemIds: hiddenKeyboardItemIds,
     items: keyboardItems,
+    minimumSpan: keyboardMinimumSpan,
     sourceDurationMs,
   });
   const keyboardRowCount = keyboardItems.length > 0 ? keyboardRows.rowCount : 0;
@@ -167,12 +178,14 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
             icon={<Keyboard />}
             items={keyboardItems}
             label="Shortcuts"
-            minimumItemWidthPx={48}
+            minimumItemWidthPx={KEYBOARD_MINIMUM_ITEM_WIDTH_PX}
+            minimumSpan={keyboardMinimumSpan}
             onClearSelection={keyboardSelection.onClear}
             onSelect={(fragment, outputPosition, toggle) => {
               blade.clearRangeSelection();
               blade.selectSegment(null);
               keyboardSelection.onSelect(fragment.fragmentId, toggle);
+              onSelectKeyboardShortcut?.();
               onSeek(outputPosition, "end");
             }}
             selectedFragmentIds={keyboardSelection.ids}

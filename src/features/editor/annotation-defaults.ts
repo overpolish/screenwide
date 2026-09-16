@@ -16,6 +16,12 @@ import { AnnotationStyle } from "./annotations";
  * dresses it in the operating system's accent at the tool's own stroke.
  */
 let lastUsed: AnnotationStyle | null = null;
+/**
+ * And whether it animated. This is the mark's own property rather than part
+ * of its dress, so it is remembered beside the style rather than inside it,
+ * and it means nothing to a screenshot, which has no clip to animate over.
+ */
+let lastAnimated: boolean | null = null;
 const listeners = new Set<() => void>();
 
 const subscribe = (listener: () => void) => {
@@ -39,7 +45,19 @@ export const rememberAnnotationStyle = (style: AnnotationStyle) => {
   for (const listener of listeners) listener();
 };
 
+/** Remember whether the last annotation edit animated. */
+export const rememberAnnotationAnimated = (animated: boolean) => {
+  if (lastAnimated === animated) return;
+  lastAnimated = animated;
+  for (const listener of listeners) listener();
+};
+
 /** The style a fresh arrow is drawn in, or null while none has been settled
  * on and the tool's own first dress stands. */
 export const useAnnotationDefaults = () =>
   useSyncExternalStore(subscribe, snapshot);
+
+/** Whether a fresh arrow animates, or null while none has been settled on
+ * and the tool's own default - animating - stands. */
+export const useAnnotationAnimatedDefault = () =>
+  useSyncExternalStore(subscribe, () => lastAnimated);

@@ -37,6 +37,7 @@ export function useScreenshotShortcut(enabled = true) {
     // shortcut action it owns exactly.
     void Promise.all([
       listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
+        if (disposed) return;
         if (!isScreenshotShortcut(payload)) return;
         // Rust routes active sessions through the dedicated handoff event.
         // Tauri listeners can still observe the original targeted event; do
@@ -69,6 +70,7 @@ export function useScreenshotShortcut(enabled = true) {
       listen<ShortcutAction>(
         SCREENSHOT_SHORTCUT_REQUESTED_EVENT,
         ({ payload }) => {
+          if (disposed) return;
           const listenerId = handoff.listenerId;
           reportShortcutDiagnostic("received", { action: payload, listenerId });
           handoffScreenshotShortcut(payload)

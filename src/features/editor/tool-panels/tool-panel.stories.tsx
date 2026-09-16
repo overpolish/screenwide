@@ -41,6 +41,7 @@ export const Arrow: Story = {
   beforeEach: () => {
     seed({
       annotation: {
+        animated: true,
         id: "arrow-1",
         style: { color: "#ff383c", head: "end", width: 8 },
       },
@@ -60,6 +61,7 @@ export const ArrowCustomColour: Story = {
   beforeEach: () => {
     seed({
       annotation: {
+        animated: true,
         id: "arrow-1",
         style: { color: "#2ec4b6", head: "both", width: 16 },
       },
@@ -69,6 +71,48 @@ export const ArrowCustomColour: Story = {
       isSaving: false,
       selection: null,
     });
+  },
+};
+
+/** Animate switched off: the mark stands on screen for the whole of its clip
+ * instead of drawing itself in and out at its ends. */
+export const ArrowWithoutAnimation: Story = {
+  args: { tool: "arrow", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      annotation: {
+        animated: false,
+        id: "arrow-1",
+        style: { color: "#ff383c", head: "end", width: 8 },
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isSaving: false,
+      selection: null,
+    });
+  },
+};
+
+/** The same panel in the screenshot editor. A still has no clip for a mark to
+ * arrive over, so the Animate row is not offered at all and the panel is the
+ * three it has always been. */
+export const ArrowInAScreenshot: Story = {
+  args: { tool: "arrow", workspace: "screenshot" },
+  beforeEach: () => {
+    seed(
+      {
+        annotation: {
+          animated: true,
+          id: "arrow-1",
+          style: { color: "#ff383c", head: "end", width: 8 },
+        },
+        cursorEffects: DEFAULT_CURSOR_EFFECTS,
+        frame: null,
+        isSaving: false,
+        selection: null,
+      },
+      "screenshot",
+    );
   },
 };
 

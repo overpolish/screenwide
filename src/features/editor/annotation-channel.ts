@@ -19,6 +19,8 @@ import { EditorKind } from "./types";
  * panel to find. This is the twin of `keyboard-shortcut-channel.ts`.
  */
 type PublishedAnnotation = {
+  applyAnimated: (animated: boolean) => void;
+  applyReverse: () => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
   selection: ToolPanelAnnotation | null;
 };
@@ -47,15 +49,21 @@ const subscribe = (listener: () => void) => {
 export function usePublishAnnotationSelection(
   workspace: EditorKind,
   selection: ToolPanelAnnotation | null,
-  applyStyle: (style: Partial<AnnotationStyle>) => void,
+  apply: Omit<PublishedAnnotation, "selection">,
 ) {
-  const applyRef = useRef(applyStyle);
-  applyRef.current = applyStyle;
+  const applyRef = useRef(apply);
+  applyRef.current = apply;
   const serialized = selection === null ? null : JSON.stringify(selection);
   useEffect(() => {
     const published: PublishedAnnotation = {
+      applyAnimated: (animated) => {
+        applyRef.current.applyAnimated(animated);
+      },
+      applyReverse: () => {
+        applyRef.current.applyReverse();
+      },
       applyStyle: (style) => {
-        applyRef.current(style);
+        applyRef.current.applyStyle(style);
       },
       selection:
         serialized === null
@@ -86,4 +94,19 @@ export const applyAnnotationStyle = (
   style: Partial<AnnotationStyle>,
 ) => {
   workspaces.get(workspace)?.applyStyle(style);
+};
+
+/** Draw the chosen mark in and out over its clip, or leave it standing. A
+ * no-op when the workspace has no preview mounted to ask. */
+export const applyAnnotationAnimated = (
+  workspace: EditorKind,
+  animated: boolean,
+) => {
+  workspaces.get(workspace)?.applyAnimated(animated);
+};
+
+/** Turn the chosen mark round. A no-op when the workspace has no preview
+ * mounted to ask. */
+export const applyAnnotationReverse = (workspace: EditorKind) => {
+  workspaces.get(workspace)?.applyReverse();
 };

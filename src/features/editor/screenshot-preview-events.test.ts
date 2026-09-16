@@ -10,6 +10,7 @@ import {
 
 const arrow = {
   aboveCamera: false,
+  animated: true,
   id: "arrow-1",
   shape: {
     control: { x: 60, y: 40 },

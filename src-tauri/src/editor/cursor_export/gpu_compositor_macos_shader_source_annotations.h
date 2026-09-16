@@ -14,13 +14,18 @@ struct AnnotationArrowGeometry {
   float rounding;
   uint head;
 };
+struct AnnotationSample {
+  AnnotationArrowGeometry arrow;
+  float opacity;
+};
 struct AnnotationUniforms {
   uint kind, above_camera;
   packed_float4 color;
   float hover;
   AnnotationArrowGeometry arrow;
+  uint sample_offset, sample_count;
 };
-static_assert(sizeof(AnnotationUniforms) == 120,
+static_assert(sizeof(AnnotationUniforms) == 128,
               "Prepared annotations must match their native layout");
 
 constant float annotation_hover_alpha = 0.24;
@@ -48,17 +53,43 @@ static float annotation_triangle_distance(
 
 /// Head vertices and shaft limits were prepared once before this dispatch.
 /// The shader only evaluates distances; picking uses the same prepared heads.
-static float annotation_arrow_distance(
+static float2 annotation_arrow_distance(
     float2 point, const device AnnotationArrowGeometry &arrow) {
-  float result = annotation_curve_distance(point, float2(arrow.a), float2(arrow.b),
-      float2(arrow.c), arrow.low, arrow.high) - arrow.width * 0.5;
+  // An empty window is a mark that has not started, or one whose head has
+  // eaten what was left of its shaft. Either way there is no shaft to draw.
+  float2 result = float2(arrow.high > arrow.low
+      ? annotation_curve_distance(point, float2(arrow.a), float2(arrow.b),
+            float2(arrow.c), arrow.low, arrow.high) - arrow.width * 0.5
+      : 1e20, 1e20);
   if (arrow.head != 0u)
-    result = min(result, annotation_triangle_distance(point, float2(arrow.end_head.a),
+    result.y = min(result.y, annotation_triangle_distance(point, float2(arrow.end_head.a),
         float2(arrow.end_head.b), float2(arrow.end_head.c)) - arrow.rounding);
   if (arrow.head == 2u)
-    result = min(result, annotation_triangle_distance(point, float2(arrow.start_head.a),
+    result.y = min(result.y, annotation_triangle_distance(point, float2(arrow.start_head.a),
         float2(arrow.start_head.b), float2(arrow.start_head.c)) - arrow.rounding);
   return result;
+}
+
+/// Coverage of one prepared arrow, feathered over `feather` canvas pixels.
+static float annotation_coverage(
+    float2 point, const device AnnotationArrowGeometry &arrow, float feather) {
+  float2 distances = annotation_arrow_distance(point, arrow);
+  return max(1.0 - smoothstep(-feather, feather, distances.x),
+             1.0 - smoothstep(-feather, feather, distances.y));
+}
+
+/// Accumulated exposure coverage: the mark is drawn at every prepared sample
+/// between the shutter start and now, so a moving shaft and its head smear
+/// along the path they actually travelled while a held end stays sharp.
+static float annotation_exposure(
+    float2 point, const device AnnotationUniforms &mark,
+    const device AnnotationSample *samples, float feather) {
+  float total = 0.0;
+  for (uint tap = 0; tap < mark.sample_count; ++tap) {
+    const device AnnotationSample &sample = samples[mark.sample_offset + tap];
+    total += annotation_coverage(point, sample.arrow, feather) * sample.opacity;
+  }
+  return total / float(mark.sample_count);
 }
 
 /// Draws every mark whose layer matches `above_camera`.
@@ -74,7 +105,8 @@ static float annotation_arrow_distance(
 static float4 composite_annotations(
     float4 rgba, const device AnnotationUniforms *annotations, uint count,
     uint above_camera, float2 canvas_point, constant CanvasUniforms &u,
-    float2 source_dimensions, float pixel_scale) {
+    float2 source_dimensions, float pixel_scale,
+    const device AnnotationSample *samples) {
   if (count == 0u || any(source_dimensions <= 0.0)) return rgba;
   float feather = max(pixel_scale, 1e-4) * 0.5;
   for (uint index = 0; index < count; ++index) {
@@ -95,8 +127,8 @@ static float4 composite_annotations(
     if (any(canvas_point < min(a, min(b, c)) - reach) ||
         any(canvas_point > max(a, max(b, c)) + reach))
       continue;
-    float distance = annotation_arrow_distance(
-        canvas_point, mark.arrow);
+    float2 distances = annotation_arrow_distance(canvas_point, mark.arrow);
+    float distance = min(distances.x, distances.y);
     if (halo > 0.0) {
       // The ruler's hover halo: an outline stroke in the shape's own colour,
       // hugging it from the edge outwards.
@@ -108,7 +140,12 @@ static float4 composite_annotations(
         rgba.a = alpha + rgba.a * (1.0 - alpha);
       }
     }
-    float coverage = 1.0 - smoothstep(-feather, feather, distance);
+    // A still frame draws the prepared arrow directly; a moving one averages
+    // the arrow over the exposure, head and shaft together.
+    float coverage = mark.sample_count == 0u
+        ? max(1.0 - smoothstep(-feather, feather, distances.x),
+              1.0 - smoothstep(-feather, feather, distances.y))
+        : annotation_exposure(canvas_point, mark, samples, feather);
     if (coverage <= 0.0) continue;
     float alpha = coverage * color.a;
     rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);

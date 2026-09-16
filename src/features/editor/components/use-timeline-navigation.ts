@@ -22,8 +22,24 @@ const ZOOM_WHEEL_SENSITIVITY = 0.006;
 
 export function useTimelineNavigation(resetKey: unknown) {
   const [viewport, setViewport] = useState(fitTimelineViewport);
+  const [areaWidthPx, setAreaWidthPx] = useState(0);
   const areaRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ pointerId: number; x: number } | null>(null);
+
+  // The ruler area and the lane rows share one gutter column, so its width is
+  // the width lanes lay fragments out against. Kept as state so the lanes'
+  // minimum-width floor can be turned back into a ratio of it.
+  useEffect(() => {
+    const area = areaRef.current;
+    if (!area) return;
+    const observer = new ResizeObserver(() => {
+      setAreaWidthPx(area.clientWidth);
+    });
+    observer.observe(area);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     // Navigation is view state, so a new recording resets it while retained
@@ -127,6 +143,7 @@ export function useTimelineNavigation(resetKey: unknown) {
 
   return {
     areaRef,
+    areaWidthPx,
     fit,
     interactionProps: {
       onAuxClick: (event: ReactPointerEvent<HTMLElement>) => {

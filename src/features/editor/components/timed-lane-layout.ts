@@ -131,28 +131,96 @@ export const timedLaneFragmentBox = (row: number) => ({
 const SEAM_EPSILON = 1e-9;
 
 /**
+ * How many sublane rows the minimum width alone may grow a lane to. Genuinely
+ * simultaneous items always earn a row of their own; this bounds only the
+ * extra rows that widening a brief item to a readable size asks for, so a
+ * dense run of keystrokes seen zoomed out cannot grow the lane without limit.
+ */
+const MINIMUM_WIDTH_ROW_LIMIT = 4;
+
+/**
+ * Converts a lane's minimum item width into the output-ratio span a fragment
+ * of that width covers. Lane fragments are positioned against the zoomed
+ * viewport content, which is the lane's own width times the zoom, so the span
+ * a fixed pixel width claims shrinks as the timeline is zoomed in.
+ */
+export const timedLaneMinimumSpan = ({
+  contentWidthPx,
+  minimumItemWidthPx,
+  zoom,
+}: {
+  contentWidthPx: number;
+  minimumItemWidthPx: number;
+  zoom: number;
+}) => {
+  const zoomedWidth = contentWidthPx * zoom;
+  if (zoomedWidth <= 0 || minimumItemWidthPx <= 0) return 0;
+  return Math.min(1, minimumItemWidthPx / zoomedWidth);
+};
+
+/**
  * Assigns overlapping fragments to stacked sublanes so simultaneous items
  * stay individually visible. Fragments that never coincide share row zero,
  * keeping the lane a single row tall in the common case.
+ *
+ * `minimumSpan` is the width the lane will not paint a fragment narrower than,
+ * as a share of the output timeline. Rows are claimed by what a fragment
+ * occupies on screen rather than by its timing alone, so two brief items too
+ * close together to be drawn side by side stack instead of overprinting.
  */
 export function stackTimedLaneFragments<Item extends TimedLaneItem>(
   fragments: TimedLaneFragment<Item>[],
+  { minimumSpan = 0 }: { minimumSpan?: number } = {},
 ): { fragments: StackedLaneFragment<Item>[]; rowCount: number } {
   const ordered = [...fragments].sort(
     (left, right) =>
       left.outputStart - right.outputStart || left.outputEnd - right.outputEnd,
   );
+  // Seam-run members waive the minimum width, exactly as the lane paints
+  // them: an inflated sliver would cover the fragment it continues into. An
+  // item yields at most one fragment per segment, so more than one fragment
+  // of the same item is a run.
+  const seen = new Set<Item["id"]>();
+  const runItemIds = new Set<Item["id"]>();
+  for (const fragment of ordered) {
+    if (seen.has(fragment.item.id)) {
+      runItemIds.add(fragment.item.id);
+    } else {
+      seen.add(fragment.item.id);
+    }
+  }
+  /** What the fragment covers once drawn, which is what a row is claimed by. */
+  const painted = (fragment: TimedLaneFragment<Item>) => {
+    if (minimumSpan <= 0 || runItemIds.has(fragment.item.id)) {
+      return { end: fragment.outputEnd, start: fragment.outputStart };
+    }
+    // The lane will not paint a fragment narrower than `minimumSpan`, so the
+    // row it claims extends to what is drawn, not to where its timing ends.
+    // (A fragment at the far right already clips against the lane's overflow;
+    // that pre-existing edge needs no help here.)
+    return {
+      end: Math.max(fragment.outputEnd, fragment.outputStart + minimumSpan),
+      start: fragment.outputStart,
+    };
+  };
   const rowEnds: number[] = [];
   const rowLast: (StackedLaneFragment<Item> | undefined)[] = [];
   const runs: StackedLaneFragment<Item>[][] = [];
   const rowRun: number[] = [];
   const stacked = ordered.map((fragment) => {
-    let row = rowEnds.findIndex((end) => fragment.outputStart >= end);
+    const box = painted(fragment);
+    let row = rowEnds.findIndex((end) => box.start >= end);
+    if (row === -1 && rowEnds.length >= MINIMUM_WIDTH_ROW_LIMIT) {
+      // Past that budget only a real overlap in time earns another row; the
+      // rest share a row and are drawn overlapping, as they were before the
+      // minimum width was accounted for.
+      row = rowEnds.findIndex((end) => fragment.outputStart >= end);
+    }
     if (row === -1) {
       row = rowEnds.length;
-      rowEnds.push(fragment.outputEnd);
+      rowEnds.push(box.end);
     } else {
-      rowEnds[row] = fragment.outputEnd;
+      rowEnds[row] = Math.max(rowEnds[row], box.end);
     }
     const previous = rowLast[row];
     const continuesPrevious =

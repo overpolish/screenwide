@@ -14,8 +14,17 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
     const ScreenwideTimedAnnotation *clip = &session->annotations[i];
     if (clip->start_ms <= source_ms && source_ms < clip->end_ms) {
       if (active_count++ == SCREENWIDE_MAX_ANNOTATIONS) break;
-      if (clip->annotation.above_camera == above)
-        marks.items[marks.count++] = clip->annotation;
+      if (clip->annotation.above_camera != above) continue;
+      ScreenwideAnnotation *mark = &marks.items[marks.count++];
+      *mark = clip->annotation;
+      // The reveal is read back from the clip's own bounds every frame, so a
+      // seek lands on exactly the frame a play-through drew. The blur's lead
+      // is one source frame of travel at the rate this export encodes.
+      screenwide_annotation_reveal_window(
+          (float)(source_ms - clip->start_ms),
+          (float)(clip->end_ms - clip->start_ms),
+          session->source_frame_rate > 0 ? 1000.0f / session->source_frame_rate : 0,
+          mark->animated, &mark->reveal);
     }
   }
   if (marks.count == 0) return;

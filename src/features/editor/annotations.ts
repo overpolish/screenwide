@@ -39,6 +39,11 @@ export type Annotation = {
    * Screenshots have no bubble; the recording compositor will honour this.
    */
   aboveCamera: boolean;
+  /**
+   * Whether a timed mark draws itself in at the start of its clip and undraws
+   * at the end. Stills have no clip to animate over and draw whole.
+   */
+  animated: boolean;
   id: string;
   shape: AnnotationShape;
   style: AnnotationStyle;
@@ -65,6 +70,16 @@ const annotationHead = (value: unknown): AnnotationHead =>
  * this list rather than over the width itself.
  */
 export const ANNOTATION_WIDTHS = [8, 12, 16, 24, 32, 48];
+
+/**
+ * How long an animated mark takes to draw itself in, in source milliseconds.
+ * The twin of `REVEAL_DRAW_IN_MS` in
+ * `src-tauri/src/editor/annotations/reveal.rs`, which a Rust test holds to
+ * this line; the reveal may shorten the phase for a short clip but never
+ * lengthens it, so a mark placed this long before the playhead is always
+ * finished drawing by the time the playhead is reached.
+ */
+export const ANNOTATION_DRAW_IN_MS = 1000;
 
 /** The stroke a fresh arrow is drawn with. The twin of `NEW_ARROW_WIDTH`. */
 export const DEFAULT_ANNOTATION_WIDTH = 8;
@@ -136,6 +151,7 @@ export const validAnnotations = (value: unknown): Annotation[] => {
     if (!control || !end || !start || !Number.isFinite(style.width)) continue;
     valid.push({
       aboveCamera: annotation.aboveCamera === true,
+      animated: annotation.animated !== false,
       id: typeof annotation.id === "string" ? annotation.id : "",
       shape: { control, end, kind: "arrow", start },
       style: {

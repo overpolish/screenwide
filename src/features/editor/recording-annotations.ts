@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Annotation } from "./annotations";
+import { Annotation, ANNOTATION_DRAW_IN_MS } from "./annotations";
 import {
   recordingTimelineOutputToSource,
   recordingTimelineRetainedDuration,
@@ -61,7 +61,15 @@ export const mergeRecordingAnnotationClips = ({
   return next;
 };
 
-/** Creates the initial three output seconds of an annotation clip. */
+/**
+ * Creates the initial three output seconds of an annotation clip, reaching a
+ * draw-in back before the playhead so an animated mark has finished drawing
+ * itself where it was placed. Near the start of the recording it takes
+ * whatever room there is and the mark is caught part drawn, which is the only
+ * way a mark can be placed there at all. The clip's end is measured from the
+ * playhead as before, so the reach back lengthens the clip rather than
+ * sliding it.
+ */
 export const recordingAnnotationClipAt = ({
   annotation,
   edit,
@@ -76,7 +84,7 @@ export const recordingAnnotationClipAt = ({
   trackId?: RecordingAnnotationClip["trackId"];
 }): RecordingAnnotationClip => {
   const duration = Math.max(1, Math.round(sourceDurationMs));
-  const startMs = Math.max(
+  const positionMs = Math.max(
     0,
     Math.min(duration - 1, Math.round(sourcePositionMs)),
   );
@@ -86,23 +94,24 @@ export const recordingAnnotationClipAt = ({
   const outputStartMs = edit
     ? recordingTimelineSourceToOutput(
         edit,
-        duration > 0 ? startMs / duration : 0,
+        duration > 0 ? positionMs / duration : 0,
       ) * outputDurationMs
-    : startMs;
+    : positionMs;
   const outputEndMs = Math.min(outputDurationMs, outputStartMs + 3_000);
   const endMs = edit
     ? Math.max(
-        startMs + (startMs < duration ? 1 : 0),
+        positionMs + (positionMs < duration ? 1 : 0),
         recordingTimelineOutputToSource(
           edit,
           outputDurationMs > 0 ? outputEndMs / outputDurationMs : 1,
         ) * duration,
       )
-    : Math.min(duration, startMs + 3_000);
+    : Math.min(duration, positionMs + 3_000);
   return {
     annotation,
     endMs: Math.round(Math.min(duration, endMs)),
-    startMs,
+    // The reveal runs on source time, so the reach back is source time too.
+    startMs: Math.max(0, positionMs - ANNOTATION_DRAW_IN_MS),
     trackId,
   };
 };

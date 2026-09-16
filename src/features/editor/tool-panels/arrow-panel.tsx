@@ -1,15 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Plus } from "lucide-react";
+import { ArrowLeftRight, Plus } from "lucide-react";
 import { ToggleButtonGroup } from "react-aria-components";
 
+import { Button } from "../../../components/base/button/button";
 import {
   useColorPanel,
   usesSystemColorPanel,
 } from "../../../components/base/input-fields/use-color-panel";
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
 import { Slider } from "../../../components/base/slider/slider";
+import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
 import { BackgroundTile } from "../../../components/shared/background-picker/background-tile";
 import {
@@ -35,8 +37,10 @@ const HEADS: { id: AnnotationHead; label: string }[] = [
 ];
 
 /**
- * The chosen mark's own controls: how heavy it is drawn, which ends carry a
- * head, and what colour it is.
+ * The chosen mark's own controls: how heavy it is drawn, whether it draws
+ * itself in over its clip, which ends carry a head, and what colour it is.
+ * Animating takes a clip to animate over, so that row is the recording
+ * editor's alone.
  *
  * This panel belongs to the mark rather than to a tool. It comes up the
  * moment an arrow is chosen, in either tool that can choose one, and goes
@@ -108,6 +112,23 @@ export function ArrowPanel({ workspace }: { workspace: EditorKind }) {
         />
       </div>
 
+      {/* Drawing in and out happens over a clip, and only a recording has
+          one: a screenshot is one instant, so there is no time for a mark to
+          arrive over and the row is not offered there at all. */}
+      {workspace === "recording" ? (
+        <div className="flex items-center justify-between gap-section">
+          <span className="text-body text-content-fg">Animate</span>
+          <Switch
+            aria-label="Animate"
+            isDisabled={isSaving}
+            isSelected={annotation.animated}
+            onChange={(next) => {
+              change({ annotationAnimated: next });
+            }}
+          />
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between gap-section">
         <span className="text-body text-content-fg">Head</span>
         <PillGroup
@@ -120,6 +141,23 @@ export function ArrowPanel({ workspace }: { workspace: EditorKind }) {
           }}
           selected={head}
         />
+      </div>
+
+      {/* The head rides the end point, so turning the mark round points it
+          the other way without redrawing it: the same commit path the drag
+          on the picture uses. */}
+      <div className="flex items-center justify-between gap-section">
+        <span className="text-body text-content-fg">Direction</span>
+        <Button
+          aria-label="Reverse the arrow"
+          isDisabled={isSaving}
+          onPress={() => {
+            change({ reverseAnnotation: true });
+          }}
+        >
+          <ArrowLeftRight aria-hidden="true" />
+          Reverse
+        </Button>
       </div>
 
       {/* The swatches say what they are, so the row carries no heading; it

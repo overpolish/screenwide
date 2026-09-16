@@ -36,6 +36,7 @@ export function useRecordingBarShortcuts() {
     const { listenerId } = listener;
 
     void listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
+      if (disposed) return;
       if (payload === "toggleRecordingBar") {
         reportShortcutDiagnostic("received", { action: payload, listenerId });
         toggleRecordingUi().then(

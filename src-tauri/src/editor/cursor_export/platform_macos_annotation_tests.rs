@@ -38,7 +38,9 @@ fn arrow(
 ) -> Annotation {
   Annotation {
     above_camera: false,
+    animated: true,
     id: "arrow".to_owned(),
+    reveal: Default::default(),
     shape: AnnotationShape::Arrow {
       start,
       control,
@@ -551,3 +553,6 @@ fn the_stroke_edge_is_feathered() {
 #[cfg(test)]
 #[path = "platform_macos_annotation_regressions.rs"]
 mod annotation_regressions;
+
+#[path = "platform_macos_annotation_reveal_tests.rs"]
+mod annotation_reveal;

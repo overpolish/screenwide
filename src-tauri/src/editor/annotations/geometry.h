@@ -5,6 +5,7 @@
 
 #include <math.h>
 #include <stdint.h>
+#include "reveal.h"
 
 /// Prepared in the caller's pixel space. Plain float pairs keep the same
 /// four-byte alignment in C and Metal's packed_float2.
@@ -45,11 +46,14 @@ static inline AnnotationVector annotation_bezier(AnnotationVector a, AnnotationV
                                                            annotation_scale(bend, t)), t));
 }
 
-/// Restrict each head to its own half of the curve, leaving a visible shaft.
+/// Where the shaft has to stop for a head of `length` to meet it: the
+/// parameter in `[low, high]` at which the curve leaves `tip` by that much.
+/// A static arrow searches its own half of the curve, so a head can never eat
+/// the whole shaft; a revealing one searches the window it is showing, where
+/// a head legitimately fills everything there is.
 static inline float annotation_trim(AnnotationVector a, AnnotationVector b,
-                                    AnnotationVector c, float length, int at_end) {
-  float low = at_end ? 0.5f : 0, high = at_end ? 1 : 0.5f;
-  AnnotationVector tip = at_end ? c : a;
+                                    AnnotationVector c, AnnotationVector tip,
+                                    float length, int at_end, float low, float high) {
   float limit = length * length;
   for (int step = 0; step < 10; step++) {
     float t = (low + high) * 0.5f;
@@ -95,8 +99,16 @@ static inline AnnotationTriangle annotation_prepare_head(AnnotationVector tip,
 /// One preparation per mark before drawing or picking, never per pixel.
 /// A short curve scales the stroke and heads together. Sampling each arm
 /// also preserves folded curves whose midpoint happens to coincide with a tip.
+///
+/// `reveal` is how much of the mark this frame draws. The whole path at full
+/// size prepares exactly what it always has: the head sits on the end point,
+/// facing the way the curve leaves the control, at full size. A mark part way
+/// through its clip wears each head on its end of the shaft, ahead of it -
+/// riding the end that is moving, growing out of its base as the mark sets
+/// off and back into it as the mark leaves.
 static inline AnnotationArrowGeometry annotation_prepare_arrow(AnnotationVector a,
-    AnnotationVector b, AnnotationVector c, float width, uint32_t head) {
+    AnnotationVector b, AnnotationVector c, float width, uint32_t head,
+    AnnotationReveal reveal) {
   AnnotationArrowGeometry result = {.a = a, .b = b, .c = c, .width = fmaxf(width, 0),
                                     .low = 0, .high = 1, .head = head};
   AnnotationVector middle = annotation_bezier(a, b, c, 0.5f);
@@ -116,17 +128,53 @@ static inline AnnotationArrowGeometry annotation_prepare_arrow(AnnotationVector 
     result.head = 0;
     return result;
   }
-  float length = result.width * 4, half_base = result.width * 2;
-  result.rounding = result.width * 0.35f;
+  // Geometry is prepared once per exposure sample, not per pixel.
+  AnnotationRevealGeometry travel;
+  screenwide_annotation_reveal_geometry(a.x, a.y, b.x, b.y, c.x, c.y,
+                                        result.width, (float)head, reveal, &travel);
+  int revealing = travel.low > 0 || travel.high < 1 || travel.scale < 1;
+  float scale = travel.scale;
+  float length = result.width * 4 * scale, half_base = result.width * 2 * scale;
+  result.rounding = result.width * 0.35f * scale;
+  // Stroke, heads and rounding are one mark and scale together. A shaft
+  // shorter than the stroke is wide draws its own round cap, so a full-width
+  // stroke on a mark two pixels long appears as a disc the width of the mark:
+  // weight has to arrive with the rest of it.
+  result.width *= scale;
+  result.low = travel.low;
+  result.high = travel.high;
+  // A head the reveal has not grown to half a pixel yet has no triangle worth
+  // building: its three vertices collapse onto each other, and a triangle
+  // with no winding reads as inside everywhere.
+  if (revealing && length <= 0.5f) {
+    result.head = 0;
+    return result;
+  }
+  // A growing head narrows fast, so while a mark is revealing, the shaft
+  // runs on a little way under the head rather than stopping at its base:
+  // met exactly, a bend pokes out through the head's narrowing sides. The
+  // head itself is built the same way throughout, so nothing jumps when the
+  // reveal holds.
+  float pullback = 0.88f;
   if (head != 0) {
-    result.high = annotation_trim(a, b, c, length, 1);
-    result.end_head = annotation_prepare_head(c, annotation_bezier(a, b, c, result.high),
+    AnnotationVector tip = revealing ? annotation_bezier(a, b, c, travel.end_tip) : c;
+    float join = revealing ? travel.high
+                           : annotation_trim(a, b, c, tip, length, 1, 0.5f, 1);
+    result.end_head = annotation_prepare_head(tip, annotation_bezier(a, b, c, join),
                                               half_base, result.rounding);
+    result.high = revealing
+        ? annotation_trim(a, b, c, tip, length * pullback, 1, travel.high, travel.end_tip)
+        : join;
   }
   if (head == 2) {
-    result.low = annotation_trim(a, b, c, length, 0);
-    result.start_head = annotation_prepare_head(a, annotation_bezier(a, b, c, result.low),
+    AnnotationVector tip = revealing ? annotation_bezier(a, b, c, travel.start_tip) : a;
+    float join = revealing ? travel.low
+                           : annotation_trim(a, b, c, tip, length, 0, 0, 0.5f);
+    result.start_head = annotation_prepare_head(tip, annotation_bezier(a, b, c, join),
                                                 half_base, result.rounding);
+    result.low = revealing
+        ? annotation_trim(a, b, c, tip, length * pullback, 0, travel.start_tip, travel.low)
+        : join;
   }
   return result;
 }

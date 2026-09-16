@@ -110,6 +110,39 @@ describe("stackTimedLaneFragments", () => {
     expect(stackTimedLaneFragments([]).rowCount).toBe(1);
   });
 
+  it("stacks brief fragments that only the painted floor would overlap", () => {
+    // No overlap in time, but a 0.3 span floor means the first fragment is
+    // drawn across the second's start, so they stack instead of overprinting.
+    const { fragments, rowCount } = stackTimedLaneFragments(
+      [fragment("a", 0.0, 0.1), fragment("b", 0.15, 0.25)],
+      { minimumSpan: 0.3 },
+    );
+    expect(rowCount).toBe(2);
+    const rows = Object.fromEntries(
+      fragments.map(({ fragmentId, row }) => [fragmentId, row]),
+    );
+    expect(rows.a).toBe(0);
+    expect(rows.b).toBe(1);
+
+    // The same pair with no floor never coincides and shares one row.
+    expect(
+      stackTimedLaneFragments([
+        fragment("a", 0.0, 0.1),
+        fragment("b", 0.15, 0.25),
+      ]).rowCount,
+    ).toBe(1);
+  });
+
+  it("waives the floor for a seam run, which paints without rounding", () => {
+    const { fragments } = stackTimedLaneFragments(
+      [fragment("crossing", 0.1, 0.3), fragment("crossing", 0.3, 0.6)],
+      { minimumSpan: 0.9 },
+    );
+    // A floor this large would push the second member onto its own row were
+    // the run not exempt; run members stay flush in one row.
+    expect(fragments.map(({ row }) => row)).toEqual([0, 0]);
+  });
+
   it("marks a segment split inside one item as a seam continuation", () => {
     const split = ({
       end,

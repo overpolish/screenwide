@@ -138,6 +138,13 @@ export function RecordingPreviewTimelineBand({
           onEnabledVideoTracksChange={changeEnabledVideoTracks}
           onSeek={timelineBlade.seek}
           onSelectedTrackChange={changeSelectedTrack}
+          onSelectKeyboardShortcut={() => {
+            // Picking a shortcut badge puts it in hand, the way picking an
+            // annotation does: clear the mark and take up the Select tool so
+            // the on-screen controls show the shortcut rather than a track.
+            annotations.clearSelection();
+            changeCanvasTool("select");
+          }}
           onVideoTrackOrderChange={onVideoTrackOrderChange}
           playhead={playhead}
           selectedAnnotationId={annotations.selectedId}

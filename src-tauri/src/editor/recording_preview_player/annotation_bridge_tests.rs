@@ -213,3 +213,40 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
   assert_eq!(manager.annotation.pane, Some(0));
   assert_eq!(manager.annotation_targets()[0].0, 0);
 }
+
+/// The Animate switch's last setting dresses the next arrow, the way the
+/// style defaults do - except that it sits on the mark rather than in its
+/// style, so the bridge applies it instead of `new_arrow`.
+#[test]
+fn a_fresh_arrow_takes_the_remembered_animate_setting() {
+  let mut manager = manager();
+  manager.annotation.animated = Some(false);
+  manager.annotation_gesture(
+    SelectionGesturePhase::Begin,
+    0,
+    AnnotationGestureTarget::NewArrow,
+    0.1,
+    0.2,
+  );
+  let commit = manager
+    .annotation_gesture(
+      SelectionGesturePhase::End,
+      0,
+      AnnotationGestureTarget::NewArrow,
+      0.6,
+      0.7,
+    )
+    .unwrap();
+  assert!(!commit.annotations[0].animated);
+  assert!(
+    !manager
+      .sources
+      .as_ref()
+      .unwrap()
+      .annotation_clips
+      .read()
+      .unwrap()[0]
+      .annotation
+      .animated
+  );
+}

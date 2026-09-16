@@ -32,6 +32,7 @@ export function TimelineItemLane<
   items,
   label,
   minimumItemWidthPx = 6,
+  minimumSpan = 0,
   onClearSelection,
   onSelect,
   selectedFragmentIds,
@@ -48,6 +49,8 @@ export function TimelineItemLane<
   hiddenFragmentIds?: ReadonlySet<string>;
   hiddenItemIds?: ReadonlySet<Item["id"]>;
   minimumItemWidthPx?: number;
+  /** `minimumItemWidthPx` as an output-ratio span, for stacking sublanes. */
+  minimumSpan?: number;
   onClearSelection?: () => void;
   onSelect?: (
     fragment: TimedLaneFragment<Item>,
@@ -64,6 +67,7 @@ export function TimelineItemLane<
     hiddenFragmentIds,
     hiddenItemIds,
     items,
+    minimumSpan,
     sourceDurationMs,
   });
 
@@ -106,7 +110,7 @@ export function TimelineItemLane<
                 // warning fill whether or not it is selected, since text on
                 // the solid yellow cannot be read; its selection is a warning
                 // ring instead. Any other selected one takes the accent.
-                className={`absolute flex items-center overflow-hidden rounded-control text-left text-footnote whitespace-nowrap transition-[color,background-color] duration-200 ${seam} ${
+                className={`absolute flex items-center rounded-control text-left text-footnote transition-[color,background-color] duration-200 ${seam} ${
                   warning
                     ? selected
                       ? "bg-warning/35 text-content-fg inset-ring-2 inset-ring-warning"
@@ -133,7 +137,13 @@ export function TimelineItemLane<
                 title={item.label}
                 type="button"
               >
-                {fragment.showLabel ? item.label : null}
+                {fragment.showLabel ? (
+                  // Truncation lives on its own element so the clip happens at
+                  // the content box, leaving the badge's horizontal padding
+                  // intact, instead of the overflow running through the padding
+                  // to the border as it does when the clip is on the button.
+                  <span className="min-w-0 truncate">{item.label}</span>
+                ) : null}
               </button>
             );
           })}

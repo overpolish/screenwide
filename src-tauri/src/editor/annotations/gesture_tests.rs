@@ -45,7 +45,9 @@ fn bend(annotation: &Annotation) -> (f64, f64) {
 fn arrow(id: &str) -> Annotation {
   Annotation {
     above_camera: false,
+    animated: true,
     id: id.to_owned(),
+    reveal: Default::default(),
     shape: AnnotationShape::Arrow {
       start: AnnotationPoint { x: 0.0, y: 0.0 },
       control: AnnotationPoint { x: 50.0, y: 0.0 },

@@ -8,6 +8,32 @@ use crate::editor::annotations::AnnotationPoint;
 use crate::editor::timeline_edit::{RecordingTimelineEdit, RecordingTimelineSegment, TimelinePlan};
 use std::process::Command;
 
+/// How many of the arrow's own yellow pixels one frame of the exported movie
+/// holds, which is the only measure of the reveal that survives the encode.
+fn exported_yellow(destination: &std::path::Path, time: &str, width: u32, height: u32) -> usize {
+  let frame = Command::new(media_preview::ffmpeg_path())
+    .args(["-hide_banner", "-loglevel", "error", "-ss", time, "-i"])
+    .arg(destination)
+    .args([
+      "-frames:v",
+      "1",
+      "-f",
+      "rawvideo",
+      "-pix_fmt",
+      "rgb24",
+      "pipe:1",
+    ])
+    .output()
+    .unwrap();
+  assert!(frame.status.success());
+  assert_eq!(frame.stdout.len(), width as usize * height as usize * 3);
+  frame
+    .stdout
+    .chunks_exact(3)
+    .filter(|rgb| rgb[0] > 160 && rgb[1] > 100 && rgb[2] < 80)
+    .count()
+}
+
 #[test]
 fn exports_timed_arrows_across_a_cut_and_speed_change() {
   let directory =
@@ -188,10 +214,11 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
         frames.stdout.len(),
         105 * width as usize * height as usize * 3
       );
-      // Source 0.75 and 1.9 seconds are inside the same mark across the cut.
+      // Source 0.95 and 1.9 seconds are inside the same mark across the cut,
+      // far enough into its draw-in that the mark is most of its full size.
       for (time, visible) in [
         ("0.2", false),
-        ("0.75", true),
+        ("0.95", true),
         ("1.2", true),
         ("1.65", false),
       ] {
@@ -244,6 +271,29 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
             yellow < 10
           },
           "at {time}s, found {yellow} yellow pixels; expected visible={visible}"
+        );
+      }
+      if scale == 100 && !baked {
+        // The clip runs from source 550ms to 2500ms, so each phase is a third
+        // of it rather than the whole three quarters of a second: the arrow
+        // draws itself in over output 0.55s to 1.2s and leaves over the last
+        // third of the clip, which the speed change puts at the end of it.
+        // The export evaluates that per frame from the clip's own bounds.
+        let opening: Vec<_> = ["0.7", "0.9", "1.1"]
+          .iter()
+          .map(|time| exported_yellow(&destination, time, width, height))
+          .collect();
+        let closing: Vec<_> = ["1.25", "1.35"]
+          .iter()
+          .map(|time| exported_yellow(&destination, time, width, height))
+          .collect();
+        assert!(
+          opening[0] < opening[1] && opening[1] < opening[2],
+          "the arrow does not draw itself in: {opening:?}"
+        );
+        assert!(
+          opening[2] > closing[0] && closing[0] > closing[1] && closing[1] > 0,
+          "the arrow does not leave: {opening:?} then {closing:?}"
         );
       }
     }

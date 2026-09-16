@@ -4,6 +4,7 @@
 #pragma once
 
 #import <Metal/Metal.h>
+#include <math.h>
 #include <string.h>
 #import "gpu_compositor_macos.h"
 #import "gpu_compositor_macos_annotation_types.h"
@@ -16,12 +17,33 @@ typedef struct {
   float color[4];
   float hover;
   AnnotationArrowGeometry arrow;
+  uint32_t sample_offset, sample_count;
 } ScreenwidePreparedAnnotation;
-_Static_assert(sizeof(ScreenwidePreparedAnnotation) == 120, "Prepared annotation ABI");
+_Static_assert(sizeof(ScreenwidePreparedAnnotation) == 128, "Prepared annotation ABI");
 _Static_assert(sizeof(ScreenwidePreparedAnnotation) * SCREENWIDE_MAX_ANNOTATIONS <= 4096,
                "Metal inline annotation bytes must fit setBytes");
 
-/// Binds prepared geometry for both still export and retained workspace draws.
+typedef struct {
+  AnnotationArrowGeometry arrow;
+  float opacity;
+} ScreenwideAnnotationSample;
+_Static_assert(sizeof(ScreenwideAnnotationSample) == 96, "Exposure sample ABI");
+
+static inline uint32_t screenwide_annotation_sample_count(
+    const ScreenwideAnnotation *mark, float sx, float sy) {
+  AnnotationReveal r = mark->reveal;
+  float length = hypotf((mark->p1[0] - mark->p0[0]) * sx,
+                        (mark->p1[1] - mark->p0[1]) * sy) +
+                 hypotf((mark->p2[0] - mark->p1[0]) * sx,
+                        (mark->p2[1] - mark->p1[1]) * sy);
+  float travel = length * fmaxf(fabsf(r.low - r.previous[0]),
+                               fabsf(r.high - r.previous[1]));
+  travel += mark->width * 4.0f * fabsf(r.scale - r.previous[2]);
+  if (travel < 1.5f && fabsf(r.opacity - r.previous[3]) < 0.01f) return 0;
+  return (uint32_t)fminf(fmaxf(ceilf(travel / 0.75f) + 1, 8), 48);
+}
+
+/// Prepare complete arrow shapes along the exposure, keeping curve solves off the GPU.
 static inline void screenwide_bind_annotations(
     id<MTLComputeCommandEncoder> encoder, const ScreenwideAnnotations *annotations,
     const ScreenwideCanvas *canvas, uint32_t source_width, uint32_t source_height) {
@@ -30,6 +52,18 @@ static inline void screenwide_bind_annotations(
   ScreenwidePreparedAnnotation prepared[SCREENWIDE_MAX_ANNOTATIONS] = {0};
   float scale_x = (float)canvas->image_width / MAX(source_width, 1u);
   float scale_y = (float)canvas->image_height / MAX(source_height, 1u);
+  uint32_t total = 0;
+  for (uint32_t i = 0; i < count; ++i) {
+    prepared[i].sample_offset = total;
+    prepared[i].sample_count = screenwide_annotation_sample_count(
+        &annotations->items[i], scale_x, scale_y);
+    total += prepared[i].sample_count;
+  }
+  // Exposure geometry exceeds Metal's 4 KiB inline limit. The encoder retains this buffer.
+  id<MTLBuffer> buffer = total > 0 ? [encoder.device
+      newBufferWithLength:total * sizeof(ScreenwideAnnotationSample)
+      options:MTLResourceStorageModeShared] : nil;
+  ScreenwideAnnotationSample *samples = buffer.contents;
   for (uint32_t index = 0; index < count; index++) {
     const ScreenwideAnnotation *mark = &annotations->items[index];
     ScreenwidePreparedAnnotation *draw = &prepared[index];
@@ -37,14 +71,35 @@ static inline void screenwide_bind_annotations(
     draw->above_camera = mark->above_camera;
     memcpy(draw->color, mark->color, sizeof(draw->color));
     draw->hover = mark->hover;
-    draw->arrow = annotation_prepare_arrow(
-        annotation_vector(canvas->image_x + mark->p0[0] * scale_x,
-                          canvas->image_y + mark->p0[1] * scale_y),
-        annotation_vector(canvas->image_x + mark->p1[0] * scale_x,
-                          canvas->image_y + mark->p1[1] * scale_y),
-        annotation_vector(canvas->image_x + mark->p2[0] * scale_x,
-                          canvas->image_y + mark->p2[1] * scale_y), mark->width, mark->head);
+    AnnotationVector a = annotation_vector(canvas->image_x + mark->p0[0] * scale_x,
+        canvas->image_y + mark->p0[1] * scale_y);
+    AnnotationVector b = annotation_vector(canvas->image_x + mark->p1[0] * scale_x,
+        canvas->image_y + mark->p1[1] * scale_y);
+    AnnotationVector c = annotation_vector(canvas->image_x + mark->p2[0] * scale_x,
+        canvas->image_y + mark->p2[1] * scale_y);
+    draw->arrow = annotation_prepare_arrow(a, b, c, mark->width, mark->head, mark->reveal);
+    if (draw->sample_count == 0) {
+      draw->color[3] *= fmaxf(fminf(mark->reveal.opacity, 1), 0);
+      continue;
+    }
+    for (uint32_t tap = 0; tap < draw->sample_count; ++tap) {
+      float t = ((float)tap + 0.5f) / (float)draw->sample_count;
+      AnnotationReveal r = mark->reveal;
+      r.low = r.previous[0] + (r.low - r.previous[0]) * t;
+      r.high = r.previous[1] + (r.high - r.previous[1]) * t;
+      r.scale = r.previous[2] + (r.scale - r.previous[2]) * t;
+      r.opacity = r.previous[3] + (r.opacity - r.previous[3]) * t;
+      ScreenwideAnnotationSample *sample = &samples[draw->sample_offset + tap];
+      sample->arrow = annotation_prepare_arrow(a, b, c, mark->width, mark->head, r);
+      sample->opacity = fmaxf(fminf(r.opacity, 1), 0);
+    }
   }
   [encoder setBytes:prepared length:sizeof(prepared) atIndex:12];
   [encoder setBytes:&count length:sizeof(count) atIndex:13];
+  if (buffer) {
+    [encoder setBuffer:buffer offset:0 atIndex:15];
+  } else {
+    ScreenwideAnnotationSample empty = {0};
+    [encoder setBytes:&empty length:sizeof(empty) atIndex:15];
+  }
 }

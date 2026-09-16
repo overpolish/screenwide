@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { Annotation } from "./annotations";
+import { Annotation, ANNOTATION_DRAW_IN_MS } from "./annotations";
 import { recordingAnnotationRows } from "./components/recording-annotation-layout";
 import { moveRecordingAnnotationClip } from "./recording-annotation-geometry";
 import {
@@ -14,6 +14,7 @@ import { createRecordingTimelineEdit } from "./recording-timeline-edit";
 
 const annotation: Annotation = {
   aboveCamera: false,
+  animated: true,
   id: "arrow-1",
   shape: {
     control: { x: 5, y: 5 },
@@ -25,7 +26,7 @@ const annotation: Annotation = {
 };
 
 describe("recording annotation clips", () => {
-  it("uses source milliseconds and gives a new mark three seconds", () => {
+  it("starts a draw-in before the playhead and ends three seconds after it", () => {
     expect(
       recordingAnnotationClipAt({
         annotation,
@@ -35,9 +36,24 @@ describe("recording annotation clips", () => {
     ).toEqual({
       annotation,
       endMs: 7_000,
-      startMs: 4_000,
+      startMs: 4_000 - ANNOTATION_DRAW_IN_MS,
       trackId: "primary",
     });
+  });
+
+  it("has finished drawing the mark in by the playhead it was placed at", () => {
+    const clip = recordingAnnotationClipAt({
+      annotation,
+      sourceDurationMs: 20_000,
+      sourcePositionMs: 4_000,
+    });
+    // The reveal caps its phase at a third of the clip and never lengthens
+    // it, so a mark placed a whole phase back is whole at the playhead.
+    const phaseMs = Math.min(
+      ANNOTATION_DRAW_IN_MS,
+      (clip.endMs - clip.startMs) / 3,
+    );
+    expect(4_000 - clip.startMs).toBeGreaterThanOrEqual(phaseMs);
   });
 
   it("maps three output seconds through a two times source segment", () => {
@@ -52,7 +68,24 @@ describe("recording annotation clips", () => {
         sourceDurationMs: 20_000,
         sourcePositionMs: 4_000,
       }),
-    ).toMatchObject({ endMs: 10_000, startMs: 4_000 });
+    ).toMatchObject({ endMs: 10_000, startMs: 4_000 - ANNOTATION_DRAW_IN_MS });
+  });
+
+  it("takes what room there is at the start of the recording", () => {
+    expect(
+      recordingAnnotationClipAt({
+        annotation,
+        sourceDurationMs: 20_000,
+        sourcePositionMs: 0,
+      }),
+    ).toMatchObject({ endMs: 3_000, startMs: 0 });
+    expect(
+      recordingAnnotationClipAt({
+        annotation,
+        sourceDurationMs: 20_000,
+        sourcePositionMs: 200,
+      }),
+    ).toMatchObject({ endMs: 3_200, startMs: 0 });
   });
 
   it("clamps a mark started near the end to the source duration", () => {
@@ -62,7 +95,7 @@ describe("recording annotation clips", () => {
         sourceDurationMs: 20_000,
         sourcePositionMs: 19_500,
       }),
-    ).toMatchObject({ endMs: 20_000, startMs: 19_500 });
+    ).toMatchObject({ endMs: 20_000, startMs: 19_500 - ANNOTATION_DRAW_IN_MS });
   });
 });
 
@@ -119,7 +152,7 @@ it("keeps a short clip valid at the final source position", () => {
       sourceDurationMs: 20_000,
       sourcePositionMs: 20_000,
     }),
-  ).toMatchObject({ endMs: 20000, startMs: 19999 });
+  ).toMatchObject({ endMs: 20000, startMs: 19_999 - ANNOTATION_DRAW_IN_MS });
 });
 
 it("keeps overlapping arrows on one row each across a removed source range", () => {
@@ -158,12 +191,10 @@ it("moves a clip by output time while preserving duration through a speed change
     segments: [{ id: 0, playbackRate: 2, sourceEnd: 1, sourceStart: 0 }],
   };
   const clip = {
-    ...recordingAnnotationClipAt({
-      annotation,
-      sourceDurationMs: 20_000,
-      sourcePositionMs: 4_000,
-    }),
+    annotation,
     endMs: 10_000,
+    startMs: 4_000,
+    trackId: "primary" as const,
   };
   const moved = moveRecordingAnnotationClip({
     clip,

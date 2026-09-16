@@ -9,6 +9,7 @@ import {
   cutRecordingTimeline,
 } from "../recording-timeline-edit";
 
+import { timedLaneMinimumSpan } from "./timed-lane-layout";
 import { TimelineItemLane } from "./timeline-item-lane";
 import { selectTimelineItem } from "./timeline-item-selection";
 import { fitTimelineViewport } from "./timeline-viewport";
@@ -42,26 +43,41 @@ const overlapping: ShortcutItem[] = [
   { endMs: 104_000, id: "quit", label: "⌘ Q", startMs: 98_000 },
 ];
 
+/** Keystrokes a second apart: far enough in time not to overlap, but zoomed
+ * out each is drawn at the 48px floor, so the floor itself overlaps them. */
+const crowded: ShortcutItem[] = [
+  { endMs: 10_300, id: "key-a", label: "a", startMs: 10_000 },
+  { endMs: 11_300, id: "key-b", label: "b", startMs: 11_000 },
+  { endMs: 12_300, id: "key-c", label: "c", startMs: 12_000 },
+  // Long enough to truncate at the 48px floor, so the padding stays visible.
+  { endMs: 13_300, id: "key-d", label: "Backspace", startMs: 13_000 },
+];
+
 function ItemLanePreview({
   items = shortcuts,
+  minimumSpan = 0,
   selectedIds,
   warningIds,
+  widthClass = "w-[760px]",
 }: {
   items?: ShortcutItem[];
+  minimumSpan?: number;
   selectedIds?: string[];
   warningIds?: string[];
+  widthClass?: string;
 }) {
   const [selected, setSelected] = useState(
     () => new Set(selectedIds ?? new Set<string>()),
   );
   return (
-    <div className="w-[760px]">
+    <div className={widthClass}>
       <TimelineItemLane
         edit={SPLIT_EDIT}
         icon={<Keyboard className="size-icon-small" />}
         items={items}
         label="Shortcuts"
         minimumItemWidthPx={48}
+        minimumSpan={minimumSpan}
         onClearSelection={() => {
           setSelected(new Set());
         }}
@@ -107,4 +123,22 @@ export const Adjusted: Story = {
 /** Simultaneous items stack into sublanes and the lane grows to fit. */
 export const Stacked: Story = {
   args: { items: overlapping },
+};
+
+/** A keystroke burst seen at fit: each badge is drawn at the 48px floor, so
+ * the floor itself would overlap them. The lane stacks the four into sublanes
+ * instead of overprinting. */
+export const Crowded: Story = {
+  args: {
+    items: crowded,
+    // At fit in a window whose lane column is 356px wide, the 48px floor is
+    // this share of the timeline. Four keystrokes a second apart all claim
+    // it, which is exactly the overlap this stacks away.
+    minimumSpan: timedLaneMinimumSpan({
+      contentWidthPx: 356,
+      minimumItemWidthPx: 48,
+      zoom: 1,
+    }),
+    widthClass: "w-[560px]",
+  },
 };

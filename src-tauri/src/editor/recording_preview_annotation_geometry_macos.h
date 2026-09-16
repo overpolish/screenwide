@@ -63,7 +63,9 @@ static double annotation_prepared_head_distance(NSPoint point,
 
 /// How far a point is from one arrow, in display points: its shaft, and the
 /// heads on it. A press on a head is a press on the arrow - it is the part of
-/// it the hand aims at.
+/// it the hand aims at. A mark half-way through drawing itself in is still
+/// picked by the whole of what it will be: the hand aims at the arrow, not at
+/// the frame of it that happens to be showing.
 static double annotation_shaft_distance(NSRect image,
                                         ScreenwidePreviewAnnotation item,
                                         NSPoint point) {
@@ -83,7 +85,7 @@ static double annotation_shaft_distance(NSRect image,
   uint32_t heads = item.start_head > 0 ? 2 : item.end_head > 0 ? 1 : 0;
   AnnotationArrowGeometry geometry = annotation_prepare_arrow(
       annotation_vector(start.x, start.y), annotation_vector(control.x, control.y),
-      annotation_vector(end.x, end.y), width, heads);
+      annotation_vector(end.x, end.y), width, heads, annotation_reveal_whole());
   if (geometry.head != 0)
     best = fmin(best, annotation_prepared_head_distance(point, geometry.end_head, geometry.rounding));
   if (geometry.head == 2)

@@ -22,6 +22,7 @@ const arrow = (
 ): RecordingAnnotationClip => ({
   annotation: {
     aboveCamera: false,
+    animated: true,
     id,
     shape: {
       control: { x: 320, y: 80 },

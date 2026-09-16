@@ -86,6 +86,10 @@ export type ToolPanelSelection =
  * says what it looks like.
  */
 export type ToolPanelAnnotation = {
+  /** Whether this mark draws itself in at the start of its clip and undraws
+   * at the end. A screenshot has no clip to animate over, so the panel shows
+   * it only in the recording editor. */
+  animated: boolean;
   id: string;
   style: AnnotationStyle;
 };

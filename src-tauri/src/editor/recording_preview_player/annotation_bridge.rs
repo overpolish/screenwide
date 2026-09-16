@@ -20,6 +20,10 @@ pub(super) struct AnnotationState {
   mode: u32,
   selected: Option<String>,
   defaults: Option<AnnotationStyle>,
+  /// Whether the next arrow drawn animates, remembered from the last one the
+  /// Animate switch was set on. Animation is the mark's own property rather
+  /// than part of its dress, so it travels beside the style defaults.
+  animated: Option<bool>,
   gesture: Option<Gesture>,
 }
 struct Gesture {
@@ -62,6 +66,7 @@ pub async fn set_recording_preview_annotations(
   pane_index: Option<u32>,
   selected_id: Option<String>,
   defaults: Option<AnnotationStyle>,
+  animated: Option<bool>,
 ) -> Result<(), String> {
   validate_clips(&clips)?;
   let mut manager = state
@@ -86,6 +91,7 @@ pub async fn set_recording_preview_annotations(
   manager.annotation.pane = pane_index.filter(|pane| *pane <= 1);
   manager.annotation.selected = selected_id;
   manager.annotation.defaults = defaults;
+  manager.annotation.animated = animated;
   manager.annotation.mode = match tool.as_deref() {
     Some("arrow") => 2,
     Some("select") => 1,
@@ -190,6 +196,16 @@ impl PreviewPlayerManager {
         point,
         self.annotation.defaults.as_ref(),
       )?;
+      // Whether a mark animates is not part of its dress, so `new_arrow` has
+      // no say in it: the switch's last setting is applied to the fresh arrow
+      // here, where the recording's own timed marks are made.
+      if target == AnnotationGestureTarget::NewArrow {
+        if let Some(animated) = self.annotation.animated {
+          if let Some(mark) = working.iter_mut().find(|m| m.id == edit.selected_id()) {
+            mark.animated = animated;
+          }
+        }
+      }
       let before_selected = self.annotation.selected.clone();
       self.annotation.selected = Some(edit.selected_id().to_owned());
       self.annotation.gesture = Some(Gesture {
@@ -210,10 +226,15 @@ impl PreviewPlayerManager {
       if let Some(clip) = next.iter_mut().find(|c| c.annotation.id == annotation.id) {
         clip.annotation = annotation.clone();
       } else {
+        // The provisional clip the gesture draws through reaches back a
+        // draw-in, the way the editor's own placement does, so the mark is
+        // finished drawing at the playhead and visible under the hand.
         next.push(RecordingAnnotationClip {
           annotation: annotation.clone(),
           track_id: track(gesture.pane),
-          start_ms: gesture.position,
+          start_ms: gesture
+            .position
+            .saturating_sub(crate::editor::annotations::reveal::REVEAL_DRAW_IN_MS as u64),
           end_ms: gesture.position.saturating_add(3000),
         });
       }

@@ -38,6 +38,10 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
     )?),
     _ => None,
   };
+  // One preview frame covers this much source time, which is how far an
+  // annotation's reveal travels between frames for its blur to fade over.
+  let frame_ms = (1_000.0 * playback_rate
+    / crate::editor::recording_preview_player::video::OUTPUT_FPS as f64) as f32;
   let cursor = sources.cursor.clone();
   let cursor_settings = Arc::clone(&sources.cursor_settings);
   let keyboard = sources.keyboard.clone();
@@ -81,6 +85,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
             &mut composition,
             &clips,
             target_ms,
+            frame_ms,
           );
         }
         let raw_screen = match screen.pixel_frame_at(target_ms) {

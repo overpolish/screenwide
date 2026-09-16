@@ -4,6 +4,8 @@
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { useEditableGeneralSettings } from "../../settings/use-general-settings";
 import {
+  applyAnnotationAnimated,
+  applyAnnotationReverse,
   applyAnnotationStyle,
   useAnnotationSelection,
 } from "../annotation-channel";
@@ -223,6 +225,9 @@ export function useEditorToolPanels({
         null,
     },
     {
+      onAnnotationAnimatedChange: (animated) => {
+        applyAnnotationAnimated(workspace, animated);
+      },
       onAnnotationColorRemove: (color) => {
         applyGeneralSettings({
           annotationColors: withoutAnnotationColor(annotationColors, color),
@@ -232,6 +237,9 @@ export function useEditorToolPanels({
         applyGeneralSettings({
           annotationColors: withAnnotationColor(annotationColors, color),
         });
+      },
+      onAnnotationReverse: () => {
+        applyAnnotationReverse(workspace);
       },
       onAnnotationStyleChange: (style) => {
         applyAnnotationStyle(workspace, style);

@@ -4,7 +4,10 @@
 import { useState } from "react";
 
 import { usePublishAnnotationSelection } from "./annotation-channel";
-import { rememberAnnotationStyle } from "./annotation-defaults";
+import {
+  rememberAnnotationAnimated,
+  rememberAnnotationStyle,
+} from "./annotation-defaults";
 import {
   Annotation,
   AnnotationStyle,
@@ -40,10 +43,47 @@ export function useAnnotations({
     );
   };
 
+  // Whether a mark animates is not part of its dress: it sits on the mark
+  // itself, so it is committed on its own rather than through the style.
+  const applyAnimated = (animated: boolean) => {
+    if (!selected) return;
+    rememberAnnotationAnimated(animated);
+    onCommit(
+      annotations.map((annotation) =>
+        annotation.id === selected.id
+          ? { ...annotation, animated }
+          : annotation,
+      ),
+    );
+  };
+
+  // Turn the arrow round: the head rides the end point, so swapping the ends
+  // points it the other way. The bend keeps its control, so the curve is the
+  // mirror of itself rather than a different one.
+  const applyReverse = () => {
+    if (!selected) return;
+    onCommit(
+      annotations.map((annotation) =>
+        annotation.id === selected.id
+          ? {
+              ...annotation,
+              shape: {
+                ...annotation.shape,
+                end: annotation.shape.start,
+                start: annotation.shape.end,
+              },
+            }
+          : annotation,
+      ),
+    );
+  };
+
   usePublishAnnotationSelection(
     workspace,
-    selected ? { id: selected.id, style: selected.style } : null,
-    applyStyle,
+    selected
+      ? { animated: selected.animated, id: selected.id, style: selected.style }
+      : null,
+    { applyAnimated, applyReverse, applyStyle },
   );
 
   return {

@@ -92,6 +92,11 @@ export type ToolPanelSnapshot = {
 export type ToolPanelPatch = Partial<
   Pick<ToolPanelSnapshot, "background" | "cursorEffects">
 > & {
+  /** Draw the chosen mark in and out over its clip, or leave it standing.
+   * This is the mark's own property rather than part of its dress, so it
+   * travels beside the style rather than inside it. It also becomes the next
+   * arrow's default. */
+  annotationAnimated?: boolean;
   /** Dress the chosen mark, a field at a time so a panel never has to send
    * the whole style back. Each one also becomes the next arrow's default. */
   annotationStyle?: Partial<AnnotationStyle>;
@@ -132,6 +137,8 @@ export type ToolPanelPatch = Partial<
   resetShortcut?: true;
   /** Bring back every shortcut deleted from the timeline. */
   restoreShortcuts?: true;
+  /** Turn the chosen mark round, so its head points the other way. */
+  reverseAnnotation?: true;
   /** Keep a colour of your own, so it is on offer next time. Sent once a
    * colour is settled on rather than on every step of a drag. */
   saveAnnotationColor?: string;

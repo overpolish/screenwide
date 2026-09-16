@@ -44,8 +44,8 @@ use self::ffi::{
 };
 pub(crate) use self::native_types::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
 use super::{
-  AnnotationGestureCallback, AnnotationHoverCallback, ContextMenuCallback, PointerDownCallback, SelectionCallback,
-  SelectionGestureCallback, TransformCallback,
+  AnnotationGestureCallback, AnnotationHoverCallback, ContextMenuCallback, PointerDownCallback,
+  SelectionCallback, SelectionGestureCallback, TransformCallback,
 };
 use crate::screenshots::CapturedImage;
 
