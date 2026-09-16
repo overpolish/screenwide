@@ -4,7 +4,7 @@
 use std::time::Duration;
 
 use super::*;
-use crate::editor::annotations::AnnotationShape;
+use crate::editor::annotations::{AnnotationHead, AnnotationShape};
 
 const PHASE_UP: u32 = 2;
 

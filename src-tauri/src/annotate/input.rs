@@ -13,12 +13,18 @@ use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::Instant;
 
 use crate::editor::annotations::model::new_arrow;
-use crate::editor::annotations::{Annotation, AnnotationHead, AnnotationPoint, AnnotationStyle};
+use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationStyle};
 
 /// Virtual key codes, which AppKit reports by physical position.
+const KEY_A: u16 = 0;
 const KEY_Z: u16 = 6;
 const KEY_BACKSPACE: u16 = 51;
 const KEY_FORWARD_DELETE: u16 = 117;
+
+/// The tool each unmodified letter picks up, the twin of the toolbar's own
+/// hints. A shape added to the overlay takes its letter here.
+const TOOL_KEYS: &[(u16, super::settings::AnnotateShape)] =
+  &[(KEY_A, super::settings::AnnotateShape::Arrow)];
 
 /// The modifier bits `native_overlay_macos.h` sends.
 const MODIFIER_COMMAND: u32 = 1;
@@ -51,7 +57,7 @@ fn style() -> AnnotationStyle {
   let settings = super::settings::current();
   AnnotationStyle {
     color: settings.default_color,
-    head: AnnotationHead::End,
+    head: settings.default_head,
     width: settings.default_width,
   }
 }
@@ -103,9 +109,16 @@ fn step(
 
 /// The stroke in hand, for the overlay to draw. Annotations already on screen come
 /// from [`super::live_clips`].
+///
+/// A stroke that has not travelled is not drawn: an arrow with both ends in
+/// one place is a blob, and the press that starts every stroke would flash
+/// one before the drag begins.
 pub(super) fn in_progress() -> Option<Annotation> {
   let style = style();
-  drawing().as_ref().map(|stroke| arrow(stroke, &style))
+  drawing()
+    .as_ref()
+    .filter(|stroke| stroke.start.x != stroke.end.x || stroke.start.y != stroke.end.y)
+    .map(|stroke| arrow(stroke, &style))
 }
 
 /// A pointer step in global desktop points: 0 down, 1 drag, 2 up.
@@ -125,7 +138,7 @@ pub(super) fn pointer(phase: u32, x: f64, y: f64) {
 /// A key press. Reports whether the overlay acted on it, which is what tells
 /// the native side to redraw. Escape and the activation shortcut arrive
 /// through their own global registrations and are never seen here.
-pub(super) fn key(key_code: u16, modifiers: u32) -> bool {
+pub(super) fn key(app: &tauri::AppHandle, key_code: u16, modifiers: u32) -> bool {
   match key_code {
     // Undo takes the last annotation off the screen. While a recording runs its
     // clip is kept: the annotation was visible for exactly that long, and the
@@ -139,6 +152,17 @@ pub(super) fn key(key_code: u16, modifiers: u32) -> bool {
       super::live_clips::clear();
       true
     }
+    _ if modifiers == 0 => match TOOL_KEYS.iter().find(|(key, _)| *key == key_code) {
+      Some((_, shape)) => {
+        // A settings write, like the toolbar's: the toolbar and the Settings
+        // page follow the change event. Nothing on screen changes.
+        if let Err(error) = super::settings::store_default_shape(app, *shape) {
+          eprintln!("Could not choose the annotate tool: {error}");
+        }
+        false
+      }
+      None => false,
+    },
     _ => false,
   }
 }

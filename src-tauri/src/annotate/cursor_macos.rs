@@ -20,6 +20,8 @@ unsafe extern "C" {
   /// `src/ruler/cursor_guard_macos.m`. Installs the `NSCursor set` guard and
   /// names the cursor an arrow request is replaced with; null clears it.
   fn screenwide_set_region_expected_cursor(cursor: *mut c_void);
+  /// The same guard's exemption: the window whose pointer stays an arrow.
+  fn screenwide_set_cursor_guard_exempt_window(window: *mut c_void);
 }
 
 fn with_window(window: &WebviewWindow, work: impl FnOnce(&NSWindow)) {
@@ -46,4 +48,17 @@ pub(super) fn release(window: &WebviewWindow) {
     native.enableCursorRects();
     native.resetCursorRects();
   });
+}
+
+/// The toolbar is chrome rather than canvas, so the guard leaves the pointer
+/// alone over it: its controls are pressed, not drawn on. Main thread only.
+pub(super) fn exempt_toolbar(window: &WebviewWindow) {
+  with_window(window, |native| unsafe {
+    screenwide_set_cursor_guard_exempt_window(std::ptr::from_ref(native).cast_mut().cast());
+  });
+}
+
+/// Main thread only, once the toolbar is no longer on screen.
+pub(super) fn forget_toolbar() {
+  unsafe { screenwide_set_cursor_guard_exempt_window(std::ptr::null_mut()) };
 }

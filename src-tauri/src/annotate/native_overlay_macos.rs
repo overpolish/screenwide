@@ -9,10 +9,10 @@
 //! document to keep in step with [`super::live_clips`].
 
 use std::ffi::c_void;
-use std::sync::{LazyLock, RwLock};
+use std::sync::{LazyLock, OnceLock, RwLock};
 
 use objc2_app_kit::NSWindow;
-use tauri::WebviewWindow;
+use tauri::{AppHandle, WebviewWindow};
 
 use crate::editor::annotations::native::{native_annotations, NativeAnnotations};
 
@@ -25,6 +25,9 @@ pub(super) struct Display {
 }
 
 static DISPLAYS: LazyLock<RwLock<Vec<Display>>> = LazyLock::new(|| RwLock::new(Vec::new()));
+/// The key callback is a bare C function pointer, so the handle a tool key
+/// needs to write a setting cannot ride along with it.
+static APP: OnceLock<AppHandle> = OnceLock::new();
 
 unsafe extern "C" {
   fn screenwide_annotate_attach(view: *mut c_void, display: u32) -> u32;
@@ -70,7 +73,10 @@ extern "C" fn pointer(phase: u32, x: f64, y: f64) {
 }
 
 extern "C" fn key(key_code: u16, modifiers: u32) -> u32 {
-  u32::from(super::input::key(key_code, modifiers))
+  let Some(app) = APP.get() else {
+    return 0;
+  };
+  u32::from(super::input::key(app, key_code, modifiers))
 }
 
 /// Names the displays the overlay is about to cover. Their order is the order
@@ -102,7 +108,8 @@ pub(super) fn install_scene() {
 }
 
 /// Starts swallowing pointer and key events. Main thread only.
-pub(super) fn install_input() {
+pub(super) fn install_input(app: &AppHandle) {
+  let _ = APP.set(app.clone());
   unsafe { screenwide_annotate_install_input(pointer, key) };
 }
 

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { AnnotationHead } from "../../components/shared/annotation-style/types";
 import { BackgroundPreset } from "../../components/shared/background-picker/background";
 
 export type ShortcutAction =
@@ -51,14 +52,24 @@ export type OcrSettings = {
 };
 
 /** The shapes the overlay can draw. Only the arrow exists so far. */
-type AnnotateShape = "arrow";
+export type AnnotateShape = "arrow";
+
+/** Where the toolbar was last dropped: logical points from the top-left of
+ * the display it landed on. */
+type AnnotateToolbarPosition = {
+  displayId: number;
+  x: number;
+  y: number;
+};
 
 export type AnnotateSettings = {
   defaultColor: string;
+  defaultHead: AnnotationHead;
   defaultShape: AnnotateShape;
   defaultWidth: number;
   enabled: boolean;
   keepAnnotationsBetweenSessions: boolean;
+  toolbarPosition: AnnotateToolbarPosition | null;
 };
 
 export type ShortcutDefaults = {

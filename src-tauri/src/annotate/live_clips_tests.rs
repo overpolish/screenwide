@@ -211,8 +211,9 @@ fn an_annotation_is_recorded_in_the_source_pixels_it_was_drawn_over() {
 
   assert_eq!((start.x, start.y), (200.0, 100.0));
   assert_eq!((end.x, end.y), (400.0, 300.0));
-  // The stroke keeps the weight it was drawn with on a 2x display.
-  assert_eq!(clips[0].annotation.style.width, 16.0);
+  // The stroke's weight is pixels, as an editor annotation's is, so the
+  // preset it was drawn with is the preset the clip carries.
+  assert_eq!(clips[0].annotation.style.width, 8.0);
   assert!(validate_clips(&clips).is_ok());
 }
 

@@ -44,3 +44,38 @@ fn a_width_outside_the_stroke_presets_is_refused() {
   })
   .is_ok());
 }
+
+#[test]
+fn a_toolbar_position_that_is_not_a_place_is_refused() {
+  for (x, y) in [(f64::NAN, 0.0), (0.0, f64::INFINITY)] {
+    assert!(validated(AnnotateSettings {
+      toolbar_position: Some(ToolbarPosition {
+        display_id: 1,
+        x,
+        y
+      }),
+      ..AnnotateSettings::default()
+    })
+    .is_err());
+  }
+  assert!(validated(AnnotateSettings {
+    toolbar_position: Some(ToolbarPosition {
+      display_id: 1,
+      x: -12.0,
+      y: 8.0
+    }),
+    ..AnnotateSettings::default()
+  })
+  .is_ok());
+}
+
+/// A stored file written before the toolbar existed still loads, and the
+/// arrow it dresses keeps its head.
+#[test]
+fn settings_without_the_newer_fields_take_their_defaults() {
+  let settings: AnnotateSettings =
+    serde_json::from_str(r##"{"enabled":true,"defaultColor":"#ffcc00","defaultWidth":8.0}"##)
+      .unwrap();
+  assert_eq!(settings.default_head, AnnotationHead::End);
+  assert_eq!(settings.toolbar_position, None);
+}

@@ -32,12 +32,14 @@ import {
   defaultRecordingOutput,
   defaultScreenshotOutput,
   RecordingOutputSettings,
-  resetScreenshotLayout,
   restoredRecordingOutput,
-  screenshotOutputTemplate,
   ScreenshotWorkspaceOutputSettings,
   withScreenshotWorkspaceItemOutput,
 } from "./screenshot-output";
+import {
+  seedScreenshotItemOutput,
+  seedScreenshotWorkspace,
+} from "./screenshot-seed";
 import {
   selectArtifact,
   selectDirectory,
@@ -351,53 +353,14 @@ export function EditorWindow() {
     );
     screenshotRadiusRef.current = persistedScreenshotRadius;
     screenshotBackgroundRadiusRef.current = persistedScreenshotBackgroundRadius;
-    const screenshotDefaults = defaultScreenshotOutput(
-      artifact?.width ?? 1,
-      artifact?.height ?? 1,
-      {
-        background: persistedScreenshotBackgroundRadius,
-        screenshot: persistedScreenshotRadius,
-      },
+    setScreenshotOutput(
+      seedScreenshotWorkspace({
+        artifact,
+        backgroundRadius: persistedScreenshotBackgroundRadius,
+        persisted: persistedScreenshotOutput,
+        radius: persistedScreenshotRadius,
+      }),
     );
-    const firstOutput =
-      artifact?.kind === "screenshot" && persistedScreenshotOutput
-        ? resetScreenshotLayout(
-            {
-              ...screenshotDefaults,
-              // The remembered look is a template, so it brings the colours
-              // and the corners and none of the marks: an arrow belongs to
-              // the capture it was drawn on.
-              ...screenshotOutputTemplate(persistedScreenshotOutput),
-              backgroundRadiusPercent: persistedScreenshotBackgroundRadius,
-              // A new capture starts at its own native canvas dimensions.
-              // Persist visual preferences, not the previous artifact's
-              // aspect ratio or manually enlarged output canvas.
-              height: screenshotDefaults.height,
-              radiusPercent: persistedScreenshotRadius,
-              recenterInsetColor: null,
-              width: screenshotDefaults.width,
-            },
-            artifact,
-          )
-        : artifact?.kind === "screenshot"
-          ? resetScreenshotLayout(screenshotDefaults, artifact)
-          : screenshotDefaults;
-    setScreenshotOutput({
-      ...firstOutput,
-      items:
-        artifact?.kind === "screenshot"
-          ? artifact.items.map((item) => ({
-              id: item.id,
-              output: {
-                ...resetScreenshotLayout(
-                  screenshotOutputTemplate(firstOutput),
-                  item,
-                ),
-                annotations: item.annotations,
-              },
-            }))
-          : [],
-    });
     setSelectedScreenshotItemId(
       artifact?.kind === "screenshot"
         ? (artifact.items[artifact.items.length - 1]?.id ?? null)
@@ -437,19 +400,8 @@ export function EditorWindow() {
           ...current.items,
           ...added.map((item) => ({
             id: item.id,
-            // Placed at its real size: fitting is the user's to do, and the
-            // marks on the layers already there are not copied onto it. Its
-            // own marks are the ones the live overlay had drawn over it.
-            output: {
-              ...resetScreenshotLayout(
-                screenshotOutputTemplate(current),
-                item,
-                {
-                  fit: false,
-                },
-              ),
-              annotations: item.annotations,
-            },
+            // Placed at its real size: fitting is the user's to do.
+            output: seedScreenshotItemOutput(current, item, { fit: false }),
           })),
         ],
       };

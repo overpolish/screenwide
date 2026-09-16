@@ -17,6 +17,19 @@ pub fn restore_recording_level(window: &WebviewWindow) -> tauri::Result<()> {
   set_level(window, PanelLevel::Custom(level).value())
 }
 
+/// Raises a floating panel over the capture overlays, or puts the ordinary
+/// floating level back. The tooltip uses it: a control on the live annotation
+/// overlay's toolbar sits above every ordinary window, so the tooltip that
+/// describes it has to clear that toolbar rather than hide under it.
+pub fn set_above_capture_overlays(window: &WebviewWindow, above: bool) -> tauri::Result<()> {
+  let level = if above {
+    i64::from(crate::capture_overlays::FOREGROUND_LEVEL as i32 + 2)
+  } else {
+    PanelLevel::Floating.value()
+  };
+  set_level(window, level)
+}
+
 fn set_level(window: &WebviewWindow, level: i64) -> tauri::Result<()> {
   let panel = ensure_recording_panel(window)?;
   // Export cleanup can close tool panels from an async command. AppKit's

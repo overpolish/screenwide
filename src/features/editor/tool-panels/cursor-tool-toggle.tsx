@@ -4,7 +4,7 @@
 import { MousePointer } from "lucide-react";
 import { useRef } from "react";
 
-import { PreviewToolToggle } from "../components/preview-tool-toggle";
+import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
 import { useToolPanel } from "./use-tool-panel";
 
@@ -22,7 +22,7 @@ export function CursorToolToggle({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <span className="inline-flex" data-editor-tool="cursor" ref={triggerRef}>
-      <PreviewToolToggle
+      <ToolToggle
         isSelected={openTool === "cursor"}
         label="Cursor"
         name="Cursor effects"
@@ -38,7 +38,7 @@ export function CursorToolToggle({ onDismiss }: { onDismiss: () => void }) {
         shortcut="M"
       >
         <MousePointer />
-      </PreviewToolToggle>
+      </ToolToggle>
     </span>
   );
 }

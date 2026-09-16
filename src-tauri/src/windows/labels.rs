@@ -24,6 +24,8 @@ pub enum WindowLabel {
   Permissions,
   /// The live annotation overlay's transparent host surface.
   Annotate,
+  /// The live annotation overlay's floating toolbar, above every host.
+  AnnotateToolbar,
   Glide,
   RecordingBar,
   RecordingDock,
@@ -50,6 +52,7 @@ impl WindowLabel {
     #[cfg(target_os = "macos")]
     Self::Permissions,
     Self::Annotate,
+    Self::AnnotateToolbar,
     Self::Glide,
     Self::RecordingBar,
     Self::RecordingDock,
@@ -76,6 +79,7 @@ impl WindowLabel {
       #[cfg(target_os = "macos")]
       Self::Permissions => "permissions",
       Self::Annotate => "annotate",
+      Self::AnnotateToolbar => "annotate-toolbar",
       Self::Glide => "glide",
       Self::RecordingBar => "recording-bar",
       Self::RecordingDock => "recording-dock",

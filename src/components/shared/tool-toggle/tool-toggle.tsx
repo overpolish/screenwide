@@ -3,18 +3,17 @@
 
 import { ReactNode } from "react";
 
-import { IconToggleButton } from "../../../components/base/button/icon-button";
-import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { IconToggleButton } from "../../base/button/icon-button";
+import { NativeTooltipTrigger } from "../native-tooltip/native-tooltip-trigger";
 
 /**
- * One Editor tool in the preview toolbar: a toggle whose tooltip
- * names its keyboard shortcut.
+ * One tool in a toolbar: a toggle whose tooltip names its keyboard shortcut.
  *
- * The tooltip is a window of its own: the preview it stands over is a native
- * surface layered above the webview, which nothing drawn in the page can
- * appear over.
+ * The tooltip is a window of its own, because the surfaces these toolbars
+ * stand over - the Editor's preview, the live annotation overlay - are native
+ * layers above the webview, which nothing drawn in the page can appear over.
  */
-export function PreviewToolToggle({
+export function ToolToggle({
   children,
   isDisabled = false,
   isSelected,

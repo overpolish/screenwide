@@ -57,7 +57,10 @@ const fn policy(label: WindowLabel) -> Policy {
     | WindowLabel::StandaloneListbox
     | WindowLabel::ToolPanelRecording
     | WindowLabel::ToolPanelScreenshot => Policy::OwnedTransient,
+    // The toolbar is rebuilt with the hosts it belongs to, so it never has to
+    // recover geometry of its own either.
     WindowLabel::Annotate
+    | WindowLabel::AnnotateToolbar
     | WindowLabel::RegionSelector
     | WindowLabel::Ruler
     | WindowLabel::TextRecognition => Policy::DesktopSurface,

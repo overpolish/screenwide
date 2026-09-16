@@ -11,11 +11,10 @@
  * twin of `src-tauri/src/editor/annotations/model.rs`.
  */
 
+import { AnnotationHead } from "../../components/shared/annotation-style/types";
+
 /** A point in the layer source's pixel space. */
 type AnnotationPoint = { x: number; y: number };
-
-/** Which ends of an arrow carry a head. */
-export type AnnotationHead = "none" | "end" | "both";
 
 export type AnnotationStyle = {
   /** `#rrggbb` or `#rrggbbaa`, straight alpha. */
@@ -63,15 +62,6 @@ const annotationHead = (value: unknown): AnnotationHead =>
   value === "none" || value === "both" ? value : "end";
 
 /**
- * The strokes the width control offers, in output pixels.
- *
- * The steps are not uniform - the jump from hairline to visible matters more
- * than the one from thick to thicker - so the slider runs over the index of
- * this list rather than over the width itself.
- */
-export const ANNOTATION_WIDTHS = [8, 12, 16, 24, 32, 48];
-
-/**
  * How long an animated mark takes to draw itself in, in source milliseconds.
  * The twin of `REVEAL_DRAW_IN_MS` in
  * `src-tauri/src/editor/annotations/reveal.rs`, which a Rust test holds to
@@ -80,34 +70,6 @@ export const ANNOTATION_WIDTHS = [8, 12, 16, 24, 32, 48];
  * finished drawing by the time the playhead is reached.
  */
 export const ANNOTATION_DRAW_IN_MS = 1000;
-
-/** The stroke a fresh arrow is drawn with. The twin of `NEW_ARROW_WIDTH`. */
-export const DEFAULT_ANNOTATION_WIDTH = 8;
-
-/** Where `width` sits in the preset list: the nearest preset to it, so a
- * width from an older document still lands the knob somewhere sensible. */
-export const annotationWidthIndex = (width: number) => {
-  if (!Number.isFinite(width))
-    return ANNOTATION_WIDTHS.indexOf(DEFAULT_ANNOTATION_WIDTH);
-  let nearest = 0;
-  for (let index = 1; index < ANNOTATION_WIDTHS.length; index++) {
-    if (
-      Math.abs(ANNOTATION_WIDTHS[index] - width) <
-      Math.abs(ANNOTATION_WIDTHS[nearest] - width)
-    )
-      nearest = index;
-  }
-  return nearest;
-};
-
-/** The preset at `index`, clamped to the list the slider runs over. */
-export const annotationWidthAt = (index: number) =>
-  ANNOTATION_WIDTHS[
-    Math.min(
-      ANNOTATION_WIDTHS.length - 1,
-      Math.max(0, Math.round(Number.isFinite(index) ? index : 0)),
-    )
-  ];
 
 /**
  * Which arrow a delete acts on: the one the halo is showing, and otherwise

@@ -4,8 +4,7 @@
 import { ArrowUpRight, Crop, MousePointer2, ScanSquare } from "lucide-react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
-
-import { PreviewToolToggle } from "./preview-tool-toggle";
+import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
 export type RecordingCanvasTool = "arrow" | "canvas" | "crop" | "select" | null;
 
@@ -29,7 +28,7 @@ export function RecordingCanvasTools({
       {/* The marker is the anchor Select's panel hangs from: taking the tool
           up opens it, however the tool was taken up. */}
       <span className="inline-flex" data-editor-tool="select">
-        <PreviewToolToggle
+        <ToolToggle
           isDisabled={!isSelectEnabled}
           isSelected={tool === "select" && isSelectEnabled}
           label="Select"
@@ -40,9 +39,9 @@ export function RecordingCanvasTools({
           shortcut="V"
         >
           <MousePointer2 />
-        </PreviewToolToggle>
+        </ToolToggle>
       </span>
-      <PreviewToolToggle
+      <ToolToggle
         isDisabled={!isFrameEnabled}
         isSelected={tool === "canvas" && isFrameEnabled}
         label="Frame"
@@ -53,8 +52,8 @@ export function RecordingCanvasTools({
         shortcut="F"
       >
         <ScanSquare />
-      </PreviewToolToggle>
-      <PreviewToolToggle
+      </ToolToggle>
+      <ToolToggle
         isDisabled={!isEnabled}
         isSelected={tool === "crop" && isEnabled}
         label="Crop"
@@ -65,9 +64,9 @@ export function RecordingCanvasTools({
         shortcut="C"
       >
         <Crop />
-      </PreviewToolToggle>
+      </ToolToggle>
       <span className="inline-flex" data-editor-tool="arrow">
-        <PreviewToolToggle
+        <ToolToggle
           isDisabled={!isArrowEnabled}
           isSelected={tool === "arrow" && isArrowEnabled}
           label="Arrow"
@@ -78,7 +77,7 @@ export function RecordingCanvasTools({
           shortcut="A"
         >
           <ArrowUpRight />
-        </PreviewToolToggle>
+        </ToolToggle>
       </span>
     </ButtonGroup>
   );

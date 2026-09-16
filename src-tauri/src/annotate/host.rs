@@ -15,8 +15,16 @@ use crate::{capture_overlays, windows::WindowLabel};
 /// One host's geometry, read from the monitor layout before any window is
 /// built: xcap's display handles are not `Send`, so nothing here may await.
 pub(super) struct HostPlan {
-  position: tauri::LogicalPosition<f64>,
-  size: tauri::LogicalSize<f64>,
+  /// The capture display this host covers, which is how the toolbar
+  /// recognises the screen it was last dropped on.
+  pub(super) display_id: u32,
+  pub(super) position: tauri::LogicalPosition<f64>,
+  pub(super) size: tauri::LogicalSize<f64>,
+  /// The display less the menu bar, the notch and the Dock. The hosts cover
+  /// the whole screen, but anything the user has to read or press - the
+  /// toolbar - belongs inside this.
+  pub(super) work_position: tauri::LogicalPosition<f64>,
+  pub(super) work_size: tauri::LogicalSize<f64>,
 }
 
 /// The anchor keeps the plain label so the window is recognisable; the peers
@@ -30,15 +38,22 @@ fn label(index: usize) -> String {
   }
 }
 
-/// Every window the overlay may have opened, whatever the display count was
-/// when it opened them.
+/// Every host window the overlay may have opened, whatever the display count
+/// was when it opened them. The peers are numbered after the anchor, and the
+/// number is what tells a host from the toolbar, whose label shares the
+/// feature's prefix.
 pub(super) fn windows(app: &AppHandle) -> Vec<WebviewWindow> {
   let anchor = WindowLabel::Annotate.as_str();
   let peer = format!("{anchor}-");
   let mut hosts: Vec<_> = app
     .webview_windows()
     .into_iter()
-    .filter(|(label, _)| label == anchor || label.starts_with(&peer))
+    .filter(|(label, _)| {
+      label == anchor
+        || label.strip_prefix(&peer).is_some_and(|index| {
+          !index.is_empty() && index.chars().all(|digit| digit.is_ascii_digit())
+        })
+    })
     .collect();
   // Anchor first: it is the window that owns focus and the cursor lease.
   hosts.sort_by(|(first, _), (second, _)| first.len().cmp(&second.len()).then(first.cmp(second)));
@@ -63,7 +78,7 @@ pub(super) fn plan(app: &AppHandle) -> Result<Vec<HostPlan>, String> {
   #[cfg(target_os = "macos")]
   let mut displays = Vec::with_capacity(monitors.len());
   let mut plans = Vec::with_capacity(monitors.len());
-  for (_, scale, monitor) in &monitors {
+  for (display_id, scale, monitor) in &monitors {
     let position = monitor.position().to_logical::<f64>(*scale);
     let size = monitor.size().to_logical::<f64>(*scale);
     #[cfg(target_os = "macos")]
@@ -71,7 +86,14 @@ pub(super) fn plan(app: &AppHandle) -> Result<Vec<HostPlan>, String> {
       origin: (position.x, position.y),
       scale: *scale,
     });
-    plans.push(HostPlan { position, size });
+    let work_area = monitor.work_area();
+    plans.push(HostPlan {
+      display_id: *display_id,
+      position,
+      size,
+      work_position: work_area.position.to_logical::<f64>(*scale),
+      work_size: work_area.size.to_logical::<f64>(*scale),
+    });
   }
   #[cfg(target_os = "macos")]
   super::native_overlay::set_displays(displays);
@@ -122,17 +144,22 @@ pub(super) fn present(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), 
   #[cfg(target_os = "macos")]
   {
     let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    let handle = app.clone();
     app
       .run_on_main_thread(move || {
-        let _ = sender.send(present_on_main_thread(&hosts));
+        let _ = sender.send(present_on_main_thread(&handle, &hosts));
       })
       .map_err(|error| error.to_string())?;
-    receiver.recv().map_err(|error| error.to_string())?
+    receiver.recv().map_err(|error| error.to_string())??;
+    // After the anchor has the foreground, so ordering the toolbar front
+    // cannot take it back off the window that owns the keyboard.
+    super::toolbar::present(app);
+    Ok(())
   }
 }
 
 #[cfg(target_os = "macos")]
-fn present_on_main_thread(hosts: &[WebviewWindow]) -> Result<(), String> {
+fn present_on_main_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<(), String> {
   let Some((anchor, peers)) = hosts.split_first() else {
     return Err("No monitor is available for Annotate".to_owned());
   };
@@ -150,7 +177,7 @@ fn present_on_main_thread(hosts: &[WebviewWindow]) -> Result<(), String> {
   for peer in peers {
     super::native_overlay::order_front(peer);
   }
-  super::native_overlay::install_input();
+  super::native_overlay::install_input(app);
   super::native_overlay::redraw();
   Ok(())
 }
@@ -160,6 +187,8 @@ fn present_on_main_thread(hosts: &[WebviewWindow]) -> Result<(), String> {
 /// or Editor window while the cursor lease is still putting the user's own
 /// application back.
 pub(super) fn close(app: &AppHandle) -> bool {
+  #[cfg(target_os = "macos")]
+  super::toolbar::close(app);
   let hosts = windows(app);
   if hosts.is_empty() {
     return false;
@@ -205,6 +234,10 @@ fn close_on_main_thread(hosts: &[WebviewWindow]) -> bool {
 /// underneath while the annotations stay drawn on top. Reports whether there were
 /// hosts to hand over.
 pub(super) fn show_only(app: &AppHandle) -> bool {
+  // Annotations that are only being shown take no input, so there is nothing
+  // for a toolbar to edit.
+  #[cfg(target_os = "macos")]
+  super::toolbar::hide(app);
   let hosts = windows(app);
   if hosts.is_empty() {
     return false;

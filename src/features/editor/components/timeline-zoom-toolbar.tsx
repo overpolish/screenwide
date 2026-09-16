@@ -12,8 +12,8 @@ import { RefObject } from "react";
 
 import { IconButton } from "../../../components/base/button/icon-button";
 import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
-import { PreviewToolToggle } from "./preview-tool-toggle";
 import { Playhead } from "./scrub-playhead";
 import { SeekHandler, TimelineRuler } from "./scrub-timeline";
 import { TimelineBladeController } from "./timeline-blade";
@@ -38,7 +38,7 @@ export function TimelineZoomToolbar({
 }) {
   return (
     <div className="flex h-control-height w-timeline-gutter shrink-0 items-center gap-control">
-      <PreviewToolToggle
+      <ToolToggle
         isSelected={isBladeActive}
         label="Blade"
         name="Blade tool"
@@ -46,8 +46,8 @@ export function TimelineZoomToolbar({
         shortcut="B"
       >
         <Scissors />
-      </PreviewToolToggle>
-      <PreviewToolToggle
+      </ToolToggle>
+      <ToolToggle
         isSelected={isRangeActive}
         label="Range"
         name="Range tool"
@@ -55,7 +55,7 @@ export function TimelineZoomToolbar({
         shortcut="R"
       >
         <SquareDashed />
-      </PreviewToolToggle>
+      </ToolToggle>
       <div className="ml-auto flex items-center gap-control">
         <NativeTooltipTrigger tooltip="Zoom out">
           <IconButton

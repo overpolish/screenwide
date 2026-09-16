@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { AnnotateToolbarWindow } from "./features/annotate/annotate-toolbar-window";
 import { ConfirmSheetWindow } from "./features/confirm-sheet/confirm-sheet-window";
 import { EditorSync } from "./features/editor/editor-sync";
 import { EditorWindow } from "./features/editor/editor-window";
@@ -33,6 +34,8 @@ export function App() {
         // The native annotate overlay uses this route only as its transparent
         // host. No annotation rendering or interaction is allowed in React.
         return null;
+      case "/annotate-toolbar":
+        return <AnnotateToolbarWindow />;
       case "/confirm-sheet":
         return <ConfirmSheetWindow />;
       case "/editor":

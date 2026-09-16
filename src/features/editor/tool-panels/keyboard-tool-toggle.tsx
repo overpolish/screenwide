@@ -4,7 +4,7 @@
 import { Keyboard } from "lucide-react";
 import { useRef } from "react";
 
-import { PreviewToolToggle } from "../components/preview-tool-toggle";
+import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
 import { useToolPanel } from "./use-tool-panel";
 
@@ -23,7 +23,7 @@ export function KeyboardToolToggle({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <span className="inline-flex" data-editor-tool="keyboard" ref={triggerRef}>
-      <PreviewToolToggle
+      <ToolToggle
         isSelected={openTool === "keyboard"}
         label="Keyboard"
         name="Keyboard shortcuts"
@@ -39,7 +39,7 @@ export function KeyboardToolToggle({ onDismiss }: { onDismiss: () => void }) {
         shortcut="K"
       >
         <Keyboard />
-      </PreviewToolToggle>
+      </ToolToggle>
     </span>
   );
 }

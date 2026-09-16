@@ -5,8 +5,7 @@ import { ArrowUpRight, Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
-
-import { PreviewToolToggle } from "./preview-tool-toggle";
+import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
 export type ScreenshotTool = "arrow" | "canvas" | "crop" | "select" | null;
 
@@ -73,7 +72,7 @@ export function useScreenshotTools({
         {/* The marker is the anchor Select's panel hangs from: taking the
             tool up opens it, however the tool was taken up. */}
         <span className="inline-flex" data-editor-tool="select">
-          <PreviewToolToggle
+          <ToolToggle
             isSelected={tool === "select"}
             label="Select"
             name="Select screenshot"
@@ -81,9 +80,9 @@ export function useScreenshotTools({
             shortcut="V"
           >
             <MousePointer2 />
-          </PreviewToolToggle>
+          </ToolToggle>
         </span>
-        <PreviewToolToggle
+        <ToolToggle
           isSelected={tool === "canvas"}
           label="Resize canvas"
           name="Resize canvas"
@@ -91,8 +90,8 @@ export function useScreenshotTools({
           shortcut="F"
         >
           <ScanSquare />
-        </PreviewToolToggle>
-        <PreviewToolToggle
+        </ToolToggle>
+        <ToolToggle
           isSelected={tool === "crop"}
           label="Crop"
           name="Crop screenshot"
@@ -100,8 +99,8 @@ export function useScreenshotTools({
           shortcut="C"
         >
           <Crop />
-        </PreviewToolToggle>
-        <PreviewToolToggle
+        </ToolToggle>
+        <ToolToggle
           isSelected={tool === "arrow"}
           label="Arrow"
           name="Draw an arrow"
@@ -109,7 +108,7 @@ export function useScreenshotTools({
           shortcut="A"
         >
           <ArrowUpRight />
-        </PreviewToolToggle>
+        </ToolToggle>
       </ButtonGroup>
     ),
     [chooseArrowTool, chooseCanvasTool, chooseCropTool, chooseSelectTool, tool],

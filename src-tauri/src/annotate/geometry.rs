@@ -8,7 +8,7 @@
 //! pixels, and the overlay itself wants it in one display's layer pixels;
 //! both are the same kind of offset-and-scale applied to the geometry.
 
-use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
+use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
 use crate::recording::cursor::CursorSource;
 
 /// Whether the bounding box of `points` reaches the recorded rectangle.
@@ -53,9 +53,10 @@ pub(super) fn source_annotation(
   }
   let horizontal = f64::from(source.video_width) / source.width;
   let vertical = f64::from(source.video_height) / source.height;
-  // The stroke is drawn in logical points and stored in source pixels, so a
-  // 2x recording has to keep the weight the user drew.
-  let width = annotation.style.width * horizontal;
+  // A stroke width is pixels of whatever it is drawn on, the way an editor
+  // annotation's is: the same preset is the same weight live and in the
+  // editor, so the number carries over rather than being rescaled.
+  let width = annotation.style.width;
   if !(width.is_finite() && width > 0.0) {
     return None;
   }
@@ -69,18 +70,15 @@ pub(super) fn source_annotation(
       control: point(control),
       end: point(end),
     },
-    style: AnnotationStyle {
-      width,
-      ..annotation.style.clone()
-    },
+    style: annotation.style.clone(),
     ..annotation.clone()
   })
 }
 
 /// An annotation in one display's layer pixels: its origin is the display's top-left
-/// corner in desktop points, and `scale` its backing scale. The stroke's
-/// width scales with it, so an annotation keeps the weight it was drawn at on a
-/// retina display as well as on a 1x one.
+/// corner in desktop points, and `scale` its backing scale. Only the geometry
+/// scales - the stroke width is already in pixels, as the editor's is, so a
+/// preset drawn live has the weight the same preset has on a picture.
 #[cfg(target_os = "macos")]
 pub(super) fn display_annotation(
   annotation: &Annotation,
@@ -102,10 +100,7 @@ pub(super) fn display_annotation(
       control: point(control),
       end: point(end),
     },
-    style: AnnotationStyle {
-      width: annotation.style.width * scale,
-      ..annotation.style.clone()
-    },
+    style: annotation.style.clone(),
     ..annotation.clone()
   }
 }

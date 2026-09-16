@@ -3,6 +3,7 @@
   "identifier": "default",
   "description": "Capability for Screenwide windows",
   "windows": [
+    "annotate-toolbar",
     "editor-recording",
     "editor-screenshot",
     "export-recording",

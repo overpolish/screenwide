@@ -13,6 +13,7 @@
 //! up: there is no pass-through mode, and the shortcut or Escape is the way
 //! out.
 
+pub(crate) mod commands;
 #[cfg(target_os = "macos")]
 #[path = "annotate/cursor_macos.rs"]
 mod cursor;
@@ -29,6 +30,8 @@ mod screenshot;
 mod screenshot_mode;
 mod session;
 pub(crate) mod settings;
+#[cfg(target_os = "macos")]
+pub(crate) mod toolbar;
 
 pub(crate) use live_clips::has_annotations;
 pub use session::AnnotateState;
@@ -180,9 +183,20 @@ fn start_hosts(app: &AppHandle, generation: u64) -> Result<(), String> {
   for (index, plan) in plans.iter().enumerate() {
     hosts.push(host::build(app, index, plan)?);
   }
+  // The toolbar belongs to the anchor display, whose host is the window made
+  // key; it is built here so every window is in place before any is seen.
+  #[cfg(target_os = "macos")]
+  match plans.first() {
+    Some(anchor) => {
+      toolbar::build(app, anchor)?;
+    }
+    None => return Err("No monitor is available for Annotate".to_owned()),
+  }
   // A newer session may have started while the windows were being built. It
   // owns the overlay now, and these windows are not part of it.
   if !app.state::<AnnotateState>().install(generation) {
+    #[cfg(target_os = "macos")]
+    toolbar::close(app);
     for window in hosts {
       let _ = window.close();
     }

@@ -195,13 +195,35 @@ static CGPoint pointerLocation(NSEvent *event) {
   return cg != NULL ? CGEventGetLocation(cg) : CGPointMake(0, 0);
 }
 
+/// Whether an event landed on one of the surfaces the overlay draws on. The
+/// monitor sees every event in the process, so this is a pointer compare over
+/// the one window per display the overlay owns.
+static BOOL isHostWindow(NSWindow *window) {
+  for (ScreenwideAnnotateSurface *surface in surfaces)
+    if (surface.host.window == window)
+      return YES;
+  return NO;
+}
+
 /// Every event the overlay is offered is swallowed: there is no pass-through
 /// mode, so nothing underneath can be clicked or typed into while it is up.
 /// Key-ups and wheels are consumed without being reported; the shortcut and
 /// Escape leave by their own global registrations.
+///
+/// The exception is this application's other windows. An event carrying a
+/// window that is not a host belongs to the toolbar - or to a panel it opened
+/// - and is handed straight back, so its controls can be pressed and, while
+/// it holds key status, typed into.
 static NSEvent *handleEvent(NSEvent *event) {
   if (surfaces.count == 0)
     return event;
+  if (event.window != nil && !isHostWindow(event.window)) {
+    // Chrome rather than canvas: the pointer says "press", not "draw". The
+    // cursor guard exempts this window, so the arrow survives being set.
+    if (event.type == NSEventTypeMouseMoved)
+      [NSCursor.arrowCursor set];
+    return event;
+  }
   switch (event.type) {
   case NSEventTypeLeftMouseDown:
   case NSEventTypeLeftMouseDragged:
@@ -221,6 +243,10 @@ static NSEvent *handleEvent(NSEvent *event) {
       screenwide_annotate_redraw();
     return nil;
   }
+  case NSEventTypeMouseMoved:
+    // Back over the canvas, where the crosshair says a stroke starts here.
+    [NSCursor.crosshairCursor set];
+    return nil;
   default:
     return nil;
   }

@@ -3,6 +3,9 @@
 
 import { GroupBox } from "../../components/base/group-box/group-box";
 import { Switch } from "../../components/base/switch/switch";
+import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
+import { AnnotationHeadGroup } from "../../components/shared/annotation-style/annotation-head-group";
+import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
 import { HotkeyField } from "../../components/shared/hotkey-field/hotkey-field";
 import { Setting } from "../../components/shared/setting/setting";
 
@@ -92,6 +95,48 @@ export function AnnotateSettingsPanel({
               onChange={onClearChange}
               value={clear}
             />
+          )}
+        </Setting>
+        {/* The dress the next stroke is drawn in. The same controls the
+            overlay's own toolbar carries, and the same setting behind them:
+            a choice made here shows up there, and the other way round. */}
+        <Setting controlClassName="max-w-72" title="Colour">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationColorGrid
+                isDisabled={isOff}
+                onChange={(defaultColor) => {
+                  update({ defaultColor });
+                }}
+                value={settings.defaultColor}
+              />
+            </div>
+          )}
+        </Setting>
+        <Setting title="Width">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationWidthSlider
+                isDisabled={isOff}
+                onChange={(defaultWidth) => {
+                  update({ defaultWidth });
+                }}
+                value={settings.defaultWidth}
+              />
+            </div>
+          )}
+        </Setting>
+        <Setting title="Head">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationHeadGroup
+                isDisabled={isOff}
+                onChange={(defaultHead) => {
+                  update({ defaultHead });
+                }}
+                value={settings.defaultHead}
+              />
+            </div>
           )}
         </Setting>
       </GroupBox>

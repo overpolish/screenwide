@@ -93,10 +93,12 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
   };
   let annotate: AnnotateSettings = {
     defaultColor: "#ffcc00",
+    defaultHead: "end",
     defaultShape: "arrow",
     defaultWidth: 8,
     enabled: true,
     keepAnnotationsBetweenSessions: false,
+    toolbarPosition: null,
   };
   const defaults: ShortcutDefaults = {
     glide: { ...glide },

@@ -32,7 +32,6 @@ mod ruler;
 mod screenshots;
 mod settings;
 mod shortcuts;
-#[cfg(target_os = "macos")]
 mod startup;
 #[cfg(debug_assertions)]
 mod storybook_native;
@@ -156,12 +155,19 @@ pub fn run() {
       text_recognition::settings::set_ocr_settings,
       annotate::settings::get_annotate_settings,
       annotate::settings::set_annotate_settings,
+      annotate::commands::clear_annotations,
+      annotate::commands::undo_annotation,
+      annotate::commands::dismiss_annotate,
+      #[cfg(target_os = "macos")]
+      annotate::toolbar::persist_annotate_toolbar_position,
+      #[cfg(target_os = "macos")]
+      annotate::toolbar::resize_annotate_toolbar,
       ruler::settings::get_ruler_settings,
       ruler::settings::set_ruler_settings,
       ruler::cancel_ruler,
       ruler::set_ruler_screenshot_mode,
       screenshots::scrolling::command::capture_scrolling_still,
-      screenshots::capture_still,
+      screenshots::still_command::capture_still,
       screenshots::thumbnail::render_background_thumbnail,
       text_recognition::cancel_text_recognition,
       text_recognition::close_qr_details,
@@ -218,71 +224,7 @@ pub fn run() {
       windows::panel_space::grow_editor_for_panel,
       windows::source_selector::expand_recording_source_selector,
     ])
-    .setup(|app| {
-      shortcuts::diagnostics::initialize(app.handle());
-      #[cfg(target_os = "windows")]
-      tooltip_window::initialize(app.handle())?;
-      #[cfg(debug_assertions)]
-      if let Some(preview_url) = std::env::var_os("SCREENWIDE_STORYBOOK_NATIVE_URL") {
-        storybook_native::show(app.handle(), &preview_url.to_string_lossy())?;
-        return Ok(());
-      }
-
-      #[cfg(target_os = "macos")]
-      {
-        editor::initialize_cursor_artwork();
-      }
-      #[cfg(desktop)]
-      tray::initialize(app)?;
-      settings::initialize(app.handle());
-      // Load controls before native input monitoring starts.
-      #[cfg(any(target_os = "macos", target_os = "windows"))]
-      glide::settings::initialize(app.handle());
-      #[cfg(any(target_os = "macos", target_os = "windows"))]
-      glide::initialize(app.handle()).map_err(std::io::Error::other)?;
-      let recording_bar_preview_enabled =
-        cfg!(debug_assertions) && std::env::var_os("SCREENWIDE_SHOW_RECORDING_BAR").is_some();
-      let show_recording_bar_on_launch = recording_bar_preview_enabled
-        || settings::current(app.handle()).show_recording_bar_on_launch;
-
-      // Create panels lazily so conversion cannot order a stale frame onscreen.
-      #[cfg(not(target_os = "macos"))]
-      {
-        windows::initialize_recording_bar(app.handle())?;
-        windows::initialize_recording_source_selector(app.handle())?;
-        windows::initialize_region_selector(app.handle())?;
-        windows::initialize_standalone_listbox(app.handle())?;
-        windows::initialize_recording_dock(app.handle())?;
-      }
-      windows::initialize_predefined_windows(app.handle())?;
-      windows::initialize_recording_bar_position(app.handle())?;
-      windows::initialize_topology_management(app.handle());
-      windows::manage_recording_bar_movement(app.handle());
-      windows::manage_recording_dock_movement(app.handle());
-      editor::initialize(app.handle());
-      let has_pending_export = editor::has_pending_workspace(app.handle());
-      shortcuts::initialize(app.handle());
-      system_accent::initialize(app.handle());
-      windows::manage_transient_popover_dismissal(app.handle());
-
-      #[cfg(target_os = "macos")]
-      permissions::show_on_launch(
-        app.handle(),
-        show_recording_bar_on_launch,
-        has_pending_export,
-      )?;
-
-      #[cfg(not(target_os = "macos"))]
-      if show_recording_bar_on_launch && !has_pending_export {
-        windows::show_recording_ui(app.handle())?;
-      }
-      permissions::start_watcher(app.handle().clone());
-
-      #[cfg(target_os = "macos")]
-      startup::hide_unrequested_windows(app.handle())?;
-
-      Ok(())
-    })
+    .setup(startup::setup)
     .build(tauri::generate_context!())
     .expect("error while running tauri application");
 

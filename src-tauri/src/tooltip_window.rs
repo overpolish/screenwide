@@ -153,6 +153,13 @@ pub fn show_tooltip(
   };
 
   let window = get_or_create(&app).map_err(|error| error.to_string())?;
+  // A control on the live annotation overlay's toolbar sits above every
+  // ordinary window, so the tooltip describing it has to clear that toolbar.
+  // Decided per tooltip rather than kept as state: the overlay comes and goes
+  // while this window is reused for the whole session.
+  #[cfg(target_os = "macos")]
+  platform::set_above_capture_overlays(&window, crate::annotate::is_active(&app))
+    .map_err(|error| error.to_string())?;
   let was_visible = window.is_visible().unwrap_or(false);
   {
     let state = app.state::<TooltipState>();

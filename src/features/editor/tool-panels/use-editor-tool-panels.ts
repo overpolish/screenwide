@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import {
+  withAnnotationColor,
+  withoutAnnotationColor,
+} from "../../../components/shared/annotation-style/palette";
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { useEditableGeneralSettings } from "../../settings/use-general-settings";
 import {
@@ -9,10 +13,6 @@ import {
   applyAnnotationStyle,
   useAnnotationSelection,
 } from "../annotation-channel";
-import {
-  withAnnotationColor,
-  withoutAnnotationColor,
-} from "../annotation-palette";
 import { useRestoreRecordingKeyboardShortcuts } from "../components/use-restore-recording-keyboard-shortcuts";
 import { keyboardMaximumSizePercent } from "../keyboard-effect-geometry";
 import {

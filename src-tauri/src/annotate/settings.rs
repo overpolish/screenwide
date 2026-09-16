@@ -9,12 +9,16 @@ use std::sync::{LazyLock, RwLock};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::editor::annotations::AnnotationHead;
+
 /// The stroke presets the editor's arrow panel offers, which is what keeps a
 /// live annotation and an editor annotation the same weight. The twin of
-/// `ANNOTATION_WIDTHS` in `src/features/editor/annotations.ts`.
+/// `ANNOTATION_WIDTHS` in
+/// `src/components/shared/annotation-style/widths.ts`.
 const MIN_WIDTH: f64 = 8.0;
 const MAX_WIDTH: f64 = 48.0;
-/// The palette's yellow, as in `src/features/editor/annotation-palette.ts`.
+/// The palette's yellow, as in
+/// `src/components/shared/annotation-style/palette.ts`.
 const DEFAULT_COLOR: &str = "#ffcc00";
 
 /// What a fresh stroke is: the tag of the editor's `AnnotationShape`, so a
@@ -24,6 +28,18 @@ const DEFAULT_COLOR: &str = "#ffcc00";
 pub enum AnnotateShape {
   #[default]
   Arrow,
+}
+
+/// Where the user dragged the toolbar, in logical points from the top-left of
+/// the display it was dropped on. Held per display so the toolbar comes back
+/// where it was left on that screen, and falls back to top-centre on a
+/// display it has never been dragged on.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToolbarPosition {
+  pub display_id: u32,
+  pub x: f64,
+  pub y: f64,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -37,6 +53,10 @@ pub struct AnnotateSettings {
   /// `#rrggbb` or `#rrggbbaa`, as a document stores it.
   pub default_color: String,
   pub default_width: f64,
+  /// Which ends of a fresh arrow carry a head. The editor's own type, so the
+  /// live overlay and the editor dress an arrow from the same value.
+  pub default_head: AnnotationHead,
+  pub toolbar_position: Option<ToolbarPosition>,
 }
 
 impl Default for AnnotateSettings {
@@ -47,6 +67,8 @@ impl Default for AnnotateSettings {
       default_shape: AnnotateShape::Arrow,
       default_color: DEFAULT_COLOR.to_owned(),
       default_width: MIN_WIDTH,
+      default_head: AnnotationHead::default(),
+      toolbar_position: None,
     }
   }
 }
@@ -64,6 +86,12 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     || !(MIN_WIDTH..=MAX_WIDTH).contains(&settings.default_width)
   {
     return Err("That is not an annotation stroke width".to_owned());
+  }
+  if settings
+    .toolbar_position
+    .is_some_and(|position| !position.x.is_finite() || !position.y.is_finite())
+  {
+    return Err("That is not a toolbar position".to_owned());
   }
   settings.default_color = format!("#{digits}");
   Ok(settings)
@@ -146,6 +174,32 @@ pub fn set_annotate_settings(
   crate::tray::refresh(&app);
   let _ = app.emit("annotate-settings://changed", &settings);
   Ok(settings)
+}
+
+/// Remembers where the toolbar was dropped. It goes through the ordinary
+/// write so the change event fires: the toolbar and the Settings page are one
+/// state, and a drag is an edit like any other.
+#[cfg(target_os = "macos")]
+pub(super) fn store_toolbar_position(
+  app: &AppHandle,
+  position: ToolbarPosition,
+) -> Result<(), String> {
+  let settings = AnnotateSettings {
+    toolbar_position: Some(position),
+    ..current()
+  };
+  set_annotate_settings(app.clone(), settings).map(|_| ())
+}
+
+/// The keyboard picking a tool up. Goes through the ordinary write for the
+/// same reason a drag does.
+#[cfg(any(target_os = "macos", test))]
+pub(super) fn store_default_shape(app: &AppHandle, shape: AnnotateShape) -> Result<(), String> {
+  let settings = AnnotateSettings {
+    default_shape: shape,
+    ..current()
+  };
+  set_annotate_settings(app.clone(), settings).map(|_| ())
 }
 
 #[cfg(test)]
