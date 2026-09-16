@@ -124,6 +124,43 @@ fn restores_the_newest_valid_slot_and_rebinds_the_artifact() {
 }
 
 #[test]
+fn live_annotation_clips_become_the_recordings_first_edit() {
+  use crate::editor::annotations::model::new_arrow;
+  use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
+  use crate::editor::annotations::AnnotationPoint;
+
+  let directory = std::env::temp_dir().join(format!(
+    "screenwide-timeline-initial-{}",
+    std::process::id()
+  ));
+  let _ = std::fs::remove_dir_all(&directory);
+  std::fs::create_dir_all(&directory).unwrap();
+  let recording = directory.join("recording-live.mov");
+  std::fs::write(&recording, []).unwrap();
+  let clip = RecordingAnnotationClip {
+    annotation: new_arrow(
+      "mark".to_owned(),
+      AnnotationPoint { x: 10.0, y: 20.0 },
+      AnnotationPoint { x: 30.0, y: 40.0 },
+      None,
+    ),
+    track_id: AnnotationTrack::Primary,
+    start_ms: 0,
+    end_ms: 8_000,
+  };
+
+  persist_initial_annotation_clips(&recording, 7, vec![clip.clone()]).unwrap();
+  let (revision, restored) = for_recording(&recording, 7).unwrap();
+
+  assert_eq!(revision, 0);
+  assert_eq!(restored.annotation_clips, vec![clip]);
+  // The editor's own first save lands on top instead of being refused.
+  persist(&recording, 7, 1, edit(7, 0.5)).unwrap();
+  assert_eq!(for_recording(&recording, 7).unwrap().0, 1);
+  let _ = std::fs::remove_dir_all(directory);
+}
+
+#[test]
 fn rejects_overlapping_or_empty_segments() {
   let mut invalid = edit(1, 0.5);
   invalid.segments[1].source_start = 0.25;

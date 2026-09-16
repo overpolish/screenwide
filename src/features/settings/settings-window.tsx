@@ -1,7 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Keyboard, LayoutGrid, Ruler, ScanText, Settings } from "lucide-react";
+import {
+  Keyboard,
+  LayoutGrid,
+  PenTool,
+  Ruler,
+  ScanText,
+  Settings,
+} from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import logoUrl from "../../assets/screenwide-mark.svg";
@@ -15,6 +22,7 @@ import { useSettingsApi } from "./settings-api-context";
 import { SettingsPanes } from "./settings-panes";
 import { sectionTitles, type SettingsSection } from "./settings-sections";
 import {
+  AnnotateSettings,
   GeneralSettings,
   GlideSettings,
   RulerSettings,
@@ -23,6 +31,7 @@ import {
   ShortcutAction,
   ShortcutSettings,
 } from "./types";
+import { useAnnotateSettingsSave } from "./use-annotate-settings-save";
 import { useGlideSettingsSave } from "./use-glide-settings-save";
 import { useOcrSettingsSave } from "./use-ocr-settings-save";
 import { useRulerSettingsSave } from "./use-ruler-settings-save";
@@ -38,6 +47,7 @@ export function SettingsWindow({
   const {
     beginShortcutCapture,
     endShortcutCapture,
+    getAnnotateSettings,
     getGeneralSettings,
     getGlideSettings,
     getOcrSettings,
@@ -46,6 +56,7 @@ export function SettingsWindow({
     getShortcutSettings,
     hideSettings,
     minimize,
+    setAnnotateSettings,
     setGeneralSettings,
     setGlideSettings,
     setOcrSettings,
@@ -56,6 +67,7 @@ export function SettingsWindow({
   const [glide, setGlide] = useState<GlideSettings | null>(null);
   const [ruler, setRuler] = useState<RulerSettings | null>(null);
   const [ocr, setOcr] = useState<OcrSettings | null>(null);
+  const [annotate, setAnnotate] = useState<AnnotateSettings | null>(null);
   const [defaults, setDefaults] = useState<ShortcutDefaults | null>(null);
 
   const [savingGeneral, setSavingGeneral] = useState(false);
@@ -79,6 +91,13 @@ export function SettingsWindow({
     setError,
     setSettings: setOcr,
   });
+  const { change: changeAnnotate, saving: savingAnnotate } =
+    useAnnotateSettingsSave({
+      getSettings: getAnnotateSettings,
+      saveSettings: setAnnotateSettings,
+      setError,
+      setSettings: setAnnotate,
+    });
 
   useEffect(() => {
     Promise.all([
@@ -87,6 +106,7 @@ export function SettingsWindow({
       getRulerSettings(),
       getShortcutSettings(),
       getOcrSettings(),
+      getAnnotateSettings(),
       getShortcutDefaults(),
     ])
       .then(
@@ -96,6 +116,7 @@ export function SettingsWindow({
           rulerSettings,
           shortcutSettings,
           ocrSettings,
+          annotateSettings,
           shortcutDefaults,
         ]) => {
           setGeneral(generalSettings);
@@ -103,6 +124,7 @@ export function SettingsWindow({
           setRuler(rulerSettings);
           setSettings(shortcutSettings);
           setOcr(ocrSettings);
+          setAnnotate(annotateSettings);
           setDefaults(shortcutDefaults);
         },
       )
@@ -115,6 +137,7 @@ export function SettingsWindow({
     getRulerSettings,
     getShortcutSettings,
     getOcrSettings,
+    getAnnotateSettings,
     getShortcutDefaults,
   ]);
 
@@ -183,6 +206,7 @@ export function SettingsWindow({
             { icon: <Settings />, id: "general", label: "General" },
             { icon: <LayoutGrid />, id: "glide", label: "Glide" },
             { icon: <Ruler />, id: "ruler", label: "Ruler" },
+            { icon: <PenTool />, id: "annotate", label: "Annotate" },
             { icon: <ScanText />, id: "ocr", label: "OCR" },
             { icon: <Keyboard />, id: "hotkeys", label: "Shortcuts" },
           ]}
@@ -202,11 +226,13 @@ export function SettingsWindow({
               className="pr-window-inset pb-window-inset flex flex-col"
             >
               <SettingsPanes
+                annotate={annotate}
                 defaults={defaults}
                 general={general}
                 glide={glide}
                 ocr={ocr}
                 onCaptureChange={onCaptureChange}
+                onChangeAnnotate={changeAnnotate}
                 onChangeBinding={changeBinding}
                 onChangeGeneral={changeGeneral}
                 onChangeGlide={changeGlide}
@@ -216,6 +242,7 @@ export function SettingsWindow({
                 }}
                 onError={setError}
                 ruler={ruler}
+                savingAnnotate={savingAnnotate}
                 savingGeneral={savingGeneral}
                 savingGlide={savingGlide}
                 savingOcr={savingOcr}

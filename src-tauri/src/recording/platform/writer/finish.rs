@@ -115,6 +115,7 @@ impl Writer {
     }
 
     Ok(FinalizeInfo {
+      annotation_clips: Vec::new(),
       camera: None,
       cursor_path: None,
       keyboard_path: None,

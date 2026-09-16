@@ -12,6 +12,7 @@ pub const FOREGROUND_LEVEL: isize = 33;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CaptureOverlay {
+  Annotate,
   Ruler,
   TextRecognition,
 }
@@ -58,6 +59,9 @@ pub fn set_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), Stri
 /// Extension point for capture tools that must be mutually exclusive while
 /// still allowing one overlay to survive a handoff such as ruler screenshots.
 pub fn dismiss_except(app: &AppHandle, preserved: Option<CaptureOverlay>) {
+  if preserved != Some(CaptureOverlay::Annotate) {
+    crate::annotate::dismiss(app);
+  }
   if preserved != Some(CaptureOverlay::TextRecognition) {
     crate::text_recognition::dismiss(app);
   }
@@ -74,7 +78,9 @@ pub fn dismiss_all(app: &AppHandle) {
 /// monitors remain installed for the life of the app, so they must consult
 /// this shared boundary before starting any gesture of their own.
 pub fn blocks_glide(app: &AppHandle) -> bool {
-  crate::ruler::is_active(app) || crate::text_recognition::is_active(app)
+  crate::annotate::is_active(app)
+    || crate::ruler::is_active(app)
+    || crate::text_recognition::is_active(app)
 }
 
 pub fn emit_lifecycle(app: &AppHandle, active: bool) {

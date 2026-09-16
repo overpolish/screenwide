@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
+mod annotate;
 mod audio_preview;
 mod camera_format;
 #[cfg(target_os = "macos")]
@@ -48,6 +49,7 @@ pub fn run() {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let builder = builder.manage(glide::settings::GlideSettingsState::default());
   let app = builder
+    .manage(annotate::AnnotateState::default())
     .manage(audio_preview::AudioPreviewState::default())
     .manage(camera_preview::CameraPreviewState::default())
     .manage(confirm_sheet::ConfirmSheetState::default())
@@ -152,6 +154,8 @@ pub fn run() {
       settings::shortcut_defaults::get_shortcut_defaults,
       text_recognition::settings::get_ocr_settings,
       text_recognition::settings::set_ocr_settings,
+      annotate::settings::get_annotate_settings,
+      annotate::settings::set_annotate_settings,
       ruler::settings::get_ruler_settings,
       ruler::settings::set_ruler_settings,
       ruler::cancel_ruler,

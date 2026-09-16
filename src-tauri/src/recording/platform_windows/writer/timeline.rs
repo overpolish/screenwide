@@ -137,6 +137,7 @@ impl Writer {
     self.sink.finish()?;
     let end_ns = self.last_appended_ns.unwrap_or_default();
     Ok(FinalizeInfo {
+      annotation_clips: Vec::new(),
       camera: None,
       cursor_path: None,
       keyboard_path: None,

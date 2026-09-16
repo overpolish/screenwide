@@ -28,6 +28,7 @@ pub enum CursorOwner {
   QuickScreenshot,
   TextRecognition,
   Ruler,
+  Annotate,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

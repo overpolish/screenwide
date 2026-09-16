@@ -10,6 +10,7 @@ import { SoftwareUpdateSetting } from "./settings-update-actions";
 import { SettingsWindow } from "./settings-window";
 
 import type {
+  AnnotateSettings,
   GeneralSettings,
   GlideSettings,
   RulerSettings,
@@ -57,6 +58,11 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
         shortcut: "CommandOrControl+Shift+KeyT",
       },
       { action: "rulerOverlay", shortcut: "CommandOrControl+Shift+KeyR" },
+      { action: "annotateOverlay", shortcut: "CommandOrControl+Shift+KeyA" },
+      {
+        action: "annotateClear",
+        shortcut: "CommandOrControl+Shift+Backspace",
+      },
       { action: "takeScreenshot", shortcut: "CommandOrControl+Shift+KeyS" },
     ],
   };
@@ -85,6 +91,13 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     },
     enabled: true,
   };
+  let annotate: AnnotateSettings = {
+    defaultColor: "#ffcc00",
+    defaultShape: "arrow",
+    defaultWidth: 8,
+    enabled: true,
+    keepAnnotationsBetweenSessions: false,
+  };
   const defaults: ShortcutDefaults = {
     glide: { ...glide },
     ocr: { bindings: { ...ocr.bindings }, enabled: ocr.enabled },
@@ -100,6 +113,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
         `/Users/demo/${kind === "recording" ? "Recordings" : "Screenshots"}`,
       ),
     endShortcutCapture: () => Promise.resolve(null),
+    getAnnotateSettings: () => Promise.resolve(annotate),
     getGeneralSettings: () => Promise.resolve(general),
     getGlideSettings: () => Promise.resolve(glide),
     getOcrSettings: () => Promise.resolve(ocr),
@@ -108,6 +122,10 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     getShortcutSettings: () => Promise.resolve(shortcuts),
     hideSettings: () => Promise.resolve(null),
     minimize: () => Promise.resolve(),
+    setAnnotateSettings: (next) => {
+      annotate = next;
+      return Promise.resolve(next);
+    },
     setGeneralSettings: (next) => {
       general = next;
       return Promise.resolve(next);
@@ -183,6 +201,7 @@ export const Default: Story = {};
 
 export const Glide: Story = { args: { initialSection: "glide" } };
 export const Ruler: Story = { args: { initialSection: "ruler" } };
+export const Annotate: Story = { args: { initialSection: "annotate" } };
 export const Ocr: Story = { args: { initialSection: "ocr" } };
 export const Shortcuts: Story = { args: { initialSection: "hotkeys" } };
 

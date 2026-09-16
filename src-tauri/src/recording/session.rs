@@ -26,7 +26,7 @@ mod sidecars;
 
 pub(crate) use cancellation::cancelled_marker;
 pub(super) use cancellation::{discard_capture, mark_capture_cancelled};
-use sidecars::RecordingSidecars;
+use sidecars::{RecordingSidecars, SidecarPlan};
 const RECORDING_ERROR_EVENT: &str = "recording://error";
 /// Emitted when a recording starts without one or more selected inputs whose
 /// devices were no longer available; the bar tells the user instead of the
@@ -249,7 +249,7 @@ fn finalize_stopped_capture(
     started_at,
   } = handles;
 
-  let stopped_sidecars = sidecars.stop();
+  let stopped_sidecars = sidecars.stop(stopped_at);
   let mut info = match session.stop_at(stopped_at) {
     Ok(info) => info,
     Err(error) => {
@@ -285,6 +285,7 @@ fn finalize_stopped_capture(
       return Err(error);
     }
   };
+  info.annotation_clips = stopped_sidecars.annotation_clips;
   info.source_scale_factor = source_scale_factor;
   Ok((info, crate::screenshots::capture_file_stem(started_at)))
 }

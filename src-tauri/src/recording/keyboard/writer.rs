@@ -1,69 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Timestamping, privacy filtering, and JSONL writing for keyboard events.
+//! Privacy filtering and JSONL writing for keyboard events.
 
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use std::sync::{Arc, OnceLock};
-use std::time::{Duration, Instant};
 
 use super::{
   FocusContext, KeyboardModifier, KeyboardRecord, RawKeyboardEvent, RawKeyboardEventKind,
 };
-
-#[derive(Debug)]
-pub(super) struct KeyboardClock {
-  pub(super) origin: Arc<OnceLock<Instant>>,
-  pub(super) paused_since: Option<Instant>,
-  pub(super) paused_total: Duration,
-  pub(super) running: bool,
-}
-
-impl KeyboardClock {
-  pub(super) fn new(origin: Arc<OnceLock<Instant>>) -> Self {
-    Self {
-      origin,
-      paused_since: None,
-      paused_total: Duration::ZERO,
-      running: true,
-    }
-  }
-
-  pub(super) fn pause(&mut self, at: Instant) {
-    if self.paused_since.is_none() {
-      self.paused_since = Some(at);
-    }
-  }
-
-  pub(super) fn resume(&mut self, at: Instant) {
-    if let Some(paused_since) = self.paused_since.take() {
-      self.paused_total = self
-        .paused_total
-        .saturating_add(at.saturating_duration_since(paused_since));
-    }
-  }
-
-  pub(super) fn stop(&mut self) {
-    self.running = false;
-  }
-
-  pub(super) fn timestamp_us(&self, at: Instant) -> Option<u64> {
-    if !self.running || self.paused_since.is_some() {
-      return None;
-    }
-    let origin = *self.origin.get()?;
-    let elapsed = at
-      .saturating_duration_since(origin)
-      .saturating_sub(self.paused_total);
-    u64::try_from(elapsed.as_micros()).ok()
-  }
-}
+use crate::recording::clock::SidecarClock;
 
 pub(super) struct StreamWriter {
   pub(super) active_keys: HashSet<u16>,
-  pub(super) clock: KeyboardClock,
+  pub(super) clock: SidecarClock,
   pub(super) failure: Option<String>,
   pub(super) writer: BufWriter<File>,
 }

@@ -5,10 +5,19 @@ use super::*;
 
 pub(super) fn action_enabled(action: ShortcutAction) -> bool {
   match action {
+    ShortcutAction::AnnotateClear | ShortcutAction::AnnotateOverlay => {
+      crate::annotate::settings::enabled()
+    }
     ShortcutAction::RulerOverlay => crate::ruler::settings::enabled(),
     ShortcutAction::RecognizeText => crate::text_recognition::settings::enabled(),
     _ => true,
   }
+}
+
+/// Both of live annotation's shortcuts follow the one switch.
+pub(crate) fn sync_annotate_enabled(app: &AppHandle) -> Result<(), String> {
+  sync_enabled(app, ShortcutAction::AnnotateOverlay)?;
+  sync_enabled(app, ShortcutAction::AnnotateClear)
 }
 
 pub(crate) fn sync_ocr_enabled(app: &AppHandle) -> Result<(), String> {

@@ -33,12 +33,41 @@ pub use registration::{
 pub use registration::{begin_shortcut_capture, end_shortcut_capture, initialize};
 
 mod feature_availability;
-pub(crate) use feature_availability::{sync_ocr_enabled, sync_ruler_enabled};
+pub(crate) use feature_availability::{
+  sync_annotate_enabled, sync_ocr_enabled, sync_ruler_enabled,
+};
 
 const SHORTCUTS_FILE: &str = "shortcuts.json";
 const SHORTCUT_ACTION_EVENT: &str = "global-shortcut://action";
 const SCREENSHOT_SHORTCUT_REQUESTED_EVENT: &str = "screenshot-region://shortcut-requested";
 static CAPTURING: AtomicBool = AtomicBool::new(false);
+
+thread_local! {
+  static IN_NATIVE_CALLBACK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Runs the body of a native global-shortcut callback.
+///
+/// The plugin holds its shortcut registry locked for as long as a callback
+/// runs, and that mutex is not reentrant: registering or releasing any
+/// shortcut from inside one deadlocks the app. Anything a callback reaches
+/// that needs the registry asks [`in_native_callback`] and waits for a later
+/// turn instead.
+pub(crate) fn during_native_callback<T>(work: impl FnOnce() -> T) -> T {
+  struct Guard;
+  impl Drop for Guard {
+    fn drop(&mut self) {
+      IN_NATIVE_CALLBACK.set(false);
+    }
+  }
+  IN_NATIVE_CALLBACK.set(true);
+  let _guard = Guard;
+  work()
+}
+
+pub(crate) fn in_native_callback() -> bool {
+  IN_NATIVE_CALLBACK.get()
+}
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -49,6 +78,8 @@ pub enum ShortcutAction {
   TakeScreenshot,
   TakeScreenshotToClipboard,
   RecognizeText,
+  AnnotateOverlay,
+  AnnotateClear,
   RulerOverlay,
 }
 
@@ -97,6 +128,14 @@ impl Default for ShortcutSettings {
           action: ShortcutAction::RulerOverlay,
           shortcut: Some("CommandOrControl+Shift+KeyR".to_owned()),
         },
+        ShortcutBinding {
+          action: ShortcutAction::AnnotateOverlay,
+          shortcut: Some("CommandOrControl+Shift+KeyA".to_owned()),
+        },
+        ShortcutBinding {
+          action: ShortcutAction::AnnotateClear,
+          shortcut: Some("CommandOrControl+Shift+Backspace".to_owned()),
+        },
       ],
     }
   }
@@ -110,18 +149,29 @@ fn settings_path(app: &AppHandle) -> tauri::Result<PathBuf> {
 }
 
 fn load(app: &AppHandle) -> ShortcutSettings {
-  let stored = settings_path(app)
-    .ok()
-    .and_then(|path| std::fs::read(path).ok())
-    .and_then(|contents| serde_json::from_slice::<ShortcutSettings>(&contents).ok());
+  merge(
+    settings_path(app)
+      .ok()
+      .and_then(|path| std::fs::read(path).ok())
+      .and_then(|contents| serde_json::from_slice::<ShortcutSettings>(&contents).ok()),
+  )
+}
+
+/// The saved bindings over the defaults. An action the saved file has never
+/// heard of keeps its default, so a shortcut introduced by an update reaches
+/// an existing install; one the user cleared is stored as null and stays
+/// cleared.
+fn merge(stored: Option<ShortcutSettings>) -> ShortcutSettings {
   let mut settings = ShortcutSettings::default();
   if let Some(stored) = stored {
     for binding in &mut settings.bindings {
-      binding.shortcut = stored
+      if let Some(saved) = stored
         .bindings
         .iter()
         .find(|candidate| candidate.action == binding.action)
-        .and_then(|candidate| candidate.shortcut.clone());
+      {
+        binding.shortcut = saved.shortcut.clone();
+      }
     }
   }
   settings

@@ -29,6 +29,10 @@ import { UpdatePromptWindow } from "./features/updates/update-prompt-window";
 export function App() {
   const content = (() => {
     switch (window.location.pathname) {
+      case "/annotate":
+        // The native annotate overlay uses this route only as its transparent
+        // host. No annotation rendering or interaction is allowed in React.
+        return null;
       case "/confirm-sheet":
         return <ConfirmSheetWindow />;
       case "/editor":

@@ -115,6 +115,9 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/recording_preview_scrubber_macos.m");
     println!("cargo:rerun-if-changed=src/recording/platform/camera/confidence_scaler_macos.m");
     println!("cargo:rerun-if-changed=src/recording/platform/desktop_compositor_macos.m");
+    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos.m");
+    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos.h");
+    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos_shader.h");
     println!("cargo:rerun-if-changed=src/ruler/cursor_guard_macos.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/native.m");
     println!("cargo:rerun-if-changed=src/glide/macos/drag_start.m");
@@ -144,6 +147,7 @@ fn main() {
       .file("src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork.m")
       .file("src/recording/platform/camera/confidence_scaler_macos.m")
       .file("src/recording/platform/desktop_compositor_macos.m")
+      .file("src/annotate/native_overlay_macos.m")
       .file("src/ruler/cursor_guard_macos.m")
       .file("src/editor/recording_preview_reader_macos.m")
       .file("src/editor/recording_preview_scrubber_macos.m")

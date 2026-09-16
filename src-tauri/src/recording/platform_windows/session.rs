@@ -62,6 +62,7 @@ impl CaptureSession {
         .ok_or_else(|| "The audio recording path is unavailable".to_owned())?;
       audio::mux_audio_only(&path, duration_ms, audio)?;
       return Ok(FinalizeInfo {
+        annotation_clips: Vec::new(),
         camera: None,
         cursor_path: None,
         keyboard_path: None,

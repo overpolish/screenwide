@@ -7,6 +7,9 @@ pub(crate) use time_mapping::source_to_output_us;
 #[path = "timeline_edit/validation.rs"]
 mod validation;
 use validation::validate;
+#[path = "timeline_edit/initial_edit.rs"]
+mod initial_edit;
+pub(in crate::editor) use initial_edit::persist_initial_annotation_clips;
 
 pub(crate) use time_mapping::source_after_output_duration_us;
 pub(crate) use time_mapping::source_before_output_duration_us;

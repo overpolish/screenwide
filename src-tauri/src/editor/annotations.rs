@@ -20,8 +20,8 @@ mod gesture_tests;
 #[cfg(target_os = "macos")]
 pub(crate) mod handles;
 
-/// The native retained scene and export accept the same number of marks.
-#[cfg(any(target_os = "macos", test))]
+/// The native retained scene, export and the live overlay accept the same
+/// number of marks.
 pub(crate) const MAX_ANNOTATIONS: usize = 32;
 
 #[cfg(target_os = "macos")]

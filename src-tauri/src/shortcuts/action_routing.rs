@@ -19,7 +19,10 @@ pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel>
       Some(WindowLabel::RegionSelector)
     }
     ShortcutAction::RecognizeText => Some(WindowLabel::RecordingBar),
-    ShortcutAction::PauseResumeRecording | ShortcutAction::RulerOverlay => None,
+    ShortcutAction::AnnotateClear
+    | ShortcutAction::AnnotateOverlay
+    | ShortcutAction::PauseResumeRecording
+    | ShortcutAction::RulerOverlay => None,
   }
 }
 
@@ -37,6 +40,9 @@ pub(super) const fn preserved_capture_overlay(
   action: ShortcutAction,
 ) -> Option<crate::capture_overlays::CaptureOverlay> {
   match action {
+    ShortcutAction::AnnotateClear | ShortcutAction::AnnotateOverlay => {
+      Some(crate::capture_overlays::CaptureOverlay::Annotate)
+    }
     ShortcutAction::RecognizeText => Some(crate::capture_overlays::CaptureOverlay::TextRecognition),
     ShortcutAction::TakeScreenshot
     | ShortcutAction::TakeScreenshotToClipboard
@@ -160,6 +166,14 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
       // `start_detached` spawns the real work, and records the settled
       // `native_action_result` itself once the overlay has opened or failed.
       crate::ruler::start_detached(app);
+    }
+    ShortcutAction::AnnotateOverlay => {
+      crate::annotate::toggle_detached(app);
+      record_native_result(action, "toggled", None);
+    }
+    ShortcutAction::AnnotateClear => {
+      crate::annotate::clear(app);
+      record_native_result(action, "cleared", None);
     }
   }
 }

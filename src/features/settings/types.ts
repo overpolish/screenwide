@@ -10,6 +10,8 @@ export type ShortcutAction =
   | "takeScreenshot"
   | "takeScreenshotToClipboard"
   | "recognizeText"
+  | "annotateOverlay"
+  | "annotateClear"
   | "rulerOverlay";
 
 type ShortcutBinding = {
@@ -46,6 +48,17 @@ export type OcrAction = "selectAll" | "copyText";
 export type OcrSettings = {
   bindings: Record<OcrAction, string | null>;
   enabled: boolean;
+};
+
+/** The shapes the overlay can draw. Only the arrow exists so far. */
+type AnnotateShape = "arrow";
+
+export type AnnotateSettings = {
+  defaultColor: string;
+  defaultShape: AnnotateShape;
+  defaultWidth: number;
+  enabled: boolean;
+  keepAnnotationsBetweenSessions: boolean;
 };
 
 export type ShortcutDefaults = {

@@ -40,6 +40,7 @@ impl AudioWriter {
       return Err(error);
     }
     Ok(FinalizeInfo {
+      annotation_clips: Vec::new(),
       camera: None,
       cursor_path: None,
       keyboard_path: None,

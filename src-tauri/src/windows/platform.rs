@@ -23,11 +23,16 @@ use objc2_foundation::{NSPoint, NSRect, NSSize};
 
 use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
 
+#[cfg(target_os = "macos")]
+#[path = "platform/capture_exclusion_macos.rs"]
+mod capture_exclusion_macos;
 #[cfg(target_os = "windows")]
 #[path = "platform/composition.rs"]
 mod composition;
 #[path = "platform/glide_preview.rs"]
 mod glide_preview;
+#[cfg(target_os = "macos")]
+pub use capture_exclusion_macos::exclude_from_capture;
 #[cfg(target_os = "macos")]
 mod presentation_macos;
 #[cfg(target_os = "macos")]

@@ -13,7 +13,7 @@ fn defaults_open_the_recording_bar_take_screenshots_and_recognize_text() {
     .iter()
     .filter(|binding| binding.shortcut.is_some())
     .collect::<Vec<_>>();
-  assert_eq!(assigned.len(), 4);
+  assert_eq!(assigned.len(), 6);
   assert_eq!(assigned[0].action, ShortcutAction::ToggleRecordingBar);
   assert_eq!(assigned[1].action, ShortcutAction::TakeScreenshot);
   assert_eq!(
@@ -34,6 +34,52 @@ fn defaults_open_the_recording_bar_take_screenshots_and_recognize_text() {
   assert_eq!(
     assigned[3].shortcut.as_deref(),
     Some("CommandOrControl+Shift+KeyR")
+  );
+  assert_eq!(assigned[4].action, ShortcutAction::AnnotateOverlay);
+  assert_eq!(
+    assigned[4].shortcut.as_deref(),
+    Some("CommandOrControl+Shift+KeyA")
+  );
+  assert_eq!(assigned[5].action, ShortcutAction::AnnotateClear);
+  assert_eq!(
+    assigned[5].shortcut.as_deref(),
+    Some("CommandOrControl+Shift+Backspace")
+  );
+}
+
+#[test]
+fn a_saved_file_that_predates_an_action_leaves_it_on_its_default() {
+  let stored = ShortcutSettings {
+    bindings: vec![
+      ShortcutBinding {
+        action: ShortcutAction::RecognizeText,
+        shortcut: None,
+      },
+      ShortcutBinding {
+        action: ShortcutAction::RulerOverlay,
+        shortcut: Some("Command+Shift+KeyR".to_owned()),
+      },
+    ],
+  };
+  let merged = merge(Some(stored));
+  let shortcut = |action| {
+    merged
+      .bindings
+      .iter()
+      .find(|binding| binding.action == action)
+      .and_then(|binding| binding.shortcut.clone())
+  };
+
+  // Never saved, so the default it shipped with stands.
+  assert_eq!(
+    shortcut(ShortcutAction::AnnotateOverlay).as_deref(),
+    Some("CommandOrControl+Shift+KeyA")
+  );
+  // Saved as cleared, so it stays cleared.
+  assert_eq!(shortcut(ShortcutAction::RecognizeText), None);
+  assert_eq!(
+    shortcut(ShortcutAction::RulerOverlay).as_deref(),
+    Some("Command+Shift+KeyR")
   );
 }
 

@@ -7,6 +7,7 @@ use tauri::menu::ContextMenu;
 
 #[cfg(target_os = "windows")]
 mod assets {
+  pub const ANNOTATE: &[u8] = include_bytes!("../../icons/menu/windows/annotate.png");
   pub const CANCEL: &[u8] = include_bytes!("../../icons/menu/windows/cancel.png");
   pub const CLIPBOARD: &[u8] = include_bytes!("../../icons/menu/windows/clipboard.png");
   pub const DISCARD: &[u8] = include_bytes!("../../icons/menu/windows/discard.png");
@@ -22,6 +23,7 @@ mod assets {
 
 #[cfg(not(target_os = "windows"))]
 mod assets {
+  pub const ANNOTATE: &[u8] = include_bytes!("../../icons/menu/annotate.png");
   pub const CANCEL: &[u8] = include_bytes!("../../icons/menu/cancel.png");
   pub const CLIPBOARD: &[u8] = include_bytes!("../../icons/menu/clipboard.png");
   pub const DISCARD: &[u8] = include_bytes!("../../icons/menu/discard.png");

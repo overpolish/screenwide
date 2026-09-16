@@ -130,16 +130,16 @@ mod capture_affinity_tests {
 }
 
 /// Keeps one window out of every capture, whatever the persistent "record
-/// Screenwide's windows" preference says. Windows excludes per window; macOS
-/// excludes by owning process at the capture call, so there is nothing to do
-/// to the window itself there.
+/// Screenwide's windows" preference says. A recording's macOS content filter
+/// is fixed when it starts, so a window opened later excludes itself.
 pub(crate) fn exclude_from_capture(window: &WebviewWindow) -> tauri::Result<()> {
   #[cfg(target_os = "windows")]
-  {
-    platform::set_capture_affinity(window, false)
-  }
+  return platform::set_capture_affinity(window, false);
 
-  #[cfg(not(target_os = "windows"))]
+  #[cfg(target_os = "macos")]
+  return platform::exclude_from_capture(window);
+
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
     let _ = window;
     Ok(())

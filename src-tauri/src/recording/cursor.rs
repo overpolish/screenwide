@@ -19,7 +19,7 @@ mod platform;
 
 mod format;
 mod visibility;
-pub(crate) use visibility::glide_cursor_visibility;
+pub(crate) use visibility::set_cursor_visibility;
 #[cfg(test)]
 mod tests;
 
@@ -39,6 +39,7 @@ pub(crate) use self::format::CursorSourceKind;
 pub(crate) use self::format::{
   read, ButtonState, CursorButton, CursorRecord, CursorSource, CursorStyle, FORMAT_VERSION,
 };
+use crate::recording::clock::SidecarClock;
 const MOVEMENT_INTERVAL: Duration = Duration::from_micros(7_500);
 const FLUSH_INTERVAL: Duration = Duration::from_secs(1);
 
@@ -73,60 +74,8 @@ pub(super) struct RawCursorEvent {
   pub y: f64,
 }
 
-#[derive(Debug)]
-struct CursorClock {
-  origin: Arc<OnceLock<Instant>>,
-  paused_since: Option<Instant>,
-  paused_total: Duration,
-  running: bool,
-}
-
-impl CursorClock {
-  fn new(origin: Arc<OnceLock<Instant>>) -> Self {
-    Self {
-      origin,
-      paused_since: None,
-      paused_total: Duration::ZERO,
-      running: true,
-    }
-  }
-
-  fn pause(&mut self, at: Instant) {
-    if self.paused_since.is_none() {
-      self.paused_since = Some(at);
-    }
-  }
-
-  fn resume(&mut self, at: Instant) {
-    if let Some(paused_since) = self.paused_since.take() {
-      self.paused_total = self
-        .paused_total
-        .saturating_add(at.saturating_duration_since(paused_since));
-    }
-  }
-
-  fn stop(&mut self) {
-    self.running = false;
-  }
-
-  fn timestamp_us(&self, at: Instant) -> Option<u64> {
-    if !self.running || self.paused_since.is_some() {
-      return None;
-    }
-    let origin = *self.origin.get()?;
-    let elapsed = at
-      .saturating_duration_since(origin)
-      .saturating_sub(self.paused_total);
-    u64::try_from(elapsed.as_micros()).ok()
-  }
-
-  fn initial_timestamp_us(&self) -> Option<u64> {
-    (self.running && self.paused_since.is_none() && self.origin.get().is_some()).then_some(0)
-  }
-}
-
 struct StreamWriter {
-  clock: CursorClock,
+  clock: SidecarClock,
   failure: Option<String>,
   last_appearance: Option<CursorAppearance>,
   last_flush: Instant,
@@ -173,7 +122,7 @@ impl CursorRecorder {
     writer.flush().map_err(|error| error.to_string())?;
 
     let state = Arc::new(Mutex::new(StreamWriter {
-      clock: CursorClock::new(origin),
+      clock: SidecarClock::new(origin),
       failure: None,
       last_appearance: None,
       last_flush: Instant::now(),

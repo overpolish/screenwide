@@ -15,6 +15,8 @@ mod windows_menu;
 #[cfg(target_os = "windows")]
 mod windows_theme;
 
+const ANNOTATE_MENU_ID: &str = "annotate";
+const ANNOTATE_CLEAR_MENU_ID: &str = "annotate-clear";
 const DISCARD_MENU_ID: &str = "discard-recording";
 const OPEN_CLIPBOARD_SCREENSHOT_MENU_ID: &str = "open-clipboard-screenshot";
 const OPEN_MENU_ID: &str = "open-screenwide";
@@ -124,10 +126,36 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   }
   let ruler_overlay = ruler_overlay.build(app)?;
 
+  let mut annotate = IconMenuItemBuilder::with_id(ANNOTATE_MENU_ID, "Annotate")
+    .icon(icons::load(icons::ANNOTATE)?)
+    .enabled(crate::annotate::settings::enabled());
+  if let Some(shortcut) =
+    crate::shortcuts::shortcut_for(app, crate::shortcuts::ShortcutAction::AnnotateOverlay)
+  {
+    annotate = annotate.accelerator(shortcut);
+  }
+  let annotate = annotate.build(app)?;
+
+  // Offered only when there is something to clear, and only refreshed when
+  // the overlay lets go of the screen - which is the only time this menu can
+  // be reached, since the overlay covers the menu bar while it draws.
+  let mut clear_annotations =
+    IconMenuItemBuilder::with_id(ANNOTATE_CLEAR_MENU_ID, "Clear Annotations")
+      .icon(icons::load(icons::CANCEL)?)
+      .enabled(crate::annotate::has_annotations());
+  if let Some(shortcut) =
+    crate::shortcuts::shortcut_for(app, crate::shortcuts::ShortcutAction::AnnotateClear)
+  {
+    clear_annotations = clear_annotations.accelerator(shortcut);
+  }
+  let clear_annotations = clear_annotations.build(app)?;
+
   let menu = builder
     .separator()
     .item(&recognize_text)
     .item(&ruler_overlay)
+    .item(&annotate)
+    .item(&clear_annotations)
     .icon(SETTINGS_MENU_ID, "Settings…", icons::load(icons::SETTINGS)?)
     .separator()
     .icon(QUIT_MENU_ID, "Quit Screenwide", icons::load(icons::QUIT)?)
@@ -148,12 +176,21 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
     .tooltip(status_tooltip(RecordingStatus::Idle))
     .on_menu_event(|app, event| {
       let preserved = match event.id().as_ref() {
+        ANNOTATE_CLEAR_MENU_ID | ANNOTATE_MENU_ID => {
+          Some(crate::capture_overlays::CaptureOverlay::Annotate)
+        }
         RECOGNIZE_TEXT_MENU_ID => Some(crate::capture_overlays::CaptureOverlay::TextRecognition),
         RULER_OVERLAY_MENU_ID => Some(crate::capture_overlays::CaptureOverlay::Ruler),
         _ => None,
       };
       crate::capture_overlays::dismiss_except(app, preserved);
       match event.id().as_ref() {
+        ANNOTATE_MENU_ID => {
+          crate::annotate::toggle_detached(app);
+        }
+        ANNOTATE_CLEAR_MENU_ID => {
+          crate::annotate::clear(app);
+        }
         DISCARD_MENU_ID => report("discard", crate::recording::cancel(app)),
         OPEN_CLIPBOARD_SCREENSHOT_MENU_ID => {
           crate::screenshots::open_clipboard_in_export(app);

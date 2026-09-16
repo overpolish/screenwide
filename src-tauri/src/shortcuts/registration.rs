@@ -27,7 +27,7 @@ pub(super) fn register_binding(
             "native_shortcut_pressed",
             serde_json::json!({"action": action, "capturing": is_capturing()}),
           );
-          run_action(app, action);
+          during_native_callback(|| run_action(app, action));
         }
       })
       .map_err(|error| error.to_string())

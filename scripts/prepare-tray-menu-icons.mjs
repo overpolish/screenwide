@@ -10,6 +10,7 @@ import {
   DoorOpen,
   Monitor,
   Pause,
+  PenTool,
   Play,
   Ruler,
   ScanText,
@@ -34,6 +35,7 @@ await mkdir(windowsOutput, { recursive: true });
 // bypassing muda's fixed 16px conversion.
 // Commit the PNGs so normal builds need neither Node nor an SVG renderer.
 for (const [name, icon] of Object.entries({
+  annotate: PenTool,
   cancel: X,
   clipboard: ClipboardPaste,
   discard: Trash2,

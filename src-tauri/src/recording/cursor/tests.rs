@@ -20,26 +20,6 @@ fn test_event(at: Instant, kind: RawCursorEventKind) -> RawCursorEvent {
 }
 
 #[test]
-fn clock_removes_paused_time() {
-  let origin = Instant::now();
-  let shared_origin = Arc::new(OnceLock::new());
-  shared_origin.set(origin).unwrap();
-  let mut clock = CursorClock::new(shared_origin);
-
-  assert_eq!(
-    clock.timestamp_us(origin + Duration::from_secs(2)),
-    Some(2_000_000)
-  );
-  clock.pause(origin + Duration::from_secs(3));
-  assert_eq!(clock.timestamp_us(origin + Duration::from_secs(5)), None);
-  clock.resume(origin + Duration::from_secs(8));
-  assert_eq!(
-    clock.timestamp_us(origin + Duration::from_secs(9)),
-    Some(4_000_000)
-  );
-}
-
-#[test]
 fn reader_keeps_complete_lines_before_a_truncated_tail() {
   let path = std::env::temp_dir().join(format!(
     "screenwide-cursor-reader-{}.jsonl",
@@ -82,7 +62,7 @@ fn initial_snapshot_starts_at_zero_and_motion_keeps_hardware_cadence() {
   ));
   let file = File::create(&path).unwrap();
   let mut stream = StreamWriter {
-    clock: CursorClock::new(shared_origin),
+    clock: SidecarClock::new(shared_origin),
     failure: None,
     last_appearance: None,
     last_flush: origin,
@@ -193,7 +173,7 @@ fn visibility_records_exact_landings_and_keeps_hidden_button_releases() {
     std::process::id()
   ));
   let mut stream = StreamWriter {
-    clock: CursorClock::new(shared_origin),
+    clock: SidecarClock::new(shared_origin),
     failure: None,
     last_appearance: None,
     last_flush: origin,

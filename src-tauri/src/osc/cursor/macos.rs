@@ -180,6 +180,14 @@ fn release(app: &AppHandle, owner: CursorOwner) -> Result<(), String> {
   })
 }
 
+pub(crate) fn acquire_annotate(app: &AppHandle) -> Result<(), String> {
+  acquire(app, CursorOwner::Annotate, CursorIcon::Crosshair)
+}
+
+pub(crate) fn release_annotate(app: &AppHandle) -> Result<(), String> {
+  release(app, CursorOwner::Annotate)
+}
+
 pub(crate) fn acquire_quick_screenshot(app: &AppHandle) -> Result<(), String> {
   acquire(app, CursorOwner::QuickScreenshot, CursorIcon::Crosshair)
 }

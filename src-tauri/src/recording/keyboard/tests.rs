@@ -139,7 +139,7 @@ fn accepted_key_down_and_matching_key_up_have_distinct_timestamps() {
   let file = std::fs::File::create(&path).unwrap();
   let mut writer = StreamWriter {
     active_keys: std::collections::HashSet::new(),
-    clock: KeyboardClock::new(shared_origin),
+    clock: SidecarClock::new(shared_origin),
     failure: None,
     writer: std::io::BufWriter::new(file),
   };
@@ -170,32 +170,12 @@ fn key_up_without_accepted_key_down_is_discarded() {
   let file = std::fs::File::create(&path).unwrap();
   let mut writer = StreamWriter {
     active_keys: std::collections::HashSet::new(),
-    clock: KeyboardClock::new(shared_origin),
+    clock: SidecarClock::new(shared_origin),
     failure: None,
     writer: std::io::BufWriter::new(file),
   };
   assert!(!writer.record(key_up(99)).unwrap());
   let _ = std::fs::remove_file(path);
-}
-
-#[test]
-fn clock_removes_paused_time() {
-  let origin = Instant::now();
-  let shared_origin = Arc::new(OnceLock::new());
-  shared_origin.set(origin).unwrap();
-  let mut clock = KeyboardClock::new(shared_origin);
-
-  assert_eq!(
-    clock.timestamp_us(origin + Duration::from_secs(2)),
-    Some(2_000_000)
-  );
-  clock.pause(origin + Duration::from_secs(3));
-  assert_eq!(clock.timestamp_us(origin + Duration::from_secs(5)), None);
-  clock.resume(origin + Duration::from_secs(8));
-  assert_eq!(
-    clock.timestamp_us(origin + Duration::from_secs(9)),
-    Some(4_000_000)
-  );
 }
 
 #[test]

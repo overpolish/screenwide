@@ -11,6 +11,7 @@ pub use preferences::{current, GeneralSettingsState};
 
 pub fn initialize(app: &tauri::AppHandle) {
   preferences::initialize(app);
+  crate::annotate::settings::initialize(app);
   crate::ruler::settings::initialize(app);
   crate::text_recognition::settings::initialize(app);
 }

@@ -62,7 +62,7 @@ pub(super) fn hide_cursor() -> Result<(), String> {
   CGDisplay::main()
     .hide_cursor()
     .map_err(|error| format!("Could not hide the Glide cursor: {error}"))?;
-  crate::recording::cursor::glide_cursor_visibility(false, None);
+  crate::recording::cursor::set_cursor_visibility(false, None);
   Ok(())
 }
 
@@ -95,7 +95,7 @@ pub(super) fn release_cursor(anchor: CGPoint, revealed: bool) {
   PINNED.store(false, std::sync::atomic::Ordering::Release);
   if revealed {
     let _ = CGDisplay::main().show_cursor();
-    crate::recording::cursor::glide_cursor_visibility(true, Some((anchor.x, anchor.y)));
+    crate::recording::cursor::set_cursor_visibility(true, Some((anchor.x, anchor.y)));
   }
 }
 

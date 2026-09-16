@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import {
+  AnnotateSettings,
   GeneralSettings,
   GlideSettings,
   OcrSettings,
@@ -48,6 +49,12 @@ export const getRulerSettings = () =>
 
 export const setRulerSettings = (settings: RulerSettings) =>
   invoke<RulerSettings>("set_ruler_settings", { settings });
+
+export const getAnnotateSettings = () =>
+  invoke<AnnotateSettings>("get_annotate_settings");
+
+export const setAnnotateSettings = (settings: AnnotateSettings) =>
+  invoke<AnnotateSettings>("set_annotate_settings", { settings });
 
 export const getOcrSettings = () => invoke<OcrSettings>("get_ocr_settings");
 

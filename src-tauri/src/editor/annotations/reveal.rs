@@ -184,6 +184,28 @@ pub(crate) fn reveal_window(elapsed_ms: f32, duration_ms: f32, frame_ms: f32) ->
   }
 }
 
+/// The clip length that leaves an animated annotation starting to draw out
+/// exactly `visible_ms` after it appeared.
+///
+/// A live annotation is on screen from its stroke until it is cleared, and
+/// then it is simply gone. A clip that ends at the clear runs its whole
+/// closing phase *before* that moment, so the annotation would be leaving
+/// while it was still whole on screen. Carrying the closing phase's own
+/// length on top puts the leaving where it belongs: after the annotation
+/// actually went. A short clip needs less than the full
+/// [`REVEAL_DRAW_OUT_MS`], because its closing is capped to a third of it.
+pub(crate) fn clip_ms_for_visible(visible_ms: f32) -> f32 {
+  if !visible_ms.is_finite() || visible_ms <= 0.0 {
+    return 0.0;
+  }
+  let uncapped = visible_ms + REVEAL_DRAW_OUT_MS;
+  if uncapped * REVEAL_PHASE_SHARE >= REVEAL_DRAW_OUT_MS {
+    uncapped
+  } else {
+    visible_ms / (1.0 - REVEAL_PHASE_SHARE)
+  }
+}
+
 /// The reveal window one clip is at, for the video export's per-frame pass.
 /// A mark that is not animated is drawn whole for the clip's whole length.
 ///

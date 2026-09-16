@@ -116,18 +116,25 @@ pub(in crate::recording) fn begin_capture(
     }
   })?;
 
-  let sidecars =
-    match RecordingSidecars::start(cursor_path, cursor_source, keyboard_path, timeline_origin) {
-      Ok(sidecars) => sidecars,
-      Err(error) => {
-        session.cancel();
-        let _ = std::fs::remove_file(&output_path);
-        if let Some(camera_path) = &camera_path {
-          let _ = std::fs::remove_file(camera_path);
-        }
-        return Err(error);
+  let sidecars = match RecordingSidecars::start(
+    SidecarPlan {
+      cursor_path,
+      cursor_source,
+      keyboard_path,
+      records_annotations: records_cursor(options.mode),
+    },
+    timeline_origin,
+  ) {
+    Ok(sidecars) => sidecars,
+    Err(error) => {
+      session.cancel();
+      let _ = std::fs::remove_file(&output_path);
+      if let Some(camera_path) = &camera_path {
+        let _ = std::fs::remove_file(camera_path);
       }
-    };
+      return Err(error);
+    }
+  };
 
   let system_audio_recorded =
     options.system_audio && !system_audio_skipped.load(std::sync::atomic::Ordering::Acquire);

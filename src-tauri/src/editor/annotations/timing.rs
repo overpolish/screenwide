@@ -23,9 +23,13 @@ pub struct RecordingAnnotationClip {
   pub end_ms: u64,
 }
 
+/// How many clips one recording's timeline may carry. Live annotation and the
+/// editor share the ceiling, so a mark that was recorded can always be shown.
+pub(crate) const MAX_CLIPS: usize = 1_024;
+
 pub(crate) fn validate_clips(clips: &[RecordingAnnotationClip]) -> Result<(), String> {
   let mut ids = std::collections::HashSet::new();
-  if clips.len() > 1024 {
+  if clips.len() > MAX_CLIPS {
     return Err("There are too many annotation clips".to_owned());
   }
   for clip in clips {

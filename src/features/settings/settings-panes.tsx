@@ -3,6 +3,7 @@
 
 import { type ReactNode } from "react";
 
+import { AnnotateSettingsPanel } from "./annotate-settings";
 import { GeneralSettingsPanel } from "./general-settings";
 import { GlideSettingsPanel } from "./glide-settings";
 import { HotkeySettingsPanel } from "./hotkey-settings";
@@ -11,6 +12,7 @@ import { RulerSettingsPanel } from "./ruler-settings";
 
 import type { SettingsSection } from "./settings-sections";
 import type {
+  AnnotateSettings,
   GeneralSettings,
   GlideSettings,
   OcrSettings,
@@ -21,10 +23,12 @@ import type {
 } from "./types";
 
 export type SettingsPanesProps = {
+  annotate: AnnotateSettings | null;
   general: GeneralSettings | null;
   glide: GlideSettings | null;
   ocr: OcrSettings | null;
   onCaptureChange: (capturing: boolean) => Promise<void>;
+  onChangeAnnotate: (settings: AnnotateSettings) => void;
   onChangeBinding: (action: ShortcutAction, shortcut: string | null) => void;
   onChangeGeneral: (settings: GeneralSettings) => void;
   onChangeGlide: (settings: GlideSettings) => void;
@@ -32,6 +36,7 @@ export type SettingsPanesProps = {
   onChangeRuler: (settings: RulerSettings) => void;
   onError: (message: string) => void;
   ruler: RulerSettings | null;
+  savingAnnotate: boolean;
   savingGeneral: boolean;
   savingGlide: boolean;
   savingOcr: boolean;
@@ -51,11 +56,13 @@ const bindingOf = (
 /** The pane the sidebar selection asks for, with nothing around it: the
  * window owns the shell and the scrolling. */
 export function SettingsPanes({
+  annotate,
   defaults,
   general,
   glide,
   ocr,
   onCaptureChange,
+  onChangeAnnotate,
   onChangeBinding,
   onChangeGeneral,
   onChangeGlide,
@@ -63,6 +70,7 @@ export function SettingsPanes({
   onChangeRuler,
   onError,
   ruler,
+  savingAnnotate,
   savingGeneral,
   savingGlide,
   savingOcr,
@@ -106,6 +114,25 @@ export function SettingsPanes({
         savingShortcut={savingShortcut !== null}
         settings={ruler}
         shortcuts={shortcuts}
+      />
+    ) : null;
+  if (section === "annotate")
+    return annotate ? (
+      <AnnotateSettingsPanel
+        activation={bindingOf(shortcuts, "annotateOverlay") ?? null}
+        activationDefault={bindingOf(defaults?.shortcuts, "annotateOverlay")}
+        clear={bindingOf(shortcuts, "annotateClear") ?? null}
+        clearDefault={bindingOf(defaults?.shortcuts, "annotateClear")}
+        isSaving={savingAnnotate || savingShortcut !== null}
+        onActivationChange={(value) => {
+          onChangeBinding("annotateOverlay", value);
+        }}
+        onCaptureChange={onCaptureChange}
+        onChange={onChangeAnnotate}
+        onClearChange={(value) => {
+          onChangeBinding("annotateClear", value);
+        }}
+        settings={annotate}
       />
     ) : null;
   if (section === "ocr")

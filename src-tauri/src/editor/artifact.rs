@@ -182,6 +182,7 @@ pub fn present_recording(
   suggested_file_stem: String,
 ) -> Result<(), String> {
   let FinalizeInfo {
+    annotation_clips,
     camera,
     cursor_path,
     keyboard_path,
@@ -200,10 +201,20 @@ pub fn present_recording(
     audio_tracks = media_preview::inspect_audio_tracks(&path).unwrap_or_default();
   }
 
+  let id = next_id(app);
+  if !annotation_clips.is_empty() {
+    // The snapshot the editor window loads reads this sidecar, so marks drawn
+    // live have to be in it before the artifact is presented.
+    if let Err(error) = timeline_edit::persist_initial_annotation_clips(&path, id, annotation_clips)
+    {
+      eprintln!("Could not keep this recording's live annotations: {error}");
+    }
+  }
+
   present_new(
     app,
     EditorArtifact::Recording {
-      id: next_id(app),
+      id,
       audio_tracks,
       camera: camera.map(|camera| {
         let camera_duration_ms = (camera.duration_ms > 0)

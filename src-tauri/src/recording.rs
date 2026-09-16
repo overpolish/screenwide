@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+pub(crate) mod clock;
 pub(crate) mod commands;
 pub(crate) mod cursor;
 mod encoding;

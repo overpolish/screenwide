@@ -38,7 +38,9 @@ use std::{
 pub(crate) use format::{read, KeyboardModifier, KeyboardRecord, FORMAT_VERSION};
 #[cfg(test)]
 use writer::modifier_transition_is_down;
-use writer::{KeyboardClock, StreamWriter};
+use writer::StreamWriter;
+
+use crate::recording::clock::SidecarClock;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum FocusContext {
@@ -114,7 +116,7 @@ impl KeyboardRecorder {
 
     let state = Arc::new(Mutex::new(StreamWriter {
       active_keys: HashSet::new(),
-      clock: KeyboardClock::new(origin),
+      clock: SidecarClock::new(origin),
       failure: None,
       writer,
     }));

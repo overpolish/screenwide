@@ -57,9 +57,10 @@ const fn policy(label: WindowLabel) -> Policy {
     | WindowLabel::StandaloneListbox
     | WindowLabel::ToolPanelRecording
     | WindowLabel::ToolPanelScreenshot => Policy::OwnedTransient,
-    WindowLabel::RegionSelector | WindowLabel::Ruler | WindowLabel::TextRecognition => {
-      Policy::DesktopSurface
-    }
+    WindowLabel::Annotate
+    | WindowLabel::RegionSelector
+    | WindowLabel::Ruler
+    | WindowLabel::TextRecognition => Policy::DesktopSurface,
   }
 }
 
@@ -92,6 +93,9 @@ fn reconcile(app: &AppHandle) {
   if persistent_position_may_have_changed {
     let _ = app.save_window_state(StateFlags::POSITION);
   }
+  // The annotate overlay's host covers one display's geometry, which a layout
+  // change invalidates. Ruler and OCR are told by their own native surfaces.
+  crate::annotate::restart_after_topology_change(app);
 }
 
 fn schedule(app: AppHandle) {
