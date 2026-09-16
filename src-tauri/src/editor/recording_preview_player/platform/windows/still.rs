@@ -181,7 +181,8 @@ fn run(
         presented = false;
         break;
       }
-      presented &= present_native_frame(&sources, index as u32, &frame);
+      // A paused still is not moving, so its marks are not blurred.
+      presented &= present_native_frame(&sources, index as u32, &frame, 0.0);
     }
     if presented {
       let _ = event_channel.send(RecordingPreviewPlayerEvent::Ready {

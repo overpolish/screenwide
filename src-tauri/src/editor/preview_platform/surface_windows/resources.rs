@@ -24,11 +24,12 @@ pub(super) struct Backdrop {
 }
 
 pub(super) struct Pane {
+  /// The halo this pane's composition draws, if the hovered arrow belongs to
+  /// its layer: the arrow's place in that layer's list and the halo's width
+  /// in canvas pixels. Preview chrome, resolved when the layer is presented.
+  pub(super) annotation_halo: Option<(usize, f32)>,
   /// Stable viewport-local geometry before the shared workspace transform.
   pub(super) base_rect: PreviewSurfaceRect,
-  /// Ping-pong targets for the suspended blur, held only while the pane is
-  /// blurred so the ordinary path allocates nothing.
-  pub(super) blur: Option<compositor::BlurTargets>,
   /// Retained swap-chain allocation; `content_size` is the presented region.
   pub(super) buffer_size: (u32, u32),
   pub(super) clip: IDCompositionRectangleClip,

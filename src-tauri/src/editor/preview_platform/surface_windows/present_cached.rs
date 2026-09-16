@@ -58,27 +58,6 @@ impl RecordingPreviewSurface {
     pane.last_camera = camera
       .map(|(_, geometry, drop_shadow, camera_on_top)| (geometry, drop_shadow, camera_on_top));
     pane.settings = Some(settings.clone());
-    // WebView2's Chromium compositor cannot sample the DirectComposition swap
-    // chains beneath it, so a `backdrop-filter` over the pane hole blurs
-    // nothing the way CoreAnimation blurs the Metal pane on macOS. While the
-    // frontend covers the workarea the pane therefore blurs its own presented
-    // pixels, matching the CSS blur the Windows chrome applies to itself.
-    let blur_sigma = suspended_blur_sigma(&self.inner, pane);
-    let blur = if blur_sigma > 0.05 {
-      match pane.blur.take() {
-        Some(targets) if targets.size == output_size => Some(targets),
-        _ => Some(
-          self
-            .inner
-            .gpu
-            .compositor
-            .blur_targets(&self.inner.gpu.device, output_size)?,
-        ),
-      }
-    } else {
-      pane.blur = None;
-      None
-    };
     let source = pane
       .source
       .as_ref()
@@ -87,11 +66,7 @@ impl RecordingPreviewSurface {
     // zero is the writable back buffer for the next draw.
     let target = unsafe { pane.swap_chain.GetBuffer::<ID3D11Texture2D>(0) }
       .map_err(|error| format!("The composed preview has no back buffer: {error}"))?;
-    // While blurring, the composed frame goes to the intermediate target and
-    // only the vertical blur pass writes the back buffer.
-    let composed = blur
-      .as_ref()
-      .map_or(&target, compositor::BlurTargets::composed);
+    let composed = &target;
     // A foreground layer blends over the existing target, and a flip-discard
     // back buffer is undefined after each present: its uncovered pixels must
     // read as transparent, not as stale frame data.
@@ -116,6 +91,19 @@ impl RecordingPreviewSurface {
         };
       }
     }
+    let mut prepared = annotation::prepared_arrows(
+      &settings.annotations,
+      source.size,
+      settings,
+      pane.annotation_halo,
+    )?;
+    // The composed canvas is scaled onto the pane's box by the visual, so
+    // one drawn pixel covers this many canvas pixels.
+    prepared.pixel_scale = if pane.display_size.0 > 0 {
+      output_size.0 as f32 / pane.display_size.0 as f32
+    } else {
+      1.0
+    };
     self.inner.gpu.compositor.draw_with_camera(
       &self.inner.gpu.context,
       composed,
@@ -124,17 +112,8 @@ impl RecordingPreviewSurface {
       composition,
       camera,
       pane.magnifier,
+      &prepared,
     )?;
-    if let Some(targets) = blur.as_ref() {
-      self.inner.gpu.compositor.blur(
-        &self.inner.gpu.context,
-        targets,
-        &target,
-        output_size,
-        blur_sigma as f32,
-      )?;
-    }
-    pane.blur = blur;
     unsafe { self.inner.gpu.context.Flush() };
     // Inside an open batch the frame is parked: the closing guard presents
     // every pane and commits every pending geometry in one flush, so sibling

@@ -74,37 +74,32 @@ pub(super) fn update_magnifier(state: &mut SurfaceState) {
   });
 }
 
-/// The Gaussian sigma the suspended pane blurs with, in the pane's own
-/// composed pixels, or zero when the editor is not suspended. Matches the
-/// `filter: blur(var(--blur-lg))` the Windows chrome applies to itself, whose
-/// sigma is the CSS length.
-pub(super) fn suspended_blur_sigma(inner: &SurfaceInner, pane: &Pane) -> f64 {
-  /// The CSS `--blur-lg` the DOM chrome blurs itself by, in CSS pixels.
-  const SUSPENDED_BLUR_CSS_SIGMA: f64 = 5.0;
-  if !inner.editor.is_suspended() {
-    return 0.0;
-  }
-  // Two conversions: CSS pixels to device pixels by the window's scale, then
-  // device pixels to pane pixels by the visual's own scale transform, which
-  // maps the composed canvas onto its laid-out box.
-  let device = SUSPENDED_BLUR_CSS_SIGMA * pane.scale;
-  let content = f64::from(pane.content_size.0.max(1));
-  let display = f64::from(pane.display_size.0.max(1) as u32);
-  device * content / display
-}
-
 /// Redraws every visible pane from its cached source and composition, without
-/// a decode. The suspension blur is applied inside the present path, and a
-/// suspended editor presents nothing else, so toggling it has to re-present.
+/// a decode: what a change that lives only in the present path - a halo, a
+/// magnifier - needs to reach the screen.
 pub(super) fn redraw_composed_panes(
   inner: &std::sync::Arc<SurfaceInner>,
   state: &mut SurfaceState,
 ) {
   let camera_source = state.camera_source.clone();
+  let hover = state.annotation.hover;
   let surface = RecordingPreviewSurface {
     inner: std::sync::Arc::clone(inner),
   };
-  for pane in state.panes.iter_mut().flatten().filter(|pane| pane.seen) {
+  for (index, pane) in state
+    .panes
+    .iter_mut()
+    .enumerate()
+    .filter_map(|(index, pane)| pane.as_mut().map(|pane| (index, pane)))
+    .filter(|(_, pane)| pane.seen)
+  {
+    // The live presents key the halo by the layer they were given; a redraw
+    // from cache has to resolve it again, or it draws the halo the pane last
+    // saw. A screenshot pane knows its layer by token; a recording pane is
+    // its own layer.
+    pane.annotation_halo = hover
+      .filter(|(layer, _, _)| pane.source_token == Some(*layer) || *layer == index as u64)
+      .map(|(_, hovered, width)| (hovered, width));
     let (Some(settings), Some(composition), true) = (
       pane.settings.clone(),
       pane.last_composition,

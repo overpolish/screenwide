@@ -25,6 +25,10 @@ pub(super) fn apply_clips(
 }
 
 impl PlayerSources {
+  /// A paused macOS still resolves its marks up front, because its worker
+  /// composes from settings rather than from the frame it is about to
+  /// present. The Windows path resolves them at present time instead.
+  #[cfg(target_os = "macos")]
   pub(super) fn annotated_composition(
     &self,
     source_ms: u64,
@@ -38,7 +42,7 @@ impl PlayerSources {
 
 /// Marks are authored in full-resolution source pixels; decoder proxies have
 /// their own source grid while stroke width follows the output resolution.
-pub(super) fn remap_source(
+pub(crate) fn remap_source(
   settings: &mut crate::screenshots::ScreenshotOutputSettings,
   source: (u32, u32),
   decoded: (u32, u32),

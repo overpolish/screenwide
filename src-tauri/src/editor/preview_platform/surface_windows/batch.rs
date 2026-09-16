@@ -19,10 +19,12 @@ impl Drop for PresentBatch<'_> {
       }
     }
     let mut selection_stale = false;
+    let mut tree_changed = false;
     for pane in state.panes.iter_mut().flatten() {
       if pane.pending_geometry {
         pane.pending_geometry = false;
         let _ = pane.update_geometry();
+        tree_changed = true;
         // Selection geometry is derived from the pane's final canvas rect.
         // A Frame undo can move/resize that rect without resizing the D3D
         // buffer, so buffer staleness alone is not sufficient.
@@ -33,12 +35,17 @@ impl Drop for PresentBatch<'_> {
     if inner.selection_pending.swap(false, Ordering::AcqRel) || selection_stale {
       draw_selection(inner, &state);
     }
-    // Unconditional: `finish_layout` leaves its hides to this commit whenever
-    // the batch was already open.
-    if unsafe { inner.gpu.composition.Commit() }.is_ok() {
-      // As in `finish_layout`: an unawaited commit backlog lets rapid drags
-      // visibly desynchronise the panes from the DOM controls above them.
-      let _ = unsafe { inner.gpu.composition.WaitForCommitCompletion() };
+    // Only a change to the visual tree needs committing: a geometry that was
+    // published here, or a hide `finish_layout` left to this flush. Frames
+    // alone reach the screen through their swap chains, and committing for
+    // them anyway would cost every arrow-drag sample a display tick of wait
+    // while the grips, which never commit, run ahead of the arrow.
+    if tree_changed || inner.commit_pending.swap(false, Ordering::AcqRel) {
+      if unsafe { inner.gpu.composition.Commit() }.is_ok() {
+        // As in `finish_layout`: an unawaited commit backlog lets rapid
+        // drags visibly desynchronise the panes from the DOM controls above.
+        let _ = unsafe { inner.gpu.composition.WaitForCommitCompletion() };
+      }
     }
   }
 }

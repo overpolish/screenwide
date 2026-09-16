@@ -18,6 +18,11 @@ impl SelectionOverlay {
     crop_radius_percent: f64,
     guides: Option<(Option<f32>, Option<f32>, bool, bool)>,
     magnifier_box: Option<[f32; 4]>,
+    // `Some` when the arrow chrome owns the screen, holding the selected
+    // arrow's grips in device pixels - possibly none, with the arrow tool in
+    // hand and nothing chosen. The layer's own chrome stands down for as long
+    // as it does, matching `annotation_owns_chrome`; `None` leaves it up.
+    annotation_handles: Option<&[[f32; 2]]>,
     scale: f64,
     light: bool,
   ) -> Result<(), String> {
@@ -48,7 +53,18 @@ impl SelectionOverlay {
       constants.magnifier_flags[1] = 1;
     }
     let mut vertices = Vec::with_capacity(96);
-    if let Some(frame) = frame {
+    // The arrow chrome draws only its own grips: the layer's selection and
+    // crop chrome stand down for as long as it has the pointer.
+    if let Some(annotation_handles) = annotation_handles {
+      let points = annotation_handles
+        .iter()
+        .map(|point| Point {
+          x: f64::from(point[0]) / scale,
+          y: f64::from(point[1]) / scale,
+        })
+        .collect::<Vec<_>>();
+      osc_gpu::add_annotation_handles(&mut vertices, view, &points, scale);
+    } else if let Some(frame) = frame {
       let logical_frame = logical_rect(frame, scale);
       if let Some(image) = crop_image.filter(|rect| rect[2] >= 0.0) {
         osc_gpu::add_crop(

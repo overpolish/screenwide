@@ -24,15 +24,17 @@ pub(crate) fn normalised_point(point: AnnotationPoint, source: (u32, u32)) -> (f
 
 /// One arrow as the native chrome needs it: the three grips, normalised over
 /// the source image - the two tips and the point of the curve at `t = 0.5`,
-/// which is where the middle handle sits - and how far each head reaches back
-/// from its tip, as a fraction of the image's drawn width.
+/// which is where the middle handle sits - how far each head reaches back
+/// from its tip, and the stroke's own width, both as a fraction of the
+/// image's drawn width.
 ///
 /// The heads travel as a length rather than as a triangle because the native
 /// side already has the tips and can take the aim from them; zero means that
 /// end carries no head. The half-base is half the length, which is the
-/// shader's four-to-two proportions. Layer identity and local index follow
-/// the eight geometry doubles, matching the C
-/// `ScreenwidePreviewAnnotation`.
+/// shader's four-to-two proportions. `width` rides separately because a
+/// headless mark still has a stroke to pick, and picking is the drawn shape
+/// exactly. Layer identity and local index follow the nine geometry doubles,
+/// matching the C `ScreenwidePreviewAnnotation`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) struct NativeAnnotationHandles {
@@ -44,21 +46,30 @@ pub(crate) struct NativeAnnotationHandles {
   pub(crate) end_y: f64,
   pub(crate) start_head: f64,
   pub(crate) end_head: f64,
+  pub(crate) width: f64,
   pub(crate) layer_id: i32,
   pub(crate) index: u32,
 }
 
-const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 72);
+const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 80);
 
-/// How far a head reaches back from its tip, as a fraction of the image's
-/// drawn width. The stroke is in output pixels and the image is drawn
-/// `image_width` of them across, so the head's four widths become a share of
-/// the picture the native side can place without knowing either number.
-fn head_reach(style: &AnnotationStyle, wanted: bool, image_width: f64) -> f64 {
-  if !wanted || image_width <= 0.0 || !image_width.is_finite() {
+/// The stroke's width as a fraction of the image's drawn width. The stroke is
+/// in output pixels and the image is drawn `image_width` of them across, so
+/// the width becomes a share of the picture the native side can place without
+/// knowing either number.
+fn stroke_width(style: &AnnotationStyle, image_width: f64) -> f64 {
+  if image_width <= 0.0 || !image_width.is_finite() {
     return 0.0;
   }
-  style.width.max(0.0) * HEAD_LENGTH_WIDTHS / image_width
+  style.width.max(0.0) / image_width
+}
+
+/// How far a head reaches back from its tip, in the same fraction.
+fn head_reach(style: &AnnotationStyle, wanted: bool, image_width: f64) -> f64 {
+  if !wanted {
+    return 0.0;
+  }
+  stroke_width(style, image_width) * HEAD_LENGTH_WIDTHS
 }
 
 /// The head's length as a multiple of the stroke width, matching the shader's
@@ -103,6 +114,7 @@ pub(crate) fn annotation_handles(
           head != crate::editor::annotations::AnnotationHead::None,
           image_width,
         ),
+        width: stroke_width(&annotation.style, image_width),
       }
     })
     .collect()

@@ -170,6 +170,28 @@ fn add_handles(out: &mut Vec<Vertex>, view: Size, points: [Point; 8], scale: f64
   }
 }
 
+/// An arrow's three grips: its two tips and the point its curve passes
+/// through. The same disc the selection draws its corner handles with, so the
+/// arrow chrome reads as part of the same set of controls.
+pub(crate) fn add_annotation_handles(
+  out: &mut Vec<Vertex>,
+  view: Size,
+  points: &[Point],
+  scale: f64,
+) {
+  let radius = 4.0 + 1.0 / scale;
+  for point in points {
+    add_circle(
+      out,
+      view,
+      snap_handle_point(*point, scale),
+      radius,
+      1.0 / scale,
+      3,
+    );
+  }
+}
+
 pub(crate) fn add_selection(
   out: &mut Vec<Vertex>,
   view: Size,

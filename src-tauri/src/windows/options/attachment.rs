@@ -53,7 +53,7 @@ pub(super) fn attach_to_parent(
   parent: &tauri::WebviewWindow,
   panel: &tauri::WebviewWindow,
 ) -> tauri::Result<()> {
-  panel.set_always_on_top(false)?;
+  platform::set_normal_level(panel)?;
   set_owner(panel, parent.hwnd()?.0 as isize)
 }
 

@@ -8,20 +8,23 @@
 #include <stdint.h>
 
 /// One arrow's three grips, normalised over the whole source image - the two
-/// tips and the point the curve passes through at t = 0.5 - and how far each
-/// head reaches back from its tip, as a fraction of the image's drawn width.
-/// Zero means that end carries no head; the half-base is half the length,
-/// which is the shader's four-to-two proportions. Rust solves the Bezier and
-/// owns the stroke's units; this side only places and hit-tests the points.
+/// tips and the point the curve passes through at t = 0.5 - how far each head
+/// reaches back from its tip, and the stroke's own width, both as a fraction
+/// of the image's drawn width. A head reach of zero means that end carries no
+/// head; the half-base is half the length, which is the shader's four-to-two
+/// proportions. `width` rides separately because a headless mark still has a
+/// stroke to pick. Rust solves the Bezier and owns the stroke's units; this
+/// side only places and hit-tests the points.
 typedef struct {
   double start_x, start_y;
   double middle_x, middle_y;
   double end_x, end_y;
   double start_head, end_head;
+  double width;
   int32_t layer_id;
   uint32_t index;
 } ScreenwidePreviewAnnotation;
-_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 72,
+_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 80,
                "Rust/C annotation handle layout mismatch");
 /// How many arrows one layer can carry, matching `MAX_ANNOTATIONS`.
 static const NSUInteger ScreenwideMaxAnnotations = 64;

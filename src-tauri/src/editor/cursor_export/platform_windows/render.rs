@@ -69,6 +69,20 @@ pub(super) fn render_video(
   let export_end_100ns = i64::try_from(request.duration_ms)
     .unwrap_or(i64::MAX / 10_000)
     .saturating_mul(10_000);
+  // Marks are authored against the source at its own scale while the stroke
+  // follows the output, exactly as `timed_annotations::for_request` prepares
+  // them for the Metal export. Scaled once rather than per frame.
+  let annotation_clips: Vec<_> = request
+    .timeline
+    .map_or(&[][..], |timeline| timeline.annotation_clips())
+    .iter()
+    .map(|clip| {
+      let mut clip = clip.clone();
+      clip.annotation.style.width *= f64::from(request.video.resolution_scale_percent)
+        / f64::from(request.video.source_scale_percent.max(1));
+      clip
+    })
+    .collect();
   loop {
     if request.cancelled.load(Ordering::Acquire) {
       let _ = std::fs::remove_file(path);
@@ -137,6 +151,14 @@ pub(super) fn render_video(
         seconds: position_ms as f64 / 1_000.0,
       },
       camera_frame,
+      &crate::editor::annotations::timing::revealed_annotations(
+        &annotation_clips,
+        request.annotation_track,
+        position_ms,
+        // How much source time this frame covers, which is the window a
+        // moving mark smears over.
+        next_pts_100ns.saturating_sub(pts_100ns).max(0) as f32 / 10_000.0,
+      ),
     )?;
     sink.write(
       &texture,

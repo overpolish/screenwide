@@ -52,6 +52,11 @@ pub struct PreviewSurfacePane {
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingPreviewSurfaceLayout {
+  /// The annotation tool in hand, when one is. It rides with the layout
+  /// because it decides which chrome owns the screen and the selection it
+  /// has to agree with travels in this same payload.
+  #[serde(default)]
+  annotation_tool: Option<String>,
   backdrop: Option<[f64; 4]>,
   bake_camera: bool,
   #[serde(default)]

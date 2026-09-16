@@ -30,6 +30,7 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       .map(|hit| hit.0);
     if let Some(target) = inactive_frame_target {
       state.selection = Some(target);
+      state.annotation.selected = -1;
       state.gesture = None;
       clear_selection_snap_guides(&mut state);
       selected = Some(Some(target.pane_index));
@@ -105,10 +106,12 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       began = Some(gesture);
       draw_selection(inner, &state);
     } else if let Some(target) = frame_target {
-      let changed = state.selection.is_none_or(|current| {
-        current.pane_index != target.pane_index || current.layer_id != target.layer_id
-      });
+      let changed = state.annotation.selected != -1
+        || state.selection.is_none_or(|current| {
+          current.pane_index != target.pane_index || current.layer_id != target.layer_id
+        });
       state.selection = Some(target);
+      state.annotation.selected = -1;
       state.gesture = None;
       clear_selection_snap_guides(&mut state);
       if changed {
@@ -116,15 +119,24 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       }
       draw_selection(inner, &state);
     } else if let Some(target) = target {
-      let changed = state.selection.is_none_or(|current| {
+      let layer_changed = state.selection.is_none_or(|current| {
         current.pane_index != target.pane_index || current.layer_id != target.layer_id
       });
-      let selection = if changed {
+      // A held arrow counts as a change even on the same layer, exactly as
+      // the Metal view's `changed` does: the press lets the arrow go, and
+      // React has to hear about it to clear its own choice.
+      let changed = layer_changed || state.annotation.selected != -1;
+      // React updates target hit regions asynchronously. When this is already
+      // the selected pane, its native selection is the freshest geometry (for
+      // example immediately after a resize), so a stale target rectangle
+      // must not replace it at the start of the next move.
+      let selection = if layer_changed {
         target
       } else {
         state.selection.unwrap_or(target)
       };
       state.selection = Some(selection);
+      state.annotation.selected = -1;
       let gesture = EditorGesture {
         edges: 0,
         last_delta: (0.0, 0.0),

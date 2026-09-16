@@ -118,6 +118,11 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
         height * scale as f32,
       ]
     });
+  // The arrow chrome, when it owns the screen: its grips, which may be none
+  // at all with the arrow tool in hand and nothing chosen yet. `None` leaves
+  // the layer's own chrome standing.
+  let annotation_handles =
+    annotation::owns_chrome(state).then(|| annotation::selected_grips(state, scale));
   if let Ok(mut overlay) = inner.gpu.selection.lock() {
     let _ = overlay.draw(
       &inner.gpu.device,
@@ -132,6 +137,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       crop_radius_percent,
       guides,
       magnifier_box,
+      annotation_handles.as_deref(),
       scale,
       luminance > 0.5,
     );

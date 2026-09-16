@@ -4,8 +4,6 @@
 //! One-pass D3D11 preview compositor. Decoded frames remain on the shared GPU;
 //! the CPU only updates this pass's small constant buffer.
 
-#[path = "compositor/blur.rs"]
-mod blur;
 #[path = "compositor/cursor_artwork.rs"]
 mod cursor_artwork;
 #[path = "compositor/draw.rs"]
@@ -24,18 +22,23 @@ use windows::{
   core::{w, Interface, PCWSTR},
   Win32::Foundation::ERROR_SUCCESS,
   Win32::Graphics::{
-    Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+    Direct3D::{D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, D3D_SRV_DIMENSION_BUFFER},
     Direct3D11::{
       ID3D11BlendState, ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11PixelShader,
       ID3D11RenderTargetView, ID3D11Resource, ID3D11SamplerState, ID3D11ShaderResourceView,
-      ID3D11Texture2D, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_RENDER_TARGET,
-      D3D11_BIND_SHADER_RESOURCE, D3D11_BLEND_DESC, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE,
-      D3D11_BLEND_OP_ADD, D3D11_BUFFER_DESC, D3D11_COLOR_WRITE_ENABLE_ALL,
-      D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_RENDER_TARGET_BLEND_DESC, D3D11_SAMPLER_DESC,
-      D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC, D3D11_TEXTURE_ADDRESS_CLAMP,
-      D3D11_USAGE_DEFAULT, D3D11_USAGE_IMMUTABLE, D3D11_VIEWPORT,
+      ID3D11Texture2D, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_SHADER_RESOURCE,
+      D3D11_BLEND_DESC, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD,
+      D3D11_BUFFER_DESC, D3D11_BUFFER_SRV, D3D11_BUFFER_SRV_0, D3D11_BUFFER_SRV_1,
+      D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_CPU_ACCESS_WRITE, D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+      D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_WRITE_DISCARD, D3D11_RENDER_TARGET_BLEND_DESC,
+      D3D11_RESOURCE_MISC_BUFFER_STRUCTURED, D3D11_SAMPLER_DESC, D3D11_SHADER_RESOURCE_VIEW_DESC,
+      D3D11_SHADER_RESOURCE_VIEW_DESC_0, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC,
+      D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC, D3D11_USAGE_IMMUTABLE,
+      D3D11_VIEWPORT,
     },
-    Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SAMPLE_DESC},
+    Dxgi::Common::{
+      DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC,
+    },
     Gdi::{
       CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, SelectObject, BITMAPINFO,
       BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
@@ -53,6 +56,8 @@ use windows::{
 
 use super::background_image::BackgroundImageCache;
 use super::keyboard_artwork::{KeyboardArtworkCache, KeyboardConstants};
+use crate::editor::annotations::geometry::{ArrowGeometry, ArrowTriangle};
+use crate::editor::annotations::MAX_ANNOTATIONS;
 use crate::editor::keyboard_effects::KeyboardOverlay;
 use crate::editor::media_preview::BakeGeometry;
 use crate::screenshots::{
@@ -62,14 +67,6 @@ use crate::screenshots::{
 
 const VERTEX_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/recording_preview_vs.cso"));
 const PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/recording_preview_ps.cso"));
-const BLUR_VERTEX_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/preview_blur_vs.cso"));
-const BLUR_PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/preview_blur_ps.cso"));
-
-/// Hardware samples per blur pass, per side of the kernel. Each covers two
-/// Gaussian taps, so this budget spans a 128-pane-pixel radius at one tap per
-/// pixel; wider kernels keep the budget and space their taps out instead.
-const BLUR_TAP_PAIRS: u32 = 32;
-
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct Constants {
@@ -99,20 +96,27 @@ struct Constants {
   options: [u32; 4],
   cursor_options: [u32; 4],
   background_options: [u32; 4],
+  /// Marks below the camera are sorted ahead of those above it, so the first
+  /// word is both the below-camera count and where the above-camera run
+  /// starts; the second is the total. The rest are spare.
+  annotation_options: [u32; 4],
 }
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct BlurConstants {
-  texel: [f32; 4],
-  axis: [f32; 4],
-}
+/// The structured-buffer elements the arrow shader reads, and the buffers
+/// that carry them.
+#[path = "compositor/arrows.rs"]
+mod arrows;
+use arrows::structured_buffer;
+pub(crate) use arrows::{PreparedArrows, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES};
 
 pub(super) struct Compositor {
   background_cache: BackgroundImageCache,
-  blur_constants: ID3D11Buffer,
-  blur_pixel_shader: ID3D11PixelShader,
-  blur_vertex_shader: ID3D11VertexShader,
+  /// Prepared arrows, mapped per draw, and its structured-buffer view.
+  annotation_buffer: ID3D11Buffer,
+  annotation_view: ID3D11ShaderResourceView,
+  /// Exposure samples for moving marks, mapped per draw beside the arrows.
+  sample_buffer: ID3D11Buffer,
+  sample_view: ID3D11ShaderResourceView,
   constants: ID3D11Buffer,
   cursor_hotspots: [[f32; 4]; 8],
   cursor_view: ID3D11ShaderResourceView,
@@ -127,25 +131,6 @@ pub(super) struct Compositor {
   sampler: ID3D11SamplerState,
   point_sampler: ID3D11SamplerState,
   vertex_shader: ID3D11VertexShader,
-}
-
-/// Ping-pong targets for the suspended-pane blur. The composed frame lands in
-/// `composed` instead of the back buffer, the horizontal pass writes
-/// `scratch`, and the vertical pass writes the back buffer. Allocated only
-/// while a pane is blurred and released as soon as it is not.
-pub(super) struct BlurTargets {
-  pub(super) size: (u32, u32),
-  composed: ID3D11Texture2D,
-  composed_view: ID3D11ShaderResourceView,
-  scratch: ID3D11Texture2D,
-  scratch_view: ID3D11ShaderResourceView,
-}
-
-impl BlurTargets {
-  /// The texture the ordinary compositor pass draws into while blurring.
-  pub(super) fn composed(&self) -> &ID3D11Texture2D {
-    &self.composed
-  }
 }
 
 #[derive(Clone)]
@@ -174,8 +159,6 @@ mod tests {
   fn preview_shader_is_embedded_as_compiled_bytecode() {
     assert_eq!(&VERTEX_SHADER[..4], b"DXBC");
     assert_eq!(&PIXEL_SHADER[..4], b"DXBC");
-    assert_eq!(&BLUR_VERTEX_SHADER[..4], b"DXBC");
-    assert_eq!(&BLUR_PIXEL_SHADER[..4], b"DXBC");
   }
 }
 

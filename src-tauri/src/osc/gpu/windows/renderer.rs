@@ -202,7 +202,9 @@ pub(crate) use pixel::{
   add_pixel_aligned_quad, add_pixel_aligned_texture_quad, pixel_aligned_rect,
 };
 pub(crate) use ruler::{add_ruler_arc, add_ruler_box};
-pub(crate) use selection::{add_crop, add_crop_with_handles, add_selection};
+pub(crate) use selection::{
+  add_annotation_handles, add_crop, add_crop_with_handles, add_selection,
+};
 
 /// The lens is emitted last as a quad over `magnifier_box`.
 pub(crate) fn add_magnifier(out: &mut Vec<Vertex>, view: Size, constants: &RenderConstants) {

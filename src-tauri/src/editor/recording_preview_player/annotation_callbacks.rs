@@ -57,7 +57,7 @@ pub(crate) fn install(
       }
     },
   ));
-  surface.set_annotation_hover_callback(Box::new(move |index, _, _| {
+  surface.set_annotation_hover_callback(Box::new(move |index, progress, image_points| {
     let state = app.state::<RecordingPreviewPlayerState>();
     let Ok(manager) = state.0.try_lock() else {
       return;
@@ -72,6 +72,60 @@ pub(crate) fn install(
     let Some(session_id) = manager.session_id else {
       return;
     };
+    // The Metal workspace cannot re-present a recording from marks alone, so
+    // on macOS the halo stops at React. The D3D11 panes redraw from what
+    // they last composed, which is exactly what a halo frame needs.
+    #[cfg(target_os = "windows")]
+    if let Some(surface) = manager
+      .sources
+      .as_ref()
+      .and_then(|sources| sources.preview_surface.as_ref())
+    {
+      // The mark's own pane, not the selected one: a shortcut or the camera
+      // can hold the selection while the pointer rests on an arrow over the
+      // screen. `annotation_targets` reports each mark beside the pane it
+      // was drawn over, in the order the grips were published.
+      let halo = usize::try_from(index)
+        .ok()
+        .and_then(|index| {
+          let targets = manager.annotation_targets();
+          let (pane, _) = targets.get(index)?;
+          // The compositor places a halo by the mark's index within its own
+          // pane's list, so the flat published index has to be counted down
+          // to a local one.
+          let local = targets[..index]
+            .iter()
+            .filter(|(candidate, _)| candidate == pane)
+            .count();
+          Some((*pane, local))
+        })
+        .and_then(|(pane, local)| {
+          if !image_points.is_finite() || image_points <= 0.0 {
+            return None;
+          }
+          let output_width = manager
+            .sources
+            .as_ref()?
+            .composition_settings
+            .as_ref()?
+            .read()
+            .ok()
+            .map(|settings| {
+              if pane == 0 {
+                settings.recording_output.primary.width
+              } else {
+                settings.recording_output.camera.width
+              }
+            })?;
+          let width = crate::editor::screenshot_preview::hover_width_points(progress)
+            * f64::from(output_width)
+            / image_points;
+          Some((u64::from(pane), local, width as f32))
+        });
+      surface.redraw_annotation_hover(halo);
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = (progress, image_points);
     let annotation_id = manager
       .annotation_targets()
       .get(index as usize)

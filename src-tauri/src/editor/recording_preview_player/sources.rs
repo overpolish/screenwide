@@ -148,15 +148,15 @@ fn sources_with_surface(
       .map(|(_, edit)| edit.annotation_clips)
       .unwrap_or_default(),
   ));
+  // The surface carries no callbacks yet: they name the session that adopts
+  // these sources, and on Windows one compositor is shared by every session
+  // the editor window ever opens, so a superseded start must not install
+  // over the live session's. `commands::startup` installs them under the
+  // manager lock that adopts the session.
   let preview_surface = if create_surface {
     app
       .get_webview_window(EditorKind::Recording.window_label().as_str())
-      .map(|window| {
-        let mut surface = RecordingPreviewSurface::from_window(&window)?;
-        #[cfg(target_os = "macos")]
-        super::annotation_bridge::install(&mut surface, app.clone(), Arc::clone(&annotation_clips));
-        Ok::<_, String>(Arc::new(surface))
-      })
+      .map(|window| Ok::<_, String>(Arc::new(RecordingPreviewSurface::from_window(&window)?)))
       .transpose()?
   } else {
     None

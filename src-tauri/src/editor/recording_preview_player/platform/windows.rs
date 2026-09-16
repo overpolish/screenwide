@@ -48,13 +48,45 @@ pub(crate) enum VideoFramePayload {
   },
 }
 
-pub(super) fn present_native_frame(sources: &PlayerSources, index: u32, frame: &GpuFrame) -> bool {
+/// `frame_ms` is how much source time this drawn frame covers, which is what
+/// the reveal's motion blur is measured over. A paused still passes zero:
+/// nothing is moving, so nothing is blurred.
+pub(super) fn present_native_frame(
+  sources: &PlayerSources,
+  index: u32,
+  frame: &GpuFrame,
+  frame_ms: f32,
+) -> bool {
   sources.preview_surface.as_ref().is_some_and(|surface| {
     let settings = sources
       .composition_settings
       .as_ref()
       .and_then(|settings| settings.read().ok().map(|settings| settings.clone()));
-    settings.is_some_and(|settings| {
+    settings.is_some_and(|mut settings| {
+      if let Ok(clips) = sources.annotation_clips.read() {
+        crate::editor::recording_preview_player::annotation_preview::apply_clips(
+          &mut settings,
+          &clips,
+          frame.timestamp_ms,
+          frame_ms,
+        );
+      }
+      // Marks are authored against the full-resolution source; this frame was
+      // decoded on its own grid, so the points move with it.
+      let track = if index == 0 {
+        &mut settings.recording_output.primary
+      } else {
+        &mut settings.recording_output.camera
+      };
+      let output_width = track.width;
+      if let Some(pane) = sources.layout.panes.get(index as usize) {
+        crate::editor::recording_preview_player::annotation_preview::remap_source(
+          track,
+          (pane.source_width, pane.source_height),
+          (frame.width, frame.height),
+          output_width,
+        );
+      }
       let cursor_settings = sources
         .cursor_settings
         .read()
@@ -137,7 +169,13 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
     index,
     presented,
   } = payload;
-  let result = present_native_frame(sources, index, &frame);
+  // Playback exposes each frame for one frame interval, which is the window
+  // a moving mark smears over; a paused still exposes nothing.
+  let frame_ms = sources
+    .frames_per_second
+    .filter(|rate| *rate > 0.0)
+    .map_or(0.0, |rate| (1_000.0 / rate) as f32);
+  let result = present_native_frame(sources, index, &frame, frame_ms);
   if let Some(presented) = presented {
     let _ = presented.send(());
   }

@@ -33,6 +33,13 @@ impl RecordingPreviewSurface {
       let (Some(composition), Some(_)) = (pane.last_composition, pane.source.as_ref()) else {
         return Ok(false);
       };
+      // A redraw moves the picture, not the marks on it. The caller's
+      // settings come straight from the composition, whose marks are only
+      // resolved from the timeline clips per decoded frame, so they arrive
+      // empty here; the marks this frame actually carries - resolved and
+      // already on the decoded grid - are the ones the last present cached.
+      let primary = with_cached_marks(pane, primary);
+      let primary = &primary;
       if bake_camera {
         // The camera texture is only cached while baked presents run; right
         // after a bake toggle it is absent (or stale) and the decoder must
@@ -67,7 +74,8 @@ impl RecordingPreviewSurface {
       if !bake_camera {
         if let Some(pane) = state.panes.get_mut(1).and_then(Option::as_mut) {
           if let (Some(composition), Some(_)) = (pane.last_composition, pane.source.as_ref()) {
-            self.present_cached_source(pane, camera_settings, composition)?;
+            let camera_settings = with_cached_marks(pane, camera_settings);
+            self.present_cached_source(pane, &camera_settings, composition)?;
           }
         }
       }
@@ -137,9 +145,16 @@ impl RecordingPreviewSurface {
     let Ok(mut state) = self.inner.state.lock() else {
       return Ok(false);
     };
+    // The halo belongs to one layer; read it before the pane is borrowed.
+    let halo = state
+      .annotation
+      .hover
+      .filter(|(layer, _, _)| *layer == source_token)
+      .map(|(_, index, width)| (index, width));
     let Some(pane) = state.panes.get_mut(index as usize).and_then(Option::as_mut) else {
       return Ok(false);
     };
+    pane.annotation_halo = halo;
     let source_size = (source.width, source.height);
     if pane.source_token != Some(source_token)
       || pane
@@ -168,4 +183,15 @@ impl RecordingPreviewSurface {
     redraw_stale_selection(&self.inner, &mut state);
     Ok(staged)
   }
+}
+
+/// `settings` with the marks the pane last drew in place of its own, which
+/// for a recording arrive unresolved and empty. The cached marks are already
+/// resolved for this frame and on its decoded grid, so they are drawn as is.
+fn with_cached_marks(pane: &Pane, settings: &ScreenshotOutputSettings) -> ScreenshotOutputSettings {
+  let mut settings = settings.clone();
+  if let Some(cached) = pane.settings.as_ref() {
+    settings.annotations = cached.annotations.clone();
+  }
+  settings
 }

@@ -84,18 +84,18 @@ fn default_animated() -> bool {
 }
 
 /// The stroke a fresh arrow is drawn with, in output pixels.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const NEW_ARROW_WIDTH: f64 = 8.0;
 
 /// The colour a fresh arrow is drawn in before anything has been chosen: the
 /// palette's yellow, which reads as a mark on almost any screenshot where the
 /// accent would sometimes be the very colour being pointed at. The twin of
 /// `ANNOTATION_SWATCHES` in `src/features/editor/annotation-palette.ts`.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 const NEW_ARROW_COLOR: &str = "#ffcc00";
 
 /// The dress a fresh arrow is drawn in before anything has been chosen.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn default_arrow_style() -> AnnotationStyle {
   AnnotationStyle {
     color: NEW_ARROW_COLOR.to_owned(),
@@ -106,7 +106,7 @@ pub(crate) fn default_arrow_style() -> AnnotationStyle {
 
 /// A straight arrow in `style`, or in the tool's own first dress where the
 /// editor has not settled on one yet.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn new_arrow(
   id: String,
   start: AnnotationPoint,
@@ -135,7 +135,7 @@ pub(crate) fn new_arrow(
 /// An annotation colour as straight RGBA, from `#rrggbb` or `#rrggbbaa`.
 /// An unreadable colour is fully transparent rather than an error: one bad
 /// mark must not cost the whole composition.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn annotation_colour(value: &str) -> [f32; 4] {
   let value = value.strip_prefix('#').unwrap_or(value);
   if !matches!(value.len(), 6 | 8) || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {

@@ -111,7 +111,7 @@ impl AnnotationReveal {
 
   /// Whether this is the whole path standing still, which the compositor
   /// prepares through its original static path rather than the reveal's.
-  #[cfg(any(target_os = "macos", test))]
+  #[cfg(any(target_os = "macos", target_os = "windows", test))]
   pub fn is_whole(self) -> bool {
     self.low == 0.0 && self.high == 1.0 && self.scale == 1.0 && self.opacity == 1.0
   }
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn screenwide_annotation_reveal_window(
 
 /// Turning a window into drawable geometry needs the curve itself, and only
 /// the compositor has one.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 #[path = "reveal_geometry.rs"]
 pub(crate) mod geometry;
 

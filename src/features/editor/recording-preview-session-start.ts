@@ -15,7 +15,33 @@ import {
   setRecordingPreviewZoom,
 } from "./api";
 import { PreviewZoomRequest } from "./preview-zoom-state";
-import { setRecordingPreviewDeletedKeyboardShortcuts } from "./recording-keyboard-timeline-api";
+import {
+  RecordingPreviewKeyboardDeletions,
+  setRecordingPreviewDeletedKeyboardShortcuts,
+} from "./recording-keyboard-timeline-api";
+import { RecordingOutputSettings } from "./screenshot-output";
+import {
+  AudioTrackVolume,
+  CameraOverlaySettings,
+  CursorEffectSettings,
+  KeyboardEffectSettings,
+} from "./types";
+
+/** The settings a session runs from, as the frontend holds them at one instant. */
+export type RecordingPreviewSessionSettings = {
+  audioTrackVolumes: AudioTrackVolume[];
+  bakeCamera: boolean;
+  cameraOverlay: CameraOverlaySettings;
+  cursorEffects: CursorEffectSettings;
+  enabledStreamIndices: number[];
+  keyboardDeletions: RecordingPreviewKeyboardDeletions;
+  keyboardEffects: KeyboardEffectSettings;
+  recordingOutput: RecordingOutputSettings;
+};
+
+export const recordingPreviewSessionSettingsKey = (
+  settings: RecordingPreviewSessionSettings,
+) => JSON.stringify(settings);
 
 /**
  * Native comes up interactive at 100%, so a session that (re)starts while
@@ -43,38 +69,34 @@ export const pushRecordingPreviewSessionState = ({
 };
 
 /**
- * Replays every settings command against the new session. The caller compares
- * settings keys first: this only runs when the user changed something while
- * the session was still starting, so the new worker never keeps stale state.
+ * Settles a session that started while its settings moved on. The session was
+ * started from the settings behind `initialKey`; if the frontend now holds
+ * different ones, every settings command is replayed against it, so the new
+ * worker never keeps stale state.
  */
-export const resendRecordingPreviewSettings = ({
-  audioTrackVolumes,
-  bakeCamera,
-  cameraOverlay,
-  cursorEffects,
-  enabledStreamIndices,
-  keyboardDeletions,
-  keyboardEffects,
-  recordingOutput,
+export const settleRecordingPreviewSettings = ({
+  initialKey,
+  onError,
   sessionId,
+  settings,
 }: {
-  audioTrackVolumes: Parameters<typeof setRecordingPreviewAudioVolumes>[0];
-  bakeCamera: boolean;
-  cameraOverlay: Parameters<
-    typeof setRecordingPreviewComposition
-  >[0]["cameraOverlay"];
-  cursorEffects: Parameters<typeof setRecordingPreviewCursorEffects>[0];
-  enabledStreamIndices: Parameters<typeof selectRecordingPreviewAudio>[0];
-  keyboardDeletions: Parameters<
-    typeof setRecordingPreviewDeletedKeyboardShortcuts
-  >[0];
-  keyboardEffects: Parameters<typeof setRecordingPreviewKeyboardEffects>[0];
-  recordingOutput: Parameters<
-    typeof setRecordingPreviewComposition
-  >[0]["recordingOutput"];
+  initialKey: string;
+  onError: (cause: unknown) => void;
   sessionId: number;
-}) =>
-  Promise.all([
+  settings: RecordingPreviewSessionSettings;
+}) => {
+  if (recordingPreviewSessionSettingsKey(settings) === initialKey) return;
+  const {
+    audioTrackVolumes,
+    bakeCamera,
+    cameraOverlay,
+    cursorEffects,
+    enabledStreamIndices,
+    keyboardDeletions,
+    keyboardEffects,
+    recordingOutput,
+  } = settings;
+  void Promise.all([
     selectRecordingPreviewAudio(enabledStreamIndices, sessionId),
     setRecordingPreviewAudioVolumes(audioTrackVolumes, sessionId),
     setRecordingPreviewCursorEffects(cursorEffects, sessionId),
@@ -86,4 +108,5 @@ export const resendRecordingPreviewSettings = ({
       recordingOutput,
       sessionId,
     }),
-  ]);
+  ]).catch(onError);
+};

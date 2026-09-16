@@ -246,6 +246,10 @@ SCREENWIDE_PREVIEW_PRIVATE void apply_editor_transform(ScreenwidePreviewSurface 
     }
     redraw_workspace(surface);
     invalidate_selection_cursor_rects(surface);
+    // The halo is measured in canvas pixels against the size the picture is
+    // drawn at, so a transform that redraws it at another size leaves it to
+    // be measured again.
+    annotation_refresh_hover(surface);
     return;
   }
   for (NSUInteger index = 0; index < surface.views.count; index++) {
@@ -256,6 +260,7 @@ SCREENWIDE_PREVIEW_PRIVATE void apply_editor_transform(ScreenwidePreviewSurface 
   }
   redraw_selection(surface);
   invalidate_selection_cursor_rects(surface);
+  annotation_refresh_hover(surface);
 }
 
 

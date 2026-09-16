@@ -61,8 +61,10 @@ static double annotation_prepared_head_distance(NSPoint point,
       annotation_native_point(triangle.c)) - rounding);
 }
 
-/// How far a point is from one arrow, in display points: its shaft, and the
-/// heads on it. A press on a head is a press on the arrow - it is the part of
+/// How far a point is from one arrow's drawn shape, in display points: its
+/// shaft, and the heads on it. Zero anywhere the arrow is actually painted,
+/// because the tolerance is measured from the stroke's edge rather than its
+/// centreline. A press on a head is a press on the arrow - it is the part of
 /// it the hand aims at. A mark half-way through drawing itself in is still
 /// picked by the whole of what it will be: the hand aims at the arrow, not at
 /// the frame of it that happens to be showing.
@@ -73,19 +75,20 @@ static double annotation_shaft_distance(NSRect image,
   NSPoint middle = annotation_display_point(image, item.middle_x, item.middle_y);
   NSPoint end = annotation_display_point(image, item.end_x, item.end_y);
   NSPoint control = annotation_control_point(start, middle, end);
-  double best = INFINITY;
+  double centreline = INFINITY;
   NSPoint previous = start;
   for (NSUInteger sample = 1; sample <= kAnnotationShaftSamples; sample++) {
     NSPoint next = annotation_curve_point(
         start, control, end, (double)sample / (double)kAnnotationShaftSamples);
-    best = fmin(best, annotation_segment_distance(point, previous, next));
+    centreline = fmin(centreline, annotation_segment_distance(point, previous, next));
     previous = next;
   }
-  float width = fmax(item.start_head, item.end_head) * image.size.width / 4.0;
+  float width = item.width * image.size.width;
   uint32_t heads = item.start_head > 0 ? 2 : item.end_head > 0 ? 1 : 0;
   AnnotationArrowGeometry geometry = annotation_prepare_arrow(
       annotation_vector(start.x, start.y), annotation_vector(control.x, control.y),
       annotation_vector(end.x, end.y), width, heads, annotation_reveal_whole());
+  double best = fmax(0.0, centreline - geometry.width * 0.5);
   if (geometry.head != 0)
     best = fmin(best, annotation_prepared_head_distance(point, geometry.end_head, geometry.rounding));
   if (geometry.head == 2)

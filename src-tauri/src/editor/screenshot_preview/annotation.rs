@@ -36,7 +36,7 @@ pub(crate) struct AnnotationHover {
 
 /// The halo's width in display points over the pulse, eased the way the
 /// ruler's is: three points growing to eight over 160 ms.
-pub(super) fn hover_width_points(progress: f64) -> f64 {
+pub(crate) fn hover_width_points(progress: f64) -> f64 {
   let eased = 1.0 - (1.0 - progress.clamp(0.0, 1.0)).powi(3);
   3.0 + (8.0 - 3.0) * eased
 }

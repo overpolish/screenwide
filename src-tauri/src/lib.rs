@@ -104,7 +104,7 @@ pub fn run() {
       editor::recording_preview_player::keyboard_command::set_recording_preview_keyboard_effects,
       editor::recording_preview_player::keyboard_command::set_recording_preview_deleted_keyboard_shortcuts,
       editor::recording_preview_player::commands::set_recording_preview_composition,
-      #[cfg(target_os = "macos")]
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
       editor::recording_preview_player::annotation_bridge::set_recording_preview_annotations,
       editor::recording_preview_player::commands::start_recording_preview_player,
       editor::recording_preview_player::commands::stop_recording_preview_player,

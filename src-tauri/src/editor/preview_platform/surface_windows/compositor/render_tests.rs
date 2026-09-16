@@ -54,6 +54,7 @@ fn aurora_background_survives_moved_foreground() {
       },
       None,
       None,
+      &Default::default(),
     )
     .unwrap();
   let first_strip = read_top_strip(&device, &context, &first_target);
@@ -83,6 +84,7 @@ fn aurora_background_survives_moved_foreground() {
       },
       None,
       None,
+      &Default::default(),
     )
     .unwrap();
   let second_strip = read_top_strip(&device, &context, &second_target);
@@ -146,6 +148,7 @@ fn aurora_drag_trace_keeps_clear_background_stable() {
         },
         None,
         None,
+        &Default::default(),
       )
       .unwrap();
     let strip = read_top_strip(&device, &context, &target);
@@ -215,6 +218,7 @@ fn aurora_background_survives_long_live_draw_sequence() {
         },
         None,
         None,
+        &Default::default(),
       )
       .unwrap();
     if draw % 10 == 0 {
@@ -268,6 +272,7 @@ fn compositor_background_ignores_selection_rasterizer_state() {
         },
         None,
         None,
+        &Default::default(),
       )
       .unwrap();
   };

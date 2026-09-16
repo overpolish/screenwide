@@ -112,7 +112,6 @@ impl Backdrop {
 
 impl Pane {
   pub(super) fn release_drawables(&mut self, context: &ID3D11DeviceContext) -> Result<(), String> {
-    self.blur = None;
     unsafe {
       let vertex_buffer: Option<ID3D11Buffer> = None;
       let stride = 0_u32;

@@ -15,9 +15,9 @@ use std::{
 use serde::{Deserialize, Serialize};
 use tauri::{ipc::Channel, AppHandle, Manager};
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod annotation_bridge;
-mod annotation_preview;
+pub(crate) mod annotation_preview;
 mod audio;
 pub(crate) mod audio_visualizer;
 mod audio_visualizer_clock;
@@ -194,7 +194,7 @@ pub(super) fn animation_timeline_ranges(
 
 #[derive(Default)]
 struct PreviewPlayerManager {
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   annotation: annotation_bridge::AnnotationState,
   artifact_id: Option<u64>,
   audio_indices: Vec<usize>,

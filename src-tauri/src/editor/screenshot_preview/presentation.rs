@@ -15,11 +15,11 @@ impl PreviewManager {
     let (Some(surface), Some(output)) = (self.surface.as_ref(), self.output.as_ref()) else {
       return Ok(());
     };
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     let hover = self
       .annotation_hover
       .map(|hover| (hover.layer_id, hover.index, hover.width));
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let hover = None;
     Self::present_snapshot(surface, output, &self.sources, hover).map(|_| ())
   }
@@ -58,7 +58,9 @@ impl PreviewManager {
       let staged = surface.present_screenshot_workspace(&layers, hover)?;
       return Ok(staged);
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    surface.set_annotation_hover(hover.map(|(layer, index, width)| (layer, index, width)));
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let _ = hover;
     #[cfg(not(target_os = "macos"))]
     let mut staged = true;
@@ -115,11 +117,11 @@ impl PreviewManager {
         if manager.require_session(session_id).is_err() {
           return;
         }
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
         let hover = manager
           .annotation_hover
           .map(|hover| (hover.layer_id, hover.index, hover.width));
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         let hover = None;
         (
           manager.surface.clone(),

@@ -58,11 +58,11 @@ pub async fn refresh_screenshot_preview_sources(
       .map_err(|_| "The screenshot preview is unavailable".to_owned())?;
     manager.require_session(session_id)?;
     manager.sources = sources;
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     let hover = manager
       .annotation_hover
       .map(|hover| (hover.layer_id, hover.index, hover.width));
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let hover = None;
     manager.has_layout.then(|| {
       (

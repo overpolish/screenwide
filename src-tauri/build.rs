@@ -228,10 +228,6 @@ fn compile_windows_preview_shaders() {
     "recording_preview",
   );
   compile_shader(
-    "src/editor/preview_platform/surface_windows/shaders/blur.hlsl",
-    "preview_blur",
-  );
-  compile_shader(
     "src/editor/preview_platform/surface_windows/shaders/audio_ribbon.hlsl",
     "preview_audio_ribbon",
   );

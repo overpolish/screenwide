@@ -193,8 +193,10 @@ impl RecordingPreviewSurface {
       draw_selection(&self.inner, &state);
       // An open batch commits for everything on its flush; a second
       // commit-and-wait here would add a display tick of latency to every
-      // layout that presents in the same invoke.
+      // layout that presents in the same invoke. The hides above changed the
+      // tree, though, so the flush has to know it owes a commit.
       if self.inner.batch_depth.load(Ordering::Acquire) > 0 {
+        self.inner.commit_pending.store(true, Ordering::Release);
         return;
       }
       if unsafe { self.inner.gpu.composition.Commit() }.is_ok() {

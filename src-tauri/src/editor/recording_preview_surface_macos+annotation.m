@@ -78,9 +78,9 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
   return -1;
 }
 
-/// The topmost arrow whose shaft `point` lands on, or -1. The tolerance is a
-/// comfortable pointing target rather than the stroke's own width: the width
-/// is in output pixels, which this side deliberately knows nothing about.
+/// The topmost arrow whose drawn shape `point` lands on, or -1. There is no
+/// tolerance around it: the arrow is picked, and haloed, exactly where it is
+/// painted, which is what keeps the halo off the space beside a mark.
 SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   NSUInteger count = 0;
@@ -89,7 +89,7 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
   for (NSInteger index = (NSInteger)count - 1; index >= 0; index--) {
     NSRect image = annotation_layer_image(surface, items[index].layer_id);
     if (image.size.width <= 0.0 || image.size.height <= 0.0) continue;
-    if (annotation_shaft_distance(image, items[(NSUInteger)index], point) <= 6.0)
+    if (annotation_shaft_distance(image, items[(NSUInteger)index], point) <= 0.0)
       return index;
   }
   return -1;

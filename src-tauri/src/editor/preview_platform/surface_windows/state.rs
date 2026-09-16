@@ -4,6 +4,8 @@
 use super::*;
 
 pub(super) struct SurfaceState {
+  /// The published arrow chrome and any drag over it.
+  pub(super) annotation: annotation::AnnotationState,
   pub(super) backdrop: [f64; 4],
   pub(super) camera_source: Option<compositor::SourceTexture>,
   pub(super) editor_active: bool,
@@ -96,6 +98,8 @@ pub(super) enum ActiveGesture {
 
 #[derive(Default)]
 pub(super) struct EditorCallbacks {
+  pub(super) annotation_gesture: Option<AnnotationGestureCallback>,
+  pub(super) annotation_hover: Option<AnnotationHoverCallback>,
   pub(super) context_menu: Option<ContextMenuCallback>,
   pub(super) gesture: Option<SelectionGestureCallback>,
   pub(super) pointer_down: Option<PointerDownCallback>,
@@ -109,6 +113,12 @@ pub(super) struct SurfaceInner {
   /// pending geometry in one flush (the DirectComposition analogue of the
   /// macOS single-`CATransaction` batch).
   pub(super) batch_depth: AtomicU32,
+  /// A visual-tree change that was left for the next batch flush to commit,
+  /// such as the hides `finish_layout` defers inside an open batch. A flush
+  /// that only presented frames has nothing to commit: swap-chain content
+  /// reaches the screen on its own, and a commit-and-wait per flush is a
+  /// display tick of latency on every pointer sample of an arrow drag.
+  pub(super) commit_pending: std::sync::atomic::AtomicBool,
   pub(super) selection_pending: std::sync::atomic::AtomicBool,
   pub(super) callbacks: Mutex<EditorCallbacks>,
   pub(super) editor: editor::EditorWindow,

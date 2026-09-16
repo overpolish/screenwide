@@ -4,6 +4,7 @@
 // Resolved textually by `compile_shader` in build.rs: D3DCompile is handed no
 // include handler.
 #include "generators.hlsl"
+#include "annotations.hlsl"
 
 cbuffer Canvas : register(b0) {
   float4 output_source; // output width/height, source width/height
@@ -15,7 +16,7 @@ cbuffer Canvas : register(b0) {
   float4 mesh_points[8];
   float4 mesh_colors[4];
   float4 effects; // image radius, background radius, warp, shadow sigma
-  float4 motion; // timeline seconds, generator speed
+  float4 motion; // timeline seconds, generator speed, canvas pixels per drawn pixel
   float4 cursor_geometry; // source-space anchor x/y, artwork width/height
   float4 cursor_effects; // opacity, reserved y, rotation radians, scale
   float4 cursor_blur; // source-space frame delta x/y
@@ -27,6 +28,9 @@ cbuffer Canvas : register(b0) {
   uint4 options; // seed, mesh enabled, point count, shadow enabled
   uint4 cursor_options; // artwork, enabled, clip to video, foreground only
   uint4 background_options; // has background image, generator, palette size
+  // Marks below the camera are sorted ahead of those above it, so `x` is both
+  // the below-camera count and where the above-camera run starts.
+  uint4 annotation_options; // below-camera count, total count
 };
 Texture2D source_image : register(t0);
 Texture2DArray native_cursor_images : register(t1);
@@ -432,7 +436,18 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
   if (cursor_options.z != 0) cursor.a *= image_alpha;
   result.rgb = lerp(result.rgb, cursor.rgb, cursor.a);
   result.a = cursor.a + result.a * (1.0 - cursor.a);
+  // Every arrow edge feathers over one *drawn* pixel, not one canvas pixel:
+  // a canvas shown smaller than its resolution would otherwise take its
+  // whole antialiasing band from inside a single drawn pixel and come out
+  // jagged. `motion.z` is how many canvas pixels one drawn pixel covers.
+  float annotation_feather = max(motion.z, 1e-4) * 0.5;
+  if (annotation_options.y > 0u)
+    result = composite_annotations(
+      result, pixel, 0u, annotation_options.x, annotation_feather);
   if (camera_effects.w != 0.0) result = camera_layer(result, pixel);
+  if (annotation_options.y > annotation_options.x)
+    result = composite_annotations(
+      result, pixel, annotation_options.x, annotation_options.y, annotation_feather);
   result = composite_keyboard(result, pixel, output_source.xy);
   if (cursor_options.w == 0) {
     result.rgb = saturate(result.rgb + hash(pixel, 0x9e3779b9) / 255.0);

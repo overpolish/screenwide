@@ -5,9 +5,9 @@ use std::sync::{Arc, Mutex};
 
 use super::super::preview_platform::{workspace_editor::WorkspaceScene, RecordingPreviewSurface};
 use super::super::ScreenshotWorkspaceOutputSettings;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::annotation::AnnotationHover;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::annotation_gesture::AnnotationGestureOverride;
 use super::gesture::SelectionGestureOverride;
 use crate::screenshots::CapturedImage;
@@ -16,22 +16,22 @@ use crate::screenshots::CapturedImage;
 pub(super) struct PreviewManager {
   /// Set while the arrow tool owns the pointer, so a React layout arriving
   /// mid-drag cannot replace the working copy the gesture is drawing into.
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_gesture: Option<AnnotationGestureOverride>,
   /// The style the next fresh arrow is drawn in: whatever the editor's last
   /// annotation edit settled on. `None` until it has settled on anything, in
   /// which case the arrow tool's own first dress stands.
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_defaults: Option<crate::editor::annotations::AnnotationStyle>,
   /// The arrow the pointer rests on, and how wide its halo has grown.
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_hover: Option<AnnotationHover>,
   /// What the pointer does over the picture, from the tool React has in hand.
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_mode: u32,
   /// The pane the arrow chrome is drawn against, which is the only one its
   /// grips and its hit tests know about.
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_pane_index: Option<u32>,
   pub(super) has_layout: bool,
   pub(super) latest_session_id: u64,
@@ -56,7 +56,7 @@ impl PreviewManager {
     if let Some(surface) = self.surface.as_ref() {
       surface.hide();
     }
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
       self.annotation_defaults = None;
       self.annotation_gesture = None;

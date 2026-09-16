@@ -17,9 +17,10 @@ import { playRecordingPreview } from "./recording-preview-playback-api";
 import { RecordingPreviewPlayerEvent } from "./recording-preview-player-contract";
 import {
   pushRecordingPreviewSessionState,
-  resendRecordingPreviewSettings,
+  RecordingPreviewSessionSettings,
+  recordingPreviewSessionSettingsKey,
+  settleRecordingPreviewSettings,
 } from "./recording-preview-session-start";
-import { recordingPreviewSettingsKey } from "./recording-preview-settings-key";
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import { recordingTimelinePlaybackRangesFrom } from "./recording-timeline-playback";
 import {
@@ -39,6 +40,7 @@ import {
 let sessionSequence = 0;
 type PreviewTiming = [durationMs: number, framesPerSecond: number | null];
 export function useRecordingPreviewPlayer({
+  annotationTool,
   artifactId,
   audioTrackVolumes,
   bakeCamera,
@@ -81,6 +83,9 @@ export function useRecordingPreviewPlayer({
   recordingOutput: import("./screenshot-output").RecordingOutputSettings;
   screenCanvasRef: RefObject<HTMLCanvasElement | null>;
   sourceDurationMs: number;
+  /** The annotation tool in hand, when one is. It reaches the native chrome
+   * with the layout that carries the selection it has to agree with. */
+  annotationTool?: "arrow" | "select" | null;
   onSelectionChange?: (paneIndex: number | null) => void;
   onSelectionGesture?: (event: RecordingSelectionGestureEvent) => void;
   onZoomChange?: (zoomPercent: number) => void;
@@ -138,6 +143,18 @@ export function useRecordingPreviewPlayer({
   timelineEditRef.current = timelineEdit;
   const keyboardDeletions = () =>
     keyboardDeletionsFor(timelineEditRef.current, sourceDurationMs);
+  // Read from the refs so one snapshot serves a session's start and its
+  // settling alike: by the time an effect runs they hold this render's props.
+  const sessionSettings = (): RecordingPreviewSessionSettings => ({
+    audioTrackVolumes: audioTrackVolumesRef.current,
+    bakeCamera: compositionRef.current.bakeCamera,
+    cameraOverlay: compositionRef.current.cameraOverlay,
+    cursorEffects: cursorEffectsRef.current,
+    enabledStreamIndices: enabledStreamIndicesRef.current,
+    keyboardDeletions: keyboardDeletions(),
+    keyboardEffects: keyboardEffectsRef.current,
+    recordingOutput: compositionRef.current.recordingOutput,
+  });
   const {
     playbackRangeFrom,
     playbackRanges,
@@ -166,6 +183,7 @@ export function useRecordingPreviewPlayer({
     startedRef,
   });
   const previewFit = useRecordingPreviewSurface({
+    annotationTool,
     bakeCamera,
     cameraCanvasRef,
     cameraOverlay,
@@ -190,16 +208,8 @@ export function useRecordingPreviewPlayer({
   useEffect(() => {
     if (!isEnabled) return;
     let disposed = false;
-    const initialSettingsKey = recordingPreviewSettingsKey({
-      audioTrackVolumes,
-      bakeCamera,
-      cameraOverlay,
-      cursorEffects,
-      ...keyboardDeletions(),
-      enabledStreamIndices,
-      keyboardEffects,
-      recordingOutput,
-    });
+    const initialSettingsKey =
+      recordingPreviewSessionSettingsKey(sessionSettings());
     const sessionId = Date.now() * 1_000 + (++sessionSequence % 1_000);
     sessionIdRef.current = sessionId;
     seekRequestRef.current = 0;
@@ -333,29 +343,13 @@ export function useRecordingPreviewPlayer({
           sessionId,
           zoomRequest,
         });
-        const latestSettingsKey = recordingPreviewSettingsKey({
-          audioTrackVolumes: audioTrackVolumesRef.current,
-          bakeCamera: compositionRef.current.bakeCamera,
-          cameraOverlay: compositionRef.current.cameraOverlay,
-          cursorEffects: cursorEffectsRef.current,
-          ...keyboardDeletions(),
-          enabledStreamIndices: enabledStreamIndicesRef.current,
-          keyboardEffects: keyboardEffectsRef.current,
-          recordingOutput: compositionRef.current.recordingOutput,
-        });
-        if (latestSettingsKey === initialSettingsKey) return;
-        void resendRecordingPreviewSettings({
-          audioTrackVolumes: audioTrackVolumesRef.current,
-          bakeCamera: compositionRef.current.bakeCamera,
-          cameraOverlay: compositionRef.current.cameraOverlay,
-          cursorEffects: cursorEffectsRef.current,
-          enabledStreamIndices: enabledStreamIndicesRef.current,
-          keyboardDeletions: keyboardDeletions(),
-          keyboardEffects: keyboardEffectsRef.current,
-          recordingOutput: compositionRef.current.recordingOutput,
+        settleRecordingPreviewSettings({
+          initialKey: initialSettingsKey,
+          onError: (cause) => {
+            if (!disposed) setError(String(cause));
+          },
           sessionId,
-        }).catch((cause: unknown) => {
-          if (!disposed) setError(String(cause));
+          settings: sessionSettings(),
         });
       })
       .catch((cause: unknown) => {

@@ -31,6 +31,7 @@ fn compositor_background_survives_selection_overlay_state() {
       0.0,
       None,
       None,
+      None,
       1.0,
       false,
     )
@@ -67,6 +68,7 @@ fn compositor_background_survives_selection_overlay_state() {
         },
         None,
         None,
+        &Default::default(),
       )
       .unwrap();
   };
@@ -75,7 +77,7 @@ fn compositor_background_survives_selection_overlay_state() {
   let first_pixels = read_top_strip(&device, &context, &first);
   selection
     .draw(
-      &device, &context, OUTPUT, None, None, None, 0.0, None, None, 1.0, false,
+      &device, &context, OUTPUT, None, None, None, 0.0, None, None, None, 1.0, false,
     )
     .unwrap();
   let second = target(&device);

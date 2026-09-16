@@ -98,3 +98,19 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_update_hover(
   if (hovered >= 0)
     schedule_annotation_hover_frame(surface, surface.annotationHoverRevision);
 }
+
+SCREENWIDE_PREVIEW_PRIVATE void annotation_refresh_hover(
+    ScreenwidePreviewSurface *surface) {
+  if (surface == nil || surface.annotationHovered < 0) return;
+  // A frame late rather than straight away: the transform is often applied
+  // from a layout Rust is in the middle of, and the report's side never
+  // waits on that lock.
+  uint64_t revision = surface.annotationHoverRevision;
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 16 * NSEC_PER_MSEC),
+                 dispatch_get_main_queue(), ^{
+                   if (surface.annotationHoverRevision != revision ||
+                       surface.annotationHovered < 0)
+                     return;
+                   report_annotation_hover(surface);
+                 });
+}

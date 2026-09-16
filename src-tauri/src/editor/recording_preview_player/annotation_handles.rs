@@ -4,6 +4,45 @@
 use super::*;
 
 impl PreviewPlayerManager {
+  /// Re-presents the frame the pane already holds with the marks the clips
+  /// resolve to at `position_ms`, without touching the decoder. Reports
+  /// whether there was a frame to redraw; a pane with nothing composed yet
+  /// has to be restarted the ordinary way. Only the D3D11 panes can do this -
+  /// the Metal workspace re-encodes from its retained scene instead.
+  #[cfg(target_os = "windows")]
+  pub(super) fn redraw_annotation_frame(&self, pane: u32, position_ms: u64) -> bool {
+    let Some(sources) = self.sources.as_ref() else {
+      return false;
+    };
+    let Some(surface) = sources.preview_surface.as_ref() else {
+      return false;
+    };
+    let Some(layout) = sources.layout.panes.get(pane as usize) else {
+      return false;
+    };
+    let annotations = crate::editor::annotations::timing::revealed_annotations(
+      &sources
+        .annotation_clips
+        .read()
+        .map(|clips| clips.clone())
+        .unwrap_or_default(),
+      track(pane),
+      position_ms,
+      0.0,
+    );
+    surface.redraw_recording_annotations(
+      pane,
+      &annotations,
+      (layout.source_width, layout.source_height),
+    )
+  }
+
+  #[cfg(not(target_os = "windows"))]
+  pub(super) fn redraw_annotation_frame(&self, _pane: u32, _position_ms: u64) -> bool {
+    false
+  }
+}
+impl PreviewPlayerManager {
   pub(super) fn annotation_targets(&self) -> Vec<(u32, Annotation)> {
     let Some(sources) = &self.sources else {
       return Vec::new();

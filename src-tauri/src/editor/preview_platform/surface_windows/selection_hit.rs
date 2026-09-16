@@ -155,6 +155,13 @@ pub(super) fn cursor_for_state(
   state: &SurfaceState,
   point: (f64, f64),
 ) -> editor::CursorKind {
+  // The arrow tool speaks first, exactly as `annotation_cursor` does: an
+  // arrow under the pointer is something to take hold of, and empty picture
+  // is something to draw on. The select tool leaves empty picture to the
+  // layer underneath.
+  if let Some(kind) = annotation::cursor_for(state, point) {
+    return kind;
+  }
   let Some((selection, handle)) = shared_selection_hit(inner, state, point) else {
     return editor::CursorKind::Arrow;
   };

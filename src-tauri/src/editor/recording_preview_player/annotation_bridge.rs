@@ -62,7 +62,6 @@ pub async fn set_recording_preview_annotations(
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   session_id: u64,
   clips: Vec<RecordingAnnotationClip>,
-  tool: Option<String>,
   pane_index: Option<u32>,
   selected_id: Option<String>,
   defaults: Option<AnnotationStyle>,
@@ -92,11 +91,6 @@ pub async fn set_recording_preview_annotations(
   manager.annotation.selected = selected_id;
   manager.annotation.defaults = defaults;
   manager.annotation.animated = animated;
-  manager.annotation.mode = match tool.as_deref() {
-    Some("arrow") => 2,
-    Some("select") => 1,
-    _ => 0,
-  };
   manager.publish_annotation_handles();
   if !manager.is_playing {
     if changed {
@@ -107,13 +101,37 @@ pub async fn set_recording_preview_annotations(
       .and_then(|s| s.preview_surface.as_ref())
       .filter(|_| manager.annotation.mode != 0)
     {
+      // Only the retained Metal workspace re-presents itself from marks
+      // alone. The D3D11 backend has no retained scene to repaint, and
+      // nothing to repaint yet either: its arrow overlay is not drawn.
+      #[cfg(target_os = "macos")]
       surface.redraw_recording_workspace();
+      #[cfg(not(target_os = "macos"))]
+      let _ = surface;
     }
   }
   Ok(())
 }
 
 impl PreviewPlayerManager {
+  /// Takes the arrow tool in hand, or puts it down, in the native
+  /// `ScreenwideAnnotationMode` the chrome is published with: nothing (0),
+  /// hit-test the arrows already there (1), or also draw a new one on empty
+  /// picture (2). A gesture in flight keeps the mode it began under.
+  pub(in crate::editor::recording_preview_player) fn set_annotation_tool(
+    &mut self,
+    tool: Option<&str>,
+  ) {
+    if self.annotation.gesture.is_some() {
+      return;
+    }
+    self.annotation.mode = match tool {
+      Some("arrow") => 2,
+      Some("select") => 1,
+      _ => 0,
+    };
+  }
+
   fn annotation_marks(&self, pane: u32) -> Vec<Annotation> {
     if let Some(gesture) = &self.annotation.gesture {
       if gesture.pane == pane {
@@ -177,7 +195,10 @@ impl PreviewPlayerManager {
             .as_ref()
             .and_then(|s| s.preview_surface.as_ref())
           {
+            #[cfg(target_os = "macos")]
             surface.redraw_recording_workspace();
+            #[cfg(not(target_os = "macos"))]
+            let _ = surface;
           }
           return Some(Commit {
             session_id,
@@ -251,7 +272,15 @@ impl PreviewPlayerManager {
       self.annotation.gesture = None;
     }
     self.publish_annotation_handles();
-    let _ = self.restart(PlaybackMode::InteractiveStill);
+    // The Metal workspace re-encodes from its retained scene on a restart,
+    // which is cheap enough to do per pointer sample. On Windows a restart
+    // seeks the still decoder, which puts a decode between the hand and the
+    // arrow on every sample; the pane already holds the frame, so it is
+    // re-presented with the new marks instead, and only the end of the
+    // gesture restarts the worker to bring it back in step.
+    if commit.is_some() || !self.redraw_annotation_frame(pane, position_ms) {
+      let _ = self.restart(PlaybackMode::InteractiveStill);
+    }
     commit
   }
 }

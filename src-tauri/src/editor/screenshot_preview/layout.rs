@@ -48,7 +48,7 @@ pub async fn layout_screenshot_preview_surface(
   } else {
     1.0
   };
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = (
     &annotation_defaults,
     &annotation_tool,
@@ -64,10 +64,10 @@ pub async fn layout_screenshot_preview_surface(
     // Pointer ownership stays native for the complete gesture. React layouts
     // may update the inspector and display-only preview model meanwhile, but
     // they cannot replace the pixel gesture snapshot until mouse-up.
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     let native_owns_output =
       manager.selection_gesture.is_some() || manager.annotation_gesture.is_some();
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let native_owns_output = manager.selection_gesture.is_some();
     let output = if native_owns_output {
       manager.output.clone().unwrap_or(output)
@@ -122,7 +122,7 @@ pub async fn layout_screenshot_preview_surface(
     let will_present =
       !frame_owns_presentation && (!manager.has_layout || output_changed || size_changed);
     let natural_size = (output.canvas.width, output.canvas.height);
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     let (annotation_layout, hover_cleared) = super::annotation::apply_annotation_layout(
       &mut manager,
       annotation_defaults,
@@ -130,7 +130,7 @@ pub async fn layout_screenshot_preview_surface(
       selection.as_ref().map(|overlay| overlay.pane_index),
       selected_annotation_id.as_deref(),
     );
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let (annotation_layout, hover_cleared) = ((), false);
     manager.has_layout = true;
     (
@@ -141,11 +141,11 @@ pub async fn layout_screenshot_preview_surface(
       hover_cleared,
     )
   };
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   if hover_cleared {
-    super::start::emit_annotation_hover(&app, session_id, None);
+    super::start_callbacks::emit_annotation_hover(&app, session_id, None);
   }
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = hover_cleared;
   let selection = selection.map(|overlay| PreviewSelection {
     recenter_height: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.height),
@@ -200,18 +200,20 @@ pub async fn layout_screenshot_preview_surface(
       })
       .collect::<Vec<_>>()
   });
-  // Install hit targets before the selected item. `set_selection` performs
-  // the draw, so this publishes one coherent OSC state after undo/selection.
+  // Install hit targets and the arrow chrome before the selected item.
+  // `set_selection` performs the draw, so everything it depends on - the
+  // targets, and which tool owns the chrome - has to be in place first, or
+  // the layer's chrome shows for a frame as the arrow tool comes in hand.
   surface.set_selection_targets(selection_targets.as_deref());
-  surface.set_selection(selection);
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_annotations(
     &annotation_layout.handles,
     annotation_layout.selected_index,
     annotation_layout.mode,
   );
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = annotation_layout;
+  surface.set_selection(selection);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor.unwrap_or(true));
   // No interaction view exists off the two native preview backends.

@@ -48,7 +48,7 @@ use windows::{
 mod placeholder;
 
 use crate::osc::{
-  geometry::{Rect, Size},
+  geometry::{Point, Rect, Size},
   gpu::windows::{self as osc_gpu, RenderConstants, Vertex, PIXEL_SHADER, VERTEX_SHADER},
 };
 use placeholder::{placeholder_texture, PlaceholderTexture};

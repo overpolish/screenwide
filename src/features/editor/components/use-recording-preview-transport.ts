@@ -132,8 +132,18 @@ export function useRecordingPreviewTransport(
       effectiveRecordingOutput,
       previewSourceDimensions,
     });
+  // The tool the arrow chrome is drawn from. A baked camera layer has no
+  // marks of its own, so selecting it puts the tool down. One value feeds
+  // both the native chrome (through the layout, beside the selection it has
+  // to agree with) and the editor's own delete shortcut.
+  const annotationTool =
+    (bakeCamera && activeVideoTrack === "camera") ||
+    (canvasTool !== "arrow" && canvasTool !== "select")
+      ? null
+      : canvasTool;
   const clearAnnotationRef = useRef(() => {});
   const player = useRecordingPreviewPlayer({
+    annotationTool,
     artifactId,
     audioTrackVolumes,
     bakeCamera,
@@ -190,7 +200,7 @@ export function useRecordingPreviewTransport(
     },
     sessionId: player.sessionId,
     sourceDurationMs: durationMs,
-    tool: bakeCamera && activeVideoTrack === "camera" ? null : canvasTool,
+    tool: annotationTool,
     trackId: activeVideoTrack
       ? bakeCamera
         ? "primary"

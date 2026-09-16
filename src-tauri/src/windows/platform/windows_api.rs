@@ -93,6 +93,20 @@ pub fn restore_recording_level(window: &WebviewWindow) -> tauri::Result<()> {
   raise_without_activation(window)
 }
 
+/// Puts the window back at the ordinary window level, so it stands with the
+/// window it belongs to instead of floating over every other application.
+///
+/// This reorders through Win32 rather than `set_always_on_top(false)` because
+/// `restore_recording_level` raises through Win32 too: tao's tracked
+/// always-on-top flag goes stale, and it only reorders on a change of that
+/// flag, so the API call would silently do nothing.
+#[cfg(target_os = "windows")]
+pub fn set_normal_level(window: &WebviewWindow) -> tauri::Result<()> {
+  use windows::Win32::UI::WindowsAndMessaging::HWND_NOTOPMOST;
+
+  reorder(window, HWND_NOTOPMOST)
+}
+
 #[cfg(target_os = "windows")]
 pub fn set_opacity(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
   composition::set_opacity(window, opacity)
@@ -100,15 +114,24 @@ pub fn set_opacity(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
 
 #[cfg(target_os = "windows")]
 pub fn raise_without_activation(window: &WebviewWindow) -> tauri::Result<()> {
+  use windows::Win32::UI::WindowsAndMessaging::HWND_TOPMOST;
+
+  reorder(window, HWND_TOPMOST)
+}
+
+/// Moves the window to one of the z-order bands without disturbing its frame
+/// or taking focus from wherever the user left it.
+#[cfg(target_os = "windows")]
+fn reorder(window: &WebviewWindow, band: windows::Win32::Foundation::HWND) -> tauri::Result<()> {
   use windows::Win32::{
     Foundation::HWND,
-    UI::WindowsAndMessaging::{SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE},
+    UI::WindowsAndMessaging::{SetWindowPos, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE},
   };
 
   unsafe {
     SetWindowPos(
       HWND(window.hwnd()?.0),
-      Some(HWND_TOPMOST),
+      Some(band),
       0,
       0,
       0,

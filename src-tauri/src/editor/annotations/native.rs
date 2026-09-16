@@ -18,7 +18,7 @@ const KIND_ARROW: u32 = 0;
 /// One retained mark matching C's `ScreenwideAnnotation`. The native binding
 /// prepares separate draw geometry; every stored member is four bytes wide.
 #[repr(C)]
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct NativeAnnotation {
   pub(crate) kind: u32,
   pub(crate) head: u32,

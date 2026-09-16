@@ -38,11 +38,13 @@ impl RecordingPreviewSurface {
         let gpu = Gpu::new(host, editor.hwnd())?;
         let inner = std::sync::Arc::new(SurfaceInner {
           batch_depth: AtomicU32::new(0),
+          commit_pending: std::sync::atomic::AtomicBool::new(false),
           selection_pending: std::sync::atomic::AtomicBool::new(false),
           callbacks: Mutex::new(EditorCallbacks::default()),
           editor,
           gpu,
           state: Mutex::new(SurfaceState {
+            annotation: Default::default(),
             backdrop: [0.09, 0.09, 0.10, 1.0],
             camera_source: None,
             editor_active: false,

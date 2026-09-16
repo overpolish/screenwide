@@ -13,10 +13,11 @@ use windows::{
     System::LibraryLoader::GetModuleHandleW,
     UI::WindowsAndMessaging::{
       CreateWindowExW, DestroyWindow, LoadCursorW, RegisterClassW, SetCursor, SetWindowPos,
-      ShowWindowAsync, CS_DBLCLKS, CW_USEDEFAULT, HMENU, HWND_TOP, IDC_ARROW, IDC_SIZEALL,
-      IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE,
-      SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_SHOWWINDOW, SW_HIDE, SW_SHOWNOACTIVATE,
-      WNDCLASSW, WS_CHILD, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP,
+      ShowWindowAsync, CS_DBLCLKS, CW_USEDEFAULT, HMENU, HWND_TOP, IDC_ARROW, IDC_CROSS,
+      IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, SWP_ASYNCWINDOWPOS,
+      SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_SHOWWINDOW, SW_HIDE,
+      SW_SHOWNOACTIVATE, WNDCLASSW, WS_CHILD, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE,
+      WS_EX_NOREDIRECTIONBITMAP,
     },
   },
 };
@@ -27,6 +28,8 @@ mod input;
 #[derive(Clone, Copy)]
 pub(super) enum CursorKind {
   Arrow,
+  /// The arrow tool over empty picture: it draws rather than picks up.
+  Crosshair,
   Move,
   ResizeHorizontal,
   ResizeVertical,
@@ -189,6 +192,7 @@ impl EditorWindow {
   pub(super) fn set_cursor(kind: CursorKind) {
     let name = match kind {
       CursorKind::Arrow => IDC_ARROW,
+      CursorKind::Crosshair => IDC_CROSS,
       CursorKind::Move => IDC_SIZEALL,
       CursorKind::ResizeHorizontal => IDC_SIZEWE,
       CursorKind::ResizeVertical => IDC_SIZENS,
@@ -234,22 +238,15 @@ impl super::RecordingPreviewSurface {
   /// owns the workarea, and the workspace transform is untouched, so nothing
   /// has to be restored on resume. Deactivating the editor would do the same
   /// here today, but a layout re-asserts the active state on every resize.
-  /// TODO(windows): verify on Windows hardware alongside the macOS pass.
-  /// The pane blur is baked into the presented pixels, so the state change
-  /// only becomes visible once every pane re-presents - and a suspended
-  /// editor presents nothing else. One batch, so the panes flip together.
+  /// The panes themselves are left as they are: as on macOS, a covered
+  /// workarea is the chrome's own affair, not the picture's.
   pub(crate) fn set_editor_suspended(&self, suspended: bool) {
-    let batch = self.present_batch();
-    {
-      let Ok(mut state) = self.inner.state.lock() else {
-        return;
-      };
-      self
-        .inner
-        .editor
-        .set_suspended(suspended, state.editor_active);
-      super::redraw_composed_panes(&self.inner, &mut state);
-    }
-    drop(batch);
+    let Ok(state) = self.inner.state.lock() else {
+      return;
+    };
+    self
+      .inner
+      .editor
+      .set_suspended(suspended, state.editor_active);
   }
 }

@@ -8,14 +8,17 @@
 //! uses: the source uploads once (the presenter caches it by token), and each
 //! settings change is a uniform-only compute pass. No pixels ever cross IPC.
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_gesture;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_hover;
-#[cfg(all(target_os = "macos", test))]
+#[cfg(all(any(target_os = "macos", target_os = "windows"), test))]
 mod annotation_tests;
+/// The halo's growth curve is one thing for both editors.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) use annotation::hover_width_points;
 mod controls;
 mod geometry;
 mod gesture;
@@ -26,6 +29,8 @@ mod payloads;
 mod presentation;
 mod refresh;
 mod start;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod start_callbacks;
 mod state;
 
 pub use controls::{
@@ -56,6 +61,7 @@ pub use state::ScreenshotPreviewState;
 
 // Native screenshot document extensions enter through presentation; React
 // remains the semantic settings, history, and command/event transport layer.
+// Only the Metal path reaches back for `run_on_main_queue`.
 #[cfg(target_os = "macos")]
 pub(super) use super::preview_platform;
 pub(super) use super::preview_workspace_model;

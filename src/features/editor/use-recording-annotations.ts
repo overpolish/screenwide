@@ -43,7 +43,9 @@ export function useRecordingAnnotations({
   onEdit: (edit: RecordingTimelineEdit) => void;
   sessionId: number | null;
   sourceDurationMs: number;
-  tool: string | null;
+  /** The annotation tool in hand, when one is. The native chrome learns it
+   * from the layout; here it only decides what the keyboard can delete. */
+  tool: "arrow" | "select" | null;
   trackId: RecordingVideoTrackId | null;
   onSelectTrack?: (track: RecordingVideoTrackId) => void;
 }) {
@@ -143,7 +145,6 @@ export function useRecordingAnnotations({
       paneIndex: trackId === null ? null : trackId === "primary" ? 0 : 1,
       selectedId: selection.selectedId,
       sessionId,
-      tool: !isPlaying && (tool === "arrow" || tool === "select") ? tool : null,
     }).catch((cause: unknown) => {
       console.error("Could not update recording annotations", cause);
     });
@@ -151,18 +152,15 @@ export function useRecordingAnnotations({
     animated,
     nativeClips,
     defaults,
-    isPlaying,
     sessionId,
     selection.selectedId,
-    tool,
     trackId,
   ]);
   return {
     ...selection,
     canDelete:
       !isPlaying &&
-      (selection.hasSelection ||
-        ((tool === "arrow" || tool === "select") && selection.canDelete)),
+      (selection.hasSelection || (tool !== null && selection.canDelete)),
     clips,
     onClipsChange: commitClips,
     onPreviewClips: setPreviewClips,

@@ -13,10 +13,28 @@ pub async fn start_recording_preview_player(
   session_id: u64,
 ) -> Result<RecordingPreviewPlayerInfo, String> {
   let mut sources = sources(&app, artifact_id, Some(&settings))?;
+  let info = RecordingPreviewPlayerInfo::from(&sources);
+  let mut manager = state
+    .0
+    .lock()
+    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
+  if session_id < manager.latest_session_id {
+    return Ok(info);
+  }
+  manager.stop();
+  manager.latest_session_id = session_id;
+  // The callbacks name this session. They are installed only once it is the
+  // session the manager holds, and under the same lock that adopts it: on
+  // Windows one compositor belongs to the editor window and outlives every
+  // session, so a superseded start installing its own would leave the live
+  // session's native input reporting against clips nothing reads.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  let annotation_clips = std::sync::Arc::clone(&sources.annotation_clips);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   if let Some(surface) = sources.preview_surface.as_mut() {
     let surface = Arc::get_mut(surface)
       .ok_or_else(|| "The recording preview surface is already in use".to_owned())?;
+    super::super::annotation_bridge::install(surface, app.clone(), annotation_clips);
     let event_app = app.clone();
     surface.enable_editor(Box::new(move |zoom_percent| {
       let _ = event_app.emit(
@@ -119,16 +137,6 @@ pub async fn start_recording_preview_player(
     surface.set_selection_snapping(true);
     surface.set_editor_active(false);
   }
-  let info = RecordingPreviewPlayerInfo::from(&sources);
-  let mut manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  if session_id < manager.latest_session_id {
-    return Ok(info);
-  }
-  manager.stop();
-  manager.latest_session_id = session_id;
   manager.artifact_id = Some(artifact_id);
   manager.audio_indices = settings.audio.enabled_stream_indices;
   manager.audio_volumes = settings.audio.audio_track_volumes;

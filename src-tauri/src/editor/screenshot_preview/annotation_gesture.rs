@@ -74,7 +74,7 @@ impl PreviewManager {
   /// manager's own working copy, so a gesture sample shows its own geometry
   /// rather than the React layout that is still catching up with it.
   fn present_annotation_gesture(&self, pane_index: u32, selected: Option<&str>) {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
       if let (Some(surface), Some(source), Some(image_width), Some(annotations)) = (
         self.surface.as_ref(),
@@ -92,7 +92,7 @@ impl PreviewManager {
         );
       }
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let _ = (pane_index, selected);
     let _ = self.present_batch();
   }

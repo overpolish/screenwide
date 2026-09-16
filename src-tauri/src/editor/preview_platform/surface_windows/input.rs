@@ -42,6 +42,18 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       y,
       snapping: _,
     } => {
+      // A press is never a hover: the halo goes out before anything moves.
+      annotation::update_hover(inner, logical(x, y), true);
+      // The arrow chrome gets the press first and keeps it if it lands on a
+      // grip, on a shaft, or on empty picture with the arrow tool in hand.
+      // Anything it declines belongs to the layer underneath.
+      if annotation::down(inner, logical(x, y)) {
+        if let Ok(mut state) = inner.state.lock() {
+          state.last_pointer = logical(x, y);
+        }
+        refresh_cursor_for(inner);
+        return;
+      }
       down::down(inner, scale, x, y);
     }
     editor::Input::Move {
@@ -51,6 +63,13 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       pressed,
       snapping,
     } => {
+      annotation::update_hover(inner, logical(x, y), pressed);
+      if pressed && annotation::pointer_move(inner, logical(x, y)) {
+        if let Ok(mut state) = inner.state.lock() {
+          state.last_pointer = logical(x, y);
+        }
+        return;
+      }
       pointer_move::pointer_move(inner, scale, centered, x, y, pressed, snapping);
     }
     editor::Input::PanDown { x, y } => {
@@ -79,9 +98,19 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       }
     }
     editor::Input::Up { x, y } => {
+      if annotation::up(inner, logical(x, y)) {
+        if let Ok(mut state) = inner.state.lock() {
+          state.last_pointer = logical(x, y);
+        }
+        refresh_cursor_for(inner);
+        return;
+      }
       up::up(inner, scale, x, y);
     }
     editor::Input::Cancel => {
+      if let Ok(mut state) = inner.state.lock() {
+        annotation::cancel(&mut state);
+      }
       cancel::cancel(inner);
     }
     editor::Input::Wheel { x, y, delta } => {

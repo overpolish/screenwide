@@ -86,6 +86,7 @@ fn compositor_background_survives_composition_swap_chain_rotation() {
         },
         None,
         None,
+        &Default::default(),
       )
       .unwrap();
     let expected = read_pixel(&device, &context, &ordinary, 1440, 32);
@@ -106,6 +107,7 @@ fn compositor_background_survives_composition_swap_chain_rotation() {
           },
           None,
           None,
+          &Default::default(),
         )
         .unwrap();
       assert_eq!(expected, read_pixel(&device, &context, &target, 1440, 32));

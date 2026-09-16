@@ -48,6 +48,9 @@ impl WindowsExportCompositor {
     settings: &ScreenshotOutputSettings,
     composition: ComposedFrame,
     camera: Option<(&ID3D11Texture2D, u32, BakeGeometry, bool, bool)>,
+    // What this frame draws. A timed mark has already had its reveal
+    // resolved for this frame by the caller, which owns the timeline.
+    annotations: &[crate::editor::annotations::Annotation],
   ) -> Result<ID3D11Texture2D, String> {
     let _state = self
       .inner
@@ -100,6 +103,8 @@ impl WindowsExportCompositor {
     }
     .map_err(|error| format!("The Windows export target could not be created: {error}"))?;
     let target = target.ok_or_else(|| "D3D11 created no Windows export target".to_owned())?;
+    let prepared =
+      super::annotation::prepared_arrows(annotations, self.source.size, settings, None)?;
     self.inner.gpu.compositor.draw_with_camera(
       &self.inner.gpu.context,
       &target,
@@ -113,6 +118,10 @@ impl WindowsExportCompositor {
           .map(|source| (source, geometry, drop_shadow, camera_on_top))
       }),
       None,
+      // Each frame bakes the marks its settings carry. A timed mark has
+      // already had its reveal resolved for this frame, so the export draws
+      // the same arrow the preview showed at that moment.
+      &prepared,
     )?;
     unsafe { self.inner.gpu.context.Flush() };
     Ok(target)

@@ -70,6 +70,7 @@ fn aurora_background_is_stable_across_cpu_rounding_modes() {
         },
         None,
         None,
+        &Default::default(),
       )
       .unwrap();
     pixels.push(read_pixel(&device, &context, &target, 1500, 700));

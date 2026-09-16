@@ -54,6 +54,13 @@ impl RecordingPreviewSurface {
         .gpu
         .compositor
         .screenshot_source(&self.inner.gpu.device, image)?;
+      let prepared = super::annotation::prepared_arrows(
+        &settings.annotations,
+        (image.width, image.height),
+        settings,
+        // The export never carries a halo.
+        None,
+      )?;
       self.inner.gpu.compositor.draw_with_camera(
         &self.inner.gpu.context,
         &target,
@@ -67,6 +74,10 @@ impl RecordingPreviewSurface {
         },
         None,
         None,
+        // The export bakes the same prepared arrows the preview draws, so the
+        // file matches what the editor showed. The halo never reaches here:
+        // it is preview chrome the flattening does not carry.
+        &prepared,
       )?;
     }
     unsafe { self.inner.gpu.context.Flush() };
@@ -137,6 +148,8 @@ impl RecordingPreviewSurface {
     }
     .map_err(|error| format!("The clipboard render target could not be created: {error}"))?;
     let target = target.ok_or_else(|| "D3D11 created no clipboard render target".to_owned())?;
+    let prepared =
+      super::annotation::prepared_arrows(&settings.annotations, source_size, settings, None)?;
     self.inner.gpu.compositor.draw_with_camera(
       &self.inner.gpu.context,
       &target,
@@ -149,6 +162,7 @@ impl RecordingPreviewSurface {
           .map(|source| (source, geometry, drop_shadow, camera_on_top))
       }),
       None,
+      &prepared,
     )?;
 
     self.readback_bgra(&target, target_description, output_size, "clipboard")

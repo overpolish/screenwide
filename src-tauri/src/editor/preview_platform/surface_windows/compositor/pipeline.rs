@@ -9,8 +9,6 @@ impl Compositor {
   ) -> Result<Self, String> {
     let mut vertex_shader = None;
     let mut pixel_shader = None;
-    let mut blur_vertex_shader = None;
-    let mut blur_pixel_shader = None;
     unsafe {
       device
         .CreateVertexShader(VERTEX_SHADER, None, Some(&mut vertex_shader))
@@ -18,27 +16,7 @@ impl Compositor {
       device
         .CreatePixelShader(PIXEL_SHADER, None, Some(&mut pixel_shader))
         .map_err(|error| error.to_string())?;
-      device
-        .CreateVertexShader(BLUR_VERTEX_SHADER, None, Some(&mut blur_vertex_shader))
-        .map_err(|error| error.to_string())?;
-      device
-        .CreatePixelShader(BLUR_PIXEL_SHADER, None, Some(&mut blur_pixel_shader))
-        .map_err(|error| error.to_string())?;
     }
-    let mut blur_constants = None;
-    unsafe {
-      device.CreateBuffer(
-        &D3D11_BUFFER_DESC {
-          ByteWidth: size_of::<BlurConstants>() as u32,
-          Usage: D3D11_USAGE_DEFAULT,
-          BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
-          ..Default::default()
-        },
-        None,
-        Some(&mut blur_constants),
-      )
-    }
-    .map_err(|error| error.to_string())?;
     let description = D3D11_BUFFER_DESC {
       ByteWidth: size_of::<Constants>() as u32,
       Usage: D3D11_USAGE_DEFAULT,
@@ -48,6 +26,21 @@ impl Compositor {
     let mut constants = None;
     unsafe { device.CreateBuffer(&description, None, Some(&mut constants)) }
       .map_err(|error| error.to_string())?;
+    // Fixed-capacity dynamic buffers: the mark cap is small and known, so
+    // the arrows and their exposure samples are mapped into one allocation
+    // each per draw rather than a fresh buffer per frame.
+    let (annotation_buffer, annotation_view) = structured_buffer(
+      device,
+      size_of::<PreviewArrow>(),
+      MAX_ANNOTATIONS,
+      "annotation",
+    )?;
+    let (sample_buffer, sample_view) = structured_buffer(
+      device,
+      size_of::<PreviewSample>(),
+      MAX_ANNOTATIONS * MAX_EXPOSURE_SAMPLES,
+      "annotation exposure",
+    )?;
     let mut keyboard_constants = None;
     unsafe {
       device.CreateBuffer(
@@ -212,12 +205,10 @@ impl Compositor {
     });
     Ok(Self {
       background_cache: BackgroundImageCache::default(),
-      blur_constants: blur_constants
-        .ok_or_else(|| "D3D11 created no preview blur constant buffer".to_owned())?,
-      blur_pixel_shader: blur_pixel_shader
-        .ok_or_else(|| "D3D11 created no preview blur pixel shader".to_owned())?,
-      blur_vertex_shader: blur_vertex_shader
-        .ok_or_else(|| "D3D11 created no preview blur vertex shader".to_owned())?,
+      annotation_buffer,
+      annotation_view,
+      sample_buffer,
+      sample_view,
       constants: constants.ok_or_else(|| "D3D11 created no preview constant buffer".to_owned())?,
       cursor_hotspots,
       cursor_view: cursor_view

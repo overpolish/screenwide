@@ -6,6 +6,8 @@
 //! recording frames never enter system memory or cross Tauri IPC, while transparent webview
 //! regions leave DOM controls above the video.
 
+#[path = "surface_windows/annotation.rs"]
+mod annotation;
 #[path = "surface_windows/batch.rs"]
 mod batch;
 #[path = "surface_windows/callbacks.rs"]
@@ -58,7 +60,7 @@ use geometry::{
   pane_canvas_rect, set_pane_geometry,
 };
 use input::handle_editor_input;
-use magnifier::{redraw_composed_panes, redraw_magnifier, suspended_blur_sigma, update_magnifier};
+use magnifier::{redraw_composed_panes, redraw_magnifier, update_magnifier};
 use resources::{Backdrop, Gpu, Pane};
 use selection_draw::{draw_selection, redraw_stale_selection};
 use selection_hit::{
@@ -149,9 +151,9 @@ use super::{
     rebase_display_fit_mode, DisplayRect, DisplayTarget, NormalizedRect,
   },
   workspace_transform::WorkspaceTransform,
-  ContextMenuCallback, PointerDownCallback, PreviewSelection, PreviewSurfaceRect,
-  SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
-  TransformCallback,
+  AnnotationGestureCallback, AnnotationHoverCallback, ContextMenuCallback, PointerDownCallback,
+  PreviewSelection, PreviewSurfaceRect, SelectionCallback, SelectionGestureCallback,
+  SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
 };
 use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};

@@ -109,6 +109,7 @@ export const setRecordingPreviewZoom = (
   });
 
 export const layoutRecordingPreviewSurface = ({
+  annotationTool,
   backdrop,
   bakeCamera,
   cameraOverlay,
@@ -136,12 +137,18 @@ export const layoutRecordingPreviewSurface = ({
   scale: number;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
+  /** The annotation tool in hand, when one is. It rides with the layout so
+   * the tool and the selection it has to agree with reach the native chrome
+   * together: split across two commands, whichever lands first paints the
+   * layer's frame for a frame. */
+  annotationTool?: "arrow" | "select" | null;
   fitWidth?: number;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
   invoke<null>("layout_recording_preview_surface", {
     layout: {
+      annotationTool: annotationTool ?? null,
       backdrop,
       bakeCamera,
       cameraOverlay: normalizedCameraOverlay(

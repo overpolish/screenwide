@@ -14,6 +14,11 @@ impl Compositor {
     composition: super::super::ComposedFrame,
     camera: Option<(&SourceTexture, BakeGeometry, bool, bool)>,
     magnifier: Option<super::super::recenter::CropMagnifier>,
+    // Prepared marks in canvas pixels, those under the camera first, with
+    // their exposure samples and the drawn pixel scale their edges feather
+    // over. The shader draws `[0, below_camera)` before the camera layer and
+    // the rest after it, so the ordering is a range rather than a flag.
+    annotations: &PreparedArrows,
   ) -> Result<(), String> {
     let placement = output_placement(source.size.0, source.size.1, settings)?;
     let mut mesh_points = [[0.0; 4]; 8];
@@ -142,7 +147,18 @@ impl Compositor {
         settings.mesh_warp_percent as f32,
         shadow_sigma,
       ],
-      motion: [composition.seconds as f32, generator_speed, 0.0, 0.0],
+      // The third word is how many canvas pixels one drawn pixel covers,
+      // which the arrow edges feather over.
+      motion: [
+        composition.seconds as f32,
+        generator_speed,
+        if annotations.pixel_scale > 0.0 {
+          annotations.pixel_scale
+        } else {
+          1.0
+        },
+        0.0,
+      ],
       cursor_geometry: composition.cursor.map_or([0.0; 4], |cursor| {
         [cursor.x, cursor.y, cursor.width, cursor.height]
       }),
@@ -208,6 +224,12 @@ impl Compositor {
         generator_color_count,
         0,
       ],
+      annotation_options: [
+        annotations.below_camera,
+        annotations.arrows.len() as u32,
+        0,
+        0,
+      ],
     };
     self.submit(
       context,
@@ -219,6 +241,8 @@ impl Compositor {
       camera,
       picture,
       values,
+      &annotations.arrows,
+      &annotations.samples,
     )
   }
 }

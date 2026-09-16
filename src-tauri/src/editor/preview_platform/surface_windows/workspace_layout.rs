@@ -198,7 +198,7 @@ pub(super) fn rebase_workspace_fit(state: &mut SurfaceState, start: &FrameResize
 /// the previous canvas letterboxed into the new box for a frame. The selection
 /// overlay is always redrawn immediately - it tracks the box, not the pixels.
 pub(super) fn apply_workspace_transform(
-  inner: &SurfaceInner,
+  inner: &std::sync::Arc<SurfaceInner>,
   state: &mut SurfaceState,
   defer_geometry: bool,
 ) {
@@ -210,6 +210,10 @@ pub(super) fn apply_workspace_transform(
     set_pane_geometry(pane, viewport, rect, scale, defer_geometry);
   }
   draw_selection(inner, state);
+  // The halo is measured in canvas pixels against the size the picture is
+  // drawn at, so a transform that redraws it at another size leaves it to be
+  // measured again.
+  super::annotation::refresh_hover(inner, state);
   if inner.batch_depth.load(std::sync::atomic::Ordering::Acquire) == 0 {
     let _ = unsafe { inner.gpu.composition.Commit() };
   }

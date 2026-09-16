@@ -13,6 +13,7 @@ pub async fn layout_recording_preview_surface(
   layout: RecordingPreviewSurfaceLayout,
 ) -> Result<(), String> {
   let RecordingPreviewSurfaceLayout {
+    annotation_tool,
     backdrop,
     bake_camera,
     camera_overlay,
@@ -36,6 +37,15 @@ pub async fn layout_recording_preview_surface(
     return Ok(());
   }
   manager.latest_layout_request = request_id;
+  // The arrow chrome's mode arrives with the layout rather than on the
+  // annotation channel: it decides which chrome owns the screen, and the
+  // selection it has to agree with travels in this same payload. Two
+  // commands let one land first, which paints the layer's frame for a frame
+  // as the tool comes in hand or goes back down.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  manager.set_annotation_tool(annotation_tool.as_deref());
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let _ = annotation_tool;
   let settings = manager
     .sources
     .as_ref()
@@ -204,8 +214,19 @@ pub async fn layout_recording_preview_surface(
       .map(RecordingPreviewSelection::into_native)
       .collect::<Vec<_>>()
   });
+  // Publish the grips before the selection: `set_selection` performs the
+  // draw, so the mode that decides which chrome owns the screen has to be in
+  // place first. The batch coalesces both into one draw, so putting the tool
+  // down cannot paint the standing selection with the tool already gone
+  // either.
+  #[cfg(target_os = "windows")]
+  let chrome_batch = surface.present_batch();
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  manager.publish_annotation_handles();
   surface.set_selection_targets(selection_targets.as_deref());
   surface.set_selection(selection);
+  #[cfg(target_os = "windows")]
+  drop(chrome_batch);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor);
   surface.begin_layout();

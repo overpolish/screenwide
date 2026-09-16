@@ -119,6 +119,11 @@ NSCursor *annotation_cursor(ScreenwidePreviewSurface *surface, NSPoint point);
 /// hover pulse that grows the halo. `dragging` reports no arrow at all.
 void annotation_update_hover(ScreenwidePreviewSurface *surface, NSPoint point,
                              BOOL dragging);
+/// Re-measures the halo against the picture's current size, a frame after the
+/// transform that changed it. The width above the facade is in canvas pixels,
+/// so a transform that redraws the picture at another size strands the halo
+/// at the size the pointer arrived to until it is measured again.
+void annotation_refresh_hover(ScreenwidePreviewSurface *surface);
 /// The chosen arrow's grip under `point`, or -1.
 NSInteger annotation_handle_at_point(ScreenwidePreviewSurface *surface,
                                      NSPoint point);
