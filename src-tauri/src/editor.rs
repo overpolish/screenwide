@@ -50,6 +50,7 @@ pub use workspace_kind::EditorKind;
 
 use screenshot_composition::compose_screenshot_workspace;
 
+use annotations::Annotation;
 use artifact::{emit_snapshot, snapshots, take_artifact};
 use artifact_snapshot::snapshot;
 pub use artifact_snapshot::EditorArtifactSnapshot;

@@ -6,7 +6,7 @@ mod action_routing;
 #[cfg(test)]
 use action_routing::action_window;
 #[cfg(test)]
-use action_routing::preserved_capture_overlay;
+use action_routing::preserved_capture_overlays;
 #[cfg(test)]
 use action_routing::requires_frontend_turn;
 use action_routing::run_action;

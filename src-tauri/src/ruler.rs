@@ -88,7 +88,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   }
 
   dismiss(app);
-  capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::Ruler));
+  capture_overlays::dismiss_except(app, &[capture_overlays::CaptureOverlay::Ruler]);
   let generation = app.state::<RulerState>().begin();
   crate::glide::suspend_for_capture(app);
   #[cfg(target_os = "macos")]

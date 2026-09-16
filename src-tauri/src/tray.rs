@@ -175,13 +175,13 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
     .show_menu_on_left_click(false)
     .tooltip(status_tooltip(RecordingStatus::Idle))
     .on_menu_event(|app, event| {
-      let preserved = match event.id().as_ref() {
+      let preserved: &[crate::capture_overlays::CaptureOverlay] = match event.id().as_ref() {
         ANNOTATE_CLEAR_MENU_ID | ANNOTATE_MENU_ID => {
-          Some(crate::capture_overlays::CaptureOverlay::Annotate)
+          &[crate::capture_overlays::CaptureOverlay::Annotate]
         }
-        RECOGNIZE_TEXT_MENU_ID => Some(crate::capture_overlays::CaptureOverlay::TextRecognition),
-        RULER_OVERLAY_MENU_ID => Some(crate::capture_overlays::CaptureOverlay::Ruler),
-        _ => None,
+        RECOGNIZE_TEXT_MENU_ID => &[crate::capture_overlays::CaptureOverlay::TextRecognition],
+        RULER_OVERLAY_MENU_ID => &[crate::capture_overlays::CaptureOverlay::Ruler],
+        _ => &[],
       };
       crate::capture_overlays::dismiss_except(app, preserved);
       match event.id().as_ref() {

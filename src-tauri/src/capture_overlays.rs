@@ -57,21 +57,22 @@ pub fn set_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), Stri
 }
 
 /// Extension point for capture tools that must be mutually exclusive while
-/// still allowing one overlay to survive a handoff such as ruler screenshots.
-pub fn dismiss_except(app: &AppHandle, preserved: Option<CaptureOverlay>) {
-  if preserved != Some(CaptureOverlay::Annotate) {
+/// still allowing overlays to survive a handoff: a screenshot keeps the ruler
+/// in the shot and the live annotations as an editable layer.
+pub fn dismiss_except(app: &AppHandle, preserved: &[CaptureOverlay]) {
+  if !preserved.contains(&CaptureOverlay::Annotate) {
     crate::annotate::dismiss(app);
   }
-  if preserved != Some(CaptureOverlay::TextRecognition) {
+  if !preserved.contains(&CaptureOverlay::TextRecognition) {
     crate::text_recognition::dismiss(app);
   }
-  if preserved != Some(CaptureOverlay::Ruler) {
+  if !preserved.contains(&CaptureOverlay::Ruler) {
     crate::ruler::dismiss(app);
   }
 }
 
 pub fn dismiss_all(app: &AppHandle) {
-  dismiss_except(app, None);
+  dismiss_except(app, &[]);
 }
 
 /// Whether a frozen-desktop tool currently owns input. Glide's global input

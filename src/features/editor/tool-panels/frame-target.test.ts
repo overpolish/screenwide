@@ -16,7 +16,7 @@ const screenshotArtifact: EditorArtifact = {
   extension: "png",
   height: 900,
   id: 1,
-  items: [{ height: 900, id: 7, width: 1_600 }],
+  items: [{ annotations: [], height: 900, id: 7, width: 1_600 }],
   kind: "screenshot",
   suggestedFileStem: "capture",
   width: 1_600,

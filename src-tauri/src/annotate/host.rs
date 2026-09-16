@@ -45,6 +45,15 @@ pub(super) fn windows(app: &AppHandle) -> Vec<WebviewWindow> {
   hosts.into_iter().map(|(_, window)| window).collect()
 }
 
+/// Moves every host to one window level. A screenshot in progress drops the
+/// annotations under the region overlay so the selection is drawn over them.
+pub(super) fn set_level(app: &AppHandle, level: isize) -> Result<(), String> {
+  for host in windows(app) {
+    capture_overlays::set_level(&host, level)?;
+  }
+  Ok(())
+}
+
 /// Reads the layout and tells the native side what it will be drawing on.
 pub(super) fn plan(app: &AppHandle) -> Result<Vec<HostPlan>, String> {
   let monitors = capture_overlays::monitor_layout(app)?;

@@ -3,9 +3,11 @@
 
 use super::*;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotItemSnapshot {
+  /// The marks the item starts with, in its own pixels.
+  pub annotations: Vec<Annotation>,
   pub height: u32,
   pub id: u64,
   pub width: u32,
@@ -73,6 +75,7 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
         items: items
           .iter()
           .map(|item| ScreenshotItemSnapshot {
+            annotations: item.annotations.clone(),
             height: item.image.height,
             id: item.id,
             width: item.image.width,

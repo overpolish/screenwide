@@ -388,10 +388,13 @@ export function EditorWindow() {
         artifact?.kind === "screenshot"
           ? artifact.items.map((item) => ({
               id: item.id,
-              output: resetScreenshotLayout(
-                screenshotOutputTemplate(firstOutput),
-                item,
-              ),
+              output: {
+                ...resetScreenshotLayout(
+                  screenshotOutputTemplate(firstOutput),
+                  item,
+                ),
+                annotations: item.annotations,
+              },
             }))
           : [],
     });
@@ -435,12 +438,18 @@ export function EditorWindow() {
           ...added.map((item) => ({
             id: item.id,
             // Placed at its real size: fitting is the user's to do, and the
-            // marks on the layers already there are not copied onto it.
-            output: resetScreenshotLayout(
-              screenshotOutputTemplate(current),
-              item,
-              { fit: false },
-            ),
+            // marks on the layers already there are not copied onto it. Its
+            // own marks are the ones the live overlay had drawn over it.
+            output: {
+              ...resetScreenshotLayout(
+                screenshotOutputTemplate(current),
+                item,
+                {
+                  fit: false,
+                },
+              ),
+              annotations: item.annotations,
+            },
           })),
         ],
       };

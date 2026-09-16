@@ -9,7 +9,7 @@ export const screenshot: EditorArtifact = {
   extension: "png",
   height: 2234,
   id: 1,
-  items: [{ height: 2234, id: 2, width: 3456 }],
+  items: [{ annotations: [], height: 2234, id: 2, width: 3456 }],
   kind: "screenshot",
   suggestedFileStem: "Screenwide 2026-08-08 at 14.32.05",
   width: 3456,

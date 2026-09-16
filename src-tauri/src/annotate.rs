@@ -24,6 +24,9 @@ pub(crate) mod live_clips;
 #[cfg(target_os = "macos")]
 #[path = "annotate/native_overlay_macos.rs"]
 mod native_overlay;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod screenshot;
+mod screenshot_mode;
 mod session;
 pub(crate) mod settings;
 
@@ -85,6 +88,7 @@ fn stop_drawing(app: &AppHandle) {
 /// session. Losing the annotations is what closes their clips in a running
 /// recording.
 fn take_down(app: &AppHandle) {
+  screenshot_mode::forget_resume();
   live_clips::clear();
   abandon(app);
   crate::tray::refresh(app);
@@ -118,6 +122,31 @@ pub(crate) fn disable(app: &AppHandle) {
   take_down(app);
 }
 
+/// Quick Screenshot's handoff: while its region overlay is up the annotations
+/// stay visible under it and take no input, and drawing resumes afterwards
+/// if that is what the overlay was doing.
+pub(crate) fn set_screenshot_mode(app: &AppHandle, active: bool) {
+  screenshot_mode::set(app, active);
+}
+
+/// The annotations on screen that a still just taken covers, in its pixels.
+/// The still itself never holds them: the overlay is kept out of every
+/// capture, so they arrive as an editable layer instead.
+pub(crate) fn screenshot_annotations(
+  target: crate::screenshots::ScreenshotTarget,
+  image: &crate::screenshots::CapturedImage,
+) -> Vec<crate::editor::annotations::Annotation> {
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  {
+    screenshot::annotations_for(target, image)
+  }
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  {
+    let _ = (target, image);
+    Vec::new()
+  }
+}
+
 /// Opens the overlay. Called off the thread that services the event loop: the
 /// windows, their Metal surfaces and the cursor lease are all put in place
 /// through it.
@@ -127,7 +156,7 @@ pub fn start(app: &AppHandle) -> Result<(), String> {
   }
 
   abandon(app);
-  capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::Annotate));
+  capture_overlays::dismiss_except(app, &[capture_overlays::CaptureOverlay::Annotate]);
   let generation = app.state::<AnnotateState>().begin();
   crate::glide::suspend_for_capture(app);
   // Taken before the windows exist: the lease remembers the application the

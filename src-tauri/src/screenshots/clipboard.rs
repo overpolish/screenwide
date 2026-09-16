@@ -35,7 +35,12 @@ pub(crate) fn open_in_export(app: &AppHandle) {
     .and_then(|result| result);
 
     let result = image.and_then(|image| {
-      crate::editor::present_screenshot(&app, image, capture_file_stem(Local::now().naive_local()))
+      crate::editor::present_screenshot(
+        &app,
+        image,
+        Vec::new(),
+        capture_file_stem(Local::now().naive_local()),
+      )
     });
     if let Err(error) = result {
       crate::editor::release_screenshot_workspace(&app);

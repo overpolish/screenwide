@@ -13,6 +13,10 @@ pub fn set_screenshot_region_session(
   let session_was_active = SCREENSHOT_REGION_SESSION.load(Ordering::Acquire);
   let mut restoring_region = false;
   if active && !session_was_active {
+    // First, so the overlay's own cursor lease is gone before the
+    // screenshot's is taken, and Escape is no longer the overlay's when
+    // it is re-armed below.
+    crate::annotate::set_screenshot_mode(&app, true);
     super::super::screenshot_region::acquire_quick_screenshot_cursor(&app)
       .map_err(std::io::Error::other)?;
   }
@@ -46,6 +50,9 @@ pub fn set_screenshot_region_session(
   if active {
     SCREENSHOT_REGION_RESTORING.store(false, Ordering::Release);
     SCREENSHOT_REGION_SESSION.store(true, Ordering::Release);
+  }
+  if !active && session_was_active {
+    crate::annotate::set_screenshot_mode(&app, false);
   }
   escape::sync(
     &app,

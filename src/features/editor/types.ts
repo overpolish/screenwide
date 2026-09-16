@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Annotation } from "./annotations";
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import {
   RecordingOutputSettings,
@@ -158,7 +159,14 @@ export type EditorArtifact =
       timelineEditRevision?: number | null;
     })
   | (EditorArtifactBase & {
-      items: { height: number; id: number; width: number }[];
+      items: {
+        /** The marks the item starts with, in its own pixels: what the live
+         * overlay had drawn over the shot when it was taken. */
+        annotations: Annotation[];
+        height: number;
+        id: number;
+        width: number;
+      }[];
       kind: "screenshot";
     });
 

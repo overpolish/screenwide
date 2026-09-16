@@ -135,7 +135,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     return Ok(());
   }
   dismiss(app);
-  capture_overlays::dismiss_except(app, Some(capture_overlays::CaptureOverlay::TextRecognition));
+  capture_overlays::dismiss_except(app, &[capture_overlays::CaptureOverlay::TextRecognition]);
   let generation = app.state::<TextRecognitionState>().begin();
   crate::glide::suspend_for_capture(app);
   #[cfg(target_os = "macos")]

@@ -36,18 +36,20 @@ pub(super) fn notify_frontend(app: &AppHandle, action: ShortcutAction) {
   }
 }
 
-pub(super) const fn preserved_capture_overlay(
+pub(super) const fn preserved_capture_overlays(
   action: ShortcutAction,
-) -> Option<crate::capture_overlays::CaptureOverlay> {
+) -> &'static [crate::capture_overlays::CaptureOverlay] {
   match action {
     ShortcutAction::AnnotateClear | ShortcutAction::AnnotateOverlay => {
-      Some(crate::capture_overlays::CaptureOverlay::Annotate)
+      &[crate::capture_overlays::CaptureOverlay::Annotate]
     }
-    ShortcutAction::RecognizeText => Some(crate::capture_overlays::CaptureOverlay::TextRecognition),
-    ShortcutAction::TakeScreenshot
-    | ShortcutAction::TakeScreenshotToClipboard
-    | ShortcutAction::RulerOverlay => Some(crate::capture_overlays::CaptureOverlay::Ruler),
-    _ => None,
+    ShortcutAction::RecognizeText => &[crate::capture_overlays::CaptureOverlay::TextRecognition],
+    ShortcutAction::TakeScreenshot | ShortcutAction::TakeScreenshotToClipboard => &[
+      crate::capture_overlays::CaptureOverlay::Annotate,
+      crate::capture_overlays::CaptureOverlay::Ruler,
+    ],
+    ShortcutAction::RulerOverlay => &[crate::capture_overlays::CaptureOverlay::Ruler],
+    _ => &[],
   }
 }
 
@@ -123,7 +125,7 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     return;
   }
 
-  crate::capture_overlays::dismiss_except(app, preserved_capture_overlay(action));
+  crate::capture_overlays::dismiss_except(app, preserved_capture_overlays(action));
   match action {
     ShortcutAction::ToggleRecordingBar
     | ShortcutAction::RecognizeText

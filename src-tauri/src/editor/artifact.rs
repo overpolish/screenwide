@@ -130,13 +130,16 @@ pub(super) fn present_new(app: &AppHandle, artifact: EditorArtifact) -> Result<(
   Ok(())
 }
 
-/// Hands a freshly captured still to the editor window.
+/// Hands a freshly captured still to the editor window, with the live
+/// annotations it covered as its first marks.
 pub fn present_screenshot(
   app: &AppHandle,
   image: CapturedImage,
+  annotations: Vec<Annotation>,
   suggested_file_stem: String,
 ) -> Result<(), String> {
   let item = ScreenshotItem {
+    annotations,
     id: next_id(app),
     image,
   };

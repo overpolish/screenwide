@@ -127,22 +127,24 @@ fn capture_window_graphs_are_never_changed_inside_shortcut_callbacks() {
 }
 
 #[test]
-fn taking_a_screenshot_keeps_the_ruler_visible() {
+fn taking_a_screenshot_keeps_the_ruler_and_the_live_annotations() {
+  use crate::capture_overlays::CaptureOverlay;
+  for action in [
+    ShortcutAction::TakeScreenshot,
+    ShortcutAction::TakeScreenshotToClipboard,
+  ] {
+    let preserved = preserved_capture_overlays(action);
+    assert!(preserved.contains(&CaptureOverlay::Ruler));
+    assert!(preserved.contains(&CaptureOverlay::Annotate));
+    assert!(!preserved.contains(&CaptureOverlay::TextRecognition));
+  }
   assert_eq!(
-    preserved_capture_overlay(ShortcutAction::TakeScreenshot),
-    Some(crate::capture_overlays::CaptureOverlay::Ruler)
+    preserved_capture_overlays(ShortcutAction::RulerOverlay),
+    &[CaptureOverlay::Ruler]
   );
   assert_eq!(
-    preserved_capture_overlay(ShortcutAction::TakeScreenshotToClipboard),
-    Some(crate::capture_overlays::CaptureOverlay::Ruler)
-  );
-  assert_eq!(
-    preserved_capture_overlay(ShortcutAction::RulerOverlay),
-    Some(crate::capture_overlays::CaptureOverlay::Ruler)
-  );
-  assert_eq!(
-    preserved_capture_overlay(ShortcutAction::RecognizeText),
-    Some(crate::capture_overlays::CaptureOverlay::TextRecognition)
+    preserved_capture_overlays(ShortcutAction::RecognizeText),
+    &[CaptureOverlay::TextRecognition]
   );
 }
 

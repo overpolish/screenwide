@@ -6,9 +6,11 @@ use super::*;
 /// One independently editable image in a screenshot workspace.
 /// Pixels remain owned by Rust and are uploaded to the native renderer once;
 /// the webview only ever needs this identity and the scene metadata added in
-/// the next slice.
+/// the next slice. `annotations` are the live annotations the shot covered,
+/// in its pixels: the item's first marks, seeded into its layer once.
 #[derive(Clone)]
 pub struct ScreenshotItem {
+  pub annotations: Vec<Annotation>,
   pub id: u64,
   pub image: CapturedImage,
 }

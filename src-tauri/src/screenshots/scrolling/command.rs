@@ -59,6 +59,7 @@ pub async fn capture_scrolling_still(
   if let Err(error) = crate::editor::present_screenshot(
     &app,
     image,
+    Vec::new(),
     crate::screenshots::capture_file_stem(Local::now().naive_local()),
   ) {
     finish(&app);
