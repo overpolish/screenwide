@@ -52,7 +52,7 @@ pub(crate) use mesh::validate_mesh;
 #[cfg(test)]
 pub(crate) use mesh::MeshGradientPoint;
 pub(crate) use mesh_generator::default_generator as default_mesh_generator;
-#[cfg(any(target_os = "windows", test))]
+#[cfg(target_os = "windows")]
 pub(crate) use mesh_generator::generator_seed_shift;
 #[cfg(target_os = "windows")]
 pub(crate) use mesh_generator::{generator_palette, mesh_generator};
@@ -62,7 +62,7 @@ pub use output::compose_screenshot;
 #[cfg(target_os = "windows")]
 pub(crate) use output::output_dimensions;
 pub(crate) use output::parse_hex_colour;
-#[cfg(test)]
+#[cfg(all(target_os = "windows", test))]
 pub(crate) use output::CropPreviewRect;
 pub use output::ScreenshotOutputSettings;
 pub(crate) use placement::output_placement;

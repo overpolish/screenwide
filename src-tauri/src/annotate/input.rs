@@ -50,9 +50,11 @@ pub(super) const MODIFIER_COMMAND: u32 = 1;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) const MODIFIER_SHIFT: u32 = 2;
 
-/// Pointer phases as the native overlay reports them.
+/// Pointer phases as the native overlay reports them. Up is the fallback
+/// phase in [`step`], so only the Windows overlay names it.
 pub(super) const PHASE_DOWN: u32 = 0;
 pub(super) const PHASE_DRAG: u32 = 1;
+#[cfg(target_os = "windows")]
 pub(super) const PHASE_UP: u32 = 2;
 
 /// The stroke in hand: when and where it started, and where the pointer is

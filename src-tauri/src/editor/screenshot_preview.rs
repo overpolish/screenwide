@@ -16,8 +16,10 @@ mod annotation_gesture;
 mod annotation_hover;
 #[cfg(all(any(target_os = "macos", target_os = "windows"), test))]
 mod annotation_tests;
-/// The halo's growth curve is one thing for both editors.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
+/// The halo's growth curve is one thing for both editors. The screenshot
+/// editor reads it inside this module; the re-export is what the Windows
+/// recording preview draws its own halo from.
+#[cfg(target_os = "windows")]
 pub(crate) use annotation::hover_width_points;
 mod controls;
 mod geometry;

@@ -39,7 +39,9 @@ pub use recording_bar_movement::{
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WindowEvent};
+#[cfg(target_os = "windows")]
+use tauri::WebviewWindow;
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WindowEvent};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 mod boot;

@@ -120,7 +120,7 @@ pub(crate) fn default_generator() -> String {
 
 /// Resolves a generator seed on the CPU so every D3D11 draw receives
 /// stable domain coordinates instead of recalculating a large GPU sine hash.
-#[cfg(any(target_os = "windows", test))]
+#[cfg(target_os = "windows")]
 pub(crate) fn generator_seed_shift(seed: u32) -> [f32; 3] {
   // Cache the wire-format f32 result so later preview/export calls on threads
   // with a different rounding mode receive the exact same domain shift.
