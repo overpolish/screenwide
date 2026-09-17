@@ -42,7 +42,8 @@ export function QrDetailsWindow() {
   }, []);
 
   const payload = useMemo(
-    () => (code ? classifyQrPayload(code.content, code.decodeError) : undefined),
+    () =>
+      code ? classifyQrPayload(code.content, code.decodeError) : undefined,
     [code],
   );
   const close = useCallback(() => {
@@ -74,10 +75,12 @@ export function QrDetailsWindow() {
       onClose={close}
       onCopy={() => {
         setError(undefined);
-        return copyRecognitionContent(code.content).catch((copyError: unknown) => {
-          setError("Could not copy QR content.");
-          throw copyError;
-        });
+        return copyRecognitionContent(code.content).catch(
+          (copyError: unknown) => {
+            setError("Could not copy QR content.");
+            throw copyError;
+          },
+        );
       }}
       payload={payload}
     />

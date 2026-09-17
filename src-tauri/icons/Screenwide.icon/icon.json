@@ -33,8 +33,6 @@
     }
   ],
   "supported-platforms": {
-    "squares": [
-      "macOS"
-    ]
+    "squares": ["macOS"]
   }
 }

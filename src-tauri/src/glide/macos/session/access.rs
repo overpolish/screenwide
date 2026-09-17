@@ -51,14 +51,18 @@ pub(in crate::glide::platform) fn monitor_mode(state: &SharedState) -> bool {
   })
 }
 
-pub(in crate::glide::platform) fn mouse_center_context(
-  state: &SharedState,
-) -> Option<(
+/// Where a mouse-centred glide sits: the window it carries, that window's
+/// frame, and the work area's origin and size.
+type MouseCenterContext = (
   super::super::tween::WindowTarget,
   cg::Rect,
   (f64, f64),
   (f64, f64),
-)> {
+);
+
+pub(in crate::glide::platform) fn mouse_center_context(
+  state: &SharedState,
+) -> Option<MouseCenterContext> {
   let (target, work_origin, work_size) = state.lock().ok().and_then(|state| {
     let session = state.session.as_ref()?;
     if session.input != InputKind::Mouse || session.monitors.is_some() {

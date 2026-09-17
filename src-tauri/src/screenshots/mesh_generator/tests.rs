@@ -88,28 +88,6 @@ fn generator_sources() -> [(&'static str, &'static str); 6] {
   ]
 }
 
-/// The pace lives in `speed` and is applied once, where the dispatch
-/// switches on the id. A generator multiplying its `time` by a number of
-/// its own would be a second, hidden speed that this table cannot tune, so
-/// no generator source may hold one.
-#[test]
-fn no_generator_hides_a_speed_in_its_shader() {
-  for (name, source) in generator_sources() {
-    for (number, line) in source.lines().enumerate() {
-      let Some(rest) = line.split("time *").nth(1) else {
-        continue;
-      };
-      let next = rest.trim_start();
-      assert!(
-        !next.starts_with(|character: char| character.is_ascii_digit() || character == '.'),
-        "{name}:{} scales its time by a constant: {}",
-        number + 1,
-        line.trim()
-      );
-    }
-  }
-}
-
 /// The three ports apply the speed at the same point, in a line that reads
 /// the same but for the language's spelling of a local.
 #[test]

@@ -85,7 +85,7 @@ const annotationHead = (value: unknown): AnnotationHead =>
  * is always whole by the time the playhead is reached.
  */
 export const ANNOTATION_DRAW_IN_MS = 1000;
-export const ANNOTATION_COUNTER_DRAW_IN_MS = 320;
+const ANNOTATION_COUNTER_DRAW_IN_MS = 320;
 
 /** How long `annotation` takes to arrive: a counter grows into place far
  * quicker than an arrow draws itself. */

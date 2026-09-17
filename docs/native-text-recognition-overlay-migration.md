@@ -48,14 +48,11 @@ The algorithms currently in `src/features/text-recognition/text-selection.ts` mo
 
 - Each recognized QR result has a native hotspot projected inside the selected desktop region.
 - QR hotspot styling must remain legible over both dark content and the white backgrounds typical of QR codes. Its semantic fill opacity and outline are tuned and tested against both extremes rather than inheriting the text-region treatment unchanged.
-- Every decoded QR opens the React QR-details window first. Actionable URLs
-  require an explicit confirmation from that window before the safe opener
-  flow runs.
+- Every decoded QR opens the React QR-details window first. Actionable URLs require an explicit confirmation from that window before the safe opener flow runs.
 - Decode failures and unsupported structured payloads use the error treatment and retain the `Unsupported QR` label.
 - The dialog retains its payload label, diagnostic/error text, selectable raw content, Close, Copy content and open/copy failure handling.
 - The QR-details dialog remains React rather than moving into the GPU compositor. Its behaviour is already suitable, but its legacy presentation must be rebuilt from current UI components and tokens and covered by dedicated feature stories before the OCR migration is complete.
-- Activating a URL successfully dismisses the OCR session. Copying content
-  keeps QR Details open so its confirmation feedback remains visible.
+- Activating a URL successfully dismisses the OCR session. Copying content keeps QR Details open so its confirmation feedback remains visible.
 
 ### Controls and accessibility
 
@@ -134,20 +131,13 @@ Status: implemented on macOS. The ready-state controls use four independent mate
 
 ### 5. QR dialog split and final webview removal
 
-Status: React QR hotspot rendering, the legacy OCR window component, frontend
-recognition kickoff, result events and their obsolete IPC surface have been
-deleted on macOS. The redesigned QR Details window is the only retained React
-feature UI. One transparent `text-recognition` webview owns keyboard focus and
-the native root surface; compositor-created peer panels cover every additional
-display. No per-monitor React or webview overlay remains.
+Status: React QR hotspot rendering, the legacy OCR window component, frontend recognition kickoff, result events and their obsolete IPC surface have been deleted on macOS. The redesigned QR Details window is the only retained React feature UI. One transparent `text-recognition` webview owns keyboard focus and the native root surface; compositor-created peer panels cover every additional display. No per-monitor React or webview overlay remains.
 
 - Route native hotspot activation to one dialog-only React surface.
 - Preserve QR payload classification tests and opener/copy failure behaviour.
 - Redesign the retained dialog with the current UI system and add feature stories for its normal, unsupported, decode-error and copy/open-failure states.
 - Do not move the dialog itself into the GPU compositor; only the desktop hotspot and activation routing remain native.
-- Delete `TextRecognitionWindow`, obsolete IPC commands/types and
-  `QrCodeOverlay`, then collapse the per-monitor OCR webviews to one native
-  owner.
+- Delete `TextRecognitionWindow`, obsolete IPC commands/types and `QrCodeOverlay`, then collapse the per-monitor OCR webviews to one native owner.
 - Confirm no OCR canvas, image, desktop-sized DOM node or pointer handler remains in the frontend.
 
 ## Parity gate for every checkpoint

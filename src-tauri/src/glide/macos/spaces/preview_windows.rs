@@ -168,12 +168,9 @@ pub(in crate::glide::platform) fn show_arranged(
     left = left.clamp(origin.x, (origin.x + size.width - width).max(origin.x));
     top = top.clamp(origin.y, (origin.y + size.height - height).max(origin.y));
   }
-  for index in 0..count {
+  for (index, &(offset_x, offset_y)) in offsets.iter().enumerate().take(count) {
     let window = ensure_window(app, index)?;
-    window.set_position(tauri::LogicalPosition::new(
-      left + offsets[index].0,
-      top + offsets[index].1,
-    ))?;
+    window.set_position(tauri::LogicalPosition::new(left + offset_x, top + offset_y))?;
   }
   let ready = {
     let mut pool = POOL.lock().unwrap_or_else(|error| error.into_inner());

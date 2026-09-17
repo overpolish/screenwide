@@ -28,12 +28,7 @@ import {
   useNativePreviewFit,
 } from "./use-native-preview-fit";
 
-export {
-  applyBackdropMask,
-  clearBackdropMasks,
-  effectiveBackdrop,
-} from "./preview-backdrop";
-export type { Hole } from "./preview-backdrop";
+export { clearBackdropMasks, effectiveBackdrop } from "./preview-backdrop";
 
 /**
  * The audio-only preview's viewport. It has no pane canvases of its own, so

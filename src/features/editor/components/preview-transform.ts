@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /** Breathing room between the fitted workspace and the viewport edge. */
-export const PREVIEW_VIEWPORT_INSET = 16;
+const PREVIEW_VIEWPORT_INSET = 16;
 
 export type PreviewPaneFit = {
   pane: { height: number; width: number; x: number; y: number };

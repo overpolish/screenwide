@@ -36,10 +36,12 @@ fn manager() -> PreviewPlayerManager {
     primary_kind: PrimaryRecordingKind::Screen,
     screen_path: "/tmp/annotation-test.mov".into(),
   };
-  let mut manager = PreviewPlayerManager::default();
-  manager.sources = Some(sources);
-  manager.session_id = Some(7);
-  manager.position_ms = 2000;
+  let mut manager = PreviewPlayerManager {
+    sources: Some(sources),
+    session_id: Some(7),
+    position_ms: 2000,
+    ..Default::default()
+  };
   manager.annotation.pane = Some(0);
   manager.annotation.mode = 2;
   manager
