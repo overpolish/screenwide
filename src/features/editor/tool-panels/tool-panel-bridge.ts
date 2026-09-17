@@ -170,6 +170,9 @@ export function useToolPanelBridge(
   handlers: ToolPanelHandlers,
 ) {
   const handlersRef = useRef(handlers);
+  // What has been applied, and what the panels have been told about. They are
+  // deliberately one commit apart: see the acknowledging effect below.
+  const [applied, setApplied] = useState(() => ({ ...appliedSeq }));
   const [acknowledged, setAcknowledged] = useState(() => ({ ...appliedSeq }));
 
   useEffect(() => {
@@ -184,6 +187,29 @@ export function useToolPanelBridge(
       acknowledgedSeq: acknowledged[workspace],
     });
   }, [acknowledged, snapshot, workspace]);
+
+  // The acknowledgement is what makes a panel drop the value it is holding and
+  // show the mirror instead, so it must never travel with a snapshot the
+  // change has not reached yet.
+  //
+  // Applying a patch renders the editor at once, but a value the preview owns
+  // - the chosen mark's dress, published through `annotation-channel` - only
+  // reaches this snapshot on the render that channel's own publish provokes.
+  // Acknowledging a commit later ties the sequence to that render: until then
+  // the panel keeps showing what it asked for, rather than pinging back to the
+  // previous value for a frame and then settling on the new one. A field the
+  // editor itself owns is already published by then, so its acknowledgement
+  // costs one more write of the same snapshot.
+  useEffect(() => {
+    if (applied[workspace] === acknowledged[workspace]) return;
+    // The extra render is the point: it is what carries the sequence out on a
+    // snapshot the change has reached.
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
+    setAcknowledged((current) => ({
+      ...current,
+      [workspace]: applied[workspace],
+    }));
+  }, [acknowledged, applied, workspace]);
 
   useEffect(() => {
     let disposed = false;
@@ -207,9 +233,10 @@ export function useToolPanelBridge(
       } else {
         applyPatch(lastRequest.request.values, handlersRef.current);
       }
-      // Batched with the editor's settings update, including no-op requests.
-      // The publishing effect acknowledges only the resulting committed render.
-      setAcknowledged((current) => ({
+      // Batched with the editor's settings update, including no-op requests:
+      // a request that changes nothing still has to be acknowledged, or the
+      // panel would hold its draft for good.
+      setApplied((current) => ({
         ...current,
         [workspace]: lastRequest.seq,
       }));
