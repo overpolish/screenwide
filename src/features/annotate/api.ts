@@ -27,6 +27,16 @@ export const resizeAnnotateToolbar = (width: number, height: number) =>
 export const persistAnnotateToolbarPosition = () =>
   invoke<null>("persist_annotate_toolbar_position");
 
+/** A field on the plate took focus. The toolbar's window refuses the keyboard
+ * until asked for it, so until this the keystrokes go to the picture and pick
+ * up tools instead of arriving in the field. */
+export const beginAnnotateToolbarTyping = () =>
+  invoke<null>("begin_annotate_toolbar_typing");
+
+/** The field is done with: the keyboard goes back to the picture. */
+export const endAnnotateToolbarTyping = () =>
+  invoke<null>("end_annotate_toolbar_typing");
+
 export const undoAnnotation = () => invoke<null>("undo_annotation");
 
 export const clearAnnotations = () => invoke<null>("clear_annotations");

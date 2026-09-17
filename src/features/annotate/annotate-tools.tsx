@@ -1,9 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowUpRight, ListOrdered } from "lucide-react";
 import { ReactNode } from "react";
 
+import {
+  ArrowToolIcon,
+  CounterToolIcon,
+} from "../../components/shared/annotation-style/mark-tool-icons";
 import { AnnotateShape } from "../settings/types";
 
 /** One tool the overlay can draw with. A shape added to the overlay becomes a
@@ -26,14 +29,14 @@ type AnnotateTool = {
 
 export const ANNOTATE_TOOLS: AnnotateTool[] = [
   {
-    icon: <ArrowUpRight />,
+    icon: <ArrowToolIcon />,
     id: "arrow",
     label: "Arrow",
     name: "Draw an arrow",
     shortcut: "A",
   },
   {
-    icon: <ListOrdered />,
+    icon: <CounterToolIcon />,
     id: "counter",
     label: "Counter",
     name: "Drop a counter",

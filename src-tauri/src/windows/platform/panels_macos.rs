@@ -48,6 +48,22 @@ tauri_panel! {
     }
   })
 
+  // The annotate toolbar carries a field - the counter's aim - and a window
+  // that cannot become key has nothing to type into. `becomes_key_only_if_needed`
+  // is what keeps that to the field: pressing the toolbar's buttons leaves the
+  // keyboard with the anchor host, so the letters that pick up a tool keep
+  // working, and only a focused field asks for key status.
+  panel!(AnnotateToolbarPanel {
+    config: {
+      can_become_key_window: true,
+      can_become_main_window: false,
+      becomes_key_only_if_needed: true,
+      hides_on_deactivate: false,
+      is_floating_panel: true,
+      works_when_modal: true
+    }
+  })
+
   panel_event!(InactiveWebviewHoverHandler {})
 }
 

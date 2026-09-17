@@ -45,6 +45,24 @@ pub fn set_opacity(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
   app.run_on_main_thread(move || panel.set_alpha_value(opacity))
 }
 
+/// Gives a panel key status without activating the application.
+///
+/// Only a panel configured `becomes_key_only_if_needed` should be asked: on one
+/// that takes key status on every press this would be indistinguishable from a
+/// click, and on one that refuses it outright it does nothing at all.
+pub fn take_key_focus(window: &WebviewWindow) -> tauri::Result<()> {
+  let panel = ensure_recording_panel(window)?;
+  window
+    .app_handle()
+    .run_on_main_thread(move || panel.make_key_window())
+}
+
+/// Whether this panel is the one WindowServer is sending keystrokes to. Main
+/// thread only.
+pub fn is_key_panel(window: &WebviewWindow) -> tauri::Result<bool> {
+  Ok(registered_panel(window)?.as_panel().isKeyWindow())
+}
+
 /// Hands keyboard focus back to whatever app owned it before this panel took
 /// key status, without hiding the overlay.
 ///

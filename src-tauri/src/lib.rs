@@ -159,6 +159,10 @@ pub fn run() {
       annotate::commands::undo_annotation,
       annotate::commands::dismiss_annotate,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
+      annotate::commands::begin_annotate_toolbar_typing,
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      annotate::commands::end_annotate_toolbar_typing,
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
       annotate::toolbar::persist_annotate_toolbar_position,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       annotate::toolbar::resize_annotate_toolbar,

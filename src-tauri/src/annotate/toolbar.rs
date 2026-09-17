@@ -26,6 +26,10 @@ use crate::windows::{platform, WindowLabel};
 mod anchor;
 use anchor::{Anchor, INITIAL_SIZE};
 
+#[path = "toolbar_keyboard.rs"]
+mod keyboard;
+pub(super) use keyboard::{give_back as return_keyboard, take as take_keyboard};
+
 /// Whether the session has got as far as putting the toolbar on screen, and
 /// whether the plate has reported its size. The window is shown by whichever
 /// of the two comes last, so it never appears at the size it was built at.

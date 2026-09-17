@@ -17,6 +17,7 @@ import {
   resizeAnnotateToolbar,
   undoAnnotation,
 } from "./api";
+import { useToolbarTyping } from "./use-toolbar-typing";
 
 /** How long the drag has to stand still before the place is kept. A drag
  * reports every step, and each one would otherwise be a settings write. */
@@ -61,6 +62,7 @@ export function AnnotateToolbarWindow() {
   // The editor's kept colours, which the store broadcasts, so one saved while
   // the overlay is up appears here without the toolbar asking again.
   const general = useGeneralSettings();
+  useToolbarTyping();
 
   useEffect(() => {
     let stopped = false;
@@ -126,8 +128,10 @@ export function AnnotateToolbarWindow() {
   // unless a later edit has arrived, which is the one being shown.
   //
   // A dragged edit's write waits for the pointer to settle, so a slider drag
-  // costs one settings write rather than one per step.
-  const onChange = (patch: Partial<AnnotateSettings>) => {
+  // costs one settings write rather than one per step. An edit that carries no
+  // drag says so: a typed value has to be in the settings before the press that
+  // draws with it, and that press is on the picture, a window away.
+  const onChange = (patch: Partial<AnnotateSettings>, immediate = false) => {
     if (!settings) return;
     const next = { ...settings, ...patch };
     setSettings(next);
@@ -151,7 +155,7 @@ export function AnnotateToolbarWindow() {
     const dragged = Object.keys(patch).every((key) =>
       DRAGGED_EDITS.has(key as keyof AnnotateSettings),
     );
-    if (!dragged) {
+    if (!dragged || immediate) {
       write();
       return;
     }

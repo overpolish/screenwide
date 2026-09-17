@@ -46,6 +46,12 @@ export type NumberFieldProps = AriaNumberFieldProps &
     label?: string;
     labelClassName?: string;
     leftSection?: React.ReactNode;
+    /** Called for each keystroke that reads as a number, instead of
+     * `onChange`, which React Aria fires on blur or Enter. Give this to a field
+     * whose value is read from outside the window it is typed in, where a value
+     * waiting behind an unfocused field is a value the reader never sees. Plain
+     * numeric entry only: a formatted field would need a parse of its own. */
+    onTypedChange?: (value: number) => void;
     rightSection?: React.ReactNode;
     showSteppers?: boolean;
   };
@@ -60,6 +66,7 @@ export const NumberField = ({
   maxValue,
   minValue,
   onChange,
+  onTypedChange,
   rightSection,
   showSteppers = true,
   step,
@@ -74,6 +81,10 @@ export const NumberField = ({
   const resolvedValue = value ?? uncontrolledValue;
   const valueRef = useRef(resolvedValue);
   const groupRef = useRef<HTMLDivElement>(null);
+  /** The typed commit as of this render, so the listener below subscribes
+   * once rather than on every change of the handler's identity. */
+  const commitTypedRef = useRef<(value: number) => void>(() => undefined);
+  const typedCommits = onTypedChange !== undefined;
 
   useEffect(() => {
     const blurOnOutsidePointer = (event: PointerEvent) => {
@@ -96,10 +107,34 @@ export const NumberField = ({
     };
   }, []);
 
+  // Each keystroke is the value, so nothing waits behind the field: the owner
+  // of a setting read outside this window needs it at once, and a press on
+  // another window blurs nothing here.
+  useEffect(() => {
+    if (!typedCommits) return;
+    const input = groupRef.current?.querySelector("input");
+    if (!input) return;
+
+    const commitTyped = () => {
+      const entry = input.value.trim();
+      if (entry === "") return;
+      const typed = Number(entry);
+      if (Number.isFinite(typed)) commitTypedRef.current(typed);
+    };
+
+    input.addEventListener("input", commitTyped);
+    return () => {
+      input.removeEventListener("input", commitTyped);
+    };
+  }, [typedCommits]);
+
   valueRef.current = resolvedValue;
 
-  const changeValue = useCallback(
-    (nextValue: number) => {
+  /** A value the field settles on, held to the step and the bounds. `notify` is
+   * what tells the owner, which differs between a typed keystroke and every
+   * other way the value moves. */
+  const applyValue = useCallback(
+    (nextValue: number, notify?: (value: number) => void) => {
       const clampedValue = Math.min(
         maxValue ?? Number.POSITIVE_INFINITY,
         Math.max(minValue ?? Number.NEGATIVE_INFINITY, nextValue),
@@ -114,10 +149,20 @@ export const NumberField = ({
       if (value === undefined) {
         setUncontrolledValue(roundedValue);
       }
-      onChange?.(roundedValue);
+      notify?.(roundedValue);
     },
-    [maxValue, minValue, onChange, step, value],
+    [maxValue, minValue, step, value],
   );
+
+  const changeValue = useCallback(
+    (nextValue: number) => {
+      applyValue(nextValue, onChange);
+    },
+    [applyValue, onChange],
+  );
+  commitTypedRef.current = (nextValue: number) => {
+    applyValue(nextValue, onTypedChange);
+  };
 
   const handlePointerDown = useNumberFieldScrub({
     changeValue,

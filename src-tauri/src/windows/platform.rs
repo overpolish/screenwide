@@ -112,12 +112,12 @@ pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 /// The annotate toolbar's panel. It sits one level above the overlay's hosts,
-/// so nothing can be drawn over the controls, and refuses key status outright:
-/// the anchor host owns the keyboard, which is what keeps the keys that draw
-/// working while the toolbar is used.
+/// so nothing can be drawn over the controls, and takes key status only when a
+/// view on it needs the keyboard: the anchor host owns it otherwise, which is
+/// what keeps the keys that draw working while the toolbar is used.
 #[cfg(target_os = "macos")]
 pub fn initialize_annotate_toolbar(window: &WebviewWindow) -> tauri::Result<()> {
-  configure_panel::<RecordingDockPanel>(
+  configure_panel::<AnnotateToolbarPanel>(
     window,
     crate::capture_overlays::FOREGROUND_LEVEL as i32 + 1,
   )
@@ -127,8 +127,8 @@ pub fn initialize_annotate_toolbar(window: &WebviewWindow) -> tauri::Result<()> 
 mod panel_properties_macos;
 #[cfg(target_os = "macos")]
 pub use panel_properties_macos::{
-  release_key_focus, restore_recording_level, set_above_capture_overlays, set_normal_level,
-  set_opacity,
+  is_key_panel, release_key_focus, restore_recording_level, set_above_capture_overlays,
+  set_normal_level, set_opacity, take_key_focus,
 };
 
 /// Every window this app floats over the desktop is an overlay: always on top,

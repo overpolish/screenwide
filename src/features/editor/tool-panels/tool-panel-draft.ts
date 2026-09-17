@@ -76,6 +76,7 @@ export function resolveToolPanelSnapshot(
   // A reset is an action rather than a value: nothing of it is shown locally,
   // and the editor's answer arrives as the next published placement.
   const {
+    annotationAngle,
     annotationAnimated,
     annotationStyle,
     applyShortcutToAll: _applyShortcutToAll,
@@ -145,24 +146,25 @@ export function resolveToolPanelSnapshot(
       ? { ...resolved.selection, decibels: audioVolume }
       : null;
   const selection = baked ?? heard ?? resolved.selection;
+  // A colour being dragged in the system panel shows at once: the mirror
+  // catches up an edit later, and the swatch must not blink back meanwhile.
+  // The Animate switch and the aim are held the same way, so neither flicks
+  // back to the mirror's value between the edit and the commit.
+  const aimed =
+    resolved.annotation && annotationAngle !== undefined
+      ? { ...resolved.annotation, angle: annotationAngle }
+      : resolved.annotation;
+  const switched =
+    aimed && annotationAnimated !== undefined
+      ? { ...aimed, animated: annotationAnimated }
+      : aimed;
+  const annotation =
+    switched && annotationStyle
+      ? { ...switched, style: { ...switched.style, ...annotationStyle } }
+      : switched;
   return {
     ...resolved,
-    // A colour being dragged in the system panel shows at once: the mirror
-    // catches up an edit later, and the swatch must not blink back meanwhile.
-    // The Animate switch is held the same way, so it does not flick back
-    // between the press and the commit.
-    ...((annotationStyle || annotationAnimated !== undefined) &&
-    resolved.annotation
-      ? {
-          annotation: {
-            ...resolved.annotation,
-            ...(annotationAnimated === undefined
-              ? {}
-              : { animated: annotationAnimated }),
-            style: { ...resolved.annotation.style, ...annotationStyle },
-          },
-        }
-      : {}),
+    annotation,
     selection,
     ...(cropSize ? { crop: sized(resolved.crop, cropSize) } : {}),
     ...(frameSize ? { frame: sized(resolved.frame, frameSize) } : {}),

@@ -51,6 +51,19 @@ pub(crate) fn pin_cursor_at(point: core_graphics::geometry::CGPoint) -> Result<(
   platform::pin_cursor_at(point)
 }
 
+/// Takes the pointer off the screen, and puts it back. Both are process-wide:
+/// a hidden cursor stays hidden until it is shown again, whichever window the
+/// pointer is over.
+#[cfg(target_os = "macos")]
+pub(crate) fn hide_cursor() -> Result<(), String> {
+  platform::hide_cursor()
+}
+
+#[cfg(target_os = "macos")]
+pub(crate) fn show_cursor() {
+  platform::show_cursor();
+}
+
 #[cfg(target_os = "macos")]
 pub(crate) fn restore_cursor_at(point: core_graphics::geometry::CGPoint) {
   platform::restore_cursor_at(point);

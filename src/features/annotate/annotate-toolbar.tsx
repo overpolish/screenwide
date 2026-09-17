@@ -6,7 +6,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { IconButton } from "../../components/base/button/icon-button";
 import { ButtonGroup } from "../../components/base/button-group/button-group";
-import { AnnotationAngleSlider } from "../../components/shared/annotation-style/annotation-angle-slider";
+import { AnnotationAngleDial } from "../../components/shared/annotation-style/annotation-angle-dial";
 import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
 import { AnnotationHeadGroup } from "../../components/shared/annotation-style/annotation-head-group";
 import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
@@ -21,8 +21,12 @@ import { ANNOTATE_TOOLS } from "./annotate-tools";
 export type AnnotateToolbarProps = {
   /** Every change is a settings edit: the toolbar and the Settings page are
    * one state, so what is chosen here dresses the next stroke and shows up
-   * there without either being reloaded. */
-  onChange: (patch: Partial<AnnotateSettings>) => void;
+   * there without either being reloaded.
+   *
+   * `immediate` is for an edit that has to reach the overlay before the next
+   * stroke rather than when the hand settles: a typed value, where there is no
+   * drag to wait for. */
+  onChange: (patch: Partial<AnnotateSettings>, immediate?: boolean) => void;
   onClear: () => void;
   /** Closes the overlay, the way Escape does: the plate's one way out for
    * a pointer. */
@@ -147,9 +151,9 @@ export function AnnotateToolbar({
               be picked up again, so a counter is aimed before it is dropped
               rather than turned afterwards. */}
           {isCounter ? (
-            <AnnotationAngleSlider
-              onChange={(defaultCounterAngle) => {
-                onChange({ defaultCounterAngle });
+            <AnnotationAngleDial
+              onChange={(defaultCounterAngle, typed) => {
+                onChange({ defaultCounterAngle }, typed);
               }}
               value={settings.defaultCounterAngle}
             />

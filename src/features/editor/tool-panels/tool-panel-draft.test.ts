@@ -251,3 +251,29 @@ describe("canvas size while a field is open", () => {
     ).toMatchObject({ decibels: 0 });
   });
 });
+
+describe("a counter's aim while the editor answers", () => {
+  const aimed = (angle: number, acknowledgedSeq = 0): ToolPanelSnapshot => ({
+    ...snapshot(100, acknowledgedSeq),
+    annotation: {
+      angle,
+      animated: true,
+      id: "counter-1",
+      kind: "counter",
+      style: { color: "#ffcc00", head: "none", width: 56 },
+    },
+  });
+  const turning: ToolPanelDraft = {
+    seq: 5,
+    values: { annotationAngle: -Math.PI / 2 },
+    workspace: "recording",
+  };
+
+  it("holds the aim just set until the editor answers with it", () => {
+    expect(resolve(aimed(0), turning).annotation?.angle).toBe(-Math.PI / 2);
+  });
+
+  it("takes the editor's own aim once the request is acknowledged", () => {
+    expect(resolve(aimed(Math.PI, 5), turning).annotation?.angle).toBe(Math.PI);
+  });
+});

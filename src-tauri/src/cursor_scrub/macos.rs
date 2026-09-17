@@ -6,7 +6,10 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+use core_foundation::base::{CFTypeRef, TCFType};
+use core_foundation::boolean::CFBoolean;
 use core_foundation::runloop::{kCFRunLoopDefaultMode, CFRunLoop};
+use core_foundation::string::{CFString, CFStringRef};
 use core_graphics::{
   display::CGDisplay,
   event::{
@@ -31,6 +34,58 @@ struct ActiveScrub {
 
 static ACTIVE_SCRUB: Mutex<Option<ActiveScrub>> = Mutex::new(None);
 
+type CGSConnectionID = u32;
+
+unsafe extern "C" {
+  fn CGSMainConnectionID() -> CGSConnectionID;
+  fn CGSSetConnectionProperty(
+    cid: CGSConnectionID,
+    target: CGSConnectionID,
+    key: CFStringRef,
+    value: CFTypeRef,
+  ) -> i32;
+}
+
+/// macOS ignores `CGDisplayHideCursor` from an app that is not frontmost, and
+/// a scrub can be started from a window that never takes focus - the live
+/// overlay's toolbar is a non-activating panel. This private window server
+/// property opts the process into background cursor changes for good.
+fn allow_background_cursor_changes() {
+  static ALLOW: std::sync::Once = std::sync::Once::new();
+  ALLOW.call_once(|| {
+    let key = CFString::from_static_string("SetsCursorInBackground");
+    let value = CFBoolean::true_value();
+    // SAFETY: the key and value outlive the call, which only reads them.
+    unsafe {
+      let connection = CGSMainConnectionID();
+      let _ = CGSSetConnectionProperty(
+        connection,
+        connection,
+        key.as_concrete_TypeRef(),
+        value.as_CFTypeRef(),
+      );
+    }
+  });
+}
+
+/// Takes the pointer off the screen for the duration of a pinned drag.
+///
+/// The page hides its own cursor in CSS, which is enough inside an ordinary
+/// window. It is not enough under the live annotation overlay: that overlay's
+/// event monitor sets the arrow cursor on every pointer move over the toolbar,
+/// and an `NSCursor` set overrides whatever the page asked for. Hiding is not
+/// a cursor to set, so it survives.
+pub(crate) fn hide_cursor() -> Result<(), String> {
+  allow_background_cursor_changes();
+  CGDisplay::main()
+    .hide_cursor()
+    .map_err(|error| format!("Could not hide the cursor: {error}"))
+}
+
+pub(crate) fn show_cursor() {
+  let _ = CGDisplay::main().show_cursor();
+}
+
 pub(super) fn begin(channel: Channel<CursorScrubEvent>) -> Result<(), String> {
   if ACTIVE_SCRUB
     .lock()
@@ -47,6 +102,11 @@ pub(super) fn begin(channel: Channel<CursorScrubEvent>) -> Result<(), String> {
     .location();
 
   pin_cursor_at(point)?;
+  // A pinned pointer that stayed drawn would sit still in the middle of the
+  // drag, so it goes; a failure here is cosmetic and leaves the drag alone.
+  if let Err(error) = hide_cursor() {
+    eprintln!("{error}");
+  }
 
   let stop = Arc::new(AtomicBool::new(false));
   let worker_stop = Arc::clone(&stop);
@@ -102,6 +162,7 @@ pub(super) fn end(offset_x: f64) -> Result<(), String> {
 }
 
 fn restore_cursor(anchor: (f64, f64), offset_x: f64) {
+  show_cursor();
   restore_cursor_at(CGPoint::new(anchor.0 + offset_x, anchor.1));
 }
 

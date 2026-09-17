@@ -34,3 +34,20 @@ pub fn clear_annotations(app: AppHandle) {
 pub fn dismiss_annotate(app: AppHandle) {
   super::dismiss(&app);
 }
+
+/// A field on the toolbar took focus. Its panel refuses key status until asked,
+/// so until this the keystrokes go to the anchor host and draw instead of
+/// arriving in the field.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[tauri::command]
+pub fn begin_annotate_toolbar_typing(app: AppHandle) -> Result<(), String> {
+  super::toolbar::take_keyboard(&app)
+}
+
+/// The field is done with: the keyboard goes back to the picture, where the
+/// letters pick tools up again.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[tauri::command]
+pub fn end_annotate_toolbar_typing(app: AppHandle) {
+  super::toolbar::return_keyboard(&app);
+}

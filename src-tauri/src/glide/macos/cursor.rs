@@ -2,45 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use cidre::cg;
-use core_foundation::{
-  base::{CFTypeRef, TCFType},
-  boolean::CFBoolean,
-  string::{CFString, CFStringRef},
-};
-use core_graphics::{display::CGDisplay, geometry::CGPoint};
-
-type CGSConnectionID = u32;
-
-extern "C" {
-  fn CGSMainConnectionID() -> CGSConnectionID;
-  fn CGSSetConnectionProperty(
-    cid: CGSConnectionID,
-    target: CGSConnectionID,
-    key: CFStringRef,
-    value: CFTypeRef,
-  ) -> i32;
-}
-
-/// macOS ignores `CGDisplayHideCursor` from an app that is not frontmost, and
-/// the Glide preview deliberately never takes focus. This private window server
-/// property opts the process into background cursor changes for good.
-fn allow_background_cursor_changes() {
-  static ALLOW: std::sync::Once = std::sync::Once::new();
-  ALLOW.call_once(|| {
-    let key = CFString::from_static_string("SetsCursorInBackground");
-    let value = CFBoolean::true_value();
-    // SAFETY: the key and value outlive the call, which only reads them.
-    unsafe {
-      let connection = CGSMainConnectionID();
-      let _ = CGSSetConnectionProperty(
-        connection,
-        connection,
-        key.as_concrete_TypeRef(),
-        value.as_CFTypeRef(),
-      );
-    }
-  });
-}
+use core_graphics::geometry::CGPoint;
 
 /// Whether the cursor is currently disassociated from the mouse. While it is,
 /// event locations report the pinned point, not where the hand has moved - so
@@ -58,10 +20,7 @@ pub(super) fn pin_cursor(anchor: CGPoint) -> Result<(), String> {
 }
 
 pub(super) fn hide_cursor() -> Result<(), String> {
-  allow_background_cursor_changes();
-  CGDisplay::main()
-    .hide_cursor()
-    .map_err(|error| format!("Could not hide the Glide cursor: {error}"))?;
+  crate::cursor_scrub::hide_cursor()?;
   crate::recording::cursor::set_cursor_visibility(false, None);
   Ok(())
 }
@@ -94,7 +53,7 @@ pub(super) fn release_cursor(anchor: CGPoint, revealed: bool) {
   crate::cursor_scrub::restore_cursor_at(anchor);
   PINNED.store(false, std::sync::atomic::Ordering::Release);
   if revealed {
-    let _ = CGDisplay::main().show_cursor();
+    crate::cursor_scrub::show_cursor();
     crate::recording::cursor::set_cursor_visibility(true, Some((anchor.x, anchor.y)));
   }
 }

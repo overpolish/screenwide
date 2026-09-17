@@ -6,7 +6,7 @@ import { ArrowLeftRight } from "lucide-react";
 import { Button } from "../../../components/base/button/button";
 import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
-import { AnnotationAngleSlider } from "../../../components/shared/annotation-style/annotation-angle-slider";
+import { AnnotationAngleDial } from "../../../components/shared/annotation-style/annotation-angle-dial";
 import { AnnotationColorGrid } from "../../../components/shared/annotation-style/annotation-color-grid";
 import { AnnotationHeadGroup } from "../../../components/shared/annotation-style/annotation-head-group";
 import { AnnotationWidthSlider } from "../../../components/shared/annotation-style/annotation-width-slider";
@@ -64,14 +64,13 @@ export function MarkPanel({ workspace }: { workspace: EditorKind }) {
         />
       </div>
 
-      {/* A counter is aimed by its tail, on the picture or here. The control
-          runs in degrees clockwise from east, the space the tail's grip
-          drags in, and steps by the same eighth of a turn Shift snaps to so
-          the eight aims that matter are a step apart rather than a hunt. */}
+      {/* A counter is aimed by its tail, on the picture or here. The dial's
+          notch stands where the tail does, and a held Shift snaps it to the
+          same eighth of a turn a drag on the picture snaps to. */}
       {isCounter ? (
         <div className="flex items-center justify-between gap-section">
           <span className="text-body text-content-fg">Angle</span>
-          <AnnotationAngleSlider
+          <AnnotationAngleDial
             isDisabled={isSaving}
             onChange={(next) => {
               change({ annotationAngle: next });

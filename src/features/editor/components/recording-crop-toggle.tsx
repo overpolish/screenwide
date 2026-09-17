@@ -1,15 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  ArrowUpRight,
-  Crop,
-  ListOrdered,
-  MousePointer2,
-  ScanSquare,
-} from "lucide-react";
+import { Crop, MousePointer2, ScanSquare } from "lucide-react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
+import {
+  ArrowToolIcon,
+  CounterToolIcon,
+} from "../../../components/shared/annotation-style/mark-tool-icons";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
 export type RecordingCanvasTool =
@@ -83,7 +81,7 @@ export function RecordingCanvasTools({
           }}
           shortcut="A"
         >
-          <ArrowUpRight />
+          <ArrowToolIcon />
         </ToolToggle>
       </span>
       <span className="inline-flex" data-editor-tool="counter">
@@ -97,7 +95,7 @@ export function RecordingCanvasTools({
           }}
           shortcut="N"
         >
-          <ListOrdered />
+          <CounterToolIcon />
         </ToolToggle>
       </span>
     </ButtonGroup>

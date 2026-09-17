@@ -44,6 +44,13 @@ pub(super) fn windows(app: &AppHandle) -> Vec<WebviewWindow> {
   hosts.into_iter().map(|(_, window)| window).collect()
 }
 
+/// The anchor host: the window that owns focus and the cursor lease. It carries
+/// the feature's own label, the peers being numbered after it, so it is a
+/// lookup rather than a search.
+pub(super) fn anchor(app: &AppHandle) -> Option<WebviewWindow> {
+  app.get_webview_window(WindowLabel::Annotate.as_str())
+}
+
 /// The hosts' capture affinity: excluded exactly while Screenwide itself is
 /// capturing, and capturable otherwise, so a screen share in another
 /// application still shows the annotations. Windows exclusion hides a window
