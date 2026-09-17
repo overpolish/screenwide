@@ -10,8 +10,8 @@
 //! path it actually travelled on both backends.
 
 use super::*;
-use crate::editor::annotations::geometry::prepare_arrow;
-use crate::editor::annotations::native::{native_annotations, NativeAnnotation};
+use crate::editor::annotations::geometry::{prepare_arrow, prepare_counter, COUNTER_TAIL_REACH};
+use crate::editor::annotations::native::{native_annotations, NativeAnnotation, KIND_COUNTER};
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::Annotation;
 use crate::screenshots::output_placement;
@@ -89,14 +89,24 @@ pub(crate) fn placed_arrows(
       .filter(|(_, mark)| mark.above_camera == above)
     {
       let (a, b, c) = (place(mark.p0), place(mark.p1), place(mark.p2));
+      // A counter keeps its centre in `p0`, its aim in `p1[0]` and its
+      // number in `p1[1]`, so only the centre is placed: the disc's diameter
+      // is in output pixels, as an arrow's stroke is, and an angle is the
+      // same angle in either space.
+      let geometry = if mark.kind == KIND_COUNTER {
+        prepare_counter(a, mark.width, mark.p1[0], mark.reveal)
+      } else {
+        prepare_arrow(a, b, c, mark.width, mark.head, mark.reveal)
+      };
       let mut arrow = compositor::PreviewArrow::new(
-        prepare_arrow(a, b, c, mark.width, mark.head, mark.reveal),
+        geometry,
         mark.color,
         // The halo is preview chrome: `native_annotations` never sets it, so
         // nothing the export composes can carry one.
         halo
           .filter(|(hovered, _)| *hovered == index)
           .map_or(0.0, |(_, width)| width),
+        mark.kind,
       );
       let count = exposure_sample_count(mark, a, b, c);
       if count == 0 {
@@ -126,6 +136,11 @@ pub(crate) fn placed_arrows(
           ));
         }
       }
+      prepared.counters.push(if mark.kind == KIND_COUNTER {
+        (mark.p1[1].max(0.0) as u32, arrow.geometry.rounding)
+      } else {
+        (0, 0.0)
+      });
       prepared.arrows.push(arrow);
     }
     if above == 0 {
@@ -141,12 +156,20 @@ pub(crate) fn placed_arrows(
 /// `screenwide_annotation_sample_count`.
 fn exposure_sample_count(mark: &NativeAnnotation, a: [f32; 2], b: [f32; 2], c: [f32; 2]) -> u32 {
   let r = mark.reveal;
-  let length = (b[0] - a[0]).hypot(b[1] - a[1]) + (c[0] - b[0]).hypot(c[1] - b[1]);
-  let mut travel = length
-    * (r.low - r.previous[0])
-      .abs()
-      .max((r.high - r.previous[1]).abs());
-  travel += mark.width * 4.0 * (r.scale - r.previous[2]).abs();
+  // An arrow's travel is its window sliding along its own path; a counter has
+  // no path, so all it can cover in a frame is the change in its own size.
+  let mut travel = if mark.kind == KIND_COUNTER {
+    mark.width * 0.5 * COUNTER_TAIL_REACH * (r.scale - r.previous[2]).abs()
+  } else {
+    let length = (b[0] - a[0]).hypot(b[1] - a[1]) + (c[0] - b[0]).hypot(c[1] - b[1]);
+    length
+      * (r.low - r.previous[0])
+        .abs()
+        .max((r.high - r.previous[1]).abs())
+  };
+  if mark.kind != KIND_COUNTER {
+    travel += mark.width * 4.0 * (r.scale - r.previous[2]).abs();
+  }
   if travel < 1.5 && (r.opacity - r.previous[3]).abs() < 0.01 {
     return 0;
   }

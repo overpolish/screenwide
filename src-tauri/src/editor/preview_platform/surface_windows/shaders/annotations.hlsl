@@ -35,7 +35,30 @@ struct PreviewArrow {
   /// This mark's run in `annotation_samples`. A count of zero draws the
   /// prepared geometry directly, as a still always does.
   uint sample_first, sample_count;
+  /// Which shape the geometry is read as: zero an arrow, one a counter.
+  uint kind;
 };
+
+/// A counter read out of the slots an arrow fills with its curve: the disc's
+/// centre and radius, the centre and radius of the small circle its tail ends
+/// in, and where its number was rasterised in the text atlas. Prepared once
+/// per mark by `geometry::prepare_counter`.
+struct PreviewCounter {
+  float2 center, tip;
+  float radius, tip_radius;
+  float2 text_origin, text_size;
+};
+
+PreviewCounter annotation_counter(PreviewGeometry prepared) {
+  PreviewCounter counter;
+  counter.center = float2(prepared.ax, prepared.ay);
+  counter.tip = float2(prepared.bx, prepared.by);
+  counter.radius = prepared.rounding;
+  counter.tip_radius = prepared.low;
+  counter.text_origin = float2(prepared.start_head_ax, prepared.start_head_ay);
+  counter.text_size = float2(prepared.start_head_bx, prepared.start_head_by);
+  return counter;
+}
 
 /// The mark part way through the interval this frame covers, and how solid
 /// it was then.
@@ -46,6 +69,9 @@ struct PreviewSample {
 
 StructuredBuffer<PreviewArrow> annotation_arrows : register(t5);
 StructuredBuffer<PreviewSample> annotation_samples : register(t6);
+/// The counters' numbers, rasterised at the size they are drawn and stacked
+/// into one texture. The twin of the Metal kernels' number buffer.
+Texture2D<float4> annotation_numbers : register(t7);
 
 /// The halo's opacity, matching the ruler's.
 static const float annotation_hover_alpha = 0.24;
@@ -192,6 +218,116 @@ float annotation_exposure(float2 probe, PreviewArrow mark, float feather) {
   return total / (float)mark.sample_count;
 }
 
+/// How far a point falls outside a counter's silhouette: the hull of the disc
+/// and the small circle its tail ends in. One exact distance rather than a
+/// union of two shapes, so nothing seams where they meet and the tip is as
+/// round as the disc.
+///
+/// Measured along the tail and across it: inside the disc's cap the distance
+/// is the disc's own, inside the tip's cap the tip's, and between them it is
+/// the distance to the tangent joining the two circles.
+float annotation_counter_distance(float2 probe, PreviewCounter counter) {
+  float2 local = probe - counter.center;
+  float2 reach = counter.tip - counter.center;
+  float length_reach = length(reach);
+  if (counter.radius <= 0.0) return length(local);
+  if (length_reach <= 0.0) return length(local) - counter.radius;
+  float2 axis = reach / length_reach;
+  float along = dot(local, axis);
+  float across = abs(local.x * -axis.y + local.y * axis.x);
+  float slope = (counter.radius - counter.tip_radius) / length_reach;
+  float run = sqrt(max(1.0 - slope * slope, 0.0));
+  float side = -slope * across + run * along;
+  if (side < 0.0) return length(float2(across, along)) - counter.radius;
+  if (side > run * length_reach)
+    return length(float2(across, along - length_reach)) - counter.tip_radius;
+  return across * run + along * slope - counter.radius;
+}
+
+/// How much of the number covers this pixel, from the atlas the numbers were
+/// rasterised into. The atlas is drawn at two pixels to the drawn pixel and
+/// read with four taps, so a counter still reads while it is growing into
+/// place. The number is centred on the disc and carried by the disc's own
+/// radius, so it grows and shrinks with the mark.
+float annotation_number_coverage(float2 probe, PreviewCounter counter, uint2 atlas) {
+  if (atlas.x == 0u || atlas.y == 0u || counter.text_size.x <= 0.0 ||
+      counter.text_size.y <= 0.0)
+    return 0.0;
+  const float supersample = 2.0;
+  float2 drawn = counter.text_size / supersample;
+  float2 local = probe - counter.center + drawn * 0.5;
+  if (any(local < 0.0) || any(local > drawn)) return 0.0;
+  // The atlas rows run top-down from its first pixel, which is the space the
+  // rasteriser reports its rectangles in.
+  float2 texel = counter.text_origin + local * supersample;
+  float total = 0.0;
+  for (uint tap = 0u; tap < 4u; ++tap) {
+    float2 offset = float2((float)(tap & 1u), (float)(tap >> 1u)) * 0.5;
+    int2 at = int2(clamp(texel + offset, float2(0.0, 0.0), float2(atlas) - 1.0));
+    total += annotation_numbers.Load(int3(at, 0)).a;
+  }
+  return total * 0.25;
+}
+
+/// Accumulated exposure coverage for a counter: the disc is drawn at every
+/// prepared sample between the shutter start and now, so one that grew
+/// through the frame smears over the sizes it covered rather than jumping
+/// between them. Each sample carries its own opacity, which is what fades a
+/// counter in and out of an exported frame.
+float annotation_counter_exposure(float2 probe, PreviewArrow mark, float feather) {
+  float total = 0.0;
+  for (uint tap = 0u; tap < mark.sample_count; ++tap) {
+    PreviewSample sample = annotation_samples[mark.sample_first + tap];
+    float distance =
+        annotation_counter_distance(probe, annotation_counter(sample.geometry));
+    total += (1.0 - smoothstep(-feather, feather, distance)) * sample.opacity;
+  }
+  return total / (float)mark.sample_count;
+}
+
+/// One counter: its silhouette in the mark's own colour, and its number in
+/// whichever of black or white reads on that colour. The number is clipped to
+/// the silhouette's own coverage, so the two share one antialiased edge.
+float4 annotation_counter_layer(
+    float4 rgba, PreviewArrow mark, float4 color, float2 canvas_point,
+    float feather, float halo, uint2 atlas) {
+  PreviewCounter counter = annotation_counter(mark.geometry);
+  float reach = counter.radius * 2.0 + halo + feather + 1.0;
+  if (any(canvas_point < counter.center - reach) ||
+      any(canvas_point > counter.center + reach))
+    return rgba;
+  float distance = annotation_counter_distance(canvas_point, counter);
+  if (halo > 0.0) {
+    // The halo hugs the silhouette from the edge outwards, the ruler's way.
+    float band = smoothstep(-feather, feather, distance) *
+        (1.0 - smoothstep(halo - feather, halo + feather, distance));
+    float alpha = band * color.a * annotation_hover_alpha;
+    if (alpha > 0.0) {
+      rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
+      rgba.a = alpha + rgba.a * (1.0 - alpha);
+    }
+  }
+  // A still frame draws the prepared disc directly, its opacity already
+  // folded into the colour; a moving one averages the disc over the
+  // exposure, where each sample carries the opacity it had.
+  float coverage = mark.sample_count == 0u
+      ? 1.0 - smoothstep(-feather, feather, distance)
+      : annotation_counter_exposure(canvas_point, mark, feather);
+  if (coverage <= 0.0) return rgba;
+  float alpha = coverage * color.a;
+  rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
+  rgba.a = alpha + rgba.a * (1.0 - alpha);
+  float ink = annotation_number_coverage(canvas_point, counter, atlas) * alpha;
+  if (ink <= 0.0) return rgba;
+  // Luminance rather than a fixed white: the palette runs from yellow to
+  // near-black, and a number has to read on all of it.
+  float luminance = dot(color.rgb, float3(0.2126, 0.7152, 0.0722));
+  float3 tint = luminance > 0.6 ? float3(0.0, 0.0, 0.0) : float3(1.0, 1.0, 1.0);
+  rgba.rgb = tint * ink + rgba.rgb * (1.0 - ink);
+  rgba.a = ink + rgba.a * (1.0 - ink);
+  return rgba;
+}
+
 /// Draws the prepared marks in `[first, last)` over `rgba`.
 ///
 /// The range is how the camera ordering is expressed: Rust sorts the marks
@@ -199,14 +335,22 @@ float annotation_exposure(float2 probe, PreviewArrow mark, float feather) {
 /// contiguous run rather than testing a flag per mark per pixel.
 ///
 /// Marks are deliberately not clipped to the crop: an arrow may point in from
-/// the padding. `feather` is how wide an edge is smoothed, in canvas pixels.
+/// the padding. `feather` is how wide an edge is smoothed, in canvas pixels,
+/// and `number_atlas` is the size of the texture the counters' numbers were
+/// rasterised into - zero where nothing rasterised one.
 float4 composite_annotations(
-    float4 rgba, float2 canvas_point, uint first, uint last, float feather) {
+    float4 rgba, float2 canvas_point, uint first, uint last, float feather,
+    uint2 number_atlas) {
   for (uint index = first; index < last; ++index) {
     PreviewArrow mark = annotation_arrows[index];
     PreviewGeometry arrow = mark.geometry;
     float4 color = float4(mark.red, mark.green, mark.blue, mark.alpha);
     if (color.a <= 0.0 || arrow.width <= 0.0) continue;
+    if (mark.kind == 1u) {
+      rgba = annotation_counter_layer(rgba, mark, color, canvas_point, feather,
+                                      max(mark.hover, 0.0), number_atlas);
+      continue;
+    }
     float2 a = float2(arrow.ax, arrow.ay);
     float2 b = float2(arrow.bx, arrow.by);
     float2 c = float2(arrow.cx, arrow.cy);

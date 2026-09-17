@@ -34,19 +34,24 @@ pub(crate) fn validate_clips(clips: &[RecordingAnnotationClip]) -> Result<(), St
   }
   for clip in clips {
     let annotation = &clip.annotation;
-    let AnnotationShape::Arrow {
-      start,
-      control,
-      end,
-    } = annotation.shape;
+    let placed = match annotation.shape {
+      AnnotationShape::Arrow {
+        start,
+        control,
+        end,
+      } => [start, control, end]
+        .iter()
+        .all(|point| point.x.is_finite() && point.y.is_finite()),
+      AnnotationShape::Counter { center, angle, .. } => {
+        center.x.is_finite() && center.y.is_finite() && angle.is_finite()
+      }
+    };
     if clip.end_ms <= clip.start_ms
       || annotation.id.is_empty()
       || !ids.insert(&annotation.id)
       || !annotation.style.width.is_finite()
       || annotation.style.width <= 0.0
-      || [start, control, end]
-        .iter()
-        .any(|p| !p.x.is_finite() || !p.y.is_finite())
+      || !placed
     {
       return Err("The annotation clip is invalid".to_owned());
     }
@@ -87,12 +92,17 @@ pub(crate) fn revealed_annotations(
   active_clips(clips, track, source_ms)
     .map(|clip| {
       let mut annotation = clip.annotation.clone();
+      let duration_ms = (clip.end_ms - clip.start_ms) as f32;
+      let elapsed_ms = (source_ms - clip.start_ms) as f32;
       if annotation.animated {
-        annotation.reveal = super::reveal::reveal_window(
-          (source_ms - clip.start_ms) as f32,
-          (clip.end_ms - clip.start_ms) as f32,
-          frame_ms,
-        );
+        annotation.reveal = match annotation.shape {
+          AnnotationShape::Arrow { .. } => {
+            super::reveal::reveal_window(elapsed_ms, duration_ms, frame_ms)
+          }
+          AnnotationShape::Counter { .. } => {
+            super::reveal::counter::counter_reveal_window(elapsed_ms, duration_ms, frame_ms)
+          }
+        };
       }
       annotation
     })

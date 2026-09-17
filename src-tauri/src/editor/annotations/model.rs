@@ -41,8 +41,8 @@ pub struct AnnotationStyle {
   pub width: f64,
 }
 
-/// What a mark is. Only the arrow exists so far; the tag leaves room for the
-/// shapes the annotation tool adds later without reshaping stored documents.
+/// What a mark is. The tag leaves room for the shapes later tools add
+/// without reshaping stored documents.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum AnnotationShape {
@@ -52,6 +52,60 @@ pub enum AnnotationShape {
     control: AnnotationPoint,
     end: AnnotationPoint,
   },
+  /// A numbered disc with a teardrop tail. `value` is the mark's place in
+  /// the document's counter order, which the editor keeps contiguous, and
+  /// `angle` is where the tail points, in radians clockwise from east in the
+  /// source's own pixel space - so a fresh counter's zero points right.
+  Counter {
+    center: AnnotationPoint,
+    value: u32,
+    angle: f64,
+  },
+}
+
+impl AnnotationShape {
+  /// The points the shape is placed by, for the coarse bounds and finiteness
+  /// tests every space-changing path runs. A counter reports its centre
+  /// three times: its tail reaches past it, so a box over these points is
+  /// smaller than the mark by up to the tail's length.
+  pub(crate) fn points(&self) -> [AnnotationPoint; 3] {
+    match self {
+      Self::Arrow {
+        start,
+        control,
+        end,
+      } => [*start, *control, *end],
+      Self::Counter { center, .. } => [*center; 3],
+    }
+  }
+
+  /// The same shape with every point moved by `map`. What a mark *is* does
+  /// not change with the space it is drawn in, so the angle and the number
+  /// ride through untouched: every space a mark travels between keeps the
+  /// picture's aspect, so a direction in one is the same direction in the
+  /// next.
+  pub(crate) fn mapped(&self, map: impl Fn(AnnotationPoint) -> AnnotationPoint) -> Self {
+    match self {
+      Self::Arrow {
+        start,
+        control,
+        end,
+      } => Self::Arrow {
+        start: map(*start),
+        control: map(*control),
+        end: map(*end),
+      },
+      Self::Counter {
+        center,
+        value,
+        angle,
+      } => Self::Counter {
+        center: map(*center),
+        value: *value,
+        angle: *angle,
+      },
+    }
+  }
 }
 
 /// One drawn mark, independent of its workspace and timing.
@@ -87,18 +141,18 @@ fn default_animated() -> bool {
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const NEW_ARROW_WIDTH: f64 = 8.0;
 
-/// The colour a fresh arrow is drawn in before anything has been chosen: the
+/// The colour a fresh mark is drawn in before anything has been chosen: the
 /// palette's yellow, which reads as a mark on almost any screenshot where the
 /// accent would sometimes be the very colour being pointed at. The twin of
 /// `ANNOTATION_SWATCHES` in `src/features/editor/annotation-palette.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-const NEW_ARROW_COLOR: &str = "#ffcc00";
+pub(super) const NEW_MARK_COLOR: &str = "#ffcc00";
 
 /// The dress a fresh arrow is drawn in before anything has been chosen.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn default_arrow_style() -> AnnotationStyle {
   AnnotationStyle {
-    color: NEW_ARROW_COLOR.to_owned(),
+    color: NEW_MARK_COLOR.to_owned(),
     head: crate::editor::annotations::AnnotationHead::End,
     width: NEW_ARROW_WIDTH,
   }

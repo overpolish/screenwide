@@ -4,6 +4,7 @@
 use super::ffi::{
   screenwide_preview_surface_present_recording_workspace,
   screenwide_preview_surface_redraw_workspace,
+  screenwide_preview_surface_set_workspace_annotation_hover,
   screenwide_preview_surface_update_workspace_camera_overlay,
   screenwide_preview_surface_update_workspace_canvas,
   screenwide_preview_surface_workspace_camera_source_size,
@@ -219,6 +220,24 @@ impl RecordingPreviewSurface {
       }
     }
     Ok(true)
+  }
+
+  /// Moves the hover halo on the retained recording scene and redraws it.
+  /// The halo is the one piece of annotation state the pointer changes
+  /// without the document changing, so it is set on the scene rather than
+  /// sent round through a fresh composition - which a recording cannot do
+  /// from marks alone, having a decoded frame behind them.
+  ///
+  /// `index` is the mark's place in its own pane's list, or -1 to clear.
+  pub(crate) fn redraw_annotation_hover(&self, hover: Option<(u32, usize, f32)>) -> bool {
+    let (pane, index, width) = hover.map_or((0, -1, 0.0), |(pane, index, width)| {
+      (pane, i32::try_from(index).unwrap_or(-1), width)
+    });
+    let moved = unsafe {
+      screenwide_preview_surface_set_workspace_annotation_hover(self.handle, pane, index, width)
+        != 0
+    };
+    moved && self.redraw_recording_workspace()
   }
 
   /// Presents the retained recording sources after a uniform-only edit.

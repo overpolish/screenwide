@@ -4,8 +4,9 @@
 //! One live annotation edit. Workspaces own presentation and history; this
 //! transaction owns only the marks changed by a pointer gesture.
 
+use super::counter::{new_counter, next_counter_value};
 use super::gesture::{
-  drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget,
+  drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget, NewMarkKind,
 };
 use super::model::new_arrow;
 use super::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle, MAX_ANNOTATIONS};
@@ -19,21 +20,32 @@ pub(crate) struct AnnotationEdit {
 }
 
 impl AnnotationEdit {
-  /// Selection-only presses are handled by the workspace, without opening an edit.
+  /// Selection-only presses are handled by the workspace, without opening an
+  /// edit. `kind` is the shape the tool in hand draws and `angle` where a
+  /// fresh counter's tail points, both of which only a
+  /// [`AnnotationGestureTarget::New`] press reads.
   pub(crate) fn begin(
     annotations: &mut Vec<Annotation>,
     target: AnnotationGestureTarget,
     point: AnnotationPoint,
     defaults: Option<&AnnotationStyle>,
+    kind: NewMarkKind,
+    angle: Option<f64>,
   ) -> Option<Self> {
     let index = match target {
-      AnnotationGestureTarget::NewArrow if annotations.len() < MAX_ANNOTATIONS => annotations.len(),
+      AnnotationGestureTarget::New if annotations.len() < MAX_ANNOTATIONS => annotations.len(),
       AnnotationGestureTarget::Existing { index, .. } if index < annotations.len() => index,
       _ => return None,
     };
     let before = annotations.clone();
-    if target == AnnotationGestureTarget::NewArrow {
-      annotations.push(new_arrow(next_annotation_id(), point, point, defaults));
+    if target == AnnotationGestureTarget::New {
+      let id = next_annotation_id();
+      annotations.push(match kind {
+        NewMarkKind::Arrow => new_arrow(id, point, point, defaults),
+        NewMarkKind::Counter => {
+          new_counter(id, point, next_counter_value(&before), defaults, angle)
+        }
+      });
     }
     let annotation = &annotations[index];
     Some(Self {
@@ -51,7 +63,8 @@ impl AnnotationEdit {
 
   /// Samples are applied against the original shape, so returning the pointer
   /// to its starting point also returns the annotation there without drift.
-  pub(crate) fn update(&self, annotations: &mut [Annotation], point: AnnotationPoint) {
+  /// `snap` is whether this sample was taken with Shift held.
+  pub(crate) fn update(&self, annotations: &mut [Annotation], point: AnnotationPoint, snap: bool) {
     let Some(annotation) = annotations
       .get_mut(self.index)
       .filter(|item| item.id == self.id)
@@ -59,20 +72,24 @@ impl AnnotationEdit {
       return;
     };
     match self.target {
-      AnnotationGestureTarget::NewArrow => {
-        let AnnotationShape::Arrow {
+      // A fresh arrow is drawn out from where the press landed; a fresh
+      // counter was dropped whole there, so the same drag carries it.
+      AnnotationGestureTarget::New => match &mut annotation.shape {
+        AnnotationShape::Arrow {
           start,
           control,
           end,
-        } = &mut annotation.shape;
-        *end = point;
-        *control = AnnotationPoint {
-          x: (start.x + point.x) / 2.0,
-          y: (start.y + point.y) / 2.0,
-        };
-      }
+        } => {
+          *end = point;
+          *control = AnnotationPoint {
+            x: (start.x + point.x) / 2.0,
+            y: (start.y + point.y) / 2.0,
+          };
+        }
+        AnnotationShape::Counter { center, .. } => *center = point,
+      },
       AnnotationGestureTarget::Existing { handle, .. } => {
-        drag_handle(annotation, handle, point, &self.origin)
+        drag_handle(annotation, handle, point, &self.origin, snap)
       }
       _ => {}
     }
@@ -104,12 +121,14 @@ mod tests {
     let mut annotations = original.clone();
     let edit = AnnotationEdit::begin(
       &mut annotations,
-      AnnotationGestureTarget::NewArrow,
+      AnnotationGestureTarget::New,
       point(20.0, 30.0),
+      None,
+      NewMarkKind::Arrow,
       None,
     )
     .unwrap();
-    edit.update(&mut annotations, point(80.0, 60.0));
+    edit.update(&mut annotations, point(80.0, 60.0), false);
     assert_eq!(annotations.len(), 2);
     assert_eq!(annotations[0], original[0]);
     edit.cancel(&mut annotations);
@@ -131,10 +150,12 @@ mod tests {
       },
       point(50.0, 0.0),
       None,
+      NewMarkKind::Arrow,
+      None,
     )
     .unwrap();
-    edit.update(&mut annotations, point(80.0, 20.0));
-    edit.update(&mut annotations, point(60.0, 10.0));
+    edit.update(&mut annotations, point(80.0, 20.0), false);
+    edit.update(&mut annotations, point(60.0, 10.0), false);
     assert_eq!(annotations[1], original[1]);
     assert_eq!(
       annotations[0].shape,
@@ -154,9 +175,11 @@ mod tests {
       },
       point(50.0, 0.0),
       None,
+      NewMarkKind::Arrow,
+      None,
     )
     .unwrap();
-    edit.update(&mut annotations, point(60.0, 10.0));
+    edit.update(&mut annotations, point(60.0, 10.0), false);
     drop(edit);
     assert_ne!(annotations[0], original[0]);
     assert_eq!(annotations[1], original[1]);
@@ -170,13 +193,21 @@ mod tests {
     for target in [
       AnnotationGestureTarget::Select { index: 0 },
       AnnotationGestureTarget::None,
-      AnnotationGestureTarget::NewArrow,
+      AnnotationGestureTarget::New,
       AnnotationGestureTarget::Existing {
         index: MAX_ANNOTATIONS,
         handle: AnnotationHandle::End,
       },
     ] {
-      assert!(AnnotationEdit::begin(&mut annotations, target, point(0.0, 0.0), None).is_none());
+      assert!(AnnotationEdit::begin(
+        &mut annotations,
+        target,
+        point(0.0, 0.0),
+        None,
+        NewMarkKind::Arrow,
+        None
+      )
+      .is_none());
       assert_eq!(annotations, before);
     }
   }

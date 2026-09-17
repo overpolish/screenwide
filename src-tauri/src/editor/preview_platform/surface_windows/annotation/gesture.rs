@@ -29,6 +29,17 @@ pub(super) struct Sample {
   handle: u32,
   x: f64,
   y: f64,
+  /// Whether Shift was held when the sample was taken, which is what holds a
+  /// counter's tail to the quarter turns.
+  snap: bool,
+}
+
+/// Whether Shift is down. Read at the moment a sample is resolved rather than
+/// latched at the press, so it can be taken and let go part way through a
+/// drag, exactly as the macOS view reads `NSEvent.modifierFlags`.
+fn snapped() -> bool {
+  use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_SHIFT};
+  unsafe { GetKeyState(i32::from(VK_SHIFT.0)) < 0 }
 }
 
 /// Resolves a sample against the published chrome. `None` when the point has
@@ -62,6 +73,7 @@ fn resolve(
     handle,
     x,
     y,
+    snap: snapped(),
   })
 }
 
@@ -86,6 +98,7 @@ fn report(inner: &SurfaceInner, samples: &[Sample]) {
       sample.handle,
       sample.x,
       sample.y,
+      sample.snap,
     );
   }
 }
@@ -108,7 +121,9 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       None => shaft_at_point(&state, point),
     };
     match (handle, shaft) {
-      (None, None) if state.annotation.mode != MODE_ARROW => {
+      (None, None)
+        if state.annotation.mode != MODE_ARROW && state.annotation.mode != MODE_COUNTER =>
+      {
         // Empty picture with only the select tool in hand: the arrow chrome
         // lets go, and the press carries on to the layer underneath. A live
         // mark - one with no layer of its own - has its choice cleared first.
@@ -124,6 +139,21 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
           ));
         }
         false
+      }
+      (None, None) if state.annotation.mode == MODE_COUNTER => {
+        // Empty picture under the counter tool: a counter is dropped whole
+        // where the press lands, so it begins at once and a click alone
+        // commits it; the drag that may follow carries it.
+        state.annotation.drag = Some(Drag::begun(TARGET_NEW, 0, HANDLE_BODY, point));
+        samples.extend(resolve(
+          &state,
+          SelectionGesturePhase::Begin,
+          TARGET_NEW,
+          0,
+          HANDLE_BODY,
+          point,
+        ));
+        true
       }
       (None, None) => {
         // Empty picture: a new arrow, once the press proves to be a drag. The

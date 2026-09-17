@@ -10,35 +10,39 @@ import {
 } from "./widths";
 
 /**
- * How heavy a mark is drawn.
+ * How heavy a mark is drawn: an arrow's stroke, or a counter's disc.
  *
- * The strokes are not evenly spaced, so the knob runs over the preset's place
- * in the list; the ticks say how many there are. A width from an older
+ * The sizes are not evenly spaced, so the knob runs over the preset's place
+ * in the list; the ticks say how many there are. A size from an older
  * document lands the knob on the nearest preset rather than nowhere.
  */
 export function AnnotationWidthSlider({
   isDisabled,
+  label = "Width",
   onChange,
+  presets = ANNOTATION_WIDTHS,
   value,
 }: {
   onChange: (width: number) => void;
-  /** Stroke width in output pixels. */
+  /** The size in output pixels: an arrow's stroke or a counter's diameter. */
   value: number;
   isDisabled?: boolean;
+  label?: string;
+  presets?: number[];
 }) {
   return (
     <Slider
-      aria-label="Width"
+      aria-label={label}
       className="w-48"
       isDisabled={isDisabled}
-      maxValue={ANNOTATION_WIDTHS.length - 1}
+      maxValue={presets.length - 1}
       minValue={0}
       onChange={(index) => {
-        onChange(annotationWidthAt(index));
+        onChange(annotationWidthAt(index, presets));
       }}
       showTicks
       step={1}
-      value={annotationWidthIndex(value)}
+      value={annotationWidthIndex(value, presets)}
     />
   );
 }

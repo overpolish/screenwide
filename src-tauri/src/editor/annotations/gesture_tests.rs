@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::bend::curve_midpoint;
-use super::gesture::{drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationHandle};
+use super::counter::new_counter;
+use super::gesture::{
+  annotation_mode, drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationHandle,
+  NewMarkKind, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
+};
 use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
 };
@@ -18,7 +22,10 @@ fn curve_midpoint_of(annotation: &Annotation) -> AnnotationPoint {
     start,
     control,
     end,
-  } = annotation.shape;
+  } = annotation.shape
+  else {
+    unreachable!()
+  };
   curve_midpoint(start, control, end)
 }
 
@@ -31,7 +38,10 @@ fn bend(annotation: &Annotation) -> (f64, f64) {
     start,
     control,
     end,
-  } = annotation.shape;
+  } = annotation.shape
+  else {
+    unreachable!()
+  };
   let (chord_x, chord_y) = (end.x - start.x, end.y - start.y);
   let length = chord_x.hypot(chord_y);
   let middle = curve_midpoint(start, control, end);
@@ -70,12 +80,16 @@ fn dragging_the_middle_handle_bends_the_curve_through_it() {
     AnnotationHandle::Middle,
     AnnotationPoint { x: 50.0, y: 50.0 },
     &from,
+    false,
   );
   let AnnotationShape::Arrow {
     start,
     control,
     end,
-  } = annotation.shape;
+  } = annotation.shape
+  else {
+    unreachable!()
+  };
   assert_eq!(control, AnnotationPoint { x: 50.0, y: 100.0 });
   assert_eq!(
     curve_midpoint(start, control, end),
@@ -94,6 +108,7 @@ fn the_middle_handle_stops_at_the_hairpin() {
     AnnotationHandle::Middle,
     AnnotationPoint { x: 50.0, y: 400.0 },
     &from,
+    false,
   );
   // The chord is 100 long, so the midpoint stops 60 off it.
   assert_eq!(
@@ -115,6 +130,7 @@ fn the_middle_handle_moves_only_across_the_chord() {
     AnnotationHandle::Middle,
     AnnotationPoint { x: -500.0, y: 30.0 },
     &from,
+    false,
   );
   assert_eq!(
     curve_midpoint_of(&annotation),
@@ -134,6 +150,7 @@ fn dragging_a_tip_keeps_the_bend_against_the_chord() {
     AnnotationHandle::Middle,
     AnnotationPoint { x: 60.0, y: 40.0 },
     &bent,
+    false,
   );
   let before = bend(&annotation);
   let from = origin(&annotation, 100.0, 0.0);
@@ -142,8 +159,11 @@ fn dragging_a_tip_keeps_the_bend_against_the_chord() {
     AnnotationHandle::End,
     AnnotationPoint { x: 10.0, y: 220.0 },
     &from,
+    false,
   );
-  let AnnotationShape::Arrow { end, .. } = annotation.shape;
+  let AnnotationShape::Arrow { end, .. } = annotation.shape else {
+    unreachable!()
+  };
   assert_eq!(end, AnnotationPoint { x: 10.0, y: 220.0 });
   let after = bend(&annotation);
   assert!((after.0 - before.0).abs() < 1e-9, "{before:?} {after:?}");
@@ -161,12 +181,16 @@ fn a_chord_with_no_direction_is_drawn_straight() {
     AnnotationHandle::End,
     AnnotationPoint { x: 0.2, y: 0.0 },
     &from,
+    false,
   );
   let AnnotationShape::Arrow {
     start,
     control,
     end,
-  } = annotation.shape;
+  } = annotation.shape
+  else {
+    unreachable!()
+  };
   assert_eq!(
     control,
     AnnotationPoint {
@@ -194,7 +218,13 @@ fn no_sequence_of_drags_can_fold_the_curve() {
   ];
   for (handle, x, y) in pulls {
     let from = origin(&annotation, 0.0, 0.0);
-    drag_handle(&mut annotation, handle, AnnotationPoint { x, y }, &from);
+    drag_handle(
+      &mut annotation,
+      handle,
+      AnnotationPoint { x, y },
+      &from,
+      false,
+    );
     let (along, across) = bend(&annotation);
     assert!((along - 0.5).abs() < 1e-9, "{along} {handle:?}");
     assert!(across.abs() <= 0.6 + 1e-9, "{across} {handle:?}");
@@ -211,6 +241,7 @@ fn a_press_on_the_shaft_that_never_travels_changes_nothing() {
     AnnotationHandle::Body,
     AnnotationPoint { x: 50.0, y: 0.0 },
     &from,
+    false,
   );
   assert_eq!(annotation, before);
 }
@@ -233,12 +264,16 @@ fn dragging_the_shaft_moves_the_whole_arrow() {
     AnnotationHandle::Body,
     AnnotationPoint { x: 70.0, y: -5.0 },
     &from,
+    false,
   );
   let AnnotationShape::Arrow {
     start,
     control,
     end,
-  } = annotation.shape;
+  } = annotation.shape
+  else {
+    unreachable!()
+  };
   assert_eq!(start, AnnotationPoint { x: 20.0, y: -25.0 });
   assert_eq!(control, AnnotationPoint { x: 70.0, y: 15.0 });
   assert_eq!(end, AnnotationPoint { x: 120.0, y: -25.0 });
@@ -254,9 +289,11 @@ fn a_shaft_drag_is_measured_from_where_the_press_landed() {
     AnnotationPoint { x: 90.0, y: 30.0 },
     AnnotationPoint { x: 60.0, y: 10.0 },
   ] {
-    drag_handle(&mut annotation, AnnotationHandle::Body, point, &from);
+    drag_handle(&mut annotation, AnnotationHandle::Body, point, &from, false);
   }
-  let AnnotationShape::Arrow { start, end, .. } = annotation.shape;
+  let AnnotationShape::Arrow { start, end, .. } = annotation.shape else {
+    unreachable!()
+  };
   assert_eq!(start, AnnotationPoint { x: 10.0, y: 10.0 });
   assert_eq!(end, AnnotationPoint { x: 110.0, y: 10.0 });
 }
@@ -270,7 +307,76 @@ fn handles_read_back_from_their_raw_codes() {
   );
   assert_eq!(AnnotationHandle::from_raw(2), Some(AnnotationHandle::End));
   assert_eq!(AnnotationHandle::from_raw(3), Some(AnnotationHandle::Body));
-  assert_eq!(AnnotationHandle::from_raw(4), None);
+  assert_eq!(AnnotationHandle::from_raw(4), Some(AnnotationHandle::Tail));
+  assert_eq!(AnnotationHandle::from_raw(5), None);
+}
+
+#[test]
+fn tool_names_read_back_as_modes() {
+  assert_eq!(annotation_mode(Some("arrow")), MODE_ARROW);
+  assert_eq!(annotation_mode(Some("counter")), MODE_COUNTER);
+  assert_eq!(annotation_mode(Some("select")), MODE_SELECT);
+  assert_eq!(annotation_mode(Some("crop")), MODE_NONE);
+  assert_eq!(annotation_mode(None), MODE_NONE);
+  assert_eq!(NewMarkKind::from_mode(MODE_COUNTER), NewMarkKind::Counter);
+  assert_eq!(NewMarkKind::from_mode(MODE_ARROW), NewMarkKind::Arrow);
+}
+
+#[test]
+fn a_counter_tail_drag_only_turns_it() {
+  let mut counter = new_counter(
+    "c".to_owned(),
+    AnnotationPoint { x: 100.0, y: 100.0 },
+    1,
+    None,
+    None,
+  );
+  let from = origin(&counter, 150.0, 100.0);
+  drag_handle(
+    &mut counter,
+    AnnotationHandle::Tail,
+    AnnotationPoint { x: 100.0, y: 40.0 },
+    &from,
+    false,
+  );
+  let AnnotationShape::Counter {
+    center,
+    value,
+    angle,
+  } = counter.shape
+  else {
+    unreachable!()
+  };
+  // Straight up in a y-down space is a quarter turn anticlockwise.
+  assert!(
+    (angle + std::f64::consts::FRAC_PI_2).abs() < 1e-9,
+    "{angle}"
+  );
+  assert_eq!(center, AnnotationPoint { x: 100.0, y: 100.0 });
+  assert_eq!(value, 1);
+}
+
+#[test]
+fn a_counter_body_drag_carries_the_disc_by_the_travel() {
+  let mut counter = new_counter(
+    "c".to_owned(),
+    AnnotationPoint { x: 100.0, y: 100.0 },
+    2,
+    None,
+    None,
+  );
+  let from = origin(&counter, 110.0, 90.0);
+  for point in [
+    AnnotationPoint { x: 200.0, y: 200.0 },
+    AnnotationPoint { x: 130.0, y: 110.0 },
+  ] {
+    drag_handle(&mut counter, AnnotationHandle::Body, point, &from, false);
+  }
+  let AnnotationShape::Counter { center, angle, .. } = counter.shape else {
+    unreachable!()
+  };
+  assert_eq!(center, AnnotationPoint { x: 120.0, y: 120.0 });
+  assert_eq!(angle, 0.0);
 }
 
 #[test]

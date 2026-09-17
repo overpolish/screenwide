@@ -178,3 +178,95 @@ static inline AnnotationArrowGeometry annotation_prepare_arrow(AnnotationVector 
   }
   return result;
 }
+
+/// How far a counter's tail reaches from the disc's centre, in radii, and how
+/// round its tip is as a share of the radius. The twins of
+/// `COUNTER_TAIL_REACH` and `COUNTER_TIP_SHARE` in `counter.rs`.
+#define ANNOTATION_COUNTER_TAIL_REACH 1.85f
+#define ANNOTATION_COUNTER_TIP_SHARE 0.17f
+
+/// One counter prepared for drawing and picking, read out of the slots an
+/// arrow fills with its curve. `a` is the disc's centre and `b` the centre of
+/// the small circle the tail ends in; `rounding` is the disc's radius, `low`
+/// the tip's, and `width` the disc's diameter, so the bounding box an arrow's
+/// stroke drives is also a counter's. Where the number is rasterised - its
+/// origin and size in the text atlas - rides in `start_head`.
+typedef struct {
+  AnnotationVector center, tip;
+  float radius, tip_radius;
+  AnnotationVector text_origin, text_size;
+} AnnotationCounterGeometry;
+
+static inline AnnotationCounterGeometry annotation_counter_geometry(
+    AnnotationArrowGeometry prepared) {
+  return (AnnotationCounterGeometry){
+      .center = prepared.a,
+      .tip = prepared.b,
+      .radius = prepared.rounding,
+      .tip_radius = prepared.low,
+      .text_origin = prepared.start_head.a,
+      .text_size = prepared.start_head.b,
+  };
+}
+
+/// One preparation per counter before drawing or picking, never per pixel.
+///
+/// The silhouette is the hull of two circles: the disc, and the small one the
+/// tail ends in. The sides are the tangents joining them, so the outline
+/// leaves the disc and arrives at the tip without ever coming to a point -
+/// one smooth teardrop rather than a disc with a spike glued on.
+///
+/// `reveal.scale` is the size the mark is drawn at this frame: the disc, its
+/// tail and its number are one mark and grow together, so the scale is
+/// applied here, once, and the number follows the radius it lands on.
+static inline AnnotationArrowGeometry annotation_prepare_counter(
+    AnnotationVector center, float diameter, float angle, AnnotationReveal reveal) {
+  float scale = fmaxf(fminf(reveal.scale, 1.0f), 0.0f);
+  float radius = fmaxf(diameter, 0) * 0.5f * scale;
+  AnnotationArrowGeometry result = {.a = center, .b = center, .c = center,
+                                    .width = radius * 2, .low = 0, .high = 1,
+                                    .rounding = radius, .head = 0};
+  if (radius <= 0) return result;
+  result.low = radius * ANNOTATION_COUNTER_TIP_SHARE;
+  float reach = radius * ANNOTATION_COUNTER_TAIL_REACH - result.low;
+  AnnotationVector direction = annotation_vector(cosf(angle), sinf(angle));
+  result.b = annotation_add(center, annotation_scale(direction, reach));
+  return result;
+}
+
+/// The far end of a prepared counter's tail: the point its grip is drawn on,
+/// which is the tip circle's own far edge rather than its centre.
+static inline AnnotationVector annotation_counter_tail_point(
+    AnnotationArrowGeometry prepared) {
+  AnnotationVector reach = annotation_subtract(prepared.b, prepared.a);
+  float length = annotation_length(reach);
+  if (length <= 0) return prepared.a;
+  return annotation_add(prepared.b, annotation_scale(reach, prepared.low / length));
+}
+
+/// How far `point` falls outside a prepared counter's silhouette, in the
+/// space it was prepared in. Negative inside the mark, which is what picks
+/// it. The twin of `counter_distance` in `counter.rs`.
+///
+/// Measured along the tail and across it: inside the disc's cap the distance
+/// is the disc's own, inside the tip's cap the tip's, and between them it is
+/// the distance to the tangent joining the two circles.
+static inline double annotation_counter_distance(AnnotationVector point,
+                                                 AnnotationArrowGeometry prepared) {
+  AnnotationCounterGeometry counter = annotation_counter_geometry(prepared);
+  double local_x = point.x - counter.center.x;
+  double local_y = point.y - counter.center.y;
+  if (counter.radius <= 0) return hypot(local_x, local_y);
+  double reach = hypot(counter.tip.x - counter.center.x, counter.tip.y - counter.center.y);
+  if (reach <= 0) return hypot(local_x, local_y) - counter.radius;
+  double axis_x = (counter.tip.x - counter.center.x) / reach;
+  double axis_y = (counter.tip.y - counter.center.y) / reach;
+  double along = local_x * axis_x + local_y * axis_y;
+  double across = fabs(local_x * -axis_y + local_y * axis_x);
+  double slope = (counter.radius - counter.tip_radius) / reach;
+  double run = sqrt(fmax(1 - slope * slope, 0));
+  double side = -slope * across + run * along;
+  if (side < 0) return hypot(across, along) - counter.radius;
+  if (side > run * reach) return hypot(across, along - reach) - counter.tip_radius;
+  return across * run + along * slope - counter.radius;
+}

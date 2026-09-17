@@ -7,22 +7,9 @@
 use crate::editor::annotations::handles::{annotation_handles, NativeAnnotationHandles};
 use crate::editor::annotations::AnnotationStyle;
 
-/// What the pointer does over the picture while a tool is in hand. The select
-/// tool hit-tests the arrows already there and lets every other press fall
-/// through to the layer; the arrow tool also draws a new one on empty
-/// picture. The values are the native `ScreenwideAnnotationMode`.
-pub(super) const ANNOTATION_MODE_NONE: u32 = 0;
-pub(super) const ANNOTATION_MODE_SELECT: u32 = 1;
-pub(super) const ANNOTATION_MODE_ARROW: u32 = 2;
-
-/// The tool name React sends, as a mode. Anything else puts the chrome away.
-pub(super) fn annotation_mode(tool: Option<&str>) -> u32 {
-  match tool {
-    Some("arrow") => ANNOTATION_MODE_ARROW,
-    Some("select") => ANNOTATION_MODE_SELECT,
-    _ => ANNOTATION_MODE_NONE,
-  }
-}
+/// The tool modes and their mapping live with the gesture model, so the two
+/// workspaces take the tool in hand the same way.
+use crate::editor::annotations::gesture::{annotation_mode, MODE_NONE};
 
 /// Where the hover halo is, and how wide. The width is already in the layer's
 /// canvas pixels: the native side reports how big the picture is drawn, and
@@ -59,15 +46,17 @@ pub(super) struct AnnotationLayout {
 pub(super) fn apply_annotation_layout(
   manager: &mut super::state::PreviewManager,
   defaults: Option<AnnotationStyle>,
+  counter_angle: Option<f64>,
   tool: Option<&str>,
   pane_index: Option<u32>,
   selected: Option<&str>,
 ) -> (AnnotationLayout, bool) {
   let mode = annotation_mode(tool);
   manager.annotation_defaults = defaults;
+  manager.annotation_counter_angle = counter_angle;
   manager.annotation_mode = mode;
   manager.annotation_pane_index = pane_index;
-  let hover_cleared = mode == ANNOTATION_MODE_NONE && manager.clear_annotation_hover();
+  let hover_cleared = mode == MODE_NONE && manager.clear_annotation_hover();
   let layout = annotation_layout(manager, pane_index, mode, selected);
   (layout, hover_cleared)
 }

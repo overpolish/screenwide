@@ -29,6 +29,7 @@ import {
  */
 export type ToolPanelHandlers = {
   /** Draw the chosen mark in and out over its clip, or leave it standing. */
+  onAnnotationAngleChange?: (angle: number) => void;
   onAnnotationAnimatedChange?: (animated: boolean) => void;
   /** Forget a colour of your own. */
   onAnnotationColorRemove?: (color: string) => void;
@@ -96,6 +97,8 @@ export type ToolPanelHandlers = {
 const appliedSeq: Record<EditorKind, number> = { recording: 0, screenshot: 0 };
 
 const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
+  if (values.annotationAngle !== undefined)
+    on.onAnnotationAngleChange?.(values.annotationAngle);
   if (values.annotationAnimated !== undefined)
     on.onAnnotationAnimatedChange?.(values.annotationAnimated);
   if (values.annotationStyle !== undefined)

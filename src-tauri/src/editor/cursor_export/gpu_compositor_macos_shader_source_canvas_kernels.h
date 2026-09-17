@@ -18,6 +18,8 @@ kernel void compose_canvas_rgba(
     const device AnnotationUniforms *annotations [[buffer(12)]],
     constant uint &annotation_count [[buffer(13)]],
     const device AnnotationSample *annotation_samples [[buffer(15)]],
+    const device uchar4 *annotation_numbers [[buffer(16)]],
+    constant uint2 &annotation_atlas [[buffer(17)]],
     texture2d_array<float, access::read> cursor_images [[texture(0)]],
     texture2d<float, access::sample> background_picture [[texture(1)]],
     uint2 gid [[thread_position_in_grid]],
@@ -34,7 +36,8 @@ kernel void compose_canvas_rgba(
   const float annotation_pixel_scale = 1.0;
   rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                float2(gid) + 0.5, u, float2(source_dimensions),
-                               annotation_pixel_scale, annotation_samples);
+                               annotation_pixel_scale, annotation_samples,
+                               annotation_numbers, annotation_atlas);
   float2 camera_point = float2(gid) -
     float2(overlay.camera_frame_x, overlay.camera_frame_y);
   float2 camera_size = float2(
@@ -75,13 +78,15 @@ kernel void compose_canvas_rgba(
     // camera go back over it exactly as the cursor does.
     rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                  float2(gid) + 0.5, u, float2(source_dimensions),
-                                 annotation_pixel_scale, annotation_samples);
+                                 annotation_pixel_scale, annotation_samples,
+                               annotation_numbers, annotation_atlas);
   }
   rgba = composite_keyboard(rgba, keyboard_pixels, keyboard,
                             float2(gid) + 0.5, float2(dimensions));
   rgba = composite_annotations(rgba, annotations, annotation_count, 1u,
                                float2(gid) + 0.5, u, float2(source_dimensions),
-                               annotation_pixel_scale, annotation_samples);
+                               annotation_pixel_scale, annotation_samples,
+                               annotation_numbers, annotation_atlas);
   float canvas_coverage = rounded_coverage(
     float2(gid) + 0.5, float2(dimensions), float(u.background_radius));
   if (u.foreground_only == 0) rgba.rgb = output_dither(rgba.rgb, float2(gid));

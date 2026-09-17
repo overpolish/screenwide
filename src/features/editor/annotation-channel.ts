@@ -11,14 +11,15 @@ import { EditorKind } from "./types";
  * The mark the preview has in hand, and the edits that dress it, reachable
  * from outside the preview that owns them.
  *
- * Which arrow is chosen is the preview's own business: the native tool
+ * Which mark is chosen is the preview's own business: the native tool
  * hit-tests it and reports it back, and the tool that did so keeps it. The
- * Arrow panel arrives by another road entirely - the panel window, through
+ * mark panel arrives by another road entirely - the panel window, through
  * the editor's bridge - and has to reach the same commit path the drag on the
  * picture uses, so each workspace leaves what it has in hand here for the
  * panel to find. This is the twin of `keyboard-shortcut-channel.ts`.
  */
 type PublishedAnnotation = {
+  applyAngle: (angle: number) => void;
   applyAnimated: (animated: boolean) => void;
   applyReverse: () => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
@@ -56,6 +57,9 @@ export function usePublishAnnotationSelection(
   const serialized = selection === null ? null : JSON.stringify(selection);
   useEffect(() => {
     const published: PublishedAnnotation = {
+      applyAngle: (angle) => {
+        applyRef.current.applyAngle(angle);
+      },
       applyAnimated: (animated) => {
         applyRef.current.applyAnimated(animated);
       },
@@ -103,6 +107,12 @@ export const applyAnnotationAnimated = (
   animated: boolean,
 ) => {
   workspaces.get(workspace)?.applyAnimated(animated);
+};
+
+/** Turn the chosen counter's tail to `angle`, in radians clockwise from
+ * east. A no-op when the workspace has no preview mounted to ask. */
+export const applyAnnotationAngle = (workspace: EditorKind, angle: number) => {
+  workspaces.get(workspace)?.applyAngle(angle);
 };
 
 /** Turn the chosen mark round. A no-op when the workspace has no preview

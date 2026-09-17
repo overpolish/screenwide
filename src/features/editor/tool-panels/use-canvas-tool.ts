@@ -21,9 +21,9 @@ import { toolPanelLabel } from "./tool-panel-window";
  * dresses the mark the tool has in hand, so the tool holding it stays up.
  */
 const canvasToolPanels: ToolPanelKind[] = [
-  "arrow",
   "crop",
   "frame",
+  "mark",
   "selection",
 ];
 

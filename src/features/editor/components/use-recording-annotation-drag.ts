@@ -20,6 +20,26 @@ import {
 } from "./timeline-viewport";
 
 type Edge = "startMs" | "endMs";
+
+/**
+ * The clips as the preview should show them while `id` is being dragged: that
+ * mark drawn whole rather than at the reveal its clip's bounds put it at.
+ *
+ * A trim handle sits exactly where the mark is arriving or leaving, so the
+ * frame it seeks to is the one frame where the mark is barely there - which
+ * is no use at all for deciding where the handle belongs. Marking the clip as
+ * not animated is how a mark is drawn whole everywhere else, and it is the
+ * preview's own copy: the list that reaches the document keeps its animation.
+ */
+export const previewedWhole = (
+  clips: RecordingAnnotationClip[],
+  id: string,
+): RecordingAnnotationClip[] =>
+  clips.map((clip) =>
+    clip.annotation.id === id && clip.annotation.animated
+      ? { ...clip, annotation: { ...clip.annotation, animated: false } }
+      : clip,
+  );
 type Drag = {
   edge: Edge | "body";
   id: string;
@@ -28,14 +48,18 @@ type Drag = {
   startX: number;
 };
 export function useRecordingAnnotationDrag({
+  clips,
   edit,
+  onCommit,
   onPreview,
   onSeek,
   onSelect,
   sourceDurationMs,
   viewport,
 }: {
+  clips: RecordingAnnotationClip[];
   edit: RecordingTimelineEdit;
+  onCommit: (clips: RecordingAnnotationClip[]) => void;
   onSelect: (id: string) => void;
   sourceDurationMs: number;
   viewport: TimelineViewportState;
@@ -47,8 +71,16 @@ export function useRecordingAnnotationDrag({
   const dragRef = useRef<Drag | null>(null);
   const movedRef = useRef(false);
   const laneRef = useRef<HTMLDivElement>(null);
+  const detachRef = useRef<() => void>(() => undefined);
+  // The window listeners are installed once per gesture while the sample
+  // handler below is rebuilt every render, so they reach it through a ref
+  // rather than closing over the render that started the drag.
+  const updateRef = useRef<(clientX: number) => void>(() => undefined);
   useEffect(() => {
-    onPreview?.(dragRef.current?.edge === "body" ? draft : null);
+    const drag = dragRef.current;
+    onPreview?.(
+      drag?.edge === "body" && draft ? previewedWhole(draft, drag.id) : null,
+    );
   }, [draft, onPreview]);
   useEffect(
     () => () => {
@@ -69,6 +101,8 @@ export function useRecordingAnnotationDrag({
               sourceDurationMs,
           ),
           "end",
+          // The gesture is over, so the seek that settles it shows the mark
+          // at the reveal its own bounds put it at once more.
           clips ?? undefined,
         );
     }
@@ -77,30 +111,82 @@ export function useRecordingAnnotationDrag({
     dragRef.current = null;
   };
   const cancel = () => {
+    detachRef.current();
     reset(false);
-  };
-  const finish = () => {
-    reset(true);
   };
   const cancelRef = useRef(cancel);
   cancelRef.current = cancel;
   useEffect(() => {
-    const abort = () => {
-      cancelRef.current();
-    };
+    // Escape abandons a drag in flight. A window blur does not: pushing
+    // preview frames hands focus to the native surface the frames are drawn
+    // on, and a pointer that is still down is still a drag.
     const escape = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || !dragRef.current) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      abort();
+      cancelRef.current();
     };
     window.addEventListener("keydown", escape, true);
-    window.addEventListener("blur", abort);
     return () => {
       window.removeEventListener("keydown", escape, true);
-      window.removeEventListener("blur", abort);
     };
   }, []);
+
+  /**
+   * Takes a press on a clip or one of its edges and owns the gesture until
+   * the pointer is released.
+   *
+   * The moves and the release are listened for on the window rather than on
+   * the element pressed. The lane restacks its clips as they are dragged -
+   * two marks that come to overlap each need a row - so the element under
+   * the pointer is moved in the DOM part way through the gesture, and a
+   * gesture that depended on that element keeping pointer capture lost the
+   * drag exactly when it started to matter.
+   */
+  const beginDrag = ({
+    clientX,
+    edge,
+    id,
+  }: {
+    clientX: number;
+    edge: Edge | "body";
+    id: string;
+  }) => {
+    detachRef.current();
+    dragRef.current = {
+      edge,
+      id,
+      moved: false,
+      original: clips,
+      startX: clientX,
+    };
+    draftRef.current = clips;
+    movedRef.current = false;
+    setDraft(clips);
+    const move = (event: PointerEvent) => {
+      updateRef.current(event.clientX);
+    };
+    const release = (event: PointerEvent) => {
+      detachRef.current();
+      updateRef.current(event.clientX);
+      const next = draftRef.current;
+      const moved = movedRef.current;
+      reset(true);
+      if (next && (moved || edge !== "body")) onCommit(next);
+    };
+    const abandon = () => {
+      cancelRef.current();
+    };
+    detachRef.current = () => {
+      detachRef.current = () => undefined;
+      window.removeEventListener("pointermove", move, true);
+      window.removeEventListener("pointerup", release, true);
+      window.removeEventListener("pointercancel", abandon, true);
+    };
+    window.addEventListener("pointermove", move, true);
+    window.addEventListener("pointerup", release, true);
+    window.addEventListener("pointercancel", abandon, true);
+  };
   const update = (clientX: number) => {
     const drag = dragRef.current;
     const bounds = laneRef.current?.getBoundingClientRect();
@@ -146,18 +232,9 @@ export function useRecordingAnnotationDrag({
             sourceDurationMs,
         ),
         "move",
-        next,
+        previewedWhole(next, drag.id),
       );
   };
-  return {
-    cancel,
-    draft,
-    draftRef,
-    dragRef,
-    finish,
-    laneRef,
-    movedRef,
-    setDraft,
-    update,
-  };
+  updateRef.current = update;
+  return { beginDrag, cancel, draft, laneRef, movedRef };
 }

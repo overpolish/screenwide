@@ -3,7 +3,7 @@
 
 #include <math.h>
 
-#import "gpu_compositor_macos.h"
+#import "gpu_compositor_macos_presenter.h"
 #import "gpu_compositor_macos_presenter_private.h"
 
 static float keyboard_motion_spring(float progress) {

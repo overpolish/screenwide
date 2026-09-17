@@ -1,7 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ScreenshotLayout } from "../screenshot-output";
+import {
+  ScreenshotLayout,
+  ScreenshotWorkspaceOutputSettings,
+  screenshotLayout,
+} from "../screenshot-output";
 
 /** Convert output-pixel layout into the pane fractions native OSCs consume. */
 export function normalizedScreenshotSelection(
@@ -27,4 +31,31 @@ export function normalizedScreenshotSelection(
     recenterBounds: mode === "crop" ? image : undefined,
     rect: mode === "select" ? bounds : sourceCrop,
   };
+}
+
+/** One selectable target per workspace pane, in pane order, for the native
+ * select and crop overlays to hit-test. Panes whose item is gone are skipped. */
+export function screenshotSelectionTargets(
+  items: { height: number; id: number; width: number }[],
+  workspaceOutput: ScreenshotWorkspaceOutputSettings,
+  target: { cropMode: boolean; height: number; width: number },
+) {
+  const { cropMode } = target;
+  return workspaceOutput.items.flatMap((itemOutput, paneIndex) => {
+    const item = items.find((candidate) => candidate.id === itemOutput.id);
+    if (!item) return [];
+    const layout = screenshotLayout(item, itemOutput.output);
+    return [
+      {
+        cropMode,
+        paneIndex,
+        radiusPercent: itemOutput.output.radiusPercent,
+        ...normalizedScreenshotSelection(
+          layout,
+          target,
+          cropMode ? "crop" : "select",
+        ),
+      },
+    ];
+  });
 }

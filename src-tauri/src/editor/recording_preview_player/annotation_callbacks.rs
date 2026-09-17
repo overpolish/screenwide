@@ -11,7 +11,7 @@ pub(crate) fn install(
   let event_clips = Arc::clone(&clips);
   let event_app = app.clone();
   surface.set_annotation_gesture_callback(Box::new(
-    move |phase, pane, kind, index, handle, x, y| {
+    move |phase, pane, kind, index, handle, x, y, snap| {
       let Some(target) = AnnotationGestureTarget::from_raw(kind, index, handle) else {
         return;
       };
@@ -26,7 +26,7 @@ pub(crate) fn install(
           {
             return;
           }
-          if let Some(commit) = manager.annotation_gesture(phase, pane, target, x, y) {
+          if let Some(commit) = manager.annotation_gesture(phase, pane, target, x, y, snap) {
             let _ = event_app.emit("editor://recording-annotations", commit);
           }
         }
@@ -47,7 +47,7 @@ pub(crate) fn install(
               {
                 return;
               }
-              if let Some(commit) = manager.annotation_gesture(phase, pane, target, x, y) {
+              if let Some(commit) = manager.annotation_gesture(phase, pane, target, x, y, snap) {
                 let _ = deferred.emit("editor://recording-annotations", commit);
               }
             }
@@ -72,10 +72,9 @@ pub(crate) fn install(
     let Some(session_id) = manager.session_id else {
       return;
     };
-    // The Metal workspace cannot re-present a recording from marks alone, so
-    // on macOS the halo stops at React. The D3D11 panes redraw from what
-    // they last composed, which is exactly what a halo frame needs.
-    #[cfg(target_os = "windows")]
+    // Both backends redraw the halo without recomposing: the D3D11 panes
+    // redraw from what they last composed, and the retained Metal scene has
+    // the halo set on the marks it is already holding.
     if let Some(surface) = manager
       .sources
       .as_ref()
@@ -120,12 +119,14 @@ pub(crate) fn install(
           let width = crate::editor::screenshot_preview::hover_width_points(progress)
             * f64::from(output_width)
             / image_points;
-          Some((u64::from(pane), local, width as f32))
+          Some((pane, local, width as f32))
         });
+      #[cfg(target_os = "windows")]
+      surface
+        .redraw_annotation_hover(halo.map(|(pane, local, width)| (u64::from(pane), local, width)));
+      #[cfg(target_os = "macos")]
       surface.redraw_annotation_hover(halo);
     }
-    #[cfg(not(target_os = "windows"))]
-    let _ = (progress, image_points);
     let annotation_id = manager
       .annotation_targets()
       .get(index as usize)

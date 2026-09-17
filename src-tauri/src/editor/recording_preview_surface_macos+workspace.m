@@ -360,6 +360,19 @@ int screenwide_preview_surface_update_workspace_canvas(
   return result;
 }
 
+int screenwide_preview_surface_set_workspace_annotation_hover(
+    void *handle, uint32_t pane_index, int32_t index, float width) {
+  if (handle == NULL) return 0;
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  if (!surface.workspaceMode || surface.views.count == 0) return 0;
+  ScreenwidePreviewView *workspace = surface.views[0];
+  [surface.workspaceLock lock];
+  int result = screenwide_gpu_still_presenter_set_workspace_annotation_hover(
+      workspace.compositor, pane_index, index, width);
+  [surface.workspaceLock unlock];
+  return result;
+}
+
 int screenwide_preview_surface_update_workspace_camera_overlay(
     void *handle, uint32_t pane_index, const ScreenwideStillOverlay *overlay) {
   if (handle == NULL || overlay == NULL) return 0;

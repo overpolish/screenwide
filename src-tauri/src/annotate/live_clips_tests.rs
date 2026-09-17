@@ -207,7 +207,9 @@ fn an_annotation_is_recorded_in_the_source_pixels_it_was_drawn_over() {
   );
 
   let clips = live.stop(origin + Duration::from_secs(1));
-  let AnnotationShape::Arrow { start, end, .. } = clips[0].annotation.shape;
+  let AnnotationShape::Arrow { start, end, .. } = clips[0].annotation.shape else {
+    unreachable!()
+  };
 
   assert_eq!((start.x, start.y), (200.0, 100.0));
   assert_eq!((end.x, end.y), (400.0, 300.0));

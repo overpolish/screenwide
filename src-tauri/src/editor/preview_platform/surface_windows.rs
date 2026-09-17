@@ -134,6 +134,8 @@ mod audio_ribbon;
 mod background_image;
 #[path = "surface_windows/compositor.rs"]
 mod compositor;
+#[path = "surface_windows/counter_artwork.rs"]
+mod counter_artwork;
 #[path = "surface_windows/editor.rs"]
 mod editor;
 #[path = "surface_windows/font.rs"]

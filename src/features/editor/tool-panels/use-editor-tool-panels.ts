@@ -8,6 +8,7 @@ import {
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { useEditableGeneralSettings } from "../../settings/use-general-settings";
 import {
+  applyAnnotationAngle,
   applyAnnotationAnimated,
   applyAnnotationReverse,
   applyAnnotationStyle,
@@ -225,6 +226,9 @@ export function useEditorToolPanels({
         null,
     },
     {
+      onAnnotationAngleChange: (angle) => {
+        applyAnnotationAngle(workspace, angle);
+      },
       onAnnotationAnimatedChange: (animated) => {
         applyAnnotationAnimated(workspace, animated);
       },

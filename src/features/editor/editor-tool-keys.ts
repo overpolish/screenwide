@@ -12,6 +12,8 @@
 export type EditorToolKeys = {
   /** A: the arrow tool. */
   onArrowTool?: () => void;
+  /** N: the counter tool. */
+  onCounterTool?: () => void;
   onResizeCanvas?: () => void;
   onSelectTool?: () => void;
   onToggleBladeTool?: () => void;
@@ -33,6 +35,7 @@ export const editorToolKeyAction = (code: string, keys: EditorToolKeys) =>
     KeyF: keys.onResizeCanvas,
     KeyK: keys.onToggleKeyboardPanel,
     KeyM: keys.onToggleCursorPanel,
+    KeyN: keys.onCounterTool,
     KeyP: keys.onTogglePlayback,
     KeyR: keys.onToggleRangeTool,
     KeyV: keys.onSelectTool,

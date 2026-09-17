@@ -23,6 +23,10 @@ pub(super) struct PreviewManager {
   /// which case the arrow tool's own first dress stands.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_defaults: Option<crate::editor::annotations::AnnotationStyle>,
+  /// Where a fresh counter's tail points, in radians clockwise from east:
+  /// whatever the last counter was turned to, so a row of them is dropped
+  /// aiming the same way. None until one has been turned.
+  pub(super) annotation_counter_angle: Option<f64>,
   /// The arrow the pointer rests on, and how wide its halo has grown.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_hover: Option<AnnotationHover>,
@@ -59,6 +63,7 @@ impl PreviewManager {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
       self.annotation_defaults = None;
+      self.annotation_counter_angle = None;
       self.annotation_gesture = None;
       self.annotation_hover = None;
       self.annotation_mode = 0;

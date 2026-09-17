@@ -92,6 +92,10 @@ export type ToolPanelSnapshot = {
 export type ToolPanelPatch = Partial<
   Pick<ToolPanelSnapshot, "background" | "cursorEffects">
 > & {
+  /** Turn the chosen counter's tail, in radians clockwise from east. Where
+   * it points is the mark's own property rather than part of its dress, and
+   * it becomes the next counter's aim. */
+  annotationAngle?: number;
   /** Draw the chosen mark in and out over its clip, or leave it standing.
    * This is the mark's own property rather than part of its dress, so it
    * travels beside the style rather than inside it. It also becomes the next

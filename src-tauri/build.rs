@@ -17,9 +17,20 @@ fn main() {
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos+presenter_keyboard.m"
     );
     println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos+presenter_resize.m"
+    );
+    println!(
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m"
     );
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard.m");
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_annotation_text.m"
+    );
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_annotation_text.h"
+    );
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_counter.h");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_composite.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork_helpers.h");
     println!(
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork.m"
@@ -141,8 +152,10 @@ fn main() {
       .file("src/editor/cursor_export/gpu_compositor_macos_export_still.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_keyboard.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos+presenter_resize.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_background_image.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos_annotation_text.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_keyboard.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork.m")
       .file("src/recording/platform/camera/confidence_scaler_macos.m")

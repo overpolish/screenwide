@@ -23,9 +23,10 @@ SCREENWIDE_PREVIEW_PRIVATE ScreenwideAnnotationMode annotation_active_mode(
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_owns_chrome(
     ScreenwidePreviewSurface *surface) {
   ScreenwideAnnotationMode mode = annotation_active_mode(surface);
-  // The arrow tool always draws its own chrome; the select tool only once it
-  // is holding an arrow, so an ordinary layer selection is untouched.
+  // A drawing tool always draws its own chrome; the select tool only once it
+  // is holding a mark, so an ordinary layer selection is untouched.
   return mode == ScreenwideAnnotationModeArrow ||
+         mode == ScreenwideAnnotationModeCounter ||
          (mode == ScreenwideAnnotationModeSelect &&
           surface.annotationSelected != -1);
 }
@@ -34,15 +35,17 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   ScreenwideAnnotationMode mode = annotation_active_mode(surface);
   if (mode == ScreenwideAnnotationModeNone) return nil;
-  // An arrow under the pointer is something to take hold of, so the pointer
+  // A mark under the pointer is something to take hold of, so the pointer
   // says so - never the crosshair the empty picture draws with.
   if (annotation_handle_at_point(surface, point) >= 0 ||
       annotation_shaft_at_point(surface, point) >= 0)
     return [NSCursor arrowCursor];
-  // Empty picture: the arrow tool draws rather than picks things up. The
-  // select tool leaves the choice to the layer underneath.
-  return mode == ScreenwideAnnotationModeArrow ? [NSCursor crosshairCursor]
-                                               : nil;
+  // Empty picture: a drawing tool makes a mark rather than picking one up.
+  // The select tool leaves the choice to the layer underneath.
+  return mode == ScreenwideAnnotationModeArrow ||
+                 mode == ScreenwideAnnotationModeCounter
+             ? [NSCursor crosshairCursor]
+             : nil;
 }
 
 static CGFloat annotation_hover_progress(ScreenwidePreviewSurface *surface) {

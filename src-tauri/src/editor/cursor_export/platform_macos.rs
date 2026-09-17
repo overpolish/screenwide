@@ -279,6 +279,9 @@ pub(super) fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult
 #[path = "platform_macos_annotation_tests.rs"]
 mod annotation_tests;
 #[cfg(test)]
+#[path = "platform_macos_counter_tests.rs"]
+mod counter_tests;
+#[cfg(test)]
 #[path = "platform_macos_keyboard_tests.rs"]
 mod keyboard_tests;
 #[cfg(test)]

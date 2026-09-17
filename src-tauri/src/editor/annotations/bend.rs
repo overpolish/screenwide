@@ -138,7 +138,7 @@ pub(crate) fn control_for_bend(
 }
 
 /// Puts an arrow's curve back on the chord's perpendicular bisector, and back
-/// within the hairpin.
+/// within the hairpin. A counter has no curve to repair.
 ///
 /// Applied to every edit, so a document written before the limits existed is
 /// repaired the first time its arrow is touched rather than at load: nothing
@@ -148,6 +148,9 @@ pub(crate) fn clamp_bend(annotation: &mut Annotation) {
     start,
     control,
     end,
-  } = &mut annotation.shape;
+  } = &mut annotation.shape
+  else {
+    return;
+  };
   *control = control_for_bend(*start, *end, arrow_bend(*start, *control, *end).clamped());
 }

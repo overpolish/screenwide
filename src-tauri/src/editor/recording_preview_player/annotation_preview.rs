@@ -48,20 +48,15 @@ pub(crate) fn remap_source(
   decoded: (u32, u32),
   output_width: u32,
 ) {
-  use crate::editor::annotations::AnnotationShape;
+  use crate::editor::annotations::AnnotationPoint;
   let sx = f64::from(decoded.0) / f64::from(source.0.max(1));
   let sy = f64::from(decoded.1) / f64::from(source.1.max(1));
   let stroke = f64::from(settings.width) / f64::from(output_width.max(1));
   for annotation in &mut settings.annotations {
-    let AnnotationShape::Arrow {
-      start,
-      control,
-      end,
-    } = &mut annotation.shape;
-    for point in [start, control, end] {
-      point.x *= sx;
-      point.y *= sy;
-    }
+    annotation.shape = annotation.shape.mapped(|point| AnnotationPoint {
+      x: point.x * sx,
+      y: point.y * sy,
+    });
     annotation.style.width *= stroke;
   }
 }
@@ -84,7 +79,9 @@ mod tests {
     )];
     let width = output.annotations[0].style.width;
     remap_source(&mut output, (1920, 1080), (960, 540), 1920);
-    let AnnotationShape::Arrow { start, end, .. } = output.annotations[0].shape;
+    let AnnotationShape::Arrow { start, end, .. } = output.annotations[0].shape else {
+      unreachable!()
+    };
     assert_eq!((start.x, start.y), (240.0, 135.0));
     assert_eq!((end.x, end.y), (720.0, 405.0));
     assert_eq!(output.annotations[0].style.width, width / 2.0);

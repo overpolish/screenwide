@@ -3,25 +3,42 @@
 
 import { useSyncExternalStore } from "react";
 
+import { defaultAnnotationSize } from "../../components/shared/annotation-style/widths";
+
 import { AnnotationStyle } from "./annotations";
 
+/** Which shape a tool draws, which is what a remembered size belongs to. */
+export type AnnotationKind = "arrow" | "counter";
+
 /**
- * The dress the next arrow is drawn in: whatever the last one was changed to.
+ * The dress the next mark is drawn in: whatever the last one was changed to.
  *
- * Choosing a colour once and drawing five arrows in it is the whole point of
+ * Choosing a colour once and drawing five marks in it is the whole point of
  * the control, so the style is remembered rather than re-chosen. It lives in
  * the editor window for as long as that window does, and rides along with the
- * preview's layout so the native tool draws a fresh arrow in it without a
- * round trip of its own. The very first arrow has no remembered style: Rust
- * dresses it in the operating system's accent at the tool's own stroke.
+ * preview's layout so the native tool draws a fresh mark in it without a
+ * round trip of its own. The very first mark has no remembered style: Rust
+ * dresses it in the tool's own first colour at the tool's own size.
+ *
+ * The colour is shared between the shapes - a counter dropped after a red
+ * arrow is red - but the size is not: an arrow's stroke and a counter's disc
+ * are different measurements of different things, and eight pixels of stroke
+ * would be a disc too small to hold a number.
  */
 let lastUsed: AnnotationStyle | null = null;
+const lastSize = new Map<AnnotationKind, number>();
 /**
  * And whether it animated. This is the mark's own property rather than part
  * of its dress, so it is remembered beside the style rather than inside it,
  * and it means nothing to a screenshot, which has no clip to animate over.
  */
 let lastAnimated: boolean | null = null;
+/**
+ * And where the last counter's tail pointed, so a second counter is dropped
+ * aiming the way the first one was turned to. Also the mark's own property
+ * rather than part of its dress.
+ */
+let lastAngle: number | null = null;
 const listeners = new Set<() => void>();
 
 const subscribe = (listener: () => void) => {
@@ -31,17 +48,26 @@ const subscribe = (listener: () => void) => {
   };
 };
 
-const snapshot = () => lastUsed;
-
-/** Remember what the last annotation edit settled on. */
-export const rememberAnnotationStyle = (style: AnnotationStyle) => {
+/** Remember what the last edit to a mark of `kind` settled on. */
+export const rememberAnnotationStyle = (
+  style: AnnotationStyle,
+  kind: AnnotationKind = "arrow",
+) => {
   if (
     lastUsed?.color === style.color &&
     lastUsed.head === style.head &&
-    lastUsed.width === style.width
+    lastSize.get(kind) === style.width
   )
     return;
   lastUsed = { color: style.color, head: style.head, width: style.width };
+  lastSize.set(kind, style.width);
+  for (const listener of listeners) listener();
+};
+
+/** Remember where the last counter's tail was turned to, in radians. */
+export const rememberAnnotationAngle = (angle: number) => {
+  if (lastAngle === angle || !Number.isFinite(angle)) return;
+  lastAngle = angle;
   for (const listener of listeners) listener();
 };
 
@@ -52,12 +78,47 @@ export const rememberAnnotationAnimated = (animated: boolean) => {
   for (const listener of listeners) listener();
 };
 
-/** The style a fresh arrow is drawn in, or null while none has been settled
- * on and the tool's own first dress stands. */
-export const useAnnotationDefaults = () =>
-  useSyncExternalStore(subscribe, snapshot);
+/**
+ * The style a fresh mark of `kind` is drawn in, or null while nothing has
+ * been settled on and the tool's own first dress stands.
+ *
+ * A colour settled on for one shape dresses the other, at that shape's own
+ * remembered size - or at its default, where it has none yet.
+ */
+export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
+  useSyncExternalStore(subscribe, () =>
+    lastUsed === null ? null : styleFor(kind, lastUsed, lastSize.get(kind)),
+  );
 
-/** Whether a fresh arrow animates, or null while none has been settled on
+/** Held outside the snapshot so an unchanged store keeps returning the same
+ * object: `useSyncExternalStore` compares by identity. */
+const dressed = new Map<AnnotationKind, AnnotationStyle>();
+
+const styleFor = (
+  kind: AnnotationKind,
+  style: AnnotationStyle,
+  size: number | undefined,
+) => {
+  const width = size ?? defaultAnnotationSize(kind);
+  const held = dressed.get(kind);
+  if (
+    held &&
+    held.color === style.color &&
+    held.head === style.head &&
+    held.width === width
+  )
+    return held;
+  const next = { color: style.color, head: style.head, width };
+  dressed.set(kind, next);
+  return next;
+};
+
+/** Whether a fresh mark animates, or null while none has been settled on
  * and the tool's own default - animating - stands. */
 export const useAnnotationAnimatedDefault = () =>
   useSyncExternalStore(subscribe, () => lastAnimated);
+
+/** Where a fresh counter's tail points, or null while none has been turned
+ * and the tool's own default - east - stands. */
+export const useAnnotationAngleDefault = () =>
+  useSyncExternalStore(subscribe, () => lastAngle);

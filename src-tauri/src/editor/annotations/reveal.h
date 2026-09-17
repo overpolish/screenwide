@@ -29,9 +29,10 @@ typedef struct {
 
 /// The window a clip is at, `elapsed_ms` into a clip lasting `duration_ms`.
 /// `frame_ms` is the exposure interval in source time; a still passes zero.
+/// `kind` is the mark's own, because a counter arrives on its own timing.
 void screenwide_annotation_reveal_window(float elapsed_ms, float duration_ms,
                                          float frame_ms, uint32_t animated,
-                                         AnnotationReveal *out);
+                                         uint32_t kind, AnnotationReveal *out);
 
 /// The prepared reveal for one mark, in the space its points were given in.
 /// `stroke` is the full stroke width and `heads` the number of arrowheads.

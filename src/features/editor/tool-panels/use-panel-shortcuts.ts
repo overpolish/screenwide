@@ -24,6 +24,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
     onCopy: () => {
       forward("KeyC", { ctrlKey: true });
     },
+    onCounterTool: () => {
+      forward("KeyN");
+    },
     onCutTimeline: () => {
       forward("KeyB", { ctrlKey: true });
     },

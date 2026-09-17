@@ -1,12 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowUpRight, Crop, MousePointer2, ScanSquare } from "lucide-react";
+import {
+  ArrowUpRight,
+  Crop,
+  ListOrdered,
+  MousePointer2,
+  ScanSquare,
+} from "lucide-react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
-export type RecordingCanvasTool = "arrow" | "canvas" | "crop" | "select" | null;
+export type RecordingCanvasTool =
+  "arrow" | "canvas" | "counter" | "crop" | "select" | null;
 
 export function RecordingCanvasTools({
   isEnabled,
@@ -77,6 +84,20 @@ export function RecordingCanvasTools({
           shortcut="A"
         >
           <ArrowUpRight />
+        </ToolToggle>
+      </span>
+      <span className="inline-flex" data-editor-tool="counter">
+        <ToolToggle
+          isDisabled={!isArrowEnabled}
+          isSelected={tool === "counter" && isArrowEnabled}
+          label="Counter"
+          name="Drop a counter"
+          onSelectedChange={(selected) => {
+            onToolChange(selected ? "counter" : null);
+          }}
+          shortcut="N"
+        >
+          <ListOrdered />
         </ToolToggle>
       </span>
     </ButtonGroup>

@@ -7,14 +7,24 @@
 #import <AppKit/AppKit.h>
 #include <stdint.h>
 
-/// One arrow's three grips, normalised over the whole source image - the two
-/// tips and the point the curve passes through at t = 0.5 - how far each head
-/// reaches back from its tip, and the stroke's own width, both as a fraction
-/// of the image's drawn width. A head reach of zero means that end carries no
-/// head; the half-base is half the length, which is the shader's four-to-two
-/// proportions. `width` rides separately because a headless mark still has a
-/// stroke to pick. Rust solves the Bezier and owns the stroke's units; this
-/// side only places and hit-tests the points.
+/// One mark's grips, normalised over the whole source image, and how to read
+/// them.
+///
+/// An arrow fills every slot: its three grips - the two tips and the point the
+/// curve passes through at t = 0.5 - how far each head reaches back from its
+/// tip, and the stroke's own width, both as a fraction of the image's drawn
+/// width. A head reach of zero means that end carries no head; the half-base
+/// is half the length, which is the shader's four-to-two proportions. `width`
+/// rides separately because a headless mark still has a stroke to pick.
+///
+/// A counter puts its disc's centre in every point slot, where its tail
+/// points in `start_head` - radians clockwise from east - and its disc's
+/// diameter in `width`. Its one grip, the tail's tip, is placed from those
+/// here: a normalised offset is a different length in each axis on a picture
+/// that is not square, and this side works in isotropic display points.
+///
+/// Rust solves the Bezier and owns the stroke's units; this side only places
+/// and hit-tests.
 typedef struct {
   double start_x, start_y;
   double middle_x, middle_y;
@@ -23,18 +33,27 @@ typedef struct {
   double width;
   int32_t layer_id;
   uint32_t index;
+  /// `ScreenwideAnnotationKind`.
+  uint32_t kind;
+  uint32_t padding;
 } ScreenwidePreviewAnnotation;
-_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 80,
+_Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
                "Rust/C annotation handle layout mismatch");
-/// How many arrows one layer can carry, matching `MAX_ANNOTATIONS`.
+/// How many marks one layer can carry, matching `MAX_ANNOTATIONS`.
 static const NSUInteger ScreenwideMaxAnnotations = 64;
-/// What the pointer does over the picture. `Select` hit-tests the arrows
+/// Which shape a mark is, matching the compositor's own kinds.
+typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
+  ScreenwideAnnotationKindArrow = 0,
+  ScreenwideAnnotationKindCounter = 1,
+};
+/// What the pointer does over the picture. `Select` hit-tests the marks
 /// that are already there and lets everything else fall through to the
-/// layer; `Arrow` also draws a new one on empty picture.
+/// layer; `Arrow` and `Counter` also make a new mark on empty picture.
 typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeNone = 0,
   ScreenwideAnnotationModeSelect = 1,
   ScreenwideAnnotationModeArrow = 2,
+  ScreenwideAnnotationModeCounter = 3,
 };
 /// Which grip a press took hold of.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationHandle) {
@@ -42,19 +61,22 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationHandle) {
   ScreenwideAnnotationHandleMiddle = 1,
   ScreenwideAnnotationHandleEnd = 2,
   ScreenwideAnnotationHandleBody = 3,
+  ScreenwideAnnotationHandleTail = 4,
 };
-/// What a gesture acts on: a new arrow (0), a grip or shaft of the arrow at
+/// What a gesture acts on: a new mark (0), a grip or body of the mark at
 /// `index` (1), nothing at all (2), which only clears the choice, or a press
-/// on the shaft of the arrow at `index` (3), which only chooses it.
+/// on the body of the mark at `index` (3), which only chooses it.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationTarget) {
   ScreenwideAnnotationTargetNew = 0,
   ScreenwideAnnotationTargetExisting = 1,
   ScreenwideAnnotationTargetNone = 2,
   ScreenwideAnnotationTargetSelect = 3,
 };
+/// `snap` is whether Shift was held for this sample, which is what holds a
+/// counter's tail to the quarter turns.
 typedef void (*screenwide_preview_annotation_gesture_callback)(
     uint32_t phase, uint32_t pane_index, uint32_t target_kind, uint32_t index,
-    uint32_t handle, double x, double y, void *context);
+    uint32_t handle, double x, double y, uint32_t snap, void *context);
 /// The hover halo's progress. `index` is the arrow the pointer is over, or -1
 /// for none; `progress` runs 0..1 over the pulse; `image_points` is how wide
 /// the layer's picture is drawn on screen, which is all Rust needs to turn

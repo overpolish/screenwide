@@ -35,7 +35,7 @@ export function useRecordingPreviewCanvasTool({
   canvasToolRef.current = canvasTool;
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
-      if (next === "arrow") {
+      if (next === "arrow" || next === "counter") {
         keyboardTimeline.selection.onClear();
         onSelectedTrackChange?.(
           bakeCamera ? "primary" : (activeVideoTrack ?? "primary"),
@@ -69,6 +69,7 @@ export function useRecordingPreviewCanvasTool({
     return {
       arrow: toggle("arrow"),
       canvas: toggle("canvas"),
+      counter: toggle("counter"),
       crop: toggle("crop"),
       select: toggle("select"),
     };

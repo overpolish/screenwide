@@ -17,7 +17,7 @@
 use super::super::preview_platform::SelectionGesturePhase;
 use super::state::PreviewManager;
 use crate::editor::annotations::edit::AnnotationEdit;
-use crate::editor::annotations::gesture::AnnotationGestureTarget;
+use crate::editor::annotations::gesture::{AnnotationGestureTarget, NewMarkKind};
 use crate::editor::annotations::handles::{annotation_handles, source_point};
 use crate::editor::annotations::Annotation;
 
@@ -115,6 +115,7 @@ impl PreviewManager {
     target: AnnotationGestureTarget,
     x: f64,
     y: f64,
+    snap: bool,
   ) -> Option<AnnotationCommit> {
     if matches!(phase, SelectionGesturePhase::Cancel) {
       let gesture = self.annotation_gesture.take()?;
@@ -143,7 +144,7 @@ impl PreviewManager {
       .get_mut(pane_index as usize)?
       .output
       .annotations;
-    gesture.edit.update(annotations, point);
+    gesture.edit.update(annotations, point, snap);
     let id = gesture.edit.selected_id().to_owned();
     if matches!(phase, SelectionGesturePhase::End) {
       self.annotation_gesture = None;
@@ -187,6 +188,8 @@ impl PreviewManager {
       return self.commit_for(pane_index, Some(id));
     }
     let defaults = self.annotation_defaults.clone();
+    let mode = self.annotation_mode;
+    let angle = self.annotation_counter_angle;
     let annotations = &mut self
       .output
       .as_mut()?
@@ -194,7 +197,14 @@ impl PreviewManager {
       .get_mut(pane_index as usize)?
       .output
       .annotations;
-    let edit = AnnotationEdit::begin(annotations, target, point, defaults.as_ref())?;
+    let edit = AnnotationEdit::begin(
+      annotations,
+      target,
+      point,
+      defaults.as_ref(),
+      NewMarkKind::from_mode(mode),
+      angle,
+    )?;
     let id = edit.selected_id().to_owned();
     self.annotation_gesture = Some(AnnotationGestureOverride { pane_index, edit });
     self.present_annotation_gesture(pane_index, Some(id.as_str()));

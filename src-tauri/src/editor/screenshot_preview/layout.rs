@@ -22,6 +22,9 @@ pub async fn layout_screenshot_preview_surface(
   // The style the next fresh arrow is drawn in: whatever the editor's last
   // annotation edit settled on. Absent until it has settled on anything.
   annotation_defaults: Option<crate::editor::annotations::AnnotationStyle>,
+  // Where the next fresh counter's tail points, in radians clockwise from
+  // east: whatever the last counter was turned to. Absent until one has been.
+  annotation_counter_angle: Option<f64>,
   // `annotation_tool` is the tool in hand, when one is. "select" hit-tests
   // the arrows already on the layer and lets every other press fall through
   // to it; "arrow" also draws a new one on empty picture.
@@ -51,6 +54,7 @@ pub async fn layout_screenshot_preview_surface(
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = (
     &annotation_defaults,
+    &annotation_counter_angle,
     &annotation_tool,
     &selected_annotation_id,
   );
@@ -126,6 +130,7 @@ pub async fn layout_screenshot_preview_surface(
     let (annotation_layout, hover_cleared) = super::annotation::apply_annotation_layout(
       &mut manager,
       annotation_defaults,
+      annotation_counter_angle,
       annotation_tool.as_deref(),
       selection.as_ref().map(|overlay| overlay.pane_index),
       selected_annotation_id.as_deref(),

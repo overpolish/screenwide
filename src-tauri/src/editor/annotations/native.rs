@@ -13,10 +13,18 @@ use super::reveal::AnnotationReveal;
 use super::{Annotation, MAX_ANNOTATIONS};
 use crate::editor::annotations::{annotation_colour, AnnotationHead, AnnotationShape};
 
-const KIND_ARROW: u32 = 0;
+/// Which shape a retained mark is, matching C's `SCREENWIDE_ANNOTATION_*`.
+pub(crate) const KIND_ARROW: u32 = 0;
+pub(crate) const KIND_COUNTER: u32 = 1;
 
 /// One retained mark matching C's `ScreenwideAnnotation`. The native binding
 /// prepares separate draw geometry; every stored member is four bytes wide.
+///
+/// An arrow fills `p0`, `p1` and `p2` with its Bézier's start, control and
+/// end, and `width` with its stroke. A counter puts its centre in `p0`, the
+/// direction of its tail in `p1[0]` - radians clockwise from east - its
+/// number in `p1[1]`, and its disc's diameter in `width`; `p2` repeats the
+/// centre so a bounding box over the three points is still the mark's.
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct NativeAnnotation {
@@ -74,13 +82,28 @@ pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotation
   let mut native = NativeAnnotations::default();
   let annotations = annotations.iter();
   for (index, annotation) in annotations.take(MAX_ANNOTATIONS).enumerate() {
-    let AnnotationShape::Arrow {
-      start,
-      control,
-      end,
-    } = &annotation.shape;
+    let (kind, p0, p1, p2) = match &annotation.shape {
+      AnnotationShape::Arrow {
+        start,
+        control,
+        end,
+      } => (
+        KIND_ARROW,
+        [start.x as f32, start.y as f32],
+        [control.x as f32, control.y as f32],
+        [end.x as f32, end.y as f32],
+      ),
+      AnnotationShape::Counter {
+        center,
+        value,
+        angle,
+      } => {
+        let centre = [center.x as f32, center.y as f32];
+        (KIND_COUNTER, centre, [*angle as f32, *value as f32], centre)
+      }
+    };
     native.items[index] = NativeAnnotation {
-      kind: KIND_ARROW,
+      kind,
       head: match annotation.style.head {
         AnnotationHead::None => 0,
         AnnotationHead::End => 1,
@@ -89,9 +112,9 @@ pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotation
       above_camera: u32::from(annotation.above_camera),
       width: annotation.style.width.max(0.0) as f32,
       color: annotation_colour(&annotation.style.color),
-      p0: [start.x as f32, start.y as f32],
-      p1: [control.x as f32, control.y as f32],
-      p2: [end.x as f32, end.y as f32],
+      p0,
+      p1,
+      p2,
       hover: 0.0,
       animated: u32::from(annotation.animated),
       reveal: annotation.reveal,

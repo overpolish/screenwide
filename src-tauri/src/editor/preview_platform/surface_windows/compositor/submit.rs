@@ -15,10 +15,16 @@ impl Compositor {
     composition: super::super::ComposedFrame,
     camera: Option<(&SourceTexture, BakeGeometry, bool, bool)>,
     picture: Option<std::sync::Arc<super::super::background_image::BackgroundImage>>,
-    values: Constants,
-    annotations: &[PreviewArrow],
-    samples: &[PreviewSample],
+    mut values: Constants,
+    // The prepared marks, their exposure samples, and what each counter's
+    // number is: the numbers are rasterised here, at the size they are drawn.
+    prepared: &PreparedArrows,
   ) -> Result<(), String> {
+    let (numbers, annotations) =
+      super::super::counter_artwork::numbered_arrows(&self.counter_cache, device, prepared)?;
+    let samples = &prepared.samples;
+    values.annotation_options[2] = numbers.as_ref().map_or(0, |atlas| atlas.size.0);
+    values.annotation_options[3] = numbers.as_ref().map_or(0, |atlas| atlas.size.1);
     let target_resource: ID3D11Resource = target.cast().map_err(|error| error.to_string())?;
     let mut render_target: Option<ID3D11RenderTargetView> = None;
     let keyboard = composition
@@ -121,12 +127,17 @@ impl Compositor {
           )),
           Some(self.annotation_view.clone()),
           Some(self.sample_view.clone()),
+          Some(
+            numbers
+              .as_ref()
+              .map_or_else(|| self.fallback_view.clone(), |atlas| atlas.view.clone()),
+          ),
         ]),
       );
       context.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
       context.PSSetSamplers(1, Some(&[Some(self.point_sampler.clone())]));
       context.Draw(3, 0);
-      context.PSSetShaderResources(0, Some(&[None, None, None, None, None, None, None]));
+      context.PSSetShaderResources(0, Some(&[None, None, None, None, None, None, None, None]));
       context.OMSetBlendState(None::<&ID3D11BlendState>, None, u32::MAX);
       context.OMSetRenderTargets(None, None);
     }

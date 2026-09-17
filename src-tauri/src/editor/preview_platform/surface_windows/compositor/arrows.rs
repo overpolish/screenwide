@@ -81,22 +81,27 @@ pub(crate) struct PreviewArrow {
   /// the prepared geometry directly, as a still always does.
   pub(crate) sample_first: u32,
   pub(crate) sample_count: u32,
+  /// Which shape the geometry is read as: zero an arrow, one a counter.
+  pub(crate) kind: u32,
 }
 
-const _: () = assert!(std::mem::size_of::<PreviewArrow>() == 120);
+const _: () = assert!(std::mem::size_of::<PreviewArrow>() == 124);
 const _: () = assert!(std::mem::offset_of!(PreviewArrow, color) == 92);
 const _: () = assert!(std::mem::offset_of!(PreviewArrow, hover) == 108);
 const _: () = assert!(std::mem::offset_of!(PreviewArrow, sample_first) == 112);
+const _: () = assert!(std::mem::offset_of!(PreviewArrow, kind) == 120);
 
 impl PreviewArrow {
-  /// Packs geometry prepared by `annotations::geometry::prepare_arrow`.
-  pub(crate) fn new(geometry: ArrowGeometry, color: [f32; 4], hover: f32) -> Self {
+  /// Packs geometry prepared by `annotations::geometry::prepare_arrow` or
+  /// `prepare_counter`, which `kind` says which of.
+  pub(crate) fn new(geometry: ArrowGeometry, color: [f32; 4], hover: f32, kind: u32) -> Self {
     Self {
       geometry: PreviewGeometry::new(geometry),
       color,
       hover,
       sample_first: 0,
       sample_count: 0,
+      kind,
     }
   }
 }
@@ -128,6 +133,10 @@ pub(crate) const MAX_EXPOSURE_SAMPLES: usize = 48;
 #[derive(Default)]
 pub(crate) struct PreparedArrows {
   pub(crate) arrows: Vec<PreviewArrow>,
+  /// Each mark's number and the radius it is drawn at, in the order `arrows`
+  /// holds them: what the counters' numbers are rasterised from. A zero
+  /// value is a mark that is not a counter.
+  pub(crate) counters: Vec<(u32, f32)>,
   pub(crate) samples: Vec<PreviewSample>,
   /// Where the above-camera run starts, which is what the shader's two
   /// passes are bounded by.

@@ -33,16 +33,41 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** The mark panel over a chosen counter: a disc with a number in it has no
+ * head to choose and no ends to swap, so the panel offers its size, whether
+ * it arrives over its clip, and its colour. */
+export const Counter: Story = {
+  args: { tool: "mark", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      annotation: {
+        // A tail turned a quarter past east, so the Angle row shows an aim
+        // rather than its own default.
+        angle: Math.PI / 4,
+        animated: true,
+        id: "counter-1",
+        kind: "counter",
+        style: { color: "#ffcc00", head: "none", width: 56 },
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isSaving: false,
+      selection: null,
+    });
+  },
+};
+
 /** The Arrow panel: the mark the preview has in hand, and what it is drawn
  * in. It follows the chosen arrow rather than a tool, so it is the one panel
  * that comes up over another. */
 export const Arrow: Story = {
-  args: { tool: "arrow", workspace: "recording" },
+  args: { tool: "mark", workspace: "recording" },
   beforeEach: () => {
     seed({
       annotation: {
         animated: true,
         id: "arrow-1",
+        kind: "arrow",
         style: { color: "#ff383c", head: "end", width: 8 },
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
@@ -57,12 +82,13 @@ export const Arrow: Story = {
  * panel are kept after the palette, and the Custom tile is the chosen one
  * only while the mark matches no tile at all. */
 export const ArrowCustomColour: Story = {
-  args: { tool: "arrow", workspace: "recording" },
+  args: { tool: "mark", workspace: "recording" },
   beforeEach: () => {
     seed({
       annotation: {
         animated: true,
         id: "arrow-1",
+        kind: "arrow",
         style: { color: "#2ec4b6", head: "both", width: 16 },
       },
       annotationColors: ["#2ec4b6", "#8b5e34"],
@@ -77,12 +103,13 @@ export const ArrowCustomColour: Story = {
 /** Animate switched off: the mark stands on screen for the whole of its clip
  * instead of drawing itself in and out at its ends. */
 export const ArrowWithoutAnimation: Story = {
-  args: { tool: "arrow", workspace: "recording" },
+  args: { tool: "mark", workspace: "recording" },
   beforeEach: () => {
     seed({
       annotation: {
         animated: false,
         id: "arrow-1",
+        kind: "arrow",
         style: { color: "#ff383c", head: "end", width: 8 },
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
@@ -97,13 +124,14 @@ export const ArrowWithoutAnimation: Story = {
  * arrive over, so the Animate row is not offered at all and the panel is the
  * three it has always been. */
 export const ArrowInAScreenshot: Story = {
-  args: { tool: "arrow", workspace: "screenshot" },
+  args: { tool: "mark", workspace: "screenshot" },
   beforeEach: () => {
     seed(
       {
         annotation: {
           animated: true,
           id: "arrow-1",
+          kind: "arrow",
           style: { color: "#ff383c", head: "end", width: 8 },
         },
         cursorEffects: DEFAULT_CURSOR_EFFECTS,

@@ -55,6 +55,7 @@ use windows::{
 };
 
 use super::background_image::BackgroundImageCache;
+use super::counter_artwork::CounterArtworkCache;
 use super::keyboard_artwork::{KeyboardArtworkCache, KeyboardConstants};
 use crate::editor::annotations::geometry::{ArrowGeometry, ArrowTriangle};
 use crate::editor::annotations::MAX_ANNOTATIONS;
@@ -125,6 +126,7 @@ pub(super) struct Compositor {
   constants: ID3D11Buffer,
   cursor_hotspots: [[f32; 4]; 8],
   cursor_view: ID3D11ShaderResourceView,
+  counter_cache: CounterArtworkCache,
   keyboard_cache: KeyboardArtworkCache,
   keyboard_constants: ID3D11Buffer,
   /// Bound at t3 when no shortcut is on screen and at t4 when the canvas has

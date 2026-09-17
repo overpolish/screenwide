@@ -123,6 +123,7 @@ pub(super) unsafe extern "C" fn annotation_gesture_callback(
   handle: u32,
   x: f64,
   y: f64,
+  snap: u32,
   context: *mut std::ffi::c_void,
 ) {
   if let Some(callback) = (context as *mut AnnotationGestureCallback).as_mut() {
@@ -133,7 +134,16 @@ pub(super) unsafe extern "C" fn annotation_gesture_callback(
       3 => SelectionGesturePhase::Cancel,
       _ => return,
     };
-    callback(phase, pane_index, target_kind, index, handle, x, y);
+    callback(
+      phase,
+      pane_index,
+      target_kind,
+      index,
+      handle,
+      x,
+      y,
+      snap != 0,
+    );
   }
 }
 

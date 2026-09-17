@@ -1,5 +1,5 @@
 {
-  "src-tauri/src/editor/cursor_export/gpu_compositor_macos+presenter.m": 951,
+  "src-tauri/src/editor/cursor_export/gpu_compositor_macos+presenter.m": 744,
   "src-tauri/src/editor/osc_gpu_macos.m": 491,
   "src-tauri/src/editor/osc_gpu_macos_shader.h": 357,
   "src-tauri/src/editor/recording_preview_surface_macos+editor.m": 832,
@@ -14,7 +14,7 @@
   "src/features/editor/api.ts": 529,
   "src/features/editor/components/editor-panel.stories.tsx": 372,
   "src/features/editor/components/editor-preview-section.tsx": 422,
-  "src/features/editor/components/preview-viewport.tsx": 521,
+  "src/features/editor/components/preview-viewport.tsx": 518,
   "src/features/editor/components/use-recording-timeline-blade.ts": 395,
   "src/features/editor/editor-window.tsx": 733,
   "src/features/editor/recording-keyboard-timeline-edit.ts": 348,

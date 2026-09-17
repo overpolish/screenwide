@@ -5,7 +5,7 @@
 
 #import <Metal/Metal.h>
 
-#import "gpu_compositor_macos.h"
+#import "gpu_compositor_macos_presenter.h"
 
 @interface ScreenwideCursorResources : NSObject
 @property(nonatomic, strong) id<MTLTexture> texture;

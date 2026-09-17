@@ -20,13 +20,15 @@ kernel void annotate_overlay(
     constant uint &count [[buffer(13)]],
     constant uint &above_camera [[buffer(14)]],
     const device AnnotationSample *samples [[buffer(15)]],
+    const device uchar4 *numbers [[buffer(16)]],
+    constant uint2 &atlas [[buffer(17)]],
     texture2d<float, access::write> target [[texture(0)]],
     uint2 gid [[thread_position_in_grid]]) {
   if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;
   // Blended over nothing, so the result is already premultiplied - which is
   // what WindowServer composites a non-opaque layer with.
   float4 value = composite_annotations(float4(0), annotations, count, above_camera,
-      float2(gid) + 0.5, canvas, float2(1), 1.0, samples);
+      float2(gid) + 0.5, canvas, float2(1), 1.0, samples, numbers, atlas);
   target.write(value, gid);
 }
 )METAL"

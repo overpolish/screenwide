@@ -24,7 +24,7 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
           (float)(source_ms - clip->start_ms),
           (float)(clip->end_ms - clip->start_ms),
           session->source_frame_rate > 0 ? 1000.0f / session->source_frame_rate : 0,
-          mark->animated, &mark->reveal);
+          mark->animated, mark->kind, &mark->reveal);
     }
   }
   if (marks.count == 0) return;

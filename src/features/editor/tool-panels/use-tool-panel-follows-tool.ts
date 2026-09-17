@@ -36,9 +36,10 @@ const toolTrigger = (tool: EditorToolId) =>
  * retires the canvas tool, and that null must not take the panel it just
  * opened away again: a cleared tool only ever closes its own panel.
  *
- * The other exception is the Arrow panel, which belongs to the mark in hand
- * rather than to a tool: choosing an arrow shows it over whatever the tool
- * would have shown, and letting the arrow go puts the tool's own panel back.
+ * The other exception is the mark panel, which belongs to the mark in hand
+ * rather than to a tool: choosing an arrow or a counter shows it over
+ * whatever the tool would have shown, and letting it go puts the tool's own
+ * panel back.
  * It never refits the picture - neither on the way in nor on the way out -
  * because nothing about the picture changed, only what is chosen in it.
  */
@@ -67,12 +68,12 @@ export function useToolPanelFollowsTool(
       if (hasSelectedAnnotation) {
         const anchor = previewViewport()?.getBoundingClientRect();
         if (!anchor) return;
-        await openPanel("arrow", anchor, false);
+        await openPanel("mark", anchor, false);
         return;
       }
       if (tool === null) {
         const previousPanel = previous?.annotated
-          ? "arrow"
+          ? "mark"
           : previous?.tool == null
             ? undefined
             : toolPanel(previous.tool);

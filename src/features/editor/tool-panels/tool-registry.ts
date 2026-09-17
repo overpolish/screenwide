@@ -5,7 +5,7 @@ import { ToolPanelKind } from "../../popup-panel/store";
 
 /** Every tool the editor toolbar offers, under one name each. */
 export type EditorToolId =
-  "arrow" | "crop" | "cursor" | "frame" | "keyboard" | "select";
+  "arrow" | "counter" | "crop" | "cursor" | "frame" | "keyboard" | "select";
 
 type EditorTool = {
   /** The panel this tool opens, for the tools that have one. */
@@ -22,9 +22,10 @@ type EditorTool = {
  * later states its behaviour in the same place as the rest.
  */
 const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
-  // The Arrow tool owns no panel: its controls belong to the arrow in hand
+  // The drawing tools own no panel: their controls belong to the mark in hand
   // rather than to the tool, and follow the selection instead.
   arrow: { resetsView: true },
+  counter: { resetsView: true },
   crop: { panel: "crop", resetsView: true },
   cursor: { panel: "cursor", resetsView: true },
   frame: { panel: "frame", resetsView: true },

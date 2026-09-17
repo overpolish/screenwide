@@ -20,8 +20,10 @@ import {
 import { TimelineTrackHeader } from "./timeline-track-header";
 import { TimelineViewportState } from "./timeline-viewport";
 import { TimelineViewportContent } from "./timeline-viewport-content";
-import { useRecordingAnnotationDrag } from "./use-recording-annotation-drag";
-
+import {
+  previewedWhole,
+  useRecordingAnnotationDrag,
+} from "./use-recording-annotation-drag";
 
 export function RecordingAnnotationLane({
   clips,
@@ -44,18 +46,10 @@ export function RecordingAnnotationLane({
   onPreview?: (clips: RecordingAnnotationClip[] | null) => void;
   onSeek?: SeekHandler;
 }) {
-  const {
-    cancel,
-    draft,
-    draftRef,
-    dragRef,
-    finish,
-    laneRef,
-    movedRef,
-    setDraft,
-    update,
-  } = useRecordingAnnotationDrag({
+  const { beginDrag, draft, laneRef, movedRef } = useRecordingAnnotationDrag({
+    clips,
     edit,
+    onCommit: onChange,
     onPreview,
     onSeek,
     onSelect,
@@ -82,7 +76,12 @@ export function RecordingAnnotationLane({
         <TimelineViewportContent viewport={viewport}>
           {laidOut.fragments.map((fragment) => {
             const clip = fragment.item;
-            const label = `Arrow ${String(clips.findIndex((item) => item.annotation.id === clip.annotation.id) + 1)}`;
+            // A counter is called by the number it shows; an arrow has no
+            // name of its own, so it is called by its place in the lane.
+            const label =
+              clip.annotation.shape.kind === "counter"
+                ? `Counter ${String(clip.annotation.shape.value)}`
+                : `Arrow ${String(clips.findIndex((item) => item.annotation.id === clip.annotation.id) + 1)}`;
             const selected = clip.annotation.id === selectedId;
             return (
               <div
@@ -106,37 +105,14 @@ export function RecordingAnnotationLane({
                       movedRef.current = false;
                     } else onSelect(clip.annotation.id);
                   }}
-                  onLostPointerCapture={cancel}
-                  onPointerCancel={cancel}
                   onPointerDown={(event) => {
                     if (event.button !== 0) return;
                     event.stopPropagation();
-                    movedRef.current = false;
-                    dragRef.current = {
+                    beginDrag({
+                      clientX: event.clientX,
                       edge: "body",
                       id: clip.annotation.id,
-                      moved: false,
-                      original: clips,
-                      startX: event.clientX,
-                    };
-                    draftRef.current = clips;
-                    setDraft(clips);
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                  }}
-                  onPointerMove={(event) => {
-                    update(event.clientX);
-                  }}
-                  onPointerUp={(event) => {
-                    if (!dragRef.current) return;
-                    update(event.clientX);
-                    const next = draftRef.current;
-                    const moved = movedRef.current;
-                    finish();
-                    if (event.currentTarget.hasPointerCapture(event.pointerId))
-                      event.currentTarget.releasePointerCapture(
-                        event.pointerId,
-                      );
-                    if (next && moved) onChange(next);
+                    });
                   }}
                   type="button"
                 >
@@ -185,21 +161,19 @@ export function RecordingAnnotationLane({
                           }),
                         );
                       }}
-                      onLostPointerCapture={cancel}
-                      onPointerCancel={cancel}
                       onPointerDown={(event) => {
                         if (event.button !== 0) return;
                         event.stopPropagation();
                         onSelect(clip.annotation.id);
-                        dragRef.current = {
+                        beginDrag({
+                          clientX: event.clientX,
                           edge,
                           id: clip.annotation.id,
-                          moved: false,
-                          original: clips,
-                          startX: event.clientX,
-                        };
-                        draftRef.current = clips;
-                        setDraft(clips);
+                        });
+                        // The press alone shows the mark whole at the edge it
+                        // took hold of: the frame under a trim handle is the
+                        // one frame the mark is barely there, which is no use
+                        // for deciding where the handle belongs.
                         onSeek?.(
                           recordingTimelineSourceToOutput(
                             edit,
@@ -207,25 +181,8 @@ export function RecordingAnnotationLane({
                               sourceDurationMs,
                           ),
                           "start",
-                          clips,
+                          previewedWhole(clips, clip.annotation.id),
                         );
-                        event.currentTarget.setPointerCapture(event.pointerId);
-                      }}
-                      onPointerMove={(event) => {
-                        update(event.clientX);
-                      }}
-                      onPointerUp={(event) => {
-                        if (!dragRef.current) return;
-                        update(event.clientX);
-                        const next = draftRef.current;
-                        finish();
-                        if (
-                          event.currentTarget.hasPointerCapture(event.pointerId)
-                        )
-                          event.currentTarget.releasePointerCapture(
-                            event.pointerId,
-                          );
-                        if (next) onChange(next);
                       }}
                       type="button"
                     />

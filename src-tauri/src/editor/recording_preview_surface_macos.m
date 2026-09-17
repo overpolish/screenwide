@@ -8,7 +8,7 @@
 #import <WebKit/WebKit.h>
 #include <math.h>
 
-#import "cursor_export/gpu_compositor_macos.h"
+#import "cursor_export/gpu_compositor_macos_presenter.h"
 #import "osc_controls.h"
 #import "recording_preview_surface_macos_private.h"
 #import "osc_gpu_macos.h"

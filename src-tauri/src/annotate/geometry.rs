@@ -8,7 +8,7 @@
 //! pixels, and the overlay itself wants it in one display's layer pixels;
 //! both are the same kind of offset-and-scale applied to the geometry.
 
-use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
+use crate::editor::annotations::{Annotation, AnnotationPoint};
 use crate::recording::cursor::CursorSource;
 
 /// Whether the bounding box of `points` reaches the recorded rectangle.
@@ -34,12 +34,7 @@ pub(super) fn source_annotation(
   if !(source.width > 0.0 && source.height > 0.0) {
     return None;
   }
-  let AnnotationShape::Arrow {
-    start,
-    control,
-    end,
-  } = annotation.shape;
-  let points = [start, control, end];
+  let points = annotation.shape.points();
   if points
     .iter()
     .any(|point| !point.x.is_finite() || !point.y.is_finite())
@@ -60,16 +55,11 @@ pub(super) fn source_annotation(
   if !(width.is_finite() && width > 0.0) {
     return None;
   }
-  let point = |point: AnnotationPoint| AnnotationPoint {
-    x: (point.x - source.x) * horizontal,
-    y: (point.y - source.y) * vertical,
-  };
   Some(Annotation {
-    shape: AnnotationShape::Arrow {
-      start: point(start),
-      control: point(control),
-      end: point(end),
-    },
+    shape: annotation.shape.mapped(|point| AnnotationPoint {
+      x: (point.x - source.x) * horizontal,
+      y: (point.y - source.y) * vertical,
+    }),
     style: annotation.style.clone(),
     ..annotation.clone()
   })
@@ -85,21 +75,11 @@ pub(super) fn display_annotation(
   origin: (f64, f64),
   scale: f64,
 ) -> Annotation {
-  let AnnotationShape::Arrow {
-    start,
-    control,
-    end,
-  } = annotation.shape;
-  let point = |point: AnnotationPoint| AnnotationPoint {
-    x: (point.x - origin.0) * scale,
-    y: (point.y - origin.1) * scale,
-  };
   Annotation {
-    shape: AnnotationShape::Arrow {
-      start: point(start),
-      control: point(control),
-      end: point(end),
-    },
+    shape: annotation.shape.mapped(|point| AnnotationPoint {
+      x: (point.x - origin.0) * scale,
+      y: (point.y - origin.1) * scale,
+    }),
     style: annotation.style.clone(),
     ..annotation.clone()
   }

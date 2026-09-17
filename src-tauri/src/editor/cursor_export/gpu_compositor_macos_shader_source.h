@@ -6,6 +6,8 @@
 #import "gpu_compositor_macos_shader_source_types.h"
 #import "gpu_compositor_macos_shader_source_annotation_curve.h"
 #import "gpu_compositor_macos_shader_source_annotations.h"
+#import "gpu_compositor_macos_shader_source_annotation_counter.h"
+#import "gpu_compositor_macos_shader_source_annotation_composite.h"
 #import "gpu_compositor_macos_shader_source_annotation_video.h"
 #import "gpu_compositor_macos_shader_source_background.h"
 #import "gpu_compositor_macos_shader_source_composition.h"
@@ -18,13 +20,18 @@
 #import "gpu_compositor_macos_shader_source_cursor_kernels.h"
 #import "gpu_compositor_macos_shader_source_cursor_overlay_kernels.h"
 
-/// The compositor's Metal library, assembled from its parts. Screenshot
-/// annotation tools extend `..._shader_source_annotations.h`: one shape per
-/// `AnnotationUniforms.kind`, drawn by both canvas kernels.
+/// The compositor's Metal library, assembled from its parts. An annotation
+/// shape brings a source of its own - the arrow's helpers live in
+/// `..._annotations.h`, the counter's in `..._annotation_counter.h` - and
+/// `..._annotation_composite.h` is the one pass that branches over
+/// `AnnotationUniforms.kind`, drawn by both canvas kernels. A shape's source
+/// goes between the two.
 __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_TYPES
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_CURVE
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATIONS
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COUNTER
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_VIDEO
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_BACKGROUND
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_COMPOSITION

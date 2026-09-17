@@ -71,6 +71,8 @@ export function useRecordingPreviewShortcuts({
   useEditorWindowShortcuts({
     onArrowTool: hasVisiblePanes && !isPlaying ? toggleTool.arrow : undefined,
     onConfirm: isCropping ? leaveCropTool : undefined,
+    onCounterTool:
+      hasVisiblePanes && !isPlaying ? toggleTool.counter : undefined,
     onDelete: annotations.canDelete ? annotations.deleteTargeted : undefined,
     onDeselect: annotations.hasSelection
       ? annotations.clearSelection

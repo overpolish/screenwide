@@ -3,7 +3,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { Annotation, annotationDeleteTarget } from "./annotations";
+import {
+  Annotation,
+  annotationDeleteTarget,
+  renumberedCounters,
+  validAnnotations,
+} from "./annotations";
 
 const arrow = (id: string): Annotation => ({
   aboveCamera: false,
@@ -36,5 +41,77 @@ describe("annotationDeleteTarget", () => {
   it("has nothing to delete when neither names a mark", () => {
     expect(annotationDeleteTarget(annotations, null, null)).toBeNull();
     expect(annotationDeleteTarget([], "a", "b")).toBeNull();
+  });
+});
+
+const counter = (id: string, value: number): Annotation => ({
+  aboveCamera: false,
+  animated: true,
+  id,
+  shape: { angle: 0, center: { x: 20, y: 30 }, kind: "counter", value },
+  style: { color: "#ff383c", head: "none", width: 56 },
+});
+
+describe("renumberedCounters", () => {
+  it("closes the gap a deleted counter leaves", () => {
+    const renumbered = renumberedCounters([counter("a", 1), counter("c", 3)]);
+    expect(renumbered.map((mark) => mark.shape)).toEqual([
+      expect.objectContaining({ value: 1 }),
+      expect.objectContaining({ value: 2 }),
+    ]);
+  });
+
+  it("numbers by place in the list, arrows in between and all", () => {
+    const renumbered = renumberedCounters([
+      counter("a", 9),
+      arrow("b"),
+      counter("c", 9),
+    ]);
+    expect(renumbered.map((mark) => mark.shape.kind)).toEqual([
+      "counter",
+      "arrow",
+      "counter",
+    ]);
+    expect(
+      renumbered
+        .map((mark) => mark.shape)
+        .filter((shape) => shape.kind === "counter")
+        .map((shape) => shape.value),
+    ).toEqual([1, 2]);
+  });
+
+  it("hands back the very same list when nothing moved", () => {
+    const marks = [counter("a", 1), counter("b", 2)];
+    expect(renumberedCounters(marks)).toBe(marks);
+  });
+});
+
+describe("validAnnotations", () => {
+  it("reads a stored counter back whole", () => {
+    expect(validAnnotations([counter("a", 2)])).toEqual([counter("a", 2)]);
+  });
+
+  it("drops a counter the compositor could not place", () => {
+    const broken = (shape: Record<string, unknown>) => [
+      { ...counter("a", 1), shape: { kind: "counter", ...shape } },
+    ];
+    expect(
+      validAnnotations(broken({ angle: 0, center: { x: 1, y: 1 } })),
+    ).toEqual([]);
+    expect(
+      validAnnotations(
+        broken({ angle: Number.NaN, center: { x: 1, y: 1 }, value: 1 }),
+      ),
+    ).toEqual([]);
+    expect(
+      validAnnotations(broken({ angle: 0, center: { x: 1, y: 1 }, value: 0 })),
+    ).toEqual([]);
+    expect(validAnnotations(broken({ angle: 0, value: 1 }))).toEqual([]);
+  });
+
+  it("ignores a shape this build does not know", () => {
+    expect(
+      validAnnotations([{ ...counter("a", 1), shape: { kind: "blob" } }]),
+    ).toEqual([]);
   });
 });

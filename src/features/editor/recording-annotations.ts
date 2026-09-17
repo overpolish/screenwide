@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Annotation, ANNOTATION_DRAW_IN_MS } from "./annotations";
+import { Annotation, annotationDrawInMs } from "./annotations";
 import {
   recordingTimelineOutputToSource,
   recordingTimelineRetainedDuration,
@@ -16,6 +16,47 @@ export type RecordingAnnotationClip = {
   endMs: number;
   startMs: number;
   trackId: "primary" | "camera";
+};
+
+/**
+ * The clips with their counters numbered 1, 2, 3 in the order they appear on
+ * the timeline.
+ *
+ * A counter counts what the viewer sees, and on a timeline that order is
+ * time: dragging the second counter's clip in front of the first makes it the
+ * first. Two clips starting on the same frame keep the order they were drawn
+ * in, which is the order they are stored in - the earlier mark wins the lower
+ * number rather than the pair flickering between them.
+ *
+ * The numbering is derived rather than kept, so a drag, a trim, an undo and a
+ * delete all land on the same numbers without any of them knowing about
+ * counters.
+ */
+export const renumberedAnnotationClips = (
+  clips: RecordingAnnotationClip[],
+): RecordingAnnotationClip[] => {
+  const order = clips
+    .map((clip, index) => ({ clip, index }))
+    .filter(({ clip }) => clip.annotation.shape.kind === "counter")
+    .sort((a, b) => a.clip.startMs - b.clip.startMs || a.index - b.index);
+  const values = new Map(order.map(({ index }, place) => [index, place + 1]));
+  const numbered = clips.map((clip, index) => {
+    const value = values.get(index);
+    const shape = clip.annotation.shape;
+    if (
+      value === undefined ||
+      shape.kind !== "counter" ||
+      shape.value === value
+    )
+      return clip;
+    return {
+      ...clip,
+      annotation: { ...clip.annotation, shape: { ...shape, value } },
+    };
+  });
+  return numbered.every((clip, index) => clip === clips[index])
+    ? clips
+    : numbered;
 };
 
 /** Merges the annotations currently drawn by a native pane into its clips. */
@@ -62,9 +103,10 @@ export const mergeRecordingAnnotationClips = ({
 };
 
 /**
- * Creates the initial three output seconds of an annotation clip, reaching a
- * draw-in back before the playhead so an animated mark has finished drawing
- * itself where it was placed. Near the start of the recording it takes
+ * Creates the initial three output seconds of an annotation clip, reaching the
+ * mark's own arrival back before the playhead so an animated mark is whole
+ * where it was placed - a second for an arrow drawing itself, a fifth of one
+ * for a counter growing into place. Near the start of the recording it takes
  * whatever room there is and the mark is caught part drawn, which is the only
  * way a mark can be placed there at all. The clip's end is measured from the
  * playhead as before, so the reach back lengthens the clip rather than
@@ -111,7 +153,7 @@ export const recordingAnnotationClipAt = ({
     annotation,
     endMs: Math.round(Math.min(duration, endMs)),
     // The reveal runs on source time, so the reach back is source time too.
-    startMs: Math.max(0, positionMs - ANNOTATION_DRAW_IN_MS),
+    startMs: Math.max(0, positionMs - annotationDrawInMs(annotation)),
     trackId,
   };
 };

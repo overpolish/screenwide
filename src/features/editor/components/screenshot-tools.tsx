@@ -1,13 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowUpRight, Crop, MousePointer2, ScanSquare } from "lucide-react";
+import {
+  ArrowUpRight,
+  Crop,
+  ListOrdered,
+  MousePointer2,
+  ScanSquare,
+} from "lucide-react";
 import { ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
-export type ScreenshotTool = "arrow" | "canvas" | "crop" | "select" | null;
+export type ScreenshotTool =
+  "arrow" | "canvas" | "counter" | "crop" | "select" | null;
 
 type ScreenshotToolActions = {
   /** The layer a crop falls back to when nothing is selected. */
@@ -59,6 +66,12 @@ export function useScreenshotTools({
       actions.onSelectedItemChange?.(actions.newestItemId);
     actions.setTool(selected ? "arrow" : null);
   }, []);
+  const chooseCounterTool = useCallback((selected: boolean) => {
+    const actions = actionsRef.current;
+    if (actions.selectedItemId === null)
+      actions.onSelectedItemChange?.(actions.newestItemId);
+    actions.setTool(selected ? "counter" : null);
+  }, []);
   const chooseCropTool = useCallback((selected: boolean) => {
     const actions = actionsRef.current;
     if (actions.selectedItemId === null)
@@ -109,8 +122,24 @@ export function useScreenshotTools({
         >
           <ArrowUpRight />
         </ToolToggle>
+        <ToolToggle
+          isSelected={tool === "counter"}
+          label="Counter"
+          name="Drop a counter"
+          onSelectedChange={chooseCounterTool}
+          shortcut="N"
+        >
+          <ListOrdered />
+        </ToolToggle>
       </ButtonGroup>
     ),
-    [chooseArrowTool, chooseCanvasTool, chooseCropTool, chooseSelectTool, tool],
+    [
+      chooseArrowTool,
+      chooseCanvasTool,
+      chooseCounterTool,
+      chooseCropTool,
+      chooseSelectTool,
+      tool,
+    ],
   );
 }

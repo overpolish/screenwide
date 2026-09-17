@@ -4,9 +4,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ANNOTATION_COUNTER_SIZES,
   ANNOTATION_WIDTHS,
+  annotationSizes,
   annotationWidthAt,
   annotationWidthIndex,
+  DEFAULT_ANNOTATION_COUNTER_SIZE,
   DEFAULT_ANNOTATION_WIDTH,
 } from "./widths";
 
@@ -35,5 +38,30 @@ describe("the width presets", () => {
     expect(annotationWidthAt(99)).toBe(
       ANNOTATION_WIDTHS[ANNOTATION_WIDTHS.length - 1],
     );
+  });
+});
+
+describe("the counter's own sizes", () => {
+  it("runs the control over the disc sizes rather than the strokes", () => {
+    const sizes = annotationSizes("counter");
+    expect(sizes).toEqual(ANNOTATION_COUNTER_SIZES);
+    expect(annotationSizes("arrow")).toEqual(ANNOTATION_WIDTHS);
+    for (const [index, size] of sizes.entries()) {
+      expect(annotationWidthIndex(size, sizes)).toBe(index);
+      expect(annotationWidthAt(index, sizes)).toBe(size);
+    }
+  });
+
+  it("is far enough apart to be worth choosing between", () => {
+    // A disc a handful of pixels wider than the last is no choice at all, so
+    // each size is at least half again the one before it.
+    for (const [index, size] of ANNOTATION_COUNTER_SIZES.slice(1).entries())
+      expect(size).toBeGreaterThanOrEqual(
+        ANNOTATION_COUNTER_SIZES[index] * 1.5,
+      );
+  });
+
+  it("starts a fresh counter at the smallest disc", () => {
+    expect(ANNOTATION_COUNTER_SIZES[0]).toBe(DEFAULT_ANNOTATION_COUNTER_SIZE);
   });
 });

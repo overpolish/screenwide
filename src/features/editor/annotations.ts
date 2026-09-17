@@ -25,12 +25,27 @@ export type AnnotationStyle = {
 };
 
 /** A quadratic Bézier from `start` to `end`, bent by `control`. */
-type AnnotationShape = {
+type AnnotationArrow = {
   control: AnnotationPoint;
   end: AnnotationPoint;
   kind: "arrow";
   start: AnnotationPoint;
 };
+
+/**
+ * A numbered disc with a teardrop tail. `value` is the mark's place in the
+ * document's counter order, which the editor keeps contiguous, and `angle` is
+ * where the tail points, in radians clockwise from east in the source's own
+ * pixel space - so a fresh counter's zero points right.
+ */
+type AnnotationCounter = {
+  angle: number;
+  center: AnnotationPoint;
+  kind: "counter";
+  value: number;
+};
+
+type AnnotationShape = AnnotationArrow | AnnotationCounter;
 
 export type Annotation = {
   /**
@@ -62,14 +77,22 @@ const annotationHead = (value: unknown): AnnotationHead =>
   value === "none" || value === "both" ? value : "end";
 
 /**
- * How long an animated mark takes to draw itself in, in source milliseconds.
- * The twin of `REVEAL_DRAW_IN_MS` in
- * `src-tauri/src/editor/annotations/reveal.rs`, which a Rust test holds to
- * this line; the reveal may shorten the phase for a short clip but never
- * lengthens it, so a mark placed this long before the playhead is always
- * finished drawing by the time the playhead is reached.
+ * How long an animated mark takes to arrive, in source milliseconds. The
+ * twins of `REVEAL_DRAW_IN_MS` and `COUNTER_REVEAL_IN_MS` in
+ * `src-tauri/src/editor/annotations/reveal.rs` and `reveal_counter.rs`, which
+ * Rust tests hold to these lines; a reveal may shorten its phase for a short
+ * clip but never lengthens it, so a mark placed this long before the playhead
+ * is always whole by the time the playhead is reached.
  */
 export const ANNOTATION_DRAW_IN_MS = 1000;
+export const ANNOTATION_COUNTER_DRAW_IN_MS = 320;
+
+/** How long `annotation` takes to arrive: a counter grows into place far
+ * quicker than an arrow draws itself. */
+export const annotationDrawInMs = (annotation: Annotation) =>
+  annotation.shape.kind === "counter"
+    ? ANNOTATION_COUNTER_DRAW_IN_MS
+    : ANNOTATION_DRAW_IN_MS;
 
 /**
  * Which arrow a delete acts on: the one the halo is showing, and otherwise
@@ -104,24 +127,72 @@ export const validAnnotations = (value: unknown): Annotation[] => {
     const annotation = (entry ?? {}) as Partial<Annotation>;
     const shape = annotation.shape;
     const style = annotation.style;
-    if (shape?.kind !== "arrow") continue;
     if (typeof style?.color !== "string" || typeof style.width !== "number")
       continue;
-    const control = annotationPoint(shape.control);
-    const end = annotationPoint(shape.end);
-    const start = annotationPoint(shape.start);
-    if (!control || !end || !start || !Number.isFinite(style.width)) continue;
-    valid.push({
+    if (!Number.isFinite(style.width)) continue;
+    const dress = {
+      color: style.color,
+      head: annotationHead(style.head),
+      width: Math.max(0, style.width),
+    };
+    const common = {
       aboveCamera: annotation.aboveCamera === true,
       animated: annotation.animated !== false,
       id: typeof annotation.id === "string" ? annotation.id : "",
-      shape: { control, end, kind: "arrow", start },
-      style: {
-        color: style.color,
-        head: annotationHead(style.head),
-        width: Math.max(0, style.width),
-      },
-    });
+      style: dress,
+    };
+    if (shape?.kind === "arrow") {
+      const control = annotationPoint(shape.control);
+      const end = annotationPoint(shape.end);
+      const start = annotationPoint(shape.start);
+      if (!control || !end || !start) continue;
+      valid.push({ ...common, shape: { control, end, kind: "arrow", start } });
+      continue;
+    }
+    if (shape?.kind === "counter") {
+      const center = annotationPoint(shape.center);
+      if (
+        !center ||
+        !Number.isFinite(shape.angle) ||
+        !Number.isInteger(shape.value) ||
+        shape.value < 1
+      )
+        continue;
+      valid.push({
+        ...common,
+        shape: {
+          angle: shape.angle,
+          center,
+          kind: "counter",
+          value: shape.value,
+        },
+      });
+    }
   }
   return valid;
+};
+
+/**
+ * The marks with their counters numbered 1, 2, 3 in the order they were
+ * dropped, which is the order they are stored in.
+ *
+ * Numbering is derived rather than kept: deleting the second of three
+ * counters leaves the third reading 3 with no 2 in sight, which is not a
+ * count. Renumbering on the way in means a delete, an undo and a reorder all
+ * land on the same numbers without any of them knowing about counters. The
+ * list is returned unchanged when nothing moved, so an unchanged document is
+ * never rewritten.
+ */
+export const renumberedCounters = (annotations: Annotation[]): Annotation[] => {
+  let value = 0;
+  const renumbered = annotations.map((annotation) => {
+    if (annotation.shape.kind !== "counter") return annotation;
+    value += 1;
+    return annotation.shape.value === value
+      ? annotation
+      : { ...annotation, shape: { ...annotation.shape, value } };
+  });
+  return renumbered.every((mark, index) => mark === annotations[index])
+    ? annotations
+    : renumbered;
 };

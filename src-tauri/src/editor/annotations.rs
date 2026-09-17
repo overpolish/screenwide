@@ -12,6 +12,8 @@ pub(crate) use model::{
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod bend;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) mod counter;
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod edit;
 /// Draw-ready arrow geometry. The Metal compositor prepares its arrows
 /// through `geometry.h`; the D3D11 one has no C to call into, so it prepares

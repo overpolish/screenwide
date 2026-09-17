@@ -6,12 +6,14 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
 import {
+  useAnnotationAngleDefault,
   useAnnotationAnimatedDefault,
   useAnnotationDefaults,
 } from "./annotation-defaults";
 import { Annotation } from "./annotations";
 import {
   mergeRecordingAnnotationClips,
+  renumberedAnnotationClips,
   RecordingAnnotationClip,
 } from "./recording-annotations";
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
@@ -45,21 +47,30 @@ export function useRecordingAnnotations({
   sourceDurationMs: number;
   /** The annotation tool in hand, when one is. The native chrome learns it
    * from the layout; here it only decides what the keyboard can delete. */
-  tool: "arrow" | "select" | null;
+  tool: "arrow" | "counter" | "select" | null;
   trackId: RecordingVideoTrackId | null;
   onSelectTrack?: (track: RecordingVideoTrackId) => void;
 }) {
   const clips = edit.annotationClips ?? EMPTY_CLIPS;
-  const defaults = useAnnotationDefaults();
-  // A fresh arrow's dress and whether it animates both travel with the layout
+  // A fresh mark's dress and whether it animates both travel with the layout
   // the native tool draws from; animation is the mark's own property, so it
-  // rides beside the style rather than inside it.
+  // rides beside the style rather than inside it. The dress is the tool's
+  // own: a disc and a stroke are different measurements, so the size the
+  // counter tool sends is the one counters were last drawn at.
+  const defaults = useAnnotationDefaults(
+    tool === "counter" ? "counter" : "arrow",
+  );
   const animated = useAnnotationAnimatedDefault();
+  const counterAngle = useAnnotationAngleDefault();
   const [previewClips, setPreviewClips] = useState<
     RecordingAnnotationClip[] | null
   >(null);
   const nativeClips = previewClips ?? clips;
-  const commitClips = (next: RecordingAnnotationClip[]) => {
+  const commitClips = (unnumbered: RecordingAnnotationClip[]) => {
+    // Counters count what the timeline shows, so every list written here is
+    // numbered by clip time: dragging one clip in front of another renumbers
+    // the pair without the drag knowing about counters.
+    const next = renumberedAnnotationClips(unnumbered);
     if (JSON.stringify(next) !== JSON.stringify(clips))
       onEdit({ ...edit, annotationClips: next });
   };
@@ -141,6 +152,7 @@ export function useRecordingAnnotations({
     void invoke("set_recording_preview_annotations", {
       animated,
       clips: nativeClips,
+      counterAngle,
       defaults,
       paneIndex: trackId === null ? null : trackId === "primary" ? 0 : 1,
       selectedId: selection.selectedId,
@@ -150,6 +162,7 @@ export function useRecordingAnnotations({
     });
   }, [
     animated,
+    counterAngle,
     nativeClips,
     defaults,
     sessionId,

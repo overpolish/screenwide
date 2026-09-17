@@ -52,18 +52,20 @@ fn native_gesture_commits_once_and_cancel_restores_the_document() {
     .annotation_gesture(
       SelectionGesturePhase::Begin,
       0,
-      AnnotationGestureTarget::NewArrow,
+      AnnotationGestureTarget::New,
       0.1,
-      0.2
+      0.2,
+      false,
     )
     .is_none());
   let commit = manager
     .annotation_gesture(
       SelectionGesturePhase::End,
       0,
-      AnnotationGestureTarget::NewArrow,
+      AnnotationGestureTarget::New,
       0.6,
       0.7,
+      false,
     )
     .unwrap();
   assert_eq!(commit.session_id, 7);
@@ -84,9 +86,10 @@ fn native_gesture_commits_once_and_cancel_restores_the_document() {
   manager.annotation_gesture(
     SelectionGesturePhase::Begin,
     0,
-    AnnotationGestureTarget::NewArrow,
+    AnnotationGestureTarget::New,
     0.3,
     0.4,
+    false,
   );
   assert_eq!(
     manager
@@ -103,9 +106,10 @@ fn native_gesture_commits_once_and_cancel_restores_the_document() {
     .annotation_gesture(
       SelectionGesturePhase::Cancel,
       0,
-      AnnotationGestureTarget::NewArrow,
+      AnnotationGestureTarget::New,
       0.5,
-      0.6
+      0.6,
+      false,
     )
     .is_none());
   assert_eq!(
@@ -125,6 +129,7 @@ fn native_gesture_commits_once_and_cancel_restores_the_document() {
       AnnotationGestureTarget::Select { index: 0 },
       0.1,
       0.2,
+      false,
     )
     .unwrap();
   assert_eq!(selection.annotations, commit.annotations);
@@ -147,17 +152,19 @@ fn final_frame_drawing_uses_a_visible_source_instant() {
   manager.annotation_gesture(
     SelectionGesturePhase::Begin,
     0,
-    AnnotationGestureTarget::NewArrow,
+    AnnotationGestureTarget::New,
     0.1,
     0.2,
+    false,
   );
   let commit = manager
     .annotation_gesture(
       SelectionGesturePhase::End,
       0,
-      AnnotationGestureTarget::NewArrow,
+      AnnotationGestureTarget::New,
       0.6,
       0.7,
+      false,
     )
     .unwrap();
   assert_eq!(commit.source_position_ms, 9999);
@@ -167,9 +174,10 @@ fn final_frame_drawing_uses_a_visible_source_instant() {
     .annotation_gesture(
       SelectionGesturePhase::Begin,
       0,
-      AnnotationGestureTarget::NewArrow,
+      AnnotationGestureTarget::New,
       0.1,
-      0.2
+      0.2,
+      false,
     )
     .is_none());
 }
@@ -205,6 +213,7 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
       AnnotationGestureTarget::Select { index: 0 },
       0.1,
       0.1,
+      false,
     )
     .expect("one press must select a mark on another video layer");
   assert_eq!(
@@ -225,17 +234,19 @@ fn a_fresh_arrow_takes_the_remembered_animate_setting() {
   manager.annotation_gesture(
     SelectionGesturePhase::Begin,
     0,
-    AnnotationGestureTarget::NewArrow,
+    AnnotationGestureTarget::New,
     0.1,
     0.2,
+    false,
   );
   let commit = manager
     .annotation_gesture(
       SelectionGesturePhase::End,
       0,
-      AnnotationGestureTarget::NewArrow,
+      AnnotationGestureTarget::New,
       0.6,
       0.7,
+      false,
     )
     .unwrap();
   assert!(!commit.annotations[0].animated);

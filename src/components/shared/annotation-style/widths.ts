@@ -12,30 +12,54 @@
  */
 export const ANNOTATION_WIDTHS = [8, 12, 16, 24, 32, 48];
 
+/**
+ * The disc diameters a counter offers, in output pixels. Three sizes far
+ * enough apart to be worth choosing between: a handful of pixels either way
+ * is no choice at all. The twin of `COUNTER_SIZES` in
+ * `src-tauri/src/editor/annotations/counter.rs`.
+ */
+export const ANNOTATION_COUNTER_SIZES = [56, 96, 160];
+
 /** The stroke a fresh arrow is drawn with. The twin of `NEW_ARROW_WIDTH`. */
 export const DEFAULT_ANNOTATION_WIDTH = 8;
 
-/** Where `width` sits in the preset list: the nearest preset to it, so a
- * width from an older document still lands the knob somewhere sensible. */
-export const annotationWidthIndex = (width: number) => {
+/** The disc a fresh counter is drawn at: the smallest of the three. The twin
+ * of `NEW_COUNTER_WIDTH`. */
+export const DEFAULT_ANNOTATION_COUNTER_SIZE = 56;
+
+/** The sizes a mark of this kind is offered, and the one a fresh mark takes. */
+export const annotationSizes = (kind: "arrow" | "counter") =>
+  kind === "counter" ? ANNOTATION_COUNTER_SIZES : ANNOTATION_WIDTHS;
+
+export const defaultAnnotationSize = (kind: "arrow" | "counter") =>
+  kind === "counter"
+    ? DEFAULT_ANNOTATION_COUNTER_SIZE
+    : DEFAULT_ANNOTATION_WIDTH;
+
+/** Where `width` sits in `presets`: the nearest one to it, so a width from an
+ * older document still lands the knob somewhere sensible. */
+export const annotationWidthIndex = (
+  width: number,
+  presets: number[] = ANNOTATION_WIDTHS,
+) => {
   if (!Number.isFinite(width))
-    return ANNOTATION_WIDTHS.indexOf(DEFAULT_ANNOTATION_WIDTH);
+    return Math.max(presets.indexOf(DEFAULT_ANNOTATION_WIDTH), 0);
   let nearest = 0;
-  for (let index = 1; index < ANNOTATION_WIDTHS.length; index++) {
-    if (
-      Math.abs(ANNOTATION_WIDTHS[index] - width) <
-      Math.abs(ANNOTATION_WIDTHS[nearest] - width)
-    )
+  for (let index = 1; index < presets.length; index++) {
+    if (Math.abs(presets[index] - width) < Math.abs(presets[nearest] - width))
       nearest = index;
   }
   return nearest;
 };
 
 /** The preset at `index`, clamped to the list the control runs over. */
-export const annotationWidthAt = (index: number) =>
-  ANNOTATION_WIDTHS[
+export const annotationWidthAt = (
+  index: number,
+  presets: number[] = ANNOTATION_WIDTHS,
+) =>
+  presets[
     Math.min(
-      ANNOTATION_WIDTHS.length - 1,
+      presets.length - 1,
       Math.max(0, Math.round(Number.isFinite(index) ? index : 0)),
     )
   ];

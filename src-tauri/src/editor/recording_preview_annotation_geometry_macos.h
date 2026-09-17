@@ -61,16 +61,38 @@ static double annotation_prepared_head_distance(NSPoint point,
       annotation_native_point(triangle.c)) - rounding);
 }
 
-/// How far a point is from one arrow's drawn shape, in display points: its
-/// shaft, and the heads on it. Zero anywhere the arrow is actually painted,
-/// because the tolerance is measured from the stroke's edge rather than its
-/// centreline. A press on a head is a press on the arrow - it is the part of
-/// it the hand aims at. A mark half-way through drawing itself in is still
-/// picked by the whole of what it will be: the hand aims at the arrow, not at
-/// the frame of it that happens to be showing.
+/// One counter prepared in display points, from the centre, aim and diameter
+/// the chrome was given. The tail's proportion lives in `geometry.h`, so the
+/// grip and the drawn shape cannot drift apart.
+static AnnotationArrowGeometry annotation_prepared_counter(
+    NSRect image, ScreenwidePreviewAnnotation item) {
+  NSPoint center = annotation_display_point(image, item.start_x, item.start_y);
+  return annotation_prepare_counter(annotation_vector(center.x, center.y),
+                                    item.width * image.size.width,
+                                    (float)item.start_head,
+                                    annotation_reveal_whole());
+}
+
+/// A counter's one grip: the far end of its tail, in display points.
+static NSPoint annotation_counter_tail(NSRect image,
+                                       ScreenwidePreviewAnnotation item) {
+  AnnotationArrowGeometry prepared = annotation_prepared_counter(image, item);
+  return annotation_native_point(annotation_counter_tail_point(prepared));
+}
+
+/// How far a point is from one mark's drawn shape, in display points. Zero
+/// anywhere the mark is actually painted, because the tolerance is measured
+/// from the stroke's edge rather than its centreline. A press on a head is a
+/// press on the arrow - it is the part of it the hand aims at - and a press
+/// on a counter's tail is a press on the counter. A mark half-way through
+/// drawing itself in is still picked by the whole of what it will be: the
+/// hand aims at the mark, not at the frame of it that happens to be showing.
 static double annotation_shaft_distance(NSRect image,
                                         ScreenwidePreviewAnnotation item,
                                         NSPoint point) {
+  if (item.kind == ScreenwideAnnotationKindCounter)
+    return annotation_counter_distance(annotation_vector(point.x, point.y),
+                                       annotation_prepared_counter(image, item));
   NSPoint start = annotation_display_point(image, item.start_x, item.start_y);
   NSPoint middle = annotation_display_point(image, item.middle_x, item.middle_y);
   NSPoint end = annotation_display_point(image, item.end_x, item.end_y);
@@ -95,4 +117,3 @@ static double annotation_shaft_distance(NSRect image,
     best = fmin(best, annotation_prepared_head_distance(point, geometry.start_head, geometry.rounding));
   return best;
 }
-

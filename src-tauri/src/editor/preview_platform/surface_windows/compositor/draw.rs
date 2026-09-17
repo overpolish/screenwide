@@ -270,6 +270,8 @@ impl Compositor {
         generator_color_count,
         0,
       ],
+      // `submit` fills the last two: the number atlas's size is only known
+      // once it has rasterised the counters' numbers.
       annotation_options: [
         annotations.below_camera,
         annotations.arrows.len() as u32,
@@ -287,8 +289,7 @@ impl Compositor {
       camera,
       picture,
       values,
-      &annotations.arrows,
-      &annotations.samples,
+      annotations,
     )
   }
 }

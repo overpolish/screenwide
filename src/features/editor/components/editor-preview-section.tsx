@@ -34,6 +34,7 @@ import { ScreenshotTool, useScreenshotTools } from "./screenshot-tools";
 import { ScrubPreview } from "./scrub-preview";
 import { useScreenshotAnnotations } from "./use-screenshot-annotations";
 import { useScreenshotRecenter } from "./use-screenshot-recenter";
+import { useToolFollowsMark } from "./use-tool-follows-mark";
 
 /** The toolbar's own name for a tool, in the registry's vocabulary. */
 const screenshotToolId = (tool: ScreenshotTool): EditorToolId | null =>
@@ -90,10 +91,13 @@ export function ScreenshotSection({
     next: ScreenshotTool | ((current: ScreenshotTool) => ScreenshotTool),
   ) => {
     const resolved = typeof next === "function" ? next(toolRef.current) : next;
-    if (resolved !== "arrow" && resolved !== "select")
+    if (resolved !== "arrow" && resolved !== "counter" && resolved !== "select")
       annotations.clearSelection();
     setActiveTool(resolved);
   };
+  // Both drawing tools pick up either shape, so the tool follows the mark
+  // that was chosen with it: the panel and the next press never disagree.
+  useToolFollowsMark(annotations.selectedKind, tool, setTool);
   const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
   const moveSelectedLayer = (
     direction: "backward" | "forward",
@@ -189,12 +193,14 @@ export function ScreenshotSection({
   // and Escape backs out of it, and both simply put the tool down - the crop
   // itself was committed as each handle was released.
   const isCropping = tool === "crop";
-  // The arrow tool is the other tool you are "in": Escape puts it down.
-  const isAnnotating = tool === "arrow";
-  // Both tools hit-test the arrows on the layer; only the arrow tool draws a
-  // new one, and only it takes every press over the picture.
+  // A drawing tool is the other kind you are "in": Escape puts it down.
+  const isAnnotating = tool === "arrow" || tool === "counter";
+  // Every one of them hit-tests the marks on the layer; only a drawing tool
+  // makes a new one, and only it takes every press over the picture.
   const annotationTool =
-    tool === "arrow" || tool === "select" ? tool : undefined;
+    tool === "arrow" || tool === "counter" || tool === "select"
+      ? tool
+      : undefined;
   const hasSelectedAnnotation = annotations.hasSelection;
   const leaveCropTool = () => {
     setTool((current) => (current === "crop" ? null : current));
@@ -207,7 +213,9 @@ export function ScreenshotSection({
       return;
     }
     setTool((current) =>
-      current === "arrow" || current === "crop" ? null : current,
+      current === "arrow" || current === "counter" || current === "crop"
+        ? null
+        : current,
     );
   };
   // The Select panel's padding controls reach this workspace's analysis
@@ -221,6 +229,11 @@ export function ScreenshotSection({
       setTool((current) => (current === "arrow" ? null : "arrow"));
     },
     onConfirm: isCropping ? leaveCropTool : undefined,
+    // A counter is dropped on a layer, so its key takes one in hand too.
+    onCounterTool: () => {
+      if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
+      setTool((current) => (current === "counter" ? null : "counter"));
+    },
     // Backspace and Delete take away the mark the hand is pointing at first,
     // and only the layer when there is no mark under them.
     onDelete: () => {

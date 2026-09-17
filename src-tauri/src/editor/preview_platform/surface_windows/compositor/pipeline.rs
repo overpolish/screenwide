@@ -213,6 +213,7 @@ impl Compositor {
       cursor_hotspots,
       cursor_view: cursor_view
         .ok_or_else(|| "D3D11 created no native cursor atlas view".to_owned())?,
+      counter_cache: CounterArtworkCache::default(),
       keyboard_cache: KeyboardArtworkCache::default(),
       keyboard_constants: keyboard_constants
         .ok_or_else(|| "D3D11 created no keyboard constant buffer".to_owned())?,

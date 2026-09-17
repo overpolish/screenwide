@@ -9,6 +9,7 @@
 #import "gpu_compositor_macos.h"
 #import "gpu_compositor_macos_annotation_types.h"
 #import "../annotations/geometry.h"
+#import "gpu_compositor_macos_annotation_text.h"
 
 /// A draw-ready mark, distinct from the source-space document retained by the
 /// presenter. Preparing at binding also covers native placement changes.
@@ -29,21 +30,45 @@ typedef struct {
 } ScreenwideAnnotationSample;
 _Static_assert(sizeof(ScreenwideAnnotationSample) == 96, "Exposure sample ABI");
 
+/// How many exposure samples one mark needs: enough that consecutive samples
+/// are under a pixel apart, and none at all for a mark that has not moved.
+///
+/// An arrow's travel is its window sliding along its own path; a counter has
+/// no path, so all it can cover in a frame is the change in its own size -
+/// the disc's edge sweeping out as it grows.
 static inline uint32_t screenwide_annotation_sample_count(
     const ScreenwideAnnotation *mark, float sx, float sy) {
   AnnotationReveal r = mark->reveal;
-  float length = hypotf((mark->p1[0] - mark->p0[0]) * sx,
-                        (mark->p1[1] - mark->p0[1]) * sy) +
-                 hypotf((mark->p2[0] - mark->p1[0]) * sx,
-                        (mark->p2[1] - mark->p1[1]) * sy);
-  float travel = length * fmaxf(fabsf(r.low - r.previous[0]),
-                               fabsf(r.high - r.previous[1]));
-  travel += mark->width * 4.0f * fabsf(r.scale - r.previous[2]);
+  float travel = 0;
+  if (mark->kind == SCREENWIDE_ANNOTATION_COUNTER) {
+    travel = mark->width * 0.5f * ANNOTATION_COUNTER_TAIL_REACH *
+             fabsf(r.scale - r.previous[2]);
+  } else {
+    float length = hypotf((mark->p1[0] - mark->p0[0]) * sx,
+                          (mark->p1[1] - mark->p0[1]) * sy) +
+                   hypotf((mark->p2[0] - mark->p1[0]) * sx,
+                          (mark->p2[1] - mark->p1[1]) * sy);
+    travel = length * fmaxf(fabsf(r.low - r.previous[0]),
+                            fabsf(r.high - r.previous[1]));
+    travel += mark->width * 4.0f * fabsf(r.scale - r.previous[2]);
+  }
   if (travel < 1.5f && fabsf(r.opacity - r.previous[3]) < 0.01f) return 0;
   return (uint32_t)fminf(fmaxf(ceilf(travel / 0.75f) + 1, 8), 48);
 }
 
-/// Prepare complete arrow shapes along the exposure, keeping curve solves off the GPU.
+/// One mark's draw geometry for the canvas placement in `canvas`. An arrow
+/// solves its curve; a counter places its disc and tail from the same
+/// centre-and-angle the document holds.
+static inline AnnotationArrowGeometry screenwide_prepare_annotation(
+    const ScreenwideAnnotation *mark, AnnotationVector a, AnnotationVector b,
+    AnnotationVector c, AnnotationReveal reveal) {
+  if (mark->kind == SCREENWIDE_ANNOTATION_COUNTER)
+    return annotation_prepare_counter(a, mark->width, mark->p1[0], reveal);
+  return annotation_prepare_arrow(a, b, c, mark->width, mark->head, reveal);
+}
+
+/// Prepare complete shapes along the exposure, keeping curve solves off the
+/// GPU, and rasterise the counters' numbers at the size they are drawn.
 static inline void screenwide_bind_annotations(
     id<MTLComputeCommandEncoder> encoder, const ScreenwideAnnotations *annotations,
     const ScreenwideCanvas *canvas, uint32_t source_width, uint32_t source_height) {
@@ -64,6 +89,8 @@ static inline void screenwide_bind_annotations(
       newBufferWithLength:total * sizeof(ScreenwideAnnotationSample)
       options:MTLResourceStorageModeShared] : nil;
   ScreenwideAnnotationSample *samples = buffer.contents;
+  uint32_t values[SCREENWIDE_MAX_ANNOTATIONS] = {0};
+  float radii[SCREENWIDE_MAX_ANNOTATIONS] = {0};
   for (uint32_t index = 0; index < count; index++) {
     const ScreenwideAnnotation *mark = &annotations->items[index];
     ScreenwidePreparedAnnotation *draw = &prepared[index];
@@ -77,7 +104,11 @@ static inline void screenwide_bind_annotations(
         canvas->image_y + mark->p1[1] * scale_y);
     AnnotationVector c = annotation_vector(canvas->image_x + mark->p2[0] * scale_x,
         canvas->image_y + mark->p2[1] * scale_y);
-    draw->arrow = annotation_prepare_arrow(a, b, c, mark->width, mark->head, mark->reveal);
+    draw->arrow = screenwide_prepare_annotation(mark, a, b, c, mark->reveal);
+    if (mark->kind == SCREENWIDE_ANNOTATION_COUNTER) {
+      values[index] = (uint32_t)fmaxf(mark->p1[1], 0);
+      radii[index] = draw->arrow.rounding;
+    }
     if (draw->sample_count == 0) {
       draw->color[3] *= fmaxf(fminf(mark->reveal.opacity, 1), 0);
       continue;
@@ -90,9 +121,23 @@ static inline void screenwide_bind_annotations(
       r.scale = r.previous[2] + (r.scale - r.previous[2]) * t;
       r.opacity = r.previous[3] + (r.opacity - r.previous[3]) * t;
       ScreenwideAnnotationSample *sample = &samples[draw->sample_offset + tap];
-      sample->arrow = annotation_prepare_arrow(a, b, c, mark->width, mark->head, r);
+      sample->arrow = screenwide_prepare_annotation(mark, a, b, c, r);
       sample->opacity = fmaxf(fminf(r.opacity, 1), 0);
     }
+  }
+  // The numbers are type, so they are rasterised rather than approximated.
+  // Where each one landed rides in the slots an arrow fills with its heads.
+  ScreenwideAnnotationTextRect text[SCREENWIDE_MAX_ANNOTATIONS] = {0};
+  ScreenwideAnnotationTextUniforms text_uniforms = {0};
+  id<MTLBuffer> numbers = screenwide_annotation_text_atlas(
+      encoder.device, values, radii, count, text, &text_uniforms);
+  for (uint32_t index = 0; index < count; index++) {
+    // Only a counter reads these slots as a text rectangle; an arrow with a
+    // head at both ends keeps its second head's triangle in them.
+    if (annotations->items[index].kind != SCREENWIDE_ANNOTATION_COUNTER) continue;
+    prepared[index].arrow.start_head.a = annotation_vector(text[index].x, text[index].y);
+    prepared[index].arrow.start_head.b =
+        annotation_vector(text[index].width, text[index].height);
   }
   [encoder setBytes:prepared length:sizeof(prepared) atIndex:12];
   [encoder setBytes:&count length:sizeof(count) atIndex:13];
@@ -102,4 +147,11 @@ static inline void screenwide_bind_annotations(
     ScreenwideAnnotationSample empty = {0};
     [encoder setBytes:&empty length:sizeof(empty) atIndex:15];
   }
+  if (numbers) {
+    [encoder setBuffer:numbers offset:0 atIndex:16];
+  } else {
+    const uint8_t empty[4] = {0, 0, 0, 0};
+    [encoder setBytes:empty length:sizeof(empty) atIndex:16];
+  }
+  [encoder setBytes:&text_uniforms length:sizeof(text_uniforms) atIndex:17];
 }

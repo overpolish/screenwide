@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   active: null as {
     kind: "tool";
-    tool: "arrow" | "cursor" | "selection";
+    tool: "arrow" | "cursor" | "mark" | "selection";
     workspace: "recording" | "screenshot";
   } | null,
   close: vi.fn(() => Promise.resolve()),
@@ -154,7 +154,7 @@ describe("useToolPanelFollowsTool", () => {
     await follow("select", true);
 
     expect(mocks.openPanel).toHaveBeenLastCalledWith(
-      "arrow",
+      "mark",
       mocks.viewport.getBoundingClientRect(),
       false,
     );
@@ -164,7 +164,7 @@ describe("useToolPanelFollowsTool", () => {
 
   it("puts the tool's own panel back when the mark is let go", async () => {
     await follow("select", true);
-    mocks.active = { kind: "tool", tool: "arrow", workspace: "recording" };
+    mocks.active = { kind: "tool", tool: "mark", workspace: "recording" };
     await follow("select");
 
     expect(mocks.openPanel).toHaveBeenLastCalledWith(
@@ -180,7 +180,7 @@ describe("useToolPanelFollowsTool", () => {
   it("closes the mark's panel without refitting for a tool that owns none", async () => {
     mocks.resetByTool.arrow = true;
     await follow("arrow", true);
-    mocks.active = { kind: "tool", tool: "arrow", workspace: "recording" };
+    mocks.active = { kind: "tool", tool: "mark", workspace: "recording" };
     await follow("arrow");
 
     expect(mocks.close).toHaveBeenCalledOnce();

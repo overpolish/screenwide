@@ -77,13 +77,14 @@ export type ToolPanelSelection =
   | ToolPanelShortcutSelection;
 
 /**
- * What the arrow panel shows: the mark the preview has in hand, and the dress
+ * What the mark panel shows: the mark the preview has in hand, and the dress
  * it is drawn in.
  *
  * A mark is neither placed nor sized in output pixels - it is drawn, in the
  * source's own space, by the compositor - so there is nothing here of where
  * it sits: the picture itself is where it is moved, and the panel only ever
- * says what it looks like.
+ * says what it looks like. `kind` is what the panel offers controls for: an
+ * arrow has heads and a stroke, a counter a disc.
  */
 export type ToolPanelAnnotation = {
   /** Whether this mark draws itself in at the start of its clip and undraws
@@ -91,5 +92,9 @@ export type ToolPanelAnnotation = {
    * it only in the recording editor. */
   animated: boolean;
   id: string;
+  kind: "arrow" | "counter";
   style: AnnotationStyle;
+  /** A counter's aim, in radians clockwise from east. Absent on an arrow,
+   * which is aimed by its own two ends. */
+  angle?: number;
 };

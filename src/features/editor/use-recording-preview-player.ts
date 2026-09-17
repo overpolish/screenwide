@@ -85,7 +85,7 @@ export function useRecordingPreviewPlayer({
   sourceDurationMs: number;
   /** The annotation tool in hand, when one is. It reaches the native chrome
    * with the layout that carries the selection it has to agree with. */
-  annotationTool?: "arrow" | "select" | null;
+  annotationTool?: "arrow" | "counter" | "select" | null;
   onSelectionChange?: (paneIndex: number | null) => void;
   onSelectionGesture?: (event: RecordingSelectionGestureEvent) => void;
   onZoomChange?: (zoomPercent: number) => void;

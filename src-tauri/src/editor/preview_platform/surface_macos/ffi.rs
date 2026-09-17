@@ -94,6 +94,12 @@ unsafe extern "C" {
     pane_index: u32,
     overlay: *const StillOverlay,
   ) -> i32;
+  pub(super) fn screenwide_preview_surface_set_workspace_annotation_hover(
+    handle: *mut std::ffi::c_void,
+    pane_index: u32,
+    index: i32,
+    width: f32,
+  ) -> i32;
   pub(super) fn screenwide_preview_surface_redraw_workspace(handle: *mut std::ffi::c_void) -> i32;
   pub(super) fn screenwide_preview_surface_hide(handle: *mut std::ffi::c_void);
   pub(super) fn screenwide_preview_surface_destroy(handle: *mut std::ffi::c_void);
@@ -174,7 +180,7 @@ unsafe extern "C" {
   pub(super) fn screenwide_preview_surface_set_annotation_gesture_callback(
     handle: *mut std::ffi::c_void,
     callback: Option<
-      unsafe extern "C" fn(u32, u32, u32, u32, u32, f64, f64, *mut std::ffi::c_void),
+      unsafe extern "C" fn(u32, u32, u32, u32, u32, f64, f64, u32, *mut std::ffi::c_void),
     >,
     context: *mut std::ffi::c_void,
   );

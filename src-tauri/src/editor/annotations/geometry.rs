@@ -257,6 +257,16 @@ pub(crate) fn prepare_arrow(
   result
 }
 
+/// Draw-ready counter geometry, prepared the same way the Metal compositor
+/// prepares its own through `geometry.h`.
+#[path = "geometry/counter.rs"]
+mod counter;
+pub(crate) use counter::prepare_counter;
+/// The D3D11 backend measures a growing counter's exposure against its own
+/// reach; the Metal one has the same constant in `geometry.h`.
+#[cfg(target_os = "windows")]
+pub(crate) use counter::COUNTER_TAIL_REACH;
+
 /// How near a prepared arrow a point falls, which is how a press picks one.
 #[path = "geometry/distance.rs"]
 mod distance;

@@ -141,7 +141,7 @@ export const layoutRecordingPreviewSurface = ({
    * the tool and the selection it has to agree with reach the native chrome
    * together: split across two commands, whichever lands first paints the
    * layer's frame for a frame. */
-  annotationTool?: "arrow" | "select" | null;
+  annotationTool?: "arrow" | "counter" | "select" | null;
   fitWidth?: number;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
@@ -265,6 +265,7 @@ export const startScreenshotPreview = (artifactId: number, sessionId: number) =>
   invoke<null>("start_screenshot_preview", { artifactId, sessionId });
 
 export const layoutScreenshotPreviewSurface = ({
+  annotationCounterAngle,
   annotationDefaults,
   annotationTool,
   backdrop,
@@ -294,17 +295,21 @@ export const layoutScreenshotPreviewSurface = ({
   /** The dress the next fresh arrow is drawn in: whatever the editor's last
    * annotation edit settled on. Absent until it has settled on anything, and
    * the native tool falls back to the accent at its own stroke. */
+  /** Where a fresh counter's tail points, in radians clockwise from east:
+   * whatever the last counter was turned to. */
+  annotationCounterAngle?: number | null;
   annotationDefaults?: AnnotationStyle | null;
-  /** The annotation tool in hand. "select" hit-tests the arrows already on
-   * the layer and lets every other press fall through to it; "arrow" also
-   * draws a new one on empty picture. */
-  annotationTool?: "arrow" | "select";
+  /** The annotation tool in hand. "select" hit-tests the marks already on
+   * the layer and lets every other press fall through to it; "arrow" and
+   * "counter" also make a new mark on empty picture. */
+  annotationTool?: "arrow" | "counter" | "select";
   fitWidth?: number;
   selectedAnnotationId?: string | null;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
   invoke<null>("layout_screenshot_preview_surface", {
+    annotationCounterAngle: annotationCounterAngle ?? null,
     annotationDefaults: annotationDefaults ?? null,
     annotationTool: annotationTool ?? null,
     backdrop,

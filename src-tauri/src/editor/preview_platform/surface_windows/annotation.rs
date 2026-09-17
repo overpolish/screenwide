@@ -22,6 +22,7 @@ const HANDLE_HIT: f64 = 8.0;
 /// What the pointer does over the picture, from the tool React has in hand.
 const MODE_NONE: u32 = 0;
 const MODE_ARROW: u32 = 2;
+const MODE_COUNTER: u32 = 3;
 
 /// What a gesture acts on, matching `ScreenwideAnnotationTarget`.
 const TARGET_NEW: u32 = 0;
@@ -32,6 +33,7 @@ const TARGET_SELECT: u32 = 3;
 /// Which grip a press took hold of, matching `ScreenwideAnnotationHandle`.
 const HANDLE_END: u32 = 2;
 const HANDLE_BODY: u32 = 3;
+const HANDLE_TAIL: u32 = 4;
 
 /// The published arrow chrome and the drag in progress over it.
 pub(super) struct AnnotationState {
@@ -97,6 +99,20 @@ impl Drag {
       origin,
       pending: true,
       begun: false,
+    }
+  }
+
+  /// A press that is a gesture from the moment it lands: the counter tool
+  /// drops a mark where it is pressed rather than drawing one out, so a click
+  /// alone commits it.
+  fn begun(target_kind: u32, index: u32, handle: u32, origin: (f64, f64)) -> Self {
+    Self {
+      target_kind,
+      index,
+      handle,
+      origin,
+      pending: false,
+      begun: true,
     }
   }
 

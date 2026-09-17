@@ -5,7 +5,7 @@
 
 use super::*;
 use crate::editor::annotations::edit::AnnotationEdit;
-use crate::editor::annotations::gesture::AnnotationGestureTarget;
+use crate::editor::annotations::gesture::{annotation_mode, AnnotationGestureTarget, NewMarkKind};
 use crate::editor::annotations::handles::{annotation_handles, source_point};
 use crate::editor::annotations::timing::{
   active_annotations, validate_clips, AnnotationTrack, RecordingAnnotationClip,
@@ -20,10 +20,11 @@ pub(super) struct AnnotationState {
   mode: u32,
   selected: Option<String>,
   defaults: Option<AnnotationStyle>,
-  /// Whether the next arrow drawn animates, remembered from the last one the
-  /// Animate switch was set on. Animation is the mark's own property rather
-  /// than part of its dress, so it travels beside the style defaults.
+  /// Whether the next arrow animates and where the next counter's tail
+  /// points. Both are the mark's own rather than part of its dress, so they
+  /// travel beside the style defaults.
   animated: Option<bool>,
+  counter_angle: Option<f64>,
   gesture: Option<Gesture>,
 }
 struct Gesture {
@@ -66,6 +67,7 @@ pub async fn set_recording_preview_annotations(
   selected_id: Option<String>,
   defaults: Option<AnnotationStyle>,
   animated: Option<bool>,
+  counter_angle: Option<f64>,
 ) -> Result<(), String> {
   validate_clips(&clips)?;
   let mut manager = state
@@ -91,6 +93,7 @@ pub async fn set_recording_preview_annotations(
   manager.annotation.selected = selected_id;
   manager.annotation.defaults = defaults;
   manager.annotation.animated = animated;
+  manager.annotation.counter_angle = counter_angle;
   manager.publish_annotation_handles();
   if !manager.is_playing {
     if changed {
@@ -114,10 +117,10 @@ pub async fn set_recording_preview_annotations(
 }
 
 impl PreviewPlayerManager {
-  /// Takes the arrow tool in hand, or puts it down, in the native
-  /// `ScreenwideAnnotationMode` the chrome is published with: nothing (0),
-  /// hit-test the arrows already there (1), or also draw a new one on empty
-  /// picture (2). A gesture in flight keeps the mode it began under.
+  /// Takes a mark tool in hand, or puts it down, in the native
+  /// `ScreenwideAnnotationMode` the chrome is published with: nothing,
+  /// hit-test the marks already there, or also draw a new one on empty
+  /// picture. A gesture in flight keeps the mode it began under.
   pub(in crate::editor::recording_preview_player) fn set_annotation_tool(
     &mut self,
     tool: Option<&str>,
@@ -125,11 +128,7 @@ impl PreviewPlayerManager {
     if self.annotation.gesture.is_some() {
       return;
     }
-    self.annotation.mode = match tool {
-      Some("arrow") => 2,
-      Some("select") => 1,
-      _ => 0,
-    };
+    self.annotation.mode = annotation_mode(tool);
   }
 
   fn annotation_marks(&self, pane: u32) -> Vec<Annotation> {
@@ -160,6 +159,7 @@ impl PreviewPlayerManager {
     target: AnnotationGestureTarget,
     x: f64,
     y: f64,
+    snap: bool,
   ) -> Option<Commit> {
     if self.is_playing || self.annotation.mode == 0 || pane > 1 {
       return None;
@@ -216,11 +216,13 @@ impl PreviewPlayerManager {
         target,
         point,
         self.annotation.defaults.as_ref(),
+        NewMarkKind::from_mode(self.annotation.mode),
+        self.annotation.counter_angle,
       )?;
-      // Whether a mark animates is not part of its dress, so `new_arrow` has
-      // no say in it: the switch's last setting is applied to the fresh arrow
-      // here, where the recording's own timed marks are made.
-      if target == AnnotationGestureTarget::NewArrow {
+      // Whether a mark animates is not part of its dress, so the shape's own
+      // constructor has no say in it: the switch's last setting is applied to
+      // the fresh mark here, where the recording's own timed marks are made.
+      if target == AnnotationGestureTarget::New {
         if let Some(animated) = self.annotation.animated {
           if let Some(mark) = working.iter_mut().find(|m| m.id == edit.selected_id()) {
             mark.animated = animated;
@@ -239,7 +241,7 @@ impl PreviewPlayerManager {
       });
     } else {
       let gesture = self.annotation.gesture.as_mut()?;
-      gesture.edit.update(&mut gesture.working, point);
+      gesture.edit.update(&mut gesture.working, point, snap);
     }
     let gesture = self.annotation.gesture.as_ref()?;
     let mut next = gesture.before.clone();

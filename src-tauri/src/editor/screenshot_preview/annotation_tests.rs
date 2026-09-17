@@ -26,7 +26,10 @@ fn a_straight_arrow_puts_its_middle_handle_on_the_midpoint() {
     start,
     control,
     end,
-  } = arrow.shape;
+  } = arrow.shape
+  else {
+    unreachable!()
+  };
   assert_eq!(control, AnnotationPoint { x: 60.0, y: 40.0 });
   assert_eq!(curve_midpoint(start, control, end), control);
   assert_eq!(arrow.style.width, NEW_ARROW_WIDTH);
@@ -93,14 +96,6 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
   // The stroke rides separately: a headless mark is still picked, and haloed,
   // over the width it shows.
   assert!((handles[0].width - 8.0 / 800.0).abs() < 1e-12);
-}
-
-#[test]
-fn tool_names_read_back_as_modes() {
-  assert_eq!(annotation_mode(Some("arrow")), ANNOTATION_MODE_ARROW);
-  assert_eq!(annotation_mode(Some("select")), ANNOTATION_MODE_SELECT);
-  assert_eq!(annotation_mode(Some("crop")), ANNOTATION_MODE_NONE);
-  assert_eq!(annotation_mode(None), ANNOTATION_MODE_NONE);
 }
 
 #[test]

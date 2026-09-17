@@ -167,7 +167,7 @@ pub(super) fn install(
   }));
   let event_app = app.clone();
   surface.set_annotation_gesture_callback(Box::new(
-    move |phase, pane_index, target_kind, index, handle, x, y| {
+    move |phase, pane_index, target_kind, index, handle, x, y, snap| {
       let Some(target) = AnnotationGestureTarget::from_raw(target_kind, index, handle) else {
         return;
       };
@@ -176,7 +176,9 @@ pub(super) fn install(
       // selection gesture above for why that inverts the locks.
       match state.0.try_lock() {
         Ok(mut manager) => {
-          if let Some(commit) = manager.handle_annotation_gesture(phase, pane_index, target, x, y) {
+          if let Some(commit) =
+            manager.handle_annotation_gesture(phase, pane_index, target, x, y, snap)
+          {
             emit_annotation_change(&event_app, session_id, commit);
           }
         }
@@ -192,7 +194,8 @@ pub(super) fn install(
             if manager.session_id != Some(session_id) {
               return;
             }
-            if let Some(commit) = manager.handle_annotation_gesture(phase, pane_index, target, x, y)
+            if let Some(commit) =
+              manager.handle_annotation_gesture(phase, pane_index, target, x, y, snap)
             {
               emit_annotation_change(&deferred_app, session_id, commit);
             }

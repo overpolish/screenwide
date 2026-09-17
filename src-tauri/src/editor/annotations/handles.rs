@@ -22,19 +22,25 @@ pub(crate) fn normalised_point(point: AnnotationPoint, source: (u32, u32)) -> (f
   )
 }
 
-/// One arrow as the native chrome needs it: the three grips, normalised over
-/// the source image - the two tips and the point of the curve at `t = 0.5`,
-/// which is where the middle handle sits - how far each head reaches back
-/// from its tip, and the stroke's own width, both as a fraction of the
-/// image's drawn width.
+/// One mark as the native chrome needs it, normalised over the source image.
 ///
-/// The heads travel as a length rather than as a triangle because the native
-/// side already has the tips and can take the aim from them; zero means that
-/// end carries no head. The half-base is half the length, which is the
-/// shader's four-to-two proportions. `width` rides separately because a
-/// headless mark still has a stroke to pick, and picking is the drawn shape
-/// exactly. Layer identity and local index follow the nine geometry doubles,
-/// matching the C `ScreenwidePreviewAnnotation`.
+/// An arrow fills every slot: the three grips - the two tips and the point of
+/// the curve at `t = 0.5`, which is where the middle handle sits - how far
+/// each head reaches back from its tip, and the stroke's own width, both as a
+/// fraction of the image's drawn width. The heads travel as a length rather
+/// than as a triangle because the native side already has the tips and can
+/// take the aim from them; zero means that end carries no head. The half-base
+/// is half the length, which is the shader's four-to-two proportions. `width`
+/// rides separately because a headless mark still has a stroke to pick, and
+/// picking is the drawn shape exactly.
+///
+/// A counter reads the same slots differently: every point is the disc's
+/// centre, `start_head` is where its tail points in radians clockwise from
+/// east, `end_head` is zero, and `width` is the disc's diameter as a share
+/// of the drawn width. Its one grip - the tail's tip - is placed from those
+/// by the native side, which works in isotropic display points. `kind` says
+/// which reading applies. Layer identity, index and kind follow the nine
+/// geometry doubles, matching the C `ScreenwidePreviewAnnotation`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) struct NativeAnnotationHandles {
@@ -49,9 +55,16 @@ pub(crate) struct NativeAnnotationHandles {
   pub(crate) width: f64,
   pub(crate) layer_id: i32,
   pub(crate) index: u32,
+  /// Zero is an arrow, one a counter: the native `ScreenwideAnnotationKind`.
+  pub(crate) kind: u32,
+  pub(crate) padding: u32,
 }
 
-const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 80);
+const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 88);
+
+/// The native kinds, matching the shapes the compositor draws.
+pub(crate) const HANDLE_KIND_ARROW: u32 = 0;
+pub(crate) const HANDLE_KIND_COUNTER: u32 = 1;
 
 /// The stroke's width as a fraction of the image's drawn width. The stroke is
 /// in output pixels and the image is drawn `image_width` of them across, so
@@ -85,36 +98,66 @@ pub(crate) fn annotation_handles(
   annotations
     .iter()
     .enumerate()
-    .map(|(index, annotation)| {
-      let head = annotation.style.head;
-      let AnnotationShape::Arrow {
+    .map(|(index, annotation)| match &annotation.shape {
+      AnnotationShape::Arrow {
         start,
         control,
         end,
-      } = &annotation.shape;
-      let (start_x, start_y) = normalised_point(*start, source);
-      let (middle_x, middle_y) = normalised_point(curve_midpoint(*start, *control, *end), source);
-      let (end_x, end_y) = normalised_point(*end, source);
-      NativeAnnotationHandles {
-        layer_id: -1,
-        index: index as u32,
-        start_x,
-        start_y,
-        middle_x,
-        middle_y,
-        end_x,
-        end_y,
-        start_head: head_reach(
-          &annotation.style,
-          head == crate::editor::annotations::AnnotationHead::Both,
-          image_width,
-        ),
-        end_head: head_reach(
-          &annotation.style,
-          head != crate::editor::annotations::AnnotationHead::None,
-          image_width,
-        ),
-        width: stroke_width(&annotation.style, image_width),
+      } => {
+        let head = annotation.style.head;
+        let (start_x, start_y) = normalised_point(*start, source);
+        let (middle_x, middle_y) = normalised_point(curve_midpoint(*start, *control, *end), source);
+        let (end_x, end_y) = normalised_point(*end, source);
+        NativeAnnotationHandles {
+          layer_id: -1,
+          index: index as u32,
+          kind: HANDLE_KIND_ARROW,
+          padding: 0,
+          start_x,
+          start_y,
+          middle_x,
+          middle_y,
+          end_x,
+          end_y,
+          start_head: head_reach(
+            &annotation.style,
+            head == crate::editor::annotations::AnnotationHead::Both,
+            image_width,
+          ),
+          end_head: head_reach(
+            &annotation.style,
+            head != crate::editor::annotations::AnnotationHead::None,
+            image_width,
+          ),
+          width: stroke_width(&annotation.style, image_width),
+        }
+      }
+      AnnotationShape::Counter {
+        center,
+        angle,
+        value: _,
+      } => {
+        // The tail's tip is not sent as a point. A normalised point is a
+        // share of the image in each axis, and those shares differ on a
+        // picture that is not square, so a circular offset does not survive
+        // the trip. The angle does, and the native side - which works in
+        // isotropic display points - places the tip from it and the disc.
+        let (start_x, start_y) = normalised_point(*center, source);
+        NativeAnnotationHandles {
+          layer_id: -1,
+          index: index as u32,
+          kind: HANDLE_KIND_COUNTER,
+          padding: 0,
+          start_x,
+          start_y,
+          middle_x: start_x,
+          middle_y: start_y,
+          end_x: start_x,
+          end_y: start_y,
+          start_head: *angle,
+          end_head: 0.0,
+          width: stroke_width(&annotation.style, image_width),
+        }
       }
     })
     .collect()

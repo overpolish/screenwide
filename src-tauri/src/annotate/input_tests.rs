@@ -33,7 +33,9 @@ fn a_drag_completes_one_arrow_between_its_ends() {
   let (completed, at) = step(&mut drawing, PHASE_UP, lifted, point(50.0, 80.0), &style).unwrap();
 
   assert!(drawing.is_none());
-  let AnnotationShape::Arrow { start, end, .. } = completed.shape;
+  let AnnotationShape::Arrow { start, end, .. } = completed.shape else {
+    unreachable!()
+  };
   assert_eq!((start.x, start.y), (10.0, 20.0));
   assert_eq!((end.x, end.y), (50.0, 80.0));
   assert_eq!(completed.style.width, 8.0);

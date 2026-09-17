@@ -35,6 +35,7 @@ export function useEditorWindowShortcuts({
   onArrowTool,
   onConfirm,
   onCopy,
+  onCounterTool,
   onCutTimeline,
   onDelete,
   onDeselect,
@@ -246,6 +247,7 @@ export function useEditorWindowShortcuts({
 
       const toolKey = editorToolKeyAction(event.code, {
         onArrowTool,
+        onCounterTool,
         onResizeCanvas,
         onSelectTool,
         onToggleBladeTool,
@@ -272,6 +274,7 @@ export function useEditorWindowShortcuts({
   }, [
     onArrowTool,
     onConfirm,
+    onCounterTool,
     onCopy,
     onCutTimeline,
     onDelete,

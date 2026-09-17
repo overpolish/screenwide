@@ -58,3 +58,31 @@ fn shaft_distance_follows_the_bend() {
   assert!(distance < 1.0, "{distance}");
   assert!(shaft_distance([100.0, 0.0], [0.0, 0.0], [100.0, 100.0], [200.0, 0.0]) > 40.0);
 }
+
+#[test]
+fn a_counter_reads_its_disc_and_rounded_tail_back() {
+  let counter = prepare_counter([100.0, 100.0], 40.0, 0.0, AnnotationReveal::WHOLE);
+  assert_eq!(counter.a, [100.0, 100.0]);
+  assert_eq!(counter.rounding, 20.0);
+  assert_eq!(counter.width, 40.0);
+  // The tip's own circle is a sixth of the disc, and its far edge is where
+  // the tail's reach ends: 1.85 radii east of the centre.
+  assert!((counter.low - 20.0 * 0.17).abs() < 1e-3, "{counter:?}");
+  let reach = counter.b[0] - 100.0 + counter.low;
+  assert!((reach - 20.0 * 1.85).abs() < 1e-3, "{counter:?}");
+  assert!((counter.b[1] - 100.0).abs() < 1e-3);
+}
+
+#[test]
+fn a_counter_arriving_is_prepared_smaller() {
+  let reveal = AnnotationReveal {
+    scale: 0.5,
+    ..AnnotationReveal::WHOLE
+  };
+  let arriving = prepare_counter([100.0, 100.0], 40.0, 0.0, reveal);
+  assert_eq!(arriving.rounding, 10.0);
+  // The tail and its tip shrink with the disc rather than staying out at
+  // full reach.
+  assert!((arriving.low - 10.0 * 0.17).abs() < 1e-3);
+  assert!((arriving.b[0] + arriving.low - (100.0 + 10.0 * 1.85)).abs() < 1e-3);
+}

@@ -11,12 +11,22 @@
 /// retained workspace scene, so it is a fixed array rather than a pointer.
 #define SCREENWIDE_MAX_ANNOTATIONS 32
 
+/// The shapes the compositor draws, matching Rust's `NativeAnnotation`.
+#define SCREENWIDE_ANNOTATION_ARROW 0u
+#define SCREENWIDE_ANNOTATION_COUNTER 1u
+
 /// One retained mark, matching Rust's `NativeAnnotation`. Points stay in
 /// source pixels; the binding step prepares draw geometry for the current
-/// canvas placement. Every member is
-/// four bytes wide, so the struct packs the same way everywhere.
+/// canvas placement. Every member is four bytes wide, so the struct packs the
+/// same way everywhere.
+///
+/// An arrow fills `p0`, `p1` and `p2` with its Bézier's start, control and
+/// end, and `width` with its stroke. A counter puts its centre in `p0`, the
+/// direction of its tail in `p1[0]` - radians clockwise from east - its
+/// number in `p1[1]`, and its disc's diameter in `width`; `p2` repeats the
+/// centre.
 typedef struct {
-  /// Zero is an arrow. The remaining shapes arrive with their tools.
+  /// `SCREENWIDE_ANNOTATION_ARROW` or `SCREENWIDE_ANNOTATION_COUNTER`.
   uint32_t kind;
   /// 0 none, 1 the end, 2 both ends.
   uint32_t head;

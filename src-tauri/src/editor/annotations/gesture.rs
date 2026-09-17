@@ -8,16 +8,20 @@
 //! carries a second copy of the model.
 
 use super::bend::{arrow_bend, clamp_bend, control_for_bend, control_through_midpoint, ArrowBend};
+use super::counter::counter_tail_angle;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
 
-/// Which grip of an arrow the pointer took hold of.
+/// Which grip of a mark the pointer took hold of. An arrow has three grips
+/// and its shaft; a counter has one - the tail - and its disc.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AnnotationHandle {
   Start,
   Middle,
   End,
-  /// The shaft. Dragging it carries the whole arrow along.
+  /// The shaft, or a counter's disc. Dragging it carries the whole mark.
   Body,
+  /// A counter's tail tip. Dragging it turns the tail around the disc.
+  Tail,
 }
 
 impl AnnotationHandle {
@@ -27,37 +31,77 @@ impl AnnotationHandle {
       1 => Some(Self::Middle),
       2 => Some(Self::End),
       3 => Some(Self::Body),
+      4 => Some(Self::Tail),
       _ => None,
     }
   }
 }
 
-/// What the gesture acts on: an arrow being drawn, or one already there.
+/// What the gesture acts on: a mark being drawn, or one already there.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AnnotationGestureTarget {
-  NewArrow,
+  /// Empty picture under a drawing tool. Which shape it makes is the tool's
+  /// business rather than the native view's, so it rides in beside the
+  /// target as [`NewMarkKind`].
+  New,
   Existing {
     index: usize,
     handle: AnnotationHandle,
   },
-  /// A press that landed on no arrow at all, with only the select tool in
-  /// hand. It lets the chosen arrow go and then belongs to the layer.
+  /// A press that landed on no mark at all, with only the select tool in
+  /// hand. It lets the chosen mark go and then belongs to the layer.
   None,
-  /// A press on the shaft of the arrow at `index`. It only chooses that
-  /// arrow: the move it may turn into arrives as its own `Existing` gesture
-  /// once the press has travelled past the native slop.
-  Select {
-    index: usize,
-  },
+  /// A press on the body of the mark at `index`. It only chooses that mark:
+  /// the move it may turn into arrives as its own `Existing` gesture once
+  /// the press has travelled past the native slop.
+  Select { index: usize },
+}
+
+/// Which shape a drawing tool's press makes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum NewMarkKind {
+  Arrow,
+  Counter,
+}
+
+/// What the pointer does over the picture while a tool is in hand. The select
+/// tool hit-tests the marks already there and lets every other press fall
+/// through to the layer; a drawing tool also makes a new mark on empty
+/// picture. The values are the native `ScreenwideAnnotationMode`.
+pub(crate) const MODE_NONE: u32 = 0;
+pub(crate) const MODE_SELECT: u32 = 1;
+pub(crate) const MODE_ARROW: u32 = 2;
+pub(crate) const MODE_COUNTER: u32 = 3;
+
+/// The tool name React sends, as a mode. Anything else puts the chrome away.
+pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
+  match tool {
+    Some("arrow") => MODE_ARROW,
+    Some("counter") => MODE_COUNTER,
+    Some("select") => MODE_SELECT,
+    _ => MODE_NONE,
+  }
+}
+
+impl NewMarkKind {
+  /// The shape the tool in hand draws. Only the drawing modes make a mark at
+  /// all, so anything else answers the arrow it would have drawn.
+  pub(crate) fn from_mode(mode: u32) -> Self {
+    if mode == MODE_COUNTER {
+      Self::Counter
+    } else {
+      Self::Arrow
+    }
+  }
 }
 
 impl AnnotationGestureTarget {
-  /// Reads the target the native interaction view reported: a new arrow (0),
-  /// a grip of the arrow at `index` (1), no arrow at all (2), or a press that
-  /// only chooses the arrow at `index` (3).
+  /// Reads the target the native interaction view reported: a new mark (0),
+  /// a grip of the mark at `index` (1), no mark at all (2), or a press that
+  /// only chooses the mark at `index` (3).
   pub(crate) fn from_raw(kind: u32, index: u32, handle: u32) -> Option<Self> {
     match kind {
-      0 => Some(Self::NewArrow),
+      0 => Some(Self::New),
       1 => Some(Self::Existing {
         index: index as usize,
         handle: AnnotationHandle::from_raw(handle)?,
@@ -89,20 +133,24 @@ pub(crate) struct AnnotationDragOrigin {
 
 impl AnnotationDragOrigin {
   pub(crate) fn new(point: AnnotationPoint, shape: &AnnotationShape) -> Self {
-    let AnnotationShape::Arrow {
-      start,
-      control,
-      end,
-    } = shape;
     Self {
-      bend: arrow_bend(*start, *control, *end).clamped(),
+      // A counter has no chord to be bent against; the default bend is never
+      // read for one.
+      bend: match shape {
+        AnnotationShape::Arrow {
+          start,
+          control,
+          end,
+        } => arrow_bend(*start, *control, *end).clamped(),
+        AnnotationShape::Counter { .. } => ArrowBend::STRAIGHT,
+      },
       point,
       shape: shape.clone(),
     }
   }
 }
 
-/// Names a fresh arrow. Collisions only have to be impossible inside one
+/// Names a fresh mark. Collisions only have to be impossible inside one
 /// document, and a monotonic counter beside the clock gives that without
 /// reaching for a dependency.
 pub(crate) fn next_annotation_id() -> String {
@@ -112,22 +160,61 @@ pub(crate) fn next_annotation_id() -> String {
   let millis = std::time::SystemTime::now()
     .duration_since(std::time::UNIX_EPOCH)
     .map_or(0, |elapsed| elapsed.as_millis() as u64);
-  format!("arrow-{millis:x}-{sequence:x}")
+  format!("mark-{millis:x}-{sequence:x}")
 }
 
-/// Move one grip of an arrow to `point`, in source pixels. `origin` is where
-/// the drag began, which is what the shaft measures its travel against.
+/// Move one grip of a mark to `point`, in source pixels. `origin` is where
+/// the drag began, which is what a whole-mark move measures its travel
+/// against, and `snap` is whether Shift was held - which holds a counter's
+/// tail to the quarter turns.
 pub(crate) fn drag_handle(
   annotation: &mut Annotation,
   handle: AnnotationHandle,
   point: AnnotationPoint,
   origin: &AnnotationDragOrigin,
+  snap: bool,
 ) {
-  let AnnotationShape::Arrow {
-    start,
-    control,
-    end,
-  } = &mut annotation.shape;
+  match &mut annotation.shape {
+    AnnotationShape::Arrow {
+      start,
+      control,
+      end,
+    } => drag_arrow_handle(start, control, end, handle, point, origin),
+    AnnotationShape::Counter { center, angle, .. } => {
+      match handle {
+        // The tail turns around the disc: the drag sets its direction and
+        // nothing else, so a counter cannot be stretched out of shape.
+        AnnotationHandle::Tail => *angle = counter_tail_angle(*center, point, *angle, snap),
+        // Everything else carries the whole counter, the disc included: a
+        // grip an arrow has and a counter does not is a move rather than
+        // nothing at all.
+        _ => {
+          let AnnotationShape::Counter { center: from, .. } = origin.shape else {
+            return;
+          };
+          *center = AnnotationPoint {
+            x: from.x + point.x - origin.point.x,
+            y: from.y + point.y - origin.point.y,
+          };
+        }
+      }
+      return;
+    }
+  }
+  // Every edit leaves an arrow that can be drawn: the middle handle can be
+  // dragged past a tip, and a document written before the limit existed is
+  // repaired the first time its arrow is touched.
+  clamp_bend(annotation);
+}
+
+fn drag_arrow_handle(
+  start: &mut AnnotationPoint,
+  control: &mut AnnotationPoint,
+  end: &mut AnnotationPoint,
+  handle: AnnotationHandle,
+  point: AnnotationPoint,
+  origin: &AnnotationDragOrigin,
+) {
   match handle {
     // A tip takes the bend with it: the curve is re-hung from the chord the
     // drag leaves behind, holding the share of it the arrow was bent by, so
@@ -142,13 +229,17 @@ pub(crate) fn drag_handle(
     }
     AnnotationHandle::Middle => *control = control_through_midpoint(*start, point, *end),
     // The shaft carries the arrow whole: every point travels by the same
-    // delta, so the curve keeps its bend and its heads keep their aim.
-    AnnotationHandle::Body => {
+    // delta, so the curve keeps its bend and its heads keep their aim. A
+    // counter's tail grip means nothing to an arrow and moves it likewise.
+    AnnotationHandle::Body | AnnotationHandle::Tail => {
       let AnnotationShape::Arrow {
         start: from_start,
         control: from_control,
         end: from_end,
-      } = origin.shape;
+      } = origin.shape
+      else {
+        return;
+      };
       let delta_x = point.x - origin.point.x;
       let delta_y = point.y - origin.point.y;
       let moved = |point: AnnotationPoint| AnnotationPoint {
@@ -160,8 +251,4 @@ pub(crate) fn drag_handle(
       *end = moved(from_end);
     }
   }
-  // Every edit leaves an arrow that can be drawn: the middle handle can be
-  // dragged past a tip, and a document written before the limit existed is
-  // repaired the first time its arrow is touched.
-  clamp_bend(annotation);
 }

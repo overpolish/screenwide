@@ -54,6 +54,7 @@ let sessionSequence = 0;
  * every settings change is a single GPU pass with no pixels crossing IPC.
  */
 export function useScreenshotPreviewSurface({
+  annotationCounterAngle,
   annotationDefaults,
   annotationTool,
   artifactId,
@@ -81,9 +82,11 @@ export function useScreenshotPreviewSurface({
   /** The dress the next fresh arrow is drawn in, when the editor has settled
    * on one. It rides along with the layout so the native tool can draw a new
    * arrow in it without a round trip of its own. */
+  /** Where a fresh counter's tail points, in radians clockwise from east. */
+  annotationCounterAngle?: number | null;
   annotationDefaults?: AnnotationStyle | null;
   /** The annotation tool in hand, when one is. */
-  annotationTool?: "arrow" | "select";
+  annotationTool?: "arrow" | "counter" | "select";
   interactionOutput?: ScreenshotWorkspaceOutputSettings;
   /**
    * Temporarily hands input back to the webview without giving up the native
@@ -139,6 +142,8 @@ export function useScreenshotPreviewSurface({
   annotationToolRef.current = annotationTool;
   const annotationDefaultsRef = useRef(annotationDefaults);
   annotationDefaultsRef.current = annotationDefaults;
+  const annotationAngleRef = useRef(annotationCounterAngle);
+  annotationAngleRef.current = annotationCounterAngle;
   const selectedAnnotationIdRef = useRef(selectedAnnotationId);
   selectedAnnotationIdRef.current = selectedAnnotationId;
   const selectionRef = useRef(selection);
@@ -283,6 +288,7 @@ export function useScreenshotPreviewSurface({
           // dedupe on the session makes the first layout of every session
           // reach the surface.
           const nextLayout = JSON.stringify({
+            annotationCounterAngle: annotationAngleRef.current,
             annotationDefaults: annotationDefaultsRef.current,
             annotationTool: annotationToolRef.current,
             backdrop,
@@ -309,6 +315,7 @@ export function useScreenshotPreviewSurface({
           if (nextLayout !== lastLayout) {
             lastLayout = nextLayout;
             pendingLayout = {
+              annotationCounterAngle: annotationAngleRef.current,
               annotationDefaults: annotationDefaultsRef.current,
               annotationTool: annotationToolRef.current,
               backdrop,
@@ -354,6 +361,7 @@ export function useScreenshotPreviewSurface({
   useEffect(() => {
     measureRef.current();
   }, [
+    annotationCounterAngle,
     annotationDefaults,
     annotationTool,
     outputKey,

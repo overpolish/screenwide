@@ -50,6 +50,8 @@ kernel void workspace_layer(
     const device AnnotationUniforms *annotations [[buffer(12)]],
     constant uint &annotation_count [[buffer(13)]],
     const device AnnotationSample *annotation_samples [[buffer(15)]],
+    const device uchar4 *annotation_numbers [[buffer(16)]],
+    constant uint2 &annotation_atlas [[buffer(17)]],
     texture2d_array<float, access::read> cursor_images [[texture(1)]],
     texture2d<float, access::sample> background_picture [[texture(2)]],
     uint2 gid [[thread_position_in_grid]]) {
@@ -101,7 +103,8 @@ kernel void workspace_layer(
       max(annotation_pixel_steps.x, annotation_pixel_steps.y);
   rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                canvas_point, u, float2(source_dimensions),
-                               annotation_pixel_scale, annotation_samples);
+                               annotation_pixel_scale, annotation_samples,
+                               annotation_numbers, annotation_atlas);
   float2 camera_point = canvas_point - float2(overlay.camera_frame_x,
                                                 overlay.camera_frame_y);
   float2 camera_size = float2(overlay.camera_frame_width,
@@ -136,13 +139,15 @@ kernel void workspace_layer(
     // camera go back over it exactly as the cursor does.
     rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                  canvas_point, u, float2(source_dimensions),
-                                 annotation_pixel_scale, annotation_samples);
+                                 annotation_pixel_scale, annotation_samples,
+                               annotation_numbers, annotation_atlas);
   }
   rgba = composite_keyboard(rgba, keyboard_pixels, keyboard, canvas_point,
                             canvas_dimensions);
   rgba = composite_annotations(rgba, annotations, annotation_count, 1u,
                                canvas_point, u, float2(source_dimensions),
-                               annotation_pixel_scale, annotation_samples);
+                               annotation_pixel_scale, annotation_samples,
+                               annotation_numbers, annotation_atlas);
   if (u.foreground_only == 0) rgba.rgb = output_dither(rgba.rgb, global_point);
   rgba.rgb *= canvas_coverage;
   rgba.a = u.foreground_only != 0 || u.transparent_background != 0

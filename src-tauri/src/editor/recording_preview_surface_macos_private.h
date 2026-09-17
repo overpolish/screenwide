@@ -9,7 +9,7 @@
 #import <QuartzCore/CAMetalLayer.h>
 #include <stdint.h>
 
-#import "cursor_export/gpu_compositor_macos.h"
+#import "cursor_export/gpu_compositor_macos_presenter.h"
 #import "osc_gpu_macos.h"
 #import "recording_preview_annotation_macos.h"
 #import "recording_preview_audio_ribbon_macos.h"

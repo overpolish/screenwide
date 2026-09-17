@@ -33,7 +33,7 @@ cbuffer Canvas : register(b0) {
   uint4 background_options; // has background image, generator, palette size
   // Marks below the camera are sorted ahead of those above it, so `x` is both
   // the below-camera count and where the above-camera run starts.
-  uint4 annotation_options; // below-camera count, total count
+  uint4 annotation_options; // below-camera count, total count, number atlas size
 };
 Texture2D source_image : register(t0);
 Texture2DArray native_cursor_images : register(t1);
@@ -476,11 +476,13 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
   float annotation_feather = max(motion.z, 1e-4) * 0.5;
   if (annotation_options.y > 0u)
     result = composite_annotations(
-      result, pixel, 0u, annotation_options.x, annotation_feather);
+      result, pixel, 0u, annotation_options.x, annotation_feather,
+      annotation_options.zw);
   if (camera_effects.w != 0.0) result = camera_layer(result, pixel);
   if (annotation_options.y > annotation_options.x)
     result = composite_annotations(
-      result, pixel, annotation_options.x, annotation_options.y, annotation_feather);
+      result, pixel, annotation_options.x, annotation_options.y,
+      annotation_feather, annotation_options.zw);
   result = composite_keyboard(result, pixel, output_source.xy);
   if (cursor_options.w == 0) {
     result.rgb = saturate(result.rgb + hash(pixel, 0x9e3779b9) / 255.0);

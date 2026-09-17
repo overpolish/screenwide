@@ -3,7 +3,10 @@
 
 import { useRef, useState } from "react";
 
-import { useAnnotationDefaults } from "../annotation-defaults";
+import {
+  useAnnotationAngleDefault,
+  useAnnotationDefaults,
+} from "../annotation-defaults";
 import { PreviewZoomRequest } from "../preview-zoom-state";
 import {
   applyScreenshotCropGesture,
@@ -29,7 +32,10 @@ import {
 
 import { useRegisterPreviewFit } from "./preview-fit-context";
 import { PreviewPaneFit } from "./preview-transform";
-import { normalizedScreenshotSelection } from "./screenshot-selection";
+import {
+  normalizedScreenshotSelection,
+  screenshotSelectionTargets,
+} from "./screenshot-selection";
 
 type PreviewViewportProps = {
   alt: string;
@@ -37,10 +43,10 @@ type PreviewViewportProps = {
   items: { height: number; id: number; width: number }[];
   naturalHeight: number;
   naturalWidth: number;
-  /** The annotation tool in hand. "select" hit-tests the arrows already on
-   * the layer; "arrow" also draws a new one on empty picture, and the layer's
-   * own chrome stands down for as long as it is held. */
-  annotationTool?: "arrow" | "select";
+  /** The annotation tool in hand. "select" hit-tests the marks already on
+   * the layer; "arrow" and "counter" also make a new one on empty picture,
+   * and the layer's own chrome stands down for as long as one is held. */
+  annotationTool?: "arrow" | "counter" | "select";
   isEditing?: boolean;
   /** Suspends native input, so the DOM over the viewport stays clickable. */
   isExportOpen?: boolean;
@@ -122,8 +128,13 @@ export function PreviewViewport({
     snapshot: ScreenshotWorkspaceOutputSettings;
   } | null>(null);
   const editGesture = useEditorEditGesture();
-  // A fresh arrow's dress travels with the layout the native tool draws from.
-  const annotationDefaults = useAnnotationDefaults();
+  // A fresh mark's dress travels with the layout the native tool draws from,
+  // and it is the tool's own: a counter's disc and an arrow's stroke are
+  // different measurements of different things.
+  const annotationDefaults = useAnnotationDefaults(
+    annotationTool === "counter" ? "counter" : "arrow",
+  );
+  const annotationCounterAngle = useAnnotationAngleDefault();
   const [canvasResizeDraft, setCanvasResizeDraft] =
     useState<ScreenshotWorkspaceOutputSettings | null>(null);
   const workspaceOutput =
@@ -425,7 +436,7 @@ export function PreviewViewport({
     if (JSON.stringify(held.annotations) !== JSON.stringify(annotations))
       onOutputChange?.({ ...held, annotations }, itemOutput.id);
   };
-  const isDrawingArrows = annotationTool === "arrow";
+  const isDrawingArrows = annotationTool != null && annotationTool !== "select";
   const selectionOverlay =
     isResizingCanvas && workspaceOutput
       ? {
@@ -451,28 +462,14 @@ export function PreviewViewport({
         : null;
   const selectionTargets =
     (isSelecting || isEditing) && workspaceOutput
-      ? workspaceOutput.items.flatMap((itemOutput, paneIndex) => {
-          const item = items.find(
-            (candidate) => candidate.id === itemOutput.id,
-          );
-          if (!item) return [];
-          const layout = screenshotLayout(item, itemOutput.output);
-          return [
-            {
-              cropMode: isEditing,
-              paneIndex,
-              radiusPercent: itemOutput.output.radiusPercent,
-              ...normalizedScreenshotSelection(
-                layout,
-                output,
-                isEditing ? "crop" : "select",
-              ),
-            },
-          ];
+      ? screenshotSelectionTargets(items, workspaceOutput, {
+          ...output,
+          cropMode: isEditing,
         })
       : null;
   const { fitDuringResize, fitPreview, setFitBasis } =
     useScreenshotPreviewSurface({
+      annotationCounterAngle,
       annotationDefaults,
       annotationTool,
       artifactId,

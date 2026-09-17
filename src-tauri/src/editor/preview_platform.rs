@@ -113,12 +113,14 @@ pub(crate) enum SelectionGestureOperation {
   CropResize = 6,
 }
 
-/// One pointer sample of the arrow tool: the phase, the pane, whether the
-/// gesture draws a new arrow (0) or edits an existing one (1), that arrow's
-/// index and grip, and the point in the layer's image-normalised space.
+/// One pointer sample of a mark tool: the phase, the pane, whether the
+/// gesture makes a new mark (0) or edits an existing one (1), that mark's
+/// index and grip, the point in the layer's image-normalised space, and
+/// whether Shift was held - which is what snaps a counter's tail to the
+/// quarter turns.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) type AnnotationGestureCallback =
-  Box<dyn FnMut(SelectionGesturePhase, u32, u32, u32, u32, f64, f64) + Send + 'static>;
+  Box<dyn FnMut(SelectionGesturePhase, u32, u32, u32, u32, f64, f64, bool) + Send + 'static>;
 
 /// The hover halo's progress: the arrow the pointer rests on (or -1), how far
 /// through the pulse it is, and how wide the layer's picture is drawn on
