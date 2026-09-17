@@ -35,6 +35,39 @@ pub(super) fn present(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), 
   Ok(())
 }
 
+/// Hands hosts that were only showing annotations back to drawing, without
+/// taking them down: their surfaces keep drawing throughout, so the
+/// annotations never leave the screen. The reverse of [`show_only`].
+pub(super) fn resume(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), String> {
+  if owns_hosts(&hosts) {
+    resume_on_owning_thread(app, &hosts)?;
+  } else {
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    let handle = app.clone();
+    app
+      .run_on_main_thread(move || {
+        let _ = sender.send(resume_on_owning_thread(&handle, &hosts));
+      })
+      .map_err(|error| error.to_string())?;
+    receiver.recv().map_err(|error| error.to_string())??;
+  }
+  crate::annotate::toolbar::present(app);
+  Ok(())
+}
+
+fn resume_on_owning_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<(), String> {
+  for host in hosts {
+    native_overlay::set_click_through(host, false);
+    crate::windows::set_host_pointer_passthrough(host, false).map_err(|error| error.to_string())?;
+    if let Err(error) = crate::windows::raise_annotate_host(host) {
+      eprintln!("An annotate host could not be raised: {error}");
+    }
+  }
+  native_overlay::install_input(app);
+  native_overlay::redraw();
+  Ok(())
+}
+
 fn present_on_owning_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<(), String> {
   for (index, host) in hosts.iter().enumerate() {
     native_overlay::attach(host, index as u32)?;

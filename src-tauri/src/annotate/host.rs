@@ -18,9 +18,7 @@ use crate::{capture_overlays, windows::WindowLabel};
 
 #[path = "host_planning.rs"]
 mod planning;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(super) use planning::HostPlan;
-pub(super) use planning::{build, plan};
+pub(super) use planning::{build, plan, HostPlan};
 
 /// Whether a label names one of the overlay's hosts. The peers are numbered
 /// after the anchor, and the number is what tells a host from the toolbar,
@@ -117,6 +115,52 @@ fn present_on_main_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<()
   // The anchor takes the foreground through the cursor lease, which is what
   // gives the overlay the key window and puts the user's application back
   // when it is released. The peers must not take it off the anchor again.
+  crate::osc::cursor::macos::present_window(anchor).map_err(|error| error.to_string())?;
+  for peer in peers {
+    super::native_overlay::order_front(peer);
+  }
+  super::native_overlay::install_input(app);
+  super::native_overlay::redraw();
+  Ok(())
+}
+
+/// Hands hosts that were only showing annotations back to drawing. The reverse
+/// of [`show_only`]: nothing is taken down, so the annotations never leave the
+/// screen. Called off the thread that services the event loop, like [`present`].
+pub(super) fn resume(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), String> {
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  {
+    let _ = (app, hosts);
+    Ok(())
+  }
+  #[cfg(target_os = "windows")]
+  {
+    platform::resume(app, hosts)
+  }
+  #[cfg(target_os = "macos")]
+  {
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    let handle = app.clone();
+    app
+      .run_on_main_thread(move || {
+        let _ = sender.send(resume_on_main_thread(&handle, &hosts));
+      })
+      .map_err(|error| error.to_string())?;
+    receiver.recv().map_err(|error| error.to_string())??;
+    super::toolbar::present(app);
+    Ok(())
+  }
+}
+
+#[cfg(target_os = "macos")]
+fn resume_on_main_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<(), String> {
+  let Some((anchor, peers)) = hosts.split_first() else {
+    return Err("No monitor is available for Annotate".to_owned());
+  };
+  for host in hosts {
+    super::native_overlay::set_click_through(host, false);
+    super::cursor::claim(host);
+  }
   crate::osc::cursor::macos::present_window(anchor).map_err(|error| error.to_string())?;
   for peer in peers {
     super::native_overlay::order_front(peer);
