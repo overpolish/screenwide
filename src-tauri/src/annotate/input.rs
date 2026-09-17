@@ -16,23 +16,44 @@ use crate::editor::annotations::model::new_arrow;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationStyle};
 
 /// Virtual key codes, which AppKit reports by physical position.
-const KEY_A: u16 = 0;
-const KEY_Z: u16 = 6;
-const KEY_BACKSPACE: u16 = 51;
-const KEY_FORWARD_DELETE: u16 = 117;
+#[cfg(target_os = "macos")]
+mod key_codes {
+  pub(super) const KEY_A: u16 = 0;
+  pub(super) const KEY_Z: u16 = 6;
+  pub(super) const KEY_BACKSPACE: u16 = 51;
+  pub(super) const KEY_FORWARD_DELETE: u16 = 117;
+}
+
+/// Windows virtual key codes, which name the character rather than the
+/// position it sits at.
+#[cfg(target_os = "windows")]
+mod key_codes {
+  pub(super) const KEY_A: u16 = 0x41;
+  pub(super) const KEY_Z: u16 = 0x5A;
+  pub(super) const KEY_BACKSPACE: u16 = 0x08;
+  pub(super) const KEY_FORWARD_DELETE: u16 = 0x2E;
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use key_codes::{KEY_A, KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z};
 
 /// The tool each unmodified letter picks up, the twin of the toolbar's own
 /// hints. A shape added to the overlay takes its letter here.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 const TOOL_KEYS: &[(u16, super::settings::AnnotateShape)] =
   &[(KEY_A, super::settings::AnnotateShape::Arrow)];
 
-/// The modifier bits `native_overlay_macos.h` sends.
-const MODIFIER_COMMAND: u32 = 1;
-const MODIFIER_SHIFT: u32 = 2;
+/// The modifier bits the native overlay sends. Windows reports Ctrl as
+/// `MODIFIER_COMMAND`: undo is the same gesture under a different name.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(super) const MODIFIER_COMMAND: u32 = 1;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(super) const MODIFIER_SHIFT: u32 = 2;
 
 /// Pointer phases as the native overlay reports them.
-const PHASE_DOWN: u32 = 0;
-const PHASE_DRAG: u32 = 1;
+pub(super) const PHASE_DOWN: u32 = 0;
+pub(super) const PHASE_DRAG: u32 = 1;
+pub(super) const PHASE_UP: u32 = 2;
 
 /// The stroke in hand: when and where it started, and where the pointer is
 /// now. The start time is what the annotation is timed from, so a clip covers the
@@ -138,6 +159,7 @@ pub(super) fn pointer(phase: u32, x: f64, y: f64) {
 /// A key press. Reports whether the overlay acted on it, which is what tells
 /// the native side to redraw. Escape and the activation shortcut arrive
 /// through their own global registrations and are never seen here.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) fn key(app: &tauri::AppHandle, key_code: u16, modifiers: u32) -> bool {
   match key_code {
     // Undo takes the last annotation off the screen. While a recording runs its

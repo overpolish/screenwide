@@ -241,6 +241,9 @@ pub async fn set_region_selector_opacity(
       opacity,
       crate::settings::current(window.app_handle()).record_screenwide_windows,
     );
+    // The shutter is one of our own captures: the windows whose exclusion
+    // depends on that, rather than on the preference, follow it here.
+    super::mark_capturing(super::Capture::Still, opacity <= 0.0);
     // The shutter only excludes the borrowed Region overlay. Every other
     // Screenwide window continues to follow the user's capture preference.
     super::sync_capture_affinity(window.app_handle(), affinity.other_windows)

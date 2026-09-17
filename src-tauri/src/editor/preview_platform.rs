@@ -76,6 +76,8 @@ mod surface;
 mod surface;
 
 #[cfg(target_os = "windows")]
+pub(crate) use surface::arrows;
+#[cfg(target_os = "windows")]
 pub(crate) use surface::ComposedFrame;
 pub(crate) use surface::RecordingPreviewSurface;
 #[cfg(target_os = "macos")]

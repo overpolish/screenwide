@@ -19,20 +19,24 @@ pub(crate) mod commands;
 mod cursor;
 mod geometry;
 mod host;
-#[cfg(any(target_os = "macos", test))]
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 mod input;
 pub(crate) mod live_clips;
 #[cfg(target_os = "macos")]
 #[path = "annotate/native_overlay_macos.rs"]
+mod native_overlay;
+#[cfg(target_os = "windows")]
+#[path = "annotate/native_overlay_windows.rs"]
 mod native_overlay;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod screenshot;
 mod screenshot_mode;
 mod session;
 pub(crate) mod settings;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod toolbar;
 
+pub(crate) use host::is_host_label;
 pub(crate) use live_clips::has_annotations;
 pub use session::AnnotateState;
 
@@ -112,7 +116,7 @@ pub fn dismiss(app: &AppHandle) {
 pub fn clear(app: &AppHandle) {
   if is_active(app) {
     live_clips::clear();
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     native_overlay::redraw();
   } else {
     take_down(app);
@@ -150,6 +154,17 @@ pub(crate) fn screenshot_annotations(
   }
 }
 
+/// The annotations a still covered, drawn into its pixels. The clipboard has
+/// no layers, so a shot that is copied rather than opened carries them there
+/// instead of alongside.
+#[cfg(target_os = "windows")]
+pub(crate) fn bake_annotations(
+  image: &crate::screenshots::CapturedImage,
+  annotations: &[crate::editor::annotations::Annotation],
+) -> Result<crate::screenshots::CapturedImage, String> {
+  native_overlay::bake(image, annotations)
+}
+
 /// Opens the overlay. Called off the thread that services the event loop: the
 /// windows, their Metal surfaces and the cursor lease are all put in place
 /// through it.
@@ -185,7 +200,7 @@ fn start_hosts(app: &AppHandle, generation: u64) -> Result<(), String> {
   }
   // The toolbar belongs to the anchor display, whose host is the window made
   // key; it is built here so every window is in place before any is seen.
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   match plans.first() {
     Some(anchor) => {
       toolbar::build(app, anchor)?;
@@ -195,7 +210,7 @@ fn start_hosts(app: &AppHandle, generation: u64) -> Result<(), String> {
   // A newer session may have started while the windows were being built. It
   // owns the overlay now, and these windows are not part of it.
   if !app.state::<AnnotateState>().install(generation) {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     toolbar::close(app);
     for window in hosts {
       let _ = window.close();

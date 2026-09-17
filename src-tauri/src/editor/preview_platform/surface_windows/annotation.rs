@@ -197,7 +197,7 @@ impl RecordingPreviewSurface {
 /// Turning a layer's marks into what the compositor draws this frame.
 #[path = "annotation/prepare.rs"]
 mod prepare;
-pub(crate) use prepare::prepared_arrows;
+pub(crate) use prepare::{placed_arrows, prepared_arrows};
 
 /// Resolving the picture a mark is drawn in, and picking the grip or shaft a
 /// press lands on.

@@ -5,33 +5,8 @@ use super::*;
 
 impl Gpu {
   pub(crate) fn new() -> Result<Arc<Self>, String> {
-    let mut device = None;
-    let mut context = None;
-    unsafe {
-      D3D11CreateDevice(
-        None,
-        D3D_DRIVER_TYPE_HARDWARE,
-        HMODULE::default(),
-        D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-        Some(&[D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0]),
-        D3D11_SDK_VERSION,
-        Some(&mut device),
-        None,
-        Some(&mut context),
-      )
-    }
-    .map_err(|error| format!("The Windows region OSC GPU could not be opened: {error}"))?;
-    let device = device.ok_or_else(|| "D3D11 returned no region OSC device".to_owned())?;
-    let context = context.ok_or_else(|| "D3D11 returned no region OSC context".to_owned())?;
-    let multithread: ID3D10Multithread = device.cast().map_err(|error| error.to_string())?;
-    let _ = unsafe { multithread.SetMultithreadProtected(true) };
-    let dxgi: IDXGIDevice = device.cast().map_err(|error| error.to_string())?;
-    let adapter: IDXGIAdapter = unsafe { dxgi.GetAdapter() }.map_err(|error| error.to_string())?;
-    let factory: IDXGIFactory2 =
-      unsafe { adapter.GetParent() }.map_err(|error| error.to_string())?;
-    let composition: IDCompositionDevice = unsafe { DCompositionCreateDevice(&dxgi) }
-      .map_err(|error| format!("DirectComposition could not use the region OSC GPU: {error}"))?;
-
+    let shared = overlay_surface::Device::new()?;
+    let device = shared.device();
     let mut vertex_shader = None;
     let mut pixel_shader = None;
     let mut layout = None;
@@ -62,8 +37,8 @@ impl Gpu {
     .map_err(|error| error.to_string())?;
 
     // Metal's normal pipeline: straight source-over on colour and alpha.
-    let blend = blend_state(&device, D3D11_BLEND_SRC_ALPHA)?;
-    let opaque_blend = blend_state(&device, D3D11_BLEND_ONE)?;
+    let blend = blend_state(device, D3D11_BLEND_SRC_ALPHA)?;
+    let opaque_blend = blend_state(device, D3D11_BLEND_ONE)?;
     // Metal's default is no face culling. Several shared OSC primitives are
     // deliberately emitted in either winding (notably line quads), so D3D's
     // default back-face culling silently removed rulers and probes.
@@ -80,20 +55,17 @@ impl Gpu {
       )
     }
     .map_err(|error| error.to_string())?;
-    let linear_sampler = sampler(&device, D3D11_FILTER_MIN_MAG_MIP_LINEAR)?;
-    let point_sampler = sampler(&device, D3D11_FILTER_MIN_MAG_MIP_POINT)?;
+    let linear_sampler = sampler(device, D3D11_FILTER_MIN_MAG_MIP_LINEAR)?;
+    let point_sampler = sampler(device, D3D11_FILTER_MIN_MAG_MIP_POINT)?;
     // No SRV slot may ever be null; t0-t4 fall back to one transparent texel.
-    let placeholder = upload_rgba(&device, &[0_u8; 4], 1, 1)?;
-    let icons = upload_icons(&device).unwrap_or_else(|error| {
+    let placeholder = upload_rgba(device, &[0_u8; 4], 1, 1)?;
+    let icons = upload_icons(device).unwrap_or_else(|error| {
       eprintln!("The Windows region OSC could not upload the icon atlas: {error}");
       placeholder.clone()
     });
 
     Ok(Arc::new(Self {
-      device,
-      context,
-      factory,
-      composition,
+      shared,
       vertex_shader: vertex_shader
         .ok_or_else(|| "D3D11 created no region OSC vertex shader".to_owned())?,
       pixel_shader: pixel_shader

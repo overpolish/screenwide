@@ -7,8 +7,10 @@ static CAPTURE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[cfg(target_os = "windows")]
 fn prepare_windows(app: &AppHandle, restore_affinity: bool) -> tauri::Result<()> {
+  crate::windows::mark_capturing(crate::windows::Capture::Still, true);
   let result = crate::windows::sync_capture_affinity(app, false);
   if result.is_err() {
+    crate::windows::mark_capturing(crate::windows::Capture::Still, false);
     let _ = crate::windows::sync_capture_affinity(app, restore_affinity);
   }
   result
@@ -66,7 +68,10 @@ pub(crate) async fn capture_monitor_screenshot(
   // Put the affinity back before the result is looked at, so a failed capture
   // cannot leave the windows excluded from the user's recordings.
   #[cfg(target_os = "windows")]
-  let affinity_restore = crate::windows::sync_capture_affinity(&app, restore_affinity);
+  let affinity_restore = {
+    crate::windows::mark_capturing(crate::windows::Capture::Still, false);
+    crate::windows::sync_capture_affinity(&app, restore_affinity)
+  };
   #[cfg(target_os = "windows")]
   affinity_restore.map_err(|error| error.to_string())?;
   screenshot?

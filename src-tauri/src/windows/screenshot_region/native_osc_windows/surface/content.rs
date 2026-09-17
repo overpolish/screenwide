@@ -48,7 +48,7 @@ impl Surface {
     }
     // The caller only lends the buffer for this call, so it is copied into a
     // texture before returning.
-    match upload_rgba(&self.gpu.device, rgba, width, height) {
+    match upload_rgba(self.gpu.device(), rgba, width, height) {
       Ok(view) => Some(Texture {
         view,
         size: (width, height),

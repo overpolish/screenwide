@@ -179,7 +179,7 @@ pub fn set_annotate_settings(
 /// Remembers where the toolbar was dropped. It goes through the ordinary
 /// write so the change event fires: the toolbar and the Settings page are one
 /// state, and a drag is an edit like any other.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) fn store_toolbar_position(
   app: &AppHandle,
   position: ToolbarPosition,
@@ -193,7 +193,7 @@ pub(super) fn store_toolbar_position(
 
 /// The keyboard picking a tool up. Goes through the ordinary write for the
 /// same reason a drag does.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(super) fn store_default_shape(app: &AppHandle, shape: AnnotateShape) -> Result<(), String> {
   let settings = AnnotateSettings {
     default_shape: shape,

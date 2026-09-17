@@ -79,7 +79,7 @@ pub(super) fn source_annotation(
 /// corner in desktop points, and `scale` its backing scale. Only the geometry
 /// scales - the stroke width is already in pixels, as the editor's is, so a
 /// preset drawn live has the weight the same preset has on a picture.
-#[cfg(target_os = "macos")]
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 pub(super) fn display_annotation(
   annotation: &Annotation,
   origin: (f64, f64),

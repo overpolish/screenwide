@@ -56,6 +56,14 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
     if !state(&app).is_current(generation) {
       return;
     }
+    // Capture exclusion is a compositor state change, and a countdown is
+    // normally long enough for DWM to present it. Without one the first
+    // frames could still carry a window that is meant to be absent - most
+    // visibly a live annotation, which the recording also receives as clips.
+    #[cfg(target_os = "windows")]
+    if countdown_seconds == 0 {
+      std::thread::sleep(std::time::Duration::from_millis(75));
+    }
 
     let (handles, first_frame) = match begin_capture(&app, &options) {
       Ok(started) => started,

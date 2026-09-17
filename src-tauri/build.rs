@@ -231,6 +231,10 @@ fn compile_windows_preview_shaders() {
     "src/editor/preview_platform/surface_windows/shaders/audio_ribbon.hlsl",
     "preview_audio_ribbon",
   );
+  compile_shader(
+    "src/annotate/shaders/annotate_overlay.hlsl",
+    "annotate_overlay",
+  );
   compile_shader("src/osc/gpu/windows/shaders/osc.hlsl", "osc_gpu");
   compile_shader(
     "src/recording/platform_windows/shaders/desktop_compositor.hlsl",

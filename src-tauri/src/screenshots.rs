@@ -62,7 +62,8 @@ pub use output::compose_screenshot;
 #[cfg(target_os = "windows")]
 pub(crate) use output::output_dimensions;
 pub(crate) use output::parse_hex_colour;
-pub use output::CropPreviewRect;
+#[cfg(test)]
+pub(crate) use output::CropPreviewRect;
 pub use output::ScreenshotOutputSettings;
 pub(crate) use placement::output_placement;
 #[cfg(target_os = "macos")]

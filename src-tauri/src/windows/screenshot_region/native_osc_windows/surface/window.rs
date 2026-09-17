@@ -21,64 +21,25 @@ pub(super) fn light_mode() -> bool {
   status == ERROR_SUCCESS && value != 0
 }
 
-/// Creates a window on the thread that owns the host HWND: Win32 queues a
-/// window's messages on its creating thread, so a surface window created on a
-/// worker thread would never see a mouse message.
+/// The region's own dispatch: the anchor child and the desktop peers are
+/// built the same way, so one call covers both.
 pub(crate) fn create_on_owning_thread(
   window: &tauri::WebviewWindow,
   host: HWND,
   peer: Option<(Rect, bool)>,
 ) -> Result<HWND, String> {
-  struct HostHandle(HWND);
-  unsafe impl Send for HostHandle {}
-  struct Created(Result<HWND, String>);
-  unsafe impl Send for Created {}
-
-  let build = move |host: HWND| match peer {
+  overlay_surface::create_on_owning_thread(window, host, move |host| match peer {
     None => create_overlay(host),
     Some((bounds, capturable)) => create_peer(host, bounds, capturable),
-  };
-  if unsafe { GetWindowThreadProcessId(host, None) } == unsafe { GetCurrentThreadId() } {
-    return build(host);
-  }
-  let handle = HostHandle(host);
-  let (sender, receiver) = std::sync::mpsc::sync_channel(1);
-  window
-    .run_on_main_thread(move || {
-      let handle = handle;
-      let _ = sender.send(Created(build(handle.0)));
-    })
-    .map_err(|error| format!("The Windows region OSC window could not be dispatched: {error}"))?;
-  receiver
-    .recv()
-    .map_err(|_| "The Windows region OSC window was never created".to_owned())?
-    .0
+  })
 }
 
 pub(super) fn create_overlay(parent: HWND) -> Result<HWND, String> {
-  let instance = unsafe { GetModuleHandleW(None) }.map_err(|error| error.to_string())?;
-  let atom = *OVERLAY_CLASS.get_or_init(|| register_class(instance.0, w!("ScreenwideRegionOsc")));
+  let atom = *OVERLAY_CLASS.get_or_init(|| register_class(w!("ScreenwideRegionOsc")));
   if atom == 0 {
     return Err("The Windows region OSC window class could not be registered".to_owned());
   }
-  let hwnd = unsafe {
-    CreateWindowExW(
-      WS_EX_NOACTIVATE | WS_EX_NOREDIRECTIONBITMAP,
-      w!("ScreenwideRegionOsc"),
-      PCWSTR::null(),
-      WS_CHILD | WS_CLIPSIBLINGS,
-      0,
-      0,
-      1,
-      1,
-      Some(parent),
-      Some(HMENU::default()),
-      Some(HINSTANCE(instance.0)),
-      None,
-    )
-  }
-  .map_err(|error| format!("The Windows region OSC overlay could not be created: {error}"))?;
-  Ok(hwnd)
+  overlay_surface::create_child(parent, w!("ScreenwideRegionOsc"))
 }
 
 /// The peer window: `NSWindowStyleMaskNonactivatingPanel` becomes
@@ -86,7 +47,7 @@ pub(super) fn create_overlay(parent: HWND) -> Result<HWND, String> {
 /// `WDA_EXCLUDEFROMCAPTURE` unless the user records Screenwide's own windows.
 pub(super) fn create_peer(owner: HWND, bounds: Rect, capturable: bool) -> Result<HWND, String> {
   let instance = unsafe { GetModuleHandleW(None) }.map_err(|error| error.to_string())?;
-  let atom = *PEER_CLASS.get_or_init(|| register_class(instance.0, w!("ScreenwideRegionOscPeer")));
+  let atom = *PEER_CLASS.get_or_init(|| register_class(w!("ScreenwideRegionOscPeer")));
   if atom == 0 {
     return Err("The Windows region OSC peer class could not be registered".to_owned());
   }
@@ -136,39 +97,8 @@ pub(crate) fn set_pointer_passthrough(hwnd: HWND, is_root: bool, passthrough: bo
   (unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) }) == next
 }
 
-pub(super) fn disable_transitions(hwnd: HWND) -> Result<(), String> {
-  let disabled = windows::core::BOOL(1);
-  unsafe {
-    DwmSetWindowAttribute(
-      hwnd,
-      DWMWA_TRANSITIONS_FORCEDISABLED,
-      (&raw const disabled).cast(),
-      std::mem::size_of::<windows::core::BOOL>() as u32,
-    )
-  }
-  .map_err(|error| error.to_string())
-}
-
-pub(crate) fn set_capture_affinity(hwnd: HWND, capturable: bool) -> Result<(), String> {
-  let affinity = if capturable {
-    WDA_NONE
-  } else {
-    WDA_EXCLUDEFROMCAPTURE
-  };
-  unsafe { SetWindowDisplayAffinity(hwnd, affinity) }.map_err(|error| error.to_string())
-}
-
-pub(super) fn register_class(instance: *mut c_void, name: PCWSTR) -> u16 {
-  unsafe {
-    RegisterClassW(&WNDCLASSW {
-      // Double clicks reach the controller as the modifier bit the region
-      // gesture uses to expand to the full monitor.
-      style: CS_DBLCLKS,
-      lpfnWndProc: Some(input::window_proc),
-      hInstance: HINSTANCE(instance),
-      hCursor: LoadCursorW(None, IDC_ARROW).unwrap_or_default(),
-      lpszClassName: name,
-      ..Default::default()
-    })
-  }
+/// The region's classes: double clicks reach the controller as the modifier
+/// bit the region gesture uses to expand to the full monitor.
+fn register_class(name: PCWSTR) -> u16 {
+  overlay_surface::register_class(name, Some(input::window_proc), CS_DBLCLKS)
 }

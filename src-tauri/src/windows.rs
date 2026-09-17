@@ -43,6 +43,18 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, Window
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 mod boot;
+mod capture_affinity;
+#[cfg(target_os = "windows")]
+pub(crate) use capture_affinity::apply_capture_policy;
+pub(crate) use capture_affinity::exclude_from_capture;
+#[cfg(target_os = "windows")]
+pub(crate) use capture_affinity::is_capturing;
+#[cfg(target_os = "windows")]
+pub(crate) use capture_affinity::set_window_capture_affinity;
+#[cfg(target_os = "windows")]
+pub use capture_affinity::sync_capture_affinity;
+#[cfg(target_os = "windows")]
+pub(crate) use capture_affinity::{mark_capturing, Capture};
 pub(crate) mod color_panel;
 mod dismissal;
 pub(crate) mod dock;
@@ -53,6 +65,8 @@ mod geometry;
 mod lifecycle;
 pub(crate) mod monitor_capture;
 pub(crate) mod options;
+#[cfg(target_os = "windows")]
+pub(crate) mod overlay_surface;
 #[cfg(target_os = "macos")]
 mod panel_presentation_macos;
 pub(crate) mod panel_space;
@@ -92,76 +106,30 @@ pub use region::{
   hide_region_selector, is_region_selector_visible, set_region_selector_passthrough,
 };
 
-#[cfg(target_os = "windows")]
-const fn window_capturable(record_screenwide_windows: bool, preserve_ruler: bool) -> bool {
-  record_screenwide_windows || preserve_ruler
-}
-
-#[cfg(target_os = "windows")]
-pub fn sync_capture_affinity(
-  app: &AppHandle,
-  record_screenwide_windows: bool,
-) -> tauri::Result<()> {
-  for window in app.webview_windows().values() {
-    if platform::is_visible(window)? {
-      // Quick Screenshot temporarily preserves Ruler in the captured pixels.
-      // Region's pre-shutter exclusion pass must not overwrite the anchor
-      // host's affinity: its additional-display peers are native windows and
-      // would otherwise remain capturable while only the anchor vanished.
-      let preserve_ruler =
-        window.label() == WindowLabel::Ruler.as_str() && crate::ruler::is_screenshot_mode();
-      platform::set_capture_affinity(
-        window,
-        window_capturable(record_screenwide_windows, preserve_ruler),
-      )?;
-    }
-  }
-  Ok(())
-}
-
-#[cfg(all(test, target_os = "windows"))]
-mod capture_affinity_tests {
-  #[test]
-  fn quick_screenshot_preserves_the_ruler_anchor_during_global_exclusion() {
-    assert!(super::window_capturable(false, true));
-    assert!(!super::window_capturable(false, false));
-    assert!(super::window_capturable(true, false));
-  }
-}
-
-/// Keeps one window out of every capture, whatever the persistent "record
-/// Screenwide's windows" preference says. A recording's macOS content filter
-/// is fixed when it starts, so a window opened later excludes itself.
-pub(crate) fn exclude_from_capture(window: &WebviewWindow) -> tauri::Result<()> {
-  #[cfg(target_os = "windows")]
-  return platform::set_capture_affinity(window, false);
-
-  #[cfg(target_os = "macos")]
-  return platform::exclude_from_capture(window);
-
-  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-  {
-    let _ = window;
-    Ok(())
-  }
-}
-
-/// Overrides capture affinity for one overlay host. Native desktop peers need
-/// their own matching update because they are separate top-level windows.
-#[cfg(target_os = "windows")]
-pub(crate) fn set_window_capture_affinity(
-  window: &WebviewWindow,
-  capturable: bool,
-) -> tauri::Result<()> {
-  platform::set_capture_affinity(window, capturable)
-}
-
 /// Applies the same non-animated, always-on-top policy as the predefined
 /// overlays to capture tools whose transparent host windows are created only
 /// when the tool starts (Ruler, OCR, and their auxiliary windows).
 #[cfg(target_os = "windows")]
 pub(crate) fn initialize_capture_overlay(window: &WebviewWindow) -> tauri::Result<()> {
   platform::initialize_capture_overlay(window)
+}
+
+/// Puts one overlay host back in the always-on-top band. Needed after any
+/// call that rebuilds a window's extended style from tao's own flags, which
+/// drops the band without tao noticing.
+#[cfg(target_os = "windows")]
+pub(crate) fn raise_annotate_host(window: &WebviewWindow) -> tauri::Result<()> {
+  platform::raise_without_activation(window)
+}
+
+/// Lets presses through one overlay host to whatever is underneath, keeping
+/// every style it holds - including its z-order band.
+#[cfg(target_os = "windows")]
+pub(crate) fn set_host_pointer_passthrough(
+  window: &WebviewWindow,
+  passthrough: bool,
+) -> tauri::Result<()> {
+  platform::set_pointer_passthrough(window, passthrough)
 }
 
 /// Removes a disposable overlay's pixels before Windows runs its native hide

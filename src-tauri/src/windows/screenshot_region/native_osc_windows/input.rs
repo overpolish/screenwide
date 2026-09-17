@@ -68,7 +68,7 @@ pub(crate) const RULER_SETTLE_TIMER: usize = 3;
 pub(crate) const RULER_COPIED_TIMER: usize = 4;
 /// The tolerance notice's 900ms expiry.
 pub(crate) const RULER_TOLERANCE_TIMER: usize = 5;
-pub(crate) const OVERLAY_KEY_EVENT: u32 = WM_APP + 0x341;
+pub(crate) use crate::osc::keyboard_windows::OVERLAY_KEY_EVENT;
 pub(crate) const RULER_CURSOR_EVENT: u32 = WM_APP + 0x342;
 const CONFIRM_TIMEOUT_MS: u32 = 2000;
 const CONFIRM_RETRY_MS: u32 = 16;

@@ -110,8 +110,9 @@ struct Constants {
 /// that carry them.
 #[path = "compositor/arrows.rs"]
 mod arrows;
-use arrows::structured_buffer;
-pub(crate) use arrows::{PreparedArrows, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES};
+pub(crate) use arrows::{
+  structured_buffer, PreparedArrows, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
+};
 
 pub(super) struct Compositor {
   background_cache: BackgroundImageCache,

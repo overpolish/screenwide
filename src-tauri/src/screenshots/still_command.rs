@@ -10,7 +10,7 @@ use chrono::Local;
 use tauri::{image::Image, AppHandle};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use super::CapturedImage;
 use super::{capture, capture_file_stem, ScreenshotDestination, ScreenshotTarget};
 
@@ -58,7 +58,9 @@ pub async fn capture_still(
     // The clipboard has no layers, so the annotations go into the pixels.
     #[cfg(target_os = "macos")]
     let copied = super::annotation_bake::bake_annotations(&image, annotations.clone());
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    let copied = crate::annotate::bake_annotations(&image, &annotations);
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let copied: Result<CapturedImage, String> = Ok(image.clone());
     if let Err(error) = copied.and_then(|copied| {
       app

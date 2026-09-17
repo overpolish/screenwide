@@ -7,6 +7,7 @@ pub(super) fn active_overlay() -> Option<Overlay> {
   match OVERLAY.load(Ordering::Acquire) {
     1 => Some(Overlay::Ruler),
     2 => Some(Overlay::TextRecognition),
+    3 => Some(Overlay::Annotate),
     _ => None,
   }
 }
@@ -162,6 +163,9 @@ pub(super) fn routes_to_overlay(
   down: bool,
   up: bool,
 ) -> bool {
+  if overlay == Overlay::Annotate {
+    return down && annotate_consumes(vk, modifiers);
+  }
   if overlay == Overlay::TextRecognition {
     return down
       && crate::text_recognition::settings::key_phase(vk as u16, modifiers, false, false)
@@ -191,4 +195,21 @@ pub(super) fn routes_to_overlay(
     CONSUMED.with(|consumed| consumed.borrow_mut()[index] = true);
   }
   matched
+}
+
+/// The only keys live annotation takes off the desktop: undo, the two clears
+/// and the arrow tool. Escape and the activation shortcut are deliberately
+/// absent - they belong to their own global registrations, and consuming them
+/// here would leave no way out of the overlay.
+fn annotate_consumes(vk: u32, modifiers: u32) -> bool {
+  /// `update_pressed`'s bits, which are not the overlay protocol's.
+  const CONTROL: u32 = 2;
+  match vk {
+    // Ctrl+Z alone. Ctrl+Shift+Z is redo, which the overlay has no notion of,
+    // so it is left for whatever is behind it.
+    0x5a => modifiers == CONTROL,
+    // Backspace, Delete and A, each unmodified.
+    0x08 | 0x2e | 0x41 => modifiers == 0,
+    _ => false,
+  }
 }

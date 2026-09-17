@@ -35,19 +35,23 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::WindowsAndMessaging::{
   CallNextHookEx, DispatchMessageW, GetMessageW, KillTimer, PostMessageW, PostThreadMessageW,
   SetTimer, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, HC_ACTION, KBDLLHOOKSTRUCT,
-  MSG, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_TIMER,
+  MSG, WH_KEYBOARD_LL, WM_APP, WM_KEYDOWN, WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_TIMER,
 };
 
-use crate::windows::screenshot_region::native_osc_windows::OVERLAY_KEY_EVENT;
+/// One key the monitor recognised, posted to the overlay window that owns it.
+/// `wparam` is the virtual key; `lparam` carries the flags below. It lives
+/// here, beside the hook that posts it, so every consumer decodes the same
+/// protocol from the same place.
+pub(crate) const OVERLAY_KEY_EVENT: u32 = WM_APP + 0x341;
 
-const FLAG_COMMAND: isize = 1;
-const FLAG_SHIFT: isize = 2;
-const FLAG_REPEAT: isize = 4;
-const FLAG_RELEASE: isize = 8;
-const FLAG_MODIFIER: isize = 16;
-const FLAG_ALT_DOWN: isize = 32;
-const FLAG_CONTROL_DOWN: isize = 64;
-const FLAG_SUPER_DOWN: isize = 128;
+pub(crate) const FLAG_COMMAND: isize = 1;
+pub(crate) const FLAG_SHIFT: isize = 2;
+pub(crate) const FLAG_REPEAT: isize = 4;
+pub(crate) const FLAG_RELEASE: isize = 8;
+pub(crate) const FLAG_MODIFIER: isize = 16;
+pub(crate) const FLAG_ALT_DOWN: isize = 32;
+pub(crate) const FLAG_CONTROL_DOWN: isize = 64;
+pub(crate) const FLAG_SUPER_DOWN: isize = 128;
 
 static TARGET: AtomicIsize = AtomicIsize::new(0);
 static OVERLAY: AtomicU8 = AtomicU8::new(0);
@@ -68,6 +72,7 @@ struct Monitor {
 pub(crate) enum Overlay {
   Ruler = 1,
   TextRecognition = 2,
+  Annotate = 3,
 }
 
 thread_local! {

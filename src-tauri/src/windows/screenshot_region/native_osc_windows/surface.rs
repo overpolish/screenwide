@@ -28,11 +28,13 @@ mod submit;
 mod textures;
 #[path = "surface/window.rs"]
 mod window;
+pub(crate) use crate::windows::overlay_surface::set_capture_affinity;
+use crate::windows::overlay_surface::{self, disable_transitions};
 use pipeline::{blend_state, input_elements, sampler};
 use textures::upload_icons;
 pub(super) use textures::upload_rgba;
 use window::light_mode;
-pub(crate) use window::{create_on_owning_thread, set_capture_affinity, set_pointer_passthrough};
+pub(crate) use window::{create_on_owning_thread, set_pointer_passthrough};
 
 use std::ffi::c_void;
 use std::sync::{Arc, OnceLock};
@@ -40,59 +42,41 @@ use std::sync::{Arc, OnceLock};
 use windows::{
   core::{s, w, Interface, PCWSTR},
   Win32::{
-    Foundation::{COLORREF, ERROR_SUCCESS, HINSTANCE, HMODULE, HWND, POINT, RECT},
+    Foundation::{COLORREF, ERROR_SUCCESS, HINSTANCE, HWND, POINT, RECT},
     Graphics::{
-      Direct3D::{
-        D3D_DRIVER_TYPE_HARDWARE, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
-        D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-      },
-      Direct3D10::ID3D10Multithread,
+      Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
       Direct3D11::{
-        D3D11CreateDevice, ID3D11BlendState, ID3D11Buffer, ID3D11Device, ID3D11DeviceContext,
-        ID3D11InputLayout, ID3D11PixelShader, ID3D11RasterizerState, ID3D11RenderTargetView,
-        ID3D11Resource, ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11Texture2D,
-        ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_SHADER_RESOURCE,
-        D3D11_BIND_VERTEX_BUFFER, D3D11_BLEND_DESC, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE,
-        D3D11_BLEND_OP_ADD, D3D11_BLEND_SRC_ALPHA, D3D11_BUFFER_DESC, D3D11_COLOR_WRITE_ENABLE_ALL,
-        D3D11_CPU_ACCESS_WRITE, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_CULL_NONE,
+        ID3D11BlendState, ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11InputLayout,
+        ID3D11PixelShader, ID3D11RasterizerState, ID3D11Resource, ID3D11SamplerState,
+        ID3D11ShaderResourceView, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER,
+        D3D11_BIND_SHADER_RESOURCE, D3D11_BIND_VERTEX_BUFFER, D3D11_BLEND_DESC,
+        D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_SRC_ALPHA,
+        D3D11_BUFFER_DESC, D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_CPU_ACCESS_WRITE, D3D11_CULL_NONE,
         D3D11_FILL_SOLID, D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_FILTER_MIN_MAG_MIP_POINT,
         D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_MAPPED_SUBRESOURCE,
         D3D11_MAP_WRITE_DISCARD, D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
-        D3D11_SAMPLER_DESC, D3D11_SDK_VERSION, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC,
+        D3D11_SAMPLER_DESC, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC,
         D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC, D3D11_VIEWPORT,
       },
-      DirectComposition::{
-        DCompositionCreateDevice, IDCompositionDevice, IDCompositionTarget, IDCompositionVisual,
-        DCOMPOSITION_BITMAP_INTERPOLATION_MODE_LINEAR,
-      },
-      Dwm::{DwmSetWindowAttribute, DWMWA_TRANSITIONS_FORCEDISABLED},
-      Dxgi::{
-        Common::{
-          DXGI_ALPHA_MODE_PREMULTIPLIED, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R32G32_FLOAT,
-          DXGI_FORMAT_R32_UINT, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8_UNORM, DXGI_SAMPLE_DESC,
-        },
-        IDXGIAdapter, IDXGIDevice, IDXGIFactory2, IDXGISwapChain3, DXGI_PRESENT,
-        DXGI_SCALING_STRETCH, DXGI_SWAP_CHAIN_DESC1, DXGI_SWAP_CHAIN_FLAG,
-        DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_USAGE_RENDER_TARGET_OUTPUT,
+      Dxgi::Common::{
+        DXGI_FORMAT_R32G32_FLOAT, DXGI_FORMAT_R32_UINT, DXGI_FORMAT_R8G8B8A8_UNORM,
+        DXGI_FORMAT_R8_UNORM, DXGI_SAMPLE_DESC,
       },
       Gdi::ScreenToClient,
     },
     System::{
       LibraryLoader::GetModuleHandleW,
       Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD},
-      Threading::GetCurrentThreadId,
     },
     UI::{
       HiDpi::GetDpiForWindow,
       WindowsAndMessaging::{
         CreateWindowExW, DestroyWindow, GetClientRect, GetCursorPos, GetWindowLongPtrW,
-        GetWindowRect, GetWindowThreadProcessId, KillTimer, LoadCursorW, RegisterClassW, SetCursor,
-        SetLayeredWindowAttributes, SetTimer, SetWindowDisplayAffinity, SetWindowLongPtrW,
-        SetWindowPos, ShowWindowAsync, CS_DBLCLKS, GWL_EXSTYLE, HMENU, HWND_TOP, HWND_TOPMOST,
-        IDC_ARROW, IDC_CROSS, LWA_ALPHA, SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOOWNERZORDER,
-        SW_HIDE, SW_SHOWNOACTIVATE, WDA_EXCLUDEFROMCAPTURE, WDA_NONE, WNDCLASSW, WS_CHILD,
-        WS_CLIPSIBLINGS, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_NOREDIRECTIONBITMAP,
-        WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
+        GetWindowRect, KillTimer, LoadCursorW, SetCursor, SetLayeredWindowAttributes, SetTimer,
+        SetWindowLongPtrW, SetWindowPos, ShowWindowAsync, CS_DBLCLKS, GWL_EXSTYLE, HMENU, HWND_TOP,
+        HWND_TOPMOST, IDC_CROSS, LWA_ALPHA, SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOOWNERZORDER,
+        SW_HIDE, SW_SHOWNOACTIVATE, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+        WS_EX_TRANSPARENT, WS_POPUP,
       },
     },
   },
@@ -126,10 +110,7 @@ struct Texture {
 /// Everything shared by the anchor surface and its peers, so a peer costs one
 /// window plus one swap chain. macOS shared the `MTLDevice` the same way.
 pub(crate) struct Gpu {
-  device: ID3D11Device,
-  context: ID3D11DeviceContext,
-  factory: IDXGIFactory2,
-  composition: IDCompositionDevice,
+  shared: Arc<overlay_surface::Device>,
   vertex_shader: ID3D11VertexShader,
   pixel_shader: ID3D11PixelShader,
   layout: ID3D11InputLayout,
@@ -148,7 +129,11 @@ pub(crate) struct Gpu {
 
 impl Gpu {
   pub(super) fn device(&self) -> &ID3D11Device {
-    &self.device
+    self.shared.device()
+  }
+
+  fn context(&self) -> &ID3D11DeviceContext {
+    self.shared.context()
   }
 }
 
@@ -173,16 +158,10 @@ pub(crate) struct Surface {
   gpu: Arc<Gpu>,
   kind: Kind,
   hwnd: HWND,
-  swap_chain: IDXGISwapChain3,
-  /// Held only to keep the composition tree alive; nothing is mutated after
-  /// construction.
-  _target: IDCompositionTarget,
-  _root: IDCompositionVisual,
-  _visual: IDCompositionVisual,
+  chain: overlay_surface::CompositionSwapChain,
   vertex_buffer: Option<ID3D11Buffer>,
   vertex_capacity: usize,
   vertices: Vec<Vertex>,
-  buffer_size: (u32, u32),
   magnifier_source: Option<Texture>,
   snapshot: Option<Texture>,
 

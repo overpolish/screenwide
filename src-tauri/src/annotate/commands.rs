@@ -17,7 +17,7 @@ pub fn undo_annotation(app: AppHandle) {
     return;
   }
   if super::live_clips::remove_last() {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     super::native_overlay::redraw();
   }
 }

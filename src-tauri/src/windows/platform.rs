@@ -9,10 +9,11 @@ mod panels_macos;
 mod windows_api;
 #[cfg(target_os = "windows")]
 pub use windows_api::{
-  hide, initialize_editor, initialize_recording_bar, initialize_recording_dock,
-  initialize_recording_source_selector, initialize_region_selector, initialize_standalone_listbox,
-  initialize_tooltip, is_visible, prepare_to_show, raise_without_activation,
-  restore_recording_level, set_capture_affinity, set_normal_level, set_opacity, show,
+  hide, initialize_annotate_toolbar, initialize_editor, initialize_recording_bar,
+  initialize_recording_dock, initialize_recording_source_selector, initialize_region_selector,
+  initialize_standalone_listbox, initialize_tooltip, is_visible, prepare_to_show,
+  raise_without_activation, restore_recording_level, set_capture_affinity, set_normal_level,
+  set_opacity, set_owner, set_pointer_passthrough, show,
 };
 
 #[cfg(target_os = "macos")]

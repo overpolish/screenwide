@@ -8,56 +8,53 @@
 //! peer panels are. Each carries a Metal layer that draws that display's
 //! annotations.
 
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+#[cfg(target_os = "windows")]
+#[path = "host_windows.rs"]
+mod platform;
+
+use tauri::{AppHandle, Manager, WebviewWindow};
 
 use crate::{capture_overlays, windows::WindowLabel};
 
-/// One host's geometry, read from the monitor layout before any window is
-/// built: xcap's display handles are not `Send`, so nothing here may await.
-pub(super) struct HostPlan {
-  /// The capture display this host covers, which is how the toolbar
-  /// recognises the screen it was last dropped on.
-  pub(super) display_id: u32,
-  pub(super) position: tauri::LogicalPosition<f64>,
-  pub(super) size: tauri::LogicalSize<f64>,
-  /// The display less the menu bar, the notch and the Dock. The hosts cover
-  /// the whole screen, but anything the user has to read or press - the
-  /// toolbar - belongs inside this.
-  pub(super) work_position: tauri::LogicalPosition<f64>,
-  pub(super) work_size: tauri::LogicalSize<f64>,
-}
+#[path = "host_planning.rs"]
+mod planning;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(super) use planning::HostPlan;
+pub(super) use planning::{build, plan};
 
-/// The anchor keeps the plain label so the window is recognisable; the peers
-/// are numbered after it.
-fn label(index: usize) -> String {
+/// Whether a label names one of the overlay's hosts. The peers are numbered
+/// after the anchor, and the number is what tells a host from the toolbar,
+/// whose label shares the feature's prefix.
+pub(crate) fn is_host_label(label: &str) -> bool {
   let anchor = WindowLabel::Annotate.as_str();
-  if index == 0 {
-    anchor.to_owned()
-  } else {
-    format!("{anchor}-{index}")
-  }
+  label == anchor
+    || label
+      .strip_prefix(&format!("{anchor}-"))
+      .is_some_and(|index| !index.is_empty() && index.chars().all(|digit| digit.is_ascii_digit()))
 }
 
 /// Every host window the overlay may have opened, whatever the display count
-/// was when it opened them. The peers are numbered after the anchor, and the
-/// number is what tells a host from the toolbar, whose label shares the
-/// feature's prefix.
+/// was when it opened them.
 pub(super) fn windows(app: &AppHandle) -> Vec<WebviewWindow> {
-  let anchor = WindowLabel::Annotate.as_str();
-  let peer = format!("{anchor}-");
   let mut hosts: Vec<_> = app
     .webview_windows()
     .into_iter()
-    .filter(|(label, _)| {
-      label == anchor
-        || label.strip_prefix(&peer).is_some_and(|index| {
-          !index.is_empty() && index.chars().all(|digit| digit.is_ascii_digit())
-        })
-    })
+    .filter(|(label, _)| is_host_label(label))
     .collect();
   // Anchor first: it is the window that owns focus and the cursor lease.
   hosts.sort_by(|(first, _), (second, _)| first.len().cmp(&second.len()).then(first.cmp(second)));
   hosts.into_iter().map(|(_, window)| window).collect()
+}
+
+/// The hosts' capture affinity: excluded exactly while Screenwide itself is
+/// capturing, and capturable otherwise, so a screen share in another
+/// application still shows the annotations. Windows exclusion hides a window
+/// from every capturer, so this is the only way to be absent from a recording
+/// without being absent from everything.
+#[cfg(target_os = "windows")]
+fn apply_capture_affinity(window: &WebviewWindow) -> Result<(), String> {
+  crate::windows::set_window_capture_affinity(window, !crate::windows::is_capturing())
+    .map_err(|error| error.to_string())
 }
 
 /// Moves every host to one window level. A screenshot in progress drops the
@@ -65,81 +62,28 @@ pub(super) fn windows(app: &AppHandle) -> Vec<WebviewWindow> {
 pub(super) fn set_level(app: &AppHandle, level: isize) -> Result<(), String> {
   for host in windows(app) {
     capture_overlays::set_level(&host, level)?;
+    // On Windows `set_level` reapplies the overlay policy, which reads the
+    // capture preference; the hosts follow their own rule instead.
+    #[cfg(target_os = "windows")]
+    apply_capture_affinity(&host)?;
   }
   Ok(())
-}
-
-/// Reads the layout and tells the native side what it will be drawing on.
-pub(super) fn plan(app: &AppHandle) -> Result<Vec<HostPlan>, String> {
-  let monitors = capture_overlays::monitor_layout(app)?;
-  if monitors.is_empty() {
-    return Err("No monitor is available for Annotate".to_owned());
-  }
-  #[cfg(target_os = "macos")]
-  let mut displays = Vec::with_capacity(monitors.len());
-  let mut plans = Vec::with_capacity(monitors.len());
-  for (display_id, scale, monitor) in &monitors {
-    let position = monitor.position().to_logical::<f64>(*scale);
-    let size = monitor.size().to_logical::<f64>(*scale);
-    #[cfg(target_os = "macos")]
-    displays.push(super::native_overlay::Display {
-      origin: (position.x, position.y),
-      scale: *scale,
-    });
-    let work_area = monitor.work_area();
-    plans.push(HostPlan {
-      display_id: *display_id,
-      position,
-      size,
-      work_position: work_area.position.to_logical::<f64>(*scale),
-      work_size: work_area.size.to_logical::<f64>(*scale),
-    });
-  }
-  #[cfg(target_os = "macos")]
-  super::native_overlay::set_displays(displays);
-  Ok(plans)
-}
-
-/// Opens one display's host, hidden. Presentation is a separate step so every
-/// window is in place before any of them takes the foreground.
-pub(super) fn build(
-  app: &AppHandle,
-  index: usize,
-  host: &HostPlan,
-) -> Result<WebviewWindow, String> {
-  let window = WebviewWindowBuilder::new(app, label(index), WebviewUrl::App("/annotate".into()))
-    .accept_first_mouse(true)
-    .always_on_top(true)
-    .decorations(false)
-    .focused(false)
-    .inner_size(host.size.width, host.size.height)
-    .position(host.position.x, host.position.y)
-    .resizable(false)
-    .shadow(false)
-    .skip_taskbar(true)
-    .transparent(true)
-    .visible(false)
-    .visible_on_all_workspaces(true)
-    .build()
-    .map_err(|error| error.to_string())?;
-  capture_overlays::set_level(&window, capture_overlays::FOREGROUND_LEVEL)?;
-  // macOS capture already excludes this process's own windows. Windows needs
-  // to be told, and is told here so the overlay is out of the recording from
-  // the moment it exists rather than from the moment it draws.
-  crate::windows::exclude_from_capture(&window).map_err(|error| error.to_string())?;
-  Ok(window)
 }
 
 /// Puts every host on screen, with its Metal layer and the crosshair, and
 /// starts routing input. Called off the thread that services the event loop.
 pub(super) fn present(app: &AppHandle, hosts: Vec<WebviewWindow>) -> Result<(), String> {
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
     let _ = app;
     for host in &hosts {
       host.show().map_err(|error| error.to_string())?;
     }
     Ok(())
+  }
+  #[cfg(target_os = "windows")]
+  {
+    platform::present(app, hosts)
   }
   #[cfg(target_os = "macos")]
   {
@@ -187,15 +131,19 @@ fn present_on_main_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<()
 /// or Editor window while the cursor lease is still putting the user's own
 /// application back.
 pub(super) fn close(app: &AppHandle) -> bool {
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   super::toolbar::close(app);
   let hosts = windows(app);
   if hosts.is_empty() {
     return false;
   }
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
     hosts.iter().any(|host| host.close().is_ok())
+  }
+  #[cfg(target_os = "windows")]
+  {
+    platform::close(app, hosts)
   }
   #[cfg(target_os = "macos")]
   {
@@ -236,18 +184,22 @@ fn close_on_main_thread(hosts: &[WebviewWindow]) -> bool {
 pub(super) fn show_only(app: &AppHandle) -> bool {
   // Annotations that are only being shown take no input, so there is nothing
   // for a toolbar to edit.
-  #[cfg(target_os = "macos")]
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
   super::toolbar::hide(app);
   let hosts = windows(app);
   if hosts.is_empty() {
     return false;
   }
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
-    // Nothing is drawn without the native renderer, so there is nothing to
+    // Nothing is drawn without a native renderer, so there is nothing to
     // leave on screen either.
     let _ = app;
     hosts.iter().any(|host| host.close().is_ok())
+  }
+  #[cfg(target_os = "windows")]
+  {
+    platform::show_only(app, hosts)
   }
   #[cfg(target_os = "macos")]
   {

@@ -12,79 +12,28 @@
 //! keyboard with the anchor host and the keys that draw keep working.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Mutex, MutexGuard};
 
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
-use tauri::{
-  AppHandle, LogicalPosition, LogicalSize, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
-};
+use tauri::{AppHandle, LogicalSize, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 use super::host::HostPlan;
 use super::settings::{self, ToolbarPosition};
 use crate::capture_overlays;
 use crate::windows::{platform, WindowLabel};
 
-/// How far below the top of the display the toolbar opens.
-const TOP_GAP: f64 = 16.0;
+#[path = "toolbar_anchor.rs"]
+mod anchor;
+use anchor::{Anchor, INITIAL_SIZE};
 
-/// What the window is built at before the plate reports what it needs. Never
-/// seen: the window stays hidden until the first fit has landed.
-const INITIAL_SIZE: LogicalSize<f64> = LogicalSize {
-  width: 420.0,
-  height: 48.0,
-};
-
-/// The display the toolbar opens on, which is the overlay's anchor host. Its
-/// usable area rather than its whole frame: the toolbar has to clear the menu
-/// bar and the notch. Kept from the build so a later fit can place the window
-/// again without reading the monitor layout a second time.
-struct Anchor {
-  display_id: u32,
-  origin: LogicalPosition<f64>,
-  size: LogicalSize<f64>,
-}
-
-static ANCHOR: Mutex<Option<Anchor>> = Mutex::new(None);
 /// Whether the session has got as far as putting the toolbar on screen, and
 /// whether the plate has reported its size. The window is shown by whichever
 /// of the two comes last, so it never appears at the size it was built at.
 static PRESENTED: AtomicBool = AtomicBool::new(false);
 static FITTED: AtomicBool = AtomicBool::new(false);
 
-fn anchor() -> MutexGuard<'static, Option<Anchor>> {
-  ANCHOR
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
 fn toolbar(app: &AppHandle) -> Option<WebviewWindow> {
   app.get_webview_window(WindowLabel::AnnotateToolbar.as_str())
-}
-
-/// Where a toolbar of `size` belongs on the anchor display: where it was last
-/// dropped there, or top-centre. A remembered place the toolbar no longer fits
-/// in is not a place - a smaller display, or a wider toolbar, takes it back to
-/// the middle rather than off the edge.
-fn placement(anchor: &Anchor, size: LogicalSize<f64>) -> LogicalPosition<f64> {
-  let remembered = settings::current()
-    .toolbar_position
-    .filter(|position| position.display_id == anchor.display_id)
-    .filter(|position| {
-      position.x >= 0.0
-        && position.y >= 0.0
-        && position.x + size.width <= anchor.size.width
-        && position.y + size.height <= anchor.size.height
-    });
-  match remembered {
-    Some(position) => {
-      LogicalPosition::new(anchor.origin.x + position.x, anchor.origin.y + position.y)
-    }
-    None => LogicalPosition::new(
-      anchor.origin.x + ((anchor.size.width - size.width) / 2.0).max(0.0),
-      anchor.origin.y + TOP_GAP,
-    ),
-  }
 }
 
 /// Puts the toolbar's window in place for a session, hidden. Presentation is a
@@ -105,18 +54,23 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
 
   if let Some(window) = toolbar(app) {
     let scale = window.scale_factor().map_err(|error| error.to_string())?;
+    // The inner size, because that is what the plate reported and what
+    // `set_frame` sets. Reading the outer size back would feed a window frame
+    // into the content size, growing the toolbar by that frame every time a
+    // session reopened it.
     let size = window
-      .outer_size()
+      .inner_size()
       .map_err(|error| error.to_string())?
       .to_logical::<f64>(scale);
-    platform::set_frame(&window, placement(&plan, size), size)
+    platform::set_frame(&window, anchor::placement(&plan, size), size)
       .map_err(|error| error.to_string())?;
-    *anchor() = Some(plan);
+    *anchor::current() = Some(plan);
+    own_by_anchor(app, &window)?;
     return Ok(window);
   }
 
-  let position = placement(&plan, INITIAL_SIZE);
-  *anchor() = Some(plan);
+  let position = anchor::placement(&plan, INITIAL_SIZE);
+  *anchor::current() = Some(plan);
   FITTED.store(false, Ordering::Release);
 
   let window = WebviewWindowBuilder::new(
@@ -139,7 +93,11 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
   .visible_on_all_workspaces(true)
   .effects(WindowEffectsConfig {
     color: None,
-    effects: vec![Effect::UnderWindowBackground],
+    effects: vec![if cfg!(target_os = "windows") {
+      Effect::Mica
+    } else {
+      Effect::UnderWindowBackground
+    }],
     radius: Some(10.0),
     state: Some(EffectState::Active),
   })
@@ -149,9 +107,10 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
   // One level above the hosts: a stroke can never be drawn over the controls,
   // and the controls are never hidden by what has been drawn.
   capture_overlays::set_level(&window, capture_overlays::FOREGROUND_LEVEL + 1)?;
-  // Panel conversion is AppKit work, and the overlay's windows are built off
-  // the thread that services the event loop. Waiting keeps the toolbar from
-  // being shown before it refuses key status.
+  // Refusing activation is window-server work on both platforms - a panel
+  // conversion on macOS, an extended style on Windows - and the overlay's
+  // windows are built off the thread that services the event loop. Waiting
+  // keeps the toolbar from being shown before it refuses key status.
   let panelled = window.clone();
   let (sender, receiver) = std::sync::mpsc::sync_channel(1);
   app
@@ -162,7 +121,27 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
     .map_err(|error| error.to_string())?;
   receiver.recv().map_err(|error| error.to_string())??;
   crate::windows::exclude_from_capture(&window).map_err(|error| error.to_string())?;
+  own_by_anchor(app, &window)?;
   Ok(window)
+}
+
+/// Puts the toolbar above the hosts. On macOS its window level does that; on
+/// Windows there are no levels, so it is made an owned window of the anchor
+/// host, which always stands above its owner. The ownership is released in
+/// [`close`], because the hosts are destroyed with the session and a window
+/// takes the windows it owns with it.
+fn own_by_anchor(app: &AppHandle, window: &WebviewWindow) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  {
+    let hosts = super::host::windows(app);
+    let Some(host) = hosts.first() else {
+      return Err("No annotate host is available for the toolbar".to_owned());
+    };
+    platform::set_owner(window, Some(host)).map_err(|error| error.to_string())?;
+  }
+  #[cfg(not(target_os = "windows"))]
+  let _ = (app, window);
+  Ok(())
 }
 
 /// The session has reached the point of showing the toolbar. It goes on screen
@@ -177,6 +156,10 @@ pub(super) fn present(app: &AppHandle) {
 /// shown. It comes back with the next session rather than from here.
 pub(super) fn hide(app: &AppHandle) {
   PRESENTED.store(false, Ordering::Release);
+  // The cursor lease is macOS's: on Windows the crosshair is set per surface
+  // in the overlay's own window procedure, so the toolbar's arrow needs no
+  // exemption.
+  #[cfg(target_os = "macos")]
   let _ = app.run_on_main_thread(super::cursor::forget_toolbar);
   if let Some(window) = toolbar(app) {
     if let Err(error) = platform::hide(&window) {
@@ -187,9 +170,20 @@ pub(super) fn hide(app: &AppHandle) {
 
 /// Takes the toolbar off screen with the session that owned it. The window
 /// itself is kept: see [`build`].
+///
+/// The ownership goes with the session too. A window takes the windows it owns
+/// with it when it is destroyed, and the hosts are destroyed here: a toolbar
+/// still owned by one of them would be destroyed along with it, leaving the
+/// next session to rebuild the plate it had already measured.
 pub(super) fn close(app: &AppHandle) {
-  *anchor() = None;
+  *anchor::current() = None;
   hide(app);
+  #[cfg(target_os = "windows")]
+  if let Some(window) = toolbar(app) {
+    if let Err(error) = platform::set_owner(&window, None) {
+      eprintln!("Could not release the annotate toolbar's owner: {error}");
+    }
+  }
 }
 
 fn show_if_ready(app: &AppHandle) {
@@ -202,12 +196,15 @@ fn show_if_ready(app: &AppHandle) {
   if window.is_visible().unwrap_or(false) {
     return;
   }
-  // The pointer is an arrow over the toolbar: the crosshair belongs to the
-  // canvas, and the guard that keeps it there exempts this window.
-  let exempt = window.clone();
-  let _ = app.run_on_main_thread(move || {
-    super::cursor::exempt_toolbar(&exempt);
-  });
+  #[cfg(target_os = "macos")]
+  {
+    // The pointer is an arrow over the toolbar: the crosshair belongs to the
+    // canvas, and the guard that keeps it there exempts this window.
+    let exempt = window.clone();
+    let _ = app.run_on_main_thread(move || {
+      super::cursor::exempt_toolbar(&exempt);
+    });
+  }
   if let Err(error) = platform::show(&window, 1.0) {
     eprintln!("Could not show the annotate toolbar: {error}");
   }
@@ -224,7 +221,7 @@ pub fn resize_annotate_toolbar(app: AppHandle, width: f64, height: f64) -> Resul
     return Ok(());
   };
   {
-    let guard = anchor();
+    let guard = anchor::current();
     let Some(anchor) = guard.as_ref() else {
       return Ok(());
     };
@@ -234,7 +231,7 @@ pub fn resize_annotate_toolbar(app: AppHandle, width: f64, height: f64) -> Resul
     );
     // One AppKit operation: a plate that grew a colour card must not be seen
     // at the old size in its new place.
-    platform::set_frame(&window, placement(anchor, size), size)
+    platform::set_frame(&window, anchor::placement(anchor, size), size)
       .map_err(|error| error.to_string())?;
   }
   FITTED.store(true, Ordering::Release);
@@ -255,7 +252,7 @@ pub fn persist_annotate_toolbar_position(app: AppHandle) -> Result<(), String> {
     .outer_position()
     .map_err(|error| error.to_string())?
     .to_logical::<f64>(scale);
-  let Some((display_id, origin)) = display_under(&app, position)? else {
+  let Some((display_id, origin)) = anchor::display_under(&app, position)? else {
     return Ok(());
   };
   settings::store_toolbar_position(
@@ -266,29 +263,4 @@ pub fn persist_annotate_toolbar_position(app: AppHandle) -> Result<(), String> {
       y: position.y - origin.y,
     },
   )
-}
-
-/// The display the toolbar's top-left corner sits on, with the origin of its
-/// usable area: that is the corner [`placement`] measures from, so a drop and
-/// the place it is restored to are the same offset.
-fn display_under(
-  app: &AppHandle,
-  position: LogicalPosition<f64>,
-) -> Result<Option<(u32, LogicalPosition<f64>)>, String> {
-  for (display_id, scale, monitor) in capture_overlays::monitor_layout(app)? {
-    let origin = monitor.position().to_logical::<f64>(scale);
-    let size = monitor.size().to_logical::<f64>(scale);
-    if position.x >= origin.x
-      && position.y >= origin.y
-      && position.x < origin.x + size.width
-      && position.y < origin.y + size.height
-    {
-      let work_area = monitor.work_area();
-      return Ok(Some((
-        display_id,
-        work_area.position.to_logical::<f64>(scale),
-      )));
-    }
-  }
-  Ok(None)
 }

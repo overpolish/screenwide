@@ -7,6 +7,7 @@
 //! shared state and its commands. This says what it does before the user sees
 //! it, in the order the steps depend on each other.
 
+#[cfg(target_os = "macos")]
 use tauri::{AppHandle, Manager};
 
 use crate::{editor, windows};

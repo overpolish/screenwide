@@ -158,9 +158,9 @@ pub fn run() {
       annotate::commands::clear_annotations,
       annotate::commands::undo_annotation,
       annotate::commands::dismiss_annotate,
-      #[cfg(target_os = "macos")]
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
       annotate::toolbar::persist_annotate_toolbar_position,
-      #[cfg(target_os = "macos")]
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
       annotate::toolbar::resize_annotate_toolbar,
       ruler::settings::get_ruler_settings,
       ruler::settings::set_ruler_settings,

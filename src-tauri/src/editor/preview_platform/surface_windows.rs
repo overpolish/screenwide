@@ -54,6 +54,17 @@ mod tests;
 mod thread_dispatch;
 #[path = "surface_windows/workspace.rs"]
 mod workspace;
+
+/// The arrow renderer's shareable parts. Live annotation draws the desktop's
+/// arrows with this pipeline: the same prepared geometry, the same structured
+/// buffers and the same shader, in one display's layer pixels rather than in
+/// the canvas's.
+pub(crate) mod arrows {
+  pub(crate) use super::annotation::placed_arrows;
+  pub(crate) use super::compositor::{
+    structured_buffer, PreparedArrows, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
+  };
+}
 use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for};
 use geometry::{
   auto_fit_selection_bounds, display_selection, frame_resize_start, maximum_editor_zoom,

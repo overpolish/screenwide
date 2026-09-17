@@ -40,17 +40,39 @@ pub(crate) fn prepared_arrows(
   if annotations.is_empty() || source.0 == 0 || source.1 == 0 {
     return Ok(compositor::PreparedArrows::default());
   }
+  let placement = output_placement(source.0, source.1, settings)?;
+  Ok(placed_arrows(
+    annotations,
+    (placement.image_x, placement.image_y),
+    (
+      f64::from(placement.image_width) / f64::from(source.0),
+      f64::from(placement.image_height) / f64::from(source.1),
+    ),
+    halo,
+  ))
+}
+
+/// The same marks in whatever pixels they are drawn in: `offset` and `scale`
+/// carry a point from the source's own pixels into them. The still passes its
+/// output placement; the live overlay passes the identity, because its marks
+/// arrive in the display's layer pixels already.
+pub(crate) fn placed_arrows(
+  annotations: &[Annotation],
+  offset: (f64, f64),
+  scale: (f64, f64),
+  halo: Option<(usize, f32)>,
+) -> compositor::PreparedArrows {
+  if annotations.is_empty() {
+    return compositor::PreparedArrows::default();
+  }
   // The same flattening the Metal backend presents through, so both prepare
   // from one resolved list rather than from two readings of the document.
   let marks = native_annotations(annotations);
   let marks = &marks.items[..marks.count as usize];
-  let placement = output_placement(source.0, source.1, settings)?;
-  let scale_x = f64::from(placement.image_width) / f64::from(source.0);
-  let scale_y = f64::from(placement.image_height) / f64::from(source.1);
-  let canvas = |point: [f32; 2]| {
+  let place = |point: [f32; 2]| {
     [
-      (placement.image_x + f64::from(point[0]) * scale_x) as f32,
-      (placement.image_y + f64::from(point[1]) * scale_y) as f32,
+      (offset.0 + f64::from(point[0]) * scale.0) as f32,
+      (offset.1 + f64::from(point[1]) * scale.1) as f32,
     ]
   };
   let mut prepared = compositor::PreparedArrows {
@@ -66,7 +88,7 @@ pub(crate) fn prepared_arrows(
       .enumerate()
       .filter(|(_, mark)| mark.above_camera == above)
     {
-      let (a, b, c) = (canvas(mark.p0), canvas(mark.p1), canvas(mark.p2));
+      let (a, b, c) = (place(mark.p0), place(mark.p1), place(mark.p2));
       let mut arrow = compositor::PreviewArrow::new(
         prepare_arrow(a, b, c, mark.width, mark.head, mark.reveal),
         mark.color,
@@ -110,7 +132,7 @@ pub(crate) fn prepared_arrows(
       prepared.below_camera = prepared.arrows.len() as u32;
     }
   }
-  Ok(prepared)
+  prepared
 }
 
 /// How many exposure samples a mark needs this frame: none when it has not

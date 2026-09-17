@@ -17,8 +17,6 @@ mod text;
 // live in the shared OSC layer used by Export as well.
 pub(crate) use crate::osc::gpu::windows as renderer;
 
-pub(crate) use input::OVERLAY_KEY_EVENT;
-
 // Re-exported with the macOS facade's shape. The Region adapter is the only
 // stage-1 consumer; the OCR and ruler overlays pick up the rest in stages 3-4.
 #[allow(unused_imports)]

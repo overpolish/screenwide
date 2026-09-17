@@ -25,6 +25,14 @@ pub(super) fn prepare_windows(
   // overlay prevents controls being used until the first encoded frames prove
   // that every configured video stream is ready.
   windows::show_recording_dock(app).map_err(to_message)?;
+  // A recording is one of our own captures for its whole length. The windows
+  // whose exclusion depends on that follow it from here, which gives the
+  // compositor the countdown to present the excluded state.
+  #[cfg(target_os = "windows")]
+  {
+    windows::mark_capturing(windows::Capture::Recording, true);
+    windows::apply_capture_policy(app).map_err(to_message)?;
+  }
 
   if options.mode == RecordingMode::Region {
     // Retain the desktop-wide cutout surfaces, but remove editing chrome and
@@ -48,6 +56,13 @@ pub(super) fn restore_windows(app: &AppHandle) {
     // be hidden, and when the bar shows it again `show_region_selector`
     // re-asserts the invariant for us.
     let _ = windows::hide_region_selector(app.clone());
+  }
+  #[cfg(target_os = "windows")]
+  {
+    windows::mark_capturing(windows::Capture::Recording, false);
+    if let Err(error) = windows::apply_capture_policy(app) {
+      eprintln!("Could not restore capture affinity after recording: {error}");
+    }
   }
 }
 
