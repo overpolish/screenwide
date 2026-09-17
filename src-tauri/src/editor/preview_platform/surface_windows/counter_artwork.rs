@@ -65,15 +65,17 @@ pub(super) struct CounterTextRect {
 
 /// One rasterised atlas: the texture the shader samples, its size, and where
 /// each counter's number landed in it.
-pub(super) struct CounterArtwork {
+pub(crate) struct CounterArtwork {
   _texture: ID3D11Texture2D,
   pub(super) rects: Vec<CounterTextRect>,
-  pub(super) size: (u32, u32),
-  pub(super) view: ID3D11ShaderResourceView,
+  pub(crate) size: (u32, u32),
+  pub(crate) view: ID3D11ShaderResourceView,
 }
 
+/// Shared by the editor's compositor and by the live overlay, which draws the
+/// desktop's counters through the same pipeline.
 #[derive(Default)]
-pub(super) struct CounterArtworkCache {
+pub(crate) struct CounterArtworkCache {
   entries: Mutex<HashMap<String, std::sync::Arc<CounterArtwork>>>,
 }
 
@@ -172,7 +174,7 @@ fn upload(device: &ID3D11Device, raster: &CounterRaster) -> Result<CounterArtwor
 /// Only a counter reads those slots as a rectangle: an arrow with a head at
 /// both ends keeps its second head's triangle in them, so the patch is per
 /// mark rather than across the list.
-pub(super) fn numbered_arrows(
+pub(crate) fn numbered_arrows(
   cache: &CounterArtworkCache,
   device: &ID3D11Device,
   prepared: &super::compositor::PreparedArrows,

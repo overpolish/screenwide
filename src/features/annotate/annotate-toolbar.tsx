@@ -6,9 +6,11 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { IconButton } from "../../components/base/button/icon-button";
 import { ButtonGroup } from "../../components/base/button-group/button-group";
+import { AnnotationAngleSlider } from "../../components/shared/annotation-style/annotation-angle-slider";
 import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
 import { AnnotationHeadGroup } from "../../components/shared/annotation-style/annotation-head-group";
 import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
+import { annotationSizes } from "../../components/shared/annotation-style/widths";
 import { BackgroundTile } from "../../components/shared/background-picker/background-tile";
 import { NativeTooltipTrigger } from "../../components/shared/native-tooltip/native-tooltip-trigger";
 import { ToolToggle } from "../../components/shared/tool-toggle/tool-toggle";
@@ -27,9 +29,6 @@ export type AnnotateToolbarProps = {
   onDone: () => void;
   onUndo: () => void;
   settings: AnnotateSettings;
-  /** Nothing is editable while a write is in flight, so a refused colour or
-   * width cannot be overtaken by the next press. */
-  isDisabled?: boolean;
   /** The plate reporting what it measures, in logical px. The window is sized
    * to it. */
   onSizeChange?: (width: number, height: number) => void;
@@ -52,7 +51,6 @@ export type AnnotateToolbarProps = {
  * The window grows to hold the row and shrinks again when it closes.
  */
 export function AnnotateToolbar({
-  isDisabled,
   onChange,
   onClear,
   onDone,
@@ -63,6 +61,9 @@ export function AnnotateToolbar({
 }: AnnotateToolbarProps) {
   const [showColors, setShowColors] = useState(false);
   const plateRef = useRef<HTMLElement>(null);
+  // Which controls the plate carries: a counter has a disc and an aim where
+  // an arrow has a stroke and a head.
+  const isCounter = settings.defaultShape === "counter";
 
   useLayoutEffect(() => {
     const plate = plateRef.current;
@@ -101,10 +102,7 @@ export function AnnotateToolbar({
         <ButtonGroup aria-label="Annotation tools" className="gap-control">
           {ANNOTATE_TOOLS.map((tool) => (
             <ToolToggle
-              isDisabled={isDisabled}
-              // The arrow is the only registered tool, so it is always the
-              // tool in hand.
-              isSelected
+              isSelected={tool.id === settings.defaultShape}
               key={tool.id}
               label={tool.label}
               name={tool.name}
@@ -125,46 +123,54 @@ export function AnnotateToolbar({
             ariaLabel="Colour"
             background={{ color: settings.defaultColor, kind: "solid" }}
             id="color"
-            isDisabled={isDisabled}
             isSelected={showColors}
             onPress={() => {
               setShowColors((open) => !open);
             }}
           />
           <AnnotationWidthSlider
-            isDisabled={isDisabled}
-            onChange={(defaultWidth) => {
-              onChange({ defaultWidth });
+            label={isCounter ? "Size" : "Width"}
+            onChange={(size) => {
+              onChange(
+                isCounter
+                  ? { defaultCounterSize: size }
+                  : { defaultWidth: size },
+              );
             }}
-            value={settings.defaultWidth}
+            presets={annotationSizes(settings.defaultShape)}
+            value={
+              isCounter ? settings.defaultCounterSize : settings.defaultWidth
+            }
           />
-          {/* The head belongs to the arrow rather than to the toolbar, and
-              the arrow is the only tool the overlay draws with. */}
-          <AnnotationHeadGroup
-            isDisabled={isDisabled}
-            onChange={(defaultHead) => {
-              onChange({ defaultHead });
-            }}
-            value={settings.defaultHead}
-          />
+          {/* The head belongs to the arrow and the aim to the counter, so the
+              plate carries whichever the tool in hand has. A live mark cannot
+              be picked up again, so a counter is aimed before it is dropped
+              rather than turned afterwards. */}
+          {isCounter ? (
+            <AnnotationAngleSlider
+              onChange={(defaultCounterAngle) => {
+                onChange({ defaultCounterAngle });
+              }}
+              value={settings.defaultCounterAngle}
+            />
+          ) : (
+            <AnnotationHeadGroup
+              onChange={(defaultHead) => {
+                onChange({ defaultHead });
+              }}
+              value={settings.defaultHead}
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-control">
           <NativeTooltipTrigger tooltip={{ label: "Undo", shortcut: "⌘Z" }}>
-            <IconButton
-              aria-label="Undo the last annotation"
-              isDisabled={isDisabled}
-              onPress={onUndo}
-            >
+            <IconButton aria-label="Undo the last annotation" onPress={onUndo}>
               <Undo2 />
             </IconButton>
           </NativeTooltipTrigger>
           <NativeTooltipTrigger tooltip={{ label: "Clear", shortcut: "⌫" }}>
-            <IconButton
-              aria-label="Clear annotations"
-              isDisabled={isDisabled}
-              onPress={onClear}
-            >
+            <IconButton aria-label="Clear annotations" onPress={onClear}>
               <Eraser />
             </IconButton>
           </NativeTooltipTrigger>
@@ -181,7 +187,6 @@ export function AnnotateToolbar({
 
       {showColors ? (
         <AnnotationColorGrid
-          isDisabled={isDisabled}
           onChange={(defaultColor) => {
             onChange({ defaultColor });
             setShowColors(false);

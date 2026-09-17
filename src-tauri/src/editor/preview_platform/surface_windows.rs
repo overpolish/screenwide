@@ -64,6 +64,10 @@ pub(crate) mod arrows {
   pub(crate) use super::compositor::{
     structured_buffer, PreparedArrows, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
   };
+  /// A counter's number is type, so it is rasterised rather than drawn by the
+  /// shader. The overlay resolves its own atlas from the same cache the
+  /// editor's compositor uses.
+  pub(crate) use super::counter_artwork::{numbered_arrows, CounterArtwork, CounterArtworkCache};
 }
 use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for};
 use geometry::{

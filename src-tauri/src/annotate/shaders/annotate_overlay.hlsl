@@ -19,7 +19,9 @@ cbuffer Overlay : register(b0) {
   uint annotation_count;
   /// How wide an edge is smoothed, in layer pixels.
   float annotation_feather;
-  float2 padding;
+  /// The size of the texture the counters' numbers were rasterised into, or
+  /// zeroes on a frame with no counter to rasterise one for.
+  uint2 annotation_number_atlas;
 };
 
 float4 vs_main(uint id : SV_VertexID) : SV_Position {
@@ -30,9 +32,7 @@ float4 vs_main(uint id : SV_VertexID) : SV_Position {
 float4 ps_main(float4 position : SV_Position) : SV_Target {
   // Composed over nothing, so the result is already premultiplied - which is
   // what DirectComposition expects of a premultiplied swap chain.
-  // The live overlay draws no counters yet, so it rasterises no numbers and
-  // passes an empty atlas: the number pass returns before it samples.
   return composite_annotations(
       float4(0, 0, 0, 0), position.xy, 0u, annotation_count, annotation_feather,
-      uint2(0, 0));
+      annotation_number_atlas);
 }

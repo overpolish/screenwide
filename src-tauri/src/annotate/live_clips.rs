@@ -15,7 +15,7 @@ use std::time::Instant;
 use super::geometry::source_annotation;
 use crate::editor::annotations::reveal::clip_ms_for_visible;
 use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip, MAX_CLIPS};
-use crate::editor::annotations::{Annotation, MAX_ANNOTATIONS};
+use crate::editor::annotations::{Annotation, AnnotationShape, MAX_ANNOTATIONS};
 use crate::recording::clock::SidecarClock;
 use crate::recording::cursor::CursorSource;
 
@@ -238,6 +238,19 @@ pub(crate) fn annotations() -> Vec<Annotation> {
     .iter()
     .map(|live| live.annotation.clone())
     .collect()
+}
+
+/// The number the next counter dropped on the overlay takes. Counted rather
+/// than remembered: clearing the screen starts the count again, and undo only
+/// ever takes the newest mark, so what is on screen is always 1..n.
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
+pub(crate) fn next_counter_value() -> u32 {
+  live()
+    .annotations
+    .iter()
+    .filter(|live| matches!(live.annotation.shape, AnnotationShape::Counter { .. }))
+    .count() as u32
+    + 1
 }
 
 /// Whether anything is on screen, which is what decides if the tray offers to

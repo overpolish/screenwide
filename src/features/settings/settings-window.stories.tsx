@@ -93,6 +93,8 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
   };
   let annotate: AnnotateSettings = {
     defaultColor: "#ffcc00",
+    defaultCounterAngle: 0,
+    defaultCounterSize: 56,
     defaultHead: "end",
     defaultShape: "arrow",
     defaultWidth: 8,

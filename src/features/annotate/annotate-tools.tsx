@@ -1,18 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ListOrdered } from "lucide-react";
 import { ReactNode } from "react";
 
 import { AnnotateShape } from "../settings/types";
 
-/** One tool the overlay can draw with. The overlay draws arrows and nothing
- * else so far; a second shape becomes a second row here, and the toolbar
- * grows a toggle without being touched.
+/** One tool the overlay can draw with. A shape added to the overlay becomes a
+ * row here, and the toolbar grows a toggle without being touched.
  *
- * The glyph and the wording are the editor's own for the same tool, so the
- * arrow reads the same whether it is drawn on a screenshot or on the desktop.
- * The twin of the arrow tool in `features/editor/components/screenshot-tools`. */
+ * The glyph and the wording are the editor's own for the same tool, so a mark
+ * reads the same whether it is drawn on a screenshot or on the desktop. The
+ * twin of the arrow and counter tools in
+ * `features/editor/components/screenshot-tools`. */
 type AnnotateTool = {
   icon: ReactNode;
   id: AnnotateShape;
@@ -31,5 +31,12 @@ export const ANNOTATE_TOOLS: AnnotateTool[] = [
     label: "Arrow",
     name: "Draw an arrow",
     shortcut: "A",
+  },
+  {
+    icon: <ListOrdered />,
+    id: "counter",
+    label: "Counter",
+    name: "Drop a counter",
+    shortcut: "N",
   },
 ];

@@ -12,6 +12,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const settings: AnnotateSettings = {
   defaultColor: "#ffcc00",
+  defaultCounterAngle: 0,
+  defaultCounterSize: 56,
   defaultHead: "end",
   defaultShape: "arrow",
   defaultWidth: 16,
@@ -61,3 +63,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+/** The counter in hand: the disc sizes and the tail's aim stand where the
+ * arrow's stroke and head were. */
+export const Counter: Story = {
+  args: { settings: { ...settings, defaultShape: "counter" } },
+};

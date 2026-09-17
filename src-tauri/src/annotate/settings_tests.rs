@@ -46,6 +46,42 @@ fn a_width_outside_the_stroke_presets_is_refused() {
 }
 
 #[test]
+fn a_counter_size_outside_the_disc_presets_is_refused() {
+  // An arrow's stroke is not a disc: eight pixels would be too small to hold
+  // a number, and the compositor draws the number at a share of the disc.
+  for size in [0.0, 8.0, 240.0, f64::NAN, f64::INFINITY] {
+    assert!(validated(AnnotateSettings {
+      default_counter_size: size,
+      ..AnnotateSettings::default()
+    })
+    .is_err());
+  }
+  assert!(validated(AnnotateSettings {
+    default_counter_size: 160.0,
+    ..AnnotateSettings::default()
+  })
+  .is_ok());
+}
+
+#[test]
+fn a_counter_aim_that_is_not_an_angle_is_refused() {
+  for angle in [f64::NAN, f64::INFINITY] {
+    assert!(validated(AnnotateSettings {
+      default_counter_angle: angle,
+      ..AnnotateSettings::default()
+    })
+    .is_err());
+  }
+  // Radians past a full turn are an aim like any other: the compositor takes
+  // the direction, not the winding.
+  assert!(validated(AnnotateSettings {
+    default_counter_angle: 12.0,
+    ..AnnotateSettings::default()
+  })
+  .is_ok());
+}
+
+#[test]
 fn a_toolbar_position_that_is_not_a_place_is_refused() {
   for (x, y) in [(f64::NAN, 0.0), (0.0, f64::INFINITY)] {
     assert!(validated(AnnotateSettings {
@@ -69,8 +105,8 @@ fn a_toolbar_position_that_is_not_a_place_is_refused() {
   .is_ok());
 }
 
-/// A stored file written before the toolbar existed still loads, and the
-/// arrow it dresses keeps its head.
+/// A stored file written before the toolbar and the counter existed still
+/// loads, and the arrow it dresses keeps its head.
 #[test]
 fn settings_without_the_newer_fields_take_their_defaults() {
   let settings: AnnotateSettings =
@@ -78,4 +114,7 @@ fn settings_without_the_newer_fields_take_their_defaults() {
       .unwrap();
   assert_eq!(settings.default_head, AnnotationHead::End);
   assert_eq!(settings.toolbar_position, None);
+  assert_eq!(settings.default_shape, AnnotateShape::Arrow);
+  assert_eq!(settings.default_counter_size, MIN_COUNTER_SIZE);
+  assert_eq!(settings.default_counter_angle, 0.0);
 }

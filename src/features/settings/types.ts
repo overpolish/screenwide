@@ -51,8 +51,9 @@ export type OcrSettings = {
   enabled: boolean;
 };
 
-/** The shapes the overlay can draw. Only the arrow exists so far. */
-export type AnnotateShape = "arrow";
+/** The shapes the overlay can draw, the tags of the editor's own
+ * `AnnotationShape`. */
+export type AnnotateShape = "arrow" | "counter";
 
 /** Where the toolbar was last dropped: logical points from the top-left of
  * the display it landed on. */
@@ -64,6 +65,14 @@ type AnnotateToolbarPosition = {
 
 export type AnnotateSettings = {
   defaultColor: string;
+  /** Where a fresh counter's tail points, in radians clockwise from east. A
+   * live mark cannot be picked up again, so the aim is chosen before the
+   * counter is dropped. */
+  defaultCounterAngle: number;
+  /** The disc a fresh counter is drawn at, in output pixels. Kept apart from
+   * the arrow's stroke: they are different measurements of different
+   * things. */
+  defaultCounterSize: number;
   defaultHead: AnnotationHead;
   defaultShape: AnnotateShape;
   defaultWidth: number;

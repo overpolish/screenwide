@@ -17,6 +17,11 @@ use crate::editor::annotations::AnnotationHead;
 /// `src/components/shared/annotation-style/widths.ts`.
 const MIN_WIDTH: f64 = 8.0;
 const MAX_WIDTH: f64 = 48.0;
+/// The disc diameters the counter control offers, in output pixels. The twin
+/// of `ANNOTATION_COUNTER_SIZES` in the same module, and of `COUNTER_SIZES`
+/// in `src-tauri/src/editor/annotations/counter.rs`.
+const MIN_COUNTER_SIZE: f64 = 56.0;
+const MAX_COUNTER_SIZE: f64 = 160.0;
 /// The palette's yellow, as in
 /// `src/components/shared/annotation-style/palette.ts`.
 const DEFAULT_COLOR: &str = "#ffcc00";
@@ -28,6 +33,7 @@ const DEFAULT_COLOR: &str = "#ffcc00";
 pub enum AnnotateShape {
   #[default]
   Arrow,
+  Counter,
 }
 
 /// Where the user dragged the toolbar, in logical points from the top-left of
@@ -53,6 +59,15 @@ pub struct AnnotateSettings {
   /// `#rrggbb` or `#rrggbbaa`, as a document stores it.
   pub default_color: String,
   pub default_width: f64,
+  /// The disc a fresh counter is drawn at, in output pixels. Kept apart from
+  /// the arrow's stroke because they are different measurements of different
+  /// things: eight pixels of stroke would be a disc too small to hold a
+  /// number.
+  pub default_counter_size: f64,
+  /// Where a fresh counter's tail points, in radians clockwise from east.
+  /// Live marks cannot be picked up again, so the aim is chosen before the
+  /// counter is dropped rather than turned afterwards.
+  pub default_counter_angle: f64,
   /// Which ends of a fresh arrow carry a head. The editor's own type, so the
   /// live overlay and the editor dress an arrow from the same value.
   pub default_head: AnnotationHead,
@@ -67,6 +82,8 @@ impl Default for AnnotateSettings {
       default_shape: AnnotateShape::Arrow,
       default_color: DEFAULT_COLOR.to_owned(),
       default_width: MIN_WIDTH,
+      default_counter_size: MIN_COUNTER_SIZE,
+      default_counter_angle: 0.0,
       default_head: AnnotationHead::default(),
       toolbar_position: None,
     }
@@ -86,6 +103,14 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     || !(MIN_WIDTH..=MAX_WIDTH).contains(&settings.default_width)
   {
     return Err("That is not an annotation stroke width".to_owned());
+  }
+  if !settings.default_counter_size.is_finite()
+    || !(MIN_COUNTER_SIZE..=MAX_COUNTER_SIZE).contains(&settings.default_counter_size)
+  {
+    return Err("That is not a counter size".to_owned());
+  }
+  if !settings.default_counter_angle.is_finite() {
+    return Err("That is not a counter angle".to_owned());
   }
   if settings
     .toolbar_position

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getAnnotateSettings, setAnnotateSettings } from "../settings/api";
 import { AnnotateSettings } from "../settings/types";
@@ -22,6 +22,22 @@ import {
  * reports every step, and each one would otherwise be a settings write. */
 const MOVE_SETTLE_MS = 250;
 
+/** How long a dragged edit has to stand still before it is written, for the
+ * same reason. A slider reports every step of a drag, and each step would
+ * otherwise be a validation, a file write, a tray refresh and a change event
+ * the plate follows back - which is what made the controls flicker under the
+ * pointer. */
+const EDIT_SETTLE_MS = 150;
+
+/** The dress a drag changes a step at a time, whose write can wait for the
+ * pointer to settle. Everything else - the tool, the colour, the head - is a
+ * single press, and has to reach the overlay before the next stroke does. */
+const DRAGGED_EDITS = new Set<keyof AnnotateSettings>([
+  "defaultCounterAngle",
+  "defaultCounterSize",
+  "defaultWidth",
+]);
+
 const report = (action: string) => (cause: unknown) => {
   console.error(`Could not ${action}`, cause);
 };
@@ -36,7 +52,12 @@ const report = (action: string) => (cause: unknown) => {
  */
 export function AnnotateToolbarWindow() {
   const [settings, setSettings] = useState<AnnotateSettings | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  // An edit of our own is outstanding while `latest` runs ahead of `settled`.
+  // Until it catches up the plate shows the choice under the pointer, and
+  // neither a write's answer nor the change event it fires may move it.
+  const editRef = useRef({ latest: 0, settled: 0 });
+  // The last dress Rust took, which is what a refused edit falls back to.
+  const acceptedRef = useRef<AnnotateSettings | null>(null);
   // The editor's kept colours, which the store broadcasts, so one saved while
   // the overlay is up appears here without the toolbar asking again.
   const general = useGeneralSettings();
@@ -46,11 +67,17 @@ export function AnnotateToolbarWindow() {
     let stopListening: (() => void) | undefined;
     getAnnotateSettings()
       .then((current) => {
-        if (!stopped) setSettings(current);
+        if (stopped) return;
+        acceptedRef.current = current;
+        setSettings(current);
       })
       .catch(report("read the annotate settings"));
     listenToAnnotateSettings((changed) => {
-      setSettings(changed);
+      acceptedRef.current = changed;
+      // Our own write echoes back through here too, so an edit still under
+      // the pointer keeps what it is showing.
+      if (editRef.current.latest === editRef.current.settled)
+        setSettings(changed);
     })
       .then((unlisten) => {
         if (stopped) unlisten();
@@ -95,29 +122,50 @@ export function AnnotateToolbarWindow() {
   }, []);
 
   // Optimistic: the control shows the choice at once, and Rust's answer is
-  // what it settles on, so a refused colour or width puts it back rather than
-  // leaving it showing a value the overlay never took.
+  // what the plate settles on, so a refused colour or size puts it back -
+  // unless a later edit has arrived, which is the one being shown.
+  //
+  // A dragged edit's write waits for the pointer to settle, so a slider drag
+  // costs one settings write rather than one per step.
   const onChange = (patch: Partial<AnnotateSettings>) => {
     if (!settings) return;
     const next = { ...settings, ...patch };
     setSettings(next);
-    setIsSaving(true);
-    setAnnotateSettings(next)
-      .then(setSettings)
-      .catch((cause: unknown) => {
-        report("save the annotate settings")(cause);
-        setSettings(settings);
-      })
-      .finally(() => {
-        setIsSaving(false);
-      });
+    editRef.current.latest += 1;
+    const seq = editRef.current.latest;
+    const write = () => {
+      setAnnotateSettings(next)
+        .then((saved) => {
+          acceptedRef.current = saved;
+          if (seq === editRef.current.latest) setSettings(saved);
+        })
+        .catch((cause: unknown) => {
+          report("save the annotate settings")(cause);
+          const last = acceptedRef.current;
+          if (last && seq === editRef.current.latest) setSettings(last);
+        })
+        .finally(() => {
+          editRef.current.settled = seq;
+        });
+    };
+    const dragged = Object.keys(patch).every((key) =>
+      DRAGGED_EDITS.has(key as keyof AnnotateSettings),
+    );
+    if (!dragged) {
+      write();
+      return;
+    }
+    window.setTimeout(() => {
+      // The step a later one overtook has nothing left to write: the drag it
+      // belonged to is still going, and its last step is the one that lands.
+      if (seq === editRef.current.latest) write();
+    }, EDIT_SETTLE_MS);
   };
 
   if (!settings) return null;
 
   return (
     <AnnotateToolbar
-      isDisabled={isSaving}
       onChange={onChange}
       onClear={() => {
         clearAnnotations().catch(report("clear the annotations"));
