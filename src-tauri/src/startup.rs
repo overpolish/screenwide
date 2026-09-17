@@ -19,6 +19,10 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   crate::shortcuts::diagnostics::initialize(app.handle());
   #[cfg(target_os = "windows")]
   crate::tooltip_window::initialize(app.handle())?;
+  // Before any overlay can be shown: the watch has to be in place by the time
+  // another application first takes the foreground over one.
+  #[cfg(target_os = "windows")]
+  windows::platform::initialize_band_guard()?;
   #[cfg(debug_assertions)]
   if let Some(preview_url) = std::env::var_os("SCREENWIDE_STORYBOOK_NATIVE_URL") {
     crate::storybook_native::show(app.handle(), &preview_url.to_string_lossy())?;

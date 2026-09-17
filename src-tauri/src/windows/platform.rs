@@ -24,12 +24,17 @@ use objc2_foundation::{NSPoint, NSRect, NSSize};
 
 use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
 
+#[cfg(target_os = "windows")]
+#[path = "platform/band_guard.rs"]
+mod band_guard;
 #[cfg(target_os = "macos")]
 #[path = "platform/capture_exclusion_macos.rs"]
 mod capture_exclusion_macos;
 #[cfg(target_os = "windows")]
 #[path = "platform/composition.rs"]
 mod composition;
+#[cfg(target_os = "windows")]
+pub use band_guard::initialize as initialize_band_guard;
 #[path = "platform/glide_preview.rs"]
 mod glide_preview;
 #[cfg(target_os = "macos")]
