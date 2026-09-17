@@ -1,21 +1,16 @@
 {
   "src-tauri/src/editor/cursor_export/gpu_compositor_macos+presenter.m": 744,
-  "src-tauri/src/editor/osc_gpu_macos.m": 491,
-  "src-tauri/src/editor/osc_gpu_macos_shader.h": 357,
   "src-tauri/src/editor/recording_preview_surface_macos+editor.m": 832,
   "src-tauri/src/editor/recording_preview_surface_macos+layout.m": 429,
-  "src-tauri/src/editor/recording_preview_surface_macos+osc.m": 553,
   "src-tauri/src/editor/recording_preview_surface_macos+selection.m": 590,
   "src-tauri/src/editor/recording_preview_surface_macos+workspace.m": 487,
   "src-tauri/src/editor/recording_preview_surface_macos.m": 752,
   "src-tauri/src/editor/screenshot_region_osc_macos+input.m": 703,
   "src-tauri/src/editor/screenshot_region_osc_macos+ruler.m": 2016,
-  "src-tauri/src/editor/screenshot_region_osc_macos_private.h": 387,
   "src/features/editor/api.ts": 529,
   "src/features/editor/components/editor-panel.stories.tsx": 372,
   "src/features/editor/components/editor-preview-section.tsx": 422,
   "src/features/editor/components/preview-viewport.tsx": 518,
-  "src/features/editor/components/use-recording-timeline-blade.ts": 395,
   "src/features/editor/editor-window.tsx": 733,
   "src/features/editor/recording-keyboard-timeline-edit.ts": 348,
   "src/features/editor/recording-timeline-edit.test.ts": 363,
@@ -24,7 +19,5 @@
   "src/features/editor/use-recording-preview-player.ts": 530,
   "src/features/editor/use-recording-preview-surface.ts": 702,
   "src/features/editor/use-screenshot-preview-surface.ts": 458,
-  "src/features/recording-controls/components/recording-bar-window.tsx": 605,
-  "src/features/recording-controls/components/recording-bar.tsx": 404,
-  "src/features/recording-controls/components/recording-dock.tsx": 306
+  "src/features/recording-controls/components/recording-bar-window.tsx": 605
 }

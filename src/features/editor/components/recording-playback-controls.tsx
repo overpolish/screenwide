@@ -14,8 +14,8 @@ import { PopupSelect } from "../../popup-panel/popup-select";
 import { formatDuration } from "../duration";
 
 import { Playhead } from "./scrub-playhead";
-import { ElapsedTime } from "./scrub-timeline";
 import { useRegisterTimelinePlaybackRow } from "./timeline-band-playback-row";
+import { ElapsedTime } from "./timeline-elapsed-time";
 
 type RecordingPlaybackControlsProps = {
   durationMs: number;

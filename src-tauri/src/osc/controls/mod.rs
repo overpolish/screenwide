@@ -9,6 +9,7 @@ mod confirm;
 mod confirm_ffi;
 mod ffi;
 mod icons;
+mod palette;
 mod style;
 
 use std::time::{Duration, Instant};
@@ -18,10 +19,11 @@ use super::geometry::{Point, Rect};
 pub use confirm::{ConfirmAction, ConfirmActionSpec, ConfirmLayer, ConfirmUpdate};
 pub use icons::ControlIcon;
 #[cfg(target_os = "windows")]
-pub use style::control_stroke;
+pub use palette::control_stroke;
+pub use palette::{control_visual, ControlVisual};
 pub use style::{
-  control_metrics, control_spacing, control_visual, Appearance, ControlColor, ControlKind,
-  ControlMetrics, ControlSize, ControlStyle, ControlVisual, Interaction,
+  control_metrics, control_spacing, Appearance, ControlColor, ControlKind, ControlMetrics,
+  ControlSize, ControlStyle, Interaction,
 };
 
 const TRANSITION_DURATION: Duration = Duration::from_millis(150);

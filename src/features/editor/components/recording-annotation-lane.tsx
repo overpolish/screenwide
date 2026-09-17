@@ -12,11 +12,11 @@ import {
 } from "../recording-timeline-edit";
 
 import { recordingAnnotationRows } from "./recording-annotation-layout";
-import { SeekHandler } from "./scrub-timeline";
 import {
   TIMED_LANE_ROW_HEIGHT_PX,
   timedLaneFragmentBox,
 } from "./timed-lane-layout";
+import { SeekHandler } from "./timeline-seek";
 import { TimelineTrackHeader } from "./timeline-track-header";
 import { TimelineViewportState } from "./timeline-viewport";
 import { TimelineViewportContent } from "./timeline-viewport-content";

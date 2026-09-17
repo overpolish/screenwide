@@ -60,8 +60,16 @@ fn main() {
     println!("cargo:rerun-if-changed=src/windows/dismissal_macos.m");
     println!("cargo:rerun-if-changed=src/editor/region_magnifier_macos.m");
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos.m");
+    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_private.h");
+    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos+primitives.m");
+    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos+selection.m");
+    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos+crop.m");
+    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos+ruler.m");
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_pipeline_macos.m");
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader.h");
+    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader_magnifier.h");
+    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader_types.h");
+    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader_fragment.h");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+callbacks.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+magnifier.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+context_menu.m");
@@ -108,6 +116,8 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+ocr_toolbar.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+ocr_toolbar_input.m");
     println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos_private.h");
+    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos_types.h");
+    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos_private_functions.h");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos_private.h");
     println!(
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos_private_functions.h"
@@ -169,6 +179,10 @@ fn main() {
       .file("src/editor/osc_text_texture_macos.m")
       .file("src/editor/osc_icon_renderer_macos.m")
       .file("src/editor/osc_gpu_macos.m")
+      .file("src/editor/osc_gpu_macos+primitives.m")
+      .file("src/editor/osc_gpu_macos+selection.m")
+      .file("src/editor/osc_gpu_macos+crop.m")
+      .file("src/editor/osc_gpu_macos+ruler.m")
       .file("src/editor/osc_gpu_pipeline_macos.m")
       .file("src/editor/region_cursor_macos.m")
       .file("src/editor/cursor_session_macos.m")

@@ -28,7 +28,7 @@ import { useRegisterPreviewFit } from "./preview-fit-context";
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { Playhead } from "./scrub-playhead";
 import { useRecordingCropPreview } from "./use-recording-crop-preview";
-import { KEYBOARD_LAYER_ID } from "./use-recording-keyboard-canvas-editing";
+import { KEYBOARD_LAYER_ID } from "./use-recording-keyboard-canvas-gesture";
 import { useRecordingPreviewPanes } from "./use-recording-preview-panes";
 import { useRecordingPreviewSelection } from "./use-recording-preview-selection";
 import { useRecordingRecenter } from "./use-recording-recenter";

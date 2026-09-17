@@ -13,9 +13,9 @@ import {
 
 import type { AudioTrackVolumes } from "./audio-level";
 import type { Playhead } from "./scrub-playhead";
-import type { SeekHandler } from "./scrub-timeline";
 import type { TimelineBladeController } from "./timeline-blade";
 import type { TimelineItemSelection } from "./timeline-item-selection";
+import type { SeekHandler } from "./timeline-seek";
 
 export type RecordingTrackLanesProps = {
   adjustedKeyboardFragmentIds: ReadonlySet<string>;

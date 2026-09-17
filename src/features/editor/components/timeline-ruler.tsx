@@ -11,20 +11,14 @@ import {
 
 import { PREVIEW_FRAME_MS, formatDuration } from "../duration";
 import { RecordingTimelineEdit } from "../recording-timeline-edit";
-import { PreparedAudioTrack } from "../types";
 
 import { clamp, Playhead } from "./scrub-playhead";
-import { TimelineBladeController, TimelineSegments } from "./timeline-blade";
 import { ScrubPhase, SeekHandler } from "./timeline-seek";
 import { speedMarkedSegments } from "./timeline-speed-markers";
 import {
   timelineXToFraction,
   TimelineViewportState,
 } from "./timeline-viewport";
-import { TimelineViewportContent } from "./timeline-viewport-content";
-import { timelineWaveformPath } from "./timeline-waveform-path";
-
-export type { ScrubPhase, SeekHandler } from "./timeline-seek";
 
 const TICK_INTERVALS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
 const MINIMUM_TICK_SPACING = 70;
@@ -37,83 +31,6 @@ const MINIMUM_TICK_SPACING = 70;
 const TICK_LABEL_GLYPH_WIDTH_PX = 6;
 /** Clearance kept after a label so the next tick does not touch it. */
 const TICK_LABEL_CLEARANCE_PX = 4;
-
-export function Waveform({
-  blade,
-  enabled,
-  onSelect,
-  track,
-  viewport,
-  volumeDecibels,
-}: {
-  blade: TimelineBladeController;
-  enabled: boolean;
-  onSelect: () => void;
-  track: PreparedAudioTrack;
-  viewport: TimelineViewportState;
-  volumeDecibels: number;
-}) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const path = useMemo(
-    () => timelineWaveformPath(track.waveform, volumeDecibels),
-    [track.waveform, volumeDecibels],
-  );
-  const outputPositionAt = (clientX: number) => {
-    const bounds = rootRef.current?.getBoundingClientRect();
-    return bounds ? timelineXToFraction(clientX, viewport, bounds) : 0;
-  };
-
-  return (
-    <div
-      // The segments carry the lane's fill, so a cut leaves the gap empty.
-      className="relative h-control-height min-w-0 grow cursor-default overflow-hidden rounded-control"
-      data-audio-stream-index={track.streamIndex}
-      onClick={() => {
-        if (!blade.isActive) blade.selectSegment(null);
-      }}
-      // The press, not the click: a segment stops its own click and a trim
-      // handle suppresses one, so only this reaches the whole lane.
-      onPointerDownCapture={(event: ReactPointerEvent<HTMLDivElement>) => {
-        if (event.button === 0 && !blade.isActive) onSelect();
-      }}
-      ref={rootRef}
-    >
-      <TimelineViewportContent viewport={viewport}>
-        <TimelineSegments
-          blade={blade}
-          edit={blade.edit}
-          isBladeActive={blade.isActive}
-          onSelectSegment={(segmentId) => {
-            blade.selectSegment(segmentId);
-            onSelect();
-          }}
-          outputPositionAt={outputPositionAt}
-          renderContent={() => (
-            <svg
-              aria-hidden="true"
-              className={
-                enabled
-                  ? "size-full text-primary"
-                  : "size-full text-content-fg-quaternary"
-              }
-              preserveAspectRatio="none"
-              viewBox="0 0 1000 40"
-            >
-              <path
-                className="stroke-current"
-                d={path}
-                fill="none"
-                strokeWidth="2"
-                vectorEffect="non-scaling-stroke"
-              />
-            </svg>
-          )}
-          selectedSegmentId={blade.selectedSegmentId}
-        />
-      </TimelineViewportContent>
-    </div>
-  );
-}
 
 export function TimelineRuler({
   durationMs,
@@ -323,21 +240,4 @@ export function TimelineRuler({
       ))}
     </div>
   );
-}
-
-/** The elapsed half of the time readout, written straight to the text node. */
-export function ElapsedTime({ playhead }: { playhead: Playhead }) {
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(
-    () =>
-      playhead.subscribe((seconds) => {
-        const text = formatDuration(seconds * 1000);
-        if (ref.current && ref.current.textContent !== text)
-          ref.current.textContent = text;
-      }),
-    [playhead],
-  );
-
-  return <span ref={ref}>{formatDuration(0)}</span>;
 }

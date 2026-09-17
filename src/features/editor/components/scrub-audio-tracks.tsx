@@ -6,10 +6,10 @@ import { Mic, Volume2 } from "lucide-react";
 import { PreparedAudioTrack } from "../types";
 
 import { AudioTrackVolumes } from "./audio-level";
-import { Waveform } from "./scrub-timeline";
 import { TimelineBladeController } from "./timeline-blade";
 import { TimelineTrackHeader } from "./timeline-track-header";
 import { TimelineViewportState } from "./timeline-viewport";
+import { Waveform } from "./timeline-waveform";
 
 export function ScrubAudioTracks({
   audioTracks,

@@ -15,8 +15,9 @@ import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
 import { Playhead } from "./scrub-playhead";
-import { SeekHandler, TimelineRuler } from "./scrub-timeline";
 import { TimelineBladeController } from "./timeline-blade";
+import { TimelineRuler } from "./timeline-ruler";
+import { SeekHandler } from "./timeline-seek";
 import { TIMELINE_MAX_ZOOM, TimelineViewportState } from "./timeline-viewport";
 
 export function TimelineZoomToolbar({

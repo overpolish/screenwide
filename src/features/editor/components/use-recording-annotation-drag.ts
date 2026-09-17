@@ -13,7 +13,7 @@ import {
   recordingTimelineSourceToOutput,
 } from "../recording-timeline-edit";
 
-import { SeekHandler } from "./scrub-timeline";
+import { SeekHandler } from "./timeline-seek";
 import {
   TimelineViewportState,
   timelineXToFraction,
