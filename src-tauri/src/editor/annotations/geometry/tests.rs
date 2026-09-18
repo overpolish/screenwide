@@ -65,11 +65,13 @@ fn a_counter_reads_its_disc_and_rounded_tail_back() {
   assert_eq!(counter.a, [100.0, 100.0]);
   assert_eq!(counter.rounding, 20.0);
   assert_eq!(counter.width, 40.0);
-  // The tip's own circle is a sixth of the disc, and its far edge is where
-  // the tail's reach ends: 1.85 radii east of the centre.
-  assert!((counter.low - 20.0 * 0.17).abs() < 1e-3, "{counter:?}");
-  let reach = counter.b[0] - 100.0 + counter.low;
-  assert!((reach - 20.0 * 1.85).abs() < 1e-3, "{counter:?}");
+  // The tail's tip is the point itself, 1.5 radii east of the centre, and
+  // `low` is the radius it is rounded to.
+  assert!((counter.low - 20.0 * 0.125).abs() < 1e-3, "{counter:?}");
+  assert!(
+    (counter.b[0] - (100.0 + 20.0 * 1.5)).abs() < 1e-3,
+    "{counter:?}"
+  );
   assert!((counter.b[1] - 100.0).abs() < 1e-3);
 }
 
@@ -83,6 +85,6 @@ fn a_counter_arriving_is_prepared_smaller() {
   assert_eq!(arriving.rounding, 10.0);
   // The tail and its tip shrink with the disc rather than staying out at
   // full reach.
-  assert!((arriving.low - 10.0 * 0.17).abs() < 1e-3);
-  assert!((arriving.b[0] + arriving.low - (100.0 + 10.0 * 1.85)).abs() < 1e-3);
+  assert!((arriving.low - 10.0 * 0.125).abs() < 1e-3);
+  assert!((arriving.b[0] - (100.0 + 10.0 * 1.5)).abs() < 1e-3);
 }

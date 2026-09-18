@@ -182,15 +182,15 @@ static inline AnnotationArrowGeometry annotation_prepare_arrow(AnnotationVector 
 /// How far a counter's tail reaches from the disc's centre, in radii, and how
 /// round its tip is as a share of the radius. The twins of
 /// `COUNTER_TAIL_REACH` and `COUNTER_TIP_SHARE` in `counter.rs`.
-#define ANNOTATION_COUNTER_TAIL_REACH 1.85f
-#define ANNOTATION_COUNTER_TIP_SHARE 0.17f
+#define ANNOTATION_COUNTER_TAIL_REACH 1.5f
+#define ANNOTATION_COUNTER_TIP_SHARE 0.125f
 
 /// One counter prepared for drawing and picking, read out of the slots an
-/// arrow fills with its curve. `a` is the disc's centre and `b` the centre of
-/// the small circle the tail ends in; `rounding` is the disc's radius, `low`
-/// the tip's, and `width` the disc's diameter, so the bounding box an arrow's
-/// stroke drives is also a counter's. Where the number is rasterised - its
-/// origin and size in the text atlas - rides in `start_head`.
+/// arrow fills with its curve. `a` is the disc's centre and `b` the tail's
+/// tip; `rounding` is the disc's radius, `low` the radius the tip is rounded
+/// to, and `width` the disc's diameter, so the bounding box an arrow's stroke
+/// drives is also a counter's. Where the number is rasterised - its origin
+/// and size in the text atlas - rides in `start_head`.
 typedef struct {
   AnnotationVector center, tip;
   float radius, tip_radius;
@@ -211,10 +211,11 @@ static inline AnnotationCounterGeometry annotation_counter_geometry(
 
 /// One preparation per counter before drawing or picking, never per pixel.
 ///
-/// The silhouette is the hull of two circles: the disc, and the small one the
-/// tail ends in. The sides are the tangents joining them, so the outline
-/// leaves the disc and arrives at the tip without ever coming to a point -
-/// one smooth teardrop rather than a disc with a spike glued on.
+/// The silhouette is the disc unioned with the tail: the overlap of two
+/// circles, one either side of the axis, each tangent to the disc and to the
+/// little circle the tip is rounded to, with their centres a radius behind the
+/// disc's own. That is the outline of `MapPinPlusInside` to within a
+/// hundredth of the radius.
 ///
 /// `reveal.scale` is the size the mark is drawn at this frame: the disc, its
 /// tail and its number are one mark and grow together, so the scale is
@@ -228,29 +229,56 @@ static inline AnnotationArrowGeometry annotation_prepare_counter(
                                     .rounding = radius, .head = 0};
   if (radius <= 0) return result;
   result.low = radius * ANNOTATION_COUNTER_TIP_SHARE;
-  float reach = radius * ANNOTATION_COUNTER_TAIL_REACH - result.low;
+  float reach = radius * ANNOTATION_COUNTER_TAIL_REACH;
   AnnotationVector direction = annotation_vector(cosf(angle), sinf(angle));
   result.b = annotation_add(center, annotation_scale(direction, reach));
   return result;
 }
 
 /// The far end of a prepared counter's tail: the point its grip is drawn on,
-/// which is the tip circle's own far edge rather than its centre.
+/// which the preparation already placed at the tail's full reach.
 static inline AnnotationVector annotation_counter_tail_point(
     AnnotationArrowGeometry prepared) {
-  AnnotationVector reach = annotation_subtract(prepared.b, prepared.a);
-  float length = annotation_length(reach);
-  if (length <= 0) return prepared.a;
-  return annotation_add(prepared.b, annotation_scale(reach, prepared.low / length));
+  return prepared.b;
+}
+
+/// How far a point falls outside the silhouette, measured `along` the tail and
+/// `across` it from the disc's centre, with `across` already folded to the
+/// near side. The twin of `counter_silhouette_distance` in
+/// `counter_silhouette.rs`.
+///
+/// The side circles are solved rather than chosen: a radius behind the disc's
+/// centre, tangent to the disc and tangent to the tip's own circle, leaves one
+/// radius and one distance across the axis to find. Their overlap is measured
+/// the way any lens is - to the near circle inside its span, to the shared
+/// corner past it - and that corner is the tip's centre, so taking the tip's
+/// radius off the whole thing rounds the point without moving it.
+///
+/// The overlap runs back behind the disc as well, and is wider than the disc
+/// where it does, so it is cut at the plane where the circles touch the disc.
+/// That cut is a chord of the disc, inside the union, and so never shows.
+static inline double annotation_counter_silhouette_distance(
+    double across, double along, double radius, double tip_radius, double reach) {
+  double disc = hypot(across, along) - radius;
+  double gap = radius - tip_radius;
+  if (gap <= 0) return disc;
+  // Where the tip's circle sits, and the side circles that reach it.
+  double tip = reach - tip_radius;
+  double side = (tip * tip + 2 * tip * radius + gap * gap) / (2 * gap);
+  double apart = side + tip_radius - radius;
+  double offset = apart * apart - radius * radius;
+  if (offset <= 0) return disc;
+  offset = sqrt(offset);
+  double lens = (along - tip) * offset > across * (tip + radius)
+                    ? hypot(across, along - tip)
+                    : hypot(across + offset, along + radius) - side;
+  double touch = radius * radius / apart;
+  return fmin(disc, fmax(lens - tip_radius, touch - along));
 }
 
 /// How far `point` falls outside a prepared counter's silhouette, in the
 /// space it was prepared in. Negative inside the mark, which is what picks
 /// it. The twin of `counter_distance` in `counter.rs`.
-///
-/// Measured along the tail and across it: inside the disc's cap the distance
-/// is the disc's own, inside the tip's cap the tip's, and between them it is
-/// the distance to the tangent joining the two circles.
 static inline double annotation_counter_distance(AnnotationVector point,
                                                  AnnotationArrowGeometry prepared) {
   AnnotationCounterGeometry counter = annotation_counter_geometry(prepared);
@@ -263,10 +291,6 @@ static inline double annotation_counter_distance(AnnotationVector point,
   double axis_y = (counter.tip.y - counter.center.y) / reach;
   double along = local_x * axis_x + local_y * axis_y;
   double across = fabs(local_x * -axis_y + local_y * axis_x);
-  double slope = (counter.radius - counter.tip_radius) / reach;
-  double run = sqrt(fmax(1 - slope * slope, 0));
-  double side = -slope * across + run * along;
-  if (side < 0) return hypot(across, along) - counter.radius;
-  if (side > run * reach) return hypot(across, along - reach) - counter.tip_radius;
-  return across * run + along * slope - counter.radius;
+  return annotation_counter_silhouette_distance(across, along, counter.radius,
+                                                counter.tip_radius, reach);
 }

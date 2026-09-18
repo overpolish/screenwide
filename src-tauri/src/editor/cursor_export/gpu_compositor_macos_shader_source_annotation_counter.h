@@ -8,9 +8,9 @@
 /// number sampled from the text atlas, and the layer that draws all three.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COUNTER @R"METAL(
 /// A counter read out of the slots an arrow fills with its curve: the disc's
-/// centre and radius, the centre and radius of the small circle its tail ends
-/// in, and where the number was rasterised in the text atlas. Prepared once
-/// per mark by `annotation_prepare_counter`.
+/// centre and radius, the tail's tip and the radius it is rounded to, and
+/// where the number was rasterised in the text atlas. Prepared once per mark
+/// by `annotation_prepare_counter`.
 struct AnnotationCounter {
   float2 center, tip;
   float radius, tip_radius;
@@ -29,16 +29,19 @@ static AnnotationCounter annotation_counter(
   return counter;
 }
 
-/// How far a point falls outside a counter's silhouette: the hull of the disc
-/// and the small circle its tail ends in. One exact distance rather than a
-/// union of two shapes, so nothing seams where they meet and the tip is as
-/// round as the disc.
+/// How far a point falls outside a counter's silhouette: the disc, unioned
+/// with the tail - the overlap of two circles, one either side of the axis,
+/// each tangent to the disc and to the little circle the tip is rounded to,
+/// their centres a radius behind the disc's own.
 ///
-/// Measured along the tail and across it: inside the disc's cap the distance
-/// is the disc's own, inside the tip's cap the tip's, and between them it is
-/// the distance to the tangent joining the two circles. The twin of
-/// `annotation_counter_distance` in `annotations/geometry.h`, which picks the
-/// same shape.
+/// The side circles are solved here from the disc, the tip and the reach.
+/// Their overlap is measured the way any lens is - to the near circle inside
+/// its span, to the shared corner past it - and that corner is the tip's
+/// centre, so taking the tip's radius off rounds the point without moving it.
+/// The overlap runs back behind the disc too, so it is cut at the plane where
+/// the circles touch the disc: a chord, inside the union, which never shows.
+/// The twin of `annotation_counter_silhouette_distance` in
+/// `annotations/geometry.h`, which picks the same shape.
 static float annotation_counter_distance(float2 point, AnnotationCounter counter) {
   float2 local = point - counter.center;
   float2 reach = counter.tip - counter.center;
@@ -48,13 +51,20 @@ static float annotation_counter_distance(float2 point, AnnotationCounter counter
   float2 axis = reach / length_reach;
   float along = dot(local, axis);
   float across = abs(local.x * -axis.y + local.y * axis.x);
-  float slope = (counter.radius - counter.tip_radius) / length_reach;
-  float run = sqrt(max(1.0 - slope * slope, 0.0));
-  float side = -slope * across + run * along;
-  if (side < 0.0) return length(float2(across, along)) - counter.radius;
-  if (side > run * length_reach)
-    return length(float2(across, along - length_reach)) - counter.tip_radius;
-  return across * run + along * slope - counter.radius;
+  float disc = length(local) - counter.radius;
+  float gap = counter.radius - counter.tip_radius;
+  if (gap <= 0.0) return disc;
+  float tip = length_reach - counter.tip_radius;
+  float side = (tip * tip + 2.0 * tip * counter.radius + gap * gap) / (2.0 * gap);
+  float apart = side + counter.tip_radius - counter.radius;
+  float offset = apart * apart - counter.radius * counter.radius;
+  if (offset <= 0.0) return disc;
+  offset = sqrt(offset);
+  float lens = (along - tip) * offset > across * (tip + counter.radius)
+      ? length(float2(across, along - tip))
+      : length(float2(across + offset, along + counter.radius)) - side;
+  float touch = counter.radius * counter.radius / apart;
+  return min(disc, max(lens - counter.tip_radius, touch - along));
 }
 
 /// How much of the number covers this pixel, from the atlas the numbers were

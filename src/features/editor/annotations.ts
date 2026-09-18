@@ -33,7 +33,7 @@ type AnnotationArrow = {
 };
 
 /**
- * A numbered disc with a teardrop tail. `value` is the mark's place in the
+ * A numbered disc with a pin's curved tail. `value` is the mark's place in the
  * document's counter order, which the editor keeps contiguous, and `angle` is
  * where the tail points, in radians clockwise from east in the source's own
  * pixel space - so a fresh counter's zero points right.
