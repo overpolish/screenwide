@@ -16,7 +16,7 @@ impl RecordingPreviewSurface {
     let Ok(mut state) = self.inner.state.lock() else {
       return Ok(false);
     };
-    // A recording's marks belong to the pane they were drawn over, so the
+    // A recording's annotations belong to the pane they were drawn over, so the
     // halo is keyed by pane index here, where a screenshot keys it by layer.
     let halo = recording_halo(&state, index);
     let Some(pane) = state.panes.get_mut(index as usize).and_then(Option::as_mut) else {
@@ -156,15 +156,15 @@ impl RecordingPreviewSurface {
 }
 
 impl RecordingPreviewSurface {
-  /// Re-presents the frame a pane already holds with `annotations` in place
-  /// of the marks it was last composed with. This is what an arrow drag
-  /// needs per pointer sample: the picture has not changed, only the marks
-  /// over it, so asking the decoder for the frame again would put a seek
-  /// between the hand and the arrow. The Metal workspace does the same
+  /// Re-presents the frame a pane already holds with `annotations` in place of
+  /// the annotations it was last composed with. This is what an arrow drag
+  /// needs per pointer sample: the picture has not changed, only the
+  /// annotations over it, so asking the decoder for the frame again would put a
+  /// seek between the hand and the arrow. The Metal workspace does the same
   /// through `redraw_recording_workspace`.
   ///
-  /// `source` is the full-resolution grid the marks are authored in; they are
-  /// moved onto the decoded frame's own grid here, as a live present does.
+  /// `source` is the full-resolution grid the annotations are authored in; they
+  /// are moved onto the decoded frame's own grid here, as a live present does.
   pub(crate) fn redraw_recording_annotations(
     &self,
     index: u32,
@@ -208,7 +208,7 @@ impl RecordingPreviewSurface {
   }
 }
 
-/// The halo this pane's marks carry, if the hovered arrow is one of them.
+/// The halo this pane's annotations carry, if the hovered arrow is one of them.
 fn recording_halo(state: &SurfaceState, index: u32) -> Option<(usize, f32)> {
   state
     .annotation

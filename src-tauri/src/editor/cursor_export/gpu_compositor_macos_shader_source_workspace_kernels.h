@@ -135,8 +135,8 @@ kernel void workspace_layer(
     rgba = overlay_canvas_foreground_rgba(
       rgba, source, source_dimensions.x, source_dimensions.y,
       canvas_point, canvas_dimensions, u);
-    // The redrawn foreground covers the pass above, so the marks under the
-    // camera go back over it exactly as the cursor does.
+    // The redrawn foreground covers the pass above, so the annotations under
+    // the camera go back over it exactly as the cursor does.
     rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                  canvas_point, u, float2(source_dimensions),
                                  annotation_pixel_scale, annotation_samples,

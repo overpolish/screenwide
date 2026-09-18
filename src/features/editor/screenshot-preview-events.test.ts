@@ -49,7 +49,7 @@ describe("screenshotAnnotationChange", () => {
     ).toBeNull();
   });
 
-  it("drops a mark the compositor could not place", () => {
+  it("drops an annotation the compositor could not place", () => {
     const broken = {
       ...arrow,
       shape: { ...arrow.shape, end: { x: Number.NaN, y: 0 } },
@@ -71,7 +71,7 @@ describe("screenshotAnnotationChange", () => {
 });
 
 describe("screenshotAnnotationHover", () => {
-  it("reads which mark the halo is on", () => {
+  it("reads which annotation the halo is on", () => {
     expect(
       screenshotAnnotationHover({ annotationId: "arrow-1", sessionId: 7 }, 7),
     ).toEqual({ annotationId: "arrow-1" });

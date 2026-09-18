@@ -17,7 +17,8 @@ import {
 } from "./annotations";
 import { EditorKind } from "./types";
 
-/** Selection and editing behaviour shared by screenshot and recording marks. */
+/** Selection and editing behaviour shared by screenshot and recording
+ * annotations. */
 export function useAnnotations({
   annotations,
   onCommit,
@@ -73,8 +74,9 @@ export function useAnnotations({
     );
   };
 
-  // Whether a mark animates is not part of its dress: it sits on the mark
-  // itself, so it is committed on its own rather than through the style.
+  // Whether an annotation animates is not part of its dress: it sits on the
+  // annotation itself, so it is committed on its own rather than through the
+  // style.
   const applyAnimated = (animated: boolean) => {
     if (!selected) return;
     rememberAnnotationAnimated(animated);
@@ -138,7 +140,7 @@ export function useAnnotations({
     onHoverChange: setHoveredId,
     onSelectedChange: setSelectedId,
     selectedId,
-    /** Which shape the chosen mark is, for the tool that follows it. */
+    /** Which shape the chosen annotation is, for the tool that follows it. */
     selectedKind: selected?.shape.kind ?? null,
   };
 }

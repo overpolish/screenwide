@@ -118,8 +118,8 @@ export function useScreenshotPreviewEvents({
     };
   }, [isEnabled, onAnnotationChangeRef, sessionIdRef]);
 
-  // The halo is native, but the keyboard belongs to the webview: a delete
-  // acts on the mark the pointer is resting on, so React is told which one
+  // The halo is native, but the keyboard belongs to the webview: a delete acts
+  // on the annotation the pointer is resting on, so React is told which one
   // that is. Only a change reports one; the pulse itself is not news.
   useEffect(() => {
     if (!isEnabled) return;

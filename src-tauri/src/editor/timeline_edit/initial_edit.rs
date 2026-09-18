@@ -5,9 +5,9 @@
 
 use super::*;
 
-/// Writes the first edit a recording has ever had, carrying the marks that
-/// were drawn live while it was being captured. The editor loads this as the
-/// recording's own timeline, so those marks arrive already editable.
+/// Writes the first edit a recording has ever had, carrying the annotations
+/// that were drawn live while it was being captured. The editor loads this as
+/// the recording's own timeline, so those annotations arrive already editable.
 ///
 /// The timeline itself is the untouched whole: one segment at full rate.
 pub(in crate::editor) fn persist_initial_annotation_clips(

@@ -74,8 +74,8 @@ kernel void compose_canvas_rgba(
       rgba, source, source_dimensions.x, source_dimensions.y,
       float2(gid) + 0.5, float2(dimensions), u);
     rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
-    // The redrawn foreground covers the pass above, so the marks under the
-    // camera go back over it exactly as the cursor does.
+    // The redrawn foreground covers the pass above, so the annotations under
+    // the camera go back over it exactly as the cursor does.
     rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                  float2(gid) + 0.5, u, float2(source_dimensions),
                                  annotation_pixel_scale, annotation_samples,

@@ -3,11 +3,11 @@
 
 //! The bridge from annotations drawn on the live overlay to editable clips.
 //!
-//! The overlay owns pixels, this owns time. An annotation lives here for as long as
-//! it is on screen, in global logical desktop points, and a running recording
-//! turns each annotation's visible span into one annotation clip in the recording's
-//! own source pixels. With no recording running, nothing is accumulated and
-//! nothing is written.
+//! The overlay owns pixels, this owns time. An annotation lives here for as
+//! long as it is on screen, in global logical desktop points, and a running
+//! recording turns each annotation's visible span into one annotation clip in
+//! the recording's own source pixels. With no recording running, nothing is
+//! accumulated and nothing is written.
 
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
@@ -19,16 +19,17 @@ use crate::editor::annotations::{Annotation, AnnotationShape, MAX_ANNOTATIONS};
 use crate::recording::clock::SidecarClock;
 use crate::recording::cursor::CursorSource;
 
-/// An annotation on screen. `shown_at_ms` is recording time, and stays absent until a
-/// running recording has seen the annotation: one drawn during a pause enters the
-/// recording at the resume rather than at the wall-clock moment it was drawn.
+/// An annotation on screen. `shown_at_ms` is recording time, and stays absent
+/// until a running recording has seen the annotation: one drawn during a pause
+/// enters the recording at the resume rather than at the wall-clock moment it
+/// was drawn.
 struct LiveAnnotation {
   annotation: Annotation,
   shown_at_ms: Option<u64>,
 }
 
-/// What a running recording adds: a clock, the space annotations are converted into,
-/// and the clips closed out so far.
+/// What a running recording adds: a clock, the space annotations are converted
+/// into, and the clips closed out so far.
 struct Timed {
   clips: Vec<RecordingAnnotationClip>,
   clock: SidecarClock,
@@ -94,7 +95,7 @@ impl LiveAnnotations {
       return;
     }
     let shown_at_ms = self.timed.as_ref().and_then(|timed| {
-      // Until the first frame lands there is no origin to measure from, and a
+      // Until the first frame lands there is no origin to measure from, and an
       // annotation drawn in that window was there from the recording's start.
       timed
         .clock
@@ -108,8 +109,9 @@ impl LiveAnnotations {
     });
   }
 
-  /// Takes the newest annotation off the screen, reporting whether there was one.
-  /// The clip it earned is kept: the annotation was visible for exactly that long.
+  /// Takes the newest annotation off the screen, reporting whether there was
+  /// one. The clip it earned is kept: the annotation was visible for exactly
+  /// that long.
   fn remove_last(&mut self, at: Instant) -> bool {
     let Some(live) = self.annotations.pop() else {
       return false;
@@ -120,7 +122,8 @@ impl LiveAnnotations {
     true
   }
 
-  /// Takes every annotation off the screen: a clear, or the overlay being dismissed.
+  /// Takes every annotation off the screen: a clear, or the overlay being
+  /// dismissed.
   fn clear(&mut self, at: Instant) {
     let annotations = std::mem::take(&mut self.annotations);
     let Some(timed) = self.timed.as_mut() else {
@@ -131,8 +134,8 @@ impl LiveAnnotations {
     }
   }
 
-  /// Starts timing against a recording. Annotations already on screen belong to it
-  /// from its first frame.
+  /// Starts timing against a recording. Annotations already on screen belong to
+  /// it from its first frame.
   fn start(&mut self, origin: Arc<OnceLock<Instant>>, source: CursorSource) {
     for live in &mut self.annotations {
       live.shown_at_ms = Some(0);
@@ -150,8 +153,8 @@ impl LiveAnnotations {
     }
   }
 
-  /// Annotations drawn during the pause enter the recording here, so their clips
-  /// start in recording time rather than at the wall time of the stroke.
+  /// Annotations drawn during the pause enter the recording here, so their
+  /// clips start in recording time rather than at the wall time of the stroke.
   fn resume(&mut self, at: Instant) {
     let Some(timed) = self.timed.as_mut() else {
       return;
@@ -207,26 +210,28 @@ const fn millis(micros: u64) -> u64 {
 static LIVE: LazyLock<Mutex<LiveAnnotations>> =
   LazyLock::new(|| Mutex::new(LiveAnnotations::default()));
 
-/// A poisoned lock still holds an honest annotation list, and one panicking stroke
-/// must not silently end annotating.
+/// A poisoned lock still holds an honest annotation list, and one panicking
+/// stroke must not silently end annotating.
 fn live() -> MutexGuard<'static, LiveAnnotations> {
   LIVE.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// Adds a completed stroke, in global logical desktop points. `at` is when the
-/// stroke began rather than when it was finished: that is the moment the annotation
-/// started appearing on screen, and where the pointer was when it did.
+/// stroke began rather than when it was finished: that is the moment the
+/// annotation started appearing on screen, and where the pointer was when it
+/// did.
 pub(crate) fn add(annotation: Annotation, at: Instant) {
   live().add(annotation, at);
 }
 
-/// Undo: takes the newest annotation off the screen, closing out its clip when a
-/// recording is running. Reports whether there was a annotation to take.
+/// Undo: takes the newest annotation off the screen, closing out its clip when
+/// a recording is running. Reports whether there was an annotation to take.
 pub(crate) fn remove_last() -> bool {
   live().remove_last(Instant::now())
 }
 
-/// Removes every annotation, closing out their clips when a recording is running.
+/// Removes every annotation, closing out their clips when a recording is
+/// running.
 pub(crate) fn clear() {
   live().clear(Instant::now());
 }
@@ -242,7 +247,7 @@ pub(crate) fn annotations() -> Vec<Annotation> {
 
 /// The number the next counter dropped on the overlay takes. Counted rather
 /// than remembered: clearing the screen starts the count again, and undo only
-/// ever takes the newest mark, so what is on screen is always 1..n.
+/// ever takes the newest annotation, so what is on screen is always 1..n.
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 pub(crate) fn next_counter_value() -> u32 {
   live()
@@ -259,8 +264,8 @@ pub(crate) fn has_annotations() -> bool {
   !live().annotations.is_empty()
 }
 
-/// The live-annotation sidecar. It owns no file and no thread: the annotations are
-/// already in memory, so all a recording adds is a clock and a clip list.
+/// The live-annotation sidecar. It owns no file and no thread: the annotations
+/// are already in memory, so all a recording adds is a clock and a clip list.
 pub(crate) struct AnnotationRecorder;
 
 impl AnnotationRecorder {

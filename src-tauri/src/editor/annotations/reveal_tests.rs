@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The reveal's timing, its arc-length inversion, and its promise that a mark
-//! standing still is drawn exactly the way it was before it could animate.
+//! The reveal's timing, its arc-length inversion, and its promise that an
+//! annotation standing still is drawn exactly the way it was before it could
+//! animate.
 
 use super::geometry::*;
 use super::*;
@@ -25,11 +26,11 @@ fn arc_length_to(t: f32) -> f32 {
   total
 }
 
-/// A mark's stroke, whose heads are four of it long apiece. Ten leaves the
-/// single head these tests measure against forty pixels of the path.
+/// An annotation's stroke, whose heads are four of it long apiece. Ten leaves
+/// the single head these tests measure against forty pixels of the path.
 const STROKE: f32 = 10.0;
 
-/// A full-sized mark whose window runs from the tail to `fraction`.
+/// A full-sized annotation whose window runs from the tail to `fraction`.
 fn opened(fraction: f32) -> AnnotationReveal {
   AnnotationReveal {
     low: 0.0,
@@ -46,7 +47,7 @@ fn bare(window: AnnotationReveal) -> AnnotationRevealGeometry {
   reveal_geometry(A, B, C, STROKE, 0.0, window)
 }
 
-/// The prepared reveal of a single-headed mark on the test curve.
+/// The prepared reveal of a single-headed annotation on the test curve.
 fn headed(window: AnnotationReveal) -> AnnotationRevealGeometry {
   reveal_geometry(A, B, C, STROKE, 1.0, window)
 }
@@ -80,7 +81,7 @@ fn the_window_ends_invert_to_their_own_arc_fractions() {
 }
 
 #[test]
-fn a_static_mark_collapses_to_the_whole_path_at_full_size() {
+fn a_static_annotation_collapses_to_the_whole_path_at_full_size() {
   assert_eq!(AnnotationReveal::default(), AnnotationReveal::WHOLE);
   assert_eq!(
     headed(AnnotationReveal::WHOLE),
@@ -93,7 +94,7 @@ fn a_static_mark_collapses_to_the_whole_path_at_full_size() {
     }
   );
   // A clip holds the whole path between its two phases, so the middle of an
-  // animated clip prepares exactly as a mark that never animates does.
+  // animated clip prepares exactly as an annotation that never animates does.
   assert!(reveal_window(1_500.0, 3_000.0, 16.0).is_whole());
 }
 
@@ -129,12 +130,12 @@ fn the_head_rides_ahead_of_the_shaft_s_end() {
   );
 }
 
-/// A bare tail keeps its round end inside the mark until it has a few
+/// A bare tail keeps its round end inside the annotation until it has a few
 /// strokes of shaft behind the head, and has it all back by four of them:
 /// the stroke stops half a width inside the window at first, so the round
 /// end's edge is on the tail rather than a knob past it. Both ways.
 #[test]
-fn a_short_bare_tail_keeps_its_round_end_inside_the_mark() {
+fn a_short_bare_tail_keeps_its_round_end_inside_the_annotation() {
   let total = arc_length_to(1.0);
   let setting_off = |shaft: f32| {
     arc_length_to(
@@ -229,7 +230,7 @@ fn a_head_grows_from_its_base_on_the_shaft() {
 }
 
 #[test]
-fn the_mark_draws_in_over_a_second_and_out_over_three_quarters_of_one() {
+fn the_annotation_draws_in_over_a_second_and_out_over_three_quarters_of_one() {
   let at = |elapsed| reveal_window(elapsed, 3_000.0, 0.0);
   assert_eq!(at(0.0).high, 0.0);
   assert_eq!(at(1_000.0).high, 1.0);
@@ -240,12 +241,12 @@ fn the_mark_draws_in_over_a_second_and_out_over_three_quarters_of_one() {
   assert_eq!(at(3_000.0).high, 1.0);
 }
 
-/// The mark arrives whole, fading in over the first three tenths of the opening
-/// phase while it is already drawing, and its head shrinks away over the
-/// last third of the closing one, starting while the stroke is still drawing
-/// itself back in: it leaves with the stroke, not after it.
+/// The annotation arrives whole, fading in over the first three tenths of the
+/// opening phase while it is already drawing, and its head shrinks away over
+/// the last third of the closing one, starting while the stroke is still
+/// drawing itself back in: it leaves with the stroke, not after it.
 #[test]
-fn the_mark_fades_in_whole_and_shrinks_away_late() {
+fn the_annotation_fades_in_whole_and_shrinks_away_late() {
   let at = |elapsed| reveal_window(elapsed, 3_000.0, 0.0);
   assert_eq!(at(0.0).opacity, 0.0);
   assert_eq!(at(0.0).scale, 1.0);
@@ -360,8 +361,8 @@ fn the_previous_window_trails_whichever_end_is_moving() {
 }
 
 /// The editor reaches a clip back by the draw-in phase when it places a fresh
-/// mark, and TypeScript cannot read this constant, so it keeps its own copy.
-/// This is what stops the two from drifting.
+/// annotation, and TypeScript cannot read this constant, so it keeps its own
+/// copy. This is what stops the two from drifting.
 #[test]
 fn the_editor_places_a_clip_by_this_phase() {
   const SOURCE: &str = include_str!(concat!(

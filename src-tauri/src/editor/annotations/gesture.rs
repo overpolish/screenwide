@@ -11,14 +11,14 @@ use super::bend::{arrow_bend, clamp_bend, control_for_bend, control_through_midp
 use super::counter::counter_tail_angle;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
 
-/// Which grip of a mark the pointer took hold of. An arrow has three grips
-/// and its shaft; a counter has one - the tail - and its disc.
+/// Which grip of an annotation the pointer took hold of. An arrow has three
+/// grips and its shaft; a counter has one - the tail - and its disc.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AnnotationHandle {
   Start,
   Middle,
   End,
-  /// The shaft, or a counter's disc. Dragging it carries the whole mark.
+  /// The shaft, or a counter's disc. Dragging it carries the whole annotation.
   Body,
   /// A counter's tail tip. Dragging it turns the tail around the disc.
   Tail,
@@ -37,36 +37,36 @@ impl AnnotationHandle {
   }
 }
 
-/// What the gesture acts on: a mark being drawn, or one already there.
+/// What the gesture acts on: an annotation being drawn, or one already there.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AnnotationGestureTarget {
   /// Empty picture under a drawing tool. Which shape it makes is the tool's
   /// business rather than the native view's, so it rides in beside the
-  /// target as [`NewMarkKind`].
+  /// target as [`NewAnnotationKind`].
   New,
   Existing {
     index: usize,
     handle: AnnotationHandle,
   },
-  /// A press that landed on no mark at all, with only the select tool in
-  /// hand. It lets the chosen mark go and then belongs to the layer.
+  /// A press that landed on no annotation at all, with only the select tool in
+  /// hand. It lets the chosen annotation go and then belongs to the layer.
   None,
-  /// A press on the body of the mark at `index`. It only chooses that mark:
-  /// the move it may turn into arrives as its own `Existing` gesture once
-  /// the press has travelled past the native slop.
+  /// A press on the body of the annotation at `index`. It only chooses that
+  /// annotation: the move it may turn into arrives as its own `Existing`
+  /// gesture once the press has travelled past the native slop.
   Select { index: usize },
 }
 
 /// Which shape a drawing tool's press makes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum NewMarkKind {
+pub(crate) enum NewAnnotationKind {
   Arrow,
   Counter,
 }
 
 /// What the pointer does over the picture while a tool is in hand. The select
-/// tool hit-tests the marks already there and lets every other press fall
-/// through to the layer; a drawing tool also makes a new mark on empty
+/// tool hit-tests the annotations already there and lets every other press fall
+/// through to the layer; a drawing tool also makes a new annotation on empty
 /// picture. The values are the native `ScreenwideAnnotationMode`.
 pub(crate) const MODE_NONE: u32 = 0;
 pub(crate) const MODE_SELECT: u32 = 1;
@@ -83,9 +83,9 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
   }
 }
 
-impl NewMarkKind {
-  /// The shape the tool in hand draws. Only the drawing modes make a mark at
-  /// all, so anything else answers the arrow it would have drawn.
+impl NewAnnotationKind {
+  /// The shape the tool in hand draws. Only the drawing modes make an
+  /// annotation at all, so anything else answers the arrow it would have drawn.
   pub(crate) fn from_mode(mode: u32) -> Self {
     if mode == MODE_COUNTER {
       Self::Counter
@@ -96,9 +96,9 @@ impl NewMarkKind {
 }
 
 impl AnnotationGestureTarget {
-  /// Reads the target the native interaction view reported: a new mark (0),
-  /// a grip of the mark at `index` (1), no mark at all (2), or a press that
-  /// only chooses the mark at `index` (3).
+  /// Reads the target the native interaction view reported: a new annotation
+  /// (0), a grip of the annotation at `index` (1), no annotation at all (2), or
+  /// a press that only chooses the annotation at `index` (3).
   pub(crate) fn from_raw(kind: u32, index: u32, handle: u32) -> Option<Self> {
     match kind {
       0 => Some(Self::New),
@@ -150,7 +150,7 @@ impl AnnotationDragOrigin {
   }
 }
 
-/// Names a fresh mark. Collisions only have to be impossible inside one
+/// Names a fresh annotation. Collisions only have to be impossible inside one
 /// document, and a monotonic counter beside the clock gives that without
 /// reaching for a dependency.
 pub(crate) fn next_annotation_id() -> String {
@@ -160,13 +160,13 @@ pub(crate) fn next_annotation_id() -> String {
   let millis = std::time::SystemTime::now()
     .duration_since(std::time::UNIX_EPOCH)
     .map_or(0, |elapsed| elapsed.as_millis() as u64);
-  format!("mark-{millis:x}-{sequence:x}")
+  format!("annotation-{millis:x}-{sequence:x}")
 }
 
-/// Move one grip of a mark to `point`, in source pixels. `origin` is where
-/// the drag began, which is what a whole-mark move measures its travel
-/// against, and `snap` is whether Shift was held - which holds a counter's
-/// tail to the quarter turns.
+/// Move one grip of an annotation to `point`, in source pixels. `origin` is
+/// where the drag began, which is what a whole-annotation move measures its
+/// travel against, and `snap` is whether Shift was held - which holds a
+/// counter's tail to the quarter turns.
 pub(crate) fn drag_handle(
   annotation: &mut Annotation,
   handle: AnnotationHandle,

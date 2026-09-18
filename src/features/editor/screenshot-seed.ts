@@ -16,10 +16,10 @@ type ScreenshotArtifactItem = Extract<
 >["items"][number];
 
 /**
- * A layer's first output: the look borrowed from the template, laid out for
- * the item's own size, carrying the marks the item arrived with. Those are the
- * live overlay's, drawn over the shot when it was taken; the marks on the
- * layers already in the workspace are never copied onto a new one.
+ * A layer's first output: the look borrowed from the template, laid out for the
+ * item's own size, carrying the annotations the item arrived with. Those are
+ * the live overlay's, drawn over the shot when it was taken; the annotations on
+ * the layers already in the workspace are never copied onto a new one.
  */
 export const seedScreenshotItemOutput = (
   template: ScreenshotOutputSettings,
@@ -32,9 +32,9 @@ export const seedScreenshotItemOutput = (
 
 /**
  * The workspace a screenshot artifact opens with. The remembered look is a
- * template, so it brings the colours and the corners and none of the marks,
- * and a new capture starts at its own native canvas dimensions rather than
- * the previous artifact's aspect ratio or manually enlarged canvas.
+ * template, so it brings the colours and the corners and none of the
+ * annotations, and a new capture starts at its own native canvas dimensions
+ * rather than the previous artifact's aspect ratio or manually enlarged canvas.
  */
 export const seedScreenshotWorkspace = ({
   artifact,

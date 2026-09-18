@@ -126,8 +126,8 @@ export function RecordingPreviewTimelineBand({
           keyboardSelection={keyboardTimeline.selection}
           layout={layout}
           onAnnotationsChange={annotations.onClipsChange}
-          // Choosing a mark from its lane picks the Select tool up, the
-          // way choosing a camera or screen clip does, so the mark is in
+          // Choosing an annotation from its lane picks the Select tool up, the
+          // way choosing a camera or screen clip does, so the annotation is in
           // hand rather than merely highlighted.
           onAnnotationSelect={(id) => {
             annotations.onSelect(id);
@@ -140,8 +140,8 @@ export function RecordingPreviewTimelineBand({
           onSelectedTrackChange={changeSelectedTrack}
           onSelectKeyboardShortcut={() => {
             // Picking a shortcut badge puts it in hand, the way picking an
-            // annotation does: clear the mark and take up the Select tool so
-            // the on-screen controls show the shortcut rather than a track.
+            // annotation does: clear the annotation and take up the Select tool
+            // so the on-screen controls show the shortcut rather than a track.
             annotations.clearSelection();
             changeCanvasTool("select");
           }}

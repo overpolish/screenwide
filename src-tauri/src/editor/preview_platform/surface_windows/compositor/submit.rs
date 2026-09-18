@@ -16,7 +16,7 @@ impl Compositor {
     camera: Option<(&SourceTexture, BakeGeometry, bool, bool)>,
     picture: Option<std::sync::Arc<super::super::background_image::BackgroundImage>>,
     mut values: Constants,
-    // The prepared marks, their exposure samples, and what each counter's
+    // The prepared annotations, their exposure samples, and what each counter's
     // number is: the numbers are rasterised here, at the size they are drawn.
     prepared: &PreparedArrows,
   ) -> Result<(), String> {

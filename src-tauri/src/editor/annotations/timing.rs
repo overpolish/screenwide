@@ -24,7 +24,8 @@ pub struct RecordingAnnotationClip {
 }
 
 /// How many clips one recording's timeline may carry. Live annotation and the
-/// editor share the ceiling, so a mark that was recorded can always be shown.
+/// editor share the ceiling, so an annotation that was recorded can always be
+/// shown.
 pub(crate) const MAX_CLIPS: usize = 1_024;
 
 pub(crate) fn validate_clips(clips: &[RecordingAnnotationClip]) -> Result<(), String> {
@@ -60,7 +61,7 @@ pub(crate) fn validate_clips(clips: &[RecordingAnnotationClip]) -> Result<(), St
 }
 
 /// The clips a source time falls inside, on one track. A clip's bounds are
-/// half open, so a mark ends exactly where the next one may begin.
+/// half open, so an annotation ends exactly where the next one may begin.
 fn active_clips(
   clips: &[RecordingAnnotationClip],
   track: AnnotationTrack,
@@ -76,13 +77,13 @@ fn active_clips(
     .take(32)
 }
 
-/// The marks a frame draws, each carrying the reveal window its own clip is
-/// at. `frame_ms` is how much source time one drawn frame covers, and is read
-/// only to measure the blur's lead: a paused preview passes zero.
+/// The annotations a frame draws, each carrying the reveal window its own clip
+/// is at. `frame_ms` is how much source time one drawn frame covers, and is
+/// read only to measure the blur's lead: a paused preview passes zero.
 ///
-/// Every mark follows its own reveal, paused or playing, so a scrub previews
-/// the animation everywhere. A fresh mark stays visible because its clip is
-/// placed a draw-in before the playhead rather than at it.
+/// Every annotation follows its own reveal, paused or playing, so a scrub
+/// previews the animation everywhere. A fresh annotation stays visible because
+/// its clip is placed a draw-in before the playhead rather than at it.
 pub(crate) fn revealed_annotations(
   clips: &[RecordingAnnotationClip],
   track: AnnotationTrack,
@@ -109,8 +110,8 @@ pub(crate) fn revealed_annotations(
     .collect()
 }
 
-/// The marks a frame holds, whole: what the editor's handles sit on and what
-/// a gesture edits, neither of which follows the reveal.
+/// The annotations a frame holds, whole: what the editor's handles sit on and
+/// what a gesture edits, neither of which follows the reveal.
 pub(crate) fn active_annotations(
   clips: &[RecordingAnnotationClip],
   track: AnnotationTrack,
@@ -178,17 +179,18 @@ mod tests {
     );
   }
 
-  /// A paused scrub shows whatever each mark's own reveal says, the chosen
-  /// one included: holding a mark and dragging the playhead through its clip
-  /// previews the draw-on, and by the end of the draw-in every mark is whole.
+  /// A paused scrub shows whatever each annotation's own reveal says, the
+  /// chosen one included: holding an annotation and dragging the playhead
+  /// through its clip previews the draw-on, and by the end of the draw-in every
+  /// annotation is whole.
   #[test]
-  fn a_paused_scrub_previews_every_mark_s_own_reveal() {
+  fn a_paused_scrub_previews_every_annotation_s_own_reveal() {
     let clips = vec![
       clip("chosen", AnnotationTrack::Primary, 1_000, 4_000),
       clip("other", AnnotationTrack::Primary, 1_000, 4_000),
     ];
     // One frame into three seconds: both clips are still drawing themselves
-    // in, so an animated mark shows a window short of the whole path.
+    // in, so an animated annotation shows a window short of the whole path.
     let opening = revealed_annotations(&clips, AnnotationTrack::Primary, 1_050, 0.0);
     assert!(!opening[0].reveal.is_whole(), "{:?}", opening[0].reveal);
     assert!(!opening[1].reveal.is_whole(), "{:?}", opening[1].reveal);
@@ -204,14 +206,14 @@ mod tests {
     assert!(drawn[1].reveal.is_whole(), "{:?}", drawn[1].reveal);
   }
 
-  /// A mark with the Animate switch off draws whole wherever it is asked
+  /// An annotation with the Animate switch off draws whole wherever it is asked
   /// from, chosen or not.
   #[test]
-  fn a_mark_that_does_not_animate_draws_whole_throughout() {
+  fn an_annotation_that_does_not_animate_draws_whole_throughout() {
     let mut unanimated = clip("still", AnnotationTrack::Primary, 1_000, 4_000);
     unanimated.annotation.animated = false;
-    let marks = revealed_annotations(&[unanimated], AnnotationTrack::Primary, 1_050, 0.0);
-    assert!(marks[0].reveal.is_whole());
+    let annotations = revealed_annotations(&[unanimated], AnnotationTrack::Primary, 1_050, 0.0);
+    assert!(annotations[0].reveal.is_whole());
   }
 
   #[test]

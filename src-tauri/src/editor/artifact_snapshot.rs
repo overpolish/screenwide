@@ -6,7 +6,7 @@ use super::*;
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotItemSnapshot {
-  /// The marks the item starts with, in its own pixels.
+  /// The annotations the item starts with, in its own pixels.
   pub annotations: Vec<Annotation>,
   pub height: u32,
   pub id: u64,

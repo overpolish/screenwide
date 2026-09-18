@@ -4,13 +4,13 @@
 /**
  * The colours an arrow is offered.
  *
- * An annotation's colour is stored in the document and drawn by the
- * compositor, so it is a value rather than a token: the shader has no theme
- * to resolve against, and a mark must not change colour when the editor does.
- * The palette is the AppKit system palette measured on macOS 26 - the same
- * source as the semantic colours in `src/index.css`, whose four values are
- * repeated here exactly rather than approximated - plus the two achromatic
- * ends every annotation tool offers.
+ * An annotation's colour is stored in the document and drawn by the compositor,
+ * so it is a value rather than a token: the shader has no theme to resolve
+ * against, and an annotation must not change colour when the editor does. The
+ * palette is the AppKit system palette measured on macOS 26 - the same source
+ * as the semantic colours in `src/index.css`, whose four values are repeated
+ * here exactly rather than approximated - plus the two achromatic ends every
+ * annotation tool offers.
  */
 export type AnnotationSwatch = {
   /** `#rrggbb`, as the document stores it. */
@@ -18,8 +18,8 @@ export type AnnotationSwatch = {
   name: string;
 };
 
-/** What a fresh arrow is drawn in before anything has been chosen: yellow
- * reads as a mark on almost any screenshot, where the accent is sometimes the
+/** What a fresh arrow is drawn in before anything has been chosen: yellow reads
+ * as an annotation on almost any screenshot, where the accent is sometimes the
  * very colour being pointed at. Rust dresses that first arrow - this is the
  * twin of `NEW_ARROW_COLOR` in
  * `src-tauri/src/editor/screenshot_preview/annotation.rs`, and the palette's

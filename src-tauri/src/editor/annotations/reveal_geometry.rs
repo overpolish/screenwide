@@ -21,11 +21,13 @@ pub struct AnnotationRevealGeometry {
   /// them, so a head is never standing over the shaft it is joined to.
   pub start_tip: f32,
   pub end_tip: f32,
-  /// The mark's size: its stroke, its heads and their rounding, at most one.
+  /// The annotation's size: its stroke, its heads and their rounding, at most
+  /// one.
   pub scale: f32,
 }
 
-/// The whole path at full size, which is what a static mark has always drawn.
+/// The whole path at full size, which is what a static annotation has always
+/// drawn.
 const WHOLE_GEOMETRY: AnnotationRevealGeometry = AnnotationRevealGeometry {
   low: 0.0,
   high: 1.0,
@@ -82,10 +84,10 @@ pub(super) fn parameter_at(table: &[f32; ARC_SAMPLES + 1], length: f32) -> f32 {
 /// The window is the *shaft's*: it runs over the path less the room the heads
 /// take, and each head rides on its end of the shaft, outside it, the way a
 /// trimmed stroke with an arrowhead parented to its end does. So the head is
-/// there from the first frame and moving with the stroke, it never stands
-/// over the shaft, and its length never counts against the travel - a heavy
-/// mark's head is four wide strokes long, and measured against the path it
-/// is still there when a fine one's is long gone. Growing and shrinking, a
+/// there from the first frame and moving with the stroke, it never stands over
+/// the shaft, and its length never counts against the travel - a heavy
+/// annotation's head is four wide strokes long, and measured against the path
+/// it is still there when a fine one's is long gone. Growing and shrinking, a
 /// head does so from its base on the shaft's end, which is where it is joined.
 ///
 pub(crate) fn reveal_geometry(
@@ -109,7 +111,7 @@ pub(crate) fn reveal_geometry(
   let low = start_head + window.low.clamp(0.0, 1.0) * shaft;
   let high = (start_head + window.high.clamp(0.0, 1.0) * shaft).max(low);
   // A stroke's round end reaches half its width past where it stops. On a
-  // bare tail that is the mark's own end and belongs there - except while
+  // bare tail that is the annotation's own end and belongs there - except while
   // the tail has all but reached the head's base, where nothing covers it and
   // it shows as a knob on the back of the head. So a bare tail stops inside
   // the window by the cap it would otherwise spend, which puts the round
@@ -132,7 +134,7 @@ pub(crate) fn reveal_geometry(
   }
 }
 
-/// The prepared reveal for one mark, called from the compositor's own
+/// The prepared reveal for one annotation, called from the compositor's own
 /// preparation so every path - preview, still export and video export -
 /// animates through the same maths.
 ///

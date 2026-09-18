@@ -11,8 +11,8 @@ const QUARTER_TURN = 90;
 /**
  * The dial reads clockwise from twelve o'clock and the document stores radians
  * clockwise from east, a quarter turn apart. Converting here rather than
- * showing the document's own zero is what lets the notch stand where the mark's
- * tail stands on the picture and the field agree with the notch.
+ * showing the document's own zero is what lets the notch stand where the
+ * annotation's tail stands on the picture and the field agree with the notch.
  */
 const dialDegrees = (radians: number) =>
   wrapAngle(Math.round((radians * 180) / Math.PI) + QUARTER_TURN);
@@ -28,21 +28,21 @@ const radiansFromDial = (degrees: number) =>
  * A degree at a time, rather than stepped to the eight aims Shift snaps a drag
  * to: the control has to be able to show whatever angle a free drag left
  * behind, and a notch that rounded to the nearest eighth would lie about the
- * mark it is dressing. The snaps stay where they are useful - on the picture,
- * and under a held Shift on the dial, where the hand is imprecise.
+ * annotation it is dressing. The snaps stay where they are useful - on the
+ * picture, and under a held Shift on the dial, where the hand is imprecise.
  *
- * The field commits as it is typed. The aim dresses the next mark rather than
- * one on screen, so a value waiting behind an unfocused field is a value the
- * stroke it was typed for will not be drawn with - the press that draws is on
- * the picture, which is a window away and blurs nothing here.
+ * The field commits as it is typed. The aim dresses the next annotation rather
+ * than one on screen, so a value waiting behind an unfocused field is a value
+ * the stroke it was typed for will not be drawn with - the press that draws is
+ * on the picture, which is a window away and blurs nothing here.
  */
 export function AnnotationAngleDial({
   isDisabled,
   onChange,
   value,
 }: {
-  /** The aim in radians, as the mark stores it. `typed` marks the value as
-   * entered rather than turned: it is one edit, and it has to reach whatever
+  /** The aim in radians, as the annotation stores it. `typed` marks the value
+   * as entered rather than turned: it is one edit, and it has to reach whatever
    * reads the setting before the next stroke does, where a turn is a stream of
    * steps whose write can wait for the hand to settle. */
   onChange: (radians: number, typed: boolean) => void;

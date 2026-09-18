@@ -27,7 +27,8 @@ export const DEFAULT_ANNOTATION_WIDTH = 8;
  * of `NEW_COUNTER_WIDTH`. */
 export const DEFAULT_ANNOTATION_COUNTER_SIZE = 56;
 
-/** The sizes a mark of this kind is offered, and the one a fresh mark takes. */
+/** The sizes an annotation of this kind is offered, and the one a fresh
+ * annotation takes. */
 export const annotationSizes = (kind: "arrow" | "counter") =>
   kind === "counter" ? ANNOTATION_COUNTER_SIZES : ANNOTATION_WIDTHS;
 

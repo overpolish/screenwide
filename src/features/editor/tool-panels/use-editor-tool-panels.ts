@@ -179,9 +179,10 @@ export function useEditorToolPanels({
   // is on screen; the panel reaches them the way the padding controls reach
   // the recentre calls.
   const shortcutSelection = useKeyboardShortcutSelection(workspace);
-  // The mark the preview has in hand. It belongs to the tools that hit-test
-  // arrows rather than to the document, so it reaches the panel the way the
-  // selected shortcut does rather than through the workspace's settings.
+  // The annotation the preview has in hand. It belongs to the tools that
+  // hit-test arrows rather than to the document, so it reaches the panel the
+  // way the selected shortcut does rather than through the workspace's
+  // settings.
   const annotation = useAnnotationSelection(workspace);
   // Restoring and resetting every shortcut is an edit to the timeline the
   // editor already owns, so the panel asks for it here rather than through the

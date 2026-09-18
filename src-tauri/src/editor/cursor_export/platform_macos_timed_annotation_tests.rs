@@ -194,7 +194,8 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
         .unwrap(),
         ExportRunResult::Completed
       );
-      // Sparse screen samples must still produce a regular effect animation clock.
+      // Sparse screen samples must still produce a regular effect animation
+      // clock.
       let frames = Command::new(media_preview::ffmpeg_path())
         .args(["-hide_banner", "-loglevel", "error", "-i"])
         .arg(&destination)
@@ -214,8 +215,9 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
         frames.stdout.len(),
         105 * width as usize * height as usize * 3
       );
-      // Source 0.95 and 1.9 seconds are inside the same mark across the cut,
-      // far enough into its draw-in that the mark is most of its full size.
+      // Source 0.95 and 1.9 seconds are inside the same annotation across the
+      // cut, far enough into its draw-in that the annotation is most of its
+      // full size.
       for (time, visible) in [
         ("0.2", false),
         ("0.95", true),

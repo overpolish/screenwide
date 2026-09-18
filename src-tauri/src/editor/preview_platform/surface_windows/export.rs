@@ -48,7 +48,7 @@ impl WindowsExportCompositor {
     settings: &ScreenshotOutputSettings,
     composition: ComposedFrame,
     camera: Option<(&ID3D11Texture2D, u32, BakeGeometry, bool, bool)>,
-    // What this frame draws. A timed mark has already had its reveal
+    // What this frame draws. A timed annotation has already had its reveal
     // resolved for this frame by the caller, which owns the timeline.
     annotations: &[crate::editor::annotations::Annotation],
   ) -> Result<ID3D11Texture2D, String> {
@@ -118,8 +118,8 @@ impl WindowsExportCompositor {
           .map(|source| (source, geometry, drop_shadow, camera_on_top))
       }),
       None,
-      // Each frame bakes the marks its settings carry. A timed mark has
-      // already had its reveal resolved for this frame, so the export draws
+      // Each frame bakes the annotations its settings carry. A timed annotation
+      // has already had its reveal resolved for this frame, so the export draws
       // the same arrow the preview showed at that moment.
       &prepared,
     )?;

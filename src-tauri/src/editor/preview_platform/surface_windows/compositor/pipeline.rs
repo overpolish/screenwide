@@ -26,7 +26,7 @@ impl Compositor {
     let mut constants = None;
     unsafe { device.CreateBuffer(&description, None, Some(&mut constants)) }
       .map_err(|error| error.to_string())?;
-    // Fixed-capacity dynamic buffers: the mark cap is small and known, so
+    // Fixed-capacity dynamic buffers: the annotation cap is small and known, so
     // the arrows and their exposure samples are mapped into one allocation
     // each per draw rather than a fresh buffer per frame.
     let (annotation_buffer, annotation_view) = structured_buffer(

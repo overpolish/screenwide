@@ -17,7 +17,7 @@
 use super::super::preview_platform::SelectionGesturePhase;
 use super::state::PreviewManager;
 use crate::editor::annotations::edit::AnnotationEdit;
-use crate::editor::annotations::gesture::{AnnotationGestureTarget, NewMarkKind};
+use crate::editor::annotations::gesture::{AnnotationGestureTarget, NewAnnotationKind};
 use crate::editor::annotations::handles::{annotation_handles, source_point};
 use crate::editor::annotations::Annotation;
 
@@ -202,7 +202,7 @@ impl PreviewManager {
       target,
       point,
       defaults.as_ref(),
-      NewMarkKind::from_mode(mode),
+      NewAnnotationKind::from_mode(mode),
       angle,
     )?;
     let id = edit.selected_id().to_owned();

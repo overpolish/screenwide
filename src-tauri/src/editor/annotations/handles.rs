@@ -22,25 +22,26 @@ pub(crate) fn normalised_point(point: AnnotationPoint, source: (u32, u32)) -> (f
   )
 }
 
-/// One mark as the native chrome needs it, normalised over the source image.
+/// One annotation as the native chrome needs it, normalised over the source
+/// image.
 ///
 /// An arrow fills every slot: the three grips - the two tips and the point of
-/// the curve at `t = 0.5`, which is where the middle handle sits - how far
-/// each head reaches back from its tip, and the stroke's own width, both as a
+/// the curve at `t = 0.5`, which is where the middle handle sits - how far each
+/// head reaches back from its tip, and the stroke's own width, both as a
 /// fraction of the image's drawn width. The heads travel as a length rather
-/// than as a triangle because the native side already has the tips and can
-/// take the aim from them; zero means that end carries no head. The half-base
-/// is half the length, which is the shader's four-to-two proportions. `width`
-/// rides separately because a headless mark still has a stroke to pick, and
-/// picking is the drawn shape exactly.
+/// than as a triangle because the native side already has the tips and can take
+/// the aim from them; zero means that end carries no head. The half-base is
+/// half the length, which is the shader's four-to-two proportions. `width`
+/// rides separately because a headless annotation still has a stroke to pick,
+/// and picking is the drawn shape exactly.
 ///
 /// A counter reads the same slots differently: every point is the disc's
 /// centre, `start_head` is where its tail points in radians clockwise from
-/// east, `end_head` is zero, and `width` is the disc's diameter as a share
-/// of the drawn width. Its one grip - the tail's tip - is placed from those
-/// by the native side, which works in isotropic display points. `kind` says
-/// which reading applies. Layer identity, index and kind follow the nine
-/// geometry doubles, matching the C `ScreenwidePreviewAnnotation`.
+/// east, `end_head` is zero, and `width` is the disc's diameter as a share of
+/// the drawn width. Its one grip - the tail's tip - is placed from those by the
+/// native side, which works in isotropic display points. `kind` says which
+/// reading applies. Layer identity, index and kind follow the nine geometry
+/// doubles, matching the C `ScreenwidePreviewAnnotation`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) struct NativeAnnotationHandles {

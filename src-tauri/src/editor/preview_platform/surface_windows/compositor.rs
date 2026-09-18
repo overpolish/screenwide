@@ -101,8 +101,8 @@ struct Constants {
   options: [u32; 4],
   cursor_options: [u32; 4],
   background_options: [u32; 4],
-  /// Marks below the camera are sorted ahead of those above it, so the first
-  /// word is both the below-camera count and where the above-camera run
+  /// Annotations below the camera are sorted ahead of those above it, so the
+  /// first word is both the below-camera count and where the above-camera run
   /// starts; the second is the total. The rest are spare.
   annotation_options: [u32; 4],
 }
@@ -120,7 +120,8 @@ pub(super) struct Compositor {
   /// Prepared arrows, mapped per draw, and its structured-buffer view.
   annotation_buffer: ID3D11Buffer,
   annotation_view: ID3D11ShaderResourceView,
-  /// Exposure samples for moving marks, mapped per draw beside the arrows.
+  /// Exposure samples for moving annotations, mapped per draw beside the
+  /// arrows.
   sample_buffer: ID3D11Buffer,
   sample_view: ID3D11ShaderResourceView,
   constants: ID3D11Buffer,

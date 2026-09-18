@@ -99,7 +99,7 @@ export function useScreenshotPreviewSurface({
   isEditorSuspended?: boolean;
   /** A finished arrow gesture: the layer's whole list, and what is chosen. */
   onAnnotationChange?: (event: ScreenshotAnnotationChangeEvent) => void;
-  /** Which mark the halo is on, or null for none. */
+  /** Which annotation the halo is on, or null for none. */
   onAnnotationHover?: (annotationId: string | null) => void;
   /** How small the workspace was drawn to fit the pane, which the toolbar
    * turns into its zoom ceiling. */

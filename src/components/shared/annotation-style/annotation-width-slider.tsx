@@ -10,7 +10,7 @@ import {
 } from "./widths";
 
 /**
- * How heavy a mark is drawn: an arrow's stroke, or a counter's disc.
+ * How heavy an annotation is drawn: an arrow's stroke, or a counter's disc.
  *
  * The sizes are not evenly spaced, so the knob runs over the preset's place
  * in the list; the ticks say how many there are. A size from an older

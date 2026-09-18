@@ -7,21 +7,21 @@
 #import <AppKit/AppKit.h>
 #include <stdint.h>
 
-/// One mark's grips, normalised over the whole source image, and how to read
-/// them.
+/// One annotation's grips, normalised over the whole source image, and how to
+/// read them.
 ///
 /// An arrow fills every slot: its three grips - the two tips and the point the
 /// curve passes through at t = 0.5 - how far each head reaches back from its
 /// tip, and the stroke's own width, both as a fraction of the image's drawn
-/// width. A head reach of zero means that end carries no head; the half-base
-/// is half the length, which is the shader's four-to-two proportions. `width`
-/// rides separately because a headless mark still has a stroke to pick.
+/// width. A head reach of zero means that end carries no head; the half-base is
+/// half the length, which is the shader's four-to-two proportions. `width`
+/// rides separately because a headless annotation still has a stroke to pick.
 ///
-/// A counter puts its disc's centre in every point slot, where its tail
-/// points in `start_head` - radians clockwise from east - and its disc's
-/// diameter in `width`. Its one grip, the tail's tip, is placed from those
-/// here: a normalised offset is a different length in each axis on a picture
-/// that is not square, and this side works in isotropic display points.
+/// A counter puts its disc's centre in every point slot, where its tail points
+/// in `start_head` - radians clockwise from east - and its disc's diameter in
+/// `width`. Its one grip, the tail's tip, is placed from those here: a
+/// normalised offset is a different length in each axis on a picture that is
+/// not square, and this side works in isotropic display points.
 ///
 /// Rust solves the Bezier and owns the stroke's units; this side only places
 /// and hit-tests.
@@ -39,16 +39,16 @@ typedef struct {
 } ScreenwidePreviewAnnotation;
 _Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
                "Rust/C annotation handle layout mismatch");
-/// How many marks one layer can carry, matching `MAX_ANNOTATIONS`.
+/// How many annotations one layer can carry, matching `MAX_ANNOTATIONS`.
 static const NSUInteger ScreenwideMaxAnnotations = 64;
-/// Which shape a mark is, matching the compositor's own kinds.
+/// Which shape an annotation is, matching the compositor's own kinds.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindArrow = 0,
   ScreenwideAnnotationKindCounter = 1,
 };
-/// What the pointer does over the picture. `Select` hit-tests the marks
+/// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
-/// layer; `Arrow` and `Counter` also make a new mark on empty picture.
+/// layer; `Arrow` and `Counter` also make a new annotation on empty picture.
 typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeNone = 0,
   ScreenwideAnnotationModeSelect = 1,
@@ -63,9 +63,10 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationHandle) {
   ScreenwideAnnotationHandleBody = 3,
   ScreenwideAnnotationHandleTail = 4,
 };
-/// What a gesture acts on: a new mark (0), a grip or body of the mark at
-/// `index` (1), nothing at all (2), which only clears the choice, or a press
-/// on the body of the mark at `index` (3), which only chooses it.
+/// What a gesture acts on: a new annotation (0), a grip or body of the
+/// annotation at `index` (1), nothing at all (2), which only clears the choice,
+/// or a press on the body of the annotation at `index` (3), which only chooses
+/// it.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationTarget) {
   ScreenwideAnnotationTargetNew = 0,
   ScreenwideAnnotationTargetExisting = 1,

@@ -7,7 +7,7 @@ use super::*;
 /// Pixels remain owned by Rust and are uploaded to the native renderer once;
 /// the webview only ever needs this identity and the scene metadata added in
 /// the next slice. `annotations` are the live annotations the shot covered,
-/// in its pixels: the item's first marks, seeded into its layer once.
+/// in its pixels: the item's first annotations, seeded into its layer once.
 #[derive(Clone)]
 pub struct ScreenshotItem {
   pub annotations: Vec<Annotation>,
@@ -44,8 +44,8 @@ impl ScreenshotWorkspaceOutputSettings {
       .map_or_else(
         || {
           // A layer the workspace holds no entry for takes the canvas as its
-          // template, and a template carries no marks: they were drawn on a
-          // layer, never on the canvas behind it.
+          // template, and a template carries no annotations: they were drawn on
+          // a layer, never on the canvas behind it.
           let mut canvas = self.canvas.clone();
           canvas.annotations.clear();
           canvas

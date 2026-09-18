@@ -56,9 +56,9 @@ fn report_for(state: &SurfaceState) -> Option<Report> {
     .hover_started
     .map_or(0.0, |started| started.elapsed().as_secs_f64())
     / HOVER_DURATION.as_secs_f64();
-  // The halo is measured against the picture the hovered mark is drawn in,
-  // which is its own layer's - not the selected one's. A shortcut or another
-  // layer can hold the selection while the pointer rests on an arrow.
+  // The halo is measured against the picture the hovered annotation is drawn
+  // in, which is its own layer's - not the selected one's. A shortcut or
+  // another layer can hold the selection while the pointer rests on an arrow.
   let image = item_image_frame(state, index)?;
   Some(Report {
     index,

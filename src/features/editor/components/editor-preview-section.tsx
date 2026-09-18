@@ -34,7 +34,7 @@ import { ScreenshotTool, useScreenshotTools } from "./screenshot-tools";
 import { ScrubPreview } from "./scrub-preview";
 import { useScreenshotAnnotations } from "./use-screenshot-annotations";
 import { useScreenshotRecenter } from "./use-screenshot-recenter";
-import { useToolFollowsMark } from "./use-tool-follows-mark";
+import { useToolFollowsAnnotation } from "./use-tool-follows-annotation";
 
 /** The toolbar's own name for a tool, in the registry's vocabulary. */
 const screenshotToolId = (tool: ScreenshotTool): EditorToolId | null =>
@@ -95,9 +95,9 @@ export function ScreenshotSection({
       annotations.clearSelection();
     setActiveTool(resolved);
   };
-  // Both drawing tools pick up either shape, so the tool follows the mark
+  // Both drawing tools pick up either shape, so the tool follows the annotation
   // that was chosen with it: the panel and the next press never disagree.
-  useToolFollowsMark(annotations.selectedKind, tool, setTool);
+  useToolFollowsAnnotation(annotations.selectedKind, tool, setTool);
   const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
   const moveSelectedLayer = (
     direction: "backward" | "forward",
@@ -195,8 +195,8 @@ export function ScreenshotSection({
   const isCropping = tool === "crop";
   // A drawing tool is the other kind you are "in": Escape puts it down.
   const isAnnotating = tool === "arrow" || tool === "counter";
-  // Every one of them hit-tests the marks on the layer; only a drawing tool
-  // makes a new one, and only it takes every press over the picture.
+  // Every one of them hit-tests the annotations on the layer; only a drawing
+  // tool makes a new one, and only it takes every press over the picture.
   const annotationTool =
     tool === "arrow" || tool === "counter" || tool === "select"
       ? tool
@@ -234,8 +234,8 @@ export function ScreenshotSection({
       if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
       setTool((current) => (current === "counter" ? null : "counter"));
     },
-    // Backspace and Delete take away the mark the hand is pointing at first,
-    // and only the layer when there is no mark under them.
+    // Backspace and Delete take away the annotation the hand is pointing at
+    // first, and only the layer when there is no annotation under them.
     onDelete: () => {
       if (!annotations.deleteTargeted()) deleteSelectedLayer();
     },

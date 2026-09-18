@@ -32,7 +32,7 @@ struct PreviewArrow {
   float red, green, blue, alpha;
   /// The hover halo's width in canvas pixels; zero when nothing is hovered.
   float hover;
-  /// This mark's run in `annotation_samples`. A count of zero draws the
+  /// This annotation's run in `annotation_samples`. A count of zero draws the
   /// prepared geometry directly, as a still always does.
   uint sample_first, sample_count;
   /// Which shape the geometry is read as: zero an arrow, one a counter.
@@ -40,9 +40,9 @@ struct PreviewArrow {
 };
 
 /// A counter read out of the slots an arrow fills with its curve: the disc's
-/// centre and radius, the tail's tip and the radius it is rounded to, and
-/// where its number was rasterised in the text atlas. Prepared once per mark
-/// by `geometry::prepare_counter`.
+/// centre and radius, the tail's tip and the radius it is rounded to, and where
+/// its number was rasterised in the text atlas. Prepared once per annotation by
+/// `geometry::prepare_counter`.
 struct PreviewCounter {
   float2 center, tip;
   float radius, tip_radius;
@@ -60,8 +60,8 @@ PreviewCounter annotation_counter(PreviewGeometry prepared) {
   return counter;
 }
 
-/// The mark part way through the interval this frame covers, and how solid
-/// it was then.
+/// The annotation part way through the interval this frame covers, and how
+/// solid it was then.
 struct PreviewSample {
   PreviewGeometry geometry;
   float opacity;
@@ -181,8 +181,8 @@ float2 annotation_arrow_distance(float2 probe, PreviewGeometry arrow) {
   float2 a = float2(arrow.ax, arrow.ay);
   float2 b = float2(arrow.bx, arrow.by);
   float2 c = float2(arrow.cx, arrow.cy);
-  // An empty window is a mark that has not started, or one whose head has
-  // eaten what was left of its shaft. Either way there is no shaft to draw.
+  // An empty window is an annotation that has not started, or one whose head
+  // has eaten what was left of its shaft. Either way there is no shaft to draw.
   float2 result = float2(arrow.high > arrow.low
       ? annotation_curve_distance(probe, a, b, c, arrow.low, arrow.high) - arrow.width * 0.5
       : 1e20, 1e20);
@@ -206,16 +206,16 @@ float annotation_coverage(float2 probe, PreviewGeometry arrow, float feather) {
              1.0 - smoothstep(-feather, feather, distances.y));
 }
 
-/// Accumulated exposure coverage: the mark is drawn at every prepared sample
-/// between the shutter start and now, so a moving shaft and its head smear
-/// along the path they actually travelled while a held end stays sharp.
-float annotation_exposure(float2 probe, PreviewArrow mark, float feather) {
+/// Accumulated exposure coverage: the annotation is drawn at every prepared
+/// sample between the shutter start and now, so a moving shaft and its head
+/// smear along the path they actually travelled while a held end stays sharp.
+float annotation_exposure(float2 probe, PreviewArrow annotation, float feather) {
   float total = 0.0;
-  for (uint tap = 0u; tap < mark.sample_count; ++tap) {
-    PreviewSample sample = annotation_samples[mark.sample_first + tap];
+  for (uint tap = 0u; tap < annotation.sample_count; ++tap) {
+    PreviewSample sample = annotation_samples[annotation.sample_first + tap];
     total += annotation_coverage(probe, sample.geometry, feather) * sample.opacity;
   }
-  return total / (float)mark.sample_count;
+  return total / (float)annotation.sample_count;
 }
 
 /// How far a point falls outside a counter's silhouette: the disc, unioned
@@ -260,7 +260,7 @@ float annotation_counter_distance(float2 probe, PreviewCounter counter) {
 /// rasterised into. The atlas is drawn at two pixels to the drawn pixel and
 /// read with four taps, so a counter still reads while it is growing into
 /// place. The number is centred on the disc and carried by the disc's own
-/// radius, so it grows and shrinks with the mark.
+/// radius, so it grows and shrinks with the annotation.
 float annotation_number_coverage(float2 probe, PreviewCounter counter, uint2 atlas) {
   if (atlas.x == 0u || atlas.y == 0u || counter.text_size.x <= 0.0 ||
       counter.text_size.y <= 0.0)
@@ -286,24 +286,24 @@ float annotation_number_coverage(float2 probe, PreviewCounter counter, uint2 atl
 /// through the frame smears over the sizes it covered rather than jumping
 /// between them. Each sample carries its own opacity, which is what fades a
 /// counter in and out of an exported frame.
-float annotation_counter_exposure(float2 probe, PreviewArrow mark, float feather) {
+float annotation_counter_exposure(float2 probe, PreviewArrow annotation, float feather) {
   float total = 0.0;
-  for (uint tap = 0u; tap < mark.sample_count; ++tap) {
-    PreviewSample sample = annotation_samples[mark.sample_first + tap];
+  for (uint tap = 0u; tap < annotation.sample_count; ++tap) {
+    PreviewSample sample = annotation_samples[annotation.sample_first + tap];
     float distance =
         annotation_counter_distance(probe, annotation_counter(sample.geometry));
     total += (1.0 - smoothstep(-feather, feather, distance)) * sample.opacity;
   }
-  return total / (float)mark.sample_count;
+  return total / (float)annotation.sample_count;
 }
 
-/// One counter: its silhouette in the mark's own colour, and its number in
-/// whichever of black or white reads on that colour. The number is clipped to
-/// the silhouette's own coverage, so the two share one antialiased edge.
+/// One counter: its silhouette in the annotation's own colour, and its number
+/// in whichever of black or white reads on that colour. The number is clipped
+/// to the silhouette's own coverage, so the two share one antialiased edge.
 float4 annotation_counter_layer(
-    float4 rgba, PreviewArrow mark, float4 color, float2 canvas_point,
+    float4 rgba, PreviewArrow annotation, float4 color, float2 canvas_point,
     float feather, float halo, uint2 atlas) {
-  PreviewCounter counter = annotation_counter(mark.geometry);
+  PreviewCounter counter = annotation_counter(annotation.geometry);
   float reach = counter.radius * 2.0 + halo + feather + 1.0;
   if (any(canvas_point < counter.center - reach) ||
       any(canvas_point > counter.center + reach))
@@ -322,9 +322,9 @@ float4 annotation_counter_layer(
   // A still frame draws the prepared disc directly, its opacity already
   // folded into the colour; a moving one averages the disc over the
   // exposure, where each sample carries the opacity it had.
-  float coverage = mark.sample_count == 0u
+  float coverage = annotation.sample_count == 0u
       ? 1.0 - smoothstep(-feather, feather, distance)
-      : annotation_counter_exposure(canvas_point, mark, feather);
+      : annotation_counter_exposure(canvas_point, annotation, feather);
   if (coverage <= 0.0) return rgba;
   float alpha = coverage * color.a;
   rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
@@ -340,27 +340,28 @@ float4 annotation_counter_layer(
   return rgba;
 }
 
-/// Draws the prepared marks in `[first, last)` over `rgba`.
+/// Draws the prepared annotations in `[first, last)` over `rgba`.
 ///
-/// The range is how the camera ordering is expressed: Rust sorts the marks
-/// that sit under the camera ahead of those above it, so each pass draws one
-/// contiguous run rather than testing a flag per mark per pixel.
+/// The range is how the camera ordering is expressed: Rust sorts the
+/// annotations that sit under the camera ahead of those above it, so each pass
+/// draws one contiguous run rather than testing a flag per annotation per
+/// pixel.
 ///
-/// Marks are deliberately not clipped to the crop: an arrow may point in from
-/// the padding. `feather` is how wide an edge is smoothed, in canvas pixels,
-/// and `number_atlas` is the size of the texture the counters' numbers were
-/// rasterised into - zero where nothing rasterised one.
+/// Annotations are deliberately not clipped to the crop: an arrow may point in
+/// from the padding. `feather` is how wide an edge is smoothed, in canvas
+/// pixels, and `number_atlas` is the size of the texture the counters' numbers
+/// were rasterised into - zero where nothing rasterised one.
 float4 composite_annotations(
     float4 rgba, float2 canvas_point, uint first, uint last, float feather,
     uint2 number_atlas) {
   for (uint index = first; index < last; ++index) {
-    PreviewArrow mark = annotation_arrows[index];
-    PreviewGeometry arrow = mark.geometry;
-    float4 color = float4(mark.red, mark.green, mark.blue, mark.alpha);
+    PreviewArrow annotation = annotation_arrows[index];
+    PreviewGeometry arrow = annotation.geometry;
+    float4 color = float4(annotation.red, annotation.green, annotation.blue, annotation.alpha);
     if (color.a <= 0.0 || arrow.width <= 0.0) continue;
-    if (mark.kind == 1u) {
-      rgba = annotation_counter_layer(rgba, mark, color, canvas_point, feather,
-                                      max(mark.hover, 0.0), number_atlas);
+    if (annotation.kind == 1u) {
+      rgba = annotation_counter_layer(rgba, annotation, color, canvas_point, feather,
+                                      max(annotation.hover, 0.0), number_atlas);
       continue;
     }
     float2 a = float2(arrow.ax, arrow.ay);
@@ -369,7 +370,7 @@ float4 composite_annotations(
     // The curve lies inside the hull of its three points; the heads reach
     // back from a tip and across it. One rectangle covers all of that, and
     // keeps a long list cheap over most of the canvas.
-    float halo = max(mark.hover, 0.0);
+    float halo = max(annotation.hover, 0.0);
     float radius = arrow.width * 0.5;
     float reach = radius * (arrow.head != 0u ? 9.0 : 1.0) + halo + feather + 1.0;
     if (any(canvas_point < min(a, min(b, c)) - reach) ||
@@ -390,10 +391,10 @@ float4 composite_annotations(
     }
     // A still frame draws the prepared arrow directly; a moving one averages
     // the arrow over the exposure, head and shaft together.
-    float coverage = mark.sample_count == 0u
+    float coverage = annotation.sample_count == 0u
         ? max(1.0 - smoothstep(-feather, feather, distances.x),
               1.0 - smoothstep(-feather, feather, distances.y))
-        : annotation_exposure(canvas_point, mark, feather);
+        : annotation_exposure(canvas_point, annotation, feather);
     if (coverage <= 0.0) continue;
     float alpha = coverage * color.a;
     rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);

@@ -3,7 +3,8 @@
 
 import { RefObject, useCallback } from "react";
 
-/** Wait through coalesced layouts too: completing one IPC can start the next. */
+/** Wait through coalesced layouts too: completing one IPC can start the next.
+ */
 export async function afterPreviewLayout(
   layout: RefObject<Promise<unknown>>,
   request: () => Promise<unknown>,

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The native mark gesture: the tool in hand, the marks a pane is showing,
-//! and the provisional clips a drag writes through until it commits.
+//! The native annotation gesture: the tool in hand, the annotations a pane is
+//! showing, and the provisional clips a drag writes through until it commits.
 
 use super::*;
 
@@ -32,9 +32,9 @@ pub(super) fn track(pane: u32) -> AnnotationTrack {
 }
 
 impl PreviewPlayerManager {
-  /// Takes a mark tool in hand, or puts it down, in the native
+  /// Takes an annotation tool in hand, or puts it down, in the native
   /// `ScreenwideAnnotationMode` the chrome is published with: nothing,
-  /// hit-test the marks already there, or also draw a new one on empty
+  /// hit-test the annotations already there, or also draw a new one on empty
   /// picture. A gesture in flight keeps the mode it began under.
   pub(in crate::editor::recording_preview_player) fn set_annotation_tool(
     &mut self,
@@ -46,7 +46,7 @@ impl PreviewPlayerManager {
     self.annotation.mode = annotation_mode(tool);
   }
 
-  pub(super) fn annotation_marks(&self, pane: u32) -> Vec<Annotation> {
+  pub(super) fn pane_annotations(&self, pane: u32) -> Vec<Annotation> {
     if let Some(gesture) = &self.annotation.gesture {
       if gesture.pane == pane {
         return gesture.working.clone();
@@ -97,7 +97,7 @@ impl PreviewPlayerManager {
       return None;
     }
     if matches!(phase, SelectionGesturePhase::Begin) {
-      let mut working = self.annotation_marks(pane);
+      let mut working = self.pane_annotations(pane);
       match target {
         AnnotationGestureTarget::None | AnnotationGestureTarget::Select { .. } => {
           self.annotation.selected = match target {
@@ -131,16 +131,17 @@ impl PreviewPlayerManager {
         target,
         point,
         self.annotation.defaults.as_ref(),
-        NewMarkKind::from_mode(self.annotation.mode),
+        NewAnnotationKind::from_mode(self.annotation.mode),
         self.annotation.counter_angle,
       )?;
-      // Whether a mark animates is not part of its dress, so the shape's own
-      // constructor has no say in it: the switch's last setting is applied to
-      // the fresh mark here, where the recording's own timed marks are made.
+      // Whether an annotation animates is not part of its dress, so the shape's
+      // own constructor has no say in it: the switch's last setting is applied
+      // to the fresh annotation here, where the recording's own timed
+      // annotations are made.
       if target == AnnotationGestureTarget::New {
         if let Some(animated) = self.annotation.animated {
-          if let Some(mark) = working.iter_mut().find(|m| m.id == edit.selected_id()) {
-            mark.animated = animated;
+          if let Some(annotation) = working.iter_mut().find(|m| m.id == edit.selected_id()) {
+            annotation.animated = animated;
           }
         }
       }
@@ -165,8 +166,8 @@ impl PreviewPlayerManager {
         clip.annotation = annotation.clone();
       } else {
         // The provisional clip the gesture draws through reaches back a
-        // draw-in, the way the editor's own placement does, so the mark is
-        // finished drawing at the playhead and visible under the hand.
+        // draw-in, the way the editor's own placement does, so the annotation
+        // is finished drawing at the playhead and visible under the hand.
         next.push(RecordingAnnotationClip {
           annotation: annotation.clone(),
           track_id: track(gesture.pane),
@@ -193,7 +194,7 @@ impl PreviewPlayerManager {
     // which is cheap enough to do per pointer sample. On Windows a restart
     // seeks the still decoder, which puts a decode between the hand and the
     // arrow on every sample; the pane already holds the frame, so it is
-    // re-presented with the new marks instead, and only the end of the
+    // re-presented with the new annotations instead, and only the end of the
     // gesture restarts the worker to bring it back in step.
     if commit.is_some() || !self.redraw_annotation_frame(pane, position_ms) {
       let _ = self.restart(PlaybackMode::InteractiveStill);

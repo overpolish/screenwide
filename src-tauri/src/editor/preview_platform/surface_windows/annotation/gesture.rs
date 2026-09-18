@@ -126,7 +126,8 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       {
         // Empty picture with only the select tool in hand: the arrow chrome
         // lets go, and the press carries on to the layer underneath. A live
-        // mark - one with no layer of its own - has its choice cleared first.
+        // annotation - one with no layer of its own - has its choice cleared
+        // first.
         if selected_item(&state).is_some_and(|item| item.layer_id < 0) {
           state.annotation.selected = -1;
           samples.extend(resolve(

@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   active: null as {
     kind: "tool";
-    tool: "arrow" | "cursor" | "mark" | "selection";
+    tool: "arrow" | "cursor" | "annotation" | "selection";
     workspace: "recording" | "screenshot";
   } | null,
   close: vi.fn(() => Promise.resolve()),
@@ -148,13 +148,13 @@ describe("useToolPanelFollowsTool", () => {
     expect(mocks.close).not.toHaveBeenCalled();
   });
 
-  it("shows the chosen mark's own panel over the tool's, without refitting", async () => {
+  it("shows the chosen annotation's own panel over the tool's, without refitting", async () => {
     await follow("select");
     mocks.active = { kind: "tool", tool: "selection", workspace: "recording" };
     await follow("select", true);
 
     expect(mocks.openPanel).toHaveBeenLastCalledWith(
-      "mark",
+      "annotation",
       mocks.viewport.getBoundingClientRect(),
       false,
     );
@@ -162,9 +162,9 @@ describe("useToolPanelFollowsTool", () => {
     expect(mocks.fitPreview).not.toHaveBeenCalled();
   });
 
-  it("puts the tool's own panel back when the mark is let go", async () => {
+  it("puts the tool's own panel back when the annotation is let go", async () => {
     await follow("select", true);
-    mocks.active = { kind: "tool", tool: "mark", workspace: "recording" };
+    mocks.active = { kind: "tool", tool: "annotation", workspace: "recording" };
     await follow("select");
 
     expect(mocks.openPanel).toHaveBeenLastCalledWith(
@@ -175,12 +175,12 @@ describe("useToolPanelFollowsTool", () => {
     expect(mocks.close).not.toHaveBeenCalled();
   });
 
-  // The Arrow tool refits the picture when it is taken up; letting a mark go
-  // while holding it is not taking it up again.
-  it("closes the mark's panel without refitting for a tool that owns none", async () => {
+  // The Arrow tool refits the picture when it is taken up; letting an
+  // annotation go while holding it is not taking it up again.
+  it("closes the annotation's panel without refitting for a tool that owns none", async () => {
     mocks.resetByTool.arrow = true;
     await follow("arrow", true);
-    mocks.active = { kind: "tool", tool: "mark", workspace: "recording" };
+    mocks.active = { kind: "tool", tool: "annotation", workspace: "recording" };
     await follow("arrow");
 
     expect(mocks.close).toHaveBeenCalledOnce();

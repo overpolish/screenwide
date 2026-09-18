@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The shape a counter is drawn and picked as: where its tail ends, and how
-//! far a point falls outside the mark.
+//! far a point falls outside the annotation.
 //!
 //! The silhouette is the disc unioned with the tail: the overlap of two
 //! circles, one either side of the axis, each tangent to the disc and to the
@@ -23,7 +23,7 @@ use crate::editor::annotations::AnnotationPoint;
 /// The reach past the edge is what makes it a tail rather than a bump, and
 /// keeping both proportional means one direction handle serves every size.
 /// The two together are the shape of `MapPinPlusInside`, the glyph the counter
-/// tool is drawn with, so the mark and its icon read as one thing.
+/// tool is drawn with, so the annotation and its icon read as one thing.
 ///
 /// Placing and picking a counter's grip is the D3D11 backend's work; the Metal
 /// one does both through `geometry.h`, which carries its own twins.
@@ -44,9 +44,9 @@ pub(crate) fn counter_tail_tip(
 }
 
 /// How far `point` falls outside one counter's drawn silhouette, in the space
-/// the geometry is in. Zero anywhere the mark is painted, which is what picks
-/// it. The twin of `annotation_counter_distance` in `geometry.h` and of the
-/// shaders' own copies.
+/// the geometry is in. Zero anywhere the annotation is painted, which is what
+/// picks it. The twin of `annotation_counter_distance` in `geometry.h` and of
+/// the shaders' own copies.
 pub(crate) fn counter_distance(
   point: (f64, f64),
   center: AnnotationPoint,
@@ -126,7 +126,7 @@ mod tests {
   fn the_disc_and_its_tail_are_both_picked() {
     let radius = 20.0;
     assert!(counter_distance((100.0, 100.0), center(), radius, 0.0) < 0.0);
-    // Just past the edge on the tail's side is still the mark: the tail
+    // Just past the edge on the tail's side is still the annotation: the tail
     // reaches 1.5 radii out.
     assert!(counter_distance((125.0, 100.0), center(), radius, 0.0) < 0.0);
     // The same distance out on the other side is past the disc.
@@ -148,7 +148,7 @@ mod tests {
     let tip = counter_tail_tip(center(), radius, 0.0);
     assert_eq!((tip.x, tip.y), (100.0 + 20.0 * COUNTER_TAIL_REACH, 100.0));
     // The silhouette ends exactly at the tail's reach, and ends in an arc: a
-    // tip radius back and half of one across is still inside the mark.
+    // tip radius back and half of one across is still inside the annotation.
     assert!(counter_distance((tip.x, tip.y), center(), radius, 0.0).abs() < 1e-9);
     assert!(counter_distance((tip.x + 1.0, 100.0), center(), radius, 0.0) > 0.0);
     let tip_radius = radius * COUNTER_TIP_SHARE;
@@ -160,8 +160,8 @@ mod tests {
         0.0
       ) < 0.0
     );
-    // Level with the centre the mark is exactly as wide as the disc, and no
-    // wider anywhere: the disc is the widest the silhouette ever gets.
+    // Level with the centre the annotation is exactly as wide as the disc, and
+    // no wider anywhere: the disc is the widest the silhouette ever gets.
     assert!(counter_distance((100.0, 120.0), center(), radius, 0.0).abs() < 1e-9);
     assert!(counter_distance((100.0, 121.0), center(), radius, 0.0) > 0.0);
     assert!(counter_distance((110.0, 120.4), center(), radius, 0.0) > 0.0);

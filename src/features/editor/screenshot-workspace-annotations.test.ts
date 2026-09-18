@@ -29,7 +29,7 @@ const workspace = (): ScreenshotWorkspaceOutputSettings => {
   return { ...canvas, items: [{ id: 1, output: canvas }] };
 };
 
-describe("a layer's marks against the shared canvas", () => {
+describe("a layer's annotations against the shared canvas", () => {
   it("keeps them on the layer they were drawn on", () => {
     const next = withScreenshotWorkspaceItemOutput(
       workspace(),
@@ -38,8 +38,9 @@ describe("a layer's marks against the shared canvas", () => {
     );
 
     expect(next.items[0].output.annotations).toHaveLength(1);
-    // The canvas is what a new layer and the next capture are built from, so
-    // a mark left on it would be inherited by pictures it was never drawn on.
+    // The canvas is what a new layer and the next capture are built from, so an
+    // annotation left on it would be inherited by pictures it was never drawn
+    // on.
     expect(next.annotations).toEqual([]);
   });
 
@@ -67,7 +68,7 @@ describe("a layer's marks against the shared canvas", () => {
 });
 
 describe("screenshotOutputTemplate", () => {
-  it("drops the marks and keeps everything else", () => {
+  it("drops the annotations and keeps everything else", () => {
     const settings = {
       ...defaultScreenshotOutput(100, 100),
       annotations: [arrow("a")],

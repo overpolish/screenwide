@@ -31,8 +31,8 @@ cbuffer Canvas : register(b0) {
   uint4 options; // seed, mesh enabled, point count, shadow enabled
   uint4 cursor_options; // artwork, enabled, clip to video, foreground only
   uint4 background_options; // has background image, generator, palette size
-  // Marks below the camera are sorted ahead of those above it, so `x` is both
-  // the below-camera count and where the above-camera run starts.
+  // Annotations below the camera are sorted ahead of those above it, so `x` is
+  // both the below-camera count and where the above-camera run starts.
   uint4 annotation_options; // below-camera count, total count, number atlas size
 };
 Texture2D source_image : register(t0);

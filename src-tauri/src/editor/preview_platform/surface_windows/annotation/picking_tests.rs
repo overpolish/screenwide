@@ -74,16 +74,16 @@ fn the_shaft_is_picked_over_the_width_it_is_drawn_at() {
   assert_eq!(arrow_distance(IMAGE, &item, (60.0, 50.0)), 0.0);
   // The stroke's own edge, 4 points out, is still the arrow.
   assert_eq!(arrow_distance(IMAGE, &item, (100.0, 54.0)), 0.0);
-  // Just past it is not. There is no pointing slop around a mark: the halo
-  // would otherwise sit over blank picture beside the arrow.
+  // Just past it is not. There is no pointing slop around an annotation: the
+  // halo would otherwise sit over blank picture beside the arrow.
   assert!(arrow_distance(IMAGE, &item, (100.0, 54.5)) > 0.0);
   assert!(arrow_distance(IMAGE, &item, (100.0, 90.0)) > 0.0);
 }
 
 #[test]
 fn a_wider_stroke_is_picked_further_from_its_centreline() {
-  // The width rides on the mark rather than being read off its heads, so a
-  // headless arrow is picked over the whole width it shows.
+  // The width rides on the annotation rather than being read off its heads, so
+  // a headless arrow is picked over the whole width it shows.
   let mut item = arrow();
   item.width = 0.2;
   assert_eq!(arrow_distance(IMAGE, &item, (100.0, 70.0)), 0.0);

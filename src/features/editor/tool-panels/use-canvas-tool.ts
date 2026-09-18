@@ -18,12 +18,12 @@ import { toolPanelLabel } from "./tool-panel-window";
  * The exceptions are the panels that are a canvas tool's own controls - Select,
  * Frame and Crop: the drag each of them describes has to stay live underneath
  * the panel that names it. The Arrow panel is the same case one step in: it
- * dresses the mark the tool has in hand, so the tool holding it stays up.
+ * dresses the annotation the tool has in hand, so the tool holding it stays up.
  */
 const canvasToolPanels: ToolPanelKind[] = [
+  "annotation",
   "crop",
   "frame",
-  "mark",
   "selection",
 ];
 

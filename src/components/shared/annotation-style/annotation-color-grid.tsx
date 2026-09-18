@@ -17,14 +17,14 @@ import {
 } from "./palette";
 
 /**
- * The colours a mark is offered: the palette, then the colours of your own,
- * then the Custom tile that opens the system Colours panel.
+ * The colours an annotation is offered: the palette, then the colours of your
+ * own, then the Custom tile that opens the system Colours panel.
  *
- * The grid is the background picker's one row down, so the two rows of
- * swatches behave alike wherever they are met. `savedColors` and the Custom
- * tile are for a caller that has somewhere to keep a colour the palette does
- * not hold; the live overlay's toolbar offers the palette alone, because a
- * setting has no colour list behind it.
+ * The grid is the background picker's one row down, so the two rows of swatches
+ * behave alike wherever they are met. `savedColors` and the Custom tile are for
+ * a caller that has somewhere to keep a colour the palette does not hold; the
+ * live overlay's toolbar offers the palette alone, because a setting has no
+ * colour list behind it.
  */
 export function AnnotationColorGrid({
   isDisabled,

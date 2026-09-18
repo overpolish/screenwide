@@ -21,8 +21,8 @@ pub type FailureReport = Arc<dyn Fn(String) + Send + Sync>;
 /// it is what the editor window is handed, and the editor window knows nothing
 /// about how the file was made.
 pub struct FinalizeInfo {
-  /// Marks drawn live over the desktop while this recording ran. They open
-  /// the editor as ordinary annotation clips.
+  /// Annotations drawn live over the desktop while this recording ran. They
+  /// open the editor as ordinary annotation clips.
   pub annotation_clips: Vec<crate::editor::annotations::timing::RecordingAnnotationClip>,
   pub camera: Option<CameraFinalizeInfo>,
   pub cursor_path: Option<PathBuf>,

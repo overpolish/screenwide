@@ -10,7 +10,8 @@ import {
 } from "./recording-timeline-edit";
 import { RecordingVideoTrackId } from "./types";
 
-/** A mark in source time, attached to one of the recording's two panes. */
+/** An annotation in source time, attached to one of the recording's two panes.
+ */
 export type RecordingAnnotationClip = {
   annotation: Annotation;
   endMs: number;
@@ -22,10 +23,10 @@ export type RecordingAnnotationClip = {
  * The clips with their counters numbered 1, 2, 3 in the order they appear on
  * the timeline.
  *
- * A counter counts what the viewer sees, and on a timeline that order is
- * time: dragging the second counter's clip in front of the first makes it the
- * first. Two clips starting on the same frame keep the order they were drawn
- * in, which is the order they are stored in - the earlier mark wins the lower
+ * A counter counts what the viewer sees, and on a timeline that order is time:
+ * dragging the second counter's clip in front of the first makes it the first.
+ * Two clips starting on the same frame keep the order they were drawn in, which
+ * is the order they are stored in - the earlier annotation wins the lower
  * number rather than the pair flickering between them.
  *
  * The numbering is derived rather than kept, so a drag, a trim, an undo and a
@@ -104,13 +105,13 @@ export const mergeRecordingAnnotationClips = ({
 
 /**
  * Creates the initial three output seconds of an annotation clip, reaching the
- * mark's own arrival back before the playhead so an animated mark is whole
- * where it was placed - a second for an arrow drawing itself, a fifth of one
- * for a counter growing into place. Near the start of the recording it takes
- * whatever room there is and the mark is caught part drawn, which is the only
- * way a mark can be placed there at all. The clip's end is measured from the
- * playhead as before, so the reach back lengthens the clip rather than
- * sliding it.
+ * annotation's own arrival back before the playhead so an animated annotation
+ * is whole where it was placed - a second for an arrow drawing itself, a fifth
+ * of one for a counter growing into place. Near the start of the recording it
+ * takes whatever room there is and the annotation is caught part drawn, which
+ * is the only way an annotation can be placed there at all. The clip's end is
+ * measured from the playhead as before, so the reach back lengthens the clip
+ * rather than sliding it.
  */
 export const recordingAnnotationClipAt = ({
   annotation,

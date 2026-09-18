@@ -49,8 +49,9 @@ pub(super) struct NativeWorkspaceLayer {
   pub(super) camera_rgba: *const u8,
   pub(super) camera_pixels: *mut std::ffi::c_void,
   pub(super) overlay: StillOverlay,
-  /// The layer's marks, inline: the presenter retains its scene and redraws
-  /// it without Rust, so a borrowed pointer would dangle on the next pan.
+  /// The layer's annotations, inline: the presenter retains its scene and
+  /// redraws it without Rust, so a borrowed pointer would dangle on the next
+  /// pan.
   pub(super) annotations: NativeAnnotations,
 }
 

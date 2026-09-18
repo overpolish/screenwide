@@ -43,7 +43,7 @@ type PreviewViewportProps = {
   items: { height: number; id: number; width: number }[];
   naturalHeight: number;
   naturalWidth: number;
-  /** The annotation tool in hand. "select" hit-tests the marks already on
+  /** The annotation tool in hand. "select" hit-tests the annotations already on
    * the layer; "arrow" and "counter" also make a new one on empty picture,
    * and the layer's own chrome stands down for as long as one is held. */
   annotationTool?: "arrow" | "counter" | "select";
@@ -128,8 +128,8 @@ export function PreviewViewport({
     snapshot: ScreenshotWorkspaceOutputSettings;
   } | null>(null);
   const editGesture = useEditorEditGesture();
-  // A fresh mark's dress travels with the layout the native tool draws from,
-  // and it is the tool's own: a counter's disc and an arrow's stroke are
+  // A fresh annotation's dress travels with the layout the native tool draws
+  // from, and it is the tool's own: a counter's disc and an arrow's stroke are
   // different measurements of different things.
   const annotationDefaults = useAnnotationDefaults(
     annotationTool === "counter" ? "counter" : "arrow",

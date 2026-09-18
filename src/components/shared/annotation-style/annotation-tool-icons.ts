@@ -4,7 +4,7 @@
 import { ArrowUpRight, MapPinPlusInside } from "lucide-react";
 
 /**
- * The glyphs the mark tools are drawn with.
+ * The glyphs the annotation tools are drawn with.
  *
  * The same two tools are picked up in three places - the live overlay's
  * toolbar, the screenshot workspace and the recording workspace - and a tool

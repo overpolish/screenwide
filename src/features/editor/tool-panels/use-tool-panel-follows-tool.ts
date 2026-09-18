@@ -11,8 +11,8 @@ import { toolPanelLabel } from "./tool-panel-window";
 import { EditorToolId, toolPanel, toolResetsView } from "./tool-registry";
 import { previewViewport, useToolPanel } from "./use-tool-panel";
 
-/** What the panel was last settled against: the tool in hand, and whether a
- * mark was chosen, whose panel outranks the tool's. */
+/** What the panel was last settled against: the tool in hand, and whether an
+ * annotation was chosen, whose panel outranks the tool's. */
 type Settled = { annotated: boolean; tool: EditorToolId | null };
 
 /** The toolbar button a tool's panel hangs from, for the tools that mark one.
@@ -27,21 +27,20 @@ const toolTrigger = (tool: EditorToolId) =>
  *
  * A tool's panel is open exactly while that tool is active: taking a tool up
  * shows its controls, swapping tools swaps the panel in place, and a tool
- * without controls leaves the picture clear. The workspaces state which tool
- * is in hand and nothing else; every open and close is decided here, so a
- * toolbar button, a shortcut and the tool a session starts in all behave the
- * same way.
+ * without controls leaves the picture clear. The workspaces state which tool is
+ * in hand and nothing else; every open and close is decided here, so a toolbar
+ * button, a shortcut and the tool a session starts in all behave the same way.
  *
  * The exception is the tools that are only a panel - Cursor today. Opening one
- * retires the canvas tool, and that null must not take the panel it just
- * opened away again: a cleared tool only ever closes its own panel.
+ * retires the canvas tool, and that null must not take the panel it just opened
+ * away again: a cleared tool only ever closes its own panel.
  *
- * The other exception is the mark panel, which belongs to the mark in hand
- * rather than to a tool: choosing an arrow or a counter shows it over
+ * The other exception is the annotation panel, which belongs to the annotation
+ * in hand rather than to a tool: choosing an arrow or a counter shows it over
  * whatever the tool would have shown, and letting it go puts the tool's own
- * panel back.
- * It never refits the picture - neither on the way in nor on the way out -
- * because nothing about the picture changed, only what is chosen in it.
+ * panel back. It never refits the picture - neither on the way in nor on the
+ * way out - because nothing about the picture changed, only what is chosen in
+ * it.
  */
 export function useToolPanelFollowsTool(
   workspace: EditorKind,
@@ -62,18 +61,19 @@ export function useToolPanelFollowsTool(
     let frame = 0;
 
     const settle = async (previous: Settled | undefined) => {
-      // Only taking up another tool applies that tool's fit policy. Letting a
-      // mark go is not picking the tool up again, and must not move the view.
+      // Only taking up another tool applies that tool's fit policy. Letting an
+      // annotation go is not picking the tool up again, and must not move the
+      // view.
       const toolChanged = previous === undefined || previous.tool !== tool;
       if (hasSelectedAnnotation) {
         const anchor = previewViewport()?.getBoundingClientRect();
         if (!anchor) return;
-        await openPanel("mark", anchor, false);
+        await openPanel("annotation", anchor, false);
         return;
       }
       if (tool === null) {
         const previousPanel = previous?.annotated
-          ? "mark"
+          ? "annotation"
           : previous?.tool == null
             ? undefined
             : toolPanel(previous.tool);

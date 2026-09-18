@@ -24,7 +24,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_owns_chrome(
     ScreenwidePreviewSurface *surface) {
   ScreenwideAnnotationMode mode = annotation_active_mode(surface);
   // A drawing tool always draws its own chrome; the select tool only once it
-  // is holding a mark, so an ordinary layer selection is untouched.
+  // is holding an annotation, so an ordinary layer selection is untouched.
   return mode == ScreenwideAnnotationModeArrow ||
          mode == ScreenwideAnnotationModeCounter ||
          (mode == ScreenwideAnnotationModeSelect &&
@@ -35,13 +35,13 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   ScreenwideAnnotationMode mode = annotation_active_mode(surface);
   if (mode == ScreenwideAnnotationModeNone) return nil;
-  // A mark under the pointer is something to take hold of, so the pointer
-  // says so - never the crosshair the empty picture draws with.
+  // An annotation under the pointer is something to take hold of, so the
+  // pointer says so - never the crosshair the empty picture draws with.
   if (annotation_handle_at_point(surface, point) >= 0 ||
       annotation_shaft_at_point(surface, point) >= 0)
     return [NSCursor arrowCursor];
-  // Empty picture: a drawing tool makes a mark rather than picking one up.
-  // The select tool leaves the choice to the layer underneath.
+  // Empty picture: a drawing tool makes an annotation rather than picking one
+  // up. The select tool leaves the choice to the layer underneath.
   return mode == ScreenwideAnnotationModeArrow ||
                  mode == ScreenwideAnnotationModeCounter
              ? [NSCursor crosshairCursor]

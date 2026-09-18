@@ -3,7 +3,7 @@
 
 //! Pointer and key events turned into annotations.
 //!
-//! A stroke is the mark the tool in hand draws, in the dress the settings
+//! A stroke is the annotation the tool in hand draws, in the dress the settings
 //! carry: an arrow from where the pointer went down to where it is now, or a
 //! counter dropped at the press and carried by the drag. It reaches
 //! [`super::live_clips`] only when the button comes up: an unfinished stroke
@@ -65,14 +65,14 @@ pub(super) const PHASE_DRAG: u32 = 1;
 #[cfg(target_os = "windows")]
 pub(super) const PHASE_UP: u32 = 2;
 
-/// The stroke in hand: the mark it makes, when and where it started, and
+/// The stroke in hand: the annotation it makes, when and where it started, and
 /// where the pointer is now. The start time is what the annotation is timed
 /// from, so a clip covers the drawing rather than beginning once it is over.
 ///
 /// The shape, the number and the aim are taken at the press and held: a tool
-/// picked up mid-drag chooses what the *next* mark is, rather than reshaping
-/// the one being drawn. The dress is read every frame, so a colour changed
-/// mid-drag shows on the stroke in hand.
+/// picked up mid-drag chooses what the *next* annotation is, rather than
+/// reshaping the one being drawn. The dress is read every frame, so a colour
+/// changed mid-drag shows on the stroke in hand.
 struct Stroke {
   id: String,
   started_at: Instant,
@@ -94,9 +94,9 @@ fn drawing() -> MutexGuard<'static, Option<Stroke>> {
     .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-/// The dress a mark of `shape` is drawn in. An arrow's stroke and a counter's
-/// disc are different measurements of different things, so the width comes
-/// from the setting that belongs to the shape.
+/// The dress an annotation of `shape` is drawn in. An arrow's stroke and a
+/// counter's disc are different measurements of different things, so the width
+/// comes from the setting that belongs to the shape.
 fn style(shape: AnnotateShape) -> AnnotationStyle {
   let settings = super::settings::current();
   AnnotationStyle {
@@ -109,14 +109,14 @@ fn style(shape: AnnotateShape) -> AnnotationStyle {
   }
 }
 
-/// The mark a stroke currently describes, built by the editor's own
-/// constructors so a mark drawn live and one drawn in the editor are the same
-/// shape from the first frame.
+/// The annotation a stroke currently describes, built by the editor's own
+/// constructors so an annotation drawn live and one drawn in the editor are the
+/// same shape from the first frame.
 ///
-/// A counter sits where the pointer is rather than where the press landed:
-/// it is dropped whole, and the same drag carries it, exactly as a fresh
-/// counter in the editor is carried.
-fn mark(stroke: &Stroke, style: &AnnotationStyle) -> Annotation {
+/// A counter sits where the pointer is rather than where the press landed: it
+/// is dropped whole, and the same drag carries it, exactly as a fresh counter
+/// in the editor is carried.
+fn annotation(stroke: &Stroke, style: &AnnotationStyle) -> Annotation {
   match stroke.shape {
     AnnotateShape::Arrow => new_arrow(stroke.id.clone(), stroke.start, stroke.end, Some(style)),
     AnnotateShape::Counter => new_counter(
@@ -131,7 +131,7 @@ fn mark(stroke: &Stroke, style: &AnnotationStyle) -> Annotation {
 
 /// Whether a stroke has anything to show. An arrow with both ends in one
 /// place is a blob, and the press that starts every stroke would flash one
-/// before the drag begins; a counter is a mark the moment it is dropped.
+/// before the drag begins; a counter is an annotation the moment it is dropped.
 fn is_drawn(stroke: &Stroke) -> bool {
   stroke.shape == AnnotateShape::Counter || stroke.start != stroke.end
 }
@@ -145,12 +145,12 @@ struct Tool {
 }
 
 /// One pointer step, and the annotation it completed with the moment its stroke
-/// began. Kept apart from the live annotation list so the gesture can be driven a
-/// step at a time.
+/// began. Kept apart from the live annotation list so the gesture can be driven
+/// a step at a time.
 ///
-/// `tool` is the mark a press starts: the shape in hand, the number a counter
-/// takes, and where its tail points. A drag or a release reads none of it -
-/// the stroke carries its own.
+/// `tool` is the annotation a press starts: the shape in hand, the number a
+/// counter takes, and where its tail points. A drag or a release reads none of
+/// it - the stroke carries its own.
 fn step(
   drawing: &mut Option<Stroke>,
   phase: u32,
@@ -185,18 +185,18 @@ fn step(
       // in the recording. A counter is dropped by that very click.
       is_drawn(&stroke).then(|| {
         let style = style(stroke.shape);
-        (mark(&stroke, &style), stroke.started_at)
+        (annotation(&stroke, &style), stroke.started_at)
       })
     }
   }
 }
 
-/// The stroke in hand, for the overlay to draw. Annotations already on screen come
-/// from [`super::live_clips`].
+/// The stroke in hand, for the overlay to draw. Annotations already on screen
+/// come from [`super::live_clips`].
 pub(super) fn in_progress() -> Option<Annotation> {
   let drawing = drawing();
   let stroke = drawing.as_ref().filter(|stroke| is_drawn(stroke))?;
-  Some(mark(stroke, &style(stroke.shape)))
+  Some(annotation(stroke, &style(stroke.shape)))
 }
 
 /// A pointer step in global desktop points: 0 down, 1 drag, 2 up.

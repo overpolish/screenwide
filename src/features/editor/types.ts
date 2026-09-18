@@ -11,7 +11,8 @@ import {
 type EditorArtifactBase = {
   extension: string;
   height: number;
-  /** Unique per capture, so a replacement is never mistaken for the same one. */
+  /** Unique per capture, so a replacement is never mistaken for the same one.
+   */
   id: number;
   suggestedFileStem: string;
   width: number;
@@ -142,14 +143,16 @@ export type EditorArtifact =
       camera: RecordingCamera | null;
       canCompress: boolean;
       cursorDataVersion: number | null;
-      /** Zero for a recording recovered from an earlier run, whose length is unknown. */
+      /** Zero for a recording recovered from an earlier run, whose length is
+       * unknown. */
       durationMs: number;
       hasCursorData: boolean;
       hasKeyboardData: boolean;
       keyboardDataVersion: number | null;
       kind: "recording";
       originalSizeBytes: number;
-      /** The working recording consumed by the native preview and export paths. */
+      /** The working recording consumed by the native preview and export paths.
+       */
       path: string;
       primaryKind: "audio" | "camera" | "screen";
       /** Captured pixels per logical display point, multiplied by 100. */
@@ -160,8 +163,8 @@ export type EditorArtifact =
     })
   | (EditorArtifactBase & {
       items: {
-        /** The marks the item starts with, in its own pixels: what the live
-         * overlay had drawn over the shot when it was taken. */
+        /** The annotations the item starts with, in its own pixels: what the
+         * live overlay had drawn over the shot when it was taken. */
         annotations: Annotation[];
         height: number;
         id: number;

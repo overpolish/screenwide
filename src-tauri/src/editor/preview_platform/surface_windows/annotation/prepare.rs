@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Turning a layer's marks into what the compositor draws this frame.
+//! Turning a layer's annotations into what the compositor draws this frame.
 //!
 //! The twin of `screenwide_bind_annotations` in
 //! `gpu_compositor_macos_annotations.h`: the same flattening, the same
-//! placement into canvas pixels, and the same exposure sampling for a mark
-//! that moved since the shutter opened, so a moving arrow smears along the
-//! path it actually travelled on both backends.
+//! placement into canvas pixels, and the same exposure sampling for an
+//! annotation that moved since the shutter opened, so a moving arrow smears
+//! along the path it actually travelled on both backends.
 
 use super::*;
 use crate::editor::annotations::geometry::{prepare_arrow, prepare_counter, COUNTER_TAIL_REACH};
@@ -16,19 +16,19 @@ use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::Annotation;
 use crate::screenshots::output_placement;
 
-/// Prepares the marks for one composition, in canvas pixels, with those
+/// Prepares the annotations for one composition, in canvas pixels, with those
 /// under the camera first.
 ///
-/// Returns the arrows and where the above-camera run starts, which is what
-/// the shader's two passes are bounded by. Points arrive in the source's own
-/// pixels and are placed through the same `output_placement` the picture is,
-/// so a mark stays glued to what it points at through a crop or a resize.
-/// The stroke is already in output pixels - that is what keeps a mark's
-/// weight on the canvas instead of growing with the picture - so it is used
-/// as it comes.
-/// `annotations` is the list this frame draws. A still passes the document's
-/// own; a video export passes the marks its timeline clips resolve to at that
-/// frame, which is why the list is given rather than read from `settings`.
+/// Returns the arrows and where the above-camera run starts, which is what the
+/// shader's two passes are bounded by. Points arrive in the source's own pixels
+/// and are placed through the same `output_placement` the picture is, so an
+/// annotation stays glued to what it points at through a crop or a resize. The
+/// stroke is already in output pixels - that is what keeps an annotation's
+/// weight on the canvas instead of growing with the picture - so it is used as
+/// it comes. `annotations` is the list this frame draws. A still passes the
+/// document's own; a video export passes the annotations its timeline clips
+/// resolve to at that frame, which is why the list is given rather than read
+/// from `settings`.
 pub(crate) fn prepared_arrows(
   annotations: &[Annotation],
   source: (u32, u32),
@@ -52,10 +52,10 @@ pub(crate) fn prepared_arrows(
   ))
 }
 
-/// The same marks in whatever pixels they are drawn in: `offset` and `scale`
-/// carry a point from the source's own pixels into them. The still passes its
-/// output placement; the live overlay passes the identity, because its marks
-/// arrive in the display's layer pixels already.
+/// The same annotations in whatever pixels they are drawn in: `offset` and
+/// `scale` carry a point from the source's own pixels into them. The still
+/// passes its output placement; the live overlay passes the identity, because
+/// its annotations arrive in the display's layer pixels already.
 pub(crate) fn placed_arrows(
   annotations: &[Annotation],
   offset: (f64, f64),
@@ -67,8 +67,8 @@ pub(crate) fn placed_arrows(
   }
   // The same flattening the Metal backend presents through, so both prepare
   // from one resolved list rather than from two readings of the document.
-  let marks = native_annotations(annotations);
-  let marks = &marks.items[..marks.count as usize];
+  let annotations = native_annotations(annotations);
+  let annotations = &annotations.items[..annotations.count as usize];
   let place = |point: [f32; 2]| {
     [
       (offset.0 + f64::from(point[0]) * scale.0) as f32,
@@ -76,50 +76,62 @@ pub(crate) fn placed_arrows(
     ]
   };
   let mut prepared = compositor::PreparedArrows {
-    arrows: Vec::with_capacity(marks.len()),
+    arrows: Vec::with_capacity(annotations.len()),
     ..Default::default()
   };
-  // Two passes rather than a sort: within each side the marks have to keep
-  // the order their layer stores them in, so a later mark paints over an
-  // earlier one.
+  // Two passes rather than a sort: within each side the annotations have to
+  // keep the order their layer stores them in, so a later annotation paints
+  // over an earlier one.
   for above in [0, 1] {
-    for (index, mark) in marks
+    for (index, annotation) in annotations
       .iter()
       .enumerate()
-      .filter(|(_, mark)| mark.above_camera == above)
+      .filter(|(_, annotation)| annotation.above_camera == above)
     {
-      let (a, b, c) = (place(mark.p0), place(mark.p1), place(mark.p2));
+      let (a, b, c) = (
+        place(annotation.p0),
+        place(annotation.p1),
+        place(annotation.p2),
+      );
       // A counter keeps its centre in `p0`, its aim in `p1[0]` and its
       // number in `p1[1]`, so only the centre is placed: the disc's diameter
       // is in output pixels, as an arrow's stroke is, and an angle is the
       // same angle in either space.
-      let geometry = if mark.kind == KIND_COUNTER {
-        prepare_counter(a, mark.width, mark.p1[0], mark.reveal)
+      let geometry = if annotation.kind == KIND_COUNTER {
+        prepare_counter(a, annotation.width, annotation.p1[0], annotation.reveal)
       } else {
-        prepare_arrow(a, b, c, mark.width, mark.head, mark.reveal)
+        prepare_arrow(
+          a,
+          b,
+          c,
+          annotation.width,
+          annotation.head,
+          annotation.reveal,
+        )
       };
       let mut arrow = compositor::PreviewArrow::new(
         geometry,
-        mark.color,
+        annotation.color,
         // The halo is preview chrome: `native_annotations` never sets it, so
         // nothing the export composes can carry one.
         halo
           .filter(|(hovered, _)| *hovered == index)
           .map_or(0.0, |(_, width)| width),
-        mark.kind,
+        annotation.kind,
       );
-      let count = exposure_sample_count(mark, a, b, c);
+      let count = exposure_sample_count(annotation, a, b, c);
       if count == 0 {
-        // A still mark carries its reveal's opacity in its colour. The shader
-        // only knows the colour, so it is folded in here, exactly as the
+        // A still annotation carries its reveal's opacity in its colour. The
+        // shader only knows the colour, so it is folded in here, exactly as the
         // Metal compositor's `draw->color[3] *= reveal.opacity` does.
-        arrow.color[3] *= mark.reveal.opacity.clamp(0.0, 1.0);
+        arrow.color[3] *= annotation.reveal.opacity.clamp(0.0, 1.0);
       } else {
-        // A moving mark is drawn at every sample between the shutter start
-        // and now, each at the reveal it had then; the shader averages them.
+        // A moving annotation is drawn at every sample between the shutter
+        // start and now, each at the reveal it had then; the shader averages
+        // them.
         arrow.sample_first = prepared.samples.len() as u32;
         arrow.sample_count = count;
-        let reveal = mark.reveal;
+        let reveal = annotation.reveal;
         for tap in 0..count {
           let t = (tap as f32 + 0.5) / count as f32;
           let lerp = |from: f32, to: f32| from + (to - from) * t;
@@ -131,13 +143,13 @@ pub(crate) fn placed_arrows(
             previous: reveal.previous,
           };
           prepared.samples.push(compositor::PreviewSample::new(
-            prepare_arrow(a, b, c, mark.width, mark.head, sample),
+            prepare_arrow(a, b, c, annotation.width, annotation.head, sample),
             sample.opacity.clamp(0.0, 1.0),
           ));
         }
       }
-      prepared.counters.push(if mark.kind == KIND_COUNTER {
-        (mark.p1[1].max(0.0) as u32, arrow.geometry.rounding)
+      prepared.counters.push(if annotation.kind == KIND_COUNTER {
+        (annotation.p1[1].max(0.0) as u32, arrow.geometry.rounding)
       } else {
         (0, 0.0)
       });
@@ -150,16 +162,21 @@ pub(crate) fn placed_arrows(
   prepared
 }
 
-/// How many exposure samples a mark needs this frame: none when it has not
-/// moved, else enough that consecutive samples are under a pixel apart, in
+/// How many exposure samples an annotation needs this frame: none when it has
+/// not moved, else enough that consecutive samples are under a pixel apart, in
 /// the same eight-to-forty-eight band the Metal compositor uses. The twin of
 /// `screenwide_annotation_sample_count`.
-fn exposure_sample_count(mark: &NativeAnnotation, a: [f32; 2], b: [f32; 2], c: [f32; 2]) -> u32 {
-  let r = mark.reveal;
+fn exposure_sample_count(
+  annotation: &NativeAnnotation,
+  a: [f32; 2],
+  b: [f32; 2],
+  c: [f32; 2],
+) -> u32 {
+  let r = annotation.reveal;
   // An arrow's travel is its window sliding along its own path; a counter has
   // no path, so all it can cover in a frame is the change in its own size.
-  let mut travel = if mark.kind == KIND_COUNTER {
-    mark.width * 0.5 * COUNTER_TAIL_REACH * (r.scale - r.previous[2]).abs()
+  let mut travel = if annotation.kind == KIND_COUNTER {
+    annotation.width * 0.5 * COUNTER_TAIL_REACH * (r.scale - r.previous[2]).abs()
   } else {
     let length = (b[0] - a[0]).hypot(b[1] - a[1]) + (c[0] - b[0]).hypot(c[1] - b[1]);
     length
@@ -167,8 +184,8 @@ fn exposure_sample_count(mark: &NativeAnnotation, a: [f32; 2], b: [f32; 2], c: [
         .abs()
         .max((r.high - r.previous[1]).abs())
   };
-  if mark.kind != KIND_COUNTER {
-    travel += mark.width * 4.0 * (r.scale - r.previous[2]).abs();
+  if annotation.kind != KIND_COUNTER {
+    travel += annotation.width * 4.0 * (r.scale - r.previous[2]).abs();
   }
   if travel < 1.5 && (r.opacity - r.previous[3]).abs() < 0.01 {
     return 0;

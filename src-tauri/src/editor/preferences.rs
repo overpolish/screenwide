@@ -56,9 +56,9 @@ pub(super) fn load_screenshot_radius(app: &AppHandle) -> f64 {
 
 /// The remembered look, as a template for the next capture.
 ///
-/// Marks are document content rather than a preference: they are drawn on one
-/// layer of one capture and mean nothing on another. They are dropped both on
-/// the way in and on the way out, so a file written before this rule existed
+/// Annotations are document content rather than a preference: they are drawn on
+/// one layer of one capture and mean nothing on another. They are dropped both
+/// on the way in and on the way out, so a file written before this rule existed
 /// stops handing yesterday's arrows to today's screenshot.
 fn screenshot_output_template(mut output: ScreenshotOutputSettings) -> ScreenshotOutputSettings {
   output.annotations.clear();
@@ -248,11 +248,11 @@ pub(super) fn remember_completed_export(
 mod tests {
   use super::*;
 
-  /// The look is remembered as a template. Marks are drawn on one layer of
-  /// one capture, so carrying them forward would put yesterday's arrow on
+  /// The look is remembered as a template. Annotations are drawn on one layer
+  /// of one capture, so carrying them forward would put yesterday's arrow on
   /// today's screenshot - which is exactly what it did.
   #[test]
-  fn a_remembered_look_carries_none_of_the_marks_drawn_on_it() {
+  fn a_remembered_look_carries_none_of_the_annotations_drawn_on_it() {
     let preferences: EditorPreferences = serde_json::from_str(
       r##"{"screenshot_output":{"annotations":[{"id":"a",
         "shape":{"kind":"arrow","start":{"x":0,"y":0},"control":{"x":1,"y":1},
@@ -266,7 +266,11 @@ mod tests {
     )
     .unwrap();
     let output = preferences.screenshot_output.unwrap();
-    assert_eq!(output.annotations.len(), 1, "the fixture has a mark on it");
+    assert_eq!(
+      output.annotations.len(),
+      1,
+      "the fixture has an annotation on it"
+    );
     assert!(screenshot_output_template(output).annotations.is_empty());
   }
 

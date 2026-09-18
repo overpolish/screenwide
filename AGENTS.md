@@ -19,6 +19,7 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - `src/lib/motion.ts`: shared motion timings and easing.
 - `src/storybook/feature-story-stage.tsx`: standard feature-window story frame.
 - **Editor** is the editing window and its workspace, in internal names, routes, events, and stories. **Export** means producing or saving finished files.
+- **Annotation** is the only word for a drawn arrow or counter, in identifiers, comments, tests, and user-visible copy. Do not reintroduce "mark" as a synonym. **Annotate** stays the verb form for the live desktop overlay feature and its settings, routes, and commands. `mark` in this repository means the brand mark or a timeline tick marker, and nothing else.
 - Native preview is owned by the native compositor. Browser stories cannot reproduce it; do not add a substitute rendering path just for stories.
 
 ## UI conventions

@@ -19,7 +19,7 @@ const STORY_DURATION_MS = 96_000;
  * The band as the editor assembles it: the real transport row above the real
  * lanes. Drag the divider down to the stop - it never hides the transport, the
  * ruler and two lane rows - and only the lane rows scroll: the transport row,
- * the ruler and the meter all stand still, so the overflow shadow marks
+ * the ruler and the meter all stand still, so the overflow shadow annotations
  * exactly where the rows are cut off. Double click the divider to refit.
  */
 function BandPreview({ audioTrackCount }: { audioTrackCount: number }) {

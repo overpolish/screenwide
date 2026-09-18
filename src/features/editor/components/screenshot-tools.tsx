@@ -8,7 +8,7 @@ import { ButtonGroup } from "../../../components/base/button-group/button-group"
 import {
   ArrowToolIcon,
   CounterToolIcon,
-} from "../../../components/shared/annotation-style/mark-tool-icons";
+} from "../../../components/shared/annotation-style/annotation-tool-icons";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 
 export type ScreenshotTool =

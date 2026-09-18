@@ -299,9 +299,9 @@ export const layoutScreenshotPreviewSurface = ({
    * whatever the last counter was turned to. */
   annotationCounterAngle?: number | null;
   annotationDefaults?: AnnotationStyle | null;
-  /** The annotation tool in hand. "select" hit-tests the marks already on
+  /** The annotation tool in hand. "select" hit-tests the annotations already on
    * the layer and lets every other press fall through to it; "arrow" and
-   * "counter" also make a new mark on empty picture. */
+   * "counter" also make a new annotation on empty picture. */
   annotationTool?: "arrow" | "counter" | "select";
   fitWidth?: number;
   selectedAnnotationId?: string | null;

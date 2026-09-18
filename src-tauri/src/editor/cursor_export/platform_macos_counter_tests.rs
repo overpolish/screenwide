@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The compositor's counter marks, through a real Metal dispatch.
+//! The compositor's counter annotations, through a real Metal dispatch.
 
 use crate::editor::annotations::counter::new_counter;
 use crate::editor::annotations::counter::silhouette::COUNTER_TAIL_REACH;
@@ -15,16 +15,18 @@ const DIAMETER: f64 = 80.0;
 /// A counter on a black canvas, in the palette's yellow so the number's dark
 /// tint reads against its own disc.
 fn counter(value: u32, angle: f64) -> Annotation {
-  let mut mark = new_counter("counter".to_owned(), CENTER, value, None, None);
-  mark.style = AnnotationStyle {
+  let mut annotation = new_counter("counter".to_owned(), CENTER, value, None, None);
+  annotation.style = AnnotationStyle {
     color: "#ffcc00".to_owned(),
     head: crate::editor::annotations::AnnotationHead::None,
     width: DIAMETER,
   };
-  if let crate::editor::annotations::AnnotationShape::Counter { angle: aim, .. } = &mut mark.shape {
+  if let crate::editor::annotations::AnnotationShape::Counter { angle: aim, .. } =
+    &mut annotation.shape
+  {
     *aim = angle;
   }
-  mark
+  annotation
 }
 
 fn composed(annotation: Annotation) -> crate::screenshots::CapturedImage {
@@ -147,9 +149,9 @@ fn a_two_digit_counter_keeps_its_number_inside_the_disc() {
 
 #[test]
 fn a_counter_arrives_by_growing_into_place() {
-  let mut mark = counter(3, 0.0);
-  mark.reveal = counter_reveal_window(0.0, 2_000.0, 0.0);
-  let arriving = composed(mark);
+  let mut annotation = counter(3, 0.0);
+  annotation.reveal = counter_reveal_window(0.0, 2_000.0, 0.0);
+  let arriving = composed(annotation);
   write_png("counter-3-arriving", &arriving);
   // At the very start it is transparent, and smaller than it will be: the
   // edge of the full-size disc is background.
@@ -174,9 +176,9 @@ fn a_counter_smears_over_the_sizes_it_grew_through() {
   // every size between the two, so its edge is a band rather than a step.
   let window = counter_reveal_window(90.0, 2_000.0, 33.0);
   assert!(window.scale > window.previous[2]);
-  let mut mark = counter(4, 0.0);
-  mark.reveal = window;
-  let moving = composed(mark);
+  let mut annotation = counter(4, 0.0);
+  annotation.reveal = window;
+  let moving = composed(annotation);
   write_png("counter-4-smear", &moving);
   let mut held = counter(4, 0.0);
   held.reveal = counter_reveal_window(90.0, 2_000.0, 0.0);
@@ -199,8 +201,8 @@ fn a_counter_smears_over_the_sizes_it_grew_through() {
   // so the smear is a band at the edge rather than a hole in the middle.
   let inner = radius(window.previous[2]) * 0.5;
   assert!(pixel(&moving, CENTER.x - inner, CENTER.y)[0] > smeared + 24);
-  // And the mark is drawn at the opacity its reveal is at rather than whole,
-  // which is what a video export was missing.
+  // And the annotation is drawn at the opacity its reveal is at rather than
+  // whole, which is what a video export was missing.
   let inside = pixel(&moving, CENTER.x - inner, CENTER.y)[0];
   assert!(inside > 16 && inside < 240, "the disc is solid: {inside}");
 }

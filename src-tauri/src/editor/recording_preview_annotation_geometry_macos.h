@@ -80,13 +80,14 @@ static NSPoint annotation_counter_tail(NSRect image,
   return annotation_native_point(annotation_counter_tail_point(prepared));
 }
 
-/// How far a point is from one mark's drawn shape, in display points. Zero
-/// anywhere the mark is actually painted, because the tolerance is measured
-/// from the stroke's edge rather than its centreline. A press on a head is a
-/// press on the arrow - it is the part of it the hand aims at - and a press
-/// on a counter's tail is a press on the counter. A mark half-way through
-/// drawing itself in is still picked by the whole of what it will be: the
-/// hand aims at the mark, not at the frame of it that happens to be showing.
+/// How far a point is from one annotation's drawn shape, in display points.
+/// Zero anywhere the annotation is actually painted, because the tolerance is
+/// measured from the stroke's edge rather than its centreline. A press on a
+/// head is a press on the arrow - it is the part of it the hand aims at - and a
+/// press on a counter's tail is a press on the counter. An annotation half-way
+/// through drawing itself in is still picked by the whole of what it will be:
+/// the hand aims at the annotation, not at the frame of it that happens to be
+/// showing.
 static double annotation_shaft_distance(NSRect image,
                                         ScreenwidePreviewAnnotation item,
                                         NSPoint point) {

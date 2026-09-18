@@ -17,25 +17,25 @@ import { useAnnotationColorMenu } from "./use-annotation-color-menu";
 import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
 
 /**
- * The chosen mark's own controls: how big it is drawn, whether it arrives
- * over its clip, and what colour it is - plus the controls its shape has.
- * An arrow carries heads and can be turned round; a counter is a disc with a
+ * The chosen annotation's own controls: how big it is drawn, whether it arrives
+ * over its clip, and what colour it is - plus the controls its shape has. An
+ * arrow carries heads and can be turned round; a counter is a disc with a
  * number in it, which leaves it nothing to reverse and no head to choose.
- * Animating takes a clip to animate over, so that row is the recording
- * editor's alone.
+ * Animating takes a clip to animate over, so that row is the recording editor's
+ * alone.
  *
- * This panel belongs to the mark rather than to a tool. It comes up the
- * moment one is chosen, in any tool that can choose one, and goes away when
- * the choice does. Every change is committed through the same path the drag
- * on the picture uses, so it lands in the edit history as one edit, and
- * becomes the dress the next mark is drawn in.
+ * This panel belongs to the annotation rather than to a tool. It comes up the
+ * moment one is chosen, in any tool that can choose one, and goes away when the
+ * choice does. Every change is committed through the same path the drag on the
+ * picture uses, so it lands in the edit history as one edit, and becomes the
+ * dress the next annotation is drawn in.
  *
  * The head and the colours are the shared controls the live overlay's toolbar
- * carries, so a mark is dressed the same way wherever it is drawn. A colour
- * the palette does not hold is kept the moment the system panel closes on it,
- * and forgotten from the same right-click menu a saved background is.
+ * carries, so an annotation is dressed the same way wherever it is drawn. A
+ * colour the palette does not hold is kept the moment the system panel closes
+ * on it, and forgotten from the same right-click menu a saved background is.
  */
-export function MarkPanel({ workspace }: { workspace: EditorKind }) {
+export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
   const { annotation, annotationColors, isSaving } = snapshot;
   const showColorMenu = useAnnotationColorMenu((color) => {
@@ -81,7 +81,7 @@ export function MarkPanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {/* Drawing in and out happens over a clip, and only a recording has
-          one: a screenshot is one instant, so there is no time for a mark to
+          one: a screenshot is one instant, so there is no time for an annotation to
           arrive over and the row is not offered there at all. */}
       {workspace === "recording" ? (
         <div className="flex items-center justify-between gap-section">
@@ -110,7 +110,7 @@ export function MarkPanel({ workspace }: { workspace: EditorKind }) {
         </div>
       )}
 
-      {/* The head rides the end point, so turning the mark round points it
+      {/* The head rides the end point, so turning the annotation round points it
           the other way without redrawing it: the same commit path the drag
           on the picture uses. A counter is aimed by its tail instead, on the
           picture itself. */}

@@ -66,7 +66,7 @@ type AnnotateToolbarPosition = {
 export type AnnotateSettings = {
   defaultColor: string;
   /** Where a fresh counter's tail points, in radians clockwise from east. A
-   * live mark cannot be picked up again, so the aim is chosen before the
+   * live annotation cannot be picked up again, so the aim is chosen before the
    * counter is dropped. */
   defaultCounterAngle: number;
   /** The disc a fresh counter is drawn at, in output pixels. Kept apart from

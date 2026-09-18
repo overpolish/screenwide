@@ -23,13 +23,14 @@ type Edge = "startMs" | "endMs";
 
 /**
  * The clips as the preview should show them while `id` is being dragged: that
- * mark drawn whole rather than at the reveal its clip's bounds put it at.
+ * annotation drawn whole rather than at the reveal its clip's bounds put it at.
  *
- * A trim handle sits exactly where the mark is arriving or leaving, so the
- * frame it seeks to is the one frame where the mark is barely there - which
- * is no use at all for deciding where the handle belongs. Marking the clip as
- * not animated is how a mark is drawn whole everywhere else, and it is the
- * preview's own copy: the list that reaches the document keeps its animation.
+ * A trim handle sits exactly where the annotation is arriving or leaving, so
+ * the frame it seeks to is the one frame where the annotation is barely there -
+ * which is no use at all for deciding where the handle belongs. Marking the
+ * clip as not animated is how an annotation is drawn whole everywhere else, and
+ * it is the preview's own copy: the list that reaches the document keeps its
+ * animation.
  */
 export const previewedWhole = (
   clips: RecordingAnnotationClip[],
@@ -101,8 +102,8 @@ export function useRecordingAnnotationDrag({
               sourceDurationMs,
           ),
           "end",
-          // The gesture is over, so the seek that settles it shows the mark
-          // at the reveal its own bounds put it at once more.
+          // The gesture is over, so the seek that settles it shows the
+          // annotation at the reveal its own bounds put it at once more.
           clips ?? undefined,
         );
     }
@@ -138,7 +139,7 @@ export function useRecordingAnnotationDrag({
    *
    * The moves and the release are listened for on the window rather than on
    * the element pressed. The lane restacks its clips as they are dragged -
-   * two marks that come to overlap each need a row - so the element under
+   * two annotations that come to overlap each need a row - so the element under
    * the pointer is moved in the DOM part way through the gesture, and a
    * gesture that depended on that element keeping pointer capture lost the
    * drag exactly when it started to matter.

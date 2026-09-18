@@ -29,7 +29,7 @@ type CropPreviewRect = {
 };
 
 export type ScreenshotOutputSettings = {
-  /** Marks drawn over this layer, in the source's own pixel space. */
+  /** Annotations drawn over this layer, in the source's own pixel space. */
   annotations: Annotation[];
   backgroundColor: string;
   /** A picture of your own behind the layers, or null for a painted one. */
@@ -99,13 +99,13 @@ export const defaultScreenshotOutput = (
 };
 
 /**
- * Settings borrowed as a template: for a new document, a layer added to one,
- * or the look remembered from the last export.
+ * Settings borrowed as a template: for a new document, a layer added to one, or
+ * the look remembered from the last export.
  *
- * Marks are document content, not a preference. They are drawn on one layer
- * of one capture and mean nothing on another, so anything copied as a default
- * leaves them behind - otherwise the arrow drawn on yesterday's screenshot
- * turns up on today's.
+ * Annotations are document content, not a preference. They are drawn on one
+ * layer of one capture and mean nothing on another, so anything copied as a
+ * default leaves them behind - otherwise the arrow drawn on yesterday's
+ * screenshot turns up on today's.
  */
 export const screenshotOutputTemplate = <
   Settings extends ScreenshotOutputSettings,

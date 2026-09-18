@@ -46,8 +46,8 @@ pub(super) struct ScreenshotSelectionGestureEvent {
   pub(super) session_id: u64,
 }
 
-/// The layer's marks after a pointer gesture, for React to commit into the
-/// document and its edit history.
+/// The layer's annotations after a pointer gesture, for React to commit into
+/// the document and its edit history.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -58,8 +58,8 @@ pub(super) struct ScreenshotAnnotationChangeEvent {
   pub(super) session_id: u64,
 }
 
-/// Which mark the pointer is resting on, so the keyboard - which belongs to
-/// the webview - can act on what the halo is showing.
+/// Which annotation the pointer is resting on, so the keyboard - which belongs
+/// to the webview - can act on what the halo is showing.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]

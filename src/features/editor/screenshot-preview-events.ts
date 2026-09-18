@@ -29,7 +29,8 @@ export const screenshotAnnotationChange = (
 
 /**
  * Reads one native hover payload. `null` means the payload was not this
- * session's; an `annotationId` of null means the pointer rests on no mark.
+ * session's; an `annotationId` of null means the pointer rests on no
+ * annotation.
  */
 export const screenshotAnnotationHover = (
   payload: unknown,
@@ -64,8 +65,9 @@ export type ScreenshotSelectionGestureEvent = {
 };
 
 /**
- * The layer's marks after an arrow gesture, for the document to take as one
- * edit. The native tool owns the drawing; only the finished list arrives here.
+ * The layer's annotations after an arrow gesture, for the document to take as
+ * one edit. The native tool owns the drawing; only the finished list arrives
+ * here.
  */
 export type ScreenshotAnnotationChangeEvent = {
   annotations: Annotation[];

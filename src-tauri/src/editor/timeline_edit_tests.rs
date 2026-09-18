@@ -139,7 +139,7 @@ fn live_annotation_clips_become_the_recordings_first_edit() {
   std::fs::write(&recording, []).unwrap();
   let clip = RecordingAnnotationClip {
     annotation: new_arrow(
-      "mark".to_owned(),
+      "annotation".to_owned(),
       AnnotationPoint { x: 10.0, y: 20.0 },
       AnnotationPoint { x: 30.0, y: 40.0 },
       None,

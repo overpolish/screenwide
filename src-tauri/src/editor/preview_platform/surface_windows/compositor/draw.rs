@@ -14,7 +14,7 @@ impl Compositor {
     composition: super::super::ComposedFrame,
     camera: Option<(&SourceTexture, BakeGeometry, bool, bool)>,
     magnifier: Option<super::super::recenter::CropMagnifier>,
-    // Prepared marks in canvas pixels, those under the camera first, with
+    // Prepared annotations in canvas pixels, those under the camera first, with
     // their exposure samples and the drawn pixel scale their edges feather
     // over. The shader draws `[0, below_camera)` before the camera layer and
     // the rest after it, so the ordering is a range rather than a flag.

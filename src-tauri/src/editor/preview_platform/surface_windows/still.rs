@@ -33,12 +33,12 @@ impl RecordingPreviewSurface {
       let (Some(composition), Some(_)) = (pane.last_composition, pane.source.as_ref()) else {
         return Ok(false);
       };
-      // A redraw moves the picture, not the marks on it. The caller's
-      // settings come straight from the composition, whose marks are only
+      // A redraw moves the picture, not the annotations on it. The caller's
+      // settings come straight from the composition, whose annotations are only
       // resolved from the timeline clips per decoded frame, so they arrive
-      // empty here; the marks this frame actually carries - resolved and
+      // empty here; the annotations this frame actually carries - resolved and
       // already on the decoded grid - are the ones the last present cached.
-      let primary = with_cached_marks(pane, primary);
+      let primary = with_cached_annotations(pane, primary);
       let primary = &primary;
       if bake_camera {
         // The camera texture is only cached while baked presents run; right
@@ -74,7 +74,7 @@ impl RecordingPreviewSurface {
       if !bake_camera {
         if let Some(pane) = state.panes.get_mut(1).and_then(Option::as_mut) {
           if let (Some(composition), Some(_)) = (pane.last_composition, pane.source.as_ref()) {
-            let camera_settings = with_cached_marks(pane, camera_settings);
+            let camera_settings = with_cached_annotations(pane, camera_settings);
             self.present_cached_source(pane, &camera_settings, composition)?;
           }
         }
@@ -185,10 +185,14 @@ impl RecordingPreviewSurface {
   }
 }
 
-/// `settings` with the marks the pane last drew in place of its own, which
-/// for a recording arrive unresolved and empty. The cached marks are already
-/// resolved for this frame and on its decoded grid, so they are drawn as is.
-fn with_cached_marks(pane: &Pane, settings: &ScreenshotOutputSettings) -> ScreenshotOutputSettings {
+/// `settings` with the annotations the pane last drew in place of its own,
+/// which for a recording arrive unresolved and empty. The cached annotations
+/// are already resolved for this frame and on its decoded grid, so they are
+/// drawn as is.
+fn with_cached_annotations(
+  pane: &Pane,
+  settings: &ScreenshotOutputSettings,
+) -> ScreenshotOutputSettings {
   let mut settings = settings.clone();
   if let Some(cached) = pane.settings.as_ref() {
     settings.annotations = cached.annotations.clone();

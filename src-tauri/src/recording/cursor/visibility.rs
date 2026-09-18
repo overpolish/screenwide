@@ -18,9 +18,9 @@ pub(super) static VISIBILITY: Mutex<VisibilityState> = Mutex::new(VisibilityStat
 /// that emits no mouse event of its own.
 ///
 /// Glide hides it for the length of a gesture; live annotation hides it for as
-/// long as the overlay is up, where the pointer is a crosshair drawing a mark
-/// rather than anything a viewer should follow. The two cannot overlap: an
-/// active overlay blocks Glide.
+/// long as the overlay is up, where the pointer is a crosshair drawing an
+/// annotation rather than anything a viewer should follow. The two cannot
+/// overlap: an active overlay blocks Glide.
 pub(crate) fn set_cursor_visibility(visible: bool, position: Option<(f64, f64)>) {
   let mut visibility = VISIBILITY.lock().unwrap_or_else(|p| p.into_inner());
   visibility.visible = visible;

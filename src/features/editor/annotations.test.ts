@@ -26,19 +26,19 @@ const arrow = (id: string): Annotation => ({
 describe("annotationDeleteTarget", () => {
   const annotations = [arrow("a"), arrow("b")];
 
-  it("takes the mark the hand is pointing at over the chosen one", () => {
+  it("takes the annotation the hand is pointing at over the chosen one", () => {
     expect(annotationDeleteTarget(annotations, "b", "a")).toBe("b");
   });
 
-  it("falls back to the chosen mark when nothing is hovered", () => {
+  it("falls back to the chosen annotation when nothing is hovered", () => {
     expect(annotationDeleteTarget(annotations, null, "a")).toBe("a");
   });
 
-  it("ignores a hover on a mark this layer no longer carries", () => {
+  it("ignores a hover on an annotation this layer no longer carries", () => {
     expect(annotationDeleteTarget(annotations, "gone", "a")).toBe("a");
   });
 
-  it("has nothing to delete when neither names a mark", () => {
+  it("has nothing to delete when neither names an annotation", () => {
     expect(annotationDeleteTarget(annotations, null, null)).toBeNull();
     expect(annotationDeleteTarget([], "a", "b")).toBeNull();
   });
@@ -55,7 +55,7 @@ const counter = (id: string, value: number): Annotation => ({
 describe("renumberedCounters", () => {
   it("closes the gap a deleted counter leaves", () => {
     const renumbered = renumberedCounters([counter("a", 1), counter("c", 3)]);
-    expect(renumbered.map((mark) => mark.shape)).toEqual([
+    expect(renumbered.map((annotation) => annotation.shape)).toEqual([
       expect.objectContaining({ value: 1 }),
       expect.objectContaining({ value: 2 }),
     ]);
@@ -67,22 +67,22 @@ describe("renumberedCounters", () => {
       arrow("b"),
       counter("c", 9),
     ]);
-    expect(renumbered.map((mark) => mark.shape.kind)).toEqual([
+    expect(renumbered.map((annotation) => annotation.shape.kind)).toEqual([
       "counter",
       "arrow",
       "counter",
     ]);
     expect(
       renumbered
-        .map((mark) => mark.shape)
+        .map((annotation) => annotation.shape)
         .filter((shape) => shape.kind === "counter")
         .map((shape) => shape.value),
     ).toEqual([1, 2]);
   });
 
   it("hands back the very same list when nothing moved", () => {
-    const marks = [counter("a", 1), counter("b", 2)];
-    expect(renumberedCounters(marks)).toBe(marks);
+    const annotations = [counter("a", 1), counter("b", 2)];
+    expect(renumberedCounters(annotations)).toBe(annotations);
   });
 });
 

@@ -7,8 +7,9 @@
 //! build rather than drifting silently.
 
 use super::*;
-/// One prepared arrow's geometry as scalars, shared by the mark and by each
-/// of its exposure samples. The twin of the geometry block in `annotations.hlsl`.
+/// One prepared arrow's geometry as scalars, shared by the annotation and by
+/// each of its exposure samples. The twin of the geometry block in
+/// `annotations.hlsl`.
 ///
 /// Every member is a scalar on purpose. HLSL refuses to straddle a vector
 /// across a 16-byte boundary and pads to avoid it, so a `[f32; 2]` here would
@@ -64,7 +65,7 @@ impl PreviewGeometry {
   }
 }
 
-/// One prepared mark as the pixel shader's structured buffer element.
+/// One prepared annotation as the pixel shader's structured buffer element.
 ///
 /// Every member is a scalar on purpose. HLSL refuses to straddle a vector
 /// across a 16-byte boundary and pads to avoid it, so a `[f32; 2]` here would
@@ -77,7 +78,7 @@ pub(crate) struct PreviewArrow {
   pub(crate) color: [f32; 4],
   /// The hover halo's width in canvas pixels; zero when nothing is hovered.
   pub(crate) hover: f32,
-  /// This mark's run in the exposure sample buffer. A count of zero draws
+  /// This annotation's run in the exposure sample buffer. A count of zero draws
   /// the prepared geometry directly, as a still always does.
   pub(crate) sample_first: u32,
   pub(crate) sample_count: u32,
@@ -106,7 +107,7 @@ impl PreviewArrow {
   }
 }
 
-/// One exposure sample: the mark part way through the interval this frame
+/// One exposure sample: the annotation part way through the interval this frame
 /// covers, and how solid it was then. The twin of `ScreenwideAnnotationSample`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -126,16 +127,16 @@ impl PreviewSample {
   }
 }
 
-/// The most exposure samples one mark prepares, matching the Metal cap.
+/// The most exposure samples one annotation prepares, matching the Metal cap.
 pub(crate) const MAX_EXPOSURE_SAMPLES: usize = 48;
 
-/// Everything one composition draws for its marks.
+/// Everything one composition draws for its annotations.
 #[derive(Default)]
 pub(crate) struct PreparedArrows {
   pub(crate) arrows: Vec<PreviewArrow>,
-  /// Each mark's number and the radius it is drawn at, in the order `arrows`
-  /// holds them: what the counters' numbers are rasterised from. A zero
-  /// value is a mark that is not a counter.
+  /// Each annotation's number and the radius it is drawn at, in the order
+  /// `arrows` holds them: what the counters' numbers are rasterised from. A
+  /// zero value is an annotation that is not a counter.
   pub(crate) counters: Vec<(u32, f32)>,
   pub(crate) samples: Vec<PreviewSample>,
   /// Where the above-camera run starts, which is what the shader's two

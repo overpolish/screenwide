@@ -39,7 +39,7 @@ fn emit_annotation_change(app: &AppHandle, session_id: u64, commit: AnnotationCo
   );
 }
 
-/// Tells React which mark the halo is on. Only a change reports one: the
+/// Tells React which annotation the halo is on. Only a change reports one: the
 /// pulse runs at display rate, and the arrow under it is the same throughout.
 pub(super) fn emit_annotation_hover(
   app: &AppHandle,

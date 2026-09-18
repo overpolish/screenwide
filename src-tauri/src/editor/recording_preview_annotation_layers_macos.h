@@ -3,7 +3,8 @@
 
 #pragma once
 
-// A mark belongs to its image, independently of the currently selected layer.
+// An annotation belongs to its image, independently of the currently selected
+// layer.
 static inline BOOL annotation_layer_selection(ScreenwidePreviewSurface *surface,
     int32_t layer, ScreenwidePreviewSelection *selection) {
   if (surface.hasSelection && (layer < 0 || surface.selection.layer_id == (uint32_t)layer)) {

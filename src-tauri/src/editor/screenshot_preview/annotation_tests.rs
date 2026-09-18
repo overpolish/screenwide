@@ -93,8 +93,8 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
   };
   let handles = annotation_handles(&[none], (100, 100), 800.0);
   assert_eq!(handles[0].end_head, 0.0);
-  // The stroke rides separately: a headless mark is still picked, and haloed,
-  // over the width it shows.
+  // The stroke rides separately: a headless annotation is still picked, and
+  // haloed, over the width it shows.
   assert!((handles[0].width - 8.0 / 800.0).abs() < 1e-12);
 }
 

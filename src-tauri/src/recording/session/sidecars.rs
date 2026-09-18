@@ -22,8 +22,8 @@ pub(super) struct SidecarPlan {
   pub cursor_path: Option<PathBuf>,
   pub cursor_source: Option<CursorSource>,
   pub keyboard_path: Option<PathBuf>,
-  /// Live marks are recorded in the desktop's coordinate space, so they ride
-  /// with the modes that record the desktop.
+  /// Live annotations are recorded in the desktop's coordinate space, so they
+  /// ride with the modes that record the desktop.
   pub records_annotations: bool,
 }
 

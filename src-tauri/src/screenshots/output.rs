@@ -43,7 +43,7 @@ pub struct CropPreviewRect {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotOutputSettings {
-  /// Marks drawn over this layer, in the source's own pixel space.
+  /// Annotations drawn over this layer, in the source's own pixel space.
   #[serde(default)]
   pub annotations: Vec<Annotation>,
   pub background_color: String,

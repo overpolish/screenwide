@@ -69,9 +69,9 @@ pub(super) fn render_video(
   let export_end_100ns = i64::try_from(request.duration_ms)
     .unwrap_or(i64::MAX / 10_000)
     .saturating_mul(10_000);
-  // Marks are authored against the source at its own scale while the stroke
-  // follows the output, exactly as `timed_annotations::for_request` prepares
-  // them for the Metal export. Scaled once rather than per frame.
+  // Annotations are authored against the source at its own scale while the
+  // stroke follows the output, exactly as `timed_annotations::for_request`
+  // prepares them for the Metal export. Scaled once rather than per frame.
   let annotation_clips: Vec<_> = request
     .timeline
     .map_or(&[][..], |timeline| timeline.annotation_clips())
@@ -156,7 +156,7 @@ pub(super) fn render_video(
         request.annotation_track,
         position_ms,
         // How much source time this frame covers, which is the window a
-        // moving mark smears over.
+        // moving annotation smears over.
         next_pts_100ns.saturating_sub(pts_100ns).max(0) as f32 / 10_000.0,
       ),
     )?;

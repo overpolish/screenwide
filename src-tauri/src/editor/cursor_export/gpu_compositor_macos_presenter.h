@@ -101,8 +101,8 @@ int screenwide_gpu_still_presenter_update_workspace_canvas(
     void *handle, uint32_t pane_index, uint32_t canvas_width,
     uint32_t canvas_height, const ScreenwideCanvas *canvas);
 /// Moves the hover halo on the retained workspace without recomposing it: the
-/// mark at `index` in `pane_index`'s own list wears it and every other mark
-/// puts it down. A negative index only clears.
+/// annotation at `index` in `pane_index`'s own list wears it and every other
+/// annotation puts it down. A negative index only clears.
 int screenwide_gpu_still_presenter_set_workspace_annotation_hover(
     void *handle, uint32_t pane_index, int32_t index, float width);
 int screenwide_gpu_still_presenter_update_workspace_camera_overlay(

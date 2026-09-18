@@ -43,14 +43,14 @@ describe("recording annotation clips", () => {
     });
   });
 
-  it("has finished drawing the mark in by the playhead it was placed at", () => {
+  it("has finished drawing the annotation in by the playhead it was placed at", () => {
     const clip = recordingAnnotationClipAt({
       annotation,
       sourceDurationMs: 20_000,
       sourcePositionMs: 4_000,
     });
     // The reveal caps its phase at a third of the clip and never lengthens
-    // it, so a mark placed a whole phase back is whole at the playhead.
+    // it, so an annotation placed a whole phase back is whole at the playhead.
     const phaseMs = Math.min(
       ANNOTATION_DRAW_IN_MS,
       (clip.endMs - clip.startMs) / 3,
@@ -90,7 +90,7 @@ describe("recording annotation clips", () => {
     ).toMatchObject({ endMs: 3_200, startMs: 0 });
   });
 
-  it("clamps a mark started near the end to the source duration", () => {
+  it("clamps an annotation started near the end to the source duration", () => {
     expect(
       recordingAnnotationClipAt({
         annotation,
@@ -237,7 +237,7 @@ describe("renumberedAnnotationClips", () => {
     expect(values(renumberedAnnotationClips(dragged))).toEqual([2, 1]);
   });
 
-  it("gives the lower number to the mark drawn first on a tie", () => {
+  it("gives the lower number to the annotation drawn first on a tie", () => {
     const together = [counterClip("a", 1, 2_000), counterClip("b", 2, 2_000)];
     expect(renumberedAnnotationClips(together)).toBe(together);
   });

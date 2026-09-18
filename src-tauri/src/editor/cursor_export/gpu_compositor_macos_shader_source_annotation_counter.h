@@ -8,9 +8,9 @@
 /// number sampled from the text atlas, and the layer that draws all three.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COUNTER @R"METAL(
 /// A counter read out of the slots an arrow fills with its curve: the disc's
-/// centre and radius, the tail's tip and the radius it is rounded to, and
-/// where the number was rasterised in the text atlas. Prepared once per mark
-/// by `annotation_prepare_counter`.
+/// centre and radius, the tail's tip and the radius it is rounded to, and where
+/// the number was rasterised in the text atlas. Prepared once per annotation by
+/// `annotation_prepare_counter`.
 struct AnnotationCounter {
   float2 center, tip;
   float radius, tip_radius;
@@ -69,11 +69,12 @@ static float annotation_counter_distance(float2 point, AnnotationCounter counter
 
 /// How much of the number covers this pixel, from the atlas the numbers were
 /// rasterised into. The atlas is drawn at `supersample` pixels to the drawn
-/// pixel and read with four taps, so a counter still reads while it is
-/// growing into place.
+/// pixel and read with four taps, so a counter still reads while it is growing
+/// into place.
 ///
 /// The number is centred on the disc and carried by the disc's own radius, so
-/// it grows and shrinks with the mark without a second scale to keep in step.
+/// it grows and shrinks with the annotation without a second scale to keep in
+/// step.
 static float annotation_number_coverage(
     float2 point, AnnotationCounter counter, const device uchar4 *numbers,
     uint2 atlas) {
@@ -102,27 +103,27 @@ static float annotation_number_coverage(
 /// between them. Each sample carries its own opacity, which is what fades a
 /// counter in and out of an exported frame.
 static float annotation_counter_exposure(
-    float2 point, const device AnnotationUniforms &mark,
+    float2 point, const device AnnotationUniforms &annotation,
     const device AnnotationSample *samples, float feather) {
   float total = 0.0;
-  for (uint tap = 0; tap < mark.sample_count; ++tap) {
-    const device AnnotationSample &sample = samples[mark.sample_offset + tap];
+  for (uint tap = 0; tap < annotation.sample_count; ++tap) {
+    const device AnnotationSample &sample = samples[annotation.sample_offset + tap];
     float distance = annotation_counter_distance(
         point, annotation_counter(sample.arrow));
     total += (1.0 - smoothstep(-feather, feather, distance)) * sample.opacity;
   }
-  return total / float(mark.sample_count);
+  return total / float(annotation.sample_count);
 }
 
-/// One counter: its silhouette in the mark's own colour, and its number in
-/// whichever of black or white reads on that colour. The number is clipped to
-/// the silhouette's own coverage, so the two share one antialiased edge.
+/// One counter: its silhouette in the annotation's own colour, and its number
+/// in whichever of black or white reads on that colour. The number is clipped
+/// to the silhouette's own coverage, so the two share one antialiased edge.
 static float4 annotation_counter_layer(
-    float4 rgba, const device AnnotationUniforms &mark, float4 color,
+    float4 rgba, const device AnnotationUniforms &annotation, float4 color,
     float2 canvas_point, float feather, float halo,
     const device AnnotationSample *samples, const device uchar4 *numbers,
     uint2 number_atlas) {
-  AnnotationCounter counter = annotation_counter(mark.arrow);
+  AnnotationCounter counter = annotation_counter(annotation.arrow);
   float reach = counter.radius * 2.0 + halo + feather + 1.0;
   if (any(canvas_point < counter.center - reach) ||
       any(canvas_point > counter.center + reach))
@@ -141,9 +142,9 @@ static float4 annotation_counter_layer(
   // A still frame draws the prepared disc directly, its opacity already
   // folded into the colour; a moving one averages the disc over the
   // exposure, where each sample carries the opacity it had.
-  float coverage = mark.sample_count == 0u
+  float coverage = annotation.sample_count == 0u
       ? 1.0 - smoothstep(-feather, feather, distance)
-      : annotation_counter_exposure(canvas_point, mark, samples, feather);
+      : annotation_counter_exposure(canvas_point, annotation, samples, feather);
   if (coverage <= 0.0) return rgba;
   float alpha = coverage * color.a;
   rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);

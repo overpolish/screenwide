@@ -41,8 +41,9 @@ import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
 const recordingToolId = (tool: RecordingCanvasTool): EditorToolId | null =>
   tool === "canvas" ? "frame" : tool;
 
-/** Playback and the timeline under it: the native player, the marks on the
- * clip, the recentre analysis, and the pane layout the picture is drawn into. */
+/** Playback and the timeline under it: the native player, the annotations on
+ * the clip, the recentre analysis, and the pane layout the picture is drawn
+ * into. */
 export function useRecordingPreviewTransport(
   props: ResolvedScrubPreviewProps,
   {
@@ -132,8 +133,8 @@ export function useRecordingPreviewTransport(
       effectiveRecordingOutput,
       previewSourceDimensions,
     });
-  // The tool the mark chrome is drawn from. A baked camera layer has no
-  // marks of its own, so selecting it puts the tool down. One value feeds
+  // The tool the annotation chrome is drawn from. A baked camera layer has no
+  // annotations of its own, so selecting it puts the tool down. One value feeds
   // both the native chrome (through the layout, beside the selection it has
   // to agree with) and the editor's own delete shortcut.
   const annotationTool =

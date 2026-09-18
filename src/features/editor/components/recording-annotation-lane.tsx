@@ -170,10 +170,11 @@ export function RecordingAnnotationLane({
                           edge,
                           id: clip.annotation.id,
                         });
-                        // The press alone shows the mark whole at the edge it
-                        // took hold of: the frame under a trim handle is the
-                        // one frame the mark is barely there, which is no use
-                        // for deciding where the handle belongs.
+                        // The press alone shows the annotation whole at the
+                        // edge it took hold of: the frame under a trim handle
+                        // is the one frame the annotation is barely there,
+                        // which is no use for deciding where the handle
+                        // belongs.
                         onSeek?.(
                           recordingTimelineSourceToOutput(
                             edit,

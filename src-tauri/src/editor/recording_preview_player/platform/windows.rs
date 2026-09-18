@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Windows preview backend: Media Foundation hardware decode into D3D11 textures
-//! presented by native flip-model swap chains. Live frames never enter system
-//! memory or cross the Tauri IPC boundary.
+//! Windows preview backend: Media Foundation hardware decode into D3D11
+//! textures presented by native flip-model swap chains. Live frames never enter
+//! system memory or cross the Tauri IPC boundary.
 
 mod decoder;
 mod gpu_decoder;
@@ -71,8 +71,8 @@ pub(super) fn present_native_frame(
           frame_ms,
         );
       }
-      // Marks are authored against the full-resolution source; this frame was
-      // decoded on its own grid, so the points move with it.
+      // Annotations are authored against the full-resolution source; this frame
+      // was decoded on its own grid, so the points move with it.
       let track = if index == 0 {
         &mut settings.recording_output.primary
       } else {
@@ -170,7 +170,7 @@ pub(crate) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
     presented,
   } = payload;
   // Playback exposes each frame for one frame interval, which is the window
-  // a moving mark smears over; a paused still exposes nothing.
+  // a moving annotation smears over; a paused still exposes nothing.
   let frame_ms = sources
     .frames_per_second
     .filter(|rate| *rate > 0.0)

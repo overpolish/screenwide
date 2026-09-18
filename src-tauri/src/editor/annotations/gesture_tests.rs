@@ -5,7 +5,7 @@ use super::bend::curve_midpoint;
 use super::counter::new_counter;
 use super::gesture::{
   annotation_mode, drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationHandle,
-  NewMarkKind, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
+  NewAnnotationKind, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
 };
 use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
@@ -318,8 +318,14 @@ fn tool_names_read_back_as_modes() {
   assert_eq!(annotation_mode(Some("select")), MODE_SELECT);
   assert_eq!(annotation_mode(Some("crop")), MODE_NONE);
   assert_eq!(annotation_mode(None), MODE_NONE);
-  assert_eq!(NewMarkKind::from_mode(MODE_COUNTER), NewMarkKind::Counter);
-  assert_eq!(NewMarkKind::from_mode(MODE_ARROW), NewMarkKind::Arrow);
+  assert_eq!(
+    NewAnnotationKind::from_mode(MODE_COUNTER),
+    NewAnnotationKind::Counter
+  );
+  assert_eq!(
+    NewAnnotationKind::from_mode(MODE_ARROW),
+    NewAnnotationKind::Arrow
+  );
 }
 
 #[test]

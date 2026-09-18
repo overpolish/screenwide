@@ -33,11 +33,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The mark panel over a chosen counter: a disc with a number in it has no
- * head to choose and no ends to swap, so the panel offers its size, whether
+/** The annotation panel over a chosen counter: a disc with a number in it has
+ * no head to choose and no ends to swap, so the panel offers its size, whether
  * it arrives over its clip, and its colour. */
 export const Counter: Story = {
-  args: { tool: "mark", workspace: "recording" },
+  args: { tool: "annotation", workspace: "recording" },
   beforeEach: () => {
     seed({
       annotation: {
@@ -57,11 +57,11 @@ export const Counter: Story = {
   },
 };
 
-/** The Arrow panel: the mark the preview has in hand, and what it is drawn
- * in. It follows the chosen arrow rather than a tool, so it is the one panel
- * that comes up over another. */
+/** The Arrow panel: the annotation the preview has in hand, and what it is
+ * drawn in. It follows the chosen arrow rather than a tool, so it is the one
+ * panel that comes up over another. */
 export const Arrow: Story = {
-  args: { tool: "mark", workspace: "recording" },
+  args: { tool: "annotation", workspace: "recording" },
   beforeEach: () => {
     seed({
       annotation: {
@@ -80,9 +80,9 @@ export const Arrow: Story = {
 
 /** The same panel wearing a colour of its own: colours chosen from the system
  * panel are kept after the palette, and the Custom tile is the chosen one
- * only while the mark matches no tile at all. */
+ * only while the annotation matches no tile at all. */
 export const ArrowCustomColour: Story = {
-  args: { tool: "mark", workspace: "recording" },
+  args: { tool: "annotation", workspace: "recording" },
   beforeEach: () => {
     seed({
       annotation: {
@@ -100,10 +100,10 @@ export const ArrowCustomColour: Story = {
   },
 };
 
-/** Animate switched off: the mark stands on screen for the whole of its clip
- * instead of drawing itself in and out at its ends. */
+/** Animate switched off: the annotation stands on screen for the whole of its
+ * clip instead of drawing itself in and out at its ends. */
 export const ArrowWithoutAnimation: Story = {
-  args: { tool: "mark", workspace: "recording" },
+  args: { tool: "annotation", workspace: "recording" },
   beforeEach: () => {
     seed({
       annotation: {
@@ -120,11 +120,11 @@ export const ArrowWithoutAnimation: Story = {
   },
 };
 
-/** The same panel in the screenshot editor. A still has no clip for a mark to
- * arrive over, so the Animate row is not offered at all and the panel is the
- * three it has always been. */
+/** The same panel in the screenshot editor. A still has no clip for an
+ * annotation to arrive over, so the Animate row is not offered at all and the
+ * panel is the three it has always been. */
 export const ArrowInAScreenshot: Story = {
-  args: { tool: "mark", workspace: "screenshot" },
+  args: { tool: "annotation", workspace: "screenshot" },
   beforeEach: () => {
     seed(
       {

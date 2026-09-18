@@ -84,9 +84,9 @@ function bakedCameraSelection({
  * composited into the screen output, or the selected pane's own rect.
  */
 /** A drawing tool leaves the layer chrome in the select tool's hands: the
- * marks are drawn over the picture, and the layer underneath is still the
+ * annotations are drawn over the picture, and the layer underneath is still the
  * thing a press outside one acts on. */
-const markTool = (tool: "arrow" | "counter" | "crop" | "select") =>
+const selectionChromeTool = (tool: "arrow" | "counter" | "crop" | "select") =>
   tool === "arrow" || tool === "counter" ? "select" : tool;
 
 export function recordingVideoSelectionOverlay({
@@ -136,7 +136,7 @@ export function recordingVideoSelectionOverlay({
   if (canPreviewBakedCamera) {
     if (activeVideoTrack === "primary") {
       return normalizedRecordingSelection({
-        mode: markTool(canvasTool),
+        mode: selectionChromeTool(canvasTool),
         output: effectiveRecordingOutput.primary,
         paneIndex: 0,
         source: primarySource,
@@ -159,7 +159,7 @@ export function recordingVideoSelectionOverlay({
       : previewSourceDimensions.camera;
   if (!source) return null;
   return normalizedRecordingSelection({
-    mode: markTool(canvasTool),
+    mode: selectionChromeTool(canvasTool),
     output: effectiveRecordingOutput[activeVideoTrack],
     paneIndex,
     source,

@@ -29,7 +29,7 @@ fn shape(curve: (AnnotationPoint, AnnotationPoint, AnnotationPoint), width: f64)
   arrow(curve.0, curve.1, curve.2, width, AnnotationHead::End)
 }
 
-/// The same mark, `elapsed` milliseconds into its clip.
+/// The same annotation, `elapsed` milliseconds into its clip.
 fn at_reveal(mut annotation: Annotation, elapsed: f32, frame_ms: f32) -> Annotation {
   annotation.reveal = reveal_window(elapsed, CLIP_MS, frame_ms);
   annotation
@@ -59,12 +59,13 @@ fn parameter_at(curve: (AnnotationPoint, AnnotationPoint, AnnotationPoint), frac
   )
 }
 
-/// How much of the mark's red ink reaches a point, which on a black canvas
-/// is its coverage: the blur is a partial one, so it is only readable here.
+/// How much of the annotation's red ink reaches a point, which on a black
+/// canvas is its coverage: the blur is a partial one, so it is only readable
+/// here.
 ///
 /// The pixel sampled is the one the point falls inside, whose centre is the
-/// canvas point the shader evaluated. Rounding instead lands half a pixel
-/// away, which a mark drawn at a fraction of its weight can read as a gap.
+/// canvas point the shader evaluated. Rounding instead lands half a pixel away,
+/// which an annotation drawn at a fraction of its weight can read as a gap.
 fn red(image: &crate::screenshots::CapturedImage, at: AnnotationPoint) -> u8 {
   let (x, y) = (at.x.floor(), at.y.floor());
   if x < 0.0 || y < 0.0 || x >= f64::from(image.width) || y >= f64::from(image.height) {
@@ -73,8 +74,8 @@ fn red(image: &crate::screenshots::CapturedImage, at: AnnotationPoint) -> u8 {
   image.rgba[(y as usize * image.width as usize + x as usize) * 4]
 }
 
-/// Whether the mark's red ink reaches a point, which is all the arrow leaves
-/// on a black canvas.
+/// Whether the annotation's red ink reaches a point, which is all the arrow
+/// leaves on a black canvas.
 fn inked(image: &crate::screenshots::CapturedImage, at: AnnotationPoint) -> bool {
   red(image, at) > 128
 }
@@ -100,7 +101,7 @@ fn along(
   curve_point(curve.0, curve.1, curve.2, parameter_at(curve, fraction))
 }
 
-/// The stretch of the path a mark covers `elapsed` into its clip, as
+/// The stretch of the path an annotation covers `elapsed` into its clip, as
 /// fractions of the arc from the tail: the shaft's window, which runs over the
 /// path less the head, and the head riding ahead of the window's end.
 fn covered(
@@ -171,14 +172,16 @@ fn half_a_bent_arrow_stops_at_half_its_length() {
   );
 }
 
-/// Nothing breaks open between the shaft and the head while the mark is still
-/// growing: the seam is the whole reason the shaft is pulled back from it.
+/// Nothing breaks open between the shaft and the head while the annotation is
+/// still growing: the seam is the whole reason the shaft is pulled back from
+/// it.
 ///
-/// The sweep starts where the mark's stroke is a pixel wide or more. Below
-/// that a mark is drawn as a fraction of a pixel of coverage everywhere, and
-/// a gap in it is not a thing a threshold can tell from its own faintness.
+/// The sweep starts where the annotation's stroke is a pixel wide or more.
+/// Below that an annotation is drawn as a fraction of a pixel of coverage
+/// everywhere, and a gap in it is not a thing a threshold can tell from its own
+/// faintness.
 #[test]
-fn the_seam_never_gaps_while_the_mark_grows() {
+fn the_seam_never_gaps_while_the_annotation_grows() {
   for (label, curve, width) in [("straight", STRAIGHT, 6.0), ("curved", CURVED, 4.0)] {
     for elapsed in [300.0, 500.0, 800.0, 2_400.0, 2_700.0] {
       let image = composed(SIZE, at_reveal(shape(curve, width), elapsed, 0.0));
@@ -186,7 +189,7 @@ fn the_seam_never_gaps_while_the_mark_grows() {
       // Stopping just short of the tip: the head's apex is a point, and its
       // last pixel is a feathered fraction of one by design. The margin is an
       // absolute distance rather than a share of what is drawn, and it shrinks
-      // with the mark, whose apex is as blunt as its size makes it.
+      // with the annotation, whose apex is as blunt as its size makes it.
       let scale = f64::from(reveal_window(elapsed, CLIP_MS, 0.0).scale);
       let margin = (width * 0.75 * scale / arc_length(curve)) as f32;
       let front = front - margin;
@@ -231,14 +234,14 @@ fn the_tail_catches_up_to_the_head() {
   }
 }
 
-/// How much of the canvas the mark inked, which is the only measure of a
+/// How much of the canvas the annotation inked, which is the only measure of a
 /// frame that catches a jump anywhere in it at once.
 fn ink(image: &crate::screenshots::CapturedImage) -> usize {
   image.rgba.chunks_exact(4).filter(|p| p[0] > 128).count()
 }
 
 /// Nothing appears before the reveal has anything to show, and what shows
-/// first is a mark at the size the clip has earned it: a head with no
+/// first is an annotation at the size the clip has earned it: a head with no
 /// triangle worth building must not be drawn as one, and a triangle with no
 /// winding reads as inside every pixel on the canvas.
 #[test]
@@ -266,7 +269,7 @@ fn nothing_is_drawn_before_the_reveal_starts() {
 
 /// The reveal only ever grows while it opens and only ever shrinks while it
 /// closes, and never by a quarter of the arrow between two frames: a phase
-/// boundary that changed how the mark is prepared would show up here as a
+/// boundary that changed how the annotation is prepared would show up here as a
 /// step, whichever direction it stepped in.
 #[test]
 fn the_reveal_never_steps_between_frames() {
@@ -285,9 +288,9 @@ fn the_reveal_never_steps_between_frames() {
       } else {
         (count, previous)
       };
-      // The tolerance is the pullback's own width: while a mark is drawing
-      // its shaft stops short of the head, and the fraction of a pixel that
-      // costs where the two meet is not a step in the animation.
+      // The tolerance is the pullback's own width: while an annotation is
+      // drawing its shaft stops short of the head, and the fraction of a pixel
+      // that costs where the two meet is not a step in the animation.
       assert!(
         low <= high + whole / 200,
         "{elapsed}ms went from {previous} to {count}"
@@ -304,18 +307,18 @@ fn the_reveal_never_steps_between_frames() {
   assert_eq!(sweep(2_250.0, false), 0, "the clip empties");
 }
 
-/// A mark that does not animate is drawn whole for the clip's whole length,
-/// and a mark holding between its phases is drawn the same way.
+/// An annotation that does not animate is drawn whole for the clip's whole
+/// length, and an annotation holding between its phases is drawn the same way.
 #[test]
-fn a_mark_that_does_not_animate_is_never_cut_short() {
+fn an_annotation_that_does_not_animate_is_never_cut_short() {
   let width = 6.0;
   let whole = composed(SIZE, shape(STRAIGHT, width));
   let holding = composed(SIZE, at_reveal(shape(STRAIGHT, width), 1_500.0, 16.0));
   assert_eq!(whole.rgba, holding.rgba);
 }
 
-/// The prepared reveal of a mark `elapsed` into its clip, in the curve's own
-/// parameter: the shaft's ends and where its heads' tips are.
+/// The prepared reveal of an annotation `elapsed` into its clip, in the curve's
+/// own parameter: the shaft's ends and where its heads' tips are.
 fn prepared(
   curve: (AnnotationPoint, AnnotationPoint, AnnotationPoint),
   width: f64,
@@ -334,11 +337,11 @@ fn prepared(
   )
 }
 
-/// The blur smears the mark along the path it travelled: between the still
-/// frame's moving end and the end it reached, the moving frame lays down
+/// The blur smears the annotation along the path it travelled: between the
+/// still frame's moving end and the end it reached, the moving frame lays down
 /// partial ink where a still frame has none, and the smear ends there.
 #[test]
-fn the_mark_smears_along_the_path_it_travelled() {
+fn the_annotation_smears_along_the_path_it_travelled() {
   let frame_ms = 1_000.0 / 60.0;
   for (label, curve, width) in [("straight", STRAIGHT, 12.0), ("curved", CURVED, 8.0)] {
     for (phase, elapsed, towards_tail, head) in [
@@ -387,7 +390,7 @@ fn the_mark_smears_along_the_path_it_travelled() {
 
 /// The blur, rendered out for the eyeball pass: one 60fps frame of a
 /// half-second draw-in on a long arrow, in both phases, with the same frame
-/// standing still beside it. Each is blown up around the span the mark's
+/// standing still beside it. Each is blown up around the span the annotation's
 /// moving end crossed during the exposure.
 #[test]
 fn renders_the_smear_along_the_travelled_span() {
@@ -451,8 +454,8 @@ fn renders_every_reveal_phase() {
       write_png(&format!("i-reveal-{label}-{elapsed}"), &image);
     }
     // The head's first head-length of travel and its last, blown up: this is
-    // where the mark grows in and leaves, and where a shallow pullback would
-    // show the curve.
+    // where the annotation grows in and leaves, and where a shallow pullback
+    // would show the curve.
     for elapsed in [10.0, 100.0, 225.0, 2_850.0, 2_950.0] {
       let image = composed(SIZE, at_reveal(shape(curve, width), elapsed, frame_ms));
       let travel = prepared(curve, width, 1.0, elapsed, frame_ms);
@@ -472,10 +475,10 @@ fn renders_every_reveal_phase() {
   }
 }
 
-/// The head is ahead of the stroke from the first frame, riding on its end
-/// at full size, and the stroke is continuous into it: what shows while the
-/// mark sets off is a whole arrow fading in, not an arrowhead with a stub of
-/// stroke budding out of its base and not a stroke waiting on a head.
+/// The head is ahead of the stroke from the first frame, riding on its end at
+/// full size, and the stroke is continuous into it: what shows while the
+/// annotation sets off is a whole arrow fading in, not an arrowhead with a stub
+/// of stroke budding out of its base and not a stroke waiting on a head.
 #[test]
 fn the_head_rides_ahead_of_the_stroke_from_the_start() {
   let width = 12.0;
@@ -488,7 +491,10 @@ fn the_head_rides_ahead_of_the_stroke_from_the_start() {
       f64::from(travel.end_tip) > f64::from(travel.high),
       "at {elapsed}ms the head's tip is not ahead of the shaft"
     );
-    assert_eq!(travel.scale, 1.0, "at {elapsed}ms the mark is not whole");
+    assert_eq!(
+      travel.scale, 1.0,
+      "at {elapsed}ms the annotation is not whole"
+    );
     // Solid for however far in the fade is: continuous from the tail to just
     // short of the tip, whose last pixel is a feathered fraction of one.
     let opacity = reveal_window(elapsed, CLIP_MS, 0.0).opacity;
@@ -499,7 +505,7 @@ fn the_head_rides_ahead_of_the_stroke_from_the_start() {
       let point = along(STRAIGHT, fraction);
       assert!(
         red(&image, point) > solid,
-        "at {elapsed}ms the mark broke open {fraction} along, at {point:?}"
+        "at {elapsed}ms the annotation broke open {fraction} along, at {point:?}"
       );
     }
     // And nothing past the tip by more than a stroke.
@@ -514,11 +520,11 @@ fn the_head_rides_ahead_of_the_stroke_from_the_start() {
 /// A stroke's round end reaches half a width past where it stops, and where
 /// nothing covers it it shows as a knob on the back of the head for as long
 /// as the head is there. Leaving, the tail keeps its round end inside the
-/// mark until there is stroke enough to carry it, at any stroke width.
+/// annotation until there is stroke enough to carry it, at any stroke width.
 /// Setting off there is nothing to hold in: the stroke has outrun its own
 /// width, which is still growing in, before it is a pixel wide.
 #[test]
-fn a_short_stroke_keeps_its_cap_inside_the_mark() {
+fn a_short_stroke_keeps_its_cap_inside_the_annotation() {
   let along_path = |from: AnnotationPoint, to: AnnotationPoint, strokes: f64, width: f64| {
     let (dx, dy) = (to.x - from.x, to.y - from.y);
     let len = dx.hypot(dy).max(1e-6);

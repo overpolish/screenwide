@@ -22,8 +22,8 @@ type EditorTool = {
  * later states its behaviour in the same place as the rest.
  */
 const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
-  // The drawing tools own no panel: their controls belong to the mark in hand
-  // rather than to the tool, and follow the selection instead.
+  // The drawing tools own no panel: their controls belong to the annotation in
+  // hand rather than to the tool, and follow the selection instead.
   arrow: { resetsView: true },
   counter: { resetsView: true },
   crop: { panel: "crop", resetsView: true },

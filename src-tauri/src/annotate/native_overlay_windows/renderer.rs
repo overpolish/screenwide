@@ -117,9 +117,9 @@ impl Renderer {
     &self.device
   }
 
-  /// Draws the prepared marks over a cleared target of `size` physical
+  /// Draws the prepared annotations over a cleared target of `size` physical
   /// pixels. Shared by a display's frame and by a still that leaves the app as
-  /// pixels, so both draw the same marks the same way.
+  /// pixels, so both draw the same annotations the same way.
   ///
   /// A counter's number is type rather than a shape the shader can solve, so
   /// it is rasterised here, at the size it is drawn, and handed over as one

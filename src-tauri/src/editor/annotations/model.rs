@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Drawn marks carried by an editor layer.
+//! Drawn annotations carried by an editor layer.
 //!
 //! Annotations live in the source's own pixel space, the same space the crop
 //! is expressed in, so they stay glued to the picture while the frame is
@@ -29,8 +29,9 @@ pub enum AnnotationHead {
   Both,
 }
 
-/// How a mark is painted. The width is in output pixels, so an annotation
-/// keeps its weight on the canvas rather than growing with the picture.
+/// How an annotation is painted. The width is in output pixels, so an
+/// annotation keeps its weight on the canvas rather than growing with the
+/// picture.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnnotationStyle {
@@ -41,7 +42,7 @@ pub struct AnnotationStyle {
   pub width: f64,
 }
 
-/// What a mark is. The tag leaves room for the shapes later tools add
+/// What an annotation is. The tag leaves room for the shapes later tools add
 /// without reshaping stored documents.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -52,10 +53,10 @@ pub enum AnnotationShape {
     control: AnnotationPoint,
     end: AnnotationPoint,
   },
-  /// A numbered disc with a pin's curved tail. `value` is the mark's place in
-  /// the document's counter order, which the editor keeps contiguous, and
-  /// `angle` is where the tail points, in radians clockwise from east in the
-  /// source's own pixel space - so a fresh counter's zero points right.
+  /// A numbered disc with a pin's curved tail. `value` is the annotation's
+  /// place in the document's counter order, which the editor keeps contiguous,
+  /// and `angle` is where the tail points, in radians clockwise from east in
+  /// the source's own pixel space - so a fresh counter's zero points right.
   Counter {
     center: AnnotationPoint,
     value: u32,
@@ -67,7 +68,7 @@ impl AnnotationShape {
   /// The points the shape is placed by, for the coarse bounds and finiteness
   /// tests every space-changing path runs. A counter reports its centre
   /// three times: its tail reaches past it, so a box over these points is
-  /// smaller than the mark by up to the tail's length.
+  /// smaller than the annotation by up to the tail's length.
   pub(crate) fn points(&self) -> [AnnotationPoint; 3] {
     match self {
       Self::Arrow {
@@ -79,10 +80,10 @@ impl AnnotationShape {
     }
   }
 
-  /// The same shape with every point moved by `map`. What a mark *is* does
-  /// not change with the space it is drawn in, so the angle and the number
-  /// ride through untouched: every space a mark travels between keeps the
-  /// picture's aspect, so a direction in one is the same direction in the
+  /// The same shape with every point moved by `map`. What an annotation *is*
+  /// does not change with the space it is drawn in, so the angle and the number
+  /// ride through untouched: every space an annotation travels between keeps
+  /// the picture's aspect, so a direction in one is the same direction in the
   /// next.
   pub(crate) fn mapped(&self, map: impl Fn(AnnotationPoint) -> AnnotationPoint) -> Self {
     match self {
@@ -108,15 +109,15 @@ impl AnnotationShape {
   }
 }
 
-/// One drawn mark, independent of its workspace and timing.
+/// One drawn annotation, independent of its workspace and timing.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Annotation {
-  /// Whether the mark is drawn over the camera bubble rather than under it.
-  /// Screenshots have no bubble; the recording kernel will honour this.
+  /// Whether the annotation is drawn over the camera bubble rather than under
+  /// it. Screenshots have no bubble; the recording kernel will honour this.
   #[serde(default)]
   pub above_camera: bool,
-  /// Whether a timed mark draws itself in at the start of its clip and
+  /// Whether a timed annotation draws itself in at the start of its clip and
   /// undraws at the end. Stills have no clip to animate over, so they ignore
   /// it and draw whole.
   #[serde(default = "default_animated")]
@@ -131,8 +132,8 @@ pub struct Annotation {
   pub style: AnnotationStyle,
 }
 
-/// A mark animates unless a document from before the reveal, or the editor,
-/// says otherwise.
+/// An annotation animates unless a document from before the reveal, or the
+/// editor, says otherwise.
 fn default_animated() -> bool {
   true
 }
@@ -141,18 +142,19 @@ fn default_animated() -> bool {
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const NEW_ARROW_WIDTH: f64 = 8.0;
 
-/// The colour a fresh mark is drawn in before anything has been chosen: the
-/// palette's yellow, which reads as a mark on almost any screenshot where the
-/// accent would sometimes be the very colour being pointed at. The twin of
-/// `ANNOTATION_SWATCHES` in `src/features/editor/annotation-palette.ts`.
+/// The colour a fresh annotation is drawn in before anything has been chosen:
+/// the palette's yellow, which reads as an annotation on almost any screenshot
+/// where the accent would sometimes be the very colour being pointed at. The
+/// twin of `ANNOTATION_SWATCHES` in
+/// `src/features/editor/annotation-palette.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(super) const NEW_MARK_COLOR: &str = "#ffcc00";
+pub(super) const NEW_ANNOTATION_COLOR: &str = "#ffcc00";
 
 /// The dress a fresh arrow is drawn in before anything has been chosen.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn default_arrow_style() -> AnnotationStyle {
   AnnotationStyle {
-    color: NEW_MARK_COLOR.to_owned(),
+    color: NEW_ANNOTATION_COLOR.to_owned(),
     head: crate::editor::annotations::AnnotationHead::End,
     width: NEW_ARROW_WIDTH,
   }
@@ -188,7 +190,7 @@ pub(crate) fn new_arrow(
 
 /// An annotation colour as straight RGBA, from `#rrggbb` or `#rrggbbaa`.
 /// An unreadable colour is fully transparent rather than an error: one bad
-/// mark must not cost the whole composition.
+/// annotation must not cost the whole composition.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn annotation_colour(value: &str) -> [f32; 4] {
   let value = value.strip_prefix('#').unwrap_or(value);
@@ -257,7 +259,7 @@ mod tests {
     )
     .unwrap();
     assert!(!annotation.above_camera);
-    // A document written before marks could animate still animates.
+    // A document written before annotations could animate still animates.
     assert!(annotation.animated);
     assert!(annotation.reveal.is_whole());
     assert_eq!(annotation.style.head, AnnotationHead::End);

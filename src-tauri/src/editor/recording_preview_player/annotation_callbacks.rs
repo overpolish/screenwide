@@ -74,23 +74,23 @@ pub(crate) fn install(
     };
     // Both backends redraw the halo without recomposing: the D3D11 panes
     // redraw from what they last composed, and the retained Metal scene has
-    // the halo set on the marks it is already holding.
+    // the halo set on the annotations it is already holding.
     if let Some(surface) = manager
       .sources
       .as_ref()
       .and_then(|sources| sources.preview_surface.as_ref())
     {
-      // The mark's own pane, not the selected one: a shortcut or the camera
-      // can hold the selection while the pointer rests on an arrow over the
-      // screen. `annotation_targets` reports each mark beside the pane it
-      // was drawn over, in the order the grips were published.
+      // The annotation's own pane, not the selected one: a shortcut or the
+      // camera can hold the selection while the pointer rests on an arrow over
+      // the screen. `annotation_targets` reports each annotation beside the
+      // pane it was drawn over, in the order the grips were published.
       let halo = usize::try_from(index)
         .ok()
         .and_then(|index| {
           let targets = manager.annotation_targets();
           let (pane, _) = targets.get(index)?;
-          // The compositor places a halo by the mark's index within its own
-          // pane's list, so the flat published index has to be counted down
+          // The compositor places a halo by the annotation's index within its
+          // own pane's list, so the flat published index has to be counted down
           // to a local one.
           let local = targets[..index]
             .iter()
@@ -130,7 +130,7 @@ pub(crate) fn install(
     let annotation_id = manager
       .annotation_targets()
       .get(index as usize)
-      .map(|(_, mark)| mark.id.clone());
+      .map(|(_, annotation)| annotation.id.clone());
     let _ = app.emit(
       "editor://recording-annotation-hover",
       Hover {

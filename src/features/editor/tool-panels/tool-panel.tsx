@@ -6,11 +6,11 @@ import { ReactNode } from "react";
 import { ToolPanelKind } from "../../popup-panel/store";
 import { EditorKind } from "../types";
 
+import { AnnotationPanel } from "./annotation-panel";
 import { CropPanel } from "./crop-panel";
 import { CursorPanel } from "./cursor-panel";
 import { FramePanel } from "./frame-panel";
 import { KeyboardPanel } from "./keyboard-panel";
-import { MarkPanel } from "./mark-panel";
 import { SelectionPanel } from "./selection-panel";
 import { usePanelShortcuts } from "./use-panel-shortcuts";
 
@@ -18,11 +18,11 @@ const toolPanels: Record<
   ToolPanelKind,
   (props: { workspace: EditorKind }) => ReactNode
 > = {
+  annotation: AnnotationPanel,
   crop: CropPanel,
   cursor: CursorPanel,
   frame: FramePanel,
   keyboard: KeyboardPanel,
-  mark: MarkPanel,
   selection: SelectionPanel,
 };
 

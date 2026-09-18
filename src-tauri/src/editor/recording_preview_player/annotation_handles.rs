@@ -4,11 +4,11 @@
 use super::*;
 
 impl PreviewPlayerManager {
-  /// Re-presents the frame the pane already holds with the marks the clips
-  /// resolve to at `position_ms`, without touching the decoder. Reports
-  /// whether there was a frame to redraw; a pane with nothing composed yet
-  /// has to be restarted the ordinary way. Only the D3D11 panes can do this -
-  /// the Metal workspace re-encodes from its retained scene instead.
+  /// Re-presents the frame the pane already holds with the annotations the
+  /// clips resolve to at `position_ms`, without touching the decoder. Reports
+  /// whether there was a frame to redraw; a pane with nothing composed yet has
+  /// to be restarted the ordinary way. Only the D3D11 panes can do this - the
+  /// Metal workspace re-encodes from its retained scene instead.
   #[cfg(target_os = "windows")]
   pub(super) fn redraw_annotation_frame(&self, pane: u32, position_ms: u64) -> bool {
     let Some(sources) = self.sources.as_ref() else {
@@ -50,9 +50,9 @@ impl PreviewPlayerManager {
     (0..sources.playback_layout.panes.len().min(2) as u32)
       .flat_map(|pane| {
         self
-          .annotation_marks(pane)
+          .pane_annotations(pane)
           .into_iter()
-          .map(move |mark| (pane, mark))
+          .map(move |annotation| (pane, annotation))
       })
       .collect()
   }
@@ -80,16 +80,16 @@ impl PreviewPlayerManager {
       } else {
         &composition.recording_output.primary
       };
-      let marks = self.annotation_marks(pane as u32);
-      if let Some(index) = marks
+      let annotations = self.pane_annotations(pane as u32);
+      if let Some(index) = annotations
         .iter()
-        .position(|mark| Some(&mark.id) == self.annotation.selected.as_ref())
+        .position(|annotation| Some(&annotation.id) == self.annotation.selected.as_ref())
       {
         selected = (handles.len() + index) as i32;
       }
       handles.extend(
         annotation_handles(
-          &marks,
+          &annotations,
           (source.source_width, source.source_height),
           output.image_width,
         )

@@ -16,7 +16,8 @@ export type PopupPanelItem = {
   /** A short note after the label, drawn as a badge at the trailing edge:
    * a scale beside a size, say. */
   detail?: string;
-  /** A glyph from the popup panel window's registry, for items without artwork. */
+  /** A glyph from the popup panel window's registry, for items without artwork.
+   */
   icon?: PopupPanelIcon;
   iconPath?: string | null;
   /** Heads the run of consecutive items that name the same section. Items
@@ -30,11 +31,11 @@ export type PopupPanelItem = {
   togglesInPlace?: boolean;
 };
 
-/** The editor tools that own a panel, with room for the background, camera
- * and audio panels that follow. "mark" is the one that belongs to what is
+/** The editor tools that own a panel, with room for the background, camera and
+ * audio panels that follow. "annotation" is the one that belongs to what is
  * selected rather than to a tool: it dresses the arrow or counter in hand. */
 export type ToolPanelKind =
-  "crop" | "cursor" | "frame" | "keyboard" | "mark" | "selection";
+  "annotation" | "crop" | "cursor" | "frame" | "keyboard" | "selection";
 
 /** A list of choices: the panel as it has always been. */
 export type PopupPanelListContent = {

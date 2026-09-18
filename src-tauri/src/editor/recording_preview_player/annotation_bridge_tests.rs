@@ -170,7 +170,7 @@ fn final_frame_drawing_uses_a_visible_source_instant() {
     )
     .unwrap();
   assert_eq!(commit.source_position_ms, 9999);
-  assert_eq!(manager.annotation_marks(0).len(), 1);
+  assert_eq!(manager.pane_annotations(0).len(), 1);
   manager.is_playing = true;
   assert!(manager
     .annotation_gesture(
@@ -187,7 +187,7 @@ fn final_frame_drawing_uses_a_visible_source_instant() {
 #[test]
 fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
   let mut manager = manager();
-  let mark = crate::editor::annotations::model::new_arrow(
+  let annotation = crate::editor::annotations::model::new_arrow(
     "screen-arrow".into(),
     crate::editor::annotations::AnnotationPoint { x: 100.0, y: 100.0 },
     crate::editor::annotations::AnnotationPoint { x: 500.0, y: 100.0 },
@@ -201,7 +201,7 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
     .write()
     .unwrap()
     .push(RecordingAnnotationClip {
-      annotation: mark,
+      annotation: annotation,
       track_id: AnnotationTrack::Primary,
       start_ms: 0,
       end_ms: 5000,
@@ -217,7 +217,7 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
       0.1,
       false,
     )
-    .expect("one press must select a mark on another video layer");
+    .expect("one press must select an annotation on another video layer");
   assert_eq!(
     commit.selected_annotation_id.as_deref(),
     Some("screen-arrow")
@@ -227,7 +227,7 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
 }
 
 /// The Animate switch's last setting dresses the next arrow, the way the
-/// style defaults do - except that it sits on the mark rather than in its
+/// style defaults do - except that it sits on the annotation rather than in its
 /// style, so the bridge applies it instead of `new_arrow`.
 #[test]
 fn a_fresh_arrow_takes_the_remembered_animate_setting() {

@@ -6,7 +6,9 @@
 
 use super::*;
 use crate::editor::annotations::edit::AnnotationEdit;
-use crate::editor::annotations::gesture::{annotation_mode, AnnotationGestureTarget, NewMarkKind};
+use crate::editor::annotations::gesture::{
+  annotation_mode, AnnotationGestureTarget, NewAnnotationKind,
+};
 use crate::editor::annotations::handles::{annotation_handles, source_point};
 use crate::editor::annotations::timing::{
   active_annotations, validate_clips, AnnotationTrack, RecordingAnnotationClip,
@@ -22,8 +24,8 @@ pub(super) struct AnnotationState {
   mode: u32,
   selected: Option<String>,
   defaults: Option<AnnotationStyle>,
-  /// Whether the next arrow animates and where the next counter's tail
-  /// points. Both are the mark's own rather than part of its dress, so they
+  /// Whether the next arrow animates and where the next counter's tail points.
+  /// Both are the annotation's own rather than part of its dress, so they
   /// travel beside the style defaults.
   animated: Option<bool>,
   counter_angle: Option<f64>,
@@ -37,7 +39,7 @@ struct Hover {
 }
 
 // The command's arguments are its wire format: the chrome sends the clips and
-// the next mark's dress as one flat payload.
+// the next annotation's dress as one flat payload.
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn set_recording_preview_annotations(
@@ -85,7 +87,7 @@ pub async fn set_recording_preview_annotations(
       .and_then(|s| s.preview_surface.as_ref())
       .filter(|_| manager.annotation.mode != 0)
     {
-      // Only the retained Metal workspace re-presents itself from marks
+      // Only the retained Metal workspace re-presents itself from annotations
       // alone. The D3D11 backend has no retained scene to repaint, and
       // nothing to repaint yet either: its arrow overlay is not drawn.
       #[cfg(target_os = "macos")]

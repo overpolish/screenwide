@@ -181,7 +181,7 @@ fn run(
         presented = false;
         break;
       }
-      // A paused still is not moving, so its marks are not blurred.
+      // A paused still is not moving, so its annotations are not blurred.
       presented &= present_native_frame(&sources, index as u32, &frame, 0.0);
     }
     if presented {

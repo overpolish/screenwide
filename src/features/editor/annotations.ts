@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /**
- * Drawn marks carried by an editor layer.
+ * Drawn annotations carried by an editor layer.
  *
  * Points are in the source's own pixel space, the same space the crop is
- * expressed in, so a mark stays glued to the picture while the frame is
+ * expressed in, so an annotation stays glued to the picture while the frame is
  * moved, resized or re-cropped. The compositor draws them, which is what
  * keeps the editor's preview and the exported PNG the same image. This is the
  * twin of `src-tauri/src/editor/annotations/model.rs`.
@@ -33,10 +33,10 @@ type AnnotationArrow = {
 };
 
 /**
- * A numbered disc with a pin's curved tail. `value` is the mark's place in the
- * document's counter order, which the editor keeps contiguous, and `angle` is
- * where the tail points, in radians clockwise from east in the source's own
- * pixel space - so a fresh counter's zero points right.
+ * A numbered disc with a pin's curved tail. `value` is the annotation's place
+ * in the document's counter order, which the editor keeps contiguous, and
+ * `angle` is where the tail points, in radians clockwise from east in the
+ * source's own pixel space - so a fresh counter's zero points right.
  */
 type AnnotationCounter = {
   angle: number;
@@ -49,13 +49,13 @@ type AnnotationShape = AnnotationArrow | AnnotationCounter;
 
 export type Annotation = {
   /**
-   * Whether the mark is drawn over the camera bubble rather than under it.
-   * Screenshots have no bubble; the recording compositor will honour this.
+   * Whether the annotation is drawn over the camera bubble rather than under
+   * it. Screenshots have no bubble; the recording compositor will honour this.
    */
   aboveCamera: boolean;
   /**
-   * Whether a timed mark draws itself in at the start of its clip and undraws
-   * at the end. Stills have no clip to animate over and draw whole.
+   * Whether a timed annotation draws itself in at the start of its clip and
+   * undraws at the end. Stills have no clip to animate over and draw whole.
    */
   animated: boolean;
   id: string;
@@ -77,12 +77,12 @@ const annotationHead = (value: unknown): AnnotationHead =>
   value === "none" || value === "both" ? value : "end";
 
 /**
- * How long an animated mark takes to arrive, in source milliseconds. The
+ * How long an animated annotation takes to arrive, in source milliseconds. The
  * twins of `REVEAL_DRAW_IN_MS` and `COUNTER_REVEAL_IN_MS` in
  * `src-tauri/src/editor/annotations/reveal.rs` and `reveal_counter.rs`, which
  * Rust tests hold to these lines; a reveal may shorten its phase for a short
- * clip but never lengthens it, so a mark placed this long before the playhead
- * is always whole by the time the playhead is reached.
+ * clip but never lengthens it, so an annotation placed this long before the
+ * playhead is always whole by the time the playhead is reached.
  */
 export const ANNOTATION_DRAW_IN_MS = 1000;
 const ANNOTATION_COUNTER_DRAW_IN_MS = 320;
@@ -115,10 +115,10 @@ export const annotationDeleteTarget = (
 };
 
 /**
- * Read a stored document's marks, dropping anything the compositor could not
- * place. A mark that is not wholly finite is no mark at all rather than
- * something every kernel has to guard, and a shape this build does not know
- * belongs to a newer document than it can draw.
+ * Read a stored document's annotations, dropping anything the compositor could
+ * not place. An annotation that is not wholly finite is no annotation at all
+ * rather than something every kernel has to guard, and a shape this build does
+ * not know belongs to a newer document than it can draw.
  */
 export const validAnnotations = (value: unknown): Annotation[] => {
   if (!Array.isArray(value)) return [];
@@ -173,7 +173,7 @@ export const validAnnotations = (value: unknown): Annotation[] => {
 };
 
 /**
- * The marks with their counters numbered 1, 2, 3 in the order they were
+ * The annotations with their counters numbered 1, 2, 3 in the order they were
  * dropped, which is the order they are stored in.
  *
  * Numbering is derived rather than kept: deleting the second of three
@@ -192,7 +192,9 @@ export const renumberedCounters = (annotations: Annotation[]): Annotation[] => {
       ? annotation
       : { ...annotation, shape: { ...annotation.shape, value } };
   });
-  return renumbered.every((mark, index) => mark === annotations[index])
+  return renumbered.every(
+    (annotation, index) => annotation === annotations[index],
+  )
     ? annotations
     : renumbered;
 };

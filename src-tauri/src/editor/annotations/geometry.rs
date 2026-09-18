@@ -3,11 +3,11 @@
 
 //! Draw-ready arrow geometry, the twin of `geometry.h`.
 //!
-//! The Metal compositor prepares its arrows through the C header; the D3D11
-//! one prepares them here, in the same single-precision arithmetic and the
-//! same order, so the two backends draw the same pixels from the same mark.
-//! Everything is prepared once per mark before drawing or picking, never per
-//! pixel.
+//! The Metal compositor prepares its arrows through the C header; the D3D11 one
+//! prepares them here, in the same single-precision arithmetic and the same
+//! order, so the two backends draw the same pixels from the same annotation.
+//! Everything is prepared once per annotation before drawing or picking, never
+//! per pixel.
 
 use super::reveal::geometry::reveal_geometry;
 use super::reveal::AnnotationReveal;
@@ -142,11 +142,11 @@ fn prepare_head(tip: [f32; 2], join: [f32; 2], half_base: f32, rounding: f32) ->
   }
 }
 
-/// One preparation per mark before drawing or picking. A short curve scales
-/// the stroke and heads together. `reveal` is how much of the mark this frame
-/// draws: the whole path at full size prepares exactly what a still always
-/// has; a mark part way through its clip wears each head on its end of the
-/// shaft, riding the end that is moving.
+/// One preparation per annotation before drawing or picking. A short curve
+/// scales the stroke and heads together. `reveal` is how much of the annotation
+/// this frame draws: the whole path at full size prepares exactly what a still
+/// always has; an annotation part way through its clip wears each head on its
+/// end of the shaft, riding the end that is moving.
 pub(crate) fn prepare_arrow(
   a: [f32; 2],
   b: [f32; 2],
@@ -186,7 +186,7 @@ pub(crate) fn prepare_arrow(
   let length = result.width * 4.0 * scale;
   let half_base = result.width * 2.0 * scale;
   result.rounding = result.width * 0.35 * scale;
-  // Stroke, heads and rounding are one mark and scale together.
+  // Stroke, heads and rounding are one annotation and scale together.
   result.width *= scale;
   result.low = travel.low;
   result.high = travel.high;
@@ -197,8 +197,8 @@ pub(crate) fn prepare_arrow(
     result.head = 0;
     return result;
   }
-  // A growing head narrows fast, so while a mark is revealing, the shaft runs
-  // on a little way under the head rather than stopping at its base.
+  // A growing head narrows fast, so while an annotation is revealing, the shaft
+  // runs on a little way under the head rather than stopping at its base.
   let pullback = 0.88;
   if head != 0 {
     let tip = if revealing {

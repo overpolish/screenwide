@@ -81,8 +81,8 @@ pub(crate) struct CounterArtworkCache {
 
 impl CounterArtworkCache {
   /// The atlas for `counters` - one `(value, radius in drawn pixels)` per
-  /// mark, a zero value being a mark that is not a counter - or nothing when
-  /// there is no number to draw at all.
+  /// annotation, a zero value being an annotation that is not a counter - or
+  /// nothing when there is no number to draw at all.
   ///
   /// The result is cached against exactly the numbers and sizes it was drawn
   /// from, so a preview that redraws an unchanged list does no work.
@@ -168,12 +168,12 @@ fn upload(device: &ID3D11Device, raster: &CounterRaster) -> Result<CounterArtwor
   })
 }
 
-/// The atlas one composition needs, and its marks with the number rectangles
-/// written into the slots a counter reads them from.
+/// The atlas one composition needs, and its annotations with the number
+/// rectangles written into the slots a counter reads them from.
 ///
 /// Only a counter reads those slots as a rectangle: an arrow with a head at
 /// both ends keeps its second head's triangle in them, so the patch is per
-/// mark rather than across the list.
+/// annotation rather than across the list.
 pub(crate) fn numbered_arrows(
   cache: &CounterArtworkCache,
   device: &ID3D11Device,

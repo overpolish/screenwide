@@ -130,8 +130,8 @@ pub(super) fn present_new(app: &AppHandle, artifact: EditorArtifact) -> Result<(
   Ok(())
 }
 
-/// Hands a freshly captured still to the editor window, with the live
-/// annotations it covered as its first marks.
+/// Hands a freshly captured still to the editor window, seeding its layer
+/// with the live annotations the still covered.
 pub fn present_screenshot(
   app: &AppHandle,
   image: CapturedImage,
@@ -206,8 +206,8 @@ pub fn present_recording(
 
   let id = next_id(app);
   if !annotation_clips.is_empty() {
-    // The snapshot the editor window loads reads this sidecar, so marks drawn
-    // live have to be in it before the artifact is presented.
+    // The snapshot the editor window loads reads this sidecar, so annotations
+    // drawn live have to be in it before the artifact is presented.
     if let Err(error) = timeline_edit::persist_initial_annotation_clips(&path, id, annotation_clips)
     {
       eprintln!("Could not keep this recording's live annotations: {error}");

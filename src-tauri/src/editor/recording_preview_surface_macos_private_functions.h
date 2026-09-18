@@ -106,7 +106,7 @@ void annotation_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
                         NSSize size, ScreenwidePreviewSurface *surface,
                         CGFloat scale);
 /// What the pointer does over the picture right now, or `None` when no tool
-/// is in hand or the surface cannot place a mark.
+/// is in hand or the surface cannot place an annotation.
 ScreenwideAnnotationMode annotation_active_mode(
     ScreenwidePreviewSurface *surface);
 /// Whether the arrow chrome replaces the layer's own: always while the arrow

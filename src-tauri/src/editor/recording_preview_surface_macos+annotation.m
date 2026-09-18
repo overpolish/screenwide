@@ -52,14 +52,14 @@ static BOOL annotation_normalised_point(ScreenwidePreviewSurface *surface,
 
 #include "recording_preview_annotation_geometry_macos.h"
 
-/// Whether a tool in hand makes a new mark on empty picture.
+/// Whether a tool in hand makes a new annotation on empty picture.
 static BOOL annotation_drawing_mode(ScreenwideAnnotationMode mode) {
   return mode == ScreenwideAnnotationModeArrow ||
          mode == ScreenwideAnnotationModeCounter;
 }
 
-/// The chosen mark's grip under `point`, or -1. An arrow has three; a counter
-/// has one, the tip of its tail.
+/// The chosen annotation's grip under `point`, or -1. An arrow has three; a
+/// counter has one, the tip of its tail.
 SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   NSUInteger count = 0;
@@ -95,7 +95,7 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
 
 /// The topmost arrow whose drawn shape `point` lands on, or -1. There is no
 /// tolerance around it: the arrow is picked, and haloed, exactly where it is
-/// painted, which is what keeps the halo off the space beside a mark.
+/// painted, which is what keeps the halo off the space beside an annotation.
 SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   NSUInteger count = 0;
@@ -153,7 +153,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
   if (handle < 0 && shaft < 0 && !annotation_drawing_mode(mode)) {
     // Empty picture with only the select tool in hand: the arrow chrome lets
     // go, and the press carries on to the layer underneath. Recording
-    // selection clears the mark together with the new layer; screenshots
+    // selection clears the annotation together with the new layer; screenshots
     // still publish their selected-image annotation document separately.
     NSUInteger count = 0;
     const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
@@ -204,7 +204,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
                             point);
     return YES;
   }
-  // Empty picture: a new mark. An arrow is drawn out, so it waits for the
+  // Empty picture: a new annotation. An arrow is drawn out, so it waits for the
   // press to prove a drag and a click leaves no stub behind. A counter is
   // dropped whole where the press lands, so it begins at once and a click
   // alone commits it; the drag that may follow carries it.

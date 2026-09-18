@@ -35,7 +35,7 @@ import {
 import { toolPanelLabel } from "./tool-panel-window";
 import { EditorToolId, toolPanel, toolResetsView } from "./tool-registry";
 
-/** Both workspaces mark their preview area with this, and a tool panel is
+/** Both workspaces annotation their preview area with this, and a tool panel is
  * placed against it rather than against the button that opened it. */
 const PREVIEW_VIEWPORT_SELECTOR = "[data-recording-preview-viewport]";
 

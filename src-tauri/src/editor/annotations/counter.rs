@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The counter mark: a numbered disc with a pin's curved tail.
+//! The counter annotation: a numbered disc with a pin's curved tail.
 //!
-//! The disc is what carries the number, so its diameter is the mark's
+//! The disc is what carries the number, so its diameter is the annotation's
 //! `style.width` - a counter has no stroke of its own to weigh. The tail is
 //! the part that points: it is always there, and only its direction is
 //! editable, so a counter can be aimed without being reshaped. The shape it
@@ -38,7 +38,7 @@ pub(crate) const NEW_COUNTER_ANGLE: f64 = 0.0;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn default_counter_style() -> AnnotationStyle {
   AnnotationStyle {
-    color: super::model::NEW_MARK_COLOR.to_owned(),
+    color: super::model::NEW_ANNOTATION_COLOR.to_owned(),
     head: super::AnnotationHead::None,
     width: NEW_COUNTER_WIDTH,
   }

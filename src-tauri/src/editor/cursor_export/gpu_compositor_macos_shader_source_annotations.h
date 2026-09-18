@@ -55,8 +55,8 @@ static float annotation_triangle_distance(
 /// The shader only evaluates distances; picking uses the same prepared heads.
 static float2 annotation_arrow_distance(
     float2 point, const device AnnotationArrowGeometry &arrow) {
-  // An empty window is a mark that has not started, or one whose head has
-  // eaten what was left of its shaft. Either way there is no shaft to draw.
+  // An empty window is an annotation that has not started, or one whose head
+  // has eaten what was left of its shaft. Either way there is no shaft to draw.
   float2 result = float2(arrow.high > arrow.low
       ? annotation_curve_distance(point, float2(arrow.a), float2(arrow.b),
             float2(arrow.c), arrow.low, arrow.high) - arrow.width * 0.5
@@ -78,18 +78,18 @@ static float annotation_coverage(
              1.0 - smoothstep(-feather, feather, distances.y));
 }
 
-/// Accumulated exposure coverage: the mark is drawn at every prepared sample
-/// between the shutter start and now, so a moving shaft and its head smear
-/// along the path they actually travelled while a held end stays sharp.
+/// Accumulated exposure coverage: the annotation is drawn at every prepared
+/// sample between the shutter start and now, so a moving shaft and its head
+/// smear along the path they actually travelled while a held end stays sharp.
 static float annotation_exposure(
-    float2 point, const device AnnotationUniforms &mark,
+    float2 point, const device AnnotationUniforms &annotation,
     const device AnnotationSample *samples, float feather) {
   float total = 0.0;
-  for (uint tap = 0; tap < mark.sample_count; ++tap) {
-    const device AnnotationSample &sample = samples[mark.sample_offset + tap];
+  for (uint tap = 0; tap < annotation.sample_count; ++tap) {
+    const device AnnotationSample &sample = samples[annotation.sample_offset + tap];
     total += annotation_coverage(point, sample.arrow, feather) * sample.opacity;
   }
-  return total / float(mark.sample_count);
+  return total / float(annotation.sample_count);
 }
 
 )METAL"

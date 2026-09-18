@@ -102,8 +102,8 @@ impl Drag {
     }
   }
 
-  /// A press that is a gesture from the moment it lands: the counter tool
-  /// drops a mark where it is pressed rather than drawing one out, so a click
+  /// A press that is a gesture from the moment it lands: the counter tool drops
+  /// an annotation where it is pressed rather than drawing one out, so a click
   /// alone commits it.
   fn begun(target_kind: u32, index: u32, handle: u32, origin: (f64, f64)) -> Self {
     Self {
@@ -210,13 +210,13 @@ impl RecordingPreviewSurface {
   }
 }
 
-/// Turning a layer's marks into what the compositor draws this frame.
+/// Turning a layer's annotations into what the compositor draws this frame.
 #[path = "annotation/prepare.rs"]
 mod prepare;
 pub(crate) use prepare::{placed_arrows, prepared_arrows};
 
-/// Resolving the picture a mark is drawn in, and picking the grip or shaft a
-/// press lands on.
+/// Resolving the picture an annotation is drawn in, and picking the grip or
+/// shaft a press lands on.
 #[path = "annotation/picking.rs"]
 mod picking;
 pub(super) use picking::{cursor_for, owns_chrome, selected_grips};

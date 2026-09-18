@@ -1,47 +1,48 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The reveal a timed mark draws itself in and out through.
+//! The reveal a timed annotation draws itself in and out through.
 //!
-//! A mark is drawn the way a hand draws one: the stroke leaves the tail and
-//! runs to the head, which rides the end that is moving until it lands on the
-//! end point. The close carries on in the same direction - the tail catches up
-//! to the head, and the mark leaves from where it was pointing.
+//! An annotation is drawn the way a hand draws one: the stroke leaves the tail
+//! and runs to the head, which rides the end that is moving until it lands on
+//! the end point. The close carries on in the same direction - the tail catches
+//! up to the head, and the annotation leaves from where it was pointing.
 //!
 //! Two things carry that, and each takes its own part of the phase. The
-//! window - `low` to `high` - is how much of the path the mark covers, in
-//! *arc length* rather than in the curve's parameter, because a quadratic
-//! Bézier's parameter runs unevenly along a bend: revealing by parameter
-//! would crawl through the curve's tight side and race through its slack
-//! side. `scale` is the mark's own size, and it exists because a mark can
-//! never be drawn shorter than its own head: travel alone holds a full-sized
-//! head through the whole phase and then crosses that last head-length in the
-//! two frames an eased phase spends near rest, which reads as the head
-//! popping on and off rather than arriving and leaving.
+//! window - `low` to `high` - is how much of the path the annotation covers,
+//! in *arc length* rather than in the curve's parameter, because a quadratic
+//! Bézier's parameter runs unevenly along a bend: revealing by parameter would
+//! crawl through the curve's tight side and race through its slack side.
+//! `scale` is the annotation's own size, and it exists because an annotation
+//! can never be drawn shorter than its own head: travel alone holds a
+//! full-sized head through the whole phase and then crosses that last
+//! head-length in the two frames an eased phase spends near rest, which reads
+//! as the head popping on and off rather than arriving and leaving.
 //!
-//! So a mark grows to full weight as it sets off - stroke, heads and their
-//! rounding together, a small whole arrow rather than the full-width round cap
-//! a shaft of no length draws - and shrinks away as it finishes leaving.
+//! So an annotation grows to full weight as it sets off - stroke, heads and
+//! their rounding together, a small whole arrow rather than the full-width
+//! round cap a shaft of no length draws - and shrinks away as it finishes
+//! leaving.
 //!
 //! Everything here is derived from the clip's bounds and the frame's source
 //! time, so scrubbing backwards lands on exactly the frame playing forwards
 //! drew. Nothing is integrated across frames.
 //!
 //! The compositor calls [`screenwide_annotation_reveal_geometry`] while it
-//! prepares a mark, in the canvas pixel space where the stroke's width and
-//! the curve's length are finally comparable, and the video export calls
-//! [`screenwide_annotation_reveal_window`] once per frame per clip. Preview
-//! and export therefore animate through this one implementation.
+//! prepares an annotation, in the canvas pixel space where the stroke's width
+//! and the curve's length are finally comparable, and the video export calls
+//! [`screenwide_annotation_reveal_window`] once per frame per clip. Preview and
+//! export therefore animate through this one implementation.
 
 use crate::editor::effect_animation::ease_in_out_cubic;
 
-/// How long a mark takes to draw itself in. The twin of
+/// How long an annotation takes to draw itself in. The twin of
 /// `ANNOTATION_DRAW_IN_MS` in `src/features/editor/annotations.ts`, which
-/// places a fresh clip this far before the playhead so the mark is drawn by
-/// the time the playhead is reached; `the_editor_places_a_clip_by_this_phase`
-/// holds the two together. A second: the drawing is the thing a viewer is
-/// meant to follow to what the arrow points at, and it is gentler for being
-/// given its time.
+/// places a fresh clip this far before the playhead so the annotation is drawn
+/// by the time the playhead is reached;
+/// `the_editor_places_a_clip_by_this_phase` holds the two together. A second:
+/// the drawing is the thing a viewer is meant to follow to what the arrow
+/// points at, and it is gentler for being given its time.
 pub(crate) const REVEAL_DRAW_IN_MS: f32 = 1_000.0;
 
 /// A counter arrives by growing into place rather than by being drawn along
@@ -50,28 +51,28 @@ pub(crate) const REVEAL_DRAW_IN_MS: f32 = 1_000.0;
 #[path = "reveal_counter.rs"]
 pub(crate) mod counter;
 
-/// How long a mark takes to undraw. Shorter than the drawing: leaving is not
-/// the thing being watched, and a mark that lingers on its way out is in the
-/// way of whatever comes next.
+/// How long an annotation takes to undraw. Shorter than the drawing: leaving is
+/// not the thing being watched, and an annotation that lingers on its way out
+/// is in the way of whatever comes next.
 pub(crate) const REVEAL_DRAW_OUT_MS: f32 = 750.0;
 
 /// The most of a clip either phase may take, so a clip shorter than a second
 /// still finishes drawing itself in before it starts leaving.
 const REVEAL_PHASE_SHARE: f32 = 1.0 / 3.0;
 
-/// The share of the opening phase the mark fades in over, from the clip's
-/// start, while it is already under way. It arrives whole: a head that grows
-/// in is a head two hundred pixels long changing shape over a handful of
-/// frames on a heavy mark, and a stroke that grows in weight is one that
-/// looks drawn twice. Fading, nothing changes shape - the arrow is simply
-/// there, already drawing, as the eye finds it. Long enough that the stroke
-/// is a width or more long before the mark is half solid: shorter than that
-/// its round end is a nub on the back of the head, however it is held in.
+/// The share of the opening phase the annotation fades in over, from the clip's
+/// start, while it is already under way. It arrives whole: a head that grows in
+/// is a head two hundred pixels long changing shape over a handful of frames on
+/// a heavy annotation, and a stroke that grows in weight is one that looks
+/// drawn twice. Fading, nothing changes shape - the arrow is simply there,
+/// already drawing, as the eye finds it. Long enough that the stroke is a width
+/// or more long before the annotation is half solid: shorter than that its
+/// round end is a nub on the back of the head, however it is held in.
 const REVEAL_FADE_SHARE: f32 = 0.3;
 
-/// The share of the closing phase the mark shrinks away over, at the clip's
-/// end. Longer than the arrival: the head starts to go while the stroke is
-/// still drawing itself back in, so the two leave as one motion rather than
+/// The share of the closing phase the annotation shrinks away over, at the
+/// clip's end. Longer than the arrival: the head starts to go while the stroke
+/// is still drawing itself back in, so the two leave as one motion rather than
 /// the stroke finishing and the head following.
 const REVEAL_SHRINK_SHARE: f32 = 0.35;
 
@@ -105,8 +106,9 @@ pub struct AnnotationReveal {
 }
 
 impl AnnotationReveal {
-  /// The whole path at full size, standing still: what a screenshot, a mark
-  /// that is not animated, and the middle of every animated clip all draw.
+  /// The whole path at full size, standing still: what a screenshot, an
+  /// annotation that is not animated, and the middle of every animated clip all
+  /// draw.
   pub const WHOLE: Self = Self {
     low: 0.0,
     high: 1.0,
@@ -131,7 +133,8 @@ impl Default for AnnotationReveal {
 
 /// The reveal `elapsed_ms` into a clip lasting `duration_ms`.
 ///
-/// `frame_ms` is the exposure interval in source time. A paused preview uses zero.
+/// `frame_ms` is the exposure interval in source time. A paused preview uses
+/// zero.
 pub(crate) fn reveal_window(elapsed_ms: f32, duration_ms: f32, frame_ms: f32) -> AnnotationReveal {
   let opening_ms = REVEAL_DRAW_IN_MS.min(duration_ms * REVEAL_PHASE_SHARE);
   let closing_ms = REVEAL_DRAW_OUT_MS.min(duration_ms * REVEAL_PHASE_SHARE);
@@ -139,19 +142,20 @@ pub(crate) fn reveal_window(elapsed_ms: f32, duration_ms: f32, frame_ms: f32) ->
     return AnnotationReveal::WHOLE;
   }
   // Both ends ease in *and* out, rather than easing out the way the ruler's
-  // hover halo and the keyboard's pops do. A pulse announces itself: it is
-  // over before it is read, so it has to start at its fastest. A mark drawing
+  // hover halo and the keyboard's pops do. A pulse announces itself: it is over
+  // before it is read, so it has to start at its fastest. An annotation drawing
   // itself is read while it moves, and an ease-out leaves the stroke at three
   // times its average speed on the very first frame, which reads as the arrow
-  // being launched rather than drawn. In-out starts and stops gently and
-  // spends its speed in the middle, where the eye is already following.
+  // being launched rather than drawn. In-out starts and stops gently and spends
+  // its speed in the middle, where the eye is already following.
   //
-  // The phases never overlap - each is at most a third of the clip - so the
-  // end that is not running sits at rest on its own extreme.
+  // The phases never overlap - each is at most a third of the clip - so the end
+  // that is not running sits at rest on its own extreme.
   //
-  // The mark arrives whole and fades in while it is already drawing; leaving,
-  // its head starts to go while the stroke is still drawing itself back in -
-  // and still moving, the stroke being home before the head has half gone.
+  // The annotation arrives whole and fades in while it is already drawing;
+  // leaving, its head starts to go while the stroke is still drawing itself
+  // back in - and still moving, the stroke being home before the head has half
+  // gone.
   let fade_ms = opening_ms * REVEAL_FADE_SHARE;
   let shrink_ms = closing_ms * REVEAL_SHRINK_SHARE;
   let land_ms = closing_ms * REVEAL_LAND_SHARE;
@@ -212,10 +216,11 @@ pub(crate) fn clip_ms_for_visible(visible_ms: f32) -> f32 {
   }
 }
 
-/// The reveal window one clip is at, for the video export's per-frame pass.
-/// A mark that is not animated is drawn whole for the clip's whole length,
+/// The reveal window one clip is at, for the video export's per-frame pass. An
+/// annotation that is not animated is drawn whole for the clip's whole length,
 /// and a counter follows its own quicker arrival: `kind` is the retained
-/// mark's, so the export and the preview animate through one implementation.
+/// annotation's, so the export and the preview animate through one
+/// implementation.
 ///
 /// # Safety
 /// `out` must point at one writable [`AnnotationReveal`].

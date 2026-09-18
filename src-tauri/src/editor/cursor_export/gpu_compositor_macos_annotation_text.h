@@ -18,8 +18,8 @@
 /// it is growing into place rather than crawling with aliasing over the two
 /// hundred milliseconds of its arrival.
 
-/// Where one counter's number sits in the atlas, in atlas pixels. A mark that
-/// is not a counter gets a zero rectangle, which the kernels skip.
+/// Where one counter's number sits in the atlas, in atlas pixels. An annotation
+/// that is not a counter gets a zero rectangle, which the kernels skip.
 typedef struct {
   float x, y, width, height;
 } ScreenwideAnnotationTextRect;
@@ -39,10 +39,10 @@ static const float SCREENWIDE_COUNTER_CAP_HEIGHT = 0.727f;
 /// How many atlas pixels are rasterised per drawn pixel.
 static const float SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE = 2.0f;
 
-/// Rasterises `count` numbers - `values[i]` at `radii[i]` drawn pixels, where
-/// a zero value is a mark that is not a counter - into one buffer, and fills
-/// `rects` and `uniforms` with where each landed. Returns nil when there is
-/// nothing to draw, which the kernels read as no counters.
+/// Rasterises `count` numbers - `values[i]` at `radii[i]` drawn pixels, where a
+/// zero value is an annotation that is not a counter - into one buffer, and
+/// fills `rects` and `uniforms` with where each landed. Returns nil when there
+/// is nothing to draw, which the kernels read as no counters.
 ///
 /// The result is cached against the numbers and sizes it was built from, so a
 /// preview that redraws an unchanged list does no work at all.

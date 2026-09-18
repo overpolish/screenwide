@@ -28,18 +28,19 @@ import {
  * identical path through the workspace's state.
  */
 export type ToolPanelHandlers = {
-  /** Draw the chosen mark in and out over its clip, or leave it standing. */
+  /** Draw the chosen annotation in and out over its clip, or leave it standing.
+   */
   onAnnotationAngleChange?: (angle: number) => void;
   onAnnotationAnimatedChange?: (animated: boolean) => void;
   /** Forget a colour of your own. */
   onAnnotationColorRemove?: (color: string) => void;
   /** Keep a colour of your own, so it is on offer next time. */
   onAnnotationColorSave?: (color: string) => void;
-  /** Turn the chosen mark round, through the same commit path the drag on
+  /** Turn the chosen annotation round, through the same commit path the drag on
    * the picture uses. */
   onAnnotationReverse?: () => void;
-  /** Dress the chosen mark, a field at a time, through the same commit path
-   * the drag on the picture uses. */
+  /** Dress the chosen annotation, a field at a time, through the same commit
+   * path the drag on the picture uses. */
   onAnnotationStyleChange?: (style: Partial<AnnotationStyle>) => void;
   /** Play the selected audio track this much louder or quieter than it was
    * recorded, in decibels. */
@@ -192,9 +193,10 @@ export function useToolPanelBridge(
   // show the mirror instead, so it must never travel with a snapshot the
   // change has not reached yet.
   //
-  // Applying a patch renders the editor at once, but a value the preview owns
-  // - the chosen mark's dress, published through `annotation-channel` - only
-  // reaches this snapshot on the render that channel's own publish provokes.
+  // Applying a patch renders the editor at once, but a value the preview
+  // owns - the chosen annotation's dress, published through
+  // `annotation-channel` - only reaches this snapshot on the render that
+  // channel's own publish provokes.
   // Acknowledging a commit later ties the sequence to that render: until then
   // the panel keeps showing what it asked for, rather than pinging back to the
   // previous value for a frame and then settling on the new one. A field the

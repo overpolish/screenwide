@@ -96,16 +96,16 @@ static inline AnnotationTriangle annotation_prepare_head(AnnotationVector tip,
     annotation_add(incentre, annotation_scale(annotation_subtract(right, incentre), shrink))};
 }
 
-/// One preparation per mark before drawing or picking, never per pixel.
-/// A short curve scales the stroke and heads together. Sampling each arm
-/// also preserves folded curves whose midpoint happens to coincide with a tip.
+/// One preparation per annotation before drawing or picking, never per pixel. A
+/// short curve scales the stroke and heads together. Sampling each arm also
+/// preserves folded curves whose midpoint happens to coincide with a tip.
 ///
-/// `reveal` is how much of the mark this frame draws. The whole path at full
-/// size prepares exactly what it always has: the head sits on the end point,
-/// facing the way the curve leaves the control, at full size. A mark part way
-/// through its clip wears each head on its end of the shaft, ahead of it -
-/// riding the end that is moving, growing out of its base as the mark sets
-/// off and back into it as the mark leaves.
+/// `reveal` is how much of the annotation this frame draws. The whole path at
+/// full size prepares exactly what it always has: the head sits on the end
+/// point, facing the way the curve leaves the control, at full size. An
+/// annotation part way through its clip wears each head on its end of the
+/// shaft, ahead of it - riding the end that is moving, growing out of its base
+/// as the annotation sets off and back into it as the annotation leaves.
 static inline AnnotationArrowGeometry annotation_prepare_arrow(AnnotationVector a,
     AnnotationVector b, AnnotationVector c, float width, uint32_t head,
     AnnotationReveal reveal) {
@@ -136,10 +136,10 @@ static inline AnnotationArrowGeometry annotation_prepare_arrow(AnnotationVector 
   float scale = travel.scale;
   float length = result.width * 4 * scale, half_base = result.width * 2 * scale;
   result.rounding = result.width * 0.35f * scale;
-  // Stroke, heads and rounding are one mark and scale together. A shaft
+  // Stroke, heads and rounding are one annotation and scale together. A shaft
   // shorter than the stroke is wide draws its own round cap, so a full-width
-  // stroke on a mark two pixels long appears as a disc the width of the mark:
-  // weight has to arrive with the rest of it.
+  // stroke on an annotation two pixels long appears as a disc the width of the
+  // annotation: weight has to arrive with the rest of it.
   result.width *= scale;
   result.low = travel.low;
   result.high = travel.high;
@@ -150,7 +150,7 @@ static inline AnnotationArrowGeometry annotation_prepare_arrow(AnnotationVector 
     result.head = 0;
     return result;
   }
-  // A growing head narrows fast, so while a mark is revealing, the shaft
+  // A growing head narrows fast, so while an annotation is revealing, the shaft
   // runs on a little way under the head rather than stopping at its base:
   // met exactly, a bend pokes out through the head's narrowing sides. The
   // head itself is built the same way throughout, so nothing jumps when the
@@ -214,12 +214,12 @@ static inline AnnotationCounterGeometry annotation_counter_geometry(
 /// The silhouette is the disc unioned with the tail: the overlap of two
 /// circles, one either side of the axis, each tangent to the disc and to the
 /// little circle the tip is rounded to, with their centres a radius behind the
-/// disc's own. That is the outline of `MapPinPlusInside` to within a
-/// hundredth of the radius.
+/// disc's own. That is the outline of `MapPinPlusInside` to within a hundredth
+/// of the radius.
 ///
-/// `reveal.scale` is the size the mark is drawn at this frame: the disc, its
-/// tail and its number are one mark and grow together, so the scale is
-/// applied here, once, and the number follows the radius it lands on.
+/// `reveal.scale` is the size the annotation is drawn at this frame: the disc,
+/// its tail and its number are one annotation and grow together, so the scale
+/// is applied here, once, and the number follows the radius it lands on.
 static inline AnnotationArrowGeometry annotation_prepare_counter(
     AnnotationVector center, float diameter, float angle, AnnotationReveal reveal) {
   float scale = fmaxf(fminf(reveal.scale, 1.0f), 0.0f);
@@ -276,9 +276,9 @@ static inline double annotation_counter_silhouette_distance(
   return fmin(disc, fmax(lens - tip_radius, touch - along));
 }
 
-/// How far `point` falls outside a prepared counter's silhouette, in the
-/// space it was prepared in. Negative inside the mark, which is what picks
-/// it. The twin of `counter_distance` in `counter.rs`.
+/// How far `point` falls outside a prepared counter's silhouette, in the space
+/// it was prepared in. Negative inside the annotation, which is what picks it.
+/// The twin of `counter_distance` in `counter.rs`.
 static inline double annotation_counter_distance(AnnotationVector point,
                                                  AnnotationArrowGeometry prepared) {
   AnnotationCounterGeometry counter = annotation_counter_geometry(prepared);

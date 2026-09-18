@@ -75,7 +75,7 @@ static NSDictionary *counter_dress(CGFloat size) {
 /// One number as it will be rasterised: everything in atlas pixels, which are
 /// [`SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE`] to the drawn pixel.
 typedef struct {
-  uint32_t mark;
+  uint32_t annotation;
   NSDictionary *dress;
   NSString *text;
   CGSize measured;
@@ -168,7 +168,7 @@ id<MTLBuffer> screenwide_annotation_text_atlas(
   for (uint32_t index = 0; index < count; index++) {
     if (values[index] == 0 || !(radii[index] > 1.0f)) continue;
     prepared[rows] = counter_text(values[index], radii[index]);
-    prepared[rows].mark = index;
+    prepared[rows].annotation = index;
     atlasWidth = MAX(atlasWidth, prepared[rows].cell.width);
     atlasHeight += prepared[rows].cell.height;
     rows++;
@@ -201,7 +201,7 @@ id<MTLBuffer> screenwide_annotation_text_atlas(
                                (text.cell.width - text.measured.width) * 0.5,
                                bottom + (text.cell.height - text.measured.height) * 0.5)
             withAttributes:text.dress];
-    written[text.mark] = (ScreenwideAnnotationTextRect){
+    written[text.annotation] = (ScreenwideAnnotationTextRect){
         .x = 0.0f,
         .y = (float)top,
         .width = (float)text.cell.width,

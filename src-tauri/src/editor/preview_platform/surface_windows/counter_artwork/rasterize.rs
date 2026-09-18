@@ -79,14 +79,14 @@ struct CounterRaster {
 /// is centred in. A number too wide for its disc is narrowed rather than
 /// allowed to touch the edge.
 struct Row {
-  mark: usize,
+  annotation: usize,
   text: Vec<u16>,
   measured: (i32, i32),
   cell: (u32, u32),
   size: f64,
 }
 
-fn row(mark: usize, value: u32, radius: f64) -> Result<Row, String> {
+fn row(annotation: usize, value: u32, radius: f64) -> Result<Row, String> {
   let diameter = radius * 2.0 * SUPERSAMPLE;
   let mut size = diameter * CAP_SHARE / CAP_HEIGHT;
   let text: Vec<u16> = format!("{value}").encode_utf16().collect();
@@ -97,7 +97,7 @@ fn row(mark: usize, value: u32, radius: f64) -> Result<Row, String> {
     measured = TextDevice::new(size)?.measure(&text)?;
   }
   Ok(Row {
-    mark,
+    annotation,
     // One transparent pixel of margin keeps a four-tap sample on one number.
     cell: (
       (measured.0 as u32).saturating_add(2).max(1),
@@ -109,10 +109,10 @@ fn row(mark: usize, value: u32, radius: f64) -> Result<Row, String> {
   })
 }
 
-fn rasterize(wanted: &[(usize, u32, f64)], marks: usize) -> Result<CounterRaster, String> {
+fn rasterize(wanted: &[(usize, u32, f64)], annotations: usize) -> Result<CounterRaster, String> {
   let mut rows = Vec::with_capacity(wanted.len());
-  for (mark, value, radius) in wanted {
-    rows.push(row(*mark, *value, *radius)?);
+  for (annotation, value, radius) in wanted {
+    rows.push(row(*annotation, *value, *radius)?);
   }
   let width = rows.iter().map(|row| row.cell.0).max().unwrap_or(1).max(1);
   let height = rows.iter().map(|row| row.cell.1).sum::<u32>().max(1);
@@ -130,7 +130,7 @@ fn rasterize(wanted: &[(usize, u32, f64)], marks: usize) -> Result<CounterRaster
     },
     ..Default::default()
   };
-  let mut rects = vec![CounterTextRect::default(); marks];
+  let mut rects = vec![CounterTextRect::default(); annotations];
   let mut pixels = Vec::new();
   let mut top = 0_u32;
   // One context per row: each number is set at its own size, and GDI selects
@@ -174,7 +174,7 @@ fn rasterize(wanted: &[(usize, u32, f64)], marks: usize) -> Result<CounterRaster
       return Err("Windows could not draw a counter's number".to_owned());
     }
     pixels.append(&mut written);
-    rects[row.mark] = CounterTextRect {
+    rects[row.annotation] = CounterTextRect {
       x: 0.0,
       y: top as f32,
       width: row.cell.0 as f32,

@@ -1,30 +1,32 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Source-space marks retained by the native compositor.
+//! Source-space annotations retained by the native compositor.
 //!
 //! The retained native workspace keeps a copy of every layer it presents and
-//! redraws it without asking Rust again, so the marks travel inline rather
-//! than as a borrowed pointer: a fixed array is the only shape that survives
-//! a pan or a zoom. The same cap applies to the export so what the editor
-//! previews is what the PNG gets.
+//! redraws it without asking Rust again, so the annotations travel inline
+//! rather than as a borrowed pointer: a fixed array is the only shape that
+//! survives a pan or a zoom. The same cap applies to the export so what the
+//! editor previews is what the PNG gets.
 
 use super::reveal::AnnotationReveal;
 use super::{Annotation, MAX_ANNOTATIONS};
 use crate::editor::annotations::{annotation_colour, AnnotationHead, AnnotationShape};
 
-/// Which shape a retained mark is, matching C's `SCREENWIDE_ANNOTATION_*`.
+/// Which shape a retained annotation is, matching C's
+/// `SCREENWIDE_ANNOTATION_*`.
 pub(crate) const KIND_ARROW: u32 = 0;
 pub(crate) const KIND_COUNTER: u32 = 1;
 
-/// One retained mark matching C's `ScreenwideAnnotation`. The native binding
-/// prepares separate draw geometry; every stored member is four bytes wide.
+/// One retained annotation matching C's `ScreenwideAnnotation`. The native
+/// binding prepares separate draw geometry; every stored member is four bytes
+/// wide.
 ///
-/// An arrow fills `p0`, `p1` and `p2` with its Bézier's start, control and
-/// end, and `width` with its stroke. A counter puts its centre in `p0`, the
-/// direction of its tail in `p1[0]` - radians clockwise from east - its
-/// number in `p1[1]`, and its disc's diameter in `width`; `p2` repeats the
-/// centre so a bounding box over the three points is still the mark's.
+/// An arrow fills `p0`, `p1` and `p2` with its Bézier's start, control and end,
+/// and `width` with its stroke. A counter puts its centre in `p0`, the
+/// direction of its tail in `p1[0]` - radians clockwise from east - its number
+/// in `p1[1]`, and its disc's diameter in `width`; `p2` repeats the centre so a
+/// bounding box over the three points is still the annotation's.
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct NativeAnnotation {
@@ -40,12 +42,12 @@ pub(crate) struct NativeAnnotation {
   /// is preview chrome: [`native_annotations`] never sets it, so nothing the
   /// export composes can carry one.
   pub(crate) hover: f32,
-  /// Whether this mark's clip draws itself in and out. Video export reads it
-  /// per frame; every other path has already resolved `reveal` from it.
+  /// Whether this annotation's clip draws itself in and out. Video export reads
+  /// it per frame; every other path has already resolved `reveal` from it.
   pub(crate) animated: u32,
-  /// This frame's window and the size the mark is drawn at. The whole path at
-  /// full size - a still, or a mark that does not animate - prepares the way
-  /// it always has.
+  /// This frame's window and the size the annotation is drawn at. The whole
+  /// path at full size - a still, or an annotation that does not animate -
+  /// prepares the way it always has.
   pub(crate) reveal: AnnotationReveal,
 }
 
@@ -57,7 +59,7 @@ const _: () = assert!(std::mem::offset_of!(NativeAnnotation, hover) == 56);
 const _: () = assert!(std::mem::offset_of!(NativeAnnotation, animated) == 60);
 const _: () = assert!(std::mem::offset_of!(NativeAnnotation, reveal) == 64);
 
-/// One layer's marks, bound as a single buffer. `count` may be zero; the
+/// One layer's annotations, bound as a single buffer. `count` may be zero; the
 /// array is still valid memory so Metal never sees a nil buffer.
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -77,7 +79,7 @@ impl Default for NativeAnnotations {
   }
 }
 
-/// Flatten a workspace's marks into the retained native scene.
+/// Flatten a workspace's annotations into the retained native scene.
 pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotations {
   let mut native = NativeAnnotations::default();
   let annotations = annotations.iter();

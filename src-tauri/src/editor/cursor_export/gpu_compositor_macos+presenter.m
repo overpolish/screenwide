@@ -497,13 +497,13 @@ int screenwide_gpu_still_presenter_update_workspace_canvas(
   return 0;
 }
 
-/// Moves the hover halo on the retained workspace: the mark at `index` in
-/// `pane_index`'s own list wears it, and every other mark in the scene puts
-/// it down. A negative index only clears.
+/// Moves the hover halo on the retained workspace: the annotation at `index` in
+/// `pane_index`'s own list wears it, and every other annotation in the scene
+/// puts it down. A negative index only clears.
 ///
 /// The halo is the one piece of annotation state the pointer changes without
-/// the document changing, so it is set here and redrawn rather than sent
-/// back round through a fresh composition.
+/// the document changing, so it is set here and redrawn rather than sent back
+/// round through a fresh composition.
 int screenwide_gpu_still_presenter_set_workspace_annotation_hover(
     void *handle, uint32_t pane_index, int32_t index, float width) {
   if (handle == NULL) return 0;
@@ -514,11 +514,11 @@ int screenwide_gpu_still_presenter_set_workspace_annotation_hover(
     ScreenwideWorkspaceLayer layer;
     [updated[layer_index] getValue:&layer size:sizeof(layer)];
     int changed = 0;
-    for (uint32_t mark = 0; mark < layer.annotations.count; ++mark) {
+    for (uint32_t annotation = 0; annotation < layer.annotations.count; ++annotation) {
       float wanted = layer.pane_index == pane_index && index >= 0 &&
-                     (uint32_t)index == mark ? width : 0;
-      if (layer.annotations.items[mark].hover == wanted) continue;
-      layer.annotations.items[mark].hover = wanted;
+                     (uint32_t)index == annotation ? width : 0;
+      if (layer.annotations.items[annotation].hover == wanted) continue;
+      layer.annotations.items[annotation].hover = wanted;
       changed = 1;
     }
     if (layer.pane_index == pane_index) found = 1;

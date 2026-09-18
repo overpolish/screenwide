@@ -11,7 +11,7 @@ import { timelineLanesHeight } from "./timeline-band-metrics";
 /**
  * The timeline block's own frame. Only the lane rows scroll: the ruler stands
  * fixed above them and the meter fixed beside them, so the overflow shadow
- * marks exactly where the rows are cut off.
+ * annotations exactly where the rows are cut off.
  *
  * The ruler and the rows line up because both carry the same gutter column -
  * the zoom toolbar in the ruler, the track header in each row, each a

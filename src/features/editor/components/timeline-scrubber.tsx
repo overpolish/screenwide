@@ -77,7 +77,7 @@ export function TimelineScrubberOverlay(
   const { blade, ...scrubber } = props;
   return (
     <>
-      {/* Above the ruler: the playhead is the one mark that has to stay
+      {/* Above the ruler: the playhead is the one annotation that has to stay
           readable across it, and it takes no presses, so nothing below it
           loses a click to this layer. */}
       <div

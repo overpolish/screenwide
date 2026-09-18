@@ -101,7 +101,8 @@ fn large_curved_head_base_is_centred_on_the_trimmed_curve() {
 }
 
 /// A short, thick curve cannot fit full-size heads. It must reduce the visual
-/// scale as a unit so the heads overlap the shaft and leave one connected mark.
+/// scale as a unit so the heads overlap the shaft and leave one connected
+/// annotation.
 #[test]
 fn short_thick_curved_arrow_stays_connected() {
   let (start, control, end) = (point(106.0, 299.0), point(312.5, 186.5), point(129.0, 40.0));

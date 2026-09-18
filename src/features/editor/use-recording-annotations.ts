@@ -52,11 +52,11 @@ export function useRecordingAnnotations({
   onSelectTrack?: (track: RecordingVideoTrackId) => void;
 }) {
   const clips = edit.annotationClips ?? EMPTY_CLIPS;
-  // A fresh mark's dress and whether it animates both travel with the layout
-  // the native tool draws from; animation is the mark's own property, so it
-  // rides beside the style rather than inside it. The dress is the tool's
-  // own: a disc and a stroke are different measurements, so the size the
-  // counter tool sends is the one counters were last drawn at.
+  // A fresh annotation's dress and whether it animates both travel with the
+  // layout the native tool draws from; animation is the annotation's own
+  // property, so it rides beside the style rather than inside it. The dress is
+  // the tool's own: a disc and a stroke are different measurements, so the size
+  // the counter tool sends is the one counters were last drawn at.
   const defaults = useAnnotationDefaults(
     tool === "counter" ? "counter" : "arrow",
   );
@@ -75,12 +75,15 @@ export function useRecordingAnnotations({
       onEdit({ ...edit, annotationClips: next });
   };
   // Inspector edits and deletion operate on document IDs, including a selected
-  // clip outside the playhead. Native gestures supply only the visible marks.
+  // clip outside the playhead. Native gestures supply only the visible
+  // annotations.
   const selection = useAnnotations({
     annotations: clips.map((clip) => clip.annotation),
-    onCommit: (marks) => {
+    onCommit: (annotations) => {
       if (isPlaying) return;
-      const byId = new Map(marks.map((mark) => [mark.id, mark]));
+      const byId = new Map(
+        annotations.map((annotation) => [annotation.id, annotation]),
+      );
       commitClips(
         clips.flatMap((clip) => {
           const annotation = byId.get(clip.annotation.id);

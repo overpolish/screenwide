@@ -28,7 +28,7 @@ mod gesture_tests;
 pub(crate) mod handles;
 
 /// The native retained scene, export and the live overlay accept the same
-/// number of marks.
+/// number of annotations.
 pub(crate) const MAX_ANNOTATIONS: usize = 32;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]

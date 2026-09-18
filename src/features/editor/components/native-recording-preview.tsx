@@ -29,11 +29,12 @@ import { useRecordingPreviewTracks } from "./use-recording-preview-tracks";
 import { useRecordingPreviewTransport } from "./use-recording-preview-transport";
 import { useRecordingToolbar } from "./use-recording-toolbar";
 import { useRecordingTrackSelection } from "./use-recording-track-selection";
-import { useToolFollowsMark } from "./use-tool-follows-mark";
+import { useToolFollowsAnnotation } from "./use-tool-follows-annotation";
 
 import type { ScrubPreviewProps } from "./scrub-preview";
 
-/** Editor playback whose decode, audio output and timeline are all owned by Rust. */
+/** Editor playback whose decode, audio output and timeline are all owned by
+ * Rust. */
 export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   const props = resolveScrubPreviewProps(rawProps);
   const {
@@ -167,9 +168,13 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
       onSelectedTrackChange,
       setCanvasTool,
     });
-  // Both drawing tools pick up either shape, so the tool follows the mark
+  // Both drawing tools pick up either shape, so the tool follows the annotation
   // that was chosen with it: the panel and the next press never disagree.
-  useToolFollowsMark(annotations.selectedKind, canvasTool, changeCanvasTool);
+  useToolFollowsAnnotation(
+    annotations.selectedKind,
+    canvasTool,
+    changeCanvasTool,
+  );
 
   // Keep the transport zoom control stable between zoom changes.
   const zoomControl = useMemo(

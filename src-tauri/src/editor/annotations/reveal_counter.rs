@@ -26,11 +26,10 @@ use crate::editor::effect_animation::{ease_in_out_cubic, ease_out_cubic};
 /// whole by the time the playhead is reached.
 pub(crate) const COUNTER_REVEAL_IN_MS: f32 = 320.0;
 
-/// How long it takes to leave. Longer than its arrival: an arrival is a
-/// thing appearing, which the eye catches however quick it is, while a
-/// departure that is quicker than the eye reads as the mark being cut rather
-/// than leaving. Still well short of an arrow's, which has a stroke to
-/// undraw.
+/// How long it takes to leave. Longer than its arrival: an arrival is a thing
+/// appearing, which the eye catches however quick it is, while a departure that
+/// is quicker than the eye reads as the annotation being cut rather than
+/// leaving. Still well short of an arrow's, which has a stroke to undraw.
 pub(crate) const COUNTER_REVEAL_OUT_MS: f32 = 420.0;
 
 /// The most of a clip either phase may take, so a clip shorter than the two
@@ -44,21 +43,21 @@ const COUNTER_PHASE_SHARE: f32 = 1.0 / 3.0;
 const COUNTER_REVEAL_FROM: f32 = 0.55;
 
 /// The reveal a counter's clip is at, `elapsed_ms` into a clip lasting
-/// `duration_ms`. Everything is derived from the clip's bounds and the
-/// frame's source time, so a scrub backwards lands on exactly the frame
-/// playing forwards drew.
+/// `duration_ms`. Everything is derived from the clip's bounds and the frame's
+/// source time, so a scrub backwards lands on exactly the frame playing
+/// forwards drew.
 ///
-/// Size and opacity follow one curve rather than two of their own: a disc
-/// that grew on one schedule and faded on another reads as two things
-/// happening. Arriving eases out, the way the hover halo's pulse does -
-/// quick off the mark, settling gently - and leaving eases in and out over
-/// the whole of its phase, so the last frames are a fade rather than a cut.
+/// Size and opacity follow one curve rather than two of their own: a disc that
+/// grew on one schedule and faded on another reads as two things happening.
+/// Arriving eases out, the way the hover halo's pulse does - quick off the
+/// annotation, settling gently - and leaving eases in and out over the whole of
+/// its phase, so the last frames are a fade rather than a cut.
 ///
 /// `frame_ms` is the exposure interval in source time, and the state one
-/// interval back rides along as `previous`: a disc that grows through a
-/// frame covered every size in between, so the compositor smears it over
-/// them exactly as it smears a travelling arrow. A paused preview passes
-/// zero and the shutter starts where it ends.
+/// interval back rides along as `previous`: a disc that grows through a frame
+/// covered every size in between, so the compositor smears it over them exactly
+/// as it smears a travelling arrow. A paused preview passes zero and the
+/// shutter starts where it ends.
 pub(crate) fn counter_reveal_window(
   elapsed_ms: f32,
   duration_ms: f32,

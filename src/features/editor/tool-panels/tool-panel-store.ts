@@ -59,7 +59,7 @@ export type ToolPanelCrop = {
  * and background settings each arrive as more keys, not another mirror.
  */
 export type ToolPanelSnapshot = {
-  /** The mark the preview has in hand, or null while it has none. Unlike
+  /** The annotation the preview has in hand, or null while it has none. Unlike
    * every other panel, the arrow panel follows this rather than a tool. */
   annotation: ToolPanelAnnotation | null;
   /** Colours of your own the annotation tools were given, newest last. */
@@ -92,17 +92,18 @@ export type ToolPanelSnapshot = {
 export type ToolPanelPatch = Partial<
   Pick<ToolPanelSnapshot, "background" | "cursorEffects">
 > & {
-  /** Turn the chosen counter's tail, in radians clockwise from east. Where
-   * it points is the mark's own property rather than part of its dress, and
+  /** Turn the chosen counter's tail, in radians clockwise from east. Where it
+   * points is the annotation's own property rather than part of its dress, and
    * it becomes the next counter's aim. */
   annotationAngle?: number;
-  /** Draw the chosen mark in and out over its clip, or leave it standing.
-   * This is the mark's own property rather than part of its dress, so it
+  /** Draw the chosen annotation in and out over its clip, or leave it standing.
+   * This is the annotation's own property rather than part of its dress, so it
    * travels beside the style rather than inside it. It also becomes the next
    * arrow's default. */
   annotationAnimated?: boolean;
-  /** Dress the chosen mark, a field at a time so a panel never has to send
-   * the whole style back. Each one also becomes the next arrow's default. */
+  /** Dress the chosen annotation, a field at a time so a panel never has to
+   * send the whole style back. Each one also becomes the next arrow's default.
+   */
   annotationStyle?: Partial<AnnotationStyle>;
   /** Put every shortcut back where the recording drew it. */
   applyShortcutToAll?: true;
@@ -141,7 +142,7 @@ export type ToolPanelPatch = Partial<
   resetShortcut?: true;
   /** Bring back every shortcut deleted from the timeline. */
   restoreShortcuts?: true;
-  /** Turn the chosen mark round, so its head points the other way. */
+  /** Turn the chosen annotation round, so its head points the other way. */
   reverseAnnotation?: true;
   /** Keep a colour of your own, so it is on offer next time. Sent once a
    * colour is settled on rather than on every step of a drag. */

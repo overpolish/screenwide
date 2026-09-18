@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Whether live annotation is offered at all, what becomes of the annotations when
-//! the overlay closes, and the dress a fresh stroke is drawn in.
+//! Whether live annotation is offered at all, what becomes of the annotations
+//! when the overlay closes, and the dress a fresh stroke is drawn in.
 
 use std::sync::{LazyLock, RwLock};
 
@@ -52,8 +52,8 @@ pub struct ToolbarPosition {
 #[serde(default, rename_all = "camelCase")]
 pub struct AnnotateSettings {
   pub enabled: bool,
-  /// Whether annotations survive the overlay closing. Off by default: the overlay
-  /// is normally toggled off to be rid of what is on screen.
+  /// Whether annotations survive the overlay closing. Off by default: the
+  /// overlay is normally toggled off to be rid of what is on screen.
   pub keep_annotations_between_sessions: bool,
   pub default_shape: AnnotateShape,
   /// `#rrggbb` or `#rrggbbaa`, as a document stores it.
@@ -64,8 +64,8 @@ pub struct AnnotateSettings {
   /// things: eight pixels of stroke would be a disc too small to hold a
   /// number.
   pub default_counter_size: f64,
-  /// Where a fresh counter's tail points, in radians clockwise from east.
-  /// Live marks cannot be picked up again, so the aim is chosen before the
+  /// Where a fresh counter's tail points, in radians clockwise from east. Live
+  /// annotations cannot be picked up again, so the aim is chosen before the
   /// counter is dropped rather than turned afterwards.
   pub default_counter_angle: f64,
   /// Which ends of a fresh arrow carry a head. The editor's own type, so the
@@ -91,7 +91,8 @@ impl Default for AnnotateSettings {
 }
 
 /// Settings the overlay can actually draw with. A colour the compositor cannot
-/// read would cost the annotation rather than the setting, so it is refused here.
+/// read would cost the annotation rather than the setting, so it is refused
+/// here.
 fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String> {
   let color = settings.default_color.to_ascii_lowercase();
   let digits = color

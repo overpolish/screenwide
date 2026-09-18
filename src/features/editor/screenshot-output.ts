@@ -45,8 +45,8 @@ export const normalizedScreenshotWorkspaceOutput = (
  *
  * The layer takes them whole; the canvas takes only what it shares with every
  * layer. Two things are the layer's alone and must never reach it: the colour
- * behind its padding, and the marks drawn on it - the canvas is what a new
- * layer and the next capture are built from, so anything left on it is
+ * behind its padding, and the annotations drawn on it - the canvas is what a
+ * new layer and the next capture are built from, so anything left on it is
  * inherited by pictures it was never drawn on.
  */
 export const withScreenshotWorkspaceItemOutput = (

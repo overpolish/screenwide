@@ -226,9 +226,9 @@ impl RecordingPreviewSurface {
   /// The halo is the one piece of annotation state the pointer changes
   /// without the document changing, so it is set on the scene rather than
   /// sent round through a fresh composition - which a recording cannot do
-  /// from marks alone, having a decoded frame behind them.
+  /// from annotations alone, having a decoded frame behind them.
   ///
-  /// `index` is the mark's place in its own pane's list, or -1 to clear.
+  /// `index` is the annotation's place in its own pane's list, or -1 to clear.
   pub(crate) fn redraw_annotation_hover(&self, hover: Option<(u32, usize, f32)>) -> bool {
     let (pane, index, width) = hover.map_or((0, -1, 0.0), |(pane, index, width)| {
       (pane, i32::try_from(index).unwrap_or(-1), width)

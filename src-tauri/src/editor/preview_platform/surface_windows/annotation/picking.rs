@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Where a mark's picture is on screen, and what a press lands on.
+//! Where an annotation's picture is on screen, and what a press lands on.
 //!
-//! Marks are published in their layer's image-normalised space, so picking
-//! first has to find that image inside the pane the layer is drawn in. The
-//! twin of `recording_preview_annotation_geometry_macos.h` and the layer
+//! Annotations are published in their layer's image-normalised space, so
+//! picking first has to find that image inside the pane the layer is drawn in.
+//! The twin of `recording_preview_annotation_geometry_macos.h` and the layer
 //! lookup in `recording_preview_annotation_layers_macos.h`.
 
 use super::*;
@@ -15,8 +15,8 @@ use crate::editor::annotations::handles::HANDLE_KIND_COUNTER;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::AnnotationPoint;
 
-/// A mark belongs to its image, independently of the selected layer. The twin
-/// of `annotation_layer_selection`.
+/// An annotation belongs to its image, independently of the selected layer. The
+/// twin of `annotation_layer_selection`.
 pub(super) fn layer_selection(state: &SurfaceState, layer: i32) -> Option<PreviewSelection> {
   if let Some(current) = state.selection {
     if layer < 0 || current.layer_id == layer as u32 {
@@ -42,10 +42,10 @@ fn layer_image_rect(state: &SurfaceState, layer: i32) -> Option<PreviewSurfaceRe
   (rect.width > 0.0 && rect.height > 0.0).then_some(rect)
 }
 
-/// The image one arrow's grips and its halo are placed in. A mark belongs to
-/// its own layer, which is not always the selected one: the keyboard
-/// shortcut can hold the selection while the pointer rests on an arrow over
-/// the screen.
+/// The image one arrow's grips and its halo are placed in. An annotation
+/// belongs to its own layer, which is not always the selected one: the keyboard
+/// shortcut can hold the selection while the pointer rests on an arrow over the
+/// screen.
 pub(super) fn item_image_frame(state: &SurfaceState, index: i32) -> Option<PreviewSurfaceRect> {
   let layer = usize::try_from(index)
     .ok()
@@ -102,8 +102,8 @@ fn grip_at_point(
   })
 }
 
-/// The grips one mark shows, in display points: an arrow's three, or the tip
-/// of a counter's tail. The tail is placed here rather than sent because a
+/// The grips one annotation shows, in display points: an arrow's three, or the
+/// tip of a counter's tail. The tail is placed here rather than sent because a
 /// normalised offset is a different length in each axis on a picture that is
 /// not square, while display points are isotropic.
 fn item_grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> Vec<(f64, f64)> {
@@ -178,8 +178,8 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<edit
 /// How far a point is from one arrow's drawn shape, in display points: its
 /// shaft, and the heads on it. Zero anywhere the arrow is actually painted,
 /// because the tolerance is measured from the stroke's edge rather than its
-/// centreline. A press on a head is a press on the arrow - it is the part of
-/// it the hand aims at. A mark half-way through drawing itself in is still
+/// centreline. A press on a head is a press on the arrow - it is the part of it
+/// the hand aims at. An annotation half-way through drawing itself in is still
 /// picked by the whole of what it will be.
 fn arrow_distance(
   image: PreviewSurfaceRect,
@@ -209,8 +209,8 @@ fn arrow_distance(
   ];
   let c = [end.0 as f32, end.1 as f32];
   let probe = [point.0 as f32, point.1 as f32];
-  // The stroke rides on the mark rather than being read back off its heads,
-  // so a headless arrow is picked over the width it shows too.
+  // The stroke rides on the annotation rather than being read back off its
+  // heads, so a headless arrow is picked over the width it shows too.
   let width = (item.width * image.width) as f32;
   let heads = if item.start_head > 0.0 {
     2
@@ -232,7 +232,7 @@ fn arrow_distance(
 
 /// The topmost arrow whose drawn shape `point` lands on. There is no
 /// tolerance around it: the arrow is picked, and haloed, exactly where it is
-/// painted, which is what keeps the halo off the space beside a mark.
+/// painted, which is what keeps the halo off the space beside an annotation.
 pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<usize> {
   state
     .annotation

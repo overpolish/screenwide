@@ -7,15 +7,15 @@
 #include <stdint.h>
 #include "../annotations/reveal.h"
 
-/// How many marks one layer can carry. The list travels inline through the
-/// retained workspace scene, so it is a fixed array rather than a pointer.
+/// How many annotations one layer can carry. The list travels inline through
+/// the retained workspace scene, so it is a fixed array rather than a pointer.
 #define SCREENWIDE_MAX_ANNOTATIONS 32
 
 /// The shapes the compositor draws, matching Rust's `NativeAnnotation`.
 #define SCREENWIDE_ANNOTATION_ARROW 0u
 #define SCREENWIDE_ANNOTATION_COUNTER 1u
 
-/// One retained mark, matching Rust's `NativeAnnotation`. Points stay in
+/// One retained annotation, matching Rust's `NativeAnnotation`. Points stay in
 /// source pixels; the binding step prepares draw geometry for the current
 /// canvas placement. Every member is four bytes wide, so the struct packs the
 /// same way everywhere.
@@ -42,10 +42,11 @@ typedef struct {
   /// The hover halo's width in canvas pixels, or zero for no halo. Preview
   /// decoration only: the export path always sends this as zero.
   float hover;
-  /// Whether this mark's clip draws itself in and out. Video export resolves
-  /// `reveal` from it per frame; every other path arrives with it resolved.
+  /// Whether this annotation's clip draws itself in and out. Video export
+  /// resolves `reveal` from it per frame; every other path arrives with it
+  /// resolved.
   uint32_t animated;
-  /// This frame's window and the size the mark is drawn at.
+  /// This frame's window and the size the annotation is drawn at.
   AnnotationReveal reveal;
 } ScreenwideAnnotation;
 _Static_assert(sizeof(ScreenwideAnnotation) == 96,
@@ -59,8 +60,8 @@ _Static_assert(offsetof(ScreenwideAnnotation, hover) == 56,
 _Static_assert(offsetof(ScreenwideAnnotation, reveal) == 64,
                "ScreenwideAnnotation.reveal ABI must match Rust");
 
-/// One layer's marks. `count` may be zero; the array is still valid memory,
-/// so the kernels never bind a nil buffer.
+/// One layer's annotations. `count` may be zero; the array is still valid
+/// memory, so the kernels never bind a nil buffer.
 typedef struct {
   ScreenwideAnnotation items[SCREENWIDE_MAX_ANNOTATIONS];
   uint32_t count;

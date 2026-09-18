@@ -47,8 +47,8 @@ export type AnnotateToolbarProps = {
  * that can be done to what is already drawn.
  *
  * Live mode is draw-only - nothing on screen can be picked up or moved - so
- * the plate carries no selection controls: undo and clear are the only ways a
- * mark changes. Close leaves the overlay, as Escape does.
+ * the plate carries no selection controls: undo and clear are the only ways an
+ * annotation changes. Close leaves the overlay, as Escape does.
  *
  * The colours open as a second row of the plate rather than in a layer of
  * their own: the window is the plate, so a popover would be clipped by it.
@@ -147,7 +147,7 @@ export function AnnotateToolbar({
             }
           />
           {/* The head belongs to the arrow and the aim to the counter, so the
-              plate carries whichever the tool in hand has. A live mark cannot
+              plate carries whichever the tool in hand has. A live annotation cannot
               be picked up again, so a counter is aimed before it is dropped
               rather than turned afterwards. */}
           {isCounter ? (

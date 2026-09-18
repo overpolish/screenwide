@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! One live annotation edit. Workspaces own presentation and history; this
-//! transaction owns only the marks changed by a pointer gesture.
+//! transaction owns only the annotations changed by a pointer gesture.
 
 use super::counter::{new_counter, next_counter_value};
 use super::gesture::{
-  drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget, NewMarkKind,
+  drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget, NewAnnotationKind,
 };
 use super::model::new_arrow;
 use super::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle, MAX_ANNOTATIONS};
@@ -29,7 +29,7 @@ impl AnnotationEdit {
     target: AnnotationGestureTarget,
     point: AnnotationPoint,
     defaults: Option<&AnnotationStyle>,
-    kind: NewMarkKind,
+    kind: NewAnnotationKind,
     angle: Option<f64>,
   ) -> Option<Self> {
     let index = match target {
@@ -41,8 +41,8 @@ impl AnnotationEdit {
     if target == AnnotationGestureTarget::New {
       let id = next_annotation_id();
       annotations.push(match kind {
-        NewMarkKind::Arrow => new_arrow(id, point, point, defaults),
-        NewMarkKind::Counter => {
+        NewAnnotationKind::Arrow => new_arrow(id, point, point, defaults),
+        NewAnnotationKind::Counter => {
           new_counter(id, point, next_counter_value(&before), defaults, angle)
         }
       });
@@ -124,7 +124,7 @@ mod tests {
       AnnotationGestureTarget::New,
       point(20.0, 30.0),
       None,
-      NewMarkKind::Arrow,
+      NewAnnotationKind::Arrow,
       None,
     )
     .unwrap();
@@ -136,7 +136,7 @@ mod tests {
   }
 
   #[test]
-  fn completing_or_cancelling_an_existing_drag_only_changes_its_mark() {
+  fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
     let original = vec![
       new_arrow("a".to_owned(), point(0.0, 0.0), point(100.0, 0.0), None),
       new_arrow("b".to_owned(), point(0.0, 50.0), point(100.0, 50.0), None),
@@ -150,7 +150,7 @@ mod tests {
       },
       point(50.0, 0.0),
       None,
-      NewMarkKind::Arrow,
+      NewAnnotationKind::Arrow,
       None,
     )
     .unwrap();
@@ -175,7 +175,7 @@ mod tests {
       },
       point(50.0, 0.0),
       None,
-      NewMarkKind::Arrow,
+      NewAnnotationKind::Arrow,
       None,
     )
     .unwrap();
@@ -204,7 +204,7 @@ mod tests {
         target,
         point(0.0, 0.0),
         None,
-        NewMarkKind::Arrow,
+        NewAnnotationKind::Arrow,
         None
       )
       .is_none());

@@ -8,15 +8,15 @@ import { ToolPanelAnnotation } from "./tool-panels/tool-panel-selection";
 import { EditorKind } from "./types";
 
 /**
- * The mark the preview has in hand, and the edits that dress it, reachable
- * from outside the preview that owns them.
+ * The annotation the preview has in hand, and the edits that dress it,
+ * reachable from outside the preview that owns them.
  *
- * Which mark is chosen is the preview's own business: the native tool
+ * Which annotation is chosen is the preview's own business: the native tool
  * hit-tests it and reports it back, and the tool that did so keeps it. The
- * mark panel arrives by another road entirely - the panel window, through
+ * annotation panel arrives by another road entirely - the panel window, through
  * the editor's bridge - and has to reach the same commit path the drag on the
- * picture uses, so each workspace leaves what it has in hand here for the
- * panel to find. This is the twin of `keyboard-shortcut-channel.ts`.
+ * picture uses, so each workspace leaves what it has in hand here for the panel
+ * to find. This is the twin of `keyboard-shortcut-channel.ts`.
  */
 type PublishedAnnotation = {
   applyAngle: (angle: number) => void;
@@ -41,8 +41,8 @@ const subscribe = (listener: () => void) => {
 };
 
 /**
- * Publish the mark this workspace has in hand for as long as its preview is
- * mounted.
+ * Publish the annotation this workspace has in hand for as long as its preview
+ * is mounted.
  *
  * The selection is compared by value: the preview rebuilds it on every render,
  * and a panel that re-rendered on identity alone would never settle.
@@ -84,15 +84,15 @@ export function usePublishAnnotationSelection(
   }, [serialized, workspace]);
 }
 
-/** The mark this workspace has in hand, or nothing. */
+/** The annotation this workspace has in hand, or nothing. */
 export const useAnnotationSelection = (workspace: EditorKind) =>
   useSyncExternalStore(
     subscribe,
     () => workspaces.get(workspace)?.selection ?? null,
   );
 
-/** Dress the chosen mark. A no-op when the workspace has no preview mounted
- * to ask. */
+/** Dress the chosen annotation. A no-op when the workspace has no preview
+ * mounted to ask. */
 export const applyAnnotationStyle = (
   workspace: EditorKind,
   style: Partial<AnnotationStyle>,
@@ -100,7 +100,7 @@ export const applyAnnotationStyle = (
   workspaces.get(workspace)?.applyStyle(style);
 };
 
-/** Draw the chosen mark in and out over its clip, or leave it standing. A
+/** Draw the chosen annotation in and out over its clip, or leave it standing. A
  * no-op when the workspace has no preview mounted to ask. */
 export const applyAnnotationAnimated = (
   workspace: EditorKind,
@@ -115,7 +115,7 @@ export const applyAnnotationAngle = (workspace: EditorKind, angle: number) => {
   workspaces.get(workspace)?.applyAngle(angle);
 };
 
-/** Turn the chosen mark round. A no-op when the workspace has no preview
+/** Turn the chosen annotation round. A no-op when the workspace has no preview
  * mounted to ask. */
 export const applyAnnotationReverse = (workspace: EditorKind) => {
   workspaces.get(workspace)?.applyReverse();

@@ -8,9 +8,9 @@
 //! the editor can move, retime and delete. Outside a recording the overlay is
 //! purely visual.
 //!
-//! The host windows are transparent surfaces the annotations are drawn on, one per
-//! display. They own pointer and keyboard input for as long as the overlay is
-//! up: there is no pass-through mode, and the shortcut or Escape is the way
+//! The host windows are transparent surfaces the annotations are drawn on, one
+//! per display. They own pointer and keyboard input for as long as the overlay
+//! is up: there is no pass-through mode, and the shortcut or Escape is the way
 //! out.
 
 pub(crate) mod commands;
@@ -70,9 +70,9 @@ fn release_input_ownership(app: &AppHandle) {
   crate::windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
 }
 
-/// Takes the overlay's surfaces down and ends the session, leaving the annotations
-/// alone. A rebuild and a failed start both go through here: a display change
-/// must not cost the user what they have drawn.
+/// Takes the overlay's surfaces down and ends the session, leaving the
+/// annotations alone. A rebuild and a failed start both go through here: a
+/// display change must not cost the user what they have drawn.
 fn abandon(app: &AppHandle) {
   let closed = host::close(app);
   let ended = app.state::<AnnotateState>().cancel();
@@ -82,8 +82,8 @@ fn abandon(app: &AppHandle) {
   }
 }
 
-/// Stops drawing and leaves the annotations on screen, drawn by hosts that take no
-/// input. The way out of these is [`clear`].
+/// Stops drawing and leaves the annotations on screen, drawn by hosts that take
+/// no input. The way out of these is [`clear`].
 fn stop_drawing(app: &AppHandle) {
   let handed_over = host::show_only(app);
   let ended = app.state::<AnnotateState>().show();
@@ -104,8 +104,9 @@ fn take_down(app: &AppHandle) {
   crate::tray::refresh(app);
 }
 
-/// Leaves the overlay. Annotations asked to stay are left on screen and keep their
-/// clips open in a running recording, because they really are still visible.
+/// Leaves the overlay. Annotations asked to stay are left on screen and keep
+/// their clips open in a running recording, because they really are still
+/// visible.
 pub fn dismiss(app: &AppHandle) {
   if settings::keep_annotations_between_sessions() && live_clips::has_annotations() {
     stop_drawing(app);
@@ -127,7 +128,7 @@ pub fn clear(app: &AppHandle) {
 }
 
 /// Switching the feature off leaves nothing behind, whatever the keep setting
-/// says: a annotation cannot outlive the tool that draws it.
+/// says: an annotation cannot outlive the tool that draws it.
 pub(crate) fn disable(app: &AppHandle) {
   take_down(app);
 }
