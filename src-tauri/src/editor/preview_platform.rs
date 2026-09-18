@@ -116,11 +116,13 @@ pub(crate) enum SelectionGestureOperation {
 /// One pointer sample of an annotation tool: the phase, the pane, whether the
 /// gesture makes a new annotation (0) or edits an existing one (1), that
 /// annotation's index and grip, the point in the layer's image-normalised
-/// space, and whether Shift was held - which is what snaps a counter's tail to
-/// the quarter turns.
+/// space, which snapping modifiers were held - bit 0 Shift, which snaps a
+/// counter's tail to the quarter turns, bit 1 Cmd or Ctrl, which snaps the
+/// position itself - and how wide the layer's picture is drawn on screen, in
+/// points, which is what turns a snap's reach into source pixels.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) type AnnotationGestureCallback =
-  Box<dyn FnMut(SelectionGesturePhase, u32, u32, u32, u32, f64, f64, bool) + Send + 'static>;
+  Box<dyn FnMut(SelectionGesturePhase, u32, u32, u32, u32, f64, f64, u32, f64) + Send + 'static>;
 
 /// The hover halo's progress: the arrow the pointer rests on (or -1), how far
 /// through the pulse it is, and how wide the layer's picture is drawn on

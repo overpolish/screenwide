@@ -67,6 +67,70 @@ const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 88);
 pub(crate) const HANDLE_KIND_ARROW: u32 = 0;
 pub(crate) const HANDLE_KIND_COUNTER: u32 = 1;
 
+/// What the snap chrome draws, in the same image-normalised space the grips
+/// use, matching the C `ScreenwideAnnotationSnap`. `flags` says which members
+/// are live; a default value is what puts the chrome away.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct NativeAnnotationSnap {
+  pub(crate) flags: u32,
+  /// Whether each guide came from another annotation rather than the canvas,
+  /// which is what picks the line's colour.
+  pub(crate) guide_x_object: u32,
+  pub(crate) guide_y_object: u32,
+  pub(crate) padding: u32,
+  pub(crate) guide_x: f64,
+  pub(crate) guide_y: f64,
+  pub(crate) anchor_x: f64,
+  pub(crate) anchor_y: f64,
+  pub(crate) box_x: f64,
+  pub(crate) box_y: f64,
+  pub(crate) box_width: f64,
+  pub(crate) box_height: f64,
+}
+
+const _: () = assert!(std::mem::size_of::<NativeAnnotationSnap>() == 80);
+
+/// Which members of [`NativeAnnotationSnap`] are live, matching the C
+/// `ScreenwideAnnotationSnapFlag`.
+pub(crate) const SNAP_FLAG_GUIDE_X: u32 = 1;
+pub(crate) const SNAP_FLAG_GUIDE_Y: u32 = 1 << 1;
+pub(crate) const SNAP_FLAG_ANCHOR: u32 = 1 << 2;
+
+/// One sample's snap as the native chrome needs it. The engine works in source
+/// pixels and the chrome places everything inside the picture on screen, so
+/// every length is normalised over the source here, once, exactly as
+/// [`normalised_point`] does.
+pub(crate) fn annotation_snap(
+  result: &super::snap::SnapResult,
+  source: (u32, u32),
+) -> NativeAnnotationSnap {
+  let width = f64::from(source.0.max(1));
+  let height = f64::from(source.1.max(1));
+  let mut snap = NativeAnnotationSnap::default();
+  if let Some(guide) = result.guide_x {
+    snap.flags |= SNAP_FLAG_GUIDE_X;
+    snap.guide_x = guide.position / width;
+    snap.guide_x_object = u32::from(guide.object);
+  }
+  if let Some(guide) = result.guide_y {
+    snap.flags |= SNAP_FLAG_GUIDE_Y;
+    snap.guide_y = guide.position / height;
+    snap.guide_y_object = u32::from(guide.object);
+  }
+  if let Some(anchor) = result.anchor {
+    snap.flags |= SNAP_FLAG_ANCHOR;
+    let (x, y) = normalised_point(anchor.point, source);
+    snap.anchor_x = x;
+    snap.anchor_y = y;
+    snap.box_x = anchor.bounds.x / width;
+    snap.box_y = anchor.bounds.y / height;
+    snap.box_width = anchor.bounds.width / width;
+    snap.box_height = anchor.bounds.height / height;
+  }
+  snap
+}
+
 /// The stroke's width as a fraction of the image's drawn width. The stroke is
 /// in output pixels and the image is drawn `image_width` of them across, so
 /// the width becomes a share of the picture the native side can place without

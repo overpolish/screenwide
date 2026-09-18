@@ -48,6 +48,64 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
              : nil;
 }
 
+/// The snap chrome: the axis guides a counter's centre landed on, and the
+/// element an arrow's tip took hold of. Placed inside the same picture the
+/// grips are, because that is the space Rust normalises them in.
+SCREENWIDE_PREVIEW_PRIVATE void annotation_add_snap_osc(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
+    ScreenwidePreviewSurface *surface, CGFloat scale) {
+  ScreenwideAnnotationSnap snap = surface.annotationSnap;
+  if (snap.flags == 0) return;
+  NSRect image = annotation_image_frame(surface);
+  if (image.size.width <= 0.0 || image.size.height <= 0.0) return;
+  // The same lines the layer engine's guides are drawn with, in the same two
+  // colours: 4 for one of the canvas's own, 5 for another annotation's.
+  CGFloat half = 0.5 / scale;
+  if ((snap.flags & ScreenwideAnnotationSnapGuideX) != 0) {
+    CGFloat x = screenwide_region_osc_snap(
+        NSMinX(image) + image.size.width * snap.guide_x, scale);
+    screenwide_region_osc_add_quad(
+        vertices, count, size,
+        NSMakeRect(x - half, 0.0, half * 2.0, size.height),
+        snap.guide_x_object != 0 ? 5 : 4);
+  }
+  if ((snap.flags & ScreenwideAnnotationSnapGuideY) != 0) {
+    CGFloat y = screenwide_region_osc_snap(
+        NSMinY(image) + image.size.height * snap.guide_y, scale);
+    screenwide_region_osc_add_quad(
+        vertices, count, size,
+        NSMakeRect(0.0, y - half, size.width, half * 2.0),
+        snap.guide_y_object != 0 ? 5 : 4);
+  }
+  if ((snap.flags & ScreenwideAnnotationSnapAnchor) == 0) return;
+  CGFloat pixel = 1.0 / scale;
+  CGFloat left = screenwide_region_osc_snap(
+      NSMinX(image) + image.size.width * snap.box_x, scale);
+  CGFloat top = screenwide_region_osc_snap(
+      NSMinY(image) + image.size.height * snap.box_y, scale);
+  CGFloat right = screenwide_region_osc_snap(
+      left + image.size.width * snap.box_width, scale);
+  CGFloat bottom = screenwide_region_osc_snap(
+      top + image.size.height * snap.box_height, scale);
+  NSRect outline[4] = {
+      NSMakeRect(left, top, right - left, pixel),
+      NSMakeRect(left, bottom - pixel, right - left, pixel),
+      NSMakeRect(left, top, pixel, bottom - top),
+      NSMakeRect(right - pixel, top, pixel, bottom - top),
+  };
+  for (NSUInteger index = 0; index < 4; index++)
+    screenwide_region_osc_add_quad(vertices, count, size, outline[index], 5);
+  // The point itself wears the grips' own disc, so a snapped tip reads as
+  // something the hand has hold of.
+  CGFloat extent = 4.0 + 2.0 / scale;
+  CGFloat x = round((NSMinX(image) + image.size.width * snap.anchor_x) * scale) / scale;
+  CGFloat y = round((NSMinY(image) + image.size.height * snap.anchor_y) * scale) / scale;
+  screenwide_region_osc_add_texture_quad(
+      vertices, count, size,
+      NSMakeRect(x - extent, y - extent, extent * 2.0, extent * 2.0),
+      NSMakeRect(0.0, 0.0, 1.0, 1.0), 3);
+}
+
 static CGFloat annotation_hover_progress(ScreenwidePreviewSurface *surface) {
   CFTimeInterval elapsed =
       CACurrentMediaTime() - surface.annotationHoverStarted;

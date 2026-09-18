@@ -16,7 +16,7 @@ static const CGFloat kAnnotationHandleHit = 8.0;
 /// quadratic segment, so this is comfortably finer than a fingertip.
 static const NSUInteger kAnnotationShaftSamples = 24;
 
-static const ScreenwidePreviewAnnotation *annotation_items(
+SCREENWIDE_PREVIEW_PRIVATE const ScreenwidePreviewAnnotation *annotation_items(
     ScreenwidePreviewSurface *surface, NSUInteger *count) {
   NSUInteger items = surface.annotations.length / sizeof(ScreenwidePreviewAnnotation);
   *count = MIN(items, ScreenwideMaxAnnotations);
@@ -110,11 +110,14 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
   return -1;
 }
 
-/// Whether this sample is snapped: Shift is read at the moment the sample is
-/// reported rather than latched at the press, so it can be taken and let go
-/// part way through a drag.
+/// Which snapping modifiers this sample was taken with: bit 0 Shift, bit 1
+/// Command. Both are read at the moment the sample is reported rather than
+/// latched at the press, so either can be taken and let go part way through a
+/// drag.
 static uint32_t annotation_snapped(void) {
-  return ([NSEvent modifierFlags] & NSEventModifierFlagShift) != 0 ? 1 : 0;
+  NSEventModifierFlags flags = [NSEvent modifierFlags];
+  return ((flags & NSEventModifierFlagShift) != 0 ? 1u : 0u) |
+         ((flags & NSEventModifierFlagCommand) != 0 ? 2u : 0u);
 }
 
 static void emit_annotation_gesture(ScreenwidePreviewSurface *surface,
@@ -138,6 +141,7 @@ static void emit_annotation_gesture(ScreenwidePreviewSurface *surface,
   surface.annotationGestureCallback(phase, layer,
                                     targetKind, index, handle, x, y,
                                     annotation_snapped(),
+                                    annotation_image_frame(surface).size.width,
                                     surface.annotationGestureContext);
 }
 

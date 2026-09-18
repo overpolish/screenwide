@@ -11,7 +11,7 @@ pub(crate) fn install(
   let event_clips = Arc::clone(&clips);
   let event_app = app.clone();
   surface.set_annotation_gesture_callback(Box::new(
-    move |phase, pane, kind, index, handle, x, y, snap| {
+    move |phase, pane, kind, index, handle, x, y, snap, image_points| {
       let Some(target) = AnnotationGestureTarget::from_raw(kind, index, handle) else {
         return;
       };
@@ -26,7 +26,9 @@ pub(crate) fn install(
           {
             return;
           }
-          if let Some(commit) = manager.annotation_gesture(phase, pane, target, x, y, snap) {
+          if let Some(commit) =
+            manager.annotation_gesture(phase, pane, target, x, y, snap, image_points)
+          {
             let _ = event_app.emit("editor://recording-annotations", commit);
           }
         }
@@ -47,7 +49,9 @@ pub(crate) fn install(
               {
                 return;
               }
-              if let Some(commit) = manager.annotation_gesture(phase, pane, target, x, y, snap) {
+              if let Some(commit) =
+                manager.annotation_gesture(phase, pane, target, x, y, snap, image_points)
+              {
                 let _ = deferred.emit("editor://recording-annotations", commit);
               }
             }

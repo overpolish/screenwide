@@ -81,6 +81,7 @@ fn dragging_the_middle_handle_bends_the_curve_through_it() {
     AnnotationPoint { x: 50.0, y: 50.0 },
     &from,
     false,
+    None,
   );
   let AnnotationShape::Arrow {
     start,
@@ -109,6 +110,7 @@ fn the_middle_handle_stops_at_the_hairpin() {
     AnnotationPoint { x: 50.0, y: 400.0 },
     &from,
     false,
+    None,
   );
   // The chord is 100 long, so the midpoint stops 60 off it.
   assert_eq!(
@@ -131,6 +133,7 @@ fn the_middle_handle_moves_only_across_the_chord() {
     AnnotationPoint { x: -500.0, y: 30.0 },
     &from,
     false,
+    None,
   );
   assert_eq!(
     curve_midpoint_of(&annotation),
@@ -151,6 +154,7 @@ fn dragging_a_tip_keeps_the_bend_against_the_chord() {
     AnnotationPoint { x: 60.0, y: 40.0 },
     &bent,
     false,
+    None,
   );
   let before = bend(&annotation);
   let from = origin(&annotation, 100.0, 0.0);
@@ -160,6 +164,7 @@ fn dragging_a_tip_keeps_the_bend_against_the_chord() {
     AnnotationPoint { x: 10.0, y: 220.0 },
     &from,
     false,
+    None,
   );
   let AnnotationShape::Arrow { end, .. } = annotation.shape else {
     unreachable!()
@@ -182,6 +187,7 @@ fn a_chord_with_no_direction_is_drawn_straight() {
     AnnotationPoint { x: 0.2, y: 0.0 },
     &from,
     false,
+    None,
   );
   let AnnotationShape::Arrow {
     start,
@@ -224,6 +230,7 @@ fn no_sequence_of_drags_can_fold_the_curve() {
       AnnotationPoint { x, y },
       &from,
       false,
+      None,
     );
     let (along, across) = bend(&annotation);
     assert!((along - 0.5).abs() < 1e-9, "{along} {handle:?}");
@@ -242,6 +249,7 @@ fn a_press_on_the_shaft_that_never_travels_changes_nothing() {
     AnnotationPoint { x: 50.0, y: 0.0 },
     &from,
     false,
+    None,
   );
   assert_eq!(annotation, before);
 }
@@ -265,6 +273,7 @@ fn dragging_the_shaft_moves_the_whole_arrow() {
     AnnotationPoint { x: 70.0, y: -5.0 },
     &from,
     false,
+    None,
   );
   let AnnotationShape::Arrow {
     start,
@@ -289,7 +298,14 @@ fn a_shaft_drag_is_measured_from_where_the_press_landed() {
     AnnotationPoint { x: 90.0, y: 30.0 },
     AnnotationPoint { x: 60.0, y: 10.0 },
   ] {
-    drag_handle(&mut annotation, AnnotationHandle::Body, point, &from, false);
+    drag_handle(
+      &mut annotation,
+      AnnotationHandle::Body,
+      point,
+      &from,
+      false,
+      None,
+    );
   }
   let AnnotationShape::Arrow { start, end, .. } = annotation.shape else {
     unreachable!()
@@ -344,6 +360,7 @@ fn a_counter_tail_drag_only_turns_it() {
     AnnotationPoint { x: 100.0, y: 40.0 },
     &from,
     false,
+    None,
   );
   let AnnotationShape::Counter {
     center,
@@ -376,7 +393,14 @@ fn a_counter_body_drag_carries_the_disc_by_the_travel() {
     AnnotationPoint { x: 200.0, y: 200.0 },
     AnnotationPoint { x: 130.0, y: 110.0 },
   ] {
-    drag_handle(&mut counter, AnnotationHandle::Body, point, &from, false);
+    drag_handle(
+      &mut counter,
+      AnnotationHandle::Body,
+      point,
+      &from,
+      false,
+      None,
+    );
   }
   let AnnotationShape::Counter { center, angle, .. } = counter.shape else {
     unreachable!()

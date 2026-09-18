@@ -78,30 +78,46 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     .selection
     .filter(|selection| selection.crop_mode != 0 && selection.radius_disabled == 0)
     .map_or(0.0, |selection| selection.radius_percent);
-  let guides = display.and_then(|_| {
-    let selection = state.selection?;
-    let pane = state.panes.get(selection.pane_index as usize)?.as_ref()?;
-    let pane = state.workspace_transform.apply(
-      state.viewport,
-      pane_canvas_rect(pane, state.frame_resize.is_some()),
-    );
-    let x = state
-      .selection_snap_guide_x
-      .map(|guide| window::pixel_center((pane.x + guide.guide * pane.width) * scale));
-    let y = state
-      .selection_snap_guide_y
-      .map(|guide| window::pixel_center((pane.y + guide.guide * pane.height) * scale));
-    Some((
-      x,
-      y,
-      state
-        .selection_snap_guide_x
-        .is_some_and(|guide| guide.object),
-      state
-        .selection_snap_guide_y
-        .is_some_and(|guide| guide.object),
-    ))
+  // The arrow chrome, when it owns the screen: its grips, which may be none
+  // at all with the arrow tool in hand and nothing chosen yet, plus the disc
+  // over a snapped tip, which is drawn exactly like one of them. `None`
+  // leaves the layer's own chrome standing.
+  let snap = annotation::snap_chrome(state, scale);
+  let annotation_handles = annotation::owns_chrome(state).then(|| {
+    let mut grips = annotation::selected_grips(state, scale);
+    grips.extend(snap.anchor);
+    grips
   });
+  // An annotation gesture owns the guides for as long as it owns the chrome:
+  // its candidates are the source image's own lines, not the canvas's.
+  let guides = if annotation_handles.is_some() {
+    snap.guides
+  } else {
+    display.and_then(|_| {
+      let selection = state.selection?;
+      let pane = state.panes.get(selection.pane_index as usize)?.as_ref()?;
+      let pane = state.workspace_transform.apply(
+        state.viewport,
+        pane_canvas_rect(pane, state.frame_resize.is_some()),
+      );
+      let x = state
+        .selection_snap_guide_x
+        .map(|guide| window::pixel_center((pane.x + guide.guide * pane.width) * scale));
+      let y = state
+        .selection_snap_guide_y
+        .map(|guide| window::pixel_center((pane.y + guide.guide * pane.height) * scale));
+      Some((
+        x,
+        y,
+        state
+          .selection_snap_guide_x
+          .is_some_and(|guide| guide.object),
+        state
+          .selection_snap_guide_y
+          .is_some_and(|guide| guide.object),
+      ))
+    })
+  };
   let luminance =
     state.backdrop[0] * 0.2126 + state.backdrop[1] * 0.7152 + state.backdrop[2] * 0.0722;
   let magnifier_box = state
@@ -118,11 +134,6 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
         height * scale as f32,
       ]
     });
-  // The arrow chrome, when it owns the screen: its grips, which may be none
-  // at all with the arrow tool in hand and nothing chosen yet. `None` leaves
-  // the layer's own chrome standing.
-  let annotation_handles =
-    annotation::owns_chrome(state).then(|| annotation::selected_grips(state, scale));
   if let Ok(mut overlay) = inner.gpu.selection.lock() {
     let _ = overlay.draw(
       &inner.gpu.device,
@@ -138,6 +149,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       guides,
       magnifier_box,
       annotation_handles.as_deref(),
+      snap.bounds,
       scale,
       luminance > 0.5,
     );

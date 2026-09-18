@@ -29,17 +29,23 @@ pub(super) struct Sample {
   handle: u32,
   x: f64,
   y: f64,
-  /// Whether Shift was held when the sample was taken, which is what holds a
-  /// counter's tail to the quarter turns.
-  snap: bool,
+  /// Which snapping modifiers were held when the sample was taken: bit 0
+  /// Shift, which holds a counter's tail to the quarter turns, and bit 1
+  /// Ctrl, which snaps the position itself.
+  snap: u32,
+  /// How wide the layer's picture is drawn on screen, in display points,
+  /// which is what turns a snap's reach into source pixels.
+  image_points: f64,
 }
 
-/// Whether Shift is down. Read at the moment a sample is resolved rather than
-/// latched at the press, so it can be taken and let go part way through a
-/// drag, exactly as the macOS view reads `NSEvent.modifierFlags`.
-fn snapped() -> bool {
-  use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_SHIFT};
-  unsafe { GetKeyState(i32::from(VK_SHIFT.0)) < 0 }
+/// Which snapping modifiers are down. Read at the moment a sample is resolved
+/// rather than latched at the press, so either can be taken and let go part
+/// way through a drag, exactly as the macOS view reads
+/// `NSEvent.modifierFlags`. Ctrl here is Command there.
+fn snapped() -> u32 {
+  use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_SHIFT};
+  let down = |key: u16| unsafe { GetKeyState(i32::from(key)) < 0 };
+  u32::from(down(VK_SHIFT.0)) | (u32::from(down(VK_CONTROL.0)) << 1)
 }
 
 /// Resolves a sample against the published chrome. `None` when the point has
@@ -74,6 +80,7 @@ fn resolve(
     x,
     y,
     snap: snapped(),
+    image_points: image_extent(state).unwrap_or_default(),
   })
 }
 
@@ -99,6 +106,7 @@ fn report(inner: &SurfaceInner, samples: &[Sample]) {
       sample.x,
       sample.y,
       sample.snap,
+      sample.image_points,
     );
   }
 }

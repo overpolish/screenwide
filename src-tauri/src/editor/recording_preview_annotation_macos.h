@@ -73,11 +73,34 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationTarget) {
   ScreenwideAnnotationTargetNone = 2,
   ScreenwideAnnotationTargetSelect = 3,
 };
-/// `snap` is whether Shift was held for this sample, which is what holds a
-/// counter's tail to the quarter turns.
+/// What the snap chrome draws, normalised over the source image exactly as
+/// the grips are, matching Rust's `NativeAnnotationSnap`. `flags` says which
+/// members are live; a zeroed value draws nothing.
+typedef struct {
+  uint32_t flags;
+  uint32_t guide_x_object, guide_y_object;
+  uint32_t padding;
+  double guide_x, guide_y;
+  double anchor_x, anchor_y;
+  double box_x, box_y, box_width, box_height;
+} ScreenwideAnnotationSnap;
+_Static_assert(sizeof(ScreenwideAnnotationSnap) == 80,
+               "Rust/C annotation snap layout mismatch");
+/// Which members of `ScreenwideAnnotationSnap` are live.
+typedef NS_ENUM(uint32_t, ScreenwideAnnotationSnapFlag) {
+  ScreenwideAnnotationSnapGuideX = 1 << 0,
+  ScreenwideAnnotationSnapGuideY = 1 << 1,
+  ScreenwideAnnotationSnapAnchor = 1 << 2,
+};
+/// `snap` is which snapping modifiers were held for this sample: bit 0 Shift,
+/// which holds a counter's tail to the quarter turns, and bit 1 Command,
+/// which snaps the position itself to the candidates around it. `image_points`
+/// is how wide the layer's picture is drawn on screen, which is what turns
+/// the snap's reach in screen points into the source pixels Rust works in.
 typedef void (*screenwide_preview_annotation_gesture_callback)(
     uint32_t phase, uint32_t pane_index, uint32_t target_kind, uint32_t index,
-    uint32_t handle, double x, double y, uint32_t snap, void *context);
+    uint32_t handle, double x, double y, uint32_t snap, double image_points,
+    void *context);
 /// The hover halo's progress. `index` is the arrow the pointer is over, or -1
 /// for none; `progress` runs 0..1 over the pulse; `image_points` is how wide
 /// the layer's picture is drawn on screen, which is all Rust needs to turn

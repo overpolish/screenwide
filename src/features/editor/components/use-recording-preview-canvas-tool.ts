@@ -7,6 +7,7 @@ import { RecordingTrackId, RecordingVideoTrackId } from "../types";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { useRecordingPreviewSelection } from "./use-recording-preview-selection";
+import { toolDisagreesWithAnnotation } from "./use-tool-follows-annotation";
 
 /** Picking a canvas tool up and putting it down, and what each change clears
  * on its way in. */
@@ -18,6 +19,7 @@ export function useRecordingPreviewCanvasTool({
   hasVisiblePanes,
   keyboardTimeline,
   onSelectedTrackChange,
+  selectedAnnotationKind,
   setCanvasTool,
 }: {
   activeVideoTrack: RecordingVideoTrackId | null;
@@ -28,14 +30,21 @@ export function useRecordingPreviewCanvasTool({
   keyboardTimeline: ReturnType<
     typeof useRecordingPreviewSelection
   >["keyboardTimeline"];
+  /** The shape of the annotation in hand, so a tool that draws the other one
+   * knows to let it go. */
+  selectedAnnotationKind: "arrow" | "counter" | null;
   setCanvasTool: (tool: RecordingCanvasTool) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
 }) {
   const canvasToolRef = useRef(canvasTool);
   canvasToolRef.current = canvasTool;
+  const selectedKindRef = useRef(selectedAnnotationKind);
+  selectedKindRef.current = selectedAnnotationKind;
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
       if (next === "arrow" || next === "counter") {
+        if (toolDisagreesWithAnnotation(next, selectedKindRef.current))
+          clearAnnotationRef.current();
         keyboardTimeline.selection.onClear();
         onSelectedTrackChange?.(
           bakeCamera ? "primary" : (activeVideoTrack ?? "primary"),

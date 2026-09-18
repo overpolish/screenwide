@@ -9,7 +9,11 @@ use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{
   annotation_mode, AnnotationGestureTarget, NewAnnotationKind,
 };
-use crate::editor::annotations::handles::{annotation_handles, source_point};
+use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
+use crate::editor::annotations::snap::{
+  detect_anchors, request_anchors, threshold_source_px, AnchorBoxes, AnchorCache, SnapField,
+  SnapModifiers, SnapRequest, SnapResult,
+};
 use crate::editor::annotations::timing::{
   active_annotations, validate_clips, AnnotationTrack, RecordingAnnotationClip,
 };
@@ -30,6 +34,10 @@ pub(super) struct AnnotationState {
   animated: Option<bool>,
   counter_angle: Option<f64>,
   gesture: Option<Gesture>,
+  /// The latest frame's detected UI elements, for an arrow's tip to land on.
+  /// Behind its own lock because the detection that fills it runs on a
+  /// blocking thread and must never wait for the manager.
+  anchors: Arc<AnchorCache>,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

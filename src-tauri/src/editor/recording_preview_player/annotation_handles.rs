@@ -42,6 +42,56 @@ impl PreviewPlayerManager {
     false
   }
 }
+
+impl PreviewPlayerManager {
+  /// The elements detected in the frame under the pointer, for an arrow's tip
+  /// to land on. Only the screen pane of a screen recording has any: a camera
+  /// or a window of pure video has no UI to aim at, and a counter never uses
+  /// them.
+  ///
+  /// The first call for a frame starts the detection and answers `None`; the
+  /// pointer is never held for it. Once it lands, every later sample of the
+  /// same drag - and every later drag over the same frame - reads the cached
+  /// result.
+  pub(super) fn annotation_anchors(
+    &self,
+    pane: u32,
+    position_ms: u64,
+    source: (u32, u32),
+  ) -> Option<Arc<AnchorBoxes>> {
+    let sources = self.sources.as_ref()?;
+    if pane != 0 || sources.primary_kind != PrimaryRecordingKind::Screen {
+      return None;
+    }
+    let key = (self.artifact_id?, pane, position_ms);
+    if let Some(anchors) = self.annotation.anchors.anchors(key) {
+      return anchors.matches(source).then_some(anchors);
+    }
+    let path = sources.screen_path.clone();
+    let duration_ms = sources.duration_ms;
+    request_anchors(&self.annotation.anchors, key, move || {
+      match platform::source_frame_image(&path, position_ms, duration_ms) {
+        Ok(frame) => detect_anchors(&frame.rgba, frame.width, frame.height),
+        // A frame that cannot be decoded has no elements, which is cached like
+        // any other answer so the decode is not attempted again per sample.
+        Err(_) => AnchorBoxes::new(0, 0, Vec::new()),
+      }
+    });
+    None
+  }
+
+  /// Publishes what the sample on screen snapped to. It goes out before the
+  /// grips, because on Windows publishing those is what redraws the chrome.
+  pub(super) fn publish_annotation_snap(&self, source: (u32, u32), result: &SnapResult) {
+    if let Some(surface) = self
+      .sources
+      .as_ref()
+      .and_then(|sources| sources.preview_surface.as_ref())
+    {
+      surface.set_annotation_snap_guides(annotation_snap(result, source));
+    }
+  }
+}
 impl PreviewPlayerManager {
   pub(super) fn annotation_targets(&self) -> Vec<(u32, Annotation)> {
     let Some(sources) = &self.sources else {

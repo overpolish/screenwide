@@ -105,6 +105,15 @@ BOOL annotation_mouse_up(ScreenwidePreviewInteractionView *view, NSPoint point);
 void annotation_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
                         NSSize size, ScreenwidePreviewSurface *surface,
                         CGFloat scale);
+/// The snap chrome for the sample on screen: the axis guides a counter landed
+/// on, and the element an arrow's tip took. Nothing at all when the last
+/// sample snapped to nothing.
+void annotation_add_snap_osc(ScreenwideRegionOscVertex *vertices,
+                             NSUInteger *count, NSSize size,
+                             ScreenwidePreviewSurface *surface, CGFloat scale);
+/// Every published annotation, capped at what one layer can carry, or NULL.
+const ScreenwidePreviewAnnotation *annotation_items(
+    ScreenwidePreviewSurface *surface, NSUInteger *count);
 /// What the pointer does over the picture right now, or `None` when no tool
 /// is in hand or the surface cannot place an annotation.
 ScreenwideAnnotationMode annotation_active_mode(

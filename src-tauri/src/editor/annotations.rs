@@ -15,6 +15,8 @@ pub(crate) mod bend;
 pub(crate) mod counter;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod edit;
+#[cfg(test)]
+mod edit_tests;
 /// Draw-ready arrow geometry. The Metal compositor prepares its arrows
 /// through `geometry.h`; the D3D11 one has no C to call into, so it prepares
 /// them here against the same arithmetic.
@@ -26,6 +28,9 @@ pub(crate) mod gesture;
 mod gesture_tests;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod handles;
+/// Where a gesture's positions land while the positional modifier is held.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) mod snap;
 
 /// The native retained scene, export and the live overlay accept the same
 /// number of annotations.

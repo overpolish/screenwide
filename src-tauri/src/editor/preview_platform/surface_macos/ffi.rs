@@ -3,7 +3,7 @@
 
 use super::super::PreviewSelection;
 use super::native_types::{NativeWorkspaceLayer, NativeWorkspacePaneRect};
-use crate::editor::annotations::handles::NativeAnnotationHandles;
+use crate::editor::annotations::handles::{NativeAnnotationHandles, NativeAnnotationSnap};
 use crate::editor::cursor_effects::NativeGpuArtwork;
 use crate::screenshots::{NativeCanvas, StillOverlay};
 
@@ -177,10 +177,14 @@ unsafe extern "C" {
     callback: Option<unsafe extern "C" fn(i32, f64, f64, *mut std::ffi::c_void)>,
     context: *mut std::ffi::c_void,
   );
+  pub(super) fn screenwide_preview_surface_set_annotation_snap(
+    handle: *mut std::ffi::c_void,
+    snap: *const NativeAnnotationSnap,
+  );
   pub(super) fn screenwide_preview_surface_set_annotation_gesture_callback(
     handle: *mut std::ffi::c_void,
     callback: Option<
-      unsafe extern "C" fn(u32, u32, u32, u32, u32, f64, f64, u32, *mut std::ffi::c_void),
+      unsafe extern "C" fn(u32, u32, u32, u32, u32, f64, f64, u32, f64, *mut std::ffi::c_void),
     >,
     context: *mut std::ffi::c_void,
   );

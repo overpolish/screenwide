@@ -166,6 +166,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
       hasVisiblePanes,
       keyboardTimeline: selection.keyboardTimeline,
       onSelectedTrackChange,
+      selectedAnnotationKind: annotations.selectedKind,
       setCanvasTool,
     });
   // Both drawing tools pick up either shape, so the tool follows the annotation

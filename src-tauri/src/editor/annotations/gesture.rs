@@ -9,6 +9,7 @@
 
 use super::bend::{arrow_bend, clamp_bend, control_for_bend, control_through_midpoint, ArrowBend};
 use super::counter::counter_tail_angle;
+use super::snap::{SnapRequest, SnapResult};
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
 
 /// Which grip of an annotation the pointer took hold of. An arrow has three
@@ -165,48 +166,78 @@ pub(crate) fn next_annotation_id() -> String {
 
 /// Move one grip of an annotation to `point`, in source pixels. `origin` is
 /// where the drag began, which is what a whole-annotation move measures its
-/// travel against, and `snap` is whether Shift was held - which holds a
+/// travel against, and `shift` is whether Shift was held - which holds a
 /// counter's tail to the quarter turns.
+///
+/// `snap` is the positional candidates this sample may land on, absent when
+/// the positional modifier is not held. A counter's centre takes an axis
+/// guide and an arrow's tip takes an element anchor; neither shape ever sees
+/// the other's candidates, and the bend and the shaft snap to nothing at all.
+/// What it landed on is reported back for the chrome to draw.
 pub(crate) fn drag_handle(
   annotation: &mut Annotation,
   handle: AnnotationHandle,
   point: AnnotationPoint,
   origin: &AnnotationDragOrigin,
-  snap: bool,
-) {
+  shift: bool,
+  snap: Option<SnapRequest<'_>>,
+) -> SnapResult {
+  let mut result = SnapResult::default();
   match &mut annotation.shape {
     AnnotationShape::Arrow {
       start,
       control,
       end,
-    } => drag_arrow_handle(start, control, end, handle, point, origin),
+    } => drag_arrow_handle(
+      start,
+      control,
+      end,
+      handle,
+      point,
+      origin,
+      snap,
+      &mut result,
+    ),
     AnnotationShape::Counter { center, angle, .. } => {
       match handle {
         // The tail turns around the disc: the drag sets its direction and
-        // nothing else, so a counter cannot be stretched out of shape.
-        AnnotationHandle::Tail => *angle = counter_tail_angle(*center, point, *angle, snap),
+        // nothing else, so a counter cannot be stretched out of shape, and
+        // there is no position in it to snap.
+        AnnotationHandle::Tail => *angle = counter_tail_angle(*center, point, *angle, shift),
         // Everything else carries the whole counter, the disc included: a
         // grip an arrow has and a counter does not is a move rather than
         // nothing at all.
         _ => {
           let AnnotationShape::Counter { center: from, .. } = origin.shape else {
-            return;
+            return result;
           };
-          *center = AnnotationPoint {
+          let moved = AnnotationPoint {
             x: from.x + point.x - origin.point.x,
             y: from.y + point.y - origin.point.y,
           };
+          // The centre the drag arrives at is what snaps, not the pointer:
+          // the grip may be anywhere on the disc.
+          *center = match snap {
+            Some(request) => {
+              let (snapped, axes) = request.axes(moved);
+              result = axes;
+              snapped
+            }
+            None => moved,
+          };
         }
       }
-      return;
+      return result;
     }
   }
   // Every edit leaves an arrow that can be drawn: the middle handle can be
   // dragged past a tip, and a document written before the limit existed is
   // repaired the first time its arrow is touched.
   clamp_bend(annotation);
+  result
 }
 
+#[allow(clippy::too_many_arguments)]
 fn drag_arrow_handle(
   start: &mut AnnotationPoint,
   control: &mut AnnotationPoint,
@@ -214,16 +245,21 @@ fn drag_arrow_handle(
   handle: AnnotationHandle,
   point: AnnotationPoint,
   origin: &AnnotationDragOrigin,
+  snap: Option<SnapRequest<'_>>,
+  result: &mut SnapResult,
 ) {
   match handle {
     // A tip takes the bend with it: the curve is re-hung from the chord the
     // drag leaves behind, holding the share of it the arrow was bent by, so
-    // it rotates and scales with the shaft and can never be stranded.
+    // it rotates and scales with the shaft and can never be stranded. The tip
+    // is what an arrow aims with, so it is the only part of one that snaps,
+    // and the bend is re-hung from wherever it lands.
     AnnotationHandle::Start | AnnotationHandle::End => {
+      let tip = result.tip(point, snap);
       if handle == AnnotationHandle::Start {
-        *start = point;
+        *start = tip;
       } else {
-        *end = point;
+        *end = tip;
       }
       *control = control_for_bend(*start, *end, origin.bend);
     }

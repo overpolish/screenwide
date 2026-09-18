@@ -34,6 +34,7 @@ import { ScreenshotTool, useScreenshotTools } from "./screenshot-tools";
 import { ScrubPreview } from "./scrub-preview";
 import { useScreenshotAnnotations } from "./use-screenshot-annotations";
 import { useScreenshotRecenter } from "./use-screenshot-recenter";
+import { useScreenshotTool } from "./use-screenshot-tool";
 import { useToolFollowsAnnotation } from "./use-tool-follows-annotation";
 
 /** The toolbar's own name for a tool, in the registry's vocabulary. */
@@ -85,16 +86,12 @@ export function ScreenshotSection({
     screenshotToolId(tool),
     annotations.hasSelection,
   );
-  const toolRef = useRef(tool);
-  toolRef.current = tool;
-  const setTool = (
-    next: ScreenshotTool | ((current: ScreenshotTool) => ScreenshotTool),
-  ) => {
-    const resolved = typeof next === "function" ? next(toolRef.current) : next;
-    if (resolved !== "arrow" && resolved !== "counter" && resolved !== "select")
-      annotations.clearSelection();
-    setActiveTool(resolved);
-  };
+  const setTool = useScreenshotTool({
+    clearSelection: annotations.clearSelection,
+    selectedKind: annotations.selectedKind,
+    setActiveTool,
+    tool,
+  });
   // Both drawing tools pick up either shape, so the tool follows the annotation
   // that was chosen with it: the panel and the next press never disagree.
   useToolFollowsAnnotation(annotations.selectedKind, tool, setTool);

@@ -252,6 +252,9 @@ typedef struct {
 @property(nonatomic, strong) NSMutableData *annotations;
 @property(nonatomic) NSInteger annotationSelected;
 @property(nonatomic) ScreenwideAnnotationMode annotationMode;
+/// What the last gesture sample snapped to, for the chrome to draw. Zeroed
+/// whenever a sample snaps to nothing, and when the gesture ends.
+@property(nonatomic) ScreenwideAnnotationSnap annotationSnap;
 @property(nonatomic) screenwide_preview_annotation_gesture_callback annotationGestureCallback;
 @property(nonatomic) void *annotationGestureContext;
 /// The arrow the pointer is resting on, its pulse, and the revision that

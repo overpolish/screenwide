@@ -23,6 +23,9 @@ impl SelectionOverlay {
     // hand and nothing chosen. The layer's own chrome stands down for as long
     // as it does, matching `annotation_owns_chrome`; `None` leaves it up.
     annotation_handles: Option<&[[f32; 2]]>,
+    // The element an arrow's tip has snapped to, outlined a device pixel
+    // wide so the anchor it took reads as part of that element.
+    annotation_bounds: Option<[f32; 4]>,
     scale: f64,
     light: bool,
   ) -> Result<(), String> {
@@ -56,6 +59,31 @@ impl SelectionOverlay {
     // The arrow chrome draws only its own grips: the layer's selection and
     // crop chrome stand down for as long as it has the pointer.
     if let Some(annotation_handles) = annotation_handles {
+      // The element first: it is the context for the anchor that landed on
+      // it, so the disc sits over its outline rather than under it. The
+      // object colour is the one the guides use too.
+      if let Some(bounds) = annotation_bounds.filter(|rect| rect[2] > 0.0 && rect[3] > 0.0) {
+        let rect = logical_rect(bounds, scale);
+        let pixel = 1.0 / scale;
+        for edge in [
+          Rect::from_xywh(rect.origin.x, rect.origin.y, rect.size.width, pixel),
+          Rect::from_xywh(
+            rect.origin.x,
+            rect.origin.y + rect.size.height - pixel,
+            rect.size.width,
+            pixel,
+          ),
+          Rect::from_xywh(rect.origin.x, rect.origin.y, pixel, rect.size.height),
+          Rect::from_xywh(
+            rect.origin.x + rect.size.width - pixel,
+            rect.origin.y,
+            pixel,
+            rect.size.height,
+          ),
+        ] {
+          osc_gpu::add_pixel_aligned_quad(&mut vertices, view, edge, scale, 5);
+        }
+      }
       let points = annotation_handles
         .iter()
         .map(|point| Point {

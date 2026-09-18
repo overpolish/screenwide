@@ -18,6 +18,11 @@ pub(super) struct PreviewManager {
   /// mid-drag cannot replace the working copy the gesture is drawing into.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_gesture: Option<AnnotationGestureOverride>,
+  /// The latest pane's detected UI elements, for an arrow's tip to land on.
+  /// Behind its own lock because the detection that fills it runs on a
+  /// blocking thread and must never wait for the manager.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  pub(super) annotation_anchor_cache: Arc<crate::editor::annotations::snap::AnchorCache>,
   /// The style the next fresh arrow is drawn in: whatever the editor's last
   /// annotation edit settled on. `None` until it has settled on anything, in
   /// which case the arrow tool's own first dress stands.
@@ -62,6 +67,7 @@ impl PreviewManager {
     }
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
+      self.annotation_anchor_cache.clear();
       self.annotation_defaults = None;
       self.annotation_counter_angle = None;
       self.annotation_gesture = None;

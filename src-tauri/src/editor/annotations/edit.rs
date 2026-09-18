@@ -9,6 +9,7 @@ use super::gesture::{
   drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget, NewAnnotationKind,
 };
 use super::model::new_arrow;
+use super::snap::{SnapModifiers, SnapRequest, SnapResult};
 use super::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle, MAX_ANNOTATIONS};
 
 pub(crate) struct AnnotationEdit {
@@ -63,152 +64,72 @@ impl AnnotationEdit {
 
   /// Samples are applied against the original shape, so returning the pointer
   /// to its starting point also returns the annotation there without drift.
-  /// `snap` is whether this sample was taken with Shift held.
-  pub(crate) fn update(&self, annotations: &mut [Annotation], point: AnnotationPoint, snap: bool) {
+  ///
+  /// `modifiers` is what was held for this sample and `field` the candidates
+  /// the gesture began with. This is the one place that decides whether a
+  /// sample snaps at all: with the positional modifier let go, or with no
+  /// usable reach to convert, the candidates are simply not offered.
+  pub(crate) fn update(
+    &self,
+    annotations: &mut [Annotation],
+    point: AnnotationPoint,
+    modifiers: SnapModifiers,
+    field: Option<SnapRequest<'_>>,
+  ) -> SnapResult {
     let Some(annotation) = annotations
       .get_mut(self.index)
       .filter(|item| item.id == self.id)
     else {
-      return;
+      return SnapResult::default();
     };
+    let snap = field.filter(|request| {
+      modifiers.position && request.threshold.is_finite() && request.threshold > 0.0
+    });
     match self.target {
       // A fresh arrow is drawn out from where the press landed; a fresh
-      // counter was dropped whole there, so the same drag carries it.
+      // counter was dropped whole there, so the same drag carries it. Both
+      // snap the way the same grip does on an annotation already placed.
       AnnotationGestureTarget::New => match &mut annotation.shape {
         AnnotationShape::Arrow {
           start,
           control,
           end,
         } => {
-          *end = point;
+          let mut result = SnapResult::default();
+          let tip = result.tip(point, snap);
+          *end = tip;
           *control = AnnotationPoint {
-            x: (start.x + point.x) / 2.0,
-            y: (start.y + point.y) / 2.0,
+            x: (start.x + tip.x) / 2.0,
+            y: (start.y + tip.y) / 2.0,
           };
+          result
         }
-        AnnotationShape::Counter { center, .. } => *center = point,
+        AnnotationShape::Counter { center, .. } => match snap {
+          Some(request) => {
+            let (snapped, result) = request.axes(point);
+            *center = snapped;
+            result
+          }
+          None => {
+            *center = point;
+            SnapResult::default()
+          }
+        },
       },
-      AnnotationGestureTarget::Existing { handle, .. } => {
-        drag_handle(annotation, handle, point, &self.origin, snap)
-      }
-      _ => {}
+      AnnotationGestureTarget::Existing { handle, .. } => drag_handle(
+        annotation,
+        handle,
+        point,
+        &self.origin,
+        modifiers.shift,
+        snap,
+      ),
+      _ => SnapResult::default(),
     }
   }
 
   /// Drop an edit to accept the working list, or restore it on Escape.
   pub(crate) fn cancel(self, annotations: &mut Vec<Annotation>) {
     *annotations = self.before;
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::editor::annotations::gesture::AnnotationHandle;
-
-  fn point(x: f64, y: f64) -> AnnotationPoint {
-    AnnotationPoint { x, y }
-  }
-
-  #[test]
-  fn cancelling_a_new_arrow_restores_the_original_list() {
-    let original = vec![new_arrow(
-      "existing".to_owned(),
-      point(0.0, 0.0),
-      point(100.0, 0.0),
-      None,
-    )];
-    let mut annotations = original.clone();
-    let edit = AnnotationEdit::begin(
-      &mut annotations,
-      AnnotationGestureTarget::New,
-      point(20.0, 30.0),
-      None,
-      NewAnnotationKind::Arrow,
-      None,
-    )
-    .unwrap();
-    edit.update(&mut annotations, point(80.0, 60.0), false);
-    assert_eq!(annotations.len(), 2);
-    assert_eq!(annotations[0], original[0]);
-    edit.cancel(&mut annotations);
-    assert_eq!(annotations, original);
-  }
-
-  #[test]
-  fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
-    let original = vec![
-      new_arrow("a".to_owned(), point(0.0, 0.0), point(100.0, 0.0), None),
-      new_arrow("b".to_owned(), point(0.0, 50.0), point(100.0, 50.0), None),
-    ];
-    let mut annotations = original.clone();
-    let edit = AnnotationEdit::begin(
-      &mut annotations,
-      AnnotationGestureTarget::Existing {
-        index: 0,
-        handle: AnnotationHandle::Body,
-      },
-      point(50.0, 0.0),
-      None,
-      NewAnnotationKind::Arrow,
-      None,
-    )
-    .unwrap();
-    edit.update(&mut annotations, point(80.0, 20.0), false);
-    edit.update(&mut annotations, point(60.0, 10.0), false);
-    assert_eq!(annotations[1], original[1]);
-    assert_eq!(
-      annotations[0].shape,
-      AnnotationShape::Arrow {
-        start: point(10.0, 10.0),
-        control: point(60.0, 10.0),
-        end: point(110.0, 10.0)
-      }
-    );
-    edit.cancel(&mut annotations);
-    assert_eq!(annotations, original);
-    let edit = AnnotationEdit::begin(
-      &mut annotations,
-      AnnotationGestureTarget::Existing {
-        index: 0,
-        handle: AnnotationHandle::Body,
-      },
-      point(50.0, 0.0),
-      None,
-      NewAnnotationKind::Arrow,
-      None,
-    )
-    .unwrap();
-    edit.update(&mut annotations, point(60.0, 10.0), false);
-    drop(edit);
-    assert_ne!(annotations[0], original[0]);
-    assert_eq!(annotations[1], original[1]);
-  }
-
-  #[test]
-  fn selection_and_capacity_do_not_open_an_edit() {
-    let mut annotations =
-      vec![new_arrow("a".to_owned(), point(0.0, 0.0), point(100.0, 0.0), None); MAX_ANNOTATIONS];
-    let before = annotations.clone();
-    for target in [
-      AnnotationGestureTarget::Select { index: 0 },
-      AnnotationGestureTarget::None,
-      AnnotationGestureTarget::New,
-      AnnotationGestureTarget::Existing {
-        index: MAX_ANNOTATIONS,
-        handle: AnnotationHandle::End,
-      },
-    ] {
-      assert!(AnnotationEdit::begin(
-        &mut annotations,
-        target,
-        point(0.0, 0.0),
-        None,
-        NewAnnotationKind::Arrow,
-        None
-      )
-      .is_none());
-      assert_eq!(annotations, before);
-    }
   }
 }

@@ -124,6 +124,7 @@ pub(super) unsafe extern "C" fn annotation_gesture_callback(
   x: f64,
   y: f64,
   snap: u32,
+  image_points: f64,
   context: *mut std::ffi::c_void,
 ) {
   if let Some(callback) = (context as *mut AnnotationGestureCallback).as_mut() {
@@ -142,7 +143,8 @@ pub(super) unsafe extern "C" fn annotation_gesture_callback(
       handle,
       x,
       y,
-      snap != 0,
+      snap,
+      image_points,
     );
   }
 }

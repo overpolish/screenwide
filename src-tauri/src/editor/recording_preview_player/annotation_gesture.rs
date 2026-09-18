@@ -13,6 +13,10 @@ pub(super) struct Gesture {
   working: Vec<Annotation>,
   before: Vec<RecordingAnnotationClip>,
   before_selected: Option<String>,
+  /// What this gesture can snap to, built from the pane as it was when the
+  /// press landed. Its element anchors are refreshed each sample, because
+  /// detection may land part way through the drag.
+  field: SnapField,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,6 +71,7 @@ impl PreviewPlayerManager {
       })
       .unwrap_or_default()
   }
+  #[allow(clippy::too_many_arguments)]
   pub(super) fn annotation_gesture(
     &mut self,
     phase: SelectionGesturePhase,
@@ -74,7 +79,8 @@ impl PreviewPlayerManager {
     target: AnnotationGestureTarget,
     x: f64,
     y: f64,
-    snap: bool,
+    snap: u32,
+    image_points: f64,
   ) -> Option<Commit> {
     if self.is_playing || self.annotation.mode == 0 || pane > 1 {
       return None;
@@ -86,12 +92,15 @@ impl PreviewPlayerManager {
     let sources = self.sources.as_ref()?;
     let position_ms = self.position_ms.min(sources.duration_ms.saturating_sub(1));
     let source = sources.playback_layout.panes.get(pane as usize)?;
-    let point = source_point(x, y, (source.source_width, source.source_height));
+    let source_size = (source.source_width, source.source_height);
+    let point = source_point(x, y, source_size);
     let clips = Arc::clone(&sources.annotation_clips);
+    let modifiers = SnapModifiers::from_bits(snap);
     if matches!(phase, SelectionGesturePhase::Cancel) {
       let gesture = self.annotation.gesture.take()?;
       *clips.write().ok()? = gesture.before;
       self.annotation.selected = gesture.before_selected;
+      self.publish_annotation_snap(source_size, &SnapResult::default());
       self.publish_annotation_handles();
       let _ = self.restart(PlaybackMode::InteractiveStill);
       return None;
@@ -104,6 +113,7 @@ impl PreviewPlayerManager {
             AnnotationGestureTarget::Select { index } => working.get(index).map(|a| a.id.clone()),
             _ => None,
           };
+          self.publish_annotation_snap(source_size, &SnapResult::default());
           self.publish_annotation_handles();
           if let Some(surface) = self
             .sources
@@ -147,6 +157,9 @@ impl PreviewPlayerManager {
       }
       let before_selected = self.annotation.selected.clone();
       self.annotation.selected = Some(edit.selected_id().to_owned());
+      // The field excludes the annotation the gesture holds, so a counter can
+      // never snap back to the place it started from.
+      let field = SnapField::new(source_size, &working, edit.selected_id());
       self.annotation.gesture = Some(Gesture {
         pane,
         position: position_ms,
@@ -154,10 +167,36 @@ impl PreviewPlayerManager {
         working,
         before,
         before_selected,
+        field,
       });
+      // The detector costs far too much to run between two pointer samples,
+      // so the press starts it while the hand is still holding steady.
+      if modifiers.position {
+        let _ = self.annotation_anchors(pane, position_ms, source_size);
+      }
+      self.publish_annotation_snap(source_size, &SnapResult::default());
     } else {
-      let gesture = self.annotation.gesture.as_mut()?;
-      gesture.edit.update(&mut gesture.working, point, snap);
+      let threshold = threshold_source_px(source_size.0, image_points);
+      let anchors = modifiers
+        .position
+        .then(|| self.annotation_anchors(pane, position_ms, source_size))
+        .flatten();
+      let Gesture {
+        edit,
+        working,
+        field,
+        ..
+      } = self.annotation.gesture.as_mut()?;
+      field.anchors = anchors;
+      let request = threshold.map(|threshold| SnapRequest { field, threshold });
+      let result = edit.update(working, point, modifiers, request);
+      // A gesture that has ended leaves nothing on screen to explain.
+      let shown = if matches!(phase, SelectionGesturePhase::End) {
+        SnapResult::default()
+      } else {
+        result
+      };
+      self.publish_annotation_snap(source_size, &shown);
     }
     let gesture = self.annotation.gesture.as_ref()?;
     let mut next = gesture.before.clone();

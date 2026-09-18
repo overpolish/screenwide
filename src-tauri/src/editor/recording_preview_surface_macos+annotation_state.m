@@ -43,6 +43,19 @@ void screenwide_preview_surface_set_annotations(
   });
 }
 
+/// Publishes what the sample on screen snapped to. It arrives beside the
+/// grips of the same sample, on the same main-queue turn, so the chrome never
+/// draws a guide for a position it is no longer showing.
+void screenwide_preview_surface_set_annotation_snap(
+    void *handle, const ScreenwideAnnotationSnap *snap) {
+  if (handle == NULL || snap == NULL) return;
+  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
+  ScreenwideAnnotationSnap next = *snap;
+  on_main_async(^{
+    surface.annotationSnap = next;
+  });
+}
+
 void screenwide_preview_surface_set_annotation_hover_callback(
     void *handle, screenwide_preview_annotation_hover_callback callback,
     void *context) {

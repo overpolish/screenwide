@@ -30,3 +30,21 @@ export function useToolFollowsAnnotation(
     setToolRef.current(kind);
   }, [kind, tool]);
 }
+
+/**
+ * Whether taking up `next` should let the annotation in hand go.
+ *
+ * Reaching for the tool that draws the other shape is a decision about what
+ * comes next, so the annotation goes with it: otherwise the tool follows the
+ * annotation straight back and the switch never lands. Taking up the tool an
+ * annotation was drawn with keeps it, which is how choosing one adopts its
+ * tool.
+ */
+export function toolDisagreesWithAnnotation(
+  next: string | null,
+  kind: "arrow" | "counter" | null,
+) {
+  return (
+    (next === "arrow" || next === "counter") && kind !== null && kind !== next
+  );
+}

@@ -82,9 +82,10 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   // Match Keyframeless's contrast-safe OSC construction: hard-edged quads
   // snapped to drawable-pixel centres, with a 3px dark halo underneath a 1px
   // white core. Handles keep their 8pt fill and gain a 1-device-pixel ring.
-  if (annotationMode)
+  if (annotationMode) {
     annotation_add_osc(vertices, &count, size, surface, scale);
-  else if (surface.selection.crop_mode != 0)
+    annotation_add_snap_osc(vertices, &count, size, surface, scale);
+  } else if (surface.selection.crop_mode != 0)
     screenwide_region_osc_add_crop(
         vertices, &count, size, frame,
         selection_image_frame_for(surface, surface.selection), scale,

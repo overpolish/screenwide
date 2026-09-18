@@ -23,9 +23,11 @@ type EditorTool = {
  */
 const EDITOR_TOOLS: Record<EditorToolId, EditorTool> = {
   // The drawing tools own no panel: their controls belong to the annotation in
-  // hand rather than to the tool, and follow the selection instead.
-  arrow: { resetsView: true },
-  counter: { resetsView: true },
+  // hand rather than to the tool, and follow the selection instead. They also
+  // change no layout, so there is nothing for a fit to reclaim and the zoom a
+  // drawing was aimed at survives being picked up.
+  arrow: {},
+  counter: {},
   crop: { panel: "crop", resetsView: true },
   cursor: { panel: "cursor", resetsView: true },
   frame: { panel: "frame", resetsView: true },

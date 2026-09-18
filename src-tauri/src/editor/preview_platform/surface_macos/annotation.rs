@@ -16,10 +16,10 @@ use super::callbacks::{
 use super::ffi::{
   screenwide_preview_surface_set_annotation_gesture_callback,
   screenwide_preview_surface_set_annotation_hover_callback,
-  screenwide_preview_surface_set_annotations,
+  screenwide_preview_surface_set_annotation_snap, screenwide_preview_surface_set_annotations,
 };
 use super::RecordingPreviewSurface;
-use crate::editor::annotations::handles::NativeAnnotationHandles;
+use crate::editor::annotations::handles::{NativeAnnotationHandles, NativeAnnotationSnap};
 
 impl RecordingPreviewSurface {
   /// Publishes the selected layer's arrow grips. `selected_index` is the
@@ -52,6 +52,15 @@ impl RecordingPreviewSurface {
         mode as i32,
         active_layer,
       );
+    }
+  }
+
+  /// Publishes what the sample on screen snapped to, for the chrome to draw.
+  /// A default value is what puts the guides and the anchor marker away, and
+  /// is what the end of a gesture and every unsnapped sample publish.
+  pub(crate) fn set_annotation_snap_guides(&self, snap: NativeAnnotationSnap) {
+    unsafe {
+      screenwide_preview_surface_set_annotation_snap(self.handle, &snap);
     }
   }
 

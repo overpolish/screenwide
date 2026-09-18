@@ -167,7 +167,7 @@ pub(super) fn install(
   }));
   let event_app = app.clone();
   surface.set_annotation_gesture_callback(Box::new(
-    move |phase, pane_index, target_kind, index, handle, x, y, snap| {
+    move |phase, pane_index, target_kind, index, handle, x, y, snap, image_points| {
       let Some(target) = AnnotationGestureTarget::from_raw(target_kind, index, handle) else {
         return;
       };
@@ -177,7 +177,7 @@ pub(super) fn install(
       match state.0.try_lock() {
         Ok(mut manager) => {
           if let Some(commit) =
-            manager.handle_annotation_gesture(phase, pane_index, target, x, y, snap)
+            manager.handle_annotation_gesture(phase, pane_index, target, x, y, snap, image_points)
           {
             emit_annotation_change(&event_app, session_id, commit);
           }
@@ -195,7 +195,7 @@ pub(super) fn install(
               return;
             }
             if let Some(commit) =
-              manager.handle_annotation_gesture(phase, pane_index, target, x, y, snap)
+              manager.handle_annotation_gesture(phase, pane_index, target, x, y, snap, image_points)
             {
               emit_annotation_change(&deferred_app, session_id, commit);
             }

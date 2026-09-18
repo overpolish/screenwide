@@ -10,7 +10,10 @@
 //! pixels, so everything above the platform facade stays identical.
 
 use super::*;
-use crate::editor::annotations::handles::NativeAnnotationHandles;
+use crate::editor::annotations::handles::{
+  NativeAnnotationHandles, NativeAnnotationSnap, SNAP_FLAG_ANCHOR, SNAP_FLAG_GUIDE_X,
+  SNAP_FLAG_GUIDE_Y,
+};
 
 /// A press has to travel this far before it draws an arrow rather than
 /// clearing the choice: a click and a very short drag are the same gesture to
@@ -57,6 +60,9 @@ pub(super) struct AnnotationState {
   /// The arrow whose grips are drawn and hit-tested, or -1 for none.
   pub(super) selected: i32,
   pub(super) mode: u32,
+  /// What the last gesture sample snapped to, for the chrome to draw. Zeroed
+  /// whenever a sample snaps to nothing, and when the gesture ends.
+  pub(super) snap: NativeAnnotationSnap,
   drag: Option<Drag>,
 }
 
@@ -71,6 +77,7 @@ impl Default for AnnotationState {
       hover_refreshing: false,
       selected: -1,
       mode: MODE_NONE,
+      snap: NativeAnnotationSnap::default(),
       drag: None,
     }
   }
@@ -163,6 +170,16 @@ impl RecordingPreviewSurface {
     state.annotation.hover = hover;
     redraw_composed_panes(&self.inner, &mut state);
   }
+
+  /// Publishes what the sample on screen snapped to. It is only stored: a
+  /// sample's annotations arrive immediately after and redraw the held frame
+  /// together with this chrome, so drawing here would draw the overlay twice
+  /// and leave the guides a frame ahead of the geometry they explain.
+  pub(crate) fn set_annotation_snap_guides(&self, snap: NativeAnnotationSnap) {
+    if let Ok(mut state) = self.inner.state.lock() {
+      state.annotation.snap = snap;
+    }
+  }
   /// Publishes the selected layer's arrow grips. `selected_index` is the
   /// arrow whose three handles are drawn, or -1 for none; `mode` is what the
   /// pointer does over the picture: nothing (0), hit-test the arrows that are
@@ -221,9 +238,14 @@ pub(crate) use prepare::{placed_arrows, prepared_arrows};
 mod picking;
 pub(super) use picking::{cursor_for, owns_chrome, selected_grips};
 use picking::{
-  handle_at_point, item_image_frame, layer_selection, normalised_point, selected_item,
-  shaft_at_point,
+  handle_at_point, image_extent, image_frame, item_image_frame, layer_selection, normalised_point,
+  selected_item, shaft_at_point,
 };
+
+/// What a snapped sample draws, and where.
+#[path = "annotation/snap_chrome.rs"]
+mod snap_chrome;
+pub(super) use snap_chrome::{snap_chrome, SnapChrome};
 
 /// The halo that grows under the arrow the pointer rests on.
 #[path = "annotation/hover.rs"]

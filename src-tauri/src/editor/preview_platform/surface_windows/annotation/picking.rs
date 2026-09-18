@@ -54,8 +54,8 @@ pub(super) fn item_image_frame(state: &SurfaceState, index: i32) -> Option<Previ
   layer_image_rect(state, layer)
 }
 
-/// The image the selected arrow's grips are placed in.
-fn image_frame(state: &SurfaceState) -> Option<PreviewSurfaceRect> {
+/// The image the selected arrow's grips, and the snap chrome, are placed in.
+pub(super) fn image_frame(state: &SurfaceState) -> Option<PreviewSurfaceRect> {
   item_image_frame(state, state.annotation.selected)
 }
 
@@ -77,6 +77,13 @@ pub(super) fn normalised_point(state: &SurfaceState, point: (f64, f64)) -> Optio
     (point.0 - image.x) / image.width,
     (point.1 - image.y) / image.height,
   ))
+}
+
+/// How wide the chosen annotation's picture is drawn, in display points. The
+/// twin of the `image.size.width` the macOS view reports beside each sample,
+/// and what turns a snap's reach in points into source pixels.
+pub(super) fn image_extent(state: &SurfaceState) -> Option<f64> {
+  Some(image_frame(state)?.width)
 }
 
 /// The grip of one arrow under `point`, in display points. Pure so the hit
