@@ -28,6 +28,7 @@ use crate::editor::annotations::AnnotationPoint;
 /// Placing and picking a counter's grip is the D3D11 backend's work; the Metal
 /// one does both through `geometry.h`, which carries its own twins.
 pub(crate) const COUNTER_TAIL_REACH: f64 = 1.5;
+#[cfg(any(target_os = "windows", test))]
 const COUNTER_TIP_SHARE: f64 = 0.125;
 
 /// Where the tail's tip falls, in the space `center` and `radius` are in.
@@ -47,6 +48,7 @@ pub(crate) fn counter_tail_tip(
 /// the geometry is in. Zero anywhere the annotation is painted, which is what
 /// picks it. The twin of `annotation_counter_distance` in `geometry.h` and of
 /// the shaders' own copies.
+#[cfg(any(target_os = "windows", test))]
 pub(crate) fn counter_distance(
   point: (f64, f64),
   center: AnnotationPoint,
@@ -84,6 +86,7 @@ pub(crate) fn counter_distance(
 /// The overlap runs back behind the disc as well, and is wider than the disc
 /// where it does, so it is cut at the plane where the circles touch the disc.
 /// That cut is a chord of the disc, inside the union, and so never shows.
+#[cfg(any(target_os = "windows", test))]
 fn counter_silhouette_distance(
   across: f64,
   along: f64,

@@ -158,8 +158,20 @@ impl PreviewPlayerManager {
       let before_selected = self.annotation.selected.clone();
       self.annotation.selected = Some(edit.selected_id().to_owned());
       // The field excludes the annotation the gesture holds, so a counter can
-      // never snap back to the place it started from.
-      let field = SnapField::new(source_size, &working, edit.selected_id());
+      // never snap back to the place it started from. A disc's diameter is in
+      // output pixels, so the pane's drawn width is what turns it into a
+      // radius the engine can measure.
+      let image_width = self
+        .selection_composition()
+        .map(|composition| {
+          if pane == 1 {
+            composition.recording_output.camera.image_width
+          } else {
+            composition.recording_output.primary.image_width
+          }
+        })
+        .unwrap_or_default();
+      let field = SnapField::new(source_size, &working, edit.selected_id(), image_width);
       self.annotation.gesture = Some(Gesture {
         pane,
         position: position_ms,

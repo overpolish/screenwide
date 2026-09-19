@@ -13,6 +13,10 @@
 use super::AnnotationPoint;
 use crate::ruler::analysis::ComponentBox;
 
+#[cfg(test)]
+#[path = "snap_edges_tests.rs"]
+mod tests;
+
 /// How far outside a detected element its snap edges sit, as a share of the
 /// source's shorter side: the gap that keeps an arrowhead off the thing it is
 /// aimed at. Measured against the picture rather than the screen so the
@@ -85,6 +89,16 @@ pub(crate) fn element_padding(source: (u32, u32)) -> f64 {
   f64::from(source.0.max(1)).min(f64::from(source.1.max(1))) * ELEMENT_PADDING
 }
 
+/// Which axes a point riding an element's edges is pinned in, and the
+/// element it rides. An axis left `None` still follows the hand: a tip
+/// beside a button's left edge takes that edge's `x` and keeps its own `y`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct EdgeSnap {
+  pub(crate) x: Option<f64>,
+  pub(crate) y: Option<f64>,
+  pub(crate) bounds: SnapBounds,
+}
+
 /// Collapse icon-scale fragments into the single element they make up.
 ///
 /// A dashed or dotted glyph is detected as one small box per dash, each a
@@ -154,8 +168,8 @@ pub(crate) fn merge_fragments(bounds: Vec<SnapBounds>, source: (u32, u32)) -> Ve
   kept
 }
 
-/// The nearest element edge to `tip` within `threshold`, the tip moved onto
-/// it, and the element it belongs to.
+/// Which axes the nearest element edges pin `tip` in, within `threshold`,
+/// and the element it ends up riding.
 ///
 /// The nearest edge decides which element the tip is riding; the two
 /// perpendicular edges of that same element are then offered as well, so a tip
@@ -172,7 +186,7 @@ pub(crate) fn snap_edges(
   tip: AnnotationPoint,
   bounds: &[SnapBounds],
   threshold: f64,
-) -> Option<(AnnotationPoint, SnapBounds)> {
+) -> Option<EdgeSnap> {
   let mut chosen: Option<(f64, SnapBounds, bool, f64)> = None;
   for rect in bounds {
     let mut consider = |vertical: bool, edge: f64| {
@@ -194,26 +208,20 @@ pub(crate) fn snap_edges(
     consider(false, rect.y);
     consider(false, rect.bottom());
   }
-  let (_, rect, vertical, edge) = chosen?;
-  let across = if vertical {
-    nearest(tip.y, rect.y, rect.bottom(), threshold)
+  let (_, bounds, vertical, edge) = chosen?;
+  Some(if vertical {
+    EdgeSnap {
+      x: Some(edge),
+      y: nearest(tip.y, bounds.y, bounds.bottom(), threshold),
+      bounds,
+    }
   } else {
-    nearest(tip.x, rect.x, rect.right(), threshold)
-  };
-  Some((
-    if vertical {
-      AnnotationPoint {
-        x: edge,
-        y: across.unwrap_or(tip.y),
-      }
-    } else {
-      AnnotationPoint {
-        x: across.unwrap_or(tip.x),
-        y: edge,
-      }
-    },
-    rect,
-  ))
+    EdgeSnap {
+      x: nearest(tip.x, bounds.x, bounds.right(), threshold),
+      y: Some(edge),
+      bounds,
+    }
+  })
 }
 
 /// Whichever of an element's two perpendicular edges `position` is nearest, if

@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What an arrow gesture acts on, and what moving one grip does to the shape.
+//! What a gesture acts on, and what moving a counter's grip does to it.
 //!
 //! The native interaction view reports a grip by number; everything that
 //! decides what an arrow *is* lives on this side, so the native side never
 //! carries a second copy of the model.
 
-use super::bend::{arrow_bend, clamp_bend, control_for_bend, control_through_midpoint, ArrowBend};
+use super::bend::{arrow_bend, clamp_bend, ArrowBend};
 use super::counter::counter_tail_angle;
+use super::counter::silhouette::counter_tail_tip;
+use super::gesture_arrow::drag_arrow_handle;
 use super::snap::{SnapRequest, SnapResult};
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
 
@@ -170,8 +172,8 @@ pub(crate) fn next_annotation_id() -> String {
 /// counter's tail to the quarter turns.
 ///
 /// `snap` is the positional candidates this sample may land on, absent when
-/// the positional modifier is not held. A counter's centre takes an axis
-/// guide and an arrow's tip takes an element anchor; neither shape ever sees
+/// the positional modifier is not held. A counter's disc aligns to the axis
+/// guides and an arrow's tip takes an element anchor; neither shape ever sees
 /// the other's candidates, and the bend and the shaft snap to nothing at all.
 /// What it landed on is reported back for the chrome to draw.
 pub(crate) fn drag_handle(
@@ -183,6 +185,7 @@ pub(crate) fn drag_handle(
   snap: Option<SnapRequest<'_>>,
 ) -> SnapResult {
   let mut result = SnapResult::default();
+  let width = annotation.style.width;
   match &mut annotation.shape {
     AnnotationShape::Arrow {
       start,
@@ -201,9 +204,19 @@ pub(crate) fn drag_handle(
     AnnotationShape::Counter { center, angle, .. } => {
       match handle {
         // The tail turns around the disc: the drag sets its direction and
-        // nothing else, so a counter cannot be stretched out of shape, and
-        // there is no position in it to snap.
-        AnnotationHandle::Tail => *angle = counter_tail_angle(*center, point, *angle, shift),
+        // nothing else, so a counter cannot be stretched out of shape. The
+        // aim the hand gives comes first, because an element edge within
+        // reach of it beats both that aim and Shift's eighth turns.
+        AnnotationHandle::Tail => {
+          let aimed = counter_tail_angle(*center, point, *angle, false);
+          match snap.and_then(|request| request.tail(*center, request.field.radius(width), aimed)) {
+            Some((edge, anchor)) => {
+              *angle = edge;
+              result.anchor = Some(anchor);
+            }
+            None => *angle = counter_tail_angle(*center, point, *angle, shift),
+          }
+        }
         // Everything else carries the whole counter, the disc included: a
         // grip an arrow has and a counter does not is a move rather than
         // nothing at all.
@@ -215,13 +228,19 @@ pub(crate) fn drag_handle(
             x: from.x + point.x - origin.point.x,
             y: from.y + point.y - origin.point.y,
           };
-          // The centre the drag arrives at is what snaps, not the pointer:
-          // the grip may be anywhere on the disc.
+          // What snaps is the disc the drag arrives at, not the pointer: the
+          // grip may be anywhere on it, and a counter lines up by its edges
+          // as readily as by its middle. Its tail tip travels with it and
+          // competes for an element's edges in either axis.
           *center = match snap {
             Some(request) => {
-              let (snapped, axes) = request.axes(moved);
-              result = axes;
-              snapped
+              let radius = request.field.radius(width);
+              let (offset, resolved) = request.counter(
+                request.field.disc(moved, width),
+                counter_tail_tip(moved, radius, *angle),
+              );
+              result = resolved;
+              offset.apply(moved)
             }
             None => moved,
           };
@@ -235,56 +254,4 @@ pub(crate) fn drag_handle(
   // repaired the first time its arrow is touched.
   clamp_bend(annotation);
   result
-}
-
-#[allow(clippy::too_many_arguments)]
-fn drag_arrow_handle(
-  start: &mut AnnotationPoint,
-  control: &mut AnnotationPoint,
-  end: &mut AnnotationPoint,
-  handle: AnnotationHandle,
-  point: AnnotationPoint,
-  origin: &AnnotationDragOrigin,
-  snap: Option<SnapRequest<'_>>,
-  result: &mut SnapResult,
-) {
-  match handle {
-    // A tip takes the bend with it: the curve is re-hung from the chord the
-    // drag leaves behind, holding the share of it the arrow was bent by, so
-    // it rotates and scales with the shaft and can never be stranded. The tip
-    // is what an arrow aims with, so it is the only part of one that snaps,
-    // and the bend is re-hung from wherever it lands.
-    AnnotationHandle::Start | AnnotationHandle::End => {
-      let tip = result.tip(point, snap);
-      if handle == AnnotationHandle::Start {
-        *start = tip;
-      } else {
-        *end = tip;
-      }
-      *control = control_for_bend(*start, *end, origin.bend);
-    }
-    AnnotationHandle::Middle => *control = control_through_midpoint(*start, point, *end),
-    // The shaft carries the arrow whole: every point travels by the same
-    // delta, so the curve keeps its bend and its heads keep their aim. A
-    // counter's tail grip means nothing to an arrow and moves it likewise.
-    AnnotationHandle::Body | AnnotationHandle::Tail => {
-      let AnnotationShape::Arrow {
-        start: from_start,
-        control: from_control,
-        end: from_end,
-      } = origin.shape
-      else {
-        return;
-      };
-      let delta_x = point.x - origin.point.x;
-      let delta_y = point.y - origin.point.y;
-      let moved = |point: AnnotationPoint| AnnotationPoint {
-        x: point.x + delta_x,
-        y: point.y + delta_y,
-      };
-      *start = moved(from_start);
-      *control = moved(from_control);
-      *end = moved(from_end);
-    }
-  }
 }

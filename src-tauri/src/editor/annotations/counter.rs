@@ -23,9 +23,11 @@ pub(crate) const COUNTER_SIZES: [f64; 3] = [56.0, 96.0, 160.0];
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const NEW_COUNTER_WIDTH: f64 = COUNTER_SIZES[0];
 
-/// The shape a counter is drawn and picked as. Picking one is the D3D11
-/// backend's work; the Metal one does it through `geometry.h`.
-#[cfg(any(target_os = "windows", test))]
+/// The shape a counter is drawn and picked as, and where its tail ends.
+/// Picking one is the D3D11 backend's work; the Metal one does it through
+/// `geometry.h`. The tail's tip is shared: it is what a turning tail snaps
+/// with on both platforms.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 #[path = "counter_silhouette.rs"]
 pub(crate) mod silhouette;
 

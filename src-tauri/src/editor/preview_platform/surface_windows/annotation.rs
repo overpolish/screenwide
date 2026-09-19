@@ -11,8 +11,8 @@
 
 use super::*;
 use crate::editor::annotations::handles::{
-  NativeAnnotationHandles, NativeAnnotationSnap, SNAP_FLAG_ANCHOR, SNAP_FLAG_GUIDE_X,
-  SNAP_FLAG_GUIDE_Y,
+  NativeAnnotationHandles, NativeAnnotationSnap, NativeGapSpan, SNAP_FLAG_ANCHOR, SNAP_FLAG_GAP_X,
+  SNAP_FLAG_GAP_Y, SNAP_FLAG_GUIDE_X, SNAP_FLAG_GUIDE_Y,
 };
 
 /// A press has to travel this far before it draws an arrow rather than

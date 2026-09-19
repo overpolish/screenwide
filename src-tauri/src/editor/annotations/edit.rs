@@ -4,6 +4,7 @@
 //! One live annotation edit. Workspaces own presentation and history; this
 //! transaction owns only the annotations changed by a pointer gesture.
 
+use super::counter::silhouette::counter_tail_tip;
 use super::counter::{new_counter, next_counter_value};
 use super::gesture::{
   drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget, NewAnnotationKind,
@@ -85,6 +86,7 @@ impl AnnotationEdit {
     let snap = field.filter(|request| {
       modifiers.position && request.threshold.is_finite() && request.threshold > 0.0
     });
+    let width = annotation.style.width;
     match self.target {
       // A fresh arrow is drawn out from where the press landed; a fresh
       // counter was dropped whole there, so the same drag carries it. Both
@@ -104,10 +106,14 @@ impl AnnotationEdit {
           };
           result
         }
-        AnnotationShape::Counter { center, .. } => match snap {
+        AnnotationShape::Counter { center, angle, .. } => match snap {
           Some(request) => {
-            let (snapped, result) = request.axes(point);
-            *center = snapped;
+            let radius = request.field.radius(width);
+            let (offset, result) = request.counter(
+              request.field.disc(point, width),
+              counter_tail_tip(point, radius, *angle),
+            );
+            *center = offset.apply(point);
             result
           }
           None => {

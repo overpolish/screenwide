@@ -48,9 +48,49 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
              : nil;
 }
 
-/// The snap chrome: the axis guides a counter's centre landed on, and the
-/// element an arrow's tip took hold of. Placed inside the same picture the
-/// grips are, because that is the space Rust normalises them in.
+/// How far an equal-gap bar's end ticks reach either side of it, in points.
+/// Short enough to read as a measurement rather than as another guide.
+static const CGFloat kAnnotationGapTick = 3.0;
+
+/// One equal gap: a hairline the length of the gap, with a tick across each
+/// end. `horizontal` is a gap measured across the picture, whose bar runs
+/// left to right; the other runs down it.
+static void annotation_add_gap_bar(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
+    NSRect image, CGFloat scale, ScreenwideAnnotationGapSpan span,
+    BOOL horizontal) {
+  CGFloat half = 0.5 / scale;
+  CGFloat origin = horizontal ? NSMinX(image) : NSMinY(image);
+  CGFloat extent = horizontal ? image.size.width : image.size.height;
+  CGFloat from = origin + extent * span.from;
+  CGFloat to = origin + extent * span.to;
+  if (to < from) return;
+  CGFloat cross = screenwide_region_osc_snap(
+      (horizontal ? NSMinY(image) : NSMinX(image)) +
+          (horizontal ? image.size.height : image.size.width) * span.cross,
+      scale);
+  if (to > from)
+    screenwide_region_osc_add_quad(
+        vertices, count, size,
+        horizontal ? NSMakeRect(from, cross - half, to - from, half * 2.0)
+                   : NSMakeRect(cross - half, from, half * 2.0, to - from),
+        5);
+  for (NSUInteger index = 0; index < 2; index++) {
+    CGFloat end = screenwide_region_osc_snap(index == 0 ? from : to, scale);
+    screenwide_region_osc_add_quad(
+        vertices, count, size,
+        horizontal ? NSMakeRect(end - half, cross - kAnnotationGapTick,
+                                half * 2.0, kAnnotationGapTick * 2.0)
+                   : NSMakeRect(cross - kAnnotationGapTick, end - half,
+                                kAnnotationGapTick * 2.0, half * 2.0),
+        5);
+  }
+}
+
+/// The snap chrome: the axis guides a counter's disc landed on, the equal
+/// gaps it lined up with, and the element an arrow's tip took hold of.
+/// Placed inside the same picture the grips are, because that is the space
+/// Rust normalises them in.
 SCREENWIDE_PREVIEW_PRIVATE void annotation_add_snap_osc(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
     ScreenwidePreviewSurface *surface, CGFloat scale) {
@@ -76,6 +116,14 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_add_snap_osc(
         vertices, count, size,
         NSMakeRect(0.0, y - half, size.width, half * 2.0),
         snap.guide_y_object != 0 ? 5 : 4);
+  }
+  for (NSUInteger index = 0; index < 2; index++) {
+    if ((snap.flags & ScreenwideAnnotationSnapGapX) != 0)
+      annotation_add_gap_bar(vertices, count, size, image, scale,
+                             snap.gap_x[index], YES);
+    if ((snap.flags & ScreenwideAnnotationSnapGapY) != 0)
+      annotation_add_gap_bar(vertices, count, size, image, scale,
+                             snap.gap_y[index], NO);
   }
   if ((snap.flags & ScreenwideAnnotationSnapAnchor) == 0) return;
   CGFloat pixel = 1.0 / scale;

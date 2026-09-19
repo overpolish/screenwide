@@ -249,6 +249,7 @@ impl PreviewManager {
     let defaults = self.annotation_defaults.clone();
     let mode = self.annotation_mode;
     let angle = self.annotation_counter_angle;
+    let image_width = self.annotation_image_width(pane_index).unwrap_or_default();
     let annotations = &mut self
       .output
       .as_mut()?
@@ -266,7 +267,7 @@ impl PreviewManager {
     )?;
     // The field excludes the annotation the gesture holds, so a counter can
     // never snap back to the place it started from.
-    let field = SnapField::new(source, annotations, edit.selected_id());
+    let field = SnapField::new(source, annotations, edit.selected_id(), image_width);
     let id = edit.selected_id().to_owned();
     self.annotation_gesture = Some(AnnotationGestureOverride {
       pane_index,

@@ -24,6 +24,8 @@ mod edit_tests;
 pub(crate) mod geometry;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod gesture;
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+mod gesture_arrow;
 #[cfg(test)]
 mod gesture_tests;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -31,6 +33,12 @@ pub(crate) mod handles;
 /// Where a gesture's positions land while the positional modifier is held.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod snap;
+#[cfg(test)]
+mod snap_edit_tests;
+#[cfg(test)]
+mod snap_gap_tests;
+#[cfg(test)]
+mod snap_tail_tests;
 
 /// The native retained scene, export and the live overlay accept the same
 /// number of annotations.

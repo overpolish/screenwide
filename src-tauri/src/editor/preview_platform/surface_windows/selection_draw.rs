@@ -150,6 +150,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       magnifier_box,
       annotation_handles.as_deref(),
       snap.bounds,
+      &snap.gaps,
       scale,
       luminance > 0.5,
     );

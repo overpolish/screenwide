@@ -67,6 +67,16 @@ const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 88);
 pub(crate) const HANDLE_KIND_ARROW: u32 = 0;
 pub(crate) const HANDLE_KIND_COUNTER: u32 = 1;
 
+/// One equal gap the chrome draws a bar across, normalised over the source:
+/// where it starts and ends along its own axis, and where it sits across it.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct NativeGapSpan {
+  pub(crate) from: f64,
+  pub(crate) to: f64,
+  pub(crate) cross: f64,
+}
+
 /// What the snap chrome draws, in the same image-normalised space the grips
 /// use, matching the C `ScreenwideAnnotationSnap`. `flags` says which members
 /// are live; a default value is what puts the chrome away.
@@ -87,15 +97,20 @@ pub(crate) struct NativeAnnotationSnap {
   pub(crate) box_y: f64,
   pub(crate) box_width: f64,
   pub(crate) box_height: f64,
+  /// The two equal gaps each axis landed on, in order along that axis.
+  pub(crate) gap_x: [NativeGapSpan; 2],
+  pub(crate) gap_y: [NativeGapSpan; 2],
 }
 
-const _: () = assert!(std::mem::size_of::<NativeAnnotationSnap>() == 80);
+const _: () = assert!(std::mem::size_of::<NativeAnnotationSnap>() == 176);
 
 /// Which members of [`NativeAnnotationSnap`] are live, matching the C
 /// `ScreenwideAnnotationSnapFlag`.
 pub(crate) const SNAP_FLAG_GUIDE_X: u32 = 1;
 pub(crate) const SNAP_FLAG_GUIDE_Y: u32 = 1 << 1;
 pub(crate) const SNAP_FLAG_ANCHOR: u32 = 1 << 2;
+pub(crate) const SNAP_FLAG_GAP_X: u32 = 1 << 3;
+pub(crate) const SNAP_FLAG_GAP_Y: u32 = 1 << 4;
 
 /// One sample's snap as the native chrome needs it. The engine works in source
 /// pixels and the chrome places everything inside the picture on screen, so
@@ -128,7 +143,28 @@ pub(crate) fn annotation_snap(
     snap.box_width = anchor.bounds.width / width;
     snap.box_height = anchor.bounds.height / height;
   }
+  if let Some(gap) = result.gap_x {
+    snap.flags |= SNAP_FLAG_GAP_X;
+    snap.gap_x = gap_spans(gap.spans, width, height);
+  }
+  if let Some(gap) = result.gap_y {
+    snap.flags |= SNAP_FLAG_GAP_Y;
+    // A gap in y runs down the picture and its bars lie across it, so the
+    // extents normalise over the height and the bars' own places over the
+    // width.
+    snap.gap_y = gap_spans(gap.spans, height, width);
+  }
   snap
+}
+
+/// One axis's two gaps as the chrome needs them: the extents over `along`,
+/// the bars' own places over `across`.
+fn gap_spans(spans: [super::snap::GapSpan; 2], along: f64, across: f64) -> [NativeGapSpan; 2] {
+  spans.map(|span| NativeGapSpan {
+    from: span.from / along,
+    to: span.to / along,
+    cross: span.cross / across,
+  })
 }
 
 /// The stroke's width as a fraction of the image's drawn width. The stroke is

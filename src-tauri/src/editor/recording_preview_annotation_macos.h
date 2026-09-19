@@ -73,6 +73,12 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationTarget) {
   ScreenwideAnnotationTargetNone = 2,
   ScreenwideAnnotationTargetSelect = 3,
 };
+/// One equal gap the snap chrome draws a bar across, normalised over the
+/// source: where it starts and ends along its own axis, and where it sits
+/// across it.
+typedef struct {
+  double from, to, cross;
+} ScreenwideAnnotationGapSpan;
 /// What the snap chrome draws, normalised over the source image exactly as
 /// the grips are, matching Rust's `NativeAnnotationSnap`. `flags` says which
 /// members are live; a zeroed value draws nothing.
@@ -83,14 +89,17 @@ typedef struct {
   double guide_x, guide_y;
   double anchor_x, anchor_y;
   double box_x, box_y, box_width, box_height;
+  ScreenwideAnnotationGapSpan gap_x[2], gap_y[2];
 } ScreenwideAnnotationSnap;
-_Static_assert(sizeof(ScreenwideAnnotationSnap) == 80,
+_Static_assert(sizeof(ScreenwideAnnotationSnap) == 176,
                "Rust/C annotation snap layout mismatch");
 /// Which members of `ScreenwideAnnotationSnap` are live.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationSnapFlag) {
   ScreenwideAnnotationSnapGuideX = 1 << 0,
   ScreenwideAnnotationSnapGuideY = 1 << 1,
   ScreenwideAnnotationSnapAnchor = 1 << 2,
+  ScreenwideAnnotationSnapGapX = 1 << 3,
+  ScreenwideAnnotationSnapGapY = 1 << 4,
 };
 /// `snap` is which snapping modifiers were held for this sample: bit 0 Shift,
 /// which holds a counter's tail to the quarter turns, and bit 1 Command,

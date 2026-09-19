@@ -105,9 +105,9 @@ BOOL annotation_mouse_up(ScreenwidePreviewInteractionView *view, NSPoint point);
 void annotation_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
                         NSSize size, ScreenwidePreviewSurface *surface,
                         CGFloat scale);
-/// The snap chrome for the sample on screen: the axis guides a counter landed
-/// on, and the element an arrow's tip took. Nothing at all when the last
-/// sample snapped to nothing.
+/// The snap chrome for the sample on screen: the axis guides a counter
+/// landed on, the equal gaps it lined up with, and the element an arrow's
+/// tip took. Nothing at all when the last sample snapped to nothing.
 void annotation_add_snap_osc(ScreenwideRegionOscVertex *vertices,
                              NSUInteger *count, NSSize size,
                              ScreenwidePreviewSurface *surface, CGFloat scale);

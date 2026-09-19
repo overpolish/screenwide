@@ -26,6 +26,9 @@ impl SelectionOverlay {
     // The element an arrow's tip has snapped to, outlined a device pixel
     // wide so the anchor it took reads as part of that element.
     annotation_bounds: Option<[f32; 4]>,
+    // The equal-gap bars a snapped counter lined up with, already device
+    // pixel rectangles: a hairline across each gap with a tick at each end.
+    annotation_gaps: &[[f32; 4]],
     scale: f64,
     light: bool,
   ) -> Result<(), String> {
@@ -83,6 +86,11 @@ impl SelectionOverlay {
         ] {
           osc_gpu::add_pixel_aligned_quad(&mut vertices, view, edge, scale, 5);
         }
+      }
+      // The equal gaps the counter lined up with, in the object colour the
+      // guides and the element outline use.
+      for bar in annotation_gaps {
+        osc_gpu::add_pixel_aligned_quad(&mut vertices, view, logical_rect(*bar, scale), scale, 5);
       }
       let points = annotation_handles
         .iter()
