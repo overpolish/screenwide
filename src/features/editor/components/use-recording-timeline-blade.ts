@@ -31,6 +31,7 @@ export function useRecordingTimelineBlade({
   onChange,
   onTrimPreviewRestore,
   onTrimPreviewStart,
+  ownsDelete,
   playhead,
   seekPlayer,
   shortcutsEnabled,
@@ -39,6 +40,9 @@ export function useRecordingTimelineBlade({
   artifactId: number;
   framesPerSecond: number | null;
   getPositionMs: () => number;
+  /** False while an annotation is what Delete would take: the segment
+   * selection then keeps out of its way. Every other shortcut stays live. */
+  ownsDelete: boolean;
   playhead: Playhead;
   seekPlayer: SeekHandler;
   shortcutsEnabled: boolean;
@@ -204,7 +208,8 @@ export function useRecordingTimelineBlade({
 
   useEditorWindowShortcuts({
     onCutTimeline: shortcutsEnabled ? commands.cutAtPlayhead : undefined,
-    onDelete: shortcutsEnabled ? commands.deleteSelected : undefined,
+    onDelete:
+      shortcutsEnabled && ownsDelete ? commands.deleteSelected : undefined,
     onDeselect: shortcutsEnabled
       ? selection.rangeSelection !== null
         ? selection.clearRangeSelection
@@ -214,6 +219,7 @@ export function useRecordingTimelineBlade({
       : undefined,
     onToggleBladeTool: shortcutsEnabled ? selection.toggle : undefined,
     onToggleRangeTool: shortcutsEnabled ? selection.toggleRange : undefined,
+    onToggleSnap: shortcutsEnabled ? selection.toggleSnap : undefined,
   });
 
   return {
@@ -226,6 +232,7 @@ export function useRecordingTimelineBlade({
       endTrim: trim.end,
       isActive: selection.isActive,
       isRangeActive: selection.isRangeActive,
+      isSnapActive: selection.isSnapActive,
       previewAt: selection.previewAt,
       previewPosition: selection.previewPosition,
       rangeSelection: selection.rangeSelection,
@@ -236,6 +243,9 @@ export function useRecordingTimelineBlade({
       setRangePlaybackRate: commands.changeRangePlaybackRate,
       setRangeSelection: selection.setRangeSelection,
       setSegmentPlaybackRate: commands.changeSegmentPlaybackRate,
+      setSnapActive: selection.setSnapActive,
+      setSnapGuidePosition: selection.setSnapGuidePosition,
+      snapGuidePosition: selection.snapGuidePosition,
       snapPosition: snapOutput,
       updateTrim: trim.update,
     },

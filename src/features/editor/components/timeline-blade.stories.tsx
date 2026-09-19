@@ -58,6 +58,7 @@ function BladePreview({
     endTrim: () => undefined,
     isActive: false,
     isRangeActive: false,
+    isSnapActive: false,
     previewAt: setPreview,
     previewPosition: preview,
     rangeSelection: null,
@@ -76,6 +77,9 @@ function BladePreview({
         ),
       );
     },
+    setSnapActive: () => undefined,
+    setSnapGuidePosition: () => undefined,
+    snapGuidePosition: null,
     snapPosition: (sourcePosition) => sourcePosition,
     updateTrim: () => null,
   };

@@ -266,9 +266,10 @@ export function useRecordingPreviewTransport(
     onChange: onRecordingTimelineEditChange,
     onTrimPreviewRestore: trimPreview.restore,
     onTrimPreviewStart: trimPreview.start,
+    ownsDelete: !annotations.canDelete,
     playhead,
     seekPlayer: player.seek,
-    shortcutsEnabled: Boolean(layout) && !annotations.canDelete,
+    shortcutsEnabled: Boolean(layout),
     totalDurationMs,
   });
   const { visibleCanvasRefs, visibleLayout, visiblePaneEntries } =

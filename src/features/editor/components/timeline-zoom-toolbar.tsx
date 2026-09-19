@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {
+  Magnet,
   Maximize2,
   Scissors,
   SquareDashed,
@@ -23,17 +24,21 @@ import { TIMELINE_MAX_ZOOM, TimelineViewportState } from "./timeline-viewport";
 export function TimelineZoomToolbar({
   isBladeActive,
   isRangeActive,
+  isSnapActive,
   onBladeActiveChange,
   onFit,
   onRangeActiveChange,
+  onSnapActiveChange,
   onZoom,
   viewport,
 }: {
   isBladeActive: boolean;
   isRangeActive: boolean;
+  isSnapActive: boolean;
   onBladeActiveChange: (active: boolean) => void;
   onFit: () => void;
   onRangeActiveChange: (active: boolean) => void;
+  onSnapActiveChange: (active: boolean) => void;
   onZoom: (factor: number) => void;
   viewport: TimelineViewportState;
 }) {
@@ -56,6 +61,15 @@ export function TimelineZoomToolbar({
         shortcut="R"
       >
         <SquareDashed />
+      </ToolToggle>
+      <ToolToggle
+        isSelected={isSnapActive}
+        label="Snap"
+        name="Snap to edges"
+        onSelectedChange={onSnapActiveChange}
+        shortcut="S"
+      >
+        <Magnet />
       </ToolToggle>
       <div className="ml-auto flex items-center gap-control">
         <NativeTooltipTrigger tooltip="Zoom out">
@@ -121,9 +135,11 @@ export function TimelineHeader({
       <TimelineZoomToolbar
         isBladeActive={blade.isActive}
         isRangeActive={blade.isRangeActive}
+        isSnapActive={blade.isSnapActive}
         onBladeActiveChange={blade.setActive}
         onFit={onFit}
         onRangeActiveChange={blade.setRangeActive}
+        onSnapActiveChange={blade.setSnapActive}
         onZoom={onZoom}
         viewport={viewport}
       />

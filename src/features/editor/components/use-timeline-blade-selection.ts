@@ -34,6 +34,12 @@ export function useTimelineBladeSelection({
   );
   const [rangeSelection, setRangeSelection] =
     useState<TimelineRangeSelection | null>(null);
+  // On by default: lining an annotation up with its neighbour is the usual
+  // reason to drag it, and Alt pulls an edge off a target for the odd time.
+  const [isSnapActive, setIsSnapActive] = useState(true);
+  const [snapGuidePosition, setSnapGuidePosition] = useState<number | null>(
+    null,
+  );
   const effectiveSelectedSegmentId =
     selectedSegmentId !== null &&
     edit.segments.some((segment) => segment.id === selectedSegmentId)
@@ -78,6 +84,9 @@ export function useTimelineBladeSelection({
       return !active;
     });
   }, []);
+  const toggleSnap = useCallback(() => {
+    setIsSnapActive((active) => !active);
+  }, []);
   const changeRangeSelection = useCallback(
     (anchor: number, focus: number) => {
       const start = snapOutput(Math.min(anchor, focus));
@@ -121,6 +130,7 @@ export function useTimelineBladeSelection({
     clearSelection,
     isActive,
     isRangeActive,
+    isSnapActive,
     previewAt,
     previewPosition,
     rangeSelection,
@@ -129,7 +139,11 @@ export function useTimelineBladeSelection({
     setActive,
     setRangeActive: changeRangeActive,
     setRangeSelection: changeRangeSelection,
+    setSnapActive: setIsSnapActive,
+    setSnapGuidePosition,
+    snapGuidePosition,
     toggle,
     toggleRange,
+    toggleSnap,
   };
 }

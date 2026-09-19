@@ -86,11 +86,38 @@ export function TimelineScrubberOverlay(
         <TimelineScrubber {...scrubber} />
       </div>
       <TimelineRangeOverlay blade={blade} viewport={props.viewport} />
+      <TimelineSnapGuide blade={blade} viewport={props.viewport} />
       {/* One layer for the blade too, over the same rectangle: a cut acts on
           the timeline, not on the lane the pointer happened to be over. */}
       <TimelineBladeOverlay blade={blade} viewport={props.viewport} />
     </>
   );
+}
+
+/**
+ * The target a drag is held on, drawn through every lane so the edge it has
+ * met can be seen in the lane it came from.
+ */
+function TimelineSnapGuide({
+  blade,
+  viewport,
+}: {
+  blade: TimelineBladeController;
+  viewport: TimelineViewportState;
+}) {
+  return blade.snapGuidePosition !== null ? (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute inset-y-0 right-0 ${TIMELINE_LANE_LEFT_CLASS} z-30 overflow-hidden`}
+    >
+      <span
+        className="absolute inset-y-0 w-px -translate-x-1/2 bg-primary"
+        style={{
+          left: `${((blade.snapGuidePosition - viewport.panOffset) * viewport.zoom * 100).toString()}%`,
+        }}
+      />
+    </div>
+  ) : null;
 }
 
 function TimelineRangeOverlay({

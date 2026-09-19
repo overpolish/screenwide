@@ -12,6 +12,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 function ZoomToolbar({ viewport }: { viewport?: TimelineViewportState }) {
   const [isBladeActive, setIsBladeActive] = useState(false);
   const [isRangeActive, setIsRangeActive] = useState(false);
+  const [isSnapActive, setIsSnapActive] = useState(true);
   const [state, setState] = useState<TimelineViewportState>(
     viewport ?? { panOffset: 0, zoom: 1 },
   );
@@ -21,6 +22,7 @@ function ZoomToolbar({ viewport }: { viewport?: TimelineViewportState }) {
       <TimelineZoomToolbar
         isBladeActive={isBladeActive}
         isRangeActive={isRangeActive}
+        isSnapActive={isSnapActive}
         onBladeActiveChange={(active) => {
           setIsBladeActive(active);
           if (active) setIsRangeActive(false);
@@ -32,6 +34,7 @@ function ZoomToolbar({ viewport }: { viewport?: TimelineViewportState }) {
           setIsRangeActive(active);
           if (active) setIsBladeActive(false);
         }}
+        onSnapActiveChange={setIsSnapActive}
         onZoom={(factor) => {
           setState((current) => ({
             panOffset: current.panOffset,

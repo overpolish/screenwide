@@ -23,11 +23,16 @@ import {
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
 
 import { RecordingTrackLanes } from "./recording-track-lanes";
+import {
+  STORY_ANNOTATION_CLIPS,
+  STORY_DURATION_MS,
+  STORY_FRAMES_PER_SECOND,
+  STORY_KEYBOARD_ITEMS,
+  STORY_LAYOUT,
+  STORY_THUMBNAILS,
+} from "./recording-track-lanes-preview-fixtures";
 import { createPlayhead } from "./scrub-playhead";
 import { selectTimelineItem } from "./timeline-item-selection";
-
-const STORY_DURATION_MS = 120_000;
-const STORY_FRAMES_PER_SECOND = 60_000 / 1_001;
 
 /**
  * The timeline lanes wired to real edit state, shared by the lanes story and
@@ -60,9 +65,19 @@ export function RecordingTrackLanesPreview({
   const [enabledVideo, setEnabledVideo] = useState<Set<RecordingVideoTrackId>>(
     () => new Set(["primary"]),
   );
+  const [annotationClips, setAnnotationClips] = useState(
+    STORY_ANNOTATION_CLIPS,
+  );
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<
+    string | null
+  >(null);
   const [isBladeActive, setIsBladeActive] = useState(false);
   const [previewPosition, setPreviewPosition] = useState<number | null>(null);
   const [isRangeActive, setIsRangeActive] = useState(false);
+  const [isSnapActive, setIsSnapActive] = useState(true);
+  const [snapGuidePosition, setSnapGuidePosition] = useState<number | null>(
+    null,
+  );
   const [selectedKeyboardItems, setSelectedKeyboardItems] = useState(
     () => new Set<string>(),
   );
@@ -148,12 +163,16 @@ export function RecordingTrackLanesPreview({
     onToggleBladeTool: () => {
       setIsBladeActive((active) => !active);
     },
+    onToggleSnap: () => {
+      setIsSnapActive((active) => !active);
+    },
   });
 
   return (
     <EditorEditGestureContext value={editGesture}>
       <RecordingTrackLanes
         adjustedKeyboardFragmentIds={new Set()}
+        annotationClips={annotationClips}
         audioTracks={audioTracks}
         blade={{
           beginTrim: () => undefined,
@@ -168,6 +187,7 @@ export function RecordingTrackLanesPreview({
           endTrim: () => undefined,
           isActive: isBladeActive,
           isRangeActive,
+          isSnapActive,
           previewAt: (position) => {
             setPreviewPosition(snapOutput(position));
           },
@@ -213,6 +233,9 @@ export function RecordingTrackLanesPreview({
               ),
             );
           },
+          setSnapActive: setIsSnapActive,
+          setSnapGuidePosition,
+          snapGuidePosition,
           snapPosition: snapOutput,
           updateTrim: () => null,
         }}
@@ -221,11 +244,7 @@ export function RecordingTrackLanesPreview({
         enabledVideoTracks={enabledVideo}
         hiddenKeyboardFragmentIds={new Set()}
         hiddenKeyboardItemIds={new Set()}
-        keyboardItems={[
-          { endMs: 11_800, id: 0, label: "⌘ C", startMs: 10_000 },
-          { endMs: 29_600, id: 1, label: "⌘ V", startMs: 28_000 },
-          { endMs: 74_900, id: 2, label: "⇧ ⌘ 4", startMs: 72_000 },
-        ]}
+        keyboardItems={STORY_KEYBOARD_ITEMS}
         keyboardSelection={{
           ids: selectedKeyboardItems,
           onClear: () => {
@@ -237,21 +256,9 @@ export function RecordingTrackLanesPreview({
             );
           },
         }}
-        layout={{
-          height: 1080,
-          panes: [
-            {
-              height: 1080,
-              kind: "screen",
-              sourceHeight: 1080,
-              sourceWidth: 1920,
-              width: 1920,
-              x: 0,
-              y: 0,
-            },
-          ],
-          width: 1920,
-        }}
+        layout={STORY_LAYOUT}
+        onAnnotationsChange={setAnnotationClips}
+        onAnnotationSelect={setSelectedAnnotationId}
         onEnabledTracksChange={setEnabledAudio}
         onEnabledVideoTracksChange={setEnabledVideo}
         onSeek={(ratio) => {
@@ -260,15 +267,10 @@ export function RecordingTrackLanesPreview({
         }}
         onSelectedTrackChange={setSelectedTrack}
         playhead={playhead}
+        selectedAnnotationId={selectedAnnotationId}
         selectedTrack={selectedTrack}
         sourceDurationMs={STORY_DURATION_MS}
-        thumbnails={{
-          camera: [],
-          primary: Array.from({ length: 24 }, (_, index) => ({
-            id: `primary-${index.toString()}`,
-            url: null,
-          })),
-        }}
+        thumbnails={STORY_THUMBNAILS}
         videoTrackOrder={["primary"]}
         volumes={new Map()}
       />

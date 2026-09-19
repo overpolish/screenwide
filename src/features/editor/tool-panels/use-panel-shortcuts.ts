@@ -78,6 +78,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
     onToggleRangeTool: () => {
       forward("KeyR");
     },
+    onToggleSnap: () => {
+      forward("KeyS");
+    },
     onUndo: () => {
       forward("KeyZ", { ctrlKey: true, key: "z" });
     },

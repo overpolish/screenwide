@@ -3,7 +3,11 @@
 
 import { useEffect, useRef } from "react";
 
-import { editorToolKeyAction, EditorToolKeys } from "./editor-tool-keys";
+import {
+  arrowDirections,
+  editorToolKeyAction,
+  EditorToolKeys,
+} from "./editor-tool-keys";
 import { preserveEscapeFocus } from "./escape-focus";
 import {
   ownsActivationKeys,
@@ -23,13 +27,6 @@ import {
  * leaves the tool and every plain deselect on the window stands down.
  */
 let escapeClaims = 0;
-
-const arrowDirections = new Map([
-  ["ArrowDown", { x: 0, y: 1 }],
-  ["ArrowLeft", { x: -1, y: 0 }],
-  ["ArrowRight", { x: 1, y: 0 }],
-  ["ArrowUp", { x: 0, y: -1 }],
-]);
 
 export function useEditorWindowShortcuts({
   onArrowTool,
@@ -53,6 +50,7 @@ export function useEditorWindowShortcuts({
   onToggleKeyboardPanel,
   onTogglePlayback,
   onToggleRangeTool,
+  onToggleSnap,
   onUndo,
   ownsEscape = false,
 }: EditorToolKeys & {
@@ -256,6 +254,7 @@ export function useEditorWindowShortcuts({
         onToggleKeyboardPanel,
         onTogglePlayback,
         onToggleRangeTool,
+        onToggleSnap,
       });
       if (toolKey && !ownsTextEditingKeys(event.target)) {
         consume(event);
@@ -293,6 +292,7 @@ export function useEditorWindowShortcuts({
     onToggleBladeTool,
     onTogglePlayback,
     onToggleRangeTool,
+    onToggleSnap,
     onUndo,
     ownsEscape,
   ]);

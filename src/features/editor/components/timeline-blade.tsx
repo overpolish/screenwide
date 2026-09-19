@@ -18,12 +18,15 @@ import {
 import { useTimelineNativeTrim } from "./use-timeline-native-trim";
 import { useTimelineSpeedMenu } from "./use-timeline-speed-menu";
 
+import type { TimelineSnapGesture } from "./timeline-snap";
+
 export type TimelineBladeController = {
-  beginTrim: (
-    segmentId: number,
-    edge: RecordingTimelineTrimEdge,
-    outputPosition: number,
-  ) => void;
+  beginTrim: (gesture: {
+    edge: RecordingTimelineTrimEdge;
+    outputPosition: number;
+    segmentId: number;
+    snap?: TimelineSnapGesture;
+  }) => void;
   clearPreview: () => void;
   clearRangeSelection: () => void;
   cutAt: (outputPosition: number) => void;
@@ -31,6 +34,7 @@ export type TimelineBladeController = {
   endTrim: (outputPosition: number) => void;
   isActive: boolean;
   isRangeActive: boolean;
+  isSnapActive: boolean;
   previewAt: (outputPosition: number) => void;
   previewPosition: number | null;
   rangeSelection: TimelineRangeSelection | null;
@@ -41,6 +45,10 @@ export type TimelineBladeController = {
   setRangePlaybackRate: (playbackRate: number) => void;
   setRangeSelection: (anchor: number, focus: number) => void;
   setSegmentPlaybackRate: (segmentId: number, playbackRate: number) => void;
+  setSnapActive: (active: boolean) => void;
+  setSnapGuidePosition: (outputPosition: number | null) => void;
+  /** Where a snapped drag is held, in output time, for the guide line. */
+  snapGuidePosition: number | null;
   snapPosition: (sourcePosition: number) => number;
   /** Returns the clamped output position when the drag overshot the trim. */
   updateTrim: (outputPosition: number) => number | null;

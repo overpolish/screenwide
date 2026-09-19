@@ -15,6 +15,14 @@ import {
 
 import { SeekHandler } from "./timeline-seek";
 import {
+  beginTimelineSnapGesture,
+  nearestTimelineSnapTarget,
+  TIMELINE_SNAP_THRESHOLD_PX,
+  timelineSnapRangeShift,
+  TimelineSnapGesture,
+  useTimelineSnap,
+} from "./timeline-snap";
+import {
   TimelineViewportState,
   timelineXToFraction,
 } from "./timeline-viewport";
@@ -46,6 +54,7 @@ type Drag = {
   id: string;
   moved: boolean;
   original: RecordingAnnotationClip[];
+  snap: TimelineSnapGesture;
   startX: number;
 };
 export function useRecordingAnnotationDrag({
@@ -72,6 +81,7 @@ export function useRecordingAnnotationDrag({
   const dragRef = useRef<Drag | null>(null);
   const movedRef = useRef(false);
   const laneRef = useRef<HTMLDivElement>(null);
+  const snap = useTimelineSnap();
   const detachRef = useRef<() => void>(() => undefined);
   // The window listeners are installed once per gesture while the sample
   // handler below is rebuilt every render, so they reach it through a ref
@@ -107,6 +117,7 @@ export function useRecordingAnnotationDrag({
           clips ?? undefined,
         );
     }
+    drag?.snap.showGuide(null);
     setDraft(null);
     draftRef.current = null;
     dragRef.current = null;
@@ -159,6 +170,11 @@ export function useRecordingAnnotationDrag({
       id,
       moved: false,
       original: clips,
+      snap: beginTimelineSnapGesture(snap, {
+        excludeAnnotationId: id,
+        mapTarget: (source) => recordingTimelineSourceToOutput(edit, source),
+        threshold: 0,
+      }),
       startX: clientX,
     };
     draftRef.current = clips;
@@ -196,15 +212,32 @@ export function useRecordingAnnotationDrag({
     if (!drag.moved && drag.edge === "body") onSelect(drag.id);
     drag.moved = true;
     movedRef.current = true;
+    // Retaken every move: a wheel zoom mid-drag changes what 8px spans.
+    drag.snap.threshold =
+      TIMELINE_SNAP_THRESHOLD_PX / (viewport.zoom * bounds.width);
     if (drag.edge === "body") {
       const clip = drag.original.find((item) => item.annotation.id === drag.id);
-      if (!clip) return;
+      if (!clip || sourceDurationMs <= 0) return;
+      const start = recordingTimelineSourceToOutput(
+        edit,
+        clip.startMs / sourceDurationMs,
+      );
+      const end = recordingTimelineSourceToOutput(
+        edit,
+        clip.endMs / sourceDurationMs,
+      );
+      const shift = (clientX - drag.startX) / (viewport.zoom * bounds.width);
+      const snapped = timelineSnapRangeShift(
+        drag.snap,
+        start + shift,
+        end + shift,
+      );
+      drag.snap.showGuide(snapped?.target ?? null);
       const next = drag.original.map((item) =>
         item.annotation.id === drag.id
           ? moveRecordingAnnotationClip({
               clip,
-              deltaOutput:
-                (clientX - drag.startX) / (viewport.zoom * bounds.width),
+              deltaOutput: shift + (snapped?.shift ?? 0),
               edit,
               sourceDurationMs,
             })
@@ -214,12 +247,15 @@ export function useRecordingAnnotationDrag({
       setDraft(next);
       return;
     }
+    const reached = timelineXToFraction(clientX, viewport, bounds);
+    const target = nearestTimelineSnapTarget(drag.snap, reached);
+    drag.snap.showGuide(target);
     const next = resizeRecordingAnnotationClip({
       clips: drag.original,
       edge: drag.edge,
       edit,
       id: drag.id,
-      output: timelineXToFraction(clientX, viewport, bounds),
+      output: target ?? reached,
       sourceDurationMs,
     });
     draftRef.current = next;

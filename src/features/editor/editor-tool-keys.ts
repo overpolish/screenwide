@@ -24,6 +24,8 @@ export type EditorToolKeys = {
   onToggleKeyboardPanel?: () => void;
   onTogglePlayback?: () => void;
   onToggleRangeTool?: () => void;
+  /** S: timeline snapping, on or off. */
+  onToggleSnap?: () => void;
 };
 
 /** What `code` does in this window, or null where it does nothing. */
@@ -38,5 +40,14 @@ export const editorToolKeyAction = (code: string, keys: EditorToolKeys) =>
     KeyN: keys.onCounterTool,
     KeyP: keys.onTogglePlayback,
     KeyR: keys.onToggleRangeTool,
+    KeyS: keys.onToggleSnap,
     KeyV: keys.onSelectTool,
   })[code] ?? null;
+
+/** The arrow keys as directions, for nudging a layer or stepping the playhead. */
+export const arrowDirections = new Map([
+  ["ArrowDown", { x: 0, y: 1 }],
+  ["ArrowLeft", { x: -1, y: 0 }],
+  ["ArrowRight", { x: 1, y: 0 }],
+  ["ArrowUp", { x: 0, y: -1 }],
+]);

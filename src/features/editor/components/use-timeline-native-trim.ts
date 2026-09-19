@@ -11,6 +11,12 @@ import {
 
 import { RecordingTimelineTrimEdge } from "../recording-timeline-edit";
 
+import {
+  beginTimelineSnapGesture,
+  TIMELINE_SNAP_THRESHOLD_PX,
+  useTimelineSnap,
+} from "./timeline-snap";
+
 import type { TimelineBladeController } from "./timeline-blade";
 
 const isMacOS = navigator.userAgent.includes("Mac");
@@ -25,6 +31,7 @@ export function useTimelineNativeTrim({
 }) {
   const channelRef = useRef<Channel<CursorScrubEvent> | null>(null);
   const nativeScrubRef = useRef<Promise<unknown> | null>(null);
+  const snap = useTimelineSnap();
   const dragRef = useRef<{
     anchorClientX: number;
     edge: RecordingTimelineTrimEdge;
@@ -111,7 +118,16 @@ export function useTimelineNativeTrim({
       outputPosition,
       travel: 0,
     };
-    blade.beginTrim(segmentId, edge, outputPosition);
+    blade.beginTrim({
+      edge,
+      outputPosition,
+      segmentId,
+      snap: beginTimelineSnapGesture(snap, {
+        threshold:
+          TIMELINE_SNAP_THRESHOLD_PX *
+          (outputPositionAt(event.clientX + 1) - outputPosition),
+      }),
+    });
     document.documentElement.setAttribute("data-timeline-trimming", "");
     if (!isTauri()) return;
     const channel = new Channel<CursorScrubEvent>();

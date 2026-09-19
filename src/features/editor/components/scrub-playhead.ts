@@ -28,6 +28,8 @@ export const createPlayhead = () => {
       last = { ratio: safeRatio, seconds: safeSeconds };
       for (const listener of listeners) listener(safeSeconds, safeRatio);
     },
+    /** Where the playhead stands now, for a gesture that reads it once. */
+    ratio: () => last.ratio,
     subscribe: (listener: PlayheadListener) => {
       listeners.add(listener);
       // So a subscriber that mounts mid-playback is not left at zero.
