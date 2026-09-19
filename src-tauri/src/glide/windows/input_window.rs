@@ -188,7 +188,7 @@ unsafe extern "system" fn window_proc(
           };
           let work = target.work_area();
           super::finish_current_session(true);
-          super::center::center_target(target, frame, work);
+          super::center::center_target(target, frame, work, point);
         }
       }
       LRESULT(0)

@@ -58,6 +58,15 @@ pub(super) fn release_cursor(anchor: CGPoint, revealed: bool) {
   }
 }
 
+/// Warps the pointer onto a window that moved out from under it, leaving the
+/// hide and pin state a gesture owns untouched: a centering never hid the
+/// cursor, so there is nothing to reveal. The recording stream is told where
+/// the pointer went, since a warp emits no mouse event of its own.
+pub(super) fn carry_cursor(landing: CGPoint) {
+  crate::cursor_scrub::restore_cursor_at(landing);
+  crate::recording::cursor::set_cursor_visibility(true, Some((landing.x, landing.y)));
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

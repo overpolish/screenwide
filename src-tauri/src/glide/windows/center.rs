@@ -4,7 +4,7 @@
 use std::time::{Duration, Instant};
 
 use super::input_kind::InputKind;
-use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{HWND, POINT};
 
 #[derive(Clone, Copy)]
 pub(super) struct Click {
@@ -88,6 +88,7 @@ pub(super) fn center_target(
   target: super::target::WindowTarget,
   frame: crate::glide::core::GlideFrame,
   work: crate::glide::core::GlideFrame,
+  anchor: POINT,
 ) {
   let x = work.x + ((work.width - frame.width) / 2.0).max(0.0);
   let y = work.y + ((work.height - frame.height) / 2.0).max(0.0);
@@ -96,6 +97,20 @@ pub(super) fn center_target(
     crate::glide::core::GlideFrame { x, y, ..frame },
     None,
   );
+  follow_cursor(target, anchor);
+}
+
+/// Centering commits a move like every other glide, so the pointer keeps its
+/// grip on the window when "Move pointer with window" is on. The landing is
+/// read from the tween now in flight and applied when it settles; a window
+/// that never travelled reports no landing and leaves the pointer alone.
+fn follow_cursor(target: super::target::WindowTarget, anchor: POINT) {
+  if !super::native_settings::snapshot().cursor_follows {
+    return;
+  }
+  if let Some(landing) = target.landing(anchor) {
+    super::tween::land_cursor(landing, crate::glide::core::activity::BusyLease::acquire());
+  }
 }
 
 #[cfg(test)]

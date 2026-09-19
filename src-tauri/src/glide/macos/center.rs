@@ -5,9 +5,11 @@ use cidre::cg;
 use core_graphics::geometry::CGPoint;
 use tauri::{AppHandle, LogicalPosition, LogicalSize, Monitor};
 
+use super::cursor::{carry_cursor, landing_point, returns_to_origin};
+use super::native_settings;
 use super::own_window::own_window_at;
 use super::titlebar::{ax_window_at, AxHit};
-use super::tween::{animate_to, WindowTarget};
+use super::tween::{after_current, animate_to, WindowTarget};
 
 /// Centers the window under a global point on the monitor that point lies on,
 /// keeping the window's size. This runs on the event tap thread, like the
@@ -29,6 +31,7 @@ pub(super) fn center_window_at(app: &AppHandle, point: CGPoint) {
     frame,
     (position.x, position.y),
     (size.width, size.height),
+    point,
   );
 }
 
@@ -37,6 +40,7 @@ pub(super) fn center_captured(
   frame: cg::Rect,
   work_position: (f64, f64),
   work_size: (f64, f64),
+  anchor: CGPoint,
 ) {
   let (x, y) = centered_origin(
     LogicalPosition::new(work_position.0, work_position.1),
@@ -51,6 +55,28 @@ pub(super) fn center_captured(
     },
     None,
   );
+  follow_cursor(target, anchor, frame);
+}
+
+/// Centering commits a move like every other glide, so the pointer keeps its
+/// grip on the window when "Move pointer with window" is on. The warp waits for
+/// the tween and reads the frame the window actually reached: a window that
+/// never travelled - already centered, or one its application refused to move -
+/// leaves the pointer where the hand put it.
+fn follow_cursor(target: &WindowTarget, anchor: CGPoint, original: cg::Rect) {
+  if !native_settings::snapshot().cursor_follows {
+    return;
+  }
+  let grip = target.duplicate();
+  after_current(Box::new(move || {
+    let Some(achieved) = grip.frame() else {
+      return;
+    };
+    if returns_to_origin(original, achieved) {
+      return;
+    }
+    carry_cursor(landing_point(anchor, original, achieved));
+  }));
 }
 
 /// The window under a global point as something the tween can drive, with the

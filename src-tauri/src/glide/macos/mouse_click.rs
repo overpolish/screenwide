@@ -27,7 +27,7 @@ pub(super) fn handle_mouse_down(
   if let Some((target, frame, work_position, work_size)) = mouse_center_context(state) {
     end_session(app, state, true);
     set_mouse_up_swallow(state, true);
-    center_captured(&target, frame, work_position, work_size);
+    center_captured(&target, frame, work_position, work_size, point);
     return CallbackResult::Drop;
   }
   if crate::glide::core::activity::BusyLease::is_busy() {
