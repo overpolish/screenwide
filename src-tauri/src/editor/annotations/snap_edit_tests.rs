@@ -3,12 +3,12 @@
 
 //! What one pointer sample lands on, through the whole edit path.
 
+use super::arrow::new_arrow;
 use super::counter::new_counter;
 use super::edit::AnnotationEdit;
-use super::gesture::{AnnotationGestureTarget, AnnotationHandle, NewAnnotationKind};
-use super::model::new_arrow;
+use super::gesture::{AnnotationGestureTarget, AnnotationHandle};
 use super::snap::{AnchorBoxes, SnapBounds, SnapField, SnapModifiers, SnapRequest, SnapResult};
-use super::{Annotation, AnnotationPoint, AnnotationShape};
+use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationShape};
 use crate::ruler::analysis::ComponentBox;
 
 fn point(x: f64, y: f64) -> AnnotationPoint {
@@ -42,7 +42,7 @@ fn counter_move(
     },
     from,
     None,
-    NewAnnotationKind::Counter,
+    Some(AnnotationKind::Counter),
     None,
   )
   .unwrap()
@@ -187,7 +187,7 @@ fn dragging_an_arrow_tip_snaps_it_to_a_detected_element() {
     },
     point(80.0, 80.0),
     None,
-    NewAnnotationKind::Arrow,
+    Some(AnnotationKind::Arrow),
     None,
   )
   .unwrap();
@@ -249,7 +249,7 @@ fn the_bend_and_the_shaft_of_an_arrow_never_snap() {
       AnnotationGestureTarget::Existing { index: 0, handle },
       point(400.0, 200.0),
       None,
-      NewAnnotationKind::Arrow,
+      Some(AnnotationKind::Arrow),
       None,
     )
     .unwrap();

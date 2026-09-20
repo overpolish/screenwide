@@ -8,7 +8,7 @@
 //! the curve, and each head is its inner triangle grown back out by the
 //! rounding.
 
-use super::{add, bezier, distance, scale, subtract, ArrowTriangle};
+use crate::editor::annotations::geometry::{add, bezier, distance, scale, subtract, ArrowTriangle};
 
 fn segment_distance(point: [f32; 2], start: [f32; 2], end: [f32; 2]) -> f32 {
   let delta = subtract(end, start);
@@ -51,4 +51,15 @@ pub(crate) fn shaft_distance(point: [f32; 2], a: [f32; 2], b: [f32; 2], c: [f32;
     previous = next;
   }
   best
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  #[test]
+  fn shaft_distance_follows_the_bend() {
+    let distance = shaft_distance([100.0, 50.0], [0.0, 0.0], [100.0, 100.0], [200.0, 0.0]);
+    assert!(distance < 1.0, "{distance}");
+    assert!(shaft_distance([100.0, 0.0], [0.0, 0.0], [100.0, 100.0], [200.0, 0.0]) > 40.0);
+  }
 }

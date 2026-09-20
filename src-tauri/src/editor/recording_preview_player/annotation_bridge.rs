@@ -6,9 +6,7 @@
 
 use super::*;
 use crate::editor::annotations::edit::AnnotationEdit;
-use crate::editor::annotations::gesture::{
-  annotation_mode, AnnotationGestureTarget, NewAnnotationKind,
-};
+use crate::editor::annotations::gesture::{annotation_mode, drawing_kind, AnnotationGestureTarget};
 use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
 use crate::editor::annotations::snap::{
   detect_anchors, request_anchors, threshold_source_px, AnchorBoxes, AnchorCache, SnapField,

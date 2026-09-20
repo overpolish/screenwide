@@ -64,7 +64,7 @@ pub(crate) fn remap_source(
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::editor::annotations::{model::new_arrow, AnnotationPoint, AnnotationShape};
+  use crate::editor::annotations::{arrow::new_arrow, AnnotationPoint, AnnotationShape};
   #[test]
   fn proxy_decode_preserves_normalized_arrow_position_and_stroke() {
     let mut output = crate::screenshots::test_output_settings(960, 540);

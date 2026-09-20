@@ -3,6 +3,7 @@
 
 import { PencilLine } from "lucide-react";
 
+import { annotationLaneLabel } from "../annotations";
 import { resizeRecordingAnnotationClip } from "../recording-annotation-geometry";
 import { RecordingAnnotationClip } from "../recording-annotations";
 import {
@@ -78,10 +79,12 @@ export function RecordingAnnotationLane({
             const clip = fragment.item;
             // A counter is called by the number it shows; an arrow has no
             // name of its own, so it is called by its place in the lane.
-            const label =
-              clip.annotation.shape.kind === "counter"
-                ? `Counter ${String(clip.annotation.shape.value)}`
-                : `Arrow ${String(clips.findIndex((item) => item.annotation.id === clip.annotation.id) + 1)}`;
+            const label = annotationLaneLabel(
+              clip.annotation,
+              clips.findIndex(
+                (item) => item.annotation.id === clip.annotation.id,
+              ),
+            );
             const selected = clip.annotation.id === selectedId;
             return (
               <div

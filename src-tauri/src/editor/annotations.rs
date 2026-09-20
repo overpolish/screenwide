@@ -2,30 +2,50 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Annotation documents and editing, shared by still and timed workspaces.
+//!
+//! A tool's shape lives in one module under this one ([`arrow`],
+//! [`counter`]) and nothing else branches on which kind an annotation is.
+//! Adding a tool is therefore:
+//!
+//! - one module here, with the `model`, `gesture`, `handles`, `native`,
+//!   `snap`, `reveal` and `geometry` parts the kind needs;
+//! - one arm in each `match` in [`shape`], which is the exhaustive list of
+//!   what a kind has to answer;
+//! - one `EDITOR_TOOLS` row and one `ANNOTATION_KINDS` row in TypeScript,
+//!   plus its icon;
+//! - the per-platform draw code that cannot be shared: a `geometry.h` twin, a
+//!   Metal layer function and an HLSL layer function.
+
+pub(crate) mod kind;
+pub(crate) use kind::AnnotationKind;
 
 pub(crate) mod model;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use model::annotation_colour;
-pub(crate) use model::{
-  Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
-};
+pub(crate) use model::{Annotation, AnnotationHead, AnnotationPoint, AnnotationStyle};
+
+/// What an annotation is, and every per-kind branch there is.
+pub(crate) mod shape;
+pub(crate) use shape::AnnotationShape;
+
+/// The arrow tool's own half of the model.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) mod bend;
+pub(crate) mod arrow;
+/// The counter tool's own half of the model.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod counter;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod edit;
 #[cfg(test)]
 mod edit_tests;
-/// Draw-ready arrow geometry. The Metal compositor prepares its arrows
-/// through `geometry.h`; the D3D11 one has no C to call into, so it prepares
-/// them here against the same arithmetic.
+/// The draw record every kind fills, and the arithmetic it is built with.
+/// The Metal compositor prepares annotations through `geometry.h`; the D3D11
+/// one has no C to call into, so it prepares them against the same
+/// arithmetic here.
 #[cfg(any(target_os = "windows", test))]
 pub(crate) mod geometry;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod gesture;
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-mod gesture_arrow;
 #[cfg(test)]
 mod gesture_tests;
 #[cfg(any(target_os = "macos", target_os = "windows"))]

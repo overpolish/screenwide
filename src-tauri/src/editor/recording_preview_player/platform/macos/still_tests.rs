@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 use super::*;
-use crate::editor::annotations::{model::new_arrow, timing::AnnotationTrack, AnnotationPoint};
+use crate::editor::annotations::{arrow::new_arrow, timing::AnnotationTrack, AnnotationPoint};
 
 #[test]
 fn queued_seek_keeps_its_annotation_timing_snapshot() {

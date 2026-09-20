@@ -4,11 +4,8 @@
 import { Crop, MousePointer2, ScanSquare } from "lucide-react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
-import {
-  ArrowToolIcon,
-  CounterToolIcon,
-} from "../../../components/shared/annotation-style/annotation-tool-icons";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
+import { ANNOTATION_TOOLS } from "../tool-panels/tool-registry";
 
 export type RecordingCanvasTool =
   "arrow" | "canvas" | "counter" | "crop" | "select" | null;
@@ -70,34 +67,23 @@ export function RecordingCanvasTools({
       >
         <Crop />
       </ToolToggle>
-      <span className="inline-flex" data-editor-tool="arrow">
-        <ToolToggle
-          isDisabled={!isArrowEnabled}
-          isSelected={tool === "arrow" && isArrowEnabled}
-          label="Arrow"
-          name="Draw arrow"
-          onSelectedChange={(selected) => {
-            onToolChange(selected ? "arrow" : null);
-          }}
-          shortcut="A"
-        >
-          <ArrowToolIcon />
-        </ToolToggle>
-      </span>
-      <span className="inline-flex" data-editor-tool="counter">
-        <ToolToggle
-          isDisabled={!isArrowEnabled}
-          isSelected={tool === "counter" && isArrowEnabled}
-          label="Counter"
-          name="Drop a counter"
-          onSelectedChange={(selected) => {
-            onToolChange(selected ? "counter" : null);
-          }}
-          shortcut="N"
-        >
-          <CounterToolIcon />
-        </ToolToggle>
-      </span>
+      {ANNOTATION_TOOLS.map(({ icon: Icon, id, label, name, shortcut }) => (
+        // The marker is the anchor this tool's panel hangs from.
+        <span className="inline-flex" data-editor-tool={id} key={id}>
+          <ToolToggle
+            isDisabled={!isArrowEnabled}
+            isSelected={tool === id && isArrowEnabled}
+            label={label}
+            name={name}
+            onSelectedChange={(selected) => {
+              onToolChange(selected ? id : null);
+            }}
+            shortcut={shortcut}
+          >
+            <Icon />
+          </ToolToggle>
+        </span>
+      ))}
     </ButtonGroup>
   );
 }

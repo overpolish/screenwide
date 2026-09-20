@@ -23,6 +23,7 @@ import {
   screenshotWorkspaceItemOutput,
   screenshotOutputDimensions,
 } from "../screenshot-output";
+import { drawingToolKind } from "../tool-panels/tool-registry";
 import { useEditorEditGesture } from "../use-editor-edit-history";
 import {
   ScreenshotAnnotationChangeEvent,
@@ -131,9 +132,8 @@ export function PreviewViewport({
   // A fresh annotation's dress travels with the layout the native tool draws
   // from, and it is the tool's own: a counter's disc and an arrow's stroke are
   // different measurements of different things.
-  const annotationDefaults = useAnnotationDefaults(
-    annotationTool === "counter" ? "counter" : "arrow",
-  );
+  const annotationKind = drawingToolKind(annotationTool) ?? "arrow";
+  const annotationDefaults = useAnnotationDefaults(annotationKind);
   const annotationCounterAngle = useAnnotationAngleDefault();
   const [canvasResizeDraft, setCanvasResizeDraft] =
     useState<ScreenshotWorkspaceOutputSettings | null>(null);

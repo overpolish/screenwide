@@ -10,8 +10,9 @@
 //! along the path it actually travelled on both backends.
 
 use super::*;
-use crate::editor::annotations::geometry::{prepare_arrow, prepare_counter, COUNTER_TAIL_REACH};
-use crate::editor::annotations::native::{native_annotations, NativeAnnotation, KIND_COUNTER};
+use crate::editor::annotations::arrow::geometry::prepare_arrow;
+use crate::editor::annotations::counter::geometry::{prepare_counter, COUNTER_TAIL_REACH};
+use crate::editor::annotations::native::{native_annotations, NativeAnnotation};
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::Annotation;
 use crate::screenshots::output_placement;
@@ -97,17 +98,18 @@ pub(crate) fn placed_arrows(
       // number in `p1[1]`, so only the centre is placed: the disc's diameter
       // is in output pixels, as an arrow's stroke is, and an angle is the
       // same angle in either space.
-      let geometry = if annotation.kind == KIND_COUNTER {
-        prepare_counter(a, annotation.width, annotation.p1[0], annotation.reveal)
-      } else {
-        prepare_arrow(
+      let geometry = match annotation.shape_kind() {
+        AnnotationKind::Counter => {
+          prepare_counter(a, annotation.width, annotation.p1[0], annotation.reveal)
+        }
+        AnnotationKind::Arrow => prepare_arrow(
           a,
           b,
           c,
           annotation.width,
           annotation.head,
           annotation.reveal,
-        )
+        ),
       };
       let mut arrow = compositor::PreviewArrow::new(
         geometry,
@@ -148,10 +150,9 @@ pub(crate) fn placed_arrows(
           ));
         }
       }
-      prepared.counters.push(if annotation.kind == KIND_COUNTER {
-        (annotation.p1[1].max(0.0) as u32, arrow.geometry.rounding)
-      } else {
-        (0, 0.0)
+      prepared.counters.push(match annotation.shape_kind() {
+        AnnotationKind::Counter => (annotation.p1[1].max(0.0) as u32, arrow.geometry.rounding),
+        AnnotationKind::Arrow => (0, 0.0),
       });
       prepared.arrows.push(arrow);
     }
@@ -173,20 +174,22 @@ fn exposure_sample_count(
   c: [f32; 2],
 ) -> u32 {
   let r = annotation.reveal;
-  // An arrow's travel is its window sliding along its own path; a counter has
-  // no path, so all it can cover in a frame is the change in its own size.
-  let mut travel = if annotation.kind == KIND_COUNTER {
-    annotation.width * 0.5 * COUNTER_TAIL_REACH * (r.scale - r.previous[2]).abs()
-  } else {
-    let length = (b[0] - a[0]).hypot(b[1] - a[1]) + (c[0] - b[0]).hypot(c[1] - b[1]);
-    length
-      * (r.low - r.previous[0])
-        .abs()
-        .max((r.high - r.previous[1]).abs())
+  // An arrow's travel is its window sliding along its own path, plus the
+  // change in its own size; a counter has no path, so all it can cover in a
+  // frame is the change in its own size.
+  let travel = match annotation.shape_kind() {
+    AnnotationKind::Counter => {
+      annotation.width * 0.5 * COUNTER_TAIL_REACH * (r.scale - r.previous[2]).abs()
+    }
+    AnnotationKind::Arrow => {
+      let length = (b[0] - a[0]).hypot(b[1] - a[1]) + (c[0] - b[0]).hypot(c[1] - b[1]);
+      length
+        * (r.low - r.previous[0])
+          .abs()
+          .max((r.high - r.previous[1]).abs())
+        + annotation.width * 4.0 * (r.scale - r.previous[2]).abs()
+    }
   };
-  if annotation.kind != KIND_COUNTER {
-    travel += annotation.width * 4.0 * (r.scale - r.previous[2]).abs();
-  }
   if travel < 1.5 && (r.opacity - r.previous[3]).abs() < 0.01 {
     return 0;
   }

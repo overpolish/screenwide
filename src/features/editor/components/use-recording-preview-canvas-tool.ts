@@ -3,11 +3,14 @@
 
 import { RefObject, useCallback, useEffect, useMemo, useRef } from "react";
 
+import { drawingToolKind } from "../tool-panels/tool-registry";
 import { RecordingTrackId, RecordingVideoTrackId } from "../types";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { useRecordingPreviewSelection } from "./use-recording-preview-selection";
 import { toolDisagreesWithAnnotation } from "./use-tool-follows-annotation";
+
+import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
 /** Picking a canvas tool up and putting it down, and what each change clears
  * on its way in. */
@@ -32,7 +35,7 @@ export function useRecordingPreviewCanvasTool({
   >["keyboardTimeline"];
   /** The shape of the annotation in hand, so a tool that draws the other one
    * knows to let it go. */
-  selectedAnnotationKind: "arrow" | "counter" | null;
+  selectedAnnotationKind: AnnotationKind | null;
   setCanvasTool: (tool: RecordingCanvasTool) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
 }) {
@@ -42,7 +45,7 @@ export function useRecordingPreviewCanvasTool({
   selectedKindRef.current = selectedAnnotationKind;
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
-      if (next === "arrow" || next === "counter") {
+      if (drawingToolKind(next) !== null) {
         if (toolDisagreesWithAnnotation(next, selectedKindRef.current))
           clearAnnotationRef.current();
         keyboardTimeline.selection.onClear();

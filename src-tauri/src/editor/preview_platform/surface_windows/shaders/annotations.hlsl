@@ -4,7 +4,7 @@
 // Arrow annotations, the HLSL twin of
 // `gpu_compositor_macos_shader_source_annotation_curve.h` and
 // `gpu_compositor_macos_shader_source_annotations.h`. Geometry arrives already
-// prepared in canvas pixels - `annotations::geometry::prepare_arrow` on the
+// prepared in canvas pixels - `annotations::arrow::geometry::prepare_arrow` on the
 // Rust side is the twin of the C header Metal prepares through - so both
 // backends evaluate the same distances against the same numbers.
 
@@ -42,7 +42,7 @@ struct PreviewArrow {
 /// A counter read out of the slots an arrow fills with its curve: the disc's
 /// centre and radius, the tail's tip and the radius it is rounded to, and where
 /// its number was rasterised in the text atlas. Prepared once per annotation by
-/// `geometry::prepare_counter`.
+/// `counter::geometry::prepare_counter`.
 struct PreviewCounter {
   float2 center, tip;
   float radius, tip_radius;

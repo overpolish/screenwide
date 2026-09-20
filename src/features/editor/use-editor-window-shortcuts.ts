@@ -29,10 +29,8 @@ import {
 let escapeClaims = 0;
 
 export function useEditorWindowShortcuts({
-  onArrowTool,
   onConfirm,
   onCopy,
-  onCounterTool,
   onCutTimeline,
   onDelete,
   onDeselect,
@@ -51,6 +49,7 @@ export function useEditorWindowShortcuts({
   onTogglePlayback,
   onToggleRangeTool,
   onToggleSnap,
+  onTool,
   onUndo,
   ownsEscape = false,
 }: EditorToolKeys & {
@@ -244,8 +243,6 @@ export function useEditorWindowShortcuts({
       }
 
       const toolKey = editorToolKeyAction(event.code, {
-        onArrowTool,
-        onCounterTool,
         onResizeCanvas,
         onSelectTool,
         onToggleBladeTool,
@@ -255,6 +252,7 @@ export function useEditorWindowShortcuts({
         onTogglePlayback,
         onToggleRangeTool,
         onToggleSnap,
+        onTool,
       });
       if (toolKey && !ownsTextEditingKeys(event.target)) {
         consume(event);
@@ -271,9 +269,7 @@ export function useEditorWindowShortcuts({
       window.removeEventListener("keyup", onKeyUp, true);
     };
   }, [
-    onArrowTool,
     onConfirm,
-    onCounterTool,
     onCopy,
     onCutTimeline,
     onDelete,
@@ -293,6 +289,7 @@ export function useEditorWindowShortcuts({
     onTogglePlayback,
     onToggleRangeTool,
     onToggleSnap,
+    onTool,
     onUndo,
     ownsEscape,
   ]);

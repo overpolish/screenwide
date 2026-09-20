@@ -15,6 +15,8 @@
 
 use std::{collections::HashMap, sync::Mutex};
 
+use crate::editor::annotations::AnnotationKind;
+
 use windows::{
   core::{Interface, PCWSTR},
   Win32::{
@@ -189,8 +191,9 @@ pub(crate) fn numbered_arrows(
   let mut arrows = prepared.arrows.clone();
   if let Some(atlas) = numbers.as_ref() {
     for (arrow, rect) in arrows.iter_mut().zip(&atlas.rects) {
-      if arrow.kind != crate::editor::annotations::native::KIND_COUNTER {
-        continue;
+      match AnnotationKind::from_raw(arrow.kind) {
+        Some(AnnotationKind::Counter) => {}
+        Some(AnnotationKind::Arrow) | None => continue,
       }
       arrow.geometry.start_head[0] = rect.x;
       arrow.geometry.start_head[1] = rect.y;

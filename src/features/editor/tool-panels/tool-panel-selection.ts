@@ -3,6 +3,8 @@
 
 import { AnnotationStyle } from "../annotations";
 
+import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+
 /**
  * What the selection panel shows for a placed layer: the selected layer, its
  * size and position in output pixels, and the source it was captured at, which
@@ -92,7 +94,7 @@ export type ToolPanelAnnotation = {
    * shows it only in the recording editor. */
   animated: boolean;
   id: string;
-  kind: "arrow" | "counter";
+  kind: AnnotationKind;
   style: AnnotationStyle;
   /** A counter's aim, in radians clockwise from east. Absent on an arrow,
    * which is aimed by its own two ends. */

@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::annotation::*;
-use crate::editor::annotations::bend::{control_through_midpoint, curve_midpoint};
+use crate::editor::annotations::arrow::bend::{control_through_midpoint, curve_midpoint};
+use crate::editor::annotations::arrow::model::{new_arrow, NEW_ARROW_WIDTH};
 use crate::editor::annotations::handles::*;
-use crate::editor::annotations::model::*;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
 
 const A: AnnotationPoint = AnnotationPoint { x: 10.0, y: 20.0 };

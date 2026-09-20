@@ -4,7 +4,7 @@
 use std::time::Duration;
 
 use super::*;
-use crate::editor::annotations::model::new_arrow;
+use crate::editor::annotations::arrow::new_arrow;
 use crate::editor::annotations::timing::validate_clips;
 use crate::editor::annotations::{AnnotationPoint, AnnotationShape};
 use crate::recording::cursor::CursorSourceKind;

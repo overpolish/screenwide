@@ -7,11 +7,11 @@
 use super::counter::new_counter;
 use super::counter::silhouette::COUNTER_TAIL_REACH;
 use super::edit::AnnotationEdit;
-use super::gesture::{AnnotationGestureTarget, AnnotationHandle, NewAnnotationKind};
+use super::gesture::{AnnotationGestureTarget, AnnotationHandle};
 use super::snap::{
   element_padding, AnchorBoxes, SnapField, SnapModifiers, SnapRequest, SnapResult,
 };
-use super::{Annotation, AnnotationPoint, AnnotationShape};
+use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationShape};
 use crate::ruler::analysis::ComponentBox;
 use std::f64::consts::{FRAC_PI_4, PI};
 use std::sync::Arc;
@@ -80,7 +80,7 @@ fn drag(
     AnnotationGestureTarget::Existing { index: 0, handle },
     from,
     None,
-    NewAnnotationKind::Counter,
+    Some(AnnotationKind::Counter),
     None,
   )
   .unwrap()

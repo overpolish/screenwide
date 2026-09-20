@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::arrow::new_arrow;
 use super::edit::AnnotationEdit;
-use super::gesture::{AnnotationGestureTarget, AnnotationHandle, NewAnnotationKind};
-use super::model::new_arrow;
+use super::gesture::{AnnotationGestureTarget, AnnotationHandle};
 use super::snap::SnapModifiers;
-use super::{AnnotationPoint, AnnotationShape, MAX_ANNOTATIONS};
+use super::{AnnotationKind, AnnotationPoint, AnnotationShape, MAX_ANNOTATIONS};
 
 fn point(x: f64, y: f64) -> AnnotationPoint {
   AnnotationPoint { x, y }
@@ -30,7 +30,7 @@ fn cancelling_a_new_arrow_restores_the_original_list() {
     AnnotationGestureTarget::New,
     point(20.0, 30.0),
     None,
-    NewAnnotationKind::Arrow,
+    Some(AnnotationKind::Arrow),
     None,
   )
   .unwrap();
@@ -56,7 +56,7 @@ fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
     },
     point(50.0, 0.0),
     None,
-    NewAnnotationKind::Arrow,
+    Some(AnnotationKind::Arrow),
     None,
   )
   .unwrap();
@@ -81,7 +81,7 @@ fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
     },
     point(50.0, 0.0),
     None,
-    NewAnnotationKind::Arrow,
+    Some(AnnotationKind::Arrow),
     None,
   )
   .unwrap();
@@ -110,7 +110,7 @@ fn selection_and_capacity_do_not_open_an_edit() {
       target,
       point(0.0, 0.0),
       None,
-      NewAnnotationKind::Arrow,
+      Some(AnnotationKind::Arrow),
       None
     )
     .is_none());

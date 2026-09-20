@@ -12,3 +12,11 @@
 
 /** Which ends of an arrow carry a head. */
 export type AnnotationHead = "none" | "end" | "both";
+
+/**
+ * Which shape a tool draws. The twin of `AnnotationKind` in
+ * `src-tauri/src/editor/annotations/kind.rs`, and the one spelling of the
+ * union: the editor, the live overlay and the shared controls all name a
+ * kind from here rather than respelling it.
+ */
+export type AnnotationKind = "arrow" | "counter";

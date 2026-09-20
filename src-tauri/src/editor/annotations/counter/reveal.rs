@@ -17,7 +17,7 @@
 //! `opacity` move, and the compositor applies both to the disc, its tail and
 //! its number together.
 
-use super::AnnotationReveal;
+use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::effect_animation::{ease_in_out_cubic, ease_out_cubic};
 
 /// How long a counter takes to arrive. The twin of

@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::bend::curve_midpoint;
+use super::arrow::bend::curve_midpoint;
 use super::counter::new_counter;
 use super::gesture::{
-  annotation_mode, drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationHandle,
-  NewAnnotationKind, MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
+  annotation_mode, drawing_kind, next_annotation_id, AnnotationDragOrigin, AnnotationHandle,
+  MODE_ARROW, MODE_COUNTER, MODE_NONE, MODE_SELECT,
 };
 use crate::editor::annotations::{
-  Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
+  Annotation, AnnotationHead, AnnotationKind, AnnotationPoint, AnnotationShape, AnnotationStyle,
 };
 
 /// A drag that began on `annotation` at `point`, which is what a whole-arrow
@@ -75,8 +75,7 @@ fn arrow(id: &str) -> Annotation {
 fn dragging_the_middle_handle_bends_the_curve_through_it() {
   let mut annotation = arrow("a");
   let from = origin(&annotation, 50.0, 0.0);
-  drag_handle(
-    &mut annotation,
+  annotation.drag_grip(
     AnnotationHandle::Middle,
     AnnotationPoint { x: 50.0, y: 50.0 },
     &from,
@@ -104,8 +103,7 @@ fn dragging_the_middle_handle_bends_the_curve_through_it() {
 fn the_middle_handle_stops_at_the_hairpin() {
   let mut annotation = arrow("a");
   let from = origin(&annotation, 50.0, 0.0);
-  drag_handle(
-    &mut annotation,
+  annotation.drag_grip(
     AnnotationHandle::Middle,
     AnnotationPoint { x: 50.0, y: 400.0 },
     &from,
@@ -127,8 +125,7 @@ fn the_middle_handle_stops_at_the_hairpin() {
 fn the_middle_handle_moves_only_across_the_chord() {
   let mut annotation = arrow("a");
   let from = origin(&annotation, 50.0, 0.0);
-  drag_handle(
-    &mut annotation,
+  annotation.drag_grip(
     AnnotationHandle::Middle,
     AnnotationPoint { x: -500.0, y: 30.0 },
     &from,
@@ -148,8 +145,7 @@ fn the_middle_handle_moves_only_across_the_chord() {
 fn dragging_a_tip_keeps_the_bend_against_the_chord() {
   let mut annotation = arrow("a");
   let bent = origin(&annotation, 50.0, 0.0);
-  drag_handle(
-    &mut annotation,
+  annotation.drag_grip(
     AnnotationHandle::Middle,
     AnnotationPoint { x: 60.0, y: 40.0 },
     &bent,
@@ -158,8 +154,7 @@ fn dragging_a_tip_keeps_the_bend_against_the_chord() {
   );
   let before = bend(&annotation);
   let from = origin(&annotation, 100.0, 0.0);
-  drag_handle(
-    &mut annotation,
+  annotation.drag_grip(
     AnnotationHandle::End,
     AnnotationPoint { x: 10.0, y: 220.0 },
     &from,
@@ -181,8 +176,7 @@ fn dragging_a_tip_keeps_the_bend_against_the_chord() {
 fn a_chord_with_no_direction_is_drawn_straight() {
   let mut annotation = arrow("a");
   let from = origin(&annotation, 100.0, 0.0);
-  drag_handle(
-    &mut annotation,
+  annotation.drag_grip(
     AnnotationHandle::End,
     AnnotationPoint { x: 0.2, y: 0.0 },
     &from,
@@ -224,14 +218,7 @@ fn no_sequence_of_drags_can_fold_the_curve() {
   ];
   for (handle, x, y) in pulls {
     let from = origin(&annotation, 0.0, 0.0);
-    drag_handle(
-      &mut annotation,
-      handle,
-      AnnotationPoint { x, y },
-      &from,
-      false,
-      None,
-    );
+    annotation.drag_grip(handle, AnnotationPoint { x, y }, &from, false, None);
     let (along, across) = bend(&annotation);
     assert!((along - 0.5).abs() < 1e-9, "{along} {handle:?}");
     assert!(across.abs() <= 0.6 + 1e-9, "{across} {handle:?}");
@@ -243,8 +230,7 @@ fn a_press_on_the_shaft_that_never_travels_changes_nothing() {
   let mut annotation = arrow("a");
   let before = annotation.clone();
   let from = origin(&annotation, 50.0, 0.0);
-  drag_handle(
-    &mut annotation,
+  annotation.drag_grip(
     AnnotationHandle::Body,
     AnnotationPoint { x: 50.0, y: 0.0 },
     &from,
@@ -267,8 +253,7 @@ fn dragging_the_shaft_moves_the_whole_arrow() {
     ..arrow("a")
   };
   let from = origin(&annotation, 50.0, 20.0);
-  drag_handle(
-    &mut annotation,
+  annotation.drag_grip(
     AnnotationHandle::Body,
     AnnotationPoint { x: 70.0, y: -5.0 },
     &from,
@@ -298,14 +283,7 @@ fn a_shaft_drag_is_measured_from_where_the_press_landed() {
     AnnotationPoint { x: 90.0, y: 30.0 },
     AnnotationPoint { x: 60.0, y: 10.0 },
   ] {
-    drag_handle(
-      &mut annotation,
-      AnnotationHandle::Body,
-      point,
-      &from,
-      false,
-      None,
-    );
+    annotation.drag_grip(AnnotationHandle::Body, point, &from, false, None);
   }
   let AnnotationShape::Arrow { start, end, .. } = annotation.shape else {
     unreachable!()
@@ -334,14 +312,12 @@ fn tool_names_read_back_as_modes() {
   assert_eq!(annotation_mode(Some("select")), MODE_SELECT);
   assert_eq!(annotation_mode(Some("crop")), MODE_NONE);
   assert_eq!(annotation_mode(None), MODE_NONE);
-  assert_eq!(
-    NewAnnotationKind::from_mode(MODE_COUNTER),
-    NewAnnotationKind::Counter
-  );
-  assert_eq!(
-    NewAnnotationKind::from_mode(MODE_ARROW),
-    NewAnnotationKind::Arrow
-  );
+  assert_eq!(drawing_kind(MODE_ARROW), Some(AnnotationKind::Arrow));
+  assert_eq!(drawing_kind(MODE_COUNTER), Some(AnnotationKind::Counter));
+  // The tools that draw nothing make nothing: both hosts decline a press on
+  // empty picture before it can become an annotation.
+  assert_eq!(drawing_kind(MODE_SELECT), None);
+  assert_eq!(drawing_kind(MODE_NONE), None);
 }
 
 #[test]
@@ -354,8 +330,7 @@ fn a_counter_tail_drag_only_turns_it() {
     None,
   );
   let from = origin(&counter, 150.0, 100.0);
-  drag_handle(
-    &mut counter,
+  counter.drag_grip(
     AnnotationHandle::Tail,
     AnnotationPoint { x: 100.0, y: 40.0 },
     &from,
@@ -393,14 +368,7 @@ fn a_counter_body_drag_carries_the_disc_by_the_travel() {
     AnnotationPoint { x: 200.0, y: 200.0 },
     AnnotationPoint { x: 130.0, y: 110.0 },
   ] {
-    drag_handle(
-      &mut counter,
-      AnnotationHandle::Body,
-      point,
-      &from,
-      false,
-      None,
-    );
+    counter.drag_grip(AnnotationHandle::Body, point, &from, false, None);
   }
   let AnnotationShape::Counter { center, angle, .. } = counter.shape else {
     unreachable!()

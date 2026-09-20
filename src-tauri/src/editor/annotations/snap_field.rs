@@ -3,7 +3,7 @@
 
 //! What one gesture can land on, gathered when it begins.
 
-use super::{AnchorBoxes, Annotation, AnnotationPoint, AnnotationShape, Axis, AxisGuide, SnapBox};
+use super::{AnchorBoxes, Annotation, AnnotationPoint, Axis, AxisGuide, SnapBox};
 use std::sync::Arc;
 
 /// How far the canvas's inset guides sit from each edge, as a share of the
@@ -58,12 +58,10 @@ impl SnapField {
     let boxes: Vec<SnapBox> = annotations
       .iter()
       .filter(|annotation| annotation.id != edited)
-      .filter_map(|annotation| match annotation.shape {
-        AnnotationShape::Counter { center, .. } => Some(SnapBox::disc(
-          center,
-          disc_radius(annotation.style.width, source_per_output),
-        )),
-        AnnotationShape::Arrow { .. } => None,
+      .filter_map(|annotation| {
+        annotation
+          .shape
+          .field_box(annotation.style.width, source_per_output)
       })
       .collect();
     let mut field = Self {
@@ -98,6 +96,6 @@ impl SnapField {
   }
 }
 
-fn disc_radius(width: f64, source_per_output: f64) -> f64 {
+pub(crate) fn disc_radius(width: f64, source_per_output: f64) -> f64 {
   width.max(0.0) / 2.0 * source_per_output
 }

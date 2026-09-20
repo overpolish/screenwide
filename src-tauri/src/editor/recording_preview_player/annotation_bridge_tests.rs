@@ -195,7 +195,7 @@ fn final_frame_drawing_uses_a_visible_source_instant() {
 #[test]
 fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
   let mut manager = manager();
-  let annotation = crate::editor::annotations::model::new_arrow(
+  let annotation = crate::editor::annotations::arrow::new_arrow(
     "screen-arrow".into(),
     crate::editor::annotations::AnnotationPoint { x: 100.0, y: 100.0 },
     crate::editor::annotations::AnnotationPoint { x: 500.0, y: 100.0 },

@@ -69,10 +69,7 @@ export function useRecordingPreviewShortcuts({
     !isPlaying &&
     !annotations.hasSelection;
   useEditorWindowShortcuts({
-    onArrowTool: hasVisiblePanes && !isPlaying ? toggleTool.arrow : undefined,
     onConfirm: isCropping ? leaveCropTool : undefined,
-    onCounterTool:
-      hasVisiblePanes && !isPlaying ? toggleTool.counter : undefined,
     onDelete: annotations.canDelete ? annotations.deleteTargeted : undefined,
     onDeselect: annotations.hasSelection
       ? annotations.clearSelection
@@ -93,6 +90,12 @@ export function useRecordingPreviewShortcuts({
     onToggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
     onToggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
+    onTool:
+      hasVisiblePanes && !isPlaying
+        ? (tool) => {
+            toggleTool[tool]();
+          }
+        : undefined,
     ownsEscape: isCropping || annotations.hasSelection,
   });
 }

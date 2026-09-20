@@ -1,18 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What a gesture acts on, and what moving a counter's grip does to it.
+//! What a gesture acts on: which grip the pointer took hold of, which tool
+//! is in hand, and the shape a drag began from.
 //!
 //! The native interaction view reports a grip by number; everything that
-//! decides what an arrow *is* lives on this side, so the native side never
-//! carries a second copy of the model.
+//! decides what an annotation *is* lives on this side, so the native side
+//! never carries a second copy of the model. What a grip does to each shape
+//! is that kind's own, in its `gesture` module.
 
-use super::bend::{arrow_bend, clamp_bend, ArrowBend};
-use super::counter::counter_tail_angle;
-use super::counter::silhouette::counter_tail_tip;
-use super::gesture_arrow::drag_arrow_handle;
-use super::snap::{SnapRequest, SnapResult};
-use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
+use super::arrow::bend::ArrowBend;
+use crate::editor::annotations::{AnnotationKind, AnnotationPoint, AnnotationShape};
 
 /// Which grip of an annotation the pointer took hold of. An arrow has three
 /// grips and its shaft; a counter has one - the tail - and its disc.
@@ -45,7 +43,7 @@ impl AnnotationHandle {
 pub(crate) enum AnnotationGestureTarget {
   /// Empty picture under a drawing tool. Which shape it makes is the tool's
   /// business rather than the native view's, so it rides in beside the
-  /// target as [`NewAnnotationKind`].
+  /// target as the mode's [`AnnotationKind`].
   New,
   Existing {
     index: usize,
@@ -58,13 +56,6 @@ pub(crate) enum AnnotationGestureTarget {
   /// annotation: the move it may turn into arrives as its own `Existing`
   /// gesture once the press has travelled past the native slop.
   Select { index: usize },
-}
-
-/// Which shape a drawing tool's press makes.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum NewAnnotationKind {
-  Arrow,
-  Counter,
 }
 
 /// What the pointer does over the picture while a tool is in hand. The select
@@ -86,15 +77,16 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
   }
 }
 
-impl NewAnnotationKind {
-  /// The shape the tool in hand draws. Only the drawing modes make an
-  /// annotation at all, so anything else answers the arrow it would have drawn.
-  pub(crate) fn from_mode(mode: u32) -> Self {
-    if mode == MODE_COUNTER {
-      Self::Counter
-    } else {
-      Self::Arrow
-    }
+/// The shape the tool in hand draws, or `None` where the tool draws nothing.
+/// This is also the one answer to "does this mode draw at all": both hosts
+/// ask before a press on empty picture may become an annotation, so a
+/// [`AnnotationGestureTarget::New`] under any other mode never arrives.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
+  match mode {
+    MODE_ARROW => Some(AnnotationKind::Arrow),
+    MODE_COUNTER => Some(AnnotationKind::Counter),
+    _ => None,
   }
 }
 
@@ -137,16 +129,7 @@ pub(crate) struct AnnotationDragOrigin {
 impl AnnotationDragOrigin {
   pub(crate) fn new(point: AnnotationPoint, shape: &AnnotationShape) -> Self {
     Self {
-      // A counter has no chord to be bent against; the default bend is never
-      // read for one.
-      bend: match shape {
-        AnnotationShape::Arrow {
-          start,
-          control,
-          end,
-        } => arrow_bend(*start, *control, *end).clamped(),
-        AnnotationShape::Counter { .. } => ArrowBend::STRAIGHT,
-      },
+      bend: shape.bend(),
       point,
       shape: shape.clone(),
     }
@@ -164,94 +147,4 @@ pub(crate) fn next_annotation_id() -> String {
     .duration_since(std::time::UNIX_EPOCH)
     .map_or(0, |elapsed| elapsed.as_millis() as u64);
   format!("annotation-{millis:x}-{sequence:x}")
-}
-
-/// Move one grip of an annotation to `point`, in source pixels. `origin` is
-/// where the drag began, which is what a whole-annotation move measures its
-/// travel against, and `shift` is whether Shift was held - which holds a
-/// counter's tail to the quarter turns.
-///
-/// `snap` is the positional candidates this sample may land on, absent when
-/// the positional modifier is not held. A counter's disc aligns to the axis
-/// guides and an arrow's tip takes an element anchor; neither shape ever sees
-/// the other's candidates, and the bend and the shaft snap to nothing at all.
-/// What it landed on is reported back for the chrome to draw.
-pub(crate) fn drag_handle(
-  annotation: &mut Annotation,
-  handle: AnnotationHandle,
-  point: AnnotationPoint,
-  origin: &AnnotationDragOrigin,
-  shift: bool,
-  snap: Option<SnapRequest<'_>>,
-) -> SnapResult {
-  let mut result = SnapResult::default();
-  let width = annotation.style.width;
-  match &mut annotation.shape {
-    AnnotationShape::Arrow {
-      start,
-      control,
-      end,
-    } => drag_arrow_handle(
-      start,
-      control,
-      end,
-      handle,
-      point,
-      origin,
-      snap,
-      &mut result,
-    ),
-    AnnotationShape::Counter { center, angle, .. } => {
-      match handle {
-        // The tail turns around the disc: the drag sets its direction and
-        // nothing else, so a counter cannot be stretched out of shape. The
-        // aim the hand gives comes first, because an element edge within
-        // reach of it beats both that aim and Shift's eighth turns.
-        AnnotationHandle::Tail => {
-          let aimed = counter_tail_angle(*center, point, *angle, false);
-          match snap.and_then(|request| request.tail(*center, request.field.radius(width), aimed)) {
-            Some((edge, anchor)) => {
-              *angle = edge;
-              result.anchor = Some(anchor);
-            }
-            None => *angle = counter_tail_angle(*center, point, *angle, shift),
-          }
-        }
-        // Everything else carries the whole counter, the disc included: a
-        // grip an arrow has and a counter does not is a move rather than
-        // nothing at all.
-        _ => {
-          let AnnotationShape::Counter { center: from, .. } = origin.shape else {
-            return result;
-          };
-          let moved = AnnotationPoint {
-            x: from.x + point.x - origin.point.x,
-            y: from.y + point.y - origin.point.y,
-          };
-          // What snaps is the disc the drag arrives at, not the pointer: the
-          // grip may be anywhere on it, and a counter lines up by its edges
-          // as readily as by its middle. Its tail tip travels with it and
-          // competes for an element's edges in either axis.
-          *center = match snap {
-            Some(request) => {
-              let radius = request.field.radius(width);
-              let (offset, resolved) = request.counter(
-                request.field.disc(moved, width),
-                counter_tail_tip(moved, radius, *angle),
-              );
-              result = resolved;
-              offset.apply(moved)
-            }
-            None => moved,
-          };
-        }
-      }
-      return result;
-    }
-  }
-  // Every edit leaves an arrow that can be drawn: the middle handle can be
-  // dragged past a tip, and a document written before the limit existed is
-  // repaired the first time its arrow is touched.
-  clamp_bend(annotation);
-  result
 }

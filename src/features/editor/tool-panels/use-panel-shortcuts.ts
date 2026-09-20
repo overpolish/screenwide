@@ -5,6 +5,7 @@ import { EditorKind } from "../types";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
 
 import { sendToolPanelRequest } from "./tool-panel-store";
+import { drawingToolShortcut } from "./tool-registry";
 
 /** Apply the editor's input ownership rules before crossing window boundaries. */
 export function usePanelShortcuts(workspace: EditorKind) {
@@ -15,17 +16,11 @@ export function usePanelShortcuts(workspace: EditorKind) {
     });
   };
   useEditorWindowShortcuts({
-    onArrowTool: () => {
-      forward("KeyA");
-    },
     onConfirm: () => {
       forward("Enter");
     },
     onCopy: () => {
       forward("KeyC", { ctrlKey: true });
-    },
-    onCounterTool: () => {
-      forward("KeyN");
     },
     onCutTimeline: () => {
       forward("KeyB", { ctrlKey: true });
@@ -80,6 +75,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
     },
     onToggleSnap: () => {
       forward("KeyS");
+    },
+    onTool: (tool) => {
+      forward(`Key${drawingToolShortcut(tool)}`);
     },
     onUndo: () => {
       forward("KeyZ", { ctrlKey: true, key: "z" });

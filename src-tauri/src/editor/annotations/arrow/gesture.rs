@@ -3,22 +3,31 @@
 
 //! What moving one of an arrow's grips does to its shape.
 
-use super::bend::{control_for_bend, control_through_midpoint};
-use super::gesture::{AnnotationDragOrigin, AnnotationHandle};
-use super::snap::{SnapRequest, SnapResult};
-use super::{AnnotationPoint, AnnotationShape};
+use super::bend::{clamp_bend, control_for_bend, control_through_midpoint};
+use crate::editor::annotations::gesture::{AnnotationDragOrigin, AnnotationHandle};
+use crate::editor::annotations::snap::{SnapRequest, SnapResult};
+use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
 
+/// Move one grip of an arrow to `point`. `shift` is unread: an arrow's grips
+/// have nothing to quantise to, where a counter's tail has its eighth turns.
 #[allow(clippy::too_many_arguments)]
-pub(super) fn drag_arrow_handle(
-  start: &mut AnnotationPoint,
-  control: &mut AnnotationPoint,
-  end: &mut AnnotationPoint,
+pub(crate) fn drag(
+  annotation: &mut Annotation,
   handle: AnnotationHandle,
   point: AnnotationPoint,
   origin: &AnnotationDragOrigin,
+  _shift: bool,
   snap: Option<SnapRequest<'_>>,
-  result: &mut SnapResult,
-) {
+) -> SnapResult {
+  let mut result = SnapResult::default();
+  let AnnotationShape::Arrow {
+    start,
+    control,
+    end,
+  } = &mut annotation.shape
+  else {
+    return result;
+  };
   match handle {
     // A tip takes the bend with it: the curve is re-hung from the chord the
     // drag leaves behind, holding the share of it the arrow was bent by, so
@@ -45,7 +54,7 @@ pub(super) fn drag_arrow_handle(
         end: from_end,
       } = origin.shape
       else {
-        return;
+        return result;
       };
       let delta_x = point.x - origin.point.x;
       let delta_y = point.y - origin.point.y;
@@ -58,4 +67,9 @@ pub(super) fn drag_arrow_handle(
       *end = moved(from_end);
     }
   }
+  // Every edit leaves an arrow that can be drawn: the middle handle can be
+  // dragged past a tip, and a document written before the limit existed is
+  // repaired the first time its arrow is touched.
+  clamp_bend(annotation);
+  result
 }

@@ -11,6 +11,8 @@ import { CameraOverlaySettings, RecordingVideoTrackId } from "../types";
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { normalizedRecordingSelection } from "./recording-selection";
 
+import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+
 const FRAME_LAYER_ID = 0xffffffff;
 
 type VideoSourceDimensions = Partial<
@@ -83,11 +85,11 @@ function bakedCameraSelection({
  * handle under the Frame tool, the baked camera's own rect when the camera is
  * composited into the screen output, or the selected pane's own rect.
  */
-/** A drawing tool leaves the layer chrome in the select tool's hands: the
- * annotations are drawn over the picture, and the layer underneath is still the
- * thing a press outside one acts on. */
-const selectionChromeTool = (tool: "arrow" | "counter" | "crop" | "select") =>
-  tool === "arrow" || tool === "counter" ? "select" : tool;
+/** Only the crop tool draws its own layer chrome. A drawing tool leaves it in
+ * the select tool's hands: the annotations are drawn over the picture, and the
+ * layer underneath is still the thing a press outside one acts on. */
+const selectionChromeTool = (tool: AnnotationKind | "crop" | "select") =>
+  tool === "crop" ? "crop" : "select";
 
 export function recordingVideoSelectionOverlay({
   activeVideoTrack,

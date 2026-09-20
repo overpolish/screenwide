@@ -10,7 +10,7 @@ import { AnnotationAngleDial } from "../../../components/shared/annotation-style
 import { AnnotationColorGrid } from "../../../components/shared/annotation-style/annotation-color-grid";
 import { AnnotationHeadGroup } from "../../../components/shared/annotation-style/annotation-head-group";
 import { AnnotationWidthSlider } from "../../../components/shared/annotation-style/annotation-width-slider";
-import { annotationSizes } from "../../../components/shared/annotation-style/widths";
+import { ANNOTATION_KINDS } from "../annotations";
 import { EditorKind } from "../types";
 
 import { useAnnotationColorMenu } from "./use-annotation-color-menu";
@@ -45,21 +45,19 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   if (!annotation) return <Text variant="body">Nothing selected</Text>;
 
   const { color, head, width } = annotation.style;
-  const isCounter = annotation.kind === "counter";
+  const kind = ANNOTATION_KINDS[annotation.kind];
 
   return (
     <div className="flex flex-col gap-section">
       <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">
-          {isCounter ? "Size" : "Width"}
-        </span>
+        <span className="text-body text-content-fg">{kind.sizeLabel}</span>
         <AnnotationWidthSlider
           isDisabled={isSaving}
-          label={isCounter ? "Size" : "Width"}
+          label={kind.sizeLabel}
           onChange={(next) => {
             change({ annotationStyle: { width: next } });
           }}
-          presets={annotationSizes(annotation.kind)}
+          presets={kind.sizes}
           value={width}
         />
       </div>
@@ -67,7 +65,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       {/* A counter is aimed by its tail, on the picture or here. The dial's
           notch stands where the tail does, and a held Shift snaps it to the
           same eighth of a turn a drag on the picture snaps to. */}
-      {isCounter ? (
+      {kind.hasAngle ? (
         <div className="flex items-center justify-between gap-section">
           <span className="text-body text-content-fg">Angle</span>
           <AnnotationAngleDial
@@ -97,7 +95,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         </div>
       ) : null}
 
-      {isCounter ? null : (
+      {kind.hasHead ? (
         <div className="flex items-center justify-between gap-section">
           <span className="text-body text-content-fg">Head</span>
           <AnnotationHeadGroup
@@ -108,13 +106,13 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
             value={head}
           />
         </div>
-      )}
+      ) : null}
 
       {/* The head rides the end point, so turning the annotation round points it
           the other way without redrawing it: the same commit path the drag
           on the picture uses. A counter is aimed by its tail instead, on the
           picture itself. */}
-      {isCounter ? null : (
+      {kind.reversible ? (
         <div className="flex items-center justify-between gap-section">
           <span className="text-body text-content-fg">Direction</span>
           <Button
@@ -128,7 +126,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
             Reverse
           </Button>
         </div>
-      )}
+      ) : null}
 
       {/* The swatches say what they are, so the row carries no heading; it
           keeps the section gap its labelled neighbours sit on. */}

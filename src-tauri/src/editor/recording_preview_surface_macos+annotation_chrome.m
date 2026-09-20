@@ -25,8 +25,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_owns_chrome(
   ScreenwideAnnotationMode mode = annotation_active_mode(surface);
   // A drawing tool always draws its own chrome; the select tool only once it
   // is holding an annotation, so an ordinary layer selection is untouched.
-  return mode == ScreenwideAnnotationModeArrow ||
-         mode == ScreenwideAnnotationModeCounter ||
+  return annotation_drawing_mode(mode) ||
          (mode == ScreenwideAnnotationModeSelect &&
           surface.annotationSelected != -1);
 }
@@ -42,10 +41,7 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
     return [NSCursor arrowCursor];
   // Empty picture: a drawing tool makes an annotation rather than picking one
   // up. The select tool leaves the choice to the layer underneath.
-  return mode == ScreenwideAnnotationModeArrow ||
-                 mode == ScreenwideAnnotationModeCounter
-             ? [NSCursor crosshairCursor]
-             : nil;
+  return annotation_drawing_mode(mode) ? [NSCursor crosshairCursor] : nil;
 }
 
 /// How far an equal-gap bar's end ticks reach either side of it, in points.

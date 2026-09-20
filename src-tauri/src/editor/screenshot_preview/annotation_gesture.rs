@@ -17,7 +17,7 @@
 use super::super::preview_platform::SelectionGesturePhase;
 use super::state::PreviewManager;
 use crate::editor::annotations::edit::AnnotationEdit;
-use crate::editor::annotations::gesture::{AnnotationGestureTarget, NewAnnotationKind};
+use crate::editor::annotations::gesture::{drawing_kind, AnnotationGestureTarget};
 use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
 use crate::editor::annotations::snap::{
   detect_anchors, request_anchors, threshold_source_px, AnchorBoxes, SnapField, SnapModifiers,
@@ -262,7 +262,7 @@ impl PreviewManager {
       target,
       point,
       defaults.as_ref(),
-      NewAnnotationKind::from_mode(mode),
+      drawing_kind(mode),
       angle,
     )?;
     // The field excludes the annotation the gesture holds, so a counter can

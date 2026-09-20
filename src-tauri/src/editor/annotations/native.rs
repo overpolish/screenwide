@@ -11,12 +11,9 @@
 
 use super::reveal::AnnotationReveal;
 use super::{Annotation, MAX_ANNOTATIONS};
-use crate::editor::annotations::{annotation_colour, AnnotationHead, AnnotationShape};
-
-/// Which shape a retained annotation is, matching C's
-/// `SCREENWIDE_ANNOTATION_*`.
-pub(crate) const KIND_ARROW: u32 = 0;
-pub(crate) const KIND_COUNTER: u32 = 1;
+#[cfg(target_os = "windows")]
+use crate::editor::annotations::AnnotationKind;
+use crate::editor::annotations::{annotation_colour, AnnotationHead};
 
 /// One retained annotation matching C's `ScreenwideAnnotation`. The native
 /// binding prepares separate draw geometry; every stored member is four bytes
@@ -30,6 +27,7 @@ pub(crate) const KIND_COUNTER: u32 = 1;
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct NativeAnnotation {
+  /// The shape's [`AnnotationKind`], as the number the shaders read.
   pub(crate) kind: u32,
   pub(crate) head: u32,
   pub(crate) above_camera: u32,
@@ -59,6 +57,18 @@ const _: () = assert!(std::mem::offset_of!(NativeAnnotation, hover) == 56);
 const _: () = assert!(std::mem::offset_of!(NativeAnnotation, animated) == 60);
 const _: () = assert!(std::mem::offset_of!(NativeAnnotation, reveal) == 64);
 
+/// The Metal backend reads a record's kind in its own shader and prepare
+/// code; only the D3D11 one prepares from it in Rust.
+#[cfg(target_os = "windows")]
+impl NativeAnnotation {
+  /// Which shape this record draws. A number no kind owns cannot come from
+  /// [`native_annotations`], and the arrow is what such a record was drawn as
+  /// before the kinds were named, so the reading stays the arrow's.
+  pub(crate) fn shape_kind(&self) -> AnnotationKind {
+    AnnotationKind::from_raw(self.kind).unwrap_or(AnnotationKind::Arrow)
+  }
+}
+
 /// One layer's annotations, bound as a single buffer. `count` may be zero; the
 /// array is still valid memory so Metal never sees a nil buffer.
 #[repr(C)]
@@ -84,28 +94,9 @@ pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotation
   let mut native = NativeAnnotations::default();
   let annotations = annotations.iter();
   for (index, annotation) in annotations.take(MAX_ANNOTATIONS).enumerate() {
-    let (kind, p0, p1, p2) = match &annotation.shape {
-      AnnotationShape::Arrow {
-        start,
-        control,
-        end,
-      } => (
-        KIND_ARROW,
-        [start.x as f32, start.y as f32],
-        [control.x as f32, control.y as f32],
-        [end.x as f32, end.y as f32],
-      ),
-      AnnotationShape::Counter {
-        center,
-        value,
-        angle,
-      } => {
-        let centre = [center.x as f32, center.y as f32];
-        (KIND_COUNTER, centre, [*angle as f32, *value as f32], centre)
-      }
-    };
+    let [p0, p1, p2] = annotation.shape.draw_points();
     native.items[index] = NativeAnnotation {
-      kind,
+      kind: annotation.shape.kind().raw(),
       head: match annotation.style.head {
         AnnotationHead::None => 0,
         AnnotationHead::End => 1,
@@ -129,7 +120,7 @@ pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotation
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationStyle};
+  use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
 
   #[test]
   fn flattens_an_arrow() {

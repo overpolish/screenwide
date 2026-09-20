@@ -53,7 +53,7 @@ static BOOL annotation_normalised_point(ScreenwidePreviewSurface *surface,
 #include "recording_preview_annotation_geometry_macos.h"
 
 /// Whether a tool in hand makes a new annotation on empty picture.
-static BOOL annotation_drawing_mode(ScreenwideAnnotationMode mode) {
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode mode) {
   return mode == ScreenwideAnnotationModeArrow ||
          mode == ScreenwideAnnotationModeCounter;
 }

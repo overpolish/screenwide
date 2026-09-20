@@ -3,8 +3,9 @@
 
 //! Native handle conversion, independent of the owning workspace.
 
-use super::bend::curve_midpoint;
-use super::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
+#[cfg(target_os = "windows")]
+use super::AnnotationKind;
+use super::{Annotation, AnnotationPoint, AnnotationStyle};
 
 /// A point in image-normalised space, in the source's pixels.
 pub(crate) fn source_point(x: f64, y: f64, source: (u32, u32)) -> AnnotationPoint {
@@ -63,9 +64,17 @@ pub(crate) struct NativeAnnotationHandles {
 
 const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 88);
 
-/// The native kinds, matching the shapes the compositor draws.
-pub(crate) const HANDLE_KIND_ARROW: u32 = 0;
-pub(crate) const HANDLE_KIND_COUNTER: u32 = 1;
+/// The Metal backend reads a record's kind in Objective-C; only the D3D11
+/// one picks and prepares from it in Rust.
+#[cfg(target_os = "windows")]
+impl NativeAnnotationHandles {
+  /// Which shape these grips belong to. A number no kind owns cannot come
+  /// from [`annotation_handles`], and the arrow is what such a record was
+  /// picked as before the kinds were named, so the reading stays the arrow's.
+  pub(crate) fn shape_kind(&self) -> AnnotationKind {
+    AnnotationKind::from_raw(self.kind).unwrap_or(AnnotationKind::Arrow)
+  }
+}
 
 /// One equal gap the chrome draws a bar across, normalised over the source:
 /// where it starts and ends along its own axis, and where it sits across it.
@@ -171,24 +180,24 @@ fn gap_spans(spans: [super::snap::GapSpan; 2], along: f64, across: f64) -> [Nati
 /// in output pixels and the image is drawn `image_width` of them across, so
 /// the width becomes a share of the picture the native side can place without
 /// knowing either number.
-fn stroke_width(style: &AnnotationStyle, image_width: f64) -> f64 {
+pub(super) fn stroke_width(style: &AnnotationStyle, image_width: f64) -> f64 {
   if image_width <= 0.0 || !image_width.is_finite() {
     return 0.0;
   }
   style.width.max(0.0) / image_width
 }
 
+/// The head's length as a multiple of the stroke width, matching the shader's
+/// `annotation_head_length`.
+const HEAD_LENGTH_WIDTHS: f64 = 4.0;
+
 /// How far a head reaches back from its tip, in the same fraction.
-fn head_reach(style: &AnnotationStyle, wanted: bool, image_width: f64) -> f64 {
+pub(super) fn head_reach(style: &AnnotationStyle, wanted: bool, image_width: f64) -> f64 {
   if !wanted {
     return 0.0;
   }
   stroke_width(style, image_width) * HEAD_LENGTH_WIDTHS
 }
-
-/// The head's length as a multiple of the stroke width, matching the shader's
-/// `annotation_head_length`.
-const HEAD_LENGTH_WIDTHS: f64 = 4.0;
 
 /// Every annotation's grips, in the order the layer stores them.
 pub(crate) fn annotation_handles(
@@ -199,67 +208,10 @@ pub(crate) fn annotation_handles(
   annotations
     .iter()
     .enumerate()
-    .map(|(index, annotation)| match &annotation.shape {
-      AnnotationShape::Arrow {
-        start,
-        control,
-        end,
-      } => {
-        let head = annotation.style.head;
-        let (start_x, start_y) = normalised_point(*start, source);
-        let (middle_x, middle_y) = normalised_point(curve_midpoint(*start, *control, *end), source);
-        let (end_x, end_y) = normalised_point(*end, source);
-        NativeAnnotationHandles {
-          layer_id: -1,
-          index: index as u32,
-          kind: HANDLE_KIND_ARROW,
-          padding: 0,
-          start_x,
-          start_y,
-          middle_x,
-          middle_y,
-          end_x,
-          end_y,
-          start_head: head_reach(
-            &annotation.style,
-            head == crate::editor::annotations::AnnotationHead::Both,
-            image_width,
-          ),
-          end_head: head_reach(
-            &annotation.style,
-            head != crate::editor::annotations::AnnotationHead::None,
-            image_width,
-          ),
-          width: stroke_width(&annotation.style, image_width),
-        }
-      }
-      AnnotationShape::Counter {
-        center,
-        angle,
-        value: _,
-      } => {
-        // The tail's tip is not sent as a point. A normalised point is a
-        // share of the image in each axis, and those shares differ on a
-        // picture that is not square, so a circular offset does not survive
-        // the trip. The angle does, and the native side - which works in
-        // isotropic display points - places the tip from it and the disc.
-        let (start_x, start_y) = normalised_point(*center, source);
-        NativeAnnotationHandles {
-          layer_id: -1,
-          index: index as u32,
-          kind: HANDLE_KIND_COUNTER,
-          padding: 0,
-          start_x,
-          start_y,
-          middle_x: start_x,
-          middle_y: start_y,
-          end_x: start_x,
-          end_y: start_y,
-          start_head: *angle,
-          end_head: 0.0,
-          width: stroke_width(&annotation.style, image_width),
-        }
-      }
+    .map(|(index, annotation)| {
+      annotation
+        .shape
+        .grips(&annotation.style, index as u32, source, image_width)
     })
     .collect()
 }

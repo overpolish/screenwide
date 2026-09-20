@@ -4,14 +4,9 @@
 //! One live annotation edit. Workspaces own presentation and history; this
 //! transaction owns only the annotations changed by a pointer gesture.
 
-use super::counter::silhouette::counter_tail_tip;
-use super::counter::{new_counter, next_counter_value};
-use super::gesture::{
-  drag_handle, next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget, NewAnnotationKind,
-};
-use super::model::new_arrow;
+use super::gesture::{next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget};
 use super::snap::{SnapModifiers, SnapRequest, SnapResult};
-use super::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle, MAX_ANNOTATIONS};
+use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationStyle, MAX_ANNOTATIONS};
 
 pub(crate) struct AnnotationEdit {
   before: Vec<Annotation>,
@@ -23,15 +18,16 @@ pub(crate) struct AnnotationEdit {
 
 impl AnnotationEdit {
   /// Selection-only presses are handled by the workspace, without opening an
-  /// edit. `kind` is the shape the tool in hand draws and `angle` where a
-  /// fresh counter's tail points, both of which only a
-  /// [`AnnotationGestureTarget::New`] press reads.
+  /// edit. `kind` is the shape the tool in hand draws - absent where the tool
+  /// draws nothing, which declines a press that would have made one - and
+  /// `angle` where a fresh counter's tail points. Only a
+  /// [`AnnotationGestureTarget::New`] press reads either.
   pub(crate) fn begin(
     annotations: &mut Vec<Annotation>,
     target: AnnotationGestureTarget,
     point: AnnotationPoint,
     defaults: Option<&AnnotationStyle>,
-    kind: NewAnnotationKind,
+    kind: Option<AnnotationKind>,
     angle: Option<f64>,
   ) -> Option<Self> {
     let index = match target {
@@ -42,12 +38,7 @@ impl AnnotationEdit {
     let before = annotations.clone();
     if target == AnnotationGestureTarget::New {
       let id = next_annotation_id();
-      annotations.push(match kind {
-        NewAnnotationKind::Arrow => new_arrow(id, point, point, defaults),
-        NewAnnotationKind::Counter => {
-          new_counter(id, point, next_counter_value(&before), defaults, angle)
-        }
-      });
+      annotations.push(kind?.new_annotation(id, point, defaults, angle, &before));
     }
     let annotation = &annotations[index];
     Some(Self {
@@ -86,50 +77,14 @@ impl AnnotationEdit {
     let snap = field.filter(|request| {
       modifiers.position && request.threshold.is_finite() && request.threshold > 0.0
     });
-    let width = annotation.style.width;
     match self.target {
       // A fresh arrow is drawn out from where the press landed; a fresh
       // counter was dropped whole there, so the same drag carries it. Both
       // snap the way the same grip does on an annotation already placed.
-      AnnotationGestureTarget::New => match &mut annotation.shape {
-        AnnotationShape::Arrow {
-          start,
-          control,
-          end,
-        } => {
-          let mut result = SnapResult::default();
-          let tip = result.tip(point, snap);
-          *end = tip;
-          *control = AnnotationPoint {
-            x: (start.x + tip.x) / 2.0,
-            y: (start.y + tip.y) / 2.0,
-          };
-          result
-        }
-        AnnotationShape::Counter { center, angle, .. } => match snap {
-          Some(request) => {
-            let radius = request.field.radius(width);
-            let (offset, result) = request.counter(
-              request.field.disc(point, width),
-              counter_tail_tip(point, radius, *angle),
-            );
-            *center = offset.apply(point);
-            result
-          }
-          None => {
-            *center = point;
-            SnapResult::default()
-          }
-        },
-      },
-      AnnotationGestureTarget::Existing { handle, .. } => drag_handle(
-        annotation,
-        handle,
-        point,
-        &self.origin,
-        modifiers.shift,
-        snap,
-      ),
+      AnnotationGestureTarget::New => annotation.drag_new(point, snap),
+      AnnotationGestureTarget::Existing { handle, .. } => {
+        annotation.drag_grip(handle, point, &self.origin, modifiers.shift, snap)
+      }
       _ => SnapResult::default(),
     }
   }

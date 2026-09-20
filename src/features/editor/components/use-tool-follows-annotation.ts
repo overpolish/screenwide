@@ -3,6 +3,10 @@
 
 import { useEffect, useRef } from "react";
 
+import { drawingToolKind } from "../tool-panels/tool-registry";
+
+import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+
 /**
  * A drawing tool follows the annotation that was chosen with it.
  *
@@ -16,9 +20,9 @@ import { useEffect, useRef } from "react";
  * draws nothing to disagree with.
  */
 export function useToolFollowsAnnotation(
-  kind: "arrow" | "counter" | null,
+  kind: AnnotationKind | null,
   tool: string | null,
-  setTool: (tool: "arrow" | "counter") => void,
+  setTool: (tool: AnnotationKind) => void,
 ) {
   // The workspaces rebuild their setter every render; only the chosen
   // annotation and the tool in hand are worth reacting to.
@@ -42,9 +46,7 @@ export function useToolFollowsAnnotation(
  */
 export function toolDisagreesWithAnnotation(
   next: string | null,
-  kind: "arrow" | "counter" | null,
+  kind: AnnotationKind | null,
 ) {
-  return (
-    (next === "arrow" || next === "counter") && kind !== null && kind !== next
-  );
+  return drawingToolKind(next) !== null && kind !== null && kind !== next;
 }

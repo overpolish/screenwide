@@ -17,6 +17,7 @@ import {
   RecordingAnnotationClip,
 } from "./recording-annotations";
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
+import { drawingToolKind } from "./tool-panels/tool-registry";
 import { RecordingVideoTrackId } from "./types";
 import { useAnnotations } from "./use-annotations";
 
@@ -57,9 +58,7 @@ export function useRecordingAnnotations({
   // property, so it rides beside the style rather than inside it. The dress is
   // the tool's own: a disc and a stroke are different measurements, so the size
   // the counter tool sends is the one counters were last drawn at.
-  const defaults = useAnnotationDefaults(
-    tool === "counter" ? "counter" : "arrow",
-  );
+  const defaults = useAnnotationDefaults(drawingToolKind(tool) ?? "arrow");
   const animated = useAnnotationAnimatedDefault();
   const counterAngle = useAnnotationAngleDefault();
   const [previewClips, setPreviewClips] = useState<

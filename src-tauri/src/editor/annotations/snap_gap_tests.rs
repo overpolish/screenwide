@@ -5,10 +5,10 @@
 
 use super::counter::new_counter;
 use super::edit::AnnotationEdit;
-use super::gesture::{AnnotationGestureTarget, AnnotationHandle, NewAnnotationKind};
+use super::gesture::{AnnotationGestureTarget, AnnotationHandle};
 use super::handles::{annotation_snap, SNAP_FLAG_GAP_X, SNAP_FLAG_GAP_Y};
 use super::snap::{GapSpan, SnapField, SnapModifiers, SnapRequest, SnapResult};
-use super::{Annotation, AnnotationPoint, AnnotationShape};
+use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationShape};
 
 const SOURCE: (u32, u32) = (1920, 1080);
 /// Drawn one output pixel per source pixel, so the default 56-pixel disc is
@@ -55,7 +55,7 @@ fn moved_to(
     },
     from,
     None,
-    NewAnnotationKind::Counter,
+    Some(AnnotationKind::Counter),
     None,
   )
   .unwrap();

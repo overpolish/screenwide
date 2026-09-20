@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::editor::annotations::model::new_arrow;
+use crate::editor::annotations::arrow::new_arrow;
 use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
 use crate::editor::annotations::AnnotationPoint;
 use crate::editor::timeline_edit::{RecordingTimelineEdit, RecordingTimelineSegment, TimelinePlan};

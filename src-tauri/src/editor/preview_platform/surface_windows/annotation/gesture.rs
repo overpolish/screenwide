@@ -128,49 +128,52 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       Some(_) => None,
       None => shaft_at_point(&state, point),
     };
+    // Read before the match: the arms take the state by mutable reference,
+    // which a borrow held by the scrutinee would forbid.
+    let drawing = drawing_kind(state.annotation.mode);
     match (handle, shaft) {
-      (None, None)
-        if state.annotation.mode != MODE_ARROW && state.annotation.mode != MODE_COUNTER =>
-      {
-        // Empty picture with only the select tool in hand: the arrow chrome
-        // lets go, and the press carries on to the layer underneath. A live
-        // annotation - one with no layer of its own - has its choice cleared
-        // first.
-        if selected_item(&state).is_some_and(|item| item.layer_id < 0) {
-          state.annotation.selected = -1;
+      (None, None) => match drawing {
+        None => {
+          // Empty picture with only the select tool in hand: the arrow chrome
+          // lets go, and the press carries on to the layer underneath. A live
+          // annotation - one with no layer of its own - has its choice cleared
+          // first.
+          if selected_item(&state).is_some_and(|item| item.layer_id < 0) {
+            state.annotation.selected = -1;
+            samples.extend(resolve(
+              &state,
+              SelectionGesturePhase::Begin,
+              TARGET_NONE,
+              0,
+              HANDLE_BODY,
+              point,
+            ));
+          }
+          false
+        }
+        Some(AnnotationKind::Counter) => {
+          // Empty picture under the counter tool: a counter is dropped whole
+          // where the press lands, so it begins at once and a click alone
+          // commits it; the drag that may follow carries it.
+          state.annotation.drag = Some(Drag::begun(TARGET_NEW, 0, HANDLE_BODY, point));
           samples.extend(resolve(
             &state,
             SelectionGesturePhase::Begin,
-            TARGET_NONE,
+            TARGET_NEW,
             0,
             HANDLE_BODY,
             point,
           ));
+          true
         }
-        false
-      }
-      (None, None) if state.annotation.mode == MODE_COUNTER => {
-        // Empty picture under the counter tool: a counter is dropped whole
-        // where the press lands, so it begins at once and a click alone
-        // commits it; the drag that may follow carries it.
-        state.annotation.drag = Some(Drag::begun(TARGET_NEW, 0, HANDLE_BODY, point));
-        samples.extend(resolve(
-          &state,
-          SelectionGesturePhase::Begin,
-          TARGET_NEW,
-          0,
-          HANDLE_BODY,
-          point,
-        ));
-        true
-      }
-      (None, None) => {
-        // Empty picture: a new arrow, once the press proves to be a drag. The
-        // end grip is the one the drag carries, so the arrow grows from where
-        // it started towards the pointer.
-        state.annotation.drag = Some(Drag::pending(TARGET_NEW, 0, HANDLE_END, point));
-        true
-      }
+        Some(AnnotationKind::Arrow) => {
+          // Empty picture: a new arrow, once the press proves to be a drag.
+          // The end grip is the one the drag carries, so the arrow grows from
+          // where it started towards the pointer.
+          state.annotation.drag = Some(Drag::pending(TARGET_NEW, 0, HANDLE_END, point));
+          true
+        }
+      },
       // A grip and a chosen shaft both wait for the press to travel before
       // they begin: a click must not nudge the arrow by the few points
       // between the grip's centre and the pointer, nor leave an edit in the

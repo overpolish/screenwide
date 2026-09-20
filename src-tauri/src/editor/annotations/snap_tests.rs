@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use crate::editor::annotations::arrow::new_arrow;
 use crate::editor::annotations::counter::new_counter;
-use crate::editor::annotations::model::new_arrow;
 
 fn point(x: f64, y: f64) -> AnnotationPoint {
   AnnotationPoint { x, y }

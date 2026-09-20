@@ -141,7 +141,7 @@ impl PreviewPlayerManager {
         target,
         point,
         self.annotation.defaults.as_ref(),
-        NewAnnotationKind::from_mode(self.annotation.mode),
+        drawing_kind(self.annotation.mode),
         self.annotation.counter_angle,
       )?;
       // Whether an annotation animates is not part of its dress, so the shape's

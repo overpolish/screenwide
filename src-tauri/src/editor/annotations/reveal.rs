@@ -34,6 +34,8 @@
 //! [`screenwide_annotation_reveal_window`] once per frame per clip. Preview and
 //! export therefore animate through this one implementation.
 
+#[cfg(target_os = "macos")]
+use crate::editor::annotations::AnnotationKind;
 use crate::editor::effect_animation::ease_in_out_cubic;
 
 /// How long an annotation takes to draw itself in. The twin of
@@ -44,12 +46,6 @@ use crate::editor::effect_animation::ease_in_out_cubic;
 /// the drawing is the thing a viewer is meant to follow to what the arrow
 /// points at, and it is gentler for being given its time.
 pub(crate) const REVEAL_DRAW_IN_MS: f32 = 1_000.0;
-
-/// A counter arrives by growing into place rather than by being drawn along
-/// a path, on its own much shorter timing.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-#[path = "reveal_counter.rs"]
-pub(crate) mod counter;
 
 /// How long an annotation takes to undraw. Shorter than the drawing: leaving is
 /// not the thing being watched, and an annotation that lingers on its way out
@@ -218,7 +214,7 @@ pub(crate) fn clip_ms_for_visible(visible_ms: f32) -> f32 {
 
 /// The reveal window one clip is at, for the video export's per-frame pass. An
 /// annotation that is not animated is drawn whole for the clip's whole length,
-/// and a counter follows its own quicker arrival: `kind` is the retained
+/// and every other one follows its own kind's arrival: `kind` is the retained
 /// annotation's, so the export and the preview animate through one
 /// implementation.
 ///
@@ -239,10 +235,11 @@ pub unsafe extern "C" fn screenwide_annotation_reveal_window(
   }
   *out = if animated == 0 {
     AnnotationReveal::WHOLE
-  } else if kind == 1 {
-    counter::counter_reveal_window(elapsed_ms, duration_ms, frame_ms)
   } else {
-    reveal_window(elapsed_ms, duration_ms, frame_ms)
+    // A number no kind owns cannot come from a retained annotation, and the
+    // arrow's window is what such a record drew before the kinds were named.
+    let kind = AnnotationKind::from_raw(kind).unwrap_or(AnnotationKind::Arrow);
+    kind.reveal_window(elapsed_ms, duration_ms, frame_ms)
   };
 }
 

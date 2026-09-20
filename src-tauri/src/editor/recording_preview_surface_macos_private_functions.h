@@ -118,6 +118,10 @@ const ScreenwidePreviewAnnotation *annotation_items(
 /// is in hand or the surface cannot place an annotation.
 ScreenwideAnnotationMode annotation_active_mode(
     ScreenwidePreviewSurface *surface);
+/// Whether a tool in hand makes a new annotation on empty picture. The one
+/// answer to "does this mode draw at all", the twin of Rust's
+/// `annotations::gesture::drawing_kind`.
+BOOL annotation_drawing_mode(ScreenwideAnnotationMode mode);
 /// Whether the arrow chrome replaces the layer's own: always while the arrow
 /// tool is in hand, and while the select tool holds an arrow.
 BOOL annotation_owns_chrome(ScreenwidePreviewSurface *surface);

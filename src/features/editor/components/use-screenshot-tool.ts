@@ -6,6 +6,8 @@ import { useRef } from "react";
 import { ScreenshotTool } from "./screenshot-tools";
 import { toolDisagreesWithAnnotation } from "./use-tool-follows-annotation";
 
+import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+
 /** Picking a screenshot tool up, and what that clears on its way in. The twin
  * of `useRecordingPreviewCanvasTool`'s own `changeCanvasTool`. */
 export function useScreenshotTool({
@@ -15,7 +17,7 @@ export function useScreenshotTool({
   tool,
 }: {
   clearSelection: () => void;
-  selectedKind: "arrow" | "counter" | null;
+  selectedKind: AnnotationKind | null;
   setActiveTool: (tool: ScreenshotTool) => void;
   tool: ScreenshotTool;
 }) {

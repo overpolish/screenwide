@@ -4,7 +4,7 @@
 //! Clips follow source time; timeline cuts and rates map their boundaries.
 //! A cut inside a clip does not create a new entrance or exit.
 
-use super::{Annotation, AnnotationShape};
+use super::Annotation;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -35,18 +35,7 @@ pub(crate) fn validate_clips(clips: &[RecordingAnnotationClip]) -> Result<(), St
   }
   for clip in clips {
     let annotation = &clip.annotation;
-    let placed = match annotation.shape {
-      AnnotationShape::Arrow {
-        start,
-        control,
-        end,
-      } => [start, control, end]
-        .iter()
-        .all(|point| point.x.is_finite() && point.y.is_finite()),
-      AnnotationShape::Counter { center, angle, .. } => {
-        center.x.is_finite() && center.y.is_finite() && angle.is_finite()
-      }
-    };
+    let placed = annotation.shape.placed();
     if clip.end_ms <= clip.start_ms
       || annotation.id.is_empty()
       || !ids.insert(&annotation.id)
@@ -96,14 +85,11 @@ pub(crate) fn revealed_annotations(
       let duration_ms = (clip.end_ms - clip.start_ms) as f32;
       let elapsed_ms = (source_ms - clip.start_ms) as f32;
       if annotation.animated {
-        annotation.reveal = match annotation.shape {
-          AnnotationShape::Arrow { .. } => {
-            super::reveal::reveal_window(elapsed_ms, duration_ms, frame_ms)
-          }
-          AnnotationShape::Counter { .. } => {
-            super::reveal::counter::counter_reveal_window(elapsed_ms, duration_ms, frame_ms)
-          }
-        };
+        annotation.reveal =
+          annotation
+            .shape
+            .kind()
+            .reveal_window(elapsed_ms, duration_ms, frame_ms);
       }
       annotation
     })
@@ -125,6 +111,7 @@ pub(crate) fn active_annotations(
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::editor::annotations::AnnotationShape;
 
   fn clip(
     id: &str,

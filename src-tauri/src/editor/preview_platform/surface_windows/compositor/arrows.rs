@@ -93,8 +93,9 @@ const _: () = assert!(std::mem::offset_of!(PreviewArrow, sample_first) == 112);
 const _: () = assert!(std::mem::offset_of!(PreviewArrow, kind) == 120);
 
 impl PreviewArrow {
-  /// Packs geometry prepared by `annotations::geometry::prepare_arrow` or
-  /// `prepare_counter`, which `kind` says which of.
+  /// Packs geometry prepared by `annotations::arrow::geometry::prepare_arrow` or
+  /// `annotations::counter::geometry::prepare_counter`, which `kind` says which
+  /// of.
   pub(crate) fn new(geometry: ArrowGeometry, color: [f32; 4], hover: f32, kind: u32) -> Self {
     Self {
       geometry: PreviewGeometry::new(geometry),

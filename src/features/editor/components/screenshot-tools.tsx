@@ -5,11 +5,8 @@ import { Crop, MousePointer2, ScanSquare } from "lucide-react";
 import { ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
-import {
-  ArrowToolIcon,
-  CounterToolIcon,
-} from "../../../components/shared/annotation-style/annotation-tool-icons";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
+import { ANNOTATION_TOOLS } from "../tool-panels/tool-registry";
 
 export type ScreenshotTool =
   "arrow" | "canvas" | "counter" | "crop" | "select" | null;
@@ -56,20 +53,22 @@ export function useScreenshotTools({
   const chooseCanvasTool = useCallback((selected: boolean) => {
     actionsRef.current.setTool(selected ? "canvas" : null);
   }, []);
-  // The arrow is drawn on a layer, so the tool needs one in hand the way the
-  // crop does.
-  const chooseArrowTool = useCallback((selected: boolean) => {
-    const actions = actionsRef.current;
-    if (actions.selectedItemId === null)
-      actions.onSelectedItemChange?.(actions.newestItemId);
-    actions.setTool(selected ? "arrow" : null);
-  }, []);
-  const chooseCounterTool = useCallback((selected: boolean) => {
-    const actions = actionsRef.current;
-    if (actions.selectedItemId === null)
-      actions.onSelectedItemChange?.(actions.newestItemId);
-    actions.setTool(selected ? "counter" : null);
-  }, []);
+  // A drawing tool needs a layer in hand the way the crop does, so each one
+  // takes the newest layer when nothing is selected. The callbacks are built
+  // once, outside the memo below, so choosing a tool is all that rebuilds it.
+  const chooseDrawingTool = useMemo(
+    () =>
+      ANNOTATION_TOOLS.map((item) => ({
+        ...item,
+        choose: (selected: boolean) => {
+          const actions = actionsRef.current;
+          if (actions.selectedItemId === null)
+            actions.onSelectedItemChange?.(actions.newestItemId);
+          actions.setTool(selected ? item.id : null);
+        },
+      })),
+    [],
+  );
   const chooseCropTool = useCallback((selected: boolean) => {
     const actions = actionsRef.current;
     if (actions.selectedItemId === null)
@@ -111,31 +110,26 @@ export function useScreenshotTools({
         >
           <Crop />
         </ToolToggle>
-        <ToolToggle
-          isSelected={tool === "arrow"}
-          label="Arrow"
-          name="Draw an arrow"
-          onSelectedChange={chooseArrowTool}
-          shortcut="A"
-        >
-          <ArrowToolIcon />
-        </ToolToggle>
-        <ToolToggle
-          isSelected={tool === "counter"}
-          label="Counter"
-          name="Drop a counter"
-          onSelectedChange={chooseCounterTool}
-          shortcut="N"
-        >
-          <CounterToolIcon />
-        </ToolToggle>
+        {chooseDrawingTool.map(
+          ({ choose, icon: Icon, id, label, name, shortcut }) => (
+            <ToolToggle
+              isSelected={tool === id}
+              key={id}
+              label={label}
+              name={name}
+              onSelectedChange={choose}
+              shortcut={shortcut}
+            >
+              <Icon />
+            </ToolToggle>
+          ),
+        )}
       </ButtonGroup>
     ),
     [
-      chooseArrowTool,
       chooseCanvasTool,
-      chooseCounterTool,
       chooseCropTool,
+      chooseDrawingTool,
       chooseSelectTool,
       tool,
     ],

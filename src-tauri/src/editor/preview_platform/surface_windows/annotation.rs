@@ -10,10 +10,16 @@
 //! pixels, so everything above the platform facade stays identical.
 
 use super::*;
+/// What the pointer does over the picture, from the tool React has in hand,
+/// and which shape a drawing mode makes. Both are declared once beside the
+/// gesture model, so Windows and the macOS interaction view read the same
+/// numbers.
+use crate::editor::annotations::gesture::{drawing_kind, MODE_NONE};
 use crate::editor::annotations::handles::{
   NativeAnnotationHandles, NativeAnnotationSnap, NativeGapSpan, SNAP_FLAG_ANCHOR, SNAP_FLAG_GAP_X,
   SNAP_FLAG_GAP_Y, SNAP_FLAG_GUIDE_X, SNAP_FLAG_GUIDE_Y,
 };
+use crate::editor::annotations::AnnotationKind;
 
 /// A press has to travel this far before it draws an arrow rather than
 /// clearing the choice: a click and a very short drag are the same gesture to
@@ -21,11 +27,6 @@ use crate::editor::annotations::handles::{
 const DRAG_SLOP: f64 = 3.0;
 /// The grip's hit box, matching the selection handles'.
 const HANDLE_HIT: f64 = 8.0;
-
-/// What the pointer does over the picture, from the tool React has in hand.
-const MODE_NONE: u32 = 0;
-const MODE_ARROW: u32 = 2;
-const MODE_COUNTER: u32 = 3;
 
 /// What a gesture acts on, matching `ScreenwideAnnotationTarget`.
 const TARGET_NEW: u32 = 0;

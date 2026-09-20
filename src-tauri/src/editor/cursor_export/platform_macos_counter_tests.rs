@@ -4,8 +4,8 @@
 //! The compositor's counter annotations, through a real Metal dispatch.
 
 use crate::editor::annotations::counter::new_counter;
+use crate::editor::annotations::counter::reveal::counter_reveal_window;
 use crate::editor::annotations::counter::silhouette::COUNTER_TAIL_REACH;
-use crate::editor::annotations::reveal::counter::counter_reveal_window;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationStyle};
 
 const SIZE: (u32, u32) = (480, 320);

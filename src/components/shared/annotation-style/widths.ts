@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import type { AnnotationKind } from "./types";
+
 /**
  * The strokes the width controls offer, in output pixels.
  *
@@ -16,7 +18,7 @@ export const ANNOTATION_WIDTHS = [8, 12, 16, 24, 32, 48];
  * The disc diameters a counter offers, in output pixels. Three sizes far
  * enough apart to be worth choosing between: a handful of pixels either way
  * is no choice at all. The twin of `COUNTER_SIZES` in
- * `src-tauri/src/editor/annotations/counter.rs`.
+ * `src-tauri/src/editor/annotations/counter/model.rs`.
  */
 export const ANNOTATION_COUNTER_SIZES = [56, 96, 160];
 
@@ -27,15 +29,35 @@ export const DEFAULT_ANNOTATION_WIDTH = 8;
  * of `NEW_COUNTER_WIDTH`. */
 export const DEFAULT_ANNOTATION_COUNTER_SIZE = 56;
 
+/**
+ * How big each kind is drawn: the sizes its control offers, the one a fresh
+ * annotation takes, and what the control is called. One row per kind, shared
+ * because the editor's panel and the live overlay's toolbar offer the same
+ * choice.
+ */
+export const ANNOTATION_SIZES: Record<
+  AnnotationKind,
+  { defaultSize: number; sizeLabel: string; sizes: number[] }
+> = {
+  arrow: {
+    defaultSize: DEFAULT_ANNOTATION_WIDTH,
+    sizeLabel: "Width",
+    sizes: ANNOTATION_WIDTHS,
+  },
+  counter: {
+    defaultSize: DEFAULT_ANNOTATION_COUNTER_SIZE,
+    sizeLabel: "Size",
+    sizes: ANNOTATION_COUNTER_SIZES,
+  },
+};
+
 /** The sizes an annotation of this kind is offered, and the one a fresh
  * annotation takes. */
-export const annotationSizes = (kind: "arrow" | "counter") =>
-  kind === "counter" ? ANNOTATION_COUNTER_SIZES : ANNOTATION_WIDTHS;
+export const annotationSizes = (kind: AnnotationKind) =>
+  ANNOTATION_SIZES[kind].sizes;
 
-export const defaultAnnotationSize = (kind: "arrow" | "counter") =>
-  kind === "counter"
-    ? DEFAULT_ANNOTATION_COUNTER_SIZE
-    : DEFAULT_ANNOTATION_WIDTH;
+export const defaultAnnotationSize = (kind: AnnotationKind) =>
+  ANNOTATION_SIZES[kind].defaultSize;
 
 /** Where `width` sits in `presets`: the nearest one to it, so a width from an
  * older document still lands the knob somewhere sensible. */

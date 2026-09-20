@@ -13,7 +13,7 @@ import {
   screenshotWorkspaceItemOutput,
   ScreenshotOutputSettings,
 } from "../screenshot-output";
-import { EditorToolId } from "../tool-panels/tool-registry";
+import { EditorToolId, drawingToolKind } from "../tool-panels/tool-registry";
 import { useCanvasTool } from "../tool-panels/use-canvas-tool";
 import { useToolPanelFollowsTool } from "../tool-panels/use-tool-panel-follows-tool";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
@@ -191,7 +191,7 @@ export function ScreenshotSection({
   // itself was committed as each handle was released.
   const isCropping = tool === "crop";
   // A drawing tool is the other kind you are "in": Escape puts it down.
-  const isAnnotating = tool === "arrow" || tool === "counter";
+  const isAnnotating = drawingToolKind(tool) !== null;
   // Every one of them hit-tests the annotations on the layer; only a drawing
   // tool makes a new one, and only it takes every press over the picture.
   const annotationTool =
@@ -210,27 +210,14 @@ export function ScreenshotSection({
       return;
     }
     setTool((current) =>
-      current === "arrow" || current === "counter" || current === "crop"
-        ? null
-        : current,
+      drawingToolKind(current) !== null || current === "crop" ? null : current,
     );
   };
   // The Select panel's padding controls reach this workspace's analysis
   // through here, alongside the refresh a crop drag ends with.
   useRecenterInsetControls("screenshot", recenter);
   useEditorWindowShortcuts({
-    // The arrow is drawn on a layer, so the key takes one in hand the way the
-    // crop key does.
-    onArrowTool: () => {
-      if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
-      setTool((current) => (current === "arrow" ? null : "arrow"));
-    },
     onConfirm: isCropping ? leaveCropTool : undefined,
-    // A counter is dropped on a layer, so its key takes one in hand too.
-    onCounterTool: () => {
-      if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
-      setTool((current) => (current === "counter" ? null : "counter"));
-    },
     // Backspace and Delete take away the annotation the hand is pointing at
     // first, and only the layer when there is no annotation under them.
     onDelete: () => {
@@ -259,6 +246,12 @@ export function ScreenshotSection({
     onToggleCrop: () => {
       if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
       setTool((current) => (current === "crop" ? null : "crop"));
+    },
+    // A drawing tool draws on a layer, so its key takes one in hand the way
+    // the crop key does.
+    onTool: (next) => {
+      if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
+      setTool((current) => (current === next ? null : next));
     },
     ownsEscape: isCropping || isAnnotating || hasSelectedAnnotation,
   });

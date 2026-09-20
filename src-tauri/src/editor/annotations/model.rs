@@ -9,6 +9,7 @@
 //! keeps the editor's preview and the exported PNG the same image.
 
 use super::reveal::AnnotationReveal;
+use super::shape::AnnotationShape;
 use serde::{Deserialize, Serialize};
 
 /// A point in the screenshot source's pixel space.
@@ -42,73 +43,6 @@ pub struct AnnotationStyle {
   pub width: f64,
 }
 
-/// What an annotation is. The tag leaves room for the shapes later tools add
-/// without reshaping stored documents.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum AnnotationShape {
-  /// A quadratic Bézier from `start` to `end`, bent by `control`.
-  Arrow {
-    start: AnnotationPoint,
-    control: AnnotationPoint,
-    end: AnnotationPoint,
-  },
-  /// A numbered disc with a pin's curved tail. `value` is the annotation's
-  /// place in the document's counter order, which the editor keeps contiguous,
-  /// and `angle` is where the tail points, in radians clockwise from east in
-  /// the source's own pixel space - so a fresh counter's zero points right.
-  Counter {
-    center: AnnotationPoint,
-    value: u32,
-    angle: f64,
-  },
-}
-
-impl AnnotationShape {
-  /// The points the shape is placed by, for the coarse bounds and finiteness
-  /// tests every space-changing path runs. A counter reports its centre
-  /// three times: its tail reaches past it, so a box over these points is
-  /// smaller than the annotation by up to the tail's length.
-  pub(crate) fn points(&self) -> [AnnotationPoint; 3] {
-    match self {
-      Self::Arrow {
-        start,
-        control,
-        end,
-      } => [*start, *control, *end],
-      Self::Counter { center, .. } => [*center; 3],
-    }
-  }
-
-  /// The same shape with every point moved by `map`. What an annotation *is*
-  /// does not change with the space it is drawn in, so the angle and the number
-  /// ride through untouched: every space an annotation travels between keeps
-  /// the picture's aspect, so a direction in one is the same direction in the
-  /// next.
-  pub(crate) fn mapped(&self, map: impl Fn(AnnotationPoint) -> AnnotationPoint) -> Self {
-    match self {
-      Self::Arrow {
-        start,
-        control,
-        end,
-      } => Self::Arrow {
-        start: map(*start),
-        control: map(*control),
-        end: map(*end),
-      },
-      Self::Counter {
-        center,
-        value,
-        angle,
-      } => Self::Counter {
-        center: map(*center),
-        value: *value,
-        angle: *angle,
-      },
-    }
-  }
-}
-
 /// One drawn annotation, independent of its workspace and timing.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -138,10 +72,6 @@ fn default_animated() -> bool {
   true
 }
 
-/// The stroke a fresh arrow is drawn with, in output pixels.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) const NEW_ARROW_WIDTH: f64 = 8.0;
-
 /// The colour a fresh annotation is drawn in before anything has been chosen:
 /// the palette's yellow, which reads as an annotation on almost any screenshot
 /// where the accent would sometimes be the very colour being pointed at. The
@@ -149,44 +79,6 @@ pub(crate) const NEW_ARROW_WIDTH: f64 = 8.0;
 /// `src/features/editor/annotation-palette.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(super) const NEW_ANNOTATION_COLOR: &str = "#ffcc00";
-
-/// The dress a fresh arrow is drawn in before anything has been chosen.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) fn default_arrow_style() -> AnnotationStyle {
-  AnnotationStyle {
-    color: NEW_ANNOTATION_COLOR.to_owned(),
-    head: crate::editor::annotations::AnnotationHead::End,
-    width: NEW_ARROW_WIDTH,
-  }
-}
-
-/// A straight arrow in `style`, or in the tool's own first dress where the
-/// editor has not settled on one yet.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) fn new_arrow(
-  id: String,
-  start: AnnotationPoint,
-  end: AnnotationPoint,
-  style: Option<&AnnotationStyle>,
-) -> Annotation {
-  let mut arrow = Annotation {
-    above_camera: false,
-    animated: true,
-    id,
-    reveal: AnnotationReveal::default(),
-    shape: AnnotationShape::Arrow {
-      start,
-      control: AnnotationPoint {
-        x: (start.x + end.x) / 2.0,
-        y: (start.y + end.y) / 2.0,
-      },
-      end,
-    },
-    style: style.cloned().unwrap_or_else(default_arrow_style),
-  };
-  super::bend::clamp_bend(&mut arrow);
-  arrow
-}
 
 /// An annotation colour as straight RGBA, from `#rrggbb` or `#rrggbbaa`.
 /// An unreadable colour is fully transparent rather than an error: one bad

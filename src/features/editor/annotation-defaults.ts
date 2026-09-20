@@ -7,8 +7,7 @@ import { defaultAnnotationSize } from "../../components/shared/annotation-style/
 
 import { AnnotationStyle } from "./annotations";
 
-/** Which shape a tool draws, which is what a remembered size belongs to. */
-export type AnnotationKind = "arrow" | "counter";
+import type { AnnotationKind } from "../../components/shared/annotation-style/types";
 
 /**
  * The dress the next annotation is drawn in: whatever the last one was changed

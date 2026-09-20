@@ -15,8 +15,8 @@ use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::Instant;
 
 use super::settings::AnnotateShape;
+use crate::editor::annotations::arrow::new_arrow;
 use crate::editor::annotations::counter::new_counter;
-use crate::editor::annotations::model::new_arrow;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationStyle};
 
 /// Virtual key codes, which AppKit reports by physical position.

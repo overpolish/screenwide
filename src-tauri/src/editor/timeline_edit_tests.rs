@@ -125,7 +125,7 @@ fn restores_the_newest_valid_slot_and_rebinds_the_artifact() {
 
 #[test]
 fn live_annotation_clips_become_the_recordings_first_edit() {
-  use crate::editor::annotations::model::new_arrow;
+  use crate::editor::annotations::arrow::new_arrow;
   use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
   use crate::editor::annotations::AnnotationPoint;
 
