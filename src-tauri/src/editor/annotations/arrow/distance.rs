@@ -8,7 +8,9 @@
 //! the curve, and each head is its inner triangle grown back out by the
 //! rounding.
 
-use crate::editor::annotations::geometry::{add, bezier, distance, scale, subtract, ArrowTriangle};
+use crate::editor::annotations::geometry::{
+  add, bezier, distance, scale, subtract, ArrowGeometry, ArrowTriangle,
+};
 
 fn segment_distance(point: [f32; 2], start: [f32; 2], end: [f32; 2]) -> f32 {
   let delta = subtract(end, start);
@@ -49,6 +51,21 @@ pub(crate) fn shaft_distance(point: [f32; 2], a: [f32; 2], b: [f32; 2], c: [f32;
     let next = bezier(a, b, c, sample as f32 / SAMPLES as f32);
     best = best.min(segment_distance(point, previous, next));
     previous = next;
+  }
+  best
+}
+
+/// How far a point is from a prepared arrow's drawn shape: its shaft, and the
+/// heads on it. Zero anywhere the arrow is painted, because the tolerance is
+/// measured from the stroke's edge rather than its centreline. A press on a
+/// head is a press on the arrow - it is the part of it the hand aims at.
+pub(crate) fn prepared_arrow_distance(point: [f32; 2], arrow: &ArrowGeometry) -> f32 {
+  let mut best = (shaft_distance(point, arrow.a, arrow.b, arrow.c) - arrow.width * 0.5).max(0.0);
+  if arrow.head != 0 {
+    best = best.min(head_distance(point, arrow.end_head, arrow.rounding));
+  }
+  if arrow.head == 2 {
+    best = best.min(head_distance(point, arrow.start_head, arrow.rounding));
   }
   best
 }

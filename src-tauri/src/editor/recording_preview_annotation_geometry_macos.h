@@ -5,79 +5,35 @@
 
 #include "annotations/geometry.h"
 
-/// The control point behind a reported middle handle, so the shaft can be
-/// sampled without asking Rust for the curve again.
-static NSPoint annotation_control_point(NSPoint start, NSPoint middle,
-                                        NSPoint end) {
-  return NSMakePoint(2.0 * middle.x - (start.x + end.x) / 2.0,
-                     2.0 * middle.y - (start.y + end.y) / 2.0);
-}
-
-static NSPoint annotation_curve_point(NSPoint start, NSPoint control,
-                                      NSPoint end, double t) {
-  double inverse = 1.0 - t;
-  return NSMakePoint(
-      inverse * inverse * start.x + 2.0 * inverse * t * control.x + t * t * end.x,
-      inverse * inverse * start.y + 2.0 * inverse * t * control.y + t * t * end.y);
-}
-
-static double annotation_segment_distance(NSPoint point, NSPoint start,
-                                          NSPoint end) {
-  double dx = end.x - start.x;
-  double dy = end.y - start.y;
-  double length = dx * dx + dy * dy;
-  double t = length <= 0.0
-      ? 0.0
-      : ((point.x - start.x) * dx + (point.y - start.y) * dy) / length;
-  t = fmax(0.0, fmin(1.0, t));
-  double nearestX = start.x + dx * t;
-  double nearestY = start.y + dy * t;
-  return hypot(point.x - nearestX, point.y - nearestY);
-}
-
-/// How far a point is from a triangle, in display points. Zero inside it.
-static double annotation_triangle_distance(NSPoint point, NSPoint a, NSPoint b,
-                                           NSPoint c) {
-  double first = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
-  double second = (c.x - b.x) * (point.y - b.y) - (c.y - b.y) * (point.x - b.x);
-  double third = (a.x - c.x) * (point.y - c.y) - (a.y - c.y) * (point.x - c.x);
-  if ((first >= 0.0 && second >= 0.0 && third >= 0.0) ||
-      (first <= 0.0 && second <= 0.0 && third <= 0.0))
-    return 0.0;
-  return fmin(annotation_segment_distance(point, a, b),
-              fmin(annotation_segment_distance(point, b, c),
-                   annotation_segment_distance(point, c, a)));
-}
-
-static NSPoint annotation_native_point(AnnotationVector point) {
-  return NSMakePoint(point.x, point.y);
-}
-
-/// The same rounded triangle the compositor draws, in display points.
-static double annotation_prepared_head_distance(NSPoint point,
-    AnnotationTriangle triangle, float rounding) {
-  return fmax(0, annotation_triangle_distance(point,
-      annotation_native_point(triangle.a), annotation_native_point(triangle.b),
-      annotation_native_point(triangle.c)) - rounding);
-}
-
-/// One counter prepared in display points, from the centre, aim and diameter
-/// the chrome was given. The tail's proportion lives in `geometry.h`, so the
-/// grip and the drawn shape cannot drift apart.
-static AnnotationArrowGeometry annotation_prepared_counter(
+/// One annotation prepared in display points, from the normalised record the
+/// chrome was given. The shape is Rust's, so the grips and the halo cannot
+/// drift from what the compositor draws.
+static AnnotationArrowGeometry annotation_prepared(
     NSRect image, ScreenwidePreviewAnnotation item) {
-  NSPoint center = annotation_display_point(image, item.start_x, item.start_y);
-  return annotation_prepare_counter(annotation_vector(center.x, center.y),
-                                    item.width * image.size.width,
-                                    (float)item.start_head,
-                                    annotation_reveal_whole());
+  NSPoint start = annotation_display_point(image, item.start_x, item.start_y);
+  NSPoint end = annotation_display_point(image, item.end_x, item.end_y);
+  // A middle handle is reported rather than the curve's control point, so the
+  // control is taken back out of it here, in display points. A counter aims
+  // its tail with `start_head`, an angle, which rides in the same slot.
+  NSPoint middle = annotation_display_point(image, item.middle_x, item.middle_y);
+  NSPoint control = item.kind == ScreenwideAnnotationKindCounter
+      ? NSMakePoint(item.start_head, 0)
+      : NSMakePoint(2.0 * middle.x - (start.x + end.x) / 2.0,
+                    2.0 * middle.y - (start.y + end.y) / 2.0);
+  uint32_t heads = item.start_head > 0 ? 2 : item.end_head > 0 ? 1 : 0;
+  AnnotationArrowGeometry prepared;
+  screenwide_annotation_prepare(item.kind, start.x, start.y, control.x, control.y,
+                                end.x, end.y, item.width * image.size.width, heads,
+                                annotation_reveal_whole(), &prepared);
+  return prepared;
 }
 
-/// A counter's one grip: the far end of its tail, in display points.
+/// A counter's one grip: the far end of its tail, where the preparation
+/// already placed it.
 static NSPoint annotation_counter_tail(NSRect image,
                                        ScreenwidePreviewAnnotation item) {
-  AnnotationArrowGeometry prepared = annotation_prepared_counter(image, item);
-  return annotation_native_point(annotation_counter_tail_point(prepared));
+  AnnotationArrowGeometry prepared = annotation_prepared(image, item);
+  return NSMakePoint(prepared.b.x, prepared.b.y);
 }
 
 /// How far a point is from one annotation's drawn shape, in display points.
@@ -91,30 +47,6 @@ static NSPoint annotation_counter_tail(NSRect image,
 static double annotation_shaft_distance(NSRect image,
                                         ScreenwidePreviewAnnotation item,
                                         NSPoint point) {
-  if (item.kind == ScreenwideAnnotationKindCounter)
-    return annotation_counter_distance(annotation_vector(point.x, point.y),
-                                       annotation_prepared_counter(image, item));
-  NSPoint start = annotation_display_point(image, item.start_x, item.start_y);
-  NSPoint middle = annotation_display_point(image, item.middle_x, item.middle_y);
-  NSPoint end = annotation_display_point(image, item.end_x, item.end_y);
-  NSPoint control = annotation_control_point(start, middle, end);
-  double centreline = INFINITY;
-  NSPoint previous = start;
-  for (NSUInteger sample = 1; sample <= kAnnotationShaftSamples; sample++) {
-    NSPoint next = annotation_curve_point(
-        start, control, end, (double)sample / (double)kAnnotationShaftSamples);
-    centreline = fmin(centreline, annotation_segment_distance(point, previous, next));
-    previous = next;
-  }
-  float width = item.width * image.size.width;
-  uint32_t heads = item.start_head > 0 ? 2 : item.end_head > 0 ? 1 : 0;
-  AnnotationArrowGeometry geometry = annotation_prepare_arrow(
-      annotation_vector(start.x, start.y), annotation_vector(control.x, control.y),
-      annotation_vector(end.x, end.y), width, heads, annotation_reveal_whole());
-  double best = fmax(0.0, centreline - geometry.width * 0.5);
-  if (geometry.head != 0)
-    best = fmin(best, annotation_prepared_head_distance(point, geometry.end_head, geometry.rounding));
-  if (geometry.head == 2)
-    best = fmin(best, annotation_prepared_head_distance(point, geometry.start_head, geometry.rounding));
-  return best;
+  AnnotationArrowGeometry prepared = annotation_prepared(image, item);
+  return screenwide_annotation_distance(item.kind, point.x, point.y, &prepared);
 }

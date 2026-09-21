@@ -11,7 +11,8 @@
 
 use super::*;
 use crate::editor::annotations::arrow::geometry::prepare_arrow;
-use crate::editor::annotations::counter::geometry::{prepare_counter, COUNTER_TAIL_REACH};
+use crate::editor::annotations::counter::geometry::prepare_counter;
+use crate::editor::annotations::exposure::annotation_travel;
 use crate::editor::annotations::native::{native_annotations, NativeAnnotation};
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::Annotation;
@@ -174,22 +175,17 @@ fn exposure_sample_count(
   c: [f32; 2],
 ) -> u32 {
   let r = annotation.reveal;
-  // An arrow's travel is its window sliding along its own path, plus the
-  // change in its own size; a counter has no path, so all it can cover in a
-  // frame is the change in its own size.
-  let travel = match annotation.shape_kind() {
-    AnnotationKind::Counter => {
-      annotation.width * 0.5 * COUNTER_TAIL_REACH * (r.scale - r.previous[2]).abs()
-    }
-    AnnotationKind::Arrow => {
-      let length = (b[0] - a[0]).hypot(b[1] - a[1]) + (c[0] - b[0]).hypot(c[1] - b[1]);
-      length
-        * (r.low - r.previous[0])
-          .abs()
-          .max((r.high - r.previous[1]).abs())
-        + annotation.width * 4.0 * (r.scale - r.previous[2]).abs()
-    }
-  };
+  // The points arrive placed already, so the axis scale travel is measured
+  // in is the identity.
+  let travel = annotation_travel(
+    annotation.shape_kind(),
+    a,
+    b,
+    c,
+    [1.0, 1.0],
+    annotation.width,
+    r,
+  );
   if travel < 1.5 && (r.opacity - r.previous[3]).abs() < 0.01 {
     return 0;
   }

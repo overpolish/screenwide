@@ -9,8 +9,8 @@
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COUNTER @R"METAL(
 /// A counter read out of the slots an arrow fills with its curve: the disc's
 /// centre and radius, the tail's tip and the radius it is rounded to, and where
-/// the number was rasterised in the text atlas. Prepared once per annotation by
-/// `annotation_prepare_counter`.
+/// the number was rasterised in the text atlas. Prepared once per annotation
+/// by Rust's `prepare_counter`, over `screenwide_annotation_prepare`.
 struct AnnotationCounter {
   float2 center, tip;
   float radius, tip_radius;
@@ -40,8 +40,9 @@ static AnnotationCounter annotation_counter(
 /// centre, so taking the tip's radius off rounds the point without moving it.
 /// The overlap runs back behind the disc too, so it is cut at the plane where
 /// the circles touch the disc: a chord, inside the union, which never shows.
-/// The twin of `annotation_counter_silhouette_distance` in
-/// `annotations/geometry.h`, which picks the same shape.
+/// The per-pixel twin of `counter_silhouette_distance` in
+/// `annotations/counter/silhouette.rs`, which picks the same shape. The CPU
+/// side prepares and picks in Rust; the shaders are the only other copies.
 static float annotation_counter_distance(float2 point, AnnotationCounter counter) {
   float2 local = point - counter.center;
   float2 reach = counter.tip - counter.center;

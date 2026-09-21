@@ -229,8 +229,9 @@ float annotation_exposure(float2 probe, PreviewArrow annotation, float feather) 
 /// centre, so taking the tip's radius off rounds the point without moving it.
 /// The overlap runs back behind the disc too, so it is cut at the plane where
 /// the circles touch the disc: a chord, inside the union, which never shows.
-/// The twin of `counter_silhouette_distance` in
-/// `annotations/counter_silhouette.rs`.
+/// The per-pixel twin of `counter_silhouette_distance` in
+/// `annotations/counter/silhouette.rs`. The CPU side prepares and picks in
+/// Rust; the shaders are the only other copies.
 float annotation_counter_distance(float2 probe, PreviewCounter counter) {
   float2 local = probe - counter.center;
   float2 reach = counter.tip - counter.center;

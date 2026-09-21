@@ -1,17 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Draw-ready counter geometry, the twin of `annotation_prepare_counter` in
-//! `geometry.h`.
+//! Draw-ready counter geometry, prepared once per annotation for both
+//! backends: the D3D11 one calls this directly, the Metal compositor and the
+//! macOS chrome through `screenwide_annotation_prepare`.
 
 use crate::editor::annotations::geometry::{add, scale, ArrowGeometry};
 use crate::editor::annotations::reveal::AnnotationReveal;
 
-/// One counter prepared for drawing, read out of the slots an arrow fills
-/// with its curve: `a` is the disc's centre and `b` the tail's tip,
-/// `rounding` is the disc's radius, `low` the radius the tip is rounded to
-/// and `width` the disc's diameter. The twin of
-/// `annotation_prepare_counter` in `geometry.h`.
+/// One counter prepared for drawing and picking, read out of the slots an
+/// arrow fills with its curve: `a` is the disc's centre and `b` the tail's
+/// tip, `rounding` is the disc's radius, `low` the radius the tip is rounded
+/// to and `width` the disc's diameter, so the bounding box an arrow's stroke
+/// drives is also a counter's. Where its number is rasterised rides in
+/// `start_head`, which only the compositor fills.
 ///
 /// The silhouette is the disc unioned with the tail: the overlap of two
 /// circles, one either side of the axis, each tangent to the disc and to the
@@ -46,7 +48,6 @@ pub(crate) fn prepare_counter(
 /// How far the tail reaches from the disc's centre, in radii, and how round
 /// its tip is as a share of the radius. The twins of `COUNTER_TAIL_REACH`
 /// and `COUNTER_TIP_SHARE` in `counter.rs`.
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub(crate) const COUNTER_TAIL_REACH: f32 = 1.5;
 const COUNTER_TIP_SHARE: f32 = 0.125;
 

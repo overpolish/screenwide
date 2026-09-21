@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Draw-ready arrow geometry, the twin of `annotation_prepare_arrow` in
-//! `geometry.h`.
+//! Draw-ready arrow geometry, prepared once per annotation before drawing or
+//! picking, never per pixel.
 //!
-//! The Metal compositor prepares its arrows through the C header; the D3D11 one
-//! prepares them here, in the same single-precision arithmetic and the same
-//! order, so the two backends draw the same pixels from the same annotation.
-//! Everything is prepared once per annotation before drawing or picking, never
-//! per pixel.
+//! Both backends prepare here: the D3D11 one calls this directly and the
+//! Metal compositor and the macOS chrome reach it through
+//! `screenwide_annotation_prepare`, so the two draw the same pixels from the
+//! same annotation. The shaders hold the only other copy of the shape, as a
+//! per-pixel SDF over the record this fills.
 
 use crate::editor::annotations::geometry::{add, bezier, distance, length, scale, subtract};
 use crate::editor::annotations::geometry::{ArrowGeometry, ArrowTriangle};

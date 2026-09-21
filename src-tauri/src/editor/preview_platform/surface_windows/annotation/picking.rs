@@ -9,7 +9,7 @@
 //! lookup in `recording_preview_annotation_layers_macos.h`.
 
 use super::*;
-use crate::editor::annotations::arrow::distance::{head_distance, shaft_distance};
+use crate::editor::annotations::arrow::distance::prepared_arrow_distance;
 use crate::editor::annotations::arrow::geometry::prepare_arrow;
 use crate::editor::annotations::counter::silhouette::counter_distance;
 use crate::editor::annotations::reveal::AnnotationReveal;
@@ -231,14 +231,7 @@ fn arrow_distance(
     0
   };
   let geometry = prepare_arrow(a, b, c, width, heads, AnnotationReveal::WHOLE);
-  let mut best = (shaft_distance(probe, a, b, c) - geometry.width * 0.5).max(0.0);
-  if geometry.head != 0 {
-    best = best.min(head_distance(probe, geometry.end_head, geometry.rounding));
-  }
-  if geometry.head == 2 {
-    best = best.min(head_distance(probe, geometry.start_head, geometry.rounding));
-  }
-  best
+  prepared_arrow_distance(probe, &geometry)
 }
 
 /// The topmost arrow whose drawn shape `point` lands on. There is no

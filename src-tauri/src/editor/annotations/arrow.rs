@@ -12,11 +12,11 @@
 pub(crate) mod bend;
 /// How far a point falls from a prepared arrow, which is how a press picks
 /// one.
-#[cfg(any(target_os = "windows", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod distance;
-/// Draw-ready geometry for the D3D11 backend; the Metal one prepares the same
-/// numbers through `geometry.h`.
-#[cfg(any(target_os = "windows", test))]
+/// Draw-ready geometry, prepared for both backends: the D3D11 one calls this
+/// directly, the Metal one through `geometry.h`.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod geometry;
 /// What moving one of an arrow's grips does to its shape.
 pub(crate) mod gesture;

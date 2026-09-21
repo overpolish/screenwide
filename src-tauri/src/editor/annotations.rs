@@ -38,11 +38,19 @@ pub(crate) mod counter;
 pub(crate) mod edit;
 #[cfg(test)]
 mod edit_tests;
+/// How far an annotation's picture moves while the shutter is open, which
+/// both backends spread their exposure samples along.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) mod exposure;
+/// The C entry points the Metal compositor and the macOS chrome reach a
+/// kind's prepared geometry through.
+#[cfg(target_os = "macos")]
+pub(crate) mod ffi;
 /// The draw record every kind fills, and the arithmetic it is built with.
-/// The Metal compositor prepares annotations through `geometry.h`; the D3D11
-/// one has no C to call into, so it prepares them against the same
-/// arithmetic here.
-#[cfg(any(target_os = "windows", test))]
+/// Both backends prepare from it: the D3D11 one calls each kind's `geometry`
+/// module, and the Metal compositor and the macOS chrome reach the same
+/// functions through `ffi`.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod geometry;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod gesture;

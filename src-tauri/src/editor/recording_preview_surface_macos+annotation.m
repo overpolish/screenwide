@@ -12,9 +12,6 @@
 static const CGFloat kAnnotationDragSlop = 3.0;
 /// The grip's hit radius, matching the selection handles'.
 static const CGFloat kAnnotationHandleHit = 8.0;
-/// How many points the shaft is sampled at for hit testing. The curve is one
-/// quadratic segment, so this is comfortably finer than a fingertip.
-static const NSUInteger kAnnotationShaftSamples = 24;
 
 SCREENWIDE_PREVIEW_PRIVATE const ScreenwidePreviewAnnotation *annotation_items(
     ScreenwidePreviewSurface *surface, NSUInteger *count) {

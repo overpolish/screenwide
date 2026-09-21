@@ -32,40 +32,31 @@ _Static_assert(sizeof(ScreenwideAnnotationSample) == 96, "Exposure sample ABI");
 
 /// How many exposure samples one annotation needs: enough that consecutive
 /// samples are under a pixel apart, and none at all for an annotation that has
-/// not moved.
-///
-/// An arrow's travel is its window sliding along its own path; a counter has no
-/// path, so all it can cover in a frame is the change in its own size - the
-/// disc's edge sweeping out as it grows.
+/// not moved. The travel itself is measured in Rust, where the D3D11 backend
+/// measures its own.
 static inline uint32_t screenwide_annotation_sample_count(
     const ScreenwideAnnotation *annotation, float sx, float sy) {
   AnnotationReveal r = annotation->reveal;
-  float travel = 0;
-  if (annotation->kind == SCREENWIDE_ANNOTATION_COUNTER) {
-    travel = annotation->width * 0.5f * ANNOTATION_COUNTER_TAIL_REACH *
-             fabsf(r.scale - r.previous[2]);
-  } else {
-    float length = hypotf((annotation->p1[0] - annotation->p0[0]) * sx,
-                          (annotation->p1[1] - annotation->p0[1]) * sy) +
-                   hypotf((annotation->p2[0] - annotation->p1[0]) * sx,
-                          (annotation->p2[1] - annotation->p1[1]) * sy);
-    travel = length * fmaxf(fabsf(r.low - r.previous[0]),
-                            fabsf(r.high - r.previous[1]));
-    travel += annotation->width * 4.0f * fabsf(r.scale - r.previous[2]);
-  }
+  float travel = screenwide_annotation_travel(
+      annotation->kind, annotation->p0[0], annotation->p0[1], annotation->p1[0],
+      annotation->p1[1], annotation->p2[0], annotation->p2[1], sx, sy,
+      annotation->width, r);
   if (travel < 1.5f && fabsf(r.opacity - r.previous[3]) < 0.01f) return 0;
   return (uint32_t)fminf(fmaxf(ceilf(travel / 0.75f) + 1, 8), 48);
 }
 
 /// One annotation's draw geometry for the canvas placement in `canvas`. An
 /// arrow solves its curve; a counter places its disc and tail from the same
-/// centre-and-angle the document holds.
+/// centre-and-angle the document holds - the aim rides in `p1[0]` as an angle,
+/// which no placement touches, so it is passed as it stands.
 static inline AnnotationArrowGeometry screenwide_prepare_annotation(
     const ScreenwideAnnotation *annotation, AnnotationVector a, AnnotationVector b,
     AnnotationVector c, AnnotationReveal reveal) {
-  if (annotation->kind == SCREENWIDE_ANNOTATION_COUNTER)
-    return annotation_prepare_counter(a, annotation->width, annotation->p1[0], reveal);
-  return annotation_prepare_arrow(a, b, c, annotation->width, annotation->head, reveal);
+  float p1x = annotation->kind == SCREENWIDE_ANNOTATION_COUNTER ? annotation->p1[0] : b.x;
+  AnnotationArrowGeometry prepared;
+  screenwide_annotation_prepare(annotation->kind, a.x, a.y, p1x, b.y, c.x, c.y,
+                                annotation->width, annotation->head, reveal, &prepared);
+  return prepared;
 }
 
 /// Prepare complete shapes along the exposure, keeping curve solves off the

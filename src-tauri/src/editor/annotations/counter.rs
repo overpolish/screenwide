@@ -8,9 +8,9 @@
 //! picked - lives here. [`super::shape`] is the list of what a kind has to
 //! answer, and every answer of the counter's is one function in this module.
 
-/// Draw-ready geometry for the D3D11 backend; the Metal one prepares the same
-/// numbers through `geometry.h`.
-#[cfg(any(target_os = "windows", test))]
+/// Draw-ready geometry, prepared for both backends: the D3D11 one calls this
+/// directly, the Metal one through `geometry.h`.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod geometry;
 /// What moving a counter's grips does to it.
 pub(crate) mod gesture;

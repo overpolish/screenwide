@@ -15,6 +15,7 @@
 //! tool is drawn with, to within a hundredth of the radius. Every drawing and
 //! picking path - Metal, HLSL and this module - builds it that way.
 
+use crate::editor::annotations::geometry::ArrowGeometry;
 use crate::editor::annotations::AnnotationPoint;
 
 /// How far the tail reaches from the disc's centre, in radii, and how round
@@ -25,8 +26,8 @@ use crate::editor::annotations::AnnotationPoint;
 /// The two together are the shape of `MapPinPlusInside`, the glyph the counter
 /// tool is drawn with, so the annotation and its icon read as one thing.
 ///
-/// Placing and picking a counter's grip is the D3D11 backend's work; the Metal
-/// one does both through `geometry.h`, which carries its own twins.
+/// Placing and picking a counter's grip from its aim is the D3D11 backend's
+/// work; the Metal one and the macOS chrome pick from the prepared record.
 pub(crate) const COUNTER_TAIL_REACH: f64 = 1.5;
 #[cfg(any(target_os = "windows", test))]
 const COUNTER_TIP_SHARE: f64 = 0.125;
@@ -46,8 +47,7 @@ pub(crate) fn counter_tail_tip(
 
 /// How far `point` falls outside one counter's drawn silhouette, in the space
 /// the geometry is in. Zero anywhere the annotation is painted, which is what
-/// picks it. The twin of `annotation_counter_distance` in `geometry.h` and of
-/// the shaders' own copies.
+/// picks it.
 #[cfg(any(target_os = "windows", test))]
 pub(crate) fn counter_distance(
   point: (f64, f64),
@@ -55,26 +55,70 @@ pub(crate) fn counter_distance(
   radius: f64,
   angle: f64,
 ) -> f64 {
-  let (local_x, local_y) = (point.0 - center.x, point.1 - center.y);
+  let local = (point.0 - center.x, point.1 - center.y);
   if radius <= 0.0 {
-    return local_x.hypot(local_y);
+    return local.0.hypot(local.1);
   }
-  let (axis_x, axis_y) = (angle.cos(), angle.sin());
-  let along = local_x * axis_x + local_y * axis_y;
-  let across = (local_x * -axis_y + local_y * axis_x).abs();
-  counter_silhouette_distance(
-    across,
-    along,
+  silhouette_distance(
+    local,
+    (angle.cos(), angle.sin()),
     radius,
     radius * COUNTER_TIP_SHARE,
     radius * COUNTER_TAIL_REACH,
   )
 }
 
+/// The same measurement from a prepared record rather than from a centre and
+/// an aim: the disc's centre is `a`, the tail's tip `b`, the radius
+/// `rounding` and the radius the tip is rounded to `low`. This is what the
+/// macOS chrome picks with, over the record the compositor draws.
+///
+/// The record is single precision and the picking is not, so each difference
+/// is taken in the record's own precision before it is widened: the answer is
+/// then the one the whole native side has always produced.
+pub(crate) fn prepared_counter_distance(point: (f64, f64), prepared: &ArrowGeometry) -> f64 {
+  let radius = f64::from(prepared.rounding);
+  let local = (
+    point.0 - f64::from(prepared.a[0]),
+    point.1 - f64::from(prepared.a[1]),
+  );
+  if radius <= 0.0 {
+    return local.0.hypot(local.1);
+  }
+  let tail = (
+    f64::from(prepared.b[0] - prepared.a[0]),
+    f64::from(prepared.b[1] - prepared.a[1]),
+  );
+  let reach = tail.0.hypot(tail.1);
+  if reach <= 0.0 {
+    return local.0.hypot(local.1) - radius;
+  }
+  silhouette_distance(
+    local,
+    (tail.0 / reach, tail.1 / reach),
+    radius,
+    f64::from(prepared.low),
+    reach,
+  )
+}
+
+/// How far a point offset from the disc's centre falls outside the
+/// silhouette, measured along the tail's `axis` and across it.
+fn silhouette_distance(
+  local: (f64, f64),
+  axis: (f64, f64),
+  radius: f64,
+  tip_radius: f64,
+  reach: f64,
+) -> f64 {
+  let along = local.0 * axis.0 + local.1 * axis.1;
+  let across = (local.0 * -axis.1 + local.1 * axis.0).abs();
+  counter_silhouette_distance(across, along, radius, tip_radius, reach)
+}
+
 /// How far a point falls outside the silhouette, measured `along` the tail and
 /// `across` it from the disc's centre, with `across` already folded to the
-/// near side. The twin of `annotation_counter_silhouette_distance` in
-/// `geometry.h` and of the shaders' own copies.
+/// near side. The shaders carry the only other copies.
 ///
 /// The side circles are solved rather than chosen: a radius behind the disc's
 /// centre, tangent to the disc and tangent to the tip's own circle, leaves one
@@ -86,7 +130,6 @@ pub(crate) fn counter_distance(
 /// The overlap runs back behind the disc as well, and is wider than the disc
 /// where it does, so it is cut at the plane where the circles touch the disc.
 /// That cut is a chord of the disc, inside the union, and so never shows.
-#[cfg(any(target_os = "windows", test))]
 fn counter_silhouette_distance(
   across: f64,
   along: f64,
