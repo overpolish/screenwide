@@ -2,100 +2,100 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Source-space annotations retained by the native compositor.
-//!
-//! The retained native workspace keeps a copy of every layer it presents and
-//! redraws it without asking Rust again, so the annotations travel inline
-//! rather than as a borrowed pointer: a fixed array is the only shape that
-//! survives a pan or a zoom. The same cap applies to the export so what the
-//! editor previews is what the PNG gets.
 
 use super::reveal::AnnotationReveal;
-use super::{Annotation, MAX_ANNOTATIONS};
+use super::{Annotation, MAX_ANNOTATIONS, MAX_ANNOTATION_POINTS, MAX_ANNOTATION_TEXT};
 #[cfg(target_os = "windows")]
 use crate::editor::annotations::AnnotationKind;
 use crate::editor::annotations::{annotation_colour, AnnotationHead};
 
-/// One retained annotation matching C's `ScreenwideAnnotation`. The native
-/// binding prepares separate draw geometry; every stored member is four bytes
-/// wide.
-///
-/// An arrow fills `p0`, `p1` and `p2` with its Bézier's start, control and end,
-/// and `width` with its stroke. A counter puts its centre in `p0`, the
-/// direction of its tail in `p1[0]` - radians clockwise from east - its number
-/// in `p1[1]`, and its disc's diameter in `width`; `p2` repeats the centre so a
-/// bounding box over the three points is still the annotation's.
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
 pub(crate) struct NativeAnnotation {
-  /// The shape's [`AnnotationKind`], as the number the shaders read.
   pub(crate) kind: u32,
   pub(crate) head: u32,
   pub(crate) above_camera: u32,
+  pub(crate) flags: u32,
   pub(crate) width: f32,
+  pub(crate) params: [f32; 3],
   pub(crate) color: [f32; 4],
   pub(crate) p0: [f32; 2],
   pub(crate) p1: [f32; 2],
   pub(crate) p2: [f32; 2],
-  /// The hover halo's width in canvas pixels, or zero for no halo. The halo
-  /// is preview chrome: [`native_annotations`] never sets it, so nothing the
-  /// export composes can carry one.
+  pub(crate) p3: [f32; 2],
+  pub(crate) data_offset: u32,
+  pub(crate) data_count: u32,
   pub(crate) hover: f32,
-  /// Whether this annotation's clip draws itself in and out. Video export reads
-  /// it per frame; every other path has already resolved `reveal` from it.
   pub(crate) animated: u32,
-  /// This frame's window and the size the annotation is drawn at. The whole
-  /// path at full size - a still, or an annotation that does not animate -
-  /// prepares the way it always has.
   pub(crate) reveal: AnnotationReveal,
 }
 
-const _: () = assert!(std::mem::size_of::<NativeAnnotation>() == 96);
-const _: () = assert!(std::mem::offset_of!(NativeAnnotation, color) == 16);
-const _: () = assert!(std::mem::offset_of!(NativeAnnotation, p0) == 32);
-const _: () = assert!(std::mem::offset_of!(NativeAnnotation, p2) == 48);
-const _: () = assert!(std::mem::offset_of!(NativeAnnotation, hover) == 56);
-const _: () = assert!(std::mem::offset_of!(NativeAnnotation, animated) == 60);
-const _: () = assert!(std::mem::offset_of!(NativeAnnotation, reveal) == 64);
+const _: () = assert!(std::mem::size_of::<NativeAnnotation>() == 128);
+const _: () = assert!(std::mem::offset_of!(NativeAnnotation, color) == 32);
+const _: () = assert!(std::mem::offset_of!(NativeAnnotation, p0) == 48);
+const _: () = assert!(std::mem::offset_of!(NativeAnnotation, hover) == 88);
+const _: () = assert!(std::mem::offset_of!(NativeAnnotation, animated) == 92);
+const _: () = assert!(std::mem::offset_of!(NativeAnnotation, reveal) == 96);
 
-/// The Metal backend reads a record's kind in its own shader and prepare
-/// code; only the D3D11 one prepares from it in Rust.
 #[cfg(target_os = "windows")]
 impl NativeAnnotation {
-  /// Which shape this record draws. A number no kind owns cannot come from
-  /// [`native_annotations`], and the arrow is what such a record was drawn as
-  /// before the kinds were named, so the reading stays the arrow's.
   pub(crate) fn shape_kind(&self) -> AnnotationKind {
     AnnotationKind::from_raw(self.kind).unwrap_or(AnnotationKind::Arrow)
   }
 }
 
-/// One layer's annotations, bound as a single buffer. `count` may be zero; the
-/// array is still valid memory so Metal never sees a nil buffer.
+/// The side buffers every kind's variable-length data lives in: a points
+/// kind indexes `points`, a text kind indexes `text`, through its record's
+/// `data_offset` and `data_count`. Kept apart from the items so a list that
+/// is longer than one scene - the video export's clips - can share one set
+/// of buffers and pass it beside the list.
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub(crate) struct NativeAnnotations {
-  pub(crate) items: [NativeAnnotation; MAX_ANNOTATIONS],
-  pub(crate) count: u32,
+pub(crate) struct NativeAnnotationData {
+  pub(crate) points: [[f32; 2]; MAX_ANNOTATION_POINTS],
+  pub(crate) text: [u8; MAX_ANNOTATION_TEXT],
+  pub(crate) point_count: u32,
+  pub(crate) text_len: u32,
 }
 
-const _: () = assert!(std::mem::size_of::<NativeAnnotations>() == 96 * MAX_ANNOTATIONS + 4);
+const _: () = assert!(std::mem::size_of::<NativeAnnotationData>() == 32 * 1024 + 4096 + 8);
 
-impl Default for NativeAnnotations {
+impl Default for NativeAnnotationData {
   fn default() -> Self {
     Self {
-      items: [NativeAnnotation::default(); MAX_ANNOTATIONS],
-      count: 0,
+      points: [[0.0; 2]; MAX_ANNOTATION_POINTS],
+      text: [0; MAX_ANNOTATION_TEXT],
+      point_count: 0,
+      text_len: 0,
     }
   }
 }
 
-/// Flatten a workspace's annotations into the retained native scene.
-pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotations {
-  let mut native = NativeAnnotations::default();
-  let annotations = annotations.iter();
-  for (index, annotation) in annotations.take(MAX_ANNOTATIONS).enumerate() {
+impl NativeAnnotationData {
+  /// Write `annotation`'s variable-length data into the buffers and return
+  /// its record, with the offsets pointing here. Data that would overflow a
+  /// buffer is dropped, in order, the way `MAX_ANNOTATIONS` drops items.
+  pub(crate) fn pack(&mut self, annotation: &Annotation) -> NativeAnnotation {
     let [p0, p1, p2] = annotation.shape.draw_points();
-    native.items[index] = NativeAnnotation {
+    let point_offset = self.point_count as usize;
+    if point_offset + 3 <= MAX_ANNOTATION_POINTS {
+      self.points[point_offset..point_offset + 3].copy_from_slice(&[p0, p1, p2]);
+      self.point_count += 3;
+    }
+    let text = match &annotation.shape {
+      super::shape::AnnotationShape::Counter { value, .. } => value.to_string(),
+      super::shape::AnnotationShape::Arrow { .. } => String::new(),
+    };
+    let text_bytes = text.as_bytes();
+    let data_offset = self.text_len as usize;
+    let data_count = text_bytes
+      .len()
+      .min(MAX_ANNOTATION_TEXT.saturating_sub(data_offset));
+    if data_count > 0 {
+      self.text[data_offset..data_offset + data_count].copy_from_slice(&text_bytes[..data_count]);
+      self.text_len += data_count as u32;
+    }
+    NativeAnnotation {
       kind: annotation.shape.kind().raw(),
       head: match annotation.style.head {
         AnnotationHead::None => 0,
@@ -103,15 +103,49 @@ pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotation
         AnnotationHead::Both => 2,
       },
       above_camera: u32::from(annotation.above_camera),
+      flags: 0,
       width: annotation.style.width.max(0.0) as f32,
+      params: [0.0; 3],
       color: annotation_colour(&annotation.style.color),
       p0,
       p1,
       p2,
+      p3: [0.0; 2],
+      data_offset: data_offset as u32,
+      data_count: data_count as u32,
       hover: 0.0,
       animated: u32::from(annotation.animated),
       reveal: annotation.reveal,
-    };
+    }
+  }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct NativeAnnotations {
+  pub(crate) items: [NativeAnnotation; MAX_ANNOTATIONS],
+  pub(crate) count: u32,
+  pub(crate) data: NativeAnnotationData,
+}
+
+const _: () = assert!(
+  std::mem::size_of::<NativeAnnotations>() == 128 * MAX_ANNOTATIONS + 4 + 32 * 1024 + 4096 + 8
+);
+
+impl Default for NativeAnnotations {
+  fn default() -> Self {
+    Self {
+      items: [NativeAnnotation::default(); MAX_ANNOTATIONS],
+      count: 0,
+      data: NativeAnnotationData::default(),
+    }
+  }
+}
+
+pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotations {
+  let mut native = NativeAnnotations::default();
+  for (index, annotation) in annotations.iter().take(MAX_ANNOTATIONS).enumerate() {
+    native.items[index] = native.data.pack(annotation);
     native.count = index as u32 + 1;
   }
   native
@@ -122,32 +156,34 @@ mod tests {
   use super::*;
   use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
 
-  #[test]
-  fn flattens_an_arrow() {
-    let mut settings = crate::screenshots::test_output_settings(640, 360);
-    settings.annotations = vec![Annotation {
+  fn annotation(shape: AnnotationShape) -> Annotation {
+    Annotation {
       above_camera: true,
       animated: true,
       id: "a".to_owned(),
       reveal: Default::default(),
-      shape: AnnotationShape::Arrow {
-        start: AnnotationPoint { x: 1.0, y: 2.0 },
-        control: AnnotationPoint { x: 3.0, y: 4.0 },
-        end: AnnotationPoint { x: 5.0, y: 6.0 },
-      },
+      shape,
       style: AnnotationStyle {
         color: "#0000ff".to_owned(),
         head: AnnotationHead::Both,
         width: 9.0,
       },
-    }];
-    let native = native_annotations(&settings.annotations);
-    assert_eq!(native.count, 1);
-    assert_eq!(native.items[0].head, 2);
-    assert_eq!(native.items[0].above_camera, 1);
-    assert_eq!(native.items[0].color, [0.0, 0.0, 1.0, 1.0]);
-    assert_eq!(native.items[0].p2, [5.0, 6.0]);
-    assert_eq!(native.items[0].animated, 1);
-    assert!(native.items[0].reveal.is_whole());
+    }
+  }
+
+  #[test]
+  fn retains_counter_text_and_points() {
+    let annotations = [annotation(AnnotationShape::Counter {
+      center: AnnotationPoint { x: 1.0, y: 2.0 },
+      value: 12,
+      angle: 0.5,
+    })];
+    let native = native_annotations(&annotations);
+    assert_eq!(native.data.point_count, 3);
+    assert_eq!(native.data.points[0], [1.0, 2.0]);
+    assert_eq!(native.data.text_len, 2);
+    assert_eq!(&native.data.text[..2], b"12");
+    assert_eq!(native.items[0].data_offset, 0);
+    assert_eq!(native.items[0].data_count, 2);
   }
 }

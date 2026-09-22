@@ -93,6 +93,16 @@ impl Compositor {
       &self.sample_buffer,
       &samples[..samples.len().min(MAX_ANNOTATIONS * MAX_EXPOSURE_SAMPLES)],
     )?;
+    upload(
+      context,
+      &self.annotation_points_buffer,
+      &prepared.points[..prepared.points.len().min(MAX_ANNOTATION_POINTS)],
+    )?;
+    upload(
+      context,
+      &self.annotation_text_buffer,
+      &prepared.text[..prepared.text.len().min(MAX_ANNOTATION_TEXT)],
+    )?;
     unsafe {
       context.OMSetRenderTargets(Some(&[Some(render_target)]), None);
       context.OMSetBlendState(
@@ -132,10 +142,13 @@ impl Compositor {
               .as_ref()
               .map_or_else(|| self.fallback_view.clone(), |atlas| atlas.view.clone()),
           ),
+          Some(self.annotation_points_view.clone()),
+          Some(self.annotation_text_view.clone()),
         ]),
       );
       context.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
-      context.PSSetSamplers(1, Some(&[Some(self.point_sampler.clone())]));
+      // Annotation pre-pass hook: obfuscate will sample the composed layer here.
+      // It is intentionally a no-op until that tool is implemented.
       context.Draw(3, 0);
       context.PSSetShaderResources(0, Some(&[None, None, None, None, None, None, None, None]));
       context.OMSetBlendState(None::<&ID3D11BlendState>, None, u32::MAX);

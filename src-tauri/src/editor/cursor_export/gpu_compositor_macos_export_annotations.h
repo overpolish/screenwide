@@ -9,6 +9,9 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
     id<MTLCommandBuffer> command, id<MTLTexture> luma, id<MTLTexture> chroma,
     uint32_t source_width, uint32_t source_height, uint64_t source_ms, uint32_t above) {
   ScreenwideAnnotations annotations = {0};
+  // Every clip's record indexes the one set of side buffers the export was
+  // given, so the buffers are copied whole and the offsets stay as they are.
+  if (session->annotation_data != NULL) annotations.data = *session->annotation_data;
   uint32_t active_count = 0;
   for (uint32_t i = 0; i < session->annotation_count; i++) {
     const ScreenwideTimedAnnotation *clip = &session->annotations[i];

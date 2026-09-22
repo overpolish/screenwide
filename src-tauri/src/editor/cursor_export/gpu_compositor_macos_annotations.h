@@ -5,6 +5,7 @@
 
 #import <Metal/Metal.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 #import "gpu_compositor_macos.h"
 #import "gpu_compositor_macos_annotation_types.h"
@@ -14,15 +15,17 @@
 /// A draw-ready annotation, distinct from the source-space document retained by
 /// the presenter. Preparing at binding also covers native placement changes.
 typedef struct {
-  uint32_t kind, above_camera;
+  uint32_t kind, above_camera, flags;
+  float params[3];
   float color[4];
   float hover;
   AnnotationArrowGeometry arrow;
   uint32_t sample_offset, sample_count;
+  uint32_t data_offset, data_count;
 } ScreenwidePreparedAnnotation;
-_Static_assert(sizeof(ScreenwidePreparedAnnotation) == 128, "Prepared annotation ABI");
-_Static_assert(sizeof(ScreenwidePreparedAnnotation) * SCREENWIDE_MAX_ANNOTATIONS <= 4096,
-               "Metal inline annotation bytes must fit setBytes");
+_Static_assert(sizeof(ScreenwidePreparedAnnotation) == 152, "Prepared annotation ABI");
+
+// Prepared records are backed by an MTLBuffer because the widened array no longer fits setBytes.
 
 typedef struct {
   AnnotationArrowGeometry arrow;
@@ -82,26 +85,23 @@ static inline void screenwide_bind_annotations(
       newBufferWithLength:total * sizeof(ScreenwideAnnotationSample)
       options:MTLResourceStorageModeShared] : nil;
   ScreenwideAnnotationSample *samples = buffer.contents;
-  uint32_t values[SCREENWIDE_MAX_ANNOTATIONS] = {0};
   float radii[SCREENWIDE_MAX_ANNOTATIONS] = {0};
   for (uint32_t index = 0; index < count; index++) {
     const ScreenwideAnnotation *annotation = &annotations->items[index];
     ScreenwidePreparedAnnotation *draw = &prepared[index];
+    draw->flags = annotation->flags;
+    memcpy(draw->params, annotation->params, sizeof(draw->params));
+    draw->data_offset = annotation->data_offset;
+    draw->data_count = annotation->data_count;
     draw->kind = annotation->kind;
     draw->above_camera = annotation->above_camera;
     memcpy(draw->color, annotation->color, sizeof(draw->color));
     draw->hover = annotation->hover;
-    AnnotationVector a = annotation_vector(canvas->image_x + annotation->p0[0] * scale_x,
-        canvas->image_y + annotation->p0[1] * scale_y);
-    AnnotationVector b = annotation_vector(canvas->image_x + annotation->p1[0] * scale_x,
-        canvas->image_y + annotation->p1[1] * scale_y);
-    AnnotationVector c = annotation_vector(canvas->image_x + annotation->p2[0] * scale_x,
-        canvas->image_y + annotation->p2[1] * scale_y);
+    AnnotationVector a = annotation_vector(canvas->image_x + annotation->p0[0] * scale_x, canvas->image_y + annotation->p0[1] * scale_y);
+    AnnotationVector b = annotation_vector(canvas->image_x + annotation->p1[0] * scale_x, canvas->image_y + annotation->p1[1] * scale_y);
+    AnnotationVector c = annotation_vector(canvas->image_x + annotation->p2[0] * scale_x, canvas->image_y + annotation->p2[1] * scale_y);
     draw->arrow = screenwide_prepare_annotation(annotation, a, b, c, annotation->reveal);
-    if (annotation->kind == SCREENWIDE_ANNOTATION_COUNTER) {
-      values[index] = (uint32_t)fmaxf(annotation->p1[1], 0);
-      radii[index] = draw->arrow.rounding;
-    }
+    if (annotation->kind == SCREENWIDE_ANNOTATION_COUNTER) radii[index] = draw->arrow.rounding;
     if (draw->sample_count == 0) {
       draw->color[3] *= fmaxf(fminf(annotation->reveal.opacity, 1), 0);
       continue;
@@ -118,12 +118,22 @@ static inline void screenwide_bind_annotations(
       sample->opacity = fmaxf(fminf(r.opacity, 1), 0);
     }
   }
-  // The numbers are type, so they are rasterised rather than approximated.
-  // Where each one landed rides in the slots an arrow fills with its heads.
+  const char *text_values[SCREENWIDE_MAX_ANNOTATIONS] = {0};
+  uint32_t text_lengths[SCREENWIDE_MAX_ANNOTATIONS] = {0};
+  float text_sizes[SCREENWIDE_MAX_ANNOTATIONS] = {0};
+  for (uint32_t index = 0; index < count; index++) {
+    const ScreenwideAnnotation *annotation = &annotations->items[index];
+    if (annotation->kind != SCREENWIDE_ANNOTATION_COUNTER || annotation->data_count == 0 ||
+        annotation->data_offset + annotation->data_count > annotations->data.text_len)
+      continue;
+    text_values[index] = (const char *)(annotations->data.text + annotation->data_offset);
+    text_lengths[index] = annotation->data_count;
+    text_sizes[index] = radii[index];
+  }
   ScreenwideAnnotationTextRect text[SCREENWIDE_MAX_ANNOTATIONS] = {0};
   ScreenwideAnnotationTextUniforms text_uniforms = {0};
   id<MTLBuffer> numbers = screenwide_annotation_text_atlas(
-      encoder.device, values, radii, count, text, &text_uniforms);
+      encoder.device, text_values, text_lengths, text_sizes, count, text, &text_uniforms);
   for (uint32_t index = 0; index < count; index++) {
     // Only a counter reads these slots as a text rectangle; an arrow with a
     // head at both ends keeps its second head's triangle in them.
@@ -132,7 +142,20 @@ static inline void screenwide_bind_annotations(
     prepared[index].arrow.start_head.b =
         annotation_vector(text[index].width, text[index].height);
   }
-  [encoder setBytes:prepared length:sizeof(prepared) atIndex:12];
+  id<MTLBuffer> points_buffer = [encoder.device
+      newBufferWithBytes:annotations->data.points
+                   length:sizeof(annotations->data.points)
+                  options:MTLResourceStorageModeShared];
+  id<MTLBuffer> text_buffer = [encoder.device
+      newBufferWithBytes:annotations->data.text
+                   length:sizeof(annotations->data.text)
+                  options:MTLResourceStorageModeShared];
+  [encoder setBuffer:points_buffer offset:0 atIndex:18];
+  [encoder setBuffer:text_buffer offset:0 atIndex:19];
+  id<MTLBuffer> prepared_buffer = [encoder.device
+      newBufferWithBytes:prepared length:sizeof(prepared)
+      options:MTLResourceStorageModeShared];
+  [encoder setBuffer:prepared_buffer offset:0 atIndex:12];
   [encoder setBytes:&count length:sizeof(count) atIndex:13];
   if (buffer) {
     [encoder setBuffer:buffer offset:0 atIndex:15];

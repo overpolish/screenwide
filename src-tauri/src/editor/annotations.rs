@@ -71,6 +71,10 @@ mod snap_tail_tests;
 /// The native retained scene, export and the live overlay accept the same
 /// number of annotations.
 pub(crate) const MAX_ANNOTATIONS: usize = 32;
+pub(crate) const MAX_ANNOTATION_POINTS: usize = 4096;
+pub(crate) const MAX_ANNOTATION_TEXT: usize = 4096;
+
+pub(crate) mod flags;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod native;

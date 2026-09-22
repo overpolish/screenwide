@@ -123,11 +123,7 @@ impl AnnotationShape {
         control,
         end,
       } => super::arrow::native::draw_points(*start, *control, *end),
-      Self::Counter {
-        center,
-        value,
-        angle,
-      } => super::counter::native::draw_points(*center, *value, *angle),
+      Self::Counter { center, angle, .. } => super::counter::native::draw_points(*center, *angle),
     }
   }
 

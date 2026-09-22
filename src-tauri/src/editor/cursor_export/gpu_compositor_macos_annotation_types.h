@@ -7,69 +7,63 @@
 #include <stdint.h>
 #include "../annotations/reveal.h"
 
-/// How many annotations one layer can carry. The list travels inline through
-/// the retained workspace scene, so it is a fixed array rather than a pointer.
 #define SCREENWIDE_MAX_ANNOTATIONS 32
-
-/// The shapes the compositor draws, matching Rust's `NativeAnnotation`.
+#define SCREENWIDE_MAX_ANNOTATION_POINTS 4096
+#define SCREENWIDE_MAX_ANNOTATION_TEXT 4096
 #define SCREENWIDE_ANNOTATION_ARROW 0u
 #define SCREENWIDE_ANNOTATION_COUNTER 1u
+#define SCREENWIDE_ANNOTATION_FLAG_FILL (1u << 0)
+#define SCREENWIDE_ANNOTATION_FLAG_MULTIPLY (1u << 1)
+#define SCREENWIDE_ANNOTATION_FLAG_PIXELATE (1u << 2)
 
-/// One retained annotation, matching Rust's `NativeAnnotation`. Points stay in
-/// source pixels; the binding step prepares draw geometry for the current
-/// canvas placement. Every member is four bytes wide, so the struct packs the
-/// same way everywhere.
-///
-/// An arrow fills `p0`, `p1` and `p2` with its Bézier's start, control and
-/// end, and `width` with its stroke. A counter puts its centre in `p0`, the
-/// direction of its tail in `p1[0]` - radians clockwise from east - its
-/// number in `p1[1]`, and its disc's diameter in `width`; `p2` repeats the
-/// centre.
 typedef struct {
-  /// `SCREENWIDE_ANNOTATION_ARROW` or `SCREENWIDE_ANNOTATION_COUNTER`.
   uint32_t kind;
-  /// 0 none, 1 the end, 2 both ends.
   uint32_t head;
   uint32_t above_camera;
-  /// Stroke width in output pixels.
+  uint32_t flags;
   float width;
-  /// Straight (non-premultiplied) RGBA.
+  float params[3];
   float color[4];
-  /// The quadratic Bézier's start, control and end.
   float p0[2];
   float p1[2];
   float p2[2];
-  /// The hover halo's width in canvas pixels, or zero for no halo. Preview
-  /// decoration only: the export path always sends this as zero.
+  float p3[2];
+  uint32_t data_offset;
+  uint32_t data_count;
   float hover;
-  /// Whether this annotation's clip draws itself in and out. Video export
-  /// resolves `reveal` from it per frame; every other path arrives with it
-  /// resolved.
   uint32_t animated;
-  /// This frame's window and the size the annotation is drawn at.
   AnnotationReveal reveal;
 } ScreenwideAnnotation;
-_Static_assert(sizeof(ScreenwideAnnotation) == 96,
-               "ScreenwideAnnotation ABI must match Rust");
-_Static_assert(offsetof(ScreenwideAnnotation, color) == 16,
-               "ScreenwideAnnotation.color ABI must match Rust");
-_Static_assert(offsetof(ScreenwideAnnotation, p0) == 32,
-               "ScreenwideAnnotation.p0 ABI must match Rust");
-_Static_assert(offsetof(ScreenwideAnnotation, hover) == 56,
-               "ScreenwideAnnotation.hover ABI must match Rust");
-_Static_assert(offsetof(ScreenwideAnnotation, reveal) == 64,
-               "ScreenwideAnnotation.reveal ABI must match Rust");
+_Static_assert(sizeof(ScreenwideAnnotation) == 128, "ScreenwideAnnotation ABI must match Rust");
+_Static_assert(offsetof(ScreenwideAnnotation, color) == 32, "ScreenwideAnnotation.color ABI must match Rust");
+_Static_assert(offsetof(ScreenwideAnnotation, p0) == 48, "ScreenwideAnnotation.p0 ABI must match Rust");
+_Static_assert(offsetof(ScreenwideAnnotation, hover) == 88, "ScreenwideAnnotation.hover ABI must match Rust");
+_Static_assert(offsetof(ScreenwideAnnotation, reveal) == 96, "ScreenwideAnnotation.reveal ABI must match Rust");
 
-/// One layer's annotations. `count` may be zero; the array is still valid
-/// memory, so the kernels never bind a nil buffer.
+/// The side buffers a record's `data_offset`/`data_count` index: `points`
+/// for a points kind, `text` for a text kind. Matches Rust's
+/// `NativeAnnotationData`. Held apart from the items so the video export can
+/// share one set across every clip and copy it into each frame's scene.
+typedef struct {
+  float points[SCREENWIDE_MAX_ANNOTATION_POINTS][2];
+  uint8_t text[SCREENWIDE_MAX_ANNOTATION_TEXT];
+  uint32_t point_count;
+  uint32_t text_len;
+} ScreenwideAnnotationData;
+_Static_assert(sizeof(ScreenwideAnnotationData) == 32768 + 4096 + 8,
+               "ScreenwideAnnotationData ABI must match Rust");
+
 typedef struct {
   ScreenwideAnnotation items[SCREENWIDE_MAX_ANNOTATIONS];
   uint32_t count;
+  ScreenwideAnnotationData data;
 } ScreenwideAnnotations;
 
-/// Source-time clip bounds used by video export. A cut never restarts a clip.
+_Static_assert(sizeof(ScreenwideAnnotations) == 128 * SCREENWIDE_MAX_ANNOTATIONS + 4 + 32768 + 4096 + 8,
+               "ScreenwideAnnotations ABI must match Rust");
+
 typedef struct {
   ScreenwideAnnotation annotation;
   uint64_t start_ms, end_ms;
 } ScreenwideTimedAnnotation;
-_Static_assert(sizeof(ScreenwideTimedAnnotation) == 112, "Timed annotation ABI");
+_Static_assert(sizeof(ScreenwideTimedAnnotation) == 144, "Timed annotation ABI");

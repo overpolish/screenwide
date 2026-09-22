@@ -69,8 +69,8 @@ pub(crate) fn placed_arrows(
   }
   // The same flattening the Metal backend presents through, so both prepare
   // from one resolved list rather than from two readings of the document.
-  let annotations = native_annotations(annotations);
-  let annotations = &annotations.items[..annotations.count as usize];
+  let native = native_annotations(annotations);
+  let annotations = &native.items[..native.count as usize];
   let place = |point: [f32; 2]| {
     [
       (offset.0 + f64::from(point[0]) * scale.0) as f32,
@@ -79,9 +79,10 @@ pub(crate) fn placed_arrows(
   };
   let mut prepared = compositor::PreparedArrows {
     arrows: Vec::with_capacity(annotations.len()),
+    points: native.data.points[..native.data.point_count as usize].to_vec(),
+    text: native.data.text[..native.data.text_len as usize].to_vec(),
     ..Default::default()
   };
-  // Two passes rather than a sort: within each side the annotations have to
   // keep the order their layer stores them in, so a later annotation paints
   // over an earlier one.
   for above in [0, 1] {
@@ -95,10 +96,9 @@ pub(crate) fn placed_arrows(
         place(annotation.p1),
         place(annotation.p2),
       );
-      // A counter keeps its centre in `p0`, its aim in `p1[0]` and its
-      // number in `p1[1]`, so only the centre is placed: the disc's diameter
-      // is in output pixels, as an arrow's stroke is, and an angle is the
-      // same angle in either space.
+      // A counter keeps its centre in `p0` and its aim in `p1[0]`, so only
+      // the centre is placed: the disc's diameter is in output pixels, as an
+      // arrow's stroke is, and an angle is the same angle in either space.
       let geometry = match annotation.shape_kind() {
         AnnotationKind::Counter => {
           prepare_counter(a, annotation.width, annotation.p1[0], annotation.reveal)
@@ -115,13 +115,15 @@ pub(crate) fn placed_arrows(
       let mut arrow = compositor::PreviewArrow::new(
         geometry,
         annotation.color,
-        // The halo is preview chrome: `native_annotations` never sets it, so
-        // nothing the export composes can carry one.
         halo
           .filter(|(hovered, _)| *hovered == index)
           .map_or(0.0, |(_, width)| width),
         annotation.kind,
       );
+      arrow.flags = annotation.flags;
+      arrow.params = annotation.params;
+      arrow.data_offset = annotation.data_offset;
+      arrow.data_count = annotation.data_count;
       let count = exposure_sample_count(annotation, a, b, c);
       if count == 0 {
         // A still annotation carries its reveal's opacity in its colour. The
@@ -146,14 +148,28 @@ pub(crate) fn placed_arrows(
             previous: reveal.previous,
           };
           prepared.samples.push(compositor::PreviewSample::new(
-            prepare_arrow(a, b, c, annotation.width, annotation.head, sample),
+            match annotation.shape_kind() {
+              AnnotationKind::Arrow => {
+                prepare_arrow(a, b, c, annotation.width, annotation.head, sample)
+              }
+              AnnotationKind::Counter => {
+                prepare_counter(a, annotation.width, annotation.p1[0], sample)
+              }
+            },
             sample.opacity.clamp(0.0, 1.0),
           ));
         }
       }
       prepared.counters.push(match annotation.shape_kind() {
-        AnnotationKind::Counter => (annotation.p1[1].max(0.0) as u32, arrow.geometry.rounding),
-        AnnotationKind::Arrow => (0, 0.0),
+        AnnotationKind::Counter => (
+          String::from_utf8_lossy(
+            &native.data.text[annotation.data_offset as usize
+              ..annotation.data_offset as usize + annotation.data_count as usize],
+          )
+          .into_owned(),
+          arrow.geometry.rounding,
+        ),
+        AnnotationKind::Arrow => (String::new(), 0.0),
       });
       prepared.arrows.push(arrow);
     }

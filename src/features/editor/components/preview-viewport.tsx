@@ -47,7 +47,7 @@ type PreviewViewportProps = {
   /** The annotation tool in hand. "select" hit-tests the annotations already on
    * the layer; "arrow" and "counter" also make a new one on empty picture,
    * and the layer's own chrome stands down for as long as one is held. */
-  annotationTool?: "arrow" | "counter" | "select";
+  annotationTool?: import("../annotation-defaults").AnnotationTool;
   isEditing?: boolean;
   /** Suspends native input, so the DOM over the viewport stays clickable. */
   isExportOpen?: boolean;

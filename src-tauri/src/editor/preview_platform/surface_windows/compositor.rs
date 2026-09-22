@@ -58,7 +58,7 @@ use super::background_image::BackgroundImageCache;
 use super::counter_artwork::CounterArtworkCache;
 use super::keyboard_artwork::{KeyboardArtworkCache, KeyboardConstants};
 use crate::editor::annotations::geometry::{ArrowGeometry, ArrowTriangle};
-use crate::editor::annotations::MAX_ANNOTATIONS;
+use crate::editor::annotations::{MAX_ANNOTATIONS, MAX_ANNOTATION_POINTS, MAX_ANNOTATION_TEXT};
 use crate::editor::keyboard_effects::KeyboardOverlay;
 use crate::editor::media_preview::BakeGeometry;
 use crate::screenshots::{
@@ -124,6 +124,10 @@ pub(super) struct Compositor {
   /// arrows.
   sample_buffer: ID3D11Buffer,
   sample_view: ID3D11ShaderResourceView,
+  annotation_points_buffer: ID3D11Buffer,
+  annotation_points_view: ID3D11ShaderResourceView,
+  annotation_text_buffer: ID3D11Buffer,
+  annotation_text_view: ID3D11ShaderResourceView,
   constants: ID3D11Buffer,
   cursor_hotspots: [[f32; 4]; 8],
   cursor_view: ID3D11ShaderResourceView,

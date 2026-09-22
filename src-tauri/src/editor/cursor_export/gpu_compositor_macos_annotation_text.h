@@ -39,16 +39,10 @@ static const float SCREENWIDE_COUNTER_CAP_HEIGHT = 0.727f;
 /// How many atlas pixels are rasterised per drawn pixel.
 static const float SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE = 2.0f;
 
-/// Rasterises `count` numbers - `values[i]` at `radii[i]` drawn pixels, where a
-/// zero value is an annotation that is not a counter - into one buffer, and
-/// fills `rects` and `uniforms` with where each landed. Returns nil when there
-/// is nothing to draw, which the kernels read as no counters.
-///
-/// The result is cached against the numbers and sizes it was built from, so a
-/// preview that redraws an unchanged list does no work at all.
+/// Rasterises `count` UTF-8 strings with their requested pixel sizes.
 id<MTLBuffer> screenwide_annotation_text_atlas(
-    id<MTLDevice> device, const uint32_t *values, const float *radii,
-    uint32_t count, ScreenwideAnnotationTextRect *rects,
+    id<MTLDevice> device, const char *const *values, const uint32_t *lengths,
+    const float *sizes, uint32_t count, ScreenwideAnnotationTextRect *rects,
     ScreenwideAnnotationTextUniforms *uniforms);
 
 /// Registers the bundled Inter face with Core Text, once per process. The

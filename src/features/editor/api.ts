@@ -141,7 +141,7 @@ export const layoutRecordingPreviewSurface = ({
    * the tool and the selection it has to agree with reach the native chrome
    * together: split across two commands, whichever lands first paints the
    * layer's frame for a frame. */
-  annotationTool?: "arrow" | "counter" | "select" | null;
+  annotationTool?: import("./annotation-defaults").AnnotationTool | null;
   fitWidth?: number;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
@@ -302,7 +302,7 @@ export const layoutScreenshotPreviewSurface = ({
   /** The annotation tool in hand. "select" hit-tests the annotations already on
    * the layer and lets every other press fall through to it; "arrow" and
    * "counter" also make a new annotation on empty picture. */
-  annotationTool?: "arrow" | "counter" | "select";
+  annotationTool?: import("./annotation-defaults").AnnotationTool;
   fitWidth?: number;
   selectedAnnotationId?: string | null;
   selection?: PreviewSelectionLayout | null;

@@ -91,17 +91,19 @@ impl CounterArtworkCache {
   pub(super) fn resolve(
     &self,
     device: &ID3D11Device,
-    counters: &[(u32, f32)],
+    counters: &[(String, f32)],
   ) -> Result<Option<std::sync::Arc<CounterArtwork>>, String> {
-    let wanted: Vec<(usize, u32, f64)> = counters
+    let wanted: Vec<(usize, String, f64)> = counters
       .iter()
       .take(MAX_ANNOTATIONS)
       .enumerate()
-      .filter(|(_, (value, radius))| *value > 0 && *radius > 1.0)
+      .filter(|(_, (value, radius))| !value.is_empty() && *radius > 1.0)
       .map(|(index, (value, radius))| {
-        // Quantised to a quarter pixel, so a preview nudged by rounding
-        // reuses the atlas it already has.
-        (index, *value, f64::from((radius * 4.0).round() / 4.0))
+        (
+          index,
+          value.clone(),
+          f64::from((radius * 4.0).round() / 4.0),
+        )
       })
       .collect();
     if wanted.is_empty() {

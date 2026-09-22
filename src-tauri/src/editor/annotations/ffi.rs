@@ -170,7 +170,10 @@ mod tests {
 
   #[test]
   fn a_kind_no_number_owns_prepares_nothing() {
-    assert_eq!(prepared(7, [220.0, 40.0], 12.0, 2), ArrowGeometry::default());
+    assert_eq!(
+      prepared(7, [220.0, 40.0], 12.0, 2),
+      ArrowGeometry::default()
+    );
     assert_eq!(
       screenwide_annotation_travel(
         7,

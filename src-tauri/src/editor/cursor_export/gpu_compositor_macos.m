@@ -29,7 +29,8 @@ int screenwide_gpu_composite_cursor(
     uint32_t cursor_count, const ScreenwideCursorArtwork *artworks,
     uint32_t artwork_count, const ScreenwideKeyboardOverlay *keyboards,
     uint32_t keyboard_count, const ScreenwideTimedAnnotation *annotations,
-    uint32_t annotation_count, const ScreenwideTimelineRange *timeline_ranges,
+    uint32_t annotation_count, const ScreenwideAnnotationData *annotation_data,
+    const ScreenwideTimelineRange *timeline_ranges,
     uint32_t timeline_range_count, const char *camera_path,
     const ScreenwideCameraOverlay *camera_overlay,
     const ScreenwideCanvas *canvas, const char *output_path,
@@ -44,6 +45,7 @@ int screenwide_gpu_composite_cursor(
     session->canvas = canvas;
     session->annotations = annotations;
     session->annotation_count = annotation_count;
+    session->annotation_data = annotation_data;
     session->camera_overlay = camera_overlay;
     session->artworks = artworks;
     session->artwork_count = artwork_count;

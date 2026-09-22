@@ -48,7 +48,7 @@ export function useRecordingAnnotations({
   sourceDurationMs: number;
   /** The annotation tool in hand, when one is. The native chrome learns it
    * from the layout; here it only decides what the keyboard can delete. */
-  tool: "arrow" | "counter" | "select" | null;
+  tool: import("./annotation-defaults").AnnotationTool | null;
   trackId: RecordingVideoTrackId | null;
   onSelectTrack?: (track: RecordingVideoTrackId) => void;
 }) {

@@ -52,6 +52,8 @@ kernel void workspace_layer(
     const device AnnotationSample *annotation_samples [[buffer(15)]],
     const device uchar4 *annotation_numbers [[buffer(16)]],
     constant uint2 &annotation_atlas [[buffer(17)]],
+    const device packed_float2 *annotation_points [[buffer(18)]],
+    const device uchar *annotation_text [[buffer(19)]],
     texture2d_array<float, access::read> cursor_images [[texture(1)]],
     texture2d<float, access::sample> background_picture [[texture(2)]],
     uint2 gid [[thread_position_in_grid]]) {

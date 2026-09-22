@@ -30,13 +30,12 @@ struct PreviewGeometry {
 struct PreviewArrow {
   PreviewGeometry geometry;
   float red, green, blue, alpha;
-  /// The hover halo's width in canvas pixels; zero when nothing is hovered.
   float hover;
-  /// This annotation's run in `annotation_samples`. A count of zero draws the
-  /// prepared geometry directly, as a still always does.
   uint sample_first, sample_count;
-  /// Which shape the geometry is read as: zero an arrow, one a counter.
   uint kind;
+  uint flags;
+  float params[3];
+  uint data_offset, data_count;
 };
 
 /// A counter read out of the slots an arrow fills with its curve: the disc's
@@ -72,6 +71,8 @@ StructuredBuffer<PreviewSample> annotation_samples : register(t6);
 /// The counters' numbers, rasterised at the size they are drawn and stacked
 /// into one texture. The twin of the Metal kernels' number buffer.
 Texture2D<float4> annotation_numbers : register(t7);
+StructuredBuffer<float2> annotation_points : register(t8);
+StructuredBuffer<uint> annotation_text : register(t9);
 
 /// The halo's opacity, matching the ruler's.
 static const float annotation_hover_alpha = 0.24;

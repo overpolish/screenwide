@@ -129,6 +129,7 @@ screenwide_export_encode_cursor_overlay(
   CVMetalTextureCacheRef texture_cache;
   const ScreenwideCanvas *canvas;
   const ScreenwideTimedAnnotation *annotations;
+  const ScreenwideAnnotationData *annotation_data;
   uint32_t annotation_count;
   id<MTLComputePipelineState> annotation_luma_pipeline, annotation_chroma_pipeline;
   const ScreenwideCameraOverlay *camera_overlay;

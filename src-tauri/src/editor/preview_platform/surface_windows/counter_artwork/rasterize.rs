@@ -86,10 +86,10 @@ struct Row {
   size: f64,
 }
 
-fn row(annotation: usize, value: u32, radius: f64) -> Result<Row, String> {
+fn row(annotation: usize, value: &str, radius: f64) -> Result<Row, String> {
   let diameter = radius * 2.0 * SUPERSAMPLE;
   let mut size = diameter * CAP_SHARE / CAP_HEIGHT;
-  let text: Vec<u16> = format!("{value}").encode_utf16().collect();
+  let text: Vec<u16> = value.encode_utf16().collect();
   let mut measured = TextDevice::new(size)?.measure(&text)?;
   let limit = diameter * WIDTH_SHARE;
   if f64::from(measured.0) > limit && measured.0 > 0 {
@@ -109,10 +109,10 @@ fn row(annotation: usize, value: u32, radius: f64) -> Result<Row, String> {
   })
 }
 
-fn rasterize(wanted: &[(usize, u32, f64)], annotations: usize) -> Result<CounterRaster, String> {
+fn rasterize(wanted: &[(usize, String, f64)], annotations: usize) -> Result<CounterRaster, String> {
   let mut rows = Vec::with_capacity(wanted.len());
   for (annotation, value, radius) in wanted {
-    rows.push(row(*annotation, *value, *radius)?);
+    rows.push(row(*annotation, value, *radius)?);
   }
   let width = rows.iter().map(|row| row.cell.0).max().unwrap_or(1).max(1);
   let height = rows.iter().map(|row| row.cell.1).sum::<u32>().max(1);

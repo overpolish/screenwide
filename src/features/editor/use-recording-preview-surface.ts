@@ -104,7 +104,7 @@ export function useRecordingPreviewSurface({
   startedRef: RefObject<boolean>;
   /** The annotation tool in hand, when one is. It travels with the layout
    * beside the selection its chrome has to agree with. */
-  annotationTool?: "arrow" | "counter" | "select" | null;
+  annotationTool?: import("./annotation-defaults").AnnotationTool | null;
   /**
    * Temporarily hands input back to the webview without giving up ownership
    * of the layout: the native interaction view sits above the webview, so

@@ -86,14 +86,10 @@ typedef struct {
 /// wide for its disc is narrowed rather than allowed to touch the edge: three
 /// digits in a small disc still read, and the disc stays the size the style
 /// asked for.
-static ScreenwideCounterText counter_text(uint32_t value, float radius) {
-  CGFloat supersample = SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE;
-  CGFloat diameter = radius * 2.0 * supersample;
-  CGFloat size = diameter * SCREENWIDE_COUNTER_TEXT_CAP_SHARE /
-                 SCREENWIDE_COUNTER_CAP_HEIGHT;
-  ScreenwideCounterText result = {
-      .text = [NSString stringWithFormat:@"%u", value],
-  };
+static ScreenwideCounterText counter_text(const char *value, uint32_t length, CGFloat size) {
+  CGFloat diameter = size * 2.0 * SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE;
+  size *= SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE;
+  ScreenwideCounterText result = { .text = [[NSString alloc] initWithBytes:value length:length encoding:NSUTF8StringEncoding] };
   result.dress = counter_dress(size);
   result.measured = [result.text sizeWithAttributes:result.dress];
   CGFloat limit = diameter * SCREENWIDE_COUNTER_TEXT_WIDTH_SHARE;
@@ -101,9 +97,7 @@ static ScreenwideCounterText counter_text(uint32_t value, float radius) {
     result.dress = counter_dress(size * limit / result.measured.width);
     result.measured = [result.text sizeWithAttributes:result.dress];
   }
-  // One transparent pixel of margin keeps a four-tap sample on one number.
-  result.cell = CGSizeMake(ceil(result.measured.width) + 2.0,
-                           ceil(result.measured.height) + 2.0);
+  result.cell = CGSizeMake(ceil(result.measured.width) + 2.0, ceil(result.measured.height) + 2.0);
   return result;
 }
 
@@ -116,10 +110,6 @@ static ScreenwideCounterText counter_text(uint32_t value, float radius) {
 @implementation ScreenwideAnnotationTextAtlas
 @end
 
-/// The atlas is keyed on exactly what it was drawn from, so an unchanged
-/// preview frame is a dictionary lookup. A counter being dragged or animated
-/// walks through its own sizes, and the whole cache is dropped once it fills
-/// rather than tracked by age, as the keyboard artwork's is.
 static NSMutableDictionary<NSString *, ScreenwideAnnotationTextAtlas *> *atlas_cache(void) {
   static NSMutableDictionary *cache;
   static dispatch_once_t once;
@@ -130,25 +120,24 @@ static NSMutableDictionary<NSString *, ScreenwideAnnotationTextAtlas *> *atlas_c
 }
 
 id<MTLBuffer> screenwide_annotation_text_atlas(
-    id<MTLDevice> device, const uint32_t *values, const float *radii,
-    uint32_t count, ScreenwideAnnotationTextRect *rects,
+    id<MTLDevice> device, const char *const *values, const uint32_t *lengths,
+    const float *sizes, uint32_t count, ScreenwideAnnotationTextRect *rects,
     ScreenwideAnnotationTextUniforms *uniforms) {
   if (count > SCREENWIDE_MAX_ANNOTATIONS) count = SCREENWIDE_MAX_ANNOTATIONS;
   if (rects != NULL)
     memset(rects, 0, sizeof(ScreenwideAnnotationTextRect) * count);
   if (uniforms != NULL) *uniforms = (ScreenwideAnnotationTextUniforms){0};
-  if (device == nil || values == NULL || radii == NULL || count == 0) return nil;
+  if (device == nil || values == NULL || lengths == NULL || sizes == NULL || count == 0) return nil;
 
   // A number smaller than a pixel across has nothing to rasterise; the disc
   // it belongs to is mid-arrival and is drawn without it for a frame or two.
   NSMutableString *key = [NSMutableString stringWithString:@"counter"];
   uint32_t wanted = 0;
   for (uint32_t index = 0; index < count; index++) {
-    if (values[index] == 0 || !(radii[index] > 1.0f)) continue;
+    if (values[index] == NULL || lengths[index] == 0 || !(sizes[index] > 1.0f)) continue;
     // Quantised to a quarter pixel, so a preview nudged by rounding reuses
     // the atlas it already has.
-    [key appendFormat:@"|%u@%.2f", values[index],
-                      roundf(radii[index] * 4.0f) / 4.0f];
+    [key appendFormat:@"|%.*s@%.2f", (int)lengths[index], values[index], sizes[index]];
     wanted++;
   }
   if (wanted == 0) return nil;
@@ -166,8 +155,8 @@ id<MTLBuffer> screenwide_annotation_text_atlas(
   CGFloat atlasWidth = 0.0;
   CGFloat atlasHeight = 0.0;
   for (uint32_t index = 0; index < count; index++) {
-    if (values[index] == 0 || !(radii[index] > 1.0f)) continue;
-    prepared[rows] = counter_text(values[index], radii[index]);
+    if (values[index] == NULL || lengths[index] == 0 || !(sizes[index] > 1.0f)) continue;
+    prepared[rows] = counter_text(values[index], lengths[index], sizes[index]);
     prepared[rows].annotation = index;
     atlasWidth = MAX(atlasWidth, prepared[rows].cell.width);
     atlasHeight += prepared[rows].cell.height;

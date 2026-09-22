@@ -9,6 +9,8 @@ import { AnnotationStyle } from "./annotations";
 
 import type { AnnotationKind } from "../../components/shared/annotation-style/types";
 
+export type AnnotationTool = AnnotationKind | "select";
+
 /**
  * The dress the next annotation is drawn in: whatever the last one was changed
  * to.

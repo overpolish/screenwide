@@ -19,13 +19,15 @@ struct AnnotationSample {
   float opacity;
 };
 struct AnnotationUniforms {
-  uint kind, above_camera;
+  uint kind, above_camera, flags;
+  float params[3];
   packed_float4 color;
   float hover;
   AnnotationArrowGeometry arrow;
   uint sample_offset, sample_count;
+  uint data_offset, data_count;
 };
-static_assert(sizeof(AnnotationUniforms) == 128,
+static_assert(sizeof(AnnotationUniforms) == 152,
               "Prepared annotations must match their native layout");
 
 constant float annotation_hover_alpha = 0.24;

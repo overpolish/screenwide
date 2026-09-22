@@ -20,6 +20,8 @@ kernel void compose_canvas_rgba(
     const device AnnotationSample *annotation_samples [[buffer(15)]],
     const device uchar4 *annotation_numbers [[buffer(16)]],
     constant uint2 &annotation_atlas [[buffer(17)]],
+    const device packed_float2 *annotation_points [[buffer(18)]],
+    const device uchar *annotation_text [[buffer(19)]],
     texture2d_array<float, access::read> cursor_images [[texture(0)]],
     texture2d<float, access::sample> background_picture [[texture(1)]],
     uint2 gid [[thread_position_in_grid]],
@@ -33,6 +35,8 @@ kernel void compose_canvas_rgba(
   rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
   // The still export dispatches one thread per output pixel over a canvas
   // measured in those same pixels, so a drawn pixel is a canvas pixel.
+  // Annotation pre-pass hook: obfuscate will sample the composed layer here.
+  // It is intentionally a no-op until that tool is implemented.
   const float annotation_pixel_scale = 1.0;
   rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                float2(gid) + 0.5, u, float2(source_dimensions),

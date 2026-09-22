@@ -41,7 +41,21 @@ impl Compositor {
       MAX_ANNOTATIONS * MAX_EXPOSURE_SAMPLES,
       "annotation exposure",
     )?;
-    let mut keyboard_constants = None;
+    let (annotation_points_buffer, annotation_points_view) = structured_buffer(
+      device,
+      size_of::<[f32; 2]>(),
+      MAX_ANNOTATION_POINTS,
+      "annotation points",
+    )?;
+    // A structured buffer's stride must be a multiple of four, and the shader
+    // reads the text as `StructuredBuffer<uint>`: four bytes per element, a
+    // byte at `text[i >> 2] >> ((i & 3) * 8)`.
+    let (annotation_text_buffer, annotation_text_view) = structured_buffer(
+      device,
+      size_of::<u32>(),
+      MAX_ANNOTATION_TEXT / size_of::<u32>(),
+      "annotation text",
+    )?;
     unsafe {
       device.CreateBuffer(
         &D3D11_BUFFER_DESC {
@@ -209,6 +223,10 @@ impl Compositor {
       annotation_view,
       sample_buffer,
       sample_view,
+      annotation_points_buffer,
+      annotation_points_view,
+      annotation_text_buffer,
+      annotation_text_view,
       constants: constants.ok_or_else(|| "D3D11 created no preview constant buffer".to_owned())?,
       cursor_hotspots,
       cursor_view: cursor_view

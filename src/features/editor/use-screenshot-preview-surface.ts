@@ -86,7 +86,7 @@ export function useScreenshotPreviewSurface({
   annotationCounterAngle?: number | null;
   annotationDefaults?: AnnotationStyle | null;
   /** The annotation tool in hand, when one is. */
-  annotationTool?: "arrow" | "counter" | "select";
+  annotationTool?: import("./annotation-defaults").AnnotationTool;
   interactionOutput?: ScreenshotWorkspaceOutputSettings;
   /**
    * Temporarily hands input back to the webview without giving up the native
