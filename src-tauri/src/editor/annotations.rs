@@ -17,7 +17,7 @@
 //!   Metal layer function and an HLSL layer function.
 
 pub(crate) mod kind;
-pub(crate) use kind::AnnotationKind;
+pub use kind::AnnotationKind;
 
 pub(crate) mod model;
 #[cfg(any(target_os = "macos", target_os = "windows"))]

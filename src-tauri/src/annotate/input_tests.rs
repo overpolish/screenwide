@@ -15,7 +15,7 @@ fn point(x: f64, y: f64) -> AnnotationPoint {
 /// The arrow tool in hand. A counter's number and aim are never read for it.
 fn arrow_tool() -> Tool {
   Tool {
-    shape: AnnotateShape::Arrow,
+    shape: AnnotationKind::Arrow,
     value: 0,
     angle: 0.0,
   }
@@ -23,7 +23,7 @@ fn arrow_tool() -> Tool {
 
 fn counter_tool(value: u32, angle: f64) -> Tool {
   Tool {
-    shape: AnnotateShape::Counter,
+    shape: AnnotationKind::Counter,
     value,
     angle,
   }

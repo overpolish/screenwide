@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationHead } from "../../components/shared/annotation-style/types";
+import {
+  AnnotationHead,
+  AnnotationKind,
+} from "../../components/shared/annotation-style/types";
 import { BackgroundPreset } from "../../components/shared/background-picker/background";
 
 export type ShortcutAction =
@@ -51,10 +54,6 @@ export type OcrSettings = {
   enabled: boolean;
 };
 
-/** The shapes the overlay can draw, the tags of the editor's own
- * `AnnotationShape`. */
-export type AnnotateShape = "arrow" | "counter";
-
 /** Where the toolbar was last dropped: logical points from the top-left of
  * the display it landed on. */
 type AnnotateToolbarPosition = {
@@ -74,7 +73,8 @@ export type AnnotateSettings = {
    * things. */
   defaultCounterSize: number;
   defaultHead: AnnotationHead;
-  defaultShape: AnnotateShape;
+  /** What a fresh stroke is: the editor's own kind. */
+  defaultShape: AnnotationKind;
   defaultWidth: number;
   enabled: boolean;
   keepAnnotationsBetweenSessions: boolean;

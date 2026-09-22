@@ -7,7 +7,7 @@ import {
   ArrowToolIcon,
   CounterToolIcon,
 } from "../../components/shared/annotation-style/annotation-tool-icons";
-import { AnnotateShape } from "../settings/types";
+import { AnnotationKind } from "../../components/shared/annotation-style/types";
 
 /** One tool the overlay can draw with. A shape added to the overlay becomes a
  * row here, and the toolbar grows a toggle without being touched.
@@ -18,7 +18,7 @@ import { AnnotateShape } from "../settings/types";
  * `features/editor/components/screenshot-tools`. */
 type AnnotateTool = {
   icon: ReactNode;
-  id: AnnotateShape;
+  id: AnnotationKind;
   label: string;
   /** Accessible name, which says what the tool acts on. */
   name: string;

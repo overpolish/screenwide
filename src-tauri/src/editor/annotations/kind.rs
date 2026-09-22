@@ -3,14 +3,20 @@
 
 //! Which shape an annotation is, as one value every layer of the stack shares.
 
+use serde::{Deserialize, Serialize};
+
 /// The kinds the compositor draws. The numbers are ABI: they are the C
 /// `ScreenwideAnnotationKind`, the `SCREENWIDE_ANNOTATION_*` the Metal
 /// compositor prepares against, and the `kind == 1u` tests in the Metal and
 /// HLSL annotation shaders. They travel inside the native records as they are,
-/// so a value may never be renumbered.
+/// so a value may never be renumbered. The serde names are the `kind` tag of
+/// `AnnotationShape` and what the live overlay's settings store, so a kind
+/// is one word in a document, in settings, and over the native boundary.
 #[repr(u32)]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum AnnotationKind {
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AnnotationKind {
+  #[default]
   Arrow = 0,
   Counter = 1,
 }

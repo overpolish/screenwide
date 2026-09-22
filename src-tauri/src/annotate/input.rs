@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::Instant;
 
-use super::settings::AnnotateShape;
+use crate::editor::annotations::AnnotationKind;
 use crate::editor::annotations::arrow::new_arrow;
 use crate::editor::annotations::counter::new_counter;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationStyle};
@@ -46,9 +46,9 @@ use key_codes::{KEY_A, KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_N, KEY_Z};
 /// The tool each unmodified letter picks up, the twin of the toolbar's own
 /// hints. A shape added to the overlay takes its letter here.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-const TOOL_KEYS: &[(u16, AnnotateShape)] = &[
-  (KEY_A, AnnotateShape::Arrow),
-  (KEY_N, AnnotateShape::Counter),
+const TOOL_KEYS: &[(u16, AnnotationKind)] = &[
+  (KEY_A, AnnotationKind::Arrow),
+  (KEY_N, AnnotationKind::Counter),
 ];
 
 /// The modifier bits the native overlay sends. Windows reports Ctrl as
@@ -78,7 +78,7 @@ struct Stroke {
   started_at: Instant,
   start: AnnotationPoint,
   end: AnnotationPoint,
-  shape: AnnotateShape,
+  shape: AnnotationKind,
   /// The counter's place in the order it was dropped in, and where its tail
   /// points. Neither is read for an arrow.
   value: u32,
@@ -97,14 +97,14 @@ fn drawing() -> MutexGuard<'static, Option<Stroke>> {
 /// The dress an annotation of `shape` is drawn in. An arrow's stroke and a
 /// counter's disc are different measurements of different things, so the width
 /// comes from the setting that belongs to the shape.
-fn style(shape: AnnotateShape) -> AnnotationStyle {
+fn style(shape: AnnotationKind) -> AnnotationStyle {
   let settings = super::settings::current();
   AnnotationStyle {
     color: settings.default_color,
     head: settings.default_head,
     width: match shape {
-      AnnotateShape::Arrow => settings.default_width,
-      AnnotateShape::Counter => settings.default_counter_size,
+      AnnotationKind::Arrow => settings.default_width,
+      AnnotationKind::Counter => settings.default_counter_size,
     },
   }
 }
@@ -118,8 +118,8 @@ fn style(shape: AnnotateShape) -> AnnotationStyle {
 /// in the editor is carried.
 fn annotation(stroke: &Stroke, style: &AnnotationStyle) -> Annotation {
   match stroke.shape {
-    AnnotateShape::Arrow => new_arrow(stroke.id.clone(), stroke.start, stroke.end, Some(style)),
-    AnnotateShape::Counter => new_counter(
+    AnnotationKind::Arrow => new_arrow(stroke.id.clone(), stroke.start, stroke.end, Some(style)),
+    AnnotationKind::Counter => new_counter(
       stroke.id.clone(),
       stroke.end,
       stroke.value,
@@ -133,13 +133,13 @@ fn annotation(stroke: &Stroke, style: &AnnotationStyle) -> Annotation {
 /// place is a blob, and the press that starts every stroke would flash one
 /// before the drag begins; a counter is an annotation the moment it is dropped.
 fn is_drawn(stroke: &Stroke) -> bool {
-  stroke.shape == AnnotateShape::Counter || stroke.start != stroke.end
+  stroke.shape == AnnotationKind::Counter || stroke.start != stroke.end
 }
 
 /// What a press starts: the tool in hand, and what a counter dropped by it
 /// would be numbered and aimed at.
 struct Tool {
-  shape: AnnotateShape,
+  shape: AnnotationKind,
   value: u32,
   angle: f64,
 }

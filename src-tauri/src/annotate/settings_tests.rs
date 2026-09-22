@@ -114,7 +114,7 @@ fn settings_without_the_newer_fields_take_their_defaults() {
       .unwrap();
   assert_eq!(settings.default_head, AnnotationHead::End);
   assert_eq!(settings.toolbar_position, None);
-  assert_eq!(settings.default_shape, AnnotateShape::Arrow);
+  assert_eq!(settings.default_shape, AnnotationKind::Arrow);
   assert_eq!(settings.default_counter_size, MIN_COUNTER_SIZE);
   assert_eq!(settings.default_counter_angle, 0.0);
 }

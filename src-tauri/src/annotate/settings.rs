@@ -9,7 +9,7 @@ use std::sync::{LazyLock, RwLock};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::editor::annotations::AnnotationHead;
+use crate::editor::annotations::{AnnotationHead, AnnotationKind};
 
 /// The stroke presets the editor's arrow panel offers, which is what keeps a
 /// live annotation and an editor annotation the same weight. The twin of
@@ -25,16 +25,6 @@ const MAX_COUNTER_SIZE: f64 = 160.0;
 /// The palette's yellow, as in
 /// `src/components/shared/annotation-style/palette.ts`.
 const DEFAULT_COLOR: &str = "#ffcc00";
-
-/// What a fresh stroke is: the tag of the editor's `AnnotationShape`, so a
-/// second shape in the editor becomes a second variant here.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum AnnotateShape {
-  #[default]
-  Arrow,
-  Counter,
-}
 
 /// Where the user dragged the toolbar, in logical points from the top-left of
 /// the display it was dropped on. Held per display so the toolbar comes back
@@ -55,7 +45,9 @@ pub struct AnnotateSettings {
   /// Whether annotations survive the overlay closing. Off by default: the
   /// overlay is normally toggled off to be rid of what is on screen.
   pub keep_annotations_between_sessions: bool,
-  pub default_shape: AnnotateShape,
+  /// What a fresh stroke is: the editor's own kind, so a tool added there
+  /// is the same word here and in the stored settings.
+  pub default_shape: AnnotationKind,
   /// `#rrggbb` or `#rrggbbaa`, as a document stores it.
   pub default_color: String,
   pub default_width: f64,
@@ -79,7 +71,7 @@ impl Default for AnnotateSettings {
     Self {
       enabled: true,
       keep_annotations_between_sessions: false,
-      default_shape: AnnotateShape::Arrow,
+      default_shape: AnnotationKind::Arrow,
       default_color: DEFAULT_COLOR.to_owned(),
       default_width: MIN_WIDTH,
       default_counter_size: MIN_COUNTER_SIZE,
@@ -220,7 +212,7 @@ pub(super) fn store_toolbar_position(
 /// The keyboard picking a tool up. Goes through the ordinary write for the
 /// same reason a drag does.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(super) fn store_default_shape(app: &AppHandle, shape: AnnotateShape) -> Result<(), String> {
+pub(super) fn store_default_shape(app: &AppHandle, shape: AnnotationKind) -> Result<(), String> {
   let settings = AnnotateSettings {
     default_shape: shape,
     ..current()
