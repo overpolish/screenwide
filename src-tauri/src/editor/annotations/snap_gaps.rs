@@ -16,9 +16,9 @@
 //! the moving box already has to a neighbour would move with it, so matching
 //! it would mean matching nothing.
 //!
-//! This is every pair of field boxes per sample, which is quadratic - fine
-//! only because a document holds at most `MAX_ANNOTATIONS` of them and
-//! nothing here allocates.
+//! Only boxes whose cross-axis span the moving box shares can offer a gap, so
+//! those are gathered first and paired among themselves: the work is linear in
+//! the document and quadratic only in the boxes level with the one in hand.
 
 use super::{Axis, SnapBox};
 
@@ -85,15 +85,14 @@ pub(crate) fn snap_gap(
   threshold: f64,
 ) -> Option<GapCandidate> {
   let cross = axis.other();
+  let level: Vec<SnapBox> = boxes
+    .iter()
+    .copied()
+    .filter(|other| overlaps(moving, *other, cross))
+    .collect();
   let mut best: Option<GapCandidate> = None;
-  for (index, left) in boxes.iter().enumerate() {
-    if !overlaps(moving, *left, cross) {
-      continue;
-    }
-    for right in &boxes[index + 1..] {
-      if !overlaps(moving, *right, cross) {
-        continue;
-      }
+  for (index, left) in level.iter().enumerate() {
+    for right in &level[index + 1..] {
       // Order the pair along the axis, and skip any that share space: two
       // boxes that overlap have no gap worth copying.
       let (first, second) = if left.min(axis) <= right.min(axis) {

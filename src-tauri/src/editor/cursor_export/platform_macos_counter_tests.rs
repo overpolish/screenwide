@@ -30,35 +30,42 @@ fn counter(value: u32, angle: f64) -> Annotation {
 }
 
 fn composed(annotation: Annotation) -> crate::screenshots::CapturedImage {
+  composed_at(SIZE, vec![annotation])
+}
+
+fn composed_at(
+  size: (u32, u32),
+  annotations: Vec<Annotation>,
+) -> crate::screenshots::CapturedImage {
   let source = crate::screenshots::CapturedImage {
-    rgba: [0, 0, 0, 255].repeat(SIZE.0 as usize * SIZE.1 as usize),
-    width: SIZE.0,
-    height: SIZE.1,
+    rgba: [0, 0, 0, 255].repeat(size.0 as usize * size.1 as usize),
+    width: size.0,
+    height: size.1,
   };
-  let mut settings = crate::screenshots::test_output_settings(SIZE.0, SIZE.1);
+  let mut settings = crate::screenshots::test_output_settings(size.0, size.1);
   settings.background_color = "#000000".to_owned();
   settings.background_type = "solid".to_owned();
-  settings.crop_height = f64::from(SIZE.1);
-  settings.crop_width = f64::from(SIZE.0);
+  settings.crop_height = f64::from(size.1);
+  settings.crop_width = f64::from(size.0);
   settings.crop_x = 0.0;
   settings.crop_y = 0.0;
-  settings.image_width = f64::from(SIZE.0);
+  settings.image_width = f64::from(size.0);
   settings.image_x = 0.0;
   settings.image_y = 0.0;
-  settings.annotations = vec![annotation];
+  settings.annotations = annotations;
   let rgba = crate::screenshots::compose_output_layers(
     &source, &settings, 0.0, false, None, None, None, None, false, false,
   )
   .unwrap();
   crate::screenshots::CapturedImage {
     rgba: rgba.rgba,
-    width: SIZE.0,
-    height: SIZE.1,
+    width: size.0,
+    height: size.1,
   }
 }
 
 fn pixel(image: &crate::screenshots::CapturedImage, x: f64, y: f64) -> [u8; 4] {
-  let start = ((y.round() as usize) * SIZE.0 as usize + x.round() as usize) * 4;
+  let start = ((y.round() as usize) * image.width as usize + x.round() as usize) * 4;
   [
     image.rgba[start],
     image.rgba[start + 1],
@@ -205,4 +212,48 @@ fn a_counter_smears_over_the_sizes_it_grew_through() {
   // whole, which is what a video export was missing.
   let inside = pixel(&moving, CENTER.x - inner, CENTER.y)[0];
   assert!(inside > 16 && inside < 240, "the disc is solid: {inside}");
+}
+
+/// A document has no ceiling on its annotations: well past the thousand a
+/// fixed array once held, the last counter is still drawn, number and all.
+#[test]
+fn the_last_of_a_long_list_of_counters_is_drawn_with_its_number() {
+  const COLUMNS: u32 = 40;
+  const ROWS: u32 = 30;
+  const PITCH: f64 = 32.0;
+  let counters: Vec<Annotation> = (0..COLUMNS * ROWS)
+    .map(|index| {
+      let mut annotation = counter(index + 1, 0.0);
+      annotation.id = index.to_string();
+      annotation.style.width = 24.0;
+      if let crate::editor::annotations::AnnotationShape::Counter { center, .. } =
+        &mut annotation.shape
+      {
+        *center = AnnotationPoint {
+          x: f64::from(index % COLUMNS) * PITCH + PITCH / 2.0,
+          y: f64::from(index / COLUMNS) * PITCH + PITCH / 2.0,
+        };
+      }
+      annotation
+    })
+    .collect();
+  let image = composed_at(
+    (
+      (f64::from(COLUMNS) * PITCH) as u32,
+      (f64::from(ROWS) * PITCH) as u32,
+    ),
+    counters,
+  );
+  write_png("counter-long-list", &image);
+  let last = (
+    f64::from(COLUMNS - 1) * PITCH + PITCH / 2.0,
+    f64::from(ROWS - 1) * PITCH + PITCH / 2.0,
+  );
+  assert!(
+    yellow(pixel(&image, last.0 - 9.0, last.1)),
+    "the last disc is {:?}",
+    pixel(&image, last.0 - 9.0, last.1)
+  );
+  let inked = (0..12).any(|step| pixel(&image, last.0, last.1 - 6.0 + f64::from(step))[0] < 160);
+  assert!(inked, "the last counter's number left no ink");
 }

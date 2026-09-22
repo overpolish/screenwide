@@ -20,6 +20,9 @@ fn main() {
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos+presenter_resize.m"
     );
     println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos+presenter_annotations.m"
+    );
+    println!(
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m"
     );
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard.m");
@@ -163,6 +166,7 @@ fn main() {
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_keyboard.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_resize.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos+presenter_annotations.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_background_image.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_annotation_text.m")

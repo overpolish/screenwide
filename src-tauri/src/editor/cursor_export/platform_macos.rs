@@ -13,8 +13,8 @@ use crate::editor::cursor_effects::{NativeGpuArtwork, NativeGpuCursor};
 #[path = "platform_macos/ffi.rs"]
 mod ffi;
 use ffi::{
-  gpu_progress, gpu_should_cancel, screenwide_gpu_composite_cursor, GpuCallbacks,
-  GpuCameraOverlay, GPU_PROGRESS_PERCENT,
+  gpu_progress, gpu_should_cancel, screenwide_gpu_composite_cursor, GpuCallbacks, GpuCameraOverlay,
+  GPU_PROGRESS_PERCENT,
 };
 
 #[path = "platform_macos/mux.rs"]
@@ -70,6 +70,7 @@ fn render_gpu_video(
     .map(|timeline| timeline.frames.as_slice())
     .unwrap_or_default();
   let (annotations, annotation_data) = timed_annotations::for_request(request);
+  let annotation_data = annotation_data.view();
   let camera = request.camera.map(|(path, _)| c_path(path)).transpose()?;
   let camera_overlay = request
     .camera
@@ -122,7 +123,7 @@ fn render_gpu_video(
       keyboards.len() as u32,
       annotations.as_ptr(),
       annotations.len() as u32,
-      std::ptr::from_ref(&*annotation_data),
+      &annotation_data,
       timeline_ranges.as_ptr(),
       timeline_ranges.len() as u32,
       camera

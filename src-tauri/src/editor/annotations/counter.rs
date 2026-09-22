@@ -8,6 +8,12 @@
 //! picked - lives here. [`super::shape`] is the list of what a kind has to
 //! answer, and every answer of the counter's is one function in this module.
 
+/// Where the numbers sit in the atlas both backends rasterise them into.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) mod atlas;
+/// The atlas layout as the Metal compositor reaches it.
+#[cfg(target_os = "macos")]
+pub(crate) mod atlas_ffi;
 /// Draw-ready geometry, prepared for both backends: the D3D11 one calls this
 /// directly, the Metal one through `geometry.h`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]

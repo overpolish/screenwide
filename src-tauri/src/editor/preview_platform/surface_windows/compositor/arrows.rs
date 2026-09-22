@@ -154,9 +154,74 @@ pub(crate) struct PreparedArrows {
   pub(crate) pixel_scale: f32,
 }
 
+/// A CPU-written structured buffer that grows to fit the list it is handed,
+/// with the view the pixel shader reads it through. A list is as long as its
+/// document, so nothing is sized up front: the buffer is replaced by one twice
+/// the size needed whenever a list outgrows it, and kept after that.
+pub(crate) struct StructuredBuffer {
+  stride: usize,
+  name: &'static str,
+  slot: std::sync::Mutex<(ID3D11Buffer, ID3D11ShaderResourceView, usize)>,
+}
+
+impl StructuredBuffer {
+  pub(crate) fn new(
+    device: &ID3D11Device,
+    stride: usize,
+    name: &'static str,
+  ) -> Result<Self, String> {
+    const FIRST_CAPACITY: usize = 64;
+    let (buffer, view) = structured_buffer(device, stride, FIRST_CAPACITY, name)?;
+    Ok(Self {
+      stride,
+      name,
+      slot: std::sync::Mutex::new((buffer, view, FIRST_CAPACITY)),
+    })
+  }
+
+  /// Writes `items` to the front of the buffer, growing it first when they do
+  /// not fit, and returns the view to bind. `items` may be narrower than the
+  /// stride - the text is bytes read four to an element - so room is counted
+  /// in bytes. Nothing is written for an empty list; the shader never reads
+  /// past its counts.
+  pub(crate) fn write<T: Copy>(
+    &self,
+    device: &ID3D11Device,
+    context: &ID3D11DeviceContext,
+    items: &[T],
+  ) -> Result<ID3D11ShaderResourceView, String> {
+    let bytes = std::mem::size_of_val(items);
+    let needed = bytes.div_ceil(self.stride);
+    let mut slot = self
+      .slot
+      .lock()
+      .map_err(|_| format!("The {} buffer is poisoned", self.name))?;
+    if needed > slot.2 {
+      let capacity = needed.next_power_of_two();
+      let (buffer, view) = structured_buffer(device, self.stride, capacity, self.name)?;
+      *slot = (buffer, view, capacity);
+    }
+    if bytes > 0 {
+      let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
+      unsafe {
+        context
+          .Map(&slot.0, 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&mut mapped))
+          .map_err(|error| error.to_string())?;
+        std::ptr::copy_nonoverlapping(
+          items.as_ptr().cast::<u8>(),
+          mapped.pData.cast::<u8>(),
+          bytes,
+        );
+        context.Unmap(&slot.0, 0);
+      }
+    }
+    Ok(slot.1.clone())
+  }
+}
+
 /// A CPU-written structured buffer of `count` elements of `stride` bytes,
 /// with the view the pixel shader reads it through.
-pub(crate) fn structured_buffer(
+fn structured_buffer(
   device: &ID3D11Device,
   stride: usize,
   count: usize,

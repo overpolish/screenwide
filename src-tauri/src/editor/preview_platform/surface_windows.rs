@@ -62,12 +62,12 @@ mod workspace;
 pub(crate) mod arrows {
   pub(crate) use super::annotation::placed_arrows;
   pub(crate) use super::compositor::{
-    structured_buffer, PreparedArrows, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
+    PreparedArrows, PreviewArrow, PreviewSample, StructuredBuffer,
   };
   /// A counter's number is type, so it is rasterised rather than drawn by the
-  /// shader. The overlay resolves its own atlas from the same cache the
-  /// editor's compositor uses.
-  pub(crate) use super::counter_artwork::{numbered_arrows, CounterArtwork, CounterArtworkCache};
+  /// shader. The overlay lays its numbers out in an atlas of its own, the same
+  /// way the editor's compositor does.
+  pub(crate) use super::counter_artwork::{numbered_arrows, CounterAtlas};
 }
 use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for};
 use geometry::{

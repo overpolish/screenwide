@@ -13,7 +13,7 @@ use super::*;
 use crate::editor::annotations::arrow::geometry::prepare_arrow;
 use crate::editor::annotations::counter::geometry::prepare_counter;
 use crate::editor::annotations::exposure::annotation_travel;
-use crate::editor::annotations::native::{native_annotations, NativeAnnotation};
+use crate::editor::annotations::native::{native_annotations, NativeAnnotation, NativeAnnotations};
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::Annotation;
 use crate::screenshots::output_placement;
@@ -69,8 +69,8 @@ pub(crate) fn placed_arrows(
   }
   // The same flattening the Metal backend presents through, so both prepare
   // from one resolved list rather than from two readings of the document.
-  let native = native_annotations(annotations);
-  let annotations = &native.items[..native.count as usize];
+  let NativeAnnotations { items, data } = native_annotations(annotations);
+  let annotations = &items;
   let place = |point: [f32; 2]| {
     [
       (offset.0 + f64::from(point[0]) * scale.0) as f32,
@@ -79,8 +79,6 @@ pub(crate) fn placed_arrows(
   };
   let mut prepared = compositor::PreparedArrows {
     arrows: Vec::with_capacity(annotations.len()),
-    points: native.data.points[..native.data.point_count as usize].to_vec(),
-    text: native.data.text[..native.data.text_len as usize].to_vec(),
     ..Default::default()
   };
   // keep the order their layer stores them in, so a later annotation paints
@@ -163,7 +161,7 @@ pub(crate) fn placed_arrows(
       prepared.counters.push(match annotation.shape_kind() {
         AnnotationKind::Counter => (
           String::from_utf8_lossy(
-            &native.data.text[annotation.data_offset as usize
+            &data.text[annotation.data_offset as usize
               ..annotation.data_offset as usize + annotation.data_count as usize],
           )
           .into_owned(),
@@ -177,6 +175,8 @@ pub(crate) fn placed_arrows(
       prepared.below_camera = prepared.arrows.len() as u32;
     }
   }
+  prepared.points = data.points;
+  prepared.text = data.text;
   prepared
 }
 

@@ -27,8 +27,13 @@ impl RecordingPreviewSurface {
     layers: &[RecordingWorkspaceLayer<'_>],
     artworks: Option<&[GpuArtwork]>,
   ) -> Result<bool, String> {
+    // The views below borrow these lists until the presenter has copied them.
+    let annotations: Vec<_> = layers
+      .iter()
+      .map(|layer| native_annotations(&layer.settings.annotations))
+      .collect();
     let mut native_layers = Vec::with_capacity(layers.len());
-    for layer in layers {
+    for (layer, annotations) in layers.iter().zip(&annotations) {
       let (source_width, source_height, source_rgba, source_pixels, source_kind) =
         if let Some(source) = layer.source {
           (
@@ -90,7 +95,7 @@ impl RecordingPreviewSurface {
         camera_rgba,
         camera_pixels,
         overlay,
-        annotations: native_annotations(&layer.settings.annotations),
+        annotations: annotations.view(),
       });
     }
     let native_artworks = artworks

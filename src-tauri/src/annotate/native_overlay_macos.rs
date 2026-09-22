@@ -8,13 +8,16 @@
 //! frame it asks for the display's annotations, so there is no second copy of the
 //! document to keep in step with [`super::live_clips`].
 
+use std::cell::RefCell;
 use std::ffi::c_void;
 use std::sync::{LazyLock, OnceLock, RwLock};
 
 use objc2_app_kit::NSWindow;
 use tauri::{AppHandle, WebviewWindow};
 
-use crate::editor::annotations::native::{native_annotations, NativeAnnotations};
+use crate::editor::annotations::native::{
+  native_annotations, NativeAnnotations, NativeAnnotationsView,
+};
 
 /// One display the overlay covers: where it starts in desktop points, and how
 /// many pixels one point is.
@@ -33,7 +36,7 @@ unsafe extern "C" {
   fn screenwide_annotate_attach(view: *mut c_void, display: u32) -> u32;
   fn screenwide_annotate_detach(view: *mut c_void);
   fn screenwide_annotate_redraw();
-  fn screenwide_annotate_install_scene(scene: extern "C" fn(u32, *mut NativeAnnotations));
+  fn screenwide_annotate_install_scene(scene: extern "C" fn(u32, *mut NativeAnnotationsView));
   fn screenwide_annotate_install_input(
     pointer: extern "C" fn(u32, f64, f64),
     key: extern "C" fn(u16, u32) -> u32,
@@ -41,12 +44,19 @@ unsafe extern "C" {
   fn screenwide_annotate_teardown_input();
 }
 
+thread_local! {
+  /// The list the last [`scene`] call handed out. The native side draws it
+  /// before it asks again, so it lives exactly as long as it is read.
+  static SCENE: RefCell<NativeAnnotations> = RefCell::default();
+}
+
 /// Fills one display's annotation list: everything on screen plus the stroke in
 /// hand, in that display's layer pixels.
 ///
 /// # Safety
-/// `out` must point at one writable [`NativeAnnotations`].
-extern "C" fn scene(display: u32, out: *mut NativeAnnotations) {
+/// `out` must point at one writable [`NativeAnnotationsView`], which stays
+/// valid until the next call on this thread.
+extern "C" fn scene(display: u32, out: *mut NativeAnnotationsView) {
   if out.is_null() {
     return;
   }
@@ -65,7 +75,10 @@ extern "C" fn scene(display: u32, out: *mut NativeAnnotations) {
       super::geometry::display_annotation(annotation, display.origin, display.scale)
     })
     .collect();
-  unsafe { out.write(native_annotations(&drawn)) };
+  SCENE.with_borrow_mut(|scene| {
+    *scene = native_annotations(&drawn);
+    unsafe { out.write(scene.view()) };
+  });
 }
 
 extern "C" fn pointer(phase: u32, x: f64, y: f64) {

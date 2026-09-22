@@ -13,7 +13,7 @@ void screenwide_preview_surface_set_annotations(
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   // The block outlives this call, so the caller's array is copied here while
   // it is still alive and only the copy is captured.
-  NSUInteger copied = MIN((NSUInteger)count, ScreenwideMaxAnnotations);
+  NSUInteger copied = (NSUInteger)count;
   NSMutableData *data = [NSMutableData
       dataWithBytes:(copied == 0 ? NULL : items)
              length:copied * sizeof(ScreenwidePreviewAnnotation)];

@@ -25,7 +25,8 @@ typedef struct {
 } ScreenwidePreparedAnnotation;
 _Static_assert(sizeof(ScreenwidePreparedAnnotation) == 152, "Prepared annotation ABI");
 
-// Prepared records are backed by an MTLBuffer because the widened array no longer fits setBytes.
+// Prepared records live in an MTLBuffer written in place: a list is as long
+// as its document, far past what setBytes carries.
 
 typedef struct {
   AnnotationArrowGeometry arrow;
@@ -63,13 +64,21 @@ static inline AnnotationArrowGeometry screenwide_prepare_annotation(
 }
 
 /// Prepare complete shapes along the exposure, keeping curve solves off the
-/// GPU, and rasterise the counters' numbers at the size they are drawn.
+/// GPU, and rasterise the counters' numbers at the size they are drawn. Every
+/// per-annotation array is sized by the list it is handed and kept off the
+/// stack, which a long document would overrun.
 static inline void screenwide_bind_annotations(
     id<MTLComputeCommandEncoder> encoder, const ScreenwideAnnotations *annotations,
     const ScreenwideCanvas *canvas, uint32_t source_width, uint32_t source_height) {
-  uint32_t count = annotations == NULL ? 0
-      : MIN(annotations->count, (uint32_t)SCREENWIDE_MAX_ANNOTATIONS);
-  ScreenwidePreparedAnnotation prepared[SCREENWIDE_MAX_ANNOTATIONS] = {0};
+  uint32_t count = annotations == NULL ? 0 : annotations->count;
+  id<MTLDevice> device = encoder.device;
+  // Metal will not make an empty buffer, so an empty list binds one zeroed record.
+  NSUInteger slots = MAX(count, 1u);
+  id<MTLBuffer> prepared_buffer = [device
+      newBufferWithLength:slots * sizeof(ScreenwidePreparedAnnotation)
+                  options:MTLResourceStorageModeShared];
+  ScreenwidePreparedAnnotation *prepared = prepared_buffer.contents;
+  memset(prepared, 0, slots * sizeof(ScreenwidePreparedAnnotation));
   float scale_x = (float)canvas->image_width / MAX(source_width, 1u);
   float scale_y = (float)canvas->image_height / MAX(source_height, 1u);
   uint32_t total = 0;
@@ -81,11 +90,12 @@ static inline void screenwide_bind_annotations(
   }
   // Exposure geometry exceeds Metal's 4 KiB inline limit. The encoder retains
   // this buffer.
-  id<MTLBuffer> buffer = total > 0 ? [encoder.device
+  id<MTLBuffer> buffer = total > 0 ? [device
       newBufferWithLength:total * sizeof(ScreenwideAnnotationSample)
       options:MTLResourceStorageModeShared] : nil;
   ScreenwideAnnotationSample *samples = buffer.contents;
-  float radii[SCREENWIDE_MAX_ANNOTATIONS] = {0};
+  NSMutableData *radii_data = [NSMutableData dataWithLength:slots * sizeof(float)];
+  float *radii = radii_data.mutableBytes;
   for (uint32_t index = 0; index < count; index++) {
     const ScreenwideAnnotation *annotation = &annotations->items[index];
     ScreenwidePreparedAnnotation *draw = &prepared[index];
@@ -118,9 +128,15 @@ static inline void screenwide_bind_annotations(
       sample->opacity = fmaxf(fminf(r.opacity, 1), 0);
     }
   }
-  const char *text_values[SCREENWIDE_MAX_ANNOTATIONS] = {0};
-  uint32_t text_lengths[SCREENWIDE_MAX_ANNOTATIONS] = {0};
-  float text_sizes[SCREENWIDE_MAX_ANNOTATIONS] = {0};
+  NSMutableData *text_values_data = [NSMutableData dataWithLength:slots * sizeof(const char *)];
+  NSMutableData *text_lengths_data = [NSMutableData dataWithLength:slots * sizeof(uint32_t)];
+  NSMutableData *text_sizes_data = [NSMutableData dataWithLength:slots * sizeof(float)];
+  NSMutableData *text_rects_data =
+      [NSMutableData dataWithLength:slots * sizeof(ScreenwideAnnotationTextRect)];
+  const char **text_values = text_values_data.mutableBytes;
+  uint32_t *text_lengths = text_lengths_data.mutableBytes;
+  float *text_sizes = text_sizes_data.mutableBytes;
+  ScreenwideAnnotationTextRect *text = text_rects_data.mutableBytes;
   for (uint32_t index = 0; index < count; index++) {
     const ScreenwideAnnotation *annotation = &annotations->items[index];
     if (annotation->kind != SCREENWIDE_ANNOTATION_COUNTER || annotation->data_count == 0 ||
@@ -130,10 +146,9 @@ static inline void screenwide_bind_annotations(
     text_lengths[index] = annotation->data_count;
     text_sizes[index] = radii[index];
   }
-  ScreenwideAnnotationTextRect text[SCREENWIDE_MAX_ANNOTATIONS] = {0};
   ScreenwideAnnotationTextUniforms text_uniforms = {0};
   id<MTLBuffer> numbers = screenwide_annotation_text_atlas(
-      encoder.device, text_values, text_lengths, text_sizes, count, text, &text_uniforms);
+      device, text_values, text_lengths, text_sizes, count, text, &text_uniforms);
   for (uint32_t index = 0; index < count; index++) {
     // Only a counter reads these slots as a text rectangle; an arrow with a
     // head at both ends keeps its second head's triangle in them.
@@ -142,19 +157,27 @@ static inline void screenwide_bind_annotations(
     prepared[index].arrow.start_head.b =
         annotation_vector(text[index].width, text[index].height);
   }
-  id<MTLBuffer> points_buffer = [encoder.device
-      newBufferWithBytes:annotations->data.points
-                   length:sizeof(annotations->data.points)
-                  options:MTLResourceStorageModeShared];
-  id<MTLBuffer> text_buffer = [encoder.device
-      newBufferWithBytes:annotations->data.text
-                   length:sizeof(annotations->data.text)
-                  options:MTLResourceStorageModeShared];
-  [encoder setBuffer:points_buffer offset:0 atIndex:18];
-  [encoder setBuffer:text_buffer offset:0 atIndex:19];
-  id<MTLBuffer> prepared_buffer = [encoder.device
-      newBufferWithBytes:prepared length:sizeof(prepared)
-      options:MTLResourceStorageModeShared];
+  // Only the used length is uploaded; an empty side buffer binds a zeroed word.
+  const uint8_t empty_side[8] = {0};
+  NSUInteger points_length =
+      annotations == NULL ? 0 : (NSUInteger)annotations->data.point_count * sizeof(float[2]);
+  if (points_length > 0)
+    [encoder setBuffer:[device newBufferWithBytes:annotations->data.points
+                                           length:points_length
+                                          options:MTLResourceStorageModeShared]
+                offset:0
+               atIndex:18];
+  else
+    [encoder setBytes:empty_side length:sizeof(empty_side) atIndex:18];
+  NSUInteger text_length = annotations == NULL ? 0 : annotations->data.text_len;
+  if (text_length > 0)
+    [encoder setBuffer:[device newBufferWithBytes:annotations->data.text
+                                           length:text_length
+                                          options:MTLResourceStorageModeShared]
+                offset:0
+               atIndex:19];
+  else
+    [encoder setBytes:empty_side length:sizeof(empty_side) atIndex:19];
   [encoder setBuffer:prepared_buffer offset:0 atIndex:12];
   [encoder setBytes:&count length:sizeof(count) atIndex:13];
   if (buffer) {

@@ -25,8 +25,27 @@ impl RecordingPreviewSurface {
     // and the halo's width in canvas pixels.
     hover: Option<(u64, usize, f32)>,
   ) -> Result<bool, String> {
+    // The hover halo never reaches the export: it is applied here, on the
+    // preview's own copy of each flattened list. The views below borrow these
+    // until the presenter has copied them.
+    let annotations: Vec<_> = layers
+      .iter()
+      .map(|(source_token, _, settings)| {
+        let mut annotations = native_annotations(&settings.annotations);
+        if let Some((layer_id, index, width)) = hover {
+          if layer_id == *source_token {
+            if let Some(item) = annotations.items.get_mut(index) {
+              item.hover = width;
+            }
+          }
+        }
+        annotations
+      })
+      .collect();
     let mut native_layers = Vec::with_capacity(layers.len());
-    for (index, (source_token, source, settings)) in layers.iter().enumerate() {
+    for (index, ((source_token, source, settings), annotations)) in
+      layers.iter().zip(&annotations).enumerate()
+    {
       let mut canvas = native_canvas(source.width, source.height, settings, true)?;
       canvas.foreground_only = u32::from(index > 0);
       native_layers.push(NativeWorkspaceLayer {
@@ -52,17 +71,7 @@ impl RecordingPreviewSurface {
         camera_rgba: std::ptr::null(),
         camera_pixels: std::ptr::null_mut(),
         overlay: StillOverlay::default(),
-        annotations: {
-          // The hover halo never reaches the export: it is applied here, on
-          // the preview's own copy of the flattened list.
-          let mut annotations = native_annotations(&settings.annotations);
-          if let Some((layer_id, index, width)) = hover {
-            if layer_id == *source_token && index < annotations.count as usize {
-              annotations.items[index].hover = width;
-            }
-          }
-          annotations
-        },
+        annotations: annotations.view(),
       });
     }
     Ok(unsafe {

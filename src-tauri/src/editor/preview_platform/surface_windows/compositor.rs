@@ -55,10 +55,9 @@ use windows::{
 };
 
 use super::background_image::BackgroundImageCache;
-use super::counter_artwork::CounterArtworkCache;
+use super::counter_artwork::CounterAtlas;
 use super::keyboard_artwork::{KeyboardArtworkCache, KeyboardConstants};
 use crate::editor::annotations::geometry::{ArrowGeometry, ArrowTriangle};
-use crate::editor::annotations::{MAX_ANNOTATIONS, MAX_ANNOTATION_POINTS, MAX_ANNOTATION_TEXT};
 use crate::editor::keyboard_effects::KeyboardOverlay;
 use crate::editor::media_preview::BakeGeometry;
 use crate::screenshots::{
@@ -112,26 +111,22 @@ struct Constants {
 #[path = "compositor/arrows.rs"]
 mod arrows;
 pub(crate) use arrows::{
-  structured_buffer, PreparedArrows, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
+  PreparedArrows, PreviewArrow, PreviewSample, StructuredBuffer, MAX_EXPOSURE_SAMPLES,
 };
 
 pub(super) struct Compositor {
   background_cache: BackgroundImageCache,
-  /// Prepared arrows, mapped per draw, and its structured-buffer view.
-  annotation_buffer: ID3D11Buffer,
-  annotation_view: ID3D11ShaderResourceView,
-  /// Exposure samples for moving annotations, mapped per draw beside the
+  /// Prepared arrows, written per draw.
+  annotations: StructuredBuffer,
+  /// Exposure samples for moving annotations, written per draw beside the
   /// arrows.
-  sample_buffer: ID3D11Buffer,
-  sample_view: ID3D11ShaderResourceView,
-  annotation_points_buffer: ID3D11Buffer,
-  annotation_points_view: ID3D11ShaderResourceView,
-  annotation_text_buffer: ID3D11Buffer,
-  annotation_text_view: ID3D11ShaderResourceView,
+  samples: StructuredBuffer,
+  annotation_points: StructuredBuffer,
+  annotation_text: StructuredBuffer,
   constants: ID3D11Buffer,
   cursor_hotspots: [[f32; 4]; 8],
   cursor_view: ID3D11ShaderResourceView,
-  counter_cache: CounterArtworkCache,
+  counter_atlas: CounterAtlas,
   keyboard_cache: KeyboardArtworkCache,
   keyboard_constants: ID3D11Buffer,
   /// Bound at t3 when no shortcut is on screen and at t4 when the canvas has

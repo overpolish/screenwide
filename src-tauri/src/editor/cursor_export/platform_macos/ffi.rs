@@ -8,7 +8,7 @@ use std::ffi::{c_char, c_void};
 use std::sync::atomic::Ordering;
 
 use super::timed_annotations::NativeTimedAnnotation;
-use crate::editor::annotations::native::NativeAnnotationData;
+use crate::editor::annotations::native::NativeAnnotationDataView;
 use crate::editor::cursor_effects::{NativeGpuArtwork, NativeGpuCursor};
 
 /// The share of the progress bar the GPU pass owns; muxing takes the rest.
@@ -59,7 +59,7 @@ unsafe extern "C" {
     keyboard_count: u32,
     annotations: *const NativeTimedAnnotation,
     annotation_count: u32,
-    annotation_data: *const NativeAnnotationData,
+    annotation_data: *const NativeAnnotationDataView,
     timeline_ranges: *const crate::editor::timeline_edit::TimelineRange,
     timeline_range_count: u32,
     camera_path: *const c_char,

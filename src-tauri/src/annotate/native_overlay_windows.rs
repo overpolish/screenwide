@@ -42,10 +42,9 @@ use windows::{
     Graphics::{
       Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
       Direct3D11::{
-        ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11PixelShader, ID3D11RenderTargetView,
+        ID3D11Buffer, ID3D11Device, ID3D11PixelShader, ID3D11RenderTargetView,
         ID3D11ShaderResourceView, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER,
-        D3D11_BUFFER_DESC, D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_WRITE_DISCARD, D3D11_USAGE_DEFAULT,
-        D3D11_VIEWPORT,
+        D3D11_BUFFER_DESC, D3D11_MAPPED_SUBRESOURCE, D3D11_USAGE_DEFAULT, D3D11_VIEWPORT,
       },
     },
     System::Threading::GetCurrentThreadId,
@@ -69,7 +68,6 @@ use windows::{
 };
 
 use super::{geometry, input, live_clips};
-use crate::editor::annotations::MAX_ANNOTATIONS;
 use crate::osc::keyboard_windows::{
   self, FLAG_CONTROL_DOWN, FLAG_MODIFIER, FLAG_RELEASE, FLAG_SHIFT, OVERLAY_KEY_EVENT,
 };

@@ -235,4 +235,5 @@ void screenwide_gpu_still_presenter_end_workspace_resize(
     presenter.workspaceLayers = [presenter.workspaceResizeLayers mutableCopy];
   presenter.workspaceResizeLayers = nil;
   presenter.workspaceResizeApplied = NO;
+  screenwide_presenter_prune_annotation_stores(presenter);
 }

@@ -134,7 +134,7 @@ pub(crate) fn compose_output_layers(
       camera.map_or(std::ptr::null(), |image| image.rgba.as_ptr()),
       overlay.map_or(std::ptr::null(), std::ptr::from_ref),
       keyboard.map_or(std::ptr::null(), std::ptr::from_ref),
-      &annotations,
+      &annotations.view(),
       rgba.as_mut_ptr(),
       error.as_mut_ptr(),
       error.len(),

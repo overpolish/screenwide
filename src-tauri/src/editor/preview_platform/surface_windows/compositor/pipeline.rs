@@ -26,36 +26,14 @@ impl Compositor {
     let mut constants = None;
     unsafe { device.CreateBuffer(&description, None, Some(&mut constants)) }
       .map_err(|error| error.to_string())?;
-    // Fixed-capacity dynamic buffers: the annotation cap is small and known, so
-    // the arrows and their exposure samples are mapped into one allocation
-    // each per draw rather than a fresh buffer per frame.
-    let (annotation_buffer, annotation_view) = structured_buffer(
-      device,
-      size_of::<PreviewArrow>(),
-      MAX_ANNOTATIONS,
-      "annotation",
-    )?;
-    let (sample_buffer, sample_view) = structured_buffer(
-      device,
-      size_of::<PreviewSample>(),
-      MAX_ANNOTATIONS * MAX_EXPOSURE_SAMPLES,
-      "annotation exposure",
-    )?;
-    let (annotation_points_buffer, annotation_points_view) = structured_buffer(
-      device,
-      size_of::<[f32; 2]>(),
-      MAX_ANNOTATION_POINTS,
-      "annotation points",
-    )?;
+    let annotations = StructuredBuffer::new(device, size_of::<PreviewArrow>(), "annotation")?;
+    let samples = StructuredBuffer::new(device, size_of::<PreviewSample>(), "annotation exposure")?;
+    let annotation_points =
+      StructuredBuffer::new(device, size_of::<[f32; 2]>(), "annotation points")?;
     // A structured buffer's stride must be a multiple of four, and the shader
     // reads the text as `StructuredBuffer<uint>`: four bytes per element, a
     // byte at `text[i >> 2] >> ((i & 3) * 8)`.
-    let (annotation_text_buffer, annotation_text_view) = structured_buffer(
-      device,
-      size_of::<u32>(),
-      MAX_ANNOTATION_TEXT / size_of::<u32>(),
-      "annotation text",
-    )?;
+    let annotation_text = StructuredBuffer::new(device, size_of::<u32>(), "annotation text")?;
     unsafe {
       device.CreateBuffer(
         &D3D11_BUFFER_DESC {
@@ -219,19 +197,15 @@ impl Compositor {
     });
     Ok(Self {
       background_cache: BackgroundImageCache::default(),
-      annotation_buffer,
-      annotation_view,
-      sample_buffer,
-      sample_view,
-      annotation_points_buffer,
-      annotation_points_view,
-      annotation_text_buffer,
-      annotation_text_view,
+      annotations,
+      samples,
+      annotation_points,
+      annotation_text,
       constants: constants.ok_or_else(|| "D3D11 created no preview constant buffer".to_owned())?,
       cursor_hotspots,
       cursor_view: cursor_view
         .ok_or_else(|| "D3D11 created no native cursor atlas view".to_owned())?,
-      counter_cache: CounterArtworkCache::default(),
+      counter_atlas: CounterAtlas::default(),
       keyboard_cache: KeyboardArtworkCache::default(),
       keyboard_constants: keyboard_constants
         .ok_or_else(|| "D3D11 created no keyboard constant buffer".to_owned())?,

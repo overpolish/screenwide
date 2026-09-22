@@ -1,10 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Source-space annotations retained by the native compositor.
+//! Source-space annotations handed to the native compositors.
+//!
+//! The lists are owned here and grow with the document; the native side reads
+//! them through a borrowed view of pointers and lengths, so no list size is
+//! baked into the boundary.
 
 use super::reveal::AnnotationReveal;
-use super::{Annotation, MAX_ANNOTATIONS, MAX_ANNOTATION_POINTS, MAX_ANNOTATION_TEXT};
+use super::Annotation;
 #[cfg(target_os = "windows")]
 use crate::editor::annotations::AnnotationKind;
 use crate::editor::annotations::{annotation_colour, AnnotationHead};
@@ -49,52 +53,24 @@ impl NativeAnnotation {
 /// `data_offset` and `data_count`. Kept apart from the items so a list that
 /// is longer than one scene - the video export's clips - can share one set
 /// of buffers and pass it beside the list.
-#[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Default)]
 pub(crate) struct NativeAnnotationData {
-  pub(crate) points: [[f32; 2]; MAX_ANNOTATION_POINTS],
-  pub(crate) text: [u8; MAX_ANNOTATION_TEXT],
-  pub(crate) point_count: u32,
-  pub(crate) text_len: u32,
-}
-
-const _: () = assert!(std::mem::size_of::<NativeAnnotationData>() == 32 * 1024 + 4096 + 8);
-
-impl Default for NativeAnnotationData {
-  fn default() -> Self {
-    Self {
-      points: [[0.0; 2]; MAX_ANNOTATION_POINTS],
-      text: [0; MAX_ANNOTATION_TEXT],
-      point_count: 0,
-      text_len: 0,
-    }
-  }
+  pub(crate) points: Vec<[f32; 2]>,
+  pub(crate) text: Vec<u8>,
 }
 
 impl NativeAnnotationData {
   /// Write `annotation`'s variable-length data into the buffers and return
-  /// its record, with the offsets pointing here. Data that would overflow a
-  /// buffer is dropped, in order, the way `MAX_ANNOTATIONS` drops items.
+  /// its record, with the offsets pointing here.
   pub(crate) fn pack(&mut self, annotation: &Annotation) -> NativeAnnotation {
     let [p0, p1, p2] = annotation.shape.draw_points();
-    let point_offset = self.point_count as usize;
-    if point_offset + 3 <= MAX_ANNOTATION_POINTS {
-      self.points[point_offset..point_offset + 3].copy_from_slice(&[p0, p1, p2]);
-      self.point_count += 3;
-    }
+    self.points.extend_from_slice(&[p0, p1, p2]);
     let text = match &annotation.shape {
       super::shape::AnnotationShape::Counter { value, .. } => value.to_string(),
       super::shape::AnnotationShape::Arrow { .. } => String::new(),
     };
-    let text_bytes = text.as_bytes();
-    let data_offset = self.text_len as usize;
-    let data_count = text_bytes
-      .len()
-      .min(MAX_ANNOTATION_TEXT.saturating_sub(data_offset));
-    if data_count > 0 {
-      self.text[data_offset..data_offset + data_count].copy_from_slice(&text_bytes[..data_count]);
-      self.text_len += data_count as u32;
-    }
+    let data_offset = self.text.len();
+    self.text.extend_from_slice(text.as_bytes());
     NativeAnnotation {
       kind: annotation.shape.kind().raw(),
       head: match annotation.style.head {
@@ -111,45 +87,91 @@ impl NativeAnnotationData {
       p1,
       p2,
       p3: [0.0; 2],
-      data_offset: data_offset as u32,
-      data_count: data_count as u32,
+      data_offset: ffi_len(data_offset),
+      data_count: ffi_len(text.len()),
       hover: 0.0,
       animated: u32::from(annotation.animated),
       reveal: annotation.reveal,
     }
   }
+
+  #[cfg(target_os = "macos")]
+  pub(crate) fn view(&self) -> NativeAnnotationDataView {
+    NativeAnnotationDataView {
+      points: self.points.as_ptr(),
+      text: self.text.as_ptr(),
+      point_count: ffi_len(self.points.len()),
+      text_len: ffi_len(self.text.len()),
+    }
+  }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy)]
+/// One composition's annotations and the side buffers they index.
+#[derive(Clone, Default)]
 pub(crate) struct NativeAnnotations {
-  pub(crate) items: [NativeAnnotation; MAX_ANNOTATIONS],
-  pub(crate) count: u32,
+  pub(crate) items: Vec<NativeAnnotation>,
   pub(crate) data: NativeAnnotationData,
 }
 
-const _: () = assert!(
-  std::mem::size_of::<NativeAnnotations>() == 128 * MAX_ANNOTATIONS + 4 + 32 * 1024 + 4096 + 8
-);
-
-impl Default for NativeAnnotations {
-  fn default() -> Self {
-    Self {
-      items: [NativeAnnotation::default(); MAX_ANNOTATIONS],
-      count: 0,
-      data: NativeAnnotationData::default(),
+#[cfg(target_os = "macos")]
+impl NativeAnnotations {
+  pub(crate) fn view(&self) -> NativeAnnotationsView {
+    NativeAnnotationsView {
+      items: self.items.as_ptr(),
+      count: ffi_len(self.items.len()),
+      data: self.data.view(),
     }
   }
 }
 
 pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotations {
-  let mut native = NativeAnnotations::default();
-  for (index, annotation) in annotations.iter().take(MAX_ANNOTATIONS).enumerate() {
-    native.items[index] = native.data.pack(annotation);
-    native.count = index as u32 + 1;
-  }
-  native
+  let mut data = NativeAnnotationData::default();
+  let items = annotations
+    .iter()
+    .map(|annotation| data.pack(annotation))
+    .collect();
+  NativeAnnotations { items, data }
 }
+
+/// A length as the native side counts it. Saturating keeps a list too long to
+/// count short of its end rather than past it.
+fn ffi_len(len: usize) -> u32 {
+  u32::try_from(len).unwrap_or(u32::MAX)
+}
+
+/// [`NativeAnnotationData`] as the Metal side reads it: pointers into the
+/// owner's buffers, valid while the owner is neither changed nor dropped.
+/// The twin of `ScreenwideAnnotationData`. The D3D11 backend reads the Rust
+/// lists directly and has no use for one.
+#[cfg(target_os = "macos")]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct NativeAnnotationDataView {
+  pub(crate) points: *const [f32; 2],
+  pub(crate) text: *const u8,
+  pub(crate) point_count: u32,
+  pub(crate) text_len: u32,
+}
+
+#[cfg(target_os = "macos")]
+const _: () = assert!(std::mem::size_of::<NativeAnnotationDataView>() == 24);
+
+/// [`NativeAnnotations`] as the native side reads it, under the same
+/// lifetime rule as [`NativeAnnotationDataView`]. The twin of
+/// `ScreenwideAnnotations`.
+#[cfg(target_os = "macos")]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct NativeAnnotationsView {
+  pub(crate) items: *const NativeAnnotation,
+  pub(crate) count: u32,
+  pub(crate) data: NativeAnnotationDataView,
+}
+
+#[cfg(target_os = "macos")]
+const _: () = assert!(std::mem::size_of::<NativeAnnotationsView>() == 40);
+#[cfg(target_os = "macos")]
+const _: () = assert!(std::mem::offset_of!(NativeAnnotationsView, data) == 16);
 
 #[cfg(test)]
 mod tests {
@@ -179,11 +201,40 @@ mod tests {
       angle: 0.5,
     })];
     let native = native_annotations(&annotations);
-    assert_eq!(native.data.point_count, 3);
+    assert_eq!(native.data.points.len(), 3);
     assert_eq!(native.data.points[0], [1.0, 2.0]);
-    assert_eq!(native.data.text_len, 2);
-    assert_eq!(&native.data.text[..2], b"12");
+    assert_eq!(native.data.text, b"12");
     assert_eq!(native.items[0].data_offset, 0);
     assert_eq!(native.items[0].data_count, 2);
+  }
+
+  /// The lists grow with the document: well past the thousand-odd a fixed
+  /// array once held, every annotation is still there, in order, with its
+  /// number where its record says.
+  #[test]
+  fn keeps_every_annotation_of_a_long_list() {
+    let annotations: Vec<_> = (0..5_000_u32)
+      .map(|value| {
+        let mut item = annotation(AnnotationShape::Counter {
+          center: AnnotationPoint {
+            x: f64::from(value),
+            y: 0.0,
+          },
+          value,
+          angle: 0.0,
+        });
+        item.id = value.to_string();
+        item
+      })
+      .collect();
+    let native = native_annotations(&annotations);
+    assert_eq!(native.items.len(), 5_000);
+    let last = native.items[4_999];
+    assert_eq!(last.p0[0], 4_999.0);
+    let start = last.data_offset as usize;
+    assert_eq!(
+      &native.data.text[start..start + last.data_count as usize],
+      b"4999"
+    );
   }
 }

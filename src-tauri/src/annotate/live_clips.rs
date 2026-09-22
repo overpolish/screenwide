@@ -14,8 +14,8 @@ use std::time::Instant;
 
 use super::geometry::source_annotation;
 use crate::editor::annotations::reveal::clip_ms_for_visible;
-use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip, MAX_CLIPS};
-use crate::editor::annotations::{Annotation, MAX_ANNOTATIONS};
+use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
+use crate::editor::annotations::Annotation;
 use crate::recording::clock::SidecarClock;
 use crate::recording::cursor::CursorSource;
 
@@ -52,9 +52,6 @@ impl Timed {
     let Some(gone_ms) = self.clock.elapsed_us(at).map(millis) else {
       return;
     };
-    if self.clips.len() >= MAX_CLIPS {
-      return;
-    }
     let Some(annotation) = source_annotation(&live.annotation, &self.source) else {
       return;
     };
@@ -86,11 +83,10 @@ impl LiveAnnotations {
   /// Adds a completed stroke, in global logical desktop points. A repeated id
   /// is dropped, because a clip list that reuses one is rejected whole.
   fn add(&mut self, annotation: Annotation, at: Instant) {
-    if self.annotations.len() >= MAX_ANNOTATIONS
-      || self
-        .annotations
-        .iter()
-        .any(|live| live.annotation.id == annotation.id)
+    if self
+      .annotations
+      .iter()
+      .any(|live| live.annotation.id == annotation.id)
     {
       return;
     }

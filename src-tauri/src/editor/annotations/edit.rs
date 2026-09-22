@@ -6,7 +6,7 @@
 
 use super::gesture::{next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget};
 use super::snap::{SnapModifiers, SnapRequest, SnapResult};
-use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationStyle, MAX_ANNOTATIONS};
+use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationStyle};
 
 pub(crate) struct AnnotationEdit {
   before: Vec<Annotation>,
@@ -31,7 +31,7 @@ impl AnnotationEdit {
     angle: Option<f64>,
   ) -> Option<Self> {
     let index = match target {
-      AnnotationGestureTarget::New if annotations.len() < MAX_ANNOTATIONS => annotations.len(),
+      AnnotationGestureTarget::New => annotations.len(),
       AnnotationGestureTarget::Existing { index, .. } if index < annotations.len() => index,
       _ => return None,
     };

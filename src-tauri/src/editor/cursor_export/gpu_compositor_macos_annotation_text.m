@@ -75,7 +75,6 @@ static NSDictionary *counter_dress(CGFloat size) {
 /// One number as it will be rasterised: everything in atlas pixels, which are
 /// [`SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE`] to the drawn pixel.
 typedef struct {
-  uint32_t annotation;
   NSDictionary *dress;
   NSString *text;
   CGSize measured;
@@ -101,75 +100,86 @@ static ScreenwideCounterText counter_text(const char *value, uint32_t length, CG
   return result;
 }
 
-@interface ScreenwideAnnotationTextAtlas : NSObject
+// The layout half of the atlas, shared with the D3D11 backend through
+// `annotations/counter/atlas_ffi.rs`.
+typedef struct {
+  const char *text;
+  uint32_t length;
+  float radius;
+} ScreenwideCounterNumber;
+typedef struct {
+  uint32_t index;
+  float radius;
+} ScreenwideCounterDraw;
+typedef struct {
+  uint32_t width, height, fresh, draw_count;
+} ScreenwideCounterAtlasLayout;
+typedef uint32_t (*ScreenwideCounterMeasure)(void *context, uint32_t index, float radius,
+                                             uint32_t *width, uint32_t *height);
+void *screenwide_counter_atlas_create(void);
+void screenwide_counter_atlas_destroy(void *atlas);
+uint32_t screenwide_counter_atlas_frame(
+    void *atlas, const ScreenwideCounterNumber *numbers, uint32_t count,
+    ScreenwideCounterMeasure measure, void *context, ScreenwideAnnotationTextRect *rects,
+    ScreenwideCounterDraw *draws, ScreenwideCounterAtlasLayout *out);
+
+/// One thread's atlas: the Rust layout and the pixels it describes. Every
+/// thread that composes keeps its own, so the export and the preview neither
+/// share a lock nor evict each other's numbers.
+@interface ScreenwideCounterAtlas : NSObject
+@property(nonatomic) void *layout;
+@property(nonatomic, strong) id<MTLDevice> device;
 @property(nonatomic, strong) id<MTLBuffer> pixels;
-@property(nonatomic, strong) NSData *rects;
-@property(nonatomic) ScreenwideAnnotationTextUniforms uniforms;
 @end
 
-@implementation ScreenwideAnnotationTextAtlas
+@implementation ScreenwideCounterAtlas
+- (instancetype)initWithDevice:(id<MTLDevice>)device {
+  if ((self = [super init])) {
+    _layout = screenwide_counter_atlas_create();
+    _device = device;
+  }
+  return self;
+}
+- (void)dealloc {
+  screenwide_counter_atlas_destroy(_layout);
+}
 @end
 
-static NSMutableDictionary<NSString *, ScreenwideAnnotationTextAtlas *> *atlas_cache(void) {
-  static NSMutableDictionary *cache;
-  static dispatch_once_t once;
-  dispatch_once(&once, ^{
-    cache = [NSMutableDictionary dictionary];
-  });
-  return cache;
+static ScreenwideCounterAtlas *thread_atlas(id<MTLDevice> device) {
+  static NSString *const key = @"ScreenwideCounterAtlas";
+  NSMutableDictionary *store = NSThread.currentThread.threadDictionary;
+  ScreenwideCounterAtlas *atlas = store[key];
+  if (atlas == nil || atlas.device != device) {
+    atlas = [[ScreenwideCounterAtlas alloc] initWithDevice:device];
+    store[key] = atlas;
+  }
+  return atlas;
 }
 
-id<MTLBuffer> screenwide_annotation_text_atlas(
-    id<MTLDevice> device, const char *const *values, const uint32_t *lengths,
-    const float *sizes, uint32_t count, ScreenwideAnnotationTextRect *rects,
-    ScreenwideAnnotationTextUniforms *uniforms) {
-  if (count > SCREENWIDE_MAX_ANNOTATIONS) count = SCREENWIDE_MAX_ANNOTATIONS;
-  if (rects != NULL)
-    memset(rects, 0, sizeof(ScreenwideAnnotationTextRect) * count);
-  if (uniforms != NULL) *uniforms = (ScreenwideAnnotationTextUniforms){0};
-  if (device == nil || values == NULL || lengths == NULL || sizes == NULL || count == 0) return nil;
+static uint32_t measure_counter(void *context, uint32_t index, float radius,
+                                uint32_t *width, uint32_t *height) {
+  const ScreenwideCounterNumber *numbers = context;
+  ScreenwideCounterText text = counter_text(numbers[index].text, numbers[index].length, radius);
+  *width = (uint32_t)text.cell.width;
+  *height = (uint32_t)text.cell.height;
+  return 1;
+}
 
-  // A number smaller than a pixel across has nothing to rasterise; the disc
-  // it belongs to is mid-arrival and is drawn without it for a frame or two.
-  NSMutableString *key = [NSMutableString stringWithString:@"counter"];
-  uint32_t wanted = 0;
-  for (uint32_t index = 0; index < count; index++) {
-    if (values[index] == NULL || lengths[index] == 0 || !(sizes[index] > 1.0f)) continue;
-    // Quantised to a quarter pixel, so a preview nudged by rounding reuses
-    // the atlas it already has.
-    [key appendFormat:@"|%.*s@%.2f", (int)lengths[index], values[index], sizes[index]];
-    wanted++;
-  }
-  if (wanted == 0) return nil;
-
-  ScreenwideAnnotationTextAtlas *known = atlas_cache()[key];
-  if (known != nil &&
-      known.rects.length == sizeof(ScreenwideAnnotationTextRect) * count) {
-    if (rects != NULL) memcpy(rects, known.rects.bytes, known.rects.length);
-    if (uniforms != NULL) *uniforms = known.uniforms;
-    return known.pixels;
-  }
-
-  ScreenwideCounterText prepared[SCREENWIDE_MAX_ANNOTATIONS];
-  uint32_t rows = 0;
-  CGFloat atlasWidth = 0.0;
-  CGFloat atlasHeight = 0.0;
-  for (uint32_t index = 0; index < count; index++) {
-    if (values[index] == NULL || lengths[index] == 0 || !(sizes[index] > 1.0f)) continue;
-    prepared[rows] = counter_text(values[index], lengths[index], sizes[index]);
-    prepared[rows].annotation = index;
-    atlasWidth = MAX(atlasWidth, prepared[rows].cell.width);
-    atlasHeight += prepared[rows].cell.height;
-    rows++;
-  }
-  NSUInteger pixelWidth = MAX((NSUInteger)atlasWidth, 1u);
-  NSUInteger pixelHeight = MAX((NSUInteger)atlasHeight, 1u);
+/// Rasterises one number into its rectangle of the atlas, margin included, so
+/// whatever the space held before is overwritten.
+static void draw_counter(uint8_t *pixels, uint32_t atlas_width,
+                         ScreenwideAnnotationTextRect rect,
+                         const ScreenwideCounterNumber *number, float radius) {
+  ScreenwideCounterText text = counter_text(number->text, number->length, radius);
+  size_t width = (size_t)rect.width;
+  size_t height = (size_t)rect.height;
   CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
   CGContextRef context = CGBitmapContextCreate(
-      NULL, pixelWidth, pixelHeight, 8, pixelWidth * 4, space,
+      NULL, width, height, 8, width * 4, space,
       (CGBitmapInfo)kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
   CGColorSpaceRelease(space);
-  if (context == NULL) return nil;
+  if (context == NULL) return;
+  CGContextClearRect(context, CGRectMake(0, 0, width, height));
   // Grayscale antialiasing, as the keyboard artwork and the OSC text use: the
   // number is tinted by the kernel, so subpixel coverage would be wrong.
   CGContextSetShouldSmoothFonts(context, false);
@@ -177,43 +187,60 @@ id<MTLBuffer> screenwide_annotation_text_atlas(
       [NSGraphicsContext graphicsContextWithCGContext:context flipped:NO];
   [NSGraphicsContext saveGraphicsState];
   [NSGraphicsContext setCurrentContext:graphics];
-  NSMutableData *placed =
-      [NSMutableData dataWithLength:sizeof(ScreenwideAnnotationTextRect) * count];
-  ScreenwideAnnotationTextRect *written = placed.mutableBytes;
-  CGFloat top = 0.0;
-  for (uint32_t row = 0; row < rows; row++) {
-    ScreenwideCounterText text = prepared[row];
-    // The context is not flipped, so a row is drawn from the bottom up while
-    // the rectangle handed back is in the top-down space the kernels sample.
-    CGFloat bottom = (CGFloat)pixelHeight - top - text.cell.height;
-    [text.text drawAtPoint:NSMakePoint(
-                               (text.cell.width - text.measured.width) * 0.5,
-                               bottom + (text.cell.height - text.measured.height) * 0.5)
-            withAttributes:text.dress];
-    written[text.annotation] = (ScreenwideAnnotationTextRect){
-        .x = 0.0f,
-        .y = (float)top,
-        .width = (float)text.cell.width,
-        .height = (float)text.cell.height,
-    };
-    top += text.cell.height;
-  }
+  [text.text drawAtPoint:NSMakePoint((text.cell.width - text.measured.width) * 0.5,
+                                     (text.cell.height - text.measured.height) * 0.5)
+          withAttributes:text.dress];
   [NSGraphicsContext restoreGraphicsState];
-  id<MTLBuffer> pixels =
-      [device newBufferWithBytes:CGBitmapContextGetData(context)
-                          length:pixelWidth * pixelHeight * 4
-                         options:MTLResourceStorageModeShared];
+  // A bitmap context keeps its top row first, the top-down space the kernels
+  // sample the atlas in.
+  const uint8_t *source = CGBitmapContextGetData(context);
+  size_t row_bytes = CGBitmapContextGetBytesPerRow(context);
+  for (size_t row = 0; row < height; row++)
+    memcpy(pixels + (((size_t)rect.y + row) * atlas_width + (size_t)rect.x) * 4,
+           source + row * row_bytes, width * 4);
   CGContextRelease(context);
-  if (pixels == nil) return nil;
-  ScreenwideAnnotationTextAtlas *atlas = [ScreenwideAnnotationTextAtlas new];
-  atlas.pixels = pixels;
-  atlas.rects = placed;
-  atlas.uniforms = (ScreenwideAnnotationTextUniforms){(uint32_t)pixelWidth,
-                                                      (uint32_t)pixelHeight};
-  if (rects != NULL) memcpy(rects, written, placed.length);
-  if (uniforms != NULL) *uniforms = atlas.uniforms;
-  NSMutableDictionary *cache = atlas_cache();
-  if (cache.count >= 64) [cache removeAllObjects];
-  cache[key] = atlas;
-  return pixels;
+}
+
+id<MTLBuffer> screenwide_annotation_text_atlas(
+    id<MTLDevice> device, const char *const *values, const uint32_t *lengths,
+    const float *sizes, uint32_t count, ScreenwideAnnotationTextRect *rects,
+    ScreenwideAnnotationTextUniforms *uniforms) {
+  if (rects != NULL && count > 0)
+    memset(rects, 0, sizeof(ScreenwideAnnotationTextRect) * count);
+  if (uniforms != NULL) *uniforms = (ScreenwideAnnotationTextUniforms){0};
+  if (device == nil || values == NULL || lengths == NULL || sizes == NULL ||
+      rects == NULL || count == 0)
+    return nil;
+
+  NSMutableData *numbers_data =
+      [NSMutableData dataWithLength:sizeof(ScreenwideCounterNumber) * count];
+  ScreenwideCounterNumber *numbers = numbers_data.mutableBytes;
+  for (uint32_t index = 0; index < count; index++)
+    numbers[index] = (ScreenwideCounterNumber){
+        values[index], values[index] == NULL ? 0 : lengths[index], sizes[index]};
+  NSMutableData *draws_data =
+      [NSMutableData dataWithLength:sizeof(ScreenwideCounterDraw) * count];
+  ScreenwideCounterDraw *draws = draws_data.mutableBytes;
+  ScreenwideCounterAtlasLayout layout = {0};
+  ScreenwideCounterAtlas *atlas = thread_atlas(device);
+  if (!screenwide_counter_atlas_frame(atlas.layout, numbers, count, measure_counter, numbers,
+                                      rects, draws, &layout) ||
+      layout.width == 0 || layout.height == 0)
+    return nil;
+  // A fresh layout gets new storage rather than being drawn over: a command
+  // buffer still in flight holds the old one and reads the cells it was given.
+  // Otherwise the new cells land in space no earlier cell used.
+  if (layout.fresh || atlas.pixels == nil) {
+    atlas.pixels = [device newBufferWithLength:(NSUInteger)layout.width * layout.height * 4
+                                       options:MTLResourceStorageModeShared];
+    if (atlas.pixels == nil) return nil;
+  }
+  for (uint32_t draw = 0; draw < layout.draw_count; draw++) {
+    uint32_t index = draws[draw].index;
+    draw_counter(atlas.pixels.contents, layout.width, rects[index], &numbers[index],
+                 draws[draw].radius);
+  }
+  if (uniforms != NULL)
+    *uniforms = (ScreenwideAnnotationTextUniforms){layout.width, layout.height};
+  return atlas.pixels;
 }

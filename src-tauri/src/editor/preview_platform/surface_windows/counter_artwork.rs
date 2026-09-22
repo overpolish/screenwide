@@ -5,16 +5,21 @@
 //!
 //! The twin of `gpu_compositor_macos_annotation_text.m`: a counter's number
 //! is type, so it is drawn by the text engine rather than approximated by the
-//! shader. Every counter in one composition is rasterised at the size it is
-//! actually drawn and stacked into one texture, which the annotation shader
-//! samples the way it samples the keyboard's artwork.
+//! shader. Where each number sits is laid out by the shared
+//! [`atlas`](crate::editor::annotations::counter::atlas) module; this draws the
+//! numbers the layout asks for into a texture that outlives the composition,
+//! which the annotation shader samples the way it samples the keyboard's
+//! artwork.
 //!
 //! The atlas is rasterised at [`SUPERSAMPLE`] pixels to the drawn pixel and
 //! read with four taps, so a counter still reads while it is growing into
 //! place rather than crawling with aliasing over its arrival.
 
-use std::{collections::HashMap, sync::Mutex};
+use std::sync::Mutex;
 
+use crate::editor::annotations::counter::atlas::{
+  AtlasDraw, AtlasRect, CounterAtlas as AtlasLayout, CounterNumber,
+};
 use crate::editor::annotations::AnnotationKind;
 
 use windows::{
@@ -23,9 +28,9 @@ use windows::{
     Foundation::COLORREF,
     Graphics::{
       Direct3D11::{
-        ID3D11Device, ID3D11Resource, ID3D11ShaderResourceView, ID3D11Texture2D,
-        D3D11_BIND_SHADER_RESOURCE, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC,
-        D3D11_USAGE_IMMUTABLE,
+        ID3D11Device, ID3D11DeviceContext, ID3D11Resource, ID3D11ShaderResourceView,
+        ID3D11Texture2D, D3D11_BIND_SHADER_RESOURCE, D3D11_BOX, D3D11_TEXTURE2D_DESC,
+        D3D11_USAGE_DEFAULT,
       },
       Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
       Gdi::{
@@ -39,8 +44,6 @@ use windows::{
   },
 };
 
-use crate::editor::annotations::MAX_ANNOTATIONS;
-
 /// How many atlas pixels are rasterised per drawn pixel.
 const SUPERSAMPLE: f64 = 2.0;
 /// How much of the disc's diameter a digit's cap height takes, and the widest
@@ -51,95 +54,124 @@ const CAP_SHARE: f64 = 0.42;
 const WIDTH_SHARE: f64 = 0.72;
 /// Inter's cap height, in ems: what turns a wanted cap height into a size.
 const CAP_HEIGHT: f64 = 0.727;
-/// How many atlases are kept before the lot is dropped, as the keyboard
-/// artwork's cache does: a counter being dragged or animated walks through
-/// its own sizes rather than settling on one.
-const CACHE_ENTRIES: usize = 64;
 
-/// Where one counter's number sits in the atlas, in atlas pixels.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub(super) struct CounterTextRect {
-  pub(super) x: f32,
-  pub(super) y: f32,
-  pub(super) width: f32,
-  pub(super) height: f32,
-}
-
-/// One rasterised atlas: the texture the shader samples, its size, and where
-/// each counter's number landed in it.
-pub(crate) struct CounterArtwork {
-  _texture: ID3D11Texture2D,
-  pub(super) rects: Vec<CounterTextRect>,
+/// The atlas one composition samples: its texture and the texture's size.
+pub(crate) struct AtlasBinding {
   pub(crate) size: (u32, u32),
   pub(crate) view: ID3D11ShaderResourceView,
 }
 
-/// Shared by the editor's compositor and by the live overlay, which draws the
-/// desktop's counters through the same pipeline.
-#[derive(Default)]
-pub(crate) struct CounterArtworkCache {
-  entries: Mutex<HashMap<String, std::sync::Arc<CounterArtwork>>>,
+struct Storage {
+  size: (u32, u32),
+  texture: ID3D11Texture2D,
+  view: ID3D11ShaderResourceView,
 }
 
-impl CounterArtworkCache {
+#[derive(Default)]
+struct State {
+  layout: AtlasLayout,
+  storage: Option<Storage>,
+  draws: Vec<AtlasDraw>,
+}
+
+/// One atlas per pipeline: the editor's compositor keeps one and the live
+/// overlay, which draws the desktop's counters through the same shader,
+/// keeps its own.
+#[derive(Default)]
+pub(crate) struct CounterAtlas {
+  state: Mutex<State>,
+}
+
+impl CounterAtlas {
   /// The atlas for `counters` - one `(value, radius in drawn pixels)` per
-  /// annotation, a zero value being an annotation that is not a counter - or
-  /// nothing when there is no number to draw at all.
-  ///
-  /// The result is cached against exactly the numbers and sizes it was drawn
-  /// from, so a preview that redraws an unchanged list does no work.
-  pub(super) fn resolve(
+  /// annotation, an empty value being an annotation that is not a counter -
+  /// with each one's rectangle written into `rects`, or nothing when no number
+  /// is drawn at all. Only numbers the atlas does not hold yet are rasterised.
+  fn resolve(
     &self,
     device: &ID3D11Device,
+    context: &ID3D11DeviceContext,
     counters: &[(String, f32)],
-  ) -> Result<Option<std::sync::Arc<CounterArtwork>>, String> {
-    let wanted: Vec<(usize, String, f64)> = counters
+    rects: &mut Vec<AtlasRect>,
+  ) -> Result<Option<AtlasBinding>, String> {
+    let mut state = self
+      .state
+      .lock()
+      .map_err(|_| "The counter atlas is poisoned".to_owned())?;
+    let State {
+      layout,
+      storage,
+      draws,
+    } = &mut *state;
+    let numbers: Vec<CounterNumber<'_>> = counters
       .iter()
-      .take(MAX_ANNOTATIONS)
-      .enumerate()
-      .filter(|(_, (value, radius))| !value.is_empty() && *radius > 1.0)
-      .map(|(index, (value, radius))| {
-        (
-          index,
-          value.clone(),
-          f64::from((radius * 4.0).round() / 4.0),
-        )
+      .map(|(value, radius)| CounterNumber {
+        text: value.as_bytes(),
+        radius: *radius,
       })
       .collect();
-    if wanted.is_empty() {
+    rects.clear();
+    rects.resize(counters.len(), AtlasRect::default());
+    let placed = layout.frame(
+      &numbers,
+      |index, radius| rasterize::measure(&counters[index].0, radius).ok(),
+      rects,
+      draws,
+    );
+    if rects.iter().all(|rect| rect.width == 0.0) {
       return Ok(None);
     }
-    let key = wanted
-      .iter()
-      .map(|(_, value, radius)| format!("{value}@{radius:.2}"))
-      .collect::<Vec<_>>()
-      .join("|");
-    let mut entries = self
-      .entries
-      .lock()
-      .map_err(|_| "The counter artwork cache is poisoned".to_owned())?;
-    if let Some(known) = entries.get(&key) {
-      return Ok(Some(std::sync::Arc::clone(known)));
+    // A fresh layout gets a new texture rather than being drawn over, the way
+    // the Metal atlas gets a new buffer; otherwise the new cells land in space
+    // no earlier cell used.
+    if placed.fresh
+      || storage
+        .as_ref()
+        .is_none_or(|storage| storage.size != placed.size)
+    {
+      *storage = Some(create_storage(device, placed.size)?);
     }
-    let raster = rasterize(&wanted, counters.len())?;
-    let artwork = std::sync::Arc::new(upload(device, &raster)?);
-    if entries.len() >= CACHE_ENTRIES {
-      entries.clear();
+    let Some(storage) = storage.as_ref() else {
+      return Ok(None);
+    };
+    let resource: ID3D11Resource = storage.texture.cast().map_err(|error| error.to_string())?;
+    for draw in draws.iter() {
+      let rect = rects[draw.index];
+      let (left, top) = (rect.x as u32, rect.y as u32);
+      let (width, height) = (rect.width as u32, rect.height as u32);
+      let pixels = rasterize::draw(&counters[draw.index].0, draw.radius, (width, height))?;
+      unsafe {
+        context.UpdateSubresource(
+          &resource,
+          0,
+          Some(&D3D11_BOX {
+            left,
+            top,
+            front: 0,
+            right: left + width,
+            bottom: top + height,
+            back: 1,
+          }),
+          pixels.as_ptr().cast(),
+          width * 4,
+          0,
+        );
+      }
     }
-    entries.insert(key, std::sync::Arc::clone(&artwork));
-    Ok(Some(artwork))
+    Ok(Some(AtlasBinding {
+      size: storage.size,
+      view: storage.view.clone(),
+    }))
   }
 }
 
-/// The GDI rasterisation the atlas is built by.
-#[path = "counter_artwork/rasterize.rs"]
-mod rasterize;
-use rasterize::{rasterize, CounterRaster};
-
-fn upload(device: &ID3D11Device, raster: &CounterRaster) -> Result<CounterArtwork, String> {
+/// A texture for a fresh layout. Its contents start undefined, which is safe
+/// because every cell is drawn whole, margin included, before it is sampled,
+/// and the shader reads nowhere else.
+fn create_storage(device: &ID3D11Device, size: (u32, u32)) -> Result<Storage, String> {
   let description = D3D11_TEXTURE2D_DESC {
-    Width: raster.size.0,
-    Height: raster.size.1,
+    Width: size.0,
+    Height: size.1,
     MipLevels: 1,
     ArraySize: 1,
     Format: DXGI_FORMAT_B8G8R8A8_UNORM,
@@ -147,30 +179,28 @@ fn upload(device: &ID3D11Device, raster: &CounterRaster) -> Result<CounterArtwor
       Count: 1,
       Quality: 0,
     },
-    Usage: D3D11_USAGE_IMMUTABLE,
+    Usage: D3D11_USAGE_DEFAULT,
     BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
     ..Default::default()
   };
-  let initial = D3D11_SUBRESOURCE_DATA {
-    pSysMem: raster.pixels.as_ptr().cast(),
-    SysMemPitch: raster.size.0 * 4,
-    SysMemSlicePitch: 0,
-  };
   let mut texture = None;
-  unsafe { device.CreateTexture2D(&description, Some(&initial), Some(&mut texture)) }
+  unsafe { device.CreateTexture2D(&description, None, Some(&mut texture)) }
     .map_err(|error| error.to_string())?;
-  let texture = texture.ok_or_else(|| "D3D11 created no counter artwork texture".to_owned())?;
+  let texture = texture.ok_or_else(|| "D3D11 created no counter atlas texture".to_owned())?;
   let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
   let mut view = None;
   unsafe { device.CreateShaderResourceView(&resource, None, Some(&mut view)) }
     .map_err(|error| error.to_string())?;
-  Ok(CounterArtwork {
-    _texture: texture,
-    rects: raster.rects.clone(),
-    size: raster.size,
-    view: view.ok_or_else(|| "D3D11 created no counter artwork view".to_owned())?,
+  Ok(Storage {
+    size,
+    texture,
+    view: view.ok_or_else(|| "D3D11 created no counter atlas view".to_owned())?,
   })
 }
+
+/// The GDI rasterisation the atlas is drawn by.
+#[path = "counter_artwork/rasterize.rs"]
+mod rasterize;
 
 /// The atlas one composition needs, and its annotations with the number
 /// rectangles written into the slots a counter reads them from.
@@ -179,20 +209,16 @@ fn upload(device: &ID3D11Device, raster: &CounterRaster) -> Result<CounterArtwor
 /// both ends keeps its second head's triangle in them, so the patch is per
 /// annotation rather than across the list.
 pub(crate) fn numbered_arrows(
-  cache: &CounterArtworkCache,
+  atlas: &CounterAtlas,
   device: &ID3D11Device,
+  context: &ID3D11DeviceContext,
   prepared: &super::compositor::PreparedArrows,
-) -> Result<
-  (
-    Option<std::sync::Arc<CounterArtwork>>,
-    Vec<super::compositor::PreviewArrow>,
-  ),
-  String,
-> {
-  let numbers = cache.resolve(device, &prepared.counters)?;
+) -> Result<(Option<AtlasBinding>, Vec<super::compositor::PreviewArrow>), String> {
+  let mut rects = Vec::new();
+  let numbers = atlas.resolve(device, context, &prepared.counters, &mut rects)?;
   let mut arrows = prepared.arrows.clone();
-  if let Some(atlas) = numbers.as_ref() {
-    for (arrow, rect) in arrows.iter_mut().zip(&atlas.rects) {
+  if numbers.is_some() {
+    for (arrow, rect) in arrows.iter_mut().zip(&rects) {
       match AnnotationKind::from_raw(arrow.kind) {
         Some(AnnotationKind::Counter) => {}
         Some(AnnotationKind::Arrow) | None => continue,

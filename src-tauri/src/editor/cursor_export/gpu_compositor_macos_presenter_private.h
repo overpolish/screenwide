@@ -7,6 +7,7 @@
 #import <Metal/Metal.h>
 
 #import "gpu_compositor_macos_keyboard.h"
+#import "gpu_compositor_macos_presenter.h"
 
 @class ScreenwideCursorResources;
 
@@ -31,8 +32,17 @@
 @property(nonatomic, strong) NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *> *keyboardArtworks;
 @property(nonatomic, strong) NSArray<NSValue *> *workspaceResizeLayers;
 @property(nonatomic) BOOL workspaceResizeApplied;
+/// Copies of the retained layers' annotation lists, which the layers point into.
+@property(nonatomic, strong) NSMutableArray<NSMutableData *> *workspaceAnnotationStores;
 @property(nonatomic, strong) id<MTLComputePipelineState> workspaceClearPipeline;
 @property(nonatomic, strong) id<MTLComputePipelineState> workspaceLayerPipeline;
 @property(nonatomic, strong) id<MTLComputePipelineState> regionMagnifierPipeline;
 @property(nonatomic, strong) ScreenwideCursorResources *cursorResources;
 @end
+
+/// Copies one layer's annotations into a store the presenter keeps, returning
+/// the view the retained layer holds instead of the caller's.
+ScreenwideAnnotations screenwide_presenter_retain_annotations(
+    ScreenwideStillPresenter *presenter, const ScreenwideAnnotations *source);
+/// Releases the stores no retained layer points into any more.
+void screenwide_presenter_prune_annotation_stores(ScreenwideStillPresenter *presenter);

@@ -5,7 +5,7 @@ use super::arrow::new_arrow;
 use super::edit::AnnotationEdit;
 use super::gesture::{AnnotationGestureTarget, AnnotationHandle};
 use super::snap::SnapModifiers;
-use super::{AnnotationKind, AnnotationPoint, AnnotationShape, MAX_ANNOTATIONS};
+use super::{AnnotationKind, AnnotationPoint, AnnotationShape};
 
 fn point(x: f64, y: f64) -> AnnotationPoint {
   AnnotationPoint { x, y }
@@ -92,16 +92,19 @@ fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
 }
 
 #[test]
-fn selection_and_capacity_do_not_open_an_edit() {
-  let mut annotations =
-    vec![new_arrow("a".to_owned(), point(0.0, 0.0), point(100.0, 0.0), None); MAX_ANNOTATIONS];
+fn selection_and_a_missing_annotation_do_not_open_an_edit() {
+  let mut annotations = vec![new_arrow(
+    "a".to_owned(),
+    point(0.0, 0.0),
+    point(100.0, 0.0),
+    None,
+  )];
   let before = annotations.clone();
   for target in [
     AnnotationGestureTarget::Select { index: 0 },
     AnnotationGestureTarget::None,
-    AnnotationGestureTarget::New,
     AnnotationGestureTarget::Existing {
-      index: MAX_ANNOTATIONS,
+      index: 1,
       handle: AnnotationHandle::End,
     },
   ] {
@@ -116,4 +119,22 @@ fn selection_and_capacity_do_not_open_an_edit() {
     .is_none());
     assert_eq!(annotations, before);
   }
+}
+
+/// A document has no ceiling: a press on empty picture still draws a new
+/// annotation however many are already there.
+#[test]
+fn a_long_document_still_takes_a_new_annotation() {
+  let mut annotations =
+    vec![new_arrow("a".to_owned(), point(0.0, 0.0), point(100.0, 0.0), None); 5_000];
+  let edit = AnnotationEdit::begin(
+    &mut annotations,
+    AnnotationGestureTarget::New,
+    point(10.0, 10.0),
+    None,
+    Some(AnnotationKind::Arrow),
+    None,
+  );
+  assert!(edit.is_some());
+  assert_eq!(annotations.len(), 5_001);
 }

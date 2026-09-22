@@ -13,12 +13,11 @@ pub(super) struct NativeTimedAnnotation {
 const _: () = assert!(std::mem::size_of::<NativeTimedAnnotation>() == 144);
 
 /// Every clip on the export's track as a native record, and the one set of
-/// side buffers their `data_offset`s index. The clips outnumber a scene, so
-/// they cannot ride inside a `NativeAnnotations`; the compositor copies the
-/// buffers into each frame's scene beside whichever clips are showing.
+/// side buffers their `data_offset`s index. Each frame's scene is the clips
+/// showing then, pointing into these same buffers, so the offsets hold.
 pub(super) fn for_request(
   request: &CursorExportRequest<'_>,
-) -> (Vec<NativeTimedAnnotation>, Box<NativeAnnotationData>) {
+) -> (Vec<NativeTimedAnnotation>, NativeAnnotationData) {
   let clips = request
     .timeline
     .map_or(&[][..], |t| t.annotation_clips())
@@ -33,8 +32,8 @@ pub(super) fn for_request(
 fn pack_clips<'a>(
   clips: impl Iterator<Item = &'a RecordingAnnotationClip>,
   stroke_scale: f64,
-) -> (Vec<NativeTimedAnnotation>, Box<NativeAnnotationData>) {
-  let mut data = Box::<NativeAnnotationData>::default();
+) -> (Vec<NativeTimedAnnotation>, NativeAnnotationData) {
+  let mut data = NativeAnnotationData::default();
   let clips = clips
     .map(|clip| {
       let mut annotation = clip.annotation.clone();
@@ -85,7 +84,7 @@ mod tests {
   fn every_clip_indexes_the_one_shared_text_buffer() {
     let clips = [counter_clip(1), counter_clip(12)];
     let (packed, data) = pack_clips(clips.iter(), 1.0);
-    assert_eq!(&data.text[..data.text_len as usize], b"112");
+    assert_eq!(data.text, b"112");
     let slots: Vec<_> = packed
       .iter()
       .map(|clip| (clip.annotation.data_offset, clip.annotation.data_count))

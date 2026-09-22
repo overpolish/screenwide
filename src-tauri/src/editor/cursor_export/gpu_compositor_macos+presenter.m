@@ -49,6 +49,7 @@ void *screenwide_gpu_still_presenter_create(void) {
     presenter.workspaceCameraSources = [NSMutableDictionary dictionary];
     presenter.workspaceSourceSizes = [NSMutableDictionary dictionary];
     presenter.workspaceLayers = [NSMutableArray array];
+    presenter.workspaceAnnotationStores = [NSMutableArray array];
     presenter.keyboardArtworks = [NSMutableDictionary dictionary];
     const uint8_t transparentCursor[4] = {0, 0, 0, 0};
     const ScreenwideCursorArtwork emptyCursor = {transparentCursor, 1, 1, 1, 1,
@@ -388,7 +389,10 @@ int screenwide_gpu_still_presenter_set_workspace(
           [pixelReferences addObject:[NSValue valueWithPointer:reference]];
       } else
         [presenter.workspaceCameraSources removeObjectForKey:token];
-      [retained addObject:[NSValue valueWithBytes:&layers[index]
+      ScreenwideWorkspaceLayer retainedLayer = layers[index];
+      retainedLayer.annotations =
+          screenwide_presenter_retain_annotations(presenter, &layers[index].annotations);
+      [retained addObject:[NSValue valueWithBytes:&retainedLayer
                                           objCType:@encode(ScreenwideWorkspaceLayer)]];
       [activeTokens addObject:token];
     }
@@ -408,6 +412,7 @@ int screenwide_gpu_still_presenter_set_workspace(
         [presenter.workspaceCameraSources removeObjectForKey:key];
       }
     presenter.workspaceLayers = retained;
+    screenwide_presenter_prune_annotation_stores(presenter);
     return 1;
   }
 }
@@ -495,39 +500,6 @@ int screenwide_gpu_still_presenter_update_workspace_canvas(
     return 1;
   }
   return 0;
-}
-
-/// Moves the hover halo on the retained workspace: the annotation at `index` in
-/// `pane_index`'s own list wears it, and every other annotation in the scene
-/// puts it down. A negative index only clears.
-///
-/// The halo is the one piece of annotation state the pointer changes without
-/// the document changing, so it is set here and redrawn rather than sent back
-/// round through a fresh composition.
-int screenwide_gpu_still_presenter_set_workspace_annotation_hover(
-    void *handle, uint32_t pane_index, int32_t index, float width) {
-  if (handle == NULL) return 0;
-  ScreenwideStillPresenter *presenter = (__bridge ScreenwideStillPresenter *)handle;
-  NSMutableArray<NSValue *> *updated = [presenter.workspaceLayers mutableCopy];
-  int found = 0;
-  for (NSUInteger layer_index = 0; layer_index < updated.count; ++layer_index) {
-    ScreenwideWorkspaceLayer layer;
-    [updated[layer_index] getValue:&layer size:sizeof(layer)];
-    int changed = 0;
-    for (uint32_t annotation = 0; annotation < layer.annotations.count; ++annotation) {
-      float wanted = layer.pane_index == pane_index && index >= 0 &&
-                     (uint32_t)index == annotation ? width : 0;
-      if (layer.annotations.items[annotation].hover == wanted) continue;
-      layer.annotations.items[annotation].hover = wanted;
-      changed = 1;
-    }
-    if (layer.pane_index == pane_index) found = 1;
-    if (!changed) continue;
-    updated[layer_index] = [NSValue valueWithBytes:&layer
-                                          objCType:@encode(ScreenwideWorkspaceLayer)];
-  }
-  presenter.workspaceLayers = updated;
-  return found;
 }
 
 int screenwide_gpu_still_presenter_update_workspace_camera_overlay(

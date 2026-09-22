@@ -16,7 +16,7 @@ static const CGFloat kAnnotationHandleHit = 8.0;
 SCREENWIDE_PREVIEW_PRIVATE const ScreenwidePreviewAnnotation *annotation_items(
     ScreenwidePreviewSurface *surface, NSUInteger *count) {
   NSUInteger items = surface.annotations.length / sizeof(ScreenwidePreviewAnnotation);
-  *count = MIN(items, ScreenwideMaxAnnotations);
+  *count = items;
   return *count == 0 ? NULL : surface.annotations.bytes;
 }
 

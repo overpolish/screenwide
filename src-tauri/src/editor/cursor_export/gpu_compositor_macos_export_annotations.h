@@ -8,19 +8,20 @@
 static void screenwide_export_annotations(ScreenwideVideoExport *session,
     id<MTLCommandBuffer> command, id<MTLTexture> luma, id<MTLTexture> chroma,
     uint32_t source_width, uint32_t source_height, uint64_t source_ms, uint32_t above) {
-  ScreenwideAnnotations annotations = {0};
+  // A frame shows at most every clip; the list is sized to that, on the heap.
+  NSMutableData *items = [NSMutableData
+      dataWithLength:MAX(session->annotation_count, 1u) * sizeof(ScreenwideAnnotation)];
+  ScreenwideAnnotation *showing = items.mutableBytes;
+  ScreenwideAnnotations annotations = {.items = showing};
   // Every clip's record indexes the one set of side buffers the export was
-  // given, so the buffers are copied whole and the offsets stay as they are.
+  // given, so the frame points at them and the offsets stay as they are.
   if (session->annotation_data != NULL) annotations.data = *session->annotation_data;
-  uint32_t active_count = 0;
   for (uint32_t i = 0; i < session->annotation_count; i++) {
     const ScreenwideTimedAnnotation *clip = &session->annotations[i];
     if (clip->start_ms <= source_ms && source_ms < clip->end_ms) {
-      if (active_count++ == SCREENWIDE_MAX_ANNOTATIONS) break;
       if (clip->annotation.above_camera != above) continue;
-      ScreenwideAnnotation *annotation = &annotations.items[annotations.count++];
+      ScreenwideAnnotation *annotation = &showing[annotations.count++];
       *annotation = clip->annotation;
-      // The reveal is read back from the clip's own bounds every frame, so a
       // seek lands on exactly the frame a play-through drew. The blur's lead
       // is one source frame of travel at the rate this export encodes.
       screenwide_annotation_reveal_window(

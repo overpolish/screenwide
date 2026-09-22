@@ -39,8 +39,6 @@ typedef struct {
 } ScreenwidePreviewAnnotation;
 _Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
                "Rust/C annotation handle layout mismatch");
-/// How many annotations one layer can carry, matching `MAX_ANNOTATIONS`.
-static const NSUInteger ScreenwideMaxAnnotations = 64;
 /// Which shape an annotation is, matching the compositor's own kinds.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindArrow = 0,

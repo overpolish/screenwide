@@ -15,7 +15,8 @@
 #define SCREENWIDE_ANNOTATE_MODIFIER_CONTROL 8u
 
 /// What one display's overlay draws: the annotations on screen plus the stroke in
-/// hand, already in that display's layer pixels.
+/// hand, already in that display's layer pixels. The list is Rust's and stays
+/// valid until the scene is asked for again, so it is drawn straight away.
 typedef void (*ScreenwideAnnotateScene)(uint32_t display,
                                         ScreenwideAnnotations *out);
 

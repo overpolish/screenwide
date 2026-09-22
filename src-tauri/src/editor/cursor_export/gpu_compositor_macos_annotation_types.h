@@ -7,9 +7,6 @@
 #include <stdint.h>
 #include "../annotations/reveal.h"
 
-#define SCREENWIDE_MAX_ANNOTATIONS 32
-#define SCREENWIDE_MAX_ANNOTATION_POINTS 4096
-#define SCREENWIDE_MAX_ANNOTATION_TEXT 4096
 #define SCREENWIDE_ANNOTATION_ARROW 0u
 #define SCREENWIDE_ANNOTATION_COUNTER 1u
 #define SCREENWIDE_ANNOTATION_FLAG_FILL (1u << 0)
@@ -40,27 +37,26 @@ _Static_assert(offsetof(ScreenwideAnnotation, p0) == 48, "ScreenwideAnnotation.p
 _Static_assert(offsetof(ScreenwideAnnotation, hover) == 88, "ScreenwideAnnotation.hover ABI must match Rust");
 _Static_assert(offsetof(ScreenwideAnnotation, reveal) == 96, "ScreenwideAnnotation.reveal ABI must match Rust");
 
-/// The side buffers a record's `data_offset`/`data_count` index: `points`
-/// for a points kind, `text` for a text kind. Matches Rust's
-/// `NativeAnnotationData`. Held apart from the items so the video export can
-/// share one set across every clip and copy it into each frame's scene.
+/// The side buffers a list's records index through `data_offset` and
+/// `data_count`. Borrowed: whoever hands this over owns the bytes, and a
+/// retained scene copies them. The twin of Rust's `NativeAnnotationDataView`.
 typedef struct {
-  float points[SCREENWIDE_MAX_ANNOTATION_POINTS][2];
-  uint8_t text[SCREENWIDE_MAX_ANNOTATION_TEXT];
+  const float (*points)[2];
+  const uint8_t *text;
   uint32_t point_count;
   uint32_t text_len;
 } ScreenwideAnnotationData;
-_Static_assert(sizeof(ScreenwideAnnotationData) == 32768 + 4096 + 8,
-               "ScreenwideAnnotationData ABI must match Rust");
+_Static_assert(sizeof(ScreenwideAnnotationData) == 24, "ScreenwideAnnotationData ABI must match Rust");
 
+/// One composition's annotations, borrowed under the same rule as their
+/// data. The twin of Rust's `NativeAnnotationsView`.
 typedef struct {
-  ScreenwideAnnotation items[SCREENWIDE_MAX_ANNOTATIONS];
+  const ScreenwideAnnotation *items;
   uint32_t count;
   ScreenwideAnnotationData data;
 } ScreenwideAnnotations;
-
-_Static_assert(sizeof(ScreenwideAnnotations) == 128 * SCREENWIDE_MAX_ANNOTATIONS + 4 + 32768 + 4096 + 8,
-               "ScreenwideAnnotations ABI must match Rust");
+_Static_assert(sizeof(ScreenwideAnnotations) == 40, "ScreenwideAnnotations ABI must match Rust");
+_Static_assert(offsetof(ScreenwideAnnotations, data) == 16, "ScreenwideAnnotations.data ABI must match Rust");
 
 typedef struct {
   ScreenwideAnnotation annotation;

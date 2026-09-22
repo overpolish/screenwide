@@ -20,8 +20,12 @@ impl Compositor {
     // number is: the numbers are rasterised here, at the size they are drawn.
     prepared: &PreparedArrows,
   ) -> Result<(), String> {
-    let (numbers, annotations) =
-      super::super::counter_artwork::numbered_arrows(&self.counter_cache, device, prepared)?;
+    let (numbers, annotations) = super::super::counter_artwork::numbered_arrows(
+      &self.counter_atlas,
+      device,
+      context,
+      prepared,
+    )?;
     let samples = &prepared.samples;
     values.annotation_options[2] = numbers.as_ref().map_or(0, |atlas| atlas.size.0);
     values.annotation_options[3] = numbers.as_ref().map_or(0, |atlas| atlas.size.1);
@@ -81,28 +85,14 @@ impl Compositor {
       MaxDepth: 1.0,
       ..Default::default()
     };
-    // The caps are enforced above the facade, but a longer list must clamp
-    // rather than run past the buffer its view describes.
-    upload(
-      context,
-      &self.annotation_buffer,
-      &annotations[..annotations.len().min(MAX_ANNOTATIONS)],
-    )?;
-    upload(
-      context,
-      &self.sample_buffer,
-      &samples[..samples.len().min(MAX_ANNOTATIONS * MAX_EXPOSURE_SAMPLES)],
-    )?;
-    upload(
-      context,
-      &self.annotation_points_buffer,
-      &prepared.points[..prepared.points.len().min(MAX_ANNOTATION_POINTS)],
-    )?;
-    upload(
-      context,
-      &self.annotation_text_buffer,
-      &prepared.text[..prepared.text.len().min(MAX_ANNOTATION_TEXT)],
-    )?;
+    let annotation_view = self.annotations.write(device, context, &annotations)?;
+    let sample_view = self.samples.write(device, context, samples)?;
+    let points_view = self
+      .annotation_points
+      .write(device, context, &prepared.points)?;
+    let text_view = self
+      .annotation_text
+      .write(device, context, &prepared.text)?;
     unsafe {
       context.OMSetRenderTargets(Some(&[Some(render_target)]), None);
       context.OMSetBlendState(
@@ -135,15 +125,15 @@ impl Compositor {
             || self.fallback_view.clone(),
             |picture| picture.view.clone(),
           )),
-          Some(self.annotation_view.clone()),
-          Some(self.sample_view.clone()),
+          Some(annotation_view),
+          Some(sample_view),
           Some(
             numbers
               .as_ref()
               .map_or_else(|| self.fallback_view.clone(), |atlas| atlas.view.clone()),
           ),
-          Some(self.annotation_points_view.clone()),
-          Some(self.annotation_text_view.clone()),
+          Some(points_view),
+          Some(text_view),
         ]),
       );
       context.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
@@ -156,25 +146,4 @@ impl Compositor {
     }
     Ok(())
   }
-}
-
-/// Writes `items` to the front of a CPU-written structured buffer. Nothing
-/// is written for an empty list; the shader never reads past its counts.
-fn upload<T: Copy>(
-  context: &ID3D11DeviceContext,
-  buffer: &ID3D11Buffer,
-  items: &[T],
-) -> Result<(), String> {
-  if items.is_empty() {
-    return Ok(());
-  }
-  let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
-  unsafe {
-    context
-      .Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&mut mapped))
-      .map_err(|error| error.to_string())?;
-    std::ptr::copy_nonoverlapping(items.as_ptr(), mapped.pData.cast::<T>(), items.len());
-    context.Unmap(buffer, 0);
-  }
-  Ok(())
 }

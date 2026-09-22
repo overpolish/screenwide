@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::editor::annotations::native::NativeAnnotations;
+use crate::editor::annotations::native::NativeAnnotationsView;
 use crate::{
   editor::{
     cursor_effects::{GpuCursor, NativeGpuCursor},
@@ -49,10 +49,10 @@ pub(super) struct NativeWorkspaceLayer {
   pub(super) camera_rgba: *const u8,
   pub(super) camera_pixels: *mut std::ffi::c_void,
   pub(super) overlay: StillOverlay,
-  /// The layer's annotations, inline: the presenter retains its scene and
-  /// redraws it without Rust, so a borrowed pointer would dangle on the next
-  /// pan.
-  pub(super) annotations: NativeAnnotations,
+  /// The layer's annotations, borrowed for the call: the presenter copies
+  /// them into a store of its own, because it redraws its retained scene
+  /// without Rust and a borrowed list would be gone by the next pan.
+  pub(super) annotations: NativeAnnotationsView,
 }
 
 /// Input for one layer in the retained recording workspace. A decoded RGBA

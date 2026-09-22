@@ -9,9 +9,11 @@
 /// The counters' numbers, rasterised.
 ///
 /// A counter's number is type, so it is drawn by the text engine rather than
-/// approximated by the shader: every counter in a dispatch is rasterised at
-/// the size it is actually drawn and stacked into one buffer, which the
-/// annotation kernels sample the way they sample the keyboard's artwork.
+/// approximated by the shader, at the size it is actually drawn, into an atlas
+/// the annotation kernels sample the way they sample the keyboard's artwork.
+/// The atlas persists per thread and keeps the numbers recent frames drew, so
+/// a frame rasterises only the numbers it has not drawn before; where each
+/// goes is laid out in Rust, shared with the D3D11 backend.
 ///
 /// The atlas is rasterised at [`SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE`] times
 /// the drawn size and sampled with four taps, so a counter still reads while
@@ -39,7 +41,9 @@ static const float SCREENWIDE_COUNTER_CAP_HEIGHT = 0.727f;
 /// How many atlas pixels are rasterised per drawn pixel.
 static const float SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE = 2.0f;
 
-/// Rasterises `count` UTF-8 strings with their requested pixel sizes.
+/// Lays out and rasterises `count` UTF-8 strings at their requested radii,
+/// writing each one's rectangle into `rects`. A NULL value or a radius under a
+/// pixel draws nothing.
 id<MTLBuffer> screenwide_annotation_text_atlas(
     id<MTLDevice> device, const char *const *values, const uint32_t *lengths,
     const float *sizes, uint32_t count, ScreenwideAnnotationTextRect *rects,

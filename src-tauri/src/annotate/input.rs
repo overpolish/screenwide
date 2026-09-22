@@ -14,9 +14,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::Instant;
 
-use crate::editor::annotations::AnnotationKind;
 use crate::editor::annotations::arrow::new_arrow;
 use crate::editor::annotations::counter::new_counter;
+use crate::editor::annotations::AnnotationKind;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationStyle};
 
 /// Virtual key codes, which AppKit reports by physical position.

@@ -17,7 +17,7 @@ impl TextDevice {
   /// by the preview surface's own font module, which the keyboard artwork
   /// shares.
   fn new(size: f64) -> Result<Self, String> {
-    super::font::register_inter_font();
+    super::super::font::register_inter_font();
     let dc = unsafe { CreateCompatibleDC(None) };
     if dc.is_invalid() {
       return Err("Windows could not create a counter drawing context".to_owned());
@@ -69,25 +69,18 @@ impl Drop for TextDevice {
   }
 }
 
-struct CounterRaster {
-  pixels: Vec<u8>,
-  rects: Vec<CounterTextRect>,
-  size: (u32, u32),
-}
-
-/// One number's own row: the text, the size it measures at, and the cell it
-/// is centred in. A number too wide for its disc is narrowed rather than
-/// allowed to touch the edge.
+/// One number set for its cell: the text, the size it measures at, and the
+/// cell it is centred in. A number too wide for its disc is narrowed rather
+/// than allowed to touch the edge.
 struct Row {
-  annotation: usize,
   text: Vec<u16>,
   measured: (i32, i32),
   cell: (u32, u32),
   size: f64,
 }
 
-fn row(annotation: usize, value: &str, radius: f64) -> Result<Row, String> {
-  let diameter = radius * 2.0 * SUPERSAMPLE;
+fn row(value: &str, radius: f32) -> Result<Row, String> {
+  let diameter = f64::from(radius) * 2.0 * SUPERSAMPLE;
   let mut size = diameter * CAP_SHARE / CAP_HEIGHT;
   let text: Vec<u16> = value.encode_utf16().collect();
   let mut measured = TextDevice::new(size)?.measure(&text)?;
@@ -97,7 +90,6 @@ fn row(annotation: usize, value: &str, radius: f64) -> Result<Row, String> {
     measured = TextDevice::new(size)?.measure(&text)?;
   }
   Ok(Row {
-    annotation,
     // One transparent pixel of margin keeps a four-tap sample on one number.
     cell: (
       (measured.0 as u32).saturating_add(2).max(1),
@@ -109,20 +101,23 @@ fn row(annotation: usize, value: &str, radius: f64) -> Result<Row, String> {
   })
 }
 
-fn rasterize(wanted: &[(usize, String, f64)], annotations: usize) -> Result<CounterRaster, String> {
-  let mut rows = Vec::with_capacity(wanted.len());
-  for (annotation, value, radius) in wanted {
-    rows.push(row(*annotation, value, *radius)?);
-  }
-  let width = rows.iter().map(|row| row.cell.0).max().unwrap_or(1).max(1);
-  let height = rows.iter().map(|row| row.cell.1).sum::<u32>().max(1);
+/// The cell `value` needs at `radius`, in atlas pixels.
+pub(super) fn measure(value: &str, radius: f32) -> Result<(u32, u32), String> {
+  Ok(row(value, radius)?.cell)
+}
+
+/// `value` drawn at `radius` into a cell of `cell` pixels, as BGRA rows, top
+/// row first. The number is tinted by the shader, so its coverage is carried
+/// in the alpha channel over white.
+pub(super) fn draw(value: &str, radius: f32, cell: (u32, u32)) -> Result<Vec<u8>, String> {
+  let row = row(value, radius)?;
   let info = BITMAPINFO {
     bmiHeader: BITMAPINFOHEADER {
       biSize: size_of::<BITMAPINFOHEADER>() as u32,
-      biWidth: width as i32,
+      biWidth: cell.0 as i32,
       // Negative: the rows run top-down from the first pixel, which is the
       // space the shader samples the rectangles in.
-      biHeight: -(height as i32),
+      biHeight: -(cell.1 as i32),
       biPlanes: 1,
       biBitCount: 32,
       biCompression: BI_RGB.0,
@@ -130,61 +125,43 @@ fn rasterize(wanted: &[(usize, String, f64)], annotations: usize) -> Result<Coun
     },
     ..Default::default()
   };
-  let mut rects = vec![CounterTextRect::default(); annotations];
-  let mut pixels = Vec::new();
-  let mut top = 0_u32;
-  // One context per row: each number is set at its own size, and GDI selects
-  // a font into a context rather than into a draw.
-  for row in &rows {
-    let device = TextDevice::new(row.size)?;
-    let mut bits = std::ptr::null_mut();
-    let bitmap = unsafe {
-      CreateDIBSection(
-        Some(device.dc),
-        &raw const info,
-        DIB_RGB_COLORS,
-        &mut bits,
-        None,
-        0,
-      )
-    }
-    .map_err(|error| error.to_string())?;
-    let old_bitmap = unsafe { SelectObject(device.dc, bitmap.into()) };
-    let length = (width as usize) * (row.cell.1 as usize) * 4;
-    let raster = unsafe { std::slice::from_raw_parts_mut(bits.cast::<u8>(), length) };
-    raster.fill(0);
-    unsafe {
-      SetBkMode(device.dc, TRANSPARENT);
-      SetTextColor(device.dc, COLORREF(0x00FF_FFFF));
-    }
-    let x = (row.cell.0 as i32 - row.measured.0) / 2;
-    let y = (row.cell.1 as i32 - row.measured.1) / 2;
-    let drawn = unsafe { TextOutW(device.dc, x, y, &row.text) }.as_bool();
-    // The number is tinted by the shader, so the coverage is carried in the
-    // alpha channel and the colour left white: GDI writes no alpha itself.
-    let mut written: Vec<u8> = raster
-      .chunks_exact(4)
-      .flat_map(|pixel| [255, 255, 255, pixel[2]])
-      .collect();
-    unsafe {
-      SelectObject(device.dc, old_bitmap);
-      let _ = DeleteObject(bitmap.into());
-    }
-    if !drawn {
-      return Err("Windows could not draw a counter's number".to_owned());
-    }
-    pixels.append(&mut written);
-    rects[row.annotation] = CounterTextRect {
-      x: 0.0,
-      y: top as f32,
-      width: row.cell.0 as f32,
-      height: row.cell.1 as f32,
-    };
-    top += row.cell.1;
+  // GDI selects a font into a context rather than into a draw, so the number
+  // gets a context of its own at its own size.
+  let device = TextDevice::new(row.size)?;
+  let mut bits = std::ptr::null_mut();
+  let bitmap = unsafe {
+    CreateDIBSection(
+      Some(device.dc),
+      &raw const info,
+      DIB_RGB_COLORS,
+      &mut bits,
+      None,
+      0,
+    )
   }
-  Ok(CounterRaster {
-    pixels,
-    rects,
-    size: (width, height),
-  })
+  .map_err(|error| error.to_string())?;
+  let old_bitmap = unsafe { SelectObject(device.dc, bitmap.into()) };
+  let length = cell.0 as usize * cell.1 as usize * 4;
+  let raster = unsafe { std::slice::from_raw_parts_mut(bits.cast::<u8>(), length) };
+  raster.fill(0);
+  unsafe {
+    SetBkMode(device.dc, TRANSPARENT);
+    SetTextColor(device.dc, COLORREF(0x00FF_FFFF));
+  }
+  let x = (cell.0 as i32 - row.measured.0) / 2;
+  let y = (cell.1 as i32 - row.measured.1) / 2;
+  let drawn = unsafe { TextOutW(device.dc, x, y, &row.text) }.as_bool();
+  // GDI writes no alpha itself: the white text's red channel is its coverage.
+  let pixels: Vec<u8> = raster
+    .chunks_exact(4)
+    .flat_map(|pixel| [255, 255, 255, pixel[2]])
+    .collect();
+  unsafe {
+    SelectObject(device.dc, old_bitmap);
+    let _ = DeleteObject(bitmap.into());
+  }
+  if !drawn {
+    return Err("Windows could not draw a counter's number".to_owned());
+  }
+  Ok(pixels)
 }
