@@ -71,7 +71,10 @@ pub(super) fn recording_dock_local_position(
   let (x, y) = match offset {
     // Offsets are stored in logical pixels, so a pill dropped 200pt from the
     // corner of a Retina display lands 200pt from the corner of a 1x one.
-    Some(offset) => (offset.x * scale, offset.y * scale),
+    Some(offset) => (
+      offset.centre_x * scale - f64::from(dock_size.width) / 2.0,
+      offset.y * scale,
+    ),
     None => (max_x / 2.0, RECORDING_DOCK_TOP_GAP * scale),
   };
 
@@ -111,8 +114,9 @@ pub(super) fn recording_dock_offset(
   let max_x = f64::from(work_area.size.width.saturating_sub(dock_size.width));
   let max_y = f64::from(work_area.size.height.saturating_sub(dock_size.height));
 
+  let left = f64::from(dock_position.x - work_area.position.x).clamp(0.0, max_x);
   Ok(Some(RecordingDockOffset {
-    x: f64::from(dock_position.x - work_area.position.x).clamp(0.0, max_x) / scale,
+    centre_x: (left + f64::from(dock_size.width) / 2.0) / scale,
     y: f64::from(dock_position.y - work_area.position.y).clamp(0.0, max_y) / scale,
   }))
 }

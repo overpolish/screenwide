@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[path = "dock/first_reveal.rs"]
+pub mod first_reveal;
 #[path = "dock/positioning.rs"]
 mod positioning;
 use positioning::load_recording_dock_offset;
@@ -40,13 +42,18 @@ static DOCK_DRAG_ACTIVE: AtomicBool = AtomicBool::new(false);
 /// dropped on rather than as absolute desktop coordinates, so it lands in the
 /// same visual spot whichever monitor the recording bar is on.
 ///
+/// The pill is anchored at its horizontal centre, because its width follows
+/// its state: the countdown, starting and recording layouts differ by up to a
+/// hundred pixels, and a centre anchor grows and shrinks it in place instead
+/// of sliding it. `y` is the top edge; the height never changes.
+///
 /// The offset is in *logical* pixels. Physical pixels would move the pill twice
 /// as far from the corner when a 2x display's offset is applied to a 1x one,
 /// and a proportional fraction would distort placement for a fixed-size window
 /// that is meant to sit a fixed distance from an edge.
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 struct RecordingDockOffset {
-  x: f64,
+  centre_x: f64,
   y: f64,
 }
 
@@ -77,19 +84,23 @@ pub fn show_recording_dock(app: &AppHandle) -> tauri::Result<()> {
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     let scale = monitor.scale_factor();
-    let logical_size = dock.outer_size()?.to_logical::<f64>(dock.scale_factor()?);
+    let dock_scale = dock.scale_factor()?;
+    let logical_size = LogicalSize::new(
+      dock.outer_size()?.to_logical::<f64>(dock_scale).width,
+      RECORDING_DOCK_HEIGHT,
+    );
     let dock_size = PhysicalSize::new(
       (logical_size.width * scale).round() as u32,
       (RECORDING_DOCK_HEIGHT * scale).round() as u32,
     );
     let position = recording_dock_position(&monitor, dock_size, offset);
-    dock.set_position(position)?;
-    *RECORDING_DOCK_PLACED
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(position);
+    place_recording_dock(&dock, position, logical_size)?;
   }
-
-  platform::show(&dock, 1.0)?;
+  #[cfg(target_os = "macos")]
+  let opacity = first_reveal::show_opacity(app);
+  #[cfg(not(target_os = "macos"))]
+  let opacity = 1.0;
+  platform::show(&dock, opacity)?;
   platform::restore_recording_level(&dock)
 }
 
@@ -103,60 +114,82 @@ pub fn resize_recording_dock(app: AppHandle, width: f64) -> Result<(), String> {
   let dock = app
     .get_webview_window(WindowLabel::RecordingDock.as_str())
     .ok_or_else(|| "The recording pill is unavailable".to_owned())?;
-  let visible = dock.is_visible().map_err(to_message)?;
   let old_position = dock.outer_position().map_err(to_message)?;
   let old_size = dock.outer_size().map_err(to_message)?;
-  dock
-    .set_size(LogicalSize::new(
-      width
-        .ceil()
-        .clamp(RECORDING_DOCK_MIN_WIDTH, RECORDING_DOCK_MAX_WIDTH),
-      RECORDING_DOCK_HEIGHT,
-    ))
-    .map_err(to_message)?;
-
-  if visible {
-    let new_size = dock.outer_size().map_err(to_message)?;
-    let centred_position = PhysicalPosition::new(
-      old_position.x + (old_size.width as i32 - new_size.width as i32) / 2,
-      old_position.y,
-    );
-    dock.set_position(centred_position).map_err(to_message)?;
-    contain_recording_dock(&app, &dock).map_err(to_message)?;
-    let position = dock.outer_position().map_err(to_message)?;
-    *RECORDING_DOCK_PLACED
+  let logical_size = LogicalSize::new(
+    width
+      .ceil()
+      .clamp(RECORDING_DOCK_MIN_WIDTH, RECORDING_DOCK_MAX_WIDTH),
+    RECORDING_DOCK_HEIGHT,
+  );
+  // This runs whether or not the pill is visible: a resize racing the show can
+  // still see it hidden, and a hidden pill is placed again on show anyway.
+  let new_size: PhysicalSize<u32> =
+    logical_size.to_physical(dock.scale_factor().map_err(to_message)?);
+  let Some(monitor) = monitor_with_most_overlap(&app, &dock).map_err(to_message)? else {
+    return dock.set_size(logical_size).map_err(to_message);
+  };
+  let placed = *RECORDING_DOCK_PLACED
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  // A pill still where it was last placed is placed afresh from the saved
+  // anchor, exactly as showing it does, so the two can never disagree about
+  // where it belongs. Only a pill mid-drag keeps its own centre.
+  let position = if placed == Some(old_position) {
+    let offset = *RECORDING_DOCK_OFFSET
       .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(position);
-  }
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    recording_dock_position(&monitor, new_size, offset)
+  } else {
+    contained_position(
+      &monitor,
+      PhysicalPosition::new(
+        old_position.x + (old_size.width as i32 - new_size.width as i32) / 2,
+        old_position.y,
+      ),
+      new_size,
+    )
+  };
+  place_recording_dock(&dock, position, logical_size).map_err(to_message)
+}
 
+/// Applies the pill's position and size as one frame and records it as placed.
+///
+/// Not `set_position`/`set_size`: on macOS tao queues both on the GCD main
+/// queue, which has no ordering with `platform::show` (posted through the event
+/// loop), so a fresh launch put the pill on screen at its default centred frame
+/// before the move landed; and the two steps could present a stretched frame
+/// before the shifted one. `platform::set_frame` is one AppKit call on the same
+/// channel as the show. The frame is recorded as requested because reading it
+/// back can precede a frame change that is still queued.
+fn place_recording_dock(
+  dock: &WebviewWindow,
+  position: PhysicalPosition<i32>,
+  size: LogicalSize<f64>,
+) -> tauri::Result<()> {
+  platform::set_frame(dock, position.to_logical(dock.scale_factor()?), size)?;
+  *RECORDING_DOCK_PLACED
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(position);
   Ok(())
 }
 
-/// Clamps the pill into the work area it mostly sits on, so a drag cannot park
-/// it under the menu bar, the notch or the taskbar.
-fn contain_recording_dock(app: &AppHandle, dock: &WebviewWindow) -> tauri::Result<()> {
-  let dock_position = dock.outer_position()?;
-  let dock_size = dock.outer_size()?;
-  let Some(monitor) = monitor_with_most_overlap(app, dock)? else {
-    return Ok(());
-  };
+fn contained_position(
+  monitor: &Monitor,
+  position: PhysicalPosition<i32>,
+  size: PhysicalSize<u32>,
+) -> PhysicalPosition<i32> {
   let work_area = monitor.work_area();
-  let max_x = work_area.position.x + work_area.size.width.saturating_sub(dock_size.width) as i32;
-  let max_y = work_area.position.y + work_area.size.height.saturating_sub(dock_size.height) as i32;
-  let contained = PhysicalPosition::new(
-    dock_position
+  let max_x = work_area.position.x + work_area.size.width.saturating_sub(size.width) as i32;
+  let max_y = work_area.position.y + work_area.size.height.saturating_sub(size.height) as i32;
+  PhysicalPosition::new(
+    position
       .x
       .clamp(work_area.position.x, max_x.max(work_area.position.x)),
-    dock_position
+    position
       .y
       .clamp(work_area.position.y, max_y.max(work_area.position.y)),
-  );
-
-  if contained != dock_position {
-    dock.set_position(contained)?;
-  }
-
-  Ok(())
+  )
 }
 
 #[tauri::command]
@@ -165,9 +198,17 @@ pub fn finish_recording_dock_drag(app: AppHandle) -> Result<(), String> {
   let dock = app
     .get_webview_window(WindowLabel::RecordingDock.as_str())
     .ok_or_else(|| "The recording pill is unavailable".to_owned())?;
-  contain_recording_dock(&app, &dock).map_err(to_message)?;
-
-  let position = dock.outer_position().map_err(to_message)?;
+  // Clamped so a drag cannot park the pill under the menu bar, the notch or
+  // the taskbar. The clamped position is kept as computed: on macOS the move
+  // is applied asynchronously, so the frame would read back unclamped.
+  let dragged = dock.outer_position().map_err(to_message)?;
+  let position = match monitor_with_most_overlap(&app, &dock).map_err(to_message)? {
+    Some(monitor) => contained_position(&monitor, dragged, dock.outer_size().map_err(to_message)?),
+    None => dragged,
+  };
+  if position != dragged {
+    dock.set_position(position).map_err(to_message)?;
+  }
   let placed = *RECORDING_DOCK_PLACED
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -232,6 +273,7 @@ fn watch_for_recording_dock_mouse_up(app: AppHandle) {
 }
 
 pub fn hide_recording_dock(app: &AppHandle) -> tauri::Result<()> {
+  first_reveal::cancel();
   if let Some(dock) = app.get_webview_window(WindowLabel::RecordingDock.as_str()) {
     platform::hide(&dock)?;
   }

@@ -88,6 +88,16 @@ pub struct ApplicationDetails {
   process_ids: Vec<u32>,
 }
 
+/// Whether a remembered window can still be recorded, with its app's icon
+/// resolved afresh. The remembered icon path points into the temp directory,
+/// which macOS purges of files nobody has read for a few days.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SelectedWindowStatus {
+  available: bool,
+  app_icon_path: Option<PathBuf>,
+}
+
 #[tauri::command]
 pub fn list_monitors(app: AppHandle) -> Result<Vec<MonitorDetails>, String> {
   crate::monitor_topology::snapshot(&app)?
@@ -152,7 +162,8 @@ pub async fn list_windows(app: AppHandle) -> Result<Vec<WindowDetails>, String> 
     .map_err(|error| error.to_string())?
     .join("Screenwide")
     .join("window-selector");
-  tauri::async_runtime::spawn_blocking(move || enumerate_windows(&cache_dir))
+  let icon_dir = application_icon_cache_dir(&app)?;
+  tauri::async_runtime::spawn_blocking(move || enumerate_windows(&cache_dir, &icon_dir))
     .await
     .map_err(|error| error.to_string())?
 }
@@ -176,12 +187,17 @@ pub async fn list_monitor_thumbnails(app: AppHandle) -> Result<Vec<MonitorThumbn
 }
 
 #[tauri::command]
-pub async fn selected_window_available(id: u32, pid: u32) -> Result<bool, String> {
+pub async fn selected_window_status(
+  app: AppHandle,
+  id: u32,
+  pid: u32,
+) -> Result<SelectedWindowStatus, String> {
+  let icon_dir = application_icon_cache_dir(&app)?;
   tauri::async_runtime::spawn_blocking(move || {
     let selectable_window_ids = platform::selectable_window_ids();
     let windows = xcap::Window::all().map_err(|error| error.to_string())?;
 
-    Ok(windows.into_iter().any(|window| {
+    let available = windows.into_iter().any(|window| {
       window.id().ok() == Some(id)
         && window.pid().ok() == Some(pid)
         && selectable_window_ids
@@ -191,7 +207,13 @@ pub async fn selected_window_available(id: u32, pid: u32) -> Result<bool, String
         && window.width().is_ok_and(|width| width > 0)
         && window.height().is_ok_and(|height| height > 0)
         && !window.is_minimized().unwrap_or(true)
-    }))
+    });
+    // The icon belongs to the process, so it resolves for as long as the app
+    // is running, whether or not this particular window still is.
+    Ok(SelectedWindowStatus {
+      available,
+      app_icon_path: platform::app_icon(&icon_dir, pid),
+    })
   })
   .await
   .map_err(|error| error.to_string())?

@@ -17,11 +17,14 @@ export const listMonitorThumbnails = () =>
 
 export const listWindows = () => invoke<WindowDetails[]>("list_windows");
 
-export const selectedWindowAvailable = (window: WindowDetails) =>
-  invoke<boolean>("selected_window_available", {
-    id: window.id,
-    pid: window.pid,
-  });
+export const selectedWindowStatus = (window: WindowDetails) =>
+  invoke<{ appIconPath: string | null; available: boolean }>(
+    "selected_window_status",
+    {
+      id: window.id,
+      pid: window.pid,
+    },
+  );
 
 export const expandRecordingSourceSelector = (
   windowSelector: boolean,

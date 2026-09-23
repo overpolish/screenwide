@@ -38,6 +38,10 @@ export const finishRecordingDockDrag = () =>
 export const resizeRecordingDock = (width: number) =>
   invoke<null>("resize_recording_dock", { width });
 
+/** Tells native the pill's page has drawn, which reveals its first show. */
+export const recordingDockPainted = () =>
+  invoke<null>("recording_dock_painted");
+
 export const startRecordingMonitor = (
   subscriptionId: number,
   channel: Channel<ArrayBuffer>,

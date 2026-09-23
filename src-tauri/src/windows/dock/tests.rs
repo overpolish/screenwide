@@ -35,15 +35,41 @@ fn scales_the_default_gap_with_the_monitor() {
 }
 
 #[test]
-fn applies_a_saved_offset_relative_to_the_work_area() {
-  let offset = Some(RecordingDockOffset { x: 200.0, y: 60.0 });
+fn centres_the_pill_on_a_saved_offset_relative_to_the_work_area() {
+  let offset = Some(RecordingDockOffset {
+    centre_x: 299.0,
+    y: 60.0,
+  });
   let (x, y) = recording_dock_local_position(WORK_AREA, DOCK, 1.0, offset);
-  assert_eq!((x, y), (200, 60));
+  assert_eq!((x, y), (299 - 198 / 2, 60));
+}
+
+#[test]
+fn keeps_the_centre_fixed_when_the_pill_changes_width() {
+  let offset = Some(RecordingDockOffset {
+    centre_x: 400.0,
+    y: 60.0,
+  });
+  let starting = PhysicalSize {
+    width: 128,
+    height: 40,
+  };
+  let recording = PhysicalSize {
+    width: 226,
+    height: 40,
+  };
+  let (starting_x, _) = recording_dock_local_position(WORK_AREA, starting, 1.0, offset);
+  let (recording_x, _) = recording_dock_local_position(WORK_AREA, recording, 1.0, offset);
+  assert_eq!(starting_x + 128 / 2, 400);
+  assert_eq!(recording_x + 226 / 2, 400);
 }
 
 #[test]
 fn keeps_a_saved_offset_the_same_visual_distance_on_a_retina_monitor() {
-  let offset = Some(RecordingDockOffset { x: 200.0, y: 60.0 });
+  let offset = Some(RecordingDockOffset {
+    centre_x: 308.0,
+    y: 60.0,
+  });
   let work_area = PhysicalSize {
     width: 2880,
     height: 1700,
@@ -53,13 +79,13 @@ fn keeps_a_saved_offset_the_same_visual_distance_on_a_retina_monitor() {
     height: 120,
   };
   let (x, y) = recording_dock_local_position(work_area, dock, 2.0, offset);
-  assert_eq!((x, y), (400, 120));
+  assert_eq!((x, y), (616 - 432 / 2, 120));
 }
 
 #[test]
 fn clamps_a_saved_offset_onto_a_smaller_monitor() {
   let offset = Some(RecordingDockOffset {
-    x: 2_000.0,
+    centre_x: 2_000.0,
     y: 1_400.0,
   });
   let work_area = PhysicalSize {
@@ -72,7 +98,10 @@ fn clamps_a_saved_offset_onto_a_smaller_monitor() {
 
 #[test]
 fn clamps_a_negative_offset_back_inside_the_work_area() {
-  let offset = Some(RecordingDockOffset { x: -50.0, y: -80.0 });
+  let offset = Some(RecordingDockOffset {
+    centre_x: -50.0,
+    y: -80.0,
+  });
   let (x, y) = recording_dock_local_position(WORK_AREA, DOCK, 1.0, offset);
   assert_eq!((x, y), (0, 0));
 }

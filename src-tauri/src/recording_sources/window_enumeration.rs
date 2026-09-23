@@ -3,7 +3,12 @@
 
 use super::*;
 
-pub(super) fn enumerate_windows(cache_dir: &Path) -> Result<Vec<WindowDetails>, String> {
+/// Thumbnails go to the picker's own `cache_dir`; app icons go to the shared
+/// `icon_dir`, which every other surface reads and re-extracts from.
+pub(super) fn enumerate_windows(
+  cache_dir: &Path,
+  icon_dir: &Path,
+) -> Result<Vec<WindowDetails>, String> {
   std::fs::create_dir_all(cache_dir).map_err(|error| error.to_string())?;
   let current_pid = std::process::id();
   let windows = xcap::Window::all().map_err(|error| error.to_string())?;
@@ -34,7 +39,7 @@ pub(super) fn enumerate_windows(cache_dir: &Path) -> Result<Vec<WindowDetails>, 
       // A window without a capturable preview is not a usable recording
       // source. Filter it out just as we do minimized windows above.
       let thumbnail_path = create_thumbnail(&window, cache_dir, id)?;
-      let app_icon_path = platform::app_icon(cache_dir, pid);
+      let app_icon_path = platform::app_icon(icon_dir, pid);
 
       Some(WindowDetails {
         id,

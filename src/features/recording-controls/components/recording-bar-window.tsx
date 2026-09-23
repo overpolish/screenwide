@@ -36,7 +36,7 @@ import {
   recordingUiVisible,
   setRecordingSourceSelectorVisible,
   showRegionSelector,
-  selectedWindowAvailable,
+  selectedWindowStatus,
 } from "../../recording-sources/api";
 import { findCurrentMonitor } from "../../recording-sources/monitor-selection";
 import {
@@ -75,22 +75,35 @@ const SKIPPED_INPUT_LABELS: Record<string, string> = {
   microphone: "microphone",
   systemAudio: "system audio",
 };
-const validateSelectedWindow = async (isActive: () => boolean) => {
+/**
+ * Clears a window that can no longer be recorded while window mode is active.
+ * `refreshIcon` repoints the remembered app icon at a freshly extracted file:
+ * it lives in the temp directory, which macOS purges behind the stored path.
+ * The write always lands, even for an unchanged path, so an icon that already
+ * failed to load retries against the recreated file.
+ */
+const validateSelectedWindow = async (
+  isActive: () => boolean,
+  refreshIcon: boolean,
+) => {
   const selected = useRecordingSourceStore.getState().selectedWindow;
   if (!selected) return;
 
   try {
-    const available = await selectedWindowAvailable(selected);
+    const { appIconPath, available } = await selectedWindowStatus(selected);
     if (!isActive()) return;
     const { recordingMode, selectedWindow, setSelectedWindow } =
       useRecordingSourceStore.getState();
     if (
-      !available &&
-      recordingMode === "window" &&
-      selectedWindow?.id === selected.id &&
-      selectedWindow.pid === selected.pid
+      selectedWindow?.id !== selected.id ||
+      selectedWindow.pid !== selected.pid
     ) {
+      return;
+    }
+    if (!available && recordingMode === "window") {
       setSelectedWindow(null);
+    } else if (refreshIcon) {
+      setSelectedWindow({ ...selectedWindow, appIconPath });
     }
   } catch (error) {
     console.error("Could not validate the selected window", error);
@@ -123,13 +136,19 @@ const validateSelectedMonitor = async (isActive: () => boolean) => {
   }
 };
 
+/**
+ * Outside window mode the remembered window is only shown by its app icon, so
+ * it is refreshed once as the bar opens rather than enumerated on every tick.
+ */
 const validateSelectedSource = async (
   mode: RecordingMode,
   isActive: () => boolean,
+  isFirstCheck: boolean,
 ) => {
-  if (mode === "window") {
-    await validateSelectedWindow(isActive);
-  } else if (["region", "screen"].includes(mode)) {
+  if (mode === "window" || isFirstCheck) {
+    await validateSelectedWindow(isActive, isFirstCheck);
+  }
+  if (["region", "screen"].includes(mode)) {
     await validateSelectedMonitor(isActive);
   }
 };
@@ -351,19 +370,23 @@ export function RecordingBarWindow() {
 
     let disposed = false;
     let validating = false;
-    const validate = async () => {
+    const validate = async (isFirstCheck: boolean) => {
       if (validating) return;
       validating = true;
       try {
-        await validateSelectedSource(recordingMode, () => !disposed);
+        await validateSelectedSource(
+          recordingMode,
+          () => !disposed,
+          isFirstCheck,
+        );
       } finally {
         validating = false;
       }
     };
 
-    void validate();
+    void validate(true);
     const interval = window.setInterval(() => {
-      if (!disposed) void validate();
+      if (!disposed) void validate(false);
     }, SOURCE_AVAILABILITY_INTERVAL_MS);
 
     return () => {

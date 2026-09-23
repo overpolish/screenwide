@@ -9,6 +9,7 @@ import {
   SquareDashed,
   Video,
 } from "lucide-react";
+import { useState } from "react";
 
 import {
   PillGroup,
@@ -76,15 +77,7 @@ export function RecordingTypePicker({
     },
     {
       ariaLabel: "Window",
-      icon: selectedWindow?.appIconPath ? (
-        <img
-          alt=""
-          className="size-icon-xl shrink-0 object-contain"
-          src={convertFileSrc(selectedWindow.appIconPath)}
-        />
-      ) : (
-        <AppWindowMac />
-      ),
+      icon: <WindowAppIcon window={selectedWindow} />,
       id: "window",
       label: "Window",
       onPress: onChooseWindow,
@@ -108,6 +101,28 @@ export function RecordingTypePicker({
       selected={mode}
       size="capture"
       variant="ghost"
+    />
+  );
+}
+
+/**
+ * The remembered window's app icon, or the generic window glyph when there is
+ * none or its cached file fails to load: without the fallback WebKit paints
+ * its broken-image question mark. A new `window` object, which the bar writes
+ * after re-extracting the icon, retries the load.
+ */
+function WindowAppIcon({ window }: { window: WindowDetails | null }) {
+  const [failedWindow, setFailedWindow] = useState<WindowDetails | null>(null);
+
+  if (!window?.appIconPath || failedWindow === window) return <AppWindowMac />;
+  return (
+    <img
+      alt=""
+      className="size-icon-xl shrink-0 object-contain"
+      onError={() => {
+        setFailedWindow(window);
+      }}
+      src={convertFileSrc(window.appIconPath)}
     />
   );
 }

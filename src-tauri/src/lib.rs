@@ -148,7 +148,7 @@ pub fn run() {
       recording_sources::list_monitor_thumbnails,
       recording_sources::list_monitors,
       recording_sources::list_windows,
-      recording_sources::selected_window_available,
+      recording_sources::selected_window_status,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       settings::shortcut_defaults::get_shortcut_defaults,
       text_recognition::settings::get_ocr_settings,
@@ -207,6 +207,7 @@ pub fn run() {
       windows::region_gesture::finish_region_selector_gesture,
       windows::dock::finish_recording_dock_drag,
       windows::dock::resize_recording_dock,
+      windows::dock::first_reveal::recording_dock_painted,
       windows::hide_recording_ui,
       windows::recording_ui_visible,
       windows::toggle_recording_ui,
