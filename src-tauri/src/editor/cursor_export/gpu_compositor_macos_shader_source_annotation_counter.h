@@ -111,7 +111,7 @@ static float annotation_counter_exposure(
     const device AnnotationSample &sample = samples[annotation.sample_offset + tap];
     float distance = annotation_counter_distance(
         point, annotation_counter(sample.arrow));
-    total += (1.0 - smoothstep(-feather, feather, distance)) * sample.opacity;
+    total += annotation_edge(distance, feather) * sample.opacity;
   }
   return total / float(annotation.sample_count);
 }
@@ -132,8 +132,8 @@ static float4 annotation_counter_layer(
   float distance = annotation_counter_distance(canvas_point, counter);
   if (halo > 0.0) {
     // The halo hugs the silhouette from the edge outwards, the ruler's way.
-    float band = smoothstep(-feather, feather, distance) *
-        (1.0 - smoothstep(halo - feather, halo + feather, distance));
+    float band = (1.0 - annotation_edge(distance, feather)) *
+        annotation_edge(distance - halo, feather);
     float alpha = band * color.a * annotation_hover_alpha;
     if (alpha > 0.0) {
       rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
@@ -144,7 +144,7 @@ static float4 annotation_counter_layer(
   // folded into the colour; a moving one averages the disc over the
   // exposure, where each sample carries the opacity it had.
   float coverage = annotation.sample_count == 0u
-      ? 1.0 - smoothstep(-feather, feather, distance)
+      ? annotation_edge(distance, feather)
       : annotation_counter_exposure(canvas_point, annotation, samples, feather);
   if (coverage <= 0.0) return rgba;
   float alpha = coverage * color.a;

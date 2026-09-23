@@ -72,12 +72,19 @@ static float2 annotation_arrow_distance(
   return result;
 }
 
+/// How much of a pixel lies inside an edge `distance` canvas pixels away,
+/// where `feather` is half a drawn pixel. A linear ramp across that one pixel
+/// is the area a straight edge actually covers; `smoothstep` is half again as
+/// steep at the edge and leaves visible steps on a 1x display.
+static float annotation_edge(float distance, float feather) {
+  return saturate(0.5 - distance / (2.0 * feather));
+}
+
 /// Coverage of one prepared arrow, feathered over `feather` canvas pixels.
 static float annotation_coverage(
     float2 point, const device AnnotationArrowGeometry &arrow, float feather) {
   float2 distances = annotation_arrow_distance(point, arrow);
-  return max(1.0 - smoothstep(-feather, feather, distances.x),
-             1.0 - smoothstep(-feather, feather, distances.y));
+  return max(annotation_edge(distances.x, feather), annotation_edge(distances.y, feather));
 }
 
 /// Accumulated exposure coverage: the annotation is drawn at every prepared

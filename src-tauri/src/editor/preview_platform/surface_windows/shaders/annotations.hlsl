@@ -200,11 +200,18 @@ float2 annotation_arrow_distance(float2 probe, PreviewGeometry arrow) {
   return result;
 }
 
+/// How much of a pixel lies inside an edge `distance` canvas pixels away,
+/// where `feather` is half a drawn pixel. A linear ramp across that one pixel
+/// is the area a straight edge actually covers; `smoothstep` is half again as
+/// steep at the edge and leaves visible steps on a 1x display.
+float annotation_edge(float distance, float feather) {
+  return saturate(0.5 - distance / (2.0 * feather));
+}
+
 /// Coverage of one prepared arrow, feathered over `feather` canvas pixels.
 float annotation_coverage(float2 probe, PreviewGeometry arrow, float feather) {
   float2 distances = annotation_arrow_distance(probe, arrow);
-  return max(1.0 - smoothstep(-feather, feather, distances.x),
-             1.0 - smoothstep(-feather, feather, distances.y));
+  return max(annotation_edge(distances.x, feather), annotation_edge(distances.y, feather));
 }
 
 /// Accumulated exposure coverage: the annotation is drawn at every prepared
@@ -294,7 +301,7 @@ float annotation_counter_exposure(float2 probe, PreviewArrow annotation, float f
     PreviewSample sample = annotation_samples[annotation.sample_first + tap];
     float distance =
         annotation_counter_distance(probe, annotation_counter(sample.geometry));
-    total += (1.0 - smoothstep(-feather, feather, distance)) * sample.opacity;
+    total += annotation_edge(distance, feather) * sample.opacity;
   }
   return total / (float)annotation.sample_count;
 }
@@ -313,8 +320,8 @@ float4 annotation_counter_layer(
   float distance = annotation_counter_distance(canvas_point, counter);
   if (halo > 0.0) {
     // The halo hugs the silhouette from the edge outwards, the ruler's way.
-    float band = smoothstep(-feather, feather, distance) *
-        (1.0 - smoothstep(halo - feather, halo + feather, distance));
+    float band = (1.0 - annotation_edge(distance, feather)) *
+        annotation_edge(distance - halo, feather);
     float alpha = band * color.a * annotation_hover_alpha;
     if (alpha > 0.0) {
       rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
@@ -325,7 +332,7 @@ float4 annotation_counter_layer(
   // folded into the colour; a moving one averages the disc over the
   // exposure, where each sample carries the opacity it had.
   float coverage = annotation.sample_count == 0u
-      ? 1.0 - smoothstep(-feather, feather, distance)
+      ? annotation_edge(distance, feather)
       : annotation_counter_exposure(canvas_point, annotation, feather);
   if (coverage <= 0.0) return rgba;
   float alpha = coverage * color.a;
@@ -383,8 +390,8 @@ float4 composite_annotations(
     if (halo > 0.0) {
       // The ruler's hover halo: an outline stroke in the shape's own colour,
       // hugging it from the edge outwards.
-      float band = smoothstep(-feather, feather, distance) *
-          (1.0 - smoothstep(halo - feather, halo + feather, distance));
+      float band = (1.0 - annotation_edge(distance, feather)) *
+          annotation_edge(distance - halo, feather);
       float alpha = band * color.a * annotation_hover_alpha;
       if (alpha > 0.0) {
         rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
@@ -394,8 +401,7 @@ float4 composite_annotations(
     // A still frame draws the prepared arrow directly; a moving one averages
     // the arrow over the exposure, head and shaft together.
     float coverage = annotation.sample_count == 0u
-        ? max(1.0 - smoothstep(-feather, feather, distances.x),
-              1.0 - smoothstep(-feather, feather, distances.y))
+        ? max(annotation_edge(distances.x, feather), annotation_edge(distances.y, feather))
         : annotation_exposure(canvas_point, annotation, feather);
     if (coverage <= 0.0) continue;
     float alpha = coverage * color.a;

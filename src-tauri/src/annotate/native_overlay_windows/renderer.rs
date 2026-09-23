@@ -21,8 +21,9 @@ const PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/annotate_o
 #[derive(Clone, Copy)]
 pub(super) struct Constants {
   pub(super) count: u32,
-  /// How wide an edge is smoothed. One layer pixel: the overlay draws at the
-  /// display's own resolution, so there is nothing to widen the band for.
+  /// Half the width an edge is smoothed over, as `composite_annotations`
+  /// takes it. The overlay draws at the display's own resolution, so the edge
+  /// spans one layer pixel and this is half of one.
   pub(super) feather: f32,
   /// The size of the texture the counters' numbers were rasterised into, in
   /// pixels, or zeroes when no counter is on screen to rasterise one.
@@ -129,7 +130,7 @@ impl Renderer {
       .write(self.device.device(), context, &prepared.samples)?;
     let constants = Constants {
       count: numbered.len() as u32,
-      feather: 1.0,
+      feather: 0.5,
       atlas: numbers.as_ref().map_or([0, 0], |atlas| {
         let (width, height) = atlas.size;
         [width, height]

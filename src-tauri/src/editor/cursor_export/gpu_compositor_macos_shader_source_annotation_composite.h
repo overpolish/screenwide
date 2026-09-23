@@ -53,8 +53,8 @@ static float4 composite_annotations(
     if (halo > 0.0) {
       // The ruler's hover halo: an outline stroke in the shape's own colour,
       // hugging it from the edge outwards.
-      float band = smoothstep(-feather, feather, distance) *
-          (1.0 - smoothstep(halo - feather, halo + feather, distance));
+      float band = (1.0 - annotation_edge(distance, feather)) *
+          annotation_edge(distance - halo, feather);
       float alpha = band * color.a * annotation_hover_alpha;
       if (alpha > 0.0) {
         rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
@@ -64,8 +64,7 @@ static float4 composite_annotations(
     // A still frame draws the prepared arrow directly; a moving one averages
     // the arrow over the exposure, head and shaft together.
     float coverage = annotation.sample_count == 0u
-        ? max(1.0 - smoothstep(-feather, feather, distances.x),
-              1.0 - smoothstep(-feather, feather, distances.y))
+        ? max(annotation_edge(distances.x, feather), annotation_edge(distances.y, feather))
         : annotation_exposure(canvas_point, annotation, samples, feather);
     if (coverage <= 0.0) continue;
     float alpha = coverage * color.a;
