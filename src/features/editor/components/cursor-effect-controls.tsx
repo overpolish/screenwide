@@ -6,11 +6,11 @@ import { SliderNumberField } from "../../../components/shared/slider-number-fiel
 import { CursorEffectSettings } from "../types";
 
 export function CursorEffectControls({
-  isSaving,
+  isDisabled,
   onChange,
   settings,
 }: {
-  isSaving: boolean;
+  isDisabled: boolean;
   settings: CursorEffectSettings;
   onChange?: (settings: CursorEffectSettings) => void;
 }) {
@@ -24,7 +24,7 @@ export function CursorEffectControls({
     <div className="flex flex-col gap-section">
       <Checkbox
         description="Hides it where it leaves the recorded area instead of drawing it over the frame."
-        isDisabled={isSaving}
+        isDisabled={isDisabled}
         isSelected={settings.clipAtVideoEdge}
         onChange={(clipAtVideoEdge) => {
           update({ clipAtVideoEdge });
@@ -34,7 +34,7 @@ export function CursorEffectControls({
       </Checkbox>
       <Checkbox
         description="Adds natural smoothing and momentum."
-        isDisabled={isSaving}
+        isDisabled={isDisabled}
         isSelected={settings.smoothMovement}
         onChange={(smoothMovement) => {
           update({ smoothMovement });
@@ -47,7 +47,7 @@ export function CursorEffectControls({
         <SliderNumberField
           aria-label="Cursor size"
           className="w-48"
-          isDisabled={isSaving}
+          isDisabled={isDisabled}
           maxValue={500}
           minValue={50}
           onChange={(nextSizePercent) => {
@@ -59,7 +59,7 @@ export function CursorEffectControls({
         />
       </div>
       <Checkbox
-        isDisabled={isSaving}
+        isDisabled={isDisabled}
         isSelected={settings.motionBlur}
         onChange={(motionBlur) => {
           update({ motionBlur });
@@ -68,7 +68,7 @@ export function CursorEffectControls({
         Motion blur
       </Checkbox>
       <Checkbox
-        isDisabled={isSaving}
+        isDisabled={isDisabled}
         isSelected={settings.clickAnimation}
         onChange={(clickAnimation) => {
           update({ clickAnimation });

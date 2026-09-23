@@ -41,7 +41,7 @@ export const Selection: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasCursorData: true,
-      isSaving: false,
+      isLocked: false,
       selection: {
         dropShadow: true,
         height: 2458,
@@ -69,7 +69,7 @@ export const SelectionCamera: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasCursorData: true,
-      isSaving: false,
+      isLocked: false,
       selection: {
         canBake: true,
         dropShadow: true,
@@ -99,7 +99,7 @@ export const SelectionBakedCamera: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasCursorData: true,
-      isSaving: false,
+      isLocked: false,
       selection: {
         canBake: true,
         dropShadow: true,
@@ -129,7 +129,7 @@ export const SelectionAudio: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasCursorData: true,
-      isSaving: false,
+      isLocked: false,
       selection: { decibels: 6, kind: "audio", label: "Microphone" },
     });
   },
@@ -144,7 +144,7 @@ export const SelectionEmpty: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasCursorData: true,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },
@@ -160,7 +160,7 @@ export const SelectionShortcut: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasKeyboardData: true,
-      isSaving: false,
+      isLocked: false,
       keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
       keyboardMaximum: 240,
       selection: {

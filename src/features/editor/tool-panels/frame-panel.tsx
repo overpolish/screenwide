@@ -26,7 +26,7 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  */
 export function FramePanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
-  const { background, backgroundPresets, frame, isSaving } = snapshot;
+  const { background, backgroundPresets, frame, isLocked } = snapshot;
   const presets = useBuiltInBackgroundPresets();
   const showPresetMenu = useBackgroundPresetMenu((id) => {
     change({ removePreset: id });
@@ -42,7 +42,7 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
     // `Dimensions` has no disabled state of its own: a save takes the whole
     // group out of reach the way the selection panel's does.
     <div
-      className={`flex flex-col gap-section ${isSaving ? "pointer-events-none opacity-50" : ""}`}
+      className={`flex flex-col gap-section ${isLocked ? "pointer-events-none opacity-50" : ""}`}
     >
       <Dimensions
         height={frame.height}
@@ -70,7 +70,7 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
           aria-label="Radius"
           className="w-48"
           formatOptions={{ maximumFractionDigits: 1, minimumFractionDigits: 1 }}
-          isDisabled={isSaving}
+          isDisabled={isLocked}
           maxValue={50}
           minValue={0}
           onChange={(radius) => {
@@ -87,7 +87,7 @@ export function FramePanel({ workspace }: { workspace: EditorKind }) {
           Background
         </Text>
         <BackgroundPicker
-          isDisabled={isSaving}
+          isDisabled={isLocked}
           onChange={(next) => {
             change({ background: next });
           }}

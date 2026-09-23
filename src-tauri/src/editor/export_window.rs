@@ -185,12 +185,13 @@ pub fn show_export_options(app: AppHandle, window: WebviewWindow) -> Result<(), 
   show(&app, kind).map_err(|error| error.to_string())
 }
 
-/// Closes the export options window the call came from, and returns to its
-/// editor. The workspace is read off the caller, which is the options window
-/// itself rather than the editor.
+/// Closes a workspace's export options window, and returns to its editor.
+/// Called by the options window itself, or by its editor when Escape is
+/// pressed there or in its tool panel; the workspace is read off the caller.
 #[tauri::command]
 pub fn hide_export_options(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
   let kind = kind_of_options_label(window.label())
+    .or_else(|| kind_of_editor_label(window.label()))
     .ok_or_else(|| "That window has no editor workspace".to_owned())?;
   hide(&app, kind).map_err(|error| error.to_string())?;
   // The editor is the window the user came from, so it gets the focus back

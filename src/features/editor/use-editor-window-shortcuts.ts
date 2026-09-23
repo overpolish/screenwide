@@ -15,6 +15,7 @@ import {
   ownsPopupInteractionKeys,
   ownsTextEditingKeys,
 } from "./keyboard-target";
+import { sheetOwnsKey } from "./sheet-escape";
 
 /**
  * How many mounted hooks have claimed Escape for a tool that is in the middle
@@ -98,6 +99,7 @@ export function useEditorWindowShortcuts({
       focusIntentRef.current = "pointer";
     };
     const onKeyDown = (event: KeyboardEvent) => {
+      if (sheetOwnsKey(event, consume)) return;
       if (
         event.repeat &&
         consumedKeys.has(event.code) &&

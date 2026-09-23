@@ -44,6 +44,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     cursorEffects,
     hasCursorData,
     hasKeyboardData,
+    isSheetOpen,
     keyboardEffects,
     onEnabledTracksChange,
     onEnabledVideoTracksChange,
@@ -133,7 +134,12 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     player,
     visiblePaneEntries,
   } = transport;
+  // A sheet is modal to the editor, so the preview does not play on under it.
   const isPlaying = player.isPlaying;
+  const pausePlayer = player.pause;
+  useEffect(() => {
+    if (isSheetOpen && isPlaying) pausePlayer();
+  }, [isPlaying, isSheetOpen, pausePlayer]);
   const canEditActiveTrack =
     activeVideoTrack !== null && selectedVideoTracks.has(activeVideoTrack);
   const canResizeActiveTrack =
@@ -191,7 +197,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     hasCursorData,
     hasKeyboardData,
     hasVisiblePanes,
-    isPlaying,
   });
   useEffect(() => {
     playhead.publish(0, 0);

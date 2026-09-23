@@ -51,7 +51,7 @@ export const Counter: Story = {
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },
@@ -72,7 +72,7 @@ export const Arrow: Story = {
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },
@@ -94,7 +94,7 @@ export const ArrowCustomColour: Story = {
       annotationColors: ["#2ec4b6", "#8b5e34"],
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },
@@ -114,7 +114,7 @@ export const ArrowWithoutAnimation: Story = {
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },
@@ -136,7 +136,7 @@ export const ArrowInAScreenshot: Story = {
         },
         cursorEffects: DEFAULT_CURSOR_EFFECTS,
         frame: null,
-        isSaving: false,
+        isLocked: false,
         selection: null,
       },
       "screenshot",
@@ -150,7 +150,7 @@ export const Cursor: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasCursorData: true,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },
@@ -164,7 +164,7 @@ export const WithoutCursorData: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasCursorData: false,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },
@@ -181,7 +181,7 @@ export const Keyboard: Story = {
       frame: null,
       hasCursorData: true,
       hasKeyboardData: true,
-      isSaving: false,
+      isLocked: false,
       keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
       keyboardMaximum: 240,
       selection: null,
@@ -198,7 +198,7 @@ export const WithoutKeyboardData: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasKeyboardData: false,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },
@@ -227,7 +227,7 @@ export const Frame: Story = {
         width: 3600,
       },
       hasCursorData: true,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },
@@ -248,7 +248,7 @@ export const Crop: Story = {
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       hasCursorData: true,
-      isSaving: false,
+      isLocked: false,
       selection: null,
     });
   },

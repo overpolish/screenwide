@@ -18,11 +18,11 @@ import { ToolPanelPatch, ToolPanelShortcutSelection } from "./tool-panel-store";
  */
 export function ShortcutSelectionRows({
   change,
-  isSaving,
+  isLocked,
   selection,
 }: {
   change: (values: ToolPanelPatch) => void;
-  isSaving: boolean;
+  isLocked: boolean;
   selection: ToolPanelShortcutSelection;
 }) {
   // The slider needs a range to run over, so a canvas narrow enough that the
@@ -36,7 +36,7 @@ export function ShortcutSelectionRows({
         <SliderNumberField
           aria-label="Size"
           className="w-48"
-          isDisabled={isSaving}
+          isDisabled={isLocked}
           maxValue={maximum}
           minValue={minimum}
           onChange={(sizePercent) => {
@@ -54,7 +54,7 @@ export function ShortcutSelectionRows({
           <NumberField
             aria-label="Shortcut X position"
             className="w-20"
-            isDisabled={isSaving}
+            isDisabled={isLocked}
             leftSection="X"
             maxValue={100}
             minValue={0}
@@ -69,7 +69,7 @@ export function ShortcutSelectionRows({
           <NumberField
             aria-label="Shortcut Y position"
             className="w-20"
-            isDisabled={isSaving}
+            isDisabled={isLocked}
             leftSection="Y"
             maxValue={100}
             minValue={0}
@@ -86,7 +86,7 @@ export function ShortcutSelectionRows({
 
       <div className="flex justify-end gap-control">
         <Button
-          isDisabled={isSaving}
+          isDisabled={isLocked}
           onPress={() => {
             change({ resetShortcut: true });
           }}
@@ -94,7 +94,7 @@ export function ShortcutSelectionRows({
           Reset
         </Button>
         <Button
-          isDisabled={isSaving}
+          isDisabled={isLocked}
           onPress={() => {
             change({ applyShortcutToAll: true });
           }}

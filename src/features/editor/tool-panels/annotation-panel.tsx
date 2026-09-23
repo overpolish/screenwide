@@ -37,7 +37,7 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  */
 export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
-  const { annotation, annotationColors, isSaving } = snapshot;
+  const { annotation, annotationColors, isLocked } = snapshot;
   const showColorMenu = useAnnotationColorMenu((color) => {
     change({ removeAnnotationColor: color });
   });
@@ -52,7 +52,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       <div className="flex items-center justify-between gap-section">
         <span className="text-body text-content-fg">{kind.sizeLabel}</span>
         <AnnotationWidthSlider
-          isDisabled={isSaving}
+          isDisabled={isLocked}
           label={kind.sizeLabel}
           onChange={(next) => {
             change({ annotationStyle: { width: next } });
@@ -69,7 +69,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         <div className="flex items-center justify-between gap-section">
           <span className="text-body text-content-fg">Angle</span>
           <AnnotationAngleDial
-            isDisabled={isSaving}
+            isDisabled={isLocked}
             onChange={(next) => {
               change({ annotationAngle: next });
             }}
@@ -86,7 +86,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           <span className="text-body text-content-fg">Animate</span>
           <Switch
             aria-label="Animate"
-            isDisabled={isSaving}
+            isDisabled={isLocked}
             isSelected={annotation.animated}
             onChange={(next) => {
               change({ annotationAnimated: next });
@@ -99,7 +99,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         <div className="flex items-center justify-between gap-section">
           <span className="text-body text-content-fg">Head</span>
           <AnnotationHeadGroup
-            isDisabled={isSaving}
+            isDisabled={isLocked}
             onChange={(next) => {
               change({ annotationStyle: { head: next } });
             }}
@@ -117,7 +117,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           <span className="text-body text-content-fg">Direction</span>
           <Button
             aria-label="Reverse the arrow"
-            isDisabled={isSaving}
+            isDisabled={isLocked}
             onPress={() => {
               change({ reverseAnnotation: true });
             }}
@@ -131,7 +131,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       {/* The swatches say what they are, so the row carries no heading; it
           keeps the section gap its labelled neighbours sit on. */}
       <AnnotationColorGrid
-        isDisabled={isSaving}
+        isDisabled={isLocked}
         onChange={(next) => {
           change({ annotationStyle: { color: next } });
         }}

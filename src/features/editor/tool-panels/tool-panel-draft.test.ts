@@ -20,7 +20,7 @@ const snapshot = (
   cursorEffects: { ...DEFAULT_CURSOR_EFFECTS, sizePercent },
   frame: null,
   hasCursorData: true,
-  isSaving: false,
+  isLocked: false,
   selection: null,
 });
 const draft = (sizePercent: number, seq: number): ToolPanelDraft => ({
@@ -80,10 +80,10 @@ describe("panel input during delayed editor replies", () => {
     expect(resolve(snapshot(100, 3), null).cursorEffects.sizePercent).toBe(100);
   });
 
-  it("keeps saving and availability metadata live while an edit is pending", () => {
-    const reply = { ...snapshot(100, 1), hasCursorData: false, isSaving: true };
+  it("keeps lock and availability metadata live while an edit is pending", () => {
+    const reply = { ...snapshot(100, 1), hasCursorData: false, isLocked: true };
     const value = resolve(reply, draft(250, 3));
-    expect(value.isSaving).toBe(true);
+    expect(value.isLocked).toBe(true);
     expect(value.hasCursorData).toBe(false);
     expect(value.cursorEffects.sizePercent).toBe(250);
   });

@@ -49,11 +49,11 @@ type PreviewViewportProps = {
    * and the layer's own chrome stands down for as long as one is held. */
   annotationTool?: import("../annotation-defaults").AnnotationTool;
   isEditing?: boolean;
-  /** Suspends native input, so the DOM over the viewport stays clickable. */
-  isExportOpen?: boolean;
   isResizingCanvas?: boolean;
   isSaving?: boolean;
   isSelecting?: boolean;
+  /** An export or confirm sheet is up: native input stands down under it. */
+  isSheetOpen?: boolean;
   onAnnotationHover?: (annotationId: string | null) => void;
   onBackgroundRadiusChange?: (radiusPercent: number) => void;
   onBackgroundRadiusChangeEnd?: () => void;
@@ -82,10 +82,10 @@ export function PreviewViewport({
   annotationTool,
   artifactId,
   isEditing = false,
-  isExportOpen = false,
   isResizingCanvas = false,
   isSaving = false,
   isSelecting = false,
+  isSheetOpen = false,
   items,
   naturalHeight,
   naturalWidth,
@@ -475,7 +475,7 @@ export function PreviewViewport({
       artifactId,
       canvasRef: nativeFrameRef,
       interactionOutput: workspaceOutput,
-      isEditorSuspended: isSaving || isExportOpen,
+      isEditorSuspended: isSaving || isSheetOpen,
       isEnabled: workspaceOutput !== undefined,
       onAnnotationChange: annotationChange,
       onAnnotationHover,

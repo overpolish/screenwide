@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ReactNode } from "react";
+import { ReactNode, use } from "react";
 
 import { IconToggleButton } from "../../base/button/icon-button";
 import { NativeTooltipTrigger } from "../native-tooltip/native-tooltip-trigger";
+
+import { ToolToggleDisabledContext } from "./tool-toggle-disabled";
 
 /**
  * One tool in a toolbar: a toggle whose tooltip names its keyboard shortcut.
@@ -32,12 +34,13 @@ export function ToolToggle({
   isDisabled?: boolean;
   shortcut?: string;
 }) {
+  const isBarDisabled = use(ToolToggleDisabledContext);
   return (
     <NativeTooltipTrigger tooltip={{ label, shortcut }}>
       <IconToggleButton
         aria-keyshortcuts={shortcut}
         aria-label={name}
-        isDisabled={isDisabled}
+        isDisabled={isDisabled || isBarDisabled}
         isSelected={isSelected}
         onChange={onSelectedChange}
       >

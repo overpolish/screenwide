@@ -57,7 +57,7 @@ type EditorToolPanelInputs = {
   cameraOverlay: CameraOverlaySettings;
   cursorEffects: CursorEffectSettings;
   enabledVideoTracks: RecordingVideoTrackId[];
-  isSaving: boolean;
+  isLocked: boolean;
   keyboardEffects: KeyboardEffectSettings;
   recordingOutput: RecordingOutputSettings | null | undefined;
   recordingTimelineEdit: RecordingTimelineEdit | null | undefined;
@@ -96,7 +96,7 @@ export function useEditorToolPanels({
   cameraOverlay,
   cursorEffects,
   enabledVideoTracks,
-  isSaving,
+  isLocked,
   keyboardEffects,
   onBakeCameraChange,
   onCameraOverlayChange,
@@ -209,7 +209,7 @@ export function useEditorToolPanels({
       hasCursorData: artifact?.kind === "recording" && artifact.hasCursorData,
       hasKeyboardData:
         artifact?.kind === "recording" && artifact.hasKeyboardData,
-      isSaving,
+      isLocked,
       keyboardEffects,
       keyboardMaximum:
         artifact?.kind === "recording" && keyboardOutput

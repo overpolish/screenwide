@@ -92,8 +92,8 @@ export function useRecordingPreviewTransport(
     cursorEffects,
     durationMs,
     enabledVideoTracks,
-    isExportOpen,
     isSaving,
+    isSheetOpen,
     keyboardEffects,
     onRecordingOutputChange,
     onRecordingTimelineEditChange,
@@ -119,11 +119,10 @@ export function useRecordingPreviewTransport(
   // screen for the duration of the save (every path that clears `isSaving`:
   // success, failure and cancel) and changes nothing else: the editor stays
   // enabled, the panes keep rendering natively, and the workspace zoom and pan
-  // are exactly where the user left them when the overlay goes away. The
-  // export options window covers the workspace with the same kind of DOM blur,
-  // and is suspended for the same reason.
-  const isEditorSuspended =
-    nativeEditorOwnsLayout && (isSaving || isExportOpen);
+  // are exactly where the user left them when the overlay goes away. An export
+  // or confirm sheet over the editor covers the workspace in the same way, and
+  // is suspended for the same reason.
+  const isEditorSuspended = nativeEditorOwnsLayout && (isSaving || isSheetOpen);
   const { previewCameraOverlay, previewRecordingOutput } =
     useRecordingCropPreview({
       activeVideoTrack,
@@ -192,7 +191,6 @@ export function useRecordingPreviewTransport(
   );
   const annotations = useRecordingAnnotations({
     edit: annotationEdit,
-    isPlaying: player.isPlaying,
     onEdit: (next) => onRecordingTimelineEditChange?.(next),
     onSelectTrack: (track) => {
       if (player.isPlaying) player.pause();

@@ -22,8 +22,8 @@ import {
 /** What the screenshot workspace is shown, and what it reports back. */
 export type ScreenshotSectionProps = {
   artifact: Extract<EditorArtifact, { kind: "screenshot" }>;
-  isExportOpen?: boolean;
   isSaving?: boolean;
+  isSheetOpen?: boolean;
   onBackgroundRadiusChange?: (radiusPercent: number) => void;
   onBackgroundRadiusChangeEnd?: () => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
@@ -49,10 +49,10 @@ export type RecordingSectionProps = {
   enabledVideoTracks?: RecordingVideoTrackId[];
   hasCursorData?: boolean;
   hasKeyboardData?: boolean;
-  isExportOpen?: boolean;
   isPreparingRecordingAudio?: boolean;
   isPreparingRecordingPreview?: boolean;
   isSaving?: boolean;
+  isSheetOpen?: boolean;
   keyboardEffects?: KeyboardEffectSettings;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onEnabledTracksChange?: (streamIndices: number[]) => void;

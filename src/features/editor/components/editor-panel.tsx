@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { WindowShell } from "../../../components/shared/window-shell/window-shell";
-import { useConfirmSheetModal } from "../../confirm-sheet/use-confirm-sheet-modal";
 import { useExportOptionsBridge } from "../export-options/use-export-options-bridge";
-import { useExportOptionsOpen } from "../export-options/use-export-options-open";
 import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
@@ -19,6 +17,7 @@ import { RecordingSection, ScreenshotSection } from "./editor-preview-section";
 import { EditorTitlebar } from "./editor-titlebar";
 import { EditorToolbarProvider } from "./editor-toolbar-provider";
 import { PreviewFitProvider } from "./preview-fit";
+import { useEditorSheets } from "./use-editor-sheets";
 
 /**
  * `EditorPanelProps` still carries what the inspectors used to read - the bake
@@ -109,9 +108,13 @@ export function EditorPanel({
   // window's own workspace rather than the artifact's, so an editor with
   // nothing in it cannot publish over the other workspace's settings.
   const workspace = currentEditorKind() ?? artifact?.kind ?? "recording";
-  const { isExportOpen, open: openExportOptions } =
-    useExportOptionsOpen(workspace);
-  const isConfirmSheetModal = useConfirmSheetModal();
+  const { isSheetOpen, openExportOptions } = useEditorSheets(
+    workspace,
+    Boolean(isSaving),
+  );
+  // A save or a sheet over the editor puts its tools out of reach, in the title
+  // bar and in the tool panels alike, while leaving them in view.
+  const isLocked = Boolean(isSaving) || isSheetOpen;
   useExportOptionsBridge(
     workspace,
     {
@@ -161,7 +164,7 @@ export function EditorPanel({
     cameraOverlay,
     cursorEffects,
     enabledVideoTracks,
-    isSaving: Boolean(isSaving),
+    isLocked,
     keyboardEffects,
     onBakeCameraChange,
     onCameraOverlayChange,
@@ -192,6 +195,7 @@ export function EditorPanel({
               canExport={canExport}
               fileStem={fileStem}
               isSaving={isSaving}
+              isToolbarDisabled={isLocked}
               onClose={onCancel}
               onCopy={onCopy}
               onExport={openExportOptions}
@@ -212,7 +216,7 @@ export function EditorPanel({
           bar stays live so the window can still be moved. */}
           <div
             className="flex min-h-0 grow flex-col gap-section"
-            inert={isExportOpen || isConfirmSheetModal}
+            inert={isSheetOpen}
           >
             <ToolPanelPlacement workspace={workspace} />
             {artifact?.kind === "recording" ? (
@@ -227,10 +231,10 @@ export function EditorPanel({
                 enabledVideoTracks={enabledVideoTracks}
                 hasCursorData={artifact.hasCursorData}
                 hasKeyboardData={artifact.hasKeyboardData}
-                isExportOpen={isExportOpen}
                 isPreparingRecordingAudio={isPreparingRecordingAudio}
                 isPreparingRecordingPreview={isPreparingRecordingPreview}
                 isSaving={isSaving}
+                isSheetOpen={isSheetOpen}
                 key={artifact.id}
                 keyboardEffects={keyboardEffects}
                 onCameraOverlayChange={onCameraOverlayChange}
@@ -253,8 +257,8 @@ export function EditorPanel({
               <section className="flex min-h-0 grow flex-col">
                 <ScreenshotSection
                   artifact={artifact}
-                  isExportOpen={isExportOpen}
                   isSaving={isSaving}
+                  isSheetOpen={isSheetOpen}
                   onBackgroundRadiusChange={onScreenshotBackgroundRadiusChange}
                   onBackgroundRadiusChangeEnd={
                     onScreenshotBackgroundRadiusChangeEnd

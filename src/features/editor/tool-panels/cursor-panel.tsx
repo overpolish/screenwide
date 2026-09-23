@@ -22,7 +22,7 @@ export function CursorPanel({ workspace }: { workspace: EditorKind }) {
   return (
     <>
       <CursorEffectControls
-        isSaving={snapshot.isSaving}
+        isDisabled={snapshot.isLocked}
         onChange={(cursorEffects) => {
           change({ cursorEffects });
         }}
@@ -32,7 +32,7 @@ export function CursorPanel({ workspace }: { workspace: EditorKind }) {
           where its meaning is plain, rather than on the toolbar. */}
       <div className="flex justify-end">
         <Button
-          isDisabled={snapshot.isSaving}
+          isDisabled={snapshot.isLocked}
           onPress={() => {
             change({ cursorEffects: DEFAULT_CURSOR_EFFECTS });
           }}

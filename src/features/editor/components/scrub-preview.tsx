@@ -32,10 +32,10 @@ export type ScrubPreviewProps = {
   enabledVideoTracks?: RecordingVideoTrackId[];
   hasCursorData?: boolean;
   hasKeyboardData?: boolean;
-  isExportOpen?: boolean;
   isPreparingAudio?: boolean;
   isPreparingPreview?: boolean;
   isSaving?: boolean;
+  isSheetOpen?: boolean;
   keyboardEffects?: KeyboardEffectSettings;
   keyboardMaximumWidthUnits?: number | null;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;

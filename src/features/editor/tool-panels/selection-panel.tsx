@@ -38,7 +38,7 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  */
 export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
-  const { isSaving, selection } = snapshot;
+  const { isLocked, selection } = snapshot;
 
   if (!selection) {
     return <Text variant="body">Nothing selected</Text>;
@@ -48,7 +48,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
     return (
       <ShortcutSelectionRows
         change={change}
-        isSaving={isSaving}
+        isLocked={isLocked}
         selection={selection}
       />
     );
@@ -63,7 +63,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
         <div className="flex items-center gap-control">
           <IconButton
             aria-label="Reset volume"
-            isDisabled={isSaving || selection.decibels === 0}
+            isDisabled={isLocked || selection.decibels === 0}
             onPress={() => {
               change({ audioVolume: 0 });
             }}
@@ -73,7 +73,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           <SliderNumberField
             aria-label="Volume"
             className="w-48"
-            isDisabled={isSaving}
+            isDisabled={isLocked}
             maxValue={12}
             minValue={-60}
             onChange={(decibels) => {
@@ -103,7 +103,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           <span className="text-body text-content-fg">Combine with screen</span>
           <Switch
             aria-label="Combine with screen"
-            isDisabled={isSaving || !selection.canBake}
+            isDisabled={isLocked || !selection.canBake}
             isSelected={Boolean(selection.isBaked)}
             onChange={(bake) => {
               change({ bakeCamera: bake });
@@ -114,7 +114,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
 
       {/* `Dimensions` has no disabled state of its own: a save takes the whole
           group out of reach the way the output controls do. */}
-      <div className={isSaving ? "pointer-events-none opacity-50" : ""}>
+      <div className={isLocked ? "pointer-events-none opacity-50" : ""}>
         <Dimensions
           height={selection.height}
           initialLinked
@@ -137,7 +137,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
       </div>
 
       <Checkbox
-        isDisabled={isSaving}
+        isDisabled={isLocked}
         isSelected={selection.dropShadow}
         onChange={(next) => {
           change({ selectionDropShadow: next });
@@ -152,7 +152,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           aria-label="Radius"
           className="w-48"
           formatOptions={{ maximumFractionDigits: 1, minimumFractionDigits: 1 }}
-          isDisabled={isSaving}
+          isDisabled={isLocked}
           maxValue={50}
           minValue={0}
           onChange={(radius) => {
@@ -176,7 +176,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
             <SliderNumberField
               aria-label="Inset"
               className="w-48"
-              isDisabled={isSaving}
+              isDisabled={isLocked}
               maxValue={Number.MAX_SAFE_INTEGER}
               minValue={0}
               onChange={(inset) => {
@@ -189,7 +189,7 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           </div>
           <div className="flex justify-end">
             <Button
-              isDisabled={isSaving}
+              isDisabled={isLocked}
               onPress={() => {
                 change({ recenterSelection: true });
               }}

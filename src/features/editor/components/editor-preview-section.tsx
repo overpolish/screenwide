@@ -47,8 +47,8 @@ const screenshotToolId = (tool: ScreenshotTool): EditorToolId | null =>
  */
 export function ScreenshotSection({
   artifact,
-  isExportOpen = false,
   isSaving = false,
+  isSheetOpen = false,
   onBackgroundRadiusChange,
   onBackgroundRadiusChangeEnd,
   onCanvasResize,
@@ -263,10 +263,10 @@ export function ScreenshotSection({
         annotationTool={annotationTool}
         artifactId={artifact.id}
         isEditing={tool === "crop"}
-        isExportOpen={isExportOpen}
         isResizingCanvas={tool === "canvas"}
         isSaving={isSaving}
         isSelecting={tool === "select"}
+        isSheetOpen={isSheetOpen}
         items={artifact.items}
         naturalHeight={artifact.height}
         naturalWidth={artifact.width}
@@ -311,10 +311,10 @@ export function RecordingSection({
   enabledVideoTracks,
   hasCursorData,
   hasKeyboardData,
-  isExportOpen,
   isPreparingRecordingAudio,
   isPreparingRecordingPreview,
   isSaving,
+  isSheetOpen,
   keyboardEffects,
   onCameraOverlayChange,
   onEnabledTracksChange,
@@ -370,10 +370,10 @@ export function RecordingSection({
         enabledVideoTracks={enabledVideoTracks}
         hasCursorData={hasCursorData}
         hasKeyboardData={hasKeyboardData}
-        isExportOpen={isExportOpen}
         isPreparingAudio={isPreparingRecordingAudio}
         isPreparingPreview={isPreparingRecordingPreview}
         isSaving={isSaving}
+        isSheetOpen={isSheetOpen}
         key={artifact.id}
         keyboardEffects={keyboardEffects}
         keyboardMaximumWidthUnits={artifact.keyboardMaximumWidthUnits}

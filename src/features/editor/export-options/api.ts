@@ -20,7 +20,8 @@ export const showExportOptions = async () => {
   await invoke<null>("show_export_options");
 };
 
-/** Closes this export options window and returns to its editor. */
+/** Closes the calling workspace's export options, from the options window or
+ * its editor, and returns to the editor. */
 export const hideExportOptions = async () => {
   await invoke<null>("hide_export_options");
 };

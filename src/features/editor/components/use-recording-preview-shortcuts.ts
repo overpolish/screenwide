@@ -66,7 +66,6 @@ export function useRecordingPreviewShortcuts({
   const canNudgeActiveTrack =
     canvasTool === "select" &&
     canMoveActiveVideoTrack &&
-    !isPlaying &&
     !annotations.hasSelection;
   useEditorWindowShortcuts({
     onConfirm: isCropping ? leaveCropTool : undefined,
@@ -90,12 +89,11 @@ export function useRecordingPreviewShortcuts({
     onToggleCursorPanel: hasCursorData ? toggleCursorPanel : undefined,
     onToggleKeyboardPanel: hasKeyboardData ? toggleKeyboardPanel : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
-    onTool:
-      hasVisiblePanes && !isPlaying
-        ? (tool) => {
-            toggleTool[tool]();
-          }
-        : undefined,
+    onTool: hasVisiblePanes
+      ? (tool) => {
+          toggleTool[tool]();
+        }
+      : undefined,
     ownsEscape: isCropping || annotations.hasSelection,
   });
 }

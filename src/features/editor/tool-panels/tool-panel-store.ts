@@ -77,7 +77,9 @@ export type ToolPanelSnapshot = {
   frame: ToolPanelFrame | null;
   hasCursorData: boolean;
   hasKeyboardData: boolean;
-  isSaving: boolean;
+  /** A save runs or a sheet stands over the editor: the panels stay up, and
+   * every control in them is disabled. */
+  isLocked: boolean;
   keyboardEffects: KeyboardEffectSettings;
   /** As big as a shortcut may be drawn in this recording's canvas, in percent:
    * the point past which the widest shortcut would run off the edge. */
@@ -186,7 +188,7 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   frame: null,
   hasCursorData: false,
   hasKeyboardData: false,
-  isSaving: false,
+  isLocked: false,
   keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
   keyboardMaximum: 500,
   selection: null,

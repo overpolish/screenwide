@@ -17,7 +17,7 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  */
 export function CropPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
-  const { crop, isSaving } = snapshot;
+  const { crop, isLocked } = snapshot;
 
   if (!crop) return null;
 
@@ -29,7 +29,7 @@ export function CropPanel({ workspace }: { workspace: EditorKind }) {
     // `Dimensions` has no disabled state of its own: a save takes the whole
     // group out of reach the way the frame panel's does.
     <div
-      className={`flex flex-col gap-section ${isSaving ? "pointer-events-none opacity-50" : ""}`}
+      className={`flex flex-col gap-section ${isLocked ? "pointer-events-none opacity-50" : ""}`}
     >
       <Dimensions
         height={crop.height}

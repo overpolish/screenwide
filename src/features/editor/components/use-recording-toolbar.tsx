@@ -20,7 +20,6 @@ export function useRecordingToolbar({
   hasCursorData,
   hasKeyboardData,
   hasVisiblePanes,
-  isPlaying,
 }: {
   canEditActiveTrack: boolean;
   canResizeActiveTrack: boolean;
@@ -29,7 +28,6 @@ export function useRecordingToolbar({
   hasCursorData: boolean;
   hasKeyboardData: boolean;
   hasVisiblePanes: boolean;
-  isPlaying: boolean;
 }) {
   const {
     close: closeToolPanel,
@@ -82,7 +80,7 @@ export function useRecordingToolbar({
             </ButtonGroup>
           ) : null}
           <RecordingCanvasTools
-            isArrowEnabled={!isPlaying && hasVisiblePanes}
+            isArrowEnabled={hasVisiblePanes}
             isEnabled={canEditActiveTrack}
             isFrameEnabled={canResizeActiveTrack}
             isSelectEnabled={hasVisiblePanes}
@@ -94,7 +92,6 @@ export function useRecordingToolbar({
     [
       canEditActiveTrack,
       canResizeActiveTrack,
-      isPlaying,
       hasVisiblePanes,
       canvasTool,
       changeCanvasTool,

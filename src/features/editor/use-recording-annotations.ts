@@ -33,7 +33,6 @@ const EMPTY_CLIPS: RecordingAnnotationClip[] = [];
 
 export function useRecordingAnnotations({
   edit,
-  isPlaying,
   onEdit,
   onSelectTrack,
   sessionId,
@@ -42,7 +41,6 @@ export function useRecordingAnnotations({
   trackId,
 }: {
   edit: RecordingTimelineEdit;
-  isPlaying: boolean;
   onEdit: (edit: RecordingTimelineEdit) => void;
   sessionId: number | null;
   sourceDurationMs: number;
@@ -79,7 +77,6 @@ export function useRecordingAnnotations({
   const selection = useAnnotations({
     annotations: clips.map((clip) => clip.annotation),
     onCommit: (annotations) => {
-      if (isPlaying) return;
       const byId = new Map(
         annotations.map((annotation) => [annotation.id, annotation]),
       );
@@ -173,9 +170,7 @@ export function useRecordingAnnotations({
   ]);
   return {
     ...selection,
-    canDelete:
-      !isPlaying &&
-      (selection.hasSelection || (tool !== null && selection.canDelete)),
+    canDelete: selection.hasSelection || (tool !== null && selection.canDelete),
     clips,
     onClipsChange: commitClips,
     onPreviewClips: setPreviewClips,

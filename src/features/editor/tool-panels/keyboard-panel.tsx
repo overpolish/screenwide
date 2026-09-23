@@ -44,7 +44,7 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
   const {
     canRestoreShortcuts,
     hasKeyboardData,
-    isSaving,
+    isLocked,
     keyboardEffects,
     keyboardMaximum,
   } = snapshot;
@@ -55,7 +55,7 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
     );
   }
 
-  const isDisabled = isSaving || !keyboardEffects.bake;
+  const isDisabled = isLocked || !keyboardEffects.bake;
   // The slider needs a range to run over, so a canvas narrow enough that the
   // shortcut's own floor meets its ceiling still leaves one to scrub.
   const maximum = Math.max(keyboardMaximum, 10);
@@ -77,7 +77,7 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
         <span className="text-body text-content-fg">Show shortcuts</span>
         <Switch
           aria-label="Show shortcuts"
-          isDisabled={isSaving}
+          isDisabled={isLocked}
           isSelected={keyboardEffects.bake}
           onChange={(bake) => {
             change({ keyboardEffects: { bake } });

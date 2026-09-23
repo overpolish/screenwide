@@ -24,10 +24,10 @@ export type ResolvedScrubPreviewProps = ScrubPreviewProps &
       | "enabledVideoTracks"
       | "hasCursorData"
       | "hasKeyboardData"
-      | "isExportOpen"
       | "isPreparingAudio"
       | "isPreparingPreview"
       | "isSaving"
+      | "isSheetOpen"
       | "keyboardEffects"
       | "selectedTrack"
     >
@@ -54,10 +54,10 @@ export function resolveScrubPreviewProps(
     enabledVideoTracks = [],
     hasCursorData = false,
     hasKeyboardData = false,
-    isExportOpen = false,
     isPreparingAudio = false,
     isPreparingPreview = false,
     isSaving = false,
+    isSheetOpen = false,
     keyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
     selectedTrack = null,
   } = props;
@@ -71,10 +71,10 @@ export function resolveScrubPreviewProps(
     enabledVideoTracks,
     hasCursorData,
     hasKeyboardData,
-    isExportOpen,
     isPreparingAudio,
     isPreparingPreview,
     isSaving,
+    isSheetOpen,
     keyboardEffects,
     selectedTrack,
   };

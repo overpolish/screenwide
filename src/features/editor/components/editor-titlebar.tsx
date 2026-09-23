@@ -6,6 +6,7 @@ import { ReactNode, useCallback, useLayoutEffect, useRef } from "react";
 
 import logoUrl from "../../../assets/screenwide-mark.svg";
 import { Button } from "../../../components/base/button/button";
+import { ToolToggleDisabledContext } from "../../../components/shared/tool-toggle/tool-toggle-disabled";
 import { WindowHeader } from "../../../components/shared/window-header/window-header";
 import { EditorArtifact } from "../types";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
@@ -17,6 +18,7 @@ export function EditorTitlebar({
   canExport,
   fileStem,
   isSaving,
+  isToolbarDisabled = false,
   onClose,
   onCopy,
   onExport,
@@ -29,6 +31,9 @@ export function EditorTitlebar({
   canExport: boolean;
   fileStem: string;
   isSaving?: boolean;
+  /** Takes the tools out of reach while leaving them in view, as under a
+   * sheet. */
+  isToolbarDisabled?: boolean;
   onClose?: () => void;
   onCopy?: () => void;
   onExport?: () => void;
@@ -66,6 +71,7 @@ export function EditorTitlebar({
   });
 
   const sectionTools = useEditorToolbarTools();
+  const barTools = tools ?? sectionTools;
 
   return (
     <WindowHeader
@@ -83,7 +89,13 @@ export function EditorTitlebar({
           </Button>
         </div>
       }
-      center={tools ?? sectionTools}
+      center={
+        barTools ? (
+          <ToolToggleDisabledContext value={isToolbarDisabled}>
+            {barTools}
+          </ToolToggleDisabledContext>
+        ) : null
+      }
       leadingSection={
         <img
           alt="Screenwide"
