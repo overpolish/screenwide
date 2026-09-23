@@ -59,7 +59,7 @@ impl PreviewManager {
       return Ok(staged);
     }
     #[cfg(target_os = "windows")]
-    surface.set_annotation_hover(hover.map(|(layer, index, width)| (layer, index, width)));
+    surface.set_annotation_hover(hover);
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let _ = hover;
     #[cfg(not(target_os = "macos"))]

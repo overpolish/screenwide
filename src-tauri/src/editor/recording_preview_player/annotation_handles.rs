@@ -26,7 +26,7 @@ impl PreviewPlayerManager {
         .read()
         .map(|clips| clips.clone())
         .unwrap_or_default(),
-      track(pane),
+      super::gesture::track(pane),
       position_ms,
       0.0,
     );

@@ -34,6 +34,7 @@ impl Compositor {
     // reads the text as `StructuredBuffer<uint>`: four bytes per element, a
     // byte at `text[i >> 2] >> ((i & 3) * 8)`.
     let annotation_text = StructuredBuffer::new(device, size_of::<u32>(), "annotation text")?;
+    let mut keyboard_constants = None;
     unsafe {
       device.CreateBuffer(
         &D3D11_BUFFER_DESC {

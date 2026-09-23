@@ -105,7 +105,12 @@ pub(crate) fn snap_gap(
         continue;
       }
       let mut offer = |offset: f64, place: GapPlace| {
-        if !(offset.abs() <= threshold) {
+        // A NaN offset compares as neither, and is refused with the rest.
+        if offset
+          .abs()
+          .partial_cmp(&threshold)
+          .is_none_or(|order| order.is_gt())
+        {
           return;
         }
         if best.is_none_or(|chosen| offset.abs() < chosen.offset.abs()) {

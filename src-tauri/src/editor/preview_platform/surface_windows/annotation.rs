@@ -246,7 +246,7 @@ use picking::{
 /// What a snapped sample draws, and where.
 #[path = "annotation/snap_chrome.rs"]
 mod snap_chrome;
-pub(super) use snap_chrome::{snap_chrome, SnapChrome};
+pub(super) use snap_chrome::snap_chrome;
 
 /// The halo that grows under the arrow the pointer rests on.
 #[path = "annotation/hover.rs"]

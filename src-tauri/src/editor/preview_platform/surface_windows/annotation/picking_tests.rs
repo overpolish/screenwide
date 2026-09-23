@@ -31,6 +31,8 @@ fn arrow() -> NativeAnnotationHandles {
     width: 0.04,
     layer_id: 0,
     index: 0,
+    kind: 0,
+    padding: 0,
   }
 }
 

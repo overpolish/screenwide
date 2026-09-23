@@ -47,6 +47,7 @@ pub(super) fn windows(app: &AppHandle) -> Vec<WebviewWindow> {
 /// The anchor host: the window that owns focus and the cursor lease. It carries
 /// the feature's own label, the peers being numbered after it, so it is a
 /// lookup rather than a search.
+#[cfg(target_os = "macos")]
 pub(super) fn anchor(app: &AppHandle) -> Option<WebviewWindow> {
   app.get_webview_window(WindowLabel::Annotate.as_str())
 }

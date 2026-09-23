@@ -361,11 +361,13 @@ fn a_rounded_crop_shades_its_corners() {
   assert_eq!(&rounded[..4 * 6], &square[..4 * 6]);
   assert_eq!(quad_kinds(&rounded[4 * 6..8 * 6]), vec![45, 45, 45, 45]);
   assert_eq!(rounded.len(), square.len() + 4 * 6);
-  // Each wedge spans one radius - a quarter of the 80pt shorter side - and its
-  // uv runs from the arc centre out to the corner.
-  let wedge = &rounded[4 * 6];
-  assert_eq!(wedge.uv, [0.0, 0.0]);
-  assert_eq!(rounded[4 * 6 + 2].uv, [1.0, 1.0]);
+  // Each wedge spans one radius - a quarter of the 80pt shorter side - with uv
+  // measured from the arc centre in radii, so it reaches from the centre at
+  // zero to the crop corner at one on both axes.
+  for wedge in rounded[4 * 6..8 * 6].chunks_exact(6) {
+    assert!(wedge.iter().any(|vertex| vertex.uv == [0.0, 0.0]));
+    assert!(wedge.iter().any(|vertex| vertex.uv == [1.0, 1.0]));
+  }
 }
 
 #[test]

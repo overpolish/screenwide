@@ -21,6 +21,10 @@ pub struct ScreenshotItemSnapshot {
   rename_all_fields = "camelCase",
   tag = "kind"
 )]
+// Built once per artifact and serialised straight away, so the variant's size
+// never matters; it only crosses clippy's line on Windows, where `PathBuf` is
+// wider.
+#[allow(clippy::large_enum_variant)]
 pub enum EditorArtifactSnapshot {
   Screenshot {
     id: u64,

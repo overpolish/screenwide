@@ -86,7 +86,7 @@ pub(crate) struct PreviewArrow {
   pub(crate) data_count: u32,
 }
 
-const _: () = assert!(std::mem::size_of::<PreviewArrow>() == 152);
+const _: () = assert!(std::mem::size_of::<PreviewArrow>() == 148);
 const _: () = assert!(std::mem::offset_of!(PreviewArrow, color) == 92);
 const _: () = assert!(std::mem::offset_of!(PreviewArrow, hover) == 108);
 const _: () = assert!(std::mem::offset_of!(PreviewArrow, sample_first) == 112);

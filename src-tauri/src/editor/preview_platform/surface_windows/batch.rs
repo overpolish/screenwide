@@ -40,12 +40,12 @@ impl Drop for PresentBatch<'_> {
     // alone reach the screen through their swap chains, and committing for
     // them anyway would cost every arrow-drag sample a display tick of wait
     // while the grips, which never commit, run ahead of the arrow.
-    if tree_changed || inner.commit_pending.swap(false, Ordering::AcqRel) {
-      if unsafe { inner.gpu.composition.Commit() }.is_ok() {
-        // As in `finish_layout`: an unawaited commit backlog lets rapid
-        // drags visibly desynchronise the panes from the DOM controls above.
-        let _ = unsafe { inner.gpu.composition.WaitForCommitCompletion() };
-      }
+    if (tree_changed || inner.commit_pending.swap(false, Ordering::AcqRel))
+      && unsafe { inner.gpu.composition.Commit() }.is_ok()
+    {
+      // As in `finish_layout`: an unawaited commit backlog lets rapid
+      // drags visibly desynchronise the panes from the DOM controls above.
+      let _ = unsafe { inner.gpu.composition.WaitForCommitCompletion() };
     }
   }
 }

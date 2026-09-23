@@ -136,7 +136,10 @@ impl Compositor {
           Some(text_view),
         ]),
       );
-      context.PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
+      context.PSSetSamplers(
+        0,
+        Some(&[Some(self.sampler.clone()), Some(self.point_sampler.clone())]),
+      );
       // Annotation pre-pass hook: obfuscate will sample the composed layer here.
       // It is intentionally a no-op until that tool is implemented.
       context.Draw(3, 0);

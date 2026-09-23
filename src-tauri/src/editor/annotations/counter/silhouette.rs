@@ -15,6 +15,7 @@
 //! tool is drawn with, to within a hundredth of the radius. Every drawing and
 //! picking path - Metal, HLSL and this module - builds it that way.
 
+#[cfg(target_os = "macos")]
 use crate::editor::annotations::geometry::ArrowGeometry;
 use crate::editor::annotations::AnnotationPoint;
 
@@ -76,6 +77,7 @@ pub(crate) fn counter_distance(
 /// The record is single precision and the picking is not, so each difference
 /// is taken in the record's own precision before it is widened: the answer is
 /// then the one the whole native side has always produced.
+#[cfg(target_os = "macos")]
 pub(crate) fn prepared_counter_distance(point: (f64, f64), prepared: &ArrowGeometry) -> f64 {
   let radius = f64::from(prepared.rounding);
   let local = (

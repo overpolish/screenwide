@@ -62,20 +62,16 @@ pub(crate) fn snap_chrome(state: &SurfaceState, scale: f64) -> SnapChrome {
       snap.guide_x_object != 0,
       snap.guide_y_object != 0,
     )),
-    anchor: anchored.then(|| {
-      [
-        ((image.x + snap.anchor_x * image.width) * scale) as f32,
-        ((image.y + snap.anchor_y * image.height) * scale) as f32,
-      ]
-    }),
-    bounds: anchored.then(|| {
-      [
-        ((image.x + snap.box_x * image.width) * scale) as f32,
-        ((image.y + snap.box_y * image.height) * scale) as f32,
-        (snap.box_width * image.width * scale) as f32,
-        (snap.box_height * image.height * scale) as f32,
-      ]
-    }),
+    anchor: anchored.then_some([
+      ((image.x + snap.anchor_x * image.width) * scale) as f32,
+      ((image.y + snap.anchor_y * image.height) * scale) as f32,
+    ]),
+    bounds: anchored.then_some([
+      ((image.x + snap.box_x * image.width) * scale) as f32,
+      ((image.y + snap.box_y * image.height) * scale) as f32,
+      (snap.box_width * image.width * scale) as f32,
+      (snap.box_height * image.height * scale) as f32,
+    ]),
     gaps,
   }
 }

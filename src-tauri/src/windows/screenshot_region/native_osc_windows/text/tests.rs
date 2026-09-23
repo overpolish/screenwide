@@ -47,7 +47,13 @@ fn glyph_rectangles_walk_evenly_spaced_cells() {
 #[test]
 fn coverage_is_stored_premultiplied_so_the_shader_can_divide_it_out() {
   let rgba = premultiply(&[0, 128, 255], [1.0, 0.0, 0.5]);
-  assert_eq!(&rgba[0..4], &[0, 0, 0, 0]);
-  assert_eq!(&rgba[4..8], &[128, 0, 64, 128]);
-  assert_eq!(&rgba[8..12], &[255, 0, 128, 255]);
+  // Coverage is carried at the label tier's alpha, and each ink channel is
+  // multiplied by that same alpha.
+  for (pixel, coverage) in rgba.chunks_exact(4).zip([0.0_f32, 128.0, 255.0]) {
+    let alpha = coverage * LABEL_ALPHA;
+    assert_eq!(pixel[3], alpha.round() as u8);
+    assert_eq!(pixel[0], alpha.round() as u8);
+    assert_eq!(pixel[1], 0);
+    assert_eq!(pixel[2], (alpha * 0.5).round() as u8);
+  }
 }
