@@ -73,8 +73,8 @@ static NSDictionary *counter_dress(CGFloat size) {
   };
 }
 
-/// One number as it will be rasterised: everything in atlas pixels, which are
-/// [`SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE`] to the drawn pixel.
+/// One number as it will be rasterised: everything in atlas pixels, the disc's
+/// radius included.
 typedef struct {
   NSDictionary *dress;
   NSString *text;
@@ -87,8 +87,7 @@ typedef struct {
 /// digits in a small disc still read, and the disc stays the size the style
 /// asked for.
 static ScreenwideCounterText counter_text(const char *value, uint32_t length, CGFloat size) {
-  CGFloat diameter = size * 2.0 * SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE;
-  size *= SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE;
+  CGFloat diameter = size * 2.0;
   ScreenwideCounterText result = { .text = [[NSString alloc] initWithBytes:value length:length encoding:NSUTF8StringEncoding] };
   result.dress = counter_dress(size);
   result.measured = [result.text sizeWithAttributes:result.dress];
@@ -269,6 +268,6 @@ id<MTLBuffer> screenwide_annotation_text_atlas(
                                number->style - 1);
   }
   if (uniforms != NULL)
-    *uniforms = (ScreenwideAnnotationTextUniforms){layout.width, layout.height};
+    *uniforms = (ScreenwideAnnotationTextUniforms){.width = layout.width, .height = layout.height};
   return atlas.pixels;
 }

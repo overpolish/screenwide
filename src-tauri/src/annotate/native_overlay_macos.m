@@ -98,7 +98,7 @@ static void drawSurface(ScreenwideAnnotateSurface *surface) {
   uint32_t above_camera = 0;
   [encoder setBytes:&above_camera length:sizeof(above_camera) atIndex:14];
   [encoder setTexture:drawable.texture atIndex:0];
-  screenwide_bind_annotations(encoder, &annotations, &canvas, 1, 1);
+  screenwide_bind_annotations(encoder, &annotations, &canvas, 1, 1, 1.0f);
   MTLSize threads = MTLSizeMake((NSUInteger)size.width, (NSUInteger)size.height, 1);
   NSUInteger width = surface.pipeline.threadExecutionWidth;
   NSUInteger height = surface.pipeline.maxTotalThreadsPerThreadgroup / MAX(width, 1u);

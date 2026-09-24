@@ -12,9 +12,11 @@
 //! which the annotation shader samples the way it samples the keyboard's
 //! artwork.
 //!
-//! The atlas is rasterised at [`SUPERSAMPLE`] pixels to the canvas pixel, and
-//! the shader averages every atlas pixel a drawn pixel covers, so type stays
-//! antialiased however small or large the canvas is shown.
+//! The atlas is rasterised at a density that follows how large the canvas is
+//! drawn - [`raster_scale`], shared with the Metal backend - and each drawn
+//! pixel is read as four filtered taps over the atlas pixels it spans, so type
+//! stays smooth on a high-DPI display, zoomed in or out, and while it grows
+//! into place.
 
 use std::sync::Mutex;
 
@@ -22,6 +24,7 @@ use super::compositor::PreparedType;
 use crate::editor::annotations::counter::atlas::{
   AtlasDraw, AtlasRect, CounterAtlas as AtlasLayout, CounterNumber,
 };
+use crate::editor::annotations::counter::atlas_scale::raster_scale;
 use crate::editor::annotations::AnnotationKind;
 
 use windows::{
@@ -35,8 +38,6 @@ use windows::{
   },
 };
 
-/// How many atlas pixels are rasterised per drawn pixel.
-const SUPERSAMPLE: f64 = 2.0;
 /// How much of the disc's diameter a digit's cap height takes, and the widest
 /// the number may be drawn, both as shares of the diameter. The twins of
 /// `SCREENWIDE_COUNTER_TEXT_CAP_SHARE` and
@@ -46,9 +47,11 @@ const WIDTH_SHARE: f64 = 0.72;
 /// Inter's cap height, in ems: what turns a wanted cap height into a size.
 const CAP_HEIGHT: f64 = 0.727;
 
-/// The atlas one composition samples: its texture and the texture's size.
+/// The atlas one composition samples: its texture, the texture's size, and
+/// how many atlas pixels it holds per canvas pixel.
 pub(crate) struct AtlasBinding {
   pub(crate) size: (u32, u32),
+  pub(crate) scale: f32,
   pub(crate) view: ID3D11ShaderResourceView,
 }
 
@@ -75,14 +78,17 @@ pub(crate) struct CounterAtlas {
 
 impl CounterAtlas {
   /// The atlas for `types` - one per annotation, an empty text being an
-  /// annotation with no type - with each one's rectangle written into
-  /// `rects`, or nothing when no type is drawn at all. Only type the atlas
-  /// does not hold yet is rasterised.
+  /// annotation with no type - rasterised at `scale` atlas pixels per canvas
+  /// pixel and `drawn` atlas pixels per drawn pixel, with each one's
+  /// rectangle written into `rects`, or nothing when no type is drawn at
+  /// all. Only type the atlas does not hold yet is rasterised.
   fn resolve(
     &self,
     device: &ID3D11Device,
     context: &ID3D11DeviceContext,
     types: &[PreparedType],
+    scale: f32,
+    drawn: f64,
     rects: &mut Vec<AtlasRect>,
   ) -> Result<Option<AtlasBinding>, String> {
     let mut state = self
@@ -94,13 +100,13 @@ impl CounterAtlas {
       storage,
       draws,
     } = &mut *state;
-    let keys: Vec<Vec<u8>> = types.iter().map(cell_key).collect();
+    let keys: Vec<Vec<u8>> = types.iter().map(|entry| cell_key(entry, drawn)).collect();
     let numbers: Vec<CounterNumber<'_>> = types
       .iter()
       .zip(&keys)
       .map(|(entry, key)| CounterNumber {
         text: key,
-        radius: entry.size,
+        radius: entry.size * scale,
         style: entry.style,
       })
       .collect();
@@ -108,7 +114,7 @@ impl CounterAtlas {
     rects.resize(types.len(), AtlasRect::default());
     let placed = layout.frame(
       &numbers,
-      |index, size| measure_cell(&types[index], size),
+      |index, size| measure_cell(&types[index], size, drawn),
       rects,
       draws,
     );
@@ -133,7 +139,7 @@ impl CounterAtlas {
       let rect = rects[draw.index];
       let (left, top) = (rect.x as u32, rect.y as u32);
       let (width, height) = (rect.width as u32, rect.height as u32);
-      let pixels = draw_cell(&types[draw.index], draw.radius, (width, height))?;
+      let pixels = draw_cell(&types[draw.index], draw.radius, drawn, (width, height))?;
       unsafe {
         context.UpdateSubresource(
           &resource,
@@ -154,6 +160,7 @@ impl CounterAtlas {
     }
     Ok(Some(AtlasBinding {
       size: storage.size,
+      scale,
       view: storage.view.clone(),
     }))
   }
@@ -200,34 +207,42 @@ mod rasterize;
 mod text_box;
 
 /// What the atlas keys a piece of type by: its text, and for a box being
-/// typed into its caret and selection too, so each change of them draws
-/// afresh. `0xFF` never appears in UTF-8, so no text can collide with that
-/// tail.
-fn cell_key(entry: &PreparedType) -> Vec<u8> {
+/// typed into its caret, its selection and the caret's width in atlas pixels
+/// too, so each change of them draws afresh. `0xFF` never appears in UTF-8,
+/// so no text can collide with that tail.
+fn cell_key(entry: &PreparedType, drawn: f64) -> Vec<u8> {
   let mut key = entry.text.as_bytes().to_vec();
   if let Some(marks) = entry.marks {
     key.push(0xFF);
     key.extend_from_slice(&(marks.start as u32).to_le_bytes());
     key.extend_from_slice(&(marks.end as u32).to_le_bytes());
     key.push(u8::from(marks.caret));
+    key.extend_from_slice(&((drawn * 4.0).round() as u32).to_le_bytes());
   }
   key
 }
 
-fn measure_cell(entry: &PreparedType, size: f32) -> Option<(u32, u32)> {
+/// `size` is in atlas pixels, and `drawn` is how many of them one drawn pixel
+/// spans, which a text box's caret is as wide as.
+fn measure_cell(entry: &PreparedType, size: f32, drawn: f64) -> Option<(u32, u32)> {
   if entry.style == 0 {
     return rasterize::measure(&entry.text, size).ok();
   }
-  text_box::measure(&entry.text, size, entry.marks)
+  text_box::measure(&entry.text, size, drawn, entry.marks)
     .ok()
     .flatten()
 }
 
-fn draw_cell(entry: &PreparedType, size: f32, cell: (u32, u32)) -> Result<Vec<u8>, String> {
+fn draw_cell(
+  entry: &PreparedType,
+  size: f32,
+  drawn: f64,
+  cell: (u32, u32),
+) -> Result<Vec<u8>, String> {
   if entry.style == 0 {
     return rasterize::draw(&entry.text, size, cell);
   }
-  text_box::draw(&entry.text, size, entry.style - 1, entry.marks, cell)
+  text_box::draw(&entry.text, size, drawn, entry.style - 1, entry.marks, cell)
 }
 
 /// The atlas one composition needs, and its annotations with the type
@@ -244,7 +259,20 @@ pub(crate) fn numbered_arrows(
   prepared: &super::compositor::PreparedArrows,
 ) -> Result<(Option<AtlasBinding>, Vec<super::compositor::PreviewArrow>), String> {
   let mut rects = Vec::new();
-  let numbers = atlas.resolve(device, context, &prepared.types, &mut rects)?;
+  let pixel_scale = if prepared.pixel_scale > 0.0 {
+    prepared.pixel_scale
+  } else {
+    1.0
+  };
+  let largest = prepared
+    .types
+    .iter()
+    .map(|entry| entry.size)
+    .fold(0.0, f32::max);
+  let scale = raster_scale(pixel_scale, largest);
+  // Atlas pixels per drawn pixel: what a text box's caret is as wide as.
+  let drawn = f64::from(scale * pixel_scale);
+  let numbers = atlas.resolve(device, context, &prepared.types, scale, drawn, &mut rects)?;
   let mut arrows = prepared.arrows.clone();
   if numbers.is_some() {
     for (arrow, rect) in arrows.iter_mut().zip(&rects) {

@@ -237,6 +237,18 @@ static void workspace_dispatch(
       MAX(width, (NSUInteger)1), MAX(height, (NSUInteger)1), 1)];
 }
 
+/// Binds a layer's annotations for `workspace_layer`, which draws the canvas
+/// into `placement`: its type is rasterised for the canvas pixels one drawn
+/// pixel covers, measured the way the kernel measures it.
+static void workspace_bind_annotations(id<MTLComputeCommandEncoder> encoder,
+                                       const ScreenwideWorkspaceLayer *layer) {
+  float pixel_scale = fmaxf(
+      (float)layer->canvas_width / (float)MAX(layer->placement.width, 1u),
+      (float)layer->canvas_height / (float)MAX(layer->placement.height, 1u));
+  screenwide_bind_annotations(encoder, &layer->annotations, &layer->canvas,
+                              layer->source_width, layer->source_height, pixel_scale);
+}
+
 static int presenter_present_workspace_layers(
     ScreenwideStillPresenter *presenter, CAMetalLayer *layer,
     const ScreenwideWorkspaceLayer *layers, uint32_t layer_count,
@@ -311,8 +323,7 @@ static int presenter_present_workspace_layers(
     float seconds = (float)item->seconds;
     [encoder setBytes:&seconds length:sizeof(seconds) atIndex:9];
     screenwide_bind_keyboard(encoder, presenter.device, presenter.keyboardArtworks, item->keyboard, item->canvas_height);
-    screenwide_bind_annotations(encoder, &item->annotations, &item->canvas,
-                               item->source_width, item->source_height);
+    workspace_bind_annotations(encoder, item);
     [encoder setTexture:presenter.cursorResources.texture atIndex:1];
     workspace_dispatch(encoder, presenter.workspaceLayerPipeline, grid);
     [encoder endEncoding];
@@ -608,8 +619,7 @@ int screenwide_gpu_still_presenter_redraw_workspace(
         float seconds = (float)layers[index].seconds;
         [encoder setBytes:&seconds length:sizeof(seconds) atIndex:9];
         screenwide_bind_keyboard(encoder, presenter.device, presenter.keyboardArtworks, layers[index].keyboard, layers[index].canvas_height);
-        screenwide_bind_annotations(encoder, &layers[index].annotations, &layers[index].canvas,
-                                   layers[index].source_width, layers[index].source_height);
+        workspace_bind_annotations(encoder, &layers[index]);
         [encoder setTexture:presenter.cursorResources.texture atIndex:1];
         workspace_dispatch(encoder, presenter.workspaceLayerPipeline, grid);
         [encoder endEncoding];

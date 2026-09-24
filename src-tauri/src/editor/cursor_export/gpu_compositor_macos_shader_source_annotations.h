@@ -30,6 +30,14 @@ struct AnnotationUniforms {
 static_assert(sizeof(AnnotationUniforms) == 152,
               "Prepared annotations must match their native layout");
 
+/// Where the annotations' type was rasterised: the atlas's size in pixels and
+/// how many atlas pixels it holds per canvas pixel. The twin of
+/// `ScreenwideAnnotationTextUniforms`.
+struct AnnotationTextAtlas {
+  uint width, height;
+  float scale;
+};
+
 constant float annotation_hover_alpha = 0.24;
 
 static float annotation_triangle_distance(
@@ -101,57 +109,40 @@ static float annotation_exposure(
   return total / float(annotation.sample_count);
 }
 
-/// How many atlas pixels the type is rasterised at per canvas pixel.
-constant float annotation_type_supersample = 2.0;
-
-static float annotation_atlas_texel(const device uchar4 *pixels, uint2 atlas, int2 at) {
-  uint2 clamped = uint2(clamp(at, int2(0), int2(atlas) - 1));
-  return float(pixels[clamped.y * atlas.x + clamped.x].a) / 255.0;
-}
-
-/// The atlas's coverage at `position`, in atlas pixels, blended between the
-/// four nearest texels.
+/// The atlas's coverage at `texel`, bilinearly filtered and held to the
+/// cell from `low` to `high`, so a tap at the cell's edge reads its own
+/// transparent margin rather than the next cell over.
 static float annotation_atlas_bilinear(
-    const device uchar4 *pixels, uint2 atlas, float2 position) {
-  float2 at = position - 0.5;
-  float2 base = floor(at);
-  float2 fraction = at - base;
-  int2 low = int2(base);
-  float a = annotation_atlas_texel(pixels, atlas, low);
-  float b = annotation_atlas_texel(pixels, atlas, low + int2(1, 0));
-  float c = annotation_atlas_texel(pixels, atlas, low + int2(0, 1));
-  float d = annotation_atlas_texel(pixels, atlas, low + int2(1, 1));
-  return mix(mix(a, b, fraction.x), mix(c, d, fraction.x), fraction.y);
+    const device uchar4 *pixels, uint width, float2 texel, float2 low, float2 high) {
+  float2 base = texel - 0.5;
+  float2 first = floor(base);
+  float2 blend = base - first;
+  uint2 from = uint2(clamp(first, low, high));
+  uint2 to = uint2(clamp(first + 1.0, low, high));
+  float top = mix(float(pixels[from.y * width + from.x].a),
+                  float(pixels[from.y * width + to.x].a), blend.x);
+  float bottom = mix(float(pixels[to.y * width + from.x].a),
+                     float(pixels[to.y * width + to.x].a), blend.x);
+  return mix(top, bottom, blend.y) / 255.0;
 }
 
-/// How much of the type in one atlas cell covers a drawn pixel centred on
-/// `texel`, both in atlas pixels. A drawn pixel spans `feather * 2` canvas
-/// pixels, so the whole of that footprint is averaged: a single sample would
-/// pick one atlas pixel out of many where the canvas is shown smaller than
-/// its resolution, and the type's edges would come out stepped. The samples
-/// stay inside the cell so a neighbour's type never bleeds in. The twin of
-/// `annotation_atlas_coverage` in `annotations.hlsl`.
+/// How much of the type in the atlas cell at `origin`, `size` atlas pixels
+/// across, covers one drawn pixel centred on `texel` and spanning `footprint`
+/// atlas pixels: four filtered taps spread over that span. The atlas holds
+/// two to four atlas pixels per drawn pixel, so the taps take in the whole
+/// pixel whether the canvas is drawn larger or smaller than its resolution.
 static float annotation_atlas_coverage(
-    const device uchar4 *pixels, uint2 atlas, float2 texel, float feather,
-    float2 cell_origin, float2 cell_size) {
-  float span = max(feather * 2.0 * annotation_type_supersample, 1e-3);
-  // Samples no more than an atlas pixel apart, and never fewer than two per
-  // axis: one bilinear sample only averages the footprint when it lands on a
-  // texel corner, and type set off the pixel grid would otherwise come out
-  // stepped. Capped for a canvas shown very small.
-  uint taps = clamp(uint(ceil(span)), 2u, 6u);
-  float step = span / float(taps);
-  float2 first = texel - span * 0.5 + step * 0.5;
-  float2 low = cell_origin + 0.5;
-  float2 high = max(cell_origin + cell_size - 0.5, low);
+    const device uchar4 *pixels, AnnotationTextAtlas atlas, float2 origin, float2 size,
+    float2 texel, float footprint) {
+  float2 low = origin;
+  float2 high = min(origin + size, float2(atlas.width, atlas.height)) - 1.0;
+  float spread = footprint * 0.25;
   float total = 0.0;
-  for (uint row = 0u; row < taps; ++row) {
-    for (uint column = 0u; column < taps; ++column) {
-      float2 position = clamp(first + float2(float(column), float(row)) * step, low, high);
-      total += annotation_atlas_bilinear(pixels, atlas, position);
-    }
+  for (uint tap = 0u; tap < 4u; ++tap) {
+    float2 offset = float2(tap & 1u ? spread : -spread, tap >> 1u ? spread : -spread);
+    total += annotation_atlas_bilinear(pixels, atlas.width, texel + offset, low, high);
   }
-  return total / float(taps * taps);
+  return total * 0.25;
 }
 
 )METAL"

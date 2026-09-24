@@ -18,7 +18,7 @@ struct Row {
 }
 
 fn row(value: &str, radius: f32) -> Result<Row, String> {
-  let diameter = f64::from(radius) * 2.0 * SUPERSAMPLE;
+  let diameter = f64::from(radius) * 2.0;
   let mut size = diameter * CAP_SHARE / CAP_HEIGHT;
   let device = TypeDevice::numbers(size)?;
   let (ascent, descent) = device.vertical_metrics();
@@ -46,7 +46,7 @@ fn row(value: &str, radius: f32) -> Result<Row, String> {
   })
 }
 
-/// The cell `value` needs at `radius`, in atlas pixels.
+/// The cell `value` needs at `radius`, both in atlas pixels.
 pub(super) fn measure(value: &str, radius: f32) -> Result<(u32, u32), String> {
   Ok(row(value, radius)?.cell)
 }

@@ -22,6 +22,8 @@ cbuffer Overlay : register(b0) {
   /// The size of the texture the counters' numbers were rasterised into, or
   /// zeroes on a frame with no counter to rasterise one for.
   uint2 annotation_number_atlas;
+  /// How many atlas pixels that texture holds per layer pixel.
+  float annotation_number_scale;
 };
 
 float4 vs_main(uint id : SV_VertexID) : SV_Position {
@@ -32,7 +34,7 @@ float4 vs_main(uint id : SV_VertexID) : SV_Position {
 float4 ps_main(float4 position : SV_Position) : SV_Target {
   // Composed over nothing, so the result is already premultiplied - which is
   // what DirectComposition expects of a premultiplied swap chain.
+  AnnotationTextAtlas atlas = {annotation_number_atlas, annotation_number_scale};
   return composite_annotations(
-      float4(0, 0, 0, 0), position.xy, 0u, annotation_count, annotation_feather,
-      annotation_number_atlas);
+      float4(0, 0, 0, 0), position.xy, 0u, annotation_count, annotation_feather, atlas);
 }

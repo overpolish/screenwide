@@ -21,7 +21,7 @@ kernel void annotate_overlay(
     constant uint &above_camera [[buffer(14)]],
     const device AnnotationSample *samples [[buffer(15)]],
     const device uchar4 *numbers [[buffer(16)]],
-    constant uint2 &atlas [[buffer(17)]],
+    constant AnnotationTextAtlas &atlas [[buffer(17)]],
     texture2d<float, access::write> target [[texture(0)]],
     uint2 gid [[thread_position_in_grid]]) {
   if (gid.x >= target.get_width() || gid.y >= target.get_height()) return;

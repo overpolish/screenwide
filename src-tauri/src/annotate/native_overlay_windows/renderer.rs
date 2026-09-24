@@ -16,7 +16,7 @@ const VERTEX_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/annotate_
 const PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/annotate_overlay_ps.cso"));
 
 /// The shader's own constants. A constant buffer is a multiple of sixteen
-/// bytes wide, which the atlas size fills out.
+/// bytes wide, which the spare words fill out.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub(super) struct Constants {
@@ -28,9 +28,12 @@ pub(super) struct Constants {
   /// The size of the texture the counters' numbers were rasterised into, in
   /// pixels, or zeroes when no counter is on screen to rasterise one.
   pub(super) atlas: [u32; 2],
+  /// How many atlas pixels that texture holds per layer pixel.
+  pub(super) atlas_scale: f32,
+  pub(super) spare: [f32; 3],
 }
 
-const _: () = assert!(std::mem::size_of::<Constants>() == 16);
+const _: () = assert!(std::mem::size_of::<Constants>() == 32);
 
 /// Everything every surface of one session shares.
 pub(super) struct Renderer {
@@ -135,6 +138,8 @@ impl Renderer {
         let (width, height) = atlas.size;
         [width, height]
       }),
+      atlas_scale: numbers.as_ref().map_or(0.0, |atlas| atlas.scale),
+      spare: [0.0; 3],
     };
     unsafe {
       context.UpdateSubresource(

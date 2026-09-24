@@ -7,7 +7,7 @@
 static float4 annotation_video_pixel(const device AnnotationUniforms *annotations,
     uint count, uint above, float2 point, constant CanvasUniforms &canvas,
     const device AnnotationSample *samples, const device uchar4 *numbers,
-    uint2 atlas) {
+    AnnotationTextAtlas atlas) {
   float4 value = composite_annotations(float4(0), annotations, count, above, point,
       canvas, float2(1), 1.0, samples, numbers, atlas);
   return value.a > 0.0001 ? float4(value.rgb / value.a, value.a) : float4(0);
@@ -18,7 +18,7 @@ kernel void overlay_annotation_luma(
     constant uint &count [[buffer(13)]], constant uint &above [[buffer(14)]],
     const device AnnotationSample *samples [[buffer(15)]],
     const device uchar4 *numbers [[buffer(16)]],
-    constant uint2 &atlas [[buffer(17)]],
+    constant AnnotationTextAtlas &atlas [[buffer(17)]],
     texture2d<float, access::read_write> luma [[texture(0)]], uint2 gid [[thread_position_in_grid]]) {
   if (gid.x >= luma.get_width() || gid.y >= luma.get_height()) return;
   float4 rgba = annotation_video_pixel(annotations, count, above, float2(gid) + 0.5, canvas, samples, numbers, atlas);
@@ -32,7 +32,7 @@ kernel void overlay_annotation_chroma(
     constant uint &count [[buffer(13)]], constant uint &above [[buffer(14)]],
     const device AnnotationSample *samples [[buffer(15)]],
     const device uchar4 *numbers [[buffer(16)]],
-    constant uint2 &atlas [[buffer(17)]],
+    constant AnnotationTextAtlas &atlas [[buffer(17)]],
     texture2d<float, access::read_write> chroma [[texture(0)]], uint2 gid [[thread_position_in_grid]]) {
   if (gid.x >= chroma.get_width() || gid.y >= chroma.get_height()) return;
   float3 sum = 0; float alpha_sum = 0;

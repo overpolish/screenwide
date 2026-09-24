@@ -15,12 +15,11 @@ use crate::editor::annotations::text::metrics::LINE_HEIGHT;
 use crate::editor::annotations::text::typing::TypingMarks;
 use crate::editor::preview_platform::surface::type_device::TypeDevice;
 
-/// The caret's width, in atlas pixels: one drawn pixel.
-const CARET_WIDTH: f64 = SUPERSAMPLE;
-/// Room either side of the widest line, in atlas pixels: one pixel keeps the
-/// type's edge off the cell's, and a caret after the widest line needs its
-/// own width. Kept on both sides so the cell stays centred on the block.
-const MARGIN: f64 = 1.0 + CARET_WIDTH;
+/// Room either side of the widest line beyond the caret, in atlas pixels: one
+/// pixel keeps the shader's filtered taps on this cell. A caret after the
+/// widest line needs its own width too, and both are kept on both sides so
+/// the cell stays centred on the block.
+const MARGIN: f64 = 1.0;
 /// How much ink a selection lays over what it covers: the share macOS's text
 /// view highlights with.
 const SELECTION_SHARE: f64 = 0.28;
@@ -35,7 +34,7 @@ struct Block<'a> {
 }
 
 fn block(text: &str, size: f32) -> Result<Block<'_>, String> {
-  let font = f64::from(size) * SUPERSAMPLE;
+  let font = f64::from(size);
   let device = TypeDevice::new(font)?;
   let mut offset = 0;
   let lines: Vec<(usize, &str)> = text
@@ -59,10 +58,12 @@ fn block(text: &str, size: f32) -> Result<Block<'_>, String> {
 
 /// The cell a box's text needs at `size`, or none for a box with nothing to
 /// show: an empty box shows its caret while it is typed into, and nothing
-/// once it is not.
+/// once it is not. `size` and the caret's width `caret`, one drawn pixel,
+/// are in atlas pixels.
 pub(super) fn measure(
   text: &str,
   size: f32,
+  caret: f64,
   marks: Option<TypingMarks>,
 ) -> Result<Option<(u32, u32)>, String> {
   if size <= 1.0 {
@@ -73,7 +74,7 @@ pub(super) fn measure(
     return Ok(None);
   }
   Ok(Some((
-    (block.width + 2.0 * MARGIN).ceil() as u32,
+    (block.width + 2.0 * (MARGIN + caret)).ceil() as u32,
     (block.line * block.lines.len() as f64).ceil() as u32 + 2,
   )))
 }
@@ -107,10 +108,12 @@ fn shade(
 }
 
 /// `text` drawn at `size` into a cell of `cell` pixels, each line placed by
-/// `alignment`, with the caret and the selection of a box being typed into.
+/// `alignment`, with the caret, `caret` atlas pixels wide, and the selection
+/// of a box being typed into.
 pub(super) fn draw(
   text: &str,
   size: f32,
+  caret: f64,
   alignment: u32,
   marks: Option<TypingMarks>,
   cell: (u32, u32),
@@ -122,7 +125,7 @@ pub(super) fn draw(
     2 => 1.0,
     _ => 0.0,
   };
-  let left = |index: usize| MARGIN + (block.width - block.widths[index]) * share;
+  let left = |index: usize| MARGIN + caret + (block.width - block.widths[index]) * share;
   // Each line sits centred in its own fixed-height band, as on macOS.
   let top = |index: usize| 1.0 + block.line * index as f64 + (block.line - ascent - descent) * 0.5;
   let x_at = |index: usize, offset: usize| {
@@ -172,7 +175,7 @@ pub(super) fn draw(
     shade(
       &mut coverage,
       cell,
-      (x, x + CARET_WIDTH),
+      (x, x + caret),
       (top(index), top(index) + ascent + descent),
       |_| 255,
     );

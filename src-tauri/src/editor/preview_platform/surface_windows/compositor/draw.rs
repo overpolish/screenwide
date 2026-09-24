@@ -194,7 +194,8 @@ impl Compositor {
         shadow_sigma,
       ],
       // The third word is how many canvas pixels one drawn pixel covers,
-      // which the arrow edges feather over.
+      // which the arrow edges feather over. `submit` fills the fourth once
+      // the atlas has chosen how finely to rasterise the annotations' type.
       motion: [
         composition.seconds as f32,
         generator_speed,

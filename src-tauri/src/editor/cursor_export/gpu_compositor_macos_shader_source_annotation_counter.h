@@ -69,25 +69,27 @@ static float annotation_counter_distance(float2 point, AnnotationCounter counter
 }
 
 /// How much of the number covers this pixel, from the atlas the numbers were
-/// rasterised into.
+/// rasterised into at `atlas.scale` pixels to the canvas pixel. `feather` is
+/// half a drawn pixel, in canvas pixels, which is how far the atlas read
+/// spreads.
 ///
 /// The number is centred on the disc and carried by the disc's own radius, so
 /// it grows and shrinks with the annotation without a second scale to keep in
 /// step.
 static float annotation_number_coverage(
-    float2 point, AnnotationCounter counter, float feather,
-    const device uchar4 *numbers, uint2 atlas) {
-  if (atlas.x == 0u || atlas.y == 0u ||
+    float2 point, AnnotationCounter counter, const device uchar4 *numbers,
+    AnnotationTextAtlas atlas, float feather) {
+  if (atlas.width == 0u || atlas.height == 0u || atlas.scale <= 0.0 ||
       counter.text_size.x <= 0.0 || counter.text_size.y <= 0.0)
     return 0.0;
-  float2 drawn = counter.text_size / annotation_type_supersample;
+  float2 drawn = counter.text_size / atlas.scale;
   float2 local = point - counter.center + drawn * 0.5;
   if (any(local < 0.0) || any(local > drawn)) return 0.0;
   // The atlas rows run top-down from the buffer's first pixel, which is the
   // space the rasteriser reports its rectangles in.
-  float2 texel = counter.text_origin + local * annotation_type_supersample;
-  return annotation_atlas_coverage(numbers, atlas, texel, feather,
-                                   counter.text_origin, counter.text_size);
+  return annotation_atlas_coverage(numbers, atlas, counter.text_origin, counter.text_size,
+                                   counter.text_origin + local * atlas.scale,
+                                   2.0 * feather * atlas.scale);
 }
 
 /// Accumulated exposure coverage for a counter: the disc is drawn at every
@@ -115,7 +117,7 @@ static float4 annotation_counter_layer(
     float4 rgba, const device AnnotationUniforms &annotation, float4 color,
     float2 canvas_point, float feather, float halo,
     const device AnnotationSample *samples, const device uchar4 *numbers,
-    uint2 number_atlas) {
+    AnnotationTextAtlas number_atlas) {
   AnnotationCounter counter = annotation_counter(annotation.arrow);
   // The disc and tail fit within twice the radius of the centre. The exposure
   // samples run steadily from last frame's reveal to this one's, so the first
@@ -151,8 +153,8 @@ static float4 annotation_counter_layer(
   float alpha = coverage * color.a;
   rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
   rgba.a = alpha + rgba.a * (1.0 - alpha);
-  float ink = annotation_number_coverage(canvas_point, counter, feather, numbers,
-                                         number_atlas) * alpha;
+  float ink = annotation_number_coverage(canvas_point, counter, numbers,
+                                         number_atlas, feather) * alpha;
   if (ink <= 0.0) return rgba;
   // Luminance rather than a fixed white: the palette runs from yellow to
   // near-black, and a number has to read on all of it.

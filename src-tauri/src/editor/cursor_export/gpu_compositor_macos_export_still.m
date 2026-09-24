@@ -114,7 +114,8 @@ int screenwide_gpu_composite_still(
     [encoder setBuffer:overlay_uniforms offset:0 atIndex:7];
     screenwide_bind_keyboard(encoder, device, keyboard_cache, *keyboard,
                              output_height);
-    screenwide_bind_annotations(encoder, annotations, canvas, source_width, source_height);
+    screenwide_bind_annotations(encoder, annotations, canvas, source_width, source_height,
+                                1.0f);
     [encoder setTexture:cursor_resources.texture atIndex:0];
     MTLSize grid = MTLSizeMake(output_width, output_height, 1);
     NSUInteger width = MIN(pipeline.threadExecutionWidth, output_width);

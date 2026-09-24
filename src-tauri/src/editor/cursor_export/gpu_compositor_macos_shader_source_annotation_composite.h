@@ -22,7 +22,7 @@ static float4 composite_annotations(
     uint above_camera, float2 canvas_point, constant CanvasUniforms &u,
     float2 source_dimensions, float pixel_scale,
     const device AnnotationSample *samples, const device uchar4 *numbers,
-    uint2 number_atlas) {
+    AnnotationTextAtlas number_atlas) {
   if (count == 0u || any(source_dimensions <= 0.0)) return rgba;
   float feather = max(pixel_scale, 1e-4) * 0.5;
   for (uint index = 0; index < count; ++index) {

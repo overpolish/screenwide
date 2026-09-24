@@ -31,7 +31,7 @@ const MAX_SIDE: u32 = 16_384;
 const BASE_WIDTH: u32 = 1_024;
 const BASE_HEIGHT: u32 = 256;
 
-/// One piece of type a composition draws: its text, its size in drawn pixels
+/// One piece of type a composition draws: its text, its size in atlas pixels
 /// (a counter's disc radius or a text box's type size), and how it is set:
 /// zero for a counter's number, one more than its alignment for a text box.
 pub(crate) struct CounterNumber<'a> {

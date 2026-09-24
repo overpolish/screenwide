@@ -29,6 +29,7 @@ impl Compositor {
     let samples = &prepared.samples;
     values.annotation_options[2] = numbers.as_ref().map_or(0, |atlas| atlas.size.0);
     values.annotation_options[3] = numbers.as_ref().map_or(0, |atlas| atlas.size.1);
+    values.motion[3] = numbers.as_ref().map_or(0.0, |atlas| atlas.scale);
     let target_resource: ID3D11Resource = target.cast().map_err(|error| error.to_string())?;
     let mut render_target: Option<ID3D11RenderTargetView> = None;
     let keyboard = composition

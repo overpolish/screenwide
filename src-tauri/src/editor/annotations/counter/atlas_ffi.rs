@@ -49,6 +49,14 @@ pub extern "C" fn screenwide_counter_atlas_create() -> *mut c_void {
   Box::into_raw(Box::<CounterAtlas>::default()).cast()
 }
 
+/// Atlas pixels per canvas pixel for a composition drawn at `pixel_scale`
+/// canvas pixels per drawn pixel, its largest type `largest` canvas pixels in
+/// size. See [`super::atlas_scale::raster_scale`].
+#[no_mangle]
+pub extern "C" fn screenwide_annotation_text_scale(pixel_scale: f32, largest: f32) -> f32 {
+  super::atlas_scale::raster_scale(pixel_scale, largest)
+}
+
 /// # Safety
 /// `atlas` must come from [`screenwide_counter_atlas_create`] and not have
 /// been destroyed.

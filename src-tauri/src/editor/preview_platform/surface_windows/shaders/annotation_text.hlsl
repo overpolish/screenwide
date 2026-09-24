@@ -74,15 +74,20 @@ float annotation_text_distance(float2 probe, PreviewTextBox box) {
 }
 
 /// How much of the type covers this pixel, from the atlas it was rasterised
-/// into, centred on the text block.
-float annotation_text_coverage(float2 probe, PreviewTextBox box, float feather, uint2 atlas) {
-  if (atlas.x == 0u || atlas.y == 0u || box.text_size.x <= 0.0 || box.text_size.y <= 0.0)
+/// into at `atlas.scale` pixels to the canvas pixel, centred on the text
+/// block. `feather` is half a drawn pixel, in canvas pixels, which is how far
+/// the atlas read spreads.
+float annotation_text_coverage(
+    float2 probe, PreviewTextBox box, AnnotationTextAtlas atlas, float feather) {
+  if (atlas.size.x == 0u || atlas.size.y == 0u || atlas.scale <= 0.0 ||
+      box.text_size.x <= 0.0 || box.text_size.y <= 0.0)
     return 0.0;
-  float2 drawn = box.text_size / annotation_type_supersample;
+  float2 drawn = box.text_size / atlas.scale;
   float2 local = probe - box.text_centre + drawn * 0.5;
   if (any(local < 0.0) || any(local > drawn)) return 0.0;
-  float2 texel = box.text_origin + local * annotation_type_supersample;
-  return annotation_atlas_coverage(texel, feather, box.text_origin, box.text_size, atlas);
+  return annotation_atlas_coverage(atlas, box.text_origin, box.text_size,
+                                   box.text_origin + local * atlas.scale,
+                                   2.0 * feather * atlas.scale);
 }
 
 /// A text box averaged over its exposure samples, as a counter is while it
@@ -113,7 +118,7 @@ void annotation_text_bounds(
 /// box's own coverage so the two share one antialiased edge.
 float4 annotation_text_layer(
     float4 rgba, PreviewArrow annotation, float4 color, float2 canvas_point,
-    float feather, float halo, uint2 atlas) {
+    float feather, float halo, AnnotationTextAtlas atlas) {
   PreviewTextBox box = annotation_text_box(annotation.geometry);
   float reach = halo + feather + 1.0;
   float2 low = float2(1e20, 1e20);
@@ -147,7 +152,7 @@ float4 annotation_text_layer(
   float alpha = coverage * color.a;
   rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
   rgba.a = alpha + rgba.a * (1.0 - alpha);
-  float ink = annotation_text_coverage(canvas_point, box, feather, atlas) * alpha;
+  float ink = annotation_text_coverage(canvas_point, box, atlas, feather) * alpha;
   if (ink <= 0.0) return rgba;
   // The counter's rule, so a text box and a counter in one colour carry the
   // same ink.

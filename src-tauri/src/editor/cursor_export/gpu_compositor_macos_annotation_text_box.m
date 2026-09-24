@@ -82,8 +82,7 @@ uint32_t screenwide_text_box_cell(const char *text, uint32_t length, float size,
                                   uint32_t *width, uint32_t *height) {
   if (!(size > 1.0f)) return 0;
   @autoreleasepool {
-    ScreenwideTextBlock block =
-        text_block(text, length, size * SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE);
+    ScreenwideTextBlock block = text_block(text, length, size);
     if (block.width <= 0.0) return 0;
     // One transparent pixel of margin each side keeps the block's edge off
     // the cell's.
@@ -97,8 +96,7 @@ void screenwide_text_box_draw(uint8_t *pixels, uint32_t atlas_width,
                               ScreenwideAnnotationTextRect rect, const char *text,
                               uint32_t length, float size, uint32_t alignment) {
   @autoreleasepool {
-    ScreenwideTextBlock block =
-        text_block(text, length, size * SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE);
+    ScreenwideTextBlock block = text_block(text, length, size);
     CGContextRef context = screenwide_annotation_cell_context(rect);
     if (context == NULL) return;
     CGContextSetRGBFillColor(context, 1.0, 1.0, 1.0, 1.0);

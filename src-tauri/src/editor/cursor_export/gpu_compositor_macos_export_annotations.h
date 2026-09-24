@@ -38,7 +38,8 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
     [encoder setComputePipelineState:plane == 0 ? session->annotation_luma_pipeline : session->annotation_chroma_pipeline];
     [encoder setTexture:texture atIndex:0];
     [encoder setBytes:session->canvas length:sizeof(*session->canvas) atIndex:0];
-    screenwide_bind_annotations(encoder, &annotations, session->canvas, source_width, source_height);
+    screenwide_bind_annotations(encoder, &annotations, session->canvas, source_width,
+                                source_height, 1.0f);
     [encoder setBytes:&above length:sizeof(above) atIndex:14];
     [encoder dispatchThreads:MTLSizeMake(texture.width, texture.height, 1)
         threadsPerThreadgroup:MTLSizeMake(16, 16, 1)];

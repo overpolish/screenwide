@@ -32,8 +32,8 @@ NSParagraphStyle *screenwide_text_box_paragraph(CGFloat size, uint32_t alignment
 /// from. Called from any thread.
 double screenwide_text_box_line_width(const uint8_t *text, uint32_t length, double font);
 
-/// The atlas cell a text block needs at `size` drawn pixels, margin included,
-/// in atlas pixels. Zero when there is nothing to draw.
+/// The atlas cell a text block set at `size` needs, margin included, both in
+/// atlas pixels. Zero when there is nothing to draw.
 uint32_t screenwide_text_box_cell(const char *text, uint32_t length, float size,
                                   uint32_t *width, uint32_t *height);
 

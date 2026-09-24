@@ -84,8 +84,9 @@ struct Constants {
   mesh_points: [[f32; 4]; 8],
   mesh_colors: [[f32; 4]; 4],
   effects: [f32; 4],
-  /// Timeline seconds, then the generator speed the ported generators scale
-  /// them by. The other two words are spare.
+  /// Timeline seconds, the generator speed the ported generators scale them
+  /// by, how many canvas pixels one drawn pixel covers, and how many atlas
+  /// pixels the annotations' type holds per canvas pixel.
   motion: [f32; 4],
   cursor_geometry: [f32; 4],
   cursor_effects: [f32; 4],

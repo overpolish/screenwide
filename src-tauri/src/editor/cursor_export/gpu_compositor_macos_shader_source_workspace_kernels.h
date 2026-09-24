@@ -51,7 +51,7 @@ kernel void workspace_layer(
     constant uint &annotation_count [[buffer(13)]],
     const device AnnotationSample *annotation_samples [[buffer(15)]],
     const device uchar4 *annotation_numbers [[buffer(16)]],
-    constant uint2 &annotation_atlas [[buffer(17)]],
+    constant AnnotationTextAtlas &annotation_atlas [[buffer(17)]],
     const device packed_float2 *annotation_points [[buffer(18)]],
     const device uchar *annotation_text [[buffer(19)]],
     texture2d_array<float, access::read> cursor_images [[texture(1)]],

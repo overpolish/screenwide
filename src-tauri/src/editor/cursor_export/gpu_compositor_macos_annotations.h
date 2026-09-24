@@ -72,11 +72,14 @@ static inline AnnotationArrowGeometry screenwide_prepare_annotation(
 
 /// Prepare complete shapes along the exposure, keeping curve solves off the
 /// GPU, and rasterise the counters' numbers and the text boxes' text at the
-/// size they are drawn. Every per-annotation array is sized by the list it is
-/// handed and kept off the stack, which a long document would overrun.
+/// size they are drawn. `pixel_scale` is how many canvas pixels one drawn
+/// pixel covers, which sets how finely that type is rasterised. Every
+/// per-annotation array is sized by the list it is handed and kept off the
+/// stack, which a long document would overrun.
 static inline void screenwide_bind_annotations(
     id<MTLComputeCommandEncoder> encoder, const ScreenwideAnnotations *annotations,
-    const ScreenwideCanvas *canvas, uint32_t source_width, uint32_t source_height) {
+    const ScreenwideCanvas *canvas, uint32_t source_width, uint32_t source_height,
+    float pixel_scale) {
   uint32_t count = annotations == NULL ? 0 : annotations->count;
   id<MTLDevice> device = encoder.device;
   // Metal will not make an empty buffer, so an empty list binds one zeroed record.
@@ -138,6 +141,9 @@ static inline void screenwide_bind_annotations(
       sample->opacity = fmaxf(fminf(r.opacity, 1), 0);
     }
   }
+  float largest = 0.0f;
+  for (uint32_t index = 0; index < count; index++) largest = fmaxf(largest, radii[index]);
+  float text_scale = screenwide_annotation_text_scale(pixel_scale, largest);
   NSMutableData *text_values_data = [NSMutableData dataWithLength:slots * sizeof(const char *)];
   NSMutableData *text_lengths_data = [NSMutableData dataWithLength:slots * sizeof(uint32_t)];
   NSMutableData *text_sizes_data = [NSMutableData dataWithLength:slots * sizeof(float)];
@@ -158,7 +164,7 @@ static inline void screenwide_bind_annotations(
       continue;
     text_values[index] = (const char *)(annotations->data.text + annotation->data_offset);
     text_lengths[index] = annotation->data_count;
-    text_sizes[index] = radii[index];
+    text_sizes[index] = radii[index] * text_scale;
     text_styles[index] = annotation->kind == SCREENWIDE_ANNOTATION_TEXT
         ? 1u + (annotation->head & 3u)
         : SCREENWIDE_ANNOTATION_TEXT_STYLE_COUNTER;
@@ -167,6 +173,7 @@ static inline void screenwide_bind_annotations(
   id<MTLBuffer> numbers = screenwide_annotation_text_atlas(
       device, text_values, text_lengths, text_sizes, text_styles, count, text,
       &text_uniforms);
+  text_uniforms.scale = text_scale;
   for (uint32_t index = 0; index < count; index++) {
     // Only a counter and a text box read these slots as a text rectangle; an
     // arrow with a head at both ends keeps its second head's triangle in them.
