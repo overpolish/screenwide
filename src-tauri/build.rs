@@ -32,6 +32,13 @@ fn main() {
     println!(
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_annotation_text.h"
     );
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_annotation_text_box.m"
+    );
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_annotation_text_box.h"
+    );
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_text.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_counter.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_composite.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork_helpers.h");
@@ -79,6 +86,10 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+editor.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+keyboard.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation.m");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_text.m");
+    println!(
+      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_text_input.m"
+    );
     println!(
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_chrome.m"
     );
@@ -125,6 +136,7 @@ fn main() {
     println!(
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos_private_functions.h"
     );
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_text_macos.h");
     println!(
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_background_image.m"
     );
@@ -170,6 +182,7 @@ fn main() {
       .file("src/editor/cursor_export/gpu_compositor_macos_background_image.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_annotation_text.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos_annotation_text_box.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_keyboard.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork.m")
       .file("src/recording/platform/camera/confidence_scaler_macos.m")
@@ -199,6 +212,8 @@ fn main() {
       .file("src/editor/recording_preview_surface_macos+editor.m")
       .file("src/editor/recording_preview_surface_macos+keyboard.m")
       .file("src/editor/recording_preview_surface_macos+annotation.m")
+      .file("src/editor/recording_preview_surface_macos+annotation_text_input.m")
+      .file("src/editor/recording_preview_surface_macos+annotation_text.m")
       .file("src/editor/recording_preview_surface_macos+annotation_chrome.m")
       .file("src/editor/recording_preview_surface_macos+annotation_state.m")
       .file("src/editor/recording_preview_surface_macos+osc.m")

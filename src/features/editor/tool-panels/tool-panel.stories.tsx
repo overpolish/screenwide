@@ -47,13 +47,36 @@ export const Counter: Story = {
         animated: true,
         id: "counter-1",
         kind: "counter",
-        style: { color: "#ffcc00", head: "none", width: 56 },
+        style: { align: "left", color: "#ffcc00", head: "none", width: 56 },
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
       isLocked: false,
       selection: null,
     });
+  },
+};
+
+/** The Text panel: a text box has no head or aim, and lines its lines up by
+ * the alignment it carries instead. */
+export const Text: Story = {
+  args: { tool: "annotation", workspace: "screenshot" },
+  beforeEach: () => {
+    seed(
+      {
+        annotation: {
+          animated: true,
+          id: "text-1",
+          kind: "text",
+          style: { align: "center", color: "#ffcc00", head: "none", width: 28 },
+        },
+        cursorEffects: DEFAULT_CURSOR_EFFECTS,
+        frame: null,
+        isLocked: false,
+        selection: null,
+      },
+      "screenshot",
+    );
   },
 };
 
@@ -68,7 +91,7 @@ export const Arrow: Story = {
         animated: true,
         id: "arrow-1",
         kind: "arrow",
-        style: { color: "#ff383c", head: "end", width: 8 },
+        style: { align: "left", color: "#ff383c", head: "end", width: 8 },
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
@@ -89,7 +112,7 @@ export const ArrowCustomColour: Story = {
         animated: true,
         id: "arrow-1",
         kind: "arrow",
-        style: { color: "#2ec4b6", head: "both", width: 16 },
+        style: { align: "left", color: "#2ec4b6", head: "both", width: 16 },
       },
       annotationColors: ["#2ec4b6", "#8b5e34"],
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
@@ -110,7 +133,7 @@ export const ArrowWithoutAnimation: Story = {
         animated: false,
         id: "arrow-1",
         kind: "arrow",
-        style: { color: "#ff383c", head: "end", width: 8 },
+        style: { align: "left", color: "#ff383c", head: "end", width: 8 },
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,
@@ -132,7 +155,7 @@ export const ArrowInAScreenshot: Story = {
           animated: true,
           id: "arrow-1",
           kind: "arrow",
-          style: { color: "#ff383c", head: "end", width: 8 },
+          style: { align: "left", color: "#ff383c", head: "end", width: 8 },
         },
         cursorEffects: DEFAULT_CURSOR_EFFECTS,
         frame: null,

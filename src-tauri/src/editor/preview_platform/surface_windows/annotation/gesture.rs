@@ -151,10 +151,11 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
           }
           false
         }
-        Some(AnnotationKind::Counter) => {
-          // Empty picture under the counter tool: a counter is dropped whole
-          // where the press lands, so it begins at once and a click alone
-          // commits it; the drag that may follow carries it.
+        Some(AnnotationKind::Counter | AnnotationKind::Text) => {
+          // Empty picture under the counter or text tool: the annotation is
+          // dropped whole where the press lands, so it begins at once and a
+          // click alone makes it; the drag that may follow carries it. A
+          // fresh text box goes straight on to being typed into.
           state.annotation.drag = Some(Drag::begun(TARGET_NEW, 0, HANDLE_BODY, point));
           samples.extend(resolve(
             &state,

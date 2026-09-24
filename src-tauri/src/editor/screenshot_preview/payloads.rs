@@ -46,8 +46,10 @@ pub(super) struct ScreenshotSelectionGestureEvent {
   pub(super) session_id: u64,
 }
 
-/// The layer's annotations after a pointer gesture, for React to commit into
-/// the document and its edit history.
+/// The layer's annotations after a pointer gesture, or as a text box is typed
+/// into, for React to commit into the document and its edit history.
+/// `text_edit` is where in the typing the commit falls; React groups a
+/// typing's commits into one edit.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -56,6 +58,7 @@ pub(super) struct ScreenshotAnnotationChangeEvent {
   pub(super) pane_index: u32,
   pub(super) selected_annotation_id: Option<String>,
   pub(super) session_id: u64,
+  pub(super) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
 }
 
 /// Which annotation the pointer is resting on, so the keyboard - which belongs

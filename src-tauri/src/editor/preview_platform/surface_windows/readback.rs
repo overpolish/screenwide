@@ -58,7 +58,8 @@ impl RecordingPreviewSurface {
         &settings.annotations,
         (image.width, image.height),
         settings,
-        // The export never carries a halo.
+        // The export never carries a halo, nor a caret.
+        None,
         None,
       )?;
       self.inner.gpu.compositor.draw_with_camera(
@@ -149,7 +150,7 @@ impl RecordingPreviewSurface {
     .map_err(|error| format!("The clipboard render target could not be created: {error}"))?;
     let target = target.ok_or_else(|| "D3D11 created no clipboard render target".to_owned())?;
     let prepared =
-      super::annotation::prepared_arrows(&settings.annotations, source_size, settings, None)?;
+      super::annotation::prepared_arrows(&settings.annotations, source_size, settings, None, None)?;
     self.inner.gpu.compositor.draw_with_camera(
       &self.inner.gpu.context,
       &target,

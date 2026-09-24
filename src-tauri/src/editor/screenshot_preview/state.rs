@@ -18,6 +18,10 @@ pub(super) struct PreviewManager {
   /// mid-drag cannot replace the working copy the gesture is drawing into.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_gesture: Option<AnnotationGestureOverride>,
+  /// Set while a text box is being typed into: the pane's working copy is the
+  /// manager's until the typing ends, the way it is through a drag.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  pub(super) annotation_text: Option<super::annotation_text::TextSession>,
   /// The latest pane's detected UI elements, for an arrow's tip to land on.
   /// Behind its own lock because the detection that fills it runs on a
   /// blocking thread and must never wait for the manager.
@@ -64,6 +68,8 @@ impl PreviewManager {
   pub(super) fn stop(&mut self) {
     if let Some(surface) = self.surface.as_ref() {
       surface.hide();
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      surface.end_annotation_text();
     }
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
@@ -71,6 +77,7 @@ impl PreviewManager {
       self.annotation_defaults = None;
       self.annotation_counter_angle = None;
       self.annotation_gesture = None;
+      self.annotation_text = None;
       self.annotation_hover = None;
       self.annotation_mode = 0;
       self.annotation_pane_index = None;

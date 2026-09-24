@@ -78,6 +78,8 @@ mod surface;
 #[cfg(target_os = "windows")]
 pub(crate) use surface::arrows;
 #[cfg(target_os = "windows")]
+pub(crate) use surface::type_device;
+#[cfg(target_os = "windows")]
 pub(crate) use surface::ComposedFrame;
 pub(crate) use surface::RecordingPreviewSurface;
 #[cfg(target_os = "macos")]
@@ -129,6 +131,23 @@ pub(crate) type AnnotationGestureCallback =
 /// screen, in points.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) type AnnotationHoverCallback = Box<dyn FnMut(i32, f64, f64) + Send + 'static>;
+
+/// What a text box being typed into reports: a double-click asking to open
+/// it, a change to its text, or the end of the typing.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum AnnotationTextPhase {
+  Open,
+  Change,
+  End,
+}
+
+/// One report from a text box being typed into: the phase, the layer and the
+/// box's place in its list, the text as it now stands, and the change's
+/// revision, which only ever grows within one session.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) type AnnotationTextCallback =
+  Box<dyn FnMut(AnnotationTextPhase, u32, u32, String, u64) + Send + 'static>;
 
 pub(crate) type SelectionGestureCallback = Box<
   dyn FnMut(SelectionGesturePhase, u32, SelectionGestureOperation, u32, f64, f64, f64)

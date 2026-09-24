@@ -22,9 +22,9 @@ pub(crate) fn drag_new(
   match snap {
     Some(request) => {
       let radius = request.field.radius(width);
-      let (offset, result) = request.counter(
+      let (offset, result) = request.boxed(
         request.field.disc(point, width),
-        counter_tail_tip(point, radius, *angle),
+        Some(counter_tail_tip(point, radius, *angle)),
       );
       *center = offset.apply(point);
       result

@@ -21,7 +21,8 @@ use super::AnnotationKind;
 ///
 /// An arrow's travel is its window sliding along its own path, plus the change
 /// in its own size; a counter has no path, so all it can cover in a frame is
-/// its disc's edge sweeping out as it grows.
+/// its disc's edge sweeping out as it grows, and a text box likewise its
+/// box's corners, `c` being its text block's size.
 pub(crate) fn annotation_travel(
   kind: AnnotationKind,
   a: [f32; 2],
@@ -35,6 +36,16 @@ pub(crate) fn annotation_travel(
   match kind {
     AnnotationKind::Counter => {
       width * 0.5 * COUNTER_TAIL_REACH * (reveal.scale - previous[2]).abs()
+    }
+    // Half the box's width and height together, padding included, is as far
+    // as a corner sits from the centre it grows about. The pointer, `b` as
+    // the record encodes it, sweeps out from the edge by its own reach.
+    AnnotationKind::Text => {
+      let box_reach = (c[0] + c[1]) * 0.5 + width;
+      let past = |encoded: f32| (encoded.abs() - 1.0).max(0.0);
+      let pointer_reach = past(b[0]).hypot(past(b[1])) * width + box_reach;
+      box_reach * (reveal.scale - previous[2]).abs()
+        + pointer_reach * (reveal.high - previous[1]).abs()
     }
     AnnotationKind::Arrow => {
       let length = ((b[0] - a[0]) * scale[0]).hypot((b[1] - a[1]) * scale[1])

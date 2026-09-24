@@ -8,7 +8,6 @@
 //! until each arm below has been answered, rather than a silent fall back to
 //! the arrow.
 
-use super::reveal::AnnotationReveal;
 use super::{AnnotationKind, AnnotationPoint};
 use serde::{Deserialize, Serialize};
 
@@ -32,6 +31,15 @@ pub enum AnnotationShape {
     value: u32,
     angle: f64,
   },
+  /// Lines of type in a solid box. `origin` is the box's top-left corner and
+  /// `pointer` the pointer drawn out of it, held against the box. The box's
+  /// size follows from the text and the type size.
+  Text {
+    origin: AnnotationPoint,
+    #[serde(default)]
+    pointer: super::text::model::TextPointer,
+    text: String,
+  },
 }
 
 impl AnnotationShape {
@@ -40,13 +48,15 @@ impl AnnotationShape {
     match self {
       Self::Arrow { .. } => AnnotationKind::Arrow,
       Self::Counter { .. } => AnnotationKind::Counter,
+      Self::Text { .. } => AnnotationKind::Text,
     }
   }
 
   /// The points the shape is placed by, for the coarse bounds and finiteness
   /// tests every space-changing path runs. A counter reports its centre
-  /// three times: its tail reaches past it, so a box over these points is
-  /// smaller than the annotation by up to the tail's length.
+  /// three times and a text box its corner: the disc, the tail and the box
+  /// all reach past them, so a box over these points is smaller than the
+  /// annotation. A text box's pointer is held against the box, not placed.
   pub(crate) fn points(&self) -> [AnnotationPoint; 3] {
     match self {
       Self::Arrow {
@@ -55,6 +65,7 @@ impl AnnotationShape {
         end,
       } => [*start, *control, *end],
       Self::Counter { center, .. } => [*center; 3],
+      Self::Text { origin, .. } => [*origin; 3],
     }
   }
 
@@ -68,14 +79,17 @@ impl AnnotationShape {
         end,
       } => super::arrow::model::placed(*start, *control, *end),
       Self::Counter { center, angle, .. } => super::counter::model::placed(*center, *angle),
+      Self::Text {
+        origin, pointer, ..
+      } => super::text::model::placed(*origin, pointer),
     }
   }
 
   /// The same shape with every point moved by `map`. What an annotation *is*
-  /// does not change with the space it is drawn in, so the angle and the number
-  /// ride through untouched: every space an annotation travels between keeps
-  /// the picture's aspect, so a direction in one is the same direction in the
-  /// next.
+  /// does not change with the space it is drawn in, so the angle, the number
+  /// and the text ride through untouched: every space an annotation travels
+  /// between keeps the picture's aspect, so a direction in one is the same
+  /// direction in the next.
   pub(crate) fn mapped(&self, map: impl Fn(AnnotationPoint) -> AnnotationPoint) -> Self {
     match self {
       Self::Arrow {
@@ -96,6 +110,15 @@ impl AnnotationShape {
         value: *value,
         angle: *angle,
       },
+      Self::Text {
+        origin,
+        pointer,
+        text,
+      } => Self::Text {
+        origin: map(*origin),
+        pointer: *pointer,
+        text: text.clone(),
+      },
     }
   }
 
@@ -109,14 +132,14 @@ impl AnnotationShape {
         control,
         end,
       } => super::arrow::bend::arrow_bend(*start, *control, *end).clamped(),
-      Self::Counter { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
+      Self::Counter { .. } | Self::Text { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
     }
   }
 
   /// The three points the retained draw record carries. Each kind reads the
-  /// slots its own way; [`super::native`] documents both readings.
+  /// slots its own way; [`super::native`] documents every reading.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
-  pub(crate) fn draw_points(&self) -> [[f32; 2]; 3] {
+  pub(crate) fn draw_points(&self, style: &super::AnnotationStyle) -> [[f32; 2]; 3] {
     match self {
       Self::Arrow {
         start,
@@ -124,6 +147,36 @@ impl AnnotationShape {
         end,
       } => super::arrow::native::draw_points(*start, *control, *end),
       Self::Counter { center, angle, .. } => super::counter::native::draw_points(*center, *angle),
+      Self::Text {
+        origin,
+        pointer,
+        text,
+      } => super::text::native::draw_points(*origin, pointer, text, style),
+    }
+  }
+
+  /// The `head` the retained draw record carries: which ends of an arrow
+  /// have one, nothing for a counter, and a text box's alignment.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  pub(crate) fn draw_head(&self, style: &super::AnnotationStyle) -> u32 {
+    match self {
+      Self::Arrow { .. } | Self::Counter { .. } => match style.head {
+        super::AnnotationHead::None => 0,
+        super::AnnotationHead::End => 1,
+        super::AnnotationHead::Both => 2,
+      },
+      Self::Text { .. } => style.align.raw(),
+    }
+  }
+
+  /// What the retained draw record rasterises as type: a counter's number, a
+  /// text box's text, nothing for an arrow.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  pub(crate) fn draw_text(&self) -> std::borrow::Cow<'_, str> {
+    match self {
+      Self::Arrow { .. } => std::borrow::Cow::Borrowed(""),
+      Self::Counter { value, .. } => std::borrow::Cow::Owned(value.to_string()),
+      Self::Text { text, .. } => std::borrow::Cow::Borrowed(text),
     }
   }
 
@@ -145,6 +198,11 @@ impl AnnotationShape {
       Self::Counter { center, angle, .. } => {
         super::counter::handles::grips(*center, *angle, style, index, source, image_width)
       }
+      Self::Text {
+        origin,
+        pointer,
+        text,
+      } => super::text::handles::grips(*origin, pointer, text, style, index, source, image_width),
     }
   }
 
@@ -161,94 +219,14 @@ impl AnnotationShape {
       Self::Counter { center, .. } => {
         super::counter::snap::field_box(*center, width, source_per_output)
       }
-    }
-  }
-}
-
-impl super::Annotation {
-  /// Move one grip to `point`, in source pixels. `origin` is where the drag
-  /// began, which is what a whole-annotation move measures its travel
-  /// against, and `shift` is whether Shift was held - which holds a
-  /// counter's tail to the quarter turns.
-  ///
-  /// `snap` is the positional candidates this sample may land on, absent
-  /// when the positional modifier is not held. A counter's disc aligns to
-  /// the axis guides and an arrow's tip takes an element anchor; neither
-  /// shape ever sees the other's candidates. What it landed on is reported
-  /// back for the chrome to draw.
-  #[cfg(any(target_os = "macos", target_os = "windows", test))]
-  pub(crate) fn drag_grip(
-    &mut self,
-    handle: super::gesture::AnnotationHandle,
-    point: AnnotationPoint,
-    origin: &super::gesture::AnnotationDragOrigin,
-    shift: bool,
-    snap: Option<super::snap::SnapRequest<'_>>,
-  ) -> super::snap::SnapResult {
-    match self.shape.kind() {
-      AnnotationKind::Arrow => {
-        super::arrow::gesture::drag(self, handle, point, origin, shift, snap)
-      }
-      AnnotationKind::Counter => {
-        super::counter::gesture::drag(self, handle, point, origin, shift, snap)
-      }
-    }
-  }
-
-  /// Carry the annotation this gesture has just made to `point`: an arrow is
-  /// drawn out from the press, a counter was dropped whole there.
-  #[cfg(any(target_os = "macos", target_os = "windows", test))]
-  pub(crate) fn drag_new(
-    &mut self,
-    point: AnnotationPoint,
-    snap: Option<super::snap::SnapRequest<'_>>,
-  ) -> super::snap::SnapResult {
-    match self.shape.kind() {
-      AnnotationKind::Arrow => super::arrow::snap::drag_new(self, point, snap),
-      AnnotationKind::Counter => super::counter::snap::drag_new(self, point, snap),
-    }
-  }
-}
-
-impl AnnotationKind {
-  /// The annotation a fresh press of this tool makes at `point`, in `style`
-  /// or in the tool's own first dress. `angle` is where a counter's tail
-  /// points and `existing` the list it is numbered against.
-  #[cfg(any(target_os = "macos", target_os = "windows", test))]
-  pub(crate) fn new_annotation(
-    self,
-    id: String,
-    point: AnnotationPoint,
-    style: Option<&super::AnnotationStyle>,
-    angle: Option<f64>,
-    existing: &[super::Annotation],
-  ) -> super::Annotation {
-    match self {
-      Self::Arrow => super::arrow::model::new_arrow(id, point, point, style),
-      Self::Counter => super::counter::model::new_counter(
-        id,
-        point,
-        super::counter::next_counter_value(existing),
-        style,
-        angle,
-      ),
-    }
-  }
-
-  /// The reveal window a clip of this kind is at: an arrow is drawn along its
-  /// own path, a counter grows into place on its own quicker timing.
-  #[cfg(any(target_os = "macos", target_os = "windows", test))]
-  pub(crate) fn reveal_window(
-    self,
-    elapsed_ms: f32,
-    duration_ms: f32,
-    frame_ms: f32,
-  ) -> AnnotationReveal {
-    match self {
-      Self::Arrow => super::reveal::reveal_window(elapsed_ms, duration_ms, frame_ms),
-      Self::Counter => {
-        super::counter::reveal::counter_reveal_window(elapsed_ms, duration_ms, frame_ms)
+      Self::Text { origin, text, .. } => {
+        super::text::snap::field_box(*origin, text, width, source_per_output)
       }
     }
   }
 }
+
+/// What a gesture asks of each kind: how a grip moves it, how a fresh one is
+/// made and carried, and how it arrives over its clip.
+#[path = "shape_edit.rs"]
+mod edit;

@@ -7,8 +7,10 @@ import { ButtonGroup } from "../../../components/base/button-group/button-group"
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 import { ANNOTATION_TOOLS } from "../tool-panels/tool-registry";
 
+import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+
 export type RecordingCanvasTool =
-  "arrow" | "canvas" | "counter" | "crop" | "select" | null;
+  AnnotationKind | "canvas" | "crop" | "select" | null;
 
 export function RecordingCanvasTools({
   isEnabled,

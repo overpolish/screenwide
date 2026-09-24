@@ -96,14 +96,16 @@ fn drawing() -> MutexGuard<'static, Option<Stroke>> {
 
 /// The dress an annotation of `shape` is drawn in. An arrow's stroke and a
 /// counter's disc are different measurements of different things, so the width
-/// comes from the setting that belongs to the shape.
+/// comes from the setting that belongs to the shape. The overlay offers no
+/// text tool, and its settings refuse one, so a text box never reaches here.
 fn style(shape: AnnotationKind) -> AnnotationStyle {
   let settings = super::settings::current();
   AnnotationStyle {
+    align: Default::default(),
     color: settings.default_color,
     head: settings.default_head,
     width: match shape {
-      AnnotationKind::Arrow => settings.default_width,
+      AnnotationKind::Arrow | AnnotationKind::Text => settings.default_width,
       AnnotationKind::Counter => settings.default_counter_size,
     },
   }
@@ -116,16 +118,22 @@ fn style(shape: AnnotationKind) -> AnnotationStyle {
 /// A counter sits where the pointer is rather than where the press landed: it
 /// is dropped whole, and the same drag carries it, exactly as a fresh counter
 /// in the editor is carried.
-fn annotation(stroke: &Stroke, style: &AnnotationStyle) -> Annotation {
+fn annotation(stroke: &Stroke, style: &AnnotationStyle) -> Option<Annotation> {
   match stroke.shape {
-    AnnotationKind::Arrow => new_arrow(stroke.id.clone(), stroke.start, stroke.end, Some(style)),
-    AnnotationKind::Counter => new_counter(
+    AnnotationKind::Arrow => Some(new_arrow(
+      stroke.id.clone(),
+      stroke.start,
+      stroke.end,
+      Some(style),
+    )),
+    AnnotationKind::Counter => Some(new_counter(
       stroke.id.clone(),
       stroke.end,
       stroke.value,
       Some(style),
       Some(stroke.angle),
-    ),
+    )),
+    AnnotationKind::Text => None,
   }
 }
 
@@ -133,7 +141,11 @@ fn annotation(stroke: &Stroke, style: &AnnotationStyle) -> Annotation {
 /// place is a blob, and the press that starts every stroke would flash one
 /// before the drag begins; a counter is an annotation the moment it is dropped.
 fn is_drawn(stroke: &Stroke) -> bool {
-  stroke.shape == AnnotationKind::Counter || stroke.start != stroke.end
+  match stroke.shape {
+    AnnotationKind::Arrow => stroke.start != stroke.end,
+    AnnotationKind::Counter => true,
+    AnnotationKind::Text => false,
+  }
 }
 
 /// What a press starts: the tool in hand, and what a counter dropped by it
@@ -183,10 +195,10 @@ fn step(
       // A click that never travelled is not an arrow. Otherwise every stray
       // click while the overlay is up would leave a dot on screen, and a clip
       // in the recording. A counter is dropped by that very click.
-      is_drawn(&stroke).then(|| {
-        let style = style(stroke.shape);
-        (annotation(&stroke, &style), stroke.started_at)
-      })
+      let drawn = is_drawn(&stroke)
+        .then(|| annotation(&stroke, &style(stroke.shape)))
+        .flatten()?;
+      Some((drawn, stroke.started_at))
     }
   }
 }
@@ -196,7 +208,7 @@ fn step(
 pub(super) fn in_progress() -> Option<Annotation> {
   let drawing = drawing();
   let stroke = drawing.as_ref().filter(|stroke| is_drawn(stroke))?;
-  Some(annotation(stroke, &style(stroke.shape)))
+  annotation(stroke, &style(stroke.shape))
 }
 
 /// A pointer step in global desktop points: 0 down, 1 drag, 2 up.

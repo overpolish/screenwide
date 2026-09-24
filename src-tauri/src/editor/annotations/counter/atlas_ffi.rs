@@ -9,12 +9,13 @@ use std::ffi::c_void;
 
 use super::atlas::{AtlasDraw, AtlasRect, CounterAtlas, CounterNumber};
 
-/// One number, the twin of `ScreenwideCounterNumber`.
+/// One piece of type, the twin of `ScreenwideCounterNumber`.
 #[repr(C)]
 pub struct NativeCounterNumber {
   text: *const u8,
   length: u32,
   radius: f32,
+  style: u32,
 }
 
 /// One number to rasterise now, the twin of `ScreenwideCounterDraw`.
@@ -96,6 +97,7 @@ pub unsafe extern "C" fn screenwide_counter_atlas_frame(
           std::slice::from_raw_parts(number.text, number.length as usize)
         },
         radius: number.radius,
+        style: number.style,
       })
       .collect()
   };

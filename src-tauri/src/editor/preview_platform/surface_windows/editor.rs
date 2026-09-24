@@ -13,7 +13,7 @@ use windows::{
     System::LibraryLoader::GetModuleHandleW,
     UI::WindowsAndMessaging::{
       CreateWindowExW, DestroyWindow, LoadCursorW, RegisterClassW, SetCursor, SetWindowPos,
-      ShowWindowAsync, CS_DBLCLKS, CW_USEDEFAULT, HMENU, HWND_TOP, IDC_ARROW, IDC_CROSS,
+      ShowWindowAsync, CS_DBLCLKS, CW_USEDEFAULT, HMENU, HWND_TOP, IDC_ARROW, IDC_CROSS, IDC_IBEAM,
       IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, SWP_ASYNCWINDOWPOS,
       SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_SHOWWINDOW, SW_HIDE,
       SW_SHOWNOACTIVATE, WNDCLASSW, WS_CHILD, WS_CLIPSIBLINGS, WS_EX_NOACTIVATE,
@@ -24,6 +24,9 @@ use windows::{
 
 #[path = "editor/input.rs"]
 mod input;
+#[path = "editor/typing_window.rs"]
+mod typing_window;
+pub(super) use typing_window::TypingInput;
 
 #[derive(Clone, Copy)]
 pub(super) enum CursorKind {
@@ -35,6 +38,8 @@ pub(super) enum CursorKind {
   ResizeVertical,
   ResizeNesw,
   ResizeNwse,
+  /// Over a box being typed into.
+  IBeam,
 }
 
 #[derive(Clone, Copy)]
@@ -87,6 +92,10 @@ pub(super) enum Input {
 
 pub(super) struct EditorWindow {
   hwnd: HWND,
+  /// The child a box's typing takes the keyboard in.
+  typing: HWND,
+  /// Where the keyboard goes back to once the typing is over.
+  webview: tauri::WebviewWindow,
   /// Set while the frontend covers the workarea with its own chrome. The
   /// window stays hidden for as long as it is set, whatever the editor's
   /// active state does, so a layout cannot raise it back over that chrome.
@@ -98,7 +107,7 @@ unsafe impl Send for EditorWindow {}
 unsafe impl Sync for EditorWindow {}
 
 impl EditorWindow {
-  pub(super) fn new(parent: HWND) -> Result<Self, String> {
+  pub(super) fn new(parent: HWND, webview: tauri::WebviewWindow) -> Result<Self, String> {
     let instance = unsafe { GetModuleHandleW(None) }.map_err(|error| error.to_string())?;
     let atom = *CLASS.get_or_init(|| unsafe {
       RegisterClassW(&WNDCLASSW {
@@ -135,12 +144,20 @@ impl EditorWindow {
     raise(hwnd);
     Ok(Self {
       hwnd,
+      typing: typing_window::create(hwnd)?,
+      webview,
       suspended: AtomicBool::new(false),
     })
   }
 
   pub(super) fn hwnd(&self) -> HWND {
     self.hwnd
+  }
+
+  /// Hands the keyboard back to the webview, whose shortcuts own it
+  /// whenever nothing is being typed.
+  pub(super) fn focus_webview(&self) {
+    let _ = self.webview.set_focus();
   }
 
   /// `ShowWindowAsync` posts rather than sends, so callers off the event-loop
@@ -198,6 +215,7 @@ impl EditorWindow {
       CursorKind::ResizeVertical => IDC_SIZENS,
       CursorKind::ResizeNesw => IDC_SIZENESW,
       CursorKind::ResizeNwse => IDC_SIZENWSE,
+      CursorKind::IBeam => IDC_IBEAM,
     };
     if let Ok(cursor) = unsafe { LoadCursorW(None, name) } {
       unsafe { SetCursor(Some(cursor)) };

@@ -42,6 +42,12 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       y,
       snapping: _,
     } => {
+      // A box being typed into takes the press first: in the box it places
+      // the caret, anywhere else it only ends the typing.
+      if annotation::typing_press(inner, logical(x, y), false) {
+        refresh_cursor_for(inner);
+        return;
+      }
       // A press is never a hover: the halo goes out before anything moves.
       annotation::update_hover(inner, logical(x, y), true);
       // The arrow chrome gets the press first and keeps it if it lands on a
@@ -63,6 +69,9 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       pressed,
       snapping,
     } => {
+      if pressed && annotation::typing_move(inner, logical(x, y)) {
+        return;
+      }
       annotation::update_hover(inner, logical(x, y), pressed);
       if pressed && annotation::pointer_move(inner, logical(x, y)) {
         if let Ok(mut state) = inner.state.lock() {
@@ -98,7 +107,7 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       }
     }
     editor::Input::Up { x, y } => {
-      if annotation::up(inner, logical(x, y)) {
+      if annotation::typing_up(inner) || annotation::up(inner, logical(x, y)) {
         if let Ok(mut state) = inner.state.lock() {
           state.last_pointer = logical(x, y);
         }
@@ -134,7 +143,16 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
         emit_transform(inner, zoom);
       }
     }
-    editor::Input::DoubleClick { .. } => {
+    editor::Input::DoubleClick { x, y } => {
+      // Windows reports a double-click in place of its second press. Over a
+      // text box it opens the box for typing, and in a box being typed into
+      // it selects a word; only elsewhere does it fit the view.
+      if annotation::typing_press(inner, logical(x, y), true)
+        || annotation::open_text(inner, logical(x, y))
+      {
+        refresh_cursor_for(inner);
+        return;
+      }
       // Back to the current fit basis: the space beside an open tool panel
       // while one is up, the whole viewport otherwise.
       let mut zoom = 1.0;

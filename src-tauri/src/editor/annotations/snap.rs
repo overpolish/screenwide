@@ -143,32 +143,37 @@ pub(crate) struct SnapRequest<'a> {
 }
 
 impl SnapRequest<'_> {
-  /// Where a counter lands: its disc aligned to the guides, its tail tip
-  /// competing for the detected elements' edges, and the disc offered equal
-  /// spacing with every pair of other annotations. Each axis resolves once
-  /// and one offset carries the whole counter, so it arrives whole however
-  /// the candidates fell out.
-  pub(crate) fn counter(&self, disc: SnapBox, tip: AnnotationPoint) -> (SnapOffset, SnapResult) {
+  /// Where a boxed annotation lands - a counter's disc or a text box: the
+  /// box aligned to the guides, the tip of its tail or pointer competing for
+  /// the detected elements' edges, and the box offered equal spacing with
+  /// every pair of other annotations. Each axis resolves once and one offset
+  /// carries the whole annotation, so it arrives whole however the
+  /// candidates fell out. A text box without a pointer has no tip.
+  pub(crate) fn boxed(
+    &self,
+    disc: SnapBox,
+    tip: Option<AnnotationPoint>,
+  ) -> (SnapOffset, SnapResult) {
     let subject = SnapSubject::moved_box(disc);
-    let edges = self
-      .field
-      .anchors
-      .as_deref()
-      .and_then(|anchors| snap_edges(tip, anchors.bounds(), self.threshold));
+    let edges = tip
+      .zip(self.field.anchors.as_deref())
+      .and_then(|(tip, anchors)| {
+        snap_edges(tip, anchors.bounds(), self.threshold).map(|edge| (tip, edge))
+      });
     let gaps =
       [Axis::X, Axis::Y].map(|axis| snap_gap(disc, &self.field.boxes, axis, self.threshold));
     let (x, took_x) = resolve_axis(
       snap_axis(subject.x.as_slice(), &self.field.guides_x, self.threshold),
-      edges.and_then(|edge| edge.x).map(|edge| edge - tip.x),
+      edges.and_then(|(tip, edge)| edge.x.map(|x| x - tip.x)),
       gaps[0].map(|gap| gap.offset),
     );
     let (y, took_y) = resolve_axis(
       snap_axis(subject.y.as_slice(), &self.field.guides_y, self.threshold),
-      edges.and_then(|edge| edge.y).map(|edge| edge - tip.y),
+      edges.and_then(|(tip, edge)| edge.y.map(|y| y - tip.y)),
       gaps[1].map(|gap| gap.offset),
     );
     let offset = SnapOffset { x, y };
-    // The bars are measured from where the counter landed, not from where
+    // The bars are measured from where the box landed, not from where
     // the hand was, so each sits in the middle of what the boxes either side
     // of it really share.
     let moved = disc.moved(offset);
@@ -186,7 +191,7 @@ impl SnapRequest<'_> {
         guide_y: took_y.and_then(AxisWinner::guide),
         anchor: edges
           .filter(|_| took_edge(took_x) || took_edge(took_y))
-          .map(|edge| SnapAnchor {
+          .map(|(tip, edge)| SnapAnchor {
             point: offset.apply(tip),
             bounds: edge.bounds,
           }),
@@ -225,11 +230,18 @@ impl SnapRequest<'_> {
   }
 }
 
-/// Eight screen points in the source's pixels. `image_points` is how wide the
-/// layer's picture is drawn on screen, which is the only measure the native
-/// side reports; the source's own width - not the output canvas's - is what
-/// the annotation model measures in. `None` leaves the sample unsnapped.
-pub(crate) fn threshold_source_px(source_width: u32, image_points: f64) -> Option<f64> {
+/// How many source pixels one screen point covers. `image_points` is how
+/// wide the layer's picture is drawn on screen, which is the only measure the
+/// native side reports; the source's own width - not the output canvas's - is
+/// what the annotation model measures in. `None` where the drawn width is
+/// unknown.
+pub(crate) fn source_per_point(source_width: u32, image_points: f64) -> Option<f64> {
   (image_points.is_finite() && image_points > 0.0)
-    .then(|| THRESHOLD_POINTS * f64::from(source_width.max(1)) / image_points)
+    .then(|| f64::from(source_width.max(1)) / image_points)
+}
+
+/// Eight screen points in the source's pixels. `None` leaves the sample
+/// unsnapped.
+pub(crate) fn threshold_source_px(source_width: u32, image_points: f64) -> Option<f64> {
+  source_per_point(source_width, image_points).map(|scale| THRESHOLD_POINTS * scale)
 }

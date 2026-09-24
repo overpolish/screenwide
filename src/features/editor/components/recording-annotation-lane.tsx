@@ -3,7 +3,7 @@
 
 import { PencilLine } from "lucide-react";
 
-import { annotationLaneLabel } from "../annotations";
+import { annotationLaneLabel } from "../annotation-kinds";
 import { resizeRecordingAnnotationClip } from "../recording-annotation-geometry";
 import { RecordingAnnotationClip } from "../recording-annotations";
 import {

@@ -9,8 +9,8 @@ use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{annotation_mode, drawing_kind, AnnotationGestureTarget};
 use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
 use crate::editor::annotations::snap::{
-  detect_anchors, request_anchors, threshold_source_px, AnchorBoxes, AnchorCache, SnapField,
-  SnapModifiers, SnapRequest, SnapResult,
+  detect_anchors, request_anchors, source_per_point, threshold_source_px, AnchorBoxes, AnchorCache,
+  SnapField, SnapModifiers, SnapRequest, SnapResult,
 };
 use crate::editor::annotations::timing::{
   active_annotations, validate_clips, AnnotationTrack, RecordingAnnotationClip,
@@ -32,6 +32,9 @@ pub(super) struct AnnotationState {
   animated: Option<bool>,
   counter_angle: Option<f64>,
   gesture: Option<Gesture>,
+  /// The text box being typed into, which owns the pane's annotations the way
+  /// a gesture does until the typing ends.
+  text: Option<TextSession>,
   /// The latest frame's detected UI elements, for an arrow's tip to land on.
   /// Behind its own lock because the detection that fills it runs on a
   /// blocking thread and must never wait for the manager.
@@ -58,6 +61,7 @@ pub async fn set_recording_preview_annotations(
   animated: Option<bool>,
   counter_angle: Option<f64>,
 ) -> Result<(), String> {
+  let mut clips = clips;
   validate_clips(&clips)?;
   let mut manager = state
     .0
@@ -75,6 +79,9 @@ pub async fn set_recording_preview_annotations(
     .annotation_clips
     .write()
     .map_err(|_| "The annotations are unavailable")?;
+  // A text box being typed into takes React's clips - the panel may be
+  // dressing it - with the text typed so far laid over them.
+  manager.merge_text_session(&mut clips, &current);
   let changed = *current != clips;
   *current = clips;
   drop(current);
@@ -107,6 +114,10 @@ pub async fn set_recording_preview_annotations(
 
 #[path = "annotation_gesture.rs"]
 mod gesture;
+
+#[path = "annotation_text.rs"]
+mod text;
+use text::TextSession;
 
 #[path = "annotation_callbacks.rs"]
 mod callbacks;

@@ -69,6 +69,11 @@ pub(crate) mod arrows {
   /// way the editor's compositor does.
   pub(crate) use super::counter_artwork::{numbered_arrows, CounterAtlas};
 }
+/// Inter SemiBold set by GDI, which measures a text box as well as drawing
+/// its type.
+#[path = "surface_windows/type_device.rs"]
+pub(crate) mod type_device;
+use annotation::handle_typing_input;
 use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for};
 use geometry::{
   auto_fit_selection_bounds, display_selection, frame_resize_start, maximum_editor_zoom,
@@ -168,9 +173,10 @@ use super::{
     rebase_display_fit_mode, DisplayRect, DisplayTarget, NormalizedRect,
   },
   workspace_transform::WorkspaceTransform,
-  AnnotationGestureCallback, AnnotationHoverCallback, ContextMenuCallback, PointerDownCallback,
-  PreviewSelection, PreviewSurfaceRect, SelectionCallback, SelectionGestureCallback,
-  SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
+  AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, AnnotationTextPhase,
+  ContextMenuCallback, PointerDownCallback, PreviewSelection, PreviewSurfaceRect,
+  SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
+  TransformCallback,
 };
 use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};

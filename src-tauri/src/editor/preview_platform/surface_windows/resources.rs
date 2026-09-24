@@ -28,6 +28,11 @@ pub(super) struct Pane {
   /// its layer: the arrow's place in that layer's list and the halo's width
   /// in canvas pixels. Preview chrome, resolved when the layer is presented.
   pub(super) annotation_halo: Option<(usize, f32)>,
+  /// The box being typed into, if it belongs to this pane's layer: its place
+  /// in that layer's list and the caret and selection drawn into its type.
+  /// Kept across presents, so every redraw the typing causes carries it.
+  pub(super) annotation_typing:
+    Option<(usize, crate::editor::annotations::text::typing::TypingMarks)>,
   /// Stable viewport-local geometry before the shared workspace transform.
   pub(super) base_rect: PreviewSurfaceRect,
   /// Retained swap-chain allocation; `content_size` is the presented region.

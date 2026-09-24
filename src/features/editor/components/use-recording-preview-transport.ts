@@ -16,7 +16,7 @@ import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
 } from "../screenshot-output";
-import { EditorToolId } from "../tool-panels/tool-registry";
+import { EditorToolId, isAnnotationTool } from "../tool-panels/tool-registry";
 import { useToolPanelFollowsTool } from "../tool-panels/use-tool-panel-follows-tool";
 import { RecordingVideoTrackId } from "../types";
 import { usePreviewZoom } from "../use-preview-zoom";
@@ -138,9 +138,7 @@ export function useRecordingPreviewTransport(
   // to agree with) and the editor's own delete shortcut.
   const annotationTool =
     (bakeCamera && activeVideoTrack === "camera") ||
-    (canvasTool !== "arrow" &&
-      canvasTool !== "counter" &&
-      canvasTool !== "select")
+    !isAnnotationTool(canvasTool)
       ? null
       : canvasTool;
   const clearAnnotationRef = useRef(() => {});

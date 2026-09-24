@@ -10,7 +10,7 @@ import {
   useAnnotationAnimatedDefault,
   useAnnotationDefaults,
 } from "./annotation-defaults";
-import { Annotation } from "./annotations";
+import { Annotation, AnnotationTextEdit } from "./annotations";
 import {
   mergeRecordingAnnotationClips,
   renumberedAnnotationClips,
@@ -20,6 +20,7 @@ import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import { drawingToolKind } from "./tool-panels/tool-registry";
 import { RecordingVideoTrackId } from "./types";
 import { useAnnotations } from "./use-annotations";
+import { useEditorEditGesture } from "./use-editor-edit-history";
 
 type AnnotationEvent = {
   annotations: Annotation[];
@@ -27,6 +28,9 @@ type AnnotationEvent = {
   selectedAnnotationId: string | null;
   sessionId: number;
   sourcePositionMs: number;
+  /** Where in a text box's typing this commit falls; the typing's commits
+   * are grouped into one edit. */
+  textEdit: AnnotationTextEdit | null;
 };
 type AnnotationHoverEvent = { annotationId: string | null; sessionId: number };
 const EMPTY_CLIPS: RecordingAnnotationClip[] = [];
@@ -59,6 +63,7 @@ export function useRecordingAnnotations({
   const defaults = useAnnotationDefaults(drawingToolKind(tool) ?? "arrow");
   const animated = useAnnotationAnimatedDefault();
   const counterAngle = useAnnotationAngleDefault();
+  const editGesture = useEditorEditGesture();
   const [previewClips, setPreviewClips] = useState<
     RecordingAnnotationClip[] | null
   >(null);
@@ -95,6 +100,7 @@ export function useRecordingAnnotations({
   });
   eventRef.current = {
     commit: (payload) => {
+      if (payload.textEdit === "begin") editGesture.beginGesture();
       const track = payload.paneIndex === 1 ? "camera" : "primary";
       commitClips(
         mergeRecordingAnnotationClips({
@@ -108,6 +114,8 @@ export function useRecordingAnnotations({
       );
       selection.onSelectedChange(payload.selectedAnnotationId);
       if (payload.selectedAnnotationId) onSelectTrack?.(track);
+      if (payload.textEdit === "end")
+        requestAnimationFrame(editGesture.endGesture);
     },
     hover: selection.onHoverChange,
   };

@@ -11,26 +11,28 @@
  * twin of `src-tauri/src/editor/annotations/model.rs`.
  */
 
-import { ANNOTATION_SIZES } from "../../components/shared/annotation-style/widths";
+import { ANNOTATION_KINDS, isAnnotationKind } from "./annotation-kinds";
 
 import type {
+  AnnotationAlign,
   AnnotationHead,
-  AnnotationKind,
 } from "../../components/shared/annotation-style/types";
 
 /** A point in the layer source's pixel space. */
-type AnnotationPoint = { x: number; y: number };
+export type AnnotationPoint = { x: number; y: number };
 
 export type AnnotationStyle = {
+  /** How a text box lines up its lines; the other kinds carry the default. */
+  align: AnnotationAlign;
   /** `#rrggbb` or `#rrggbbaa`, straight alpha. */
   color: string;
   head: AnnotationHead;
-  /** Stroke width in output pixels. */
+  /** Stroke width, disc diameter or type size, in output pixels. */
   width: number;
 };
 
 /** A quadratic Bézier from `start` to `end`, bent by `control`. */
-type AnnotationArrow = {
+export type AnnotationArrow = {
   control: AnnotationPoint;
   end: AnnotationPoint;
   kind: "arrow";
@@ -43,14 +45,40 @@ type AnnotationArrow = {
  * `angle` is where the tail points, in radians clockwise from east in the
  * source's own pixel space - so a fresh counter's zero points right.
  */
-type AnnotationCounter = {
+export type AnnotationCounter = {
   angle: number;
   center: AnnotationPoint;
   kind: "counter";
   value: number;
 };
 
-type AnnotationShape = AnnotationArrow | AnnotationCounter;
+/**
+ * Lines of type in a solid box. `origin` is the box's top-left corner and
+ * `pointer` the pointer drawn out of it, held against the box. The box's size
+ * follows from the text and the type size.
+ */
+export type AnnotationText = {
+  kind: "text";
+  origin: AnnotationPoint;
+  pointer: TextPointer;
+  text: string;
+};
+
+/**
+ * A text box's pointer, held against its box so it keeps its place however
+ * the box is moved, retyped or resized. `along` is where the tip sits in each
+ * axis as a share of the box's half size from its centre, -1 to 1; `reach` is
+ * how far past that edge it goes, in ems of the box's type. One that reaches
+ * nowhere is tucked in and not drawn. The twin of `TextPointer` in
+ * `src-tauri/src/editor/annotations/text/model.rs`.
+ */
+export type TextPointer = {
+  along: AnnotationPoint;
+  reach: AnnotationPoint;
+};
+
+export type AnnotationShape =
+  AnnotationArrow | AnnotationCounter | AnnotationText;
 
 export type Annotation = {
   /**
@@ -68,125 +96,11 @@ export type Annotation = {
   style: AnnotationStyle;
 };
 
-const annotationPoint = (value: unknown): AnnotationPoint | null => {
-  const point = value as Partial<AnnotationPoint> | null | undefined;
-  return typeof point?.x === "number" &&
-    typeof point.y === "number" &&
-    Number.isFinite(point.x) &&
-    Number.isFinite(point.y)
-    ? { x: point.x, y: point.y }
-    : null;
-};
-
 const annotationHead = (value: unknown): AnnotationHead =>
   value === "none" || value === "both" ? value : "end";
 
-/**
- * How long an animated annotation takes to arrive, in source milliseconds. The
- * twins of `REVEAL_DRAW_IN_MS` and `COUNTER_REVEAL_IN_MS` in
- * `src-tauri/src/editor/annotations/reveal.rs` and `counter/reveal.rs`, which
- * Rust tests hold to these lines; a reveal may shorten its phase for a short
- * clip but never lengthens it, so an annotation placed this long before the
- * playhead is always whole by the time the playhead is reached.
- */
-export const ANNOTATION_DRAW_IN_MS = 1000;
-const ANNOTATION_COUNTER_DRAW_IN_MS = 320;
-
-/**
- * What one kind of annotation is and can do: how it is read from a document,
- * how long it takes to arrive, what it is called, and which controls it
- * answers to.
- *
- * One row per kind rather than a condition at each control, so a tool added
- * later states its own answers in one place and the panel, the lane and the
- * document reader all follow. The sizes come from the shared table the live
- * overlay's controls read, so a kind is offered the same sizes wherever it is
- * drawn.
- */
-type AnnotationKindRow<Shape extends AnnotationShape> =
-  (typeof ANNOTATION_SIZES)[AnnotationKind] & {
-    drawInMs: number;
-    /** Whether it is aimed by an angle of its own, rather than by its ends. */
-    hasAngle: boolean;
-    /** Whether it carries heads to choose between. */
-    hasHead: boolean;
-    /** What the timeline lane calls one, `index` being its place in the lane. */
-    laneLabel: (shape: Shape, index: number) => string;
-    /** The shape as stored, or null where the compositor could not place it. */
-    parseShape: (value: unknown) => Shape | null;
-    /** Whether it can be turned round end for end. */
-    reversible: boolean;
-  };
-
-export const ANNOTATION_KINDS: {
-  [Kind in AnnotationKind]: AnnotationKindRow<
-    Extract<AnnotationShape, { kind: Kind }>
-  >;
-} = {
-  arrow: {
-    ...ANNOTATION_SIZES.arrow,
-    drawInMs: ANNOTATION_DRAW_IN_MS,
-    hasAngle: false,
-    hasHead: true,
-    // An arrow has no name of its own, so it is called by its place in the
-    // lane.
-    laneLabel: (_shape, index) => `Arrow ${String(index + 1)}`,
-    parseShape: (value) => {
-      const shape = (value ?? {}) as Partial<AnnotationArrow>;
-      const control = annotationPoint(shape.control);
-      const end = annotationPoint(shape.end);
-      const start = annotationPoint(shape.start);
-      return control && end && start
-        ? { control, end, kind: "arrow", start }
-        : null;
-    },
-    reversible: true,
-  },
-  counter: {
-    ...ANNOTATION_SIZES.counter,
-    drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
-    hasAngle: true,
-    // A counter is a disc with a number in it, which leaves it no head to
-    // choose and nothing to reverse.
-    hasHead: false,
-    laneLabel: (shape) => `Counter ${String(shape.value)}`,
-    parseShape: (value) => {
-      const shape = (value ?? {}) as Partial<AnnotationCounter>;
-      const center = annotationPoint(shape.center);
-      const number = shape.value;
-      return center &&
-        typeof shape.angle === "number" &&
-        Number.isFinite(shape.angle) &&
-        typeof number === "number" &&
-        Number.isInteger(number) &&
-        number >= 1
-        ? { angle: shape.angle, center, kind: "counter", value: number }
-        : null;
-    },
-    reversible: false,
-  },
-};
-
-/** Whether `value` names a kind this build knows how to draw. */
-const isAnnotationKind = (value: unknown): value is AnnotationKind =>
-  typeof value === "string" && value in ANNOTATION_KINDS;
-
-/** How long `annotation` takes to arrive: a counter grows into place far
- * quicker than an arrow draws itself. */
-export const annotationDrawInMs = (annotation: Annotation) =>
-  ANNOTATION_KINDS[annotation.shape.kind].drawInMs;
-
-/** What the timeline lane calls `annotation`, `index` being its place there. */
-export const annotationLaneLabel = (annotation: Annotation, index: number) => {
-  const { shape } = annotation;
-  // The row is looked up by the shape's own kind, so the two always agree;
-  // TypeScript cannot carry that correlation through the lookup.
-  const label = ANNOTATION_KINDS[shape.kind].laneLabel as (
-    shape: AnnotationShape,
-    index: number,
-  ) => string;
-  return label(shape, index);
-};
+const annotationAlign = (value: unknown): AnnotationAlign =>
+  value === "center" || value === "right" ? value : "left";
 
 /**
  * Which arrow a delete acts on: the one the halo is showing, and otherwise
@@ -225,6 +139,7 @@ export const validAnnotations = (value: unknown): Annotation[] => {
       continue;
     if (!Number.isFinite(style.width)) continue;
     const dress = {
+      align: annotationAlign(style.align),
       color: style.color,
       head: annotationHead(style.head),
       width: Math.max(0, style.width),
@@ -242,6 +157,19 @@ export const validAnnotations = (value: unknown): Annotation[] => {
   }
   return valid;
 };
+
+/**
+ * Where a native commit falls in a text box's typing: the typing began, the
+ * text changed, or the typing ended. The document groups the commits of one
+ * typing into a single edit. The twin of `TextEditPhase` in
+ * `src-tauri/src/editor/annotations/text/edit.rs`.
+ */
+export type AnnotationTextEdit = "begin" | "update" | "end";
+
+export const annotationTextEdit = (
+  value: unknown,
+): AnnotationTextEdit | null =>
+  value === "begin" || value === "update" || value === "end" ? value : null;
 
 /**
  * The annotations with their counters numbered 1, 2, 3 in the order they were

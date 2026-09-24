@@ -37,6 +37,7 @@ use self::ffi::{
   screenwide_preview_surface_end_present, screenwide_preview_surface_present,
   screenwide_preview_surface_set_annotation_gesture_callback,
   screenwide_preview_surface_set_annotation_hover_callback,
+  screenwide_preview_surface_set_annotation_text_callback,
   screenwide_preview_surface_set_context_menu_callback,
   screenwide_preview_surface_set_pointer_down_callback,
   screenwide_preview_surface_set_selection_callback,
@@ -44,8 +45,8 @@ use self::ffi::{
 };
 pub(crate) use self::native_types::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
 use super::{
-  AnnotationGestureCallback, AnnotationHoverCallback, ContextMenuCallback, PointerDownCallback,
-  SelectionCallback, SelectionGestureCallback, TransformCallback,
+  AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, ContextMenuCallback,
+  PointerDownCallback, SelectionCallback, SelectionGestureCallback, TransformCallback,
 };
 use crate::screenshots::CapturedImage;
 
@@ -53,6 +54,7 @@ pub(crate) struct RecordingPreviewSurface {
   pub(super) handle: *mut std::ffi::c_void,
   pub(super) annotation_gesture_callback: Option<Box<AnnotationGestureCallback>>,
   pub(super) annotation_hover_callback: Option<Box<AnnotationHoverCallback>>,
+  pub(super) annotation_text_callback: Option<Box<AnnotationTextCallback>>,
   pub(super) selection_callback: Option<Box<SelectionCallback>>,
   pub(super) pointer_down_callback: Option<Box<PointerDownCallback>>,
   pub(super) context_menu_callback: Option<Box<ContextMenuCallback>>,
@@ -74,6 +76,7 @@ impl RecordingPreviewSurface {
         handle,
         annotation_gesture_callback: None,
         annotation_hover_callback: None,
+        annotation_text_callback: None,
         selection_callback: None,
         pointer_down_callback: None,
         context_menu_callback: None,
@@ -127,6 +130,11 @@ impl Drop for RecordingPreviewSurface {
         None,
         std::ptr::null_mut(),
       );
+      screenwide_preview_surface_set_annotation_text_callback(
+        self.handle,
+        None,
+        std::ptr::null_mut(),
+      );
       screenwide_preview_surface_destroy(self.handle);
     }
     release_callback_on_main(self.transform_callback.take());
@@ -136,6 +144,7 @@ impl Drop for RecordingPreviewSurface {
     release_callback_on_main(self.selection_gesture_callback.take());
     release_callback_on_main(self.annotation_gesture_callback.take());
     release_callback_on_main(self.annotation_hover_callback.take());
+    release_callback_on_main(self.annotation_text_callback.take());
   }
 }
 

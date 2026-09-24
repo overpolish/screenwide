@@ -10,9 +10,11 @@ import {
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import { normalizedScreenshotSelection } from "./screenshot-selection";
 
+import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+
 type SelectionTool = Exclude<
   RecordingCanvasTool,
-  "arrow" | "canvas" | "counter" | null
+  AnnotationKind | "canvas" | null
 >;
 
 /** Build the native OSC payload for an ordinary screen/camera output pane. */

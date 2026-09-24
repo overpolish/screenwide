@@ -83,6 +83,7 @@ pub(super) fn redraw_composed_panes(
 ) {
   let camera_source = state.camera_source.clone();
   let hover = state.annotation.hover;
+  annotation::sync_typing_marks(state);
   let surface = RecordingPreviewSurface {
     inner: std::sync::Arc::clone(inner),
   };

@@ -233,6 +233,9 @@ mod recenter_tests;
 #[cfg(test)]
 #[path = "platform_macos_tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "platform_macos_text_tests.rs"]
+mod text_tests;
 
 #[cfg(test)]
 #[path = "platform_macos_timed_annotation_tests.rs"]

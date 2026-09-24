@@ -6,6 +6,7 @@ import { LucideIcon } from "lucide-react";
 import {
   ArrowToolIcon,
   CounterToolIcon,
+  TextToolIcon,
 } from "../../../components/shared/annotation-style/annotation-tool-icons";
 import { ToolPanelKind } from "../../popup-panel/store";
 
@@ -77,6 +78,13 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   frame: { panel: "frame", resetsView: true, shortcut: "F" },
   keyboard: { panel: "keyboard", resetsView: true },
   select: { panel: "selection", resetsView: false, shortcut: "V" },
+  text: {
+    drawsOnLayer: true,
+    icon: TextToolIcon,
+    label: "Text",
+    name: "Add text",
+    shortcut: "T",
+  },
 };
 
 const editorToolIds = () => Object.keys(EDITOR_TOOLS) as EditorToolId[];
@@ -96,6 +104,13 @@ export const ANNOTATION_TOOLS = editorToolIds().flatMap((id) =>
  * `src-tauri/src/editor/annotations/gesture.rs`. */
 export const drawingToolKind = (tool: string | null | undefined) =>
   ANNOTATION_TOOLS.find((item) => item.id === tool)?.id ?? null;
+
+/** Whether the annotation chrome answers to `tool`: a drawing tool, or the
+ * select tool, which hit-tests the annotations without making any. */
+export const isAnnotationTool = (
+  tool: string | null | undefined,
+): tool is AnnotationKind | "select" =>
+  tool === "select" || drawingToolKind(tool) !== null;
 
 /** The letter that takes up a drawing tool. */
 export const drawingToolShortcut = (id: AnnotationKind) =>

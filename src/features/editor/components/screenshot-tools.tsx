@@ -8,8 +8,10 @@ import { ButtonGroup } from "../../../components/base/button-group/button-group"
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
 import { ANNOTATION_TOOLS } from "../tool-panels/tool-registry";
 
+import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
+
 export type ScreenshotTool =
-  "arrow" | "canvas" | "counter" | "crop" | "select" | null;
+  AnnotationKind | "canvas" | "crop" | "select" | null;
 
 type ScreenshotToolActions = {
   /** The layer a crop falls back to when nothing is selected. */

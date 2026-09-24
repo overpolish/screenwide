@@ -15,19 +15,31 @@ import type { AnnotationKind } from "./types";
 export const ANNOTATION_WIDTHS = [8, 12, 16, 24, 32, 48];
 
 /**
- * The disc diameters a counter offers, in output pixels. Three sizes far
- * enough apart to be worth choosing between: a handful of pixels either way
- * is no choice at all. The twin of `COUNTER_SIZES` in
+ * The disc diameters a counter offers, in output pixels. Five steps, keeping
+ * the three sizes counters offered before at the first, middle and last step
+ * so an older document keeps its discs. The twin of `COUNTER_SIZES` in
  * `src-tauri/src/editor/annotations/counter/model.rs`.
  */
-export const ANNOTATION_COUNTER_SIZES = [56, 96, 160];
+export const ANNOTATION_COUNTER_SIZES = [56, 72, 96, 128, 160];
 
 /** The stroke a fresh arrow is drawn with. The twin of `NEW_ARROW_WIDTH`. */
 export const DEFAULT_ANNOTATION_WIDTH = 8;
 
-/** The disc a fresh counter is drawn at: the smallest of the three. The twin
- * of `NEW_COUNTER_WIDTH`. */
+/** The disc a fresh counter is drawn at: the smallest. The twin of
+ * `NEW_COUNTER_WIDTH`. */
 export const DEFAULT_ANNOTATION_COUNTER_SIZE = 56;
+
+/**
+ * The type sizes a text box offers, in output pixels: two small steps for
+ * labels, then steps that grow by a ratio so the large ones are big enough to
+ * title a screen. The twin of `TEXT_SIZES` in
+ * `src-tauri/src/editor/annotations/text/model.rs`.
+ */
+const ANNOTATION_TEXT_SIZES = [20, 28, 48, 80, 128];
+
+/** The type size a fresh text box is set at: the second step. The twin of
+ * `NEW_TEXT_WIDTH`. */
+const DEFAULT_ANNOTATION_TEXT_SIZE = 28;
 
 /**
  * How big each kind is drawn: the sizes its control offers, the one a fresh
@@ -48,6 +60,11 @@ export const ANNOTATION_SIZES: Record<
     defaultSize: DEFAULT_ANNOTATION_COUNTER_SIZE,
     sizeLabel: "Size",
     sizes: ANNOTATION_COUNTER_SIZES,
+  },
+  text: {
+    defaultSize: DEFAULT_ANNOTATION_TEXT_SIZE,
+    sizeLabel: "Size",
+    sizes: ANNOTATION_TEXT_SIZES,
   },
 };
 

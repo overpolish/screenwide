@@ -18,7 +18,7 @@ const arrow = {
     kind: "arrow",
     start: { x: 10, y: 20 },
   },
-  style: { color: "#0a84ff", head: "end", width: 6 },
+  style: { align: "left", color: "#0a84ff", head: "end", width: 6 },
 };
 
 const payload = (overrides: Record<string, unknown> = {}) => ({
@@ -35,7 +35,19 @@ describe("screenshotAnnotationChange", () => {
       annotations: [arrow],
       paneIndex: 0,
       selectedAnnotationId: "arrow-1",
+      textEdit: null,
     });
+  });
+
+  it("reads where in a text box's typing a commit falls", () => {
+    for (const textEdit of ["begin", "update", "end"])
+      expect(
+        screenshotAnnotationChange(payload({ textEdit }), 7)?.textEdit,
+      ).toBe(textEdit);
+    expect(
+      screenshotAnnotationChange(payload({ textEdit: "sideways" }), 7)
+        ?.textEdit,
+    ).toBeNull();
   });
 
   it("ignores another session's gesture", () => {

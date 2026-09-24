@@ -84,6 +84,7 @@ export function useRecordingPreviewCanvasTool({
       counter: toggle("counter"),
       crop: toggle("crop"),
       select: toggle("select"),
+      text: toggle("text"),
     };
   }, [changeCanvasTool]);
   // The crop tool is the one tool you are "in": Enter accepts what is framed

@@ -195,8 +195,8 @@ export function ScreenshotSection({
   // Every one of them hit-tests the annotations on the layer; only a drawing
   // tool makes a new one, and only it takes every press over the picture.
   const annotationTool =
-    tool === "arrow" || tool === "counter" || tool === "select"
-      ? tool
+    isAnnotating || tool === "select"
+      ? (drawingToolKind(tool) ?? "select")
       : undefined;
   const hasSelectedAnnotation = annotations.hasSelection;
   const leaveCropTool = () => {

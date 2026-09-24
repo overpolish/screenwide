@@ -15,6 +15,8 @@ use crate::editor::annotations::counter::geometry::prepare_counter;
 use crate::editor::annotations::exposure::annotation_travel;
 use crate::editor::annotations::native::{native_annotations, NativeAnnotation, NativeAnnotations};
 use crate::editor::annotations::reveal::AnnotationReveal;
+use crate::editor::annotations::text::geometry::{prepare_text, HEAD_ALIGN_MASK};
+use crate::editor::annotations::text::typing::TypingMarks;
 use crate::editor::annotations::Annotation;
 use crate::screenshots::output_placement;
 
@@ -38,6 +40,9 @@ pub(crate) fn prepared_arrows(
   // The halo this composition carries, if the hovered arrow belongs to it:
   // its place in this layer's list and the halo's width in canvas pixels.
   halo: Option<(usize, f32)>,
+  // The box being typed into, if it is on this layer: its place in the list,
+  // and the caret and selection it is drawn with.
+  typing: Option<(usize, TypingMarks)>,
 ) -> Result<compositor::PreparedArrows, String> {
   if annotations.is_empty() || source.0 == 0 || source.1 == 0 {
     return Ok(compositor::PreparedArrows::default());
@@ -51,6 +56,7 @@ pub(crate) fn prepared_arrows(
       f64::from(placement.image_height) / f64::from(source.1),
     ),
     halo,
+    typing,
   ))
 }
 
@@ -63,6 +69,7 @@ pub(crate) fn placed_arrows(
   offset: (f64, f64),
   scale: (f64, f64),
   halo: Option<(usize, f32)>,
+  typing: Option<(usize, TypingMarks)>,
 ) -> compositor::PreparedArrows {
   if annotations.is_empty() {
     return compositor::PreparedArrows::default();
@@ -96,20 +103,22 @@ pub(crate) fn placed_arrows(
       );
       // A counter keeps its centre in `p0` and its aim in `p1[0]`, so only
       // the centre is placed: the disc's diameter is in output pixels, as an
-      // arrow's stroke is, and an angle is the same angle in either space.
-      let geometry = match annotation.shape_kind() {
-        AnnotationKind::Counter => {
-          prepare_counter(a, annotation.width, annotation.p1[0], annotation.reveal)
-        }
-        AnnotationKind::Arrow => prepare_arrow(
+      // arrow's stroke is, and an angle is the same angle in either space. A
+      // text box keeps its pointer, held against the box, in `p1` and its
+      // text block's size, in output pixels, in `p2`; neither is placed.
+      let shape = |reveal: AnnotationReveal| match annotation.shape_kind() {
+        AnnotationKind::Counter => prepare_counter(a, annotation.width, annotation.p1[0], reveal),
+        AnnotationKind::Text => prepare_text(
           a,
-          b,
-          c,
+          annotation.p1,
+          annotation.p2,
           annotation.width,
           annotation.head,
-          annotation.reveal,
+          reveal,
         ),
+        AnnotationKind::Arrow => prepare_arrow(a, b, c, annotation.width, annotation.head, reveal),
       };
+      let geometry = shape(annotation.reveal);
       let mut arrow = compositor::PreviewArrow::new(
         geometry,
         annotation.color,
@@ -122,7 +131,13 @@ pub(crate) fn placed_arrows(
       arrow.params = annotation.params;
       arrow.data_offset = annotation.data_offset;
       arrow.data_count = annotation.data_count;
-      let count = exposure_sample_count(annotation, a, b, c);
+      // A text box's travel reads its pointer and its block as they are held,
+      // which are never placed.
+      let count = if annotation.shape_kind() == AnnotationKind::Text {
+        exposure_sample_count(annotation, a, annotation.p1, annotation.p2)
+      } else {
+        exposure_sample_count(annotation, a, b, c)
+      };
       if count == 0 {
         // A still annotation carries its reveal's opacity in its colour. The
         // shader only knows the colour, so it is folded in here, exactly as the
@@ -146,28 +161,37 @@ pub(crate) fn placed_arrows(
             previous: reveal.previous,
           };
           prepared.samples.push(compositor::PreviewSample::new(
-            match annotation.shape_kind() {
-              AnnotationKind::Arrow => {
-                prepare_arrow(a, b, c, annotation.width, annotation.head, sample)
-              }
-              AnnotationKind::Counter => {
-                prepare_counter(a, annotation.width, annotation.p1[0], sample)
-              }
-            },
+            shape(sample),
             sample.opacity.clamp(0.0, 1.0),
           ));
         }
       }
-      prepared.counters.push(match annotation.shape_kind() {
-        AnnotationKind::Counter => (
-          String::from_utf8_lossy(
-            &data.text[annotation.data_offset as usize
-              ..annotation.data_offset as usize + annotation.data_count as usize],
-          )
-          .into_owned(),
-          arrow.geometry.rounding,
-        ),
-        AnnotationKind::Arrow => (String::new(), 0.0),
+      // A counter's number is set at its disc's radius and a text box's text
+      // at its own type size, both as this frame draws them.
+      let text = || {
+        let start = annotation.data_offset as usize;
+        data
+          .text
+          .get(start..start + annotation.data_count as usize)
+          .map(|text| String::from_utf8_lossy(text).into_owned())
+          .unwrap_or_default()
+      };
+      prepared.types.push(match annotation.shape_kind() {
+        AnnotationKind::Counter => compositor::PreparedType {
+          text: text(),
+          size: arrow.geometry.rounding,
+          style: 0,
+          marks: None,
+        },
+        AnnotationKind::Text => compositor::PreparedType {
+          text: text(),
+          size: arrow.geometry.width,
+          style: 1 + (annotation.head & HEAD_ALIGN_MASK),
+          marks: typing
+            .filter(|(typed, _)| *typed == index)
+            .map(|(_, marks)| marks),
+        },
+        AnnotationKind::Arrow => compositor::PreparedType::default(),
       });
       prepared.arrows.push(arrow);
     }

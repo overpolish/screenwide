@@ -100,6 +100,7 @@ pub(super) enum ActiveGesture {
 pub(super) struct EditorCallbacks {
   pub(super) annotation_gesture: Option<AnnotationGestureCallback>,
   pub(super) annotation_hover: Option<AnnotationHoverCallback>,
+  pub(super) annotation_text: Option<AnnotationTextCallback>,
   pub(super) context_menu: Option<ContextMenuCallback>,
   pub(super) gesture: Option<SelectionGestureCallback>,
   pub(super) pointer_down: Option<PointerDownCallback>,

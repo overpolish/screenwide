@@ -64,6 +64,7 @@ fn arrow(id: &str) -> Annotation {
       end: AnnotationPoint { x: 100.0, y: 0.0 },
     },
     style: AnnotationStyle {
+      align: Default::default(),
       color: "#ff0000".to_owned(),
       head: AnnotationHead::End,
       width: 6.0,

@@ -1,18 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The arrow tool's pointer gesture.
+//! The annotation tools' pointer gesture.
 //!
 //! The native interaction view reports where the pointer is, in the layer's
 //! image-normalised space, and which grip it took hold of. Everything that
-//! decides what an arrow *is* - the source-pixel geometry, the Bézier solve
-//! behind the middle handle, the colour a fresh arrow is drawn in - happens
-//! here, so the native side never carries a second copy of the model.
-//!
-//! The manager owns the picture for the length of the gesture, the way the
-//! selection gesture does: it mutates a working copy of the layer's settings
-//! and presents it natively on every sample, and only mouse-up hands the
-//! finished list back to React to commit into the document and its history.
+//! decides what an annotation *is* - its source-pixel geometry, the dress a
+//! fresh one takes - happens here, so the native side never carries a second
+//! copy of the model. The manager owns the picture for the length of the
+//! gesture, the way the selection gesture does: it mutates a working copy of
+//! the layer's settings and presents it natively on every sample, and only
+//! mouse-up hands the finished list back to React to commit into the document
+//! and its history.
 
 use super::super::preview_platform::SelectionGesturePhase;
 use super::state::PreviewManager;
@@ -20,18 +19,20 @@ use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{drawing_kind, AnnotationGestureTarget};
 use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
 use crate::editor::annotations::snap::{
-  detect_anchors, request_anchors, threshold_source_px, AnchorBoxes, SnapField, SnapModifiers,
-  SnapRequest, SnapResult,
+  detect_anchors, request_anchors, source_per_point, threshold_source_px, AnchorBoxes, SnapField,
+  SnapModifiers, SnapRequest, SnapResult,
 };
 use crate::editor::annotations::Annotation;
 use std::sync::Arc;
 
-/// The list React is asked to commit when a gesture ends.
+/// The list React is asked to commit when a gesture ends, or as a text box is
+/// typed into: `text_edit` says where in the typing it falls.
 #[derive(Clone, Debug)]
 pub(crate) struct AnnotationCommit {
   pub(crate) annotations: Vec<Annotation>,
   pub(crate) pane_index: u32,
   pub(crate) selected_annotation_id: Option<String>,
+  pub(crate) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
 }
 
 pub(super) struct AnnotationGestureOverride {
@@ -81,7 +82,7 @@ impl PreviewManager {
   /// Republishes the arrow grips and the live picture. Both are read from the
   /// manager's own working copy, so a gesture sample shows its own geometry
   /// rather than the React layout that is still catching up with it.
-  fn present_annotation_gesture(&self, pane_index: u32, selected: Option<&str>) {
+  pub(super) fn present_annotation_gesture(&self, pane_index: u32, selected: Option<&str>) {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
       if let (Some(surface), Some(source), Some(image_width), Some(annotations)) = (
@@ -105,11 +106,16 @@ impl PreviewManager {
     let _ = self.present_batch();
   }
 
-  fn commit_for(&self, pane_index: u32, selected: Option<String>) -> Option<AnnotationCommit> {
+  pub(super) fn commit_for(
+    &self,
+    pane_index: u32,
+    selected: Option<String>,
+  ) -> Option<AnnotationCommit> {
     Some(AnnotationCommit {
       annotations: self.annotations_for(pane_index)?.clone(),
       pane_index,
       selected_annotation_id: selected,
+      text_edit: None,
     })
   }
 
@@ -179,12 +185,14 @@ impl PreviewManager {
     let source = self.annotation_source(pane_index)?;
     let point = source_point(x, y, source);
     let threshold = threshold_source_px(source.0, image_points);
+    let scale = source_per_point(source.0, image_points);
     let anchors = modifiers
       .position
       .then(|| self.annotation_anchors(pane_index, source))
       .flatten();
     let gesture = self.annotation_gesture.as_mut()?;
     gesture.field.anchors = anchors;
+    gesture.edit.set_source_per_point(scale);
     let annotations = &mut self
       .output
       .as_mut()?
@@ -204,7 +212,12 @@ impl PreviewManager {
     let shown = if ended { SnapResult::default() } else { result };
     self.publish_annotation_snap(pane_index, &shown);
     if ended {
-      self.annotation_gesture = None;
+      let gesture = self.annotation_gesture.take()?;
+      // A fresh text box goes straight on to being typed into, and React
+      // groups the press that made it and the typing into one edit.
+      if gesture.edit.is_new() && self.is_text(pane_index, &id) {
+        return self.begin_text_session(pane_index, id);
+      }
       self.present_annotation_gesture(pane_index, Some(id.as_str()));
       return self.commit_for(pane_index, Some(id));
     }
@@ -257,7 +270,7 @@ impl PreviewManager {
       .get_mut(pane_index as usize)?
       .output
       .annotations;
-    let edit = AnnotationEdit::begin(
+    let mut edit = AnnotationEdit::begin(
       annotations,
       target,
       point,
@@ -268,6 +281,7 @@ impl PreviewManager {
     // The field excludes the annotation the gesture holds, so a counter can
     // never snap back to the place it started from.
     let field = SnapField::new(source, annotations, edit.selected_id(), image_width);
+    edit.set_source_per_output(field.source_per_output());
     let id = edit.selected_id().to_owned();
     self.annotation_gesture = Some(AnnotationGestureOverride {
       pane_index,

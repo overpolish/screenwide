@@ -287,5 +287,6 @@ typedef struct {
 /// on GPU work (see `screenwide_preview_surface_end_present`).
 @property(nonatomic, strong) dispatch_group_t batchGroup;
 @end
+#import "recording_preview_annotation_text_macos.h"
 #import "recording_preview_surface_macos_private_functions.h"
 #endif

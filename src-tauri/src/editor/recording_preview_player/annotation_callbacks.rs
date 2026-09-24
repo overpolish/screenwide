@@ -61,6 +61,51 @@ pub(crate) fn install(
       }
     },
   ));
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  {
+    let text_clips = Arc::clone(&clips);
+    let text_app = app.clone();
+    surface.set_annotation_text_callback(Box::new(move |phase, pane, index, text, revision| {
+      // Never wait for this mutex from AppKit's main thread. No report may be
+      // dropped - each one is typing - so a contended lock defers it, and the
+      // revision keeps a late change from overwriting a newer one.
+      let apply = |manager: &mut PreviewPlayerManager, app: &AppHandle, text: &str| {
+        if !manager
+          .sources
+          .as_ref()
+          .is_some_and(|sources| Arc::ptr_eq(&sources.annotation_clips, &text_clips))
+        {
+          return;
+        }
+        if let Some(commit) = manager.annotation_text(phase, pane, index, text, revision) {
+          let _ = app.emit("editor://recording-annotations", commit);
+        }
+      };
+      let state = text_app.state::<RecordingPreviewPlayerState>();
+      if let Ok(mut manager) = state.0.try_lock() {
+        apply(&mut manager, &text_app, &text);
+        return;
+      }
+      let deferred = text_app.clone();
+      let deferred_clips = Arc::clone(&text_clips);
+      tauri::async_runtime::spawn_blocking(move || {
+        let state = deferred.state::<RecordingPreviewPlayerState>();
+        let Ok(mut manager) = state.0.lock() else {
+          return;
+        };
+        if !manager
+          .sources
+          .as_ref()
+          .is_some_and(|sources| Arc::ptr_eq(&sources.annotation_clips, &deferred_clips))
+        {
+          return;
+        }
+        if let Some(commit) = manager.annotation_text(phase, pane, index, &text, revision) {
+          let _ = deferred.emit("editor://recording-annotations", commit);
+        }
+      });
+    }));
+  }
   surface.set_annotation_hover_callback(Box::new(move |index, progress, image_points| {
     let state = app.state::<RecordingPreviewPlayerState>();
     let Ok(manager) = state.0.try_lock() else {

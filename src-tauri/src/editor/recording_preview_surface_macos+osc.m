@@ -18,6 +18,9 @@ SCREENWIDE_PREVIEW_PRIVATE NSRect selection_image_frame_for(
 }
 
 static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
+  // The box being typed into follows every change the chrome redraws for:
+  // a zoom, a pan, its own text growing, the tool being put down.
+  annotation_text_layout(surface);
   surface.selectionDrawRevision += 1;
   uint64_t revision = surface.selectionDrawRevision;
   BOOL workspaceEncoding = surface.workspaceMode &&

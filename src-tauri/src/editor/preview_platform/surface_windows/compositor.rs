@@ -111,7 +111,7 @@ struct Constants {
 #[path = "compositor/arrows.rs"]
 mod arrows;
 pub(crate) use arrows::{
-  PreparedArrows, PreviewArrow, PreviewSample, StructuredBuffer, MAX_EXPOSURE_SAMPLES,
+  PreparedArrows, PreparedType, PreviewArrow, PreviewSample, StructuredBuffer, MAX_EXPOSURE_SAMPLES,
 };
 
 pub(super) struct Compositor {

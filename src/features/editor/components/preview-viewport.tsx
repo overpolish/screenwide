@@ -23,6 +23,7 @@ import {
   screenshotWorkspaceItemOutput,
   screenshotOutputDimensions,
 } from "../screenshot-output";
+import { screenshotAnnotationOutput } from "../screenshot-preview-events";
 import { drawingToolKind } from "../tool-panels/tool-registry";
 import { useEditorEditGesture } from "../use-editor-edit-history";
 import {
@@ -423,18 +424,14 @@ export function PreviewViewport({
     }
     return;
   };
-  // A finished arrow gesture is one edit: the native tool drew every frame of
-  // it, and only the list it ends with reaches the document.
+  // A finished arrow gesture is one edit, and so is a text box's typing,
+  // whose commits arrive as it is typed so the panel can dress the box.
   const annotationChange = (event: ScreenshotAnnotationChangeEvent) => {
+    if (event.textEdit === "begin") editGesture.beginGesture();
     onSelectedAnnotationChange?.(event.selectedAnnotationId);
-    const itemOutput = workspaceOutput?.items[event.paneIndex];
-    if (!workspaceOutput || !itemOutput) return;
-    const held = screenshotWorkspaceItemOutput(workspaceOutput, itemOutput.id);
-    const annotations = event.annotations;
-    // Choosing an arrow reports the same list it was already holding. That is
-    // a selection, not an edit, and must not land in the undo history.
-    if (JSON.stringify(held.annotations) !== JSON.stringify(annotations))
-      onOutputChange?.({ ...held, annotations }, itemOutput.id);
+    const changed = screenshotAnnotationOutput(workspaceOutput, event);
+    if (changed) onOutputChange?.(changed.output, changed.itemId);
+    if (event.textEdit === "end") requestAnimationFrame(editGesture.endGesture);
   };
   const isDrawingArrows = annotationTool != null && annotationTool !== "select";
   const selectionOverlay =

@@ -9,14 +9,18 @@
 //! source pixels, so the native side needs nothing but the transform it
 //! already applies to the selection chrome.
 
-use super::super::{AnnotationGestureCallback, AnnotationHoverCallback};
+use super::super::{AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback};
 use super::callbacks::{
-  annotation_gesture_callback, annotation_hover_callback, release_callback_on_main,
+  annotation_gesture_callback, annotation_hover_callback, annotation_text_callback,
+  release_callback_on_main,
 };
 use super::ffi::{
+  screenwide_preview_surface_begin_annotation_text, screenwide_preview_surface_end_annotation_text,
   screenwide_preview_surface_set_annotation_gesture_callback,
   screenwide_preview_surface_set_annotation_hover_callback,
-  screenwide_preview_surface_set_annotation_snap, screenwide_preview_surface_set_annotations,
+  screenwide_preview_surface_set_annotation_snap,
+  screenwide_preview_surface_set_annotation_text_callback,
+  screenwide_preview_surface_set_annotations,
 };
 use super::RecordingPreviewSurface;
 use crate::editor::annotations::handles::{NativeAnnotationHandles, NativeAnnotationSnap};
@@ -92,5 +96,46 @@ impl RecordingPreviewSurface {
       );
     }
     release_callback_on_main(self.annotation_gesture_callback.replace(callback));
+  }
+
+  /// Installs the callback a text box being typed into reports through. It is
+  /// invoked on the main thread.
+  pub(crate) fn set_annotation_text_callback(&mut self, callback: AnnotationTextCallback) {
+    let mut callback = Box::new(callback);
+    let context = (&mut *callback) as *mut AnnotationTextCallback as *mut std::ffi::c_void;
+    unsafe {
+      screenwide_preview_surface_set_annotation_text_callback(
+        self.handle,
+        Some(annotation_text_callback),
+        context,
+      );
+    }
+    release_callback_on_main(self.annotation_text_callback.replace(callback));
+  }
+
+  /// Opens the text box at `index` in the published grips for typing, holding
+  /// `text`. `dark_ink` is whether its text is inked dark, which the caret
+  /// follows.
+  pub(crate) fn begin_annotation_text(&self, index: usize, text: &str, dark_ink: bool) {
+    let Ok(index) = i32::try_from(index) else {
+      return;
+    };
+    unsafe {
+      screenwide_preview_surface_begin_annotation_text(
+        self.handle,
+        index,
+        text.as_ptr(),
+        u32::try_from(text.len()).unwrap_or(u32::MAX),
+        u32::from(dark_ink),
+      );
+    }
+  }
+
+  /// Takes the typing away without it reporting its end, for an end Rust
+  /// has already settled.
+  pub(crate) fn end_annotation_text(&self) {
+    unsafe {
+      screenwide_preview_surface_end_annotation_text(self.handle);
+    }
   }
 }

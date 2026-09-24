@@ -77,6 +77,7 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
   assert_eq!(straight[0].start_head, 0.0);
   let both = Annotation {
     style: AnnotationStyle {
+      align: Default::default(),
       head: crate::editor::annotations::AnnotationHead::Both,
       ..arrow.style.clone()
     },
@@ -86,6 +87,7 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
   assert_eq!(handles[0].start_head, handles[0].end_head);
   let none = Annotation {
     style: AnnotationStyle {
+      align: Default::default(),
       head: crate::editor::annotations::AnnotationHead::None,
       ..arrow.style.clone()
     },
@@ -121,6 +123,7 @@ fn a_fresh_arrow_with_nothing_settled_on_wears_the_default() {
 #[test]
 fn a_fresh_arrow_wears_the_style_it_is_given() {
   let style = AnnotationStyle {
+    align: Default::default(),
     color: "#ff9500".to_owned(),
     head: crate::editor::annotations::AnnotationHead::Both,
     width: 12.0,

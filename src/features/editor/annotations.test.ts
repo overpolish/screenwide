@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { annotationLaneLabel } from "./annotation-kinds";
 import {
   Annotation,
   annotationDeleteTarget,
@@ -20,7 +21,7 @@ const arrow = (id: string): Annotation => ({
     kind: "arrow",
     start: { x: 0, y: 0 },
   },
-  style: { color: "#ff383c", head: "end", width: 8 },
+  style: { align: "left", color: "#ff383c", head: "end", width: 8 },
 });
 
 describe("annotationDeleteTarget", () => {
@@ -49,7 +50,7 @@ const counter = (id: string, value: number): Annotation => ({
   animated: true,
   id,
   shape: { angle: 0, center: { x: 20, y: 30 }, kind: "counter", value },
-  style: { color: "#ff383c", head: "none", width: 56 },
+  style: { align: "left", color: "#ff383c", head: "none", width: 56 },
 });
 
 describe("renumberedCounters", () => {
@@ -113,5 +114,55 @@ describe("validAnnotations", () => {
     expect(
       validAnnotations([{ ...counter("a", 1), shape: { kind: "blob" } }]),
     ).toEqual([]);
+  });
+
+  it("reads a stored text box back, tucking in a pointer it cannot read", () => {
+    const box = (pointer: unknown) => ({
+      ...counter("t", 1),
+      shape: { kind: "text", origin: { x: 4, y: 5 }, pointer, text: "Hi" },
+      style: { align: "center", color: "#ffcc00", head: "none", width: 28 },
+    });
+    const out = { along: { x: 1, y: -0.5 }, reach: { x: 3, y: 0 } };
+    const [read] = validAnnotations([box(out)]);
+    expect(read.shape).toEqual({
+      kind: "text",
+      origin: { x: 4, y: 5 },
+      pointer: out,
+      text: "Hi",
+    });
+    expect(read.style.align).toBe("center");
+    const tucked = { along: { x: 0, y: 1 }, reach: { x: 0, y: 0 } };
+    for (const unreadable of [null, { x: 9, y: 9 }, { along: out.along }])
+      expect(validAnnotations([box(unreadable)])[0].shape).toMatchObject({
+        pointer: tucked,
+      });
+  });
+
+  it("reads an older document's style as left-aligned", () => {
+    const [read] = validAnnotations([
+      {
+        ...counter("a", 1),
+        style: { color: "#ffcc00", head: "none", width: 56 },
+      },
+    ]);
+    expect(read.style.align).toBe("left");
+  });
+});
+
+describe("annotationLaneLabel", () => {
+  it("calls a text box by its first line, and by its place when that is empty", () => {
+    const box = (text: string): Annotation => ({
+      ...counter("t", 1),
+      shape: {
+        kind: "text",
+        origin: { x: 0, y: 0 },
+        pointer: { along: { x: 0, y: 1 }, reach: { x: 0, y: 0 } },
+        text,
+      },
+    });
+    expect(annotationLaneLabel(box("Save here\nthen quit"), 2)).toBe(
+      "Save here",
+    );
+    expect(annotationLaneLabel(box("\nsecond"), 2)).toBe("Text 3");
   });
 });

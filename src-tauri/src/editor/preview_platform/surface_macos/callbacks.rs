@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::{
-  AnnotationGestureCallback, AnnotationHoverCallback, ContextMenuCallback, PointerDownCallback,
-  SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
-  TransformCallback,
+  AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, AnnotationTextPhase,
+  ContextMenuCallback, PointerDownCallback, SelectionCallback, SelectionGestureCallback,
+  SelectionGestureOperation, SelectionGesturePhase, TransformCallback,
 };
 use super::ffi::screenwide_preview_surface_release_context_on_main;
 
@@ -158,4 +158,33 @@ pub(super) unsafe extern "C" fn annotation_hover_callback(
   if let Some(callback) = (context as *mut AnnotationHoverCallback).as_mut() {
     callback(index, progress, image_points);
   }
+}
+
+/// # Safety
+/// `text` must point at `length` readable bytes, or be null with `length`
+/// zero.
+pub(super) unsafe extern "C" fn annotation_text_callback(
+  phase: u32,
+  layer: u32,
+  index: u32,
+  text: *const u8,
+  length: u32,
+  revision: u64,
+  context: *mut std::ffi::c_void,
+) {
+  let Some(callback) = (context as *mut AnnotationTextCallback).as_mut() else {
+    return;
+  };
+  let phase = match phase {
+    0 => AnnotationTextPhase::Open,
+    1 => AnnotationTextPhase::Change,
+    2 => AnnotationTextPhase::End,
+    _ => return,
+  };
+  let text = if text.is_null() || length == 0 {
+    String::new()
+  } else {
+    String::from_utf8_lossy(std::slice::from_raw_parts(text, length as usize)).into_owned()
+  };
+  callback(phase, layer, index, text, revision);
 }

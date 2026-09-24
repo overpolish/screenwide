@@ -52,11 +52,18 @@ static inline uint32_t screenwide_annotation_sample_count(
 /// One annotation's draw geometry for the canvas placement in `canvas`. An
 /// arrow solves its curve; a counter places its disc and tail from the same
 /// centre-and-angle the document holds - the aim rides in `p1[0]` as an angle,
-/// which no placement touches, so it is passed as it stands.
+/// which no placement touches, so it is passed as it stands; a text box reads
+/// its pointer, held against the box, out of `p1` and its text block's size
+/// out of `p2` the same way.
 static inline AnnotationArrowGeometry screenwide_prepare_annotation(
     const ScreenwideAnnotation *annotation, AnnotationVector a, AnnotationVector b,
     AnnotationVector c, AnnotationReveal reveal) {
   float p1x = annotation->kind == SCREENWIDE_ANNOTATION_COUNTER ? annotation->p1[0] : b.x;
+  if (annotation->kind == SCREENWIDE_ANNOTATION_TEXT) {
+    p1x = annotation->p1[0];
+    b = annotation_vector(annotation->p1[0], annotation->p1[1]);
+    c = annotation_vector(annotation->p2[0], annotation->p2[1]);
+  }
   AnnotationArrowGeometry prepared;
   screenwide_annotation_prepare(annotation->kind, a.x, a.y, p1x, b.y, c.x, c.y,
                                 annotation->width, annotation->head, reveal, &prepared);
@@ -64,9 +71,9 @@ static inline AnnotationArrowGeometry screenwide_prepare_annotation(
 }
 
 /// Prepare complete shapes along the exposure, keeping curve solves off the
-/// GPU, and rasterise the counters' numbers at the size they are drawn. Every
-/// per-annotation array is sized by the list it is handed and kept off the
-/// stack, which a long document would overrun.
+/// GPU, and rasterise the counters' numbers and the text boxes' text at the
+/// size they are drawn. Every per-annotation array is sized by the list it is
+/// handed and kept off the stack, which a long document would overrun.
 static inline void screenwide_bind_annotations(
     id<MTLComputeCommandEncoder> encoder, const ScreenwideAnnotations *annotations,
     const ScreenwideCanvas *canvas, uint32_t source_width, uint32_t source_height) {
@@ -111,7 +118,10 @@ static inline void screenwide_bind_annotations(
     AnnotationVector b = annotation_vector(canvas->image_x + annotation->p1[0] * scale_x, canvas->image_y + annotation->p1[1] * scale_y);
     AnnotationVector c = annotation_vector(canvas->image_x + annotation->p2[0] * scale_x, canvas->image_y + annotation->p2[1] * scale_y);
     draw->arrow = screenwide_prepare_annotation(annotation, a, b, c, annotation->reveal);
+    // A counter's number is set at its disc's radius and a text box's text at
+    // its own type size, both as this frame draws them.
     if (annotation->kind == SCREENWIDE_ANNOTATION_COUNTER) radii[index] = draw->arrow.rounding;
+    if (annotation->kind == SCREENWIDE_ANNOTATION_TEXT) radii[index] = draw->arrow.width;
     if (draw->sample_count == 0) {
       draw->color[3] *= fmaxf(fminf(annotation->reveal.opacity, 1), 0);
       continue;
@@ -131,28 +141,37 @@ static inline void screenwide_bind_annotations(
   NSMutableData *text_values_data = [NSMutableData dataWithLength:slots * sizeof(const char *)];
   NSMutableData *text_lengths_data = [NSMutableData dataWithLength:slots * sizeof(uint32_t)];
   NSMutableData *text_sizes_data = [NSMutableData dataWithLength:slots * sizeof(float)];
+  NSMutableData *text_styles_data = [NSMutableData dataWithLength:slots * sizeof(uint32_t)];
   NSMutableData *text_rects_data =
       [NSMutableData dataWithLength:slots * sizeof(ScreenwideAnnotationTextRect)];
   const char **text_values = text_values_data.mutableBytes;
   uint32_t *text_lengths = text_lengths_data.mutableBytes;
   float *text_sizes = text_sizes_data.mutableBytes;
+  uint32_t *text_styles = text_styles_data.mutableBytes;
   ScreenwideAnnotationTextRect *text = text_rects_data.mutableBytes;
   for (uint32_t index = 0; index < count; index++) {
     const ScreenwideAnnotation *annotation = &annotations->items[index];
-    if (annotation->kind != SCREENWIDE_ANNOTATION_COUNTER || annotation->data_count == 0 ||
+    BOOL typed = annotation->kind == SCREENWIDE_ANNOTATION_COUNTER ||
+                 annotation->kind == SCREENWIDE_ANNOTATION_TEXT;
+    if (!typed || annotation->data_count == 0 ||
         annotation->data_offset + annotation->data_count > annotations->data.text_len)
       continue;
     text_values[index] = (const char *)(annotations->data.text + annotation->data_offset);
     text_lengths[index] = annotation->data_count;
     text_sizes[index] = radii[index];
+    text_styles[index] = annotation->kind == SCREENWIDE_ANNOTATION_TEXT
+        ? 1u + (annotation->head & 3u)
+        : SCREENWIDE_ANNOTATION_TEXT_STYLE_COUNTER;
   }
   ScreenwideAnnotationTextUniforms text_uniforms = {0};
   id<MTLBuffer> numbers = screenwide_annotation_text_atlas(
-      device, text_values, text_lengths, text_sizes, count, text, &text_uniforms);
+      device, text_values, text_lengths, text_sizes, text_styles, count, text,
+      &text_uniforms);
   for (uint32_t index = 0; index < count; index++) {
-    // Only a counter reads these slots as a text rectangle; an arrow with a
-    // head at both ends keeps its second head's triangle in them.
-    if (annotations->items[index].kind != SCREENWIDE_ANNOTATION_COUNTER) continue;
+    // Only a counter and a text box read these slots as a text rectangle; an
+    // arrow with a head at both ends keeps its second head's triangle in them.
+    uint32_t kind = annotations->items[index].kind;
+    if (kind != SCREENWIDE_ANNOTATION_COUNTER && kind != SCREENWIDE_ANNOTATION_TEXT) continue;
     prepared[index].arrow.start_head.a = annotation_vector(text[index].x, text[index].y);
     prepared[index].arrow.start_head.b =
         annotation_vector(text[index].width, text[index].height);

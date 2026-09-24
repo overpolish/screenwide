@@ -17,9 +17,10 @@ use crate::editor::annotations::{AnnotationHead, AnnotationKind};
 /// `src/components/shared/annotation-style/widths.ts`.
 const MIN_WIDTH: f64 = 8.0;
 const MAX_WIDTH: f64 = 48.0;
-/// The disc diameters the counter control offers, in output pixels. The twin
-/// of `ANNOTATION_COUNTER_SIZES` in the same module, and of `COUNTER_SIZES`
-/// in `src-tauri/src/editor/annotations/counter.rs`.
+/// The smallest and largest disc diameters the counter control offers, in
+/// output pixels. The twins of the ends of `ANNOTATION_COUNTER_SIZES` in the
+/// same module, and of `COUNTER_SIZES` in
+/// `src-tauri/src/editor/annotations/counter/model.rs`.
 const MIN_COUNTER_SIZE: f64 = 56.0;
 const MAX_COUNTER_SIZE: f64 = 160.0;
 /// The palette's yellow, as in
@@ -92,6 +93,11 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     .filter(|digits| matches!(digits.len(), 6 | 8))
     .filter(|digits| digits.chars().all(|digit| digit.is_ascii_hexdigit()))
     .ok_or_else(|| "That is not an annotation colour".to_owned())?;
+  // The overlay's annotations cannot be picked up again, so a text box could
+  // never be typed into there.
+  if settings.default_shape == AnnotationKind::Text {
+    return Err("The live overlay draws arrows and counters".to_owned());
+  }
   if !settings.default_width.is_finite()
     || !(MIN_WIDTH..=MAX_WIDTH).contains(&settings.default_width)
   {

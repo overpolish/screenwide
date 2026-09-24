@@ -1,16 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Where the counters' numbers sit in the atlas both backends rasterise them
-//! into.
-//!
-//! A number is type, so each platform draws it with its own text engine; where
-//! it goes is decided here, once. The atlas outlives a composition and is keyed
-//! by the number and the size it is drawn at, so a frame rasterises only the
-//! numbers the atlas does not hold yet. It holds what recent frames drew, not
-//! what the document holds: when a frame's new numbers no longer fit, every
-//! cell that frame does not use is dropped and the atlas is laid out again at a
-//! size for that frame's own numbers.
+//! Where the annotations' type - counters' numbers and text boxes' text - sits
+//! in the atlas both backends rasterise it into. Type is drawn by each
+//! platform's own text engine; where it goes is decided here, once. The atlas
+//! outlives a composition and is keyed by the text, its size and how it is
+//! set, so a frame rasterises only what the atlas does not hold yet. It holds
+//! what recent frames drew, not what the document holds: when a frame's new
+//! type no longer fits, every cell that frame does not use is dropped and the
+//! atlas is laid out again at a size for that frame's own type.
 
 use std::collections::HashMap;
 
@@ -33,11 +31,13 @@ const MAX_SIDE: u32 = 16_384;
 const BASE_WIDTH: u32 = 1_024;
 const BASE_HEIGHT: u32 = 256;
 
-/// One number a composition draws: its text and its disc's radius in drawn
-/// pixels.
+/// One piece of type a composition draws: its text, its size in drawn pixels
+/// (a counter's disc radius or a text box's type size), and how it is set:
+/// zero for a counter's number, one more than its alignment for a text box.
 pub(crate) struct CounterNumber<'a> {
   pub(crate) text: &'a [u8],
   pub(crate) radius: f32,
+  pub(crate) style: u32,
 }
 
 /// One number to rasterise into its rectangle, at the radius it is keyed by.
@@ -58,23 +58,25 @@ pub(crate) struct AtlasLayout {
   pub(crate) fresh: bool,
 }
 
-/// A number and its size, compared without allocating: a counter's text is a
-/// `u32` in decimal, which always fits the short form.
+/// A piece of type, its size and how it is set, compared without allocating
+/// where it can be: a counter's number always fits the short form.
 #[derive(Clone, PartialEq, Eq, Hash)]
 enum CellKey {
   Short {
     len: u8,
     bytes: [u8; 11],
     quarters: u32,
+    style: u32,
   },
   Long {
     text: Box<[u8]>,
     quarters: u32,
+    style: u32,
   },
 }
 
 impl CellKey {
-  fn new(text: &[u8], quarters: u32) -> Self {
+  fn new(text: &[u8], quarters: u32, style: u32) -> Self {
     if text.len() <= 11 {
       let mut bytes = [0; 11];
       bytes[..text.len()].copy_from_slice(text);
@@ -82,11 +84,13 @@ impl CellKey {
         len: text.len() as u8,
         bytes,
         quarters,
+        style,
       }
     } else {
       Self::Long {
         text: text.into(),
         quarters,
+        style,
       }
     }
   }
@@ -156,7 +160,7 @@ impl CounterAtlas {
         continue;
       }
       let quarters = (number.radius * 4.0).round() as u32;
-      let key = CellKey::new(number.text, quarters);
+      let key = CellKey::new(number.text, quarters, number.style);
       if let Some(&unique) = seen.get(&key) {
         uniques[unique].indices.push(index);
         continue;

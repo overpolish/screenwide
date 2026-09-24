@@ -3,25 +3,26 @@
 
 #pragma once
 
+#import <CoreGraphics/CoreGraphics.h>
 #import <Metal/Metal.h>
 #include <stdint.h>
 
-/// The counters' numbers, rasterised.
+/// The annotations' type, rasterised: counters' numbers and text boxes' text.
 ///
-/// A counter's number is type, so it is drawn by the text engine rather than
-/// approximated by the shader, at the size it is actually drawn, into an atlas
-/// the annotation kernels sample the way they sample the keyboard's artwork.
-/// The atlas persists per thread and keeps the numbers recent frames drew, so
-/// a frame rasterises only the numbers it has not drawn before; where each
-/// goes is laid out in Rust, shared with the D3D11 backend.
+/// Type is drawn by the text engine rather than approximated by the shader,
+/// at the size it is actually drawn, into an atlas the annotation kernels
+/// sample the way they sample the keyboard's artwork. The atlas persists per
+/// thread and keeps what recent frames drew, so a frame rasterises only the
+/// type it has not drawn before; where each goes is laid out in Rust, shared
+/// with the D3D11 backend.
 ///
 /// The atlas is rasterised at [`SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE`] times
-/// the drawn size and sampled with four taps, so a counter still reads while
-/// it is growing into place rather than crawling with aliasing over the two
-/// hundred milliseconds of its arrival.
+/// the drawn size and sampled with four taps, so type still reads while it is
+/// growing into place rather than crawling with aliasing over the frames of
+/// its arrival.
 
-/// Where one counter's number sits in the atlas, in atlas pixels. An annotation
-/// that is not a counter gets a zero rectangle, which the kernels skip.
+/// Where one annotation's type sits in the atlas, in atlas pixels. An
+/// annotation with no type gets a zero rectangle, which the kernels skip.
 typedef struct {
   float x, y, width, height;
 } ScreenwideAnnotationTextRect;
@@ -41,14 +42,27 @@ static const float SCREENWIDE_COUNTER_CAP_HEIGHT = 0.727f;
 /// How many atlas pixels are rasterised per drawn pixel.
 static const float SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE = 2.0f;
 
-/// Lays out and rasterises `count` UTF-8 strings at their requested radii,
-/// writing each one's rectangle into `rects`. A NULL value or a radius under a
-/// pixel draws nothing.
+/// What one entry's type is set as: a counter's number, or a text box's text
+/// at one more than its alignment.
+#define SCREENWIDE_ANNOTATION_TEXT_STYLE_COUNTER 0u
+
+/// Lays out and rasterises `count` UTF-8 strings, writing each one's
+/// rectangle into `rects`. `sizes` is a counter's disc radius or a text box's
+/// type size, in drawn pixels, and `styles` says which each entry is. A NULL
+/// value or a size under a pixel draws nothing.
 id<MTLBuffer> screenwide_annotation_text_atlas(
     id<MTLDevice> device, const char *const *values, const uint32_t *lengths,
-    const float *sizes, uint32_t count, ScreenwideAnnotationTextRect *rects,
-    ScreenwideAnnotationTextUniforms *uniforms);
+    const float *sizes, const uint32_t *styles, uint32_t count,
+    ScreenwideAnnotationTextRect *rects, ScreenwideAnnotationTextUniforms *uniforms);
+
+/// A cleared bitmap context the size of `rect`, set up to draw type the
+/// kernels tint, and the copy of it into the atlas's pixels, which releases
+/// the context.
+CGContextRef screenwide_annotation_cell_context(ScreenwideAnnotationTextRect rect);
+void screenwide_annotation_cell_copy(CGContextRef context, uint8_t *pixels,
+                                     uint32_t atlas_width,
+                                     ScreenwideAnnotationTextRect rect);
 
 /// Registers the bundled Inter face with Core Text, once per process. The
-/// keyboard artwork and the counters' numbers both draw in it.
+/// keyboard artwork and the annotations' type both draw in it.
 void screenwide_register_inter_font(void);

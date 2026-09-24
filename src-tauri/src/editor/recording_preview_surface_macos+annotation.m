@@ -52,11 +52,31 @@ static BOOL annotation_normalised_point(ScreenwidePreviewSurface *surface,
 /// Whether a tool in hand makes a new annotation on empty picture.
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode mode) {
   return mode == ScreenwideAnnotationModeArrow ||
-         mode == ScreenwideAnnotationModeCounter;
+         mode == ScreenwideAnnotationModeCounter ||
+         mode == ScreenwideAnnotationModeText;
 }
 
-/// The chosen annotation's grip under `point`, or -1. An arrow has three; a
-/// counter has one, the tip of its tail.
+/// The grips one annotation shows, in display points, and which grip each is.
+/// An arrow has three; a counter one, the tip of its tail; a text box one,
+/// its pointer's tip.
+static NSUInteger annotation_grips(NSRect image, ScreenwidePreviewAnnotation item,
+                                   NSPoint handles[3], ScreenwideAnnotationHandle kinds[3]) {
+  if (item.kind == ScreenwideAnnotationKindCounter || item.kind == ScreenwideAnnotationKindText) {
+    handles[0] = item.kind == ScreenwideAnnotationKindText ? annotation_text_grip(image, item)
+                                                           : annotation_counter_tail(image, item);
+    kinds[0] = ScreenwideAnnotationHandleTail;
+    return 1;
+  }
+  handles[0] = annotation_display_point(image, item.start_x, item.start_y);
+  handles[1] = annotation_display_point(image, item.middle_x, item.middle_y);
+  handles[2] = annotation_display_point(image, item.end_x, item.end_y);
+  kinds[0] = ScreenwideAnnotationHandleStart;
+  kinds[1] = ScreenwideAnnotationHandleMiddle;
+  kinds[2] = ScreenwideAnnotationHandleEnd;
+  return 3;
+}
+
+/// The chosen annotation's grip under `point`, or -1.
 SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   NSUInteger count = 0;
@@ -64,24 +84,10 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
   if (items == NULL || surface.annotationSelected < 0 ||
       (NSUInteger)surface.annotationSelected >= count)
     return -1;
-  ScreenwidePreviewAnnotation item = items[surface.annotationSelected];
-  NSRect image = annotation_image_frame(surface);
   NSPoint handles[3];
   ScreenwideAnnotationHandle kinds[3];
-  NSUInteger grips = 0;
-  if (item.kind == ScreenwideAnnotationKindCounter) {
-    handles[0] = annotation_counter_tail(image, item);
-    kinds[0] = ScreenwideAnnotationHandleTail;
-    grips = 1;
-  } else {
-    handles[0] = annotation_display_point(image, item.start_x, item.start_y);
-    handles[1] = annotation_display_point(image, item.middle_x, item.middle_y);
-    handles[2] = annotation_display_point(image, item.end_x, item.end_y);
-    kinds[0] = ScreenwideAnnotationHandleStart;
-    kinds[1] = ScreenwideAnnotationHandleMiddle;
-    kinds[2] = ScreenwideAnnotationHandleEnd;
-    grips = 3;
-  }
+  NSUInteger grips = annotation_grips(annotation_image_frame(surface),
+                                      items[surface.annotationSelected], handles, kinds);
   for (NSUInteger index = 0; index < grips; index++) {
     if (fabs(point.x - handles[index].x) <= kAnnotationHandleHit &&
         fabs(point.y - handles[index].y) <= kAnnotationHandleHit)
@@ -206,12 +212,12 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
     return YES;
   }
   // Empty picture: a new annotation. An arrow is drawn out, so it waits for the
-  // press to prove a drag and a click leaves no stub behind. A counter is
-  // dropped whole where the press lands, so it begins at once and a click
-  // alone commits it; the drag that may follow carries it.
+  // press to prove a drag and a click leaves no stub behind. A counter and a
+  // text box are dropped whole where the press lands, so they begin at once
+  // and a click alone makes them; the drag that may follow carries them.
   view.annotationDragTargetKind = ScreenwideAnnotationTargetNew;
   view.annotationDragIndex = 0;
-  if (mode == ScreenwideAnnotationModeCounter) {
+  if (mode == ScreenwideAnnotationModeCounter || mode == ScreenwideAnnotationModeText) {
     view.annotationDragHandle = ScreenwideAnnotationHandleBody;
     view.annotationDragBegun = YES;
     emit_annotation_gesture(surface, 0, ScreenwideAnnotationTargetNew, 0,
@@ -226,6 +232,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_down(
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_dragged(
     ScreenwidePreviewInteractionView *view, NSPoint point) {
   ScreenwidePreviewSurface *surface = view.surface;
+  if (view.annotationPressIgnored) return YES;
   if (!view.annotationDragActive) return NO;
   if (view.annotationDragPending) {
     if (hypot(point.x - view.annotationDragOrigin.x,
@@ -246,6 +253,10 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_dragged(
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_mouse_up(
     ScreenwidePreviewInteractionView *view, NSPoint point) {
   ScreenwidePreviewSurface *surface = view.surface;
+  if (view.annotationPressIgnored) {
+    view.annotationPressIgnored = NO;
+    return YES;
+  }
   if (!view.annotationDragActive) return NO;
   BOOL begun = view.annotationDragBegun;
   if (begun)
@@ -266,19 +277,10 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_add_osc(
   if (list == NULL || surface.annotationSelected < 0 ||
       (NSUInteger)surface.annotationSelected >= items)
     return;
-  ScreenwidePreviewAnnotation item = list[surface.annotationSelected];
-  NSRect image = annotation_image_frame(surface);
   NSPoint handles[3];
-  NSUInteger grips = 0;
-  if (item.kind == ScreenwideAnnotationKindCounter) {
-    handles[0] = annotation_counter_tail(image, item);
-    grips = 1;
-  } else {
-    handles[0] = annotation_display_point(image, item.start_x, item.start_y);
-    handles[1] = annotation_display_point(image, item.middle_x, item.middle_y);
-    handles[2] = annotation_display_point(image, item.end_x, item.end_y);
-    grips = 3;
-  }
+  ScreenwideAnnotationHandle kinds[3];
+  NSUInteger grips = annotation_grips(annotation_image_frame(surface),
+                                      list[surface.annotationSelected], handles, kinds);
   // The same disc the selection OSC draws its corner grips with: a 4pt fill
   // with a one-device-pixel ring, snapped to a whole device pixel.
   CGFloat extent = 4.0 + 2.0 / scale;

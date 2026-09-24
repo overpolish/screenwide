@@ -349,6 +349,8 @@ float4 annotation_counter_layer(
   return rgba;
 }
 
+#include "annotation_text.hlsl"
+
 /// Draws the prepared annotations in `[first, last)` over `rgba`.
 ///
 /// The range is how the camera ordering is expressed: Rust sorts the
@@ -371,6 +373,11 @@ float4 composite_annotations(
     if (annotation.kind == 1u) {
       rgba = annotation_counter_layer(rgba, annotation, color, canvas_point, feather,
                                       max(annotation.hover, 0.0), number_atlas);
+      continue;
+    }
+    if (annotation.kind == 2u) {
+      rgba = annotation_text_layer(rgba, annotation, color, canvas_point, feather,
+                                   max(annotation.hover, 0.0), number_atlas);
       continue;
     }
     float2 a = float2(arrow.ax, arrow.ay);

@@ -9,9 +9,9 @@
 
 use super::reveal::AnnotationReveal;
 use super::Annotation;
+use crate::editor::annotations::annotation_colour;
 #[cfg(target_os = "windows")]
 use crate::editor::annotations::AnnotationKind;
-use crate::editor::annotations::{annotation_colour, AnnotationHead};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
@@ -63,21 +63,14 @@ impl NativeAnnotationData {
   /// Write `annotation`'s variable-length data into the buffers and return
   /// its record, with the offsets pointing here.
   pub(crate) fn pack(&mut self, annotation: &Annotation) -> NativeAnnotation {
-    let [p0, p1, p2] = annotation.shape.draw_points();
+    let [p0, p1, p2] = annotation.shape.draw_points(&annotation.style);
     self.points.extend_from_slice(&[p0, p1, p2]);
-    let text = match &annotation.shape {
-      super::shape::AnnotationShape::Counter { value, .. } => value.to_string(),
-      super::shape::AnnotationShape::Arrow { .. } => String::new(),
-    };
+    let text = annotation.shape.draw_text();
     let data_offset = self.text.len();
     self.text.extend_from_slice(text.as_bytes());
     NativeAnnotation {
       kind: annotation.shape.kind().raw(),
-      head: match annotation.style.head {
-        AnnotationHead::None => 0,
-        AnnotationHead::End => 1,
-        AnnotationHead::Both => 2,
-      },
+      head: annotation.shape.draw_head(&annotation.style),
       above_camera: u32::from(annotation.above_camera),
       flags: 0,
       width: annotation.style.width.max(0.0) as f32,
@@ -176,7 +169,9 @@ const _: () = assert!(std::mem::offset_of!(NativeAnnotationsView, data) == 16);
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
+  use crate::editor::annotations::{
+    Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
+  };
 
   fn annotation(shape: AnnotationShape) -> Annotation {
     Annotation {
@@ -186,6 +181,7 @@ mod tests {
       reveal: Default::default(),
       shape,
       style: AnnotationStyle {
+        align: Default::default(),
         color: "#0000ff".to_owned(),
         head: AnnotationHead::Both,
         width: 9.0,

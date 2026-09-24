@@ -47,6 +47,7 @@ fn arrow(
       end,
     },
     style: AnnotationStyle {
+      align: Default::default(),
       color: "#ff0000".to_owned(),
       head,
       width,

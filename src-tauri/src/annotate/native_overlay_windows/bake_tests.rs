@@ -21,6 +21,7 @@ fn arrow() -> Annotation {
     AnnotationPoint { x: 20.0, y: 20.0 },
     AnnotationPoint { x: 100.0, y: 100.0 },
     Some(&AnnotationStyle {
+      align: Default::default(),
       color: "#ff0000".to_owned(),
       head: AnnotationHead::End,
       width: 8.0,

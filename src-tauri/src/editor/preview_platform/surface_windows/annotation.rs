@@ -65,6 +65,14 @@ pub(super) struct AnnotationState {
   /// whenever a sample snaps to nothing, and when the gesture ends.
   pub(super) snap: NativeAnnotationSnap,
   drag: Option<Drag>,
+  /// The box being typed into, if any.
+  pub(super) typing: Option<typing::Typing>,
+  /// Where the double-click that asked for a box to open landed, for the
+  /// caret to start there once Rust opens it.
+  opening: Option<(f64, f64)>,
+  /// A press typing took - one that closed a box or opened one - whose drag
+  /// and release belong to nothing else.
+  press_taken: bool,
 }
 
 impl Default for AnnotationState {
@@ -80,6 +88,9 @@ impl Default for AnnotationState {
       mode: MODE_NONE,
       snap: NativeAnnotationSnap::default(),
       drag: None,
+      typing: None,
+      opening: None,
+      press_taken: false,
     }
   }
 }
@@ -209,6 +220,11 @@ impl RecordingPreviewSurface {
     state.annotation.handles.extend_from_slice(handles);
     state.annotation.selected = selected_index;
     state.annotation.mode = mode;
+    // The tool put down, or the box gone from under the typing: there is
+    // nothing left to type into, and what was typed is kept.
+    if typing::lost_its_box(&state) {
+      self.inner.editor.finish_typing();
+    }
     // The grips are chrome: publishing them is what moves them on screen,
     // and what stands the layer's own chrome up or down. The cursor needs no
     // push - the window re-asks on the next pointer move.
@@ -240,7 +256,7 @@ mod picking;
 pub(super) use picking::{cursor_for, owns_chrome, selected_grips};
 use picking::{
   handle_at_point, image_extent, image_frame, item_image_frame, layer_selection, normalised_point,
-  selected_item, shaft_at_point,
+  selected_item, shaft_at_point, text_geometry,
 };
 
 /// What a snapped sample draws, and where.
@@ -257,6 +273,13 @@ pub(crate) use hover::{refresh as refresh_hover, update as update_hover};
 #[path = "annotation/gesture.rs"]
 mod gesture;
 pub(super) use gesture::{cancel, down, pointer_move, up};
+
+/// Typing into a text box: the keyboard, the caret and the presses around it.
+#[path = "annotation/typing.rs"]
+mod typing;
+pub(super) use typing::{handle_typing_input, sync_typing_marks};
+pub(crate) use typing::{open as open_text, press as typing_press};
+pub(crate) use typing::{pointer_move as typing_move, up as typing_up};
 
 #[cfg(test)]
 #[path = "annotation/drag_tests.rs"]

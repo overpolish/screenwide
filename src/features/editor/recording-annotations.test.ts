@@ -3,7 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { Annotation, ANNOTATION_DRAW_IN_MS } from "./annotations";
+import { ANNOTATION_DRAW_IN_MS } from "./annotation-kinds";
+import { Annotation } from "./annotations";
 import { recordingAnnotationRows } from "./components/recording-annotation-layout";
 import { moveRecordingAnnotationClip } from "./recording-annotation-geometry";
 import {
@@ -24,7 +25,7 @@ const annotation: Annotation = {
     kind: "arrow",
     start: { x: 0, y: 0 },
   },
-  style: { color: "#ff0000", head: "end", width: 8 },
+  style: { align: "left", color: "#ff0000", head: "end", width: 8 },
 };
 
 describe("recording annotation clips", () => {
@@ -218,7 +219,7 @@ const counterClip = (
     animated: true,
     id,
     shape: { angle: 0, center: { x: 10, y: 10 }, kind: "counter", value },
-    style: { color: "#ffcc00", head: "none", width: 56 },
+    style: { align: "left", color: "#ffcc00", head: "none", width: 56 },
   },
   endMs: startMs + 3_000,
   startMs,

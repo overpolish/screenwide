@@ -5,6 +5,7 @@
 //! showing, and the provisional clips a drag writes through until it commits.
 
 use super::*;
+use crate::editor::annotations::AnnotationShape;
 
 pub(super) struct Gesture {
   pane: u32,
@@ -22,10 +23,13 @@ pub(super) struct Gesture {
 #[serde(rename_all = "camelCase")]
 pub(super) struct Commit {
   pub(super) session_id: u64,
-  pane_index: u32,
+  pub(super) pane_index: u32,
   pub(super) source_position_ms: u64,
   pub(super) annotations: Vec<Annotation>,
   pub(super) selected_annotation_id: Option<String>,
+  /// Where in a text box's typing this commit falls; React groups a typing's
+  /// commits into one edit.
+  pub(super) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
 }
 pub(super) fn track(pane: u32) -> AnnotationTrack {
   if pane == 1 {
@@ -82,7 +86,7 @@ impl PreviewPlayerManager {
     snap: u32,
     image_points: f64,
   ) -> Option<Commit> {
-    if self.is_playing || self.annotation.mode == 0 || pane > 1 {
+    if self.is_playing || self.annotation.mode == 0 || pane > 1 || self.annotation.text.is_some() {
       return None;
     }
     if matches!(phase, SelectionGesturePhase::Begin) {
@@ -131,12 +135,13 @@ impl PreviewPlayerManager {
             source_position_ms: position_ms,
             annotations: working,
             selected_annotation_id: self.annotation.selected.clone(),
+            text_edit: None,
           });
         }
         _ => {}
       }
       let before = clips.read().ok()?.clone();
-      let edit = AnnotationEdit::begin(
+      let mut edit = AnnotationEdit::begin(
         &mut working,
         target,
         point,
@@ -172,6 +177,7 @@ impl PreviewPlayerManager {
         })
         .unwrap_or_default();
       let field = SnapField::new(source_size, &working, edit.selected_id(), image_width);
+      edit.set_source_per_output(field.source_per_output());
       self.annotation.gesture = Some(Gesture {
         pane,
         position: position_ms,
@@ -200,6 +206,7 @@ impl PreviewPlayerManager {
         ..
       } = self.annotation.gesture.as_mut()?;
       field.anchors = anchors;
+      edit.set_source_per_point(source_per_point(source_size.0, image_points));
       let request = threshold.map(|threshold| SnapRequest { field, threshold });
       let result = edit.update(working, point, modifiers, request);
       // A gesture that has ended leaves nothing on screen to explain.
@@ -211,34 +218,35 @@ impl PreviewPlayerManager {
       self.publish_annotation_snap(source_size, &shown);
     }
     let gesture = self.annotation.gesture.as_ref()?;
-    let mut next = gesture.before.clone();
-    for annotation in &gesture.working {
-      if let Some(clip) = next.iter_mut().find(|c| c.annotation.id == annotation.id) {
-        clip.annotation = annotation.clone();
-      } else {
-        // The provisional clip the gesture draws through reaches back a
-        // draw-in, the way the editor's own placement does, so the annotation
-        // is finished drawing at the playhead and visible under the hand.
-        next.push(RecordingAnnotationClip {
-          annotation: annotation.clone(),
-          track_id: track(gesture.pane),
-          start_ms: gesture
-            .position
-            .saturating_sub(crate::editor::annotations::reveal::REVEAL_DRAW_IN_MS as u64),
-          end_ms: gesture.position.saturating_add(3000),
+    *clips.write().ok()? = provisional_clips(
+      &gesture.before,
+      &gesture.working,
+      gesture.pane,
+      gesture.position,
+    );
+    let ended = matches!(phase, SelectionGesturePhase::End);
+    if ended {
+      let gesture = self.annotation.gesture.take()?;
+      // A fresh text box goes straight on to being typed into, and React
+      // groups the press that made it and the typing into one edit.
+      let id = gesture.edit.selected_id().to_owned();
+      let fresh_text = gesture.edit.is_new()
+        && gesture.working.iter().any(|annotation| {
+          annotation.id == id && matches!(annotation.shape, AnnotationShape::Text { .. })
         });
+      if fresh_text {
+        return self.begin_text_session(gesture.pane, gesture.position, id);
       }
-    }
-    *clips.write().ok()? = next;
-    let commit = matches!(phase, SelectionGesturePhase::End).then(|| Commit {
-      session_id,
-      pane_index: pane,
-      source_position_ms: gesture.position,
-      annotations: gesture.working.clone(),
-      selected_annotation_id: self.annotation.selected.clone(),
-    });
-    if commit.is_some() {
-      self.annotation.gesture = None;
+      self.publish_annotation_handles();
+      let _ = self.restart(PlaybackMode::InteractiveStill);
+      return Some(Commit {
+        session_id,
+        pane_index: pane,
+        source_position_ms: gesture.position,
+        annotations: gesture.working,
+        selected_annotation_id: self.annotation.selected.clone(),
+        text_edit: None,
+      });
     }
     self.publish_annotation_handles();
     // The Metal workspace re-encodes from its retained scene on a restart,
@@ -247,9 +255,37 @@ impl PreviewPlayerManager {
     // arrow on every sample; the pane already holds the frame, so it is
     // re-presented with the new annotations instead, and only the end of the
     // gesture restarts the worker to bring it back in step.
-    if commit.is_some() || !self.redraw_annotation_frame(pane, position_ms) {
+    if !self.redraw_annotation_frame(pane, position_ms) {
       let _ = self.restart(PlaybackMode::InteractiveStill);
     }
-    commit
+    None
   }
+}
+
+/// The clips a gesture or a typing session draws through: the clips it began
+/// on, with every annotation it holds written into its own clip. One that has
+/// no clip yet gets a provisional one reaching back a draw-in, the way the
+/// editor's own placement does, so it is finished drawing at the playhead and
+/// visible under the hand.
+pub(super) fn provisional_clips(
+  before: &[RecordingAnnotationClip],
+  working: &[Annotation],
+  pane: u32,
+  position: u64,
+) -> Vec<RecordingAnnotationClip> {
+  let mut next = before.to_vec();
+  for annotation in working {
+    if let Some(clip) = next.iter_mut().find(|c| c.annotation.id == annotation.id) {
+      clip.annotation = annotation.clone();
+    } else {
+      next.push(RecordingAnnotationClip {
+        annotation: annotation.clone(),
+        track_id: track(pane),
+        start_ms: position
+          .saturating_sub(crate::editor::annotations::reveal::REVEAL_DRAW_IN_MS as u64),
+        end_ms: position.saturating_add(3000),
+      });
+    }
+  }
+  next
 }

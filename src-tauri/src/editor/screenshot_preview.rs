@@ -16,6 +16,8 @@ mod annotation_gesture;
 mod annotation_hover;
 #[cfg(all(any(target_os = "macos", target_os = "windows"), test))]
 mod annotation_tests;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod annotation_text;
 /// The halo's growth curve is one thing for every editor. The screenshot
 /// editor reads it inside this module; the re-export is what the recording
 /// preview draws its own halo from, on either backend.

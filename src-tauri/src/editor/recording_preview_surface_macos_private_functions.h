@@ -143,6 +143,19 @@ NSInteger annotation_handle_at_point(ScreenwidePreviewSurface *surface,
 /// The topmost arrow whose shaft `point` lands on, or -1.
 NSInteger annotation_shaft_at_point(ScreenwidePreviewSurface *surface,
                                     NSPoint point);
+/// Whether a text box is being typed into.
+BOOL annotation_text_editing(ScreenwidePreviewSurface *surface);
+/// Ends the typing, telling Rust the text it ended with.
+void annotation_text_finish(ScreenwidePreviewSurface *surface);
+/// Lays the text view over its box again, at the box's current place and
+/// type size, or ends the typing when there is no box left to type into.
+void annotation_text_layout(ScreenwidePreviewSurface *surface);
+/// A press typing owns: any press while a box is open, which ends the typing
+/// and does nothing else, and a double-click on a text box, which asks Rust
+/// to open it. YES when the press was typing's.
+BOOL annotation_text_press(ScreenwidePreviewInteractionView *view, NSEvent *event);
+/// The I-beam over the box being typed into, or nil anywhere else.
+NSCursor *annotation_text_cursor(ScreenwidePreviewSurface *surface, NSPoint point);
 /// The whole source image's rectangle on screen, in the flipped interaction
 /// view's coordinates.
 NSRect annotation_image_frame(ScreenwidePreviewSurface *surface);

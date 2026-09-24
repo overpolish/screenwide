@@ -84,6 +84,9 @@
                                            fromView:nil]];
 }
 - (void)mouseDown:(NSEvent *)event {
+  // Typing owns the press: one while a box is open ends it and does nothing
+  // else, and a double-click on a text box opens it.
+  if (annotation_text_press(self, event)) return;
   if (self.surface.pointerDownCallback) self.surface.pointerDownCallback(self.surface.pointerDownContext);
   // A stale commit flag must not outlive its gesture (see its declaration).
   self.surface.keepTransformForCommittedNaturalSize = NO;

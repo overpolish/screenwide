@@ -13,12 +13,13 @@ use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
 };
 
-/// The disc diameters the counter control offers, in output pixels. Three
-/// sizes far enough apart to be worth choosing between: a handful of pixels
-/// either way is no choice at all. The twin of `ANNOTATION_COUNTER_SIZES` in
+/// The disc diameters the counter control offers, in output pixels. Five
+/// steps, keeping the three earlier sizes at the first, middle and last step
+/// so an older document keeps its discs. The twin of
+/// `ANNOTATION_COUNTER_SIZES` in
 /// `src/components/shared/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) const COUNTER_SIZES: [f64; 3] = [56.0, 96.0, 160.0];
+pub(crate) const COUNTER_SIZES: [f64; 5] = [56.0, 72.0, 96.0, 128.0, 160.0];
 
 /// The disc a fresh counter is drawn at, in output pixels: the smallest,
 /// which is the size counters were drawn at before the sizes widened.
@@ -34,6 +35,7 @@ pub(crate) const NEW_COUNTER_ANGLE: f64 = 0.0;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn default_counter_style() -> AnnotationStyle {
   AnnotationStyle {
+    align: Default::default(),
     color: crate::editor::annotations::model::NEW_ANNOTATION_COLOR.to_owned(),
     head: AnnotationHead::None,
     width: NEW_COUNTER_WIDTH,

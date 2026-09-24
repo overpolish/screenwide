@@ -40,18 +40,26 @@ typedef struct {
 _Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
                "Rust/C annotation handle layout mismatch");
 /// Which shape an annotation is, matching the compositor's own kinds.
+///
+/// A text box reads the grip slots its own way: `start` is the box's top-left
+/// corner; `end` is its pointer as Rust's `TextPointer::encoded` carries it,
+/// held against the box and never placed; `middle` is its text block's width
+/// and height and `width` its type size, both as shares of the drawn width;
+/// `start_head` is its alignment.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindArrow = 0,
   ScreenwideAnnotationKindCounter = 1,
+  ScreenwideAnnotationKindText = 2,
 };
 /// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
-/// layer; `Arrow` and `Counter` also make a new annotation on empty picture.
+/// layer; the drawing tools also make a new annotation on empty picture.
 typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeNone = 0,
   ScreenwideAnnotationModeSelect = 1,
   ScreenwideAnnotationModeArrow = 2,
   ScreenwideAnnotationModeCounter = 3,
+  ScreenwideAnnotationModeText = 4,
 };
 /// Which grip a press took hold of.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationHandle) {
@@ -114,5 +122,13 @@ typedef void (*screenwide_preview_annotation_gesture_callback)(
 /// the halo's points into the canvas pixels the compositor draws in.
 typedef void (*screenwide_preview_annotation_hover_callback)(
     int32_t index, double progress, double image_points, void *context);
+
+/// A text box being typed into. `phase` is 0 when a double-click asks to open
+/// the box at `index` in `layer`, 1 when its text changed to `text`, and 2
+/// when typing ended. `revision` counts the changes of one session, so a
+/// change delivered late never overwrites a newer one.
+typedef void (*screenwide_preview_annotation_text_callback)(
+    uint32_t phase, uint32_t layer, uint32_t index, const uint8_t *text,
+    uint32_t length, uint64_t revision, void *context);
 
 #endif

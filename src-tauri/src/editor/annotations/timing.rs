@@ -111,6 +111,7 @@ mod tests {
           end: Default::default(),
         },
         style: AnnotationStyle {
+          align: Default::default(),
           color: "#ff0000".to_owned(),
           head: Default::default(),
           width: 8.0,

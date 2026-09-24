@@ -129,6 +129,7 @@ impl Gpu {
     .map_err(|error| format!("The Windows preview pane could not be attached: {error}"))?;
     Ok(Pane {
       annotation_halo: None,
+      annotation_typing: None,
       base_rect: PreviewSurfaceRect {
         height: 0.0,
         width: 0.0,

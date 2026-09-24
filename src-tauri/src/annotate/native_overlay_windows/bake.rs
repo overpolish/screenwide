@@ -42,7 +42,7 @@ pub(crate) fn bake(
   renderer.draw_arrows(
     &view,
     (image.width, image.height),
-    &arrows::placed_arrows(annotations, (0.0, 0.0), (1.0, 1.0), None),
+    &arrows::placed_arrows(annotations, (0.0, 0.0), (1.0, 1.0), None, None),
   )?;
 
   let staging = texture(device, image.width, image.height, true)?;

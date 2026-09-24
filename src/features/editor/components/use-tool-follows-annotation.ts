@@ -10,11 +10,11 @@ import type { AnnotationKind } from "../../../components/shared/annotation-style
 /**
  * A drawing tool follows the annotation that was chosen with it.
  *
- * Both drawing tools hit-test every annotation, so the arrow tool can pick up a
- * counter and the counter tool an arrow. What it must not leave behind is a
- * mismatch: the panel dressing a counter while the next press on empty picture
- * draws an arrow. So choosing an annotation takes up its own tool, and the tool
- * in hand is always the shape the next press makes.
+ * Every drawing tool hit-tests every annotation, so the arrow tool can pick up
+ * a counter and the text tool an arrow. What it must not leave behind is a
+ * mismatch: the panel dressing a counter while the next press on empty
+ * picture draws an arrow. So choosing an annotation takes up its own tool, and
+ * the tool in hand is always the shape the next press makes.
  *
  * The select tool is left alone: picking things up is what it is for, and it
  * draws nothing to disagree with.
@@ -29,7 +29,7 @@ export function useToolFollowsAnnotation(
   const setToolRef = useRef(setTool);
   setToolRef.current = setTool;
   useEffect(() => {
-    if (kind === null || (tool !== "arrow" && tool !== "counter")) return;
+    if (kind === null || drawingToolKind(tool) === null) return;
     if (tool === kind) return;
     setToolRef.current(kind);
   }, [kind, tool]);

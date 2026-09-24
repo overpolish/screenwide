@@ -52,13 +52,9 @@ describe("the counter's own sizes", () => {
     }
   });
 
-  it("is far enough apart to be worth choosing between", () => {
-    // A disc a handful of pixels wider than the last is no choice at all, so
-    // each size is at least half again the one before it.
-    for (const [index, size] of ANNOTATION_COUNTER_SIZES.slice(1).entries())
-      expect(size).toBeGreaterThanOrEqual(
-        ANNOTATION_COUNTER_SIZES[index] * 1.5,
-      );
+  it("keeps the sizes an older document was drawn at", () => {
+    for (const size of [56, 96, 160])
+      expect(ANNOTATION_COUNTER_SIZES).toContain(size);
   });
 
   it("starts a fresh counter at the smallest disc", () => {

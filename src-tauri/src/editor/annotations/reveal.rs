@@ -39,7 +39,7 @@ use crate::editor::annotations::AnnotationKind;
 use crate::editor::effect_animation::ease_in_out_cubic;
 
 /// How long an annotation takes to draw itself in. The twin of
-/// `ANNOTATION_DRAW_IN_MS` in `src/features/editor/annotations.ts`, which
+/// `ANNOTATION_DRAW_IN_MS` in `src/features/editor/annotation-kinds.ts`, which
 /// places a fresh clip this far before the playhead so the annotation is drawn
 /// by the time the playhead is reached;
 /// `the_editor_places_a_clip_by_this_phase` holds the two together. A second:

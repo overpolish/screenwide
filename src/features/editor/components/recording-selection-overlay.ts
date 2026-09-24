@@ -6,6 +6,7 @@ import {
   RecordingOutputSettings,
   screenshotOutputDimensions,
 } from "../screenshot-output";
+import { isAnnotationTool } from "../tool-panels/tool-registry";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../types";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
@@ -122,10 +123,7 @@ export function recordingVideoSelectionOverlay({
     };
   }
   if (
-    (canvasTool !== "select" &&
-      canvasTool !== "crop" &&
-      canvasTool !== "arrow" &&
-      canvasTool !== "counter") ||
+    (canvasTool !== "crop" && !isAnnotationTool(canvasTool)) ||
     !activeVideoTrack ||
     !selectedVideoTracks.has(activeVideoTrack)
   )

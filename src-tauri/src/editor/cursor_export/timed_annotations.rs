@@ -67,6 +67,7 @@ mod tests {
           angle: 0.0,
         },
         style: AnnotationStyle {
+          align: Default::default(),
           color: "#ffcc00".to_owned(),
           head: Default::default(),
           width: 40.0,

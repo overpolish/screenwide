@@ -19,6 +19,7 @@ pub enum AnnotationKind {
   #[default]
   Arrow = 0,
   Counter = 1,
+  Text = 2,
 }
 
 impl AnnotationKind {
@@ -28,6 +29,7 @@ impl AnnotationKind {
     match kind {
       0 => Some(Self::Arrow),
       1 => Some(Self::Counter),
+      2 => Some(Self::Text),
       _ => None,
     }
   }
@@ -47,8 +49,10 @@ mod tests {
   fn kinds_read_back_from_their_native_numbers() {
     assert_eq!(AnnotationKind::from_raw(0), Some(AnnotationKind::Arrow));
     assert_eq!(AnnotationKind::from_raw(1), Some(AnnotationKind::Counter));
+    assert_eq!(AnnotationKind::from_raw(2), Some(AnnotationKind::Text));
     assert_eq!(AnnotationKind::Arrow.raw(), 0);
     assert_eq!(AnnotationKind::Counter.raw(), 1);
-    assert_eq!(AnnotationKind::from_raw(2), None);
+    assert_eq!(AnnotationKind::Text.raw(), 2);
+    assert_eq!(AnnotationKind::from_raw(3), None);
   }
 }

@@ -21,7 +21,7 @@ use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::effect_animation::{ease_in_out_cubic, ease_out_cubic};
 
 /// How long a counter takes to arrive. The twin of
-/// `ANNOTATION_COUNTER_DRAW_IN_MS` in `src/features/editor/annotations.ts`,
+/// `ANNOTATION_COUNTER_DRAW_IN_MS` in `src/features/editor/annotation-kinds.ts`,
 /// which places a fresh clip this far before the playhead so the counter is
 /// whole by the time the playhead is reached.
 pub(crate) const COUNTER_REVEAL_IN_MS: f32 = 320.0;
@@ -70,24 +70,44 @@ pub(crate) fn counter_reveal_window(
   }
   // One formula for size and opacity at a source time, so the current frame
   // and the one before it - the blur's lead - share it.
-  let presence = |at_ms: f32| {
-    let arriving = ease_out_cubic((at_ms / opening_ms).clamp(0.0, 1.0));
-    let leaving =
-      ease_in_out_cubic(((at_ms - (duration_ms - closing_ms)) / closing_ms).clamp(0.0, 1.0));
-    // One phase at a time: the clip caps each to a third of itself, so the
-    // phase that is not running sits at rest on its own extreme.
-    arriving * (1.0 - leaving)
-  };
-  let scale = |presence: f32| COUNTER_REVEAL_FROM + (1.0 - COUNTER_REVEAL_FROM) * presence;
-  let now = presence(elapsed_ms);
-  let before = presence(elapsed_ms - frame_ms.max(0.0));
+  let now = counter_presence(elapsed_ms, duration_ms, opening_ms, closing_ms);
+  let before = counter_presence(
+    elapsed_ms - frame_ms.max(0.0),
+    duration_ms,
+    opening_ms,
+    closing_ms,
+  );
   AnnotationReveal {
     low: 0.0,
     high: 1.0,
-    scale: scale(now),
+    scale: counter_scale(now),
     opacity: now,
-    previous: [0.0, 1.0, scale(before), before],
+    previous: [0.0, 1.0, counter_scale(before), before],
   }
+}
+
+/// How present a disc - or a text box, which arrives the same way - is at
+/// `at_ms` into a clip lasting `duration_ms`, arriving over `opening_ms` and
+/// leaving over the last `closing_ms`: arriving eases out, leaving eases in
+/// and out, one phase at a time.
+pub(crate) fn counter_presence(
+  at_ms: f32,
+  duration_ms: f32,
+  opening_ms: f32,
+  closing_ms: f32,
+) -> f32 {
+  if opening_ms <= 0.0 || closing_ms <= 0.0 {
+    return 1.0;
+  }
+  let arriving = ease_out_cubic((at_ms / opening_ms).clamp(0.0, 1.0));
+  let leaving =
+    ease_in_out_cubic(((at_ms - (duration_ms - closing_ms)) / closing_ms).clamp(0.0, 1.0));
+  arriving * (1.0 - leaving)
+}
+
+/// The size a disc is drawn at for its presence.
+pub(crate) fn counter_scale(presence: f32) -> f32 {
+  COUNTER_REVEAL_FROM + (1.0 - COUNTER_REVEAL_FROM) * presence
 }
 
 #[cfg(test)]

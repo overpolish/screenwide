@@ -17,6 +17,7 @@ const DIAMETER: f64 = 80.0;
 fn counter(value: u32, angle: f64) -> Annotation {
   let mut annotation = new_counter("counter".to_owned(), CENTER, value, None, None);
   annotation.style = AnnotationStyle {
+    align: Default::default(),
     color: "#ffcc00".to_owned(),
     head: crate::editor::annotations::AnnotationHead::None,
     width: DIAMETER,

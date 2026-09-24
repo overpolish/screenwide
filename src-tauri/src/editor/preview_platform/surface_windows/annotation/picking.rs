@@ -12,7 +12,9 @@ use super::*;
 use crate::editor::annotations::arrow::distance::prepared_arrow_distance;
 use crate::editor::annotations::arrow::geometry::prepare_arrow;
 use crate::editor::annotations::counter::silhouette::counter_distance;
+use crate::editor::annotations::geometry::ArrowGeometry;
 use crate::editor::annotations::reveal::AnnotationReveal;
+use crate::editor::annotations::text::geometry::{prepare_text, text_distance};
 use crate::editor::annotations::AnnotationPoint;
 
 /// An annotation belongs to its image, independently of the selected layer. The
@@ -101,11 +103,32 @@ fn grip_at_point(
     })
     .map(|index| index as u32)?;
   Some(match item.shape_kind() {
-    // A counter has one grip - the tip of its tail - rather than an arrow's
-    // three, so the grip it reports is the tail rather than the start.
-    AnnotationKind::Counter => HANDLE_TAIL,
+    // A counter and a text box have one grip - the tip of the tail or the
+    // pointer - rather than an arrow's three, so the grip it reports is the
+    // tail rather than the start.
+    AnnotationKind::Counter | AnnotationKind::Text => HANDLE_TAIL,
     AnnotationKind::Arrow => found,
   })
+}
+
+/// A text box prepared in display points, from the grips it was published
+/// with. The twin of the text branch of `annotation_prepared`.
+pub(super) fn text_geometry(
+  image: PreviewSurfaceRect,
+  item: &NativeAnnotationHandles,
+) -> ArrowGeometry {
+  let origin = display_point(image, item.start_x, item.start_y);
+  prepare_text(
+    [origin.0 as f32, origin.1 as f32],
+    [item.end_x as f32, item.end_y as f32],
+    [
+      (item.middle_x * image.width) as f32,
+      (item.middle_y * image.width) as f32,
+    ],
+    (item.width * image.width) as f32,
+    item.start_head as u32 & 3,
+    AnnotationReveal::WHOLE,
+  )
 }
 
 /// The grips one annotation shows, in display points: an arrow's three, or the
@@ -126,6 +149,12 @@ fn item_grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> Vec<
         item.start_head,
       );
       vec![(tip.x, tip.y)]
+    }
+    // The pointer's tip, drawn out of the box or tucked into it where it was
+    // left.
+    AnnotationKind::Text => {
+      let geometry = text_geometry(image, item);
+      vec![(f64::from(geometry.c[0]), f64::from(geometry.c[1]))]
     }
     AnnotationKind::Arrow => vec![
       centre,
@@ -175,6 +204,9 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<edit
   if state.annotation.mode == MODE_NONE {
     return None;
   }
+  if super::typing::over_box(state, point) {
+    return Some(editor::CursorKind::IBeam);
+  }
   if handle_at_point(state, point).is_some() || shaft_at_point(state, point).is_some() {
     return Some(editor::CursorKind::Arrow);
   }
@@ -206,6 +238,12 @@ fn arrow_distance(
         item.width * image.width / 2.0,
         item.start_head,
       ) as f32;
+    }
+    AnnotationKind::Text => {
+      return text_distance(
+        [point.0 as f32, point.1 as f32],
+        &text_geometry(image, item),
+      );
     }
     AnnotationKind::Arrow => {}
   }

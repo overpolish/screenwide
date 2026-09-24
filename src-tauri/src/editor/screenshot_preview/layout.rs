@@ -78,6 +78,9 @@ pub async fn layout_screenshot_preview_surface(
     } else {
       output
     };
+    // A box being typed into keeps its typing over React's layout.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    let output = manager.merge_text_session(output);
     let output_changed = manager.output.as_ref() != Some(&output);
     manager.output = Some(output.clone());
     if !panes.is_empty() {

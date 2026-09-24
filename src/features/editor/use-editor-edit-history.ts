@@ -157,6 +157,15 @@ export function useEditorEditHistory<State extends object>({
     // React may commit their last update after the native mouse-up event.
     timerRef.current = window.setTimeout(() => {
       gestureRef.current = false;
+      // A gesture that ends where it began - a text box typed into and left
+      // empty, which removes it again - leaves nothing to undo. Its states
+      // are fresh objects either way, so only their contents can say so.
+      const pending = pendingRef.current;
+      if (
+        pending &&
+        JSON.stringify(pending.start) === JSON.stringify(currentRef.current)
+      )
+        pendingRef.current = null;
       finishGroup();
     }, 0);
   }, [finishGroup]);

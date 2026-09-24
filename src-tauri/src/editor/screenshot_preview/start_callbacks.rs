@@ -34,6 +34,7 @@ fn emit_annotation_change(app: &AppHandle, session_id: u64, commit: AnnotationCo
       annotations: commit.annotations,
       pane_index: commit.pane_index,
       selected_annotation_id: commit.selected_annotation_id,
+      text_edit: commit.text_edit,
       session_id,
     },
   );
@@ -205,4 +206,42 @@ pub(super) fn install(
       };
     },
   ));
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  {
+    let event_app = app.clone();
+    surface.set_annotation_text_callback(Box::new(
+      move |phase, pane_index, index, text, revision| {
+        // Never wait for this mutex from AppKit's main thread. No report may be
+        // dropped - each one is typing - so a contended lock defers it, and the
+        // revision keeps a late change from overwriting a newer one.
+        let state = event_app.state::<ScreenshotPreviewState>();
+        if let Ok(mut manager) = state.0.try_lock() {
+          if manager.session_id != Some(session_id) {
+            return;
+          }
+          let commit = manager.handle_annotation_text(phase, pane_index, index, &text, revision);
+          drop(manager);
+          if let Some(commit) = commit {
+            emit_annotation_change(&event_app, session_id, commit);
+          }
+          return;
+        }
+        let deferred = event_app.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+          let state = deferred.state::<ScreenshotPreviewState>();
+          let Ok(mut manager) = state.0.lock() else {
+            return;
+          };
+          if manager.session_id != Some(session_id) {
+            return;
+          }
+          let commit = manager.handle_annotation_text(phase, pane_index, index, &text, revision);
+          drop(manager);
+          if let Some(commit) = commit {
+            emit_annotation_change(&deferred, session_id, commit);
+          }
+        });
+      },
+    ));
+  }
 }

@@ -1,7 +1,37 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Annotation, validAnnotations } from "./annotations";
+import {
+  Annotation,
+  AnnotationTextEdit,
+  annotationTextEdit,
+  validAnnotations,
+} from "./annotations";
+import {
+  ScreenshotWorkspaceOutputSettings,
+  screenshotWorkspaceItemOutput,
+} from "./screenshot-output";
+
+/**
+ * The layer output a native annotation change writes into the document, and
+ * which layer it is, or null where there is nothing to write. Choosing an
+ * annotation reports the list the layer already holds: a selection rather
+ * than an edit, which must not land in the undo history.
+ */
+export const screenshotAnnotationOutput = (
+  workspace: ScreenshotWorkspaceOutputSettings | undefined,
+  event: ScreenshotAnnotationChangeEvent,
+) => {
+  const item = workspace?.items[event.paneIndex];
+  if (!workspace || !item) return null;
+  const held = screenshotWorkspaceItemOutput(workspace, item.id);
+  if (JSON.stringify(held.annotations) === JSON.stringify(event.annotations))
+    return null;
+  return {
+    itemId: item.id,
+    output: { ...held, annotations: event.annotations },
+  };
+};
 
 /**
  * Reads one native annotation-change payload, dropping anything the
@@ -24,6 +54,7 @@ export const screenshotAnnotationChange = (
       typeof event.selectedAnnotationId === "string"
         ? event.selectedAnnotationId
         : null,
+    textEdit: annotationTextEdit(event.textEdit),
   };
 };
 
@@ -66,11 +97,13 @@ export type ScreenshotSelectionGestureEvent = {
 
 /**
  * The layer's annotations after an arrow gesture, for the document to take as
- * one edit. The native tool owns the drawing; only the finished list arrives
- * here.
+ * one edit, or as a text box is typed into, where `textEdit` says where in the
+ * typing the commit falls. The native tool owns the drawing; only lists
+ * arrive here.
  */
 export type ScreenshotAnnotationChangeEvent = {
   annotations: Annotation[];
   paneIndex: number;
   selectedAnnotationId: string | null;
+  textEdit: AnnotationTextEdit | null;
 };

@@ -17,5 +17,5 @@ pub(super) fn scene(display: Display) -> arrows::PreparedArrows {
     .chain(input::in_progress().iter())
     .map(|annotation| geometry::display_annotation(annotation, display.origin, display.scale))
     .collect();
-  arrows::placed_arrows(&drawn, (0.0, 0.0), (1.0, 1.0), None)
+  arrows::placed_arrows(&drawn, (0.0, 0.0), (1.0, 1.0), None, None)
 }

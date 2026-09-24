@@ -367,7 +367,7 @@ fn the_previous_window_trails_whichever_end_is_moving() {
 fn the_editor_places_a_clip_by_this_phase() {
   const SOURCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../src/features/editor/annotations.ts"
+    "/../src/features/editor/annotation-kinds.ts"
   ));
   let declared = SOURCE
     .lines()

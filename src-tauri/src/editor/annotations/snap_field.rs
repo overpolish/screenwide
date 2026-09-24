@@ -94,6 +94,12 @@ impl SnapField {
   pub(crate) fn disc(&self, center: AnnotationPoint, width: f64) -> SnapBox {
     SnapBox::disc(center, self.radius(width))
   }
+
+  /// Source pixels per output pixel: what turns a size a style carries into
+  /// the space the field is in.
+  pub(crate) fn source_per_output(&self) -> f64 {
+    self.source_per_output
+  }
 }
 
 pub(crate) fn disc_radius(width: f64, source_per_output: f64) -> f64 {

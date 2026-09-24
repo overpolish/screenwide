@@ -30,7 +30,7 @@ const arrow = (
       kind: "arrow",
       start: { x: 40, y: 40 },
     },
-    style: { color: "#ff383c", head: "end", width: 12 },
+    style: { align: "left", color: "#ff383c", head: "end", width: 12 },
   } satisfies Annotation,
   endMs: end,
   startMs: start,

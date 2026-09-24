@@ -96,6 +96,7 @@ impl RecordingPreviewSurface {
       source.size,
       settings,
       pane.annotation_halo,
+      pane.annotation_typing,
     )?;
     // The composed canvas is scaled onto the pane's box by the visual, so
     // one drawn pixel covers this many canvas pixels.

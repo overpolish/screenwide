@@ -135,12 +135,25 @@ impl PreviewSample {
 /// The most exposure samples one annotation prepares, matching the Metal cap.
 pub(crate) const MAX_EXPOSURE_SAMPLES: usize = 48;
 
+/// One annotation's type as the atlas sets it: a counter's number, a text
+/// box's lines, or nothing at all for an arrow.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct PreparedType {
+  pub(crate) text: String,
+  /// A counter's disc radius or a text box's type size, in canvas pixels.
+  pub(crate) size: f32,
+  /// Zero for a counter, one more than its alignment for a text box.
+  pub(crate) style: u32,
+  /// The caret and the selection of a box being typed into.
+  pub(crate) marks: Option<crate::editor::annotations::text::typing::TypingMarks>,
+}
+
 /// Everything one composition draws for its annotations.
 #[derive(Default)]
 pub(crate) struct PreparedArrows {
   pub(crate) arrows: Vec<PreviewArrow>,
-  /// Each annotation's text and radius in draw order.
-  pub(crate) counters: Vec<(String, f32)>,
+  /// Each annotation's type, in draw order.
+  pub(crate) types: Vec<PreparedType>,
   pub(crate) points: Vec<[f32; 2]>,
   pub(crate) text: Vec<u8>,
   pub(crate) samples: Vec<PreviewSample>,

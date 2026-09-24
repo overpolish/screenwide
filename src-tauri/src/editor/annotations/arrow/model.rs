@@ -18,6 +18,7 @@ pub(crate) const NEW_ARROW_WIDTH: f64 = 8.0;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn default_arrow_style() -> AnnotationStyle {
   AnnotationStyle {
+    align: Default::default(),
     color: crate::editor::annotations::model::NEW_ANNOTATION_COLOR.to_owned(),
     head: AnnotationHead::End,
     width: NEW_ARROW_WIDTH,

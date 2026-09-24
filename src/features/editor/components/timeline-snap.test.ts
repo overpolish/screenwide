@@ -33,7 +33,7 @@ const clip = (
     animated: true,
     id,
     shape: { angle: 0, center: { x: 10, y: 10 }, kind: "counter", value: 1 },
-    style: { color: "#ffcc00", head: "none", width: 56 },
+    style: { align: "left", color: "#ffcc00", head: "none", width: 56 },
   },
   endMs,
   startMs,

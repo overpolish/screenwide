@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Annotation, annotationDrawInMs } from "./annotations";
+import { annotationDrawInMs } from "./annotation-kinds";
+import { Annotation } from "./annotations";
 import {
   recordingTimelineOutputToSource,
   recordingTimelineRetainedDuration,

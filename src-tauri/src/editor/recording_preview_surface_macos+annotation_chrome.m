@@ -34,13 +34,17 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   ScreenwideAnnotationMode mode = annotation_active_mode(surface);
   if (mode == ScreenwideAnnotationModeNone) return nil;
+  NSCursor *typing = annotation_text_cursor(surface, point);
+  if (typing != nil) return typing;
   // An annotation under the pointer is something to take hold of, so the
   // pointer says so - never the crosshair the empty picture draws with.
   if (annotation_handle_at_point(surface, point) >= 0 ||
       annotation_shaft_at_point(surface, point) >= 0)
     return [NSCursor arrowCursor];
   // Empty picture: a drawing tool makes an annotation rather than picking one
-  // up. The select tool leaves the choice to the layer underneath.
+  // up, and the text tool says it is about to take typing. The select tool
+  // leaves the choice to the layer underneath.
+  if (mode == ScreenwideAnnotationModeText) return [NSCursor IBeamCursor];
   return annotation_drawing_mode(mode) ? [NSCursor crosshairCursor] : nil;
 }
 

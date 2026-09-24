@@ -1,29 +1,31 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! GDI rasterisation and D3D11 upload of the counters' numbers.
+//! GDI rasterisation and D3D11 upload of the annotations' type: counters'
+//! numbers and text boxes' lines.
 //!
-//! The twin of `gpu_compositor_macos_annotation_text.m`: a counter's number
-//! is type, so it is drawn by the text engine rather than approximated by the
-//! shader. Where each number sits is laid out by the shared
-//! [`atlas`](crate::editor::annotations::counter::atlas) module; this draws the
-//! numbers the layout asks for into a texture that outlives the composition,
+//! The twin of `gpu_compositor_macos_annotation_text.m`: type is drawn by the
+//! text engine rather than approximated by the shader. Where each piece sits
+//! is laid out by the shared
+//! [`atlas`](crate::editor::annotations::counter::atlas) module; this draws
+//! what the layout asks for into a texture that outlives the composition,
 //! which the annotation shader samples the way it samples the keyboard's
 //! artwork.
 //!
 //! The atlas is rasterised at [`SUPERSAMPLE`] pixels to the drawn pixel and
-//! read with four taps, so a counter still reads while it is growing into
-//! place rather than crawling with aliasing over its arrival.
+//! read with four taps, so type still reads while it is growing into place
+//! rather than crawling with aliasing over its arrival.
 
 use std::sync::Mutex;
 
+use super::compositor::PreparedType;
 use crate::editor::annotations::counter::atlas::{
   AtlasDraw, AtlasRect, CounterAtlas as AtlasLayout, CounterNumber,
 };
 use crate::editor::annotations::AnnotationKind;
 
 use windows::{
-  core::{Interface, PCWSTR},
+  core::Interface,
   Win32::{
     Foundation::COLORREF,
     Graphics::{
@@ -34,11 +36,8 @@ use windows::{
       },
       Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
       Gdi::{
-        CreateCompatibleDC, CreateDIBSection, CreateFontW, DeleteDC, DeleteObject,
-        GetTextExtentPoint32W, SelectObject, SetBkMode, SetTextColor, TextOutW,
-        ANTIALIASED_QUALITY, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CLIP_DEFAULT_PRECIS,
-        DEFAULT_CHARSET, DIB_RGB_COLORS, FF_SWISS, FW_SEMIBOLD, HDC, HFONT, HGDIOBJ,
-        OUT_DEFAULT_PRECIS, TRANSPARENT, VARIABLE_PITCH,
+        CreateDIBSection, DeleteObject, SelectObject, SetBkMode, SetTextColor, TextOutW,
+        BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HDC, TRANSPARENT,
       },
     },
   },
@@ -83,15 +82,15 @@ pub(crate) struct CounterAtlas {
 }
 
 impl CounterAtlas {
-  /// The atlas for `counters` - one `(value, radius in drawn pixels)` per
-  /// annotation, an empty value being an annotation that is not a counter -
-  /// with each one's rectangle written into `rects`, or nothing when no number
-  /// is drawn at all. Only numbers the atlas does not hold yet are rasterised.
+  /// The atlas for `types` - one per annotation, an empty text being an
+  /// annotation with no type - with each one's rectangle written into
+  /// `rects`, or nothing when no type is drawn at all. Only type the atlas
+  /// does not hold yet is rasterised.
   fn resolve(
     &self,
     device: &ID3D11Device,
     context: &ID3D11DeviceContext,
-    counters: &[(String, f32)],
+    types: &[PreparedType],
     rects: &mut Vec<AtlasRect>,
   ) -> Result<Option<AtlasBinding>, String> {
     let mut state = self
@@ -103,18 +102,21 @@ impl CounterAtlas {
       storage,
       draws,
     } = &mut *state;
-    let numbers: Vec<CounterNumber<'_>> = counters
+    let keys: Vec<Vec<u8>> = types.iter().map(cell_key).collect();
+    let numbers: Vec<CounterNumber<'_>> = types
       .iter()
-      .map(|(value, radius)| CounterNumber {
-        text: value.as_bytes(),
-        radius: *radius,
+      .zip(&keys)
+      .map(|(entry, key)| CounterNumber {
+        text: key,
+        radius: entry.size,
+        style: entry.style,
       })
       .collect();
     rects.clear();
-    rects.resize(counters.len(), AtlasRect::default());
+    rects.resize(types.len(), AtlasRect::default());
     let placed = layout.frame(
       &numbers,
-      |index, radius| rasterize::measure(&counters[index].0, radius).ok(),
+      |index, size| measure_cell(&types[index], size),
       rects,
       draws,
     );
@@ -139,7 +141,7 @@ impl CounterAtlas {
       let rect = rects[draw.index];
       let (left, top) = (rect.x as u32, rect.y as u32);
       let (width, height) = (rect.width as u32, rect.height as u32);
-      let pixels = rasterize::draw(&counters[draw.index].0, draw.radius, (width, height))?;
+      let pixels = draw_cell(&types[draw.index], draw.radius, (width, height))?;
       unsafe {
         context.UpdateSubresource(
           &resource,
@@ -198,15 +200,50 @@ fn create_storage(device: &ID3D11Device, size: (u32, u32)) -> Result<Storage, St
   })
 }
 
-/// The GDI rasterisation the atlas is drawn by.
+/// The GDI rasterisation the atlas is drawn by: a counter's number, and a
+/// text box's lines.
 #[path = "counter_artwork/rasterize.rs"]
 mod rasterize;
+#[path = "counter_artwork/text_box.rs"]
+mod text_box;
 
-/// The atlas one composition needs, and its annotations with the number
-/// rectangles written into the slots a counter reads them from.
+/// What the atlas keys a piece of type by: its text, and for a box being
+/// typed into its caret and selection too, so each change of them draws
+/// afresh. `0xFF` never appears in UTF-8, so no text can collide with that
+/// tail.
+fn cell_key(entry: &PreparedType) -> Vec<u8> {
+  let mut key = entry.text.as_bytes().to_vec();
+  if let Some(marks) = entry.marks {
+    key.push(0xFF);
+    key.extend_from_slice(&(marks.start as u32).to_le_bytes());
+    key.extend_from_slice(&(marks.end as u32).to_le_bytes());
+    key.push(u8::from(marks.caret));
+  }
+  key
+}
+
+fn measure_cell(entry: &PreparedType, size: f32) -> Option<(u32, u32)> {
+  if entry.style == 0 {
+    return rasterize::measure(&entry.text, size).ok();
+  }
+  text_box::measure(&entry.text, size, entry.marks)
+    .ok()
+    .flatten()
+}
+
+fn draw_cell(entry: &PreparedType, size: f32, cell: (u32, u32)) -> Result<Vec<u8>, String> {
+  if entry.style == 0 {
+    return rasterize::draw(&entry.text, size, cell);
+  }
+  text_box::draw(&entry.text, size, entry.style - 1, entry.marks, cell)
+}
+
+/// The atlas one composition needs, and its annotations with the type
+/// rectangles written into the slots a counter or a text box reads them
+/// from.
 ///
-/// Only a counter reads those slots as a rectangle: an arrow with a head at
-/// both ends keeps its second head's triangle in them, so the patch is per
+/// Only those two read the slots as a rectangle: an arrow with a head at both
+/// ends keeps its second head's triangle in them, so the patch is per
 /// annotation rather than across the list.
 pub(crate) fn numbered_arrows(
   atlas: &CounterAtlas,
@@ -215,12 +252,12 @@ pub(crate) fn numbered_arrows(
   prepared: &super::compositor::PreparedArrows,
 ) -> Result<(Option<AtlasBinding>, Vec<super::compositor::PreviewArrow>), String> {
   let mut rects = Vec::new();
-  let numbers = atlas.resolve(device, context, &prepared.counters, &mut rects)?;
+  let numbers = atlas.resolve(device, context, &prepared.types, &mut rects)?;
   let mut arrows = prepared.arrows.clone();
   if numbers.is_some() {
     for (arrow, rect) in arrows.iter_mut().zip(&rects) {
       match AnnotationKind::from_raw(arrow.kind) {
-        Some(AnnotationKind::Counter) => {}
+        Some(AnnotationKind::Counter | AnnotationKind::Text) => {}
         Some(AnnotationKind::Arrow) | None => continue,
       }
       arrow.geometry.start_head[0] = rect.x;

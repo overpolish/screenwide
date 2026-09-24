@@ -6,11 +6,12 @@ import { ArrowLeftRight } from "lucide-react";
 import { Button } from "../../../components/base/button/button";
 import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
+import { AnnotationAlignGroup } from "../../../components/shared/annotation-style/annotation-align-group";
 import { AnnotationAngleDial } from "../../../components/shared/annotation-style/annotation-angle-dial";
 import { AnnotationColorGrid } from "../../../components/shared/annotation-style/annotation-color-grid";
 import { AnnotationHeadGroup } from "../../../components/shared/annotation-style/annotation-head-group";
 import { AnnotationWidthSlider } from "../../../components/shared/annotation-style/annotation-width-slider";
-import { ANNOTATION_KINDS } from "../annotations";
+import { ANNOTATION_KINDS } from "../annotation-kinds";
 import { EditorKind } from "../types";
 
 import { useAnnotationColorMenu } from "./use-annotation-color-menu";
@@ -20,9 +21,8 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  * The chosen annotation's own controls: how big it is drawn, whether it arrives
  * over its clip, and what colour it is - plus the controls its shape has. An
  * arrow carries heads and can be turned round; a counter is a disc with a
- * number in it, which leaves it nothing to reverse and no head to choose.
- * Animating takes a clip to animate over, so that row is the recording editor's
- * alone.
+ * number in it, which leaves it nothing to reverse and no head to choose; a
+ * text box lines its lines up by its alignment.
  *
  * This panel belongs to the annotation rather than to a tool. It comes up the
  * moment one is chosen, in any tool that can choose one, and goes away when the
@@ -41,10 +41,9 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   const showColorMenu = useAnnotationColorMenu((color) => {
     change({ removeAnnotationColor: color });
   });
-
   if (!annotation) return <Text variant="body">Nothing selected</Text>;
 
-  const { color, head, width } = annotation.style;
+  const { align, color, head, width } = annotation.style;
   const kind = ANNOTATION_KINDS[annotation.kind];
 
   return (
@@ -125,6 +124,19 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
             <ArrowLeftRight aria-hidden="true" />
             Reverse
           </Button>
+        </div>
+      ) : null}
+
+      {kind.hasAlign ? (
+        <div className="flex items-center justify-between gap-section">
+          <span className="text-body text-content-fg">Alignment</span>
+          <AnnotationAlignGroup
+            isDisabled={isLocked}
+            onChange={(next) => {
+              change({ annotationStyle: { align: next } });
+            }}
+            value={align}
+          />
         </div>
       ) : null}
 

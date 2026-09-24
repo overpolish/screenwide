@@ -15,7 +15,7 @@ pub(super) fn create_editor_on_owning_thread(
   if unsafe { GetWindowThreadProcessId(host, None) } == unsafe { GetCurrentThreadId() } {
     // Already on the event-loop thread: create inline. Dispatching and then
     // blocking for the reply here would deadlock tao's loop against itself.
-    return editor::EditorWindow::new(host);
+    return editor::EditorWindow::new(host, window.clone());
   }
   // `HWND` is a raw pointer and so not `Send`; a window handle is just an
   // opaque process-wide token, safe to hand to the thread that owns it.
@@ -23,11 +23,12 @@ pub(super) fn create_editor_on_owning_thread(
   unsafe impl Send for HostHandle {}
 
   let handle = HostHandle(host);
+  let webview = window.clone();
   let (sender, receiver) = std::sync::mpsc::channel();
   window
     .run_on_main_thread(move || {
       let handle = handle;
-      let _ = sender.send(editor::EditorWindow::new(handle.0));
+      let _ = sender.send(editor::EditorWindow::new(handle.0, webview));
     })
     .map_err(|error| format!("The Windows preview editor could not be dispatched: {error}"))?;
   receiver

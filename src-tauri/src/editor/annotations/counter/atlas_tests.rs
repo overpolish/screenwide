@@ -20,6 +20,7 @@ fn numbers(texts: &[String], radius: f32) -> Vec<CounterNumber<'_>> {
     .map(|text| CounterNumber {
       text: text.as_bytes(),
       radius,
+      style: 0,
     })
     .collect()
 }
@@ -72,6 +73,21 @@ fn a_new_size_is_added_beside_the_cells_already_drawn() {
   for rect in &grown {
     assert!(first.iter().all(|old| !overlaps(old, rect)));
   }
+}
+
+/// A counter numbered 12 and a text box reading "12" at the same size are set
+/// differently, so they are two cells rather than one drawn the wrong way.
+#[test]
+fn the_same_text_set_two_ways_takes_two_cells() {
+  let mut atlas = CounterAtlas::default();
+  let texts = vec!["12".to_owned(), "12".to_owned()];
+  let mut numbers = numbers(&texts, 20.0);
+  numbers[1].style = 1;
+  let mut rects = vec![AtlasRect::default(); 2];
+  let mut draws = Vec::new();
+  atlas.frame(&numbers, measure(&texts), &mut rects, &mut draws);
+  assert_ne!(rects[0], rects[1]);
+  assert_eq!(draws.len(), 2);
 }
 
 #[test]

@@ -16,13 +16,16 @@ use super::counter::silhouette::prepared_counter_distance;
 use super::exposure::annotation_travel;
 use super::geometry::ArrowGeometry;
 use super::reveal::AnnotationReveal;
+use super::text::geometry::{prepare_text, text_distance};
 use super::AnnotationKind;
 
 /// One annotation's draw geometry, in the pixel space its points are given in:
 /// canvas pixels for the compositor, display points for the chrome. An arrow
 /// solves its curve from the three points; a counter places its disc at `p0`
 /// and aims its tail with `p1x`, which is the angle `native.rs` keeps there
-/// rather than a point, so no placement touches it.
+/// rather than a point, so no placement touches it; a text box places its
+/// corner at `p0` and its pointer's tip at `p1`, and reads its text block's
+/// size out of `p2`, which is a size rather than a point for the same reason.
 ///
 /// A number no kind owns prepares nothing. It cannot come from a retained
 /// annotation, and drawing it as an arrow would draw some future kind as a
@@ -54,6 +57,9 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
       prepare_arrow([p0x, p0y], [p1x, p1y], [p2x, p2y], width, head, reveal)
     }
     Some(AnnotationKind::Counter) => prepare_counter([p0x, p0y], width, p1x, reveal),
+    Some(AnnotationKind::Text) => {
+      prepare_text([p0x, p0y], [p1x, p1y], [p2x, p2y], width, head, reveal)
+    }
     None => ArrowGeometry::default(),
   };
 }
@@ -118,6 +124,7 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
     Some(AnnotationKind::Counter) => {
       prepared_counter_distance((f64::from(px), f64::from(py)), geometry) as f32
     }
+    Some(AnnotationKind::Text) => text_distance([px, py], geometry),
     None => f32::INFINITY,
   }
 }

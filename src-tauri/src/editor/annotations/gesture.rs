@@ -13,15 +13,19 @@ use super::arrow::bend::ArrowBend;
 use crate::editor::annotations::{AnnotationKind, AnnotationPoint, AnnotationShape};
 
 /// Which grip of an annotation the pointer took hold of. An arrow has three
-/// grips and its shaft; a counter has one - the tail - and its disc.
+/// grips and its shaft; a counter has one - the tail - and its disc; a text
+/// box has one - its pointer's tip - and its box.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AnnotationHandle {
   Start,
   Middle,
   End,
-  /// The shaft, or a counter's disc. Dragging it carries the whole annotation.
+  /// The shaft, a counter's disc or a text box. Dragging it carries the
+  /// whole annotation.
   Body,
-  /// A counter's tail tip. Dragging it turns the tail around the disc.
+  /// A counter's tail tip, which turns the tail around the disc, or a text
+  /// box's pointer tip, which draws the pointer out of the box or pushes it
+  /// back in.
   Tail,
 }
 
@@ -66,12 +70,14 @@ pub(crate) const MODE_NONE: u32 = 0;
 pub(crate) const MODE_SELECT: u32 = 1;
 pub(crate) const MODE_ARROW: u32 = 2;
 pub(crate) const MODE_COUNTER: u32 = 3;
+pub(crate) const MODE_TEXT: u32 = 4;
 
 /// The tool name React sends, as a mode. Anything else puts the chrome away.
 pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
   match tool {
     Some("arrow") => MODE_ARROW,
     Some("counter") => MODE_COUNTER,
+    Some("text") => MODE_TEXT,
     Some("select") => MODE_SELECT,
     _ => MODE_NONE,
   }
@@ -86,6 +92,7 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
   match mode {
     MODE_ARROW => Some(AnnotationKind::Arrow),
     MODE_COUNTER => Some(AnnotationKind::Counter),
+    MODE_TEXT => Some(AnnotationKind::Text),
     _ => None,
   }
 }
@@ -119,11 +126,20 @@ impl AnnotationGestureTarget {
 /// rounding of every frame in between. The bend is held the same way, and in
 /// the chord's terms, so dragging a tip carries the curve round with the
 /// shaft rather than leaving the control point behind in the canvas.
+///
+/// `source_per_output` turns a size a style carries into source pixels: a
+/// text box's pointer is pushed back in when its tip lands inside the box,
+/// and the box is only known in output pixels. Zero where the workspace has
+/// not said, which leaves every box a point. `source_per_point` is how many
+/// source pixels one screen point covers at the current zoom, which a text
+/// box's pointer measures its stretch point in; zero where it is unknown.
 #[derive(Clone, Debug)]
 pub(crate) struct AnnotationDragOrigin {
   pub(crate) bend: ArrowBend,
   pub(crate) point: AnnotationPoint,
   pub(crate) shape: AnnotationShape,
+  pub(crate) source_per_output: f64,
+  pub(crate) source_per_point: f64,
 }
 
 impl AnnotationDragOrigin {
@@ -132,6 +148,8 @@ impl AnnotationDragOrigin {
       bend: shape.bend(),
       point,
       shape: shape.clone(),
+      source_per_output: 0.0,
+      source_per_point: 0.0,
     }
   }
 }

@@ -35,6 +35,8 @@ void screenwide_preview_surface_set_annotations(
       surface.annotationHovered = -1;
       surface.annotationHoverRevision += 1;
     }
+    // The box being typed into may have grown with its text.
+    annotation_text_layout(surface);
     if (changed) invalidate_selection_cursor_rects(surface);
     // Nothing is drawn here. A layout draws once every base rect belongs to
     // the same scene, in `finish_layout`; a gesture sample is followed by the

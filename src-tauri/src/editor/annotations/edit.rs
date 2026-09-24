@@ -54,6 +54,23 @@ impl AnnotationEdit {
     &self.id
   }
 
+  /// Source pixels per output pixel for this gesture's pane, which a text
+  /// box's pointer needs to know when its tip is inside the box.
+  pub(crate) fn set_source_per_output(&mut self, source_per_output: f64) {
+    self.origin.source_per_output = source_per_output;
+  }
+
+  /// Source pixels per screen point for the sample about to be applied. Read
+  /// each sample, since a pinch may zoom part way through a drag.
+  pub(crate) fn set_source_per_point(&mut self, source_per_point: Option<f64>) {
+    self.origin.source_per_point = source_per_point.unwrap_or(0.0);
+  }
+
+  /// Whether this gesture made a fresh annotation rather than moving one.
+  pub(crate) fn is_new(&self) -> bool {
+    self.target == AnnotationGestureTarget::New
+  }
+
   /// Samples are applied against the original shape, so returning the pointer
   /// to its starting point also returns the annotation there without drift.
   ///

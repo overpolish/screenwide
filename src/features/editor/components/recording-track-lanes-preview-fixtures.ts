@@ -28,7 +28,7 @@ const counter = (
     animated: true,
     id: `counter-${value.toString()}`,
     shape: { angle: 0, center: { x: 200, y: 200 }, kind: "counter", value },
-    style: { color: "#ffcc00", head: "none", width: 56 },
+    style: { align: "left", color: "#ffcc00", head: "none", width: 56 },
   },
   endMs,
   startMs,

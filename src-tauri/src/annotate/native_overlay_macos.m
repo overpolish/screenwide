@@ -19,6 +19,7 @@
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_curve.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_composite.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_counter.h"
+#import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_text.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotations.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_types.h"
 
@@ -47,6 +48,7 @@ static NSString *shaderSource(void) {
       GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_CURVE
           GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATIONS
               GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COUNTER
+              GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_TEXT
                   GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE
                       SCREENWIDE_ANNOTATE_SHADER_SOURCE;
 }

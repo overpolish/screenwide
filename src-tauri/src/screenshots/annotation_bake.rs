@@ -96,6 +96,7 @@ mod tests {
         end: AnnotationPoint { x: 180.0, y: 100.0 },
       },
       style: AnnotationStyle {
+        align: Default::default(),
         color: "#ff0000".to_owned(),
         head: AnnotationHead::default(),
         width,

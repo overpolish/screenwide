@@ -4,7 +4,8 @@
 //! Annotation documents and editing, shared by still and timed workspaces.
 //!
 //! A tool's shape lives in one module under this one ([`arrow`],
-//! [`counter`]) and nothing else branches on which kind an annotation is.
+//! [`counter`], [`text`]) and nothing else branches on which kind an
+//! annotation is.
 //! Adding a tool is therefore:
 //!
 //! - one module here, with the `model`, `gesture`, `handles`, `native`,
@@ -22,7 +23,9 @@ pub use kind::AnnotationKind;
 pub(crate) mod model;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use model::annotation_colour;
-pub(crate) use model::{Annotation, AnnotationHead, AnnotationPoint, AnnotationStyle};
+pub(crate) use model::{
+  Annotation, AnnotationAlign, AnnotationHead, AnnotationPoint, AnnotationStyle,
+};
 
 /// What an annotation is, and every per-kind branch there is.
 pub(crate) mod shape;
@@ -67,6 +70,8 @@ mod snap_edit_tests;
 mod snap_gap_tests;
 #[cfg(test)]
 mod snap_tail_tests;
+/// The text tool's own half of the model.
+pub(crate) mod text;
 
 pub(crate) mod flags;
 

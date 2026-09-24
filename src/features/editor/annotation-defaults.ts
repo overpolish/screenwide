@@ -23,9 +23,10 @@ export type AnnotationTool = AnnotationKind | "select";
  * Rust dresses it in the tool's own first colour at the tool's own size.
  *
  * The colour is shared between the shapes - a counter dropped after a red arrow
- * is red - but the size is not: an arrow's stroke and a counter's disc are
- * different measurements of different things, and eight pixels of stroke would
- * be a disc too small to hold a number.
+ * is red - but the size is not: an arrow's stroke, a counter's disc and a text
+ * box's type are different measurements of different things, and eight pixels
+ * of stroke would be a disc too small to hold a number. The alignment, which
+ * only a text box reads, rides with the colour.
  */
 let lastUsed: AnnotationStyle | null = null;
 const lastSize = new Map<AnnotationKind, number>();
@@ -50,18 +51,28 @@ const subscribe = (listener: () => void) => {
   };
 };
 
+const sameDress = (
+  held: AnnotationStyle,
+  style: AnnotationStyle,
+  width: number,
+) =>
+  held.align === style.align &&
+  held.color === style.color &&
+  held.head === style.head &&
+  held.width === width;
+
 /** Remember what the last edit to an annotation of `kind` settled on. */
 export const rememberAnnotationStyle = (
   style: AnnotationStyle,
   kind: AnnotationKind = "arrow",
 ) => {
   if (
-    lastUsed?.color === style.color &&
-    lastUsed.head === style.head &&
+    lastUsed !== null &&
+    sameDress(lastUsed, style, lastUsed.width) &&
     lastSize.get(kind) === style.width
   )
     return;
-  lastUsed = { color: style.color, head: style.head, width: style.width };
+  lastUsed = { ...style };
   lastSize.set(kind, style.width);
   for (const listener of listeners) listener();
 };
@@ -84,7 +95,7 @@ export const rememberAnnotationAnimated = (animated: boolean) => {
  * The style a fresh annotation of `kind` is drawn in, or null while nothing has
  * been settled on and the tool's own first dress stands.
  *
- * A colour settled on for one shape dresses the other, at that shape's own
+ * A colour settled on for one shape dresses the others, at that shape's own
  * remembered size - or at its default, where it has none yet.
  */
 export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
@@ -103,14 +114,8 @@ const styleFor = (
 ) => {
   const width = size ?? defaultAnnotationSize(kind);
   const held = dressed.get(kind);
-  if (
-    held &&
-    held.color === style.color &&
-    held.head === style.head &&
-    held.width === width
-  )
-    return held;
-  const next = { color: style.color, head: style.head, width };
+  if (held && sameDress(held, style, width)) return held;
+  const next = { ...style, width };
   dressed.set(kind, next);
   return next;
 };

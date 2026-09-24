@@ -30,12 +30,38 @@ pub enum AnnotationHead {
   Both,
 }
 
+/// How a text box lines up its lines against each other. Only a text box
+/// reads it; the other kinds carry the default the way a counter carries a
+/// head it never draws.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AnnotationAlign {
+  #[default]
+  Left,
+  Center,
+  Right,
+}
+
+impl AnnotationAlign {
+  /// The number the native records and the text rasteriser read.
+  #[cfg(any(target_os = "macos", target_os = "windows", test))]
+  pub(crate) fn raw(self) -> u32 {
+    match self {
+      Self::Left => 0,
+      Self::Center => 1,
+      Self::Right => 2,
+    }
+  }
+}
+
 /// How an annotation is painted. The width is in output pixels, so an
 /// annotation keeps its weight on the canvas rather than growing with the
 /// picture.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnnotationStyle {
+  #[serde(default)]
+  pub align: AnnotationAlign,
   /// `#rrggbb` or `#rrggbbaa`, straight alpha.
   pub color: String,
   #[serde(default)]
@@ -124,6 +150,7 @@ mod tests {
         end: AnnotationPoint { x: 5.0, y: 6.0 },
       },
       style: AnnotationStyle {
+        align: Default::default(),
         color: "#ff0000".to_owned(),
         head: AnnotationHead::Both,
         width: 8.0,
