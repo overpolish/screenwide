@@ -106,6 +106,17 @@ static float annotation_text_exposure(
   return total / float(annotation.sample_count);
 }
 
+/// Grows `low` and `high` to hold a text box and its pointer, `reach` beyond.
+static void annotation_text_bounds(
+    AnnotationTextBox box, float reach, thread float2 &low, thread float2 &high) {
+  low = min(low, box.low - reach);
+  high = max(high, box.high + reach);
+  if (box.base_radius > 0.0) {
+    low = min(low, box.tip - box.tip_radius - reach);
+    high = max(high, box.tip + box.tip_radius + reach);
+  }
+}
+
 /// One text box: its box and pointer in the annotation's own colour, and its
 /// text in whichever of black or white reads on that colour, clipped to the
 /// box's own coverage so the two share one antialiased edge.
@@ -116,11 +127,17 @@ static float4 annotation_text_layer(
     uint2 atlas) {
   AnnotationTextBox box = annotation_text_box(annotation.arrow);
   float reach = halo + feather + 1.0;
-  float2 low = box.low - reach;
-  float2 high = box.high + reach;
-  if (box.base_radius > 0.0) {
-    low = min(low, box.tip - box.tip_radius - reach);
-    high = max(high, box.tip + box.tip_radius + reach);
+  float2 low = float2(1e20);
+  float2 high = float2(-1e20);
+  annotation_text_bounds(box, reach, low, high);
+  if (annotation.sample_count > 0u) {
+    // The exposure samples run steadily from last frame's reveal to this
+    // one's, so the first and last hold every one between: a pointer drawing
+    // back in trails past where its tip is now.
+    uint last = annotation.sample_offset + annotation.sample_count - 1u;
+    annotation_text_bounds(annotation_text_box(samples[annotation.sample_offset].arrow), reach,
+                           low, high);
+    annotation_text_bounds(annotation_text_box(samples[last].arrow), reach, low, high);
   }
   if (any(canvas_point < low) || any(canvas_point > high)) return rgba;
   float distance = annotation_text_distance(canvas_point, box);

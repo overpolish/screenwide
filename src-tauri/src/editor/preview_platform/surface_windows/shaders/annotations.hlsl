@@ -353,7 +353,17 @@ float4 annotation_counter_layer(
     float4 rgba, PreviewArrow annotation, float4 color, float2 canvas_point,
     float feather, float halo, uint2 atlas) {
   PreviewCounter counter = annotation_counter(annotation.geometry);
-  float reach = counter.radius * 2.0 + halo + feather + 1.0;
+  // The disc and tail fit within twice the radius of the centre. The exposure
+  // samples run steadily from last frame's reveal to this one's, so the first
+  // and last hold the largest radius any of them is drawn at.
+  float radius = counter.radius;
+  if (annotation.sample_count > 0u) {
+    uint last = annotation.sample_first + annotation.sample_count - 1u;
+    radius = max(radius, max(
+        annotation_counter(annotation_samples[annotation.sample_first].geometry).radius,
+        annotation_counter(annotation_samples[last].geometry).radius));
+  }
+  float reach = radius * 2.0 + halo + feather + 1.0;
   if (any(canvas_point < counter.center - reach) ||
       any(canvas_point > counter.center + reach))
     return rgba;
