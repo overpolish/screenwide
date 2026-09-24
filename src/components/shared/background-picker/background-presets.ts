@@ -109,7 +109,6 @@ const solidPresets: BackgroundPreset[] = [
   { background: solid("#007AFF"), id: "solid-blue", name: "Blue" },
   { background: solid("#5856D6"), id: "solid-indigo", name: "Indigo" },
   { background: solid("#AF52DE"), id: "solid-purple", name: "Purple" },
-  { background: solid("#FF2D55"), id: "solid-pink", name: "Pink" },
   { background: solid("#A2845E"), id: "solid-brown", name: "Brown" },
   { background: solid("#1E293B"), id: "solid-navy", name: "Navy" },
   { background: solid("#14532D"), id: "solid-forest", name: "Forest" },

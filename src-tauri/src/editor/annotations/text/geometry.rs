@@ -32,7 +32,7 @@ pub(super) fn text_corner(em: f64) -> f64 {
 /// The pointer's base and tip radii, and how far the blend into the box
 /// reaches, all in ems.
 const POINTER_BASE: f32 = 0.5;
-const POINTER_TIP: f32 = 0.12;
+const POINTER_TIP: f32 = 0.04;
 const POINTER_BLEND: f32 = 0.3;
 
 /// The alignment a text box's native record carries in its `head`.

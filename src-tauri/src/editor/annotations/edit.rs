@@ -22,6 +22,11 @@ impl AnnotationEdit {
   /// draws nothing, which declines a press that would have made one - and
   /// `angle` where a fresh counter's tail points. Only a
   /// [`AnnotationGestureTarget::New`] press reads either.
+  ///
+  /// `source_per_output` is source pixels per output pixel for this
+  /// gesture's pane, zero where it is unknown. A fresh text box needs it to
+  /// centre itself on the press, and a text box's pointer to tell when its
+  /// tip is inside the box.
   pub(crate) fn begin(
     annotations: &mut Vec<Annotation>,
     target: AnnotationGestureTarget,
@@ -29,6 +34,7 @@ impl AnnotationEdit {
     defaults: Option<&AnnotationStyle>,
     kind: Option<AnnotationKind>,
     angle: Option<f64>,
+    source_per_output: f64,
   ) -> Option<Self> {
     let index = match target {
       AnnotationGestureTarget::New => annotations.len(),
@@ -38,26 +44,29 @@ impl AnnotationEdit {
     let before = annotations.clone();
     if target == AnnotationGestureTarget::New {
       let id = next_annotation_id();
-      annotations.push(kind?.new_annotation(id, point, defaults, angle, &before));
+      annotations.push(kind?.new_annotation(
+        id,
+        point,
+        defaults,
+        angle,
+        &before,
+        source_per_output,
+      ));
     }
     let annotation = &annotations[index];
+    let mut origin = AnnotationDragOrigin::new(point, &annotation.shape);
+    origin.source_per_output = source_per_output;
     Some(Self {
       before,
       index,
       id: annotation.id.clone(),
-      origin: AnnotationDragOrigin::new(point, &annotation.shape),
+      origin,
       target,
     })
   }
 
   pub(crate) fn selected_id(&self) -> &str {
     &self.id
-  }
-
-  /// Source pixels per output pixel for this gesture's pane, which a text
-  /// box's pointer needs to know when its tip is inside the box.
-  pub(crate) fn set_source_per_output(&mut self, source_per_output: f64) {
-    self.origin.source_per_output = source_per_output;
   }
 
   /// Source pixels per screen point for the sample about to be applied. Read
@@ -96,9 +105,10 @@ impl AnnotationEdit {
     });
     match self.target {
       // A fresh arrow is drawn out from where the press landed; a fresh
-      // counter was dropped whole there, so the same drag carries it. Both
-      // snap the way the same grip does on an annotation already placed.
-      AnnotationGestureTarget::New => annotation.drag_new(point, snap),
+      // counter or text box was dropped whole there, so the same drag
+      // carries it. Each snaps the way the same grip does on an annotation
+      // already placed.
+      AnnotationGestureTarget::New => annotation.drag_new(point, &self.origin, snap),
       AnnotationGestureTarget::Existing { handle, .. } => {
         annotation.drag_grip(handle, point, &self.origin, modifiers.shift, snap)
       }

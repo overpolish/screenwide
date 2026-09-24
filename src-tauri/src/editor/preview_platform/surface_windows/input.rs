@@ -42,8 +42,8 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
       y,
       snapping: _,
     } => {
-      // A box being typed into takes the press first: in the box it places
-      // the caret, anywhere else it only ends the typing.
+      // A box being typed into sees the press first: in the box it places the
+      // caret, anywhere else it ends the typing and may carry on below.
       if annotation::typing_press(inner, logical(x, y), false) {
         refresh_cursor_for(inner);
         return;

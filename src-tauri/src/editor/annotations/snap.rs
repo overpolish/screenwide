@@ -44,7 +44,7 @@ const THRESHOLD_POINTS: f64 = 8.0;
 /// What one gesture can land on.
 #[path = "snap_field.rs"]
 mod field;
-pub(crate) use field::{disc_radius, SnapField};
+pub(crate) use field::{disc_radius, source_per_output, SnapField};
 
 /// The edges of a detected element, which an arrow's tip rides.
 #[path = "snap_edges.rs"]

@@ -80,10 +80,10 @@ impl TextPointer {
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const TEXT_SIZES: [f64; 5] = [20.0, 28.0, 48.0, 80.0, 128.0];
 
-/// The type size a fresh text box is set at: the second step, which reads on
-/// a Retina screenshot without covering what it describes.
+/// The type size a fresh text box is set at: the third step, large enough to
+/// read at a glance on a Retina screenshot.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) const NEW_TEXT_WIDTH: f64 = TEXT_SIZES[1];
+pub(crate) const NEW_TEXT_WIDTH: f64 = TEXT_SIZES[2];
 
 /// The dress a fresh text box is drawn in before anything has been chosen:
 /// the same first colour every annotation takes.
@@ -97,26 +97,34 @@ pub(crate) fn default_text_style() -> AnnotationStyle {
   }
 }
 
-/// An empty text box with its top-left corner at `origin`, in `style` or in
-/// the tool's own first dress. Its pointer is tucked in: one is drawn out of
-/// the box afterwards, by its grip.
+/// An empty text box centred on `point`, in `style` or in the tool's own
+/// first dress, so its caret starts under the hand; typing grows it right and
+/// down from there. `source_per_output` sizes the box in source pixels, and
+/// where it is unknown the box's corner lands on `point` instead. Its pointer
+/// is tucked in: one is drawn out of the box afterwards, by its grip.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn new_text(
   id: String,
-  origin: AnnotationPoint,
+  point: AnnotationPoint,
   style: Option<&AnnotationStyle>,
+  source_per_output: f64,
 ) -> Annotation {
+  let style = style.cloned().unwrap_or_else(default_text_style);
+  let empty = super::snap::text_box(point, "", style.width, source_per_output);
   Annotation {
     above_camera: false,
     animated: true,
     id,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Text {
-      origin,
+      origin: AnnotationPoint {
+        x: point.x - empty.width / 2.0,
+        y: point.y - empty.height / 2.0,
+      },
       pointer: TextPointer::default(),
       text: String::new(),
     },
-    style: style.cloned().unwrap_or_else(default_text_style),
+    style,
   }
 }
 

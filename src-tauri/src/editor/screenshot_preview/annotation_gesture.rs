@@ -19,8 +19,8 @@ use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{drawing_kind, AnnotationGestureTarget};
 use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
 use crate::editor::annotations::snap::{
-  detect_anchors, request_anchors, source_per_point, threshold_source_px, AnchorBoxes, SnapField,
-  SnapModifiers, SnapRequest, SnapResult,
+  detect_anchors, request_anchors, source_per_output, source_per_point, threshold_source_px,
+  AnchorBoxes, SnapField, SnapModifiers, SnapRequest, SnapResult,
 };
 use crate::editor::annotations::Annotation;
 use std::sync::Arc;
@@ -179,6 +179,12 @@ impl PreviewManager {
     }
     let modifiers = SnapModifiers::from_bits(snap);
     if matches!(phase, SelectionGesturePhase::Begin) {
+      // A press that ends the typing carries on into a gesture, but only once
+      // the typing's end has landed: an end deferred behind a contended lock
+      // would otherwise finish into the gesture's working list.
+      if self.annotation_text.is_some() {
+        return None;
+      }
       return self.begin_annotation_gesture(pane_index, target, x, y, modifiers);
     }
     let pane_index = self.annotation_gesture.as_ref()?.pane_index;
@@ -270,18 +276,18 @@ impl PreviewManager {
       .get_mut(pane_index as usize)?
       .output
       .annotations;
-    let mut edit = AnnotationEdit::begin(
+    let edit = AnnotationEdit::begin(
       annotations,
       target,
       point,
       defaults.as_ref(),
       drawing_kind(mode),
       angle,
+      source_per_output(source, image_width),
     )?;
     // The field excludes the annotation the gesture holds, so a counter can
     // never snap back to the place it started from.
     let field = SnapField::new(source, annotations, edit.selected_id(), image_width);
-    edit.set_source_per_output(field.source_per_output());
     let id = edit.selected_id().to_owned();
     self.annotation_gesture = Some(AnnotationGestureOverride {
       pane_index,

@@ -141,13 +141,26 @@ impl PreviewPlayerManager {
         _ => {}
       }
       let before = clips.read().ok()?.clone();
-      let mut edit = AnnotationEdit::begin(
+      // A disc's diameter and a text box's type size are in output pixels,
+      // so the pane's drawn width is what turns them into source pixels.
+      let image_width = self
+        .selection_composition()
+        .map(|composition| {
+          if pane == 1 {
+            composition.recording_output.camera.image_width
+          } else {
+            composition.recording_output.primary.image_width
+          }
+        })
+        .unwrap_or_default();
+      let edit = AnnotationEdit::begin(
         &mut working,
         target,
         point,
         self.annotation.defaults.as_ref(),
         drawing_kind(self.annotation.mode),
         self.annotation.counter_angle,
+        source_per_output(source_size, image_width),
       )?;
       // Whether an annotation animates is not part of its dress, so the shape's
       // own constructor has no say in it: the switch's last setting is applied
@@ -163,21 +176,8 @@ impl PreviewPlayerManager {
       let before_selected = self.annotation.selected.clone();
       self.annotation.selected = Some(edit.selected_id().to_owned());
       // The field excludes the annotation the gesture holds, so a counter can
-      // never snap back to the place it started from. A disc's diameter is in
-      // output pixels, so the pane's drawn width is what turns it into a
-      // radius the engine can measure.
-      let image_width = self
-        .selection_composition()
-        .map(|composition| {
-          if pane == 1 {
-            composition.recording_output.camera.image_width
-          } else {
-            composition.recording_output.primary.image_width
-          }
-        })
-        .unwrap_or_default();
+      // never snap back to the place it started from.
       let field = SnapField::new(source_size, &working, edit.selected_id(), image_width);
-      edit.set_source_per_output(field.source_per_output());
       self.annotation.gesture = Some(Gesture {
         pane,
         position: position_ms,

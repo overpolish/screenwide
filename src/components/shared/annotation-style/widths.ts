@@ -37,9 +37,9 @@ export const DEFAULT_ANNOTATION_COUNTER_SIZE = 56;
  */
 const ANNOTATION_TEXT_SIZES = [20, 28, 48, 80, 128];
 
-/** The type size a fresh text box is set at: the second step. The twin of
+/** The type size a fresh text box is set at: the third step. The twin of
  * `NEW_TEXT_WIDTH`. */
-const DEFAULT_ANNOTATION_TEXT_SIZE = 28;
+const DEFAULT_ANNOTATION_TEXT_SIZE = 48;
 
 /**
  * How big each kind is drawn: the sizes its control offers, the one a fresh

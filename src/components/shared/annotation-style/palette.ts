@@ -33,7 +33,6 @@ export const ANNOTATION_SWATCHES: AnnotationSwatch[] = [
   { color: "#34c759", name: "Green" },
   { color: "#0088ff", name: "Blue" },
   { color: "#cb30e0", name: "Purple" },
-  { color: "#ff2d55", name: "Pink" },
   { color: "#ffffff", name: "White" },
   { color: "#000000", name: "Black" },
 ];

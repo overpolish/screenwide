@@ -44,6 +44,7 @@ fn counter_move(
     None,
     Some(AnnotationKind::Counter),
     None,
+    0.0,
   )
   .unwrap()
 }
@@ -189,6 +190,7 @@ fn dragging_an_arrow_tip_snaps_it_to_a_detected_element() {
     None,
     Some(AnnotationKind::Arrow),
     None,
+    0.0,
   )
   .unwrap();
   let request = SnapRequest {
@@ -251,6 +253,7 @@ fn the_bend_and_the_shaft_of_an_arrow_never_snap() {
       None,
       Some(AnnotationKind::Arrow),
       None,
+      0.0,
     )
     .unwrap();
     let result = edit.update(

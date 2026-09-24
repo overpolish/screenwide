@@ -82,6 +82,7 @@ fn drag(
     None,
     Some(AnnotationKind::Counter),
     None,
+    0.0,
   )
   .unwrap()
 }

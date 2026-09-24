@@ -8,8 +8,8 @@
 /// beside the rest of their state in `recording_preview_surface_macos_private.h`.
 
 @interface ScreenwidePreviewInteractionView ()
-/// A press typing took - one that ended the typing or opened a box - whose
-/// drag and release belong to nothing else.
+/// A press typing took - one that only ended the typing, or opened a box -
+/// whose drag and release belong to nothing else.
 @property(nonatomic) BOOL annotationPressIgnored;
 @end
 

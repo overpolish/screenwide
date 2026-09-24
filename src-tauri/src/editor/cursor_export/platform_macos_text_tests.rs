@@ -16,7 +16,7 @@ const ORIGIN: AnnotationPoint = AnnotationPoint { x: 60.0, y: 60.0 };
 const FONT: f64 = 28.0;
 
 fn text_box(text: &str, pointer: TextPointer, color: &str) -> Annotation {
-  let mut annotation = new_text("text".to_owned(), ORIGIN, None);
+  let mut annotation = new_text("text".to_owned(), ORIGIN, None, 0.0);
   annotation.style = AnnotationStyle {
     align: AnnotationAlign::Left,
     color: color.to_owned(),

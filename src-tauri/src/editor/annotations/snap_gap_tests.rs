@@ -57,6 +57,7 @@ fn moved_to(
     None,
     Some(AnnotationKind::Counter),
     None,
+    0.0,
   )
   .unwrap();
   edit.update(

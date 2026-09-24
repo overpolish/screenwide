@@ -124,6 +124,17 @@ impl PreviewManager {
           .output
           .annotations;
         let selected = session.edit.finish(annotations).then_some(id);
+        // React commits exactly this list, but its layout trails by a round
+        // trip, and the press that ended the typing may go straight on to a
+        // gesture that begins on React's layout. It begins on this list.
+        let finished = annotations.clone();
+        if let Some(item) = self
+          .react_output
+          .as_mut()
+          .and_then(|output| output.items.get_mut(pane_index as usize))
+        {
+          item.output.annotations = finished;
+        }
         self.present_annotation_gesture(pane_index, selected.as_deref());
         let mut commit = self.commit_for(pane_index, selected)?;
         commit.text_edit = Some(TextEditPhase::End);

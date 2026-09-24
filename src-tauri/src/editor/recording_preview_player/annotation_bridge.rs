@@ -9,8 +9,8 @@ use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{annotation_mode, drawing_kind, AnnotationGestureTarget};
 use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
 use crate::editor::annotations::snap::{
-  detect_anchors, request_anchors, source_per_point, threshold_source_px, AnchorBoxes, AnchorCache,
-  SnapField, SnapModifiers, SnapRequest, SnapResult,
+  detect_anchors, request_anchors, source_per_output, source_per_point, threshold_source_px,
+  AnchorBoxes, AnchorCache, SnapField, SnapModifiers, SnapRequest, SnapResult,
 };
 use crate::editor::annotations::timing::{
   active_annotations, validate_clips, AnnotationTrack, RecordingAnnotationClip,

@@ -77,12 +77,17 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_editing(ScreenwidePreviewSurface
   return surface.annotationTextView != nil;
 }
 
-SCREENWIDE_PREVIEW_PRIVATE void annotation_text_finish(ScreenwidePreviewSurface *surface) {
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_text_finish(ScreenwidePreviewSurface *surface) {
   ScreenwideAnnotationTextView *view = (ScreenwideAnnotationTextView *)surface.annotationTextView;
-  if (view == nil || view.finishing) return;
+  if (view == nil || view.finishing) return NO;
   view.finishing = YES;
+  // The twin of Rust's `has_content`: a box left with only white space in it
+  // is removed when the typing ends.
+  NSCharacterSet *blank = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+  BOOL readable = [view.string stringByTrimmingCharactersInSet:blank].length > 0;
   report_text(surface, 2);
   remove_text_view(surface);
+  return readable;
 }
 
 @implementation ScreenwideAnnotationTextView

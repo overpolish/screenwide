@@ -20,8 +20,13 @@ fn pointer(along: (f64, f64), reach: (f64, f64)) -> TextPointer {
   }
 }
 
+/// The type size the drag tests measure against, fixed here rather than taken
+/// from the tool's default so a new default does not move their numbers.
+const EM: f64 = 28.0;
+
 fn text_box(text: &str, pointer: TextPointer) -> Annotation {
-  let mut annotation = new_text("t".to_owned(), point(100.0, 100.0), None);
+  let mut annotation = new_text("t".to_owned(), point(100.0, 100.0), None, 0.0);
+  annotation.style.width = EM;
   annotation.shape = AnnotationShape::Text {
     origin: point(100.0, 100.0),
     pointer,
@@ -169,7 +174,7 @@ fn a_box_arriving_grows_about_its_centre() {
 #[test]
 fn the_pointers_grip_tucks_points_and_stretches() {
   let mut annotation = text_box("Hello", TextPointer::default());
-  let [width, height] = box_size(text_block("Hello", 28.0), 28.0);
+  let [width, height] = box_size(text_block("Hello", EM), EM);
   let mut origin = AnnotationDragOrigin::new(point(0.0, 0.0), &annotation.shape);
   origin.source_per_output = 1.0;
   let right = 100.0 + width;
@@ -198,7 +203,7 @@ fn the_pointers_grip_tucks_points_and_stretches() {
   // of that edge.
   let cornered = drag(point(101.0, 103.0));
   let half_height = height / 2.0;
-  let corner = (0.4 * 28.0_f64).min(half_height);
+  let corner = (0.4 * EM).min(half_height);
   assert_eq!(cornered.along.x, -1.0);
   assert!(
     (cornered.along.y + (1.0 - corner / half_height)).abs() < 1e-6,
@@ -210,7 +215,7 @@ fn the_pointers_grip_tucks_points_and_stretches() {
 /// length; zoomed out, a short pull still lands on the standard point.
 #[test]
 fn the_pointer_stretches_sooner_the_further_the_view_is_zoomed_in() {
-  let [width, height] = box_size(text_block("Hello", 28.0), 28.0);
+  let [width, height] = box_size(text_block("Hello", EM), EM);
   let right = 100.0 + width;
   let middle = 100.0 + height / 2.0;
   let pulled = |source_per_point: f64, past: f64| {
@@ -229,10 +234,10 @@ fn the_pointer_stretches_sooner_the_further_the_view_is_zoomed_in() {
   };
   // One em is 28 source pixels. At 4x zoom, 24 points is 6 pixels: under the
   // standard reach, so a pull of 0.6 em is drawn at 0.6 em.
-  assert!((pulled(0.25, 0.6 * 28.0) - 0.6).abs() < 1e-9);
+  assert!((pulled(0.25, 0.6 * EM) - 0.6).abs() < 1e-9);
   // At 1x, the same pull is inside the 24 pixel stretch point.
-  assert!((pulled(1.0, 0.6 * 28.0) - 0.55).abs() < 1e-9);
-  assert!((pulled(1.0, 30.0) - 30.0 / 28.0).abs() < 1e-9);
+  assert!((pulled(1.0, 0.6 * EM) - 0.55).abs() < 1e-9);
+  assert!((pulled(1.0, 30.0) - 30.0 / EM).abs() < 1e-9);
   // Zoomed out to a quarter, 24 points is 96 pixels.
   assert!((pulled(4.0, 90.0) - 0.55).abs() < 1e-9);
 }

@@ -50,11 +50,7 @@ impl SnapField {
         object: false,
       })
     };
-    let source_per_output = if image_width.is_finite() && image_width > 0.0 {
-      width / image_width
-    } else {
-      0.0
-    };
+    let source_per_output = source_per_output(source, image_width);
     let boxes: Vec<SnapBox> = annotations
       .iter()
       .filter(|annotation| annotation.id != edited)
@@ -99,6 +95,16 @@ impl SnapField {
   /// the space the field is in.
   pub(crate) fn source_per_output(&self) -> f64 {
     self.source_per_output
+  }
+}
+
+/// Source pixels per output pixel for a `source`-sized picture drawn
+/// `image_width` output pixels wide. Zero where that width is not known.
+pub(crate) fn source_per_output(source: (u32, u32), image_width: f64) -> f64 {
+  if image_width.is_finite() && image_width > 0.0 {
+    f64::from(source.0.max(1)) / image_width
+  } else {
+    0.0
   }
 }
 

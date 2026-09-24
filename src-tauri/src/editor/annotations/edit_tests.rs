@@ -5,7 +5,8 @@ use super::arrow::new_arrow;
 use super::edit::AnnotationEdit;
 use super::gesture::{AnnotationGestureTarget, AnnotationHandle};
 use super::snap::SnapModifiers;
-use super::{AnnotationKind, AnnotationPoint, AnnotationShape};
+use super::text::snap::text_box;
+use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationShape};
 
 fn point(x: f64, y: f64) -> AnnotationPoint {
   AnnotationPoint { x, y }
@@ -32,6 +33,7 @@ fn cancelling_a_new_arrow_restores_the_original_list() {
     None,
     Some(AnnotationKind::Arrow),
     None,
+    0.0,
   )
   .unwrap();
   edit.update(&mut annotations, point(80.0, 60.0), plain(), None);
@@ -39,6 +41,40 @@ fn cancelling_a_new_arrow_restores_the_original_list() {
   assert_eq!(annotations[0], original[0]);
   edit.cancel(&mut annotations);
   assert_eq!(annotations, original);
+}
+
+/// A fresh text box is centred on the press, so its caret starts under the
+/// hand, and a drag while it is being placed keeps it centred there.
+#[test]
+fn a_new_text_box_is_centred_on_the_press_and_carried_there() {
+  const SOURCE_PER_OUTPUT: f64 = 2.0;
+  let centre = |annotation: &Annotation| {
+    let AnnotationShape::Text { origin, text, .. } = &annotation.shape else {
+      unreachable!()
+    };
+    let bounds = text_box(*origin, text, annotation.style.width, SOURCE_PER_OUTPUT);
+    assert!(bounds.width > 0.0 && bounds.height > 0.0);
+    point(
+      bounds.x + bounds.width / 2.0,
+      bounds.y + bounds.height / 2.0,
+    )
+  };
+  let near =
+    |a: AnnotationPoint, b: AnnotationPoint| (a.x - b.x).abs() < 1e-9 && (a.y - b.y).abs() < 1e-9;
+  let mut annotations = Vec::new();
+  let edit = AnnotationEdit::begin(
+    &mut annotations,
+    AnnotationGestureTarget::New,
+    point(200.0, 150.0),
+    None,
+    Some(AnnotationKind::Text),
+    None,
+    SOURCE_PER_OUTPUT,
+  )
+  .unwrap();
+  assert!(near(centre(&annotations[0]), point(200.0, 150.0)));
+  edit.update(&mut annotations, point(260.0, 190.0), plain(), None);
+  assert!(near(centre(&annotations[0]), point(260.0, 190.0)));
 }
 
 #[test]
@@ -58,6 +94,7 @@ fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
     None,
     Some(AnnotationKind::Arrow),
     None,
+    0.0,
   )
   .unwrap();
   edit.update(&mut annotations, point(80.0, 20.0), plain(), None);
@@ -83,6 +120,7 @@ fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
     None,
     Some(AnnotationKind::Arrow),
     None,
+    0.0,
   )
   .unwrap();
   edit.update(&mut annotations, point(60.0, 10.0), plain(), None);
@@ -114,7 +152,8 @@ fn selection_and_a_missing_annotation_do_not_open_an_edit() {
       point(0.0, 0.0),
       None,
       Some(AnnotationKind::Arrow),
-      None
+      None,
+      0.0
     )
     .is_none());
     assert_eq!(annotations, before);
@@ -134,6 +173,7 @@ fn a_long_document_still_takes_a_new_annotation() {
     None,
     Some(AnnotationKind::Arrow),
     None,
+    0.0,
   );
   assert!(edit.is_some());
   assert_eq!(annotations.len(), 5_001);
