@@ -77,25 +77,19 @@ static float annotation_text_distance(float2 point, AnnotationTextBox box) {
 }
 
 /// How much of the text covers this pixel, from the atlas it was rasterised
-/// into at `supersample` pixels to the drawn pixel, centred on the box.
+/// into, centred on the box.
 static float annotation_text_coverage(
-    float2 point, AnnotationTextBox box, const device uchar4 *atlas_pixels,
-    uint2 atlas) {
+    float2 point, AnnotationTextBox box, float feather,
+    const device uchar4 *atlas_pixels, uint2 atlas) {
   if (atlas.x == 0u || atlas.y == 0u || box.text_size.x <= 0.0 ||
       box.text_size.y <= 0.0)
     return 0.0;
-  const float supersample = 2.0;
-  float2 drawn = box.text_size / supersample;
+  float2 drawn = box.text_size / annotation_type_supersample;
   float2 local = point - box.text_centre + drawn * 0.5;
   if (any(local < 0.0) || any(local > drawn)) return 0.0;
-  float2 texel = box.text_origin + local * supersample;
-  float total = 0.0;
-  for (uint tap = 0u; tap < 4u; ++tap) {
-    float2 offset = float2(float(tap & 1u), float(tap >> 1u)) * 0.5;
-    uint2 at = uint2(clamp(texel + offset, float2(0.0), float2(atlas) - 1.0));
-    total += float(atlas_pixels[at.y * atlas.x + at.x].a) / 255.0;
-  }
-  return total * 0.25;
+  float2 texel = box.text_origin + local * annotation_type_supersample;
+  return annotation_atlas_coverage(atlas_pixels, atlas, texel, feather,
+                                   box.text_origin, box.text_size);
 }
 
 /// A text box averaged over its exposure samples, as a counter is while it
@@ -146,7 +140,7 @@ static float4 annotation_text_layer(
   float alpha = coverage * color.a;
   rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
   rgba.a = alpha + rgba.a * (1.0 - alpha);
-  float ink = annotation_text_coverage(canvas_point, box, atlas_pixels, atlas) * alpha;
+  float ink = annotation_text_coverage(canvas_point, box, feather, atlas_pixels, atlas) * alpha;
   if (ink <= 0.0) return rgba;
   // The counter's rule, so a text box and a counter in one colour carry the
   // same ink.

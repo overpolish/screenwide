@@ -13,6 +13,7 @@ use crate::editor::annotations::arrow::distance::prepared_arrow_distance;
 use crate::editor::annotations::arrow::geometry::prepare_arrow;
 use crate::editor::annotations::counter::silhouette::counter_distance;
 use crate::editor::annotations::geometry::ArrowGeometry;
+use crate::editor::annotations::gesture::MODE_TEXT;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::text::geometry::{prepare_text, text_distance};
 use crate::editor::annotations::AnnotationPoint;
@@ -209,6 +210,10 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<edit
   }
   if handle_at_point(state, point).is_some() || shaft_at_point(state, point).is_some() {
     return Some(editor::CursorKind::Arrow);
+  }
+  // Empty picture: the text tool takes typing, a drawing tool draws.
+  if state.annotation.mode == MODE_TEXT {
+    return Some(editor::CursorKind::IBeam);
   }
   drawing_kind(state.annotation.mode)
     .is_some()

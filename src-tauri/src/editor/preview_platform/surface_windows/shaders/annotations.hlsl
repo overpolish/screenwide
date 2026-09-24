@@ -265,29 +265,69 @@ float annotation_counter_distance(float2 probe, PreviewCounter counter) {
   return min(disc, max(lens - counter.tip_radius, touch - along));
 }
 
+/// How many atlas pixels the type is rasterised at per canvas pixel.
+static const float annotation_type_supersample = 2.0;
+
+/// The atlas's coverage at `position`, in atlas pixels, blended between the
+/// four nearest texels.
+float annotation_atlas_bilinear(float2 position, uint2 atlas) {
+  float2 at = position - 0.5;
+  float2 base = floor(at);
+  float2 fraction = at - base;
+  int2 limit = int2(atlas) - 1;
+  int2 low = clamp(int2(base), int2(0, 0), limit);
+  int2 high = clamp(int2(base) + 1, int2(0, 0), limit);
+  float a = annotation_numbers.Load(int3(low.x, low.y, 0)).a;
+  float b = annotation_numbers.Load(int3(high.x, low.y, 0)).a;
+  float c = annotation_numbers.Load(int3(low.x, high.y, 0)).a;
+  float d = annotation_numbers.Load(int3(high.x, high.y, 0)).a;
+  return lerp(lerp(a, b, fraction.x), lerp(c, d, fraction.x), fraction.y);
+}
+
+/// How much of the type in one atlas cell covers a drawn pixel centred on
+/// `texel`, both in atlas pixels. A drawn pixel spans `feather * 2` canvas
+/// pixels, so the whole of that footprint is averaged: a single sample would
+/// pick one atlas pixel out of many where the canvas is shown smaller than
+/// its resolution, and the type's edges would come out stepped. The samples
+/// stay inside the cell so a neighbour's type never bleeds in.
+float annotation_atlas_coverage(
+    float2 texel, float feather, float2 cell_origin, float2 cell_size, uint2 atlas) {
+  float span = max(feather * 2.0 * annotation_type_supersample, 1e-3);
+  // Samples no more than an atlas pixel apart, and never fewer than two per
+  // axis: one bilinear sample only averages the footprint when it lands on a
+  // texel corner, and type set off the pixel grid would otherwise come out
+  // stepped. Capped for a canvas shown very small.
+  uint taps = clamp((uint)ceil(span), 2u, 6u);
+  float step = span / (float)taps;
+  float2 first = texel - span * 0.5 + step * 0.5;
+  float2 low = cell_origin + 0.5;
+  float2 high = max(cell_origin + cell_size - 0.5, low);
+  float total = 0.0;
+  for (uint row = 0u; row < taps; ++row) {
+    for (uint column = 0u; column < taps; ++column) {
+      float2 position = clamp(first + float2((float)column, (float)row) * step, low, high);
+      total += annotation_atlas_bilinear(position, atlas);
+    }
+  }
+  return total / (float)(taps * taps);
+}
+
 /// How much of the number covers this pixel, from the atlas the numbers were
-/// rasterised into. The atlas is drawn at two pixels to the drawn pixel and
-/// read with four taps, so a counter still reads while it is growing into
-/// place. The number is centred on the disc and carried by the disc's own
-/// radius, so it grows and shrinks with the annotation.
-float annotation_number_coverage(float2 probe, PreviewCounter counter, uint2 atlas) {
+/// rasterised into. The number is centred on the disc and carried by the
+/// disc's own radius, so it grows and shrinks with the annotation.
+float annotation_number_coverage(
+    float2 probe, PreviewCounter counter, float feather, uint2 atlas) {
   if (atlas.x == 0u || atlas.y == 0u || counter.text_size.x <= 0.0 ||
       counter.text_size.y <= 0.0)
     return 0.0;
-  const float supersample = 2.0;
-  float2 drawn = counter.text_size / supersample;
+  float2 drawn = counter.text_size / annotation_type_supersample;
   float2 local = probe - counter.center + drawn * 0.5;
   if (any(local < 0.0) || any(local > drawn)) return 0.0;
   // The atlas rows run top-down from its first pixel, which is the space the
   // rasteriser reports its rectangles in.
-  float2 texel = counter.text_origin + local * supersample;
-  float total = 0.0;
-  for (uint tap = 0u; tap < 4u; ++tap) {
-    float2 offset = float2((float)(tap & 1u), (float)(tap >> 1u)) * 0.5;
-    int2 at = int2(clamp(texel + offset, float2(0.0, 0.0), float2(atlas) - 1.0));
-    total += annotation_numbers.Load(int3(at, 0)).a;
-  }
-  return total * 0.25;
+  float2 texel = counter.text_origin + local * annotation_type_supersample;
+  return annotation_atlas_coverage(
+      texel, feather, counter.text_origin, counter.text_size, atlas);
 }
 
 /// Accumulated exposure coverage for a counter: the disc is drawn at every
@@ -338,7 +378,7 @@ float4 annotation_counter_layer(
   float alpha = coverage * color.a;
   rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
   rgba.a = alpha + rgba.a * (1.0 - alpha);
-  float ink = annotation_number_coverage(canvas_point, counter, atlas) * alpha;
+  float ink = annotation_number_coverage(canvas_point, counter, feather, atlas) * alpha;
   if (ink <= 0.0) return rgba;
   // Luminance rather than a fixed white: the palette runs from yellow to
   // near-black, and a number has to read on all of it.

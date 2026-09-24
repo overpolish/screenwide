@@ -69,8 +69,8 @@ pub(crate) mod arrows {
   /// way the editor's compositor does.
   pub(crate) use super::counter_artwork::{numbered_arrows, CounterAtlas};
 }
-/// Inter SemiBold set by GDI, which measures a text box as well as drawing
-/// its type.
+/// Inter SemiBold set by DirectWrite, which measures a text box as well as
+/// drawing its type.
 #[path = "surface_windows/type_device.rs"]
 pub(crate) mod type_device;
 use annotation::handle_typing_input;

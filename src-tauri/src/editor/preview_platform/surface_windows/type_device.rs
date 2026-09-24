@@ -1,128 +1,106 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Inter SemiBold set by GDI: the one text engine this backend measures and
-//! rasterises annotation type with, so a box is sized by the same widths its
-//! text is drawn at.
+//! Inter SemiBold set by DirectWrite: the one text engine this backend
+//! measures and rasterises annotation type with, so a box is sized by the
+//! same widths its text is drawn at.
+//!
+//! Not GDI: GDI stops antialiasing this face above about 116 pixels to the
+//! em, and the atlas sets type at twice its drawn size, so any large box or
+//! counter came out with stepped edges.
 
-use std::cell::RefCell;
+#[path = "type_device/engine.rs"]
+mod engine;
+#[cfg(test)]
+#[path = "type_device/tests.rs"]
+mod tests;
 
-use windows::{
-  core::PCWSTR,
-  Win32::Graphics::Gdi::{
-    CreateCompatibleDC, CreateFontW, DeleteDC, DeleteObject, GetTextExtentPoint32W,
-    GetTextMetricsW, SelectObject, ANTIALIASED_QUALITY, CLIP_DEFAULT_PRECIS, DEFAULT_CHARSET,
-    FF_SWISS, FW_SEMIBOLD, HDC, HFONT, HGDIOBJ, OUT_DEFAULT_PRECIS, TEXTMETRICW, VARIABLE_PITCH,
-  },
-};
+use engine::REFERENCE_SIZE;
+use windows::Win32::Graphics::DirectWrite::IDWriteTextFormat3;
 
-/// A memory context with the face selected at one size in pixels.
+/// The face at one size in pixels.
 pub(crate) struct TypeDevice {
-  pub(crate) dc: HDC,
-  font: HFONT,
-  old_font: HGDIOBJ,
+  format: IDWriteTextFormat3,
+  tabular: bool,
+  ascent: f64,
+  descent: f64,
 }
 
 impl TypeDevice {
-  /// The face at `size` pixels, its em rather than its cell height. The face
-  /// is registered with GDI by the preview surface's own font module, which
-  /// the keyboard artwork shares.
+  /// The face at `size` pixels, its em rather than its line's height.
   pub(crate) fn new(size: f64) -> Result<Self, String> {
-    super::font::register_inter_font();
-    let dc = unsafe { CreateCompatibleDC(None) };
-    if dc.is_invalid() {
-      return Err("Windows could not create a type drawing context".to_owned());
-    }
-    let face: Vec<u16> = "Inter\0".encode_utf16().collect();
-    let font = unsafe {
-      CreateFontW(
-        -((size.round() as i32).max(1)),
-        0,
-        0,
-        0,
-        FW_SEMIBOLD.0 as i32,
-        0,
-        0,
-        0,
-        DEFAULT_CHARSET,
-        OUT_DEFAULT_PRECIS,
-        CLIP_DEFAULT_PRECIS,
-        ANTIALIASED_QUALITY,
-        (VARIABLE_PITCH.0 | FF_SWISS.0) as u32,
-        PCWSTR(face.as_ptr()),
-      )
-    };
-    if font.is_invalid() {
-      let _ = unsafe { DeleteDC(dc) };
-      return Err("Windows could not create the annotation font".to_owned());
-    }
-    let old_font = unsafe { SelectObject(dc, font.into()) };
-    Ok(Self { dc, font, old_font })
+    Self::create(size, false)
   }
 
-  /// The extent `text` is set at: its advance and the cell's height.
-  pub(crate) fn measure(&self, text: &[u16]) -> Result<(i32, i32), String> {
-    let mut extent = Default::default();
-    let measured = unsafe { GetTextExtentPoint32W(self.dc, text, &mut extent) };
-    if !measured.as_bool() || extent.cx <= 0 || extent.cy <= 0 {
-      return Err("Windows could not measure annotation type".to_owned());
-    }
-    Ok((extent.cx, extent.cy))
+  /// The face at `size` with tabular figures, so a counter's number does not
+  /// shift as it grows. The twin of `screenwide_annotation_font(size, YES)`.
+  pub(crate) fn numbers(size: f64) -> Result<Self, String> {
+    Self::create(size, true)
+  }
+
+  fn create(size: f64, tabular: bool) -> Result<Self, String> {
+    let size = size.max(1.0);
+    engine::with(|engine| {
+      let (ascent, descent) = (engine.ascent * size, engine.descent * size);
+      Ok(Self {
+        format: engine.format(size, ascent, descent)?,
+        tabular,
+        ascent,
+        descent,
+      })
+    })
   }
 
   /// How far `text` advances, zero for nothing to set.
   pub(crate) fn advance(&self, text: &str) -> f64 {
-    let wide: Vec<u16> = text.encode_utf16().collect();
-    if wide.is_empty() {
-      return 0.0;
-    }
-    self
-      .measure(&wide)
-      .map_or(0.0, |(width, _)| f64::from(width))
+    advance(&self.format, text, self.tabular)
   }
 
   /// The face's ascent and descent at this size, in pixels.
   pub(crate) fn vertical_metrics(&self) -> (f64, f64) {
-    let mut metrics = TEXTMETRICW::default();
-    if unsafe { GetTextMetricsW(self.dc, &mut metrics) }.as_bool() {
-      (f64::from(metrics.tmAscent), f64::from(metrics.tmDescent))
-    } else {
-      (0.0, 0.0)
-    }
+    (self.ascent, self.descent)
+  }
+
+  /// `lines` drawn into a cell of `cell` pixels, each with its top-left at
+  /// the point given and its baseline the ascent below that: one coverage
+  /// byte per pixel, top row first.
+  pub(crate) fn draw(
+    &self,
+    cell: (u32, u32),
+    lines: &[((f64, f64), &str)],
+  ) -> Result<Vec<u8>, String> {
+    engine::with(|engine| {
+      let layouts = lines
+        .iter()
+        .filter(|(_, text)| !text.is_empty())
+        .map(|(at, text)| {
+          let wide: Vec<u16> = text.encode_utf16().collect();
+          Ok((*at, engine.layout(&self.format, &wide, self.tabular)?))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+      engine.draw(cell, &layouts)
+    })
   }
 }
 
-impl Drop for TypeDevice {
-  fn drop(&mut self) {
-    unsafe {
-      SelectObject(self.dc, self.old_font);
-      let _ = DeleteObject(self.font.into());
-      let _ = DeleteDC(self.dc);
-    }
+/// How far `text` advances set in `format`, zero for nothing to set.
+fn advance(format: &IDWriteTextFormat3, text: &str, tabular: bool) -> f64 {
+  if text.is_empty() {
+    return 0.0;
   }
+  let wide: Vec<u16> = text.encode_utf16().collect();
+  engine::with(|engine| engine.layout(format, &wide, tabular))
+    .map_or(0.0, |layout| engine::width(&layout))
 }
-
-/// The size lines are measured at before scaling to the size asked for. GDI
-/// sets a face to whole pixels, so a box measured at its own small size would
-/// snap its width to them; one large size scales evenly to every other.
-const REFERENCE_SIZE: f64 = 256.0;
 
 /// How wide one line of annotation type is at `font_px`. The twin of Core
 /// Text's typographic width on macOS.
 pub(crate) fn line_width(line: &str, font_px: f64) -> f64 {
-  thread_local! {
-    static REFERENCE: RefCell<Option<TypeDevice>> = const { RefCell::new(None) };
-  }
   if line.is_empty() || font_px.is_nan() || font_px <= 0.0 {
     return 0.0;
   }
-  REFERENCE.with(|reference| {
-    let mut reference = reference.borrow_mut();
-    if reference.is_none() {
-      *reference = TypeDevice::new(REFERENCE_SIZE).ok();
-    }
-    reference.as_ref().map_or(0.0, |device| {
-      device.advance(line) * font_px / REFERENCE_SIZE
-    })
+  let reference = engine::with(|engine| Ok(engine.reference.clone()));
+  reference.map_or(0.0, |format| {
+    advance(&format, line, false) * font_px / REFERENCE_SIZE
   })
 }

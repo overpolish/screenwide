@@ -17,9 +17,9 @@
 /// with the D3D11 backend.
 ///
 /// The atlas is rasterised at [`SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE`] times
-/// the drawn size and sampled with four taps, so type still reads while it is
-/// growing into place rather than crawling with aliasing over the frames of
-/// its arrival.
+/// the drawn size, and the shader averages every atlas pixel a drawn pixel
+/// covers, so type stays antialiased however small or large the canvas is
+/// shown.
 
 /// Where one annotation's type sits in the atlas, in atlas pixels. An
 /// annotation with no type gets a zero rectangle, which the kernels skip.

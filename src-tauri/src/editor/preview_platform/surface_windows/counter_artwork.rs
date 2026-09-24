@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! GDI rasterisation and D3D11 upload of the annotations' type: counters'
-//! numbers and text boxes' lines.
+//! DirectWrite rasterisation and D3D11 upload of the annotations' type:
+//! counters' numbers and text boxes' lines.
 //!
 //! The twin of `gpu_compositor_macos_annotation_text.m`: type is drawn by the
 //! text engine rather than approximated by the shader. Where each piece sits
@@ -12,9 +12,9 @@
 //! which the annotation shader samples the way it samples the keyboard's
 //! artwork.
 //!
-//! The atlas is rasterised at [`SUPERSAMPLE`] pixels to the drawn pixel and
-//! read with four taps, so type still reads while it is growing into place
-//! rather than crawling with aliasing over its arrival.
+//! The atlas is rasterised at [`SUPERSAMPLE`] pixels to the canvas pixel, and
+//! the shader averages every atlas pixel a drawn pixel covers, so type stays
+//! antialiased however small or large the canvas is shown.
 
 use std::sync::Mutex;
 
@@ -26,20 +26,12 @@ use crate::editor::annotations::AnnotationKind;
 
 use windows::{
   core::Interface,
-  Win32::{
-    Foundation::COLORREF,
-    Graphics::{
-      Direct3D11::{
-        ID3D11Device, ID3D11DeviceContext, ID3D11Resource, ID3D11ShaderResourceView,
-        ID3D11Texture2D, D3D11_BIND_SHADER_RESOURCE, D3D11_BOX, D3D11_TEXTURE2D_DESC,
-        D3D11_USAGE_DEFAULT,
-      },
-      Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
-      Gdi::{
-        CreateDIBSection, DeleteObject, SelectObject, SetBkMode, SetTextColor, TextOutW,
-        BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HDC, TRANSPARENT,
-      },
+  Win32::Graphics::{
+    Direct3D11::{
+      ID3D11Device, ID3D11DeviceContext, ID3D11Resource, ID3D11ShaderResourceView, ID3D11Texture2D,
+      D3D11_BIND_SHADER_RESOURCE, D3D11_BOX, D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT,
     },
+    Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
   },
 };
 
@@ -200,8 +192,8 @@ fn create_storage(device: &ID3D11Device, size: (u32, u32)) -> Result<Storage, St
   })
 }
 
-/// The GDI rasterisation the atlas is drawn by: a counter's number, and a
-/// text box's lines.
+/// The DirectWrite rasterisation the atlas is drawn by: a counter's number,
+/// and a text box's lines.
 #[path = "counter_artwork/rasterize.rs"]
 mod rasterize;
 #[path = "counter_artwork/text_box.rs"]

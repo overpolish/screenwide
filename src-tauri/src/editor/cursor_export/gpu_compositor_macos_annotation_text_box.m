@@ -85,8 +85,8 @@ uint32_t screenwide_text_box_cell(const char *text, uint32_t length, float size,
     ScreenwideTextBlock block =
         text_block(text, length, size * SCREENWIDE_COUNTER_TEXT_SUPERSAMPLE);
     if (block.width <= 0.0) return 0;
-    // One transparent pixel of margin each side keeps a four-tap sample on
-    // one block.
+    // One transparent pixel of margin each side keeps the block's edge off
+    // the cell's.
     *width = (uint32_t)ceil(block.width) + 2;
     *height = (uint32_t)ceil(block.line * block.lines.count) + 2;
     return 1;

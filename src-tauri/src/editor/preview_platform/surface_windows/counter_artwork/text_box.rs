@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! GDI rasterisation of a text box's lines, the twin of
+//! DirectWrite rasterisation of a text box's lines, the twin of
 //! `screenwide_text_box_draw` in `gpu_compositor_macos_annotation_text_box.m`.
 //!
 //! macOS lays a native text view over the box being typed into, which draws
@@ -9,7 +9,7 @@
 //! visual that way, so here the caret and the selection are drawn into the
 //! box's own cell, as coverage the shader inks like the text.
 
-use super::rasterize::raster_cell;
+use super::rasterize::tinted;
 use super::*;
 use crate::editor::annotations::text::metrics::LINE_HEIGHT;
 use crate::editor::annotations::text::typing::TypingMarks;
@@ -17,8 +17,8 @@ use crate::editor::preview_platform::surface::type_device::TypeDevice;
 
 /// The caret's width, in atlas pixels: one drawn pixel.
 const CARET_WIDTH: f64 = SUPERSAMPLE;
-/// Room either side of the widest line, in atlas pixels: one pixel keeps a
-/// four-tap sample on this cell, and a caret after the widest line needs its
+/// Room either side of the widest line, in atlas pixels: one pixel keeps the
+/// type's edge off the cell's, and a caret after the widest line needs its
 /// own width. Kept on both sides so the cell stays centred on the block.
 const MARGIN: f64 = 1.0 + CARET_WIDTH;
 /// How much ink a selection lays over what it covers: the share macOS's text
@@ -88,14 +88,20 @@ fn clamped(text: &str, offset: usize) -> usize {
   offset
 }
 
-/// Lays `value` over the coverage of every pixel in the rectangle.
-fn shade(raster: &mut [u8], cell: (u32, u32), x: (f64, f64), y: (f64, f64), value: u8) {
+/// Blends `ink` into the coverage of every pixel in the rectangle.
+fn shade(
+  coverage: &mut [u8],
+  cell: (u32, u32),
+  x: (f64, f64),
+  y: (f64, f64),
+  ink: impl Fn(u8) -> u8,
+) {
   let columns = (x.0.round().max(0.0) as u32)..(x.1.round().min(f64::from(cell.0)) as u32);
   let rows = (y.0.round().max(0.0) as u32)..(y.1.round().min(f64::from(cell.1)) as u32);
   for row in rows {
     for column in columns.clone() {
-      let at = (row as usize * cell.0 as usize + column as usize) * 4 + 2;
-      raster[at] = raster[at].max(value);
+      let at = row as usize * cell.0 as usize + column as usize;
+      coverage[at] = ink(coverage[at]);
     }
   }
 }
@@ -124,52 +130,52 @@ pub(super) fn draw(
     let within = clamped(line, offset.saturating_sub(start));
     left(index) + block.device.advance(&line[..within])
   };
-  raster_cell(&block.device, cell, |dc, raster| {
-    let marks = marks.map(|marks| TypingMarks {
-      start: clamped(text, marks.start),
-      end: clamped(text, marks.end),
-      caret: marks.caret,
-    });
-    // The selection goes under the glyphs, which GDI blends over it.
-    if let Some(marks) = marks.filter(|marks| marks.start < marks.end) {
-      for (index, (start, line)) in block.lines.iter().enumerate() {
-        let (from, to) = (marks.start.max(*start), marks.end.min(start + line.len()));
-        if from < to {
-          let band = 1.0 + block.line * index as f64;
-          shade(
-            raster,
-            cell,
-            (x_at(index, from), x_at(index, to)),
-            (band, band + block.line),
-            (SELECTION_SHARE * 255.0).round() as u8,
-          );
-        }
+  let lines: Vec<((f64, f64), &str)> = block
+    .lines
+    .iter()
+    .enumerate()
+    .map(|(index, (_, line))| ((left(index), top(index)), *line))
+    .collect();
+  let mut coverage = block.device.draw(cell, &lines)?;
+  let marks = marks.map(|marks| TypingMarks {
+    start: clamped(text, marks.start),
+    end: clamped(text, marks.end),
+    caret: marks.caret,
+  });
+  // The selection goes under the glyphs: they cover it where they are drawn.
+  if let Some(marks) = marks.filter(|marks| marks.start < marks.end) {
+    let under = |covered: u8| {
+      let behind = f64::from(255 - covered) * SELECTION_SHARE;
+      covered.saturating_add(behind.round() as u8)
+    };
+    for (index, (start, line)) in block.lines.iter().enumerate() {
+      let (from, to) = (marks.start.max(*start), marks.end.min(start + line.len()));
+      if from < to {
+        let band = 1.0 + block.line * index as f64;
+        shade(
+          &mut coverage,
+          cell,
+          (x_at(index, from), x_at(index, to)),
+          (band, band + block.line),
+          under,
+        );
       }
     }
-    let mut drawn = true;
-    for (index, (_, line)) in block.lines.iter().enumerate() {
-      if line.is_empty() {
-        continue;
-      }
-      let wide: Vec<u16> = line.encode_utf16().collect();
-      let (x, y) = (left(index).round() as i32, top(index).round() as i32);
-      drawn &= unsafe { TextOutW(dc, x, y, &wide) }.as_bool();
-    }
-    if let Some(marks) = marks.filter(|marks| marks.caret && marks.start == marks.end) {
-      let index = block
-        .lines
-        .iter()
-        .position(|(start, line)| marks.start <= start + line.len())
-        .unwrap_or(block.lines.len() - 1);
-      let x = x_at(index, marks.start);
-      shade(
-        raster,
-        cell,
-        (x, x + CARET_WIDTH),
-        (top(index), top(index) + ascent + descent),
-        255,
-      );
-    }
-    drawn
-  })
+  }
+  if let Some(marks) = marks.filter(|marks| marks.caret && marks.start == marks.end) {
+    let index = block
+      .lines
+      .iter()
+      .position(|(start, line)| marks.start <= start + line.len())
+      .unwrap_or(block.lines.len() - 1);
+    let x = x_at(index, marks.start);
+    shade(
+      &mut coverage,
+      cell,
+      (x, x + CARET_WIDTH),
+      (top(index), top(index) + ascent + descent),
+      |_| 255,
+    );
+  }
+  Ok(tinted(&coverage))
 }

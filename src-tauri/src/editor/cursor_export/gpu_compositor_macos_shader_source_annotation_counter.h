@@ -69,33 +69,25 @@ static float annotation_counter_distance(float2 point, AnnotationCounter counter
 }
 
 /// How much of the number covers this pixel, from the atlas the numbers were
-/// rasterised into. The atlas is drawn at `supersample` pixels to the drawn
-/// pixel and read with four taps, so a counter still reads while it is growing
-/// into place.
+/// rasterised into.
 ///
 /// The number is centred on the disc and carried by the disc's own radius, so
 /// it grows and shrinks with the annotation without a second scale to keep in
 /// step.
 static float annotation_number_coverage(
-    float2 point, AnnotationCounter counter, const device uchar4 *numbers,
-    uint2 atlas) {
+    float2 point, AnnotationCounter counter, float feather,
+    const device uchar4 *numbers, uint2 atlas) {
   if (atlas.x == 0u || atlas.y == 0u ||
       counter.text_size.x <= 0.0 || counter.text_size.y <= 0.0)
     return 0.0;
-  const float supersample = 2.0;
-  float2 drawn = counter.text_size / supersample;
+  float2 drawn = counter.text_size / annotation_type_supersample;
   float2 local = point - counter.center + drawn * 0.5;
   if (any(local < 0.0) || any(local > drawn)) return 0.0;
   // The atlas rows run top-down from the buffer's first pixel, which is the
   // space the rasteriser reports its rectangles in.
-  float2 texel = counter.text_origin + local * supersample;
-  float total = 0.0;
-  for (uint tap = 0u; tap < 4u; ++tap) {
-    float2 offset = float2(float(tap & 1u), float(tap >> 1u)) * 0.5;
-    uint2 at = uint2(clamp(texel + offset, float2(0.0), float2(atlas) - 1.0));
-    total += float(numbers[at.y * atlas.x + at.x].a) / 255.0;
-  }
-  return total * 0.25;
+  float2 texel = counter.text_origin + local * annotation_type_supersample;
+  return annotation_atlas_coverage(numbers, atlas, texel, feather,
+                                   counter.text_origin, counter.text_size);
 }
 
 /// Accumulated exposure coverage for a counter: the disc is drawn at every
@@ -150,7 +142,7 @@ static float4 annotation_counter_layer(
   float alpha = coverage * color.a;
   rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
   rgba.a = alpha + rgba.a * (1.0 - alpha);
-  float ink = annotation_number_coverage(canvas_point, counter, numbers,
+  float ink = annotation_number_coverage(canvas_point, counter, feather, numbers,
                                          number_atlas) * alpha;
   if (ink <= 0.0) return rgba;
   // Luminance rather than a fixed white: the palette runs from yellow to
