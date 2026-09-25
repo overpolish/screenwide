@@ -100,9 +100,12 @@ impl RecordingPreviewSurface {
       pane.annotation_typing,
     )?;
     // The composed canvas is scaled onto the pane's box by the visual, so
-    // one drawn pixel covers this many canvas pixels.
+    // one drawn pixel covers this many canvas pixels. The canvas is drawn at
+    // its own resolution and magnified by the visual when zoomed in, so a
+    // canvas pixel is the finest thing it holds: edges smoothed over less
+    // than one come out hard and are enlarged into steps.
     prepared.pixel_scale = if pane.display_size.0 > 0 {
-      output_size.0 as f32 / pane.display_size.0 as f32
+      (output_size.0 as f32 / pane.display_size.0 as f32).max(1.0)
     } else {
       1.0
     };
