@@ -420,6 +420,9 @@
 
     /* A WinUI button is 32 tall on a 4px corner; overlays sit on 8px. */
     --spacing-control-height: 2rem;
+    /* Room for the timeline toolbar's six 32px controls, with the same slack
+       the 24px macOS controls leave in 12rem. */
+    --spacing-timeline-gutter: 15rem;
     --radius-control: 4px;
     --radius-capture: var(--radius-control);
     --radius-panel: 8px;
