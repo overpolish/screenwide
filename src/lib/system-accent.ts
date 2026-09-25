@@ -15,6 +15,14 @@ type SystemAccent = {
   tones?: { dark: Rgb; darkText: Rgb; light: Rgb; lightText: Rgb };
 };
 
+declare global {
+  interface Window {
+    /** Seeded by Rust's `system_accent::initialization_script` before the
+     * page runs, on windows built after launch; absent on the rest. */
+    __SCREENWIDE_ACCENT__?: SystemAccent | null;
+  }
+}
+
 const rgb = (channels: Rgb) => `rgb(${channels.join(" ")})`;
 
 // Removing the properties lets the brand fallback in `--color-primary` and
@@ -54,6 +62,14 @@ const applySystemAccent = (accent: SystemAccent | null) => {
 export const synchronizeSystemAccent = () => {
   let unlisten: (() => void) | undefined;
   let stopped = false;
+
+  // A window built after launch is shown while its page still loads, so Rust
+  // seeds it with the accent through an initialization script
+  // (`system_accent::initialization_script`); applied here, before the first
+  // paint, it never flashes the brand colour. The windows from the config
+  // load hidden and have none.
+  const seeded = window.__SCREENWIDE_ACCENT__;
+  if (seeded !== undefined) applySystemAccent(seeded);
 
   // Outside the desktop app the command is absent or mocked; an unreadable
   // accent simply leaves the property unset.

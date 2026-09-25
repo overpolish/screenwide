@@ -3,13 +3,13 @@
 
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
-use tauri::{AppHandle, LogicalPosition, Manager, TitleBarStyle, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, LogicalPosition, Manager, TitleBarStyle, WebviewUrl};
 
 use crate::windows::{self, WindowLabel};
 
 pub fn show(app: &AppHandle) -> tauri::Result<()> {
   let window = windows::get_or_create(app, WindowLabel::Permissions, || {
-    WebviewWindowBuilder::new(
+    windows::webview_window(
       app,
       WindowLabel::Permissions.as_str(),
       WebviewUrl::App("/permissions".into()),

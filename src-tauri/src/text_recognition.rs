@@ -4,7 +4,7 @@
 //! Text/OCR recognition and native overlay session state.
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use crate::{capture_overlays, screenshots, windows::WindowLabel};
@@ -173,7 +173,7 @@ async fn start_session(app: &AppHandle, generation: u64) -> Result<(), String> {
   let anchor_id = *anchor_id;
   let position = anchor_monitor.position().to_logical::<f64>(*anchor_scale);
   let size = anchor_monitor.size().to_logical::<f64>(*anchor_scale);
-  let window = WebviewWindowBuilder::new(
+  let window = crate::windows::webview_window(
     app,
     WindowLabel::TextRecognition.as_str(),
     WebviewUrl::App("/text-recognition".into()),

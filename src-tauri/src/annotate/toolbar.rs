@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
-use tauri::{AppHandle, LogicalSize, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, LogicalSize, Manager, WebviewUrl, WebviewWindow};
 
 use super::host::HostPlan;
 use super::settings::{self, ToolbarPosition};
@@ -77,7 +77,7 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
   *anchor::current() = Some(plan);
   FITTED.store(false, Ordering::Release);
 
-  let window = WebviewWindowBuilder::new(
+  let window = crate::windows::webview_window(
     app,
     WindowLabel::AnnotateToolbar.as_str(),
     WebviewUrl::App("/annotate-toolbar".into()),

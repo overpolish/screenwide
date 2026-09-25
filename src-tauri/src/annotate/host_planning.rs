@@ -3,7 +3,7 @@
 
 //! What the overlay is about to be drawn on, and opening the windows for it.
 
-use tauri::{AppHandle, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, WebviewUrl, WebviewWindow};
 
 use crate::{capture_overlays, windows::WindowLabel};
 
@@ -71,21 +71,22 @@ pub(crate) fn build(
   index: usize,
   host: &HostPlan,
 ) -> Result<WebviewWindow, String> {
-  let window = WebviewWindowBuilder::new(app, label(index), WebviewUrl::App("/annotate".into()))
-    .accept_first_mouse(true)
-    .always_on_top(true)
-    .decorations(false)
-    .focused(false)
-    .inner_size(host.size.width, host.size.height)
-    .position(host.position.x, host.position.y)
-    .resizable(false)
-    .shadow(false)
-    .skip_taskbar(true)
-    .transparent(true)
-    .visible(false)
-    .visible_on_all_workspaces(true)
-    .build()
-    .map_err(|error| error.to_string())?;
+  let window =
+    crate::windows::webview_window(app, label(index), WebviewUrl::App("/annotate".into()))
+      .accept_first_mouse(true)
+      .always_on_top(true)
+      .decorations(false)
+      .focused(false)
+      .inner_size(host.size.width, host.size.height)
+      .position(host.position.x, host.position.y)
+      .resizable(false)
+      .shadow(false)
+      .skip_taskbar(true)
+      .transparent(true)
+      .visible(false)
+      .visible_on_all_workspaces(true)
+      .build()
+      .map_err(|error| error.to_string())?;
   capture_overlays::set_level(&window, capture_overlays::FOREGROUND_LEVEL)?;
   // macOS capture excludes this process's own windows through its content
   // filter, so the host is out of every Screenwide capture and visible to

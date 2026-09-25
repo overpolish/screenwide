@@ -135,6 +135,15 @@ pub fn get_system_accent() -> Option<SystemAccent> {
   current()
 }
 
+/// The current accent as a script a webview runs before any of its own, so
+/// a window built after launch paints in it from its first frame instead of
+/// flashing the brand colour until `get_system_accent` answers. Applied by
+/// `synchronizeSystemAccent` in `src/lib/system-accent.ts`.
+pub fn initialization_script() -> String {
+  let accent = serde_json::to_string(&current()).unwrap_or_else(|_| "null".to_owned());
+  format!("window.__SCREENWIDE_ACCENT__ = {accent};")
+}
+
 /// The accent every native surface paints with: the operating system's when
 /// the user has chosen one, the brand colour otherwise. This is the Rust twin
 /// of `--color-primary`, so native chrome and the web UI never disagree.

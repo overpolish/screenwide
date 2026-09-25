@@ -5,10 +5,7 @@ use std::sync::Mutex;
 
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
-use tauri::{
-  AppHandle, Emitter, LogicalSize, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
-  WindowEvent,
-};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, WebviewUrl, WebviewWindow, WindowEvent};
 
 use crate::windows::WindowLabel;
 
@@ -78,28 +75,29 @@ pub fn show(
       Effect::UnderWindowBackground
     };
     #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
-    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/qr-details".into()))
-      .title("QR Details")
-      .inner_size(480.0, 360.0)
-      .center()
-      .always_on_top(true)
-      .closable(true)
-      .decorations(false)
-      // A sheet-sized detail window: closing is the only way out, on every
-      // platform, so the header draws no minimise or zoom button.
-      .minimizable(false)
-      .maximizable(false)
-      .resizable(false)
-      .shadow(true)
-      .skip_taskbar(true)
-      .transparent(true)
-      .visible(false)
-      .effects(WindowEffectsConfig {
-        color: None,
-        effects: vec![effect],
-        radius: Some(10.0),
-        state: Some(EffectState::Active),
-      });
+    let mut builder =
+      crate::windows::webview_window(app, label, WebviewUrl::App("/qr-details".into()))
+        .title("QR Details")
+        .inner_size(480.0, 360.0)
+        .center()
+        .always_on_top(true)
+        .closable(true)
+        .decorations(false)
+        // A sheet-sized detail window: closing is the only way out, on every
+        // platform, so the header draws no minimise or zoom button.
+        .minimizable(false)
+        .maximizable(false)
+        .resizable(false)
+        .shadow(true)
+        .skip_taskbar(true)
+        .transparent(true)
+        .visible(false)
+        .effects(WindowEffectsConfig {
+          color: None,
+          effects: vec![effect],
+          radius: Some(10.0),
+          state: Some(EffectState::Active),
+        });
     // The page's header leaves room for the real traffic lights, so on macOS
     // the window keeps a native title bar, drawn over its content.
     #[cfg(target_os = "macos")]

@@ -41,7 +41,10 @@ use std::time::Duration;
 
 #[cfg(target_os = "windows")]
 use tauri::WebviewWindow;
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WindowEvent};
+use tauri::{
+  AppHandle, Emitter, Manager, PhysicalPosition, Runtime, WebviewUrl, WebviewWindowBuilder,
+  WindowEvent,
+};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 mod boot;
@@ -142,6 +145,19 @@ pub(crate) fn set_host_pointer_passthrough(
 pub(crate) fn conceal_disposable_overlay(window: &WebviewWindow) -> tauri::Result<()> {
   platform::set_opacity(window, 0.0)?;
   platform::hide(window)
+}
+
+/// The builder for a window created after launch. The windows in
+/// `tauri.conf.json` load hidden at startup and have the accent long before
+/// they are shown; one built on demand is shown while its page still loads,
+/// so it is handed the accent before its first paint.
+pub(crate) fn webview_window<'a, R: Runtime, M: Manager<R>>(
+  manager: &'a M,
+  label: impl Into<String>,
+  url: WebviewUrl,
+) -> WebviewWindowBuilder<'a, R, M> {
+  WebviewWindowBuilder::new(manager, label, url)
+    .initialization_script(crate::system_accent::initialization_script())
 }
 
 pub fn initialize_topology_management(app: &AppHandle) {

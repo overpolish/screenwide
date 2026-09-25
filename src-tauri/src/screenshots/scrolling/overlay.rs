@@ -3,7 +3,7 @@
 
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
-use tauri::{AppHandle, LogicalPosition, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, LogicalPosition, Manager, WebviewUrl};
 
 use crate::screenshots::ScreenshotTarget;
 
@@ -53,7 +53,7 @@ pub(super) fn show(
   } else {
     Effect::UnderWindowBackground
   };
-  let window = WebviewWindowBuilder::new(
+  let window = crate::windows::webview_window(
     app,
     LABEL,
     WebviewUrl::App(

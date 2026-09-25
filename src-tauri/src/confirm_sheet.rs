@@ -16,8 +16,7 @@ use serde::Serialize;
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
 use tauri::{
-  AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
-  WindowEvent,
+  AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WindowEvent,
 };
 
 use crate::editor::export_window::presentation;
@@ -78,7 +77,7 @@ fn get_or_create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
   } else {
     Effect::UnderWindowBackground
   };
-  let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/confirm-sheet".into()))
+  let window = crate::windows::webview_window(app, label, WebviewUrl::App("/confirm-sheet".into()))
     .title("Screenwide")
     .inner_size(WIDTH, INITIAL_HEIGHT)
     .always_on_top(true)

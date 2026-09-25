@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl};
 
 use crate::{capture_overlays, screenshots, windows::WindowLabel};
 
@@ -120,7 +120,7 @@ async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
     .ok_or_else(|| "No monitor is available for Ruler".to_owned())?;
   let position = anchor_monitor.position().to_logical::<f64>(*anchor_scale);
   let size = anchor_monitor.size().to_logical::<f64>(*anchor_scale);
-  let window = WebviewWindowBuilder::new(
+  let window = crate::windows::webview_window(
     app,
     WindowLabel::Ruler.as_str(),
     WebviewUrl::App("/ruler".into()),

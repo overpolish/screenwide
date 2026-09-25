@@ -3,7 +3,7 @@
 
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
-use tauri::{AppHandle, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, WebviewUrl, WebviewWindow};
 
 #[cfg(target_os = "windows")]
 use tauri::Manager;
@@ -18,7 +18,7 @@ pub(super) fn build(app: &AppHandle) -> tauri::Result<WebviewWindow> {
   } else {
     Effect::UnderWindowBackground
   };
-  let window = WebviewWindowBuilder::new(
+  let window = crate::windows::webview_window(
     app,
     WindowLabel::Tooltip.as_str(),
     WebviewUrl::App("/tooltip".into()),
