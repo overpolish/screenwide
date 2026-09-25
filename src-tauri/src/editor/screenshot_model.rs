@@ -13,6 +13,22 @@ pub struct ScreenshotItem {
   pub annotations: Vec<Annotation>,
   pub id: u64,
   pub image: CapturedImage,
+  /// The display scale the image was captured at: how many of its pixels one
+  /// logical point spans. One for a picture with no display behind it, such
+  /// as one pasted from the clipboard.
+  pub scale_factor: f64,
+}
+
+impl ScreenshotItem {
+  /// The image's width in logical points, which its redactions are sized in.
+  pub(crate) fn capture_width_points(&self) -> f64 {
+    let scale = if self.scale_factor.is_finite() && self.scale_factor > 0.0 {
+      self.scale_factor
+    } else {
+      1.0
+    };
+    f64::from(self.image.width) / scale
+  }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -33,10 +49,16 @@ pub struct ScreenshotWorkspaceOutputSettings {
 
 impl ScreenshotWorkspaceOutputSettings {
   pub(crate) fn output_for(&self, item: &ScreenshotItem) -> ScreenshotOutputSettings {
-    self.output_for_id(item.id)
+    self.output_for_id(item.id, item.capture_width_points())
   }
 
-  pub(crate) fn output_for_id(&self, id: u64) -> ScreenshotOutputSettings {
+  /// The layer `id`'s settings, for an image `capture_width_points` logical
+  /// points wide.
+  pub(crate) fn output_for_id(
+    &self,
+    id: u64,
+    capture_width_points: f64,
+  ) -> ScreenshotOutputSettings {
     let mut output = self
       .items
       .iter()
@@ -63,6 +85,7 @@ impl ScreenshotWorkspaceOutputSettings {
     output.mesh_points = self.canvas.mesh_points.clone();
     output.mesh_seed = self.canvas.mesh_seed;
     output.mesh_warp_percent = self.canvas.mesh_warp_percent;
+    output.capture_width_points = capture_width_points;
     output.width = self.canvas.width;
     output
   }

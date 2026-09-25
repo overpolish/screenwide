@@ -27,7 +27,7 @@ pub(super) fn apply_clips(
     held.attach(
       &mut primary.annotations,
       clips,
-      primary.image_width,
+      primary.capture_width_points,
       source_ms,
     );
   }

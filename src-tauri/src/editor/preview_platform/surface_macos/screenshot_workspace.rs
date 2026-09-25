@@ -36,7 +36,7 @@ impl RecordingPreviewSurface {
           &source.rgba,
           source.width,
           source.height,
-          settings.image_width,
+          settings.capture_width_points,
         );
         let mut annotations =
           native_annotations(&settings.annotations, RedactSource::Picture(&picture));

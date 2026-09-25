@@ -131,10 +131,12 @@ pub(super) fn present_new(app: &AppHandle, artifact: EditorArtifact) -> Result<(
 }
 
 /// Hands a freshly captured still to the editor window, seeding its layer
-/// with the live annotations the still covered.
+/// with the live annotations the still covered. `scale_factor` is the
+/// display scale it was captured at.
 pub fn present_screenshot(
   app: &AppHandle,
   image: CapturedImage,
+  scale_factor: f64,
   annotations: Vec<Annotation>,
   suggested_file_stem: String,
 ) -> Result<(), String> {
@@ -142,6 +144,7 @@ pub fn present_screenshot(
     annotations,
     id: next_id(app),
     image,
+    scale_factor,
   };
 
   {

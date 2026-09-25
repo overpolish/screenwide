@@ -18,6 +18,7 @@ fn manager() -> PreviewPlayerManager {
     audio_tracks: vec![],
     camera_duration_ms: None,
     camera_path: None,
+    capture_width_points: [0.0; 2],
     composition_settings: None,
     cursor: None,
     #[cfg(target_os = "macos")]

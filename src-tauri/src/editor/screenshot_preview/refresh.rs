@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
 use super::super::{EditorArtifact, EditorState};
-use super::state::{PreviewManager, ScreenshotPreviewState};
+use super::state::{PreviewManager, PreviewSource, ScreenshotPreviewState};
 
 /// Refreshes captured sources without replacing the live Metal surface.
 /// Screenshot workspaces append items while the editor window stays open;
@@ -42,12 +42,16 @@ pub async fn refresh_screenshot_preview_sources(
     }
     items
       .iter()
-      .map(|item| {
-        existing
+      .map(|item| PreviewSource {
+        id: item.id,
+        image: existing
           .iter()
-          .find(|(id, _)| *id == item.id)
-          .map(|(_, image)| (item.id, Arc::clone(image)))
-          .unwrap_or_else(|| (item.id, Arc::new(item.image.clone())))
+          .find(|source| source.id == item.id)
+          .map_or_else(
+            || Arc::new(item.image.clone()),
+            |source| Arc::clone(&source.image),
+          ),
+        capture_width_points: item.capture_width_points(),
       })
       .collect::<Vec<_>>()
   };

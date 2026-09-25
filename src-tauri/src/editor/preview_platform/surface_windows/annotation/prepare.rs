@@ -15,7 +15,9 @@ use crate::editor::annotations::counter::geometry::prepare_counter;
 use crate::editor::annotations::exposure::annotation_travel;
 use crate::editor::annotations::native::{native_annotations, NativeAnnotation, NativeAnnotations};
 use crate::editor::annotations::redact::geometry::prepare_redact;
-use crate::editor::annotations::redact::native::{RedactPicture, RedactSource};
+use crate::editor::annotations::redact::native::{
+  source_per_capture_point, RedactPicture, RedactSource,
+};
 use crate::editor::annotations::redact::records::redact_records;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::text::geometry::{prepare_text, HEAD_ALIGN_MASK};
@@ -59,17 +61,14 @@ pub(crate) fn prepared_arrows(
       &picture.rgba,
       picture.width,
       picture.height,
-      settings.image_width,
+      settings.capture_width_points,
     )
   });
   let native = native_annotations(
     annotations,
     picture.as_ref().map_or_else(
       || RedactSource::Video {
-        source_per_output: crate::editor::annotations::snap::source_per_output(
-          source,
-          settings.image_width,
-        ),
+        source_per_point: source_per_capture_point(source.0, settings.capture_width_points),
       },
       RedactSource::Picture,
     ),

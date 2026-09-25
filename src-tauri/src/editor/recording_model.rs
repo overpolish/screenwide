@@ -75,6 +75,39 @@ pub struct RecordingOutputSettings {
   pub primary: ScreenshotOutputSettings,
 }
 
+impl RecordingOutputSettings {
+  /// Writes each pane's source width in logical points, primary then camera,
+  /// from [`EditorArtifact::capture_widths`]. The webview's settings never
+  /// carry them, so they are stamped before a composition is compared or used.
+  pub(crate) fn stamp_capture_widths(&mut self, widths: [f64; 2]) {
+    self.primary.capture_width_points = widths[0];
+    self.camera.capture_width_points = widths[1];
+  }
+}
+
+impl EditorArtifact {
+  /// A recording's pane widths in logical points, which redactions are sized
+  /// in, primary then camera: the screen's pixels over the scale it was
+  /// recorded at, and a camera's own pixels. Zero where there is no pane.
+  pub(crate) fn capture_widths(&self) -> [f64; 2] {
+    let EditorArtifact::Recording {
+      camera,
+      source_scale_percent,
+      width,
+      ..
+    } = self
+    else {
+      return [0.0; 2];
+    };
+    [
+      f64::from(*width) * 100.0 / f64::from((*source_scale_percent).max(1)),
+      camera
+        .as_ref()
+        .map_or(0.0, |camera| f64::from(camera.width)),
+    ]
+  }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioTrackVolume {

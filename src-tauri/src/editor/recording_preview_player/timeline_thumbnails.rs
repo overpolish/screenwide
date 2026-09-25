@@ -54,6 +54,7 @@ pub async fn copy_recording_preview_frame_to_clipboard(
   annotation_clips: Option<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>,
 ) -> Result<(), String> {
   let sources = headless_sources(&app, artifact_id)?;
+  recording_output.stamp_capture_widths(sources.capture_width_points);
   if let Some(clips) = annotation_clips {
     use crate::editor::annotations::timing::{
       revealed_annotations, validate_clips, AnnotationTrack,

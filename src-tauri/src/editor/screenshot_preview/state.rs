@@ -12,6 +12,16 @@ use super::annotation_gesture::AnnotationGestureOverride;
 use super::gesture::SelectionGestureOverride;
 use crate::screenshots::CapturedImage;
 
+/// One captured image the preview draws, with what its layer settings need
+/// of the item it came from.
+#[derive(Clone)]
+pub(super) struct PreviewSource {
+  pub(super) id: u64,
+  pub(super) image: Arc<CapturedImage>,
+  /// The image's width in logical points, which its redactions are sized in.
+  pub(super) capture_width_points: f64,
+}
+
 #[derive(Default)]
 pub(super) struct PreviewManager {
   /// Set while the arrow tool owns the pointer, so a React layout arriving
@@ -52,7 +62,7 @@ pub(super) struct PreviewManager {
   pub(super) pane_target_size: Option<(u32, u32)>,
   pub(super) react_output: Option<ScreenshotWorkspaceOutputSettings>,
   pub(super) session_id: Option<u64>,
-  pub(super) sources: Vec<(u64, Arc<CapturedImage>)>,
+  pub(super) sources: Vec<PreviewSource>,
   pub(super) surface: Option<Arc<RecordingPreviewSurface>>,
   pub(super) selection_gesture: Option<SelectionGestureOverride>,
   pub(super) workspace_scene: Option<WorkspaceScene>,

@@ -112,7 +112,12 @@ pub(crate) fn compose_output_layers(
   canvas.foreground_only = u32::from(foreground_only);
   let mut rgba = vec![0_u8; settings.width as usize * settings.height as usize * 4];
   let mut error = vec![0_i8; 2_048];
-  let picture = RedactPicture::new(&image.rgba, image.width, image.height, settings.image_width);
+  let picture = RedactPicture::new(
+    &image.rgba,
+    image.width,
+    image.height,
+    settings.capture_width_points,
+  );
   let annotations = native_annotations(&settings.annotations, RedactSource::Picture(&picture));
   let native_cursor = NativeGpuCursor::from(cursor.map(|(cursor, _)| *cursor));
   let native_artworks = cursor

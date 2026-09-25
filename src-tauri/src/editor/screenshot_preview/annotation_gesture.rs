@@ -49,8 +49,8 @@ impl PreviewManager {
   pub(super) fn annotation_source(&self, pane_index: u32) -> Option<(u32, u32)> {
     let output = self.output.as_ref()?;
     let item = output.items.get(pane_index as usize)?;
-    let (_, source) = self.sources.iter().find(|(id, _)| *id == item.id)?;
-    Some((source.width, source.height))
+    let source = self.sources.iter().find(|source| source.id == item.id)?;
+    Some((source.image.width, source.image.height))
   }
 
   /// How wide this pane's picture is drawn, in output pixels: what turns a
@@ -131,8 +131,8 @@ impl PreviewManager {
     let image = self
       .sources
       .iter()
-      .find(|(id, _)| *id == item_id)
-      .map(|(_, image)| Arc::clone(image))?;
+      .find(|source| source.id == item_id)
+      .map(|source| Arc::clone(&source.image))?;
     request_anchors(&self.annotation_anchor_cache, key, move || {
       detect_anchors(&image.rgba, image.width, image.height)
     });

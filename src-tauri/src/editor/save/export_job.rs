@@ -27,7 +27,7 @@ pub(super) fn save_recording_artifact(
     include_camera,
     include_primary_video,
     resolution_scale_percent,
-    recording_output,
+    mut recording_output,
     timeline_edit: timeline_model,
     ..
   } = options;
@@ -48,6 +48,7 @@ pub(super) fn save_recording_artifact(
   else {
     unreachable!("recording export helper received a non-recording artifact");
   };
+  recording_output.stamp_capture_widths(artifact.capture_widths());
   validate_primary_resolution_scale(
     resolution_scale_percent,
     *source_scale_percent,

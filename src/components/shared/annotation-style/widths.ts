@@ -42,23 +42,24 @@ const ANNOTATION_TEXT_SIZES = [20, 28, 48, 80, 128];
 const DEFAULT_ANNOTATION_TEXT_SIZE = 48;
 
 /**
- * The block sizes a securely pixelated redaction offers, in output pixels.
- * The twin of `REDACT_BLOCK_SIZES` in
+ * The block sizes a securely pixelated redaction offers, in logical points of
+ * the captured content, so a block hides as much on a 2x capture as on a 1x
+ * one. The twin of `REDACT_BLOCK_SIZES` in
  * `src-tauri/src/editor/annotations/redact/model.rs`.
  */
-const ANNOTATION_REDACT_SIZES = [8, 12, 16, 24, 32];
+const ANNOTATION_REDACT_SIZES = [4, 6, 8, 12, 16];
 
 /**
- * The block sizes classic pixelation offers, in output pixels: coarser than
+ * The block sizes classic pixelation offers, in logical points: coarser than
  * the secure steps, since fine ordinary blocks read as the picture itself.
  * The first is the twin of `MIN_CLASSIC_BLOCK` in
  * `src-tauri/src/editor/annotations/redact/cells.rs`.
  */
-export const ANNOTATION_CLASSIC_SIZES = [16, 24, 32, 48, 64];
+export const ANNOTATION_CLASSIC_SIZES = [8, 12, 16, 24, 32];
 
 /** The block a fresh redaction pixelates with: the second step. The twin of
  * `NEW_REDACT_WIDTH`. */
-const DEFAULT_ANNOTATION_REDACT_SIZE = 12;
+const DEFAULT_ANNOTATION_REDACT_SIZE = 6;
 
 /**
  * The strengths a blurred redaction offers, weakest first: each step blurs

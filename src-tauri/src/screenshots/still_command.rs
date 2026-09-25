@@ -84,6 +84,7 @@ pub async fn capture_still(
   if let Err(error) = crate::editor::present_screenshot(
     &app,
     image,
+    super::capture_scale(target),
     annotations,
     capture_file_stem(Local::now().naive_local()),
   ) {

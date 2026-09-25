@@ -18,7 +18,6 @@ use super::held_timelines::{ready, HeldTimelines, ReadySlot};
 use crate::editor::annotations::redact::held::HeldFill;
 use crate::editor::annotations::redact::native::{held_fill, RedactPicture};
 use crate::editor::annotations::redact::surface_timeline::surface_at;
-use crate::editor::annotations::snap::source_per_output;
 use crate::editor::annotations::timing::RecordingAnnotationClip;
 use crate::editor::annotations::{Annotation, AnnotationShape};
 use crate::screenshots::CapturedImage;
@@ -32,15 +31,15 @@ const FRAMES: usize = 2;
 /// How many fills are kept before they are all let go.
 const KEPT: usize = 64;
 
-/// What a fill is read from: the frame, the box, how it is read, and how
-/// large the picture is drawn, which sizes a pixelation's blocks.
+/// What a fill is read from: the frame, the box, how it is read, and how many
+/// logical points the capture is wide, which sizes a pixelation's blocks.
 #[derive(Clone, Hash, PartialEq, Eq)]
 struct FillKey {
   start_ms: u64,
   corners: [u64; 4],
   redaction: u8,
   width: u64,
-  image_width: u64,
+  capture_width_points: u64,
 }
 
 fn corners(clip: &RecordingAnnotationClip) -> Option<[u64; 4]> {
@@ -91,13 +90,13 @@ impl HeldFills {
 
   /// Hands each of `annotations` that reads the picture its fill as it
   /// stands `source_ms` into the recording, where one is to hand. `clips`
-  /// are the frame's clips by id; `image_width` is how wide the
-  /// full-resolution source is drawn on its canvas.
+  /// are the frame's clips by id; `capture_width_points` is how many logical
+  /// points the recording is wide.
   pub(crate) fn attach(
     self: &Arc<Self>,
     annotations: &mut [Annotation],
     clips: &[RecordingAnnotationClip],
-    image_width: f64,
+    capture_width_points: f64,
     source_ms: u64,
   ) {
     for annotation in annotations {
@@ -110,7 +109,7 @@ impl HeldFills {
       else {
         continue;
       };
-      let Some(fill) = self.fill(clip, image_width) else {
+      let Some(fill) = self.fill(clip, capture_width_points) else {
         continue;
       };
       let elapsed = source_ms.saturating_sub(clip.start_ms) as f32;
@@ -131,7 +130,7 @@ impl HeldFills {
   fn fill(
     self: &Arc<Self>,
     clip: &RecordingAnnotationClip,
-    image_width: f64,
+    capture_width_points: f64,
   ) -> Option<Arc<HeldFill>> {
     let style = &clip.annotation.style;
     let key = FillKey {
@@ -139,7 +138,7 @@ impl HeldFills {
       corners: corners(clip)?,
       redaction: style.redaction as u8,
       width: style.width.to_bits(),
-      image_width: image_width.to_bits(),
+      capture_width_points: capture_width_points.to_bits(),
     };
     let mut state = self.state.lock().ok()?;
     if let Some(fill) = state.fills.get(&key) {
@@ -159,12 +158,7 @@ impl HeldFills {
     let AnnotationShape::Redact { start, end, .. } = clip.annotation.shape else {
       return None;
     };
-    let picture = RedactPicture {
-      rgba: &frame.rgba,
-      width: frame.width,
-      height: frame.height,
-      source_per_output: source_per_output((frame.width, frame.height), image_width),
-    };
+    let picture = RedactPicture::new(&frame.rgba, frame.width, frame.height, capture_width_points);
     let fill = Arc::new(held_fill(start, end, style, &picture));
     if state.fills.len() >= KEPT {
       state.fills.clear();

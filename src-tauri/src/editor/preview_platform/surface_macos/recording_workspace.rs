@@ -13,8 +13,7 @@ use super::ffi::{
 use super::native_types::{NativeWorkspaceLayer, RecordingWorkspaceLayer};
 use super::RecordingPreviewSurface;
 use crate::editor::annotations::native::native_annotations;
-use crate::editor::annotations::redact::native::RedactSource;
-use crate::editor::annotations::snap::source_per_output;
+use crate::editor::annotations::redact::native::{source_per_capture_point, RedactSource};
 use crate::editor::{
   cursor_effects::{GpuArtwork, NativeGpuArtwork, NativeGpuCursor},
   media_preview, CameraOverlaySettings,
@@ -42,7 +41,7 @@ impl RecordingPreviewSurface {
         native_annotations(
           &layer.settings.annotations,
           RedactSource::Video {
-            source_per_output: source_per_output(size, layer.settings.image_width),
+            source_per_point: source_per_capture_point(size.0, layer.settings.capture_width_points),
           },
         )
       })

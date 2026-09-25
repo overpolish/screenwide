@@ -38,6 +38,8 @@ pub(crate) fn open_in_export(app: &AppHandle) {
       crate::editor::present_screenshot(
         &app,
         image,
+        // A pasted picture has no display behind it to read a scale from.
+        1.0,
         Vec::new(),
         capture_file_stem(Local::now().naive_local()),
       )

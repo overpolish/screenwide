@@ -8,6 +8,8 @@ pub(crate) mod tests;
 use serde::{Deserialize, Serialize};
 
 #[cfg(any(test, not(target_os = "macos")))]
+use super::parse_hex_colour;
+#[cfg(any(test, not(target_os = "macos")))]
 use super::placement::output_placement;
 #[cfg(any(test, not(target_os = "macos")))]
 use super::CapturedImage;
@@ -54,6 +56,15 @@ pub struct ScreenshotOutputSettings {
   pub background_image_path: Option<String>,
   pub background_type: String,
   pub background_radius_percent: f64,
+  /// The whole source's width in the logical points it was captured at: its
+  /// pixel width over the display's scale. Redactions size their cells in
+  /// these points, so they hide as much on a 2x capture as on a 1x one.
+  /// Stamped by Rust from the capture it belongs to; never sent by the
+  /// webview or saved with a preference, where it would follow the look onto
+  /// another capture. Zero where unknown, which reads as one point per
+  /// source pixel.
+  #[serde(skip)]
+  pub capture_width_points: f64,
   /// The visible rectangle, in output pixels. Zero width or height marks a
   /// settings blob written before placement moved into pixels.
   #[serde(default)]
@@ -106,21 +117,6 @@ impl ScreenshotOutputSettings {
   pub fn has_placement(&self) -> bool {
     self.crop_width > 0.0 && self.crop_height > 0.0 && self.image_width > 0.0
   }
-}
-
-pub(crate) fn parse_hex_colour(value: &str) -> Result<[u8; 4], String> {
-  let value = value.strip_prefix('#').unwrap_or(value);
-  if !matches!(value.len(), 2 | 3 | 6) || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-    return Err("The screenshot background colour is not valid".to_owned());
-  }
-  let expanded = match value.len() {
-    2 => value.repeat(3),
-    3 => value.chars().flat_map(|character| [character; 2]).collect(),
-    _ => value.to_owned(),
-  };
-  let channel =
-    |start| u8::from_str_radix(&expanded[start..start + 2], 16).map_err(|e| e.to_string());
-  Ok([channel(0)?, channel(2)?, channel(4)?, u8::MAX])
 }
 
 pub(crate) fn output_dimensions(settings: &ScreenshotOutputSettings) -> Result<(u32, u32), String> {

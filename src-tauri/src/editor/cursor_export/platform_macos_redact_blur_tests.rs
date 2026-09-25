@@ -7,7 +7,7 @@
 
 use super::redact_tests::{composed, identity, picture, redaction, resampled, HEIGHT, WIDTH};
 use crate::editor::annotations::redact::cells::blur_cell;
-use crate::editor::annotations::snap::source_per_output;
+use crate::editor::annotations::redact::native::source_per_capture_point;
 use crate::editor::annotations::{AnnotationRedaction, AnnotationShape};
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
 
@@ -22,8 +22,8 @@ fn shuffled_within_cells(
   output: &ScreenshotOutputSettings,
 ) -> CapturedImage {
   let [x0, y0, x1, y1] = PAINTED;
-  let per_output = source_per_output((WIDTH, HEIGHT), output.image_width);
-  let cell = blur_cell(3.0, per_output) as f32;
+  let per_point = source_per_capture_point(WIDTH, output.capture_width_points);
+  let cell = blur_cell(3.0, per_point) as f32;
   let axis = |extent: u32| {
     let count = (extent as f32 / cell).ceil().max(1.0);
     ((extent as f32 - count * cell) * 0.5, count as u32 - 1)

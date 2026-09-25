@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 use super::*;
 use crate::editor::annotations::native::{NativeAnnotation, NativeAnnotationData};
-use crate::editor::annotations::redact::native::RedactSource;
-use crate::editor::annotations::snap::source_per_output;
+use crate::editor::annotations::redact::native::{source_per_capture_point, RedactSource};
 use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
 use crate::editor::annotations::AnnotationKind;
 
@@ -34,17 +33,14 @@ pub(super) fn for_request(
       request.screen,
       request.duration_ms,
       &mut clips,
-      request.output.image_width,
+      request.output.capture_width_points,
     );
   }
   // The stroke follows the output while the points stay in the source.
   let stroke_scale = f64::from(request.video.resolution_scale_percent)
     / f64::from(request.video.source_scale_percent.max(1));
   let source = RedactSource::Video {
-    source_per_output: source_per_output(
-      (request.width, request.height),
-      request.output.image_width,
-    ),
+    source_per_point: source_per_capture_point(request.width, request.output.capture_width_points),
   };
   pack_clips(clips.iter(), stroke_scale, source)
 }

@@ -10,6 +10,9 @@ pub(super) struct PlayerSources {
   pub(super) audio_tracks: Vec<RecordingAudioTrack>,
   pub(super) camera_duration_ms: Option<u64>,
   pub(super) camera_path: Option<PathBuf>,
+  /// Each pane's source width in logical points, primary then camera, from
+  /// `EditorArtifact::capture_widths`, for the compositions this player stores.
+  pub(super) capture_width_points: [f64; 2],
   #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
   pub(super) cursor: Option<Arc<CursorCompositor>>,
   #[cfg(target_os = "macos")]
@@ -86,6 +89,7 @@ fn sources_with_surface(
   let (
     audio_tracks,
     camera,
+    capture_width_points,
     cursor_path,
     keyboard_path,
     duration_ms,
@@ -99,19 +103,21 @@ fn sources_with_surface(
       .artifact
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
-    let Some(EditorArtifact::Recording {
-      audio_tracks,
-      camera,
-      cursor,
-      keyboard,
-      duration_ms,
-      height,
-      id,
-      path,
-      primary_kind,
-      width,
-      ..
-    }) = artifact.as_ref()
+    let Some(
+      recording @ EditorArtifact::Recording {
+        audio_tracks,
+        camera,
+        cursor,
+        keyboard,
+        duration_ms,
+        height,
+        id,
+        path,
+        primary_kind,
+        width,
+        ..
+      },
+    ) = artifact.as_ref()
     else {
       return Err("There is no recording to preview".to_owned());
     };
@@ -121,6 +127,7 @@ fn sources_with_surface(
     (
       audio_tracks.clone(),
       camera.clone(),
+      recording.capture_widths(),
       cursor.as_ref().map(|value| value.path.clone()),
       keyboard.as_ref().map(|value| value.path.clone()),
       *duration_ms,
@@ -231,12 +238,15 @@ fn sources_with_surface(
     #[cfg(target_os = "macos")]
     cursor_artworks,
     composition_settings: settings.map(|settings| {
+      let mut recording_output = settings.recording_output.clone();
+      recording_output.stamp_capture_widths(capture_width_points);
       Arc::new(RwLock::new(PreviewCompositionSettings {
         bake_camera: settings.bake_camera,
         camera_overlay: settings.camera_overlay,
-        recording_output: settings.recording_output.clone(),
+        recording_output,
       }))
     }),
+    capture_width_points,
     cursor_settings: Arc::new(RwLock::new(
       settings.map_or_else(CursorEffectSettings::default, |settings| {
         settings.cursor_effects

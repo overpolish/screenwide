@@ -1,14 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::Arc;
-
 use tauri::{AppHandle, Manager};
 
 use super::super::preview_platform::RecordingPreviewSurface;
 use super::super::ScreenshotWorkspaceOutputSettings;
-use super::state::{PreviewManager, ScreenshotPreviewState};
-use crate::screenshots::CapturedImage;
+use super::state::{PreviewManager, PreviewSource, ScreenshotPreviewState};
 
 impl PreviewManager {
   pub(super) fn present(&self) -> Result<(), String> {
@@ -30,7 +27,7 @@ impl PreviewManager {
   pub(super) fn present_snapshot(
     surface: &RecordingPreviewSurface,
     output: &ScreenshotWorkspaceOutputSettings,
-    sources: &[(u64, Arc<CapturedImage>)],
+    sources: &[PreviewSource],
     // The hovered arrow's halo: its layer, its place in that layer's list, and
     // the halo's width in canvas pixels. Preview chrome only.
     hover: Option<(u64, usize, f32)>,
@@ -44,11 +41,11 @@ impl PreviewManager {
         .items
         .iter()
         .filter_map(|item_output| {
-          let (_, source) = sources.iter().find(|(id, _)| *id == item_output.id)?;
+          let source = sources.iter().find(|source| source.id == item_output.id)?;
           Some((
             item_output.id,
-            source.as_ref(),
-            output.output_for_id(item_output.id),
+            source.image.as_ref(),
+            output.output_for_id(item_output.id, source.capture_width_points),
           ))
         })
         .collect::<Vec<_>>();
@@ -68,15 +65,15 @@ impl PreviewManager {
     let mut has_source = false;
     #[cfg(not(target_os = "macos"))]
     for (index, item_output) in output.items.iter().enumerate() {
-      let Some((_, source)) = sources.iter().find(|(id, _)| *id == item_output.id) else {
+      let Some(source) = sources.iter().find(|source| source.id == item_output.id) else {
         continue;
       };
       has_source = true;
-      let item_settings = output.output_for_id(item_output.id);
+      let item_settings = output.output_for_id(item_output.id, source.capture_width_points);
       staged &= surface.present_screenshot_layer(
         index as u32,
         item_output.id,
-        source,
+        &source.image,
         &item_settings,
         index > 0,
       )?;

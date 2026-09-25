@@ -11,7 +11,6 @@ use crate::editor::annotations::redact::native::{
 #[cfg(target_os = "windows")]
 use crate::editor::annotations::redact::surface_timeline::surface_at;
 use crate::editor::annotations::redact::surface_timeline::{timeline, SAMPLE_MS};
-use crate::editor::annotations::snap::source_per_output;
 use crate::editor::annotations::timing::RecordingAnnotationClip;
 use crate::editor::annotations::{AnnotationRedaction, AnnotationShape};
 use crate::editor::surface_colour::surrounding_colour;
@@ -60,13 +59,13 @@ pub(crate) fn clip_surfaces(
 /// Hands each redaction among an export's `clips` that reads the picture its
 /// fill: a secure pixelation's zones from its clip's first frame, and the
 /// surface timeline across the clip. Each first frame is decoded once,
-/// however many clips start on it. `image_width` is how wide the
-/// full-resolution source is drawn on its canvas.
+/// however many clips start on it. `capture_width_points` is how many
+/// logical points the recording is wide.
 pub(crate) fn attach_for_export(
   path: &std::path::Path,
   duration_ms: u64,
   clips: &mut [RecordingAnnotationClip],
-  image_width: f64,
+  capture_width_points: f64,
 ) {
   let mut frames: HashMap<u64, Option<CapturedImage>> = HashMap::new();
   for clip in clips {
@@ -84,12 +83,7 @@ pub(crate) fn attach_for_export(
     let Some(frame) = frame else {
       continue;
     };
-    let picture = RedactPicture {
-      rgba: &frame.rgba,
-      width: frame.width,
-      height: frame.height,
-      source_per_output: source_per_output((frame.width, frame.height), image_width),
-    };
+    let picture = RedactPicture::new(&frame.rgba, frame.width, frame.height, capture_width_points);
     let fill = HeldFill {
       surfaces: clip_surfaces(path, duration_ms, clip, &AtomicBool::new(false)),
       ..held_fill(start, end, &clip.annotation.style, &picture)

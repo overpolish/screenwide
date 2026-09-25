@@ -94,7 +94,7 @@ pub(super) fn render_video(
       request.screen,
       request.duration_ms,
       &mut annotation_clips,
-      request.output.image_width,
+      request.output.capture_width_points,
     );
   }
   loop {

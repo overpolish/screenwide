@@ -7,6 +7,7 @@ mod background_image;
 mod clipboard;
 pub(crate) mod desktop;
 pub(crate) mod encoding;
+mod hex_colour;
 #[cfg(target_os = "macos")]
 mod image_decode_macos;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
@@ -47,6 +48,7 @@ pub(crate) use background_image::{background_image_canvas, background_image_swat
 pub(crate) use clipboard::open_in_export as open_clipboard_in_export;
 pub use encoding::encode_png;
 pub use encoding::rounded_corners;
+pub(crate) use hex_colour::parse_hex_colour;
 #[cfg(target_os = "windows")]
 pub(crate) use mesh::validate_mesh;
 #[cfg(test)]
@@ -61,7 +63,6 @@ pub use naming::{capture_file_stem, screenshot_directory, unique_path};
 pub use output::compose_screenshot;
 #[cfg(target_os = "windows")]
 pub(crate) use output::output_dimensions;
-pub(crate) use output::parse_hex_colour;
 #[cfg(all(target_os = "windows", test))]
 pub(crate) use output::CropPreviewRect;
 pub use output::ScreenshotOutputSettings;
@@ -170,6 +171,37 @@ pub(crate) async fn capture_excluding_own_windows(
   target: ScreenshotTarget,
 ) -> Result<CapturedImage, String> {
   capture_content(target, false, false).await
+}
+
+/// The display scale `target` is captured at: how many of the still's pixels
+/// one logical point spans, which its redactions are sized by. A window takes
+/// the scale of the monitor it is on. One where the display cannot be read.
+pub(crate) fn capture_scale(target: ScreenshotTarget) -> f64 {
+  let scale = match target {
+    ScreenshotTarget::Screen { monitor_id }
+    | ScreenshotTarget::Region { monitor_id, .. }
+    | ScreenshotTarget::DesktopRegion { monitor_id, .. } => xcap::Monitor::all()
+      .ok()
+      .and_then(|monitors| {
+        monitors
+          .into_iter()
+          .find(|monitor| monitor.id().ok() == Some(monitor_id))
+      })
+      .and_then(|monitor| monitor.scale_factor().ok()),
+    ScreenshotTarget::Window { window_id } => xcap::Window::all()
+      .ok()
+      .and_then(|windows| {
+        windows
+          .into_iter()
+          .find(|window| window.id().ok() == Some(window_id))
+      })
+      .and_then(|window| window.current_monitor().ok())
+      .and_then(|monitor| monitor.scale_factor().ok()),
+  };
+  scale
+    .map(f64::from)
+    .filter(|scale| scale.is_finite() && *scale > 0.0)
+    .unwrap_or(1.0)
 }
 
 async fn capture_content(

@@ -7,7 +7,7 @@ use tauri::{AppHandle, Manager};
 
 use super::super::preview_platform::RecordingPreviewSurface;
 use super::super::{EditorArtifact, EditorKind, EditorState};
-use super::state::ScreenshotPreviewState;
+use super::state::{PreviewSource, ScreenshotPreviewState};
 
 #[tauri::command]
 pub fn start_screenshot_preview(
@@ -31,7 +31,11 @@ pub fn start_screenshot_preview(
     }
     items
       .iter()
-      .map(|item| (item.id, Arc::new(item.image.clone())))
+      .map(|item| PreviewSource {
+        id: item.id,
+        image: Arc::new(item.image.clone()),
+        capture_width_points: item.capture_width_points(),
+      })
       .collect::<Vec<_>>()
   };
   // Obtaining the surface is idempotent - on Windows it is the editor

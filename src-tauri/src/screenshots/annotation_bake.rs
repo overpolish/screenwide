@@ -27,6 +27,8 @@ fn identity_settings(
     background_image_path: None,
     background_type: "solid".to_owned(),
     background_radius_percent: 0.0,
+    // The live overlay draws no redaction, so there is nothing to size.
+    capture_width_points: 0.0,
     crop_height: height,
     crop_width: width,
     crop_preview: None,

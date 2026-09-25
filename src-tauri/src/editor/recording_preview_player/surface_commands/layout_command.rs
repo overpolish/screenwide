@@ -46,10 +46,13 @@ pub async fn layout_recording_preview_surface(
   manager.set_annotation_tool(annotation_tool.as_deref());
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = annotation_tool;
-  let settings = manager
+  let sources = manager
     .sources
     .as_ref()
-    .ok_or_else(|| "The recording preview player is not open".to_owned())?
+    .ok_or_else(|| "The recording preview player is not open".to_owned())?;
+  let mut recording_output = recording_output;
+  recording_output.stamp_capture_widths(sources.capture_width_points);
+  let settings = sources
     .composition_settings
     .clone()
     .ok_or_else(|| "The recording preview composition is unavailable".to_owned())?;

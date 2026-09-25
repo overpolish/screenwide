@@ -18,10 +18,13 @@ pub async fn set_recording_preview_composition(
     .lock()
     .map_err(|_| "The recording preview player is unavailable".to_owned())?;
   manager.require_session(session_id)?;
-  let settings = manager
+  let sources = manager
     .sources
     .as_ref()
-    .ok_or_else(|| "The recording preview player is not open".to_owned())?
+    .ok_or_else(|| "The recording preview player is not open".to_owned())?;
+  let mut recording_output = recording_output;
+  recording_output.stamp_capture_widths(sources.capture_width_points);
+  let settings = sources
     .composition_settings
     .clone()
     .ok_or_else(|| "The recording preview composition is unavailable".to_owned())?;

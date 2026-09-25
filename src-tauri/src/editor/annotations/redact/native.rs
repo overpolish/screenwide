@@ -34,33 +34,42 @@ pub(crate) enum RedactSource<'a> {
   /// frame, and each box snaps outward to even pixels, since a video keeps
   /// its colour at half resolution and an odd edge would leave a colour
   /// sample half covered.
-  Video { source_per_output: f64 },
+  Video { source_per_point: f64 },
 }
 
 /// The picture a list of redactions covers: the pixels erase and pixelate
-/// take their colour from, and how many source pixels one output pixel is,
-/// which sizes the blocks.
+/// take their colour from, and how many source pixels one logical point of
+/// the captured content is, which sizes the blocks.
 #[derive(Clone, Copy)]
 pub(crate) struct RedactPicture<'a> {
   pub(crate) rgba: &'a [u8],
   pub(crate) width: u32,
   pub(crate) height: u32,
-  pub(crate) source_per_output: f64,
+  pub(crate) source_per_point: f64,
 }
 
 impl<'a> RedactPicture<'a> {
-  /// `rgba` is `width` by `height` source pixels, drawn `image_width` output
-  /// pixels wide on its canvas.
-  pub(crate) fn new(rgba: &'a [u8], width: u32, height: u32, image_width: f64) -> Self {
+  /// `rgba` is `width` by `height` source pixels: a whole capture, at its own
+  /// resolution or a decoder's, that is `capture_width_points` points wide.
+  pub(crate) fn new(rgba: &'a [u8], width: u32, height: u32, capture_width_points: f64) -> Self {
     Self {
       rgba,
       width,
       height,
-      source_per_output: crate::editor::annotations::snap::source_per_output(
-        (width, height),
-        image_width,
-      ),
+      source_per_point: source_per_capture_point(width, capture_width_points),
     }
+  }
+}
+
+/// How many source pixels one logical point of the captured content covers
+/// in a picture `grid_width` pixels wide - the capture itself, or a decoder's
+/// proxy of it - where the whole capture is `capture_width_points` points
+/// wide. Unknown reads as one point per source pixel.
+pub(crate) fn source_per_capture_point(grid_width: u32, capture_width_points: f64) -> f64 {
+  if capture_width_points.is_finite() && capture_width_points > 0.0 {
+    f64::from(grid_width.max(1)) / capture_width_points
+  } else {
+    1.0
   }
 }
 
@@ -123,7 +132,7 @@ pub(crate) fn held_fill(
       ..HeldFill::default()
     };
   }
-  let block = block_size(style, picture.source_per_output);
+  let block = block_size(style, picture.source_per_point);
   let own = own_bytes(style);
   let zones = super::palette::zones(
     picture.rgba,
@@ -157,16 +166,16 @@ pub(crate) fn fill(
   source: RedactSource<'_>,
   held: Option<&HeldFill>,
 ) -> RedactFill {
-  let (read, per_output) = match source {
+  let (read, per_point) = match source {
     RedactSource::Picture(picture) => (
       Some(Cow::Owned(held_fill(start, end, style, picture))),
-      picture.source_per_output,
+      picture.source_per_point,
     ),
-    RedactSource::Video { source_per_output } => (held.map(Cow::Borrowed), source_per_output),
+    RedactSource::Video { source_per_point } => (held.map(Cow::Borrowed), source_per_point),
     RedactSource::None => (None, 1.0),
   };
-  let per_output = if per_output.is_finite() && per_output > 0.0 {
-    per_output
+  let per_point = if per_point.is_finite() && per_point > 0.0 {
+    per_point
   } else {
     1.0
   };
@@ -180,19 +189,19 @@ pub(crate) fn fill(
         let read = read.into_owned();
         ([read.columns, read.blocks], read.inks)
       });
-      (PIXELATE, block_size(style, per_output), grid, inks)
+      (PIXELATE, block_size(style, per_point), grid, inks)
     }
     // Classic pixelation and blur are averaged by the GPU from the pixels
     // themselves, so all they carry is the size of their cells.
     AnnotationRedaction::PixelateClassic => (
       MOSAIC,
-      super::cells::mosaic_cell(style.width, per_output) as f32,
+      super::cells::mosaic_cell(style.width, per_point) as f32,
       [0, 0],
       Vec::new(),
     ),
     AnnotationRedaction::Blur => (
       BLUR,
-      super::cells::blur_cell(style.strength, per_output) as f32,
+      super::cells::blur_cell(style.strength, per_point) as f32,
       [0, 0],
       Vec::new(),
     ),
@@ -215,9 +224,10 @@ pub(crate) fn fill(
   }
 }
 
-/// A secure pixelation's block, in source pixels.
-fn block_size(style: &AnnotationStyle, source_per_output: f64) -> f32 {
-  (style.width * source_per_output).max(1.0) as f32
+/// A secure pixelation's block, in source pixels: the style's width is in
+/// logical points.
+fn block_size(style: &AnnotationStyle, source_per_point: f64) -> f32 {
+  (style.width * source_per_point).max(1.0) as f32
 }
 
 /// The style's own colour as opaque bytes: the fill wherever there is no

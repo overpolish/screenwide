@@ -16,13 +16,15 @@ use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationRedaction, AnnotationShape, AnnotationStyle,
 };
 
-/// The block sizes pixelation offers, in output pixels. The twin of
+/// The block sizes pixelation offers, in logical points of the captured
+/// content: a 2x capture draws each at twice as many source pixels, so a
+/// block hides as much text on a Retina capture as on a 1x one. The twin of
 /// `ANNOTATION_REDACT_SIZES` in
 /// `src/components/shared/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) const REDACT_BLOCK_SIZES: [f64; 5] = [8.0, 12.0, 16.0, 24.0, 32.0];
+pub(crate) const REDACT_BLOCK_SIZES: [f64; 5] = [4.0, 6.0, 8.0, 12.0, 16.0];
 
-/// The block a fresh redaction pixelates with, in output pixels.
+/// The block a fresh redaction pixelates with, in logical points.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const NEW_REDACT_WIDTH: f64 = REDACT_BLOCK_SIZES[1];
 

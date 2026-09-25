@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::gesture::{EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP};
-use super::native::{fill, RedactPicture, RedactSource};
+use super::native::{fill, source_per_capture_point, RedactPicture, RedactSource};
 use super::palette::{packed, zones, Palette};
 use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::flags::PIXELATE;
@@ -212,7 +212,7 @@ fn pixelate_carries_its_seed_and_its_block_in_source_pixels() {
     unreachable!()
   };
   let rgba = picture_with(0);
-  // Drawn 10 output pixels wide, each output pixel is two source pixels.
+  // A 2x capture: 20 pixels across are 10 points, each point two pixels.
   let picture = RedactPicture::new(&rgba, 20, 20, 10.0);
   let filled = fill(
     start,
@@ -226,6 +226,18 @@ fn pixelate_carries_its_seed_and_its_block_in_source_pixels() {
   assert_eq!(filled.params[0], 24.0);
   let halves = (filled.params[1] as u32) << 16 | filled.params[2] as u32;
   assert_eq!(halves, seed);
+}
+
+#[test]
+fn a_decoded_proxy_sizes_cells_to_the_same_share_of_the_capture() {
+  // A 2x recording 1,920 pixels wide is 960 points: its own frames and a
+  // half-size proxy of them put the same points under every cell.
+  let full = source_per_capture_point(1_920, 960.0);
+  let proxy = source_per_capture_point(960, 960.0);
+  assert_eq!(full, 2.0);
+  assert_eq!(proxy, 1.0);
+  // Unknown is one point per pixel, never a zero cell.
+  assert_eq!(source_per_capture_point(640, 0.0), 1.0);
 }
 
 /// A 20 by 10 grey box, `first` painted over the leading `first_count`
