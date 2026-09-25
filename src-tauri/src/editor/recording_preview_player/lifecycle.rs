@@ -134,7 +134,17 @@ impl PreviewPlayerManager {
         // it: the next recording must not open onto the last one's audio.
         #[cfg(any(target_os = "macos", target_os = "windows"))]
         surface.set_audio_ribbon(&super::audio_visualizer::AudioRibbonEnvelopes::default());
+        // The Windows surface outlives the session (one per editor window),
+        // so a box still open for typing would keep taking the next
+        // recording's presses.
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        surface.end_annotation_text();
         surface.hide();
+        // A save suspends the editor and the session ends before React lifts
+        // it; the Windows editor window keeps the flag and would stay hidden
+        // for every later session. After `hide`, lifting it shows nothing.
+        #[cfg(target_os = "windows")]
+        surface.set_editor_suspended(false);
       }
     }
     if let Some(decoder) = self.still_decoder.take() {
@@ -148,7 +158,7 @@ impl PreviewPlayerManager {
     {
       self.selection_gesture = None;
     }
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
       self.annotation = Default::default();
     }
