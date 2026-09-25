@@ -10,7 +10,6 @@
 //! box's own cell, as coverage the shader inks like the text.
 
 use super::rasterize::tinted;
-use super::*;
 use crate::editor::annotations::text::metrics::LINE_HEIGHT;
 use crate::editor::annotations::text::typing::TypingMarks;
 use crate::editor::preview_platform::surface::type_device::TypeDevice;

@@ -82,7 +82,7 @@ pub(crate) fn surface_at(entries: &[[f32; 2]], elapsed_ms: f32) -> Option<[f32; 
     .or((!entries.is_empty()).then_some(0))?;
   let colour = unpack(entries[at][1]);
   let into = elapsed_ms - entries[at][0];
-  if at == 0 || !(into < FADE_MS) {
+  if at == 0 || into.is_nan() || into >= FADE_MS {
     return Some(colour);
   }
   let before = unpack(entries[at - 1][1]);

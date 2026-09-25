@@ -61,7 +61,7 @@ pub(crate) struct RedactRecords {
 /// showing along the edge.
 fn edge(value: f32, far: bool, limit: u32) -> u32 {
   let edge = if far { value.ceil() } else { value.floor() };
-  if !(edge > 0.0) {
+  if edge.is_nan() || edge <= 0.0 {
     return 0;
   }
   if edge >= limit as f32 {

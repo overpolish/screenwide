@@ -45,7 +45,7 @@ pub(crate) fn raster_scale(pixel_scale: f32, largest: f32) -> f32 {
     .clamp(DENSITY_STEPS.0, DENSITY_STEPS.1)
     .exp2();
   let wanted = SUPERSAMPLE * step;
-  if wanted <= SUPERSAMPLE || !(largest > 0.0) {
+  if wanted <= SUPERSAMPLE || largest.is_nan() || largest <= 0.0 {
     return wanted;
   }
   let ceiling = (MAX_RASTER_SIZE / largest).log2().floor().exp2();

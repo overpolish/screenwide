@@ -65,7 +65,7 @@ const RADIUS_TRAVEL: f64 = 0.55;
 /// screen points into source pixels; zero where it is unknown.
 pub(crate) fn radius_at(bounds: SnapBox, point: AnnotationPoint, source_per_point: f64) -> f64 {
   let shortest = bounds.width.min(bounds.height);
-  if !(shortest > 0.0) {
+  if shortest.is_nan() || shortest <= 0.0 {
     return 0.0;
   }
   let along = ((point.x - bounds.x) + (point.y - bounds.y)) / 2.0;
