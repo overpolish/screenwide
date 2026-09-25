@@ -10,19 +10,39 @@ use crate::editor::annotations::timing::{
 
 /// How much source time one drawn frame covers, which is what the reveal's
 /// motion blur is measured over. A paused composition passes zero: nothing
-/// is moving, so nothing is blurred.
-///
+/// is moving, so nothing is blurred. `held` hands the screen's redactions
+/// the fills read from their clips' first frames; only the screen takes a
+/// redaction.
 pub(super) fn apply_clips(
   composition: &mut PreviewCompositionSettings,
   clips: &[RecordingAnnotationClip],
   source_ms: u64,
   frame_ms: f32,
+  held: Option<&HeldFillsHandle>,
 ) {
-  composition.recording_output.primary.annotations =
-    revealed_annotations(clips, AnnotationTrack::Primary, source_ms, frame_ms);
+  let primary = &mut composition.recording_output.primary;
+  primary.annotations = revealed_annotations(clips, AnnotationTrack::Primary, source_ms, frame_ms);
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  if let Some(held) = held {
+    held.attach(
+      &mut primary.annotations,
+      clips,
+      primary.image_width,
+      source_ms,
+    );
+  }
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let _ = held;
   composition.recording_output.camera.annotations =
     revealed_annotations(clips, AnnotationTrack::Camera, source_ms, frame_ms);
 }
+
+/// The preview's held fills, where the platform decodes the frames they are
+/// read from.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(super) type HeldFillsHandle = Arc<super::held_fills::HeldFills>;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub(super) type HeldFillsHandle = ();
 
 impl PlayerSources {
   /// A paused macOS still resolves its annotations up front, because its worker
@@ -35,7 +55,13 @@ impl PlayerSources {
     clips: &[RecordingAnnotationClip],
   ) -> Option<PreviewCompositionSettings> {
     let mut composition = self.composition_settings.as_ref()?.read().ok()?.clone();
-    apply_clips(&mut composition, clips, source_ms, 0.0);
+    apply_clips(
+      &mut composition,
+      clips,
+      source_ms,
+      0.0,
+      self.held_fills.as_ref(),
+    );
     Some(composition)
   }
 }

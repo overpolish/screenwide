@@ -46,10 +46,14 @@ _Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
 /// held against the box and never placed; `middle` is its text block's width
 /// and height and `width` its type size, both as shares of the drawn width;
 /// `start_head` is its alignment.
+///
+/// A redaction puts its box's top-left corner in `start`, its bottom-right in
+/// `end` and its centre in `middle`, all normalised like an arrow's grips.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindArrow = 0,
   ScreenwideAnnotationKindCounter = 1,
   ScreenwideAnnotationKindText = 2,
+  ScreenwideAnnotationKindRedact = 3,
 };
 /// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
@@ -60,15 +64,23 @@ typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeArrow = 2,
   ScreenwideAnnotationModeCounter = 3,
   ScreenwideAnnotationModeText = 4,
+  ScreenwideAnnotationModeRedact = 5,
 };
-/// Which grip a press took hold of.
+/// Which grip a press took hold of. A redaction's box grips report `Box` plus
+/// the sides they move - 1 left, 2 right, 4 top, 8 bottom - the same bits the
+/// resize cursors are chosen by and Rust's `AnnotationHandle::Edges` reads.
+/// Its radius dot, the layer selection's own, reports `Radius`.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationHandle) {
   ScreenwideAnnotationHandleStart = 0,
   ScreenwideAnnotationHandleMiddle = 1,
   ScreenwideAnnotationHandleEnd = 2,
   ScreenwideAnnotationHandleBody = 3,
   ScreenwideAnnotationHandleTail = 4,
+  ScreenwideAnnotationHandleBox = 16,
+  ScreenwideAnnotationHandleRadius = 32,
 };
+/// The most grips one annotation shows: a redaction's box and radius dot.
+#define SCREENWIDE_ANNOTATION_MAX_GRIPS 9
 /// What a gesture acts on: a new annotation (0), a grip or body of the
 /// annotation at `index` (1), nothing at all (2), which only clears the choice,
 /// or a press on the body of the annotation at `index` (3), which only chooses

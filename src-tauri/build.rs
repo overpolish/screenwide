@@ -94,6 +94,9 @@ fn main() {
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_chrome.m"
     );
     println!(
+      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_redact.m"
+    );
+    println!(
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_state.m"
     );
     println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_macos.h");
@@ -174,11 +177,14 @@ fn main() {
       .file("src/editor/cursor_export/gpu_compositor_macos+export_encoding.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_export_cursor.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_export_inflight.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos_export_redact.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_export_still.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_keyboard.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_resize.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_annotations.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos+presenter_redact.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos_redact.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_background_image.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_annotation_text.m")
@@ -215,6 +221,7 @@ fn main() {
       .file("src/editor/recording_preview_surface_macos+annotation_text_input.m")
       .file("src/editor/recording_preview_surface_macos+annotation_text.m")
       .file("src/editor/recording_preview_surface_macos+annotation_chrome.m")
+      .file("src/editor/recording_preview_surface_macos+annotation_redact.m")
       .file("src/editor/recording_preview_surface_macos+annotation_state.m")
       .file("src/editor/recording_preview_surface_macos+osc.m")
       .file("src/editor/recording_preview_surface_macos+selection.m")
@@ -276,6 +283,14 @@ fn compile_windows_preview_shaders() {
   compile_shader(
     "src/editor/preview_platform/surface_windows/shaders/audio_ribbon.hlsl",
     "preview_audio_ribbon",
+  );
+  compile_shader(
+    "src/editor/preview_platform/surface_windows/shaders/redact_cells.hlsl",
+    "preview_redact_cells",
+  );
+  compile_shader(
+    "src/editor/preview_platform/surface_windows/shaders/redact_paint.hlsl",
+    "preview_redact_paint",
   );
   compile_shader(
     "src/annotate/shaders/annotate_overlay.hlsl",

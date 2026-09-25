@@ -54,6 +54,35 @@ impl AnnotationAlign {
   }
 }
 
+/// How a redaction covers what is under it. Only a redaction reads it; the
+/// other kinds carry the default the way they carry an alignment. Erase and
+/// colour carry nothing of what was under the box: erase takes its surface
+/// from the ring just outside the box, and colour uses the style's own.
+/// Pixelate keeps each zone's colours and nothing of their layout. Classic
+/// pixelation and blur keep more by design, which the editor says where
+/// either is chosen.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AnnotationRedaction {
+  /// A flat fill in the colour of the surface around the box.
+  #[default]
+  Erase,
+  /// A flat fill in the style's colour.
+  Color,
+  /// Blocks in the surface colour and the few colours under the box, laid out
+  /// by the seed rather than averaged from the picture, so there are no
+  /// shapes for a depixelation attack to recover.
+  Pixelate,
+  /// Ordinary pixelation: each block the average of the pixels under it. It
+  /// looks the way pixelation is expected to, and a depixelation attack can
+  /// read text back out of it.
+  PixelateClassic,
+  /// A soft picture of a coarse grid of the box's average colours, nudged by
+  /// the seed. It keeps rough shapes and colours, which is the look, and
+  /// nothing finer than the grid.
+  Blur,
+}
+
 /// How an annotation is painted. The width is in output pixels, so an
 /// annotation keeps its weight on the canvas rather than growing with the
 /// picture.
@@ -66,6 +95,16 @@ pub struct AnnotationStyle {
   pub color: String,
   #[serde(default)]
   pub head: AnnotationHead,
+  /// A redaction's corner radius, as a percentage of its box's shorter side
+  /// from 0 to 50; the other kinds carry zero.
+  #[serde(default)]
+  pub radius: f64,
+  #[serde(default)]
+  pub redaction: AnnotationRedaction,
+  /// A blurred redaction's strength, a step from 1 to 5; the other kinds
+  /// carry zero.
+  #[serde(default = "default_strength")]
+  pub strength: f64,
   pub width: f64,
 }
 
@@ -83,6 +122,10 @@ pub struct Annotation {
   #[serde(default = "default_animated")]
   pub animated: bool,
   pub id: String,
+  /// A recording's redaction's fill, read once from its clip's first frame
+  /// and attached as each frame is resolved, like the reveal. Never stored.
+  #[serde(skip)]
+  pub held: Option<std::sync::Arc<super::redact::held::HeldFill>>,
   /// How much of the path is showing this frame. Derived from the clip's
   /// bounds and the frame's source time every frame and never stored, so a
   /// scrub backwards lands on exactly the frame playing forwards drew.
@@ -96,6 +139,11 @@ pub struct Annotation {
 /// editor, says otherwise.
 fn default_animated() -> bool {
   true
+}
+
+/// The strength a redaction from before blur existed would have taken.
+fn default_strength() -> f64 {
+  super::redact::model::NEW_BLUR_STRENGTH
 }
 
 /// The colour a fresh annotation is drawn in before anything has been chosen:
@@ -143,6 +191,7 @@ mod tests {
       above_camera: false,
       animated: true,
       id: "a".to_owned(),
+      held: None,
       reveal: AnnotationReveal::default(),
       shape: AnnotationShape::Arrow {
         start: AnnotationPoint { x: 1.0, y: 2.0 },
@@ -153,6 +202,9 @@ mod tests {
         align: Default::default(),
         color: "#ff0000".to_owned(),
         head: AnnotationHead::Both,
+        radius: 0.0,
+        redaction: Default::default(),
+        strength: 0.0,
         width: 8.0,
       },
     };

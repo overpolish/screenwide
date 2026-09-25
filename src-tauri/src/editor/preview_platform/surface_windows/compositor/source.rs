@@ -35,6 +35,7 @@ impl Compositor {
       size,
       texture,
       view: view.ok_or_else(|| "D3D11 created no preview source view".to_owned())?,
+      picture: None,
     })
   }
 
@@ -79,6 +80,7 @@ impl Compositor {
       size: (source.width, source.height),
       texture,
       view,
+      picture: None,
     })
   }
 

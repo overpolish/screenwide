@@ -14,11 +14,14 @@ use crate::editor::annotations::arrow::geometry::prepare_arrow;
 use crate::editor::annotations::counter::geometry::prepare_counter;
 use crate::editor::annotations::exposure::annotation_travel;
 use crate::editor::annotations::native::{native_annotations, NativeAnnotation, NativeAnnotations};
+use crate::editor::annotations::redact::geometry::prepare_redact;
+use crate::editor::annotations::redact::native::{RedactPicture, RedactSource};
+use crate::editor::annotations::redact::records::redact_records;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::text::geometry::{prepare_text, HEAD_ALIGN_MASK};
 use crate::editor::annotations::text::typing::TypingMarks;
 use crate::editor::annotations::Annotation;
-use crate::screenshots::output_placement;
+use crate::screenshots::{output_placement, CapturedImage};
 
 /// Prepares the annotations for one composition, in canvas pixels, with those
 /// under the camera first.
@@ -32,11 +35,14 @@ use crate::screenshots::output_placement;
 /// it comes. `annotations` is the list this frame draws. A still passes the
 /// document's own; a video export passes the annotations its timeline clips
 /// resolve to at that frame, which is why the list is given rather than read
-/// from `settings`.
+/// from `settings`. `picture` is a screenshot's own pixels, which its
+/// redactions read their fills from; a video frame has none, and its
+/// redactions take the fills held from their clips' frames.
 pub(crate) fn prepared_arrows(
   annotations: &[Annotation],
   source: (u32, u32),
   settings: &ScreenshotOutputSettings,
+  picture: Option<&CapturedImage>,
   // The halo this composition carries, if the hovered arrow belongs to it:
   // its place in this layer's list and the halo's width in canvas pixels.
   halo: Option<(usize, f32)>,
@@ -48,8 +54,31 @@ pub(crate) fn prepared_arrows(
     return Ok(compositor::PreparedArrows::default());
   }
   let placement = output_placement(source.0, source.1, settings)?;
-  Ok(placed_arrows(
+  let picture = picture.map(|picture| {
+    RedactPicture::new(
+      &picture.rgba,
+      picture.width,
+      picture.height,
+      settings.image_width,
+    )
+  });
+  let native = native_annotations(
     annotations,
+    picture.as_ref().map_or_else(
+      || RedactSource::Video {
+        source_per_output: crate::editor::annotations::snap::source_per_output(
+          source,
+          settings.image_width,
+        ),
+      },
+      RedactSource::Picture,
+    ),
+  );
+  // In the source's own pixels, which the pre-pass covers before anything
+  // is placed on the canvas.
+  let redactions = redact_records(&native.items, &native.data.points, source.0, source.1);
+  let mut prepared = placed_native(
+    native,
     (placement.image_x, placement.image_y),
     (
       f64::from(placement.image_width) / f64::from(source.0),
@@ -57,13 +86,15 @@ pub(crate) fn prepared_arrows(
     ),
     halo,
     typing,
-  ))
+  );
+  prepared.redactions = redactions;
+  Ok(prepared)
 }
 
 /// The same annotations in whatever pixels they are drawn in: `offset` and
-/// `scale` carry a point from the source's own pixels into them. The still
-/// passes its output placement; the live overlay passes the identity, because
-/// its annotations arrive in the display's layer pixels already.
+/// `scale` carry a point from the source's own pixels into them. The live
+/// overlay passes the identity, because its annotations arrive in the
+/// display's layer pixels already, and it draws no redaction.
 pub(crate) fn placed_arrows(
   annotations: &[Annotation],
   offset: (f64, f64),
@@ -74,9 +105,26 @@ pub(crate) fn placed_arrows(
   if annotations.is_empty() {
     return compositor::PreparedArrows::default();
   }
-  // The same flattening the Metal backend presents through, so both prepare
-  // from one resolved list rather than from two readings of the document.
-  let NativeAnnotations { items, data } = native_annotations(annotations);
+  placed_native(
+    native_annotations(annotations, RedactSource::None),
+    offset,
+    scale,
+    halo,
+    typing,
+  )
+}
+
+/// Flattened annotations placed into drawn pixels. The same flattening the
+/// Metal backend presents through, so both prepare from one resolved list
+/// rather than from two readings of the document.
+fn placed_native(
+  native: NativeAnnotations,
+  offset: (f64, f64),
+  scale: (f64, f64),
+  halo: Option<(usize, f32)>,
+  typing: Option<(usize, TypingMarks)>,
+) -> compositor::PreparedArrows {
+  let NativeAnnotations { items, data } = native;
   let annotations = &items;
   let place = |point: [f32; 2]| {
     [
@@ -117,6 +165,7 @@ pub(crate) fn placed_arrows(
           reveal,
         ),
         AnnotationKind::Arrow => prepare_arrow(a, b, c, annotation.width, annotation.head, reveal),
+        AnnotationKind::Redact => prepare_redact(a, c, annotation.width),
       };
       let geometry = shape(annotation.reveal);
       let mut arrow = compositor::PreviewArrow::new(
@@ -191,7 +240,7 @@ pub(crate) fn placed_arrows(
             .filter(|(typed, _)| *typed == index)
             .map(|(_, marks)| marks),
         },
-        AnnotationKind::Arrow => compositor::PreparedType::default(),
+        AnnotationKind::Arrow | AnnotationKind::Redact => compositor::PreparedType::default(),
       });
       prepared.arrows.push(arrow);
     }

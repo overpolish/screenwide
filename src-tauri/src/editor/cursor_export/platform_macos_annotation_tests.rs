@@ -40,6 +40,7 @@ fn arrow(
     above_camera: false,
     animated: true,
     id: "arrow".to_owned(),
+    held: None,
     reveal: Default::default(),
     shape: AnnotationShape::Arrow {
       start,
@@ -50,6 +51,9 @@ fn arrow(
       align: Default::default(),
       color: "#ff0000".to_owned(),
       head,
+      radius: 0.0,
+      redaction: Default::default(),
+      strength: 0.0,
       width,
     },
   }

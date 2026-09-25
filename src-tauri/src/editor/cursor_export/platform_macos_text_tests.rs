@@ -21,6 +21,9 @@ fn text_box(text: &str, pointer: TextPointer, color: &str) -> Annotation {
     align: AnnotationAlign::Left,
     color: color.to_owned(),
     head: AnnotationHead::None,
+    radius: 0.0,
+    redaction: Default::default(),
+    strength: 0.0,
     width: FONT,
   };
   annotation.shape = AnnotationShape::Text {

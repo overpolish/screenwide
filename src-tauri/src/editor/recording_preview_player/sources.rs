@@ -21,6 +21,8 @@ pub(super) struct PlayerSources {
   pub(super) composition_settings: Option<Arc<RwLock<PreviewCompositionSettings>>>,
   pub(super) duration_ms: u64,
   pub(super) frames_per_second: Option<f64>,
+  /// The fills the screen's redactions read from their clips' first frames.
+  pub(super) held_fills: Option<super::annotation_preview::HeldFillsHandle>,
   /// Zero when OSCs are hidden, one for the primary pane and two for camera.
   pub(super) layout: RecordingPreviewLayout,
   pub(super) playback_layout: RecordingPreviewLayout,
@@ -251,6 +253,11 @@ fn sources_with_surface(
     )),
     duration_ms,
     frames_per_second,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    held_fills: (primary_kind != PrimaryRecordingKind::Audio)
+      .then(|| Arc::new(super::held_fills::HeldFills::new(path.clone(), duration_ms))),
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    held_fills: None,
     layout,
     playback_layout,
     playing: Arc::new(AtomicBool::new(false)),

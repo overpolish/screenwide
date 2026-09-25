@@ -138,7 +138,7 @@ impl RecordingPreviewSurface {
     &self,
     index: u32,
     source_token: u64,
-    source: &CapturedImage,
+    source: &std::sync::Arc<CapturedImage>,
     settings: &ScreenshotOutputSettings,
     foreground_only: bool,
   ) -> Result<bool, String> {
@@ -162,11 +162,12 @@ impl RecordingPreviewSurface {
         .as_ref()
         .is_none_or(|texture| texture.size != source_size)
     {
-      let texture = self
+      let mut texture = self
         .inner
         .gpu
         .compositor
         .screenshot_source(&self.inner.gpu.device, source)?;
+      texture.picture = Some(std::sync::Arc::clone(source));
       pane.source = Some(texture);
       pane.source_token = Some(source_token);
     }

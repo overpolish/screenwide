@@ -95,6 +95,7 @@ impl RecordingPreviewSurface {
       &settings.annotations,
       source.size,
       settings,
+      source.picture.as_deref(),
       pane.annotation_halo,
       pane.annotation_typing,
     )?;

@@ -7,6 +7,35 @@
 /// comes after every shape's own source: each kind is a branch here and a layer
 /// function of its own beside it.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE @R"METAL(
+/// A hovered redaction's halo, drawn by the canvas pass like every other
+/// kind's. The box itself was applied to the source and is not drawn here, so
+/// this is the only thing that finds an erased box on its own surface: it is
+/// white round a dark fill and black round a light one, and stronger than the
+/// halo a coloured shape wears in its own colour.
+constant float annotation_redact_halo_alpha = 0.5;
+
+static float4 annotation_redact_halo(
+    float4 rgba, const device AnnotationUniforms &annotation, float2 point,
+    float feather) {
+  float halo = max(annotation.hover, 0.0);
+  if (halo <= 0.0) return rgba;
+  float2 low = float2(annotation.arrow.a);
+  float2 high = float2(annotation.arrow.b);
+  float reach = halo + feather + 1.0;
+  if (any(point < low - reach) || any(point > high + reach)) return rgba;
+  float rounding = min(annotation.arrow.rounding, min(high.x - low.x, high.y - low.y) * 0.5);
+  float2 q = abs(point - (low + high) * 0.5) - ((high - low) * 0.5 - rounding);
+  float distance = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rounding;
+  float band = (1.0 - annotation_edge(distance, feather)) *
+      annotation_edge(distance - halo, feather);
+  float luminance = dot(float4(annotation.color).rgb, float3(0.2126, 0.7152, 0.0722));
+  float3 tone = luminance > 0.5 ? float3(0.0) : float3(1.0);
+  float alpha = band * annotation_redact_halo_alpha;
+  rgba.rgb = tone * alpha + rgba.rgb * (1.0 - alpha);
+  rgba.a = alpha + rgba.a * (1.0 - alpha);
+  return rgba;
+}
+
 /// Draws every annotation whose layer matches `above_camera`.
 ///
 /// Geometry is already in canvas pixels, prepared using the current image
@@ -29,6 +58,10 @@ static float4 composite_annotations(
     const device AnnotationUniforms &annotation = annotations[index];
     if (annotation.above_camera != above_camera) continue;
     float4 color = float4(annotation.color);
+    if (annotation.kind == 3u) {
+      rgba = annotation_redact_halo(rgba, annotation, canvas_point, feather);
+      continue;
+    }
     if (color.a <= 0.0 || annotation.arrow.width <= 0.0) continue;
     float halo = max(annotation.hover, 0.0);
     if (annotation.kind == 1u) {

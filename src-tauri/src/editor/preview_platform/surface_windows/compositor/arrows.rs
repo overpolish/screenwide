@@ -165,6 +165,8 @@ pub(crate) struct PreparedArrows {
   /// than its resolution would otherwise take its whole antialiasing band
   /// from inside a single drawn pixel and come out jagged. Zero means one.
   pub(crate) pixel_scale: f32,
+  /// The redactions the pre-pass applies to the source, in its own pixels.
+  pub(crate) redactions: crate::editor::annotations::redact::records::RedactRecords,
 }
 
 /// A CPU-written structured buffer that grows to fit the list it is handed,

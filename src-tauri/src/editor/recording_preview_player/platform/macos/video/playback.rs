@@ -49,6 +49,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
   let keyboard_settings = Arc::clone(&sources.keyboard_settings);
   let composition_settings = sources.composition_settings.clone();
   let annotation_clips = Arc::clone(&sources.annotation_clips);
+  let held_fills = sources.held_fills.clone();
   let duration_ms = sources.duration_ms;
   let source_dimensions: Vec<_> = sources
     .playback_layout
@@ -86,6 +87,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
             &clips,
             target_ms,
             frame_ms,
+            held_fills.as_ref(),
           );
         }
         let raw_screen = match screen.pixel_frame_at(target_ms) {

@@ -18,7 +18,7 @@ mod still_decode;
 mod thumbnails;
 mod video;
 
-pub(crate) use source_frame::source_frame_image;
+pub(crate) use source_frame::{each_source_frame, source_frame_image};
 
 use std::{
   process::Child,

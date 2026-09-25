@@ -76,7 +76,10 @@ extern "C" fn scene(display: u32, out: *mut NativeAnnotationsView) {
     })
     .collect();
   SCENE.with_borrow_mut(|scene| {
-    *scene = native_annotations(&drawn);
+    *scene = native_annotations(
+      &drawn,
+      crate::editor::annotations::redact::native::RedactSource::None,
+    );
     unsafe { out.write(scene.view()) };
   });
 }

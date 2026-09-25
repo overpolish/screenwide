@@ -53,14 +53,15 @@ static BOOL annotation_normalised_point(ScreenwidePreviewSurface *surface,
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode mode) {
   return mode == ScreenwideAnnotationModeArrow ||
          mode == ScreenwideAnnotationModeCounter ||
-         mode == ScreenwideAnnotationModeText;
+         mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeRedact;
 }
 
-/// The grips one annotation shows, in display points, and which grip each is.
-/// An arrow has three; a counter one, the tip of its tail; a text box one,
-/// its pointer's tip.
-static NSUInteger annotation_grips(NSRect image, ScreenwidePreviewAnnotation item,
-                                   NSPoint handles[3], ScreenwideAnnotationHandle kinds[3]) {
+// An arrow has three grips; a counter one, the tip of its tail; a text box
+// one, its pointer's tip; a redaction the eight of its box.
+SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_grips(
+    NSRect image, ScreenwidePreviewAnnotation item, NSPoint *handles, uint32_t *kinds) {
+  if (item.kind == ScreenwideAnnotationKindRedact)
+    return annotation_redact_grips(image, item, handles, kinds);
   if (item.kind == ScreenwideAnnotationKindCounter || item.kind == ScreenwideAnnotationKindText) {
     handles[0] = item.kind == ScreenwideAnnotationKindText ? annotation_text_grip(image, item)
                                                            : annotation_counter_tail(image, item);
@@ -84,8 +85,8 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
   if (items == NULL || surface.annotationSelected < 0 ||
       (NSUInteger)surface.annotationSelected >= count)
     return -1;
-  NSPoint handles[3];
-  ScreenwideAnnotationHandle kinds[3];
+  NSPoint handles[SCREENWIDE_ANNOTATION_MAX_GRIPS];
+  uint32_t kinds[SCREENWIDE_ANNOTATION_MAX_GRIPS];
   NSUInteger grips = annotation_grips(annotation_image_frame(surface),
                                       items[surface.annotationSelected], handles, kinds);
   for (NSUInteger index = 0; index < grips; index++) {
@@ -274,11 +275,13 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_add_osc(
     ScreenwidePreviewSurface *surface, CGFloat scale) {
   NSUInteger items = 0;
   const ScreenwidePreviewAnnotation *list = annotation_items(surface, &items);
+  // A chosen redaction wears the selection's box rather than discs.
+  if (annotation_redact_add_osc(vertices, count, size, surface, scale)) return;
   if (list == NULL || surface.annotationSelected < 0 ||
       (NSUInteger)surface.annotationSelected >= items)
     return;
-  NSPoint handles[3];
-  ScreenwideAnnotationHandle kinds[3];
+  NSPoint handles[SCREENWIDE_ANNOTATION_MAX_GRIPS];
+  uint32_t kinds[SCREENWIDE_ANNOTATION_MAX_GRIPS];
   NSUInteger grips = annotation_grips(annotation_image_frame(surface),
                                       list[surface.annotationSelected], handles, kinds);
   // The same disc the selection OSC draws its corner grips with: a 4pt fill

@@ -14,6 +14,7 @@
 #import "gpu_compositor_macos_cursor_resources.h"
 #import "gpu_compositor_macos_keyboard.h"
 #import "gpu_compositor_macos_presenter_private.h"
+#import "gpu_compositor_macos_redact.h"
 
 
 @implementation ScreenwideStillPresenter
@@ -44,10 +45,12 @@ void *screenwide_gpu_still_presenter_create(void) {
     presenter.regionMagnifierPipeline =
         screenwide_region_magnifier_make_pipeline(presenter.device, library,
                                                    &error);
+    presenter.redactPipelines = screenwide_redact_pipelines(library);
     presenter.queue = [presenter.device newCommandQueue];
     presenter.workspaceSources = [NSMutableDictionary dictionary];
     presenter.workspaceCameraSources = [NSMutableDictionary dictionary];
     presenter.workspaceSourceSizes = [NSMutableDictionary dictionary];
+    presenter.workspaceRedactedSources = [NSMutableDictionary dictionary];
     presenter.workspaceLayers = [NSMutableArray array];
     presenter.workspaceAnnotationStores = [NSMutableArray array];
     presenter.keyboardArtworks = [NSMutableDictionary dictionary];
@@ -61,7 +64,7 @@ void *screenwide_gpu_still_presenter_create(void) {
     presenter.textureCache = texture_cache;
     if (presenter.pipeline == nil || presenter.unpackPipeline == nil ||
         presenter.workspaceClearPipeline == nil || presenter.workspaceLayerPipeline == nil ||
-        presenter.regionMagnifierPipeline == nil ||
+        presenter.regionMagnifierPipeline == nil || presenter.redactPipelines == nil ||
         presenter.queue == nil || presenter.textureCache == NULL) return NULL;
     return (__bridge_retained void *)presenter;
   }
@@ -282,6 +285,9 @@ static int presenter_present_workspace_layers(
       }
     }
     if (source == nil) return 0;
+    screenwide_presenter_redact_source(presenter, source, item);
+    screenwide_presenter_apply_redactions(presenter, command);
+    source = screenwide_presenter_visible_source(presenter, item->source_token);
     if (item->placement.width == 0 || item->placement.height == 0) continue;
     NSUInteger camera_length = (NSUInteger)item->overlay.camera_source_width *
         item->overlay.camera_source_height * 4;
@@ -380,6 +386,7 @@ int screenwide_gpu_still_presenter_set_workspace(
         }
       }
       if (source == nil) return 0;
+      screenwide_presenter_redact_source(presenter, source, &layers[index]);
       NSNumber *token = @(layers[index].source_token);
       NSUInteger cameraLength = (NSUInteger)layers[index].overlay.camera_source_width *
           layers[index].overlay.camera_source_height * 4;
@@ -421,6 +428,7 @@ int screenwide_gpu_still_presenter_set_workspace(
         [presenter.workspaceSources removeObjectForKey:key];
         [presenter.workspaceSourceSizes removeObjectForKey:key];
         [presenter.workspaceCameraSources removeObjectForKey:key];
+        [presenter.workspaceRedactedSources removeObjectForKey:key];
       }
     presenter.workspaceLayers = retained;
     screenwide_presenter_prune_annotation_stores(presenter);
@@ -594,8 +602,9 @@ int screenwide_gpu_still_presenter_redraw_workspace(
       [clear setTexture:drawable.texture atIndex:0];
       workspace_dispatch(clear, presenter.workspaceClearPipeline, grid);
       [clear endEncoding];
+      screenwide_presenter_apply_redactions(presenter, command);
       for (uint32_t index = 0; index < placement_count; ++index) {
-        id<MTLBuffer> source = presenter.workspaceSources[@(layers[index].source_token)];
+        id<MTLBuffer> source = screenwide_presenter_visible_source(presenter, layers[index].source_token);
         id<MTLBuffer> camera = presenter.workspaceCameraSources[@(layers[index].source_token)]
             ?: [presenter.device newBufferWithLength:4 options:MTLResourceStorageModeShared];
         id<MTLBuffer> overlay = [presenter.device newBufferWithBytes:&layers[index].overlay length:sizeof(layers[index].overlay) options:MTLResourceStorageModeShared];
@@ -633,7 +642,7 @@ int screenwide_gpu_still_presenter_redraw_workspace(
           NSNumber *token = @(layers[index].source_token);
           id<MTLBuffer> source = magnifier->sample_camera != 0
               ? presenter.workspaceCameraSources[token]
-              : presenter.workspaceSources[token];
+              : screenwide_presenter_visible_source(presenter, layers[index].source_token);
           uint32_t dimensions[2] = {
             magnifier->sample_camera != 0
                 ? layers[index].overlay.camera_source_width

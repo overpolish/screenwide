@@ -253,11 +253,19 @@ pub(crate) use prepare::{placed_arrows, prepared_arrows};
 /// shaft a press lands on.
 #[path = "annotation/picking.rs"]
 mod picking;
-pub(super) use picking::{cursor_for, owns_chrome, selected_grips};
+/// The chrome's grips, whether it owns the screen, and its cursor.
+#[path = "annotation/picking_chrome.rs"]
+mod picking_chrome;
 use picking::{
   handle_at_point, image_extent, image_frame, item_image_frame, layer_selection, normalised_point,
   selected_item, shaft_at_point, text_geometry,
 };
+pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
+
+/// A redaction's box, grips and radius dot.
+#[path = "annotation/redact_chrome.rs"]
+mod redact_chrome;
+pub(super) use redact_chrome::selected_box as selected_redaction;
 
 /// What a snapped sample draws, and where.
 #[path = "annotation/snap_chrome.rs"]

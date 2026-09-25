@@ -18,7 +18,15 @@ const arrow = {
     kind: "arrow",
     start: { x: 10, y: 20 },
   },
-  style: { align: "left", color: "#0a84ff", head: "end", width: 6 },
+  style: {
+    align: "left",
+    color: "#0a84ff",
+    head: "end",
+    radius: 0,
+    redaction: "erase",
+    strength: 0,
+    width: 6,
+  },
 };
 
 const payload = (overrides: Record<string, unknown> = {}) => ({

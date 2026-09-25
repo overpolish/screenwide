@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::editor::annotations::native::{native_annotations, NativeAnnotationsView};
+use crate::editor::annotations::redact::native::{RedactPicture, RedactSource};
 #[path = "platform/composition.rs"]
 mod composition;
 pub(crate) use composition::alpha_composite;

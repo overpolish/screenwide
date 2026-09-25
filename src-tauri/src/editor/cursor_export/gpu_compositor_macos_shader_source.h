@@ -20,13 +20,17 @@
 #import "gpu_compositor_macos_shader_source_camera_kernels.h"
 #import "gpu_compositor_macos_shader_source_cursor_kernels.h"
 #import "gpu_compositor_macos_shader_source_cursor_overlay_kernels.h"
+#import "gpu_compositor_macos_shader_source_redact.h"
+#import "gpu_compositor_macos_shader_source_redact_video.h"
 
 /// The compositor's Metal library, assembled from its parts. An annotation
 /// shape brings a source of its own - the arrow's helpers live in
 /// `..._annotations.h`, the counter's in `..._annotation_counter.h`, the text
 /// box's in `..._annotation_text.h` - and `..._annotation_composite.h` is the
 /// one pass that branches over `AnnotationUniforms.kind`, drawn by both
-/// canvas kernels. A shape's source goes between the two.
+/// canvas kernels. A shape's source goes between the two. A redaction is the
+/// exception: `..._redact.h` applies it to the source before any canvas pass,
+/// and the composite pass only draws its hover halo.
 __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_TYPES
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_CURVE
@@ -45,4 +49,6 @@ __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_PREVIEW_KERNELS
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_CAMERA_KERNELS
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_CURSOR_KERNELS
-    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_CURSOR_OVERLAY_KERNELS;
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_CURSOR_OVERLAY_KERNELS
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT_VIDEO;

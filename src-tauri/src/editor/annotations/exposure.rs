@@ -56,6 +56,9 @@ pub(crate) fn annotation_travel(
           .max((reveal.high - previous[1]).abs())
         + width * 4.0 * (reveal.scale - previous[2]).abs()
     }
+    // A redaction never moves over a clip: it is whole for as long as it is
+    // shown.
+    AnnotationKind::Redact => 0.0,
   }
 }
 

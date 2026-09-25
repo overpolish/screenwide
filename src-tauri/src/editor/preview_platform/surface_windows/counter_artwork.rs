@@ -278,7 +278,7 @@ pub(crate) fn numbered_arrows(
     for (arrow, rect) in arrows.iter_mut().zip(&rects) {
       match AnnotationKind::from_raw(arrow.kind) {
         Some(AnnotationKind::Counter | AnnotationKind::Text) => {}
-        Some(AnnotationKind::Arrow) | None => continue,
+        Some(AnnotationKind::Arrow | AnnotationKind::Redact) | None => continue,
       }
       arrow.geometry.start_head[0] = rect.x;
       arrow.geometry.start_head[1] = rect.y;

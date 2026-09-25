@@ -10,7 +10,7 @@ mod gpu_decoder;
 mod still;
 mod thumbnails;
 
-pub(crate) use thumbnails::source_frame_image;
+pub(crate) use thumbnails::{each_source_frame, source_frame_image};
 
 #[path = "windows/video_playback.rs"]
 mod video_playback;
@@ -69,6 +69,7 @@ pub(super) fn present_native_frame(
           &clips,
           frame.timestamp_ms,
           frame_ms,
+          sources.held_fills.as_ref(),
         );
       }
       // Annotations are authored against the full-resolution source; this frame

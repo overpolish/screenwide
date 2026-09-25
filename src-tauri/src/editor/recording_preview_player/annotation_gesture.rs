@@ -5,7 +5,7 @@
 //! showing, and the provisional clips a drag writes through until it commits.
 
 use super::*;
-use crate::editor::annotations::AnnotationShape;
+use crate::editor::annotations::{AnnotationKind, AnnotationShape};
 
 pub(super) struct Gesture {
   pane: u32,
@@ -40,20 +40,6 @@ pub(super) fn track(pane: u32) -> AnnotationTrack {
 }
 
 impl PreviewPlayerManager {
-  /// Takes an annotation tool in hand, or puts it down, in the native
-  /// `ScreenwideAnnotationMode` the chrome is published with: nothing,
-  /// hit-test the annotations already there, or also draw a new one on empty
-  /// picture. A gesture in flight keeps the mode it began under.
-  pub(in crate::editor::recording_preview_player) fn set_annotation_tool(
-    &mut self,
-    tool: Option<&str>,
-  ) {
-    if self.annotation.gesture.is_some() {
-      return;
-    }
-    self.annotation.mode = annotation_mode(tool);
-  }
-
   pub(super) fn pane_annotations(&self, pane: u32) -> Vec<Annotation> {
     if let Some(gesture) = &self.annotation.gesture {
       if gesture.pane == pane {
@@ -140,6 +126,11 @@ impl PreviewPlayerManager {
         }
         _ => {}
       }
+      // A redaction is applied to the screen's frames alone.
+      let redacting = drawing_kind(self.annotation.mode) == Some(AnnotationKind::Redact);
+      if target == AnnotationGestureTarget::New && redacting && pane != 0 {
+        return None;
+      }
       let before = clips.read().ok()?.clone();
       // A disc's diameter and a text box's type size are in output pixels,
       // so the pane's drawn width is what turns them into source pixels.
@@ -165,8 +156,9 @@ impl PreviewPlayerManager {
       // Whether an annotation animates is not part of its dress, so the shape's
       // own constructor has no say in it: the switch's last setting is applied
       // to the fresh annotation here, where the recording's own timed
-      // annotations are made.
-      if target == AnnotationGestureTarget::New {
+      // annotations are made. A redaction always starts still, however the
+      // switch was last left, since animating shows what it hides.
+      if target == AnnotationGestureTarget::New && !redacting {
         if let Some(animated) = self.annotation.animated {
           if let Some(annotation) = working.iter_mut().find(|m| m.id == edit.selected_id()) {
             annotation.animated = animated;

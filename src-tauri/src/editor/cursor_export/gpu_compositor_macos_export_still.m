@@ -3,6 +3,7 @@
 
 #import "gpu_compositor_macos_export_private.h"
 #import "gpu_compositor_macos_generators_layered.h"
+#import "gpu_compositor_macos_redact.h"
 
 int screenwide_gpu_composite_still(
     const uint8_t *source_rgba, uint32_t source_width, uint32_t source_height,
@@ -24,6 +25,7 @@ int screenwide_gpu_composite_still(
     }
     static id<MTLDevice> device;
     static id<MTLComputePipelineState> pipeline;
+    static ScreenwideRedactPipelines *redact_pipelines;
     static id<MTLCommandQueue> queue;
     static NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *>
         *keyboard_cache;
@@ -40,11 +42,12 @@ int screenwide_gpu_composite_still(
           [library newFunctionWithName:@"compose_canvas_rgba"];
       pipeline = [device newComputePipelineStateWithFunction:function
                                                        error:&error];
+      redact_pipelines = screenwide_redact_pipelines(library);
       queue = [device newCommandQueue];
       keyboard_cache = [NSMutableDictionary dictionary];
       initialization_error = error.localizedDescription;
     });
-    if (device == nil || pipeline == nil || queue == nil) {
+    if (device == nil || pipeline == nil || redact_pipelines == nil || queue == nil) {
       return fail(error_text, error_capacity,
                   initialization_error
                       ?: @"The Metal still compositor could not be created");
@@ -100,6 +103,11 @@ int screenwide_gpu_composite_still(
     uint32_t source_dimensions[2] = {source_width, source_height};
     float time = (float)seconds;
     id<MTLCommandBuffer> commands = [queue commandBuffer];
+    // The source is this call's own copy, so it is redacted in place before
+    // the canvas pass, and every sample of it sees the covered pixels gone.
+    screenwide_encode_redactions(
+        commands, redact_pipelines, source,
+        screenwide_redactions(annotations, source_width, source_height));
     id<MTLComputeCommandEncoder> encoder = [commands computeCommandEncoder];
     [encoder setComputePipelineState:pipeline];
     [encoder setBuffer:source offset:0 atIndex:0];

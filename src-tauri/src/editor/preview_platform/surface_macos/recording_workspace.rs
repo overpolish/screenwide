@@ -13,6 +13,8 @@ use super::ffi::{
 use super::native_types::{NativeWorkspaceLayer, RecordingWorkspaceLayer};
 use super::RecordingPreviewSurface;
 use crate::editor::annotations::native::native_annotations;
+use crate::editor::annotations::redact::native::RedactSource;
+use crate::editor::annotations::snap::source_per_output;
 use crate::editor::{
   cursor_effects::{GpuArtwork, NativeGpuArtwork, NativeGpuCursor},
   media_preview, CameraOverlaySettings,
@@ -28,9 +30,22 @@ impl RecordingPreviewSurface {
     artworks: Option<&[GpuArtwork]>,
   ) -> Result<bool, String> {
     // The views below borrow these lists until the presenter has copied them.
+    // A recording's redactions carry the fills held from their clips' first
+    // frames, so all a frame adds is how large its source is drawn.
     let annotations: Vec<_> = layers
       .iter()
-      .map(|layer| native_annotations(&layer.settings.annotations))
+      .map(|layer| {
+        let size = layer.source.map_or_else(
+          || layer.source_pixels.map_or((0, 0), |(_, size)| size),
+          |source| (source.width, source.height),
+        );
+        native_annotations(
+          &layer.settings.annotations,
+          RedactSource::Video {
+            source_per_output: source_per_output(size, layer.settings.image_width),
+          },
+        )
+      })
       .collect();
     let mut native_layers = Vec::with_capacity(layers.len());
     for (layer, annotations) in layers.iter().zip(&annotations) {

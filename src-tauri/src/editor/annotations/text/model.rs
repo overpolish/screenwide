@@ -93,6 +93,9 @@ pub(crate) fn default_text_style() -> AnnotationStyle {
     align: AnnotationAlign::Left,
     color: crate::editor::annotations::model::NEW_ANNOTATION_COLOR.to_owned(),
     head: AnnotationHead::None,
+    radius: 0.0,
+    redaction: Default::default(),
+    strength: 0.0,
     width: NEW_TEXT_WIDTH,
   }
 }
@@ -115,6 +118,7 @@ pub(crate) fn new_text(
     above_camera: false,
     animated: true,
     id,
+    held: None,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Text {
       origin: AnnotationPoint {

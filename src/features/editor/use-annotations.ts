@@ -108,6 +108,22 @@ export function useAnnotations({
     );
   };
 
+  // Lay a redaction's blocks out again. The seed comes from the browser's
+  // secure generator, as a fresh redaction's does from the system's; the
+  // blocks carry nothing of the picture's layout whatever the seed.
+  const applyShuffle = () => {
+    if (!selected || selected.shape.kind !== "redact") return;
+    const shape = selected.shape;
+    const [seed] = crypto.getRandomValues(new Uint32Array(1));
+    commit(
+      annotations.map((annotation) =>
+        annotation.id === selected.id
+          ? { ...annotation, shape: { ...shape, seed } }
+          : annotation,
+      ),
+    );
+  };
+
   usePublishAnnotationSelection(
     workspace,
     selected
@@ -119,7 +135,7 @@ export function useAnnotations({
           style: selected.style,
         }
       : null,
-    { applyAngle, applyAnimated, applyReverse, applyStyle },
+    { applyAngle, applyAnimated, applyReverse, applyShuffle, applyStyle },
   );
 
   return {

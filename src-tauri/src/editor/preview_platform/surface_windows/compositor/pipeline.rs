@@ -216,6 +216,7 @@ impl Compositor {
         .ok_or_else(|| "D3D11 created no screenshot layer blend state".to_owned())?,
       pixel_shader: pixel_shader
         .ok_or_else(|| "D3D11 created no preview pixel shader".to_owned())?,
+      redactor: redact::Redactor::new(device)?,
       sampler: sampler.ok_or_else(|| "D3D11 created no preview sampler".to_owned())?,
       point_sampler: point_sampler
         .ok_or_else(|| "D3D11 created no preview point sampler".to_owned())?,

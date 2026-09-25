@@ -88,6 +88,12 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     grips.extend(snap.anchor);
     grips
   });
+  // A chosen redaction wears the layer selection's own box, grips and radius
+  // dot inside the annotation chrome.
+  let annotation_box = annotation_handles
+    .is_some()
+    .then(|| annotation::selected_redaction(state, scale))
+    .flatten();
   // An annotation gesture owns the guides for as long as it owns the chrome:
   // its candidates are the source image's own lines, not the canvas's.
   let guides = if annotation_handles.is_some() {
@@ -149,6 +155,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       guides,
       magnifier_box,
       annotation_handles.as_deref(),
+      annotation_box,
       snap.bounds,
       &snap.gaps,
       scale,

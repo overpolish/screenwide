@@ -6,6 +6,7 @@ import { LucideIcon } from "lucide-react";
 import {
   ArrowToolIcon,
   CounterToolIcon,
+  RedactToolIcon,
   TextToolIcon,
 } from "../../../components/shared/annotation-style/annotation-tool-icons";
 import { ToolPanelKind } from "../../popup-panel/store";
@@ -77,6 +78,13 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   cursor: { panel: "cursor", resetsView: true },
   frame: { panel: "frame", resetsView: true, shortcut: "F" },
   keyboard: { panel: "keyboard", resetsView: true },
+  redact: {
+    drawsOnLayer: true,
+    icon: RedactToolIcon,
+    label: "Redact",
+    name: "Redact a region",
+    shortcut: "X",
+  },
   select: { panel: "selection", resetsView: false, shortcut: "V" },
   text: {
     drawsOnLayer: true,

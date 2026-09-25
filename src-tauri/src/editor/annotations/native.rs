@@ -7,6 +7,7 @@
 //! them through a borrowed view of pointers and lengths, so no list size is
 //! baked into the boundary.
 
+use super::redact::native::RedactSource;
 use super::reveal::AnnotationReveal;
 use super::Annotation;
 use crate::editor::annotations::annotation_colour;
@@ -49,10 +50,10 @@ impl NativeAnnotation {
 }
 
 /// The side buffers every kind's variable-length data lives in: a points
-/// kind indexes `points`, a text kind indexes `text`, through its record's
-/// `data_offset` and `data_count`. Kept apart from the items so a list that
-/// is longer than one scene - the video export's clips - can share one set
-/// of buffers and pass it beside the list.
+/// kind - a pixelated redaction's zones - indexes `points`, a text kind
+/// indexes `text`, through its record's `data_offset` and `data_count`. Kept
+/// apart from the items so a list that is longer than one scene - the video
+/// export's clips - can share one set of buffers and pass it beside the list.
 #[derive(Clone, Default)]
 pub(crate) struct NativeAnnotationData {
   pub(crate) points: Vec<[f32; 2]>,
@@ -61,14 +62,34 @@ pub(crate) struct NativeAnnotationData {
 
 impl NativeAnnotationData {
   /// Write `annotation`'s variable-length data into the buffers and return
-  /// its record, with the offsets pointing here.
-  pub(crate) fn pack(&mut self, annotation: &Annotation) -> NativeAnnotation {
-    let [p0, p1, p2] = annotation.shape.draw_points(&annotation.style);
+  /// its record, with the offsets pointing here. `source` is where a
+  /// redaction reads what is under and around its box.
+  pub(crate) fn pack(
+    &mut self,
+    annotation: &Annotation,
+    source: RedactSource<'_>,
+  ) -> NativeAnnotation {
+    let [mut p0, mut p1, mut p2] = annotation.shape.draw_points(&annotation.style);
+    let fill =
+      annotation
+        .shape
+        .redaction_fill(&annotation.style, source, annotation.held.as_deref());
+    if fill.is_some() && matches!(source, RedactSource::Video { .. }) {
+      // Outward to even pixels, as the box's colour is covered in whole
+      // two-pixel samples.
+      let even = |value: f32, far: bool| {
+        let halved = value / 2.0;
+        2.0 * if far { halved.ceil() } else { halved.floor() }
+      };
+      p0 = p0.map(|value| even(value, false));
+      p2 = p2.map(|value| even(value, true));
+      p1 = p2;
+    }
     self.points.extend_from_slice(&[p0, p1, p2]);
     let text = annotation.shape.draw_text();
     let data_offset = self.text.len();
     self.text.extend_from_slice(text.as_bytes());
-    NativeAnnotation {
+    let mut record = NativeAnnotation {
       kind: annotation.shape.kind().raw(),
       head: annotation.shape.draw_head(&annotation.style),
       above_camera: u32::from(annotation.above_camera),
@@ -85,7 +106,30 @@ impl NativeAnnotationData {
       hover: 0.0,
       animated: u32::from(annotation.animated),
       reveal: annotation.reveal,
+    };
+    if let Some(fill) = fill {
+      record.color = fill.color;
+      record.flags = fill.flags;
+      record.params = fill.params;
+      record.width = fill.radius;
+      record.p3 = fill.grid.map(|count| count as f32);
+      record.data_offset = ffi_len(self.points.len());
+      record.data_count = ffi_len(fill.entries.len());
+      self.points.extend_from_slice(&fill.entries);
+      // A recording's export resolves the surface frame by frame from the
+      // timeline worked out ahead; the preview hands over each frame's own.
+      if let Some(surfaces) = annotation
+        .held
+        .as_deref()
+        .map(|held| &held.surfaces)
+        .filter(|surfaces| !surfaces.is_empty())
+      {
+        record.flags |= super::flags::SURFACES;
+        record.p1 = [self.points.len() as f32, surfaces.len() as f32];
+        self.points.extend_from_slice(surfaces);
+      }
     }
+    record
   }
 
   #[cfg(target_os = "macos")]
@@ -117,11 +161,16 @@ impl NativeAnnotations {
   }
 }
 
-pub(crate) fn native_annotations(annotations: &[Annotation]) -> NativeAnnotations {
+/// One composition's records. `source` is where its redactions read what is
+/// under and around each box.
+pub(crate) fn native_annotations(
+  annotations: &[Annotation],
+  source: RedactSource<'_>,
+) -> NativeAnnotations {
   let mut data = NativeAnnotationData::default();
   let items = annotations
     .iter()
-    .map(|annotation| data.pack(annotation))
+    .map(|annotation| data.pack(annotation, source))
     .collect();
   NativeAnnotations { items, data }
 }
@@ -178,12 +227,16 @@ mod tests {
       above_camera: true,
       animated: true,
       id: "a".to_owned(),
+      held: None,
       reveal: Default::default(),
       shape,
       style: AnnotationStyle {
         align: Default::default(),
         color: "#0000ff".to_owned(),
         head: AnnotationHead::Both,
+        radius: 0.0,
+        redaction: Default::default(),
+        strength: 0.0,
         width: 9.0,
       },
     }
@@ -196,7 +249,7 @@ mod tests {
       value: 12,
       angle: 0.5,
     })];
-    let native = native_annotations(&annotations);
+    let native = native_annotations(&annotations, RedactSource::None);
     assert_eq!(native.data.points.len(), 3);
     assert_eq!(native.data.points[0], [1.0, 2.0]);
     assert_eq!(native.data.text, b"12");
@@ -223,7 +276,7 @@ mod tests {
         item
       })
       .collect();
-    let native = native_annotations(&annotations);
+    let native = native_annotations(&annotations, RedactSource::None);
     assert_eq!(native.items.len(), 5_000);
     let last = native.items[4_999];
     assert_eq!(last.p0[0], 4_999.0);

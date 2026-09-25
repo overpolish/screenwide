@@ -94,6 +94,18 @@ impl Compositor {
     let text_view = self
       .annotation_text
       .write(device, context, &prepared.text)?;
+    // Applied before anything binds the canvas pass, whose own state it
+    // leaves behind; everything that pass needs is bound below.
+    let source_view = self
+      .redactor
+      .apply(
+        device,
+        context,
+        source,
+        &prepared.redactions,
+        source.picture.is_some(),
+      )?
+      .unwrap_or_else(|| source.view.clone());
     unsafe {
       context.OMSetRenderTargets(Some(&[Some(render_target)]), None);
       context.OMSetBlendState(
@@ -115,7 +127,7 @@ impl Compositor {
       context.PSSetShaderResources(
         0,
         Some(&[
-          Some(source.view.clone()),
+          Some(source_view),
           Some(self.cursor_view.clone()),
           camera.map(|(camera, _, _, _)| camera.view.clone()),
           Some(keyboard.as_ref().map_or_else(
@@ -141,8 +153,6 @@ impl Compositor {
         0,
         Some(&[Some(self.sampler.clone()), Some(self.point_sampler.clone())]),
       );
-      // Annotation pre-pass hook: obfuscate will sample the composed layer here.
-      // It is intentionally a no-op until that tool is implemented.
       context.Draw(3, 0);
       context.PSSetShaderResources(0, Some(&[None, None, None, None, None, None, None, None]));
       context.OMSetBlendState(None::<&ID3D11BlendState>, None, u32::MAX);

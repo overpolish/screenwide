@@ -14,19 +14,25 @@ use crate::editor::annotations::{AnnotationKind, AnnotationPoint, AnnotationShap
 
 /// Which grip of an annotation the pointer took hold of. An arrow has three
 /// grips and its shaft; a counter has one - the tail - and its disc; a text
-/// box has one - its pointer's tip - and its box.
+/// box has one - its pointer's tip - and its box; a redaction has the eight
+/// grips of a box, its radius dot and its body.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AnnotationHandle {
   Start,
   Middle,
   End,
-  /// The shaft, a counter's disc or a text box. Dragging it carries the
-  /// whole annotation.
+  /// The shaft, a counter's disc, a text box or a redaction's body.
+  /// Dragging it carries the whole annotation.
   Body,
   /// A counter's tail tip, which turns the tail around the disc, or a text
   /// box's pointer tip, which draws the pointer out of the box or pushes it
   /// back in.
   Tail,
+  /// A redaction's corner or edge grip: which of the box's sides it moves,
+  /// as the `redact::gesture::EDGE_*` bits.
+  Edges(u32),
+  /// A redaction's radius dot, which rounds its corners.
+  Radius,
 }
 
 impl AnnotationHandle {
@@ -37,10 +43,24 @@ impl AnnotationHandle {
       2 => Some(Self::End),
       3 => Some(Self::Body),
       4 => Some(Self::Tail),
+      // A box grip is its side bits past `BOX_HANDLES`. Opposite sides never
+      // move together, and a grip always moves at least one.
+      raw if (BOX_HANDLES..BOX_HANDLES + 16).contains(&raw) => {
+        let edges = raw - BOX_HANDLES;
+        let opposed = |pair: u32| edges & pair == pair;
+        (edges != 0 && !opposed(0b0011) && !opposed(0b1100)).then_some(Self::Edges(edges))
+      }
+      RADIUS_HANDLE => Some(Self::Radius),
       _ => None,
     }
   }
 }
+
+/// Where the native `ScreenwideAnnotationHandleBox` grips start: a box grip
+/// reports this plus the bits of the sides it moves.
+pub(crate) const BOX_HANDLES: u32 = 16;
+/// The native `ScreenwideAnnotationHandleRadius`, past every box grip.
+pub(crate) const RADIUS_HANDLE: u32 = BOX_HANDLES + 16;
 
 /// What the gesture acts on: an annotation being drawn, or one already there.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -71,6 +91,7 @@ pub(crate) const MODE_SELECT: u32 = 1;
 pub(crate) const MODE_ARROW: u32 = 2;
 pub(crate) const MODE_COUNTER: u32 = 3;
 pub(crate) const MODE_TEXT: u32 = 4;
+pub(crate) const MODE_REDACT: u32 = 5;
 
 /// The tool name React sends, as a mode. Anything else puts the chrome away.
 pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
@@ -78,6 +99,7 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
     Some("arrow") => MODE_ARROW,
     Some("counter") => MODE_COUNTER,
     Some("text") => MODE_TEXT,
+    Some("redact") => MODE_REDACT,
     Some("select") => MODE_SELECT,
     _ => MODE_NONE,
   }
@@ -93,6 +115,7 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
     MODE_ARROW => Some(AnnotationKind::Arrow),
     MODE_COUNTER => Some(AnnotationKind::Counter),
     MODE_TEXT => Some(AnnotationKind::Text),
+    MODE_REDACT => Some(AnnotationKind::Redact),
     _ => None,
   }
 }

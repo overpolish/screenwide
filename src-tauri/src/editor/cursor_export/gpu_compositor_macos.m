@@ -137,6 +137,16 @@ int screenwide_gpu_composite_cursor(
                                                       keyboard:keyboard
                                                     sourceTime:pts
                                                     outputTime:output_pts];
+        if (frame == nil) {
+          CVPixelBufferRelease(destination);
+          error = [NSError errorWithDomain:@"ScreenwideGPUCompositor"
+                                      code:3
+                                  userInfo:@{
+                                    NSLocalizedDescriptionKey :
+                                        @"A redaction could not be applied to a frame"
+                                  }];
+          break;
+        }
         [ring addObject:frame];
         if (ring.count > SCREENWIDE_GPU_INFLIGHT_FRAMES) {
           ScreenwideInflightFrame *oldest = ring.firstObject;

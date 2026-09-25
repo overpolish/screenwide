@@ -11,11 +11,14 @@
  * twin of `src-tauri/src/editor/annotations/model.rs`.
  */
 
+import { DEFAULT_BLUR_STRENGTH } from "../../components/shared/annotation-style/widths";
+
 import { ANNOTATION_KINDS, isAnnotationKind } from "./annotation-kinds";
 
 import type {
   AnnotationAlign,
   AnnotationHead,
+  AnnotationRedaction,
 } from "../../components/shared/annotation-style/types";
 
 /** A point in the layer source's pixel space. */
@@ -27,7 +30,17 @@ export type AnnotationStyle = {
   /** `#rrggbb` or `#rrggbbaa`, straight alpha. */
   color: string;
   head: AnnotationHead;
-  /** Stroke width, disc diameter or type size, in output pixels. */
+  /** A redaction's corner radius, as a percentage of its box's shorter side
+   * from 0 to 50; the other kinds carry zero. */
+  radius: number;
+  /** How a redaction covers what is under it; the other kinds carry the
+   * default. */
+  redaction: AnnotationRedaction;
+  /** A blurred redaction's strength, a step from 1 to 5; the other kinds
+   * carry zero. */
+  strength: number;
+  /** Stroke width, disc diameter, type size or pixelation block, in output
+   * pixels. */
   width: number;
 };
 
@@ -65,6 +78,18 @@ export type AnnotationText = {
 };
 
 /**
+ * A box that hides what is under it. `start` is its top-left corner and `end`
+ * its bottom-right, in source pixels; `seed` generates a pixelated box's
+ * blocks.
+ */
+export type AnnotationRedact = {
+  end: AnnotationPoint;
+  kind: "redact";
+  seed: number;
+  start: AnnotationPoint;
+};
+
+/**
  * A text box's pointer, held against its box so it keeps its place however
  * the box is moved, retyped or resized. `along` is where the tip sits in each
  * axis as a share of the box's half size from its centre, -1 to 1; `reach` is
@@ -78,7 +103,7 @@ export type TextPointer = {
 };
 
 export type AnnotationShape =
-  AnnotationArrow | AnnotationCounter | AnnotationText;
+  AnnotationArrow | AnnotationCounter | AnnotationRedact | AnnotationText;
 
 export type Annotation = {
   /**
@@ -101,6 +126,18 @@ const annotationHead = (value: unknown): AnnotationHead =>
 
 const annotationAlign = (value: unknown): AnnotationAlign =>
   value === "center" || value === "right" ? value : "left";
+
+const annotationRedaction = (value: unknown): AnnotationRedaction =>
+  value === "blur" ||
+  value === "color" ||
+  value === "pixelate" ||
+  value === "pixelateClassic"
+    ? value
+    : "erase";
+
+/** A finite number, or `fallback` for anything else. */
+const finiteOr = (value: unknown, fallback: number) =>
+  typeof value === "number" && Number.isFinite(value) ? value : fallback;
 
 /**
  * Which arrow a delete acts on: the one the halo is showing, and otherwise
@@ -142,6 +179,9 @@ export const validAnnotations = (value: unknown): Annotation[] => {
       align: annotationAlign(style.align),
       color: style.color,
       head: annotationHead(style.head),
+      radius: Math.min(50, Math.max(0, finiteOr(style.radius, 0))),
+      redaction: annotationRedaction(style.redaction),
+      strength: finiteOr(style.strength, DEFAULT_BLUR_STRENGTH),
       width: Math.max(0, style.width),
     };
     const common = {

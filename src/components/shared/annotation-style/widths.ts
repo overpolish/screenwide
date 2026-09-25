@@ -42,6 +42,36 @@ const ANNOTATION_TEXT_SIZES = [20, 28, 48, 80, 128];
 const DEFAULT_ANNOTATION_TEXT_SIZE = 48;
 
 /**
+ * The block sizes a securely pixelated redaction offers, in output pixels.
+ * The twin of `REDACT_BLOCK_SIZES` in
+ * `src-tauri/src/editor/annotations/redact/model.rs`.
+ */
+const ANNOTATION_REDACT_SIZES = [8, 12, 16, 24, 32];
+
+/**
+ * The block sizes classic pixelation offers, in output pixels: coarser than
+ * the secure steps, since fine ordinary blocks read as the picture itself.
+ * The first is the twin of `MIN_CLASSIC_BLOCK` in
+ * `src-tauri/src/editor/annotations/redact/cells.rs`.
+ */
+export const ANNOTATION_CLASSIC_SIZES = [16, 24, 32, 48, 64];
+
+/** The block a fresh redaction pixelates with: the second step. The twin of
+ * `NEW_REDACT_WIDTH`. */
+const DEFAULT_ANNOTATION_REDACT_SIZE = 12;
+
+/**
+ * The strengths a blurred redaction offers, weakest first: each step blurs
+ * with larger cells, the same size in every box. The twin of `BLUR_CELLS` in
+ * `src-tauri/src/editor/annotations/redact/cells.rs`, which sizes them.
+ */
+export const ANNOTATION_BLUR_STRENGTHS = [1, 2, 3, 4, 5];
+
+/** The strength a fresh blur takes: the middle step. The twin of
+ * `NEW_BLUR_STRENGTH`. */
+export const DEFAULT_BLUR_STRENGTH = 3;
+
+/**
  * How big each kind is drawn: the sizes its control offers, the one a fresh
  * annotation takes, and what the control is called. One row per kind, shared
  * because the editor's panel and the live overlay's toolbar offer the same
@@ -60,6 +90,11 @@ export const ANNOTATION_SIZES: Record<
     defaultSize: DEFAULT_ANNOTATION_COUNTER_SIZE,
     sizeLabel: "Size",
     sizes: ANNOTATION_COUNTER_SIZES,
+  },
+  redact: {
+    defaultSize: DEFAULT_ANNOTATION_REDACT_SIZE,
+    sizeLabel: "Block size",
+    sizes: ANNOTATION_REDACT_SIZES,
   },
   text: {
     defaultSize: DEFAULT_ANNOTATION_TEXT_SIZE,

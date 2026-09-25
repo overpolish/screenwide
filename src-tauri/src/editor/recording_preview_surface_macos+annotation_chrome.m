@@ -37,9 +37,16 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
   NSCursor *typing = annotation_text_cursor(surface, point);
   if (typing != nil) return typing;
   // An annotation under the pointer is something to take hold of, so the
-  // pointer says so - never the crosshair the empty picture draws with.
-  if (annotation_handle_at_point(surface, point) >= 0 ||
-      annotation_shaft_at_point(surface, point) >= 0)
+  // pointer says so - never the crosshair the empty picture draws with. A
+  // redaction's box grip resizes, and says which way.
+  NSInteger handle = annotation_handle_at_point(surface, point);
+  // The radius dot drags diagonally, as the layer selection's does.
+  if (handle == ScreenwideAnnotationHandleRadius)
+    return screenwide_region_resize_cursor(1 | 4) ?: [NSCursor arrowCursor];
+  if (handle >= ScreenwideAnnotationHandleBox)
+    return screenwide_region_resize_cursor((uint32_t)(handle - ScreenwideAnnotationHandleBox))
+        ?: [NSCursor arrowCursor];
+  if (handle >= 0 || annotation_shaft_at_point(surface, point) >= 0)
     return [NSCursor arrowCursor];
   // Empty picture: a drawing tool makes an annotation rather than picking one
   // up, and the text tool says it is about to take typing. The select tool

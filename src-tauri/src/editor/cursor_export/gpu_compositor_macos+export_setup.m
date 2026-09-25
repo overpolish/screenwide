@@ -3,6 +3,7 @@
 
 #import "gpu_compositor_macos_export_private.h"
 #import "gpu_compositor_macos_generators_layered.h"
+#import "gpu_compositor_macos_redact.h"
 
 static NSArray<AVAssetTrack *> *video_tracks(AVURLAsset *asset,
                                              NSError **error) {
@@ -166,6 +167,7 @@ reader_output(AVAssetReader *reader, AVAssetTrack *track, OSType format,
       device, library, @"overlay_keyboard_chroma", &error);
   annotation_luma_pipeline = screenwide_keyboard_pipeline(device, library, @"overlay_annotation_luma", &error);
   annotation_chroma_pipeline = screenwide_keyboard_pipeline(device, library, @"overlay_annotation_chroma", &error);
+  redact_pipelines = screenwide_redact_pipelines(library);
   camera_luma_pipeline =
       [device newComputePipelineStateWithFunction:
                   [library newFunctionWithName:@"overlay_camera_luma"]
@@ -204,6 +206,7 @@ reader_output(AVAssetReader *reader, AVAssetTrack *track, OSType format,
       canvas_luma_pipeline == nil || canvas_chroma_pipeline == nil ||
       screen_luma_pipeline == nil || screen_chroma_pipeline == nil ||
       annotation_luma_pipeline == nil || annotation_chroma_pipeline == nil ||
+      redact_pipelines == nil ||
       texture_cache == NULL)
     return fail(error_text, error_capacity,
                 error.localizedDescription

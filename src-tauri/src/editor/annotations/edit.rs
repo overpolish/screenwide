@@ -108,7 +108,9 @@ impl AnnotationEdit {
       // counter or text box was dropped whole there, so the same drag
       // carries it. Each snaps the way the same grip does on an annotation
       // already placed.
-      AnnotationGestureTarget::New => annotation.drag_new(point, &self.origin, snap),
+      AnnotationGestureTarget::New => {
+        annotation.drag_new(point, &self.origin, modifiers.shift, snap)
+      }
       AnnotationGestureTarget::Existing { handle, .. } => {
         annotation.drag_grip(handle, point, &self.origin, modifiers.shift, snap)
       }

@@ -22,6 +22,7 @@ type PublishedAnnotation = {
   applyAngle: (angle: number) => void;
   applyAnimated: (animated: boolean) => void;
   applyReverse: () => void;
+  applyShuffle: () => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
   selection: ToolPanelAnnotation | null;
 };
@@ -65,6 +66,9 @@ export function usePublishAnnotationSelection(
       },
       applyReverse: () => {
         applyRef.current.applyReverse();
+      },
+      applyShuffle: () => {
+        applyRef.current.applyShuffle();
       },
       applyStyle: (style) => {
         applyRef.current.applyStyle(style);
@@ -119,4 +123,10 @@ export const applyAnnotationAngle = (workspace: EditorKind, angle: number) => {
  * mounted to ask. */
 export const applyAnnotationReverse = (workspace: EditorKind) => {
   workspaces.get(workspace)?.applyReverse();
+};
+
+/** Lay the chosen redaction's blocks out again from a fresh seed. A no-op when
+ * the workspace has no preview mounted to ask. */
+export const applyAnnotationShuffle = (workspace: EditorKind) => {
+  workspaces.get(workspace)?.applyShuffle();
 };

@@ -46,8 +46,12 @@ pub(crate) fn drag(
     AnnotationHandle::Middle => *control = control_through_midpoint(*start, point, *end),
     // The shaft carries the arrow whole: every point travels by the same
     // delta, so the curve keeps its bend and its heads keep their aim. A
-    // counter's tail grip means nothing to an arrow and moves it likewise.
-    AnnotationHandle::Body | AnnotationHandle::Tail => {
+    // counter's tail grip or a box's grips mean nothing to an arrow and move
+    // it likewise.
+    AnnotationHandle::Body
+    | AnnotationHandle::Tail
+    | AnnotationHandle::Edges(_)
+    | AnnotationHandle::Radius => {
       let AnnotationShape::Arrow {
         start: from_start,
         control: from_control,

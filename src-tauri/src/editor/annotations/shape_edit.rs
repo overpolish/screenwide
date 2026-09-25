@@ -35,18 +35,24 @@ impl super::super::Annotation {
         super::super::counter::gesture::drag(self, handle, point, origin, shift, snap)
       }
       AnnotationKind::Text => super::super::text::gesture::drag(self, handle, point, origin, snap),
+      AnnotationKind::Redact => {
+        super::super::redact::gesture::drag(self, handle, point, origin, shift, snap)
+      }
     }
   }
 
   /// Carry the annotation this gesture has just made to `point`: an arrow is
-  /// drawn out from the press, a counter was dropped whole there, and a text
+  /// drawn out from the press, a counter was dropped whole there, a text
   /// box is carried the way a placed one is moved, so it stays centred under
-  /// the hand it was centred on. `origin` is where the gesture began.
+  /// the hand it was centred on, and a redaction is pulled out from the press
+  /// to the hand, square while `shift` is held. `origin` is where the gesture
+  /// began.
   #[cfg(any(target_os = "macos", target_os = "windows", test))]
   pub(crate) fn drag_new(
     &mut self,
     point: AnnotationPoint,
     origin: &super::super::gesture::AnnotationDragOrigin,
+    shift: bool,
     snap: Option<super::super::snap::SnapRequest<'_>>,
   ) -> super::super::snap::SnapResult {
     match self.shape.kind() {
@@ -59,6 +65,9 @@ impl super::super::Annotation {
         origin,
         snap,
       ),
+      AnnotationKind::Redact => {
+        super::super::redact::gesture::drag_new(self, point, origin, shift, snap)
+      }
     }
   }
 }
@@ -88,12 +97,14 @@ impl AnnotationKind {
         angle,
       ),
       Self::Text => super::super::text::new_text(id, point, style, source_per_output),
+      Self::Redact => super::super::redact::new_redact(id, point, style),
     }
   }
 
   /// The reveal window a clip of this kind is at: an arrow is drawn along its
   /// own path; a counter grows into place on its own quicker timing, and a
-  /// text box does the same before its pointer draws out.
+  /// text box does the same before its pointer draws out. A redaction ramps
+  /// in on the counter's timing and stays whole to its clip's last frame.
   #[cfg(any(target_os = "macos", target_os = "windows", test))]
   pub(crate) fn reveal_window(
     self,
@@ -108,6 +119,9 @@ impl AnnotationKind {
       }
       Self::Text => {
         super::super::text::reveal::text_reveal_window(elapsed_ms, duration_ms, frame_ms)
+      }
+      Self::Redact => {
+        super::super::redact::reveal::redact_reveal_window(elapsed_ms, duration_ms, frame_ms)
       }
     }
   }

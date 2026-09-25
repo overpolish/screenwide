@@ -94,8 +94,12 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     .filter(|digits| digits.chars().all(|digit| digit.is_ascii_hexdigit()))
     .ok_or_else(|| "That is not an annotation colour".to_owned())?;
   // The overlay's annotations cannot be picked up again, so a text box could
-  // never be typed into there.
-  if settings.default_shape == AnnotationKind::Text {
+  // never be typed into there. A redaction drawn on the live desktop hides
+  // nothing from the screen it covers, so the overlay offers none.
+  if matches!(
+    settings.default_shape,
+    AnnotationKind::Text | AnnotationKind::Redact
+  ) {
     return Err("The live overlay draws arrows and counters".to_owned());
   }
   if !settings.default_width.is_finite()

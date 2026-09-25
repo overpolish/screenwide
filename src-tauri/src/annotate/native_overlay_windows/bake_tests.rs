@@ -24,6 +24,9 @@ fn arrow() -> Annotation {
       align: Default::default(),
       color: "#ff0000".to_owned(),
       head: AnnotationHead::End,
+      radius: 0.0,
+      redaction: Default::default(),
+      strength: 0.0,
       width: 8.0,
     }),
   )

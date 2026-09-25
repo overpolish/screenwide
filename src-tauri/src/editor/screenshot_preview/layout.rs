@@ -126,9 +126,6 @@ pub async fn layout_screenshot_preview_surface(
     });
     #[cfg(not(target_os = "macos"))]
     let frame_owns_presentation = false;
-    let will_present =
-      !frame_owns_presentation && (!manager.has_layout || output_changed || size_changed);
-    let natural_size = (output.canvas.width, output.canvas.height);
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     let (annotation_layout, hover_cleared) = super::annotation::apply_annotation_layout(
       &mut manager,
@@ -140,6 +137,11 @@ pub async fn layout_screenshot_preview_surface(
     );
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let (annotation_layout, hover_cleared) = ((), false);
+    // The halo is drawn into the presented scene, so a tool put down under
+    // it takes a present to retire it, however little else changed.
+    let will_present = !frame_owns_presentation
+      && (!manager.has_layout || output_changed || size_changed || hover_cleared);
+    let natural_size = (output.canvas.width, output.canvas.height);
     manager.has_layout = true;
     (
       surface,
@@ -155,63 +157,28 @@ pub async fn layout_screenshot_preview_surface(
   }
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = hover_cleared;
-  let selection = selection.map(|overlay| PreviewSelection {
-    recenter_height: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.height),
-    recenter_width: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.width),
-    recenter_x: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.x),
-    recenter_y: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.y),
-    crop_mode: u32::from(overlay.crop_mode),
-    image_height: overlay.image.map_or(0.0, |image| image.height),
-    image_width: overlay.image.map_or(0.0, |image| image.width),
-    image_x: overlay.image.map_or(0.0, |image| image.x),
-    image_y: overlay.image.map_or(0.0, |image| image.y),
-    layer_id: overlay.layer_id.unwrap_or(overlay.pane_index),
-    radius_disabled: 0,
-    #[cfg(target_os = "macos")]
-    pane_index: 0,
-    #[cfg(not(target_os = "macos"))]
-    pane_index: overlay.pane_index,
-    x: overlay.rect.x,
-    y: overlay.rect.y,
-    width: overlay.rect.width,
-    height: overlay.rect.height,
-    radius_percent: overlay.radius_percent,
-    minimum_scale: 0.0,
-    maximum_scale: 0.0,
-  });
+  let selection = selection.map(preview_selection);
   let selection_targets = selection_targets.map(|targets| {
     targets
       .into_iter()
-      .map(|target| PreviewSelection {
-        recenter_height: target.recenter_bounds.map_or(0.0, |bounds| bounds.height),
-        recenter_width: target.recenter_bounds.map_or(0.0, |bounds| bounds.width),
-        recenter_x: target.recenter_bounds.map_or(0.0, |bounds| bounds.x),
-        recenter_y: target.recenter_bounds.map_or(0.0, |bounds| bounds.y),
-        crop_mode: u32::from(target.crop_mode),
-        image_height: target.image.map_or(0.0, |image| image.height),
-        image_width: target.image.map_or(0.0, |image| image.width),
-        image_x: target.image.map_or(0.0, |image| image.x),
-        image_y: target.image.map_or(0.0, |image| image.y),
-        layer_id: target.layer_id.unwrap_or(target.pane_index),
-        radius_disabled: 0,
-        #[cfg(target_os = "macos")]
-        pane_index: 0,
-        #[cfg(not(target_os = "macos"))]
-        pane_index: target.pane_index,
-        x: target.rect.x,
-        y: target.rect.y,
-        width: target.rect.width,
-        height: target.rect.height,
-        radius_percent: target.radius_percent,
-        minimum_scale: 0.0,
-        maximum_scale: 0.0,
-      })
+      .map(preview_selection)
       .collect::<Vec<_>>()
   });
-  // Install hit targets and the arrow chrome before the selected item.
-  // `set_selection` performs the draw, so everything it depends on - the
-  // targets, and which tool owns the chrome - has to be in place first, or
-  // the layer's chrome shows for a frame as the arrow tool comes in hand.
+  // On macOS every setter below would redraw the workspace at once, from the
+  // scene staged by the previous layout, and that stale frame could still
+  // reach the screen after the one the present below draws. Opening the
+  // layout first holds those draws back: the workspace has no panes until
+  // `layout_workspace` restores them, and the layout ends in one full redraw,
+  // from the present or from `finish_layout`.
+  #[cfg(target_os = "macos")]
+  {
+    surface.set_scale(scale);
+    surface.begin_layout();
+  }
+  // Install hit targets and the arrow chrome before the selected item. Off
+  // macOS `set_selection` performs the draw, so everything it depends on -
+  // the targets, and which tool owns the chrome - has to be in place first,
+  // or the layer's chrome shows for a frame as the arrow tool comes in hand.
   surface.set_selection_targets(selection_targets.as_deref());
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_annotations(
@@ -234,8 +201,11 @@ pub async fn layout_screenshot_preview_surface(
   // immediately, so the drawable would land a tick before the frame and be
   // fitted into the old rect meanwhile. A layout that will not present (a
   // pure pan) applies its frames at once, or they would never land.
-  surface.set_scale(scale);
-  surface.begin_layout();
+  #[cfg(not(target_os = "macos"))]
+  {
+    surface.set_scale(scale);
+    surface.begin_layout();
+  }
   // Open before viewport and pane geometry so a fit reset cannot publish an
   // intermediate transform against the previous layout.
   let batch = (will_present || fit_width.is_some()).then(|| surface.present_batch());
@@ -294,4 +264,31 @@ pub async fn layout_screenshot_preview_surface(
   }
   drop(batch);
   Ok(())
+}
+
+fn preview_selection(overlay: ScreenshotSelectionOverlay) -> PreviewSelection {
+  PreviewSelection {
+    recenter_height: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.height),
+    recenter_width: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.width),
+    recenter_x: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.x),
+    recenter_y: overlay.recenter_bounds.map_or(0.0, |bounds| bounds.y),
+    crop_mode: u32::from(overlay.crop_mode),
+    image_height: overlay.image.map_or(0.0, |image| image.height),
+    image_width: overlay.image.map_or(0.0, |image| image.width),
+    image_x: overlay.image.map_or(0.0, |image| image.x),
+    image_y: overlay.image.map_or(0.0, |image| image.y),
+    layer_id: overlay.layer_id.unwrap_or(overlay.pane_index),
+    radius_disabled: 0,
+    #[cfg(target_os = "macos")]
+    pane_index: 0,
+    #[cfg(not(target_os = "macos"))]
+    pane_index: overlay.pane_index,
+    x: overlay.rect.x,
+    y: overlay.rect.y,
+    width: overlay.rect.width,
+    height: overlay.rect.height,
+    radius_percent: overlay.radius_percent,
+    minimum_scale: 0.0,
+    maximum_scale: 0.0,
+  }
 }

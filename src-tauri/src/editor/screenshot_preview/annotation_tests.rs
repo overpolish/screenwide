@@ -126,6 +126,9 @@ fn a_fresh_arrow_wears_the_style_it_is_given() {
     align: Default::default(),
     color: "#ff9500".to_owned(),
     head: crate::editor::annotations::AnnotationHead::Both,
+    radius: 0.0,
+    redaction: Default::default(),
+    strength: 0.0,
     width: 12.0,
   };
   let arrow = new_arrow("a".to_owned(), A, C, Some(&style));

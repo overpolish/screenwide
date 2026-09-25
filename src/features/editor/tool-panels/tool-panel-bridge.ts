@@ -39,6 +39,8 @@ export type ToolPanelHandlers = {
   /** Turn the chosen annotation round, through the same commit path the drag on
    * the picture uses. */
   onAnnotationReverse?: () => void;
+  /** Lay the chosen redaction's blocks out again from a fresh seed. */
+  onAnnotationShuffle?: () => void;
   /** Dress the chosen annotation, a field at a time, through the same commit
    * path the drag on the picture uses. */
   onAnnotationStyleChange?: (style: Partial<AnnotationStyle>) => void;
@@ -105,6 +107,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.annotationStyle !== undefined)
     on.onAnnotationStyleChange?.(values.annotationStyle);
   if (values.reverseAnnotation) on.onAnnotationReverse?.();
+  if (values.shuffleAnnotation) on.onAnnotationShuffle?.();
   if (values.saveAnnotationColor !== undefined)
     on.onAnnotationColorSave?.(values.saveAnnotationColor);
   if (values.removeAnnotationColor !== undefined)

@@ -27,8 +27,15 @@ export type AnnotationTool = AnnotationKind | "select";
  * box's type are different measurements of different things, and eight pixels
  * of stroke would be a disc too small to hold a number. The alignment, which
  * only a text box reads, rides with the colour.
+ *
+ * A redaction keeps a dress of its own. Its colour fills a box rather than
+ * marking something out, so a box filled in the last arrow's colour, or an
+ * arrow drawn in the black a box was filled with, would both be surprises.
  */
-let lastUsed: AnnotationStyle | null = null;
+type DressGroup = "redact" | "shared";
+const lastUsed = new Map<DressGroup, AnnotationStyle>();
+const dressGroup = (kind: AnnotationKind): DressGroup =>
+  kind === "redact" ? "redact" : "shared";
 const lastSize = new Map<AnnotationKind, number>();
 /**
  * And whether it animated. This is the annotation's own property rather than
@@ -59,6 +66,9 @@ const sameDress = (
   held.align === style.align &&
   held.color === style.color &&
   held.head === style.head &&
+  held.radius === style.radius &&
+  held.redaction === style.redaction &&
+  held.strength === style.strength &&
   held.width === width;
 
 /** Remember what the last edit to an annotation of `kind` settled on. */
@@ -66,13 +76,15 @@ export const rememberAnnotationStyle = (
   style: AnnotationStyle,
   kind: AnnotationKind = "arrow",
 ) => {
+  const group = dressGroup(kind);
+  const held = lastUsed.get(group);
   if (
-    lastUsed !== null &&
-    sameDress(lastUsed, style, lastUsed.width) &&
+    held !== undefined &&
+    sameDress(held, style, held.width) &&
     lastSize.get(kind) === style.width
   )
     return;
-  lastUsed = { ...style };
+  lastUsed.set(group, { ...style });
   lastSize.set(kind, style.width);
   for (const listener of listeners) listener();
 };
@@ -96,12 +108,14 @@ export const rememberAnnotationAnimated = (animated: boolean) => {
  * been settled on and the tool's own first dress stands.
  *
  * A colour settled on for one shape dresses the others, at that shape's own
- * remembered size - or at its default, where it has none yet.
+ * remembered size - or at its default, where it has none yet. A redaction is
+ * dressed only by another redaction.
  */
 export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
-  useSyncExternalStore(subscribe, () =>
-    lastUsed === null ? null : styleFor(kind, lastUsed, lastSize.get(kind)),
-  );
+  useSyncExternalStore(subscribe, () => {
+    const held = lastUsed.get(dressGroup(kind));
+    return held === undefined ? null : styleFor(kind, held, lastSize.get(kind));
+  });
 
 /** Held outside the snapshot so an unchanged store keeps returning the same
  * object: `useSyncExternalStore` compares by identity. */

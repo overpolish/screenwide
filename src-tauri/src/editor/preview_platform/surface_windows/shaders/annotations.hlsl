@@ -398,6 +398,36 @@ float4 annotation_counter_layer(
 
 #include "annotation_text.hlsl"
 
+/// A hovered redaction's halo. The box itself was applied to the source and
+/// is not drawn here, so this is the only thing that finds an erased box on
+/// its own surface: it is white round a dark fill and black round a light
+/// one, and stronger than the halo a coloured shape wears in its own colour.
+/// The twin of `annotation_redact_halo` in the Metal annotation pass.
+static const float annotation_redact_halo_alpha = 0.5;
+
+float4 annotation_redact_halo(float4 rgba, PreviewArrow annotation, float2 canvas_point,
+                              float feather) {
+  float halo = max(annotation.hover, 0.0);
+  if (halo <= 0.0) return rgba;
+  PreviewGeometry box = annotation.geometry;
+  float2 low = float2(box.ax, box.ay);
+  float2 high = float2(box.bx, box.by);
+  float reach = halo + feather + 1.0;
+  if (any(canvas_point < low - reach) || any(canvas_point > high + reach)) return rgba;
+  float rounding = min(box.rounding, min(high.x - low.x, high.y - low.y) * 0.5);
+  float2 q = abs(canvas_point - (low + high) * 0.5) - ((high - low) * 0.5 - rounding);
+  float distance = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rounding;
+  float band = (1.0 - annotation_edge(distance, feather)) *
+      annotation_edge(distance - halo, feather);
+  float luminance = dot(float3(annotation.red, annotation.green, annotation.blue),
+                        float3(0.2126, 0.7152, 0.0722));
+  float3 tone = luminance > 0.5 ? float3(0.0, 0.0, 0.0) : float3(1.0, 1.0, 1.0);
+  float alpha = band * annotation_redact_halo_alpha;
+  rgba.rgb = tone * alpha + rgba.rgb * (1.0 - alpha);
+  rgba.a = alpha + rgba.a * (1.0 - alpha);
+  return rgba;
+}
+
 /// Draws the prepared annotations in `[first, last)` over `rgba`.
 ///
 /// The range is how the camera ordering is expressed: Rust sorts the
@@ -416,6 +446,10 @@ float4 composite_annotations(
     PreviewArrow annotation = annotation_arrows[index];
     PreviewGeometry arrow = annotation.geometry;
     float4 color = float4(annotation.red, annotation.green, annotation.blue, annotation.alpha);
+    if (annotation.kind == 3u) {
+      rgba = annotation_redact_halo(rgba, annotation, canvas_point, feather);
+      continue;
+    }
     if (color.a <= 0.0 || arrow.width <= 0.0) continue;
     if (annotation.kind == 1u) {
       rgba = annotation_counter_layer(rgba, annotation, color, canvas_point, feather,

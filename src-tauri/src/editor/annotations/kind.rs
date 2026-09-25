@@ -20,6 +20,7 @@ pub enum AnnotationKind {
   Arrow = 0,
   Counter = 1,
   Text = 2,
+  Redact = 3,
 }
 
 impl AnnotationKind {
@@ -30,6 +31,7 @@ impl AnnotationKind {
       0 => Some(Self::Arrow),
       1 => Some(Self::Counter),
       2 => Some(Self::Text),
+      3 => Some(Self::Redact),
       _ => None,
     }
   }
@@ -53,6 +55,8 @@ mod tests {
     assert_eq!(AnnotationKind::Arrow.raw(), 0);
     assert_eq!(AnnotationKind::Counter.raw(), 1);
     assert_eq!(AnnotationKind::Text.raw(), 2);
-    assert_eq!(AnnotationKind::from_raw(3), None);
+    assert_eq!(AnnotationKind::from_raw(3), Some(AnnotationKind::Redact));
+    assert_eq!(AnnotationKind::Redact.raw(), 3);
+    assert_eq!(AnnotationKind::from_raw(4), None);
   }
 }

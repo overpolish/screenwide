@@ -12,6 +12,8 @@
 #import <VideoToolbox/VideoToolbox.h>
 #include <math.h>
 
+@class ScreenwideRedactPipelines;
+
 typedef bool (*ScreenwideShouldCancel)(void *context);
 typedef void (*ScreenwideProgress)(void *context, uint64_t position_ms);
 
@@ -132,6 +134,7 @@ screenwide_export_encode_cursor_overlay(
   const ScreenwideAnnotationData *annotation_data;
   uint32_t annotation_count;
   id<MTLComputePipelineState> annotation_luma_pipeline, annotation_chroma_pipeline;
+  ScreenwideRedactPipelines *redact_pipelines;
   const ScreenwideCameraOverlay *camera_overlay;
   const ScreenwideCursorArtwork *artworks;
   uint32_t artwork_count;
@@ -149,6 +152,14 @@ screenwide_export_encode_cursor_overlay(
   id<MTLComputePipelineState> screen_chroma_pipeline;
 }
 @end
+
+/// Replaces `luma` and `chroma`, the frame's decoded planes, with copies that
+/// have the redactions showing at `source_ms` applied, for every pass after
+/// to sample in their place; leaves them where none shows. Answers NO only
+/// where the copies could not be made, when the frame must not be written.
+__attribute__((visibility("hidden"))) BOOL screenwide_export_redact_frame(
+    ScreenwideVideoExport *session, id<MTLCommandBuffer> command,
+    id<MTLTexture> __strong *luma, id<MTLTexture> __strong *chroma, uint64_t source_ms);
 
 @interface ScreenwideVideoExport (Setup)
 - (int)prepareScreen:(const char *)screen_path

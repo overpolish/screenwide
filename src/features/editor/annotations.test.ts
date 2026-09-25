@@ -21,7 +21,15 @@ const arrow = (id: string): Annotation => ({
     kind: "arrow",
     start: { x: 0, y: 0 },
   },
-  style: { align: "left", color: "#ff383c", head: "end", width: 8 },
+  style: {
+    align: "left",
+    color: "#ff383c",
+    head: "end",
+    radius: 0,
+    redaction: "erase",
+    strength: 0,
+    width: 8,
+  },
 });
 
 describe("annotationDeleteTarget", () => {
@@ -50,7 +58,15 @@ const counter = (id: string, value: number): Annotation => ({
   animated: true,
   id,
   shape: { angle: 0, center: { x: 20, y: 30 }, kind: "counter", value },
-  style: { align: "left", color: "#ff383c", head: "none", width: 56 },
+  style: {
+    align: "left",
+    color: "#ff383c",
+    head: "none",
+    radius: 0,
+    redaction: "erase",
+    strength: 0,
+    width: 56,
+  },
 });
 
 describe("renumberedCounters", () => {
@@ -120,7 +136,15 @@ describe("validAnnotations", () => {
     const box = (pointer: unknown) => ({
       ...counter("t", 1),
       shape: { kind: "text", origin: { x: 4, y: 5 }, pointer, text: "Hi" },
-      style: { align: "center", color: "#ffcc00", head: "none", width: 28 },
+      style: {
+        align: "center",
+        color: "#ffcc00",
+        head: "none",
+        radius: 0,
+        redaction: "erase",
+        strength: 0,
+        width: 28,
+      },
     });
     const out = { along: { x: 1, y: -0.5 }, reach: { x: 3, y: 0 } };
     const [read] = validAnnotations([box(out)]);
@@ -142,7 +166,14 @@ describe("validAnnotations", () => {
     const [read] = validAnnotations([
       {
         ...counter("a", 1),
-        style: { color: "#ffcc00", head: "none", width: 56 },
+        style: {
+          color: "#ffcc00",
+          head: "none",
+          radius: 0,
+          redaction: "erase",
+          strength: 0,
+          width: 56,
+        },
       },
     ]);
     expect(read.style.align).toBe("left");

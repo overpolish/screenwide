@@ -260,7 +260,15 @@ describe("a counter's aim while the editor answers", () => {
       animated: true,
       id: "counter-1",
       kind: "counter",
-      style: { align: "left", color: "#ffcc00", head: "none", width: 56 },
+      style: {
+        align: "left",
+        color: "#ffcc00",
+        head: "none",
+        radius: 0,
+        redaction: "erase",
+        strength: 0,
+        width: 56,
+      },
     },
   });
   const turning: ToolPanelDraft = {

@@ -164,6 +164,8 @@ export type ToolPanelPatch = Partial<
     positionYPercent?: number;
     sizePercent?: number;
   };
+  /** Lay the chosen redaction's blocks out again from a fresh seed. */
+  shuffleAnnotation?: true;
 };
 
 export type ToolPanelRequest =

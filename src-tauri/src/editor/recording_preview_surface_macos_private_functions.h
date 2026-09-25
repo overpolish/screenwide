@@ -161,4 +161,18 @@ NSCursor *annotation_text_cursor(ScreenwidePreviewSurface *surface, NSPoint poin
 /// The whole source image's rectangle on screen, in the flipped interaction
 /// view's coordinates.
 NSRect annotation_image_frame(ScreenwidePreviewSurface *surface);
+/// The grips one annotation shows, in display points, and which grip each
+/// is. Answers how many, never more than `SCREENWIDE_ANNOTATION_MAX_GRIPS`.
+NSUInteger annotation_grips(NSRect image, ScreenwidePreviewAnnotation item,
+                            NSPoint *handles, uint32_t *kinds);
+/// A redaction's eight box grips, in the layer selection's order, then its
+/// radius dot.
+NSUInteger annotation_redact_grips(NSRect image, ScreenwidePreviewAnnotation item,
+                                   NSPoint *handles, uint32_t *kinds);
+/// The layer selection's own box chrome around the chosen redaction. Answers
+/// whether the chosen annotation is a redaction, whose box chrome stands in
+/// for the grips `annotation_add_osc` would draw.
+BOOL annotation_redact_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
+                               NSSize size, ScreenwidePreviewSurface *surface,
+                               CGFloat scale);
 #endif

@@ -11,6 +11,7 @@ use super::ffi::screenwide_preview_surface_present_screenshot_workspace;
 use super::native_types::{NativeWorkspaceLayer, NativeWorkspacePlacement};
 use super::RecordingPreviewSurface;
 use crate::editor::annotations::native::native_annotations;
+use crate::editor::annotations::redact::native::{RedactPicture, RedactSource};
 use crate::screenshots::{native_canvas, CapturedImage, ScreenshotOutputSettings, StillOverlay};
 
 impl RecordingPreviewSurface {
@@ -30,8 +31,15 @@ impl RecordingPreviewSurface {
     // until the presenter has copied them.
     let annotations: Vec<_> = layers
       .iter()
-      .map(|(source_token, _, settings)| {
-        let mut annotations = native_annotations(&settings.annotations);
+      .map(|(source_token, source, settings)| {
+        let picture = RedactPicture::new(
+          &source.rgba,
+          source.width,
+          source.height,
+          settings.image_width,
+        );
+        let mut annotations =
+          native_annotations(&settings.annotations, RedactSource::Picture(&picture));
         if let Some((layer_id, index, width)) = hover {
           if layer_id == *source_token {
             if let Some(item) = annotations.items.get_mut(index) {

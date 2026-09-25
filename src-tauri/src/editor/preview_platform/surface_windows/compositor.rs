@@ -10,6 +10,8 @@ mod cursor_artwork;
 mod draw;
 #[path = "compositor/pipeline.rs"]
 mod pipeline;
+#[path = "compositor/redact.rs"]
+mod redact;
 #[path = "compositor/source.rs"]
 mod source;
 #[path = "compositor/submit.rs"]
@@ -136,6 +138,7 @@ pub(super) struct Compositor {
   fallback_view: ID3D11ShaderResourceView,
   layer_blend: ID3D11BlendState,
   pixel_shader: ID3D11PixelShader,
+  redactor: redact::Redactor,
   sampler: ID3D11SamplerState,
   point_sampler: ID3D11SamplerState,
   vertex_shader: ID3D11VertexShader,
@@ -146,6 +149,9 @@ pub(super) struct SourceTexture {
   pub(super) size: (u32, u32),
   texture: ID3D11Texture2D,
   view: ID3D11ShaderResourceView,
+  /// A screenshot's own pixels, which its redactions read their fills from.
+  /// A video frame has none: its fills are read from its clip's frames.
+  pub(super) picture: Option<std::sync::Arc<crate::screenshots::CapturedImage>>,
 }
 
 impl Compositor {
@@ -176,6 +182,9 @@ mod crop_preview_tests;
 #[cfg(all(test, target_os = "windows", target_arch = "x86_64"))]
 #[path = "compositor/fpu_tests.rs"]
 mod fpu_tests;
+#[cfg(all(test, target_os = "windows"))]
+#[path = "compositor/redact_tests.rs"]
+mod redact_tests;
 #[cfg(all(test, target_os = "windows"))]
 #[path = "compositor/render_test_helpers.rs"]
 mod render_test_helpers;

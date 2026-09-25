@@ -21,6 +21,9 @@ pub(crate) fn default_arrow_style() -> AnnotationStyle {
     align: Default::default(),
     color: crate::editor::annotations::model::NEW_ANNOTATION_COLOR.to_owned(),
     head: AnnotationHead::End,
+    radius: 0.0,
+    redaction: Default::default(),
+    strength: 0.0,
     width: NEW_ARROW_WIDTH,
   }
 }
@@ -38,6 +41,7 @@ pub(crate) fn new_arrow(
     above_camera: false,
     animated: true,
     id,
+    held: None,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Arrow {
       start,

@@ -231,6 +231,21 @@ mod keyboard_tests;
 #[path = "platform_macos_recenter_tests.rs"]
 mod recenter_tests;
 #[cfg(test)]
+#[path = "platform_macos_redact_attack_tests.rs"]
+mod redact_attack_tests;
+#[cfg(test)]
+#[path = "platform_macos_redact_blur_tests.rs"]
+mod redact_blur_tests;
+#[cfg(test)]
+#[path = "platform_macos_redact_classic_tests.rs"]
+mod redact_classic_tests;
+#[cfg(test)]
+#[path = "platform_macos_redact_tests.rs"]
+mod redact_tests;
+#[cfg(test)]
+#[path = "platform_macos_redact_video_tests.rs"]
+mod redact_video_tests;
+#[cfg(test)]
 #[path = "platform_macos_tests.rs"]
 mod tests;
 #[cfg(test)]

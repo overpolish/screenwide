@@ -50,6 +50,17 @@ static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
               uv_height, 1, &destination_uv_ref);
   id<MTLCommandBuffer> command = [queue commandBuffer];
   float seconds = (float)CMTimeGetSeconds(pts);
+  uint64_t annotation_ms = (uint64_t)llround(CMTimeGetSeconds(pts) * 1000.0);
+  // Redactions are applied to copies of the source planes, which every pass
+  // below samples in place of the decoded frame. A frame whose copies cannot
+  // be made is not written at all.
+  if (!screenwide_export_redact_frame(self, command, &source_y, &source_uv, annotation_ms)) {
+    CVMetalTextureRef references[] = {source_y_ref, source_uv_ref, destination_y_ref,
+                                      destination_uv_ref};
+    for (size_t index = 0; index < 4; index++)
+      if (references[index] != NULL) CFRelease(references[index]);
+    return nil;
+  }
   MTLSize canvas_group = MTLSizeMake(16, 16, 1);
   id<MTLComputeCommandEncoder> canvas_compute = [command computeCommandEncoder];
   [canvas_compute setComputePipelineState:canvas_luma_pipeline];
@@ -75,7 +86,7 @@ static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
       command, luma_pipeline, chroma_pipeline, destination_y, destination_uv,
       cursor_artwork, cursor, artworks, artwork_count, canvas, output_width,
       output_height);
-  uint64_t annotation_ms = (uint64_t)llround(CMTimeGetSeconds(pts) * 1000.0);
+
   screenwide_export_annotations(self, command, destination_y, destination_uv,
       (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms, 0);
   CVMetalTextureRef camera_ref = NULL;

@@ -150,6 +150,7 @@ fn test_sources() -> PlayerSources {
     keyboard_settings: Default::default(),
     duration_ms: 1_000,
     frames_per_second: Some(60.0),
+    held_fills: None,
     layout: layout.clone(),
     playback_layout: layout,
     playing: Default::default(),

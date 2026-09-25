@@ -66,6 +66,12 @@ impl PreviewManager {
     progress: f64,
     image_points: f64,
   ) -> Option<AnnotationHover> {
+    // With no tool in hand there is no halo, whatever a pulse report already
+    // on its way says: one landing after the tool was put down would bring
+    // back the halo that putting it down retired.
+    if self.annotation_mode == crate::editor::annotations::gesture::MODE_NONE {
+      return None;
+    }
     let index = usize::try_from(index).ok()?;
     if !image_points.is_finite() || image_points <= 0.0 {
       return None;

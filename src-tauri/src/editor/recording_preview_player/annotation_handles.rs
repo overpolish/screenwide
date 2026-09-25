@@ -4,6 +4,32 @@
 use super::*;
 
 impl PreviewPlayerManager {
+  /// Takes an annotation tool in hand, or puts it down, in the native
+  /// `ScreenwideAnnotationMode` the chrome is published with: nothing,
+  /// hit-test the annotations already there, or also draw a new one on empty
+  /// picture. A gesture in flight keeps the mode it began under. Putting the
+  /// tool down retires the halo, which the pointer may never move to retire.
+  pub(in crate::editor::recording_preview_player) fn set_annotation_tool(
+    &mut self,
+    tool: Option<&str>,
+  ) {
+    if self.annotation.gesture.is_some() {
+      return;
+    }
+    let mode = annotation_mode(tool);
+    if mode == 0 && self.annotation.mode != 0 {
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      if let Some(surface) = self
+        .sources
+        .as_ref()
+        .and_then(|sources| sources.preview_surface.as_ref())
+      {
+        surface.redraw_annotation_hover(None);
+      }
+    }
+    self.annotation.mode = mode;
+  }
+
   /// Re-presents the frame the pane already holds with the annotations the
   /// clips resolve to at `position_ms`, without touching the decoder. Reports
   /// whether there was a frame to redraw; a pane with nothing composed yet has

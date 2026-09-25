@@ -103,8 +103,14 @@ impl WindowsExportCompositor {
     }
     .map_err(|error| format!("The Windows export target could not be created: {error}"))?;
     let target = target.ok_or_else(|| "D3D11 created no Windows export target".to_owned())?;
-    let prepared =
-      super::annotation::prepared_arrows(annotations, self.source.size, settings, None, None)?;
+    let prepared = super::annotation::prepared_arrows(
+      annotations,
+      self.source.size,
+      settings,
+      None,
+      None,
+      None,
+    )?;
     self.inner.gpu.compositor.draw_with_camera(
       &self.inner.gpu.context,
       &target,

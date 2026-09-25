@@ -57,6 +57,7 @@ fn arrow(id: &str) -> Annotation {
     above_camera: false,
     animated: true,
     id: id.to_owned(),
+    held: None,
     reveal: Default::default(),
     shape: AnnotationShape::Arrow {
       start: AnnotationPoint { x: 0.0, y: 0.0 },
@@ -67,6 +68,9 @@ fn arrow(id: &str) -> Annotation {
       align: Default::default(),
       color: "#ff0000".to_owned(),
       head: AnnotationHead::End,
+      radius: 0.0,
+      redaction: Default::default(),
+      strength: 0.0,
       width: 6.0,
     },
   }

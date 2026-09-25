@@ -71,18 +71,32 @@ pub(super) fn render_video(
     .saturating_mul(10_000);
   // Annotations are authored against the source at its own scale while the
   // stroke follows the output, exactly as `timed_annotations::for_request`
-  // prepares them for the Metal export. Scaled once rather than per frame.
-  let annotation_clips: Vec<_> = request
+  // prepares them for the Metal export. Scaled once rather than per frame. A
+  // redaction's width is its block, which covers the source rather than
+  // drawing on the output, so it keeps its size in source pixels.
+  let mut annotation_clips: Vec<_> = request
     .timeline
     .map_or(&[][..], |timeline| timeline.annotation_clips())
     .iter()
     .map(|clip| {
       let mut clip = clip.clone();
-      clip.annotation.style.width *= f64::from(request.video.resolution_scale_percent)
-        / f64::from(request.video.source_scale_percent.max(1));
+      if clip.annotation.shape.kind() != crate::editor::annotations::AnnotationKind::Redact {
+        clip.annotation.style.width *= f64::from(request.video.resolution_scale_percent)
+          / f64::from(request.video.source_scale_percent.max(1));
+      }
       clip
     })
     .collect();
+  // The screen's redactions take the fills read from their clips' frames:
+  // a secure pixelation's zones from its first, and the surface across it.
+  if request.annotation_track == crate::editor::annotations::timing::AnnotationTrack::Primary {
+    crate::editor::recording_preview_player::held_surfaces::attach_for_export(
+      request.screen,
+      request.duration_ms,
+      &mut annotation_clips,
+      request.output.image_width,
+    );
+  }
   loop {
     if request.cancelled.load(Ordering::Acquire) {
       let _ = std::fs::remove_file(path);
@@ -133,6 +147,19 @@ pub(super) fn render_video(
         )
       })
     });
+    let mut annotations = crate::editor::annotations::timing::revealed_annotations(
+      &annotation_clips,
+      request.annotation_track,
+      position_ms,
+      // How much source time this frame covers, which is the window a
+      // moving annotation smears over.
+      next_pts_100ns.saturating_sub(pts_100ns).max(0) as f32 / 10_000.0,
+    );
+    crate::editor::recording_preview_player::held_surfaces::resolve_surfaces(
+      &mut annotations,
+      &annotation_clips,
+      position_ms,
+    );
     let texture = compositor.compose_with_camera(
       &current.texture,
       current.subresource,
@@ -151,14 +178,7 @@ pub(super) fn render_video(
         seconds: position_ms as f64 / 1_000.0,
       },
       camera_frame,
-      &crate::editor::annotations::timing::revealed_annotations(
-        &annotation_clips,
-        request.annotation_track,
-        position_ms,
-        // How much source time this frame covers, which is the window a
-        // moving annotation smears over.
-        next_pts_100ns.saturating_sub(pts_100ns).max(0) as f32 / 10_000.0,
-      ),
+      &annotations,
     )?;
     sink.write(
       &texture,

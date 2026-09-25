@@ -21,7 +21,15 @@ const arrow = (id: string): Annotation => ({
     kind: "arrow",
     start: { x: 0, y: 0 },
   },
-  style: { align: "left", color: "#ff383c", head: "end", width: 8 },
+  style: {
+    align: "left",
+    color: "#ff383c",
+    head: "end",
+    radius: 0,
+    redaction: "erase",
+    strength: 0,
+    width: 8,
+  },
 });
 
 const workspace = (): ScreenshotWorkspaceOutputSettings => {

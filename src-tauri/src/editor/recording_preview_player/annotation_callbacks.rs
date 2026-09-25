@@ -133,8 +133,11 @@ pub(crate) fn install(
       // camera can hold the selection while the pointer rests on an arrow over
       // the screen. `annotation_targets` reports each annotation beside the
       // pane it was drawn over, in the order the grips were published.
+      // With no tool in hand there is no halo, whatever a pulse report
+      // already on its way says.
       let halo = usize::try_from(index)
         .ok()
+        .filter(|_| manager.annotation.mode != 0)
         .and_then(|index| {
           let targets = manager.annotation_targets();
           let (pane, _) = targets.get(index)?;

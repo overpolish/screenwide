@@ -14,6 +14,7 @@ import type {
   AnnotationArrow,
   AnnotationCounter,
   AnnotationPoint,
+  AnnotationRedact,
   AnnotationShape,
   AnnotationText,
   TextPointer,
@@ -79,6 +80,9 @@ const textPointer = (value: unknown): TextPointer => {
  */
 type AnnotationKindRow<Shape extends AnnotationShape> =
   (typeof ANNOTATION_SIZES)[AnnotationKind] & {
+    /** Whether it draws itself in over its clip, which is what the panel's
+     * Animate switch offers. */
+    animates: boolean;
     drawInMs: number;
     /** Whether it lines up lines of text. */
     hasAlign: boolean;
@@ -86,6 +90,8 @@ type AnnotationKindRow<Shape extends AnnotationShape> =
     hasAngle: boolean;
     /** Whether it carries heads to choose between. */
     hasHead: boolean;
+    /** Whether it hides what is under it, and so offers the redaction modes. */
+    hasRedaction: boolean;
     /** What the timeline lane calls one, `index` being its place in the lane. */
     laneLabel: (shape: Shape, index: number) => string;
     /** The shape as stored, or null where the compositor could not place it. */
@@ -101,10 +107,12 @@ export const ANNOTATION_KINDS: {
 } = {
   arrow: {
     ...ANNOTATION_SIZES.arrow,
+    animates: true,
     drawInMs: ANNOTATION_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: false,
     hasHead: true,
+    hasRedaction: false,
     // An arrow has no name of its own, so it is called by its place in the
     // lane.
     laneLabel: (_shape, index) => `Arrow ${String(index + 1)}`,
@@ -121,12 +129,14 @@ export const ANNOTATION_KINDS: {
   },
   counter: {
     ...ANNOTATION_SIZES.counter,
+    animates: true,
     drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: true,
     // A counter is a disc with a number in it, which leaves it no head to
     // choose and nothing to reverse.
     hasHead: false,
+    hasRedaction: false,
     laneLabel: (shape) => `Counter ${String(shape.value)}`,
     parseShape: (value) => {
       const shape = (value ?? {}) as Partial<AnnotationCounter>;
@@ -143,14 +153,44 @@ export const ANNOTATION_KINDS: {
     },
     reversible: false,
   },
+  redact: {
+    ...ANNOTATION_SIZES.redact,
+    // A redaction ramps in on a counter's timing and never leaves. It starts
+    // without the ramp, since a box arriving shows what it hides until it
+    // has.
+    animates: true,
+    drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
+    hasAlign: false,
+    hasAngle: false,
+    hasHead: false,
+    hasRedaction: true,
+    laneLabel: (_shape, index) => `Redaction ${String(index + 1)}`,
+    parseShape: (value) => {
+      const shape = (value ?? {}) as Partial<AnnotationRedact>;
+      const start = annotationPoint(shape.start);
+      const end = annotationPoint(shape.end);
+      const seed = shape.seed;
+      return start &&
+        end &&
+        typeof seed === "number" &&
+        Number.isInteger(seed) &&
+        seed >= 0 &&
+        seed <= 0xffffffff
+        ? { end, kind: "redact", seed, start }
+        : null;
+    },
+    reversible: false,
+  },
   text: {
     ...ANNOTATION_SIZES.text,
+    animates: true,
     // The box grows into place the way a counter does, and then its pointer
     // draws out of it.
     drawInMs: ANNOTATION_TEXT_DRAW_IN_MS,
     hasAlign: true,
     hasAngle: false,
     hasHead: false,
+    hasRedaction: false,
     // A box is called by what it says: its first line, which the lane
     // truncates to the room it has, or by its place when that line is empty.
     laneLabel: (shape, index) => {
@@ -178,9 +218,13 @@ export const isAnnotationKind = (value: unknown): value is AnnotationKind =>
   typeof value === "string" && value in ANNOTATION_KINDS;
 
 /** How long `annotation` takes to arrive: a counter grows into place far
- * quicker than an arrow draws itself. */
+ * quicker than an arrow draws itself. A redaction that does not animate is
+ * whole from its clip's first frame, so its clip starts where it is placed
+ * rather than reaching back. */
 export const annotationDrawInMs = (annotation: Annotation) =>
-  ANNOTATION_KINDS[annotation.shape.kind].drawInMs;
+  annotation.shape.kind === "redact" && !annotation.animated
+    ? 0
+    : ANNOTATION_KINDS[annotation.shape.kind].drawInMs;
 
 /** What the timeline lane calls `annotation`, `index` being its place there. */
 export const annotationLaneLabel = (annotation: Annotation, index: number) => {

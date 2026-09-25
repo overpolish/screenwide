@@ -40,6 +40,14 @@ pub enum AnnotationShape {
     pointer: super::text::model::TextPointer,
     text: String,
   },
+  /// A box that hides what is under it. `start` is its top-left corner and
+  /// `end` its bottom-right, in source pixels; `seed` generates a pixelated
+  /// box's blocks.
+  Redact {
+    start: AnnotationPoint,
+    end: AnnotationPoint,
+    seed: u32,
+  },
 }
 
 impl AnnotationShape {
@@ -49,6 +57,7 @@ impl AnnotationShape {
       Self::Arrow { .. } => AnnotationKind::Arrow,
       Self::Counter { .. } => AnnotationKind::Counter,
       Self::Text { .. } => AnnotationKind::Text,
+      Self::Redact { .. } => AnnotationKind::Redact,
     }
   }
 
@@ -66,6 +75,7 @@ impl AnnotationShape {
       } => [*start, *control, *end],
       Self::Counter { center, .. } => [*center; 3],
       Self::Text { origin, .. } => [*origin; 3],
+      Self::Redact { start, end, .. } => [*start, *end, *end],
     }
   }
 
@@ -82,6 +92,7 @@ impl AnnotationShape {
       Self::Text {
         origin, pointer, ..
       } => super::text::model::placed(*origin, pointer),
+      Self::Redact { start, end, .. } => super::redact::model::placed(*start, *end),
     }
   }
 
@@ -119,6 +130,11 @@ impl AnnotationShape {
         pointer: *pointer,
         text: text.clone(),
       },
+      Self::Redact { start, end, seed } => Self::Redact {
+        start: map(*start),
+        end: map(*end),
+        seed: *seed,
+      },
     }
   }
 
@@ -132,7 +148,9 @@ impl AnnotationShape {
         control,
         end,
       } => super::arrow::bend::arrow_bend(*start, *control, *end).clamped(),
-      Self::Counter { .. } | Self::Text { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
+      Self::Counter { .. } | Self::Text { .. } | Self::Redact { .. } => {
+        super::arrow::bend::ArrowBend::STRAIGHT
+      }
     }
   }
 
@@ -152,6 +170,7 @@ impl AnnotationShape {
         pointer,
         text,
       } => super::text::native::draw_points(*origin, pointer, text, style),
+      Self::Redact { start, end, .. } => super::redact::native::draw_points(*start, *end),
     }
   }
 
@@ -166,6 +185,7 @@ impl AnnotationShape {
         super::AnnotationHead::Both => 2,
       },
       Self::Text { .. } => style.align.raw(),
+      Self::Redact { .. } => 0,
     }
   }
 
@@ -174,7 +194,7 @@ impl AnnotationShape {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(crate) fn draw_text(&self) -> std::borrow::Cow<'_, str> {
     match self {
-      Self::Arrow { .. } => std::borrow::Cow::Borrowed(""),
+      Self::Arrow { .. } | Self::Redact { .. } => std::borrow::Cow::Borrowed(""),
       Self::Counter { value, .. } => std::borrow::Cow::Owned(value.to_string()),
       Self::Text { text, .. } => std::borrow::Cow::Borrowed(text),
     }
@@ -203,6 +223,9 @@ impl AnnotationShape {
         pointer,
         text,
       } => super::text::handles::grips(*origin, pointer, text, style, index, source, image_width),
+      Self::Redact { start, end, .. } => {
+        super::redact::handles::grips(*start, *end, style.radius, index, source)
+      }
     }
   }
 
@@ -222,6 +245,25 @@ impl AnnotationShape {
       Self::Text { origin, text, .. } => {
         super::text::snap::field_box(*origin, text, width, source_per_output)
       }
+      Self::Redact { start, end, .. } => super::redact::snap::field_box(*start, *end),
+    }
+  }
+
+  /// The fill, flags and parameters a redaction's record carries over the
+  /// picture it covers; `None` for every kind that is drawn rather than
+  /// applied to the source.
+  #[cfg(any(target_os = "macos", target_os = "windows", test))]
+  pub(crate) fn redaction_fill(
+    &self,
+    style: &super::AnnotationStyle,
+    source: super::redact::native::RedactSource<'_>,
+    held: Option<&super::redact::held::HeldFill>,
+  ) -> Option<super::redact::native::RedactFill> {
+    match self {
+      Self::Redact { start, end, seed } => Some(super::redact::native::fill(
+        *start, *end, *seed, style, source, held,
+      )),
+      Self::Arrow { .. } | Self::Counter { .. } | Self::Text { .. } => None,
     }
   }
 }

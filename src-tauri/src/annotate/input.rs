@@ -97,15 +97,21 @@ fn drawing() -> MutexGuard<'static, Option<Stroke>> {
 /// The dress an annotation of `shape` is drawn in. An arrow's stroke and a
 /// counter's disc are different measurements of different things, so the width
 /// comes from the setting that belongs to the shape. The overlay offers no
-/// text tool, and its settings refuse one, so a text box never reaches here.
+/// text or redaction tool, and its settings refuse both, so neither ever
+/// reaches here.
 fn style(shape: AnnotationKind) -> AnnotationStyle {
   let settings = super::settings::current();
   AnnotationStyle {
     align: Default::default(),
     color: settings.default_color,
     head: settings.default_head,
+    radius: 0.0,
+    redaction: Default::default(),
+    strength: 0.0,
     width: match shape {
-      AnnotationKind::Arrow | AnnotationKind::Text => settings.default_width,
+      AnnotationKind::Arrow | AnnotationKind::Text | AnnotationKind::Redact => {
+        settings.default_width
+      }
       AnnotationKind::Counter => settings.default_counter_size,
     },
   }
@@ -133,7 +139,7 @@ fn annotation(stroke: &Stroke, style: &AnnotationStyle) -> Option<Annotation> {
       Some(style),
       Some(stroke.angle),
     )),
-    AnnotationKind::Text => None,
+    AnnotationKind::Text | AnnotationKind::Redact => None,
   }
 }
 
@@ -144,7 +150,7 @@ fn is_drawn(stroke: &Stroke) -> bool {
   match stroke.shape {
     AnnotationKind::Arrow => stroke.start != stroke.end,
     AnnotationKind::Counter => true,
-    AnnotationKind::Text => false,
+    AnnotationKind::Text | AnnotationKind::Redact => false,
   }
 }
 

@@ -4,8 +4,8 @@
 //! Annotation documents and editing, shared by still and timed workspaces.
 //!
 //! A tool's shape lives in one module under this one ([`arrow`],
-//! [`counter`], [`text`]) and nothing else branches on which kind an
-//! annotation is.
+//! [`counter`], [`text`], [`redact`]) and nothing else branches on which
+//! kind an annotation is.
 //! Adding a tool is therefore:
 //!
 //! - one module here, with the `model`, `gesture`, `handles`, `native`,
@@ -24,7 +24,8 @@ pub(crate) mod model;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use model::annotation_colour;
 pub(crate) use model::{
-  Annotation, AnnotationAlign, AnnotationHead, AnnotationPoint, AnnotationStyle,
+  Annotation, AnnotationAlign, AnnotationHead, AnnotationPoint, AnnotationRedaction,
+  AnnotationStyle,
 };
 
 /// What an annotation is, and every per-kind branch there is.
@@ -61,6 +62,8 @@ pub(crate) mod gesture;
 mod gesture_tests;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod handles;
+/// The redaction tool's own half of the model.
+pub(crate) mod redact;
 /// Where a gesture's positions land while the positional modifier is held.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod snap;

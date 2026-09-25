@@ -15,6 +15,7 @@ use super::counter::geometry::prepare_counter;
 use super::counter::silhouette::prepared_counter_distance;
 use super::exposure::annotation_travel;
 use super::geometry::ArrowGeometry;
+use super::redact::geometry::{prepare_redact, redact_distance};
 use super::reveal::AnnotationReveal;
 use super::text::geometry::{prepare_text, text_distance};
 use super::AnnotationKind;
@@ -60,6 +61,7 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
     Some(AnnotationKind::Text) => {
       prepare_text([p0x, p0y], [p1x, p1y], [p2x, p2y], width, head, reveal)
     }
+    Some(AnnotationKind::Redact) => prepare_redact([p0x, p0y], [p2x, p2y], width),
     None => ArrowGeometry::default(),
   };
 }
@@ -125,6 +127,7 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
       prepared_counter_distance((f64::from(px), f64::from(py)), geometry) as f32
     }
     Some(AnnotationKind::Text) => text_distance([px, py], geometry),
+    Some(AnnotationKind::Redact) => redact_distance([px, py], geometry),
     None => f32::INFINITY,
   }
 }

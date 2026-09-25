@@ -89,6 +89,7 @@ mod tests {
       above_camera: false,
       animated: true,
       id: "arrow".to_owned(),
+      held: None,
       reveal: Default::default(),
       shape: AnnotationShape::Arrow {
         start: AnnotationPoint { x: 20.0, y: 100.0 },
@@ -99,6 +100,9 @@ mod tests {
         align: Default::default(),
         color: "#ff0000".to_owned(),
         head: AnnotationHead::default(),
+        radius: 0.0,
+        redaction: Default::default(),
+        strength: 0.0,
         width,
       },
     }

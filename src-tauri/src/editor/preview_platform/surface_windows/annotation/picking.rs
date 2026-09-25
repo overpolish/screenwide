@@ -13,7 +13,6 @@ use crate::editor::annotations::arrow::distance::prepared_arrow_distance;
 use crate::editor::annotations::arrow::geometry::prepare_arrow;
 use crate::editor::annotations::counter::silhouette::counter_distance;
 use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::gesture::MODE_TEXT;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::text::geometry::{prepare_text, text_distance};
 use crate::editor::annotations::AnnotationPoint;
@@ -96,6 +95,9 @@ fn grip_at_point(
   item: &NativeAnnotationHandles,
   point: (f64, f64),
 ) -> Option<u32> {
+  if item.shape_kind() == AnnotationKind::Redact {
+    return super::redact_chrome::grip_at(image, item, point);
+  }
   let grips = item_grips(image, item);
   let found = grips
     .iter()
@@ -108,7 +110,7 @@ fn grip_at_point(
     // pointer - rather than an arrow's three, so the grip it reports is the
     // tail rather than the start.
     AnnotationKind::Counter | AnnotationKind::Text => HANDLE_TAIL,
-    AnnotationKind::Arrow => found,
+    AnnotationKind::Arrow | AnnotationKind::Redact => found,
   })
 }
 
@@ -132,11 +134,16 @@ pub(super) fn text_geometry(
   )
 }
 
-/// The grips one annotation shows, in display points: an arrow's three, or the
-/// tip of a counter's tail. The tail is placed here rather than sent because a
-/// normalised offset is a different length in each axis on a picture that is
-/// not square, while display points are isotropic.
-fn item_grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> Vec<(f64, f64)> {
+/// The grips one annotation shows as discs, in display points: an arrow's
+/// three, and the tip of a counter's tail or of a text box's pointer. A
+/// redaction's are the selection box's own, which `redact_chrome` draws and
+/// hits. The tail is placed here rather than sent because a normalised
+/// offset is a different length in each axis on a picture that is not square,
+/// while display points are isotropic.
+pub(super) fn item_grips(
+  image: PreviewSurfaceRect,
+  item: &NativeAnnotationHandles,
+) -> Vec<(f64, f64)> {
   let centre = display_point(image, item.start_x, item.start_y);
   match item.shape_kind() {
     AnnotationKind::Counter => {
@@ -157,6 +164,7 @@ fn item_grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> Vec<
       let geometry = text_geometry(image, item);
       vec![(f64::from(geometry.c[0]), f64::from(geometry.c[1]))]
     }
+    AnnotationKind::Redact => Vec::new(),
     AnnotationKind::Arrow => vec![
       centre,
       display_point(image, item.middle_x, item.middle_y),
@@ -169,55 +177,6 @@ fn item_grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> Vec<
 pub(super) fn handle_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<u32> {
   let item = *selected_item(state)?;
   grip_at_point(image_frame(state)?, &item, point)
-}
-
-/// The chosen arrow's three grips, in device pixels, for the chrome to draw.
-/// Empty when no arrow is chosen or the arrow tool has no say, which is what
-/// leaves the layer's own chrome standing.
-pub(crate) fn selected_grips(state: &SurfaceState, scale: f64) -> Vec<[f32; 2]> {
-  if state.annotation.mode == MODE_NONE {
-    return Vec::new();
-  }
-  let Some(item) = selected_item(state).copied() else {
-    return Vec::new();
-  };
-  let Some(image) = image_frame(state) else {
-    return Vec::new();
-  };
-  item_grips(image, &item)
-    .into_iter()
-    .map(|(x, y)| [(x * scale) as f32, (y * scale) as f32])
-    .collect()
-}
-
-/// Whether the arrow chrome is what is on screen. The arrow tool always
-/// draws its own chrome; the select tool only once it is holding an arrow, so
-/// an ordinary layer selection is untouched. The twin of
-/// `annotation_owns_chrome`.
-pub(crate) fn owns_chrome(state: &SurfaceState) -> bool {
-  drawing_kind(state.annotation.mode).is_some()
-    || (state.annotation.mode != MODE_NONE && state.annotation.selected >= 0)
-}
-
-/// The cursor the arrow tool asks for over `point`, or `None` when the
-/// choice belongs to the layer underneath. The twin of `annotation_cursor`.
-pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<editor::CursorKind> {
-  if state.annotation.mode == MODE_NONE {
-    return None;
-  }
-  if super::typing::over_box(state, point) {
-    return Some(editor::CursorKind::IBeam);
-  }
-  if handle_at_point(state, point).is_some() || shaft_at_point(state, point).is_some() {
-    return Some(editor::CursorKind::Arrow);
-  }
-  // Empty picture: the text tool takes typing, a drawing tool draws.
-  if state.annotation.mode == MODE_TEXT {
-    return Some(editor::CursorKind::IBeam);
-  }
-  drawing_kind(state.annotation.mode)
-    .is_some()
-    .then_some(editor::CursorKind::Crosshair)
 }
 
 /// How far a point is from one arrow's drawn shape, in display points: its
@@ -250,6 +209,7 @@ fn arrow_distance(
         &text_geometry(image, item),
       );
     }
+    AnnotationKind::Redact => return super::redact_chrome::distance(image, item, point),
     AnnotationKind::Arrow => {}
   }
   let middle = display_point(image, item.middle_x, item.middle_y);

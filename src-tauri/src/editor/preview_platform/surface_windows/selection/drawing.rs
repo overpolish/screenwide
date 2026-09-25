@@ -23,6 +23,9 @@ impl SelectionOverlay {
     // hand and nothing chosen. The layer's own chrome stands down for as long
     // as it does, matching `annotation_owns_chrome`; `None` leaves it up.
     annotation_handles: Option<&[[f32; 2]]>,
+    // The chosen redaction's box in device pixels and its radius
+    // percentage, drawn as the layer selection draws its own.
+    annotation_box: Option<([f32; 4], f64)>,
     // The element an arrow's tip has snapped to, outlined a device pixel
     // wide so the anchor it took reads as part of that element.
     annotation_bounds: Option<[f32; 4]>,
@@ -91,6 +94,16 @@ impl SelectionOverlay {
       // guides and the element outline use.
       for bar in annotation_gaps {
         osc_gpu::add_pixel_aligned_quad(&mut vertices, view, logical_rect(*bar, scale), scale, 5);
+      }
+      if let Some((frame, radius_percent)) = annotation_box {
+        osc_gpu::add_selection(
+          &mut vertices,
+          view,
+          logical_rect(frame, scale),
+          scale,
+          radius_percent,
+          true,
+        );
       }
       let points = annotation_handles
         .iter()

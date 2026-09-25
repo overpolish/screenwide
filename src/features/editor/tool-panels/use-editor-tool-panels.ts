@@ -1,19 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  withAnnotationColor,
-  withoutAnnotationColor,
-} from "../../../components/shared/annotation-style/palette";
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { useEditableGeneralSettings } from "../../settings/use-general-settings";
-import {
-  applyAnnotationAngle,
-  applyAnnotationAnimated,
-  applyAnnotationReverse,
-  applyAnnotationStyle,
-  useAnnotationSelection,
-} from "../annotation-channel";
+import { useAnnotationSelection } from "../annotation-channel";
 import { useRestoreRecordingKeyboardShortcuts } from "../components/use-restore-recording-keyboard-shortcuts";
 import { keyboardMaximumSizePercent } from "../keyboard-effect-geometry";
 import {
@@ -39,6 +29,7 @@ import {
   RecordingVideoTrackId,
 } from "../types";
 
+import { annotationPanelHandlers } from "./annotation-handlers";
 import { cropPanelHandlers, editorCropTarget } from "./crop-target";
 import { editorFrameTarget, framePanelHandlers } from "./frame-target";
 import {
@@ -227,28 +218,9 @@ export function useEditorToolPanels({
         null,
     },
     {
-      onAnnotationAngleChange: (angle) => {
-        applyAnnotationAngle(workspace, angle);
-      },
-      onAnnotationAnimatedChange: (animated) => {
-        applyAnnotationAnimated(workspace, animated);
-      },
-      onAnnotationColorRemove: (color) => {
-        applyGeneralSettings({
-          annotationColors: withoutAnnotationColor(annotationColors, color),
-        });
-      },
-      onAnnotationColorSave: (color) => {
-        applyGeneralSettings({
-          annotationColors: withAnnotationColor(annotationColors, color),
-        });
-      },
-      onAnnotationReverse: () => {
-        applyAnnotationReverse(workspace);
-      },
-      onAnnotationStyleChange: (style) => {
-        applyAnnotationStyle(workspace, style);
-      },
+      ...annotationPanelHandlers(workspace, annotationColors, (colors) => {
+        applyGeneralSettings({ annotationColors: colors });
+      }),
       onBackgroundPresetRemove: (id) => {
         setBackgroundPresets(
           backgroundPresets.filter((preset) => preset.id !== id),
