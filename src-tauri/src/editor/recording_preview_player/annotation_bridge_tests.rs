@@ -32,6 +32,8 @@ fn manager() -> PreviewPlayerManager {
     held_fills: None,
     layout: layout.clone(),
     playback_layout: layout,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    pins: None,
     playing: Default::default(),
     video_muted: Default::default(),
     preview_surface: None,
@@ -211,6 +213,7 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
     .write()
     .unwrap()
     .push(RecordingAnnotationClip {
+      pin: None,
       annotation,
       track_id: AnnotationTrack::Primary,
       start_ms: 0,

@@ -189,6 +189,7 @@ export function useRecordingPreviewTransport(
   );
   const annotations = useRecordingAnnotations({
     edit: annotationEdit,
+    getPositionMs: player.getPositionMs,
     onEdit: (next) => onRecordingTimelineEditChange?.(next),
     onSelectTrack: (track) => {
       if (player.isPlaying) player.pause();

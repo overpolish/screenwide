@@ -7,6 +7,11 @@ import { Text } from "../../../components/base/text/text";
 import { FeatureStoryStage } from "../../../storybook/feature-story-stage";
 import { Annotation } from "../annotations";
 import { formatDuration } from "../duration";
+import {
+  clearedPinCorrections,
+  pinnedClip,
+  unpinnedClip,
+} from "../recording-annotation-pins";
 import { RecordingAnnotationClip } from "../recording-annotations";
 import { createRecordingTimelineEdit } from "../recording-timeline-edit";
 
@@ -45,6 +50,32 @@ const arrow = (
   trackId: "primary",
 });
 
+/** Pinning as the editor does it, pinned where each annotation was placed
+ * since a story has no playhead in source time. */
+const pinning = (
+  setClips: (
+    change: (clips: RecordingAnnotationClip[]) => RecordingAnnotationClip[],
+  ) => void,
+) => {
+  const withClip =
+    (change: (clip: RecordingAnnotationClip) => RecordingAnnotationClip) =>
+    (id: string) => {
+      setClips((clips) =>
+        clips.map((clip) => (clip.annotation.id === id ? change(clip) : clip)),
+      );
+    };
+  return {
+    onClearPinCorrections: withClip((clip) =>
+      clip.pin ? { ...clip, pin: clearedPinCorrections(clip.pin) } : clip,
+    ),
+    onPinnedChange: (id: string, pinned: boolean) => {
+      withClip((clip) => (pinned ? pinnedClip(clip, -1) : unpinnedClip(clip)))(
+        id,
+      );
+    },
+  };
+};
+
 function Preview() {
   const [clips, setClips] = useState(() => [
     arrow("arrow-a", 8_000, 31_000),
@@ -67,6 +98,7 @@ function Preview() {
           ],
         }}
         onChange={setClips}
+        {...pinning(setClips)}
         onSeek={setPosition}
         onSelect={setSelectedId}
         selectedId={selectedId}
@@ -109,4 +141,56 @@ export const Empty: Story = {
       />
     </div>
   ),
+};
+
+/** Two pinned arrows. The one in hand shows where it was pinned and put
+ * right, a stretch it was followed poorly in to check, and a stretch its
+ * content was off the frame; the other is still being tracked. */
+export const Pinned: Story = {
+  render: function PinnedLane() {
+    const [clips, setClips] = useState<RecordingAnnotationClip[]>(() => [
+      {
+        ...arrow("arrow-a", 4_000, 40_000),
+        pin: {
+          keyframes: [
+            { dx: 0, dy: 0, ms: 10_000 },
+            { dx: 12, dy: -30, ms: 26_000 },
+          ],
+          pinnedMs: 10_000,
+        },
+      },
+      {
+        ...arrow("arrow-b", 50_000, 90_000),
+        pin: { keyframes: [{ dx: 0, dy: 0, ms: 60_000 }], pinnedMs: 60_000 },
+      },
+    ]);
+    const [selectedId, setSelectedId] = useState<string | null>("arrow-a");
+    return (
+      <div className="p-window-inset">
+        <RecordingAnnotationLane
+          clips={clips}
+          edit={createRecordingTimelineEdit(1)}
+          onChange={setClips}
+          {...pinning(setClips)}
+          onSelect={setSelectedId}
+          pinStatus={
+            new Map([
+              [
+                "arrow-a",
+                {
+                  hidden: [[30_000, 34_000]],
+                  progress: null,
+                  weak: [[17_000, 21_000]],
+                },
+              ],
+              ["arrow-b", { hidden: [], progress: 0.4, weak: [] }],
+            ])
+          }
+          selectedId={selectedId}
+          sourceDurationMs={120_000}
+          viewport={fitTimelineViewport()}
+        />
+      </div>
+    );
+  },
 };

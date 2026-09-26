@@ -19,6 +19,7 @@ mod thumbnails;
 mod video;
 
 pub(crate) use source_frame::{each_source_frame, source_frame_image};
+pub(crate) use video::LumaReader;
 
 use std::{
   process::Child,

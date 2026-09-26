@@ -38,18 +38,28 @@ struct TimelineKey {
   start_ms: u64,
   end_ms: u64,
   corners: [u64; 4],
+  /// The path a pinned box is carried along, which the ring is read along.
+  pin: Option<u64>,
 }
 
 impl TimelineKey {
+  /// A pinned box's ring is read along its path, so it waits for one.
   fn of(clip: &RecordingAnnotationClip) -> Option<Self> {
     let AnnotationShape::Redact { start, end, .. } = clip.annotation.shape else {
       return None;
     };
+    if clip.pin.as_ref().is_some_and(|pin| pin.path.is_none()) {
+      return None;
+    }
     Some(Self {
       id: clip.annotation.id.clone(),
       start_ms: clip.start_ms,
       end_ms: clip.end_ms,
       corners: [start.x, start.y, end.x, end.y].map(f64::to_bits),
+      pin: clip
+        .pin
+        .as_ref()
+        .and_then(|pin| pin.path.as_ref().map(|path| path.key)),
     })
   }
 }

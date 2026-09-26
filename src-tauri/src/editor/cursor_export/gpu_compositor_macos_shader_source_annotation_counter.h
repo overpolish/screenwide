@@ -38,8 +38,9 @@ static AnnotationCounter annotation_counter(
 /// Their overlap is measured the way any lens is - to the near circle inside
 /// its span, to the shared corner past it - and that corner is the tip's
 /// centre, so taking the tip's radius off rounds the point without moving it.
-/// The overlap runs back behind the disc too, so it is cut at the plane where
-/// the circles touch the disc: a chord, inside the union, which never shows.
+/// Each side circle is tangent to the disc on the line through both centres,
+/// so behind that line the nearest edge is the disc's: there the disc alone is
+/// measured. A cut anywhere else leaves a wide halo stepping out past the disc.
 /// The per-pixel twin of `counter_silhouette_distance` in
 /// `annotations/counter/silhouette.rs`, which picks the same shape. The CPU
 /// side prepares and picks in Rust; the shaders are the only other copies.
@@ -64,8 +65,8 @@ static float annotation_counter_distance(float2 point, AnnotationCounter counter
   float lens = (along - tip) * offset > across * (tip + counter.radius)
       ? length(float2(across, along - tip))
       : length(float2(across + offset, along + counter.radius)) - side;
-  float touch = counter.radius * counter.radius / apart;
-  return min(disc, max(lens - counter.tip_radius, touch - along));
+  if (along * offset < across * counter.radius) return disc;
+  return min(disc, lens - counter.tip_radius);
 }
 
 /// How much of the number covers this pixel, from the atlas the numbers were

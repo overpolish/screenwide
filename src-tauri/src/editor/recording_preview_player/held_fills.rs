@@ -13,13 +13,13 @@
 //! until its timeline lands it holds the first frame's surface. A paused
 //! preview is drawn again the moment either does.
 
-use super::held_surfaces::reads_picture;
+use super::held_surfaces::{first_box, reads_picture};
 use super::held_timelines::{ready, HeldTimelines, ReadySlot};
 use crate::editor::annotations::redact::held::HeldFill;
 use crate::editor::annotations::redact::native::{held_fill, RedactPicture};
 use crate::editor::annotations::redact::surface_timeline::surface_at;
 use crate::editor::annotations::timing::RecordingAnnotationClip;
-use crate::editor::annotations::{Annotation, AnnotationShape};
+use crate::editor::annotations::Annotation;
 use crate::screenshots::CapturedImage;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
@@ -42,10 +42,9 @@ struct FillKey {
   capture_width_points: u64,
 }
 
+/// The box a fill is read from, where it is on its clip's first frame.
 fn corners(clip: &RecordingAnnotationClip) -> Option<[u64; 4]> {
-  let AnnotationShape::Redact { start, end, .. } = clip.annotation.shape else {
-    return None;
-  };
+  let (start, end) = first_box(clip)?;
   Some([start.x, start.y, end.x, end.y].map(f64::to_bits))
 }
 
@@ -155,9 +154,7 @@ impl HeldFills {
       }
       return None;
     };
-    let AnnotationShape::Redact { start, end, .. } = clip.annotation.shape else {
-      return None;
-    };
+    let (start, end) = first_box(clip)?;
     let picture = RedactPicture::new(&frame.rgba, frame.width, frame.height, capture_width_points);
     let fill = Arc::new(held_fill(start, end, style, &picture));
     if state.fills.len() >= KEPT {

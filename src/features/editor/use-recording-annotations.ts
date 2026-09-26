@@ -12,19 +12,29 @@ import {
 } from "./annotation-defaults";
 import { Annotation, AnnotationTextEdit } from "./annotations";
 import {
+  clearedPinCorrections,
+  isPinnable,
+  pinnedClip,
+  unpinnedClip,
+} from "./recording-annotation-pins";
+import {
   mergeRecordingAnnotationClips,
-  renumberedAnnotationClips,
   RecordingAnnotationClip,
+  RecordingAnnotationPinCommit,
+  renumberedAnnotationClips,
 } from "./recording-annotations";
 import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import { drawingToolKind } from "./tool-panels/tool-registry";
 import { RecordingVideoTrackId } from "./types";
 import { useAnnotations } from "./use-annotations";
 import { useEditorEditGesture } from "./use-editor-edit-history";
+import { useRecordingPinStatus } from "./use-recording-pin-status";
 
 type AnnotationEvent = {
   annotations: Annotation[];
   paneIndex: number;
+  /** The pins of the pinned annotations among `annotations`. */
+  pins: RecordingAnnotationPinCommit[];
   selectedAnnotationId: string | null;
   sessionId: number;
   sourcePositionMs: number;
@@ -37,6 +47,7 @@ const EMPTY_CLIPS: RecordingAnnotationClip[] = [];
 
 export function useRecordingAnnotations({
   edit,
+  getPositionMs,
   onEdit,
   onSelectTrack,
   sessionId,
@@ -45,6 +56,8 @@ export function useRecordingAnnotations({
   trackId,
 }: {
   edit: RecordingTimelineEdit;
+  /** Where the playhead is, in source time: where a fresh pin is made. */
+  getPositionMs: () => number;
   onEdit: (edit: RecordingTimelineEdit) => void;
   sessionId: number | null;
   sourceDurationMs: number;
@@ -75,6 +88,15 @@ export function useRecordingAnnotations({
     const next = renumberedAnnotationClips(unnumbered);
     if (JSON.stringify(next) !== JSON.stringify(clips))
       onEdit({ ...edit, annotationClips: next });
+  };
+  const pinStatus = useRecordingPinStatus(sessionId);
+  const withClip = (
+    id: string,
+    change: (clip: RecordingAnnotationClip) => RecordingAnnotationClip,
+  ) => {
+    commitClips(
+      clips.map((clip) => (clip.annotation.id === id ? change(clip) : clip)),
+    );
   };
   // Inspector edits and deletion operate on document IDs, including a selected
   // clip outside the playhead. Native gestures supply only the visible
@@ -107,6 +129,7 @@ export function useRecordingAnnotations({
           annotations: payload.annotations,
           clips,
           edit,
+          pins: payload.pins,
           positionMs: payload.sourcePositionMs,
           sourceDurationMs,
           trackId: track,
@@ -180,7 +203,21 @@ export function useRecordingAnnotations({
     ...selection,
     canDelete: selection.hasSelection || (tool !== null && selection.canDelete),
     clips,
+    onClearPinCorrections: (id: string) => {
+      withClip(id, (clip) =>
+        clip.pin ? { ...clip, pin: clearedPinCorrections(clip.pin) } : clip,
+      );
+    },
     onClipsChange: commitClips,
+    onPinnedChange: (id: string, pinned: boolean) => {
+      withClip(id, (clip) =>
+        pinned
+          ? clip.pin || !isPinnable(clip)
+            ? clip
+            : pinnedClip(clip, getPositionMs())
+          : unpinnedClip(clip),
+      );
+    },
     onPreviewClips: setPreviewClips,
     onSelect: (id: string) => {
       const clip = clips.find((item) => item.annotation.id === id);
@@ -188,5 +225,6 @@ export function useRecordingAnnotations({
       selection.onSelectedChange(id);
       onSelectTrack?.(clip.trackId);
     },
+    pinStatus,
   };
 }

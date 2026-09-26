@@ -29,6 +29,9 @@ pub(super) struct PlayerSources {
   /// Zero when OSCs are hidden, one for the primary pane and two for camera.
   pub(super) layout: RecordingPreviewLayout,
   pub(super) playback_layout: RecordingPreviewLayout,
+  /// Pinned annotations' paths, worked out from the screen.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  pub(super) pins: Option<Arc<super::pin_tracks::PinTracks>>,
   /// True while real-time playback owns the surface, so a late still decode
   /// never stomps a playing frame.
   pub(super) playing: Arc<AtomicBool>,
@@ -269,6 +272,19 @@ fn sources_with_surface(
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     held_fills: None,
     layout,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    pins: playback_layout
+      .panes
+      .first()
+      .filter(|_| primary_kind != PrimaryRecordingKind::Audio)
+      .map(|pane| {
+        Arc::new(super::pin_tracks::PinTracks::new(
+          path.clone(),
+          duration_ms,
+          (pane.source_width, pane.source_height),
+          frames_per_second,
+        ))
+      }),
     playback_layout,
     playing: Arc::new(AtomicBool::new(false)),
     video_muted: Arc::new(AtomicBool::new(false)),

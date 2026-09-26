@@ -82,6 +82,7 @@ pub async fn set_recording_preview_annotations(
   // A text box being typed into takes React's clips - the panel may be
   // dressing it - with the text typed so far laid over them.
   manager.merge_text_session(&mut clips, &current);
+  sources.attach_pins(&mut clips, manager.position_ms);
   let changed = *current != clips;
   *current = clips;
   drop(current);
@@ -112,8 +113,33 @@ pub async fn set_recording_preview_annotations(
   Ok(())
 }
 
+/// Every pinned annotation's latest status, for a timeline that starts
+/// listening after the paths first landed.
+#[tauri::command]
+pub async fn recording_preview_pin_statuses(
+  state: tauri::State<'_, RecordingPreviewPlayerState>,
+  session_id: u64,
+) -> Result<Vec<super::pin_paths::PinStatus>, String> {
+  let manager = state
+    .0
+    .lock()
+    .map_err(|_| "The recording preview is unavailable")?;
+  manager.require_session(session_id)?;
+  Ok(
+    manager
+      .sources
+      .as_ref()
+      .and_then(|sources| sources.pins.as_ref())
+      .map(|pins| pins.statuses())
+      .unwrap_or_default(),
+  )
+}
+
 #[path = "annotation_gesture.rs"]
 mod gesture;
+
+#[path = "annotation_commit.rs"]
+mod commit;
 
 #[path = "annotation_text.rs"]
 mod text;

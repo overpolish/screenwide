@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { shiftedPin } from "./recording-annotation-pins";
 import { RecordingAnnotationClip } from "./recording-annotations";
 import {
   RecordingTimelineEdit,
@@ -40,9 +41,12 @@ export const moveRecordingAnnotationClip = ({
     endMs = Math.min(duration, startMs + 1);
     startMs = Math.max(0, endMs - 1);
   }
+  // A pinned clip's keyframes move with it: it follows whatever sits where
+  // it now is, at the same point in its clip.
   return {
     ...clip,
     endMs,
+    pin: clip.pin && shiftedPin(clip.pin, startMs - clip.startMs),
     startMs,
   };
 };

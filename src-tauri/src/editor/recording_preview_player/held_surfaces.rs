@@ -11,8 +11,8 @@ use crate::editor::annotations::redact::native::{
 #[cfg(target_os = "windows")]
 use crate::editor::annotations::redact::surface_timeline::surface_at;
 use crate::editor::annotations::redact::surface_timeline::{timeline, SAMPLE_MS};
-use crate::editor::annotations::timing::RecordingAnnotationClip;
-use crate::editor::annotations::{AnnotationRedaction, AnnotationShape};
+use crate::editor::annotations::timing::{placed_annotation, RecordingAnnotationClip};
+use crate::editor::annotations::{AnnotationPoint, AnnotationRedaction, AnnotationShape};
 use crate::editor::surface_colour::surrounding_colour;
 use crate::screenshots::CapturedImage;
 use std::collections::HashMap;
@@ -28,6 +28,31 @@ pub(crate) fn reads_picture(redaction: AnnotationRedaction) -> bool {
   )
 }
 
+/// `clip`'s redaction box where it is drawn `ms` into the recording: where
+/// its pin has carried it, for a pinned one. `None` for another kind, or
+/// while a pinned box's content is off the frame.
+pub(crate) fn box_at(
+  clip: &RecordingAnnotationClip,
+  ms: u64,
+) -> Option<(AnnotationPoint, AnnotationPoint)> {
+  let (annotation, _) = placed_annotation(clip, ms)?;
+  match annotation.shape {
+    AnnotationShape::Redact { start, end, .. } => Some((start, end)),
+    _ => None,
+  }
+}
+
+/// The box a redaction's fill is read from: where it is on its clip's first
+/// frame.
+pub(crate) fn first_box(
+  clip: &RecordingAnnotationClip,
+) -> Option<(AnnotationPoint, AnnotationPoint)> {
+  box_at(clip, clip.start_ms).or(match clip.annotation.shape {
+    AnnotationShape::Redact { start, end, .. } => Some((start, end)),
+    _ => None,
+  })
+}
+
 /// The surface timeline of `clip`'s box across the clip, from one decode
 /// pass over the recording at `path`. Empty where it could not be read; cut
 /// short, and to be thrown away, once `stop` is raised.
@@ -37,16 +62,19 @@ pub(crate) fn clip_surfaces(
   clip: &RecordingAnnotationClip,
   stop: &AtomicBool,
 ) -> Vec<[f32; 2]> {
-  let AnnotationShape::Redact { start, end, .. } = clip.annotation.shape else {
+  if !matches!(clip.annotation.shape, AnnotationShape::Redact { .. }) {
     return Vec::new();
-  };
+  }
   let times: Vec<u64> = (clip.start_ms..clip.end_ms)
     .step_by(SAMPLE_MS as usize)
     .collect();
   let mut samples = Vec::with_capacity(times.len());
   let read = super::platform::each_source_frame(path, &times, duration_ms, |time, frame| {
-    let bounds = painted_bounds(draw_points(start, end), frame.width, frame.height);
-    let colour = surrounding_colour(&frame.rgba, frame.width, frame.height, bounds);
+    // A pinned box's ring is read where the box is at that moment.
+    let colour = box_at(clip, time).and_then(|(start, end)| {
+      let bounds = painted_bounds(draw_points(start, end), frame.width, frame.height);
+      surrounding_colour(&frame.rgba, frame.width, frame.height, bounds)
+    });
     samples.push((time - clip.start_ms, colour));
     !stop.load(Ordering::Relaxed)
   });
@@ -69,7 +97,7 @@ pub(crate) fn attach_for_export(
 ) {
   let mut frames: HashMap<u64, Option<CapturedImage>> = HashMap::new();
   for clip in clips {
-    let AnnotationShape::Redact { start, end, .. } = clip.annotation.shape else {
+    let Some((start, end)) = first_box(clip) else {
       continue;
     };
     if !reads_picture(clip.annotation.style.redaction) {

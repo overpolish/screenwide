@@ -10,6 +10,7 @@ mod gpu_decoder;
 mod still;
 mod thumbnails;
 
+pub(crate) use decoder::LumaReader;
 pub(crate) use thumbnails::{each_source_frame, source_frame_image};
 
 #[path = "windows/video_playback.rs"]

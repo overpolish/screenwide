@@ -157,9 +157,10 @@ pub async fn seek_recording_preview(
         surface.set_selection_visible(visible);
       }
     }
-    if let Some(clips) = annotation_clips {
+    if let Some(mut clips) = annotation_clips {
       crate::editor::annotations::timing::validate_clips(&clips)?;
       if let Some(sources) = &manager.sources {
+        sources.attach_pins(&mut clips, position_ms);
         *sources
           .annotation_clips
           .write()

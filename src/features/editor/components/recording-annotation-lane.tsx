@@ -2,17 +2,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { PencilLine } from "lucide-react";
+import { MouseEvent, PointerEvent } from "react";
 
+import { boundsAnchor, pointerAnchor } from "../../popup-panel/use-popup-menu";
 import { annotationLaneLabel } from "../annotation-kinds";
 import { resizeRecordingAnnotationClip } from "../recording-annotation-geometry";
+import { isPinnable, withoutPinKeyframe } from "../recording-annotation-pins";
 import { RecordingAnnotationClip } from "../recording-annotations";
 import {
   RecordingTimelineEdit,
   recordingTimelineSourceToOutput,
   recordingTimelineRetainedDuration,
 } from "../recording-timeline-edit";
+import { RecordingPinStatus } from "../use-recording-pin-status";
 
 import { recordingAnnotationRows } from "./recording-annotation-layout";
+import {
+  RecordingAnnotationPinBadge,
+  RecordingAnnotationPinKeyframes,
+  RecordingAnnotationPinStretches,
+} from "./recording-annotation-pin-overlay";
 import {
   TIMED_LANE_ROW_HEIGHT_PX,
   timedLaneFragmentBox,
@@ -21,6 +30,8 @@ import { SeekHandler } from "./timeline-seek";
 import { TimelineTrackHeader } from "./timeline-track-header";
 import { TimelineViewportState } from "./timeline-viewport";
 import { TimelineViewportContent } from "./timeline-viewport-content";
+import { useAnnotationClipMenu } from "./use-annotation-clip-menu";
+import { usePinKeyframeMenu } from "./use-pin-keyframe-menu";
 import {
   previewedWhole,
   useRecordingAnnotationDrag,
@@ -30,9 +41,12 @@ export function RecordingAnnotationLane({
   clips,
   edit,
   onChange,
+  onClearPinCorrections,
+  onPinnedChange,
   onPreview,
   onSeek,
   onSelect,
+  pinStatus,
   selectedId,
   sourceDurationMs,
   viewport,
@@ -44,8 +58,15 @@ export function RecordingAnnotationLane({
   selectedId: string | null;
   sourceDurationMs: number;
   viewport: TimelineViewportState;
+  /** Take away every place the annotation was put by hand. */
+  onClearPinCorrections?: (id: string) => void;
+  /** Pin the annotation to the content under it, or let it go. Without it,
+   * the lane offers no pinning. */
+  onPinnedChange?: (id: string, pinned: boolean) => void;
   onPreview?: (clips: RecordingAnnotationClip[] | null) => void;
   onSeek?: SeekHandler;
+  /** How each pinned clip's path is coming along, by annotation id. */
+  pinStatus?: ReadonlyMap<string, RecordingPinStatus>;
 }) {
   const { beginDrag, draft, laneRef, movedRef } = useRecordingAnnotationDrag({
     clips,
@@ -62,6 +83,20 @@ export function RecordingAnnotationLane({
     edit,
     sourceDurationMs,
   );
+  const deleteKeyframe = (id: string, ms: number) => {
+    onChange(
+      clips.map((clip) =>
+        clip.annotation.id === id && clip.pin
+          ? { ...clip, pin: withoutPinKeyframe(clip.pin, ms) }
+          : clip,
+      ),
+    );
+  };
+  const openKeyframeMenu = usePinKeyframeMenu(deleteKeyframe);
+  const openClipMenu = useAnnotationClipMenu({
+    onClearCorrections: (id) => onClearPinCorrections?.(id),
+    onPinnedChange: (id, pinned) => onPinnedChange?.(id, pinned),
+  });
   return (
     <div className="flex items-center gap-section">
       <TimelineTrackHeader
@@ -86,10 +121,37 @@ export function RecordingAnnotationLane({
               ),
             );
             const selected = clip.annotation.id === selectedId;
+            const status = pinStatus?.get(clip.annotation.id);
+            const block = { edit, fragment, sourceDurationMs };
+            const pinnable = onPinnedChange !== undefined && isPinnable(clip);
+            const clickBody = (event: MouseEvent) => {
+              event.stopPropagation();
+              if (movedRef.current) {
+                event.preventDefault();
+                movedRef.current = false;
+              } else onSelect(clip.annotation.id);
+            };
+            const pressBody = (event: PointerEvent) => {
+              if (event.button !== 0) return;
+              event.stopPropagation();
+              beginDrag({
+                clientX: event.clientX,
+                edge: "body",
+                id: clip.annotation.id,
+              });
+            };
             return (
               <div
                 className={`absolute overflow-hidden rounded-control text-footnote ${fragment.continuesPrevious ? "rounded-l-none" : ""} ${fragment.continuedByNext ? "rounded-r-none" : ""} ${selected ? "bg-primary-surface text-primary-fg" : "bg-fill-secondary text-content-fg"}`}
                 key={fragment.fragmentId}
+                onContextMenu={(event) => {
+                  if (!pinnable) return;
+                  event.preventDefault();
+                  void openClipMenu(
+                    pointerAnchor(event.clientX, event.clientY),
+                    clip,
+                  );
+                }}
                 style={{
                   ...timedLaneFragmentBox(fragment.row),
                   left: `${String(fragment.outputStart * 100)}%`,
@@ -101,26 +163,53 @@ export function RecordingAnnotationLane({
                   aria-label={label}
                   aria-pressed={selected}
                   className="h-full w-full truncate px-control-inset text-left focus-visible:outline-2 focus-visible:outline-primary"
-                  onClick={(event) => {
+                  onClick={clickBody}
+                  // The menu key opens the right-click menu from the
+                  // keyboard, hung off the block it acts on.
+                  onKeyDown={(event) => {
+                    const menuKey =
+                      event.key === "ContextMenu" ||
+                      (event.key === "F10" && event.shiftKey);
+                    if (!menuKey || !pinnable) return;
+                    event.preventDefault();
                     event.stopPropagation();
-                    if (movedRef.current) {
-                      event.preventDefault();
-                      movedRef.current = false;
-                    } else onSelect(clip.annotation.id);
+                    void openClipMenu(
+                      boundsAnchor(event.currentTarget.getBoundingClientRect()),
+                      clip,
+                    );
                   }}
-                  onPointerDown={(event) => {
-                    if (event.button !== 0) return;
-                    event.stopPropagation();
-                    beginDrag({
-                      clientX: event.clientX,
-                      edge: "body",
-                      id: clip.annotation.id,
-                    });
-                  }}
+                  onPointerDown={pressBody}
                   type="button"
                 >
                   {fragment.showLabel ? label : null}
                 </button>
+                {selected && clip.pin ? (
+                  <>
+                    <RecordingAnnotationPinStretches
+                      {...block}
+                      onBodyClick={clickBody}
+                      onBodyPointerDown={pressBody}
+                      status={status}
+                    />
+                    <RecordingAnnotationPinKeyframes
+                      {...block}
+                      label={label}
+                      onDeleteKeyframe={(ms) => {
+                        deleteKeyframe(clip.annotation.id, ms);
+                      }}
+                      onKeyframeMenu={(point, ms, isPinnedFrame) => {
+                        void openKeyframeMenu({
+                          annotationId: clip.annotation.id,
+                          isPinnedFrame,
+                          ms,
+                          point,
+                        });
+                      }}
+                      onSeek={onSeek}
+                      pin={clip.pin}
+                    />
+                  </>
+                ) : null}
                 {(["startMs", "endMs"] as const).map((edge) => {
                   if (
                     (edge === "startMs" && fragment.continuesPrevious) ||
@@ -192,6 +281,13 @@ export function RecordingAnnotationLane({
                     />
                   );
                 })}
+                {clip.pin ? (
+                  <RecordingAnnotationPinBadge
+                    label={label}
+                    selected={selected}
+                    status={status}
+                  />
+                ) : null}
               </div>
             );
           })}

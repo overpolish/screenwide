@@ -24,6 +24,8 @@
 //!   on-screen size.
 //! - [`generate_thumbnails`] and [`source_frame_image`] - the timeline strip
 //!   and the full-resolution decoded frame used for inset analysis.
+//! - [`LumaReader`] - brightness-only frames at a reduced size, for pinned
+//!   annotations' tracking.
 //!
 //! Geometry, layout and settings math deliberately stay above this line, in
 //! [`super::layout`] and the shared output validation, so a new backend never
@@ -42,6 +44,7 @@ use windows as backend;
 pub(super) use backend::composed_frame_image;
 #[cfg(target_os = "windows")]
 pub(crate) use backend::GpuVideoReader;
+pub(super) use backend::LumaReader;
 pub(super) use backend::{
   each_source_frame, generate_thumbnails, playback_factors, send_frame, source_frame_image,
   spawn_video, StillDecoder, VideoFramePayload, NATIVE_STILLS,

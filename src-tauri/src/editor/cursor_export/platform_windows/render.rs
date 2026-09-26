@@ -87,9 +87,17 @@ pub(super) fn render_video(
       clip
     })
     .collect();
-  // The screen's redactions take the fills read from their clips' frames:
-  // a secure pixelation's zones from its first, and the surface across it.
+  // Pinned annotations take their paths, which the preview has normally
+  // worked out already. The screen's redactions then take the fills read
+  // from their clips' frames: a secure pixelation's zones from its first,
+  // and the surface across it, both where the pin carries the box.
   if request.annotation_track == crate::editor::annotations::timing::AnnotationTrack::Primary {
+    crate::editor::recording_preview_player::pin_paths::attach_for_export(
+      request.screen,
+      request.duration_ms,
+      &mut annotation_clips,
+      request.cancelled,
+    );
     crate::editor::recording_preview_player::held_surfaces::attach_for_export(
       request.screen,
       request.duration_ms,

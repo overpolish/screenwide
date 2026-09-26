@@ -28,6 +28,10 @@ const POINTER_OUT_MS: f32 = 240.0;
 #[cfg(test)]
 const TEXT_REVEAL_IN_MS: f32 = COUNTER_REVEAL_IN_MS + POINTER_IN_MS;
 
+/// How long a text box takes to arrive and to leave, pointer and all.
+pub(crate) const TEXT_REVEAL_SPAN_MS: f32 =
+  COUNTER_REVEAL_IN_MS + POINTER_IN_MS + COUNTER_REVEAL_OUT_MS + POINTER_OUT_MS;
+
 /// The most of a clip each end may take, so a clip shorter than both ends
 /// together still arrives before it starts leaving.
 const TEXT_PHASE_SHARE: f32 = 1.0 / 3.0;

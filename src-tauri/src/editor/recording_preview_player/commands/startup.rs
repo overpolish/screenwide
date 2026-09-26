@@ -152,6 +152,40 @@ pub async fn start_recording_preview_player(
       }
     }));
   }
+  // A pinned annotation's path lands on a thread of its own: it is attached
+  // to the clips as they stand and a paused preview is drawn again, and the
+  // timeline hears how each path is coming along.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  if let Some(pins) = sources.pins.as_ref() {
+    let ready_app = app.clone();
+    pins.set_on_ready(Arc::new(move || {
+      let state = ready_app.state::<RecordingPreviewPlayerState>();
+      let Ok(mut manager) = state.0.lock() else {
+        return;
+      };
+      if manager.session_id != Some(session_id) {
+        return;
+      }
+      if let Some(sources) = manager.sources.as_ref() {
+        if let Ok(mut clips) = sources.annotation_clips.write() {
+          sources.attach_pins(&mut clips, manager.position_ms);
+        }
+      }
+      if !manager.is_playing {
+        let _ = manager.restart(PlaybackMode::InteractiveStill);
+      }
+    }));
+    let status_app = app.clone();
+    pins.set_on_status(Arc::new(move |status| {
+      let _ = status_app.emit(
+        "editor://recording-pin-status",
+        super::super::pin_paths::PinStatusEvent { session_id, status },
+      );
+    }));
+  }
+  if let Ok(mut clips) = sources.annotation_clips.write() {
+    sources.attach_pins(&mut clips, 0);
+  }
   manager.artifact_id = Some(artifact_id);
   manager.audio_indices = settings.audio.enabled_stream_indices;
   manager.audio_volumes = settings.audio.audio_track_volumes;

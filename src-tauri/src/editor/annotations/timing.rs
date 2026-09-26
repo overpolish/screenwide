@@ -4,6 +4,7 @@
 //! Clips follow source time; timeline cuts and rates map their boundaries.
 //! A cut inside a clip does not create a new entrance or exit.
 
+use super::pin::AnnotationPin;
 use super::Annotation;
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +22,11 @@ pub struct RecordingAnnotationClip {
   pub track_id: AnnotationTrack,
   pub start_ms: u64,
   pub end_ms: u64,
+  /// Where the annotation follows the content it was placed on, when it
+  /// does. Only the screen's clips are pinned: the camera is a face, not a
+  /// page.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub pin: Option<AnnotationPin>,
 }
 
 /// Whether a recording's clips can be drawn: each one spans time, has an
@@ -36,6 +42,7 @@ pub(crate) fn validate_clips(clips: &[RecordingAnnotationClip]) -> Result<(), St
       || !annotation.style.width.is_finite()
       || annotation.style.width <= 0.0
       || !placed
+      || clip.pin.as_ref().is_some_and(|pin| !pin.is_valid())
     {
       return Err("The annotation clip is invalid".to_owned());
     }
@@ -55,7 +62,24 @@ fn active_clips(
   })
 }
 
-/// The annotations a frame draws, each carrying the reveal window its own clip is at.
+/// `clip`'s annotation as it is drawn `source_ms` into the recording, and
+/// the stretch its arrival and leaving play over; `None` while a pinned
+/// annotation's content is off the frame.
+pub(crate) fn placed_annotation(
+  clip: &RecordingAnnotationClip,
+  source_ms: u64,
+) -> Option<(Annotation, [u64; 2])> {
+  let Some(pin) = clip.pin.as_ref() else {
+    return Some((clip.annotation.clone(), [clip.start_ms, clip.end_ms]));
+  };
+  let placement = super::pin::placement(clip, pin, source_ms);
+  let shown = placement.shown?;
+  Some((super::pin::displaced(&clip.annotation, &placement), shown))
+}
+
+/// The annotations a frame draws, each carrying the reveal window its own
+/// clip is at. A pinned annotation arrives and leaves over each stretch its
+/// content is on the frame rather than over its whole clip.
 pub(crate) fn revealed_annotations(
   clips: &[RecordingAnnotationClip],
   track: AnnotationTrack,
@@ -63,28 +87,29 @@ pub(crate) fn revealed_annotations(
   frame_ms: f32,
 ) -> Vec<Annotation> {
   active_clips(clips, track, source_ms)
-    .map(|clip| {
-      let mut annotation = clip.annotation.clone();
+    .filter_map(|clip| {
+      let (mut annotation, [start_ms, end_ms]) = placed_annotation(clip, source_ms)?;
       if annotation.animated {
         annotation.reveal = annotation.shape.kind().reveal_window(
-          (source_ms - clip.start_ms) as f32,
-          (clip.end_ms - clip.start_ms) as f32,
+          source_ms.saturating_sub(start_ms) as f32,
+          end_ms.saturating_sub(start_ms) as f32,
           frame_ms,
         );
       }
-      annotation
+      Some(annotation)
     })
     .collect()
 }
 
-/// The annotations a frame holds whole, for handles and gestures.
+/// The annotations a frame holds whole, for handles and gestures, where they
+/// are drawn.
 pub(crate) fn active_annotations(
   clips: &[RecordingAnnotationClip],
   track: AnnotationTrack,
   source_ms: u64,
 ) -> Vec<Annotation> {
   active_clips(clips, track, source_ms)
-    .map(|clip| clip.annotation.clone())
+    .filter_map(|clip| placed_annotation(clip, source_ms).map(|(annotation, _)| annotation))
     .collect()
 }
 
@@ -124,6 +149,7 @@ mod tests {
       track_id,
       start_ms,
       end_ms,
+      pin: None,
     }
   }
 

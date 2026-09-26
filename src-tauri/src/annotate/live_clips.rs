@@ -62,6 +62,7 @@ impl Timed {
       visible_ms
     };
     self.clips.push(RecordingAnnotationClip {
+      pin: None,
       annotation,
       track_id: AnnotationTrack::Primary,
       start_ms,

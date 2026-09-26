@@ -10,6 +10,7 @@ import {
   RecordingTrackId,
   RecordingVideoTrackId,
 } from "../types";
+import { RecordingPinStatus } from "../use-recording-pin-status";
 
 import type { AudioTrackVolumes } from "./audio-level";
 import type { Playhead } from "./scrub-playhead";
@@ -40,6 +41,13 @@ export type RecordingTrackLanesProps = {
   videoTrackOrder: RecordingVideoTrackId[];
   volumes: AudioTrackVolumes;
   annotationClips?: RecordingAnnotationClip[];
+  /** How each pinned annotation's path is coming along, by annotation id. */
+  annotationPinStatus?: ReadonlyMap<string, RecordingPinStatus>;
+  /** Take away every place the annotation was put by hand, keeping the
+   * frame it was pinned on. */
+  onAnnotationPinCorrectionsClear?: (id: string) => void;
+  /** Pin the annotation to the content under it, or let it go. */
+  onAnnotationPinnedChange?: (id: string, pinned: boolean) => void;
   onAnnotationSelect?: (id: string) => void;
   onAnnotationsChange?: (clips: RecordingAnnotationClip[]) => void;
   onAnnotationsPreview?: (clips: RecordingAnnotationClip[] | null) => void;

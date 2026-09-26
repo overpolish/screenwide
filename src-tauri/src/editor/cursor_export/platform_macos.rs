@@ -228,6 +228,9 @@ mod counter_tests;
 #[path = "platform_macos_keyboard_tests.rs"]
 mod keyboard_tests;
 #[cfg(test)]
+#[path = "platform_macos_pinned_annotation_tests.rs"]
+mod pinned_annotation_tests;
+#[cfg(test)]
 #[path = "platform_macos_recenter_tests.rs"]
 mod recenter_tests;
 #[cfg(test)]

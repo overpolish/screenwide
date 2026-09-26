@@ -5,6 +5,7 @@
 //! showing, and the provisional clips a drag writes through until it commits.
 
 use super::*;
+use crate::editor::annotations::pin::fold;
 use crate::editor::annotations::{AnnotationKind, AnnotationShape};
 
 pub(super) struct Gesture {
@@ -30,7 +31,11 @@ pub(super) struct Commit {
   /// Where in a text box's typing this commit falls; React groups a typing's
   /// commits into one edit.
   pub(super) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
+  /// The pins of the pinned annotations among `annotations`, which an edit
+  /// on the picture may have given a keyframe.
+  pub(super) pins: Vec<super::commit::CommitPin>,
 }
+
 pub(super) fn track(pane: u32) -> AnnotationTrack {
   if pane == 1 {
     AnnotationTrack::Camera
@@ -78,7 +83,7 @@ impl PreviewPlayerManager {
     if matches!(phase, SelectionGesturePhase::Begin) {
       self.annotation.pane = Some(pane);
     }
-    let session_id = self.session_id?;
+    self.session_id?;
     let sources = self.sources.as_ref()?;
     let position_ms = self.position_ms.min(sources.duration_ms.saturating_sub(1));
     let source = sources.playback_layout.panes.get(pane as usize)?;
@@ -115,14 +120,13 @@ impl PreviewPlayerManager {
             #[cfg(not(target_os = "macos"))]
             let _ = surface;
           }
-          return Some(Commit {
-            session_id,
-            pane_index: pane,
-            source_position_ms: position_ms,
-            annotations: working,
-            selected_annotation_id: self.annotation.selected.clone(),
-            text_edit: None,
-          });
+          return self.commit(
+            pane,
+            position_ms,
+            working,
+            self.annotation.selected.clone(),
+            None,
+          );
         }
         _ => {}
       }
@@ -231,14 +235,13 @@ impl PreviewPlayerManager {
       }
       self.publish_annotation_handles();
       let _ = self.restart(PlaybackMode::InteractiveStill);
-      return Some(Commit {
-        session_id,
-        pane_index: pane,
-        source_position_ms: gesture.position,
-        annotations: gesture.working,
-        selected_annotation_id: self.annotation.selected.clone(),
-        text_edit: None,
-      });
+      return self.commit(
+        pane,
+        gesture.position,
+        gesture.working,
+        self.annotation.selected.clone(),
+        None,
+      );
     }
     self.publish_annotation_handles();
     // The Metal workspace re-encodes from its retained scene on a restart,
@@ -268,9 +271,11 @@ pub(super) fn provisional_clips(
   let mut next = before.to_vec();
   for annotation in working {
     if let Some(clip) = next.iter_mut().find(|c| c.annotation.id == annotation.id) {
-      clip.annotation = annotation.clone();
+      // A pinned annotation was shown where its pin put it at `position`.
+      fold(clip, annotation, position);
     } else {
       next.push(RecordingAnnotationClip {
+        pin: None,
         annotation: annotation.clone(),
         track_id: track(pane),
         start_ms: position

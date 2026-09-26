@@ -63,8 +63,14 @@ typedef struct {
 _Static_assert(sizeof(ScreenwideAnnotations) == 40, "ScreenwideAnnotations ABI must match Rust");
 _Static_assert(offsetof(ScreenwideAnnotations, data) == 16, "ScreenwideAnnotations.data ABI must match Rust");
 
+/// One record drawn while `start_ms <= t < end_ms`, arriving and leaving over
+/// `reveal_start_ms..reveal_end_ms`, with a redaction's surface timeline read
+/// from `clip_start_ms`. A pinned clip is one record for each place its pin
+/// puts it. The twin of Rust's `NativeTimedAnnotation`.
 typedef struct {
   ScreenwideAnnotation annotation;
   uint64_t start_ms, end_ms;
+  uint64_t reveal_start_ms, reveal_end_ms;
+  uint64_t clip_start_ms;
 } ScreenwideTimedAnnotation;
-_Static_assert(sizeof(ScreenwideTimedAnnotation) == 144, "Timed annotation ABI");
+_Static_assert(sizeof(ScreenwideTimedAnnotation) == 168, "Timed annotation ABI");

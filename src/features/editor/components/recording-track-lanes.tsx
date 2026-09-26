@@ -29,6 +29,7 @@ const KEYBOARD_MINIMUM_ITEM_WIDTH_PX = 48;
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   adjustedKeyboardFragmentIds,
   annotationClips = [],
+  annotationPinStatus,
   audioTracks,
   blade,
   durationMs,
@@ -39,6 +40,8 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   keyboardItems,
   keyboardSelection,
   layout,
+  onAnnotationPinCorrectionsClear,
+  onAnnotationPinnedChange,
   onAnnotationSelect,
   onAnnotationsChange,
   onAnnotationsPreview,
@@ -171,9 +174,12 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               clips={annotationClips}
               edit={blade.edit}
               onChange={onAnnotationsChange}
+              onClearPinCorrections={onAnnotationPinCorrectionsClear}
+              onPinnedChange={onAnnotationPinnedChange}
               onPreview={onAnnotationsPreview}
               onSeek={onSeek}
               onSelect={onAnnotationSelect}
+              pinStatus={annotationPinStatus}
               selectedId={selectedAnnotationId}
               sourceDurationMs={sourceDurationMs}
               viewport={timeline.viewport}

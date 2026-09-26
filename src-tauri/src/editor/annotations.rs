@@ -62,6 +62,8 @@ pub(crate) mod gesture;
 mod gesture_tests;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod handles;
+/// Annotations on a recording following the content they were placed on.
+pub(crate) mod pin;
 /// The redaction tool's own half of the model.
 pub(crate) mod redact;
 /// Where a gesture's positions land while the positional modifier is held.

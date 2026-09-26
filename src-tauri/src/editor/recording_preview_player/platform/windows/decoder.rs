@@ -14,6 +14,9 @@ use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_MULTITH
 
 use crate::screenshots::CapturedImage;
 
+mod luma;
+pub(crate) use luma::LumaReader;
+
 const HUNDRED_NS_PER_MS: i64 = 10_000;
 const SEEK_PREROLL_MS: u64 = 1_500;
 const VIDEO_STREAM: u32 = MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32;

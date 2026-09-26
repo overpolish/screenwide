@@ -138,6 +138,7 @@ fn live_annotation_clips_become_the_recordings_first_edit() {
   let recording = directory.join("recording-live.mov");
   std::fs::write(&recording, []).unwrap();
   let clip = RecordingAnnotationClip {
+    pin: None,
     annotation: new_arrow(
       "annotation".to_owned(),
       AnnotationPoint { x: 10.0, y: 20.0 },

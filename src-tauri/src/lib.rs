@@ -106,6 +106,8 @@ pub fn run() {
       editor::recording_preview_player::commands::set_recording_preview_composition,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       editor::recording_preview_player::annotation_bridge::set_recording_preview_annotations,
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      editor::recording_preview_player::annotation_bridge::recording_preview_pin_statuses,
       editor::recording_preview_player::commands::start_recording_preview_player,
       editor::recording_preview_player::commands::stop_recording_preview_player,
         editor::recording_preview_player::timeline_thumbnails::copy_recording_preview_frame_to_clipboard,

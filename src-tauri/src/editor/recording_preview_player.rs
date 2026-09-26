@@ -33,6 +33,12 @@ pub(crate) mod keyboard_command;
 mod layout;
 mod lifecycle;
 mod output_gesture;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod pin_cache;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) mod pin_paths;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) mod pin_tracks;
 mod platform;
 pub(crate) mod recenter;
 mod selection_gesture;

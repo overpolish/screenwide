@@ -55,27 +55,29 @@ pub async fn copy_recording_preview_frame_to_clipboard(
 ) -> Result<(), String> {
   let sources = headless_sources(&app, artifact_id)?;
   recording_output.stamp_capture_widths(sources.capture_width_points);
-  if let Some(clips) = annotation_clips {
-    use crate::editor::annotations::timing::{
-      revealed_annotations, validate_clips, AnnotationTrack,
-    };
-    validate_clips(&clips)?;
-    // A thumbnail is one frame standing still, so it shows the reveal this
-    // instant holds and nothing is moving for the blur to fade.
-    recording_output.primary.annotations = revealed_annotations(
-      &clips,
-      AnnotationTrack::Primary,
-      position_ms.min(sources.duration_ms.saturating_sub(1)),
-      0.0,
-    );
-    recording_output.camera.annotations = revealed_annotations(
-      &clips,
-      AnnotationTrack::Camera,
-      position_ms.min(sources.duration_ms.saturating_sub(1)),
-      0.0,
-    );
+  if let Some(clips) = &annotation_clips {
+    crate::editor::annotations::timing::validate_clips(clips)?;
   }
   let composed = tauri::async_runtime::spawn_blocking(move || {
+    if let Some(mut clips) = annotation_clips {
+      use crate::editor::annotations::timing::{revealed_annotations, AnnotationTrack};
+      // The preview has normally tracked every pin already; one it has not
+      // is tracked here, off the async runtime.
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      super::pin_paths::attach_for_export(
+        &sources.screen_path,
+        sources.duration_ms,
+        &mut clips,
+        &std::sync::atomic::AtomicBool::new(false),
+      );
+      let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
+      // A thumbnail is one frame standing still, so it shows the reveal this
+      // instant holds and nothing is moving for the blur to fade.
+      recording_output.primary.annotations =
+        revealed_annotations(&clips, AnnotationTrack::Primary, position_ms, 0.0);
+      recording_output.camera.annotations =
+        revealed_annotations(&clips, AnnotationTrack::Camera, position_ms, 0.0);
+    }
     platform::composed_frame_image(
       &sources,
       position_ms,

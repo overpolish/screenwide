@@ -6,6 +6,7 @@ use crate::editor::annotations::{arrow::new_arrow, timing::AnnotationTrack, Anno
 #[test]
 fn queued_seek_keeps_its_annotation_timing_snapshot() {
   let clip = RecordingAnnotationClip {
+    pin: None,
     annotation: new_arrow(
       "arrow".into(),
       AnnotationPoint { x: 0.0, y: 0.0 },

@@ -154,6 +154,8 @@ fn test_sources() -> PlayerSources {
     held_fills: None,
     layout: layout.clone(),
     playback_layout: layout,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    pins: None,
     playing: Default::default(),
     preview_surface: None,
     primary_kind: PrimaryRecordingKind::Screen,

@@ -45,6 +45,21 @@ pub(super) type HeldFillsHandle = Arc<super::held_fills::HeldFills>;
 pub(super) type HeldFillsHandle = ();
 
 impl PlayerSources {
+  /// Hands each pinned clip among `clips` its path, asking for any not yet
+  /// worked out, nearest `position_ms` first.
+  pub(super) fn attach_pins(
+    &self,
+    clips: &mut [crate::editor::annotations::timing::RecordingAnnotationClip],
+    position_ms: u64,
+  ) {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    if let Some(pins) = &self.pins {
+      pins.attach(clips, position_ms);
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let _ = (clips, position_ms);
+  }
+
   /// A paused macOS still resolves its annotations up front, because its worker
   /// composes from settings rather than from the frame it is about to
   /// present. The Windows path resolves them at present time instead.

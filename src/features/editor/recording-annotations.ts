@@ -11,6 +11,25 @@ import {
 } from "./recording-timeline-edit";
 import { RecordingVideoTrackId } from "./types";
 
+/** Where a pinned annotation is put at one moment, as a movement in source
+ * pixels from where it was drawn. */
+type RecordingAnnotationPinKeyframe = {
+  dx: number;
+  dy: number;
+  ms: number;
+};
+
+/**
+ * An annotation following the content it was placed on. The annotation's own
+ * geometry is where it was drawn; each keyframe says where it is at one
+ * moment, and the native tracker fills in every other frame. `pinnedMs` is
+ * the keyframe the pin was made on, which clearing the corrections keeps.
+ */
+export type RecordingAnnotationPin = {
+  keyframes: RecordingAnnotationPinKeyframe[];
+  pinnedMs: number;
+};
+
 /** An annotation in source time, attached to one of the recording's two panes.
  */
 export type RecordingAnnotationClip = {
@@ -18,6 +37,7 @@ export type RecordingAnnotationClip = {
   endMs: number;
   startMs: number;
   trackId: "primary" | "camera";
+  pin?: RecordingAnnotationPin;
 };
 
 /**
@@ -61,11 +81,20 @@ export const renumberedAnnotationClips = (
     : numbered;
 };
 
-/** Merges the annotations currently drawn by a native pane into its clips. */
+/** A pin as a native edit left it: dragging a pinned annotation whole gives it
+ * a keyframe rather than moving what was drawn. */
+export type RecordingAnnotationPinCommit = {
+  annotationId: string;
+  pin: RecordingAnnotationPin;
+};
+
+/** Merges the annotations currently drawn by a native pane into its clips,
+ * with the pins the same edit left on them. */
 export const mergeRecordingAnnotationClips = ({
   annotations,
   clips,
   edit,
+  pins = [],
   positionMs,
   sourceDurationMs,
   trackId,
@@ -76,18 +105,23 @@ export const mergeRecordingAnnotationClips = ({
   positionMs: number;
   sourceDurationMs: number;
   trackId: RecordingVideoTrackId;
+  pins?: RecordingAnnotationPinCommit[];
 }) => {
   const byId = new Map(
     annotations.map((annotation) => [annotation.id, annotation]),
   );
-  const next = clips.map((clip) =>
-    clip.trackId === trackId && byId.has(clip.annotation.id)
-      ? {
-          ...clip,
-          annotation: byId.get(clip.annotation.id) ?? clip.annotation,
-        }
-      : clip,
+  const pinById = new Map(
+    pins.map(({ annotationId, pin }) => [annotationId, pin]),
   );
+  const next = clips.map((clip) => {
+    if (clip.trackId !== trackId || !byId.has(clip.annotation.id)) return clip;
+    const pin = pinById.get(clip.annotation.id);
+    return {
+      ...clip,
+      annotation: byId.get(clip.annotation.id) ?? clip.annotation,
+      ...(pin && clip.pin ? { pin } : {}),
+    };
+  });
   const known = new Set(next.map((clip) => clip.annotation.id));
   for (const annotation of annotations) {
     if (!known.has(annotation.id))

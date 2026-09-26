@@ -37,9 +37,12 @@ BOOL screenwide_export_redact_frame(ScreenwideVideoExport *session,
     if (clip->start_ms > source_ms || source_ms >= clip->end_ms) continue;
     ScreenwideAnnotation *annotation = &showing[annotations.count++];
     *annotation = clip->annotation;
-    float elapsed_ms = (float)(source_ms - clip->start_ms);
+    // A pinned clip's records each arrive over the stretch they show in, and
+    // all read the surface from their clip's own start.
+    float elapsed_ms = (float)(source_ms - clip->clip_start_ms);
     screenwide_annotation_reveal_window(
-        elapsed_ms, (float)(clip->end_ms - clip->start_ms),
+        (float)(source_ms - clip->reveal_start_ms),
+        (float)(clip->reveal_end_ms - clip->reveal_start_ms),
         session->source_frame_rate > 0 ? 1000.0f / session->source_frame_rate : 0,
         annotation->animated, annotation->kind, &annotation->reveal);
     // The surface the ring round the box settles on at this frame, from the

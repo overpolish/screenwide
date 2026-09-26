@@ -125,4 +125,19 @@ impl AnnotationKind {
       }
     }
   }
+
+  /// How long the kind takes to arrive and leave again: the least a pinned
+  /// annotation's clip must have left for it to come back onto the frame.
+  #[cfg(any(target_os = "macos", target_os = "windows", test))]
+  pub(crate) fn reveal_span_ms(self) -> f32 {
+    use super::super::counter::reveal::{COUNTER_REVEAL_IN_MS, COUNTER_REVEAL_OUT_MS};
+    use super::super::reveal::{REVEAL_DRAW_IN_MS, REVEAL_DRAW_OUT_MS};
+    match self {
+      Self::Arrow => REVEAL_DRAW_IN_MS + REVEAL_DRAW_OUT_MS,
+      Self::Counter => COUNTER_REVEAL_IN_MS + COUNTER_REVEAL_OUT_MS,
+      Self::Text => super::super::text::reveal::TEXT_REVEAL_SPAN_MS,
+      // A redaction ramps in and never leaves.
+      Self::Redact => COUNTER_REVEAL_IN_MS,
+    }
+  }
 }

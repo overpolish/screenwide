@@ -25,8 +25,8 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
       // seek lands on exactly the frame a play-through drew. The blur's lead
       // is one source frame of travel at the rate this export encodes.
       screenwide_annotation_reveal_window(
-          (float)(source_ms - clip->start_ms),
-          (float)(clip->end_ms - clip->start_ms),
+          (float)(source_ms - clip->reveal_start_ms),
+          (float)(clip->reveal_end_ms - clip->reveal_start_ms),
           session->source_frame_rate > 0 ? 1000.0f / session->source_frame_rate : 0,
           annotation->animated, annotation->kind, &annotation->reveal);
     }

@@ -129,9 +129,10 @@ fn silhouette_distance(
 /// corner past it - and that corner is the tip's centre, so taking the tip's
 /// radius off the whole thing rounds the point without moving it.
 ///
-/// The overlap runs back behind the disc as well, and is wider than the disc
-/// where it does, so it is cut at the plane where the circles touch the disc.
-/// That cut is a chord of the disc, inside the union, and so never shows.
+/// Each side circle is tangent to the disc on the line through both centres,
+/// so behind that line the nearest edge is the disc's: there the disc alone is
+/// measured. The overlap runs back behind the disc too, wider than it, and a
+/// cut anywhere else leaves a wide hover halo stepping out past the disc.
 fn counter_silhouette_distance(
   across: f64,
   along: f64,
@@ -158,8 +159,10 @@ fn counter_silhouette_distance(
   } else {
     (across + offset).hypot(along + radius) - side
   };
-  let touch = radius * radius / apart;
-  disc.min((lens - tip_radius).max(touch - along))
+  if along * offset < across * radius {
+    return disc;
+  }
+  disc.min(lens - tip_radius)
 }
 
 #[cfg(test)]
@@ -188,6 +191,17 @@ mod tests {
         std::f64::consts::FRAC_PI_2
       ) < 0.0
     );
+  }
+
+  #[test]
+  fn beside_the_disc_the_distance_is_the_discs_however_far_out() {
+    // The hover halo is this distance, and zoomed out it is wider than the
+    // counter: it has to stay a true distance well clear of the silhouette.
+    let radius = 20.0;
+    for out in [1.0, 10.0, 40.0] {
+      let beside = counter_distance((100.0, 100.0 + radius + out), center(), radius, 0.0);
+      assert!((beside - out).abs() < 1e-9, "{out}: {beside}");
+    }
   }
 
   #[test]

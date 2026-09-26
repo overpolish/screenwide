@@ -30,7 +30,7 @@ impl PreviewPlayerManager {
     position: u64,
     id: String,
   ) -> Option<Commit> {
-    let session_id = self.session_id?;
+    self.session_id?;
     let annotations = self.pane_annotations(pane);
     let annotation = annotations.iter().find(|annotation| annotation.id == id)?;
     let AnnotationShape::Text { text, .. } = &annotation.shape else {
@@ -63,14 +63,13 @@ impl PreviewPlayerManager {
     ) {
       surface.begin_annotation_text(index, &text, dark_ink);
     }
-    Some(Commit {
-      session_id,
-      pane_index: pane,
-      source_position_ms: position,
+    self.commit(
+      pane,
+      position,
       annotations,
-      selected_annotation_id: Some(id),
-      text_edit: Some(TextEditPhase::Begin),
-    })
+      Some(id),
+      Some(TextEditPhase::Begin),
+    )
   }
 
   /// Lays the text typed so far over the box's clip, and redraws it.
@@ -106,7 +105,7 @@ impl PreviewPlayerManager {
     text: &str,
     revision: u64,
   ) -> Option<Commit> {
-    let session_id = self.session_id?;
+    self.session_id?;
     match phase {
       AnnotationTextPhase::Open => {
         if self.is_playing
@@ -133,14 +132,13 @@ impl PreviewPlayerManager {
         }
         self.write_text_session();
         let session = self.annotation.text.as_ref()?;
-        Some(Commit {
-          session_id,
-          pane_index: session.pane,
-          source_position_ms: session.position,
-          annotations: self.pane_annotations(session.pane),
-          selected_annotation_id: Some(session.edit.id().to_owned()),
-          text_edit: Some(TextEditPhase::Update),
-        })
+        self.commit(
+          session.pane,
+          session.position,
+          self.pane_annotations(session.pane),
+          Some(session.edit.id().to_owned()),
+          Some(TextEditPhase::Update),
+        )
       }
       AnnotationTextPhase::End => {
         self.annotation.text.as_mut()?.edit.take(text, revision);
@@ -163,14 +161,13 @@ impl PreviewPlayerManager {
         self.annotation.selected = kept.then_some(id);
         self.publish_annotation_handles();
         let _ = self.restart(PlaybackMode::InteractiveStill);
-        Some(Commit {
-          session_id,
-          pane_index: pane,
-          source_position_ms: position,
+        self.commit(
+          pane,
+          position,
           annotations,
-          selected_annotation_id: self.annotation.selected.clone(),
-          text_edit: Some(TextEditPhase::End),
-        })
+          self.annotation.selected.clone(),
+          Some(TextEditPhase::End),
+        )
       }
     }
   }
