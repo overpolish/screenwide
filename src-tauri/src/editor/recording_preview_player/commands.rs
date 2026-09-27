@@ -99,6 +99,10 @@ pub async fn pause_recording_preview(
       .as_ref()
       .map_or(0, |sources| sources.duration_ms);
     manager.position_ms = decodable_position(manager.position_ms, duration_ms);
+    // A pinned annotation sits somewhere else at the paused frame, so its
+    // grips move with it.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    manager.publish_annotation_handles();
     if let Some(channel) = &manager.event_channel {
       let _ = channel.send(RecordingPreviewPlayerEvent::Paused {
         position_ms: displayed_position_ms,
@@ -179,7 +183,8 @@ pub async fn seek_recording_preview(
       .map_or(0, |value| value.duration_ms);
     manager.position_ms = position_ms.min(duration_ms.saturating_sub(1));
     manager.is_playing = false;
-    #[cfg(target_os = "macos")]
+    // A pinned annotation moves with the playhead, and its grips with it.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     manager.publish_annotation_handles();
     (worker, manager.restart(PlaybackMode::InteractiveStill))
   };

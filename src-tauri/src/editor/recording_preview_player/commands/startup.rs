@@ -191,6 +191,8 @@ pub async fn start_recording_preview_player(
         sources.reattach_pins(manager.position_ms);
       }
       if !manager.is_playing {
+        // The path moves the annotation, so its grips follow it there.
+        manager.publish_annotation_handles();
         let _ = manager.restart(PlaybackMode::InteractiveStill);
       }
     }));
