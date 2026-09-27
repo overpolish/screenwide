@@ -68,6 +68,7 @@ pub async fn copy_recording_preview_frame_to_clipboard(
         &sources.screen_path,
         sources.duration_ms,
         &mut clips,
+        recording_output.primary.image_width,
         &std::sync::atomic::AtomicBool::new(false),
       );
       let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));

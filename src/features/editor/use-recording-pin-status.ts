@@ -11,11 +11,16 @@ export type RecordingPinStretch = [number, number];
 /**
  * How a pinned annotation's path is coming along, as the native tracker
  * reports it: `progress` from 0 to 1 while it is worked out, and once it has
- * landed, where the content was lost (`weak`) or off the frame (`hidden`).
+ * landed, where the content was lost (`weak`), off the frame (`hidden`) or
+ * under something that stays put on screen, like a sticky header (`under`),
+ * and where the annotation is hidden because its content went out of sight
+ * on screen (`covered`).
  */
 export type RecordingPinStatus = {
+  covered: RecordingPinStretch[];
   hidden: RecordingPinStretch[];
   progress: number | null;
+  under: RecordingPinStretch[];
   weak: RecordingPinStretch[];
 };
 

@@ -46,7 +46,9 @@ pub(super) type HeldFillsHandle = ();
 
 impl PlayerSources {
   /// Hands each pinned clip among `clips` its path, asking for any not yet
-  /// worked out, nearest `position_ms` first.
+  /// worked out, nearest `position_ms` first. The screen's current canvas
+  /// scale places the tips counters and text boxes are followed by, so a
+  /// layout change attaches them again.
   pub(super) fn attach_pins(
     &self,
     clips: &mut [crate::editor::annotations::timing::RecordingAnnotationClip],
@@ -54,10 +56,31 @@ impl PlayerSources {
   ) {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     if let Some(pins) = &self.pins {
-      pins.attach(clips, position_ms);
+      pins.attach(clips, position_ms, self.screen_image_width());
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let _ = (clips, position_ms);
+  }
+
+  /// How wide the screen is drawn on the canvas, in canvas pixels, or zero
+  /// before the layout is known: what places the tips counters and text boxes
+  /// are followed by.
+  pub(super) fn screen_image_width(&self) -> f64 {
+    self
+      .composition_settings
+      .as_ref()
+      .and_then(|settings| settings.read().ok())
+      .map_or(0.0, |settings| {
+        settings.recording_output.primary.image_width
+      })
+  }
+
+  /// Attaches every clip's pin again: after a path lands, or after a layout
+  /// change that may have moved the tips counters and text boxes follow.
+  pub(super) fn reattach_pins(&self, position_ms: u64) {
+    if let Ok(mut clips) = self.annotation_clips.write() {
+      self.attach_pins(&mut clips, position_ms);
+    }
   }
 
   /// A paused macOS still resolves its annotations up front, because its worker

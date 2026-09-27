@@ -5,24 +5,58 @@
 
 /// The native right press, split from the rest of the editor's pointer
 /// handling: it selects nothing of its own and opens nothing natively, it
-/// only tells the web layer which layer was pressed and where.
+/// only tells the web layer what was pressed and where.
 @implementation ScreenwidePreviewInteractionView (ContextMenu)
 
-/// The layer under a right press, handed to the web layer so it can open the
-/// app's own layer menu there. Nothing opens natively.
+/// Hands the press to the web layer, in the window content's coordinates:
+/// the webview reports pointer coordinates from the top-left of the window's
+/// content, with y growing downwards, while this view is flipped and inset
+/// inside that content, so the point goes through window base coordinates and
+/// is measured against the webview's own rect there.
+- (void)reportContextMenu:(uint32_t)layer
+               annotation:(int32_t)annotation
+                  atPoint:(NSPoint)point
+                reference:(NSView *)reference {
+  self.selectionDragActive = NO;
+  self.panning = NO;
+  NSPoint windowPoint = [self convertPoint:point toView:nil];
+  NSRect referenceRect = [reference convertRect:reference.bounds toView:nil];
+  self.surface.contextMenuCallback(
+      layer, annotation, windowPoint.x - NSMinX(referenceRect),
+      NSMaxY(referenceRect) - windowPoint.y, self.surface.contextMenuContext);
+}
+
+/// The annotation or layer under a right press, handed to the web layer so it
+/// can open the app's own menu there. Nothing opens natively.
 ///
 /// The press selects exactly what a left press would select first, so the menu
-/// always acts on the layer it was opened on. A press on the shortcut layer,
+/// always acts on what it was opened on. An annotation comes before the layer
+/// it is drawn on, as it does for a left press. A press on the shortcut layer,
 /// on a canvas frame, or on empty canvas has no layer order to change and is
 /// left alone.
 - (BOOL)reportContextMenuAtPoint:(NSPoint)point {
   if (self.surface.contextMenuCallback == NULL ||
-      !self.surface.editorEnabled || self.surface.editorSuspended ||
-      !self.surface.selectionHitTestingEnabled)
+      !self.surface.editorEnabled || self.surface.editorSuspended)
     return NO;
   NSView *reference = self.surface.webview != nil ? self.surface.webview
                                                   : self.window.contentView;
   if (reference == nil) return NO;
+  NSInteger annotation =
+      annotation_active_mode(self.surface) == ScreenwideAnnotationModeNone
+          ? -1
+          : annotation_shaft_at_point(self.surface, point);
+  if (annotation >= 0) {
+    annotation_update_hover(self.surface, point, YES);
+    annotation_choose(self.surface, annotation, point);
+    [self reportContextMenu:self.surface.selection.layer_id
+                 annotation:(int32_t)annotation
+                    atPoint:point
+                  reference:reference];
+    return YES;
+  }
+  // Layers are only picked while the select tool is in hand; an annotation
+  // tool picks annotations, above, and nothing else.
+  if (!self.surface.selectionHitTestingEnabled) return NO;
   ScreenwidePreviewSelection target;
   uint8_t sharedHandle = 0;
   if (!shared_selection_hit(self.surface, point, &target, &sharedHandle) &&
@@ -42,17 +76,10 @@
     redraw_selection(self.surface);
     invalidate_selection_cursor_rects(self.surface);
   }
-  self.selectionDragActive = NO;
-  self.panning = NO;
-  // The webview reports pointer coordinates from the top-left of the window's
-  // content, with y growing downwards; this view is flipped and inset inside
-  // that content, so the point goes through window base coordinates and is
-  // measured against the webview's own rect there.
-  NSPoint windowPoint = [self convertPoint:point toView:nil];
-  NSRect referenceRect = [reference convertRect:reference.bounds toView:nil];
-  self.surface.contextMenuCallback(
-      target.layer_id, windowPoint.x - NSMinX(referenceRect),
-      NSMaxY(referenceRect) - windowPoint.y, self.surface.contextMenuContext);
+  [self reportContextMenu:target.layer_id
+               annotation:-1
+                  atPoint:point
+                reference:reference];
   return YES;
 }
 

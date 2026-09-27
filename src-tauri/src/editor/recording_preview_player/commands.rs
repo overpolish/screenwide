@@ -39,6 +39,9 @@ struct RecordingPreviewSelectionChangeEvent {
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct RecordingPreviewContextMenuEvent {
+  /// The annotation pressed, when the press landed on a screen annotation
+  /// rather than a layer.
+  annotation_id: Option<String>,
   pane_index: u32,
   x: f64,
   y: f64,

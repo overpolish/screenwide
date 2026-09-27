@@ -37,6 +37,28 @@ const arrowKeyTargets = [
   ...arrowKeyRoles.map((role) => `[role="${role}"]`),
 ].join(",");
 
+// Groups whose arrows only move between their items, as opposed to changing a
+// value: a tool picked from a toolbar with the pointer is not a request to walk
+// the toolbar with the keyboard.
+const focusOnlyRoles = ["radiogroup", "tab", "tablist", "toolbar"];
+const focusOnlyTargets = focusOnlyRoles
+  .map((role) => `[role="${role}"]`)
+  .join(",");
+const valueTargets = [
+  "select",
+  ...arrowKeyRoles
+    .filter((role) => !focusOnlyRoles.includes(role))
+    .map((role) => `[role="${role}"]`),
+].join(",");
+
+/** Whether the arrows on `target` would only move focus or the choice between
+ * a group's items, rather than change a value inside one of them. */
+export const arrowsOnlyMoveFocus = (target: EventTarget | null) =>
+  target instanceof HTMLElement &&
+  target.closest(focusOnlyTargets) !== null &&
+  !(target instanceof HTMLInputElement && target.type === "range") &&
+  target.closest(valueTargets) === null;
+
 export const ownsArrowKeys = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   // A range input carries the slider role implicitly, so it needs its own test.

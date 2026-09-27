@@ -11,6 +11,7 @@ import {
 import { preserveEscapeFocus } from "./escape-focus";
 import {
   ownsActivationKeys,
+  arrowsOnlyMoveFocus,
   ownsArrowKeys,
   ownsPopupInteractionKeys,
   ownsTextEditingKeys,
@@ -108,24 +109,24 @@ export function useEditorWindowShortcuts({
         consume(event);
         return;
       }
-      if (
-        event.code === "Tab" ||
-        (arrowDirections.has(event.code) && ownsArrowKeys(event.target))
-      ) {
-        focusIntentRef.current = "keyboard";
-      }
+      // Only Tab says the keyboard is being used to move around the window;
+      // a pointer press says it is not, until the next Tab.
+      if (event.code === "Tab") focusIntentRef.current = "keyboard";
 
       // Arrows run before the shared guards: holding one has to repeat, and
       // Shift only picks the bigger jump rather than naming another shortcut.
       const arrow = arrowDirections.get(event.code);
       if (arrow) {
+        const pickedWithPointer =
+          focusIntentRef.current === "pointer" &&
+          arrowsOnlyMoveFocus(event.target);
         if (
           event.isComposing ||
           event.altKey ||
           event.ctrlKey ||
           event.metaKey ||
           ownsTextEditingKeys(event.target) ||
-          ownsArrowKeys(event.target)
+          (ownsArrowKeys(event.target) && !pickedWithPointer)
         )
           return;
         const handled = onNudge

@@ -10,6 +10,7 @@ import {
   clearedPinCorrections,
   pinnedClip,
   withoutPinKeyframe,
+  withPinKeyframe,
 } from "./recording-annotation-pins";
 import {
   mergeRecordingAnnotationClips,
@@ -109,6 +110,45 @@ describe("pinned recording annotations", () => {
     expect(withoutPinKeyframe(withoutPinKeyframe(pin, 5_000), 6_000)).toEqual({
       keyframes: [{ dx: 3, dy: 1, ms: 6_000 }],
       pinnedMs: 6_000,
+    });
+  });
+
+  it("puts a keyframe in time order, over any at the same moment", () => {
+    const pin = {
+      keyframes: [
+        { dx: 0, dy: 0, ms: 1_000 },
+        { dx: 0, dy: -30, ms: 5_000 },
+      ],
+      pinnedMs: 1_000,
+    };
+    expect(withPinKeyframe(pin, { dx: 2, dy: -8, ms: 3_000 })).toEqual({
+      keyframes: [
+        { dx: 0, dy: 0, ms: 1_000 },
+        { dx: 2, dy: -8, ms: 3_000 },
+        { dx: 0, dy: -30, ms: 5_000 },
+      ],
+      pinnedMs: 1_000,
+    });
+    // Within a frame's slack of one already there, it takes its place.
+    expect(
+      withPinKeyframe(pin, { dx: 1, dy: -31, ms: 5_006 }).keyframes,
+    ).toEqual([
+      { dx: 0, dy: 0, ms: 1_000 },
+      { dx: 1, dy: -31, ms: 5_006 },
+    ]);
+    // A resize made there keeps its size.
+    const edges: [number, number, number, number] = [0, 0, 0, -6];
+    const resized = {
+      ...pin,
+      keyframes: [pin.keyframes[0], { dx: 0, dy: -30, edges, ms: 5_000 }],
+    };
+    expect(
+      withPinKeyframe(resized, { dx: 1, dy: -31, ms: 5_006 }).keyframes[1],
+    ).toEqual({
+      dx: 1,
+      dy: -31,
+      edges,
+      ms: 5_006,
     });
   });
 });

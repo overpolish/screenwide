@@ -99,6 +99,8 @@ fn setup() -> Setup {
       ms: number("PINNED_MS", 0),
       dx: 0.0,
       dy: 0.0,
+      edges: None,
+      out_of_view: false,
     }],
     target: PinTarget {
       region,

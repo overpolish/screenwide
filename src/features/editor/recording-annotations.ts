@@ -12,11 +12,16 @@ import {
 import { RecordingVideoTrackId } from "./types";
 
 /** Where a pinned annotation is put at one moment, as a movement in source
- * pixels from where it was drawn. */
+ * pixels from where it was drawn. A redaction resized away from the frame it
+ * was pinned on also carries how far each edge - left, top, right, bottom -
+ * sits outside the box it was drawn as there. One `outOfView` says instead
+ * that the content cannot be seen from its moment until the next keyframe. */
 type RecordingAnnotationPinKeyframe = {
   dx: number;
   dy: number;
   ms: number;
+  edges?: [number, number, number, number];
+  outOfView?: boolean;
 };
 
 /**

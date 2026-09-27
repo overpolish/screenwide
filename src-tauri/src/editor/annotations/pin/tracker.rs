@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::cover::Covers;
 use super::features::corners;
 use super::geometry::{Rect, Rng, Similarity};
 use super::luma::{Plane, Pyramid};
@@ -88,12 +89,24 @@ pub(crate) struct Tracker {
   since_template: u32,
   prev: Pyramid,
   points: Vec<[f32; 2]>,
+  /// Beside each of `points`, whether it has moved with an answer the pinned
+  /// look confirmed.
+  vetted: Vec<bool>,
   transform: Similarity,
   velocity: [f32; 2],
   status: Status,
   lost_frames: u32,
+  /// How many points agreed the last time the pinned look confirmed the
+  /// target, which an unconfirmed answer is measured against.
+  supported: usize,
+  covers: Covers,
   rng: Rng,
 }
+
+/// How far the size may change between two frames, as a share, for the
+/// frame to vote on covers: the lines of content growing do not all move
+/// alike.
+const STEADY_SCALE: f32 = 0.01;
 
 /// The central share of a centre-weighted box its points are taken from
 /// while it has enough of them there.
@@ -146,6 +159,8 @@ impl Tracker {
     }
     let reference_points = points.iter().copied().take(REFERENCE_POINTS).collect();
     let reference_template = Template::cut(&reference, &target.region);
+    let points_count = points.len();
+    let covers = Covers::new(plane.width, plane.height);
     Self {
       target,
       reference_points,
@@ -157,10 +172,13 @@ impl Tracker {
       prev: reference.clone(),
       reference,
       points,
+      vetted: vec![true; points_count],
       transform: Similarity::IDENTITY,
       velocity: [0.0; 2],
       status: Status::Tracked,
       lost_frames: 0,
+      supported: points_count,
+      covers,
       rng: Rng::new(0x9e37_79b9),
     }
   }
@@ -180,13 +198,37 @@ impl Tracker {
   }
 
   pub(crate) fn step(&mut self, next: Pyramid) -> Observation {
+    let (was, before) = (self.status, self.transform);
     let observation = if self.status == Status::Tracked && self.points.len() >= MIN_INLIERS {
       self.follow(&next)
     } else {
       self.reacquire(&next)
     };
+    // Only a movement followed from one frame to the next says how each
+    // line of the content moved.
+    let after = observation.transform;
+    if was == Status::Tracked
+      && observation.status == Status::Tracked
+      && (after.scale() / before.scale() - 1.0).abs() < STEADY_SCALE
+    {
+      let centre = self.target.region.centre();
+      let ([x0, y0], [x1, y1]) = (before.apply(centre), after.apply(centre));
+      let region = after.apply_rect(&self.target.region);
+      self.covers.watch(
+        &self.prev.levels[0],
+        &next.levels[0],
+        &region,
+        [x1 - x0, y1 - y0],
+      );
+    }
     self.prev = next;
     observation
+  }
+
+  /// The part of the frame no still cover lies over, in tracking pixels:
+  /// infinite on each side without one.
+  pub(crate) fn view(&self) -> Rect {
+    self.covers.view()
   }
 
   fn frame(&self) -> Rect {
@@ -230,6 +272,7 @@ impl Tracker {
       };
     self.lost_frames = 0;
     self.points.clear();
+    self.vetted.clear();
     Observation {
       ms,
       transform: self.transform,

@@ -280,7 +280,7 @@ pub(crate) use hover::{refresh as refresh_hover, update as update_hover};
 /// The gesture the press becomes, and the samples it reports.
 #[path = "annotation/gesture.rs"]
 mod gesture;
-pub(super) use gesture::{cancel, down, pointer_move, up};
+pub(super) use gesture::{cancel, choose_at, down, pointer_move, up};
 
 /// Typing into a text box: the keyboard, the caret and the presses around it.
 #[path = "annotation/typing.rs"]

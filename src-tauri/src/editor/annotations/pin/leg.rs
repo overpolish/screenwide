@@ -52,7 +52,19 @@ pub(crate) struct LegSample {
   pub(crate) scale: f32,
   pub(crate) confidence: f32,
   pub(crate) status: Status,
+  /// The edges of the still covers proven around the content by this frame,
+  /// in source pixels: left, top, right and bottom, infinite on each side
+  /// without one.
+  pub(crate) proven: [f32; 4],
 }
+
+/// A view with no cover on any side.
+pub(crate) const NO_COVER: [f32; 4] = [
+  f32::NEG_INFINITY,
+  f32::NEG_INFINITY,
+  f32::INFINITY,
+  f32::INFINITY,
+];
 
 impl Leg {
   /// A number shared by every leg that starts from the same keyframe in the
@@ -64,6 +76,7 @@ impl Leg {
     self.from.ms.hash(&mut hasher);
     self.from.dx.to_bits().hash(&mut hasher);
     self.from.dy.to_bits().hash(&mut hasher);
+    hash_edges(&self.from, &mut hasher);
     self.forward.hash(&mut hasher);
     self.target.hash_into(&mut hasher);
     hasher.finish()
@@ -112,6 +125,14 @@ impl Leg {
     } else {
       ms.saturating_sub(high)
     }
+  }
+}
+
+/// A keyframe's edges into `hasher`, so a resize is a different leg and a
+/// different path.
+pub(crate) fn hash_edges(keyframe: &PinKeyframe, hasher: &mut impl Hasher) {
+  for edge in keyframe.edges.iter().flatten() {
+    edge.to_bits().hash(hasher);
   }
 }
 
@@ -221,19 +242,22 @@ pub(crate) fn track_leg(
 
 /// A tracker started on a keyframe's frame, and how its answers turn back
 /// into source pixels.
-struct Follower {
-  tracker: Tracker,
+pub(super) struct Follower {
+  pub(super) tracker: Tracker,
   /// The anchor where the keyframe puts it, in tracking pixels.
   anchor: [f32; 2],
   /// The anchor where the annotation was drawn, in source pixels.
   drawn: [f64; 2],
-  factor: f64,
+  pub(super) factor: f64,
 }
 
 impl Follower {
-  fn new(pinned: &LumaFrame, leg: &Leg, source_width: u32) -> Self {
+  pub(super) fn new(pinned: &LumaFrame, leg: &Leg, source_width: u32) -> Self {
     let factor = f64::from(pinned.width) / f64::from(source_width.max(1));
-    let placed = leg.target.shifted([leg.from.dx, leg.from.dy]);
+    let placed = leg
+      .target
+      .shifted([leg.from.dx, leg.from.dy])
+      .edged(leg.from.edges);
     let scaled = |value: f64| (value * factor) as f32;
     let target = Target {
       region: Rect {
@@ -253,8 +277,10 @@ impl Follower {
     }
   }
 
-  fn sample(&self, observation: Observation) -> LegSample {
+  pub(super) fn sample(&self, observation: Observation) -> LegSample {
     let [x, y] = observation.transform.apply(self.anchor);
+    let view = self.tracker.view();
+    let source = |value: f32| (f64::from(value) / self.factor) as f32;
     LegSample {
       ms: observation.ms,
       dx: (f64::from(x) / self.factor - self.drawn[0]) as f32,
@@ -262,6 +288,7 @@ impl Follower {
       scale: observation.transform.scale(),
       confidence: observation.confidence,
       status: observation.status,
+      proven: [view.x0, view.y0, view.x1, view.y1].map(source),
     }
   }
 }

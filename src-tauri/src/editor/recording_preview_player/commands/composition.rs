@@ -45,6 +45,9 @@ pub async fn set_recording_preview_composition(
   *settings
     .write()
     .map_err(|_| "The recording preview composition is unavailable".to_owned())? = next;
+  if let Some(sources) = &manager.sources {
+    sources.reattach_pins(manager.position_ms);
+  }
   if !manager.is_playing {
     // A composition change leaves the decoded frame and its cursor valid, so
     // Windows redraws the paused still synchronously from the cached sources

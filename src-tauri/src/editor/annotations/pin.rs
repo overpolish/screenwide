@@ -22,12 +22,18 @@
 
 /// Joining legs into one path.
 mod assemble;
+/// Still covers followed content goes under.
+mod cover;
 /// Corner points worth following inside a region.
 mod features;
+/// Finding content again on one frame, where the hand says it is back.
+pub(crate) mod find;
 /// The movement and change of size a set of point pairs agree on.
 mod fit;
 /// Pyramidal Lucas-Kanade for one point.
 mod flow;
+/// Writing an edit made on a pinned annotation back into its clip.
+mod fold;
 /// Boxes, similarities and a deterministic generator.
 mod geometry;
 /// Following the target from one keyframe.
@@ -52,12 +58,13 @@ pub(crate) mod target;
 mod tracker;
 
 pub(crate) use assemble::assemble;
+pub(crate) use fold::fold;
 pub(crate) use luma::LumaFrame;
 pub use model::AnnotationPin;
 #[cfg(test)]
 pub(crate) use path::track_pin;
 pub(crate) use path::{FrameSource, PinRequest};
-pub(crate) use resolve::{displaced, fold, placement, PinnedPath};
+pub(crate) use resolve::{displaced, placement, PinnedPath};
 
 /// The longest side frames are tracked at. Decoding costs the same at any
 /// output size, since the hardware scales, and following costs about the

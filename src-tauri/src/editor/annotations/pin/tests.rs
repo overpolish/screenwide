@@ -168,6 +168,8 @@ fn request(
         ms: ms(index),
         dx,
         dy,
+        edges: None,
+        out_of_view: false,
       })
       .collect(),
     target: PinTarget {
@@ -384,6 +386,8 @@ fn a_shorter_leg_cut_from_a_longer_one_is_the_leg_followed_on_its_own() {
     ms: ms(45),
     dx: 0.0,
     dy: 0.0,
+    edges: None,
+    out_of_view: false,
   };
   let stop = AtomicBool::new(false);
   for forward in [true, false] {
@@ -407,3 +411,142 @@ fn a_shorter_leg_cut_from_a_longer_one_is_the_leg_followed_on_its_own() {
     assert_eq!(cut, alone, "forward: {forward}");
   }
 }
+
+/// Where the frames `split` makes change from one page to the other.
+const SPLIT: usize = 160;
+
+/// Frames whose left half is a page that stays put and whose right half is
+/// another page scrolled to `tops`: a still sidebar beside a scrolling view.
+fn split(tops: &[f64]) -> Frames {
+  let still = Page::new(WIDTH as usize, HEIGHT as usize, 21);
+  let moving = Page::new(WIDTH as usize, 2_400, 23);
+  let width = WIDTH as usize;
+  Frames(
+    tops
+      .iter()
+      .enumerate()
+      .map(|(index, top)| {
+        let mut frame = still.view(ms(index), 0.0, 0.0);
+        let scrolled = moving.view(ms(index), 0.0, *top);
+        for row in 0..HEIGHT as usize {
+          let span = row * width + SPLIT..(row + 1) * width;
+          frame.pixels[span.clone()].copy_from_slice(&scrolled.pixels[span]);
+        }
+        frame
+      })
+      .collect(),
+  )
+}
+
+#[test]
+fn a_counter_and_a_text_box_follow_what_their_tips_point_at() {
+  use crate::editor::annotations::counter::model::new_counter;
+  use crate::editor::annotations::text::model::{new_text, TextPointer};
+  use crate::editor::annotations::{AnnotationPoint, AnnotationShape};
+  let point = |x, y| AnnotationPoint { x, y };
+  let tops = momentum(60, 2.0);
+  let mut frames = split(&tops);
+  // Both sit mostly on the still half and point into the half that scrolls,
+  // drawn at one source pixel per canvas pixel. The counter's disc is 40
+  // pixels across each way, its tail tip 60 east of its centre.
+  let mut counter = new_counter("c".to_owned(), point(150.0, 150.0), 1, None, Some(0.0));
+  counter.style.width = 80.0;
+  let mut text = new_text("t".to_owned(), point(0.0, 0.0), None, 1.0);
+  text.style.width = 16.0;
+  text.shape = AnnotationShape::Text {
+    origin: point(20.0, 140.0),
+    pointer: TextPointer {
+      along: point(1.0, 0.0),
+      reach: point(10.0, 0.0),
+    },
+    text: "Hi".to_owned(),
+  };
+  for annotation in [counter, text] {
+    let target = PinTarget::of(&annotation, (WIDTH, HEIGHT), 1.0);
+    assert!(
+      target.region[0] >= SPLIT as f64,
+      "the tip's patch {:?} is not over the scrolling half",
+      target.region
+    );
+    let request = PinRequest {
+      target,
+      ..request(&frames, &[(0, [0.0; 2])], target.region, false)
+    };
+    let path = track_pin(&mut frames, &request, &AtomicBool::new(false))
+      .expect("tracks")
+      .expect("not stopped");
+    let last = path.samples.last().expect("samples");
+    let expected = tops[0] - tops[tops.len() - 1];
+    assert!(
+      (f64::from(last.dy) - expected).abs() < 1.0 && last.dx.abs() < 1.0,
+      "{:?} followed ({}, {}), not the scroll of {expected:.1}",
+      annotation.shape.kind(),
+      last.dx,
+      last.dy
+    );
+  }
+}
+
+#[test]
+fn a_counter_pointing_just_past_a_boundary_follows_what_lies_ahead() {
+  use crate::editor::annotations::counter::model::new_counter;
+  use crate::editor::annotations::AnnotationPoint;
+  let tops = momentum(60, 2.0);
+  let mut frames = split(&tops);
+  // The tail tip stops five pixels short of the scrolling half, pointing
+  // into it: most of what is around the tip itself is still.
+  let mut counter = new_counter(
+    "c".to_owned(),
+    AnnotationPoint {
+      x: SPLIT as f64 - 35.0,
+      y: 120.0,
+    },
+    1,
+    None,
+    Some(0.0),
+  );
+  counter.style.width = 40.0;
+  let target = PinTarget::of(&counter, (WIDTH, HEIGHT), 1.0);
+  let request = PinRequest {
+    target,
+    ..request(&frames, &[(0, [0.0; 2])], target.region, false)
+  };
+  let path = track_pin(&mut frames, &request, &AtomicBool::new(false))
+    .expect("tracks")
+    .expect("not stopped");
+  // The tip itself sits on the still side, away from the points followed,
+  // so it is carried a little short; a patch centred on the tip is carried
+  // less than half the way.
+  let last = path.samples.last().expect("samples");
+  let expected = tops[0] - tops[tops.len() - 1];
+  assert!(
+    (f64::from(last.dy) - expected).abs() < 0.1 * expected.abs(),
+    "followed {} rather than the scroll of {expected:.1}",
+    last.dy
+  );
+}
+
+#[test]
+fn a_redaction_resized_at_a_keyframe_follows_what_the_resized_box_covers() {
+  let tops = momentum(60, 2.0);
+  let mut frames = split(&tops);
+  // Drawn over the still half, then resized at its keyframe to lie over the
+  // half that scrolls instead.
+  let drawn = [60.0, 100.0, 140.0, 140.0];
+  let mut request = request(&frames, &[(0, [0.0; 2])], drawn, true);
+  request.keyframes[0].edges = Some([-(SPLIT as f64 + 20.0 - 60.0), 0.0, 120.0, 0.0]);
+  let path = track_pin(&mut frames, &request, &AtomicBool::new(false))
+    .expect("tracks")
+    .expect("not stopped");
+  let last = path.samples.last().expect("samples");
+  let expected = tops[0] - tops[tops.len() - 1];
+  assert!(
+    (f64::from(last.dy) - expected).abs() < 1.0,
+    "followed {} rather than the scroll of {expected:.1}",
+    last.dy
+  );
+}
+
+/// Content going out of sight under something that stays put.
+#[path = "tests_covered.rs"]
+mod covered;

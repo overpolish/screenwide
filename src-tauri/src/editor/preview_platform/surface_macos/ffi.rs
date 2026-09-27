@@ -154,7 +154,7 @@ unsafe extern "C" {
   );
   pub(super) fn screenwide_preview_surface_set_context_menu_callback(
     handle: *mut std::ffi::c_void,
-    callback: Option<unsafe extern "C" fn(u32, f64, f64, *mut std::ffi::c_void)>,
+    callback: Option<unsafe extern "C" fn(u32, i32, f64, f64, *mut std::ffi::c_void)>,
     context: *mut std::ffi::c_void,
   );
   pub(super) fn screenwide_preview_surface_set_selection_gesture_callback(

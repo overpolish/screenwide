@@ -157,6 +157,10 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     videoTrackOrder,
   });
   useRecordingCanvasContextMenu({
+    annotations: {
+      clips: annotations.clips,
+      pinning: annotations.pinning,
+    },
     canvasTool,
     moveVideoTrack,
     onSelectedTrackChange,

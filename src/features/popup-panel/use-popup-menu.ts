@@ -171,7 +171,15 @@ export function usePopupMenu({
         anchor.y + anchor.height + ANCHOR_GAP,
       ),
       parentWindowLabel: getCurrentWindow().label,
-      size: new LogicalSize(width, initialPopupPanelHeight(items.length)),
+      // Opened at the height its rows and section headings take, so a
+      // headed menu does not grow once it has measured itself.
+      size: new LogicalSize(
+        width,
+        initialPopupPanelHeight(
+          items.length,
+          new Set(items.flatMap((item) => item.section ?? [])).size,
+        ),
+      ),
       triggerId: id,
     });
   };

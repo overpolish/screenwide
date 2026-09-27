@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Where a pinned annotation is drawn at a moment, and how an edit made to it
-//! there is written back into its clip.
+//! Where a pinned annotation is drawn at a moment.
 
 use crate::editor::annotations::timing::RecordingAnnotationClip;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
@@ -38,6 +37,11 @@ pub(crate) struct PinnedPath {
   /// top, right and bottom, in source pixels: out to everywhere its content
   /// may have been while it was lost. Empty for every other kind.
   pub(crate) growth: Vec<[f32; 4]>,
+  /// The part of the frame no still cover lies over at each sample, left,
+  /// top, right and bottom, in source pixels, infinite on each side without
+  /// one: what a redaction's box is trimmed to, so it never hides the cover
+  /// its content went under. Empty for every other kind.
+  pub(crate) views: Vec<[f32; 4]>,
   /// The stretches the annotation shows for, `[start, end)` in source
   /// milliseconds.
   pub(crate) shown: Vec<[u64; 2]>,
@@ -46,6 +50,13 @@ pub(crate) struct PinnedPath {
   pub(crate) weak: Vec<[u64; 2]>,
   /// The stretches its content was off the frame.
   pub(crate) hidden: Vec<[u64; 2]>,
+  /// The stretches an arrow, counter or text box is hidden for because its
+  /// content was out of sight on screen: under something, or lost; and
+  /// those a redaction is hidden for because its content went under a cover.
+  pub(crate) covered: Vec<[u64; 2]>,
+  /// The stretches it is hidden for because its content went under a still
+  /// cover.
+  pub(crate) under: Vec<[u64; 2]>,
 }
 
 impl PinnedPath {
@@ -62,6 +73,24 @@ impl PinnedPath {
         .saturating_sub(1),
     )
   }
+
+  /// Where the annotation was last shown before its content went out of
+  /// sight, when `ms` falls in a stretch it is hidden for because of that:
+  /// the offset "Show Here" puts it back at, for the hand to set right. A
+  /// stretch at the very start of the clip takes the first frame it shows.
+  pub(crate) fn last_seen(&self, ms: u64) -> Option<[f64; 2]> {
+    let [start, _] = *self
+      .covered
+      .iter()
+      .find(|[start, end]| (*start..*end).contains(&ms))?;
+    let seen = self
+      .samples
+      .iter()
+      .rev()
+      .find(|sample| sample.ms < start && sample.visible)
+      .or_else(|| self.samples.iter().find(|sample| sample.visible))?;
+    Some([f64::from(seen.dx), f64::from(seen.dy)])
+  }
 }
 
 /// Where a pinned annotation is drawn at one moment.
@@ -71,11 +100,25 @@ pub(crate) struct Placement {
   pub(crate) offset: [f64; 2],
   /// How much a redaction's box has grown with its content.
   pub(crate) scale: f64,
+  /// How far a redaction's edges sit outside its drawn box by the hand, from
+  /// the keyframes that resized it: left, top, right, bottom.
+  pub(crate) edges: [f64; 4],
   pub(crate) grow: [f64; 4],
+  /// What a redaction's box is trimmed to, from its path: see
+  /// [`PinnedPath::views`].
+  pub(crate) view: [f64; 4],
   /// The stretch it is showing through, which its arrival and leaving play
   /// over; `None` while it is hidden.
   pub(crate) shown: Option<[u64; 2]>,
 }
+
+/// A view with no cover on any side.
+pub(crate) const NO_COVER: [f64; 4] = [
+  f64::NEG_INFINITY,
+  f64::NEG_INFINITY,
+  f64::INFINITY,
+  f64::INFINITY,
+];
 
 /// Where `clip`'s pinned annotation is at `ms`.
 ///
@@ -83,10 +126,30 @@ pub(crate) struct Placement {
 /// so an annotation dragged there stays under the hand while its new path is
 /// worked out. Elsewhere it follows the path it has, which may still be the
 /// path of the keyframes before a change; with no path yet it waits at the
-/// nearest keyframe.
+/// nearest keyframe. Where the hand said its content is out of view, it is
+/// hidden, path or not.
 pub(crate) fn placement(clip: &RecordingAnnotationClip, pin: &AnnotationPin, ms: u64) -> Placement {
   let whole = [clip.start_ms, clip.end_ms];
+  let out_of_view = pin
+    .keyframe_at(ms)
+    .map_or_else(|| pin.out_of_view_at(ms), |keyframe| keyframe.out_of_view);
+  if out_of_view {
+    return Placement {
+      offset: [0.0; 2],
+      scale: 1.0,
+      edges: [0.0; 4],
+      grow: [0.0; 4],
+      view: NO_COVER,
+      shown: None,
+    };
+  }
   let path = pin.path.as_deref();
+  let view = |path: &PinnedPath, index: usize| {
+    path
+      .views
+      .get(index)
+      .map_or(NO_COVER, |view| view.map(f64::from))
+  };
   let shown = |path: &PinnedPath| {
     path
       .shown
@@ -99,7 +162,13 @@ pub(crate) fn placement(clip: &RecordingAnnotationClip, pin: &AnnotationPin, ms:
     return Placement {
       offset: [keyframe.dx, keyframe.dy],
       scale: 1.0,
+      edges: pin.edges_at(ms),
       grow: [0.0; 4],
+      // Trimmed on a keyframe too, or the box would stand over the cover
+      // for the one frame a correction was made on.
+      view: path
+        .and_then(|path| Some(view(path, path.index(ms)?)))
+        .unwrap_or(NO_COVER),
       shown: path.and_then(shown).or(Some(whole)),
     };
   }
@@ -108,10 +177,12 @@ pub(crate) fn placement(clip: &RecordingAnnotationClip, pin: &AnnotationPin, ms:
     return Placement {
       offset: [f64::from(sample.dx), f64::from(sample.dy)],
       scale: f64::from(sample.scale),
+      edges: pin.edges_at(ms),
       grow: path
         .growth
         .get(index)
         .map_or([0.0; 4], |grow| grow.map(f64::from)),
+      view: view(path, index),
       shown: shown(path),
     };
   }
@@ -121,7 +192,9 @@ pub(crate) fn placement(clip: &RecordingAnnotationClip, pin: &AnnotationPin, ms:
   Placement {
     offset,
     scale: 1.0,
+    edges: pin.edges_at(ms),
     grow: [0.0; 4],
+    view: NO_COVER,
     shown: Some(whole),
   }
 }
@@ -138,8 +211,10 @@ fn room_to_arrive(clip: &RecordingAnnotationClip, from: u64) -> bool {
 }
 
 /// `annotation` where `placement` puts it. A redaction's box also grows and
-/// shrinks with its content and is grown over doubtful frames; the other
-/// kinds keep their size, since they are drawn at the canvas's scale.
+/// shrinks with its content, takes the size its keyframes resized it to, is
+/// grown over doubtful frames, and is trimmed clear of any still cover its
+/// content goes under; the other kinds keep their size, since they are drawn
+/// at the canvas's scale.
 pub(crate) fn displaced(annotation: &Annotation, placement: &Placement) -> Annotation {
   let [ax, ay] = anchor_of(annotation);
   let [dx, dy] = placement.offset;
@@ -151,79 +226,19 @@ pub(crate) fn displaced(annotation: &Annotation, placement: &Placement) -> Annot
     y: ay + dy + scale * (point.y - ay),
   });
   if let AnnotationShape::Redact { start, end, .. } = &mut out.shape {
-    let [left, top, right, bottom] = placement.grow;
+    let [left, top, right, bottom]: [f64; 4] =
+      std::array::from_fn(|side| placement.edges[side] + placement.grow[side]);
+    let [x_min, y_min, x_max, y_max] = placement.view;
     let (x0, x1) = (start.x.min(end.x) - left, start.x.max(end.x) + right);
     let (y0, y1) = (start.y.min(end.y) - top, start.y.max(end.y) + bottom);
+    // Wholly under a cover, it closes up against the cover's edge.
+    let (x0, x1) = (x0.max(x_min).min(x_max), x1.min(x_max).max(x_min));
+    let (y0, y1) = (y0.max(y_min).min(y_max), y1.min(y_max).max(y_min));
+    let (x1, y1) = (x1.max(x0), y1.max(y0));
     *start = AnnotationPoint { x: x0, y: y0 };
     *end = AnnotationPoint { x: x1, y: y1 };
   }
   out
-}
-
-/// How far `from` was moved to become `to`, when moving is all that was
-/// done to it.
-fn movement(from: &AnnotationShape, to: &AnnotationShape) -> Option<[f64; 2]> {
-  const EPSILON: f64 = 1e-6;
-  let flat = |shape: &AnnotationShape| shape.mapped(|_| AnnotationPoint::default());
-  if flat(from) != flat(to) {
-    return None;
-  }
-  let (a, b) = (from.points(), to.points());
-  let delta = [b[0].x - a[0].x, b[0].y - a[0].y];
-  a.iter()
-    .zip(&b)
-    .all(|(a, b)| (b.x - a.x - delta[0]).abs() < EPSILON && (b.y - a.y - delta[1]).abs() < EPSILON)
-    .then_some(delta)
-}
-
-/// Writes `shown` - the annotation as an edit left it at `ms`, where its pin
-/// had drawn it - back into `clip`.
-///
-/// Moving the whole annotation says where its content is at that moment, so
-/// it becomes a keyframe there and the geometry it was drawn with stays.
-/// Anything else - a resized box, a moved grip, new text - changes the
-/// annotation itself, so it is written back to where it was drawn.
-pub(crate) fn fold(clip: &mut RecordingAnnotationClip, shown: &Annotation, ms: u64) {
-  let Some(pin) = clip.pin.as_ref() else {
-    clip.annotation = shown.clone();
-    return;
-  };
-  let place = placement(clip, pin, ms);
-  let expected = displaced(&clip.annotation, &place);
-  match movement(&expected.shape, &shown.shape) {
-    Some([dx, dy]) => {
-      let kept = clip.annotation.shape.clone();
-      if dx != 0.0 || dy != 0.0 {
-        if let Some(pin) = clip.pin.as_mut() {
-          pin.set_keyframe(ms, [place.offset[0] + dx, place.offset[1] + dy]);
-        }
-      }
-      clip.annotation = Annotation {
-        shape: kept,
-        ..shown.clone()
-      };
-    }
-    None => {
-      let [ax, ay] = anchor_of(&expected);
-      let redaction = matches!(shown.shape, AnnotationShape::Redact { .. });
-      let scale = if redaction {
-        place.scale.max(1e-3)
-      } else {
-        1.0
-      };
-      let [dx, dy] = place.offset;
-      // The anchor where the annotation was drawn, before the placement moved
-      // it.
-      let (bx, by) = (ax - dx, ay - dy);
-      clip.annotation = Annotation {
-        shape: shown.shape.mapped(|point| AnnotationPoint {
-          x: bx + (point.x - ax) / scale,
-          y: by + (point.y - ay) / scale,
-        }),
-        ..shown.clone()
-      };
-    }
-  }
 }
 
 #[cfg(test)]

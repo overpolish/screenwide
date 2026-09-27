@@ -99,6 +99,9 @@ fn main() {
     println!(
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_state.m"
     );
+    println!(
+      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_report.m"
+    );
     println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_macos.h");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_geometry_macos.h");
     println!("cargo:rerun-if-changed=src/editor/annotations/geometry.h");
@@ -223,6 +226,7 @@ fn main() {
       .file("src/editor/recording_preview_surface_macos+annotation_chrome.m")
       .file("src/editor/recording_preview_surface_macos+annotation_redact.m")
       .file("src/editor/recording_preview_surface_macos+annotation_state.m")
+      .file("src/editor/recording_preview_surface_macos+annotation_report.m")
       .file("src/editor/recording_preview_surface_macos+osc.m")
       .file("src/editor/recording_preview_surface_macos+selection.m")
       .file("src/editor/recording_preview_surface_macos+workspace.m")

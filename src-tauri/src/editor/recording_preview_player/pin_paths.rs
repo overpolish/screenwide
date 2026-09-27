@@ -22,10 +22,11 @@ use crate::editor::annotations::pin::leg::track_leg;
 use crate::editor::annotations::pin::{
   assemble, FrameSource, PinRequest, PinnedPath, TRACKING_SIDE,
 };
+use crate::editor::annotations::snap::source_per_output;
 use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
 
 /// What the timeline shows of a pin: how far its path is worked out, and
-/// where it was followed poorly or went off the frame.
+/// where it was followed poorly, went off the frame or went under a cover.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PinStatus {
@@ -34,15 +35,35 @@ pub(crate) struct PinStatus {
   pub(crate) progress: Option<f32>,
   pub(crate) weak: Vec<[u64; 2]>,
   pub(crate) hidden: Vec<[u64; 2]>,
+  /// Where the annotation is hidden because its content went out of sight
+  /// on screen, which "Content Back in View" can bring it back in.
+  pub(crate) covered: Vec<[u64; 2]>,
+  /// Where it is hidden because its content went under a still cover.
+  pub(crate) under: Vec<[u64; 2]>,
 }
 
 impl PinStatus {
+  /// A path `progress` of the way worked out, whose stretches are not known
+  /// yet.
+  pub(super) fn working(annotation_id: &str, progress: f32) -> Self {
+    Self {
+      annotation_id: annotation_id.to_owned(),
+      progress: Some(progress),
+      weak: Vec::new(),
+      hidden: Vec::new(),
+      covered: Vec::new(),
+      under: Vec::new(),
+    }
+  }
+
   pub(super) fn landed(annotation_id: &str, path: &PinnedPath) -> Self {
     Self {
       annotation_id: annotation_id.to_owned(),
       progress: None,
       weak: path.weak.clone(),
       hidden: path.hidden.clone(),
+      covered: path.covered.clone(),
+      under: path.under.clone(),
     }
   }
 }
@@ -181,10 +202,15 @@ pub(super) fn work_out(
 /// Hands each pinned clip among an export's `clips` its path, working out
 /// any the preview has not already, from the recording at `recording`. A
 /// path that cannot be worked out leaves its annotation where it was drawn.
+///
+/// `image_width` is how wide the screen is drawn on the edited canvas, in
+/// canvas pixels, before any export scaling: the preview places counters'
+/// and text boxes' tips at that scale, so the export asks for the same paths.
 pub(crate) fn attach_for_export(
   recording: &Path,
   duration_ms: u64,
   clips: &mut [RecordingAnnotationClip],
+  image_width: f64,
   cancelled: &AtomicBool,
 ) {
   let mut reader: Option<LumaReader> = None;
@@ -208,7 +234,8 @@ pub(crate) fn attach_for_export(
     let Some(source) = reader.as_mut() else {
       return;
     };
-    let request = PinRequest::of(clip, pin, source.source_size());
+    let size = source.source_size();
+    let request = PinRequest::of(clip, pin, size, source_per_output(size, image_width));
     let path = match cached_path(recording, request.key()) {
       Some(path) => Some(path),
       None => work_out(source, &work, &request, &|_| {}, &mut |_| {})

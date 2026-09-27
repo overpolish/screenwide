@@ -12,6 +12,8 @@ import {
 } from "../types";
 import { RecordingPinStatus } from "../use-recording-pin-status";
 
+import { AnnotationClipPinning } from "./use-annotation-clip-menu";
+
 import type { AudioTrackVolumes } from "./audio-level";
 import type { Playhead } from "./scrub-playhead";
 import type { TimelineBladeController } from "./timeline-blade";
@@ -43,11 +45,9 @@ export type RecordingTrackLanesProps = {
   annotationClips?: RecordingAnnotationClip[];
   /** How each pinned annotation's path is coming along, by annotation id. */
   annotationPinStatus?: ReadonlyMap<string, RecordingPinStatus>;
-  /** Take away every place the annotation was put by hand, keeping the
-   * frame it was pinned on. */
-  onAnnotationPinCorrectionsClear?: (id: string) => void;
-  /** Pin the annotation to the content under it, or let it go. */
-  onAnnotationPinnedChange?: (id: string, pinned: boolean) => void;
+  /** What an annotation clip's menu does to its pin. Without it, the lane
+   * offers no pinning. */
+  annotationPinning?: AnnotationClipPinning;
   onAnnotationSelect?: (id: string) => void;
   onAnnotationsChange?: (clips: RecordingAnnotationClip[]) => void;
   onAnnotationsPreview?: (clips: RecordingAnnotationClip[] | null) => void;

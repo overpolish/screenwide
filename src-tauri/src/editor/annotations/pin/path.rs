@@ -3,7 +3,7 @@
 
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use super::leg::{Leg, LEAD_MS};
+use super::leg::{hash_edges, Leg, LEAD_MS};
 use super::luma::LumaFrame;
 use super::model::{AnnotationPin, PinKeyframe};
 use super::target::PinTarget;
@@ -35,17 +35,18 @@ pub(crate) struct PinRequest {
 
 impl PinRequest {
   /// What `clip`'s pin asks to be tracked, on a recording `source` pixels in
-  /// size.
+  /// size drawn at `source_per_output` source pixels per canvas pixel.
   pub(crate) fn of(
     clip: &RecordingAnnotationClip,
     pin: &AnnotationPin,
     source: (u32, u32),
+    source_per_output: f64,
   ) -> Self {
     Self {
       start_ms: clip.start_ms,
       end_ms: clip.end_ms,
       keyframes: pin.sorted(),
-      target: PinTarget::of(&clip.annotation, source),
+      target: PinTarget::of(&clip.annotation, source, source_per_output),
     }
   }
 
@@ -58,6 +59,8 @@ impl PinRequest {
       keyframe.ms.hash(&mut hasher);
       keyframe.dx.to_bits().hash(&mut hasher);
       keyframe.dy.to_bits().hash(&mut hasher);
+      hash_edges(keyframe, &mut hasher);
+      keyframe.out_of_view.hash(&mut hasher);
     }
     self.target.hash_into(&mut hasher);
     hasher.finish()
@@ -67,6 +70,10 @@ impl PinRequest {
   /// clip's start, both ways between each pair of keyframes, and on from the
   /// last to the clip's end. A keyframe left outside the clip by a trim is
   /// still followed to, so the clip keeps its corrections.
+  ///
+  /// Nothing is followed into a stretch the hand said is out of view: no leg
+  /// starts from an out-of-view keyframe, and none runs back into the stretch
+  /// from the keyframe that ends it.
   pub(crate) fn legs(&self) -> Vec<Leg> {
     let lower = self.start_ms.saturating_sub(LEAD_MS);
     let leg = |from: PinKeyframe, until_ms, forward| Leg {
@@ -79,14 +86,19 @@ impl PinRequest {
       return Vec::new();
     };
     let mut legs = Vec::new();
-    if first.ms > lower {
+    if first.ms > lower && !first.out_of_view {
       legs.push(leg(*first, lower, false));
     }
     for pair in self.keyframes.windows(2) {
+      if pair[0].out_of_view {
+        continue;
+      }
       legs.push(leg(pair[0], pair[1].ms, true));
-      legs.push(leg(pair[1], pair[0].ms, false));
+      if !pair[1].out_of_view {
+        legs.push(leg(pair[1], pair[0].ms, false));
+      }
     }
-    if last.ms < self.end_ms {
+    if last.ms < self.end_ms && !last.out_of_view {
       legs.push(leg(*last, self.end_ms, true));
     }
     legs

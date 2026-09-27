@@ -69,8 +69,16 @@ impl FrameSource for LumaReader {
     if start_ms >= end_ms {
       return Ok(());
     }
+    // AVFoundation hands over the frame already showing at the start of a
+    // range stamped with the range's start rather than its own time. Two legs
+    // reading the same moment from different starts would then disagree about
+    // when a frame was, and the path would take one leg's answer alone there.
+    // Reading from a millisecond early puts that stamp before `start_ms`,
+    // where it is skipped, so every frame keeps its own time, as Media
+    // Foundation's do on Windows.
+    let from_ms = start_ms.saturating_sub(1);
     let reused = match self.reader.take() {
-      Some(mut reader) if self.drained => reader.reset(start_ms, end_ms).is_ok().then_some(reader),
+      Some(mut reader) if self.drained => reader.reset(from_ms, end_ms).is_ok().then_some(reader),
       _ => None,
     };
     let mut reader = match reused {
@@ -80,7 +88,7 @@ impl FrameSource for LumaReader {
         self.size.0,
         self.size.1,
         cv::PixelFormat::_420F,
-        start_ms,
+        from_ms,
         end_ms,
       )?,
     };
@@ -95,6 +103,9 @@ impl FrameSource for LumaReader {
         break;
       };
       let ms = (sample.pts().as_secs().max(0.0) * 1_000.0).round() as u64;
+      if ms < start_ms {
+        continue;
+      }
       if !each(luma_frame(sample, ms)?) {
         break;
       }
@@ -136,3 +147,59 @@ fn luma_frame(mut sample: arc::R<cm::SampleBuf>, ms: u64) -> Result<LumaFrame, S
 #[cfg(test)]
 #[path = "luma_bench_tests.rs"]
 mod bench_tests;
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// A range that starts between two frames yields only frames with their own
+  /// times, the same ones a read from the start of the movie sees: legs read
+  /// the same moments from different starts, and have to agree on them.
+  #[test]
+  fn a_range_starting_between_frames_keeps_every_frames_own_time() {
+    let directory = std::env::temp_dir().join(format!("screenwide-luma-{}", std::process::id()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let path = directory.join("frames.mp4");
+    let status = std::process::Command::new(crate::editor::media_preview::ffmpeg_path())
+      .args([
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=64x64:rate=10:duration=1",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+      ])
+      .arg(&path)
+      .status()
+      .unwrap();
+    assert!(status.success());
+    let mut reader = LumaReader::open(&path, 1_000, 64).unwrap();
+    let mut read = |start, end| {
+      let mut frames = Vec::new();
+      reader
+        .read(start, end, &mut |frame| {
+          frames.push((frame.ms, frame.pixels));
+          true
+        })
+        .unwrap();
+      frames
+    };
+    let whole = read(0, 1_000);
+    let part = read(250, 1_000);
+    assert_eq!(part.first().map(|(ms, _)| *ms), Some(300));
+    for (ms, pixels) in &part {
+      let same = whole.iter().find(|(whole_ms, _)| whole_ms == ms);
+      assert!(
+        same.is_some_and(|(_, whole_pixels)| whole_pixels == pixels),
+        "{ms}"
+      );
+    }
+    std::fs::remove_dir_all(directory).unwrap();
+  }
+}

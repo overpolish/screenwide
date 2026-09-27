@@ -34,6 +34,17 @@ impl Template {
   /// [`TEMPLATE_SIDE`]. `None` where the region is not wholly on the frame or
   /// is flat.
   pub(crate) fn cut(pyramid: &Pyramid, region: &Rect) -> Option<Self> {
+    Self::cut_within(pyramid, region, TEMPLATE_SIDE)
+  }
+
+  /// [`Template::cut`] one level finer, for a single search that can afford
+  /// it: matched on a coarse level, content that lies half a pixel off its
+  /// grid may score too low to be taken.
+  pub(crate) fn cut_fine(pyramid: &Pyramid, region: &Rect) -> Option<Self> {
+    Self::cut_within(pyramid, region, 2.0 * TEMPLATE_SIDE)
+  }
+
+  fn cut_within(pyramid: &Pyramid, region: &Rect, side: f32) -> Option<Self> {
     let frame = Rect {
       x0: 0.0,
       y0: 0.0,
@@ -45,7 +56,7 @@ impl Template {
     }
     let longest = region.width().max(region.height());
     let mut level = 0;
-    while level + 1 < pyramid.levels.len() && longest / (1 << level) as f32 > TEMPLATE_SIDE {
+    while level + 1 < pyramid.levels.len() && longest / (1 << level) as f32 > side {
       level += 1;
     }
     let scale = (1 << level) as f32;

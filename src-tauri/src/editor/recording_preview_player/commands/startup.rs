@@ -65,10 +65,31 @@ pub async fn start_recording_preview_player(
           (),
         );
       }));
-      surface.set_context_menu_callback(Box::new(move |pane_index, x, y| {
+      let menu_app = app.clone();
+      surface.set_context_menu_callback(Box::new(move |pane_index, annotation, x, y| {
+        // A press on an annotation opens its own menu. One on the camera's
+        // opens nothing: only the screen's annotations can be pinned.
+        let annotation_id = match annotation {
+          None => None,
+          Some(index) => {
+            let state = menu_app.state::<RecordingPreviewPlayerState>();
+            let Ok(manager) = state.0.try_lock() else {
+              return;
+            };
+            match manager.annotation_targets().into_iter().nth(index as usize) {
+              Some((0, annotation)) => Some(annotation.id),
+              _ => return,
+            }
+          }
+        };
         let _ = menu_window.emit(
           crate::editor::preview_platform::NATIVE_CONTEXT_MENU_EVENT,
-          RecordingPreviewContextMenuEvent { pane_index, x, y },
+          RecordingPreviewContextMenuEvent {
+            annotation_id,
+            pane_index,
+            x,
+            y,
+          },
         );
       }));
     }
@@ -167,9 +188,7 @@ pub async fn start_recording_preview_player(
         return;
       }
       if let Some(sources) = manager.sources.as_ref() {
-        if let Ok(mut clips) = sources.annotation_clips.write() {
-          sources.attach_pins(&mut clips, manager.position_ms);
-        }
+        sources.reattach_pins(manager.position_ms);
       }
       if !manager.is_playing {
         let _ = manager.restart(PlaybackMode::InteractiveStill);
@@ -183,9 +202,7 @@ pub async fn start_recording_preview_player(
       );
     }));
   }
-  if let Ok(mut clips) = sources.annotation_clips.write() {
-    sources.attach_pins(&mut clips, 0);
-  }
+  sources.reattach_pins(0);
   manager.artifact_id = Some(artifact_id);
   manager.audio_indices = settings.audio.enabled_stream_indices;
   manager.audio_volumes = settings.audio.audio_track_volumes;

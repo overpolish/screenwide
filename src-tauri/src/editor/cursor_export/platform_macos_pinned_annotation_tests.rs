@@ -106,6 +106,8 @@ fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
             ms: 0,
             dx: 0.0,
             dy: 0.0,
+            edges: None,
+            out_of_view: false,
           }],
           path: None,
         }),

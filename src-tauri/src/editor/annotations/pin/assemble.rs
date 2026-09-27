@@ -7,23 +7,34 @@
 //! blended by how near each keyframe is and how well each matched, so a
 //! correction pulls the path towards it from both sides and a leg that lost
 //! the target is carried by the other. The joined path is smoothed, a stretch
-//! off the frame is carried on at the speed it left or came back at, and a
-//! redaction is grown over every stretch the content was lost in.
+//! off the frame or under a still cover is carried on at the speed it left
+//! or came back at, a redaction is trimmed clear of the cover, and grown over
+//! every other stretch the content was lost in.
 
 use std::collections::BTreeMap;
 
 use super::leg::{Leg, LegSample};
-use super::model::{PinKeyframe, KEYFRAME_SLACK_MS};
+use super::model::KEYFRAME_SLACK_MS;
 use super::path::PinRequest;
 use super::resolve::{PinSample, PinnedPath};
 use super::smooth::{smooth, Sample, LOG_SCALE, POSITION};
 use super::tracker::Status;
 
+/// Stretches the content spent under a still cover.
+#[path = "assemble_covers.rs"]
+mod covers;
+/// What each leg has for one moment, and how the two are blended.
+#[path = "assemble_moment.rs"]
+mod moment;
 /// Runs of samples, and how a path's stretches off the frame and a
 /// redaction's doubtful ones are filled in.
 #[path = "assemble_stretches.rs"]
 mod stretches;
-use stretches::{carry_hidden, grown, runs};
+use covers::under_covers;
+use moment::{blend, Raw, Sides};
+use stretches::{
+  bridge_lost, carry_hidden, grown, hide_unseen, in_sight, out_of_view, runs, unseen_between,
+};
 
 /// A frame below this is doubtful: the tracker lost the content there and
 /// bridged it, or took it back from a match its keyframe's points could not
@@ -31,92 +42,9 @@ use stretches::{carry_hidden, grown, runs};
 /// redaction. A frame followed soundly never falls below it.
 pub(crate) const WEAK: f32 = 0.5;
 
-#[derive(Clone, Copy)]
-struct Raw {
-  ms: u64,
-  dx: f32,
-  dy: f32,
-  scale: f32,
-  confidence: f32,
-  status: Status,
-}
-
-impl Raw {
-  fn exact(keyframe: &PinKeyframe, ms: u64) -> Self {
-    Self {
-      ms,
-      dx: keyframe.dx as f32,
-      dy: keyframe.dy as f32,
-      scale: 1.0,
-      confidence: 1.0,
-      status: Status::Tracked,
-    }
-  }
-
-  fn from(sample: &LegSample) -> Self {
-    Self {
-      ms: sample.ms,
-      dx: sample.dx,
-      dy: sample.dy,
-      scale: sample.scale,
-      confidence: sample.confidence,
-      status: sample.status,
-    }
-  }
-}
-
-/// The frames a leg from each side has for one moment.
-#[derive(Default)]
-struct Sides {
-  forward: Option<(u64, LegSample)>,
-  backward: Option<(u64, LegSample)>,
-}
-
-/// Blends the leg followed forward from the keyframe before with the one
-/// followed back from the keyframe after, `share` of the way from the first
-/// to the second.
-fn blend(forward: Option<&LegSample>, backward: Option<&LegSample>, share: f32) -> Raw {
-  let tracked = |sample: Option<&LegSample>| {
-    sample
-      .filter(|sample| sample.status == Status::Tracked)
-      .copied()
-  };
-  match (tracked(forward), tracked(backward)) {
-    // The two legs meet because a keyframe was set between them, which is
-    // where they are expected to disagree: the blend is the correction.
-    (Some(f), Some(b)) => {
-      let wf = f.confidence * (1.0 - share) + 1e-3;
-      let wb = b.confidence * share + 1e-3;
-      let total = wf + wb;
-      Raw {
-        ms: f.ms,
-        dx: (wf * f.dx + wb * b.dx) / total,
-        dy: (wf * f.dy + wb * b.dy) / total,
-        scale: (wf * f.scale + wb * b.scale) / total,
-        confidence: (wf * f.confidence + wb * b.confidence) / total,
-        status: Status::Tracked,
-      }
-    }
-    (Some(one), None) | (None, Some(one)) => Raw::from(&one),
-    (None, None) => {
-      let near = if share < 0.5 {
-        forward.or(backward)
-      } else {
-        backward.or(forward)
-      };
-      let near = near.expect("a moment has a leg from one side at least");
-      let hidden = [forward, backward]
-        .iter()
-        .flatten()
-        .any(|sample| sample.status == Status::Hidden);
-      Raw {
-        confidence: 0.0,
-        status: if hidden { Status::Hidden } else { Status::Lost },
-        ..Raw::from(near)
-      }
-    }
-  }
-}
+/// How long an arrow, counter or text box may have its content out of sight
+/// on screen before it is hidden, in milliseconds.
+const LOST_GRACE_MS: u64 = 200;
 
 /// Joins `legs` into `request`'s path. `source` is the recording's size in
 /// source pixels, which decides what is on the frame.
@@ -148,22 +76,33 @@ pub(crate) fn assemble(
   }
 
   let keyframes = &request.keyframes;
-  let raw: Vec<Raw> = moments
+  let unseen = unseen_between(&moments, keyframes, LOST_GRACE_MS);
+  let mut raw: Vec<Raw> = moments
     .iter()
     .map(|(&ms, sides)| {
       if let Some(keyframe) = keyframes
         .iter()
         .find(|keyframe| keyframe.ms.abs_diff(ms) <= KEYFRAME_SLACK_MS)
       {
-        return Raw::exact(keyframe, ms);
+        return Raw {
+          proven: sides.proven(),
+          ..Raw::exact(keyframe, ms)
+        };
       }
-      let before = keyframes.iter().rev().find(|keyframe| keyframe.ms <= ms);
+      let slot = keyframes.iter().rposition(|keyframe| keyframe.ms <= ms);
+      let before = slot.map(|index| &keyframes[index]);
       let after = keyframes.iter().find(|keyframe| keyframe.ms >= ms);
-      let share = match (before, after) {
-        (Some(before), Some(after)) if after.ms > before.ms => {
+      let share = match (
+        before,
+        after,
+        slot.and_then(|index| unseen.get(index).copied().flatten()),
+      ) {
+        (_, _, Some((start, _))) if ms < start => 0.0,
+        (_, _, Some((_, end))) if ms >= end => 1.0,
+        (Some(before), Some(after), _) if after.ms > before.ms => {
           (ms - before.ms) as f32 / (after.ms - before.ms) as f32
         }
-        (Some(_), _) => 0.0,
+        (Some(_), _, _) => 0.0,
         _ => 1.0,
       };
       let mut raw = blend(
@@ -172,9 +111,11 @@ pub(crate) fn assemble(
         share,
       );
       raw.ms = ms;
+      raw.proven = sides.proven();
       raw
     })
     .collect();
+  let unseen_by_hand = out_of_view(&mut raw, keyframes);
 
   let axis = |value: &dyn Fn(&Raw) -> f32, tuning| {
     let samples: Vec<Sample> = raw
@@ -188,36 +129,16 @@ pub(crate) fn assemble(
   };
   let mut dx = axis(&|raw| raw.dx, POSITION);
   let mut dy = axis(&|raw| raw.dy, POSITION);
-  let scale: Vec<f32> = axis(&|raw| raw.scale.max(1e-3).ln(), LOG_SCALE)
+  let mut scale: Vec<f32> = axis(&|raw| raw.scale.max(1e-3).ln(), LOG_SCALE)
     .into_iter()
     .map(f32::exp)
     .collect();
-  carry_hidden(&raw, &mut dx, &mut dy);
-
   let target = &request.target;
-  let (width, height) = (f64::from(source.0), f64::from(source.1));
-  let visible: Vec<bool> = (0..raw.len())
-    .map(|index| {
-      let (x, y) = (f64::from(dx[index]), f64::from(dy[index]));
-      if target.redaction {
-        let s = f64::from(scale[index]);
-        let [ax, ay] = target.anchor;
-        let place = |value: f64, anchor: f64, shift: f64| anchor + shift + s * (value - anchor);
-        let (x0, y0) = (
-          place(target.region[0], ax, x),
-          place(target.region[1], ay, y),
-        );
-        let (x1, y1) = (
-          place(target.region[2], ax, x),
-          place(target.region[3], ay, y),
-        );
-        x1 > 0.0 && y1 > 0.0 && x0 < width && y0 < height
-      } else {
-        let (ax, ay) = (target.anchor[0] + x, target.anchor[1] + y);
-        raw[index].status != Status::Hidden && ax >= 0.0 && ay >= 0.0 && ax < width && ay < height
-      }
-    })
-    .collect();
+  under_covers(&mut raw, [&dx, &dy, &scale], target);
+  carry_hidden(&raw, &mut dx, &mut dy);
+  bridge_lost(&raw, &mut [&mut dx, &mut dy, &mut scale]);
+
+  let mut visible = in_sight(&raw, [&dx, &dy, &scale], target, source);
 
   let span = |(from, to): (usize, usize)| {
     let start = if from == 0 {
@@ -228,13 +149,21 @@ pub(crate) fn assemble(
     let end = raw.get(to + 1).map_or(request.end_ms, |next| next.ms);
     [start, end]
   };
+  let covered = hide_unseen(&raw, &mut visible, &unseen_by_hand, target.redaction, &span);
+  // Content known to be under a cover is not lost: it is where it went.
   let weak_runs = runs(raw.len(), |index| {
-    visible[index] && raw[index].confidence < WEAK
+    (visible[index] || covered[index])
+      && !unseen_by_hand[index]
+      && !raw[index].under
+      && raw[index].confidence < WEAK
   });
-  let growth = if target.redaction {
-    grown(&weak_runs, &dx, &dy, target.region)
+  let (growth, views) = if target.redaction {
+    (
+      grown(&weak_runs, &dx, &dy, target.region),
+      raw.iter().map(|raw| raw.view).collect(),
+    )
   } else {
-    Vec::new()
+    (Vec::new(), Vec::new())
   };
   PinnedPath {
     key: request.key(),
@@ -251,14 +180,27 @@ pub(crate) fn assemble(
       })
       .collect(),
     growth,
+    views,
     shown: runs(raw.len(), |index| visible[index])
       .into_iter()
       .map(span)
       .collect(),
     weak: weak_runs.iter().copied().map(span).collect(),
-    hidden: runs(raw.len(), |index| raw[index].status == Status::Hidden)
+    hidden: runs(raw.len(), |index| {
+      raw[index].status == Status::Hidden && !unseen_by_hand[index]
+    })
+    .into_iter()
+    .map(span)
+    .collect(),
+    covered: runs(raw.len(), |index| covered[index])
       .into_iter()
       .map(span)
       .collect(),
+    under: runs(raw.len(), |index| {
+      raw[index].under && !visible[index] && !unseen_by_hand[index]
+    })
+    .into_iter()
+    .map(span)
+    .collect(),
   }
 }

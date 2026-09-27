@@ -69,33 +69,22 @@ pub(super) fn render_video(
   let export_end_100ns = i64::try_from(request.duration_ms)
     .unwrap_or(i64::MAX / 10_000)
     .saturating_mul(10_000);
-  // Annotations are authored against the source at its own scale while the
-  // stroke follows the output, exactly as `timed_annotations::for_request`
-  // prepares them for the Metal export. Scaled once rather than per frame. A
-  // redaction's width is its block, which covers the source rather than
-  // drawing on the output, so it keeps its size in source pixels.
-  let mut annotation_clips: Vec<_> = request
+  let mut annotation_clips = request
     .timeline
     .map_or(&[][..], |timeline| timeline.annotation_clips())
-    .iter()
-    .map(|clip| {
-      let mut clip = clip.clone();
-      if clip.annotation.shape.kind() != crate::editor::annotations::AnnotationKind::Redact {
-        clip.annotation.style.width *= f64::from(request.video.resolution_scale_percent)
-          / f64::from(request.video.source_scale_percent.max(1));
-      }
-      clip
-    })
-    .collect();
+    .to_vec();
   // Pinned annotations take their paths, which the preview has normally
   // worked out already. The screen's redactions then take the fills read
   // from their clips' frames: a secure pixelation's zones from its first,
-  // and the surface across it, both where the pin carries the box.
+  // and the surface across it, both where the pin carries the box. Both come
+  // before the stroke is scaled below: the preview placed counters' and text
+  // boxes' tips at the edited scale, so the export asks for the same paths.
   if request.annotation_track == crate::editor::annotations::timing::AnnotationTrack::Primary {
     crate::editor::recording_preview_player::pin_paths::attach_for_export(
       request.screen,
       request.duration_ms,
       &mut annotation_clips,
+      request.output.image_width,
       request.cancelled,
     );
     crate::editor::recording_preview_player::held_surfaces::attach_for_export(
@@ -104,6 +93,17 @@ pub(super) fn render_video(
       &mut annotation_clips,
       request.output.capture_width_points,
     );
+  }
+  // Annotations are authored against the source at its own scale while the
+  // stroke follows the output, exactly as `timed_annotations::for_request`
+  // prepares them for the Metal export. Scaled once rather than per frame. A
+  // redaction's width is its block, which covers the source rather than
+  // drawing on the output, so it keeps its size in source pixels.
+  for clip in &mut annotation_clips {
+    if clip.annotation.shape.kind() != crate::editor::annotations::AnnotationKind::Redact {
+      clip.annotation.style.width *= f64::from(request.video.resolution_scale_percent)
+        / f64::from(request.video.source_scale_percent.max(1));
+    }
   }
   loop {
     if request.cancelled.load(Ordering::Acquire) {

@@ -19,7 +19,10 @@ use std::sync::{Arc, Mutex};
 use super::held_timelines::ReadySlot;
 use super::pin_cache::cached_path;
 use super::pin_paths::PinStatus;
-use crate::editor::annotations::pin::{PinRequest, PinnedPath};
+use super::platform::LumaReader;
+use crate::editor::annotations::pin::find::find_again;
+use crate::editor::annotations::pin::{PinRequest, PinnedPath, TRACKING_SIDE};
+use crate::editor::annotations::snap::source_per_output;
 use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
 
 /// Working through the queue on the tracking thread.
@@ -116,9 +119,62 @@ impl PinTracks {
     )
   }
 
+  /// [`PinnedPath::last_seen`] on `annotation_id`'s latest path.
+  pub(crate) fn last_seen(&self, annotation_id: &str, ms: u64) -> Option<[f64; 2]> {
+    self
+      .state
+      .lock()
+      .ok()?
+      .latest
+      .get(annotation_id)?
+      .last_seen(ms)
+  }
+
+  /// Where `clip`'s annotation goes when the hand says its content is back in
+  /// view at `ms`: found again near where it was last shown, by how it looked
+  /// on the last keyframe before that it was in view on, or else on the frame
+  /// it was pinned on - one keyframe may have been made while it was half
+  /// covered - and where it was last shown when neither finds it. Nothing
+  /// where it is not hidden. `image_width` places the tips counters and text
+  /// boxes are followed by, as [`PinTracks::attach`] does.
+  pub(crate) fn back_in_view(
+    &self,
+    clip: &RecordingAnnotationClip,
+    ms: u64,
+    image_width: f64,
+  ) -> Option<[f64; 2]> {
+    let pin = clip.pin.as_ref()?;
+    let near = self.last_seen(&clip.annotation.id, ms)?;
+    let keyframes = pin.sorted();
+    let before = keyframes
+      .iter()
+      .rev()
+      .find(|keyframe| !keyframe.out_of_view && keyframe.ms <= ms);
+    let pinned = keyframes
+      .iter()
+      .find(|keyframe| keyframe.ms == pin.pinned_ms)
+      .filter(|pinned| before.is_none_or(|before| before.ms != pinned.ms));
+    let scale = source_per_output(self.source, image_width);
+    let target = PinRequest::of(clip, pin, self.source, scale).target;
+    let mut reader = LumaReader::open(&self.recording, self.duration_ms, TRACKING_SIDE).ok()?;
+    let found = [before, pinned].into_iter().flatten().find_map(|keyframe| {
+      find_again(&mut reader, target, *keyframe, near, ms)
+        .ok()
+        .flatten()
+    });
+    Some(found.unwrap_or(near))
+  }
+
   /// Hands each pinned clip among `clips` its path, or the one it had while
-  /// its new one is asked for.
-  pub(crate) fn attach(self: &Arc<Self>, clips: &mut [RecordingAnnotationClip], position_ms: u64) {
+  /// its new one is asked for. `image_width` is how wide the screen is drawn
+  /// on the canvas, in canvas pixels, or zero where that is not known yet.
+  pub(crate) fn attach(
+    self: &Arc<Self>,
+    clips: &mut [RecordingAnnotationClip],
+    position_ms: u64,
+    image_width: f64,
+  ) {
+    let scale = source_per_output(self.source, image_width);
     for clip in clips.iter_mut() {
       if clip.track_id != AnnotationTrack::Primary {
         continue;
@@ -126,7 +182,7 @@ impl PinTracks {
       let Some(pin) = clip.pin.as_ref() else {
         continue;
       };
-      let request = PinRequest::of(clip, pin, self.source);
+      let request = PinRequest::of(clip, pin, self.source, scale);
       let key = request.key();
       let id = clip.annotation.id.clone();
       let path = match cached_path(&self.recording, key) {

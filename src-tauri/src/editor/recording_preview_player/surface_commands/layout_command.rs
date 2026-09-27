@@ -75,6 +75,9 @@ pub async fn layout_recording_preview_surface(
       camera_overlay,
       recording_output: recording_output.clone(),
     };
+  if composition_changed {
+    sources.reattach_pins(manager.position_ms);
+  }
   let scale = if scale.is_finite() && scale > 0.0 {
     scale
   } else {

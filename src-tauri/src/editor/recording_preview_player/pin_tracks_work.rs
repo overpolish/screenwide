@@ -31,12 +31,7 @@ impl PinTracks {
         stop,
       ) = job;
       // The last path's stretches no longer say anything about this one.
-      self.report(PinStatus {
-        annotation_id: id.clone(),
-        progress: Some(0.0),
-        weak: Vec::new(),
-        hidden: Vec::new(),
-      });
+      self.report(PinStatus::working(&id, 0.0));
       let reported = Mutex::new(0.0_f32);
       let progress = |share: f32| {
         let Ok(mut reported) = reported.lock() else {
@@ -44,12 +39,7 @@ impl PinTracks {
         };
         if share - *reported >= PROGRESS_STEP {
           *reported = share;
-          self.report(PinStatus {
-            annotation_id: id.clone(),
-            progress: Some(share),
-            weak: Vec::new(),
-            hidden: Vec::new(),
-          });
+          self.report(PinStatus::working(&id, share));
         }
       };
       // Each leg that lands is shown at once, over the path the annotation

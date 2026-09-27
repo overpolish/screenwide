@@ -7,6 +7,7 @@ const hooks = vi.hoisted(() => ({
   activation: false,
   arrows: false,
   effects: [] as (() => void)[],
+  focusOnly: false,
   index: 0,
   popup: false,
   refs: [] as { current: unknown }[],
@@ -22,6 +23,7 @@ vi.mock("../escape-focus", () => ({
   preserveEscapeFocus: () => () => undefined,
 }));
 vi.mock("../keyboard-target", () => ({
+  arrowsOnlyMoveFocus: () => hooks.focusOnly,
   ownsActivationKeys: () => hooks.activation,
   ownsArrowKeys: () => hooks.arrows,
   ownsPopupInteractionKeys: () => hooks.popup,
@@ -46,7 +48,12 @@ const key = (code: string, values = {}, type = "keydown") => {
 beforeEach(() => {
   hooks.refs = [];
   hooks.index = 0;
-  hooks.text = hooks.arrows = hooks.activation = hooks.popup = false;
+  hooks.text =
+    hooks.arrows =
+    hooks.activation =
+    hooks.popup =
+    hooks.focusOnly =
+      false;
   hooks.send.mockClear();
   vi.stubGlobal("window", new EventTarget());
 });
@@ -125,6 +132,24 @@ describe("panel editor shortcuts", () => {
     hooks.text = true;
     key("KeyZ", { metaKey: true });
     expect(hooks.send).toHaveBeenCalledTimes(2);
+  });
+
+  // A tool picked from a toolbar with the pointer keeps focus, but the
+  // arrows are the playhead's until Tab says the keyboard is moving around.
+  it("steps the playhead from a group picked with the pointer until Tab", () => {
+    const step = vi.fn();
+    useEditorWindowShortcuts({ onStep: step });
+    hooks.arrows = hooks.focusOnly = true;
+    window.dispatchEvent(new Event("pointerdown"));
+    expect(key("ArrowRight").stop).toHaveBeenCalledOnce();
+    expect(step).toHaveBeenCalledOnce();
+    key("Tab");
+    expect(key("ArrowRight").stop).not.toHaveBeenCalled();
+    // A value the pointer just took hold of, a slider's, keeps its arrows.
+    window.dispatchEvent(new Event("pointerdown"));
+    hooks.focusOnly = false;
+    expect(key("ArrowLeft").stop).not.toHaveBeenCalled();
+    expect(step).toHaveBeenCalledOnce();
   });
 
   it("keeps release suppression through a render caused by the shortcut", () => {

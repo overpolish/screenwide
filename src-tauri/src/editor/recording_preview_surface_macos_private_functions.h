@@ -143,6 +143,15 @@ NSInteger annotation_handle_at_point(ScreenwidePreviewSurface *surface,
 /// The topmost arrow whose shaft `point` lands on, or -1.
 NSInteger annotation_shaft_at_point(ScreenwidePreviewSurface *surface,
                                     NSPoint point);
+/// Reports one annotation gesture sample to Rust. `index` is the item's place
+/// in the published list for an existing or chosen annotation.
+void emit_annotation_gesture(ScreenwidePreviewSurface *surface, uint32_t phase,
+                             uint32_t targetKind, uint32_t index,
+                             uint32_t handle, NSPoint point);
+/// Chooses the annotation at `index` in the published list, as a press on it
+/// does: its layer becomes the selection and Rust commits the choice.
+void annotation_choose(ScreenwidePreviewSurface *surface, NSInteger index,
+                       NSPoint point);
 /// Whether a text box is being typed into.
 BOOL annotation_text_editing(ScreenwidePreviewSurface *surface);
 /// Ends the typing, telling Rust the text it ended with. Answers whether that

@@ -4,23 +4,41 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
-import { dismissPopupMenu } from "../../popup-panel/use-popup-menu";
+import {
+  dismissPopupMenu,
+  pointerAnchor,
+} from "../../popup-panel/use-popup-menu";
+import { isPinnable } from "../recording-annotation-pins";
+import { RecordingAnnotationClip } from "../recording-annotations";
 import { RecordingTrackId, RecordingVideoTrackId } from "../types";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
+import {
+  AnnotationClipPinning,
+  useAnnotationClipMenu,
+} from "./use-annotation-clip-menu";
 import {
   RECORDING_TRACK_MENU_PREFIX,
   recordingTrackMoves,
   useRecordingTrackMenu,
 } from "./use-recording-track-menu";
 
+/** What a right press on an annotation needs: the clips to find it among, and
+ * the pin actions its menu offers. */
+type CanvasMenuAnnotations = {
+  clips: RecordingAnnotationClip[];
+  pinning: AnnotationClipPinning;
+};
+
 export function useRecordingCanvasContextMenu({
+  annotations,
   canvasTool,
   moveVideoTrack,
   onSelectedTrackChange,
   videoTrackOrderList,
   visiblePaneEntries,
 }: {
+  annotations: CanvasMenuAnnotations;
   canvasTool: RecordingCanvasTool;
   moveVideoTrack: (
     track: RecordingVideoTrackId,
@@ -30,6 +48,22 @@ export function useRecordingCanvasContextMenu({
   visiblePaneEntries: { trackId: RecordingVideoTrackId }[];
   onSelectedTrackChange?: (track: RecordingTrackId | null) => void;
 }) {
+  // A right press on an annotation opens the menu its timeline clip opens.
+  // The native side has already chosen it and names it here.
+  const openAnnotationMenu = useAnnotationClipMenu({
+    idPrefix: "annotation-canvas:",
+    pinning: annotations.pinning,
+  });
+  const openCanvasAnnotationMenuRef = useRef<
+    (annotationId: string, x: number, y: number) => void
+  >(() => undefined);
+  openCanvasAnnotationMenuRef.current = (annotationId, x, y) => {
+    const clip = annotations.clips.find(
+      (item) => item.annotation.id === annotationId,
+    );
+    if (clip && isPinnable(clip))
+      void openAnnotationMenu(pointerAnchor(x, y), clip);
+  };
   // A right click on a pane in the native canvas opens the same layer menu the
   // timeline row opens. The native side selects the layer it landed on and
   // reports the point; the menu is drawn here, at the pointer.
@@ -67,16 +101,25 @@ export function useRecordingCanvasContextMenu({
     let unlisten: (() => void) | undefined;
     let disposed = false;
     void getCurrentWindow()
-      .listen<{ paneIndex: number; x: number; y: number }>(
-        "preview://context-menu",
-        ({ payload }) => {
+      .listen<{
+        annotationId: string | null;
+        paneIndex: number;
+        x: number;
+        y: number;
+      }>("preview://context-menu", ({ payload }) => {
+        if (payload.annotationId !== null)
+          openCanvasAnnotationMenuRef.current(
+            payload.annotationId,
+            payload.x,
+            payload.y,
+          );
+        else
           openCanvasTrackMenuRef.current(
             payload.paneIndex,
             payload.x,
             payload.y,
           );
-        },
-      )
+      })
       .then((dispose) => {
         if (disposed) dispose();
         else unlisten = dispose;

@@ -91,11 +91,13 @@ typedef void (*screenwide_preview_selection_gesture_callback)(uint32_t phase,
 typedef void (*screenwide_preview_selection_callback)(int32_t pane_index,
                                                        void *context);
 typedef void (*screenwide_preview_pointer_down_callback)(void *context);
-/// A right press (or Control-click) that landed on a video layer. `x` and `y`
-/// are logical points from the top-left of the window's content, the frame the
-/// webview reports pointer events in, so the web layer can open its own menu
-/// exactly where the press was.
+/// A right press (or Control-click) that landed on a video layer or an
+/// annotation. `annotation_index` is the annotation's place in the published
+/// list, or -1 for a layer. `x` and `y` are logical points from the top-left
+/// of the window's content, the frame the webview reports pointer events in,
+/// so the web layer can open its own menu exactly where the press was.
 typedef void (*screenwide_preview_context_menu_callback)(uint32_t pane_index,
+                                                          int32_t annotation_index,
                                                           double x, double y,
                                                           void *context);
 

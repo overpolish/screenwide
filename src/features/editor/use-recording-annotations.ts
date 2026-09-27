@@ -11,12 +11,7 @@ import {
   useAnnotationDefaults,
 } from "./annotation-defaults";
 import { Annotation, AnnotationTextEdit } from "./annotations";
-import {
-  clearedPinCorrections,
-  isPinnable,
-  pinnedClip,
-  unpinnedClip,
-} from "./recording-annotation-pins";
+import { recordingAnnotationPinning } from "./recording-annotation-pinning";
 import {
   mergeRecordingAnnotationClips,
   RecordingAnnotationClip,
@@ -199,25 +194,18 @@ export function useRecordingAnnotations({
     selection.selectedId,
     trackId,
   ]);
+  const pinning = recordingAnnotationPinning({
+    clips,
+    getPositionMs,
+    pinStatus,
+    sessionId,
+    withClip,
+  });
   return {
     ...selection,
     canDelete: selection.hasSelection || (tool !== null && selection.canDelete),
     clips,
-    onClearPinCorrections: (id: string) => {
-      withClip(id, (clip) =>
-        clip.pin ? { ...clip, pin: clearedPinCorrections(clip.pin) } : clip,
-      );
-    },
     onClipsChange: commitClips,
-    onPinnedChange: (id: string, pinned: boolean) => {
-      withClip(id, (clip) =>
-        pinned
-          ? clip.pin || !isPinnable(clip)
-            ? clip
-            : pinnedClip(clip, getPositionMs())
-          : unpinnedClip(clip),
-      );
-    },
     onPreviewClips: setPreviewClips,
     onSelect: (id: string) => {
       const clip = clips.find((item) => item.annotation.id === id);
@@ -226,5 +214,6 @@ export function useRecordingAnnotations({
       onSelectTrack?.(clip.trackId);
     },
     pinStatus,
+    pinning,
   };
 }

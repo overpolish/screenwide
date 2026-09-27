@@ -19,8 +19,7 @@ import { RecordingPinStatus } from "../use-recording-pin-status";
 import { recordingAnnotationRows } from "./recording-annotation-layout";
 import {
   RecordingAnnotationPinBadge,
-  RecordingAnnotationPinKeyframes,
-  RecordingAnnotationPinStretches,
+  RecordingAnnotationPinOverlay,
 } from "./recording-annotation-pin-overlay";
 import {
   TIMED_LANE_ROW_HEIGHT_PX,
@@ -30,7 +29,10 @@ import { SeekHandler } from "./timeline-seek";
 import { TimelineTrackHeader } from "./timeline-track-header";
 import { TimelineViewportState } from "./timeline-viewport";
 import { TimelineViewportContent } from "./timeline-viewport-content";
-import { useAnnotationClipMenu } from "./use-annotation-clip-menu";
+import {
+  AnnotationClipPinning,
+  useAnnotationClipMenu,
+} from "./use-annotation-clip-menu";
 import { usePinKeyframeMenu } from "./use-pin-keyframe-menu";
 import {
   previewedWhole,
@@ -41,12 +43,11 @@ export function RecordingAnnotationLane({
   clips,
   edit,
   onChange,
-  onClearPinCorrections,
-  onPinnedChange,
   onPreview,
   onSeek,
   onSelect,
   pinStatus,
+  pinning,
   selectedId,
   sourceDurationMs,
   viewport,
@@ -58,15 +59,13 @@ export function RecordingAnnotationLane({
   selectedId: string | null;
   sourceDurationMs: number;
   viewport: TimelineViewportState;
-  /** Take away every place the annotation was put by hand. */
-  onClearPinCorrections?: (id: string) => void;
-  /** Pin the annotation to the content under it, or let it go. Without it,
-   * the lane offers no pinning. */
-  onPinnedChange?: (id: string, pinned: boolean) => void;
   onPreview?: (clips: RecordingAnnotationClip[] | null) => void;
   onSeek?: SeekHandler;
   /** How each pinned clip's path is coming along, by annotation id. */
   pinStatus?: ReadonlyMap<string, RecordingPinStatus>;
+  /** What a clip's menu does to its pin. Without it, the lane offers no
+   * pinning. */
+  pinning?: AnnotationClipPinning;
 }) {
   const { beginDrag, draft, laneRef, movedRef } = useRecordingAnnotationDrag({
     clips,
@@ -94,8 +93,8 @@ export function RecordingAnnotationLane({
   };
   const openKeyframeMenu = usePinKeyframeMenu(deleteKeyframe);
   const openClipMenu = useAnnotationClipMenu({
-    onClearCorrections: (id) => onClearPinCorrections?.(id),
-    onPinnedChange: (id, pinned) => onPinnedChange?.(id, pinned),
+    idPrefix: "annotation-clip:",
+    pinning,
   });
   return (
     <div className="flex items-center gap-section">
@@ -123,7 +122,7 @@ export function RecordingAnnotationLane({
             const selected = clip.annotation.id === selectedId;
             const status = pinStatus?.get(clip.annotation.id);
             const block = { edit, fragment, sourceDurationMs };
-            const pinnable = onPinnedChange !== undefined && isPinnable(clip);
+            const pinnable = pinning !== undefined && isPinnable(clip);
             const clickBody = (event: MouseEvent) => {
               event.stopPropagation();
               if (movedRef.current) {
@@ -183,32 +182,28 @@ export function RecordingAnnotationLane({
                 >
                   {fragment.showLabel ? label : null}
                 </button>
-                {selected && clip.pin ? (
-                  <>
-                    <RecordingAnnotationPinStretches
-                      {...block}
-                      onBodyClick={clickBody}
-                      onBodyPointerDown={pressBody}
-                      status={status}
-                    />
-                    <RecordingAnnotationPinKeyframes
-                      {...block}
-                      label={label}
-                      onDeleteKeyframe={(ms) => {
-                        deleteKeyframe(clip.annotation.id, ms);
-                      }}
-                      onKeyframeMenu={(point, ms, isPinnedFrame) => {
-                        void openKeyframeMenu({
-                          annotationId: clip.annotation.id,
-                          isPinnedFrame,
-                          ms,
-                          point,
-                        });
-                      }}
-                      onSeek={onSeek}
-                      pin={clip.pin}
-                    />
-                  </>
+                {clip.pin ? (
+                  <RecordingAnnotationPinOverlay
+                    {...block}
+                    clipEndMs={clip.endMs}
+                    label={label}
+                    onBodyClick={clickBody}
+                    onBodyPointerDown={pressBody}
+                    onDeleteKeyframe={(ms) => {
+                      deleteKeyframe(clip.annotation.id, ms);
+                    }}
+                    onKeyframeMenu={(point, ms, kind) => {
+                      void openKeyframeMenu({
+                        annotationId: clip.annotation.id,
+                        kind,
+                        ms,
+                        point,
+                      });
+                    }}
+                    onSeek={onSeek}
+                    pin={clip.pin}
+                    status={status}
+                  />
                 ) : null}
                 {(["startMs", "endMs"] as const).map((edge) => {
                   if (

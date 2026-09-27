@@ -135,6 +135,54 @@ pub async fn recording_preview_pin_statuses(
   )
 }
 
+/// Where a pinned annotation hidden at `source_ms` goes when the hand says
+/// its content is back in view there, as a movement from where it was drawn:
+/// found again on that frame, or where it was last shown. Nothing when it is
+/// not hidden there. The frames are read off the preview's lock.
+#[tauri::command]
+pub async fn recording_preview_pin_back_in_view(
+  state: tauri::State<'_, RecordingPreviewPlayerState>,
+  session_id: u64,
+  annotation_id: String,
+  source_ms: u64,
+) -> Result<Option<[f64; 2]>, String> {
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  {
+    let (pins, clip, image_width) = {
+      let manager = state
+        .0
+        .lock()
+        .map_err(|_| "The recording preview is unavailable")?;
+      manager.require_session(session_id)?;
+      let Some(sources) = manager.sources.as_ref() else {
+        return Ok(None);
+      };
+      let Some(pins) = sources.pins.clone() else {
+        return Ok(None);
+      };
+      let clip = sources
+        .annotation_clips
+        .read()
+        .map_err(|_| "The annotations are unavailable")?
+        .iter()
+        .find(|clip| clip.annotation.id == annotation_id)
+        .cloned();
+      let Some(clip) = clip else {
+        return Ok(None);
+      };
+      (pins, clip, sources.screen_image_width())
+    };
+    tauri::async_runtime::spawn_blocking(move || pins.back_in_view(&clip, source_ms, image_width))
+      .await
+      .map_err(|error| error.to_string())
+  }
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  {
+    let _ = (state, session_id, annotation_id, source_ms);
+    Ok(None)
+  }
+}
+
 #[path = "annotation_gesture.rs"]
 mod gesture;
 

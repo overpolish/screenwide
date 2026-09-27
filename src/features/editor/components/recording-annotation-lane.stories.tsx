@@ -17,6 +17,7 @@ import { createRecordingTimelineEdit } from "../recording-timeline-edit";
 
 import { RecordingAnnotationLane } from "./recording-annotation-lane";
 import { fitTimelineViewport } from "./timeline-viewport";
+import { AnnotationClipPinning } from "./use-annotation-clip-menu";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
@@ -51,12 +52,13 @@ const arrow = (
 });
 
 /** Pinning as the editor does it, pinned where each annotation was placed
- * since a story has no playhead in source time. */
+ * since a story has no playhead in source time, and with no tracker to bring
+ * a hidden annotation back from. */
 const pinning = (
   setClips: (
     change: (clips: RecordingAnnotationClip[]) => RecordingAnnotationClip[],
   ) => void,
-) => {
+): AnnotationClipPinning => {
   const withClip =
     (change: (clip: RecordingAnnotationClip) => RecordingAnnotationClip) =>
     (id: string) => {
@@ -65,14 +67,18 @@ const pinning = (
       );
     };
   return {
-    onClearPinCorrections: withClip((clip) =>
+    canHideHere: () => false,
+    canShowHere: () => false,
+    onClearCorrections: withClip((clip) =>
       clip.pin ? { ...clip, pin: clearedPinCorrections(clip.pin) } : clip,
     ),
-    onPinnedChange: (id: string, pinned: boolean) => {
+    onHideHere: () => undefined,
+    onPinnedChange: (id, pinned) => {
       withClip((clip) => (pinned ? pinnedClip(clip, -1) : unpinnedClip(clip)))(
         id,
       );
     },
+    onShowHere: () => undefined,
   };
 };
 
@@ -98,9 +104,9 @@ function Preview() {
           ],
         }}
         onChange={setClips}
-        {...pinning(setClips)}
         onSeek={setPosition}
         onSelect={setSelectedId}
+        pinning={pinning(setClips)}
         selectedId={selectedId}
         sourceDurationMs={120_000}
         viewport={fitTimelineViewport()}
@@ -143,9 +149,10 @@ export const Empty: Story = {
   ),
 };
 
-/** Two pinned arrows. The one in hand shows where it was pinned and put
- * right, a stretch it was followed poorly in to check, and a stretch its
- * content was off the frame; the other is still being tracked. */
+/** Two pinned arrows, each showing its keyframes and stretches whether in
+ * hand or not. The one in hand was put right once, followed poorly in one
+ * stretch and off the frame in another; the other is still being tracked,
+ * and its content was said to be out of view for ten seconds. */
 export const Pinned: Story = {
   render: function PinnedLane() {
     const [clips, setClips] = useState<RecordingAnnotationClip[]>(() => [
@@ -161,7 +168,14 @@ export const Pinned: Story = {
       },
       {
         ...arrow("arrow-b", 50_000, 90_000),
-        pin: { keyframes: [{ dx: 0, dy: 0, ms: 60_000 }], pinnedMs: 60_000 },
+        pin: {
+          keyframes: [
+            { dx: 0, dy: 0, ms: 60_000 },
+            { dx: 0, dy: 0, ms: 70_000, outOfView: true },
+            { dx: 4, dy: -12, ms: 80_000 },
+          ],
+          pinnedMs: 60_000,
+        },
       },
     ]);
     const [selectedId, setSelectedId] = useState<string | null>("arrow-a");
@@ -171,19 +185,24 @@ export const Pinned: Story = {
           clips={clips}
           edit={createRecordingTimelineEdit(1)}
           onChange={setClips}
-          {...pinning(setClips)}
           onSelect={setSelectedId}
+          pinning={pinning(setClips)}
           pinStatus={
             new Map([
               [
                 "arrow-a",
                 {
+                  covered: [[24_000, 27_000]],
                   hidden: [[30_000, 34_000]],
                   progress: null,
+                  under: [[24_000, 27_000]],
                   weak: [[17_000, 21_000]],
                 },
               ],
-              ["arrow-b", { hidden: [], progress: 0.4, weak: [] }],
+              [
+                "arrow-b",
+                { covered: [], hidden: [], progress: 0.4, under: [], weak: [] },
+              ],
             ])
           }
           selectedId={selectedId}

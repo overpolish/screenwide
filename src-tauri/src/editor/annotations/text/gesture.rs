@@ -159,7 +159,11 @@ fn pointer_at(
 
 /// Where a drawn pointer's tip is against `bounds`, for it to take an
 /// element's edge when the box is moved; `None` when it is tucked in.
-fn pointer_tip(bounds: SnapBox, em: f64, pointer: &TextPointer) -> Option<AnnotationPoint> {
+pub(crate) fn pointer_tip(
+  bounds: SnapBox,
+  em: f64,
+  pointer: &TextPointer,
+) -> Option<AnnotationPoint> {
   if !pointer.is_drawn() {
     return None;
   }

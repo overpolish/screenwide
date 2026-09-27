@@ -119,7 +119,9 @@ impl PreviewPlayerManager {
   }
 }
 impl PreviewPlayerManager {
-  pub(super) fn annotation_targets(&self) -> Vec<(u32, Annotation)> {
+  pub(in crate::editor::recording_preview_player) fn annotation_targets(
+    &self,
+  ) -> Vec<(u32, Annotation)> {
     let Some(sources) = &self.sources else {
       return Vec::new();
     };

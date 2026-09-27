@@ -30,6 +30,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   adjustedKeyboardFragmentIds,
   annotationClips = [],
   annotationPinStatus,
+  annotationPinning,
   audioTracks,
   blade,
   durationMs,
@@ -40,8 +41,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   keyboardItems,
   keyboardSelection,
   layout,
-  onAnnotationPinCorrectionsClear,
-  onAnnotationPinnedChange,
   onAnnotationSelect,
   onAnnotationsChange,
   onAnnotationsPreview,
@@ -174,11 +173,10 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               clips={annotationClips}
               edit={blade.edit}
               onChange={onAnnotationsChange}
-              onClearPinCorrections={onAnnotationPinCorrectionsClear}
-              onPinnedChange={onAnnotationPinnedChange}
               onPreview={onAnnotationsPreview}
               onSeek={onSeek}
               onSelect={onAnnotationSelect}
+              pinning={annotationPinning}
               pinStatus={annotationPinStatus}
               selectedId={selectedAnnotationId}
               sourceDurationMs={sourceDurationMs}

@@ -73,12 +73,13 @@ pub(super) unsafe extern "C" fn pointer_down_callback(context: *mut std::ffi::c_
 
 pub(super) unsafe extern "C" fn context_menu_callback(
   pane_index: u32,
+  annotation_index: i32,
   x: f64,
   y: f64,
   context: *mut std::ffi::c_void,
 ) {
   if let Some(callback) = (context as *mut ContextMenuCallback).as_mut() {
-    callback(pane_index, x, y);
+    callback(pane_index, u32::try_from(annotation_index).ok(), x, y);
   }
 }
 

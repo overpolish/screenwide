@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::super::geometry::{distance, Rect};
+use super::super::geometry::{distance, Rect, Similarity};
 use super::super::luma::Pyramid;
+use super::super::search::Template;
 use super::{seed, Observation, Status, Tracker, MAX_SEARCH, MIN_INLIERS, POINTS};
 
 /// How closely a lost target's latest look must match to be taken back
@@ -12,6 +13,9 @@ const UNVERIFIED_SCORE: f32 = 0.92;
 /// How far past twice its own size a lost target is looked for, in tracking
 /// pixels.
 const SEARCH_SLACK: f32 = 32.0;
+/// How long a target found again by the hand counts as having been lost, in
+/// frames, which widens the search to about a hundred tracking pixels more.
+const FIND_LOST_FRAMES: u32 = 25;
 impl Tracker {
   /// Looks for the target near where it was last seen, by its latest look
   /// and then by the pinned one. A find is taken once the pinned frame's
@@ -20,6 +24,16 @@ impl Tracker {
   /// look; one that went off the edge never is, since anything else on the
   /// frame could be the best match while the target itself is still off it.
   pub(super) fn reacquire(&mut self, next: &Pyramid) -> Observation {
+    let templates = [
+      (self.recent_template.clone(), false),
+      (self.reference_template.clone(), true),
+    ];
+    self.look_for(next, &templates)
+  }
+
+  /// Looks for the target by each of `templates` in turn, each marked with
+  /// whether it is the pinned look, as [`Tracker::reacquire`] does.
+  fn look_for(&mut self, next: &Pyramid, templates: &[(Option<Template>, bool)]) -> Observation {
     self.lost_frames += 1;
     let last = self.transform;
     let centre = self.target.region.centre();
@@ -52,11 +66,8 @@ impl Tracker {
         status: self.status,
       };
     }
-    let templates = [
-      (self.recent_template.clone(), false),
-      (self.reference_template.clone(), true),
-    ];
     for (template, pinned) in templates {
+      let pinned = *pinned;
       let Some(template) = template else {
         continue;
       };
@@ -83,6 +94,8 @@ impl Tracker {
       if points.len() < MIN_INLIERS {
         continue;
       }
+      self.supported = points.len();
+      self.vetted = vec![true; points.len()];
       self.points = points;
       self.transform = transform;
       self.velocity = [0.0; 2];
@@ -101,5 +114,20 @@ impl Tracker {
       confidence: 0.0,
       status: self.status,
     }
+  }
+
+  /// Looks for the target on `next` alone, around `around` - a movement from
+  /// the pinned frame, in tracking pixels - as widely as for a target lost a
+  /// while, by a finer cut of the pinned look, and takes it only where the
+  /// pinned frame's points agree. For content the hand says is back in view,
+  /// where nothing was followed to get there.
+  pub(crate) fn find(&mut self, next: &Pyramid, around: [f32; 2]) -> Option<Observation> {
+    self.transform = Similarity::IDENTITY.shifted(around);
+    self.velocity = [0.0; 2];
+    self.status = Status::Lost;
+    self.lost_frames = FIND_LOST_FRAMES;
+    let fine = Template::cut_fine(&self.reference, &self.target.region);
+    let observation = self.look_for(next, &[(fine, true)]);
+    (observation.status == Status::Tracked && observation.confidence >= 0.8).then_some(observation)
   }
 }

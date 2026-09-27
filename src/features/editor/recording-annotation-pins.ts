@@ -89,3 +89,41 @@ export const withoutPinKeyframe = (
     pinnedMs: ms === pin.pinnedMs ? nearest.ms : pin.pinnedMs,
   };
 };
+
+/** `pin` put at `keyframe`, which takes the place of any keyframe already
+ * that close to its moment, keeping that one's size unless it brings its
+ * own: a size is only ever changed by a resize. */
+export const withPinKeyframe = (
+  pin: RecordingAnnotationPin,
+  keyframe: RecordingAnnotationPin["keyframes"][number],
+): RecordingAnnotationPin => {
+  const near = (existing: RecordingAnnotationPin["keyframes"][number]) =>
+    Math.abs(existing.ms - keyframe.ms) <= KEYFRAME_SLACK_MS;
+  const edges = keyframe.edges ?? pin.keyframes.find(near)?.edges;
+  return {
+    keyframes: [
+      ...pin.keyframes.filter((existing) => !near(existing)),
+      edges ? { ...keyframe, edges } : keyframe,
+    ].sort((a, b) => a.ms - b.ms),
+    pinnedMs: pin.pinnedMs,
+  };
+};
+
+/** The stretches `pin`'s content was said to be out of view in: from each
+ * out-of-view keyframe to the keyframe after it, or on to `endMs`. */
+export const outOfViewStretches = (
+  pin: RecordingAnnotationPin,
+  endMs: number,
+): [number, number][] => {
+  const keyframes = [...pin.keyframes].sort((a, b) => a.ms - b.ms);
+  return keyframes.flatMap((keyframe, index) =>
+    keyframe.outOfView
+      ? [[keyframe.ms, keyframes[index + 1]?.ms ?? endMs] as [number, number]]
+      : [],
+  );
+};
+
+/** Whether `ms` is within a frame of `pin`'s pinned frame, which always stays
+ * a keyframe the annotation is shown on. */
+export const onPinnedFrame = (pin: RecordingAnnotationPin, ms: number) =>
+  Math.abs(ms - pin.pinnedMs) <= KEYFRAME_SLACK_MS;

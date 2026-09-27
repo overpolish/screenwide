@@ -8,6 +8,7 @@
 //! for the legs still to come. The patchwork is only ever shown; it is never
 //! kept as the pin's path.
 
+use super::leg::NO_COVER;
 use super::resolve::{PinSample, PinnedPath};
 
 /// `partial` wherever it has frames, and `stale` everywhere else, across a
@@ -22,9 +23,17 @@ pub(crate) fn patched(
   key: u64,
 ) -> PinnedPath {
   let grown = !partial.growth.is_empty() || !stale.growth.is_empty();
-  let growth_of =
-    |path: &PinnedPath, index: usize| path.growth.get(index).copied().unwrap_or([0.0; 4]);
-  let mut merged: Vec<(PinSample, [f32; 4])> =
+  let viewed = !partial.views.is_empty() || !stale.views.is_empty();
+  // Each moment's growth and view come with it from the path it is taken
+  // from.
+  let taken = |path: &PinnedPath, index: usize| {
+    (
+      path.samples[index],
+      path.growth.get(index).copied().unwrap_or([0.0; 4]),
+      path.views.get(index).copied().unwrap_or(NO_COVER),
+    )
+  };
+  let mut merged: Vec<(PinSample, [f32; 4], [f32; 4])> =
     Vec::with_capacity(stale.samples.len().max(partial.samples.len()));
   let (mut fresh, mut old) = (0, 0);
   // Both are in time order: take each moment from the fresh path where it
@@ -37,15 +46,15 @@ pub(crate) fn patched(
         if a.ms == b.ms {
           old += 1;
         }
-        merged.push((*a, growth_of(partial, fresh)));
+        merged.push(taken(partial, fresh));
         fresh += 1;
       }
-      (_, Some(b)) => {
-        merged.push((*b, growth_of(stale, old)));
+      (_, Some(_)) => {
+        merged.push(taken(stale, old));
         old += 1;
       }
-      (Some(a), None) => {
-        merged.push((*a, growth_of(partial, fresh)));
+      (Some(_), None) => {
+        merged.push(taken(partial, fresh));
         fresh += 1;
       }
       (None, None) => break,
@@ -54,7 +63,7 @@ pub(crate) fn patched(
   let mut shown = Vec::new();
   let mut from: Option<usize> = None;
   for index in 0..=merged.len() {
-    let visible = merged.get(index).is_some_and(|(sample, _)| sample.visible);
+    let visible = merged.get(index).is_some_and(|(sample, ..)| sample.visible);
     match (from, visible) {
       (None, true) => from = Some(index),
       (Some(first), false) => {
@@ -63,7 +72,7 @@ pub(crate) fn patched(
         } else {
           merged[first].0.ms
         };
-        let end = merged.get(index).map_or(end_ms, |(sample, _)| sample.ms);
+        let end = merged.get(index).map_or(end_ms, |(sample, ..)| sample.ms);
         shown.push([start, end]);
         from = None;
       }
@@ -73,13 +82,20 @@ pub(crate) fn patched(
   PinnedPath {
     key,
     growth: if grown {
-      merged.iter().map(|(_, growth)| *growth).collect()
+      merged.iter().map(|(_, growth, _)| *growth).collect()
     } else {
       Vec::new()
     },
-    samples: merged.into_iter().map(|(sample, _)| sample).collect(),
+    views: if viewed {
+      merged.iter().map(|(.., view)| *view).collect()
+    } else {
+      Vec::new()
+    },
+    samples: merged.into_iter().map(|(sample, ..)| sample).collect(),
     shown,
     weak: Vec::new(),
     hidden: Vec::new(),
+    covered: Vec::new(),
+    under: Vec::new(),
   }
 }

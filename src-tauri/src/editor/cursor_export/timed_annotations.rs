@@ -44,6 +44,7 @@ pub(super) fn for_request(
       request.screen,
       request.duration_ms,
       &mut clips,
+      request.output.image_width,
       request.cancelled,
     );
     crate::editor::recording_preview_player::held_surfaces::attach_for_export(
@@ -237,6 +238,8 @@ mod tests {
         ms: 1_000,
         dx: 0.0,
         dy: 0.0,
+        edges: None,
+        out_of_view: false,
       }],
       path: Some(std::sync::Arc::new(PinnedPath {
         samples: vec![

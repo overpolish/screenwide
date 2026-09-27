@@ -6,6 +6,7 @@ import { MouseEvent, PointerEvent } from "react";
 import { Focusable } from "react-aria-components";
 
 import { NativeTooltipTrigger } from "../../../components/shared/native-tooltip/native-tooltip-trigger";
+import { outOfViewStretches } from "../recording-annotation-pins";
 import { RecordingAnnotationPin } from "../recording-annotations";
 import {
   RecordingTimelineEdit,
@@ -17,6 +18,13 @@ import {
 } from "../use-recording-pin-status";
 
 import { SeekHandler } from "./timeline-seek";
+import { PinKeyframeKind } from "./use-pin-keyframe-menu";
+
+const KEYFRAME_NAMES: Record<PinKeyframeKind, string> = {
+  correction: "Correction",
+  outOfView: "Out of view",
+  pinned: "Pinned frame",
+};
 
 /*
  * What a pinned clip shows of its pin inside its own block on the lane, in
@@ -24,12 +32,12 @@ import { SeekHandler } from "./timeline-seek";
  * over the block's body and pass its presses on, the keyframes sit over the
  * stretches, and the trim handles the lane draws next sit over both.
  *
- * A clip in hand shows where it was pinned and put right by hand as
- * keyframes, which a right click or Delete takes away, the stretches the
- * tracker lost its content in, to check, and the stretches its content was
- * off the frame, where it is hidden. Any other pinned clip only says it is
- * pinned, so a lane of them stays readable. Every pinned clip shows how far
- * its path is worked out.
+ * Every pinned clip, in hand or not, shows where it was pinned and put right
+ * by hand as keyframes, which a right click or Delete takes away, the
+ * stretches the tracker lost its content in, to check, the stretches its
+ * content was off the frame or said to be out of view, where it is hidden,
+ * and how far its path is worked out: what needs checking is plain without
+ * picking every clip out first.
  */
 
 type Block = {
@@ -69,30 +77,45 @@ const blockGeometry = ({ edit, fragment, sourceDurationMs }: Block) => {
   };
 };
 
-/** The stretches the content was lost in and off the frame, each saying so
- * when the pointer rests on it. A press on one is a press on the block. */
-export function RecordingAnnotationPinStretches({
+/** The stretches the content was lost in, off the frame, and said to be
+ * out of view, each saying so when the pointer rests on it. A press on one is
+ * a press on the block. The last come from the pin itself, so they show
+ * before its path has landed. */
+function RecordingAnnotationPinStretches({
+  clipEndMs,
   onBodyClick,
   onBodyPointerDown,
+  pin,
   status,
   ...block
 }: Block & {
+  clipEndMs: number;
   onBodyClick: (event: MouseEvent) => void;
   onBodyPointerDown: (event: PointerEvent) => void;
+  pin: RecordingAnnotationPin;
   status?: RecordingPinStatus;
 }) {
-  if (!status) return null;
   const { stretch } = blockGeometry(block);
   const kinds = [
     {
       className: "bg-content/60",
       label: "Off the frame",
-      ranges: status.hidden,
+      ranges: status?.hidden ?? [],
+    },
+    {
+      className: "bg-content/60",
+      label: "Under a cover",
+      ranges: status?.under ?? [],
+    },
+    {
+      className: "bg-content/40",
+      label: "Out of view",
+      ranges: outOfViewStretches(pin, clipEndMs),
     },
     {
       className: "bg-warning/35",
       label: "Lost here, check",
-      ranges: status.weak,
+      ranges: status?.weak ?? [],
     },
   ];
   return kinds.flatMap(({ className, label, ranges }) =>
@@ -123,8 +146,10 @@ export function RecordingAnnotationPinStretches({
   );
 }
 
-/** The keyframes: where the clip was pinned and every correction. */
-export function RecordingAnnotationPinKeyframes({
+/** The keyframes: where the clip was pinned, every correction, and where its
+ * content was said to go out of view, drawn hollow. Each takes the block's
+ * own text colour, so it reads on a clip in hand and on one that is not. */
+function RecordingAnnotationPinKeyframes({
   label,
   onDeleteKeyframe,
   onKeyframeMenu,
@@ -139,7 +164,7 @@ export function RecordingAnnotationPinKeyframes({
   onKeyframeMenu: (
     point: { x: number; y: number },
     ms: number,
-    isPinnedFrame: boolean,
+    kind: PinKeyframeKind,
   ) => void;
   pin: RecordingAnnotationPin;
   onSeek?: SeekHandler;
@@ -151,12 +176,17 @@ export function RecordingAnnotationPinKeyframes({
   return pin.keyframes.map((keyframe) => {
     const share = across(keyframe.ms);
     if (share === null) return null;
-    const isPin = keyframe.ms === pin.pinnedMs;
+    const kind: PinKeyframeKind =
+      keyframe.ms === pin.pinnedMs
+        ? "pinned"
+        : keyframe.outOfView
+          ? "outOfView"
+          : "correction";
     return (
       // The hit area is wider than the diamond it holds, so a keyframe can be
       // taken hold of without aiming at eight pixels.
       <button
-        aria-label={`${isPin ? "Pinned frame" : "Correction"} of ${label}`}
+        aria-label={`${KEYFRAME_NAMES[kind]} of ${label}`}
         className="group absolute inset-y-0 w-4 -translate-x-1/2 focus-visible:outline-none"
         key={keyframe.ms}
         onClick={(event) => {
@@ -170,7 +200,7 @@ export function RecordingAnnotationPinKeyframes({
             onKeyframeMenu(
               { x: event.clientX, y: event.clientY },
               keyframe.ms,
-              isPin,
+              kind,
             );
         }}
         onKeyDown={(event) => {
@@ -187,11 +217,49 @@ export function RecordingAnnotationPinKeyframes({
       >
         <span
           aria-hidden="true"
-          className="absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[1px] bg-primary-fg group-focus-visible:outline-2 group-focus-visible:outline-offset-1 group-focus-visible:outline-primary-fg"
+          className={`absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[1px] group-focus-visible:outline-2 group-focus-visible:outline-offset-1 group-focus-visible:outline-current ${kind === "outOfView" ? "border border-current" : "bg-current"}`}
         />
       </button>
     );
   });
+}
+
+/** A pinned clip's stretches, with its keyframes over them, in one block of
+ * the lane. */
+export function RecordingAnnotationPinOverlay({
+  clipEndMs,
+  label,
+  onBodyClick,
+  onBodyPointerDown,
+  onDeleteKeyframe,
+  onKeyframeMenu,
+  onSeek,
+  pin,
+  status,
+  ...block
+}: Block &
+  Parameters<typeof RecordingAnnotationPinStretches>[0] &
+  Parameters<typeof RecordingAnnotationPinKeyframes>[0]) {
+  return (
+    <>
+      <RecordingAnnotationPinStretches
+        {...block}
+        clipEndMs={clipEndMs}
+        onBodyClick={onBodyClick}
+        onBodyPointerDown={onBodyPointerDown}
+        pin={pin}
+        status={status}
+      />
+      <RecordingAnnotationPinKeyframes
+        {...block}
+        label={label}
+        onDeleteKeyframe={onDeleteKeyframe}
+        onKeyframeMenu={onKeyframeMenu}
+        onSeek={onSeek}
+        pin={pin}
+      />
+    </>
+  );
 }
 
 /** What every pinned clip shows: that it is pinned, and how far its path is

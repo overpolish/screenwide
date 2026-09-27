@@ -17,99 +17,10 @@
 
 use super::*;
 
-/// One resolved pointer sample, in the layer's image-normalised space and
-/// addressed the way everything above the facade expects: by layer and by the
-/// arrow's index within it. Resolved under the state lock, reported without.
-#[derive(Clone, Copy)]
-pub(super) struct Sample {
-  phase: SelectionGesturePhase,
-  layer: u32,
-  target_kind: u32,
-  index: u32,
-  handle: u32,
-  x: f64,
-  y: f64,
-  /// Which snapping modifiers were held when the sample was taken: bit 0
-  /// Shift, which holds a counter's tail to the quarter turns, and bit 1
-  /// Ctrl, which snaps the position itself.
-  snap: u32,
-  /// How wide the layer's picture is drawn on screen, in display points,
-  /// which is what turns a snap's reach into source pixels.
-  image_points: f64,
-}
-
-/// Which snapping modifiers are down. Read at the moment a sample is resolved
-/// rather than latched at the press, so either can be taken and let go part
-/// way through a drag, exactly as the macOS view reads
-/// `NSEvent.modifierFlags`. Ctrl here is Command there.
-fn snapped() -> u32 {
-  use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_SHIFT};
-  let down = |key: u16| unsafe { GetKeyState(i32::from(key)) < 0 };
-  u32::from(down(VK_SHIFT.0)) | (u32::from(down(VK_CONTROL.0)) << 1)
-}
-
-/// Resolves a sample against the published chrome. `None` when the point has
-/// no picture to be normalised against, which is nothing to report.
-fn resolve(
-  state: &SurfaceState,
-  phase: SelectionGesturePhase,
-  target_kind: u32,
-  index: u32,
-  handle: u32,
-  point: (f64, f64),
-) -> Option<Sample> {
-  let (x, y) = normalised_point(state, point)?;
-  // Windows draws every layer into its own pane, but the gesture addresses
-  // the layer, which is the identity a selection gesture reports too.
-  let mut layer = state.selection.map_or(0, |selection| selection.layer_id);
-  let mut index = index;
-  if matches!(target_kind, TARGET_EXISTING | TARGET_SELECT) {
-    if let Some(item) = state.annotation.handles.get(index as usize) {
-      if item.layer_id >= 0 {
-        layer = item.layer_id as u32;
-      }
-      index = item.index;
-    }
-  }
-  Some(Sample {
-    phase,
-    layer,
-    target_kind,
-    index,
-    handle,
-    x,
-    y,
-    snap: snapped(),
-    image_points: image_extent(state).unwrap_or_default(),
-  })
-}
-
-/// Reports resolved samples. MUST be called with no surface state held: the
-/// callback re-enters the surface to publish what it changed.
-fn report(inner: &SurfaceInner, samples: &[Sample]) {
-  if samples.is_empty() {
-    return;
-  }
-  let Ok(mut callbacks) = inner.callbacks.lock() else {
-    return;
-  };
-  let Some(callback) = callbacks.annotation_gesture.as_mut() else {
-    return;
-  };
-  for sample in samples {
-    callback(
-      sample.phase,
-      sample.layer,
-      sample.target_kind,
-      sample.index,
-      sample.handle,
-      sample.x,
-      sample.y,
-      sample.snap,
-      sample.image_points,
-    );
-  }
-}
+/// Resolving pointer samples and reporting them to the manager.
+#[path = "gesture_sample.rs"]
+mod sample;
+use sample::{report, resolve, Sample};
 
 /// Takes the press if the arrow chrome owns it. `false` lets it carry on to
 /// the layer underneath, exactly as `annotation_mouse_down` returning `NO`
@@ -187,35 +98,57 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       (None, Some(shaft)) => {
         // Choosing an arrow is complete on the press: the manager commits the
         // choice and the chrome moves to it.
-        state.annotation.selected = shaft as i32;
-        if let Some(target) = state
-          .annotation
-          .handles
-          .get(shaft)
-          .and_then(|item| layer_selection(&state, item.layer_id))
-        {
-          state.selection = Some(target);
-        }
         state.annotation.drag = Some(Drag::pending(
           TARGET_EXISTING,
           shaft as u32,
           HANDLE_BODY,
           point,
         ));
-        samples.extend(resolve(
-          &state,
-          SelectionGesturePhase::Begin,
-          TARGET_SELECT,
-          shaft as u32,
-          HANDLE_BODY,
-          point,
-        ));
+        samples.extend(choose(&mut state, shaft, point));
         true
       }
     }
   };
   report(inner, &samples);
   taken
+}
+
+/// Chooses the annotation at `shaft` in the published list, as a press on it
+/// does: its layer becomes the selection and the manager commits the choice.
+fn choose(state: &mut SurfaceState, shaft: usize, point: (f64, f64)) -> Option<Sample> {
+  state.annotation.selected = shaft as i32;
+  if let Some(target) = state
+    .annotation
+    .handles
+    .get(shaft)
+    .and_then(|item| layer_selection(state, item.layer_id))
+  {
+    state.selection = Some(target);
+  }
+  resolve(
+    state,
+    SelectionGesturePhase::Begin,
+    TARGET_SELECT,
+    shaft as u32,
+    HANDLE_BODY,
+    point,
+  )
+}
+
+/// Chooses the annotation under a right press, as a left press on it does, so
+/// the menu opened there acts on it. Its place in the published list, or
+/// `None` when the press is not on one.
+pub(crate) fn choose_at(inner: &SurfaceInner, point: (f64, f64)) -> Option<usize> {
+  let (shaft, sample) = {
+    let mut state = inner.state.lock().ok()?;
+    if state.annotation.mode == MODE_NONE {
+      return None;
+    }
+    let shaft = shaft_at_point(&state, point)?;
+    (shaft, choose(&mut state, shaft, point))
+  };
+  report(inner, sample.as_slice());
+  Some(shaft)
 }
 
 pub(crate) fn pointer_move(inner: &SurfaceInner, point: (f64, f64)) -> bool {

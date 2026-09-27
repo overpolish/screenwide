@@ -113,6 +113,7 @@ export function RecordingPreviewTimelineBand({
         <RecordingTrackLanes
           adjustedKeyboardFragmentIds={keyboardTimeline.adjustedFragmentIds}
           annotationClips={annotations.clips}
+          annotationPinning={annotations.pinning}
           annotationPinStatus={annotations.pinStatus}
           audioTracks={audioTracks}
           blade={timelineBlade.blade}
@@ -126,8 +127,6 @@ export function RecordingPreviewTimelineBand({
           keyboardItems={keyboardEffects.bake ? keyboardTimeline.items : []}
           keyboardSelection={keyboardTimeline.selection}
           layout={layout}
-          onAnnotationPinCorrectionsClear={annotations.onClearPinCorrections}
-          onAnnotationPinnedChange={annotations.onPinnedChange}
           onAnnotationsChange={annotations.onClipsChange}
           // Choosing an annotation from its lane picks the Select tool up, the
           // way choosing a camera or screen clip does, so the annotation is in

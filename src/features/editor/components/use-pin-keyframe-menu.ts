@@ -7,6 +7,16 @@ import { pointerAnchor, usePopupMenu } from "../../popup-panel/use-popup-menu";
 const MENU_PREFIX = "pin-keyframe:";
 const MENU_WIDTH = 200;
 
+/** What a keyframe on a pinned clip is: the frame it was pinned on, a
+ * correction made by hand, or where its content was said to go out of view. */
+export type PinKeyframeKind = "correction" | "outOfView" | "pinned";
+
+const DELETE_LABELS: Record<PinKeyframeKind, string> = {
+  correction: "Delete Correction",
+  outOfView: "Delete Out of View",
+  pinned: "Delete Pinned Frame",
+};
+
 /**
  * A right click on a pinned clip's keyframe, answered with the app's own menu:
  * one action, taking that keyframe away. A pin's only keyframe is the pin
@@ -31,21 +41,17 @@ export function usePinKeyframeMenu(
 
   return ({
     annotationId,
-    isPinnedFrame,
+    kind,
     ms,
     point,
   }: {
     annotationId: string;
-    isPinnedFrame: boolean;
+    kind: PinKeyframeKind;
     ms: number;
     point: { x: number; y: number };
   }) => {
     const items: PopupPanelItem[] = [
-      {
-        icon: "trash",
-        id: "delete",
-        label: isPinnedFrame ? "Delete Pinned Frame" : "Delete Correction",
-      },
+      { icon: "trash", id: "delete", label: DELETE_LABELS[kind] },
     ];
     return openMenu({
       anchor: pointerAnchor(point.x, point.y),
