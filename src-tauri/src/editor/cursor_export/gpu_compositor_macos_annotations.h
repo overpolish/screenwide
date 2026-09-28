@@ -60,7 +60,8 @@ static inline uint32_t screenwide_annotation_sample_count(
 /// which no placement touches, so it is passed as it stands; a text box reads
 /// its pointer, held against the box, out of `p1` and its text block's size
 /// out of `p2` the same way. A highlight is placed by where `p0` and `p1` land
-/// and reads its tone out of `p2`.
+/// and reads its tone out of `p2`. A shape's `p1` is its radius and its hand,
+/// never placed either.
 static inline AnnotationArrowGeometry screenwide_prepare_annotation(
     const ScreenwideAnnotation *annotation, AnnotationVector a, AnnotationVector b,
     AnnotationVector c, AnnotationReveal reveal) {
@@ -73,6 +74,10 @@ static inline AnnotationArrowGeometry screenwide_prepare_annotation(
   // A highlight's tone rides in `p2`, which no placement touches.
   if (annotation->kind == SCREENWIDE_ANNOTATION_HIGHLIGHT)
     c = annotation_vector(annotation->p2[0], annotation->p2[1]);
+  if (annotation->kind == SCREENWIDE_ANNOTATION_SHAPE) {
+    p1x = annotation->p1[0];
+    b = annotation_vector(annotation->p1[0], annotation->p1[1]);
+  }
   AnnotationArrowGeometry prepared;
   screenwide_annotation_prepare(annotation->kind, a.x, a.y, p1x, b.y, c.x, c.y,
                                 annotation->width, annotation->head, reveal, &prepared);

@@ -19,7 +19,7 @@ use tauri::window::{Effect, EffectState};
 use tauri::{AppHandle, LogicalSize, Manager, WebviewUrl, WebviewWindow};
 
 use super::host::HostPlan;
-use super::settings::{self, ToolbarPosition};
+use super::settings;
 use crate::capture_overlays;
 use crate::windows::{platform, WindowLabel};
 
@@ -30,6 +30,13 @@ use anchor::{Anchor, INITIAL_SIZE};
 #[path = "toolbar_keyboard.rs"]
 mod keyboard;
 pub(super) use keyboard::{give_back as return_keyboard, take as take_keyboard};
+
+#[path = "toolbar_drag.rs"]
+mod drag;
+pub use drag::finish_annotate_toolbar_drag;
+pub use drag::{
+  __cmd__finish_annotate_toolbar_drag, __tauri_command_name_finish_annotate_toolbar_drag,
+};
 
 /// Whether the session has got as far as putting the toolbar on screen, and
 /// whether the plate has reported its size. The window is shown by whichever
@@ -71,6 +78,8 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
     display_id: anchor_plan.display_id,
     origin: anchor_plan.work_position,
     size: anchor_plan.work_size,
+    screen_origin: anchor_plan.position,
+    screen_size: anchor_plan.size,
   };
   PRESENTED.store(false, Ordering::Release);
 
@@ -135,6 +144,8 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
     .map_err(|error| error.to_string())?;
   receiver.recv().map_err(|error| error.to_string())??;
   crate::windows::exclude_from_capture(&window).map_err(|error| error.to_string())?;
+  #[cfg(target_os = "windows")]
+  drag::follow_drags(app, &window);
   own_by_anchor(app, &window)?;
   Ok(window)
 }
@@ -251,30 +262,4 @@ pub fn resize_annotate_toolbar(app: AppHandle, width: f64, height: f64) -> Resul
   FITTED.store(true, Ordering::Release);
   show_if_ready(&app);
   Ok(())
-}
-
-/// The toolbar reporting that it was dropped somewhere new. The place is kept
-/// against the display it landed on, so the toolbar comes back where it was
-/// left on that screen and top-centre on any other.
-#[tauri::command]
-pub fn persist_annotate_toolbar_position(app: AppHandle) -> Result<(), String> {
-  let Some(window) = toolbar(&app) else {
-    return Ok(());
-  };
-  let scale = window.scale_factor().map_err(|error| error.to_string())?;
-  let position = window
-    .outer_position()
-    .map_err(|error| error.to_string())?
-    .to_logical::<f64>(scale);
-  let Some((display_id, origin)) = anchor::display_under(&app, position)? else {
-    return Ok(());
-  };
-  settings::store_toolbar_position(
-    &app,
-    ToolbarPosition {
-      display_id,
-      x: position.x - origin.x,
-      y: position.y - origin.y,
-    },
-  )
 }

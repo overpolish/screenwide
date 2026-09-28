@@ -391,6 +391,7 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
     .unwrap()
     .success());
   let clip = RecordingAnnotationClip {
+    path_ms: None,
     pin: None,
     annotation: Annotation {
       animated: false,

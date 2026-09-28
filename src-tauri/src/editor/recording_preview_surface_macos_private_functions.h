@@ -184,13 +184,15 @@ NSRect annotation_image_frame(ScreenwidePreviewSurface *surface);
 /// is. Answers how many, never more than `SCREENWIDE_ANNOTATION_MAX_GRIPS`.
 NSUInteger annotation_grips(NSRect image, ScreenwidePreviewAnnotation item,
                             NSPoint *handles, uint32_t *kinds);
-/// A redaction's eight box grips, in the layer selection's order, then its
-/// radius dot.
+/// A box's eight grips - a redaction's or a shape's - in the layer
+/// selection's order, then its radius dot.
 NSUInteger annotation_redact_grips(NSRect image, ScreenwidePreviewAnnotation item,
                                    NSPoint *handles, uint32_t *kinds);
-/// The layer selection's own box chrome around the chosen redaction. Answers
-/// whether the chosen annotation is a redaction, whose box chrome stands in
-/// for the grips `annotation_add_osc` would draw.
+/// Whether an annotation of `kind` is held by a box and its eight grips.
+BOOL annotation_kind_is_box(uint32_t kind);
+/// The layer selection's own box chrome around the chosen redaction or
+/// shape. Answers whether the chosen annotation is one, whose box chrome
+/// stands in for the grips `annotation_add_osc` would draw.
 BOOL annotation_redact_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,
                                NSSize size, ScreenwidePreviewSurface *surface,
                                CGFloat scale);

@@ -25,6 +25,15 @@ static inline AnnotationArrowGeometry annotation_prepared(
                                   annotation_reveal_whole(), &prepared);
     return prepared;
   }
+  if (item.kind == ScreenwideAnnotationKindShape) {
+    // The radius and the stroke's hand ride in the head slots, and are
+    // handed on as they are, never placed.
+    screenwide_annotation_prepare(item.kind, start.x, start.y, item.start_head,
+                                  item.end_head, end.x, end.y,
+                                  item.width * image.size.width, 0,
+                                  annotation_reveal_whole(), &prepared);
+    return prepared;
+  }
   // A middle handle is reported rather than the curve's control point, so the
   // control is taken back out of it here, in display points. A counter aims
   // its tail with `start_head`, an angle, which rides in the same slot.
@@ -89,4 +98,13 @@ static inline double annotation_shaft_distance(NSRect image,
   }
   AnnotationArrowGeometry prepared = annotation_prepared(image, item);
   return screenwide_annotation_distance(item.kind, point.x, point.y, &prepared);
+}
+
+/// How far a point is from a shape's stroke or the box it outlines, in
+/// display points: what picks a shape from anywhere inside it.
+static inline double annotation_shape_body_distance(NSRect image,
+                                                    ScreenwidePreviewAnnotation item,
+                                                    NSPoint point) {
+  AnnotationArrowGeometry prepared = annotation_prepared(image, item);
+  return screenwide_shape_body_distance(point.x, point.y, &prepared);
 }

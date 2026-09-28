@@ -7,6 +7,7 @@ use std::time::Instant;
 
 use crate::editor::annotations::arrow::new_arrow;
 use crate::editor::annotations::counter::new_counter;
+use crate::editor::annotations::outline::model::new_shape;
 use crate::editor::annotations::{Annotation, AnnotationKind, AnnotationPoint, AnnotationStyle};
 
 /// The stroke in hand: the annotation it makes, when and where it started, and
@@ -30,29 +31,39 @@ pub(super) struct Stroke {
   /// Whether a highlight is laid by hand over the box the drag spans rather
   /// than fitted to text: the tool's choice at the press.
   pub(super) manual: bool,
+  /// A hand-drawn shape's wobble, held for the whole stroke so it does not
+  /// wobble anew each frame. A highlight holds its own with its capture.
+  pub(super) seed: u32,
 }
 
 impl Stroke {
   /// The dress the stroke is drawn in. An arrow's stroke and a counter's disc
   /// are different measurements of different things, so the width comes from
-  /// the setting that belongs to the shape; a highlight has one marker. The
-  /// overlay offers no text or redaction tool, and its settings refuse both,
-  /// so neither ever reaches here.
+  /// the setting that belongs to the shape; a highlight has one marker, and a
+  /// shape's pen is an arrow's. A highlight and a shape are each drawn by
+  /// hand by their own choice. The overlay offers no text or redaction tool,
+  /// and its settings refuse both, so neither ever reaches here.
   pub(super) fn style(&self) -> AnnotationStyle {
     let settings = super::super::settings::current();
+    let shape = self.shape == AnnotationKind::Shape;
     AnnotationStyle {
       align: Default::default(),
       color: settings.default_color,
       head: settings.default_head,
-      hand_drawn: settings.highlight_hand_drawn,
+      hand_drawn: if shape {
+        settings.shape_hand_drawn
+      } else {
+        settings.highlight_hand_drawn
+      },
       manual: self.manual,
-      radius: 0.0,
+      radius: if shape { settings.shape_radius } else { 0.0 },
       redaction: Default::default(),
       strength: 0.0,
       width: match self.shape {
-        AnnotationKind::Arrow | AnnotationKind::Text | AnnotationKind::Redact => {
-          settings.default_width
-        }
+        AnnotationKind::Arrow
+        | AnnotationKind::Text
+        | AnnotationKind::Redact
+        | AnnotationKind::Shape => settings.default_width,
         AnnotationKind::Counter => settings.default_counter_size,
         AnnotationKind::Highlight => {
           crate::editor::annotations::highlight::model::NEW_HIGHLIGHT_WIDTH
@@ -87,18 +98,24 @@ impl Stroke {
       AnnotationKind::Highlight => Some(super::super::highlight::annotation(
         &self.id, self.start, self.end, &style,
       )),
+      AnnotationKind::Shape => Some(new_shape(
+        self.id.clone(),
+        [self.start, self.end],
+        self.seed,
+        Some(&style),
+      )),
       AnnotationKind::Text | AnnotationKind::Redact => None,
     }
   }
 
-  /// Whether the stroke has anything to show. An arrow with both ends in one
-  /// place is a blob, and the press that starts every stroke would flash one
-  /// before the drag begins; a counter is an annotation the moment it is
-  /// dropped. A highlight has nothing to recolour until the desktop under it
-  /// is read.
+  /// Whether the stroke has anything to show. An arrow or a shape with both
+  /// ends in one place is a blob, and the press that starts every stroke
+  /// would flash one before the drag begins; a counter is an annotation the
+  /// moment it is dropped. A highlight has nothing to recolour until the
+  /// desktop under it is read.
   pub(super) fn is_drawn(&self) -> bool {
     match self.shape {
-      AnnotationKind::Arrow => self.start != self.end,
+      AnnotationKind::Arrow | AnnotationKind::Shape => self.start != self.end,
       AnnotationKind::Highlight => {
         self.start != self.end && super::super::highlight::ready(&self.id)
       }

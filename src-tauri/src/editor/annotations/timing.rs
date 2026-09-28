@@ -27,6 +27,13 @@ pub struct RecordingAnnotationClip {
   /// page.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub pin: Option<AnnotationPin>,
+  /// How long what the annotation draws along a path takes to draw in - the
+  /// whole of an arrow, a highlight or a shape, a text box's pointer - paced
+  /// by the editor from the path's length. It leaves over three quarters of
+  /// that. Absent from a clip the editor has not paced, which takes its kind's
+  /// own time, and from every counter and redaction, which grow into place.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub path_ms: Option<f32>,
 }
 
 /// Whether a recording's clips can be drawn: each one spans time, has an
@@ -43,6 +50,7 @@ pub(crate) fn validate_clips(clips: &[RecordingAnnotationClip]) -> Result<(), St
       || annotation.style.width <= 0.0
       || !placed
       || clip.pin.as_ref().is_some_and(|pin| !pin.is_valid())
+      || clip.path_ms.is_some_and(|ms| !ms.is_finite() || ms <= 0.0)
     {
       return Err("The annotation clip is invalid".to_owned());
     }
@@ -94,6 +102,7 @@ pub(crate) fn revealed_annotations(
           source_ms.saturating_sub(start_ms) as f32,
           end_ms.saturating_sub(start_ms) as f32,
           frame_ms,
+          clip.path_ms,
         );
       }
       Some(annotation)
@@ -125,6 +134,7 @@ mod tests {
     end_ms: u64,
   ) -> RecordingAnnotationClip {
     RecordingAnnotationClip {
+      path_ms: None,
       annotation: Annotation {
         above_camera: false,
         animated: true,
@@ -193,5 +203,22 @@ mod tests {
   #[test]
   fn invalid_clip_is_rejected() {
     assert!(validate_clips(&[clip("bad", AnnotationTrack::Primary, 2_000, 2_000)]).is_err());
+  }
+
+  /// A clip draws in over its own pace, and one the editor has not paced
+  /// over its kind's second.
+  #[test]
+  fn a_clip_draws_in_at_its_own_pace() {
+    let drawn = |path_ms: Option<f32>, at: u64| {
+      let mut paced = clip("a", AnnotationTrack::Primary, 0, 10_000);
+      paced.path_ms = path_ms;
+      revealed_annotations(&[paced], AnnotationTrack::Primary, at, 0.0)[0]
+        .reveal
+        .high
+    };
+    assert_eq!(drawn(None, 1_000), 1.0);
+    assert!(drawn(Some(2_000.0), 1_000) < 1.0);
+    assert_eq!(drawn(Some(2_000.0), 2_000), 1.0);
+    assert_eq!(drawn(Some(600.0), 600), 1.0);
   }
 }

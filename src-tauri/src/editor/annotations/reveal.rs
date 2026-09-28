@@ -38,19 +38,24 @@
 use crate::editor::annotations::AnnotationKind;
 use crate::editor::effect_animation::ease_in_out_cubic;
 
-/// How long an annotation takes to draw itself in. The twin of
-/// `ANNOTATION_DRAW_IN_MS` in `src/features/editor/annotation-kinds.ts`, which
-/// places a fresh clip this far before the playhead so the annotation is drawn
-/// by the time the playhead is reached;
-/// `the_editor_places_a_clip_by_this_phase` holds the two together. A second:
-/// the drawing is the thing a viewer is meant to follow to what the arrow
-/// points at, and it is gentler for being given its time.
+/// How long an annotation draws itself in where its clip does not say: a
+/// clip from before the pace followed the path's length, and one the live
+/// overlay records. The editor paces every clip it writes by its own path, in
+/// `src/features/editor/annotation-pace.ts`, from this same second at a
+/// typical arrow's length. The twin of `ANNOTATION_DRAW_IN_MS` in
+/// `src/features/editor/annotation-kinds.ts`, which reaches a clip without a
+/// pace this far back; `the_editor_places_a_clip_by_this_phase` holds the two
+/// together.
 pub(crate) const REVEAL_DRAW_IN_MS: f32 = 1_000.0;
 
-/// How long an annotation takes to undraw. Shorter than the drawing: leaving is
-/// not the thing being watched, and an annotation that lingers on its way out
-/// is in the way of whatever comes next.
-pub(crate) const REVEAL_DRAW_OUT_MS: f32 = 750.0;
+/// How long an annotation takes to undraw, as a share of its drawing in.
+/// Shorter than the drawing: leaving is not the thing being watched, and an
+/// annotation that lingers on its way out is in the way of whatever comes
+/// next.
+pub(crate) const REVEAL_OUT_SHARE: f32 = 0.75;
+
+/// How long an annotation drawn at the unpaced second takes to undraw.
+pub(crate) const REVEAL_DRAW_OUT_MS: f32 = REVEAL_DRAW_IN_MS * REVEAL_OUT_SHARE;
 
 /// The most of a clip either phase may take, so a clip shorter than a second
 /// still finishes drawing itself in before it starts leaving.
@@ -127,13 +132,19 @@ impl Default for AnnotationReveal {
   }
 }
 
-/// The reveal `elapsed_ms` into a clip lasting `duration_ms`.
+/// The reveal `elapsed_ms` into a clip lasting `duration_ms`, drawing in over
+/// `draw_in_ms` and out over its [`REVEAL_OUT_SHARE`].
 ///
 /// `frame_ms` is the exposure interval in source time. A paused preview uses
 /// zero.
-pub(crate) fn reveal_window(elapsed_ms: f32, duration_ms: f32, frame_ms: f32) -> AnnotationReveal {
-  let opening_ms = REVEAL_DRAW_IN_MS.min(duration_ms * REVEAL_PHASE_SHARE);
-  let closing_ms = REVEAL_DRAW_OUT_MS.min(duration_ms * REVEAL_PHASE_SHARE);
+pub(crate) fn reveal_window(
+  elapsed_ms: f32,
+  duration_ms: f32,
+  frame_ms: f32,
+  draw_in_ms: f32,
+) -> AnnotationReveal {
+  let opening_ms = draw_in_ms.min(duration_ms * REVEAL_PHASE_SHARE);
+  let closing_ms = (draw_in_ms * REVEAL_OUT_SHARE).min(duration_ms * REVEAL_PHASE_SHARE);
   if !opening_ms.is_finite() || opening_ms <= 0.0 || !elapsed_ms.is_finite() {
     return AnnotationReveal::WHOLE;
   }
@@ -191,21 +202,23 @@ pub(crate) fn reveal_window(elapsed_ms: f32, duration_ms: f32, frame_ms: f32) ->
 }
 
 /// The clip length that leaves an animated annotation starting to draw out
-/// exactly `visible_ms` after it appeared.
+/// exactly `visible_ms` after it appeared, for a clip drawn in over `path_ms`
+/// or the unpaced second where it has none.
 ///
 /// A live annotation is on screen from its stroke until it is cleared, and
 /// then it is simply gone. A clip that ends at the clear runs its whole
 /// closing phase *before* that moment, so the annotation would be leaving
 /// while it was still whole on screen. Carrying the closing phase's own
 /// length on top puts the leaving where it belongs: after the annotation
-/// actually went. A short clip needs less than the full
-/// [`REVEAL_DRAW_OUT_MS`], because its closing is capped to a third of it.
-pub(crate) fn clip_ms_for_visible(visible_ms: f32) -> f32 {
+/// actually went. A short clip needs less than the full closing, because its
+/// closing is capped to a third of it.
+pub(crate) fn clip_ms_for_visible(visible_ms: f32, path_ms: Option<f32>) -> f32 {
   if !visible_ms.is_finite() || visible_ms <= 0.0 {
     return 0.0;
   }
-  let uncapped = visible_ms + REVEAL_DRAW_OUT_MS;
-  if uncapped * REVEAL_PHASE_SHARE >= REVEAL_DRAW_OUT_MS {
+  let closing_ms = path_ms.map_or(REVEAL_DRAW_OUT_MS, |ms| ms * REVEAL_OUT_SHARE);
+  let uncapped = visible_ms + closing_ms;
+  if uncapped * REVEAL_PHASE_SHARE >= closing_ms {
     uncapped
   } else {
     visible_ms / (1.0 - REVEAL_PHASE_SHARE)
@@ -214,7 +227,8 @@ pub(crate) fn clip_ms_for_visible(visible_ms: f32) -> f32 {
 
 /// The reveal window one clip is at, for the video export's per-frame pass. An
 /// annotation that is not animated is drawn whole for the clip's whole length,
-/// and every other one follows its own kind's arrival: `kind` is the retained
+/// and every other one follows its own kind's arrival at its clip's pace,
+/// `path_ms`, which is zero where the clip names none: `kind` is the retained
 /// annotation's, so the export and the preview animate through one
 /// implementation.
 ///
@@ -228,6 +242,7 @@ pub unsafe extern "C" fn screenwide_annotation_reveal_window(
   frame_ms: f32,
   animated: u32,
   kind: u32,
+  path_ms: f32,
   out: *mut AnnotationReveal,
 ) {
   if out.is_null() {
@@ -239,7 +254,8 @@ pub unsafe extern "C" fn screenwide_annotation_reveal_window(
     // A number no kind owns cannot come from a retained annotation, and the
     // arrow's window is what such a record drew before the kinds were named.
     let kind = AnnotationKind::from_raw(kind).unwrap_or(AnnotationKind::Arrow);
-    kind.reveal_window(elapsed_ms, duration_ms, frame_ms)
+    let pace = (path_ms > 0.0).then_some(path_ms);
+    kind.reveal_window(elapsed_ms, duration_ms, frame_ms, pace)
   };
 }
 

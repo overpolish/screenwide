@@ -29,10 +29,11 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  * arrow carries heads and can be turned round; a counter is a disc with a
  * number in it, which leaves it nothing to reverse and no head to choose; a
  * text box lines its lines up by its alignment; a highlight may be drawn by
- * hand, and drawn again differently; a redaction chooses how it
- * covers and how round its corners are, and offers a pixelation style and a
- * block size only when pixelated, a strength only when blurred and a colour
- * only when filled with one.
+ * hand, and drawn again differently; a shape may be drawn by hand too, and
+ * rounds its corners; a redaction chooses how it covers and how round its
+ * corners are, and offers a pixelation style and a block size only when
+ * pixelated, a strength only when blurred and a colour only when filled with
+ * one.
  *
  * This panel belongs to the annotation in hand. It comes up the moment one is
  * chosen, in any tool that can choose one, and every change is committed
@@ -246,7 +247,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         </ControlRow>
       ) : null}
 
-      {kind.hasRedaction ? (
+      {kind.hasRadius ? (
         <ControlRow title="Radius">
           {(controlProps) => (
             <div {...controlProps} role="group">

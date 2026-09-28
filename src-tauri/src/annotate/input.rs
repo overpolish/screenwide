@@ -82,6 +82,7 @@ fn step(
         value: tool.value,
         angle: tool.angle,
         manual: tool.shape == AnnotationKind::Highlight && tool.manual,
+        seed: crate::editor::annotations::highlight::model::fresh_seed(),
       });
       None
     }

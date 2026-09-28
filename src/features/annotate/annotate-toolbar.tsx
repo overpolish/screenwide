@@ -10,6 +10,7 @@ import { AnnotationAngleDial } from "../../components/shared/annotation-style/an
 import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
 import { AnnotationFitGroup } from "../../components/shared/annotation-style/annotation-fit-group";
 import { AnnotationHeadGroup } from "../../components/shared/annotation-style/annotation-head-group";
+import { AnnotationRadiusField } from "../../components/shared/annotation-style/annotation-radius-field";
 import { AnnotationStrokeGroup } from "../../components/shared/annotation-style/annotation-stroke-group";
 import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
 import { annotationSizes } from "../../components/shared/annotation-style/widths";
@@ -68,10 +69,12 @@ export function AnnotateToolbar({
   const [showColors, setShowColors] = useState(false);
   const plateRef = useRef<HTMLElement>(null);
   // Which controls the plate carries: a counter has a disc and an aim where
-  // an arrow has a stroke and a head, and a highlight fits the lines it
-  // covers and is only drawn clean or by hand.
+  // an arrow has a stroke and a head, a highlight fits the lines it covers
+  // and is only drawn clean or by hand, and a shape has a pen, a hand and
+  // rounded corners.
   const isCounter = settings.defaultShape === "counter";
   const isHighlight = settings.defaultShape === "highlight";
+  const isShape = settings.defaultShape === "shape";
 
   useLayoutEffect(() => {
     const plate = plateRef.current;
@@ -180,7 +183,8 @@ export function AnnotateToolbar({
           {/* The head belongs to the arrow and the aim to the counter, so the
               plate carries whichever the tool in hand has. A live annotation cannot
               be picked up again, so a counter is aimed before it is dropped
-              rather than turned afterwards. */}
+              rather than turned afterwards, and a shape is drawn by hand and
+              rounded before it is drawn. */}
           {isHighlight ? null : isCounter ? (
             <AnnotationAngleDial
               onChange={(defaultCounterAngle, typed) => {
@@ -188,6 +192,21 @@ export function AnnotateToolbar({
               }}
               value={settings.defaultCounterAngle}
             />
+          ) : isShape ? (
+            <>
+              <AnnotationStrokeGroup
+                onChange={(shapeHandDrawn) => {
+                  onChange({ shapeHandDrawn });
+                }}
+                value={settings.shapeHandDrawn}
+              />
+              <AnnotationRadiusField
+                onChange={(shapeRadius) => {
+                  onChange({ shapeRadius });
+                }}
+                value={settings.shapeRadius}
+              />
+            </>
           ) : (
             <AnnotationHeadGroup
               onChange={(defaultHead) => {

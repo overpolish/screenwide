@@ -1,7 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { annotationDrawInMs } from "./annotation-kinds";
+import {
+  AnnotationFrame,
+  annotationDrawInMs,
+  annotationPathMs,
+} from "./annotation-pace";
 import { Annotation } from "./annotations";
 import {
   recordingTimelineOutputToSource,
@@ -36,12 +40,14 @@ export type RecordingAnnotationPin = {
 };
 
 /** An annotation in source time, attached to one of the recording's two panes.
- */
+ * `pathMs` is how long what it draws along a path takes to draw in, paced by
+ * the path's length; see `annotation-pace.ts`. */
 export type RecordingAnnotationClip = {
   annotation: Annotation;
   endMs: number;
   startMs: number;
   trackId: "primary" | "camera";
+  pathMs?: number;
   pin?: RecordingAnnotationPin;
 };
 
@@ -94,11 +100,13 @@ export type RecordingAnnotationPinCommit = {
 };
 
 /** Merges the annotations currently drawn by a native pane into its clips,
- * with the pins the same edit left on them. */
+ * with the pins the same edit left on them. A fresh annotation is paced on
+ * `frame`, the pane's picture. */
 export const mergeRecordingAnnotationClips = ({
   annotations,
   clips,
   edit,
+  frame,
   pins = [],
   positionMs,
   sourceDurationMs,
@@ -110,6 +118,7 @@ export const mergeRecordingAnnotationClips = ({
   positionMs: number;
   sourceDurationMs: number;
   trackId: RecordingVideoTrackId;
+  frame?: AnnotationFrame;
   pins?: RecordingAnnotationPinCommit[];
 }) => {
   const byId = new Map(
@@ -134,6 +143,7 @@ export const mergeRecordingAnnotationClips = ({
         recordingAnnotationClipAt({
           annotation,
           edit,
+          frame,
           sourceDurationMs,
           sourcePositionMs: positionMs,
           trackId,
@@ -146,16 +156,17 @@ export const mergeRecordingAnnotationClips = ({
 /**
  * Creates the initial three output seconds of an annotation clip, reaching the
  * annotation's own arrival back before the playhead so an animated annotation
- * is whole where it was placed - a second for an arrow drawing itself, a fifth
- * of one for a counter growing into place. Near the start of the recording it
- * takes whatever room there is and the annotation is caught part drawn, which
- * is the only way an annotation can be placed there at all. The clip's end is
- * measured from the playhead as before, so the reach back lengthens the clip
- * rather than sliding it.
+ * is whole where it was placed - its path's paced time for an arrow drawing
+ * itself on `frame`, a fifth of a second for a counter growing into place.
+ * Near the start of the recording it takes whatever room there is and the
+ * annotation is caught part drawn, which is the only way an annotation can be
+ * placed there at all. The clip's end is measured from the playhead as
+ * before, so the reach back lengthens the clip rather than sliding it.
  */
 export const recordingAnnotationClipAt = ({
   annotation,
   edit,
+  frame,
   sourceDurationMs,
   sourcePositionMs,
   trackId = "primary",
@@ -164,6 +175,7 @@ export const recordingAnnotationClipAt = ({
   sourceDurationMs: number;
   sourcePositionMs: number;
   edit?: RecordingTimelineEdit | null;
+  frame?: AnnotationFrame;
   trackId?: RecordingAnnotationClip["trackId"];
 }): RecordingAnnotationClip => {
   const duration = Math.max(1, Math.round(sourceDurationMs));
@@ -190,11 +202,13 @@ export const recordingAnnotationClipAt = ({
         ) * duration,
       )
     : Math.min(duration, positionMs + 3_000);
+  const pathMs = annotationPathMs(annotation, frame);
   return {
     annotation,
     endMs: Math.round(Math.min(duration, endMs)),
+    ...(pathMs === undefined ? {} : { pathMs }),
     // The reveal runs on source time, so the reach back is source time too.
-    startMs: Math.max(0, positionMs - annotationDrawInMs(annotation)),
+    startMs: Math.max(0, positionMs - annotationDrawInMs(annotation, pathMs)),
     trackId,
   };
 };

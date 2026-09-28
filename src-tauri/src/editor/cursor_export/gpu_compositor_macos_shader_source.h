@@ -8,6 +8,7 @@
 #import "gpu_compositor_macos_shader_source_annotations.h"
 #import "gpu_compositor_macos_shader_source_annotation_counter.h"
 #import "gpu_compositor_macos_shader_source_annotation_text.h"
+#import "gpu_compositor_macos_shader_source_annotation_shape.h"
 #import "gpu_compositor_macos_shader_source_annotation_composite.h"
 #import "gpu_compositor_macos_shader_source_annotation_highlight.h"
 #import "gpu_compositor_macos_shader_source_annotation_highlight_video.h"
@@ -28,7 +29,8 @@
 /// The compositor's Metal library, assembled from its parts. An annotation
 /// shape brings a source of its own - the arrow's helpers live in
 /// `..._annotations.h`, the counter's in `..._annotation_counter.h`, the text
-/// box's in `..._annotation_text.h` - and `..._annotation_composite.h` is the
+/// box's in `..._annotation_text.h`, the shape tool's in
+/// `..._annotation_shape.h` - and `..._annotation_composite.h` is the
 /// one pass that branches over `AnnotationUniforms.kind`, drawn by both
 /// canvas kernels. A shape's source goes between the two. A redaction is the
 /// exception: `..._redact.h` applies it to the source before any canvas pass,
@@ -41,6 +43,7 @@ __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATIONS
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COUNTER
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_TEXT
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_SHAPE
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_VIDEO

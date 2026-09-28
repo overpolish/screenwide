@@ -40,6 +40,7 @@ fn main() {
     );
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_text.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_counter.h");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_shape.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_composite.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork_helpers.h");
     println!(

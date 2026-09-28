@@ -95,7 +95,7 @@ fn a_static_annotation_collapses_to_the_whole_path_at_full_size() {
   );
   // A clip holds the whole path between its two phases, so the middle of an
   // animated clip prepares exactly as an annotation that never animates does.
-  assert!(reveal_window(1_500.0, 3_000.0, 16.0).is_whole());
+  assert!(reveal_window(1_500.0, 3_000.0, 16.0, REVEAL_DRAW_IN_MS).is_whole());
 }
 
 /// The window is the shaft's, and the head rides on its end, ahead of it: the
@@ -231,7 +231,7 @@ fn a_head_grows_from_its_base_on_the_shaft() {
 
 #[test]
 fn the_annotation_draws_in_over_a_second_and_out_over_three_quarters_of_one() {
-  let at = |elapsed| reveal_window(elapsed, 3_000.0, 0.0);
+  let at = |elapsed| reveal_window(elapsed, 3_000.0, 0.0, REVEAL_DRAW_IN_MS);
   assert_eq!(at(0.0).high, 0.0);
   assert_eq!(at(1_000.0).high, 1.0);
   assert_eq!(at(1_000.0).low, 0.0);
@@ -247,7 +247,7 @@ fn the_annotation_draws_in_over_a_second_and_out_over_three_quarters_of_one() {
 /// drawing itself back in: it leaves with the stroke, not after it.
 #[test]
 fn the_annotation_fades_in_whole_and_shrinks_away_late() {
-  let at = |elapsed| reveal_window(elapsed, 3_000.0, 0.0);
+  let at = |elapsed| reveal_window(elapsed, 3_000.0, 0.0, REVEAL_DRAW_IN_MS);
   assert_eq!(at(0.0).opacity, 0.0);
   assert_eq!(at(0.0).scale, 1.0);
   assert!(
@@ -297,7 +297,7 @@ fn the_annotation_fades_in_whole_and_shrinks_away_late() {
 fn a_short_clip_still_finishes_both_phases() {
   // Each phase is capped at a third of the clip, so a 900ms clip draws itself
   // in over 300ms, holds for 300ms and leaves over the last 300ms.
-  let at = |elapsed| reveal_window(elapsed, 900.0, 0.0);
+  let at = |elapsed| reveal_window(elapsed, 900.0, 0.0, REVEAL_DRAW_IN_MS);
   assert_eq!(at(300.0).high, 1.0);
   assert_eq!(at(300.0).low, 0.0);
   assert_eq!(at(600.0).low, 0.0);
@@ -316,7 +316,7 @@ fn a_short_clip_still_finishes_both_phases() {
 /// is moving from its first frame and still lands the same way.
 #[test]
 fn each_phase_eases_in_and_out() {
-  let at = |elapsed| reveal_window(elapsed, 3_000.0, 0.0);
+  let at = |elapsed| reveal_window(elapsed, 3_000.0, 0.0, REVEAL_DRAW_IN_MS);
   for (fraction, eased) in [(0.25, 0.0625), (0.5, 0.5), (0.75, 0.9375)] {
     // The tail is home at nine tenths of the closing phase.
     let closing = at(2_250.0 + 675.0 * fraction).low;
@@ -342,18 +342,18 @@ fn each_phase_eases_in_and_out() {
 /// frame exposes no interval at all.
 #[test]
 fn the_previous_window_trails_whichever_end_is_moving() {
-  let opening = reveal_window(500.0, 3_000.0, 16.0);
+  let opening = reveal_window(500.0, 3_000.0, 16.0, REVEAL_DRAW_IN_MS);
   assert!(
     opening.previous[1] < opening.high,
     "the end leads while the clip opens"
   );
   assert_eq!(opening.previous[0], opening.low, "the tail is at rest");
-  let closing = reveal_window(2_625.0, 3_000.0, 16.0);
+  let closing = reveal_window(2_625.0, 3_000.0, 16.0, REVEAL_DRAW_IN_MS);
   assert!(
     closing.previous[0] < closing.low,
     "the start leads while the clip closes"
   );
-  let still = reveal_window(500.0, 3_000.0, 0.0);
+  let still = reveal_window(500.0, 3_000.0, 0.0, REVEAL_DRAW_IN_MS);
   assert_eq!(
     [still.previous[0], still.previous[1]],
     [still.low, still.high]

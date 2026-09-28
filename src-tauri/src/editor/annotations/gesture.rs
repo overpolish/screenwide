@@ -14,25 +14,25 @@ use crate::editor::annotations::{AnnotationKind, AnnotationPoint, AnnotationShap
 
 /// Which grip of an annotation the pointer took hold of. An arrow has three
 /// grips and its shaft; a counter has one - the tail - and its disc; a text
-/// box has one - its pointer's tip - and its box; a redaction has the eight
-/// grips of a box, its radius dot and its body; a highlight has the
-/// selection's two ends and its bands.
+/// box has one - its pointer's tip - and its box; a redaction and a shape
+/// have the eight grips of a box, its radius dot and its body; a highlight
+/// has the selection's two ends and its bands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AnnotationHandle {
   Start,
   Middle,
   End,
-  /// The shaft, a counter's disc, a text box or a redaction's body.
-  /// Dragging it carries the whole annotation.
+  /// The shaft, a counter's disc, a text box or a box's body. Dragging it
+  /// carries the whole annotation.
   Body,
   /// A counter's tail tip, which turns the tail around the disc, or a text
   /// box's pointer tip, which draws the pointer out of the box or pushes it
   /// back in.
   Tail,
-  /// A redaction's corner or edge grip: which of the box's sides it moves,
-  /// as the `redact::gesture::EDGE_*` bits.
+  /// A box's corner or edge grip: which of the box's sides it moves, as the
+  /// `box_gesture::EDGE_*` bits.
   Edges(u32),
-  /// A redaction's radius dot, which rounds its corners.
+  /// A box's radius dot, which rounds its corners.
   Radius,
 }
 
@@ -94,6 +94,7 @@ pub(crate) const MODE_COUNTER: u32 = 3;
 pub(crate) const MODE_TEXT: u32 = 4;
 pub(crate) const MODE_REDACT: u32 = 5;
 pub(crate) const MODE_HIGHLIGHT: u32 = 6;
+pub(crate) const MODE_SHAPE: u32 = 7;
 
 /// The tool name React sends, as a mode. Anything else puts the chrome away.
 pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
@@ -103,6 +104,7 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
     Some("text") => MODE_TEXT,
     Some("redact") => MODE_REDACT,
     Some("highlight") => MODE_HIGHLIGHT,
+    Some("shape") => MODE_SHAPE,
     Some("select") => MODE_SELECT,
     _ => MODE_NONE,
   }
@@ -120,6 +122,7 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
     MODE_TEXT => Some(AnnotationKind::Text),
     MODE_REDACT => Some(AnnotationKind::Redact),
     MODE_HIGHLIGHT => Some(AnnotationKind::Highlight),
+    MODE_SHAPE => Some(AnnotationKind::Shape),
     _ => None,
   }
 }

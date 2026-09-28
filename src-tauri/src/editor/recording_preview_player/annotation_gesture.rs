@@ -269,10 +269,9 @@ impl PreviewPlayerManager {
 }
 
 /// The clips a gesture or a typing session draws through: the clips it began
-/// on, with every annotation it holds written into its own clip. One that has
-/// no clip yet gets a provisional one reaching back a draw-in, the way the
-/// editor's own placement does, so it is finished drawing at the playhead and
-/// visible under the hand.
+/// on, with every annotation it holds written into its own clip. One with no
+/// clip yet gets a provisional, unpaced one reaching back a draw-in, so it is
+/// finished drawing at the playhead, under the hand, until the editor paces it.
 pub(super) fn provisional_clips(
   before: &[RecordingAnnotationClip],
   working: &[Annotation],
@@ -286,6 +285,7 @@ pub(super) fn provisional_clips(
       fold(clip, annotation, position);
     } else {
       next.push(RecordingAnnotationClip {
+        path_ms: None,
         pin: None,
         annotation: annotation.clone(),
         track_id: track(pane),

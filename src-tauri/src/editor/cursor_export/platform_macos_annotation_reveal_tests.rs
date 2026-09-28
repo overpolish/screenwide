@@ -6,7 +6,7 @@
 
 use super::*;
 use crate::editor::annotations::reveal::geometry::reveal_geometry;
-use crate::editor::annotations::reveal::{reveal_window, AnnotationReveal};
+use crate::editor::annotations::reveal::{reveal_window, AnnotationReveal, REVEAL_DRAW_IN_MS};
 
 /// A clip long enough for both phases to run at their full half second.
 const CLIP_MS: f32 = 3_000.0;
@@ -31,7 +31,7 @@ fn shape(curve: (AnnotationPoint, AnnotationPoint, AnnotationPoint), width: f64)
 
 /// The same annotation, `elapsed` milliseconds into its clip.
 fn at_reveal(mut annotation: Annotation, elapsed: f32, frame_ms: f32) -> Annotation {
-  annotation.reveal = reveal_window(elapsed, CLIP_MS, frame_ms);
+  annotation.reveal = reveal_window(elapsed, CLIP_MS, frame_ms, REVEAL_DRAW_IN_MS);
   annotation
 }
 
@@ -109,7 +109,7 @@ fn covered(
   width: f64,
   elapsed: f32,
 ) -> (f32, f32) {
-  let window = reveal_window(elapsed, CLIP_MS, 0.0);
+  let window = reveal_window(elapsed, CLIP_MS, 0.0, REVEAL_DRAW_IN_MS);
   let head = (width * 4.0 / arc_length(curve)) as f32;
   (
     window.low * (1.0 - head),
@@ -190,7 +190,7 @@ fn the_seam_never_gaps_while_the_annotation_grows() {
       // last pixel is a feathered fraction of one by design. The margin is an
       // absolute distance rather than a share of what is drawn, and it shrinks
       // with the annotation, whose apex is as blunt as its size makes it.
-      let scale = f64::from(reveal_window(elapsed, CLIP_MS, 0.0).scale);
+      let scale = f64::from(reveal_window(elapsed, CLIP_MS, 0.0, REVEAL_DRAW_IN_MS).scale);
       let margin = (width * 0.75 * scale / arc_length(curve)) as f32;
       let front = front - margin;
       for step in 0..=60_u8 {
@@ -213,7 +213,7 @@ fn the_tail_catches_up_to_the_head() {
   // Three quarters through the closing phase, where the in-out ease has
   // taken fifteen sixteenths of the tail's travel.
   let image = composed(SIZE, at_reveal(shape(STRAIGHT, width), 2_800.0, 0.0));
-  let gone = reveal_window(2_800.0, CLIP_MS, 0.0).low;
+  let gone = reveal_window(2_800.0, CLIP_MS, 0.0, REVEAL_DRAW_IN_MS).low;
   assert!(gone > 0.8, "the tail is only {gone} along");
   assert!(
     !inked(&image, along(STRAIGHT, gone * 0.5)),
@@ -333,7 +333,7 @@ fn prepared(
     vector(curve.2),
     width as f32,
     heads,
-    reveal_window(elapsed, CLIP_MS, frame_ms),
+    reveal_window(elapsed, CLIP_MS, frame_ms, REVEAL_DRAW_IN_MS),
   )
 }
 
@@ -363,7 +363,7 @@ fn the_annotation_smears_along_the_path_it_travelled() {
       };
       let drawn = |frame_ms| {
         let mut annotation = arrow(curve.0, curve.1, curve.2, width, head);
-        annotation.reveal = reveal_window(elapsed, CLIP_MS, frame_ms);
+        annotation.reveal = reveal_window(elapsed, CLIP_MS, frame_ms, REVEAL_DRAW_IN_MS);
         composed(SIZE, annotation)
       };
       let (moving, standing) = (drawn(frame_ms), drawn(0.0));
@@ -416,7 +416,7 @@ fn renders_the_smear_along_the_travelled_span() {
       let middle = curve_point(curve.0, curve.1, curve.2, (from + to) * 0.5);
       for (blurred, frame_ms) in [("", frame_ms), ("-still", 0.0)] {
         let mut annotation = arrow(curve.0, curve.1, curve.2, width, head);
-        annotation.reveal = reveal_window(elapsed, CLIP_MS, frame_ms);
+        annotation.reveal = reveal_window(elapsed, CLIP_MS, frame_ms, REVEAL_DRAW_IN_MS);
         let image = composed(SIZE, annotation);
         let name = format!("i-reveal-blur-{label}-{phase}{blurred}");
         write_png(&name, &image);
@@ -443,7 +443,7 @@ fn renders_every_reveal_phase() {
   let frame_ms = 1_000.0 / 60.0;
   for elapsed in [10.0, 100.0, 375.0, 2_400.0, 2_700.0, 2_950.0] {
     let mut both = arrow(CURVED.0, CURVED.1, CURVED.2, 4.0, AnnotationHead::Both);
-    both.reveal = reveal_window(elapsed, CLIP_MS, frame_ms);
+    both.reveal = reveal_window(elapsed, CLIP_MS, frame_ms, REVEAL_DRAW_IN_MS);
     write_png(&format!("i-reveal-both-{elapsed}"), &composed(SIZE, both));
   }
   for (label, curve, width) in [("straight", STRAIGHT, 6.0), ("curved", CURVED, 4.0)] {
@@ -497,7 +497,7 @@ fn the_head_rides_ahead_of_the_stroke_from_the_start() {
     );
     // Solid for however far in the fade is: continuous from the tail to just
     // short of the tip, whose last pixel is a feathered fraction of one.
-    let opacity = reveal_window(elapsed, CLIP_MS, 0.0).opacity;
+    let opacity = reveal_window(elapsed, CLIP_MS, 0.0, REVEAL_DRAW_IN_MS).opacity;
     let solid = (254.0 * opacity * 0.5) as u8;
     let margin = (width * 0.75 / arc) as f32;
     for step in 0..=40_u8 {
@@ -539,7 +539,7 @@ fn a_short_stroke_keeps_its_cap_inside_the_annotation() {
     for elapsed in [2_800.0, 2_900.0] {
       let image = composed(SIZE, at_reveal(shape(STRAIGHT, width), elapsed, 0.0));
       let travel = prepared(STRAIGHT, width, 1.0, elapsed, 0.0);
-      let window = reveal_window(elapsed, CLIP_MS, 0.0);
+      let window = reveal_window(elapsed, CLIP_MS, 0.0, REVEAL_DRAW_IN_MS);
       let head = (width * 4.0 / arc_length(STRAIGHT)) as f32;
       let tail = along(STRAIGHT, window.low * (1.0 - head));
       let base = curve_point(STRAIGHT.0, STRAIGHT.1, STRAIGHT.2, f64::from(travel.high));

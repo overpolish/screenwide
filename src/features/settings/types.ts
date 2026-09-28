@@ -83,6 +83,12 @@ export type AnnotateSettings = {
    * rather than fitted to the text under it. */
   highlightManual: boolean;
   keepAnnotationsBetweenSessions: boolean;
+  /** Whether a fresh shape is drawn as a pen stroke by hand rather than as
+   * a clean outline. Its own choice rather than the highlight's. */
+  shapeHandDrawn: boolean;
+  /** How round a fresh shape's corners are, as a percentage of its shorter
+   * side from 0 to 50. */
+  shapeRadius: number;
   toolbarPosition: AnnotateToolbarPosition | null;
 };
 

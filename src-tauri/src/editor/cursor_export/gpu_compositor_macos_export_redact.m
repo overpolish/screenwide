@@ -44,7 +44,7 @@ BOOL screenwide_export_redact_frame(ScreenwideVideoExport *session,
         (float)(source_ms - clip->reveal_start_ms),
         (float)(clip->reveal_end_ms - clip->reveal_start_ms),
         session->source_frame_rate > 0 ? 1000.0f / session->source_frame_rate : 0,
-        annotation->animated, annotation->kind, &annotation->reveal);
+        annotation->animated, annotation->kind, clip->path_ms, &annotation->reveal);
     // The surface the ring round the box settles on at this frame, from the
     // timeline worked out ahead for the whole clip.
     uint64_t first = (uint64_t)annotation->p1[0], count = (uint64_t)annotation->p1[1];

@@ -70,6 +70,13 @@ pub struct AnnotateSettings {
   /// Whether a fresh highlight is laid by hand over the box its drag spans
   /// rather than fitted to the text under it.
   pub highlight_manual: bool,
+  /// Whether a fresh shape is drawn as a pen stroke by hand rather than as a
+  /// clean outline. Its own choice rather than the highlight's: a marker and
+  /// an outline are drawn by hand for different reasons.
+  pub shape_hand_drawn: bool,
+  /// How round a fresh shape's corners are, as a percentage of its shorter
+  /// side from 0 to 50: a square rounded all the way is a circle.
+  pub shape_radius: f64,
   pub toolbar_position: Option<ToolbarPosition>,
 }
 
@@ -86,6 +93,8 @@ impl Default for AnnotateSettings {
       default_head: AnnotationHead::default(),
       highlight_hand_drawn: false,
       highlight_manual: false,
+      shape_hand_drawn: false,
+      shape_radius: 0.0,
       toolbar_position: None,
     }
   }
@@ -108,7 +117,7 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     settings.default_shape,
     AnnotationKind::Text | AnnotationKind::Redact
   ) {
-    return Err("The live overlay draws arrows, counters and highlights".to_owned());
+    return Err("The live overlay draws arrows, counters, highlights and shapes".to_owned());
   }
   if !settings.default_width.is_finite()
     || !(MIN_WIDTH..=MAX_WIDTH).contains(&settings.default_width)
@@ -122,6 +131,9 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
   }
   if !settings.default_counter_angle.is_finite() {
     return Err("That is not a counter angle".to_owned());
+  }
+  if !settings.shape_radius.is_finite() || !(0.0..=50.0).contains(&settings.shape_radius) {
+    return Err("That is not a shape radius".to_owned());
   }
   if settings
     .toolbar_position

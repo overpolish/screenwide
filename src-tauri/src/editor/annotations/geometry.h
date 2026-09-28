@@ -49,6 +49,11 @@ void screenwide_annotation_prepare(uint32_t kind, float p0x, float p0y,
 float screenwide_annotation_distance(uint32_t kind, float px, float py,
                                      const AnnotationArrowGeometry *geometry);
 
+/// How far a point falls outside a prepared shape's stroke or the box it
+/// outlines: what picks a shape from anywhere inside it.
+float screenwide_shape_body_distance(float px, float py,
+                                     const AnnotationArrowGeometry *geometry);
+
 /// How far the annotation's picture moves between the shutter opening and
 /// now, which is the length its exposure is sampled along. `sx` and `sy`
 /// carry a point from the space the points are given in into the pixels the

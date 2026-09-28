@@ -76,6 +76,11 @@ static float4 composite_annotations(
                                    halo, samples, numbers, number_atlas);
       continue;
     }
+    if (annotation.kind == 5u) {
+      rgba = annotation_shape_layer(rgba, annotation, color, canvas_point, feather, halo,
+                                    samples);
+      continue;
+    }
     float2 a = float2(annotation.arrow.a);
     float2 b = float2(annotation.arrow.b);
     float2 c = float2(annotation.arrow.c);

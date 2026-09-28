@@ -69,3 +69,27 @@ export const Highlight: Story = {
     });
   },
 };
+
+/** The shape tool: one outline whose corners the radius rounds, drawn clean
+ * or by hand, chosen before it is drawn. */
+export const Shape: Story = {
+  beforeEach: () => {
+    seedToolPanel({
+      annotation: {
+        animated: true,
+        id: "",
+        isDraft: true,
+        kind: "shape",
+        style: {
+          ...firstAnnotationDress("shape"),
+          handDrawn: true,
+          radius: 20,
+        },
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
+  },
+};

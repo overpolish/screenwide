@@ -43,6 +43,12 @@ fn started(live: &mut LiveAnnotations, origin: Instant) {
   live.start(shared, source());
 }
 
+/// How long a clip's closing phase runs: its own pace's draw-out share.
+fn closing_ms(clip: &RecordingAnnotationClip) -> u64 {
+  let path_ms = clip.path_ms.expect("a live arrow is paced");
+  (path_ms * crate::editor::annotations::reveal::REVEAL_OUT_SHARE).round() as u64
+}
+
 #[test]
 fn annotations_on_screen_when_recording_starts_are_in_it_from_zero() {
   let origin = Instant::now();
@@ -56,11 +62,15 @@ fn annotations_on_screen_when_recording_starts_are_in_it_from_zero() {
   let clips = live.stop(origin + Duration::from_secs(10));
 
   assert_eq!(clips.len(), 3);
-  // Cleared at eight seconds, so each clip carries the closing phase's 750ms
-  // past that: the annotation is whole when it goes and leaves afterwards.
-  assert_eq!((clips[0].start_ms, clips[0].end_ms), (0, 8_750));
-  assert_eq!((clips[1].start_ms, clips[1].end_ms), (0, 8_750));
-  assert_eq!((clips[2].start_ms, clips[2].end_ms), (5_000, 8_750));
+  // Cleared at eight seconds, so each clip carries its closing phase past
+  // that: the annotation is whole when it goes and leaves afterwards.
+  let closing = closing_ms(&clips[0]);
+  assert_eq!((clips[0].start_ms, clips[0].end_ms), (0, 8_000 + closing));
+  assert_eq!((clips[1].start_ms, clips[1].end_ms), (0, 8_000 + closing));
+  assert_eq!(
+    (clips[2].start_ms, clips[2].end_ms),
+    (5_000, 8_000 + closing)
+  );
   assert!(clips
     .iter()
     .all(|clip| clip.track_id == AnnotationTrack::Primary));
@@ -123,7 +133,10 @@ fn an_undone_annotation_keeps_the_clip_it_earned() {
   let clips = live.stop(origin + Duration::from_secs(9));
 
   assert_eq!(clips.len(), 1);
-  assert_eq!((clips[0].start_ms, clips[0].end_ms), (1_000, 4_750));
+  assert_eq!(
+    (clips[0].start_ms, clips[0].end_ms),
+    (1_000, 4_000 + closing_ms(&clips[0]))
+  );
 }
 
 #[test]
@@ -133,7 +146,7 @@ fn a_short_clip_leaves_over_the_closing_phase_it_is_allowed() {
   started(&mut live, origin);
   live.add(annotation("a", 10.0), origin + Duration::from_secs(1));
   // Visible for 600ms, so the closing phase is capped to a third of the clip
-  // rather than the full 750. The clip is the length that still puts the
+  // rather than run in full. The clip is the length that still puts the
   // leaving after the annotation went: 600 + 300.
   assert!(live.remove_last(origin + Duration::from_millis(1_600)));
 

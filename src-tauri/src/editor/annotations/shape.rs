@@ -62,6 +62,16 @@ pub enum AnnotationShape {
     #[serde(default)]
     seed: u32,
   },
+  /// An outline round a box, drawn with a round pen. `start` is the box's
+  /// top-left corner and `end` its bottom-right, in source pixels; its
+  /// corners are rounded by the style's radius, so a square rounded all the
+  /// way is a circle. `seed` is its hand-drawn stroke's wobble and where that
+  /// stroke begins and ends.
+  Shape {
+    start: AnnotationPoint,
+    end: AnnotationPoint,
+    seed: u32,
+  },
 }
 
 impl AnnotationShape {
@@ -73,6 +83,7 @@ impl AnnotationShape {
       Self::Text { .. } => AnnotationKind::Text,
       Self::Redact { .. } => AnnotationKind::Redact,
       Self::Highlight { .. } => AnnotationKind::Highlight,
+      Self::Shape { .. } => AnnotationKind::Shape,
     }
   }
 
@@ -90,7 +101,7 @@ impl AnnotationShape {
       } => [*start, *control, *end],
       Self::Counter { center, .. } => [*center; 3],
       Self::Text { origin, .. } => [*origin; 3],
-      Self::Redact { start, end, .. } => [*start, *end, *end],
+      Self::Redact { start, end, .. } | Self::Shape { start, end, .. } => [*start, *end, *end],
       Self::Highlight {
         start, end, bands, ..
       } => {
@@ -114,6 +125,7 @@ impl AnnotationShape {
         origin, pointer, ..
       } => super::text::model::placed(*origin, pointer),
       Self::Redact { start, end, .. } => super::redact::model::placed(*start, *end),
+      Self::Shape { start, end, .. } => super::outline::model::placed(*start, *end),
       Self::Highlight {
         start, end, bands, ..
       } => super::highlight::model::placed(*start, *end, bands),
@@ -172,6 +184,11 @@ impl AnnotationShape {
         tone: *tone,
         seed: *seed,
       },
+      Self::Shape { start, end, seed } => Self::Shape {
+        start: map(*start),
+        end: map(*end),
+        seed: *seed,
+      },
     }
   }
 
@@ -185,9 +202,11 @@ impl AnnotationShape {
         control,
         end,
       } => super::arrow::bend::arrow_bend(*start, *control, *end).clamped(),
-      Self::Counter { .. } | Self::Text { .. } | Self::Redact { .. } | Self::Highlight { .. } => {
-        super::arrow::bend::ArrowBend::STRAIGHT
-      }
+      Self::Counter { .. }
+      | Self::Text { .. }
+      | Self::Redact { .. }
+      | Self::Highlight { .. }
+      | Self::Shape { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
     }
   }
 }

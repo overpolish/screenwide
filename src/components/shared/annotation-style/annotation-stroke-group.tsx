@@ -8,8 +8,8 @@ const items: { id: "clean" | "hand"; label: string }[] = [
   { id: "hand", label: "Hand-drawn" },
 ];
 
-/** Whether a highlight is drawn as a clean band or as a marker stroke by
- * hand, labelled for a toolbar that has no room for a row heading. */
+/** Whether a highlight or a shape is drawn clean or as a pen stroke by hand,
+ * labelled for a toolbar that has no room for a row heading. */
 export function AnnotationStrokeGroup({
   isDisabled,
   onChange,

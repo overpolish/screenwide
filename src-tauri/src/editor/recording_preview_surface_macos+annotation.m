@@ -43,15 +43,15 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode
   return mode == ScreenwideAnnotationModeArrow ||
          mode == ScreenwideAnnotationModeCounter ||
          mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeRedact ||
-         mode == ScreenwideAnnotationModeHighlight;
+         mode == ScreenwideAnnotationModeHighlight || mode == ScreenwideAnnotationModeShape;
 }
 
 // An arrow has three grips; a counter one, the tip of its tail; a text box
-// one, its pointer's tip; a redaction the eight of its box; a highlight the
-// selection's two ends.
+// one, its pointer's tip; a redaction or a shape the eight of its box; a
+// highlight the selection's two ends.
 SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_grips(
     NSRect image, ScreenwidePreviewAnnotation item, NSPoint *handles, uint32_t *kinds) {
-  if (item.kind == ScreenwideAnnotationKindRedact)
+  if (annotation_kind_is_box(item.kind))
     return annotation_redact_grips(image, item, handles, kinds);
   if (item.kind == ScreenwideAnnotationKindHighlight) {
     handles[0] = annotation_display_point(image, item.start_x,
@@ -99,16 +99,25 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
 /// The topmost arrow whose drawn shape `point` lands on, or -1. There is no
 /// tolerance around it: the arrow is picked, and haloed, exactly where it is
 /// painted, which is what keeps the halo off the space beside an annotation.
+///
+/// A shape is picked by its stroke, and by its inside too once it is chosen
+/// or while the select tool is in hand: it can be carried from anywhere in
+/// it, while any other tool still draws inside a shape not in hand.
 SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   NSUInteger count = 0;
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
   if (items == NULL) return -1;
+  BOOL selecting = annotation_active_mode(surface) == ScreenwideAnnotationModeSelect;
   for (NSInteger index = (NSInteger)count - 1; index >= 0; index--) {
-    NSRect image = annotation_layer_image(surface, items[index].layer_id);
+    ScreenwidePreviewAnnotation item = items[(NSUInteger)index];
+    NSRect image = annotation_layer_image(surface, item.layer_id);
     if (image.size.width <= 0.0 || image.size.height <= 0.0) continue;
-    if (annotation_shaft_distance(image, items[(NSUInteger)index], point) <= 0.0)
-      return index;
+    BOOL whole = item.kind == ScreenwideAnnotationKindShape &&
+                 (selecting || index == surface.annotationSelected);
+    double distance = whole ? annotation_shape_body_distance(image, item, point)
+                            : annotation_shaft_distance(image, item, point);
+    if (distance <= 0.0) return index;
   }
   return -1;
 }
@@ -229,7 +238,7 @@ SCREENWIDE_PREVIEW_PRIVATE void annotation_add_osc(
     ScreenwidePreviewSurface *surface, CGFloat scale) {
   NSUInteger items = 0;
   const ScreenwidePreviewAnnotation *list = annotation_items(surface, &items);
-  // A chosen redaction wears the selection's box rather than discs.
+  // A chosen redaction or shape wears the selection's box rather than discs.
   if (annotation_redact_add_osc(vertices, count, size, surface, scale)) return;
   if (list == NULL || surface.annotationSelected < 0 ||
       (NSUInteger)surface.annotationSelected >= items)

@@ -96,7 +96,8 @@ pub struct AnnotationStyle {
   #[serde(default)]
   pub head: AnnotationHead,
   /// Whether a highlight is drawn as a marker stroke by hand rather than as a
-  /// clean band; the other kinds carry `false`.
+  /// clean band, or a shape's outline as a pen stroke that misses its own
+  /// start; the other kinds carry `false`.
   #[serde(default)]
   pub hand_drawn: bool,
   /// Whether a highlight is laid by hand over the box its drag spans, in
@@ -104,8 +105,8 @@ pub struct AnnotationStyle {
   /// the other kinds carry `false`.
   #[serde(default)]
   pub manual: bool,
-  /// A redaction's corner radius, as a percentage of its box's shorter side
-  /// from 0 to 50; the other kinds carry zero.
+  /// A redaction's or a shape's corner radius, as a percentage of its box's
+  /// shorter side from 0 to 50; the other kinds carry zero.
   #[serde(default)]
   pub radius: f64,
   #[serde(default)]

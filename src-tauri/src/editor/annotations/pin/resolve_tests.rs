@@ -13,6 +13,7 @@ fn point(x: f64, y: f64) -> AnnotationPoint {
 
 fn clip(shape: AnnotationShape, keyframes: &[(u64, f64, f64)]) -> RecordingAnnotationClip {
   RecordingAnnotationClip {
+    path_ms: None,
     annotation: Annotation {
       above_camera: false,
       animated: false,

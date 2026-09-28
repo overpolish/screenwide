@@ -21,6 +21,8 @@ const settings: AnnotateSettings = {
   highlightHandDrawn: false,
   highlightManual: false,
   keepAnnotationsBetweenSessions: false,
+  shapeHandDrawn: false,
+  shapeRadius: 0,
   toolbarPosition: null,
 };
 
@@ -82,5 +84,18 @@ export const Highlight: Story = {
 export const HighlightManual: Story = {
   args: {
     settings: { ...settings, defaultShape: "highlight", highlightManual: true },
+  },
+};
+
+/** The shape in hand: its pen, whether it is drawn by hand, and how round
+ * its corners are stand where the arrow's head was. */
+export const Shape: Story = {
+  args: {
+    settings: {
+      ...settings,
+      defaultShape: "shape",
+      shapeHandDrawn: true,
+      shapeRadius: 20,
+    },
   },
 };

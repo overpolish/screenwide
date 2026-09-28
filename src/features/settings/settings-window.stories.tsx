@@ -102,6 +102,8 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     highlightHandDrawn: false,
     highlightManual: false,
     keepAnnotationsBetweenSessions: false,
+    shapeHandDrawn: false,
+    shapeRadius: 0,
     toolbarPosition: null,
   };
   const defaults: ShortcutDefaults = {

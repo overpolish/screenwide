@@ -190,6 +190,7 @@ export function useRecordingPreviewTransport(
   );
   const annotations = useRecordingAnnotations({
     edit: annotationEdit,
+    frames: previewSourceDimensions,
     getPositionMs: player.getPositionMs,
     onEdit: (next) => onRecordingTimelineEditChange?.(next),
     onSelectTrack: (track) => {

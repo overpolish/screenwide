@@ -128,9 +128,10 @@ export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
  * The dress a tool draws in before anything has been settled on: the palette's
  * yellow, or black for a redaction's fill, at the tool's own first size, with
  * an arrow's head at its end. The twins of `default_arrow_style`,
- * `default_counter_style`, `default_text_style`, `default_redact_style` and
- * `default_highlight_style` in `src-tauri/src/editor/annotations`, which dress
- * a fresh annotation where the editor sends no dress of its own.
+ * `default_counter_style`, `default_text_style`, `default_redact_style`,
+ * `default_highlight_style` and `default_shape_style` in
+ * `src-tauri/src/editor/annotations`, which dress a fresh annotation where the
+ * editor sends no dress of its own.
  */
 export const firstAnnotationDress = (
   kind: AnnotationKind,

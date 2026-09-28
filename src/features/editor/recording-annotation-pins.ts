@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { annotationDrawInMs } from "./annotation-kinds";
+import { annotationDrawInMs } from "./annotation-pace";
 import {
   RecordingAnnotationClip,
   RecordingAnnotationPin,
@@ -27,7 +27,7 @@ export const pinnedClip = (
 ): RecordingAnnotationClip => {
   const placed = Math.min(
     clip.endMs - 1,
-    clip.startMs + annotationDrawInMs(clip.annotation),
+    clip.startMs + annotationDrawInMs(clip.annotation, clip.pathMs),
   );
   const inside = positionMs >= clip.startMs && positionMs < clip.endMs;
   const pinnedMs = Math.max(0, Math.round(inside ? positionMs : placed));

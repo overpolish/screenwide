@@ -4,8 +4,8 @@
 //! Annotation documents and editing, shared by still and timed workspaces.
 //!
 //! A tool's shape lives in one module under this one ([`arrow`],
-//! [`counter`], [`text`], [`redact`], [`highlight`]) and nothing else
-//! branches on which kind an annotation is.
+//! [`counter`], [`text`], [`redact`], [`highlight`], [`outline`] for the
+//! shape tool) and nothing else branches on which kind an annotation is.
 //! Adding a tool is therefore:
 //!
 //! - one module here, with the `model`, `gesture`, `handles`, `native`,
@@ -35,6 +35,10 @@ pub(crate) use shape::AnnotationShape;
 /// The arrow tool's own half of the model.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod arrow;
+/// What moving a box's grips does to it, shared by the redaction and the
+/// shape.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) mod box_gesture;
 /// The counter tool's own half of the model.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod counter;
@@ -64,6 +68,12 @@ mod gesture_tests;
 pub(crate) mod handles;
 /// The highlight tool's own half of the model.
 pub(crate) mod highlight;
+/// The shape tool's own half of the model: an outline round a box. Not
+/// called `shape`, which is the enum every kind is a variant of.
+pub(crate) mod outline;
+/// How long an annotation's path takes to draw in, from its length: the
+/// editor's pace, for the clips made natively.
+pub(crate) mod pace;
 /// Annotations on a recording following the content they were placed on.
 pub(crate) mod pin;
 /// The redaction tool's own half of the model.

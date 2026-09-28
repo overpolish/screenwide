@@ -3,8 +3,8 @@
 
 /**
  * The pieces a stored annotation's shape is read from, each held to what the
- * compositor can draw: a point, a text box's pointer, a highlight's band and
- * the page it was read from.
+ * compositor can draw: a point, a seed, a box's corners, a text box's pointer,
+ * a highlight's band and the page it was read from.
  */
 
 import type {
@@ -23,6 +23,25 @@ export const annotationPoint = (value: unknown): AnnotationPoint | null => {
     Number.isFinite(point.y)
     ? { x: point.x, y: point.y }
     : null;
+};
+
+/** A stored seed, or null where it is not a 32-bit unsigned integer. */
+export const annotationSeed = (value: unknown): number | null =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= 0 &&
+  value <= 0xffffffff
+    ? value
+    : null;
+
+/** A stored box's two corners and its seed - a redaction's or a shape's - or
+ * null where any of them cannot be read. */
+export const annotationBox = (value: unknown) => {
+  const box = (value ?? {}) as Record<string, unknown>;
+  const start = annotationPoint(box.start);
+  const end = annotationPoint(box.end);
+  const seed = annotationSeed(box.seed);
+  return start && end && seed !== null ? { end, seed, start } : null;
 };
 
 /** A stored band, or null where it cannot be drawn. */

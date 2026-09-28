@@ -206,7 +206,7 @@ fn room_to_arrive(clip: &RecordingAnnotationClip, from: u64) -> bool {
   if from <= clip.start_ms || !clip.annotation.animated {
     return true;
   }
-  let span = clip.annotation.shape.kind().reveal_span_ms();
+  let span = clip.annotation.shape.kind().reveal_span_ms(clip.path_ms);
   clip.end_ms.saturating_sub(from) as f32 >= span
 }
 

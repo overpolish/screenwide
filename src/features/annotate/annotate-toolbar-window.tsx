@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -16,20 +15,16 @@ import { AnnotateToolbar } from "./annotate-toolbar";
 import {
   clearAnnotations,
   dismissAnnotate,
-  persistAnnotateToolbarPosition,
+  finishAnnotateToolbarDrag,
   resizeAnnotateToolbar,
   undoAnnotation,
 } from "./api";
 import { useToolbarTyping } from "./use-toolbar-typing";
 
-/** How long the drag has to stand still before the place is kept. A drag
- * reports every step, and each one would otherwise be a settings write. */
-const MOVE_SETTLE_MS = 250;
-
-/** How long a dragged edit has to stand still before it is written, for the
- * same reason. A slider reports every step of a drag, and each step would
- * otherwise be a validation, a file write, a tray refresh and a change event
- * the plate follows back - which is what made the controls flicker under the
+/** How long a dragged edit has to stand still before it is written. A slider
+ * reports every step of a drag, and each step would otherwise be a
+ * validation, a file write, a tray refresh and a change event the plate
+ * follows back - which is what made the controls flicker under the
  * pointer. */
 const EDIT_SETTLE_MS = 150;
 
@@ -101,30 +96,16 @@ export function AnnotateToolbarWindow() {
     };
   }, []);
 
-  // A drag moves the window natively, so the place is read back from it once
-  // the pointer has settled.
+  // A drag moves the window natively, so it is settled on the release, as the
+  // recording bar is: pulled back on screen and its place kept. A release that
+  // ends a plain press leaves both alone.
   useEffect(() => {
-    let timer = 0;
-    let stopped = false;
-    let stopListening: (() => void) | undefined;
-    getCurrentWindow()
-      .onMoved(() => {
-        window.clearTimeout(timer);
-        timer = window.setTimeout(() => {
-          persistAnnotateToolbarPosition().catch(
-            report("keep the toolbar's place"),
-          );
-        }, MOVE_SETTLE_MS);
-      })
-      .then((unlisten) => {
-        if (stopped) unlisten();
-        else stopListening = unlisten;
-      })
-      .catch(report("follow the toolbar's place"));
+    const finish = () => {
+      finishAnnotateToolbarDrag().catch(report("keep the toolbar's place"));
+    };
+    window.addEventListener("pointerup", finish);
     return () => {
-      stopped = true;
-      window.clearTimeout(timer);
-      stopListening?.();
+      window.removeEventListener("pointerup", finish);
     };
   }, []);
 

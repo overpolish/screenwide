@@ -56,6 +56,18 @@ pub(crate) fn annotation_travel(
           .max((reveal.high - previous[1]).abs())
         + width * 4.0 * (reveal.scale - previous[2]).abs()
     }
+    // A shape's window slides round its outline, `a` and `c` being its
+    // box's corners. A hand-drawn stroke runs on past a lap, by at most a
+    // quarter of one.
+    AnnotationKind::Shape => {
+      let across = ((c[0] - a[0]) * scale[0]).abs();
+      let down = ((c[1] - a[1]) * scale[1]).abs();
+      2.5
+        * (across + down)
+        * (reveal.low - previous[0])
+          .abs()
+          .max((reveal.high - previous[1]).abs())
+    }
     // A redaction never moves over a clip: it is whole for as long as it is
     // shown. A highlight's bands are not in its record's points, so
     // `highlight_travel` measures it instead.

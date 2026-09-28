@@ -166,7 +166,7 @@ pub fn run() {
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       annotate::commands::end_annotate_toolbar_typing,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
-      annotate::toolbar::persist_annotate_toolbar_position,
+      annotate::toolbar::finish_annotate_toolbar_drag,
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       annotate::toolbar::resize_annotate_toolbar,
       ruler::settings::get_ruler_settings,

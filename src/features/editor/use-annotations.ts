@@ -110,14 +110,19 @@ export function useAnnotations({
     );
   };
 
-  // Lay a redaction's blocks out again, or draw a hand-drawn highlight's
-  // stroke again. The seed comes from the browser's secure generator, as a
-  // fresh redaction's does from the system's; the blocks carry nothing of the
-  // picture's layout whatever the seed.
+  // Lay a redaction's blocks out again, or draw a hand-drawn highlight's or
+  // shape's stroke again. The seed comes from the browser's secure generator,
+  // as a fresh redaction's does from the system's; the blocks carry nothing of
+  // the picture's layout whatever the seed.
   const applyShuffle = () => {
     if (!selected) return;
     const shape = selected.shape;
-    if (shape.kind !== "redact" && shape.kind !== "highlight") return;
+    if (
+      shape.kind !== "redact" &&
+      shape.kind !== "highlight" &&
+      shape.kind !== "shape"
+    )
+      return;
     const [seed] = crypto.getRandomValues(new Uint32Array(1));
     commit(
       annotations.map((annotation) =>

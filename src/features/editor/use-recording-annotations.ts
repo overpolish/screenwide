@@ -10,6 +10,7 @@ import {
   useAnnotationAnimatedDefault,
   useAnnotationDefaults,
 } from "./annotation-defaults";
+import { AnnotationFrame, pacedClip } from "./annotation-pace";
 import { Annotation, AnnotationTextEdit } from "./annotations";
 import { recordingAnnotationPinning } from "./recording-annotation-pinning";
 import {
@@ -42,6 +43,7 @@ const EMPTY_CLIPS: RecordingAnnotationClip[] = [];
 
 export function useRecordingAnnotations({
   edit,
+  frames,
   getPositionMs,
   onEdit,
   onSelectTrack,
@@ -51,6 +53,9 @@ export function useRecordingAnnotations({
   trackId,
 }: {
   edit: RecordingTimelineEdit;
+  /** Each pane's picture, in its own source pixels: what an annotation's
+   * path is paced against. */
+  frames: Partial<Record<RecordingVideoTrackId, AnnotationFrame>>;
   /** Where the playhead is, in source time: where a fresh pin is made. */
   getPositionMs: () => number;
   onEdit: (edit: RecordingTimelineEdit) => void;
@@ -79,8 +84,12 @@ export function useRecordingAnnotations({
   const commitClips = (unnumbered: RecordingAnnotationClip[]) => {
     // Counters count what the timeline shows, so every list written here is
     // numbered by clip time: dragging one clip in front of another renumbers
-    // the pair without the drag knowing about counters.
-    const next = renumberedAnnotationClips(unnumbered);
+    // the pair without the drag knowing about counters. Every clip is paced
+    // by its annotation as it now stands, so a path drawn longer takes
+    // longer to draw in.
+    const next = renumberedAnnotationClips(unnumbered).map((clip) =>
+      pacedClip(clip, frames[clip.trackId]),
+    );
     if (JSON.stringify(next) !== JSON.stringify(clips))
       onEdit({ ...edit, annotationClips: next });
   };
@@ -124,6 +133,7 @@ export function useRecordingAnnotations({
           annotations: payload.annotations,
           clips,
           edit,
+          frame: frames[track],
           pins: payload.pins,
           positionMs: payload.sourcePositionMs,
           sourceDurationMs,

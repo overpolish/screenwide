@@ -213,6 +213,7 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
     .write()
     .unwrap()
     .push(RecordingAnnotationClip {
+      path_ms: None,
       pin: None,
       annotation,
       track_id: AnnotationTrack::Primary,

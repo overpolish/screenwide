@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A redaction's chrome: the layer selection's own box, with its eight grips
-//! and its radius dot, around the chosen one. A hovered one wears the
-//! compositor's halo instead. The twin of
+//! A box's chrome - a redaction's or a shape's: the layer selection's own
+//! box, with its eight grips and its radius dot, around the chosen one. A
+//! hovered one wears the compositor's halo instead. The twin of
 //! `recording_preview_surface_macos+annotation_redact.m`.
 
 use super::*;
-use crate::editor::annotations::gesture::{BOX_HANDLES, RADIUS_HANDLE};
+use crate::editor::annotations::gesture::{BOX_HANDLES, MODE_SELECT, RADIUS_HANDLE};
+use crate::editor::annotations::outline::geometry::{prepare_shape, shape_distance};
 use crate::editor::annotations::redact::geometry::{prepare_redact, redact_distance};
+use crate::editor::annotations::reveal::AnnotationReveal;
 
 /// The box on screen, in display points, from the normalised corners Rust
 /// published.
@@ -55,7 +57,7 @@ fn grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> [((f64, f
   grips
 }
 
-/// The grip of a redaction under `point`, as the handle it reports.
+/// The grip of a box under `point`, as the handle it reports.
 pub(super) fn grip_at(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
@@ -86,7 +88,67 @@ pub(super) fn distance(
   redact_distance([point.0 as f32, point.1 as f32], &geometry)
 }
 
-/// The resize cursor a redaction's grip shows: its sides say which way, and
+/// A shape prepared in display points, from the grips it was published with.
+/// Its radius and its stroke's hand ride in the head slots, never placed.
+fn shape_geometry(
+  image: PreviewSurfaceRect,
+  item: &NativeAnnotationHandles,
+) -> crate::editor::annotations::geometry::ArrowGeometry {
+  let frame = frame(image, item);
+  prepare_shape(
+    [frame.x as f32, frame.y as f32],
+    [
+      (frame.x + frame.width) as f32,
+      (frame.y + frame.height) as f32,
+    ],
+    item.start_head as f32,
+    item.end_head as f32,
+    (item.width * image.width) as f32,
+    AnnotationReveal::WHOLE,
+  )
+}
+
+/// How far `point` is from a shape's drawn stroke, in display points: zero on
+/// its edge, so a press on the line picks it and one inside the box does not.
+pub(super) fn shape_stroke_distance(
+  image: PreviewSurfaceRect,
+  item: &NativeAnnotationHandles,
+  point: (f64, f64),
+) -> f32 {
+  shape_distance(
+    [point.0 as f32, point.1 as f32],
+    &shape_geometry(image, item),
+  )
+}
+
+/// How far `point` is from a shape's stroke or the box it outlines, in
+/// display points: what picks a shape from anywhere inside it.
+pub(super) fn shape_body_distance(
+  image: PreviewSurfaceRect,
+  item: &NativeAnnotationHandles,
+  point: (f64, f64),
+) -> f32 {
+  crate::editor::annotations::outline::geometry::shape_body_distance(
+    [point.0 as f32, point.1 as f32],
+    &shape_geometry(image, item),
+  )
+}
+
+/// Whether the annotation at `index` is picked by its inside as well as its
+/// stroke: a shape once it is chosen, or while the select tool is in hand. It
+/// can be carried from anywhere in it, while any other tool still draws
+/// inside a shape not in hand. The twin of the rule in
+/// `annotation_shaft_at_point`.
+pub(super) fn grabs_inside(
+  state: &SurfaceState,
+  index: usize,
+  item: &NativeAnnotationHandles,
+) -> bool {
+  item.shape_kind() == AnnotationKind::Shape
+    && (state.annotation.mode == MODE_SELECT || state.annotation.selected == index as i32)
+}
+
+/// The resize cursor a box's grip shows: its sides say which way, and
 /// the radius dot drags diagonally as the layer selection's does.
 pub(super) fn grip_cursor(handle: u32) -> Option<editor::CursorKind> {
   if handle == RADIUS_HANDLE {
@@ -103,15 +165,18 @@ pub(super) fn grip_cursor(handle: u32) -> Option<editor::CursorKind> {
   })
 }
 
-/// The chosen redaction's box in device pixels and its radius percentage,
-/// for the chrome to draw the way the layer selection draws its own. `None`
-/// when no redaction is chosen or the annotation tool has no say.
+/// The chosen redaction's or shape's box in device pixels and its radius
+/// percentage, for the chrome to draw the way the layer selection draws its
+/// own. `None` when no box is chosen or the annotation tool has no say.
 pub(crate) fn selected_box(state: &SurfaceState, scale: f64) -> Option<([f32; 4], f64)> {
   if state.annotation.mode == MODE_NONE {
     return None;
   }
   let item = selected_item(state)?;
-  if item.shape_kind() != AnnotationKind::Redact {
+  if !matches!(
+    item.shape_kind(),
+    AnnotationKind::Redact | AnnotationKind::Shape
+  ) {
     return None;
   }
   let rect = frame(image_frame(state)?, item);

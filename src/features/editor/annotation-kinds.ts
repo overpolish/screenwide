@@ -10,7 +10,9 @@
 import { ANNOTATION_SIZES } from "../../components/shared/annotation-style/widths";
 
 import {
+  annotationBox,
   annotationPoint,
+  annotationSeed,
   highlightBand,
   highlightTone,
   textPointer,
@@ -21,20 +23,19 @@ import type {
   AnnotationArrow,
   AnnotationCounter,
   AnnotationHighlight,
-  AnnotationRedact,
   AnnotationShape,
   AnnotationText,
 } from "./annotations";
 import type { AnnotationKind } from "../../components/shared/annotation-style/types";
 
 /**
- * How long an animated annotation takes to arrive, in source milliseconds. The
- * twins of `REVEAL_DRAW_IN_MS`, `COUNTER_REVEAL_IN_MS` and `TEXT_REVEAL_IN_MS`
- * in `src-tauri/src/editor/annotations/reveal.rs`, `counter/reveal.rs` and
- * `text/reveal.rs`, which Rust tests hold to these lines; a reveal may shorten
- * its phase for a short clip but never lengthens it, so an annotation placed
- * this long before the playhead is always whole by the time the playhead is
- * reached. A text box's is its box's arrival and then its pointer's.
+ * How long an animated annotation takes to arrive where its clip names no
+ * pace, in source milliseconds. The twins of `REVEAL_DRAW_IN_MS`,
+ * `COUNTER_REVEAL_IN_MS` and `TEXT_REVEAL_IN_MS` in
+ * `src-tauri/src/editor/annotations/reveal.rs`, `counter/reveal.rs` and
+ * `text/reveal.rs`, which Rust tests hold to these lines. A clip the editor
+ * paces arrives over its path's own time instead, as `annotation-pace.ts`
+ * works it out. A text box's is its box's arrival and then its pointer's.
  */
 export const ANNOTATION_DRAW_IN_MS = 1000;
 const ANNOTATION_COUNTER_DRAW_IN_MS = 320;
@@ -68,6 +69,8 @@ type AnnotationKindRow<Shape extends AnnotationShape> =
     hasHandDrawn: boolean;
     /** Whether it carries heads to choose between. */
     hasHead: boolean;
+    /** Whether its box's corners can be rounded. */
+    hasRadius: boolean;
     /** Whether it hides what is under it, and so offers the redaction modes. */
     hasRedaction: boolean;
     /** Whether its size is its own to choose. A highlight's bands are as tall
@@ -98,6 +101,7 @@ export const ANNOTATION_KINDS: {
     hasFit: false,
     hasHandDrawn: false,
     hasHead: true,
+    hasRadius: false,
     hasRedaction: false,
     hasSize: true,
     // An arrow has no name of its own, so it is called by its place in the
@@ -126,6 +130,7 @@ export const ANNOTATION_KINDS: {
     // A counter is a disc with a number in it, which leaves it no head to
     // choose and nothing to reverse.
     hasHead: false,
+    hasRadius: false,
     hasRedaction: false,
     hasSize: true,
     laneLabel: (shape) => `Counter ${String(shape.value)}`,
@@ -155,6 +160,7 @@ export const ANNOTATION_KINDS: {
     hasFit: true,
     hasHandDrawn: true,
     hasHead: false,
+    hasRadius: false,
     hasRedaction: false,
     hasSize: false,
     laneLabel: (_shape, index) => `Highlight ${String(index + 1)}`,
@@ -162,16 +168,13 @@ export const ANNOTATION_KINDS: {
       const shape = (value ?? {}) as Partial<AnnotationHighlight>;
       const start = annotationPoint(shape.start);
       const end = annotationPoint(shape.end);
-      const seed = shape.seed;
+      const seed = annotationSeed(shape.seed);
       const bands = Array.isArray(shape.bands)
         ? shape.bands.map(highlightBand)
         : [];
       return start &&
         end &&
-        typeof seed === "number" &&
-        Number.isInteger(seed) &&
-        seed >= 0 &&
-        seed <= 0xffffffff &&
+        seed !== null &&
         bands.every((band) => band !== null)
         ? {
             bands,
@@ -198,25 +201,37 @@ export const ANNOTATION_KINDS: {
     hasFit: false,
     hasHandDrawn: false,
     hasHead: false,
+    hasRadius: true,
     hasRedaction: true,
     hasSize: true,
     laneLabel: (_shape, index) => `Redaction ${String(index + 1)}`,
     parseShape: (value) => {
-      const shape = (value ?? {}) as Partial<AnnotationRedact>;
-      const start = annotationPoint(shape.start);
-      const end = annotationPoint(shape.end);
-      const seed = shape.seed;
-      return start &&
-        end &&
-        typeof seed === "number" &&
-        Number.isInteger(seed) &&
-        seed >= 0 &&
-        seed <= 0xffffffff
-        ? { end, kind: "redact", seed, start }
-        : null;
+      const box = annotationBox(value);
+      return box && { ...box, kind: "redact" };
     },
     reversible: false,
     startsStill: true,
+  },
+  shape: {
+    ...ANNOTATION_SIZES.shape,
+    // Drawn round its outline the way an arrow is along its path.
+    animates: true,
+    drawInMs: ANNOTATION_DRAW_IN_MS,
+    hasAlign: false,
+    hasAngle: false,
+    hasFit: false,
+    hasHandDrawn: true,
+    hasHead: false,
+    hasRadius: true,
+    hasRedaction: false,
+    hasSize: true,
+    laneLabel: (_shape, index) => `Shape ${String(index + 1)}`,
+    parseShape: (value) => {
+      const box = annotationBox(value);
+      return box && { ...box, kind: "shape" };
+    },
+    reversible: false,
+    startsStill: false,
   },
   text: {
     ...ANNOTATION_SIZES.text,
@@ -229,6 +244,7 @@ export const ANNOTATION_KINDS: {
     hasFit: false,
     hasHandDrawn: false,
     hasHead: false,
+    hasRadius: false,
     hasRedaction: false,
     hasSize: true,
     // A box is called by what it says: its first line, which the lane
@@ -257,15 +273,6 @@ export const ANNOTATION_KINDS: {
 /** Whether `value` names a kind this build knows how to draw. */
 export const isAnnotationKind = (value: unknown): value is AnnotationKind =>
   typeof value === "string" && value in ANNOTATION_KINDS;
-
-/** How long `annotation` takes to arrive: a counter grows into place far
- * quicker than an arrow draws itself. A redaction that does not animate is
- * whole from its clip's first frame, so its clip starts where it is placed
- * rather than reaching back. */
-export const annotationDrawInMs = (annotation: Annotation) =>
-  annotation.shape.kind === "redact" && !annotation.animated
-    ? 0
-    : ANNOTATION_KINDS[annotation.shape.kind].drawInMs;
 
 /** What the timeline lane calls `annotation`, `index` being its place there. */
 export const annotationLaneLabel = (annotation: Annotation, index: number) => {

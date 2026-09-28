@@ -399,6 +399,7 @@ float4 annotation_counter_layer(
 
 #include "annotation_text.hlsl"
 #include "annotation_highlight.hlsl"
+#include "annotation_shape.hlsl"
 
 /// A hovered redaction's halo. The box itself was applied to the source and
 /// is not drawn here, so this is the only thing that finds an erased box on
@@ -464,6 +465,11 @@ float4 composite_annotations(
     if (annotation.kind == 2u) {
       rgba = annotation_text_layer(rgba, annotation, color, canvas_point, feather,
                                    max(annotation.hover, 0.0), number_atlas);
+      continue;
+    }
+    if (annotation.kind == annotation_shape_kind) {
+      rgba = annotation_shape_layer(rgba, annotation, color, canvas_point, feather,
+                                    max(annotation.hover, 0.0));
       continue;
     }
     float2 a = float2(arrow.ax, arrow.ay);

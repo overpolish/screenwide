@@ -22,6 +22,7 @@ pub enum AnnotationKind {
   Text = 2,
   Redact = 3,
   Highlight = 4,
+  Shape = 5,
 }
 
 impl AnnotationKind {
@@ -34,6 +35,7 @@ impl AnnotationKind {
       2 => Some(Self::Text),
       3 => Some(Self::Redact),
       4 => Some(Self::Highlight),
+      5 => Some(Self::Shape),
       _ => None,
     }
   }
@@ -61,6 +63,8 @@ mod tests {
     assert_eq!(AnnotationKind::Redact.raw(), 3);
     assert_eq!(AnnotationKind::from_raw(4), Some(AnnotationKind::Highlight));
     assert_eq!(AnnotationKind::Highlight.raw(), 4);
-    assert_eq!(AnnotationKind::from_raw(5), None);
+    assert_eq!(AnnotationKind::from_raw(5), Some(AnnotationKind::Shape));
+    assert_eq!(AnnotationKind::Shape.raw(), 5);
+    assert_eq!(AnnotationKind::from_raw(6), None);
   }
 }

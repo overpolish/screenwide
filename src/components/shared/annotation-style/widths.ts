@@ -22,7 +22,8 @@ export const ANNOTATION_WIDTHS = [8, 12, 16, 24, 32, 48];
  */
 export const ANNOTATION_COUNTER_SIZES = [56, 72, 96, 128, 160];
 
-/** The stroke a fresh arrow is drawn with. The twin of `NEW_ARROW_WIDTH`. */
+/** The stroke a fresh arrow or shape is drawn with. The twin of
+ * `NEW_ARROW_WIDTH` and `NEW_SHAPE_WIDTH`. */
 export const DEFAULT_ANNOTATION_WIDTH = 8;
 
 /** The disc a fresh counter is drawn at: the smallest. The twin of
@@ -114,6 +115,11 @@ export const ANNOTATION_SIZES: Record<
     defaultSize: DEFAULT_ANNOTATION_REDACT_SIZE,
     sizeLabel: "Block size",
     sizes: ANNOTATION_REDACT_SIZES,
+  },
+  shape: {
+    defaultSize: DEFAULT_ANNOTATION_WIDTH,
+    sizeLabel: "Width",
+    sizes: ANNOTATION_WIDTHS,
   },
   text: {
     defaultSize: DEFAULT_ANNOTATION_TEXT_SIZE,

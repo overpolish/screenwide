@@ -16,6 +16,7 @@ use super::counter::silhouette::prepared_counter_distance;
 use super::exposure::{annotation_travel, highlight_travel};
 use super::geometry::ArrowGeometry;
 use super::highlight::geometry::{flow_distance, prepare_highlight, HighlightFlow};
+use super::outline::geometry::{prepare_shape, shape_distance};
 use super::redact::geometry::{prepare_redact, redact_distance};
 use super::reveal::AnnotationReveal;
 use super::text::geometry::{prepare_text, text_distance};
@@ -29,7 +30,9 @@ use super::AnnotationKind;
 /// corner at `p0` and its pointer's tip at `p1`, and reads its text block's
 /// size out of `p2`, which is a size rather than a point for the same reason.
 /// A highlight is placed by where `p0` and `p1` land - the source's origin and
-/// its pixel `(1, 1)` - and reads its tone out of `p2`.
+/// its pixel `(1, 1)` - and reads its tone out of `p2`. A shape's box runs
+/// from `p0` to `p2`, and `p1` carries its radius and its hand rather than a
+/// point, as `outline::native` keeps them.
 ///
 /// A number no kind owns prepares nothing. It cannot come from a retained
 /// annotation, and drawing it as an arrow would draw some future kind as a
@@ -68,6 +71,7 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
     Some(AnnotationKind::Highlight) => {
       prepare_highlight([p0x, p0y], [p1x, p1y], [p2x, p2y], reveal)
     }
+    Some(AnnotationKind::Shape) => prepare_shape([p0x, p0y], [p2x, p2y], p1x, p1y, width, reveal),
     None => ArrowGeometry::default(),
   };
 }
@@ -154,10 +158,28 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
     }
     Some(AnnotationKind::Text) => text_distance([px, py], geometry),
     Some(AnnotationKind::Redact) => redact_distance([px, py], geometry),
+    Some(AnnotationKind::Shape) => shape_distance([px, py], geometry),
     // A highlight's record places bands it does not carry; the chrome picks
     // it through [`screenwide_highlight_distance`] instead.
     Some(AnnotationKind::Highlight) | None => f32::INFINITY,
   }
+}
+
+/// How far a point falls outside a prepared shape's stroke or the box it
+/// outlines: what picks a shape from anywhere inside it.
+///
+/// # Safety
+/// `geometry` must point at one readable [`ArrowGeometry`].
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn screenwide_shape_body_distance(
+  px: f32,
+  py: f32,
+  geometry: *const ArrowGeometry,
+) -> f32 {
+  geometry.as_ref().map_or(f32::INFINITY, |geometry| {
+    super::outline::geometry::shape_body_distance([px, py], geometry)
+  })
 }
 
 /// How far a point falls outside a highlight, from what its grips' record

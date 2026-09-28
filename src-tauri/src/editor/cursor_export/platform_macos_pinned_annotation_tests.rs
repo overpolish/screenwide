@@ -96,6 +96,7 @@ fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
       next_segment_id: 1,
       keyboard_deletions: Box::default(),
       annotation_clips: vec![RecordingAnnotationClip {
+        path_ms: None,
         annotation: counter,
         track_id: AnnotationTrack::Primary,
         start_ms: 0,

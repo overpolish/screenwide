@@ -7,23 +7,7 @@ pub(super) fn contain_recording_bar(app: &AppHandle) -> tauri::Result<()> {
   let bar = app
     .get_webview_window(WindowLabel::RecordingBar.as_str())
     .ok_or_else(|| tauri::Error::WindowNotFound)?;
-  let bar_position = bar.outer_position()?;
-  let bar_size = bar.outer_size()?;
-  let target = monitor_with_most_overlap(app, &bar)?.ok_or_else(|| tauri::Error::WindowNotFound)?;
-  let monitor_position = target.position();
-  let monitor_size = target.size();
-  let max_x = monitor_position.x + monitor_size.width.saturating_sub(bar_size.width) as i32;
-  let max_y = monitor_position.y + monitor_size.height.saturating_sub(bar_size.height) as i32;
-  let contained = PhysicalPosition::new(
-    bar_position.x.clamp(monitor_position.x, max_x),
-    bar_position.y.clamp(monitor_position.y, max_y),
-  );
-
-  if contained != bar_position {
-    bar.set_position(contained)?;
-  }
-
-  Ok(())
+  contain_window_on_its_monitor(app, &bar)
 }
 
 pub fn manage_recording_bar_movement(app: &AppHandle) {
@@ -52,25 +36,8 @@ pub fn manage_recording_bar_movement(app: &AppHandle) {
 
 #[cfg(target_os = "windows")]
 pub(super) fn watch_for_recording_bar_mouse_up(app: AppHandle) {
-  use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
-
-  if unsafe { GetAsyncKeyState(VK_LBUTTON.0.into()) } >= 0
-    || BAR_DRAG_ACTIVE.swap(true, Ordering::Relaxed)
-  {
-    return;
-  }
-
-  tauri::async_runtime::spawn_blocking(move || {
-    loop {
-      let is_pressed = unsafe { GetAsyncKeyState(VK_LBUTTON.0.into()) } < 0;
-      if !is_pressed {
-        break;
-      }
-      std::thread::sleep(Duration::from_millis(8));
-    }
-
+  drag_release::after_mouse_up(&BAR_DRAG_ACTIVE, move || {
     let _ = finish_recording_bar_drag(app);
-    BAR_DRAG_ACTIVE.store(false, Ordering::Relaxed);
   });
 }
 

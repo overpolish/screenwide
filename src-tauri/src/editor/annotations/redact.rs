@@ -23,9 +23,6 @@ pub(crate) mod cells;
 /// backends. The record never draws: its width stays zero.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod geometry;
-/// What moving a redaction's grips does to it.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) mod gesture;
 /// The grips the native chrome draws.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod handles;

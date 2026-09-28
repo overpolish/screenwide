@@ -17,21 +17,34 @@ const RELEASED: SnapModifiers = SnapModifiers {
   position: false,
 };
 
-/// A box from (10, 10) to (110, 60): fifty source pixels on its shorter side.
-fn boxed() -> Vec<Annotation> {
+/// Every kind held by a box and its eight grips.
+const BOXED: [AnnotationKind; 2] = [AnnotationKind::Redact, AnnotationKind::Shape];
+
+/// A box of `kind` pulled from (10, 10) to (110, 60): fifty source pixels on
+/// its shorter side.
+fn boxed(kind: AnnotationKind) -> Vec<Annotation> {
   let mut annotations = Vec::new();
   let edit = AnnotationEdit::begin(
     &mut annotations,
     AnnotationGestureTarget::New,
     point(10.0, 10.0),
     None,
-    Some(AnnotationKind::Redact),
+    Some(kind),
     None,
     0.0,
   )
   .unwrap();
   edit.update(&mut annotations, point(110.0, 60.0), RELEASED, None);
   annotations
+}
+
+fn corners(annotation: &Annotation) -> (AnnotationPoint, AnnotationPoint) {
+  match annotation.shape {
+    AnnotationShape::Redact { start, end, .. } | AnnotationShape::Shape { start, end, .. } => {
+      (start, end)
+    }
+    _ => unreachable!(),
+  }
 }
 
 /// The radius dot dragged to `to`, on a picture drawn at `source_per_point`
@@ -64,35 +77,52 @@ fn dot(percent: f64, source_per_point: f64) -> AnnotationPoint {
 }
 
 #[test]
+fn a_fresh_box_is_pulled_out_from_the_press_to_the_hand() {
+  for kind in BOXED {
+    let annotations = boxed(kind);
+    assert_eq!(annotations[0].shape.kind(), kind);
+    assert_eq!(
+      corners(&annotations[0]),
+      (point(10.0, 10.0), point(110.0, 60.0)),
+      "{kind:?}"
+    );
+  }
+}
+
+#[test]
 fn the_radius_dot_reads_back_the_radius_it_is_drawn_at() {
-  for source_per_point in [0.5, 2.0] {
-    for percent in [0.0, 12.5, 50.0] {
-      let mut annotations = boxed();
-      rounded(
-        &mut annotations,
-        dot(percent, source_per_point),
-        source_per_point,
-      );
-      let radius = annotations[0].style.radius;
-      assert!(
-        (radius - percent).abs() < 1e-9,
-        "{percent} at {source_per_point}: {radius}"
-      );
+  for kind in BOXED {
+    for source_per_point in [0.5, 2.0] {
+      for percent in [0.0, 12.5, 50.0] {
+        let mut annotations = boxed(kind);
+        rounded(
+          &mut annotations,
+          dot(percent, source_per_point),
+          source_per_point,
+        );
+        let radius = annotations[0].style.radius;
+        assert!(
+          (radius - percent).abs() < 1e-9,
+          "{kind:?} {percent} at {source_per_point}: {radius}"
+        );
+      }
     }
   }
 }
 
 #[test]
 fn the_radius_dot_rounds_the_corners_without_moving_the_box() {
-  let mut annotations = boxed();
-  rounded(&mut annotations, point(500.0, 500.0), 1.0);
-  assert_eq!(annotations[0].style.radius, 50.0);
-  let AnnotationShape::Redact { start, end, .. } = annotations[0].shape else {
-    unreachable!()
-  };
-  assert_eq!((start, end), (point(10.0, 10.0), point(110.0, 60.0)));
-  rounded(&mut annotations, point(0.0, 0.0), 1.0);
-  assert_eq!(annotations[0].style.radius, 0.0);
+  for kind in BOXED {
+    let mut annotations = boxed(kind);
+    rounded(&mut annotations, point(500.0, 500.0), 1.0);
+    assert_eq!(annotations[0].style.radius, 50.0);
+    assert_eq!(
+      corners(&annotations[0]),
+      (point(10.0, 10.0), point(110.0, 60.0))
+    );
+    rounded(&mut annotations, point(0.0, 0.0), 1.0);
+    assert_eq!(annotations[0].style.radius, 0.0);
+  }
 }
 
 #[test]

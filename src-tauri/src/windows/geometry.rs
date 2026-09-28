@@ -127,6 +127,28 @@ pub(super) fn contain_window_in_work_area(
   Ok(())
 }
 
+/// Pulls a dragged window back inside the monitor it mostly covers - the
+/// whole screen, not its work area - so none of it is left off an edge.
+/// Every window the user drags around is settled this way when it is
+/// dropped.
+pub(crate) fn contain_window_on_its_monitor(
+  app: &AppHandle,
+  window: &WebviewWindow,
+) -> tauri::Result<()> {
+  let monitor = monitor_with_most_overlap(app, window)?.ok_or(tauri::Error::WindowNotFound)?;
+  let position = window.outer_position()?;
+  let contained = contained_position(
+    *monitor.position(),
+    *monitor.size(),
+    position,
+    window.outer_size()?,
+  );
+  if contained != position {
+    window.set_position(contained)?;
+  }
+  Ok(())
+}
+
 pub(super) fn keep_window_on_a_monitor(
   app: &AppHandle,
   window: &WebviewWindow,

@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::gesture::{EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP};
 use super::native::{fill, source_per_capture_point, RedactPicture, RedactSource};
 use super::palette::{packed, zones, Palette};
+use crate::editor::annotations::box_gesture::{EDGE_BOTTOM, EDGE_LEFT, EDGE_RIGHT, EDGE_TOP};
 use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::flags::PIXELATE;
 use crate::editor::annotations::gesture::{AnnotationGestureTarget, AnnotationHandle, BOX_HANDLES};

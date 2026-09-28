@@ -8,6 +8,7 @@ import {
   CounterToolIcon,
   HighlightToolIcon,
   RedactToolIcon,
+  ShapeToolIcon,
   TextToolIcon,
 } from "../../../components/shared/annotation-style/annotation-tool-icons";
 import { ToolPanelKind } from "../../popup-panel/store";
@@ -98,6 +99,14 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     shortcut: "X",
   },
   select: { panel: "selection", resetsView: false, shortcut: "V" },
+  shape: {
+    drawsOnLayer: true,
+    icon: ShapeToolIcon,
+    label: "Shape",
+    name: "Draw a shape",
+    panel: "annotation",
+    shortcut: "O",
+  },
   text: {
     drawsOnLayer: true,
     icon: TextToolIcon,

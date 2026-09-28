@@ -252,6 +252,9 @@ mod redact_tests;
 #[path = "platform_macos_redact_video_tests.rs"]
 mod redact_video_tests;
 #[cfg(test)]
+#[path = "platform_macos_shape_tests.rs"]
+mod shape_tests;
+#[cfg(test)]
 #[path = "platform_macos_tests.rs"]
 mod tests;
 #[cfg(test)]

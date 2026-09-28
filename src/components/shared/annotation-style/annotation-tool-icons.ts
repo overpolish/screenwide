@@ -6,6 +6,7 @@ import {
   EyeOff,
   Highlighter,
   MapPinPlusInside,
+  Square,
   Type,
 } from "lucide-react";
 
@@ -22,3 +23,4 @@ export const CounterToolIcon = MapPinPlusInside;
 export const TextToolIcon = Type;
 export const RedactToolIcon = EyeOff;
 export const HighlightToolIcon = Highlighter;
+export const ShapeToolIcon = Square;

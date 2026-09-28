@@ -1,12 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A redaction's chrome: the layer selection's own box, with its eight grips
-//! and its radius dot, around the chosen one. A hovered one wears the
-//! compositor's halo instead.
+//! A box's chrome - a redaction's or a shape's: the layer selection's own
+//! box, with its eight grips and its radius dot, around the chosen one. A
+//! hovered one wears the compositor's halo instead.
 
 #import "recording_preview_surface_macos_private.h"
 #include "recording_preview_annotation_layers_macos.h"
+
+SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_kind_is_box(uint32_t kind) {
+  return kind == ScreenwideAnnotationKindRedact || kind == ScreenwideAnnotationKindShape;
+}
 
 /// The box on screen, from the normalised corners Rust published.
 static NSRect redact_frame(NSRect image, ScreenwidePreviewAnnotation item) {
@@ -19,7 +23,7 @@ static NSRect redact_frame(NSRect image, ScreenwidePreviewAnnotation item) {
 
 /// Where the radius dot sits, as the layer selection places its own: in
 /// from the top-left corner, further in the rounder the corners are. The
-/// twin of `redact::gesture::radius_at`, which reads a dragged dot back.
+/// twin of `box_gesture::radius_at`, which reads a dragged dot back.
 static NSPoint redact_radius_point(NSRect frame, double radius_percent) {
   double offset =
       MIN(frame.size.width, frame.size.height) * radius_percent / 100.0 * 0.55 + 10.0;
@@ -54,7 +58,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_redact_add_osc(
   const ScreenwidePreviewAnnotation *list = annotation_items(surface, &items);
   NSInteger selected = surface.annotationSelected;
   if (list == NULL || selected < 0 || (NSUInteger)selected >= items ||
-      list[selected].kind != ScreenwideAnnotationKindRedact)
+      !annotation_kind_is_box(list[selected].kind))
     return NO;
   NSRect image = annotation_image_frame(surface);
   if (image.size.width > 0.0 && image.size.height > 0.0)

@@ -30,15 +30,16 @@ export type AnnotationStyle = {
   /** `#rrggbb` or `#rrggbbaa`, straight alpha. */
   color: string;
   /** Whether a highlight is drawn as a marker stroke by hand rather than as a
-   * clean band; the other kinds carry `false`. */
+   * clean band, or a shape's outline as a pen stroke that misses its own
+   * start; the other kinds carry `false`. */
   handDrawn: boolean;
   head: AnnotationHead;
   /** Whether a highlight is laid by hand over the box its drag spans, in
    * strokes `width` tall, rather than fitted to the text under it; the other
    * kinds carry `false`. */
   manual: boolean;
-  /** A redaction's corner radius, as a percentage of its box's shorter side
-   * from 0 to 50; the other kinds carry zero. */
+  /** A redaction's or a shape's corner radius, as a percentage of its box's
+   * shorter side from 0 to 50; the other kinds carry zero. */
   radius: number;
   /** How a redaction covers what is under it; the other kinds carry the
    * default. */
@@ -46,8 +47,8 @@ export type AnnotationStyle = {
   /** A blurred redaction's strength, a step from 1 to 5; the other kinds
    * carry zero. */
   strength: number;
-  /** Stroke width, disc diameter, type size, pixelation block or a
-   * highlight's marker, in output pixels. */
+  /** Stroke width, disc diameter, type size, pixelation block, a shape's pen
+   * or a highlight's marker, in output pixels. */
   width: number;
 };
 
@@ -89,9 +90,23 @@ export type AnnotationText = {
  * its bottom-right, in source pixels; `seed` generates a pixelated box's
  * blocks.
  */
-export type AnnotationRedact = {
+type AnnotationRedact = {
   end: AnnotationPoint;
   kind: "redact";
+  seed: number;
+  start: AnnotationPoint;
+};
+
+/**
+ * An outline round a box, drawn with a round pen. `start` is its top-left
+ * corner and `end` its bottom-right, in source pixels; the style's radius
+ * rounds its corners, so a square rounded all the way is a circle. `seed` is
+ * its hand-drawn stroke's wobble. The twin of `AnnotationShape::Shape` in
+ * `src-tauri/src/editor/annotations/shape.rs`.
+ */
+type AnnotationOutline = {
+  end: AnnotationPoint;
+  kind: "shape";
   seed: number;
   start: AnnotationPoint;
 };
@@ -137,6 +152,7 @@ export type AnnotationShape =
   | AnnotationArrow
   | AnnotationCounter
   | AnnotationHighlight
+  | AnnotationOutline
   | AnnotationRedact
   | AnnotationText;
 

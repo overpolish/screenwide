@@ -26,11 +26,14 @@ impl super::AnnotationShape {
       } => super::super::text::native::draw_points(*origin, pointer, text, style),
       Self::Redact { start, end, .. } => super::super::redact::native::draw_points(*start, *end),
       Self::Highlight { tone, .. } => super::super::highlight::geometry::draw_points(*tone),
+      Self::Shape { start, end, seed } => {
+        super::super::outline::native::draw_points(*start, *end, *seed, style)
+      }
     }
   }
 
   /// The `head` the retained draw record carries: which ends of an arrow
-  /// have one, nothing for a counter, and a text box's alignment.
+  /// have one, nothing for a counter or a shape, and a text box's alignment.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(crate) fn draw_head(&self, style: &super::super::AnnotationStyle) -> u32 {
     match self {
@@ -40,7 +43,7 @@ impl super::AnnotationShape {
         super::super::AnnotationHead::Both => 2,
       },
       Self::Text { .. } => style.align.raw(),
-      Self::Redact { .. } | Self::Highlight { .. } => 0,
+      Self::Redact { .. } | Self::Highlight { .. } | Self::Shape { .. } => 0,
     }
   }
 
@@ -49,7 +52,7 @@ impl super::AnnotationShape {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(crate) fn draw_text(&self) -> std::borrow::Cow<'_, str> {
     match self {
-      Self::Arrow { .. } | Self::Redact { .. } | Self::Highlight { .. } => {
+      Self::Arrow { .. } | Self::Redact { .. } | Self::Highlight { .. } | Self::Shape { .. } => {
         std::borrow::Cow::Borrowed("")
       }
       Self::Counter { value, .. } => std::borrow::Cow::Owned(value.to_string()),
@@ -102,6 +105,15 @@ impl super::AnnotationShape {
       Self::Highlight {
         start, end, bands, ..
       } => super::super::highlight::handles::grips(*start, *end, bands, index, source),
+      Self::Shape { start, end, seed } => super::super::outline::handles::grips(
+        *start,
+        *end,
+        *seed,
+        style,
+        index,
+        source,
+        image_width,
+      ),
     }
   }
 
@@ -122,6 +134,7 @@ impl super::AnnotationShape {
         super::super::text::snap::field_box(*origin, text, width, source_per_output)
       }
       Self::Redact { start, end, .. } => super::super::redact::snap::field_box(*start, *end),
+      Self::Shape { start, end, .. } => super::super::outline::model::field_box(*start, *end),
       // A highlight lies over the text it marks; nothing lines up against it.
       Self::Highlight { .. } => None,
     }
@@ -141,9 +154,11 @@ impl super::AnnotationShape {
       Self::Redact { start, end, seed } => Some(super::super::redact::native::fill(
         *start, *end, *seed, style, source, held,
       )),
-      Self::Arrow { .. } | Self::Counter { .. } | Self::Text { .. } | Self::Highlight { .. } => {
-        None
-      }
+      Self::Arrow { .. }
+      | Self::Counter { .. }
+      | Self::Text { .. }
+      | Self::Highlight { .. }
+      | Self::Shape { .. } => None,
     }
   }
 }

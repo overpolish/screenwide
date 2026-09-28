@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What moving a redaction's grips does to it.
+//! What moving a box's grips does to it: a redaction's, or a shape's.
 //!
-//! The box has the layer selection's eight grips: a corner moves two sides
+//! A box has the layer selection's eight grips: a corner moves two sides
 //! and an edge one. Every sample is measured against the box the press began
 //! on, so a side dragged past its opposite simply turns the box inside out
 //! and the corners are written back top-left first.
 
-use super::model::{corners, redact_box};
-use super::snap::snap_sides;
+use super::redact::model::{corners, redact_box};
+use super::redact::snap::snap_sides;
 use crate::editor::annotations::gesture::{AnnotationDragOrigin, AnnotationHandle};
 use crate::editor::annotations::snap::{SnapBox, SnapOffset, SnapRequest, SnapResult};
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
@@ -21,9 +21,9 @@ pub(crate) const EDGE_RIGHT: u32 = 1 << 1;
 pub(crate) const EDGE_TOP: u32 = 1 << 2;
 pub(crate) const EDGE_BOTTOM: u32 = 1 << 3;
 
-/// Move one grip of a redaction to `point`. An edge or corner grip resizes
-/// the box, with Shift holding a corner to the box's own proportions; the
-/// radius dot rounds its corners; the body carries the whole box.
+/// Move one grip of a box to `point`. An edge or corner grip resizes the
+/// box, with Shift holding a corner to the box's own proportions; the radius
+/// dot rounds its corners; the body carries the whole box.
 pub(crate) fn drag(
   annotation: &mut Annotation,
   handle: AnnotationHandle,
@@ -32,15 +32,10 @@ pub(crate) fn drag(
   shift: bool,
   snap: Option<SnapRequest<'_>>,
 ) -> SnapResult {
-  let AnnotationShape::Redact {
-    start: from_start,
-    end: from_end,
-    ..
-  } = &origin.shape
-  else {
+  let Some((from_start, from_end)) = held_corners(&origin.shape) else {
     return SnapResult::default();
   };
-  let from = redact_box(*from_start, *from_end);
+  let from = redact_box(from_start, from_end);
   let (bounds, result) = match handle {
     AnnotationHandle::Edges(edges) => resize(from, edges, point, shift, snap),
     AnnotationHandle::Radius => {
@@ -74,7 +69,7 @@ pub(crate) fn radius_at(bounds: SnapBox, point: AnnotationPoint, source_per_poin
   (radius * 100.0 / shortest).clamp(0.0, 50.0)
 }
 
-/// Pull a fresh redaction out from where the press landed: the press is one
+/// Pull a fresh box out from where the press landed: the press is one
 /// corner and the hand the other, and Shift makes it square.
 pub(crate) fn drag_new(
   annotation: &mut Annotation,
@@ -94,8 +89,21 @@ pub(crate) fn drag_new(
   result
 }
 
+/// The two corners a boxed shape is held by, or `None` for a shape that is
+/// not a box.
+fn held_corners(shape: &AnnotationShape) -> Option<(AnnotationPoint, AnnotationPoint)> {
+  match shape {
+    AnnotationShape::Redact { start, end, .. } | AnnotationShape::Shape { start, end, .. } => {
+      Some((*start, *end))
+    }
+    _ => None,
+  }
+}
+
 fn write(annotation: &mut Annotation, bounds: SnapBox) {
-  if let AnnotationShape::Redact { start, end, .. } = &mut annotation.shape {
+  if let AnnotationShape::Redact { start, end, .. } | AnnotationShape::Shape { start, end, .. } =
+    &mut annotation.shape
+  {
     (*start, *end) = corners(bounds);
   }
 }
@@ -177,5 +185,5 @@ fn resize(
 }
 
 #[cfg(test)]
-#[path = "gesture_tests.rs"]
+#[path = "box_gesture_tests.rs"]
 mod tests;

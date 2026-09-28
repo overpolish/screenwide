@@ -8,10 +8,11 @@ import { invoke } from "@tauri-apps/api/core";
 export const resizeAnnotateToolbar = (width: number, height: number) =>
   invoke<null>("resize_annotate_toolbar", { height, width });
 
-/** The toolbar was dragged. Rust reads where the window ended up, so the
- * place is kept against the display it landed on. */
-export const persistAnnotateToolbarPosition = () =>
-  invoke<null>("persist_annotate_toolbar_position");
+/** A press on the toolbar was released. If it was a drag, Rust pulls the
+ * window back on screen and keeps its place against the display it landed
+ * on. */
+export const finishAnnotateToolbarDrag = () =>
+  invoke<null>("finish_annotate_toolbar_drag");
 
 /** A field on the plate took focus. The toolbar's window refuses the keyboard
  * until asked for it, so until this the keystrokes go to the picture and pick

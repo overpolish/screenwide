@@ -9,7 +9,8 @@ use crate::editor::annotations::timing::{
 use crate::editor::annotations::{Annotation, AnnotationKind};
 
 /// One record the Metal export draws while `start_ms <= t < end_ms`. Its
-/// arrival and leaving play over `reveal_start_ms..reveal_end_ms`, and a
+/// arrival and leaving play over `reveal_start_ms..reveal_end_ms` at its
+/// clip's pace, `path_ms` - zero where the clip names none - and a
 /// redaction's surface timeline is read from `clip_start_ms`: for a clip that
 /// is not pinned all three are its own bounds, while a pinned clip is one
 /// record for each place its pin puts it, each keeping its clip's reveal and
@@ -22,8 +23,10 @@ pub(super) struct NativeTimedAnnotation {
   reveal_start_ms: u64,
   reveal_end_ms: u64,
   clip_start_ms: u64,
+  path_ms: f32,
+  padding: u32,
 }
-const _: () = assert!(std::mem::size_of::<NativeTimedAnnotation>() == 168);
+const _: () = assert!(std::mem::size_of::<NativeTimedAnnotation>() == 176);
 
 /// Every clip on the export's track as a native record, and the one set of
 /// side buffers their `data_offset`s index. Each frame's scene is the clips
@@ -155,6 +158,8 @@ fn pack_clips<'a>(
               reveal_start_ms,
               reveal_end_ms,
               clip_start_ms: clip.start_ms,
+              path_ms: clip.path_ms.unwrap_or(0.0),
+              padding: 0,
             }
           },
         )
@@ -171,6 +176,7 @@ mod tests {
 
   fn counter_clip(value: u32) -> RecordingAnnotationClip {
     RecordingAnnotationClip {
+      path_ms: None,
       pin: None,
       annotation: Annotation {
         above_camera: false,

@@ -65,6 +65,8 @@ mod dismissal;
 pub(crate) mod dock;
 #[cfg(target_os = "macos")]
 mod dock_visibility;
+#[cfg(target_os = "windows")]
+pub(crate) mod drag_release;
 mod escape;
 mod geometry;
 mod lifecycle;
@@ -92,8 +94,8 @@ pub use dismissal::hide_without_focus_transfer;
 #[cfg(not(target_os = "macos"))]
 pub use dock::initialize_recording_dock;
 pub use dock::{hide_recording_dock, manage_recording_dock_movement, show_recording_dock};
-pub(crate) use geometry::centered_logical_position;
 use geometry::monitor_with_most_overlap;
+pub(crate) use geometry::{centered_logical_position, contain_window_on_its_monitor};
 #[cfg(target_os = "macos")]
 pub use lifecycle::get_or_create;
 pub use lifecycle::{

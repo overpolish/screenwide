@@ -131,6 +131,17 @@ impl PinTarget {
           redaction: false,
         }
       }
+      // A shape follows what it outlines as one region, and keeps its size.
+      AnnotationShape::Shape { start, end, .. } => Self {
+        anchor: [0.5 * (start.x + end.x), 0.5 * (start.y + end.y)],
+        region: [
+          start.x.min(end.x),
+          start.y.min(end.y),
+          start.x.max(end.x),
+          start.y.max(end.y),
+        ],
+        redaction: false,
+      },
     }
   }
 
