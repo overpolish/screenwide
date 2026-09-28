@@ -57,15 +57,16 @@ type DrawingTool = {
  */
 const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   Record<Exclude<EditorToolId, AnnotationKind>, ViewTool> = {
-  // The drawing tools own no panel: their controls belong to the annotation in
-  // hand rather than to the tool, and follow the selection instead. They also
-  // change no layout, so there is nothing for a fit to reclaim and the zoom a
-  // drawing was aimed at survives being picked up.
+  // The drawing tools open the annotation panel: with nothing chosen it shows
+  // the dress the tool draws its next annotation in, and a chosen annotation
+  // takes it over. They change no layout, so there is nothing for a fit to
+  // reclaim and the zoom a drawing was aimed at survives being picked up.
   arrow: {
     drawsOnLayer: true,
     icon: ArrowToolIcon,
     label: "Arrow",
     name: "Draw an arrow",
+    panel: "annotation",
     shortcut: "A",
   },
   counter: {
@@ -73,6 +74,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     icon: CounterToolIcon,
     label: "Counter",
     name: "Drop a counter",
+    panel: "annotation",
     shortcut: "N",
   },
   crop: { panel: "crop", resetsView: true, shortcut: "C" },
@@ -83,6 +85,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     icon: HighlightToolIcon,
     label: "Highlight",
     name: "Highlight text",
+    panel: "annotation",
     shortcut: "H",
   },
   keyboard: { panel: "keyboard", resetsView: true },
@@ -91,6 +94,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     icon: RedactToolIcon,
     label: "Redact",
     name: "Redact a region",
+    panel: "annotation",
     shortcut: "X",
   },
   select: { panel: "selection", resetsView: false, shortcut: "V" },
@@ -99,6 +103,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     icon: TextToolIcon,
     label: "Text",
     name: "Add text",
+    panel: "annotation",
     shortcut: "T",
   },
 };

@@ -3,6 +3,11 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
+import {
+  rememberAnnotationAngle,
+  rememberAnnotationAnimated,
+  rememberAnnotationStyle,
+} from "./annotation-defaults";
 import { AnnotationStyle } from "./annotations";
 import { ToolPanelAnnotation } from "./tool-panels/tool-panel-selection";
 import { EditorKind } from "./types";
@@ -28,6 +33,9 @@ type PublishedAnnotation = {
 };
 
 const workspaces = new Map<EditorKind, PublishedAnnotation>();
+/** The dress the tool in hand draws its next annotation in, for the panel to
+ * show and edit while nothing is chosen. */
+const drafts = new Map<EditorKind, ToolPanelAnnotation>();
 const listeners = new Set<() => void>();
 
 const notify = () => {
@@ -88,46 +96,89 @@ export function usePublishAnnotationSelection(
   }, [serialized, workspace]);
 }
 
-/** The annotation this workspace has in hand, or nothing. */
+/**
+ * Publish the dress the tool in hand draws its next annotation in, or `null`
+ * while no drawing tool is in hand. The panel shows it whenever nothing is
+ * chosen, so a dress is picked before drawing rather than fixed after.
+ */
+export function usePublishAnnotationDraft(
+  workspace: EditorKind,
+  draft: ToolPanelAnnotation | null,
+) {
+  const serialized = draft === null ? null : JSON.stringify(draft);
+  useEffect(() => {
+    if (serialized === null) {
+      if (drafts.delete(workspace)) notify();
+      return;
+    }
+    const published = JSON.parse(serialized) as ToolPanelAnnotation;
+    drafts.set(workspace, published);
+    notify();
+    return () => {
+      if (drafts.get(workspace) !== published) return;
+      drafts.delete(workspace);
+      notify();
+    };
+  }, [serialized, workspace]);
+}
+
+/** The annotation this workspace has in hand, or else the dress its tool
+ * draws in, or nothing. */
 export const useAnnotationSelection = (workspace: EditorKind) =>
   useSyncExternalStore(
     subscribe,
-    () => workspaces.get(workspace)?.selection ?? null,
+    () => workspaces.get(workspace)?.selection ?? drafts.get(workspace) ?? null,
   );
 
-/** Dress the chosen annotation. A no-op when the workspace has no preview
- * mounted to ask. */
+/** The workspace's published edits when it has an annotation chosen. */
+const chosen = (workspace: EditorKind) => {
+  const published = workspaces.get(workspace);
+  return published?.selection ? published : null;
+};
+
+/** Dress the chosen annotation, or with none chosen, the next one the tool in
+ * hand draws. A no-op when the workspace has neither to dress. */
 export const applyAnnotationStyle = (
   workspace: EditorKind,
   style: Partial<AnnotationStyle>,
 ) => {
-  workspaces.get(workspace)?.applyStyle(style);
+  const published = chosen(workspace);
+  if (published) {
+    published.applyStyle(style);
+    return;
+  }
+  const draft = drafts.get(workspace);
+  if (draft) rememberAnnotationStyle({ ...draft.style, ...style }, draft.kind);
 };
 
-/** Draw the chosen annotation in and out over its clip, or leave it standing. A
- * no-op when the workspace has no preview mounted to ask. */
+/** Draw the chosen annotation in and out over its clip, or leave it standing;
+ * with none chosen, the next one. */
 export const applyAnnotationAnimated = (
   workspace: EditorKind,
   animated: boolean,
 ) => {
-  workspaces.get(workspace)?.applyAnimated(animated);
+  const published = chosen(workspace);
+  if (published) published.applyAnimated(animated);
+  else if (drafts.has(workspace)) rememberAnnotationAnimated(animated);
 };
 
 /** Turn the chosen counter's tail to `angle`, in radians clockwise from
- * east. A no-op when the workspace has no preview mounted to ask. */
+ * east; with none chosen, the next counter's. */
 export const applyAnnotationAngle = (workspace: EditorKind, angle: number) => {
-  workspaces.get(workspace)?.applyAngle(angle);
+  const published = chosen(workspace);
+  if (published) published.applyAngle(angle);
+  else if (drafts.has(workspace)) rememberAnnotationAngle(angle);
 };
 
-/** Turn the chosen annotation round. A no-op when the workspace has no preview
- * mounted to ask. */
+/** Turn the chosen annotation round. A no-op with none chosen: there is
+ * nothing drawn yet to turn. */
 export const applyAnnotationReverse = (workspace: EditorKind) => {
-  workspaces.get(workspace)?.applyReverse();
+  chosen(workspace)?.applyReverse();
 };
 
 /** Lay the chosen redaction's blocks out again, or draw the chosen hand-drawn
- * highlight's stroke again, from a fresh seed. A no-op when the workspace has
- * no preview mounted to ask. */
+ * highlight's stroke again, from a fresh seed. A no-op with none chosen: every
+ * fresh one is drawn from a seed of its own. */
 export const applyAnnotationShuffle = (workspace: EditorKind) => {
-  workspaces.get(workspace)?.applyShuffle();
+  chosen(workspace)?.applyShuffle();
 };

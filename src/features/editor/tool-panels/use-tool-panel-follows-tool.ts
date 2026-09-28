@@ -38,7 +38,8 @@ const toolTrigger = (tool: EditorToolId) =>
  * The other exception is the annotation panel, which belongs to the annotation
  * in hand rather than to a tool: choosing an arrow or a counter shows it over
  * whatever the tool would have shown, and letting it go puts the tool's own
- * panel back. It never refits the picture - neither on the way in nor on the
+ * panel back. A drawing tool's own panel is the annotation panel too, showing
+ * the dress its next annotation is drawn in. It never refits the picture - neither on the way in nor on the
  * way out - because nothing about the picture changed, only what is chosen in
  * it.
  */
@@ -96,8 +97,12 @@ export function useToolPanelFollowsTool(
         if (toolChanged && toolResetsView(tool)) fitPreview();
         return;
       }
+      // The annotation panel hangs from the picture whether a tool or a chosen
+      // annotation opened it, so choosing one and letting it go leaves the
+      // panel where it is.
       const anchor =
-        toolTrigger(tool) ?? previewViewport()?.getBoundingClientRect();
+        (panel === "annotation" ? undefined : toolTrigger(tool)) ??
+        previewViewport()?.getBoundingClientRect();
       if (!anchor) return;
       await openPanel(panel, anchor, toolChanged && toolResetsView(tool));
     };

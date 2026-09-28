@@ -10,6 +10,7 @@ import { AnnotationRedaction } from "./types";
 /** How a redaction covers what is under it. Pressing Pixelate or Blur while
  * it is already chosen lays the blocks out, or nudges the cells, again. Both
  * pixelation styles light Pixelate; the classic one has no layout to shuffle.
+ * Without `onShuffle` - no redaction drawn yet - the press only chooses.
  */
 export function AnnotationRedactionGroup({
   isDisabled,
@@ -18,9 +19,9 @@ export function AnnotationRedactionGroup({
   value,
 }: {
   onChange: (redaction: AnnotationRedaction) => void;
-  onShuffle: () => void;
   value: AnnotationRedaction;
   isDisabled?: boolean;
+  onShuffle?: () => void;
 }) {
   return (
     <PillGroup
@@ -37,14 +38,17 @@ export function AnnotationRedactionGroup({
           // The press lands after the selection has moved, but `value` is the
           // one this render was given: only a press on the mode already
           // chosen shuffles.
-          ariaLabel: value === "pixelate" ? "Shuffle pixelation" : "Pixelate",
+          ariaLabel:
+            value === "pixelate" && onShuffle
+              ? "Shuffle pixelation"
+              : "Pixelate",
           icon: <Grid2x2 aria-hidden="true" />,
           id: "pixelate",
           label: "Pixelate",
           onPress: value === "pixelate" ? onShuffle : undefined,
         },
         {
-          ariaLabel: value === "blur" ? "Shuffle blur" : "Blur",
+          ariaLabel: value === "blur" && onShuffle ? "Shuffle blur" : "Blur",
           icon: <Droplet aria-hidden="true" />,
           id: "blur",
           label: "Blur",

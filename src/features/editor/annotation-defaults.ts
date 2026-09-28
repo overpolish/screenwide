@@ -3,7 +3,10 @@
 
 import { useSyncExternalStore } from "react";
 
-import { defaultAnnotationSize } from "../../components/shared/annotation-style/widths";
+import {
+  DEFAULT_BLUR_STRENGTH,
+  defaultAnnotationSize,
+} from "../../components/shared/annotation-style/widths";
 
 import { AnnotationStyle } from "./annotations";
 
@@ -120,6 +123,28 @@ export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
     const held = lastUsed.get(dressGroup(kind));
     return held === undefined ? null : styleFor(kind, held, lastSize.get(kind));
   });
+
+/**
+ * The dress a tool draws in before anything has been settled on: the palette's
+ * yellow, or black for a redaction's fill, at the tool's own first size, with
+ * an arrow's head at its end. The twins of `default_arrow_style`,
+ * `default_counter_style`, `default_text_style`, `default_redact_style` and
+ * `default_highlight_style` in `src-tauri/src/editor/annotations`, which dress
+ * a fresh annotation where the editor sends no dress of its own.
+ */
+export const firstAnnotationDress = (
+  kind: AnnotationKind,
+): AnnotationStyle => ({
+  align: "left",
+  color: kind === "redact" ? "#000000" : "#ffcc00",
+  handDrawn: false,
+  head: kind === "arrow" ? "end" : "none",
+  manual: false,
+  radius: 0,
+  redaction: "erase",
+  strength: kind === "redact" ? DEFAULT_BLUR_STRENGTH : 0,
+  width: defaultAnnotationSize(kind),
+});
 
 /** Held outside the snapshot so an unchanged store keeps returning the same
  * object: `useSyncExternalStore` compares by identity. */

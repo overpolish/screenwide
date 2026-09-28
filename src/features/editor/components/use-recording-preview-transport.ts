@@ -10,6 +10,7 @@ import {
   useRef,
 } from "react";
 
+import { useAnnotationDraft } from "../annotation-draft";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import { createRecordingTimelineEdit } from "../recording-timeline-edit";
 import {
@@ -213,6 +214,7 @@ export function useRecordingPreviewTransport(
     recordingToolId(canvasTool),
     annotations.hasSelection,
   );
+  useAnnotationDraft("recording", recordingToolId(canvasTool));
   useRegisterPreviewFit(player);
   const isPlaying = player.isPlaying;
   const getPlayerPositionMs = player.getPositionMs;

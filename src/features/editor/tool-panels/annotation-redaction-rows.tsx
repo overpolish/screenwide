@@ -23,6 +23,7 @@ import type { ToolPanelPatch } from "./tool-panel-store";
  */
 export function AnnotationRedactionRows({
   animated,
+  canShuffle,
   change,
   isLocked,
   pixelation,
@@ -32,6 +33,8 @@ export function AnnotationRedactionRows({
   width,
 }: {
   animated: boolean;
+  /** Whether there is a drawn redaction to lay out again. */
+  canShuffle: boolean;
   change: (values: ToolPanelPatch) => void;
   isLocked: boolean;
   pixelation: Extract<
@@ -57,9 +60,13 @@ export function AnnotationRedactionRows({
           onChange={(next) => {
             change({ annotationStyle: { redaction: next } });
           }}
-          onShuffle={() => {
-            change({ shuffleAnnotation: true });
-          }}
+          onShuffle={
+            canShuffle
+              ? () => {
+                  change({ shuffleAnnotation: true });
+                }
+              : undefined
+          }
           value={redaction}
         />
       </div>

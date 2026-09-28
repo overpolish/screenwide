@@ -99,4 +99,8 @@ export type ToolPanelAnnotation = {
   /** A counter's aim, in radians clockwise from east. Absent on an arrow,
    * which is aimed by its own two ends. */
   angle?: number;
+  /** Whether this is no annotation yet but the dress the tool in hand draws
+   * its next one in. Its edits dress that one, and what only a drawn
+   * annotation can do - turning it round, drawing it again - is not offered. */
+  isDraft?: boolean;
 };

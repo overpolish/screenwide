@@ -3,6 +3,7 @@
 
 import { useRef } from "react";
 
+import { useAnnotationDraft } from "../annotation-draft";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
   scaledDimensions,
@@ -86,6 +87,9 @@ export function ScreenshotSection({
     screenshotToolId(tool),
     annotations.hasSelection,
   );
+  // What a drawing tool's panel shows while nothing is chosen: the dress its
+  // next annotation is drawn in.
+  useAnnotationDraft("screenshot", screenshotToolId(tool));
   const setTool = useScreenshotTool({
     clearSelection: annotations.clearSelection,
     selectedKind: annotations.selectedKind,

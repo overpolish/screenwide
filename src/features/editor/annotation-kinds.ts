@@ -79,6 +79,9 @@ type AnnotationKindRow<Shape extends AnnotationShape> =
     parseShape: (value: unknown) => Shape | null;
     /** Whether it can be turned round end for end. */
     reversible: boolean;
+    /** Whether a fresh one arrives without drawing itself in, whatever the
+     * last one did: a redaction would show what it hides until it had. */
+    startsStill: boolean;
   };
 
 export const ANNOTATION_KINDS: {
@@ -110,6 +113,7 @@ export const ANNOTATION_KINDS: {
         : null;
     },
     reversible: true,
+    startsStill: false,
   },
   counter: {
     ...ANNOTATION_SIZES.counter,
@@ -139,6 +143,7 @@ export const ANNOTATION_KINDS: {
         : null;
     },
     reversible: false,
+    startsStill: false,
   },
   highlight: {
     ...ANNOTATION_SIZES.highlight,
@@ -179,6 +184,7 @@ export const ANNOTATION_KINDS: {
         : null;
     },
     reversible: false,
+    startsStill: false,
   },
   redact: {
     ...ANNOTATION_SIZES.redact,
@@ -210,6 +216,7 @@ export const ANNOTATION_KINDS: {
         : null;
     },
     reversible: false,
+    startsStill: true,
   },
   text: {
     ...ANNOTATION_SIZES.text,
@@ -243,6 +250,7 @@ export const ANNOTATION_KINDS: {
         : null;
     },
     reversible: false,
+    startsStill: false,
   },
 };
 

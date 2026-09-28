@@ -33,11 +33,14 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  * block size only when pixelated, a strength only when blurred and a colour
  * only when filled with one.
  *
- * This panel belongs to the annotation rather than to a tool. It comes up the
- * moment one is chosen, in any tool that can choose one, and goes away when the
- * choice does. Every change is committed through the same path the drag on the
- * picture uses, so it lands in the edit history as one edit, and becomes the
- * dress the next annotation is drawn in.
+ * This panel belongs to the annotation in hand. It comes up the moment one is
+ * chosen, in any tool that can choose one, and every change is committed
+ * through the same path the drag on the picture uses, so it lands in the edit
+ * history as one edit, and becomes the dress the next annotation is drawn in.
+ * With nothing chosen, a drawing tool's panel shows the dress its next
+ * annotation will be drawn in, so it is picked before drawing rather than
+ * fixed after; what only a drawn annotation can do - turning it round, drawing
+ * it again - is not offered there.
  *
  * The head and the colours are the shared controls the live overlay's toolbar
  * carries, so an annotation is dressed the same way wherever it is drawn. A
@@ -64,6 +67,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
     width,
   } = annotation.style;
   const kind = ANNOTATION_KINDS[annotation.kind];
+  const isDraft = annotation.isDraft === true;
   const pixelation =
     kind.hasRedaction &&
     (redaction === "pixelate" || redaction === "pixelateClassic")
@@ -71,12 +75,17 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       : null;
   const showsSize = kind.hasSize && (!kind.hasRedaction || pixelation !== null);
   const showsColor = !kind.hasRedaction || redaction === "color";
-  const animates = workspace === "recording" && kind.animates;
+  // A kind that always arrives still has no choice to make before it is drawn.
+  const animates =
+    workspace === "recording" &&
+    kind.animates &&
+    !(isDraft && kind.startsStill);
   return (
     <div className="flex flex-col gap-section">
       {kind.hasRedaction ? (
         <AnnotationRedactionRows
           animated={animates && annotation.animated}
+          canShuffle={!isDraft}
           change={change}
           isLocked={isLocked}
           pixelation={pixelation}
@@ -140,9 +149,13 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
             onChange={(next) => {
               change({ annotationStyle: { handDrawn: next } });
             }}
-            onRandomise={() => {
-              change({ shuffleAnnotation: true });
-            }}
+            onRandomise={
+              isDraft
+                ? undefined
+                : () => {
+                    change({ shuffleAnnotation: true });
+                  }
+            }
           />
         </div>
       ) : null}
@@ -181,7 +194,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           the other way without redrawing it: the same commit path the drag
           on the picture uses. A counter is aimed by its tail instead, on the
           picture itself. */}
-      {kind.reversible ? (
+      {kind.reversible && !isDraft ? (
         <div className="flex items-center justify-between gap-section">
           <span className="text-body text-content-fg">Direction</span>
           <Button
