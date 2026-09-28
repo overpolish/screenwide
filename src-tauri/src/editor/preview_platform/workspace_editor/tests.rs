@@ -520,3 +520,41 @@ fn crop_resize_is_clamped_to_image_and_preserves_image() {
   assert!((centered.width - 0.6).abs() < 1e-9);
   assert!((centered.height - 0.6).abs() < 1e-9);
 }
+
+#[test]
+fn crop_draw_spans_anchor_to_clamped_pointer() {
+  let image = n(0.25, 0.25, 0.5, 0.5);
+  let drawn = apply_crop_draw((0.5, 0.5), (0.0, 0.375), image, (0.0625, 0.0625), false);
+  assert_eq!(drawn.rect, n(0.25, 0.375, 0.25, 0.125));
+  assert_eq!(drawn.delta, (-0.25, -0.125));
+  assert_eq!(drawn.edges, FRAME_EDGE_LEFT | FRAME_EDGE_TOP);
+}
+
+#[test]
+fn crop_draw_keeps_minimum_size_and_opens_away_from_edges() {
+  let image = n(0.25, 0.25, 0.5, 0.5);
+  let short = apply_crop_draw((0.5, 0.5), (0.515625, 0.5), image, (0.0625, 0.0625), false);
+  assert_eq!(short.rect, n(0.5, 0.5, 0.0625, 0.0625));
+  let at_edge = apply_crop_draw((0.75, 0.5), (0.875, 0.5), image, (0.0625, 0.0625), false);
+  assert_eq!(at_edge.rect, n(0.6875, 0.5, 0.0625, 0.0625));
+  assert_eq!(at_edge.edges, FRAME_EDGE_LEFT | FRAME_EDGE_BOTTOM);
+}
+
+#[test]
+fn centered_crop_draw_is_bounded_by_nearest_edge() {
+  let image = n(0.25, 0.25, 0.5, 0.5);
+  let drawn = apply_crop_draw((0.5, 0.5), (0.625, 0.5625), image, (0.0625, 0.0625), true);
+  assert_eq!(drawn.rect, n(0.375, 0.4375, 0.25, 0.125));
+  assert_eq!(drawn.delta, (0.125, 0.0625));
+  assert_eq!(
+    drawn.edges,
+    FRAME_EDGE_RIGHT | FRAME_EDGE_BOTTOM | FRAME_EDGE_CENTERED
+  );
+  let limited = apply_crop_draw((0.5, 0.5), (1.0, 0.5), image, (0.0625, 0.0625), true);
+  assert_eq!(limited.rect.x, 0.25);
+  assert_eq!(limited.rect.width, 0.5);
+  // An anchor on the image edge has no room to centre about.
+  let fallback = apply_crop_draw((0.25, 0.5), (0.375, 0.625), image, (0.0625, 0.0625), true);
+  assert_eq!(fallback.rect, n(0.25, 0.5, 0.125, 0.125));
+  assert_eq!(fallback.edges & FRAME_EDGE_CENTERED, 0);
+}

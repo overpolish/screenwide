@@ -84,12 +84,12 @@ use magnifier::{redraw_composed_panes, redraw_magnifier, update_magnifier};
 use resources::{Backdrop, Gpu, Pane};
 use selection_draw::{draw_selection, redraw_stale_selection};
 use selection_hit::{
-  clear_selection_snap_guides, cursor_for_state, radius_point, selection_pane_rect,
-  selection_snap_targets, shared_handle_edges, shared_selection_hit,
+  clear_selection_snap_guides, crop_press_draws, cursor_for_state, radius_point,
+  selection_pane_rect, selection_snap_targets, shared_handle_edges, shared_selection_hit,
 };
 use state::{
-  ActiveGesture, EditorCallbacks, EditorGesture, FrameResizeStart, MoveAutoFit, SurfaceInner,
-  SurfaceState,
+  ActiveGesture, CropDrawStart, EditorCallbacks, EditorGesture, FrameResizeStart, MoveAutoFit,
+  SurfaceInner, SurfaceState,
 };
 use thread_dispatch::create_editor_on_owning_thread;
 
@@ -169,7 +169,7 @@ mod workspace_layout;
 
 use super::{
   workspace_editor::{
-    apply_crop_move, apply_crop_resize, crop_magnifier_anchor, hit_test_display,
+    apply_crop_draw, apply_crop_move, apply_crop_resize, crop_magnifier_anchor, hit_test_display,
     rebase_display_fit_mode, DisplayRect, DisplayTarget, NormalizedRect,
   },
   workspace_transform::WorkspaceTransform,

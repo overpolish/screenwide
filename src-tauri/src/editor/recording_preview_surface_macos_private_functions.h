@@ -100,6 +100,16 @@ BOOL annotation_mouse_down(ScreenwidePreviewInteractionView *view,
 BOOL annotation_mouse_dragged(ScreenwidePreviewInteractionView *view,
                               NSPoint point);
 BOOL annotation_mouse_up(ScreenwidePreviewInteractionView *view, NSPoint point);
+/// The crop tool's press on nothing, or on the body of a crop that crops
+/// nothing yet: it arms a new crop window, which begins only once the press
+/// travels far enough to be a drag. Each answers YES when the press, movement
+/// or release belonged to a crop draw.
+BOOL crop_draw_starts_at_point(ScreenwidePreviewSurface *surface, NSPoint point);
+BOOL crop_draw_mouse_down(ScreenwidePreviewInteractionView *view, NSPoint point,
+                          NSEvent *event);
+BOOL crop_draw_mouse_dragged(ScreenwidePreviewInteractionView *view,
+                             NSEvent *event);
+BOOL crop_draw_mouse_up(ScreenwidePreviewInteractionView *view, NSEvent *event);
 /// The three grips of the chosen arrow, in the same handle shape the
 /// selection OSC draws its corners with.
 void annotation_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,

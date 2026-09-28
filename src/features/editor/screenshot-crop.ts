@@ -16,17 +16,51 @@ import {
   withScreenshotSourceCrop,
 } from "./screenshot-output-settings";
 
+export type CropOperation = "cropDraw" | "cropMove" | "cropResize";
+
+export const isCropOperation = (
+  operation: string,
+): operation is CropOperation =>
+  operation === "cropDraw" ||
+  operation === "cropMove" ||
+  operation === "cropResize";
+
+const CENTERED_EDGE = 1 << 16;
+
+/**
+ * The window a crop draw sample describes, in the units of its anchor and
+ * deltas. The anchor is a corner of the window, or its centre when the
+ * sample is centered; the deltas reach the far corner or the half extents.
+ */
+export const drawnCropRect = (
+  anchor: { x: number; y: number },
+  sample: { deltaX: number; deltaY: number; edges: number },
+) => {
+  const centered = (sample.edges & CENTERED_EDGE) !== 0;
+  const span = (start: number, delta: number) =>
+    centered
+      ? { length: 2 * Math.abs(delta), start: start - Math.abs(delta) }
+      : { length: Math.abs(delta), start: Math.min(start, start + delta) };
+  const x = span(anchor.x, sample.deltaX);
+  const y = span(anchor.y, sample.deltaY);
+  return { height: y.length, width: x.length, x: x.start, y: y.start };
+};
+
 type CropGesture = {
   deltaX: number;
   deltaY: number;
   edges: number;
-  operation: "cropMove" | "cropResize";
+  operation: CropOperation;
   output: { height: number; width: number };
   settings: ScreenshotOutputSettings;
   source: { height: number; width: number };
+  /** A crop draw's anchor: its Begin deltas, a share of the canvas from the
+   * crop's origin. */
+  anchor?: { x: number; y: number };
 };
 
 export const applyScreenshotCropGesture = ({
+  anchor = { x: 0, y: 0 },
   deltaX,
   deltaY,
   edges,
@@ -36,10 +70,22 @@ export const applyScreenshotCropGesture = ({
   source,
 }: CropGesture): ScreenshotOutputSettings => {
   const image = screenshotLayout(source, settings).image;
-  const sourceDeltaX = (deltaX * output.width) / image.width;
-  const sourceDeltaY = (deltaY * output.height) / image.height;
+  const toSourceX = output.width / image.width;
+  const toSourceY = output.height / image.height;
+  const sourceDeltaX = deltaX * toSourceX;
+  const sourceDeltaY = deltaY * toSourceY;
   const current = screenshotSourceCrop(settings);
   let next: SourceRect;
+  if (operation === "cropDraw") {
+    const drawn = drawnCropRect(
+      {
+        x: current.x + anchor.x * toSourceX,
+        y: current.y + anchor.y * toSourceY,
+      },
+      { deltaX: sourceDeltaX, deltaY: sourceDeltaY, edges },
+    );
+    return withScreenshotSourceCrop(settings, sourceRect(drawn));
+  }
   if (operation === "cropMove") {
     next = translateSourceRect(current, { x: sourceDeltaX, y: sourceDeltaY });
     return withScreenshotSourceCrop(settings, next);

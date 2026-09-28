@@ -11,6 +11,7 @@ import { PreviewZoomRequest } from "../preview-zoom-state";
 import {
   applyScreenshotCropGesture,
   commitScreenshotCrop,
+  isCropOperation,
   uncroppedScreenshotPreviewOutput,
 } from "../screenshot-crop";
 import { SourceRect } from "../screenshot-geometry";
@@ -108,6 +109,8 @@ export function PreviewViewport({
 }: PreviewViewportProps) {
   const nativeFrameRef = useRef<HTMLDivElement | null>(null);
   const selectionGestureRef = useRef<{
+    /** The Begin deltas, which a crop draw uses as its anchor. */
+    anchor: { x: number; y: number };
     autoFitCheckpointed: boolean;
     autoFitUsed: boolean;
     itemId: number;
@@ -249,8 +252,7 @@ export function PreviewViewport({
     if (frameGesture(event)) return;
     if (event.phase === "begin") {
       const itemOutput = workspaceOutput?.items[event.paneIndex];
-      const cropGesture =
-        event.operation === "cropMove" || event.operation === "cropResize";
+      const cropGesture = isCropOperation(event.operation);
       if (
         (!isSelecting && !(isEditing && cropGesture)) ||
         !workspaceOutput ||
@@ -262,6 +264,7 @@ export function PreviewViewport({
         itemOutput.id,
       );
       selectionGestureRef.current = {
+        anchor: { x: event.deltaX, y: event.deltaY },
         autoFitCheckpointed: false,
         autoFitUsed: false,
         itemId: itemOutput.id,
@@ -333,8 +336,7 @@ export function PreviewViewport({
         event.operation === "radius" ||
         event.operation === "cropResize") &&
         Math.abs(event.scale - active.lastScale) > 1e-9);
-    const cropOperation =
-      event.operation === "cropMove" || event.operation === "cropResize";
+    const cropOperation = isCropOperation(event.operation);
     const shouldApply =
       event.phase === "end" ? cropOperation || differsFromLastUpdate : changed;
     // Native gesture deltas arrive as a share of the canvas.
@@ -343,11 +345,12 @@ export function PreviewViewport({
     const cropX = active.snapshot.cropX + moveX;
     const cropY = active.snapshot.cropY + moveY;
     let next: ScreenshotOutputSettings;
-    if (event.operation === "cropMove" || event.operation === "cropResize") {
+    if (isCropOperation(event.operation)) {
       const source = items.find((item) => item.id === active.itemId);
       if (!source) return;
       next = applyScreenshotCropGesture({
         ...event,
+        anchor: active.anchor,
         operation: event.operation,
         output,
         settings: active.snapshot,

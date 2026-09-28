@@ -3,6 +3,7 @@
 
 import { Dispatch, RefObject, SetStateAction, useRef } from "react";
 
+import { isCropOperation } from "../screenshot-crop";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -66,6 +67,8 @@ export function useRecordingSelectionGesture({
   ) => void;
 }) {
   const selectionGestureRef = useRef<{
+    /** The Begin deltas, which a crop draw uses as its anchor. */
+    anchor: { x: number; y: number };
     cameraOverlaySnapshot: CameraOverlaySettings | null;
     lastDeltaX: number;
     lastDeltaY: number;
@@ -85,8 +88,7 @@ export function useRecordingSelectionGesture({
           : null;
     const isFrameGesture =
       event.operation === "frameResize" || event.operation === "frameRadius";
-    const isCropGesture =
-      event.operation === "cropMove" || event.operation === "cropResize";
+    const isCropGesture = isCropOperation(event.operation);
     if (event.phase === "begin") {
       if (
         !trackId ||
@@ -101,6 +103,7 @@ export function useRecordingSelectionGesture({
       const editsBakedCamera =
         !isFrameGesture && canPreviewBakedCamera && trackId === "camera";
       selectionGestureRef.current = {
+        anchor: { x: event.deltaX, y: event.deltaY },
         cameraOverlaySnapshot: editsBakedCamera ? cameraOverlay : null,
         lastDeltaX: 0,
         lastDeltaY: 0,
@@ -219,6 +222,7 @@ export function useRecordingSelectionGesture({
     }
     if (active.cameraOverlaySnapshot) {
       const next = gesturedCameraOverlay({
+        anchor: active.anchor,
         event,
         primaryOutput: effectiveRecordingOutput.primary,
         start: active.cameraOverlaySnapshot,
@@ -234,6 +238,7 @@ export function useRecordingSelectionGesture({
     const snapshot = active.outputSnapshot;
     if (!snapshot) return;
     const next = gesturedTrackOutput({
+      anchor: active.anchor,
       event,
       previewSourceDimensions,
       snapshot,

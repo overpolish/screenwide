@@ -140,6 +140,10 @@ typedef struct {
 @property(nonatomic) uint32_t selectionDragEdges;
 @property(nonatomic, strong) NSTrackingArea *selectionTrackingArea;
 @property(nonatomic) BOOL cursorRectsDisabled;
+/// A crop window drawn from a press outside the current one: its anchor in
+/// pane fractions, and whether the press has travelled far enough to begin.
+@property(nonatomic) NSPoint cropDrawAnchor;
+@property(nonatomic) BOOL cropDrawBegun;
 /// The arrow tool's live drag. `annotationDragActive` covers the whole press,
 /// including one that only chooses an arrow; every edit - a new arrow, a grip,
 /// or the whole arrow carried by its shaft - waits for the press to travel far

@@ -13,9 +13,7 @@
 
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 
-use super::super::preview_platform::{
-  RecordingPreviewSurface, SelectionGestureOperation, SelectionGesturePhase,
-};
+use super::super::preview_platform::{RecordingPreviewSurface, SelectionGesturePhase};
 use super::annotation_gesture::AnnotationCommit;
 use super::payloads::{
   ScreenshotAnnotationChangeEvent, ScreenshotAnnotationHoverEvent, ScreenshotPreviewTransformEvent,
@@ -131,15 +129,7 @@ pub(super) fn install(
           delta_x,
           delta_y,
           edges,
-          operation: match operation {
-            SelectionGestureOperation::Move => 0,
-            SelectionGestureOperation::Resize => 1,
-            SelectionGestureOperation::Radius => 2,
-            SelectionGestureOperation::FrameResize => 3,
-            SelectionGestureOperation::FrameRadius => 4,
-            SelectionGestureOperation::CropMove => 5,
-            SelectionGestureOperation::CropResize => 6,
-          },
+          operation: operation as u32,
           pane_index,
           phase: phase_name,
           scale,

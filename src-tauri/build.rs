@@ -82,6 +82,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader_fragment.h");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+callbacks.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+magnifier.m");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+crop_draw.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+context_menu.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+editor.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+keyboard.m");
@@ -220,6 +221,7 @@ fn main() {
       .file("src/editor/region_magnifier_macos.m")
       .file("src/editor/recording_preview_surface_macos+callbacks.m")
       .file("src/editor/recording_preview_surface_macos+magnifier.m")
+      .file("src/editor/recording_preview_surface_macos+crop_draw.m")
       .file("src/editor/recording_preview_surface_macos+context_menu.m")
       .file("src/editor/recording_preview_surface_macos+editor.m")
       .file("src/editor/recording_preview_surface_macos+keyboard.m")

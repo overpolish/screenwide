@@ -64,9 +64,10 @@
     set_selection_cursor(screenwide_region_resize_cursor(1 | 4));
   else if (self.selectionDragActive &&
            (self.selectionDragOperation == 1 || self.selectionDragOperation == 3 ||
-            self.selectionDragOperation == 6))
+            self.selectionDragOperation == 6 ||
+            (self.selectionDragOperation == 7 && self.selectionDragEdges != 0)))
     set_selection_cursor(screenwide_region_resize_cursor(self.selectionDragEdges));
-  else if (self.selectionDragActive)
+  else if (self.selectionDragActive && self.selectionDragOperation != 7)
     set_selection_move_cursor();
   else if (self.panning)
     set_selection_cursor([NSCursor closedHandCursor]);
@@ -123,6 +124,7 @@
   // choosing and dragging a grip are all its own. A press that lands on no
   // arrow with only the select tool in hand falls through to the layer.
   if (event.buttonNumber == 0 && annotation_mouse_down(self, point)) return;
+  if (canGesture && crop_draw_mouse_down(self, point, event)) return;
   if (event.buttonNumber == 0 && self.surface.selectionHitTestingEnabled) {
     ScreenwidePreviewSelection target;
     uint8_t sharedHandle = 0;
@@ -326,6 +328,7 @@
 - (void)mouseDragged:(NSEvent *)event {
   NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
   if (annotation_mouse_dragged(self, point)) return;
+  if (crop_draw_mouse_dragged(self, event)) return;
   if (self.selectionDragActive) {
     NSPoint delta = NSMakePoint(point.x - self.selectionDragOrigin.x,
                                 point.y - self.selectionDragOrigin.y);
@@ -742,6 +745,7 @@
   if (annotation_mouse_up(self, [self convertPoint:event.locationInWindow
                                           fromView:nil]))
     return;
+  if (crop_draw_mouse_up(self, event)) return;
   BOOL hadSnapGuides = self.surface.hasSelectionSnapGuideX ||
                        self.surface.hasSelectionSnapGuideY;
   BOOL hadMagnifier = self.surface.workspaceMagnifier.active != 0;

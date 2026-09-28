@@ -10,7 +10,11 @@ pub(super) fn update_magnifier(state: &mut SurfaceState) {
     }
     return;
   };
-  let show = gesture.operation == SelectionGestureOperation::CropResize;
+  // Only the side bits name the corner the loupe rides on. A crop draw has
+  // no corner until its first sample places one.
+  let edges = gesture.edges & 0b1111;
+  let show = gesture.operation == SelectionGestureOperation::CropResize
+    || (gesture.operation == SelectionGestureOperation::CropDraw && edges != 0);
   for pane in state.panes.iter_mut().flatten() {
     pane.magnifier = None;
   }
@@ -34,21 +38,16 @@ pub(super) fn update_magnifier(state: &mut SurfaceState) {
   let Some(settings) = pane.settings.as_ref() else {
     return;
   };
-  let display_point = if gesture.operation == SelectionGestureOperation::CropResize {
-    let frame = PreviewSurfaceRect {
-      x: rect.x + selection.x * rect.width,
-      y: rect.y + selection.y * rect.height,
-      width: selection.width * rect.width,
-      height: selection.height * rect.height,
-    };
-    crop_magnifier_anchor(
-      [frame.x, frame.y, frame.width, frame.height],
-      state.last_pointer,
-      gesture.edges,
-    )
-  } else {
-    state.last_pointer
-  };
+  let display_point = crop_magnifier_anchor(
+    [
+      rect.x + selection.x * rect.width,
+      rect.y + selection.y * rect.height,
+      selection.width * rect.width,
+      selection.height * rect.height,
+    ],
+    state.last_pointer,
+    edges,
+  );
   let x = ((display_point.0 - rect.x) / rect.width * settings.width as f64) as f32;
   let y = ((display_point.1 - rect.y) / rect.height * settings.height as f64) as f32;
   let diameter = (96.0 * settings.width as f64 / rect.width.max(1.0)) as f32;
@@ -67,7 +66,7 @@ pub(super) fn update_magnifier(state: &mut SurfaceState) {
     geometry: [x, y, diameter, diameter / 40.0],
     options: [
       if sample_camera { 1.0 } else { 0.0 },
-      gesture.edges as f32,
+      edges as f32,
       if luminance > 0.5 { 1.0 } else { 0.0 },
       0.0,
     ],

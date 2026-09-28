@@ -42,6 +42,7 @@ export type RecordingSelectionGestureEvent = {
   deltaY: number;
   edges: number;
   operation:
+    | "cropDraw"
     | "cropMove"
     | "cropResize"
     | "frameRadius"
@@ -274,6 +275,7 @@ export function useRecordingPreviewSurface({
           "frameRadius",
           "cropMove",
           "cropResize",
+          "cropDraw",
         ][payload.operation] as RecordingSelectionGestureEvent["operation"],
         paneIndex: payload.paneIndex,
         phase: payload.phase,

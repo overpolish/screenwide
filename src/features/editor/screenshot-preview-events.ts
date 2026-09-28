@@ -83,6 +83,7 @@ export type ScreenshotSelectionGestureEvent = {
   deltaY: number;
   edges: number;
   operation:
+    | "cropDraw"
     | "cropMove"
     | "cropResize"
     | "frameRadius"

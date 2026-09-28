@@ -6,6 +6,8 @@ use super::*;
 mod cancel;
 #[path = "input/context_menu.rs"]
 mod context_menu;
+#[path = "input/crop_draw.rs"]
+mod crop_draw;
 #[path = "input/down.rs"]
 mod down;
 #[path = "input/pointer_move.rs"]

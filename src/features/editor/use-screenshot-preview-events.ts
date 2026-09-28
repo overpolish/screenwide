@@ -177,6 +177,7 @@ export function useScreenshotPreviewEvents({
           "frameRadius",
           "cropMove",
           "cropResize",
+          "cropDraw",
         ][payload.operation] as ScreenshotSelectionGestureEvent["operation"],
         paneIndex: payload.paneIndex,
         phase: payload.phase,

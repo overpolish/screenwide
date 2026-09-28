@@ -47,6 +47,7 @@ impl RecordingPreviewSurface {
             annotation: Default::default(),
             backdrop: [0.09, 0.09, 0.10, 1.0],
             camera_source: None,
+            crop_draw: None,
             editor_active: false,
             frame_resize: None,
             frame_resize_committed: false,

@@ -13,6 +13,7 @@ pub(super) fn pointer_move(
   snapping: bool,
 ) {
   let point = (x / scale, y / scale);
+  let mut began = None;
   let mut update = None;
   let mut zoom = None;
   if let Ok(mut state) = inner.state.lock() {
@@ -26,6 +27,11 @@ pub(super) fn pointer_move(
           state.workspace_transform.pan_x = transform_start.pan_x + point.0 - pointer_start.0;
           state.workspace_transform.pan_y = transform_start.pan_y + point.1 - pointer_start.1;
           apply_workspace_transform(inner, &mut state, false);
+        }
+        Some(ActiveGesture::Selection(gesture))
+          if gesture.operation == SelectionGestureOperation::CropDraw =>
+        {
+          (began, update) = super::crop_draw::drag(inner, &mut state, gesture, point, centered);
         }
         Some(ActiveGesture::Selection(mut gesture)) => {
           let owns_geometry = state.frame_resize.is_some();
@@ -252,6 +258,9 @@ pub(super) fn pointer_move(
   // the pixels still by changing the zoom the workspace is expressed in.
   if let Some(zoom) = zoom {
     emit_transform(inner, zoom);
+  }
+  if let Some(gesture) = began {
+    emit_gesture(inner, SelectionGesturePhase::Begin, gesture);
   }
   if let Some(gesture) = update {
     emit_gesture(inner, SelectionGesturePhase::Update, gesture);

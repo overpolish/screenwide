@@ -22,8 +22,13 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
     let handle = shared
       .filter(|(_, handle)| (1..=8).contains(handle))
       .map(|(selection, handle)| (selection, shared_handle_edges(handle)));
+    // A press on an uncropped crop's body draws a new crop rather than
+    // moving one that cannot move; it falls through to `crop_draw::start`.
+    let draws_crop = crop_press_draws(&state, shared);
     let target = shared
-      .filter(|(selection, handle)| *handle == 0 && selection.layer_id != FRAME_LAYER_ID)
+      .filter(|(selection, handle)| {
+        *handle == 0 && selection.layer_id != FRAME_LAYER_ID && !draws_crop
+      })
       .map(|hit| hit.0);
     let frame_target = shared
       .filter(|(selection, handle)| *handle == 0 && selection.layer_id == FRAME_LAYER_ID)
@@ -179,6 +184,10 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       }
       began = Some(gesture);
       draw_selection(inner, &state);
+    } else if let Some(gesture) = super::crop_draw::start(&mut state, point) {
+      // A press on nothing while cropping draws a new crop window. It
+      // begins only once the press becomes a drag, from `pointer_move`.
+      state.gesture = Some(ActiveGesture::Selection(gesture));
     } else {
       state.gesture = Some(ActiveGesture::Pan {
         pointer_start: point,

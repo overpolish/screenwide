@@ -114,6 +114,19 @@ pub(crate) enum SelectionGestureOperation {
   FrameRadius = 4,
   CropMove = 5,
   CropResize = 6,
+  /// A new crop window drawn from a press outside the current one. Begin
+  /// carries the anchor's offset from the crop's origin; later samples carry
+  /// the far corner's offset from the anchor, or the half extents when the
+  /// centered edge bit is set.
+  CropDraw = 7,
+}
+
+impl SelectionGestureOperation {
+  /// Crop gestures are mirrored by React's uncropped composition rather than
+  /// the native gesture managers.
+  pub(crate) const fn is_crop(self) -> bool {
+    matches!(self, Self::CropMove | Self::CropResize | Self::CropDraw)
+  }
 }
 
 /// One pointer sample of an annotation tool: the phase, the pane, whether the

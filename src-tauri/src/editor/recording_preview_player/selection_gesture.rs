@@ -45,10 +45,7 @@ impl PreviewPlayerManager {
         // selection OSC changes synchronously on mouse-down, and React must
         // be able to present the newly selected layer's uncropped pixels
         // before the first crop update arrives.
-        if matches!(
-          operation,
-          SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize
-        ) {
+        if operation.is_crop() {
           self.selection_gesture = None;
           return Ok(());
         }
@@ -56,10 +53,7 @@ impl PreviewPlayerManager {
         Ok(())
       }
       SelectionGesturePhase::Update | SelectionGesturePhase::End => {
-        if matches!(
-          operation,
-          SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize
-        ) {
+        if operation.is_crop() {
           // Crop pixels are mirrored by React's uncropped composition. Keep
           // this native manager out of the gesture snapshot so each selected
           // layer can present immediately during the crop interaction.
@@ -138,7 +132,9 @@ impl PreviewPlayerManager {
             SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
               return Ok(())
             }
-            SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
+            SelectionGestureOperation::CropMove
+            | SelectionGestureOperation::CropResize
+            | SelectionGestureOperation::CropDraw => {
               unreachable!("crop gestures are mirrored by the frontend")
             }
           };
@@ -198,7 +194,9 @@ impl PreviewPlayerManager {
           SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
             return Ok(())
           }
-          SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
+          SelectionGestureOperation::CropMove
+          | SelectionGestureOperation::CropResize
+          | SelectionGestureOperation::CropDraw => {
             unreachable!("crop gestures are mirrored by the frontend")
           }
         };

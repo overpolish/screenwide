@@ -24,7 +24,7 @@ pub(super) fn up(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: f6
         }
         state.move_auto_fit = None;
       }
-      ended = Some(gesture);
+      ended = super::crop_draw::finish(&mut state, &gesture).then_some(gesture);
     } else {
       state.gesture = None;
     }

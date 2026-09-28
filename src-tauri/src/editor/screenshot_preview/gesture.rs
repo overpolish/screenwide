@@ -52,10 +52,7 @@ impl PreviewManager {
         // the first crop pointer update. Retaining this snapshot would keep
         // the previously selected layer's uncropped pixels alive while the
         // native OSC had already moved to the new layer.
-        if matches!(
-          operation,
-          SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize
-        ) {
+        if operation.is_crop() {
           self.selection_gesture = None;
           return Ok(());
         }
@@ -71,10 +68,7 @@ impl PreviewManager {
         };
       }
       SelectionGesturePhase::Update | SelectionGesturePhase::End => {
-        if matches!(
-          operation,
-          SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize
-        ) {
+        if operation.is_crop() {
           // Crop pixels are mirrored by React's uncropped composition. Keep
           // this native manager out of the gesture snapshot so each selected
           // layer can present immediately during the crop interaction.
@@ -185,7 +179,9 @@ impl PreviewManager {
           SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius => {
             unreachable!("frame gestures are handled before selecting an item")
           }
-          SelectionGestureOperation::CropMove | SelectionGestureOperation::CropResize => {
+          SelectionGestureOperation::CropMove
+          | SelectionGestureOperation::CropResize
+          | SelectionGestureOperation::CropDraw => {
             unreachable!("crop gestures are mirrored by the frontend")
           }
         };

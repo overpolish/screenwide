@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #[cfg(any(target_os = "windows", test))]
-use super::{NormalizedRect, FRAME_EDGE_BOTTOM, FRAME_EDGE_LEFT, FRAME_EDGE_RIGHT, FRAME_EDGE_TOP};
+use super::{
+  NormalizedRect, FRAME_EDGE_BOTTOM, FRAME_EDGE_CENTERED, FRAME_EDGE_LEFT, FRAME_EDGE_RIGHT,
+  FRAME_EDGE_TOP,
+};
 
 /// `f64::clamp` panics when `low > high`, and two bounds derived from the same
 /// normalized geometry (`image.x + image.width - crop.width` against `image.x`
@@ -85,5 +88,100 @@ pub fn apply_crop_resize(
     y: top,
     width,
     height,
+  }
+}
+
+/// One sample of a crop window drawn from a press outside the current one.
+/// `delta` is what the gesture reports: the far corner's offset from the
+/// anchor, or the half extents about it when `edges` carries the centered
+/// bit. The anchor is always a corner or the centre of `rect`, which is what
+/// lets the frontend rebuild the same rectangle from the anchor and `delta`.
+#[cfg(any(target_os = "windows", test))]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CropDraw {
+  pub rect: NormalizedRect,
+  pub delta: (f64, f64),
+  pub edges: u32,
+}
+
+/// Draw a crop window from `anchor` towards `pointer` inside `image`. Both
+/// sides are at least `minimum` long where the image leaves room, so a short
+/// drag or one along a single axis never collapses the crop. Centering is
+/// honoured only while the anchor has half a minimum of room on every side.
+#[cfg(any(target_os = "windows", test))]
+pub fn apply_crop_draw(
+  anchor: (f64, f64),
+  pointer: (f64, f64),
+  image: NormalizedRect,
+  minimum: (f64, f64),
+  centered: bool,
+) -> CropDraw {
+  let axes = [
+    (
+      anchor.0,
+      pointer.0,
+      image.x,
+      image.x + image.width,
+      minimum.0,
+    ),
+    (
+      anchor.1,
+      pointer.1,
+      image.y,
+      image.y + image.height,
+      minimum.1,
+    ),
+  ];
+  let centered = centered
+    && axes
+      .iter()
+      .all(|&(anchor, _, low, high, minimum)| (anchor - low).min(high - anchor) >= minimum / 2.0);
+  let [x, y] = axes.map(|(anchor, pointer, low, high, minimum)| {
+    let offset = clamp_range(pointer, low, high) - anchor;
+    let toward = if offset < 0.0 { -1.0 } else { 1.0 };
+    if centered {
+      let room = (anchor - low).min(high - anchor);
+      return toward * offset.abs().max(minimum / 2.0).min(room);
+    }
+    let length = offset.abs().max(minimum);
+    let reach = |direction: f64| clamp_range(anchor + direction * length, low, high) - anchor;
+    let forward = reach(toward);
+    let backward = reach(-toward);
+    // Pressing against an edge and dragging into it would leave a sliver;
+    // the window opens away from that edge instead.
+    if forward.abs() < minimum && backward.abs() > forward.abs() {
+      backward
+    } else {
+      forward
+    }
+  });
+  let span = |anchor: f64, delta: f64| {
+    if centered {
+      (anchor - delta.abs(), 2.0 * delta.abs())
+    } else {
+      (anchor.min(anchor + delta), delta.abs())
+    }
+  };
+  let (left, width) = span(anchor.0, x);
+  let (top, height) = span(anchor.1, y);
+  let horizontal = if x < 0.0 {
+    FRAME_EDGE_LEFT
+  } else {
+    FRAME_EDGE_RIGHT
+  };
+  let vertical = if y < 0.0 {
+    FRAME_EDGE_TOP
+  } else {
+    FRAME_EDGE_BOTTOM
+  };
+  CropDraw {
+    rect: NormalizedRect {
+      x: left,
+      y: top,
+      width,
+      height,
+    },
+    delta: (x, y),
+    edges: horizontal | vertical | if centered { FRAME_EDGE_CENTERED } else { 0 },
   }
 }

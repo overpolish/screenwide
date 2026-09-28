@@ -9,6 +9,9 @@ pub(super) struct SurfaceState {
   pub(super) backdrop: [f64; 4],
   pub(super) camera_source: Option<compositor::SourceTexture>,
   pub(super) editor_active: bool,
+  /// A crop window being drawn from a press outside the current one. Set on
+  /// the press, and taken when the gesture ends or is cancelled.
+  pub(super) crop_draw: Option<CropDrawStart>,
   /// The immutable workspace state a live Frame resize re-flows from, and the
   /// marker that the native side - not the DOM - owns the pane geometry.
   pub(super) frame_resize: Option<FrameResizeStart>,
@@ -84,6 +87,15 @@ pub(super) struct MoveAutoFit {
   /// fit (`fit_workspace_to_items` / `fit_canvas_to_layers`).
   pub(super) natural_size: Option<(f64, f64)>,
   pub(super) targets_start: Vec<PreviewSelection>,
+}
+
+/// Where a drawn crop window is anchored, in pane fractions, and whether the
+/// press has travelled far enough to begin the gesture. A press that never
+/// does is a plain click and leaves the crop alone.
+#[derive(Clone, Copy)]
+pub(super) struct CropDrawStart {
+  pub(super) anchor: (f64, f64),
+  pub(super) begun: bool,
 }
 
 #[derive(Clone, Copy)]

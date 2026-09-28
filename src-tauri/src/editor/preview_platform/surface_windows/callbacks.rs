@@ -69,8 +69,13 @@ pub(super) fn refresh_cursor_for(inner: &SurfaceInner) {
       {
         editor::CursorKind::ResizeNwse
       }
+      Some(ActiveGesture::Selection(gesture))
+        if gesture.operation == SelectionGestureOperation::CropDraw && gesture.edges == 0 =>
+      {
+        editor::CursorKind::Crosshair
+      }
       Some(ActiveGesture::Selection(gesture)) => {
-        let edges = gesture.edges;
+        let edges = gesture.edges & 0b1111;
         if edges == 1 || edges == 2 {
           editor::CursorKind::ResizeHorizontal
         } else if edges == 4 || edges == 8 {

@@ -5,6 +5,8 @@ import { scaledCameraOverlay } from "../camera-overlay-placement";
 import {
   applyScreenshotCropGesture,
   commitScreenshotCrop,
+  drawnCropRect,
+  isCropOperation,
 } from "../screenshot-crop";
 import {
   RecordingOutputSettings,
@@ -22,10 +24,13 @@ import type { RecordingSelectionGestureEvent } from "../use-recording-preview-su
  * the snapshot the gesture began from.
  */
 export function gesturedCameraOverlay({
+  anchor,
   event,
   primaryOutput,
   start,
 }: {
+  /** The gesture's Begin deltas, which a crop draw uses as its anchor. */
+  anchor: { x: number; y: number };
   event: RecordingSelectionGestureEvent;
   primaryOutput: ScreenshotOutputSettings;
   start: CameraOverlaySettings;
@@ -38,7 +43,22 @@ export function gesturedCameraOverlay({
   const frameX = start.frameX + moveX;
   const frameY = start.frameY + moveY;
   let next: CameraOverlaySettings;
-  if (event.operation === "cropMove") {
+  if (event.operation === "cropDraw") {
+    const drawn = drawnCropRect(
+      {
+        x: start.frameX + anchor.x * canvas.width,
+        y: start.frameY + anchor.y * canvas.height,
+      },
+      { deltaX: moveX, deltaY: moveY, edges: event.edges },
+    );
+    next = {
+      ...start,
+      frameHeight: drawn.height,
+      frameWidth: drawn.width,
+      frameX: drawn.x,
+      frameY: drawn.y,
+    };
+  } else if (event.operation === "cropMove") {
     next = {
       ...start,
       frameX,
@@ -88,11 +108,14 @@ export function gesturedCameraOverlay({
  * crop against and the frame is dropped.
  */
 export function gesturedTrackOutput({
+  anchor,
   event,
   previewSourceDimensions,
   snapshot,
   trackId,
 }: {
+  /** The gesture's Begin deltas, which a crop draw uses as its anchor. */
+  anchor: { x: number; y: number };
   event: RecordingSelectionGestureEvent;
   previewSourceDimensions: Partial<
     Record<RecordingVideoTrackId, { height: number; width: number }>
@@ -107,7 +130,7 @@ export function gesturedTrackOutput({
   const cropX = snapshot.cropX + moveX;
   const cropY = snapshot.cropY + moveY;
   let next: RecordingOutputSettings[RecordingVideoTrackId];
-  if (event.operation === "cropMove" || event.operation === "cropResize") {
+  if (isCropOperation(event.operation)) {
     const source =
       trackId === "primary"
         ? previewSourceDimensions.primary
@@ -115,6 +138,7 @@ export function gesturedTrackOutput({
     if (!source) return null;
     next = applyScreenshotCropGesture({
       ...event,
+      anchor,
       operation: event.operation,
       output: screenshotOutputDimensions(snapshot),
       settings: snapshot,

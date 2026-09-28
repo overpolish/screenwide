@@ -162,7 +162,11 @@ pub(super) fn cursor_for_state(
   if let Some(kind) = annotation::cursor_for(state, point) {
     return kind;
   }
-  let Some((selection, handle)) = shared_selection_hit(inner, state, point) else {
+  let hit = shared_selection_hit(inner, state, point);
+  if crop_press_draws(state, hit) {
+    return editor::CursorKind::Crosshair;
+  }
+  let Some((selection, handle)) = hit else {
     return editor::CursorKind::Arrow;
   };
   if handle == 0 && selection.layer_id == FRAME_LAYER_ID {
@@ -177,4 +181,26 @@ pub(super) fn cursor_for_state(
     _ if edges == (1 | 4) || edges == (2 | 8) => editor::CursorKind::ResizeNwse,
     _ => editor::CursorKind::ResizeNesw,
   }
+}
+
+/// Whether a press while cropping draws a new crop window: one on nothing, or
+/// on the body of the active crop while it still covers its whole picture,
+/// which moving could not change. A grip resizes, and another layer's crop is
+/// chosen by the press.
+pub(super) fn crop_press_draws(state: &SurfaceState, hit: Option<(PreviewSelection, u8)>) -> bool {
+  let Some(active) = state.selection.filter(|selection| selection.crop_mode != 0) else {
+    return false;
+  };
+  let Some((target, handle)) = hit else {
+    return true;
+  };
+  let tolerance = 1e-4;
+  let uncropped = (active.x - active.image_x).abs() < tolerance
+    && (active.y - active.image_y).abs() < tolerance
+    && (active.width - active.image_width).abs() < tolerance
+    && (active.height - active.image_height).abs() < tolerance;
+  handle == 0
+    && target.pane_index == active.pane_index
+    && target.layer_id == active.layer_id
+    && uncropped
 }
