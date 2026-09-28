@@ -5,7 +5,9 @@
 //! its words and runs of text begin and end.
 
 use super::ink::{Cell, Mask};
-use super::{RUN_GAP, WORD_GAP};
+
+/// Where a selection's ends land along their lines.
+pub(super) mod snap;
 
 /// A run of rows or columns, `[from, to)`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -214,48 +216,5 @@ impl Columns {
       }
     }
     Some(right)
-  }
-
-  /// Where a selection starting at `x` begins: the start of the word under
-  /// it, or where it starts in a gap, the start of the next word along before
-  /// `until`. Nothing there leaves it where it was pressed.
-  pub(super) fn snap_start(&self, x: f64, until: f64, run_gap: f64) -> usize {
-    let column = self.clamp(x);
-    let word_gap = self.word_gap(run_gap);
-    if let Some(inside) = [column, column.saturating_sub(1), column + 1]
-      .into_iter()
-      .find(|&column| self.at(column))
-    {
-      return self.run_left(inside, word_gap, inside).unwrap_or(inside);
-    }
-    let limit = self.clamp(until).max(column);
-    (column..=limit)
-      .take_while(|&next| !self.blocked(next))
-      .find(|&next| self.at(next))
-      .unwrap_or(column)
-  }
-
-  /// Where a selection ending at `x` ends: the end of the word under it, or
-  /// where it ends in a gap, the end of the word before it back to `until`.
-  pub(super) fn snap_end(&self, x: f64, until: f64, run_gap: f64) -> usize {
-    let column = self.clamp(x);
-    let word_gap = self.word_gap(run_gap);
-    if let Some(inside) = [column, column + 1, column.saturating_sub(1)]
-      .into_iter()
-      .find(|&column| self.at(column))
-    {
-      return self.run_right(inside, word_gap, inside).unwrap_or(inside);
-    }
-    let limit = self.clamp(until).min(column);
-    (limit..=column)
-      .rev()
-      .take_while(|&previous| !self.blocked(previous))
-      .find(|&previous| self.at(previous))
-      .unwrap_or(column)
-  }
-
-  /// A word space, from the run gap it is a fixed share of.
-  fn word_gap(&self, run_gap: f64) -> f64 {
-    (run_gap * WORD_GAP / RUN_GAP).max(2.0)
   }
 }

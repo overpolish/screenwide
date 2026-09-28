@@ -12,9 +12,9 @@
 use super::*;
 use crate::editor::annotations::arrow::geometry::prepare_arrow;
 use crate::editor::annotations::counter::geometry::prepare_counter;
-use crate::editor::annotations::exposure::annotation_travel;
+use crate::editor::annotations::exposure::{annotation_travel, highlight_travel};
 use crate::editor::annotations::highlight::geometry::prepare_highlight;
-use crate::editor::annotations::native::{native_annotations, NativeAnnotation, NativeAnnotations};
+use crate::editor::annotations::native::{native_annotations, NativeAnnotations};
 use crate::editor::annotations::redact::geometry::prepare_redact;
 use crate::editor::annotations::redact::native::{
   source_per_capture_point, RedactPicture, RedactSource,
@@ -183,14 +183,26 @@ fn placed_native(
       arrow.params = annotation.params;
       arrow.data_offset = annotation.data_offset;
       arrow.data_count = annotation.data_count;
-      // A text box's travel reads its pointer and its block as they are held,
-      // which are never placed.
-      let count = match annotation.shape_kind() {
-        AnnotationKind::Text => exposure_sample_count(annotation, a, annotation.p1, annotation.p2),
-        // A highlight's sweep has a soft tip of its own and is never smeared.
-        AnnotationKind::Highlight => 0,
-        _ => exposure_sample_count(annotation, a, b, c),
+      // The points arrive placed already, so the axis scale travel is
+      // measured in is the identity. A text box's travel reads its pointer
+      // and its block as they are held, which are never placed, and a
+      // highlight's the sweep its record keeps.
+      let identity = [1.0, 1.0];
+      let (width, reveal) = (annotation.width, annotation.reveal);
+      let travel = match annotation.shape_kind() {
+        kind @ AnnotationKind::Text => annotation_travel(
+          kind,
+          a,
+          annotation.p1,
+          annotation.p2,
+          identity,
+          width,
+          reveal,
+        ),
+        AnnotationKind::Highlight => highlight_travel(a, b, identity, annotation.params[2], reveal),
+        kind => annotation_travel(kind, a, b, c, identity, width, reveal),
       };
+      let count = exposure_sample_count(travel, reveal);
       if count == 0 {
         // A still annotation carries its reveal's opacity in its colour. The
         // shader only knows the colour, so it is folded in here, exactly as the
@@ -259,28 +271,11 @@ fn placed_native(
   prepared
 }
 
-/// How many exposure samples an annotation needs this frame: none when it has
-/// not moved, else enough that consecutive samples are under a pixel apart, in
-/// the same eight-to-forty-eight band the Metal compositor uses. The twin of
-/// `screenwide_annotation_sample_count`.
-fn exposure_sample_count(
-  annotation: &NativeAnnotation,
-  a: [f32; 2],
-  b: [f32; 2],
-  c: [f32; 2],
-) -> u32 {
-  let r = annotation.reveal;
-  // The points arrive placed already, so the axis scale travel is measured
-  // in is the identity.
-  let travel = annotation_travel(
-    annotation.shape_kind(),
-    a,
-    b,
-    c,
-    [1.0, 1.0],
-    annotation.width,
-    r,
-  );
+/// How many exposure samples an annotation that moved `travel` pixels this
+/// frame needs: none when it has not moved, else enough that consecutive
+/// samples are under a pixel apart, in the same eight-to-forty-eight band the
+/// Metal compositor uses. The twin of `screenwide_annotation_sample_count`.
+fn exposure_sample_count(travel: f32, r: AnnotationReveal) -> u32 {
   if travel < 1.5 && (r.opacity - r.previous[3]).abs() < 0.01 {
     return 0;
   }

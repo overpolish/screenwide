@@ -66,20 +66,20 @@ fn span(band: &HighlightBand) -> (i64, i64, i64) {
 #[test]
 fn a_selection_across_lines_covers_them_the_way_selecting_text_does() {
   let rgba = page(LIGHT, DARK, 1);
-  // Pressed inside the first line's second word and let go inside the last
-  // line's first word.
+  // Pressed well inside the first line's second word and let go well inside
+  // the last line's first word.
   let selection = select_on(&rgba, 1, point(110.0, 50.0), point(40.0, 120.0));
   let spans: Vec<_> = selection.bands.iter().map(span).collect();
   assert_eq!(spans.len(), 3, "{spans:?}");
-  // The first line from the start of the word pressed in to its own end.
-  assert!((86..=90).contains(&spans[0].0), "{spans:?}");
+  // The first line from where it was pressed to its own end.
+  assert_eq!(spans[0].0, 110, "{spans:?}");
   assert!((220..=224).contains(&spans[0].1), "{spans:?}");
   // The line between in full, to its own further end.
   assert!((16..=20).contains(&spans[1].0), "{spans:?}");
   assert!((300..=304).contains(&spans[1].1), "{spans:?}");
-  // The last line from its start to the end of the word let go in.
+  // The last line from its start to where it was let go.
   assert!((16..=20).contains(&spans[2].0), "{spans:?}");
-  assert!((90..=94).contains(&spans[2].1), "{spans:?}");
+  assert_eq!(spans[2].1, 40, "{spans:?}");
   // Each band sits on its own line.
   assert_eq!([spans[0].2, spans[1].2, spans[2].2], [50, 86, 122]);
 }
@@ -93,12 +93,21 @@ fn a_selection_dragged_upwards_covers_the_same_lines() {
 }
 
 #[test]
-fn a_selection_within_one_line_snaps_to_whole_words() {
+fn a_selection_within_one_line_cuts_words_where_it_was_pressed_and_let_go() {
   let rgba = page(LIGHT, DARK, 1);
   let selection = select_on(&rgba, 1, point(80.0, 84.0), point(190.0, 88.0));
   let spans: Vec<_> = selection.bands.iter().map(span).collect();
   assert_eq!(spans.len(), 1, "{spans:?}");
-  // From the start of the word pressed in to the end of the word let go in.
+  assert_eq!((spans[0].0, spans[0].1), (80, 190), "{spans:?}");
+}
+
+#[test]
+fn an_end_let_go_near_a_words_edge_settles_on_it() {
+  let rgba = page(LIGHT, DARK, 1);
+  // Pressed three pixels into a word and let go three short of another's end.
+  let selection = select_on(&rgba, 1, point(73.0, 84.0), point(246.0, 88.0));
+  let spans: Vec<_> = selection.bands.iter().map(span).collect();
+  assert_eq!(spans.len(), 1, "{spans:?}");
   assert!((66..=70).contains(&spans[0].0), "{spans:?}");
   assert!((250..=254).contains(&spans[0].1), "{spans:?}");
 }
@@ -317,8 +326,9 @@ fn two_cells(left: &[Word], right: &[Word]) -> Picture {
 #[test]
 fn a_selection_across_a_table_covers_each_row_across_its_cells() {
   let picture = two_cells(&[(20, 60)], &[(200, 70)]);
-  // Pressed in the first row's first cell, let go in the last row's second.
-  let selection = picture.select(point(30.0, 50.0), point(250.0, 122.0));
+  // Pressed at the start of the first row's first cell, let go at the end of
+  // the last row's second.
+  let selection = picture.select(point(22.0, 50.0), point(266.0, 122.0));
   let spans: Vec<_> = selection.bands.iter().map(span).collect();
   assert_eq!(spans.len(), 3, "{spans:?}");
   for band in &selection.bands {

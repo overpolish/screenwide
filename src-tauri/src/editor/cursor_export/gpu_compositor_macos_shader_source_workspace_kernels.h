@@ -90,7 +90,7 @@ kernel void workspace_layer(
   // Highlights recolour the picture itself, so they go under everything
   // drawn over it, the cursor included.
   rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 0u, canvas_point,
-                              annotation_pixel_scale, annotation_points);
+                              annotation_pixel_scale, annotation_points, annotation_samples);
   if (cursor_uniforms.cursor.visible != 0) {
     float blur = min(length(float2(cursor_uniforms.cursor.blur_delta_x, cursor_uniforms.cursor.blur_delta_y)), 80.0);
     float radius = length(float2(cursor_uniforms.cursor.width, cursor_uniforms.cursor.height)) * cursor_uniforms.cursor.scale + blur + 4.0;
@@ -144,14 +144,14 @@ kernel void workspace_layer(
     // The redrawn foreground covers the pass above, so the annotations under
     // the camera go back over it exactly as the cursor does.
     rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 0u, canvas_point,
-                                annotation_pixel_scale, annotation_points);
+                                annotation_pixel_scale, annotation_points, annotation_samples);
     rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                  canvas_point, u, float2(source_dimensions),
                                  annotation_pixel_scale, annotation_samples,
                                annotation_numbers, annotation_atlas);
   }
   rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 1u, canvas_point,
-                              annotation_pixel_scale, annotation_points);
+                              annotation_pixel_scale, annotation_points, annotation_samples);
   rgba = composite_keyboard(rgba, keyboard_pixels, keyboard, canvas_point,
                             canvas_dimensions);
   rgba = composite_annotations(rgba, annotations, annotation_count, 1u,

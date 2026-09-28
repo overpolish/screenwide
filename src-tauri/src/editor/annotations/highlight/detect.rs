@@ -7,9 +7,9 @@
 //! colour most of the neighbourhood is, anything far enough from it is ink,
 //! and the rows that carry ink are the lines. Along a line, ink columns closer
 //! than a word space are one word and closer than a column gap are one run of
-//! text, which is how a selection's ends snap to whole words and its middle
-//! lines reach their own ends. Nothing here knows what the text says, so it
-//! reads any script, code and interface labels alike.
+//! text, which is how a selection's ends settle on a word's edge when let go
+//! near one and its middle lines reach their own ends. Nothing here knows what
+//! the text says, so it reads any script, code and interface labels alike.
 //!
 //! Every length is a share of the lines' own height, so the same selection
 //! reads a 1x capture and a 2x one the same way.
@@ -48,6 +48,9 @@ const WORD_GAP: f64 = 0.16;
 /// A gap narrower than this share of the line height joins two words into one
 /// run of text; a wider one is a column, a cell or the end of the line.
 const RUN_GAP: f64 = 1.2;
+/// An end let go inside a word within this share of the line height of the
+/// word's edge settles on that edge; further in, it cuts the word there.
+const EDGE_SNAP: f64 = 0.25;
 /// How far a band reaches past its line's ink, as shares of the line height.
 const PAD_X: f64 = 0.12;
 const PAD_Y: f64 = 0.16;

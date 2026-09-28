@@ -57,10 +57,31 @@ pub(crate) fn annotation_travel(
         + width * 4.0 * (reveal.scale - previous[2]).abs()
     }
     // A redaction never moves over a clip: it is whole for as long as it is
-    // shown. A highlight's sweep is drawn with a soft tip of its own rather
-    // than smeared, so it takes no exposure samples either.
+    // shown. A highlight's bands are not in its record's points, so
+    // `highlight_travel` measures it instead.
     AnnotationKind::Redact | AnnotationKind::Highlight => 0.0,
   }
+}
+
+/// How far a highlight's fastest line end moves between the shutter opening
+/// and now, in the pixels it is drawn in. `origin` and `unit` are where the
+/// source's origin and its pixel `(1, 1)` land in the space the points are
+/// given in, `scale` carries that space into those pixels, and `sweep` is how
+/// far the fastest end runs over the whole reveal, in source pixels, which
+/// the highlight's record keeps in `params[2]`.
+pub(crate) fn highlight_travel(
+  origin: [f32; 2],
+  unit: [f32; 2],
+  scale: [f32; 2],
+  sweep: f32,
+  reveal: AnnotationReveal,
+) -> f32 {
+  let previous = reveal.previous;
+  let reach = ((unit[0] - origin[0]) * scale[0]).abs();
+  let moved = (reveal.low - previous[0])
+    .abs()
+    .max((reveal.high - previous[1]).abs());
+  sweep.max(0.0) * reach * moved
 }
 
 #[cfg(test)]
@@ -127,5 +148,24 @@ mod tests {
       ),
       300.0
     );
+  }
+
+  #[test]
+  fn a_highlight_covers_its_fastest_lines_sweep_in_the_pixels_it_is_drawn_in() {
+    let drawing = AnnotationReveal {
+      low: 0.2,
+      high: 0.5,
+      previous: [0.2, 0.4, 1.0, 1.0],
+      ..AnnotationReveal::WHOLE
+    };
+    // One source pixel reaches six across in the space the points are given
+    // in, which the axis scale doubles, and the window moved a tenth.
+    let travel = |reveal| highlight_travel([10.0, 10.0], [16.0, 16.0], [2.0, 2.0], 600.0, reveal);
+    assert!(
+      (travel(drawing) - 720.0).abs() < 1e-3,
+      "{}",
+      travel(drawing)
+    );
+    assert_eq!(travel(AnnotationReveal::WHOLE), 0.0);
   }
 }

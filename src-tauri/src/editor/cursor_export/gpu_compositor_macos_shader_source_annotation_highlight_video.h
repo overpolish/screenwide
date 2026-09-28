@@ -13,6 +13,7 @@ kernel void highlight_video(
     constant CanvasUniforms &canvas [[buffer(0)]],
     const device AnnotationUniforms *annotations [[buffer(12)]],
     constant uint &count [[buffer(13)]], constant uint &above [[buffer(14)]],
+    const device AnnotationSample *samples [[buffer(15)]],
     const device packed_float2 *points [[buffer(18)]],
     texture2d<float, access::read_write> luma [[texture(0)]],
     texture2d<float, access::read_write> chroma [[texture(1)]],
@@ -28,7 +29,7 @@ kernel void highlight_video(
       if (pixel.x >= luma.get_width() || pixel.y >= luma.get_height()) continue;
       float4 base = float4(yuv_to_rgb(luma.read(pixel).r, sample_uv), 1.0);
       float4 marked = composite_highlights(base, base, annotations, count, above,
-                                           float2(pixel) + 0.5, 1.0, points);
+                                           float2(pixel) + 0.5, 1.0, points, samples);
       sum += marked.rgb;
       pixels += 1.0;
       if (any(abs(marked.rgb - base.rgb) > 1e-4)) {

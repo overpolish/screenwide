@@ -58,6 +58,14 @@ float screenwide_annotation_travel(uint32_t kind, float p0x, float p0y,
                                    float sx, float sy, float width,
                                    AnnotationReveal reveal);
 
+/// How far a highlight's fastest line end moves between the shutter opening
+/// and now. `p0` and `p1` are its record's source origin and pixel `(1, 1)`,
+/// `sx` and `sy` carry them into the pixels the travel is measured in, and
+/// `sweep` is its record's `params[2]`.
+float screenwide_highlight_travel(float p0x, float p0y, float p1x, float p1y,
+                                  float sx, float sy, float sweep,
+                                  AnnotationReveal reveal);
+
 /// How far a point falls outside a highlight, from what its grips' record
 /// carries placed in display points: its first band's top-left corner and
 /// bottom, its last band's top and bottom-right corner, and how far left and

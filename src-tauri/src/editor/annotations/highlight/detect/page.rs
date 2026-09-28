@@ -4,6 +4,7 @@
 //! Reading one picture: its surface, its lines and its ink.
 
 use super::ink::{Cell, Mask};
+use super::lines::snap::Snap;
 use super::lines::{line_at, merge_lines, Columns, Run};
 use super::{
   HighlightPixels, EVEN_HEIGHT, LINE_REACH, PAD_X, PAD_Y, PAGE_SHARE, RUN_GAP, SOLID_RUN,
@@ -151,16 +152,38 @@ impl<'a> Page<'a> {
     let run_gap = (tallest * RUN_GAP).max(word_gap * 3.0);
     let along = Self::span(from.0, to.0, tallest * LINE_REACH, self.width());
     let columns = |line: Run| Columns::read(&mask, line, along);
+    let least = tallest * EVEN_HEIGHT;
+    let pad_x = (tallest * PAD_X).max(1.0);
+    let pad_y = (tallest * PAD_Y).max(1.0);
+    // A band reaches past the ink at a word's edge, but a cut through a word
+    // stops where it was let go, short of the letters beyond.
+    let left_of = |snap: Snap| {
+      if snap.cut {
+        snap.at as f64
+      } else {
+        snap.at as f64 - pad_x
+      }
+    };
+    let right_of = |snap: Snap| {
+      if snap.cut {
+        snap.at as f64
+      } else {
+        (snap.at + 1) as f64 + pad_x
+      }
+    };
 
-    let mut spans: Vec<(Run, usize, usize)> = Vec::new();
+    let mut spans: Vec<(Run, f64, f64)> = Vec::new();
     if first == last {
       let row = columns(lines[first]);
-      let left = row.snap_start(head.0, tail.0, run_gap);
-      let right = row.snap_end(tail.0, head.0, run_gap);
-      let (left, right) = if left <= right {
+      let left = left_of(row.snap_start(head.0, tail.0, run_gap));
+      let right = right_of(row.snap_end(tail.0, head.0, run_gap));
+      let (left, right) = if left < right {
         (left, right)
       } else {
-        (row.clamp(head.0), row.clamp(tail.0))
+        (
+          left_of(Snap::edge(row.clamp(head.0))),
+          right_of(Snap::edge(row.clamp(tail.0))),
+        )
       };
       spans.push((lines[first], left, right));
     } else {
@@ -169,16 +192,20 @@ impl<'a> Page<'a> {
       // a line, so a selection down one column of text keeps to it.
       let (span_left, span_right) = (from.0.min(to.0), from.0.max(to.0));
       let head_row = columns(lines[first]);
-      let left = head_row.snap_start(head.0, f64::MAX, run_gap);
+      let head_left = head_row.snap_start(head.0, f64::MAX, run_gap);
       let right = head_row
-        .run_right(left, run_gap, head_row.clamp(span_right))
-        .unwrap_or(left);
-      spans.push((lines[first], left, right));
+        .run_right(head_left.ink, run_gap, head_row.clamp(span_right))
+        .unwrap_or(head_left.at);
+      spans.push((
+        lines[first],
+        left_of(head_left),
+        right_of(Snap::edge(right)),
+      ));
       let tail_row = columns(lines[last]);
       let tail_right = tail_row.snap_end(tail.0, 0.0, run_gap);
       let tail_left = tail_row
-        .run_left(tail_right, run_gap, tail_row.clamp(span_left))
-        .unwrap_or(tail_right);
+        .run_left(tail_right.ink, run_gap, tail_row.clamp(span_left))
+        .unwrap_or(tail_right.at);
       // Every line between starts where its paragraph does, which is where
       // the last line starts.
       for &line in &lines[first + 1..last] {
@@ -187,7 +214,7 @@ impl<'a> Page<'a> {
           continue;
         }
         let row = columns(line);
-        let Some(seed) = row.nearest(tail_left.min(left) as f64, run_gap * 2.0) else {
+        let Some(seed) = row.nearest(tail_left.min(head_left.at) as f64, run_gap * 2.0) else {
           continue;
         };
         let middle_left = row
@@ -196,14 +223,19 @@ impl<'a> Page<'a> {
         let middle_right = row
           .run_right(seed, run_gap, row.clamp(span_right))
           .unwrap_or(seed);
-        spans.push((line, middle_left, middle_right));
+        spans.push((
+          line,
+          left_of(Snap::edge(middle_left)),
+          right_of(Snap::edge(middle_right)),
+        ));
       }
-      spans.push((lines[last], tail_left, tail_right));
+      spans.push((
+        lines[last],
+        left_of(Snap::edge(tail_left)),
+        right_of(tail_right),
+      ));
     }
 
-    let least = tallest * EVEN_HEIGHT;
-    let pad_x = (tallest * PAD_X).max(1.0);
-    let pad_y = (tallest * PAD_Y).max(1.0);
     Some(
       spans
         .into_iter()
@@ -217,12 +249,7 @@ impl<'a> Page<'a> {
             top -= short * 0.7;
             bottom += short * 0.3;
           }
-          [
-            left as f64 - pad_x,
-            top - pad_y,
-            (right + 1) as f64 + pad_x,
-            bottom + pad_y,
-          ]
+          [left, top - pad_y, right, bottom + pad_y]
         })
         .collect(),
     )

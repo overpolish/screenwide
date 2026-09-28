@@ -136,6 +136,57 @@ fn an_annotation_that_moved_this_frame_is_averaged_over_its_exposure() {
 }
 
 #[test]
+fn a_highlight_drawing_itself_in_is_averaged_over_its_exposure() {
+  use crate::editor::annotations::highlight::model::{new_highlight, HighlightBand};
+  use crate::editor::annotations::reveal::AnnotationReveal;
+  let mut annotation = new_highlight("h".into(), AnnotationPoint { x: 0.0, y: 0.0 }, None, 1.0);
+  if let AnnotationShape::Highlight { bands, .. } = &mut annotation.shape {
+    *bands = vec![
+      HighlightBand {
+        left: 20.0,
+        top: 20.0,
+        right: 420.0,
+        bottom: 44.0,
+      },
+      HighlightBand {
+        left: 20.0,
+        top: 56.0,
+        right: 220.0,
+        bottom: 80.0,
+      },
+    ];
+  }
+  let prepare = |annotation: &Annotation| {
+    placed_arrows(
+      std::slice::from_ref(annotation),
+      (0.0, 0.0),
+      (1.0, 1.0),
+      None,
+      None,
+    )
+  };
+  // Drawn whole and standing still, it has nothing to smear.
+  annotation.reveal = AnnotationReveal::WHOLE;
+  assert_eq!(prepare(&annotation).arrows[0].sample_count, 0);
+  // A tenth of the reveal in one frame: its longest line's end, drawn over
+  // two thirds of the reveal, runs 60 pixels.
+  annotation.reveal = AnnotationReveal {
+    high: 0.5,
+    previous: [0.0, 0.4, 1.0, 1.0],
+    ..AnnotationReveal::WHOLE
+  };
+  let prepared = prepare(&annotation);
+  let highlight = prepared.arrows[0];
+  assert_eq!(highlight.sample_count, 48);
+  assert_eq!(prepared.samples.len(), 48);
+  let first = prepared.samples[0].geometry;
+  let last = prepared.samples[47].geometry;
+  assert!(first.high < last.high, "{} vs {}", first.high, last.high);
+  assert!(first.high > 0.4 && last.high < 0.5);
+  assert_eq!(highlight.color[3], 1.0);
+}
+
+#[test]
 fn no_annotations_prepare_no_arrows() {
   let settings = crate::screenshots::test_output_settings(640, 360);
   let prepared = prepared_arrows(

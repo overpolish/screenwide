@@ -15,7 +15,9 @@
 /// record's `a` (where the source's origin lands) and `b` (one source pixel's
 /// reach). The reveal draws them in reading order, each line over its own
 /// share of it and starting a little after the line before, the way a hand
-/// goes back for the next line.
+/// goes back for the next line. A highlight that moved since the shutter
+/// opened carries exposure samples, each with its own window, and each line is
+/// averaged over them, so its drawing end smears.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT @R"METAL(
 constant uint annotation_highlight_kind = 4u;
 constant uint annotation_highlight_hand_drawn = 1u << 6;
@@ -64,19 +66,19 @@ static float highlight_box(float2 point, float2 low, float2 high, float left_rad
 /// moving it and 1 once it has arrived, so a moving tip reaches exactly as far
 /// as it has drawn.
 ///
-/// `shared` is whether its top and its bottom lie under a neighbouring band,
+/// `joined` is whether its top and its bottom lie under a neighbouring band,
 /// as the strokes laid over a box do. A shared edge runs straight and the
 /// stroke keeps level, so no page shows between neighbours; the edge is under
 /// the neighbour anyway.
 static float highlight_stroke(float2 point, float2 low, float2 high, float from, float to,
-                              float2 settled, float slant, uint seed, float2 shared) {
+                              float2 settled, float slant, uint seed, float2 joined) {
   float band = high.y - low.y;
   // Turned about the band's own centre, not the part drawn so far, so a
   // stroke drawing itself in does not swing as it grows. The turn is held to
   // what moves its ends a tenth of its height, so a long line stays on the
   // text it covers.
   float2 centre = (low + high) * 0.5;
-  float free_hand = 1.0 - max(shared.x, shared.y);
+  float free_hand = 1.0 - max(joined.x, joined.y);
   float most = min(0.026, band * 0.1 / max((high.x - low.x) * 0.5, 1.0));
   float tilt = (highlight_random(seed, 1u) * 2.0 - 1.0) * most * free_hand;
   float2 offset = point - centre;
@@ -91,9 +93,9 @@ static float highlight_stroke(float2 point, float2 low, float2 high, float from,
   float right = to + settled.y * (0.05 + highlight_random(seed, 4u) * 0.3) * band;
   float wave = max(band * 2.6, 1.0);
   float top = -band * 0.5 +
-      band * 0.07 * (1.0 - shared.x) * (highlight_noise(along / wave, seed ^ 5u) * 2.0 - 1.0);
+      band * 0.07 * (1.0 - joined.x) * (highlight_noise(along / wave, seed ^ 5u) * 2.0 - 1.0);
   float bottom = band * 0.5 +
-      band * 0.07 * (1.0 - shared.y) * (highlight_noise(along / wave, seed ^ 6u) * 2.0 - 1.0);
+      band * 0.07 * (1.0 - joined.y) * (highlight_noise(along / wave, seed ^ 6u) * 2.0 - 1.0);
   float radius = band * 0.16;
   float2 outside = float2(max(left - along, along - right), max(top - level.y, level.y - bottom)) + radius;
   return length(max(outside, 0.0)) + min(max(outside.x, outside.y), 0.0) - radius;
@@ -130,13 +132,43 @@ static float3 highlight_recolour(float3 base, float3 colour, float2 tone) {
   return mix(colour, saturate(ink), ink_share);
 }
 
+/// Where one line `span` long is drawn from and to at the reveal `low` to
+/// `high`: it draws itself in over `share` of the reveal, from `begin`.
+static float2 highlight_window(float low, float high, float begin, float share, float span) {
+  return span * saturate((float2(low, high) - begin) / share);
+}
+
+/// How far `point` falls outside the line from `low` to `high` drawn over
+/// `window` along it.
+static float highlight_line(float2 point, float2 low, float2 high, float2 window,
+                            float2 joined, bool hand, uint stroke, float slant) {
+  float span = max(high.x - low.x, 0.0);
+  float height = high.y - low.y;
+  // How far each end has settled: a reveal's moving tip is round, and it
+  // eases into the end's own shape over the last line height it travels.
+  float2 settled = saturate(1.0 - float2(window.x, span - window.y) / max(height, 1.0));
+  if (hand)
+    return highlight_stroke(point, low, high, low.x + window.x, low.x + window.y, settled,
+                            slant, stroke, joined);
+  // The drawn end of a band still being drawn is the marker's round tip.
+  // Settled, a corner on an edge shared with a neighbour is square, so a box
+  // laid in strokes has no notch where two of them meet.
+  // A settled corner is rounded as a one-line text box's is, as a share of
+  // its height: `CORNER` over `LINE_HEIGHT` and twice `PAD_Y`, in
+  // `editor/annotations/text/geometry.rs` and `text/metrics.rs`.
+  float tip = height * 0.5;
+  float square = height * 0.21 * (1.0 - (point.y < (low.y + high.y) * 0.5 ? joined.x : joined.y));
+  return highlight_box(point, float2(low.x + window.x, low.y), float2(low.x + window.y, high.y),
+                       mix(tip, square, settled.x), mix(tip, square, settled.y));
+}
+
 /// Every highlight on the layer `above_camera` names, over `rgba`, each
 /// recolouring `base`. The canvas passes hand the same pixel as both; the live
 /// overlay's is transparent, and `base` is the desktop captured under it.
 static float4 composite_highlights(
     float4 rgba, float4 base, const device AnnotationUniforms *annotations, uint count,
     uint above_camera, float2 point, float pixel_scale,
-    const device packed_float2 *points) {
+    const device packed_float2 *points, const device AnnotationSample *samples) {
   float feather = max(pixel_scale, 1e-4) * 0.5;
   for (uint index = 0; index < count; ++index) {
     const device AnnotationUniforms &annotation = annotations[index];
@@ -162,51 +194,75 @@ static float4 composite_highlights(
     float share = min(1.0, max(0.35, 2.0 / (lines + 1.0)));
     float spacing = pairs > 1u ? (1.0 - share) / (lines - 1.0) : 0.0;
     float halo = max(annotation.hover, 0.0);
+    // The exposure's samples run steadily from the shutter opening to now, so
+    // the first and the last hold every sample's ends between them, and their
+    // opacities' mean is the mean of all of them.
+    uint taps = annotation.sample_count;
+    float2 opened = float2(annotation.arrow.low, annotation.arrow.high);
+    float2 closed = opened;
+    float opacity = 1.0;
+    if (taps > 0u) {
+      const device AnnotationSample &first = samples[annotation.sample_offset];
+      const device AnnotationSample &last = samples[annotation.sample_offset + taps - 1u];
+      opened = float2(first.arrow.low, first.arrow.high);
+      closed = float2(last.arrow.low, last.arrow.high);
+      opacity = (first.opacity + last.opacity) * 0.5;
+    }
     float coverage = 0.0, nearest = 1e20;
     for (uint band = 0u; band < pairs; ++band) {
       uint at = annotation.data_offset + band * 2u;
       float2 low = origin + float2(points[at]) * unit;
       float2 high = origin + float2(points[at + 1u]) * unit;
       float span = max(high.x - low.x, 0.0);
-      float begin = float(band) * spacing;
-      float from = span * saturate((annotation.arrow.low - begin) / share);
-      float to = span * saturate((annotation.arrow.high - begin) / share);
       float height = high.y - low.y;
+      float begin = float(band) * spacing;
+      float2 now =
+          highlight_window(annotation.arrow.low, annotation.arrow.high, begin, share, span);
+      float2 start = highlight_window(opened.x, opened.y, begin, share, span);
+      float2 end = highlight_window(closed.x, closed.y, begin, share, span);
+      float from = min(now.x, min(start.x, end.x));
+      float to = max(now.y, max(start.y, end.y));
       if (to <= from || height <= 0.0) continue;
       float reach = height + halo + feather + 1.0;
       if (point.y < low.y - reach || point.y > high.y + reach ||
           point.x < low.x + from - reach || point.x > low.x + to + reach)
         continue;
-      // How far each end has settled: a reveal's moving tip is round, and it
-      // eases into the end's own shape over the last line height it travels.
-      float2 settled = saturate(1.0 - float2(from, span - to) / max(height, 1.0));
       // Whether its top and its bottom lie under a neighbouring band, as the
       // strokes laid over a box do.
-      float2 shared = float2(
+      float2 joined = float2(
           band > 0u && origin.y + float2(points[at - 1u]).y * unit.y > low.y ? 1.0 : 0.0,
           band + 1u < pairs && origin.y + float2(points[at + 2u]).y * unit.y < high.y ? 1.0
                                                                                       : 0.0);
-      float edge;
-      if (hand) {
-        uint stroke = seed ^ (band * 0x9e3779b9u);
-        float slant = lean * (0.08 + highlight_random(stroke, 10u) * 0.32);
-        edge = highlight_stroke(point, low, high, low.x + from, low.x + to, settled, slant,
-                                stroke, shared);
-      } else {
-        // The drawn end of a band still being drawn is the marker's round tip.
-        // Settled, a corner on an edge shared with a neighbour is square, so a
-        // box laid in strokes has no notch where two of them meet.
-        // A settled corner is rounded as a one-line text box's is, as a share
-        // of its height: `CORNER` over `LINE_HEIGHT` and twice `PAD_Y`, in
-        // `editor/annotations/text/geometry.rs` and `text/metrics.rs`.
-        float tip = height * 0.5;
-        float square = height * 0.21 *
-            (1.0 - (point.y < (low.y + high.y) * 0.5 ? shared.x : shared.y));
-        edge = highlight_box(point, float2(low.x + from, low.y), float2(low.x + to, high.y),
-                             mix(tip, square, settled.x), mix(tip, square, settled.y));
+      uint stroke = seed ^ (band * 0x9e3779b9u);
+      float slant = lean * (0.08 + highlight_random(stroke, 10u) * 0.32);
+      if ((taps == 0u || halo > 0.0) && now.y > now.x) {
+        float edge = highlight_line(point, low, high, now, joined, hand, stroke, slant);
+        nearest = min(nearest, edge);
+        if (taps == 0u) {
+          coverage = max(coverage, annotation_edge(edge, feather));
+          continue;
+        }
       }
-      coverage = max(coverage, annotation_edge(edge, feather));
-      nearest = min(nearest, edge);
+      if (taps == 0u) continue;
+      // More than two line heights inside every sample's ends, every sample
+      // draws this pixel alike, so the last stands for them all.
+      float along = point.x - low.x;
+      float margin = height * 2.0 + feather + 1.0;
+      float line_coverage = 0.0;
+      if (along > max(start.x, end.x) + margin && along < min(start.y, end.y) - margin) {
+        float edge = highlight_line(point, low, high, end, joined, hand, stroke, slant);
+        line_coverage = annotation_edge(edge, feather) * opacity;
+      } else {
+        for (uint tap = 0u; tap < taps; ++tap) {
+          const device AnnotationSample &sample = samples[annotation.sample_offset + tap];
+          float2 window = highlight_window(sample.arrow.low, sample.arrow.high, begin, share, span);
+          if (window.y <= window.x) continue;
+          float edge = highlight_line(point, low, high, window, joined, hand, stroke, slant);
+          line_coverage += annotation_edge(edge, feather) * sample.opacity;
+        }
+        line_coverage /= float(taps);
+      }
+      coverage = max(coverage, line_coverage);
     }
     if (halo > 0.0 && nearest < 1e19) {
       // The ruler's hover halo, hugging the bands from the edge outwards.

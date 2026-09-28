@@ -40,14 +40,16 @@ _Static_assert(sizeof(ScreenwideAnnotationSample) == 96, "Exposure sample ABI");
 /// measures its own.
 static inline uint32_t screenwide_annotation_sample_count(
     const ScreenwideAnnotation *annotation, float sx, float sy) {
-  // A highlight's sweep is drawn with a soft tip of its own, never smeared, so
-  // its reveal's opacity always rides in its colour.
-  if (annotation->kind == SCREENWIDE_ANNOTATION_HIGHLIGHT) return 0;
   AnnotationReveal r = annotation->reveal;
-  float travel = screenwide_annotation_travel(
-      annotation->kind, annotation->p0[0], annotation->p0[1], annotation->p1[0],
-      annotation->p1[1], annotation->p2[0], annotation->p2[1], sx, sy,
-      annotation->width, r);
+  // A highlight's bands are not in its record's points; its record keeps
+  // how far its fastest line end sweeps instead.
+  float travel = annotation->kind == SCREENWIDE_ANNOTATION_HIGHLIGHT
+      ? screenwide_highlight_travel(annotation->p0[0], annotation->p0[1], annotation->p1[0],
+                                    annotation->p1[1], sx, sy, annotation->params[2], r)
+      : screenwide_annotation_travel(
+            annotation->kind, annotation->p0[0], annotation->p0[1], annotation->p1[0],
+            annotation->p1[1], annotation->p2[0], annotation->p2[1], sx, sy,
+            annotation->width, r);
   if (travel < 1.5f && fabsf(r.opacity - r.previous[3]) < 0.01f) return 0;
   return (uint32_t)fminf(fmaxf(ceilf(travel / 0.75f) + 1, 8), 48);
 }

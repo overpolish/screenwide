@@ -37,7 +37,7 @@ kernel void annotate_overlay(
   // Blended over nothing, so the result is already premultiplied - which is
   // what WindowServer composites a non-opaque layer with.
   float4 value = composite_highlights(float4(0), float4(base.rgb, 1.0), annotations, count,
-      above_camera, float2(gid) + 0.5, 1.0, points);
+      above_camera, float2(gid) + 0.5, 1.0, points, samples);
   value = composite_annotations(value, annotations, count, above_camera,
       float2(gid) + 0.5, canvas, float2(1), 1.0, samples, numbers, atlas);
   target.write(value, gid);
