@@ -6,8 +6,8 @@ import { type ReactNode } from "react";
 import { GroupBox } from "../../components/base/group-box/group-box";
 import { PillGroup } from "../../components/base/pill-group/pill-group";
 import { Switch } from "../../components/base/switch/switch";
+import { ControlRow } from "../../components/shared/control-row/control-row";
 import { PathField } from "../../components/shared/path-field/path-field";
-import { Setting } from "../../components/shared/setting/setting";
 import { useRecordingInputStore } from "../recording-inputs/store";
 import { RecordingFps } from "../recording-inputs/types";
 
@@ -65,7 +65,11 @@ export function GeneralSettingsPanel({
     onChange({ ...settings, ...changes });
   };
   const toggle = (item: ToggleItem) => (
-    <Setting description={item.description} key={item.key} title={item.title}>
+    <ControlRow
+      description={item.description}
+      key={item.key}
+      title={item.title}
+    >
       {(controlProps) => (
         <Switch
           {...controlProps}
@@ -76,13 +80,13 @@ export function GeneralSettingsPanel({
           }}
         />
       )}
-    </Setting>
+    </ControlRow>
   );
   return (
     <div className="gap-layout flex flex-col">
       <GroupBox title="Software Update">{updateSetting}</GroupBox>
       <GroupBox title="Appearance">
-        <Setting
+        <ControlRow
           description="Controls and highlights use the system accent colour, or Screenwide's own."
           title="Accent colour"
         >
@@ -103,7 +107,7 @@ export function GeneralSettingsPanel({
               />
             </div>
           )}
-        </Setting>
+        </ControlRow>
       </GroupBox>
       <GroupBox title="Saving">
         {(["recording", "screenshot"] as const).map((kind) => {
@@ -112,7 +116,7 @@ export function GeneralSettingsPanel({
           const title =
             kind === "recording" ? "Recording folder" : "Screenshot folder";
           return (
-            <Setting
+            <ControlRow
               description="You can choose a different folder when saving."
               key={kind}
               title={title}
@@ -143,13 +147,13 @@ export function GeneralSettingsPanel({
                   />
                 </div>
               )}
-            </Setting>
+            </ControlRow>
           );
         })}
       </GroupBox>
       <GroupBox title="Recording">
         {toggle(recordingToggle)}
-        <Setting title="Recording countdown">
+        <ControlRow title="Recording countdown">
           {(controlProps) => (
             <div {...controlProps} role="group">
               <PillGroup
@@ -170,8 +174,8 @@ export function GeneralSettingsPanel({
               />
             </div>
           )}
-        </Setting>
-        <Setting
+        </ControlRow>
+        <ControlRow
           description="More frames look smoother and make a larger file."
           title="Frame rate"
         >
@@ -191,7 +195,7 @@ export function GeneralSettingsPanel({
               />
             </div>
           )}
-        </Setting>
+        </ControlRow>
       </GroupBox>
       <GroupBox title="Capture">{toggle(captureToggle)}</GroupBox>
       <GroupBox title="Startup">

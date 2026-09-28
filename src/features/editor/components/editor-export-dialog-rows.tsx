@@ -7,7 +7,7 @@ import { Text } from "../../../components/base/text/text";
 import { cn } from "../../../lib/styling";
 import { PopupSelect } from "../../popup-panel/popup-select";
 
-import type { SettingControlProps } from "../../../components/shared/setting/setting";
+import type { ControlRowControlProps } from "../../../components/shared/control-row/control-row";
 
 /** Compression levels are the numbers the export backend takes, 0 through 4. */
 const compressionOptions = [
@@ -29,7 +29,7 @@ export function ExportRow({
   description,
   title,
 }: {
-  children: (controlProps: SettingControlProps) => ReactNode;
+  children: (controlProps: ControlRowControlProps) => ReactNode;
   title: string;
   controlClassName?: string;
   description?: string;
@@ -75,7 +75,7 @@ export function CompressionSelect({
   onChange,
   value,
   ...props
-}: SettingControlProps & {
+}: ControlRowControlProps & {
   /** Names the pop-up to the panel window; unique per control. */
   id: string;
   value: number;

@@ -5,9 +5,9 @@ import { RotateCcw } from "lucide-react";
 
 import { Button } from "../../../components/base/button/button";
 import { IconButton } from "../../../components/base/button/icon-button";
-import { Checkbox } from "../../../components/base/checkbox/checkbox";
 import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
+import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { Dimensions } from "../../../components/shared/dimensions/dimensions";
 import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
 import { EditorKind } from "../types";
@@ -58,33 +58,38 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
   // the reset is out of reach exactly while it is already there.
   if (selection.kind === "audio") {
     return (
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Volume</span>
-        <div className="flex items-center gap-control">
-          <IconButton
-            aria-label="Reset volume"
-            isDisabled={isLocked || selection.decibels === 0}
-            onPress={() => {
-              change({ audioVolume: 0 });
-            }}
+      <ControlRow title="Volume">
+        {(controlProps) => (
+          <div
+            {...controlProps}
+            className="flex items-center gap-control"
+            role="group"
           >
-            <RotateCcw />
-          </IconButton>
-          <SliderNumberField
-            aria-label="Volume"
-            className="w-48"
-            isDisabled={isLocked}
-            maxValue={12}
-            minValue={-60}
-            onChange={(decibels) => {
-              change({ audioVolume: decibels });
-            }}
-            rightSection="dB"
-            step={1}
-            value={selection.decibels}
-          />
-        </div>
-      </div>
+            <IconButton
+              aria-label="Reset volume"
+              isDisabled={isLocked || selection.decibels === 0}
+              onPress={() => {
+                change({ audioVolume: 0 });
+              }}
+            >
+              <RotateCcw />
+            </IconButton>
+            <SliderNumberField
+              aria-label="Volume"
+              className="w-48"
+              isDisabled={isLocked}
+              maxValue={12}
+              minValue={-60}
+              onChange={(decibels) => {
+                change({ audioVolume: decibels });
+              }}
+              rightSection="dB"
+              step={1}
+              value={selection.decibels}
+            />
+          </div>
+        )}
+      </ControlRow>
     );
   }
 
@@ -99,17 +104,18 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
           of its own. It takes both tracks, so it is out of reach with either
           one left out. */}
       {selection.kind === "camera" ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Combine with screen</span>
-          <Switch
-            aria-label="Combine with screen"
-            isDisabled={isLocked || !selection.canBake}
-            isSelected={Boolean(selection.isBaked)}
-            onChange={(bake) => {
-              change({ bakeCamera: bake });
-            }}
-          />
-        </div>
+        <ControlRow title="Combine with screen">
+          {(controlProps) => (
+            <Switch
+              {...controlProps}
+              isDisabled={isLocked || !selection.canBake}
+              isSelected={Boolean(selection.isBaked)}
+              onChange={(bake) => {
+                change({ bakeCamera: bake });
+              }}
+            />
+          )}
+        </ControlRow>
       ) : null}
 
       {/* `Dimensions` has no disabled state of its own: a save takes the whole
@@ -136,57 +142,69 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
         />
       </div>
 
-      <Checkbox
-        isDisabled={isLocked}
-        isSelected={selection.dropShadow}
-        onChange={(next) => {
-          change({ selectionDropShadow: next });
-        }}
-      >
-        <span className="text-body">Drop shadow</span>
-      </Checkbox>
+      <ControlRow title="Drop shadow">
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isDisabled={isLocked}
+            isSelected={selection.dropShadow}
+            onChange={(next) => {
+              change({ selectionDropShadow: next });
+            }}
+          />
+        )}
+      </ControlRow>
 
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Radius</span>
-        <SliderNumberField
-          aria-label="Radius"
-          className="w-48"
-          formatOptions={{ maximumFractionDigits: 1, minimumFractionDigits: 1 }}
-          isDisabled={isLocked}
-          maxValue={50}
-          minValue={0}
-          onChange={(radius) => {
-            change({ selectionRadius: radius });
-          }}
-          rightSection="%"
-          step={0.1}
-          value={selection.radius}
-        />
-      </div>
+      <ControlRow title="Radius">
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <SliderNumberField
+              aria-label="Radius"
+              className="w-48"
+              formatOptions={{
+                maximumFractionDigits: 1,
+                minimumFractionDigits: 1,
+              }}
+              isDisabled={isLocked}
+              maxValue={50}
+              minValue={0}
+              onChange={(radius) => {
+                change({ selectionRadius: radius });
+              }}
+              rightSection="%"
+              step={0.1}
+              value={selection.radius}
+            />
+          </div>
+        )}
+      </ControlRow>
 
       {/* A camera track is placed in the screen's picture rather than padded
           against a colour of its own, so it is offered no padding. */}
       {selection.kind === "camera" ? null : (
         <div className="flex flex-col gap-section">
-          <div className="flex items-center justify-between gap-section">
-            <span className="text-body text-content-fg">Inset</span>
-            {/* The bridge carries one kind of request, so every value the knob
-                passes is committed as it is reached; the draft holds the one
-                just sent until the editor answers with it. */}
-            <SliderNumberField
-              aria-label="Inset"
-              className="w-48"
-              isDisabled={isLocked}
-              maxValue={Number.MAX_SAFE_INTEGER}
-              minValue={0}
-              onChange={(inset) => {
-                change({ selectionInset: inset });
-              }}
-              rightSection="px"
-              sliderMaxValue={Math.max(1, selection.insetMaximum)}
-              value={selection.inset}
-            />
-          </div>
+          <ControlRow title="Inset">
+            {(controlProps) => (
+              <div {...controlProps} role="group">
+                {/* The bridge carries one kind of request, so every value the
+                    knob passes is committed as it is reached; the draft holds
+                    the one just sent until the editor answers with it. */}
+                <SliderNumberField
+                  aria-label="Inset"
+                  className="w-48"
+                  isDisabled={isLocked}
+                  maxValue={Number.MAX_SAFE_INTEGER}
+                  minValue={0}
+                  onChange={(inset) => {
+                    change({ selectionInset: inset });
+                  }}
+                  rightSection="px"
+                  sliderMaxValue={Math.max(1, selection.insetMaximum)}
+                  value={selection.inset}
+                />
+              </div>
+            )}
+          </ControlRow>
           <div className="flex justify-end">
             <Button
               isDisabled={isLocked}

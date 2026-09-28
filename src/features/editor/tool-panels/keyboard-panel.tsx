@@ -9,6 +9,7 @@ import { NumberField } from "../../../components/base/input-fields/number-field"
 import { PillGroup } from "../../../components/base/pill-group/pill-group";
 import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
+import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
 import { keyboardDefaultCenter } from "../keyboard-effect-geometry";
 import {
@@ -73,119 +74,130 @@ export function KeyboardPanel({ workspace }: { workspace: EditorKind }) {
 
   return (
     <div className="flex flex-col gap-section">
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Show shortcuts</span>
-        <Switch
-          aria-label="Show shortcuts"
-          isDisabled={isLocked}
-          isSelected={keyboardEffects.bake}
-          onChange={(bake) => {
-            change({ keyboardEffects: { bake } });
-          }}
-        />
-      </div>
-
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Size</span>
-        <SliderNumberField
-          aria-label="Size"
-          className="w-48"
-          isDisabled={isDisabled}
-          maxValue={maximum}
-          minValue={minimum}
-          onChange={(next) => {
-            change({ keyboardEffects: { sizePercent: next } });
-          }}
-          rightSection="%"
-          step={5}
-          value={sizePercent}
-        />
-      </div>
-
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Position</span>
-        <div className="flex gap-control">
-          <IconButton
-            aria-label="Reset position"
-            isDisabled={
-              isDisabled ||
-              (keyboardEffects.positionXPercent === undefined &&
-                keyboardEffects.positionYPercent === undefined)
-            }
-            onPress={() => {
-              change({ resetKeyboardPosition: true });
+      <ControlRow title="Show shortcuts">
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isDisabled={isLocked}
+            isSelected={keyboardEffects.bake}
+            onChange={(bake) => {
+              change({ keyboardEffects: { bake } });
             }}
-          >
-            <RotateCcw />
-          </IconButton>
-          <NumberField
-            aria-label="Shortcut X position"
-            className="w-20"
-            isDisabled={isDisabled}
-            leftSection="X"
-            maxValue={100}
-            minValue={0}
-            onChange={(positionXPercent) => {
-              change({ keyboardEffects: { positionXPercent } });
-            }}
-            rightSection="%"
-            showSteppers={false}
-            step={1}
-            value={position.x * 100}
           />
-          <NumberField
-            aria-label="Shortcut Y position"
-            className="w-20"
-            isDisabled={isDisabled}
-            leftSection="Y"
-            maxValue={100}
-            minValue={0}
-            onChange={(positionYPercent) => {
-              change({ keyboardEffects: { positionYPercent } });
-            }}
-            rightSection="%"
-            showSteppers={false}
-            step={1}
-            value={position.y * 100}
-          />
-        </div>
-      </div>
+        )}
+      </ControlRow>
 
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Animation</span>
-        <PillGroup
-          aria-label="Animation"
-          display="label"
-          isDisabled={isDisabled}
-          items={animationOptions}
-          onSelectionChange={(animation) => {
-            change({
-              keyboardEffects: {
-                animation: animation as KeyboardEffectAnimation,
-              },
-            });
-          }}
-          selected={keyboardEffects.animation}
-        />
-      </div>
+      <ControlRow title="Size">
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <SliderNumberField
+              aria-label="Size"
+              className="w-48"
+              isDisabled={isDisabled}
+              maxValue={maximum}
+              minValue={minimum}
+              onChange={(next) => {
+                change({ keyboardEffects: { sizePercent: next } });
+              }}
+              rightSection="%"
+              step={5}
+              value={sizePercent}
+            />
+          </div>
+        )}
+      </ControlRow>
 
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Appearance</span>
-        <PillGroup
-          aria-label="Appearance"
-          display="label"
-          isDisabled={isDisabled}
-          items={appearanceOptions}
-          onSelectionChange={(appearance) => {
-            change({
-              keyboardEffects: {
-                appearance: appearance as KeyboardEffectAppearance,
-              },
-            });
-          }}
-          selected={keyboardEffects.appearance}
-        />
-      </div>
+      <ControlRow title="Position">
+        {(controlProps) => (
+          <div {...controlProps} className="flex gap-control" role="group">
+            <IconButton
+              aria-label="Reset position"
+              isDisabled={
+                isDisabled ||
+                (keyboardEffects.positionXPercent === undefined &&
+                  keyboardEffects.positionYPercent === undefined)
+              }
+              onPress={() => {
+                change({ resetKeyboardPosition: true });
+              }}
+            >
+              <RotateCcw />
+            </IconButton>
+            <NumberField
+              aria-label="Shortcut X position"
+              className="w-20"
+              isDisabled={isDisabled}
+              leftSection="X"
+              maxValue={100}
+              minValue={0}
+              onChange={(positionXPercent) => {
+                change({ keyboardEffects: { positionXPercent } });
+              }}
+              rightSection="%"
+              showSteppers={false}
+              step={1}
+              value={position.x * 100}
+            />
+            <NumberField
+              aria-label="Shortcut Y position"
+              className="w-20"
+              isDisabled={isDisabled}
+              leftSection="Y"
+              maxValue={100}
+              minValue={0}
+              onChange={(positionYPercent) => {
+                change({ keyboardEffects: { positionYPercent } });
+              }}
+              rightSection="%"
+              showSteppers={false}
+              step={1}
+              value={position.y * 100}
+            />
+          </div>
+        )}
+      </ControlRow>
+
+      <ControlRow title="Animation">
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <PillGroup
+              aria-label="Animation"
+              display="label"
+              isDisabled={isDisabled}
+              items={animationOptions}
+              onSelectionChange={(animation) => {
+                change({
+                  keyboardEffects: {
+                    animation: animation as KeyboardEffectAnimation,
+                  },
+                });
+              }}
+              selected={keyboardEffects.animation}
+            />
+          </div>
+        )}
+      </ControlRow>
+
+      <ControlRow title="Appearance">
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <PillGroup
+              aria-label="Appearance"
+              display="label"
+              isDisabled={isDisabled}
+              items={appearanceOptions}
+              onSelectionChange={(appearance) => {
+                change({
+                  keyboardEffects: {
+                    appearance: appearance as KeyboardEffectAppearance,
+                  },
+                });
+              }}
+              selected={keyboardEffects.appearance}
+            />
+          </div>
+        )}
+      </ControlRow>
 
       <div className="flex justify-end gap-control">
         <Button

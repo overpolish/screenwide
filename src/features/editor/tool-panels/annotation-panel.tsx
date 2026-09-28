@@ -15,6 +15,7 @@ import { AnnotationHeadGroup } from "../../../components/shared/annotation-style
 import { AnnotationRadiusField } from "../../../components/shared/annotation-style/annotation-radius-field";
 import { AnnotationWidthSlider } from "../../../components/shared/annotation-style/annotation-width-slider";
 import { redactionSizePresets } from "../../../components/shared/annotation-style/widths";
+import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { ANNOTATION_KINDS } from "../annotation-kinds";
 import { EditorKind } from "../types";
 
@@ -97,97 +98,113 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       ) : null}
 
       {kind.hasFit ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Fit</span>
-          <AnnotationFitGroup
-            isDisabled={isLocked}
-            onChange={(next) => {
-              change({ annotationStyle: { manual: next } });
-            }}
-            value={manual}
-          />
-        </div>
+        <ControlRow title="Fit">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationFitGroup
+                isDisabled={isLocked}
+                onChange={(next) => {
+                  change({ annotationStyle: { manual: next } });
+                }}
+                value={manual}
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : null}
 
       {showsSize ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">{kind.sizeLabel}</span>
-          <AnnotationWidthSlider
-            isDisabled={isLocked}
-            label={kind.sizeLabel}
-            onChange={(next) => {
-              change({ annotationStyle: { width: next } });
-            }}
-            presets={redactionSizePresets(redaction, kind.sizes)}
-            value={width}
-          />
-        </div>
+        <ControlRow title={kind.sizeLabel}>
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationWidthSlider
+                isDisabled={isLocked}
+                label={kind.sizeLabel}
+                onChange={(next) => {
+                  change({ annotationStyle: { width: next } });
+                }}
+                presets={redactionSizePresets(redaction, kind.sizes)}
+                value={width}
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : null}
 
       {/* A counter is aimed by its tail, on the picture or here. The dial's
           notch stands where the tail does, and a held Shift snaps it to the
           same eighth of a turn a drag on the picture snaps to. */}
       {kind.hasAngle ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Angle</span>
-          <AnnotationAngleDial
-            isDisabled={isLocked}
-            onChange={(next) => {
-              change({ annotationAngle: next });
-            }}
-            value={annotation.angle ?? 0}
-          />
-        </div>
+        <ControlRow title="Angle">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationAngleDial
+                isDisabled={isLocked}
+                onChange={(next) => {
+                  change({ annotationAngle: next });
+                }}
+                value={annotation.angle ?? 0}
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : null}
 
       {kind.hasHandDrawn ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Hand-drawn</span>
-          <AnnotationHandDrawnToggle
-            isDisabled={isLocked}
-            isSelected={handDrawn}
-            onChange={(next) => {
-              change({ annotationStyle: { handDrawn: next } });
-            }}
-            onRandomise={
-              isDraft
-                ? undefined
-                : () => {
-                    change({ shuffleAnnotation: true });
-                  }
-            }
-          />
-        </div>
+        <ControlRow title="Hand-drawn">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationHandDrawnToggle
+                isDisabled={isLocked}
+                isSelected={handDrawn}
+                onChange={(next) => {
+                  change({ annotationStyle: { handDrawn: next } });
+                }}
+                onRandomise={
+                  isDraft
+                    ? undefined
+                    : () => {
+                        change({ shuffleAnnotation: true });
+                      }
+                }
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : null}
 
       {/* Drawing in and out happens over a clip, and only a recording has
           one: a screenshot is one instant, so there is no time for an
           annotation to arrive over and the row is not offered there at all. */}
       {animates ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Animate</span>
-          <Switch
-            aria-label="Animate"
-            isDisabled={isLocked}
-            isSelected={annotation.animated}
-            onChange={(next) => {
-              change({ annotationAnimated: next });
-            }}
-          />
-        </div>
+        <ControlRow title="Animate">
+          {(controlProps) => (
+            <Switch
+              {...controlProps}
+              isDisabled={isLocked}
+              isSelected={annotation.animated}
+              onChange={(next) => {
+                change({ annotationAnimated: next });
+              }}
+            />
+          )}
+        </ControlRow>
       ) : null}
 
       {kind.hasHead ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Head</span>
-          <AnnotationHeadGroup
-            isDisabled={isLocked}
-            onChange={(next) => {
-              change({ annotationStyle: { head: next } });
-            }}
-            value={head}
-          />
-        </div>
+        <ControlRow title="Head">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationHeadGroup
+                isDisabled={isLocked}
+                onChange={(next) => {
+                  change({ annotationStyle: { head: next } });
+                }}
+                value={head}
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : null}
 
       {/* The head rides the end point, so turning the annotation round points it
@@ -195,45 +212,54 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           on the picture uses. A counter is aimed by its tail instead, on the
           picture itself. */}
       {kind.reversible && !isDraft ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Direction</span>
-          <Button
-            aria-label="Reverse the arrow"
-            isDisabled={isLocked}
-            onPress={() => {
-              change({ reverseAnnotation: true });
-            }}
-          >
-            <ArrowLeftRight aria-hidden="true" />
-            Reverse
-          </Button>
-        </div>
+        <ControlRow title="Direction">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <Button
+                aria-label="Reverse the arrow"
+                isDisabled={isLocked}
+                onPress={() => {
+                  change({ reverseAnnotation: true });
+                }}
+              >
+                <ArrowLeftRight aria-hidden="true" />
+                Reverse
+              </Button>
+            </div>
+          )}
+        </ControlRow>
       ) : null}
 
       {kind.hasAlign ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Alignment</span>
-          <AnnotationAlignGroup
-            isDisabled={isLocked}
-            onChange={(next) => {
-              change({ annotationStyle: { align: next } });
-            }}
-            value={align}
-          />
-        </div>
+        <ControlRow title="Alignment">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationAlignGroup
+                isDisabled={isLocked}
+                onChange={(next) => {
+                  change({ annotationStyle: { align: next } });
+                }}
+                value={align}
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : null}
 
       {kind.hasRedaction ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Radius</span>
-          <AnnotationRadiusField
-            isDisabled={isLocked}
-            onChange={(next) => {
-              change({ annotationStyle: { radius: next } });
-            }}
-            value={radius}
-          />
-        </div>
+        <ControlRow title="Radius">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationRadiusField
+                isDisabled={isLocked}
+                onChange={(next) => {
+                  change({ annotationStyle: { radius: next } });
+                }}
+                value={radius}
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : null}
 
       {/* The swatches say what they are, so the row carries no heading; it

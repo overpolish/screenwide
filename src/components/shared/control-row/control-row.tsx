@@ -6,13 +6,13 @@ import { useId, type ReactNode } from "react";
 import { cn } from "../../../lib/styling";
 import { Text } from "../../base/text/text";
 
-export type SettingControlProps = {
+export type ControlRowControlProps = {
   "aria-labelledby": string;
   "aria-describedby"?: string;
 };
 
-export type SettingProps = {
-  children: (controlProps: SettingControlProps) => ReactNode;
+export type ControlRowProps = {
+  children: (controlProps: ControlRowControlProps) => ReactNode;
   title: string;
   className?: string;
   controlClassName?: string;
@@ -26,7 +26,7 @@ export type SettingProps = {
 /** Spread controlProps onto the actual control, not its layout wrapper.
  * The parent owns spacing between rows; the row itself is not clickable.
  */
-export function Setting({
+export function ControlRow({
   children,
   className,
   controlClassName,
@@ -34,14 +34,15 @@ export function Setting({
   leading,
   title,
   titleAccessory,
-}: SettingProps) {
+}: ControlRowProps) {
   const id = useId();
   const titleId = `${id}-title`;
   const descriptionId = description ? `${id}-description` : undefined;
 
   return (
-    // A settings row as System Settings lays one out: title with its
-    // description directly beneath, and the control trailing.
+    // A labelled control row as System Settings and inspector panels lay one
+    // out: title with its description directly beneath, and the control
+    // trailing.
     <div className={cn("flex items-center gap-layout", className)}>
       {leading ? (
         <div className="-mr-section flex shrink-0 items-center">{leading}</div>

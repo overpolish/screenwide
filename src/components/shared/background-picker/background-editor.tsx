@@ -7,6 +7,7 @@ import { Button } from "../../base/button/button";
 import { ColorPaletteGenerator } from "../../base/input-fields/color-palette-generator";
 import { ColorSwatch } from "../../base/input-fields/color-swatch";
 import { PillGroup } from "../../base/pill-group/pill-group";
+import { ControlRow } from "../control-row/control-row";
 
 import { Background } from "./background";
 import {
@@ -81,49 +82,55 @@ export function BackgroundEditor({
 
   return (
     <div className="flex flex-col gap-control-inset">
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Type</span>
-        <PillGroup
-          aria-label="Background type"
-          display="label"
-          isDisabled={isDisabled}
-          items={backgroundKinds.map((item) =>
-            item.id === "mesh"
-              ? {
-                  ...item,
-                  onPress: () => {
-                    if (kind === "mesh" && mesh) {
-                      changeMesh(randomizeMeshBackground(mesh));
+      <ControlRow title="Type">
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <PillGroup
+              aria-label="Background type"
+              display="label"
+              isDisabled={isDisabled}
+              items={backgroundKinds.map((item) =>
+                item.id === "mesh"
+                  ? {
+                      ...item,
+                      onPress: () => {
+                        if (kind === "mesh" && mesh) {
+                          changeMesh(randomizeMeshBackground(mesh));
+                        }
+                      },
                     }
-                  },
+                  : item,
+              )}
+              onSelectionChange={(nextKind) => {
+                if (nextKind === "solid") {
+                  onChange({ color: solidColor, kind: "solid" });
+                  return;
                 }
-              : item,
-          )}
-          onSelectionChange={(nextKind) => {
-            if (nextKind === "solid") {
-              onChange({ color: solidColor, kind: "solid" });
-              return;
-            }
-            changeMesh(
-              mesh ? randomizeMeshBackground(mesh) : randomMeshBackground(),
-            );
-          }}
-          selected={kind}
-        />
-      </div>
+                changeMesh(
+                  mesh ? randomizeMeshBackground(mesh) : randomMeshBackground(),
+                );
+              }}
+              selected={kind}
+            />
+          </div>
+        )}
+      </ControlRow>
 
       {kind === "solid" || !mesh ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Colour</span>
-          <ColorSwatch
-            ariaLabel="Background colour"
-            isDisabled={isDisabled}
-            onChange={(color) => {
-              onChange({ color, kind: "solid" });
-            }}
-            value={solidColor}
-          />
-        </div>
+        <ControlRow title="Colour">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <ColorSwatch
+                ariaLabel="Background colour"
+                isDisabled={isDisabled}
+                onChange={(color) => {
+                  onChange({ color, kind: "solid" });
+                }}
+                value={solidColor}
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : (
         <ColorPaletteGenerator
           colors={palette}

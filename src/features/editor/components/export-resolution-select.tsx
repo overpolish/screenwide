@@ -3,7 +3,7 @@
 
 import { PopupSelect } from "../../popup-panel/popup-select";
 
-import type { SettingControlProps } from "../../../components/shared/setting/setting";
+import type { ControlRowControlProps } from "../../../components/shared/control-row/control-row";
 
 export type ExportResolutionItem = {
   height: number;
@@ -27,7 +27,7 @@ export function ExportResolutionSelect({
   onChange,
   value,
   ...props
-}: SettingControlProps & {
+}: ControlRowControlProps & {
   /** Names the pop-up to the panel window; unique per control. */
   id: string;
   items: ExportResolutionItem[];

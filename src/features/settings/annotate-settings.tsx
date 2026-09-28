@@ -3,8 +3,8 @@
 
 import { GroupBox } from "../../components/base/group-box/group-box";
 import { Switch } from "../../components/base/switch/switch";
+import { ControlRow } from "../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../components/shared/hotkey-field/hotkey-field";
-import { Setting } from "../../components/shared/setting/setting";
 
 import type { AnnotateSettings } from "./types";
 
@@ -38,7 +38,7 @@ export function AnnotateSettingsPanel({
   return (
     <div className="gap-layout flex flex-col">
       <GroupBox title="Annotate">
-        <Setting
+        <ControlRow
           description="Draw on your screen, and keep the annotations in a recording."
           title="Use Annotate"
         >
@@ -52,8 +52,8 @@ export function AnnotateSettingsPanel({
               }}
             />
           )}
-        </Setting>
-        <Setting title="Draw on the screen">
+        </ControlRow>
+        <ControlRow title="Draw on the screen">
           {(controlProps) => (
             <HotkeyField
               aria-describedby={controlProps["aria-describedby"]}
@@ -65,8 +65,8 @@ export function AnnotateSettingsPanel({
               value={activation}
             />
           )}
-        </Setting>
-        <Setting
+        </ControlRow>
+        <ControlRow
           description="They stay on screen until you clear them."
           title="Keep annotations after exiting"
         >
@@ -80,8 +80,8 @@ export function AnnotateSettingsPanel({
               }}
             />
           )}
-        </Setting>
-        <Setting title="Clear annotations">
+        </ControlRow>
+        <ControlRow title="Clear annotations">
           {(controlProps) => (
             <HotkeyField
               aria-describedby={controlProps["aria-describedby"]}
@@ -93,7 +93,7 @@ export function AnnotateSettingsPanel({
               value={clear}
             />
           )}
-        </Setting>
+        </ControlRow>
       </GroupBox>
     </div>
   );

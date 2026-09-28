@@ -3,8 +3,8 @@
 
 import { GroupBox } from "../../components/base/group-box/group-box";
 import { Switch } from "../../components/base/switch/switch";
+import { ControlRow } from "../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../components/shared/hotkey-field/hotkey-field";
-import { Setting } from "../../components/shared/setting/setting";
 import { SliderNumberField } from "../../components/shared/slider-number-field/slider-number-field";
 
 import type { GlideSettings } from "./types";
@@ -51,7 +51,7 @@ export function GlideSettingsPanel({
   return (
     <div className="gap-layout flex flex-col">
       <GroupBox title="Glide">
-        <Setting
+        <ControlRow
           description="Move and resize windows to fit your screen."
           title="Use Glide"
         >
@@ -65,7 +65,7 @@ export function GlideSettingsPanel({
               }}
             />
           )}
-        </Setting>
+        </ControlRow>
       </GroupBox>
       <GroupBox title="Controls">
         {(
@@ -95,7 +95,7 @@ export function GlideSettingsPanel({
                     : "Modifier for virtual desktops"
                   : "Modifier for Monitors";
           return (
-            <Setting
+            <ControlRow
               description={
                 key === "mouseModifier"
                   ? "Hold while moving from a window's top bar."
@@ -134,12 +134,12 @@ export function GlideSettingsPanel({
                   value={settings[key]}
                 />
               )}
-            </Setting>
+            </ControlRow>
           );
         })}
       </GroupBox>
       <GroupBox title="Behavior">
-        <Setting title="Space around windows">
+        <ControlRow title="Space around windows">
           {(controlProps) => (
             <div {...controlProps} role="group">
               <SliderNumberField
@@ -156,11 +156,11 @@ export function GlideSettingsPanel({
               />
             </div>
           )}
-        </Setting>
+        </ControlRow>
         {toggles
           .filter(({ macOnly }) => !macOnly || isMac)
           .map((toggle) => (
-            <Setting
+            <ControlRow
               description={
                 "description" in toggle ? toggle.description : undefined
               }
@@ -177,7 +177,7 @@ export function GlideSettingsPanel({
                   }}
                 />
               )}
-            </Setting>
+            </ControlRow>
           ))}
       </GroupBox>
     </div>

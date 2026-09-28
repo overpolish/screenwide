@@ -8,7 +8,7 @@ import { TooltipTrigger } from "react-aria-components";
 import { Badge } from "../../components/base/badge/badge";
 import { Button } from "../../components/base/button/button";
 import { Tooltip } from "../../components/base/tooltip/tooltip";
-import { Setting } from "../../components/shared/setting/setting";
+import { ControlRow } from "../../components/shared/control-row/control-row";
 import { cn } from "../../lib/styling";
 
 import { PermissionKind, PermissionStatus } from "./types";
@@ -39,7 +39,7 @@ export function PermissionRow({
   };
 
   return (
-    <Setting
+    <ControlRow
       description={description}
       leading={
         <div
@@ -68,6 +68,6 @@ export function PermissionRow({
           </TooltipTrigger>
         )
       }
-    </Setting>
+    </ControlRow>
   );
 }

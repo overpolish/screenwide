@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 
 import { Alert } from "../../components/base/alert/alert";
 import { Button } from "../../components/base/button/button";
-import { Setting } from "../../components/shared/setting/setting";
+import { ControlRow } from "../../components/shared/control-row/control-row";
 
 import { useSettingsUpdate } from "./use-settings-update";
 
@@ -25,7 +25,7 @@ export function SoftwareUpdateSetting({
     (status === "available" || status === "downloading") && updateVersion;
   return (
     <>
-      <Setting
+      <ControlRow
         className="tabular-nums"
         description={currentVersion ? `Version ${currentVersion}` : undefined}
         title="Screenwide"
@@ -50,7 +50,7 @@ export function SoftwareUpdateSetting({
             </Button>
           )
         }
-      </Setting>
+      </ControlRow>
       {error ? (
         <Alert color="error" role="alert">
           {error}

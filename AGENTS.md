@@ -29,7 +29,7 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - Use `WindowHeader` for window titles. Its display variant is the default; version text belongs in its actions area and uses the mono font.
 - Window layout owns the inset and header/content gap. Use flex/grid gaps for sibling separation rather than adding spacing inside the header.
 - Use `ScrollArea` for scrolling regions. With `edgeEffect="inset"` it owns its inner padding and provides the recessed content treatment. Settings sections are separated by spacing only: no borders, dividers, or blur.
-- Use `Setting` for title/control rows. Descriptions are optional: omit them when the label is sufficient, otherwise use plain language and at most ten words in Settings. Avoid repeating the label.
+- Use `ControlRow` for title/control rows, in Settings and editor tool panels alike. Descriptions are optional: omit them when the label is sufficient, otherwise use plain language and at most ten words in Settings. Avoid repeating the label.
 - Use switches for settings that take effect immediately. Use checkboxes for selection or checklist semantics, such as release-note task lists.
 - Use `Text` for body/help copy, `Keyboard` and `Shortcut` for shortcut display, `HotkeyField` for capture, and `PathField` for file/folder controls.
 - Use Lucide icons. Size them through the shared control sizing, not through ancestor selectors that reach into nested primitives.

@@ -3,25 +3,25 @@
 
 import { Meta, StoryObj } from "@storybook/react-vite";
 
-import { Setting } from "../../shared/setting/setting";
+import { ControlRow } from "../../shared/control-row/control-row";
 import { Switch } from "../switch/switch";
 
 import { GroupBox } from "./group-box";
 
 const rows = (
   <>
-    <Setting
+    <ControlRow
       description="Show the containing folder after a successful export."
       title="Open location after export"
     >
       {(controlProps) => <Switch {...controlProps} defaultSelected />}
-    </Setting>
-    <Setting
+    </ControlRow>
+    <ControlRow
       description="Play a sound when a recording starts and stops."
       title="Sounds"
     >
       {(controlProps) => <Switch {...controlProps} />}
-    </Setting>
+    </ControlRow>
   </>
 );
 

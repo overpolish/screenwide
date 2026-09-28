@@ -4,14 +4,17 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { Setting } from "./setting";
+import { ControlRow } from "./control-row";
 
-describe("Setting", () => {
+describe("ControlRow", () => {
   it("links the control to its title and description", () => {
     const html = renderToStaticMarkup(
-      <Setting description="Show the exported file." title="Open after export">
+      <ControlRow
+        description="Show the exported file."
+        title="Open after export"
+      >
         {(props) => <button {...props}>Configure</button>}
-      </Setting>,
+      </ControlRow>,
     );
     const titleId = html.match(/id="([^"]+-title)"/)?.[1];
     const descriptionId = html.match(/id="([^"]+-description)"/)?.[1];
@@ -23,9 +26,9 @@ describe("Setting", () => {
 
   it("omits the description association when there is no description", () => {
     const html = renderToStaticMarkup(
-      <Setting title="Launch at login">
+      <ControlRow title="Launch at login">
         {(props) => <button {...props}>Configure</button>}
-      </Setting>,
+      </ControlRow>,
     );
     expect(html).not.toContain("aria-describedby");
     expect(html).not.toContain("-description");

@@ -3,8 +3,8 @@
 
 import { GroupBox } from "../../components/base/group-box/group-box";
 import { Switch } from "../../components/base/switch/switch";
+import { ControlRow } from "../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../components/shared/hotkey-field/hotkey-field";
-import { Setting } from "../../components/shared/setting/setting";
 
 import type { OcrAction, OcrSettings } from "./types";
 
@@ -47,7 +47,7 @@ export function OcrSettingsPanel({
   return (
     <div className="gap-layout flex flex-col">
       <GroupBox title="OCR">
-        <Setting
+        <ControlRow
           description="Select text or a QR code on your screen."
           title="Use OCR"
         >
@@ -61,8 +61,8 @@ export function OcrSettingsPanel({
               }}
             />
           )}
-        </Setting>
-        <Setting title="Read text or a QR code">
+        </ControlRow>
+        <ControlRow title="Read text or a QR code">
           {(controlProps) => (
             <HotkeyField
               aria-describedby={controlProps["aria-describedby"]}
@@ -74,11 +74,11 @@ export function OcrSettingsPanel({
               value={activation}
             />
           )}
-        </Setting>
+        </ControlRow>
       </GroupBox>
       <GroupBox title="Shortcuts">
         {actions.map(({ action, description, label }) => (
-          <Setting description={description} key={action} title={label}>
+          <ControlRow description={description} key={action} title={label}>
             {(controlProps) => (
               <HotkeyField
                 aria-describedby={controlProps["aria-describedby"]}
@@ -95,7 +95,7 @@ export function OcrSettingsPanel({
                 value={settings.bindings[action]}
               />
             )}
-          </Setting>
+          </ControlRow>
         ))}
       </GroupBox>
     </div>

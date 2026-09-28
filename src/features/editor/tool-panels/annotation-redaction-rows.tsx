@@ -12,6 +12,7 @@ import {
   annotationWidthIndex,
   redactionSizePresets,
 } from "../../../components/shared/annotation-style/widths";
+import { ControlRow } from "../../../components/shared/control-row/control-row";
 
 import type { ToolPanelPatch } from "./tool-panel-store";
 
@@ -53,46 +54,52 @@ export function AnnotationRedactionRows({
     redaction === "pixelateClassic" || redaction === "blur" || animated;
   return (
     <>
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Redaction</span>
-        <AnnotationRedactionGroup
-          isDisabled={isLocked}
-          onChange={(next) => {
-            change({ annotationStyle: { redaction: next } });
-          }}
-          onShuffle={
-            canShuffle
-              ? () => {
-                  change({ shuffleAnnotation: true });
-                }
-              : undefined
-          }
-          value={redaction}
-        />
-      </div>
+      <ControlRow title="Redaction">
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <AnnotationRedactionGroup
+              isDisabled={isLocked}
+              onChange={(next) => {
+                change({ annotationStyle: { redaction: next } });
+              }}
+              onShuffle={
+                canShuffle
+                  ? () => {
+                      change({ shuffleAnnotation: true });
+                    }
+                  : undefined
+              }
+              value={redaction}
+            />
+          </div>
+        )}
+      </ControlRow>
 
       {pixelation ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Style</span>
-          <AnnotationPixelationGroup
-            isDisabled={isLocked}
-            onChange={(next) => {
-              // The styles offer different block sizes, so the block moves
-              // to the nearest the new style offers.
-              const presets = redactionSizePresets(next, sizes);
-              change({
-                annotationStyle: {
-                  redaction: next,
-                  width: annotationWidthAt(
-                    annotationWidthIndex(width, presets),
-                    presets,
-                  ),
-                },
-              });
-            }}
-            value={pixelation}
-          />
-        </div>
+        <ControlRow title="Style">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationPixelationGroup
+                isDisabled={isLocked}
+                onChange={(next) => {
+                  // The styles offer different block sizes, so the block moves
+                  // to the nearest the new style offers.
+                  const presets = redactionSizePresets(next, sizes);
+                  change({
+                    annotationStyle: {
+                      redaction: next,
+                      width: annotationWidthAt(
+                        annotationWidthIndex(width, presets),
+                        presets,
+                      ),
+                    },
+                  });
+                }}
+                value={pixelation}
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : null}
 
       {isStylistic ? (
@@ -102,18 +109,21 @@ export function AnnotationRedactionRows({
       ) : null}
 
       {redaction === "blur" ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Strength</span>
-          <AnnotationWidthSlider
-            isDisabled={isLocked}
-            label="Strength"
-            onChange={(next) => {
-              change({ annotationStyle: { strength: next } });
-            }}
-            presets={ANNOTATION_BLUR_STRENGTHS}
-            value={strength}
-          />
-        </div>
+        <ControlRow title="Strength">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationWidthSlider
+                isDisabled={isLocked}
+                label="Strength"
+                onChange={(next) => {
+                  change({ annotationStyle: { strength: next } });
+                }}
+                presets={ANNOTATION_BLUR_STRENGTHS}
+                value={strength}
+              />
+            </div>
+          )}
+        </ControlRow>
       ) : null}
     </>
   );

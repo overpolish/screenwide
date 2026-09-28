@@ -3,6 +3,7 @@
 
 import { Button } from "../../../components/base/button/button";
 import { NumberField } from "../../../components/base/input-fields/number-field";
+import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
 
 import { ToolPanelPatch, ToolPanelShortcutSelection } from "./tool-panel-store";
@@ -31,58 +32,65 @@ export function ShortcutSelectionRows({
   const minimum = Math.min(selection.minimumSizePercent, maximum - 5);
   return (
     <div className="flex flex-col gap-section">
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Size</span>
-        <SliderNumberField
-          aria-label="Size"
-          className="w-48"
-          isDisabled={isLocked}
-          maxValue={maximum}
-          minValue={minimum}
-          onChange={(sizePercent) => {
-            change({ shortcutPlacement: { sizePercent } });
-          }}
-          rightSection="%"
-          step={5}
-          value={Math.min(Math.max(selection.sizePercent, minimum), maximum)}
-        />
-      </div>
+      <ControlRow title="Size">
+        {(controlProps) => (
+          <div {...controlProps} role="group">
+            <SliderNumberField
+              aria-label="Size"
+              className="w-48"
+              isDisabled={isLocked}
+              maxValue={maximum}
+              minValue={minimum}
+              onChange={(sizePercent) => {
+                change({ shortcutPlacement: { sizePercent } });
+              }}
+              rightSection="%"
+              step={5}
+              value={Math.min(
+                Math.max(selection.sizePercent, minimum),
+                maximum,
+              )}
+            />
+          </div>
+        )}
+      </ControlRow>
 
-      <div className="flex items-center justify-between gap-section">
-        <span className="text-body text-content-fg">Position</span>
-        <div className="flex gap-control">
-          <NumberField
-            aria-label="Shortcut X position"
-            className="w-20"
-            isDisabled={isLocked}
-            leftSection="X"
-            maxValue={100}
-            minValue={0}
-            onChange={(positionXPercent) => {
-              change({ shortcutPlacement: { positionXPercent } });
-            }}
-            rightSection="%"
-            showSteppers={false}
-            step={1}
-            value={selection.positionXPercent}
-          />
-          <NumberField
-            aria-label="Shortcut Y position"
-            className="w-20"
-            isDisabled={isLocked}
-            leftSection="Y"
-            maxValue={100}
-            minValue={0}
-            onChange={(positionYPercent) => {
-              change({ shortcutPlacement: { positionYPercent } });
-            }}
-            rightSection="%"
-            showSteppers={false}
-            step={1}
-            value={selection.positionYPercent}
-          />
-        </div>
-      </div>
+      <ControlRow title="Position">
+        {(controlProps) => (
+          <div {...controlProps} className="flex gap-control" role="group">
+            <NumberField
+              aria-label="Shortcut X position"
+              className="w-20"
+              isDisabled={isLocked}
+              leftSection="X"
+              maxValue={100}
+              minValue={0}
+              onChange={(positionXPercent) => {
+                change({ shortcutPlacement: { positionXPercent } });
+              }}
+              rightSection="%"
+              showSteppers={false}
+              step={1}
+              value={selection.positionXPercent}
+            />
+            <NumberField
+              aria-label="Shortcut Y position"
+              className="w-20"
+              isDisabled={isLocked}
+              leftSection="Y"
+              maxValue={100}
+              minValue={0}
+              onChange={(positionYPercent) => {
+                change({ shortcutPlacement: { positionYPercent } });
+              }}
+              rightSection="%"
+              showSteppers={false}
+              step={1}
+              value={selection.positionYPercent}
+            />
+          </div>
+        )}
+      </ControlRow>
 
       <div className="flex justify-end gap-control">
         <Button

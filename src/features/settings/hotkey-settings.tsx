@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { GroupBox } from "../../components/base/group-box/group-box";
+import { ControlRow } from "../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../components/shared/hotkey-field/hotkey-field";
-import { Setting } from "../../components/shared/setting/setting";
 
 import type { ShortcutAction, ShortcutSettings } from "./types";
 
@@ -66,7 +66,7 @@ export function HotkeySettingsPanel({
       {groups.map((group) => (
         <GroupBox key={group.title} title={group.title}>
           {group.rows.map(({ action, description, label }) => (
-            <Setting description={description} key={action} title={label}>
+            <ControlRow description={description} key={action} title={label}>
               {(controlProps) => (
                 <HotkeyField
                   aria-describedby={controlProps["aria-describedby"]}
@@ -88,7 +88,7 @@ export function HotkeySettingsPanel({
                   }
                 />
               )}
-            </Setting>
+            </ControlRow>
           ))}
         </GroupBox>
       ))}

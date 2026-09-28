@@ -10,9 +10,9 @@ import { HotkeyField } from "../hotkey-field/hotkey-field";
 import { PathField } from "../path-field/path-field";
 import { SliderNumberField } from "../slider-number-field/slider-number-field";
 
-import { Setting } from "./setting";
+import { ControlRow } from "./control-row";
 
-import type { SettingControlProps } from "./setting";
+import type { ControlRowControlProps } from "./control-row";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
@@ -21,7 +21,7 @@ const meta = {
     description: "Show the containing folder after a successful export.",
     title: "Open location after export",
   },
-  component: Setting,
+  component: ControlRow,
   decorators: [
     (Story, context) => (
       <FeatureStoryStage height={64} viewMode={context.viewMode} width={576}>
@@ -30,8 +30,8 @@ const meta = {
     ),
   ],
   parameters: { layout: "fullscreen" },
-  title: "Components/Setting",
-} satisfies Meta<typeof Setting>;
+  title: "Components/ControlRow",
+} satisfies Meta<typeof ControlRow>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -39,8 +39,8 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 // Composite controls keep their own action labels. The surrounding group links
-// the whole control to the setting title and description.
-function GapControl(props: SettingControlProps) {
+// the whole control to the row title and description.
+function GapControl(props: ControlRowControlProps) {
   const [value, setValue] = useState(12);
   return (
     <div {...props} role="group">
@@ -58,7 +58,7 @@ function GapControl(props: SettingControlProps) {
   );
 }
 
-function LocationControl(props: SettingControlProps) {
+function LocationControl(props: ControlRowControlProps) {
   const [value, setValue] = useState<string | null>(null);
   return (
     <div {...props} role="group">
@@ -81,7 +81,7 @@ function LocationControl(props: SettingControlProps) {
   );
 }
 
-function ShortcutControl(props: SettingControlProps) {
+function ShortcutControl(props: ControlRowControlProps) {
   const [value, setValue] = useState<string | null>(
     "CommandOrControl+Shift+KeyR",
   );
@@ -96,7 +96,7 @@ function ShortcutControl(props: SettingControlProps) {
   );
 }
 
-function FormatControl(props: SettingControlProps) {
+function FormatControl(props: ControlRowControlProps) {
   const [selected, setSelected] = useState("png");
   return (
     <div {...props} role="group">

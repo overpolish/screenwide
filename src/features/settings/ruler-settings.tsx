@@ -3,8 +3,8 @@
 
 import { GroupBox } from "../../components/base/group-box/group-box";
 import { Switch } from "../../components/base/switch/switch";
+import { ControlRow } from "../../components/shared/control-row/control-row";
 import { HotkeyField } from "../../components/shared/hotkey-field/hotkey-field";
-import { Setting } from "../../components/shared/setting/setting";
 
 import type { RulerAction, RulerSettings, ShortcutSettings } from "./types";
 
@@ -93,7 +93,7 @@ export function RulerSettingsPanel({
   return (
     <div className="gap-layout flex flex-col">
       <GroupBox title="Ruler">
-        <Setting
+        <ControlRow
           description="Measure sizes and distances on your screen."
           title="Use Ruler"
         >
@@ -107,8 +107,8 @@ export function RulerSettingsPanel({
               }}
             />
           )}
-        </Setting>
-        <Setting title="Show ruler">
+        </ControlRow>
+        <ControlRow title="Show ruler">
           {(controlProps) => (
             <HotkeyField
               aria-describedby={controlProps["aria-describedby"]}
@@ -124,11 +124,11 @@ export function RulerSettingsPanel({
               }
             />
           )}
-        </Setting>
+        </ControlRow>
       </GroupBox>
       <GroupBox title="Shortcuts">
         {actions.map(({ action, description, label }) => (
-          <Setting description={description} key={action} title={label}>
+          <ControlRow description={description} key={action} title={label}>
             {(controlProps) => (
               <HotkeyField
                 aria-describedby={controlProps["aria-describedby"]}
@@ -145,7 +145,7 @@ export function RulerSettingsPanel({
                 value={settings.bindings[action]}
               />
             )}
-          </Setting>
+          </ControlRow>
         ))}
       </GroupBox>
     </div>
