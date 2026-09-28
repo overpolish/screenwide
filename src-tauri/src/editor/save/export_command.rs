@@ -16,6 +16,7 @@ pub async fn save_export(
     camera_compression,
     compression,
     cursor_effects,
+    keyboard_effects,
     recording_output,
     screenshot_output,
     ..
@@ -34,7 +35,11 @@ pub async fn save_export(
   let screenshot_preference =
     matches!(&artifact, EditorArtifact::Screenshot { .. }).then(|| screenshot_output.clone());
   let recording_preference =
-    matches!(&artifact, EditorArtifact::Recording { .. }).then(|| recording_output.clone());
+    matches!(&artifact, EditorArtifact::Recording { .. }).then(|| CompletedRecordingExport {
+      choices: RecordingExportChoices::offered_by(&artifact, &job_options),
+      keyboard: keyboard_effects,
+      output: recording_output.clone(),
+    });
   let cancelled = Arc::new(AtomicBool::new(false));
   {
     let state = app.state::<EditorState>();

@@ -159,6 +159,14 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
     .cursor_effects
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
+  let keyboard_effects = *state
+    .keyboard_effects
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  let recording_export_choices = *state
+    .recording_choices
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
   let recording_output = state
     .recording_output
     .lock()
@@ -168,6 +176,8 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
     artifact,
     cursor_effects,
     directory: current_directory(app, kind),
+    keyboard_effects,
+    recording_export_choices,
     recording_output,
     screenshot_radius_percent,
     screenshot_background_radius_percent,

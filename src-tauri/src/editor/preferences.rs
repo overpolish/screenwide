@@ -3,10 +3,17 @@
 
 use super::*;
 
+mod recording;
+pub(super) use recording::{
+  load_keyboard_effects, load_recording_choices, CompletedRecordingExport, RecordingExportChoices,
+};
+
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
 struct EditorPreferences {
   cursor_effects: cursor_effects::CursorEffectSettings,
+  keyboard_effects: keyboard_effects::KeyboardEffectSettings,
+  recording_choices: RecordingExportChoices,
   recording_output: Option<RecordingOutputSettings>,
   screenshot_background_radius_percent: f64,
   screenshot_output: Option<ScreenshotOutputSettings>,
@@ -17,6 +24,8 @@ impl Default for EditorPreferences {
   fn default() -> Self {
     Self {
       cursor_effects: cursor_effects::CursorEffectSettings::default(),
+      keyboard_effects: keyboard_effects::KeyboardEffectSettings::default(),
+      recording_choices: RecordingExportChoices::default(),
       recording_output: None,
       screenshot_background_radius_percent: 0.0,
       screenshot_output: None,
@@ -226,7 +235,7 @@ pub(super) fn remember_recording_output(
 pub(super) fn remember_completed_export(
   app: &AppHandle,
   cursor: cursor_effects::CursorEffectSettings,
-  recording: Option<RecordingOutputSettings>,
+  recording: Option<CompletedRecordingExport>,
   screenshot: Option<ScreenshotOutputSettings>,
 ) {
   if let Some(output) = screenshot {
@@ -234,9 +243,15 @@ pub(super) fn remember_completed_export(
       eprintln!("Could not remember screenshot export settings: {error}");
     }
   }
-  if let Some(output) = recording {
-    if let Err(error) = remember_recording_output(app, output) {
+  if let Some(completed) = recording {
+    if let Err(error) = remember_recording_output(app, completed.output) {
       eprintln!("Could not remember recording export settings: {error}");
+    }
+    if let Err(error) = recording::remember_keyboard_effects(app, completed.keyboard) {
+      eprintln!("Could not remember keyboard export settings: {error}");
+    }
+    if let Err(error) = recording::remember_recording_choices(app, completed.choices) {
+      eprintln!("Could not remember recording export choices: {error}");
     }
   }
   if let Err(error) = remember_cursor_effects(app, cursor) {
@@ -245,48 +260,4 @@ pub(super) fn remember_completed_export(
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-
-  /// The look is remembered as a template. Annotations are drawn on one layer
-  /// of one capture, so carrying them forward would put yesterday's arrow on
-  /// today's screenshot - which is exactly what it did.
-  #[test]
-  fn a_remembered_look_carries_none_of_the_annotations_drawn_on_it() {
-    let preferences: EditorPreferences = serde_json::from_str(
-      r##"{"screenshot_output":{"annotations":[{"id":"a",
-        "shape":{"kind":"arrow","start":{"x":0,"y":0},"control":{"x":1,"y":1},
-        "end":{"x":2,"y":2}},"style":{"color":"#ff0000","width":6}}],
-        "backgroundColor":"#171717","backgroundType":"solid",
-        "backgroundRadiusPercent":0,"height":100,"width":100,
-        "imageWidth":100,"radiusPercent":0,"dropShadow":true,
-        "meshColors":[],"meshLockedColors":[],"meshPoints":[],"meshSeed":0,
-        "meshWarpPercent":0,"meshGenerator":"mesh",
-        "sourceCrop":{"x":0,"y":0,"width":1,"height":1}}}"##,
-    )
-    .unwrap();
-    let output = preferences.screenshot_output.unwrap();
-    assert_eq!(
-      output.annotations.len(),
-      1,
-      "the fixture has an annotation on it"
-    );
-    assert!(screenshot_output_template(output).annotations.is_empty());
-  }
-
-  #[test]
-  fn loads_preferences_written_before_screenshot_output_was_remembered() {
-    let preferences: EditorPreferences = serde_json::from_str(
-      r#"{
-        "screenshot_background_radius_percent": 7.5,
-        "screenshot_radius_percent": 12.0
-      }"#,
-    )
-    .unwrap();
-
-    assert_eq!(preferences.screenshot_background_radius_percent, 7.5);
-    assert_eq!(preferences.screenshot_radius_percent, 12.0);
-    assert_eq!(preferences.screenshot_output, None);
-    assert_eq!(preferences.recording_output, None);
-  }
-}
+mod tests;

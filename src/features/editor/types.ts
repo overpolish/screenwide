@@ -132,6 +132,30 @@ export type CameraOverlaySettings = {
   radiusPercent: number;
 };
 
+/** A baked camera's placement with the geometry it was measured against. */
+export type RememberedCameraOverlay = {
+  cameraHeight: number;
+  cameraWidth: number;
+  overlay: CameraOverlaySettings;
+  screenHeight: number;
+  screenWidth: number;
+};
+
+/**
+ * The last recording export's choices. `null` means no exported recording has
+ * offered that choice yet, so the editor keeps its default.
+ */
+export type RecordingExportChoices = {
+  bakeCamera: boolean | null;
+  cameraCompression: number | null;
+  cameraOverlay: RememberedCameraOverlay | null;
+  cameraResolutionScalePercent: number | null;
+  collapseAudio: boolean | null;
+  compression: number | null;
+  /** The output scale as a share of the "Original" scale. */
+  resolutionScaleRatio: number | null;
+};
+
 /**
  * A capture waiting to be exported. The window switches on `kind` rather than
  * assuming a screenshot: a recording is a file that gets moved, not pixels
@@ -183,14 +207,14 @@ export type EditorSnapshot = {
   artifact: EditorArtifact | null;
   cursorEffects: CursorEffectSettings;
   directory: string | null;
+  keyboardEffects: KeyboardEffectSettings;
+  recordingExportChoices: RecordingExportChoices;
   recordingOutput: RecordingOutputSettings | null;
   screenshotBackgroundRadiusPercent: number;
   screenshotOutput: ScreenshotOutputSettings | null;
   screenshotRadiusPercent: number;
   /** The workspace this describes: the change event is app-wide. */
   workspace: EditorKind;
-  /** Absent in snapshots from builds before keyboard preview settings. */
-  keyboardEffects?: KeyboardEffectSettings;
 };
 
 export type EditorSnapshots = Record<EditorKind, EditorSnapshot>;
@@ -213,6 +237,15 @@ export const initialEditorSnapshot = (
     appearance: "light",
     bake: true,
     sizePercent: 100,
+  },
+  recordingExportChoices: {
+    bakeCamera: null,
+    cameraCompression: null,
+    cameraOverlay: null,
+    cameraResolutionScalePercent: null,
+    collapseAudio: null,
+    compression: null,
+    resolutionScaleRatio: null,
   },
   recordingOutput: null,
   screenshotBackgroundRadiusPercent: 0,

@@ -18,6 +18,7 @@ import {
   cameraOverlayWithCameraCrop,
 } from "./camera-overlay-geometry";
 import { EditorPanel } from "./components/editor-panel";
+import { seededExportChoices } from "./recording-export-choices";
 import {
   cameraExportSettings,
   DEFAULT_COMPRESSION,
@@ -74,7 +75,8 @@ export function EditorWindow() {
   const directory = useEditorStore(selectDirectory(kind));
   const {
     cursorEffects: persistedCursorEffects,
-    keyboardEffects: persistedKeyboardEffects = DEFAULT_KEYBOARD_EFFECTS,
+    keyboardEffects: persistedKeyboardEffects,
+    recordingExportChoices: persistedRecordingExportChoices,
     recordingOutput: persistedRecordingOutput,
     screenshotBackgroundRadiusPercent: persistedScreenshotBackgroundRadius,
     screenshotOutput: persistedScreenshotOutput,
@@ -151,7 +153,6 @@ export function EditorWindow() {
   // the previous capture's pixels.
   const artifactId = artifact?.id;
   const saveProgress = useExportProgress(artifactId);
-  const canCompress = artifact?.kind === "recording" && artifact.canCompress;
   const originalResolutionScale =
     artifact?.kind === "recording" ? sourceScalePercent(artifact) : 100;
   const cameraExport = cameraExportSettings(
@@ -327,30 +328,34 @@ export function EditorWindow() {
   );
 
   useEffect(() => {
+    const seededRecordingOutput = restoredRecordingOutput({
+      camera: artifact?.kind === "recording" ? artifact.camera : undefined,
+      persisted: persistedRecordingOutput,
+      primary: {
+        height: artifact?.height ?? 1,
+        width: artifact?.width ?? 1,
+      },
+    });
+    const seeded = seededExportChoices({
+      artifact,
+      choices: persistedRecordingExportChoices,
+      screen: seededRecordingOutput.primary,
+    });
     /* eslint-disable @eslint-react/set-state-in-effect */
     setTrackSelection(null);
     setVideoTrackSelection(null);
     setSelectedTrack(null);
     setAudioTrackVolumes(null);
-    setBakeCamera(false);
-    setCameraOverlay(defaultCameraOverlay(artifact));
+    setBakeCamera(seeded.bakeCamera);
+    setCameraOverlay(seeded.cameraOverlay);
     setCursorEffects(persistedCursorEffects);
     setKeyboardEffects(persistedKeyboardEffects);
-    setCollapseAudio(false);
-    setCompression(canCompress ? DEFAULT_COMPRESSION : 0);
-    setCameraCompression(canCompress ? DEFAULT_COMPRESSION : 0);
-    setCameraResolutionScalePercent(100);
-    setResolutionScalePercent(originalResolutionScale);
-    setRecordingOutput(
-      restoredRecordingOutput({
-        camera: artifact?.kind === "recording" ? artifact.camera : undefined,
-        persisted: persistedRecordingOutput,
-        primary: {
-          height: artifact?.height ?? 1,
-          width: artifact?.width ?? 1,
-        },
-      }),
-    );
+    setCollapseAudio(seeded.collapseAudio);
+    setCompression(seeded.compression);
+    setCameraCompression(seeded.cameraCompression);
+    setCameraResolutionScalePercent(seeded.cameraResolutionScalePercent);
+    setResolutionScalePercent(seeded.resolutionScalePercent);
+    setRecordingOutput(seededRecordingOutput);
     screenshotRadiusRef.current = persistedScreenshotRadius;
     screenshotBackgroundRadiusRef.current = persistedScreenshotBackgroundRadius;
     setScreenshotOutput(

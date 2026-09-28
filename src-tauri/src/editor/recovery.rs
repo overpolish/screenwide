@@ -156,5 +156,15 @@ pub fn initialize(app: &AppHandle) {
     .cursor_effects
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = load_cursor_effects(app);
+  *app
+    .state::<EditorState>()
+    .keyboard_effects
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner()) = load_keyboard_effects(app);
+  *app
+    .state::<EditorState>()
+    .recording_choices
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner()) = load_recording_choices(app);
   sweep_orphaned_recordings(app);
 }

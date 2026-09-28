@@ -63,9 +63,10 @@ pub use export_window::hide as hide_export_options_for;
 pub(crate) use media_preview::ffmpeg_path;
 use naming::sanitize_file_stem;
 use preferences::{
-  load_cursor_effects, load_recording_output, load_screenshot_background_radius,
-  load_screenshot_output, load_screenshot_radius, remember_completed_export,
-  remember_screenshot_background_radius, remember_screenshot_output, remember_screenshot_radius,
+  load_cursor_effects, load_keyboard_effects, load_recording_choices, load_recording_output,
+  load_screenshot_background_radius, load_screenshot_output, load_screenshot_radius,
+  remember_completed_export, remember_screenshot_background_radius, remember_screenshot_output,
+  remember_screenshot_radius, CompletedRecordingExport, RecordingExportChoices,
 };
 use recording_sidecar::{RecordingCursor, RecordingKeyboard};
 pub use recovery::initialize;
@@ -190,6 +191,8 @@ pub struct EditorSnapshot {
   pub artifact: Option<EditorArtifactSnapshot>,
   pub cursor_effects: cursor_effects::CursorEffectSettings,
   pub directory: Option<PathBuf>,
+  pub keyboard_effects: keyboard_effects::KeyboardEffectSettings,
+  pub recording_export_choices: RecordingExportChoices,
   pub recording_output: Option<RecordingOutputSettings>,
   pub screenshot_radius_percent: f64,
   pub screenshot_background_radius_percent: f64,
@@ -242,6 +245,8 @@ pub struct EditorState {
   capture_reservation: Mutex<Option<EditorKind>>,
   generation: AtomicU64,
   cursor_effects: Mutex<cursor_effects::CursorEffectSettings>,
+  keyboard_effects: Mutex<keyboard_effects::KeyboardEffectSettings>,
+  recording_choices: Mutex<RecordingExportChoices>,
   recording_output: Mutex<Option<RecordingOutputSettings>>,
   screenshot_radius_percent: Mutex<f64>,
   screenshot_background_radius_percent: Mutex<f64>,
