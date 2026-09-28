@@ -52,11 +52,6 @@ describe("the counter's own sizes", () => {
     }
   });
 
-  it("keeps the sizes an older document was drawn at", () => {
-    for (const size of [56, 96, 160])
-      expect(ANNOTATION_COUNTER_SIZES).toContain(size);
-  });
-
   it("starts a fresh counter at the smallest disc", () => {
     expect(ANNOTATION_COUNTER_SIZES[0]).toBe(DEFAULT_ANNOTATION_COUNTER_SIZE);
   });

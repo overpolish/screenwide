@@ -55,7 +55,7 @@ pub(crate) fn drag(
             .first()
             .map(|band| band.bottom - band.top)
             .filter(|tall| *tall > 0.0)
-            .unwrap_or_else(|| band_height(&annotation.style, origin.source_per_output)),
+            .unwrap_or_else(|| band_height(&annotation.style, origin.source_per_size)),
         )),
         _ => None,
       };
@@ -101,7 +101,7 @@ pub(crate) fn drag(
 /// Select again between the highlight's ends, from the gesture's picture, or
 /// lay a box drawn by hand again.
 fn reselect(annotation: &mut Annotation, origin: &AnnotationDragOrigin) {
-  let height = band_height(&annotation.style, origin.source_per_output);
+  let height = band_height(&annotation.style, origin.source_per_size);
   let manual = annotation.style.manual;
   let AnnotationShape::Highlight {
     start,

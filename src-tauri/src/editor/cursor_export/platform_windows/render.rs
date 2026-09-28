@@ -84,7 +84,7 @@ pub(super) fn render_video(
       request.screen,
       request.duration_ms,
       &mut annotation_clips,
-      request.output.image_width,
+      request.output.size_image_width(),
       request.cancelled,
     );
     crate::editor::recording_preview_player::held_surfaces::attach_for_export(
@@ -158,6 +158,9 @@ pub(super) fn render_video(
     let mut annotations = crate::editor::annotations::timing::revealed_annotations(
       &annotation_clips,
       request.annotation_track,
+      request
+        .timeline
+        .map_or(&[][..], |timeline| timeline.ranges()),
       position_ms,
       // How much source time this frame covers, which is the window a
       // moving annotation smears over.

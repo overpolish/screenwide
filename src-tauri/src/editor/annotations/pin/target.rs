@@ -44,13 +44,13 @@ impl PinTarget {
   /// moved forward along the way it points: three quarters of it ahead, and
   /// a quarter behind to keep what the tip sits on.
   ///
-  /// A counter and a text box are drawn at the canvas's scale, so where their
-  /// tips fall in the recording takes `source_per_output`, source pixels per
-  /// canvas pixel. Where that is not known yet (zero), a counter follows its
+  /// A counter and a text box are sized in points, so where their tips fall
+  /// in the recording takes `source_per_size`, source pixels per point of
+  /// their size. Where that is not known yet (zero), a counter follows its
   /// centre and a text box its corner.
-  pub(crate) fn of(annotation: &Annotation, source: (u32, u32), source_per_output: f64) -> Self {
-    let scale = if source_per_output.is_finite() {
-      source_per_output.max(0.0)
+  pub(crate) fn of(annotation: &Annotation, source: (u32, u32), source_per_size: f64) -> Self {
+    let scale = if source_per_size.is_finite() {
+      source_per_size.max(0.0)
     } else {
       0.0
     };

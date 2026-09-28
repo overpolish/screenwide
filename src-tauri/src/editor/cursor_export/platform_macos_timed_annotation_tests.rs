@@ -217,13 +217,13 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
         frames.stdout.len(),
         105 * width as usize * height as usize * 3
       );
-      // Source 0.95 and 1.9 seconds are inside the same annotation across the
-      // cut, far enough into its draw-in that the annotation is most of its
-      // full size.
+      // The clip runs from source 550ms to 2500ms: output 0.55s to 1.5s, the
+      // speed change halving the part after the cut. Output 0.95s and 1.1s
+      // hold the arrow whole, and 1.65s is past its clip.
       for (time, visible) in [
         ("0.2", false),
         ("0.95", true),
-        ("1.2", true),
+        ("1.1", true),
         ("1.65", false),
       ] {
         let frame = Command::new(media_preview::ffmpeg_path())
@@ -278,12 +278,11 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
         );
       }
       if scale == 100 && !baked {
-        // The clip runs from source 550ms to 2500ms, so each phase is a third
-        // of it rather than the whole three quarters of a second: the arrow
-        // draws itself in over output 0.55s to 1.2s and leaves over the last
-        // third of the clip, which the speed change puts at the end of it.
-        // The export evaluates that per frame from the clip's own bounds.
-        let opening: Vec<_> = ["0.7", "0.9", "1.1"]
+        // The clip plays for 0.95s of output, so each phase is a third of
+        // that rather than the whole three quarters of a second: the arrow
+        // draws itself in over output 0.55s to 0.87s and leaves over 1.18s
+        // to 1.5s, however fast the timeline plays the source under it.
+        let opening: Vec<_> = ["0.6", "0.7", "0.95"]
           .iter()
           .map(|time| exported_yellow(&destination, time, width, height))
           .collect();

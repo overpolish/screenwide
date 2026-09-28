@@ -118,7 +118,11 @@ pub(crate) fn compose_output_layers(
     image.height,
     settings.capture_width_points,
   );
-  let annotations = native_annotations(&settings.annotations, RedactSource::Picture(&picture));
+  let annotations = native_annotations(
+    &settings.annotations,
+    RedactSource::Picture(&picture),
+    settings.size_scale(),
+  );
   let native_cursor = NativeGpuCursor::from(cursor.map(|(cursor, _)| *cursor));
   let native_artworks = cursor
     .map_or(&[][..], |(_, artworks)| artworks)

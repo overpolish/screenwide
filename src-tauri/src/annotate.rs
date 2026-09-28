@@ -181,15 +181,16 @@ pub(crate) fn screenshot_annotations(
   }
 }
 
-/// The annotations a still covered, drawn into its pixels. The clipboard has
-/// no layers, so a shot that is copied rather than opened carries them there
-/// instead of alongside.
+/// The annotations a still covered, drawn into its pixels at the `scale` it
+/// was captured at. The clipboard has no layers, so a shot that is copied
+/// rather than opened carries them there instead of alongside.
 #[cfg(target_os = "windows")]
 pub(crate) fn bake_annotations(
   image: &crate::screenshots::CapturedImage,
   annotations: &[crate::editor::annotations::Annotation],
+  scale: f64,
 ) -> Result<crate::screenshots::CapturedImage, String> {
-  native_overlay::bake(image, annotations)
+  native_overlay::bake(image, annotations, scale)
 }
 
 /// The shortcut's and the tray item's way in: the same press that opens the

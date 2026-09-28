@@ -63,13 +63,25 @@ pub(crate) struct NativeAnnotationData {
 impl NativeAnnotationData {
   /// Write `annotation`'s variable-length data into the buffers and return
   /// its record, with the offsets pointing here. `source` is where a
-  /// redaction reads what is under and around its box.
+  /// redaction reads what is under and around its box, and `size_scale` how
+  /// many output pixels one point of the style's size is drawn at.
   pub(crate) fn pack(
     &mut self,
     annotation: &Annotation,
     source: RedactSource<'_>,
+    size_scale: f64,
   ) -> NativeAnnotation {
-    let [mut p0, mut p1, mut p2] = annotation.shape.draw_points(&annotation.style);
+    // A redaction's size is its block, which its fill already measures in the
+    // points of what it covers.
+    let style = if size_scale != 1.0 && annotation.shape.kind() != super::AnnotationKind::Redact {
+      std::borrow::Cow::Owned(super::AnnotationStyle {
+        width: annotation.style.width * size_scale,
+        ..annotation.style.clone()
+      })
+    } else {
+      std::borrow::Cow::Borrowed(&annotation.style)
+    };
+    let [mut p0, mut p1, mut p2] = annotation.shape.draw_points(&style);
     let fill =
       annotation
         .shape
@@ -91,10 +103,10 @@ impl NativeAnnotationData {
     self.text.extend_from_slice(text.as_bytes());
     let mut record = NativeAnnotation {
       kind: annotation.shape.kind().raw(),
-      head: annotation.shape.draw_head(&annotation.style),
+      head: annotation.shape.draw_head(&style),
       above_camera: u32::from(annotation.above_camera),
       flags: 0,
-      width: annotation.style.width.max(0.0) as f32,
+      width: style.width.max(0.0) as f32,
       params: [0.0; 3],
       color: annotation_colour(&annotation.style.color),
       p0,
@@ -171,15 +183,17 @@ impl NativeAnnotations {
 }
 
 /// One composition's records. `source` is where its redactions read what is
-/// under and around each box.
+/// under and around each box, and `size_scale` how many output pixels one
+/// point of a style's size is drawn at.
 pub(crate) fn native_annotations(
   annotations: &[Annotation],
   source: RedactSource<'_>,
+  size_scale: f64,
 ) -> NativeAnnotations {
   let mut data = NativeAnnotationData::default();
   let items = annotations
     .iter()
-    .map(|annotation| data.pack(annotation, source))
+    .map(|annotation| data.pack(annotation, source, size_scale))
     .collect();
   NativeAnnotations { items, data }
 }

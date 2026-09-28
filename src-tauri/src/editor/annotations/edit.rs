@@ -23,7 +23,7 @@ impl AnnotationEdit {
   /// `angle` where a fresh counter's tail points. Only a
   /// [`AnnotationGestureTarget::New`] press reads either.
   ///
-  /// `source_per_output` is source pixels per output pixel for this
+  /// `source_per_size` is source pixels per point of a style's size for this
   /// gesture's pane, zero where it is unknown. A fresh text box needs it to
   /// centre itself on the press, and a text box's pointer to tell when its
   /// tip is inside the box.
@@ -34,7 +34,7 @@ impl AnnotationEdit {
     defaults: Option<&AnnotationStyle>,
     kind: Option<AnnotationKind>,
     angle: Option<f64>,
-    source_per_output: f64,
+    source_per_size: f64,
   ) -> Option<Self> {
     let index = match target {
       AnnotationGestureTarget::New => annotations.len(),
@@ -44,18 +44,11 @@ impl AnnotationEdit {
     let before = annotations.clone();
     if target == AnnotationGestureTarget::New {
       let id = next_annotation_id();
-      annotations.push(kind?.new_annotation(
-        id,
-        point,
-        defaults,
-        angle,
-        &before,
-        source_per_output,
-      ));
+      annotations.push(kind?.new_annotation(id, point, defaults, angle, &before, source_per_size));
     }
     let annotation = &annotations[index];
     let mut origin = AnnotationDragOrigin::new(point, &annotation.shape);
-    origin.source_per_output = source_per_output;
+    origin.source_per_size = source_per_size;
     Some(Self {
       before,
       index,

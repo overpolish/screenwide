@@ -14,6 +14,37 @@ pub(crate) fn source_to_output_us(ranges: &[TimelineRange], source_us: u64) -> O
   ))
 }
 
+/// Where `source_us` lands on the output timeline. A moment the timeline cut
+/// away lands on the join the cut left, so every source moment has a place and
+/// a later one never lands earlier. No ranges means an uncut timeline.
+pub(crate) fn output_at_us(ranges: &[TimelineRange], source_us: f64) -> f64 {
+  let Some(last) = ranges.last() else {
+    return source_us;
+  };
+  for range in ranges {
+    let start = range.source_start_us as f64;
+    if source_us < start {
+      return range.output_start_us as f64;
+    }
+    if source_us < range.source_end_us as f64 {
+      return range.output_start_us as f64 + (source_us - start) / range.playback_rate;
+    }
+  }
+  last.output_start_us as f64
+    + (last.source_end_us.saturating_sub(last.source_start_us)) as f64 / last.playback_rate
+}
+
+/// How fast the timeline plays `source_us`: its range's rate, or 1 where it
+/// was cut away or nothing was cut.
+pub(crate) fn rate_at(ranges: &[TimelineRange], source_us: f64) -> f64 {
+  ranges
+    .iter()
+    .find(|range| {
+      source_us >= range.source_start_us as f64 && source_us < range.source_end_us as f64
+    })
+    .map_or(1.0, |range| range.playback_rate)
+}
+
 pub(super) fn output_to_source_us(ranges: &[TimelineRange], output_us: u64) -> Option<u64> {
   for range in ranges {
     let output_end_us = range.output_start_us.saturating_add(

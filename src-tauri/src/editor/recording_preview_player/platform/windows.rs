@@ -65,9 +65,14 @@ pub(super) fn present_native_frame(
       .and_then(|settings| settings.read().ok().map(|settings| settings.clone()));
     settings.is_some_and(|mut settings| {
       if let Ok(clips) = sources.annotation_clips.read() {
+        let ranges = sources
+          .animation_ranges
+          .read()
+          .unwrap_or_else(|poisoned| poisoned.into_inner());
         crate::editor::recording_preview_player::annotation_preview::apply_clips(
           &mut settings,
           &clips,
+          &ranges,
           frame.timestamp_ms,
           frame_ms,
           sources.held_fills.as_ref(),

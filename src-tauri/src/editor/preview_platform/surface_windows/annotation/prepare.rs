@@ -33,10 +33,10 @@ use crate::screenshots::{output_placement, CapturedImage};
 /// Returns the arrows and where the above-camera run starts, which is what the
 /// shader's two passes are bounded by. Points arrive in the source's own pixels
 /// and are placed through the same `output_placement` the picture is, so an
-/// annotation stays glued to what it points at through a crop or a resize. The
-/// stroke is already in output pixels - that is what keeps an annotation's
-/// weight on the canvas instead of growing with the picture - so it is used as
-/// it comes. `annotations` is the list this frame draws. A still passes the
+/// annotation stays glued to what it points at through a crop or a resize. A
+/// size is in points and drawn at the capture's scale, straight into output
+/// pixels - that is what keeps an annotation's weight on the canvas instead of
+/// growing with the picture. `annotations` is the list this frame draws. A still passes the
 /// document's own; a video export passes the annotations its timeline clips
 /// resolve to at that frame, which is why the list is given rather than read
 /// from `settings`. `picture` is a screenshot's own pixels, which its
@@ -74,6 +74,7 @@ pub(crate) fn prepared_arrows(
       },
       RedactSource::Picture,
     ),
+    settings.size_scale(),
   );
   // In the source's own pixels, which the pre-pass covers before anything
   // is placed on the canvas.
@@ -93,13 +94,13 @@ pub(crate) fn prepared_arrows(
 }
 
 /// The same annotations in whatever pixels they are drawn in: `offset` and
-/// `scale` carry a point from the source's own pixels into them. The live
-/// overlay passes the identity, because its annotations arrive in the
-/// display's layer pixels already, and it draws no redaction.
+/// `scale` carry a point there, and `size_scale` a point of size. The live
+/// overlay passes the identity, its annotations arriving in its layer pixels.
 pub(crate) fn placed_arrows(
   annotations: &[Annotation],
   offset: (f64, f64),
   scale: (f64, f64),
+  size_scale: f64,
   halo: Option<(usize, f32)>,
   typing: Option<(usize, TypingMarks)>,
 ) -> compositor::PreparedArrows {
@@ -107,7 +108,7 @@ pub(crate) fn placed_arrows(
     return compositor::PreparedArrows::default();
   }
   placed_native(
-    native_annotations(annotations, RedactSource::None),
+    native_annotations(annotations, RedactSource::None, size_scale),
     offset,
     scale,
     halo,

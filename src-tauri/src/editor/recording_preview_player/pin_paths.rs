@@ -22,7 +22,7 @@ use crate::editor::annotations::pin::leg::track_leg;
 use crate::editor::annotations::pin::{
   assemble, FrameSource, PinRequest, PinnedPath, TRACKING_SIDE,
 };
-use crate::editor::annotations::snap::source_per_output;
+use crate::editor::annotations::snap::source_per_size;
 use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
 
 /// What the timeline shows of a pin: how far its path is worked out, and
@@ -204,8 +204,9 @@ pub(super) fn work_out(
 /// path that cannot be worked out leaves its annotation where it was drawn.
 ///
 /// `image_width` is how wide the screen is drawn on the edited canvas, in
-/// canvas pixels, before any export scaling: the preview places counters'
-/// and text boxes' tips at that scale, so the export asks for the same paths.
+/// points of annotation size, before any export scaling: the preview places
+/// counters' and text boxes' tips at that scale, so the export asks for the
+/// same paths.
 pub(crate) fn attach_for_export(
   recording: &Path,
   duration_ms: u64,
@@ -235,7 +236,7 @@ pub(crate) fn attach_for_export(
       return;
     };
     let size = source.source_size();
-    let request = PinRequest::of(clip, pin, size, source_per_output(size, image_width));
+    let request = PinRequest::of(clip, pin, size, source_per_size(size, image_width));
     let path = match cached_path(recording, request.key()) {
       Some(path) => Some(path),
       None => work_out(source, &work, &request, &|_| {}, &mut |_| {})

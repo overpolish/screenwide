@@ -53,6 +53,10 @@ impl PreviewPlayerManager {
         .map(|clips| clips.clone())
         .unwrap_or_default(),
       super::gesture::track(pane),
+      &sources
+        .animation_ranges
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()),
       position_ms,
       0.0,
     );
@@ -202,7 +206,7 @@ impl PreviewPlayerManager {
         annotation_handles(
           &annotations,
           (source.source_width, source.source_height),
-          output.image_width,
+          output.size_image_width(),
         )
         .into_iter()
         .map(|mut handle| {

@@ -23,7 +23,7 @@ pub async fn set_recording_preview_composition(
     .as_ref()
     .ok_or_else(|| "The recording preview player is not open".to_owned())?;
   let mut recording_output = recording_output;
-  recording_output.stamp_capture_widths(sources.capture_width_points);
+  recording_output.stamp_captures(sources.captures);
   let settings = sources
     .composition_settings
     .clone()

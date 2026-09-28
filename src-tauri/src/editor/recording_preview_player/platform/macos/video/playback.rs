@@ -45,7 +45,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
   let cursor = sources.cursor.clone();
   let cursor_settings = Arc::clone(&sources.cursor_settings);
   let keyboard = sources.keyboard.clone();
-  let sources_keyboard_animation_ranges = Arc::clone(&sources.keyboard_animation_ranges);
+  let sources_animation_ranges = Arc::clone(&sources.animation_ranges);
   let keyboard_settings = Arc::clone(&sources.keyboard_settings);
   let composition_settings = sources.composition_settings.clone();
   let annotation_clips = Arc::clone(&sources.annotation_clips);
@@ -82,9 +82,13 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
           .map(|settings| settings.clone())
           .unwrap_or_else(|poisoned| poisoned.into_inner().clone());
         if let Ok(clips) = annotation_clips.read() {
+          let ranges = sources_animation_ranges
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
           crate::editor::recording_preview_player::annotation_preview::apply_clips(
             &mut composition,
             &clips,
+            &ranges,
             target_ms,
             frame_ms,
             held_fills.as_ref(),
@@ -109,7 +113,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
           .map(|settings| *settings)
           .unwrap_or_default();
         let keyboard_overlay = keyboard.as_deref().and_then(|_| {
-          let ranges = sources_keyboard_animation_ranges
+          let ranges = sources_animation_ranges
             .read()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
           keyboard.as_deref()?.evaluate_fitted_with_ranges(

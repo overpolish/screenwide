@@ -47,12 +47,12 @@ fn cancelling_a_new_arrow_restores_the_original_list() {
 /// hand, and a drag while it is being placed keeps it centred there.
 #[test]
 fn a_new_text_box_is_centred_on_the_press_and_carried_there() {
-  const SOURCE_PER_OUTPUT: f64 = 2.0;
+  const SOURCE_PER_SIZE: f64 = 2.0;
   let centre = |annotation: &Annotation| {
     let AnnotationShape::Text { origin, text, .. } = &annotation.shape else {
       unreachable!()
     };
-    let bounds = text_box(*origin, text, annotation.style.width, SOURCE_PER_OUTPUT);
+    let bounds = text_box(*origin, text, annotation.style.width, SOURCE_PER_SIZE);
     assert!(bounds.width > 0.0 && bounds.height > 0.0);
     point(
       bounds.x + bounds.width / 2.0,
@@ -69,7 +69,7 @@ fn a_new_text_box_is_centred_on_the_press_and_carried_there() {
     None,
     Some(AnnotationKind::Text),
     None,
-    SOURCE_PER_OUTPUT,
+    SOURCE_PER_SIZE,
   )
   .unwrap();
   assert!(near(centre(&annotations[0]), point(200.0, 150.0)));

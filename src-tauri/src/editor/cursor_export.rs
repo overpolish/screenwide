@@ -158,6 +158,7 @@ mod tests {
       background_type: "color".to_owned(),
       background_radius_percent: 0.0,
       capture_width_points: 0.0,
+      capture_scale: 0.0,
       crop_height: f64::from(height),
       crop_width: f64::from(width),
       crop_preview: None,

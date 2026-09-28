@@ -53,9 +53,9 @@ pub(crate) fn set_recording_preview_deleted_keyboard_shortcuts(
     .ok_or_else(|| "The recording preview player is not open".to_owned())?;
   let keyboard = sources.keyboard.clone();
   *sources
-    .keyboard_animation_ranges
+    .animation_ranges
     .write()
-    .map_err(|_| "The keyboard animation timeline is unavailable".to_owned())? =
+    .map_err(|_| "The animation timeline is unavailable".to_owned())? =
     super::animation_timeline_ranges(&playback_ranges);
   if let Some(keyboard) = keyboard {
     keyboard.set_deleted_shortcuts(&shortcut_ids, &shortcut_ranges);

@@ -10,18 +10,20 @@ use crate::editor::annotations::timing::{
 
 /// How much source time one drawn frame covers, which is what the reveal's
 /// motion blur is measured over. A paused composition passes zero: nothing
-/// is moving, so nothing is blurred. `held` hands the screen's redactions
-/// the fills read from their clips' first frames; only the screen takes a
-/// redaction.
+/// is moving, so nothing is blurred. `ranges` is the timeline the reveals are
+/// timed on. `held` hands the screen's redactions the fills read from their
+/// clips' first frames; only the screen takes a redaction.
 pub(super) fn apply_clips(
   composition: &mut PreviewCompositionSettings,
   clips: &[RecordingAnnotationClip],
+  ranges: &[TimelineRange],
   source_ms: u64,
   frame_ms: f32,
   held: Option<&HeldFillsHandle>,
 ) {
   let primary = &mut composition.recording_output.primary;
-  primary.annotations = revealed_annotations(clips, AnnotationTrack::Primary, source_ms, frame_ms);
+  primary.annotations =
+    revealed_annotations(clips, AnnotationTrack::Primary, ranges, source_ms, frame_ms);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   if let Some(held) = held {
     held.attach(
@@ -34,7 +36,7 @@ pub(super) fn apply_clips(
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = held;
   composition.recording_output.camera.annotations =
-    revealed_annotations(clips, AnnotationTrack::Camera, source_ms, frame_ms);
+    revealed_annotations(clips, AnnotationTrack::Camera, ranges, source_ms, frame_ms);
 }
 
 /// The preview's held fills, where the platform decodes the frames they are
@@ -56,22 +58,22 @@ impl PlayerSources {
   ) {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     if let Some(pins) = &self.pins {
-      pins.attach(clips, position_ms, self.screen_image_width());
+      pins.attach(clips, position_ms, self.screen_size_width());
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let _ = (clips, position_ms);
   }
 
-  /// How wide the screen is drawn on the canvas, in canvas pixels, or zero
-  /// before the layout is known: what places the tips counters and text boxes
-  /// are followed by.
-  pub(super) fn screen_image_width(&self) -> f64 {
+  /// How wide the screen is drawn on the canvas, in points of annotation
+  /// size, or zero before the layout is known: what places the tips counters
+  /// and text boxes are followed by.
+  pub(super) fn screen_size_width(&self) -> f64 {
     self
       .composition_settings
       .as_ref()
       .and_then(|settings| settings.read().ok())
       .map_or(0.0, |settings| {
-        settings.recording_output.primary.image_width
+        settings.recording_output.primary.size_image_width()
       })
   }
 
@@ -93,9 +95,14 @@ impl PlayerSources {
     clips: &[RecordingAnnotationClip],
   ) -> Option<PreviewCompositionSettings> {
     let mut composition = self.composition_settings.as_ref()?.read().ok()?.clone();
+    let ranges = self
+      .animation_ranges
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
     apply_clips(
       &mut composition,
       clips,
+      &ranges,
       source_ms,
       0.0,
       self.held_fills.as_ref(),

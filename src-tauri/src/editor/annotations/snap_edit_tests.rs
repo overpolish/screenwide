@@ -23,10 +23,10 @@ fn positional() -> SnapModifiers {
   SnapModifiers::from_bits(0b10)
 }
 
-/// The default disc is 56 output pixels across, and these tests draw a
-/// 1920-wide source 1920 output pixels across, so a disc's edges sit 28
+/// The default disc is 28 points across, and these tests draw a 1920-wide
+/// source 960 points across, as a 2x capture is, so a disc's edges sit 28
 /// source pixels either side of its centre.
-const IMAGE_WIDTH: f64 = 1920.0;
+const IMAGE_WIDTH: f64 = 960.0;
 
 /// A drag of the whole counter at `index`, which began where it stands.
 fn counter_move(

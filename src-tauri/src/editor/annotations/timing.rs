@@ -1,11 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Clips follow source time; timeline cuts and rates map their boundaries.
-//! A cut inside a clip does not create a new entrance or exit.
+//! Clips follow source time, so a cut or a speed change never moves where an
+//! annotation sits in the recording. Its arrival and leaving play in output
+//! time instead: they start at the first moment of its clip the timeline
+//! keeps, end at the last, and take the same time at any speed. A cut inside
+//! a clip does not create a new entrance or exit.
 
 use super::pin::AnnotationPin;
 use super::Annotation;
+use crate::editor::timeline_edit::{output_at_us, rate_at, TimelineRange};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -85,25 +89,48 @@ pub(crate) fn placed_annotation(
   Some((super::pin::displaced(&clip.annotation, &placement), shown))
 }
 
+/// How far into the stretch `[start_ms, end_ms)` the timeline is at
+/// `source_ms`, and how long the stretch plays for, both in output
+/// milliseconds. The stretch is measured over what the timeline keeps of it,
+/// so one that loses its start to a cut arrives where it is first seen.
+/// `None` where the timeline keeps none of it.
+pub(crate) fn output_progress(
+  ranges: &[TimelineRange],
+  [start_ms, end_ms]: [u64; 2],
+  source_ms: u64,
+) -> Option<(f32, f32)> {
+  let at = |ms: u64| output_at_us(ranges, ms as f64 * 1_000.0) / 1_000.0;
+  let from = at(start_ms);
+  let duration = at(end_ms) - from;
+  (duration > 0.0).then(|| ((at(source_ms) - from).max(0.0) as f32, duration as f32))
+}
+
 /// The annotations a frame draws, each carrying the reveal window its own
 /// clip is at. A pinned annotation arrives and leaves over each stretch its
-/// content is on the frame rather than over its whole clip.
+/// content is on the frame rather than over its whole clip. `ranges` is the
+/// timeline the reveal is timed on, empty when nothing is cut; `frame_ms` is
+/// how much source time the frame covers.
 pub(crate) fn revealed_annotations(
   clips: &[RecordingAnnotationClip],
   track: AnnotationTrack,
+  ranges: &[TimelineRange],
   source_ms: u64,
   frame_ms: f32,
 ) -> Vec<Annotation> {
+  let frame_ms = frame_ms / rate_at(ranges, source_ms as f64 * 1_000.0) as f32;
   active_clips(clips, track, source_ms)
     .filter_map(|clip| {
-      let (mut annotation, [start_ms, end_ms]) = placed_annotation(clip, source_ms)?;
+      let (mut annotation, shown) = placed_annotation(clip, source_ms)?;
       if annotation.animated {
-        annotation.reveal = annotation.shape.kind().reveal_window(
-          source_ms.saturating_sub(start_ms) as f32,
-          end_ms.saturating_sub(start_ms) as f32,
-          frame_ms,
-          clip.path_ms,
-        );
+        // A stretch the timeline cut away entirely is never seen, so it is
+        // left whole for the handles and gestures that still reach it.
+        if let Some((elapsed_ms, duration_ms)) = output_progress(ranges, shown, source_ms) {
+          annotation.reveal =
+            annotation
+              .shape
+              .kind()
+              .reveal_window(elapsed_ms, duration_ms, frame_ms, clip.path_ms);
+        }
       }
       Some(annotation)
     })
@@ -212,7 +239,7 @@ mod tests {
     let drawn = |path_ms: Option<f32>, at: u64| {
       let mut paced = clip("a", AnnotationTrack::Primary, 0, 10_000);
       paced.path_ms = path_ms;
-      revealed_annotations(&[paced], AnnotationTrack::Primary, at, 0.0)[0]
+      revealed_annotations(&[paced], AnnotationTrack::Primary, &[], at, 0.0)[0]
         .reveal
         .high
     };
@@ -220,5 +247,49 @@ mod tests {
     assert!(drawn(Some(2_000.0), 1_000) < 1.0);
     assert_eq!(drawn(Some(2_000.0), 2_000), 1.0);
     assert_eq!(drawn(Some(600.0), 600), 1.0);
+  }
+
+  fn kept(source_start_ms: u64, source_end_ms: u64, playback_rate: f64) -> TimelineRange {
+    TimelineRange {
+      output_start_us: 0,
+      source_end_us: source_end_ms * 1_000,
+      source_start_us: source_start_ms * 1_000,
+      playback_rate,
+    }
+  }
+
+  fn reveal_at(
+    ranges: &[TimelineRange],
+    at: u64,
+  ) -> crate::editor::annotations::reveal::AnnotationReveal {
+    let clip = clip("a", AnnotationTrack::Primary, 1_000, 10_000);
+    revealed_annotations(&[clip], AnnotationTrack::Primary, ranges, at, 0.0)[0].reveal
+  }
+
+  /// A clip whose start the timeline trimmed away arrives from the first
+  /// frame it is seen, rather than already part way in.
+  #[test]
+  fn a_trimmed_start_arrives_where_the_clip_is_first_seen() {
+    let ranges = [kept(3_000, 20_000, 1.0)];
+    assert_eq!(reveal_at(&ranges, 3_000).high, 0.0);
+    assert!(reveal_at(&ranges, 3_500).high < 1.0);
+    assert_eq!(reveal_at(&ranges, 4_000).high, 1.0);
+  }
+
+  /// A clip whose end the timeline trimmed away has left by the last frame
+  /// that is kept, rather than being cut off whole.
+  #[test]
+  fn a_trimmed_end_leaves_before_the_cut() {
+    let ranges = [kept(0, 6_000, 1.0)];
+    assert!(reveal_at(&ranges, 5_999).low > 0.99);
+    assert!(reveal_at(&[], 5_999).is_whole());
+  }
+
+  /// Arriving takes the same output time at any speed.
+  #[test]
+  fn a_faster_timeline_does_not_hurry_the_arrival() {
+    let ranges = [kept(0, 20_000, 2.0)];
+    assert!(reveal_at(&ranges, 2_000).high < 1.0);
+    assert_eq!(reveal_at(&ranges, 3_000).high, 1.0);
   }
 }

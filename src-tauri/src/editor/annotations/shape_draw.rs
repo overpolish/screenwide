@@ -123,15 +123,15 @@ impl super::AnnotationShape {
   pub(crate) fn field_box(
     &self,
     width: f64,
-    source_per_output: f64,
+    source_per_size: f64,
   ) -> Option<super::super::snap::SnapBox> {
     match self {
       Self::Arrow { .. } => super::super::arrow::snap::field_box(),
       Self::Counter { center, .. } => {
-        super::super::counter::snap::field_box(*center, width, source_per_output)
+        super::super::counter::snap::field_box(*center, width, source_per_size)
       }
       Self::Text { origin, text, .. } => {
-        super::super::text::snap::field_box(*origin, text, width, source_per_output)
+        super::super::text::snap::field_box(*origin, text, width, source_per_size)
       }
       Self::Redact { start, end, .. } => super::super::redact::snap::field_box(*start, *end),
       Self::Shape { start, end, .. } => super::super::outline::model::field_box(*start, *end),

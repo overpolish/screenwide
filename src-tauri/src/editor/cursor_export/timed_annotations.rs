@@ -7,14 +7,16 @@ use crate::editor::annotations::timing::{
   placed_annotation, AnnotationTrack, RecordingAnnotationClip,
 };
 use crate::editor::annotations::{Annotation, AnnotationKind};
+use crate::editor::timeline_edit::{output_at_us, TimelineRange};
 
-/// One record the Metal export draws while `start_ms <= t < end_ms`. Its
-/// arrival and leaving play over `reveal_start_ms..reveal_end_ms` at its
-/// clip's pace, `path_ms` - zero where the clip names none - and a
-/// redaction's surface timeline is read from `clip_start_ms`: for a clip that
-/// is not pinned all three are its own bounds, while a pinned clip is one
-/// record for each place its pin puts it, each keeping its clip's reveal and
-/// surface.
+/// One record the Metal export draws while `start_ms <= t < end_ms` in source
+/// time. Its arrival and leaving play from `reveal_start_ms` to
+/// `reveal_end_ms` in output time, at its clip's pace `path_ms` - zero where
+/// the clip names none - so a cut or a speed change moves neither out of
+/// step with the frames that are kept. A redaction's surface timeline is read
+/// from `clip_start_ms`, in source time. A clip that is not pinned is one
+/// record over its own bounds, while a pinned clip is one record for each
+/// place its pin puts it, each keeping its clip's reveal and surface.
 #[repr(C)]
 pub(super) struct NativeTimedAnnotation {
   annotation: NativeAnnotation,
@@ -47,7 +49,7 @@ pub(super) fn for_request(
       request.screen,
       request.duration_ms,
       &mut clips,
-      request.output.image_width,
+      request.output.size_image_width(),
       request.cancelled,
     );
     crate::editor::recording_preview_player::held_surfaces::attach_for_export(
@@ -57,13 +59,18 @@ pub(super) fn for_request(
       request.output.capture_width_points,
     );
   }
-  // The stroke follows the output while the points stay in the source.
-  let stroke_scale = f64::from(request.video.resolution_scale_percent)
+  // Sizes are in points, drawn at the capture's scale, and the stroke then
+  // follows the output while the points stay in the source.
+  let stroke_scale = request.output.size_scale()
+    * f64::from(request.video.resolution_scale_percent)
     / f64::from(request.video.source_scale_percent.max(1));
   let source = RedactSource::Video {
     source_per_point: source_per_capture_point(request.width, request.output.capture_width_points),
   };
-  pack_clips(clips.iter(), stroke_scale, source)
+  let ranges = request
+    .timeline
+    .map_or(&[][..], |timeline| timeline.ranges());
+  pack_clips(clips.iter(), ranges, stroke_scale, source)
 }
 
 /// How far either side of a sample a frame's time may be rounded.
@@ -136,10 +143,12 @@ fn placed_records(clip: &RecordingAnnotationClip) -> Vec<(Annotation, u64, u64, 
 
 fn pack_clips<'a>(
   clips: impl Iterator<Item = &'a RecordingAnnotationClip>,
+  ranges: &[TimelineRange],
   stroke_scale: f64,
   source: RedactSource<'_>,
 ) -> (Vec<NativeTimedAnnotation>, NativeAnnotationData) {
   let mut data = NativeAnnotationData::default();
+  let output_ms = |ms: u64| (output_at_us(ranges, ms as f64 * 1_000.0) / 1_000.0).round() as u64;
   let clips = clips
     .flat_map(|clip| {
       placed_records(clip)
@@ -152,11 +161,11 @@ fn pack_clips<'a>(
               annotation.style.width *= stroke_scale;
             }
             NativeTimedAnnotation {
-              annotation: data.pack(&annotation, source),
+              annotation: data.pack(&annotation, source, 1.0),
               start_ms,
               end_ms,
-              reveal_start_ms,
-              reveal_end_ms,
+              reveal_start_ms: output_ms(reveal_start_ms),
+              reveal_end_ms: output_ms(reveal_end_ms),
               clip_start_ms: clip.start_ms,
               path_ms: clip.path_ms.unwrap_or(0.0),
               padding: 0,
@@ -170,117 +179,5 @@ fn pack_clips<'a>(
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::editor::annotations::{AnnotationPoint, AnnotationShape, AnnotationStyle};
-
-  fn counter_clip(value: u32) -> RecordingAnnotationClip {
-    RecordingAnnotationClip {
-      path_ms: None,
-      pin: None,
-      annotation: Annotation {
-        above_camera: false,
-        animated: true,
-        id: value.to_string(),
-        held: None,
-        reveal: Default::default(),
-        shape: AnnotationShape::Counter {
-          center: AnnotationPoint { x: 10.0, y: 10.0 },
-          value,
-          angle: 0.0,
-        },
-        style: AnnotationStyle {
-          align: Default::default(),
-          color: "#ffcc00".to_owned(),
-          head: Default::default(),
-          hand_drawn: false,
-          manual: false,
-          radius: 0.0,
-          redaction: Default::default(),
-          strength: 0.0,
-          width: 40.0,
-        },
-      },
-      end_ms: 2_000,
-      start_ms: 1_000,
-      track_id: AnnotationTrack::Primary,
-    }
-  }
-
-  /// A clip packed on its own would index a buffer that is thrown away, and
-  /// the export would draw its counter with no number in it.
-  #[test]
-  fn every_clip_indexes_the_one_shared_text_buffer() {
-    let clips = [counter_clip(1), counter_clip(12)];
-    let (packed, data) = pack_clips(clips.iter(), 1.0, RedactSource::None);
-    assert_eq!(data.text, b"112");
-    let slots: Vec<_> = packed
-      .iter()
-      .map(|clip| (clip.annotation.data_offset, clip.annotation.data_count))
-      .collect();
-    assert_eq!(slots, [(0, 1), (1, 2)]);
-  }
-
-  /// A pinned counter is drawn where its path puts it frame by frame, not
-  /// drawn while its content is off the frame, and shown again over the
-  /// stretch it comes back for.
-  #[test]
-  fn a_pinned_clip_is_drawn_where_its_path_puts_it_and_not_while_hidden() {
-    use crate::editor::annotations::pin::model::PinKeyframe;
-    use crate::editor::annotations::pin::resolve::{PinSample, PinnedPath};
-    use crate::editor::annotations::pin::AnnotationPin;
-    let sample = |ms, dy: f32, visible| PinSample {
-      ms,
-      dx: 0.0,
-      dy,
-      scale: 1.0,
-      confidence: 1.0,
-      visible,
-    };
-    let mut clip = counter_clip(1);
-    // Standing whole, so coming back 300 ms before its end still shows it.
-    clip.annotation.animated = false;
-    clip.pin = Some(AnnotationPin {
-      pinned_ms: 1_000,
-      keyframes: vec![PinKeyframe {
-        ms: 1_000,
-        dx: 0.0,
-        dy: 0.0,
-        edges: None,
-        out_of_view: false,
-      }],
-      path: Some(std::sync::Arc::new(PinnedPath {
-        samples: vec![
-          sample(1_000, 0.0, true),
-          sample(1_200, -5.0, true),
-          sample(1_400, -50.0, false),
-          sample(1_700, 0.0, true),
-        ],
-        shown: vec![[1_000, 1_400], [1_700, 2_000]],
-        ..PinnedPath::default()
-      })),
-    });
-    let (packed, _) = pack_clips(std::iter::once(&clip), 1.0, RedactSource::None);
-    let spans: Vec<_> = packed
-      .iter()
-      .map(|record| {
-        (
-          record.start_ms,
-          record.end_ms,
-          record.reveal_start_ms,
-          record.reveal_end_ms,
-          record.annotation.p0[1],
-        )
-      })
-      .collect();
-    assert_eq!(
-      spans,
-      [
-        (1_000, 1_198, 1_000, 1_400, 10.0),
-        (1_198, 1_398, 1_000, 1_400, 5.0),
-        (1_698, 2_000, 1_698, 2_000, 10.0),
-      ]
-    );
-    assert!(packed.iter().all(|record| record.clip_start_ms == 1_000));
-  }
-}
+#[path = "timed_annotations_tests.rs"]
+mod tests;

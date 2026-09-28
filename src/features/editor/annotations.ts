@@ -48,7 +48,7 @@ export type AnnotationStyle = {
    * carry zero. */
   strength: number;
   /** Stroke width, disc diameter, type size, pixelation block, a shape's pen
-   * or a highlight's marker, in output pixels. */
+   * or a highlight's marker, in points of the capture. */
   width: number;
 };
 

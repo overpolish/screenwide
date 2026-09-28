@@ -18,6 +18,7 @@ use super::{
 fn identity_settings(
   image: &CapturedImage,
   annotations: Vec<Annotation>,
+  scale: f64,
 ) -> ScreenshotOutputSettings {
   let width = f64::from(image.width);
   let height = f64::from(image.height);
@@ -29,6 +30,7 @@ fn identity_settings(
     background_radius_percent: 0.0,
     // The live overlay draws no redaction, so there is nothing to size.
     capture_width_points: 0.0,
+    capture_scale: scale,
     crop_height: height,
     crop_width: width,
     crop_preview: None,
@@ -60,17 +62,19 @@ fn identity_settings(
   }
 }
 
-/// The still with `annotations` drawn over it. A shot too small for the
-/// compositor's canvas floor is returned as it was: nothing is lost that the
-/// editor could not still show.
+/// The still with `annotations` drawn over it, their sizes in points of a
+/// capture taken at `scale`. A shot too small for the compositor's canvas
+/// floor is returned as it was: nothing is lost that the editor could not
+/// still show.
 pub(crate) fn bake_annotations(
   image: &CapturedImage,
   annotations: Vec<Annotation>,
+  scale: f64,
 ) -> Result<CapturedImage, String> {
   if annotations.is_empty() {
     return Ok(image.clone());
   }
-  let settings = identity_settings(image, annotations);
+  let settings = identity_settings(image, annotations, scale);
   if super::output::output_dimensions(&settings).is_err() {
     return Ok(image.clone());
   }
@@ -127,7 +131,7 @@ mod tests {
 
   #[test]
   fn the_arrow_lands_in_the_still_at_its_own_pixels() {
-    let baked = bake_annotations(&black(200, 200), vec![arrow(8.0)]).unwrap();
+    let baked = bake_annotations(&black(200, 200), vec![arrow(8.0)], 1.0).unwrap();
 
     assert_eq!((baked.width, baked.height), (200, 200));
     assert!(pixel(&baked, 100, 100)[0] > 200, "the shaft is red");
@@ -141,7 +145,7 @@ mod tests {
   #[test]
   fn a_shot_under_the_canvas_floor_is_returned_as_it_was() {
     let source = black(32, 32);
-    let baked = bake_annotations(&source, vec![arrow(2.0)]).unwrap();
+    let baked = bake_annotations(&source, vec![arrow(2.0)], 1.0).unwrap();
 
     assert_eq!(baked.rgba, source.rgba);
   }

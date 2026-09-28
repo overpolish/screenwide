@@ -56,7 +56,7 @@ export const Counter: Story = {
         animated: true,
         id: "counter-1",
         kind: "counter",
-        style: { ...dress, color: "#ffcc00", width: 56 },
+        style: { ...dress, color: "#ffcc00", width: 28 },
       },
       cursorEffects: DEFAULT_CURSOR_EFFECTS,
       frame: null,

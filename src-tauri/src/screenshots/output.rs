@@ -65,6 +65,10 @@ pub struct ScreenshotOutputSettings {
   /// source pixel.
   #[serde(skip)]
   pub capture_width_points: f64,
+  /// Source pixels per logical point: annotation sizes are points, drawn this
+  /// many output pixels to the point. Stamped with `capture_width_points`.
+  #[serde(skip)]
+  pub capture_scale: f64,
   /// The visible rectangle, in output pixels. Zero width or height marks a
   /// settings blob written before placement moved into pixels.
   #[serde(default)]

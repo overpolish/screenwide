@@ -3,11 +3,13 @@
 
 #pragma once
 
-/// Evaluate source-time clips once per exported frame. Bind the same prepared
-/// geometry used by screenshot export and native video preview.
+/// Evaluate source-time clips once per exported frame, their arrivals timed at
+/// `output_ms`, the frame's place on the edited timeline. Bind the same
+/// prepared geometry used by screenshot export and native video preview.
 static void screenwide_export_annotations(ScreenwideVideoExport *session,
     id<MTLCommandBuffer> command, id<MTLTexture> luma, id<MTLTexture> chroma,
-    uint32_t source_width, uint32_t source_height, uint64_t source_ms, uint32_t above) {
+    uint32_t source_width, uint32_t source_height, uint64_t source_ms, uint64_t output_ms,
+    uint32_t above) {
   // A frame shows at most every clip; the list is sized to that, on the heap.
   NSMutableData *items = [NSMutableData
       dataWithLength:MAX(session->annotation_count, 1u) * sizeof(ScreenwideAnnotation)];
@@ -25,7 +27,7 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
       // seek lands on exactly the frame a play-through drew. The blur's lead
       // is one source frame of travel at the rate this export encodes.
       screenwide_annotation_reveal_window(
-          (float)(source_ms - clip->reveal_start_ms),
+          screenwide_timed_reveal_elapsed_ms(clip, output_ms),
           (float)(clip->reveal_end_ms - clip->reveal_start_ms),
           session->source_frame_rate > 0 ? 1000.0f / session->source_frame_rate : 0,
           annotation->animated, annotation->kind, clip->path_ms, &annotation->reveal);

@@ -19,7 +19,7 @@ use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{drawing_kind, AnnotationGestureTarget};
 use crate::editor::annotations::handles::{annotation_handles, source_point};
 use crate::editor::annotations::snap::{
-  source_per_output, source_per_point, threshold_source_px, SnapField, SnapModifiers, SnapRequest,
+  source_per_point, source_per_size, threshold_source_px, SnapField, SnapModifiers, SnapRequest,
   SnapResult,
 };
 use crate::editor::annotations::Annotation;
@@ -52,18 +52,12 @@ impl PreviewManager {
     Some((source.image.width, source.image.height))
   }
 
-  /// How wide this pane's picture is drawn, in output pixels: what turns a
-  /// stroke in output pixels into a share of the picture.
+  /// How wide this pane's picture is drawn, in points of annotation size: what
+  /// turns a size into source pixels, or into a share of the picture.
   pub(super) fn annotation_image_width(&self, pane_index: u32) -> Option<f64> {
-    Some(
-      self
-        .output
-        .as_ref()?
-        .items
-        .get(pane_index as usize)?
-        .output
-        .image_width,
-    )
+    let item = self.output.as_ref()?.items.get(pane_index as usize)?;
+    let source = self.sources.iter().find(|source| source.id == item.id)?;
+    Some(item.output.image_width / source.capture.size_scale())
   }
 
   pub(super) fn annotations_for(&self, pane_index: u32) -> Option<&Vec<Annotation>> {
@@ -253,7 +247,7 @@ impl PreviewManager {
       defaults.as_ref(),
       drawing_kind(mode),
       angle,
-      source_per_output(source, image_width),
+      source_per_size(source, image_width),
     )?;
     if edit.wants_picture(annotations) {
       edit.set_picture(picture);

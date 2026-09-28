@@ -10,7 +10,7 @@ use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,
 };
 
-/// The stroke a fresh arrow is drawn with, in output pixels.
+/// The stroke a fresh arrow is drawn with, in points.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const NEW_ARROW_WIDTH: f64 = 8.0;
 

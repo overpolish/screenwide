@@ -66,11 +66,12 @@ typedef struct {
 _Static_assert(sizeof(ScreenwideAnnotations) == 40, "ScreenwideAnnotations ABI must match Rust");
 _Static_assert(offsetof(ScreenwideAnnotations, data) == 16, "ScreenwideAnnotations.data ABI must match Rust");
 
-/// One record drawn while `start_ms <= t < end_ms`, arriving and leaving over
-/// `reveal_start_ms..reveal_end_ms` at its clip's pace `path_ms` - zero where
-/// the clip names none - with a redaction's surface timeline read from
-/// `clip_start_ms`. A pinned clip is one record for each place its pin puts
-/// it. The twin of Rust's `NativeTimedAnnotation`.
+/// One record drawn while `start_ms <= t < end_ms` in source time, arriving
+/// and leaving from `reveal_start_ms` to `reveal_end_ms` in output time at its
+/// clip's pace `path_ms` - zero where the clip names none - with a
+/// redaction's surface timeline read from `clip_start_ms` in source time. A
+/// pinned clip is one record for each place its pin puts it. The twin of
+/// Rust's `NativeTimedAnnotation`.
 typedef struct {
   ScreenwideAnnotation annotation;
   uint64_t start_ms, end_ms;
@@ -80,3 +81,9 @@ typedef struct {
   uint32_t padding;
 } ScreenwideTimedAnnotation;
 _Static_assert(sizeof(ScreenwideTimedAnnotation) == 176, "Timed annotation ABI");
+
+/// How far into its arrival `clip` is at the output moment `output_ms`.
+static inline float screenwide_timed_reveal_elapsed_ms(const ScreenwideTimedAnnotation *clip,
+                                                       uint64_t output_ms) {
+  return output_ms > clip->reveal_start_ms ? (float)(output_ms - clip->reveal_start_ms) : 0.0f;
+}

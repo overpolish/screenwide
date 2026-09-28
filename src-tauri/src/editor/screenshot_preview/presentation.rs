@@ -45,7 +45,7 @@ impl PreviewManager {
           Some((
             item_output.id,
             source.image.as_ref(),
-            output.output_for_id(item_output.id, source.capture_width_points),
+            output.output_for_id(item_output.id, source.capture),
           ))
         })
         .collect::<Vec<_>>();
@@ -69,7 +69,7 @@ impl PreviewManager {
         continue;
       };
       has_source = true;
-      let item_settings = output.output_for_id(item_output.id, source.capture_width_points);
+      let item_settings = output.output_for_id(item_output.id, source.capture);
       staged &= surface.present_screenshot_layer(
         index as u32,
         item_output.id,

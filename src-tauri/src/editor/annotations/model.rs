@@ -83,9 +83,10 @@ pub enum AnnotationRedaction {
   Blur,
 }
 
-/// How an annotation is painted. The width is in output pixels, so an
-/// annotation keeps its weight on the canvas rather than growing with the
-/// picture.
+/// How an annotation is painted. The width is in points of the capture, drawn
+/// at its scale straight into output pixels, so an annotation keeps its weight
+/// on the canvas rather than growing with the picture, and weighs the same on
+/// a 2x capture as on a 1x one.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnnotationStyle {

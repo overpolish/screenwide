@@ -95,9 +95,9 @@ fn the_field_holds_the_canvas_lines_and_every_other_counters_disc() {
       None,
     ),
   ];
-  // Drawn 1000 output pixels across a 1000-pixel source, so the default
-  // 56-pixel disc is 56 source pixels wide and its edges sit 28 out.
-  let field = SnapField::new((1000, 500), &annotations, "held", 1000.0);
+  // Drawn 500 points across a 1000-pixel source, as a 2x capture is, so the
+  // default 28-point disc is 56 source pixels wide and its edges sit 28 out.
+  let field = SnapField::new((1000, 500), &annotations, "held", 500.0);
   // Inset is 2% of the shorter side, so both axes are inset by the same length.
   assert_eq!(
     field.guides_x,

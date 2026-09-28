@@ -203,12 +203,22 @@ export const recordingAnnotationClipAt = ({
       )
     : Math.min(duration, positionMs + 3_000);
   const pathMs = annotationPathMs(annotation, frame);
+  const drawInMs = annotationDrawInMs(annotation, pathMs);
+  // The reveal plays in output time, so the reach back is measured there and
+  // taken back into source time: a cut or a speed change behind the playhead
+  // still leaves the annotation whole where it was placed.
+  const startMs =
+    edit && outputDurationMs > 0
+      ? recordingTimelineOutputToSource(
+          edit,
+          Math.max(0, outputStartMs - drawInMs) / outputDurationMs,
+        ) * duration
+      : positionMs - drawInMs;
   return {
     annotation,
     endMs: Math.round(Math.min(duration, endMs)),
     ...(pathMs === undefined ? {} : { pathMs }),
-    // The reveal runs on source time, so the reach back is source time too.
-    startMs: Math.max(0, positionMs - annotationDrawInMs(annotation, pathMs)),
+    startMs: Math.max(0, Math.round(startMs)),
     trackId,
   };
 };

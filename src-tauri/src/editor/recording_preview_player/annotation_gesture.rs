@@ -138,15 +138,15 @@ impl PreviewPlayerManager {
         return None;
       }
       let before = clips.read().ok()?.clone();
-      // A disc's diameter and a text box's type size are in output pixels,
-      // so the pane's drawn width is what turns them into source pixels.
+      // A disc's diameter and a text box's type size are in points, so the
+      // pane's drawn width in points is what turns them into source pixels.
       let image_width = self
         .selection_composition()
         .map(|composition| {
           if pane == 1 {
-            composition.recording_output.camera.image_width
+            composition.recording_output.camera.size_image_width()
           } else {
-            composition.recording_output.primary.image_width
+            composition.recording_output.primary.size_image_width()
           }
         })
         .unwrap_or_default();
@@ -157,7 +157,7 @@ impl PreviewPlayerManager {
         self.annotation.defaults.as_ref(),
         drawing_kind(self.annotation.mode),
         self.annotation.counter_angle,
-        source_per_output(source_size, image_width),
+        source_per_size(source_size, image_width),
       )?;
       if edit.wants_picture(&working) {
         edit.set_picture(self.annotation_picture(pane, position_ms, source_size, false));

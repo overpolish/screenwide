@@ -9,7 +9,7 @@ use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{annotation_mode, drawing_kind, AnnotationGestureTarget};
 use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
 use crate::editor::annotations::snap::{
-  detect_anchors, request_anchors, source_per_output, source_per_point, threshold_source_px,
+  detect_anchors, request_anchors, source_per_point, source_per_size, threshold_source_px,
   AnchorBoxes, AnchorCache, SnapField, SnapModifiers, SnapRequest, SnapResult,
 };
 use crate::editor::annotations::timing::{
@@ -173,7 +173,7 @@ pub async fn recording_preview_pin_back_in_view(
       let Some(clip) = clip else {
         return Ok(None);
       };
-      (pins, clip, sources.screen_image_width())
+      (pins, clip, sources.screen_size_width())
     };
     tauri::async_runtime::spawn_blocking(move || pins.back_in_view(&clip, source_ms, image_width))
       .await

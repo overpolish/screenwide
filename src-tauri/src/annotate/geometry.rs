@@ -48,9 +48,9 @@ pub(super) fn source_annotation(
   }
   let horizontal = f64::from(source.video_width) / source.width;
   let vertical = f64::from(source.video_height) / source.height;
-  // A stroke width is pixels of whatever it is drawn on, the way an editor
-  // annotation's is: the same preset is the same weight live and in the
-  // editor, so the number carries over rather than being rescaled.
+  // A size is in points, the way an editor annotation's is: the same preset
+  // is the same weight live and in the editor, so the number carries over
+  // rather than being rescaled.
   let width = annotation.style.width;
   if !(width.is_finite() && width > 0.0) {
     return None;
@@ -67,7 +67,7 @@ pub(super) fn source_annotation(
 
 /// An annotation in one display's layer pixels: its origin is the display's top-left
 /// corner in desktop points, and `scale` its backing scale. Only the geometry
-/// scales - the stroke width is already in pixels, as the editor's is, so a
+/// scales - the size stays in points and is drawn at the same `scale`, so a
 /// preset drawn live has the weight the same preset has on a picture.
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 pub(super) fn display_annotation(

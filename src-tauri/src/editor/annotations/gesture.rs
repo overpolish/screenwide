@@ -157,9 +157,9 @@ impl AnnotationGestureTarget {
 /// the chord's terms, so dragging a tip carries the curve round with the
 /// shaft rather than leaving the control point behind in the canvas.
 ///
-/// `source_per_output` turns a size a style carries into source pixels: a
+/// `source_per_size` turns a size a style carries into source pixels: a
 /// text box's pointer is pushed back in when its tip lands inside the box,
-/// and the box is only known in output pixels. Zero where the workspace has
+/// and the box is only known in points. Zero where the workspace has
 /// not said, which leaves every box a point. `source_per_point` is how many
 /// source pixels one screen point covers at the current zoom, which a text
 /// box's pointer measures its stretch point in; zero where it is unknown.
@@ -172,7 +172,7 @@ pub(crate) struct AnnotationDragOrigin {
   pub(crate) bend: ArrowBend,
   pub(crate) point: AnnotationPoint,
   pub(crate) shape: AnnotationShape,
-  pub(crate) source_per_output: f64,
+  pub(crate) source_per_size: f64,
   pub(crate) source_per_point: f64,
   pub(crate) picture: Option<std::sync::Arc<super::highlight::picture::HighlightPicture>>,
 }
@@ -183,7 +183,7 @@ impl AnnotationDragOrigin {
       bend: shape.bend(),
       point,
       shape: shape.clone(),
-      source_per_output: 0.0,
+      source_per_size: 0.0,
       source_per_point: 0.0,
       picture: None,
     }

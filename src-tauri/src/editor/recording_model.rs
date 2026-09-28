@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use crate::screenshots::Capture;
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -76,20 +77,21 @@ pub struct RecordingOutputSettings {
 }
 
 impl RecordingOutputSettings {
-  /// Writes each pane's source width in logical points, primary then camera,
-  /// from [`EditorArtifact::capture_widths`]. The webview's settings never
-  /// carry them, so they are stamped before a composition is compared or used.
-  pub(crate) fn stamp_capture_widths(&mut self, widths: [f64; 2]) {
-    self.primary.capture_width_points = widths[0];
-    self.camera.capture_width_points = widths[1];
+  /// Writes each pane's capture, primary then camera, from
+  /// [`EditorArtifact::captures`]. The webview's settings never carry it, so
+  /// it is stamped before a composition is compared or used.
+  pub(crate) fn stamp_captures(&mut self, captures: [Capture; 2]) {
+    self.primary.stamp_capture(captures[0]);
+    self.camera.stamp_capture(captures[1]);
   }
 }
 
 impl EditorArtifact {
-  /// A recording's pane widths in logical points, which redactions are sized
-  /// in, primary then camera: the screen's pixels over the scale it was
-  /// recorded at, and a camera's own pixels. Zero where there is no pane.
-  pub(crate) fn capture_widths(&self) -> [f64; 2] {
+  /// What a recording's panes were captured at, primary then camera, which
+  /// redactions and annotation sizes are measured against: the screen at the
+  /// scale it was recorded at, and a camera at one point to its pixel. Zero
+  /// where there is no pane.
+  pub(crate) fn captures(&self) -> [Capture; 2] {
     let EditorArtifact::Recording {
       camera,
       source_scale_percent,
@@ -97,13 +99,20 @@ impl EditorArtifact {
       ..
     } = self
     else {
-      return [0.0; 2];
+      return [Capture::default(); 2];
     };
+    let scale = f64::from((*source_scale_percent).max(1)) / 100.0;
     [
-      f64::from(*width) * 100.0 / f64::from((*source_scale_percent).max(1)),
+      Capture {
+        width_points: f64::from(*width) / scale,
+        scale,
+      },
       camera
         .as_ref()
-        .map_or(0.0, |camera| f64::from(camera.width)),
+        .map_or_else(Capture::default, |camera| Capture {
+          width_points: f64::from(camera.width),
+          scale: 1.0,
+        }),
     ]
   }
 }

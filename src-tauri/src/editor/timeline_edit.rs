@@ -3,7 +3,7 @@
 
 #[path = "timeline_edit/time_mapping.rs"]
 mod time_mapping;
-pub(crate) use time_mapping::source_to_output_us;
+pub(crate) use time_mapping::{output_at_us, rate_at, source_to_output_us};
 #[path = "timeline_edit/validation.rs"]
 mod validation;
 use validation::validate;

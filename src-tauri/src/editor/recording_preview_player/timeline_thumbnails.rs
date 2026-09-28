@@ -54,7 +54,7 @@ pub async fn copy_recording_preview_frame_to_clipboard(
   annotation_clips: Option<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>,
 ) -> Result<(), String> {
   let sources = headless_sources(&app, artifact_id)?;
-  recording_output.stamp_capture_widths(sources.capture_width_points);
+  recording_output.stamp_captures(sources.captures);
   if let Some(clips) = &annotation_clips {
     crate::editor::annotations::timing::validate_clips(clips)?;
   }
@@ -68,16 +68,20 @@ pub async fn copy_recording_preview_frame_to_clipboard(
         &sources.screen_path,
         sources.duration_ms,
         &mut clips,
-        recording_output.primary.image_width,
+        recording_output.primary.size_image_width(),
         &std::sync::atomic::AtomicBool::new(false),
       );
       let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
+      let ranges = sources
+        .animation_ranges
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
       // A thumbnail is one frame standing still, so it shows the reveal this
       // instant holds and nothing is moving for the blur to fade.
       recording_output.primary.annotations =
-        revealed_annotations(&clips, AnnotationTrack::Primary, position_ms, 0.0);
+        revealed_annotations(&clips, AnnotationTrack::Primary, &ranges, position_ms, 0.0);
       recording_output.camera.annotations =
-        revealed_annotations(&clips, AnnotationTrack::Camera, position_ms, 0.0);
+        revealed_annotations(&clips, AnnotationTrack::Camera, &ranges, position_ms, 0.0);
     }
     platform::composed_frame_image(
       &sources,

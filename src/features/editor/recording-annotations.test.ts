@@ -69,7 +69,7 @@ describe("recording annotation clips", () => {
     expect(4_000 - clip.startMs).toBeGreaterThanOrEqual(phaseMs);
   });
 
-  it("maps three output seconds through a two times source segment", () => {
+  it("maps three output seconds and the arrival through a two times source segment", () => {
     const edit = {
       ...createRecordingTimelineEdit(1),
       segments: [{ id: 0, playbackRate: 2, sourceEnd: 1, sourceStart: 0 }],
@@ -81,7 +81,10 @@ describe("recording annotation clips", () => {
         sourceDurationMs: 20_000,
         sourcePositionMs: 4_000,
       }),
-    ).toMatchObject({ endMs: 10_000, startMs: 4_000 - ANNOTATION_DRAW_IN_MS });
+    ).toMatchObject({
+      endMs: 10_000,
+      startMs: 4_000 - 2 * ANNOTATION_DRAW_IN_MS,
+    });
   });
 
   it("takes what room there is at the start of the recording", () => {

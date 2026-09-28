@@ -57,9 +57,14 @@ pub async fn capture_still(
   ) {
     // The clipboard has no layers, so the annotations go into the pixels.
     #[cfg(target_os = "macos")]
-    let copied = super::annotation_bake::bake_annotations(&image, annotations.clone());
+    let copied = super::annotation_bake::bake_annotations(
+      &image,
+      annotations.clone(),
+      super::capture_scale(target),
+    );
     #[cfg(target_os = "windows")]
-    let copied = crate::annotate::bake_annotations(&image, &annotations);
+    let copied =
+      crate::annotate::bake_annotations(&image, &annotations, super::capture_scale(target));
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let copied: Result<CapturedImage, String> = Ok(image.clone());
     if let Err(error) = copied.and_then(|copied| {

@@ -5,7 +5,7 @@
 //!
 //! The box is held by two corners in source pixels, `start` the top-left and
 //! `end` the bottom-right; every edit writes them back in that order. The
-//! style's width is the pen, in output pixels, so a shape keeps its weight on
+//! style's width is the pen, in points, so a shape keeps its weight on
 //! the canvas the way an arrow does, and its radius rounds the corners as a
 //! percentage of the box's shorter side, as a redaction's does.
 
@@ -15,7 +15,7 @@ use crate::editor::annotations::AnnotationPoint;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 use crate::editor::annotations::{Annotation, AnnotationHead, AnnotationShape, AnnotationStyle};
 
-/// The pen a fresh shape is drawn with, in output pixels: an arrow's, so the
+/// The pen a fresh shape is drawn with, in points: an arrow's, so the
 /// two read as one set of marks. The twin of `DEFAULT_ANNOTATION_WIDTH` in
 /// `src/components/shared/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]

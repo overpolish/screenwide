@@ -11,9 +11,9 @@ use super::snap::{GapSpan, SnapField, SnapModifiers, SnapRequest, SnapResult};
 use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationShape};
 
 const SOURCE: (u32, u32) = (1920, 1080);
-/// Drawn one output pixel per source pixel, so the default 56-pixel disc is
-/// 56 source pixels across and its edges sit 28 either side of its centre.
-const IMAGE_WIDTH: f64 = 1920.0;
+/// Drawn 960 points across, as a 2x capture is, so the default 28-point disc
+/// is 56 source pixels across and its edges sit 28 either side of its centre.
+const IMAGE_WIDTH: f64 = 960.0;
 const THRESHOLD: f64 = 16.0;
 
 fn point(x: f64, y: f64) -> AnnotationPoint {

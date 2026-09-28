@@ -38,8 +38,11 @@ impl RecordingPreviewSurface {
           source.height,
           settings.capture_width_points,
         );
-        let mut annotations =
-          native_annotations(&settings.annotations, RedactSource::Picture(&picture));
+        let mut annotations = native_annotations(
+          &settings.annotations,
+          RedactSource::Picture(&picture),
+          settings.size_scale(),
+        );
         if let Some((layer_id, index, width)) = hover {
           if layer_id == *source_token {
             if let Some(item) = annotations.items.get_mut(index) {

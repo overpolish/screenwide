@@ -35,18 +35,18 @@ pub(crate) struct PinRequest {
 
 impl PinRequest {
   /// What `clip`'s pin asks to be tracked, on a recording `source` pixels in
-  /// size drawn at `source_per_output` source pixels per canvas pixel.
+  /// size drawn at `source_per_size` source pixels per point of a style's size.
   pub(crate) fn of(
     clip: &RecordingAnnotationClip,
     pin: &AnnotationPin,
     source: (u32, u32),
-    source_per_output: f64,
+    source_per_size: f64,
   ) -> Self {
     Self {
       start_ms: clip.start_ms,
       end_ms: clip.end_ms,
       keyframes: pin.sorted(),
-      target: PinTarget::of(&clip.annotation, source, source_per_output),
+      target: PinTarget::of(&clip.annotation, source, source_per_size),
     }
   }
 

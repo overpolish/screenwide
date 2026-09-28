@@ -4,7 +4,8 @@
 import type { AnnotationKind, AnnotationRedaction } from "./types";
 
 /**
- * The strokes the width controls offer, in output pixels.
+ * The strokes the width controls offer, in points: drawn at the capture's
+ * scale, so a preset weighs the same on a 2x capture as on a 1x one.
  *
  * The steps are not uniform - the jump from hairline to visible matters more
  * than the one from thick to thicker - so a control runs over the index of
@@ -12,15 +13,13 @@ import type { AnnotationKind, AnnotationRedaction } from "./types";
  * `MAX_WIDTH` in `src-tauri/src/annotate/settings.rs`, which refuses a live
  * stroke outside these ends.
  */
-export const ANNOTATION_WIDTHS = [8, 12, 16, 24, 32, 48];
+export const ANNOTATION_WIDTHS = [8, 12, 16, 24];
 
 /**
- * The disc diameters a counter offers, in output pixels. Five steps, keeping
- * the three sizes counters offered before at the first, middle and last step
- * so an older document keeps its discs. The twin of `COUNTER_SIZES` in
- * `src-tauri/src/editor/annotations/counter/model.rs`.
+ * The disc diameters a counter offers, in points. The twin of `COUNTER_SIZES`
+ * in `src-tauri/src/editor/annotations/counter/model.rs`.
  */
-export const ANNOTATION_COUNTER_SIZES = [56, 72, 96, 128, 160];
+export const ANNOTATION_COUNTER_SIZES = [28, 36, 48, 64, 80];
 
 /** The stroke a fresh arrow or shape is drawn with. The twin of
  * `NEW_ARROW_WIDTH` and `NEW_SHAPE_WIDTH`. */
@@ -28,19 +27,19 @@ export const DEFAULT_ANNOTATION_WIDTH = 8;
 
 /** The disc a fresh counter is drawn at: the smallest. The twin of
  * `NEW_COUNTER_WIDTH`. */
-export const DEFAULT_ANNOTATION_COUNTER_SIZE = 56;
+export const DEFAULT_ANNOTATION_COUNTER_SIZE = 28;
 
 /**
- * The type sizes a text box offers, in output pixels: two small steps for
- * labels, then steps that grow by a ratio so the large ones are big enough to
- * title a screen. The twin of `TEXT_SIZES` in
+ * The type sizes a text box offers, in points: two small steps for labels,
+ * then steps that grow by a ratio so the large ones are big enough to title a
+ * screen. The twin of `TEXT_SIZES` in
  * `src-tauri/src/editor/annotations/text/model.rs`.
  */
-const ANNOTATION_TEXT_SIZES = [20, 28, 48, 80, 128];
+const ANNOTATION_TEXT_SIZES = [10, 14, 24, 40, 64];
 
 /** The type size a fresh text box is set at: the third step. The twin of
  * `NEW_TEXT_WIDTH`. */
-const DEFAULT_ANNOTATION_TEXT_SIZE = 48;
+const DEFAULT_ANNOTATION_TEXT_SIZE = 24;
 
 /**
  * The block sizes a securely pixelated redaction offers, in logical points of
@@ -65,11 +64,11 @@ export const redactionSizePresets = (
   sizes: number[],
 ) => (redaction === "pixelateClassic" ? ANNOTATION_CLASSIC_SIZES : sizes);
 
-/** The marker every highlight is drawn with, in output pixels: the stroke a
- * box laid by hand is covered in, and the band drawn where no text is found.
- * The twin of `NEW_HIGHLIGHT_WIDTH` in
+/** The marker every highlight is drawn with, in points: the stroke a box laid
+ * by hand is covered in, and the band drawn where no text is found. The twin
+ * of `NEW_HIGHLIGHT_WIDTH` in
  * `src-tauri/src/editor/annotations/highlight/model.rs`. */
-const DEFAULT_ANNOTATION_HIGHLIGHT_SIZE = 24;
+const DEFAULT_ANNOTATION_HIGHLIGHT_SIZE = 12;
 
 /** The block a fresh redaction pixelates with: the second step. The twin of
  * `NEW_REDACT_WIDTH`. */

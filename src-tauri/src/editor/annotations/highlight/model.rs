@@ -5,8 +5,8 @@
 //!
 //! `start` and `end` are where the selection was pressed and let go, in source
 //! pixels; the bands are what it covers, one per line in reading order. The
-//! style's width is the band's height, in output pixels, where the selection
-//! found no text to fit.
+//! style's width is the band's height, in points, where the selection found
+//! no text to fit.
 
 use crate::editor::annotations::AnnotationPoint;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
@@ -89,12 +89,12 @@ impl Default for HighlightTone {
   }
 }
 
-/// The marker every highlight is drawn with, in output pixels: the stroke a box
-/// laid by hand is covered in, and the band drawn where no text is found. The
-/// twin of `DEFAULT_ANNOTATION_HIGHLIGHT_SIZE` in
+/// The marker every highlight is drawn with, in points: the stroke a box laid
+/// by hand is covered in, and the band drawn where no text is found. The twin
+/// of `DEFAULT_ANNOTATION_HIGHLIGHT_SIZE` in
 /// `src/components/shared/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) const NEW_HIGHLIGHT_WIDTH: f64 = 24.0;
+pub(crate) const NEW_HIGHLIGHT_WIDTH: f64 = 12.0;
 
 /// The dress a fresh highlight is drawn in before anything has been chosen:
 /// the palette's yellow, a highlighter's own colour.
@@ -115,17 +115,17 @@ pub(crate) fn default_highlight_style() -> AnnotationStyle {
 
 /// A highlight pressed at `point` and not yet drawn out: one band there, as
 /// tall as the style's width, which the drag that follows selects from.
-/// `source_per_output` turns that width into source pixels; zero where it is
+/// `source_per_size` turns that width into source pixels; zero where it is
 /// unknown.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn new_highlight(
   id: String,
   point: AnnotationPoint,
   style: Option<&AnnotationStyle>,
-  source_per_output: f64,
+  source_per_size: f64,
 ) -> Annotation {
   let style = style.cloned().unwrap_or_else(default_highlight_style);
-  let half = band_height(&style, source_per_output) * 0.5;
+  let half = band_height(&style, source_per_size) * 0.5;
   Annotation {
     above_camera: false,
     animated: true,
@@ -149,11 +149,11 @@ pub(crate) fn new_highlight(
 }
 
 /// How tall a band is where no text is found, in source pixels: the style's
-/// width, which is in output pixels.
+/// width, which is in points.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) fn band_height(style: &AnnotationStyle, source_per_output: f64) -> f64 {
-  let scale = if source_per_output.is_finite() && source_per_output > 0.0 {
-    source_per_output
+pub(crate) fn band_height(style: &AnnotationStyle, source_per_size: f64) -> f64 {
+  let scale = if source_per_size.is_finite() && source_per_size > 0.0 {
+    source_per_size
   } else {
     1.0
   };

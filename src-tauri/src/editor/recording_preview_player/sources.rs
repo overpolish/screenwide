@@ -10,16 +10,17 @@ pub(super) struct PlayerSources {
   pub(super) audio_tracks: Vec<RecordingAudioTrack>,
   pub(super) camera_duration_ms: Option<u64>,
   pub(super) camera_path: Option<PathBuf>,
-  /// Each pane's source width in logical points, primary then camera, from
-  /// `EditorArtifact::capture_widths`, for the compositions this player stores.
-  pub(super) capture_width_points: [f64; 2],
+  /// What each pane was captured at, primary then camera, from
+  /// `EditorArtifact::captures`, for the compositions this player stores.
+  pub(super) captures: [crate::screenshots::Capture; 2],
   #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
   pub(super) cursor: Option<Arc<CursorCompositor>>,
   #[cfg(target_os = "macos")]
   pub(super) cursor_artworks: Option<Arc<Vec<GpuArtwork>>>,
   pub(super) cursor_settings: Arc<RwLock<CursorEffectSettings>>,
   pub(super) keyboard: Option<Arc<KeyboardCompositor>>,
-  pub(super) keyboard_animation_ranges: Arc<RwLock<Vec<TimelineRange>>>,
+  /// The kept source ranges keyboard badges and annotations animate on.
+  pub(super) animation_ranges: Arc<RwLock<Vec<TimelineRange>>>,
   pub(super) keyboard_settings: Arc<RwLock<KeyboardEffectSettings>>,
   pub(super) composition_settings: Option<Arc<RwLock<PreviewCompositionSettings>>>,
   pub(super) duration_ms: u64,
@@ -58,7 +59,7 @@ impl PlayerSources {
   ) -> Option<crate::editor::keyboard_effects::KeyboardOverlay> {
     let keyboard = self.keyboard.as_deref()?;
     let ranges = self
-      .keyboard_animation_ranges
+      .animation_ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     keyboard.evaluate_fitted_with_ranges(
@@ -92,7 +93,7 @@ fn sources_with_surface(
   let (
     audio_tracks,
     camera,
-    capture_width_points,
+    captures,
     cursor_path,
     keyboard_path,
     duration_ms,
@@ -130,7 +131,7 @@ fn sources_with_surface(
     (
       audio_tracks.clone(),
       camera.clone(),
-      recording.capture_widths(),
+      recording.captures(),
       cursor.as_ref().map(|value| value.path.clone()),
       keyboard.as_ref().map(|value| value.path.clone()),
       *duration_ms,
@@ -155,9 +156,14 @@ fn sources_with_surface(
   // editor window's NSView/HWND. Never do that while holding the artifact
   // mutex: the main thread may simultaneously be serving a snapshot request
   // that needs the same mutex, which deadlocks crash recovery on startup.
+  let persisted_edit =
+    crate::editor::timeline_edit::for_recording(&path, artifact_id).map(|(_, edit)| edit);
+  let persisted = persisted_edit
+    .as_ref()
+    .and_then(|edit| crate::editor::timeline_edit::TimelinePlan::from_edit(edit, duration_ms));
   let annotation_clips = Arc::new(RwLock::new(
-    crate::editor::timeline_edit::for_recording(&path, artifact_id)
-      .map(|(_, edit)| edit.annotation_clips)
+    persisted_edit
+      .map(|edit| edit.annotation_clips)
       .unwrap_or_default(),
   ));
   // The surface carries no callbacks yet: they name the session that adopts
@@ -196,10 +202,6 @@ fn sources_with_surface(
   let keyboard = keyboard_path
     .as_ref()
     .map(|keyboard_path| {
-      let persisted =
-        crate::editor::timeline_edit::for_recording(&path, artifact_id).and_then(|(_, edit)| {
-          crate::editor::timeline_edit::TimelinePlan::from_edit(&edit, duration_ms)
-        });
       let deleted_ids = settings
         .map(|settings| settings.deleted_keyboard_shortcut_ids.clone())
         .unwrap_or_else(|| {
@@ -242,23 +244,25 @@ fn sources_with_surface(
     cursor_artworks,
     composition_settings: settings.map(|settings| {
       let mut recording_output = settings.recording_output.clone();
-      recording_output.stamp_capture_widths(capture_width_points);
+      recording_output.stamp_captures(captures);
       Arc::new(RwLock::new(PreviewCompositionSettings {
         bake_camera: settings.bake_camera,
         camera_overlay: settings.camera_overlay,
         recording_output,
       }))
     }),
-    capture_width_points,
+    captures,
     cursor_settings: Arc::new(RwLock::new(
       settings.map_or_else(CursorEffectSettings::default, |settings| {
         settings.cursor_effects
       }),
     )),
     keyboard,
-    keyboard_animation_ranges: Arc::new(RwLock::new(settings.map_or_else(Vec::new, |settings| {
-      animation_timeline_ranges(&settings.playback_ranges)
-    }))),
+    animation_ranges: Arc::new(RwLock::new(match settings {
+      Some(settings) => animation_timeline_ranges(&settings.playback_ranges),
+      // Headless, with no session to send the timeline: timed on the saved one.
+      None => persisted.map_or_else(Vec::new, |plan| plan.ranges().to_vec()),
+    })),
     keyboard_settings: Arc::new(RwLock::new(
       settings.map_or_else(KeyboardEffectSettings::default, |settings| {
         settings.keyboard_effects.normalized()

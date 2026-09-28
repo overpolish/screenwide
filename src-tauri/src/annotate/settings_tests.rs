@@ -31,7 +31,7 @@ fn a_colour_is_kept_in_the_palettes_own_spelling() {
 
 #[test]
 fn a_width_outside_the_stroke_presets_is_refused() {
-  for width in [0.0, 4.0, 64.0, f64::NAN, f64::INFINITY] {
+  for width in [0.0, 4.0, 32.0, f64::NAN, f64::INFINITY] {
     assert!(validated(AnnotateSettings {
       default_width: width,
       ..AnnotateSettings::default()
@@ -39,7 +39,7 @@ fn a_width_outside_the_stroke_presets_is_refused() {
     .is_err());
   }
   assert!(validated(AnnotateSettings {
-    default_width: 48.0,
+    default_width: 24.0,
     ..AnnotateSettings::default()
   })
   .is_ok());
@@ -47,9 +47,9 @@ fn a_width_outside_the_stroke_presets_is_refused() {
 
 #[test]
 fn a_counter_size_outside_the_disc_presets_is_refused() {
-  // An arrow's stroke is not a disc: eight pixels would be too small to hold
+  // An arrow's stroke is not a disc: eight points would be too small to hold
   // a number, and the compositor draws the number at a share of the disc.
-  for size in [0.0, 8.0, 240.0, f64::NAN, f64::INFINITY] {
+  for size in [0.0, 8.0, 120.0, f64::NAN, f64::INFINITY] {
     assert!(validated(AnnotateSettings {
       default_counter_size: size,
       ..AnnotateSettings::default()
@@ -57,7 +57,7 @@ fn a_counter_size_outside_the_disc_presets_is_refused() {
     .is_err());
   }
   assert!(validated(AnnotateSettings {
-    default_counter_size: 160.0,
+    default_counter_size: 80.0,
     ..AnnotateSettings::default()
   })
   .is_ok());

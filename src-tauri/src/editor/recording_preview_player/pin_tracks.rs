@@ -22,7 +22,7 @@ use super::pin_paths::PinStatus;
 use super::platform::LumaReader;
 use crate::editor::annotations::pin::find::find_again;
 use crate::editor::annotations::pin::{PinRequest, PinnedPath, TRACKING_SIDE};
-use crate::editor::annotations::snap::source_per_output;
+use crate::editor::annotations::snap::source_per_size;
 use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
 
 /// Working through the queue on the tracking thread.
@@ -154,7 +154,7 @@ impl PinTracks {
       .iter()
       .find(|keyframe| keyframe.ms == pin.pinned_ms)
       .filter(|pinned| before.is_none_or(|before| before.ms != pinned.ms));
-    let scale = source_per_output(self.source, image_width);
+    let scale = source_per_size(self.source, image_width);
     let target = PinRequest::of(clip, pin, self.source, scale).target;
     let mut reader = LumaReader::open(&self.recording, self.duration_ms, TRACKING_SIDE).ok()?;
     let found = [before, pinned].into_iter().flatten().find_map(|keyframe| {
@@ -167,14 +167,15 @@ impl PinTracks {
 
   /// Hands each pinned clip among `clips` its path, or the one it had while
   /// its new one is asked for. `image_width` is how wide the screen is drawn
-  /// on the canvas, in canvas pixels, or zero where that is not known yet.
+  /// on the canvas, in points of annotation size, or zero where that is not
+  /// known yet.
   pub(crate) fn attach(
     self: &Arc<Self>,
     clips: &mut [RecordingAnnotationClip],
     position_ms: u64,
     image_width: f64,
   ) {
-    let scale = source_per_output(self.source, image_width);
+    let scale = source_per_size(self.source, image_width);
     for clip in clips.iter_mut() {
       if clip.track_id != AnnotationTrack::Primary {
         continue;

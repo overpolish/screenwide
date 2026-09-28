@@ -4,6 +4,7 @@
 #[cfg(target_os = "macos")]
 mod annotation_bake;
 mod background_image;
+mod capture;
 mod clipboard;
 pub(crate) mod desktop;
 pub(crate) mod encoding;
@@ -45,6 +46,7 @@ pub(crate) use crate::capture_geometry::physical_capture_rect;
 #[cfg(test)]
 pub(crate) use crate::capture_geometry::CaptureRect;
 pub(crate) use background_image::{background_image_canvas, background_image_swatch};
+pub(crate) use capture::Capture;
 pub(crate) use clipboard::open_in_export as open_clipboard_in_export;
 pub use encoding::encode_png;
 pub use encoding::rounded_corners;

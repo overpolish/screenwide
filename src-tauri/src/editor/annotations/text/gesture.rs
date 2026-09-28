@@ -54,8 +54,8 @@ pub(crate) fn drag(
   if handle == AnnotationHandle::Tail {
     // The tip lands on an element's edge the way an arrow's does, when it is
     // drawn out far enough to point at one.
-    let bounds = text_box(*corner, text, width, origin.source_per_output);
-    let em = width.max(0.0) * origin.source_per_output;
+    let bounds = text_box(*corner, text, width, origin.source_per_size);
+    let em = width.max(0.0) * origin.source_per_size;
     let from = stretch_from(em, origin.source_per_point);
     let mut result = SnapResult::default();
     let snapped = result.tip(point, snap);
@@ -79,8 +79,8 @@ pub(crate) fn drag(
   // the hand: the box may be held anywhere.
   match snap {
     Some(request) => {
-      let bounds = text_box(moved, text, width, request.field.source_per_output());
-      let em = width.max(0.0) * request.field.source_per_output();
+      let bounds = text_box(moved, text, width, request.field.source_per_size());
+      let em = width.max(0.0) * request.field.source_per_size();
       let (offset, result) = request.boxed(bounds, pointer_tip(bounds, em, pointer));
       *corner = offset.apply(moved);
       result

@@ -51,7 +51,7 @@ pub async fn refresh_screenshot_preview_sources(
             || Arc::new(item.image.clone()),
             |source| Arc::clone(&source.image),
           ),
-        capture_width_points: item.capture_width_points(),
+        capture: item.capture(),
       })
       .collect::<Vec<_>>()
   };

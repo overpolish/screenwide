@@ -35,7 +35,7 @@ fn retains_counter_text_and_points() {
     value: 12,
     angle: 0.5,
   })];
-  let native = native_annotations(&annotations, RedactSource::None);
+  let native = native_annotations(&annotations, RedactSource::None, 1.0);
   assert_eq!(native.data.points.len(), 3);
   assert_eq!(native.data.points[0], [1.0, 2.0]);
   assert_eq!(native.data.text, b"12");
@@ -62,7 +62,7 @@ fn keeps_every_annotation_of_a_long_list() {
       item
     })
     .collect();
-  let native = native_annotations(&annotations, RedactSource::None);
+  let native = native_annotations(&annotations, RedactSource::None, 1.0);
   assert_eq!(native.items.len(), 5_000);
   let last = native.items[4_999];
   assert_eq!(last.p0[0], 4_999.0);
@@ -71,4 +71,19 @@ fn keeps_every_annotation_of_a_long_list() {
     &native.data.text[start..start + last.data_count as usize],
     b"4999"
   );
+}
+
+/// A size is in points, so a 2x capture draws it twice as many pixels wide
+/// and it looks the same as on a 1x one.
+#[test]
+fn a_size_is_drawn_at_the_capture_scale() {
+  let counter = annotation(AnnotationShape::Counter {
+    center: AnnotationPoint { x: 1.0, y: 2.0 },
+    value: 1,
+    angle: 0.0,
+  });
+  let width = |scale| {
+    native_annotations(std::slice::from_ref(&counter), RedactSource::None, scale).items[0].width
+  };
+  assert_eq!(width(2.0), 2.0 * width(1.0));
 }

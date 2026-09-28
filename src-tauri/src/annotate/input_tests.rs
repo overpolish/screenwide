@@ -111,9 +111,9 @@ fn a_click_drops_a_counter_numbered_and_aimed_as_the_tool_says() {
   assert_eq!((center.x, center.y), (10.0, 20.0));
   assert_eq!(value, 3);
   assert_eq!(angle, std::f64::consts::FRAC_PI_2);
-  // The disc, from the counter's own setting: an arrow's eight-pixel stroke
+  // The disc, from the counter's own setting: an arrow's eight-point stroke
   // would be a disc too small to hold a number.
-  assert_eq!(completed.style.width, 56.0);
+  assert_eq!(completed.style.width, 28.0);
 }
 
 #[test]

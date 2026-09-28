@@ -14,14 +14,14 @@ pub(crate) fn text_box(
   origin: AnnotationPoint,
   text: &str,
   width: f64,
-  source_per_output: f64,
+  source_per_size: f64,
 ) -> SnapBox {
   let size = box_size(text_block(text, width), width);
   SnapBox {
     x: origin.x,
     y: origin.y,
-    width: size[0] * source_per_output,
-    height: size[1] * source_per_output,
+    width: size[0] * source_per_size,
+    height: size[1] * source_per_size,
   }
 }
 
@@ -30,7 +30,7 @@ pub(crate) fn field_box(
   origin: AnnotationPoint,
   text: &str,
   width: f64,
-  source_per_output: f64,
+  source_per_size: f64,
 ) -> Option<SnapBox> {
-  Some(text_box(origin, text, width, source_per_output))
+  Some(text_box(origin, text, width, source_per_size))
 }

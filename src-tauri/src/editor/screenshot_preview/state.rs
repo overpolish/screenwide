@@ -10,7 +10,7 @@ use super::annotation::AnnotationHover;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use super::annotation_gesture::AnnotationGestureOverride;
 use super::gesture::SelectionGestureOverride;
-use crate::screenshots::CapturedImage;
+use crate::screenshots::{Capture, CapturedImage};
 
 /// One captured image the preview draws, with what its layer settings need
 /// of the item it came from.
@@ -18,8 +18,9 @@ use crate::screenshots::CapturedImage;
 pub(super) struct PreviewSource {
   pub(super) id: u64,
   pub(super) image: Arc<CapturedImage>,
-  /// The image's width in logical points, which its redactions are sized in.
-  pub(super) capture_width_points: f64,
+  /// What the image was captured at, which its redactions and annotation
+  /// sizes are measured against.
+  pub(super) capture: Capture,
 }
 
 #[derive(Default)]

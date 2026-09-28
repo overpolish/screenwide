@@ -27,7 +27,7 @@ export type AnnotationTool = AnnotationKind | "select";
  *
  * The colour is shared between the shapes - a counter dropped after a red arrow
  * is red - but the size is not: an arrow's stroke, a counter's disc and a text
- * box's type are different measurements of different things, and eight pixels
+ * box's type are different measurements of different things, and eight points
  * of stroke would be a disc too small to hold a number. The alignment, which
  * only a text box reads, rides with the colour.
  *

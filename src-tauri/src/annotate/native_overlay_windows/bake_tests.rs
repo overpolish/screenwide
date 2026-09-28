@@ -41,7 +41,7 @@ fn pixel(image: &CapturedImage, x: u32, y: u32) -> &[u8] {
 
 #[test]
 fn the_arrow_lands_in_the_still_in_its_own_colour() {
-  let baked = bake(&still(), &[arrow()]).expect("the still bakes");
+  let baked = bake(&still(), &[arrow()], 1.0).expect("the still bakes");
   // On the shaft, half way along it: the arrow's own red, in RGBA order, over
   // an opaque still.
   assert_eq!(pixel(&baked, 60, 60), [255, 0, 0, 255]);
@@ -53,6 +53,6 @@ fn the_arrow_lands_in_the_still_in_its_own_colour() {
 #[test]
 fn a_still_with_nothing_drawn_over_it_is_returned_as_it_was() {
   let original = still();
-  let baked = bake(&original, &[]).expect("an empty list bakes");
+  let baked = bake(&original, &[], 1.0).expect("an empty list bakes");
   assert_eq!(baked.rgba, original.rgba);
 }

@@ -5,8 +5,8 @@
 //!
 //! The box is held by two corners in source pixels, `start` the top-left and
 //! `end` the bottom-right; every edit writes them back in that order. The
-//! style's width is the pixelation's block size in output pixels, so blocks
-//! keep their weight on the canvas the way a stroke does.
+//! style's width is the pixelation's block size in logical points of what it
+//! covers, so a block hides as much on a 2x capture as on a 1x one.
 
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 use crate::editor::annotations::snap::SnapBox;

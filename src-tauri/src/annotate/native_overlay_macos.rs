@@ -129,9 +129,11 @@ extern "C" fn scene(display: u32, out: *mut NativeAnnotationsView) {
     })
     .collect();
   SCENE.with_borrow_mut(|scene| {
+    // Sizes are points, drawn at the display's scale.
     *scene = native_annotations(
       &drawn,
       crate::editor::annotations::redact::native::RedactSource::None,
+      display.scale,
     );
     unsafe { out.write(scene.view()) };
   });

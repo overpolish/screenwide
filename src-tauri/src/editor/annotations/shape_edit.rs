@@ -80,7 +80,7 @@ impl AnnotationKind {
   /// The annotation a fresh press of this tool makes at `point`, in `style`
   /// or in the tool's own first dress. `angle` is where a counter's tail
   /// points, `existing` the list it is numbered against, and
-  /// `source_per_output` what sizes a text box so it can centre on `point`.
+  /// `source_per_size` what sizes a text box so it can centre on `point`.
   #[cfg(any(target_os = "macos", target_os = "windows", test))]
   pub(crate) fn new_annotation(
     self,
@@ -89,7 +89,7 @@ impl AnnotationKind {
     style: Option<&super::super::AnnotationStyle>,
     angle: Option<f64>,
     existing: &[super::super::Annotation],
-    source_per_output: f64,
+    source_per_size: f64,
   ) -> super::super::Annotation {
     match self {
       Self::Arrow => super::super::arrow::model::new_arrow(id, point, point, style),
@@ -100,10 +100,10 @@ impl AnnotationKind {
         style,
         angle,
       ),
-      Self::Text => super::super::text::new_text(id, point, style, source_per_output),
+      Self::Text => super::super::text::new_text(id, point, style, source_per_size),
       Self::Redact => super::super::redact::new_redact(id, point, style),
       Self::Highlight => {
-        super::super::highlight::model::new_highlight(id, point, style, source_per_output)
+        super::super::highlight::model::new_highlight(id, point, style, source_per_size)
       }
       Self::Shape => super::super::outline::model::new_shape(
         id,

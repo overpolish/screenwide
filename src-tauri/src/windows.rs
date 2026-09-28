@@ -37,14 +37,10 @@ pub use recording_bar_movement::{
 };
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 
 #[cfg(target_os = "windows")]
 use tauri::WebviewWindow;
-use tauri::{
-  AppHandle, Emitter, Manager, PhysicalPosition, Runtime, WebviewUrl, WebviewWindowBuilder,
-  WindowEvent,
-};
+use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 mod boot;
@@ -94,7 +90,6 @@ pub use dismissal::hide_without_focus_transfer;
 #[cfg(not(target_os = "macos"))]
 pub use dock::initialize_recording_dock;
 pub use dock::{hide_recording_dock, manage_recording_dock_movement, show_recording_dock};
-use geometry::monitor_with_most_overlap;
 pub(crate) use geometry::{centered_logical_position, contain_window_on_its_monitor};
 #[cfg(target_os = "macos")]
 pub use lifecycle::get_or_create;
@@ -278,7 +273,7 @@ pub fn manage_transient_popover_dismissal(app: &AppHandle) {
       }
 
       was_pressed = is_pressed;
-      std::thread::sleep(Duration::from_millis(8));
+      std::thread::sleep(std::time::Duration::from_millis(8));
     }
   });
 }

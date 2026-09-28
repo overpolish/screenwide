@@ -24,7 +24,8 @@ static id<MTLTexture> writable_copy(id<MTLCommandBuffer> command, id<MTLTexture>
 BOOL screenwide_export_redact_frame(ScreenwideVideoExport *session,
                                     id<MTLCommandBuffer> command,
                                     id<MTLTexture> __strong *luma,
-                                    id<MTLTexture> __strong *chroma, uint64_t source_ms) {
+                                    id<MTLTexture> __strong *chroma, uint64_t source_ms,
+                                    uint64_t output_ms) {
   if (session->annotation_count == 0 || session->redact_pipelines == nil) return YES;
   NSMutableData *items =
       [NSMutableData dataWithLength:session->annotation_count * sizeof(ScreenwideAnnotation)];
@@ -41,7 +42,7 @@ BOOL screenwide_export_redact_frame(ScreenwideVideoExport *session,
     // all read the surface from their clip's own start.
     float elapsed_ms = (float)(source_ms - clip->clip_start_ms);
     screenwide_annotation_reveal_window(
-        (float)(source_ms - clip->reveal_start_ms),
+        screenwide_timed_reveal_elapsed_ms(clip, output_ms),
         (float)(clip->reveal_end_ms - clip->reveal_start_ms),
         session->source_frame_rate > 0 ? 1000.0f / session->source_frame_rate : 0,
         annotation->animated, annotation->kind, clip->path_ms, &annotation->reveal);

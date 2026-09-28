@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use crate::screenshots::Capture;
 
 /// One independently editable image in a screenshot workspace.
 /// Pixels remain owned by Rust and are uploaded to the native renderer once;
@@ -20,14 +21,18 @@ pub struct ScreenshotItem {
 }
 
 impl ScreenshotItem {
-  /// The image's width in logical points, which its redactions are sized in.
-  pub(crate) fn capture_width_points(&self) -> f64 {
+  /// What the image was captured at, which its redactions and annotation
+  /// sizes are measured against.
+  pub(crate) fn capture(&self) -> Capture {
     let scale = if self.scale_factor.is_finite() && self.scale_factor > 0.0 {
       self.scale_factor
     } else {
       1.0
     };
-    f64::from(self.image.width) / scale
+    Capture {
+      width_points: f64::from(self.image.width) / scale,
+      scale,
+    }
   }
 }
 
@@ -49,16 +54,11 @@ pub struct ScreenshotWorkspaceOutputSettings {
 
 impl ScreenshotWorkspaceOutputSettings {
   pub(crate) fn output_for(&self, item: &ScreenshotItem) -> ScreenshotOutputSettings {
-    self.output_for_id(item.id, item.capture_width_points())
+    self.output_for_id(item.id, item.capture())
   }
 
-  /// The layer `id`'s settings, for an image `capture_width_points` logical
-  /// points wide.
-  pub(crate) fn output_for_id(
-    &self,
-    id: u64,
-    capture_width_points: f64,
-  ) -> ScreenshotOutputSettings {
+  /// The layer `id`'s settings, for an image captured at `capture`.
+  pub(crate) fn output_for_id(&self, id: u64, capture: Capture) -> ScreenshotOutputSettings {
     let mut output = self
       .items
       .iter()
@@ -85,7 +85,7 @@ impl ScreenshotWorkspaceOutputSettings {
     output.mesh_points = self.canvas.mesh_points.clone();
     output.mesh_seed = self.canvas.mesh_seed;
     output.mesh_warp_percent = self.canvas.mesh_warp_percent;
-    output.capture_width_points = capture_width_points;
+    output.stamp_capture(capture);
     output.width = self.canvas.width;
     output
   }

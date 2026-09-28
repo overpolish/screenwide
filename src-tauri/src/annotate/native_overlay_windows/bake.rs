@@ -24,9 +24,11 @@ use crate::screenshots::CapturedImage;
 ///
 /// The annotations arrive already placed in those pixels, so this is the
 /// overlay's identity placement again, one drawn pixel per annotation pixel.
+/// Their sizes are points of a capture taken at `scale`.
 pub(crate) fn bake(
   image: &CapturedImage,
   annotations: &[Annotation],
+  scale: f64,
 ) -> Result<CapturedImage, String> {
   if annotations.is_empty() || image.width == 0 || image.height == 0 {
     return Ok(image.clone());
@@ -44,7 +46,7 @@ pub(crate) fn bake(
   renderer.draw_arrows(
     &view,
     (image.width, image.height),
-    &arrows::placed_arrows(annotations, (0.0, 0.0), (1.0, 1.0), None, None),
+    &arrows::placed_arrows(annotations, (0.0, 0.0), (1.0, 1.0), scale, None, None),
     Some(&still),
   )?;
 

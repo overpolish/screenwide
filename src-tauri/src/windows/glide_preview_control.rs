@@ -60,7 +60,7 @@ pub(crate) fn position_glide_preview(app: &AppHandle, x: f64, y: f64) -> tauri::
   ))?;
 
   // Geometry rather than `current_monitor`, because the window is hidden here.
-  let monitor = match monitor_with_most_overlap(app, &window)? {
+  let monitor = match super::geometry::monitor_with_most_overlap(app, &window)? {
     Some(monitor) => Some(monitor),
     None => app.primary_monitor()?,
   };
@@ -72,7 +72,7 @@ pub(crate) fn position_glide_preview(app: &AppHandle, x: f64, y: f64) -> tauri::
   let work_area = monitor.work_area();
   let max_x = work_area.position.x + work_area.size.width.saturating_sub(size.width) as i32;
   let max_y = work_area.position.y + work_area.size.height.saturating_sub(size.height) as i32;
-  let contained = PhysicalPosition::new(
+  let contained = tauri::PhysicalPosition::new(
     position
       .x
       .clamp(work_area.position.x, max_x.max(work_area.position.x)),

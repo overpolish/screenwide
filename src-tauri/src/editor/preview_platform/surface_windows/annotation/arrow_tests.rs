@@ -161,6 +161,7 @@ fn a_highlight_drawing_itself_in_is_averaged_over_its_exposure() {
       std::slice::from_ref(annotation),
       (0.0, 0.0),
       (1.0, 1.0),
+      1.0,
       None,
       None,
     )

@@ -63,9 +63,9 @@ fn drawing_one_out_without_a_picture_runs_a_band_along_the_drag() {
     bands(&annotation),
     vec![HighlightBand {
       left: 10.0,
-      top: 38.0,
+      top: 44.0,
       right: 90.0,
-      bottom: 62.0
+      bottom: 56.0
     }]
   );
 }
@@ -123,7 +123,7 @@ fn the_body_carries_every_band_with_it() {
     unreachable!()
   };
   assert_eq!((*start, *end), (point(15.0, 30.0), point(15.0, 30.0)));
-  assert_eq!((bands[0].top, bands[0].bottom), (18.0, 42.0));
+  assert_eq!((bands[0].top, bands[0].bottom), (24.0, 36.0));
 }
 
 /// Two lines of dark bars on a light page, 200 by 100, each 16 pixels tall.

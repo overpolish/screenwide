@@ -41,7 +41,7 @@ pub(crate) fn drag_new(
 pub(crate) fn field_box(
   center: AnnotationPoint,
   width: f64,
-  source_per_output: f64,
+  source_per_size: f64,
 ) -> Option<SnapBox> {
-  Some(SnapBox::disc(center, disc_radius(width, source_per_output)))
+  Some(SnapBox::disc(center, disc_radius(width, source_per_size)))
 }

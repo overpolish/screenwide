@@ -176,7 +176,7 @@ fn the_pointers_grip_tucks_points_and_stretches() {
   let mut annotation = text_box("Hello", TextPointer::default());
   let [width, height] = box_size(text_block("Hello", EM), EM);
   let mut origin = AnnotationDragOrigin::new(point(0.0, 0.0), &annotation.shape);
-  origin.source_per_output = 1.0;
+  origin.source_per_size = 1.0;
   let right = 100.0 + width;
   let middle = 100.0 + height / 2.0;
   let mut drag = |to: AnnotationPoint| {
@@ -221,7 +221,7 @@ fn the_pointer_stretches_sooner_the_further_the_view_is_zoomed_in() {
   let pulled = |source_per_point: f64, past: f64| {
     let mut annotation = text_box("Hello", TextPointer::default());
     let mut origin = AnnotationDragOrigin::new(point(0.0, 0.0), &annotation.shape);
-    origin.source_per_output = 1.0;
+    origin.source_per_size = 1.0;
     origin.source_per_point = source_per_point;
     annotation.drag_grip(
       AnnotationHandle::Tail,

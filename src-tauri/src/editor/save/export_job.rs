@@ -48,7 +48,7 @@ pub(super) fn save_recording_artifact(
   else {
     unreachable!("recording export helper received a non-recording artifact");
   };
-  recording_output.stamp_capture_widths(artifact.capture_widths());
+  recording_output.stamp_captures(artifact.captures());
   validate_primary_resolution_scale(
     resolution_scale_percent,
     *source_scale_percent,

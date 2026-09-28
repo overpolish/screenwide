@@ -34,7 +34,7 @@ pub fn start_screenshot_preview(
       .map(|item| PreviewSource {
         id: item.id,
         image: Arc::new(item.image.clone()),
-        capture_width_points: item.capture_width_points(),
+        capture: item.capture(),
       })
       .collect::<Vec<_>>()
   };

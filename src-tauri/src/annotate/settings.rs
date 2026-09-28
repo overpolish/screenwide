@@ -11,18 +11,18 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::editor::annotations::{AnnotationHead, AnnotationKind};
 
-/// The stroke presets the editor's arrow panel offers, which is what keeps a
-/// live annotation and an editor annotation the same weight. The twin of
-/// `ANNOTATION_WIDTHS` in
+/// The stroke presets the editor's arrow panel offers, in points, which is
+/// what keeps a live annotation and an editor annotation the same weight. The
+/// twin of `ANNOTATION_WIDTHS` in
 /// `src/components/shared/annotation-style/widths.ts`.
 const MIN_WIDTH: f64 = 8.0;
-const MAX_WIDTH: f64 = 48.0;
+const MAX_WIDTH: f64 = 24.0;
 /// The smallest and largest disc diameters the counter control offers, in
-/// output pixels. The twins of the ends of `ANNOTATION_COUNTER_SIZES` in the
-/// same module, and of `COUNTER_SIZES` in
+/// points. The twins of the ends of `ANNOTATION_COUNTER_SIZES` in the same
+/// module, and of `COUNTER_SIZES` in
 /// `src-tauri/src/editor/annotations/counter/model.rs`.
-const MIN_COUNTER_SIZE: f64 = 56.0;
-const MAX_COUNTER_SIZE: f64 = 160.0;
+const MIN_COUNTER_SIZE: f64 = 28.0;
+const MAX_COUNTER_SIZE: f64 = 80.0;
 /// The palette's yellow, as in
 /// `src/components/shared/annotation-style/palette.ts`.
 const DEFAULT_COLOR: &str = "#ffcc00";
@@ -52,9 +52,9 @@ pub struct AnnotateSettings {
   /// `#rrggbb` or `#rrggbbaa`, as a document stores it.
   pub default_color: String,
   pub default_width: f64,
-  /// The disc a fresh counter is drawn at, in output pixels. Kept apart from
-  /// the arrow's stroke because they are different measurements of different
-  /// things: eight pixels of stroke would be a disc too small to hold a
+  /// The disc a fresh counter is drawn at, in points. Kept apart from the
+  /// arrow's stroke because they are different measurements of different
+  /// things: eight points of stroke would be a disc too small to hold a
   /// number.
   pub default_counter_size: f64,
   /// Where a fresh counter's tail points, in radians clockwise from east. Live

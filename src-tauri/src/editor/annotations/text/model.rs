@@ -3,7 +3,7 @@
 
 //! Making a text box, and the dress a fresh one wears.
 //!
-//! A text box's `style.width` is its type size in output pixels: the box, its
+//! A text box's `style.width` is its type size in points: the box, its
 //! padding, its corners and its pointer all follow from that and from the
 //! text, so there is nothing else to size.
 
@@ -73,15 +73,15 @@ impl TextPointer {
   }
 }
 
-/// The type sizes the text control offers, in output pixels: two small steps
-/// for labels, then steps that grow by a ratio so the large ones are big
-/// enough to title a screen. The twin of `ANNOTATION_TEXT_SIZES` in
+/// The type sizes the text control offers, in points: two small steps for
+/// labels, then steps that grow by a ratio so the large ones are big enough
+/// to title a screen. The twin of `ANNOTATION_TEXT_SIZES` in
 /// `src/components/shared/annotation-style/widths.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) const TEXT_SIZES: [f64; 5] = [20.0, 28.0, 48.0, 80.0, 128.0];
+pub(crate) const TEXT_SIZES: [f64; 5] = [10.0, 14.0, 24.0, 40.0, 64.0];
 
 /// The type size a fresh text box is set at: the third step, large enough to
-/// read at a glance on a Retina screenshot.
+/// read at a glance.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) const NEW_TEXT_WIDTH: f64 = TEXT_SIZES[2];
 
@@ -104,7 +104,7 @@ pub(crate) fn default_text_style() -> AnnotationStyle {
 
 /// An empty text box centred on `point`, in `style` or in the tool's own
 /// first dress, so its caret starts under the hand; typing grows it right and
-/// down from there. `source_per_output` sizes the box in source pixels, and
+/// down from there. `source_per_size` sizes the box in source pixels, and
 /// where it is unknown the box's corner lands on `point` instead. Its pointer
 /// is tucked in: one is drawn out of the box afterwards, by its grip.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
@@ -112,10 +112,10 @@ pub(crate) fn new_text(
   id: String,
   point: AnnotationPoint,
   style: Option<&AnnotationStyle>,
-  source_per_output: f64,
+  source_per_size: f64,
 ) -> Annotation {
   let style = style.cloned().unwrap_or_else(default_text_style);
-  let empty = super::snap::text_box(point, "", style.width, source_per_output);
+  let empty = super::snap::text_box(point, "", style.width, source_per_size);
   Annotation {
     above_camera: false,
     animated: true,

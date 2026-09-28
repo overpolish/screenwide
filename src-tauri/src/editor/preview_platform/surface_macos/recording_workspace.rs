@@ -43,6 +43,7 @@ impl RecordingPreviewSurface {
           RedactSource::Video {
             source_per_point: source_per_capture_point(size.0, layer.settings.capture_width_points),
           },
+          layer.settings.size_scale(),
         )
       })
       .collect();

@@ -17,7 +17,9 @@ export type RecordingTimelineEdit = {
   artifactId: number;
   nextSegmentId: number;
   segments: RecordingTimelineSegment[];
-  /** Annotation timing remains in source milliseconds across cuts and speed changes. */
+  /** Annotation clips stay in source milliseconds across cuts and speed
+   * changes; their arrivals and leavings play in output time over what the
+   * timeline keeps of each clip. */
   annotationClips?: RecordingAnnotationClip[];
 };
 

@@ -156,11 +156,14 @@ screenwide_export_encode_cursor_overlay(
 
 /// Replaces `luma` and `chroma`, the frame's decoded planes, with copies that
 /// have the redactions showing at `source_ms` applied, for every pass after
-/// to sample in their place; leaves them where none shows. Answers NO only
-/// where the copies could not be made, when the frame must not be written.
+/// to sample in their place; leaves them where none shows. `output_ms` is the
+/// frame's place on the edited timeline, which arrivals are timed on. Answers
+/// NO only where the copies could not be made, when the frame must not be
+/// written.
 __attribute__((visibility("hidden"))) BOOL screenwide_export_redact_frame(
     ScreenwideVideoExport *session, id<MTLCommandBuffer> command,
-    id<MTLTexture> __strong *luma, id<MTLTexture> __strong *chroma, uint64_t source_ms);
+    id<MTLTexture> __strong *luma, id<MTLTexture> __strong *chroma, uint64_t source_ms,
+    uint64_t output_ms);
 
 @interface ScreenwideVideoExport (Setup)
 - (int)prepareScreen:(const char *)screen_path

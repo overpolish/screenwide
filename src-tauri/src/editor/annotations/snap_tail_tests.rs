@@ -17,9 +17,9 @@ use std::f64::consts::{FRAC_PI_4, PI};
 use std::sync::Arc;
 
 const SOURCE: (u32, u32) = (1920, 1080);
-/// Drawn one output pixel per source pixel, so the default 56-pixel disc has
-/// a 28-pixel radius and its tail reaches 42 pixels from the centre.
-const IMAGE_WIDTH: f64 = 1920.0;
+/// Drawn 960 points across, as a 2x capture is, so the default 28-point disc
+/// has a 28-pixel radius and its tail reaches 42 pixels from the centre.
+const IMAGE_WIDTH: f64 = 960.0;
 const RADIUS: f64 = 28.0;
 const THRESHOLD: f64 = 16.0;
 

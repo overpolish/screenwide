@@ -177,9 +177,9 @@ fn gap_spans(spans: [super::snap::GapSpan; 2], along: f64, across: f64) -> [Nati
 }
 
 /// The stroke's width as a fraction of the image's drawn width. The stroke is
-/// in output pixels and the image is drawn `image_width` of them across, so
-/// the width becomes a share of the picture the native side can place without
-/// knowing either number.
+/// in points and the image is drawn `image_width` of them across, so the width
+/// becomes a share of the picture the native side can place without knowing
+/// either number.
 pub(super) fn stroke_width(style: &AnnotationStyle, image_width: f64) -> f64 {
   if image_width <= 0.0 || !image_width.is_finite() {
     return 0.0;
