@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
 
 import { RecordingOutputSettings } from "../screenshot-output";
 import { EditorKind } from "../types";
 import { ExportPhase } from "../use-export-progress";
+import { createWorkspaceMirror } from "../workspace-mirror";
 
 /**
  * Everything the export form needs that the editor window owns.
@@ -94,11 +94,6 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptionsSnapshot = {
   saveProgress: null,
 };
 
-type ExportOptionsStore = {
-  publish: (kind: EditorKind, snapshot: ExportOptionsSnapshot) => void;
-  snapshots: Partial<Record<EditorKind, ExportOptionsSnapshot>>;
-};
-
 const STORE_NAME = "screenwide-export-options";
 const REQUEST_STORE_NAME = `${STORE_NAME}-request`;
 
@@ -110,34 +105,9 @@ const nextSeq = () => {
   return lastSeq;
 };
 
-const isSameSnapshot = (
-  a: ExportOptionsSnapshot | undefined,
-  b: ExportOptionsSnapshot,
-) =>
-  a !== undefined &&
-  (Object.keys(b) as (keyof ExportOptionsSnapshot)[]).every(
-    (key) => a[key] === b[key],
-  );
+const mirror = createWorkspaceMirror<ExportOptionsSnapshot>(STORE_NAME);
 
-export const useExportOptionsStore = create<ExportOptionsStore>()(
-  persist(
-    (set) => ({
-      publish: (kind, snapshot) => {
-        set((state) =>
-          isSameSnapshot(state.snapshots[kind], snapshot)
-            ? state
-            : { snapshots: { ...state.snapshots, [kind]: snapshot } },
-        );
-      },
-      snapshots: {},
-    }),
-    {
-      name: STORE_NAME,
-      partialize: (state) => ({ snapshots: state.snapshots }),
-      storage: createJSONStorage(() => localStorage),
-    },
-  ),
-);
+export const useExportOptionsStore = mirror.useMirror;
 
 /**
  * The latest ask from an options window, held apart from the settings mirror
@@ -159,9 +129,8 @@ export const sendExportOptionsRequest = (
 
 /** Carries the editor's settings out, and the options window's asks back. */
 export const synchronizeExportOptionsStore = (event: StorageEvent) => {
-  if (event.key === STORE_NAME) {
-    void useExportOptionsStore.persist.rehydrate();
-  } else if (event.key === REQUEST_STORE_NAME && event.newValue) {
+  mirror.synchronize(event);
+  if (event.key === REQUEST_STORE_NAME && event.newValue) {
     try {
       useExportOptionsRequestStore.setState({
         lastRequest: JSON.parse(event.newValue) as ExportOptionsMessage,

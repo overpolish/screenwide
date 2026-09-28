@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
 
 import {
   Background,
@@ -19,6 +18,7 @@ import {
   EditorKind,
   KeyboardEffectSettings,
 } from "../types";
+import { createWorkspaceMirror } from "../workspace-mirror";
 
 import { ToolPanelFrame } from "./tool-panel-frame";
 import {
@@ -197,11 +197,6 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   selection: null,
 };
 
-type ToolPanelStore = {
-  publish: (workspace: EditorKind, snapshot: ToolPanelSnapshot) => void;
-  snapshots: Partial<Record<EditorKind, ToolPanelSnapshot>>;
-};
-
 const STORE_NAME = "screenwide-tool-panels";
 const REQUEST_STORE_NAME = `${STORE_NAME}-request`;
 
@@ -213,44 +208,9 @@ const nextSeq = () => {
   return lastSeq;
 };
 
-/** Settings groups travel as objects, so a snapshot key is compared by value
- * rather than by identity. */
-const isSameValue = (a: unknown, b: unknown) =>
-  a === b ||
-  (typeof a === "object" &&
-    a !== null &&
-    typeof b === "object" &&
-    b !== null &&
-    JSON.stringify(a) === JSON.stringify(b));
+const mirror = createWorkspaceMirror<ToolPanelSnapshot>(STORE_NAME);
 
-const isSameSnapshot = (
-  a: ToolPanelSnapshot | undefined,
-  b: ToolPanelSnapshot,
-) =>
-  a !== undefined &&
-  (Object.keys(b) as (keyof ToolPanelSnapshot)[]).every((key) =>
-    isSameValue(a[key], b[key]),
-  );
-
-export const useToolPanelStore = create<ToolPanelStore>()(
-  persist(
-    (set) => ({
-      publish: (workspace, snapshot) => {
-        set((state) =>
-          isSameSnapshot(state.snapshots[workspace], snapshot)
-            ? state
-            : { snapshots: { ...state.snapshots, [workspace]: snapshot } },
-        );
-      },
-      snapshots: {},
-    }),
-    {
-      name: STORE_NAME,
-      partialize: (state) => ({ snapshots: state.snapshots }),
-      storage: createJSONStorage(() => localStorage),
-    },
-  ),
-);
+export const useToolPanelStore = mirror.useMirror;
 
 /**
  * The latest ask from a panel, held apart from the settings mirror so sending
@@ -273,9 +233,8 @@ export const sendToolPanelRequest = (
 
 /** Carries the editor's settings out, and a panel's asks back. */
 export const synchronizeToolPanelStore = (event: StorageEvent) => {
-  if (event.key === STORE_NAME) {
-    void useToolPanelStore.persist.rehydrate();
-  } else if (event.key === REQUEST_STORE_NAME && event.newValue) {
+  mirror.synchronize(event);
+  if (event.key === REQUEST_STORE_NAME && event.newValue) {
     try {
       useToolPanelRequestStore.setState({
         lastRequest: JSON.parse(event.newValue) as ToolPanelMessage,
