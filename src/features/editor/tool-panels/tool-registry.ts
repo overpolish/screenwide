@@ -6,6 +6,7 @@ import { LucideIcon } from "lucide-react";
 import {
   ArrowToolIcon,
   CounterToolIcon,
+  HighlightToolIcon,
   RedactToolIcon,
   TextToolIcon,
 } from "../../../components/shared/annotation-style/annotation-tool-icons";
@@ -77,6 +78,13 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   crop: { panel: "crop", resetsView: true, shortcut: "C" },
   cursor: { panel: "cursor", resetsView: true },
   frame: { panel: "frame", resetsView: true, shortcut: "F" },
+  highlight: {
+    drawsOnLayer: true,
+    icon: HighlightToolIcon,
+    label: "Highlight",
+    name: "Highlight text",
+    shortcut: "H",
+  },
   keyboard: { panel: "keyboard", resetsView: true },
   redact: {
     drawsOnLayer: true,

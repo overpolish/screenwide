@@ -15,7 +15,8 @@ use crate::editor::annotations::{AnnotationKind, AnnotationPoint, AnnotationShap
 /// Which grip of an annotation the pointer took hold of. An arrow has three
 /// grips and its shaft; a counter has one - the tail - and its disc; a text
 /// box has one - its pointer's tip - and its box; a redaction has the eight
-/// grips of a box, its radius dot and its body.
+/// grips of a box, its radius dot and its body; a highlight has the
+/// selection's two ends and its bands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AnnotationHandle {
   Start,
@@ -92,6 +93,7 @@ pub(crate) const MODE_ARROW: u32 = 2;
 pub(crate) const MODE_COUNTER: u32 = 3;
 pub(crate) const MODE_TEXT: u32 = 4;
 pub(crate) const MODE_REDACT: u32 = 5;
+pub(crate) const MODE_HIGHLIGHT: u32 = 6;
 
 /// The tool name React sends, as a mode. Anything else puts the chrome away.
 pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
@@ -100,6 +102,7 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
     Some("counter") => MODE_COUNTER,
     Some("text") => MODE_TEXT,
     Some("redact") => MODE_REDACT,
+    Some("highlight") => MODE_HIGHLIGHT,
     Some("select") => MODE_SELECT,
     _ => MODE_NONE,
   }
@@ -116,6 +119,7 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
     MODE_COUNTER => Some(AnnotationKind::Counter),
     MODE_TEXT => Some(AnnotationKind::Text),
     MODE_REDACT => Some(AnnotationKind::Redact),
+    MODE_HIGHLIGHT => Some(AnnotationKind::Highlight),
     _ => None,
   }
 }
@@ -156,6 +160,10 @@ impl AnnotationGestureTarget {
 /// not said, which leaves every box a point. `source_per_point` is how many
 /// source pixels one screen point covers at the current zoom, which a text
 /// box's pointer measures its stretch point in; zero where it is unknown.
+///
+/// `picture` is what a highlight selects from while it is drawn out or its
+/// ends are moved: the pixels under the gesture, where the workspace has
+/// them.
 #[derive(Clone, Debug)]
 pub(crate) struct AnnotationDragOrigin {
   pub(crate) bend: ArrowBend,
@@ -163,6 +171,7 @@ pub(crate) struct AnnotationDragOrigin {
   pub(crate) shape: AnnotationShape,
   pub(crate) source_per_output: f64,
   pub(crate) source_per_point: f64,
+  pub(crate) picture: Option<std::sync::Arc<super::highlight::picture::HighlightPicture>>,
 }
 
 impl AnnotationDragOrigin {
@@ -173,6 +182,7 @@ impl AnnotationDragOrigin {
       shape: shape.clone(),
       source_per_output: 0.0,
       source_per_point: 0.0,
+      picture: None,
     }
   }
 }

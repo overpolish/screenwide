@@ -164,7 +164,8 @@ export type ToolPanelPatch = Partial<
     positionYPercent?: number;
     sizePercent?: number;
   };
-  /** Lay the chosen redaction's blocks out again from a fresh seed. */
+  /** Lay the chosen redaction's blocks out again, or draw the chosen
+   * hand-drawn highlight's stroke again, from a fresh seed. */
   shuffleAnnotation?: true;
 };
 

@@ -14,10 +14,12 @@
 #import <objc/runtime.h>
 
 #import "native_overlay_macos.h"
+#import "native_overlay_macos_private.h"
 #import "native_overlay_macos_shader.h"
 #import "../editor/cursor_export/gpu_compositor_macos_annotations.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_curve.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_composite.h"
+#import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_highlight.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_counter.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_text.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotations.h"
@@ -30,6 +32,10 @@
 @property(nonatomic, strong) id<MTLCommandQueue> queue;
 @property(nonatomic, strong) id<MTLComputePipelineState> pipeline;
 @property(nonatomic) uint32_t display;
+/// The desktop this display's highlights are recoloured from, and which of
+/// Rust's revisions it holds.
+@property(nonatomic, strong) id<MTLTexture> underlay;
+@property(nonatomic) uint64_t underlayRevision;
 @end
 
 @implementation ScreenwideAnnotateSurface
@@ -38,9 +44,7 @@
 static const void *ScreenwideAnnotateSurfaceKey = &ScreenwideAnnotateSurfaceKey;
 static NSMutableArray<ScreenwideAnnotateSurface *> *surfaces = nil;
 static ScreenwideAnnotateScene sceneCallback = NULL;
-static ScreenwideAnnotatePointer pointerCallback = NULL;
-static ScreenwideAnnotateKey keyCallback = NULL;
-static id eventMonitor = nil;
+static ScreenwideAnnotateUnderlaySource underlayCallback = NULL;
 
 /// The library is this one kernel plus the shared annotation code it calls.
 static NSString *shaderSource(void) {
@@ -50,7 +54,8 @@ static NSString *shaderSource(void) {
               GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COUNTER
               GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_TEXT
                   GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE
-                      SCREENWIDE_ANNOTATE_SHADER_SOURCE;
+                      GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT
+                          SCREENWIDE_ANNOTATE_SHADER_SOURCE;
 }
 
 uint32_t screenwide_annotate_shader_check(char *message, uint32_t capacity) {
@@ -70,6 +75,41 @@ uint32_t screenwide_annotate_shader_check(char *message, uint32_t capacity) {
     strlcpy(message, reason.UTF8String, capacity);
   }
   return 0;
+}
+
+/// The underlay this display's highlights read, uploaded when Rust has made a
+/// new one. A display with none binds a single clear pixel, which no highlight
+/// is drawn over.
+static id<MTLTexture> currentUnderlay(ScreenwideAnnotateSurface *surface) {
+  ScreenwideAnnotateUnderlay underlay = {0};
+  if (underlayCallback != NULL)
+    underlayCallback(surface.display, &underlay);
+  BOOL fresh = underlay.rgba != NULL && underlay.width > 0 && underlay.height > 0;
+  if (fresh && underlay.revision != surface.underlayRevision) {
+    if (surface.underlay == nil || surface.underlay.width != underlay.width ||
+        surface.underlay.height != underlay.height) {
+      MTLTextureDescriptor *descriptor = [MTLTextureDescriptor
+          texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                       width:underlay.width
+                                      height:underlay.height
+                                   mipmapped:NO];
+      descriptor.usage = MTLTextureUsageShaderRead;
+      surface.underlay = [surface.device newTextureWithDescriptor:descriptor];
+    }
+    [surface.underlay replaceRegion:MTLRegionMake2D(0, 0, underlay.width, underlay.height)
+                        mipmapLevel:0
+                          withBytes:underlay.rgba
+                        bytesPerRow:underlay.width * 4u];
+    surface.underlayRevision = underlay.revision;
+  }
+  if (fresh && surface.underlay != nil)
+    return surface.underlay;
+  MTLTextureDescriptor *empty =
+      [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                                         width:1
+                                                        height:1
+                                                     mipmapped:NO];
+  return [surface.device newTextureWithDescriptor:empty];
 }
 
 static void drawSurface(ScreenwideAnnotateSurface *surface) {
@@ -98,6 +138,7 @@ static void drawSurface(ScreenwideAnnotateSurface *surface) {
   uint32_t above_camera = 0;
   [encoder setBytes:&above_camera length:sizeof(above_camera) atIndex:14];
   [encoder setTexture:drawable.texture atIndex:0];
+  [encoder setTexture:currentUnderlay(surface) atIndex:1];
   screenwide_bind_annotations(encoder, &annotations, &canvas, 1, 1, 1.0f);
   MTLSize threads = MTLSizeMake((NSUInteger)size.width, (NSUInteger)size.height, 1);
   NSUInteger width = surface.pipeline.threadExecutionWidth;
@@ -178,122 +219,22 @@ void screenwide_annotate_redraw(void) {
     drawSurface(surface);
 }
 
-static uint32_t modifiersOf(NSEvent *event) {
-  NSEventModifierFlags flags = event.modifierFlags;
-  uint32_t modifiers = 0;
-  if ((flags & NSEventModifierFlagCommand) != 0)
-    modifiers |= SCREENWIDE_ANNOTATE_MODIFIER_COMMAND;
-  if ((flags & NSEventModifierFlagShift) != 0)
-    modifiers |= SCREENWIDE_ANNOTATE_MODIFIER_SHIFT;
-  if ((flags & NSEventModifierFlagOption) != 0)
-    modifiers |= SCREENWIDE_ANNOTATE_MODIFIER_OPTION;
-  if ((flags & NSEventModifierFlagControl) != 0)
-    modifiers |= SCREENWIDE_ANNOTATE_MODIFIER_CONTROL;
-  return modifiers;
-}
-
-/// The pointer in the space the cursor sidecar reports in: global desktop
-/// points with y running down from the main display's top-left. Taken from the
-/// event's CGEvent rather than converted from AppKit's y-up screen
-/// coordinates, so an annotation lands where the recording says it did.
-static CGPoint pointerLocation(NSEvent *event) {
-  CGEventRef cg = event.CGEvent;
-  return cg != NULL ? CGEventGetLocation(cg) : CGPointMake(0, 0);
-}
-
 /// Whether an event landed on one of the surfaces the overlay draws on. The
 /// monitor sees every event in the process, so this is a pointer compare over
 /// the one window per display the overlay owns.
-static BOOL isHostWindow(NSWindow *window) {
+BOOL screenwide_annotate_owns_window(NSWindow *window) {
   for (ScreenwideAnnotateSurface *surface in surfaces)
     if (surface.host.window == window)
       return YES;
   return NO;
 }
 
-/// Every event the overlay is offered is swallowed: there is no pass-through
-/// mode, so nothing underneath can be clicked or typed into while it is up.
-/// Key-ups and wheels are consumed without being reported; the shortcut and
-/// Escape leave by their own global registrations.
-///
-/// The exception is this application's other windows. An event carrying a
-/// window that is not a host belongs to the toolbar - or to a panel it opened
-/// - and is handed straight back, so its controls can be pressed and, while
-/// it holds key status, typed into.
-static NSEvent *handleEvent(NSEvent *event) {
-  if (surfaces.count == 0)
-    return event;
-  if (event.window != nil && !isHostWindow(event.window)) {
-    // Chrome rather than canvas: the pointer says "press", not "draw". The
-    // cursor guard exempts this window, so the arrow survives being set.
-    if (event.type == NSEventTypeMouseMoved)
-      [NSCursor.arrowCursor set];
-    return event;
-  }
-  switch (event.type) {
-  case NSEventTypeLeftMouseDown:
-  case NSEventTypeLeftMouseDragged:
-  case NSEventTypeLeftMouseUp: {
-    if (pointerCallback != NULL) {
-      CGPoint point = pointerLocation(event);
-      uint32_t phase = event.type == NSEventTypeLeftMouseDown ? 0
-                       : event.type == NSEventTypeLeftMouseDragged ? 1
-                                                                   : 2;
-      pointerCallback(phase, point.x, point.y);
-      screenwide_annotate_redraw();
-    }
-    return nil;
-  }
-  case NSEventTypeKeyDown: {
-    if (keyCallback != NULL && keyCallback(event.keyCode, modifiersOf(event)))
-      screenwide_annotate_redraw();
-    return nil;
-  }
-  case NSEventTypeMouseMoved:
-    // Back over the canvas, where the crosshair says a stroke starts here.
-    [NSCursor.crosshairCursor set];
-    return nil;
-  default:
-    return nil;
-  }
-}
+BOOL screenwide_annotate_has_surfaces(void) { return surfaces.count > 0; }
 
-void screenwide_annotate_install_scene(ScreenwideAnnotateScene scene) {
+void screenwide_annotate_install_scene(ScreenwideAnnotateScene scene,
+                                       ScreenwideAnnotateUnderlaySource underlay) {
   if (!NSThread.isMainThread)
     return;
   sceneCallback = scene;
+  underlayCallback = underlay;
 }
-
-void screenwide_annotate_install_input(ScreenwideAnnotatePointer pointer,
-                                       ScreenwideAnnotateKey key) {
-  if (!NSThread.isMainThread)
-    return;
-  pointerCallback = pointer;
-  keyCallback = key;
-  if (eventMonitor != nil)
-    return;
-  NSEventMask mask = NSEventMaskLeftMouseDown | NSEventMaskLeftMouseDragged |
-                     NSEventMaskLeftMouseUp | NSEventMaskRightMouseDown |
-                     NSEventMaskRightMouseUp | NSEventMaskOtherMouseDown |
-                     NSEventMaskOtherMouseUp | NSEventMaskMouseMoved |
-                     NSEventMaskScrollWheel | NSEventMaskKeyDown |
-                     NSEventMaskKeyUp;
-  eventMonitor = [NSEvent
-      addLocalMonitorForEventsMatchingMask:mask
-                                   handler:^NSEvent *(NSEvent *event) {
-                                     return handleEvent(event);
-                                   }];
-}
-
-void screenwide_annotate_teardown_input(void) {
-  if (!NSThread.isMainThread)
-    return;
-  if (eventMonitor != nil) {
-    [NSEvent removeMonitor:eventMonitor];
-    eventMonitor = nil;
-  }
-  // The annotations source stays: hosts left showing still draw from it.
-  pointerCallback = NULL;
-  keyCallback = NULL;
-}
-

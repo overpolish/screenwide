@@ -263,7 +263,9 @@ describe("a counter's aim while the editor answers", () => {
       style: {
         align: "left",
         color: "#ffcc00",
+        handDrawn: false,
         head: "none",
+        manual: false,
         radius: 0,
         redaction: "erase",
         strength: 0,

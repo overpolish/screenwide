@@ -39,7 +39,9 @@ const arrow = (
     style: {
       align: "left",
       color: "#ff383c",
+      handDrawn: false,
       head: "end",
+      manual: false,
       radius: 0,
       redaction: "erase",
       strength: 0,

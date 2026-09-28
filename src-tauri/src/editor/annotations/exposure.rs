@@ -57,8 +57,9 @@ pub(crate) fn annotation_travel(
         + width * 4.0 * (reveal.scale - previous[2]).abs()
     }
     // A redaction never moves over a clip: it is whole for as long as it is
-    // shown.
-    AnnotationKind::Redact => 0.0,
+    // shown. A highlight's sweep is drawn with a soft tip of its own rather
+    // than smeared, so it takes no exposure samples either.
+    AnnotationKind::Redact | AnnotationKind::Highlight => 0.0,
   }
 }
 

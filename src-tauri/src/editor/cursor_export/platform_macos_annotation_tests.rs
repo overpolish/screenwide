@@ -49,6 +49,8 @@ fn arrow(
     },
     style: AnnotationStyle {
       align: Default::default(),
+      hand_drawn: false,
+      manual: false,
       color: "#ff0000".to_owned(),
       head,
       radius: 0.0,

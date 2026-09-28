@@ -134,6 +134,7 @@ screenwide_export_encode_cursor_overlay(
   const ScreenwideAnnotationData *annotation_data;
   uint32_t annotation_count;
   id<MTLComputePipelineState> annotation_luma_pipeline, annotation_chroma_pipeline;
+  id<MTLComputePipelineState> highlight_pipeline;
   ScreenwideRedactPipelines *redact_pipelines;
   const ScreenwideCameraOverlay *camera_overlay;
   const ScreenwideCursorArtwork *artworks;

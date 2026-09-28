@@ -6,6 +6,7 @@ import { ReactNode } from "react";
 import {
   ArrowToolIcon,
   CounterToolIcon,
+  HighlightToolIcon,
 } from "../../components/shared/annotation-style/annotation-tool-icons";
 import { AnnotationKind } from "../../components/shared/annotation-style/types";
 
@@ -14,8 +15,8 @@ import { AnnotationKind } from "../../components/shared/annotation-style/types";
  *
  * The glyph and the wording are the editor's own for the same tool, so an
  * annotation reads the same whether it is drawn on a screenshot or on the
- * desktop. The twin of the arrow and counter tools in
- * `features/editor/components/screenshot-tools`. */
+ * desktop. The twin of the same tools in
+ * `features/editor/tool-panels/tool-registry`. */
 type AnnotateTool = {
   icon: ReactNode;
   id: AnnotationKind;
@@ -41,5 +42,12 @@ export const ANNOTATE_TOOLS: AnnotateTool[] = [
     label: "Counter",
     name: "Drop a counter",
     shortcut: "N",
+  },
+  {
+    icon: <HighlightToolIcon />,
+    id: "highlight",
+    label: "Highlight",
+    name: "Highlight text",
+    shortcut: "H",
   },
 ];

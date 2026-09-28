@@ -20,6 +20,8 @@ fn counter(value: u32, angle: f64) -> Annotation {
     align: Default::default(),
     color: "#ffcc00".to_owned(),
     head: crate::editor::annotations::AnnotationHead::None,
+    hand_drawn: false,
+    manual: false,
     radius: 0.0,
     redaction: Default::default(),
     strength: 0.0,

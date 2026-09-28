@@ -464,16 +464,21 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
     result = lerp(result, float4(video.rgb, 1.0), video.a * image_alpha);
   }
   result = crop_preview_layer(result, pixel);
-  float4 cursor = cursor_layer(pixel);
-  cursor.a *= cursor_effects.x;
-  if (cursor_options.z != 0) cursor.a *= image_alpha;
-  result.rgb = lerp(result.rgb, cursor.rgb, cursor.a);
-  result.a = cursor.a + result.a * (1.0 - cursor.a);
   // Every arrow edge feathers over one *drawn* pixel, not one canvas pixel:
   // a canvas shown smaller than its resolution would otherwise take its
   // whole antialiasing band from inside a single drawn pixel and come out
   // jagged. `motion.z` is how many canvas pixels one drawn pixel covers.
   float annotation_feather = max(motion.z, 1e-4) * 0.5;
+  // Highlights recolour the picture itself, so they go under everything drawn
+  // over it, the cursor included.
+  if (annotation_options.x > 0u)
+    result = composite_highlights(result, result, pixel, 0u, annotation_options.x,
+                                  annotation_feather);
+  float4 cursor = cursor_layer(pixel);
+  cursor.a *= cursor_effects.x;
+  if (cursor_options.z != 0) cursor.a *= image_alpha;
+  result.rgb = lerp(result.rgb, cursor.rgb, cursor.a);
+  result.a = cursor.a + result.a * (1.0 - cursor.a);
   // The atlas's size and, in `motion.w`, how many atlas pixels it holds per
   // canvas pixel.
   AnnotationTextAtlas annotation_atlas = {annotation_options.zw, motion.w};
@@ -481,10 +486,13 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
     result = composite_annotations(
       result, pixel, 0u, annotation_options.x, annotation_feather, annotation_atlas);
   if (camera_effects.w != 0.0) result = camera_layer(result, pixel);
-  if (annotation_options.y > annotation_options.x)
+  if (annotation_options.y > annotation_options.x) {
+    result = composite_highlights(result, result, pixel, annotation_options.x,
+                                  annotation_options.y, annotation_feather);
     result = composite_annotations(
       result, pixel, annotation_options.x, annotation_options.y,
       annotation_feather, annotation_atlas);
+  }
   result = composite_keyboard(result, pixel, output_source.xy);
   if (cursor_options.w == 0) {
     result.rgb = saturate(result.rgb + hash(pixel, 0x9e3779b9) / 255.0);

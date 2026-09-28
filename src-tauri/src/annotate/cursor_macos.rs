@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Keeping the crosshair over the overlay's transparent host.
+//! Keeping the tool's pointer over the overlay's transparent host: the
+//! crosshair, or the I-beam for the highlight, which selects text.
 //!
 //! The cursor lease sets the crosshair once, and that is enough for a native
 //! surface. This host is a webview: WebKit asks for the arrow cursor again on
@@ -33,11 +34,24 @@ fn with_window(window: &WebviewWindow, work: impl FnOnce(&NSWindow)) {
 /// Main thread only, while the host window still exists.
 pub(super) fn claim(window: &WebviewWindow) {
   with_window(window, |native| native.disableCursorRects());
-  let crosshair = NSCursor::crosshairCursor();
+  follow_tool();
+}
+
+/// Points with the tool in hand: the guard's substitute, the overlay's own
+/// pointer moves and the pointer now. Main thread only, while the overlay
+/// holds the pointer.
+pub(super) fn follow_tool() {
+  let text = super::text_cursor();
+  let cursor = if text {
+    NSCursor::IBeamCursor()
+  } else {
+    NSCursor::crosshairCursor()
+  };
   unsafe {
-    screenwide_set_region_expected_cursor(Retained::as_ptr(&crosshair).cast_mut().cast());
+    screenwide_set_region_expected_cursor(Retained::as_ptr(&cursor).cast_mut().cast());
   }
-  crosshair.set();
+  super::native_overlay::set_text_cursor(text);
+  cursor.set();
 }
 
 /// Main thread only, before the host window is closed. The lease's own release

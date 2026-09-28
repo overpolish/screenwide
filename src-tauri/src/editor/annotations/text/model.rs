@@ -93,6 +93,8 @@ pub(crate) fn default_text_style() -> AnnotationStyle {
     align: AnnotationAlign::Left,
     color: crate::editor::annotations::model::NEW_ANNOTATION_COLOR.to_owned(),
     head: AnnotationHead::None,
+    hand_drawn: false,
+    manual: false,
     radius: 0.0,
     redaction: Default::default(),
     strength: 0.0,

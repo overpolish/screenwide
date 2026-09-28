@@ -46,7 +46,7 @@ fn open(app: &AppHandle, rebuild: bool) -> Result<(), String> {
   // user was working in, which is what it puts back on release, and it is what
   // makes the pointer a crosshair over the overlay.
   #[cfg(target_os = "macos")]
-  if let Err(error) = crate::osc::cursor::macos::acquire_annotate(app) {
+  if let Err(error) = crate::osc::cursor::macos::acquire_annotate(app, super::text_cursor()) {
     abandon(app);
     return Err(error);
   }

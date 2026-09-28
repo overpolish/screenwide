@@ -4,7 +4,7 @@
 //! Drawing the annotations into a still that leaves the app as pixels.
 //!
 //! The clipboard has no layers, so a shot copied rather than opened carries
-//! the arrows in its own pixels. They are drawn by the overlay's own pipeline,
+//! the arrows in its own pixels, and its highlights recolour those pixels. They are drawn by the overlay's own pipeline,
 //! offscreen, and composed over the still: the same shader draws the arrow
 //! whether it is on the desktop, in the editor or on the clipboard.
 
@@ -39,10 +39,13 @@ pub(crate) fn bake(
   unsafe { device.CreateRenderTargetView(&target_resource, None, Some(&mut view)) }
     .map_err(|error| error.to_string())?;
   let view = view.ok_or_else(|| "D3D11 created no annotate still target".to_owned())?;
+  // A highlight recolours the still under it, so the still is its underlay.
+  let still = underlay::upload(device, image)?;
   renderer.draw_arrows(
     &view,
     (image.width, image.height),
     &arrows::placed_arrows(annotations, (0.0, 0.0), (1.0, 1.0), None, None),
+    Some(&still),
   )?;
 
   let staging = texture(device, image.width, image.height, true)?;

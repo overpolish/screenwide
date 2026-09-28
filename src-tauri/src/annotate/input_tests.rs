@@ -18,6 +18,7 @@ fn arrow_tool() -> Tool {
     shape: AnnotationKind::Arrow,
     value: 0,
     angle: 0.0,
+    manual: false,
   }
 }
 
@@ -26,6 +27,7 @@ fn counter_tool(value: u32, angle: f64) -> Tool {
     shape: AnnotationKind::Counter,
     value,
     angle,
+    manual: false,
   }
 }
 
@@ -142,7 +144,7 @@ fn a_counter_is_on_screen_from_the_press_and_an_arrow_is_not() {
     point(10.0, 20.0),
     &arrow_tool(),
   );
-  assert!(!is_drawn(drawing.as_ref().unwrap()));
+  assert!(!drawing.as_ref().unwrap().is_drawn());
 
   step(
     &mut drawing,
@@ -151,5 +153,5 @@ fn a_counter_is_on_screen_from_the_press_and_an_arrow_is_not() {
     point(10.0, 20.0),
     &counter_tool(1, 0.0),
   );
-  assert!(is_drawn(drawing.as_ref().unwrap()));
+  assert!(drawing.as_ref().unwrap().is_drawn());
 }

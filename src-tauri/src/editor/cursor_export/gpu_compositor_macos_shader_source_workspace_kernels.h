@@ -80,6 +80,17 @@ kernel void workspace_layer(
         existing, source, source_dimensions.x, source_dimensions.y,
         canvas_point, canvas_dimensions, u);
   }
+  // The layer is drawn into `placement`, which is rarely its canvas' own size:
+  // zoomed out, one drawn pixel covers several canvas pixels, and an edge
+  // feathered over one canvas pixel would land inside a single drawn one.
+  float2 annotation_pixel_steps =
+      canvas_dimensions / float2(placement.width, placement.height);
+  float annotation_pixel_scale =
+      max(annotation_pixel_steps.x, annotation_pixel_steps.y);
+  // Highlights recolour the picture itself, so they go under everything
+  // drawn over it, the cursor included.
+  rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 0u, canvas_point,
+                              annotation_pixel_scale, annotation_points);
   if (cursor_uniforms.cursor.visible != 0) {
     float blur = min(length(float2(cursor_uniforms.cursor.blur_delta_x, cursor_uniforms.cursor.blur_delta_y)), 80.0);
     float radius = length(float2(cursor_uniforms.cursor.width, cursor_uniforms.cursor.height)) * cursor_uniforms.cursor.scale + blur + 4.0;
@@ -96,13 +107,6 @@ kernel void workspace_layer(
       rgba = mix(rgba, pixel, pixel.a);
     }
   }
-  // The layer is drawn into `placement`, which is rarely its canvas' own size:
-  // zoomed out, one drawn pixel covers several canvas pixels, and an edge
-  // feathered over one canvas pixel would land inside a single drawn one.
-  float2 annotation_pixel_steps =
-      canvas_dimensions / float2(placement.width, placement.height);
-  float annotation_pixel_scale =
-      max(annotation_pixel_steps.x, annotation_pixel_steps.y);
   rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                canvas_point, u, float2(source_dimensions),
                                annotation_pixel_scale, annotation_samples,
@@ -139,11 +143,15 @@ kernel void workspace_layer(
       canvas_point, canvas_dimensions, u);
     // The redrawn foreground covers the pass above, so the annotations under
     // the camera go back over it exactly as the cursor does.
+    rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 0u, canvas_point,
+                                annotation_pixel_scale, annotation_points);
     rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                  canvas_point, u, float2(source_dimensions),
                                  annotation_pixel_scale, annotation_samples,
                                annotation_numbers, annotation_atlas);
   }
+  rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 1u, canvas_point,
+                              annotation_pixel_scale, annotation_points);
   rgba = composite_keyboard(rgba, keyboard_pixels, keyboard, canvas_point,
                             canvas_dimensions);
   rgba = composite_annotations(rgba, annotations, annotation_count, 1u,

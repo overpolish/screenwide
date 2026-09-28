@@ -12,6 +12,7 @@
 //! keyboard with the anchor host and the keys that draw keep working.
 
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
@@ -35,6 +36,23 @@ pub(super) use keyboard::{give_back as return_keyboard, take as take_keyboard};
 /// of the two comes last, so it never appears at the size it was built at.
 static PRESENTED: AtomicBool = AtomicBool::new(false);
 static FITTED: AtomicBool = AtomicBool::new(false);
+/// The size the plate last reported, kept whether or not a session is up. The
+/// plate changes while it is hidden too - a tool changed from the Settings page
+/// between sessions - and the next session has to open at that size rather
+/// than the one the window was last given.
+static PLATE: Mutex<Option<LogicalSize<f64>>> = Mutex::new(None);
+
+fn plate() -> std::sync::MutexGuard<'static, Option<LogicalSize<f64>>> {
+  PLATE.lock().unwrap_or_else(|error| error.into_inner())
+}
+
+/// The plate's size as the display's work area can hold it.
+fn fitted(anchor: &Anchor, size: LogicalSize<f64>) -> LogicalSize<f64> {
+  LogicalSize::new(
+    size.width.ceil().min(anchor.size.width),
+    size.height.ceil().min(anchor.size.height),
+  )
+}
 
 fn toolbar(app: &AppHandle) -> Option<WebviewWindow> {
   app.get_webview_window(WindowLabel::AnnotateToolbar.as_str())
@@ -57,15 +75,7 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
   PRESENTED.store(false, Ordering::Release);
 
   if let Some(window) = toolbar(app) {
-    let scale = window.scale_factor().map_err(|error| error.to_string())?;
-    // The inner size, because that is what the plate reported and what
-    // `set_frame` sets. Reading the outer size back would feed a window frame
-    // into the content size, growing the toolbar by that frame every time a
-    // session reopened it.
-    let size = window
-      .inner_size()
-      .map_err(|error| error.to_string())?
-      .to_logical::<f64>(scale);
+    let size = fitted(&plan, plate().unwrap_or(INITIAL_SIZE));
     platform::set_frame(&window, anchor::placement(&plan, size), size)
       .map_err(|error| error.to_string())?;
     *anchor::current() = Some(plan);
@@ -221,18 +231,18 @@ pub fn resize_annotate_toolbar(app: AppHandle, width: f64, height: f64) -> Resul
   if !width.is_finite() || width <= 0.0 || !height.is_finite() || height <= 0.0 {
     return Err("The annotate toolbar size must be positive".to_owned());
   }
+  *plate() = Some(LogicalSize::new(width, height));
   let Some(window) = toolbar(&app) else {
     return Ok(());
   };
   {
+    // Between sessions there is nowhere to place it; the next session's
+    // build opens it at the size just kept.
     let guard = anchor::current();
     let Some(anchor) = guard.as_ref() else {
       return Ok(());
     };
-    let size = LogicalSize::new(
-      width.ceil().min(anchor.size.width),
-      height.ceil().min(anchor.size.height),
-    );
+    let size = fitted(anchor, LogicalSize::new(width, height));
     // One AppKit operation: a plate that grew a colour card must not be seen
     // at the old size in its new place.
     platform::set_frame(&window, anchor::placement(anchor, size), size)

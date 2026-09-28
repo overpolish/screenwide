@@ -9,27 +9,23 @@
 
 import { ANNOTATION_SIZES } from "../../components/shared/annotation-style/widths";
 
+import {
+  annotationPoint,
+  highlightBand,
+  highlightTone,
+  textPointer,
+} from "./annotation-shape-parts";
+
 import type {
   Annotation,
   AnnotationArrow,
   AnnotationCounter,
-  AnnotationPoint,
+  AnnotationHighlight,
   AnnotationRedact,
   AnnotationShape,
   AnnotationText,
-  TextPointer,
 } from "./annotations";
 import type { AnnotationKind } from "../../components/shared/annotation-style/types";
-
-const annotationPoint = (value: unknown): AnnotationPoint | null => {
-  const point = value as Partial<AnnotationPoint> | null | undefined;
-  return typeof point?.x === "number" &&
-    typeof point.y === "number" &&
-    Number.isFinite(point.x) &&
-    Number.isFinite(point.y)
-    ? { x: point.x, y: point.y }
-    : null;
-};
 
 /**
  * How long an animated annotation takes to arrive, in source milliseconds. The
@@ -43,29 +39,6 @@ const annotationPoint = (value: unknown): AnnotationPoint | null => {
 export const ANNOTATION_DRAW_IN_MS = 1000;
 const ANNOTATION_COUNTER_DRAW_IN_MS = 320;
 const ANNOTATION_TEXT_DRAW_IN_MS = 600;
-
-/** Where a fresh text box's pointer sits: tucked into the middle of its
- * bottom edge. The twin of `TextPointer::default`. */
-const TUCKED_POINTER: TextPointer = {
-  along: { x: 0, y: 1 },
-  reach: { x: 0, y: 0 },
-};
-
-/** A stored pointer, or the tucked one where what is stored cannot be read. */
-const textPointer = (value: unknown): TextPointer => {
-  const pointer = (value ?? {}) as Partial<TextPointer>;
-  const along = annotationPoint(pointer.along);
-  const reach = annotationPoint(pointer.reach);
-  return along && reach
-    ? {
-        along: {
-          x: Math.min(1, Math.max(-1, along.x)),
-          y: Math.min(1, Math.max(-1, along.y)),
-        },
-        reach: { x: Math.max(0, reach.x), y: Math.max(0, reach.y) },
-      }
-    : TUCKED_POINTER;
-};
 
 /**
  * What one kind of annotation is and can do: how it is read from a document,
@@ -88,10 +61,18 @@ type AnnotationKindRow<Shape extends AnnotationShape> =
     hasAlign: boolean;
     /** Whether it is aimed by an angle of its own, rather than by its ends. */
     hasAngle: boolean;
+    /** Whether it fits itself to what is under it, or can be laid by hand
+     * over a box instead. */
+    hasFit: boolean;
+    /** Whether it can be drawn by hand, and drawn again differently. */
+    hasHandDrawn: boolean;
     /** Whether it carries heads to choose between. */
     hasHead: boolean;
     /** Whether it hides what is under it, and so offers the redaction modes. */
     hasRedaction: boolean;
+    /** Whether its size is its own to choose. A highlight's bands are as tall
+     * as the lines it covers, and a box is laid with its one marker. */
+    hasSize: boolean;
     /** What the timeline lane calls one, `index` being its place in the lane. */
     laneLabel: (shape: Shape, index: number) => string;
     /** The shape as stored, or null where the compositor could not place it. */
@@ -111,8 +92,11 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: false,
+    hasFit: false,
+    hasHandDrawn: false,
     hasHead: true,
     hasRedaction: false,
+    hasSize: true,
     // An arrow has no name of its own, so it is called by its place in the
     // lane.
     laneLabel: (_shape, index) => `Arrow ${String(index + 1)}`,
@@ -133,10 +117,13 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: true,
+    hasFit: false,
+    hasHandDrawn: false,
     // A counter is a disc with a number in it, which leaves it no head to
     // choose and nothing to reverse.
     hasHead: false,
     hasRedaction: false,
+    hasSize: true,
     laneLabel: (shape) => `Counter ${String(shape.value)}`,
     parseShape: (value) => {
       const shape = (value ?? {}) as Partial<AnnotationCounter>;
@@ -153,6 +140,46 @@ export const ANNOTATION_KINDS: {
     },
     reversible: false,
   },
+  highlight: {
+    ...ANNOTATION_SIZES.highlight,
+    // Drawn along its bands the way an arrow is along its path.
+    animates: true,
+    drawInMs: ANNOTATION_DRAW_IN_MS,
+    hasAlign: false,
+    hasAngle: false,
+    hasFit: true,
+    hasHandDrawn: true,
+    hasHead: false,
+    hasRedaction: false,
+    hasSize: false,
+    laneLabel: (_shape, index) => `Highlight ${String(index + 1)}`,
+    parseShape: (value) => {
+      const shape = (value ?? {}) as Partial<AnnotationHighlight>;
+      const start = annotationPoint(shape.start);
+      const end = annotationPoint(shape.end);
+      const seed = shape.seed;
+      const bands = Array.isArray(shape.bands)
+        ? shape.bands.map(highlightBand)
+        : [];
+      return start &&
+        end &&
+        typeof seed === "number" &&
+        Number.isInteger(seed) &&
+        seed >= 0 &&
+        seed <= 0xffffffff &&
+        bands.every((band) => band !== null)
+        ? {
+            bands,
+            end,
+            kind: "highlight",
+            seed,
+            start,
+            tone: highlightTone(shape.tone),
+          }
+        : null;
+    },
+    reversible: false,
+  },
   redact: {
     ...ANNOTATION_SIZES.redact,
     // A redaction ramps in on a counter's timing and never leaves. It starts
@@ -162,8 +189,11 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: false,
+    hasFit: false,
+    hasHandDrawn: false,
     hasHead: false,
     hasRedaction: true,
+    hasSize: true,
     laneLabel: (_shape, index) => `Redaction ${String(index + 1)}`,
     parseShape: (value) => {
       const shape = (value ?? {}) as Partial<AnnotationRedact>;
@@ -189,8 +219,11 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_TEXT_DRAW_IN_MS,
     hasAlign: true,
     hasAngle: false,
+    hasFit: false,
+    hasHandDrawn: false,
     hasHead: false,
     hasRedaction: false,
+    hasSize: true,
     // A box is called by what it says: its first line, which the lane
     // truncates to the room it has, or by its place when that line is empty.
     laneLabel: (shape, index) => {

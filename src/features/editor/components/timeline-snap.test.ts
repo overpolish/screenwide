@@ -36,7 +36,9 @@ const clip = (
     style: {
       align: "left",
       color: "#ffcc00",
+      handDrawn: false,
       head: "none",
+      manual: false,
       radius: 0,
       redaction: "erase",
       strength: 0,

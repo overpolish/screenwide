@@ -14,42 +14,16 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, MutexGuard};
 use std::time::Instant;
 
-use crate::editor::annotations::arrow::new_arrow;
-use crate::editor::annotations::counter::new_counter;
 use crate::editor::annotations::AnnotationKind;
-use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationStyle};
+use crate::editor::annotations::{Annotation, AnnotationPoint};
 
-/// Virtual key codes, which AppKit reports by physical position.
-#[cfg(target_os = "macos")]
-mod key_codes {
-  pub(super) const KEY_A: u16 = 0;
-  pub(super) const KEY_Z: u16 = 6;
-  pub(super) const KEY_N: u16 = 45;
-  pub(super) const KEY_BACKSPACE: u16 = 51;
-  pub(super) const KEY_FORWARD_DELETE: u16 = 117;
-}
-
-/// Windows virtual key codes, which name the character rather than the
-/// position it sits at.
-#[cfg(target_os = "windows")]
-mod key_codes {
-  pub(super) const KEY_A: u16 = 0x41;
-  pub(super) const KEY_Z: u16 = 0x5A;
-  pub(super) const KEY_N: u16 = 0x4E;
-  pub(super) const KEY_BACKSPACE: u16 = 0x08;
-  pub(super) const KEY_FORWARD_DELETE: u16 = 0x2E;
-}
-
+#[path = "input_keys.rs"]
+mod keys;
+#[path = "input_stroke.rs"]
+mod stroke;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use key_codes::{KEY_A, KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_N, KEY_Z};
-
-/// The tool each unmodified letter picks up, the twin of the toolbar's own
-/// hints. A shape added to the overlay takes its letter here.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-const TOOL_KEYS: &[(u16, AnnotationKind)] = &[
-  (KEY_A, AnnotationKind::Arrow),
-  (KEY_N, AnnotationKind::Counter),
-];
+use keys::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z, TOOL_KEYS};
+use stroke::Stroke;
 
 /// The modifier bits the native overlay sends. Windows reports Ctrl as
 /// `MODIFIER_COMMAND`: undo is the same gesture under a different name.
@@ -65,26 +39,6 @@ pub(super) const PHASE_DRAG: u32 = 1;
 #[cfg(target_os = "windows")]
 pub(super) const PHASE_UP: u32 = 2;
 
-/// The stroke in hand: the annotation it makes, when and where it started, and
-/// where the pointer is now. The start time is what the annotation is timed
-/// from, so a clip covers the drawing rather than beginning once it is over.
-///
-/// The shape, the number and the aim are taken at the press and held: a tool
-/// picked up mid-drag chooses what the *next* annotation is, rather than
-/// reshaping the one being drawn. The dress is read every frame, so a colour
-/// changed mid-drag shows on the stroke in hand.
-struct Stroke {
-  id: String,
-  started_at: Instant,
-  start: AnnotationPoint,
-  end: AnnotationPoint,
-  shape: AnnotationKind,
-  /// The counter's place in the order it was dropped in, and where its tail
-  /// points. Neither is read for an arrow.
-  value: u32,
-  angle: f64,
-}
-
 static DRAWING: LazyLock<Mutex<Option<Stroke>>> = LazyLock::new(|| Mutex::new(None));
 static NEXT_ANNOTATION: AtomicU64 = AtomicU64::new(1);
 
@@ -94,72 +48,13 @@ fn drawing() -> MutexGuard<'static, Option<Stroke>> {
     .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-/// The dress an annotation of `shape` is drawn in. An arrow's stroke and a
-/// counter's disc are different measurements of different things, so the width
-/// comes from the setting that belongs to the shape. The overlay offers no
-/// text or redaction tool, and its settings refuse both, so neither ever
-/// reaches here.
-fn style(shape: AnnotationKind) -> AnnotationStyle {
-  let settings = super::settings::current();
-  AnnotationStyle {
-    align: Default::default(),
-    color: settings.default_color,
-    head: settings.default_head,
-    radius: 0.0,
-    redaction: Default::default(),
-    strength: 0.0,
-    width: match shape {
-      AnnotationKind::Arrow | AnnotationKind::Text | AnnotationKind::Redact => {
-        settings.default_width
-      }
-      AnnotationKind::Counter => settings.default_counter_size,
-    },
-  }
-}
-
-/// The annotation a stroke currently describes, built by the editor's own
-/// constructors so an annotation drawn live and one drawn in the editor are the
-/// same shape from the first frame.
-///
-/// A counter sits where the pointer is rather than where the press landed: it
-/// is dropped whole, and the same drag carries it, exactly as a fresh counter
-/// in the editor is carried.
-fn annotation(stroke: &Stroke, style: &AnnotationStyle) -> Option<Annotation> {
-  match stroke.shape {
-    AnnotationKind::Arrow => Some(new_arrow(
-      stroke.id.clone(),
-      stroke.start,
-      stroke.end,
-      Some(style),
-    )),
-    AnnotationKind::Counter => Some(new_counter(
-      stroke.id.clone(),
-      stroke.end,
-      stroke.value,
-      Some(style),
-      Some(stroke.angle),
-    )),
-    AnnotationKind::Text | AnnotationKind::Redact => None,
-  }
-}
-
-/// Whether a stroke has anything to show. An arrow with both ends in one
-/// place is a blob, and the press that starts every stroke would flash one
-/// before the drag begins; a counter is an annotation the moment it is dropped.
-fn is_drawn(stroke: &Stroke) -> bool {
-  match stroke.shape {
-    AnnotationKind::Arrow => stroke.start != stroke.end,
-    AnnotationKind::Counter => true,
-    AnnotationKind::Text | AnnotationKind::Redact => false,
-  }
-}
-
-/// What a press starts: the tool in hand, and what a counter dropped by it
-/// would be numbered and aimed at.
+/// What a press starts: the tool in hand, what a counter dropped by it would
+/// be numbered and aimed at, and whether a highlight is laid by hand.
 struct Tool {
   shape: AnnotationKind,
   value: u32,
   angle: f64,
+  manual: bool,
 }
 
 /// One pointer step, and the annotation it completed with the moment its stroke
@@ -186,6 +81,7 @@ fn step(
         shape: tool.shape,
         value: tool.value,
         angle: tool.angle,
+        manual: tool.shape == AnnotationKind::Highlight && tool.manual,
       });
       None
     }
@@ -201,9 +97,7 @@ fn step(
       // A click that never travelled is not an arrow. Otherwise every stray
       // click while the overlay is up would leave a dot on screen, and a clip
       // in the recording. A counter is dropped by that very click.
-      let drawn = is_drawn(&stroke)
-        .then(|| annotation(&stroke, &style(stroke.shape)))
-        .flatten()?;
+      let drawn = stroke.is_drawn().then(|| stroke.annotation()).flatten()?;
       Some((drawn, stroke.started_at))
     }
   }
@@ -213,12 +107,15 @@ fn step(
 /// come from [`super::live_clips`].
 pub(super) fn in_progress() -> Option<Annotation> {
   let drawing = drawing();
-  let stroke = drawing.as_ref().filter(|stroke| is_drawn(stroke))?;
-  annotation(stroke, &style(stroke.shape))
+  drawing
+    .as_ref()
+    .filter(|stroke| stroke.is_drawn())?
+    .annotation()
 }
 
-/// A pointer step in global desktop points: 0 down, 1 drag, 2 up.
-pub(super) fn pointer(phase: u32, x: f64, y: f64) {
+/// A pointer step in global desktop points: 0 down, 1 drag, 2 up. `app` is
+/// what a highlight's press captures the desktop with.
+pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64) {
   let settings = super::settings::current();
   let tool = Tool {
     shape: settings.default_shape,
@@ -232,15 +129,31 @@ pub(super) fn pointer(phase: u32, x: f64, y: f64) {
       0
     },
     angle: settings.default_counter_angle,
+    manual: settings.highlight_manual,
   };
-  let completed = step(
-    &mut drawing(),
-    phase,
-    Instant::now(),
-    AnnotationPoint { x, y },
-    &tool,
-  );
+  let point = AnnotationPoint { x, y };
+  if phase != PHASE_DOWN && phase != PHASE_DRAG {
+    // A quick flick lets go before the desktop under it has been read.
+    let highlight = |stroke: &&Stroke| stroke.shape == AnnotationKind::Highlight;
+    let flicked = drawing()
+      .as_ref()
+      .filter(highlight)
+      .map(|stroke| stroke.id.clone());
+    if let Some(stroke) = flicked {
+      super::highlight::wait_ready(&stroke, std::time::Duration::from_millis(400));
+    }
+  }
+  let completed = step(&mut drawing(), phase, Instant::now(), point, &tool);
+  if phase == PHASE_DOWN && tool.shape == AnnotationKind::Highlight {
+    let stroke = drawing().as_ref().map(|stroke| stroke.id.clone());
+    if let (Some(stroke), Some(app)) = (stroke, app) {
+      super::highlight::begin(app, &stroke, point);
+    }
+  }
   if let Some((annotation, started_at)) = completed {
+    if annotation.shape.kind() == AnnotationKind::Highlight {
+      super::highlight::commit(&annotation);
+    }
     super::live_clips::add(annotation, started_at);
   }
 }
@@ -282,6 +195,7 @@ pub(super) fn key(app: &tauri::AppHandle, key_code: u16, modifiers: u32) -> bool
 /// for the next session to finish.
 pub(super) fn cancel() {
   drawing().take();
+  super::highlight::cancel();
 }
 
 #[cfg(test)]

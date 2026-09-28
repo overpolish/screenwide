@@ -180,8 +180,16 @@ fn release(app: &AppHandle, owner: CursorOwner) -> Result<(), String> {
   })
 }
 
-pub(crate) fn acquire_annotate(app: &AppHandle) -> Result<(), String> {
-  acquire(app, CursorOwner::Annotate, CursorIcon::Crosshair)
+/// Annotate's lease, or its icon changed where it already holds one: the
+/// highlight selects text, so it points with the I-beam rather than the
+/// crosshair the other tools draw with.
+pub(crate) fn acquire_annotate(app: &AppHandle, text: bool) -> Result<(), String> {
+  let icon = if text {
+    CursorIcon::IBeam
+  } else {
+    CursorIcon::Crosshair
+  };
+  acquire(app, CursorOwner::Annotate, icon)
 }
 
 pub(crate) fn release_annotate(app: &AppHandle) -> Result<(), String> {

@@ -13,6 +13,7 @@ use super::*;
 use crate::editor::annotations::arrow::geometry::prepare_arrow;
 use crate::editor::annotations::counter::geometry::prepare_counter;
 use crate::editor::annotations::exposure::annotation_travel;
+use crate::editor::annotations::highlight::geometry::prepare_highlight;
 use crate::editor::annotations::native::{native_annotations, NativeAnnotation, NativeAnnotations};
 use crate::editor::annotations::redact::geometry::prepare_redact;
 use crate::editor::annotations::redact::native::{
@@ -165,6 +166,9 @@ fn placed_native(
         ),
         AnnotationKind::Arrow => prepare_arrow(a, b, c, annotation.width, annotation.head, reveal),
         AnnotationKind::Redact => prepare_redact(a, c, annotation.width),
+        // A highlight is placed by where the source's origin and its pixel
+        // (1, 1) land, and keeps its tone in `p2`, which is never placed.
+        AnnotationKind::Highlight => prepare_highlight(a, b, annotation.p2, reveal),
       };
       let geometry = shape(annotation.reveal);
       let mut arrow = compositor::PreviewArrow::new(
@@ -181,10 +185,11 @@ fn placed_native(
       arrow.data_count = annotation.data_count;
       // A text box's travel reads its pointer and its block as they are held,
       // which are never placed.
-      let count = if annotation.shape_kind() == AnnotationKind::Text {
-        exposure_sample_count(annotation, a, annotation.p1, annotation.p2)
-      } else {
-        exposure_sample_count(annotation, a, b, c)
+      let count = match annotation.shape_kind() {
+        AnnotationKind::Text => exposure_sample_count(annotation, a, annotation.p1, annotation.p2),
+        // A highlight's sweep has a soft tip of its own and is never smeared.
+        AnnotationKind::Highlight => 0,
+        _ => exposure_sample_count(annotation, a, b, c),
       };
       if count == 0 {
         // A still annotation carries its reveal's opacity in its colour. The
@@ -239,7 +244,9 @@ fn placed_native(
             .filter(|(typed, _)| *typed == index)
             .map(|(_, marks)| marks),
         },
-        AnnotationKind::Arrow | AnnotationKind::Redact => compositor::PreparedType::default(),
+        AnnotationKind::Arrow | AnnotationKind::Redact | AnnotationKind::Highlight => {
+          compositor::PreparedType::default()
+        }
       });
       prepared.arrows.push(arrow);
     }

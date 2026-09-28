@@ -64,6 +64,12 @@ pub struct AnnotateSettings {
   /// Which ends of a fresh arrow carry a head. The editor's own type, so the
   /// live overlay and the editor dress an arrow from the same value.
   pub default_head: AnnotationHead,
+  /// Whether a fresh highlight is drawn as a marker stroke by hand rather
+  /// than as a clean band.
+  pub highlight_hand_drawn: bool,
+  /// Whether a fresh highlight is laid by hand over the box its drag spans
+  /// rather than fitted to the text under it.
+  pub highlight_manual: bool,
   pub toolbar_position: Option<ToolbarPosition>,
 }
 
@@ -78,6 +84,8 @@ impl Default for AnnotateSettings {
       default_counter_size: MIN_COUNTER_SIZE,
       default_counter_angle: 0.0,
       default_head: AnnotationHead::default(),
+      highlight_hand_drawn: false,
+      highlight_manual: false,
       toolbar_position: None,
     }
   }
@@ -100,7 +108,7 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     settings.default_shape,
     AnnotationKind::Text | AnnotationKind::Redact
   ) {
-    return Err("The live overlay draws arrows and counters".to_owned());
+    return Err("The live overlay draws arrows, counters and highlights".to_owned());
   }
   if !settings.default_width.is_finite()
     || !(MIN_WIDTH..=MAX_WIDTH).contains(&settings.default_width)
@@ -198,6 +206,9 @@ pub fn set_annotate_settings(
   }
   if !settings.enabled {
     super::disable(&app);
+  }
+  if settings.default_shape != previous.default_shape {
+    super::follow_tool(&app);
   }
   crate::tray::refresh(&app);
   let _ = app.emit("annotate-settings://changed", &settings);

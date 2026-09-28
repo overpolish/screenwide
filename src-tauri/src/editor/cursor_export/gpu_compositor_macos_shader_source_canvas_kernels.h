@@ -30,6 +30,10 @@ kernel void compose_canvas_rgba(
   float4 rgba = canvas_rgba_pixel(
     source, source_dimensions.x, source_dimensions.y, float2(gid) + 0.5,
     float2(dimensions), u, seconds, background_picture);
+  // Highlights recolour the picture itself, so they go under everything
+  // drawn over it, the cursor included.
+  rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 0u,
+                              float2(gid) + 0.5, 1.0, annotation_points);
   float4 cursor_rgba = canvas_cursor_pixel(
     cursor_images, cursor, u, float2(gid) + 0.5);
   rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
@@ -77,6 +81,8 @@ kernel void compose_canvas_rgba(
     rgba = overlay_canvas_foreground_rgba(
       rgba, source, source_dimensions.x, source_dimensions.y,
       float2(gid) + 0.5, float2(dimensions), u);
+    rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 0u,
+                                float2(gid) + 0.5, 1.0, annotation_points);
     rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
     // The redrawn foreground covers the pass above, so the annotations under
     // the camera go back over it exactly as the cursor does.
@@ -85,6 +91,8 @@ kernel void compose_canvas_rgba(
                                  annotation_pixel_scale, annotation_samples,
                                annotation_numbers, annotation_atlas);
   }
+  rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 1u,
+                              float2(gid) + 0.5, 1.0, annotation_points);
   rgba = composite_keyboard(rgba, keyboard_pixels, keyboard,
                             float2(gid) + 0.5, float2(dimensions));
   rgba = composite_annotations(rgba, annotations, annotation_count, 1u,

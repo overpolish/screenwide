@@ -117,4 +117,8 @@ fn settings_without_the_newer_fields_take_their_defaults() {
   assert_eq!(settings.default_shape, AnnotationKind::Arrow);
   assert_eq!(settings.default_counter_size, MIN_COUNTER_SIZE);
   assert_eq!(settings.default_counter_angle, 0.0);
+  // A file that predates laying highlights by hand still fits them to text,
+  // and still validates: a refused file would cost every other setting in it.
+  assert!(!settings.highlight_manual);
+  assert!(validated(settings).is_ok());
 }

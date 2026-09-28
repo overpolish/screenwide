@@ -21,6 +21,8 @@ pub(crate) fn default_arrow_style() -> AnnotationStyle {
     align: Default::default(),
     color: crate::editor::annotations::model::NEW_ANNOTATION_COLOR.to_owned(),
     head: AnnotationHead::End,
+    hand_drawn: false,
+    manual: false,
     radius: 0.0,
     redaction: Default::default(),
     strength: 0.0,

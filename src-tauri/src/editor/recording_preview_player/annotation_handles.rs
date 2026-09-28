@@ -106,6 +106,39 @@ impl PreviewPlayerManager {
     None
   }
 
+  /// The frame under the pointer, for a highlight to select from. Only the
+  /// screen pane has text to find. The first call for a frame starts its
+  /// decode and answers `None`, as detection does; `wait` holds the pointer
+  /// for a decode already on its way, which the end of a gesture does rather
+  /// than commit the plain band it drew before the frame landed.
+  pub(super) fn annotation_picture(
+    &self,
+    pane: u32,
+    position_ms: u64,
+    source: (u32, u32),
+    wait: bool,
+  ) -> Option<Arc<crate::editor::annotations::highlight::picture::HighlightPicture>> {
+    use crate::editor::annotations::highlight::picture::{request_picture, HighlightPicture};
+    let sources = self.sources.as_ref()?;
+    if pane != 0 {
+      return None;
+    }
+    let key = (self.artifact_id?, pane, position_ms);
+    let cache = &self.annotation.pictures;
+    if let Some(picture) = cache.picture(key) {
+      return Some(picture);
+    }
+    let path = sources.screen_path.clone();
+    let duration_ms = sources.duration_ms;
+    request_picture(cache, key, move || {
+      let frame = platform::source_frame_image(&path, position_ms, duration_ms).ok()?;
+      HighlightPicture::new(Arc::new(frame), source)
+    });
+    wait
+      .then(|| cache.wait(key, std::time::Duration::from_millis(400)))
+      .flatten()
+  }
+
   /// Publishes what the sample on screen snapped to. It goes out before the
   /// grips, because on Windows publishing those is what redraws the chrome.
   pub(super) fn publish_annotation_snap(&self, source: (u32, u32), result: &SnapResult) {

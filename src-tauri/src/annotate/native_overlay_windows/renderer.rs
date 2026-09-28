@@ -30,7 +30,10 @@ pub(super) struct Constants {
   pub(super) atlas: [u32; 2],
   /// How many atlas pixels that texture holds per layer pixel.
   pub(super) atlas_scale: f32,
-  pub(super) spare: [f32; 3],
+  /// The target's size in pixels, which the highlights' underlay is read
+  /// across.
+  pub(super) target: [f32; 2],
+  pub(super) spare: f32,
 }
 
 const _: () = assert!(std::mem::size_of::<Constants>() == 32);
@@ -43,6 +46,8 @@ pub(super) struct Renderer {
   pub(super) constants: ID3D11Buffer,
   arrows: arrows::StructuredBuffer,
   samples: arrows::StructuredBuffer,
+  /// A highlight's bands, which the shader reads at `t8`.
+  points: arrows::StructuredBuffer,
   /// The counters' numbers, rasterised at the size they are drawn into an
   /// atlas that keeps them, so a frame that redraws an unchanged screen does
   /// no work.
@@ -89,6 +94,8 @@ impl Renderer {
       size_of::<arrows::PreviewSample>(),
       "annotate arrow exposure",
     )?;
+    let points =
+      arrows::StructuredBuffer::new(handle, size_of::<[f32; 2]>(), "annotate highlight bands")?;
     let (empty_texture, empty_numbers) = empty_atlas(handle)?;
     Ok(Self {
       device,
@@ -99,6 +106,7 @@ impl Renderer {
       constants: constants.ok_or_else(|| "D3D11 created no annotate constants".to_owned())?,
       arrows,
       samples,
+      points,
       counters: arrows::CounterAtlas::default(),
       empty_numbers,
       _empty_texture: empty_texture,
@@ -115,12 +123,15 @@ impl Renderer {
   ///
   /// A counter's number is type rather than a shape the shader can solve, so
   /// it is rasterised here, at the size it is drawn, and handed over as one
-  /// texture - the same pass the editor's compositor makes.
+  /// texture - the same pass the editor's compositor makes. `underlay` is what
+  /// a highlight recolours: the desktop captured under it, or the still it is
+  /// baked into. Without one there is nothing under a highlight to read.
   pub(super) fn draw_arrows(
     &self,
     target: &ID3D11RenderTargetView,
     size: (u32, u32),
     prepared: &arrows::PreparedArrows,
+    underlay: Option<&ID3D11ShaderResourceView>,
   ) -> Result<(), String> {
     let context = self.device.context();
     let (numbers, numbered) =
@@ -131,6 +142,9 @@ impl Renderer {
     let sample_view = self
       .samples
       .write(self.device.device(), context, &prepared.samples)?;
+    let point_view = self
+      .points
+      .write(self.device.device(), context, &prepared.points)?;
     let constants = Constants {
       count: numbered.len() as u32,
       feather: 0.5,
@@ -139,7 +153,8 @@ impl Renderer {
         [width, height]
       }),
       atlas_scale: numbers.as_ref().map_or(0.0, |atlas| atlas.scale),
-      spare: [0.0; 3],
+      target: [size.0 as f32, size.1 as f32],
+      spare: 0.0,
     };
     unsafe {
       context.UpdateSubresource(
@@ -164,8 +179,9 @@ impl Renderer {
       context.VSSetShader(&self.vertex_shader, None);
       context.PSSetShader(&self.pixel_shader, None);
       context.PSSetConstantBuffers(0, Some(&[Some(self.constants.clone())]));
-      // The included shader reads its two lists at t5 and t6 and the numbers
-      // at t7, the slots the editor's compositor binds them at.
+      // The included shader reads its two lists at t5 and t6, the numbers at
+      // t7 and the highlights' bands at t8, the slots the editor's compositor
+      // binds them at; the underlay is the overlay's own, at t10.
       context.PSSetShaderResources(
         5,
         Some(&[
@@ -176,12 +192,19 @@ impl Renderer {
               .as_ref()
               .map_or_else(|| self.empty_numbers.clone(), |atlas| atlas.view.clone()),
           ),
+          Some(point_view),
+          None,
+          Some(
+            underlay
+              .cloned()
+              .unwrap_or_else(|| self.empty_numbers.clone()),
+          ),
         ]),
       );
       // The result is already premultiplied, so it is written rather than
       // blended: one pass over a cleared target has nothing to blend with.
       context.Draw(3, 0);
-      context.PSSetShaderResources(5, Some(&[None, None, None]));
+      context.PSSetShaderResources(5, Some(&[None, None, None, None, None, None]));
       context.OMSetRenderTargets(None, None);
     }
     Ok(())

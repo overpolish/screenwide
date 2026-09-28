@@ -17,13 +17,12 @@ use super::super::preview_platform::SelectionGesturePhase;
 use super::state::PreviewManager;
 use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{drawing_kind, AnnotationGestureTarget};
-use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
+use crate::editor::annotations::handles::{annotation_handles, source_point};
 use crate::editor::annotations::snap::{
-  detect_anchors, request_anchors, source_per_output, source_per_point, threshold_source_px,
-  AnchorBoxes, SnapField, SnapModifiers, SnapRequest, SnapResult,
+  source_per_output, source_per_point, threshold_source_px, SnapField, SnapModifiers, SnapRequest,
+  SnapResult,
 };
 use crate::editor::annotations::Annotation;
-use std::sync::Arc;
 
 /// The list React is asked to commit when a gesture ends, or as a text box is
 /// typed into: `text_edit` says where in the typing it falls.
@@ -117,36 +116,6 @@ impl PreviewManager {
       selected_annotation_id: selected,
       text_edit: None,
     })
-  }
-
-  /// The elements detected in this pane's image, for an arrow's tip to land
-  /// on. The first call starts the detection and answers `None`; the pointer
-  /// is never held for it, and every later sample reads the cached result.
-  fn annotation_anchors(&self, pane_index: u32, source: (u32, u32)) -> Option<Arc<AnchorBoxes>> {
-    let key = (self.session_id?, pane_index, 0);
-    if let Some(anchors) = self.annotation_anchor_cache.anchors(key) {
-      return anchors.matches(source).then_some(anchors);
-    }
-    let item_id = self.output.as_ref()?.items.get(pane_index as usize)?.id;
-    let image = self
-      .sources
-      .iter()
-      .find(|source| source.id == item_id)
-      .map(|source| Arc::clone(&source.image))?;
-    request_anchors(&self.annotation_anchor_cache, key, move || {
-      detect_anchors(&image.rgba, image.width, image.height)
-    });
-    None
-  }
-
-  /// Publishes what the sample on screen snapped to. It goes out before the
-  /// grips, because on Windows publishing those is what redraws the chrome.
-  fn publish_annotation_snap(&self, pane_index: u32, result: &SnapResult) {
-    if let (Some(surface), Some(source)) =
-      (self.surface.as_ref(), self.annotation_source(pane_index))
-    {
-      surface.set_annotation_snap_guides(annotation_snap(result, source));
-    }
   }
 
   /// One pointer sample of the arrow tool. `x` and `y` are normalised over
@@ -269,6 +238,7 @@ impl PreviewManager {
     let mode = self.annotation_mode;
     let angle = self.annotation_counter_angle;
     let image_width = self.annotation_image_width(pane_index).unwrap_or_default();
+    let picture = self.annotation_picture(pane_index);
     let annotations = &mut self
       .output
       .as_mut()?
@@ -276,7 +246,7 @@ impl PreviewManager {
       .get_mut(pane_index as usize)?
       .output
       .annotations;
-    let edit = AnnotationEdit::begin(
+    let mut edit = AnnotationEdit::begin(
       annotations,
       target,
       point,
@@ -285,6 +255,9 @@ impl PreviewManager {
       angle,
       source_per_output(source, image_width),
     )?;
+    if edit.wants_picture(annotations) {
+      edit.set_picture(picture);
+    }
     // The field excludes the annotation the gesture holds, so a counter can
     // never snap back to the place it started from.
     let field = SnapField::new(source, annotations, edit.selected_id(), image_width);

@@ -25,6 +25,8 @@ pub(super) struct Surface {
   /// The child's physical size, so a frame that has not changed size neither
   /// moves the window nor reallocates the buffers.
   size: (u32, u32),
+  /// What this display's highlights are recoloured from, once one is drawn.
+  pub(super) underlay: Option<underlay::HeldUnderlay>,
 }
 
 impl Surface {
@@ -52,6 +54,7 @@ impl Surface {
       child,
       chain,
       size: (0, 0),
+      underlay: None,
     };
     surface.fit()?;
     Ok(surface)

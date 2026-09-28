@@ -78,6 +78,15 @@ static inline NSRect annotation_text_block(NSRect image, ScreenwidePreviewAnnota
 static inline double annotation_shaft_distance(NSRect image,
                                         ScreenwidePreviewAnnotation item,
                                         NSPoint point) {
+  if (item.kind == ScreenwideAnnotationKindHighlight) {
+    NSPoint start = annotation_display_point(image, item.start_x, item.start_y);
+    NSPoint end = annotation_display_point(image, item.end_x, item.end_y);
+    NSPoint block = annotation_display_point(image, item.middle_x, item.middle_y);
+    NSPoint rows = annotation_display_point(image, item.middle_y, item.start_head);
+    NSPoint last = annotation_display_point(image, item.start_x, item.end_head);
+    return screenwide_highlight_distance(point.x, point.y, start.x, start.y, rows.y, last.y,
+                                         end.x, end.y, block.x, rows.x);
+  }
   AnnotationArrowGeometry prepared = annotation_prepared(image, item);
   return screenwide_annotation_distance(item.kind, point.x, point.y, &prepared);
 }

@@ -47,7 +47,9 @@ pub(crate) fn plan(app: &AppHandle) -> Result<Vec<HostPlan>, String> {
     let size = monitor.size().to_logical::<f64>(*scale);
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     displays.push(crate::annotate::native_overlay::Display {
+      id: *display_id,
       origin: (position.x, position.y),
+      size: (size.width, size.height),
       scale: *scale,
     });
     let work_area = monitor.work_area();

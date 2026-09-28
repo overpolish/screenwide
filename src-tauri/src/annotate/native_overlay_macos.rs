@@ -19,11 +19,14 @@ use crate::editor::annotations::native::{
   native_annotations, NativeAnnotations, NativeAnnotationsView,
 };
 
-/// One display the overlay covers: where it starts in desktop points, and how
-/// many pixels one point is.
+/// One display the overlay covers: the capture display it is, where it
+/// starts and how far it reaches in desktop points, and how many pixels one
+/// point is.
 #[derive(Clone, Copy)]
 pub(super) struct Display {
+  pub id: u32,
   pub origin: (f64, f64),
+  pub size: (f64, f64),
   pub scale: f64,
 }
 
@@ -36,18 +39,68 @@ unsafe extern "C" {
   fn screenwide_annotate_attach(view: *mut c_void, display: u32) -> u32;
   fn screenwide_annotate_detach(view: *mut c_void);
   fn screenwide_annotate_redraw();
-  fn screenwide_annotate_install_scene(scene: extern "C" fn(u32, *mut NativeAnnotationsView));
+  fn screenwide_annotate_install_scene(
+    scene: extern "C" fn(u32, *mut NativeAnnotationsView),
+    underlay: extern "C" fn(u32, *mut NativeUnderlay),
+  );
   fn screenwide_annotate_install_input(
     pointer: extern "C" fn(u32, f64, f64),
     key: extern "C" fn(u16, u32) -> u32,
   );
   fn screenwide_annotate_teardown_input();
+  fn screenwide_annotate_set_text_cursor(text: u32);
 }
 
 thread_local! {
   /// The list the last [`scene`] call handed out. The native side draws it
   /// before it asks again, so it lives exactly as long as it is read.
   static SCENE: RefCell<NativeAnnotations> = RefCell::default();
+  /// The underlay the last [`underlay`] call handed out, under the same rule.
+  static UNDERLAY: RefCell<Option<std::sync::Arc<super::highlight::Underlay>>> =
+    RefCell::default();
+}
+
+/// What a display's highlights are recoloured from, as the native side reads
+/// it: the pixels, their size, and a revision that changes whenever they do.
+/// No pixels where no highlight has been drawn on the display. The twin of
+/// `ScreenwideAnnotateUnderlay`.
+#[repr(C)]
+pub(super) struct NativeUnderlay {
+  rgba: *const u8,
+  width: u32,
+  height: u32,
+  revision: u64,
+}
+
+const _: () = assert!(std::mem::size_of::<NativeUnderlay>() == 24);
+
+/// Fills one display's underlay.
+///
+/// # Safety
+/// `out` must point at one writable [`NativeUnderlay`], whose pixels stay
+/// valid until the next call on this thread.
+extern "C" fn underlay(display: u32, out: *mut NativeUnderlay) {
+  if out.is_null() {
+    return;
+  }
+  UNDERLAY.with_borrow_mut(|held| {
+    *held = super::highlight::underlay(display as usize);
+    let view = held.as_ref().map_or(
+      NativeUnderlay {
+        rgba: std::ptr::null(),
+        width: 0,
+        height: 0,
+        revision: 0,
+      },
+      |underlay| NativeUnderlay {
+        rgba: underlay.image.rgba.as_ptr(),
+        width: underlay.image.width,
+        height: underlay.image.height,
+        revision: underlay.revision,
+      },
+    );
+    unsafe { out.write(view) };
+  });
 }
 
 /// Fills one display's annotation list: everything on screen plus the stroke in
@@ -93,7 +146,7 @@ extern "C" fn pointer(phase: u32, x: f64, y: f64) {
       super::toolbar::return_keyboard(app);
     }
   }
-  super::input::pointer(phase, x, y);
+  super::input::pointer(APP.get(), phase, x, y);
 }
 
 extern "C" fn key(key_code: u16, modifiers: u32) -> u32 {
@@ -128,7 +181,7 @@ pub(super) fn detach(window: &WebviewWindow) {
 /// Names where the annotations come from. Outlives input: hosts left showing annotations
 /// still draw from it. Main thread only.
 pub(super) fn install_scene() {
-  unsafe { screenwide_annotate_install_scene(scene) };
+  unsafe { screenwide_annotate_install_scene(scene, underlay) };
 }
 
 /// Starts swallowing pointer and key events. Main thread only.
@@ -146,6 +199,32 @@ pub(super) fn teardown_input() {
 /// Forgets the displays, once nothing is drawn on them any more.
 pub(super) fn forget_displays() {
   set_displays(Vec::new());
+  super::highlight::forget();
+}
+
+/// The display under a point in global desktop points, and its place in the
+/// overlay's order.
+pub(super) fn display_at(x: f64, y: f64) -> Option<(usize, Display)> {
+  DISPLAYS
+    .read()
+    .unwrap_or_else(|error| error.into_inner())
+    .iter()
+    .copied()
+    .enumerate()
+    .find(|(_, display)| {
+      (display.origin.0..display.origin.0 + display.size.0).contains(&x)
+        && (display.origin.1..display.origin.1 + display.size.1).contains(&y)
+    })
+}
+
+/// Redraws every display from any thread.
+pub(super) fn request_redraw(app: &AppHandle) {
+  let _ = app.run_on_main_thread(redraw);
+}
+
+/// Whether the pointer over the canvas is the I-beam. Main thread only.
+pub(super) fn set_text_cursor(text: bool) {
+  unsafe { screenwide_annotate_set_text_cursor(u32::from(text)) };
 }
 
 /// Redraws every attached display. Main thread only.

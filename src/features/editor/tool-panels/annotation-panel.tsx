@@ -9,35 +9,26 @@ import { Text } from "../../../components/base/text/text";
 import { AnnotationAlignGroup } from "../../../components/shared/annotation-style/annotation-align-group";
 import { AnnotationAngleDial } from "../../../components/shared/annotation-style/annotation-angle-dial";
 import { AnnotationColorGrid } from "../../../components/shared/annotation-style/annotation-color-grid";
+import { AnnotationFitGroup } from "../../../components/shared/annotation-style/annotation-fit-group";
+import { AnnotationHandDrawnToggle } from "../../../components/shared/annotation-style/annotation-hand-drawn-toggle";
 import { AnnotationHeadGroup } from "../../../components/shared/annotation-style/annotation-head-group";
-import { AnnotationPixelationGroup } from "../../../components/shared/annotation-style/annotation-pixelation-group";
-import { AnnotationRedactionGroup } from "../../../components/shared/annotation-style/annotation-redaction-group";
+import { AnnotationRadiusField } from "../../../components/shared/annotation-style/annotation-radius-field";
 import { AnnotationWidthSlider } from "../../../components/shared/annotation-style/annotation-width-slider";
-import { AnnotationRedaction } from "../../../components/shared/annotation-style/types";
-import {
-  ANNOTATION_BLUR_STRENGTHS,
-  ANNOTATION_CLASSIC_SIZES,
-  annotationWidthAt,
-  annotationWidthIndex,
-} from "../../../components/shared/annotation-style/widths";
-import { SliderNumberField } from "../../../components/shared/slider-number-field/slider-number-field";
+import { redactionSizePresets } from "../../../components/shared/annotation-style/widths";
 import { ANNOTATION_KINDS } from "../annotation-kinds";
 import { EditorKind } from "../types";
 
+import { AnnotationRedactionRows } from "./annotation-redaction-rows";
 import { useAnnotationColorMenu } from "./use-annotation-color-menu";
 import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
-
-/** The block sizes a redaction drawn `redaction` offers: classic
- * pixelation's own coarser steps, or the kind's. */
-const sizePresetsFor = (redaction: AnnotationRedaction, sizes: number[]) =>
-  redaction === "pixelateClassic" ? ANNOTATION_CLASSIC_SIZES : sizes;
 
 /**
  * The chosen annotation's own controls: how big it is drawn, whether it arrives
  * over its clip, and what colour it is - plus the controls its shape has. An
  * arrow carries heads and can be turned round; a counter is a disc with a
  * number in it, which leaves it nothing to reverse and no head to choose; a
- * text box lines its lines up by its alignment; a redaction chooses how it
+ * text box lines its lines up by its alignment; a highlight may be drawn by
+ * hand, and drawn again differently; a redaction chooses how it
  * covers and how round its corners are, and offers a pixelation style and a
  * block size only when pixelated, a strength only when blurred and a colour
  * only when filled with one.
@@ -61,85 +52,50 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   });
   if (!annotation) return <Text variant="body">Nothing selected</Text>;
 
-  const { align, color, head, radius, redaction, strength, width } =
-    annotation.style;
+  const {
+    align,
+    color,
+    handDrawn,
+    head,
+    manual,
+    radius,
+    redaction,
+    strength,
+    width,
+  } = annotation.style;
   const kind = ANNOTATION_KINDS[annotation.kind];
   const pixelation =
     kind.hasRedaction &&
     (redaction === "pixelate" || redaction === "pixelateClassic")
       ? redaction
       : null;
-  const showsSize = !kind.hasRedaction || pixelation !== null;
+  const showsSize = kind.hasSize && (!kind.hasRedaction || pixelation !== null);
   const showsColor = !kind.hasRedaction || redaction === "color";
   const animates = workspace === "recording" && kind.animates;
-  // Classic pixelation and blur keep what an attack can read text back out
-  // of, and a box drawing in shows what it covers until it has arrived: a
-  // look, not a guarantee. Secure pixelation withstands the attack tests.
-  const isStylistic =
-    kind.hasRedaction &&
-    (redaction === "pixelateClassic" ||
-      redaction === "blur" ||
-      (animates && annotation.animated));
-
   return (
     <div className="flex flex-col gap-section">
       {kind.hasRedaction ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Redaction</span>
-          <AnnotationRedactionGroup
-            isDisabled={isLocked}
-            onChange={(next) => {
-              change({ annotationStyle: { redaction: next } });
-            }}
-            onShuffle={() => {
-              change({ shuffleAnnotation: true });
-            }}
-            value={redaction}
-          />
-        </div>
+        <AnnotationRedactionRows
+          animated={animates && annotation.animated}
+          change={change}
+          isLocked={isLocked}
+          pixelation={pixelation}
+          redaction={redaction}
+          sizes={kind.sizes}
+          strength={strength}
+          width={width}
+        />
       ) : null}
 
-      {pixelation ? (
+      {kind.hasFit ? (
         <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Style</span>
-          <AnnotationPixelationGroup
+          <span className="text-body text-content-fg">Fit</span>
+          <AnnotationFitGroup
             isDisabled={isLocked}
             onChange={(next) => {
-              // The styles offer different block sizes, so the block moves
-              // to the nearest the new style offers.
-              const presets = sizePresetsFor(next, kind.sizes);
-              change({
-                annotationStyle: {
-                  redaction: next,
-                  width: annotationWidthAt(
-                    annotationWidthIndex(width, presets),
-                    presets,
-                  ),
-                },
-              });
+              change({ annotationStyle: { manual: next } });
             }}
-            value={pixelation}
-          />
-        </div>
-      ) : null}
-
-      {isStylistic ? (
-        <Text variant="footnote">
-          Use Erase or Colour for sensitive content.
-        </Text>
-      ) : null}
-
-      {kind.hasRedaction && redaction === "blur" ? (
-        <div className="flex items-center justify-between gap-section">
-          <span className="text-body text-content-fg">Strength</span>
-          <AnnotationWidthSlider
-            isDisabled={isLocked}
-            label="Strength"
-            onChange={(next) => {
-              change({ annotationStyle: { strength: next } });
-            }}
-            presets={ANNOTATION_BLUR_STRENGTHS}
-            value={strength}
+            value={manual}
           />
         </div>
       ) : null}
@@ -153,7 +109,7 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
             onChange={(next) => {
               change({ annotationStyle: { width: next } });
             }}
-            presets={sizePresetsFor(redaction, kind.sizes)}
+            presets={redactionSizePresets(redaction, kind.sizes)}
             value={width}
           />
         </div>
@@ -171,6 +127,22 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
               change({ annotationAngle: next });
             }}
             value={annotation.angle ?? 0}
+          />
+        </div>
+      ) : null}
+
+      {kind.hasHandDrawn ? (
+        <div className="flex items-center justify-between gap-section">
+          <span className="text-body text-content-fg">Hand-drawn</span>
+          <AnnotationHandDrawnToggle
+            isDisabled={isLocked}
+            isSelected={handDrawn}
+            onChange={(next) => {
+              change({ annotationStyle: { handDrawn: next } });
+            }}
+            onRandomise={() => {
+              change({ shuffleAnnotation: true });
+            }}
           />
         </div>
       ) : null}
@@ -241,21 +213,11 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       {kind.hasRedaction ? (
         <div className="flex items-center justify-between gap-section">
           <span className="text-body text-content-fg">Radius</span>
-          <SliderNumberField
-            aria-label="Radius"
-            className="w-48"
-            formatOptions={{
-              maximumFractionDigits: 1,
-              minimumFractionDigits: 1,
-            }}
+          <AnnotationRadiusField
             isDisabled={isLocked}
-            maxValue={50}
-            minValue={0}
             onChange={(next) => {
               change({ annotationStyle: { radius: next } });
             }}
-            rightSection="%"
-            step={0.1}
             value={radius}
           />
         </div>

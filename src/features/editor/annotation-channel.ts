@@ -125,8 +125,9 @@ export const applyAnnotationReverse = (workspace: EditorKind) => {
   workspaces.get(workspace)?.applyReverse();
 };
 
-/** Lay the chosen redaction's blocks out again from a fresh seed. A no-op when
- * the workspace has no preview mounted to ask. */
+/** Lay the chosen redaction's blocks out again, or draw the chosen hand-drawn
+ * highlight's stroke again, from a fresh seed. A no-op when the workspace has
+ * no preview mounted to ask. */
 export const applyAnnotationShuffle = (workspace: EditorKind) => {
   workspaces.get(workspace)?.applyShuffle();
 };

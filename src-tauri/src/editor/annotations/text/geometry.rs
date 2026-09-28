@@ -20,7 +20,8 @@ const PAD_Y: f64 = 0.32;
 /// The narrowest a text is taken to be, in ems, so an empty box still has
 /// room for its caret.
 const MIN_TEXT_WIDTH: f64 = 0.3;
-/// The corners' radius, in ems.
+/// The corners' radius, in ems. A clean highlight's settled corners are the
+/// same share of a one-line box's height, in its two shaders.
 const CORNER: f32 = 0.4;
 
 /// The corners' radius for type `em` high, before a small box caps it at its

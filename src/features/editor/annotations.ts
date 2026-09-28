@@ -29,7 +29,14 @@ export type AnnotationStyle = {
   align: AnnotationAlign;
   /** `#rrggbb` or `#rrggbbaa`, straight alpha. */
   color: string;
+  /** Whether a highlight is drawn as a marker stroke by hand rather than as a
+   * clean band; the other kinds carry `false`. */
+  handDrawn: boolean;
   head: AnnotationHead;
+  /** Whether a highlight is laid by hand over the box its drag spans, in
+   * strokes `width` tall, rather than fitted to the text under it; the other
+   * kinds carry `false`. */
+  manual: boolean;
   /** A redaction's corner radius, as a percentage of its box's shorter side
    * from 0 to 50; the other kinds carry zero. */
   radius: number;
@@ -39,8 +46,8 @@ export type AnnotationStyle = {
   /** A blurred redaction's strength, a step from 1 to 5; the other kinds
    * carry zero. */
   strength: number;
-  /** Stroke width, disc diameter, type size or pixelation block, in output
-   * pixels. */
+  /** Stroke width, disc diameter, type size, pixelation block or a
+   * highlight's marker, in output pixels. */
   width: number;
 };
 
@@ -89,6 +96,30 @@ export type AnnotationRedact = {
   start: AnnotationPoint;
 };
 
+/** One line a highlight covers, in source pixels. */
+export type HighlightBand = {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+};
+
+/**
+ * A marker over lines of text. `start` and `end` are where the selection was
+ * pressed and let go, in source pixels; `bands` what it covers, one per line in
+ * reading order; `tone` how bright the page it was read from is, and its ink,
+ * 0 to 1; `seed` its hand-drawn stroke's wobble. The twin of
+ * `AnnotationShape::Highlight` in `src-tauri/src/editor/annotations/shape.rs`.
+ */
+export type AnnotationHighlight = {
+  bands: HighlightBand[];
+  end: AnnotationPoint;
+  kind: "highlight";
+  seed: number;
+  start: AnnotationPoint;
+  tone: { ink: number; surface: number };
+};
+
 /**
  * A text box's pointer, held against its box so it keeps its place however
  * the box is moved, retyped or resized. `along` is where the tip sits in each
@@ -103,7 +134,11 @@ export type TextPointer = {
 };
 
 export type AnnotationShape =
-  AnnotationArrow | AnnotationCounter | AnnotationRedact | AnnotationText;
+  | AnnotationArrow
+  | AnnotationCounter
+  | AnnotationHighlight
+  | AnnotationRedact
+  | AnnotationText;
 
 export type Annotation = {
   /**
@@ -178,7 +213,10 @@ export const validAnnotations = (value: unknown): Annotation[] => {
     const dress = {
       align: annotationAlign(style.align),
       color: style.color,
+      // Absent from a document written before highlights could be drawn.
+      handDrawn: (style.handDrawn as unknown) === true,
       head: annotationHead(style.head),
+      manual: (style.manual as unknown) === true,
       radius: Math.min(50, Math.max(0, finiteOr(style.radius, 0))),
       redaction: annotationRedaction(style.redaction),
       strength: finiteOr(style.strength, DEFAULT_BLUR_STRENGTH),

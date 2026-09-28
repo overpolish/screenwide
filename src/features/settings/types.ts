@@ -77,6 +77,11 @@ export type AnnotateSettings = {
   defaultShape: AnnotationKind;
   defaultWidth: number;
   enabled: boolean;
+  /** Whether a fresh highlight is drawn as a marker stroke by hand. */
+  highlightHandDrawn: boolean;
+  /** Whether a fresh highlight is laid by hand over the box its drag spans
+   * rather than fitted to the text under it. */
+  highlightManual: boolean;
   keepAnnotationsBetweenSessions: boolean;
   toolbarPosition: AnnotateToolbarPosition | null;
 };

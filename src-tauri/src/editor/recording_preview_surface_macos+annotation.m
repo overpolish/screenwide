@@ -42,15 +42,25 @@ static NSPoint annotation_display_point(NSRect image, double x, double y) {
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode mode) {
   return mode == ScreenwideAnnotationModeArrow ||
          mode == ScreenwideAnnotationModeCounter ||
-         mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeRedact;
+         mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeRedact ||
+         mode == ScreenwideAnnotationModeHighlight;
 }
 
 // An arrow has three grips; a counter one, the tip of its tail; a text box
-// one, its pointer's tip; a redaction the eight of its box.
+// one, its pointer's tip; a redaction the eight of its box; a highlight the
+// selection's two ends.
 SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_grips(
     NSRect image, ScreenwidePreviewAnnotation item, NSPoint *handles, uint32_t *kinds) {
   if (item.kind == ScreenwideAnnotationKindRedact)
     return annotation_redact_grips(image, item, handles, kinds);
+  if (item.kind == ScreenwideAnnotationKindHighlight) {
+    handles[0] = annotation_display_point(image, item.start_x,
+                                          (item.start_y + item.start_head) * 0.5);
+    handles[1] = annotation_display_point(image, item.end_x, (item.end_head + item.end_y) * 0.5);
+    kinds[0] = ScreenwideAnnotationHandleStart;
+    kinds[1] = ScreenwideAnnotationHandleEnd;
+    return 2;
+  }
   if (item.kind == ScreenwideAnnotationKindCounter || item.kind == ScreenwideAnnotationKindText) {
     handles[0] = item.kind == ScreenwideAnnotationKindText ? annotation_text_grip(image, item)
                                                            : annotation_counter_tail(image, item);

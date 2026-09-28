@@ -4,7 +4,11 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getAnnotateSettings, setAnnotateSettings } from "../settings/api";
+import {
+  getAnnotateSettings,
+  listenToAnnotateSettings,
+  setAnnotateSettings,
+} from "../settings/api";
 import { AnnotateSettings } from "../settings/types";
 import { useGeneralSettings } from "../settings/use-general-settings";
 
@@ -12,7 +16,6 @@ import { AnnotateToolbar } from "./annotate-toolbar";
 import {
   clearAnnotations,
   dismissAnnotate,
-  listenToAnnotateSettings,
   persistAnnotateToolbarPosition,
   resizeAnnotateToolbar,
   undoAnnotation,
@@ -57,8 +60,14 @@ export function AnnotateToolbarWindow() {
   // Until it catches up the plate shows the choice under the pointer, and
   // neither a write's answer nor the change event it fires may move it.
   const editRef = useRef({ latest: 0, settled: 0 });
-  // The last dress Rust took, which is what a refused edit falls back to.
+  // The last dress Rust took, which is what a refused edit falls back to and
+  // what every write is built on.
   const acceptedRef = useRef<AnnotateSettings | null>(null);
+  // Our own edits not yet answered. A write carries them over what Rust last
+  // took rather than over the plate's copy, which stops following the change
+  // event while an edit is outstanding: a slider write landing after a tool
+  // key would otherwise put the old tool back.
+  const outstandingRef = useRef<Partial<AnnotateSettings>>({});
   // The editor's kept colours, which the store broadcasts, so one saved while
   // the overlay is up appears here without the toolbar asking again.
   const general = useGeneralSettings();
@@ -133,12 +142,15 @@ export function AnnotateToolbarWindow() {
   // draws with it, and that press is on the picture, a window away.
   const onChange = (patch: Partial<AnnotateSettings>, immediate = false) => {
     if (!settings) return;
-    const next = { ...settings, ...patch };
-    setSettings(next);
+    setSettings({ ...settings, ...patch });
+    outstandingRef.current = { ...outstandingRef.current, ...patch };
     editRef.current.latest += 1;
     const seq = editRef.current.latest;
     const write = () => {
-      setAnnotateSettings(next)
+      setAnnotateSettings({
+        ...(acceptedRef.current ?? settings),
+        ...outstandingRef.current,
+      })
         .then((saved) => {
           acceptedRef.current = saved;
           if (seq === editRef.current.latest) setSettings(saved);
@@ -150,6 +162,8 @@ export function AnnotateToolbarWindow() {
         })
         .finally(() => {
           editRef.current.settled = seq;
+          // The latest write carried every edit before it, answered or not.
+          if (seq === editRef.current.latest) outstandingRef.current = {};
         });
     };
     const dragged = Object.keys(patch).every((key) =>

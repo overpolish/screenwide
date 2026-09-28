@@ -51,7 +51,9 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
   // Empty picture: a drawing tool makes an annotation rather than picking one
   // up, and the text tool says it is about to take typing. The select tool
   // leaves the choice to the layer underneath.
-  if (mode == ScreenwideAnnotationModeText) return [NSCursor IBeamCursor];
+  // A highlight selects the text it covers, the way the text tool types it.
+  if (mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeHighlight)
+    return [NSCursor IBeamCursor];
   return annotation_drawing_mode(mode) ? [NSCursor crosshairCursor] : nil;
 }
 

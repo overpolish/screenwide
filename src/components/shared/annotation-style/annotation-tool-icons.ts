@@ -1,7 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowUpRight, EyeOff, MapPinPlusInside, Type } from "lucide-react";
+import {
+  ArrowUpRight,
+  EyeOff,
+  Highlighter,
+  MapPinPlusInside,
+  Type,
+} from "lucide-react";
 
 /**
  * The glyphs the annotation tools are drawn with.
@@ -15,3 +21,4 @@ export const ArrowToolIcon = ArrowUpRight;
 export const CounterToolIcon = MapPinPlusInside;
 export const TextToolIcon = Type;
 export const RedactToolIcon = EyeOff;
+export const HighlightToolIcon = Highlighter;

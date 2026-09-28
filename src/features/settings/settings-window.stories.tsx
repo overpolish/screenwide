@@ -99,6 +99,8 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     defaultShape: "arrow",
     defaultWidth: 8,
     enabled: true,
+    highlightHandDrawn: false,
+    highlightManual: false,
     keepAnnotationsBetweenSessions: false,
     toolbarPosition: null,
   };
@@ -125,6 +127,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     getShortcutDefaults: () => Promise.resolve(defaults),
     getShortcutSettings: () => Promise.resolve(shortcuts),
     hideSettings: () => Promise.resolve(null),
+    listenToAnnotateSettings: () => Promise.resolve(() => undefined),
     minimize: () => Promise.resolve(),
     setAnnotateSettings: (next) => {
       annotate = next;

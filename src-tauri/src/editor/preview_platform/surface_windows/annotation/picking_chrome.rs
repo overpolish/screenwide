@@ -7,7 +7,7 @@
 
 use super::picking::item_grips;
 use super::*;
-use crate::editor::annotations::gesture::MODE_TEXT;
+use crate::editor::annotations::gesture::{MODE_HIGHLIGHT, MODE_TEXT};
 
 /// The chosen arrow's three grips, in device pixels, for the chrome to draw.
 /// Empty when no arrow is chosen or the arrow tool has no say, which is what
@@ -55,8 +55,9 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<edit
   if handle.is_some() || shaft_at_point(state, point).is_some() {
     return Some(editor::CursorKind::Arrow);
   }
-  // Empty picture: the text tool takes typing, a drawing tool draws.
-  if state.annotation.mode == MODE_TEXT {
+  // Empty picture: the text tool takes typing and the highlight selects the
+  // text it covers, a drawing tool draws.
+  if matches!(state.annotation.mode, MODE_TEXT | MODE_HIGHLIGHT) {
     return Some(editor::CursorKind::IBeam);
   }
   drawing_kind(state.annotation.mode)

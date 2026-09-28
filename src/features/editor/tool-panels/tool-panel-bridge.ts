@@ -39,7 +39,8 @@ export type ToolPanelHandlers = {
   /** Turn the chosen annotation round, through the same commit path the drag on
    * the picture uses. */
   onAnnotationReverse?: () => void;
-  /** Lay the chosen redaction's blocks out again from a fresh seed. */
+  /** Lay the chosen redaction's blocks out again, or draw the chosen
+   * hand-drawn highlight's stroke again, from a fresh seed. */
   onAnnotationShuffle?: () => void;
   /** Dress the chosen annotation, a field at a time, through the same commit
    * path the drag on the picture uses. */

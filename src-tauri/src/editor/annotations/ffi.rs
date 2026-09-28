@@ -15,6 +15,7 @@ use super::counter::geometry::prepare_counter;
 use super::counter::silhouette::prepared_counter_distance;
 use super::exposure::annotation_travel;
 use super::geometry::ArrowGeometry;
+use super::highlight::geometry::{flow_distance, prepare_highlight, HighlightFlow};
 use super::redact::geometry::{prepare_redact, redact_distance};
 use super::reveal::AnnotationReveal;
 use super::text::geometry::{prepare_text, text_distance};
@@ -27,6 +28,8 @@ use super::AnnotationKind;
 /// rather than a point, so no placement touches it; a text box places its
 /// corner at `p0` and its pointer's tip at `p1`, and reads its text block's
 /// size out of `p2`, which is a size rather than a point for the same reason.
+/// A highlight is placed by where `p0` and `p1` land - the source's origin and
+/// its pixel `(1, 1)` - and reads its tone out of `p2`.
 ///
 /// A number no kind owns prepares nothing. It cannot come from a retained
 /// annotation, and drawing it as an arrow would draw some future kind as a
@@ -62,6 +65,9 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
       prepare_text([p0x, p0y], [p1x, p1y], [p2x, p2y], width, head, reveal)
     }
     Some(AnnotationKind::Redact) => prepare_redact([p0x, p0y], [p2x, p2y], width),
+    Some(AnnotationKind::Highlight) => {
+      prepare_highlight([p0x, p0y], [p1x, p1y], [p2x, p2y], reveal)
+    }
     None => ArrowGeometry::default(),
   };
 }
@@ -128,8 +134,41 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
     }
     Some(AnnotationKind::Text) => text_distance([px, py], geometry),
     Some(AnnotationKind::Redact) => redact_distance([px, py], geometry),
-    None => f32::INFINITY,
+    // A highlight's record places bands it does not carry; the chrome picks
+    // it through [`screenwide_highlight_distance`] instead.
+    Some(AnnotationKind::Highlight) | None => f32::INFINITY,
   }
+}
+
+/// How far a point falls outside a highlight, from what its grips' record
+/// carries placed in the chrome's display points: the first band's top-left
+/// corner and bottom, the last band's top and bottom-right corner, and the
+/// block's left and right. Negative inside.
+#[cfg(target_os = "macos")]
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn screenwide_highlight_distance(
+  px: f32,
+  py: f32,
+  start_x: f32,
+  start_y: f32,
+  first_bottom: f32,
+  last_top: f32,
+  end_x: f32,
+  end_y: f32,
+  block_left: f32,
+  block_right: f32,
+) -> f32 {
+  flow_distance(
+    [px, py],
+    &HighlightFlow {
+      start: [start_x, start_y],
+      first_bottom,
+      last_top,
+      end: [end_x, end_y],
+      block: [block_left, block_right],
+    },
+  )
 }
 
 #[cfg(all(test, target_os = "macos"))]

@@ -18,6 +18,8 @@ const settings: AnnotateSettings = {
   defaultShape: "arrow",
   defaultWidth: 16,
   enabled: true,
+  highlightHandDrawn: false,
+  highlightManual: false,
   keepAnnotationsBetweenSessions: false,
   toolbarPosition: null,
 };
@@ -68,4 +70,17 @@ export const Default: Story = {};
  * arrow's stroke and head were. */
 export const Counter: Story = {
   args: { settings: { ...settings, defaultShape: "counter" } },
+};
+
+/** The highlight in hand: it fits the lines it covers, so the plate offers
+ * how it is drawn in place of a size and a head. */
+export const Highlight: Story = {
+  args: { settings: { ...settings, defaultShape: "highlight" } },
+};
+
+/** A highlight laid by hand over a box, tinting what it covers. */
+export const HighlightManual: Story = {
+  args: {
+    settings: { ...settings, defaultShape: "highlight", highlightManual: true },
+  },
 };

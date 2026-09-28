@@ -38,6 +38,9 @@ impl super::super::Annotation {
       AnnotationKind::Redact => {
         super::super::redact::gesture::drag(self, handle, point, origin, shift, snap)
       }
+      AnnotationKind::Highlight => {
+        super::super::highlight::gesture::drag(self, handle, point, origin)
+      }
     }
   }
 
@@ -68,6 +71,7 @@ impl super::super::Annotation {
       AnnotationKind::Redact => {
         super::super::redact::gesture::drag_new(self, point, origin, shift, snap)
       }
+      AnnotationKind::Highlight => super::super::highlight::gesture::drag_new(self, point, origin),
     }
   }
 }
@@ -98,6 +102,9 @@ impl AnnotationKind {
       ),
       Self::Text => super::super::text::new_text(id, point, style, source_per_output),
       Self::Redact => super::super::redact::new_redact(id, point, style),
+      Self::Highlight => {
+        super::super::highlight::model::new_highlight(id, point, style, source_per_output)
+      }
     }
   }
 
@@ -123,6 +130,9 @@ impl AnnotationKind {
       Self::Redact => {
         super::super::redact::reveal::redact_reveal_window(elapsed_ms, duration_ms, frame_ms)
       }
+      // A highlight is drawn along its bands the way an arrow is along its
+      // path, in reading order, and leaves the same way.
+      Self::Highlight => super::super::reveal::reveal_window(elapsed_ms, duration_ms, frame_ms),
     }
   }
 
@@ -133,7 +143,7 @@ impl AnnotationKind {
     use super::super::counter::reveal::{COUNTER_REVEAL_IN_MS, COUNTER_REVEAL_OUT_MS};
     use super::super::reveal::{REVEAL_DRAW_IN_MS, REVEAL_DRAW_OUT_MS};
     match self {
-      Self::Arrow => REVEAL_DRAW_IN_MS + REVEAL_DRAW_OUT_MS,
+      Self::Arrow | Self::Highlight => REVEAL_DRAW_IN_MS + REVEAL_DRAW_OUT_MS,
       Self::Counter => COUNTER_REVEAL_IN_MS + COUNTER_REVEAL_OUT_MS,
       Self::Text => super::super::text::reveal::TEXT_REVEAL_SPAN_MS,
       // A redaction ramps in and never leaves.

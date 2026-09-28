@@ -39,6 +39,9 @@ pub(super) struct AnnotationState {
   /// Behind its own lock because the detection that fills it runs on a
   /// blocking thread and must never wait for the manager.
   anchors: Arc<AnchorCache>,
+  /// The frame under the pointer, for a highlight to select from. Decoded on
+  /// a blocking thread for the same reason.
+  pictures: Arc<crate::editor::annotations::highlight::picture::PictureCache>,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

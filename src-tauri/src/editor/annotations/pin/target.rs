@@ -119,6 +119,18 @@ impl PinTarget {
           redaction: true,
         }
       }
+      // A highlight follows the text it covers: every band, held as one
+      // region, and never resized with it.
+      AnnotationShape::Highlight {
+        start, end, bands, ..
+      } => {
+        let (low, high) = crate::editor::annotations::highlight::model::bounds(*start, *end, bands);
+        Self {
+          anchor: [0.5 * (low.x + high.x), 0.5 * (low.y + high.y)],
+          region: [low.x, low.y, high.x, high.y],
+          redaction: false,
+        }
+      }
     }
   }
 

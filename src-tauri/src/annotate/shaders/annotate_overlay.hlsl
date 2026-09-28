@@ -9,6 +9,10 @@
 // export compose through. This shader only chooses the surface: a transparent
 // target, one annotation list, no camera layer.
 //
+// A highlight recolours what is under it, which the overlay never sees: it
+// reads `annotate_underlay` instead, the desktop captured when it was drawn, or
+// the still it is baked into.
+//
 // Annotations arrive in this display's layer pixels, so there is no canvas
 // placement to apply and one drawn pixel is one annotation pixel.
 
@@ -24,7 +28,13 @@ cbuffer Overlay : register(b0) {
   uint2 annotation_number_atlas;
   /// How many atlas pixels that texture holds per layer pixel.
   float annotation_number_scale;
+  /// The target's size in pixels, which the underlay is read across.
+  float2 annotation_target;
+  float annotation_spare;
 };
+
+/// What the highlights recolour, laid over the whole target.
+Texture2D<float4> annotate_underlay : register(t10);
 
 float4 vs_main(uint id : SV_VertexID) : SV_Position {
   float2 position = float2((id << 1) & 2, id & 2);
@@ -32,9 +42,16 @@ float4 vs_main(uint id : SV_VertexID) : SV_Position {
 }
 
 float4 ps_main(float4 position : SV_Position) : SV_Target {
+  uint width, height;
+  annotate_underlay.GetDimensions(width, height);
+  float2 across = position.xy / max(annotation_target, float2(1.0, 1.0));
+  uint2 texel = min(uint2(across * float2(width, height)), uint2(width - 1u, height - 1u));
+  float4 base = float4(annotate_underlay.Load(int3(texel, 0)).rgb, 1.0);
   // Composed over nothing, so the result is already premultiplied - which is
   // what DirectComposition expects of a premultiplied swap chain.
+  float4 result = composite_highlights(
+      float4(0, 0, 0, 0), base, position.xy, 0u, annotation_count, annotation_feather);
   AnnotationTextAtlas atlas = {annotation_number_atlas, annotation_number_scale};
   return composite_annotations(
-      float4(0, 0, 0, 0), position.xy, 0u, annotation_count, annotation_feather, atlas);
+      result, position.xy, 0u, annotation_count, annotation_feather, atlas);
 }

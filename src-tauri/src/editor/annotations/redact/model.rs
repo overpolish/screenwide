@@ -44,6 +44,8 @@ pub(crate) fn default_redact_style() -> AnnotationStyle {
     align: Default::default(),
     color: NEW_REDACT_COLOR.to_owned(),
     head: AnnotationHead::None,
+    hand_drawn: false,
+    manual: false,
     radius: 0.0,
     redaction: AnnotationRedaction::Erase,
     strength: NEW_BLUR_STRENGTH,

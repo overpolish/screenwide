@@ -130,9 +130,11 @@ impl PreviewPlayerManager {
         }
         _ => {}
       }
-      // A redaction is applied to the screen's frames alone.
+      // Only the screen's frames are redacted, or have text to highlight.
       let redacting = drawing_kind(self.annotation.mode) == Some(AnnotationKind::Redact);
-      if target == AnnotationGestureTarget::New && redacting && pane != 0 {
+      let screen_only =
+        redacting || self.annotation.mode == crate::editor::annotations::gesture::MODE_HIGHLIGHT;
+      if target == AnnotationGestureTarget::New && screen_only && pane != 0 {
         return None;
       }
       let before = clips.read().ok()?.clone();
@@ -148,7 +150,7 @@ impl PreviewPlayerManager {
           }
         })
         .unwrap_or_default();
-      let edit = AnnotationEdit::begin(
+      let mut edit = AnnotationEdit::begin(
         &mut working,
         target,
         point,
@@ -157,6 +159,9 @@ impl PreviewPlayerManager {
         self.annotation.counter_angle,
         source_per_output(source_size, image_width),
       )?;
+      if edit.wants_picture(&working) {
+        edit.set_picture(self.annotation_picture(pane, position_ms, source_size, false));
+      }
       // Whether an annotation animates is not part of its dress, so the shape's
       // own constructor has no say in it: the switch's last setting is applied
       // to the fresh annotation here, where the recording's own timed
@@ -195,12 +200,18 @@ impl PreviewPlayerManager {
         .position
         .then(|| self.annotation_anchors(pane, position_ms, source_size))
         .flatten();
+      let ended = matches!(phase, SelectionGesturePhase::End);
+      let gesture = self.annotation.gesture.as_ref();
+      let picture = (gesture.is_some_and(|g| g.edit.wants_picture(&g.working)))
+        .then(|| self.annotation_picture(pane, position_ms, source_size, ended))
+        .flatten();
       let Gesture {
         edit,
         working,
         field,
         ..
       } = self.annotation.gesture.as_mut()?;
+      edit.set_picture(picture);
       field.anchors = anchors;
       edit.set_source_per_point(source_per_point(source_size.0, image_points));
       let request = threshold.map(|threshold| SnapRequest { field, threshold });

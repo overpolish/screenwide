@@ -21,7 +21,9 @@ const arrow = {
   style: {
     align: "left",
     color: "#0a84ff",
+    handDrawn: false,
     head: "end",
+    manual: false,
     radius: 0,
     redaction: "erase",
     strength: 0,

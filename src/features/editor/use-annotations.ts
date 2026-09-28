@@ -15,6 +15,7 @@ import {
   annotationDeleteTarget,
   renumberedCounters,
 } from "./annotations";
+import { relaidHighlight } from "./highlight-strokes";
 import { EditorKind } from "./types";
 
 /** Selection and editing behaviour shared by screenshot and recording
@@ -65,10 +66,11 @@ export function useAnnotations({
     if (!selected) return;
     const dressed = { ...selected.style, ...style };
     rememberAnnotationStyle(dressed, selected.shape.kind);
+    const shape = relaidHighlight(selected, dressed) ?? selected.shape;
     commit(
       annotations.map((annotation) =>
         annotation.id === selected.id
-          ? { ...annotation, style: dressed }
+          ? { ...annotation, shape, style: dressed }
           : annotation,
       ),
     );
@@ -108,12 +110,14 @@ export function useAnnotations({
     );
   };
 
-  // Lay a redaction's blocks out again. The seed comes from the browser's
-  // secure generator, as a fresh redaction's does from the system's; the
-  // blocks carry nothing of the picture's layout whatever the seed.
+  // Lay a redaction's blocks out again, or draw a hand-drawn highlight's
+  // stroke again. The seed comes from the browser's secure generator, as a
+  // fresh redaction's does from the system's; the blocks carry nothing of the
+  // picture's layout whatever the seed.
   const applyShuffle = () => {
-    if (!selected || selected.shape.kind !== "redact") return;
+    if (!selected) return;
     const shape = selected.shape;
+    if (shape.kind !== "redact" && shape.kind !== "highlight") return;
     const [seed] = crypto.getRandomValues(new Uint32Array(1));
     commit(
       annotations.map((annotation) =>

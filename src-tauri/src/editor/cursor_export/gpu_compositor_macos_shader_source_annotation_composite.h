@@ -56,7 +56,9 @@ static float4 composite_annotations(
   float feather = max(pixel_scale, 1e-4) * 0.5;
   for (uint index = 0; index < count; ++index) {
     const device AnnotationUniforms &annotation = annotations[index];
-    if (annotation.above_camera != above_camera) continue;
+    // Highlights recolour the pixel under them in `composite_highlights`,
+    // before anything else is drawn over it.
+    if (annotation.above_camera != above_camera || annotation.kind == 4u) continue;
     float4 color = float4(annotation.color);
     if (annotation.kind == 3u) {
       rgba = annotation_redact_halo(rgba, annotation, canvas_point, feather);

@@ -9,6 +9,8 @@
 #import "gpu_compositor_macos_shader_source_annotation_counter.h"
 #import "gpu_compositor_macos_shader_source_annotation_text.h"
 #import "gpu_compositor_macos_shader_source_annotation_composite.h"
+#import "gpu_compositor_macos_shader_source_annotation_highlight.h"
+#import "gpu_compositor_macos_shader_source_annotation_highlight_video.h"
 #import "gpu_compositor_macos_shader_source_annotation_video.h"
 #import "gpu_compositor_macos_shader_source_background.h"
 #import "gpu_compositor_macos_shader_source_composition.h"
@@ -30,7 +32,9 @@
 /// one pass that branches over `AnnotationUniforms.kind`, drawn by both
 /// canvas kernels. A shape's source goes between the two. A redaction is the
 /// exception: `..._redact.h` applies it to the source before any canvas pass,
-/// and the composite pass only draws its hover halo.
+/// and the composite pass only draws its hover halo. A highlight is the other:
+/// it recolours the pixel under it, so `..._annotation_highlight.h` is its own
+/// pass, which every kernel runs before the composite one.
 __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_TYPES
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_CURVE
@@ -38,6 +42,7 @@ __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COUNTER
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_TEXT
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_VIDEO
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_BACKGROUND
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_COMPOSITION
@@ -51,4 +56,5 @@ __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_CURSOR_KERNELS
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_CURSOR_OVERLAY_KERNELS
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT
-    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT_VIDEO;
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT_VIDEO
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT_VIDEO;

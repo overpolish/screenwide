@@ -8,7 +8,9 @@ import { IconButton } from "../../components/base/button/icon-button";
 import { ButtonGroup } from "../../components/base/button-group/button-group";
 import { AnnotationAngleDial } from "../../components/shared/annotation-style/annotation-angle-dial";
 import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
+import { AnnotationFitGroup } from "../../components/shared/annotation-style/annotation-fit-group";
 import { AnnotationHeadGroup } from "../../components/shared/annotation-style/annotation-head-group";
+import { AnnotationStrokeGroup } from "../../components/shared/annotation-style/annotation-stroke-group";
 import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
 import { annotationSizes } from "../../components/shared/annotation-style/widths";
 import { BackgroundTile } from "../../components/shared/background-picker/background-tile";
@@ -66,8 +68,10 @@ export function AnnotateToolbar({
   const [showColors, setShowColors] = useState(false);
   const plateRef = useRef<HTMLElement>(null);
   // Which controls the plate carries: a counter has a disc and an aim where
-  // an arrow has a stroke and a head.
+  // an arrow has a stroke and a head, and a highlight fits the lines it
+  // covers and is only drawn clean or by hand.
   const isCounter = settings.defaultShape === "counter";
+  const isHighlight = settings.defaultShape === "highlight";
 
   useLayoutEffect(() => {
     const plate = plateRef.current;
@@ -86,6 +90,16 @@ export function AnnotateToolbar({
       observer.disconnect();
     };
   }, [onSizeChange]);
+
+  // A tool change that lands while the toolbar is hidden - a write from the
+  // Settings page between sessions - is measured as it lands: a hidden
+  // window's resize observer can wait for a frame it is not drawing, and the
+  // next session would open the plate at the size of the tool it had before.
+  useLayoutEffect(() => {
+    const rect = plateRef.current?.getBoundingClientRect();
+    if (!rect || !onSizeChange || rect.width === 0 || rect.height === 0) return;
+    onSizeChange(Math.ceil(rect.width), Math.ceil(rect.height));
+  }, [onSizeChange, settings.defaultShape]);
 
   return (
     <main
@@ -132,25 +146,42 @@ export function AnnotateToolbar({
               setShowColors((open) => !open);
             }}
           />
-          <AnnotationWidthSlider
-            label={isCounter ? "Size" : "Width"}
-            onChange={(size) => {
-              onChange(
-                isCounter
-                  ? { defaultCounterSize: size }
-                  : { defaultWidth: size },
-              );
-            }}
-            presets={annotationSizes(settings.defaultShape)}
-            value={
-              isCounter ? settings.defaultCounterSize : settings.defaultWidth
-            }
-          />
+          {isHighlight ? (
+            <>
+              <AnnotationFitGroup
+                onChange={(highlightManual) => {
+                  onChange({ highlightManual });
+                }}
+                value={settings.highlightManual}
+              />
+              <AnnotationStrokeGroup
+                onChange={(highlightHandDrawn) => {
+                  onChange({ highlightHandDrawn });
+                }}
+                value={settings.highlightHandDrawn}
+              />
+            </>
+          ) : (
+            <AnnotationWidthSlider
+              label={isCounter ? "Size" : "Width"}
+              onChange={(size) => {
+                onChange(
+                  isCounter
+                    ? { defaultCounterSize: size }
+                    : { defaultWidth: size },
+                );
+              }}
+              presets={annotationSizes(settings.defaultShape)}
+              value={
+                isCounter ? settings.defaultCounterSize : settings.defaultWidth
+              }
+            />
+          )}
           {/* The head belongs to the arrow and the aim to the counter, so the
               plate carries whichever the tool in hand has. A live annotation cannot
               be picked up again, so a counter is aimed before it is dropped
               rather than turned afterwards. */}
-          {isCounter ? (
+          {isHighlight ? null : isCounter ? (
             <AnnotationAngleDial
               onChange={(defaultCounterAngle, typed) => {
                 onChange({ defaultCounterAngle }, typed);

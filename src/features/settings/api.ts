@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 import {
   AnnotateSettings,
@@ -55,6 +56,18 @@ export const getAnnotateSettings = () =>
 
 export const setAnnotateSettings = (settings: AnnotateSettings) =>
   invoke<AnnotateSettings>("set_annotate_settings", { settings });
+
+/** Fired on every write, so the toolbar and the Settings page show one state
+ * without either asking the other - and neither writes back a copy the other
+ * has since changed. */
+const ANNOTATE_CHANGED_EVENT = "annotate-settings://changed";
+
+export const listenToAnnotateSettings = (
+  onChange: (settings: AnnotateSettings) => void,
+) =>
+  listen<AnnotateSettings>(ANNOTATE_CHANGED_EVENT, (event) => {
+    onChange(event.payload);
+  });
 
 export const getOcrSettings = () => invoke<OcrSettings>("get_ocr_settings");
 

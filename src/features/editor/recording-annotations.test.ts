@@ -28,7 +28,9 @@ const annotation: Annotation = {
   style: {
     align: "left",
     color: "#ff0000",
+    handDrawn: false,
     head: "end",
+    manual: false,
     radius: 0,
     redaction: "erase",
     strength: 0,
@@ -230,7 +232,9 @@ const counterClip = (
     style: {
       align: "left",
       color: "#ffcc00",
+      handDrawn: false,
       head: "none",
+      manual: false,
       radius: 0,
       redaction: "erase",
       strength: 0,

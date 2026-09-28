@@ -18,6 +18,8 @@ pub(crate) mod commands;
 #[path = "annotate/cursor_macos.rs"]
 mod cursor;
 mod geometry;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod highlight;
 mod host;
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 mod input;
@@ -49,6 +51,27 @@ use crate::capture_overlays;
 
 pub fn is_active(app: &AppHandle) -> bool {
   app.state::<AnnotateState>().active_generation().is_some()
+}
+
+/// Whether the tool in hand points with the I-beam: the highlight selects the
+/// text it covers, where the other tools draw with the crosshair.
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
+fn text_cursor() -> bool {
+  settings::current().default_shape == crate::editor::annotations::AnnotationKind::Highlight
+}
+
+/// The pointer following a tool picked up while drawing. The Windows overlay
+/// asks for its cursor on every move, so only macOS has one to change.
+pub(crate) fn follow_tool(app: &AppHandle) {
+  #[cfg(target_os = "macos")]
+  if is_active(app) {
+    if let Err(error) = crate::osc::cursor::macos::acquire_annotate(app, text_cursor()) {
+      eprintln!("Could not change the Annotate pointer: {error}");
+    }
+    let _ = app.run_on_main_thread(cursor::follow_tool);
+  }
+  #[cfg(not(target_os = "macos"))]
+  let _ = app;
 }
 
 /// Gives the foreground, the pointer and Escape back. Shared by every way the

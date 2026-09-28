@@ -15,7 +15,9 @@ const seed = seedToolPanel;
 /** The dress fields a story's annotation leaves at their defaults. */
 const dress = {
   align: "left",
+  handDrawn: false,
   head: "none",
+  manual: false,
   radius: 0,
   redaction: "erase",
   strength: 0,
@@ -258,5 +260,26 @@ export const ArrowInAScreenshot: Story = {
       },
       "screenshot",
     );
+  },
+};
+
+/** The Highlight panel, drawn by hand: a highlight fits the lines it covers,
+ * so it offers no width, and the dice beside the switch draws its stroke
+ * again. */
+export const Highlight: Story = {
+  args: { tool: "annotation", workspace: "recording" },
+  beforeEach: () => {
+    seed({
+      annotation: {
+        animated: true,
+        id: "highlight-1",
+        kind: "highlight",
+        style: { ...dress, color: "#ffcc00", handDrawn: true, width: 24 },
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
   },
 };

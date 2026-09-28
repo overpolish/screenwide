@@ -49,11 +49,17 @@ _Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
 ///
 /// A redaction puts its box's top-left corner in `start`, its bottom-right in
 /// `end` and its centre in `middle`, all normalised like an arrow's grips.
+///
+/// A highlight puts its first band's top-left corner in `start` and its last
+/// band's bottom-right in `end`; `middle_x` and `middle_y` are how far left
+/// and right its block of bands reaches, `start_head` its first band's bottom
+/// and `end_head` its last band's top. Its two grips are the selection's ends.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindArrow = 0,
   ScreenwideAnnotationKindCounter = 1,
   ScreenwideAnnotationKindText = 2,
   ScreenwideAnnotationKindRedact = 3,
+  ScreenwideAnnotationKindHighlight = 4,
 };
 /// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
@@ -65,6 +71,7 @@ typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeCounter = 3,
   ScreenwideAnnotationModeText = 4,
   ScreenwideAnnotationModeRedact = 5,
+  ScreenwideAnnotationModeHighlight = 6,
 };
 /// Which grip a press took hold of. A redaction's box grips report `Box` plus
 /// the sides they move - 1 left, 2 right, 4 top, 8 bottom - the same bits the

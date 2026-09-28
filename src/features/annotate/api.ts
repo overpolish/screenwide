@@ -2,20 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-
-import { AnnotateSettings } from "../settings/types";
-
-/** Fired on every write, so the toolbar and the Settings page show one
- * state without either asking the other. */
-const CHANGED_EVENT = "annotate-settings://changed";
-
-export const listenToAnnotateSettings = (
-  onChange: (settings: AnnotateSettings) => void,
-) =>
-  listen<AnnotateSettings>(CHANGED_EVENT, (event) => {
-    onChange(event.payload);
-  });
 
 /** The plate reporting the size it needs. The window is sized and placed to
  * it, and shown once it has been. */

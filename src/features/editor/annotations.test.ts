@@ -24,7 +24,9 @@ const arrow = (id: string): Annotation => ({
   style: {
     align: "left",
     color: "#ff383c",
+    handDrawn: false,
     head: "end",
+    manual: false,
     radius: 0,
     redaction: "erase",
     strength: 0,
@@ -61,7 +63,9 @@ const counter = (id: string, value: number): Annotation => ({
   style: {
     align: "left",
     color: "#ff383c",
+    handDrawn: false,
     head: "none",
+    manual: false,
     radius: 0,
     redaction: "erase",
     strength: 0,
@@ -139,7 +143,9 @@ describe("validAnnotations", () => {
       style: {
         align: "center",
         color: "#ffcc00",
+        handDrawn: false,
         head: "none",
+        manual: false,
         radius: 0,
         redaction: "erase",
         strength: 0,
@@ -162,13 +168,45 @@ describe("validAnnotations", () => {
       });
   });
 
+  it("reads a stored highlight back, and drops one with a band it cannot draw", () => {
+    const highlight = (bands: unknown[]) => ({
+      ...counter("h", 1),
+      shape: {
+        bands,
+        end: { x: 90, y: 30 },
+        kind: "highlight",
+        seed: 7,
+        start: { x: 10, y: 10 },
+        tone: { ink: 0.9, surface: 0.1 },
+      },
+    });
+    // A band written the wrong way round is read the right way round.
+    const [read] = validAnnotations([
+      highlight([{ bottom: 4, left: 90, right: 10, top: 20 }]),
+    ]);
+    expect(read.shape).toEqual(
+      expect.objectContaining({
+        bands: [{ bottom: 20, left: 10, right: 90, top: 4 }],
+        tone: { ink: 0.9, surface: 0.1 },
+      }),
+    );
+    expect(read.style.handDrawn).toBe(false);
+    expect(
+      validAnnotations([
+        highlight([{ bottom: 4, left: "x", right: 10, top: 2 }]),
+      ]),
+    ).toEqual([]);
+  });
+
   it("reads an older document's style as left-aligned", () => {
     const [read] = validAnnotations([
       {
         ...counter("a", 1),
         style: {
           color: "#ffcc00",
+          handDrawn: false,
           head: "none",
+          manual: false,
           radius: 0,
           redaction: "erase",
           strength: 0,

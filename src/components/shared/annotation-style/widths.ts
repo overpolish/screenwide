@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { AnnotationKind } from "./types";
+import type { AnnotationKind, AnnotationRedaction } from "./types";
 
 /**
  * The strokes the width controls offer, in output pixels.
@@ -57,6 +57,19 @@ const ANNOTATION_REDACT_SIZES = [4, 6, 8, 12, 16];
  */
 export const ANNOTATION_CLASSIC_SIZES = [8, 12, 16, 24, 32];
 
+/** The block sizes a redaction drawn `redaction` offers: classic
+ * pixelation's own coarser steps, or the kind's. */
+export const redactionSizePresets = (
+  redaction: AnnotationRedaction,
+  sizes: number[],
+) => (redaction === "pixelateClassic" ? ANNOTATION_CLASSIC_SIZES : sizes);
+
+/** The marker every highlight is drawn with, in output pixels: the stroke a
+ * box laid by hand is covered in, and the band drawn where no text is found.
+ * The twin of `NEW_HIGHLIGHT_WIDTH` in
+ * `src-tauri/src/editor/annotations/highlight/model.rs`. */
+const DEFAULT_ANNOTATION_HIGHLIGHT_SIZE = 24;
+
 /** The block a fresh redaction pixelates with: the second step. The twin of
  * `NEW_REDACT_WIDTH`. */
 const DEFAULT_ANNOTATION_REDACT_SIZE = 6;
@@ -91,6 +104,11 @@ export const ANNOTATION_SIZES: Record<
     defaultSize: DEFAULT_ANNOTATION_COUNTER_SIZE,
     sizeLabel: "Size",
     sizes: ANNOTATION_COUNTER_SIZES,
+  },
+  highlight: {
+    defaultSize: DEFAULT_ANNOTATION_HIGHLIGHT_SIZE,
+    sizeLabel: "Height",
+    sizes: [DEFAULT_ANNOTATION_HIGHLIGHT_SIZE],
   },
   redact: {
     defaultSize: DEFAULT_ANNOTATION_REDACT_SIZE,

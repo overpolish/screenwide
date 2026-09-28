@@ -32,6 +32,24 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
     }
   }
   if (annotations.count == 0) return;
+  // Highlights recolour what is under them, so they are written first, from
+  // both planes at once, and every other annotation is drawn over them.
+  BOOL highlighted = NO;
+  for (uint32_t i = 0; i < annotations.count; i++)
+    highlighted |= showing[i].kind == SCREENWIDE_ANNOTATION_HIGHLIGHT;
+  if (highlighted) {
+    id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
+    [encoder setComputePipelineState:session->highlight_pipeline];
+    [encoder setTexture:luma atIndex:0];
+    [encoder setTexture:chroma atIndex:1];
+    [encoder setBytes:session->canvas length:sizeof(*session->canvas) atIndex:0];
+    screenwide_bind_annotations(encoder, &annotations, session->canvas, source_width,
+                                source_height, 1.0f);
+    [encoder setBytes:&above length:sizeof(above) atIndex:14];
+    [encoder dispatchThreads:MTLSizeMake(chroma.width, chroma.height, 1)
+        threadsPerThreadgroup:MTLSizeMake(16, 16, 1)];
+    [encoder endEncoding];
+  }
   for (int plane = 0; plane < 2; plane++) {
     id<MTLTexture> texture = plane == 0 ? luma : chroma;
     id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];

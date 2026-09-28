@@ -57,3 +57,11 @@ float screenwide_annotation_travel(uint32_t kind, float p0x, float p0y,
                                    float p1x, float p1y, float p2x, float p2y,
                                    float sx, float sy, float width,
                                    AnnotationReveal reveal);
+
+/// How far a point falls outside a highlight, from what its grips' record
+/// carries placed in display points: its first band's top-left corner and
+/// bottom, its last band's top and bottom-right corner, and how far left and
+/// right its block of bands reaches. Negative inside.
+float screenwide_highlight_distance(float px, float py, float start_x, float start_y,
+                                    float first_bottom, float last_top, float end_x,
+                                    float end_y, float block_left, float block_right);

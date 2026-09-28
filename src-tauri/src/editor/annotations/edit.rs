@@ -75,6 +75,27 @@ impl AnnotationEdit {
     self.origin.source_per_point = source_per_point.unwrap_or(0.0);
   }
 
+  /// The pixels a highlight selects from, for the samples still to come.
+  /// Set as soon as the workspace has them, which for a recording may be
+  /// part way through the drag; a picture once given is kept.
+  pub(crate) fn set_picture(
+    &mut self,
+    picture: Option<std::sync::Arc<super::highlight::picture::HighlightPicture>>,
+  ) {
+    if picture.is_some() {
+      self.origin.picture = picture;
+    }
+  }
+
+  /// Whether the annotation this gesture holds reads a picture: only a
+  /// highlight does, so no other gesture has one decoded for it.
+  pub(crate) fn wants_picture(&self, annotations: &[Annotation]) -> bool {
+    annotations
+      .get(self.index)
+      .filter(|annotation| annotation.id == self.id)
+      .is_some_and(|annotation| annotation.shape.kind() == AnnotationKind::Highlight)
+  }
+
   /// Whether this gesture made a fresh annotation rather than moving one.
   pub(crate) fn is_new(&self) -> bool {
     self.target == AnnotationGestureTarget::New

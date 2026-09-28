@@ -46,6 +46,7 @@ fn pointer(child: HWND, phase: u32, lparam: LPARAM) {
   let x = f64::from((lparam.0 & 0xffff) as u16 as i16);
   let y = f64::from(((lparam.0 >> 16) & 0xffff) as u16 as i16);
   input::pointer(
+    APP.get(),
     phase,
     display.origin.0 + x / scale,
     display.origin.1 + y / scale,
@@ -114,8 +115,15 @@ pub(super) extern "system" fn window_proc(
     // Nothing is taken, and no cursor is set, while the annotations are only
     // being shown.
     _ if click_through => unsafe { DefWindowProcW(hwnd, message, wparam, lparam) },
+    // The highlight selects the text it covers, so it points with the I-beam;
+    // the other tools draw with the crosshair.
     WM_SETCURSOR => {
-      unsafe { SetCursor(LoadCursorW(None, IDC_CROSS).ok()) };
+      let cursor = if super::super::text_cursor() {
+        IDC_IBEAM
+      } else {
+        IDC_CROSS
+      };
+      unsafe { SetCursor(LoadCursorW(None, cursor).ok()) };
       LRESULT(1)
     }
     WM_LBUTTONDOWN => {

@@ -48,6 +48,20 @@ pub enum AnnotationShape {
     end: AnnotationPoint,
     seed: u32,
   },
+  /// A marker over lines of text. `start` and `end` are where the selection
+  /// was pressed and let go, in source pixels; `bands` what it covers, one
+  /// per line in reading order; `tone` the page it was read from; `seed` its
+  /// hand-drawn stroke's wobble.
+  Highlight {
+    start: AnnotationPoint,
+    end: AnnotationPoint,
+    #[serde(default)]
+    bands: Vec<super::highlight::model::HighlightBand>,
+    #[serde(default)]
+    tone: super::highlight::model::HighlightTone,
+    #[serde(default)]
+    seed: u32,
+  },
 }
 
 impl AnnotationShape {
@@ -58,6 +72,7 @@ impl AnnotationShape {
       Self::Counter { .. } => AnnotationKind::Counter,
       Self::Text { .. } => AnnotationKind::Text,
       Self::Redact { .. } => AnnotationKind::Redact,
+      Self::Highlight { .. } => AnnotationKind::Highlight,
     }
   }
 
@@ -76,6 +91,12 @@ impl AnnotationShape {
       Self::Counter { center, .. } => [*center; 3],
       Self::Text { origin, .. } => [*origin; 3],
       Self::Redact { start, end, .. } => [*start, *end, *end],
+      Self::Highlight {
+        start, end, bands, ..
+      } => {
+        let (low, high) = super::highlight::model::bounds(*start, *end, bands);
+        [low, high, high]
+      }
     }
   }
 
@@ -93,6 +114,9 @@ impl AnnotationShape {
         origin, pointer, ..
       } => super::text::model::placed(*origin, pointer),
       Self::Redact { start, end, .. } => super::redact::model::placed(*start, *end),
+      Self::Highlight {
+        start, end, bands, ..
+      } => super::highlight::model::placed(*start, *end, bands),
     }
   }
 
@@ -135,6 +159,19 @@ impl AnnotationShape {
         end: map(*end),
         seed: *seed,
       },
+      Self::Highlight {
+        start,
+        end,
+        bands,
+        tone,
+        seed,
+      } => Self::Highlight {
+        start: map(*start),
+        end: map(*end),
+        bands: bands.iter().map(|band| band.mapped(&map)).collect(),
+        tone: *tone,
+        seed: *seed,
+      },
     }
   }
 
@@ -148,125 +185,16 @@ impl AnnotationShape {
         control,
         end,
       } => super::arrow::bend::arrow_bend(*start, *control, *end).clamped(),
-      Self::Counter { .. } | Self::Text { .. } | Self::Redact { .. } => {
+      Self::Counter { .. } | Self::Text { .. } | Self::Redact { .. } | Self::Highlight { .. } => {
         super::arrow::bend::ArrowBend::STRAIGHT
       }
     }
   }
-
-  /// The three points the retained draw record carries. Each kind reads the
-  /// slots its own way; [`super::native`] documents every reading.
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  pub(crate) fn draw_points(&self, style: &super::AnnotationStyle) -> [[f32; 2]; 3] {
-    match self {
-      Self::Arrow {
-        start,
-        control,
-        end,
-      } => super::arrow::native::draw_points(*start, *control, *end),
-      Self::Counter { center, angle, .. } => super::counter::native::draw_points(*center, *angle),
-      Self::Text {
-        origin,
-        pointer,
-        text,
-      } => super::text::native::draw_points(*origin, pointer, text, style),
-      Self::Redact { start, end, .. } => super::redact::native::draw_points(*start, *end),
-    }
-  }
-
-  /// The `head` the retained draw record carries: which ends of an arrow
-  /// have one, nothing for a counter, and a text box's alignment.
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  pub(crate) fn draw_head(&self, style: &super::AnnotationStyle) -> u32 {
-    match self {
-      Self::Arrow { .. } | Self::Counter { .. } => match style.head {
-        super::AnnotationHead::None => 0,
-        super::AnnotationHead::End => 1,
-        super::AnnotationHead::Both => 2,
-      },
-      Self::Text { .. } => style.align.raw(),
-      Self::Redact { .. } => 0,
-    }
-  }
-
-  /// What the retained draw record rasterises as type: a counter's number, a
-  /// text box's text, nothing for an arrow.
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  pub(crate) fn draw_text(&self) -> std::borrow::Cow<'_, str> {
-    match self {
-      Self::Arrow { .. } | Self::Redact { .. } => std::borrow::Cow::Borrowed(""),
-      Self::Counter { value, .. } => std::borrow::Cow::Owned(value.to_string()),
-      Self::Text { text, .. } => std::borrow::Cow::Borrowed(text),
-    }
-  }
-
-  /// The grips the native chrome draws, normalised over the source image.
-  #[cfg(any(target_os = "macos", target_os = "windows"))]
-  pub(crate) fn grips(
-    &self,
-    style: &super::AnnotationStyle,
-    index: u32,
-    source: (u32, u32),
-    image_width: f64,
-  ) -> super::handles::NativeAnnotationHandles {
-    match self {
-      Self::Arrow {
-        start,
-        control,
-        end,
-      } => super::arrow::handles::grips(*start, *control, *end, style, index, source, image_width),
-      Self::Counter { center, angle, .. } => {
-        super::counter::handles::grips(*center, *angle, style, index, source, image_width)
-      }
-      Self::Text {
-        origin,
-        pointer,
-        text,
-      } => super::text::handles::grips(*origin, pointer, text, style, index, source, image_width),
-      Self::Redact { start, end, .. } => {
-        super::redact::handles::grips(*start, *end, style.radius, index, source)
-      }
-    }
-  }
-
-  /// The rectangle this annotation offers the snap engine, in the source's
-  /// pixels, or `None` for a shape nothing lines up against.
-  #[cfg(any(target_os = "macos", target_os = "windows", test))]
-  pub(crate) fn field_box(
-    &self,
-    width: f64,
-    source_per_output: f64,
-  ) -> Option<super::snap::SnapBox> {
-    match self {
-      Self::Arrow { .. } => super::arrow::snap::field_box(),
-      Self::Counter { center, .. } => {
-        super::counter::snap::field_box(*center, width, source_per_output)
-      }
-      Self::Text { origin, text, .. } => {
-        super::text::snap::field_box(*origin, text, width, source_per_output)
-      }
-      Self::Redact { start, end, .. } => super::redact::snap::field_box(*start, *end),
-    }
-  }
-
-  /// The fill, flags and parameters a redaction's record carries over the
-  /// picture it covers; `None` for every kind that is drawn rather than
-  /// applied to the source.
-  #[cfg(any(target_os = "macos", target_os = "windows", test))]
-  pub(crate) fn redaction_fill(
-    &self,
-    style: &super::AnnotationStyle,
-    source: super::redact::native::RedactSource<'_>,
-    held: Option<&super::redact::held::HeldFill>,
-  ) -> Option<super::redact::native::RedactFill> {
-    match self {
-      Self::Redact { start, end, seed } => Some(super::redact::native::fill(
-        *start, *end, *seed, style, source, held,
-      )),
-      Self::Arrow { .. } | Self::Counter { .. } | Self::Text { .. } => None,
-    }
-  }
 }
+
+/// What the native records and the chrome ask of each kind.
+#[path = "shape_draw.rs"]
+mod draw;
 
 /// What a gesture asks of each kind: how a grip moves it, how a fresh one is
 /// made and carried, and how it arrives over its clip.

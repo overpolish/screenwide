@@ -79,6 +79,8 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
     style: AnnotationStyle {
       align: Default::default(),
       head: crate::editor::annotations::AnnotationHead::Both,
+      hand_drawn: false,
+      manual: false,
       ..arrow.style.clone()
     },
     ..arrow.clone()
@@ -89,6 +91,8 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
     style: AnnotationStyle {
       align: Default::default(),
       head: crate::editor::annotations::AnnotationHead::None,
+      hand_drawn: false,
+      manual: false,
       ..arrow.style.clone()
     },
     ..arrow
@@ -126,6 +130,8 @@ fn a_fresh_arrow_wears_the_style_it_is_given() {
     align: Default::default(),
     color: "#ff9500".to_owned(),
     head: crate::editor::annotations::AnnotationHead::Both,
+    hand_drawn: false,
+    manual: false,
     radius: 0.0,
     redaction: Default::default(),
     strength: 0.0,

@@ -55,6 +55,7 @@ export function SettingsWindow({
     getShortcutDefaults,
     getShortcutSettings,
     hideSettings,
+    listenToAnnotateSettings,
     minimize,
     setAnnotateSettings,
     setGeneralSettings,
@@ -140,6 +141,27 @@ export function SettingsWindow({
     getAnnotateSettings,
     getShortcutDefaults,
   ]);
+
+  // The toolbar writes the same settings while the overlay is up - the tool,
+  // the colour, where it was dropped - so this page follows every write rather
+  // than keeping the copy it opened with, which its next edit would write back
+  // over the toolbar's.
+  useEffect(() => {
+    let stopped = false;
+    let stop: (() => void) | undefined;
+    listenToAnnotateSettings(setAnnotate)
+      .then((unlisten) => {
+        if (stopped) unlisten();
+        else stop = unlisten;
+      })
+      .catch((reason: unknown) => {
+        setError(String(reason));
+      });
+    return () => {
+      stopped = true;
+      stop?.();
+    };
+  }, [listenToAnnotateSettings]);
 
   const changeBinding = useCallback(
     (action: ShortcutAction, shortcut: string | null) => {

@@ -40,6 +40,9 @@ _Static_assert(sizeof(ScreenwideAnnotationSample) == 96, "Exposure sample ABI");
 /// measures its own.
 static inline uint32_t screenwide_annotation_sample_count(
     const ScreenwideAnnotation *annotation, float sx, float sy) {
+  // A highlight's sweep is drawn with a soft tip of its own, never smeared, so
+  // its reveal's opacity always rides in its colour.
+  if (annotation->kind == SCREENWIDE_ANNOTATION_HIGHLIGHT) return 0;
   AnnotationReveal r = annotation->reveal;
   float travel = screenwide_annotation_travel(
       annotation->kind, annotation->p0[0], annotation->p0[1], annotation->p1[0],
@@ -54,7 +57,8 @@ static inline uint32_t screenwide_annotation_sample_count(
 /// centre-and-angle the document holds - the aim rides in `p1[0]` as an angle,
 /// which no placement touches, so it is passed as it stands; a text box reads
 /// its pointer, held against the box, out of `p1` and its text block's size
-/// out of `p2` the same way.
+/// out of `p2` the same way. A highlight is placed by where `p0` and `p1` land
+/// and reads its tone out of `p2`.
 static inline AnnotationArrowGeometry screenwide_prepare_annotation(
     const ScreenwideAnnotation *annotation, AnnotationVector a, AnnotationVector b,
     AnnotationVector c, AnnotationReveal reveal) {
@@ -64,6 +68,9 @@ static inline AnnotationArrowGeometry screenwide_prepare_annotation(
     b = annotation_vector(annotation->p1[0], annotation->p1[1]);
     c = annotation_vector(annotation->p2[0], annotation->p2[1]);
   }
+  // A highlight's tone rides in `p2`, which no placement touches.
+  if (annotation->kind == SCREENWIDE_ANNOTATION_HIGHLIGHT)
+    c = annotation_vector(annotation->p2[0], annotation->p2[1]);
   AnnotationArrowGeometry prepared;
   screenwide_annotation_prepare(annotation->kind, a.x, a.y, p1x, b.y, c.x, c.y,
                                 annotation->width, annotation->head, reveal, &prepared);

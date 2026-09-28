@@ -13,6 +13,7 @@ use crate::editor::annotations::arrow::distance::prepared_arrow_distance;
 use crate::editor::annotations::arrow::geometry::prepare_arrow;
 use crate::editor::annotations::counter::silhouette::counter_distance;
 use crate::editor::annotations::geometry::ArrowGeometry;
+use crate::editor::annotations::highlight::geometry::{flow_distance, HighlightFlow};
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::text::geometry::{prepare_text, text_distance};
 use crate::editor::annotations::AnnotationPoint;
@@ -111,6 +112,9 @@ fn grip_at_point(
     // tail rather than the start.
     AnnotationKind::Counter | AnnotationKind::Text => HANDLE_TAIL,
     AnnotationKind::Arrow | AnnotationKind::Redact => found,
+    // A highlight's two grips are the selection's start and end.
+    AnnotationKind::Highlight if found == 0 => 0,
+    AnnotationKind::Highlight => 2,
   })
 }
 
@@ -132,6 +136,15 @@ pub(super) fn text_geometry(
     item.start_head as u32 & 3,
     AnnotationReveal::WHOLE,
   )
+}
+
+/// A highlight's flow of bands in display points, from the grips it was
+/// published with.
+fn highlight_flow(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> HighlightFlow {
+  crate::editor::annotations::highlight::handles::flow(item, |x, y| {
+    let (x, y) = display_point(image, x, y);
+    [x as f32, y as f32]
+  })
 }
 
 /// The grips one annotation shows as discs, in display points: an arrow's
@@ -165,6 +178,12 @@ pub(super) fn item_grips(
       vec![(f64::from(geometry.c[0]), f64::from(geometry.c[1]))]
     }
     AnnotationKind::Redact => Vec::new(),
+    AnnotationKind::Highlight => {
+      let flow = highlight_flow(image, item);
+      [flow.start_grip(), flow.end_grip()]
+        .map(|[x, y]| (f64::from(x), f64::from(y)))
+        .to_vec()
+    }
     AnnotationKind::Arrow => vec![
       centre,
       display_point(image, item.middle_x, item.middle_y),
@@ -210,6 +229,12 @@ fn arrow_distance(
       );
     }
     AnnotationKind::Redact => return super::redact_chrome::distance(image, item, point),
+    AnnotationKind::Highlight => {
+      return flow_distance(
+        [point.0 as f32, point.1 as f32],
+        &highlight_flow(image, item),
+      );
+    }
     AnnotationKind::Arrow => {}
   }
   let middle = display_point(image, item.middle_x, item.middle_y);

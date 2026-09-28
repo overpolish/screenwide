@@ -20,6 +20,22 @@
 typedef void (*ScreenwideAnnotateScene)(uint32_t display,
                                         ScreenwideAnnotations *out);
 
+/// The desktop one display's highlights are recoloured from: its latest
+/// capture with each highlight's own pasted back, straight RGBA, `width` by
+/// `height`. `revision` changes whenever the pixels do, so each is uploaded
+/// once; no pixels where no highlight has been drawn. Rust's, and valid until
+/// it is asked for again. The twin of Rust's `NativeUnderlay`.
+typedef struct {
+  const uint8_t *rgba;
+  uint32_t width;
+  uint32_t height;
+  uint64_t revision;
+} ScreenwideAnnotateUnderlay;
+_Static_assert(sizeof(ScreenwideAnnotateUnderlay) == 24, "Underlay ABI must match Rust");
+
+typedef void (*ScreenwideAnnotateUnderlaySource)(uint32_t display,
+                                                 ScreenwideAnnotateUnderlay *out);
+
 /// A pointer step: 0 down, 1 drag, 2 up. The point is in global desktop
 /// points with y running down, the space the cursor sidecar reports in.
 typedef void (*ScreenwideAnnotatePointer)(uint32_t phase, double x, double y);
@@ -44,10 +60,12 @@ uint32_t screenwide_annotate_shader_check(char *message, uint32_t capacity);
 /// Redraws every attached display. Main thread only.
 void screenwide_annotate_redraw(void);
 
-/// Names the source of the annotations every display draws. Outlives input: annotations
-/// kept after exiting are still drawn by hosts that take no input at all.
-/// Main thread only.
-void screenwide_annotate_install_scene(ScreenwideAnnotateScene scene);
+/// Names the source of the annotations every display draws, and of what its
+/// highlights are recoloured from. Outlives input: annotations kept after
+/// exiting are still drawn by hosts that take no input at all. Main thread
+/// only.
+void screenwide_annotate_install_scene(ScreenwideAnnotateScene scene,
+                                       ScreenwideAnnotateUnderlaySource underlay);
 
 /// Starts swallowing pointer and key events and routing them to Rust. The
 /// overlay has no pass-through mode: while input is installed, nothing under
@@ -57,3 +75,7 @@ void screenwide_annotate_install_input(ScreenwideAnnotatePointer pointer,
 
 /// Stops swallowing input. Main thread only.
 void screenwide_annotate_teardown_input(void);
+
+/// Whether the pointer over the canvas is the I-beam, for the tool that selects
+/// text, rather than the crosshair. Main thread only.
+void screenwide_annotate_set_text_cursor(uint32_t text);

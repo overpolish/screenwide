@@ -31,4 +31,5 @@ export type AnnotationRedaction =
  * union: the editor, the live overlay and the shared controls all name a
  * kind from here rather than respelling it.
  */
-export type AnnotationKind = "arrow" | "counter" | "redact" | "text";
+export type AnnotationKind =
+  "arrow" | "counter" | "highlight" | "redact" | "text";

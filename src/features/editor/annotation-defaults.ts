@@ -30,12 +30,14 @@ export type AnnotationTool = AnnotationKind | "select";
  *
  * A redaction keeps a dress of its own. Its colour fills a box rather than
  * marking something out, so a box filled in the last arrow's colour, or an
- * arrow drawn in the black a box was filled with, would both be surprises.
+ * arrow drawn in the black a box was filled with, would both be surprises. A
+ * highlight keeps its own too: a highlighter is its own pen, which stays
+ * yellow when the arrows turn red, and is the only kind drawn by hand.
  */
-type DressGroup = "redact" | "shared";
+type DressGroup = "highlight" | "redact" | "shared";
 const lastUsed = new Map<DressGroup, AnnotationStyle>();
 const dressGroup = (kind: AnnotationKind): DressGroup =>
-  kind === "redact" ? "redact" : "shared";
+  kind === "redact" || kind === "highlight" ? kind : "shared";
 const lastSize = new Map<AnnotationKind, number>();
 /**
  * And whether it animated. This is the annotation's own property rather than
@@ -65,7 +67,9 @@ const sameDress = (
 ) =>
   held.align === style.align &&
   held.color === style.color &&
+  held.handDrawn === style.handDrawn &&
   held.head === style.head &&
+  held.manual === style.manual &&
   held.radius === style.radius &&
   held.redaction === style.redaction &&
   held.strength === style.strength &&
@@ -109,7 +113,7 @@ export const rememberAnnotationAnimated = (animated: boolean) => {
  *
  * A colour settled on for one shape dresses the others, at that shape's own
  * remembered size - or at its default, where it has none yet. A redaction is
- * dressed only by another redaction.
+ * dressed only by another redaction, and a highlight by another highlight.
  */
 export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
   useSyncExternalStore(subscribe, () => {

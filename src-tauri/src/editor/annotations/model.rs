@@ -95,6 +95,15 @@ pub struct AnnotationStyle {
   pub color: String,
   #[serde(default)]
   pub head: AnnotationHead,
+  /// Whether a highlight is drawn as a marker stroke by hand rather than as a
+  /// clean band; the other kinds carry `false`.
+  #[serde(default)]
+  pub hand_drawn: bool,
+  /// Whether a highlight is laid by hand over the box its drag spans, in
+  /// strokes the style's width tall, rather than fitted to the text under it;
+  /// the other kinds carry `false`.
+  #[serde(default)]
+  pub manual: bool,
   /// A redaction's corner radius, as a percentage of its box's shorter side
   /// from 0 to 50; the other kinds carry zero.
   #[serde(default)]
@@ -202,6 +211,8 @@ mod tests {
         align: Default::default(),
         color: "#ff0000".to_owned(),
         head: AnnotationHead::Both,
+        hand_drawn: false,
+        manual: false,
         radius: 0.0,
         redaction: Default::default(),
         strength: 0.0,

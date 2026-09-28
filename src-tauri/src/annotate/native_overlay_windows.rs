@@ -28,6 +28,8 @@ mod renderer;
 mod scene;
 #[path = "native_overlay_windows/surface.rs"]
 mod surface;
+#[path = "native_overlay_windows/underlay.rs"]
+mod underlay;
 #[path = "native_overlay_windows/window_proc.rs"]
 mod window_proc;
 
@@ -56,7 +58,7 @@ use windows::{
       WindowsAndMessaging::{
         DefWindowProcW, DestroyWindow, GetClientRect, GetWindowLongPtrW, GetWindowThreadProcessId,
         LoadCursorW, SetCursor, SetWindowLongPtrW, SetWindowPos, ShowWindowAsync, GWLP_USERDATA,
-        HTCLIENT, HTTRANSPARENT, HWND_TOP, IDC_CROSS, MA_NOACTIVATE, SWP_ASYNCWINDOWPOS,
+        HTCLIENT, HTTRANSPARENT, HWND_TOP, IDC_CROSS, IDC_IBEAM, MA_NOACTIVATE, SWP_ASYNCWINDOWPOS,
         SWP_NOACTIVATE, SWP_NOOWNERZORDER, SW_SHOWNOACTIVATE, WM_CANCELMODE, WM_CAPTURECHANGED,
         WM_ERASEBKGND, WM_KEYDOWN, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
         WM_MOUSEACTIVATE, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_NCHITTEST,
@@ -77,11 +79,14 @@ use crate::windows::overlay_surface;
 use renderer::Renderer;
 use surface::Surface;
 
-/// One display the overlay covers: where it starts in desktop points, and how
-/// many pixels one point is.
+/// One display the overlay covers: the capture display it is, where it
+/// starts and how far it reaches in desktop points, and how many pixels one
+/// point is.
 #[derive(Clone, Copy)]
 pub(super) struct Display {
+  pub id: u32,
   pub origin: (f64, f64),
+  pub size: (f64, f64),
   pub scale: f64,
 }
 
@@ -128,6 +133,27 @@ pub(super) fn set_displays(displays: Vec<Display>) {
 /// Forgets the displays, once nothing is drawn on them any more.
 pub(super) fn forget_displays() {
   set_displays(Vec::new());
+  super::highlight::forget();
+}
+
+/// The display under a point in global desktop points, and its place in the
+/// overlay's order.
+pub(super) fn display_at(x: f64, y: f64) -> Option<(usize, Display)> {
+  DISPLAYS
+    .read()
+    .unwrap_or_else(|error| error.into_inner())
+    .iter()
+    .copied()
+    .enumerate()
+    .find(|(_, display)| {
+      (display.origin.0..display.origin.0 + display.size.0).contains(&x)
+        && (display.origin.1..display.origin.1 + display.size.1).contains(&y)
+    })
+}
+
+/// Redraws every display from any thread.
+pub(super) fn request_redraw(_app: &AppHandle) {
+  redraw();
 }
 
 /// Gives one host window its overlay child and swap chain. Owning thread only.

@@ -158,6 +158,8 @@ fn main() {
     println!("cargo:rerun-if-changed=src/recording/platform/camera/confidence_scaler_macos.m");
     println!("cargo:rerun-if-changed=src/recording/platform/desktop_compositor_macos.m");
     println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos.m");
+    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos_input.m");
+    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos_private.h");
     println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos.h");
     println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos_shader.h");
     println!("cargo:rerun-if-changed=src/ruler/cursor_guard_macos.m");
@@ -197,6 +199,7 @@ fn main() {
       .file("src/recording/platform/camera/confidence_scaler_macos.m")
       .file("src/recording/platform/desktop_compositor_macos.m")
       .file("src/annotate/native_overlay_macos.m")
+      .file("src/annotate/native_overlay_macos_input.m")
       .file("src/ruler/cursor_guard_macos.m")
       .file("src/editor/recording_preview_reader_macos.m")
       .file("src/editor/recording_preview_scrubber_macos.m")
