@@ -24,7 +24,8 @@
 //! bow's two waves' frequency and phase in `start_head.b` and `.c`, the
 //! trail-off in `end_head.a`, and how far along the lead-in and the
 //! trail-off each ease in `end_head.b`. Everything random is decided here,
-//! once, so the shaders only evaluate [`wander`]'s and [`slope`]'s twins.
+//! once, so the shaders only evaluate [`wander`]'s, [`slope`]'s and
+//! [`curl`]'s twins.
 
 use std::f32::consts::TAU;
 
@@ -118,30 +119,46 @@ fn unit(seed: u32, salt: u32) -> f32 {
 }
 
 /// How much of the lead-in is left `from` the stroke's start over `over`,
-/// and how fast that changes per unit of `from`: all of it at the start, none
-/// past `over`, in an S that leaves and arrives level, so the pen touches
-/// down alongside the line and merges into it.
-fn settle(from: f32, over: f32) -> [f32; 2] {
+/// how fast that changes per unit of `from`, and how fast that change
+/// changes: all of it at the start, none past `over`, in an S that leaves and
+/// arrives level, so the pen touches down alongside the line and merges into
+/// it.
+fn settle(from: f32, over: f32) -> [f32; 3] {
   let over = over.max(1e-6);
   let x = (from / over).clamp(0.0, 1.0);
-  [1.0 - x * x * (3.0 - 2.0 * x), -6.0 * x * (1.0 - x) / over]
+  let bend = if x > 0.0 && x < 1.0 {
+    -6.0 * (1.0 - 2.0 * x) / (over * over)
+  } else {
+    0.0
+  };
+  [
+    1.0 - x * x * (3.0 - 2.0 * x),
+    -6.0 * x * (1.0 - x) / over,
+    bend,
+  ]
 }
 
 /// How much of the trail-off is left `from` the stroke's end over `over`,
-/// and how fast that changes per unit of `from`: all of it at the end, none
-/// past `over`, steepest at the tip, so the pen flicks off as it lifts.
-fn flick(from: f32, over: f32) -> [f32; 2] {
+/// how fast that changes per unit of `from`, and how fast that change
+/// changes: all of it at the end, none past `over`, steepest at the tip, so
+/// the pen flicks off as it lifts.
+fn flick(from: f32, over: f32) -> [f32; 3] {
   let over = over.max(1e-6);
   let left = 1.0 - (from / over).clamp(0.0, 1.0);
-  [left * left, -2.0 * left / over]
+  let bend = if left > 0.0 { 2.0 / (over * over) } else { 0.0 };
+  [left * left, -2.0 * left / over, bend]
 }
 
 /// The lead-in's ease `along` the stroke, and the trail-off's, each as its
-/// share left and how fast that share changes along the stroke.
-fn eases(geometry: &ArrowGeometry, along: f32) -> ([f32; 2], [f32; 2]) {
+/// share left and how fast that share changes along the stroke, and how fast
+/// that change changes.
+fn eases(geometry: &ArrowGeometry, along: f32) -> ([f32; 3], [f32; 3]) {
   let [lead_ease, trail_ease] = geometry.end_head.b;
-  let [trail_left, trail_change] = flick(geometry.c[1] - along, trail_ease);
-  (settle(along, lead_ease), [trail_left, -trail_change])
+  let [trail_left, trail_change, trail_bend] = flick(geometry.c[1] - along, trail_ease);
+  (
+    settle(along, lead_ease),
+    [trail_left, -trail_change, trail_bend],
+  )
 }
 
 /// How far the stroke sits outside the outline `along` into it: nowhere for
@@ -151,7 +168,7 @@ pub(super) fn wander(geometry: &ArrowGeometry, along: f32) -> f32 {
   let [first, first_phase] = geometry.start_head.b;
   let [second, second_phase] = geometry.start_head.c;
   let trail = geometry.end_head.a[0];
-  let ([lead_left, _], [trail_left, _]) = eases(geometry, along);
+  let ([lead_left, ..], [trail_left, ..]) = eases(geometry, along);
   reach
     * (0.85 * (first * along + first_phase).sin() + 0.15 * (second * along + second_phase).sin())
     + lead * lead_left
@@ -166,10 +183,25 @@ pub(super) fn slope(geometry: &ArrowGeometry, along: f32) -> f32 {
   let [first, first_phase] = geometry.start_head.b;
   let [second, second_phase] = geometry.start_head.c;
   let trail = geometry.end_head.a[0];
-  let ([_, lead_change], [_, trail_change]) = eases(geometry, along);
+  let ([_, lead_change, _], [_, trail_change, _]) = eases(geometry, along);
   reach
     * (0.85 * first * (first * along + first_phase).cos()
       + 0.15 * second * (second * along + second_phase).cos())
     + lead * lead_change
     + trail * trail_change
+}
+
+/// How fast [`slope`] changes `along` the stroke: how sharply the pen's line
+/// curls, which the nearest point on it is found by.
+pub(super) fn curl(geometry: &ArrowGeometry, along: f32) -> f32 {
+  let [reach, lead] = geometry.start_head.a;
+  let [first, first_phase] = geometry.start_head.b;
+  let [second, second_phase] = geometry.start_head.c;
+  let trail = geometry.end_head.a[0];
+  let ([.., lead_bend], [.., trail_bend]) = eases(geometry, along);
+  -reach
+    * (0.85 * first * first * (first * along + first_phase).sin()
+      + 0.15 * second * second * (second * along + second_phase).sin())
+    + lead * lead_bend
+    + trail * trail_bend
 }

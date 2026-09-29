@@ -15,32 +15,43 @@
 static const uint annotation_shape_kind = 5u;
 static const float annotation_shape_quarter = 1.5707963268;
 static const float annotation_shape_turn = 6.2831853072;
+/// How many points along the pen's line each search for the nearest one
+/// tries before its ends, as `TRIES` in `annotations/outline/geometry.rs`.
+static const int annotation_shape_tries = 4;
 
 float annotation_shape_perimeter(float2 half_size, float rounding) {
   return 4.0 * (half_size.x + half_size.y - 2.0 * rounding) + annotation_shape_turn * rounding;
 }
 
-/// How far the stroke sits outside the outline `along` into it in `x`, and
-/// how fast that changes along it in `y`: a bow all the way round, a lead-in
-/// easing off from the start and a trail-off easing in towards the end.
-/// Nowhere for a clean stroke, whose wander is all zero. The twin of
-/// `wander` and `slope` in `annotations/outline/wander.rs`.
-float2 annotation_shape_wander(PreviewGeometry shape, float along) {
+/// How far the stroke sits outside the outline `along` into it in `x`, how
+/// fast that changes along it in `y`, and how fast that change changes in
+/// `z`: a bow all the way round, a lead-in easing off from the start and a
+/// trail-off easing in towards the end. Nowhere for a clean stroke, whose
+/// wander is all zero. The twin of `wander`, `slope` and `curl` in
+/// `annotations/outline/wander.rs`.
+float3 annotation_shape_wander(PreviewGeometry shape, float along) {
   float2 ease = max(float2(shape.end_head_bx, shape.end_head_by), 1e-6);
   // The lead-in settles in an S from its start; the trail-off flicks off,
   // steepest at the tip. Each is gone past its own span.
   float lead_x = saturate(along / ease.x);
   float trail_x = saturate((shape.cy - along) / ease.y);
+  float lead_bend = lead_x > 0.0 && lead_x < 1.0
+      ? -6.0 * (1.0 - 2.0 * lead_x) / (ease.x * ease.x) : 0.0;
+  float trail_bend = trail_x < 1.0 ? 2.0 / (ease.y * ease.y) : 0.0;
   float first_at = shape.start_head_bx * along + shape.start_head_by;
   float second_at = shape.start_head_cx * along + shape.start_head_cy;
-  return float2(
+  return float3(
       shape.start_head_ax * (0.85 * sin(first_at) + 0.15 * sin(second_at)) +
           shape.start_head_ay * (1.0 - lead_x * lead_x * (3.0 - 2.0 * lead_x)) +
           shape.end_head_ax * (1.0 - trail_x) * (1.0 - trail_x),
       shape.start_head_ax * (0.85 * shape.start_head_bx * cos(first_at) +
                              0.15 * shape.start_head_cx * cos(second_at)) -
           shape.start_head_ay * 6.0 * lead_x * (1.0 - lead_x) / ease.x +
-          shape.end_head_ax * 2.0 * (1.0 - trail_x) / ease.y);
+          shape.end_head_ax * 2.0 * (1.0 - trail_x) / ease.y,
+      -shape.start_head_ax *
+              (0.85 * shape.start_head_bx * shape.start_head_bx * sin(first_at) +
+               0.15 * shape.start_head_cx * shape.start_head_cx * sin(second_at)) +
+          shape.start_head_ay * lead_bend + shape.end_head_ax * trail_bend);
 }
 
 /// Where the stroke begins on the walk's piece `start` into it, before any
@@ -50,17 +61,73 @@ float annotation_shape_base(PreviewGeometry shape, float start, float lap) {
   return base - lap * floor(base / lap);
 }
 
+/// The pen's line `at` into a piece whose pass begins `offset` into the
+/// stroke: how far `local` is from it, how far `local` lies along the line's
+/// direction, that direction's squared length, and how far `local` lies
+/// along the line's curl. On a side `local` is its distance along the side
+/// and out from it, and `at` a length; round a corner `local` is its reach
+/// from the corner's centre and its turn, and `at` a turn. The twin of the
+/// probes in `annotations/outline/geometry.rs`.
+float4 annotation_shape_probe(PreviewGeometry shape, bool corner, float2 local, float offset,
+                              float rounding, float at) {
+  if (!corner) {
+    float3 wander = annotation_shape_wander(shape, offset + at);
+    float beyond = local.y - wander.x;
+    return float4(length(float2(local.x - at, beyond)), local.x - at + beyond * wander.y,
+                  1.0 + wander.y * wander.y, beyond * wander.z);
+  }
+  float3 wander = annotation_shape_wander(shape, offset + at * rounding);
+  float bend = rounding + wander.x;
+  // A stroke pulled inside a corner further than it is rounded needs no
+  // join: its two sides already cross there.
+  if (bend < 0.0) return float4(1e20, 0.0, 1.0, 0.0);
+  float lean = wander.y * rounding;
+  float swing = wander.z * rounding * rounding;
+  // `local` sits `gap.x` beyond the line and `gap.y` ahead of it. Per unit
+  // of turn the line runs `lean` out and `bend` on, and curls `swing - bend`
+  // out and `2 * lean` on.
+  float2 gap = local.x * float2(cos(local.y - at), sin(local.y - at)) - float2(bend, 0.0);
+  return float4(length(gap), gap.x * lean + gap.y * bend, lean * lean + bend * bend,
+                gap.x * (swing - bend) + gap.y * 2.0 * lean);
+}
+
+/// The distance from `local` to the nearest point of the pen's line within
+/// `span`, searching from `at` by Newton steps, each held to twice what
+/// following the line alone would take and halved back towards the best
+/// point so far when it lands further away. The span's ends are measured
+/// too, so a tip is never missed. The twin of `nearest` in
+/// `annotations/outline/geometry.rs`.
+float annotation_shape_nearest(PreviewGeometry shape, bool corner, float2 local, float offset,
+                               float rounding, float2 span, float at) {
+  float best = 1e20;
+  float best_at = at;
+  float shift = 0.0;
+  for (int tries = 0; tries < annotation_shape_tries; ++tries) {
+    float4 probe = annotation_shape_probe(shape, corner, local, offset, rounding, at);
+    if (probe.x < best) {
+      best = probe.x;
+      best_at = at;
+      shift = probe.y / max(max(probe.z - probe.w, probe.z * 0.5), 1e-6);
+    } else {
+      shift *= 0.5;
+    }
+    at = clamp(best_at + shift, span.x, span.y);
+  }
+  best = min(best, annotation_shape_probe(shape, corner, local, offset, rounding, at).x);
+  best = min(best, annotation_shape_probe(shape, corner, local, offset, rounding, span.x).x);
+  return min(best, annotation_shape_probe(shape, corner, local, offset, rounding, span.y).x);
+}
+
 /// How far `local` is from the pen's line along one side, from its `from`
 /// end along `toward` for `run`, `normal` pointing out. `window` is the part
-/// of the stroke drawn; the stroke may pass over the side on three laps.
-/// Square to the side, the distance is scaled back by the line's tilt, so a
-/// line leaving the outline keeps the pen's width rather than thinning.
+/// of the stroke drawn; the stroke may pass over the side on three laps. The
+/// search starts square to the side, so a line leaving the outline keeps the
+/// pen's width and a tip that flicks away ends in a true round pen.
 float annotation_shape_side(
     float2 local, float2 from, float2 toward, float2 normal, float start, float run,
     PreviewGeometry shape, float lap, float2 window) {
   float2 relative = local - from;
-  float along = dot(relative, toward);
-  float off = dot(relative, normal);
+  float2 across = float2(dot(relative, toward), dot(relative, normal));
   float base = annotation_shape_base(shape, start, lap);
   float nearest = 1e20;
   for (int turn = -1; turn <= 1; ++turn) {
@@ -68,18 +135,17 @@ float annotation_shape_side(
     float low = max(window.x - offset, 0.0);
     float high = min(window.y - offset, run);
     if (low > high) continue;
-    float at = clamp(along, low, high);
-    float2 aside = annotation_shape_wander(shape, offset + at);
-    nearest = min(nearest, along == at
-        ? abs(off - aside.x) * rsqrt(1.0 + aside.y * aside.y)
-        : length(relative - (toward * at + normal * aside.x)));
+    nearest = min(nearest, annotation_shape_nearest(shape, false, across, offset, 0.0,
+                                                    float2(low, high),
+                                                    clamp(across.x, low, high)));
   }
   return nearest;
 }
 
 /// How far `local` is from the pen's line round one corner: a quarter turn
-/// about `centre` from `from_angle`. A square corner is passed at one moment,
-/// and faces every way between its sides.
+/// about `centre` from `from_angle`, searched by the turn as a side is by its
+/// length. A square corner is passed at one moment, and faces every way
+/// between its sides.
 float annotation_shape_corner(
     float2 local, float2 centre, float from_angle, float rounding, float start,
     PreviewGeometry shape, float lap, float2 window) {
@@ -89,6 +155,7 @@ float annotation_shape_corner(
   // lands on the nearer of its two ends.
   turned -= annotation_shape_turn *
             floor((turned + 1.5 * annotation_shape_quarter) / annotation_shape_turn);
+  float2 polar = float2(length(relative), turned);
   float base = annotation_shape_base(shape, start, lap);
   float nearest = 1e20;
   for (int turn = -1; turn <= 1; ++turn) {
@@ -96,23 +163,16 @@ float annotation_shape_corner(
     float low = max(window.x - offset, 0.0);
     float high = min(window.y - offset, annotation_shape_quarter * rounding);
     if (low > high) continue;
-    float2 span = rounding > 0.0 ? float2(low, high) / rounding
-                                 : float2(0.0, annotation_shape_quarter);
-    float at = clamp(turned, span.x, span.y);
-    float2 aside = annotation_shape_wander(shape, offset + at * rounding);
-    // A stroke pulled inside a corner further than it is rounded needs no
-    // join: its two sides already cross there.
-    if (rounding + aside.x < 0.0) continue;
-    if (rounding > 0.0 && turned == at) {
-      // Measured out from the corner's centre, tilted as a side is.
-      float tilt = aside.y * rounding / max(rounding + aside.x, 1e-6);
-      nearest = min(nearest, abs(length(relative) - rounding - aside.x) *
-                                 rsqrt(1.0 + tilt * tilt));
+    // A square corner's wander is one number, so the clamp is exact.
+    if (rounding <= 0.0) {
+      nearest = min(nearest, annotation_shape_probe(shape, true, polar, offset, 0.0,
+                                                    clamp(turned, 0.0,
+                                                          annotation_shape_quarter)).x);
       continue;
     }
-    float angle = from_angle + at;
-    nearest = min(nearest,
-                  length(relative - float2(cos(angle), sin(angle)) * (rounding + aside.x)));
+    float2 span = float2(low, high) / rounding;
+    nearest = min(nearest, annotation_shape_nearest(shape, true, polar, offset, rounding, span,
+                                                    clamp(turned, span.x, span.y)));
   }
   return nearest;
 }

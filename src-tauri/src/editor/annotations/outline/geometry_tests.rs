@@ -190,6 +190,52 @@ fn a_hand_drawn_stroke_finishes_every_way_with_clean_tips() {
   );
 }
 
+/// Each tip ends in a true round pen, however steeply the stroke flicks
+/// there: round a circle and a rounded box, every point near either tip and
+/// near the stroke's edge is as far from the stroke as from the pen's line
+/// itself, so the stroke neither spikes past its cap nor leaves a notch
+/// beside it. Further out a curling line can have more than one nearest
+/// point, and nothing drawn depends on which is found.
+#[test]
+fn a_hand_drawn_stroke_ends_in_round_tips() {
+  let pen = PEN * 2.0;
+  for (end, radius) in [([260.0, 260.0], 50.0), ([300.0, 200.0], 20.0)] {
+    for seed in 0..24 {
+      let geometry = prepare_shape([100.0, 100.0], end, radius, seed as f32 + 1.0, pen, WHOLE);
+      let stroke = geometry.c[1];
+      // Every quarter pixel along the pen's line, and the tip itself.
+      let line: Vec<[f32; 2]> = (0..=(stroke * 4.0).ceil() as usize)
+        .map(|step| pen_at(&geometry, (step as f32 * 0.25).min(stroke)))
+        .collect();
+      for tip in [pen_at(&geometry, 0.0), pen_at(&geometry, stroke)] {
+        let near: Vec<[f32; 2]> = line
+          .iter()
+          .copied()
+          .filter(|&on| length(subtract(on, tip)) < pen * 3.0)
+          .collect();
+        for row in -12..=12 {
+          for column in -12..=12 {
+            let point = add(tip, scale([column as f32, row as f32], pen / 8.0));
+            let exact = near
+              .iter()
+              .map(|&on| length(subtract(point, on)))
+              .fold(f32::INFINITY, f32::min)
+              - pen * 0.5;
+            if exact.abs() > 2.0 {
+              continue;
+            }
+            let distance = shape_distance(point, &geometry);
+            assert!(
+              (distance - exact).abs() < 0.1,
+              "{radius}% seed {seed} at {point:?}: {distance} against {exact}"
+            );
+          }
+        }
+      }
+    }
+  }
+}
+
 /// A thin pen round a large box still strays far enough to read as drawn by
 /// hand: the wander follows the shape's size, not only the pen's.
 #[test]
