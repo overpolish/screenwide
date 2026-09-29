@@ -14,7 +14,7 @@ mod key_codes {
   pub(in super::super) const KEY_Z: u16 = 6;
   pub(in super::super) const KEY_N: u16 = 45;
   pub(in super::super) const KEY_O: u16 = 31;
-  pub(in super::super) const KEY_L: u16 = 37;
+  pub(in super::super) const KEY_S: u16 = 1;
   pub(in super::super) const KEY_BACKSPACE: u16 = 51;
   pub(in super::super) const KEY_FORWARD_DELETE: u16 = 117;
 }
@@ -29,13 +29,13 @@ mod key_codes {
   pub(in super::super) const KEY_Z: u16 = 0x5A;
   pub(in super::super) const KEY_N: u16 = 0x4E;
   pub(in super::super) const KEY_O: u16 = 0x4F;
-  pub(in super::super) const KEY_L: u16 = 0x4C;
+  pub(in super::super) const KEY_S: u16 = 0x53;
   pub(in super::super) const KEY_BACKSPACE: u16 = 0x08;
   pub(in super::super) const KEY_FORWARD_DELETE: u16 = 0x2E;
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use key_codes::{KEY_A, KEY_D, KEY_H, KEY_L, KEY_N, KEY_O};
+use key_codes::{KEY_A, KEY_D, KEY_H, KEY_N, KEY_O, KEY_S};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) use key_codes::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z};
 
@@ -47,6 +47,6 @@ pub(super) const TOOL_KEYS: &[(u16, AnnotationKind)] = &[
   (KEY_N, AnnotationKind::Counter),
   (KEY_H, AnnotationKind::Highlight),
   (KEY_O, AnnotationKind::Shape),
-  (KEY_L, AnnotationKind::Spotlight),
+  (KEY_S, AnnotationKind::Spotlight),
   (KEY_D, AnnotationKind::Draw),
 ];

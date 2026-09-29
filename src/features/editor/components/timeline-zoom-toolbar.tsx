@@ -58,7 +58,7 @@ export function TimelineZoomToolbar({
         label="Range"
         name="Range tool"
         onSelectedChange={onRangeActiveChange}
-        shortcut="R"
+        shortcut="Shift+R"
       >
         <SquareDashed />
       </ToolToggle>
@@ -67,7 +67,7 @@ export function TimelineZoomToolbar({
         label="Snap"
         name="Snap to edges"
         onSelectedChange={onSnapActiveChange}
-        shortcut="S"
+        shortcut="Shift+S"
       >
         <Magnet />
       </ToolToggle>

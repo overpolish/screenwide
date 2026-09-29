@@ -126,16 +126,13 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
   return -1;
 }
 
-/// The topmost arrow whose drawn shape `point` lands on, or -1. There is no
-/// tolerance around it: the arrow is picked, and haloed, exactly where it is
-/// painted, which is what keeps the halo off the space beside an annotation.
-///
-/// A shape or a stroke is picked by its line, and by its inside too once it
-/// is chosen or while the select tool is in hand: it can be carried from
-/// anywhere in it, while any other tool still draws inside one not in hand.
-/// The pen picks nothing up, so every press under it draws, and a stroke is
-/// picked by the select tool alone: another drawing tool that chose one would
-/// hand over to the pen, which never holds one.
+/// The topmost arrow whose drawn shape `point` lands on, or -1, with no
+/// tolerance: picked, and haloed, exactly where it is painted. A shape or a
+/// stroke is also picked by its inside once chosen or under the select tool,
+/// but what is drawn wins over an inside whatever the stacking, so only a
+/// press on nothing drawn falls to the inside it lands in. The pen picks
+/// nothing up, and a stroke is picked by the select tool alone: another
+/// drawing tool that chose one would hand over to the pen.
 SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   NSUInteger count = 0;
@@ -143,19 +140,22 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
   ScreenwideAnnotationMode mode = annotation_active_mode(surface);
   if (items == NULL || mode == ScreenwideAnnotationModeDraw) return -1;
   BOOL selecting = mode == ScreenwideAnnotationModeSelect;
-  for (NSInteger index = (NSInteger)count - 1; index >= 0; index--) {
-    ScreenwidePreviewAnnotation item = items[(NSUInteger)index];
-    if (item.kind == ScreenwideAnnotationKindDraw && !selecting) continue;
-    NSRect image = annotation_layer_image(surface, item.layer_id);
-    if (image.size.width <= 0.0 || image.size.height <= 0.0) continue;
-    BOOL whole = (item.kind == ScreenwideAnnotationKindShape ||
-                  item.kind == ScreenwideAnnotationKindDraw) &&
-                 (selecting || index == surface.annotationSelected);
-    double distance = item.kind == ScreenwideAnnotationKindDraw
-        ? annotation_draw_distance(surface, image, item, point, whole)
-        : whole ? annotation_shape_body_distance(image, item, point)
-                : annotation_shaft_distance(image, item, point);
-    if (distance <= 0.0) return index;
+  for (int insides = 0; insides < 2; insides++) {
+    for (NSInteger index = (NSInteger)count - 1; index >= 0; index--) {
+      ScreenwidePreviewAnnotation item = items[(NSUInteger)index];
+      if (item.kind == ScreenwideAnnotationKindDraw && !selecting) continue;
+      BOOL whole = (item.kind == ScreenwideAnnotationKindShape ||
+                    item.kind == ScreenwideAnnotationKindDraw) &&
+                   (selecting || index == surface.annotationSelected);
+      if (insides && !whole) continue;
+      NSRect image = annotation_layer_image(surface, item.layer_id);
+      if (image.size.width <= 0.0 || image.size.height <= 0.0) continue;
+      double distance = item.kind == ScreenwideAnnotationKindDraw
+          ? annotation_draw_distance(surface, image, item, point, insides == 1)
+          : insides ? annotation_shape_body_distance(image, item, point)
+                    : annotation_shaft_distance(image, item, point);
+      if (distance <= 0.0) return index;
+    }
   }
   return -1;
 }

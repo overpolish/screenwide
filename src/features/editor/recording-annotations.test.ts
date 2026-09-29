@@ -10,8 +10,6 @@ import { moveRecordingAnnotationClip } from "./recording-annotation-geometry";
 import {
   mergeRecordingAnnotationClips,
   recordingAnnotationClipAt,
-  RecordingAnnotationClip,
-  renumberedAnnotationClips,
 } from "./recording-annotations";
 import { createRecordingTimelineEdit } from "./recording-timeline-edit";
 
@@ -173,7 +171,7 @@ it("keeps a short clip valid at the final source position", () => {
   ).toMatchObject({ endMs: 20000, startMs: 19_999 - ANNOTATION_DRAW_IN_MS });
 });
 
-it("keeps overlapping arrows on one row each across a removed source range", () => {
+it("puts the clip drawn in front on the row above one it overlaps, across a removed source range", () => {
   const edit = {
     ...createRecordingTimelineEdit(1),
     segments: [
@@ -196,10 +194,15 @@ it("keeps overlapping arrows on one row each across a removed source range", () 
   const rows = recordingAnnotationRows([first, second], edit, 120_000);
   expect(rows.rowCount).toBe(2);
   expect(rows.fragments).toHaveLength(2);
+  expect(rows.fragments.map((fragment) => fragment.row)).toEqual([1, 0]);
+  expect(
+    recordingAnnotationRows([second, first], edit, 120_000).fragments.map(
+      (fragment) => fragment.row,
+    ),
+  ).toEqual([1, 0]);
   expect(rows.fragments[1]).toMatchObject({
     continuedByNext: false,
     continuesPrevious: false,
-    row: 1,
   });
 });
 
@@ -222,67 +225,4 @@ it("moves a clip by output time while preserving duration through a speed change
   });
   expect(moved.endMs - moved.startMs).toBe(6_000);
   expect(moved.startMs).toBe(6_000);
-});
-
-const counterClip = (
-  id: string,
-  value: number,
-  startMs: number,
-): RecordingAnnotationClip => ({
-  annotation: {
-    aboveCamera: false,
-    animated: true,
-    id,
-    shape: { angle: 0, center: { x: 10, y: 10 }, kind: "counter", value },
-    style: {
-      align: "left",
-      blur: false,
-      color: "#ffcc00",
-      handDrawn: false,
-      head: "none",
-      manual: false,
-      radius: 0,
-      redaction: "erase",
-      softness: 0,
-      strength: 0,
-      width: 56,
-    },
-  },
-  endMs: startMs + 3_000,
-  startMs,
-  trackId: "primary",
-});
-
-const values = (clips: RecordingAnnotationClip[]) =>
-  clips
-    .map((clip) => clip.annotation.shape)
-    .filter((shape) => shape.kind === "counter")
-    .map((shape) => shape.value);
-
-describe("renumberedAnnotationClips", () => {
-  it("numbers counters by where their clips sit on the timeline", () => {
-    const dragged = [counterClip("a", 1, 4_000), counterClip("b", 2, 1_000)];
-    expect(values(renumberedAnnotationClips(dragged))).toEqual([2, 1]);
-  });
-
-  it("gives the lower number to the annotation drawn first on a tie", () => {
-    const together = [counterClip("a", 1, 2_000), counterClip("b", 2, 2_000)];
-    expect(renumberedAnnotationClips(together)).toBe(together);
-  });
-
-  it("counts only counters, and leaves arrows where they are", () => {
-    const mixed = [
-      counterClip("c", 9, 5_000),
-      { annotation, endMs: 3_000, startMs: 0, trackId: "primary" as const },
-      counterClip("a", 9, 1_000),
-    ];
-    const numbered = renumberedAnnotationClips(mixed);
-    expect(values(numbered)).toEqual([2, 1]);
-    expect(numbered[1]).toBe(mixed[1]);
-  });
-
-  it("hands back the very same list when nothing moved", () => {
-    const settled = [counterClip("a", 1, 1_000), counterClip("b", 2, 4_000)];
-    expect(renumberedAnnotationClips(settled)).toBe(settled);
-  });
 });

@@ -1,24 +1,27 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { arranged, Arrangement } from "../annotation-order";
 import { ScreenshotWorkspaceOutputSettings } from "../screenshot-output";
 
+/** The workspace with one layer moved through the stacking. Every layer is
+ * drawn with every other, so each step passes the next one along. */
 export const moveScreenshotLayer = ({
-  direction,
+  arrangement,
   itemId,
   settings,
 }: {
-  direction: "backward" | "forward";
+  arrangement: Arrangement;
   itemId: number;
   settings: ScreenshotWorkspaceOutputSettings;
 }) => {
   const index = settings.items.findIndex((item) => item.id === itemId);
-  const nextIndex = direction === "forward" ? index + 1 : index - 1;
-  if (index === -1 || nextIndex < 0 || nextIndex >= settings.items.length)
-    return settings;
-  const items = [...settings.items];
-  [items[index], items[nextIndex]] = [items[nextIndex], items[index]];
-  return { ...settings, items };
+  if (index === -1) return settings;
+  const items = arranged(settings.items, index, {
+    arrangement,
+    meets: () => true,
+  });
+  return items === settings.items ? settings : { ...settings, items };
 };
 
 export const deleteScreenshotLayer = ({

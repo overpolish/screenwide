@@ -71,6 +71,19 @@ pub(super) struct ScreenshotAnnotationHoverEvent {
   pub(super) session_id: u64,
 }
 
+/// A right press on an annotation, for React to open its menu at `x`, `y` in
+/// the window's content. `pane_index` is the layer the annotation is drawn on.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ScreenshotAnnotationMenuEvent {
+  pub(super) annotation_id: String,
+  pub(super) pane_index: u32,
+  pub(super) session_id: u64,
+  pub(super) x: f64,
+  pub(super) y: f64,
+}
+
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct ScreenshotSelectionChangeEvent {

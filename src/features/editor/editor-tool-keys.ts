@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Arrangement } from "./annotation-order";
 import {
   editorToolForShortcut,
   EditorToolId,
@@ -10,7 +11,7 @@ import {
 import type { AnnotationKind } from "../../components/shared/annotation-style/types";
 
 /**
- * The plain letter keys that take up a tool or put its panel on screen.
+ * The letter keys that take up a tool or put its panel on screen.
  *
  * One table rather than a chain of conditions, so a tool added later states
  * its key in the same place as the rest and the hook that owns the window's
@@ -19,9 +20,13 @@ import type { AnnotationKind } from "../../components/shared/annotation-style/ty
  *
  * A tool's own letter comes from `EDITOR_TOOLS`, so a drawing tool added
  * there is reachable from the keyboard without being named again here. The
- * keys below belong to no tool.
+ * keys below belong to no tool. A tool takes the plain letter; a setting or
+ * a timeline mode beside it takes the same letter with Shift.
  */
 export type EditorToolKeys = {
+  /** `]` and `[` move what is selected one step through the stacking, and
+   * with Shift all the way to the front or the back. */
+  onArrange?: (move: Arrangement) => void;
   onResizeCanvas?: () => void;
   onSelectTool?: () => void;
   onToggleBladeTool?: () => void;
@@ -31,8 +36,9 @@ export type EditorToolKeys = {
   /** K: the keyboard panel, on or away. */
   onToggleKeyboardPanel?: () => void;
   onTogglePlayback?: () => void;
+  /** Shift+R: the range tool, on or off. */
   onToggleRangeTool?: () => void;
-  /** S: timeline snapping, on or off. */
+  /** Shift+S: timeline snapping, on or off. */
   onToggleSnap?: () => void;
   /** A drawing tool's letter, taking the tool up: A for the arrow, N for the
    * counter. One callback for every drawing tool, because taking one up is
@@ -62,8 +68,34 @@ const toolKeyAction = (id: EditorToolId, keys: EditorToolKeys) => {
   }[id];
 };
 
-/** What `code` does in this window, or null where it does nothing. */
-export const editorToolKeyAction = (code: string, keys: EditorToolKeys) => {
+/** What `code` does in this window, with Shift held when `shifted`, or null
+ * where it does nothing. */
+export const editorToolKeyAction = (
+  code: string,
+  keys: EditorToolKeys,
+  shifted = false,
+) => {
+  const move: Arrangement | null =
+    code === "BracketRight"
+      ? shifted
+        ? "front"
+        : "forward"
+      : code === "BracketLeft"
+        ? shifted
+          ? "back"
+          : "backward"
+        : null;
+  const onArrange = keys.onArrange;
+  if (move !== null)
+    return onArrange
+      ? () => {
+          onArrange(move);
+        }
+      : null;
+  if (shifted)
+    return (
+      { KeyR: keys.onToggleRangeTool, KeyS: keys.onToggleSnap }[code] ?? null
+    );
   const tool = code.startsWith("Key")
     ? editorToolForShortcut(code.slice(3))
     : null;
@@ -74,8 +106,6 @@ export const editorToolKeyAction = (code: string, keys: EditorToolKeys) => {
       KeyK: keys.onToggleKeyboardPanel,
       KeyM: keys.onToggleCursorPanel,
       KeyP: keys.onTogglePlayback,
-      KeyR: keys.onToggleRangeTool,
-      KeyS: keys.onToggleSnap,
     }[code] ?? null
   );
 };

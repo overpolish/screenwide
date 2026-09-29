@@ -16,6 +16,12 @@ export function usePanelShortcuts(workspace: EditorKind) {
     });
   };
   useEditorWindowShortcuts({
+    onArrange: (move) => {
+      forward(
+        move === "forward" || move === "front" ? "BracketRight" : "BracketLeft",
+        { shiftKey: move === "front" || move === "back" },
+      );
+    },
     onConfirm: () => {
       forward("Enter");
     },
@@ -33,12 +39,6 @@ export function usePanelShortcuts(workspace: EditorKind) {
     },
     onExport: () => {
       forward("KeyE", { ctrlKey: true });
-    },
-    onMoveBackward: () => {
-      forward("BracketLeft");
-    },
-    onMoveForward: () => {
-      forward("BracketRight");
     },
     onNudge: (x, y, shiftKey) => {
       forward(
@@ -71,10 +71,10 @@ export function usePanelShortcuts(workspace: EditorKind) {
       forward("KeyP");
     },
     onToggleRangeTool: () => {
-      forward("KeyR");
+      forward("KeyR", { shiftKey: true });
     },
     onToggleSnap: () => {
-      forward("KeyS");
+      forward("KeyS", { shiftKey: true });
     },
     onTool: (tool) => {
       forward(`Key${drawingToolShortcut(tool)}`);

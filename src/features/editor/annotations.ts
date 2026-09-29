@@ -241,21 +241,29 @@ export const annotationTextEdit = (
   value === "begin" || value === "update" || value === "end" ? value : null;
 
 /**
- * The annotations with their counters numbered 1, 2, 3 in the order they were
- * dropped, which is the order they are stored in.
+ * The annotations with their counters numbered 1, 2, 3 in the order of the
+ * numbers they already carry, the one earlier in the list first on a tie.
  *
- * Numbering is derived rather than kept: deleting the second of three
- * counters leaves the third reading 3 with no 2 in sight, which is not a
- * count. Renumbering on the way in means a delete, an undo and a reorder all
- * land on the same numbers without any of them knowing about counters. The
- * list is returned unchanged when nothing moved, so an unchanged document is
- * never rewritten.
+ * A counter keeps the number it was given: moving it, or changing which
+ * annotations it is drawn over, never renumbers it. Only the gaps close, so
+ * deleting the second of three counters leaves 1 and 2 rather than 1 and 3,
+ * and a delete, an undo and a reorder all land on the same numbers without
+ * any of them knowing about counters. The list is returned unchanged when
+ * nothing moved, so an unchanged document is never rewritten.
  */
 export const renumberedCounters = (annotations: Annotation[]): Annotation[] => {
-  let value = 0;
-  const renumbered = annotations.map((annotation) => {
-    if (annotation.shape.kind !== "counter") return annotation;
-    value += 1;
+  const order = annotations
+    .flatMap((annotation, index) =>
+      annotation.shape.kind === "counter"
+        ? [{ index, value: annotation.shape.value }]
+        : [],
+    )
+    .sort((a, b) => a.value - b.value || a.index - b.index);
+  const values = new Map(order.map(({ index }, place) => [index, place + 1]));
+  const renumbered = annotations.map((annotation, index) => {
+    const value = values.get(index);
+    if (annotation.shape.kind !== "counter" || value === undefined)
+      return annotation;
     return annotation.shape.value === value
       ? annotation
       : { ...annotation, shape: { ...annotation.shape, value } };

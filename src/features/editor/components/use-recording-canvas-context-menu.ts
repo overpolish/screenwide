@@ -8,7 +8,6 @@ import {
   dismissPopupMenu,
   pointerAnchor,
 } from "../../popup-panel/use-popup-menu";
-import { isPinnable } from "../recording-annotation-pins";
 import { RecordingAnnotationClip } from "../recording-annotations";
 import { RecordingTrackId, RecordingVideoTrackId } from "../types";
 
@@ -23,10 +22,11 @@ import {
   useRecordingTrackMenu,
 } from "./use-recording-track-menu";
 
-/** What a right press on an annotation needs: the clips to find it among, and
- * the pin actions its menu offers. */
+/** What a right press on an annotation needs: the clips to find it among and
+ * to reorder, and the pin actions its menu offers. */
 type CanvasMenuAnnotations = {
   clips: RecordingAnnotationClip[];
+  onClipsChange: (clips: RecordingAnnotationClip[]) => void;
   pinning: AnnotationClipPinning;
 };
 
@@ -51,7 +51,9 @@ export function useRecordingCanvasContextMenu({
   // A right press on an annotation opens the menu its timeline clip opens.
   // The native side has already chosen it and names it here.
   const openAnnotationMenu = useAnnotationClipMenu({
+    clips: annotations.clips,
     idPrefix: "annotation-canvas:",
+    onClipsChange: annotations.onClipsChange,
     pinning: annotations.pinning,
   });
   const openCanvasAnnotationMenuRef = useRef<
@@ -61,8 +63,7 @@ export function useRecordingCanvasContextMenu({
     const clip = annotations.clips.find(
       (item) => item.annotation.id === annotationId,
     );
-    if (clip && isPinnable(clip))
-      void openAnnotationMenu(pointerAnchor(x, y), clip);
+    if (clip) void openAnnotationMenu(pointerAnchor(x, y), clip);
   };
   // A right click on a pane in the native canvas opens the same layer menu the
   // timeline row opens. The native side selects the layer it landed on and

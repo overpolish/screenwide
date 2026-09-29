@@ -159,6 +159,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   useRecordingCanvasContextMenu({
     annotations: {
       clips: annotations.clips,
+      onClipsChange: annotations.onClipsChange,
       pinning: annotations.pinning,
     },
     canvasTool,

@@ -3,22 +3,24 @@
 
 #pragma once
 
-/// Spotlights and highlights over an exported frame's two planes. Both
-/// change what is under them rather than drawing over it, so they have to
-/// read both planes before they write either: one thread takes a colour
-/// sample and the four luma pixels it covers, reads all of them, and writes
-/// them back shaded, then recoloured. The conversions are the export's own,
-/// the same ones every other annotation is written through.
+/// Every annotation over an exported frame's two planes, in document order.
+/// Highlights and spotlights change what is under them rather than drawing
+/// over it, so the pass reads both planes before it writes either: one thread
+/// takes a colour sample and the four luma pixels it covers, reads all of
+/// them, draws the annotations over each, and writes them back. The
+/// conversions are the export's own.
 ///
 /// `redo` is set for the pass run again after the screen layer is redrawn
 /// over a camera sent behind it: the shade then goes only where the redraw
 /// repainted, since everywhere else already has it.
-#define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT_VIDEO @R"METAL(
-kernel void highlight_video(
+#define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_LAYERS_VIDEO @R"METAL(
+kernel void annotation_layers_video(
     constant CanvasUniforms &canvas [[buffer(0)]],
     const device AnnotationUniforms *annotations [[buffer(12)]],
     constant uint &count [[buffer(13)]], constant uint &above [[buffer(14)]],
     const device AnnotationSample *samples [[buffer(15)]],
+    const device uchar4 *numbers [[buffer(16)]],
+    constant AnnotationTextAtlas &atlas [[buffer(17)]],
     const device packed_float2 *points [[buffer(18)]],
     constant uint &redo [[buffer(20)]],
     texture2d<float, access::read_write> luma [[texture(0)]],
@@ -35,15 +37,15 @@ kernel void highlight_video(
       if (pixel.x >= luma.get_width() || pixel.y >= luma.get_height()) continue;
       float2 point = float2(pixel) + 0.5;
       float4 base = float4(yuv_to_rgb(luma.read(pixel).r, sample_uv), 1.0);
-      float4 shaded = composite_spotlights(base, annotations, count, above, point, 1.0);
-      if (redo != 0u) shaded = mix(base, shaded, canvas_foreground_coverage(point, canvas));
-      float4 marked = composite_highlights(shaded, shaded, annotations, count, above, point,
-                                           1.0, points, samples);
-      sum += marked.rgb;
+      float gate = redo != 0u ? canvas_foreground_coverage(point, canvas) : 1.0;
+      float4 drawn = composite_annotation_layers(base, annotations, count, above, point,
+                                                 float2(1.0), 1.0, gate, samples, numbers,
+                                                 atlas, points);
+      sum += drawn.rgb;
       pixels += 1.0;
-      if (any(abs(marked.rgb - base.rgb) > 1e-4)) {
+      if (any(abs(drawn.rgb - base.rgb) > 1e-4)) {
         changed = true;
-        luma.write(float4(16.0 / 255.0 + dot(saturate(marked.rgb),
+        luma.write(float4(16.0 / 255.0 + dot(saturate(drawn.rgb),
                                                float3(0.182586, 0.614231, 0.062007))),
                    pixel);
       }

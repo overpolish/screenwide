@@ -106,7 +106,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     label: "Redact",
     name: "Redact a region",
     panel: "annotation",
-    shortcut: "X",
+    shortcut: "R",
   },
   select: { panel: "selection", resetsView: false, shortcut: "V" },
   shape: {
@@ -123,7 +123,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     label: "Spotlight",
     name: "Spotlight a region",
     panel: "annotation",
-    shortcut: "L",
+    shortcut: "S",
   },
   text: {
     drawsOnLayer: true,

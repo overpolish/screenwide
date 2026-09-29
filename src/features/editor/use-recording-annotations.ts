@@ -10,12 +10,14 @@ import {
   useAnnotationAnimatedDefault,
   useAnnotationDefaults,
 } from "./annotation-defaults";
+import { arranged, Arrangement } from "./annotation-order";
 import { AnnotationFrame, pacedClip } from "./annotation-pace";
 import { Annotation, AnnotationTextEdit } from "./annotations";
 import { recordingAnnotationPinning } from "./recording-annotation-pinning";
 import {
   mergeRecordingAnnotationClips,
   RecordingAnnotationClip,
+  recordingAnnotationClipsMeet,
   RecordingAnnotationPinCommit,
   renumberedAnnotationClips,
 } from "./recording-annotations";
@@ -83,11 +85,11 @@ export function useRecordingAnnotations({
   const nativeClips = previewClips ?? clips;
   const commitClips = (unnumbered: RecordingAnnotationClip[]) => {
     // Counters count what the timeline shows, so every list written here is
-    // numbered by clip time: dragging one clip in front of another renumbers
-    // the pair without the drag knowing about counters. Every clip is paced
-    // by its annotation as it now stands, so a path drawn longer takes
-    // longer to draw in.
-    const next = renumberedAnnotationClips(unnumbered).map((clip) =>
+    // numbered by clip time: dragging one clip in front of another in time
+    // renumbers the pair, while reordering the drawing order does not. Every
+    // clip is paced by its annotation as it now stands, so a path drawn
+    // longer takes longer to draw in.
+    const next = renumberedAnnotationClips(unnumbered, clips).map((clip) =>
       pacedClip(clip, frames[clip.trackId]),
     );
     if (JSON.stringify(next) !== JSON.stringify(clips))
@@ -213,6 +215,21 @@ export function useRecordingAnnotations({
   });
   return {
     ...selection,
+    /** Moves the annotation in hand past the clips showing with it,
+     * answering whether there was one. */
+    arrangeSelected: (arrangement: Arrangement) => {
+      const index = clips.findIndex(
+        (clip) => clip.annotation.id === selection.selectedId,
+      );
+      if (index < 0) return false;
+      commitClips(
+        arranged(clips, index, {
+          arrangement,
+          meets: recordingAnnotationClipsMeet,
+        }),
+      );
+      return true;
+    },
     canDelete: selection.hasSelection || (tool !== null && selection.canDelete),
     clips,
     onClipsChange: commitClips,

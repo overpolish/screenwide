@@ -43,14 +43,17 @@ impl AnnotationEdit {
     source_per_size: f64,
   ) -> Option<Self> {
     let index = match target {
-      AnnotationGestureTarget::New => annotations.len(),
+      AnnotationGestureTarget::New => fresh_annotation_index(annotations, kind?),
       AnnotationGestureTarget::Existing { index, .. } if index < annotations.len() => index,
       _ => return None,
     };
     let before = annotations.clone();
     if target == AnnotationGestureTarget::New {
       let id = next_annotation_id();
-      annotations.push(kind?.new_annotation(id, point, defaults, angle, &before, source_per_size));
+      annotations.insert(
+        index,
+        kind?.new_annotation(id, point, defaults, angle, &before, source_per_size),
+      );
     }
     let annotation = &annotations[index];
     let mut origin = AnnotationDragOrigin::new(point, &annotation.shape);
@@ -183,4 +186,24 @@ impl AnnotationEdit {
   pub(crate) fn cancel(self, annotations: &mut Vec<Annotation>) {
     *annotations = self.before;
   }
+}
+
+/// Where a fresh annotation of `kind` goes in a document kept bottom first. A
+/// highlight recolours the page, so it goes under every spotlight and every
+/// annotation drawn over the page; a spotlight goes over the highlights and
+/// under the rest, so what is drawn next stays lit. Everything else goes on
+/// top. A redaction is applied to the picture wherever it sits, so it never
+/// holds a fresh one back. The twin of `freshAnnotationIndex` in
+/// `src/features/editor/annotation-order.ts`.
+fn fresh_annotation_index(annotations: &[Annotation], kind: AnnotationKind) -> usize {
+  use AnnotationKind::{Highlight, Redact, Spotlight};
+  let beneath = |other: AnnotationKind| match kind {
+    Highlight => matches!(other, Highlight | Redact),
+    Spotlight => matches!(other, Highlight | Spotlight | Redact),
+    _ => true,
+  };
+  annotations
+    .iter()
+    .position(|annotation| !beneath(annotation.shape.kind()))
+    .unwrap_or(annotations.len())
 }

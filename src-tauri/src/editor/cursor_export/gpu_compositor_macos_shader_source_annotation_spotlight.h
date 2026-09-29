@@ -5,8 +5,8 @@
 
 /// The shade a layer's spotlights cast. Every spotlight showing cuts its hole
 /// in one shared shade, which darkens what is under it by a fixed share.
-/// Every kernel runs it after the picture and the cursor and before the
-/// composite pass, so what other annotations draw stays at full brightness.
+/// `composite_annotation_layers` lays the shade where the topmost spotlight
+/// sits in the document, so what is drawn above it stays at full brightness.
 /// The arithmetic is Rust's `spotlight::geometry::{light, shade}`, which the
 /// tests hold this to; the blur a spotlight can add is applied to the source
 /// with the redactions, in `..._redact.h`.
@@ -64,16 +64,5 @@ static float annotation_spotlight_cover(
     lit = max(lit, presence * annotation_spotlight_light(annotation, point, feather));
   }
   return max(layer - lit, 0.0);
-}
-
-/// `rgba`, premultiplied, under the shade the spotlights on the layer
-/// `above_camera` names cast at `point`.
-static float4 composite_spotlights(
-    float4 rgba, const device AnnotationUniforms *annotations, uint count,
-    uint above_camera, float2 point, float pixel_scale) {
-  float shade = annotation_spotlight_cover(annotations, count, above_camera, point,
-                                           pixel_scale, false);
-  rgba.rgb *= 1.0 - annotation_spotlight_dim * shade;
-  return rgba;
 }
 )METAL"

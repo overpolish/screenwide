@@ -65,7 +65,7 @@ export const ANNOTATE_TOOLS: AnnotateTool[] = [
     id: "spotlight",
     label: "Spotlight",
     name: "Spotlight a region",
-    shortcut: "L",
+    shortcut: "S",
   },
   {
     icon: <DrawToolIcon />,

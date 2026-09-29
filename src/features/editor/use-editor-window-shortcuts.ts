@@ -31,14 +31,13 @@ import { sheetOwnsKey } from "./sheet-escape";
 let escapeClaims = 0;
 
 export function useEditorWindowShortcuts({
+  onArrange,
   onConfirm,
   onCopy,
   onCutTimeline,
   onDelete,
   onDeselect,
   onExport,
-  onMoveBackward,
-  onMoveForward,
   onNudge,
   onRedo,
   onResizeCanvas,
@@ -62,8 +61,6 @@ export function useEditorWindowShortcuts({
   onDelete?: () => void;
   onDeselect?: () => void;
   onExport?: () => void;
-  onMoveBackward?: () => void;
-  onMoveForward?: () => void;
   /** Moves the selected layer by one arrow press; `coarse` is the Shift jump. */
   onNudge?: (directionX: number, directionY: number, coarse: boolean) => void;
   onRedo?: () => void;
@@ -196,6 +193,19 @@ export function useEditorWindowShortcuts({
         return;
       }
 
+      if (event.shiftKey && !commandKey) {
+        const shiftedKey = editorToolKeyAction(
+          event.code,
+          { onArrange, onToggleRangeTool, onToggleSnap },
+          true,
+        );
+        if (shiftedKey && !ownsTextEditingKeys(event.target)) {
+          consume(event);
+          shiftedKey();
+        }
+        return;
+      }
+
       if (event.ctrlKey || event.metaKey || event.shiftKey) return;
 
       if (
@@ -225,27 +235,8 @@ export function useEditorWindowShortcuts({
         return;
       }
 
-      if (
-        event.code === "BracketRight" &&
-        onMoveForward &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onMoveForward();
-        return;
-      }
-
-      if (
-        event.code === "BracketLeft" &&
-        onMoveBackward &&
-        !ownsTextEditingKeys(event.target)
-      ) {
-        consume(event);
-        onMoveBackward();
-        return;
-      }
-
       const toolKey = editorToolKeyAction(event.code, {
+        onArrange,
         onResizeCanvas,
         onSelectTool,
         onToggleBladeTool,
@@ -277,9 +268,8 @@ export function useEditorWindowShortcuts({
     onCutTimeline,
     onDelete,
     onDeselect,
+    onArrange,
     onExport,
-    onMoveBackward,
-    onMoveForward,
     onNudge,
     onRedo,
     onResizeCanvas,

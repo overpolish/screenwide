@@ -10,6 +10,8 @@ use validation::validate;
 #[path = "timeline_edit/initial_edit.rs"]
 mod initial_edit;
 pub(in crate::editor) use initial_edit::persist_initial_annotation_clips;
+#[path = "timeline_edit/stacking.rs"]
+mod stacking;
 
 pub(crate) use time_mapping::source_after_output_duration_us;
 pub(crate) use time_mapping::source_before_output_duration_us;
@@ -20,7 +22,9 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-const FORMAT_VERSION: u16 = 1;
+/// Version 2 draws annotations in document order; version 1 files are read
+/// by putting their clips in the order that draws them as they were drawn.
+const FORMAT_VERSION: u16 = 2;
 const MAX_SEGMENTS: usize = 100_000;
 
 #[path = "timeline_edit_keyboard.rs"]
@@ -197,8 +201,13 @@ fn sidecar_path(recording: &Path, slot: char) -> Option<PathBuf> {
 
 fn read_slot(recording: &Path, slot: char) -> Option<PersistedTimelineEdit> {
   let bytes = std::fs::read(sidecar_path(recording, slot)?).ok()?;
-  let persisted: PersistedTimelineEdit = serde_json::from_slice(&bytes).ok()?;
-  (persisted.version == FORMAT_VERSION && validate(&persisted.edit).is_ok()).then_some(persisted)
+  let mut persisted: PersistedTimelineEdit = serde_json::from_slice(&bytes).ok()?;
+  match persisted.version {
+    FORMAT_VERSION => {}
+    1 => stacking::stack_by_kind(&mut persisted.edit.annotation_clips),
+    _ => return None,
+  }
+  validate(&persisted.edit).is_ok().then_some(persisted)
 }
 
 pub fn for_recording(recording: &Path, artifact_id: u64) -> Option<(u64, RecordingTimelineEdit)> {

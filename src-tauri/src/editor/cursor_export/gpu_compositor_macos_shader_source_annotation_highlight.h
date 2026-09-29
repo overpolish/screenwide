@@ -162,9 +162,120 @@ static float highlight_line(float2 point, float2 low, float2 high, float2 window
                        mix(tip, square, settled.x), mix(tip, square, settled.y));
 }
 
+/// One highlight over `rgba`, recolouring `base`. The editor hands the same
+/// pixel as both, so a highlight recolours whatever the document drew under
+/// it; the live overlay's `rgba` is transparent, and `base` is the desktop
+/// captured under it.
+static float4 annotation_highlight_layer(
+    float4 rgba, float4 base, const device AnnotationUniforms &annotation, float2 point,
+    float feather, const device packed_float2 *points, const device AnnotationSample *samples) {
+  float4 colour = float4(annotation.color);
+  uint pairs = annotation.data_count / 2u;
+  if (colour.a <= 0.0 || pairs == 0u) return rgba;
+  float2 origin = float2(annotation.arrow.a);
+  float2 unit = float2(annotation.arrow.b);
+  float2 tone = float2(annotation.arrow.c);
+  bool hand = (annotation.flags & annotation_highlight_hand_drawn) != 0u;
+  uint seed = uint(annotation.params[0]) | (uint(annotation.params[1]) << 16);
+  // One hand holds the marker for the whole highlight, so its chisel leans
+  // the same way on every line, which way being the seed's. How far is each
+  // line's own: the hand is lifted and put down again between lines.
+  float lean = highlight_random(seed, 8u) < 0.5 ? -1.0 : 1.0;
+  // Each line draws itself in over its own share of the reveal, starting a
+  // little after the line before it, so a box of many strokes goes down one
+  // after another at a hand's pace rather than as one racing line.
+  float lines = float(pairs);
+  float share = min(1.0, max(0.35, 2.0 / (lines + 1.0)));
+  float spacing = pairs > 1u ? (1.0 - share) / (lines - 1.0) : 0.0;
+  float halo = max(annotation.hover, 0.0);
+  // The exposure's samples run steadily from the shutter opening to now, so
+  // the first and the last hold every sample's ends between them, and their
+  // opacities' mean is the mean of all of them.
+  uint taps = annotation.sample_count;
+  float2 opened = float2(annotation.arrow.low, annotation.arrow.high);
+  float2 closed = opened;
+  float opacity = 1.0;
+  if (taps > 0u) {
+    const device AnnotationSample &first = samples[annotation.sample_offset];
+    const device AnnotationSample &last = samples[annotation.sample_offset + taps - 1u];
+    opened = float2(first.arrow.low, first.arrow.high);
+    closed = float2(last.arrow.low, last.arrow.high);
+    opacity = (first.opacity + last.opacity) * 0.5;
+  }
+  float coverage = 0.0, nearest = 1e20;
+  for (uint band = 0u; band < pairs; ++band) {
+    uint at = annotation.data_offset + band * 2u;
+    float2 low = origin + float2(points[at]) * unit;
+    float2 high = origin + float2(points[at + 1u]) * unit;
+    float span = max(high.x - low.x, 0.0);
+    float height = high.y - low.y;
+    float begin = float(band) * spacing;
+    float2 now =
+        highlight_window(annotation.arrow.low, annotation.arrow.high, begin, share, span);
+    float2 start = highlight_window(opened.x, opened.y, begin, share, span);
+    float2 end = highlight_window(closed.x, closed.y, begin, share, span);
+    float from = min(now.x, min(start.x, end.x));
+    float to = max(now.y, max(start.y, end.y));
+    if (to <= from || height <= 0.0) continue;
+    float reach = height + halo + feather + 1.0;
+    if (point.y < low.y - reach || point.y > high.y + reach ||
+        point.x < low.x + from - reach || point.x > low.x + to + reach)
+      continue;
+    // Whether its top and its bottom lie under a neighbouring band, as the
+    // strokes laid over a box do.
+    float2 joined = float2(
+        band > 0u && origin.y + float2(points[at - 1u]).y * unit.y > low.y ? 1.0 : 0.0,
+        band + 1u < pairs && origin.y + float2(points[at + 2u]).y * unit.y < high.y ? 1.0
+                                                                                    : 0.0);
+    uint stroke = seed ^ (band * 0x9e3779b9u);
+    float slant = lean * (0.08 + highlight_random(stroke, 10u) * 0.32);
+    if ((taps == 0u || halo > 0.0) && now.y > now.x) {
+      float edge = highlight_line(point, low, high, now, joined, hand, stroke, slant);
+      nearest = min(nearest, edge);
+      if (taps == 0u) {
+        coverage = max(coverage, annotation_edge(edge, feather));
+        continue;
+      }
+    }
+    if (taps == 0u) continue;
+    // More than two line heights inside every sample's ends, every sample
+    // draws this pixel alike, so the last stands for them all.
+    float along = point.x - low.x;
+    float margin = height * 2.0 + feather + 1.0;
+    float line_coverage = 0.0;
+    if (along > max(start.x, end.x) + margin && along < min(start.y, end.y) - margin) {
+      float edge = highlight_line(point, low, high, end, joined, hand, stroke, slant);
+      line_coverage = annotation_edge(edge, feather) * opacity;
+    } else {
+      for (uint tap = 0u; tap < taps; ++tap) {
+        const device AnnotationSample &sample = samples[annotation.sample_offset + tap];
+        float2 window = highlight_window(sample.arrow.low, sample.arrow.high, begin, share, span);
+        if (window.y <= window.x) continue;
+        float edge = highlight_line(point, low, high, window, joined, hand, stroke, slant);
+        line_coverage += annotation_edge(edge, feather) * sample.opacity;
+      }
+      line_coverage /= float(taps);
+    }
+    coverage = max(coverage, line_coverage);
+  }
+  if (halo > 0.0 && nearest < 1e19) {
+    // The ruler's hover halo, hugging the bands from the edge outwards.
+    float ring = (1.0 - annotation_edge(nearest, feather)) *
+        annotation_edge(nearest - halo, feather);
+    float alpha = ring * colour.a * annotation_hover_alpha;
+    rgba.rgb = colour.rgb * alpha + rgba.rgb * (1.0 - alpha);
+    rgba.a = alpha + rgba.a * (1.0 - alpha);
+  }
+  if (coverage <= 0.0) return rgba;
+  float alpha = coverage * colour.a;
+  rgba.rgb = highlight_recolour(base.rgb, colour.rgb, tone) * alpha + rgba.rgb * (1.0 - alpha);
+  rgba.a = alpha + rgba.a * (1.0 - alpha);
+  return rgba;
+}
+
 /// Every highlight on the layer `above_camera` names, over `rgba`, each
-/// recolouring `base`. The canvas passes hand the same pixel as both; the live
-/// overlay's is transparent, and `base` is the desktop captured under it.
+/// recolouring `base`: the live overlay's pass, which puts its highlights
+/// under everything else it draws.
 static float4 composite_highlights(
     float4 rgba, float4 base, const device AnnotationUniforms *annotations, uint count,
     uint above_camera, float2 point, float pixel_scale,
@@ -175,107 +286,7 @@ static float4 composite_highlights(
     if (annotation.kind != annotation_highlight_kind ||
         annotation.above_camera != above_camera)
       continue;
-    float4 colour = float4(annotation.color);
-    uint pairs = annotation.data_count / 2u;
-    if (colour.a <= 0.0 || pairs == 0u) continue;
-    float2 origin = float2(annotation.arrow.a);
-    float2 unit = float2(annotation.arrow.b);
-    float2 tone = float2(annotation.arrow.c);
-    bool hand = (annotation.flags & annotation_highlight_hand_drawn) != 0u;
-    uint seed = uint(annotation.params[0]) | (uint(annotation.params[1]) << 16);
-    // One hand holds the marker for the whole highlight, so its chisel leans
-    // the same way on every line, which way being the seed's. How far is each
-    // line's own: the hand is lifted and put down again between lines.
-    float lean = highlight_random(seed, 8u) < 0.5 ? -1.0 : 1.0;
-    // Each line draws itself in over its own share of the reveal, starting a
-    // little after the line before it, so a box of many strokes goes down one
-    // after another at a hand's pace rather than as one racing line.
-    float lines = float(pairs);
-    float share = min(1.0, max(0.35, 2.0 / (lines + 1.0)));
-    float spacing = pairs > 1u ? (1.0 - share) / (lines - 1.0) : 0.0;
-    float halo = max(annotation.hover, 0.0);
-    // The exposure's samples run steadily from the shutter opening to now, so
-    // the first and the last hold every sample's ends between them, and their
-    // opacities' mean is the mean of all of them.
-    uint taps = annotation.sample_count;
-    float2 opened = float2(annotation.arrow.low, annotation.arrow.high);
-    float2 closed = opened;
-    float opacity = 1.0;
-    if (taps > 0u) {
-      const device AnnotationSample &first = samples[annotation.sample_offset];
-      const device AnnotationSample &last = samples[annotation.sample_offset + taps - 1u];
-      opened = float2(first.arrow.low, first.arrow.high);
-      closed = float2(last.arrow.low, last.arrow.high);
-      opacity = (first.opacity + last.opacity) * 0.5;
-    }
-    float coverage = 0.0, nearest = 1e20;
-    for (uint band = 0u; band < pairs; ++band) {
-      uint at = annotation.data_offset + band * 2u;
-      float2 low = origin + float2(points[at]) * unit;
-      float2 high = origin + float2(points[at + 1u]) * unit;
-      float span = max(high.x - low.x, 0.0);
-      float height = high.y - low.y;
-      float begin = float(band) * spacing;
-      float2 now =
-          highlight_window(annotation.arrow.low, annotation.arrow.high, begin, share, span);
-      float2 start = highlight_window(opened.x, opened.y, begin, share, span);
-      float2 end = highlight_window(closed.x, closed.y, begin, share, span);
-      float from = min(now.x, min(start.x, end.x));
-      float to = max(now.y, max(start.y, end.y));
-      if (to <= from || height <= 0.0) continue;
-      float reach = height + halo + feather + 1.0;
-      if (point.y < low.y - reach || point.y > high.y + reach ||
-          point.x < low.x + from - reach || point.x > low.x + to + reach)
-        continue;
-      // Whether its top and its bottom lie under a neighbouring band, as the
-      // strokes laid over a box do.
-      float2 joined = float2(
-          band > 0u && origin.y + float2(points[at - 1u]).y * unit.y > low.y ? 1.0 : 0.0,
-          band + 1u < pairs && origin.y + float2(points[at + 2u]).y * unit.y < high.y ? 1.0
-                                                                                      : 0.0);
-      uint stroke = seed ^ (band * 0x9e3779b9u);
-      float slant = lean * (0.08 + highlight_random(stroke, 10u) * 0.32);
-      if ((taps == 0u || halo > 0.0) && now.y > now.x) {
-        float edge = highlight_line(point, low, high, now, joined, hand, stroke, slant);
-        nearest = min(nearest, edge);
-        if (taps == 0u) {
-          coverage = max(coverage, annotation_edge(edge, feather));
-          continue;
-        }
-      }
-      if (taps == 0u) continue;
-      // More than two line heights inside every sample's ends, every sample
-      // draws this pixel alike, so the last stands for them all.
-      float along = point.x - low.x;
-      float margin = height * 2.0 + feather + 1.0;
-      float line_coverage = 0.0;
-      if (along > max(start.x, end.x) + margin && along < min(start.y, end.y) - margin) {
-        float edge = highlight_line(point, low, high, end, joined, hand, stroke, slant);
-        line_coverage = annotation_edge(edge, feather) * opacity;
-      } else {
-        for (uint tap = 0u; tap < taps; ++tap) {
-          const device AnnotationSample &sample = samples[annotation.sample_offset + tap];
-          float2 window = highlight_window(sample.arrow.low, sample.arrow.high, begin, share, span);
-          if (window.y <= window.x) continue;
-          float edge = highlight_line(point, low, high, window, joined, hand, stroke, slant);
-          line_coverage += annotation_edge(edge, feather) * sample.opacity;
-        }
-        line_coverage /= float(taps);
-      }
-      coverage = max(coverage, line_coverage);
-    }
-    if (halo > 0.0 && nearest < 1e19) {
-      // The ruler's hover halo, hugging the bands from the edge outwards.
-      float ring = (1.0 - annotation_edge(nearest, feather)) *
-          annotation_edge(nearest - halo, feather);
-      float alpha = ring * colour.a * annotation_hover_alpha;
-      rgba.rgb = colour.rgb * alpha + rgba.rgb * (1.0 - alpha);
-      rgba.a = alpha + rgba.a * (1.0 - alpha);
-    }
-    if (coverage <= 0.0) continue;
-    float alpha = coverage * colour.a;
-    rgba.rgb = highlight_recolour(base.rgb, colour.rgb, tone) * alpha + rgba.rgb * (1.0 - alpha);
-    rgba.a = alpha + rgba.a * (1.0 - alpha);
+    rgba = annotation_highlight_layer(rgba, base, annotation, point, feather, points, samples);
   }
   return rgba;
 }

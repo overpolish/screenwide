@@ -3,16 +3,21 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { resizeRecordingAnnotationClip } from "../recording-annotation-geometry";
 import {
-  moveRecordingAnnotationClip,
-  resizeRecordingAnnotationClip,
-} from "../recording-annotation-geometry";
-import { RecordingAnnotationClip } from "../recording-annotations";
+  RecordingAnnotationClip,
+  renumberedAnnotationClips,
+} from "../recording-annotations";
 import {
   RecordingTimelineEdit,
   recordingTimelineSourceToOutput,
 } from "../recording-timeline-edit";
 
+import {
+  carriedAxes,
+  carriedClips,
+  previewedWhole,
+} from "./recording-annotation-drag-draft";
 import { SeekHandler } from "./timeline-seek";
 import {
   beginTimelineSnapGesture,
@@ -28,35 +33,18 @@ import {
 } from "./timeline-viewport";
 
 type Edge = "startMs" | "endMs";
-
-/**
- * The clips as the preview should show them while `id` is being dragged: that
- * annotation drawn whole rather than at the reveal its clip's bounds put it at.
- *
- * A trim handle sits exactly where the annotation is arriving or leaving, so
- * the frame it seeks to is the one frame where the annotation is barely there -
- * which is no use at all for deciding where the handle belongs. Marking the
- * clip as not animated is how an annotation is drawn whole everywhere else, and
- * it is the preview's own copy: the list that reaches the document keeps its
- * animation.
- */
-export const previewedWhole = (
-  clips: RecordingAnnotationClip[],
-  id: string,
-): RecordingAnnotationClip[] =>
-  clips.map((clip) =>
-    clip.annotation.id === id && clip.annotation.animated
-      ? { ...clip, annotation: { ...clip.annotation, animated: false } }
-      : clip,
-  );
 type Drag = {
   edge: Edge | "body";
   id: string;
+  /** Where the pointer last was, for a Shift press to resample. */
+  last: { x: number; y: number };
   moved: boolean;
   original: RecordingAnnotationClip[];
   snap: TimelineSnapGesture;
   startX: number;
+  startY: number;
 };
+
 export function useRecordingAnnotationDrag({
   clips,
   edit,
@@ -86,12 +74,14 @@ export function useRecordingAnnotationDrag({
   // The window listeners are installed once per gesture while the sample
   // handler below is rebuilt every render, so they reach it through a ref
   // rather than closing over the render that started the drag.
-  const updateRef = useRef<(clientX: number) => void>(() => undefined);
+  const updateRef = useRef<
+    (clientX: number, clientY: number, shiftKey: boolean) => void
+  >(() => undefined);
+  // A carried clip is previewed as it will play, reveal and all, so the
+  // frame under the playhead follows it through time. A trim seeks the
+  // preview itself, drawing the annotation whole at the handle.
   useEffect(() => {
-    const drag = dragRef.current;
-    onPreview?.(
-      drag?.edge === "body" && draft ? previewedWhole(draft, drag.id) : null,
-    );
+    onPreview?.(dragRef.current?.edge === "body" ? draft : null);
   }, [draft, onPreview]);
   useEffect(
     () => () => {
@@ -146,7 +136,9 @@ export function useRecordingAnnotationDrag({
 
   /**
    * Takes a press on a clip or one of its edges and owns the gesture until
-   * the pointer is released.
+   * the pointer is released. A clip's body carried sideways moves it in time
+   * and carried up or down moves it through the drawing order, a row at a
+   * time.
    *
    * The moves and the release are listened for on the window rather than on
    * the element pressed. The lane restacks its clips as they are dragged -
@@ -157,10 +149,12 @@ export function useRecordingAnnotationDrag({
    */
   const beginDrag = ({
     clientX,
+    clientY,
     edge,
     id,
   }: {
     clientX: number;
+    clientY: number;
     edge: Edge | "body";
     id: string;
   }) => {
@@ -168,6 +162,7 @@ export function useRecordingAnnotationDrag({
     dragRef.current = {
       edge,
       id,
+      last: { x: clientX, y: clientY },
       moved: false,
       original: clips,
       snap: beginTimelineSnapGesture(snap, {
@@ -176,16 +171,23 @@ export function useRecordingAnnotationDrag({
         threshold: 0,
       }),
       startX: clientX,
+      startY: clientY,
     };
     draftRef.current = clips;
     movedRef.current = false;
     setDraft(clips);
     const move = (event: PointerEvent) => {
-      updateRef.current(event.clientX);
+      updateRef.current(event.clientX, event.clientY, event.shiftKey);
+    };
+    // Shift pressed or let go with the pointer still takes effect at once.
+    const shift = (event: KeyboardEvent) => {
+      const last = dragRef.current?.last;
+      if (event.key === "Shift" && last)
+        updateRef.current(last.x, last.y, event.shiftKey);
     };
     const release = (event: PointerEvent) => {
       detachRef.current();
-      updateRef.current(event.clientX);
+      updateRef.current(event.clientX, event.clientY, event.shiftKey);
       const next = draftRef.current;
       const moved = movedRef.current;
       reset(true);
@@ -199,16 +201,24 @@ export function useRecordingAnnotationDrag({
       window.removeEventListener("pointermove", move, true);
       window.removeEventListener("pointerup", release, true);
       window.removeEventListener("pointercancel", abandon, true);
+      window.removeEventListener("keydown", shift, true);
+      window.removeEventListener("keyup", shift, true);
     };
     window.addEventListener("pointermove", move, true);
     window.addEventListener("pointerup", release, true);
     window.addEventListener("pointercancel", abandon, true);
+    window.addEventListener("keydown", shift, true);
+    window.addEventListener("keyup", shift, true);
   };
-  const update = (clientX: number) => {
+  const update = (clientX: number, clientY: number, shiftKey: boolean) => {
     const drag = dragRef.current;
     const bounds = laneRef.current?.getBoundingClientRect();
     if (!drag || !bounds) return;
-    if (!drag.moved && Math.abs(clientX - drag.startX) < 4) return;
+    drag.last = { x: clientX, y: clientY };
+    const travelled =
+      Math.abs(clientX - drag.startX) >= 4 ||
+      (drag.edge === "body" && Math.abs(clientY - drag.startY) >= 4);
+    if (!drag.moved && !travelled) return;
     if (!drag.moved && drag.edge === "body") onSelect(drag.id);
     drag.moved = true;
     movedRef.current = true;
@@ -226,23 +236,26 @@ export function useRecordingAnnotationDrag({
         edit,
         clip.endMs / sourceDurationMs,
       );
-      const shift = (clientX - drag.startX) / (viewport.zoom * bounds.width);
-      const snapped = timelineSnapRangeShift(
-        drag.snap,
-        start + shift,
-        end + shift,
+      const axes = carriedAxes(
+        clientX - drag.startX,
+        clientY - drag.startY,
+        shiftKey,
       );
+      const shift = axes.time
+        ? (clientX - drag.startX) / (viewport.zoom * bounds.width)
+        : 0;
+      const snapped = axes.time
+        ? timelineSnapRangeShift(drag.snap, start + shift, end + shift)
+        : null;
       drag.snap.showGuide(snapped?.target ?? null);
-      const next = drag.original.map((item) =>
-        item.annotation.id === drag.id
-          ? moveRecordingAnnotationClip({
-              clip,
-              deltaOutput: shift + (snapped?.shift ?? 0),
-              edit,
-              sourceDurationMs,
-            })
-          : item,
-      );
+      const next = carriedClips({
+        deltaOutput: shift + (snapped?.shift ?? 0),
+        edit,
+        id: drag.id,
+        lift: axes.order ? drag.startY - clientY : 0,
+        original: drag.original,
+        sourceDurationMs,
+      });
       draftRef.current = next;
       setDraft(next);
       return;
@@ -250,14 +263,17 @@ export function useRecordingAnnotationDrag({
     const reached = timelineXToFraction(clientX, viewport, bounds);
     const target = nearestTimelineSnapTarget(drag.snap, reached);
     drag.snap.showGuide(target);
-    const next = resizeRecordingAnnotationClip({
-      clips: drag.original,
-      edge: drag.edge,
-      edit,
-      id: drag.id,
-      output: target ?? reached,
-      sourceDurationMs,
-    });
+    const next = renumberedAnnotationClips(
+      resizeRecordingAnnotationClip({
+        clips: drag.original,
+        edge: drag.edge,
+        edit,
+        id: drag.id,
+        output: target ?? reached,
+        sourceDurationMs,
+      }),
+      drag.original,
+    );
     draftRef.current = next;
     setDraft(next);
     const edgeClip = next.find((item) => item.annotation.id === drag.id);

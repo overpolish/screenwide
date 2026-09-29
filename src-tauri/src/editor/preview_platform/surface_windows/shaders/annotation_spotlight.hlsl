@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // The shade a layer's spotlights cast. Every spotlight showing cuts its hole
-// in one shared shade, which darkens what is under it by a fixed share. The
+// in one shared shade, which darkens what is under it by a fixed share;
+// `composite_annotation_layers` lays it where the topmost spotlight sits. The
 // HLSL twin of `gpu_compositor_macos_shader_source_annotation_spotlight.h`,
 // and like it the arithmetic is Rust's `spotlight::geometry::{light, shade}`.
 // Every number it reads was prepared by `spotlight::geometry::prepare_spotlight`.
@@ -58,13 +59,4 @@ float annotation_spotlight_cover(float2 probe, uint first, uint last, float feat
     lit = max(lit, presence * annotation_spotlight_light(shape, probe, pixel));
   }
   return max(layer - lit, 0.0);
-}
-
-// `rgba`, premultiplied, under the shade the spotlights between `first` and
-// `last` cast at `canvas_point`.
-float4 composite_spotlights(float4 rgba, float2 canvas_point, uint first, uint last,
-                            float feather) {
-  float shade = annotation_spotlight_cover(canvas_point, first, last, feather, false);
-  rgba.rgb *= 1.0 - annotation_spotlight_dim * shade;
-  return rgba;
 }

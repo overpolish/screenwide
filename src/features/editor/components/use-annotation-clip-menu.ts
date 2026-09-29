@@ -6,8 +6,17 @@ import {
   PopupMenuAnchor,
   usePopupMenu,
 } from "../../popup-panel/use-popup-menu";
-import { pinCorrections } from "../recording-annotation-pins";
-import { RecordingAnnotationClip } from "../recording-annotations";
+import { availableArrangements, arranged } from "../annotation-order";
+import { isPinnable, pinCorrections } from "../recording-annotation-pins";
+import {
+  RecordingAnnotationClip,
+  recordingAnnotationClipsMeet,
+} from "../recording-annotations";
+
+import {
+  annotationArrangeItems,
+  annotationArrangementPicked,
+} from "./annotation-arrange-items";
 
 const MENU_WIDTH = 200;
 
@@ -34,19 +43,26 @@ const SECTION = "Tracking";
 
 /**
  * A right click on an annotation, on its clip or on the picture, or its clip's
- * menu key, answered with the app's own menu, under a Tracking heading: pin
- * it to the content or let it go, say its content is out of view from here or
- * back in view, and take its corrections away when it has any. The panel draws
- * no disabled rows, so an action is left out until it applies.
+ * menu key, answered with the app's own menu. Under an Arrange heading it
+ * moves the annotation through the drawing order, past the clips showing at
+ * the same time as it; under a Tracking heading it pins the annotation to the
+ * content or lets it go, says its content is out of view from here or back in
+ * view, and takes its corrections away when it has any. The panel draws no
+ * disabled rows, so an action is left out until it applies, and a menu with
+ * nothing in it does not open.
  *
  * Every mounted menu hears every pick under its prefix, so each place that
  * opens this menu names it with a prefix of its own.
  */
 export function useAnnotationClipMenu({
+  clips,
   idPrefix,
+  onClipsChange,
   pinning,
 }: {
+  clips: RecordingAnnotationClip[];
   idPrefix: string;
+  onClipsChange: (clips: RecordingAnnotationClip[]) => void;
   pinning: AnnotationClipPinning | undefined;
 }) {
   const openMenu = usePopupMenu({
@@ -54,7 +70,19 @@ export function useAnnotationClipMenu({
     label: "Annotation actions",
     mode: "menu",
     onSelect: (itemId, annotationId) => {
-      if (itemId === "pin") pinning?.onPinnedChange(annotationId, true);
+      const arrangement = annotationArrangementPicked(itemId);
+      if (arrangement) {
+        const index = clips.findIndex(
+          (clip) => clip.annotation.id === annotationId,
+        );
+        if (index >= 0)
+          onClipsChange(
+            arranged(clips, index, {
+              arrangement,
+              meets: recordingAnnotationClipsMeet,
+            }),
+          );
+      } else if (itemId === "pin") pinning?.onPinnedChange(annotationId, true);
       else if (itemId === "unpin") pinning?.onPinnedChange(annotationId, false);
       else if (itemId === "hide") pinning?.onHideHere(annotationId);
       else if (itemId === "show") pinning?.onShowHere(annotationId);
@@ -64,24 +92,34 @@ export function useAnnotationClipMenu({
   });
 
   return (anchor: PopupMenuAnchor, clip: RecordingAnnotationClip) => {
-    if (!pinning) return;
     const id = clip.annotation.id;
-    const items: PopupPanelItem[] = (
-      clip.pin
-        ? [
-            ...(pinning.canHideHere(id)
-              ? [{ id: "hide", label: "Content Out of View" }]
-              : []),
-            ...(pinning.canShowHere(id)
-              ? [{ id: "show", label: "Content Back in View" }]
-              : []),
-            ...(pinCorrections(clip.pin) > 0
-              ? [{ id: "clear", label: "Clear Corrections" }]
-              : []),
-            { id: "unpin", label: "Unpin" },
-          ]
-        : [{ id: "pin", label: "Pin to Content" }]
-    ).map((item) => ({ ...item, section: SECTION }));
+    const index = clips.findIndex((item) => item.annotation.id === id);
+    const tracking: PopupPanelItem[] =
+      pinning && isPinnable(clip)
+        ? clip.pin
+          ? [
+              ...(pinning.canHideHere(id)
+                ? [{ id: "hide", label: "Content Out of View" }]
+                : []),
+              ...(pinning.canShowHere(id)
+                ? [{ id: "show", label: "Content Back in View" }]
+                : []),
+              ...(pinCorrections(clip.pin) > 0
+                ? [{ id: "clear", label: "Clear Corrections" }]
+                : []),
+              { id: "unpin", label: "Unpin" },
+            ]
+          : [{ id: "pin", label: "Pin to Content" }]
+        : [];
+    const items = [
+      ...(index >= 0
+        ? annotationArrangeItems(
+            availableArrangements(clips, index, recordingAnnotationClipsMeet),
+          )
+        : []),
+      ...tracking.map((item) => ({ ...item, section: SECTION })),
+    ];
+    if (items.length === 0) return;
     return openMenu({ anchor, context: id, items });
   };
 }

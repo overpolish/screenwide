@@ -67,8 +67,8 @@ pub async fn start_recording_preview_player(
       }));
       let menu_app = app.clone();
       surface.set_context_menu_callback(Box::new(move |pane_index, annotation, x, y| {
-        // A press on an annotation opens its own menu. One on the camera's
-        // opens nothing: only the screen's annotations can be pinned.
+        // A press on an annotation opens its own menu, on either pane: the
+        // menu offers what applies to it.
         let annotation_id = match annotation {
           None => None,
           Some(index) => {
@@ -77,8 +77,8 @@ pub async fn start_recording_preview_player(
               return;
             };
             match manager.annotation_targets().into_iter().nth(index as usize) {
-              Some((0, annotation)) => Some(annotation.id),
-              _ => return,
+              Some((_, annotation)) => Some(annotation.id),
+              None => return,
             }
           }
         };

@@ -34,9 +34,9 @@ export function useAnnotations({
   const selected =
     annotations.find((annotation) => annotation.id === selectedId) ?? null;
 
-  // Counters are numbered by their place in the list, so every list this hook
-  // writes is renumbered on the way out: a delete closes the gap it leaves
-  // rather than leaving 1 and 3 behind.
+  // Counters keep the numbers they were given, so every list this hook writes
+  // is renumbered on the way out only to close the gaps: a delete leaves 1
+  // and 2 behind rather than 1 and 3.
   const commit = (next: Annotation[]) => {
     onCommit(renumberedCounters(next));
   };

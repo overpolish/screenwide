@@ -50,4 +50,18 @@ describe("the editor's tool keys", () => {
     for (const { shortcut } of EDITOR_TOOL_SHORTCUTS)
       expect(editorToolKeyAction(`Key${shortcut}`, others)).toBeNull();
   });
+
+  it("gives a letter with Shift to the setting beside the tool, never the tool", () => {
+    const keys = {
+      onToggleRangeTool: vi.fn(),
+      onToggleSnap: vi.fn(),
+      onTool: vi.fn(),
+    };
+    editorToolKeyAction("KeyS", keys, true)?.();
+    editorToolKeyAction("KeyR", keys, true)?.();
+    expect(keys.onToggleSnap).toHaveBeenCalledOnce();
+    expect(keys.onToggleRangeTool).toHaveBeenCalledOnce();
+    expect(keys.onTool).not.toHaveBeenCalled();
+    expect(editorToolKeyAction("KeyA", keys, true)).toBeNull();
+  });
 });

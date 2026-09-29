@@ -68,6 +68,18 @@ export function useRecordingPreviewShortcuts({
     canMoveActiveVideoTrack &&
     !annotations.hasSelection;
   useEditorWindowShortcuts({
+    // A chosen annotation moves through the drawing order; with none in hand
+    // the active video layer moves, and with two layers the front or the
+    // back is one step away.
+    onArrange:
+      annotations.hasSelection || canMoveActiveVideoTrack
+        ? (move) => {
+            if (annotations.arrangeSelected(move)) return;
+            if (move === "forward" || move === "front")
+              moveActiveVideoTrackForward();
+            else moveActiveVideoTrackBackward();
+          }
+        : undefined,
     onConfirm: isCropping ? leaveCropTool : undefined,
     onDelete: annotations.canDelete ? annotations.deleteTargeted : undefined,
     onDeselect: annotations.hasSelection
@@ -75,12 +87,6 @@ export function useRecordingPreviewShortcuts({
       : isCropping
         ? leaveCropTool
         : undefined,
-    onMoveBackward: canMoveActiveVideoTrack
-      ? moveActiveVideoTrackBackward
-      : undefined,
-    onMoveForward: canMoveActiveVideoTrack
-      ? moveActiveVideoTrackForward
-      : undefined,
     onNudge: canNudgeActiveTrack ? nudgeActiveTrack : undefined,
     onResizeCanvas: canResizeActiveTrack ? toggleTool.canvas : undefined,
     onSelectTool: hasVisiblePanes ? toggleTool.select : undefined,

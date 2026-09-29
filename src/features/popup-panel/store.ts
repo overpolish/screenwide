@@ -24,7 +24,8 @@ export type PopupPanelItem = {
    * without one sit in an unheaded group. */
   section?: string;
   /** The key that does the same as this item, drawn as a shortcut hint at
-   * the trailing edge the way a menu shows one. */
+   * the trailing edge the way a menu shows one, in the hotkey format
+   * Settings stores (`Shift+]`), so each platform names its own modifiers. */
   shortcut?: string;
   /** A toggle in a single-selection list: a press flips its tick and leaves
    * the panel open, so several can be set in one visit. */

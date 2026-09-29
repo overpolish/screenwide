@@ -43,6 +43,51 @@ fn cancelling_a_new_arrow_restores_the_original_list() {
   assert_eq!(annotations, original);
 }
 
+/// A fresh highlight goes under what is drawn over the page, a fresh spotlight
+/// over the highlights and under the rest, and anything else on top, whatever
+/// order the tools are picked up in.
+#[test]
+fn a_fresh_annotation_takes_the_place_its_kind_is_drawn_at() {
+  let mut annotations = vec![new_arrow(
+    "a".to_owned(),
+    point(0.0, 0.0),
+    point(100.0, 0.0),
+    None,
+  )];
+  for kind in [
+    AnnotationKind::Spotlight,
+    AnnotationKind::Highlight,
+    AnnotationKind::Arrow,
+    AnnotationKind::Spotlight,
+  ] {
+    AnnotationEdit::begin(
+      &mut annotations,
+      AnnotationGestureTarget::New,
+      point(10.0, 10.0),
+      None,
+      Some(kind),
+      None,
+      0.0,
+    )
+    .unwrap();
+  }
+  let kinds: Vec<_> = annotations
+    .iter()
+    .map(|annotation| annotation.shape.kind())
+    .collect();
+  assert_eq!(
+    kinds,
+    [
+      AnnotationKind::Highlight,
+      AnnotationKind::Spotlight,
+      AnnotationKind::Spotlight,
+      AnnotationKind::Arrow,
+      AnnotationKind::Arrow,
+    ]
+  );
+  assert_eq!(annotations[3].id, "a");
+}
+
 /// A fresh text box is centred on the press, so its caret starts under the
 /// hand, and a drag while it is being placed keeps it centred there.
 #[test]

@@ -214,7 +214,10 @@ pub(super) fn handle_at_point(state: &SurfaceState, point: (f64, f64)) -> Option
 /// tolerance around it: the arrow is picked, and haloed, exactly where it is
 /// painted, which is what keeps the halo off the space beside an annotation.
 /// A shape or a stroke grabbed by its inside is `redact_chrome::grabs_inside`'s
-/// call.
+/// call, and what is drawn wins over an inside, whatever the stacking: a
+/// press on an annotation seen through a shape in front picks that
+/// annotation, and only a press on nothing drawn falls to the inside it
+/// lands in.
 ///
 /// The pen picks nothing up, so every press under it draws. A stroke is picked
 /// by the select tool alone: another drawing tool that chose one would hand
@@ -226,27 +229,30 @@ pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<
     return None;
   }
   let chrome = super::redact_chrome::grabs_inside;
-  state
-    .annotation
-    .handles
-    .iter()
-    .enumerate()
-    .rev()
-    .filter(|(_, item)| item.shape_kind() != AnnotationKind::Draw || mode == MODE_SELECT)
-    .find(|(index, item)| {
-      layer_image_rect(state, item.layer_id).is_some_and(|image| {
-        let whole = chrome(state, *index, item);
-        let distance = if item.shape_kind() == AnnotationKind::Draw {
-          draw_distance(state, image, item, point, whole)
-        } else if whole {
-          super::redact_chrome::shape_body_distance(image, item, point)
-        } else {
-          arrow_distance(image, item, point)
-        };
-        distance <= 0.0
+  let pick = |insides: bool| {
+    state
+      .annotation
+      .handles
+      .iter()
+      .enumerate()
+      .rev()
+      .filter(|(_, item)| item.shape_kind() != AnnotationKind::Draw || mode == MODE_SELECT)
+      .filter(|(index, item)| !insides || chrome(state, *index, item))
+      .find(|(_, item)| {
+        layer_image_rect(state, item.layer_id).is_some_and(|image| {
+          let distance = if item.shape_kind() == AnnotationKind::Draw {
+            draw_distance(state, image, item, point, insides)
+          } else if insides {
+            super::redact_chrome::shape_body_distance(image, item, point)
+          } else {
+            arrow_distance(image, item, point)
+          };
+          distance <= 0.0
+        })
       })
-    })
-    .map(|(index, _)| index)
+      .map(|(index, _)| index)
+  };
+  pick(false).or_else(|| pick(true))
 }
 
 #[cfg(test)]

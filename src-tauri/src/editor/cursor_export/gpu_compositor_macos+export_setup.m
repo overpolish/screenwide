@@ -165,9 +165,8 @@ reader_output(AVAssetReader *reader, AVAssetTrack *track, OSType format,
       device, library, @"overlay_keyboard_luma", &error);
   keyboard_chroma_pipeline = screenwide_keyboard_pipeline(
       device, library, @"overlay_keyboard_chroma", &error);
-  annotation_luma_pipeline = screenwide_keyboard_pipeline(device, library, @"overlay_annotation_luma", &error);
-  annotation_chroma_pipeline = screenwide_keyboard_pipeline(device, library, @"overlay_annotation_chroma", &error);
-  highlight_pipeline = screenwide_keyboard_pipeline(device, library, @"highlight_video", &error);
+  annotation_pipeline =
+      screenwide_keyboard_pipeline(device, library, @"annotation_layers_video", &error);
   redact_pipelines = screenwide_redact_pipelines(library);
   camera_luma_pipeline =
       [device newComputePipelineStateWithFunction:
@@ -206,8 +205,7 @@ reader_output(AVAssetReader *reader, AVAssetTrack *track, OSType format,
       camera_chroma_pipeline == nil || queue == nil ||
       canvas_luma_pipeline == nil || canvas_chroma_pipeline == nil ||
       screen_luma_pipeline == nil || screen_chroma_pipeline == nil ||
-      annotation_luma_pipeline == nil || annotation_chroma_pipeline == nil ||
-      highlight_pipeline == nil || redact_pipelines == nil ||
+      annotation_pipeline == nil || redact_pipelines == nil ||
       texture_cache == NULL)
     return fail(error_text, error_capacity,
                 error.localizedDescription

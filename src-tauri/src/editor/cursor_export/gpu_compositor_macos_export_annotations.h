@@ -37,38 +37,18 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
     }
   }
   if (annotations.count == 0) return;
-  // Spotlights shade what is under them and highlights recolour it, so they
-  // are written first, from both planes at once, and every other annotation
-  // is drawn over them.
-  BOOL recoloured = NO;
-  for (uint32_t i = 0; i < annotations.count; i++)
-    recoloured |= showing[i].kind == SCREENWIDE_ANNOTATION_HIGHLIGHT ||
-                  showing[i].kind == SCREENWIDE_ANNOTATION_SPOTLIGHT;
-  if (recoloured) {
-    id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
-    [encoder setComputePipelineState:session->highlight_pipeline];
-    [encoder setTexture:luma atIndex:0];
-    [encoder setTexture:chroma atIndex:1];
-    [encoder setBytes:session->canvas length:sizeof(*session->canvas) atIndex:0];
-    screenwide_bind_annotations(encoder, &annotations, session->canvas, source_width,
-                                source_height, 1.0f);
-    [encoder setBytes:&above length:sizeof(above) atIndex:14];
-    [encoder setBytes:&redo length:sizeof(redo) atIndex:20];
-    [encoder dispatchThreads:MTLSizeMake(chroma.width, chroma.height, 1)
-        threadsPerThreadgroup:MTLSizeMake(16, 16, 1)];
-    [encoder endEncoding];
-  }
-  for (int plane = 0; plane < 2; plane++) {
-    id<MTLTexture> texture = plane == 0 ? luma : chroma;
-    id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
-    [encoder setComputePipelineState:plane == 0 ? session->annotation_luma_pipeline : session->annotation_chroma_pipeline];
-    [encoder setTexture:texture atIndex:0];
-    [encoder setBytes:session->canvas length:sizeof(*session->canvas) atIndex:0];
-    screenwide_bind_annotations(encoder, &annotations, session->canvas, source_width,
-                                source_height, 1.0f);
-    [encoder setBytes:&above length:sizeof(above) atIndex:14];
-    [encoder dispatchThreads:MTLSizeMake(texture.width, texture.height, 1)
-        threadsPerThreadgroup:MTLSizeMake(16, 16, 1)];
-    [encoder endEncoding];
-  }
+  // Highlights and spotlights change what is under them, so the pass reads
+  // both planes at once and draws the whole list over them in document order.
+  id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
+  [encoder setComputePipelineState:session->annotation_pipeline];
+  [encoder setTexture:luma atIndex:0];
+  [encoder setTexture:chroma atIndex:1];
+  [encoder setBytes:session->canvas length:sizeof(*session->canvas) atIndex:0];
+  screenwide_bind_annotations(encoder, &annotations, session->canvas, source_width,
+                              source_height, 1.0f);
+  [encoder setBytes:&above length:sizeof(above) atIndex:14];
+  [encoder setBytes:&redo length:sizeof(redo) atIndex:20];
+  [encoder dispatchThreads:MTLSizeMake(chroma.width, chroma.height, 1)
+      threadsPerThreadgroup:MTLSizeMake(16, 16, 1)];
+  [encoder endEncoding];
 }

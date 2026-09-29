@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { freshAnnotationIndex } from "./annotation-order";
 import {
   AnnotationFrame,
   annotationDrawInMs,
@@ -51,15 +52,24 @@ export type RecordingAnnotationClip = {
   pin?: RecordingAnnotationPin;
 };
 
+/** Whether two clips are ever showing at once, and so drawn one over the
+ * other: what a move through the drawing order passes. */
+export const recordingAnnotationClipsMeet = (
+  a: RecordingAnnotationClip,
+  b: RecordingAnnotationClip,
+) => a.startMs < b.endMs && b.startMs < a.endMs;
+
 /**
- * The clips with their counters numbered 1, 2, 3 in the order they appear on
- * the timeline.
+ * The clips with their counters numbered 1, 2, 3 in the order their clips
+ * start on the timeline.
  *
  * A counter counts what the viewer sees, and on a timeline that order is time:
  * dragging the second counter's clip in front of the first makes it the first.
- * Two clips starting on the same frame keep the order they were drawn in, which
- * is the order they are stored in - the earlier annotation wins the lower
- * number rather than the pair flickering between them.
+ * Only the numbers follow time; where a counter sits in the drawing order is
+ * its own, so reordering it renumbers nothing. Counters starting on the same
+ * frame keep the order of the numbers they already had, a fresh one - any
+ * not among `previous` - after the rest, so a tie never flips as the drawing
+ * order changes.
  *
  * The numbering is derived rather than kept, so a drag, a trim, an undo and a
  * delete all land on the same numbers without any of them knowing about
@@ -67,11 +77,29 @@ export type RecordingAnnotationClip = {
  */
 export const renumberedAnnotationClips = (
   clips: RecordingAnnotationClip[],
+  previous: RecordingAnnotationClip[],
 ): RecordingAnnotationClip[] => {
+  const known = new Set(previous.map((clip) => clip.annotation.id));
   const order = clips
-    .map((clip, index) => ({ clip, index }))
-    .filter(({ clip }) => clip.annotation.shape.kind === "counter")
-    .sort((a, b) => a.clip.startMs - b.clip.startMs || a.index - b.index);
+    .flatMap((clip, index) =>
+      clip.annotation.shape.kind === "counter"
+        ? [
+            {
+              fresh: known.has(clip.annotation.id) ? 0 : 1,
+              index,
+              startMs: clip.startMs,
+              value: clip.annotation.shape.value,
+            },
+          ]
+        : [],
+    )
+    .sort(
+      (a, b) =>
+        a.startMs - b.startMs ||
+        a.fresh - b.fresh ||
+        a.value - b.value ||
+        a.index - b.index,
+    );
   const values = new Map(order.map(({ index }, place) => [index, place + 1]));
   const numbered = clips.map((clip, index) => {
     const value = values.get(index);
@@ -138,17 +166,22 @@ export const mergeRecordingAnnotationClips = ({
   });
   const known = new Set(next.map((clip) => clip.annotation.id));
   for (const annotation of annotations) {
-    if (!known.has(annotation.id))
-      next.push(
-        recordingAnnotationClipAt({
-          annotation,
-          edit,
-          frame,
-          sourceDurationMs,
-          sourcePositionMs: positionMs,
-          trackId,
-        }),
-      );
+    if (known.has(annotation.id)) continue;
+    next.splice(
+      freshAnnotationIndex(
+        next.map((clip) => clip.annotation.shape.kind),
+        annotation.shape.kind,
+      ),
+      0,
+      recordingAnnotationClipAt({
+        annotation,
+        edit,
+        frame,
+        sourceDurationMs,
+        sourcePositionMs: positionMs,
+        trackId,
+      }),
+    );
   }
   return next;
 };

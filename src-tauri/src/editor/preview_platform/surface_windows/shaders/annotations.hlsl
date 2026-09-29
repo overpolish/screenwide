@@ -440,87 +440,110 @@ float4 annotation_redact_halo(float4 rgba, PreviewArrow annotation, float2 canva
   return rgba;
 }
 
-/// Draws the prepared annotations in `[first, last)` over `rgba`.
-///
-/// The range is how the camera ordering is expressed: Rust sorts the
-/// annotations that sit under the camera ahead of those above it, so each pass
-/// draws one contiguous run rather than testing a flag per annotation per
-/// pixel.
+/// Draws one prepared annotation over `rgba`, whatever its kind but a
+/// highlight, which recolours what is under it in `annotation_highlight_layer`
+/// instead.
 ///
 /// Annotations are deliberately not clipped to the crop: an arrow may point in
 /// from the padding. `feather` is how wide an edge is smoothed, in canvas
 /// pixels, and `number_atlas` is where the counters' numbers and the text
 /// boxes' text were rasterised - a zero size where nothing rasterised any.
+float4 annotation_layer(float4 rgba, PreviewArrow annotation, float2 canvas_point,
+                        float feather, AnnotationTextAtlas number_atlas) {
+  PreviewGeometry arrow = annotation.geometry;
+  float4 color = float4(annotation.red, annotation.green, annotation.blue, annotation.alpha);
+  if (annotation.kind == 3u || annotation.kind == annotation_spotlight_kind)
+    return annotation_redact_halo(rgba, annotation, canvas_point, feather);
+  if (color.a <= 0.0 || arrow.width <= 0.0) return rgba;
+  float halo = max(annotation.hover, 0.0);
+  if (annotation.kind == 1u)
+    return annotation_counter_layer(rgba, annotation, color, canvas_point, feather, halo,
+                                    number_atlas);
+  if (annotation.kind == 2u)
+    return annotation_text_layer(rgba, annotation, color, canvas_point, feather, halo,
+                                 number_atlas);
+  if (annotation.kind == annotation_shape_kind)
+    return annotation_shape_layer(rgba, annotation, color, canvas_point, feather, halo);
+  if (annotation.kind == annotation_draw_kind)
+    return annotation_draw_layer(rgba, annotation, color, canvas_point, feather, halo);
+  float2 a = float2(arrow.ax, arrow.ay);
+  float2 b = float2(arrow.bx, arrow.by);
+  float2 c = float2(arrow.cx, arrow.cy);
+  // The curve lies inside the hull of its three points; the heads reach
+  // back from a tip and across it. One rectangle covers all of that, and
+  // keeps a long list cheap over most of the canvas.
+  float radius = arrow.width * 0.5;
+  float reach = radius * (arrow.head != 0u ? 9.0 : 1.0) + halo + feather + 1.0;
+  if (any(canvas_point < min(a, min(b, c)) - reach) ||
+      any(canvas_point > max(a, max(b, c)) + reach))
+    return rgba;
+  float2 distances = annotation_arrow_distance(canvas_point, arrow);
+  float distance = min(distances.x, distances.y);
+  if (halo > 0.0) {
+    // The ruler's hover halo: an outline stroke in the shape's own colour,
+    // hugging it from the edge outwards.
+    float band = (1.0 - annotation_edge(distance, feather)) *
+        annotation_edge(distance - halo, feather);
+    float halo_alpha = band * color.a * annotation_hover_alpha;
+    if (halo_alpha > 0.0) {
+      rgba.rgb = color.rgb * halo_alpha + rgba.rgb * (1.0 - halo_alpha);
+      rgba.a = halo_alpha + rgba.a * (1.0 - halo_alpha);
+    }
+  }
+  // A still frame draws the prepared arrow directly; a moving one averages
+  // the arrow over the exposure, head and shaft together.
+  float coverage = annotation.sample_count == 0u
+      ? max(annotation_edge(distances.x, feather), annotation_edge(distances.y, feather))
+      : annotation_exposure(canvas_point, annotation, feather);
+  if (coverage <= 0.0) return rgba;
+  float alpha = coverage * color.a;
+  rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
+  rgba.a = alpha + rgba.a * (1.0 - alpha);
+  return rgba;
+}
+
+/// Draws every annotation in `[first, last)` but the highlights over `rgba`:
+/// the live overlay's pass, which recolours its highlights under everything
+/// else in `composite_highlights`. The editor draws in document order through
+/// `composite_annotation_layers` instead.
 float4 composite_annotations(
     float4 rgba, float2 canvas_point, uint first, uint last, float feather,
     AnnotationTextAtlas number_atlas) {
   for (uint index = first; index < last; ++index) {
     PreviewArrow annotation = annotation_arrows[index];
-    PreviewGeometry arrow = annotation.geometry;
-    float4 color = float4(annotation.red, annotation.green, annotation.blue, annotation.alpha);
-    // Highlights recolour the pixel under them in `composite_highlights`, and
-    // spotlights shade it in `composite_spotlights`, before anything else is
-    // drawn over it.
     if (annotation.kind == annotation_highlight_kind) continue;
-    if (annotation.kind == 3u || annotation.kind == annotation_spotlight_kind) {
-      rgba = annotation_redact_halo(rgba, annotation, canvas_point, feather);
-      continue;
+    rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas);
+  }
+  return rgba;
+}
+
+/// Draws the prepared annotations in `[first, last)` over `rgba`, the first in
+/// the document at the bottom. A highlight recolours whatever is under it by
+/// then. The spotlights share one shade, laid where the topmost of them sits:
+/// it darkens the picture and every annotation below that spotlight, and
+/// nothing above it. The twin of the Metal `composite_annotation_layers`.
+///
+/// The range is how the camera ordering is expressed: Rust sorts the
+/// annotations that sit under the camera ahead of those above it, keeping the
+/// document's order within each, so each pass draws one contiguous run rather
+/// than testing a flag per annotation per pixel.
+float4 composite_annotation_layers(
+    float4 rgba, float2 canvas_point, uint first, uint last, float feather,
+    AnnotationTextAtlas number_atlas) {
+  uint shade_at = last;
+  for (uint probe = first; probe < last; ++probe)
+    if (annotation_arrows[probe].kind == annotation_spotlight_kind) shade_at = probe;
+  for (uint index = first; index < last; ++index) {
+    if (index == shade_at) {
+      float shade = annotation_spotlight_cover(canvas_point, first, last, feather, false);
+      rgba.rgb *= 1.0 - annotation_spotlight_dim * shade;
     }
-    if (color.a <= 0.0 || arrow.width <= 0.0) continue;
-    if (annotation.kind == 1u) {
-      rgba = annotation_counter_layer(rgba, annotation, color, canvas_point, feather,
-                                      max(annotation.hover, 0.0), number_atlas);
-      continue;
-    }
-    if (annotation.kind == 2u) {
-      rgba = annotation_text_layer(rgba, annotation, color, canvas_point, feather,
-                                   max(annotation.hover, 0.0), number_atlas);
-      continue;
-    }
-    if (annotation.kind == annotation_shape_kind) {
-      rgba = annotation_shape_layer(rgba, annotation, color, canvas_point, feather,
-                                    max(annotation.hover, 0.0));
-      continue;
-    }
-    if (annotation.kind == annotation_draw_kind) {
-      rgba = annotation_draw_layer(rgba, annotation, color, canvas_point, feather,
-                                   max(annotation.hover, 0.0));
-      continue;
-    }
-    float2 a = float2(arrow.ax, arrow.ay);
-    float2 b = float2(arrow.bx, arrow.by);
-    float2 c = float2(arrow.cx, arrow.cy);
-    // The curve lies inside the hull of its three points; the heads reach
-    // back from a tip and across it. One rectangle covers all of that, and
-    // keeps a long list cheap over most of the canvas.
-    float halo = max(annotation.hover, 0.0);
-    float radius = arrow.width * 0.5;
-    float reach = radius * (arrow.head != 0u ? 9.0 : 1.0) + halo + feather + 1.0;
-    if (any(canvas_point < min(a, min(b, c)) - reach) ||
-        any(canvas_point > max(a, max(b, c)) + reach))
-      continue;
-    float2 distances = annotation_arrow_distance(canvas_point, arrow);
-    float distance = min(distances.x, distances.y);
-    if (halo > 0.0) {
-      // The ruler's hover halo: an outline stroke in the shape's own colour,
-      // hugging it from the edge outwards.
-      float band = (1.0 - annotation_edge(distance, feather)) *
-          annotation_edge(distance - halo, feather);
-      float alpha = band * color.a * annotation_hover_alpha;
-      if (alpha > 0.0) {
-        rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
-        rgba.a = alpha + rgba.a * (1.0 - alpha);
-      }
-    }
-    // A still frame draws the prepared arrow directly; a moving one averages
-    // the arrow over the exposure, head and shaft together.
-    float coverage = annotation.sample_count == 0u
-        ? max(annotation_edge(distances.x, feather), annotation_edge(distances.y, feather))
-        : annotation_exposure(canvas_point, annotation, feather);
-    if (coverage <= 0.0) continue;
-    float alpha = coverage * color.a;
-    rgba.rgb = color.rgb * alpha + rgba.rgb * (1.0 - alpha);
-    rgba.a = alpha + rgba.a * (1.0 - alpha);
+    PreviewArrow annotation = annotation_arrows[index];
+    // FXC evaluates both sides of `?:`, so the kinds branch.
+    if (annotation.kind == annotation_highlight_kind)
+      rgba = annotation_highlight_layer(rgba, rgba, annotation, canvas_point, feather);
+    else
+      rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas);
   }
   return rgba;
 }

@@ -4,6 +4,7 @@
 import { useRef } from "react";
 
 import { useAnnotationDraft } from "../annotation-draft";
+import { Arrangement } from "../annotation-order";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
 import {
   scaledDimensions,
@@ -101,12 +102,12 @@ export function ScreenshotSection({
   useToolFollowsAnnotation(annotations.selectedKind, tool, setTool);
   const newestItemId = artifact.items[artifact.items.length - 1]?.id ?? null;
   const moveSelectedLayer = (
-    direction: "backward" | "forward",
+    arrangement: Arrangement,
     itemId = selectedItemId,
   ) => {
     if (!screenshotOutput || itemId === null) return;
     const next = moveScreenshotLayer({
-      direction,
+      arrangement,
       itemId,
       settings: screenshotOutput,
     });
@@ -221,6 +222,11 @@ export function ScreenshotSection({
   // through here, alongside the refresh a crop drag ends with.
   useRecenterInsetControls("screenshot", recenter);
   useEditorWindowShortcuts({
+    // A chosen annotation moves through its layer's stacking; with none in
+    // hand the layer itself moves.
+    onArrange: (move) => {
+      if (!annotations.arrangeSelected(move)) moveSelectedLayer(move);
+    },
     onConfirm: isCropping ? leaveCropTool : undefined,
     // Backspace and Delete take away the annotation the hand is pointing at
     // first, and only the layer when there is no annotation under them.
@@ -231,12 +237,6 @@ export function ScreenshotSection({
       isCropping || isAnnotating || hasSelectedAnnotation
         ? leaveModalTool
         : undefined,
-    onMoveBackward: () => {
-      moveSelectedLayer("backward");
-    },
-    onMoveForward: () => {
-      moveSelectedLayer("forward");
-    },
     onNudge:
       tool === "select" && selectedItem && selectedOutput
         ? nudgeSelectedLayer

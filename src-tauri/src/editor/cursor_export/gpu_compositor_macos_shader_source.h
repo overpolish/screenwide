@@ -13,8 +13,8 @@
 #import "gpu_compositor_macos_shader_source_annotation_composite.h"
 #import "gpu_compositor_macos_shader_source_annotation_highlight.h"
 #import "gpu_compositor_macos_shader_source_annotation_spotlight.h"
-#import "gpu_compositor_macos_shader_source_annotation_highlight_video.h"
-#import "gpu_compositor_macos_shader_source_annotation_video.h"
+#import "gpu_compositor_macos_shader_source_annotation_layers.h"
+#import "gpu_compositor_macos_shader_source_annotation_layers_video.h"
 #import "gpu_compositor_macos_shader_source_background.h"
 #import "gpu_compositor_macos_shader_source_composition.h"
 #import "gpu_compositor_macos_shader_source_cursor.h"
@@ -34,15 +34,14 @@
 /// `..._annotations.h`, the counter's in `..._annotation_counter.h`, the text
 /// box's in `..._annotation_text.h`, the shape tool's in
 /// `..._annotation_shape.h`, the draw tool's in `..._annotation_draw.h` -
-/// and `..._annotation_composite.h` is the one pass that branches over
-/// `AnnotationUniforms.kind`, drawn by both canvas kernels. A shape's source
-/// goes between the two. A redaction is the
-/// exception: `..._redact.h` applies it to the source before any canvas pass,
-/// and the composite pass only draws its hover halo. A highlight is the other:
-/// it recolours the pixel under it, so `..._annotation_highlight.h` is its own
-/// pass, which every kernel runs before the composite one. A spotlight's
-/// shade, in `..._annotation_spotlight.h`, is a pass of its own the same way,
-/// and its blur rides with the redactions.
+/// and `..._annotation_composite.h` is the one function that branches over
+/// `AnnotationUniforms.kind`. A shape's source goes between the two. A
+/// redaction is the exception: `..._redact.h` applies it to the source before
+/// any canvas pass, and the composite pass only draws its hover halo. A
+/// highlight recolours the pixel under it, in `..._annotation_highlight.h`,
+/// and the spotlights share one shade, in `..._annotation_spotlight.h`, whose
+/// blur rides with the redactions. `..._annotation_layers.h` walks the
+/// document in order over all of them, and every editor kernel draws through it.
 __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_TYPES
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_CURVE
@@ -54,7 +53,7 @@ __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_SPOTLIGHT
-    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_VIDEO
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_LAYERS
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_BACKGROUND
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_COMPOSITION
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_CURSOR
@@ -69,4 +68,4 @@ __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT_PAINT
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT_VIDEO
-    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT_VIDEO;
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_LAYERS_VIDEO;

@@ -7,7 +7,7 @@ import { MouseEvent, PointerEvent } from "react";
 import { boundsAnchor, pointerAnchor } from "../../popup-panel/use-popup-menu";
 import { annotationLaneLabel } from "../annotation-kinds";
 import { resizeRecordingAnnotationClip } from "../recording-annotation-geometry";
-import { isPinnable, withoutPinKeyframe } from "../recording-annotation-pins";
+import { withoutPinKeyframe } from "../recording-annotation-pins";
 import { RecordingAnnotationClip } from "../recording-annotations";
 import {
   RecordingTimelineEdit,
@@ -16,6 +16,7 @@ import {
 } from "../recording-timeline-edit";
 import { RecordingPinStatus } from "../use-recording-pin-status";
 
+import { previewedWhole } from "./recording-annotation-drag-draft";
 import { recordingAnnotationRows } from "./recording-annotation-layout";
 import {
   RecordingAnnotationPinBadge,
@@ -34,10 +35,7 @@ import {
   useAnnotationClipMenu,
 } from "./use-annotation-clip-menu";
 import { usePinKeyframeMenu } from "./use-pin-keyframe-menu";
-import {
-  previewedWhole,
-  useRecordingAnnotationDrag,
-} from "./use-recording-annotation-drag";
+import { useRecordingAnnotationDrag } from "./use-recording-annotation-drag";
 
 export function RecordingAnnotationLane({
   clips,
@@ -93,7 +91,9 @@ export function RecordingAnnotationLane({
   };
   const openKeyframeMenu = usePinKeyframeMenu(deleteKeyframe);
   const openClipMenu = useAnnotationClipMenu({
+    clips,
     idPrefix: "annotation-clip:",
+    onClipsChange: onChange,
     pinning,
   });
   return (
@@ -122,7 +122,6 @@ export function RecordingAnnotationLane({
             const selected = clip.annotation.id === selectedId;
             const status = pinStatus?.get(clip.annotation.id);
             const block = { edit, fragment, sourceDurationMs };
-            const pinnable = pinning !== undefined && isPinnable(clip);
             const clickBody = (event: MouseEvent) => {
               event.stopPropagation();
               if (movedRef.current) {
@@ -135,6 +134,7 @@ export function RecordingAnnotationLane({
               event.stopPropagation();
               beginDrag({
                 clientX: event.clientX,
+                clientY: event.clientY,
                 edge: "body",
                 id: clip.annotation.id,
               });
@@ -144,7 +144,6 @@ export function RecordingAnnotationLane({
                 className={`absolute overflow-hidden rounded-control text-footnote ${fragment.continuesPrevious ? "rounded-l-none" : ""} ${fragment.continuedByNext ? "rounded-r-none" : ""} ${selected ? "bg-primary-surface text-primary-fg" : "bg-fill-secondary text-content-fg"}`}
                 key={fragment.fragmentId}
                 onContextMenu={(event) => {
-                  if (!pinnable) return;
                   event.preventDefault();
                   void openClipMenu(
                     pointerAnchor(event.clientX, event.clientY),
@@ -169,7 +168,7 @@ export function RecordingAnnotationLane({
                     const menuKey =
                       event.key === "ContextMenu" ||
                       (event.key === "F10" && event.shiftKey);
-                    if (!menuKey || !pinnable) return;
+                    if (!menuKey) return;
                     event.preventDefault();
                     event.stopPropagation();
                     void openClipMenu(
@@ -254,6 +253,7 @@ export function RecordingAnnotationLane({
                         onSelect(clip.annotation.id);
                         beginDrag({
                           clientX: event.clientX,
+                          clientY: event.clientY,
                           edge,
                           id: clip.annotation.id,
                         });
