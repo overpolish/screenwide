@@ -33,6 +33,19 @@ const USAGE_KEYBOARD: u16 = 0x06;
 const USAGE_TOUCHPAD: u16 = 0x05;
 static WINDOW_CLASS: OnceLock<u16> = OnceLock::new();
 
+/// Listens for Glide's gestures: raw input sinks on a message-only window,
+/// plus the low-level keyboard and wheel hooks.
+///
+/// None of these see anything while an elevated, high-integrity window such
+/// as Task Manager owns the foreground: User Interface Privilege Isolation
+/// withholds its input from a medium-integrity process, so the hooks, the
+/// sinks and `GetAsyncKeyState` all read nothing until a normal window is
+/// focused. Only `GetCursorPos` keeps moving, and that cannot tell a glide
+/// from ordinary mouse use, so a glide cannot begin over one. Lifting this
+/// needs either a `uiAccess="true"` manifest, which Windows honours only for
+/// an Authenticode-signed build installed under Program Files, or running
+/// elevated. Gliding an elevated window from a normal foreground is refused
+/// up front instead, by `target::probe_movable`.
 pub(super) fn run(app: AppHandle, ready: std::sync::mpsc::SyncSender<Result<(), String>>) {
   let instance = match unsafe { GetModuleHandleW(None) } {
     Ok(instance) => HINSTANCE(instance.0),
