@@ -35,6 +35,8 @@ const DRAGGED_EDITS = new Set<keyof AnnotateSettings>([
   "defaultCounterAngle",
   "defaultCounterSize",
   "defaultWidth",
+  "shapeRadius",
+  "spotlightRadius",
 ]);
 
 const report = (action: string) => (cause: unknown) => {

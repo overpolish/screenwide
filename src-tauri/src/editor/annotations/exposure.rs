@@ -69,9 +69,9 @@ pub(crate) fn annotation_travel(
           .max((reveal.high - previous[1]).abs())
     }
     // A redaction never moves over a clip: it is whole for as long as it is
-    // shown. A highlight's bands are not in its record's points, so
-    // `highlight_travel` measures it instead.
-    AnnotationKind::Redact | AnnotationKind::Highlight => 0.0,
+    // shown, and a spotlight only fades. A highlight's bands are not in its
+    // record's points, so `highlight_travel` measures it instead.
+    AnnotationKind::Redact | AnnotationKind::Highlight | AnnotationKind::Spotlight => 0.0,
   }
 }
 

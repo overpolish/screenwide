@@ -76,7 +76,7 @@ const DEFAULT_ANNOTATION_REDACT_SIZE = 6;
 
 /**
  * The strengths a blurred redaction offers, weakest first: each step blurs
- * with larger cells, the same size in every box. The twin of `BLUR_CELLS` in
+ * wider, the same width in every box. The twin of `BLUR_DEVIATIONS` in
  * `src-tauri/src/editor/annotations/redact/cells.rs`, which sizes them.
  */
 export const ANNOTATION_BLUR_STRENGTHS = [1, 2, 3, 4, 5];
@@ -84,6 +84,11 @@ export const ANNOTATION_BLUR_STRENGTHS = [1, 2, 3, 4, 5];
 /** The strength a fresh blur takes: the middle step. The twin of
  * `NEW_BLUR_STRENGTH`. */
 export const DEFAULT_BLUR_STRENGTH = 3;
+
+/** How far a soft spotlight's edge fades in from its box, as a percentage of
+ * its shorter side; a hard one fades over none. The twin of Rust's
+ * `NEW_SPOTLIGHT_SOFTNESS`. */
+export const SOFT_SPOTLIGHT_EDGE = 10;
 
 /**
  * How big each kind is drawn: the sizes its control offers, the one a fresh
@@ -119,6 +124,13 @@ export const ANNOTATION_SIZES: Record<
     defaultSize: DEFAULT_ANNOTATION_WIDTH,
     sizeLabel: "Width",
     sizes: ANNOTATION_WIDTHS,
+  },
+  // A spotlight draws no stroke: it carries the least width every clip must,
+  // the twin of `default_spotlight_style`'s, and offers no size to choose.
+  spotlight: {
+    defaultSize: 1,
+    sizeLabel: "Width",
+    sizes: [1],
   },
   text: {
     defaultSize: DEFAULT_ANNOTATION_TEXT_SIZE,

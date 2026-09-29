@@ -9,6 +9,7 @@ import {
   HighlightToolIcon,
   RedactToolIcon,
   ShapeToolIcon,
+  SpotlightToolIcon,
   TextToolIcon,
 } from "../../../components/shared/annotation-style/annotation-tool-icons";
 import { ToolPanelKind } from "../../popup-panel/store";
@@ -106,6 +107,14 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     name: "Draw a shape",
     panel: "annotation",
     shortcut: "O",
+  },
+  spotlight: {
+    drawsOnLayer: true,
+    icon: SpotlightToolIcon,
+    label: "Spotlight",
+    name: "Spotlight a region",
+    panel: "annotation",
+    shortcut: "L",
   },
   text: {
     drawsOnLayer: true,

@@ -30,8 +30,14 @@ impl Renderer {
       return Ok(());
     }
     let target = surface.chain.back_buffer_view(self.device().device())?;
-    let underlay = surface.underlay(self.device().device())?;
-    self.draw_arrows(&target, size, &scene::scene(display), underlay.as_ref())?;
+    let (underlay, softened) = surface.underlay(self.device().device())?;
+    self.draw_arrows(
+      &target,
+      size,
+      &scene::scene(display),
+      underlay.as_ref(),
+      softened.as_ref(),
+    )?;
     surface.chain.present()
   }
 }

@@ -3,7 +3,8 @@
 
 import { DEFAULT_GENERATOR_ID } from "../../components/shared/background-picker/background-generators";
 
-import { Annotation, validAnnotations } from "./annotations";
+import { validAnnotations } from "./annotation-documents";
+import { Annotation } from "./annotations";
 import {
   MeshGradientPoint,
   randomMeshComposition,

@@ -29,6 +29,9 @@ impl super::AnnotationShape {
       Self::Shape { start, end, seed } => {
         super::super::outline::native::draw_points(*start, *end, *seed, style)
       }
+      Self::Spotlight { start, end } => {
+        super::super::spotlight::native::draw_points(*start, *end, style)
+      }
     }
   }
 
@@ -43,7 +46,10 @@ impl super::AnnotationShape {
         super::super::AnnotationHead::Both => 2,
       },
       Self::Text { .. } => style.align.raw(),
-      Self::Redact { .. } | Self::Highlight { .. } | Self::Shape { .. } => 0,
+      Self::Redact { .. }
+      | Self::Highlight { .. }
+      | Self::Shape { .. }
+      | Self::Spotlight { .. } => 0,
     }
   }
 
@@ -52,9 +58,11 @@ impl super::AnnotationShape {
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(crate) fn draw_text(&self) -> std::borrow::Cow<'_, str> {
     match self {
-      Self::Arrow { .. } | Self::Redact { .. } | Self::Highlight { .. } | Self::Shape { .. } => {
-        std::borrow::Cow::Borrowed("")
-      }
+      Self::Arrow { .. }
+      | Self::Redact { .. }
+      | Self::Highlight { .. }
+      | Self::Shape { .. }
+      | Self::Spotlight { .. } => std::borrow::Cow::Borrowed(""),
       Self::Counter { value, .. } => std::borrow::Cow::Owned(value.to_string()),
       Self::Text { text, .. } => std::borrow::Cow::Borrowed(text),
     }
@@ -114,6 +122,9 @@ impl super::AnnotationShape {
         source,
         image_width,
       ),
+      Self::Spotlight { start, end } => {
+        super::super::spotlight::handles::grips(*start, *end, style, index, source)
+      }
     }
   }
 
@@ -135,6 +146,7 @@ impl super::AnnotationShape {
       }
       Self::Redact { start, end, .. } => super::super::redact::snap::field_box(*start, *end),
       Self::Shape { start, end, .. } => super::super::outline::model::field_box(*start, *end),
+      Self::Spotlight { start, end } => super::super::spotlight::model::field_box(*start, *end),
       // A highlight lies over the text it marks; nothing lines up against it.
       Self::Highlight { .. } => None,
     }
@@ -158,7 +170,8 @@ impl super::AnnotationShape {
       | Self::Counter { .. }
       | Self::Text { .. }
       | Self::Highlight { .. }
-      | Self::Shape { .. } => None,
+      | Self::Shape { .. }
+      | Self::Spotlight { .. } => None,
     }
   }
 }

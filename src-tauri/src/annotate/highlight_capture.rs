@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Reading the desktop at a highlight's press, and keeping what each
-//! highlight still on screen was drawn over.
+//! Reading the desktop at a highlight's press, or a blurring spotlight's,
+//! and keeping what each highlight still on screen was drawn over.
 
 use std::sync::Arc;
 
@@ -15,17 +15,30 @@ use crate::editor::annotations::AnnotationPoint;
 /// capture that fails - Screen Recording not allowed, the display gone - leaves
 /// the stroke undrawn, which is all the overlay can honestly show.
 pub(in crate::annotate) fn begin(app: &tauri::AppHandle, stroke: &str, point: AnnotationPoint) {
-  let Some((display, found)) = super::super::native_overlay::display_at(point.x, point.y) else {
-    return;
-  };
   state().pending = Some(Pending {
     stroke: stroke.to_owned(),
     seed: fresh_seed(),
     capture: None,
     drawn: None,
   });
+  capture(app, point, Some(stroke.to_owned()));
+}
+
+/// A spotlight that blurs pressed at `point`: reads the display under it
+/// again, so the blur softens the desktop as it is now. Until the capture
+/// lands, and where it fails, the spotlight only shades.
+pub(in crate::annotate) fn refresh(app: &tauri::AppHandle, point: AnnotationPoint) {
+  capture(app, point, None);
+}
+
+/// Captures the display under `point` and makes its underlay again from it.
+/// `stroke` is the highlight pressed for it, which takes the capture as its
+/// own; one that has since been let go of or replaced keeps nothing.
+fn capture(app: &tauri::AppHandle, point: AnnotationPoint, stroke: Option<String>) {
+  let Some((display, found)) = super::super::native_overlay::display_at(point.x, point.y) else {
+    return;
+  };
   let app = app.clone();
-  let stroke = stroke.to_owned();
   tauri::async_runtime::spawn(async move {
     let image = match crate::windows::monitor_capture::capture_monitor_screenshot(
       app.clone(),
@@ -35,7 +48,7 @@ pub(in crate::annotate) fn begin(app: &tauri::AppHandle, stroke: &str, point: An
     {
       Ok(image) => Arc::new(image),
       Err(error) => {
-        eprintln!("Could not read the desktop under a highlight: {error}");
+        eprintln!("Could not read the desktop under an annotation: {error}");
         return;
       }
     };
@@ -55,12 +68,14 @@ pub(in crate::annotate) fn begin(app: &tauri::AppHandle, stroke: &str, point: An
     });
     {
       let mut state = state();
-      match &mut state.pending {
-        Some(pending) if pending.stroke == stroke => {
-          pending.capture = Some(Arc::clone(&capture));
-          pending.drawn = None;
+      if let Some(stroke) = &stroke {
+        match &mut state.pending {
+          Some(pending) if pending.stroke == *stroke => {
+            pending.capture = Some(Arc::clone(&capture));
+            pending.drawn = None;
+          }
+          _ => return,
         }
-        _ => return,
       }
       rebuild(&mut state, display, Some(&capture));
     }

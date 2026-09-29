@@ -13,6 +13,7 @@
 #define SCREENWIDE_ANNOTATION_REDACT 3u
 #define SCREENWIDE_ANNOTATION_HIGHLIGHT 4u
 #define SCREENWIDE_ANNOTATION_SHAPE 5u
+#define SCREENWIDE_ANNOTATION_SPOTLIGHT 6u
 #define SCREENWIDE_ANNOTATION_FLAG_FILL (1u << 0)
 #define SCREENWIDE_ANNOTATION_FLAG_MULTIPLY (1u << 1)
 #define SCREENWIDE_ANNOTATION_FLAG_PIXELATE (1u << 2)
@@ -70,17 +71,22 @@ _Static_assert(offsetof(ScreenwideAnnotations, data) == 16, "ScreenwideAnnotatio
 /// and leaving from `reveal_start_ms` to `reveal_end_ms` in output time at its
 /// clip's pace `path_ms` - zero where the clip names none - with a
 /// redaction's surface timeline read from `clip_start_ms` in source time. A
-/// pinned clip is one record for each place its pin puts it. The twin of
-/// Rust's `NativeTimedAnnotation`.
+/// pinned clip is one record for each place its pin puts it, and a spotlight
+/// gliding in from the one before is one for each step of its glide. A
+/// spotlight's `joins` are the ends it hands its light over at, and
+/// `blur_share` how far its blur has arrived. The twin of Rust's
+/// `NativeTimedAnnotation`.
 typedef struct {
   ScreenwideAnnotation annotation;
   uint64_t start_ms, end_ms;
   uint64_t reveal_start_ms, reveal_end_ms;
   uint64_t clip_start_ms;
   float path_ms;
+  uint32_t joins;
+  float blur_share;
   uint32_t padding;
 } ScreenwideTimedAnnotation;
-_Static_assert(sizeof(ScreenwideTimedAnnotation) == 176, "Timed annotation ABI");
+_Static_assert(sizeof(ScreenwideTimedAnnotation) == 184, "Timed annotation ABI");
 
 /// How far into its arrival `clip` is at the output moment `output_ms`.
 static inline float screenwide_timed_reveal_elapsed_ms(const ScreenwideTimedAnnotation *clip,

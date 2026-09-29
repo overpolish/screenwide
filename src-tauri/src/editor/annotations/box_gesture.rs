@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What moving a box's grips does to it: a redaction's, or a shape's.
+//! What moving a box's grips does to it: a redaction's, a shape's or a
+//! spotlight's.
 //!
 //! A box has the layer selection's eight grips: a corner moves two sides
 //! and an edge one. Every sample is measured against the box the press began
@@ -93,16 +94,17 @@ pub(crate) fn drag_new(
 /// not a box.
 fn held_corners(shape: &AnnotationShape) -> Option<(AnnotationPoint, AnnotationPoint)> {
   match shape {
-    AnnotationShape::Redact { start, end, .. } | AnnotationShape::Shape { start, end, .. } => {
-      Some((*start, *end))
-    }
+    AnnotationShape::Redact { start, end, .. }
+    | AnnotationShape::Shape { start, end, .. }
+    | AnnotationShape::Spotlight { start, end } => Some((*start, *end)),
     _ => None,
   }
 }
 
 fn write(annotation: &mut Annotation, bounds: SnapBox) {
-  if let AnnotationShape::Redact { start, end, .. } | AnnotationShape::Shape { start, end, .. } =
-    &mut annotation.shape
+  if let AnnotationShape::Redact { start, end, .. }
+  | AnnotationShape::Shape { start, end, .. }
+  | AnnotationShape::Spotlight { start, end } = &mut annotation.shape
   {
     (*start, *end) = corners(bounds);
   }

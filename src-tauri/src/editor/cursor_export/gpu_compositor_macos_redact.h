@@ -14,6 +14,8 @@ enum {
   SCREENWIDE_REDACT_PIXELATE = 1u,
   SCREENWIDE_REDACT_BLUR = 2u,
   SCREENWIDE_REDACT_MOSAIC = 3u,
+  /// The spotlights' blur over the whole source; its entries are their holes.
+  SCREENWIDE_REDACT_SPOTLIGHT = 4u,
 };
 
 /// One redaction in whole source pixels, `[x0, x1)` by `[y0, y1)`, as the
@@ -23,12 +25,13 @@ typedef struct {
   uint32_t source_width;
   uint32_t mode;
   uint32_t seed;
-  /// A pixelated box's block, or a blurred box's cell, in source pixels.
+  /// A pixelated box's block or a classically pixelated box's cell, or a
+  /// blur's standard deviation, in source pixels.
   float size;
   float color[4];
   /// The grid the box draws from: a pixelated box's zones across and blocks
-  /// per zone, or a classically pixelated or blurred box's cells across and
-  /// down; and how many zones follow this record.
+  /// per zone, or a classically pixelated box's cells across and down; and
+  /// how many zones follow this record.
   uint32_t grid[2];
   uint32_t entry_count;
   /// The corner radius in source pixels.
@@ -37,12 +40,15 @@ typedef struct {
 _Static_assert(sizeof(ScreenwideRedaction) == 64, "Redaction uniforms ABI");
 
 /// The kernels a redaction is applied with: the cells pass that averages a
-/// classic pixelation's blocks or a blur's cells, and the paint pass, over an
-/// RGBA source; and the same over a video frame's two planes.
+/// classic pixelation's blocks, the rows pass that blurs a blur along its
+/// rows, and the paint pass, over an RGBA source; and the same over a video
+/// frame's two planes.
 @interface ScreenwideRedactPipelines : NSObject
 @property(nonatomic, strong) id<MTLComputePipelineState> cells;
+@property(nonatomic, strong) id<MTLComputePipelineState> rows;
 @property(nonatomic, strong) id<MTLComputePipelineState> paint;
 @property(nonatomic, strong) id<MTLComputePipelineState> videoCells;
+@property(nonatomic, strong) id<MTLComputePipelineState> videoRows;
 @property(nonatomic, strong) id<MTLComputePipelineState> videoLuma;
 @property(nonatomic, strong) id<MTLComputePipelineState> videoChroma;
 @end
@@ -52,9 +58,10 @@ ScreenwideRedactPipelines *screenwide_redact_pipelines(id<MTLLibrary> library);
 
 /// The redactions in `annotations`, snapped outward to whole pixels of a
 /// `width` by `height` source and clipped to it: each record followed by its
-/// `entry_count` zones, two floats each. Empty when there are none, and
-/// equal for two lists that redact the same pixels the same way, which is
-/// what lets a retained source skip a pass that would change nothing.
+/// `entry_count` zones, two floats each, and last the spotlights' blur where
+/// one showing blurs. Empty when there are none, and equal for two lists that
+/// redact the same pixels the same way, which is what lets a retained source
+/// skip a pass that would change nothing.
 NSData *screenwide_redactions(const ScreenwideAnnotations *annotations,
                               uint32_t width, uint32_t height);
 

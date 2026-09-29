@@ -89,6 +89,14 @@ export type AnnotateSettings = {
   /** How round a fresh shape's corners are, as a percentage of its shorter
    * side from 0 to 50. */
   shapeRadius: number;
+  /** Whether a fresh spotlight also blurs what lies outside it. */
+  spotlightBlur: boolean;
+  /** How round a fresh spotlight's corners are, as a percentage of its
+   * shorter side from 0 to 50. */
+  spotlightRadius: number;
+  /** How far a fresh spotlight's edge fades, as a percentage of its shorter
+   * side from 0 to 50. */
+  spotlightSoftness: number;
   toolbarPosition: AnnotateToolbarPosition | null;
 };
 

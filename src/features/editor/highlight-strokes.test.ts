@@ -9,12 +9,14 @@ import type { Annotation, AnnotationStyle } from "./annotations";
 
 const style: AnnotationStyle = {
   align: "left",
+  blur: false,
   color: "#ffcc00",
   handDrawn: false,
   head: "none",
   manual: false,
   radius: 0,
   redaction: "erase",
+  softness: 0,
   strength: 0,
   width: 24,
 };

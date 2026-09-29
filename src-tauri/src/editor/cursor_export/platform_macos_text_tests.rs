@@ -19,12 +19,14 @@ fn text_box(text: &str, pointer: TextPointer, color: &str) -> Annotation {
   let mut annotation = new_text("text".to_owned(), ORIGIN, None, 0.0);
   annotation.style = AnnotationStyle {
     align: AnnotationAlign::Left,
+    blur: false,
     color: color.to_owned(),
     head: AnnotationHead::None,
     hand_drawn: false,
     manual: false,
     radius: 0.0,
     redaction: Default::default(),
+    softness: 0.0,
     strength: 0.0,
     width: FONT,
   };

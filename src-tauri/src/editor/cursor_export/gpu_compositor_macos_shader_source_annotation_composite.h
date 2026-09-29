@@ -7,11 +7,12 @@
 /// comes after every shape's own source: each kind is a branch here and a layer
 /// function of its own beside it.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE @R"METAL(
-/// A hovered redaction's halo, drawn by the canvas pass like every other
-/// kind's. The box itself was applied to the source and is not drawn here, so
-/// this is the only thing that finds an erased box on its own surface: it is
-/// white round a dark fill and black round a light one, and stronger than the
-/// halo a coloured shape wears in its own colour.
+/// A hovered redaction's or spotlight's halo, drawn by the canvas pass like
+/// every other kind's. Neither box is drawn here - a redaction was applied to
+/// the source, a spotlight is a hole in the shade - so this is the only thing
+/// that finds one on its own surface: it is white round a dark fill and black
+/// round a light one, and stronger than the halo a coloured shape wears in
+/// its own colour.
 constant float annotation_redact_halo_alpha = 0.5;
 
 static float4 annotation_redact_halo(
@@ -56,11 +57,12 @@ static float4 composite_annotations(
   float feather = max(pixel_scale, 1e-4) * 0.5;
   for (uint index = 0; index < count; ++index) {
     const device AnnotationUniforms &annotation = annotations[index];
-    // Highlights recolour the pixel under them in `composite_highlights`,
-    // before anything else is drawn over it.
+    // Highlights recolour the pixel under them in `composite_highlights`, and
+    // spotlights shade it in `composite_spotlights`, before anything else is
+    // drawn over it.
     if (annotation.above_camera != above_camera || annotation.kind == 4u) continue;
     float4 color = float4(annotation.color);
-    if (annotation.kind == 3u) {
+    if (annotation.kind == 3u || annotation.kind == 6u) {
       rgba = annotation_redact_halo(rgba, annotation, canvas_point, feather);
       continue;
     }

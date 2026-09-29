@@ -59,6 +59,7 @@ impl PreviewPlayerManager {
         .unwrap_or_else(|poisoned| poisoned.into_inner()),
       position_ms,
       0.0,
+      (layout.source_width, layout.source_height),
     );
     surface.redraw_recording_annotations(
       pane,

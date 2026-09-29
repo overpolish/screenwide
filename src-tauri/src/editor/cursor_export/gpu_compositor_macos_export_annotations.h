@@ -6,10 +6,12 @@
 /// Evaluate source-time clips once per exported frame, their arrivals timed at
 /// `output_ms`, the frame's place on the edited timeline. Bind the same
 /// prepared geometry used by screenshot export and native video preview.
+/// `redo` is set for the pass run again over the screen layer redrawn above
+/// a camera sent behind it.
 static void screenwide_export_annotations(ScreenwideVideoExport *session,
     id<MTLCommandBuffer> command, id<MTLTexture> luma, id<MTLTexture> chroma,
     uint32_t source_width, uint32_t source_height, uint64_t source_ms, uint64_t output_ms,
-    uint32_t above) {
+    uint32_t above, uint32_t redo) {
   // A frame shows at most every clip; the list is sized to that, on the heap.
   NSMutableData *items = [NSMutableData
       dataWithLength:MAX(session->annotation_count, 1u) * sizeof(ScreenwideAnnotation)];
@@ -30,16 +32,19 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
           screenwide_timed_reveal_elapsed_ms(clip, output_ms),
           (float)(clip->reveal_end_ms - clip->reveal_start_ms),
           session->source_frame_rate > 0 ? 1000.0f / session->source_frame_rate : 0,
-          annotation->animated, annotation->kind, clip->path_ms, &annotation->reveal);
+          annotation->animated, annotation->kind, clip->path_ms, clip->joins,
+          clip->blur_share, &annotation->reveal);
     }
   }
   if (annotations.count == 0) return;
-  // Highlights recolour what is under them, so they are written first, from
-  // both planes at once, and every other annotation is drawn over them.
-  BOOL highlighted = NO;
+  // Spotlights shade what is under them and highlights recolour it, so they
+  // are written first, from both planes at once, and every other annotation
+  // is drawn over them.
+  BOOL recoloured = NO;
   for (uint32_t i = 0; i < annotations.count; i++)
-    highlighted |= showing[i].kind == SCREENWIDE_ANNOTATION_HIGHLIGHT;
-  if (highlighted) {
+    recoloured |= showing[i].kind == SCREENWIDE_ANNOTATION_HIGHLIGHT ||
+                  showing[i].kind == SCREENWIDE_ANNOTATION_SPOTLIGHT;
+  if (recoloured) {
     id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
     [encoder setComputePipelineState:session->highlight_pipeline];
     [encoder setTexture:luma atIndex:0];
@@ -48,6 +53,7 @@ static void screenwide_export_annotations(ScreenwideVideoExport *session,
     screenwide_bind_annotations(encoder, &annotations, session->canvas, source_width,
                                 source_height, 1.0f);
     [encoder setBytes:&above length:sizeof(above) atIndex:14];
+    [encoder setBytes:&redo length:sizeof(redo) atIndex:20];
     [encoder dispatchThreads:MTLSizeMake(chroma.width, chroma.height, 1)
         threadsPerThreadgroup:MTLSizeMake(16, 16, 1)];
     [encoder endEncoding];

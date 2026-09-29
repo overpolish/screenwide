@@ -20,6 +20,7 @@
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_curve.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_composite.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_highlight.h"
+#import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_spotlight.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_counter.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_shape.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_text.h"
@@ -33,10 +34,13 @@
 @property(nonatomic, strong) id<MTLCommandQueue> queue;
 @property(nonatomic, strong) id<MTLComputePipelineState> pipeline;
 @property(nonatomic) uint32_t display;
-/// The desktop this display's highlights are recoloured from, and which of
-/// Rust's revisions it holds.
+/// The desktop this display's highlights are recoloured from, which of
+/// Rust's revisions it holds, and the same softened for a spotlight's blur,
+/// with the revision it was softened from.
 @property(nonatomic, strong) id<MTLTexture> underlay;
 @property(nonatomic) uint64_t underlayRevision;
+@property(nonatomic, strong) id<MTLTexture> softened;
+@property(nonatomic) uint64_t softenedRevision;
 @end
 
 @implementation ScreenwideAnnotateSurface
@@ -57,7 +61,8 @@ static NSString *shaderSource(void) {
               GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_SHAPE
                   GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE
                       GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT
-                          SCREENWIDE_ANNOTATE_SHADER_SOURCE;
+                          GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_SPOTLIGHT
+                              SCREENWIDE_ANNOTATE_SHADER_SOURCE;
 }
 
 uint32_t screenwide_annotate_shader_check(char *message, uint32_t capacity) {
@@ -79,39 +84,62 @@ uint32_t screenwide_annotate_shader_check(char *message, uint32_t capacity) {
   return 0;
 }
 
-/// The underlay this display's highlights read, uploaded when Rust has made a
-/// new one. A display with none binds a single clear pixel, which no highlight
-/// is drawn over.
-static id<MTLTexture> currentUnderlay(ScreenwideAnnotateSurface *surface) {
-  ScreenwideAnnotateUnderlay underlay = {0};
-  if (underlayCallback != NULL)
-    underlayCallback(surface.display, &underlay);
-  BOOL fresh = underlay.rgba != NULL && underlay.width > 0 && underlay.height > 0;
-  if (fresh && underlay.revision != surface.underlayRevision) {
-    if (surface.underlay == nil || surface.underlay.width != underlay.width ||
-        surface.underlay.height != underlay.height) {
-      MTLTextureDescriptor *descriptor = [MTLTextureDescriptor
-          texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
-                                       width:underlay.width
-                                      height:underlay.height
-                                   mipmapped:NO];
-      descriptor.usage = MTLTextureUsageShaderRead;
-      surface.underlay = [surface.device newTextureWithDescriptor:descriptor];
-    }
-    [surface.underlay replaceRegion:MTLRegionMake2D(0, 0, underlay.width, underlay.height)
-                        mipmapLevel:0
-                          withBytes:underlay.rgba
-                        bytesPerRow:underlay.width * 4u];
-    surface.underlayRevision = underlay.revision;
+/// `rgba`, `width` by `height`, in `texture` - made again where it is
+/// missing or a different size.
+static id<MTLTexture> uploaded(ScreenwideAnnotateSurface *surface, id<MTLTexture> texture,
+                               const uint8_t *rgba, uint32_t width, uint32_t height) {
+  if (texture == nil || texture.width != width || texture.height != height) {
+    MTLTextureDescriptor *descriptor =
+        [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                                           width:width
+                                                          height:height
+                                                       mipmapped:NO];
+    descriptor.usage = MTLTextureUsageShaderRead;
+    texture = [surface.device newTextureWithDescriptor:descriptor];
   }
-  if (fresh && surface.underlay != nil)
-    return surface.underlay;
+  [texture replaceRegion:MTLRegionMake2D(0, 0, width, height)
+             mipmapLevel:0
+               withBytes:rgba
+             bytesPerRow:width * 4u];
+  return texture;
+}
+
+/// A single clear pixel, bound where there is nothing to read: no highlight
+/// or blur is ever drawn over one.
+static id<MTLTexture> emptyTexture(ScreenwideAnnotateSurface *surface) {
   MTLTextureDescriptor *empty =
       [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
                                                          width:1
                                                         height:1
                                                      mipmapped:NO];
   return [surface.device newTextureWithDescriptor:empty];
+}
+
+/// Brings this display's underlay, and its softened copy while a spotlight
+/// blurs, up to what Rust holds, uploading each only when it has changed.
+static void refreshUnderlay(ScreenwideAnnotateSurface *surface) {
+  ScreenwideAnnotateUnderlay underlay = {0};
+  if (underlayCallback != NULL)
+    underlayCallback(surface.display, &underlay);
+  BOOL fresh = underlay.rgba != NULL && underlay.width > 0 && underlay.height > 0;
+  if (!fresh) {
+    surface.underlay = nil;
+    surface.softened = nil;
+    return;
+  }
+  if (underlay.revision != surface.underlayRevision || surface.underlay == nil) {
+    surface.underlay = uploaded(surface, surface.underlay, underlay.rgba, underlay.width,
+                                underlay.height);
+    surface.underlayRevision = underlay.revision;
+  }
+  BOOL soft = underlay.soft_rgba != NULL && underlay.soft_width > 0 && underlay.soft_height > 0;
+  if (!soft) {
+    surface.softened = nil;
+  } else if (underlay.revision != surface.softenedRevision || surface.softened == nil) {
+    surface.softened = uploaded(surface, surface.softened, underlay.soft_rgba,
+                                underlay.soft_width, underlay.soft_height);
+    surface.softenedRevision = underlay.revision;
+  }
 }
 
 static void drawSurface(ScreenwideAnnotateSurface *surface) {
@@ -140,7 +168,11 @@ static void drawSurface(ScreenwideAnnotateSurface *surface) {
   uint32_t above_camera = 0;
   [encoder setBytes:&above_camera length:sizeof(above_camera) atIndex:14];
   [encoder setTexture:drawable.texture atIndex:0];
-  [encoder setTexture:currentUnderlay(surface) atIndex:1];
+  refreshUnderlay(surface);
+  id<MTLTexture> empty = surface.underlay == nil || surface.softened == nil
+      ? emptyTexture(surface) : nil;
+  [encoder setTexture:surface.underlay ?: empty atIndex:1];
+  [encoder setTexture:surface.softened ?: empty atIndex:2];
   screenwide_bind_annotations(encoder, &annotations, &canvas, 1, 1, 1.0f);
   MTLSize threads = MTLSizeMake((NSUInteger)size.width, (NSUInteger)size.height, 1);
   NSUInteger width = surface.pipeline.threadExecutionWidth;

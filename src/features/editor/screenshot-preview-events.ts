@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { validAnnotations } from "./annotation-documents";
 import {
   Annotation,
   AnnotationTextEdit,
   annotationTextEdit,
-  validAnnotations,
 } from "./annotations";
 import {
   ScreenshotWorkspaceOutputSettings,

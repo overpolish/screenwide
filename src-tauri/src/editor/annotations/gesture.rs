@@ -95,6 +95,7 @@ pub(crate) const MODE_TEXT: u32 = 4;
 pub(crate) const MODE_REDACT: u32 = 5;
 pub(crate) const MODE_HIGHLIGHT: u32 = 6;
 pub(crate) const MODE_SHAPE: u32 = 7;
+pub(crate) const MODE_SPOTLIGHT: u32 = 8;
 
 /// The tool name React sends, as a mode. Anything else puts the chrome away.
 pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
@@ -105,6 +106,7 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
     Some("redact") => MODE_REDACT,
     Some("highlight") => MODE_HIGHLIGHT,
     Some("shape") => MODE_SHAPE,
+    Some("spotlight") => MODE_SPOTLIGHT,
     Some("select") => MODE_SELECT,
     _ => MODE_NONE,
   }
@@ -123,8 +125,20 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
     MODE_REDACT => Some(AnnotationKind::Redact),
     MODE_HIGHLIGHT => Some(AnnotationKind::Highlight),
     MODE_SHAPE => Some(AnnotationKind::Shape),
+    MODE_SPOTLIGHT => Some(AnnotationKind::Spotlight),
     _ => None,
   }
+}
+
+/// Whether the tool in hand only draws on a recording's screen: a redaction,
+/// a highlight and a spotlight each read or change the screen's own frames,
+/// which a camera pane has none of.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) fn screen_only(mode: u32) -> bool {
+  matches!(
+    drawing_kind(mode),
+    Some(AnnotationKind::Redact | AnnotationKind::Highlight | AnnotationKind::Spotlight)
+  )
 }
 
 impl AnnotationGestureTarget {

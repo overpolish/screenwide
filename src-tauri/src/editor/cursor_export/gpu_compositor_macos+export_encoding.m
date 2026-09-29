@@ -93,7 +93,7 @@ static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
 
   screenwide_export_annotations(self, command, destination_y, destination_uv,
       (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms, annotation_output_ms,
-      0);
+      0, 0);
   CVMetalTextureRef camera_ref = NULL;
   if (camera_sample != NULL && camera_overlay != NULL) {
     CVPixelBufferRef camera_pixels =
@@ -167,10 +167,10 @@ static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
   if (camera_sample != NULL && camera_overlay != NULL && camera_overlay->camera_on_top == 0)
     screenwide_export_annotations(self, command, destination_y, destination_uv,
         (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms,
-        annotation_output_ms, 0);
+        annotation_output_ms, 0, 1);
   screenwide_export_annotations(self, command, destination_y, destination_uv,
       (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms, annotation_output_ms,
-      1);
+      1, 0);
   screenwide_encode_keyboard_overlay(command, device, keyboard_luma_pipeline,
                                      keyboard_chroma_pipeline, destination_y,
                                      destination_uv, keyboard_cache, keyboard,

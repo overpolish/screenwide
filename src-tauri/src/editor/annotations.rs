@@ -5,7 +5,8 @@
 //!
 //! A tool's shape lives in one module under this one ([`arrow`],
 //! [`counter`], [`text`], [`redact`], [`highlight`], [`outline`] for the
-//! shape tool) and nothing else branches on which kind an annotation is.
+//! shape tool, [`spotlight`]) and nothing else branches on which kind an
+//! annotation is.
 //! Adding a tool is therefore:
 //!
 //! - one module here, with the `model`, `gesture`, `handles`, `native`,
@@ -35,8 +36,8 @@ pub(crate) use shape::AnnotationShape;
 /// The arrow tool's own half of the model.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod arrow;
-/// What moving a box's grips does to it, shared by the redaction and the
-/// shape.
+/// What moving a box's grips does to it, shared by the redaction, the shape
+/// and the spotlight.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod box_gesture;
 /// The counter tool's own half of the model.
@@ -87,6 +88,9 @@ mod snap_edit_tests;
 mod snap_gap_tests;
 #[cfg(test)]
 mod snap_tail_tests;
+/// The spotlight tool's own half of the model: a box left bright while the
+/// picture around it dims.
+pub(crate) mod spotlight;
 /// The text tool's own half of the model.
 pub(crate) mod text;
 

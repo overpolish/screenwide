@@ -6,34 +6,28 @@
 #include "redact.hlsl"
 
 // One cell's averaged colour, the nearest cell standing in past the box's
-// edge so the blur never reaches outside it.
+// edge.
 float3 redact_cell(int2 cell) {
   int2 last = int2(redact_grid) - 1;
   return redact_cells.Load(int3(clamp(cell, int2(0, 0), last), 0)).rgb;
 }
 
-// The cubic B-spline's four weights a fraction `t` past a cell's centre:
-// smooth, and never negative, so the blur never rings past its cells.
-float4 redact_spline(float t) {
-  float s = 1.0 - t;
-  float t2 = t * t, t3 = t2 * t;
-  return float4(s * s * s, 3.0 * t3 - 6.0 * t2 + 4.0,
-                -3.0 * t3 + 3.0 * t2 + 3.0 * t + 1.0, t3) / 6.0;
-}
-
-// The smooth surface through the cells' colours at `local`, a point in the
-// box's own pixels.
-float3 redact_blur(float2 local) {
-  float2 at = (local - redact_grid_origin()) / max(redact_size, 1.0) - 0.5;
-  float2 base = floor(at);
-  float4 across = redact_spline(at.x - base.x);
-  float4 down = redact_spline(at.y - base.y);
-  float3 sum = float3(0.0, 0.0, 0.0);
-  [unroll] for (int row = 0; row < 4; ++row)
-    [unroll] for (int column = 0; column < 4; ++column)
-      sum += across[column] * down[row] *
-          redact_cell(int2(base) + int2(column - 1, row - 1));
-  return sum;
+// The blur's second pass at the box's pixel `gid`: the Gaussian down its
+// column of what the rows pass wrote, within the box, back out of
+// premultiplied colour.
+float3 redact_blur(uint2 gid) {
+  int tall = (int)(redact_bounds.w - redact_bounds.y);
+  int reach = redact_reach(redact_size);
+  float4 sum = float4(0.0, 0.0, 0.0, 0.0);
+  float total = 0.0;
+  int last = min((int)gid.y + reach, tall - 1);
+  [loop] for (int y = max((int)gid.y - reach, 0); y <= last; ++y) {
+    float weight = redact_weight(y - (int)gid.y, redact_size);
+    sum += weight * redact_rows.Load(int3((int)gid.x, y, 0));
+    total += weight;
+  }
+  float4 average = sum / total;
+  return average.a > 0.0 ? average.rgb / average.a : float3(0.0, 0.0, 0.0);
 }
 
 // How much of the pixel centred at `local` the box takes: all of every pixel
@@ -51,9 +45,32 @@ float redact_cover(float2 local, float2 size) {
 // The colour the box's pixel `gid` is painted with.
 float3 redact_colour(uint2 gid) {
   if (redact_mode == 1u) return redact_block(uint2(float2(gid) / max(redact_size, 1.0)));
-  if (redact_mode == 2u) return redact_blur(float2(gid) + 0.5);
+  if (redact_mode == 2u || redact_mode == 4u) return redact_blur(gid);
   if (redact_mode == 3u) return redact_cell(int2(redact_cell_of(gid)));
   return redact_color.rgb;
+}
+
+// How much of the pixel centred at `point` the spotlights' blur takes: as
+// much as the record's cover, which rides in the colour's alpha, lifted by
+// each spotlight's light as far as it is present. The zones are the holes,
+// four each: the box's corners, its rounding and fade, and its presence
+// beside the blur's, in source pixels. The twin of `redact_spotlight_share`.
+float redact_spotlight_share(float2 point) {
+  float lit = 0.0;
+  [loop] for (uint at = 0u; at + 3u < redact_entry_count; at += 4u) {
+    uint first = redact_zone_first + at;
+    float2 low = redact_zones[first];
+    float2 high = redact_zones[first + 1u];
+    float2 shape = redact_zones[first + 2u];
+    float presence = saturate(redact_zones[first + 3u].x);
+    float rounding = min(shape.x, min(high.x - low.x, high.y - low.y) * 0.5);
+    float2 q = abs(point - (low + high) * 0.5) - ((high - low) * 0.5 - rounding);
+    float distance = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rounding;
+    float soft = max(shape.y, 0.0);
+    float fall = saturate((distance + soft + 0.5) / (soft + 1.0));
+    lit = max(lit, presence * (1.0 - fall * fall * (3.0 - 2.0 * fall)));
+  }
+  return max(saturate(redact_color.a) - lit, 0.0);
 }
 
 // The viewport is the box, so every pixel drawn is one of its own. A pixel
@@ -63,11 +80,18 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
   if (any(pixel < redact_bounds.xy) || any(pixel >= redact_bounds.zw)) discard;
   uint2 gid = pixel - redact_bounds.xy;
   // Its rounded outline's cover, and of that only the share an arriving fill
-  // has reached, which rides in the colour's alpha.
-  float cover = redact_cover(float2(gid) + 0.5, float2(redact_bounds.zw - redact_bounds.xy)) *
-      saturate(redact_color.a);
+  // has reached, which rides in the colour's alpha. The spotlights' blur
+  // takes what its holes leave.
+  float cover = redact_mode == 4u
+      ? redact_spotlight_share(float2(pixel) + 0.5)
+      : redact_cover(float2(gid) + 0.5, float2(redact_bounds.zw - redact_bounds.xy)) *
+          saturate(redact_color.a);
   if (cover <= 0.0) discard;
-  float4 painted = float4(round(saturate(redact_colour(gid)) * 255.0) / 255.0, 1.0);
-  if (cover < 1.0) painted = lerp(redact_source.Load(int3(pixel, 0)), painted, cover);
+  float4 original = redact_source.Load(int3(pixel, 0));
+  // What the spotlights' blur softens keeps its own alpha: it is the same
+  // picture, only less sharp.
+  float4 painted = float4(round(saturate(redact_colour(gid)) * 255.0) / 255.0,
+                          redact_mode == 4u ? original.a : 1.0);
+  if (cover < 1.0) painted = lerp(original, painted, cover);
   return painted;
 }

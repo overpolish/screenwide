@@ -54,6 +54,10 @@ float screenwide_annotation_distance(uint32_t kind, float px, float py,
 float screenwide_shape_body_distance(float px, float py,
                                      const AnnotationArrowGeometry *geometry);
 
+/// The standard deviation of the spotlights' blur over a `width` by `height`
+/// source as it arrives with `strength`, widening from nothing.
+float screenwide_spotlight_blur_deviation(float strength, uint32_t width, uint32_t height);
+
 /// How far the annotation's picture moves between the shutter opening and
 /// now, which is the length its exposure is sampled along. `sx` and `sy`
 /// carry a point from the space the points are given in into the pixels the

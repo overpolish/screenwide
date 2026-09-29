@@ -3,8 +3,8 @@
 
 import { SliderNumberField } from "../slider-number-field/slider-number-field";
 
-/** How round a redaction's or a shape's corners are, as a percentage of its
- * box's shorter side from 0 to 50. */
+/** How round a redaction's, a shape's or a spotlight's corners are, as a
+ * percentage of its box's shorter side from 0 to 50. */
 export function AnnotationRadiusField({
   isDisabled,
   onChange,

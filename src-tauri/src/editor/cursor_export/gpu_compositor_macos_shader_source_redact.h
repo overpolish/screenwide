@@ -7,10 +7,14 @@
 /// samples it. The paint pass reads no covered pixel: the fill colour and
 /// each pixelated zone's inks come from Rust, and which block of a zone takes
 /// which shade comes from a hash of the seed and the block's place in the box.
-/// A classic pixelation's blocks and a blur's cells are averaged by the cells
-/// pass first, into a buffer the paint pass reads instead of the pixels. The
-/// only pixels the paint pass reads are those wholly outside a rounded
-/// corner, which it blends into the corner's soft edge. The twin of
+/// A classic pixelation's blocks are averaged by the cells pass first, and a
+/// blur's rows by the rows pass, each into a buffer the paint pass reads
+/// instead of the pixels. The only pixels the paint pass reads are those
+/// wholly outside a rounded corner, which it blends into the corner's soft
+/// edge. The spotlights' blur is one more record of this kind, mode 4: a blur
+/// over the whole source, lifted wherever light falls, whose entries are the
+/// spotlights' holes. What every pass shares and the cells pass are here;
+/// the blur and the paint pass are in `..._redact_paint.h`. The twin of
 /// `ScreenwideRedaction` in `gpu_compositor_macos_redact.h`.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT @R"METAL(
 struct RedactUniforms {
@@ -89,12 +93,7 @@ static uint2 redact_cell_of(constant RedactUniforms &r, uint2 local) {
   return min(uint2(max(cell, 0.0)), last);
 }
 
-/// How far the seed moves each channel of a blurred cell's average, either
-/// way: enough that the output never equals the averages of a guessed
-/// original, too little to see.
-constant uint redact_jitter = 6u;
-
-/// An RGBA source buffer, as the cells pass reads it.
+/// An RGBA source buffer, as the cells and rows passes read it.
 struct RedactRgbaPixels {
   const device uchar4 *pixels;
   uint width;
@@ -103,8 +102,8 @@ struct RedactRgbaPixels {
 
 /// One cell's exact average, summed by a threadgroup of 256 over every
 /// pixel in the cell, each laid over the surface first so a transparent one
-/// counts as the surface it shows against. A blurred cell's average is then
-/// nudged by the seed. Written as 24 bits of RGB, one word a cell.
+/// counts as the surface it shows against. Written as 24 bits of RGB, one
+/// word a cell.
 template <typename Pixels>
 static void redact_average(Pixels pixels, constant RedactUniforms &r, device uint *cells,
                            uint index, uint lane, threadgroup uint (*sums)[256]) {
@@ -141,14 +140,6 @@ static void redact_average(Pixels pixels, constant RedactUniforms &r, device uin
   uint3 average = count == 0u
       ? surface
       : (uint3(sums[0][0], sums[1][0], sums[2][0]) + count / 2u) / count;
-  if (r.mode == 2u) {
-    for (uint channel = 0u; channel < 3u; ++channel) {
-      uint hash = redact_hash(r.seed ^ redact_hash(index ^ redact_hash(channel)));
-      int moved = int(average[channel]) + int(hash % (2u * redact_jitter + 1u)) -
-          int(redact_jitter);
-      average[channel] = uint(clamp(moved, 0, 255));
-    }
-  }
   cells[index] = (average.r << 16u) | (average.g << 8u) | average.b;
 }
 
@@ -164,83 +155,12 @@ kernel void redact_cells_rgba(
 }
 
 /// One cell's averaged colour, the nearest cell standing in past the box's
-/// edge so the blur never reaches outside it.
+/// edge.
 static float3 redact_cell(constant RedactUniforms &r, const device uint *cells, int2 cell) {
   int2 last = int2(int(r.grid[0]), int(r.grid[1])) - 1;
   cell = clamp(cell, int2(0), last);
   uint rgb = cells[uint(cell.y) * r.grid[0] + uint(cell.x)];
   return float3(float((rgb >> 16u) & 0xffu), float((rgb >> 8u) & 0xffu),
                 float(rgb & 0xffu)) / 255.0;
-}
-
-/// The cubic B-spline's four weights a fraction `t` past a cell's centre:
-/// smooth, and never negative, so the blur never rings past its cells.
-static float4 redact_spline(float t) {
-  float s = 1.0 - t;
-  float t2 = t * t, t3 = t2 * t;
-  return float4(s * s * s, 3.0 * t3 - 6.0 * t2 + 4.0,
-                -3.0 * t3 + 3.0 * t2 + 3.0 * t + 1.0, t3) / 6.0;
-}
-
-/// The smooth surface through the cells' colours at `local`, a point in the
-/// box's own pixels.
-static float3 redact_blur(constant RedactUniforms &r, const device uint *cells,
-                          float2 local) {
-  float2 at = (local - redact_grid_origin(r)) / max(r.size, 1.0) - 0.5;
-  float2 base = floor(at);
-  float4 across = redact_spline(at.x - base.x);
-  float4 down = redact_spline(at.y - base.y);
-  float3 sum = float3(0.0);
-  for (int row = 0; row < 4; ++row)
-    for (int column = 0; column < 4; ++column)
-      sum += across[column] * down[row] *
-          redact_cell(r, cells, int2(base) + int2(column - 1, row - 1));
-  return sum;
-}
-
-/// How much of the pixel centred at `local` the box takes: all of every
-/// pixel its rounded outline touches, since a pixel's farthest point is half
-/// its diagonal from its centre, then a soft edge one pixel wide beyond it.
-/// So only a pixel wholly outside the outline is ever blended, and what shows
-/// through it is picture the box never covered.
-static float redact_cover(float2 local, float2 size, float radius) {
-  if (radius <= 0.0) return 1.0;
-  float2 q = abs(local - size * 0.5) - (size * 0.5 - radius);
-  float distance = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
-  return saturate(1.70710678 - distance);
-}
-
-/// How much of the box's pixel `gid` a redaction takes: its rounded
-/// outline's cover, and of that only the share an arriving fill has reached,
-/// which rides in the colour's alpha.
-static float redact_share(constant RedactUniforms &r, uint2 gid) {
-  return redact_cover(float2(gid) + 0.5, float2(r.x1 - r.x0, r.y1 - r.y0), r.radius) *
-      saturate(float(r.color.a));
-}
-
-/// The colour a redaction paints the box's pixel `gid` with.
-static float3 redact_colour(constant RedactUniforms &r, const device float2 *entries,
-                            const device uint *cells, uint2 gid) {
-  if (r.mode == 1u) return redact_block(r, entries, uint2(float2(gid) / max(r.size, 1.0)));
-  if (r.mode == 2u) return redact_blur(r, cells, float2(gid) + 0.5);
-  if (r.mode == 3u) return redact_cell(r, cells, int2(redact_cell_of(r, gid)));
-  return float3(r.color.rgb);
-}
-
-kernel void redact_source_rgba(
-    device uchar4 *pixels [[buffer(0)]],
-    constant RedactUniforms &r [[buffer(1)]],
-    const device float2 *entries [[buffer(2)]],
-    const device uint *cells [[buffer(3)]],
-    uint2 gid [[thread_position_in_grid]]) {
-  uint2 point = uint2(r.x0, r.y0) + gid;
-  if (point.x >= r.x1 || point.y >= r.y1) return;
-  float cover = redact_share(r, gid);
-  if (cover <= 0.0) return;
-  float3 rgb = redact_colour(r, entries, cells, gid);
-  uint index = point.y * r.source_width + point.x;
-  float4 painted = float4(round(saturate(rgb) * 255.0) / 255.0, 1.0);
-  if (cover < 1.0) painted = mix(float4(pixels[index]) / 255.0, painted, cover);
-  pixels[index] = uchar4(round(saturate(painted) * 255.0));
 }
 )METAL"

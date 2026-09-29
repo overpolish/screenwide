@@ -77,6 +77,14 @@ pub struct AnnotateSettings {
   /// How round a fresh shape's corners are, as a percentage of its shorter
   /// side from 0 to 50: a square rounded all the way is a circle.
   pub shape_radius: f64,
+  /// Whether a fresh spotlight also blurs what lies outside it.
+  pub spotlight_blur: bool,
+  /// How round a fresh spotlight's corners are, as a percentage of its
+  /// shorter side from 0 to 50.
+  pub spotlight_radius: f64,
+  /// How far a fresh spotlight's edge fades, as a percentage of its shorter
+  /// side from 0 to 50.
+  pub spotlight_softness: f64,
   pub toolbar_position: Option<ToolbarPosition>,
 }
 
@@ -95,6 +103,9 @@ impl Default for AnnotateSettings {
       highlight_manual: false,
       shape_hand_drawn: false,
       shape_radius: 0.0,
+      spotlight_blur: false,
+      spotlight_radius: crate::editor::annotations::spotlight::model::NEW_SPOTLIGHT_RADIUS,
+      spotlight_softness: crate::editor::annotations::spotlight::model::NEW_SPOTLIGHT_SOFTNESS,
       toolbar_position: None,
     }
   }
@@ -117,7 +128,9 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     settings.default_shape,
     AnnotationKind::Text | AnnotationKind::Redact
   ) {
-    return Err("The live overlay draws arrows, counters, highlights and shapes".to_owned());
+    return Err(
+      "The live overlay draws arrows, counters, highlights, shapes and spotlights".to_owned(),
+    );
   }
   if !settings.default_width.is_finite()
     || !(MIN_WIDTH..=MAX_WIDTH).contains(&settings.default_width)
@@ -132,8 +145,12 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
   if !settings.default_counter_angle.is_finite() {
     return Err("That is not a counter angle".to_owned());
   }
-  if !settings.shape_radius.is_finite() || !(0.0..=50.0).contains(&settings.shape_radius) {
+  let share = |value: f64| value.is_finite() && (0.0..=50.0).contains(&value);
+  if !share(settings.shape_radius) {
     return Err("That is not a shape radius".to_owned());
+  }
+  if !share(settings.spotlight_radius) || !share(settings.spotlight_softness) {
+    return Err("That is not a spotlight radius or softness".to_owned());
   }
   if settings
     .toolbar_position

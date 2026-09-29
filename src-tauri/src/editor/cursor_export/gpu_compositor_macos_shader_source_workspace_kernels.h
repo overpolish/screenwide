@@ -107,6 +107,10 @@ kernel void workspace_layer(
       rgba = mix(rgba, pixel, pixel.a);
     }
   }
+  // The spotlights' shade goes over the picture and the cursor, and under
+  // every annotation drawn next.
+  rgba = composite_spotlights(rgba, annotations, annotation_count, 0u, canvas_point,
+                              annotation_pixel_scale);
   rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                canvas_point, u, float2(source_dimensions),
                                annotation_pixel_scale, annotation_samples,
@@ -145,6 +149,10 @@ kernel void workspace_layer(
     // the camera go back over it exactly as the cursor does.
     rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 0u, canvas_point,
                                 annotation_pixel_scale, annotation_points, annotation_samples);
+    rgba = mix(rgba,
+               composite_spotlights(rgba, annotations, annotation_count, 0u, canvas_point,
+                                    annotation_pixel_scale),
+               canvas_foreground_coverage(canvas_point, u));
     rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                  canvas_point, u, float2(source_dimensions),
                                  annotation_pixel_scale, annotation_samples,
@@ -152,6 +160,8 @@ kernel void workspace_layer(
   }
   rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 1u, canvas_point,
                               annotation_pixel_scale, annotation_points, annotation_samples);
+  rgba = composite_spotlights(rgba, annotations, annotation_count, 1u, canvas_point,
+                              annotation_pixel_scale);
   rgba = composite_keyboard(rgba, keyboard_pixels, keyboard, canvas_point,
                             canvas_dimensions);
   rgba = composite_annotations(rgba, annotations, annotation_count, 1u,

@@ -34,7 +34,10 @@ BOOL screenwide_export_redact_frame(ScreenwideVideoExport *session,
   if (session->annotation_data != NULL) annotations.data = *session->annotation_data;
   for (uint32_t index = 0; index < session->annotation_count; index++) {
     const ScreenwideTimedAnnotation *clip = &session->annotations[index];
-    if (clip->annotation.kind != SCREENWIDE_ANNOTATION_REDACT) continue;
+    // A spotlight's blur is applied to the source with the redactions.
+    if (clip->annotation.kind != SCREENWIDE_ANNOTATION_REDACT &&
+        clip->annotation.kind != SCREENWIDE_ANNOTATION_SPOTLIGHT)
+      continue;
     if (clip->start_ms > source_ms || source_ms >= clip->end_ms) continue;
     ScreenwideAnnotation *annotation = &showing[annotations.count++];
     *annotation = clip->annotation;
@@ -45,7 +48,8 @@ BOOL screenwide_export_redact_frame(ScreenwideVideoExport *session,
         screenwide_timed_reveal_elapsed_ms(clip, output_ms),
         (float)(clip->reveal_end_ms - clip->reveal_start_ms),
         session->source_frame_rate > 0 ? 1000.0f / session->source_frame_rate : 0,
-        annotation->animated, annotation->kind, clip->path_ms, &annotation->reveal);
+        annotation->animated, annotation->kind, clip->path_ms, clip->joins, clip->blur_share,
+        &annotation->reveal);
     // The surface the ring round the box settles on at this frame, from the
     // timeline worked out ahead for the whole clip.
     uint64_t first = (uint64_t)annotation->p1[0], count = (uint64_t)annotation->p1[1];

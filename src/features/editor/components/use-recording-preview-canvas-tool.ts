@@ -87,6 +87,7 @@ export function useRecordingPreviewCanvasTool({
       redact: toggle("redact"),
       select: toggle("select"),
       shape: toggle("shape"),
+      spotlight: toggle("spotlight"),
       text: toggle("text"),
     };
   }, [changeCanvasTool]);

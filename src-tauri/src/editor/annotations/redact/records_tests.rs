@@ -45,7 +45,7 @@ fn each_pixelated_box_reads_only_its_own_zones() {
 }
 
 #[test]
-fn an_arriving_box_fades_in_or_grows_its_cells_from_a_pixel() {
+fn an_arriving_box_fades_in_widens_its_blur_or_grows_its_cells_from_a_pixel() {
   let arriving = AnnotationReveal {
     opacity: 0.5,
     ..AnnotationReveal::WHOLE
@@ -54,10 +54,15 @@ fn an_arriving_box_fades_in_or_grows_its_cells_from_a_pixel() {
   flat.reveal = arriving;
   let mut blur = redaction([0.0, 0.0], [32.0, 32.0], BLUR);
   blur.reveal = arriving;
-  let list = redact_records(&[flat, blur], &[], 64, 64);
+  let mut mosaic = redaction([0.0, 0.0], [32.0, 32.0], MOSAIC);
+  mosaic.reveal = arriving;
+  let list = redact_records(&[flat, blur, mosaic], &[], 64, 64);
   assert_eq!(list.records[0].color[3], 0.5);
-  // Halfway from a pixel to eight.
-  assert_eq!(list.records[1].size, 4.5);
-  assert_eq!(list.records[1].grid, [8, 8]);
+  // Half as wide, over the whole box at once.
+  assert_eq!(list.records[1].size, 4.0);
   assert_eq!(list.records[1].color[3], 1.0);
+  // Halfway from a pixel to eight.
+  assert_eq!(list.records[2].size, 4.5);
+  assert_eq!(list.records[2].grid, [8, 8]);
+  assert_eq!(list.records[2].color[3], 1.0);
 }

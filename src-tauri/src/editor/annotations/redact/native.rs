@@ -191,8 +191,9 @@ pub(crate) fn fill(
       });
       (PIXELATE, block_size(style, per_point), grid, inks)
     }
-    // Classic pixelation and blur are averaged by the GPU from the pixels
-    // themselves, so all they carry is the size of their cells.
+    // Classic pixelation is averaged by the GPU from the pixels themselves,
+    // so all it carries is the size of its cells, and a blur the width of
+    // its Gaussian.
     AnnotationRedaction::PixelateClassic => (
       MOSAIC,
       super::cells::mosaic_cell(style.width, per_point) as f32,
@@ -201,7 +202,7 @@ pub(crate) fn fill(
     ),
     AnnotationRedaction::Blur => (
       BLUR,
-      super::cells::blur_cell(style.strength, per_point) as f32,
+      super::cells::blur_deviation(style.strength, per_point) as f32,
       [0, 0],
       Vec::new(),
     ),

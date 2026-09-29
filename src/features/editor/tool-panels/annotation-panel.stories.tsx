@@ -15,11 +15,13 @@ const seed = seedToolPanel;
 /** The dress fields a story's annotation leaves at their defaults. */
 const dress = {
   align: "left",
+  blur: false,
   handDrawn: false,
   head: "none",
   manual: false,
   radius: 0,
   redaction: "erase",
+  softness: 0,
   strength: 0,
 } as const;
 
@@ -105,6 +107,7 @@ export const Redaction: Story = {
             ...dress,
             color: "#000000",
             redaction: "pixelate",
+            softness: 0,
             width: 12,
           },
         },
@@ -133,6 +136,7 @@ export const RedactionClassic: Story = {
             ...dress,
             color: "#000000",
             redaction: "pixelateClassic",
+            softness: 0,
             width: 12,
           },
         },
@@ -162,6 +166,7 @@ export const RedactionBlur: Story = {
             color: "#000000",
             radius: 50,
             redaction: "blur",
+            softness: 0,
             strength: 3,
             width: 12,
           },

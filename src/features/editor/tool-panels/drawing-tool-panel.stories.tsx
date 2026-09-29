@@ -93,3 +93,23 @@ export const Shape: Story = {
     });
   },
 };
+
+/** The spotlight tool: a rounded box the picture dims around, with its edge's
+ * fade and whether what is outside it blurs, chosen before it is drawn. */
+export const Spotlight: Story = {
+  beforeEach: () => {
+    seedToolPanel({
+      annotation: {
+        animated: true,
+        id: "",
+        isDraft: true,
+        kind: "spotlight",
+        style: { ...firstAnnotationDress("spotlight"), blur: true },
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
+  },
+};

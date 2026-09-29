@@ -50,7 +50,8 @@ _Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
 /// A redaction puts its box's top-left corner in `start`, its bottom-right in
 /// `end` and its centre in `middle`, all normalised like an arrow's grips,
 /// and its corner radius in `start_head`. A shape reads them the same way,
-/// and adds its stroke's hand in `end_head` and its pen in `width`.
+/// and adds its stroke's hand in `end_head` and its pen in `width`; a
+/// spotlight reads them exactly as a redaction does.
 ///
 /// A highlight puts its first band's top-left corner in `start` and its last
 /// band's bottom-right in `end`; `middle_x` and `middle_y` are how far left
@@ -63,6 +64,7 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindRedact = 3,
   ScreenwideAnnotationKindHighlight = 4,
   ScreenwideAnnotationKindShape = 5,
+  ScreenwideAnnotationKindSpotlight = 6,
 };
 /// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
@@ -76,9 +78,10 @@ typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeRedact = 5,
   ScreenwideAnnotationModeHighlight = 6,
   ScreenwideAnnotationModeShape = 7,
+  ScreenwideAnnotationModeSpotlight = 8,
 };
-/// Which grip a press took hold of. A box's grips - a redaction's or a
-/// shape's - report `Box` plus the sides they move - 1 left, 2 right, 4 top,
+/// Which grip a press took hold of. A box's grips - a redaction's, a shape's
+/// or a spotlight's - report `Box` plus the sides they move - 1 left, 2 right, 4 top,
 /// 8 bottom - the same bits the resize cursors are chosen by and Rust's
 /// `AnnotationHandle::Edges` reads. Its radius dot, the layer selection's
 /// own, reports `Radius`.

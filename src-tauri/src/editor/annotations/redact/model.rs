@@ -42,12 +42,14 @@ const NEW_REDACT_COLOR: &str = "#000000";
 pub(crate) fn default_redact_style() -> AnnotationStyle {
   AnnotationStyle {
     align: Default::default(),
+    blur: false,
     color: NEW_REDACT_COLOR.to_owned(),
     head: AnnotationHead::None,
     hand_drawn: false,
     manual: false,
     radius: 0.0,
     redaction: AnnotationRedaction::Erase,
+    softness: 0.0,
     strength: NEW_BLUR_STRENGTH,
     width: NEW_REDACT_WIDTH,
   }

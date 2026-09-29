@@ -61,6 +61,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
     sources.playback_layout.panes[0].source_width,
     sources.playback_layout.panes[0].source_height,
   );
+  let annotation_pictures = sources.annotation_pictures();
 
   std::thread::Builder::new()
     .name("recording-preview-video-native".to_owned())
@@ -91,6 +92,7 @@ pub(in crate::editor::recording_preview_player::platform::macos) fn spawn(
             &ranges,
             target_ms,
             frame_ms,
+            annotation_pictures,
             held_fills.as_ref(),
           );
         }

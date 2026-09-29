@@ -3,12 +3,12 @@
 
 import { describe, expect, it } from "vitest";
 
+import { validAnnotations } from "./annotation-documents";
 import { annotationLaneLabel } from "./annotation-kinds";
 import {
   Annotation,
   annotationDeleteTarget,
   renumberedCounters,
-  validAnnotations,
 } from "./annotations";
 
 const arrow = (id: string): Annotation => ({
@@ -23,12 +23,14 @@ const arrow = (id: string): Annotation => ({
   },
   style: {
     align: "left",
+    blur: false,
     color: "#ff383c",
     handDrawn: false,
     head: "end",
     manual: false,
     radius: 0,
     redaction: "erase",
+    softness: 0,
     strength: 0,
     width: 8,
   },
@@ -62,12 +64,14 @@ const counter = (id: string, value: number): Annotation => ({
   shape: { angle: 0, center: { x: 20, y: 30 }, kind: "counter", value },
   style: {
     align: "left",
+    blur: false,
     color: "#ff383c",
     handDrawn: false,
     head: "none",
     manual: false,
     radius: 0,
     redaction: "erase",
+    softness: 0,
     strength: 0,
     width: 56,
   },
@@ -142,12 +146,14 @@ describe("validAnnotations", () => {
       shape: { kind: "text", origin: { x: 4, y: 5 }, pointer, text: "Hi" },
       style: {
         align: "center",
+        blur: false,
         color: "#ffcc00",
         handDrawn: false,
         head: "none",
         manual: false,
         radius: 0,
         redaction: "erase",
+        softness: 0,
         strength: 0,
         width: 28,
       },
@@ -209,6 +215,7 @@ describe("validAnnotations", () => {
           manual: false,
           radius: 0,
           redaction: "erase",
+          softness: 0,
           strength: 0,
           width: 56,
         },

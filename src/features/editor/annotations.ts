@@ -11,10 +11,6 @@
  * twin of `src-tauri/src/editor/annotations/model.rs`.
  */
 
-import { DEFAULT_BLUR_STRENGTH } from "../../components/shared/annotation-style/widths";
-
-import { ANNOTATION_KINDS, isAnnotationKind } from "./annotation-kinds";
-
 import type {
   AnnotationAlign,
   AnnotationHead,
@@ -27,6 +23,9 @@ export type AnnotationPoint = { x: number; y: number };
 export type AnnotationStyle = {
   /** How a text box lines up its lines; the other kinds carry the default. */
   align: AnnotationAlign;
+  /** Whether a spotlight also blurs what lies outside it; the other kinds
+   * carry `false`. */
+  blur: boolean;
   /** `#rrggbb` or `#rrggbbaa`, straight alpha. */
   color: string;
   /** Whether a highlight is drawn as a marker stroke by hand rather than as a
@@ -38,12 +37,16 @@ export type AnnotationStyle = {
    * strokes `width` tall, rather than fitted to the text under it; the other
    * kinds carry `false`. */
   manual: boolean;
-  /** A redaction's or a shape's corner radius, as a percentage of its box's
-   * shorter side from 0 to 50; the other kinds carry zero. */
+  /** A redaction's, a shape's or a spotlight's corner radius, as a
+   * percentage of its box's shorter side from 0 to 50; the other kinds carry
+   * zero. */
   radius: number;
   /** How a redaction covers what is under it; the other kinds carry the
    * default. */
   redaction: AnnotationRedaction;
+  /** How far a spotlight's edge fades from lit to dim, as a percentage of its
+   * box's shorter side from 0 to 50; the other kinds carry zero. */
+  softness: number;
   /** A blurred redaction's strength, a step from 1 to 5; the other kinds
    * carry zero. */
   strength: number;
@@ -111,6 +114,19 @@ type AnnotationOutline = {
   start: AnnotationPoint;
 };
 
+/**
+ * A box left bright while everything around it dims. `start` is its top-left
+ * corner and `end` its bottom-right, in source pixels; the style rounds its
+ * corners, fades its edge and says whether what is outside it is blurred
+ * too. The twin of `AnnotationShape::Spotlight` in
+ * `src-tauri/src/editor/annotations/shape.rs`.
+ */
+type AnnotationSpotlight = {
+  end: AnnotationPoint;
+  kind: "spotlight";
+  start: AnnotationPoint;
+};
+
 /** One line a highlight covers, in source pixels. */
 export type HighlightBand = {
   bottom: number;
@@ -154,6 +170,7 @@ export type AnnotationShape =
   | AnnotationHighlight
   | AnnotationOutline
   | AnnotationRedact
+  | AnnotationSpotlight
   | AnnotationText;
 
 export type Annotation = {
@@ -171,24 +188,6 @@ export type Annotation = {
   shape: AnnotationShape;
   style: AnnotationStyle;
 };
-
-const annotationHead = (value: unknown): AnnotationHead =>
-  value === "none" || value === "both" ? value : "end";
-
-const annotationAlign = (value: unknown): AnnotationAlign =>
-  value === "center" || value === "right" ? value : "left";
-
-const annotationRedaction = (value: unknown): AnnotationRedaction =>
-  value === "blur" ||
-  value === "color" ||
-  value === "pixelate" ||
-  value === "pixelateClassic"
-    ? value
-    : "erase";
-
-/** A finite number, or `fallback` for anything else. */
-const finiteOr = (value: unknown, fallback: number) =>
-  typeof value === "number" && Number.isFinite(value) ? value : fallback;
 
 /**
  * Which arrow a delete acts on: the one the halo is showing, and otherwise
@@ -208,48 +207,6 @@ export const annotationDeleteTarget = (
       ? id
       : null;
   return present(hoveredId) ?? present(selectedId);
-};
-
-/**
- * Read a stored document's annotations, dropping anything the compositor could
- * not place. An annotation that is not wholly finite is no annotation at all
- * rather than something every kernel has to guard, and a shape this build does
- * not know belongs to a newer document than it can draw.
- */
-export const validAnnotations = (value: unknown): Annotation[] => {
-  if (!Array.isArray(value)) return [];
-  const valid: Annotation[] = [];
-  for (const entry of value as unknown[]) {
-    const annotation = (entry ?? {}) as Partial<Annotation>;
-    const shape = annotation.shape;
-    const style = annotation.style;
-    if (typeof style?.color !== "string" || typeof style.width !== "number")
-      continue;
-    if (!Number.isFinite(style.width)) continue;
-    const dress = {
-      align: annotationAlign(style.align),
-      color: style.color,
-      // Absent from a document written before highlights could be drawn.
-      handDrawn: (style.handDrawn as unknown) === true,
-      head: annotationHead(style.head),
-      manual: (style.manual as unknown) === true,
-      radius: Math.min(50, Math.max(0, finiteOr(style.radius, 0))),
-      redaction: annotationRedaction(style.redaction),
-      strength: finiteOr(style.strength, DEFAULT_BLUR_STRENGTH),
-      width: Math.max(0, style.width),
-    };
-    const common = {
-      aboveCamera: annotation.aboveCamera === true,
-      animated: annotation.animated !== false,
-      id: typeof annotation.id === "string" ? annotation.id : "",
-      style: dress,
-    };
-    const kind = (shape as { kind?: unknown } | undefined)?.kind;
-    if (!isAnnotationKind(kind)) continue;
-    const parsed = ANNOTATION_KINDS[kind].parseShape(shape);
-    if (parsed) valid.push({ ...common, shape: parsed });
-  }
-  return valid;
 };
 
 /**

@@ -10,13 +10,14 @@
 //! the ring just outside the box, colour takes the style's. Pixelate reads the
 //! covered pixels only for the few colours they are made of; its blocks are
 //! laid out by a seed rather than averaged from the picture, which leaves a
-//! depixelation attack no shapes to recover. Blur reads a coarse grid of
-//! average colours and nothing finer. The box is snapped outward to whole
-//! source pixels, and a rounded corner is drawn wholly inside the curve with
-//! its soft edge outside it, so no covered pixel survives half-blended.
+//! depixelation attack no shapes to recover. Blur is a Gaussian over the box's
+//! own pixels, a look rather than a way to hide. The box is snapped outward
+//! to whole source pixels, and a rounded corner is drawn wholly inside the
+//! curve with its soft edge outside it, so no covered pixel survives
+//! half-blended.
 
-/// The grid of average colours a blurred or classically pixelated box draws
-/// from.
+/// How large a classically pixelated box's cells are, and how wide a blurred
+/// box's blur.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod cells;
 /// Draw-ready geometry and the distance that picks it, prepared for both

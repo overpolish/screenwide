@@ -23,6 +23,9 @@ const settings: AnnotateSettings = {
   keepAnnotationsBetweenSessions: false,
   shapeHandDrawn: false,
   shapeRadius: 0,
+  spotlightBlur: false,
+  spotlightRadius: 12,
+  spotlightSoftness: 10,
   toolbarPosition: null,
 };
 
@@ -97,5 +100,13 @@ export const Shape: Story = {
       shapeHandDrawn: true,
       shapeRadius: 20,
     },
+  },
+};
+
+/** The spotlight in hand: no colour and no stroke, only how round its corners
+ * are, how far its edge fades and whether what is outside it blurs. */
+export const Spotlight: Story = {
+  args: {
+    settings: { ...settings, defaultShape: "spotlight", spotlightBlur: true },
   },
 };

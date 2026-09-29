@@ -5,6 +5,7 @@
 //! showing, and the provisional clips a drag writes through until it commits.
 
 use super::*;
+use crate::editor::annotations::gesture::screen_only;
 use crate::editor::annotations::pin::fold;
 use crate::editor::annotations::{AnnotationKind, AnnotationShape};
 
@@ -130,11 +131,8 @@ impl PreviewPlayerManager {
         }
         _ => {}
       }
-      // Only the screen's frames are redacted, or have text to highlight.
       let redacting = drawing_kind(self.annotation.mode) == Some(AnnotationKind::Redact);
-      let screen_only =
-        redacting || self.annotation.mode == crate::editor::annotations::gesture::MODE_HIGHLIGHT;
-      if target == AnnotationGestureTarget::New && screen_only && pane != 0 {
+      if target == AnnotationGestureTarget::New && screen_only(self.annotation.mode) && pane != 0 {
         return None;
       }
       let before = clips.read().ok()?.clone();

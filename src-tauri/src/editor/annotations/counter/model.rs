@@ -33,12 +33,14 @@ pub(crate) const NEW_COUNTER_ANGLE: f64 = 0.0;
 pub(crate) fn default_counter_style() -> AnnotationStyle {
   AnnotationStyle {
     align: Default::default(),
+    blur: false,
     color: crate::editor::annotations::model::NEW_ANNOTATION_COLOR.to_owned(),
     head: AnnotationHead::None,
     hand_drawn: false,
     manual: false,
     radius: 0.0,
     redaction: Default::default(),
+    softness: 0.0,
     strength: 0.0,
     width: NEW_COUNTER_WIDTH,
   }

@@ -75,6 +75,7 @@ pub(super) fn present_native_frame(
           &ranges,
           frame.timestamp_ms,
           frame_ms,
+          sources.annotation_pictures(),
           sources.held_fills.as_ref(),
         );
       }

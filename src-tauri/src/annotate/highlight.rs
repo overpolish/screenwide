@@ -30,7 +30,7 @@ use crate::screenshots::CapturedImage;
 mod capture;
 #[path = "highlight_underlay.rs"]
 mod underlay;
-pub(super) use capture::begin;
+pub(super) use capture::{begin, refresh};
 pub(super) use underlay::Underlay;
 
 /// One display's pixels at a press, and where they sit on the desktop.

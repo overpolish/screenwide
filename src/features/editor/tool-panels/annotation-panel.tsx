@@ -20,6 +20,7 @@ import { ANNOTATION_KINDS } from "../annotation-kinds";
 import { EditorKind } from "../types";
 
 import { AnnotationRedactionRows } from "./annotation-redaction-rows";
+import { AnnotationSpotlightRows } from "./annotation-spotlight-rows";
 import { useAnnotationColorMenu } from "./use-annotation-color-menu";
 import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
 
@@ -33,7 +34,7 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  * rounds its corners; a redaction chooses how it covers and how round its
  * corners are, and offers a pixelation style and a block size only when
  * pixelated, a strength only when blurred and a colour only when filled with
- * one.
+ * one; a spotlight has no colour, only its corners, its fade and its blur.
  *
  * This panel belongs to the annotation in hand. It comes up the moment one is
  * chosen, in any tool that can choose one, and every change is committed
@@ -76,7 +77,8 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
       ? redaction
       : null;
   const showsSize = kind.hasSize && (!kind.hasRedaction || pixelation !== null);
-  const showsColor = !kind.hasRedaction || redaction === "color";
+  const showsColor =
+    kind.hasColor && (!kind.hasRedaction || redaction === "color");
   // A kind that always arrives still has no choice to make before it is drawn.
   const animates =
     workspace === "recording" &&
@@ -262,6 +264,14 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           )}
         </ControlRow>
       ) : null}
+
+      <AnnotationSpotlightRows
+        change={change}
+        hasBlur={kind.hasBlur}
+        hasSoftness={kind.hasSoftness}
+        isLocked={isLocked}
+        style={annotation.style}
+      />
 
       {/* The swatches say what they are, so the row carries no heading; it
           keeps the section gap its labelled neighbours sit on. */}

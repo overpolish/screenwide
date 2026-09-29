@@ -32,4 +32,4 @@ export type AnnotationRedaction =
  * kind from here rather than respelling it.
  */
 export type AnnotationKind =
-  "arrow" | "counter" | "highlight" | "redact" | "shape" | "text";
+  "arrow" | "counter" | "highlight" | "redact" | "shape" | "spotlight" | "text";

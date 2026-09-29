@@ -72,6 +72,14 @@ pub enum AnnotationShape {
     end: AnnotationPoint,
     seed: u32,
   },
+  /// A box left bright while everything around it dims. `start` is its
+  /// top-left corner and `end` its bottom-right, in source pixels; the style
+  /// rounds its corners, fades its edge and says whether what is outside it
+  /// is blurred too.
+  Spotlight {
+    start: AnnotationPoint,
+    end: AnnotationPoint,
+  },
 }
 
 impl AnnotationShape {
@@ -84,6 +92,7 @@ impl AnnotationShape {
       Self::Redact { .. } => AnnotationKind::Redact,
       Self::Highlight { .. } => AnnotationKind::Highlight,
       Self::Shape { .. } => AnnotationKind::Shape,
+      Self::Spotlight { .. } => AnnotationKind::Spotlight,
     }
   }
 
@@ -101,7 +110,9 @@ impl AnnotationShape {
       } => [*start, *control, *end],
       Self::Counter { center, .. } => [*center; 3],
       Self::Text { origin, .. } => [*origin; 3],
-      Self::Redact { start, end, .. } | Self::Shape { start, end, .. } => [*start, *end, *end],
+      Self::Redact { start, end, .. }
+      | Self::Shape { start, end, .. }
+      | Self::Spotlight { start, end } => [*start, *end, *end],
       Self::Highlight {
         start, end, bands, ..
       } => {
@@ -126,6 +137,7 @@ impl AnnotationShape {
       } => super::text::model::placed(*origin, pointer),
       Self::Redact { start, end, .. } => super::redact::model::placed(*start, *end),
       Self::Shape { start, end, .. } => super::outline::model::placed(*start, *end),
+      Self::Spotlight { start, end } => super::spotlight::model::placed(*start, *end),
       Self::Highlight {
         start, end, bands, ..
       } => super::highlight::model::placed(*start, *end, bands),
@@ -189,6 +201,10 @@ impl AnnotationShape {
         end: map(*end),
         seed: *seed,
       },
+      Self::Spotlight { start, end } => Self::Spotlight {
+        start: map(*start),
+        end: map(*end),
+      },
     }
   }
 
@@ -206,7 +222,8 @@ impl AnnotationShape {
       | Self::Text { .. }
       | Self::Redact { .. }
       | Self::Highlight { .. }
-      | Self::Shape { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
+      | Self::Shape { .. }
+      | Self::Spotlight { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
     }
   }
 }

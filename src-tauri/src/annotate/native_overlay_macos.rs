@@ -61,18 +61,22 @@ thread_local! {
 }
 
 /// What a display's highlights are recoloured from, as the native side reads
-/// it: the pixels, their size, and a revision that changes whenever they do.
-/// No pixels where no highlight has been drawn on the display. The twin of
-/// `ScreenwideAnnotateUnderlay`.
+/// it: the pixels, their size, and a revision that changes whenever they do;
+/// and while a spotlight blurs, the same softened for its blur. No pixels
+/// where no highlight or blurring spotlight has been drawn on the display.
+/// The twin of `ScreenwideAnnotateUnderlay`.
 #[repr(C)]
 pub(super) struct NativeUnderlay {
   rgba: *const u8,
   width: u32,
   height: u32,
   revision: u64,
+  soft_rgba: *const u8,
+  soft_width: u32,
+  soft_height: u32,
 }
 
-const _: () = assert!(std::mem::size_of::<NativeUnderlay>() == 24);
+const _: () = assert!(std::mem::size_of::<NativeUnderlay>() == 40);
 
 /// Fills one display's underlay.
 ///
@@ -85,20 +89,28 @@ extern "C" fn underlay(display: u32, out: *mut NativeUnderlay) {
   }
   UNDERLAY.with_borrow_mut(|held| {
     *held = super::highlight::underlay(display as usize);
-    let view = held.as_ref().map_or(
-      NativeUnderlay {
-        rgba: std::ptr::null(),
-        width: 0,
-        height: 0,
-        revision: 0,
-      },
-      |underlay| NativeUnderlay {
-        rgba: underlay.image.rgba.as_ptr(),
-        width: underlay.image.width,
-        height: underlay.image.height,
-        revision: underlay.revision,
-      },
-    );
+    let mut view = NativeUnderlay {
+      rgba: std::ptr::null(),
+      width: 0,
+      height: 0,
+      revision: 0,
+      soft_rgba: std::ptr::null(),
+      soft_width: 0,
+      soft_height: 0,
+    };
+    if let Some(underlay) = held.as_ref() {
+      (view.rgba, view.width, view.height) = (
+        underlay.image.rgba.as_ptr(),
+        underlay.image.width,
+        underlay.image.height,
+      );
+      view.revision = underlay.revision;
+      if super::input::spotlight_blurs() {
+        let soft = underlay.softened();
+        (view.soft_rgba, view.soft_width, view.soft_height) =
+          (soft.rgba.as_ptr(), soft.width, soft.height);
+      }
+    }
     unsafe { out.write(view) };
   });
 }

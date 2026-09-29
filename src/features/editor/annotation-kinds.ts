@@ -10,36 +10,32 @@
 import { ANNOTATION_SIZES } from "../../components/shared/annotation-style/widths";
 
 import {
-  annotationBox,
-  annotationPoint,
-  annotationSeed,
-  highlightBand,
-  highlightTone,
-  textPointer,
-} from "./annotation-shape-parts";
+  arrowShape,
+  counterShape,
+  highlightShape,
+  outlineShape,
+  redactShape,
+  spotlightShape,
+  textShape,
+} from "./annotation-shape-parsers";
 
-import type {
-  Annotation,
-  AnnotationArrow,
-  AnnotationCounter,
-  AnnotationHighlight,
-  AnnotationShape,
-  AnnotationText,
-} from "./annotations";
+import type { Annotation, AnnotationShape } from "./annotations";
 import type { AnnotationKind } from "../../components/shared/annotation-style/types";
 
 /**
  * How long an animated annotation takes to arrive where its clip names no
  * pace, in source milliseconds. The twins of `REVEAL_DRAW_IN_MS`,
- * `COUNTER_REVEAL_IN_MS` and `TEXT_REVEAL_IN_MS` in
- * `src-tauri/src/editor/annotations/reveal.rs`, `counter/reveal.rs` and
- * `text/reveal.rs`, which Rust tests hold to these lines. A clip the editor
- * paces arrives over its path's own time instead, as `annotation-pace.ts`
- * works it out. A text box's is its box's arrival and then its pointer's.
+ * `COUNTER_REVEAL_IN_MS`, `TEXT_REVEAL_IN_MS` and `SPOTLIGHT_FADE_IN_MS` in
+ * `src-tauri/src/editor/annotations/reveal.rs`, `counter/reveal.rs`,
+ * `text/reveal.rs` and `spotlight/reveal.rs`, which Rust tests hold to these
+ * lines. A clip the editor paces arrives over its path's own time instead, as
+ * `annotation-pace.ts` works it out. A text box's is its box's arrival and
+ * then its pointer's, and a spotlight's is its shade deepening.
  */
 export const ANNOTATION_DRAW_IN_MS = 1000;
 const ANNOTATION_COUNTER_DRAW_IN_MS = 320;
 const ANNOTATION_TEXT_DRAW_IN_MS = 600;
+const ANNOTATION_SPOTLIGHT_DRAW_IN_MS = 400;
 
 /**
  * What one kind of annotation is and can do: how it is read from a document,
@@ -62,6 +58,10 @@ type AnnotationKindRow<Shape extends AnnotationShape> =
     hasAlign: boolean;
     /** Whether it is aimed by an angle of its own, rather than by its ends. */
     hasAngle: boolean;
+    /** Whether it can blur what lies outside it. */
+    hasBlur: boolean;
+    /** Whether it has a colour of its own. A spotlight's shade is black. */
+    hasColor: boolean;
     /** Whether it fits itself to what is under it, or can be laid by hand
      * over a box instead. */
     hasFit: boolean;
@@ -76,6 +76,8 @@ type AnnotationKindRow<Shape extends AnnotationShape> =
     /** Whether its size is its own to choose. A highlight's bands are as tall
      * as the lines it covers, and a box is laid with its one marker. */
     hasSize: boolean;
+    /** Whether its edge can fade in from its box, which is its own to choose. */
+    hasSoftness: boolean;
     /** What the timeline lane calls one, `index` being its place in the lane. */
     laneLabel: (shape: Shape, index: number) => string;
     /** The shape as stored, or null where the compositor could not place it. */
@@ -98,24 +100,19 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: false,
+    hasBlur: false,
+    hasColor: true,
     hasFit: false,
     hasHandDrawn: false,
     hasHead: true,
     hasRadius: false,
     hasRedaction: false,
     hasSize: true,
+    hasSoftness: false,
     // An arrow has no name of its own, so it is called by its place in the
     // lane.
     laneLabel: (_shape, index) => `Arrow ${String(index + 1)}`,
-    parseShape: (value) => {
-      const shape = (value ?? {}) as Partial<AnnotationArrow>;
-      const control = annotationPoint(shape.control);
-      const end = annotationPoint(shape.end);
-      const start = annotationPoint(shape.start);
-      return control && end && start
-        ? { control, end, kind: "arrow", start }
-        : null;
-    },
+    parseShape: arrowShape,
     reversible: true,
     startsStill: false,
   },
@@ -125,6 +122,8 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: true,
+    hasBlur: false,
+    hasColor: true,
     hasFit: false,
     hasHandDrawn: false,
     // A counter is a disc with a number in it, which leaves it no head to
@@ -133,20 +132,9 @@ export const ANNOTATION_KINDS: {
     hasRadius: false,
     hasRedaction: false,
     hasSize: true,
+    hasSoftness: false,
     laneLabel: (shape) => `Counter ${String(shape.value)}`,
-    parseShape: (value) => {
-      const shape = (value ?? {}) as Partial<AnnotationCounter>;
-      const center = annotationPoint(shape.center);
-      const number = shape.value;
-      return center &&
-        typeof shape.angle === "number" &&
-        Number.isFinite(shape.angle) &&
-        typeof number === "number" &&
-        Number.isInteger(number) &&
-        number >= 1
-        ? { angle: shape.angle, center, kind: "counter", value: number }
-        : null;
-    },
+    parseShape: counterShape,
     reversible: false,
     startsStill: false,
   },
@@ -157,35 +145,17 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: false,
+    hasBlur: false,
+    hasColor: true,
     hasFit: true,
     hasHandDrawn: true,
     hasHead: false,
     hasRadius: false,
     hasRedaction: false,
     hasSize: false,
+    hasSoftness: false,
     laneLabel: (_shape, index) => `Highlight ${String(index + 1)}`,
-    parseShape: (value) => {
-      const shape = (value ?? {}) as Partial<AnnotationHighlight>;
-      const start = annotationPoint(shape.start);
-      const end = annotationPoint(shape.end);
-      const seed = annotationSeed(shape.seed);
-      const bands = Array.isArray(shape.bands)
-        ? shape.bands.map(highlightBand)
-        : [];
-      return start &&
-        end &&
-        seed !== null &&
-        bands.every((band) => band !== null)
-        ? {
-            bands,
-            end,
-            kind: "highlight",
-            seed,
-            start,
-            tone: highlightTone(shape.tone),
-          }
-        : null;
-    },
+    parseShape: highlightShape,
     reversible: false,
     startsStill: false,
   },
@@ -198,17 +168,17 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_COUNTER_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: false,
+    hasBlur: false,
+    hasColor: true,
     hasFit: false,
     hasHandDrawn: false,
     hasHead: false,
     hasRadius: true,
     hasRedaction: true,
     hasSize: true,
+    hasSoftness: false,
     laneLabel: (_shape, index) => `Redaction ${String(index + 1)}`,
-    parseShape: (value) => {
-      const box = annotationBox(value);
-      return box && { ...box, kind: "redact" };
-    },
+    parseShape: redactShape,
     reversible: false,
     startsStill: true,
   },
@@ -219,17 +189,40 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_DRAW_IN_MS,
     hasAlign: false,
     hasAngle: false,
+    hasBlur: false,
+    hasColor: true,
     hasFit: false,
     hasHandDrawn: true,
     hasHead: false,
     hasRadius: true,
     hasRedaction: false,
     hasSize: true,
+    hasSoftness: false,
     laneLabel: (_shape, index) => `Shape ${String(index + 1)}`,
-    parseShape: (value) => {
-      const box = annotationBox(value);
-      return box && { ...box, kind: "shape" };
-    },
+    parseShape: outlineShape,
+    reversible: false,
+    startsStill: false,
+  },
+  spotlight: {
+    ...ANNOTATION_SIZES.spotlight,
+    // The shade deepens round it as it arrives and lifts as it leaves. It is
+    // no colour and no stroke: only its box, its corners, its fade and
+    // whether what is outside it blurs.
+    animates: true,
+    drawInMs: ANNOTATION_SPOTLIGHT_DRAW_IN_MS,
+    hasAlign: false,
+    hasAngle: false,
+    hasBlur: true,
+    hasColor: false,
+    hasFit: false,
+    hasHandDrawn: false,
+    hasHead: false,
+    hasRadius: true,
+    hasRedaction: false,
+    hasSize: false,
+    hasSoftness: true,
+    laneLabel: (_shape, index) => `Spotlight ${String(index + 1)}`,
+    parseShape: spotlightShape,
     reversible: false,
     startsStill: false,
   },
@@ -241,30 +234,22 @@ export const ANNOTATION_KINDS: {
     drawInMs: ANNOTATION_TEXT_DRAW_IN_MS,
     hasAlign: true,
     hasAngle: false,
+    hasBlur: false,
+    hasColor: true,
     hasFit: false,
     hasHandDrawn: false,
     hasHead: false,
     hasRadius: false,
     hasRedaction: false,
     hasSize: true,
+    hasSoftness: false,
     // A box is called by what it says: its first line, which the lane
     // truncates to the room it has, or by its place when that line is empty.
     laneLabel: (shape, index) => {
       const line = shape.text.split("\n", 1)[0].trim();
       return line === "" ? `Text ${String(index + 1)}` : line;
     },
-    parseShape: (value) => {
-      const shape = (value ?? {}) as Partial<AnnotationText>;
-      const origin = annotationPoint(shape.origin);
-      return origin && typeof shape.text === "string"
-        ? {
-            kind: "text",
-            origin,
-            pointer: textPointer(shape.pointer),
-            text: shape.text,
-          }
-        : null;
-    },
+    parseShape: textShape,
     reversible: false,
     startsStill: false,
   },

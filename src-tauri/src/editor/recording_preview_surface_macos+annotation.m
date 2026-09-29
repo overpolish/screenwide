@@ -43,12 +43,13 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode
   return mode == ScreenwideAnnotationModeArrow ||
          mode == ScreenwideAnnotationModeCounter ||
          mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeRedact ||
-         mode == ScreenwideAnnotationModeHighlight || mode == ScreenwideAnnotationModeShape;
+         mode == ScreenwideAnnotationModeHighlight || mode == ScreenwideAnnotationModeShape ||
+         mode == ScreenwideAnnotationModeSpotlight;
 }
 
 // An arrow has three grips; a counter one, the tip of its tail; a text box
-// one, its pointer's tip; a redaction or a shape the eight of its box; a
-// highlight the selection's two ends.
+// one, its pointer's tip; a redaction, a shape or a spotlight the eight of
+// its box; a highlight the selection's two ends.
 SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_grips(
     NSRect image, ScreenwidePreviewAnnotation item, NSPoint *handles, uint32_t *kinds) {
   if (annotation_kind_is_box(item.kind))

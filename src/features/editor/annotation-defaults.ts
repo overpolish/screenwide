@@ -6,6 +6,7 @@ import { useSyncExternalStore } from "react";
 import {
   DEFAULT_BLUR_STRENGTH,
   defaultAnnotationSize,
+  SOFT_SPOTLIGHT_EDGE,
 } from "../../components/shared/annotation-style/widths";
 
 import { AnnotationStyle } from "./annotations";
@@ -35,12 +36,16 @@ export type AnnotationTool = AnnotationKind | "select";
  * marking something out, so a box filled in the last arrow's colour, or an
  * arrow drawn in the black a box was filled with, would both be surprises. A
  * highlight keeps its own too: a highlighter is its own pen, which stays
- * yellow when the arrows turn red, and is the only kind drawn by hand.
+ * yellow when the arrows turn red, and is the only kind drawn by hand. So
+ * does a spotlight, which is no colour at all, and whose corners and fade
+ * are its own rather than a shape's.
  */
-type DressGroup = "highlight" | "redact" | "shared";
+type DressGroup = "highlight" | "redact" | "shared" | "spotlight";
 const lastUsed = new Map<DressGroup, AnnotationStyle>();
 const dressGroup = (kind: AnnotationKind): DressGroup =>
-  kind === "redact" || kind === "highlight" ? kind : "shared";
+  kind === "redact" || kind === "highlight" || kind === "spotlight"
+    ? kind
+    : "shared";
 const lastSize = new Map<AnnotationKind, number>();
 /**
  * And whether it animated. This is the annotation's own property rather than
@@ -69,12 +74,14 @@ const sameDress = (
   width: number,
 ) =>
   held.align === style.align &&
+  held.blur === style.blur &&
   held.color === style.color &&
   held.handDrawn === style.handDrawn &&
   held.head === style.head &&
   held.manual === style.manual &&
   held.radius === style.radius &&
   held.redaction === style.redaction &&
+  held.softness === style.softness &&
   held.strength === style.strength &&
   held.width === width;
 
@@ -116,7 +123,8 @@ export const rememberAnnotationAnimated = (animated: boolean) => {
  *
  * A colour settled on for one shape dresses the others, at that shape's own
  * remembered size - or at its default, where it has none yet. A redaction is
- * dressed only by another redaction, and a highlight by another highlight.
+ * dressed only by another redaction, a highlight by another highlight and a
+ * spotlight by another spotlight.
  */
 export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
   useSyncExternalStore(subscribe, () => {
@@ -124,25 +132,32 @@ export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
     return held === undefined ? null : styleFor(kind, held, lastSize.get(kind));
   });
 
+/** A fresh spotlight's corner radius, as a percentage of its shorter side.
+ * The twin of `NEW_SPOTLIGHT_RADIUS` in
+ * `src-tauri/src/editor/annotations/spotlight`. */
+const SPOTLIGHT_RADIUS = 12;
+
 /**
  * The dress a tool draws in before anything has been settled on: the palette's
- * yellow, or black for a redaction's fill, at the tool's own first size, with
- * an arrow's head at its end. The twins of `default_arrow_style`,
- * `default_counter_style`, `default_text_style`, `default_redact_style`,
- * `default_highlight_style` and `default_shape_style` in
- * `src-tauri/src/editor/annotations`, which dress a fresh annotation where the
- * editor sends no dress of its own.
+ * yellow, or black for a redaction's fill and a spotlight's shade, at the
+ * tool's own first size, with an arrow's head at its end. The twins of
+ * `default_arrow_style`, `default_counter_style`, `default_text_style`,
+ * `default_redact_style`, `default_highlight_style`, `default_shape_style`
+ * and `default_spotlight_style` in `src-tauri/src/editor/annotations`, which
+ * dress a fresh annotation where the editor sends no dress of its own.
  */
 export const firstAnnotationDress = (
   kind: AnnotationKind,
 ): AnnotationStyle => ({
   align: "left",
-  color: kind === "redact" ? "#000000" : "#ffcc00",
+  blur: false,
+  color: kind === "redact" || kind === "spotlight" ? "#000000" : "#ffcc00",
   handDrawn: false,
   head: kind === "arrow" ? "end" : "none",
   manual: false,
-  radius: 0,
+  radius: kind === "spotlight" ? SPOTLIGHT_RADIUS : 0,
   redaction: "erase",
+  softness: kind === "spotlight" ? SOFT_SPOTLIGHT_EDGE : 0,
   strength: kind === "redact" ? DEFAULT_BLUR_STRENGTH : 0,
   width: defaultAnnotationSize(kind),
 });

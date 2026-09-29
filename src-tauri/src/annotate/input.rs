@@ -114,8 +114,22 @@ pub(super) fn in_progress() -> Option<Annotation> {
     .annotation()
 }
 
+/// Whether a spotlight on screen, or the one in hand, blurs: what the
+/// overlays soften their underlay for.
+pub(super) fn spotlight_blurs() -> bool {
+  let blurs = |annotation: &Annotation| {
+    annotation.style.blur
+      && matches!(
+        annotation.shape,
+        crate::editor::annotations::AnnotationShape::Spotlight { .. }
+      )
+  };
+  super::live_clips::annotations().iter().any(blurs) || in_progress().is_some_and(|a| blurs(&a))
+}
+
 /// A pointer step in global desktop points: 0 down, 1 drag, 2 up. `app` is
-/// what a highlight's press captures the desktop with.
+/// what a highlight's press, or a blurring spotlight's, captures the desktop
+/// with.
 pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64) {
   let settings = super::settings::current();
   let tool = Tool {
@@ -145,10 +159,16 @@ pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64
     }
   }
   let completed = step(&mut drawing(), phase, Instant::now(), point, &tool);
-  if phase == PHASE_DOWN && tool.shape == AnnotationKind::Highlight {
+  if phase == PHASE_DOWN {
     let stroke = drawing().as_ref().map(|stroke| stroke.id.clone());
-    if let (Some(stroke), Some(app)) = (stroke, app) {
-      super::highlight::begin(app, &stroke, point);
+    match (tool.shape, stroke, app) {
+      (AnnotationKind::Highlight, Some(stroke), Some(app)) => {
+        super::highlight::begin(app, &stroke, point);
+      }
+      (AnnotationKind::Spotlight, Some(_), Some(app)) if settings.spotlight_blur => {
+        super::highlight::refresh(app, point);
+      }
+      _ => {}
     }
   }
   if let Some((annotation, started_at)) = completed {

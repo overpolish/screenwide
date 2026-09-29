@@ -91,12 +91,14 @@ pub(crate) const NEW_TEXT_WIDTH: f64 = TEXT_SIZES[2];
 pub(crate) fn default_text_style() -> AnnotationStyle {
   AnnotationStyle {
     align: AnnotationAlign::Left,
+    blur: false,
     color: crate::editor::annotations::model::NEW_ANNOTATION_COLOR.to_owned(),
     head: AnnotationHead::None,
     hand_drawn: false,
     manual: false,
     radius: 0.0,
     redaction: Default::default(),
+    softness: 0.0,
     strength: 0.0,
     width: NEW_TEXT_WIDTH,
   }

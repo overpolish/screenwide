@@ -23,15 +23,21 @@ typedef void (*ScreenwideAnnotateScene)(uint32_t display,
 /// The desktop one display's highlights are recoloured from: its latest
 /// capture with each highlight's own pasted back, straight RGBA, `width` by
 /// `height`. `revision` changes whenever the pixels do, so each is uploaded
-/// once; no pixels where no highlight has been drawn. Rust's, and valid until
-/// it is asked for again. The twin of Rust's `NativeUnderlay`.
+/// once; no pixels where no highlight or blurring spotlight has been drawn.
+/// While a spotlight blurs, `soft_rgba` is the same desktop softened for its
+/// blur, `soft_width` by `soft_height` and stretched back over the display;
+/// none otherwise. Rust's, and valid until it is asked for again. The twin of
+/// Rust's `NativeUnderlay`.
 typedef struct {
   const uint8_t *rgba;
   uint32_t width;
   uint32_t height;
   uint64_t revision;
+  const uint8_t *soft_rgba;
+  uint32_t soft_width;
+  uint32_t soft_height;
 } ScreenwideAnnotateUnderlay;
-_Static_assert(sizeof(ScreenwideAnnotateUnderlay) == 24, "Underlay ABI must match Rust");
+_Static_assert(sizeof(ScreenwideAnnotateUnderlay) == 40, "Underlay ABI must match Rust");
 
 typedef void (*ScreenwideAnnotateUnderlaySource)(uint32_t display,
                                                  ScreenwideAnnotateUnderlay *out);

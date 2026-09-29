@@ -400,6 +400,7 @@ float4 annotation_counter_layer(
 #include "annotation_text.hlsl"
 #include "annotation_highlight.hlsl"
 #include "annotation_shape.hlsl"
+#include "annotation_spotlight.hlsl"
 
 /// A hovered redaction's halo. The box itself was applied to the source and
 /// is not drawn here, so this is the only thing that finds an erased box on
@@ -449,10 +450,11 @@ float4 composite_annotations(
     PreviewArrow annotation = annotation_arrows[index];
     PreviewGeometry arrow = annotation.geometry;
     float4 color = float4(annotation.red, annotation.green, annotation.blue, annotation.alpha);
-    // Highlights recolour the pixel under them in `composite_highlights`,
-    // before anything else is drawn over it.
+    // Highlights recolour the pixel under them in `composite_highlights`, and
+    // spotlights shade it in `composite_spotlights`, before anything else is
+    // drawn over it.
     if (annotation.kind == annotation_highlight_kind) continue;
-    if (annotation.kind == 3u) {
+    if (annotation.kind == 3u || annotation.kind == annotation_spotlight_kind) {
       rgba = annotation_redact_halo(rgba, annotation, canvas_point, feather);
       continue;
     }

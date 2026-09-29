@@ -78,10 +78,23 @@ pub async fn copy_recording_preview_frame_to_clipboard(
         .unwrap_or_else(|poisoned| poisoned.into_inner());
       // A thumbnail is one frame standing still, so it shows the reveal this
       // instant holds and nothing is moving for the blur to fade.
-      recording_output.primary.annotations =
-        revealed_annotations(&clips, AnnotationTrack::Primary, &ranges, position_ms, 0.0);
-      recording_output.camera.annotations =
-        revealed_annotations(&clips, AnnotationTrack::Camera, &ranges, position_ms, 0.0);
+      let [primary, camera] = sources.annotation_pictures();
+      recording_output.primary.annotations = revealed_annotations(
+        &clips,
+        AnnotationTrack::Primary,
+        &ranges,
+        position_ms,
+        0.0,
+        primary,
+      );
+      recording_output.camera.annotations = revealed_annotations(
+        &clips,
+        AnnotationTrack::Camera,
+        &ranges,
+        position_ms,
+        0.0,
+        camera,
+      );
     }
     platform::composed_frame_image(
       &sources,

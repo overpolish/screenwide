@@ -18,12 +18,14 @@ fn counter(value: u32, angle: f64) -> Annotation {
   let mut annotation = new_counter("counter".to_owned(), CENTER, value, None, None);
   annotation.style = AnnotationStyle {
     align: Default::default(),
+    blur: false,
     color: "#ffcc00".to_owned(),
     head: crate::editor::annotations::AnnotationHead::None,
     hand_drawn: false,
     manual: false,
     radius: 0.0,
     redaction: Default::default(),
+    softness: 0.0,
     strength: 0.0,
     width: DIAMETER,
   };

@@ -41,6 +41,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_text.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_counter.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_shape.h");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_spotlight.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_composite.h");
     println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork_helpers.h");
     println!(
@@ -192,6 +193,7 @@ fn main() {
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_annotations.m")
       .file("src/editor/cursor_export/gpu_compositor_macos+presenter_redact.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_redact.m")
+      .file("src/editor/cursor_export/gpu_compositor_macos_redact_encode.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_background_image.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m")
       .file("src/editor/cursor_export/gpu_compositor_macos_annotation_text.m")
@@ -297,6 +299,10 @@ fn compile_windows_preview_shaders() {
   compile_shader(
     "src/editor/preview_platform/surface_windows/shaders/redact_cells.hlsl",
     "preview_redact_cells",
+  );
+  compile_shader(
+    "src/editor/preview_platform/surface_windows/shaders/redact_rows.hlsl",
+    "preview_redact_rows",
   );
   compile_shader(
     "src/editor/preview_platform/surface_windows/shaders/redact_paint.hlsl",

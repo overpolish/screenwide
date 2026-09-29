@@ -12,6 +12,8 @@ mod draw;
 mod pipeline;
 #[path = "compositor/redact.rs"]
 mod redact;
+#[path = "compositor/redact_targets.rs"]
+mod redact_targets;
 #[path = "compositor/source.rs"]
 mod source;
 #[path = "compositor/submit.rs"]

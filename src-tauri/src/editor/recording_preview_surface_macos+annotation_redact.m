@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A box's chrome - a redaction's or a shape's: the layer selection's own
-//! box, with its eight grips and its radius dot, around the chosen one. A
-//! hovered one wears the compositor's halo instead.
+//! A box's chrome - a redaction's, a shape's or a spotlight's: the layer
+//! selection's own box, with its eight grips and its radius dot, around the
+//! chosen one. A hovered one wears the compositor's halo instead.
 
 #import "recording_preview_surface_macos_private.h"
 #include "recording_preview_annotation_layers_macos.h"
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_kind_is_box(uint32_t kind) {
-  return kind == ScreenwideAnnotationKindRedact || kind == ScreenwideAnnotationKindShape;
+  return kind == ScreenwideAnnotationKindRedact || kind == ScreenwideAnnotationKindShape ||
+         kind == ScreenwideAnnotationKindSpotlight;
 }
 
 /// The box on screen, from the normalised corners Rust published.

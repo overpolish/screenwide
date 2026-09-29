@@ -41,13 +41,30 @@ pub(crate) fn bake(
   unsafe { device.CreateRenderTargetView(&target_resource, None, Some(&mut view)) }
     .map_err(|error| error.to_string())?;
   let view = view.ok_or_else(|| "D3D11 created no annotate still target".to_owned())?;
-  // A highlight recolours the still under it, so the still is its underlay.
+  // A highlight recolours the still under it, so the still is its underlay,
+  // and a blurring spotlight softens the same still.
   let still = underlay::upload(device, image)?;
+  let blurs = annotations.iter().any(|annotation| {
+    annotation.style.blur
+      && matches!(
+        annotation.shape,
+        crate::editor::annotations::AnnotationShape::Spotlight { .. }
+      )
+  });
+  let softened = if blurs {
+    Some(underlay::upload(
+      device,
+      &crate::editor::annotations::spotlight::soften::soften(image),
+    )?)
+  } else {
+    None
+  };
   renderer.draw_arrows(
     &view,
     (image.width, image.height),
     &arrows::placed_arrows(annotations, (0.0, 0.0), (1.0, 1.0), scale, None, None),
     Some(&still),
+    softened.as_ref(),
   )?;
 
   let staging = texture(device, image.width, image.height, true)?;

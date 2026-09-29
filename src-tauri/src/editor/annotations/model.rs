@@ -92,6 +92,10 @@ pub enum AnnotationRedaction {
 pub struct AnnotationStyle {
   #[serde(default)]
   pub align: AnnotationAlign,
+  /// Whether a spotlight also blurs what lies outside it; the other kinds
+  /// carry `false`.
+  #[serde(default)]
+  pub blur: bool,
   /// `#rrggbb` or `#rrggbbaa`, straight alpha.
   pub color: String,
   #[serde(default)]
@@ -106,12 +110,17 @@ pub struct AnnotationStyle {
   /// the other kinds carry `false`.
   #[serde(default)]
   pub manual: bool,
-  /// A redaction's or a shape's corner radius, as a percentage of its box's
-  /// shorter side from 0 to 50; the other kinds carry zero.
+  /// A redaction's, a shape's or a spotlight's corner radius, as a
+  /// percentage of its box's shorter side from 0 to 50; the other kinds carry
+  /// zero.
   #[serde(default)]
   pub radius: f64,
   #[serde(default)]
   pub redaction: AnnotationRedaction,
+  /// How far a spotlight's edge fades from lit to dim, as a percentage of its
+  /// box's shorter side from 0 to 50; the other kinds carry zero.
+  #[serde(default)]
+  pub softness: f64,
   /// A blurred redaction's strength, a step from 1 to 5; the other kinds
   /// carry zero.
   #[serde(default = "default_strength")]
@@ -211,12 +220,14 @@ mod tests {
       },
       style: AnnotationStyle {
         align: Default::default(),
+        blur: false,
         color: "#ff0000".to_owned(),
         head: AnnotationHead::Both,
         hand_drawn: false,
         manual: false,
         radius: 0.0,
         redaction: Default::default(),
+        softness: 0.0,
         strength: 0.0,
         width: 8.0,
       },

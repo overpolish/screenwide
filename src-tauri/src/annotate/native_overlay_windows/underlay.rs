@@ -3,7 +3,7 @@
 
 //! What a highlight is recoloured from, as a texture the overlay's shader
 //! reads at `t10`: a display's underlay, or the still a highlight is baked
-//! into.
+//! into; and the same softened for a spotlight's blur, at `t11`.
 
 use super::*;
 
@@ -67,13 +67,20 @@ pub(super) fn upload(
 
 impl Surface {
   /// The underlay this display's highlights read, uploaded again when Rust
-  /// has made a new one; `None` where no highlight has been drawn on it.
+  /// has made a new one, and while a spotlight blurs, the same softened for
+  /// its blur; `None` for either where there is none.
   pub(super) fn underlay(
     &mut self,
     device: &ID3D11Device,
-  ) -> Result<Option<ID3D11ShaderResourceView>, String> {
+  ) -> Result<
+    (
+      Option<ID3D11ShaderResourceView>,
+      Option<ID3D11ShaderResourceView>,
+    ),
+    String,
+  > {
     let Some(current) = super::super::highlight::underlay(self.display as usize) else {
-      return Ok(None);
+      return Ok((None, None));
     };
     if self.underlay.as_ref().map(|held| held.revision) != Some(current.revision) {
       self.underlay = Some(HeldUnderlay {
@@ -81,6 +88,17 @@ impl Surface {
         revision: current.revision,
       });
     }
-    Ok(self.underlay.as_ref().map(|held| held.view.clone()))
+    if !super::super::input::spotlight_blurs() {
+      self.softened = None;
+    } else if self.softened.as_ref().map(|held| held.revision) != Some(current.revision) {
+      self.softened = Some(HeldUnderlay {
+        view: upload(device, current.softened())?,
+        revision: current.revision,
+      });
+    }
+    Ok((
+      self.underlay.as_ref().map(|held| held.view.clone()),
+      self.softened.as_ref().map(|held| held.view.clone()),
+    ))
   }
 }

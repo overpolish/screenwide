@@ -104,6 +104,9 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     keepAnnotationsBetweenSessions: false,
     shapeHandDrawn: false,
     shapeRadius: 0,
+    spotlightBlur: false,
+    spotlightRadius: 12,
+    spotlightSoftness: 10,
     toolbarPosition: null,
   };
   const defaults: ShortcutDefaults = {

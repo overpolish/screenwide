@@ -482,13 +482,19 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
   // The atlas's size and, in `motion.w`, how many atlas pixels it holds per
   // canvas pixel.
   AnnotationTextAtlas annotation_atlas = {annotation_options.zw, motion.w};
-  if (annotation_options.y > 0u)
+  // The spotlights' shade goes over the picture and the cursor, and under
+  // every annotation drawn next.
+  if (annotation_options.y > 0u) {
+    result = composite_spotlights(result, pixel, 0u, annotation_options.x, annotation_feather);
     result = composite_annotations(
       result, pixel, 0u, annotation_options.x, annotation_feather, annotation_atlas);
+  }
   if (camera_effects.w != 0.0) result = camera_layer(result, pixel);
   if (annotation_options.y > annotation_options.x) {
     result = composite_highlights(result, result, pixel, annotation_options.x,
                                   annotation_options.y, annotation_feather);
+    result = composite_spotlights(result, pixel, annotation_options.x, annotation_options.y,
+                                  annotation_feather);
     result = composite_annotations(
       result, pixel, annotation_options.x, annotation_options.y,
       annotation_feather, annotation_atlas);

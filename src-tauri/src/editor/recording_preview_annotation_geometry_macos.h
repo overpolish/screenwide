@@ -34,6 +34,13 @@ static inline AnnotationArrowGeometry annotation_prepared(
                                   annotation_reveal_whole(), &prepared);
     return prepared;
   }
+  if (item.kind == ScreenwideAnnotationKindSpotlight) {
+    // The corner radius rides in `start_head`, handed on as it is; the chrome
+    // picks the box, so its fade is left out.
+    screenwide_annotation_prepare(item.kind, start.x, start.y, item.start_head, 0.0f, end.x,
+                                  end.y, 0.0f, 0, annotation_reveal_whole(), &prepared);
+    return prepared;
+  }
   // A middle handle is reported rather than the curve's control point, so the
   // control is taken back out of it here, in display points. A counter aims
   // its tail with `start_head`, an angle, which rides in the same slot.

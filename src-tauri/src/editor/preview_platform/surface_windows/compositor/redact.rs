@@ -12,60 +12,20 @@
 //! box drawn over another averages what the first left, as on macOS. Two
 //! targets take turns being that copy.
 
+use super::redact_targets::{target, Scratch, Target};
 use super::*;
 use crate::editor::annotations::redact::records::{
-  RedactRecord, RedactRecords, REDACT_BLUR, REDACT_MOSAIC,
+  RedactRecord, RedactRecords, REDACT_BLUR, REDACT_MOSAIC, REDACT_SPOTLIGHT,
 };
-use windows::Win32::Graphics::Direct3D11::D3D11_BIND_RENDER_TARGET;
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
+use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT, DXGI_FORMAT_R16G16B16A16_FLOAT};
 
 const VERTEX_SHADER: &[u8] =
   include_bytes!(concat!(env!("OUT_DIR"), "/preview_redact_paint_vs.cso"));
 const CELLS_SHADER: &[u8] =
   include_bytes!(concat!(env!("OUT_DIR"), "/preview_redact_cells_ps.cso"));
+const ROWS_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/preview_redact_rows_ps.cso"));
 const PAINT_SHADER: &[u8] =
   include_bytes!(concat!(env!("OUT_DIR"), "/preview_redact_paint_ps.cso"));
-
-/// A texture a pass draws into and the next one reads.
-struct Target {
-  texture: ID3D11Texture2D,
-  view: ID3D11ShaderResourceView,
-  target: ID3D11RenderTargetView,
-}
-
-fn target(device: &ID3D11Device, size: (u32, u32), format: DXGI_FORMAT) -> Result<Target, String> {
-  let description = D3D11_TEXTURE2D_DESC {
-    Width: size.0,
-    Height: size.1,
-    MipLevels: 1,
-    ArraySize: 1,
-    Format: format,
-    SampleDesc: DXGI_SAMPLE_DESC {
-      Count: 1,
-      Quality: 0,
-    },
-    Usage: D3D11_USAGE_DEFAULT,
-    BindFlags: (D3D11_BIND_SHADER_RESOURCE.0 | D3D11_BIND_RENDER_TARGET.0) as u32,
-    ..Default::default()
-  };
-  let mut texture = None;
-  unsafe { device.CreateTexture2D(&description, None, Some(&mut texture)) }
-    .map_err(|error| format!("The redaction target could not be created: {error}"))?;
-  let texture = texture.ok_or_else(|| "D3D11 created no redaction target".to_owned())?;
-  let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
-  let (mut view, mut target) = (None, None);
-  unsafe {
-    device
-      .CreateShaderResourceView(&resource, None, Some(&mut view))
-      .and_then(|()| device.CreateRenderTargetView(&resource, None, Some(&mut target)))
-  }
-  .map_err(|error| error.to_string())?;
-  Ok(Target {
-    texture,
-    view: view.ok_or_else(|| "D3D11 created no redaction view".to_owned())?,
-    target: target.ok_or_else(|| "D3D11 created no redaction target view".to_owned())?,
-  })
-}
 
 /// The two copies redactions take turns drawing over, sized and formatted
 /// like the source, and the last still they redacted.
@@ -81,22 +41,27 @@ struct Work {
 pub(crate) struct Redactor {
   vertex_shader: ID3D11VertexShader,
   cells_shader: ID3D11PixelShader,
+  rows_shader: ID3D11PixelShader,
   paint_shader: ID3D11PixelShader,
   constants: ID3D11Buffer,
   zones: StructuredBuffer,
   work: std::sync::Mutex<Option<Work>>,
-  /// The cells a blurred or classically pixelated box averages, one pixel a
-  /// cell; grown to fit the largest grid yet.
-  cells: std::sync::Mutex<Option<((u32, u32), Target)>>,
+  /// The cells a classically pixelated box averages, one pixel a cell.
+  cells: Scratch,
+  /// A blurred box's rows, blurred along and premultiplied, one pixel a pixel
+  /// of the box.
+  rows: Scratch,
 }
 
 impl Redactor {
   pub(super) fn new(device: &ID3D11Device) -> Result<Self, String> {
-    let (mut vertex_shader, mut cells_shader, mut paint_shader) = (None, None, None);
+    let (mut vertex_shader, mut cells_shader, mut rows_shader, mut paint_shader) =
+      (None, None, None, None);
     unsafe {
       device
         .CreateVertexShader(VERTEX_SHADER, None, Some(&mut vertex_shader))
         .and_then(|()| device.CreatePixelShader(CELLS_SHADER, None, Some(&mut cells_shader)))
+        .and_then(|()| device.CreatePixelShader(ROWS_SHADER, None, Some(&mut rows_shader)))
         .and_then(|()| device.CreatePixelShader(PAINT_SHADER, None, Some(&mut paint_shader)))
     }
     .map_err(|error| format!("The redaction shaders could not be created: {error}"))?;
@@ -117,11 +82,13 @@ impl Redactor {
     Ok(Self {
       vertex_shader: vertex_shader.ok_or("D3D11 created no redaction vertex shader")?,
       cells_shader: cells_shader.ok_or("D3D11 created no redaction cells shader")?,
+      rows_shader: rows_shader.ok_or("D3D11 created no redaction rows shader")?,
       paint_shader: paint_shader.ok_or("D3D11 created no redaction paint shader")?,
       constants: constants.ok_or("D3D11 created no redaction constant buffer")?,
       zones: StructuredBuffer::new(device, size_of::<[f32; 2]>(), "redaction zones")?,
       work: std::sync::Mutex::new(None),
-      cells: std::sync::Mutex::new(None),
+      cells: Scratch::default(),
+      rows: Scratch::default(),
     })
   }
 
@@ -192,8 +159,8 @@ impl Redactor {
           0,
         );
       }
-      let cells = self.average(device, context, record, &last.1)?;
-      self.paint(context, record, copy, &last.1, &zones, cells.as_ref());
+      let views = self.prepare(device, context, record, &last.1)?;
+      self.paint(context, copy, record, &last.1, &zones, views);
       last = (copy_resource, copy.view.clone());
     }
     if retained {
@@ -202,53 +169,58 @@ impl Redactor {
     Ok(Some(last.1))
   }
 
-  /// Averages `record`'s cells from `from` into the cells target, whose view
-  /// it answers; `None` for a box that averages none.
-  fn average(
+  /// Runs the pass `record` needs before it is painted - a classic
+  /// pixelation's cells or a blur's rows - from `from`, and answers the cells
+  /// and rows the paint pass reads.
+  fn prepare(
     &self,
     device: &ID3D11Device,
     context: &ID3D11DeviceContext,
     record: &RedactRecord,
     from: &ID3D11ShaderResourceView,
-  ) -> Result<Option<ID3D11ShaderResourceView>, String> {
-    if !matches!(record.mode, REDACT_BLUR | REDACT_MOSAIC) {
-      return Ok(None);
-    }
-    let grid = (record.grid[0], record.grid[1]);
-    let mut cells = self
-      .cells
-      .lock()
-      .map_err(|_| "The redaction cells are poisoned".to_owned())?;
-    if cells
-      .as_ref()
-      .is_none_or(|(size, _)| size.0 < grid.0 || size.1 < grid.1)
-    {
-      let size = cells
-        .as_ref()
-        .map_or(grid, |(size, _)| (size.0.max(grid.0), size.1.max(grid.1)));
-      *cells = Some((size, target(device, size, DXGI_FORMAT_R8G8B8A8_UNORM)?));
-    }
-    let (_, cells) = cells.as_ref().expect("the redaction cells were just made");
-    self.draw(
-      context,
-      &cells.target,
-      [0.0, 0.0, grid.0 as f32, grid.1 as f32],
-      &self.cells_shader,
-      [Some(from.clone()), None, None],
-    );
-    Ok(Some(cells.view.clone()))
+  ) -> Result<[Option<ID3D11ShaderResourceView>; 2], String> {
+    let [x0, y0, x1, y1] = record.bounds;
+    let (scratch, size, format, shader, slot) = match record.mode {
+      REDACT_MOSAIC => (
+        &self.cells,
+        (record.grid[0], record.grid[1]),
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        &self.cells_shader,
+        0,
+      ),
+      REDACT_BLUR | REDACT_SPOTLIGHT => (
+        &self.rows,
+        (x1 - x0, y1 - y0),
+        DXGI_FORMAT_R16G16B16A16_FLOAT,
+        &self.rows_shader,
+        1,
+      ),
+      _ => return Ok([None, None]),
+    };
+    let view = scratch.draw(device, size, format, |target| {
+      self.draw(
+        context,
+        &target.target,
+        [0.0, 0.0, size.0 as f32, size.1 as f32],
+        shader,
+        [Some(from.clone()), None, None, None],
+      );
+    })?;
+    let mut views = [None, None];
+    views[slot] = Some(view);
+    Ok(views)
   }
 
   /// Paints `record`'s box over `copy`, reading what the last pass left
-  /// from `from`.
+  /// from `from`, and the cells and rows it averaged or blurred.
   fn paint(
     &self,
     context: &ID3D11DeviceContext,
-    record: &RedactRecord,
     copy: &Target,
+    record: &RedactRecord,
     from: &ID3D11ShaderResourceView,
     zones: &ID3D11ShaderResourceView,
-    cells: Option<&ID3D11ShaderResourceView>,
+    [cells, rows]: [Option<ID3D11ShaderResourceView>; 2],
   ) {
     let [x0, y0, x1, y1] = record.bounds;
     self.draw(
@@ -256,7 +228,7 @@ impl Redactor {
       &copy.target,
       [x0 as f32, y0 as f32, (x1 - x0) as f32, (y1 - y0) as f32],
       &self.paint_shader,
-      [Some(from.clone()), Some(zones.clone()), cells.cloned()],
+      [Some(from.clone()), Some(zones.clone()), cells, rows],
     );
   }
 
@@ -269,7 +241,7 @@ impl Redactor {
     target: &ID3D11RenderTargetView,
     viewport: [f32; 4],
     shader: &ID3D11PixelShader,
-    views: [Option<ID3D11ShaderResourceView>; 3],
+    views: [Option<ID3D11ShaderResourceView>; 4],
   ) {
     unsafe {
       context.OMSetRenderTargets(Some(&[Some(target.clone())]), None);
@@ -288,7 +260,7 @@ impl Redactor {
       context.PSSetConstantBuffers(0, Some(&[Some(self.constants.clone())]));
       context.PSSetShaderResources(0, Some(&views));
       context.Draw(3, 0);
-      context.PSSetShaderResources(0, Some(&[None, None, None]));
+      context.PSSetShaderResources(0, Some(&[None, None, None, None]));
       context.OMSetRenderTargets(None, None);
     }
   }

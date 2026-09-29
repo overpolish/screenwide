@@ -3,11 +3,16 @@
 
 #pragma once
 
-/// Highlights over an exported frame's two planes. A highlight recolours what
-/// is under it, so it has to read both planes before it writes either: one
-/// thread takes a colour sample and the four luma pixels it covers, reads all
-/// of them, and writes them back recoloured. The conversions are the export's
-/// own, the same ones every other annotation is written through.
+/// Spotlights and highlights over an exported frame's two planes. Both
+/// change what is under them rather than drawing over it, so they have to
+/// read both planes before they write either: one thread takes a colour
+/// sample and the four luma pixels it covers, reads all of them, and writes
+/// them back shaded, then recoloured. The conversions are the export's own,
+/// the same ones every other annotation is written through.
+///
+/// `redo` is set for the pass run again after the screen layer is redrawn
+/// over a camera sent behind it: the shade then goes only where the redraw
+/// repainted, since everywhere else already has it.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT_VIDEO @R"METAL(
 kernel void highlight_video(
     constant CanvasUniforms &canvas [[buffer(0)]],
@@ -15,6 +20,7 @@ kernel void highlight_video(
     constant uint &count [[buffer(13)]], constant uint &above [[buffer(14)]],
     const device AnnotationSample *samples [[buffer(15)]],
     const device packed_float2 *points [[buffer(18)]],
+    constant uint &redo [[buffer(20)]],
     texture2d<float, access::read_write> luma [[texture(0)]],
     texture2d<float, access::read_write> chroma [[texture(1)]],
     uint2 gid [[thread_position_in_grid]]) {
@@ -27,9 +33,12 @@ kernel void highlight_video(
     for (uint x = 0u; x < 2u; ++x) {
       uint2 pixel = gid * 2u + uint2(x, y);
       if (pixel.x >= luma.get_width() || pixel.y >= luma.get_height()) continue;
+      float2 point = float2(pixel) + 0.5;
       float4 base = float4(yuv_to_rgb(luma.read(pixel).r, sample_uv), 1.0);
-      float4 marked = composite_highlights(base, base, annotations, count, above,
-                                           float2(pixel) + 0.5, 1.0, points, samples);
+      float4 shaded = composite_spotlights(base, annotations, count, above, point, 1.0);
+      if (redo != 0u) shaded = mix(base, shaded, canvas_foreground_coverage(point, canvas));
+      float4 marked = composite_highlights(shaded, shaded, annotations, count, above, point,
+                                           1.0, points, samples);
       sum += marked.rgb;
       pixels += 1.0;
       if (any(abs(marked.rgb - base.rgb) > 1e-4)) {

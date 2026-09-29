@@ -35,7 +35,7 @@ impl super::super::Annotation {
         super::super::counter::gesture::drag(self, handle, point, origin, shift, snap)
       }
       AnnotationKind::Text => super::super::text::gesture::drag(self, handle, point, origin, snap),
-      AnnotationKind::Redact | AnnotationKind::Shape => {
+      AnnotationKind::Redact | AnnotationKind::Shape | AnnotationKind::Spotlight => {
         super::super::box_gesture::drag(self, handle, point, origin, shift, snap)
       }
       AnnotationKind::Highlight => {
@@ -68,7 +68,7 @@ impl super::super::Annotation {
         origin,
         snap,
       ),
-      AnnotationKind::Redact | AnnotationKind::Shape => {
+      AnnotationKind::Redact | AnnotationKind::Shape | AnnotationKind::Spotlight => {
         super::super::box_gesture::drag_new(self, point, origin, shift, snap)
       }
       AnnotationKind::Highlight => super::super::highlight::gesture::drag_new(self, point, origin),
@@ -111,6 +111,7 @@ impl AnnotationKind {
         super::super::highlight::model::fresh_seed(),
         style,
       ),
+      Self::Spotlight => super::super::spotlight::model::new_spotlight(id, [point, point], style),
     }
   }
 
@@ -118,10 +119,10 @@ impl AnnotationKind {
   /// own path and a shape round its outline; a counter grows into place on its
   /// own quicker timing, and a text box does the same before its pointer
   /// draws out. A redaction ramps in on the counter's timing and stays whole
-  /// to its clip's last frame. `path_ms` is the clip's pace: how long what
-  /// travels along a path takes to draw in - the whole of an arrow, a
-  /// highlight or a shape, a text box's pointer - or `None` for the kind's
-  /// own unpaced time.
+  /// to its clip's last frame, and a spotlight fades in and out on its own.
+  /// `path_ms` is the clip's pace: how long what travels along a path takes
+  /// to draw in - the whole of an arrow, a highlight or a shape, a text box's
+  /// pointer - or `None` for the kind's own unpaced time.
   #[cfg(any(target_os = "macos", target_os = "windows", test))]
   pub(crate) fn reveal_window(
     self,
@@ -147,6 +148,14 @@ impl AnnotationKind {
       Self::Redact => {
         super::super::redact::reveal::redact_reveal_window(elapsed_ms, duration_ms, frame_ms)
       }
+      // Joins to the spotlights either side are the clip list's to find;
+      // `spotlight::handoff` works them out and asks for its reveal itself.
+      Self::Spotlight => super::super::spotlight::reveal::spotlight_reveal_window(
+        elapsed_ms,
+        duration_ms,
+        Default::default(),
+        1.0,
+      ),
     }
   }
 
@@ -161,7 +170,7 @@ impl AnnotationKind {
         own.unwrap_or(super::super::reveal::REVEAL_DRAW_IN_MS)
       }
       Self::Text => own.unwrap_or(super::super::text::reveal::POINTER_IN_MS),
-      Self::Counter | Self::Redact => 0.0,
+      Self::Counter | Self::Redact | Self::Spotlight => 0.0,
     }
   }
 
@@ -179,6 +188,10 @@ impl AnnotationKind {
       Self::Text => super::super::text::reveal::text_reveal_span_ms(path_ms),
       // A redaction ramps in and never leaves.
       Self::Redact => COUNTER_REVEAL_IN_MS,
+      Self::Spotlight => {
+        use super::super::spotlight::reveal::{SPOTLIGHT_FADE_IN_MS, SPOTLIGHT_FADE_OUT_MS};
+        SPOTLIGHT_FADE_IN_MS + SPOTLIGHT_FADE_OUT_MS
+      }
     }
   }
 }

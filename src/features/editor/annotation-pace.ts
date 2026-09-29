@@ -97,6 +97,7 @@ const pathLength = ({ shape, style }: Annotation) => {
     }
     case "counter":
     case "redact":
+    case "spotlight":
     case "text":
       return null;
   }

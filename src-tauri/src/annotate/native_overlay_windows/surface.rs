@@ -27,6 +27,8 @@ pub(super) struct Surface {
   size: (u32, u32),
   /// What this display's highlights are recoloured from, once one is drawn.
   pub(super) underlay: Option<underlay::HeldUnderlay>,
+  /// The same softened for a spotlight's blur, while one blurs.
+  pub(super) softened: Option<underlay::HeldUnderlay>,
 }
 
 impl Surface {
@@ -55,6 +57,7 @@ impl Surface {
       chain,
       size: (0, 0),
       underlay: None,
+      softened: None,
     };
     surface.fit()?;
     Ok(surface)

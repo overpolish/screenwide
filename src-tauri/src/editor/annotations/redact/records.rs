@@ -3,7 +3,8 @@
 
 //! A composition's redactions as the Windows compositor's passes read them:
 //! each box in whole source pixels, snapped outward and clipped to the
-//! source, with how it is painted and the grid it draws from. The twin of
+//! source, with how it is painted and the grid it draws from, and last the
+//! spotlights' blur over the whole source. The twin of
 //! `screenwide_redactions` in `gpu_compositor_macos_redact.m`, which packs
 //! the same records for Metal.
 
@@ -16,9 +17,13 @@ pub(crate) const REDACT_FLAT: u32 = 0;
 pub(crate) const REDACT_PIXELATE: u32 = 1;
 pub(crate) const REDACT_BLUR: u32 = 2;
 pub(crate) const REDACT_MOSAIC: u32 = 3;
+/// The spotlights' blur: the whole source softened, lifted wherever light
+/// falls. Its zones are the spotlights' holes, four points each.
+pub(crate) const REDACT_SPOTLIGHT: u32 = 4;
 
-/// The most cells the cells pass averages for one box. Rust sizes the cells
-/// well under this; a ramp's first small cells are grown to stay within it.
+/// The most cells the cells pass averages for one classically pixelated box.
+/// Rust sizes the cells well under this; a ramp's first small cells are grown
+/// to stay within it.
 const MAX_CELLS: f32 = (1u32 << 20) as f32;
 
 /// One redaction, the twin of the `Redaction` constant buffer in
@@ -31,13 +36,13 @@ pub(crate) struct RedactRecord {
   pub(crate) source_width: u32,
   pub(crate) mode: u32,
   pub(crate) seed: u32,
-  /// A pixelated box's block, or a blurred or classically pixelated box's
-  /// cell, in source pixels.
+  /// A pixelated box's block or a classically pixelated box's cell, or a
+  /// blur's standard deviation, in source pixels.
   pub(crate) size: f32,
   /// The fill, whose alpha is the share an arriving fill has reached.
   pub(crate) color: [f32; 4],
   /// A pixelated box's zones across and blocks per zone, or a classically
-  /// pixelated or blurred box's cells across and down.
+  /// pixelated box's cells across and down.
   pub(crate) grid: [u32; 2],
   pub(crate) entry_count: u32,
   /// The corner radius in source pixels.
@@ -81,7 +86,10 @@ fn count(value: f32) -> u32 {
 }
 
 /// The redactions among `items`, over a `width` by `height` source whose
-/// side buffer is `points`.
+/// side buffer is `points`, and after them the spotlights' blur. The blur
+/// comes last so it only ever softens what the redactions left: a blur
+/// reaching into a box before the box was painted would carry what the box
+/// hides out past its edge.
 pub(crate) fn redact_records(
   items: &[NativeAnnotation],
   points: &[[f32; 2]],
@@ -136,14 +144,21 @@ pub(crate) fn redact_records(
       ..RedactRecord::default()
     };
     // An animated redaction arrives by covering more: a classic pixelation's
-    // blocks and a blur's cells grow from a pixel to their size, and every
-    // other fill fades in, its share riding in the colour's alpha.
+    // blocks grow from a pixel to their size, a blur widens from nothing,
+    // and every other fill fades in, its share riding in the colour's alpha.
     let arrived = if item.reveal.opacity.is_finite() {
       item.reveal.opacity.clamp(0.0, 1.0)
     } else {
       1.0
     };
-    if matches!(mode, REDACT_BLUR | REDACT_MOSAIC) {
+    if mode == REDACT_BLUR {
+      record.color[3] = 1.0;
+      record.size = if record.size.is_finite() {
+        record.size.max(0.0) * arrived
+      } else {
+        0.0
+      };
+    } else if mode == REDACT_MOSAIC {
       record.color[3] = 1.0;
       let size = if record.size.is_finite() {
         record.size.max(1.0)
@@ -172,7 +187,34 @@ pub(crate) fn redact_records(
     }
     list.records.push(record);
   }
+  if let Some(record) = spotlight_record(&mut list.zones, items, width, height) {
+    list.records.push(record);
+  }
   list
+}
+
+/// The spotlights' blur over the whole source, with its holes written into
+/// `zones`, or `None` where no spotlight showing blurs.
+fn spotlight_record(
+  zones: &mut Vec<[f32; 2]>,
+  items: &[NativeAnnotation],
+  width: u32,
+  height: u32,
+) -> Option<RedactRecord> {
+  use crate::editor::annotations::spotlight::native::{blur_deviation, blur_holes};
+  let (strength, holes) = blur_holes(items, width, height)?;
+  let record = RedactRecord {
+    bounds: [0, 0, width, height],
+    source_width: width,
+    mode: REDACT_SPOTLIGHT,
+    size: blur_deviation(strength, width, height),
+    color: [0.0, 0.0, 0.0, 1.0],
+    entry_count: holes.len() as u32,
+    zone_first: zones.len() as u32,
+    ..RedactRecord::default()
+  };
+  zones.extend_from_slice(&holes);
+  Some(record)
 }
 
 #[cfg(test)]

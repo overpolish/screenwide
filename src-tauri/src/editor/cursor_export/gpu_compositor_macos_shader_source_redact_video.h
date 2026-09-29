@@ -4,13 +4,13 @@
 #pragma once
 
 /// The redaction passes over a video frame's two planes, before the canvas
-/// samples them: the same cells, colours and cover as over an RGBA source,
-/// converted the way the export converts everything it writes. A recording's
-/// boxes are snapped to even pixels, so every colour sample lies wholly
-/// inside a box or wholly outside it. The planes are the export's own copies
-/// of the decoded frame, which the canvas then reads in their place.
+/// samples them: the same cells, blur, colours and cover as over an RGBA
+/// source, converted the way the export converts everything it writes. A
+/// recording's boxes are snapped to even pixels, so every colour sample lies
+/// wholly inside a box or wholly outside it. The planes are the export's own
+/// copies of the decoded frame, which the canvas then reads in their place.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_REDACT_VIDEO @R"METAL(
-/// A video frame's planes, as the cells pass reads them.
+/// A video frame's planes, as the cells and rows passes read them.
 struct RedactVideoPixels {
   texture2d<float, access::read> luma;
   texture2d<float, access::read> chroma;
@@ -32,18 +32,29 @@ kernel void redact_cells_video(
   redact_average(RedactVideoPixels{luma, chroma}, r, cells, index, lane, sums);
 }
 
+/// The rows pass over a video frame: one thread a pixel of the box.
+kernel void redact_rows_video(
+    texture2d<float, access::read> luma [[texture(0)]],
+    texture2d<float, access::read> chroma [[texture(1)]],
+    constant RedactUniforms &r [[buffer(1)]],
+    device half4 *rows [[buffer(4)]],
+    uint2 gid [[thread_position_in_grid]]) {
+  redact_blur_row(RedactVideoPixels{luma, chroma}, r, rows, gid);
+}
+
 /// The luma plane, one thread a pixel of the box.
 kernel void redact_video_luma(
     texture2d<float, access::read_write> luma [[texture(0)]],
     constant RedactUniforms &r [[buffer(1)]],
     const device float2 *entries [[buffer(2)]],
     const device uint *cells [[buffer(3)]],
+    const device half4 *rows [[buffer(4)]],
     uint2 gid [[thread_position_in_grid]]) {
   uint2 point = uint2(r.x0, r.y0) + gid;
   if (point.x >= r.x1 || point.y >= r.y1) return;
-  float cover = redact_share(r, gid);
+  float cover = redact_share(r, entries, gid);
   if (cover <= 0.0) return;
-  float3 rgb = saturate(redact_colour(r, entries, cells, gid));
+  float3 rgb = saturate(redact_colour(r, entries, cells, rows, gid));
   float value = 16.0 / 255.0 + dot(rgb, float3(0.182586, 0.614231, 0.062007));
   luma.write(mix(luma.read(point).r, value, cover), point);
 }
@@ -55,6 +66,7 @@ kernel void redact_video_chroma(
     constant RedactUniforms &r [[buffer(1)]],
     const device float2 *entries [[buffer(2)]],
     const device uint *cells [[buffer(3)]],
+    const device half4 *rows [[buffer(4)]],
     uint2 gid [[thread_position_in_grid]]) {
   uint2 sample = uint2(r.x0, r.y0) / 2u + gid;
   if (sample.x * 2u >= r.x1 || sample.y * 2u >= r.y1) return;
@@ -65,9 +77,9 @@ kernel void redact_video_chroma(
       uint2 point = sample * 2u + uint2(x, y);
       if (point.x < r.x0 || point.y < r.y0 || point.x >= r.x1 || point.y >= r.y1) continue;
       uint2 local = point - uint2(r.x0, r.y0);
-      float cover = redact_share(r, local);
+      float cover = redact_share(r, entries, local);
       if (cover <= 0.0) continue;
-      sum += saturate(redact_colour(r, entries, cells, local)) * cover;
+      sum += saturate(redact_colour(r, entries, cells, rows, local)) * cover;
       covered += cover;
     }
   if (covered <= 0.0) return;

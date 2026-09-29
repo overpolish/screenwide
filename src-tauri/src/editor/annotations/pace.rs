@@ -77,6 +77,7 @@ fn path_length(annotation: &Annotation) -> Option<f64> {
     }
     AnnotationShape::Counter { .. }
     | AnnotationShape::Redact { .. }
+    | AnnotationShape::Spotlight { .. }
     | AnnotationShape::Text { .. } => None,
   }
 }
@@ -97,15 +98,25 @@ pub(crate) fn path_ms(annotation: &Annotation, frame: (u32, u32)) -> Option<f32>
     });
   }
   let length = path_length(annotation)?;
+  let sized = frame.0 > 0 || frame.1 > 0;
+  (sized && length.is_finite()).then(|| travel_ms(length, frame))
+}
+
+/// How long something takes to travel `length` source pixels on a picture
+/// `frame` source pixels in size, at the pace a path draws in: a spotlight's
+/// light gliding to the next box keeps it too. A picture of unknown size
+/// takes the unpaced time.
+pub(crate) fn travel_ms(length: f64, frame: (u32, u32)) -> f32 {
   let diagonal = f64::from(frame.0).hypot(f64::from(frame.1));
-  (diagonal > 0.0 && length.is_finite()).then(|| {
-    paced(
-      REVEAL_DRAW_IN_MS,
-      length / diagonal / REFERENCE_SHARE,
-      PATH_MIN_MS,
-      PATH_MAX_MS,
-    )
-  })
+  if diagonal <= 0.0 || !length.is_finite() {
+    return REVEAL_DRAW_IN_MS;
+  }
+  paced(
+    REVEAL_DRAW_IN_MS,
+    length / diagonal / REFERENCE_SHARE,
+    PATH_MIN_MS,
+    PATH_MAX_MS,
+  )
 }
 
 #[cfg(test)]

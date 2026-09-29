@@ -165,6 +165,7 @@ pub(super) fn render_video(
       // How much source time this frame covers, which is the window a
       // moving annotation smears over.
       next_pts_100ns.saturating_sub(pts_100ns).max(0) as f32 / 10_000.0,
+      (request.width, request.height),
     );
     crate::editor::recording_preview_player::held_surfaces::resolve_surfaces(
       &mut annotations,

@@ -19,6 +19,7 @@ use super::highlight::geometry::{flow_distance, prepare_highlight, HighlightFlow
 use super::outline::geometry::{prepare_shape, shape_distance};
 use super::redact::geometry::{prepare_redact, redact_distance};
 use super::reveal::AnnotationReveal;
+use super::spotlight::geometry::{prepare_spotlight, spotlight_distance};
 use super::text::geometry::{prepare_text, text_distance};
 use super::AnnotationKind;
 
@@ -32,7 +33,8 @@ use super::AnnotationKind;
 /// A highlight is placed by where `p0` and `p1` land - the source's origin and
 /// its pixel `(1, 1)` - and reads its tone out of `p2`. A shape's box runs
 /// from `p0` to `p2`, and `p1` carries its radius and its hand rather than a
-/// point, as `outline::native` keeps them.
+/// point, as `outline::native` keeps them; a spotlight's `p1` carries its
+/// radius and its softness the same way.
 ///
 /// A number no kind owns prepares nothing. It cannot come from a retained
 /// annotation, and drawing it as an arrow would draw some future kind as a
@@ -72,6 +74,7 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
       prepare_highlight([p0x, p0y], [p1x, p1y], [p2x, p2y], reveal)
     }
     Some(AnnotationKind::Shape) => prepare_shape([p0x, p0y], [p2x, p2y], p1x, p1y, width, reveal),
+    Some(AnnotationKind::Spotlight) => prepare_spotlight([p0x, p0y], [p2x, p2y], p1x, p1y),
     None => ArrowGeometry::default(),
   };
 }
@@ -159,6 +162,7 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
     Some(AnnotationKind::Text) => text_distance([px, py], geometry),
     Some(AnnotationKind::Redact) => redact_distance([px, py], geometry),
     Some(AnnotationKind::Shape) => shape_distance([px, py], geometry),
+    Some(AnnotationKind::Spotlight) => spotlight_distance([px, py], geometry),
     // A highlight's record places bands it does not carry; the chrome picks
     // it through [`screenwide_highlight_distance`] instead.
     Some(AnnotationKind::Highlight) | None => f32::INFINITY,
@@ -180,6 +184,19 @@ pub unsafe extern "C" fn screenwide_shape_body_distance(
   geometry.as_ref().map_or(f32::INFINITY, |geometry| {
     super::outline::geometry::shape_body_distance([px, py], geometry)
   })
+}
+
+/// The standard deviation of the spotlights' blur over a `width` by `height`
+/// source as it arrives with `strength`: what
+/// `spotlight::native::blur_deviation` works out for Windows.
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub extern "C" fn screenwide_spotlight_blur_deviation(
+  strength: f32,
+  width: u32,
+  height: u32,
+) -> f32 {
+  super::spotlight::native::blur_deviation(strength, width, height)
 }
 
 /// How far a point falls outside a highlight, from what its grips' record

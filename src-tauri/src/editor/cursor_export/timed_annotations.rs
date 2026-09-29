@@ -3,11 +3,14 @@
 use super::*;
 use crate::editor::annotations::native::{NativeAnnotation, NativeAnnotationData};
 use crate::editor::annotations::redact::native::{source_per_capture_point, RedactSource};
+use crate::editor::annotations::spotlight::handoff::{
+  drawn_until, glide_ms, joined, spotlight_links, SpotlightLinks,
+};
 use crate::editor::annotations::timing::{
-  placed_annotation, AnnotationTrack, RecordingAnnotationClip,
+  output_progress, placed_annotation, AnnotationTrack, RecordingAnnotationClip,
 };
 use crate::editor::annotations::{Annotation, AnnotationKind};
-use crate::editor::timeline_edit::{output_at_us, TimelineRange};
+use crate::editor::timeline_edit::{output_at_us, rate_at, TimelineRange};
 
 /// One record the Metal export draws while `start_ms <= t < end_ms` in source
 /// time. Its arrival and leaving play from `reveal_start_ms` to
@@ -16,7 +19,10 @@ use crate::editor::timeline_edit::{output_at_us, TimelineRange};
 /// step with the frames that are kept. A redaction's surface timeline is read
 /// from `clip_start_ms`, in source time. A clip that is not pinned is one
 /// record over its own bounds, while a pinned clip is one record for each
-/// place its pin puts it, each keeping its clip's reveal and surface.
+/// place its pin puts it, each keeping its clip's reveal and surface. A
+/// spotlight carries the ends it hands its light over at, as
+/// `SpotlightJoins` bits, and how far its blur has arrived; one gliding in
+/// from the spotlight before is one record for each step of its glide.
 #[repr(C)]
 pub(super) struct NativeTimedAnnotation {
   annotation: NativeAnnotation,
@@ -26,9 +32,11 @@ pub(super) struct NativeTimedAnnotation {
   reveal_end_ms: u64,
   clip_start_ms: u64,
   path_ms: f32,
+  joins: u32,
+  blur_share: f32,
   padding: u32,
 }
-const _: () = assert!(std::mem::size_of::<NativeTimedAnnotation>() == 176);
+const _: () = assert!(std::mem::size_of::<NativeTimedAnnotation>() == 184);
 
 /// Every clip on the export's track as a native record, and the one set of
 /// side buffers their `data_offset`s index. Each frame's scene is the clips
@@ -70,7 +78,13 @@ pub(super) fn for_request(
   let ranges = request
     .timeline
     .map_or(&[][..], |timeline| timeline.ranges());
-  pack_clips(clips.iter(), ranges, stroke_scale, source)
+  pack_clips(
+    &clips,
+    ranges,
+    stroke_scale,
+    source,
+    (request.width, request.height),
+  )
 }
 
 /// How far either side of a sample a frame's time may be rounded.
@@ -141,41 +155,111 @@ fn placed_records(clip: &RecordingAnnotationClip) -> Vec<(Annotation, u64, u64, 
   records
 }
 
-fn pack_clips<'a>(
-  clips: impl Iterator<Item = &'a RecordingAnnotationClip>,
+/// How much output time each record of a glide covers: short enough that
+/// the light moves a frame's worth at most between them at any frame rate.
+const GLIDE_STEP_MS: f64 = 4.0;
+
+/// One record's annotation, its source bounds, the stretch its reveal plays
+/// over, and how far its blur has arrived.
+type Timed = (Annotation, u64, u64, [u64; 2], f32);
+
+/// Clip `index` of `clips` as timed records, on a picture `picture` source
+/// pixels in size: a spotlight handing its light on is drawn until the next
+/// one starts, and one taking it over glides in through a record for each
+/// step, each drawn as the preview draws its middle.
+fn timed_records(
+  clips: &[RecordingAnnotationClip],
+  links: &[SpotlightLinks],
+  index: usize,
+  ranges: &[TimelineRange],
+  picture: (u32, u32),
+) -> Vec<Timed> {
+  let clip = &clips[index];
+  let until = drawn_until(clips, links, index);
+  let held = |ms: u64| if ms == clip.end_ms { until } else { ms };
+  let mut records: Vec<Timed> = placed_records(clip)
+    .into_iter()
+    .map(|(annotation, start, end, [from, to])| {
+      (annotation, start, held(end), [from, held(to)], 1.0)
+    })
+    .collect();
+  if links[index].from.is_none() {
+    return records;
+  }
+  let mut glide = Vec::new();
+  let mut at = clip.start_ms;
+  while at < until {
+    let rate = rate_at(ranges, at as f64 * 1_000.0);
+    let next = (at + (GLIDE_STEP_MS * rate).round().max(1.0) as u64).min(until);
+    let middle = (at + next) / 2;
+    let Some((annotation, [from, to])) = placed_annotation(clip, middle.min(clip.end_ms - 1))
+    else {
+      break;
+    };
+    let shown = [from, held(to)];
+    let Some((elapsed_ms, duration_ms)) = output_progress(ranges, shown, middle) else {
+      break;
+    };
+    if glide_ms(clips, links, index, picture, duration_ms).is_none_or(|ms| elapsed_ms >= ms) {
+      break;
+    }
+    let (drawn, blur_share) = joined(
+      clips,
+      links,
+      index,
+      picture,
+      annotation,
+      elapsed_ms,
+      duration_ms,
+    );
+    glide.push((drawn, at, next, shown, blur_share));
+    at = next;
+  }
+  // What follows the glide keeps its own records from where the glide ends.
+  records.retain_mut(|record| {
+    record.1 = record.1.max(at);
+    record.1 < record.2
+  });
+  glide.extend(records);
+  glide
+}
+
+fn pack_clips(
+  clips: &[RecordingAnnotationClip],
   ranges: &[TimelineRange],
   stroke_scale: f64,
   source: RedactSource<'_>,
+  picture: (u32, u32),
 ) -> (Vec<NativeTimedAnnotation>, NativeAnnotationData) {
   let mut data = NativeAnnotationData::default();
   let output_ms = |ms: u64| (output_at_us(ranges, ms as f64 * 1_000.0) / 1_000.0).round() as u64;
-  let clips = clips
-    .flat_map(|clip| {
-      placed_records(clip)
-        .into_iter()
-        .map(
-          |(mut annotation, start_ms, end_ms, [reveal_start_ms, reveal_end_ms])| {
-            // A redaction's width is its block, which covers the source rather
-            // than drawing on the output, so it keeps its size in source pixels.
-            if annotation.shape.kind() != AnnotationKind::Redact {
-              annotation.style.width *= stroke_scale;
-            }
-            NativeTimedAnnotation {
-              annotation: data.pack(&annotation, source, 1.0),
-              start_ms,
-              end_ms,
-              reveal_start_ms: output_ms(reveal_start_ms),
-              reveal_end_ms: output_ms(reveal_end_ms),
-              clip_start_ms: clip.start_ms,
-              path_ms: clip.path_ms.unwrap_or(0.0),
-              padding: 0,
-            }
-          },
-        )
-        .collect::<Vec<_>>()
-    })
-    .collect();
-  (clips, data)
+  let links = spotlight_links(clips);
+  let mut packed = Vec::new();
+  for (index, clip) in clips.iter().enumerate() {
+    let joins = links[index].joins().bits();
+    for (mut annotation, start_ms, end_ms, [reveal_start_ms, reveal_end_ms], blur_share) in
+      timed_records(clips, &links, index, ranges, picture)
+    {
+      // A redaction's width is its block, which covers the source rather
+      // than drawing on the output, so it keeps its size in source pixels.
+      if annotation.shape.kind() != AnnotationKind::Redact {
+        annotation.style.width *= stroke_scale;
+      }
+      packed.push(NativeTimedAnnotation {
+        annotation: data.pack(&annotation, source, 1.0),
+        start_ms,
+        end_ms,
+        reveal_start_ms: output_ms(reveal_start_ms),
+        reveal_end_ms: output_ms(reveal_end_ms),
+        clip_start_ms: clip.start_ms,
+        path_ms: clip.path_ms.unwrap_or(0.0),
+        joins,
+        blur_share,
+        padding: 0,
+      });
+    }
+  }
+  (packed, data)
 }
 
 #[cfg(test)]

@@ -128,6 +128,9 @@ impl NativeAnnotationData {
         annotation.style.hand_drawn,
       );
     }
+    if let super::AnnotationShape::Spotlight { .. } = &annotation.shape {
+      record.flags = super::spotlight::native::flags(&annotation.style);
+    }
     if let Some(fill) = fill {
       record.color = fill.color;
       record.flags = fill.flags;

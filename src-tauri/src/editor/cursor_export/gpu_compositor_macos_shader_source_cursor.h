@@ -128,6 +128,21 @@ static float4 overlay_canvas_foreground_rgba(
                            dimensions, u);
 }
 
+/// How much of `point` the screen layer's redraw repaints: its frame, or its
+/// whole crop where a recentred crop is inset in colour. A pass run again
+/// over that redraw weighs what it adds by this, so a pixel the redraw left
+/// alone is not given the pass twice.
+static float canvas_foreground_coverage(float2 point, constant CanvasUniforms &u) {
+  float2 crop_origin = float2(u.crop_x, u.crop_y), crop_size = float2(u.crop_width, u.crop_height);
+  float crop_coverage = rounded_coverage(point - crop_origin, crop_size, float(u.radius));
+  if (u.recenter_inset_color.a > 0.0) return crop_coverage;
+  return crop_coverage *
+      rounded_coverage(point - float2(u.image_x, u.image_y),
+                       float2(u.image_width, u.image_height), 0.0) *
+      rounded_coverage(point - float2(u.source_crop_x, u.source_crop_y),
+                       float2(u.source_crop_width, u.source_crop_height), 0.0);
+}
+
 static float4 cursor_pixel(
     texture2d_array<float, access::read> images,
     constant OverlayUniforms &u, float2 point);

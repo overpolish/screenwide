@@ -21,12 +21,14 @@ fn counter_clip(value: u32) -> RecordingAnnotationClip {
       },
       style: AnnotationStyle {
         align: Default::default(),
+        blur: false,
         color: "#ffcc00".to_owned(),
         head: Default::default(),
         hand_drawn: false,
         manual: false,
         radius: 0.0,
         redaction: Default::default(),
+        softness: 0.0,
         strength: 0.0,
         width: 40.0,
       },
@@ -42,7 +44,7 @@ fn counter_clip(value: u32) -> RecordingAnnotationClip {
 #[test]
 fn every_clip_indexes_the_one_shared_text_buffer() {
   let clips = [counter_clip(1), counter_clip(12)];
-  let (packed, data) = pack_clips(clips.iter(), &[], 1.0, RedactSource::None);
+  let (packed, data) = pack_clips(&clips, &[], 1.0, RedactSource::None, (0, 0));
   assert_eq!(data.text, b"112");
   let slots: Vec<_> = packed
     .iter()
@@ -90,7 +92,13 @@ fn a_pinned_clip_is_drawn_where_its_path_puts_it_and_not_while_hidden() {
       ..PinnedPath::default()
     })),
   });
-  let (packed, _) = pack_clips(std::iter::once(&clip), &[], 1.0, RedactSource::None);
+  let (packed, _) = pack_clips(
+    std::slice::from_ref(&clip),
+    &[],
+    1.0,
+    RedactSource::None,
+    (0, 0),
+  );
   let spans: Vec<_> = packed
     .iter()
     .map(|record| {
@@ -128,12 +136,7 @@ fn reveal_bounds_are_where_the_timeline_keeps_the_clip() {
     range(0, 500_000, 0, 1.0),
     range(1_500_000, 3_500_000, 500_000, 2.0),
   ];
-  let (packed, _) = pack_clips(
-    std::iter::once(&counter_clip(1)),
-    &ranges,
-    1.0,
-    RedactSource::None,
-  );
+  let (packed, _) = pack_clips(&[counter_clip(1)], &ranges, 1.0, RedactSource::None, (0, 0));
   assert_eq!(
     (
       packed[0].start_ms,

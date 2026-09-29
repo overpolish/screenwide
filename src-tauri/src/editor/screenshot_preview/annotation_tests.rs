@@ -128,12 +128,14 @@ fn a_fresh_arrow_with_nothing_settled_on_wears_the_default() {
 fn a_fresh_arrow_wears_the_style_it_is_given() {
   let style = AnnotationStyle {
     align: Default::default(),
+    blur: false,
     color: "#ff9500".to_owned(),
     head: crate::editor::annotations::AnnotationHead::Both,
     hand_drawn: false,
     manual: false,
     radius: 0.0,
     redaction: Default::default(),
+    softness: 0.0,
     strength: 0.0,
     width: 12.0,
   };

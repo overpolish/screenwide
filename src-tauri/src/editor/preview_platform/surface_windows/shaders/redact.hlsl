@@ -3,17 +3,20 @@
 
 // What the passes that apply one redaction to a copy of the source share,
 // before the canvas samples that copy. The twin of
-// `gpu_compositor_macos_shader_source_redact.h`. The paint pass reads no
-// covered pixel: the fill colour and each pixelated zone's inks come from
-// Rust, and which block of a zone takes which shade comes from a hash of the
-// seed and the block's place in the box. A classic pixelation's blocks and a
-// blur's cells are averaged by the cells pass first, into a texture the paint
-// pass reads instead of the pixels. The only pixels the paint pass reads are
-// those wholly outside a rounded corner, which it blends into the corner's
-// soft edge.
+// `gpu_compositor_macos_shader_source_redact.h` and `..._redact_paint.h`.
+// The paint pass reads no covered pixel: the fill colour and each pixelated
+// zone's inks come from Rust, and which block of a zone takes which shade
+// comes from a hash of the seed and the block's place in the box. A classic
+// pixelation's blocks are averaged by the cells pass first, and a blur's rows
+// by the rows pass, each into a texture the paint pass reads instead of the
+// pixels. A blur is a Gaussian over the box's own pixels whose deviation is
+// the record's size, which widens from nothing as the blur arrives. The only
+// pixels the paint pass reads are those wholly outside a rounded corner,
+// which it blends into the corner's soft edge.
 //
-// Included textually by `redact_cells.hlsl` and `redact_paint.hlsl`, each of
-// which `compile_shader` in build.rs builds with its own `ps_main`.
+// Included textually by `redact_cells.hlsl`, `redact_rows.hlsl` and
+// `redact_paint.hlsl`, each of which `compile_shader` in build.rs builds with
+// its own `ps_main`.
 
 // The twin of `RedactRecord` in `annotations/redact/records.rs`.
 cbuffer Redaction : register(b0) {
@@ -32,14 +35,25 @@ cbuffer Redaction : register(b0) {
 Texture2D<float4> redact_source : register(t0);
 StructuredBuffer<float2> redact_zones : register(t1);
 Texture2D<float4> redact_cells : register(t2);
+Texture2D<float4> redact_rows : register(t3);
 
 // The share of blocks left the plain surface colour, as the gaps between
 // words and lines leave pixelated text.
 static const float redact_blank_share = 0.3;
-// How far the seed moves each channel of a blurred cell's average, either
-// way: enough that the output never equals the averages of a guessed
-// original, too little to see.
-static const uint redact_jitter = 6u;
+
+// How many pixels either side of its centre a blur of deviation `sigma`
+// reaches: three deviations, past which a tap weighs about a hundredth of the
+// centre's. Held to what one pass can afford.
+int redact_reach(float sigma) {
+  return (int)min(ceil(max(sigma, 0.0) * 3.0), 160.0);
+}
+
+// The Gaussian's weight `offset` pixels from its centre, for a deviation of
+// `sigma`.
+float redact_weight(int offset, float sigma) {
+  float along = (float)offset;
+  return exp(-0.5 * along * along / max(sigma * sigma, 1e-6));
+}
 
 // One triangle over the viewport, which each pass sets to what it writes.
 float4 vs_main(uint id : SV_VertexID) : SV_Position {

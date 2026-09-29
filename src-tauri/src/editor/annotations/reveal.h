@@ -30,11 +30,13 @@ typedef struct {
 /// The window a clip is at, `elapsed_ms` into a clip lasting `duration_ms`.
 /// `frame_ms` is the exposure interval in source time; a still passes zero.
 /// `kind` is the annotation's own, because a counter arrives on its own timing,
-/// and `path_ms` its clip's pace, zero where the clip names none.
+/// and `path_ms` its clip's pace, zero where the clip names none. A spotlight
+/// takes the ends `joins` names as handed over rather than faded, and
+/// `blur_share` of its blur; every other kind ignores both.
 void screenwide_annotation_reveal_window(float elapsed_ms, float duration_ms,
                                          float frame_ms, uint32_t animated,
-                                         uint32_t kind, float path_ms,
-                                         AnnotationReveal *out);
+                                         uint32_t kind, float path_ms, uint32_t joins,
+                                         float blur_share, AnnotationReveal *out);
 
 /// The prepared reveal for one annotation, in the space its points were given
 /// in. `stroke` is the full stroke width and `heads` the number of arrowheads.

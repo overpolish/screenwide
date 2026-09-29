@@ -255,6 +255,12 @@ mod redact_video_tests;
 #[path = "platform_macos_shape_tests.rs"]
 mod shape_tests;
 #[cfg(test)]
+#[path = "platform_macos_spotlight_tests.rs"]
+mod spotlight_tests;
+#[cfg(test)]
+#[path = "platform_macos_spotlight_video_tests.rs"]
+mod spotlight_video_tests;
+#[cfg(test)]
 #[path = "platform_macos_tests.rs"]
 mod tests;
 #[cfg(test)]

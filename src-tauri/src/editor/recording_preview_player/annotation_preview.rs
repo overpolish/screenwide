@@ -11,19 +11,27 @@ use crate::editor::annotations::timing::{
 /// How much source time one drawn frame covers, which is what the reveal's
 /// motion blur is measured over. A paused composition passes zero: nothing
 /// is moving, so nothing is blurred. `ranges` is the timeline the reveals are
-/// timed on. `held` hands the screen's redactions the fills read from their
-/// clips' first frames; only the screen takes a redaction.
+/// timed on, and `pictures` the primary's and the camera's source sizes.
+/// `held` hands the screen's redactions the fills read from their clips'
+/// first frames; only the screen takes a redaction.
 pub(super) fn apply_clips(
   composition: &mut PreviewCompositionSettings,
   clips: &[RecordingAnnotationClip],
   ranges: &[TimelineRange],
   source_ms: u64,
   frame_ms: f32,
+  pictures: [(u32, u32); 2],
   held: Option<&HeldFillsHandle>,
 ) {
   let primary = &mut composition.recording_output.primary;
-  primary.annotations =
-    revealed_annotations(clips, AnnotationTrack::Primary, ranges, source_ms, frame_ms);
+  primary.annotations = revealed_annotations(
+    clips,
+    AnnotationTrack::Primary,
+    ranges,
+    source_ms,
+    frame_ms,
+    pictures[0],
+  );
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   if let Some(held) = held {
     held.attach(
@@ -35,8 +43,14 @@ pub(super) fn apply_clips(
   }
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = held;
-  composition.recording_output.camera.annotations =
-    revealed_annotations(clips, AnnotationTrack::Camera, ranges, source_ms, frame_ms);
+  composition.recording_output.camera.annotations = revealed_annotations(
+    clips,
+    AnnotationTrack::Camera,
+    ranges,
+    source_ms,
+    frame_ms,
+    pictures[1],
+  );
 }
 
 /// The preview's held fills, where the platform decodes the frames they are
@@ -77,6 +91,19 @@ impl PlayerSources {
       })
   }
 
+  /// The primary's and the camera's source sizes, which a spotlight's glide
+  /// is paced against; zero for a pane there is not.
+  pub(super) fn annotation_pictures(&self) -> [(u32, u32); 2] {
+    let pane = |index: usize| {
+      self
+        .playback_layout
+        .panes
+        .get(index)
+        .map_or((0, 0), |pane| (pane.source_width, pane.source_height))
+    };
+    [pane(0), pane(1)]
+  }
+
   /// Attaches every clip's pin again: after a path lands, or after a layout
   /// change that may have moved the tips counters and text boxes follow.
   pub(super) fn reattach_pins(&self, position_ms: u64) {
@@ -105,6 +132,7 @@ impl PlayerSources {
       &ranges,
       source_ms,
       0.0,
+      self.annotation_pictures(),
       self.held_fills.as_ref(),
     );
     Some(composition)

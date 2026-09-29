@@ -126,12 +126,15 @@ impl Renderer {
   /// texture - the same pass the editor's compositor makes. `underlay` is what
   /// a highlight recolours: the desktop captured under it, or the still it is
   /// baked into. Without one there is nothing under a highlight to read.
+  /// `softened` is the same softened for a spotlight's blur; without one a
+  /// spotlight only shades.
   pub(super) fn draw_arrows(
     &self,
     target: &ID3D11RenderTargetView,
     size: (u32, u32),
     prepared: &arrows::PreparedArrows,
     underlay: Option<&ID3D11ShaderResourceView>,
+    softened: Option<&ID3D11ShaderResourceView>,
   ) -> Result<(), String> {
     let context = self.device.context();
     let (numbers, numbered) =
@@ -181,7 +184,9 @@ impl Renderer {
       context.PSSetConstantBuffers(0, Some(&[Some(self.constants.clone())]));
       // The included shader reads its two lists at t5 and t6, the numbers at
       // t7 and the highlights' bands at t8, the slots the editor's compositor
-      // binds them at; the underlay is the overlay's own, at t10.
+      // binds them at; the underlay is the overlay's own, at t10, and its
+      // softened copy at t11. The empty atlas stands in for either, a single
+      // pixel the shader reads as none.
       context.PSSetShaderResources(
         5,
         Some(&[
@@ -199,12 +204,17 @@ impl Renderer {
               .cloned()
               .unwrap_or_else(|| self.empty_numbers.clone()),
           ),
+          Some(
+            softened
+              .cloned()
+              .unwrap_or_else(|| self.empty_numbers.clone()),
+          ),
         ]),
       );
       // The result is already premultiplied, so it is written rather than
       // blended: one pass over a cleared target has nothing to blend with.
       context.Draw(3, 0);
-      context.PSSetShaderResources(5, Some(&[None, None, None, None, None, None]));
+      context.PSSetShaderResources(5, Some(&[None, None, None, None, None, None, None]));
       context.OMSetRenderTargets(None, None);
     }
     Ok(())

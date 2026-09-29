@@ -1,84 +1,95 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Blur and rounded corners through a real Metal dispatch: a blur carries
-//! nothing finer than its cells, and a rounded box covers every pixel its
-//! outline touches whole, blending only pixels wholly outside it.
+//! Blur and rounded corners through a real Metal dispatch: a blur is a
+//! Gaussian over the box's own pixels, and a rounded box covers every pixel
+//! its outline touches whole, blending only pixels wholly outside it.
 
-use super::redact_tests::{composed, identity, picture, redaction, resampled, HEIGHT, WIDTH};
-use crate::editor::annotations::redact::cells::blur_cell;
+use super::redact_tests::{composed, identity, picture, redaction, HEIGHT, WIDTH};
+use crate::editor::annotations::redact::cells::blur_deviation;
 use crate::editor::annotations::redact::native::source_per_capture_point;
-use crate::editor::annotations::{AnnotationRedaction, AnnotationShape};
-use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
+use crate::editor::annotations::AnnotationRedaction;
+use crate::screenshots::CapturedImage;
 
 /// The box's pixels once the compositor snaps its corners outward.
 const PAINTED: [u32; 4] = [30, 20, 82, 56];
 
-/// `source` with the pixels inside each of the blur's cells put in reverse
-/// order: every cell keeps exactly its average and loses everything else.
-/// The cells are the compositor's: centred on the box, measured in floats.
-fn shuffled_within_cells(
-  source: &CapturedImage,
-  output: &ScreenshotOutputSettings,
-) -> CapturedImage {
+/// `source` blurred by a Gaussian of deviation `sigma` over the painted box
+/// alone, rows then columns, each tap renormalised within the box: what the
+/// box's pixels should become, in 0 to 255.
+fn gaussian(source: &CapturedImage, sigma: f64) -> Vec<[f64; 3]> {
   let [x0, y0, x1, y1] = PAINTED;
-  let per_point = source_per_capture_point(WIDTH, output.capture_width_points);
-  let cell = blur_cell(3.0, per_point) as f32;
-  let axis = |extent: u32| {
-    let count = (extent as f32 / cell).ceil().max(1.0);
-    ((extent as f32 - count * cell) * 0.5, count as u32 - 1)
+  let (wide, tall) = ((x1 - x0) as i64, (y1 - y0) as i64);
+  let reach = (sigma * 3.0).ceil() as i64;
+  let weight = |offset: i64| (-((offset * offset) as f64) / (2.0 * sigma * sigma)).exp();
+  let blur = |at: i64, extent: i64, read: &dyn Fn(i64) -> [f64; 3]| {
+    let (mut sum, mut total) = ([0.0; 3], 0.0);
+    for tap in (at - reach).max(0)..=(at + reach).min(extent - 1) {
+      let value = read(tap);
+      let w = weight(tap - at);
+      for channel in 0..3 {
+        sum[channel] += w * value[channel];
+      }
+      total += w;
+    }
+    sum.map(|channel| channel / total)
   };
-  let ((across_origin, last_x), (down_origin, last_y)) = (axis(x1 - x0), axis(y1 - y0));
-  let index = |local: u32, origin: f32, last: u32| {
-    (((local as f32 - origin) / cell).floor().max(0.0) as u32).min(last)
+  let source_at = |x: i64, y: i64| {
+    let offset = (((y0 as i64 + y) * WIDTH as i64 + x0 as i64 + x) * 4) as usize;
+    [0, 1, 2].map(|channel| f64::from(source.rgba[offset + channel]))
   };
-  let cell_of = |x: u32, y: u32| {
-    (
-      index(x - x0, across_origin, last_x),
-      index(y - y0, down_origin, last_y),
-    )
-  };
-  let mut cells = std::collections::BTreeMap::<(u32, u32), Vec<(u32, u32)>>::new();
+  let rows: Vec<[f64; 3]> = (0..tall)
+    .flat_map(|y| (0..wide).map(move |x| (x, y)))
+    .map(|(x, y)| blur(x, wide, &|tap| source_at(tap, y)))
+    .collect();
+  (0..tall)
+    .flat_map(|y| (0..wide).map(move |x| (x, y)))
+    .map(|(x, y)| blur(y, tall, &|tap| rows[(tap * wide + x) as usize]))
+    .collect()
+}
+
+#[test]
+fn blur_is_a_gaussian_over_the_box_alone() {
+  let source = picture(1);
+  let output = identity();
+  let sigma = blur_deviation(
+    3.0,
+    source_per_capture_point(WIDTH, output.capture_width_points),
+  );
+  let blurred = composed(&source, output, redaction(AnnotationRedaction::Blur));
+  let expected = gaussian(&source, sigma);
+  let [x0, y0, x1, y1] = PAINTED;
+  let mut worst = 0.0_f64;
   for y in y0..y1 {
     for x in x0..x1 {
-      cells.entry(cell_of(x, y)).or_default().push((x, y));
+      let offset = ((y * WIDTH + x) * 4) as usize;
+      let want = expected[((y - y0) * (x1 - x0) + x - x0) as usize];
+      for channel in 0..3 {
+        worst = worst.max((f64::from(blurred[offset + channel]) - want[channel]).abs());
+      }
     }
   }
-  let mut shuffled = source.clone();
-  let at = |x: u32, y: u32| ((y * WIDTH + x) * 4) as usize;
-  for points in cells.values() {
-    for (to, from) in points.iter().zip(points.iter().rev()) {
-      shuffled.rgba[at(to.0, to.1)..][..4].copy_from_slice(&source.rgba[at(from.0, from.1)..][..4]);
-    }
+  // Half-float rows and two roundings to 8 bits leave a level or two.
+  assert!(worst <= 2.0, "off a Gaussian by {worst}");
+  // Outside the box the picture is as it is with no redaction at all.
+  let plain = crate::screenshots::compose_output_layers(
+    &source,
+    &identity(),
+    0.0,
+    false,
+    None,
+    None,
+    None,
+    None,
+    false,
+    false,
+  )
+  .unwrap()
+  .rgba;
+  for (x, y) in [(x0 - 1, y0), (x1, y1 - 1), (x0, y1), (x1 - 1, y0 - 1)] {
+    let offset = ((y * WIDTH + x) * 4) as usize;
+    assert_eq!(blurred[offset..offset + 3], plain[offset..offset + 3]);
   }
-  shuffled
-}
-
-#[test]
-fn blur_carries_nothing_finer_than_its_cells() {
-  let annotation = redaction(AnnotationRedaction::Blur);
-  for output in [identity(), resampled()] {
-    let source = picture(1);
-    let shuffled = shuffled_within_cells(&source, &output);
-    assert!(shuffled.rgba != source.rgba);
-    let blurred = composed(&source, output.clone(), annotation.clone());
-    assert!(blurred == composed(&shuffled, output.clone(), annotation.clone()));
-    // Not a flat fill in disguise: the cells' colours show.
-    assert!(blurred != composed(&source, output, redaction(AnnotationRedaction::Erase)));
-  }
-}
-
-#[test]
-fn blur_takes_a_new_nudge_from_a_new_seed() {
-  let source = picture(1);
-  let annotation = redaction(AnnotationRedaction::Blur);
-  let blurred = composed(&source, identity(), annotation.clone());
-  assert!(composed(&source, identity(), annotation.clone()) == blurred);
-  let mut reseeded = annotation;
-  if let AnnotationShape::Redact { seed, .. } = &mut reseeded.shape {
-    *seed ^= 0x5bd1_e995;
-  }
-  assert!(composed(&source, identity(), reseeded) != blurred);
 }
 
 /// Colour kept under zero alpha is invisible in the picture, so it must stay

@@ -96,14 +96,10 @@ fn grip_at_point(
   item: &NativeAnnotationHandles,
   point: (f64, f64),
 ) -> Option<u32> {
-  if matches!(
-    item.shape_kind(),
-    AnnotationKind::Redact | AnnotationKind::Shape
-  ) {
+  if super::redact_chrome::is_box(item.shape_kind()) {
     return super::redact_chrome::grip_at(image, item, point);
   }
-  let grips = item_grips(image, item);
-  let found = grips
+  let found = item_grips(image, item)
     .iter()
     .position(|grip| {
       (point.0 - grip.0).abs() <= HANDLE_HIT && (point.1 - grip.1).abs() <= HANDLE_HIT
@@ -114,10 +110,13 @@ fn grip_at_point(
     // pointer - rather than an arrow's three, so the grip it reports is the
     // tail rather than the start.
     AnnotationKind::Counter | AnnotationKind::Text => HANDLE_TAIL,
-    AnnotationKind::Arrow | AnnotationKind::Redact | AnnotationKind::Shape => found,
     // A highlight's two grips are the selection's start and end.
     AnnotationKind::Highlight if found == 0 => 0,
     AnnotationKind::Highlight => 2,
+    AnnotationKind::Arrow
+    | AnnotationKind::Redact
+    | AnnotationKind::Shape
+    | AnnotationKind::Spotlight => found,
   })
 }
 
@@ -152,8 +151,8 @@ fn highlight_flow(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> 
 
 /// The grips one annotation shows as discs, in display points: an arrow's
 /// three, and the tip of a counter's tail or of a text box's pointer. A
-/// redaction's and a shape's are the selection box's own, which
-/// `redact_chrome` draws and hits. The tail is placed here rather than sent
+/// redaction's, a shape's and a spotlight's are the selection box's own,
+/// which `redact_chrome` draws and hits. The tail is placed here rather than sent
 /// because a normalised offset is a different length in each axis on a
 /// picture that is not square, while display points are isotropic.
 pub(super) fn item_grips(
@@ -180,7 +179,7 @@ pub(super) fn item_grips(
       let geometry = text_geometry(image, item);
       vec![(f64::from(geometry.c[0]), f64::from(geometry.c[1]))]
     }
-    AnnotationKind::Redact | AnnotationKind::Shape => Vec::new(),
+    AnnotationKind::Redact | AnnotationKind::Shape | AnnotationKind::Spotlight => Vec::new(),
     AnnotationKind::Highlight => {
       let flow = highlight_flow(image, item);
       [flow.start_grip(), flow.end_grip()]
@@ -231,7 +230,9 @@ fn arrow_distance(
         &text_geometry(image, item),
       );
     }
-    AnnotationKind::Redact => return super::redact_chrome::distance(image, item, point),
+    AnnotationKind::Redact | AnnotationKind::Spotlight => {
+      return super::redact_chrome::distance(image, item, point)
+    }
     AnnotationKind::Shape => {
       return super::redact_chrome::shape_stroke_distance(image, item, point)
     }

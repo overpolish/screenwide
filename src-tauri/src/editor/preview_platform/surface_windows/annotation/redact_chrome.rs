@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A box's chrome - a redaction's or a shape's: the layer selection's own
-//! box, with its eight grips and its radius dot, around the chosen one. A
-//! hovered one wears the compositor's halo instead. The twin of
+//! A box's chrome - a redaction's, a shape's or a spotlight's: the layer
+//! selection's own box, with its eight grips and its radius dot, around the
+//! chosen one. A hovered one wears the compositor's halo instead. The twin of
 //! `recording_preview_surface_macos+annotation_redact.m`.
 
 use super::*;
@@ -11,6 +11,14 @@ use crate::editor::annotations::gesture::{BOX_HANDLES, MODE_SELECT, RADIUS_HANDL
 use crate::editor::annotations::outline::geometry::{prepare_shape, shape_distance};
 use crate::editor::annotations::redact::geometry::{prepare_redact, redact_distance};
 use crate::editor::annotations::reveal::AnnotationReveal;
+
+/// Whether `kind` is held by a box and its eight grips.
+pub(super) fn is_box(kind: AnnotationKind) -> bool {
+  matches!(
+    kind,
+    AnnotationKind::Redact | AnnotationKind::Shape | AnnotationKind::Spotlight
+  )
+}
 
 /// The box on screen, in display points, from the normalised corners Rust
 /// published.
@@ -69,8 +77,9 @@ pub(super) fn grip_at(
     .map(|(_, handle)| handle)
 }
 
-/// How far `point` is from a redaction's rounded box, in display points:
-/// zero or less anywhere inside it, so a press anywhere on the box picks it.
+/// How far `point` is from a redaction's or a spotlight's rounded box, in
+/// display points: zero or less anywhere inside it, so a press anywhere on
+/// the box picks it.
 pub(super) fn distance(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
@@ -165,18 +174,16 @@ pub(super) fn grip_cursor(handle: u32) -> Option<editor::CursorKind> {
   })
 }
 
-/// The chosen redaction's or shape's box in device pixels and its radius
-/// percentage, for the chrome to draw the way the layer selection draws its
-/// own. `None` when no box is chosen or the annotation tool has no say.
+/// The chosen redaction's, shape's or spotlight's box in device pixels and
+/// its radius percentage, for the chrome to draw the way the layer selection
+/// draws its own. `None` when no box is chosen or the annotation tool has no
+/// say.
 pub(crate) fn selected_box(state: &SurfaceState, scale: f64) -> Option<([f32; 4], f64)> {
   if state.annotation.mode == MODE_NONE {
     return None;
   }
   let item = selected_item(state)?;
-  if !matches!(
-    item.shape_kind(),
-    AnnotationKind::Redact | AnnotationKind::Shape
-  ) {
+  if !is_box(item.shape_kind()) {
     return None;
   }
   let rect = frame(image_frame(state)?, item);

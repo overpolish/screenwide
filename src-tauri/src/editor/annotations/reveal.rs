@@ -59,7 +59,7 @@ pub(crate) const REVEAL_DRAW_OUT_MS: f32 = REVEAL_DRAW_IN_MS * REVEAL_OUT_SHARE;
 
 /// The most of a clip either phase may take, so a clip shorter than a second
 /// still finishes drawing itself in before it starts leaving.
-const REVEAL_PHASE_SHARE: f32 = 1.0 / 3.0;
+pub(crate) const REVEAL_PHASE_SHARE: f32 = 1.0 / 3.0;
 
 /// The share of the opening phase the annotation fades in over, from the clip's
 /// start, while it is already under way. It arrives whole: a head that grows in
@@ -166,12 +166,10 @@ pub(crate) fn reveal_window(
   let fade_ms = opening_ms * REVEAL_FADE_SHARE;
   let shrink_ms = closing_ms * REVEAL_SHRINK_SHARE;
   let land_ms = closing_ms * REVEAL_LAND_SHARE;
-  let takeoff = ease_in_out_cubic(REVEAL_TAKEOFF);
   let ends = |at_ms: f32| {
-    let opening = REVEAL_TAKEOFF + (1.0 - REVEAL_TAKEOFF) * (at_ms / opening_ms).clamp(0.0, 1.0);
     (
       ease_in_out_cubic(((at_ms - (duration_ms - closing_ms)) / land_ms).clamp(0.0, 1.0)),
-      (ease_in_out_cubic(opening) - takeoff) / (1.0 - takeoff),
+      eased_travel(at_ms / opening_ms),
     )
   };
   // One formula for the window, weight and opacity at a source time, so the
@@ -199,6 +197,17 @@ pub(crate) fn reveal_window(
       previous_opacity,
     ],
   }
+}
+
+/// How far along its way something travelling for `progress` of its time
+/// has come: an in-out ease set off from [`REVEAL_TAKEOFF`], so it is
+/// already moving on its first frame and still settles gently. A stroke
+/// drawing in travels this way, and a spotlight's light gliding to the next
+/// box does too.
+pub(crate) fn eased_travel(progress: f32) -> f32 {
+  let takeoff = ease_in_out_cubic(REVEAL_TAKEOFF);
+  let along = REVEAL_TAKEOFF + (1.0 - REVEAL_TAKEOFF) * progress.clamp(0.0, 1.0);
+  (ease_in_out_cubic(along) - takeoff) / (1.0 - takeoff)
 }
 
 /// The clip length that leaves an animated annotation starting to draw out
@@ -230,12 +239,14 @@ pub(crate) fn clip_ms_for_visible(visible_ms: f32, path_ms: Option<f32>) -> f32 
 /// and every other one follows its own kind's arrival at its clip's pace,
 /// `path_ms`, which is zero where the clip names none: `kind` is the retained
 /// annotation's, so the export and the preview animate through one
-/// implementation.
+/// implementation. A spotlight also takes the ends it is joined to its
+/// neighbours at, as `SpotlightJoins` bits, and how far its blur has arrived.
 ///
 /// # Safety
 /// `out` must point at one writable [`AnnotationReveal`].
 #[cfg(target_os = "macos")]
 #[no_mangle]
+#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn screenwide_annotation_reveal_window(
   elapsed_ms: f32,
   duration_ms: f32,
@@ -243,17 +254,26 @@ pub unsafe extern "C" fn screenwide_annotation_reveal_window(
   animated: u32,
   kind: u32,
   path_ms: f32,
+  joins: u32,
+  blur_share: f32,
   out: *mut AnnotationReveal,
 ) {
   if out.is_null() {
     return;
   }
+  // A number no kind owns cannot come from a retained annotation, and the
+  // arrow's window is what such a record drew before the kinds were named.
+  let kind = AnnotationKind::from_raw(kind).unwrap_or(AnnotationKind::Arrow);
   *out = if animated == 0 {
     AnnotationReveal::WHOLE
+  } else if kind == AnnotationKind::Spotlight {
+    super::spotlight::reveal::spotlight_reveal_window(
+      elapsed_ms,
+      duration_ms,
+      super::spotlight::reveal::SpotlightJoins::from_bits(joins),
+      blur_share,
+    )
   } else {
-    // A number no kind owns cannot come from a retained annotation, and the
-    // arrow's window is what such a record drew before the kinds were named.
-    let kind = AnnotationKind::from_raw(kind).unwrap_or(AnnotationKind::Arrow);
     let pace = (path_ms > 0.0).then_some(path_ms);
     kind.reveal_window(elapsed_ms, duration_ms, frame_ms, pace)
   };

@@ -9,7 +9,8 @@
 // Reserved so every kind reads the same bits: `FILL` for the rectangle and
 // ellipse tools, unused until those tools land, and `MULTIPLY`, which no kind
 // reads. `PIXELATE` marks a pixelated redaction, `MOSAIC` a classic
-// pixelated one and `BLUR` a blurred one. `SURFACES` marks a redaction whose
+// pixelated one and `BLUR` a blurred one, or a spotlight that blurs what is
+// outside it. `SURFACES` marks a redaction whose
 // `p1` points at a surface timeline in the side buffer. `HAND_DRAWN` marks a
 // highlight drawn as a marker stroke rather than a clean band.
 #![allow(dead_code)]

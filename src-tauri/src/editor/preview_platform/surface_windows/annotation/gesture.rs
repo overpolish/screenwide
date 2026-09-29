@@ -82,11 +82,13 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
           AnnotationKind::Arrow
           | AnnotationKind::Redact
           | AnnotationKind::Highlight
-          | AnnotationKind::Shape,
+          | AnnotationKind::Shape
+          | AnnotationKind::Spotlight,
         ) => {
-          // Empty picture: a new arrow, redaction, highlight or shape, once
-          // the press proves to be a drag. The end grip is the one the drag
-          // carries, so it grows from where it started towards the pointer.
+          // Empty picture: a new arrow, redaction, highlight, shape or
+          // spotlight, once the press proves to be a drag. The end grip is the
+          // one the drag carries, so it grows from where it started towards
+          // the pointer.
           state.annotation.drag = Some(Drag::pending(TARGET_NEW, 0, HANDLE_END, point));
           true
         }

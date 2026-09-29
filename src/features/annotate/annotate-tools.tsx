@@ -8,6 +8,7 @@ import {
   CounterToolIcon,
   HighlightToolIcon,
   ShapeToolIcon,
+  SpotlightToolIcon,
 } from "../../components/shared/annotation-style/annotation-tool-icons";
 import { AnnotationKind } from "../../components/shared/annotation-style/types";
 
@@ -57,5 +58,12 @@ export const ANNOTATE_TOOLS: AnnotateTool[] = [
     label: "Shape",
     name: "Draw a shape",
     shortcut: "O",
+  },
+  {
+    icon: <SpotlightToolIcon />,
+    id: "spotlight",
+    label: "Spotlight",
+    name: "Spotlight a region",
+    shortcut: "L",
   },
 ];

@@ -4,6 +4,7 @@
 import {
   ArrowUpRight,
   EyeOff,
+  Flashlight,
   Highlighter,
   MapPinPlusInside,
   Square,
@@ -24,3 +25,4 @@ export const TextToolIcon = Type;
 export const RedactToolIcon = EyeOff;
 export const HighlightToolIcon = Highlighter;
 export const ShapeToolIcon = Square;
+export const SpotlightToolIcon = Flashlight;

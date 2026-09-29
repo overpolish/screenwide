@@ -6,19 +6,13 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { IconButton } from "../../components/base/button/icon-button";
 import { ButtonGroup } from "../../components/base/button-group/button-group";
-import { AnnotationAngleDial } from "../../components/shared/annotation-style/annotation-angle-dial";
 import { AnnotationColorGrid } from "../../components/shared/annotation-style/annotation-color-grid";
-import { AnnotationFitGroup } from "../../components/shared/annotation-style/annotation-fit-group";
-import { AnnotationHeadGroup } from "../../components/shared/annotation-style/annotation-head-group";
-import { AnnotationRadiusField } from "../../components/shared/annotation-style/annotation-radius-field";
-import { AnnotationStrokeGroup } from "../../components/shared/annotation-style/annotation-stroke-group";
-import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
-import { annotationSizes } from "../../components/shared/annotation-style/widths";
 import { BackgroundTile } from "../../components/shared/background-picker/background-tile";
 import { NativeTooltipTrigger } from "../../components/shared/native-tooltip/native-tooltip-trigger";
 import { ToolToggle } from "../../components/shared/tool-toggle/tool-toggle";
 import { AnnotateSettings } from "../settings/types";
 
+import { AnnotateToolControls } from "./annotate-tool-controls";
 import { ANNOTATE_TOOLS } from "./annotate-tools";
 
 export type AnnotateToolbarProps = {
@@ -68,13 +62,9 @@ export function AnnotateToolbar({
 }: AnnotateToolbarProps) {
   const [showColors, setShowColors] = useState(false);
   const plateRef = useRef<HTMLElement>(null);
-  // Which controls the plate carries: a counter has a disc and an aim where
-  // an arrow has a stroke and a head, a highlight fits the lines it covers
-  // and is only drawn clean or by hand, and a shape has a pen, a hand and
-  // rounded corners.
-  const isCounter = settings.defaultShape === "counter";
-  const isHighlight = settings.defaultShape === "highlight";
-  const isShape = settings.defaultShape === "shape";
+  // A spotlight is no colour: its shade is the same black whatever the
+  // arrows are drawn in, so the plate offers no colour while it is in hand.
+  const hasColor = settings.defaultShape !== "spotlight";
 
   useLayoutEffect(() => {
     const plate = plateRef.current;
@@ -140,81 +130,18 @@ export function AnnotateToolbar({
         </ButtonGroup>
 
         <div className="flex items-center gap-control-inset">
-          <BackgroundTile
-            ariaLabel="Colour"
-            background={{ color: settings.defaultColor, kind: "solid" }}
-            id="color"
-            isSelected={showColors}
-            onPress={() => {
-              setShowColors((open) => !open);
-            }}
-          />
-          {isHighlight ? (
-            <>
-              <AnnotationFitGroup
-                onChange={(highlightManual) => {
-                  onChange({ highlightManual });
-                }}
-                value={settings.highlightManual}
-              />
-              <AnnotationStrokeGroup
-                onChange={(highlightHandDrawn) => {
-                  onChange({ highlightHandDrawn });
-                }}
-                value={settings.highlightHandDrawn}
-              />
-            </>
-          ) : (
-            <AnnotationWidthSlider
-              label={isCounter ? "Size" : "Width"}
-              onChange={(size) => {
-                onChange(
-                  isCounter
-                    ? { defaultCounterSize: size }
-                    : { defaultWidth: size },
-                );
+          {hasColor ? (
+            <BackgroundTile
+              ariaLabel="Colour"
+              background={{ color: settings.defaultColor, kind: "solid" }}
+              id="color"
+              isSelected={showColors}
+              onPress={() => {
+                setShowColors((open) => !open);
               }}
-              presets={annotationSizes(settings.defaultShape)}
-              value={
-                isCounter ? settings.defaultCounterSize : settings.defaultWidth
-              }
             />
-          )}
-          {/* The head belongs to the arrow and the aim to the counter, so the
-              plate carries whichever the tool in hand has. A live annotation cannot
-              be picked up again, so a counter is aimed before it is dropped
-              rather than turned afterwards, and a shape is drawn by hand and
-              rounded before it is drawn. */}
-          {isHighlight ? null : isCounter ? (
-            <AnnotationAngleDial
-              onChange={(defaultCounterAngle, typed) => {
-                onChange({ defaultCounterAngle }, typed);
-              }}
-              value={settings.defaultCounterAngle}
-            />
-          ) : isShape ? (
-            <>
-              <AnnotationStrokeGroup
-                onChange={(shapeHandDrawn) => {
-                  onChange({ shapeHandDrawn });
-                }}
-                value={settings.shapeHandDrawn}
-              />
-              <AnnotationRadiusField
-                onChange={(shapeRadius) => {
-                  onChange({ shapeRadius });
-                }}
-                value={settings.shapeRadius}
-              />
-            </>
-          ) : (
-            <AnnotationHeadGroup
-              onChange={(defaultHead) => {
-                onChange({ defaultHead });
-              }}
-              value={settings.defaultHead}
-            />
-          )}
+          ) : null}
+          <AnnotateToolControls onChange={onChange} settings={settings} />
         </div>
 
         <div className="flex items-center gap-control">
@@ -239,7 +166,7 @@ export function AnnotateToolbar({
         </div>
       </div>
 
-      {showColors ? (
+      {showColors && hasColor ? (
         <AnnotationColorGrid
           onChange={(defaultColor) => {
             onChange({ defaultColor });
