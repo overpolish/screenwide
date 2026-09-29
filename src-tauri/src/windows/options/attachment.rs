@@ -70,13 +70,17 @@ pub(super) fn detach_from_parent(
 fn set_owner(panel: &tauri::WebviewWindow, owner: isize) -> tauri::Result<()> {
   use windows::Win32::{
     Foundation::{GetLastError, SetLastError, HWND, WIN32_ERROR},
-    UI::WindowsAndMessaging::{SetWindowLongPtrW, GWLP_HWNDPARENT},
+    UI::WindowsAndMessaging::{GetWindow, SetWindowLongPtrW, GWLP_HWNDPARENT, GW_OWNER},
   };
+  let hwnd = HWND(panel.hwnd()?.0);
   unsafe {
     SetLastError(WIN32_ERROR(0));
-    let previous = SetWindowLongPtrW(HWND(panel.hwnd()?.0), GWLP_HWNDPARENT, owner);
+    let previous = SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner);
     let error = GetLastError();
-    if previous == 0 && error.0 != 0 {
+    // Clearing an owner leaves ERROR_INVALID_WINDOW_HANDLE behind even when it
+    // succeeds, so the owner the window ended up with decides.
+    let owned_by = GetWindow(hwnd, GW_OWNER).unwrap_or_default().0 as isize;
+    if previous == 0 && error.0 != 0 && owned_by != owner {
       return Err(std::io::Error::from_raw_os_error(error.0 as i32).into());
     }
   }
