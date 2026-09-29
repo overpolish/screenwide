@@ -129,14 +129,30 @@ fn mix_point(from: AnnotationPoint, to: AnnotationPoint, progress: f64) -> Annot
   }
 }
 
+/// A spotlight's box as its low and high corners. The drag that drew it may
+/// have set out from any corner, and pairing drag corners across two boxes
+/// drawn different ways folds the light through nothing on its way.
+fn corners(annotation: &Annotation) -> Option<[AnnotationPoint; 2]> {
+  match annotation.shape {
+    AnnotationShape::Spotlight { start, end } => Some([
+      AnnotationPoint {
+        x: start.x.min(end.x),
+        y: start.y.min(end.y),
+      },
+      AnnotationPoint {
+        x: start.x.max(end.x),
+        y: start.y.max(end.y),
+      },
+    ]),
+    _ => None,
+  }
+}
+
 /// How far the farther corner of the box travels from `from` to `to`, in
 /// source pixels, so a box that grows moves as far as its moving corner.
 fn travel(from: &Annotation, to: &Annotation) -> f64 {
-  match (&from.shape, &to.shape) {
-    (
-      AnnotationShape::Spotlight { start: a, end: b },
-      AnnotationShape::Spotlight { start: c, end: d },
-    ) => (c.x - a.x)
+  match (corners(from), corners(to)) {
+    (Some([a, b]), Some([c, d])) => (c.x - a.x)
       .hypot(c.y - a.y)
       .max((d.x - b.x).hypot(d.y - b.y)),
     _ => 0.0,
@@ -163,6 +179,7 @@ fn glide(
 }
 
 /// How long clip `index` glides in over, as [`glide`] works it out.
+#[cfg(any(target_os = "macos", test))]
 pub(crate) fn glide_ms(
   clips: &[RecordingAnnotationClip],
   links: &[SpotlightLinks],
@@ -180,14 +197,10 @@ fn glided(from: &Annotation, to: &Annotation, progress: f32) -> (Annotation, f32
   let eased = eased_travel(progress);
   let along = f64::from(eased);
   let mut drawn = to.clone();
-  if let (
-    AnnotationShape::Spotlight { start: a, end: b },
-    AnnotationShape::Spotlight { start: c, end: d },
-  ) = (&from.shape, &to.shape)
-  {
+  if let (Some([a, b]), Some([c, d])) = (corners(from), corners(to)) {
     drawn.shape = AnnotationShape::Spotlight {
-      start: mix_point(*a, *c, along),
-      end: mix_point(*b, *d, along),
+      start: mix_point(a, c, along),
+      end: mix_point(b, d, along),
     };
   }
   drawn.style.radius = mix(from.style.radius, to.style.radius, along);

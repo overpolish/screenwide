@@ -39,6 +39,13 @@ fn left(annotation: &Annotation) -> f64 {
   }
 }
 
+fn size(annotation: &Annotation) -> [f64; 2] {
+  match annotation.shape {
+    AnnotationShape::Spotlight { start, end } => [(end.x - start.x).abs(), (end.y - start.y).abs()],
+    _ => unreachable!(),
+  }
+}
+
 const FIRST: [f64; 4] = [0.0, 0.0, 100.0, 100.0];
 const SECOND: [f64; 4] = [400.0, 0.0, 500.0, 100.0];
 
@@ -153,4 +160,31 @@ fn a_blur_only_one_side_has_fades_across_the_glide() {
   assert!(gliding.reveal.scale > 0.0 && gliding.reveal.scale < 1.0);
   let arrived = &drawn(&clips, 3_000)[0];
   assert!(!arrived.style.blur);
+}
+
+/// A box is the same box whichever corner the drag set out from, so one
+/// dragged the other way moves across as it is, rather than folding through
+/// nothing on the way and taking the long way round.
+#[test]
+fn a_box_dragged_the_other_way_glides_whole_and_as_far() {
+  let reversed = [100.0, 100.0, 0.0, 0.0];
+  let clips = [
+    spotlight("a", reversed, [0, 2_000]),
+    spotlight("b", SECOND, [2_000, 6_000]),
+  ];
+  for at in (2_000..3_000).step_by(16) {
+    let [width, height] = size(&drawn(&clips, at)[0]);
+    assert!(
+      (width - 100.0).abs() < 1e-6 && (height - 100.0).abs() < 1e-6,
+      "{at}: {width} x {height}"
+    );
+  }
+  let normal = [
+    spotlight("a", FIRST, [0, 2_000]),
+    spotlight("b", SECOND, [2_000, 6_000]),
+  ];
+  let ms = |clips: &[RecordingAnnotationClip]| {
+    glide_ms(clips, &spotlight_links(clips), 1, PICTURE, 4_000.0)
+  };
+  assert_eq!(ms(&clips), ms(&normal));
 }

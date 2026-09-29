@@ -42,13 +42,14 @@ pub(crate) struct SpotlightJoins {
   pub(crate) onward: bool,
 }
 
+#[cfg(target_os = "macos")]
 impl SpotlightJoins {
   const FROM: u32 = 1;
   const ONWARD: u32 = 2;
 
   /// The joins as the bits a timed record carries them in.
   pub(crate) fn bits(self) -> u32 {
-    u32::from(self.from) * Self::FROM | u32::from(self.onward) * Self::ONWARD
+    (u32::from(self.from) * Self::FROM) | (u32::from(self.onward) * Self::ONWARD)
   }
 
   pub(crate) fn from_bits(bits: u32) -> Self {

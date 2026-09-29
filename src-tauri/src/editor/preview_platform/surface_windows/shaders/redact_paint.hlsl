@@ -50,12 +50,12 @@ float3 redact_colour(uint2 gid) {
   return redact_color.rgb;
 }
 
-// How much of the pixel centred at `point` the spotlights' blur takes: as
+// How much of the pixel centred at `probe` the spotlights' blur takes: as
 // much as the record's cover, which rides in the colour's alpha, lifted by
 // each spotlight's light as far as it is present. The zones are the holes,
 // four each: the box's corners, its rounding and fade, and its presence
 // beside the blur's, in source pixels. The twin of `redact_spotlight_share`.
-float redact_spotlight_share(float2 point) {
+float redact_spotlight_share(float2 probe) {
   float lit = 0.0;
   [loop] for (uint at = 0u; at + 3u < redact_entry_count; at += 4u) {
     uint first = redact_zone_first + at;
@@ -64,7 +64,7 @@ float redact_spotlight_share(float2 point) {
     float2 shape = redact_zones[first + 2u];
     float presence = saturate(redact_zones[first + 3u].x);
     float rounding = min(shape.x, min(high.x - low.x, high.y - low.y) * 0.5);
-    float2 q = abs(point - (low + high) * 0.5) - ((high - low) * 0.5 - rounding);
+    float2 q = abs(probe - (low + high) * 0.5) - ((high - low) * 0.5 - rounding);
     float distance = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - rounding;
     float soft = max(shape.y, 0.0);
     float fall = saturate((distance + soft + 0.5) / (soft + 1.0));

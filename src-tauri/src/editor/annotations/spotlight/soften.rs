@@ -43,8 +43,8 @@ pub(crate) fn soften(image: &CapturedImage) -> CapturedImage {
     for y in y0..y1 {
       for x in x0..x1 {
         let at = (y * width + x) * 4;
-        for channel in 0..3 {
-          sum[channel] += f32::from(image.rgba[at + channel]);
+        for (total, value) in sum.iter_mut().zip(&image.rgba[at..at + 3]) {
+          *total += f32::from(*value);
         }
       }
     }

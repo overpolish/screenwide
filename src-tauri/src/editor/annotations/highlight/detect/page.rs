@@ -74,14 +74,11 @@ impl<'a> Page<'a> {
         sum[2] += u32::from(b);
       }
     }
-    let Some((bucket, &count)) = counts
+    let (bucket, &count) = counts
       .iter()
       .enumerate()
       .max_by_key(|(_, count)| **count)
-      .filter(|(_, count)| **count > 0)
-    else {
-      return None;
-    };
+      .filter(|(_, count)| **count > 0)?;
     let sum = sums[bucket];
     let surface = [
       (sum[0] / count) as u8,

@@ -12,7 +12,6 @@
 
 use super::model::share;
 use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::text::geometry::rounded_box_distance;
 
 /// The box between the two corners, in the space they are given in, rounded
 /// by `radius` percent of its shorter side and fading over `softness` percent
@@ -38,8 +37,14 @@ pub(crate) fn prepare_spotlight(
 
 /// How far `point` falls from the prepared box: zero or less anywhere inside
 /// it, so a press anywhere in the light picks it.
+#[cfg(any(target_os = "macos", test))]
 pub(crate) fn spotlight_distance(point: [f32; 2], geometry: &ArrowGeometry) -> f32 {
-  rounded_box_distance(point, geometry.a, geometry.b, geometry.rounding)
+  crate::editor::annotations::text::geometry::rounded_box_distance(
+    point,
+    geometry.a,
+    geometry.b,
+    geometry.rounding,
+  )
 }
 
 /// How much of a spotlight's light reaches `point`: all of it well inside
