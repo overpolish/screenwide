@@ -37,6 +37,12 @@ const keyboardIconClassName =
 // heavier, so on Windows the glyph keeps the icon set's regular stroke.
 const keyGlyphClassName = "stroke-1 windows:stroke-[1.5px]";
 
+// Brackets and parentheses drop below the baseline, so SF Pro centres their
+// ink about 0.1em below the cap's middle, where letters sit within 0.03em.
+// Segoe's metrics differ and its keycap already reads as centred.
+const descendingKeys = new Set(["[", "]", "(", ")", "{", "}"]);
+const descendingKeyClassName = "-translate-y-[0.1em] windows:translate-y-0";
+
 const isMacOS =
   typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
 
@@ -71,6 +77,11 @@ const mappedKey = (children: ReactNode) => {
           children: <ChevronUp aria-hidden className={keyGlyphClassName} />,
         }
       : { children: "Ctrl" };
+  }
+  if (descendingKeys.has(key)) {
+    return {
+      children: <span className={descendingKeyClassName}>{children}</span>,
+    };
   }
   return { children };
 };
