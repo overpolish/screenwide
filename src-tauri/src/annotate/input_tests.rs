@@ -31,6 +31,72 @@ fn counter_tool(value: u32, angle: f64) -> Tool {
   }
 }
 
+fn pen_tool() -> Tool {
+  Tool {
+    shape: AnnotationKind::Draw,
+    value: 0,
+    angle: 0.0,
+    manual: false,
+  }
+}
+
+#[test]
+fn a_pen_drag_completes_a_stroke_through_where_it_went() {
+  let tool = pen_tool();
+  let at = Instant::now();
+  let mut drawing = None;
+
+  step(&mut drawing, PHASE_DOWN, at, point(0.0, 0.0), &tool);
+  step(&mut drawing, PHASE_DRAG, at, point(30.0, 40.0), &tool);
+  // Still, the hand stores nothing more.
+  step(&mut drawing, PHASE_DRAG, at, point(30.2, 40.0), &tool);
+  let (completed, _) = step(&mut drawing, PHASE_UP, at, point(60.0, 0.0), &tool).unwrap();
+
+  let AnnotationShape::Draw { points, .. } = &completed.shape else {
+    panic!("the pen draws a stroke");
+  };
+  let points: Vec<_> = points.iter().map(|point| (point.x, point.y)).collect();
+  assert_eq!(points, [(0.0, 0.0), (30.0, 40.0), (60.0, 0.0)]);
+  // Clear all in the editor takes what the pen drew.
+  assert!(completed.pen);
+}
+
+#[test]
+fn a_pen_click_leaves_no_dot() {
+  let tool = pen_tool();
+  let at = Instant::now();
+  let mut drawing = None;
+
+  step(&mut drawing, PHASE_DOWN, at, point(10.0, 20.0), &tool);
+  assert!(step(&mut drawing, PHASE_UP, at, point(10.0, 20.0), &tool).is_none());
+}
+
+#[test]
+fn a_pen_stroke_held_still_is_let_go_as_what_it_was_taken_for() {
+  use crate::editor::annotations::freehand::hold::HOLD;
+  let tool = pen_tool();
+  let started = Instant::now();
+  let mut drawing = None;
+
+  step(&mut drawing, PHASE_DOWN, started, point(0.0, 0.0), &tool);
+  for x in 1..=200 {
+    let at = started + Duration::from_millis(x);
+    step(
+      &mut drawing,
+      PHASE_DRAG,
+      at,
+      point(f64::from(x as u32), 0.0),
+      &tool,
+    );
+  }
+  let rested = started + Duration::from_millis(200) + HOLD;
+  assert!(drawing.as_mut().unwrap().hold(rested));
+  let (completed, _) = step(&mut drawing, PHASE_UP, rested, point(200.5, 0.0), &tool).unwrap();
+
+  assert!(matches!(completed.shape, AnnotationShape::Arrow { .. }));
+  assert!(completed.pen);
+}
+
 #[test]
 fn a_drag_completes_one_arrow_between_its_ends() {
   let tool = arrow_tool();

@@ -131,6 +131,9 @@ impl NativeAnnotationData {
     if let super::AnnotationShape::Spotlight { .. } = &annotation.shape {
       record.flags = super::spotlight::native::flags(&annotation.style);
     }
+    if let super::AnnotationShape::Draw { points, smooth } = &annotation.shape {
+      super::freehand::native::fill(&mut record, &mut self.points, points, *smooth);
+    }
     if let Some(fill) = fill {
       record.color = fill.color;
       record.flags = fill.flags;

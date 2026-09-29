@@ -4,6 +4,9 @@
 //! One live annotation edit. Workspaces own presentation and history; this
 //! transaction owns only the annotations changed by a pointer gesture.
 
+use std::time::Instant;
+
+use super::freehand::hold::StrokeHold;
 use super::gesture::{next_annotation_id, AnnotationDragOrigin, AnnotationGestureTarget};
 use super::snap::{SnapModifiers, SnapRequest, SnapResult};
 use super::{Annotation, AnnotationKind, AnnotationPoint, AnnotationStyle};
@@ -14,6 +17,9 @@ pub(crate) struct AnnotationEdit {
   id: String,
   origin: AnnotationDragOrigin,
   target: AnnotationGestureTarget,
+  /// A stroke fresh from the pen: its rest at the end, and what it was taken
+  /// for. Such a stroke is never left chosen.
+  stroke: Option<StrokeHold>,
 }
 
 impl AnnotationEdit {
@@ -55,11 +61,28 @@ impl AnnotationEdit {
       id: annotation.id.clone(),
       origin,
       target,
+      stroke: (target == AnnotationGestureTarget::New
+        && annotation.shape.kind() == AnnotationKind::Draw)
+        .then(|| StrokeHold::new(point, Instant::now())),
     })
   }
 
   pub(crate) fn selected_id(&self) -> &str {
     &self.id
+  }
+
+  /// The annotation this gesture leaves chosen. A stroke fresh from the pen is
+  /// let go, so the next press draws another rather than picking it up and no
+  /// box stands over the drawing; every other annotation stays in hand for its
+  /// panel to dress.
+  pub(crate) fn chosen_id(&self) -> Option<&str> {
+    self.stroke.is_none().then_some(self.id.as_str())
+  }
+
+  /// Whether this gesture is drawing a fresh stroke, which a clock outside
+  /// it asks [`Self::hold`] about until it ends.
+  pub(crate) fn holds_stroke(&self) -> bool {
+    self.stroke.is_some()
   }
 
   /// Source pixels per screen point for the sample about to be applied. Read
@@ -102,7 +125,7 @@ impl AnnotationEdit {
   /// sample snaps at all: with the positional modifier let go, or with no
   /// usable reach to convert, the candidates are simply not offered.
   pub(crate) fn update(
-    &self,
+    &mut self,
     annotations: &mut [Annotation],
     point: AnnotationPoint,
     modifiers: SnapModifiers,
@@ -123,6 +146,14 @@ impl AnnotationEdit {
       // carries it. Each snaps the way the same grip does on an annotation
       // already placed.
       AnnotationGestureTarget::New => {
+        // A stroke still resting where it was taken for something cleaner
+        // keeps that; moving on gives the stroke back to carry on.
+        let unit = self.origin.source_per_point;
+        if let Some(stroke) = &mut self.stroke {
+          if !stroke.sample(annotation, point, unit, Instant::now()) {
+            return SnapResult::default();
+          }
+        }
         annotation.drag_new(point, &self.origin, modifiers.shift, snap)
       }
       AnnotationGestureTarget::Existing { handle, .. } => {
@@ -130,6 +161,22 @@ impl AnnotationEdit {
       }
       _ => SnapResult::default(),
     }
+  }
+
+  /// Reads a fresh stroke the hand has rested on long enough, and puts what
+  /// it was taken for in its place. Answers whether the annotation changed,
+  /// and so wants presenting.
+  pub(crate) fn hold(&mut self, annotations: &mut [Annotation], now: Instant) -> bool {
+    let unit = self.origin.source_per_point;
+    let (Some(stroke), Some(annotation)) = (
+      &mut self.stroke,
+      annotations
+        .get_mut(self.index)
+        .filter(|item| item.id == self.id),
+    ) else {
+      return false;
+    };
+    stroke.hold(annotation, unit, now)
   }
 
   /// Drop an edit to accept the working list, or restore it on Escape.

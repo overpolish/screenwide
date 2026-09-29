@@ -110,3 +110,8 @@ export const Spotlight: Story = {
     settings: { ...settings, defaultShape: "spotlight", spotlightBlur: true },
   },
 };
+
+/** The pen in hand: only its colour and weight. */
+export const Draw: Story = {
+  args: { settings: { ...settings, defaultShape: "draw" } },
+};

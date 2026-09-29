@@ -140,6 +140,13 @@ describe("validAnnotations", () => {
     ).toEqual([]);
   });
 
+  it("keeps the mark of what the pen made, which Clear all takes", () => {
+    const [marked] = validAnnotations([{ ...counter("a", 1), pen: true }]);
+    expect(marked.pen).toBe(true);
+    const [unmarked] = validAnnotations([{ ...counter("b", 2), pen: "yes" }]);
+    expect(unmarked).not.toHaveProperty("pen");
+  });
+
   it("reads a stored text box back, tucking in a pointer it cannot read", () => {
     const box = (pointer: unknown) => ({
       ...counter("t", 1),

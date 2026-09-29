@@ -13,6 +13,7 @@ fn counter_clip(value: u32) -> RecordingAnnotationClip {
       animated: true,
       id: value.to_string(),
       held: None,
+      pen: false,
       reveal: Default::default(),
       shape: AnnotationShape::Counter {
         center: AnnotationPoint { x: 10.0, y: 10.0 },

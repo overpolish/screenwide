@@ -16,8 +16,16 @@ use crate::editor::annotations::reveal::AnnotationReveal;
 pub(super) fn is_box(kind: AnnotationKind) -> bool {
   matches!(
     kind,
-    AnnotationKind::Redact | AnnotationKind::Shape | AnnotationKind::Spotlight
+    AnnotationKind::Redact
+      | AnnotationKind::Shape
+      | AnnotationKind::Spotlight
+      | AnnotationKind::Draw
   )
+}
+
+/// Whether a box of `kind` has a radius dot: a stroke has no corners to round.
+fn has_radius(kind: AnnotationKind) -> bool {
+  kind != AnnotationKind::Draw
 }
 
 /// The box on screen, in display points, from the normalised corners Rust
@@ -73,6 +81,7 @@ pub(super) fn grip_at(
 ) -> Option<u32> {
   grips(image, item)
     .into_iter()
+    .filter(|(_, handle)| *handle != RADIUS_HANDLE || has_radius(item.shape_kind()))
     .find(|((x, y), _)| (point.0 - x).abs() <= HANDLE_HIT && (point.1 - y).abs() <= HANDLE_HIT)
     .map(|(_, handle)| handle)
 }
@@ -144,17 +153,19 @@ pub(super) fn shape_body_distance(
 }
 
 /// Whether the annotation at `index` is picked by its inside as well as its
-/// stroke: a shape once it is chosen, or while the select tool is in hand. It
-/// can be carried from anywhere in it, while any other tool still draws
-/// inside a shape not in hand. The twin of the rule in
+/// line: a shape or a stroke once it is chosen, or while the select tool is
+/// in hand. It can be carried from anywhere in it, while any other tool still
+/// draws inside one not in hand. The twin of the rule in
 /// `annotation_shaft_at_point`.
 pub(super) fn grabs_inside(
   state: &SurfaceState,
   index: usize,
   item: &NativeAnnotationHandles,
 ) -> bool {
-  item.shape_kind() == AnnotationKind::Shape
-    && (state.annotation.mode == MODE_SELECT || state.annotation.selected == index as i32)
+  matches!(
+    item.shape_kind(),
+    AnnotationKind::Shape | AnnotationKind::Draw
+  ) && (state.annotation.mode == MODE_SELECT || state.annotation.selected == index as i32)
 }
 
 /// The resize cursor a box's grip shows: its sides say which way, and
@@ -174,11 +185,11 @@ pub(super) fn grip_cursor(handle: u32) -> Option<editor::CursorKind> {
   })
 }
 
-/// The chosen redaction's, shape's or spotlight's box in device pixels and
-/// its radius percentage, for the chrome to draw the way the layer selection
-/// draws its own. `None` when no box is chosen or the annotation tool has no
-/// say.
-pub(crate) fn selected_box(state: &SurfaceState, scale: f64) -> Option<([f32; 4], f64)> {
+/// The chosen redaction's, shape's, spotlight's or stroke's box in device
+/// pixels and its radius percentage, `None` for a stroke's, which has no
+/// radius dot, for the chrome to draw the way the layer selection draws its
+/// own. `None` when no box is chosen or the annotation tool has no say.
+pub(crate) fn selected_box(state: &SurfaceState, scale: f64) -> Option<([f32; 4], Option<f64>)> {
   if state.annotation.mode == MODE_NONE {
     return None;
   }
@@ -191,6 +202,6 @@ pub(crate) fn selected_box(state: &SurfaceState, scale: f64) -> Option<([f32; 4]
   let (y, bottom) = window::scaled_edges(rect.y, rect.height, scale);
   Some((
     [x as f32, y as f32, (right - x) as f32, (bottom - y) as f32],
-    item.start_head,
+    has_radius(item.shape_kind()).then_some(item.start_head),
   ))
 }

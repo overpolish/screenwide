@@ -87,6 +87,9 @@ pub async fn set_recording_preview_annotations(
   manager.merge_text_session(&mut clips, &current);
   sources.attach_pins(&mut clips, manager.position_ms);
   let changed = *current != clips;
+  // A list that grew or shrank has moved what the halo's index names, so the
+  // halo goes rather than pass to whatever took its place.
+  let recounted = current.len() != clips.len();
   *current = clips;
   drop(current);
   manager.annotation.pane = pane_index.filter(|pane| *pane <= 1);
@@ -95,6 +98,16 @@ pub async fn set_recording_preview_annotations(
   manager.annotation.animated = animated;
   manager.annotation.counter_angle = counter_angle;
   manager.publish_annotation_handles();
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  if recounted {
+    if let Some(surface) = manager
+      .sources
+      .as_ref()
+      .and_then(|sources| sources.preview_surface.as_ref())
+    {
+      surface.redraw_annotation_hover(None);
+    }
+  }
   if !manager.is_playing {
     if changed {
       manager.restart(PlaybackMode::InteractiveStill)?;
@@ -199,6 +212,9 @@ use text::TextSession;
 #[path = "annotation_callbacks.rs"]
 mod callbacks;
 pub(super) use callbacks::install;
+
+#[path = "annotation_hold.rs"]
+mod hold;
 
 #[cfg(test)]
 #[path = "annotation_bridge_tests.rs"]

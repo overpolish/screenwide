@@ -53,6 +53,21 @@ export const counterShape = (value: unknown): Shape<"counter"> | null => {
     : null;
 };
 
+/** The most points a stroke keeps. The twin of `MAX_DRAW_POINTS` in
+ * `src-tauri/src/editor/annotations/freehand/model.rs`. */
+const MAX_DRAW_POINTS = 4096;
+
+export const drawShape = (value: unknown): Shape<"draw"> | null => {
+  const shape = (value ?? {}) as Record<string, unknown>;
+  if (!Array.isArray(shape.points)) return null;
+  const points = shape.points.map(annotationPoint);
+  return points.length > 0 &&
+    points.length <= MAX_DRAW_POINTS &&
+    points.every((point) => point !== null)
+    ? { kind: "draw", points, smooth: shape.smooth === true }
+    : null;
+};
+
 export const highlightShape = (value: unknown): Shape<"highlight"> | null => {
   const shape = (value ?? {}) as Partial<AnnotationHighlight>;
   const start = annotationPoint(shape.start);

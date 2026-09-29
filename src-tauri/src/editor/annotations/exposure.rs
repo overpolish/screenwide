@@ -69,18 +69,23 @@ pub(crate) fn annotation_travel(
           .max((reveal.high - previous[1]).abs())
     }
     // A redaction never moves over a clip: it is whole for as long as it is
-    // shown, and a spotlight only fades. A highlight's bands are not in its
-    // record's points, so `highlight_travel` measures it instead.
-    AnnotationKind::Redact | AnnotationKind::Highlight | AnnotationKind::Spotlight => 0.0,
+    // shown, and a spotlight only fades. A highlight's bands and a stroke's
+    // line are not in their records' points, so `highlight_travel` measures
+    // both from the sweep each record keeps.
+    AnnotationKind::Redact
+    | AnnotationKind::Highlight
+    | AnnotationKind::Spotlight
+    | AnnotationKind::Draw => 0.0,
   }
 }
 
-/// How far a highlight's fastest line end moves between the shutter opening
-/// and now, in the pixels it is drawn in. `origin` and `unit` are where the
-/// source's origin and its pixel `(1, 1)` land in the space the points are
-/// given in, `scale` carries that space into those pixels, and `sweep` is how
-/// far the fastest end runs over the whole reveal, in source pixels, which
-/// the highlight's record keeps in `params[2]`.
+/// How far a highlight's fastest line end, or a stroke's drawing end, moves
+/// between the shutter opening and now, in the pixels it is drawn in.
+/// `origin` and `unit` are where the source's origin, or a stroke's box
+/// corner, and that point moved one source pixel land in the space the
+/// points are given in, `scale` carries that space into those pixels, and
+/// `sweep` is how far the end runs over the whole reveal, in source pixels,
+/// which the record keeps in `params[2]`.
 pub(crate) fn highlight_travel(
   origin: [f32; 2],
   unit: [f32; 2],

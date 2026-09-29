@@ -33,7 +33,7 @@ fn held(shift: bool) -> SnapModifiers {
 /// Draws a fresh box from `from` to `to` and returns the list it lands in.
 fn drawn(from: AnnotationPoint, to: AnnotationPoint, shift: bool) -> Vec<Annotation> {
   let mut annotations = Vec::new();
-  let edit = AnnotationEdit::begin(
+  let mut edit = AnnotationEdit::begin(
     &mut annotations,
     AnnotationGestureTarget::New,
     from,
@@ -55,7 +55,7 @@ fn dragged(
   to: AnnotationPoint,
   shift: bool,
 ) {
-  let edit = AnnotationEdit::begin(
+  let mut edit = AnnotationEdit::begin(
     annotations,
     AnnotationGestureTarget::Existing { index: 0, handle },
     from,

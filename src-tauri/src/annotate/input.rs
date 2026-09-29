@@ -12,7 +12,7 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, MutexGuard};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::editor::annotations::AnnotationKind;
 use crate::editor::annotations::{Annotation, AnnotationPoint};
@@ -23,7 +23,7 @@ mod keys;
 mod stroke;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use keys::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z, TOOL_KEYS};
-use stroke::Stroke;
+use stroke::{pen_down, Stroke};
 
 /// The modifier bits the native overlay sends. Windows reports Ctrl as
 /// `MODIFIER_COMMAND`: undo is the same gesture under a different name.
@@ -41,6 +41,9 @@ pub(super) const PHASE_UP: u32 = 2;
 
 static DRAWING: LazyLock<Mutex<Option<Stroke>>> = LazyLock::new(|| Mutex::new(None));
 static NEXT_ANNOTATION: AtomicU64 = AtomicU64::new(1);
+/// How often a pen stroke is asked whether the hand has rested on it: well
+/// inside the hold, so a stroke is read soon after its rest has lasted.
+const HOLD_TICK: Duration = Duration::from_millis(40);
 
 fn drawing() -> MutexGuard<'static, Option<Stroke>> {
   DRAWING
@@ -73,8 +76,14 @@ fn step(
 ) -> Option<(Annotation, Instant)> {
   match phase {
     PHASE_DOWN => {
+      let id = format!("live-{}", NEXT_ANNOTATION.fetch_add(1, Ordering::Relaxed));
+      let (line, hold) = if tool.shape == AnnotationKind::Draw {
+        pen_down(&id, point, at)
+      } else {
+        (None, None)
+      };
       *drawing = Some(Stroke {
-        id: format!("live-{}", NEXT_ANNOTATION.fetch_add(1, Ordering::Relaxed)),
+        id,
         started_at: at,
         start: point,
         end: point,
@@ -83,18 +92,20 @@ fn step(
         angle: tool.angle,
         manual: tool.shape == AnnotationKind::Highlight && tool.manual,
         seed: crate::editor::annotations::highlight::model::fresh_seed(),
+        line,
+        hold,
       });
       None
     }
     PHASE_DRAG => {
       if let Some(stroke) = drawing.as_mut() {
-        stroke.end = point;
+        stroke.carry(point, at);
       }
       None
     }
     _ => {
       let mut stroke = drawing.take()?;
-      stroke.end = point;
+      stroke.carry(point, at);
       // A click that never travelled is not an arrow. Otherwise every stray
       // click while the overlay is up would leave a dot on screen, and a clip
       // in the recording. A counter is dropped by that very click.
@@ -155,7 +166,7 @@ pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64
       .filter(highlight)
       .map(|stroke| stroke.id.clone());
     if let Some(stroke) = flicked {
-      super::highlight::wait_ready(&stroke, std::time::Duration::from_millis(400));
+      super::highlight::wait_ready(&stroke, Duration::from_millis(400));
     }
   }
   let completed = step(&mut drawing(), phase, Instant::now(), point, &tool);
@@ -168,6 +179,7 @@ pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64
       (AnnotationKind::Spotlight, Some(_), Some(app)) if settings.spotlight_blur => {
         super::highlight::refresh(app, point);
       }
+      (AnnotationKind::Draw, Some(stroke), Some(app)) => watch_hold(app.clone(), stroke),
       _ => {}
     }
   }
@@ -177,6 +189,22 @@ pub(super) fn pointer(app: Option<&tauri::AppHandle>, phase: u32, x: f64, y: f64
     }
     super::live_clips::add(annotation, started_at);
   }
+}
+
+/// Watches the pen stroke `id` until it ends. The pointer reports nothing
+/// while it rests, so no pointer step can notice a rest; the stroke itself
+/// decides whether it has rested long enough, and what it is taken for.
+fn watch_hold(app: tauri::AppHandle, id: String) {
+  std::thread::spawn(move || loop {
+    std::thread::sleep(HOLD_TICK);
+    let changed = match drawing().as_mut() {
+      Some(stroke) if stroke.id == id => stroke.hold(Instant::now()),
+      _ => return,
+    };
+    if changed {
+      super::native_overlay::request_redraw(&app);
+    }
+  });
 }
 
 /// A key press. Reports whether the overlay acted on it, which is what tells

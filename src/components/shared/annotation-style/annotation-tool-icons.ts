@@ -7,6 +7,7 @@ import {
   Flashlight,
   Highlighter,
   MapPinPlusInside,
+  Pencil,
   Square,
   Type,
 } from "lucide-react";
@@ -26,3 +27,4 @@ export const RedactToolIcon = EyeOff;
 export const HighlightToolIcon = Highlighter;
 export const ShapeToolIcon = Square;
 export const SpotlightToolIcon = Flashlight;
+export const DrawToolIcon = Pencil;

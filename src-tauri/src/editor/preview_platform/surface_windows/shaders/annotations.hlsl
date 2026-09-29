@@ -92,7 +92,8 @@ float annotation_curve_squared(float2 a, float2 leg, float2 bend, float2 probe, 
 }
 
 /// The distance from `point` to the quadratic Bezier `a, b, c`, with the
-/// curve parameter restricted to `[low, high]`.
+/// curve parameter restricted to `[low, high]`, and the parameter that
+/// distance is at.
 ///
 /// The refinement never trusts a derivative: the closed form scales by
 /// 1 / |a - 2b + c|², which vanishes for the nearly straight arrow a plain
@@ -100,7 +101,7 @@ float annotation_curve_squared(float2 a, float2 leg, float2 bend, float2 probe, 
 /// tight bend. So golden-section on the squared distance itself, inside one
 /// sample step of the best sample, with Newton only as a polish that has to
 /// prove it shortened the distance.
-float annotation_curve_distance(float2 probe, float2 a, float2 b, float2 c, float low, float high) {
+float2 annotation_curve_nearest(float2 probe, float2 a, float2 b, float2 c, float low, float high) {
   float2 leg = b - a;
   float2 bend = a - 2.0 * b + c;
   float span = max(high - low, 0.0);
@@ -151,7 +152,13 @@ float annotation_curve_distance(float2 probe, float2 a, float2 b, float2 c, floa
     refined = squared;
     t = next;
   }
-  return sqrt(min(best_squared, refined));
+  return best_squared < refined ? float2(sqrt(best_squared), best) : float2(sqrt(refined), t);
+}
+
+/// The distance from `point` to the quadratic Bezier `a, b, c`, with the
+/// curve parameter restricted to `[low, high]`.
+float annotation_curve_distance(float2 probe, float2 a, float2 b, float2 c, float low, float high) {
+  return annotation_curve_nearest(probe, a, b, c, low, high).x;
 }
 
 /// Signed distance to a triangle: negative inside it.
@@ -400,6 +407,7 @@ float4 annotation_counter_layer(
 #include "annotation_text.hlsl"
 #include "annotation_highlight.hlsl"
 #include "annotation_shape.hlsl"
+#include "annotation_draw.hlsl"
 #include "annotation_spotlight.hlsl"
 
 /// A hovered redaction's halo. The box itself was applied to the source and
@@ -472,6 +480,11 @@ float4 composite_annotations(
     if (annotation.kind == annotation_shape_kind) {
       rgba = annotation_shape_layer(rgba, annotation, color, canvas_point, feather,
                                     max(annotation.hover, 0.0));
+      continue;
+    }
+    if (annotation.kind == annotation_draw_kind) {
+      rgba = annotation_draw_layer(rgba, annotation, color, canvas_point, feather,
+                                   max(annotation.hover, 0.0));
       continue;
     }
     float2 a = float2(arrow.ax, arrow.ay);

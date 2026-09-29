@@ -65,6 +65,7 @@ pub async fn refresh_screenshot_preview_sources(
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     let hover = manager
       .annotation_hover
+      .as_ref()
       .map(|hover| (hover.layer_id, hover.index, hover.width));
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let hover = None;

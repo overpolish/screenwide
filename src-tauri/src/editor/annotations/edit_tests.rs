@@ -26,7 +26,7 @@ fn cancelling_a_new_arrow_restores_the_original_list() {
     None,
   )];
   let mut annotations = original.clone();
-  let edit = AnnotationEdit::begin(
+  let mut edit = AnnotationEdit::begin(
     &mut annotations,
     AnnotationGestureTarget::New,
     point(20.0, 30.0),
@@ -62,7 +62,7 @@ fn a_new_text_box_is_centred_on_the_press_and_carried_there() {
   let near =
     |a: AnnotationPoint, b: AnnotationPoint| (a.x - b.x).abs() < 1e-9 && (a.y - b.y).abs() < 1e-9;
   let mut annotations = Vec::new();
-  let edit = AnnotationEdit::begin(
+  let mut edit = AnnotationEdit::begin(
     &mut annotations,
     AnnotationGestureTarget::New,
     point(200.0, 150.0),
@@ -84,7 +84,7 @@ fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
     new_arrow("b".to_owned(), point(0.0, 50.0), point(100.0, 50.0), None),
   ];
   let mut annotations = original.clone();
-  let edit = AnnotationEdit::begin(
+  let mut edit = AnnotationEdit::begin(
     &mut annotations,
     AnnotationGestureTarget::Existing {
       index: 0,
@@ -110,7 +110,7 @@ fn completing_or_cancelling_an_existing_drag_only_changes_its_annotation() {
   );
   edit.cancel(&mut annotations);
   assert_eq!(annotations, original);
-  let edit = AnnotationEdit::begin(
+  let mut edit = AnnotationEdit::begin(
     &mut annotations,
     AnnotationGestureTarget::Existing {
       index: 0,

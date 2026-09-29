@@ -60,6 +60,8 @@ export type ToolPanelHandlers = {
   /** Cut a crop of the size a field asked for, in source pixels. */
   onCropSizeChange?: (size: { height?: number; width?: number }) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
+  /** Take every stroke off the picture being edited. */
+  onDrawingsClear?: () => void;
   /** Round the output canvas corners by this share of its shorter side. */
   onFrameRadiusChange?: (radius: number) => void;
   onFrameReset?: () => void;
@@ -109,6 +111,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAnnotationStyleChange?.(values.annotationStyle);
   if (values.reverseAnnotation) on.onAnnotationReverse?.();
   if (values.shuffleAnnotation) on.onAnnotationShuffle?.();
+  if (values.clearDrawings) on.onDrawingsClear?.();
   if (values.saveAnnotationColor !== undefined)
     on.onAnnotationColorSave?.(values.saveAnnotationColor);
   if (values.removeAnnotationColor !== undefined)

@@ -26,9 +26,12 @@ import { EditorKind } from "./types";
 type PublishedAnnotation = {
   applyAngle: (angle: number) => void;
   applyAnimated: (animated: boolean) => void;
+  applyClearDrawings: () => void;
   applyReverse: () => void;
   applyShuffle: () => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
+  /** Whether the picture the workspace edits has any stroke to clear. */
+  canClearDrawings: boolean;
   selection: ToolPanelAnnotation | null;
 };
 
@@ -51,15 +54,18 @@ const subscribe = (listener: () => void) => {
 
 /**
  * Publish the annotation this workspace has in hand for as long as its preview
- * is mounted.
+ * is mounted, and whether it has strokes to clear.
  *
  * The selection is compared by value: the preview rebuilds it on every render,
  * and a panel that re-rendered on identity alone would never settle.
  */
 export function usePublishAnnotationSelection(
   workspace: EditorKind,
-  selection: ToolPanelAnnotation | null,
-  apply: Omit<PublishedAnnotation, "selection">,
+  {
+    canClearDrawings,
+    selection,
+  }: Pick<PublishedAnnotation, "canClearDrawings" | "selection">,
+  apply: Omit<PublishedAnnotation, "canClearDrawings" | "selection">,
 ) {
   const applyRef = useRef(apply);
   applyRef.current = apply;
@@ -72,6 +78,9 @@ export function usePublishAnnotationSelection(
       applyAnimated: (animated) => {
         applyRef.current.applyAnimated(animated);
       },
+      applyClearDrawings: () => {
+        applyRef.current.applyClearDrawings();
+      },
       applyReverse: () => {
         applyRef.current.applyReverse();
       },
@@ -81,6 +90,7 @@ export function usePublishAnnotationSelection(
       applyStyle: (style) => {
         applyRef.current.applyStyle(style);
       },
+      canClearDrawings,
       selection:
         serialized === null
           ? null
@@ -93,7 +103,7 @@ export function usePublishAnnotationSelection(
       workspaces.delete(workspace);
       notify();
     };
-  }, [serialized, workspace]);
+  }, [canClearDrawings, serialized, workspace]);
 }
 
 /**
@@ -128,6 +138,13 @@ export const useAnnotationSelection = (workspace: EditorKind) =>
   useSyncExternalStore(
     subscribe,
     () => workspaces.get(workspace)?.selection ?? drafts.get(workspace) ?? null,
+  );
+
+/** Whether the picture this workspace edits has any stroke to clear. */
+export const useCanClearDrawings = (workspace: EditorKind) =>
+  useSyncExternalStore(
+    subscribe,
+    () => workspaces.get(workspace)?.canClearDrawings ?? false,
   );
 
 /** The workspace's published edits when it has an annotation chosen. */
@@ -181,4 +198,9 @@ export const applyAnnotationReverse = (workspace: EditorKind) => {
  * fresh one is drawn from a seed of its own. */
 export const applyAnnotationShuffle = (workspace: EditorKind) => {
   chosen(workspace)?.applyShuffle();
+};
+
+/** Take every stroke off the picture this workspace edits, chosen or not. */
+export const applyClearDrawings = (workspace: EditorKind) => {
+  workspaces.get(workspace)?.applyClearDrawings();
 };

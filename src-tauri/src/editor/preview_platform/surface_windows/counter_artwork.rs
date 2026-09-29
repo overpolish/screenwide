@@ -283,7 +283,8 @@ pub(crate) fn numbered_arrows(
           | AnnotationKind::Redact
           | AnnotationKind::Highlight
           | AnnotationKind::Shape
-          | AnnotationKind::Spotlight,
+          | AnnotationKind::Spotlight
+          | AnnotationKind::Draw,
         )
         | None => continue,
       }

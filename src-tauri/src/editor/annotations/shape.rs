@@ -80,6 +80,14 @@ pub enum AnnotationShape {
     start: AnnotationPoint,
     end: AnnotationPoint,
   },
+  /// A line drawn freehand: the points the hand passed through, in source
+  /// pixels, thinned as it was drawn. `smooth` fits the line loosely enough
+  /// that a wobbly curve comes out clean.
+  Draw {
+    points: Vec<AnnotationPoint>,
+    #[serde(default)]
+    smooth: bool,
+  },
 }
 
 impl AnnotationShape {
@@ -93,6 +101,7 @@ impl AnnotationShape {
       Self::Highlight { .. } => AnnotationKind::Highlight,
       Self::Shape { .. } => AnnotationKind::Shape,
       Self::Spotlight { .. } => AnnotationKind::Spotlight,
+      Self::Draw { .. } => AnnotationKind::Draw,
     }
   }
 
@@ -119,6 +128,10 @@ impl AnnotationShape {
         let (low, high) = super::highlight::model::bounds(*start, *end, bands);
         [low, high, high]
       }
+      Self::Draw { points, .. } => {
+        let (low, high) = super::freehand::model::bounds(points);
+        [low, high, high]
+      }
     }
   }
 
@@ -141,6 +154,7 @@ impl AnnotationShape {
       Self::Highlight {
         start, end, bands, ..
       } => super::highlight::model::placed(*start, *end, bands),
+      Self::Draw { points, .. } => super::freehand::model::placed(points),
     }
   }
 
@@ -205,6 +219,10 @@ impl AnnotationShape {
         start: map(*start),
         end: map(*end),
       },
+      Self::Draw { points, smooth } => Self::Draw {
+        points: points.iter().map(|point| map(*point)).collect(),
+        smooth: *smooth,
+      },
     }
   }
 
@@ -223,7 +241,8 @@ impl AnnotationShape {
       | Self::Redact { .. }
       | Self::Highlight { .. }
       | Self::Shape { .. }
-      | Self::Spotlight { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
+      | Self::Spotlight { .. }
+      | Self::Draw { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
     }
   }
 }

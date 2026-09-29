@@ -145,6 +145,15 @@ impl PinTarget {
           redaction: false,
         }
       }
+      // A stroke follows what it marks as one region, and keeps its size.
+      AnnotationShape::Draw { points, .. } => {
+        let (low, high) = crate::editor::annotations::freehand::model::bounds(points);
+        Self {
+          anchor: [0.5 * (low.x + high.x), 0.5 * (low.y + high.y)],
+          region: [low.x, low.y, high.x, high.y],
+          redaction: false,
+        }
+      }
     }
   }
 

@@ -13,6 +13,8 @@ mod annotation;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_gesture;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+mod annotation_hold;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_hover;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_pixels;

@@ -83,6 +83,7 @@ export function useRecordingPreviewCanvasTool({
       canvas: toggle("canvas"),
       counter: toggle("counter"),
       crop: toggle("crop"),
+      draw: toggle("draw"),
       highlight: toggle("highlight"),
       redact: toggle("redact"),
       select: toggle("select"),

@@ -30,19 +30,22 @@ impl RecordingPreviewSurface {
   /// arrow whose three handles are drawn, or -1 for none; `mode` is what the
   /// pointer does over the picture: nothing (0), hit-test the arrows that are
   /// there and otherwise fall through to the layer (1), or also draw a new
-  /// arrow on empty picture (2).
+  /// arrow on empty picture (2). `paths` holds the strokes' fitted lines the
+  /// grips point into.
   pub(crate) fn set_annotations(
     &self,
     handles: &[NativeAnnotationHandles],
+    paths: &[[f32; 2]],
     selected_index: i32,
     mode: u32,
   ) {
-    self.set_annotation_layer(handles, selected_index, mode, -1);
+    self.set_annotation_layer(handles, paths, selected_index, mode, -1);
   }
 
   pub(crate) fn set_annotation_layer(
     &self,
     handles: &[NativeAnnotationHandles],
+    paths: &[[f32; 2]],
     selected_index: i32,
     mode: u32,
     active_layer: i32,
@@ -52,6 +55,8 @@ impl RecordingPreviewSurface {
         self.handle,
         handles.as_ptr(),
         handles.len(),
+        paths.as_ptr().cast(),
+        paths.len(),
         selected_index,
         mode as i32,
         active_layer,

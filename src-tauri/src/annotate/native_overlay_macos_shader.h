@@ -55,7 +55,7 @@ kernel void annotate_overlay(
   value = composite_highlights(value, float4(base.rgb, 1.0), annotations, count, above_camera,
                                point, 1.0, points, samples);
   value = composite_annotations(value, annotations, count, above_camera, point, canvas,
-                                float2(1), 1.0, samples, numbers, atlas);
+                                float2(1), 1.0, samples, numbers, atlas, points);
   target.write(value, gid);
 }
 )METAL"

@@ -17,6 +17,7 @@ fn clip(
       animated: true,
       id: id.to_owned(),
       held: None,
+      pen: false,
       reveal: Default::default(),
       shape: AnnotationShape::Arrow {
         start: Default::default(),

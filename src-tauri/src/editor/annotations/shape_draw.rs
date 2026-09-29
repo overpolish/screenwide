@@ -32,6 +32,7 @@ impl super::AnnotationShape {
       Self::Spotlight { start, end } => {
         super::super::spotlight::native::draw_points(*start, *end, style)
       }
+      Self::Draw { points, .. } => super::super::freehand::native::draw_points(points),
     }
   }
 
@@ -49,7 +50,8 @@ impl super::AnnotationShape {
       Self::Redact { .. }
       | Self::Highlight { .. }
       | Self::Shape { .. }
-      | Self::Spotlight { .. } => 0,
+      | Self::Spotlight { .. }
+      | Self::Draw { .. } => 0,
     }
   }
 
@@ -62,13 +64,15 @@ impl super::AnnotationShape {
       | Self::Redact { .. }
       | Self::Highlight { .. }
       | Self::Shape { .. }
-      | Self::Spotlight { .. } => std::borrow::Cow::Borrowed(""),
+      | Self::Spotlight { .. }
+      | Self::Draw { .. } => std::borrow::Cow::Borrowed(""),
       Self::Counter { value, .. } => std::borrow::Cow::Owned(value.to_string()),
       Self::Text { text, .. } => std::borrow::Cow::Borrowed(text),
     }
   }
 
-  /// The grips the native chrome draws, normalised over the source image.
+  /// The grips the native chrome draws, normalised over the source image. A
+  /// stroke appends its fitted line to `paths`, which its grips point into.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(crate) fn grips(
     &self,
@@ -76,6 +80,7 @@ impl super::AnnotationShape {
     index: u32,
     source: (u32, u32),
     image_width: f64,
+    paths: &mut Vec<[f32; 2]>,
   ) -> super::super::handles::NativeAnnotationHandles {
     match self {
       Self::Arrow {
@@ -125,6 +130,15 @@ impl super::AnnotationShape {
       Self::Spotlight { start, end } => {
         super::super::spotlight::handles::grips(*start, *end, style, index, source)
       }
+      Self::Draw { points, smooth } => super::super::freehand::handles::grips(
+        points,
+        *smooth,
+        style,
+        index,
+        source,
+        image_width,
+        paths,
+      ),
     }
   }
 
@@ -147,6 +161,7 @@ impl super::AnnotationShape {
       Self::Redact { start, end, .. } => super::super::redact::snap::field_box(*start, *end),
       Self::Shape { start, end, .. } => super::super::outline::model::field_box(*start, *end),
       Self::Spotlight { start, end } => super::super::spotlight::model::field_box(*start, *end),
+      Self::Draw { points, .. } => super::super::freehand::model::field_box(points),
       // A highlight lies over the text it marks; nothing lines up against it.
       Self::Highlight { .. } => None,
     }
@@ -171,7 +186,8 @@ impl super::AnnotationShape {
       | Self::Text { .. }
       | Self::Highlight { .. }
       | Self::Shape { .. }
-      | Self::Spotlight { .. } => None,
+      | Self::Spotlight { .. }
+      | Self::Draw { .. } => None,
     }
   }
 }

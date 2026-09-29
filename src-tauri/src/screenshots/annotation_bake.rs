@@ -96,6 +96,7 @@ mod tests {
       animated: true,
       id: "arrow".to_owned(),
       held: None,
+      pen: false,
       reveal: Default::default(),
       shape: AnnotationShape::Arrow {
         start: AnnotationPoint { x: 20.0, y: 100.0 },

@@ -46,13 +46,14 @@ static float4 annotation_redact_halo(
 /// `pixel_scale` is how many canvas pixels one drawn pixel covers. Every edge
 /// is feathered over that, not over one canvas pixel: a workspace layer drawn
 /// smaller than its canvas would otherwise take its whole antialiasing band
-/// from inside a single drawn pixel and come out jagged.
+/// from inside a single drawn pixel and come out jagged. `points` is the side
+/// buffer a stroke's fitted line rides in.
 static float4 composite_annotations(
     float4 rgba, const device AnnotationUniforms *annotations, uint count,
     uint above_camera, float2 canvas_point, constant CanvasUniforms &u,
     float2 source_dimensions, float pixel_scale,
     const device AnnotationSample *samples, const device uchar4 *numbers,
-    AnnotationTextAtlas number_atlas) {
+    AnnotationTextAtlas number_atlas, const device packed_float2 *points) {
   if (count == 0u || any(source_dimensions <= 0.0)) return rgba;
   float feather = max(pixel_scale, 1e-4) * 0.5;
   for (uint index = 0; index < count; ++index) {
@@ -81,6 +82,11 @@ static float4 composite_annotations(
     if (annotation.kind == 5u) {
       rgba = annotation_shape_layer(rgba, annotation, color, canvas_point, feather, halo,
                                     samples);
+      continue;
+    }
+    if (annotation.kind == annotation_draw_kind) {
+      rgba = annotation_draw_layer(rgba, annotation, color, canvas_point, feather, halo,
+                                   samples, points);
       continue;
     }
     float2 a = float2(annotation.arrow.a);

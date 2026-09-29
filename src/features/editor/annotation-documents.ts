@@ -75,6 +75,7 @@ export const validAnnotations = (value: unknown): Annotation[] => {
       aboveCamera: annotation.aboveCamera === true,
       animated: annotation.animated !== false,
       id: typeof annotation.id === "string" ? annotation.id : "",
+      ...(annotation.pen === true ? { pen: true as const } : {}),
       style: dress,
     };
     const kind = (shape as { kind?: unknown } | undefined)?.kind;

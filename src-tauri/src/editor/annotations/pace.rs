@@ -75,6 +75,12 @@ fn path_length(annotation: &Annotation) -> Option<f64> {
       let rounding = across.min(down) * annotation.style.radius.clamp(0.0, 50.0) / 100.0;
       Some(2.0 * (across + down) - 8.0 * rounding + std::f64::consts::TAU * rounding)
     }
+    AnnotationShape::Draw { points, .. } => Some(
+      points
+        .windows(2)
+        .map(|pair| (pair[1].x - pair[0].x).hypot(pair[1].y - pair[0].y))
+        .sum(),
+    ),
     AnnotationShape::Counter { .. }
     | AnnotationShape::Redact { .. }
     | AnnotationShape::Spotlight { .. }

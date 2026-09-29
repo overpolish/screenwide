@@ -46,6 +46,7 @@ pub(crate) fn new_arrow(
     animated: true,
     id,
     held: None,
+    pen: false,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Arrow {
       start,

@@ -47,7 +47,7 @@ kernel void compose_canvas_rgba(
   rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                float2(gid) + 0.5, u, float2(source_dimensions),
                                annotation_pixel_scale, annotation_samples,
-                               annotation_numbers, annotation_atlas);
+                               annotation_numbers, annotation_atlas, annotation_points);
   float2 camera_point = float2(gid) -
     float2(overlay.camera_frame_x, overlay.camera_frame_y);
   float2 camera_size = float2(
@@ -95,7 +95,7 @@ kernel void compose_canvas_rgba(
     rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                  float2(gid) + 0.5, u, float2(source_dimensions),
                                  annotation_pixel_scale, annotation_samples,
-                               annotation_numbers, annotation_atlas);
+                               annotation_numbers, annotation_atlas, annotation_points);
   }
   rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 1u,
                               float2(gid) + 0.5, 1.0, annotation_points, annotation_samples);
@@ -106,7 +106,7 @@ kernel void compose_canvas_rgba(
   rgba = composite_annotations(rgba, annotations, annotation_count, 1u,
                                float2(gid) + 0.5, u, float2(source_dimensions),
                                annotation_pixel_scale, annotation_samples,
-                               annotation_numbers, annotation_atlas);
+                               annotation_numbers, annotation_atlas, annotation_points);
   float canvas_coverage = rounded_coverage(
     float2(gid) + 0.5, float2(dimensions), float(u.background_radius));
   if (u.foreground_only == 0) rgba.rgb = output_dither(rgba.rgb, float2(gid));

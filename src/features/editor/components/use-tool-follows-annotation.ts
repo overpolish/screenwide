@@ -14,7 +14,9 @@ import type { AnnotationKind } from "../../../components/shared/annotation-style
  * a counter and the text tool an arrow. What it must not leave behind is a
  * mismatch: the panel dressing a counter while the next press on empty
  * picture draws an arrow. So choosing an annotation takes up its own tool, and
- * the tool in hand is always the shape the next press makes.
+ * the tool in hand is always the shape the next press makes. Strokes and the
+ * pen are the exception: the pen picks nothing up, and only the select tool
+ * picks a stroke, so no stroke is ever chosen with a drawing tool in hand.
  *
  * The select tool is left alone: picking things up is what it is for, and it
  * draws nothing to disagree with.
@@ -42,11 +44,16 @@ export function useToolFollowsAnnotation(
  * comes next, so the annotation goes with it: otherwise the tool follows the
  * annotation straight back and the switch never lands. Taking up the tool an
  * annotation was drawn with keeps it, which is how choosing one adopts its
- * tool.
+ * tool. The pen is the exception: it holds nothing, so every press under it
+ * draws, and even a stroke chosen with the select tool is let go.
  */
 export function toolDisagreesWithAnnotation(
   next: string | null,
   kind: AnnotationKind | null,
 ) {
-  return drawingToolKind(next) !== null && kind !== null && kind !== next;
+  return (
+    drawingToolKind(next) !== null &&
+    kind !== null &&
+    (kind !== next || next === "draw")
+  );
 }

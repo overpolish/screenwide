@@ -129,7 +129,8 @@ fn validated(mut settings: AnnotateSettings) -> Result<AnnotateSettings, String>
     AnnotationKind::Text | AnnotationKind::Redact
   ) {
     return Err(
-      "The live overlay draws arrows, counters, highlights, shapes and spotlights".to_owned(),
+      "The live overlay draws arrows, counters, highlights, shapes, spotlights and strokes"
+        .to_owned(),
     );
   }
   if !settings.default_width.is_finite()

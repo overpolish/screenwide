@@ -47,7 +47,7 @@ fn moved_to(
   to: AnnotationPoint,
 ) -> SnapResult {
   let from = centre(&annotations[0]);
-  let edit = AnnotationEdit::begin(
+  let mut edit = AnnotationEdit::begin(
     annotations,
     AnnotationGestureTarget::Existing {
       index: 0,

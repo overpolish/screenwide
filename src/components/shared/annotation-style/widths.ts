@@ -110,6 +110,11 @@ export const ANNOTATION_SIZES: Record<
     sizeLabel: "Size",
     sizes: ANNOTATION_COUNTER_SIZES,
   },
+  draw: {
+    defaultSize: DEFAULT_ANNOTATION_WIDTH,
+    sizeLabel: "Width",
+    sizes: ANNOTATION_WIDTHS,
+  },
   highlight: {
     defaultSize: DEFAULT_ANNOTATION_HIGHLIGHT_SIZE,
     sizeLabel: "Height",

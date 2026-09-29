@@ -66,6 +66,7 @@ pub(crate) fn new_spotlight(
     animated: true,
     id,
     held: None,
+    pen: false,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Spotlight { start, end },
     style: style.cloned().unwrap_or_else(default_spotlight_style),

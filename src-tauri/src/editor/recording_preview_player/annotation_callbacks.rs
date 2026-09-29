@@ -31,6 +31,13 @@ pub(crate) fn install(
           {
             let _ = event_app.emit("editor://recording-annotations", commit);
           }
+          // A fresh stroke is read once the hand rests on it, which no sample
+          // reports, so a watch follows it from here.
+          if matches!(phase, SelectionGesturePhase::Begin) {
+            if let Some(id) = manager.stroke_in_hand() {
+              super::hold::watch(event_app.clone(), Arc::clone(&event_clips), id);
+            }
+          }
         }
         Err(_)
           if matches!(

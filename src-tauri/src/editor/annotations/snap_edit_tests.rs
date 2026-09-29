@@ -63,7 +63,7 @@ fn moving_a_counter_snaps_its_centre_to_another_counters_centre() {
     new_counter("fixed".to_owned(), point(600.0, 400.0), 2, None, None),
   ];
   let field = SnapField::new((1920, 1080), &annotations, "moved", IMAGE_WIDTH);
-  let edit = counter_move(&mut annotations, 0, point(100.0, 100.0));
+  let mut edit = counter_move(&mut annotations, 0, point(100.0, 100.0));
   let request = SnapRequest {
     field: &field,
     threshold: 16.0,
@@ -98,7 +98,7 @@ fn a_discs_edge_lines_up_with_another_discs_edge() {
     new_counter("fixed".to_owned(), point(600.0, 400.0), 2, None, None),
   ];
   let field = SnapField::new((1920, 1080), &annotations, "moved", IMAGE_WIDTH);
-  let edit = counter_move(&mut annotations, 0, point(100.0, 100.0));
+  let mut edit = counter_move(&mut annotations, 0, point(100.0, 100.0));
   let request = SnapRequest {
     field: &field,
     threshold: 16.0,
@@ -132,7 +132,7 @@ fn a_discs_edge_lands_on_the_canvas_inset() {
     None,
   )];
   let field = SnapField::new((1920, 1080), &annotations, "moved", IMAGE_WIDTH);
-  let edit = counter_move(&mut annotations, 0, point(100.0, 100.0));
+  let mut edit = counter_move(&mut annotations, 0, point(100.0, 100.0));
   let request = SnapRequest {
     field: &field,
     threshold: 16.0,
@@ -180,7 +180,7 @@ fn dragging_an_arrow_tip_snaps_it_to_a_detected_element() {
     1080,
     vec![element],
   )));
-  let edit = AnnotationEdit::begin(
+  let mut edit = AnnotationEdit::begin(
     &mut annotations,
     AnnotationGestureTarget::Existing {
       index: 0,
@@ -246,7 +246,7 @@ fn the_bend_and_the_shaft_of_an_arrow_never_snap() {
   };
   for handle in [AnnotationHandle::Middle, AnnotationHandle::Body] {
     let mut working = annotations.clone();
-    let edit = AnnotationEdit::begin(
+    let mut edit = AnnotationEdit::begin(
       &mut working,
       AnnotationGestureTarget::Existing { index: 0, handle },
       point(400.0, 200.0),

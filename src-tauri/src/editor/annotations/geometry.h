@@ -54,6 +54,13 @@ float screenwide_annotation_distance(uint32_t kind, float px, float py,
 float screenwide_shape_body_distance(float px, float py,
                                      const AnnotationArrowGeometry *geometry);
 
+/// How far a point falls outside a stroke's drawn line, from its fitted chain
+/// of `count` points, each an `x` and a `y` in the caller's pixels. With
+/// `body`, the box from `low` to `high` holding the stroke picks it too.
+float screenwide_freehand_distance(float px, float py, const float *chain, uint32_t count,
+                                   float width, uint32_t body, float low_x, float low_y,
+                                   float high_x, float high_y);
+
 /// The standard deviation of the spotlights' blur over a `width` by `height`
 /// source as it arrives with `strength`, widening from nothing.
 float screenwide_spotlight_blur_deviation(float strength, uint32_t width, uint32_t height);

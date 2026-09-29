@@ -127,6 +127,18 @@ type AnnotationSpotlight = {
   start: AnnotationPoint;
 };
 
+/**
+ * A line drawn freehand: the points the hand passed through, in source
+ * pixels, thinned as it was drawn. `smooth` fits the line loosely enough that
+ * a wobbly curve comes out clean. The twin of `AnnotationShape::Draw` in
+ * `src-tauri/src/editor/annotations/shape.rs`.
+ */
+type AnnotationDraw = {
+  kind: "draw";
+  points: AnnotationPoint[];
+  smooth: boolean;
+};
+
 /** One line a highlight covers, in source pixels. */
 export type HighlightBand = {
   bottom: number;
@@ -167,6 +179,7 @@ export type TextPointer = {
 export type AnnotationShape =
   | AnnotationArrow
   | AnnotationCounter
+  | AnnotationDraw
   | AnnotationHighlight
   | AnnotationOutline
   | AnnotationRedact
@@ -187,6 +200,11 @@ export type Annotation = {
   id: string;
   shape: AnnotationShape;
   style: AnnotationStyle;
+  /**
+   * Set where the draw tool made the annotation: a stroke, or what a held
+   * stroke was taken for. Clear all takes these and leaves the rest.
+   */
+  pen?: true;
 };
 
 /**

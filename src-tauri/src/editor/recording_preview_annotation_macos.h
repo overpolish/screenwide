@@ -57,6 +57,11 @@ _Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
 /// band's bottom-right in `end`; `middle_x` and `middle_y` are how far left
 /// and right its block of bands reaches, `start_head` its first band's bottom
 /// and `end_head` its last band's top. Its two grips are the selection's ends.
+///
+/// A stroke puts its box in `start` and `end` and its centre in `middle`,
+/// as a redaction does, its pen in `width`, and in `start_head` and
+/// `end_head` where its fitted line starts in the published paths and how
+/// many points it has.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindArrow = 0,
   ScreenwideAnnotationKindCounter = 1,
@@ -65,6 +70,7 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindHighlight = 4,
   ScreenwideAnnotationKindShape = 5,
   ScreenwideAnnotationKindSpotlight = 6,
+  ScreenwideAnnotationKindDraw = 7,
 };
 /// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
@@ -79,6 +85,7 @@ typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeHighlight = 6,
   ScreenwideAnnotationModeShape = 7,
   ScreenwideAnnotationModeSpotlight = 8,
+  ScreenwideAnnotationModeDraw = 9,
 };
 /// Which grip a press took hold of. A box's grips - a redaction's, a shape's
 /// or a spotlight's - report `Box` plus the sides they move - 1 left, 2 right, 4 top,

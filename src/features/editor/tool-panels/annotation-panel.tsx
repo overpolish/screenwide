@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, Eraser } from "lucide-react";
 
 import { Button } from "../../../components/base/button/button";
 import { Switch } from "../../../components/base/switch/switch";
@@ -35,7 +35,8 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  * rounds its corners; a redaction chooses how it covers and how round its
  * corners are, and offers a pixelation style and a block size only when
  * pixelated, a strength only when blurred and a colour only when filled with
- * one; a spotlight has no colour, only its corners, its fade and its blur.
+ * one; a spotlight has no colour, only its corners, its fade and its blur; a
+ * stroke can clear every stroke off the picture at once.
  *
  * This panel belongs to the annotation in hand. It comes up the moment one is
  * chosen, in any tool that can choose one, and every change is committed
@@ -53,7 +54,7 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  */
 export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
-  const { annotation, annotationColors, isLocked } = snapshot;
+  const { annotation, annotationColors, canClearDrawings, isLocked } = snapshot;
   const showColorMenu = useAnnotationColorMenu((color) => {
     change({ removeAnnotationColor: color });
   });
@@ -236,6 +237,24 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           >
             <ArrowLeftRight aria-hidden="true" />
             Reverse
+          </Button>
+        </div>
+      ) : null}
+
+      {/* Clearing belongs to the pen rather than to one stroke, so it is
+          offered before anything is drawn too; one undo brings every stroke
+          back. */}
+      {annotation.kind === "draw" ? (
+        <div className="flex justify-end">
+          <Button
+            aria-label="Clear all drawings"
+            isDisabled={isLocked || !canClearDrawings}
+            onPress={() => {
+              change({ clearDrawings: true });
+            }}
+          >
+            <Eraser aria-hidden="true" />
+            Clear all
           </Button>
         </div>
       ) : null}

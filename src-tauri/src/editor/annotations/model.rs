@@ -146,6 +146,11 @@ pub struct Annotation {
   /// and attached as each frame is resolved, like the reveal. Never stored.
   #[serde(skip)]
   pub held: Option<std::sync::Arc<super::redact::held::HeldFill>>,
+  /// Whether the draw tool made this annotation: a stroke, or what a held
+  /// stroke was taken for. Clear all takes these and leaves the rest. Left
+  /// out of a document where false.
+  #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  pub pen: bool,
   /// How much of the path is showing this frame. Derived from the clip's
   /// bounds and the frame's source time every frame and never stored, so a
   /// scrub backwards lands on exactly the frame playing forwards drew.
@@ -212,6 +217,7 @@ mod tests {
       animated: true,
       id: "a".to_owned(),
       held: None,
+      pen: false,
       reveal: AnnotationReveal::default(),
       shape: AnnotationShape::Arrow {
         start: AnnotationPoint { x: 1.0, y: 2.0 },

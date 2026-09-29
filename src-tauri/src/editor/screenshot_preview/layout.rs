@@ -183,6 +183,7 @@ pub async fn layout_screenshot_preview_surface(
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_annotations(
     &annotation_layout.handles,
+    &annotation_layout.paths,
     annotation_layout.selected_index,
     annotation_layout.mode,
   );
@@ -250,6 +251,7 @@ pub async fn layout_screenshot_preview_surface(
       #[cfg(target_os = "macos")]
       let hover = manager
         .annotation_hover
+        .as_ref()
         .map(|hover| (hover.layer_id, hover.index, hover.width));
       #[cfg(not(target_os = "macos"))]
       let hover = None;

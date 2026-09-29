@@ -113,3 +113,24 @@ export const Spotlight: Story = {
     });
   },
 };
+
+/** The draw tool: a freehand line in the pen and colour chosen before it is
+ * drawn, and the strokes already on the picture cleared at once. */
+export const Draw: Story = {
+  beforeEach: () => {
+    seedToolPanel({
+      annotation: {
+        animated: true,
+        id: "",
+        isDraft: true,
+        kind: "draw",
+        style: firstAnnotationDress("draw"),
+      },
+      canClearDrawings: true,
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
+  },
+};

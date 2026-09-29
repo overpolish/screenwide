@@ -133,6 +133,7 @@ pub(crate) fn new_highlight(
     animated: true,
     id,
     held: None,
+    pen: false,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Highlight {
       start: point,

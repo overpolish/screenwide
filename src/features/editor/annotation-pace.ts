@@ -82,6 +82,18 @@ const pathLength = ({ shape, style }: Annotation) => {
   switch (shape.kind) {
     case "arrow":
       return curveLength(shape.start, shape.control, shape.end);
+    case "draw":
+      return shape.points.reduce(
+        (sum, point, index) =>
+          index === 0
+            ? 0
+            : sum +
+              Math.hypot(
+                point.x - shape.points[index - 1].x,
+                point.y - shape.points[index - 1].y,
+              ),
+        0,
+      );
     case "highlight":
       return shape.bands.reduce(
         (sum, band) => sum + Math.max(0, band.right - band.left),

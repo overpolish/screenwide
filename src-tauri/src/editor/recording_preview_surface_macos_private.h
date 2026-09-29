@@ -253,9 +253,10 @@ typedef struct {
 @property(nonatomic) BOOL selectionSnapGuideYIsObject;
 @property(nonatomic) double selectionSnapGuideX;
 @property(nonatomic) double selectionSnapGuideY;
-/// The arrow tool's scene: every arrow's grips on the selected layer, which
-/// one is chosen, and whether the tool has the pointer.
+/// The arrow tool's scene: every grip on the selected layer and the strokes'
+/// lines they point into, which one is chosen, and whether the tool has it.
 @property(nonatomic, strong) NSMutableData *annotations;
+@property(nonatomic, strong) NSData *annotationPaths;
 @property(nonatomic) NSInteger annotationSelected;
 @property(nonatomic) ScreenwideAnnotationMode annotationMode;
 /// What the last gesture sample snapped to, for the chrome to draw. Zeroed

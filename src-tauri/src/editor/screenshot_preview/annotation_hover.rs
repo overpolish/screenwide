@@ -17,15 +17,20 @@ impl PreviewManager {
   /// layer the grips were published for; keyboard shortcuts live in React,
   /// which knows arrows only by their id.
   pub(super) fn hovered_annotation_id(&self) -> Option<String> {
-    let hover = self.annotation_hover?;
-    let pane_index = self.annotation_pane_index?;
-    Some(
+    self.annotation_hover.as_ref().map(|hover| hover.id.clone())
+  }
+
+  /// Whether the annotation the halo was put on is no longer where the halo
+  /// is placed: deleted, or moved along its layer's list.
+  pub(super) fn hover_lost(&self) -> bool {
+    self.annotation_hover.as_ref().is_some_and(|hover| {
       self
-        .annotations_for(pane_index)?
-        .get(hover.index)?
-        .id
-        .clone(),
-    )
+        .output
+        .as_ref()
+        .and_then(|output| output.items.iter().find(|item| item.id == hover.layer_id))
+        .and_then(|item| item.output.annotations.get(hover.index))
+        .is_none_or(|annotation| annotation.id != hover.id)
+    })
   }
 
   /// Lets the halo go, reporting whether there was one to let go of. Putting
@@ -66,10 +71,10 @@ impl PreviewManager {
     progress: f64,
     image_points: f64,
   ) -> Option<AnnotationHover> {
-    // With no tool in hand there is no halo, whatever a pulse report already
-    // on its way says: one landing after the tool was put down would bring
-    // back the halo that putting it down retired.
-    if self.annotation_mode == crate::editor::annotations::gesture::MODE_NONE {
+    // With no tool in hand, or the pen, there is no halo, whatever a pulse
+    // report already on its way says: one landing after the tool changed would
+    // bring back the halo that changing it retired.
+    if crate::editor::annotations::gesture::hovers_nothing(self.annotation_mode) {
       return None;
     }
     let index = usize::try_from(index).ok()?;
@@ -80,11 +85,10 @@ impl PreviewManager {
     // grips were published for.
     let pane_index = self.annotation_pane_index?;
     let item = self.output.as_ref()?.items.get(pane_index as usize)?;
-    if index >= item.output.annotations.len() {
-      return None;
-    }
+    let annotation = item.output.annotations.get(index)?;
     let width = hover_width_points(progress) * item.output.image_width / image_points;
     Some(AnnotationHover {
+      id: annotation.id.clone(),
       index,
       layer_id: item.id,
       width: width as f32,

@@ -82,6 +82,7 @@ export function resolveToolPanelSnapshot(
     applyShortcutToAll: _applyShortcutToAll,
     audioVolume,
     bakeCamera,
+    clearDrawings: _clearDrawings,
     cropSize,
     frameRadius,
     frameSize,

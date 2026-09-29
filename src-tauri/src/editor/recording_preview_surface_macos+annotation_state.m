@@ -7,16 +7,18 @@
 SCREENWIDE_PREVIEW_PRIVATE void on_main_async(dispatch_block_t block);
 
 void screenwide_preview_surface_set_annotations(
-    void *handle, const ScreenwidePreviewAnnotation *items, size_t count,
-    int32_t selected_index, int32_t mode, int32_t active_layer) {
+    void *handle, const ScreenwidePreviewAnnotation *items, size_t count, const float *paths,
+    size_t path_count, int32_t selected_index, int32_t mode, int32_t active_layer) {
   if (handle == NULL) return;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  // The block outlives this call, so the caller's array is copied here while
-  // it is still alive and only the copy is captured.
+  // The block outlives this call, so the caller's arrays are copied here
+  // while they are still alive and only the copies are captured.
   NSUInteger copied = (NSUInteger)count;
   NSMutableData *data = [NSMutableData
       dataWithBytes:(copied == 0 ? NULL : items)
              length:copied * sizeof(ScreenwidePreviewAnnotation)];
+  NSData *lines = [NSData dataWithBytes:(path_count == 0 ? NULL : paths)
+                                 length:(NSUInteger)path_count * 2 * sizeof(float)];
   NSInteger selected = selected_index;
   ScreenwideAnnotationMode next = (ScreenwideAnnotationMode)mode;
   on_main_async(^{
@@ -26,12 +28,18 @@ void screenwide_preview_surface_set_annotations(
       surface.selection = target;
       surface.hasSelection = YES;
     }
+    // A list that grew or shrank has moved what the hovered index names.
+    BOOL recounted = surface.annotations.length != data.length;
     surface.annotations = data;
+    surface.annotationPaths = lines;
     surface.annotationSelected = selected;
     BOOL changed = surface.annotationMode != next;
     surface.annotationMode = next;
-    if (next == ScreenwideAnnotationModeNone) {
-      // No tool, no halo: the pointer may never move again to retire it.
+    if (changed || recounted || next == ScreenwideAnnotationModeNone ||
+        next == ScreenwideAnnotationModeDraw) {
+      // A new tool or list, no tool, or the pen: the halo goes, since the
+      // pointer may never move again to retire it. The twin of
+      // `gesture::hovers_nothing`.
       surface.annotationHovered = -1;
       surface.annotationHoverRevision += 1;
     }

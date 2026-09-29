@@ -19,6 +19,7 @@ fn clip(shape: AnnotationShape, keyframes: &[(u64, f64, f64)]) -> RecordingAnnot
       animated: false,
       id: "a".to_owned(),
       held: None,
+      pen: false,
       reveal: Default::default(),
       shape,
       style: AnnotationStyle {

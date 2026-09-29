@@ -24,7 +24,8 @@ static float annotation_curve_squared(
 }
 
 /// The distance from `point` to the quadratic Bézier `a, b, c`, with the
-/// curve parameter restricted to `[low, high]`.
+/// curve parameter restricted to `[low, high]`, and the parameter that
+/// distance is at.
 ///
 /// Two things are hopeless here. The closed form - the cubic solve on the
 /// derivative of the squared distance - scales its coefficients by
@@ -39,7 +40,7 @@ static float annotation_curve_squared(
 /// So the refinement never trusts a derivative: golden-section on the squared
 /// distance itself, inside one sample step of the best sample, and Newton
 /// only as a polish that has to prove it shortened the distance.
-static float annotation_curve_distance(
+static float2 annotation_curve_nearest(
     float2 point, float2 a, float2 b, float2 c, float low, float high) {
   float2 leg = b - a;
   float2 bend = a - 2.0 * b + c;
@@ -92,6 +93,13 @@ static float annotation_curve_distance(
     refined = squared;
     t = next;
   }
-  return sqrt(min(best_squared, refined));
+  return best_squared < refined ? float2(sqrt(best_squared), best) : float2(sqrt(refined), t);
+}
+
+/// The distance from `point` to the quadratic Bézier `a, b, c`, with the
+/// curve parameter restricted to `[low, high]`.
+static float annotation_curve_distance(
+    float2 point, float2 a, float2 b, float2 c, float low, float high) {
+  return annotation_curve_nearest(point, a, b, c, low, high).x;
 }
 )METAL"

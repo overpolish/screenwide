@@ -44,7 +44,34 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_drawing_mode(ScreenwideAnnotationMode
          mode == ScreenwideAnnotationModeCounter ||
          mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeRedact ||
          mode == ScreenwideAnnotationModeHighlight || mode == ScreenwideAnnotationModeShape ||
-         mode == ScreenwideAnnotationModeSpotlight;
+         mode == ScreenwideAnnotationModeSpotlight || mode == ScreenwideAnnotationModeDraw;
+}
+
+/// How far `point` is from a stroke's drawn line, in display points, from
+/// the fitted line its grips point into; with `body`, its box picks it too.
+/// A stroke whose line was not published is nowhere.
+static double annotation_draw_distance(ScreenwidePreviewSurface *surface, NSRect image,
+                                       ScreenwidePreviewAnnotation item, NSPoint point,
+                                       BOOL body) {
+  // The most points a fitted line has: `path::MAX_CURVES` curves, two points
+  // each and its first.
+  enum { MaxPoints = 2 * 256 + 1 };
+  NSUInteger total = surface.annotationPaths.length / (2 * sizeof(float));
+  NSUInteger first = (NSUInteger)item.start_head;
+  NSUInteger count = (NSUInteger)item.end_head;
+  if (count == 0 || count > MaxPoints || first > total || count > total - first) return INFINITY;
+  const float *normalised = (const float *)surface.annotationPaths.bytes + first * 2;
+  float placed[MaxPoints * 2];
+  for (NSUInteger index = 0; index < count; index++) {
+    NSPoint at = annotation_display_point(image, normalised[index * 2], normalised[index * 2 + 1]);
+    placed[index * 2] = (float)at.x;
+    placed[index * 2 + 1] = (float)at.y;
+  }
+  NSPoint low = annotation_display_point(image, item.start_x, item.start_y);
+  NSPoint high = annotation_display_point(image, item.end_x, item.end_y);
+  return screenwide_freehand_distance(point.x, point.y, placed, (uint32_t)count,
+                                      (float)(item.width * image.size.width), body ? 1u : 0u,
+                                      low.x, low.y, high.x, high.y);
 }
 
 // An arrow has three grips; a counter one, the tip of its tail; a text box
@@ -77,13 +104,15 @@ SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_grips(
   return 3;
 }
 
-/// The chosen annotation's grip under `point`, or -1.
+/// The chosen annotation's grip under `point`, or -1. The pen holds nothing,
+/// so it offers none.
 SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   NSUInteger count = 0;
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
   if (items == NULL || surface.annotationSelected < 0 ||
-      (NSUInteger)surface.annotationSelected >= count)
+      (NSUInteger)surface.annotationSelected >= count ||
+      annotation_active_mode(surface) == ScreenwideAnnotationModeDraw)
     return -1;
   NSPoint handles[SCREENWIDE_ANNOTATION_MAX_GRIPS];
   uint32_t kinds[SCREENWIDE_ANNOTATION_MAX_GRIPS];
@@ -101,23 +130,31 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_handle_at_point(
 /// tolerance around it: the arrow is picked, and haloed, exactly where it is
 /// painted, which is what keeps the halo off the space beside an annotation.
 ///
-/// A shape is picked by its stroke, and by its inside too once it is chosen
-/// or while the select tool is in hand: it can be carried from anywhere in
-/// it, while any other tool still draws inside a shape not in hand.
+/// A shape or a stroke is picked by its line, and by its inside too once it
+/// is chosen or while the select tool is in hand: it can be carried from
+/// anywhere in it, while any other tool still draws inside one not in hand.
+/// The pen picks nothing up, so every press under it draws, and a stroke is
+/// picked by the select tool alone: another drawing tool that chose one would
+/// hand over to the pen, which never holds one.
 SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
   NSUInteger count = 0;
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
-  if (items == NULL) return -1;
-  BOOL selecting = annotation_active_mode(surface) == ScreenwideAnnotationModeSelect;
+  ScreenwideAnnotationMode mode = annotation_active_mode(surface);
+  if (items == NULL || mode == ScreenwideAnnotationModeDraw) return -1;
+  BOOL selecting = mode == ScreenwideAnnotationModeSelect;
   for (NSInteger index = (NSInteger)count - 1; index >= 0; index--) {
     ScreenwidePreviewAnnotation item = items[(NSUInteger)index];
+    if (item.kind == ScreenwideAnnotationKindDraw && !selecting) continue;
     NSRect image = annotation_layer_image(surface, item.layer_id);
     if (image.size.width <= 0.0 || image.size.height <= 0.0) continue;
-    BOOL whole = item.kind == ScreenwideAnnotationKindShape &&
+    BOOL whole = (item.kind == ScreenwideAnnotationKindShape ||
+                  item.kind == ScreenwideAnnotationKindDraw) &&
                  (selecting || index == surface.annotationSelected);
-    double distance = whole ? annotation_shape_body_distance(image, item, point)
-                            : annotation_shaft_distance(image, item, point);
+    double distance = item.kind == ScreenwideAnnotationKindDraw
+        ? annotation_draw_distance(surface, image, item, point, whole)
+        : whole ? annotation_shape_body_distance(image, item, point)
+                : annotation_shaft_distance(image, item, point);
     if (distance <= 0.0) return index;
   }
   return -1;

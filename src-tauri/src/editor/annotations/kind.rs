@@ -24,6 +24,7 @@ pub enum AnnotationKind {
   Highlight = 4,
   Shape = 5,
   Spotlight = 6,
+  Draw = 7,
 }
 
 impl AnnotationKind {
@@ -38,6 +39,7 @@ impl AnnotationKind {
       4 => Some(Self::Highlight),
       5 => Some(Self::Shape),
       6 => Some(Self::Spotlight),
+      7 => Some(Self::Draw),
       _ => None,
     }
   }
@@ -69,6 +71,8 @@ mod tests {
     assert_eq!(AnnotationKind::Shape.raw(), 5);
     assert_eq!(AnnotationKind::from_raw(6), Some(AnnotationKind::Spotlight));
     assert_eq!(AnnotationKind::Spotlight.raw(), 6);
-    assert_eq!(AnnotationKind::from_raw(7), None);
+    assert_eq!(AnnotationKind::from_raw(7), Some(AnnotationKind::Draw));
+    assert_eq!(AnnotationKind::Draw.raw(), 7);
+    assert_eq!(AnnotationKind::from_raw(8), None);
   }
 }

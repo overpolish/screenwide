@@ -7,9 +7,9 @@
 static float4 annotation_video_pixel(const device AnnotationUniforms *annotations,
     uint count, uint above, float2 point, constant CanvasUniforms &canvas,
     const device AnnotationSample *samples, const device uchar4 *numbers,
-    AnnotationTextAtlas atlas) {
+    AnnotationTextAtlas atlas, const device packed_float2 *points) {
   float4 value = composite_annotations(float4(0), annotations, count, above, point,
-      canvas, float2(1), 1.0, samples, numbers, atlas);
+      canvas, float2(1), 1.0, samples, numbers, atlas, points);
   return value.a > 0.0001 ? float4(value.rgb / value.a, value.a) : float4(0);
 }
 kernel void overlay_annotation_luma(
@@ -19,9 +19,10 @@ kernel void overlay_annotation_luma(
     const device AnnotationSample *samples [[buffer(15)]],
     const device uchar4 *numbers [[buffer(16)]],
     constant AnnotationTextAtlas &atlas [[buffer(17)]],
+    const device packed_float2 *points [[buffer(18)]],
     texture2d<float, access::read_write> luma [[texture(0)]], uint2 gid [[thread_position_in_grid]]) {
   if (gid.x >= luma.get_width() || gid.y >= luma.get_height()) return;
-  float4 rgba = annotation_video_pixel(annotations, count, above, float2(gid) + 0.5, canvas, samples, numbers, atlas);
+  float4 rgba = annotation_video_pixel(annotations, count, above, float2(gid) + 0.5, canvas, samples, numbers, atlas, points);
   if (rgba.a <= 0.0001) return;
   float value = 16.0 / 255.0 + dot(rgba.rgb, float3(0.182586, 0.614231, 0.062007));
   luma.write(mix(luma.read(gid).r, value, rgba.a), gid);
@@ -33,11 +34,12 @@ kernel void overlay_annotation_chroma(
     const device AnnotationSample *samples [[buffer(15)]],
     const device uchar4 *numbers [[buffer(16)]],
     constant AnnotationTextAtlas &atlas [[buffer(17)]],
+    const device packed_float2 *points [[buffer(18)]],
     texture2d<float, access::read_write> chroma [[texture(0)]], uint2 gid [[thread_position_in_grid]]) {
   if (gid.x >= chroma.get_width() || gid.y >= chroma.get_height()) return;
   float3 sum = 0; float alpha_sum = 0;
   for (uint y = 0; y < 2; y++) for (uint x = 0; x < 2; x++) {
-    float4 rgba = annotation_video_pixel(annotations, count, above, float2(gid * 2u + uint2(x,y)) + 0.5, canvas, samples, numbers, atlas);
+    float4 rgba = annotation_video_pixel(annotations, count, above, float2(gid * 2u + uint2(x,y)) + 0.5, canvas, samples, numbers, atlas, points);
     sum += rgba.rgb * rgba.a; alpha_sum += rgba.a;
   }
   if (alpha_sum <= 0.0001) return;

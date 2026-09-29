@@ -6,6 +6,7 @@ import { ReactNode } from "react";
 import {
   ArrowToolIcon,
   CounterToolIcon,
+  DrawToolIcon,
   HighlightToolIcon,
   ShapeToolIcon,
   SpotlightToolIcon,
@@ -65,5 +66,12 @@ export const ANNOTATE_TOOLS: AnnotateTool[] = [
     label: "Spotlight",
     name: "Spotlight a region",
     shortcut: "L",
+  },
+  {
+    icon: <DrawToolIcon />,
+    id: "draw",
+    label: "Draw",
+    name: "Draw freehand",
+    shortcut: "D",
   },
 ];

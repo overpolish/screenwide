@@ -6,6 +6,7 @@ import { LucideIcon } from "lucide-react";
 import {
   ArrowToolIcon,
   CounterToolIcon,
+  DrawToolIcon,
   HighlightToolIcon,
   RedactToolIcon,
   ShapeToolIcon,
@@ -81,6 +82,14 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   },
   crop: { panel: "crop", resetsView: true, shortcut: "C" },
   cursor: { panel: "cursor", resetsView: true },
+  draw: {
+    drawsOnLayer: true,
+    icon: DrawToolIcon,
+    label: "Draw",
+    name: "Draw freehand",
+    panel: "annotation",
+    shortcut: "D",
+  },
   frame: { panel: "frame", resetsView: true, shortcut: "F" },
   highlight: {
     drawsOnLayer: true,

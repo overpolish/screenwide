@@ -1,16 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A box's chrome - a redaction's, a shape's or a spotlight's: the layer
-//! selection's own box, with its eight grips and its radius dot, around the
-//! chosen one. A hovered one wears the compositor's halo instead.
+//! A box's chrome - a redaction's, a shape's, a spotlight's or a stroke's:
+//! the layer selection's own box, with its eight grips and, for all but a
+//! stroke, its radius dot, around the chosen one. A hovered one wears the
+//! compositor's halo instead.
 
 #import "recording_preview_surface_macos_private.h"
 #include "recording_preview_annotation_layers_macos.h"
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_kind_is_box(uint32_t kind) {
   return kind == ScreenwideAnnotationKindRedact || kind == ScreenwideAnnotationKindShape ||
-         kind == ScreenwideAnnotationKindSpotlight;
+         kind == ScreenwideAnnotationKindSpotlight || kind == ScreenwideAnnotationKindDraw;
 }
 
 /// The box on screen, from the normalised corners Rust published.
@@ -46,6 +47,8 @@ SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_redact_grips(
     handles[index] = NSMakePoint(xs[grips[index].x], ys[grips[index].y]);
     kinds[index] = ScreenwideAnnotationHandleBox + grips[index].edges;
   }
+  // A stroke has no corners to round, and uses `start_head` for its line.
+  if (item.kind == ScreenwideAnnotationKindDraw) return 8;
   // The radius percentage rides in `start_head`, which a box has no use for.
   handles[8] = redact_radius_point(frame, item.start_head);
   kinds[8] = ScreenwideAnnotationHandleRadius;
@@ -65,6 +68,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_redact_add_osc(
   if (image.size.width > 0.0 && image.size.height > 0.0)
     screenwide_region_osc_add_selection(vertices, count, size,
                                         redact_frame(image, list[selected]), scale,
-                                        list[selected].start_head, YES);
+                                        list[selected].start_head,
+                                        list[selected].kind != ScreenwideAnnotationKindDraw);
   return YES;
 }

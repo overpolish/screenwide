@@ -117,6 +117,9 @@ export function AnnotateToolControls({
           />
         </>
       );
+    // A stroke has only its pen to choose.
+    case "draw":
+      return width;
     // The arrow, and the kinds the overlay never draws, which its settings
     // refuse.
     case "arrow":

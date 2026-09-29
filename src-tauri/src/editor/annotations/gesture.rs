@@ -96,6 +96,7 @@ pub(crate) const MODE_REDACT: u32 = 5;
 pub(crate) const MODE_HIGHLIGHT: u32 = 6;
 pub(crate) const MODE_SHAPE: u32 = 7;
 pub(crate) const MODE_SPOTLIGHT: u32 = 8;
+pub(crate) const MODE_DRAW: u32 = 9;
 
 /// The tool name React sends, as a mode. Anything else puts the chrome away.
 pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
@@ -107,9 +108,17 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
     Some("highlight") => MODE_HIGHLIGHT,
     Some("shape") => MODE_SHAPE,
     Some("spotlight") => MODE_SPOTLIGHT,
+    Some("draw") => MODE_DRAW,
     Some("select") => MODE_SELECT,
     _ => MODE_NONE,
   }
+}
+
+/// Whether the tool in hand halos nothing: with no tool there is nothing to
+/// pick, and the pen picks nothing up. Taking one up retires any halo, since
+/// the pointer may never move again to do it.
+pub(crate) fn hovers_nothing(mode: u32) -> bool {
+  mode == MODE_NONE || mode == MODE_DRAW
 }
 
 /// The shape the tool in hand draws, or `None` where the tool draws nothing.
@@ -126,6 +135,7 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
     MODE_HIGHLIGHT => Some(AnnotationKind::Highlight),
     MODE_SHAPE => Some(AnnotationKind::Shape),
     MODE_SPOTLIGHT => Some(AnnotationKind::Spotlight),
+    MODE_DRAW => Some(AnnotationKind::Draw),
     _ => None,
   }
 }

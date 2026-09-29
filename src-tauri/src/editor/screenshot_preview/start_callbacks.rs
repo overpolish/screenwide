@@ -172,6 +172,13 @@ pub(super) fn install(
           {
             emit_annotation_change(&event_app, session_id, commit);
           }
+          // A fresh stroke is read once the hand rests on it, which no sample
+          // reports, so a watch follows it from here.
+          if matches!(phase, SelectionGesturePhase::Begin) {
+            if let Some(id) = manager.stroke_in_hand() {
+              super::annotation_hold::watch(event_app.clone(), session_id, id);
+            }
+          }
         }
         Err(_) if matches!(phase, SelectionGesturePhase::End) => {
           // The commit is the whole point of a mouse-up, so a contended

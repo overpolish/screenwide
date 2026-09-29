@@ -41,6 +41,9 @@ impl super::super::Annotation {
       AnnotationKind::Highlight => {
         super::super::highlight::gesture::drag(self, handle, point, origin)
       }
+      AnnotationKind::Draw => {
+        super::super::freehand::gesture::drag(self, handle, point, origin, shift, snap)
+      }
     }
   }
 
@@ -72,6 +75,10 @@ impl super::super::Annotation {
         super::super::box_gesture::drag_new(self, point, origin, shift, snap)
       }
       AnnotationKind::Highlight => super::super::highlight::gesture::drag_new(self, point, origin),
+      AnnotationKind::Draw => {
+        super::super::freehand::gesture::drag_new(self, point, origin);
+        super::super::snap::SnapResult::default()
+      }
     }
   }
 }
@@ -112,6 +119,7 @@ impl AnnotationKind {
         style,
       ),
       Self::Spotlight => super::super::spotlight::model::new_spotlight(id, [point, point], style),
+      Self::Draw => super::super::freehand::model::new_draw(id, point, style),
     }
   }
 
@@ -136,7 +144,7 @@ impl AnnotationKind {
       // A highlight is drawn along its bands the way an arrow is along its
       // path, in reading order, and a shape round its outline; all three
       // leave the same way.
-      Self::Arrow | Self::Highlight | Self::Shape => {
+      Self::Arrow | Self::Highlight | Self::Shape | Self::Draw => {
         super::super::reveal::reveal_window(elapsed_ms, duration_ms, frame_ms, path_ms)
       }
       Self::Counter => {
@@ -166,7 +174,7 @@ impl AnnotationKind {
   fn path_ms(self, path_ms: Option<f32>) -> f32 {
     let own = path_ms.filter(|ms| ms.is_finite() && *ms > 0.0);
     match self {
-      Self::Arrow | Self::Highlight | Self::Shape => {
+      Self::Arrow | Self::Highlight | Self::Shape | Self::Draw => {
         own.unwrap_or(super::super::reveal::REVEAL_DRAW_IN_MS)
       }
       Self::Text => own.unwrap_or(super::super::text::reveal::POINTER_IN_MS),
@@ -183,7 +191,9 @@ impl AnnotationKind {
     use super::super::reveal::REVEAL_OUT_SHARE;
     let path_ms = self.path_ms(path_ms);
     match self {
-      Self::Arrow | Self::Highlight | Self::Shape => path_ms * (1.0 + REVEAL_OUT_SHARE),
+      Self::Arrow | Self::Highlight | Self::Shape | Self::Draw => {
+        path_ms * (1.0 + REVEAL_OUT_SHARE)
+      }
       Self::Counter => COUNTER_REVEAL_IN_MS + COUNTER_REVEAL_OUT_MS,
       Self::Text => super::super::text::reveal::text_reveal_span_ms(path_ms),
       // A redaction ramps in and never leaves.

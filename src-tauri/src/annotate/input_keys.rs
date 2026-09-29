@@ -9,6 +9,7 @@ use crate::editor::annotations::AnnotationKind;
 #[cfg(target_os = "macos")]
 mod key_codes {
   pub(in super::super) const KEY_A: u16 = 0;
+  pub(in super::super) const KEY_D: u16 = 2;
   pub(in super::super) const KEY_H: u16 = 4;
   pub(in super::super) const KEY_Z: u16 = 6;
   pub(in super::super) const KEY_N: u16 = 45;
@@ -23,6 +24,7 @@ mod key_codes {
 #[cfg(target_os = "windows")]
 mod key_codes {
   pub(in super::super) const KEY_A: u16 = 0x41;
+  pub(in super::super) const KEY_D: u16 = 0x44;
   pub(in super::super) const KEY_H: u16 = 0x48;
   pub(in super::super) const KEY_Z: u16 = 0x5A;
   pub(in super::super) const KEY_N: u16 = 0x4E;
@@ -33,7 +35,7 @@ mod key_codes {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use key_codes::{KEY_A, KEY_H, KEY_L, KEY_N, KEY_O};
+use key_codes::{KEY_A, KEY_D, KEY_H, KEY_L, KEY_N, KEY_O};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) use key_codes::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z};
 
@@ -46,4 +48,5 @@ pub(super) const TOOL_KEYS: &[(u16, AnnotationKind)] = &[
   (KEY_H, AnnotationKind::Highlight),
   (KEY_O, AnnotationKind::Shape),
   (KEY_L, AnnotationKind::Spotlight),
+  (KEY_D, AnnotationKind::Draw),
 ];

@@ -123,6 +123,7 @@ pub(crate) fn new_text(
     animated: true,
     id,
     held: None,
+    pen: false,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Text {
       origin: AnnotationPoint {

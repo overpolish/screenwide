@@ -5,8 +5,8 @@
 //!
 //! A tool's shape lives in one module under this one ([`arrow`],
 //! [`counter`], [`text`], [`redact`], [`highlight`], [`outline`] for the
-//! shape tool, [`spotlight`]) and nothing else branches on which kind an
-//! annotation is.
+//! shape tool, [`spotlight`], [`freehand`] for the draw tool) and nothing
+//! else branches on which kind an annotation is.
 //! Adding a tool is therefore:
 //!
 //! - one module here, with the `model`, `gesture`, `handles`, `native`,
@@ -55,6 +55,9 @@ pub(crate) mod exposure;
 /// kind's prepared geometry through.
 #[cfg(target_os = "macos")]
 pub(crate) mod ffi;
+/// The draw tool's own half of the model: a line drawn freehand. Not called
+/// `draw`, which is what every kind's native record is built by.
+pub(crate) mod freehand;
 /// The draw record every kind fills, and the arithmetic it is built with.
 /// Both backends prepare from it: the D3D11 one calls each kind's `geometry`
 /// module, and the Metal compositor and the macOS chrome reach the same

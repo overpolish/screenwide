@@ -14,6 +14,7 @@ use super::arrow::geometry::prepare_arrow;
 use super::counter::geometry::prepare_counter;
 use super::counter::silhouette::prepared_counter_distance;
 use super::exposure::{annotation_travel, highlight_travel};
+use super::freehand::geometry::{freehand_body_distance, freehand_distance, prepare_freehand};
 use super::geometry::ArrowGeometry;
 use super::highlight::geometry::{flow_distance, prepare_highlight, HighlightFlow};
 use super::outline::geometry::{prepare_shape, shape_distance};
@@ -34,7 +35,9 @@ use super::AnnotationKind;
 /// its pixel `(1, 1)` - and reads its tone out of `p2`. A shape's box runs
 /// from `p0` to `p2`, and `p1` carries its radius and its hand rather than a
 /// point, as `outline::native` keeps them; a spotlight's `p1` carries its
-/// radius and its softness the same way.
+/// radius and its softness the same way. A stroke's box runs from `p0` to
+/// `p2`, and `p1` is `p0` moved one source pixel across and down, which is
+/// how the shader places the fitted line its record carries.
 ///
 /// A number no kind owns prepares nothing. It cannot come from a retained
 /// annotation, and drawing it as an arrow would draw some future kind as a
@@ -75,6 +78,9 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
     }
     Some(AnnotationKind::Shape) => prepare_shape([p0x, p0y], [p2x, p2y], p1x, p1y, width, reveal),
     Some(AnnotationKind::Spotlight) => prepare_spotlight([p0x, p0y], [p2x, p2y], p1x, p1y),
+    Some(AnnotationKind::Draw) => {
+      prepare_freehand([p0x, p0y], [p1x, p1y], [p2x, p2y], width, reveal)
+    }
     None => ArrowGeometry::default(),
   };
 }
@@ -163,9 +169,43 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
     Some(AnnotationKind::Redact) => redact_distance([px, py], geometry),
     Some(AnnotationKind::Shape) => shape_distance([px, py], geometry),
     Some(AnnotationKind::Spotlight) => spotlight_distance([px, py], geometry),
-    // A highlight's record places bands it does not carry; the chrome picks
-    // it through [`screenwide_highlight_distance`] instead.
-    Some(AnnotationKind::Highlight) | None => f32::INFINITY,
+    // A highlight's record places bands it does not carry, and a stroke's
+    // the line it does not; the chrome picks them through
+    // [`screenwide_highlight_distance`] and [`screenwide_freehand_distance`].
+    Some(AnnotationKind::Highlight) | Some(AnnotationKind::Draw) | None => f32::INFINITY,
+  }
+}
+
+/// How far a point falls outside a stroke's drawn line, from its fitted
+/// chain of `count` points, `x` then `y` each, in the caller's pixels. With
+/// `body`, the box from `low` to `high` that holds the stroke picks it too:
+/// what picks a chosen stroke from anywhere inside it.
+///
+/// # Safety
+/// `chain` must point at `count` readable pairs of floats, or be null.
+#[cfg(target_os = "macos")]
+#[no_mangle]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn screenwide_freehand_distance(
+  px: f32,
+  py: f32,
+  chain: *const [f32; 2],
+  count: u32,
+  width: f32,
+  body: u32,
+  low_x: f32,
+  low_y: f32,
+  high_x: f32,
+  high_y: f32,
+) -> f32 {
+  if chain.is_null() || count == 0 {
+    return f32::INFINITY;
+  }
+  let chain = std::slice::from_raw_parts(chain, count as usize);
+  if body != 0 {
+    freehand_body_distance([px, py], chain, width, [low_x, low_y], [high_x, high_y])
+  } else {
+    freehand_distance([px, py], chain, width)
   }
 }
 

@@ -68,6 +68,8 @@ export type ToolPanelSnapshot = {
   background: Background;
   /** The backgrounds saved from the picker, in the order they were saved. */
   backgroundPresets: BackgroundPreset[];
+  /** Whether the picture being edited has any stroke to clear. */
+  canClearDrawings: boolean;
   /** Whether any shortcut deleted from the timeline can be brought back. */
   canRestoreShortcuts: boolean;
   /** Null until the workspace has a source to cut a crop out of. */
@@ -115,6 +117,8 @@ export type ToolPanelPatch = Partial<
   /** Draw the camera into the screen's picture, or carry it as a track of its
    * own. */
   bakeCamera?: boolean;
+  /** Take every stroke off the picture being edited. */
+  clearDrawings?: true;
   /** Cut a crop of this size, in source pixels, keeping it where it sits. */
   cropSize?: { height?: number; width?: number };
   /** Round the output canvas corners by this share of its shorter side. */
@@ -185,6 +189,7 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   annotationColors: [],
   background: { color: "#171717", kind: "solid" },
   backgroundPresets: [],
+  canClearDrawings: false,
   canRestoreShortcuts: false,
   crop: null,
   cursorEffects: DEFAULT_CURSOR_EFFECTS,

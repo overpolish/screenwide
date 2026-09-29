@@ -3,7 +3,10 @@
 
 import { BackgroundPreset } from "../../../components/shared/background-picker/background";
 import { useEditableGeneralSettings } from "../../settings/use-general-settings";
-import { useAnnotationSelection } from "../annotation-channel";
+import {
+  useAnnotationSelection,
+  useCanClearDrawings,
+} from "../annotation-channel";
 import { useRestoreRecordingKeyboardShortcuts } from "../components/use-restore-recording-keyboard-shortcuts";
 import { keyboardMaximumSizePercent } from "../keyboard-effect-geometry";
 import {
@@ -175,6 +178,7 @@ export function useEditorToolPanels({
   // way the selected shortcut does rather than through the workspace's
   // settings.
   const annotation = useAnnotationSelection(workspace);
+  const canClearDrawings = useCanClearDrawings(workspace);
   // Restoring and resetting every shortcut is an edit to the timeline the
   // editor already owns, so the panel asks for it here rather than through the
   // preview.
@@ -193,6 +197,7 @@ export function useEditorToolPanels({
       background:
         frameTarget?.background ?? DEFAULT_TOOL_PANEL_SNAPSHOT.background,
       backgroundPresets,
+      canClearDrawings,
       canRestoreShortcuts: shortcuts.canRestore,
       crop: cropTarget?.snapshot ?? null,
       cursorEffects,

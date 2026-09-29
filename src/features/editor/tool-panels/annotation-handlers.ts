@@ -11,6 +11,7 @@ import {
   applyAnnotationReverse,
   applyAnnotationShuffle,
   applyAnnotationStyle,
+  applyClearDrawings,
 } from "../annotation-channel";
 import { EditorKind } from "../types";
 
@@ -34,6 +35,7 @@ export const annotationPanelHandlers = (
   | "onAnnotationReverse"
   | "onAnnotationShuffle"
   | "onAnnotationStyleChange"
+  | "onDrawingsClear"
 > => ({
   onAnnotationAngleChange: (angle) => {
     applyAnnotationAngle(workspace, angle);
@@ -55,5 +57,8 @@ export const annotationPanelHandlers = (
   },
   onAnnotationStyleChange: (style) => {
     applyAnnotationStyle(workspace, style);
+  },
+  onDrawingsClear: () => {
+    applyClearDrawings(workspace);
   },
 });

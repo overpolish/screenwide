@@ -14,17 +14,13 @@ use super::*;
 /// and which shape a drawing mode makes. Both are declared once beside the
 /// gesture model, so Windows and the macOS interaction view read the same
 /// numbers.
-use crate::editor::annotations::gesture::{drawing_kind, MODE_NONE};
+use crate::editor::annotations::gesture::{drawing_kind, hovers_nothing, MODE_NONE};
 use crate::editor::annotations::handles::{
   NativeAnnotationHandles, NativeAnnotationSnap, NativeGapSpan, SNAP_FLAG_ANCHOR, SNAP_FLAG_GAP_X,
   SNAP_FLAG_GAP_Y, SNAP_FLAG_GUIDE_X, SNAP_FLAG_GUIDE_Y,
 };
 use crate::editor::annotations::AnnotationKind;
 
-/// A press has to travel this far before it draws an arrow rather than
-/// clearing the choice: a click and a very short drag are the same gesture to
-/// a hand, and neither should leave a stub behind.
-const DRAG_SLOP: f64 = 3.0;
 /// The grip's hit box, matching the selection handles'.
 const HANDLE_HIT: f64 = 8.0;
 
@@ -43,6 +39,9 @@ const HANDLE_TAIL: u32 = 4;
 pub(super) struct AnnotationState {
   /// Every arrow's grips, in the order the layers store them.
   pub(super) handles: Vec<NativeAnnotationHandles>,
+  /// The strokes' fitted lines, normalised over their sources, which a
+  /// stroke's grips point into.
+  pub(super) paths: Vec<[f32; 2]>,
   /// The arrow the pointer rests on: its layer, its place in that layer's
   /// list, and how wide its halo has grown, in canvas pixels. Preview chrome
   /// only - the export never sees it.
@@ -79,6 +78,7 @@ impl Default for AnnotationState {
   fn default() -> Self {
     Self {
       handles: Vec::new(),
+      paths: Vec::new(),
       hover: None,
       hovered: -1,
       hover_started: None,
@@ -92,69 +92,6 @@ impl Default for AnnotationState {
       opening: None,
       press_taken: false,
     }
-  }
-}
-
-/// A press the arrow chrome has taken, before and after it becomes a drag.
-#[derive(Clone, Copy)]
-struct Drag {
-  target_kind: u32,
-  index: u32,
-  handle: u32,
-  origin: (f64, f64),
-  /// The press has not travelled far enough to be a drag yet, so no gesture
-  /// has begun and nothing has been edited.
-  pending: bool,
-  begun: bool,
-}
-
-impl Drag {
-  /// A press the chrome has taken but which has not travelled yet.
-  fn pending(target_kind: u32, index: u32, handle: u32, origin: (f64, f64)) -> Self {
-    Self {
-      target_kind,
-      index,
-      handle,
-      origin,
-      pending: true,
-      begun: false,
-    }
-  }
-
-  /// A press that is a gesture from the moment it lands: the counter tool drops
-  /// an annotation where it is pressed rather than drawing one out, so a click
-  /// alone commits it.
-  fn begun(target_kind: u32, index: u32, handle: u32, origin: (f64, f64)) -> Self {
-    Self {
-      target_kind,
-      index,
-      handle,
-      origin,
-      pending: false,
-      begun: true,
-    }
-  }
-
-  /// Advances the drag by one pointer sample, reporting whether this sample
-  /// is the one that turns the press into a gesture. A press that has not
-  /// travelled past the slop yet leaves nothing behind: no phase is emitted
-  /// and no edit is made, so a click never nudges the arrow.
-  fn sample(&mut self, point: (f64, f64)) -> bool {
-    if !self.pending {
-      return false;
-    }
-    if (point.0 - self.origin.0).hypot(point.1 - self.origin.1) < DRAG_SLOP {
-      return false;
-    }
-    self.pending = false;
-    self.begun = true;
-    true
-  }
-
-  /// Whether this sample should report movement at all. A press still inside
-  /// the slop reports nothing.
-  fn reports(&self) -> bool {
-    !self.pending
   }
 }
 
@@ -196,19 +133,22 @@ impl RecordingPreviewSurface {
   /// arrow whose three handles are drawn, or -1 for none; `mode` is what the
   /// pointer does over the picture: nothing (0), hit-test the arrows that are
   /// there and otherwise fall through to the layer (1), or also draw a new
-  /// arrow on empty picture (2).
+  /// arrow on empty picture (2). `paths` holds the strokes' fitted lines the
+  /// grips point into.
   pub(crate) fn set_annotations(
     &self,
     handles: &[NativeAnnotationHandles],
+    paths: &[[f32; 2]],
     selected_index: i32,
     mode: u32,
   ) {
-    self.set_annotation_layer(handles, selected_index, mode, -1);
+    self.set_annotation_layer(handles, paths, selected_index, mode, -1);
   }
 
   pub(crate) fn set_annotation_layer(
     &self,
     handles: &[NativeAnnotationHandles],
+    paths: &[[f32; 2]],
     selected_index: i32,
     mode: u32,
     _active_layer: i32,
@@ -216,10 +156,22 @@ impl RecordingPreviewSurface {
     let Ok(mut state) = self.inner.state.lock() else {
       return;
     };
+    // A list that grew or shrank has moved what the hovered index names.
+    let recounted = state.annotation.handles.len() != handles.len();
     state.annotation.handles.clear();
     state.annotation.handles.extend_from_slice(handles);
+    state.annotation.paths.clear();
+    state.annotation.paths.extend_from_slice(paths);
     state.annotation.selected = selected_index;
+    let changed = state.annotation.mode != mode;
     state.annotation.mode = mode;
+    // A new tool or list, no tool, or the pen: the halo goes, since the
+    // pointer may never move again to retire it, and a pulse still running
+    // must stop reporting it.
+    if changed || recounted || hovers_nothing(mode) {
+      state.annotation.hovered = -1;
+      state.annotation.hover_revision += 1;
+    }
     // The tool put down, or the box gone from under the typing: there is
     // nothing left to type into, and what was typed is kept.
     if typing::lost_its_box(&state) {
@@ -244,6 +196,11 @@ impl RecordingPreviewSurface {
   }
 }
 
+/// A press the chrome has taken, before and after it becomes a drag.
+#[path = "annotation/drag.rs"]
+mod drag;
+use drag::Drag;
+
 /// Turning a layer's annotations into what the compositor draws this frame.
 #[path = "annotation/prepare.rs"]
 mod prepare;
@@ -256,6 +213,9 @@ mod picking;
 /// The chrome's grips, whether it owns the screen, and its cursor.
 #[path = "annotation/picking_chrome.rs"]
 mod picking_chrome;
+/// How far a press is from each kind of annotation.
+#[path = "annotation/picking_distance.rs"]
+mod picking_distance;
 use picking::{
   handle_at_point, image_extent, image_frame, item_image_frame, layer_selection, normalised_point,
   selected_item, shaft_at_point, text_geometry,
@@ -288,7 +248,3 @@ mod typing;
 pub(super) use typing::{handle_typing_input, sync_typing_marks};
 pub(crate) use typing::{open as open_text, press as typing_press};
 pub(crate) use typing::{pointer_move as typing_move, up as typing_up};
-
-#[cfg(test)]
-#[path = "annotation/drag_tests.rs"]
-mod drag_tests;

@@ -35,8 +35,8 @@ pub(crate) struct AnnotationCommit {
 }
 
 pub(super) struct AnnotationGestureOverride {
-  pane_index: u32,
-  edit: AnnotationEdit,
+  pub(super) pane_index: u32,
+  pub(super) edit: AnnotationEdit,
   /// What this gesture can snap to, built from the pane as it was when the
   /// press landed.
   field: SnapField,
@@ -87,11 +87,9 @@ impl PreviewManager {
         let selected_index = selected
           .and_then(|id| annotations.iter().position(|item| item.id == id))
           .map_or(-1, |index| i32::try_from(index).unwrap_or(-1));
-        surface.set_annotations(
-          &annotation_handles(annotations, source, image_width),
-          selected_index,
-          self.annotation_mode,
-        );
+        let mut paths = Vec::new();
+        let handles = annotation_handles(annotations, source, image_width, &mut paths);
+        surface.set_annotations(&handles, &paths, selected_index, self.annotation_mode);
       }
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -169,13 +167,12 @@ impl PreviewManager {
       .get_mut(pane_index as usize)?
       .output
       .annotations;
+    let AnnotationGestureOverride { edit, field, .. } = self.annotation_gesture.as_mut()?;
+    let request = threshold.map(|threshold| SnapRequest { field, threshold });
+    let result = edit.update(annotations, point, modifiers, request);
     let gesture = self.annotation_gesture.as_ref()?;
-    let request = threshold.map(|threshold| SnapRequest {
-      field: &gesture.field,
-      threshold,
-    });
-    let result = gesture.edit.update(annotations, point, modifiers, request);
     let id = gesture.edit.selected_id().to_owned();
+    let chosen = gesture.edit.chosen_id().map(str::to_owned);
     let ended = matches!(phase, SelectionGesturePhase::End);
     // A gesture that has ended leaves nothing on screen to explain.
     let shown = if ended { SnapResult::default() } else { result };
@@ -187,10 +184,10 @@ impl PreviewManager {
       if gesture.edit.is_new() && self.is_text(pane_index, &id) {
         return self.begin_text_session(pane_index, id);
       }
-      self.present_annotation_gesture(pane_index, Some(id.as_str()));
-      return self.commit_for(pane_index, Some(id));
+      self.present_annotation_gesture(pane_index, chosen.as_deref());
+      return self.commit_for(pane_index, chosen);
     }
-    self.present_annotation_gesture(pane_index, Some(id.as_str()));
+    self.present_annotation_gesture(pane_index, chosen.as_deref());
     None
   }
 
@@ -255,7 +252,7 @@ impl PreviewManager {
     // The field excludes the annotation the gesture holds, so a counter can
     // never snap back to the place it started from.
     let field = SnapField::new(source, annotations, edit.selected_id(), image_width);
-    let id = edit.selected_id().to_owned();
+    let chosen = edit.chosen_id().map(str::to_owned);
     self.annotation_gesture = Some(AnnotationGestureOverride {
       pane_index,
       edit,
@@ -266,7 +263,7 @@ impl PreviewManager {
     if modifiers.position {
       let _ = self.annotation_anchors(pane_index, source);
     }
-    self.present_annotation_gesture(pane_index, Some(id.as_str()));
+    self.present_annotation_gesture(pane_index, chosen.as_deref());
     None
   }
 }

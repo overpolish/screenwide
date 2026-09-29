@@ -7,9 +7,19 @@ use std::time::Instant;
 
 use crate::editor::annotations::arrow::new_arrow;
 use crate::editor::annotations::counter::new_counter;
+use crate::editor::annotations::freehand::gesture::extend;
+use crate::editor::annotations::freehand::hold::StrokeHold;
+use crate::editor::annotations::freehand::model::{default_draw_style, new_draw};
 use crate::editor::annotations::outline::model::new_shape;
 use crate::editor::annotations::spotlight::model::{default_spotlight_style, new_spotlight};
-use crate::editor::annotations::{Annotation, AnnotationKind, AnnotationPoint, AnnotationStyle};
+use crate::editor::annotations::{
+  Annotation, AnnotationKind, AnnotationPoint, AnnotationShape, AnnotationStyle,
+};
+
+/// A screen point, in the desktop points the overlay draws in: how far the
+/// pen moves before it keeps another point, and how far a resting hand is
+/// measured in.
+const SCREEN_POINT: f64 = 1.0;
 
 /// The stroke in hand: the annotation it makes, when and where it started, and
 /// where the pointer is now. The start time is what the annotation is timed
@@ -35,6 +45,10 @@ pub(super) struct Stroke {
   /// A hand-drawn shape's wobble, held for the whole stroke so it does not
   /// wobble anew each frame. A highlight holds its own with its capture.
   pub(super) seed: u32,
+  /// The pen's line so far, or what holding it still was taken for, and the
+  /// rest it is held by. Neither is kept for any other tool.
+  pub(super) line: Option<Annotation>,
+  pub(super) hold: Option<StrokeHold>,
 }
 
 impl Stroke {
@@ -43,8 +57,10 @@ impl Stroke {
   /// the setting that belongs to the shape; a highlight has one marker, and a
   /// shape's pen is an arrow's. A highlight and a shape are each drawn by
   /// hand by their own choice, and a spotlight has its own corners, fade and
-  /// blur. The overlay offers no text or redaction tool, and its settings
-  /// refuse both, so neither ever reaches here.
+  /// blur. The pen wears an arrow's colour and weight and nothing else, as a
+  /// fresh stroke in the editor does. The overlay offers no text or
+  /// redaction tool, and its settings refuse both, so neither ever reaches
+  /// here.
   pub(super) fn style(&self) -> AnnotationStyle {
     let settings = super::super::settings::current();
     let shape = self.shape == AnnotationKind::Shape;
@@ -54,6 +70,13 @@ impl Stroke {
         radius: settings.spotlight_radius,
         softness: settings.spotlight_softness,
         ..default_spotlight_style()
+      };
+    }
+    if self.shape == AnnotationKind::Draw {
+      return AnnotationStyle {
+        color: settings.default_color,
+        width: settings.default_width,
+        ..default_draw_style()
       };
     }
     AnnotationStyle {
@@ -76,7 +99,8 @@ impl Stroke {
         | AnnotationKind::Text
         | AnnotationKind::Redact
         | AnnotationKind::Shape
-        | AnnotationKind::Spotlight => settings.default_width,
+        | AnnotationKind::Spotlight
+        | AnnotationKind::Draw => settings.default_width,
         AnnotationKind::Counter => settings.default_counter_size,
         AnnotationKind::Highlight => {
           crate::editor::annotations::highlight::model::NEW_HIGHLIGHT_WIDTH
@@ -122,15 +146,23 @@ impl Stroke {
         [self.start, self.end],
         Some(&style),
       )),
+      // The line is kept as it is drawn; the dress is still read every frame,
+      // while what a held stroke was taken for keeps its own head and corners.
+      AnnotationKind::Draw => self.line.clone().map(|mut line| {
+        line.style.color = style.color;
+        line.style.width = style.width;
+        line
+      }),
       AnnotationKind::Text | AnnotationKind::Redact => None,
     }
   }
 
   /// Whether the stroke has anything to show. An arrow, a shape or a
   /// spotlight with both ends in one place is a blob, and the press that
-  /// starts every stroke would flash one before the drag begins; a counter is
-  /// an annotation the moment it is dropped. A highlight has nothing to
-  /// recolour until the desktop under it is read.
+  /// starts every stroke would flash one before the drag begins; so would a
+  /// pen stroke of one point. A counter is an annotation the moment it is
+  /// dropped. A highlight has nothing to recolour until the desktop under it
+  /// is read.
   pub(super) fn is_drawn(&self) -> bool {
     match self.shape {
       AnnotationKind::Arrow | AnnotationKind::Shape | AnnotationKind::Spotlight => {
@@ -140,7 +172,49 @@ impl Stroke {
         self.start != self.end && super::super::highlight::ready(&self.id)
       }
       AnnotationKind::Counter => true,
+      AnnotationKind::Draw => self.line.as_ref().is_some_and(|line| match &line.shape {
+        AnnotationShape::Draw { points, .. } => points.len() > 1,
+        _ => true,
+      }),
       AnnotationKind::Text | AnnotationKind::Redact => false,
     }
   }
+
+  /// Carries the stroke on to `point`. The pen keeps the point, unless the
+  /// hand is still resting where its line was taken for something cleaner;
+  /// moving on from there gives the line back to carry on.
+  pub(super) fn carry(&mut self, point: AnnotationPoint, now: Instant) {
+    self.end = point;
+    let (Some(line), Some(hold)) = (&mut self.line, &mut self.hold) else {
+      return;
+    };
+    if !hold.sample(line, point, SCREEN_POINT, now) {
+      return;
+    }
+    if let AnnotationShape::Draw { points, .. } = &mut line.shape {
+      extend(points, point, SCREEN_POINT);
+    }
+  }
+
+  /// Reads the pen's line once the hand has rested on it long enough, and
+  /// puts what it was taken for in its place. Answers whether the line
+  /// changed, and so wants drawing.
+  pub(super) fn hold(&mut self, now: Instant) -> bool {
+    match (&mut self.line, &mut self.hold) {
+      (Some(line), Some(hold)) => hold.hold(line, SCREEN_POINT, now),
+      _ => false,
+    }
+  }
+}
+
+/// The line a press with the pen begins, and the rest it may be held by.
+pub(super) fn pen_down(
+  id: &str,
+  point: AnnotationPoint,
+  at: Instant,
+) -> (Option<Annotation>, Option<StrokeHold>) {
+  (
+    Some(new_draw(id.to_owned(), point, None)),
+    Some(StrokeHold::new(point, at)),
+  )
 }

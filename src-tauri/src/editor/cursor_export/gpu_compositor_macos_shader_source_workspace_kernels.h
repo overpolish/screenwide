@@ -114,7 +114,7 @@ kernel void workspace_layer(
   rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                canvas_point, u, float2(source_dimensions),
                                annotation_pixel_scale, annotation_samples,
-                               annotation_numbers, annotation_atlas);
+                               annotation_numbers, annotation_atlas, annotation_points);
   float2 camera_point = canvas_point - float2(overlay.camera_frame_x,
                                                 overlay.camera_frame_y);
   float2 camera_size = float2(overlay.camera_frame_width,
@@ -156,7 +156,7 @@ kernel void workspace_layer(
     rgba = composite_annotations(rgba, annotations, annotation_count, 0u,
                                  canvas_point, u, float2(source_dimensions),
                                  annotation_pixel_scale, annotation_samples,
-                               annotation_numbers, annotation_atlas);
+                               annotation_numbers, annotation_atlas, annotation_points);
   }
   rgba = composite_highlights(rgba, rgba, annotations, annotation_count, 1u, canvas_point,
                               annotation_pixel_scale, annotation_points, annotation_samples);
@@ -167,7 +167,7 @@ kernel void workspace_layer(
   rgba = composite_annotations(rgba, annotations, annotation_count, 1u,
                                canvas_point, u, float2(source_dimensions),
                                annotation_pixel_scale, annotation_samples,
-                               annotation_numbers, annotation_atlas);
+                               annotation_numbers, annotation_atlas, annotation_points);
   if (u.foreground_only == 0) rgba.rgb = output_dither(rgba.rgb, global_point);
   rgba.rgb *= canvas_coverage;
   rgba.a = u.foreground_only != 0 || u.transparent_background != 0

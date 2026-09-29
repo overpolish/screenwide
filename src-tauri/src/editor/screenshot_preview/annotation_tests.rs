@@ -58,7 +58,7 @@ fn handles_report_the_curve_point_rather_than_the_control_point() {
     },
     ..annotation
   };
-  let handles = annotation_handles(&[bent], (100, 100), 100.0);
+  let handles = annotation_handles(&[bent], (100, 100), 100.0, &mut Vec::new());
   assert_eq!(handles.len(), 1);
   assert!((handles[0].start_x - 0.1).abs() < 1e-9);
   // 0.25 * 20 + 0.5 * 0 + 0.25 * 60 = 20
@@ -72,7 +72,12 @@ fn handles_report_the_curve_point_rather_than_the_control_point() {
 #[test]
 fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
   let arrow = new_arrow("a".to_owned(), A, C, None);
-  let straight = annotation_handles(std::slice::from_ref(&arrow), (100, 100), 800.0);
+  let straight = annotation_handles(
+    std::slice::from_ref(&arrow),
+    (100, 100),
+    800.0,
+    &mut Vec::new(),
+  );
   assert!((straight[0].end_head - 8.0 * 4.0 / 800.0).abs() < 1e-12);
   assert_eq!(straight[0].start_head, 0.0);
   let both = Annotation {
@@ -85,7 +90,7 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
     },
     ..arrow.clone()
   };
-  let handles = annotation_handles(&[both], (100, 100), 800.0);
+  let handles = annotation_handles(&[both], (100, 100), 800.0, &mut Vec::new());
   assert_eq!(handles[0].start_head, handles[0].end_head);
   let none = Annotation {
     style: AnnotationStyle {
@@ -97,7 +102,7 @@ fn head_reach_is_four_strokes_as_a_share_of_the_drawn_picture() {
     },
     ..arrow
   };
-  let handles = annotation_handles(&[none], (100, 100), 800.0);
+  let handles = annotation_handles(&[none], (100, 100), 800.0, &mut Vec::new());
   assert_eq!(handles[0].end_head, 0.0);
   // The stroke rides separately: a headless annotation is still picked, and
   // haloed, over the width it shows.

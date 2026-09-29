@@ -7,8 +7,9 @@ impl PreviewPlayerManager {
   /// Takes an annotation tool in hand, or puts it down, in the native
   /// `ScreenwideAnnotationMode` the chrome is published with: nothing,
   /// hit-test the annotations already there, or also draw a new one on empty
-  /// picture. A gesture in flight keeps the mode it began under. Putting the
-  /// tool down retires the halo, which the pointer may never move to retire.
+  /// picture. A gesture in flight keeps the mode it began under. Changing the
+  /// tool retires the halo, which the pointer may never move to retire; the
+  /// next move halos whatever the new tool picks.
   pub(in crate::editor::recording_preview_player) fn set_annotation_tool(
     &mut self,
     tool: Option<&str>,
@@ -17,7 +18,7 @@ impl PreviewPlayerManager {
       return;
     }
     let mode = annotation_mode(tool);
-    if mode == 0 && self.annotation.mode != 0 {
+    if mode != self.annotation.mode {
       #[cfg(any(target_os = "macos", target_os = "windows"))]
       if let Some(surface) = self
         .sources
@@ -184,6 +185,7 @@ impl PreviewPlayerManager {
       return;
     };
     let mut handles = Vec::new();
+    let mut paths = Vec::new();
     let mut selected = if self.annotation.selected.is_some() {
       -2
     } else {
@@ -208,6 +210,7 @@ impl PreviewPlayerManager {
           &annotations,
           (source.source_width, source.source_height),
           output.size_image_width(),
+          &mut paths,
         )
         .into_iter()
         .map(|mut handle| {
@@ -218,6 +221,7 @@ impl PreviewPlayerManager {
     }
     surface.set_annotation_layer(
       &handles,
+      &paths,
       selected,
       if self.is_playing {
         0

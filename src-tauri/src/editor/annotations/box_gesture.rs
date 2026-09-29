@@ -110,7 +110,7 @@ fn write(annotation: &mut Annotation, bounds: SnapBox) {
   }
 }
 
-fn carry(
+pub(crate) fn carry(
   from: SnapBox,
   point: AnnotationPoint,
   pressed: AnnotationPoint,
@@ -129,7 +129,7 @@ fn carry(
   }
 }
 
-fn resize(
+pub(crate) fn resize(
   from: SnapBox,
   edges: u32,
   point: AnnotationPoint,

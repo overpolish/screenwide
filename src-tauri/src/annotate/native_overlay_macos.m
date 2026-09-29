@@ -23,6 +23,7 @@
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_spotlight.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_counter.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_shape.h"
+#import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_draw.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotation_text.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_annotations.h"
 #import "../editor/cursor_export/gpu_compositor_macos_shader_source_types.h"
@@ -59,6 +60,7 @@ static NSString *shaderSource(void) {
               GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COUNTER
               GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_TEXT
               GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_SHAPE
+              GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_DRAW
                   GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE
                       GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT
                           GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_SPOTLIGHT

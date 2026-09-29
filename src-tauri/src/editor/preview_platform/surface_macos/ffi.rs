@@ -168,6 +168,8 @@ unsafe extern "C" {
     handle: *mut std::ffi::c_void,
     handles: *const NativeAnnotationHandles,
     count: usize,
+    paths: *const f32,
+    path_count: usize,
     selected_index: i32,
     mode: i32,
     active_layer: i32,

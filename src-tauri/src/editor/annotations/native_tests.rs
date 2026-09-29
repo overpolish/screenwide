@@ -12,6 +12,7 @@ fn annotation(shape: AnnotationShape) -> Annotation {
     animated: true,
     id: "a".to_owned(),
     held: None,
+    pen: false,
     reveal: Default::default(),
     shape,
     style: AnnotationStyle {

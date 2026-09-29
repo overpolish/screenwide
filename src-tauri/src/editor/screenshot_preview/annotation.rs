@@ -9,13 +9,16 @@ use crate::editor::annotations::AnnotationStyle;
 
 /// The tool modes and their mapping live with the gesture model, so the two
 /// workspaces take the tool in hand the same way.
-use crate::editor::annotations::gesture::{annotation_mode, MODE_NONE};
+use crate::editor::annotations::gesture::{annotation_mode, hovers_nothing};
 
 /// Where the hover halo is, and how wide. The width is already in the layer's
 /// canvas pixels: the native side reports how big the picture is drawn, and
-/// the manager knows how many canvas pixels that is.
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// the manager knows how many canvas pixels that is. The halo is placed by
+/// the annotation's index, and `id` says which annotation that was, so a
+/// list that changes under it cannot hand the halo on to another.
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct AnnotationHover {
+  pub(crate) id: String,
   pub(crate) index: usize,
   pub(crate) layer_id: u64,
   pub(crate) width: f32,
@@ -31,6 +34,8 @@ pub(crate) fn hover_width_points(progress: f64) -> f64 {
 /// What one layout push tells the native OSC about this layer's arrows.
 pub(super) struct AnnotationLayout {
   pub(super) handles: Vec<NativeAnnotationHandles>,
+  /// The strokes' fitted lines the grips point into.
+  pub(super) paths: Vec<[f32; 2]>,
   /// The arrow whose three grips are drawn, or -1 for none.
   pub(super) selected_index: i32,
   pub(super) mode: u32,
@@ -39,10 +44,13 @@ pub(super) struct AnnotationLayout {
 /// Settles what the native OSC is told about this layer's arrows, and what
 /// the tool in hand means for the halo.
 ///
-/// Answers the grips to publish and whether a halo was retired: putting the
-/// tool down retires it, because the pointer may never move again to do it
-/// and nothing else clears it, and React is told because the keyboard acts on
-/// the arrow the halo is showing.
+/// Answers the grips to publish and whether a halo was retired: changing the
+/// tool in hand retires it, and so does holding no tool or the pen, because
+/// the pointer may never move again to do it and nothing else clears it. So
+/// does a list that no longer holds the haloed annotation where the halo is
+/// placed - deleted, or moved by an undo - rather than let the halo pass to
+/// whatever took its place. The next move halos again whatever is under it.
+/// React is told because the keyboard acts on the arrow the halo is showing.
 pub(super) fn apply_annotation_layout(
   manager: &mut super::state::PreviewManager,
   defaults: Option<AnnotationStyle>,
@@ -54,9 +62,11 @@ pub(super) fn apply_annotation_layout(
   let mode = annotation_mode(tool);
   manager.annotation_defaults = defaults;
   manager.annotation_counter_angle = counter_angle;
+  let changed = manager.annotation_mode != mode;
   manager.annotation_mode = mode;
   manager.annotation_pane_index = pane_index;
-  let hover_cleared = mode == MODE_NONE && manager.clear_annotation_hover();
+  let retired = changed || hovers_nothing(mode) || manager.hover_lost();
+  let hover_cleared = retired && manager.clear_annotation_hover();
   let layout = annotation_layout(manager, pane_index, mode, selected);
   (layout, hover_cleared)
 }
@@ -70,6 +80,7 @@ fn annotation_layout(
   mode: u32,
   selected: Option<&str>,
 ) -> AnnotationLayout {
+  let mut paths = Vec::new();
   let handles = pane_index
     .and_then(|pane_index| {
       let source = manager.annotation_source(pane_index)?;
@@ -77,6 +88,7 @@ fn annotation_layout(
         manager.annotations_for(pane_index)?,
         source,
         manager.annotation_image_width(pane_index)?,
+        &mut paths,
       ))
     })
     .unwrap_or_default();
@@ -87,6 +99,7 @@ fn annotation_layout(
     .map_or(-1, |index| i32::try_from(index).unwrap_or(-1));
   AnnotationLayout {
     handles,
+    paths,
     selected_index,
     mode,
   }

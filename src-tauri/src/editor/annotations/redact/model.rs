@@ -70,6 +70,7 @@ pub(crate) fn new_redact(
     animated: false,
     id,
     held: None,
+    pen: false,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Redact {
       start: point,

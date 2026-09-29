@@ -15,6 +15,7 @@ fn arrow(above_camera: bool, start: (f64, f64), end: (f64, f64)) -> Annotation {
     animated: false,
     id: format!("{}-{}", start.0, end.0),
     held: None,
+    pen: false,
     reveal: Default::default(),
     shape: AnnotationShape::Arrow {
       start: AnnotationPoint {

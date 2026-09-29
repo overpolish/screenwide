@@ -41,9 +41,10 @@ _Static_assert(sizeof(ScreenwideAnnotationSample) == 96, "Exposure sample ABI");
 static inline uint32_t screenwide_annotation_sample_count(
     const ScreenwideAnnotation *annotation, float sx, float sy) {
   AnnotationReveal r = annotation->reveal;
-  // A highlight's bands are not in its record's points; its record keeps
-  // how far its fastest line end sweeps instead.
-  float travel = annotation->kind == SCREENWIDE_ANNOTATION_HIGHLIGHT
+  // A highlight's bands and a stroke's line are not in their records'
+  // points; each record keeps how far its drawing end sweeps instead.
+  float travel = annotation->kind == SCREENWIDE_ANNOTATION_HIGHLIGHT ||
+                         annotation->kind == SCREENWIDE_ANNOTATION_DRAW
       ? screenwide_highlight_travel(annotation->p0[0], annotation->p0[1], annotation->p1[0],
                                     annotation->p1[1], sx, sy, annotation->params[2], r)
       : screenwide_annotation_travel(

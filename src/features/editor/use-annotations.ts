@@ -133,18 +133,46 @@ export function useAnnotations({
     );
   };
 
+  // Everything the pen made goes in one commit, so one undo brings it all
+  // back: its strokes, and what held strokes were taken for. A stroke from
+  // before the flag existed is still the pen's. Other annotations stay, and
+  // so do the choice and the hover unless the pen made them.
+  const penMade = (annotation: Annotation) =>
+    annotation.pen === true || annotation.shape.kind === "draw";
+  const isPens = (id: string | null) =>
+    annotations.some(
+      (annotation) => annotation.id === id && penMade(annotation),
+    );
+  const canClearDrawings = annotations.some(penMade);
+  const applyClearDrawings = () => {
+    if (!canClearDrawings) return;
+    commit(annotations.filter((annotation) => !penMade(annotation)));
+    if (isPens(selectedId)) setSelectedId(null);
+    if (isPens(hoveredId)) setHoveredId(null);
+  };
+
   usePublishAnnotationSelection(
     workspace,
-    selected
-      ? {
-          angle: angle ?? undefined,
-          animated: selected.animated,
-          id: selected.id,
-          kind: selected.shape.kind,
-          style: selected.style,
-        }
-      : null,
-    { applyAngle, applyAnimated, applyReverse, applyShuffle, applyStyle },
+    {
+      canClearDrawings,
+      selection: selected
+        ? {
+            angle: angle ?? undefined,
+            animated: selected.animated,
+            id: selected.id,
+            kind: selected.shape.kind,
+            style: selected.style,
+          }
+        : null,
+    },
+    {
+      applyAngle,
+      applyAnimated,
+      applyClearDrawings,
+      applyReverse,
+      applyShuffle,
+      applyStyle,
+    },
   );
 
   return {

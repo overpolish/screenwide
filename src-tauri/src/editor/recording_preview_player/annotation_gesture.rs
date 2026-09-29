@@ -10,11 +10,11 @@ use crate::editor::annotations::pin::fold;
 use crate::editor::annotations::{AnnotationKind, AnnotationShape};
 
 pub(super) struct Gesture {
-  pane: u32,
-  position: u64,
-  edit: AnnotationEdit,
-  working: Vec<Annotation>,
-  before: Vec<RecordingAnnotationClip>,
+  pub(super) pane: u32,
+  pub(super) position: u64,
+  pub(super) edit: AnnotationEdit,
+  pub(super) working: Vec<Annotation>,
+  pub(super) before: Vec<RecordingAnnotationClip>,
   before_selected: Option<String>,
   /// What this gesture can snap to, built from the pane as it was when the
   /// press landed. Its element anchors are refreshed each sample, because
@@ -173,7 +173,7 @@ impl PreviewPlayerManager {
         }
       }
       let before_selected = self.annotation.selected.clone();
-      self.annotation.selected = Some(edit.selected_id().to_owned());
+      self.annotation.selected = edit.chosen_id().map(str::to_owned);
       // The field excludes the annotation the gesture holds, so a counter can
       // never snap back to the place it started from.
       let field = SnapField::new(source_size, &working, edit.selected_id(), image_width);

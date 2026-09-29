@@ -58,6 +58,7 @@ fn arrow(id: &str) -> Annotation {
     animated: true,
     id: id.to_owned(),
     held: None,
+    pen: false,
     reveal: Default::default(),
     shape: AnnotationShape::Arrow {
       start: AnnotationPoint { x: 0.0, y: 0.0 },

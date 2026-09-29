@@ -55,6 +55,7 @@ pub(crate) fn new_shape(
     animated: true,
     id,
     held: None,
+    pen: false,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Shape { start, end, seed },
     style: style.cloned().unwrap_or_else(default_shape_style),

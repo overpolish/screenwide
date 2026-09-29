@@ -62,6 +62,7 @@ pub(crate) fn new_counter(
     animated: true,
     id,
     held: None,
+    pen: false,
     reveal: crate::editor::annotations::reveal::AnnotationReveal::default(),
     shape: AnnotationShape::Counter {
       center,

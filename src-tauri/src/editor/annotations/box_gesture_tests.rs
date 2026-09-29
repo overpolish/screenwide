@@ -24,7 +24,7 @@ const BOXED: [AnnotationKind; 2] = [AnnotationKind::Redact, AnnotationKind::Shap
 /// its shorter side.
 fn boxed(kind: AnnotationKind) -> Vec<Annotation> {
   let mut annotations = Vec::new();
-  let edit = AnnotationEdit::begin(
+  let mut edit = AnnotationEdit::begin(
     &mut annotations,
     AnnotationGestureTarget::New,
     point(10.0, 10.0),

@@ -10,23 +10,21 @@
 //! along the path it actually travelled on both backends.
 
 use super::*;
-use crate::editor::annotations::arrow::geometry::prepare_arrow;
-use crate::editor::annotations::counter::geometry::prepare_counter;
 use crate::editor::annotations::exposure::{annotation_travel, highlight_travel};
-use crate::editor::annotations::highlight::geometry::prepare_highlight;
 use crate::editor::annotations::native::{native_annotations, NativeAnnotations};
-use crate::editor::annotations::outline::geometry::prepare_shape;
-use crate::editor::annotations::redact::geometry::prepare_redact;
 use crate::editor::annotations::redact::native::{
   source_per_capture_point, RedactPicture, RedactSource,
 };
 use crate::editor::annotations::redact::records::redact_records;
 use crate::editor::annotations::reveal::AnnotationReveal;
-use crate::editor::annotations::spotlight::geometry::prepare_spotlight;
-use crate::editor::annotations::text::geometry::{prepare_text, HEAD_ALIGN_MASK};
+use crate::editor::annotations::text::geometry::HEAD_ALIGN_MASK;
 use crate::editor::annotations::text::typing::TypingMarks;
 use crate::editor::annotations::Annotation;
 use crate::screenshots::{output_placement, CapturedImage};
+
+/// Which geometry each kind prepares from its placed points.
+#[path = "prepare_kind.rs"]
+mod prepare_kind;
 
 /// Prepares the annotations for one composition, in canvas pixels, with those
 /// under the camera first.
@@ -152,37 +150,8 @@ fn placed_native(
         place(annotation.p1),
         place(annotation.p2),
       );
-      // A counter keeps its centre in `p0` and its aim in `p1[0]`, so only
-      // the centre is placed: the disc's diameter is in output pixels, as an
-      // arrow's stroke is, and an angle is the same angle in either space. A
-      // text box keeps its pointer, held against the box, in `p1` and its
-      // text block's size, in output pixels, in `p2`; neither is placed. A
-      // shape's and a spotlight's `p1` is never placed either.
-      let shape = |reveal: AnnotationReveal| match annotation.shape_kind() {
-        AnnotationKind::Counter => prepare_counter(a, annotation.width, annotation.p1[0], reveal),
-        AnnotationKind::Text => prepare_text(
-          a,
-          annotation.p1,
-          annotation.p2,
-          annotation.width,
-          annotation.head,
-          reveal,
-        ),
-        AnnotationKind::Arrow => prepare_arrow(a, b, c, annotation.width, annotation.head, reveal),
-        AnnotationKind::Redact => prepare_redact(a, c, annotation.width),
-        // A highlight is placed by where the source's origin and its pixel
-        // (1, 1) land, and keeps its tone in `p2`, which is never placed.
-        AnnotationKind::Highlight => prepare_highlight(a, b, annotation.p2, reveal),
-        AnnotationKind::Shape => prepare_shape(
-          a,
-          c,
-          annotation.p1[0],
-          annotation.p1[1],
-          annotation.width,
-          reveal,
-        ),
-        AnnotationKind::Spotlight => prepare_spotlight(a, c, annotation.p1[0], annotation.p1[1]),
-      };
+      let shape =
+        |reveal: AnnotationReveal| prepare_kind::prepared_geometry(annotation, [a, b, c], reveal);
       let geometry = shape(annotation.reveal);
       let mut arrow = compositor::PreviewArrow::new(
         geometry,
@@ -199,7 +168,7 @@ fn placed_native(
       // The points arrive placed already, so the axis scale travel is
       // measured in is the identity. A text box's travel reads its pointer
       // and its block as they are held, which are never placed, and a
-      // highlight's the sweep its record keeps.
+      // highlight's and a stroke's the sweep their records keep.
       let identity = [1.0, 1.0];
       let (width, reveal) = (annotation.width, annotation.reveal);
       let travel = match annotation.shape_kind() {
@@ -212,7 +181,9 @@ fn placed_native(
           width,
           reveal,
         ),
-        AnnotationKind::Highlight => highlight_travel(a, b, identity, annotation.params[2], reveal),
+        AnnotationKind::Highlight | AnnotationKind::Draw => {
+          highlight_travel(a, b, identity, annotation.params[2], reveal)
+        }
         kind => annotation_travel(kind, a, b, c, identity, width, reveal),
       };
       let count = exposure_sample_count(travel, reveal);

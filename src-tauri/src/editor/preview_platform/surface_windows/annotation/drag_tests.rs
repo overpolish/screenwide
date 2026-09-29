@@ -4,6 +4,7 @@
 //! The press-to-drag transition: when a press becomes a gesture, and what a
 //! press that never travels leaves behind.
 
+use super::super::{HANDLE_END, TARGET_NEW};
 use super::*;
 
 fn drag_from(origin: (f64, f64)) -> Drag {

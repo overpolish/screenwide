@@ -225,6 +225,9 @@ mod annotation_tests;
 #[path = "platform_macos_counter_tests.rs"]
 mod counter_tests;
 #[cfg(test)]
+#[path = "platform_macos_draw_tests.rs"]
+mod draw_tests;
+#[cfg(test)]
 #[path = "platform_macos_highlight_tests.rs"]
 mod highlight_tests;
 #[cfg(test)]

@@ -199,11 +199,14 @@ pub(super) fn head_reach(style: &AnnotationStyle, wanted: bool, image_width: f64
   stroke_width(style, image_width) * HEAD_LENGTH_WIDTHS
 }
 
-/// Every annotation's grips, in the order the layer stores them.
+/// Every annotation's grips, in the order the layer stores them. A stroke's
+/// fitted line is appended to `paths`, which its grips point into, so a
+/// caller publishing several layers passes one buffer for all of them.
 pub(crate) fn annotation_handles(
   annotations: &[Annotation],
   source: (u32, u32),
   image_width: f64,
+  paths: &mut Vec<[f32; 2]>,
 ) -> Vec<NativeAnnotationHandles> {
   annotations
     .iter()
@@ -211,7 +214,7 @@ pub(crate) fn annotation_handles(
     .map(|(index, annotation)| {
       annotation
         .shape
-        .grips(&annotation.style, index as u32, source, image_width)
+        .grips(&annotation.style, index as u32, source, image_width, paths)
     })
     .collect()
 }

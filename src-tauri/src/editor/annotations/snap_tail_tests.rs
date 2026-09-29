@@ -95,7 +95,7 @@ fn a_tail_tip_pins_one_axis_while_a_disc_line_pins_the_other() {
     new_counter("fixed".to_owned(), point(900.0, 350.0), 2, None, None),
   ];
   let field = field_with(&annotations, "moved", vec![element()]);
-  let edit = drag(
+  let mut edit = drag(
     &mut annotations,
     AnnotationHandle::Body,
     point(100.0, 100.0),
@@ -140,7 +140,7 @@ fn a_discs_edge_never_takes_an_element_edge() {
     Some(PI),
   )];
   let field = field_with(&annotations, "moved", vec![element()]);
-  let edit = drag(
+  let mut edit = drag(
     &mut annotations,
     AnnotationHandle::Body,
     point(100.0, 100.0),
@@ -197,7 +197,7 @@ fn aimed_at(angle: f64) -> AnnotationPoint {
 fn turning_a_tail_lands_its_tip_on_an_element_edge() {
   let (mut annotations, element) = turning();
   let field = field_with(&annotations, "turned", vec![element]);
-  let edit = drag(
+  let mut edit = drag(
     &mut annotations,
     AnnotationHandle::Tail,
     point(542.0, 500.0),
@@ -223,7 +223,7 @@ fn turning_a_tail_lands_its_tip_on_an_element_edge() {
 fn an_element_edge_in_reach_beats_shifts_eighth_turns() {
   let (mut annotations, element) = turning();
   let field = field_with(&annotations, "turned", vec![element]);
-  let edit = drag(
+  let mut edit = drag(
     &mut annotations,
     AnnotationHandle::Tail,
     point(542.0, 500.0),
@@ -246,7 +246,7 @@ fn an_element_edge_in_reach_beats_shifts_eighth_turns() {
 fn with_no_element_in_reach_shift_still_quantises_the_aim() {
   let (mut annotations, element) = turning();
   let field = field_with(&annotations, "turned", vec![element]);
-  let edit = drag(
+  let mut edit = drag(
     &mut annotations,
     AnnotationHandle::Tail,
     point(542.0, 500.0),

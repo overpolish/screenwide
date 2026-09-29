@@ -8,14 +8,13 @@
 //! The twin of `recording_preview_annotation_geometry_macos.h` and the layer
 //! lookup in `recording_preview_annotation_layers_macos.h`.
 
+use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
-use crate::editor::annotations::arrow::distance::prepared_arrow_distance;
-use crate::editor::annotations::arrow::geometry::prepare_arrow;
-use crate::editor::annotations::counter::silhouette::counter_distance;
 use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::highlight::geometry::{flow_distance, HighlightFlow};
+use crate::editor::annotations::gesture::{MODE_DRAW, MODE_SELECT};
+use crate::editor::annotations::highlight::geometry::HighlightFlow;
 use crate::editor::annotations::reveal::AnnotationReveal;
-use crate::editor::annotations::text::geometry::{prepare_text, text_distance};
+use crate::editor::annotations::text::geometry::prepare_text;
 use crate::editor::annotations::AnnotationPoint;
 
 /// An annotation belongs to its image, independently of the selected layer. The
@@ -68,7 +67,7 @@ pub(super) fn selected_item(state: &SurfaceState) -> Option<&NativeAnnotationHan
     .and_then(|index| state.annotation.handles.get(index))
 }
 
-fn display_point(image: PreviewSurfaceRect, x: f64, y: f64) -> (f64, f64) {
+pub(super) fn display_point(image: PreviewSurfaceRect, x: f64, y: f64) -> (f64, f64) {
   (image.x + image.width * x, image.y + image.height * y)
 }
 
@@ -116,7 +115,8 @@ fn grip_at_point(
     AnnotationKind::Arrow
     | AnnotationKind::Redact
     | AnnotationKind::Shape
-    | AnnotationKind::Spotlight => found,
+    | AnnotationKind::Spotlight
+    | AnnotationKind::Draw => found,
   })
 }
 
@@ -142,7 +142,10 @@ pub(super) fn text_geometry(
 
 /// A highlight's flow of bands in display points, from the grips it was
 /// published with.
-fn highlight_flow(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> HighlightFlow {
+pub(super) fn highlight_flow(
+  image: PreviewSurfaceRect,
+  item: &NativeAnnotationHandles,
+) -> HighlightFlow {
   crate::editor::annotations::highlight::handles::flow(item, |x, y| {
     let (x, y) = display_point(image, x, y);
     [x as f32, y as f32]
@@ -179,7 +182,10 @@ pub(super) fn item_grips(
       let geometry = text_geometry(image, item);
       vec![(f64::from(geometry.c[0]), f64::from(geometry.c[1]))]
     }
-    AnnotationKind::Redact | AnnotationKind::Shape | AnnotationKind::Spotlight => Vec::new(),
+    AnnotationKind::Redact
+    | AnnotationKind::Shape
+    | AnnotationKind::Spotlight
+    | AnnotationKind::Draw => Vec::new(),
     AnnotationKind::Highlight => {
       let flow = highlight_flow(image, item);
       [flow.start_grip(), flow.end_grip()]
@@ -194,86 +200,31 @@ pub(super) fn item_grips(
   }
 }
 
-/// The chosen arrow's grip under `point`.
+/// The chosen arrow's grip under `point`. The pen holds nothing, so it offers
+/// none.
 pub(super) fn handle_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<u32> {
+  if state.annotation.mode == MODE_DRAW {
+    return None;
+  }
   let item = *selected_item(state)?;
   grip_at_point(image_frame(state)?, &item, point)
-}
-
-/// How far a point is from one arrow's drawn shape, in display points: its
-/// shaft, and the heads on it. Zero anywhere the arrow is actually painted,
-/// because the tolerance is measured from the stroke's edge rather than its
-/// centreline. A press on a head is a press on the arrow - it is the part of it
-/// the hand aims at. An annotation half-way through drawing itself in is still
-/// picked by the whole of what it will be.
-fn arrow_distance(
-  image: PreviewSurfaceRect,
-  item: &NativeAnnotationHandles,
-  point: (f64, f64),
-) -> f32 {
-  let start = display_point(image, item.start_x, item.start_y);
-  match item.shape_kind() {
-    AnnotationKind::Counter => {
-      return counter_distance(
-        point,
-        AnnotationPoint {
-          x: start.0,
-          y: start.1,
-        },
-        item.width * image.width / 2.0,
-        item.start_head,
-      ) as f32;
-    }
-    AnnotationKind::Text => {
-      return text_distance(
-        [point.0 as f32, point.1 as f32],
-        &text_geometry(image, item),
-      );
-    }
-    AnnotationKind::Redact | AnnotationKind::Spotlight => {
-      return super::redact_chrome::distance(image, item, point)
-    }
-    AnnotationKind::Shape => {
-      return super::redact_chrome::shape_stroke_distance(image, item, point)
-    }
-    AnnotationKind::Highlight => {
-      return flow_distance(
-        [point.0 as f32, point.1 as f32],
-        &highlight_flow(image, item),
-      );
-    }
-    AnnotationKind::Arrow => {}
-  }
-  let middle = display_point(image, item.middle_x, item.middle_y);
-  let end = display_point(image, item.end_x, item.end_y);
-  // The control point behind a reported middle handle, so the shaft can be
-  // sampled without solving the curve again.
-  let a = [start.0 as f32, start.1 as f32];
-  let b = [
-    (2.0 * middle.0 - (start.0 + end.0) / 2.0) as f32,
-    (2.0 * middle.1 - (start.1 + end.1) / 2.0) as f32,
-  ];
-  let c = [end.0 as f32, end.1 as f32];
-  let probe = [point.0 as f32, point.1 as f32];
-  // The stroke rides on the annotation rather than being read back off its
-  // heads, so a headless arrow is picked over the width it shows too.
-  let width = (item.width * image.width) as f32;
-  let heads = if item.start_head > 0.0 {
-    2
-  } else if item.end_head > 0.0 {
-    1
-  } else {
-    0
-  };
-  let geometry = prepare_arrow(a, b, c, width, heads, AnnotationReveal::WHOLE);
-  prepared_arrow_distance(probe, &geometry)
 }
 
 /// The topmost arrow whose drawn shape `point` lands on. There is no
 /// tolerance around it: the arrow is picked, and haloed, exactly where it is
 /// painted, which is what keeps the halo off the space beside an annotation.
-/// A shape grabbed by its inside is `redact_chrome::grabs_inside`'s call.
+/// A shape or a stroke grabbed by its inside is `redact_chrome::grabs_inside`'s
+/// call.
+///
+/// The pen picks nothing up, so every press under it draws. A stroke is picked
+/// by the select tool alone: another drawing tool that chose one would hand
+/// over to the pen, which never holds one. The twin of
+/// `annotation_shaft_at_point`.
 pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<usize> {
+  let mode = state.annotation.mode;
+  if mode == MODE_DRAW {
+    return None;
+  }
   let chrome = super::redact_chrome::grabs_inside;
   state
     .annotation
@@ -281,9 +232,13 @@ pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<
     .iter()
     .enumerate()
     .rev()
+    .filter(|(_, item)| item.shape_kind() != AnnotationKind::Draw || mode == MODE_SELECT)
     .find(|(index, item)| {
       layer_image_rect(state, item.layer_id).is_some_and(|image| {
-        let distance = if chrome(state, *index, item) {
+        let whole = chrome(state, *index, item);
+        let distance = if item.shape_kind() == AnnotationKind::Draw {
+          draw_distance(state, image, item, point, whole)
+        } else if whole {
           super::redact_chrome::shape_body_distance(image, item, point)
         } else {
           arrow_distance(image, item, point)

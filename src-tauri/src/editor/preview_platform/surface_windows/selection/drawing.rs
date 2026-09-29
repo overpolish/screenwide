@@ -23,9 +23,10 @@ impl SelectionOverlay {
     // hand and nothing chosen. The layer's own chrome stands down for as long
     // as it does, matching `annotation_owns_chrome`; `None` leaves it up.
     annotation_handles: Option<&[[f32; 2]]>,
-    // The chosen redaction's box in device pixels and its radius
-    // percentage, drawn as the layer selection draws its own.
-    annotation_box: Option<([f32; 4], f64)>,
+    // The chosen box annotation's box in device pixels and its radius
+    // percentage, drawn as the layer selection draws its own; a stroke's has
+    // no radius dot.
+    annotation_box: Option<([f32; 4], Option<f64>)>,
     // The element an arrow's tip has snapped to, outlined a device pixel
     // wide so the anchor it took reads as part of that element.
     annotation_bounds: Option<[f32; 4]>,
@@ -101,8 +102,8 @@ impl SelectionOverlay {
           view,
           logical_rect(frame, scale),
           scale,
-          radius_percent,
-          true,
+          radius_percent.unwrap_or(0.0),
+          radius_percent.is_some(),
         );
       }
       let points = annotation_handles

@@ -41,6 +41,7 @@ fn arrow(
     animated: true,
     id: "arrow".to_owned(),
     held: None,
+    pen: false,
     reveal: Default::default(),
     shape: AnnotationShape::Arrow {
       start,
