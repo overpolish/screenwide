@@ -10,7 +10,9 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 const TOOLTIP_TEXT_EVENT = "tooltip://text";
 
 /** What a tooltip says. The shortcut travels apart from the label so the
- * window can draw it as a keycap rather than as run-on text. */
+ * window can draw it as keycaps rather than as run-on text. It is written in
+ * the hotkey format Settings stores (`CommandOrControl+KeyZ`, `Shift+KeyZ`,
+ * `Backspace`), so each platform names its own modifiers. */
 export type NativeTooltipContent = {
   label: string;
   shortcut?: string;

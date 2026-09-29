@@ -63,12 +63,20 @@ pub(crate) fn give_back(app: &AppHandle) {
 }
 
 /// Windows has no panel that can refuse key status: the toolbar is a
-/// `WS_EX_NOACTIVATE` window, which is a different model for the same problem
-/// and is left to the platform.
+/// `WS_EX_NOACTIVATE` window, so a field in it gets the keyboard when it is
+/// pressed without being asked for.
 #[cfg(not(target_os = "macos"))]
 pub(crate) fn take(_app: &AppHandle) -> Result<(), String> {
   Ok(())
 }
 
+/// `WS_EX_NOACTIVATE` refuses activation, not focus: a press anywhere on the
+/// toolbar moves the keyboard into its web view, where the overlay's keys go
+/// unheard. Giving it back focuses the anchor's overlay child again.
 #[cfg(not(target_os = "macos"))]
-pub(crate) fn give_back(_app: &AppHandle) {}
+pub(crate) fn give_back(app: &AppHandle) {
+  let result = app.run_on_main_thread(super::super::native_overlay::focus_input);
+  if let Err(error) = result {
+    eprintln!("Could not reach the main thread to move keyboard focus: {error}");
+  }
+}

@@ -34,6 +34,12 @@ export const LabelOnly: Story = {
   args: { content: { label: "Reset the view" } },
 };
 
+/** A shortcut with a modifier, named the way the running platform names it:
+ * Command on macOS, Ctrl on Windows. */
+export const ModifiedShortcut: Story = {
+  args: { content: { label: "Undo", shortcut: "CommandOrControl+KeyZ" } },
+};
+
 /** The trigger, hovered or focused: in Storybook it shows the in-page
  * tooltip, and in the app the window. */
 export const Trigger: Story = {

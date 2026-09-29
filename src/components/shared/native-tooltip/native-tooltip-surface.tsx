@@ -3,15 +3,16 @@
 
 import { Ref } from "react";
 
-import { Keyboard } from "../../base/keyboard/keyboard";
+import { Keyboard, Shortcut } from "../../base/keyboard/keyboard";
 import { Text } from "../../base/text/text";
 import { tooltipShapeClassName } from "../../base/tooltip/tooltip";
+import { hotkeyKeys } from "../hotkey-field/hotkey";
 
 import type { NativeTooltipContent } from "./api";
 
 /**
  * What a tooltip says: the label, and the shortcut that does the same thing
- * drawn as a keycap beside it.
+ * drawn as keycaps beside it, named for the platform it runs on.
  *
  * Shared by the tooltip window and the in-page tooltip it falls back to, so a
  * tooltip reads the same however it is drawn.
@@ -24,7 +25,13 @@ export function NativeTooltipLabel({
   return (
     <span className="flex items-center gap-control-inset">
       {content.label}
-      {content.shortcut ? <Keyboard>{content.shortcut}</Keyboard> : null}
+      {content.shortcut ? (
+        <Shortcut>
+          {hotkeyKeys(content.shortcut).map((key, index) => (
+            <Keyboard key={`${key}-${index.toString()}`}>{key}</Keyboard>
+          ))}
+        </Shortcut>
+      ) : null}
     </span>
   );
 }

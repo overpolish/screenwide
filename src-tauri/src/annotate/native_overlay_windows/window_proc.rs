@@ -67,7 +67,7 @@ fn key(code: u16, modifiers: u32) -> bool {
   handled
 }
 
-/// The modifiers behind a key that arrived at this window directly.
+/// The modifiers behind a key press.
 fn pressed_modifiers() -> u32 {
   let down = |key: VIRTUAL_KEY| unsafe { GetKeyState(i32::from(key.0)) } < 0;
   (if down(VK_CONTROL) {
@@ -75,19 +75,6 @@ fn pressed_modifiers() -> u32 {
   } else {
     0
   }) | (if down(VK_SHIFT) {
-    input::MODIFIER_SHIFT
-  } else {
-    0
-  })
-}
-
-/// The modifiers the keyboard monitor posted with a key it consumed.
-fn posted_modifiers(flags: isize) -> u32 {
-  (if flags & FLAG_CONTROL_DOWN != 0 {
-    input::MODIFIER_COMMAND
-  } else {
-    0
-  }) | (if flags & FLAG_SHIFT != 0 {
     input::MODIFIER_SHIFT
   } else {
     0
@@ -130,6 +117,10 @@ pub(super) extern "system" fn window_proc(
       // Captured so a drag that leaves the display keeps reporting, and so the
       // release arrives even over another window.
       let _ = unsafe { SetCapture(hwnd) };
+      // A press on the picture is the way back from the toolbar, which took
+      // the keyboard when it was pressed. The macOS side hands it back here
+      // too.
+      focus_input();
       pointer(hwnd, input::PHASE_DOWN, lparam);
       LRESULT(0)
     }
@@ -165,15 +156,6 @@ pub(super) extern "system" fn window_proc(
       } else {
         unsafe { DefWindowProcW(hwnd, message, wparam, lparam) }
       }
-    }
-    // The monitor's fallback for the keys that arrive while something else
-    // holds focus. Releases and bare modifier transitions are not commands.
-    OVERLAY_KEY_EVENT => {
-      let flags = lparam.0;
-      if flags & (FLAG_MODIFIER | FLAG_RELEASE) != 0 {
-        return LRESULT(0);
-      }
-      LRESULT(isize::from(key(wparam.0 as u16, posted_modifiers(flags))))
     }
     _ => unsafe { DefWindowProcW(hwnd, message, wparam, lparam) },
   }

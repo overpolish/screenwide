@@ -4,6 +4,18 @@
 use super::*;
 use crate::editor::timeline_edit::TimelineRange;
 
+/// The modifier names the running platform's keyboards print.
+const COMMAND: &str = if cfg!(target_os = "windows") {
+  "Win"
+} else {
+  "Command"
+};
+const CONTROL: &str = if cfg!(target_os = "windows") {
+  "Ctrl"
+} else {
+  "Control"
+};
+
 #[test]
 fn v1_timeline_expands_legacy_modifier_mask() {
   let compositor = KeyboardCompositor::from_shortcuts_with_legacy(
@@ -17,7 +29,10 @@ fn v1_timeline_expands_legacy_modifier_mask() {
     }],
     true,
   );
-  assert_eq!(compositor.timeline_items()[0].label, "Command Shift A");
+  assert_eq!(
+    compositor.timeline_items()[0].label,
+    format!("{COMMAND} Shift A")
+  );
 }
 
 #[test]
@@ -48,7 +63,7 @@ fn timeline_items_use_reconstruction_order_and_key_labels() {
       }],
     },
   ]);
-  assert_eq!(compositor.timeline_items()[0].label, "Command A");
+  assert_eq!(compositor.timeline_items()[0].label, format!("{COMMAND} A"));
   assert_eq!(compositor.timeline_items()[0].id, 0);
   assert_eq!(compositor.timeline_items()[1].label, "Esc");
 }
@@ -154,8 +169,8 @@ fn timeline_lanes_meet_across_a_modifier_repress() {
   let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
   let items = compositor.timeline_items();
   assert_eq!(items.len(), 2);
-  assert_eq!(items[0].label, "Control");
-  assert_eq!(items[1].label, "Control Shift A");
+  assert_eq!(items[0].label, CONTROL);
+  assert_eq!(items[1].label, format!("{CONTROL} Shift A"));
   assert_eq!(items[0].end_ms, items[1].start_ms);
   assert_eq!(items[0].end_ms, 3_074);
 }
@@ -415,7 +430,7 @@ fn a_chord_during_the_fade_starts_a_fresh_badge() {
   ];
   let compositor = KeyboardCompositor::from_shortcuts(reconstruct_v2(&records));
   let items = compositor.timeline_items();
-  assert_eq!(items[0].label, "Control Shift A");
+  assert_eq!(items[0].label, format!("{CONTROL} Shift A"));
   assert_eq!(items[0].end_ms, 3_398);
   assert_eq!(items[1].start_ms, 3_398);
   for visual in compositor.visuals_snapshot() {

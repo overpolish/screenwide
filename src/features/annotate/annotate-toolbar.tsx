@@ -145,12 +145,16 @@ export function AnnotateToolbar({
         </div>
 
         <div className="flex items-center gap-control">
-          <NativeTooltipTrigger tooltip={{ label: "Undo", shortcut: "⌘Z" }}>
+          <NativeTooltipTrigger
+            tooltip={{ label: "Undo", shortcut: "CommandOrControl+KeyZ" }}
+          >
             <IconButton aria-label="Undo the last annotation" onPress={onUndo}>
               <Undo2 />
             </IconButton>
           </NativeTooltipTrigger>
-          <NativeTooltipTrigger tooltip={{ label: "Clear", shortcut: "⌫" }}>
+          <NativeTooltipTrigger
+            tooltip={{ label: "Clear", shortcut: "Backspace" }}
+          >
             <IconButton aria-label="Clear annotations" onPress={onClear}>
               <Eraser />
             </IconButton>

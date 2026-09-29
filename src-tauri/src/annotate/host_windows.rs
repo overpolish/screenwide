@@ -80,8 +80,8 @@ fn present_on_owning_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<
       eprintln!("An annotate host could not be raised: {error}");
     }
   }
-  // After the hosts are on screen: the monitor targets the anchor's child, and
-  // focusing a window that is not yet visible does nothing.
+  // After the hosts are on screen: focusing a window that is not yet visible
+  // does nothing.
   native_overlay::install_input(app);
   native_overlay::redraw();
   Ok(())

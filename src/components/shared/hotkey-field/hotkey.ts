@@ -80,7 +80,11 @@ export function hotkeyFromEvent(
   return [...modifiers, event.code].join("+");
 }
 
-export function hotkeyKeys(value: string | null, isMac: boolean): string[] {
+export function hotkeyKeys(
+  value: string | null,
+  isMac = typeof navigator !== "undefined" &&
+    navigator.userAgent.includes("Mac"),
+): string[] {
   return value
     ? value.split("+").map((key) => {
         if (key === "MouseMiddle") return "Middle click";

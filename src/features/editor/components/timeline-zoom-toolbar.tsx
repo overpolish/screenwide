@@ -84,7 +84,7 @@ export function TimelineZoomToolbar({
           </IconButton>
         </NativeTooltipTrigger>
         <NativeTooltipTrigger
-          tooltip={{ label: "Fit timeline", shortcut: "Shift+Z" }}
+          tooltip={{ label: "Fit timeline", shortcut: "Shift+KeyZ" }}
         >
           <IconButton
             aria-keyshortcuts="Shift+Z"

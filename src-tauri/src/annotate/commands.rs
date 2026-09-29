@@ -8,9 +8,9 @@
 
 use tauri::AppHandle;
 
-/// Takes the newest annotation off the screen, as `Cmd+Z` over the overlay
-/// does. A running recording keeps the clip it earned: the annotation really was
-/// visible for that long.
+/// Takes the newest annotation off the screen, as Cmd+Z (Ctrl+Z on Windows)
+/// over the overlay does. A running recording keeps the clip it earned: the
+/// annotation really was visible for that long.
 #[tauri::command]
 pub fn undo_annotation(app: AppHandle) {
   if !super::is_active(&app) {

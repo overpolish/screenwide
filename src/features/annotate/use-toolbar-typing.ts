@@ -23,6 +23,10 @@ const isField = (node: EventTarget | null) =>
  *
  * Moving between two fields is one handover, not a release and a claim: the
  * blur names where focus is going, so a move within the plate is left alone.
+ *
+ * Every press that ends outside a field gives the keyboard back as well. On
+ * Windows the window refuses activation but not focus, so any press moves the
+ * keyboard into the page; on macOS the hand-back finds nothing to move.
  */
 export function useToolbarTyping() {
   useEffect(() => {
@@ -41,6 +45,11 @@ export function useToolbarTyping() {
       typing = false;
       endAnnotateToolbarTyping().catch(() => undefined);
     };
+    const giveBack = () => {
+      if (isField(document.activeElement)) return;
+      typing = false;
+      endAnnotateToolbarTyping().catch(() => undefined);
+    };
 
     const onFocusIn = (event: FocusEvent) => {
       if (isField(event.target)) claim();
@@ -52,9 +61,11 @@ export function useToolbarTyping() {
 
     document.addEventListener("focusin", onFocusIn);
     document.addEventListener("focusout", onFocusOut);
+    document.addEventListener("pointerup", giveBack);
     return () => {
       document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("focusout", onFocusOut);
+      document.removeEventListener("pointerup", giveBack);
       release();
     };
   }, []);

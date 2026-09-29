@@ -52,8 +52,8 @@ use windows::{
     System::Threading::GetCurrentThreadId,
     UI::{
       Input::KeyboardAndMouse::{
-        GetCapture, GetKeyState, ReleaseCapture, SetCapture, SetFocus, VIRTUAL_KEY, VK_CONTROL,
-        VK_SHIFT,
+        GetCapture, GetFocus, GetKeyState, ReleaseCapture, SetCapture, SetFocus, VIRTUAL_KEY,
+        VK_CONTROL, VK_SHIFT,
       },
       WindowsAndMessaging::{
         DefWindowProcW, DestroyWindow, GetClientRect, GetWindowLongPtrW, GetWindowThreadProcessId,
@@ -70,9 +70,6 @@ use windows::{
 };
 
 use super::{geometry, input, live_clips};
-use crate::osc::keyboard_windows::{
-  self, FLAG_CONTROL_DOWN, FLAG_MODIFIER, FLAG_RELEASE, FLAG_SHIFT, OVERLAY_KEY_EVENT,
-};
 
 use crate::editor::preview_platform::arrows;
 use crate::windows::overlay_surface;
@@ -186,19 +183,26 @@ pub(super) fn detach(window: &WebviewWindow) {
   }
 }
 
-/// Starts routing input. The low-level monitor delivers the overlay's own keys
-/// whatever holds focus; focusing the anchor's child is what makes them arrive
-/// directly as well, the way the Ruler's compositor child is focused.
-pub(super) fn install_input(app: &AppHandle) {
-  let _ = APP.set(app.clone());
+/// Gives the keyboard to the anchor's overlay child: the Windows twin of the
+/// macOS anchor host being made key. The overlay hears keys only while it
+/// holds focus. A press on the toolbar's web view moves focus into it without
+/// activating anything, and neither side can get it back on its own, so every
+/// way back to drawing (a press on the picture, a toolbar press that is done
+/// with) ends here. Escape and the activation shortcut are global
+/// registrations and work wherever focus is. Owning thread only.
+pub(super) fn focus_input() {
   let Some(child) = overlay().surfaces.first().map(|surface| surface.child) else {
     return;
   };
-  let _ = unsafe { SetFocus(Some(child)) };
-  if let Err(error) = keyboard_windows::start(child.0 as isize, keyboard_windows::Overlay::Annotate)
-  {
-    eprintln!("The annotate overlay could not watch the keyboard: {error}");
+  if unsafe { GetFocus() } != child {
+    let _ = unsafe { SetFocus(Some(child)) };
   }
+}
+
+/// Starts routing input: the keyboard goes to the anchor's overlay child.
+pub(super) fn install_input(app: &AppHandle) {
+  let _ = APP.set(app.clone());
+  focus_input();
 }
 
 /// Stops routing input. The surfaces stay: annotations left on screen are
@@ -209,7 +213,6 @@ pub(super) fn install_input(app: &AppHandle) {
 /// releases the capture itself, and the `WM_CAPTURECHANGED` that sends
 /// redraws through the overlay's lock, which `detach` would be holding.
 pub(super) fn teardown_input() {
-  keyboard_windows::stop(keyboard_windows::Overlay::Annotate);
   let captured = unsafe { GetCapture() };
   let held = !captured.is_invalid()
     && overlay()

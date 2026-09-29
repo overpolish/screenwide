@@ -72,7 +72,6 @@ struct Monitor {
 pub(crate) enum Overlay {
   Ruler = 1,
   TextRecognition = 2,
-  Annotate = 3,
 }
 
 thread_local! {

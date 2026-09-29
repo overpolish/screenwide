@@ -3,15 +3,34 @@
 
 use super::*;
 
+/// Key names as each platform's keyboards print them. Keycodes are
+/// macOS-normalized on both capture platforms, so the Windows names are chosen
+/// here, matching the keyboard artwork drawn into Windows videos.
+#[cfg(target_os = "windows")]
+mod names {
+  pub(super) const COMMAND: &str = "Win";
+  pub(super) const CONTROL: &str = "Ctrl";
+  pub(super) const OPTION: &str = "Alt";
+  pub(super) const CLEAR: &str = "Num Lock";
+}
+#[cfg(not(target_os = "windows"))]
+mod names {
+  pub(super) const COMMAND: &str = "Command";
+  pub(super) const CONTROL: &str = "Control";
+  pub(super) const OPTION: &str = "Option";
+  pub(super) const CLEAR: &str = "Clear";
+}
+use names::{CLEAR, COMMAND, CONTROL, OPTION};
+
 pub(super) fn shortcut_label(shortcut: &Shortcut, legacy_modifier_expansion: bool) -> String {
   let mut labels: Vec<String> = Vec::new();
   if legacy_modifier_expansion && shortcut.keys.len() == 1 {
     let key = &shortcut.keys[0];
     if !is_modifier_key(key.key_code) {
       for (bit, label) in [
-        (1, "Command"),
-        (2, "Control"),
-        (4, "Option"),
+        (1, COMMAND),
+        (2, CONTROL),
+        (4, OPTION),
         (8, "Shift"),
         (16, "fn"),
       ] {
@@ -84,16 +103,16 @@ pub(super) fn key_label(code: u16) -> String {
     50 => "`",
     51 => "Backspace",
     53 => "Esc",
-    54 | 55 => "Command",
+    54 | 55 => COMMAND,
     56 | 60 => "Shift",
     57 => "Caps Lock",
-    58 | 61 => "Option",
-    59 | 62 => "Control",
+    58 | 61 => OPTION,
+    59 | 62 => CONTROL,
     63 => "fn",
     65 => ".",
     67 => "*",
     69 => "+",
-    71 => "Clear",
+    71 => CLEAR,
     75 => "/",
     78 => "−",
     81 => "=",
