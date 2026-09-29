@@ -17,23 +17,19 @@ import { ControlRow } from "../../../components/shared/control-row/control-row";
 import type { ToolPanelPatch } from "./tool-panel-store";
 
 /**
- * How a redaction covers what is under it: the mode, a pixelation's style, a
- * blur's strength, and a word where the result is only a look. `animated` is
- * whether it draws in over a clip, which shows what it covers until it has
- * arrived.
+ * How a redaction covers what is under it: the mode, and a pixelation's
+ * style. They lead the panel because they decide which of its other rows are
+ * offered.
  */
 export function AnnotationRedactionRows({
-  animated,
   canShuffle,
   change,
   isLocked,
   pixelation,
   redaction,
   sizes,
-  strength,
   width,
 }: {
-  animated: boolean;
   /** Whether there is a drawn redaction to lay out again. */
   canShuffle: boolean;
   change: (values: ToolPanelPatch) => void;
@@ -44,14 +40,8 @@ export function AnnotationRedactionRows({
   > | null;
   redaction: AnnotationRedaction;
   sizes: number[];
-  strength: number;
   width: number;
 }) {
-  // Classic pixelation and blur keep what an attack can read text back out
-  // of, and a box drawing in shows what it covers until it has arrived: a
-  // look, not a guarantee. Secure pixelation withstands the attack tests.
-  const isStylistic =
-    redaction === "pixelateClassic" || redaction === "blur" || animated;
   return (
     <>
       <ControlRow title="Redaction">
@@ -101,30 +91,58 @@ export function AnnotationRedactionRows({
           )}
         </ControlRow>
       ) : null}
-
-      {isStylistic ? (
-        <Text variant="footnote">
-          Use Erase or Colour for sensitive content.
-        </Text>
-      ) : null}
-
-      {redaction === "blur" ? (
-        <ControlRow title="Strength">
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <AnnotationWidthSlider
-                isDisabled={isLocked}
-                label="Strength"
-                onChange={(next) => {
-                  change({ annotationStyle: { strength: next } });
-                }}
-                presets={ANNOTATION_BLUR_STRENGTHS}
-                value={strength}
-              />
-            </div>
-          )}
-        </ControlRow>
-      ) : null}
     </>
+  );
+}
+
+/** A blur's strength, which stands where a pixelation's block size does. */
+export function AnnotationBlurStrengthRow({
+  change,
+  isLocked,
+  strength,
+}: {
+  change: (values: ToolPanelPatch) => void;
+  isLocked: boolean;
+  strength: number;
+}) {
+  return (
+    <ControlRow title="Strength">
+      {(controlProps) => (
+        <div {...controlProps} role="group">
+          <AnnotationWidthSlider
+            isDisabled={isLocked}
+            label="Strength"
+            onChange={(next) => {
+              change({ annotationStyle: { strength: next } });
+            }}
+            presets={ANNOTATION_BLUR_STRENGTHS}
+            value={strength}
+          />
+        </div>
+      )}
+    </ControlRow>
+  );
+}
+
+/**
+ * A word where the redaction is only a look. Classic pixelation and blur keep
+ * what an attack can read text back out of, and a box drawing in shows what
+ * it covers until it has arrived. Secure pixelation withstands the attack
+ * tests. The note ends the panel, so its coming and going never moves a
+ * control, Animate included.
+ */
+export function AnnotationRedactionNote({
+  animated,
+  redaction,
+}: {
+  /** Whether the redaction draws in over its clip. */
+  animated: boolean;
+  redaction: AnnotationRedaction;
+}) {
+  const isStylistic =
+    redaction === "pixelateClassic" || redaction === "blur" || animated;
+  if (!isStylistic) return null;
+  return (
+    <Text variant="footnote">Use Erase or Colour for sensitive content.</Text>
   );
 }

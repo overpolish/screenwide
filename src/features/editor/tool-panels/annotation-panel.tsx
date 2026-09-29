@@ -6,12 +6,9 @@ import { ArrowLeftRight } from "lucide-react";
 import { Button } from "../../../components/base/button/button";
 import { Switch } from "../../../components/base/switch/switch";
 import { Text } from "../../../components/base/text/text";
-import { AnnotationAlignGroup } from "../../../components/shared/annotation-style/annotation-align-group";
 import { AnnotationAngleDial } from "../../../components/shared/annotation-style/annotation-angle-dial";
 import { AnnotationColorGrid } from "../../../components/shared/annotation-style/annotation-color-grid";
 import { AnnotationFitGroup } from "../../../components/shared/annotation-style/annotation-fit-group";
-import { AnnotationHandDrawnToggle } from "../../../components/shared/annotation-style/annotation-hand-drawn-toggle";
-import { AnnotationHeadGroup } from "../../../components/shared/annotation-style/annotation-head-group";
 import { AnnotationRadiusField } from "../../../components/shared/annotation-style/annotation-radius-field";
 import { AnnotationWidthSlider } from "../../../components/shared/annotation-style/annotation-width-slider";
 import { redactionSizePresets } from "../../../components/shared/annotation-style/widths";
@@ -19,8 +16,12 @@ import { ControlRow } from "../../../components/shared/control-row/control-row";
 import { ANNOTATION_KINDS } from "../annotation-kinds";
 import { EditorKind } from "../types";
 
-import { AnnotationRedactionRows } from "./annotation-redaction-rows";
-import { AnnotationSpotlightRows } from "./annotation-spotlight-rows";
+import { AnnotationOptionRows } from "./annotation-option-rows";
+import {
+  AnnotationBlurStrengthRow,
+  AnnotationRedactionNote,
+  AnnotationRedactionRows,
+} from "./annotation-redaction-rows";
 import { useAnnotationColorMenu } from "./use-annotation-color-menu";
 import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
 
@@ -58,17 +59,8 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   });
   if (!annotation) return <Text variant="body">Nothing selected</Text>;
 
-  const {
-    align,
-    color,
-    handDrawn,
-    head,
-    manual,
-    radius,
-    redaction,
-    strength,
-    width,
-  } = annotation.style;
+  const { color, manual, radius, redaction, strength, width } =
+    annotation.style;
   const kind = ANNOTATION_KINDS[annotation.kind];
   const isDraft = annotation.isDraft === true;
   const pixelation =
@@ -84,18 +76,19 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
     workspace === "recording" &&
     kind.animates &&
     !(isDraft && kind.startsStill);
+  const animated = animates && annotation.animated;
+  // Rows follow the order every tool panel keeps: mode, size, geometry,
+  // options, Animate, colour, notes, then actions.
   return (
     <div className="flex flex-col gap-section">
       {kind.hasRedaction ? (
         <AnnotationRedactionRows
-          animated={animates && annotation.animated}
           canShuffle={!isDraft}
           change={change}
           isLocked={isLocked}
           pixelation={pixelation}
           redaction={redaction}
           sizes={kind.sizes}
-          strength={strength}
           width={width}
         />
       ) : null}
@@ -134,6 +127,30 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         </ControlRow>
       ) : null}
 
+      {kind.hasRedaction && redaction === "blur" ? (
+        <AnnotationBlurStrengthRow
+          change={change}
+          isLocked={isLocked}
+          strength={strength}
+        />
+      ) : null}
+
+      {kind.hasRadius ? (
+        <ControlRow title="Radius">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationRadiusField
+                isDisabled={isLocked}
+                onChange={(next) => {
+                  change({ annotationStyle: { radius: next } });
+                }}
+                value={radius}
+              />
+            </div>
+          )}
+        </ControlRow>
+      ) : null}
+
       {/* A counter is aimed by its tail, on the picture or here. The dial's
           notch stands where the tail does, and a held Shift snaps it to the
           same eighth of a turn a drag on the picture snaps to. */}
@@ -153,32 +170,17 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
         </ControlRow>
       ) : null}
 
-      {kind.hasHandDrawn ? (
-        <ControlRow title="Hand-drawn">
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <AnnotationHandDrawnToggle
-                isDisabled={isLocked}
-                isSelected={handDrawn}
-                onChange={(next) => {
-                  change({ annotationStyle: { handDrawn: next } });
-                }}
-                onRandomise={
-                  isDraft
-                    ? undefined
-                    : () => {
-                        change({ shuffleAnnotation: true });
-                      }
-                }
-              />
-            </div>
-          )}
-        </ControlRow>
-      ) : null}
+      <AnnotationOptionRows
+        canShuffle={!isDraft}
+        change={change}
+        isLocked={isLocked}
+        kind={kind}
+        style={annotation.style}
+      />
 
       {/* Drawing in and out happens over a clip, and only a recording has
-          one: a screenshot is one instant, so there is no time for an
-          annotation to arrive over and the row is not offered there at all. */}
+          one: a screenshot is one instant, so the row is not offered there at
+          all. It follows every other setting, so its absence moves none. */}
       {animates ? (
         <ControlRow title="Animate">
           {(controlProps) => (
@@ -193,85 +195,6 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           )}
         </ControlRow>
       ) : null}
-
-      {kind.hasHead ? (
-        <ControlRow title="Head">
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <AnnotationHeadGroup
-                isDisabled={isLocked}
-                onChange={(next) => {
-                  change({ annotationStyle: { head: next } });
-                }}
-                value={head}
-              />
-            </div>
-          )}
-        </ControlRow>
-      ) : null}
-
-      {/* The head rides the end point, so turning the annotation round points it
-          the other way without redrawing it: the same commit path the drag
-          on the picture uses. A counter is aimed by its tail instead, on the
-          picture itself. */}
-      {kind.reversible && !isDraft ? (
-        <ControlRow title="Direction">
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <Button
-                aria-label="Reverse the arrow"
-                isDisabled={isLocked}
-                onPress={() => {
-                  change({ reverseAnnotation: true });
-                }}
-              >
-                <ArrowLeftRight aria-hidden="true" />
-                Reverse
-              </Button>
-            </div>
-          )}
-        </ControlRow>
-      ) : null}
-
-      {kind.hasAlign ? (
-        <ControlRow title="Alignment">
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <AnnotationAlignGroup
-                isDisabled={isLocked}
-                onChange={(next) => {
-                  change({ annotationStyle: { align: next } });
-                }}
-                value={align}
-              />
-            </div>
-          )}
-        </ControlRow>
-      ) : null}
-
-      {kind.hasRadius ? (
-        <ControlRow title="Radius">
-          {(controlProps) => (
-            <div {...controlProps} role="group">
-              <AnnotationRadiusField
-                isDisabled={isLocked}
-                onChange={(next) => {
-                  change({ annotationStyle: { radius: next } });
-                }}
-                value={radius}
-              />
-            </div>
-          )}
-        </ControlRow>
-      ) : null}
-
-      <AnnotationSpotlightRows
-        change={change}
-        hasBlur={kind.hasBlur}
-        hasSoftness={kind.hasSoftness}
-        isLocked={isLocked}
-        style={annotation.style}
-      />
 
       {/* The swatches say what they are, so the row carries no heading; it
           keeps the section gap its labelled neighbours sit on. */}
@@ -293,6 +216,28 @@ export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
           savedColors={annotationColors}
           value={color}
         />
+      ) : null}
+
+      {kind.hasRedaction ? (
+        <AnnotationRedactionNote animated={animated} redaction={redaction} />
+      ) : null}
+
+      {/* The head rides the end point, so turning the annotation round points
+          it the other way without redrawing it: the same commit path the drag
+          on the picture uses. Only a drawn arrow has ends to swap. */}
+      {kind.reversible && !isDraft ? (
+        <div className="flex justify-end">
+          <Button
+            aria-label="Reverse the arrow"
+            isDisabled={isLocked}
+            onPress={() => {
+              change({ reverseAnnotation: true });
+            }}
+          >
+            <ArrowLeftRight aria-hidden="true" />
+            Reverse
+          </Button>
+        </div>
       ) : null}
     </div>
   );

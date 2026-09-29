@@ -142,19 +142,6 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
         />
       </div>
 
-      <ControlRow title="Drop shadow">
-        {(controlProps) => (
-          <Switch
-            {...controlProps}
-            isDisabled={isLocked}
-            isSelected={selection.dropShadow}
-            onChange={(next) => {
-              change({ selectionDropShadow: next });
-            }}
-          />
-        )}
-      </ControlRow>
-
       <ControlRow title="Radius">
         {(controlProps) => (
           <div {...controlProps} role="group">
@@ -182,39 +169,53 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
       {/* A camera track is placed in the screen's picture rather than padded
           against a colour of its own, so it is offered no padding. */}
       {selection.kind === "camera" ? null : (
-        <div className="flex flex-col gap-section">
-          <ControlRow title="Inset">
-            {(controlProps) => (
-              <div {...controlProps} role="group">
-                {/* The bridge carries one kind of request, so every value the
-                    knob passes is committed as it is reached; the draft holds
-                    the one just sent until the editor answers with it. */}
-                <SliderNumberField
-                  aria-label="Inset"
-                  className="w-48"
-                  isDisabled={isLocked}
-                  maxValue={Number.MAX_SAFE_INTEGER}
-                  minValue={0}
-                  onChange={(inset) => {
-                    change({ selectionInset: inset });
-                  }}
-                  rightSection="px"
-                  sliderMaxValue={Math.max(1, selection.insetMaximum)}
-                  value={selection.inset}
-                />
-              </div>
-            )}
-          </ControlRow>
-          <div className="flex justify-end">
-            <Button
-              isDisabled={isLocked}
-              onPress={() => {
-                change({ recenterSelection: true });
-              }}
-            >
-              Recenter
-            </Button>
-          </div>
+        <ControlRow title="Inset">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              {/* The bridge carries one kind of request, so every value the
+                  knob passes is committed as it is reached; the draft holds
+                  the one just sent until the editor answers with it. */}
+              <SliderNumberField
+                aria-label="Inset"
+                className="w-48"
+                isDisabled={isLocked}
+                maxValue={Number.MAX_SAFE_INTEGER}
+                minValue={0}
+                onChange={(inset) => {
+                  change({ selectionInset: inset });
+                }}
+                rightSection="px"
+                sliderMaxValue={Math.max(1, selection.insetMaximum)}
+                value={selection.inset}
+              />
+            </div>
+          )}
+        </ControlRow>
+      )}
+
+      <ControlRow title="Drop shadow">
+        {(controlProps) => (
+          <Switch
+            {...controlProps}
+            isDisabled={isLocked}
+            isSelected={selection.dropShadow}
+            onChange={(next) => {
+              change({ selectionDropShadow: next });
+            }}
+          />
+        )}
+      </ControlRow>
+
+      {selection.kind === "camera" ? null : (
+        <div className="flex justify-end">
+          <Button
+            isDisabled={isLocked}
+            onPress={() => {
+              change({ recenterSelection: true });
+            }}
+          >
+            Recenter
+          </Button>
         </div>
       )}
     </div>

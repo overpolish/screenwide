@@ -71,23 +71,20 @@ export const Counter: Story = {
 /** The Text panel: a text box has no head or aim, and lines its lines up by
  * the alignment it carries instead. */
 export const Text: Story = {
-  args: { tool: "annotation", workspace: "screenshot" },
+  args: { tool: "annotation", workspace: "recording" },
   beforeEach: () => {
-    seed(
-      {
-        annotation: {
-          animated: true,
-          id: "text-1",
-          kind: "text",
-          style: { ...dress, align: "center", color: "#ffcc00", width: 28 },
-        },
-        cursorEffects: DEFAULT_CURSOR_EFFECTS,
-        frame: null,
-        isLocked: false,
-        selection: null,
+    seed({
+      annotation: {
+        animated: true,
+        id: "text-1",
+        kind: "text",
+        style: { ...dress, align: "center", color: "#ffcc00", width: 28 },
       },
-      "screenshot",
-    );
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
   },
 };
 
@@ -95,89 +92,80 @@ export const Text: Story = {
  * offered because the blocks are what it draws, and no colour, because
  * pixelation takes its colour from around the box. */
 export const Redaction: Story = {
-  args: { tool: "annotation", workspace: "screenshot" },
+  args: { tool: "annotation", workspace: "recording" },
   beforeEach: () => {
-    seed(
-      {
-        annotation: {
-          animated: false,
-          id: "redact-1",
-          kind: "redact",
-          style: {
-            ...dress,
-            color: "#000000",
-            redaction: "pixelate",
-            softness: 0,
-            width: 12,
-          },
+    seed({
+      annotation: {
+        animated: false,
+        id: "redact-1",
+        kind: "redact",
+        style: {
+          ...dress,
+          color: "#000000",
+          redaction: "pixelate",
+          softness: 0,
+          width: 12,
         },
-        cursorEffects: DEFAULT_CURSOR_EFFECTS,
-        frame: null,
-        isLocked: false,
-        selection: null,
       },
-      "screenshot",
-    );
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
   },
 };
 
 /** The same box pixelated the classic way: ordinary blocks, which the note
  * says are a look rather than a way to hide anything sensitive. */
 export const RedactionClassic: Story = {
-  args: { tool: "annotation", workspace: "screenshot" },
+  args: { tool: "annotation", workspace: "recording" },
   beforeEach: () => {
-    seed(
-      {
-        annotation: {
-          animated: false,
-          id: "redact-1",
-          kind: "redact",
-          style: {
-            ...dress,
-            color: "#000000",
-            redaction: "pixelateClassic",
-            softness: 0,
-            width: 12,
-          },
+    seed({
+      annotation: {
+        animated: false,
+        id: "redact-1",
+        kind: "redact",
+        style: {
+          ...dress,
+          color: "#000000",
+          redaction: "pixelateClassic",
+          softness: 0,
+          width: 12,
         },
-        cursorEffects: DEFAULT_CURSOR_EFFECTS,
-        frame: null,
-        isLocked: false,
-        selection: null,
       },
-      "screenshot",
-    );
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
   },
 };
 
 /** The Redaction panel, blurring a face: a strength instead of a block size,
  * and corners rounded as far as they go, a circle over a square box. */
 export const RedactionBlur: Story = {
-  args: { tool: "annotation", workspace: "screenshot" },
+  args: { tool: "annotation", workspace: "recording" },
   beforeEach: () => {
-    seed(
-      {
-        annotation: {
-          animated: false,
-          id: "redact-1",
-          kind: "redact",
-          style: {
-            ...dress,
-            color: "#000000",
-            radius: 50,
-            redaction: "blur",
-            softness: 0,
-            strength: 3,
-            width: 12,
-          },
+    seed({
+      annotation: {
+        animated: false,
+        id: "redact-1",
+        kind: "redact",
+        style: {
+          ...dress,
+          color: "#000000",
+          radius: 50,
+          redaction: "blur",
+          softness: 0,
+          strength: 3,
+          width: 12,
         },
-        cursorEffects: DEFAULT_CURSOR_EFFECTS,
-        frame: null,
-        isLocked: false,
-        selection: null,
       },
-      "screenshot",
-    );
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
   },
 };
 
@@ -250,21 +238,18 @@ export const ArrowWithoutAnimation: Story = {
 export const ArrowInAScreenshot: Story = {
   args: { tool: "annotation", workspace: "screenshot" },
   beforeEach: () => {
-    seed(
-      {
-        annotation: {
-          animated: true,
-          id: "arrow-1",
-          kind: "arrow",
-          style: { ...dress, color: "#ff383c", head: "end", width: 8 },
-        },
-        cursorEffects: DEFAULT_CURSOR_EFFECTS,
-        frame: null,
-        isLocked: false,
-        selection: null,
+    seed({
+      annotation: {
+        animated: true,
+        id: "arrow-1",
+        kind: "arrow",
+        style: { ...dress, color: "#ff383c", head: "end", width: 8 },
       },
-      "screenshot",
-    );
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
   },
 };
 

@@ -43,8 +43,6 @@ export function CursorEffectControls({
   );
   return (
     <div className="flex flex-col gap-section">
-      {toggle("clipAtVideoEdge", "Keep cursor inside the recording")}
-      {toggle("smoothMovement", "Smooth movement")}
       <ControlRow title="Size">
         {(controlProps) => (
           <div {...controlProps} role="group">
@@ -64,6 +62,8 @@ export function CursorEffectControls({
           </div>
         )}
       </ControlRow>
+      {toggle("clipAtVideoEdge", "Keep cursor inside the recording")}
+      {toggle("smoothMovement", "Smooth movement")}
       {toggle("motionBlur", "Motion blur")}
       {toggle("clickAnimation", "Click animation")}
     </div>
