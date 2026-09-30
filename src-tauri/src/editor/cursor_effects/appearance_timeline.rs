@@ -57,3 +57,36 @@ pub(super) fn normalize_custom_fallback_size(appearances: &mut [Appearance]) {
     appearance.height = height;
   }
 }
+
+/// A cursor recognised by its shape may have been drawn in another design
+/// than the system artwork it is drawn with here - an application's classic
+/// 9x18 I-beam, say, drawn with the system's 23x22 one - and its recorded box
+/// is that other design's. Stretched over it, the artwork takes the other
+/// design's proportions and comes out squashed. Where the recorded box is not
+/// the artwork's own at any scale, the artwork is drawn at its own size about
+/// its own hotspot instead; a box that is the artwork's at some scale is kept,
+/// scale and all. `natural` is each style's own box: width, height and
+/// hotspot, in points.
+pub(super) fn fit_to_artwork(
+  appearances: &mut [Appearance],
+  natural: impl Fn(CursorStyle) -> Option<[f64; 4]>,
+) {
+  for appearance in appearances.iter_mut() {
+    let Some([width, height, hotspot_x, hotspot_y]) = natural(appearance.style) else {
+      continue;
+    };
+    let proportions = |wide: f64, high: f64| wide / high;
+    let same_design = appearance.height > 0.0
+      && (proportions(appearance.width, appearance.height) / proportions(width, height) - 1.0)
+        .abs()
+        <= 0.05;
+    if !same_design {
+      (
+        appearance.width,
+        appearance.height,
+        appearance.hotspot_x,
+        appearance.hotspot_y,
+      ) = (width, height, hotspot_x, hotspot_y);
+    }
+  }
+}

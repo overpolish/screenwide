@@ -52,6 +52,50 @@ fn reader_keeps_complete_lines_before_a_truncated_tail() {
 }
 
 #[test]
+fn a_macos_recordings_classic_i_beam_reads_back_as_an_i_beam() {
+  let styles = |platform: &str| {
+    let path = std::env::temp_dir().join(format!(
+      "screenwide-cursor-i-beam-{platform}-{}.jsonl",
+      std::process::id()
+    ));
+    let appearance = |width: u8, height: u8, x: u8, y: u8| {
+      format!(
+        "{{\"type\":\"appearance\",\"height\":{height}.0,\"hotspotX\":{x}.0,\
+         \"hotspotY\":{y}.0,\"style\":\"custom\",\"timestampUs\":0,\"width\":{width}.0}}\n"
+      )
+    };
+    std::fs::write(
+      &path,
+      format!(
+        "{{\"type\":\"header\",\"coordinateSpace\":\"global-logical-points\",\
+         \"platform\":\"{platform}\",\"source\":{{\"height\":100.0,\"kind\":\"screen\",\
+         \"platformId\":\"1\",\"videoHeight\":200,\"videoWidth\":200,\"width\":100.0,\
+         \"x\":0.0,\"y\":0.0}},\"timebase\":\"recording-microseconds\",\"version\":2}}\n{}{}",
+        appearance(9, 18, 4, 9),
+        appearance(9, 18, 0, 0),
+      ),
+    )
+    .unwrap();
+    let records = read(&path).unwrap();
+    let _ = std::fs::remove_file(path);
+    records
+      .into_iter()
+      .filter_map(|record| match record {
+        CursorRecord::Appearance { style, .. } => Some(style),
+        _ => None,
+      })
+      .collect::<Vec<_>>()
+  };
+  // Its own size and hotspot name it; any other custom cursor stays custom,
+  // and a Windows recording named its cursors by handle already.
+  assert_eq!(styles("macos"), [CursorStyle::IBeam, CursorStyle::Custom]);
+  assert_eq!(
+    styles("windows"),
+    [CursorStyle::Custom, CursorStyle::Custom]
+  );
+}
+
+#[test]
 fn initial_snapshot_starts_at_zero_and_motion_keeps_hardware_cadence() {
   let origin = Instant::now();
   let shared_origin = Arc::new(OnceLock::new());

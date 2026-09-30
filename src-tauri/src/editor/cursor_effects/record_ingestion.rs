@@ -39,6 +39,8 @@ impl CursorCompositor {
       })
       .collect();
     appearances.sort_by_key(|appearance| appearance.timestamp_us);
+    // The arrow's box is fitted before a custom cursor borrows it.
+    fit_to_artwork(&mut appearances, raster::natural_box);
     normalize_custom_fallback_size(&mut appearances);
     let visibility = visibility::events(records);
     let mut raw_positions: Vec<_> = records

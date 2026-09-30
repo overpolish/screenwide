@@ -53,6 +53,7 @@ fn custom_cursors_index_the_system_arrow_fitted_to_their_box() {
     hotspot_x: 5.0,
     hotspot_y: 5.0,
     image: RgbaImage::from_pixel(28, 40, image::Rgba([1, 2, 3, 255])),
+    points: (28.0, 40.0),
   };
   let artwork = custom_gpu_artwork(Some(&arrow));
   assert_eq!(

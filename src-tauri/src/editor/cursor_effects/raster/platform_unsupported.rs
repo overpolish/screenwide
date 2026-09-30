@@ -13,6 +13,7 @@ pub(super) struct StyleArtwork {
   pub hotspot_x: f64,
   pub hotspot_y: f64,
   pub image: RgbaImage,
+  pub points: (f64, f64),
 }
 
 pub(super) fn style_artwork(_style: CursorStyle) -> Option<&'static StyleArtwork> {

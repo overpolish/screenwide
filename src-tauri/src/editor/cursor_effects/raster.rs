@@ -40,6 +40,27 @@ pub(super) fn initialize_system_artwork() {
   platform::initialize();
 }
 
+/// The box a style's system artwork is drawn in at its own size - its width
+/// and height in points and its hotspot within them - or `None` where there
+/// is no artwork for it, as for a custom cursor.
+pub(super) fn natural_box(style: CursorStyle) -> Option<[f64; 4]> {
+  if style == CursorStyle::Custom {
+    return None;
+  }
+  let artwork = platform::style_artwork(style)?;
+  let (width, height) = artwork.points;
+  let (texels_wide, texels_high) = (artwork.image.width(), artwork.image.height());
+  if width <= 0.0 || height <= 0.0 || texels_wide == 0 || texels_high == 0 {
+    return None;
+  }
+  Some([
+    width,
+    height,
+    artwork.hotspot_x * width / f64::from(texels_wide),
+    artwork.hotspot_y * height / f64::from(texels_high),
+  ])
+}
+
 /// Artwork order shared by the GPU compositors' style-indexed textures and
 /// `GpuCursor::style`. Every system style that resolves to its own artwork
 /// appears once; `Custom` takes the extra slot after them.

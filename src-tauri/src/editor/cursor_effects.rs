@@ -20,7 +20,7 @@ use crate::recording::cursor::{
 use std::path::Path;
 
 mod appearance_timeline;
-use appearance_timeline::{normalize_custom_fallback_size, stable_appearances};
+use appearance_timeline::{fit_to_artwork, normalize_custom_fallback_size, stable_appearances};
 #[cfg(target_os = "macos")]
 mod gpu_wire;
 #[cfg(target_os = "macos")]

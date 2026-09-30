@@ -115,6 +115,45 @@ fn custom_arrow_fallback_keeps_the_recorded_arrow_size() {
 }
 
 #[test]
+fn a_cursor_drawn_in_another_design_takes_the_artworks_own_box() {
+  // The system's I-beam is a 23x22 canvas; its arrow 28x40.
+  let natural = |style| match style {
+    CursorStyle::IBeam => Some([23.0, 22.0, 12.0, 11.0]),
+    CursorStyle::Arrow => Some([28.0, 40.0, 5.0, 5.0]),
+    _ => None,
+  };
+  let recorded = |style, width, height, hotspot: (f64, f64)| Appearance {
+    width,
+    height,
+    hotspot_x: hotspot.0,
+    hotspot_y: hotspot.1,
+    ..appearance(0, style)
+  };
+  let mut appearances = [
+    // An application's classic I-beam, recognised by its shape.
+    recorded(CursorStyle::IBeam, 9.0, 18.0, (4.0, 9.0)),
+    // The system's own arrow, and the same arrow twice the size.
+    recorded(CursorStyle::Arrow, 28.0, 40.0, (5.0, 5.0)),
+    recorded(CursorStyle::Arrow, 56.0, 80.0, (10.0, 10.0)),
+    recorded(CursorStyle::Custom, 9.0, 18.0, (4.0, 9.0)),
+  ];
+  fit_to_artwork(&mut appearances, natural);
+  let boxes: Vec<_> = appearances
+    .iter()
+    .map(|a| (a.width, a.height, a.hotspot_x, a.hotspot_y))
+    .collect();
+  assert_eq!(
+    boxes,
+    [
+      (23.0, 22.0, 12.0, 11.0),
+      (28.0, 40.0, 5.0, 5.0),
+      (56.0, 80.0, 10.0, 10.0),
+      (9.0, 18.0, 4.0, 9.0),
+    ]
+  );
+}
+
+#[test]
 fn gpu_cursor_position_is_rounded_to_the_output_pixel_grid() {
   let records = [
     CursorRecord::Header {

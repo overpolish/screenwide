@@ -135,7 +135,12 @@ pub fn read(path: &Path) -> Result<Vec<CursorRecord>, String> {
     }
   }
   match records.first() {
-    Some(CursorRecord::Header { version, .. }) if (1..=FORMAT_VERSION).contains(version) => {
+    Some(CursorRecord::Header {
+      version, platform, ..
+    }) if (1..=FORMAT_VERSION).contains(version) => {
+      if platform == "macos" {
+        records.iter_mut().for_each(classic_i_beam);
+      }
       Ok(records)
     }
     Some(CursorRecord::Header { version, .. }) => Err(format!(
@@ -145,5 +150,25 @@ pub fn read(path: &Path) -> Result<Vec<CursorRecord>, String> {
       || "The cursor recording has no valid header".to_owned(),
       |error| format!("The cursor recording has no valid header: {error}"),
     )),
+  }
+}
+
+/// macOS recordings made before capture read cursors by their shape stored
+/// the classic I-beam - which most text views still draw, and which matches
+/// none of the system's current cursors - as a custom cursor. Its size and
+/// hotspot are its own, so it is read back as the I-beam it was.
+fn classic_i_beam(record: &mut CursorRecord) {
+  if let CursorRecord::Appearance {
+    height,
+    hotspot_x,
+    hotspot_y,
+    style: style @ CursorStyle::Custom,
+    width,
+    ..
+  } = record
+  {
+    if (*width, *height, *hotspot_x, *hotspot_y) == (9.0, 18.0, 4.0, 9.0) {
+      *style = CursorStyle::IBeam;
+    }
   }
 }

@@ -28,6 +28,8 @@ pub(super) struct StyleArtwork {
   pub hotspot_x: f64,
   pub hotspot_y: f64,
   pub image: RgbaImage,
+  /// The cursor's size in points, which the system draws it at.
+  pub points: (f64, f64),
 }
 
 struct SystemArtwork(Vec<(CursorStyle, StyleArtwork)>);
@@ -120,6 +122,7 @@ fn load() -> Result<SystemArtwork, String> {
           hotspot_x,
           hotspot_y,
           image,
+          points: (size.width, size.height),
         },
       ))
     })

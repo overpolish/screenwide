@@ -3,6 +3,9 @@
 
 #[path = "platform_macos/events.rs"]
 mod events;
+/// What a cursor no stock image matches is, read from its shape.
+#[path = "platform_macos/picture.rs"]
+mod picture;
 use events::current_event;
 use events::is_motion;
 use events::raw_event;
@@ -137,11 +140,14 @@ impl CursorCatalog {
     let current = fingerprint(&cursor);
     let style = self.cache.borrow().get(&current).copied();
     let style = style.unwrap_or_else(|| {
+      // An exact match is the system's own cursor; anything else - an older
+      // design an application still draws, or one of its own - is read by
+      // its shape, once, since the result is cached by the same fingerprint.
       let style = self
         .entries
         .iter()
         .find_map(|(style, candidate)| (*candidate == current).then_some(*style))
-        .unwrap_or(CursorStyle::Custom);
+        .unwrap_or_else(|| picture::recognised(&cursor));
       let mut cache = self.cache.borrow_mut();
       // Apps ship arbitrary custom cursors, so the key space is unbounded; a
       // hard cap with a full flush beats an LRU here because a real working set

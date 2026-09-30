@@ -18,6 +18,10 @@ mod platform;
 mod platform;
 
 mod format;
+/// What a cursor is, read from its picture where the system does not say.
+#[cfg(any(target_os = "macos", test))]
+#[path = "cursor/shape.rs"]
+mod shape;
 mod visibility;
 pub(crate) use visibility::set_cursor_visibility;
 #[cfg(test)]
