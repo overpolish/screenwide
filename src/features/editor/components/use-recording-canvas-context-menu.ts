@@ -23,11 +23,13 @@ import {
 } from "./use-recording-track-menu";
 
 /** What a right press on an annotation needs: the clips to find it among and
- * to reorder, and the pin actions its menu offers. */
+ * to reorder, the pin actions its menu offers, and the choice it may be one
+ * of. */
 type CanvasMenuAnnotations = {
   clips: RecordingAnnotationClip[];
   onClipsChange: (clips: RecordingAnnotationClip[]) => void;
   pinning: AnnotationClipPinning;
+  selectedIds: ReadonlySet<string>;
 };
 
 export function useRecordingCanvasContextMenu({
@@ -49,12 +51,14 @@ export function useRecordingCanvasContextMenu({
   onSelectedTrackChange?: (track: RecordingTrackId | null) => void;
 }) {
   // A right press on an annotation opens the menu its timeline clip opens.
-  // The native side has already chosen it and names it here.
+  // The native side has already chosen it, or kept the group it is one of,
+  // and names it here.
   const openAnnotationMenu = useAnnotationClipMenu({
     clips: annotations.clips,
     idPrefix: "annotation-canvas:",
     onClipsChange: annotations.onClipsChange,
     pinning: annotations.pinning,
+    selectedIds: annotations.selectedIds,
   });
   const openCanvasAnnotationMenuRef = useRef<
     (annotationId: string, x: number, y: number) => void

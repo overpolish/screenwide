@@ -4,7 +4,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  arrangedGroup,
   availableArrangements,
+  availableGroupArrangements,
   arranged,
   freshAnnotationIndex,
 } from "./annotation-order";
@@ -80,5 +82,87 @@ describe("arranged", () => {
     });
     expect(arranged(items, 1, { arrangement: "backward", meets })).toBe(items);
     expect(arranged(items, 1, { arrangement: "back", meets })).toBe(items);
+  });
+});
+
+describe("arrangedGroup", () => {
+  const always = () => true;
+  const letters = (list: string[]) => list.join("");
+  const group =
+    (members: string) =>
+    (item: string): boolean =>
+      members.includes(item);
+
+  it("steps the group over the next item, keeping its own stacking", () => {
+    expect(
+      letters(
+        arrangedGroup(["a", "x", "b", "y"], group("ab"), {
+          arrangement: "forward",
+          meets: always,
+        }),
+      ),
+    ).toBe("xayb");
+    expect(
+      letters(
+        arrangedGroup(["x", "a", "y", "b"], group("ab"), {
+          arrangement: "backward",
+          meets: always,
+        }),
+      ),
+    ).toBe("axby");
+  });
+
+  it("holds a member back behind another member rather than passing it", () => {
+    // `a` never meets `x`, so once `b` has passed it the next item `a` meets
+    // is `b` itself.
+    const spans: Span[] = [
+      ["a", 0, 10],
+      ["b", 5, 25],
+      ["x", 15, 30],
+    ];
+    expect(
+      ids(
+        arrangedGroup(spans, ([id]) => id !== "x", {
+          arrangement: "forward",
+          meets,
+        }),
+      ),
+    ).toEqual(["a", "x", "b"]);
+  });
+
+  it("takes the group to the very top or bottom as one block", () => {
+    const items = ["b", "x", "a", "y"];
+    expect(
+      letters(
+        arrangedGroup(items, group("ab"), {
+          arrangement: "front",
+          meets: always,
+        }),
+      ),
+    ).toBe("xyba");
+    expect(
+      letters(
+        arrangedGroup(items, group("ab"), {
+          arrangement: "back",
+          meets: always,
+        }),
+      ),
+    ).toBe("baxy");
+  });
+
+  it("offers no move, and makes none, past items no member meets", () => {
+    const spans: Span[] = [
+      ["a", 0, 10],
+      ["b", 0, 10],
+      ["x", 20, 30],
+    ];
+    const isMember = ([id]: Span) => id === "a" || id === "b";
+    expect(availableGroupArrangements(spans, isMember, meets)).toEqual({
+      canBringForward: false,
+      canSendBackward: false,
+    });
+    expect(
+      arrangedGroup(spans, isMember, { arrangement: "front", meets }),
+    ).toBe(spans);
   });
 });

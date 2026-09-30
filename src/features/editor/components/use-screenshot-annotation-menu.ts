@@ -5,7 +5,8 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef } from "react";
 
 import { pointerAnchor, usePopupMenu } from "../../popup-panel/use-popup-menu";
-import { availableArrangements, arranged } from "../annotation-order";
+import { arrangedGroup, availableGroupArrangements } from "../annotation-order";
+import { annotationMenuTargets } from "../annotation-selection";
 import { Annotation } from "../annotations";
 
 import {
@@ -21,16 +22,19 @@ const meet = () => true;
 /**
  * A right press on an annotation in the screenshot preview, answered with the
  * app's own menu at the pointer: it moves the annotation through its layer's
- * drawing order. The native chrome only hit-tests the selected layer, so the
- * annotation is looked for among `annotations`, that layer's; a report naming
- * one that is not there opens nothing.
+ * drawing order, or every one chosen with it when it is one of several. The
+ * native chrome only hit-tests the selected layer, so the annotation is looked
+ * for among `annotations`, that layer's; a report naming one that is not there
+ * opens nothing.
  */
 export function useScreenshotAnnotationMenu({
   annotations,
   onCommit,
+  selectedIds,
 }: {
   annotations: Annotation[];
   onCommit: (annotations: Annotation[]) => void;
+  selectedIds: ReadonlySet<string>;
 }) {
   const openMenu = usePopupMenu({
     idPrefix: "screenshot-annotation:",
@@ -38,16 +42,14 @@ export function useScreenshotAnnotationMenu({
     mode: "menu",
     onSelect: (itemId, annotationId) => {
       const arrangement = annotationArrangementPicked(itemId);
-      const index = annotations.findIndex(
-        (annotation) => annotation.id === annotationId,
+      if (!arrangement) return;
+      const targets = annotationMenuTargets(annotationId, selectedIds);
+      const next = arrangedGroup(
+        annotations,
+        (annotation) => targets.has(annotation.id),
+        { arrangement, meets: meet },
       );
-      if (arrangement && index >= 0)
-        onCommit(
-          arranged(annotations, index, {
-            arrangement,
-            meets: meet,
-          }),
-        );
+      if (next !== annotations) onCommit(next);
     },
     width: MENU_WIDTH,
   });
@@ -55,12 +57,13 @@ export function useScreenshotAnnotationMenu({
     (_: { annotationId: string; x: number; y: number }) => {},
   );
   openRef.current = ({ annotationId, x, y }) => {
-    const index = annotations.findIndex(
-      (annotation) => annotation.id === annotationId,
-    );
-    if (index < 0) return;
+    const targets = annotationMenuTargets(annotationId, selectedIds);
     const items = annotationArrangeItems(
-      availableArrangements(annotations, index, meet),
+      availableGroupArrangements(
+        annotations,
+        (annotation) => targets.has(annotation.id),
+        meet,
+      ),
     );
     if (items.length > 0)
       void openMenu({

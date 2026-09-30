@@ -249,8 +249,8 @@ pub(super) use snap_chrome::snap_chrome;
 /// The boxes round a group, and the marquee band.
 #[path = "annotation/group_chrome.rs"]
 mod group_chrome;
-pub(super) use group_chrome::{group_frames, marquee_frame};
-use group_chrome::{group_layer_at_point, has_group, marquee_layer_at_point};
+pub(super) use group_chrome::{group_frames, has_group, marquee_frame};
+use group_chrome::{group_layer_at_point, marquee_layer_at_point};
 
 /// The halo that grows under the arrow the pointer rests on.
 #[path = "annotation/hover.rs"]

@@ -93,3 +93,78 @@ export const arranged = <Item>(
       }
   return [...rest.slice(0, target), item, ...rest.slice(target)];
 };
+
+/**
+ * The moves that change what the members of a group, the items `isMember`
+ * picks, are drawn over: past an item outside the group that one of them
+ * meets. A group of one offers what `availableArrangements` does.
+ */
+export const availableGroupArrangements = <Item>(
+  items: Item[],
+  isMember: (item: Item) => boolean,
+  meets: (a: Item, b: Item) => boolean,
+) => {
+  let canBringForward = false;
+  let canSendBackward = false;
+  items.forEach((member, from) => {
+    if (!isMember(member)) return;
+    items.forEach((other, to) => {
+      if (isMember(other) || !meets(member, other)) return;
+      if (to > from) canBringForward = true;
+      else canSendBackward = true;
+    });
+  });
+  return { canBringForward, canSendBackward };
+};
+
+/**
+ * `items` with the group's members moved through the drawing order together,
+ * keeping their own stacking: a step forward or backward moves each member
+ * past the next item it meets, the member furthest along the way moving first
+ * so the ones behind it find the way clear, and a member held back by another
+ * member stays where it is. The very top or bottom takes the members there as
+ * one block. The list is returned unchanged where the move passes nothing.
+ */
+export const arrangedGroup = <Item>(
+  items: Item[],
+  isMember: (item: Item) => boolean,
+  {
+    arrangement,
+    meets,
+  }: {
+    arrangement: Arrangement;
+    meets: (a: Item, b: Item) => boolean;
+  },
+): Item[] => {
+  const { canBringForward, canSendBackward } = availableGroupArrangements(
+    items,
+    isMember,
+    meets,
+  );
+  const forward = arrangement === "forward" || arrangement === "front";
+  if (forward ? !canBringForward : !canSendBackward) return items;
+  const members = items.filter(isMember);
+  if (arrangement === "front" || arrangement === "back") {
+    const rest = items.filter((item) => !isMember(item));
+    return arrangement === "front"
+      ? [...rest, ...members]
+      : [...members, ...rest];
+  }
+  if (forward) members.reverse();
+  const step = forward ? 1 : -1;
+  let stepped = items;
+  for (const member of members) {
+    const index = stepped.indexOf(member);
+    let passed = index + step;
+    while (
+      passed >= 0 &&
+      passed < stepped.length &&
+      !meets(member, stepped[passed])
+    )
+      passed += step;
+    if (passed < 0 || passed >= stepped.length || isMember(stepped[passed]))
+      continue;
+    stepped = arranged(stepped, index, { arrangement, meets });
+  }
+  return stepped;
+};

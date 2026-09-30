@@ -6,7 +6,8 @@ import {
   PopupMenuAnchor,
   usePopupMenu,
 } from "../../popup-panel/use-popup-menu";
-import { availableArrangements, arranged } from "../annotation-order";
+import { arrangedGroup, availableGroupArrangements } from "../annotation-order";
+import { annotationMenuTargets } from "../annotation-selection";
 import { isPinnable, pinCorrections } from "../recording-annotation-pins";
 import {
   RecordingAnnotationClip,
@@ -51,6 +52,10 @@ const SECTION = "Tracking";
  * disabled rows, so an action is left out until it applies, and a menu with
  * nothing in it does not open.
  *
+ * Opened on one of several chosen together, the menu acts on the group: the
+ * moves carry every member, keeping their own stacking, and the Tracking
+ * heading is left out, as its actions are each one annotation's.
+ *
  * Every mounted menu hears every pick under its prefix, so each place that
  * opens this menu names it with a prefix of its own.
  */
@@ -59,11 +64,13 @@ export function useAnnotationClipMenu({
   idPrefix,
   onClipsChange,
   pinning,
+  selectedIds,
 }: {
   clips: RecordingAnnotationClip[];
   idPrefix: string;
   onClipsChange: (clips: RecordingAnnotationClip[]) => void;
   pinning: AnnotationClipPinning | undefined;
+  selectedIds: ReadonlySet<string>;
 }) {
   const openMenu = usePopupMenu({
     idPrefix,
@@ -72,16 +79,13 @@ export function useAnnotationClipMenu({
     onSelect: (itemId, annotationId) => {
       const arrangement = annotationArrangementPicked(itemId);
       if (arrangement) {
-        const index = clips.findIndex(
-          (clip) => clip.annotation.id === annotationId,
+        const targets = annotationMenuTargets(annotationId, selectedIds);
+        const next = arrangedGroup(
+          clips,
+          (clip) => targets.has(clip.annotation.id),
+          { arrangement, meets: recordingAnnotationClipsMeet },
         );
-        if (index >= 0)
-          onClipsChange(
-            arranged(clips, index, {
-              arrangement,
-              meets: recordingAnnotationClipsMeet,
-            }),
-          );
+        if (next !== clips) onClipsChange(next);
       } else if (itemId === "pin") pinning?.onPinnedChange(annotationId, true);
       else if (itemId === "unpin") pinning?.onPinnedChange(annotationId, false);
       else if (itemId === "hide") pinning?.onHideHere(annotationId);
@@ -93,9 +97,9 @@ export function useAnnotationClipMenu({
 
   return (anchor: PopupMenuAnchor, clip: RecordingAnnotationClip) => {
     const id = clip.annotation.id;
-    const index = clips.findIndex((item) => item.annotation.id === id);
+    const targets = annotationMenuTargets(id, selectedIds);
     const tracking: PopupPanelItem[] =
-      pinning && isPinnable(clip)
+      pinning && targets.size === 1 && isPinnable(clip)
         ? clip.pin
           ? [
               ...(pinning.canHideHere(id)
@@ -112,11 +116,13 @@ export function useAnnotationClipMenu({
           : [{ id: "pin", label: "Pin to Content" }]
         : [];
     const items = [
-      ...(index >= 0
-        ? annotationArrangeItems(
-            availableArrangements(clips, index, recordingAnnotationClipsMeet),
-          )
-        : []),
+      ...annotationArrangeItems(
+        availableGroupArrangements(
+          clips,
+          (item) => targets.has(item.annotation.id),
+          recordingAnnotationClipsMeet,
+        ),
+      ),
       ...tracking.map((item) => ({ ...item, section: SECTION })),
     ];
     if (items.length === 0) return;

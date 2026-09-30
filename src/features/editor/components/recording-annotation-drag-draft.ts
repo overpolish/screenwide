@@ -3,7 +3,7 @@
 
 // What the annotation lane and the preview show while a clip is dragged.
 
-import { arranged } from "../annotation-order";
+import { arrangedGroup } from "../annotation-order";
 import { moveRecordingAnnotationClip } from "../recording-annotation-geometry";
 import {
   RecordingAnnotationClip,
@@ -40,60 +40,24 @@ export const previewedWhole = (
   );
 
 /**
- * `clips` with the member named `id` brought over the next clip it overlaps,
- * or sent under the previous one. A member never passes another member: the
- * group keeps its own stacking, and a member held back by one below or above
- * it stays where it is.
- */
-const carriedOneRow = (
-  clips: RecordingAnnotationClip[],
-  id: string,
-  { forward, ids }: { forward: boolean; ids: ReadonlySet<string> },
-) => {
-  const index = clips.findIndex((clip) => clip.annotation.id === id);
-  const clip = clips[index];
-  const step = forward ? 1 : -1;
-  let passed = index + step;
-  while (
-    passed >= 0 &&
-    passed < clips.length &&
-    !recordingAnnotationClipsMeet(clip, clips[passed])
-  )
-    passed += step;
-  if (
-    passed < 0 ||
-    passed >= clips.length ||
-    ids.has(clips[passed].annotation.id)
-  )
-    return clips;
-  return arranged(clips, index, {
-    arrangement: forward ? "forward" : "backward",
-    meets: recordingAnnotationClipsMeet,
-  });
-};
-
-/**
  * `clips` with the ones named in `ids` carried `rows` rows up the lane, or
  * down for a negative count, until none of them has anything left to pass.
- * The member furthest along the way they go moves first, so the ones behind
- * it find the way clear.
+ * Each row is one step of the group through the drawing order, so the group
+ * keeps its own stacking.
  */
 const carriedThroughRows = (
   clips: RecordingAnnotationClip[],
   ids: ReadonlySet<string>,
   rows: number,
 ) => {
-  const forward = rows > 0;
   let carried = clips;
   for (let step = 0; step < Math.abs(rows); step += 1) {
-    const members = carried.flatMap((clip) =>
-      ids.has(clip.annotation.id) ? [clip.annotation.id] : [],
-    );
-    if (forward) members.reverse();
-    const before = carried;
-    for (const id of members)
-      carried = carriedOneRow(carried, id, { forward, ids });
-    if (carried === before) break;
+    const next = arrangedGroup(carried, (clip) => ids.has(clip.annotation.id), {
+      arrangement: rows > 0 ? "forward" : "backward",
+      meets: recordingAnnotationClipsMeet,
+    });
+    if (next === carried) break;
+    carried = next;
   }
   return carried;
 };

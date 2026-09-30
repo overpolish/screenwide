@@ -117,6 +117,7 @@ export function RecordingAnnotationLane({
     idPrefix: "annotation-clip:",
     onClipsChange: onChange,
     pinning,
+    selectedIds,
   });
   return (
     <div className="flex items-center gap-section">

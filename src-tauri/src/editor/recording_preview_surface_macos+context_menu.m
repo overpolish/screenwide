@@ -30,10 +30,11 @@
 /// can open the app's own menu there. Nothing opens natively.
 ///
 /// The press selects exactly what a left press would select first, so the menu
-/// always acts on what it was opened on. An annotation comes before the layer
-/// it is drawn on, as it does for a left press. A press on the shortcut layer,
-/// on a canvas frame, or on empty canvas has no layer order to change and is
-/// left alone.
+/// always acts on what it was opened on. One of several chosen together keeps
+/// the group, so the menu acts on all of them. An annotation comes before the
+/// layer it is drawn on, as it does for a left press. A press on the shortcut
+/// layer, on a canvas frame, or on empty canvas has no layer order to change
+/// and is left alone.
 - (BOOL)reportContextMenuAtPoint:(NSPoint)point {
   if (self.surface.contextMenuCallback == NULL ||
       !self.surface.editorEnabled || self.surface.editorSuspended)
@@ -47,7 +48,12 @@
           : annotation_shaft_at_point(self.surface, point);
   if (annotation >= 0) {
     annotation_update_hover(self.surface, point, YES);
-    annotation_choose(self.surface, annotation, point);
+    NSUInteger count = 0;
+    const ScreenwidePreviewAnnotation *items =
+        annotation_items(self.surface, &count);
+    BOOL grouped = (NSUInteger)annotation < count &&
+                   (items[annotation].flags & ScreenwideAnnotationFlagGrouped) != 0;
+    if (!grouped) annotation_choose(self.surface, annotation, point);
     [self reportContextMenu:self.surface.selection.layer_id
                  annotation:(int32_t)annotation
                     atPoint:point

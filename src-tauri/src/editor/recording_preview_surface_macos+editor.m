@@ -153,7 +153,11 @@
     if (hasSharedHit &&
         !(sharedHandle == 0 &&
           target.layer_id == ScreenwideFrameLayerId)) {
-      BOOL changed = self.surface.annotationSelected != -1 || !self.surface.hasSelection ||
+      // A held arrow, or a group held together, counts as a change even on
+      // the same layer: the press lets it go, and React has to hear about it
+      // to clear its own choice.
+      BOOL changed = self.surface.annotationSelected != -1 ||
+                     annotation_has_group(self.surface) || !self.surface.hasSelection ||
                      self.surface.selection.pane_index != target.pane_index ||
                      self.surface.selection.layer_id != target.layer_id;
       self.surface.hasSelection = YES;
@@ -257,6 +261,9 @@
       BOOL changed = self.surface.annotationSelected != -1 || !self.surface.hasSelection ||
                      self.surface.selection.pane_index != target.pane_index ||
                      self.surface.selection.layer_id != target.layer_id;
+      // A group held together is let go by the press as well, but the layer
+      // under it is the one already selected, so its geometry is kept.
+      BOOL reported = changed || annotation_has_group(self.surface);
       if (target.layer_id == ScreenwideFrameLayerId) {
         self.surface.hasSelection = YES;
         self.surface.selection = target;
@@ -264,7 +271,7 @@
         self.selectionDragActive = NO;
         self.panning = NO;
         clear_selection_snap_guides(self.surface);
-        if (changed && self.surface.selectionCallback != NULL)
+        if (reported && self.surface.selectionCallback != NULL)
           self.surface.selectionCallback((int32_t)target.pane_index,
                                          self.surface.selectionContext);
         redraw_selection(self.surface);
@@ -289,7 +296,7 @@
       self.selectionDragStart = dragTarget;
       if (self.selectionDragOperation == 0) [self beginWorkspaceMove];
       clear_selection_snap_guides(self.surface);
-      if (changed && self.surface.selectionCallback != NULL)
+      if (reported && self.surface.selectionCallback != NULL)
         self.surface.selectionCallback((int32_t)target.layer_id,
                                        self.surface.selectionContext);
       redraw_selection(self.surface);

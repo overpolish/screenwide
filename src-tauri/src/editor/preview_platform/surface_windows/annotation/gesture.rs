@@ -16,6 +16,7 @@
 //! reports them, exactly as the selection path in `input/down.rs` does.
 
 use super::*;
+use crate::editor::annotations::handles::HANDLE_FLAG_GROUPED;
 
 /// Resolving pointer samples and reporting them to the manager.
 #[path = "gesture_sample.rs"]
@@ -167,8 +168,9 @@ fn choose(state: &mut SurfaceState, shaft: usize, point: (f64, f64)) -> Option<S
 }
 
 /// Chooses the annotation under a right press, as a left press on it does, so
-/// the menu opened there acts on it. Its place in the published list, or
-/// `None` when the press is not on one.
+/// the menu opened there acts on it. One of several chosen together keeps the
+/// group, so the menu acts on all of them. Its place in the published list,
+/// or `None` when the press is not on one.
 pub(crate) fn choose_at(inner: &SurfaceInner, point: (f64, f64)) -> Option<usize> {
   let (shaft, sample) = {
     let mut state = inner.state.lock().ok()?;
@@ -176,6 +178,14 @@ pub(crate) fn choose_at(inner: &SurfaceInner, point: (f64, f64)) -> Option<usize
       return None;
     }
     let shaft = shaft_at_point(&state, point)?;
+    let grouped = state
+      .annotation
+      .handles
+      .get(shaft)
+      .is_some_and(|item| item.flags & HANDLE_FLAG_GROUPED != 0);
+    if grouped {
+      return Some(shaft);
+    }
     (shaft, choose(&mut state, shaft, point))
   };
   report(inner, sample.as_slice());

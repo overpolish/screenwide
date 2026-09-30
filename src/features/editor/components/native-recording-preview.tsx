@@ -161,6 +161,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
       clips: annotations.clips,
       onClipsChange: annotations.onClipsChange,
       pinning: annotations.pinning,
+      selectedIds: annotations.selectedIds,
     },
     canvasTool,
     moveVideoTrack,

@@ -58,7 +58,7 @@ fn box_rect(
 
 /// Whether several annotations are chosen together, which is when the group
 /// chrome is drawn and a press on a member carries them all.
-pub(super) fn has_group(state: &SurfaceState) -> bool {
+pub(crate) fn has_group(state: &SurfaceState) -> bool {
   !state.annotation.group.is_empty() && state.annotation.mode != MODE_NONE
 }
 

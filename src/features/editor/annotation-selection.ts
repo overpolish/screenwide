@@ -52,6 +52,16 @@ export const sweptAnnotationIds = (
   additive ? new Set([...current, ...ids]) : new Set(ids);
 
 /**
+ * What a menu opened on `id` acts on: everything chosen when it is one of
+ * several chosen together, and otherwise it alone.
+ */
+export const annotationMenuTargets = (
+  id: string,
+  chosen: ReadonlySet<string>,
+): ReadonlySet<string> =>
+  chosen.size > 1 && chosen.has(id) ? chosen : new Set([id]);
+
+/**
  * What a delete acts on: the annotation the halo is showing when it is not
  * one of the chosen, and otherwise everything chosen.
  *

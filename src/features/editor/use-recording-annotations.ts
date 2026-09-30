@@ -10,7 +10,7 @@ import {
   useAnnotationAnimatedDefault,
   useAnnotationDefaults,
 } from "./annotation-defaults";
-import { arranged, Arrangement } from "./annotation-order";
+import { arrangedGroup, Arrangement } from "./annotation-order";
 import { AnnotationFrame, pacedClip } from "./annotation-pace";
 import { Annotation, AnnotationTextEdit } from "./annotations";
 import { recordingAnnotationPinning } from "./recording-annotation-pinning";
@@ -221,19 +221,17 @@ export function useRecordingAnnotations({
   });
   return {
     ...selection,
-    /** Moves the annotation in hand past the clips showing with it,
-     * answering whether there was one. */
+    /** Moves the annotations in hand past the clips showing with them,
+     * several together keeping their own stacking, answering whether there
+     * were any. */
     arrangeSelected: (arrangement: Arrangement) => {
-      const index = clips.findIndex(
-        (clip) => clip.annotation.id === selection.selectedId,
+      if (selection.selectedIds.size === 0) return false;
+      const next = arrangedGroup(
+        clips,
+        (clip) => selection.selectedIds.has(clip.annotation.id),
+        { arrangement, meets: recordingAnnotationClipsMeet },
       );
-      if (index < 0) return false;
-      commitClips(
-        arranged(clips, index, {
-          arrangement,
-          meets: recordingAnnotationClipsMeet,
-        }),
-      );
+      if (next !== clips) commitClips(next);
       return true;
     },
     canDelete: selection.hasSelection || (tool !== null && selection.canDelete),

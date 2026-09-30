@@ -112,6 +112,7 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       draw_selection(inner, &state);
     } else if let Some(target) = frame_target {
       let changed = state.annotation.selected != -1
+        || annotation::has_group(&state)
         || state.selection.is_none_or(|current| {
           current.pane_index != target.pane_index || current.layer_id != target.layer_id
         });
@@ -127,10 +128,11 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       let layer_changed = state.selection.is_none_or(|current| {
         current.pane_index != target.pane_index || current.layer_id != target.layer_id
       });
-      // A held arrow counts as a change even on the same layer, exactly as
-      // the Metal view's `changed` does: the press lets the arrow go, and
-      // React has to hear about it to clear its own choice.
-      let changed = layer_changed || state.annotation.selected != -1;
+      // A held arrow, or a group held together, counts as a change even on
+      // the same layer, exactly as the Metal view's `changed` does: the press
+      // lets it go, and React has to hear about it to clear its own choice.
+      let changed =
+        layer_changed || state.annotation.selected != -1 || annotation::has_group(&state);
       // React updates target hit regions asynchronously. When this is already
       // the selected pane, its native selection is the freshest geometry (for
       // example immediately after a resize), so a stale target rectangle
