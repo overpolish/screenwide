@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { WindowShell } from "../../../components/shared/window-shell/window-shell";
 import { useExportOptionsBridge } from "../export-options/use-export-options-bridge";
 import {
@@ -272,8 +273,13 @@ export function EditorPanel({
                 />
               </section>
             ) : (
-              <div className="flex min-h-0 grow items-center justify-center text-sm text-muted">
-                Nothing to export
+              // The window is only shown once Rust holds a capture for it, so
+              // no capture here means its snapshot has not arrived yet.
+              <div className="flex min-h-0 grow items-center justify-center">
+                <CircularProgress
+                  aria-label="Opening the editor"
+                  isIndeterminate
+                />
               </div>
             )}
           </div>

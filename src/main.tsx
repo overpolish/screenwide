@@ -4,13 +4,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { App } from "./App";
 import "./index.css";
 import { installInactiveWindowHoverBridge } from "./lib/inactive-window-hover";
 import { installPointerModalityGuard } from "./lib/pointer-modality";
 import { synchronizeSystemAccent } from "./lib/system-accent";
 import { synchronizeSystemTheme } from "./lib/theme";
 import { installWindowInteractionTransitions } from "./lib/window-interaction-transitions";
+import { loadWindow } from "./windows/window-routes";
 
 synchronizeSystemTheme();
 synchronizeSystemAccent();
@@ -28,8 +28,11 @@ if (navigator.userAgent.includes("Windows")) {
   document.documentElement.dataset.platform = "windows";
 }
 
-createRoot(document.getElementById("root") as HTMLElement).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+void loadWindow(window.location.pathname).then((Window) => {
+  if (!Window) return;
+  createRoot(document.getElementById("root") as HTMLElement).render(
+    <StrictMode>
+      <Window />
+    </StrictMode>,
+  );
+});

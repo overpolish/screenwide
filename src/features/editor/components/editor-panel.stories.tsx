@@ -84,7 +84,7 @@ const audioPreviewLayout = {
  * CSS rule in `.storybook/styles.css` can label that empty region with a
  * placeholder.
  *
- * `NothingPending` (`artifact` is `null`) has no viewport at all and is left
+ * `Opening` (`artifact` is `null`) has no viewport at all and is left
  * unwrapped. The audio recording story is wrapped but renders an audio-waveform
  * visualizer with no viewport element, so the placeholder never appears there -
  * which is correct, since that area is not a blank GPU surface.
@@ -120,7 +120,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const NothingPending: Story = {
+/** The window before its snapshot arrives. */
+export const Opening: Story = {
   args: { artifact: null, fileStem: "" },
 };
 

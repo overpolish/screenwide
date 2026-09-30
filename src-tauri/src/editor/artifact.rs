@@ -103,6 +103,9 @@ pub(super) fn present_new(app: &AppHandle, artifact: EditorArtifact) -> Result<(
     *reservation = None;
   }
 
+  // The hidden webview still holds the last snapshot, an empty one, so the
+  // new capture goes to it before the window appears showing that.
+  emit_snapshot(app, kind);
   if let Err(error) = window::show(app, kind) {
     // A hidden artifact is a deadlocked workspace. Keep a recording's file on
     // disk so startup recovery can offer it again, but release the in-memory
@@ -125,7 +128,6 @@ pub(super) fn present_new(app: &AppHandle, artifact: EditorArtifact) -> Result<(
   // gives screenshots and recordings the same handoff without affecting
   // clipboard-only screenshots, which never open the editor window.
   let _ = crate::windows::hide_recording_ui(app.clone());
-  emit_snapshot(app, kind);
 
   Ok(())
 }
@@ -161,9 +163,9 @@ pub fn present_screenshot(
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
       drop(artifact);
+      emit_snapshot(app, EditorKind::Screenshot);
       window::show(app, EditorKind::Screenshot).map_err(|error| error.to_string())?;
       let _ = crate::windows::hide_recording_ui(app.clone());
-      emit_snapshot(app, EditorKind::Screenshot);
       return Ok(());
     }
   }
