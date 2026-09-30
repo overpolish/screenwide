@@ -22,7 +22,9 @@ cbuffer Canvas : register(b0) {
   float4 motion; // timeline seconds, generator speed, canvas pixels per drawn pixel
   float4 cursor_geometry; // source-space anchor x/y, artwork width/height
   float4 cursor_effects; // opacity, reserved y, rotation radians, scale
-  float4 cursor_blur; // source-space frame delta x/y
+  // Source-space frame delta x/y, then the spotlights' blur the cursor takes:
+  // its deviation in output pixels and how far it has arrived.
+  float4 cursor_blur;
   float4 camera_frame; // output-space x/y/width/height
   float4 camera_crop; // camera source-space x/y/width/height
   float4 camera_effects; // radius, enabled, shadow sigma, camera on top
@@ -54,6 +56,25 @@ cbuffer Keyboard : register(b1) {
 };
 SamplerState linear_sampler : register(s0);
 SamplerState point_sampler : register(s1);
+// Where a magnifier reads the picture it enlarges: the source, after its
+// redactions, placed at `image_rect` and showing where the canvas crop and the
+// source's own crop, both in output pixels, overlap.
+AnnotationMagnifyPlacement annotation_magnify_placement() {
+  AnnotationMagnifyPlacement at;
+  at.image = image_rect;
+  at.size = output_source.zw;
+  float2 per = at.size / max(image_rect.zw, 1.0);
+  float2 low = max(crop_rect.xy, source_crop_rect.xy);
+  float2 high = min(crop_rect.xy + crop_rect.zw, source_crop_rect.xy + source_crop_rect.zw);
+  float2 last = max(at.size - 1.0, 0.0);
+  float2 first_texel = clamp(floor((low - image_rect.xy) * per + 1e-3), 0.0, last);
+  float2 last_texel = clamp(ceil((high - image_rect.xy) * per - 1e-3) - 1.0, first_texel, last);
+  at.texels = float4(first_texel, last_texel);
+  return at;
+}
+float4 annotation_magnify_fetch(int2 texel) {
+  return source_image.Load(int3(texel, 0));
+}
 float hash(float2 position, uint seed) {
   float value = sin(dot(position, float2(127.1, 311.7)) + (float)seed * 0.017) * 43758.5453;
   return frac(value) * 2.0 - 1.0;
@@ -130,7 +151,9 @@ float4 cursor_sample(float2 source_pixel, float2 anchor) {
                         -sine * delta.x + cosine * delta.y) / max(cursor_effects.w, 0.01);
   float2 atlas_uv = local / cursor_geometry.zw + native_cursor_hotspots[cursor_options.x].xy;
   if (any(atlas_uv < 0.0) || any(atlas_uv >= 1.0)) return 0.0;
-  return native_cursor_images.Sample(linear_sampler, float3(atlas_uv, (float)cursor_options.x));
+  // The atlas has one level, and the layers sample it inside loops FXC will
+  // not take implicit gradients in: a loupe's exposure and the cursor's blur.
+  return native_cursor_images.SampleLevel(linear_sampler, float3(atlas_uv, (float)cursor_options.x), 0.0);
 }
 float4 cursor_layer(float2 pixel) {
   if (cursor_options.y == 0) return 0.0;
@@ -161,6 +184,24 @@ float4 cursor_layer(float2 pixel) {
   accumulated.a /= total_weight;
   accumulated.rgb = accumulated.a > 0.0 ? accumulated.rgb / (total_weight * accumulated.a) : 0.0;
   return accumulated;
+}
+// The cursor for the annotation layers, straight alpha: faded by its opacity
+// and, where it is clipped to the video, held inside the shown picture.
+float4 annotation_cursor_sample(float2 probe) {
+  float4 cursor = cursor_layer(probe);
+  cursor.a *= cursor_effects.x;
+  if (cursor_options.z != 0)
+    cursor.a *= rounded_coverage(probe, crop_rect, effects.x) *
+                rounded_coverage(probe, image_rect, 0.0) *
+                rounded_coverage(probe, source_crop_rect, 0.0);
+  return cursor;
+}
+AnnotationCursorBlur annotation_cursor_blur() {
+  AnnotationCursorBlur blur;
+  blur.deviation = cursor_blur.z;
+  blur.strength = cursor_blur.w;
+  blur.count = annotation_options.y;
+  return blur;
 }
 // A chosen picture covers the canvas: it is scaled until both sides reach,
 // centred, and the overflowing axis is trimmed evenly, so it never letterboxes
@@ -472,20 +513,15 @@ float4 ps_main(float4 position : SV_Position) : SV_Target {
   // The atlas's size and, in `motion.w`, how many atlas pixels it holds per
   // canvas pixel.
   AnnotationTextAtlas annotation_atlas = {annotation_options.zw, motion.w};
-  if (annotation_options.x > 0u)
-    result = composite_annotation_layers(result, pixel, 0u, annotation_options.x,
-                                         annotation_feather, annotation_atlas);
-  // The cursor goes over every annotation on the screen's layer.
-  float4 cursor = cursor_layer(pixel);
-  cursor.a *= cursor_effects.x;
-  if (cursor_options.z != 0) cursor.a *= image_alpha;
-  result.rgb = lerp(result.rgb, cursor.rgb, cursor.a);
-  result.a = cursor.a + result.a * (1.0 - cursor.a);
+  // The screen layer carries the cursor, over every mark but shaded and
+  // hidden by what acts on the picture.
+  result = composite_annotation_layers(result, pixel, 0u, annotation_options.x,
+                                       annotation_feather, annotation_atlas, true);
   if (camera_effects.w != 0.0) result = camera_layer(result, pixel);
   if (annotation_options.y > annotation_options.x)
     result = composite_annotation_layers(result, pixel, annotation_options.x,
                                          annotation_options.y, annotation_feather,
-                                         annotation_atlas);
+                                         annotation_atlas, false);
   result = composite_keyboard(result, pixel, output_source.xy);
   if (cursor_options.w == 0) {
     result.rgb = saturate(result.rgb + hash(pixel, 0x9e3779b9) / 255.0);

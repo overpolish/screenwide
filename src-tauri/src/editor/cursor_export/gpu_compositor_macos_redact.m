@@ -48,6 +48,18 @@ static float spotlight_blur_arrived(const ScreenwideAnnotation *item) {
   return redaction_arrived(item) * share;
 }
 
+float screenwide_spotlight_blur_strength(const ScreenwideAnnotations *annotations) {
+  float strength = 0.0f;
+  if (annotations == NULL || annotations->items == NULL) return strength;
+  for (uint32_t index = 0; index < annotations->count; ++index) {
+    const ScreenwideAnnotation *item = &annotations->items[index];
+    if (item->kind == SCREENWIDE_ANNOTATION_SPOTLIGHT &&
+        (item->flags & SCREENWIDE_ANNOTATION_FLAG_BLUR) != 0)
+      strength = fmaxf(strength, spotlight_blur_arrived(item));
+  }
+  return strength;
+}
+
 /// Appends the spotlights' blur over a `width` by `height` source to
 /// `redactions`: one record over the whole source, as wide as the most
 /// present spotlight that blurs has let it grow, followed by every
@@ -58,15 +70,10 @@ static float spotlight_blur_arrived(const ScreenwideAnnotation *item) {
 static void append_spotlight_blur(NSMutableData *redactions,
                                   const ScreenwideAnnotations *annotations, uint32_t width,
                                   uint32_t height) {
-  float strength = 0.0f;
+  float strength = screenwide_spotlight_blur_strength(annotations);
   uint32_t holes = 0;
-  for (uint32_t index = 0; index < annotations->count; ++index) {
-    const ScreenwideAnnotation *item = &annotations->items[index];
-    if (item->kind != SCREENWIDE_ANNOTATION_SPOTLIGHT) continue;
-    holes += 1;
-    if ((item->flags & SCREENWIDE_ANNOTATION_FLAG_BLUR) != 0)
-      strength = fmaxf(strength, spotlight_blur_arrived(item));
-  }
+  for (uint32_t index = 0; index < annotations->count; ++index)
+    if (annotations->items[index].kind == SCREENWIDE_ANNOTATION_SPOTLIGHT) holes += 1;
   if (strength <= 0.0f || width == 0 || height == 0) return;
   ScreenwideRedaction redaction = {
     .x1 = width,

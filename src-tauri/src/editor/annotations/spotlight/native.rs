@@ -76,6 +76,20 @@ fn blur_presence(item: &NativeAnnotation) -> f32 {
   presence(item) * share
 }
 
+/// How far the spotlights' blur has arrived among `items`: as present as the
+/// most present spotlight that blurs, and zero where none does.
+#[cfg(any(target_os = "windows", test))]
+pub(crate) fn blur_strength(items: &[NativeAnnotation]) -> f32 {
+  items
+    .iter()
+    .filter(|item| {
+      AnnotationKind::from_raw(item.kind) == Some(AnnotationKind::Spotlight)
+        && item.flags & BLUR != 0
+    })
+    .map(blur_presence)
+    .fold(0.0_f32, f32::max)
+}
+
 /// The blur pass among `items`, over a source `width` by `height` pixels:
 /// how far the blur has arrived - as present as the most present spotlight
 /// that blurs - and every spotlight's hole, four points each. A hole's
@@ -88,19 +102,13 @@ pub(crate) fn blur_holes(
   width: u32,
   height: u32,
 ) -> Option<(f32, Vec<[f32; 2]>)> {
-  let spotlights = || {
-    items
-      .iter()
-      .filter(|item| AnnotationKind::from_raw(item.kind) == Some(AnnotationKind::Spotlight))
-  };
-  let strength = spotlights()
-    .filter(|item| item.flags & BLUR != 0)
-    .map(blur_presence)
-    .fold(0.0_f32, f32::max);
+  let strength = blur_strength(items);
   if strength <= 0.0 || width == 0 || height == 0 {
     return None;
   }
-  let holes = spotlights()
+  let holes = items
+    .iter()
+    .filter(|item| AnnotationKind::from_raw(item.kind) == Some(AnnotationKind::Spotlight))
     .flat_map(|item| {
       let geometry = super::geometry::prepare_spotlight(item.p0, item.p2, item.p1[0], item.p1[1]);
       [

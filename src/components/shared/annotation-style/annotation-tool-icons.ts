@@ -8,6 +8,7 @@ import {
   Highlighter,
   MapPinPlusInside,
   Pencil,
+  ScanSearch,
   Square,
   Type,
 } from "lucide-react";
@@ -28,3 +29,4 @@ export const HighlightToolIcon = Highlighter;
 export const ShapeToolIcon = Square;
 export const SpotlightToolIcon = Flashlight;
 export const DrawToolIcon = Pencil;
+export const MagnifyToolIcon = ScanSearch;

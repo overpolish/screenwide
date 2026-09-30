@@ -45,6 +45,7 @@ const arrow = (
       manual: false,
       radius: 0,
       redaction: "erase",
+      shadow: false,
       softness: 0,
       strength: 0,
       width: 12,

@@ -46,6 +46,13 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
   if (handle >= ScreenwideAnnotationHandleBox)
     return screenwide_region_resize_cursor((uint32_t)(handle - ScreenwideAnnotationHandleBox))
         ?: [NSCursor arrowCursor];
+  // A magnifier's loupe grip sizes the loupe from the middle of its right side.
+  NSUInteger count = 0;
+  const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
+  if (handle == ScreenwideAnnotationHandleTail && surface.annotationSelected >= 0 &&
+      (NSUInteger)surface.annotationSelected < count &&
+      items[surface.annotationSelected].kind == ScreenwideAnnotationKindMagnify)
+    return screenwide_region_resize_cursor(2) ?: [NSCursor arrowCursor];
   if (handle >= 0 || annotation_shaft_at_point(surface, point) >= 0)
     return [NSCursor arrowCursor];
   // Empty picture: a drawing tool makes an annotation rather than picking one

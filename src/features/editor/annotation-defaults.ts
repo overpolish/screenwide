@@ -38,12 +38,17 @@ export type AnnotationTool = AnnotationKind | "select";
  * highlight keeps its own too: a highlighter is its own pen, which stays
  * yellow when the arrows turn red, and is the only kind drawn by hand. So
  * does a spotlight, which is no colour at all, and whose corners and fade
- * are its own rather than a shape's.
+ * are its own rather than a shape's. A magnifier keeps its own as well: its
+ * rim frames a picture rather than marking it out, and its zoom, cone and
+ * shadow mean nothing to any other kind.
  */
-type DressGroup = "highlight" | "redact" | "shared" | "spotlight";
+type DressGroup = "highlight" | "magnify" | "redact" | "shared" | "spotlight";
 const lastUsed = new Map<DressGroup, AnnotationStyle>();
 const dressGroup = (kind: AnnotationKind): DressGroup =>
-  kind === "redact" || kind === "highlight" || kind === "spotlight"
+  kind === "redact" ||
+  kind === "highlight" ||
+  kind === "spotlight" ||
+  kind === "magnify"
     ? kind
     : "shared";
 const lastSize = new Map<AnnotationKind, number>();
@@ -81,6 +86,7 @@ const sameDress = (
   held.manual === style.manual &&
   held.radius === style.radius &&
   held.redaction === style.redaction &&
+  held.shadow === style.shadow &&
   held.softness === style.softness &&
   held.strength === style.strength &&
   held.width === width;
@@ -123,8 +129,8 @@ export const rememberAnnotationAnimated = (animated: boolean) => {
  *
  * A colour settled on for one shape dresses the others, at that shape's own
  * remembered size - or at its default, where it has none yet. A redaction is
- * dressed only by another redaction, a highlight by another highlight and a
- * spotlight by another spotlight.
+ * dressed only by another redaction, a highlight by another highlight, a
+ * spotlight by another spotlight and a magnifier by another magnifier.
  */
 export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
   useSyncExternalStore(subscribe, () => {
@@ -140,23 +146,31 @@ const SPOTLIGHT_RADIUS = 12;
 /**
  * The dress a tool draws in before anything has been settled on: the palette's
  * yellow, or black for a redaction's fill and a spotlight's shade, at the
- * tool's own first size, with an arrow's head at its end. The twins of
- * `default_arrow_style`, `default_counter_style`, `default_text_style`,
- * `default_redact_style`, `default_highlight_style`, `default_shape_style`
- * and `default_spotlight_style` in `src-tauri/src/editor/annotations`, which
- * dress a fresh annotation where the editor sends no dress of its own.
+ * tool's own first size, with an arrow's head at its end. A magnifier starts
+ * round, white-rimmed and shadowed.
+ * The twins of `default_arrow_style`, `default_counter_style`,
+ * `default_text_style`, `default_redact_style`, `default_highlight_style`,
+ * `default_shape_style`, `default_spotlight_style` and
+ * `default_magnify_style` in `src-tauri/src/editor/annotations`, which dress
+ * a fresh annotation where the editor sends no dress of its own.
  */
 export const firstAnnotationDress = (
   kind: AnnotationKind,
 ): AnnotationStyle => ({
   align: "left",
   blur: false,
-  color: kind === "redact" || kind === "spotlight" ? "#000000" : "#ffcc00",
+  color:
+    kind === "redact" || kind === "spotlight"
+      ? "#000000"
+      : kind === "magnify"
+        ? "#ffffff"
+        : "#ffcc00",
   handDrawn: false,
   head: kind === "arrow" ? "end" : "none",
   manual: false,
-  radius: kind === "spotlight" ? SPOTLIGHT_RADIUS : 0,
+  radius: kind === "spotlight" ? SPOTLIGHT_RADIUS : kind === "magnify" ? 50 : 0,
   redaction: "erase",
+  shadow: kind === "magnify",
   softness: kind === "spotlight" ? SOFT_SPOTLIGHT_EDGE : 0,
   strength: kind === "redact" ? DEFAULT_BLUR_STRENGTH : 0,
   width: defaultAnnotationSize(kind),

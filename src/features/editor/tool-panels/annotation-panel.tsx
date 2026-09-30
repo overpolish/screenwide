@@ -36,6 +36,7 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  * corners are, and offers a pixelation style and a block size only when
  * pixelated, a strength only when blurred and a colour only when filled with
  * one; a spotlight has no colour, only its corners, its fade and its blur; a
+ * magnifier rounds its zoom area and its loupe and may cast a shadow; a
  * stroke can clear every stroke off the picture at once.
  *
  * This panel belongs to the annotation in hand. It comes up the moment one is

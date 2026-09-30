@@ -43,17 +43,24 @@ static float4 annotation_redact_halo(
 /// Geometry is already in canvas pixels, prepared using the current image
 /// placement before dispatch. Annotations are deliberately not
 /// clipped to the crop: an arrow may point in from the padding. `feather` is
-/// half of one drawn pixel, measured in canvas pixels, and `points` is the
-/// side buffer a stroke's fitted line rides in.
+/// half of one drawn pixel, measured in canvas pixels, `points` is the
+/// side buffer a stroke's fitted line rides in, and `tap` and `cursor` are
+/// where a magnifier reads the picture and the cursor it enlarges.
+template <typename Tap, typename Cursor>
 static float4 annotation_layer(
     float4 rgba, const device AnnotationUniforms &annotation, float2 canvas_point,
     float feather, const device AnnotationSample *samples, const device uchar4 *numbers,
-    AnnotationTextAtlas number_atlas, const device packed_float2 *points) {
+    AnnotationTextAtlas number_atlas, const device packed_float2 *points, Tap tap,
+    Cursor cursor) {
   float4 color = float4(annotation.color);
   if (annotation.kind == 3u || annotation.kind == 6u)
     return annotation_redact_halo(rgba, annotation, canvas_point, feather);
-  if (color.a <= 0.0 || annotation.arrow.width <= 0.0) return rgba;
   float halo = max(annotation.hover, 0.0);
+  // A magnifier's loupe shows the picture even where its rim is clear.
+  if (annotation.kind == annotation_magnify_kind)
+    return annotation_magnify_layer(rgba, annotation, canvas_point, feather, halo, samples,
+                                    tap, cursor);
+  if (color.a <= 0.0 || annotation.arrow.width <= 0.0) return rgba;
   if (annotation.kind == 1u)
     return annotation_counter_layer(rgba, annotation, color, canvas_point, feather, halo,
                                     samples, numbers, number_atlas);
@@ -104,8 +111,9 @@ static float4 annotation_layer(
 
 /// Draws every annotation but the highlights whose layer matches
 /// `above_camera`, for the live overlay, which recolours its highlights under
-/// everything else in `composite_highlights`. The editor draws in document
-/// order through `composite_annotation_layers` instead.
+/// everything else in `composite_highlights` and offers no magnifier. The
+/// editor draws in document order through `composite_annotation_layers`
+/// instead.
 ///
 /// `pixel_scale` is how many canvas pixels one drawn pixel covers. Every edge
 /// is feathered over that, not over one canvas pixel: a layer drawn smaller
@@ -123,7 +131,7 @@ static float4 composite_annotations(
     const device AnnotationUniforms &annotation = annotations[index];
     if (annotation.above_camera != above_camera || annotation.kind == 4u) continue;
     rgba = annotation_layer(rgba, annotation, canvas_point, feather, samples, numbers,
-                            number_atlas, points);
+                            number_atlas, points, AnnotationMagnifyNone{}, AnnotationCursorNone{});
   }
   return rgba;
 }

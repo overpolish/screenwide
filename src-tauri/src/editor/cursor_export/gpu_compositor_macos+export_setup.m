@@ -195,6 +195,7 @@ reader_output(AVAssetReader *reader, AVAssetTrack *track, OSType format,
   queue = [device newCommandQueue];
   cursor_artwork =
       screenwide_export_cursor_artwork_texture(device, artworks, artwork_count);
+  cursor_placeholder = screenwide_cursor_resources(device, NULL, 0).texture;
   keyboard_cache = [NSMutableDictionary dictionary];
   texture_cache = NULL;
   CVMetalTextureCacheCreate(kCFAllocatorDefault, NULL, device, NULL,
@@ -206,7 +207,7 @@ reader_output(AVAssetReader *reader, AVAssetTrack *track, OSType format,
       canvas_luma_pipeline == nil || canvas_chroma_pipeline == nil ||
       screen_luma_pipeline == nil || screen_chroma_pipeline == nil ||
       annotation_pipeline == nil || redact_pipelines == nil ||
-      texture_cache == NULL)
+      cursor_placeholder == nil || texture_cache == NULL)
     return fail(error_text, error_capacity,
                 error.localizedDescription
                     ?: @"The Metal cursor shader could not be created");

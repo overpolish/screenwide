@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A box's chrome - a redaction's, a shape's or a spotlight's: the layer
-//! selection's own box, with its eight grips and its radius dot, around the
-//! chosen one. A hovered one wears the compositor's halo instead. The twin of
-//! `recording_preview_surface_macos+annotation_redact.m`.
+//! A box's chrome - a redaction's, a shape's, a spotlight's or a magnifier's
+//! zoom area: the layer selection's own box, with its eight grips and its radius
+//! dot, around the chosen one. A hovered one wears the compositor's halo
+//! instead. The twin of `recording_preview_surface_macos+annotation_redact.m`.
 
 use super::*;
 use crate::editor::annotations::gesture::{BOX_HANDLES, MODE_SELECT, RADIUS_HANDLE};
@@ -20,6 +20,7 @@ pub(super) fn is_box(kind: AnnotationKind) -> bool {
       | AnnotationKind::Shape
       | AnnotationKind::Spotlight
       | AnnotationKind::Draw
+      | AnnotationKind::Magnify
   )
 }
 
@@ -73,17 +74,25 @@ fn grips(image: PreviewSurfaceRect, item: &NativeAnnotationHandles) -> [((f64, f
   grips
 }
 
-/// The grip of a box under `point`, as the handle it reports.
+/// The grip of a box under `point`, as the handle it reports. A magnifier's
+/// loupe grip comes after its zoom area's.
 pub(super) fn grip_at(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
   point: (f64, f64),
 ) -> Option<u32> {
+  let near =
+    |(x, y): (f64, f64)| (point.0 - x).abs() <= HANDLE_HIT && (point.1 - y).abs() <= HANDLE_HIT;
   grips(image, item)
     .into_iter()
     .filter(|(_, handle)| *handle != RADIUS_HANDLE || has_radius(item.shape_kind()))
-    .find(|((x, y), _)| (point.0 - x).abs() <= HANDLE_HIT && (point.1 - y).abs() <= HANDLE_HIT)
+    .find(|(grip, _)| near(*grip))
     .map(|(_, handle)| handle)
+    .or_else(|| {
+      (item.shape_kind() == AnnotationKind::Magnify
+        && near(super::magnify_chrome::loupe_grip(image, item)))
+      .then_some(HANDLE_TAIL)
+    })
 }
 
 /// How far `point` is from a redaction's or a spotlight's rounded box, in

@@ -86,14 +86,15 @@ static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
   [canvas_compute dispatchThreads:MTLSizeMake(uv_width, uv_height, 1)
             threadsPerThreadgroup:canvas_group];
   [canvas_compute endEncoding];
-  screenwide_export_annotations(self, command, destination_y, destination_uv,
-      (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms, annotation_output_ms,
-      0, 0);
-  // The cursor goes over every annotation on the screen's layer.
-  screenwide_export_encode_cursor_overlay(
-      command, luma_pipeline, chroma_pipeline, destination_y, destination_uv,
-      cursor_artwork, cursor, artworks, artwork_count, canvas, output_width,
-      output_height);
+  // The screen layer's pass draws the cursor, shaded and hidden by what acts
+  // on the picture; a frame showing no annotation draws it on its own.
+  if (!screenwide_export_annotations(self, command, destination_y, destination_uv, source_y,
+                                     source_uv, annotation_ms, annotation_output_ms, 0, 0,
+                                     cursor))
+    screenwide_export_encode_cursor_overlay(
+        command, luma_pipeline, chroma_pipeline, destination_y, destination_uv,
+        cursor_artwork, cursor, artworks, artwork_count, canvas, output_width,
+        output_height);
   CVMetalTextureRef camera_ref = NULL;
   if (camera_sample != NULL && camera_overlay != NULL) {
     CVPixelBufferRef camera_pixels =
@@ -157,19 +158,18 @@ static id<MTLTexture> texture(CVMetalTextureCacheRef cache,
               threadsPerThreadgroup:screen_group];
     [screen_compute endEncoding];
 
-    // The screen layer's annotations and its cursor go back over the redrawn
+    // The screen layer's cursor and annotations go back over the redrawn
     // screen when the camera has been sent behind that layer.
-    screenwide_export_annotations(self, command, destination_y, destination_uv,
-        (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms,
-        annotation_output_ms, 0, 1);
-    screenwide_export_encode_cursor_overlay(
-        command, luma_pipeline, chroma_pipeline, destination_y, destination_uv,
-        cursor_artwork, cursor, artworks, artwork_count, canvas, output_width,
-        output_height);
+    if (!screenwide_export_annotations(self, command, destination_y, destination_uv,
+                                       source_y, source_uv, annotation_ms,
+                                       annotation_output_ms, 0, 1, cursor))
+      screenwide_export_encode_cursor_overlay(
+          command, luma_pipeline, chroma_pipeline, destination_y, destination_uv,
+          cursor_artwork, cursor, artworks, artwork_count, canvas, output_width,
+          output_height);
   }
-  screenwide_export_annotations(self, command, destination_y, destination_uv,
-      (uint32_t)source_y_width, (uint32_t)source_y_height, annotation_ms, annotation_output_ms,
-      1, 0);
+  screenwide_export_annotations(self, command, destination_y, destination_uv, source_y,
+                                source_uv, annotation_ms, annotation_output_ms, 1, 0, NULL);
   screenwide_encode_keyboard_overlay(command, device, keyboard_luma_pipeline,
                                      keyboard_chroma_pipeline, destination_y,
                                      destination_uv, keyboard_cache, keyboard,

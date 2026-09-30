@@ -3,11 +3,12 @@
 
 // The shade a layer's spotlights cast. Every spotlight showing cuts its hole
 // in one shared shade, which darkens what is under it by a fixed share;
-// `composite_annotation_layers` lays it where the topmost spotlight sits. The
-// HLSL twin of `gpu_compositor_macos_shader_source_annotation_spotlight.h`,
-// and like it the arithmetic is Rust's `spotlight::geometry::{light, shade}`.
-// Every number it reads was prepared by `spotlight::geometry::prepare_spotlight`.
-// Included by `annotations.hlsl`, after the pieces every kind shares.
+// `composite_annotation_layers` lays it under every mark, and darkens the
+// cursor by it too. The HLSL twin of
+// `gpu_compositor_macos_shader_source_annotation_spotlight.h`, and like it the
+// arithmetic is Rust's `spotlight::geometry::{light, shade}`. Every number it
+// reads was prepared by `spotlight::geometry::prepare_spotlight`. Included by
+// `annotations.hlsl`, after the pieces every kind shares.
 
 static const uint annotation_spotlight_kind = 6u;
 // How much of the light the shade takes away. The twin of Rust's

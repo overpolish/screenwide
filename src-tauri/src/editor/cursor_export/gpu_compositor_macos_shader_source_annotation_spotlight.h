@@ -5,11 +5,11 @@
 
 /// The shade a layer's spotlights cast. Every spotlight showing cuts its hole
 /// in one shared shade, which darkens what is under it by a fixed share.
-/// `composite_annotation_layers` lays the shade where the topmost spotlight
-/// sits in the document, so what is drawn above it stays at full brightness.
-/// The arithmetic is Rust's `spotlight::geometry::{light, shade}`, which the
-/// tests hold this to; the blur a spotlight can add is applied to the source
-/// with the redactions, in `..._redact.h`.
+/// `composite_annotation_layers` lays the shade under every mark, so marks
+/// stay at full brightness, and darkens the cursor by it too. The arithmetic
+/// is Rust's `spotlight::geometry::{light, shade}`, which the tests hold this
+/// to; the blur a spotlight can add is applied to the source with the
+/// redactions, in `..._redact.h`, and to the cursor in `..._annotation_cursor.h`.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_SPOTLIGHT @R"METAL(
 constant uint annotation_spotlight_kind = 6u;
 

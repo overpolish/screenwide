@@ -123,6 +123,7 @@ export function AnnotateToolControls({
     // The arrow, and the kinds the overlay never draws, which its settings
     // refuse.
     case "arrow":
+    case "magnify":
     case "redact":
     case "text":
       return (

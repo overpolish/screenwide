@@ -116,7 +116,8 @@ fn grip_at_point(
     | AnnotationKind::Redact
     | AnnotationKind::Shape
     | AnnotationKind::Spotlight
-    | AnnotationKind::Draw => found,
+    | AnnotationKind::Draw
+    | AnnotationKind::Magnify => found,
   })
 }
 
@@ -153,11 +154,12 @@ pub(super) fn highlight_flow(
 }
 
 /// The grips one annotation shows as discs, in display points: an arrow's
-/// three, and the tip of a counter's tail or of a text box's pointer. A
-/// redaction's, a shape's and a spotlight's are the selection box's own,
-/// which `redact_chrome` draws and hits. The tail is placed here rather than sent
-/// because a normalised offset is a different length in each axis on a
-/// picture that is not square, while display points are isotropic.
+/// three, the tip of a counter's tail or of a text box's pointer, and a
+/// magnifier's loupe grip. A redaction's, a shape's and a spotlight's, and a
+/// magnifier's zoom area's, are the selection box's own, which `redact_chrome`
+/// draws and hits. The tail is placed here rather than sent because a
+/// normalised offset is a different length in each axis on a picture that is
+/// not square, while display points are isotropic.
 pub(super) fn item_grips(
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
@@ -186,6 +188,7 @@ pub(super) fn item_grips(
     | AnnotationKind::Shape
     | AnnotationKind::Spotlight
     | AnnotationKind::Draw => Vec::new(),
+    AnnotationKind::Magnify => vec![super::magnify_chrome::loupe_grip(image, item)],
     AnnotationKind::Highlight => {
       let flow = highlight_flow(image, item);
       [flow.start_grip(), flow.end_grip()]

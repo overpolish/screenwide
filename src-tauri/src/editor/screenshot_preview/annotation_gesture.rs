@@ -246,6 +246,7 @@ impl PreviewManager {
       angle,
       source_per_size(source, image_width),
     )?;
+    edit.set_source_size(source);
     if edit.wants_picture(annotations) {
       edit.set_picture(picture);
     }

@@ -101,6 +101,14 @@ screenwide_export_cursor_artwork_texture(
 __attribute__((visibility("hidden"))) const ScreenwideGpuCursor *
 screenwide_export_cursor_at(const ScreenwideGpuCursor *cursors, uint32_t count,
                             CMTime pts);
+/// The cursor's uniforms for one exported frame, as a canvas kernel reads
+/// them; zeroed, and so drawn nowhere, where there is no cursor or no
+/// artwork for its style.
+__attribute__((visibility("hidden"))) ScreenwideOverlayUniforms
+screenwide_export_cursor_uniforms(
+    id<MTLTexture> artwork_texture, const ScreenwideGpuCursor *cursor,
+    const ScreenwideCursorArtwork *artworks, uint32_t artwork_count,
+    const ScreenwideCanvas *canvas, uint32_t output_width, uint32_t output_height);
 __attribute__((visibility("hidden"))) void
 screenwide_export_encode_cursor_overlay(
     id<MTLCommandBuffer> command, id<MTLComputePipelineState> luma_pipeline,
@@ -127,6 +135,9 @@ screenwide_export_encode_cursor_overlay(
   id<MTLDevice> device;
   id<MTLCommandQueue> queue;
   id<MTLTexture> cursor_artwork;
+  /// Bound in `cursor_artwork`'s place where there is none: the annotation
+  /// pass reads its cursor's artwork whether or not it draws it.
+  id<MTLTexture> cursor_placeholder;
   NSMutableDictionary *keyboard_cache;
   CVMetalTextureCacheRef texture_cache;
   const ScreenwideCanvas *canvas;

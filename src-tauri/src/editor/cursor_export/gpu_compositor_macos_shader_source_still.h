@@ -21,6 +21,19 @@
   return visible ? cursor_pixel(images, cursor, point) : float4(0.0);
 }
 
+/// A canvas layer's cursor for the annotation layers: its artwork and
+/// uniforms, the canvas it clips against, and the spotlights that blur it.
+struct AnnotationCursorCanvas {
+  AnnotationCursorSpotlights spotlights;
+  texture2d_array<float, access::read> images;
+  constant OverlayUniforms *cursor;
+  constant CanvasUniforms *canvas;
+};
+
+static float4 annotation_cursor_sample(AnnotationCursorCanvas layer, float2 point) {
+  return canvas_cursor_pixel(layer.images, *layer.cursor, *layer.canvas, point);
+}
+
 /// Alpha-aware bilinear sampling preserves legacy RGBA overlays.
 static float4 still_cursor_pixel(const device uchar4 *cursor, float2 destination_point, uint2 destination_size, uint2 source_size) {
   float2 point = clamp((destination_point + 0.5) * float2(source_size) / float2(destination_size) - 0.5, 0.0, float2(source_size - 1));

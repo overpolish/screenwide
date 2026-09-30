@@ -22,6 +22,7 @@ kernel void compose_canvas_rgba(
     constant AnnotationTextAtlas &annotation_atlas [[buffer(17)]],
     const device packed_float2 *annotation_points [[buffer(18)]],
     const device uchar *annotation_text [[buffer(19)]],
+    constant AnnotationCursorBlur &cursor_blur [[buffer(21)]],
     texture2d_array<float, access::read> cursor_images [[texture(0)]],
     texture2d<float, access::sample> background_picture [[texture(1)]],
     uint2 gid [[thread_position_in_grid]],
@@ -33,14 +34,16 @@ kernel void compose_canvas_rgba(
   // The still export dispatches one thread per output pixel over a canvas
   // measured in those same pixels, so a drawn pixel is a canvas pixel.
   const float annotation_pixel_scale = 1.0;
+  // A magnifier enlarges the retained source the canvas is drawn from, and
+  // the layer's cursor, which the spotlights shade and a loupe hides.
+  AnnotationMagnifyRgba tap = {annotation_magnify_placement(u, source_dimensions), source};
+  AnnotationCursorCanvas pointer = {
+      {annotations, annotation_count, cursor_blur}, cursor_images, &cursor, &u};
   rgba = composite_annotation_layers(rgba, annotations, annotation_count, 0u,
                                      float2(gid) + 0.5, float2(source_dimensions),
                                      annotation_pixel_scale, 1.0, annotation_samples,
-                                     annotation_numbers, annotation_atlas, annotation_points);
-  // The cursor goes over every annotation on the screen's layer.
-  float4 cursor_rgba = canvas_cursor_pixel(
-    cursor_images, cursor, u, float2(gid) + 0.5);
-  rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
+                                     annotation_numbers, annotation_atlas, annotation_points,
+                                     tap, pointer);
   float2 camera_point = float2(gid) -
     float2(overlay.camera_frame_x, overlay.camera_frame_y);
   float2 camera_size = float2(
@@ -76,21 +79,21 @@ kernel void compose_canvas_rgba(
     rgba = overlay_canvas_foreground_rgba(
       rgba, source, source_dimensions.x, source_dimensions.y,
       float2(gid) + 0.5, float2(dimensions), u);
-    // The redrawn foreground covers the pass above, so the annotations under
-    // the camera go back over it, and the cursor over them. The shade only
-    // goes where the redraw repainted: everywhere else already has it.
+    // The redrawn foreground covers the pass above, so the cursor and the
+    // annotations under the camera go back over it. The shade only goes
+    // where the redraw repainted: everywhere else already has it.
     rgba = composite_annotation_layers(rgba, annotations, annotation_count, 0u,
                                        float2(gid) + 0.5, float2(source_dimensions),
                                        annotation_pixel_scale,
                                        canvas_foreground_coverage(float2(gid) + 0.5, u),
                                        annotation_samples, annotation_numbers,
-                                       annotation_atlas, annotation_points);
-    rgba = mix(rgba, cursor_rgba, cursor_rgba.a);
+                                       annotation_atlas, annotation_points, tap, pointer);
   }
   rgba = composite_annotation_layers(rgba, annotations, annotation_count, 1u,
                                      float2(gid) + 0.5, float2(source_dimensions),
                                      annotation_pixel_scale, 1.0, annotation_samples,
-                                     annotation_numbers, annotation_atlas, annotation_points);
+                                     annotation_numbers, annotation_atlas, annotation_points,
+                                     tap, AnnotationCursorNone{});
   // The keyboard overlay goes over everything, as the video export draws it,
   // so a spotlight above the camera never dims it.
   rgba = composite_keyboard(rgba, keyboard_pixels, keyboard,

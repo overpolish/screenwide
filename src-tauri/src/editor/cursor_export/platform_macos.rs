@@ -225,6 +225,12 @@ mod annotation_tests;
 #[path = "platform_macos_counter_tests.rs"]
 mod counter_tests;
 #[cfg(test)]
+#[path = "platform_macos_cursor_order_tests.rs"]
+mod cursor_order_tests;
+#[cfg(test)]
+#[path = "platform_macos_cursor_order_video_tests.rs"]
+mod cursor_order_video_tests;
+#[cfg(test)]
 #[path = "platform_macos_draw_tests.rs"]
 mod draw_tests;
 #[cfg(test)]
@@ -233,6 +239,12 @@ mod highlight_tests;
 #[cfg(test)]
 #[path = "platform_macos_keyboard_tests.rs"]
 mod keyboard_tests;
+#[cfg(test)]
+#[path = "platform_macos_magnify_tests.rs"]
+mod magnify_tests;
+#[cfg(test)]
+#[path = "platform_macos_magnify_video_tests.rs"]
+mod magnify_video_tests;
 #[cfg(test)]
 #[path = "platform_macos_pinned_annotation_tests.rs"]
 mod pinned_annotation_tests;

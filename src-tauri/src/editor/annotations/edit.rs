@@ -94,6 +94,12 @@ impl AnnotationEdit {
     self.origin.source_per_point = source_per_point.unwrap_or(0.0);
   }
 
+  /// The picture's size in source pixels, which a fresh magnifier sets its
+  /// loupe inside.
+  pub(crate) fn set_source_size(&mut self, source_size: (u32, u32)) {
+    self.origin.source_size = source_size;
+  }
+
   /// The pixels a highlight selects from, for the samples still to come.
   /// Set as soon as the workspace has them, which for a recording may be
   /// part way through the drag; a picture once given is kept.

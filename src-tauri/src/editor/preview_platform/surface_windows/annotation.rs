@@ -31,6 +31,7 @@ const TARGET_NONE: u32 = 2;
 const TARGET_SELECT: u32 = 3;
 
 /// Which grip a press took hold of, matching `ScreenwideAnnotationHandle`.
+const HANDLE_MIDDLE: u32 = 1;
 const HANDLE_END: u32 = 2;
 const HANDLE_BODY: u32 = 3;
 const HANDLE_TAIL: u32 = 4;
@@ -226,6 +227,10 @@ pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
 #[path = "annotation/redact_chrome.rs"]
 mod redact_chrome;
 pub(super) use redact_chrome::selected_box as selected_redaction;
+
+/// A magnifier's loupe: where it is picked and the grip that sets its size.
+#[path = "annotation/magnify_chrome.rs"]
+mod magnify_chrome;
 
 /// What a snapped sample draws, and where.
 #[path = "annotation/snap_chrome.rs"]

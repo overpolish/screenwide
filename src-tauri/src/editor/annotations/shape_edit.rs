@@ -44,15 +44,18 @@ impl super::super::Annotation {
       AnnotationKind::Draw => {
         super::super::freehand::gesture::drag(self, handle, point, origin, shift, snap)
       }
+      AnnotationKind::Magnify => {
+        super::super::magnify::gesture::drag(self, handle, point, origin, shift, snap)
+      }
     }
   }
 
   /// Carry the annotation this gesture has just made to `point`: an arrow is
   /// drawn out from the press, a counter was dropped whole there, a text
   /// box is carried the way a placed one is moved, so it stays centred under
-  /// the hand it was centred on, and a redaction or a shape is pulled out from
-  /// the press to the hand, square while `shift` is held. `origin` is where
-  /// the gesture began.
+  /// the hand it was centred on, and a redaction, a shape or a magnifier's
+  /// zoom area is pulled out from the press to the hand, square while
+  /// `shift` is held. `origin` is where the gesture began.
   #[cfg(any(target_os = "macos", target_os = "windows", test))]
   pub(crate) fn drag_new(
     &mut self,
@@ -78,6 +81,9 @@ impl super::super::Annotation {
       AnnotationKind::Draw => {
         super::super::freehand::gesture::drag_new(self, point, origin);
         super::super::snap::SnapResult::default()
+      }
+      AnnotationKind::Magnify => {
+        super::super::magnify::gesture::drag_new(self, point, origin, shift, snap)
       }
     }
   }
@@ -120,6 +126,7 @@ impl AnnotationKind {
       ),
       Self::Spotlight => super::super::spotlight::model::new_spotlight(id, [point, point], style),
       Self::Draw => super::super::freehand::model::new_draw(id, point, style),
+      Self::Magnify => super::super::magnify::model::new_magnify(id, point, style),
     }
   }
 
@@ -164,6 +171,9 @@ impl AnnotationKind {
         Default::default(),
         1.0,
       ),
+      Self::Magnify => {
+        super::super::magnify::reveal::magnify_reveal_window(elapsed_ms, duration_ms, frame_ms)
+      }
     }
   }
 
@@ -178,7 +188,7 @@ impl AnnotationKind {
         own.unwrap_or(super::super::reveal::REVEAL_DRAW_IN_MS)
       }
       Self::Text => own.unwrap_or(super::super::text::reveal::POINTER_IN_MS),
-      Self::Counter | Self::Redact | Self::Spotlight => 0.0,
+      Self::Counter | Self::Redact | Self::Spotlight | Self::Magnify => 0.0,
     }
   }
 
@@ -201,6 +211,10 @@ impl AnnotationKind {
       Self::Spotlight => {
         use super::super::spotlight::reveal::{SPOTLIGHT_FADE_IN_MS, SPOTLIGHT_FADE_OUT_MS};
         SPOTLIGHT_FADE_IN_MS + SPOTLIGHT_FADE_OUT_MS
+      }
+      Self::Magnify => {
+        use super::super::magnify::reveal::{MAGNIFY_REVEAL_IN_MS, MAGNIFY_REVEAL_OUT_MS};
+        MAGNIFY_REVEAL_IN_MS + MAGNIFY_REVEAL_OUT_MS
       }
     }
   }

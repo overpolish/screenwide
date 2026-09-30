@@ -36,6 +36,7 @@ export type AnnotationKind =
   | "counter"
   | "draw"
   | "highlight"
+  | "magnify"
   | "redact"
   | "shape"
   | "spotlight"

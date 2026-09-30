@@ -157,6 +157,7 @@ impl PreviewPlayerManager {
         self.annotation.counter_angle,
         source_per_size(source_size, image_width),
       )?;
+      edit.set_source_size(source_size);
       if edit.wants_picture(&working) {
         edit.set_picture(self.annotation_picture(pane, position_ms, source_size, false));
       }

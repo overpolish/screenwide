@@ -35,7 +35,7 @@ export function CursorToolToggle({ onDismiss }: { onDismiss: () => void }) {
           if (!bounds) return;
           void toggle("cursor", bounds);
         }}
-        shortcut="M"
+        shortcut="Shift+C"
       >
         <MousePointer />
       </ToolToggle>

@@ -60,6 +60,7 @@ pub(super) fn arrow_distance(
     // A stroke's line is in the published paths, which `draw_distance`
     // reads; its grips alone cannot place it.
     AnnotationKind::Draw => return f32::INFINITY,
+    AnnotationKind::Magnify => return super::magnify_chrome::distance(image, item, point),
     AnnotationKind::Arrow => {}
   }
   let middle = display_point(image, item.middle_x, item.middle_y);

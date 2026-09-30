@@ -30,6 +30,7 @@ const arrow = (id: string): Annotation => ({
     manual: false,
     radius: 0,
     redaction: "erase",
+    shadow: false,
     softness: 0,
     strength: 0,
     width: 8,
@@ -71,6 +72,7 @@ const counter = (id: string, value: number): Annotation => ({
     manual: false,
     radius: 0,
     redaction: "erase",
+    shadow: false,
     softness: 0,
     strength: 0,
     width: 56,
@@ -160,6 +162,7 @@ describe("validAnnotations", () => {
         manual: false,
         radius: 0,
         redaction: "erase",
+        shadow: false,
         softness: 0,
         strength: 0,
         width: 28,
@@ -209,6 +212,30 @@ describe("validAnnotations", () => {
         highlight([{ bottom: 4, left: "x", right: 10, top: 2 }]),
       ]),
     ).toEqual([]);
+  });
+
+  it("reads a stored magnifier back, and drops one whose loupe it cannot draw", () => {
+    const magnifier = (loupe: unknown, size: unknown) => ({
+      ...counter("m", 1),
+      shape: {
+        end: { x: 90, y: 90 },
+        kind: "magnify",
+        loupe,
+        size,
+        start: { x: 10, y: 10 },
+      },
+    });
+    const [read] = validAnnotations([magnifier({ x: 200, y: 50 }, 160)]);
+    expect(read.shape).toEqual({
+      end: { x: 90, y: 90 },
+      kind: "magnify",
+      loupe: { x: 200, y: 50 },
+      size: 160,
+      start: { x: 10, y: 10 },
+    });
+    expect(validAnnotations([magnifier(undefined, 160)])).toEqual([]);
+    expect(validAnnotations([magnifier({ x: 200, y: 50 }, -1)])).toEqual([]);
+    expect(validAnnotations([magnifier({ x: 200, y: 50 }, "big")])).toEqual([]);
   });
 
   it("reads an older document's style as left-aligned", () => {

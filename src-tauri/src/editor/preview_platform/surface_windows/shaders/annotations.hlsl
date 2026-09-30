@@ -409,6 +409,8 @@ float4 annotation_counter_layer(
 #include "annotation_shape.hlsl"
 #include "annotation_draw.hlsl"
 #include "annotation_spotlight.hlsl"
+#include "annotation_cursor.hlsl"
+#include "annotation_magnify.hlsl"
 
 /// A hovered redaction's halo. The box itself was applied to the source and
 /// is not drawn here, so this is the only thing that finds an erased box on
@@ -446,16 +448,20 @@ float4 annotation_redact_halo(float4 rgba, PreviewArrow annotation, float2 canva
 ///
 /// Annotations are deliberately not clipped to the crop: an arrow may point in
 /// from the padding. `feather` is how wide an edge is smoothed, in canvas
-/// pixels, and `number_atlas` is where the counters' numbers and the text
-/// boxes' text were rasterised - a zero size where nothing rasterised any.
+/// pixels, `number_atlas` is where the counters' numbers and the text boxes'
+/// text were rasterised - a zero size where nothing rasterised any - and
+/// `cursor` whether this layer carries the cursor, which a loupe shows.
 float4 annotation_layer(float4 rgba, PreviewArrow annotation, float2 canvas_point,
-                        float feather, AnnotationTextAtlas number_atlas) {
+                        float feather, AnnotationTextAtlas number_atlas, bool cursor) {
   PreviewGeometry arrow = annotation.geometry;
   float4 color = float4(annotation.red, annotation.green, annotation.blue, annotation.alpha);
   if (annotation.kind == 3u || annotation.kind == annotation_spotlight_kind)
     return annotation_redact_halo(rgba, annotation, canvas_point, feather);
-  if (color.a <= 0.0 || arrow.width <= 0.0) return rgba;
   float halo = max(annotation.hover, 0.0);
+  // A magnifier's loupe shows the picture even where its rim is clear.
+  if (annotation.kind == annotation_magnify_kind)
+    return annotation_magnify_layer(rgba, annotation, canvas_point, feather, halo, cursor);
+  if (color.a <= 0.0 || arrow.width <= 0.0) return rgba;
   if (annotation.kind == 1u)
     return annotation_counter_layer(rgba, annotation, color, canvas_point, feather, halo,
                                     number_atlas);
@@ -512,16 +518,28 @@ float4 composite_annotations(
   for (uint index = first; index < last; ++index) {
     PreviewArrow annotation = annotation_arrows[index];
     if (annotation.kind == annotation_highlight_kind) continue;
-    rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas);
+    rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas, false);
   }
   return rgba;
 }
 
-/// Draws the prepared annotations in `[first, last)` over `rgba`, the first in
-/// the document at the bottom. A highlight recolours whatever is under it by
-/// then. The spotlights share one shade, laid where the topmost of them sits:
-/// it darkens the picture and every annotation below that spotlight, and
-/// nothing above it. The twin of the Metal `composite_annotation_layers`.
+/// Whether a kind acts on the picture rather than marking it: a spotlight
+/// shades and blurs it, and a magnifier enlarges it. They lie under every
+/// mark, and over the cursor.
+bool annotation_acts_on_picture(uint kind) {
+  return kind == annotation_spotlight_kind || kind == annotation_magnify_kind;
+}
+
+/// Draws the prepared annotations in `[first, last)`, and the cursor where
+/// `cursor` says this layer carries it, over `rgba`. First what acts on the
+/// picture, in document order: the spotlights share one shade, laid where
+/// the topmost of them sits among the magnifiers, and a magnifier shows the
+/// picture and the cursor enlarged. Then every mark, in document order, the
+/// first at the bottom, none of them shaded; a highlight recolours whatever
+/// is under it by then. Last the cursor, over every mark, but treated as
+/// lying on the picture: the spotlights' shade darkens it and their blur
+/// softens it, and a loupe hides it. The twin of the Metal
+/// `composite_annotation_layers`.
 ///
 /// The range is how the camera ordering is expressed: Rust sorts the
 /// annotations that sit under the camera ahead of those above it, keeping the
@@ -529,21 +547,40 @@ float4 composite_annotations(
 /// than testing a flag per annotation per pixel.
 float4 composite_annotation_layers(
     float4 rgba, float2 canvas_point, uint first, uint last, float feather,
-    AnnotationTextAtlas number_atlas) {
+    AnnotationTextAtlas number_atlas, bool cursor) {
   uint shade_at = last;
   for (uint probe = first; probe < last; ++probe)
     if (annotation_arrows[probe].kind == annotation_spotlight_kind) shade_at = probe;
   for (uint index = first; index < last; ++index) {
+    PreviewArrow annotation = annotation_arrows[index];
+    if (!annotation_acts_on_picture(annotation.kind)) continue;
     if (index == shade_at) {
       float shade = annotation_spotlight_cover(canvas_point, first, last, feather, false);
       rgba.rgb *= 1.0 - annotation_spotlight_dim * shade;
     }
-    PreviewArrow annotation = annotation_arrows[index];
+    rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas, cursor);
+  }
+  for (uint mark = first; mark < last; ++mark) {
+    PreviewArrow annotation = annotation_arrows[mark];
+    if (annotation_acts_on_picture(annotation.kind)) continue;
     // FXC evaluates both sides of `?:`, so the kinds branch.
     if (annotation.kind == annotation_highlight_kind)
       rgba = annotation_highlight_layer(rgba, rgba, annotation, canvas_point, feather);
     else
-      rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas);
+      rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas, cursor);
   }
+  if (!cursor) return rgba;
+  float4 pointer = annotation_cursor_seen(canvas_point, max(2.0 * feather, 1e-4));
+  if (pointer.a <= 0.0) return rgba;
+  pointer.rgb *= 1.0 - annotation_spotlight_dim *
+                           annotation_spotlight_cover(canvas_point, first, last, feather, false);
+  float hidden = 0.0;
+  for (uint loupe = first; loupe < last; ++loupe)
+    if (annotation_arrows[loupe].kind == annotation_magnify_kind)
+      hidden = max(hidden, annotation_magnify_cover(annotation_arrows[loupe], canvas_point,
+                                                    feather));
+  pointer.a *= 1.0 - hidden;
+  rgba.rgb = lerp(rgba.rgb, pointer.rgb, pointer.a);
+  rgba.a = pointer.a + rgba.a * (1.0 - pointer.a);
   return rgba;
 }

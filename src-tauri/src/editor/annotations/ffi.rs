@@ -17,6 +17,7 @@ use super::exposure::{annotation_travel, highlight_travel};
 use super::freehand::geometry::{freehand_body_distance, freehand_distance, prepare_freehand};
 use super::geometry::ArrowGeometry;
 use super::highlight::geometry::{flow_distance, prepare_highlight, HighlightFlow};
+use super::magnify::geometry::magnify_distance;
 use super::outline::geometry::{prepare_shape, shape_distance};
 use super::redact::geometry::{prepare_redact, redact_distance};
 use super::reveal::AnnotationReveal;
@@ -81,7 +82,9 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
     Some(AnnotationKind::Draw) => {
       prepare_freehand([p0x, p0y], [p1x, p1y], [p2x, p2y], width, reveal)
     }
-    None => ArrowGeometry::default(),
+    // A magnifier's zoom and rounding are not among these; it prepares
+    // through `magnify::ffi::screenwide_magnify_prepare`.
+    Some(AnnotationKind::Magnify) | None => ArrowGeometry::default(),
   };
 }
 
@@ -169,6 +172,7 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
     Some(AnnotationKind::Redact) => redact_distance([px, py], geometry),
     Some(AnnotationKind::Shape) => shape_distance([px, py], geometry),
     Some(AnnotationKind::Spotlight) => spotlight_distance([px, py], geometry),
+    Some(AnnotationKind::Magnify) => magnify_distance([px, py], geometry),
     // A highlight's record places bands it does not carry, and a stroke's
     // the line it does not; the chrome picks them through
     // [`screenwide_highlight_distance`] and [`screenwide_freehand_distance`].

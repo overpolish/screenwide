@@ -153,6 +153,12 @@ NSInteger annotation_handle_at_point(ScreenwidePreviewSurface *surface,
 /// The topmost arrow whose shaft `point` lands on, or -1.
 NSInteger annotation_shaft_at_point(ScreenwidePreviewSurface *surface,
                                     NSPoint point);
+/// Which grip a press on the body of the annotation at `index` takes hold
+/// of: `Middle` inside a magnifier's loupe, `Body` everywhere else.
+uint32_t annotation_body_handle(ScreenwidePreviewSurface *surface, NSInteger index,
+                                NSPoint point);
+/// Where a magnifier's loupe grip sits, in display points.
+NSPoint annotation_magnify_grip(NSRect image, ScreenwidePreviewAnnotation item);
 /// Reports one annotation gesture sample to Rust. `index` is the item's place
 /// in the published list for an existing or chosen annotation.
 void emit_annotation_gesture(ScreenwidePreviewSurface *surface, uint32_t phase,

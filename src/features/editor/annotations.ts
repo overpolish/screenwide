@@ -37,13 +37,16 @@ export type AnnotationStyle = {
    * strokes `width` tall, rather than fitted to the text under it; the other
    * kinds carry `false`. */
   manual: boolean;
-  /** A redaction's, a shape's or a spotlight's corner radius, as a
-   * percentage of its box's shorter side from 0 to 50; the other kinds carry
-   * zero. */
+  /** A redaction's, a shape's, a spotlight's or a magnifier's corner radius,
+   * as a percentage of its box's shorter side from 0 to 50; the other kinds
+   * carry zero. */
   radius: number;
   /** How a redaction covers what is under it; the other kinds carry the
    * default. */
   redaction: AnnotationRedaction;
+  /** Whether a magnifier's loupe casts a shadow onto the picture; the other
+   * kinds carry `false`. */
+  shadow: boolean;
   /** How far a spotlight's edge fades from lit to dim, as a percentage of its
    * box's shorter side from 0 to 50; the other kinds carry zero. */
   softness: number;
@@ -139,6 +142,21 @@ type AnnotationDraw = {
   smooth: boolean;
 };
 
+/**
+ * A loupe showing a zoom area enlarged. `start` is the zoom area's top-left
+ * corner and `end` its bottom-right, in source pixels; `loupe` is the loupe's
+ * centre and `size` its longer side, the zoom area's shape scaled up to that.
+ * The twin of `AnnotationShape::Magnify` in
+ * `src-tauri/src/editor/annotations/shape.rs`.
+ */
+type AnnotationMagnify = {
+  end: AnnotationPoint;
+  kind: "magnify";
+  loupe: AnnotationPoint;
+  size: number;
+  start: AnnotationPoint;
+};
+
 /** One line a highlight covers, in source pixels. */
 export type HighlightBand = {
   bottom: number;
@@ -181,6 +199,7 @@ export type AnnotationShape =
   | AnnotationCounter
   | AnnotationDraw
   | AnnotationHighlight
+  | AnnotationMagnify
   | AnnotationOutline
   | AnnotationRedact
   | AnnotationSpotlight

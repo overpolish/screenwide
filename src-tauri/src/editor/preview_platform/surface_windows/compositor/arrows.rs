@@ -167,6 +167,9 @@ pub(crate) struct PreparedArrows {
   pub(crate) pixel_scale: f32,
   /// The redactions the pre-pass applies to the source, in its own pixels.
   pub(crate) redactions: crate::editor::annotations::redact::records::RedactRecords,
+  /// The spotlights' blur the cursor takes: its standard deviation in canvas
+  /// pixels and how far it has arrived, both zero where no spotlight blurs.
+  pub(crate) cursor_blur: [f32; 2],
 }
 
 /// A CPU-written structured buffer that grows to fit the list it is handed,

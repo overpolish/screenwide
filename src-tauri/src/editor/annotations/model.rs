@@ -98,6 +98,7 @@ pub struct AnnotationStyle {
   pub blur: bool,
   /// `#rrggbb` or `#rrggbbaa`, straight alpha.
   pub color: String,
+  /// Which ends of an arrow carry a head.
   #[serde(default)]
   pub head: AnnotationHead,
   /// Whether a highlight is drawn as a marker stroke by hand rather than as a
@@ -110,9 +111,9 @@ pub struct AnnotationStyle {
   /// the other kinds carry `false`.
   #[serde(default)]
   pub manual: bool,
-  /// A redaction's, a shape's or a spotlight's corner radius, as a
-  /// percentage of its box's shorter side from 0 to 50; the other kinds carry
-  /// zero.
+  /// A redaction's, a shape's, a spotlight's or a magnifier's corner radius,
+  /// as a percentage of its box's shorter side from 0 to 50; the other kinds
+  /// carry zero.
   #[serde(default)]
   pub radius: f64,
   #[serde(default)]
@@ -121,6 +122,10 @@ pub struct AnnotationStyle {
   /// box's shorter side from 0 to 50; the other kinds carry zero.
   #[serde(default)]
   pub softness: f64,
+  /// Whether a magnifier's loupe casts a shadow onto the picture; the other
+  /// kinds carry `false`.
+  #[serde(default)]
+  pub shadow: bool,
   /// A blurred redaction's strength, a step from 1 to 5; the other kinds
   /// carry zero.
   #[serde(default = "default_strength")]
@@ -233,6 +238,7 @@ mod tests {
         manual: false,
         radius: 0.0,
         redaction: Default::default(),
+        shadow: false,
         softness: 0.0,
         strength: 0.0,
         width: 8.0,

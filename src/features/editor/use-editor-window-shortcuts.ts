@@ -196,7 +196,7 @@ export function useEditorWindowShortcuts({
       if (event.shiftKey && !commandKey) {
         const shiftedKey = editorToolKeyAction(
           event.code,
-          { onArrange, onToggleRangeTool, onToggleSnap },
+          { onArrange, onToggleCursorPanel, onToggleRangeTool, onToggleSnap },
           true,
         );
         if (shiftedKey && !ownsTextEditingKeys(event.target)) {

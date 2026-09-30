@@ -16,7 +16,9 @@ use crate::editor::annotations::{AnnotationKind, AnnotationPoint, AnnotationShap
 /// grips and its shaft; a counter has one - the tail - and its disc; a text
 /// box has one - its pointer's tip - and its box; a redaction and a shape
 /// have the eight grips of a box, its radius dot and its body; a highlight
-/// has the selection's two ends and its bands.
+/// has the selection's two ends and its bands; a magnifier has its zoom
+/// area's box grips and body, its loupe's inside - `Middle` - and the grip on
+/// the loupe's rim - `Tail` - which sets its size and so its zoom.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum AnnotationHandle {
   Start,
@@ -97,6 +99,7 @@ pub(crate) const MODE_HIGHLIGHT: u32 = 6;
 pub(crate) const MODE_SHAPE: u32 = 7;
 pub(crate) const MODE_SPOTLIGHT: u32 = 8;
 pub(crate) const MODE_DRAW: u32 = 9;
+pub(crate) const MODE_MAGNIFY: u32 = 10;
 
 /// The tool name React sends, as a mode. Anything else puts the chrome away.
 pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
@@ -109,6 +112,7 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
     Some("shape") => MODE_SHAPE,
     Some("spotlight") => MODE_SPOTLIGHT,
     Some("draw") => MODE_DRAW,
+    Some("magnify") => MODE_MAGNIFY,
     Some("select") => MODE_SELECT,
     _ => MODE_NONE,
   }
@@ -136,18 +140,24 @@ pub(crate) fn drawing_kind(mode: u32) -> Option<AnnotationKind> {
     MODE_SHAPE => Some(AnnotationKind::Shape),
     MODE_SPOTLIGHT => Some(AnnotationKind::Spotlight),
     MODE_DRAW => Some(AnnotationKind::Draw),
+    MODE_MAGNIFY => Some(AnnotationKind::Magnify),
     _ => None,
   }
 }
 
 /// Whether the tool in hand only draws on a recording's screen: a redaction,
 /// a highlight and a spotlight each read or change the screen's own frames,
-/// which a camera pane has none of.
+/// which a camera pane has none of, and a magnifier enlarges them.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn screen_only(mode: u32) -> bool {
   matches!(
     drawing_kind(mode),
-    Some(AnnotationKind::Redact | AnnotationKind::Highlight | AnnotationKind::Spotlight)
+    Some(
+      AnnotationKind::Redact
+        | AnnotationKind::Highlight
+        | AnnotationKind::Spotlight
+        | AnnotationKind::Magnify
+    )
   )
 }
 
@@ -190,7 +200,8 @@ impl AnnotationGestureTarget {
 ///
 /// `picture` is what a highlight selects from while it is drawn out or its
 /// ends are moved: the pixels under the gesture, where the workspace has
-/// them.
+/// them. `source_size` is the picture's size in source pixels, which a fresh
+/// magnifier sets its loupe inside; zero where it is unknown.
 #[derive(Clone, Debug)]
 pub(crate) struct AnnotationDragOrigin {
   pub(crate) bend: ArrowBend,
@@ -199,6 +210,7 @@ pub(crate) struct AnnotationDragOrigin {
   pub(crate) source_per_size: f64,
   pub(crate) source_per_point: f64,
   pub(crate) picture: Option<std::sync::Arc<super::highlight::picture::HighlightPicture>>,
+  pub(crate) source_size: (u32, u32),
 }
 
 impl AnnotationDragOrigin {
@@ -210,6 +222,7 @@ impl AnnotationDragOrigin {
       source_per_size: 0.0,
       source_per_point: 0.0,
       picture: None,
+      source_size: (0, 0),
     }
   }
 }

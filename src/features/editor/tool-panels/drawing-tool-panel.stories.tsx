@@ -134,3 +134,23 @@ export const Draw: Story = {
     });
   },
 };
+
+/** The magnifier tool: a round loupe enlarging twice its zoom area, joined
+ * to it by a line and casting a shadow, chosen before it is drawn. */
+export const Magnifier: Story = {
+  beforeEach: () => {
+    seedToolPanel({
+      annotation: {
+        animated: true,
+        id: "",
+        isDraft: true,
+        kind: "magnify",
+        style: firstAnnotationDress("magnify"),
+      },
+      cursorEffects: DEFAULT_CURSOR_EFFECTS,
+      frame: null,
+      isLocked: false,
+      selection: null,
+    });
+  },
+};

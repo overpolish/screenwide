@@ -14,9 +14,10 @@ import type { ToolPanelPatch } from "./tool-panel-store";
 
 /**
  * The options only some kinds carry: an arrow's heads, a text box's
- * alignment, a hand-drawn stroke, and a spotlight's fading edge and blur. They
- * sit after the size and geometry rows and before Animate and the colour, the
- * one place every tool panel keeps its options.
+ * alignment, a hand-drawn stroke, a spotlight's fading edge and blur, and a
+ * magnifier's shadow. They sit after the size and geometry rows and
+ * before Animate and the colour, the one place every tool panel keeps its
+ * options.
  */
 export function AnnotationOptionRows({
   canShuffle,
@@ -31,7 +32,12 @@ export function AnnotationOptionRows({
   isLocked: boolean;
   kind: Pick<
     (typeof ANNOTATION_KINDS)[keyof typeof ANNOTATION_KINDS],
-    "hasAlign" | "hasBlur" | "hasHandDrawn" | "hasHead" | "hasSoftness"
+    | "hasAlign"
+    | "hasBlur"
+    | "hasHandDrawn"
+    | "hasHead"
+    | "hasShadow"
+    | "hasSoftness"
   >;
   style: AnnotationStyle;
 }) {
@@ -118,6 +124,21 @@ export function AnnotationOptionRows({
               isSelected={style.blur}
               onChange={(next) => {
                 change({ annotationStyle: { blur: next } });
+              }}
+            />
+          )}
+        </ControlRow>
+      ) : null}
+
+      {kind.hasShadow ? (
+        <ControlRow title="Drop shadow">
+          {(controlProps) => (
+            <Switch
+              {...controlProps}
+              isDisabled={isLocked}
+              isSelected={style.shadow}
+              onChange={(next) => {
+                change({ annotationStyle: { shadow: next } });
               }}
             />
           )}

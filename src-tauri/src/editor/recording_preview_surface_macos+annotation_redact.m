@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A box's chrome - a redaction's, a shape's, a spotlight's or a stroke's:
-//! the layer selection's own box, with its eight grips and, for all but a
-//! stroke, its radius dot, around the chosen one. A hovered one wears the
+//! A box's chrome - a redaction's, a shape's, a spotlight's, a stroke's or a
+//! magnifier's zoom area: the layer selection's own box, with its eight grips
+//! and, for all but a stroke, its radius dot, around the chosen one. A
+//! magnifier adds the grip on its loupe's rim. A hovered one wears the
 //! compositor's halo instead.
 
 #import "recording_preview_surface_macos_private.h"
@@ -11,7 +12,8 @@
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_kind_is_box(uint32_t kind) {
   return kind == ScreenwideAnnotationKindRedact || kind == ScreenwideAnnotationKindShape ||
-         kind == ScreenwideAnnotationKindSpotlight || kind == ScreenwideAnnotationKindDraw;
+         kind == ScreenwideAnnotationKindSpotlight || kind == ScreenwideAnnotationKindDraw ||
+         kind == ScreenwideAnnotationKindMagnify;
 }
 
 /// The box on screen, from the normalised corners Rust published.
@@ -52,7 +54,10 @@ SCREENWIDE_PREVIEW_PRIVATE NSUInteger annotation_redact_grips(
   // The radius percentage rides in `start_head`, which a box has no use for.
   handles[8] = redact_radius_point(frame, item.start_head);
   kinds[8] = ScreenwideAnnotationHandleRadius;
-  return 9;
+  if (item.kind != ScreenwideAnnotationKindMagnify) return 9;
+  handles[9] = annotation_magnify_grip(image, item);
+  kinds[9] = ScreenwideAnnotationHandleTail;
+  return 10;
 }
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_redact_add_osc(
@@ -65,10 +70,20 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_redact_add_osc(
       !annotation_kind_is_box(list[selected].kind))
     return NO;
   NSRect image = annotation_image_frame(surface);
-  if (image.size.width > 0.0 && image.size.height > 0.0)
-    screenwide_region_osc_add_selection(vertices, count, size,
-                                        redact_frame(image, list[selected]), scale,
-                                        list[selected].start_head,
-                                        list[selected].kind != ScreenwideAnnotationKindDraw);
+  if (image.size.width <= 0.0 || image.size.height <= 0.0) return YES;
+  screenwide_region_osc_add_selection(vertices, count, size,
+                                      redact_frame(image, list[selected]), scale,
+                                      list[selected].start_head,
+                                      list[selected].kind != ScreenwideAnnotationKindDraw);
+  if (list[selected].kind == ScreenwideAnnotationKindMagnify) {
+    // The loupe's grip wears the same disc an arrow's grips do.
+    NSPoint grip = annotation_magnify_grip(image, list[selected]);
+    CGFloat extent = 4.0 + 2.0 / scale;
+    CGFloat x = round(grip.x * scale) / scale;
+    CGFloat y = round(grip.y * scale) / scale;
+    screenwide_region_osc_add_texture_quad(
+        vertices, count, size, NSMakeRect(x - extent, y - extent, extent * 2.0, extent * 2.0),
+        NSMakeRect(0.0, 0.0, 1.0, 1.0), 3);
+  }
   return YES;
 }

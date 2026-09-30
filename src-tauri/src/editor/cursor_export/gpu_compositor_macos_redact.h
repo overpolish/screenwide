@@ -65,6 +65,11 @@ ScreenwideRedactPipelines *screenwide_redact_pipelines(id<MTLLibrary> library);
 NSData *screenwide_redactions(const ScreenwideAnnotations *annotations,
                               uint32_t width, uint32_t height);
 
+/// How far the spotlights' blur has arrived in `annotations`: as present as
+/// the most present spotlight that blurs, and zero where none does. The blur
+/// record's deviation is widened by it, and the cursor is blurred to match.
+float screenwide_spotlight_blur_strength(const ScreenwideAnnotations *annotations);
+
 /// Encodes the passes for every redaction over `pixels`, an RGBA source
 /// buffer, in order: a box drawn over another averages what the first left.
 void screenwide_encode_redactions(id<MTLCommandBuffer> command,

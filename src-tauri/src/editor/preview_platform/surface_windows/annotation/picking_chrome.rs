@@ -52,6 +52,12 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<edit
   if let Some(cursor) = handle.and_then(super::redact_chrome::grip_cursor) {
     return Some(cursor);
   }
+  // A magnifier's loupe grip sizes the loupe from the middle of its right side.
+  let magnifier =
+    selected_item(state).is_some_and(|item| item.shape_kind() == AnnotationKind::Magnify);
+  if handle == Some(HANDLE_TAIL) && magnifier {
+    return Some(editor::CursorKind::ResizeHorizontal);
+  }
   if handle.is_some() || shaft_at_point(state, point).is_some() {
     return Some(editor::CursorKind::Arrow);
   }

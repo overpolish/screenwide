@@ -8,6 +8,7 @@ import {
   CounterToolIcon,
   DrawToolIcon,
   HighlightToolIcon,
+  MagnifyToolIcon,
   RedactToolIcon,
   ShapeToolIcon,
   SpotlightToolIcon,
@@ -100,6 +101,14 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     shortcut: "H",
   },
   keyboard: { panel: "keyboard", resetsView: true },
+  magnify: {
+    drawsOnLayer: true,
+    icon: MagnifyToolIcon,
+    label: "Magnifier",
+    name: "Magnify a detail",
+    panel: "annotation",
+    shortcut: "M",
+  },
   redact: {
     drawsOnLayer: true,
     icon: RedactToolIcon,

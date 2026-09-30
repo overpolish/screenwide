@@ -12,7 +12,8 @@
 // pixelated one and `BLUR` a blurred one, or a spotlight that blurs what is
 // outside it. `SURFACES` marks a redaction whose
 // `p1` points at a surface timeline in the side buffer. `HAND_DRAWN` marks a
-// highlight drawn as a marker stroke rather than a clean band.
+// highlight drawn as a marker stroke rather than a clean band. `SHADOW` marks
+// a magnifier whose loupe casts a shadow.
 #![allow(dead_code)]
 
 pub(crate) const FILL: u32 = 1 << 0;
@@ -22,3 +23,4 @@ pub(crate) const BLUR: u32 = 1 << 3;
 pub(crate) const MOSAIC: u32 = 1 << 4;
 pub(crate) const SURFACES: u32 = 1 << 5;
 pub(crate) const HAND_DRAWN: u32 = 1 << 6;
+pub(crate) const SHADOW: u32 = 1 << 7;

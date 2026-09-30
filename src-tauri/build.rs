@@ -100,6 +100,9 @@ fn main() {
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_redact.m"
     );
     println!(
+      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_picking.m"
+    );
+    println!(
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_state.m"
     );
     println!(
@@ -229,6 +232,7 @@ fn main() {
       .file("src/editor/recording_preview_surface_macos+editor.m")
       .file("src/editor/recording_preview_surface_macos+keyboard.m")
       .file("src/editor/recording_preview_surface_macos+annotation.m")
+      .file("src/editor/recording_preview_surface_macos+annotation_picking.m")
       .file("src/editor/recording_preview_surface_macos+annotation_text_input.m")
       .file("src/editor/recording_preview_surface_macos+annotation_text.m")
       .file("src/editor/recording_preview_surface_macos+annotation_chrome.m")

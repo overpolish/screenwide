@@ -10,6 +10,7 @@ use crate::editor::annotations::counter::geometry::prepare_counter;
 use crate::editor::annotations::freehand::geometry::prepare_freehand;
 use crate::editor::annotations::geometry::ArrowGeometry;
 use crate::editor::annotations::highlight::geometry::prepare_highlight;
+use crate::editor::annotations::magnify::geometry::prepare_magnify;
 use crate::editor::annotations::native::NativeAnnotation;
 use crate::editor::annotations::outline::geometry::prepare_shape;
 use crate::editor::annotations::redact::geometry::prepare_redact;
@@ -18,18 +19,21 @@ use crate::editor::annotations::spotlight::geometry::prepare_spotlight;
 use crate::editor::annotations::text::geometry::prepare_text;
 
 /// `annotation` prepared at `reveal`, its points `p0`, `p1` and `p2` placed at
-/// `a`, `b` and `c`.
+/// `a`, `b` and `c` by a placement that stretches a length `scale` times.
 ///
 /// A counter keeps its centre in `p0` and its aim in `p1[0]`, so only the
 /// centre is placed: the disc's diameter is in output pixels, as an arrow's
 /// stroke is, and an angle is the same angle in either space. A text box
 /// keeps its pointer, held against the box, in `p1` and its text block's
 /// size, in output pixels, in `p2`; neither is placed. A shape's and a
-/// spotlight's `p1` is never placed either.
+/// spotlight's `p1` is never placed either. A magnifier places all three -
+/// its zoom area's corners and its loupe's centre - and reads its loupe's
+/// size out of `params`, stretched by `scale`, and its rounding beside it.
 pub(super) fn prepared_geometry(
   annotation: &NativeAnnotation,
   [a, b, c]: [[f32; 2]; 3],
   reveal: AnnotationReveal,
+  scale: f32,
 ) -> ArrowGeometry {
   match annotation.shape_kind() {
     AnnotationKind::Counter => prepare_counter(a, annotation.width, annotation.p1[0], reveal),
@@ -58,5 +62,14 @@ pub(super) fn prepared_geometry(
     // A stroke is placed by where its box's corner, that corner moved a
     // source pixel, and its far corner land.
     AnnotationKind::Draw => prepare_freehand(a, b, c, annotation.width, reveal),
+    AnnotationKind::Magnify => prepare_magnify(
+      a,
+      b,
+      c,
+      annotation.params[0] * scale,
+      annotation.params[1],
+      annotation.width,
+      reveal,
+    ),
   }
 }

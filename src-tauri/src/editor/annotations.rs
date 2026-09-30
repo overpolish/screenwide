@@ -5,8 +5,8 @@
 //!
 //! A tool's shape lives in one module under this one ([`arrow`],
 //! [`counter`], [`text`], [`redact`], [`highlight`], [`outline`] for the
-//! shape tool, [`spotlight`], [`freehand`] for the draw tool) and nothing
-//! else branches on which kind an annotation is.
+//! shape tool, [`spotlight`], [`freehand`] for the draw tool, [`magnify`])
+//! and nothing else branches on which kind an annotation is.
 //! Adding a tool is therefore:
 //!
 //! - one module here, with the `model`, `gesture`, `handles`, `native`,
@@ -72,6 +72,9 @@ mod gesture_tests;
 pub(crate) mod handles;
 /// The highlight tool's own half of the model.
 pub(crate) mod highlight;
+/// The magnifier tool's own half of the model: a loupe showing a zoom area
+/// enlarged.
+pub(crate) mod magnify;
 /// The shape tool's own half of the model: an outline round a box. Not
 /// called `shape`, which is the enum every kind is a variant of.
 pub(crate) mod outline;

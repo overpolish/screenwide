@@ -10,13 +10,14 @@
 //! along the path it actually travelled on both backends.
 
 use super::*;
-use crate::editor::annotations::exposure::{annotation_travel, highlight_travel};
+use crate::editor::annotations::exposure::{annotation_travel, highlight_travel, magnify_travel};
 use crate::editor::annotations::native::{native_annotations, NativeAnnotations};
 use crate::editor::annotations::redact::native::{
   source_per_capture_point, RedactPicture, RedactSource,
 };
 use crate::editor::annotations::redact::records::redact_records;
 use crate::editor::annotations::reveal::AnnotationReveal;
+use crate::editor::annotations::spotlight::native::{blur_deviation, blur_strength};
 use crate::editor::annotations::text::geometry::HEAD_ALIGN_MASK;
 use crate::editor::annotations::text::typing::TypingMarks;
 use crate::editor::annotations::Annotation;
@@ -78,6 +79,13 @@ pub(crate) fn prepared_arrows(
   // In the source's own pixels, which the pre-pass covers before anything
   // is placed on the canvas.
   let redactions = redact_records(&native.items, &native.data.points, source.0, source.1);
+  // The cursor is drawn on the canvas, so the source's blur is carried there.
+  let blur_strength = blur_strength(&native.items);
+  let cursor_blur = [
+    blur_deviation(blur_strength, source.0, source.1) * placement.image_width as f32
+      / source.0 as f32,
+    blur_strength,
+  ];
   let mut prepared = placed_native(
     native,
     (placement.image_x, placement.image_y),
@@ -89,6 +97,7 @@ pub(crate) fn prepared_arrows(
     typing,
   );
   prepared.redactions = redactions;
+  prepared.cursor_blur = cursor_blur;
   Ok(prepared)
 }
 
@@ -150,8 +159,9 @@ fn placed_native(
         place(annotation.p1),
         place(annotation.p2),
       );
-      let shape =
-        |reveal: AnnotationReveal| prepare_kind::prepared_geometry(annotation, [a, b, c], reveal);
+      let shape = |reveal: AnnotationReveal| {
+        prepare_kind::prepared_geometry(annotation, [a, b, c], reveal, scale.0 as f32)
+      };
       let geometry = shape(annotation.reveal);
       let mut arrow = compositor::PreviewArrow::new(
         geometry,
@@ -167,8 +177,9 @@ fn placed_native(
       arrow.data_count = annotation.data_count;
       // The points arrive placed already, so the axis scale travel is
       // measured in is the identity. A text box's travel reads its pointer
-      // and its block as they are held, which are never placed, and a
-      // highlight's and a stroke's the sweep their records keep.
+      // and its block as they are held, which are never placed, a
+      // highlight's and a stroke's the sweep their records keep, and a
+      // magnifier's its loupe size, placed here as `prepared_geometry` does.
       let identity = [1.0, 1.0];
       let (width, reveal) = (annotation.width, annotation.reveal);
       let travel = match annotation.shape_kind() {
@@ -184,6 +195,12 @@ fn placed_native(
         AnnotationKind::Highlight | AnnotationKind::Draw => {
           highlight_travel(a, b, identity, annotation.params[2], reveal)
         }
+        AnnotationKind::Magnify => magnify_travel(
+          [a, b, c],
+          annotation.params[0] * scale.0 as f32,
+          identity,
+          reveal,
+        ),
         kind => annotation_travel(kind, a, b, c, identity, width, reveal),
       };
       let count = exposure_sample_count(travel, reveal);

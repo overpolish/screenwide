@@ -269,6 +269,7 @@ describe("a counter's aim while the editor answers", () => {
         manual: false,
         radius: 0,
         redaction: "erase",
+        shadow: false,
         softness: 0,
         strength: 0,
         width: 56,

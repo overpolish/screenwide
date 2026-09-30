@@ -88,6 +88,22 @@ export const highlightShape = (value: unknown): Shape<"highlight"> | null => {
     : null;
 };
 
+export const magnifyShape = (value: unknown): Shape<"magnify"> | null => {
+  const shape = (value ?? {}) as Record<string, unknown>;
+  const start = annotationPoint(shape.start);
+  const end = annotationPoint(shape.end);
+  const loupe = annotationPoint(shape.loupe);
+  const size = shape.size;
+  return start &&
+    end &&
+    loupe &&
+    typeof size === "number" &&
+    Number.isFinite(size) &&
+    size >= 0
+    ? { end, kind: "magnify", loupe, size, start }
+    : null;
+};
+
 export const redactShape = (value: unknown): Shape<"redact"> | null => {
   const box = annotationBox(value);
   return box && { ...box, kind: "redact" };

@@ -88,6 +88,16 @@ pub enum AnnotationShape {
     #[serde(default)]
     smooth: bool,
   },
+  /// A loupe showing a zoom area enlarged. `start` is the zoom area's
+  /// top-left corner and `end` its bottom-right, in source pixels; `loupe` is
+  /// the loupe's centre and `size` its longer side, the zoom area's shape
+  /// scaled up to that.
+  Magnify {
+    start: AnnotationPoint,
+    end: AnnotationPoint,
+    loupe: AnnotationPoint,
+    size: f64,
+  },
 }
 
 impl AnnotationShape {
@@ -102,6 +112,7 @@ impl AnnotationShape {
       Self::Shape { .. } => AnnotationKind::Shape,
       Self::Spotlight { .. } => AnnotationKind::Spotlight,
       Self::Draw { .. } => AnnotationKind::Draw,
+      Self::Magnify { .. } => AnnotationKind::Magnify,
     }
   }
 
@@ -122,6 +133,9 @@ impl AnnotationShape {
       Self::Redact { start, end, .. }
       | Self::Shape { start, end, .. }
       | Self::Spotlight { start, end } => [*start, *end, *end],
+      Self::Magnify {
+        start, end, loupe, ..
+      } => [*start, *end, *loupe],
       Self::Highlight {
         start, end, bands, ..
       } => {
@@ -155,6 +169,12 @@ impl AnnotationShape {
         start, end, bands, ..
       } => super::highlight::model::placed(*start, *end, bands),
       Self::Draw { points, .. } => super::freehand::model::placed(points),
+      Self::Magnify {
+        start,
+        end,
+        loupe,
+        size,
+      } => super::magnify::model::placed(*start, *end, *loupe, *size),
     }
   }
 
@@ -223,6 +243,26 @@ impl AnnotationShape {
         points: points.iter().map(|point| map(*point)).collect(),
         smooth: *smooth,
       },
+      Self::Magnify {
+        start,
+        end,
+        loupe,
+        size,
+      } => {
+        // A length rides through as far as the space it moves into
+        // stretches it; every such space keeps the picture's aspect.
+        let centre = map(*loupe);
+        let edge = map(AnnotationPoint {
+          x: loupe.x + size,
+          y: loupe.y,
+        });
+        Self::Magnify {
+          start: map(*start),
+          end: map(*end),
+          loupe: centre,
+          size: (edge.x - centre.x).abs(),
+        }
+      }
     }
   }
 
@@ -242,7 +282,8 @@ impl AnnotationShape {
       | Self::Highlight { .. }
       | Self::Shape { .. }
       | Self::Spotlight { .. }
-      | Self::Draw { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
+      | Self::Draw { .. }
+      | Self::Magnify { .. } => super::arrow::bend::ArrowBend::STRAIGHT,
     }
   }
 }

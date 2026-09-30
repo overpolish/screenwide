@@ -74,6 +74,7 @@ fn arrow(id: &str) -> Annotation {
       manual: false,
       radius: 0.0,
       redaction: Default::default(),
+      shadow: false,
       softness: 0.0,
       strength: 0.0,
       width: 6.0,

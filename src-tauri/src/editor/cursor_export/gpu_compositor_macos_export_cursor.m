@@ -64,6 +64,36 @@ screenwide_export_cursor_at(const ScreenwideGpuCursor *cursors, uint32_t count,
   return &cursors[index];
 }
 
+ScreenwideOverlayUniforms screenwide_export_cursor_uniforms(
+    id<MTLTexture> artwork_texture, const ScreenwideGpuCursor *cursor,
+    const ScreenwideCursorArtwork *artworks, uint32_t artwork_count,
+    const ScreenwideCanvas *canvas, uint32_t output_width, uint32_t output_height) {
+  ScreenwideOverlayUniforms uniforms = {0};
+  if (cursor == NULL || cursor->visible == 0 || artwork_texture == nil ||
+      cursor->style >= artwork_count)
+    return uniforms;
+  const ScreenwideCursorArtwork *artwork = &artworks[cursor->style];
+  if (artwork->pixels == NULL || artwork->width == 0 || artwork->height == 0)
+    return uniforms;
+  uniforms.output_width = output_width;
+  uniforms.output_height = output_height;
+  uniforms.crop_x = canvas->crop_x;
+  uniforms.crop_y = canvas->crop_y;
+  uniforms.crop_width = canvas->crop_width;
+  uniforms.crop_height = canvas->crop_height;
+  uniforms.crop_radius = canvas->radius;
+  // The frame carries the same setting the canvas does; taking it from the
+  // cursor keeps one owner of the effect for the drawn cursor.
+  uniforms.clip_at_video_edge = cursor->clip_at_video_edge;
+  uniforms.cursor = *cursor;
+  uniforms.artwork = (ScreenwideCursorArtworkUniforms){
+      artwork->width,        artwork->height,     artwork->design_width,
+      artwork->design_height, artwork->origin_x,  artwork->origin_y,
+      artwork->use_design,   artwork->clip_local_box, artwork->supersample,
+  };
+  return uniforms;
+}
+
 /// Draws the cursor into the composed frame's planes. The shader owns the
 /// pixels; this only sizes the dispatch to the cursor's bounds
 /// (`raster::bounds`, cursor_effects/raster.rs:294-307).
@@ -74,12 +104,9 @@ void screenwide_export_encode_cursor_overlay(
     const ScreenwideGpuCursor *cursor, const ScreenwideCursorArtwork *artworks,
     uint32_t artwork_count, const ScreenwideCanvas *canvas,
     uint32_t output_width, uint32_t output_height) {
-  if (cursor == NULL || cursor->visible == 0 || artwork_texture == nil ||
-      cursor->style >= artwork_count)
-    return;
-  const ScreenwideCursorArtwork *artwork = &artworks[cursor->style];
-  if (artwork->pixels == NULL || artwork->width == 0 || artwork->height == 0)
-    return;
+  ScreenwideOverlayUniforms uniforms = screenwide_export_cursor_uniforms(
+      artwork_texture, cursor, artworks, artwork_count, canvas, output_width, output_height);
+  if (uniforms.cursor.visible == 0) return;
   double travel = hypot(cursor->blur_delta_x, cursor->blur_delta_y);
   double distance = MIN(travel, 80.0);
   double blur = distance > 1.25 ? distance : 0.0;
@@ -100,34 +127,10 @@ void screenwide_export_encode_cursor_overlay(
     return;
   uint32_t box_width = (uint32_t)(right - (double)x);
   uint32_t box_height = (uint32_t)(bottom - (double)y);
-  ScreenwideOverlayUniforms uniforms = {
-      x,
-      y,
-      box_width,
-      box_height,
-      output_width,
-      output_height,
-      canvas->crop_x,
-      canvas->crop_y,
-      canvas->crop_width,
-      canvas->crop_height,
-      canvas->radius,
-      // The frame carries the same setting the canvas does; taking it from the
-      // cursor keeps one owner of the effect for the drawn cursor.
-      cursor->clip_at_video_edge,
-      *cursor,
-      {
-          artwork->width,
-          artwork->height,
-          artwork->design_width,
-          artwork->design_height,
-          artwork->origin_x,
-          artwork->origin_y,
-          artwork->use_design,
-          artwork->clip_local_box,
-          artwork->supersample,
-      },
-  };
+  uniforms.x = x;
+  uniforms.y = y;
+  uniforms.cursor_width = box_width;
+  uniforms.cursor_height = box_height;
   MTLSize group = MTLSizeMake(16, 16, 1);
   id<MTLComputeCommandEncoder> compute = [command computeCommandEncoder];
   [compute setComputePipelineState:luma_pipeline];

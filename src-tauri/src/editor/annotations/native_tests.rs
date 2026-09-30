@@ -24,6 +24,7 @@ fn annotation(shape: AnnotationShape) -> Annotation {
       manual: false,
       radius: 0.0,
       redaction: Default::default(),
+      shadow: false,
       softness: 0.0,
       strength: 0.0,
       width: 9.0,

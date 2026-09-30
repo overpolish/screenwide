@@ -108,6 +108,7 @@ const pathLength = ({ shape, style }: Annotation) => {
       return 2 * (across + down) - 8 * rounding + 2 * Math.PI * rounding;
     }
     case "counter":
+    case "magnify":
     case "redact":
     case "spotlight":
     case "text":

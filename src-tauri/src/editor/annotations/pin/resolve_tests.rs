@@ -31,6 +31,7 @@ fn clip(shape: AnnotationShape, keyframes: &[(u64, f64, f64)]) -> RecordingAnnot
         manual: false,
         radius: 0.0,
         redaction: Default::default(),
+        shadow: false,
         softness: 0.0,
         strength: 0.0,
         width: 8.0,

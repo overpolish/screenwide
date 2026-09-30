@@ -53,14 +53,19 @@ describe("the editor's tool keys", () => {
 
   it("gives a letter with Shift to the setting beside the tool, never the tool", () => {
     const keys = {
+      onToggleCrop: vi.fn(),
+      onToggleCursorPanel: vi.fn(),
       onToggleRangeTool: vi.fn(),
       onToggleSnap: vi.fn(),
       onTool: vi.fn(),
     };
     editorToolKeyAction("KeyS", keys, true)?.();
     editorToolKeyAction("KeyR", keys, true)?.();
+    editorToolKeyAction("KeyC", keys, true)?.();
     expect(keys.onToggleSnap).toHaveBeenCalledOnce();
     expect(keys.onToggleRangeTool).toHaveBeenCalledOnce();
+    expect(keys.onToggleCursorPanel).toHaveBeenCalledOnce();
+    expect(keys.onToggleCrop).not.toHaveBeenCalled();
     expect(keys.onTool).not.toHaveBeenCalled();
     expect(editorToolKeyAction("KeyA", keys, true)).toBeNull();
   });

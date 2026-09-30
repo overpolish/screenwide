@@ -62,6 +62,13 @@ _Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
 /// as a redaction does, its pen in `width`, and in `start_head` and
 /// `end_head` where its fitted line starts in the published paths and how
 /// many points it has.
+///
+/// A magnifier puts its zoom area's box in `start` and `end` and its corner
+/// radius in `start_head`, as a spotlight does; its loupe's centre in
+/// `middle`, the loupe's longer side as a share of the drawn width in
+/// `end_head` and its rim's pen in `width`. Its grips are the zoom area's
+/// box's and one on the loupe's rim, which sizes the loupe; a press inside
+/// the loupe carries the loupe.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindArrow = 0,
   ScreenwideAnnotationKindCounter = 1,
@@ -71,6 +78,7 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
   ScreenwideAnnotationKindShape = 5,
   ScreenwideAnnotationKindSpotlight = 6,
   ScreenwideAnnotationKindDraw = 7,
+  ScreenwideAnnotationKindMagnify = 8,
 };
 /// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
@@ -86,6 +94,7 @@ typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeShape = 7,
   ScreenwideAnnotationModeSpotlight = 8,
   ScreenwideAnnotationModeDraw = 9,
+  ScreenwideAnnotationModeMagnify = 10,
 };
 /// Which grip a press took hold of. A box's grips - a redaction's, a shape's
 /// or a spotlight's - report `Box` plus the sides they move - 1 left, 2 right, 4 top,
@@ -101,8 +110,9 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationHandle) {
   ScreenwideAnnotationHandleBox = 16,
   ScreenwideAnnotationHandleRadius = 32,
 };
-/// The most grips one annotation shows: a box's eight and its radius dot.
-#define SCREENWIDE_ANNOTATION_MAX_GRIPS 9
+/// The most grips one annotation shows: a box's eight, its radius dot and a
+/// magnifier's loupe grip.
+#define SCREENWIDE_ANNOTATION_MAX_GRIPS 10
 /// What a gesture acts on: a new annotation (0), a grip or body of the
 /// annotation at `index` (1), nothing at all (2), which only clears the choice,
 /// or a press on the body of the annotation at `index` (3), which only chooses

@@ -43,6 +43,27 @@ void screenwide_annotation_prepare(uint32_t kind, float p0x, float p0y,
                                    AnnotationReveal reveal,
                                    AnnotationArrowGeometry *out);
 
+/// A magnifier's draw geometry: its zoom area from `p0` to `p2` and its loupe
+/// centred on `p1`, `size` along its longer side, rounded by `radius` percent
+/// of the shorter side, its rim `width` wide. The record reads back as
+/// `magnify/geometry.rs` describes.
+void screenwide_magnify_prepare(float p0x, float p0y, float p1x, float p1y,
+                                float p2x, float p2y, float size, float radius,
+                                float width, AnnotationReveal reveal,
+                                AnnotationArrowGeometry *out);
+
+/// How far a magnifier's loupe moves between the shutter opening and now, its
+/// points and `size` in the space `sx` and `sy` carry into the pixels the
+/// travel is measured in.
+float screenwide_magnify_travel(float p0x, float p0y, float p1x, float p1y,
+                                float p2x, float p2y, float size, float sx,
+                                float sy, AnnotationReveal reveal);
+
+/// Which part of a prepared magnifier a point is on: 1 for the loupe, 2 for
+/// the zoom area, 0 for neither.
+uint32_t screenwide_magnify_part(float px, float py,
+                                 const AnnotationArrowGeometry *geometry);
+
 /// How far a point falls from a prepared annotation's drawn shape, in the
 /// space it was prepared in. Zero anywhere the annotation is painted, which
 /// is what picks it and what the halo is measured from.

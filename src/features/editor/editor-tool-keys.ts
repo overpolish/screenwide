@@ -20,8 +20,8 @@ import type { AnnotationKind } from "../../components/shared/annotation-style/ty
  *
  * A tool's own letter comes from `EDITOR_TOOLS`, so a drawing tool added
  * there is reachable from the keyboard without being named again here. The
- * keys below belong to no tool. A tool takes the plain letter; a setting or
- * a timeline mode beside it takes the same letter with Shift.
+ * keys below belong to no tool. A tool takes the plain letter; a setting, a
+ * timeline mode or a panel beside it takes the same letter with Shift.
  */
 export type EditorToolKeys = {
   /** `]` and `[` move what is selected one step through the stacking, and
@@ -31,7 +31,7 @@ export type EditorToolKeys = {
   onSelectTool?: () => void;
   onToggleBladeTool?: () => void;
   onToggleCrop?: () => void;
-  /** M: the cursor panel, on or away. */
+  /** Shift+C: the cursor panel, on or away. */
   onToggleCursorPanel?: () => void;
   /** K: the keyboard panel, on or away. */
   onToggleKeyboardPanel?: () => void;
@@ -94,7 +94,11 @@ export const editorToolKeyAction = (
       : null;
   if (shifted)
     return (
-      { KeyR: keys.onToggleRangeTool, KeyS: keys.onToggleSnap }[code] ?? null
+      {
+        KeyC: keys.onToggleCursorPanel,
+        KeyR: keys.onToggleRangeTool,
+        KeyS: keys.onToggleSnap,
+      }[code] ?? null
     );
   const tool = code.startsWith("Key")
     ? editorToolForShortcut(code.slice(3))
@@ -104,7 +108,6 @@ export const editorToolKeyAction = (
     {
       KeyB: keys.onToggleBladeTool,
       KeyK: keys.onToggleKeyboardPanel,
-      KeyM: keys.onToggleCursorPanel,
       KeyP: keys.onTogglePlayback,
     }[code] ?? null
   );

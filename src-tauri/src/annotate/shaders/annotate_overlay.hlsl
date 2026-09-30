@@ -41,6 +41,29 @@ Texture2D<float4> annotate_underlay : register(t10);
 /// The same softened for the spotlights' blur, stretched over the target.
 Texture2D<float4> annotate_softened : register(t11);
 
+// The overlay offers no magnifier, so there is no picture for one to read.
+AnnotationMagnifyPlacement annotation_magnify_placement() {
+  AnnotationMagnifyPlacement at;
+  at.image = 0.0;
+  at.texels = 0.0;
+  at.size = 0.0;
+  return at;
+}
+float4 annotation_magnify_fetch(int2 texel) {
+  return 0.0;
+}
+// Nor a cursor: the live desktop's own pointer is not drawn into the overlay.
+float4 annotation_cursor_sample(float2 probe) {
+  return 0.0;
+}
+AnnotationCursorBlur annotation_cursor_blur() {
+  AnnotationCursorBlur blur;
+  blur.deviation = 0.0;
+  blur.strength = 0.0;
+  blur.count = 0u;
+  return blur;
+}
+
 float4 vs_main(uint id : SV_VertexID) : SV_Position {
   float2 position = float2((id << 1) & 2, id & 2);
   return float4(position * float2(2, -2) + float2(-1, 1), 0, 1);

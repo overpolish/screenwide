@@ -120,6 +120,13 @@ export const ANNOTATION_SIZES: Record<
     sizeLabel: "Height",
     sizes: [DEFAULT_ANNOTATION_HIGHLIGHT_SIZE],
   },
+  // A loupe's rim is always an arrow's pen, the twin of `NEW_MAGNIFY_WIDTH`,
+  // and offers no size to choose.
+  magnify: {
+    defaultSize: DEFAULT_ANNOTATION_WIDTH,
+    sizeLabel: "Width",
+    sizes: [DEFAULT_ANNOTATION_WIDTH],
+  },
   redact: {
     defaultSize: DEFAULT_ANNOTATION_REDACT_SIZE,
     sizeLabel: "Block size",

@@ -67,6 +67,8 @@ export const validAnnotations = (value: unknown): Annotation[] => {
       manual: (style.manual as unknown) === true,
       radius: boxShare(style.radius),
       redaction: annotationRedaction(style.redaction),
+      // Absent from a document written before magnifiers could be drawn.
+      shadow: (style.shadow as unknown) === true,
       softness: boxShare(style.softness),
       strength: finiteOr(style.strength, DEFAULT_BLUR_STRENGTH),
       width: Math.max(0, style.width),

@@ -34,6 +34,7 @@ pub(crate) fn default_shape_style() -> AnnotationStyle {
     manual: false,
     radius: 0.0,
     redaction: Default::default(),
+    shadow: false,
     softness: 0.0,
     strength: 0.0,
     width: NEW_SHAPE_WIDTH,

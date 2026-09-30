@@ -41,6 +41,18 @@ static inline AnnotationArrowGeometry annotation_prepared(
                                   end.y, 0.0f, 0, annotation_reveal_whole(), &prepared);
     return prepared;
   }
+  if (item.kind == ScreenwideAnnotationKindMagnify) {
+    // The loupe's centre rides in `middle`, placed like the zoom area's
+    // corners; its size rides in `end_head` as a share of the drawn width
+    // and the radius in `start_head`.
+    NSPoint loupe = annotation_display_point(image, item.middle_x, item.middle_y);
+    screenwide_magnify_prepare(start.x, start.y, loupe.x, loupe.y, end.x, end.y,
+                               (float)(item.end_head * image.size.width),
+                               (float)item.start_head,
+                               (float)(item.width * image.size.width),
+                               annotation_reveal_whole(), &prepared);
+    return prepared;
+  }
   // A middle handle is reported rather than the curve's control point, so the
   // control is taken back out of it here, in display points. A counter aims
   // its tail with `start_head`, an angle, which rides in the same slot.

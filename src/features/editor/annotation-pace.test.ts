@@ -24,6 +24,7 @@ const dressed = (shape: AnnotationShape): Annotation => ({
     manual: false,
     radius: 0,
     redaction: "erase",
+    shadow: false,
     softness: 0,
     strength: 0,
     width: 8,

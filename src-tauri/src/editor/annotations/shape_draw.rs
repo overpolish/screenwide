@@ -33,6 +33,9 @@ impl super::AnnotationShape {
         super::super::spotlight::native::draw_points(*start, *end, style)
       }
       Self::Draw { points, .. } => super::super::freehand::native::draw_points(points),
+      Self::Magnify {
+        start, end, loupe, ..
+      } => super::super::magnify::native::draw_points(*start, *end, *loupe),
     }
   }
 
@@ -51,7 +54,8 @@ impl super::AnnotationShape {
       | Self::Highlight { .. }
       | Self::Shape { .. }
       | Self::Spotlight { .. }
-      | Self::Draw { .. } => 0,
+      | Self::Draw { .. }
+      | Self::Magnify { .. } => 0,
     }
   }
 
@@ -65,7 +69,8 @@ impl super::AnnotationShape {
       | Self::Highlight { .. }
       | Self::Shape { .. }
       | Self::Spotlight { .. }
-      | Self::Draw { .. } => std::borrow::Cow::Borrowed(""),
+      | Self::Draw { .. }
+      | Self::Magnify { .. } => std::borrow::Cow::Borrowed(""),
       Self::Counter { value, .. } => std::borrow::Cow::Owned(value.to_string()),
       Self::Text { text, .. } => std::borrow::Cow::Borrowed(text),
     }
@@ -139,6 +144,20 @@ impl super::AnnotationShape {
         image_width,
         paths,
       ),
+      Self::Magnify {
+        start,
+        end,
+        loupe,
+        size,
+      } => super::super::magnify::handles::grips(
+        *start,
+        *end,
+        (*loupe, *size),
+        style,
+        index,
+        source,
+        image_width,
+      ),
     }
   }
 
@@ -162,6 +181,7 @@ impl super::AnnotationShape {
       Self::Shape { start, end, .. } => super::super::outline::model::field_box(*start, *end),
       Self::Spotlight { start, end } => super::super::spotlight::model::field_box(*start, *end),
       Self::Draw { points, .. } => super::super::freehand::model::field_box(points),
+      Self::Magnify { start, end, .. } => super::super::magnify::model::field_box(*start, *end),
       // A highlight lies over the text it marks; nothing lines up against it.
       Self::Highlight { .. } => None,
     }
@@ -187,7 +207,8 @@ impl super::AnnotationShape {
       | Self::Highlight { .. }
       | Self::Shape { .. }
       | Self::Spotlight { .. }
-      | Self::Draw { .. } => None,
+      | Self::Draw { .. }
+      | Self::Magnify { .. } => None,
     }
   }
 }

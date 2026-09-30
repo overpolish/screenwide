@@ -10,6 +10,8 @@
 #import "gpu_compositor_macos_shader_source_annotation_text.h"
 #import "gpu_compositor_macos_shader_source_annotation_shape.h"
 #import "gpu_compositor_macos_shader_source_annotation_draw.h"
+#import "gpu_compositor_macos_shader_source_annotation_cursor.h"
+#import "gpu_compositor_macos_shader_source_annotation_magnify.h"
 #import "gpu_compositor_macos_shader_source_annotation_composite.h"
 #import "gpu_compositor_macos_shader_source_annotation_highlight.h"
 #import "gpu_compositor_macos_shader_source_annotation_spotlight.h"
@@ -32,16 +34,20 @@
 /// The compositor's Metal library, assembled from its parts. An annotation
 /// shape brings a source of its own - the arrow's helpers live in
 /// `..._annotations.h`, the counter's in `..._annotation_counter.h`, the text
-/// box's in `..._annotation_text.h`, the shape tool's in
-/// `..._annotation_shape.h`, the draw tool's in `..._annotation_draw.h` -
-/// and `..._annotation_composite.h` is the one function that branches over
+/// `..._annotation_shape.h`, the draw tool's in `..._annotation_draw.h`, the
+/// magnifier's in `..._annotation_magnify.h` - and
+/// `..._annotation_composite.h` is the one function that branches over
 /// `AnnotationUniforms.kind`. A shape's source goes between the two. A
 /// redaction is the exception: `..._redact.h` applies it to the source before
 /// any canvas pass, and the composite pass only draws its hover halo. A
 /// highlight recolours the pixel under it, in `..._annotation_highlight.h`,
 /// and the spotlights share one shade, in `..._annotation_spotlight.h`, whose
-/// blur rides with the redactions. `..._annotation_layers.h` walks the
-/// document in order over all of them, and every editor kernel draws through it.
+/// blur rides with the redactions. The cursor as the layers see it, blurred
+/// by the spotlights and enlarged by a loupe, is in `..._annotation_cursor.h`.
+/// `..._annotation_layers.h` walks the document over all of them - what acts
+/// on the picture under every mark, and the cursor over the marks, shaded and
+/// hidden as if it lay on the picture - and every editor kernel draws through
+/// it.
 __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_TYPES
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_CURVE
@@ -50,6 +56,8 @@ __attribute__((visibility("hidden"))) NSString *const shader_source =
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_TEXT
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_SHAPE
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_DRAW
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_CURSOR
+    GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_MAGNIFY
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_COMPOSITE
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT
     GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_SPOTLIGHT

@@ -84,12 +84,13 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
           | AnnotationKind::Highlight
           | AnnotationKind::Shape
           | AnnotationKind::Spotlight
-          | AnnotationKind::Draw,
+          | AnnotationKind::Draw
+          | AnnotationKind::Magnify,
         ) => {
           // Empty picture: a new arrow, redaction, highlight, shape,
-          // spotlight or stroke, once the press proves to be a drag. The end
-          // grip is the one the drag carries, so it grows from where it
-          // started towards the pointer.
+          // spotlight, stroke or magnifier's zoom area, once the press
+          // proves to be a drag. The end grip is the one the drag carries,
+          // so it grows from where it started towards the pointer.
           state.annotation.drag = Some(Drag::pending(TARGET_NEW, 0, HANDLE_END, point));
           true
         }
@@ -105,11 +106,17 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       }
       (None, Some(shaft)) => {
         // Choosing an arrow is complete on the press: the manager commits the
-        // choice and the chrome moves to it.
+        // choice and the chrome moves to it. A press inside a magnifier's
+        // loupe carries the loupe on its own.
+        let on_loupe = state.annotation.handles.get(shaft).is_some_and(|item| {
+          item.shape_kind() == AnnotationKind::Magnify
+            && super::picking::item_image_frame(&state, shaft as i32)
+              .is_some_and(|image| super::magnify_chrome::on_loupe(image, item, point))
+        });
         state.annotation.drag = Some(Drag::pending(
           TARGET_EXISTING,
           shaft as u32,
-          HANDLE_BODY,
+          if on_loupe { HANDLE_MIDDLE } else { HANDLE_BODY },
           point,
         ));
         samples.extend(choose(&mut state, shaft, point));

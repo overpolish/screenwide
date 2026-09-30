@@ -11,6 +11,7 @@
 #import "gpu_compositor_macos_annotation_types.h"
 #import "../annotations/geometry.h"
 #import "gpu_compositor_macos_annotation_text.h"
+#import "gpu_compositor_macos_redact.h"
 
 /// A draw-ready annotation, distinct from the source-space document retained by
 /// the presenter. Preparing at binding also covers native placement changes.
@@ -34,6 +35,13 @@ typedef struct {
 } ScreenwideAnnotationSample;
 _Static_assert(sizeof(ScreenwideAnnotationSample) == 96, "Exposure sample ABI");
 
+/// The spotlights' blur in canvas pixels, which the kernels soften the
+/// cursor by. The twin of `AnnotationCursorBlur`.
+typedef struct {
+  float deviation;
+  float strength;
+} ScreenwideAnnotationCursorBlur;
+
 /// How many exposure samples one annotation needs: enough that consecutive
 /// samples are under a pixel apart, and none at all for an annotation that has
 /// not moved. The travel itself is measured in Rust, where the D3D11 backend
@@ -42,15 +50,22 @@ static inline uint32_t screenwide_annotation_sample_count(
     const ScreenwideAnnotation *annotation, float sx, float sy) {
   AnnotationReveal r = annotation->reveal;
   // A highlight's bands and a stroke's line are not in their records'
-  // points; each record keeps how far its drawing end sweeps instead.
-  float travel = annotation->kind == SCREENWIDE_ANNOTATION_HIGHLIGHT ||
-                         annotation->kind == SCREENWIDE_ANNOTATION_DRAW
-      ? screenwide_highlight_travel(annotation->p0[0], annotation->p0[1], annotation->p1[0],
-                                    annotation->p1[1], sx, sy, annotation->params[2], r)
-      : screenwide_annotation_travel(
-            annotation->kind, annotation->p0[0], annotation->p0[1], annotation->p1[0],
-            annotation->p1[1], annotation->p2[0], annotation->p2[1], sx, sy,
-            annotation->width, r);
+  // points; each record keeps how far its drawing end sweeps instead. A
+  // magnifier's loupe size rides in `params`.
+  float travel;
+  if (annotation->kind == SCREENWIDE_ANNOTATION_HIGHLIGHT ||
+      annotation->kind == SCREENWIDE_ANNOTATION_DRAW)
+    travel = screenwide_highlight_travel(annotation->p0[0], annotation->p0[1],
+                                         annotation->p1[0], annotation->p1[1], sx, sy,
+                                         annotation->params[2], r);
+  else if (annotation->kind == SCREENWIDE_ANNOTATION_MAGNIFY)
+    travel = screenwide_magnify_travel(annotation->p0[0], annotation->p0[1], annotation->p1[0],
+                                       annotation->p1[1], annotation->p2[0], annotation->p2[1],
+                                       annotation->params[0], sx, sy, r);
+  else
+    travel = screenwide_annotation_travel(
+        annotation->kind, annotation->p0[0], annotation->p0[1], annotation->p1[0],
+        annotation->p1[1], annotation->p2[0], annotation->p2[1], sx, sy, annotation->width, r);
   if (travel < 1.5f && fabsf(r.opacity - r.previous[3]) < 0.01f) return 0;
   return (uint32_t)fminf(fmaxf(ceilf(travel / 0.75f) + 1, 8), 48);
 }
@@ -62,10 +77,19 @@ static inline uint32_t screenwide_annotation_sample_count(
 /// its pointer, held against the box, out of `p1` and its text block's size
 /// out of `p2` the same way. A highlight is placed by where `p0` and `p1` land
 /// and reads its tone out of `p2`. A shape's `p1` is its radius and its hand,
-/// and a spotlight's its radius and its softness, never placed either.
+/// and a spotlight's its radius and its softness, never placed either. A
+/// magnifier places all three - its zoom area's corners and its loupe's
+/// centre - and reads its loupe's size out of `params`, carried into canvas
+/// pixels by `scale`, and its rounding beside it.
 static inline AnnotationArrowGeometry screenwide_prepare_annotation(
     const ScreenwideAnnotation *annotation, AnnotationVector a, AnnotationVector b,
-    AnnotationVector c, AnnotationReveal reveal) {
+    AnnotationVector c, AnnotationReveal reveal, float scale) {
+  if (annotation->kind == SCREENWIDE_ANNOTATION_MAGNIFY) {
+    AnnotationArrowGeometry prepared;
+    screenwide_magnify_prepare(a.x, a.y, b.x, b.y, c.x, c.y, annotation->params[0] * scale,
+                               annotation->params[1], annotation->width, reveal, &prepared);
+    return prepared;
+  }
   float p1x = annotation->kind == SCREENWIDE_ANNOTATION_COUNTER ? annotation->p1[0] : b.x;
   if (annotation->kind == SCREENWIDE_ANNOTATION_TEXT) {
     p1x = annotation->p1[0];
@@ -136,7 +160,7 @@ static inline void screenwide_bind_annotations(
     AnnotationVector a = annotation_vector(canvas->image_x + annotation->p0[0] * scale_x, canvas->image_y + annotation->p0[1] * scale_y);
     AnnotationVector b = annotation_vector(canvas->image_x + annotation->p1[0] * scale_x, canvas->image_y + annotation->p1[1] * scale_y);
     AnnotationVector c = annotation_vector(canvas->image_x + annotation->p2[0] * scale_x, canvas->image_y + annotation->p2[1] * scale_y);
-    draw->arrow = screenwide_prepare_annotation(annotation, a, b, c, annotation->reveal);
+    draw->arrow = screenwide_prepare_annotation(annotation, a, b, c, annotation->reveal, scale_x);
     // A counter's number is set at its disc's radius and a text box's text at
     // its own type size, both as this frame draws them.
     if (annotation->kind == SCREENWIDE_ANNOTATION_COUNTER) radii[index] = draw->arrow.rounding;
@@ -153,7 +177,7 @@ static inline void screenwide_bind_annotations(
       r.scale = r.previous[2] + (r.scale - r.previous[2]) * t;
       r.opacity = r.previous[3] + (r.opacity - r.previous[3]) * t;
       ScreenwideAnnotationSample *sample = &samples[draw->sample_offset + tap];
-      sample->arrow = screenwide_prepare_annotation(annotation, a, b, c, r);
+      sample->arrow = screenwide_prepare_annotation(annotation, a, b, c, r, scale_x);
       sample->opacity = fmaxf(fminf(r.opacity, 1), 0);
     }
   }
@@ -235,4 +259,14 @@ static inline void screenwide_bind_annotations(
     [encoder setBytes:empty length:sizeof(empty) atIndex:16];
   }
   [encoder setBytes:&text_uniforms length:sizeof(text_uniforms) atIndex:17];
+  // The source is blurred in source pixels; the cursor is drawn in canvas
+  // ones.
+  float blur_strength = screenwide_spotlight_blur_strength(annotations);
+  ScreenwideAnnotationCursorBlur cursor_blur = {
+      blur_strength > 0.0f
+          ? screenwide_spotlight_blur_deviation(blur_strength, source_width, source_height) *
+                scale_x
+          : 0.0f,
+      blur_strength};
+  [encoder setBytes:&cursor_blur length:sizeof(cursor_blur) atIndex:21];
 }

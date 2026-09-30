@@ -58,9 +58,9 @@ impl Stroke {
   /// shape's pen is an arrow's. A highlight and a shape are each drawn by
   /// hand by their own choice, and a spotlight has its own corners, fade and
   /// blur. The pen wears an arrow's colour and weight and nothing else, as a
-  /// fresh stroke in the editor does. The overlay offers no text or
-  /// redaction tool, and its settings refuse both, so neither ever reaches
-  /// here.
+  /// fresh stroke in the editor does. The overlay offers no text, redaction
+  /// or magnifier tool, and its settings refuse all three, so none ever
+  /// reaches here.
   pub(super) fn style(&self) -> AnnotationStyle {
     let settings = super::super::settings::current();
     let shape = self.shape == AnnotationKind::Shape;
@@ -92,6 +92,7 @@ impl Stroke {
       manual: self.manual,
       radius: if shape { settings.shape_radius } else { 0.0 },
       redaction: Default::default(),
+      shadow: false,
       softness: 0.0,
       strength: 0.0,
       width: match self.shape {
@@ -100,7 +101,8 @@ impl Stroke {
         | AnnotationKind::Redact
         | AnnotationKind::Shape
         | AnnotationKind::Spotlight
-        | AnnotationKind::Draw => settings.default_width,
+        | AnnotationKind::Draw
+        | AnnotationKind::Magnify => settings.default_width,
         AnnotationKind::Counter => settings.default_counter_size,
         AnnotationKind::Highlight => {
           crate::editor::annotations::highlight::model::NEW_HIGHLIGHT_WIDTH
@@ -153,7 +155,7 @@ impl Stroke {
         line.style.width = style.width;
         line
       }),
-      AnnotationKind::Text | AnnotationKind::Redact => None,
+      AnnotationKind::Text | AnnotationKind::Redact | AnnotationKind::Magnify => None,
     }
   }
 
@@ -176,7 +178,7 @@ impl Stroke {
         AnnotationShape::Draw { points, .. } => points.len() > 1,
         _ => true,
       }),
-      AnnotationKind::Text | AnnotationKind::Redact => false,
+      AnnotationKind::Text | AnnotationKind::Redact | AnnotationKind::Magnify => false,
     }
   }
 

@@ -91,12 +91,13 @@ pub(crate) fn drag_new(
 }
 
 /// The two corners a boxed shape is held by, or `None` for a shape that is
-/// not a box.
+/// not a box. A magnifier is held by its loupe.
 fn held_corners(shape: &AnnotationShape) -> Option<(AnnotationPoint, AnnotationPoint)> {
   match shape {
     AnnotationShape::Redact { start, end, .. }
     | AnnotationShape::Shape { start, end, .. }
-    | AnnotationShape::Spotlight { start, end } => Some((*start, *end)),
+    | AnnotationShape::Spotlight { start, end }
+    | AnnotationShape::Magnify { start, end, .. } => Some((*start, *end)),
     _ => None,
   }
 }
@@ -104,7 +105,8 @@ fn held_corners(shape: &AnnotationShape) -> Option<(AnnotationPoint, AnnotationP
 fn write(annotation: &mut Annotation, bounds: SnapBox) {
   if let AnnotationShape::Redact { start, end, .. }
   | AnnotationShape::Shape { start, end, .. }
-  | AnnotationShape::Spotlight { start, end } = &mut annotation.shape
+  | AnnotationShape::Spotlight { start, end }
+  | AnnotationShape::Magnify { start, end, .. } = &mut annotation.shape
   {
     (*start, *end) = corners(bounds);
   }

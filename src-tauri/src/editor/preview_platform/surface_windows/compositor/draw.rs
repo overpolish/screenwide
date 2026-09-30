@@ -213,7 +213,8 @@ impl Compositor {
         [cursor.opacity, 0.0, cursor.rotation_radians, cursor.scale]
       }),
       cursor_blur: composition.cursor.map_or([0.0; 4], |cursor| {
-        [cursor.blur_delta_x, cursor.blur_delta_y, 0.0, 0.0]
+        let blur = annotations.cursor_blur;
+        [cursor.blur_delta_x, cursor.blur_delta_y, blur[0], blur[1]]
       }),
       camera_frame: camera.map_or([0.0; 4], |(_, geometry, _, _)| {
         [
