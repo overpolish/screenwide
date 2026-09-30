@@ -37,6 +37,12 @@ fn snapped() -> u32 {
   u32::from(down(VK_SHIFT.0)) | (u32::from(down(VK_CONTROL.0)) << 1)
 }
 
+/// Whether a press takes the toggle modifier: Ctrl, as the timeline's own
+/// lanes add an item to their choice. Command on macOS.
+pub(super) fn press_toggles() -> bool {
+  snapped() & 2 != 0
+}
+
 /// Resolves a sample against the published chrome. `None` when the point has
 /// no picture to be normalised against, which is nothing to report.
 pub(super) fn resolve(
@@ -47,29 +53,60 @@ pub(super) fn resolve(
   handle: u32,
   point: (f64, f64),
 ) -> Option<Sample> {
-  let (x, y) = normalised_point(state, point)?;
   // Windows draws every layer into its own pane, but the gesture addresses
   // the layer, which is the identity a selection gesture reports too.
   let mut layer = state.selection.map_or(0, |selection| selection.layer_id);
   let mut index = index;
-  if matches!(target_kind, TARGET_EXISTING | TARGET_SELECT) {
+  let mut image = image_frame(state);
+  if matches!(target_kind, TARGET_EXISTING | TARGET_SELECT | TARGET_TOGGLE) {
     if let Some(item) = state.annotation.handles.get(index as usize) {
+      // An annotation is measured on its own layer, whichever one is chosen.
+      image = item_image_frame(state, index as i32);
       if item.layer_id >= 0 {
         layer = item.layer_id as u32;
       }
       index = item.index;
     }
   }
+  let image = image?;
   Some(Sample {
     phase,
     layer,
     target_kind,
     index,
     handle,
-    x,
-    y,
+    x: (point.0 - image.x) / image.width,
+    y: (point.1 - image.y) / image.height,
     snap: snapped(),
-    image_points: image_extent(state).unwrap_or_default(),
+    image_points: image.width,
+  })
+}
+
+/// Resolves a sample of a gesture measured on `layer` rather than on one
+/// annotation: the chosen group carried, or a marquee band's corners.
+pub(super) fn resolve_layer(
+  state: &SurfaceState,
+  phase: SelectionGesturePhase,
+  target_kind: u32,
+  layer: i32,
+  point: (f64, f64),
+) -> Option<Sample> {
+  let image = super::super::picking::layer_image_rect(state, layer)?;
+  // A still's annotations carry no layer of their own: the selection's is
+  // theirs, as it is for every other gesture on a still.
+  let layer = u32::try_from(layer)
+    .ok()
+    .or_else(|| state.selection.map(|selection| selection.layer_id))?;
+  Some(Sample {
+    phase,
+    layer,
+    target_kind,
+    index: 0,
+    handle: HANDLE_BODY,
+    x: (point.0 - image.x) / image.width,
+    y: (point.1 - image.y) / image.height,
+    snap: snapped(),
+    image_points: image.width,
   })
 }
 

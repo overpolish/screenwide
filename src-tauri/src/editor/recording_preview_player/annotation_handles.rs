@@ -14,7 +14,7 @@ impl PreviewPlayerManager {
     &mut self,
     tool: Option<&str>,
   ) {
-    if self.annotation.gesture.is_some() {
+    if self.annotation.gesture.is_some() || self.annotation.group.is_some() {
       return;
     }
     let mode = annotation_mode(tool);
@@ -158,6 +158,30 @@ impl PreviewPlayerManager {
   }
 }
 impl PreviewPlayerManager {
+  /// What `pane` draws at the playhead: a gesture's working list while one
+  /// holds that pane, and otherwise the clips live there.
+  pub(super) fn pane_annotations(&self, pane: u32) -> Vec<Annotation> {
+    if let Some(gesture) = &self.annotation.gesture {
+      if gesture.pane == pane {
+        return gesture.working.clone();
+      }
+    }
+    let Some(sources) = self.sources.as_ref() else {
+      return Vec::new();
+    };
+    sources
+      .annotation_clips
+      .read()
+      .map(|clips| {
+        active_annotations(
+          &clips,
+          super::gesture::track(pane),
+          self.position_ms.min(sources.duration_ms.saturating_sub(1)),
+        )
+      })
+      .unwrap_or_default()
+  }
+
   pub(in crate::editor::recording_preview_player) fn annotation_targets(
     &self,
   ) -> Vec<(u32, Annotation)> {
@@ -186,11 +210,14 @@ impl PreviewPlayerManager {
     };
     let mut handles = Vec::new();
     let mut paths = Vec::new();
-    let mut selected = if self.annotation.selected.is_some() {
-      -2
-    } else {
-      -1
+    let in_hand = match self.annotation.selected.as_slice() {
+      [id] => Some(id),
+      _ => None,
     };
+    let group = self.annotation_group();
+    let mut selected = if in_hand.is_some() { -2 } else { -1 };
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    let mut group_boxes = Vec::new();
     for pane in 0..sources.playback_layout.panes.len().min(2) {
       let source = &sources.playback_layout.panes[pane];
       let output = if pane == 1 {
@@ -201,24 +228,40 @@ impl PreviewPlayerManager {
       let annotations = self.pane_annotations(pane as u32);
       if let Some(index) = annotations
         .iter()
-        .position(|annotation| Some(&annotation.id) == self.annotation.selected.as_ref())
+        .position(|annotation| Some(&annotation.id) == in_hand)
       {
         selected = (handles.len() + index) as i32;
+      }
+      let source_size = (source.source_width, source.source_height);
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      if !group.is_empty() {
+        group_boxes.extend(self.pane_group_boxes(
+          pane as u32,
+          &annotations,
+          source_size,
+          output.size_image_width(),
+        ));
       }
       handles.extend(
         annotation_handles(
           &annotations,
-          (source.source_width, source.source_height),
+          source_size,
           output.size_image_width(),
           &mut paths,
         )
         .into_iter()
-        .map(|mut handle| {
+        .zip(&annotations)
+        .map(|(mut handle, annotation)| {
           handle.layer_id = pane as i32;
+          if group.contains(&annotation.id) {
+            handle.flags |= HANDLE_FLAG_GROUPED;
+          }
           handle
         }),
       );
     }
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    surface.set_annotation_group(&group_boxes);
     surface.set_annotation_layer(
       &handles,
       &paths,

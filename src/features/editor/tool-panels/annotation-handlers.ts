@@ -10,6 +10,7 @@ import {
   applyAnnotationAnimated,
   applyAnnotationReverse,
   applyAnnotationShuffle,
+  applyAnnotationsDelete,
   applyAnnotationStyle,
   applyClearDrawings,
 } from "../annotation-channel";
@@ -34,6 +35,7 @@ export const annotationPanelHandlers = (
   | "onAnnotationColorSave"
   | "onAnnotationReverse"
   | "onAnnotationShuffle"
+  | "onAnnotationsDelete"
   | "onAnnotationStyleChange"
   | "onDrawingsClear"
 > => ({
@@ -57,6 +59,9 @@ export const annotationPanelHandlers = (
   },
   onAnnotationStyleChange: (style) => {
     applyAnnotationStyle(workspace, style);
+  },
+  onAnnotationsDelete: () => {
+    applyAnnotationsDelete(workspace);
   },
   onDrawingsClear: () => {
     applyClearDrawings(workspace);

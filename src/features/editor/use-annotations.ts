@@ -10,27 +10,39 @@ import {
   rememberAnnotationStyle,
 } from "./annotation-defaults";
 import {
-  Annotation,
-  AnnotationStyle,
-  annotationDeleteTarget,
-  renumberedCounters,
-} from "./annotations";
+  annotationDeleteTargets,
+  chosenAnnotationIds,
+  sweptAnnotationIds,
+  toggledAnnotationIds,
+} from "./annotation-selection";
+import { Annotation, AnnotationStyle, renumberedCounters } from "./annotations";
 import { relaidHighlight } from "./highlight-strokes";
 import { EditorKind } from "./types";
 
+const NOTHING_CHOSEN: ReadonlySet<string> = new Set();
+const anyGroupable = () => true;
+
 /** Selection and editing behaviour shared by screenshot and recording
- * annotations. */
+ * annotations. One annotation or several may be chosen; only one on its own
+ * is dressed by the panel and gripped on the picture. */
 export function useAnnotations({
   annotations,
+  groupable = anyGroupable,
   onCommit,
   workspace,
 }: {
   annotations: Annotation[];
   onCommit: (annotations: Annotation[]) => void;
   workspace: EditorKind;
+  /** Whether an annotation may be chosen together with others. */
+  groupable?: (id: string) => boolean;
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [chosen, setChosen] = useState(NOTHING_CHOSEN);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const annotationIds = annotations.map((annotation) => annotation.id);
+  const selectedIds = chosenAnnotationIds(annotationIds, chosen, groupable);
+  const selectedId =
+    selectedIds.size === 1 ? (selectedIds.values().next().value ?? null) : null;
   const selected =
     annotations.find((annotation) => annotation.id === selectedId) ?? null;
 
@@ -133,28 +145,34 @@ export function useAnnotations({
     );
   };
 
+  // A deleted annotation stays in the choice while it is gone: the choice
+  // only ever shows annotations that are there, so it reads as let go, and an
+  // undo that brings it back brings it back chosen. The hover goes with it.
+  const remove = (targets: ReadonlySet<string>) => {
+    commit(annotations.filter((annotation) => !targets.has(annotation.id)));
+    if (hoveredId !== null && targets.has(hoveredId)) setHoveredId(null);
+  };
+
   // Everything the pen made goes in one commit, so one undo brings it all
   // back: its strokes, and what held strokes were taken for. A stroke from
   // before the flag existed is still the pen's. Other annotations stay, and
-  // so do the choice and the hover unless the pen made them.
+  // so does the hover unless the pen made it.
   const penMade = (annotation: Annotation) =>
     annotation.pen === true || annotation.shape.kind === "draw";
-  const isPens = (id: string | null) =>
-    annotations.some(
-      (annotation) => annotation.id === id && penMade(annotation),
-    );
   const canClearDrawings = annotations.some(penMade);
   const applyClearDrawings = () => {
     if (!canClearDrawings) return;
-    commit(annotations.filter((annotation) => !penMade(annotation)));
-    if (isPens(selectedId)) setSelectedId(null);
-    if (isPens(hoveredId)) setHoveredId(null);
+    remove(new Set(annotations.filter(penMade).map(({ id }) => id)));
+  };
+  const applyDelete = () => {
+    if (selectedIds.size > 0) remove(selectedIds);
   };
 
   usePublishAnnotationSelection(
     workspace,
     {
       canClearDrawings,
+      count: selectedIds.size,
       selection: selected
         ? {
             angle: angle ?? undefined,
@@ -169,31 +187,48 @@ export function useAnnotations({
       applyAngle,
       applyAnimated,
       applyClearDrawings,
+      applyDelete,
       applyReverse,
       applyShuffle,
       applyStyle,
     },
   );
 
+  const deleteTargets = annotationDeleteTargets(
+    annotationIds,
+    hoveredId,
+    selectedIds,
+  );
   return {
-    canDelete:
-      annotationDeleteTarget(annotations, hoveredId, selectedId) !== null,
+    canDelete: deleteTargets.size > 0,
     clearSelection: () => {
-      setSelectedId(null);
+      setChosen(NOTHING_CHOSEN);
     },
     deleteTargeted: () => {
-      const target = annotationDeleteTarget(annotations, hoveredId, selectedId);
-      if (target === null) return false;
-      commit(annotations.filter((annotation) => annotation.id !== target));
-      if (target === selectedId) setSelectedId(null);
-      if (target === hoveredId) setHoveredId(null);
+      if (deleteTargets.size === 0) return false;
+      remove(deleteTargets);
       return true;
     },
-    hasSelection: selected !== null,
+    hasSelection: selectedIds.size > 0,
     onHoverChange: setHoveredId,
-    onSelectedChange: setSelectedId,
+    /** Choose exactly `ids`: what a press on the picture reports. */
+    onSelectedIdsChange: (ids: readonly string[]) => {
+      setChosen(ids.length === 0 ? NOTHING_CHOSEN : new Set(ids));
+    },
+    /** Choose `id` alone, or with `toggle`, add it to the choice or take it
+     * away. */
+    selectAnnotation: (id: string, toggle: boolean) => {
+      setChosen(toggledAnnotationIds(selectedIds, id, { groupable, toggle }));
+    },
+    /** Choose what a band swept over, alone or added to the choice. */
+    selectAnnotations: (ids: readonly string[], additive: boolean) => {
+      setChosen(sweptAnnotationIds(selectedIds, ids, additive));
+    },
+    /** The one annotation in hand, or null with none or several chosen. */
     selectedId,
-    /** Which shape the chosen annotation is, for the tool that follows it. */
+    selectedIds,
+    /** Which shape the one annotation in hand is, for the tool that follows
+     * it. A group has no one shape, so no tool follows it. */
     selectedKind: selected?.shape.kind ?? null,
   };
 }

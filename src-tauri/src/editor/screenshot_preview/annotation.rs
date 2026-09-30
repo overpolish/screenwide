@@ -4,7 +4,10 @@
 //! Screenshot-specific annotation layout and hover state. Shared handles and
 //! editing live in the editor's annotation module.
 
-use crate::editor::annotations::handles::{annotation_handles, NativeAnnotationHandles};
+use crate::editor::annotations::group::{group_boxes, NativeAnnotationGroupBox};
+use crate::editor::annotations::handles::{
+  annotation_handles, NativeAnnotationHandles, HANDLE_FLAG_GROUPED,
+};
 use crate::editor::annotations::AnnotationStyle;
 
 /// The tool modes and their mapping live with the gesture model, so the two
@@ -39,6 +42,8 @@ pub(super) struct AnnotationLayout {
   /// The arrow whose three grips are drawn, or -1 for none.
   pub(super) selected_index: i32,
   pub(super) mode: u32,
+  /// The boxes round the annotations chosen together.
+  pub(super) group: Vec<NativeAnnotationGroupBox>,
 }
 
 /// Settles what the native OSC is told about this layer's arrows, and what
@@ -57,7 +62,7 @@ pub(super) fn apply_annotation_layout(
   counter_angle: Option<f64>,
   tool: Option<&str>,
   pane_index: Option<u32>,
-  selected: Option<&str>,
+  selected: &[String],
 ) -> (AnnotationLayout, bool) {
   let mode = annotation_mode(tool);
   manager.annotation_defaults = defaults;
@@ -65,6 +70,7 @@ pub(super) fn apply_annotation_layout(
   let changed = manager.annotation_mode != mode;
   manager.annotation_mode = mode;
   manager.annotation_pane_index = pane_index;
+  manager.annotation_selected = selected.to_vec();
   let retired = changed || hovers_nothing(mode) || manager.hover_lost();
   let hover_cleared = retired && manager.clear_annotation_hover();
   let layout = annotation_layout(manager, pane_index, mode, selected);
@@ -74,33 +80,64 @@ pub(super) fn apply_annotation_layout(
 /// The arrow grips for the pane the OSC is drawn against. The geometry comes
 /// from the manager's own output rather than the layout's payload, so a
 /// gesture sample and the layout that echoes it publish the same handles.
-fn annotation_layout(
+/// `selected` is every annotation chosen: one on its own shows its grips,
+/// and several are marked and boxed as a group.
+pub(super) fn annotation_layout(
   manager: &super::state::PreviewManager,
   pane_index: Option<u32>,
   mode: u32,
-  selected: Option<&str>,
+  selected: &[String],
 ) -> AnnotationLayout {
   let mut paths = Vec::new();
-  let handles = pane_index
-    .and_then(|pane_index| {
-      let source = manager.annotation_source(pane_index)?;
-      Some(annotation_handles(
-        manager.annotations_for(pane_index)?,
-        source,
-        manager.annotation_image_width(pane_index)?,
-        &mut paths,
-      ))
+  let grouped = |id: &str| selected.len() > 1 && selected.iter().any(|chosen| chosen == id);
+  let pane = pane_index.and_then(|pane_index| {
+    Some((
+      manager.annotations_for(pane_index)?,
+      manager.annotation_source(pane_index)?,
+      manager.annotation_image_width(pane_index)?,
+    ))
+  });
+  let handles = pane
+    .map(|(annotations, source, image_width)| {
+      annotation_handles(annotations, source, image_width, &mut paths)
+        .into_iter()
+        .zip(annotations)
+        .map(|(mut handle, annotation)| {
+          if grouped(&annotation.id) {
+            handle.flags |= HANDLE_FLAG_GROUPED;
+          }
+          handle
+        })
+        .collect()
     })
     .unwrap_or_default();
-  let selected_index = pane_index
-    .and_then(|pane_index| manager.annotations_for(pane_index))
-    .zip(selected)
-    .and_then(|(annotations, id)| annotations.iter().position(|item| item.id == id))
-    .map_or(-1, |index| i32::try_from(index).unwrap_or(-1));
+  let selected_index = match (pane, selected) {
+    (Some((annotations, ..)), [id]) => annotations
+      .iter()
+      .position(|item| item.id == *id)
+      .map_or(-1, |index| i32::try_from(index).unwrap_or(-1)),
+    _ => -1,
+  };
   AnnotationLayout {
     handles,
     paths,
     selected_index,
     mode,
+    // A still shows every annotation on its layer, so every member is shown.
+    group: pane
+      .map(|(annotations, source, image_width)| {
+        let members: Vec<_> = annotations
+          .iter()
+          .filter(|annotation| grouped(&annotation.id))
+          .collect();
+        group_boxes(
+          &members,
+          |_| true,
+          source,
+          crate::editor::annotations::snap::source_per_size(source, image_width),
+          -1,
+        )
+      })
+      .unwrap_or_default(),
   }
 }

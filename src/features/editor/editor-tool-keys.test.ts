@@ -12,6 +12,7 @@ import {
 describe("the editor's tool keys", () => {
   it("reaches every tool that states a letter", () => {
     const keys = {
+      onMarqueeTool: vi.fn(),
       onResizeCanvas: vi.fn(),
       onSelectTool: vi.fn(),
       onToggleCrop: vi.fn(),
@@ -26,6 +27,7 @@ describe("the editor's tool keys", () => {
     expect(keys.onTool.mock.calls.flat()).toEqual(
       ANNOTATION_TOOLS.map((tool) => tool.id),
     );
+    expect(keys.onMarqueeTool).toHaveBeenCalledOnce();
     expect(keys.onSelectTool).toHaveBeenCalledOnce();
     expect(keys.onToggleCrop).toHaveBeenCalledOnce();
     expect(keys.onResizeCanvas).toHaveBeenCalledOnce();

@@ -17,7 +17,7 @@ use super::super::preview_platform::SelectionGesturePhase;
 use super::state::PreviewManager;
 use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{drawing_kind, AnnotationGestureTarget};
-use crate::editor::annotations::handles::{annotation_handles, source_point};
+use crate::editor::annotations::handles::source_point;
 use crate::editor::annotations::snap::{
   source_per_point, source_per_size, threshold_source_px, SnapField, SnapModifiers, SnapRequest,
   SnapResult,
@@ -30,7 +30,8 @@ use crate::editor::annotations::Annotation;
 pub(crate) struct AnnotationCommit {
   pub(crate) annotations: Vec<Annotation>,
   pub(crate) pane_index: u32,
-  pub(crate) selected_annotation_id: Option<String>,
+  /// Every annotation chosen once the commit lands.
+  pub(crate) selected_annotation_ids: Vec<String>,
   pub(crate) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
 }
 
@@ -75,22 +76,23 @@ impl PreviewManager {
   /// Republishes the arrow grips and the live picture. Both are read from the
   /// manager's own working copy, so a gesture sample shows its own geometry
   /// rather than the React layout that is still catching up with it.
-  pub(super) fn present_annotation_gesture(&self, pane_index: u32, selected: Option<&str>) {
+  /// `selected` is every annotation chosen.
+  pub(super) fn present_annotation_gesture(&self, pane_index: u32, selected: &[String]) {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
-    {
-      if let (Some(surface), Some(source), Some(image_width), Some(annotations)) = (
-        self.surface.as_ref(),
-        self.annotation_source(pane_index),
-        self.annotation_image_width(pane_index),
-        self.annotations_for(pane_index),
-      ) {
-        let selected_index = selected
-          .and_then(|id| annotations.iter().position(|item| item.id == id))
-          .map_or(-1, |index| i32::try_from(index).unwrap_or(-1));
-        let mut paths = Vec::new();
-        let handles = annotation_handles(annotations, source, image_width, &mut paths);
-        surface.set_annotations(&handles, &paths, selected_index, self.annotation_mode);
-      }
+    if let Some(surface) = self.surface.as_ref() {
+      let layout = super::annotation::annotation_layout(
+        self,
+        Some(pane_index),
+        self.annotation_mode,
+        selected,
+      );
+      surface.set_annotations(
+        &layout.handles,
+        &layout.paths,
+        layout.selected_index,
+        layout.mode,
+      );
+      surface.set_annotation_group(&layout.group);
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let _ = (pane_index, selected);
@@ -100,12 +102,12 @@ impl PreviewManager {
   pub(super) fn commit_for(
     &self,
     pane_index: u32,
-    selected: Option<String>,
+    selected: Vec<String>,
   ) -> Option<AnnotationCommit> {
     Some(AnnotationCommit {
       annotations: self.annotations_for(pane_index)?.clone(),
       pane_index,
-      selected_annotation_id: selected,
+      selected_annotation_ids: selected,
       text_edit: None,
     })
   }
@@ -124,6 +126,15 @@ impl PreviewManager {
     snap: u32,
     image_points: f64,
   ) -> Option<AnnotationCommit> {
+    match target {
+      AnnotationGestureTarget::Group => {
+        return self.group_annotation_gesture(phase, pane_index, x, y, snap, image_points);
+      }
+      AnnotationGestureTarget::Marquee => {
+        return self.marquee_annotation_gesture(phase, pane_index, x, y, snap);
+      }
+      _ => {}
+    }
     if matches!(phase, SelectionGesturePhase::Cancel) {
       let gesture = self.annotation_gesture.take()?;
       if let Some(annotations) = self
@@ -135,7 +146,7 @@ impl PreviewManager {
         gesture.edit.cancel(annotations);
       }
       self.publish_annotation_snap(gesture.pane_index, &SnapResult::default());
-      self.present_annotation_gesture(gesture.pane_index, None);
+      self.present_annotation_gesture(gesture.pane_index, &[]);
       return None;
     }
     let modifiers = SnapModifiers::from_bits(snap);
@@ -184,10 +195,11 @@ impl PreviewManager {
       if gesture.edit.is_new() && self.is_text(pane_index, &id) {
         return self.begin_text_session(pane_index, id);
       }
-      self.present_annotation_gesture(pane_index, chosen.as_deref());
+      let chosen: Vec<String> = chosen.into_iter().collect();
+      self.present_annotation_gesture(pane_index, &chosen);
       return self.commit_for(pane_index, chosen);
     }
-    self.present_annotation_gesture(pane_index, chosen.as_deref());
+    self.present_annotation_gesture(pane_index, &chosen.into_iter().collect::<Vec<_>>());
     None
   }
 
@@ -213,17 +225,20 @@ impl PreviewManager {
       // selection rather than an edit.
       self.annotation_gesture = None;
       self.annotation_hover = None;
-      self.present_annotation_gesture(pane_index, None);
-      return self.commit_for(pane_index, None);
+      self.present_annotation_gesture(pane_index, &[]);
+      return self.commit_for(pane_index, Vec::new());
+    }
+    if let AnnotationGestureTarget::Toggle { index } = target {
+      return self.toggle_annotation(pane_index, index);
     }
     if let AnnotationGestureTarget::Select { index } = target {
       // A press on the shaft only chooses the arrow. It commits straight
       // away so the selection survives React's next layout; the move it may
       // turn into arrives as an `Existing` gesture of its own.
-      let id = self.annotations_for(pane_index)?.get(index)?.id.clone();
+      let chosen = vec![self.annotations_for(pane_index)?.get(index)?.id.clone()];
       self.annotation_gesture = None;
-      self.present_annotation_gesture(pane_index, Some(id.as_str()));
-      return self.commit_for(pane_index, Some(id));
+      self.present_annotation_gesture(pane_index, &chosen);
+      return self.commit_for(pane_index, chosen);
     }
     let defaults = self.annotation_defaults.clone();
     let mode = self.annotation_mode;
@@ -264,7 +279,7 @@ impl PreviewManager {
     if modifiers.position {
       let _ = self.annotation_anchors(pane_index, source);
     }
-    self.present_annotation_gesture(pane_index, chosen.as_deref());
+    self.present_annotation_gesture(pane_index, &chosen.into_iter().collect::<Vec<_>>());
     None
   }
 }

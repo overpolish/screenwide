@@ -45,7 +45,7 @@ impl PreviewPlayerManager {
       position,
       edit: AnnotationTextEdit::begin(id.clone(), text.clone()),
     });
-    self.annotation.selected = Some(id.clone());
+    self.annotation.selected = vec![id.clone()];
     self.publish_annotation_handles();
     let _ = self.restart(PlaybackMode::InteractiveStill);
     // The grips are published pane by pane, so the box's place in them is
@@ -67,7 +67,7 @@ impl PreviewPlayerManager {
       pane,
       position,
       annotations,
-      Some(id),
+      vec![id],
       Some(TextEditPhase::Begin),
     )
   }
@@ -136,7 +136,7 @@ impl PreviewPlayerManager {
           session.pane,
           session.position,
           self.pane_annotations(session.pane),
-          Some(session.edit.id().to_owned()),
+          vec![session.edit.id().to_owned()],
           Some(TextEditPhase::Update),
         )
       }
@@ -158,7 +158,7 @@ impl PreviewPlayerManager {
             clips.retain(|clip| clip.annotation.id != id);
           }
         }
-        self.annotation.selected = kept.then_some(id);
+        self.annotation.selected = kept.then_some(id).into_iter().collect();
         self.publish_annotation_handles();
         let _ = self.restart(PlaybackMode::InteractiveStill);
         self.commit(

@@ -40,7 +40,7 @@ pub async fn layout_screenshot_preview_surface(
   output: ScreenshotWorkspaceOutputSettings,
   panes: Vec<ScreenshotSurfacePane>,
   scale: f64,
-  selected_annotation_id: Option<String>,
+  selected_annotation_ids: Vec<String>,
   selection: Option<ScreenshotSelectionOverlay>,
   selection_targets: Option<Vec<ScreenshotSelectionOverlay>>,
   session_id: u64,
@@ -56,7 +56,7 @@ pub async fn layout_screenshot_preview_surface(
     &annotation_defaults,
     &annotation_counter_angle,
     &annotation_tool,
-    &selected_annotation_id,
+    &selected_annotation_ids,
   );
   let (surface, will_present, natural_size, annotation_layout, hover_cleared) = {
     let mut manager = state
@@ -69,8 +69,9 @@ pub async fn layout_screenshot_preview_surface(
     // may update the inspector and display-only preview model meanwhile, but
     // they cannot replace the pixel gesture snapshot until mouse-up.
     #[cfg(any(target_os = "macos", target_os = "windows"))]
-    let native_owns_output =
-      manager.selection_gesture.is_some() || manager.annotation_gesture.is_some();
+    let native_owns_output = manager.selection_gesture.is_some()
+      || manager.annotation_gesture.is_some()
+      || manager.annotation_group.is_some();
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let native_owns_output = manager.selection_gesture.is_some();
     let output = if native_owns_output {
@@ -133,7 +134,7 @@ pub async fn layout_screenshot_preview_surface(
       annotation_counter_angle,
       annotation_tool.as_deref(),
       selection.as_ref().map(|overlay| overlay.pane_index),
-      selected_annotation_id.as_deref(),
+      &selected_annotation_ids,
     );
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let (annotation_layout, hover_cleared) = ((), false);
@@ -187,6 +188,8 @@ pub async fn layout_screenshot_preview_surface(
     annotation_layout.selected_index,
     annotation_layout.mode,
   );
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  surface.set_annotation_group(&annotation_layout.group);
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = annotation_layout;
   surface.set_selection(selection);

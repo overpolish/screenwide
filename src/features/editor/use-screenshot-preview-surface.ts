@@ -70,7 +70,7 @@ export function useScreenshotPreviewSurface({
   onZoomChange,
   output,
   paneCount = 1,
-  selectedAnnotationId,
+  selectedAnnotationIds,
   selection,
   selectionTargets,
   sourceKey,
@@ -109,7 +109,7 @@ export function useScreenshotPreviewSurface({
   onZoomChange?: (zoomPercent: number) => void;
   output?: ScreenshotWorkspaceOutputSettings;
   paneCount?: number;
-  selectedAnnotationId?: string | null;
+  selectedAnnotationIds?: readonly string[];
   selection?: Parameters<typeof layoutScreenshotPreviewSurface>[0]["selection"];
   selectionTargets?: Parameters<
     typeof layoutScreenshotPreviewSurface
@@ -144,8 +144,10 @@ export function useScreenshotPreviewSurface({
   annotationDefaultsRef.current = annotationDefaults;
   const annotationAngleRef = useRef(annotationCounterAngle);
   annotationAngleRef.current = annotationCounterAngle;
-  const selectedAnnotationIdRef = useRef(selectedAnnotationId);
-  selectedAnnotationIdRef.current = selectedAnnotationId;
+  const selectedAnnotationIdsRef = useRef(selectedAnnotationIds);
+  selectedAnnotationIdsRef.current = selectedAnnotationIds;
+  // Compared by value: the choice is rebuilt as a new list every render.
+  const selectedAnnotationKey = selectedAnnotationIds?.join("\n") ?? "";
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   const selectionTargetsRef = useRef(selectionTargets);
@@ -306,7 +308,7 @@ export function useScreenshotPreviewSurface({
             pane,
             resizeFit: resizeFitRef.current,
             scale,
-            selectedAnnotationId: selectedAnnotationIdRef.current,
+            selectedAnnotationIds: selectedAnnotationIdsRef.current,
             selection: selectionRef.current,
             selectionTargets: selectionTargetsRef.current,
             sessionId: sessionIdRef.current,
@@ -335,7 +337,7 @@ export function useScreenshotPreviewSurface({
                 }),
               ),
               scale,
-              selectedAnnotationId: selectedAnnotationIdRef.current,
+              selectedAnnotationIds: selectedAnnotationIdsRef.current,
               selection: selectionRef.current,
               selectionTargets: selectionTargetsRef.current,
               sessionId: sessionIdRef.current,
@@ -366,7 +368,7 @@ export function useScreenshotPreviewSurface({
     annotationTool,
     outputKey,
     paneCount,
-    selectedAnnotationId,
+    selectedAnnotationKey,
     selection,
     selectionTargets,
   ]);

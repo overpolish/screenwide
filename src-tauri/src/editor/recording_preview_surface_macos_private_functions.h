@@ -168,6 +168,33 @@ void emit_annotation_gesture(ScreenwidePreviewSurface *surface, uint32_t phase,
 /// does: its layer becomes the selection and Rust commits the choice.
 void annotation_choose(ScreenwidePreviewSurface *surface, NSInteger index,
                        NSPoint point);
+/// Whether several annotations are chosen together, which is when the group
+/// chrome is drawn and a press on a member carries them all.
+BOOL annotation_has_group(ScreenwidePreviewSurface *surface);
+/// The layer whose whole-group box `point` lands inside, or `INT32_MIN`.
+int32_t annotation_group_layer_at_point(ScreenwidePreviewSurface *surface,
+                                        NSPoint point);
+/// The boxes round a group: the layer selection's frame, without handles,
+/// round each member shown and round every member on its layer.
+void annotation_group_add_osc(ScreenwideRegionOscVertex *vertices,
+                              NSUInteger *count, NSSize size,
+                              ScreenwidePreviewSurface *surface, CGFloat scale);
+/// Reports one sample of a gesture measured on `layer` rather than on one
+/// annotation: the chosen group carried, or a marquee band's corners.
+void emit_annotation_layer_gesture(ScreenwidePreviewSurface *surface, uint32_t phase,
+                                   uint32_t targetKind, int32_t layer, NSPoint point);
+/// Whether a press takes the toggle modifier: Command, as the timeline's own
+/// lanes add an item to their choice.
+BOOL annotation_press_toggles(void);
+/// The layer a marquee pressed at `point` is drawn over: the laid-out layer
+/// under it, or the selected one where no layer is.
+int32_t annotation_marquee_layer_at_point(ScreenwidePreviewSurface *surface,
+                                          NSPoint point);
+/// The band a marquee press has drawn so far: the region selector's marching
+/// ants, with nothing filled or dimmed.
+void annotation_marquee_add_osc(ScreenwideRegionOscVertex *vertices,
+                                NSUInteger *count, NSSize size,
+                                ScreenwidePreviewSurface *surface, CGFloat scale);
 /// Whether a text box is being typed into.
 BOOL annotation_text_editing(ScreenwidePreviewSurface *surface);
 /// Ends the typing, telling Rust the text it ended with. Answers whether that

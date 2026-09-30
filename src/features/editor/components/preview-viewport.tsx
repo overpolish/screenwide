@@ -68,10 +68,10 @@ type PreviewViewportProps = {
   ) => void;
   onPaneFitChange?: (fit: PreviewPaneFit) => void;
   onRadiusChangeEnd?: () => void;
-  onSelectedAnnotationChange?: (annotationId: string | null) => void;
+  onSelectedAnnotationsChange?: (annotationIds: readonly string[]) => void;
   onZoomChange?: (zoomPercent: number) => void;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
-  selectedAnnotationId?: string | null;
+  selectedAnnotationIds?: readonly string[];
   selectedItemId?: number | null;
   zoomRequest?: PreviewZoomRequest;
 };
@@ -100,10 +100,10 @@ export function PreviewViewport({
   onOutputChange,
   onPaneFitChange,
   onRadiusChangeEnd,
-  onSelectedAnnotationChange,
+  onSelectedAnnotationsChange,
   onZoomChange,
   screenshotOutput,
-  selectedAnnotationId = null,
+  selectedAnnotationIds,
   selectedItemId = null,
   zoomRequest,
 }: PreviewViewportProps) {
@@ -431,7 +431,7 @@ export function PreviewViewport({
   // whose commits arrive as it is typed so the panel can dress the box.
   const annotationChange = (event: ScreenshotAnnotationChangeEvent) => {
     if (event.textEdit === "begin") editGesture.beginGesture();
-    onSelectedAnnotationChange?.(event.selectedAnnotationId);
+    onSelectedAnnotationsChange?.(event.selectedAnnotationIds);
     const changed = screenshotAnnotationOutput(workspaceOutput, event);
     if (changed) onOutputChange?.(changed.output, changed.itemId);
     if (event.textEdit === "end") requestAnimationFrame(editGesture.endGesture);
@@ -489,7 +489,7 @@ export function PreviewViewport({
       onZoomChange,
       output: previewOutput,
       paneCount: orderedItems.length,
-      selectedAnnotationId,
+      selectedAnnotationIds,
       selection: selectionOverlay,
       selectionTargets,
       sourceKey: orderedItems

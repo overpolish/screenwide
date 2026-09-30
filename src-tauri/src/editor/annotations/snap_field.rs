@@ -41,6 +41,17 @@ impl SnapField {
     edited: &str,
     image_width: f64,
   ) -> Self {
+    Self::without(source, annotations, |id| id == edited, image_width)
+  }
+
+  /// The same field for a gesture holding every annotation `held` names: a
+  /// group carried together aligns to what it is not carrying.
+  pub(crate) fn without(
+    source: (u32, u32),
+    annotations: &[Annotation],
+    held: impl Fn(&str) -> bool,
+    image_width: f64,
+  ) -> Self {
     let width = f64::from(source.0.max(1));
     let height = f64::from(source.1.max(1));
     let inset = width.min(height) * CANVAS_INSET;
@@ -53,7 +64,7 @@ impl SnapField {
     let source_per_size = source_per_size(source, image_width);
     let boxes: Vec<SnapBox> = annotations
       .iter()
-      .filter(|annotation| annotation.id != edited)
+      .filter(|annotation| !held(&annotation.id))
       .filter_map(|annotation| {
         annotation
           .shape

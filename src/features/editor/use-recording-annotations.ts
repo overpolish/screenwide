@@ -33,7 +33,8 @@ type AnnotationEvent = {
   paneIndex: number;
   /** The pins of the pinned annotations among `annotations`. */
   pins: RecordingAnnotationPinCommit[];
-  selectedAnnotationId: string | null;
+  /** Every annotation chosen once the commit lands. */
+  selectedAnnotationIds: string[];
   sessionId: number;
   sourcePositionMs: number;
   /** Where in a text box's typing this commit falls; the typing's commits
@@ -106,9 +107,14 @@ export function useRecordingAnnotations({
   };
   // Inspector edits and deletion operate on document IDs, including a selected
   // clip outside the playhead. Native gestures supply only the visible
-  // annotations.
+  // annotations. A pinned clip follows its content on its own, so it is never
+  // chosen with others.
+  const pinned = new Set(
+    clips.flatMap((clip) => (clip.pin ? [clip.annotation.id] : [])),
+  );
   const selection = useAnnotations({
     annotations: clips.map((clip) => clip.annotation),
+    groupable: (id) => !pinned.has(id),
     onCommit: (annotations) => {
       const byId = new Map(
         annotations.map((annotation) => [annotation.id, annotation]),
@@ -142,8 +148,8 @@ export function useRecordingAnnotations({
           trackId: track,
         }),
       );
-      selection.onSelectedChange(payload.selectedAnnotationId);
-      if (payload.selectedAnnotationId) onSelectTrack?.(track);
+      selection.onSelectedIdsChange(payload.selectedAnnotationIds);
+      if (payload.selectedAnnotationIds.length > 0) onSelectTrack?.(track);
       if (payload.textEdit === "end")
         requestAnimationFrame(editGesture.endGesture);
     },
@@ -192,7 +198,7 @@ export function useRecordingAnnotations({
       counterAngle,
       defaults,
       paneIndex: trackId === null ? null : trackId === "primary" ? 0 : 1,
-      selectedId: selection.selectedId,
+      selectedIds: [...selection.selectedIds],
       sessionId,
     }).catch((cause: unknown) => {
       console.error("Could not update recording annotations", cause);
@@ -203,7 +209,7 @@ export function useRecordingAnnotations({
     nativeClips,
     defaults,
     sessionId,
-    selection.selectedId,
+    selection.selectedIds,
     trackId,
   ]);
   const pinning = recordingAnnotationPinning({
@@ -234,12 +240,16 @@ export function useRecordingAnnotations({
     clips,
     onClipsChange: commitClips,
     onPreviewClips: setPreviewClips,
-    onSelect: (id: string) => {
+    /** Choose the clip named `id` alone, or with `toggle`, add it to the
+     * choice or take it away. Its pane becomes the one in hand. */
+    onSelect: (id: string, toggle: boolean) => {
       const clip = clips.find((item) => item.annotation.id === id);
       if (!clip) return;
-      selection.onSelectedChange(id);
+      selection.selectAnnotation(id, toggle);
       onSelectTrack?.(clip.trackId);
     },
+    /** Choose the clips a band swept over, alone or added to the choice. */
+    onSelectSwept: selection.selectAnnotations,
     pinStatus,
     pinning,
   };

@@ -27,11 +27,15 @@ type PublishedAnnotation = {
   applyAngle: (angle: number) => void;
   applyAnimated: (animated: boolean) => void;
   applyClearDrawings: () => void;
+  /** Delete every chosen annotation, in one edit. */
+  applyDelete: () => void;
   applyReverse: () => void;
   applyShuffle: () => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
   /** Whether the picture the workspace edits has any stroke to clear. */
   canClearDrawings: boolean;
+  /** How many annotations are chosen; only one on its own is `selection`. */
+  count: number;
   selection: ToolPanelAnnotation | null;
 };
 
@@ -63,9 +67,10 @@ export function usePublishAnnotationSelection(
   workspace: EditorKind,
   {
     canClearDrawings,
+    count,
     selection,
-  }: Pick<PublishedAnnotation, "canClearDrawings" | "selection">,
-  apply: Omit<PublishedAnnotation, "canClearDrawings" | "selection">,
+  }: Pick<PublishedAnnotation, "canClearDrawings" | "count" | "selection">,
+  apply: Omit<PublishedAnnotation, "canClearDrawings" | "count" | "selection">,
 ) {
   const applyRef = useRef(apply);
   applyRef.current = apply;
@@ -81,6 +86,9 @@ export function usePublishAnnotationSelection(
       applyClearDrawings: () => {
         applyRef.current.applyClearDrawings();
       },
+      applyDelete: () => {
+        applyRef.current.applyDelete();
+      },
       applyReverse: () => {
         applyRef.current.applyReverse();
       },
@@ -91,6 +99,7 @@ export function usePublishAnnotationSelection(
         applyRef.current.applyStyle(style);
       },
       canClearDrawings,
+      count,
       selection:
         serialized === null
           ? null
@@ -103,7 +112,7 @@ export function usePublishAnnotationSelection(
       workspaces.delete(workspace);
       notify();
     };
-  }, [canClearDrawings, serialized, workspace]);
+  }, [canClearDrawings, count, serialized, workspace]);
 }
 
 /**
@@ -133,12 +142,18 @@ export function usePublishAnnotationDraft(
 }
 
 /** The annotation this workspace has in hand, or else the dress its tool
- * draws in, or nothing. */
+ * draws in, or nothing. With several chosen there is no one annotation to
+ * dress, so the dress of the next one is not shown either. */
 export const useAnnotationSelection = (workspace: EditorKind) =>
-  useSyncExternalStore(
-    subscribe,
-    () => workspaces.get(workspace)?.selection ?? drafts.get(workspace) ?? null,
-  );
+  useSyncExternalStore(subscribe, () => {
+    const published = workspaces.get(workspace);
+    if ((published?.count ?? 0) > 1) return null;
+    return published?.selection ?? drafts.get(workspace) ?? null;
+  });
+
+/** How many annotations this workspace has chosen. */
+export const useAnnotationSelectionCount = (workspace: EditorKind) =>
+  useSyncExternalStore(subscribe, () => workspaces.get(workspace)?.count ?? 0);
 
 /** Whether the picture this workspace edits has any stroke to clear. */
 export const useCanClearDrawings = (workspace: EditorKind) =>
@@ -203,4 +218,9 @@ export const applyAnnotationShuffle = (workspace: EditorKind) => {
 /** Take every stroke off the picture this workspace edits, chosen or not. */
 export const applyClearDrawings = (workspace: EditorKind) => {
   workspaces.get(workspace)?.applyClearDrawings();
+};
+
+/** Delete every annotation this workspace has chosen. */
+export const applyAnnotationsDelete = (workspace: EditorKind) => {
+  workspaces.get(workspace)?.applyDelete();
 };

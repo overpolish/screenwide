@@ -55,10 +55,35 @@ import { useToolPanelSnapshot } from "./use-tool-panel-snapshot";
  */
 export function AnnotationPanel({ workspace }: { workspace: EditorKind }) {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
-  const { annotation, annotationColors, canClearDrawings, isLocked } = snapshot;
+  const {
+    annotation,
+    annotationColors,
+    annotationCount,
+    canClearDrawings,
+    isLocked,
+  } = snapshot;
   const showColorMenu = useAnnotationColorMenu((color) => {
     change({ removeAnnotationColor: color });
   });
+  // Several annotations share no one dress to show, so only what acts on
+  // them all is offered.
+  if (annotationCount > 1)
+    return (
+      <div className="flex flex-col gap-section">
+        <Text variant="body">{`${String(annotationCount)} annotations selected`}</Text>
+        <div className="flex justify-end">
+          <Button
+            aria-label="Delete the selected annotations"
+            isDisabled={isLocked}
+            onPress={() => {
+              change({ deleteAnnotations: true });
+            }}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    );
   if (!annotation) return <Text variant="body">Nothing selected</Text>;
 
   const { color, manual, radius, redaction, strength, width } =

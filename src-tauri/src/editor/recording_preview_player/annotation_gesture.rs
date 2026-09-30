@@ -15,7 +15,7 @@ pub(super) struct Gesture {
   pub(super) edit: AnnotationEdit,
   pub(super) working: Vec<Annotation>,
   pub(super) before: Vec<RecordingAnnotationClip>,
-  before_selected: Option<String>,
+  before_selected: Vec<String>,
   /// What this gesture can snap to, built from the pane as it was when the
   /// press landed. Its element anchors are refreshed each sample, because
   /// detection may land part way through the drag.
@@ -28,7 +28,8 @@ pub(super) struct Commit {
   pub(super) pane_index: u32,
   pub(super) source_position_ms: u64,
   pub(super) annotations: Vec<Annotation>,
-  pub(super) selected_annotation_id: Option<String>,
+  /// Every annotation chosen once the commit lands.
+  pub(super) selected_annotation_ids: Vec<String>,
   /// Where in a text box's typing this commit falls; React groups a typing's
   /// commits into one edit.
   pub(super) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
@@ -46,27 +47,6 @@ pub(super) fn track(pane: u32) -> AnnotationTrack {
 }
 
 impl PreviewPlayerManager {
-  pub(super) fn pane_annotations(&self, pane: u32) -> Vec<Annotation> {
-    if let Some(gesture) = &self.annotation.gesture {
-      if gesture.pane == pane {
-        return gesture.working.clone();
-      }
-    }
-    let Some(sources) = self.sources.as_ref() else {
-      return Vec::new();
-    };
-    sources
-      .annotation_clips
-      .read()
-      .map(|clips| {
-        active_annotations(
-          &clips,
-          track(pane),
-          self.position_ms.min(sources.duration_ms.saturating_sub(1)),
-        )
-      })
-      .unwrap_or_default()
-  }
   #[allow(clippy::too_many_arguments)]
   pub(super) fn annotation_gesture(
     &mut self,
@@ -80,6 +60,13 @@ impl PreviewPlayerManager {
   ) -> Option<Commit> {
     if self.is_playing || self.annotation.mode == 0 || pane > 1 || self.annotation.text.is_some() {
       return None;
+    }
+    match target {
+      AnnotationGestureTarget::Group => {
+        return self.group_gesture(phase, pane, x, y, snap, image_points);
+      }
+      AnnotationGestureTarget::Marquee => return self.marquee_gesture(phase, pane, x, y, snap),
+      _ => {}
     }
     if matches!(phase, SelectionGesturePhase::Begin) {
       self.annotation.pane = Some(pane);
@@ -104,10 +91,17 @@ impl PreviewPlayerManager {
     if matches!(phase, SelectionGesturePhase::Begin) {
       let mut working = self.pane_annotations(pane);
       match target {
+        AnnotationGestureTarget::Toggle { index } => {
+          return self.toggle_annotation(pane, index, position_ms);
+        }
         AnnotationGestureTarget::None | AnnotationGestureTarget::Select { .. } => {
           self.annotation.selected = match target {
-            AnnotationGestureTarget::Select { index } => working.get(index).map(|a| a.id.clone()),
-            _ => None,
+            AnnotationGestureTarget::Select { index } => working
+              .get(index)
+              .map(|a| a.id.clone())
+              .into_iter()
+              .collect(),
+            _ => Vec::new(),
           };
           self.publish_annotation_snap(source_size, &SnapResult::default());
           self.publish_annotation_handles();
@@ -138,16 +132,7 @@ impl PreviewPlayerManager {
       let before = clips.read().ok()?.clone();
       // A disc's diameter and a text box's type size are in points, so the
       // pane's drawn width in points is what turns them into source pixels.
-      let image_width = self
-        .selection_composition()
-        .map(|composition| {
-          if pane == 1 {
-            composition.recording_output.camera.size_image_width()
-          } else {
-            composition.recording_output.primary.size_image_width()
-          }
-        })
-        .unwrap_or_default();
+      let image_width = self.pane_image_widths(pane).1;
       let mut edit = AnnotationEdit::begin(
         &mut working,
         target,
@@ -174,7 +159,7 @@ impl PreviewPlayerManager {
         }
       }
       let before_selected = self.annotation.selected.clone();
-      self.annotation.selected = edit.chosen_id().map(str::to_owned);
+      self.annotation.selected = edit.chosen_id().map(str::to_owned).into_iter().collect();
       // The field excludes the annotation the gesture holds, so a counter can
       // never snap back to the place it started from.
       let field = SnapField::new(source_size, &working, edit.selected_id(), image_width);

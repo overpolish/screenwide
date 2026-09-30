@@ -37,7 +37,7 @@ const arrow = {
 const payload = (overrides: Record<string, unknown> = {}) => ({
   annotations: [arrow],
   paneIndex: 0,
-  selectedAnnotationId: "arrow-1",
+  selectedAnnotationIds: ["arrow-1"],
   sessionId: 7,
   ...overrides,
 });
@@ -47,7 +47,7 @@ describe("screenshotAnnotationChange", () => {
     expect(screenshotAnnotationChange(payload(), 7)).toEqual({
       annotations: [arrow],
       paneIndex: 0,
-      selectedAnnotationId: "arrow-1",
+      selectedAnnotationIds: ["arrow-1"],
       textEdit: null,
     });
   });
@@ -86,12 +86,12 @@ describe("screenshotAnnotationChange", () => {
     expect(change?.annotations).toEqual([arrow]);
   });
 
-  it("reads a cleared selection as nothing chosen", () => {
+  it("reads a missing choice as nothing chosen", () => {
     const change = screenshotAnnotationChange(
-      payload({ selectedAnnotationId: null }),
+      payload({ selectedAnnotationIds: null }),
       7,
     );
-    expect(change?.selectedAnnotationId).toBeNull();
+    expect(change?.selectedAnnotationIds).toEqual([]);
   });
 });
 

@@ -59,8 +59,13 @@ pub(crate) struct NativeAnnotationHandles {
   pub(crate) index: u32,
   /// Zero is an arrow, one a counter: the native `ScreenwideAnnotationKind`.
   pub(crate) kind: u32,
-  pub(crate) padding: u32,
+  /// [`HANDLE_FLAG_GROUPED`] where the annotation is one of several chosen.
+  pub(crate) flags: u32,
 }
+
+/// The annotation is one of several chosen together, so a press on it carries
+/// the group rather than choosing it: the native `ScreenwideAnnotationFlagGrouped`.
+pub(crate) const HANDLE_FLAG_GROUPED: u32 = 1;
 
 const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 88);
 

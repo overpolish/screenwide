@@ -33,7 +33,7 @@ fn emit_annotation_change(app: &AppHandle, session_id: u64, commit: AnnotationCo
     ScreenshotAnnotationChangeEvent {
       annotations: commit.annotations,
       pane_index: commit.pane_index,
-      selected_annotation_id: commit.selected_annotation_id,
+      selected_annotation_ids: commit.selected_annotation_ids,
       text_edit: commit.text_edit,
       session_id,
     },

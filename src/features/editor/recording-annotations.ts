@@ -127,9 +127,11 @@ export type RecordingAnnotationPinCommit = {
   pin: RecordingAnnotationPin;
 };
 
-/** Merges the annotations currently drawn by a native pane into its clips,
- * with the pins the same edit left on them. A fresh annotation is paced on
- * `frame`, the pane's picture. */
+/** Merges the annotations an edit on the picture reports into their clips,
+ * with the pins the same edit left on them. An annotation already in a clip
+ * updates that clip, on whichever pane: a group carried together reports its
+ * members from both. A fresh annotation joins `trackId`, paced on `frame`,
+ * the pane's picture. */
 export const mergeRecordingAnnotationClips = ({
   annotations,
   clips,
@@ -156,7 +158,7 @@ export const mergeRecordingAnnotationClips = ({
     pins.map(({ annotationId, pin }) => [annotationId, pin]),
   );
   const next = clips.map((clip) => {
-    if (clip.trackId !== trackId || !byId.has(clip.annotation.id)) return clip;
+    if (!byId.has(clip.annotation.id)) return clip;
     const pin = pinById.get(clip.annotation.id);
     return {
       ...clip,

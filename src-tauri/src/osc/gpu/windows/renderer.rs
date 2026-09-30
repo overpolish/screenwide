@@ -203,7 +203,7 @@ pub(crate) use pixel::{
 };
 pub(crate) use ruler::{add_ruler_arc, add_ruler_box};
 pub(crate) use selection::{
-  add_annotation_handles, add_crop, add_crop_with_handles, add_selection,
+  add_annotation_handles, add_crop, add_crop_with_handles, add_group_frame, add_selection,
 };
 
 /// The lens is emitted last as a quad over `magnifier_box`.

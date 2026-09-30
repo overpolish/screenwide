@@ -84,6 +84,7 @@ export function resolveToolPanelSnapshot(
     bakeCamera,
     clearDrawings: _clearDrawings,
     cropSize,
+    deleteAnnotations: _deleteAnnotations,
     frameRadius,
     frameSize,
     keyboardEffects,

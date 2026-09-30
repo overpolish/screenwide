@@ -56,7 +56,7 @@ pub(super) struct ScreenshotSelectionGestureEvent {
 pub(super) struct ScreenshotAnnotationChangeEvent {
   pub(super) annotations: Vec<crate::editor::annotations::Annotation>,
   pub(super) pane_index: u32,
-  pub(super) selected_annotation_id: Option<String>,
+  pub(super) selected_annotation_ids: Vec<String>,
   pub(super) session_id: u64,
   pub(super) text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
 }

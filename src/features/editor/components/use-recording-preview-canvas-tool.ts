@@ -52,7 +52,8 @@ export function useRecordingPreviewCanvasTool({
         onSelectedTrackChange?.(
           bakeCamera ? "primary" : (activeVideoTrack ?? "primary"),
         );
-      } else if (next !== "select") clearAnnotationRef.current();
+      } else if (next !== "select" && next !== "marquee")
+        clearAnnotationRef.current();
       setCanvasTool(next);
     },
     [
@@ -86,6 +87,7 @@ export function useRecordingPreviewCanvasTool({
       draw: toggle("draw"),
       highlight: toggle("highlight"),
       magnify: toggle("magnify"),
+      marquee: toggle("marquee"),
       redact: toggle("redact"),
       select: toggle("select"),
       shape: toggle("shape"),

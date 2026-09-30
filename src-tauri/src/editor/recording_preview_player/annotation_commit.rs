@@ -25,7 +25,7 @@ impl PreviewPlayerManager {
     pane: u32,
     position: u64,
     shown: Vec<Annotation>,
-    selected_annotation_id: Option<String>,
+    selected_annotation_ids: Vec<String>,
     text_edit: Option<crate::editor::annotations::text::edit::TextEditPhase>,
   ) -> Option<Commit> {
     let session_id = self.session_id?;
@@ -66,7 +66,7 @@ impl PreviewPlayerManager {
       pane_index: pane,
       source_position_ms: position,
       annotations,
-      selected_annotation_id,
+      selected_annotation_ids,
       text_edit,
       pins,
     })

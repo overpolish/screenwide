@@ -17,12 +17,14 @@ use super::callbacks::{
 use super::ffi::{
   screenwide_preview_surface_begin_annotation_text, screenwide_preview_surface_end_annotation_text,
   screenwide_preview_surface_set_annotation_gesture_callback,
+  screenwide_preview_surface_set_annotation_group,
   screenwide_preview_surface_set_annotation_hover_callback,
   screenwide_preview_surface_set_annotation_snap,
   screenwide_preview_surface_set_annotation_text_callback,
   screenwide_preview_surface_set_annotations,
 };
 use super::RecordingPreviewSurface;
+use crate::editor::annotations::group::NativeAnnotationGroupBox;
 use crate::editor::annotations::handles::{NativeAnnotationHandles, NativeAnnotationSnap};
 
 impl RecordingPreviewSurface {
@@ -70,6 +72,15 @@ impl RecordingPreviewSurface {
   pub(crate) fn set_annotation_snap_guides(&self, snap: NativeAnnotationSnap) {
     unsafe {
       screenwide_preview_surface_set_annotation_snap(self.handle, &snap);
+    }
+  }
+
+  /// Publishes the boxes drawn round the annotations chosen together: round
+  /// each one shown, and round the whole group on each layer. An empty list
+  /// is what puts the group chrome away.
+  pub(crate) fn set_annotation_group(&self, boxes: &[NativeAnnotationGroupBox]) {
+    unsafe {
+      screenwide_preview_surface_set_annotation_group(self.handle, boxes.as_ptr(), boxes.len());
     }
   }
 

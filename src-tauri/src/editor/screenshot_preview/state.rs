@@ -29,6 +29,15 @@ pub(super) struct PreviewManager {
   /// mid-drag cannot replace the working copy the gesture is drawing into.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   pub(super) annotation_gesture: Option<AnnotationGestureOverride>,
+  /// The annotations chosen together being carried by a press on the picture.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  pub(super) annotation_group: Option<super::annotation_group::GroupDrag>,
+  /// A marquee band being drawn over the picture.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  pub(super) annotation_band: Option<super::annotation_choice::Band>,
+  /// Every annotation React has chosen on the layer, as its last layout said.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  pub(super) annotation_selected: Vec<String>,
   /// Set while a text box is being typed into: the pane's working copy is the
   /// manager's until the typing ends, the way it is through a drag.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -93,6 +102,9 @@ impl PreviewManager {
       self.annotation_defaults = None;
       self.annotation_counter_angle = None;
       self.annotation_gesture = None;
+      self.annotation_group = None;
+      self.annotation_band = None;
+      self.annotation_selected = Vec::new();
       self.annotation_text = None;
       self.annotation_hover = None;
       self.annotation_mode = 0;

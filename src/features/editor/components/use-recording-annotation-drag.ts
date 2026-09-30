@@ -14,8 +14,7 @@ import {
 } from "../recording-timeline-edit";
 
 import {
-  carriedAxes,
-  carriedClips,
+  carriedDraft,
   previewedWhole,
 } from "./recording-annotation-drag-draft";
 import { SeekHandler } from "./timeline-seek";
@@ -23,7 +22,6 @@ import {
   beginTimelineSnapGesture,
   nearestTimelineSnapTarget,
   TIMELINE_SNAP_THRESHOLD_PX,
-  timelineSnapRangeShift,
   TimelineSnapGesture,
   useTimelineSnap,
 } from "./timeline-snap";
@@ -36,6 +34,9 @@ type Edge = "startMs" | "endMs";
 type Drag = {
   edge: Edge | "body";
   id: string;
+  /** Every clip a body drag carries: the one pressed, or the whole choice
+   * it belongs to. */
+  ids: ReadonlySet<string>;
   /** Where the pointer last was, for a Shift press to resample. */
   last: { x: number; y: number };
   moved: boolean;
@@ -138,7 +139,8 @@ export function useRecordingAnnotationDrag({
    * Takes a press on a clip or one of its edges and owns the gesture until
    * the pointer is released. A clip's body carried sideways moves it in time
    * and carried up or down moves it through the drawing order, a row at a
-   * time.
+   * time; `ids` names the clips carried with it when it is one of several
+   * chosen. An edge trims the one clip it belongs to.
    *
    * The moves and the release are listened for on the window rather than on
    * the element pressed. The lane restacks its clips as they are dragged -
@@ -152,21 +154,25 @@ export function useRecordingAnnotationDrag({
     clientY,
     edge,
     id,
+    ids = new Set([id]),
   }: {
     clientX: number;
     clientY: number;
     edge: Edge | "body";
     id: string;
+    ids?: ReadonlySet<string>;
   }) => {
     detachRef.current();
+    const carried = edge === "body" ? ids : new Set([id]);
     dragRef.current = {
       edge,
       id,
+      ids: carried,
       last: { x: clientX, y: clientY },
       moved: false,
       original: clips,
       snap: beginTimelineSnapGesture(snap, {
-        excludeAnnotationId: id,
+        excludeAnnotationIds: carried,
         mapTarget: (source) => recordingTimelineSourceToOutput(edit, source),
         threshold: 0,
       }),
@@ -219,45 +225,31 @@ export function useRecordingAnnotationDrag({
       Math.abs(clientX - drag.startX) >= 4 ||
       (drag.edge === "body" && Math.abs(clientY - drag.startY) >= 4);
     if (!drag.moved && !travelled) return;
-    if (!drag.moved && drag.edge === "body") onSelect(drag.id);
+    // Carrying one clip of several chosen carries the choice; carrying any
+    // other takes it in hand on its own.
+    if (!drag.moved && drag.edge === "body" && drag.ids.size === 1)
+      onSelect(drag.id);
     drag.moved = true;
     movedRef.current = true;
     // Retaken every move: a wheel zoom mid-drag changes what 8px spans.
     drag.snap.threshold =
       TIMELINE_SNAP_THRESHOLD_PX / (viewport.zoom * bounds.width);
     if (drag.edge === "body") {
-      const clip = drag.original.find((item) => item.annotation.id === drag.id);
-      if (!clip || sourceDurationMs <= 0) return;
-      const start = recordingTimelineSourceToOutput(
+      const carried = carriedDraft({
+        deltaX: clientX - drag.startX,
+        deltaY: clientY - drag.startY,
         edit,
-        clip.startMs / sourceDurationMs,
-      );
-      const end = recordingTimelineSourceToOutput(
-        edit,
-        clip.endMs / sourceDurationMs,
-      );
-      const axes = carriedAxes(
-        clientX - drag.startX,
-        clientY - drag.startY,
-        shiftKey,
-      );
-      const shift = axes.time
-        ? (clientX - drag.startX) / (viewport.zoom * bounds.width)
-        : 0;
-      const snapped = axes.time
-        ? timelineSnapRangeShift(drag.snap, start + shift, end + shift)
-        : null;
-      drag.snap.showGuide(snapped?.target ?? null);
-      const next = carriedClips({
-        deltaOutput: shift + (snapped?.shift ?? 0),
-        edit,
-        id: drag.id,
-        lift: axes.order ? drag.startY - clientY : 0,
+        ids: drag.ids,
+        locked: shiftKey,
         original: drag.original,
+        outputWidthPx: viewport.zoom * bounds.width,
+        snap: drag.snap,
         sourceDurationMs,
       });
-      draftRef.current = next;
-      setDraft(next);
+      if (!carried) return;
+      drag.snap.showGuide(carried.target);
+      draftRef.current = carried.clips;
+      setDraft(carried.clips);
       return;
     }
     const reached = timelineXToFraction(clientX, viewport, bounds);

@@ -227,26 +227,6 @@ export type Annotation = {
 };
 
 /**
- * Which arrow a delete acts on: the one the halo is showing, and otherwise
- * the one the handles are on.
- *
- * The halo is under the pointer, so it is what the hand is pointing at; the
- * selection is what it last pointed at. An id that names no arrow on this
- * layer - a stale hover from a layer that has moved on - is no target at all.
- */
-export const annotationDeleteTarget = (
-  annotations: Annotation[],
-  hoveredId: string | null,
-  selectedId: string | null,
-) => {
-  const present = (id: string | null) =>
-    id !== null && annotations.some((annotation) => annotation.id === id)
-      ? id
-      : null;
-  return present(hoveredId) ?? present(selectedId);
-};
-
-/**
  * Where a native commit falls in a text box's typing: the typing began, the
  * text changed, or the typing ended. The document groups the commits of one
  * typing into a single edit. The twin of `TextEditPhase` in

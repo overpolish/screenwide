@@ -24,6 +24,7 @@ import { useTimelineSnapValue } from "./use-timeline-snap-value";
 /** The narrowest a shortcut badge is drawn, in pixels; kept here beside the
  * lane that carries it so the lane and the meter agree on one number. */
 const KEYBOARD_MINIMUM_ITEM_WIDTH_PX = 48;
+const NO_ANNOTATIONS: ReadonlySet<string> = new Set();
 
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
@@ -43,7 +44,9 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   layout,
   onAnnotationSelect,
   onAnnotationsChange,
+  onAnnotationsClear,
   onAnnotationsPreview,
+  onAnnotationsSweep,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
   onSeek,
@@ -51,7 +54,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   onSelectedTrackChange,
   onVideoTrackOrderChange,
   playhead,
-  selectedAnnotationId = null,
+  selectedAnnotationIds = NO_ANNOTATIONS,
   selectedTrack,
   sourceDurationMs,
   thumbnails,
@@ -168,17 +171,22 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               warningFragmentIds={adjustedKeyboardFragmentIds}
             />
           ) : null}
-          {onAnnotationSelect && onAnnotationsChange ? (
+          {onAnnotationSelect &&
+          onAnnotationsChange &&
+          onAnnotationsClear &&
+          onAnnotationsSweep ? (
             <RecordingAnnotationLane
               clips={annotationClips}
               edit={blade.edit}
               onChange={onAnnotationsChange}
+              onClearSelection={onAnnotationsClear}
               onPreview={onAnnotationsPreview}
               onSeek={onSeek}
               onSelect={onAnnotationSelect}
+              onSelectSwept={onAnnotationsSweep}
               pinning={annotationPinning}
               pinStatus={annotationPinStatus}
-              selectedId={selectedAnnotationId}
+              selectedIds={selectedAnnotationIds}
               sourceDurationMs={sourceDurationMs}
               viewport={timeline.viewport}
             />

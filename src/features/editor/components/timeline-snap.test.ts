@@ -89,7 +89,10 @@ describe("timelineSnapTargets", () => {
   };
 
   it("gathers segment edges, other annotations, badges and the playhead", () => {
-    const targets = timelineSnapTargets({ ...base, excludeAnnotationId: "a" });
+    const targets = timelineSnapTargets({
+      ...base,
+      excludeAnnotationIds: new Set(["a"]),
+    });
     expect(targets).toEqual(
       expect.arrayContaining([0, 0.5, 1, 0.6, 0.7, 0.3, 0.4, 0.25]),
     );

@@ -128,14 +128,19 @@ export function RecordingPreviewTimelineBand({
           keyboardSelection={keyboardTimeline.selection}
           layout={layout}
           onAnnotationsChange={annotations.onClipsChange}
+          onAnnotationsClear={annotations.clearSelection}
           // Choosing an annotation from its lane picks the Select tool up, the
           // way choosing a camera or screen clip does, so the annotation is in
           // hand rather than merely highlighted.
-          onAnnotationSelect={(id) => {
-            annotations.onSelect(id);
+          onAnnotationSelect={(id, toggle) => {
+            annotations.onSelect(id, toggle);
             changeCanvasTool("select");
           }}
           onAnnotationsPreview={annotations.onPreviewClips}
+          onAnnotationsSweep={(ids, additive) => {
+            annotations.onSelectSwept(ids, additive);
+            if (ids.length > 0) changeCanvasTool("select");
+          }}
           onEnabledTracksChange={changeEnabledTracks}
           onEnabledVideoTracksChange={changeEnabledVideoTracks}
           onSeek={timelineBlade.seek}
@@ -149,7 +154,7 @@ export function RecordingPreviewTimelineBand({
           }}
           onVideoTrackOrderChange={onVideoTrackOrderChange}
           playhead={playhead}
-          selectedAnnotationId={annotations.selectedId}
+          selectedAnnotationIds={annotations.selectedIds}
           selectedTrack={annotations.hasSelection ? null : selectedTrack}
           sourceDurationMs={durationMs}
           thumbnails={timelineThumbnails}

@@ -11,7 +11,7 @@
 use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
 use crate::editor::annotations::geometry::ArrowGeometry;
-use crate::editor::annotations::gesture::{MODE_DRAW, MODE_SELECT};
+use crate::editor::annotations::gesture::{MODE_DRAW, MODE_MARQUEE, MODE_SELECT};
 use crate::editor::annotations::highlight::geometry::HighlightFlow;
 use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::annotations::text::geometry::prepare_text;
@@ -34,7 +34,7 @@ pub(super) fn layer_selection(state: &SurfaceState, layer: i32) -> Option<Previe
 
 /// The whole source image's rectangle on screen for one layer. Every
 /// normalised handle is placed inside it.
-fn layer_image_rect(state: &SurfaceState, layer: i32) -> Option<PreviewSurfaceRect> {
+pub(super) fn layer_image_rect(state: &SurfaceState, layer: i32) -> Option<PreviewSurfaceRect> {
   let mut selection = layer_selection(state, layer)?;
   selection.x = selection.image_x;
   selection.y = selection.image_y;
@@ -69,23 +69,6 @@ pub(super) fn selected_item(state: &SurfaceState) -> Option<&NativeAnnotationHan
 
 pub(super) fn display_point(image: PreviewSurfaceRect, x: f64, y: f64) -> (f64, f64) {
   (image.x + image.width * x, image.y + image.height * y)
-}
-
-/// A point on screen, back in the layer's image-normalised space. This is
-/// exactly what Rust above the facade turns into source pixels.
-pub(super) fn normalised_point(state: &SurfaceState, point: (f64, f64)) -> Option<(f64, f64)> {
-  let image = image_frame(state)?;
-  Some((
-    (point.0 - image.x) / image.width,
-    (point.1 - image.y) / image.height,
-  ))
-}
-
-/// How wide the chosen annotation's picture is drawn, in display points. The
-/// twin of the `image.size.width` the macOS view reports beside each sample,
-/// and what turns a snap's reach in points into source pixels.
-pub(super) fn image_extent(state: &SurfaceState) -> Option<f64> {
-  Some(image_frame(state)?.width)
 }
 
 /// The grip of one arrow under `point`, in display points. Pure so the hit
@@ -239,7 +222,9 @@ pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<
       .iter()
       .enumerate()
       .rev()
-      .filter(|(_, item)| item.shape_kind() != AnnotationKind::Draw || mode == MODE_SELECT)
+      .filter(|(_, item)| {
+        item.shape_kind() != AnnotationKind::Draw || matches!(mode, MODE_SELECT | MODE_MARQUEE)
+      })
       .filter(|(index, item)| !insides || chrome(state, *index, item))
       .find(|(_, item)| {
         layer_image_rect(state, item.layer_id).is_some_and(|image| {

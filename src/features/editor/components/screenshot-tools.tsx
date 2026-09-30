@@ -1,7 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Crop, MousePointer2, ScanSquare } from "lucide-react";
+import {
+  Crop,
+  MousePointer2,
+  ScanSquare,
+  SquareDashedMousePointer,
+} from "lucide-react";
 import { ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
@@ -11,7 +16,7 @@ import { ANNOTATION_TOOLS } from "../tool-panels/tool-registry";
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
 export type ScreenshotTool =
-  AnnotationKind | "canvas" | "crop" | "select" | null;
+  AnnotationKind | "canvas" | "crop" | "marquee" | "select" | null;
 
 type ScreenshotToolActions = {
   /** The layer a crop falls back to when nothing is selected. */
@@ -51,6 +56,14 @@ export function useScreenshotTools({
   };
   const chooseSelectTool = useCallback((selected: boolean) => {
     actionsRef.current.setTool(selected ? "select" : null);
+  }, []);
+  // The marquee chooses annotations on a layer, so it takes the newest layer
+  // when nothing is selected, as a drawing tool does.
+  const chooseMarqueeTool = useCallback((selected: boolean) => {
+    const actions = actionsRef.current;
+    if (actions.selectedItemId === null)
+      actions.onSelectedItemChange?.(actions.newestItemId);
+    actions.setTool(selected ? "marquee" : null);
   }, []);
   const chooseCanvasTool = useCallback((selected: boolean) => {
     actionsRef.current.setTool(selected ? "canvas" : null);
@@ -95,6 +108,15 @@ export function useScreenshotTools({
           </ToolToggle>
         </span>
         <ToolToggle
+          isSelected={tool === "marquee"}
+          label="Marquee"
+          name="Choose annotations with a marquee"
+          onSelectedChange={chooseMarqueeTool}
+          shortcut="G"
+        >
+          <SquareDashedMousePointer />
+        </ToolToggle>
+        <ToolToggle
           isSelected={tool === "canvas"}
           label="Resize canvas"
           name="Resize canvas"
@@ -132,6 +154,7 @@ export function useScreenshotTools({
       chooseCanvasTool,
       chooseCropTool,
       chooseDrawingTool,
+      chooseMarqueeTool,
       chooseSelectTool,
       tool,
     ],

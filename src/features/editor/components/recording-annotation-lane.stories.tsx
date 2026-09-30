@@ -18,6 +18,7 @@ import { createRecordingTimelineEdit } from "../recording-timeline-edit";
 import { RecordingAnnotationLane } from "./recording-annotation-lane";
 import { fitTimelineViewport } from "./timeline-viewport";
 import { AnnotationClipPinning } from "./use-annotation-clip-menu";
+import { useLaneAnnotationSelection } from "./use-lane-annotation-selection";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
@@ -93,7 +94,7 @@ function Preview() {
     arrow("arrow-b", 22_000, 48_000),
   ]);
   const [position, setPosition] = useState(0.1);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selection = useLaneAnnotationSelection(clips);
   return (
     <div className="flex flex-col gap-section p-window-inset">
       <Text aria-label="Playhead" className="font-mono" variant="footnote">
@@ -110,9 +111,8 @@ function Preview() {
         }}
         onChange={setClips}
         onSeek={setPosition}
-        onSelect={setSelectedId}
         pinning={pinning(setClips)}
-        selectedId={selectedId}
+        {...selection}
         sourceDurationMs={120_000}
         viewport={fitTimelineViewport()}
       />
@@ -138,6 +138,31 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+/** Two of three arrows chosen together: carrying either one moves both in
+ * time and through the drawing order, keeping their spacing. */
+export const Group: Story = {
+  render: function GroupLane() {
+    const [clips, setClips] = useState(() => [
+      arrow("arrow-a", 8_000, 31_000),
+      arrow("arrow-b", 22_000, 48_000),
+      arrow("arrow-c", 40_000, 70_000),
+    ]);
+    const selection = useLaneAnnotationSelection(clips, ["arrow-a", "arrow-c"]);
+    return (
+      <div className="p-window-inset">
+        <RecordingAnnotationLane
+          clips={clips}
+          edit={createRecordingTimelineEdit(1)}
+          onChange={setClips}
+          sourceDurationMs={120_000}
+          viewport={fitTimelineViewport()}
+          {...selection}
+        />
+      </div>
+    );
+  },
+};
+
 export const Empty: Story = {
   render: () => (
     <div className="p-window-inset">
@@ -145,8 +170,10 @@ export const Empty: Story = {
         clips={[]}
         edit={createRecordingTimelineEdit(1)}
         onChange={() => undefined}
+        onClearSelection={() => undefined}
         onSelect={() => undefined}
-        selectedId={null}
+        onSelectSwept={() => undefined}
+        selectedIds={new Set()}
         sourceDurationMs={120_000}
         viewport={fitTimelineViewport()}
       />
@@ -183,14 +210,13 @@ export const Pinned: Story = {
         },
       },
     ]);
-    const [selectedId, setSelectedId] = useState<string | null>("arrow-a");
+    const selection = useLaneAnnotationSelection(clips, ["arrow-a"]);
     return (
       <div className="p-window-inset">
         <RecordingAnnotationLane
           clips={clips}
           edit={createRecordingTimelineEdit(1)}
           onChange={setClips}
-          onSelect={setSelectedId}
           pinning={pinning(setClips)}
           pinStatus={
             new Map([
@@ -210,7 +236,7 @@ export const Pinned: Story = {
               ],
             ])
           }
-          selectedId={selectedId}
+          {...selection}
           sourceDurationMs={120_000}
           viewport={fitTimelineViewport()}
         />

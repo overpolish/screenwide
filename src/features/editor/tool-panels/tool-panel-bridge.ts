@@ -45,6 +45,8 @@ export type ToolPanelHandlers = {
   /** Dress the chosen annotation, a field at a time, through the same commit
    * path the drag on the picture uses. */
   onAnnotationStyleChange?: (style: Partial<AnnotationStyle>) => void;
+  /** Delete every chosen annotation, in one edit. */
+  onAnnotationsDelete?: () => void;
   /** Play the selected audio track this much louder or quieter than it was
    * recorded, in decibels. */
   onAudioVolumeChange?: (decibels: number) => void;
@@ -112,6 +114,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.reverseAnnotation) on.onAnnotationReverse?.();
   if (values.shuffleAnnotation) on.onAnnotationShuffle?.();
   if (values.clearDrawings) on.onDrawingsClear?.();
+  if (values.deleteAnnotations) on.onAnnotationsDelete?.();
   if (values.saveAnnotationColor !== undefined)
     on.onAnnotationColorSave?.(values.saveAnnotationColor);
   if (values.removeAnnotationColor !== undefined)

@@ -121,6 +121,11 @@ void screenwide_region_osc_add_line(ScreenwideRegionOscVertex *vertices,
 void screenwide_region_osc_add_selection(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
     NSRect frame, CGFloat scale, double radius_percent, BOOL radius_enabled);
+/// The selection's own frame - a light core over a dark halo - without its
+/// handles or radius dot.
+void screenwide_region_osc_add_selection_frame(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
+    NSRect frame, CGFloat scale);
 void screenwide_region_osc_add_ruler_box(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
     NSRect frame, CGFloat scale, BOOL hovered, CGFloat hover_width);

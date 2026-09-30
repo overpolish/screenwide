@@ -80,7 +80,9 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
       bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua,
                                           NSAppearanceNameDarkAqua]];
   uint32_t lightMode = [appearance isEqualToString:NSAppearanceNameAqua] ? 1 : 0;
-  ScreenwideRegionOscVertex vertices[512];
+  // Room for a selection frame round every annotation of a large group as
+  // well as the layer and snap chrome.
+  ScreenwideRegionOscVertex vertices[2048];
   NSUInteger count = 0;
   // Match Keyframeless's contrast-safe OSC construction: hard-edged quads
   // snapped to drawable-pixel centres, with a 3px dark halo underneath a 1px

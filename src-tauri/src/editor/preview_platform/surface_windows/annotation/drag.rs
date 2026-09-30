@@ -9,12 +9,32 @@
 /// a hand, and neither should leave a stub behind.
 pub(super) const DRAG_SLOP: f64 = 3.0;
 
+/// What a press does if it never travels, and what it becomes if it does.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Press {
+  Ordinary,
+  /// A press with the toggle modifier on an annotation: a click adds it to
+  /// the choice or takes it out, and a drag moves it as an ordinary press.
+  Toggle,
+  /// A press on one of several chosen together, or inside their box: a drag
+  /// carries them all, measured on `layer`.
+  Group,
+  /// A marquee band over `layer`; `additive` when the toggle modifier was held
+  /// at the press.
+  Marquee {
+    additive: bool,
+  },
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct Drag {
   pub(super) target_kind: u32,
   pub(super) index: u32,
   pub(super) handle: u32,
   pub(super) origin: (f64, f64),
+  pub(super) press: Press,
+  /// The layer a group carry or a marquee band is measured on.
+  pub(super) layer: i32,
   /// The press has not travelled far enough to be a drag yet, so no gesture
   /// has begun and nothing has been edited.
   pending: bool,
@@ -29,6 +49,8 @@ impl Drag {
       index,
       handle,
       origin,
+      press: Press::Ordinary,
+      layer: -1,
       pending: true,
       begun: false,
     }
@@ -43,8 +65,28 @@ impl Drag {
       index,
       handle,
       origin,
+      press: Press::Ordinary,
+      layer: -1,
       pending: false,
       begun: true,
+    }
+  }
+
+  /// The same press, doing what `press` says over `layer`.
+  pub(super) fn with_press(self, press: Press, layer: i32) -> Self {
+    Self {
+      press,
+      layer,
+      ..self
+    }
+  }
+
+  /// The same press, now acting on `target_kind` through `handle`.
+  pub(super) fn retargeted(self, target_kind: u32, handle: u32) -> Self {
+    Self {
+      target_kind,
+      handle,
+      ..self
     }
   }
 

@@ -29,6 +29,9 @@ const TARGET_NEW: u32 = 0;
 const TARGET_EXISTING: u32 = 1;
 const TARGET_NONE: u32 = 2;
 const TARGET_SELECT: u32 = 3;
+const TARGET_GROUP: u32 = 4;
+const TARGET_TOGGLE: u32 = 5;
+const TARGET_MARQUEE: u32 = 6;
 
 /// Which grip a press took hold of, matching `ScreenwideAnnotationHandle`.
 const HANDLE_MIDDLE: u32 = 1;
@@ -64,6 +67,10 @@ pub(super) struct AnnotationState {
   /// What the last gesture sample snapped to, for the chrome to draw. Zeroed
   /// whenever a sample snaps to nothing, and when the gesture ends.
   pub(super) snap: NativeAnnotationSnap,
+  /// The boxes round the annotations chosen together, as Rust published them.
+  pub(super) group: Vec<crate::editor::annotations::group::NativeAnnotationGroupBox>,
+  /// The marquee band being drawn, in display points.
+  pub(super) marquee: Option<PreviewSurfaceRect>,
   drag: Option<Drag>,
   /// The box being typed into, if any.
   pub(super) typing: Option<typing::Typing>,
@@ -88,6 +95,8 @@ impl Default for AnnotationState {
       selected: -1,
       mode: MODE_NONE,
       snap: NativeAnnotationSnap::default(),
+      group: Vec::new(),
+      marquee: None,
       drag: None,
       typing: None,
       opening: None,
@@ -218,8 +227,8 @@ mod picking_chrome;
 #[path = "annotation/picking_distance.rs"]
 mod picking_distance;
 use picking::{
-  handle_at_point, image_extent, image_frame, item_image_frame, layer_selection, normalised_point,
-  selected_item, shaft_at_point, text_geometry,
+  handle_at_point, image_frame, item_image_frame, layer_selection, selected_item, shaft_at_point,
+  text_geometry,
 };
 pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
 
@@ -236,6 +245,12 @@ mod magnify_chrome;
 #[path = "annotation/snap_chrome.rs"]
 mod snap_chrome;
 pub(super) use snap_chrome::snap_chrome;
+
+/// The boxes round a group, and the marquee band.
+#[path = "annotation/group_chrome.rs"]
+mod group_chrome;
+pub(super) use group_chrome::{group_frames, marquee_frame};
+use group_chrome::{group_layer_at_point, has_group, marquee_layer_at_point};
 
 /// The halo that grows under the arrow the pointer rests on.
 #[path = "annotation/hover.rs"]

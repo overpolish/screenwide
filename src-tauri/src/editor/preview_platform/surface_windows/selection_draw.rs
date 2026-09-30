@@ -94,6 +94,14 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     .is_some()
     .then(|| annotation::selected_redaction(state, scale))
     .flatten();
+  let (group, marquee) = if annotation_handles.is_some() {
+    (
+      annotation::group_frames(state, scale),
+      annotation::marquee_frame(state, scale),
+    )
+  } else {
+    (Vec::new(), None)
+  };
   // An annotation gesture owns the guides for as long as it owns the chrome:
   // its candidates are the source image's own lines, not the canvas's.
   let guides = if annotation_handles.is_some() {
@@ -158,6 +166,8 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
       annotation_box,
       snap.bounds,
       &snap.gaps,
+      &group,
+      marquee,
       scale,
       luminance > 0.5,
     );

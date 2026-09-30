@@ -87,6 +87,7 @@ export function useRecordingPreviewShortcuts({
       : isCropping
         ? leaveCropTool
         : undefined,
+    onMarqueeTool: hasVisiblePanes ? toggleTool.marquee : undefined,
     onNudge: canNudgeActiveTrack ? nudgeActiveTrack : undefined,
     onResizeCanvas: canResizeActiveTrack ? toggleTool.canvas : undefined,
     onSelectTool: hasVisiblePanes ? toggleTool.select : undefined,

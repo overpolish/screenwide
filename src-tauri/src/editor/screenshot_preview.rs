@@ -11,7 +11,11 @@
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+mod annotation_choice;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_gesture;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod annotation_group;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_hold;
 #[cfg(any(target_os = "macos", target_os = "windows"))]

@@ -50,7 +50,8 @@ impl PreviewManager {
       pane_index,
       edit: AnnotationTextEdit::begin(id.clone(), text.clone()),
     });
-    self.present_annotation_gesture(pane_index, Some(id.as_str()));
+    let chosen = vec![id];
+    self.present_annotation_gesture(pane_index, &chosen);
     // The published grips are this pane's list in order, so the box's place
     // in it is its place in the grips.
     if let Some(surface) = self.surface.as_ref() {
@@ -60,7 +61,7 @@ impl PreviewManager {
         crate::editor::annotations::text::model::dark_ink(&annotation.style),
       );
     }
-    let mut commit = self.commit_for(pane_index, Some(id))?;
+    let mut commit = self.commit_for(pane_index, chosen)?;
     commit.text_edit = Some(TextEditPhase::Begin);
     Some(commit)
   }
@@ -106,8 +107,9 @@ impl PreviewManager {
           .output
           .annotations;
         self.annotation_text.as_ref()?.edit.apply(annotations);
-        self.present_annotation_gesture(pane_index, Some(id.as_str()));
-        let mut commit = self.commit_for(pane_index, Some(id))?;
+        let chosen = vec![id];
+        self.present_annotation_gesture(pane_index, &chosen);
+        let mut commit = self.commit_for(pane_index, chosen)?;
         commit.text_edit = Some(TextEditPhase::Update);
         Some(commit)
       }
@@ -123,7 +125,12 @@ impl PreviewManager {
           .get_mut(pane_index as usize)?
           .output
           .annotations;
-        let selected = session.edit.finish(annotations).then_some(id);
+        let selected: Vec<String> = session
+          .edit
+          .finish(annotations)
+          .then_some(id)
+          .into_iter()
+          .collect();
         // React commits exactly this list, but its layout trails by a round
         // trip, and the press that ended the typing may go straight on to a
         // gesture that begins on React's layout. It begins on this list.
@@ -135,7 +142,7 @@ impl PreviewManager {
         {
           item.output.annotations = finished;
         }
-        self.present_annotation_gesture(pane_index, selected.as_deref());
+        self.present_annotation_gesture(pane_index, &selected);
         let mut commit = self.commit_for(pane_index, selected)?;
         commit.text_edit = Some(TextEditPhase::End);
         Some(commit)

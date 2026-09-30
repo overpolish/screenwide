@@ -14,7 +14,7 @@ import type { AnnotationKind } from "../../../components/shared/annotation-style
 
 type SelectionTool = Exclude<
   RecordingCanvasTool,
-  AnnotationKind | "canvas" | null
+  AnnotationKind | "canvas" | "marquee" | null
 >;
 
 /** Build the native OSC payload for an ordinary screen/camera output pane. */

@@ -6,18 +6,16 @@ import { MouseEvent, PointerEvent } from "react";
 
 import { boundsAnchor, pointerAnchor } from "../../popup-panel/use-popup-menu";
 import { annotationLaneLabel } from "../annotation-kinds";
-import { resizeRecordingAnnotationClip } from "../recording-annotation-geometry";
 import { withoutPinKeyframe } from "../recording-annotation-pins";
 import { RecordingAnnotationClip } from "../recording-annotations";
-import {
-  RecordingTimelineEdit,
-  recordingTimelineSourceToOutput,
-  recordingTimelineRetainedDuration,
-} from "../recording-timeline-edit";
+import { RecordingTimelineEdit } from "../recording-timeline-edit";
 import { RecordingPinStatus } from "../use-recording-pin-status";
 
-import { previewedWhole } from "./recording-annotation-drag-draft";
-import { recordingAnnotationRows } from "./recording-annotation-layout";
+import { RecordingAnnotationClipEdges } from "./recording-annotation-clip-edges";
+import {
+  ANNOTATION_CLIP_MINIMUM_WIDTH_PX,
+  recordingAnnotationRows,
+} from "./recording-annotation-layout";
 import {
   RecordingAnnotationPinBadge,
   RecordingAnnotationPinOverlay,
@@ -35,26 +33,36 @@ import {
   useAnnotationClipMenu,
 } from "./use-annotation-clip-menu";
 import { usePinKeyframeMenu } from "./use-pin-keyframe-menu";
+import {
+  togglesChoice,
+  useRecordingAnnotationBand,
+} from "./use-recording-annotation-band";
 import { useRecordingAnnotationDrag } from "./use-recording-annotation-drag";
 
 export function RecordingAnnotationLane({
   clips,
   edit,
   onChange,
+  onClearSelection,
   onPreview,
   onSeek,
   onSelect,
+  onSelectSwept,
   pinStatus,
   pinning,
-  selectedId,
+  selectedIds,
   sourceDurationMs,
   viewport,
 }: {
   clips: RecordingAnnotationClip[];
   edit: RecordingTimelineEdit;
   onChange: (clips: RecordingAnnotationClip[]) => void;
-  onSelect: (id: string) => void;
-  selectedId: string | null;
+  onClearSelection: () => void;
+  /** Choose the clip `id` alone, or with `toggle`, add or take it away. */
+  onSelect: (id: string, toggle: boolean) => void;
+  /** Choose the clips a band swept over, alone or added to the choice. */
+  onSelectSwept: (ids: string[], additive: boolean) => void;
+  selectedIds: ReadonlySet<string>;
   sourceDurationMs: number;
   viewport: TimelineViewportState;
   onPreview?: (clips: RecordingAnnotationClip[] | null) => void;
@@ -71,7 +79,9 @@ export function RecordingAnnotationLane({
     onCommit: onChange,
     onPreview,
     onSeek,
-    onSelect,
+    onSelect: (id) => {
+      onSelect(id, false);
+    },
     sourceDurationMs,
     viewport,
   });
@@ -80,6 +90,18 @@ export function RecordingAnnotationLane({
     edit,
     sourceDurationMs,
   );
+  const { band, pressLane } = useRecordingAnnotationBand({
+    fragments: laidOut.fragments,
+    laneRef,
+    onClear: onClearSelection,
+    onSweep: onSelectSwept,
+    viewport,
+  });
+  // While a band is drawn, the lane shows the choice it will make.
+  const isSelected = (id: string) =>
+    band
+      ? band.ids.has(id) || (band.additive && selectedIds.has(id))
+      : selectedIds.has(id);
   const deleteKeyframe = (id: string, ms: number) => {
     onChange(
       clips.map((clip) =>
@@ -100,43 +122,51 @@ export function RecordingAnnotationLane({
     <div className="flex items-center gap-section">
       <TimelineTrackHeader
         icon={<PencilLine />}
-        isSelected={selectedId !== null}
+        isSelected={selectedIds.size > 0}
         label="Annotations"
       />
       <div
         className="relative min-w-0 grow overflow-hidden rounded-control bg-fill-tertiary"
+        // Every press on a clip stops here, so what arrives is empty lane.
+        onPointerDown={pressLane}
         ref={laneRef}
         style={{ height: laidOut.rowCount * TIMED_LANE_ROW_HEIGHT_PX }}
       >
         <TimelineViewportContent viewport={viewport}>
           {laidOut.fragments.map((fragment) => {
             const clip = fragment.item;
+            const id = clip.annotation.id;
             // A counter is called by the number it shows; an arrow has no
             // name of its own, so it is called by its place in the lane.
             const label = annotationLaneLabel(
               clip.annotation,
-              clips.findIndex(
-                (item) => item.annotation.id === clip.annotation.id,
-              ),
+              clips.findIndex((item) => item.annotation.id === id),
             );
-            const selected = clip.annotation.id === selectedId;
-            const status = pinStatus?.get(clip.annotation.id);
+            const selected = isSelected(id);
+            const status = pinStatus?.get(id);
             const block = { edit, fragment, sourceDurationMs };
             const clickBody = (event: MouseEvent) => {
               event.stopPropagation();
               if (movedRef.current) {
                 event.preventDefault();
                 movedRef.current = false;
-              } else onSelect(clip.annotation.id);
+              } else onSelect(id, togglesChoice(event));
             };
+            // A press with the toggle held is a click to come, never a drag.
+            // One on a clip of several chosen carries them all.
             const pressBody = (event: PointerEvent) => {
               if (event.button !== 0) return;
               event.stopPropagation();
+              if (togglesChoice(event)) return;
               beginDrag({
                 clientX: event.clientX,
                 clientY: event.clientY,
                 edge: "body",
-                id: clip.annotation.id,
+                id,
+                ids:
+                  selectedIds.size > 1 && selectedIds.has(id)
+                    ? selectedIds
+                    : undefined,
               });
             };
             return (
@@ -153,7 +183,7 @@ export function RecordingAnnotationLane({
                 style={{
                   ...timedLaneFragmentBox(fragment.row),
                   left: `${String(fragment.outputStart * 100)}%`,
-                  minWidth: 6,
+                  minWidth: ANNOTATION_CLIP_MINIMUM_WIDTH_PX,
                   width: `${String((fragment.outputEnd - fragment.outputStart) * 100)}%`,
                 }}
               >
@@ -189,11 +219,11 @@ export function RecordingAnnotationLane({
                     onBodyClick={clickBody}
                     onBodyPointerDown={pressBody}
                     onDeleteKeyframe={(ms) => {
-                      deleteKeyframe(clip.annotation.id, ms);
+                      deleteKeyframe(id, ms);
                     }}
                     onKeyframeMenu={(point, ms, kind) => {
                       void openKeyframeMenu({
-                        annotationId: clip.annotation.id,
+                        annotationId: id,
                         kind,
                         ms,
                         point,
@@ -204,78 +234,27 @@ export function RecordingAnnotationLane({
                     status={status}
                   />
                 ) : null}
-                {(["startMs", "endMs"] as const).map((edge) => {
-                  if (
-                    (edge === "startMs" && fragment.continuesPrevious) ||
-                    (edge === "endMs" && fragment.continuedByNext)
-                  )
-                    return null;
-                  return (
-                    <button
-                      aria-label={`${edge === "startMs" ? "Start" : "End"} of ${label}`}
-                      className={`absolute inset-y-0 w-control-inset cursor-ew-resize focus-visible:bg-primary focus-visible:outline-none ${edge === "startMs" ? "left-0" : "right-0"}`}
-                      key={edge}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                      }}
-                      onKeyDown={(event) => {
-                        if (
-                          event.key !== "ArrowLeft" &&
-                          event.key !== "ArrowRight"
-                        )
-                          return;
-                        event.preventDefault();
-                        event.stopPropagation();
-                        const output = recordingTimelineSourceToOutput(
-                          edit,
-                          clip[edge] / sourceDurationMs,
-                        );
-                        const step =
-                          (event.shiftKey ? 1000 : 100) /
-                          (sourceDurationMs *
-                            recordingTimelineRetainedDuration(edit));
-                        onChange(
-                          resizeRecordingAnnotationClip({
-                            clips,
-                            edge,
-                            edit,
-                            id: clip.annotation.id,
-                            output:
-                              output +
-                              (event.key === "ArrowLeft" ? -step : step),
-                            sourceDurationMs,
-                          }),
-                        );
-                      }}
-                      onPointerDown={(event) => {
-                        if (event.button !== 0) return;
-                        event.stopPropagation();
-                        onSelect(clip.annotation.id);
-                        beginDrag({
-                          clientX: event.clientX,
-                          clientY: event.clientY,
-                          edge,
-                          id: clip.annotation.id,
-                        });
-                        // The press alone shows the annotation whole at the
-                        // edge it took hold of: the frame under a trim handle
-                        // is the one frame the annotation is barely there,
-                        // which is no use for deciding where the handle
-                        // belongs.
-                        onSeek?.(
-                          recordingTimelineSourceToOutput(
-                            edit,
-                            (edge === "endMs" ? clip.endMs - 1 : clip.startMs) /
-                              sourceDurationMs,
-                          ),
-                          "start",
-                          previewedWhole(clips, clip.annotation.id),
-                        );
-                      }}
-                      type="button"
-                    />
-                  );
-                })}
+                <RecordingAnnotationClipEdges
+                  clip={clip}
+                  clips={clips}
+                  continuedByNext={fragment.continuedByNext}
+                  continuesPrevious={fragment.continuesPrevious}
+                  edit={edit}
+                  label={label}
+                  onChange={onChange}
+                  onPress={(edge, event) => {
+                    // Trimming one of several chosen keeps the choice.
+                    if (!selectedIds.has(id)) onSelect(id, false);
+                    beginDrag({
+                      clientX: event.clientX,
+                      clientY: event.clientY,
+                      edge,
+                      id,
+                    });
+                  }}
+                  onSeek={onSeek}
+                  sourceDurationMs={sourceDurationMs}
+                />
                 {clip.pin ? (
                   <RecordingAnnotationPinBadge
                     label={label}
@@ -287,6 +266,18 @@ export function RecordingAnnotationLane({
             );
           })}
         </TimelineViewportContent>
+        {band ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute bg-primary/15 inset-ring inset-ring-primary"
+            style={{
+              height: band.box.bottom - band.box.top,
+              left: band.box.left,
+              top: band.box.top,
+              width: band.box.right - band.box.left,
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );

@@ -69,6 +69,15 @@ export const Counter: Story = {
   },
 };
 
+/** Several annotations chosen together share no one dress, so the panel
+ * offers only what acts on them all. */
+export const Group: Story = {
+  args: { tool: "annotation", workspace: "recording" },
+  beforeEach: () => {
+    seed({ annotation: null, annotationCount: 3, isLocked: false });
+  },
+};
+
 /** The Text panel: a text box has no head or aim, and lines its lines up by
  * the alignment it carries instead. */
 export const Text: Story = {

@@ -192,6 +192,12 @@ pub(crate) fn add_annotation_handles(
   }
 }
 
+/// The layer selection's own frame with no handles, drawn round annotations
+/// chosen together so the group reads as one selection.
+pub(crate) fn add_group_frame(out: &mut Vec<Vertex>, view: Size, frame: Rect, scale: f64) {
+  add_selection_frame(out, view, frame, scale, 2, 0, 3.0 / scale);
+}
+
 pub(crate) fn add_selection(
   out: &mut Vec<Vertex>,
   view: Size,

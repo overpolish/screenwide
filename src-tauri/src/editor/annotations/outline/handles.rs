@@ -32,7 +32,7 @@ pub(crate) fn grips(
     layer_id: -1,
     index,
     kind: AnnotationKind::Shape.raw(),
-    padding: 0,
+    flags: 0,
     start_x,
     start_y,
     middle_x: (start_x + end_x) / 2.0,

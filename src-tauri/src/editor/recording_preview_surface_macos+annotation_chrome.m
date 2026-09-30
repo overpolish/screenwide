@@ -23,11 +23,12 @@ SCREENWIDE_PREVIEW_PRIVATE ScreenwideAnnotationMode annotation_active_mode(
 SCREENWIDE_PREVIEW_PRIVATE BOOL annotation_owns_chrome(
     ScreenwidePreviewSurface *surface) {
   ScreenwideAnnotationMode mode = annotation_active_mode(surface);
-  // A drawing tool always draws its own chrome; the select tool only once it
-  // is holding an annotation, so an ordinary layer selection is untouched.
-  return annotation_drawing_mode(mode) ||
+  // A drawing tool and the marquee always draw their own chrome; the select
+  // tool only once it is holding an annotation or a group, so an ordinary
+  // layer selection is untouched.
+  return annotation_drawing_mode(mode) || mode == ScreenwideAnnotationModeMarquee ||
          (mode == ScreenwideAnnotationModeSelect &&
-          surface.annotationSelected != -1);
+          (surface.annotationSelected != -1 || annotation_has_group(surface)));
 }
 
 SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
@@ -57,11 +58,18 @@ SCREENWIDE_PREVIEW_PRIVATE NSCursor *annotation_cursor(
     return [NSCursor arrowCursor];
   // Empty picture: a drawing tool makes an annotation rather than picking one
   // up, and the text tool says it is about to take typing. The select tool
-  // leaves the choice to the layer underneath.
+  // takes hold of a group inside its box, and otherwise leaves the choice to
+  // the layer underneath.
+  if (mode == ScreenwideAnnotationModeSelect &&
+      annotation_group_layer_at_point(surface, point) != INT32_MIN)
+    return [NSCursor arrowCursor];
   // A highlight selects the text it covers, the way the text tool types it.
   if (mode == ScreenwideAnnotationModeText || mode == ScreenwideAnnotationModeHighlight)
     return [NSCursor IBeamCursor];
-  return annotation_drawing_mode(mode) ? [NSCursor crosshairCursor] : nil;
+  // The marquee draws a band on empty picture, the way a drawing tool draws.
+  return annotation_drawing_mode(mode) || mode == ScreenwideAnnotationModeMarquee
+             ? [NSCursor crosshairCursor]
+             : nil;
 }
 
 /// How far an equal-gap bar's end ticks reach either side of it, in points.

@@ -40,7 +40,7 @@ pub(crate) fn grips(
     layer_id: -1,
     index,
     kind: AnnotationKind::Highlight.raw(),
-    padding: 0,
+    flags: 0,
     start_x: first.left / across,
     start_y: first.top / down,
     middle_x: left / across,

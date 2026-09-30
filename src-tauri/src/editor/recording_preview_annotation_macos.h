@@ -35,10 +35,31 @@ typedef struct {
   uint32_t index;
   /// `ScreenwideAnnotationKind`.
   uint32_t kind;
-  uint32_t padding;
+  /// `ScreenwideAnnotationFlag` bits.
+  uint32_t flags;
 } ScreenwidePreviewAnnotation;
 _Static_assert(sizeof(ScreenwidePreviewAnnotation) == 88,
                "Rust/C annotation handle layout mismatch");
+/// What a record's `flags` say. `Grouped` is an annotation chosen together
+/// with others: a press on it carries the group rather than choosing it.
+typedef NS_OPTIONS(uint32_t, ScreenwideAnnotationFlag) {
+  ScreenwideAnnotationFlagGrouped = 1u << 0,
+};
+/// One box the chrome draws round a group, normalised over its layer's
+/// source image, matching Rust's `NativeAnnotationGroupBox`: round one member
+/// shown at the playhead, or round every member on the layer, shown or not.
+typedef struct {
+  double left, top, right, bottom;
+  int32_t layer_id;
+  /// `ScreenwideAnnotationGroupBoxKind`.
+  uint32_t kind;
+} ScreenwideAnnotationGroupBox;
+_Static_assert(sizeof(ScreenwideAnnotationGroupBox) == 40,
+               "Rust/C annotation group box layout mismatch");
+typedef NS_ENUM(uint32_t, ScreenwideAnnotationGroupBoxKind) {
+  ScreenwideAnnotationGroupBoxMember = 0,
+  ScreenwideAnnotationGroupBoxWhole = 1,
+};
 /// Which shape an annotation is, matching the compositor's own kinds.
 ///
 /// A text box reads the grip slots its own way: `start` is the box's top-left
@@ -82,7 +103,8 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationKind) {
 };
 /// What the pointer does over the picture. `Select` hit-tests the annotations
 /// that are already there and lets everything else fall through to the
-/// layer; the drawing tools also make a new annotation on empty picture.
+/// layer; the drawing tools also make a new annotation on empty picture; the
+/// marquee picks up as `Select` does and draws a band over empty picture.
 typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeNone = 0,
   ScreenwideAnnotationModeSelect = 1,
@@ -95,6 +117,7 @@ typedef NS_ENUM(int32_t, ScreenwideAnnotationMode) {
   ScreenwideAnnotationModeSpotlight = 8,
   ScreenwideAnnotationModeDraw = 9,
   ScreenwideAnnotationModeMagnify = 10,
+  ScreenwideAnnotationModeMarquee = 11,
 };
 /// Which grip a press took hold of. A box's grips - a redaction's, a shape's
 /// or a spotlight's - report `Box` plus the sides they move - 1 left, 2 right, 4 top,
@@ -115,13 +138,19 @@ typedef NS_ENUM(uint32_t, ScreenwideAnnotationHandle) {
 #define SCREENWIDE_ANNOTATION_MAX_GRIPS 10
 /// What a gesture acts on: a new annotation (0), a grip or body of the
 /// annotation at `index` (1), nothing at all (2), which only clears the choice,
-/// or a press on the body of the annotation at `index` (3), which only chooses
-/// it.
+/// a press on the body of the annotation at `index` (3), which only chooses
+/// it, a carry of every annotation chosen together (4), a click with the
+/// toggle modifier on the annotation at `index` (5), which adds it to the
+/// choice or takes it out, or a marquee band (6), whose begin and end are its
+/// two corners.
 typedef NS_ENUM(uint32_t, ScreenwideAnnotationTarget) {
   ScreenwideAnnotationTargetNew = 0,
   ScreenwideAnnotationTargetExisting = 1,
   ScreenwideAnnotationTargetNone = 2,
   ScreenwideAnnotationTargetSelect = 3,
+  ScreenwideAnnotationTargetGroup = 4,
+  ScreenwideAnnotationTargetToggle = 5,
+  ScreenwideAnnotationTargetMarquee = 6,
 };
 /// One equal gap the snap chrome draws a bar across, normalised over the
 /// source: where it starts and ends along its own axis, and where it sits

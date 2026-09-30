@@ -22,6 +22,10 @@ use super::*;
 mod sample;
 use sample::{report, resolve, Sample};
 
+/// Presses that change the choice: a group carry, a toggle and a marquee.
+#[path = "gesture_group.rs"]
+mod group;
+
 /// Takes the press if the arrow chrome owns it. `false` lets it carry on to
 /// the layer underneath, exactly as `annotation_mouse_down` returning `NO`
 /// does on macOS.
@@ -43,13 +47,25 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
     // which a borrow held by the scrutinee would forbid.
     let drawing = drawing_kind(state.annotation.mode);
     match (handle, shaft) {
+      (None, None) if drawing.is_none() && group::arm_empty(&mut state, point) => true,
       (None, None) => match drawing {
         None => {
           // Empty picture with only the select tool in hand: the arrow chrome
           // lets go, and the press carries on to the layer underneath. A live
           // annotation - one with no layer of its own - has its choice cleared
-          // first.
-          if selected_item(&state).is_some_and(|item| item.layer_id < 0) {
+          // first, and so has a group of them.
+          let still = match selected_item(&state) {
+            Some(item) => item.layer_id < 0,
+            None => {
+              has_group(&state)
+                && state
+                  .annotation
+                  .handles
+                  .first()
+                  .is_some_and(|item| item.layer_id < 0)
+            }
+          };
+          if still {
             state.annotation.selected = -1;
             samples.extend(resolve(
               &state,
@@ -105,21 +121,21 @@ pub(crate) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
         true
       }
       (None, Some(shaft)) => {
-        // Choosing an arrow is complete on the press: the manager commits the
-        // choice and the chrome moves to it. A press inside a magnifier's
-        // loupe carries the loupe on its own.
         let on_loupe = state.annotation.handles.get(shaft).is_some_and(|item| {
           item.shape_kind() == AnnotationKind::Magnify
             && super::picking::item_image_frame(&state, shaft as i32)
               .is_some_and(|image| super::magnify_chrome::on_loupe(image, item, point))
         });
-        state.annotation.drag = Some(Drag::pending(
-          TARGET_EXISTING,
-          shaft as u32,
-          if on_loupe { HANDLE_MIDDLE } else { HANDLE_BODY },
-          point,
-        ));
-        samples.extend(choose(&mut state, shaft, point));
+        let handle = if on_loupe { HANDLE_MIDDLE } else { HANDLE_BODY };
+        // One of several chosen together carries them all, and the toggle
+        // modifier waits for the release to add or remove the annotation.
+        // Otherwise choosing an arrow is complete on the press: the manager
+        // commits the choice and the chrome moves to it. A press inside a
+        // magnifier's loupe carries the loupe on its own.
+        if !group::arm_shaft(&mut state, shaft, handle, point) {
+          state.annotation.drag = Some(Drag::pending(TARGET_EXISTING, shaft as u32, handle, point));
+          samples.extend(choose(&mut state, shaft, point));
+        }
         true
       }
     }
@@ -166,6 +182,26 @@ pub(crate) fn choose_at(inner: &SurfaceInner, point: (f64, f64)) -> Option<usize
   Some(shaft)
 }
 
+/// One sample of the drag in hand: a group carry and a marquee band are
+/// measured on their layer, anything else on the annotation it holds.
+fn drag_sample(
+  state: &mut SurfaceState,
+  drag: Drag,
+  phase: SelectionGesturePhase,
+  point: (f64, f64),
+) -> Option<Sample> {
+  group::layer_sample(state, drag, phase, point).unwrap_or_else(|| {
+    resolve(
+      state,
+      phase,
+      drag.target_kind,
+      drag.index,
+      drag.handle,
+      point,
+    )
+  })
+}
+
 pub(crate) fn pointer_move(inner: &SurfaceInner, point: (f64, f64)) -> bool {
   let mut samples = Vec::new();
   {
@@ -176,28 +212,30 @@ pub(crate) fn pointer_move(inner: &SurfaceInner, point: (f64, f64)) -> bool {
       return false;
     };
     let began = drag.sample(point);
+    if began {
+      drag = group::travelled(&mut state, drag, &mut samples);
+    }
     state.annotation.drag = Some(drag);
     if began {
       // The gesture begins where the press did, not where it has reached, so
       // the shape it edits is the one the hand took hold of.
-      samples.extend(resolve(
-        &state,
+      samples.extend(drag_sample(
+        &mut state,
+        drag,
         SelectionGesturePhase::Begin,
-        drag.target_kind,
-        drag.index,
-        drag.handle,
         drag.origin,
       ));
     }
     if drag.reports() {
-      samples.extend(resolve(
-        &state,
+      samples.extend(drag_sample(
+        &mut state,
+        drag,
         SelectionGesturePhase::Update,
-        drag.target_kind,
-        drag.index,
-        drag.handle,
         point,
       ));
+    }
+    if matches!(drag.press, drag::Press::Marquee { .. }) && drag.reports() {
+      draw_selection(inner, &state);
     }
   }
   report(inner, &samples);
@@ -205,29 +243,28 @@ pub(crate) fn pointer_move(inner: &SurfaceInner, point: (f64, f64)) -> bool {
 }
 
 pub(crate) fn up(inner: &SurfaceInner, point: (f64, f64)) -> bool {
-  let mut samples = Vec::new();
-  {
+  let samples = {
     let Ok(mut state) = inner.state.lock() else {
       return false;
     };
     let Some(drag) = state.annotation.drag.take() else {
       return false;
     };
-    if drag.begun {
-      samples.extend(resolve(
-        &state,
-        SelectionGesturePhase::End,
-        drag.target_kind,
-        drag.index,
-        drag.handle,
-        point,
-      ));
+    if !drag.begun {
+      group::clicked(&mut state, drag, point)
+    } else {
+      let samples = drag_sample(&mut state, drag, SelectionGesturePhase::End, point);
+      if matches!(drag.press, drag::Press::Marquee { .. }) {
+        draw_selection(inner, &state);
+      }
+      samples.into_iter().collect()
     }
-  }
+  };
   report(inner, &samples);
   true
 }
 
 pub(crate) fn cancel(state: &mut SurfaceState) {
   state.annotation.drag = None;
+  state.annotation.marquee = None;
 }

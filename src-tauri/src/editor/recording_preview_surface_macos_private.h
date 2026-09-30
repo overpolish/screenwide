@@ -112,7 +112,6 @@ typedef struct {
   double minimum_scale, maximum_scale;
 } ScreenwidePreviewSelection;
 @class ScreenwidePreviewSurface;
-
 @interface ScreenwidePreviewInteractionView : NSView
 @property(nonatomic, weak) ScreenwidePreviewSurface *surface;
 @property(nonatomic) NSPoint dragOrigin;
@@ -295,5 +294,6 @@ typedef struct {
 @property(nonatomic, strong) dispatch_group_t batchGroup;
 @end
 #import "recording_preview_annotation_text_macos.h"
+#import "recording_preview_annotation_group_macos.h"
 #import "recording_preview_surface_macos_private_functions.h"
 #endif

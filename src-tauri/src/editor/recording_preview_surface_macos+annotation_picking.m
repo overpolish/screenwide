@@ -137,7 +137,7 @@ SCREENWIDE_PREVIEW_PRIVATE NSInteger annotation_shaft_at_point(
   const ScreenwidePreviewAnnotation *items = annotation_items(surface, &count);
   ScreenwideAnnotationMode mode = annotation_active_mode(surface);
   if (items == NULL || mode == ScreenwideAnnotationModeDraw) return -1;
-  BOOL selecting = mode == ScreenwideAnnotationModeSelect;
+  BOOL selecting = mode == ScreenwideAnnotationModeSelect || mode == ScreenwideAnnotationModeMarquee;
   for (int insides = 0; insides < 2; insides++) {
     for (NSInteger index = (NSInteger)count - 1; index >= 0; index--) {
       ScreenwidePreviewAnnotation item = items[(NSUInteger)index];

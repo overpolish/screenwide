@@ -56,11 +56,11 @@ export function useTimelineSnapValue({
   }, []);
   const { edit, setSnapGuidePosition } = blade;
   const gather = useCallback(
-    (excludeAnnotationId?: string) =>
+    (excludeAnnotationIds?: ReadonlySet<string>) =>
       timelineSnapTargets({
         annotationClips,
         edit,
-        excludeAnnotationId,
+        excludeAnnotationIds,
         hiddenKeyboardFragmentIds,
         hiddenKeyboardItemIds,
         keyboardItems,

@@ -38,7 +38,7 @@ pub(crate) fn grips(
     layer_id: -1,
     index,
     kind: AnnotationKind::Text.raw(),
-    padding: 0,
+    flags: 0,
     start_x,
     start_y,
     middle_x: block[0] * per_output,

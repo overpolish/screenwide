@@ -10,9 +10,13 @@ import {
   recordingAnnotationClipsMeet,
   renumberedAnnotationClips,
 } from "../recording-annotations";
-import { RecordingTimelineEdit } from "../recording-timeline-edit";
+import {
+  RecordingTimelineEdit,
+  recordingTimelineSourceToOutput,
+} from "../recording-timeline-edit";
 
 import { TIMED_LANE_ROW_HEIGHT_PX } from "./timed-lane-layout";
+import { TimelineSnapGesture, timelineSnapRangeShift } from "./timeline-snap";
 
 /**
  * The clips as the preview should show them while `id` is being dragged: that
@@ -36,29 +40,91 @@ export const previewedWhole = (
   );
 
 /**
- * `clips` with the one named `id` carried `rows` rows up the lane, or down
- * for a negative count: each row brings it over the next clip it overlaps, or
- * sends it under the previous one, until there is none left to pass.
+ * `clips` with the member named `id` brought over the next clip it overlaps,
+ * or sent under the previous one. A member never passes another member: the
+ * group keeps its own stacking, and a member held back by one below or above
+ * it stays where it is.
+ */
+const carriedOneRow = (
+  clips: RecordingAnnotationClip[],
+  id: string,
+  { forward, ids }: { forward: boolean; ids: ReadonlySet<string> },
+) => {
+  const index = clips.findIndex((clip) => clip.annotation.id === id);
+  const clip = clips[index];
+  const step = forward ? 1 : -1;
+  let passed = index + step;
+  while (
+    passed >= 0 &&
+    passed < clips.length &&
+    !recordingAnnotationClipsMeet(clip, clips[passed])
+  )
+    passed += step;
+  if (
+    passed < 0 ||
+    passed >= clips.length ||
+    ids.has(clips[passed].annotation.id)
+  )
+    return clips;
+  return arranged(clips, index, {
+    arrangement: forward ? "forward" : "backward",
+    meets: recordingAnnotationClipsMeet,
+  });
+};
+
+/**
+ * `clips` with the ones named in `ids` carried `rows` rows up the lane, or
+ * down for a negative count, until none of them has anything left to pass.
+ * The member furthest along the way they go moves first, so the ones behind
+ * it find the way clear.
  */
 const carriedThroughRows = (
   clips: RecordingAnnotationClip[],
-  id: string,
+  ids: ReadonlySet<string>,
   rows: number,
 ) => {
+  const forward = rows > 0;
   let carried = clips;
   for (let step = 0; step < Math.abs(rows); step += 1) {
-    const next = arranged(
-      carried,
-      carried.findIndex((clip) => clip.annotation.id === id),
-      {
-        arrangement: rows > 0 ? "forward" : "backward",
-        meets: recordingAnnotationClipsMeet,
-      },
+    const members = carried.flatMap((clip) =>
+      ids.has(clip.annotation.id) ? [clip.annotation.id] : [],
     );
-    if (next === carried) break;
-    carried = next;
+    if (forward) members.reverse();
+    const before = carried;
+    for (const id of members)
+      carried = carriedOneRow(carried, id, { forward, ids });
+    if (carried === before) break;
   }
   return carried;
+};
+
+/** Where the clips named in `ids` begin and end together on the output
+ * timeline, or null where none of them is in `clips`. */
+const carriedSpan = (
+  clips: RecordingAnnotationClip[],
+  ids: ReadonlySet<string>,
+  {
+    edit,
+    sourceDurationMs,
+  }: { edit: RecordingTimelineEdit; sourceDurationMs: number },
+) => {
+  if (sourceDurationMs <= 0) return null;
+  let span: { end: number; start: number } | null = null;
+  for (const clip of clips) {
+    if (!ids.has(clip.annotation.id)) continue;
+    const start = recordingTimelineSourceToOutput(
+      edit,
+      clip.startMs / sourceDurationMs,
+    );
+    const end = recordingTimelineSourceToOutput(
+      edit,
+      clip.endMs / sourceDurationMs,
+    );
+    span = span
+      ? { end: Math.max(span.end, end), start: Math.min(span.start, start) }
+      : { end, start };
+  }
+  return span;
 };
 
 /**
@@ -67,33 +133,31 @@ const carriedThroughRows = (
  * drawing order - so a clip can be restacked without losing its timing, or
  * slid in time without slipping a row.
  */
-export const carriedAxes = (
-  deltaX: number,
-  deltaY: number,
-  locked: boolean,
-) => ({
+const carriedAxes = (deltaX: number, deltaY: number, locked: boolean) => ({
   order: !locked || Math.abs(deltaY) > Math.abs(deltaX),
   time: !locked || Math.abs(deltaX) >= Math.abs(deltaY),
 });
 
 /**
- * The clips while the one named `id` is carried by its body: moved
- * `deltaOutput` along the output timeline and `lift` pixels up the lane, a
- * row counting once the pointer has come three quarters of the way across it
- * so a sideways drag that wanders keeps its place. Counters are numbered as
- * they will be on release, so the lane and the preview show it as it goes.
+ * The clips while the ones named in `ids` are carried by a body: moved
+ * `deltaOutput` along the output timeline together, stopping as one where the
+ * first reaches the start or the last reaches the end, and `lift` pixels up
+ * the lane, a row counting once the pointer has come three quarters of the
+ * way across it so a sideways drag that wanders keeps its place. Counters are
+ * numbered as they will be on release, so the lane and the preview show it as
+ * it goes.
  */
 export const carriedClips = ({
   deltaOutput,
   edit,
-  id,
+  ids,
   lift,
   original,
   sourceDurationMs,
 }: {
   deltaOutput: number;
   edit: RecordingTimelineEdit;
-  id: string;
+  ids: ReadonlySet<string>;
   lift: number;
   original: RecordingAnnotationClip[];
   sourceDurationMs: number;
@@ -104,18 +168,69 @@ export const carriedClips = ({
       (Math.abs(lift) + TIMED_LANE_ROW_HEIGHT_PX / 4) /
         TIMED_LANE_ROW_HEIGHT_PX,
     );
+  const span = carriedSpan(original, ids, { edit, sourceDurationMs });
+  const shift = span
+    ? Math.max(-span.start, Math.min(1 - span.end, deltaOutput))
+    : 0;
   const moved = original.map((clip) =>
-    clip.annotation.id === id
+    ids.has(clip.annotation.id)
       ? moveRecordingAnnotationClip({
           clip,
-          deltaOutput,
+          deltaOutput: shift,
           edit,
           sourceDurationMs,
         })
       : clip,
   );
   return renumberedAnnotationClips(
-    carriedThroughRows(moved, id, rows),
+    carriedThroughRows(moved, ids, rows),
     original,
   );
+};
+
+/**
+ * What a body drag shows once the pointer has come `deltaX`, `deltaY` pixels
+ * from its press: the carried clips, and the snap target the group's start or
+ * end landed on. `outputWidthPx` is how many pixels the whole output timeline
+ * spans at the current zoom. Null where none of `ids` is among the clips.
+ */
+export const carriedDraft = ({
+  deltaX,
+  deltaY,
+  edit,
+  ids,
+  locked,
+  original,
+  outputWidthPx,
+  snap,
+  sourceDurationMs,
+}: {
+  deltaX: number;
+  deltaY: number;
+  edit: RecordingTimelineEdit;
+  ids: ReadonlySet<string>;
+  locked: boolean;
+  original: RecordingAnnotationClip[];
+  outputWidthPx: number;
+  snap: TimelineSnapGesture;
+  sourceDurationMs: number;
+}) => {
+  const span = carriedSpan(original, ids, { edit, sourceDurationMs });
+  if (!span) return null;
+  const axes = carriedAxes(deltaX, deltaY, locked);
+  const shift = axes.time ? deltaX / outputWidthPx : 0;
+  const snapped = axes.time
+    ? timelineSnapRangeShift(snap, span.start + shift, span.end + shift)
+    : null;
+  return {
+    clips: carriedClips({
+      deltaOutput: shift + (snapped?.shift ?? 0),
+      edit,
+      ids,
+      lift: axes.order ? -deltaY : 0,
+      original,
+      sourceDurationMs,
+    }),
+    target: snapped?.target ?? null,
+  };
 };

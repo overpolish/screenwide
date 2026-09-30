@@ -86,11 +86,13 @@ function bakedCameraSelection({
  * handle under the Frame tool, the baked camera's own rect when the camera is
  * composited into the screen output, or the selected pane's own rect.
  */
-/** Only the crop tool draws its own layer chrome. A drawing tool leaves it in
- * the select tool's hands: the annotations are drawn over the picture, and the
- * layer underneath is still the thing a press outside one acts on. */
-const selectionChromeTool = (tool: AnnotationKind | "crop" | "select") =>
-  tool === "crop" ? "crop" : "select";
+/** Only the crop tool draws its own layer chrome. A drawing tool and the
+ * marquee leave it in the select tool's hands: the annotations are drawn over
+ * the picture, and the layer underneath is still the thing a press outside
+ * one acts on. */
+const selectionChromeTool = (
+  tool: AnnotationKind | "crop" | "marquee" | "select",
+) => (tool === "crop" ? "crop" : "select");
 
 export function recordingVideoSelectionOverlay({
   activeVideoTrack,
@@ -198,6 +200,17 @@ export function recordingVideoSelectionTargets({
           ]
         : [],
     );
+  // The marquee reaches every pane, as the select tool does: a band may be
+  // drawn over whichever picture it starts on.
+  if (canvasTool === "marquee")
+    return recordingVideoSelectionTargets({
+      cameraOverlay,
+      canPreviewBakedCamera,
+      canvasTool: "select",
+      effectiveRecordingOutput,
+      previewSourceDimensions,
+      selectedVideoTracks,
+    });
   if (canvasTool !== "select" && canvasTool !== "crop") return null;
   if (canPreviewBakedCamera) {
     const primarySource = previewSourceDimensions.primary;

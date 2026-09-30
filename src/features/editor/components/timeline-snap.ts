@@ -22,8 +22,9 @@ export const TIMELINE_SNAP_THRESHOLD_PX = 8;
  * off a target part way through the gesture.
  */
 export type TimelineSnap = {
-  /** Source positions a drag may land on, gathered as the drag begins. */
-  gather: (excludeAnnotationId?: string) => number[];
+  /** Source positions a drag may land on, gathered as the drag begins. The
+   * annotations being dragged are not targets for themselves. */
+  gather: (excludeAnnotationIds?: ReadonlySet<string>) => number[];
   isActive: boolean;
   isSnapping: () => boolean;
   /** Where the held drag is snapped to, in output time; null once it is not. */
@@ -55,18 +56,18 @@ export type TimelineSnapGesture = Pick<
 export const beginTimelineSnapGesture = (
   snap: TimelineSnap,
   {
-    excludeAnnotationId,
+    excludeAnnotationIds,
     mapTarget = (source) => source,
     threshold,
   }: {
     threshold: number;
-    excludeAnnotationId?: string;
+    excludeAnnotationIds?: ReadonlySet<string>;
     mapTarget?: (source: number) => number;
   },
 ): TimelineSnapGesture => ({
   isSnapping: snap.isSnapping,
   showGuide: snap.showGuide,
-  targets: snap.gather(excludeAnnotationId).map(mapTarget),
+  targets: snap.gather(excludeAnnotationIds).map(mapTarget),
   threshold,
 });
 
@@ -120,7 +121,7 @@ export function timelineSnapRangeShift(
 export function timelineSnapTargets({
   annotationClips,
   edit,
-  excludeAnnotationId,
+  excludeAnnotationIds,
   hiddenKeyboardFragmentIds,
   hiddenKeyboardItemIds,
   keyboardItems,
@@ -134,14 +135,14 @@ export function timelineSnapTargets({
   keyboardItems: RecordingKeyboardTimelineItem[];
   playheadOutput: number;
   sourceDurationMs: number;
-  excludeAnnotationId?: string;
+  excludeAnnotationIds?: ReadonlySet<string>;
 }): number[] {
   if (sourceDurationMs <= 0) return [];
   const targets: number[] = [];
   for (const segment of edit.segments)
     targets.push(segment.sourceStart, segment.sourceEnd);
   for (const clip of annotationClips)
-    if (clip.annotation.id !== excludeAnnotationId)
+    if (!excludeAnnotationIds?.has(clip.annotation.id))
       targets.push(
         clip.startMs / sourceDurationMs,
         clip.endMs / sourceDurationMs,

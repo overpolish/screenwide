@@ -48,15 +48,20 @@ export type RecordingTrackLanesProps = {
   /** What an annotation clip's menu does to its pin. Without it, the lane
    * offers no pinning. */
   annotationPinning?: AnnotationClipPinning;
-  onAnnotationSelect?: (id: string) => void;
+  /** Choose an annotation alone, or with `toggle`, add or take it away. */
+  onAnnotationSelect?: (id: string, toggle: boolean) => void;
   onAnnotationsChange?: (clips: RecordingAnnotationClip[]) => void;
+  /** Let every annotation go, from a click on empty annotation lane. */
+  onAnnotationsClear?: () => void;
   onAnnotationsPreview?: (clips: RecordingAnnotationClip[] | null) => void;
+  /** Choose what a band over the annotation lane swept, alone or added. */
+  onAnnotationsSweep?: (ids: string[], additive: boolean) => void;
   /** Picking a keyboard shortcut puts it in hand: the caller clears the
    * annotation selection and takes up the Select tool, mirroring what the
    * annotation lane's select does. */
   onSelectKeyboardShortcut?: () => void;
   onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
-  selectedAnnotationId?: string | null;
+  selectedAnnotationIds?: ReadonlySet<string>;
 };
 
 /**

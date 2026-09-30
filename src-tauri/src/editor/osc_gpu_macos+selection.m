@@ -39,6 +39,12 @@ static void add_selection_frame(ScreenwideRegionOscVertex *vertices,
   }
 }
 
+void screenwide_region_osc_add_selection_frame(
+    ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
+    NSRect frame, CGFloat scale) {
+  add_selection_frame(vertices, count, size, frame, scale, 2, 0, 3.0 / scale);
+}
+
 void screenwide_region_osc_add_selection(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize size,
     NSRect frame, CGFloat scale, double radius_percent, BOOL radius_enabled) {

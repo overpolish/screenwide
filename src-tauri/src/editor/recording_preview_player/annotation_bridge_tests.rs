@@ -80,8 +80,8 @@ fn native_gesture_commits_once_and_cancel_restores_the_document() {
   assert_eq!(commit.source_position_ms, 2000);
   assert_eq!(commit.annotations.len(), 1);
   assert_eq!(
-    commit.selected_annotation_id.as_deref(),
-    Some(commit.annotations[0].id.as_str())
+    commit.selected_annotation_ids,
+    vec![commit.annotations[0].id.clone()]
   );
   let before = manager
     .sources
@@ -233,10 +233,7 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
       1920.0,
     )
     .expect("one press must select an annotation on another video layer");
-  assert_eq!(
-    commit.selected_annotation_id.as_deref(),
-    Some("screen-arrow")
-  );
+  assert_eq!(commit.selected_annotation_ids, vec!["screen-arrow"]);
   assert_eq!(manager.annotation.pane, Some(0));
   assert_eq!(manager.annotation_targets()[0].0, 0);
 }
@@ -280,4 +277,142 @@ fn a_fresh_arrow_takes_the_remembered_animate_setting() {
       .annotation
       .animated
   );
+}
+
+fn screen_arrow(id: &str, x: f64, start_ms: u64, end_ms: u64) -> RecordingAnnotationClip {
+  RecordingAnnotationClip {
+    path_ms: None,
+    pin: None,
+    annotation: crate::editor::annotations::arrow::new_arrow(
+      id.into(),
+      crate::editor::annotations::AnnotationPoint { x, y: 100.0 },
+      crate::editor::annotations::AnnotationPoint {
+        x: x + 200.0,
+        y: 100.0,
+      },
+      None,
+    ),
+    track_id: AnnotationTrack::Primary,
+    start_ms,
+    end_ms,
+  }
+}
+
+/// A manager with an arrow shown at the playhead and one that only arrives
+/// later, both chosen, under the select tool.
+fn grouped() -> PreviewPlayerManager {
+  let mut manager = manager();
+  *manager
+    .sources
+    .as_ref()
+    .unwrap()
+    .annotation_clips
+    .write()
+    .unwrap() = vec![
+    screen_arrow("shown", 100.0, 0, 5000),
+    screen_arrow("hidden", 900.0, 6000, 9000),
+  ];
+  manager.annotation.mode = 1;
+  manager.annotation.selected = vec!["shown".into(), "hidden".into()];
+  manager
+}
+
+fn start_x(annotation: &Annotation) -> f64 {
+  match &annotation.shape {
+    crate::editor::annotations::AnnotationShape::Arrow { start, .. } => start.x,
+    _ => unreachable!(),
+  }
+}
+
+fn clip_starts(manager: &PreviewPlayerManager) -> Vec<f64> {
+  manager
+    .sources
+    .as_ref()
+    .unwrap()
+    .annotation_clips
+    .read()
+    .unwrap()
+    .iter()
+    .map(|clip| start_x(&clip.annotation))
+    .collect()
+}
+
+fn carry(
+  manager: &mut PreviewPlayerManager,
+  phase: SelectionGesturePhase,
+  x: f64,
+) -> Option<gesture::Commit> {
+  manager.annotation_gesture(phase, 0, AnnotationGestureTarget::Group, x, 0.1, 0, 1920.0)
+}
+
+#[test]
+fn carrying_a_group_moves_the_members_hidden_at_the_playhead_in_one_commit() {
+  let mut manager = grouped();
+  assert!(carry(&mut manager, SelectionGesturePhase::Begin, 0.1).is_none());
+  // A twentieth of the 1920-pixel source across: 96 pixels.
+  let commit = carry(&mut manager, SelectionGesturePhase::End, 0.15).unwrap();
+  let moved: Vec<_> = commit
+    .annotations
+    .iter()
+    .map(|a| (a.id.as_str(), start_x(a)))
+    .collect();
+  assert_eq!(moved, vec![("shown", 196.0), ("hidden", 996.0)]);
+  assert_eq!(clip_starts(&manager), vec![196.0, 996.0]);
+  assert_eq!(commit.selected_annotation_ids, vec!["shown", "hidden"]);
+}
+
+#[test]
+fn a_cancelled_group_carry_puts_every_member_back() {
+  let mut manager = grouped();
+  carry(&mut manager, SelectionGesturePhase::Begin, 0.1);
+  carry(&mut manager, SelectionGesturePhase::Update, 0.3);
+  assert_ne!(clip_starts(&manager), vec![100.0, 900.0]);
+  carry(&mut manager, SelectionGesturePhase::Cancel, 0.3);
+  assert_eq!(clip_starts(&manager), vec![100.0, 900.0]);
+}
+
+#[test]
+fn a_toggle_adds_an_annotation_to_the_choice_and_takes_it_out() {
+  let mut manager = grouped();
+  manager.annotation.selected = vec!["hidden".into()];
+  let toggle = |manager: &mut PreviewPlayerManager| {
+    manager
+      .annotation_gesture(
+        SelectionGesturePhase::Begin,
+        0,
+        AnnotationGestureTarget::Toggle { index: 0 },
+        0.1,
+        0.1,
+        0,
+        1920.0,
+      )
+      .unwrap()
+      .selected_annotation_ids
+  };
+  assert_eq!(toggle(&mut manager), vec!["hidden", "shown"]);
+  assert_eq!(toggle(&mut manager), vec!["hidden"]);
+}
+
+/// A band over the whole picture chooses what the playhead shows there, and
+/// leaves out what arrives later and what is pinned.
+#[test]
+fn a_marquee_chooses_what_it_touches_at_the_playhead_and_skips_pinned() {
+  let mut manager = grouped();
+  let mut pinned = screen_arrow("pinned", 500.0, 0, 5000);
+  pinned.pin = Some(Default::default());
+  manager
+    .sources
+    .as_ref()
+    .unwrap()
+    .annotation_clips
+    .write()
+    .unwrap()
+    .push(pinned);
+  manager.annotation.selected = Vec::new();
+  let band = |manager: &mut PreviewPlayerManager, phase, x, y| {
+    manager.annotation_gesture(phase, 0, AnnotationGestureTarget::Marquee, x, y, 0, 1920.0)
+  };
+  assert!(band(&mut manager, SelectionGesturePhase::Begin, 0.0, 0.0).is_none());
+  let commit = band(&mut manager, SelectionGesturePhase::End, 1.0, 1.0).unwrap();
+  assert_eq!(commit.selected_annotation_ids, vec!["shown"]);
 }

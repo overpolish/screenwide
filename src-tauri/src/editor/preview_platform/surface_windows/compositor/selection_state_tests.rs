@@ -35,6 +35,8 @@ fn compositor_background_survives_selection_overlay_state() {
       None,
       None,
       &[],
+      &[],
+      None,
       1.0,
       false,
     )
@@ -93,6 +95,8 @@ fn compositor_background_survives_selection_overlay_state() {
       None,
       None,
       &[],
+      &[],
+      None,
       1.0,
       false,
     )

@@ -108,6 +108,9 @@ fn main() {
     println!(
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_report.m"
     );
+    println!(
+      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_group.m"
+    );
     println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_macos.h");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_geometry_macos.h");
     println!("cargo:rerun-if-changed=src/editor/annotations/geometry.h");
@@ -149,6 +152,7 @@ fn main() {
       "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos_private_functions.h"
     );
     println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_text_macos.h");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_group_macos.h");
     println!(
       "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_background_image.m"
     );
@@ -239,6 +243,7 @@ fn main() {
       .file("src/editor/recording_preview_surface_macos+annotation_redact.m")
       .file("src/editor/recording_preview_surface_macos+annotation_state.m")
       .file("src/editor/recording_preview_surface_macos+annotation_report.m")
+      .file("src/editor/recording_preview_surface_macos+annotation_group.m")
       .file("src/editor/recording_preview_surface_macos+osc.m")
       .file("src/editor/recording_preview_surface_macos+selection.m")
       .file("src/editor/recording_preview_surface_macos+workspace.m")

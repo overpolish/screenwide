@@ -33,6 +33,7 @@ import {
 } from "./recording-track-lanes-preview-fixtures";
 import { createPlayhead } from "./scrub-playhead";
 import { selectTimelineItem } from "./timeline-item-selection";
+import { useLaneAnnotationSelection } from "./use-lane-annotation-selection";
 
 /**
  * The timeline lanes wired to real edit state, shared by the lanes story and
@@ -68,9 +69,7 @@ export function RecordingTrackLanesPreview({
   const [annotationClips, setAnnotationClips] = useState(
     STORY_ANNOTATION_CLIPS,
   );
-  const [selectedAnnotationId, setSelectedAnnotationId] = useState<
-    string | null
-  >(null);
+  const annotationSelection = useLaneAnnotationSelection(annotationClips);
   const [isBladeActive, setIsBladeActive] = useState(false);
   const [previewPosition, setPreviewPosition] = useState<number | null>(null);
   const [isRangeActive, setIsRangeActive] = useState(false);
@@ -258,7 +257,9 @@ export function RecordingTrackLanesPreview({
         }}
         layout={STORY_LAYOUT}
         onAnnotationsChange={setAnnotationClips}
-        onAnnotationSelect={setSelectedAnnotationId}
+        onAnnotationsClear={annotationSelection.onClearSelection}
+        onAnnotationSelect={annotationSelection.onSelect}
+        onAnnotationsSweep={annotationSelection.onSelectSwept}
         onEnabledTracksChange={setEnabledAudio}
         onEnabledVideoTracksChange={setEnabledVideo}
         onSeek={(ratio) => {
@@ -267,7 +268,7 @@ export function RecordingTrackLanesPreview({
         }}
         onSelectedTrackChange={setSelectedTrack}
         playhead={playhead}
-        selectedAnnotationId={selectedAnnotationId}
+        selectedAnnotationIds={annotationSelection.selectedIds}
         selectedTrack={selectedTrack}
         sourceDurationMs={STORY_DURATION_MS}
         thumbnails={STORY_THUMBNAILS}

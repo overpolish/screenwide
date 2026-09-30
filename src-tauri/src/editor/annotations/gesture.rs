@@ -83,6 +83,17 @@ pub(crate) enum AnnotationGestureTarget {
   /// annotation: the move it may turn into arrives as its own `Existing`
   /// gesture once the press has travelled past the native slop.
   Select { index: usize },
+  /// A press on the body of one of several annotations chosen together, or
+  /// inside the box drawn round them, that has travelled: it carries the
+  /// whole group.
+  Group,
+  /// A click with the toggle modifier on the annotation at `index`: it is
+  /// added to the choice, or taken out of it.
+  Toggle { index: usize },
+  /// A band drawn over empty picture with the marquee in hand: its begin
+  /// carries the corner it was pressed at and its end the corner it was let
+  /// go at, and it chooses every annotation it touches.
+  Marquee,
 }
 
 /// What the pointer does over the picture while a tool is in hand. The select
@@ -100,6 +111,9 @@ pub(crate) const MODE_SHAPE: u32 = 7;
 pub(crate) const MODE_SPOTLIGHT: u32 = 8;
 pub(crate) const MODE_DRAW: u32 = 9;
 pub(crate) const MODE_MAGNIFY: u32 = 10;
+/// The marquee: it picks annotations up as the select tool does, and a drag
+/// over empty picture draws a band that chooses everything it touches.
+pub(crate) const MODE_MARQUEE: u32 = 11;
 
 /// The tool name React sends, as a mode. Anything else puts the chrome away.
 pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
@@ -114,6 +128,7 @@ pub(crate) fn annotation_mode(tool: Option<&str>) -> u32 {
     Some("draw") => MODE_DRAW,
     Some("magnify") => MODE_MAGNIFY,
     Some("select") => MODE_SELECT,
+    Some("marquee") => MODE_MARQUEE,
     _ => MODE_NONE,
   }
 }
@@ -163,8 +178,10 @@ pub(crate) fn screen_only(mode: u32) -> bool {
 
 impl AnnotationGestureTarget {
   /// Reads the target the native interaction view reported: a new annotation
-  /// (0), a grip of the annotation at `index` (1), no annotation at all (2), or
-  /// a press that only chooses the annotation at `index` (3).
+  /// (0), a grip of the annotation at `index` (1), no annotation at all (2), a
+  /// press that only chooses the annotation at `index` (3), a carry of the
+  /// chosen group (4), a toggle of the annotation at `index` (5), or a
+  /// marquee band (6).
   pub(crate) fn from_raw(kind: u32, index: u32, handle: u32) -> Option<Self> {
     match kind {
       0 => Some(Self::New),
@@ -176,6 +193,11 @@ impl AnnotationGestureTarget {
       3 => Some(Self::Select {
         index: index as usize,
       }),
+      4 => Some(Self::Group),
+      5 => Some(Self::Toggle {
+        index: index as usize,
+      }),
+      6 => Some(Self::Marquee),
       _ => None,
     }
   }

@@ -3,9 +3,29 @@
 import { RecordingAnnotationClip } from "../recording-annotations";
 import { RecordingTimelineEdit } from "../recording-timeline-edit";
 
-import { layoutTimedLaneItems, StackedLaneFragment } from "./timed-lane-layout";
+import {
+  layoutTimedLaneItems,
+  StackedLaneFragment,
+  timedLaneFragmentBox,
+} from "./timed-lane-layout";
+import {
+  timelineFractionToX,
+  TimelineViewportState,
+} from "./timeline-viewport";
 
 type LaneClip = RecordingAnnotationClip & { id: string };
+
+/** The narrowest a clip is drawn, in CSS pixels, so a short one can still be
+ * taken hold of. */
+export const ANNOTATION_CLIP_MINIMUM_WIDTH_PX = 6;
+
+/** A rectangle in a lane's own CSS pixels. */
+export type LaneBox = {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+};
 
 /**
  * The annotation lane's rows, which show the drawing order: a clip sits one
@@ -60,4 +80,35 @@ export const recordingAnnotationRows = (
     })),
     rowCount,
   };
+};
+
+/**
+ * The clips a band over `box` touches, as the lane draws `fragments` when it
+ * is `laneWidthPx` wide under `viewport`. A pinned clip is never swept up: it
+ * follows its content on its own, so it is never chosen with others.
+ */
+export const sweptAnnotationClips = (
+  fragments: StackedLaneFragment<LaneClip>[],
+  box: LaneBox,
+  {
+    laneWidthPx,
+    viewport,
+  }: { laneWidthPx: number; viewport: TimelineViewportState },
+): string[] => {
+  const lane = { left: 0, width: laneWidthPx };
+  return fragments.flatMap(({ item, outputEnd, outputStart, row }) => {
+    if (item.pin) return [];
+    const left = timelineFractionToX(outputStart, viewport, lane);
+    const right = Math.max(
+      timelineFractionToX(outputEnd, viewport, lane),
+      left + ANNOTATION_CLIP_MINIMUM_WIDTH_PX,
+    );
+    const { height, top } = timedLaneFragmentBox(row);
+    return left <= box.right &&
+      box.left <= right &&
+      top <= box.bottom &&
+      box.top <= top + height
+      ? [item.id]
+      : [];
+  });
 };

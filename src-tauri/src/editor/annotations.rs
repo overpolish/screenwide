@@ -68,6 +68,10 @@ pub(crate) mod geometry;
 pub(crate) mod gesture;
 #[cfg(test)]
 mod gesture_tests;
+/// Several annotations chosen together: the box round them and the move
+/// that carries them all.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) mod group;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod handles;
 /// The highlight tool's own half of the model.
@@ -75,6 +79,9 @@ pub(crate) mod highlight;
 /// The magnifier tool's own half of the model: a loupe showing a zoom area
 /// enlarged.
 pub(crate) mod magnify;
+/// What a marquee band chooses.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub(crate) mod marquee;
 /// The shape tool's own half of the model: an outline round a box. Not
 /// called `shape`, which is the enum every kind is a variant of.
 pub(crate) mod outline;

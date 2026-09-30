@@ -64,6 +64,10 @@ export type ToolPanelSnapshot = {
   annotation: ToolPanelAnnotation | null;
   /** Colours of your own the annotation tools were given, newest last. */
   annotationColors: string[];
+  /** How many annotations the preview has chosen. With more than one there is
+   * no `annotation` to dress, and the panel offers only what acts on them all.
+   */
+  annotationCount: number;
   /** What the workspace's canvas is filled with behind its layers. */
   background: Background;
   /** The backgrounds saved from the picker, in the order they were saved. */
@@ -121,6 +125,8 @@ export type ToolPanelPatch = Partial<
   clearDrawings?: true;
   /** Cut a crop of this size, in source pixels, keeping it where it sits. */
   cropSize?: { height?: number; width?: number };
+  /** Delete every chosen annotation, in one edit. */
+  deleteAnnotations?: true;
   /** Round the output canvas corners by this share of its shorter side. */
   frameRadius?: number;
   /** Size the output canvas, leaving what is in it where it sits. */
@@ -187,6 +193,7 @@ export type ToolPanelMessage = {
 export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   annotation: null,
   annotationColors: [],
+  annotationCount: 0,
   background: { color: "#171717", kind: "solid" },
   backgroundPresets: [],
   canClearDrawings: false,

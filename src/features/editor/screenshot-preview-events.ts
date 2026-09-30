@@ -50,10 +50,11 @@ export const screenshotAnnotationChange = (
   return {
     annotations: validAnnotations(event.annotations),
     paneIndex: event.paneIndex as number,
-    selectedAnnotationId:
-      typeof event.selectedAnnotationId === "string"
-        ? event.selectedAnnotationId
-        : null,
+    selectedAnnotationIds: Array.isArray(event.selectedAnnotationIds)
+      ? event.selectedAnnotationIds.filter(
+          (id): id is string => typeof id === "string",
+        )
+      : [],
     textEdit: annotationTextEdit(event.textEdit),
   };
 };
@@ -105,6 +106,7 @@ export type ScreenshotSelectionGestureEvent = {
 export type ScreenshotAnnotationChangeEvent = {
   annotations: Annotation[];
   paneIndex: number;
-  selectedAnnotationId: string | null;
+  /** Every annotation chosen once the change lands. */
+  selectedAnnotationIds: string[];
   textEdit: AnnotationTextEdit | null;
 };

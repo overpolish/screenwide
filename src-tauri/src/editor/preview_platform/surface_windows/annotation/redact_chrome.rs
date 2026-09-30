@@ -7,7 +7,7 @@
 //! instead. The twin of `recording_preview_surface_macos+annotation_redact.m`.
 
 use super::*;
-use crate::editor::annotations::gesture::{BOX_HANDLES, MODE_SELECT, RADIUS_HANDLE};
+use crate::editor::annotations::gesture::{BOX_HANDLES, MODE_MARQUEE, MODE_SELECT, RADIUS_HANDLE};
 use crate::editor::annotations::outline::geometry::{prepare_shape, shape_distance};
 use crate::editor::annotations::redact::geometry::{prepare_redact, redact_distance};
 use crate::editor::annotations::reveal::AnnotationReveal;
@@ -174,7 +174,8 @@ pub(super) fn grabs_inside(
   matches!(
     item.shape_kind(),
     AnnotationKind::Shape | AnnotationKind::Draw
-  ) && (state.annotation.mode == MODE_SELECT || state.annotation.selected == index as i32)
+  ) && (matches!(state.annotation.mode, MODE_SELECT | MODE_MARQUEE)
+    || state.annotation.selected == index as i32)
 }
 
 /// The resize cursor a box's grip shows: its sides say which way, and

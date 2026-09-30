@@ -1,7 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Crop, MousePointer2, ScanSquare } from "lucide-react";
+import {
+  Crop,
+  MousePointer2,
+  ScanSquare,
+  SquareDashedMousePointer,
+} from "lucide-react";
 
 import { ButtonGroup } from "../../../components/base/button-group/button-group";
 import { ToolToggle } from "../../../components/shared/tool-toggle/tool-toggle";
@@ -10,7 +15,7 @@ import { ANNOTATION_TOOLS } from "../tool-panels/tool-registry";
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 
 export type RecordingCanvasTool =
-  AnnotationKind | "canvas" | "crop" | "select" | null;
+  AnnotationKind | "canvas" | "crop" | "marquee" | "select" | null;
 
 export function RecordingCanvasTools({
   isEnabled,
@@ -45,6 +50,18 @@ export function RecordingCanvasTools({
           <MousePointer2 />
         </ToolToggle>
       </span>
+      <ToolToggle
+        isDisabled={!isArrowEnabled}
+        isSelected={tool === "marquee" && isArrowEnabled}
+        label="Marquee"
+        name="Choose annotations with a marquee"
+        onSelectedChange={(selected) => {
+          onToolChange(selected ? "marquee" : null);
+        }}
+        shortcut="G"
+      >
+        <SquareDashedMousePointer />
+      </ToolToggle>
       <ToolToggle
         isDisabled={!isFrameEnabled}
         isSelected={tool === "canvas" && isFrameEnabled}

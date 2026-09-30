@@ -15,7 +15,11 @@ import {
   screenshotWorkspaceItemOutput,
   ScreenshotOutputSettings,
 } from "../screenshot-output";
-import { EditorToolId, drawingToolKind } from "../tool-panels/tool-registry";
+import {
+  EditorToolId,
+  drawingToolKind,
+  isAnnotationTool,
+} from "../tool-panels/tool-registry";
 import { useCanvasTool } from "../tool-panels/use-canvas-tool";
 import { useToolPanelFollowsTool } from "../tool-panels/use-tool-panel-follows-tool";
 import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
@@ -198,11 +202,9 @@ export function ScreenshotSection({
   // A drawing tool is the other kind you are "in": Escape puts it down.
   const isAnnotating = drawingToolKind(tool) !== null;
   // Every one of them hit-tests the annotations on the layer; only a drawing
-  // tool makes a new one, and only it takes every press over the picture.
-  const annotationTool =
-    isAnnotating || tool === "select"
-      ? (drawingToolKind(tool) ?? "select")
-      : undefined;
+  // tool makes a new one, and only it takes every press over the picture. The
+  // marquee draws a band over the picture instead.
+  const annotationTool = isAnnotationTool(tool) ? tool : undefined;
   const hasSelectedAnnotation = annotations.hasSelection;
   const leaveCropTool = () => {
     setTool((current) => (current === "crop" ? null : current));
@@ -237,6 +239,10 @@ export function ScreenshotSection({
       isCropping || isAnnotating || hasSelectedAnnotation
         ? leaveModalTool
         : undefined,
+    onMarqueeTool: () => {
+      if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
+      setTool((current) => (current === "marquee" ? null : "marquee"));
+    },
     onNudge:
       tool === "select" && selectedItem && selectedOutput
         ? nudgeSelectedLayer
@@ -282,10 +288,10 @@ export function ScreenshotSection({
         onItemSelect={onSelectedItemChange}
         onOutputChange={onOutputChange}
         onRadiusChangeEnd={onRadiusChangeEnd}
-        onSelectedAnnotationChange={annotations.onSelectedChange}
+        onSelectedAnnotationsChange={annotations.onSelectedIdsChange}
         onZoomChange={reportZoom}
         screenshotOutput={screenshotOutput}
-        selectedAnnotationId={annotations.selectedId}
+        selectedAnnotationIds={[...annotations.selectedIds]}
         selectedItemId={selectedItemId}
         zoomRequest={zoomRequest}
       />

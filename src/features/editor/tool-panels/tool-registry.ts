@@ -22,7 +22,13 @@ import type { AnnotationKind } from "../../../components/shared/annotation-style
  * tool's name is its [`AnnotationKind`], so the tool and the shape it makes
  * are one word. */
 export type EditorToolId =
-  AnnotationKind | "crop" | "cursor" | "frame" | "keyboard" | "select";
+  | AnnotationKind
+  | "crop"
+  | "cursor"
+  | "frame"
+  | "keyboard"
+  | "marquee"
+  | "select";
 
 type ViewTool = {
   drawsOnLayer?: false;
@@ -109,6 +115,9 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     panel: "annotation",
     shortcut: "M",
   },
+  // The marquee chooses annotations rather than a layer, so it has no panel
+  // of its own: what it chooses brings up the annotation panel.
+  marquee: { resetsView: false, shortcut: "G" },
   redact: {
     drawsOnLayer: true,
     icon: RedactToolIcon,
@@ -162,12 +171,13 @@ export const ANNOTATION_TOOLS = editorToolIds().flatMap((id) =>
 export const drawingToolKind = (tool: string | null | undefined) =>
   ANNOTATION_TOOLS.find((item) => item.id === tool)?.id ?? null;
 
-/** Whether the annotation chrome answers to `tool`: a drawing tool, or the
- * select tool, which hit-tests the annotations without making any. */
+/** Whether the annotation chrome answers to `tool`: a drawing tool, the
+ * select tool, which hit-tests the annotations without making any, or the
+ * marquee, which also draws a band that chooses them. */
 export const isAnnotationTool = (
   tool: string | null | undefined,
-): tool is AnnotationKind | "select" =>
-  tool === "select" || drawingToolKind(tool) !== null;
+): tool is AnnotationKind | "marquee" | "select" =>
+  tool === "select" || tool === "marquee" || drawingToolKind(tool) !== null;
 
 /** The letter that takes up a drawing tool. */
 export const drawingToolShortcut = (id: AnnotationKind) =>

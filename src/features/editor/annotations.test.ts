@@ -5,11 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { validAnnotations } from "./annotation-documents";
 import { annotationLaneLabel } from "./annotation-kinds";
-import {
-  Annotation,
-  annotationDeleteTarget,
-  renumberedCounters,
-} from "./annotations";
+import { Annotation, renumberedCounters } from "./annotations";
 
 const arrow = (id: string): Annotation => ({
   aboveCamera: false,
@@ -35,27 +31,6 @@ const arrow = (id: string): Annotation => ({
     strength: 0,
     width: 8,
   },
-});
-
-describe("annotationDeleteTarget", () => {
-  const annotations = [arrow("a"), arrow("b")];
-
-  it("takes the annotation the hand is pointing at over the chosen one", () => {
-    expect(annotationDeleteTarget(annotations, "b", "a")).toBe("b");
-  });
-
-  it("falls back to the chosen annotation when nothing is hovered", () => {
-    expect(annotationDeleteTarget(annotations, null, "a")).toBe("a");
-  });
-
-  it("ignores a hover on an annotation this layer no longer carries", () => {
-    expect(annotationDeleteTarget(annotations, "gone", "a")).toBe("a");
-  });
-
-  it("has nothing to delete when neither names an annotation", () => {
-    expect(annotationDeleteTarget(annotations, null, null)).toBeNull();
-    expect(annotationDeleteTarget([], "a", "b")).toBeNull();
-  });
 });
 
 const counter = (id: string, value: number): Annotation => ({

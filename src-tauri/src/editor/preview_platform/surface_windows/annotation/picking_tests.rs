@@ -32,7 +32,7 @@ fn arrow() -> NativeAnnotationHandles {
     layer_id: 0,
     index: 0,
     kind: 0,
-    padding: 0,
+    flags: 0,
   }
 }
 

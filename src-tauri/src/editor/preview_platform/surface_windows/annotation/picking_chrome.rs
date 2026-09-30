@@ -7,7 +7,7 @@
 
 use super::picking::item_grips;
 use super::*;
-use crate::editor::annotations::gesture::{MODE_HIGHLIGHT, MODE_TEXT};
+use crate::editor::annotations::gesture::{MODE_HIGHLIGHT, MODE_MARQUEE, MODE_TEXT};
 
 /// The chosen arrow's three grips, in device pixels, for the chrome to draw.
 /// Empty when no arrow is chosen or the arrow tool has no say, which is what
@@ -28,13 +28,14 @@ pub(crate) fn selected_grips(state: &SurfaceState, scale: f64) -> Vec<[f32; 2]> 
     .collect()
 }
 
-/// Whether the arrow chrome is what is on screen. The arrow tool always
-/// draws its own chrome; the select tool only once it is holding an arrow, so
-/// an ordinary layer selection is untouched. The twin of
-/// `annotation_owns_chrome`.
+/// Whether the arrow chrome is what is on screen. A drawing tool and the
+/// marquee always draw their own chrome; the select tool only once it is
+/// holding an arrow or a group, so an ordinary layer selection is untouched.
+/// The twin of `annotation_owns_chrome`.
 pub(crate) fn owns_chrome(state: &SurfaceState) -> bool {
   drawing_kind(state.annotation.mode).is_some()
-    || (state.annotation.mode != MODE_NONE && state.annotation.selected >= 0)
+    || state.annotation.mode == MODE_MARQUEE
+    || (state.annotation.mode != MODE_NONE && (state.annotation.selected >= 0 || has_group(state)))
 }
 
 /// The cursor the arrow tool asks for over `point`, or `None` when the
@@ -61,12 +62,15 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<edit
   if handle.is_some() || shaft_at_point(state, point).is_some() {
     return Some(editor::CursorKind::Arrow);
   }
-  // Empty picture: the text tool takes typing and the highlight selects the
-  // text it covers, a drawing tool draws.
+  // Empty picture: the select tool takes hold of a group inside its box, the
+  // text tool takes typing and the highlight selects the text it covers, and
+  // a drawing tool or the marquee draws.
+  if group_layer_at_point(state, point).is_some() {
+    return Some(editor::CursorKind::Arrow);
+  }
   if matches!(state.annotation.mode, MODE_TEXT | MODE_HIGHLIGHT) {
     return Some(editor::CursorKind::IBeam);
   }
-  drawing_kind(state.annotation.mode)
-    .is_some()
+  (drawing_kind(state.annotation.mode).is_some() || state.annotation.mode == MODE_MARQUEE)
     .then_some(editor::CursorKind::Crosshair)
 }

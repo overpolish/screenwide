@@ -27,6 +27,8 @@ export type EditorToolKeys = {
   /** `]` and `[` move what is selected one step through the stacking, and
    * with Shift all the way to the front or the back. */
   onArrange?: (move: Arrangement) => void;
+  /** G: the marquee, on or off. */
+  onMarqueeTool?: () => void;
   onResizeCanvas?: () => void;
   onSelectTool?: () => void;
   onToggleBladeTool?: () => void;
@@ -64,6 +66,7 @@ const toolKeyAction = (id: EditorToolId, keys: EditorToolKeys) => {
     cursor: undefined,
     frame: keys.onResizeCanvas,
     keyboard: undefined,
+    marquee: keys.onMarqueeTool,
     select: keys.onSelectTool,
   }[id];
 };

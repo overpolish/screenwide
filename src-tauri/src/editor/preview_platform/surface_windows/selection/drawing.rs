@@ -33,6 +33,10 @@ impl SelectionOverlay {
     // The equal-gap bars a snapped counter lined up with, already device
     // pixel rectangles: a hairline across each gap with a tick at each end.
     annotation_gaps: &[[f32; 4]],
+    // The boxes round annotations chosen together, whole groups first, and
+    // the marquee band being drawn, all in device pixels.
+    annotation_group: &[[f32; 4]],
+    annotation_marquee: Option<[f32; 4]>,
     scale: f64,
     light: bool,
   ) -> Result<(), String> {
@@ -105,6 +109,15 @@ impl SelectionOverlay {
           radius_percent.unwrap_or(0.0),
           radius_percent.is_some(),
         );
+      }
+      for frame in annotation_group {
+        osc_gpu::add_group_frame(&mut vertices, view, logical_rect(*frame, scale), scale);
+      }
+      // The region selector's marching ants with no shade and no handles:
+      // the band is its own image, so nothing round it is dimmed.
+      if let Some(band) = annotation_marquee.filter(|rect| rect[2] > 0.0 || rect[3] > 0.0) {
+        let band = logical_rect(band, scale);
+        osc_gpu::add_crop_with_handles(&mut vertices, view, band, band, scale, 0.0, true, false);
       }
       let points = annotation_handles
         .iter()

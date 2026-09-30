@@ -49,7 +49,7 @@ impl PreviewManager {
     };
     if gesture.edit.hold(&mut item.output.annotations, now) {
       // A fresh stroke is never chosen, and nor is what it was taken for.
-      self.present_annotation_gesture(pane_index, None);
+      self.present_annotation_gesture(pane_index, &[]);
     }
     true
   }

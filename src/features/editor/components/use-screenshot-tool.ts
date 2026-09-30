@@ -3,7 +3,7 @@
 
 import { useRef } from "react";
 
-import { drawingToolKind } from "../tool-panels/tool-registry";
+import { isAnnotationTool } from "../tool-panels/tool-registry";
 
 import { ScreenshotTool } from "./screenshot-tools";
 import { toolDisagreesWithAnnotation } from "./use-tool-follows-annotation";
@@ -29,10 +29,10 @@ export function useScreenshotTool({
     next: ScreenshotTool | ((current: ScreenshotTool) => ScreenshotTool),
   ) => {
     const resolved = typeof next === "function" ? next(toolRef.current) : next;
-    // A tool that draws no shape lets the annotation in hand go, and so does
-    // a tool that draws a different one.
+    // A tool that picks no annotation up lets the annotation in hand go, and
+    // so does a tool that draws a different one.
     if (
-      (drawingToolKind(resolved) === null && resolved !== "select") ||
+      !isAnnotationTool(resolved) ||
       toolDisagreesWithAnnotation(resolved, selectedKind)
     )
       clearSelection();

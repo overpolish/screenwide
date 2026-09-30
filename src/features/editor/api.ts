@@ -275,7 +275,7 @@ export const layoutScreenshotPreviewSurface = ({
   output,
   panes,
   scale,
-  selectedAnnotationId,
+  selectedAnnotationIds = [],
   selection,
   selectionTargets,
   sessionId,
@@ -304,7 +304,8 @@ export const layoutScreenshotPreviewSurface = ({
    * "counter" also make a new annotation on empty picture. */
   annotationTool?: import("./annotation-defaults").AnnotationTool;
   fitWidth?: number;
-  selectedAnnotationId?: string | null;
+  /** Every annotation chosen on the selected layer. */
+  selectedAnnotationIds?: readonly string[];
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
@@ -319,7 +320,7 @@ export const layoutScreenshotPreviewSurface = ({
     output: normalizedScreenshotWorkspaceOutput(output),
     panes,
     scale,
-    selectedAnnotationId: selectedAnnotationId ?? null,
+    selectedAnnotationIds,
     selection: selection ?? null,
     selectionTargets: selectionTargets ?? null,
     sessionId,

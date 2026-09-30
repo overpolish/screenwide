@@ -7,7 +7,9 @@
 use super::*;
 use crate::editor::annotations::edit::AnnotationEdit;
 use crate::editor::annotations::gesture::{annotation_mode, drawing_kind, AnnotationGestureTarget};
-use crate::editor::annotations::handles::{annotation_handles, annotation_snap, source_point};
+use crate::editor::annotations::handles::{
+  annotation_handles, annotation_snap, source_point, HANDLE_FLAG_GROUPED,
+};
 use crate::editor::annotations::snap::{
   detect_anchors, request_anchors, source_per_point, source_per_size, threshold_source_px,
   AnchorBoxes, AnchorCache, SnapField, SnapModifiers, SnapRequest, SnapResult,
@@ -24,7 +26,9 @@ use tauri::Emitter;
 pub(super) struct AnnotationState {
   pane: Option<u32>,
   mode: u32,
-  selected: Option<String>,
+  /// Every annotation chosen, in the order it was; one on its own is the one
+  /// in hand, whose grips the chrome draws.
+  selected: Vec<String>,
   defaults: Option<AnnotationStyle>,
   /// Whether the next arrow animates and where the next counter's tail points.
   /// Both are the annotation's own rather than part of its dress, so they
@@ -32,6 +36,10 @@ pub(super) struct AnnotationState {
   animated: Option<bool>,
   counter_angle: Option<f64>,
   gesture: Option<Gesture>,
+  /// The chosen group being carried by a press on the picture.
+  group: Option<group::GroupDrag>,
+  /// A marquee band being drawn over the picture.
+  band: Option<choice::Band>,
   /// The text box being typed into, which owns the pane's annotations the way
   /// a gesture does until the typing ends.
   text: Option<TextSession>,
@@ -59,7 +67,7 @@ pub async fn set_recording_preview_annotations(
   session_id: u64,
   clips: Vec<RecordingAnnotationClip>,
   pane_index: Option<u32>,
-  selected_id: Option<String>,
+  selected_ids: Vec<String>,
   defaults: Option<AnnotationStyle>,
   animated: Option<bool>,
   counter_angle: Option<f64>,
@@ -71,7 +79,7 @@ pub async fn set_recording_preview_annotations(
     .lock()
     .map_err(|_| "The recording preview is unavailable")?;
   manager.require_session(session_id)?;
-  if manager.annotation.gesture.is_some() {
+  if manager.annotation.gesture.is_some() || manager.annotation.group.is_some() {
     return Ok(());
   }
   let sources = manager
@@ -93,7 +101,7 @@ pub async fn set_recording_preview_annotations(
   *current = clips;
   drop(current);
   manager.annotation.pane = pane_index.filter(|pane| *pane <= 1);
-  manager.annotation.selected = selected_id;
+  manager.annotation.selected = selected_ids;
   manager.annotation.defaults = defaults;
   manager.annotation.animated = animated;
   manager.annotation.counter_angle = counter_angle;
@@ -204,6 +212,12 @@ mod gesture;
 
 #[path = "annotation_commit.rs"]
 mod commit;
+
+#[path = "annotation_group.rs"]
+mod group;
+
+#[path = "annotation_choice.rs"]
+mod choice;
 
 #[path = "annotation_text.rs"]
 mod text;
