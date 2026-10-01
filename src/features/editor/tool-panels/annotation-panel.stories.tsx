@@ -24,6 +24,7 @@ const dress = {
   shadow: false,
   softness: 0,
   strength: 0,
+  tint: false,
 } as const;
 
 /** The tool panel over a chosen annotation: its controls follow the kind of
@@ -171,6 +172,7 @@ export const RedactionBlur: Story = {
           shadow: false,
           softness: 0,
           strength: 3,
+          tint: false,
           width: 12,
         },
       },

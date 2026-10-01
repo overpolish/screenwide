@@ -125,7 +125,7 @@ impl NativeAnnotationData {
         &mut self.points,
         bands,
         *seed,
-        annotation.style.hand_drawn,
+        &annotation.style,
       );
     }
     if let super::AnnotationShape::Spotlight { .. } = &annotation.shape {

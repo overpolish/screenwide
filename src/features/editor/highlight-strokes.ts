@@ -45,17 +45,14 @@ export const highlightStrokes = (
   );
 };
 
-/** The tone of a highlight laid by hand over a box: its surface and ink the
- * same, which tells the compositor to tint what the box covers rather than
- * recolour it. The twin of `HighlightTone::UNREAD`. */
-const TINTED = { ink: 0.5, surface: 0.5 };
-
 /**
  * A highlight's shape once the panel dresses it in `style`, where that lays
  * it again: switched to being laid by hand, it becomes a box of strokes over
- * the space between its ends, tinted, with a marker as tall as its first line.
- * Null where the shape stays as it is. Switched back to fitting text, the box
- * stays until an end is moved, which selects again from the picture.
+ * the space between its ends, with a marker as tall as its first line. It
+ * keeps the tone its text was read with until an end is moved, which reads
+ * the page under the box. Null where the shape stays as it is. Switched back
+ * to fitting text, the box stays until an end is moved, which selects again
+ * from the picture.
  */
 export const relaidHighlight = (
   annotation: Annotation,
@@ -70,6 +67,5 @@ export const relaidHighlight = (
   return {
     ...shape,
     bands: highlightStrokes(shape.start, shape.end, tall),
-    tone: TINTED,
   };
 };

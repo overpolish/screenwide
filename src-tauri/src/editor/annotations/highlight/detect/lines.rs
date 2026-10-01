@@ -110,33 +110,88 @@ pub(super) struct Columns {
 impl Columns {
   /// A column is solid where most of the line's rows are: a picture or a pane
   /// fills them all, where an underline or a rule crosses only a row or two.
+  /// A solid column ends the line only where it runs on unbroken past it,
+  /// most of a line's height: through the line, above and below, as a rule or
+  /// a pane's edge does however thin; or out one side across a stretch at
+  /// least a line's height wide, as a pane or a picture beside the text does.
+  /// A narrower run out one side is a cursor cell or a stem resting on the
+  /// line, and one that stays about the line's own height is a fill the line
+  /// is printed on - a label, a cell's colour. Their columns carry the line
+  /// like ink, so it runs across them and on to the text beyond.
   pub(super) fn read(mask: &Mask, line: Run, along: Run) -> Self {
     let mut glyph = vec![false; along.len()];
-    let mut solid_rows = vec![0_usize; along.len()];
+    let mut inside = vec![0_usize; along.len()];
     for y in line.from..line.to {
       for (index, cell) in mask.row(y, along).enumerate() {
         match cell {
           Cell::Glyph => glyph[index] = true,
-          Cell::Solid => solid_rows[index] += 1,
+          Cell::Solid => inside[index] += 1,
           Cell::Page => {}
         }
       }
     }
-    Self {
-      from: along.from,
-      cells: glyph
-        .into_iter()
-        .zip(solid_rows)
-        .map(|(glyph, solid_rows)| {
-          if solid_rows * 2 >= line.len().max(1) {
-            Cell::Solid
-          } else if glyph {
+    let height = line.len().max(1);
+    // How far each column stays solid going out from the line, row by row,
+    // up to a line's height: what lies beyond a gap - the next line's tall
+    // stems under a label - is not the same run.
+    let unbroken = |rows: &mut dyn Iterator<Item = usize>| {
+      let mut solid = vec![0_usize; along.len()];
+      let mut open = vec![true; along.len()];
+      for y in rows {
+        for (index, cell) in mask.row(y, along).enumerate() {
+          if open[index] && cell == Cell::Solid {
+            solid[index] += 1;
+          } else {
+            open[index] = false;
+          }
+        }
+      }
+      solid
+    };
+    let before = unbroken(&mut (line.from.saturating_sub(height)..line.from).rev());
+    let after = unbroken(&mut (line.to..line.to + height));
+    // Against a whole line's height, however much of it the picture's edge
+    // leaves: a few rows of something above a line at the top of a picture -
+    // a cursor over a label - are not a pane running on past it.
+    let runs_on = |solid: usize| solid * 4 >= height * 3;
+    let solid_inside = |index: usize| inside[index] * 2 >= height;
+    let through = |index: usize| runs_on(before[index]) && runs_on(after[index]);
+    let one_side = |index: usize| runs_on(before[index]) || runs_on(after[index]);
+    // Each stretch of columns solid inside the line and running on out one
+    // side ends the line only if it is a line's height wide.
+    let mut wide = vec![false; along.len()];
+    let mut index = 0;
+    while index < along.len() {
+      if !(solid_inside(index) && one_side(index)) {
+        index += 1;
+        continue;
+      }
+      let start = index;
+      while index < along.len() && solid_inside(index) && one_side(index) {
+        index += 1;
+      }
+      if index - start >= height {
+        wide[start..index].fill(true);
+      }
+    }
+    let cells = (0..along.len())
+      .map(|index| {
+        if !solid_inside(index) {
+          if glyph[index] {
             Cell::Glyph
           } else {
             Cell::Page
           }
-        })
-        .collect(),
+        } else if through(index) || wide[index] {
+          Cell::Solid
+        } else {
+          Cell::Glyph
+        }
+      })
+      .collect();
+    Self {
+      from: along.from,
+      cells,
     }
   }
 

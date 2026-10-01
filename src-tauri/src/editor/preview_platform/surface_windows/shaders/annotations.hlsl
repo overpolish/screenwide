@@ -405,12 +405,12 @@ float4 annotation_counter_layer(
 }
 
 #include "annotation_text.hlsl"
-#include "annotation_highlight.hlsl"
 #include "annotation_shape.hlsl"
 #include "annotation_draw.hlsl"
 #include "annotation_spotlight.hlsl"
 #include "annotation_cursor.hlsl"
 #include "annotation_magnify.hlsl"
+#include "annotation_highlight.hlsl"
 
 /// A hovered redaction's halo. The box itself was applied to the source and
 /// is not drawn here, so this is the only thing that finds an erased box on
@@ -535,11 +535,12 @@ bool annotation_acts_on_picture(uint kind) {
 /// picture, in document order: the spotlights share one shade, laid where
 /// the topmost of them sits among the magnifiers, and a magnifier shows the
 /// picture and the cursor enlarged. Then every mark, in document order, the
-/// first at the bottom, none of them shaded; a highlight recolours whatever
-/// is under it by then. Last the cursor, over every mark, but treated as
-/// lying on the picture: the spotlights' shade darkens it and their blur
-/// softens it, and a loupe hides it. The twin of the Metal
-/// `composite_annotation_layers`.
+/// first at the bottom, none of them shaded. A highlight recolours the pixel
+/// as every mark under it drew it but the highlights, so overlapping
+/// highlights merge rather than one recolouring the other into its inverse.
+/// Last the cursor, over every mark, but treated as lying on the picture: the
+/// spotlights' shade darkens it and their blur softens it, and a loupe hides
+/// it. The twin of the Metal `composite_annotation_layers`.
 ///
 /// The range is how the camera ordering is expressed: Rust sorts the
 /// annotations that sit under the camera ahead of those above it, keeping the
@@ -560,14 +561,25 @@ float4 composite_annotation_layers(
     }
     rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas, cursor);
   }
+  float4 bare = rgba;
+  bool highlighted = false;
   for (uint mark = first; mark < last; ++mark) {
     PreviewArrow annotation = annotation_arrows[mark];
     if (annotation_acts_on_picture(annotation.kind)) continue;
     // FXC evaluates both sides of `?:`, so the kinds branch.
-    if (annotation.kind == annotation_highlight_kind)
-      rgba = annotation_highlight_layer(rgba, rgba, annotation, canvas_point, feather);
-    else
+    if (annotation.kind == annotation_highlight_kind) {
+      float4 under = rgba;
+      rgba = annotation_highlight_layer(rgba, bare, annotation, canvas_point, feather);
+      highlighted = highlighted || any(rgba != under);
+    } else {
       rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas, cursor);
+      // Until a highlight reaches this pixel, `bare` is what is drawn; after,
+      // each mark is drawn on it as well.
+      if (highlighted)
+        bare = annotation_layer(bare, annotation, canvas_point, feather, number_atlas, cursor);
+      else
+        bare = rgba;
+    }
   }
   if (!cursor) return rgba;
   float4 pointer = annotation_cursor_seen(canvas_point, max(2.0 * feather, 1e-4));

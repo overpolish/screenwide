@@ -20,6 +20,17 @@
 /// Annotations arrive in this display's layer pixels, so the canvas placement is the
 /// identity and `source_dimensions` is one pixel per pixel.
 #define SCREENWIDE_ANNOTATE_SHADER_SOURCE @R"METAL(
+/// The desktop a highlight recolours, read texel by texel to tell each
+/// glyph's full ink. It is laid over the whole target.
+struct AnnotateUnderlayTap {
+  AnnotationMagnifyPlacement at;
+  texture2d<float, access::sample> pixels;
+};
+
+static float4 annotation_magnify_fetch(AnnotateUnderlayTap tap, int2 texel) {
+  return tap.pixels.read(uint2(texel));
+}
+
 kernel void annotate_overlay(
     constant CanvasUniforms &canvas [[buffer(0)]],
     const device AnnotationUniforms *annotations [[buffer(12)]],
@@ -52,8 +63,11 @@ kernel void annotate_overlay(
   float lift = 1.0 - annotation_spotlight_dim *
       annotation_spotlight_cover(annotations, count, above_camera, point, 1.0, false);
   value = float4(value.rgb * lift, 1.0 - (1.0 - value.a) * lift);
+  float2 texels = float2(underlay.get_width(), underlay.get_height());
+  AnnotateUnderlayTap tap = {{float4(0.0, 0.0, size), float4(float2(0.0), texels - 1.0), texels},
+                             underlay};
   value = composite_highlights(value, float4(base.rgb, 1.0), annotations, count, above_camera,
-                               point, 1.0, points, samples);
+                               point, 1.0, points, samples, tap);
   value = composite_annotations(value, annotations, count, above_camera, point, canvas,
                                 float2(1), 1.0, samples, numbers, atlas, points);
   target.write(value, gid);

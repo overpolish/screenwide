@@ -29,6 +29,7 @@ const arrow = (id: string): Annotation => ({
     shadow: false,
     softness: 0,
     strength: 0,
+    tint: false,
     width: 8,
   },
 });
@@ -50,6 +51,7 @@ const counter = (id: string, value: number): Annotation => ({
     shadow: false,
     softness: 0,
     strength: 0,
+    tint: false,
     width: 56,
   },
 });
@@ -140,6 +142,7 @@ describe("validAnnotations", () => {
         shadow: false,
         softness: 0,
         strength: 0,
+        tint: false,
         width: 28,
       },
     });
@@ -226,6 +229,7 @@ describe("validAnnotations", () => {
           redaction: "erase",
           softness: 0,
           strength: 0,
+          tint: false,
           width: 56,
         },
       },

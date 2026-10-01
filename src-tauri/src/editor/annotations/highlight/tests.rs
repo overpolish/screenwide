@@ -209,7 +209,7 @@ fn drawn_over_two_lines(from: AnnotationPoint, to: AnnotationPoint, manual: bool
 }
 
 #[test]
-fn a_box_laid_by_hand_covers_what_it_spans_and_tints_it() {
+fn a_box_laid_by_hand_covers_what_it_spans_and_reads_the_page_under_it() {
   let annotation = drawn_over_two_lines(point(30.0, 10.0), point(150.0, 90.0), true);
   // The box as dragged, not the lines under it: strokes from its top to its
   // bottom, each as wide as the box.
@@ -220,11 +220,34 @@ fn a_box_laid_by_hand_covers_what_it_spans_and_tints_it() {
   assert!(strokes
     .iter()
     .all(|band| (band.left, band.right) == (30.0, 150.0)));
-  // The page under it reads as text, but a box tints whatever it covers.
+  // Dark bars on a light page, read so the box can recolour them.
   let AnnotationShape::Highlight { tone, .. } = annotation.shape else {
     unreachable!()
   };
-  assert_eq!(tone, HighlightTone::UNREAD);
+  assert!(tone.surface > 0.9 && tone.ink < 0.2, "{tone:?}");
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[test]
+fn a_tinting_highlight_hands_the_compositor_the_unread_tone_and_keeps_its_own() {
+  let mut annotation = drawn_over_two_lines(point(30.0, 20.0), point(150.0, 60.0), false);
+  let AnnotationShape::Highlight { tone: read, .. } = annotation.shape.clone() else {
+    unreachable!()
+  };
+  assert_ne!(read, HighlightTone::UNREAD);
+  let recolours = annotation.shape.draw_points(&annotation.style)[2];
+  assert_eq!(recolours, [read.surface as f32, read.ink as f32]);
+  annotation.style.tint = true;
+  assert_eq!(
+    annotation.shape.draw_points(&annotation.style)[2],
+    [0.5, 0.5]
+  );
+  // Switched back, it recolours from the page it read, without reading again.
+  annotation.style.tint = false;
+  assert_eq!(
+    annotation.shape.draw_points(&annotation.style)[2],
+    recolours
+  );
 }
 
 #[test]

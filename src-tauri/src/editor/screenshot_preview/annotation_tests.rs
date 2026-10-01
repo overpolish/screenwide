@@ -138,6 +138,7 @@ fn a_fresh_arrow_wears_the_style_it_is_given() {
     head: crate::editor::annotations::AnnotationHead::Both,
     hand_drawn: false,
     manual: false,
+    tint: false,
     radius: 0.0,
     redaction: Default::default(),
     shadow: false,

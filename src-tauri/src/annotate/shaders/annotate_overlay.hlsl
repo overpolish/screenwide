@@ -41,16 +41,19 @@ Texture2D<float4> annotate_underlay : register(t10);
 /// The same softened for the spotlights' blur, stretched over the target.
 Texture2D<float4> annotate_softened : register(t11);
 
-// The overlay offers no magnifier, so there is no picture for one to read.
+// The overlay offers no magnifier, but its highlights read the picture to
+// find each glyph's full ink: the underlay, laid over the whole target.
 AnnotationMagnifyPlacement annotation_magnify_placement() {
+  uint width, height;
+  annotate_underlay.GetDimensions(width, height);
   AnnotationMagnifyPlacement at;
-  at.image = 0.0;
-  at.texels = 0.0;
-  at.size = 0.0;
+  at.size = float2(width, height);
+  at.image = float4(0.0, 0.0, annotation_target);
+  at.texels = float4(0.0, 0.0, at.size - 1.0);
   return at;
 }
 float4 annotation_magnify_fetch(int2 texel) {
-  return 0.0;
+  return annotate_underlay.Load(int3(texel, 0));
 }
 // Nor a cursor: the live desktop's own pointer is not drawn into the overlay.
 float4 annotation_cursor_sample(float2 probe) {

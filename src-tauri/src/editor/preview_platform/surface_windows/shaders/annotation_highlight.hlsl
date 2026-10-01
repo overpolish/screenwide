@@ -4,7 +4,8 @@
 // The highlight, the twin of
 // `gpu_compositor_macos_shader_source_annotation_highlight.h`: every band of
 // every highlight in a run, recoloured rather than painted over. Included by
-// `annotations.hlsl`, after the pieces every kind shares.
+// `annotations.hlsl` after the magnifier, whose picture functions it reads
+// each glyph's full ink through.
 //
 // A highlight reads the pixel under it - `base` - and maps the page to the
 // highlight's colour and the ink printed on it to a colour that reads on that,
@@ -18,6 +19,7 @@
 
 static const uint annotation_highlight_kind = 4u;
 static const uint annotation_highlight_hand_drawn = 1u << 6;
+static const uint annotation_highlight_laid_by_hand = 1u << 8;
 
 uint highlight_hash(uint value) {
   value ^= value >> 16;
@@ -89,32 +91,172 @@ float highlight_stroke(float2 probe, float2 low, float2 high, float from, float 
   return length(max(outside, 0.0)) + min(max(outside.x, outside.y), 0.0) - radius;
 }
 
-/// `base` recoloured under a highlight in `colour`: the page becomes the
-/// highlight's colour and its ink a colour that reads on it, keeping its hue.
-float3 highlight_recolour(float3 base, float3 colour, float2 tone) {
+/// Encoded channels in linear light.
+float3 highlight_light(float3 encoded) {
+  float3 channel = saturate(encoded);
+  return lerp(pow((channel + 0.055) / 1.055, 2.4), channel / 12.92, step(channel, 0.04045));
+}
+
+/// Linear light as encoded channels.
+float3 highlight_encode(float3 light) {
+  float3 channel = saturate(light);
+  return lerp(1.055 * pow(channel, 1.0 / 2.4) - 0.055, channel * 12.92, step(channel, 0.0031308));
+}
+
+/// How far the strongest pixel around `canvas_point` stands out from `page`,
+/// in linear light and in the direction ink lies, `toward`: the picture
+/// `annotation_magnify_fetch` reads, five by five texels spread over a reach
+/// that grows with the line's height, `line_height` canvas pixels. Negative
+/// where there is no picture. The twin of the Metal `highlight_peak`.
+float highlight_peak(float2 canvas_point, float line_height, float page, float toward) {
+  AnnotationMagnifyPlacement at = annotation_magnify_placement();
+  if (any(at.image.zw <= 0.0) || any(at.size < 1.0)) return -1.0;
   const float3 weights = float3(0.2126, 0.7152, 0.0722);
-  float luminance = dot(base, weights);
+  float2 per = at.size / at.image.zw;
+  float2 centre = (canvas_point - at.image.xy) * per;
+  float spread = clamp(line_height * per.y * 0.12, 2.0, 8.0) * 0.5;
+  float peak = 0.0;
+  for (int y = -2; y <= 2; ++y)
+    for (int x = -2; x <= 2; ++x) {
+      float2 probe = floor(centre + float2(x, y) * spread);
+      int2 texel = int2(clamp(probe, at.texels.xy, at.texels.zw));
+      float3 lit = highlight_light(annotation_magnify_fetch(texel).rgb);
+      peak = max(peak, toward * (dot(lit, weights) - page));
+    }
+  return peak;
+}
+
+/// The picture at canvas point `q`, encoded; past what the canvas shows, the
+/// edge the crop left carries on.
+float3 highlight_fetch(float2 q) {
+  AnnotationMagnifyPlacement at = annotation_magnify_placement();
+  float2 per = at.size / at.image.zw;
+  int2 texel = int2(clamp(floor((q - at.image.xy) * per), at.texels.xy, at.texels.zw));
+  return annotation_magnify_fetch(texel).rgb;
+}
+
+/// Whether `rgb` stands out from `page` towards the ink by at least half of
+/// `own`, eased in from three tenths of it.
+float highlight_inked(float3 rgb, float page, float toward, float own) {
+  float stands = toward * (dot(highlight_light(rgb), float3(0.2126, 0.7152, 0.0722)) - page);
+  return smoothstep(0.3, 0.6, stands / own);
+}
+
+/// How surely `canvas_point` lies on a fill rather than on type, or on the
+/// type printed on one. Where the band's margins above and below, `rows`
+/// past its line, are both one fill, the column is decided whole: what lies
+/// between them is tinted, and past them what is the fill's own colour.
+/// Otherwise ink in one margin; the pixel itself standing out, or ink to its
+/// left and right; and the fill's colour most of what lies around it. The
+/// twin of the Metal `highlight_fill`, which says why each.
+float highlight_fill(float2 canvas_point, float2 rows, float page, float toward, float stands,
+                     float faint) {
+  AnnotationMagnifyPlacement at = annotation_magnify_placement();
+  float height = rows.y - rows.x;
+  if (any(at.image.zw <= 0.0) || any(at.size < 1.0) || height <= 0.0) return 0.0;
+  float own = max(stands, faint);
+  float2 span = rows.x + height * float2(0.06, 0.94);
+  float2 margin = float2(1.0, 1.0);
+  float2 centre = float2(0.0, 0.0), beside = float2(0.0, 0.0);
+  float3 above = float3(0.0, 0.0, 0.0), below = float3(0.0, 0.0, 0.0);
+  for (int side = -1; side <= 1; ++side) {
+    float x = canvas_point.x + (float)side * height * 0.1;
+    float3 top = highlight_fetch(float2(x, span.x));
+    float3 bottom = highlight_fetch(float2(x, span.y));
+    margin *= float2(highlight_inked(top, page, toward, own),
+                     highlight_inked(bottom, page, toward, own));
+    float2 inked = float2(highlight_inked(top, page, toward, faint),
+                          highlight_inked(bottom, page, toward, faint));
+    if (side == 0) {
+      centre = inked;
+      above = top;
+      below = bottom;
+    } else {
+      beside = max(beside, inked);
+    }
+  }
+  float both = min(centre.x * beside.x, centre.y * beside.y);
+  if (both > 0.0 && all(abs(above - below) < 0.12)) {
+    if (canvas_point.y >= span.x && canvas_point.y <= span.y) return both;
+    return all(abs(highlight_fetch(canvas_point) - above) < 0.12) ? both : 0.0;
+  }
+  float reaches = max(margin.x, margin.y);
+  if (reaches <= 0.0) return 0.0;
+  float enclosed = 1.0;
+  if (stands <= faint) {
+    float2 sides = float2(0.0, 0.0);
+    for (int tenth = 1; tenth <= 4; ++tenth) {
+      float along = height * 0.1 * (float)tenth;
+      sides = max(sides, float2(
+          highlight_inked(highlight_fetch(canvas_point - float2(along, 0.0)), page, toward, own),
+          highlight_inked(highlight_fetch(canvas_point + float2(along, 0.0)), page, toward, own)));
+    }
+    enclosed = sides.x * sides.y;
+    if (enclosed <= 0.0) return 0.0;
+  }
+  float3 fill_colour = margin.x >= margin.y ? above : below;
+  float alike = 0.0;
+  for (int ring = 1; ring <= 2; ++ring)
+    for (int turn = 0; turn < 16; ++turn) {
+      float angle = (float)turn * (3.14159265 / 8.0);
+      float2 probe = canvas_point + float2(cos(angle), sin(angle)) * height * 0.25 * (float)ring;
+      alike += all(abs(highlight_fetch(probe) - fill_colour) < 0.12) ? 1.0 : 0.0;
+    }
+  return reaches * enclosed * smoothstep(0.3, 0.42, alike / 32.0);
+}
+
+/// `base` under a felt marker in `colour`. The twin of the Metal
+/// `highlight_tint`, which says how.
+float3 highlight_tint(float3 base, float3 colour) {
+  float dark = 1.0 - saturate((dot(base, float3(0.2126, 0.7152, 0.0722)) - 0.2) / 0.4);
+  float3 laid = base * lerp(float3(1.0, 1.0, 1.0), colour, 0.7);
+  float3 lifted = base + colour * (1.0 - base) * 0.25;
+  return lerp(laid, lifted, dark);
+}
+
+/// `base` recoloured under a highlight in `colour`: the page becomes the
+/// highlight's colour and its ink a colour that reads on it, keeping its hue;
+/// where `fills`, a fill the line between `rows` is drawn on is tinted
+/// instead. The twin of `highlight_recolour` in
+/// `gpu_compositor_macos_shader_source_annotation_highlight_ink.h`, which says
+/// why the ink is measured and laid in linear light, against each glyph's own
+/// strongest pixel.
+float3 highlight_recolour(float3 base, float3 colour, float2 tone, float2 canvas_point,
+                          float2 rows, bool fills) {
+  const float3 weights = float3(0.2126, 0.7152, 0.0722);
   float span = tone.y - tone.x;
   // No page was read under it - a photo, a gradient, a box laid by hand - so
-  // there is nothing to map from, and the highlight tints what is there. Over
-  // light it multiplies, well short of fully, as a felt marker's ink does on
-  // paper. Multiplied, dark would stay dark and the highlight would vanish, so
-  // dark is lifted a quarter of the way to the colour instead. Each pixel is weighed by its own
-  // brightness, so a box over mixed content needs no reading of it; dark text
-  // on a light page is lifted with the rest of the dark, to a deep shade of
-  // the colour that still reads against it.
-  if (abs(span) < 0.01) {
-    float dark = 1.0 - saturate((luminance - 0.2) / 0.4);
-    float3 laid = base * lerp(float3(1.0, 1.0, 1.0), colour, 0.7);
-    float3 lifted = base + colour * (1.0 - base) * 0.25;
-    return lerp(laid, lifted, dark);
-  }
+  // there is nothing to map from, and the highlight tints what is there.
+  if (abs(span) < 0.01) return highlight_tint(base, colour);
   if (abs(span) < 0.2) span = span < 0.0 ? -0.2 : 0.2;
-  float ink_share = smoothstep(0.04, 0.55, saturate((luminance - tone.x) / span));
+  // The page, the ink the selection read and a quarter of the way between
+  // them by eye, in linear light.
+  float3 levels = highlight_light(float3(tone.x, tone.x + span, tone.x + span * 0.25));
+  float page = levels.x;
+  float toward = span > 0.0 ? 1.0 : -1.0;
+  float faint = toward * (levels.z - page);
+  float3 lit = highlight_light(base);
+  float stands = toward * (dot(lit, weights) - page);
+  // What counts as the glyph's full ink: its own strongest pixel, but never
+  // less than the quarter mark. Without a picture, the ink the selection read.
+  float peak = highlight_peak(canvas_point, rows.y - rows.x, page, toward);
+  float full = peak < 0.0 ? toward * (levels.y - page) : max(peak, faint);
+  // How much of the pixel the ink covers, in a straight line from the page to
+  // the ink, so an edge keeps the share it has in the capture. The floor keeps
+  // faint page texture off.
+  float cover = saturate(stands / full);
+  float share = saturate((cover - 0.04) / 0.96);
+  // The ink taken back out of the page it was mixed with, the page read as a
+  // grey of its brightness, so an edge is not inked in the page's colour.
+  float3 text = highlight_encode((lit - page * (1.0 - cover)) / max(cover, 0.1));
+  float text_luminance = dot(text, weights);
   float3 ink = dot(colour, weights) > 0.5
-      ? base * min(1.0, 0.2 / max(luminance, 1e-3))
-      : 1.0 - (1.0 - base) * min(1.0, 0.15 / max(1.0 - luminance, 1e-3));
-  return lerp(colour, saturate(ink), ink_share);
+      ? text * min(1.0, 0.2 / max(text_luminance, 1e-3))
+      : 1.0 - (1.0 - text) * min(1.0, 0.15 / max(1.0 - text_luminance, 1e-3));
+  float3 recoloured = highlight_encode(lerp(highlight_light(colour), highlight_light(ink), share));
+  if (!fills) return recoloured;
+  float fill = highlight_fill(canvas_point, rows, page, toward, stands, faint);
+  return lerp(recoloured, highlight_tint(base, colour), fill);
 }
 
 /// Where one line `span` long is drawn from and to at the reveal `low` to
@@ -147,10 +289,10 @@ float highlight_line(float2 probe, float2 low, float2 high, float2 window, float
                        lerp(tip, square, settled.x), lerp(tip, square, settled.y));
 }
 
-/// One highlight over `rgba`, recolouring `base`. The editor hands the same
-/// pixel as both, so a highlight recolours whatever the document drew under
-/// it; the live overlay's `rgba` is transparent, and `base` is the desktop
-/// captured under it.
+/// One highlight over `rgba`, recolouring `base`. The editor hands the pixel
+/// as every mark but the highlights drew it, so a highlight recolours what
+/// lies under it and overlapping highlights merge; the live overlay's `rgba`
+/// is transparent, and `base` is the desktop captured under it.
 float4 annotation_highlight_layer(float4 rgba, float4 base, PreviewArrow annotation,
                                   float2 canvas_point, float feather) {
   float4 colour = float4(annotation.red, annotation.green, annotation.blue, annotation.alpha);
@@ -183,6 +325,9 @@ float4 annotation_highlight_layer(float4 rgba, float4 base, PreviewArrow annotat
     closed = annotation_samples[annotation.sample_first + taps - 1u];
   }
   float opacity = (opened.opacity + closed.opacity) * 0.5;
+  // The top and bottom of the line `canvas_point` lies on, or of the first
+  // one near.
+  float2 rows = float2(0.0, 0.0);
   float coverage = 0.0, nearest = 1e20;
   for (uint row = 0u; row < pairs; ++row) {
     uint at = annotation.data_offset + row * 2u;
@@ -201,6 +346,8 @@ float4 annotation_highlight_layer(float4 rgba, float4 base, PreviewArrow annotat
     if (canvas_point.y < low.y - reach || canvas_point.y > high.y + reach ||
         canvas_point.x < low.x + from - reach || canvas_point.x > low.x + to + reach)
       continue;
+    if (rows.y <= rows.x || (canvas_point.y >= low.y && canvas_point.y <= high.y))
+      rows = float2(low.y, high.y);
     // Whether its top and its bottom lie under a neighbouring band, as the
     // strokes laid over a box do.
     float2 joined = float2(
@@ -248,7 +395,11 @@ float4 annotation_highlight_layer(float4 rgba, float4 base, PreviewArrow annotat
   }
   if (coverage <= 0.0) return rgba;
   float alpha = coverage * colour.a;
-  rgba.rgb = highlight_recolour(base.rgb, colour.rgb, tone) * alpha + rgba.rgb * (1.0 - alpha);
+  // A box's bands are strokes a marker tall, not lines with fills drawn under
+  // them, so it recolours every pixel.
+  bool fills = (annotation.flags & annotation_highlight_laid_by_hand) == 0u;
+  rgba.rgb = highlight_recolour(base.rgb, colour.rgb, tone, canvas_point, rows, fills) * alpha +
+             rgba.rgb * (1.0 - alpha);
   rgba.a = alpha + rgba.a * (1.0 - alpha);
   return rgba;
 }

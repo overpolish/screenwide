@@ -47,6 +47,7 @@ pub(crate) fn default_redact_style() -> AnnotationStyle {
     head: AnnotationHead::None,
     hand_drawn: false,
     manual: false,
+    tint: false,
     radius: 0.0,
     redaction: AnnotationRedaction::Erase,
     shadow: false,

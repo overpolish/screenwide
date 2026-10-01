@@ -352,10 +352,11 @@ fn an_arrow_is_drawn_over_a_highlight_rather_than_recoloured_by_it() {
     None,
   );
   arrow.style.color = "#0000ff".to_owned();
-  // The arrow comes first in the list, and still lies on top.
+  // Document order, the first at the bottom: an arrow drawn after the
+  // highlight lies on it, however strongly it would read as ink.
   let image = composed(
     &source,
-    vec![arrow, highlight(HighlightTone::default(), false)],
+    vec![highlight(HighlightTone::default(), false), arrow],
   );
   assert!(
     near(at(&image, 160, 50), [0, 0, 255], 4),
@@ -487,3 +488,6 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
   assert!(luminance(rgb(120, 140)) < 0.15, "{:?}", rgb(120, 140));
   std::fs::remove_dir_all(directory).unwrap();
 }
+
+#[path = "platform_macos_highlight_ink_tests.rs"]
+mod ink;

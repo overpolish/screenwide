@@ -70,6 +70,9 @@ pub struct AnnotateSettings {
   /// Whether a fresh highlight is laid by hand over the box its drag spans
   /// rather than fitted to the text under it.
   pub highlight_manual: bool,
+  /// Whether a fresh highlight tints what it covers rather than recolouring
+  /// the page under it.
+  pub highlight_tint: bool,
   /// Whether a fresh shape is drawn as a pen stroke by hand rather than as a
   /// clean outline. Its own choice rather than the highlight's: a marker and
   /// an outline are drawn by hand for different reasons.
@@ -101,6 +104,7 @@ impl Default for AnnotateSettings {
       default_head: AnnotationHead::default(),
       highlight_hand_drawn: false,
       highlight_manual: false,
+      highlight_tint: false,
       shape_hand_drawn: false,
       shape_radius: 0.0,
       spotlight_blur: false,

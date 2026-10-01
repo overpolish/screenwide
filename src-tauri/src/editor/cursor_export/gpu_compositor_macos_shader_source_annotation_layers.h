@@ -18,7 +18,9 @@ static bool annotation_acts_on_picture(uint kind) {
 /// the spotlights share one shade, laid where the topmost of them sits among
 /// the magnifiers, and a magnifier shows the picture and the cursor
 /// enlarged. Then every mark, in document order, the first at the bottom,
-/// none of them shaded; a highlight recolours whatever is under it by then.
+/// none of them shaded. A highlight recolours the pixel as every mark under
+/// it drew it but the highlights, so overlapping highlights merge rather than
+/// one recolouring the other into its inverse; `bare` carries that pixel.
 /// Last the cursor, over every mark, which is where a viewer looks for it,
 /// but treated as lying on the picture: the spotlights' shade darkens it and
 /// their blur softens it, and a loupe hides it. `shade_gate` scales the shade
@@ -60,15 +62,27 @@ static float4 composite_annotation_layers(
       rgba = annotation_layer(rgba, annotation, point, feather, samples, numbers,
                               number_atlas, points, tap, cursor);
     }
+    float4 bare = rgba;
+    bool highlighted = false;
     for (uint index = 0; index < count; ++index) {
       const device AnnotationUniforms &annotation = annotations[index];
       if (annotation.above_camera != above_camera ||
           annotation_acts_on_picture(annotation.kind))
         continue;
-      rgba = annotation.kind == annotation_highlight_kind
-          ? annotation_highlight_layer(rgba, rgba, annotation, point, feather, points, samples)
-          : annotation_layer(rgba, annotation, point, feather, samples, numbers, number_atlas,
-                             points, tap, cursor);
+      if (annotation.kind == annotation_highlight_kind) {
+        float4 under = rgba;
+        rgba = annotation_highlight_layer(rgba, bare, annotation, point, feather, points,
+                                          samples, tap);
+        highlighted = highlighted || any(rgba != under);
+        continue;
+      }
+      rgba = annotation_layer(rgba, annotation, point, feather, samples, numbers, number_atlas,
+                              points, tap, cursor);
+      // Until a highlight reaches this pixel, `bare` is what is drawn; after,
+      // each mark is drawn on it as well.
+      bare = highlighted ? annotation_layer(bare, annotation, point, feather, samples, numbers,
+                                            number_atlas, points, tap, cursor)
+                         : rgba;
     }
   }
   float4 pointer = annotation_cursor_seen(cursor, point, drawn_pixel);

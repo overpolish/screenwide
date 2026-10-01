@@ -35,6 +35,7 @@ fn arrow(above_camera: bool, start: (f64, f64), end: (f64, f64)) -> Annotation {
       head: AnnotationHead::End,
       hand_drawn: false,
       manual: false,
+      tint: false,
       radius: 0.0,
       redaction: Default::default(),
       shadow: false,

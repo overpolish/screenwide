@@ -72,6 +72,7 @@ fn arrow(id: &str) -> Annotation {
       head: AnnotationHead::End,
       hand_drawn: false,
       manual: false,
+      tint: false,
       radius: 0.0,
       redaction: Default::default(),
       shadow: false,

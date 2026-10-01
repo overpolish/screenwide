@@ -33,6 +33,7 @@ const arrow = (id: string): Annotation => ({
     shadow: false,
     softness: 0,
     strength: 0,
+    tint: false,
     width: 8,
   },
 });

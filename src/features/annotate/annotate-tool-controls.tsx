@@ -6,6 +6,7 @@ import { AnnotationBlurGroup } from "../../components/shared/annotation-style/an
 import { AnnotationEdgeGroup } from "../../components/shared/annotation-style/annotation-edge-group";
 import { AnnotationFitGroup } from "../../components/shared/annotation-style/annotation-fit-group";
 import { AnnotationHeadGroup } from "../../components/shared/annotation-style/annotation-head-group";
+import { AnnotationInkGroup } from "../../components/shared/annotation-style/annotation-ink-group";
 import { AnnotationRadiusField } from "../../components/shared/annotation-style/annotation-radius-field";
 import { AnnotationStrokeGroup } from "../../components/shared/annotation-style/annotation-stroke-group";
 import { AnnotationWidthSlider } from "../../components/shared/annotation-style/annotation-width-slider";
@@ -54,6 +55,12 @@ export function AnnotateToolControls({
               onChange({ highlightManual });
             }}
             value={settings.highlightManual}
+          />
+          <AnnotationInkGroup
+            onChange={(highlightTint) => {
+              onChange({ highlightTint });
+            }}
+            value={settings.highlightTint}
           />
           <AnnotationStrokeGroup
             onChange={(highlightHandDrawn) => {

@@ -5,6 +5,7 @@ import { Switch } from "../../../components/base/switch/switch";
 import { AnnotationAlignGroup } from "../../../components/shared/annotation-style/annotation-align-group";
 import { AnnotationHandDrawnToggle } from "../../../components/shared/annotation-style/annotation-hand-drawn-toggle";
 import { AnnotationHeadGroup } from "../../../components/shared/annotation-style/annotation-head-group";
+import { AnnotationInkGroup } from "../../../components/shared/annotation-style/annotation-ink-group";
 import { SOFT_SPOTLIGHT_EDGE } from "../../../components/shared/annotation-style/widths";
 import { ControlRow } from "../../../components/shared/control-row/control-row";
 
@@ -14,10 +15,10 @@ import type { ToolPanelPatch } from "./tool-panel-store";
 
 /**
  * The options only some kinds carry: an arrow's heads, a text box's
- * alignment, a hand-drawn stroke, a spotlight's fading edge and blur, and a
- * magnifier's shadow. They sit after the size and geometry rows and
- * before Animate and the colour, the one place every tool panel keeps its
- * options.
+ * alignment, a highlight's ink, a hand-drawn stroke, a spotlight's fading
+ * edge and blur, and a magnifier's shadow. They sit after the size and
+ * geometry rows and before Animate and the colour, the one place every tool
+ * panel keeps its options.
  */
 export function AnnotationOptionRows({
   canShuffle,
@@ -36,6 +37,7 @@ export function AnnotationOptionRows({
     | "hasBlur"
     | "hasHandDrawn"
     | "hasHead"
+    | "hasInk"
     | "hasShadow"
     | "hasSoftness"
   >;
@@ -69,6 +71,22 @@ export function AnnotationOptionRows({
                   change({ annotationStyle: { align: next } });
                 }}
                 value={style.align}
+              />
+            </div>
+          )}
+        </ControlRow>
+      ) : null}
+
+      {kind.hasInk ? (
+        <ControlRow title="Ink">
+          {(controlProps) => (
+            <div {...controlProps} role="group">
+              <AnnotationInkGroup
+                isDisabled={isLocked}
+                onChange={(next) => {
+                  change({ annotationStyle: { tint: next } });
+                }}
+                value={style.tint}
               />
             </div>
           )}

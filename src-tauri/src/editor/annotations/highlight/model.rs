@@ -68,10 +68,11 @@ pub struct HighlightTone {
 
 impl HighlightTone {
   /// No page was read under the highlight - a photo, a gradient, a picture
-  /// with no colour most of it is - or it was laid by hand over a box, which
-  /// never reads one. Its surface and ink are the same, which a page that was
+  /// with no colour most of it is, or a box laid by hand where there was no
+  /// picture to read. Its surface and ink are the same, which a page that was
   /// read never has, and the compositor tints what is there rather than
-  /// recolouring it.
+  /// recolouring it. A highlight whose style tints is drawn with this tone
+  /// whatever it read.
   pub(crate) const UNREAD: Self = Self {
     surface: 0.5,
     ink: 0.5,
@@ -107,6 +108,7 @@ pub(crate) fn default_highlight_style() -> AnnotationStyle {
     head: AnnotationHead::None,
     hand_drawn: false,
     manual: false,
+    tint: false,
     radius: 0.0,
     redaction: Default::default(),
     shadow: false,

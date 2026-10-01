@@ -21,6 +21,7 @@
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_HIGHLIGHT @R"METAL(
 constant uint annotation_highlight_kind = 4u;
 constant uint annotation_highlight_hand_drawn = 1u << 6;
+constant uint annotation_highlight_laid_by_hand = 1u << 8;
 
 static uint highlight_hash(uint value) {
   value ^= value >> 16;
@@ -101,37 +102,6 @@ static float highlight_stroke(float2 point, float2 low, float2 high, float from,
   return length(max(outside, 0.0)) + min(max(outside.x, outside.y), 0.0) - radius;
 }
 
-/// `base` recoloured under a highlight in `colour`: the page becomes the
-/// highlight's colour and its ink - whatever stands out from the page - a
-/// colour that reads on it. The ink keeps its hue, pushed dark on a light
-/// highlight and light on a dark one. `tone` is the page's luminance and its
-/// ink's.
-static float3 highlight_recolour(float3 base, float3 colour, float2 tone) {
-  const float3 weights = float3(0.2126, 0.7152, 0.0722);
-  float luminance = dot(base, weights);
-  float span = tone.y - tone.x;
-  // No page was read under it - a photo, a gradient, a box laid by hand - so
-  // there is nothing to map from, and the highlight tints what is there. Over
-  // light it multiplies, well short of fully, as a felt marker's ink does on
-  // paper. Multiplied, dark would stay dark and the highlight would vanish, so
-  // dark is lifted a quarter of the way to the colour instead. Each pixel is weighed by its own
-  // brightness, so a box over mixed content needs no reading of it; dark text
-  // on a light page is lifted with the rest of the dark, to a deep shade of
-  // the colour that still reads against it.
-  if (abs(span) < 0.01) {
-    float dark = 1.0 - saturate((luminance - 0.2) / 0.4);
-    float3 laid = base * mix(float3(1.0, 1.0, 1.0), colour, 0.7);
-    float3 lifted = base + colour * (1.0 - base) * 0.25;
-    return mix(laid, lifted, dark);
-  }
-  if (abs(span) < 0.2) span = span < 0.0 ? -0.2 : 0.2;
-  float ink_share = smoothstep(0.04, 0.55, saturate((luminance - tone.x) / span));
-  float3 ink = dot(colour, weights) > 0.5
-      ? base * min(1.0, 0.2 / max(luminance, 1e-3))
-      : 1.0 - (1.0 - base) * min(1.0, 0.15 / max(1.0 - luminance, 1e-3));
-  return mix(colour, saturate(ink), ink_share);
-}
-
 /// Where one line `span` long is drawn from and to at the reveal `low` to
 /// `high`: it draws itself in over `share` of the reveal, from `begin`.
 static float2 highlight_window(float low, float high, float begin, float share, float span) {
@@ -162,13 +132,17 @@ static float highlight_line(float2 point, float2 low, float2 high, float2 window
                        mix(tip, square, settled.x), mix(tip, square, settled.y));
 }
 
-/// One highlight over `rgba`, recolouring `base`. The editor hands the same
-/// pixel as both, so a highlight recolours whatever the document drew under
-/// it; the live overlay's `rgba` is transparent, and `base` is the desktop
-/// captured under it.
+/// One highlight over `rgba`, recolouring `base`, with `tap` reading the
+/// picture around `point` to tell each glyph's full ink. The editor hands the
+/// pixel as every mark but the highlights drew it, so a highlight recolours
+/// what lies under it and overlapping highlights merge rather than one
+/// recolouring the other; the live overlay's `rgba` is transparent, and
+/// `base` is the desktop captured under it.
+template <typename Tap>
 static float4 annotation_highlight_layer(
     float4 rgba, float4 base, const device AnnotationUniforms &annotation, float2 point,
-    float feather, const device packed_float2 *points, const device AnnotationSample *samples) {
+    float feather, const device packed_float2 *points, const device AnnotationSample *samples,
+    Tap tap) {
   float4 colour = float4(annotation.color);
   uint pairs = annotation.data_count / 2u;
   if (colour.a <= 0.0 || pairs == 0u) return rgba;
@@ -202,7 +176,9 @@ static float4 annotation_highlight_layer(
     closed = float2(last.arrow.low, last.arrow.high);
     opacity = (first.opacity + last.opacity) * 0.5;
   }
+  // The top and bottom of the line `point` lies on, or of the first one near.
   float coverage = 0.0, nearest = 1e20;
+  float2 rows = float2(0.0);
   for (uint band = 0u; band < pairs; ++band) {
     uint at = annotation.data_offset + band * 2u;
     float2 low = origin + float2(points[at]) * unit;
@@ -221,6 +197,8 @@ static float4 annotation_highlight_layer(
     if (point.y < low.y - reach || point.y > high.y + reach ||
         point.x < low.x + from - reach || point.x > low.x + to + reach)
       continue;
+    if (rows.y <= rows.x || (point.y >= low.y && point.y <= high.y))
+      rows = float2(low.y, high.y);
     // Whether its top and its bottom lie under a neighbouring band, as the
     // strokes laid over a box do.
     float2 joined = float2(
@@ -268,25 +246,31 @@ static float4 annotation_highlight_layer(
   }
   if (coverage <= 0.0) return rgba;
   float alpha = coverage * colour.a;
-  rgba.rgb = highlight_recolour(base.rgb, colour.rgb, tone) * alpha + rgba.rgb * (1.0 - alpha);
+  // A box's bands are strokes a marker tall, not lines with fills drawn under
+  // them, so it recolours every pixel.
+  bool fills = (annotation.flags & annotation_highlight_laid_by_hand) == 0u;
+  rgba.rgb = highlight_recolour(base.rgb, colour.rgb, tone, tap, point, rows, fills) * alpha +
+             rgba.rgb * (1.0 - alpha);
   rgba.a = alpha + rgba.a * (1.0 - alpha);
   return rgba;
 }
 
 /// Every highlight on the layer `above_camera` names, over `rgba`, each
-/// recolouring `base`: the live overlay's pass, which puts its highlights
-/// under everything else it draws.
+/// recolouring `base`, which `tap` reads around each pixel: the live
+/// overlay's pass, which puts its highlights under everything else it draws.
+template <typename Tap>
 static float4 composite_highlights(
     float4 rgba, float4 base, const device AnnotationUniforms *annotations, uint count,
     uint above_camera, float2 point, float pixel_scale,
-    const device packed_float2 *points, const device AnnotationSample *samples) {
+    const device packed_float2 *points, const device AnnotationSample *samples, Tap tap) {
   float feather = max(pixel_scale, 1e-4) * 0.5;
   for (uint index = 0; index < count; ++index) {
     const device AnnotationUniforms &annotation = annotations[index];
     if (annotation.kind != annotation_highlight_kind ||
         annotation.above_camera != above_camera)
       continue;
-    rgba = annotation_highlight_layer(rgba, base, annotation, point, feather, points, samples);
+    rgba =
+        annotation_highlight_layer(rgba, base, annotation, point, feather, points, samples, tap);
   }
   return rgba;
 }

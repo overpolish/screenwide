@@ -53,6 +53,7 @@ fn arrow(
       blur: false,
       hand_drawn: false,
       manual: false,
+      tint: false,
       color: "#ff0000".to_owned(),
       head,
       radius: 0.0,

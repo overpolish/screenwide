@@ -15,7 +15,10 @@
 //! page. Each covered pixel is read and recoloured: the page's surface becomes
 //! the highlight's colour, and whatever stands out from the surface - the text -
 //! becomes ink that reads on it. The surface and ink brightness the recolouring
-//! measures against are read with the lines and kept beside them.
+//! measures against are read with the lines and kept beside them. Recolouring
+//! guesses which pixels are page and which are ink, which mixed content can
+//! defeat, so a highlight can tint instead: each pixel is laid under the
+//! colour the way a felt marker's ink is, whatever it is.
 //!
 //! Where the picture cannot be read as text, a highlight can be laid by hand
 //! instead: the drag spans a box, and the marker goes over it in strokes of

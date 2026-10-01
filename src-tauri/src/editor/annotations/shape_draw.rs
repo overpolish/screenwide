@@ -25,7 +25,9 @@ impl super::AnnotationShape {
         text,
       } => super::super::text::native::draw_points(*origin, pointer, text, style),
       Self::Redact { start, end, .. } => super::super::redact::native::draw_points(*start, *end),
-      Self::Highlight { tone, .. } => super::super::highlight::geometry::draw_points(*tone),
+      Self::Highlight { tone, .. } => {
+        super::super::highlight::geometry::draw_points(*tone, style.tint)
+      }
       Self::Shape { start, end, seed } => {
         super::super::outline::native::draw_points(*start, *end, *seed, style)
       }

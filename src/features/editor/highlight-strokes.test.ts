@@ -19,6 +19,7 @@ const style: AnnotationStyle = {
   shadow: false,
   softness: 0,
   strength: 0,
+  tint: false,
   width: 24,
 };
 
@@ -63,7 +64,7 @@ describe("highlightStrokes", () => {
 });
 
 describe("relaidHighlight", () => {
-  it("lays a fitted highlight switched to manual as a tinted box of its first line's height", () => {
+  it("lays a fitted highlight switched to manual as a box of its first line's height that keeps its tone", () => {
     const shape = relaidHighlight(fitted, { ...style, manual: true });
     const strokes = shape?.bands ?? [];
     expect(strokes.length).toBeGreaterThan(2);
@@ -71,7 +72,8 @@ describe("relaidHighlight", () => {
       expect(stroke.bottom - stroke.top).toBeCloseTo(20);
       expect([stroke.left, stroke.right]).toEqual([10, 200]);
     }
-    expect(shape?.tone.ink).toBe(shape?.tone.surface);
+    // Kept, so a box that recolours still recolours from the page it read.
+    expect(shape?.tone).toEqual({ ink: 0, surface: 1 });
   });
 
   it("leaves a highlight alone unless it is switched to manual", () => {

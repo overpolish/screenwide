@@ -53,6 +53,9 @@ export type AnnotationStyle = {
   /** A blurred redaction's strength, a step from 1 to 5; the other kinds
    * carry zero. */
   strength: number;
+  /** Whether a highlight tints what it covers rather than recolouring the
+   * page it read; the other kinds carry `false`. */
+  tint: boolean;
   /** Stroke width, disc diameter, type size, pixelation block, a shape's pen
    * or a highlight's marker, in points of the capture. */
   width: number;

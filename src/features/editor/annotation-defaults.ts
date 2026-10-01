@@ -89,6 +89,7 @@ const sameDress = (
   held.shadow === style.shadow &&
   held.softness === style.softness &&
   held.strength === style.strength &&
+  held.tint === style.tint &&
   held.width === width;
 
 /** Remember what the last edit to an annotation of `kind` settled on. */
@@ -173,6 +174,7 @@ export const firstAnnotationDress = (
   shadow: kind === "magnify",
   softness: kind === "spotlight" ? SOFT_SPOTLIGHT_EDGE : 0,
   strength: kind === "redact" ? DEFAULT_BLUR_STRENGTH : 0,
+  tint: false,
   width: defaultAnnotationSize(kind),
 });
 

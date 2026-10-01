@@ -20,6 +20,7 @@ const settings: AnnotateSettings = {
   enabled: true,
   highlightHandDrawn: false,
   highlightManual: false,
+  highlightTint: false,
   keepAnnotationsBetweenSessions: false,
   shapeHandDrawn: false,
   shapeRadius: 0,
@@ -83,7 +84,7 @@ export const Highlight: Story = {
   args: { settings: { ...settings, defaultShape: "highlight" } },
 };
 
-/** A highlight laid by hand over a box, tinting what it covers. */
+/** A highlight laid by hand over a box rather than fitted to the text. */
 export const HighlightManual: Story = {
   args: {
     settings: { ...settings, defaultShape: "highlight", highlightManual: true },

@@ -21,9 +21,12 @@ use crate::editor::annotations::text::geometry::rounded_box_distance;
 /// The retained draw record's three points: the source's origin and the
 /// source pixel `(1, 1)`, which every placement carries into the pixels the
 /// highlight is drawn in and the shader places the bands by, and the tone,
-/// which no placement touches.
+/// which no placement touches. A highlight that `tint`s hands the shader the
+/// unread tone, which tints, and keeps the tone it read for when it recolours
+/// again.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) fn draw_points(tone: HighlightTone) -> [[f32; 2]; 3] {
+pub(crate) fn draw_points(tone: HighlightTone, tint: bool) -> [[f32; 2]; 3] {
+  let tone = if tint { HighlightTone::UNREAD } else { tone };
   [
     [0.0, 0.0],
     [1.0, 1.0],

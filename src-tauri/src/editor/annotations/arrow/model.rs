@@ -24,6 +24,7 @@ pub(crate) fn default_arrow_style() -> AnnotationStyle {
     head: AnnotationHead::End,
     hand_drawn: false,
     manual: false,
+    tint: false,
     radius: 0.0,
     redaction: Default::default(),
     shadow: false,

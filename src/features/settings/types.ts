@@ -82,6 +82,9 @@ export type AnnotateSettings = {
   /** Whether a fresh highlight is laid by hand over the box its drag spans
    * rather than fitted to the text under it. */
   highlightManual: boolean;
+  /** Whether a fresh highlight tints what it covers rather than recolouring
+   * the page under it. */
+  highlightTint: boolean;
   keepAnnotationsBetweenSessions: boolean;
   /** Whether a fresh shape is drawn as a pen stroke by hand rather than as
    * a clean outline. Its own choice rather than the highlight's. */

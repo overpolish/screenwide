@@ -101,6 +101,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     enabled: true,
     highlightHandDrawn: false,
     highlightManual: false,
+    highlightTint: false,
     keepAnnotationsBetweenSessions: false,
     shapeHandDrawn: false,
     shapeRadius: 0,

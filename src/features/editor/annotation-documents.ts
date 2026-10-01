@@ -71,6 +71,7 @@ export const validAnnotations = (value: unknown): Annotation[] => {
       shadow: (style.shadow as unknown) === true,
       softness: boxShare(style.softness),
       strength: finiteOr(style.strength, DEFAULT_BLUR_STRENGTH),
+      tint: (style.tint as unknown) === true,
       width: Math.max(0, style.width),
     };
     const common = {

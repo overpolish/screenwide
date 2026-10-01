@@ -44,6 +44,7 @@ pub(crate) fn default_spotlight_style() -> AnnotationStyle {
     head: AnnotationHead::None,
     hand_drawn: false,
     manual: false,
+    tint: false,
     radius: NEW_SPOTLIGHT_RADIUS,
     redaction: Default::default(),
     shadow: false,

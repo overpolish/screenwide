@@ -130,6 +130,10 @@ pub struct AnnotationStyle {
   /// carry zero.
   #[serde(default = "default_strength")]
   pub strength: f64,
+  /// Whether a highlight tints what it covers, the way a felt marker does,
+  /// rather than recolouring the page it read; the other kinds carry `false`.
+  #[serde(default)]
+  pub tint: bool,
   pub width: f64,
 }
 
@@ -236,6 +240,7 @@ mod tests {
         head: AnnotationHead::Both,
         hand_drawn: false,
         manual: false,
+        tint: false,
         radius: 0.0,
         redaction: Default::default(),
         shadow: false,

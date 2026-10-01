@@ -347,10 +347,9 @@ fn a_selection_down_one_column_keeps_to_it() {
   }
 }
 
-#[test]
-fn a_selection_over_a_photo_tints_one_band_along_the_drag() {
-  // Colour that changes every few pixels, the way a photo does: no colour is
-  // most of it, so there is no page to read text from.
+/// Colour that changes every few pixels, the way a photo does: no colour is
+/// most of it, so there is no page to read text from.
+fn photo() -> Picture {
   let mut picture = Picture::new(WIDTH, HEIGHT, LIGHT);
   for y in 0..HEIGHT {
     for x in 0..WIDTH {
@@ -359,7 +358,12 @@ fn a_selection_over_a_photo_tints_one_band_along_the_drag() {
       picture.paint(x, y, [noise(3), noise(11), noise(19)]);
     }
   }
-  let selection = picture.select(point(40.0, 60.0), point(300.0, 64.0));
+  picture
+}
+
+#[test]
+fn a_selection_over_a_photo_tints_one_band_along_the_drag() {
+  let selection = photo().select(point(40.0, 60.0), point(300.0, 64.0));
   assert_eq!(
     selection.bands,
     vec![HighlightBand {
@@ -370,4 +374,136 @@ fn a_selection_over_a_photo_tints_one_band_along_the_drag() {
     }]
   );
   assert_eq!(selection.tone, HighlightTone::UNREAD);
+}
+
+fn box_tone_of(
+  picture: &Picture,
+  start: AnnotationPoint,
+  bands: &[HighlightBand],
+) -> HighlightTone {
+  let pixels = HighlightPixels {
+    rgba: &picture.rgba,
+    width: picture.width,
+    height: picture.height,
+  };
+  box_tone(Some((pixels, (1.0, 1.0))), start, bands, 24.0)
+}
+
+#[test]
+fn a_box_over_a_dark_page_reads_its_light_text() {
+  // A terminal: light text on a dark page, and a box laid over two lines.
+  let mut picture = Picture::new(WIDTH, HEIGHT, DARK);
+  picture.words(40, &[(20, 60), (90, 50)], LIGHT);
+  picture.words(76, &[(20, 40), (70, 90)], LIGHT);
+  let bands = [HighlightBand {
+    left: 10.0,
+    top: 36.0,
+    right: 180.0,
+    bottom: 100.0,
+  }];
+  let tone = box_tone_of(&picture, point(10.0, 36.0), &bands);
+  assert!(tone.surface < 0.15, "{tone:?}");
+  assert!(tone.ink > 0.8, "{tone:?}");
+}
+
+#[test]
+fn a_box_over_a_photo_has_no_page_to_recolour() {
+  let bands = [HighlightBand {
+    left: 40.0,
+    top: 40.0,
+    right: 300.0,
+    bottom: 120.0,
+  }];
+  let tone = box_tone_of(&photo(), point(40.0, 40.0), &bands);
+  assert_eq!(tone, HighlightTone::UNREAD);
+}
+
+#[test]
+fn a_selection_pressed_on_a_label_runs_on_across_its_line() {
+  // A terminal's error label - dark type on red, taller than its line and
+  // most of what lies around the press - starting the first of three lines,
+  // the drag pressed on it. Read around the press alone, the label passed for
+  // the page, the terminal around it for a pane, and the first line ended
+  // where the label did.
+  let mut picture = Picture::new(WIDTH, HEIGHT, DARK);
+  picture.fill(0, 30, 200, 40, [152, 0, 0]);
+  picture.words(40, &[(24, 40), (72, 50), (130, 50)], DARK);
+  picture.words(40, &[(230, 50), (290, 60)], LIGHT);
+  picture.words(76, &[(20, 90), (120, 80)], LIGHT);
+  picture.words(112, &[(20, 70), (100, 60)], LIGHT);
+  // Let go past the end of the last line, as a drag down a terminal is. With
+  // the smaller marker the label is taller than a solid run, as on a Retina
+  // capture, and the gaps between its letters are solid columns.
+  for marker in [24.0, 12.0] {
+    let pixels = HighlightPixels {
+      rgba: &picture.rgba,
+      width: picture.width,
+      height: picture.height,
+    };
+    let selection = select(
+      Some((pixels, (1.0, 1.0))),
+      point(40.0, 50.0),
+      point(380.0, 122.0),
+      marker,
+    );
+    let spans: Vec<_> = selection.bands.iter().map(span).collect();
+    assert_eq!(spans.len(), 3, "{marker}: {spans:?}");
+    // The label is part of its line, and the line runs on past it to its end.
+    let first = selection.bands[0];
+    assert!(
+      first.left < 50.0 && first.right >= 350.0,
+      "{marker}: {first:?}"
+    );
+    assert_eq!(
+      selection.tone.surface,
+      luma(DARK.map(|c| f64::from(c) / 255.0))
+    );
+  }
+}
+
+#[test]
+fn a_label_at_the_top_runs_on_past_a_cursor_above_and_stems_below() {
+  // A label on the picture's first line, a cursor block over its corner at
+  // the very top, and the next line's tall stems below the label's edge,
+  // past a gap. Neither runs on past the line as a pane does: the cursor is
+  // all the picture leaves above, and the stems are another line's.
+  let mut picture = Picture::new(WIDTH, HEIGHT, DARK);
+  picture.fill(40, 0, 16, 6, LIGHT);
+  picture.fill(0, 4, 200, 40, [152, 0, 0]);
+  picture.words(14, &[(24, 40), (72, 50), (130, 50)], DARK);
+  picture.words(14, &[(230, 50), (290, 60)], LIGHT);
+  picture.fill(190, 46, 8, 40, LIGHT);
+  picture.words(56, &[(20, 90), (120, 60)], LIGHT);
+  picture.words(96, &[(20, 70), (100, 60)], LIGHT);
+  let pixels = HighlightPixels {
+    rgba: &picture.rgba,
+    width: picture.width,
+    height: picture.height,
+  };
+  let selection = select(
+    Some((pixels, (1.0, 1.0))),
+    point(30.0, 24.0),
+    point(380.0, 106.0),
+    12.0,
+  );
+  let first = selection.bands[0];
+  assert!(first.right >= 350.0, "{:?}", selection.bands);
+}
+
+#[test]
+fn a_cursor_resting_on_a_label_does_not_end_its_line() {
+  // A terminal's cursor block sits on an error label's top edge, below the
+  // line before it. Its columns run on past the label upwards, but only a
+  // cell wide: a pane beside the text is at least a line's height across.
+  let mut picture = Picture::new(WIDTH, HEIGHT, DARK);
+  picture.words(10, &[(20, 90), (120, 60)], LIGHT);
+  picture.fill(184, 34, 12, 30, LIGHT);
+  picture.fill(0, 64, 200, 40, [152, 0, 0]);
+  picture.words(74, &[(24, 40), (72, 50), (130, 50)], DARK);
+  picture.words(74, &[(230, 50), (290, 60)], LIGHT);
+  picture.words(116, &[(20, 90), (120, 60)], LIGHT);
+  picture.words(152, &[(20, 70), (100, 60)], LIGHT);
+  let selection = picture.select(point(40.0, 84.0), point(380.0, 162.0));
+  let first = selection.bands[0];
+  assert!(first.right >= 350.0, "{:?}", selection.bands);
 }

@@ -11,8 +11,9 @@
 // The loupe reads the picture through the two functions declared below, which
 // each shader that draws annotations defines over its own source: the
 // preview's is its source texture after the redactions and the spotlights'
-// blur were applied to it, and the live overlay, which offers no magnifier,
-// reads nothing. Each texel is drawn as a crisp square, with only the one
+// blur were applied to it, and the live overlay's, which offers no magnifier,
+// the desktop its highlights recolour. Highlights read them too, to find each
+// glyph's full ink. Each texel is drawn as a crisp square, with only the one
 // drawn pixel across its edge blended. The cursor lies on the picture, under
 // the loupe, so the loupe shows it too, enlarged, through
 // `annotation_cursor_seen`.

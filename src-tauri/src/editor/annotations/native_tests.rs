@@ -22,6 +22,7 @@ fn annotation(shape: AnnotationShape) -> Annotation {
       head: AnnotationHead::Both,
       hand_drawn: false,
       manual: false,
+      tint: false,
       radius: 0.0,
       redaction: Default::default(),
       shadow: false,

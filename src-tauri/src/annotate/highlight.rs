@@ -19,7 +19,7 @@
 use std::sync::{Arc, Condvar, LazyLock, Mutex, MutexGuard};
 use std::time::Duration;
 
-use crate::editor::annotations::highlight::detect::{select, Selection};
+use crate::editor::annotations::highlight::detect::{box_tone, select, Selection};
 use crate::editor::annotations::highlight::manual::strokes;
 use crate::editor::annotations::highlight::model::{new_highlight, HighlightTone};
 use crate::editor::annotations::highlight::picture::HighlightPicture;
@@ -147,12 +147,32 @@ pub(super) fn annotation(
   let mut annotation = new_highlight(id.to_owned(), start, Some(style), 1.0);
   let height = style.width.max(1.0);
   let selection = match &capture {
-    // A box reads nothing of the desktop: its strokes are the box's, and what
-    // they cover is tinted. The capture is still what the tint is laid over.
-    _ if style.manual => Selection {
-      bands: strokes(start, end, height),
-      tone: HighlightTone::UNREAD,
-    },
+    // A box's strokes are the box's own; the capture is read only for the
+    // page's tone under it, which it recolours unless it tints.
+    _ if style.manual => {
+      let bands = strokes(start, end, height);
+      let tone = capture.as_ref().map_or(HighlightTone::UNREAD, |capture| {
+        let local: Vec<_> = bands
+          .iter()
+          .map(|band| {
+            band.mapped(|at| AnnotationPoint {
+              x: at.x - capture.origin.0,
+              y: at.y - capture.origin.1,
+            })
+          })
+          .collect();
+        box_tone(
+          Some((capture.picture.pixels(), capture.picture.scale())),
+          AnnotationPoint {
+            x: start.x - capture.origin.0,
+            y: start.y - capture.origin.1,
+          },
+          &local,
+          height,
+        )
+      });
+      Selection { bands, tone }
+    }
     Some(capture) => {
       // The capture is read in its own pixels from the display's corner.
       let local = |point: AnnotationPoint| AnnotationPoint {

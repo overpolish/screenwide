@@ -24,6 +24,7 @@ fn text_box(text: &str, pointer: TextPointer, color: &str) -> Annotation {
     head: AnnotationHead::None,
     hand_drawn: false,
     manual: false,
+    tint: false,
     radius: 0.0,
     redaction: Default::default(),
     shadow: false,

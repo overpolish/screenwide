@@ -10,14 +10,13 @@
 //! - the lines it already covers are kept and only its ends slide along them.
 //! The body carries the whole highlight, bands and all.
 //!
-//! A highlight laid by hand is a box instead, and reads no picture at all: an
-//! end is a corner, moving it lays the box's strokes again, and what it covers
-//! is tinted rather than recoloured, since a box is for what the fitting
-//! cannot read as text.
+//! A highlight laid by hand is a box instead: an end is a corner, and moving
+//! it lays the box's strokes again. The picture is read only for the page's
+//! tone under the box, which is what a box recolours unless it tints.
 
-use super::detect::select;
+use super::detect::{box_tone, select};
 use super::manual::{corners, edge_for_grip, grip, strokes};
-use super::model::{band_height, HighlightTone};
+use super::model::band_height;
 use crate::editor::annotations::gesture::{AnnotationDragOrigin, AnnotationHandle};
 use crate::editor::annotations::snap::SnapResult;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape};
@@ -103,6 +102,10 @@ pub(crate) fn drag(
 fn reselect(annotation: &mut Annotation, origin: &AnnotationDragOrigin) {
   let height = band_height(&annotation.style, origin.source_per_size);
   let manual = annotation.style.manual;
+  let pixels = origin
+    .picture
+    .as_deref()
+    .map(|picture| (picture.pixels(), picture.scale()));
   let AnnotationShape::Highlight {
     start,
     end,
@@ -122,13 +125,9 @@ fn reselect(annotation: &mut Annotation, origin: &AnnotationDragOrigin) {
       .filter(|tall| *tall > 0.0)
       .unwrap_or(height);
     *bands = strokes(*start, *end, marker);
-    *tone = HighlightTone::UNREAD;
+    *tone = box_tone(pixels, *start, bands, marker);
     return;
   }
-  let pixels = origin
-    .picture
-    .as_deref()
-    .map(|picture| (picture.pixels(), picture.scale()));
   let selection = select(pixels, *start, *end, height);
   *bands = selection.bands;
   *tone = selection.tone;

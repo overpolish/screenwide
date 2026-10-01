@@ -8,12 +8,15 @@
 //! tone, the page's brightness and its ink's. Its bands follow in the side
 //! buffer's points, `data_count` of them from `data_offset`: each band's
 //! top-left corner and then its bottom-right, in source pixels. `flags`
-//! carries `HAND_DRAWN`, and `params` the seed's low and high halves, each
-//! exact in a float, and the sweep `exposure::highlight_travel` reads.
+//! carries `HAND_DRAWN`, and `LAID_BY_HAND` for a box laid by hand, whose
+//! bands are strokes rather than lines of text; `params` the seed's low and
+//! high halves, each exact in a float, and the sweep
+//! `exposure::highlight_travel` reads.
 
 use super::model::HighlightBand;
-use crate::editor::annotations::flags::HAND_DRAWN;
+use crate::editor::annotations::flags::{HAND_DRAWN, LAID_BY_HAND};
 use crate::editor::annotations::native::NativeAnnotation;
+use crate::editor::annotations::AnnotationStyle;
 
 /// Writes the bands into `points` and points `record` at them.
 pub(crate) fn fill(
@@ -21,7 +24,7 @@ pub(crate) fn fill(
   points: &mut Vec<[f32; 2]>,
   bands: &[HighlightBand],
   seed: u32,
-  hand_drawn: bool,
+  style: &AnnotationStyle,
 ) {
   record.data_offset = u32::try_from(points.len()).unwrap_or(u32::MAX);
   record.data_count = u32::try_from(bands.len() * 2).unwrap_or(u32::MAX);
@@ -29,7 +32,8 @@ pub(crate) fn fill(
     points.push([band.left as f32, band.top as f32]);
     points.push([band.right as f32, band.bottom as f32]);
   }
-  record.flags = if hand_drawn { HAND_DRAWN } else { 0 };
+  record.flags =
+    if style.hand_drawn { HAND_DRAWN } else { 0 } | if style.manual { LAID_BY_HAND } else { 0 };
   record.params = [(seed & 0xffff) as f32, (seed >> 16) as f32, sweep(bands)];
 }
 

@@ -90,6 +90,7 @@ impl Stroke {
         settings.highlight_hand_drawn
       },
       manual: self.manual,
+      tint: self.shape == AnnotationKind::Highlight && settings.highlight_tint,
       radius: if shape { settings.shape_radius } else { 0.0 },
       redaction: Default::default(),
       shadow: false,

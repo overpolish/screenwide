@@ -49,6 +49,7 @@ pub(crate) fn default_magnify_style() -> AnnotationStyle {
     head: AnnotationHead::None,
     hand_drawn: false,
     manual: false,
+    tint: false,
     radius: NEW_MAGNIFY_RADIUS,
     redaction: Default::default(),
     shadow: true,

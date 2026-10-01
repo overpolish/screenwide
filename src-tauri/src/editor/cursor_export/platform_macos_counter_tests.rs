@@ -23,6 +23,7 @@ fn counter(value: u32, angle: f64) -> Annotation {
     head: crate::editor::annotations::AnnotationHead::None,
     hand_drawn: false,
     manual: false,
+    tint: false,
     radius: 0.0,
     redaction: Default::default(),
     shadow: false,

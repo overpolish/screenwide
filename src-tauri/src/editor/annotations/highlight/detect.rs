@@ -21,6 +21,7 @@ use page::Page;
 mod ink;
 mod lines;
 mod page;
+mod surface;
 
 /// RGBA pixels, `width` by `height`, straight alpha.
 #[derive(Clone, Copy)]
@@ -104,7 +105,7 @@ pub(crate) fn select(
   let from = to_picture(start);
   let to = to_picture(end);
   let reach = (height * scale.1).max(6.0);
-  let Some(surface) = page.surface_at(from, reach) else {
+  let Some(surface) = page.surface_of(from, to, reach) else {
     return Selection {
       bands: vec![plain_band(start, end, height)],
       tone: HighlightTone::UNREAD,
@@ -127,6 +128,30 @@ pub(crate) fn select(
       }
     }
   }
+}
+
+/// The page under a box laid by hand from `start`, covered by `bands`, read
+/// the way a selection reads it: its surface at the press, `height` source
+/// pixels being one stroke, and its ink inside the strokes. Without pixels
+/// there is nothing to read, and where no colour is most of the press's
+/// neighbourhood - a photo, a gradient - there is no page to recolour, and
+/// the box tints.
+pub(crate) fn box_tone(
+  pixels: Option<(HighlightPixels<'_>, (f64, f64))>,
+  start: AnnotationPoint,
+  bands: &[HighlightBand],
+  height: f64,
+) -> HighlightTone {
+  let Some((pixels, scale)) = pixels.filter(|(pixels, scale)| usable(pixels, *scale)) else {
+    return HighlightTone::default();
+  };
+  let page = Page::new(pixels);
+  let reach = (height.max(1.0) * scale.1).max(6.0);
+  page
+    .surface_at((start.x * scale.0, start.y * scale.1), reach)
+    .map_or(HighlightTone::UNREAD, |surface| {
+      page.tone(surface, bands, scale)
+    })
 }
 
 fn usable(pixels: &HighlightPixels<'_>, scale: (f64, f64)) -> bool {

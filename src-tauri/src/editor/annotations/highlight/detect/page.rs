@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Reading one picture: its surface, its lines and its ink.
+//! Reading one picture: its lines and its ink. Its surface is read in
+//! `surface.rs`.
 
 use super::ink::{Cell, Mask};
 use super::lines::snap::Snap;
 use super::lines::{line_at, merge_lines, Columns, Run};
 use super::{
-  HighlightPixels, EVEN_HEIGHT, LINE_REACH, PAD_X, PAD_Y, PAGE_SHARE, RUN_GAP, SOLID_RUN,
-  SURFACE_SAMPLES, TALLEST_LINE, WORD_GAP,
+  HighlightPixels, EVEN_HEIGHT, LINE_REACH, PAD_X, PAD_Y, RUN_GAP, SOLID_RUN, TALLEST_LINE,
+  WORD_GAP,
 };
 
 /// One picture, as a selection reads it.
@@ -45,61 +46,6 @@ impl<'a> Page<'a> {
     }
   }
 
-  /// The page the selection was pressed on: the colour most of the
-  /// neighbourhood of the press is. Colours are counted at five bits a
-  /// channel, and the page is the mean of the pixels in the fullest bucket.
-  ///
-  /// Read at the press rather than across the whole drag, so a pane or a
-  /// picture the drag runs into cannot outvote the page it started on. `None`
-  /// where no colour is most of it - a photo, a gradient - and there is no
-  /// page for text to sit on.
-  pub(super) fn surface_at(&self, press: (f64, f64), reach: f64) -> Option<[u8; 3]> {
-    let columns = Self::span(press.0, press.0, reach * 4.0, self.width());
-    let rows = Self::span(press.1, press.1, reach, self.height());
-    let area = (columns.len() * rows.len()) as f64;
-    let step = ((area / SURFACE_SAMPLES).sqrt().ceil() as usize).max(1);
-    let mut counts = vec![0_u32; 1 << 15];
-    let mut sums = vec![[0_u32; 3]; 1 << 15];
-    for y in (rows.from..rows.to).step_by(step) {
-      for x in (columns.from..columns.to).step_by(step) {
-        let [r, g, b, a] = self.pixel(x, y);
-        if a < 128 {
-          continue;
-        }
-        let bucket = (usize::from(r >> 3) << 10) | (usize::from(g >> 3) << 5) | usize::from(b >> 3);
-        counts[bucket] += 1;
-        let sum = &mut sums[bucket];
-        sum[0] += u32::from(r);
-        sum[1] += u32::from(g);
-        sum[2] += u32::from(b);
-      }
-    }
-    let (bucket, &count) = counts
-      .iter()
-      .enumerate()
-      .max_by_key(|(_, count)| **count)
-      .filter(|(_, count)| **count > 0)?;
-    let sum = sums[bucket];
-    let surface = [
-      (sum[0] / count) as u8,
-      (sum[1] / count) as u8,
-      (sum[2] / count) as u8,
-    ];
-    let (mut page, mut seen) = (0_usize, 0_usize);
-    for y in (rows.from..rows.to).step_by(step) {
-      for x in (columns.from..columns.to).step_by(step) {
-        if self.pixel(x, y)[3] < 128 {
-          continue;
-        }
-        seen += 1;
-        if !self.is_ink(x, y, surface) {
-          page += 1;
-        }
-      }
-    }
-    (page as f64 >= seen as f64 * PAGE_SHARE).then_some(surface)
-  }
-
   /// The bands a selection from `from` to `to` covers, in picture pixels as
   /// `[left, top, right, bottom]`, or `None` where there is no text to fit.
   pub(super) fn read(
@@ -110,9 +56,12 @@ impl<'a> Page<'a> {
     surface: [u8; 3],
   ) -> Option<Vec<[f64; 4]>> {
     let solid = (reach * SOLID_RUN).ceil() as usize;
+    // Lines are found within twice the reach of the drag, and each is read a
+    // line's height past it - up to the tallest line's - to tell a pane that
+    // ends it from a fill it is printed on.
     let mask = Mask::read(
       self,
-      Self::span(from.1, to.1, reach * 2.0, self.height()),
+      Self::span(from.1, to.1, reach * (2.0 + TALLEST_LINE), self.height()),
       surface,
       solid,
     );

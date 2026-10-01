@@ -37,6 +37,8 @@ export type AnnotationKindRow<Shape extends AnnotationShape> =
     hasHandDrawn: boolean;
     /** Whether it carries heads to choose between. */
     hasHead: boolean;
+    /** Whether it can tint what it covers instead of recolouring it. */
+    hasInk: boolean;
     /** Whether its box's corners can be rounded. */
     hasRadius: boolean;
     /** Whether it hides what is under it, and so offers the redaction modes. */
