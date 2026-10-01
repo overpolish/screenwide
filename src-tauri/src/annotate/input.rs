@@ -17,9 +17,7 @@ use std::time::{Duration, Instant};
 use crate::editor::annotations::AnnotationKind;
 use crate::editor::annotations::{Annotation, AnnotationPoint};
 
-#[path = "input_keys.rs"]
 mod keys;
-#[path = "input_stroke.rs"]
 mod stroke;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use keys::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z, TOOL_KEYS};
@@ -248,5 +246,4 @@ pub(super) fn cancel() {
 }
 
 #[cfg(test)]
-#[path = "input_tests.rs"]
 mod tests;

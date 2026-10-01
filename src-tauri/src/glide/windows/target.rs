@@ -23,7 +23,6 @@ use windows::Win32::{
 };
 
 use super::{titlebar, tween};
-#[path = "target/geometry.rs"]
 mod geometry;
 use crate::glide::{
   core::{landing_point, GlideFrame},

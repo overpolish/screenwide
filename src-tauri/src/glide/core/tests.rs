@@ -86,16 +86,10 @@ fn stroke(delta_x: f64, delta_y: f64) -> Stroke {
   }
 }
 
-#[path = "tests/detector_tests.rs"]
 mod detector_tests;
-#[path = "tests/geometry_tests.rs"]
 mod geometry_tests;
-#[path = "tests/lifecycle_tests.rs"]
 mod lifecycle_tests;
-#[path = "tests/regions_tests.rs"]
 mod regions_tests;
-#[path = "tests/runtime_tests.rs"]
 mod runtime_tests;
 
-#[path = "tests/intent_tests.rs"]
 mod intent_tests;

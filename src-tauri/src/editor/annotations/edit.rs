@@ -200,7 +200,7 @@ impl AnnotationEdit {
 /// under the rest, so what is drawn next stays lit. Everything else goes on
 /// top. A redaction is applied to the picture wherever it sits, so it never
 /// holds a fresh one back. The twin of `freshAnnotationIndex` in
-/// `src/features/editor/annotation-order.ts`.
+/// `src/features/editor/annotations/annotation-order.ts`.
 fn fresh_annotation_index(annotations: &[Annotation], kind: AnnotationKind) -> usize {
   use AnnotationKind::{Highlight, Redact, Spotlight};
   let beneath = |other: AnnotationKind| match kind {

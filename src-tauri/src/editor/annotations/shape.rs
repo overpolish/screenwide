@@ -289,10 +289,8 @@ impl AnnotationShape {
 }
 
 /// What the native records and the chrome ask of each kind.
-#[path = "shape_draw.rs"]
 mod draw;
 
 /// What a gesture asks of each kind: how a grip moves it, how a fresh one is
 /// made and carried, and how it arrives over its clip.
-#[path = "shape_edit.rs"]
 mod edit;

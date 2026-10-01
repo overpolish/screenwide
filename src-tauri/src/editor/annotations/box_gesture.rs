@@ -189,5 +189,4 @@ pub(crate) fn resize(
 }
 
 #[cfg(test)]
-#[path = "box_gesture_tests.rs"]
 mod tests;

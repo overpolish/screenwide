@@ -4,7 +4,6 @@
 use super::*;
 
 #[cfg(target_os = "windows")]
-#[path = "monitor_thumbnails/windows.rs"]
 mod windows;
 
 fn thumbnail_dimensions(width: u32, height: u32) -> Option<(u32, u32)> {

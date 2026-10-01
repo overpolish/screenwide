@@ -6,7 +6,6 @@
 //! composed by the same GPU compositor, so a paused frame is pixel-identical
 //! to the playing frame at that position. Scrubbing decodes at the presented
 //! size and the settled frame is refined at full resolution.
-#[path = "still/worker.rs"]
 mod worker;
 use worker::run;
 
@@ -102,5 +101,4 @@ impl NativeStillDecoder {
 }
 
 #[cfg(test)]
-#[path = "still_tests.rs"]
 mod tests;

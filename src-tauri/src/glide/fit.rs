@@ -10,7 +10,7 @@
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
-use crate::windows::WindowLabel;
+use crate::app_windows::WindowLabel;
 
 /// A rectangle in work-area fractions: the space the preview's mini-map draws
 /// in, so it can render this without knowing anything about the monitor.

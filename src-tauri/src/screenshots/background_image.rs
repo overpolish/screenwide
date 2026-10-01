@@ -17,7 +17,7 @@ fn native_decode(path: &str, max_pixel_size: u32) -> Option<image::RgbaImage> {
   if !NATIVE_FORMATS.contains(&extension.as_str()) {
     return None;
   }
-  super::image_decode_macos::decode_rgba(path, max_pixel_size)
+  super::macos::image_decode::decode_rgba(path, max_pixel_size)
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -80,7 +80,7 @@ pub(crate) fn background_image_swatch(
     return None;
   }
   let cap = width.max(height).saturating_mul(2);
-  let source = super::image_decode_macos::decode_rgba(path, cap).or_else(|| load(path, cap))?;
+  let source = super::macos::image_decode::decode_rgba(path, cap).or_else(|| load(path, cap))?;
   Some(cover_fit(&source, width, height))
 }
 

@@ -6,14 +6,10 @@
 //! shader geometry: one 20pt-tall strip of rounded key caps, drawn once per
 //! appearance/density/shortcut and animated entirely on the GPU afterwards.
 
-#[path = "keyboard_artwork/cache.rs"]
 mod cache;
-#[path = "keyboard_artwork/labels.rs"]
 mod labels;
-#[path = "keyboard_artwork/rasterize.rs"]
 mod rasterize;
 #[cfg(test)]
-#[path = "keyboard_artwork/tests.rs"]
 mod tests;
 use labels::{key_label, prepared_shortcut};
 pub(super) use rasterize::rasterize_keyboard;
@@ -36,9 +32,7 @@ use windows::{
 
 use crate::editor::keyboard_effects::{KeyboardKey, KeyboardOverlay};
 
-#[path = "keyboard_artwork/icons.rs"]
 mod icons;
-#[path = "keyboard_artwork/visible_bounds.rs"]
 mod visible_bounds;
 
 const MAX_KEYS: usize = 8;

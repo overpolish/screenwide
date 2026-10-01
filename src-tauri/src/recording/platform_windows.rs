@@ -13,18 +13,12 @@ mod capture;
 mod desktop_compositor;
 mod writer;
 
-#[path = "platform_windows/audio_clock.rs"]
 mod audio_clock;
-#[path = "platform_windows/session.rs"]
 mod session;
-#[path = "platform_windows/source_plan.rs"]
 mod source_plan;
-#[path = "platform_windows/startup.rs"]
 mod startup;
-#[path = "platform_windows/startup_support.rs"]
 mod startup_support;
 #[cfg(test)]
-#[path = "platform_windows/tests.rs"]
 mod tests;
 use source_plan::{resolve_source, ResolvedSource};
 pub use startup::begin_blocking;

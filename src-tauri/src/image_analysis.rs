@@ -99,5 +99,4 @@ pub(crate) fn detect_background_where(
 }
 
 #[cfg(test)]
-#[path = "image_analysis_tests.rs"]
 mod tests;

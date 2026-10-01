@@ -9,7 +9,6 @@
 //! uses one short-lived low-level hook and posts only keys recognised by the
 //! active overlay back to the OSC window's owning UI thread.
 
-#[path = "keyboard_windows/hooks.rs"]
 mod hooks;
 use hooks::active_overlay;
 pub(crate) use hooks::alt_pressed;
@@ -212,5 +211,4 @@ fn stop_current() {
 }
 
 #[cfg(test)]
-#[path = "keyboard_windows/tests.rs"]
 mod tests;

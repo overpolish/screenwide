@@ -146,14 +146,14 @@ pub fn set_general_settings(
     settings.record_screenwide_windows != current_settings.record_screenwide_windows;
   #[cfg(target_os = "windows")]
   if capture_affinity_changed {
-    crate::windows::sync_capture_affinity(&app, settings.record_screenwide_windows)
+    crate::app_windows::sync_capture_affinity(&app, settings.record_screenwide_windows)
       .map_err(|error| error.to_string())?;
   }
   #[cfg(target_os = "windows")]
   if let Err(error) = write(&app, &settings) {
     if capture_affinity_changed {
       let _ =
-        crate::windows::sync_capture_affinity(&app, current_settings.record_screenwide_windows);
+        crate::app_windows::sync_capture_affinity(&app, current_settings.record_screenwide_windows);
     }
     return Err(error);
   }
@@ -182,7 +182,7 @@ pub async fn browse_default_location(
     "screenshot" => settings.screenshot_directory,
     _ => return Err("Unknown default location".to_owned()),
   };
-  let parent = app.get_webview_window(crate::windows::WindowLabel::Settings.as_str());
+  let parent = app.get_webview_window(crate::app_windows::WindowLabel::Settings.as_str());
   tauri::async_runtime::spawn_blocking(move || {
     use tauri_plugin_dialog::DialogExt;
     let mut dialog = app.dialog().file().set_title("Choose a folder");

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #[cfg(test)]
-#[path = "audio_preview/tests.rs"]
 mod tests;
 
 use std::sync::Mutex;

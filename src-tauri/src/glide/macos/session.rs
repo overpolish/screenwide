@@ -18,23 +18,14 @@ use super::{
 use crate::glide::core::GlideRuntime;
 use crate::glide::{begin_logical, finish, icon::spawn_icon_lookup, present_locked};
 
-#[path = "session/access.rs"]
 mod access;
-#[path = "session/detector.rs"]
 mod detector;
-#[path = "session/end.rs"]
 mod end;
-#[path = "session/flags.rs"]
 mod flags;
-#[path = "session/monitor_input.rs"]
 pub(super) mod monitor_input;
-#[path = "session/monitors.rs"]
 pub(super) mod monitors;
-#[path = "session/mouse_preview.rs"]
 pub(super) mod mouse_preview;
-#[path = "session/requests.rs"]
 mod requests;
-#[path = "session/taps.rs"]
 mod taps;
 
 pub(super) use access::{

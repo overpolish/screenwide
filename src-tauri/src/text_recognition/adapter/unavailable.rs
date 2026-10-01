@@ -23,7 +23,7 @@ pub(crate) fn close(app: &tauri::AppHandle, except: Option<&str>) {
   for window in super::super::recognition_windows(app) {
     if Some(window.label()) != except {
       #[cfg(target_os = "windows")]
-      let _ = crate::windows::conceal_disposable_overlay(&window);
+      let _ = crate::app_windows::conceal_disposable_overlay(&window);
       let _ = window.close();
     }
   }

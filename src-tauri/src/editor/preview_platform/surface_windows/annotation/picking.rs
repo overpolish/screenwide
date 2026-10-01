@@ -244,5 +244,4 @@ pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<
 }
 
 #[cfg(test)]
-#[path = "picking_tests.rs"]
 mod tests;

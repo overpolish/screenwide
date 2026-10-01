@@ -13,7 +13,6 @@ use tauri::AppHandle;
 
 use super::session;
 
-#[path = "multitouch/pointer.rs"]
 mod pointer;
 
 use crate::glide::core::taps::TapRecognizer;

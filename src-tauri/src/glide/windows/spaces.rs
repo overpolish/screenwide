@@ -16,7 +16,6 @@ use std::{
 };
 use tauri::AppHandle;
 use windows::Win32::Foundation::POINT;
-#[path = "spaces/presentation.rs"]
 mod presentation;
 struct Session {
   id: u64,

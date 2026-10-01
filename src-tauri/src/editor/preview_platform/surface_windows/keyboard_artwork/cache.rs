@@ -4,7 +4,7 @@
 use super::*;
 
 impl KeyboardArtworkCache {
-  pub(in crate::editor::preview_platform::surface) fn visible_bounds(
+  pub(in crate::editor::preview_platform::surface_windows) fn visible_bounds(
     &self,
     gpu: &crate::gpu::Gpu,
     overlay: &KeyboardOverlay,
@@ -17,7 +17,7 @@ impl KeyboardArtworkCache {
     )
   }
 
-  pub(in crate::editor::preview_platform::surface) fn resolve(
+  pub(in crate::editor::preview_platform::surface_windows) fn resolve(
     &self,
     gpu: &crate::gpu::Gpu,
     overlay: &KeyboardOverlay,

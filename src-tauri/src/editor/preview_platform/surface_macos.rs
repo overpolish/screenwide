@@ -5,26 +5,17 @@
 //!
 //! See the parent module for the contract a new platform has to satisfy. The
 //! pane hierarchy, layout batching and GPU composition live in
-//! `editor/recording_preview_surface_macos.m`; this file is only the FFI
+//! `editor/preview_platform/surface_macos/native/recording_preview_surface_macos.m`; this file is only the FFI
 //! boundary around it.
 
-#[path = "surface_macos/annotation.rs"]
 mod annotation;
-#[path = "surface_macos/audio_ribbon.rs"]
 mod audio_ribbon;
-#[path = "surface_macos/callbacks.rs"]
 mod callbacks;
-#[path = "surface_macos/editor.rs"]
 mod editor;
-#[path = "surface_macos/ffi.rs"]
 mod ffi;
-#[path = "surface_macos/layout.rs"]
 mod layout;
-#[path = "surface_macos/native_types.rs"]
 mod native_types;
-#[path = "surface_macos/recording_workspace.rs"]
 mod recording_workspace;
-#[path = "surface_macos/screenshot_workspace.rs"]
 mod screenshot_workspace;
 
 use tauri::WebviewWindow;

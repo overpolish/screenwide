@@ -18,7 +18,7 @@ pub fn initialize(app: &tauri::AppHandle) {
 
 use tauri::{AppHandle, Manager};
 
-use crate::windows::{self, WindowLabel};
+use crate::app_windows::{self, WindowLabel};
 
 pub fn show(app: &AppHandle) -> tauri::Result<()> {
   crate::capture_overlays::dismiss_all(app);
@@ -27,15 +27,15 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
     .ok_or(tauri::Error::WindowNotFound)?;
   #[cfg(target_os = "macos")]
   app.set_dock_visibility(true)?;
-  windows::show(&window, true)?;
-  windows::recover_window_position(app, &window)
+  app_windows::show(&window, true)?;
+  app_windows::recover_window_position(app, &window)
 }
 
 #[tauri::command]
 pub fn hide_settings(app: AppHandle) -> tauri::Result<()> {
   let _ = crate::shortcuts::end_shortcut_capture(app.clone());
   if let Some(window) = app.get_webview_window(WindowLabel::Settings.as_str()) {
-    windows::hide_without_focus_transfer(&window)?;
+    app_windows::hide_without_focus_transfer(&window)?;
   }
   Ok(())
 }

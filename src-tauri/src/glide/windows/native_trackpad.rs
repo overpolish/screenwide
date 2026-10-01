@@ -19,9 +19,7 @@ use crate::glide::core::taps::TapRecognizer;
 
 const FALLBACK_SUPPRESSION: Duration = Duration::from_millis(180);
 
-#[path = "native_trackpad/hid.rs"]
 mod hid;
-#[path = "native_trackpad/pointer.rs"]
 mod pointer;
 
 use pointer::PointerEpisode;

@@ -30,44 +30,36 @@
 
 use super::{Annotation, AnnotationPoint};
 
-#[path = "snap_anchors.rs"]
 mod anchors;
 pub(crate) use anchors::{detect_anchors, request_anchors, AnchorBoxes, AnchorCache};
 
 #[cfg(test)]
-#[path = "snap_tests.rs"]
 mod tests;
 
 /// How far a snap reaches, in screen points. The layer engines' own distance.
 const THRESHOLD_POINTS: f64 = 8.0;
 
 /// What one gesture can land on.
-#[path = "snap_field.rs"]
 mod field;
 pub(crate) use field::{disc_radius, source_per_size, SnapField};
 
 /// The edges of a detected element, which an arrow's tip rides.
-#[path = "snap_edges.rs"]
 mod edges;
 pub(crate) use edges::{element_padding, merge_fragments, snap_edges, SnapBounds};
 
 /// The lines one axis offers, and which of them a shape takes.
-#[path = "snap_axis.rs"]
 mod axis;
 pub(crate) use axis::{resolve_axis, snap_axis, AxisGuide, AxisWinner};
 
 /// Equal spacing with a pair of other annotations.
-#[path = "snap_gaps.rs"]
 mod gaps;
 pub(crate) use gaps::{snap_gap, GapCandidate, GapSnap, GapSpan};
 
 /// What moves, and the rectangles it aligns to.
-#[path = "snap_subject.rs"]
 mod subject;
 pub(crate) use subject::{Axis, SnapBox, SnapOffset, SnapSubject};
 
 /// Where a turning tail's tip can land.
-#[path = "snap_tail.rs"]
 mod tail;
 pub(crate) use tail::snap_tail;
 

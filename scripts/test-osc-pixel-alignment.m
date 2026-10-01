@@ -3,7 +3,7 @@
 
 // Run with clang -fobjc-arc -framework AppKit -framework Metal
 // scripts/test-osc-pixel-alignment.m -o /tmp/osc-pixels && /tmp/osc-pixels
-#import "../src-tauri/src/editor/osc_pixel_alignment_macos.h"
+#import "../src-tauri/src/osc/gpu/macos/osc_pixel_alignment_macos.h"
 #include <assert.h>
 
 static void quad(ScreenwideRegionOscVertex *out, uint32_t kind) {

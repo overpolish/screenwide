@@ -116,7 +116,6 @@ impl Cell {
   }
 }
 
-#[path = "atlas_shelves.rs"]
 mod shelves;
 use shelves::Shelves;
 
@@ -295,5 +294,4 @@ impl CounterAtlas {
 }
 
 #[cfg(test)]
-#[path = "atlas_tests.rs"]
 mod tests;

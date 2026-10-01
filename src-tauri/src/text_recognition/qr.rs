@@ -128,5 +128,4 @@ fn overlapping_area(a: TextRect, b: TextRect) -> f64 {
 }
 
 #[cfg(test)]
-#[path = "qr_tests.rs"]
 mod tests;

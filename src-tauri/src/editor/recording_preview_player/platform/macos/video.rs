@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
-#[path = "video/luma.rs"]
 mod luma;
-#[path = "video/playback.rs"]
 mod playback;
 pub(crate) use luma::LumaReader;
 pub(super) use playback::spawn;
@@ -234,5 +232,4 @@ impl NativeVideoReader {
 }
 
 #[cfg(test)]
-#[path = "video/tests.rs"]
 mod tests;

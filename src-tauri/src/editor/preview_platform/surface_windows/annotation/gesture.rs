@@ -19,12 +19,10 @@ use super::*;
 use crate::editor::annotations::handles::HANDLE_FLAG_GROUPED;
 
 /// Resolving pointer samples and reporting them to the manager.
-#[path = "gesture_sample.rs"]
 mod sample;
 use sample::{report, resolve, Sample};
 
 /// Presses that change the choice: a group carry, a toggle and a marquee.
-#[path = "gesture_group.rs"]
 mod group;
 
 /// Takes the press if the arrow chrome owns it. `false` lets it carry on to

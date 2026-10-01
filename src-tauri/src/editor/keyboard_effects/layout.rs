@@ -3,7 +3,6 @@
 
 //! Absolute-position layout tracks for keyboard visuals.
 
-#[path = "layout/track_building.rs"]
 mod track_building;
 pub(super) use track_building::attach_tracks;
 

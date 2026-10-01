@@ -32,14 +32,14 @@ pub async fn capture_scrolling_still(
   // After the dismissal, so the overlay this capture owns is not swept away
   // with the capture tools it just closed.
   crate::capture_overlays::dismiss_all(&app);
-  let _ = crate::windows::hide_recording_ui(app.clone());
+  let _ = crate::app_windows::hide_recording_ui(app.clone());
   // Armed before the overlay exists so the window is told, as it loads, whether
   // it can offer a way out.
   let cancellable = cancel::arm(&app);
   if let Err(error) = overlay::show(&app, target, cancellable) {
     cancel::disarm(&app);
     crate::editor::release_screenshot_workspace(&app);
-    let _ = crate::windows::show_recording_ui(&app);
+    let _ = crate::app_windows::show_recording_ui(&app);
     return Err(error);
   }
 
@@ -51,7 +51,7 @@ pub async fn capture_scrolling_still(
       let cancelled = cancel::was_requested();
       finish(&app);
       crate::editor::release_screenshot_workspace(&app);
-      let _ = crate::windows::show_recording_ui(&app);
+      let _ = crate::app_windows::show_recording_ui(&app);
       return if cancelled { Ok(()) } else { Err(error) };
     }
   };
@@ -65,7 +65,7 @@ pub async fn capture_scrolling_still(
   ) {
     finish(&app);
     crate::editor::release_screenshot_workspace(&app);
-    let _ = crate::windows::show_recording_ui(&app);
+    let _ = crate::app_windows::show_recording_ui(&app);
     return Err(error);
   }
 

@@ -69,11 +69,13 @@ pub(crate) mod workspace_editor;
 mod workspace_transform;
 
 #[cfg(target_os = "macos")]
-#[path = "preview_platform/surface_macos.rs"]
-mod surface;
+mod surface_macos;
+#[cfg(target_os = "macos")]
+use self::surface_macos as surface;
 #[cfg(target_os = "windows")]
-#[path = "preview_platform/surface_windows.rs"]
-mod surface;
+mod surface_windows;
+#[cfg(target_os = "windows")]
+use self::surface_windows as surface;
 
 #[cfg(target_os = "windows")]
 pub(crate) use surface::arrows;

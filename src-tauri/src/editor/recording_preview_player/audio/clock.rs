@@ -124,5 +124,4 @@ impl AudioClock {
 }
 
 #[cfg(test)]
-#[path = "clock_tests.rs"]
 mod tests;

@@ -20,14 +20,13 @@ mod state;
 mod types;
 mod ui;
 
-#[path = "recording/start_capture.rs"]
 mod start_capture;
 pub use start_capture::start;
 
 use std::time::Instant;
 use tauri::AppHandle;
 
-use crate::windows;
+use crate::app_windows;
 
 #[cfg(target_os = "macos")]
 use platform as capture;

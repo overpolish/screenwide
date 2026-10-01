@@ -8,7 +8,7 @@ const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/audio_ribbon.wgsl")
 impl AudioRibbon {
   /// The ribbon's visual under `root`, hidden until it has levels. The
   /// caller commits the tree.
-  pub(in crate::editor::preview_platform::surface) fn new(
+  pub(in crate::editor::preview_platform::surface_windows) fn new(
     shared: &'static crate::gpu::Gpu,
     composition: &IDCompositionDevice,
     root: &IDCompositionVisual,
@@ -71,7 +71,7 @@ impl AudioRibbon {
         entry_point: Some("fs_main"),
         compilation_options: Default::default(),
         targets: &[Some(wgpu::ColorTargetState {
-          format: crate::windows::overlay_surface::FORMAT,
+          format: crate::app_windows::overlay_surface::FORMAT,
           blend: None,
           write_mask: wgpu::ColorWrites::ALL,
         })],

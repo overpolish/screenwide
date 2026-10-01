@@ -5,7 +5,7 @@
 use tauri::Manager;
 use tauri::{AppHandle, Emitter};
 
-use crate::windows::WindowLabel;
+use crate::app_windows::WindowLabel;
 
 /// Sits immediately above the recording Dock's native macOS level (32).
 pub const FOREGROUND_LEVEL: isize = 33;
@@ -21,7 +21,7 @@ pub enum CaptureOverlay {
 /// macOS. Other platforms retain their existing always-on-top behavior.
 pub fn set_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), String> {
   #[cfg(target_os = "windows")]
-  crate::windows::initialize_capture_overlay(window).map_err(|error| error.to_string())?;
+  crate::app_windows::initialize_capture_overlay(window).map_err(|error| error.to_string())?;
 
   #[cfg(target_os = "macos")]
   {

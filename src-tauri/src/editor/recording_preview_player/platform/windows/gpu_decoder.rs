@@ -289,5 +289,4 @@ fn sample_texture(sample: &IMFSample, _width: u32, _height: u32) -> Result<GpuFr
 }
 
 #[cfg(test)]
-#[path = "gpu_decoder_tests.rs"]
 mod tests;

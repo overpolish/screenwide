@@ -8,14 +8,14 @@ use core_graphics::geometry::CGPoint;
 
 use super::{InputKind, SharedState};
 
-pub(in crate::glide::platform) fn session_anchor(state: &SharedState) -> Option<CGPoint> {
+pub(in crate::glide::macos) fn session_anchor(state: &SharedState) -> Option<CGPoint> {
   state
     .lock()
     .ok()
     .and_then(|state| state.session.as_ref().map(|session| session.anchor))
 }
 
-pub(in crate::glide::platform) fn accumulate_pointer_travel(
+pub(in crate::glide::macos) fn accumulate_pointer_travel(
   state: &SharedState,
   distance: f64,
 ) -> f64 {
@@ -31,18 +31,18 @@ pub(in crate::glide::platform) fn accumulate_pointer_travel(
     .unwrap_or(0.0)
 }
 
-pub(in crate::glide::platform) fn active_input(state: &SharedState) -> Option<InputKind> {
+pub(in crate::glide::macos) fn active_input(state: &SharedState) -> Option<InputKind> {
   state
     .lock()
     .ok()
     .and_then(|state| state.session.as_ref().map(|session| session.input))
 }
 
-pub(in crate::glide::platform) fn is_active(state: &SharedState) -> bool {
+pub(in crate::glide::macos) fn is_active(state: &SharedState) -> bool {
   active_input(state).is_some()
 }
 
-pub(in crate::glide::platform) fn monitor_mode(state: &SharedState) -> bool {
+pub(in crate::glide::macos) fn monitor_mode(state: &SharedState) -> bool {
   state.lock().ok().is_some_and(|state| {
     state
       .session
@@ -60,7 +60,7 @@ type MouseCenterContext = (
   (f64, f64),
 );
 
-pub(in crate::glide::platform) fn mouse_center_context(
+pub(in crate::glide::macos) fn mouse_center_context(
   state: &SharedState,
 ) -> Option<MouseCenterContext> {
   let (target, work_origin, work_size) = state.lock().ok().and_then(|state| {

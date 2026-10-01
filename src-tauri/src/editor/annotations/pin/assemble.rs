@@ -21,14 +21,11 @@ use super::smooth::{smooth, Sample, LOG_SCALE, POSITION};
 use super::tracker::Status;
 
 /// Stretches the content spent under a still cover.
-#[path = "assemble_covers.rs"]
 mod covers;
 /// What each leg has for one moment, and how the two are blended.
-#[path = "assemble_moment.rs"]
 mod moment;
 /// Runs of samples, and how a path's stretches off the frame and a
 /// redaction's doubtful ones are filled in.
-#[path = "assemble_stretches.rs"]
 mod stretches;
 use covers::under_covers;
 use moment::{blend, Raw, Sides};

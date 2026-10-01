@@ -283,5 +283,4 @@ impl FixedBands {
 }
 
 #[cfg(test)]
-#[path = "fixed_regions_tests.rs"]
 mod tests;

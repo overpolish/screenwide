@@ -74,11 +74,15 @@ fn generator_sources() -> [(&'static str, &'static str); 5] {
     ),
     (
       "gpu_compositor_macos_generators.h",
-      include_str!("../../editor/cursor_export/gpu_compositor_macos_generators.h"),
+      include_str!(
+        "../../editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_generators.h"
+      ),
     ),
     (
       "gpu_compositor_macos_generators_layered.h",
-      include_str!("../../editor/cursor_export/gpu_compositor_macos_generators_layered.h"),
+      include_str!(
+        "../../editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_generators_layered.h"
+      ),
     ),
   ]
 }

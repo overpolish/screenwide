@@ -7,7 +7,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 use super::core::GlideDetection;
-use crate::windows::WindowLabel;
+use crate::app_windows::WindowLabel;
 
 #[derive(Clone, Copy, Serialize)]
 #[serde(

@@ -256,5 +256,4 @@ impl TrackSelection {
 }
 
 #[cfg(test)]
-#[path = "track_selection_tests.rs"]
 mod tests;

@@ -19,13 +19,13 @@ use crate::editor::effect_animation::{ease_in_out_cubic, ease_out_cubic};
 /// How long the pointer takes to draw out once the box is in where its clip
 /// names no pace, and how long it takes to draw back as a share of that. The
 /// editor paces a pointer by its own length. The twin of
-/// `POINTER_DRAW_IN_MS` in `src/features/editor/annotation-pace.ts`.
+/// `POINTER_DRAW_IN_MS` in `src/features/editor/annotations/annotation-pace.ts`.
 pub(crate) const POINTER_IN_MS: f32 = 280.0;
 const POINTER_OUT_SHARE: f32 = 240.0 / 280.0;
 
 /// How long a text box takes to arrive, pointer and all, where its clip names
 /// no pace. The twin of `ANNOTATION_TEXT_DRAW_IN_MS` in
-/// `src/features/editor/annotation-kinds.ts`, which reaches such a clip this
+/// `src/features/editor/annotations/annotation-kinds.ts`, which reaches such a clip this
 /// far back so the box is whole by the time the playhead is reached.
 #[cfg(test)]
 const TEXT_REVEAL_IN_MS: f32 = COUNTER_REVEAL_IN_MS + POINTER_IN_MS;
@@ -124,7 +124,7 @@ mod tests {
   fn the_editor_places_a_text_clip_by_this_arrival() {
     const SOURCE: &str = include_str!(concat!(
       env!("CARGO_MANIFEST_DIR"),
-      "/../src/features/editor/annotation-kinds.ts"
+      "/../src/features/editor/annotations/annotation-kinds.ts"
     ));
     let declared = SOURCE
       .lines()
@@ -143,7 +143,7 @@ mod tests {
   fn the_editor_paces_a_pointer_from_this_time() {
     const SOURCE: &str = include_str!(concat!(
       env!("CARGO_MANIFEST_DIR"),
-      "/../src/features/editor/annotation-pace.ts"
+      "/../src/features/editor/annotations/annotation-pace.ts"
     ));
     let declared = SOURCE
       .lines()

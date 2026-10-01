@@ -5,7 +5,6 @@ mod container;
 mod finish;
 mod samples;
 
-#[path = "writer/setup.rs"]
 mod setup;
 
 use std::sync::OnceLock;

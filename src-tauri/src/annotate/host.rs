@@ -9,14 +9,14 @@
 //! annotations.
 
 #[cfg(target_os = "windows")]
-#[path = "host_windows.rs"]
-mod platform;
+mod host_windows;
+#[cfg(target_os = "windows")]
+use self::host_windows as platform;
 
 use tauri::{AppHandle, Manager, WebviewWindow};
 
-use crate::{capture_overlays, windows::WindowLabel};
+use crate::{app_windows::WindowLabel, capture_overlays};
 
-#[path = "host_planning.rs"]
 mod planning;
 pub(super) use planning::{build, plan, HostPlan};
 
@@ -59,7 +59,7 @@ pub(super) fn anchor(app: &AppHandle) -> Option<WebviewWindow> {
 /// without being absent from everything.
 #[cfg(target_os = "windows")]
 fn apply_capture_affinity(window: &WebviewWindow) -> Result<(), String> {
-  crate::windows::set_window_capture_affinity(window, !crate::windows::is_capturing())
+  crate::app_windows::set_window_capture_affinity(window, !crate::app_windows::is_capturing())
     .map_err(|error| error.to_string())
 }
 

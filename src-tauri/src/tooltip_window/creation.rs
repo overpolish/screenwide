@@ -8,7 +8,7 @@ use tauri::{AppHandle, WebviewUrl, WebviewWindow};
 #[cfg(target_os = "windows")]
 use tauri::Manager;
 
-use crate::windows::{platform, WindowLabel};
+use crate::app_windows::{platform, WindowLabel};
 
 use super::{INITIAL_HEIGHT, MAX_WIDTH};
 
@@ -18,7 +18,7 @@ pub(super) fn build(app: &AppHandle) -> tauri::Result<WebviewWindow> {
   } else {
     Effect::UnderWindowBackground
   };
-  let window = crate::windows::webview_window(
+  let window = crate::app_windows::webview_window(
     app,
     WindowLabel::Tooltip.as_str(),
     WebviewUrl::App("/tooltip".into()),

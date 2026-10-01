@@ -3,9 +3,7 @@
 
 //! Native preview surface layout and visibility commands.
 
-#[path = "surface_commands/geometry_helpers.rs"]
 mod geometry_helpers;
-#[path = "surface_commands/view_controls.rs"]
 mod view_controls;
 pub use view_controls::reset_recording_preview_view;
 pub use view_controls::set_recording_preview_fit_basis;
@@ -21,10 +19,8 @@ pub use view_controls::{
 };
 
 #[cfg(test)]
-#[path = "surface_commands/tests.rs"]
 mod tests;
 
-#[path = "surface_commands/layout_command.rs"]
 mod layout_command;
 pub use layout_command::layout_recording_preview_surface;
 pub use layout_command::{

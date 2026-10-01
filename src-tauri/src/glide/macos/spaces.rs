@@ -3,17 +3,11 @@
 
 //! Spaces uses the same titlebar resolver and cursor lifecycle as resizing,
 //! with its own gesture state so a carry can finish after the fingers lift.
-#[path = "spaces/adapter.rs"]
 mod adapter;
-#[path = "spaces/input.rs"]
 mod input;
-#[path = "spaces/lifecycle.rs"]
 mod lifecycle;
-#[path = "spaces/presentation.rs"]
 mod presentation;
-#[path = "spaces/preview_windows.rs"]
 pub(super) mod preview_windows;
-#[path = "spaces/transport.rs"]
 mod transport;
 
 use super::tween::WindowTarget;

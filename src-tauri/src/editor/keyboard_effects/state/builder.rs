@@ -3,7 +3,6 @@
 
 //! Physical-event builder for deterministic keyboard-chord display state.
 
-#[path = "builder/key_down.rs"]
 mod key_down;
 
 use std::collections::HashMap;

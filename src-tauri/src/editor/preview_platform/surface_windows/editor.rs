@@ -22,9 +22,7 @@ use windows::{
   },
 };
 
-#[path = "editor/input.rs"]
 mod input;
-#[path = "editor/typing_window.rs"]
 mod typing_window;
 pub(super) use typing_window::TypingInput;
 

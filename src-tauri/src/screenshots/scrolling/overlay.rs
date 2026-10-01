@@ -53,7 +53,7 @@ pub(super) fn show(
   } else {
     Effect::UnderWindowBackground
   };
-  let window = crate::windows::webview_window(
+  let window = crate::app_windows::webview_window(
     app,
     LABEL,
     WebviewUrl::App(
@@ -85,7 +85,7 @@ pub(super) fn show(
 
   // Never focused: the capture scrolls whatever the user was reading, and
   // taking key status away from it would change what is on screen mid-capture.
-  crate::windows::show(&window, false).map_err(|error| error.to_string())?;
+  crate::app_windows::show(&window, false).map_err(|error| error.to_string())?;
   // Both invariants are asserted after showing, because `platform::show` turns
   // cursor events back on every time it runs and re-applies the persistent
   // capture-affinity preference.
@@ -96,7 +96,7 @@ pub(super) fn show(
   window
     .set_ignore_cursor_events(true)
     .map_err(|error| error.to_string())?;
-  crate::windows::exclude_from_capture(&window).map_err(|error| error.to_string())?;
+  crate::app_windows::exclude_from_capture(&window).map_err(|error| error.to_string())?;
 
   Ok(())
 }
@@ -106,10 +106,9 @@ pub(super) fn close(app: &AppHandle) {
     return;
   };
   #[cfg(target_os = "windows")]
-  let _ = crate::windows::conceal_disposable_overlay(&window);
+  let _ = crate::app_windows::conceal_disposable_overlay(&window);
   let _ = window.close();
 }
 
 #[cfg(test)]
-#[path = "overlay_tests.rs"]
 mod tests;

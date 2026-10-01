@@ -15,8 +15,11 @@
 
 pub(crate) mod commands;
 #[cfg(target_os = "macos")]
-#[path = "annotate/cursor_macos.rs"]
-mod cursor;
+mod macos;
+#[cfg(target_os = "windows")]
+mod windows;
+#[cfg(target_os = "macos")]
+use self::macos::cursor;
 mod geometry;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod highlight;
@@ -25,11 +28,9 @@ mod host;
 mod input;
 pub(crate) mod live_clips;
 #[cfg(target_os = "macos")]
-#[path = "annotate/native_overlay_macos.rs"]
-mod native_overlay;
+use self::macos::native_overlay;
 #[cfg(target_os = "windows")]
-#[path = "annotate/native_overlay_windows.rs"]
-mod native_overlay;
+use self::windows::native_overlay;
 mod opening;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod screenshot;
@@ -90,7 +91,7 @@ fn release_input_ownership(app: &AppHandle) {
   // Escape is released here even though every way out of the overlay runs
   // inside a native shortcut callback: `escape::sync` is what knows to wait
   // for a later turn before touching the shortcut registry.
-  crate::windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
+  crate::app_windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
 }
 
 /// Takes the overlay's surfaces down and ends the session, leaving the

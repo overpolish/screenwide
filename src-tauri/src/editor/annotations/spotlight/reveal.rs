@@ -25,7 +25,7 @@ use crate::editor::annotations::reveal::{AnnotationReveal, REVEAL_PHASE_SHARE};
 use crate::editor::effect_animation::{ease_in_out_cubic, ease_out_cubic};
 
 /// How long a spotlight takes to arrive. The twin of
-/// `ANNOTATION_SPOTLIGHT_DRAW_IN_MS` in `src/features/editor/annotation-kinds.ts`,
+/// `ANNOTATION_SPOTLIGHT_DRAW_IN_MS` in `src/features/editor/annotations/annotation-kinds.ts`,
 /// which places a fresh clip this far before the playhead so the light is
 /// whole by the time the playhead is reached.
 pub(crate) const SPOTLIGHT_FADE_IN_MS: f32 = 400.0;

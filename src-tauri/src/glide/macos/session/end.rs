@@ -15,11 +15,7 @@ use crate::glide::{finish, finish_with_fade};
 
 /// Ends the live session, if there is one. `cancelled` rides out with the end
 /// so the detector knows whether to commit what it had armed.
-pub(in crate::glide::platform) fn end_session(
-  app: &AppHandle,
-  state: &SharedState,
-  cancelled: bool,
-) {
+pub(in crate::glide::macos) fn end_session(app: &AppHandle, state: &SharedState, cancelled: bool) {
   if !cancelled {
     super::detector::finish_opening(app, state);
   }

@@ -34,7 +34,7 @@ use super::EditorWindow;
 
 /// What the typing window hands on to the box being typed into.
 #[derive(Clone, Copy)]
-pub(in crate::editor::preview_platform::surface) enum TypingInput {
+pub(in crate::editor::preview_platform::surface_windows) enum TypingInput {
   /// A key went down, with whether Ctrl and Shift were held.
   Key { key: u16, ctrl: bool, shift: bool },
   /// One UTF-16 unit of typed text, after the keyboard layout and any input
@@ -99,36 +99,36 @@ pub(super) fn create(editor: HWND) -> Result<HWND, String> {
 
 impl EditorWindow {
   /// The window that owns the clipboard while text is copied from a box.
-  pub(in crate::editor::preview_platform::surface) fn typing_window(&self) -> HWND {
+  pub(in crate::editor::preview_platform::surface_windows) fn typing_window(&self) -> HWND {
     self.typing
   }
 
   /// Takes the keyboard for a box being typed into. Posted, so it may be
   /// asked for from any thread.
-  pub(in crate::editor::preview_platform::surface) fn begin_typing(&self) {
+  pub(in crate::editor::preview_platform::surface_windows) fn begin_typing(&self) {
     let _ = unsafe { PostMessageW(Some(self.typing), BEGIN, WPARAM(0), LPARAM(0)) };
   }
 
   /// Gives the keyboard back once the typing is over.
-  pub(in crate::editor::preview_platform::surface) fn end_typing(&self) {
+  pub(in crate::editor::preview_platform::surface_windows) fn end_typing(&self) {
     let _ = unsafe { PostMessageW(Some(self.typing), END, WPARAM(0), LPARAM(0)) };
   }
 
   /// Ends the typing and reports what was typed, a turn later: the box went
   /// away while something up the stack may still hold the surface.
-  pub(in crate::editor::preview_platform::surface) fn finish_typing(&self) {
+  pub(in crate::editor::preview_platform::surface_windows) fn finish_typing(&self) {
     let _ = unsafe { PostMessageW(Some(self.typing), FINISH, WPARAM(0), LPARAM(0)) };
   }
 
   /// Shows the caret for a whole blink again, as after every edit. Only on
   /// the typing window's own thread, where every edit arrives.
-  pub(in crate::editor::preview_platform::surface) fn restart_blink(&self) {
+  pub(in crate::editor::preview_platform::surface_windows) fn restart_blink(&self) {
     unsafe { SetTimer(Some(self.typing), BLINK, GetCaretBlinkTime(), None) };
   }
 
   /// Moves the typing window to the caret, in the editor's device pixels,
   /// for an input method to open its candidates beside it.
-  pub(in crate::editor::preview_platform::surface) fn place_typing(&self, x: i32, y: i32) {
+  pub(in crate::editor::preview_platform::surface_windows) fn place_typing(&self, x: i32, y: i32) {
     let flags = SWP_ASYNCWINDOWPOS | SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER;
     let _ = unsafe { SetWindowPos(self.typing, None, x, y, 0, 0, flags) };
   }

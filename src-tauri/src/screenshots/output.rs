@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #[cfg(test)]
-#[path = "output/tests.rs"]
 pub(crate) mod tests;
 
 use serde::{Deserialize, Serialize};

@@ -286,5 +286,4 @@ pub(crate) fn shape_body_distance(point: [f32; 2], geometry: &ArrowGeometry) -> 
 }
 
 #[cfg(test)]
-#[path = "geometry_tests.rs"]
 mod tests;

@@ -24,7 +24,6 @@ use crate::editor::annotations::Annotation;
 use crate::screenshots::{output_placement, CapturedImage};
 
 /// Which geometry each kind prepares from its placed points.
-#[path = "prepare_kind.rs"]
 mod prepare_kind;
 
 /// Prepares the annotations for one composition, in canvas pixels, with those
@@ -283,5 +282,4 @@ fn exposure_sample_count(travel: f32, r: AnnotationReveal) -> u32 {
 }
 
 #[cfg(test)]
-#[path = "arrow_tests.rs"]
 mod tests;

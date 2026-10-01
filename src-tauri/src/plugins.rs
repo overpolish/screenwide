@@ -24,8 +24,8 @@ pub(crate) fn with_plugins(builder: Builder<Wry>) -> Builder<Wry> {
     .plugin(
       tauri_plugin_window_state::Builder::default()
         .with_state_flags(tauri_plugin_window_state::StateFlags::POSITION)
-        .with_filter(|label| label == crate::windows::WindowLabel::RecordingBar.as_str())
-        .skip_initial_state(crate::windows::WindowLabel::RecordingBar.as_str())
+        .with_filter(|label| label == crate::app_windows::WindowLabel::RecordingBar.as_str())
+        .skip_initial_state(crate::app_windows::WindowLabel::RecordingBar.as_str())
         .build(),
     );
   #[cfg(target_os = "macos")]

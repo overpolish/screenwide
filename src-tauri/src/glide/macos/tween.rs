@@ -16,14 +16,11 @@ use std::{
 
 use cidre::cg;
 
-#[path = "tween/completion.rs"]
 mod completion;
 
 pub(super) use completion::after_current;
 
-#[path = "tween/fit.rs"]
 mod fit;
-#[path = "tween/target.rs"]
 mod target;
 
 pub(super) use fit::FitContext;

@@ -8,10 +8,8 @@ use super::luma::{Plane, Pyramid};
 use super::search::Template;
 
 /// Following the target from one frame to the next.
-#[path = "tracker_follow.rs"]
 mod follow;
 /// Finding the target again once it is lost.
-#[path = "tracker_reacquire.rs"]
 mod reacquire;
 
 /// How many points are followed from frame to frame.

@@ -238,5 +238,4 @@ pub(crate) fn recognise(
 }
 
 #[cfg(test)]
-#[path = "shape_tests.rs"]
 mod tests;

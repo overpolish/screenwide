@@ -207,24 +207,19 @@ impl RecordingPreviewSurface {
 }
 
 /// A press the chrome has taken, before and after it becomes a drag.
-#[path = "annotation/drag.rs"]
 mod drag;
 use drag::Drag;
 
 /// Turning a layer's annotations into what the compositor draws this frame.
-#[path = "annotation/prepare.rs"]
 mod prepare;
 pub(crate) use prepare::{placed_arrows, prepared_arrows};
 
 /// Resolving the picture an annotation is drawn in, and picking the grip or
 /// shaft a press lands on.
-#[path = "annotation/picking.rs"]
 mod picking;
 /// The chrome's grips, whether it owns the screen, and its cursor.
-#[path = "annotation/picking_chrome.rs"]
 mod picking_chrome;
 /// How far a press is from each kind of annotation.
-#[path = "annotation/picking_distance.rs"]
 mod picking_distance;
 use picking::{
   handle_at_point, image_frame, item_image_frame, layer_selection, selected_item, shaft_at_point,
@@ -233,37 +228,30 @@ use picking::{
 pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
 
 /// A redaction's box, grips and radius dot.
-#[path = "annotation/redact_chrome.rs"]
 mod redact_chrome;
 pub(super) use redact_chrome::selected_box as selected_redaction;
 
 /// A magnifier's loupe: where it is picked and the grip that sets its size.
-#[path = "annotation/magnify_chrome.rs"]
 mod magnify_chrome;
 
 /// What a snapped sample draws, and where.
-#[path = "annotation/snap_chrome.rs"]
 mod snap_chrome;
 pub(super) use snap_chrome::snap_chrome;
 
 /// The boxes round a group, and the marquee band.
-#[path = "annotation/group_chrome.rs"]
 mod group_chrome;
 pub(super) use group_chrome::{group_frames, has_group, marquee_frame};
 use group_chrome::{group_layer_at_point, marquee_layer_at_point};
 
 /// The halo that grows under the arrow the pointer rests on.
-#[path = "annotation/hover.rs"]
 mod hover;
 pub(crate) use hover::{refresh as refresh_hover, update as update_hover};
 
 /// The gesture the press becomes, and the samples it reports.
-#[path = "annotation/gesture.rs"]
 mod gesture;
 pub(super) use gesture::{cancel, choose_at, down, pointer_move, up};
 
 /// Typing into a text box: the keyboard, the caret and the presses around it.
-#[path = "annotation/typing.rs"]
 mod typing;
 pub(super) use typing::{handle_typing_input, sync_typing_marks};
 pub(crate) use typing::{open as open_text, press as typing_press};

@@ -123,5 +123,4 @@ fn dominant(rgba: &[u8], width: u32, segments: &[Segment]) -> Option<[u8; 3]> {
 }
 
 #[cfg(test)]
-#[path = "surface_colour_tests.rs"]
 mod tests;

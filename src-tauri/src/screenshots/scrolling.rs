@@ -14,15 +14,17 @@ mod fixed_regions;
 mod matcher;
 mod overlay;
 #[cfg(target_os = "macos")]
-#[path = "scrolling/platform_macos.rs"]
-mod platform;
+mod platform_macos;
+#[cfg(target_os = "macos")]
+use self::platform_macos as platform;
 mod progress;
 mod scan;
 
 use scan::{prepare_frame, scan_canvas, seek_boundary};
 #[cfg(target_os = "windows")]
-#[path = "scrolling/platform_windows.rs"]
-mod platform;
+mod platform_windows;
+#[cfg(target_os = "windows")]
+use self::platform_windows as platform;
 
 // Every document row must be covered by at least three tiles, so that the
 // right-edge reconstruction always has two clean samples to outvote a tile

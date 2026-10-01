@@ -8,14 +8,17 @@
 //! versioned file format. It never receives or persists typed characters.
 
 #[cfg(target_os = "macos")]
-#[path = "keyboard/platform_macos.rs"]
-mod platform;
+mod platform_macos;
+#[cfg(target_os = "macos")]
+use self::platform_macos as platform;
 #[cfg(target_os = "windows")]
-#[path = "keyboard/platform_windows.rs"]
-mod platform;
+mod platform_windows;
+#[cfg(target_os = "windows")]
+use self::platform_windows as platform;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-#[path = "keyboard/platform_unsupported.rs"]
-mod platform;
+mod platform_unsupported;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+use self::platform_unsupported as platform;
 
 mod format;
 #[cfg(test)]

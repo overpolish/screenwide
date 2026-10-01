@@ -1,13 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "writer/frames.rs"]
 mod frames;
-#[path = "writer/media_types.rs"]
 mod media_types;
-#[path = "writer/sink.rs"]
 mod sink;
-#[path = "writer/timeline.rs"]
 mod timeline;
 use frames::crop_frame;
 pub(super) use frames::snapshot_frame;

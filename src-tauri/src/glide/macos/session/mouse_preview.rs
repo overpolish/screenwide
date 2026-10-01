@@ -8,7 +8,7 @@ use tauri::AppHandle;
 use super::{active_input, InputKind, SharedState};
 use crate::glide::platform::native_settings;
 
-pub(in crate::glide::platform) fn poll(app: &AppHandle, state: &SharedState) {
+pub(in crate::glide::macos) fn poll(app: &AppHandle, state: &SharedState) {
   let settings = native_settings::snapshot();
   let mouse_down = native_settings::is_down(settings.mouse_modifier);
   let blocked = !settings.enabled

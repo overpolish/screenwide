@@ -20,18 +20,15 @@ use tauri::{AppHandle, LogicalSize, Manager, WebviewUrl, WebviewWindow};
 
 use super::host::HostPlan;
 use super::settings;
+use crate::app_windows::{platform, WindowLabel};
 use crate::capture_overlays;
-use crate::windows::{platform, WindowLabel};
 
-#[path = "toolbar_anchor.rs"]
 mod anchor;
 use anchor::{Anchor, INITIAL_SIZE};
 
-#[path = "toolbar_keyboard.rs"]
 mod keyboard;
 pub(super) use keyboard::{give_back as return_keyboard, take as take_keyboard};
 
-#[path = "toolbar_drag.rs"]
 mod drag;
 pub use drag::finish_annotate_toolbar_drag;
 pub use drag::{
@@ -96,7 +93,7 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
   *anchor::current() = Some(plan);
   FITTED.store(false, Ordering::Release);
 
-  let window = crate::windows::webview_window(
+  let window = crate::app_windows::webview_window(
     app,
     WindowLabel::AnnotateToolbar.as_str(),
     WebviewUrl::App("/annotate-toolbar".into()),
@@ -143,7 +140,7 @@ pub(super) fn build(app: &AppHandle, anchor_plan: &HostPlan) -> Result<WebviewWi
     })
     .map_err(|error| error.to_string())?;
   receiver.recv().map_err(|error| error.to_string())??;
-  crate::windows::exclude_from_capture(&window).map_err(|error| error.to_string())?;
+  crate::app_windows::exclude_from_capture(&window).map_err(|error| error.to_string())?;
   #[cfg(target_os = "windows")]
   drag::follow_drags(app, &window);
   own_by_anchor(app, &window)?;

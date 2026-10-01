@@ -6,7 +6,7 @@ use super::*;
 impl Compositor {
   /// A source decoded frames are copied into: a BGRA texture Direct3D 11,
   /// which the decoder writes on, can copy into too.
-  pub(in crate::editor::preview_platform::surface) fn source(
+  pub(in crate::editor::preview_platform::surface_windows) fn source(
     &self,
     d3d11: &D3d11Layer,
     size: (u32, u32),
@@ -21,7 +21,7 @@ impl Compositor {
     })
   }
 
-  pub(in crate::editor::preview_platform::surface) fn screenshot_source(
+  pub(in crate::editor::preview_platform::surface_windows) fn screenshot_source(
     &self,
     source: &crate::screenshots::CapturedImage,
   ) -> Result<SourceTexture, String> {
@@ -48,7 +48,7 @@ impl Compositor {
 
   /// Copies a decoded frame into `destination`, submitted ahead of the next
   /// wgpu submission on the shared queue.
-  pub(in crate::editor::preview_platform::surface) fn copy_source(
+  pub(in crate::editor::preview_platform::surface_windows) fn copy_source(
     &self,
     d3d11: &D3d11Layer,
     destination: &SourceTexture,

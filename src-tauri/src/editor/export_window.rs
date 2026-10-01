@@ -11,7 +11,7 @@ use tauri::{
 };
 
 use super::EditorKind;
-use crate::windows::{self, WindowLabel};
+use crate::app_windows::{self, WindowLabel};
 
 // The confirmation sheet hangs off its parent exactly the way this window
 // hangs off its editor, so the native attachment lives here for both.
@@ -117,9 +117,9 @@ pub(crate) const LABELS: [WindowLabel; 2] =
 pub fn initialize(app: &AppHandle) -> tauri::Result<()> {
   for label in LABELS {
     if let Some(window) = app.get_webview_window(label.as_str()) {
-      windows::initialize_normal_window(&window)?;
+      app_windows::initialize_normal_window(&window)?;
     }
-    windows::hide_instead_of_close(app, label);
+    app_windows::hide_instead_of_close(app, label);
   }
   Ok(())
 }
@@ -133,11 +133,11 @@ pub fn show(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
   // is still taken, so the form's autofocus is in place by the time it is seen.
   let present = || -> tauri::Result<()> {
     presentation::conceal(app, &options)?;
-    windows::show(&options, true)
+    app_windows::show(&options, true)
   };
   if let Err(error) = present() {
     let _ = presentation::detach(app, &editor, &options);
-    let _ = windows::hide_without_focus_transfer(&options);
+    let _ = app_windows::hide_without_focus_transfer(&options);
     return Err(error);
   }
   notify_opened(app, kind);
@@ -152,7 +152,7 @@ pub fn hide(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
   if let Some(editor) = app.get_webview_window(kind.window_label().as_str()) {
     presentation::detach(app, &editor, &options)?;
   }
-  let hidden = windows::hide_without_focus_transfer(&options);
+  let hidden = app_windows::hide_without_focus_transfer(&options);
   // Every hide route ends here, so a close the editor did not initiate
   // reaches it just as readily as one it did.
   notify(app, kind.window_label().as_str(), kind, CLOSED_EVENT);

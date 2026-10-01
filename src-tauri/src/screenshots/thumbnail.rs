@@ -9,7 +9,6 @@
 //! the webview a file, so what is offered in the grid is what the canvas gets.
 
 #[cfg(test)]
-#[path = "thumbnail/tests.rs"]
 mod tests;
 
 use std::collections::hash_map::DefaultHasher;

@@ -127,12 +127,11 @@ pub(super) fn update(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bo
   active
 }
 
-#[path = "monitors/arming.rs"]
 mod arming;
 use arming::publish;
 pub(super) use arming::{arm_preview, claim_armed, current_id, is_armed};
 
-pub(in crate::glide::platform) fn set_icon(app: &AppHandle, id: u64, path: Option<PathBuf>) {
+pub(in crate::glide::macos) fn set_icon(app: &AppHandle, id: u64, path: Option<PathBuf>) {
   let Some(state) = STATE.get() else {
     return;
   };

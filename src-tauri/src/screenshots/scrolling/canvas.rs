@@ -178,5 +178,4 @@ pub(super) fn align_and_compose(frames: Vec<MatchedStep>) -> Result<CapturedImag
 }
 
 #[cfg(test)]
-#[path = "canvas_tests.rs"]
 mod tests;

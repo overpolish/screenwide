@@ -12,7 +12,7 @@ use crate::glide::{
   events,
 };
 
-pub(in crate::glide::platform) fn update(
+pub(in crate::glide::macos) fn update(
   app: &AppHandle,
   state: &SharedState,
   delta_x: f64,
@@ -32,7 +32,7 @@ pub(in crate::glide::platform) fn update(
   apply(app, result);
 }
 
-pub(in crate::glide::platform) fn set_thirds(app: &AppHandle, state: &SharedState, thirds: bool) {
+pub(in crate::glide::macos) fn set_thirds(app: &AppHandle, state: &SharedState, thirds: bool) {
   let result = state.lock().ok().and_then(|mut state| {
     let session = state.session.as_mut()?;
     Some((session.id, session.runtime.set_thirds(thirds)))
@@ -42,7 +42,7 @@ pub(in crate::glide::platform) fn set_thirds(app: &AppHandle, state: &SharedStat
 
 /// Resting fingers produce no input callback, so the event tap's existing
 /// 16-ms run-loop poll completes the detector's rest gate.
-pub(in crate::glide::platform) fn settle(app: &AppHandle, state: &SharedState) {
+pub(in crate::glide::macos) fn settle(app: &AppHandle, state: &SharedState) {
   let result = state.lock().ok().and_then(|mut state| {
     let session = state.session.as_mut()?;
     let timestamp = session.runtime_clock.elapsed().as_secs_f64() * 1_000.0;
@@ -53,7 +53,7 @@ pub(in crate::glide::platform) fn settle(app: &AppHandle, state: &SharedState) {
   apply(app, result);
 }
 
-pub(in crate::glide::platform) fn finish_opening(app: &AppHandle, state: &SharedState) {
+pub(in crate::glide::macos) fn finish_opening(app: &AppHandle, state: &SharedState) {
   let result = state.lock().ok().and_then(|mut state| {
     let session = state.session.as_mut()?;
     let timestamp = session.runtime_clock.elapsed().as_secs_f64() * 1_000.0;

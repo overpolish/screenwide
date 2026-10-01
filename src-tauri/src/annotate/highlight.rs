@@ -26,9 +26,7 @@ use crate::editor::annotations::highlight::picture::HighlightPicture;
 use crate::editor::annotations::{Annotation, AnnotationPoint, AnnotationShape, AnnotationStyle};
 use crate::screenshots::CapturedImage;
 
-#[path = "highlight_capture.rs"]
 mod capture;
-#[path = "highlight_underlay.rs"]
 mod underlay;
 pub(super) use capture::{begin, refresh};
 pub(super) use underlay::Underlay;

@@ -57,7 +57,7 @@ pub async fn capture_still(
   ) {
     // The clipboard has no layers, so the annotations go into the pixels.
     #[cfg(target_os = "macos")]
-    let copied = super::annotation_bake::bake_annotations(
+    let copied = super::macos::annotation_bake::bake_annotations(
       &image,
       annotations.clone(),
       super::capture_scale(target),
@@ -78,7 +78,7 @@ pub async fn capture_still(
     }
     if matches!(destination, ScreenshotDestination::Clipboard) {
       crate::editor::release_screenshot_workspace(&app);
-      let _ = crate::windows::hide_recording_ui(app.clone());
+      let _ = crate::app_windows::hide_recording_ui(app.clone());
       return Ok(None);
     }
   }

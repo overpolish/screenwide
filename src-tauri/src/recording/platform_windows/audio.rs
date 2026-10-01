@@ -8,11 +8,8 @@
 //! muxed into independent AAC streams after the video sink is finalized. The
 //! H.264 video is stream-copied, so this adds no video decode or CPU render.
 
-#[path = "audio/mux.rs"]
 mod mux;
-#[path = "audio/raw.rs"]
 mod raw;
-#[path = "audio/system.rs"]
 mod system;
 use mux::mux_file;
 use system::start_system;

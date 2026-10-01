@@ -145,7 +145,6 @@ fn luma_frame(mut sample: arc::R<cm::SampleBuf>, ms: u64) -> Result<LumaFrame, S
 }
 
 #[cfg(test)]
-#[path = "luma_bench_tests.rs"]
 mod bench_tests;
 
 #[cfg(test)]

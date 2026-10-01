@@ -4,7 +4,7 @@
 use tauri::{AppHandle, Manager};
 
 use super::EditorKind;
-use crate::windows;
+use crate::app_windows;
 
 pub fn show(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
   let window = app
@@ -14,8 +14,8 @@ pub fn show(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
   #[cfg(target_os = "macos")]
   app.set_dock_visibility(true)?;
 
-  windows::show(&window, true)?;
-  let _ = windows::recover_window_position(app, &window);
+  app_windows::show(&window, true)?;
+  let _ = app_windows::recover_window_position(app, &window);
 
   Ok(())
 }
@@ -26,9 +26,9 @@ pub fn hide(app: &AppHandle, kind: EditorKind) -> tauri::Result<()> {
   let _ = super::export_window::hide(app, kind);
   // A tool panel hangs off this window and stays up through an outside press,
   // so it has to be taken away with the editor it belongs to.
-  windows::options::close_standalone_listbox_for_parent(app, kind.window_label().as_str());
+  app_windows::options::close_standalone_listbox_for_parent(app, kind.window_label().as_str());
   if let Some(window) = app.get_webview_window(kind.window_label().as_str()) {
-    windows::hide_without_focus_transfer(&window)?;
+    app_windows::hide_without_focus_transfer(&window)?;
   }
 
   Ok(())

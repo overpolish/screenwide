@@ -19,7 +19,7 @@ use crate::editor::annotations::counter::reveal::counter_presence;
 use crate::editor::annotations::reveal::AnnotationReveal;
 
 /// How long a magnifier takes to arrive. The twin of
-/// `ANNOTATION_MAGNIFY_DRAW_IN_MS` in `src/features/editor/annotation-kinds.ts`.
+/// `ANNOTATION_MAGNIFY_DRAW_IN_MS` in `src/features/editor/annotations/annotation-kinds.ts`.
 pub(crate) const MAGNIFY_REVEAL_IN_MS: f32 = 450.0;
 
 /// How long it takes to go back into its zoom area.

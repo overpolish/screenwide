@@ -16,7 +16,7 @@ static RESERVED: AtomicBool = AtomicBool::new(false);
 static CANCELLED: AtomicBool = AtomicBool::new(false);
 static CONTACT_OPEN: AtomicBool = AtomicBool::new(false);
 
-pub(in crate::glide::platform) fn poll(app: &AppHandle, state: &SharedState) {
+pub(in crate::glide::macos) fn poll(app: &AppHandle, state: &SharedState) {
   let settings = native_settings::snapshot();
   let active = state.lock().is_ok_and(|state| {
     state
@@ -63,7 +63,7 @@ pub(in crate::glide::platform) fn poll(app: &AppHandle, state: &SharedState) {
   }
 }
 
-pub(in crate::glide::platform) fn handle_event(
+pub(in crate::glide::macos) fn handle_event(
   app: &AppHandle,
   state: &SharedState,
   kind: CGEventType,

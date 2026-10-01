@@ -245,7 +245,7 @@ fn a_loupe_with_no_room_to_the_right_goes_to_the_left() {
 fn the_editor_places_a_fresh_magnifier_by_its_arrival() {
   const SOURCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../src/features/editor/annotation-kinds.ts"
+    "/../src/features/editor/annotations/annotation-kinds.ts"
   ));
   let declared = SOURCE
     .lines()

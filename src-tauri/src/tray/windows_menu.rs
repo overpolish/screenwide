@@ -13,7 +13,6 @@ use windows::Win32::Graphics::Gdi::{
 use windows::Win32::Graphics::Gdi::{MonitorFromPoint, MONITOR_DEFAULTTONEAREST};
 
 #[cfg(test)]
-#[path = "windows_menu_tests.rs"]
 mod tests;
 use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::WindowsAndMessaging::{

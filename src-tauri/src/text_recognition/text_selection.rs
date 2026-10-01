@@ -219,5 +219,4 @@ fn line_distance(bounds: TextRect, point: Point) -> f64 {
 }
 
 #[cfg(test)]
-#[path = "text_selection_tests.rs"]
 mod tests;

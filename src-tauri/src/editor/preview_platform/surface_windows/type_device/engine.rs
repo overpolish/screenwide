@@ -7,7 +7,6 @@
 //! Not one set per thread: a thread-local is released as its thread exits,
 //! under the loader lock, and releasing DirectWrite there deadlocks the exit.
 
-#[path = "draw.rs"]
 mod draw;
 
 use std::sync::{LazyLock, Mutex, PoisonError};

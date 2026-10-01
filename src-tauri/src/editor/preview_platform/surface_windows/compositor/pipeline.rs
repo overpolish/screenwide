@@ -4,7 +4,7 @@
 use super::*;
 
 impl Compositor {
-  pub(in crate::editor::preview_platform::surface) fn new(
+  pub(in crate::editor::preview_platform::surface_windows) fn new(
     gpu: &'static Gpu,
   ) -> Result<Self, String> {
     let device = &gpu.device;

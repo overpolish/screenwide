@@ -30,11 +30,8 @@ use crate::glide::{
   region_rect::PlacedRegion,
 };
 
-#[path = "session/access.rs"]
 mod access;
-#[path = "session/effects.rs"]
 mod effects;
-#[path = "session/end.rs"]
 mod end;
 pub(super) use end::end;
 

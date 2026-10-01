@@ -170,13 +170,13 @@ mod tests {
     assert!(!labels.contains(&"glide"));
     assert!(!labels.contains(&"region-selector"));
     assert!(crate::glide::uses_full_surface(
-      crate::windows::WindowLabel::RecordingBar
+      crate::app_windows::WindowLabel::RecordingBar
     ));
     assert!(crate::glide::uses_full_surface(
-      crate::windows::WindowLabel::RecordingDock
+      crate::app_windows::WindowLabel::RecordingDock
     ));
     assert!(!crate::glide::uses_full_surface(
-      crate::windows::WindowLabel::Settings
+      crate::app_windows::WindowLabel::Settings
     ));
   }
 }

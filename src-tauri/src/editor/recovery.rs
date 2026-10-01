@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "recovery/cleanup.rs"]
 mod cleanup;
 pub(super) use cleanup::{orphaned_recordings, sweep_cancelled_recordings};
-#[path = "recovery/offer.rs"]
 mod offer;
 use offer::sweep_orphaned_recordings;
 

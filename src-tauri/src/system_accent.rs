@@ -7,14 +7,17 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 
 #[cfg(target_os = "macos")]
-#[path = "system_accent/platform_macos.rs"]
-mod platform;
+mod platform_macos;
+#[cfg(target_os = "macos")]
+use self::platform_macos as platform;
 #[cfg(target_os = "windows")]
-#[path = "system_accent/platform_windows.rs"]
-mod platform;
+mod platform_windows;
+#[cfg(target_os = "windows")]
+use self::platform_windows as platform;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-#[path = "system_accent/platform_other.rs"]
-mod platform;
+mod platform_other;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+use self::platform_other as platform;
 
 /// Emitted to every window whenever the operating system accent changes. The
 /// payload is the new accent, or `null` when the app should use its own.

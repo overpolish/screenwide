@@ -3,7 +3,7 @@
 
 use tauri::{AppHandle, Manager};
 
-use crate::windows::{self, WindowLabel};
+use crate::app_windows::{self, WindowLabel};
 
 #[tauri::command]
 pub fn update_checks_enabled() -> bool {
@@ -17,14 +17,14 @@ pub fn show_update_prompt(app: AppHandle) -> tauri::Result<()> {
     .ok_or(tauri::Error::WindowNotFound)?;
   #[cfg(target_os = "macos")]
   app.set_dock_visibility(true)?;
-  windows::show(&window, true)?;
-  windows::recover_window_position(&app, &window)
+  app_windows::show(&window, true)?;
+  app_windows::recover_window_position(&app, &window)
 }
 
 #[tauri::command]
 pub fn hide_update_prompt(app: AppHandle) -> tauri::Result<()> {
   if let Some(window) = app.get_webview_window(WindowLabel::Update.as_str()) {
-    windows::hide_without_focus_transfer(&window)?;
+    app_windows::hide_without_focus_transfer(&window)?;
   }
   Ok(())
 }

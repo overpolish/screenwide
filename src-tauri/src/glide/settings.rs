@@ -295,5 +295,4 @@ pub fn set_glide_settings(
 }
 
 #[cfg(test)]
-#[path = "settings_tests.rs"]
 mod tests;

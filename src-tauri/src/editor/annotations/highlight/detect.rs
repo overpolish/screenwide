@@ -197,5 +197,4 @@ fn apart(page: f64, ink: f64) -> f64 {
 }
 
 #[cfg(test)]
-#[path = "detect_tests.rs"]
 mod tests;

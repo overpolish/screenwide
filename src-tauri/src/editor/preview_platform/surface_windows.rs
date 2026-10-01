@@ -8,53 +8,30 @@
 //! memory or cross Tauri IPC, while transparent webview regions leave DOM
 //! controls above the video.
 
-#[path = "surface_windows/annotation.rs"]
 mod annotation;
-#[path = "surface_windows/batch.rs"]
 mod batch;
-#[path = "surface_windows/callbacks.rs"]
 mod callbacks;
-#[path = "surface_windows/creation.rs"]
 mod creation;
 #[cfg(debug_assertions)]
-#[path = "surface_windows/editor_controls.rs"]
 mod editor_controls;
-#[path = "surface_windows/export.rs"]
 mod export;
-#[path = "surface_windows/geometry.rs"]
 mod geometry;
-#[path = "surface_windows/gpu.rs"]
 mod gpu;
-#[path = "surface_windows/input.rs"]
 mod input;
-#[path = "surface_windows/layout.rs"]
 mod layout;
-#[path = "surface_windows/magnifier.rs"]
 mod magnifier;
-#[path = "surface_windows/pane.rs"]
 mod pane;
-#[path = "surface_windows/present_cached.rs"]
 mod present_cached;
-#[path = "surface_windows/present_texture.rs"]
 mod present_texture;
-#[path = "surface_windows/readback.rs"]
 mod readback;
-#[path = "surface_windows/resources.rs"]
 mod resources;
-#[path = "surface_windows/selection_draw.rs"]
 mod selection_draw;
-#[path = "surface_windows/selection_hit.rs"]
 mod selection_hit;
-#[path = "surface_windows/state.rs"]
 mod state;
-#[path = "surface_windows/still.rs"]
 mod still;
 #[cfg(test)]
-#[path = "surface_windows/tests.rs"]
 mod tests;
-#[path = "surface_windows/thread_dispatch.rs"]
 mod thread_dispatch;
-#[path = "surface_windows/workspace.rs"]
 mod workspace;
 
 /// The arrow renderer's shareable parts. Live annotation draws the desktop's
@@ -71,7 +48,6 @@ pub(crate) mod arrows {
 }
 /// Inter SemiBold set by DirectWrite, which measures a text box as well as
 /// drawing its type.
-#[path = "surface_windows/type_device.rs"]
 pub(crate) mod type_device;
 use annotation::handle_typing_input;
 use callbacks::{emit_gesture, emit_selection, emit_transform, refresh_cursor_for};
@@ -93,7 +69,6 @@ use state::{
 };
 use thread_dispatch::create_editor_on_owning_thread;
 
-#[path = "surface_windows/registry.rs"]
 mod registry;
 use registry::{preview_surfaces, surface_for_editor, surface_index};
 
@@ -130,34 +105,20 @@ use windows::{
   },
 };
 
-#[path = "surface_windows/audio_ribbon.rs"]
 mod audio_ribbon;
-#[path = "surface_windows/background_image.rs"]
 mod background_image;
-#[path = "surface_windows/compositor.rs"]
 mod compositor;
-#[path = "surface_windows/counter_artwork.rs"]
 mod counter_artwork;
-#[path = "surface_windows/editor.rs"]
 mod editor;
-#[path = "surface_windows/font.rs"]
 mod font;
-#[path = "surface_windows/keyboard_artwork.rs"]
 mod keyboard_artwork;
-#[path = "surface_windows/keyboard_hit.rs"]
 mod keyboard_hit;
 use keyboard_hit::{keyboard_transform_start, redraw_keyboard_transform};
-#[path = "surface_windows/recenter.rs"]
 mod recenter;
-#[path = "surface_windows/selection.rs"]
 mod selection;
-#[path = "surface_windows/snapping.rs"]
 mod snapping;
-#[path = "surface_windows/view_fit.rs"]
 mod view_fit;
-#[path = "surface_windows/window.rs"]
 mod window;
-#[path = "surface_windows/workspace_layout.rs"]
 mod workspace_layout;
 
 use super::{
@@ -171,10 +132,10 @@ use super::{
   SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
   TransformCallback,
 };
+use crate::app_windows::overlay_surface::{Frame, VisualSurface};
 use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
 use crate::gpu::D3d11Layer;
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
-use crate::windows::overlay_surface::{Frame, VisualSurface};
 use view_fit::fit_basis_transform;
 use workspace_layout::{
   apply_workspace_transform, aspect_fit_rect, rebase_workspace_fit, reflow_workspace_panes,

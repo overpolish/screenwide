@@ -2,17 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-#[path = "input/cancel.rs"]
 mod cancel;
-#[path = "input/context_menu.rs"]
 mod context_menu;
-#[path = "input/crop_draw.rs"]
 mod crop_draw;
-#[path = "input/down.rs"]
 mod down;
-#[path = "input/pointer_move.rs"]
 mod pointer_move;
-#[path = "input/up.rs"]
 mod up;
 
 pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
@@ -169,8 +163,6 @@ pub(super) fn handle_editor_input(editor_hwnd: HWND, input: editor::Input) {
   }
 }
 
-#[path = "input/frame_resize.rs"]
 mod frame_resize;
 
-#[path = "input/selection_move.rs"]
 mod selection_move;

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #[cfg(test)]
-#[path = "interaction/tests.rs"]
 mod tests;
 
 use crate::osc::geometry::Point;

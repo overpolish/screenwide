@@ -207,32 +207,23 @@ pub async fn recording_preview_pin_back_in_view(
   }
 }
 
-#[path = "annotation_gesture.rs"]
 mod gesture;
 
-#[path = "annotation_commit.rs"]
 mod commit;
 
-#[path = "annotation_group.rs"]
 mod group;
 
-#[path = "annotation_choice.rs"]
 mod choice;
 
-#[path = "annotation_text.rs"]
 mod text;
 use text::TextSession;
 
-#[path = "annotation_callbacks.rs"]
 mod callbacks;
 pub(super) use callbacks::install;
 
-#[path = "annotation_hold.rs"]
 mod hold;
 
 #[cfg(test)]
-#[path = "annotation_bridge_tests.rs"]
 mod tests;
 
-#[path = "annotation_handles.rs"]
 mod handles;

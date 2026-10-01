@@ -83,7 +83,7 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     );
     return;
   }
-  if crate::windows::region::is_screenshot_region_session() {
+  if crate::app_windows::region::is_screenshot_region_session() {
     // The borrowed Region window owns screenshot teardown. Resume the action
     // through `resume_shortcut_action` only after that later IPC turn has
     // cleared the session, so shortcuts never overlap two window graphs.

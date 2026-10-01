@@ -47,5 +47,4 @@ pub(crate) fn mosaic_cell(block: f64, source_per_point: f64) -> f64 {
 }
 
 #[cfg(test)]
-#[path = "cells_tests.rs"]
 mod tests;

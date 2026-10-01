@@ -1,42 +1,38 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::windows::WindowLabel;
+use crate::app_windows::WindowLabel;
 use tauri::AppHandle;
 #[cfg(target_os = "windows")]
 use tauri::{LogicalSize, Manager, PhysicalPosition, PhysicalSize};
 
 #[cfg(target_os = "macos")]
-#[path = "glide/macos.rs"]
-mod platform;
+mod macos;
+#[cfg(target_os = "macos")]
+use self::macos as platform;
 #[cfg(target_os = "windows")]
-#[path = "glide/windows.rs"]
-mod platform;
+mod windows;
+#[cfg(target_os = "windows")]
+use self::windows as platform;
 
 mod core;
 
 pub(crate) use core::activity::BusyLease;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-#[path = "glide/locked.rs"]
 mod locked;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use locked::present_locked;
 
-#[path = "glide/events.rs"]
 mod events;
-#[path = "glide/settings.rs"]
 pub mod settings;
 
 use events::{emit, GlideInputEvent};
 
-#[path = "glide/region_rect.rs"]
 mod region_rect;
 
-#[path = "glide/icon.rs"]
 mod icon;
 
-#[path = "glide/fit.rs"]
 mod fit;
 
 const GLIDABLE_WINDOW_LABELS: &[WindowLabel] = &[
@@ -64,7 +60,7 @@ const PREVIEW_WIDTH: f64 = 48.0;
 const PREVIEW_HEIGHT: f64 = 32.0;
 
 pub fn initialize(app: &AppHandle) -> Result<(), String> {
-  crate::windows::initialize_glide_preview(app).map_err(|error| error.to_string())?;
+  crate::app_windows::initialize_glide_preview(app).map_err(|error| error.to_string())?;
   platform::start(app.clone())
 }
 
@@ -91,7 +87,7 @@ fn begin_logical(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Result<(),
 
 #[cfg(target_os = "macos")]
 fn begin_logical_on_main(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Result<(), String> {
-  crate::windows::position_glide_preview(app, x, y).map_err(|error| error.to_string())?;
+  crate::app_windows::position_glide_preview(app, x, y).map_err(|error| error.to_string())?;
   emit(app, GlideInputEvent::Start { session_id })
 }
 
@@ -180,7 +176,7 @@ fn finish(app: &AppHandle, anchor_x: f64, anchor_y: f64, cancelled: bool) {
       cancelled,
     },
   );
-  crate::windows::defer_hide_glide_preview(app);
+  crate::app_windows::defer_hide_glide_preview(app);
 }
 
 /// The cursor returns this far into the fade, so its arrival overlaps the
@@ -239,9 +235,9 @@ fn finish_with_fade(
     );
     run_once(&faded);
   });
-  if let Err(error) = crate::windows::fade_glide_preview(app, completion) {
+  if let Err(error) = crate::app_windows::fade_glide_preview(app, completion) {
     eprintln!("Could not fade Glide out: {error}");
-    crate::windows::defer_hide_glide_preview(app);
+    crate::app_windows::defer_hide_glide_preview(app);
     run_once(&on_restore);
     let _ = emit(
       app,
@@ -265,9 +261,7 @@ fn run_once(completion: &std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>>) {
 }
 
 #[cfg(test)]
-#[path = "glide/input_event_tests.rs"]
 mod input_event_tests;
 
 #[cfg(all(test, target_os = "windows"))]
-#[path = "glide/windows_preview_tests.rs"]
 mod windows_preview_tests;

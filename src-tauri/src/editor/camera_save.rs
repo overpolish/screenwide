@@ -4,7 +4,6 @@
 use super::save::{save_recording_copy, save_selected_recording_copy};
 use super::*;
 
-#[path = "camera_save/baked.rs"]
 mod baked;
 pub(in crate::editor) use baked::save_baked_recording;
 

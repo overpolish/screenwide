@@ -177,5 +177,4 @@ pub(crate) fn active_annotations(
 }
 
 #[cfg(test)]
-#[path = "timing_tests.rs"]
 mod tests;

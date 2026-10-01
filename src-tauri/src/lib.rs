@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 mod annotate;
+mod app_windows;
 mod audio_preview;
 mod camera_format;
 #[cfg(target_os = "macos")]
@@ -42,7 +43,6 @@ mod tooltip_window;
 #[cfg(desktop)]
 mod tray;
 mod updates;
-mod windows;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let builder = plugins::with_plugins(tauri::Builder::default());
@@ -202,36 +202,36 @@ pub fn run() {
       shortcuts::end_shortcut_capture,
       shortcuts::set_shortcut_binding,
       system_accent::get_system_accent,
-      windows::color_panel::close_color_panel,
-      windows::color_panel::show_color_panel,
-      windows::source_selector::collapse_recording_source_selector,
-      windows::source_selector::get_recording_source_selector_state,
-      windows::region_gesture::begin_region_selector_gesture,
-      windows::finish_recording_bar_drag,
-      windows::region_gesture::finish_region_selector_gesture,
-      windows::dock::finish_recording_dock_drag,
-      windows::dock::resize_recording_dock,
-      windows::dock::first_reveal::recording_dock_painted,
-      windows::hide_recording_ui,
-      windows::recording_ui_visible,
-      windows::toggle_recording_ui,
-      windows::region::hide_region_selector,
-      windows::options::hide_standalone_listbox,
-      windows::options::open_standalone_listboxes,
-      windows::options::fit_standalone_listbox,
-      windows::region::set_recording_controls_borrowed,
-      windows::source_selector::set_recording_source_selector_visible,
-      windows::region::set_region_selector_opacity,
-      windows::region::set_region_selector_passthrough,
-      windows::region::set_screenshot_region_session,
-      windows::region::show_region_selector,
-      windows::screenshot_region::magnifier::prepare_screenshot_region_magnifier,
-      windows::screenshot_region::osc_command::set_screenshot_region_osc,
-      windows::screenshot_region::presentation::set_region_selector_osc_frame_visible,
-      windows::options::show_standalone_listbox,
-      windows::options::placement::move_standalone_listbox,
-      windows::panel_space::grow_editor_for_panel,
-      windows::source_selector::expand_recording_source_selector,
+      app_windows::color_panel::close_color_panel,
+      app_windows::color_panel::show_color_panel,
+      app_windows::source_selector::collapse_recording_source_selector,
+      app_windows::source_selector::get_recording_source_selector_state,
+      app_windows::region_gesture::begin_region_selector_gesture,
+      app_windows::finish_recording_bar_drag,
+      app_windows::region_gesture::finish_region_selector_gesture,
+      app_windows::dock::finish_recording_dock_drag,
+      app_windows::dock::resize_recording_dock,
+      app_windows::dock::first_reveal::recording_dock_painted,
+      app_windows::hide_recording_ui,
+      app_windows::recording_ui_visible,
+      app_windows::toggle_recording_ui,
+      app_windows::region::hide_region_selector,
+      app_windows::options::hide_standalone_listbox,
+      app_windows::options::open_standalone_listboxes,
+      app_windows::options::fit_standalone_listbox,
+      app_windows::region::set_recording_controls_borrowed,
+      app_windows::source_selector::set_recording_source_selector_visible,
+      app_windows::region::set_region_selector_opacity,
+      app_windows::region::set_region_selector_passthrough,
+      app_windows::region::set_screenshot_region_session,
+      app_windows::region::show_region_selector,
+      app_windows::screenshot_region::magnifier::prepare_screenshot_region_magnifier,
+      app_windows::screenshot_region::osc_command::set_screenshot_region_osc,
+      app_windows::screenshot_region::presentation::set_region_selector_osc_frame_visible,
+      app_windows::options::show_standalone_listbox,
+      app_windows::options::placement::move_standalone_listbox,
+      app_windows::panel_space::grow_editor_for_panel,
+      app_windows::source_selector::expand_recording_source_selector,
     ])
     .setup(startup::setup)
     .build(tauri::generate_context!())

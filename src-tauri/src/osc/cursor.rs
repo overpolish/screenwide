@@ -14,7 +14,6 @@
 //! an old owner can never release or update a newer session's cursor.
 
 #[cfg(test)]
-#[path = "cursor/tests.rs"]
 mod tests;
 
 use super::protocol::CursorIcon;

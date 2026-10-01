@@ -7,8 +7,8 @@ use std::sync::{mpsc, Arc};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-#[path = "classifier_windows.rs"]
-mod classifier;
+mod classifier_windows;
+use self::classifier_windows as classifier;
 
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;

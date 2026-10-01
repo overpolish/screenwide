@@ -14,9 +14,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
 #[cfg(target_os = "macos")]
-mod cached_macos;
-#[cfg(target_os = "macos")]
-mod dynamic_macos;
+mod macos;
 mod paths;
 
 /// One picture the system offers as a desktop background.
@@ -112,10 +110,10 @@ mod platform {
     let directory = Path::new(DIRECTORY);
     let thumbnails = directory.join(THUMBNAILS);
     let mut found =
-      super::dynamic_macos::collect(&directory.join(super::dynamic_macos::DIRECTORY), stills);
+      super::macos::dynamic::collect(&directory.join(super::macos::dynamic::DIRECTORY), stills);
     let Ok(entries) = std::fs::read_dir(directory) else {
-      found.extend(super::cached_macos::collect(Path::new(
-        super::cached_macos::DIRECTORY,
+      found.extend(super::macos::cached::collect(Path::new(
+        super::macos::cached::DIRECTORY,
       )));
       return found;
     };
@@ -144,8 +142,8 @@ mod platform {
     found.extend(flat);
     // The pictures the system has drawn for itself come last, so a name they
     // share with a wallpaper that ships as a file belongs to the file.
-    found.extend(super::cached_macos::collect(Path::new(
-      super::cached_macos::DIRECTORY,
+    found.extend(super::macos::cached::collect(Path::new(
+      super::macos::cached::DIRECTORY,
     )));
     found
   }

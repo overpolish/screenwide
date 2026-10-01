@@ -4,7 +4,6 @@
 pub(super) mod clock;
 mod filter;
 
-#[path = "audio/output.rs"]
 mod output;
 use output::output_stream;
 
@@ -126,5 +125,4 @@ pub(super) fn spawn(
 }
 
 #[cfg(test)]
-#[path = "audio_tests.rs"]
 mod tests;

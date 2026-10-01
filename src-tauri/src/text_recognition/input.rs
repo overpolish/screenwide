@@ -126,7 +126,7 @@ pub(crate) fn selection_finished(
     let _ = app.run_on_main_thread(move || {
       if let Some(target) = main_app.get_webview_window(window.label()) {
         let _ = target.set_ignore_cursor_events(false);
-        let _ = crate::windows::show(&target, true);
+        let _ = crate::app_windows::show(&target, true);
       }
     });
   });

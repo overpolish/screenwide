@@ -5,11 +5,11 @@ use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
 use tauri::{AppHandle, LogicalPosition, Manager, TitleBarStyle, WebviewUrl};
 
-use crate::windows::{self, WindowLabel};
+use crate::app_windows::{self, WindowLabel};
 
 pub fn show(app: &AppHandle) -> tauri::Result<()> {
-  let window = windows::get_or_create(app, WindowLabel::Permissions, || {
-    windows::webview_window(
+  let window = app_windows::get_or_create(app, WindowLabel::Permissions, || {
+    app_windows::webview_window(
       app,
       WindowLabel::Permissions.as_str(),
       WebviewUrl::App("/permissions".into()),
@@ -40,15 +40,15 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
       state: Some(EffectState::Active),
     })
     .build()
-    .inspect(|_| windows::hide_instead_of_close(app, WindowLabel::Permissions))
+    .inspect(|_| app_windows::hide_instead_of_close(app, WindowLabel::Permissions))
   })?;
 
-  windows::show(&window, true)
+  app_windows::show(&window, true)
 }
 
 pub fn hide(app: &AppHandle) -> tauri::Result<()> {
   if let Some(window) = app.get_webview_window(WindowLabel::Permissions.as_str()) {
-    windows::hide_without_focus_transfer(&window)?;
+    app_windows::hide_without_focus_transfer(&window)?;
   }
 
   Ok(())

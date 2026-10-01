@@ -205,5 +205,4 @@ pub(crate) fn every_generator() -> &'static [MeshGenerator] {
 }
 
 #[cfg(test)]
-#[path = "mesh_generator/tests.rs"]
 mod tests;

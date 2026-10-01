@@ -18,17 +18,13 @@
 use crate::editor::annotations::AnnotationPoint;
 
 /// Reading an open stroke as an arrow with its head drawn on.
-#[path = "recognise_arrow.rs"]
 mod arrow;
 use arrow::hooked_arrow;
 /// Reading a closed stroke.
-#[path = "recognise_closed.rs"]
 mod closed;
 /// Where a stroke turns, and the straight lines it runs between.
-#[path = "recognise_corners.rs"]
 mod corners;
 /// The ellipse a loop encloses.
-#[path = "recognise_ellipse.rs"]
 pub(crate) mod ellipse;
 use closed::{closing, outline};
 

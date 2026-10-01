@@ -167,7 +167,7 @@ pub(super) fn close(app: &AppHandle) {
   }
 }
 
-pub(in crate::glide::platform) fn poll(app: &AppHandle, normal: &session::SharedState) {
+pub(in crate::glide::macos) fn poll(app: &AppHandle, normal: &session::SharedState) {
   super::input::clear_cancelled_if_released();
   let settings = native_settings::snapshot();
   if !super::input::cancelled_until_release()

@@ -19,7 +19,6 @@ use windows::Win32::{
   },
 };
 
-#[path = "wheel_hook/mouse.rs"]
 mod mouse;
 pub(super) const WM_GLIDE_WHEEL_X: u32 = WM_APP + 1;
 pub(super) const WM_GLIDE_WHEEL_Y: u32 = WM_APP + 2;

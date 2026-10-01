@@ -11,264 +11,268 @@ fn main() {
   // macOS to Windows must not hand the Objective-C sources to the MSVC target.
   if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
     println!("cargo:rerun-if-changed=src/editor/cursor_export");
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos+presenter.m");
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos+presenter_keyboard.m"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos.m"
+    );
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+presenter.m");
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+presenter_keyboard.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos+presenter_resize.m"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+presenter_resize.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos+presenter_annotations.m"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+presenter_annotations.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_cursor_resources.m"
     );
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard.m");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_keyboard.m");
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_annotation_text.m"
-    );
-    println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_annotation_text.h"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_annotation_text.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_annotation_text_box.m"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_annotation_text.h"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_annotation_text_box.h"
-    );
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_text.h");
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_counter.h");
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_shape.h");
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_spotlight.h");
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source_annotation_composite.h");
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork_helpers.h");
-    println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork.m"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_annotation_text_box.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_shader_source.h"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_annotation_text_box.h"
+    );
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/shaders/gpu_compositor_macos_shader_source_annotation_text.h");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/shaders/gpu_compositor_macos_shader_source_annotation_counter.h");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/shaders/gpu_compositor_macos_shader_source_annotation_shape.h");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/shaders/gpu_compositor_macos_shader_source_annotation_spotlight.h");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/shaders/gpu_compositor_macos_shader_source_annotation_composite.h");
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_keyboard_artwork_helpers.h");
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_keyboard_artwork.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_shader_source.h"
-    );
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_generators.h");
-    println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_generators_layered.h"
-    );
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos.h");
-    println!("cargo:rerun-if-changed=src/editor/osc_pixel_alignment_macos.h");
-    println!("cargo:rerun-if-changed=src/editor/osc_controls.h");
-    println!("cargo:rerun-if-changed=src/editor/osc_material_surface_macos.h");
-    println!("cargo:rerun-if-changed=src/editor/osc_material_surface_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_text_texture_macos.h");
-    println!("cargo:rerun-if-changed=src/editor/osc_text_texture_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_icon_renderer_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/region_cursor_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/cursor_session_macos.m");
-    println!("cargo:rerun-if-changed=src/windows/color_panel_macos.m");
-    println!("cargo:rerun-if-changed=src/windows/dismissal_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/region_magnifier_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_private.h");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos+primitives.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos+selection.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos+crop.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos+ruler.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_pipeline_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader.h");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader_magnifier.h");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader_types.h");
-    println!("cargo:rerun-if-changed=src/editor/osc_gpu_macos_shader_fragment.h");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+callbacks.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+magnifier.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+crop_draw.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+context_menu.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+cursor.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+editor.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+keyboard.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_text.m");
-    println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_text_input.m"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/shaders/gpu_compositor_macos_shader_source.h"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_chrome.m"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_keyboard_shader_source.h"
+    );
+    println!("cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_generators.h");
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_generators_layered.h"
+    );
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos.h");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_pixel_alignment_macos.h");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_controls.h");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_material_surface_macos.h");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_material_surface_macos.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_text_texture_macos.h");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_text_texture_macos.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_icon_renderer_macos.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/region_cursor_macos.m");
+    println!("cargo:rerun-if-changed=src/osc/cursor/macos/cursor_session_macos.m");
+    println!("cargo:rerun-if-changed=src/app_windows/color_panel_macos.m");
+    println!("cargo:rerun-if-changed=src/app_windows/dismissal_macos.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/region_magnifier_macos.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos_private.h");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos+primitives.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos+selection.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos+crop.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos+ruler.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_pipeline_macos.m");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos_shader.h");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos_shader_magnifier.h");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos_shader_types.h");
+    println!("cargo:rerun-if-changed=src/osc/gpu/macos/osc_gpu_macos_shader_fragment.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+callbacks.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+magnifier.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+crop_draw.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+context_menu.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+cursor.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+keyboard.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text.m");
+    println!(
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text_input.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_redact.m"
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_chrome.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_picking.m"
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_redact.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_state.m"
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_picking.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_report.m"
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_state.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation_group.m"
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_report.m"
     );
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_macos.h");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_geometry_macos.h");
+    println!(
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_group.m"
+    );
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_annotation_macos.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_annotation_geometry_macos.h");
     println!("cargo:rerun-if-changed=src/editor/annotations/geometry.h");
     println!("cargo:rerun-if-changed=src/editor/annotations/reveal.h");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+osc.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+selection.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+workspace.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+layout.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+editor_state.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+zoom.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+audio_ribbon.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+osc.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+selection.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+workspace.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+layout.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor_state.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+zoom.m");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+audio_ribbon.m");
     println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+audio_ribbon_draw.m"
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+audio_ribbon_draw.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+audio_ribbon_state.m"
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+audio_ribbon_state.m"
     );
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_audio_ribbon_macos.h");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_audio_ribbon_shader.h");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_audio_ribbon_coverage_tests.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+draw.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+appearance.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+desktop.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+input.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+magnifier.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+state.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+ruler.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+snapshot.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+ocr.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+ocr_cancel.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+ocr_toolbar.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos+ocr_toolbar_input.m");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos_private.h");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos_types.h");
-    println!("cargo:rerun-if-changed=src/editor/screenshot_region_osc_macos_private_functions.h");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos_private.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_audio_ribbon_macos.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_audio_ribbon_shader.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_audio_ribbon_coverage_tests.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+draw.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+appearance.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+desktop.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+input.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+magnifier.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+state.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ruler.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+snapshot.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ocr.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ocr_cancel.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ocr_toolbar.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ocr_toolbar_input.m");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos_private.h");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos_types.h");
+    println!("cargo:rerun-if-changed=src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos_private_functions.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos_private.h");
     println!(
-      "cargo:rerun-if-changed=src/editor/recording_preview_surface_macos_private_functions.h"
+      "cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos_private_functions.h"
     );
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_text_macos.h");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_annotation_group_macos.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_annotation_text_macos.h");
+    println!("cargo:rerun-if-changed=src/editor/preview_platform/surface_macos/native/recording_preview_annotation_group_macos.h");
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_background_image.m"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_background_image.m"
     );
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_background_image.h"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_background_image.h"
     );
-    println!("cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos.h");
     println!(
-      "cargo:rerun-if-changed=src/editor/cursor_export/gpu_compositor_macos_keyboard_types.h"
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos.h"
     );
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_reader_macos.m");
-    println!("cargo:rerun-if-changed=src/editor/recording_preview_scrubber_macos.m");
+    println!(
+      "cargo:rerun-if-changed=src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_keyboard_types.h"
+    );
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_player/platform/macos/recording_preview_reader_macos.m");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_player/platform/macos/recording_preview_scrubber_macos.m");
     println!("cargo:rerun-if-changed=src/recording/platform/camera/confidence_scaler_macos.m");
     println!("cargo:rerun-if-changed=src/recording/platform/desktop_compositor_macos.m");
-    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos.m");
-    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos_input.m");
-    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos_private.h");
-    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos.h");
-    println!("cargo:rerun-if-changed=src/annotate/native_overlay_macos_shader.h");
+    println!("cargo:rerun-if-changed=src/annotate/macos/native_overlay_macos.m");
+    println!("cargo:rerun-if-changed=src/annotate/macos/native_overlay_macos_input.m");
+    println!("cargo:rerun-if-changed=src/annotate/macos/native_overlay_macos_private.h");
+    println!("cargo:rerun-if-changed=src/annotate/macos/native_overlay_macos.h");
+    println!("cargo:rerun-if-changed=src/annotate/macos/native_overlay_macos_shader.h");
     println!("cargo:rerun-if-changed=src/ruler/cursor_guard_macos.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/native.m");
     println!("cargo:rerun-if-changed=src/glide/macos/drag_start.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/carry.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/drag_point.m");
     println!("cargo:rerun-if-changed=src/glide/macos/spaces/target.h");
-    println!("cargo:rerun-if-changed=src/screenshots/image_decode_macos.m");
-    println!("cargo:rerun-if-changed=src/screenshots/video_still_macos.m");
+    println!("cargo:rerun-if-changed=src/screenshots/macos/image_decode_macos.m");
+    println!("cargo:rerun-if-changed=src/screenshots/macos/video_still_macos.m");
     cc::Build::new()
-      .file("src/screenshots/image_decode_macos.m")
-      .file("src/screenshots/video_still_macos.m")
+      .file("src/screenshots/macos/image_decode_macos.m")
+      .file("src/screenshots/macos/video_still_macos.m")
       .file("src/glide/macos/drag_start.m")
       .file("src/glide/macos/spaces/native.m")
       .file("src/glide/macos/spaces/carry.m")
       .file("src/glide/macos/spaces/drag_point.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos+export_setup.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos+export_encoding.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_export_cursor.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_export_inflight.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_export_redact.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_export_still.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos+presenter.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos+presenter_keyboard.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos+presenter_resize.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos+presenter_annotations.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos+presenter_redact.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_redact.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_redact_encode.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_background_image.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_cursor_resources.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_annotation_text.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_annotation_text_box.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_keyboard.m")
-      .file("src/editor/cursor_export/gpu_compositor_macos_keyboard_artwork.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+export_setup.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+export_encoding.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_export_cursor.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_export_inflight.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_export_redact.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_export_still.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+presenter.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+presenter_keyboard.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+presenter_resize.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+presenter_annotations.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos+presenter_redact.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_redact.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_redact_encode.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_background_image.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_cursor_resources.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_annotation_text.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_annotation_text_box.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_keyboard.m")
+      .file("src/editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_keyboard_artwork.m")
       .file("src/recording/platform/camera/confidence_scaler_macos.m")
       .file("src/recording/platform/desktop_compositor_macos.m")
-      .file("src/annotate/native_overlay_macos.m")
-      .file("src/annotate/native_overlay_macos_input.m")
+      .file("src/annotate/macos/native_overlay_macos.m")
+      .file("src/annotate/macos/native_overlay_macos_input.m")
       .file("src/ruler/cursor_guard_macos.m")
-      .file("src/editor/recording_preview_reader_macos.m")
-      .file("src/editor/recording_preview_scrubber_macos.m")
-      .file("src/editor/recording_preview_surface_macos.m")
-      .file("src/editor/osc_material_surface_macos.m")
-      .file("src/editor/osc_text_texture_macos.m")
-      .file("src/editor/osc_icon_renderer_macos.m")
-      .file("src/editor/osc_gpu_macos.m")
-      .file("src/editor/osc_gpu_macos+primitives.m")
-      .file("src/editor/osc_gpu_macos+selection.m")
-      .file("src/editor/osc_gpu_macos+crop.m")
-      .file("src/editor/osc_gpu_macos+ruler.m")
-      .file("src/editor/osc_gpu_pipeline_macos.m")
-      .file("src/editor/region_cursor_macos.m")
-      .file("src/editor/cursor_session_macos.m")
-      .file("src/windows/color_panel_macos.m")
-      .file("src/windows/dismissal_macos.m")
-      .file("src/editor/region_magnifier_macos.m")
-      .file("src/editor/recording_preview_surface_macos+callbacks.m")
-      .file("src/editor/recording_preview_surface_macos+magnifier.m")
-      .file("src/editor/recording_preview_surface_macos+crop_draw.m")
-      .file("src/editor/recording_preview_surface_macos+context_menu.m")
-      .file("src/editor/recording_preview_surface_macos+cursor.m")
-      .file("src/editor/recording_preview_surface_macos+editor.m")
-      .file("src/editor/recording_preview_surface_macos+keyboard.m")
-      .file("src/editor/recording_preview_surface_macos+annotation.m")
-      .file("src/editor/recording_preview_surface_macos+annotation_picking.m")
-      .file("src/editor/recording_preview_surface_macos+annotation_text_input.m")
-      .file("src/editor/recording_preview_surface_macos+annotation_text.m")
-      .file("src/editor/recording_preview_surface_macos+annotation_chrome.m")
-      .file("src/editor/recording_preview_surface_macos+annotation_redact.m")
-      .file("src/editor/recording_preview_surface_macos+annotation_state.m")
-      .file("src/editor/recording_preview_surface_macos+annotation_report.m")
-      .file("src/editor/recording_preview_surface_macos+annotation_group.m")
-      .file("src/editor/recording_preview_surface_macos+osc.m")
-      .file("src/editor/recording_preview_surface_macos+selection.m")
-      .file("src/editor/recording_preview_surface_macos+workspace.m")
-      .file("src/editor/recording_preview_surface_macos+layout.m")
-      .file("src/editor/recording_preview_surface_macos+editor_state.m")
-      .file("src/editor/recording_preview_audio_ribbon_coverage_tests.m")
-      .file("src/editor/recording_preview_surface_macos+audio_ribbon.m")
-      .file("src/editor/recording_preview_surface_macos+audio_ribbon_draw.m")
-      .file("src/editor/recording_preview_surface_macos+audio_ribbon_state.m")
-      .file("src/editor/recording_preview_surface_macos+zoom.m")
-      .file("src/editor/screenshot_region_osc_macos.m")
-      .file("src/editor/screenshot_region_osc_macos+draw.m")
-      .file("src/editor/screenshot_region_osc_macos+appearance.m")
-      .file("src/editor/screenshot_region_osc_macos+desktop.m")
-      .file("src/editor/screenshot_region_osc_macos+input.m")
-      .file("src/editor/screenshot_region_osc_macos+magnifier.m")
-      .file("src/editor/screenshot_region_osc_macos+state.m")
-      .file("src/editor/screenshot_region_osc_macos+ruler.m")
-      .file("src/editor/screenshot_region_osc_macos+snapshot.m")
-      .file("src/editor/screenshot_region_osc_macos+ocr.m")
-      .file("src/editor/screenshot_region_osc_macos+ocr_cancel.m")
-      .file("src/editor/screenshot_region_osc_macos+ocr_toolbar.m")
-      .file("src/editor/screenshot_region_osc_macos+ocr_toolbar_input.m")
+      .file("src/editor/recording_preview_player/platform/macos/recording_preview_reader_macos.m")
+      .file("src/editor/recording_preview_player/platform/macos/recording_preview_scrubber_macos.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos.m")
+      .file("src/osc/gpu/macos/osc_material_surface_macos.m")
+      .file("src/osc/gpu/macos/osc_text_texture_macos.m")
+      .file("src/osc/gpu/macos/osc_icon_renderer_macos.m")
+      .file("src/osc/gpu/macos/osc_gpu_macos.m")
+      .file("src/osc/gpu/macos/osc_gpu_macos+primitives.m")
+      .file("src/osc/gpu/macos/osc_gpu_macos+selection.m")
+      .file("src/osc/gpu/macos/osc_gpu_macos+crop.m")
+      .file("src/osc/gpu/macos/osc_gpu_macos+ruler.m")
+      .file("src/osc/gpu/macos/osc_gpu_pipeline_macos.m")
+      .file("src/osc/gpu/macos/region_cursor_macos.m")
+      .file("src/osc/cursor/macos/cursor_session_macos.m")
+      .file("src/app_windows/color_panel_macos.m")
+      .file("src/app_windows/dismissal_macos.m")
+      .file("src/osc/gpu/macos/region_magnifier_macos.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+callbacks.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+magnifier.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+crop_draw.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+context_menu.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+cursor.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+keyboard.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_picking.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text_input.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_text.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_chrome.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_redact.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_state.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_report.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+annotation_group.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+osc.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+selection.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+workspace.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+layout.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+editor_state.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_audio_ribbon_coverage_tests.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+audio_ribbon.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+audio_ribbon_draw.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+audio_ribbon_state.m")
+      .file("src/editor/preview_platform/surface_macos/native/recording_preview_surface_macos+zoom.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+draw.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+appearance.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+desktop.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+input.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+magnifier.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+state.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ruler.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+snapshot.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ocr.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ocr_cancel.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ocr_toolbar.m")
+      .file("src/app_windows/screenshot_region/native_osc_macos/screenshot_region_osc_macos+ocr_toolbar_input.m")
       .flag("-fobjc-arc")
       .compile("screenwide_gpu_compositor");
     // Objective-C categories do not define a class symbol, so the linker will

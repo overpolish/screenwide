@@ -12,7 +12,7 @@ use tauri::{AppHandle, Emitter, Listener, Manager, WebviewUrl, WebviewWindowBuil
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(in crate::glide::platform) struct Preview {
+pub(in crate::glide::macos) struct Preview {
   pub session_id: u64,
   pub desktop: String,
   pub selected: bool,
@@ -73,7 +73,7 @@ pub(super) fn initialize(app: &AppHandle) {
 }
 
 /// Begin loading the hidden webviews before the first gesture needs them.
-pub(in crate::glide::platform) fn preload(app: &AppHandle) {
+pub(in crate::glide::macos) fn preload(app: &AppHandle) {
   initialize(app);
   let app = app.clone();
   let result = std::thread::Builder::new()
@@ -124,7 +124,7 @@ fn ensure_window(app: &AppHandle, index: usize) -> tauri::Result<tauri::WebviewW
   let window = WebviewWindowBuilder::from_config(app, &config)?
     .initialization_script(crate::system_accent::initialization_script())
     .build()?;
-  crate::windows::platform::initialize_glide_preview(&window)?;
+  crate::app_windows::platform::initialize_glide_preview(&window)?;
   Ok(window)
 }
 
@@ -135,7 +135,7 @@ pub(super) fn show(app: &AppHandle, previews: Vec<Preview>, x: f64, y: f64) -> t
   show_arranged(app, previews, x, y, &offsets)
 }
 
-pub(in crate::glide::platform) fn show_arranged(
+pub(in crate::glide::macos) fn show_arranged(
   app: &AppHandle,
   previews: Vec<Preview>,
   x: f64,
@@ -144,7 +144,7 @@ pub(in crate::glide::platform) fn show_arranged(
 ) -> tauri::Result<()> {
   let count = previews.len();
   // Reuse the ordinary preview's anchor-monitor resolution, while it stays hidden.
-  crate::windows::position_glide_preview(app, x, y)?;
+  crate::app_windows::position_glide_preview(app, x, y)?;
   let normal = app
     .get_webview_window("glide")
     .ok_or(tauri::Error::WindowNotFound)?;
@@ -228,7 +228,7 @@ fn render(app: &AppHandle, preview: Preview) {
     }
     for preview in session {
       if let Some(window) = main.get_webview_window(&label(preview.index)) {
-        if crate::windows::platform::show_glide(&window, 1.0, false).is_err() {
+        if crate::app_windows::platform::show_glide(&window, 1.0, false).is_err() {
           return;
         }
       }
@@ -236,7 +236,7 @@ fn render(app: &AppHandle, preview: Preview) {
   });
 }
 
-pub(in crate::glide::platform) fn dismiss(app: &AppHandle, cancelled: bool) {
+pub(in crate::glide::macos) fn dismiss(app: &AppHandle, cancelled: bool) {
   let windows: Vec<_> = app
     .webview_windows()
     .into_iter()
@@ -256,9 +256,10 @@ pub(in crate::glide::platform) fn dismiss(app: &AppHandle, cancelled: bool) {
   let _ = app.run_on_main_thread(move || {
     for window in windows {
       if cancelled {
-        let _ = crate::windows::platform::hide(&window);
-      } else if crate::windows::platform::fade_glide_preview(&window, Box::new(faded)).is_err() {
-        let _ = crate::windows::platform::hide(&window);
+        let _ = crate::app_windows::platform::hide(&window);
+      } else if crate::app_windows::platform::fade_glide_preview(&window, Box::new(faded)).is_err()
+      {
+        let _ = crate::app_windows::platform::hide(&window);
         faded();
       }
     }
@@ -281,7 +282,7 @@ fn faded() {
 }
 
 /// A fresh gesture cannot reuse a panel until its previous fade has finished.
-pub(in crate::glide::platform) fn after_dismissed(done: Box<dyn FnOnce() + Send>) {
+pub(in crate::glide::macos) fn after_dismissed(done: Box<dyn FnOnce() + Send>) {
   let mut pool = POOL.lock().unwrap_or_else(|error| error.into_inner());
   if pool.fading == 0 {
     drop(pool);
@@ -291,6 +292,6 @@ pub(in crate::glide::platform) fn after_dismissed(done: Box<dyn FnOnce() + Send>
   }
 }
 
-pub(in crate::glide::platform) fn is_dismissing() -> bool {
+pub(in crate::glide::macos) fn is_dismissing() -> bool {
   POOL.lock().is_ok_and(|pool| pool.fading > 0)
 }

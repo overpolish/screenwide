@@ -548,5 +548,4 @@ fn a_redaction_resized_at_a_keyframe_follows_what_the_resized_box_covers() {
 }
 
 /// Content going out of sight under something that stays put.
-#[path = "tests_covered.rs"]
 mod covered;

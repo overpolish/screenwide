@@ -41,9 +41,9 @@ use crate::editor::effect_animation::ease_in_out_cubic;
 /// How long an annotation draws itself in where its clip does not say: a
 /// clip from before the pace followed the path's length, and one the live
 /// overlay records. The editor paces every clip it writes by its own path, in
-/// `src/features/editor/annotation-pace.ts`, from this same second at a
+/// `src/features/editor/annotations/annotation-pace.ts`, from this same second at a
 /// typical arrow's length. The twin of `ANNOTATION_DRAW_IN_MS` in
-/// `src/features/editor/annotation-kinds.ts`, which reaches a clip without a
+/// `src/features/editor/annotations/annotation-kinds.ts`, which reaches a clip without a
 /// pace this far back; `the_editor_places_a_clip_by_this_phase` holds the two
 /// together.
 pub(crate) const REVEAL_DRAW_IN_MS: f32 = 1_000.0;
@@ -282,9 +282,7 @@ pub unsafe extern "C" fn screenwide_annotation_reveal_window(
 /// Turning a window into drawable geometry needs the curve itself, and only
 /// the compositor has one.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-#[path = "reveal_geometry.rs"]
 pub(crate) mod geometry;
 
 #[cfg(test)]
-#[path = "reveal_tests.rs"]
 mod tests;

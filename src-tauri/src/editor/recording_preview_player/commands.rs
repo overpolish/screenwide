@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "commands/composition.rs"]
 mod composition;
 pub use composition::set_recording_preview_composition;
 pub use composition::set_recording_preview_cursor_effects;
@@ -13,7 +12,6 @@ pub use composition::{
   __tauri_command_name_set_recording_preview_cursor_effects,
 };
 
-#[path = "commands/startup.rs"]
 mod startup;
 pub use startup::start_recording_preview_player;
 pub use startup::{

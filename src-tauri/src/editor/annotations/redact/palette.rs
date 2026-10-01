@@ -19,7 +19,7 @@
 //! sits where to the nearest zone, and which zones are empty: roughly where
 //! the words break. A box over several lines has zones as tall as all of
 //! them, so its colours follow the words across the box but not down it.
-//! The attack tests in `cursor_export/platform_macos_redact_attack_tests.rs`
+//! The attack tests in `cursor_export/macos/platform/redact_attack_tests.rs`
 //! measure how much shows.
 
 /// How many colours besides the surface a zone draws with.

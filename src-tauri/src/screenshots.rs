@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[cfg(target_os = "macos")]
-mod annotation_bake;
 mod background_image;
 mod capture;
 mod clipboard;
@@ -10,7 +8,7 @@ pub(crate) mod desktop;
 pub(crate) mod encoding;
 mod hex_colour;
 #[cfg(target_os = "macos")]
-mod image_decode_macos;
+pub(crate) mod macos;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod mesh;
 mod mesh_generator;
@@ -22,9 +20,9 @@ mod output;
 pub(crate) use output::tests::settings as test_output_settings;
 mod placement;
 #[cfg(target_os = "macos")]
-mod platform;
+use self::macos::platform;
 #[cfg(target_os = "macos")]
-pub(crate) use platform::capture_monitor_thumbnail;
+pub(crate) use self::macos::platform::capture_monitor_thumbnail;
 #[cfg(target_os = "windows")]
 mod platform_windows;
 mod recenter;
@@ -34,8 +32,6 @@ pub(crate) mod still_command;
 #[cfg(test)]
 mod tests;
 pub(crate) mod thumbnail;
-#[cfg(target_os = "macos")]
-pub(crate) mod video_still_macos;
 
 use serde::Deserialize;
 use tauri::AppHandle;

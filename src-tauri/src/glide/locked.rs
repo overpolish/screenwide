@@ -73,9 +73,9 @@ fn present(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Result<(), Strin
 
 #[cfg(target_os = "macos")]
 fn present_on_main(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Result<(), String> {
-  crate::windows::position_glide_preview(app, x, y).map_err(|error| error.to_string())?;
+  crate::app_windows::position_glide_preview(app, x, y).map_err(|error| error.to_string())?;
   emit(app, GlideInputEvent::Locked { session_id })?;
-  crate::windows::show_glide_preview(app, false).map_err(|error| error.to_string())
+  crate::app_windows::show_glide_preview(app, false).map_err(|error| error.to_string())
 }
 
 /// Places the preview on the anchor, tells it what it is showing, and reveals
@@ -84,5 +84,5 @@ fn present_on_main(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Result<(
 fn present(app: &AppHandle, session_id: u64, x: f64, y: f64) -> Result<(), String> {
   super::place_preview_physical(app, x.round() as i32, y.round() as i32)?;
   emit(app, GlideInputEvent::Locked { session_id })?;
-  crate::windows::show_glide_preview(app, false).map_err(|error| error.to_string())
+  crate::app_windows::show_glide_preview(app, false).map_err(|error| error.to_string())
 }

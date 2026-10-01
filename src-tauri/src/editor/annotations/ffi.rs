@@ -275,5 +275,4 @@ pub extern "C" fn screenwide_highlight_distance(
 }
 
 #[cfg(all(test, target_os = "macos"))]
-#[path = "ffi_tests.rs"]
 mod tests;

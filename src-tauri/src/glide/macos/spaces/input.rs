@@ -24,7 +24,7 @@ pub(super) fn clear_cancelled_if_released() {
   }
 }
 
-pub(in crate::glide::platform) fn handle_event(
+pub(in crate::glide::macos) fn handle_event(
   app: &AppHandle,
   normal: &SharedState,
   kind: CGEventType,

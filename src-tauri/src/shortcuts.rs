@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "shortcuts/action_routing.rs"]
 mod action_routing;
 #[cfg(test)]
 use action_routing::action_window;
@@ -22,7 +21,7 @@ use std::{
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-use crate::windows::WindowLabel;
+use crate::app_windows::WindowLabel;
 pub(crate) mod diagnostics;
 mod registration;
 use registration::register_binding;

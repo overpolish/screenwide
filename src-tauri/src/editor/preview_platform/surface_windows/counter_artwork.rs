@@ -132,13 +132,10 @@ impl CounterAtlas {
 }
 
 /// The atlas's texture.
-#[path = "counter_artwork/gpu_atlas.rs"]
 mod gpu_atlas;
 /// The DirectWrite rasterisation the atlas is drawn by: a counter's number,
 /// and a text box's lines.
-#[path = "counter_artwork/rasterize.rs"]
 mod rasterize;
-#[path = "counter_artwork/text_box.rs"]
 mod text_box;
 use gpu_atlas::GpuAtlas;
 

@@ -7,24 +7,20 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager, WebviewUrl};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-use crate::{capture_overlays, screenshots, windows::WindowLabel};
+use crate::{app_windows::WindowLabel, capture_overlays, screenshots};
 mod adapter;
 mod input;
 mod interaction;
 #[cfg(target_os = "macos")]
-mod native_overlay_macos;
-#[cfg(target_os = "windows")]
-mod native_overlay_windows;
-#[cfg(target_os = "macos")]
-mod platform_macos;
-#[cfg(target_os = "windows")]
-mod platform_windows;
+mod macos;
 mod qr;
 pub(crate) mod qr_details;
 pub(crate) mod snapshot;
 mod text_selection;
 pub(crate) mod toolbar;
 pub(crate) mod visual;
+#[cfg(target_os = "windows")]
+mod windows;
 
 pub(crate) use input::{
   dispatch_control, dispatch_text_input as native_text_input,
@@ -127,7 +123,7 @@ pub fn dismiss(app: &AppHandle) {
   if had_windows || had_capture {
     capture_overlays::emit_lifecycle(app, false);
   }
-  crate::windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
+  crate::app_windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
 }
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
@@ -173,7 +169,7 @@ async fn start_session(app: &AppHandle, generation: u64) -> Result<(), String> {
   let anchor_id = *anchor_id;
   let position = anchor_monitor.position().to_logical::<f64>(*anchor_scale);
   let size = anchor_monitor.size().to_logical::<f64>(*anchor_scale);
-  let window = crate::windows::webview_window(
+  let window = crate::app_windows::webview_window(
     app,
     WindowLabel::TextRecognition.as_str(),
     WebviewUrl::App("/text-recognition".into()),
@@ -206,11 +202,11 @@ async fn start_session(app: &AppHandle, generation: u64) -> Result<(), String> {
     adapter::show_interactive(&window)?;
     adapter::present(&window)?;
   } else {
-    crate::windows::show(&window, true).map_err(|error| error.to_string())?;
+    crate::app_windows::show(&window, true).map_err(|error| error.to_string())?;
   }
 
   capture_overlays::emit_lifecycle(app, true);
-  crate::windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
+  crate::app_windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
 
   Ok(())
 }

@@ -3,7 +3,7 @@
 
 use tauri::{AppHandle, Manager, WebviewUrl};
 
-use crate::{capture_overlays, screenshots, windows::WindowLabel};
+use crate::{app_windows::WindowLabel, capture_overlays, screenshots};
 
 mod adapter;
 pub(crate) mod analysis;
@@ -50,7 +50,7 @@ pub fn dismiss(app: &AppHandle) {
   if had_windows || had_capture {
     capture_overlays::emit_lifecycle(app, false);
   }
-  crate::windows::sync_recording_ui_escape(app, false);
+  crate::app_windows::sync_recording_ui_escape(app, false);
 }
 
 pub fn is_active(app: &AppHandle) -> bool {
@@ -120,7 +120,7 @@ async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
     .ok_or_else(|| "No monitor is available for Ruler".to_owned())?;
   let position = anchor_monitor.position().to_logical::<f64>(*anchor_scale);
   let size = anchor_monitor.size().to_logical::<f64>(*anchor_scale);
-  let window = crate::windows::webview_window(
+  let window = crate::app_windows::webview_window(
     app,
     WindowLabel::Ruler.as_str(),
     WebviewUrl::App("/ruler".into()),
@@ -150,7 +150,7 @@ async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
   adapter::show_interactive(&window)?;
   adapter::present(&window)?;
   capture_overlays::emit_lifecycle(app, true);
-  crate::windows::sync_recording_ui_escape(app, true);
+  crate::app_windows::sync_recording_ui_escape(app, true);
   Ok(())
 }
 

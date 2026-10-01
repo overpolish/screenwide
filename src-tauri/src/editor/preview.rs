@@ -1,9 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "preview/estimate_command.rs"]
 mod estimate_command;
-#[path = "preview/snapshot_command.rs"]
 mod snapshot_command;
 pub use estimate_command::estimate_recording_export;
 

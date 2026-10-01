@@ -117,5 +117,4 @@ pub unsafe extern "C" fn screenwide_redaction_surface_at(
 }
 
 #[cfg(test)]
-#[path = "surface_timeline_tests.rs"]
 mod tests;

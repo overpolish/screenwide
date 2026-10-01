@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "encode/process.rs"]
 mod process;
 #[cfg(test)]
 pub(super) use process::progress_milliseconds;

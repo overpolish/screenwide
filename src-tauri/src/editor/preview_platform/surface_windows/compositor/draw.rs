@@ -5,7 +5,7 @@ use super::*;
 
 impl Compositor {
   #[allow(clippy::too_many_arguments)]
-  pub(in crate::editor::preview_platform::surface) fn draw_with_camera(
+  pub(in crate::editor::preview_platform::surface_windows) fn draw_with_camera(
     &self,
     target: &wgpu::TextureView,
     source: &SourceTexture,

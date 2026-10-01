@@ -9,10 +9,8 @@
 //! em, and the atlas sets type at twice its drawn size, so any large box or
 //! counter came out with stepped edges.
 
-#[path = "type_device/engine.rs"]
 mod engine;
 #[cfg(test)]
-#[path = "type_device/tests.rs"]
 mod tests;
 
 use engine::REFERENCE_SIZE;

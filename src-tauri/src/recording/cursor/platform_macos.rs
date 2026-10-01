@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "platform_macos/events.rs"]
 mod events;
 /// What a cursor no stock image matches is, read from its shape.
-#[path = "platform_macos/picture.rs"]
 mod picture;
 use events::current_event;
 use events::is_motion;

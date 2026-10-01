@@ -218,5 +218,4 @@ fn spotlight_record(
 }
 
 #[cfg(test)]
-#[path = "records_tests.rs"]
 mod tests;

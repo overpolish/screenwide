@@ -11,10 +11,8 @@
 mod confidence;
 
 #[cfg(test)]
-#[path = "camera/tests.rs"]
 mod tests;
 
-#[path = "camera/frames.rs"]
 mod frames;
 use frames::{bgra_pixels, camera_frame_clock, report_once, texture};
 

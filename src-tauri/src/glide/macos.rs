@@ -10,37 +10,21 @@ use core_graphics::event::{
 };
 use tauri::AppHandle;
 
-#[path = "macos/center.rs"]
 mod center;
-#[path = "macos/commands.rs"]
 mod commands;
-#[path = "macos/control.rs"]
 mod control;
-#[path = "macos/control_keys.rs"]
 mod control_keys;
-#[path = "macos/cursor.rs"]
 mod cursor;
-#[path = "macos/hardware.rs"]
 mod hardware;
-#[path = "macos/key.rs"]
 mod key;
-#[path = "macos/mouse_click.rs"]
 mod mouse_click;
-#[path = "macos/multitouch.rs"]
 mod multitouch;
-#[path = "macos/native_settings.rs"]
 mod native_settings;
-#[path = "macos/own_window.rs"]
 mod own_window;
-#[path = "macos/session.rs"]
 mod session;
-#[path = "macos/spaces.rs"]
 pub(super) mod spaces;
-#[path = "macos/titlebar.rs"]
 mod titlebar;
-#[path = "macos/trackpad.rs"]
 mod trackpad;
-#[path = "macos/tween.rs"]
 mod tween;
 
 use center::{center_captured, center_window_at};

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-#[path = "estimate_helpers.rs"]
 mod estimate_helpers;
 
 #[tauri::command]

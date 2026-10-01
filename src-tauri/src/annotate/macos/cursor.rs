@@ -1,0 +1,78 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! Keeping the tool's pointer over the overlay's transparent host: the
+//! crosshair, or the I-beam for the highlight, which selects text.
+//!
+//! The cursor lease sets the crosshair once, and that is enough for a native
+//! surface. This host is a webview: WebKit asks for the arrow cursor again on
+//! every pointer move over it, and the arrow wins. The region overlay settled
+//! this once - turn the window's cursor rectangles off and let the shared
+//! `NSCursor set` guard substitute the crosshair for any arrow request - and
+//! this is the same claim for a host that has no native view of its own yet.
+
+use std::ffi::c_void;
+
+use objc2::rc::Retained;
+use objc2_app_kit::{NSCursor, NSWindow};
+use tauri::WebviewWindow;
+
+unsafe extern "C" {
+  /// `src/ruler/cursor_guard_macos.m`. Installs the `NSCursor set` guard and
+  /// names the cursor an arrow request is replaced with; null clears it.
+  fn screenwide_set_region_expected_cursor(cursor: *mut c_void);
+  /// The same guard's exemption: the window whose pointer stays an arrow.
+  fn screenwide_set_cursor_guard_exempt_window(window: *mut c_void);
+}
+
+fn with_window(window: &WebviewWindow, work: impl FnOnce(&NSWindow)) {
+  if let Ok(raw) = window.ns_window() {
+    work(unsafe { &*raw.cast() });
+  }
+}
+
+/// Main thread only, while the host window still exists.
+pub(in super::super) fn claim(window: &WebviewWindow) {
+  with_window(window, |native| native.disableCursorRects());
+  follow_tool();
+}
+
+/// Points with the tool in hand: the guard's substitute, the overlay's own
+/// pointer moves and the pointer now. Main thread only, while the overlay
+/// holds the pointer.
+pub(in super::super) fn follow_tool() {
+  let text = super::super::text_cursor();
+  let cursor = if text {
+    NSCursor::IBeamCursor()
+  } else {
+    NSCursor::crosshairCursor()
+  };
+  unsafe {
+    screenwide_set_region_expected_cursor(Retained::as_ptr(&cursor).cast_mut().cast());
+  }
+  super::super::native_overlay::set_text_cursor(text);
+  cursor.set();
+}
+
+/// Main thread only, before the host window is closed. The lease's own release
+/// puts the arrow back once the overlay is gone.
+pub(in super::super) fn release(window: &WebviewWindow) {
+  unsafe { screenwide_set_region_expected_cursor(std::ptr::null_mut()) };
+  with_window(window, |native| {
+    native.enableCursorRects();
+    native.resetCursorRects();
+  });
+}
+
+/// The toolbar is chrome rather than canvas, so the guard leaves the pointer
+/// alone over it: its controls are pressed, not drawn on. Main thread only.
+pub(in super::super) fn exempt_toolbar(window: &WebviewWindow) {
+  with_window(window, |native| unsafe {
+    screenwide_set_cursor_guard_exempt_window(std::ptr::from_ref(native).cast_mut().cast());
+  });
+}
+
+/// Main thread only, once the toolbar is no longer on screen.
+pub(in super::super) fn forget_toolbar() {
+  unsafe { screenwide_set_cursor_guard_exempt_window(std::ptr::null_mut()) };
+}

@@ -236,5 +236,4 @@ pub(crate) fn joined(
 }
 
 #[cfg(test)]
-#[path = "handoff_tests.rs"]
 mod tests;

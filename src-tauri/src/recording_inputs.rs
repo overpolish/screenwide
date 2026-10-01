@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #[cfg(test)]
-#[path = "recording_inputs/tests.rs"]
 mod tests;
 
-#[path = "recording_inputs/mode_preferences.rs"]
 mod mode_preferences;
 #[cfg(any(test, target_os = "macos"))]
 use mode_preferences::choose_fps;

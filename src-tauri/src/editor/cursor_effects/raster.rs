@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #[cfg(test)]
-#[path = "raster/sampling.rs"]
 mod sampling;
 #[cfg(test)]
-#[path = "raster/tests.rs"]
 mod tests;
 
 use crate::recording::cursor::CursorStyle;
@@ -13,13 +11,15 @@ use crate::recording::cursor::CursorStyle;
 use image::RgbaImage;
 
 #[cfg(target_os = "macos")]
-#[path = "raster/platform_macos.rs"]
-mod platform;
+mod platform_macos;
+#[cfg(target_os = "macos")]
+use self::platform_macos as platform;
 #[cfg(target_os = "macos")]
 pub(super) use platform::gpu_rotation_radians;
 #[cfg(not(target_os = "macos"))]
-#[path = "raster/platform_unsupported.rs"]
-mod platform;
+mod platform_unsupported;
+#[cfg(not(target_os = "macos"))]
+use self::platform_unsupported as platform;
 
 mod fallback;
 

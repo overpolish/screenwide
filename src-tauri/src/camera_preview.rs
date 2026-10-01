@@ -2,12 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #[cfg(test)]
-#[path = "camera_preview/tests.rs"]
 mod tests;
 
-#[path = "camera_preview/camera_worker.rs"]
 mod camera_worker;
-#[path = "camera_preview/delivery.rs"]
 mod delivery;
 use camera_worker::build_camera_preview;
 

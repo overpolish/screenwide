@@ -17,8 +17,8 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewWindow};
 
+use crate::app_windows::{platform, WindowLabel};
 use crate::editor::export_window::presentation;
-use crate::windows::{platform, WindowLabel};
 
 mod creation;
 

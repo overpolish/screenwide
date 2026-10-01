@@ -15,9 +15,10 @@ import { useEditorToolPanels } from "../tool-panels/use-editor-tool-panels";
 import { currentEditorKind } from "../window-kind";
 
 import { EditorPanelProps } from "./editor-panel-props";
-import { RecordingSection, ScreenshotSection } from "./editor-preview-section";
+import { ScreenshotSection } from "./editor-preview-section";
 import { EditorTitlebar } from "./editor-titlebar";
 import { EditorToolbarProvider } from "./editor-toolbar-provider";
+import { RecordingSection } from "./recording-section";
 import { useEditorSheets } from "./use-editor-sheets";
 
 /**

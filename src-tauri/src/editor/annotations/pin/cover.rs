@@ -15,7 +15,6 @@ use super::geometry::Rect;
 use super::luma::Plane;
 
 /// A cover's edge, taken only once it has held still.
-#[path = "cover_edge.rs"]
 mod edge;
 use edge::Edge;
 

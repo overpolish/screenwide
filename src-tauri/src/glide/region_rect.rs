@@ -127,5 +127,4 @@ fn edge(origin: f64, extent: f64, index: u32, count: u32) -> f64 {
 }
 
 #[cfg(test)]
-#[path = "region_rect_tests.rs"]
 mod tests;

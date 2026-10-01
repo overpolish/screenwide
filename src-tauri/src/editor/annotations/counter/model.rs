@@ -99,7 +99,7 @@ pub(crate) fn placed(center: AnnotationPoint, angle: f64) -> bool {
 
 /// How far apart the angles Shift snaps to are: eight of them, the quarter
 /// turns and the diagonals between. The twin of `ANNOTATION_COUNTER_SNAP` in
-/// `src/features/editor/annotations.ts`, which the angle control steps by.
+/// `src/features/editor/annotations/annotations.ts`, which the angle control steps by.
 pub(crate) const COUNTER_SNAP_RADIANS: f64 = std::f64::consts::FRAC_PI_4;
 
 /// The angle a tail tip dragged to `point` aims the counter at. A press

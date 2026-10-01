@@ -80,7 +80,7 @@ fn a_spotlight_fades_in_and_out_on_its_own_time() {
 fn the_editor_places_a_spotlight_by_its_fade() {
   const SOURCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../src/features/editor/annotation-kinds.ts"
+    "/../src/features/editor/annotations/annotation-kinds.ts"
   ));
   let declared = SOURCE
     .lines()

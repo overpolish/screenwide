@@ -3,7 +3,7 @@
 
 use crate::screenshots::CapturedImage;
 
-use super::super::native_overlay_windows as native;
+use super::super::windows::native_overlay as native;
 
 pub(crate) fn install(
   window: &tauri::WebviewWindow,

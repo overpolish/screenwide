@@ -32,19 +32,15 @@ mod validation;
 mod workspace;
 
 pub use artifact::{discard, present_recording, present_screenshot};
-#[path = "editor/recording_model.rs"]
 mod recording_model;
-#[path = "editor/screenshot_composition.rs"]
 mod screenshot_composition;
 pub use recording_model::{
   AudioTrackKind, AudioTrackVolume, CameraOverlaySettings, RecordingAudioTrack, RecordingCamera,
   RecordingExportOptions, RecordingOutputSettings,
 };
 
-#[path = "editor/screenshot_model.rs"]
 mod screenshot_model;
 pub use screenshot_model::{ScreenshotItem, ScreenshotWorkspaceOutputSettings};
-#[path = "editor/workspace_kind.rs"]
 mod workspace_kind;
 use workspace_kind::kind_of_window;
 pub use workspace_kind::EditorKind;

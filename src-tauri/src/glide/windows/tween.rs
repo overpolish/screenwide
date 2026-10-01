@@ -26,11 +26,8 @@ use crate::glide::{
   region_rect::RegionGravity,
 };
 
-#[path = "tween/completion.rs"]
 mod completion;
-#[path = "tween/destination.rs"]
 mod destination;
-#[path = "tween/settle.rs"]
 mod settle;
 use settle::settle;
 

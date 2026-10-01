@@ -9,8 +9,8 @@
 use tauri::Manager;
 
 use crate::{
-  osc::geometry::Rect, screenshots::CapturedImage,
-  windows::screenshot_region::native_osc_windows as native_region,
+  app_windows::screenshot_region::native_osc_windows as native_region, osc::geometry::Rect,
+  screenshots::CapturedImage,
 };
 
 pub(super) fn install(
@@ -81,7 +81,7 @@ pub(super) fn install(
 /// Windows needs the two AppKit operations separately: show the host, then
 /// activate it so the compositor child can take keyboard focus in `present`.
 pub(super) fn show_interactive(window: &tauri::WebviewWindow) -> Result<(), String> {
-  crate::windows::show(window, true).map_err(|error| error.to_string())?;
+  crate::app_windows::show(window, true).map_err(|error| error.to_string())?;
   window.set_focus().map_err(|error| error.to_string())
 }
 
@@ -112,7 +112,7 @@ pub(super) fn set_screenshot_mode(
   // stamped artifact, regardless of the persistent app-window preference.
   let capturable =
     active || crate::settings::current(window.app_handle()).record_screenwide_windows;
-  crate::windows::set_window_capture_affinity(window, capturable)
+  crate::app_windows::set_window_capture_affinity(window, capturable)
     .map_err(|error| error.to_string())?;
   if !native_region::set_capture_affinity(window, capturable) {
     return Err("Could not update the native Ruler capture affinity".to_owned());
@@ -131,7 +131,7 @@ pub(super) fn set_screenshot_mode(
       let _ = native_region::set_ruler_transient_chrome(&target, !active);
       let _ = native_region::set_input_enabled(&target, !active);
       if !active {
-        let _ = crate::windows::show(&target, true);
+        let _ = crate::app_windows::show(&target, true);
         let _ = native_region::claim_pointer_surface(&target);
         let _ = native_region::refresh_ruler_pointer(&target);
       }

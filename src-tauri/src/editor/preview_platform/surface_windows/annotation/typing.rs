@@ -20,9 +20,7 @@ use crate::editor::annotations::text::geometry::text_distance;
 use crate::editor::annotations::text::typing::{TextTyping, TypingLayout};
 use crate::editor::preview_platform::surface::type_device::line_width;
 
-#[path = "typing_keys.rs"]
 mod keys;
-#[path = "typing_presses.rs"]
 mod presses;
 pub(crate) use presses::{open, pointer_move, press, up};
 
@@ -135,7 +133,9 @@ pub(super) fn lost_its_box(state: &SurfaceState) -> bool {
 /// Hands every pane the caret and selection it draws: the pane the typed
 /// box's layer is drawn in gets them, every other pane none. A screenshot
 /// pane knows its layer by token; a recording pane is its own layer.
-pub(in crate::editor::preview_platform::surface) fn sync_typing_marks(state: &mut SurfaceState) {
+pub(in crate::editor::preview_platform::surface_windows) fn sync_typing_marks(
+  state: &mut SurfaceState,
+) {
   let typing = state.annotation.typing.as_ref().map(|typing| {
     (
       u64::from(typing.layer),
@@ -246,7 +246,7 @@ impl RecordingPreviewSurface {
 
 /// What the typing window hands on: keys and typed text, the blink, and the
 /// ways the typing ends.
-pub(in crate::editor::preview_platform::surface) fn handle_typing_input(
+pub(in crate::editor::preview_platform::surface_windows) fn handle_typing_input(
   editor: HWND,
   input: editor::TypingInput,
 ) {

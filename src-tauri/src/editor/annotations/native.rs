@@ -248,5 +248,4 @@ const _: () = assert!(std::mem::size_of::<NativeAnnotationsView>() == 40);
 const _: () = assert!(std::mem::offset_of!(NativeAnnotationsView, data) == 16);
 
 #[cfg(test)]
-#[path = "native_tests.rs"]
 mod tests;

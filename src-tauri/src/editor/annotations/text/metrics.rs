@@ -16,7 +16,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 /// A line's height, in ems. The twin of `SCREENWIDE_TEXT_BOX_LINE_HEIGHT` in
-/// `cursor_export/gpu_compositor_macos_annotation_text.h`; the D3D11 atlas
+/// `cursor_export/macos/gpu_compositor/gpu_compositor_macos_annotation_text.h`; the D3D11 atlas
 /// reads it here.
 pub(crate) const LINE_HEIGHT: f64 = 1.25;
 

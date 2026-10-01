@@ -39,9 +39,12 @@ for (const file of files.sort()) {
   const lines = source.length === 0 ? 0 : source.split(/\r?\n/u).length;
   const normalized = file.split(path.sep).join("/");
   visited.add(normalized);
-  const isTest = /(?:^|\/)(?:tests?\.rs|[^/]+_tests\.rs|tests\/)/u.test(
-    normalized,
-  );
+  // Rust test modules live in `tests.rs`, `*_tests.rs`, or folders of the same
+  // names once a test module has submodules of its own.
+  const isTest =
+    /(?:^|\/)(?:tests?\.rs|[^/]+_tests\.rs|(?:[^/]+_)?tests\/)/u.test(
+      normalized,
+    );
   const standardLimit = isTest ? TEST_LIMIT : DEFAULT_LIMIT;
   const debtCeiling = debtCeilings.get(normalized);
   const limit = debtCeiling ?? standardLimit;

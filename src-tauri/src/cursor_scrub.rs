@@ -5,11 +5,13 @@ use serde::Serialize;
 use tauri::ipc::Channel;
 
 #[cfg(target_os = "macos")]
-#[path = "cursor_scrub/macos.rs"]
-mod platform;
+mod macos;
+#[cfg(target_os = "macos")]
+use self::macos as platform;
 #[cfg(target_os = "windows")]
-#[path = "cursor_scrub/windows.rs"]
-mod platform;
+mod windows;
+#[cfg(target_os = "windows")]
+use self::windows as platform;
 
 #[derive(Clone, Serialize)]
 #[cfg_attr(target_os = "macos", allow(dead_code))]

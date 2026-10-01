@@ -101,5 +101,4 @@ pub(crate) fn corners(
 }
 
 #[cfg(test)]
-#[path = "manual_tests.rs"]
 mod tests;

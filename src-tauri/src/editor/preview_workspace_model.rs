@@ -4,9 +4,7 @@
 //! Converts screenshot and recording settings into the one native workspace
 //! model consumed by both GPU backends.
 
-#[path = "preview_workspace_model/resize_helpers.rs"]
 mod resize_helpers;
-#[path = "preview_workspace_model/scenes.rs"]
 mod scenes;
 pub(super) use scenes::{recording_scene, screenshot_scene};
 

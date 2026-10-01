@@ -8,14 +8,17 @@
 //! frozen-texture upload, GPU submission, cursors and window presentation.
 
 #[cfg(target_os = "macos")]
-#[path = "adapter/macos.rs"]
-mod platform;
+mod macos;
+#[cfg(target_os = "macos")]
+use self::macos as platform;
 #[cfg(target_os = "windows")]
-#[path = "adapter/windows.rs"]
-mod platform;
+mod windows;
+#[cfg(target_os = "windows")]
+use self::windows as platform;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-#[path = "adapter/unavailable.rs"]
-mod platform;
+mod unavailable;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+use self::unavailable as platform;
 
 pub(super) use platform::{
   available, close, install, present, set_screenshot_mode, show_interactive,

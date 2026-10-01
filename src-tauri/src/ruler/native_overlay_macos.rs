@@ -4,8 +4,8 @@
 use tauri::Manager;
 
 use crate::{
-  osc::geometry::Rect, screenshots::CapturedImage,
-  windows::screenshot_region::native_osc_macos as native_region,
+  app_windows::screenshot_region::native_osc_macos as native_region, osc::geometry::Rect,
+  screenshots::CapturedImage,
 };
 
 pub(super) fn install(

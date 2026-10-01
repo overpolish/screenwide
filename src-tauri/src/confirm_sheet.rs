@@ -19,8 +19,8 @@ use tauri::{
   AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WindowEvent,
 };
 
+use crate::app_windows::{self, WindowLabel};
 use crate::editor::export_window::presentation;
-use crate::windows::{self, WindowLabel};
 
 /// Sent to an already-loaded sheet when a new question arrives. The first
 /// presentation has no one listening yet and reads the words itself instead.
@@ -77,32 +77,33 @@ fn get_or_create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
   } else {
     Effect::UnderWindowBackground
   };
-  let window = crate::windows::webview_window(app, label, WebviewUrl::App("/confirm-sheet".into()))
-    .title("Screenwide")
-    .inner_size(WIDTH, INITIAL_HEIGHT)
-    .always_on_top(true)
-    // A sheet has no title bar of its own on any platform: the two buttons
-    // are the only way out, so there is nothing for a caption to offer.
-    .decorations(false)
-    .minimizable(false)
-    .maximizable(false)
-    .resizable(false)
-    .shadow(true)
-    .skip_taskbar(true)
-    .transparent(true)
-    .accept_first_mouse(true)
-    .visible(false)
-    .effects(WindowEffectsConfig {
-      color: None,
-      effects: vec![effect],
-      radius: Some(10.0),
-      state: Some(EffectState::Active),
-    })
-    .build()?;
+  let window =
+    crate::app_windows::webview_window(app, label, WebviewUrl::App("/confirm-sheet".into()))
+      .title("Screenwide")
+      .inner_size(WIDTH, INITIAL_HEIGHT)
+      .always_on_top(true)
+      // A sheet has no title bar of its own on any platform: the two buttons
+      // are the only way out, so there is nothing for a caption to offer.
+      .decorations(false)
+      .minimizable(false)
+      .maximizable(false)
+      .resizable(false)
+      .shadow(true)
+      .skip_taskbar(true)
+      .transparent(true)
+      .accept_first_mouse(true)
+      .visible(false)
+      .effects(WindowEffectsConfig {
+        color: None,
+        effects: vec![effect],
+        radius: Some(10.0),
+        state: Some(EffectState::Active),
+      })
+      .build()?;
   // The effect's radius is macOS-only; on Windows the frameless sheet asks
   // DWM for the corner it would give a framed window.
   #[cfg(target_os = "windows")]
-  crate::windows::round_corners(&window)?;
+  crate::app_windows::round_corners(&window)?;
 
   let close_app = app.clone();
   window.on_window_event(move |event| {
@@ -137,7 +138,7 @@ fn present(app: &AppHandle, parent: &WebviewWindow, copy: &ConfirmCopy) -> tauri
   presentation::attach(app, parent, &sheet)?;
   // Restore the webview and focus on every opening, even if attachment has
   // already made the native window visible. It must lay out to report its size.
-  windows::show(&sheet, true)?;
+  app_windows::show(&sheet, true)?;
   // A reused sheet is already loaded and would otherwise still be showing the
   // last question; a fresh one has no listener yet and asks for the words on
   // mount instead.
@@ -241,7 +242,7 @@ pub fn answer(app: &AppHandle, confirmed: bool) {
     // Detached first: ordering a still-attached child out drags its parent
     // with it.
     let _ = presentation::detach(app, &pending.parent, &sheet);
-    let _ = windows::hide_without_focus_transfer(&sheet);
+    let _ = app_windows::hide_without_focus_transfer(&sheet);
   }
   let _ = app.emit_to(pending.parent.label(), MODAL_EVENT, false);
   (pending.on_answer)(app, confirmed);

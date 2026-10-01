@@ -138,7 +138,7 @@ fn centered_origin(
   work_size: LogicalSize<f64>,
   window_size: (f64, f64),
 ) -> (f64, f64) {
-  let origin = crate::windows::centered_logical_position(
+  let origin = crate::app_windows::centered_logical_position(
     work_position,
     work_size,
     LogicalSize::new(window_size.0, window_size.1),

@@ -5,21 +5,13 @@
 //! on the GPU: Media Foundation's textures are copied into a texture both
 //! devices open, and the CPU only updates this pass's uniforms and lists.
 
-#[path = "compositor/cursor_artwork.rs"]
 mod cursor_artwork;
-#[path = "compositor/draw.rs"]
 mod draw;
-#[path = "compositor/pipeline.rs"]
 mod pipeline;
-#[path = "compositor/redact.rs"]
 mod redact;
-#[path = "compositor/redact_pipeline.rs"]
 mod redact_pipeline;
-#[path = "compositor/redact_targets.rs"]
 mod redact_targets;
-#[path = "compositor/source.rs"]
 mod source;
-#[path = "compositor/submit.rs"]
 mod submit;
 use cursor_artwork::native_cursor_pixels;
 
@@ -105,7 +97,6 @@ struct Constants {
 
 /// The storage-buffer elements the annotation shader reads, and the buffers
 /// that carry them.
-#[path = "compositor/arrows.rs"]
 mod arrows;
 pub(crate) use arrows::{
   GpuBuffer, PreparedArrows, PreparedType, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
@@ -166,17 +157,12 @@ impl Compositor {
 }
 
 #[cfg(all(test, target_os = "windows"))]
-#[path = "compositor/crop_preview_tests.rs"]
 mod crop_preview_tests;
 #[cfg(all(test, target_os = "windows", target_arch = "x86_64"))]
-#[path = "compositor/fpu_tests.rs"]
 mod fpu_tests;
 #[cfg(all(test, target_os = "windows"))]
-#[path = "compositor/redact_tests.rs"]
 mod redact_tests;
 #[cfg(all(test, target_os = "windows"))]
-#[path = "compositor/render_test_helpers.rs"]
 mod render_test_helpers;
 #[cfg(all(test, target_os = "windows"))]
-#[path = "compositor/render_tests.rs"]
 mod render_tests;

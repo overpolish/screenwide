@@ -7,7 +7,7 @@ use tauri::utils::config::WindowEffectsConfig;
 use tauri::window::{Effect, EffectState};
 use tauri::{AppHandle, Emitter, LogicalSize, Manager, WebviewUrl, WebviewWindow, WindowEvent};
 
-use crate::windows::WindowLabel;
+use crate::app_windows::WindowLabel;
 
 use super::RecognizedQrCode;
 
@@ -43,11 +43,12 @@ fn place_on_display(
   else {
     // Off-screen recovery remains the fallback when input did not
     // originate from a native desktop surface or that display disappeared.
-    return crate::windows::recover_window_position(app, window).map_err(|error| error.to_string());
+    return crate::app_windows::recover_window_position(app, window)
+      .map_err(|error| error.to_string());
   };
   let size = LogicalSize::new(480.0, 360.0);
   let work_area = monitor.work_area();
-  let position = crate::windows::centered_logical_position(
+  let position = crate::app_windows::centered_logical_position(
     work_area.position.to_logical::<f64>(scale),
     work_area.size.to_logical::<f64>(scale),
     size,
@@ -76,7 +77,7 @@ pub fn show(
     };
     #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
     let mut builder =
-      crate::windows::webview_window(app, label, WebviewUrl::App("/qr-details".into()))
+      crate::app_windows::webview_window(app, label, WebviewUrl::App("/qr-details".into()))
         .title("QR Details")
         .inner_size(480.0, 360.0)
         .center()
@@ -111,7 +112,7 @@ pub fn show(
     let window = builder.build().map_err(|error| error.to_string())?;
     // Frameless on Windows, so DWM is asked for the framed window's corner.
     #[cfg(target_os = "windows")]
-    crate::windows::round_corners(&window).map_err(|error| error.to_string())?;
+    crate::app_windows::round_corners(&window).map_err(|error| error.to_string())?;
     let close_app = app.clone();
     window.on_window_event(move |event| {
       if let WindowEvent::CloseRequested { api, .. } = event {
@@ -128,7 +129,7 @@ pub fn show(
   place_on_display(app, &window, display_id)?;
   #[cfg(target_os = "macos")]
   crate::capture_overlays::set_level(&window, crate::capture_overlays::FOREGROUND_LEVEL + 1)?;
-  crate::windows::show(&window, true).map_err(|error| error.to_string())?;
+  crate::app_windows::show(&window, true).map_err(|error| error.to_string())?;
   Ok(())
 }
 
@@ -139,6 +140,6 @@ pub fn hide_and_resume(app: &AppHandle) {
 pub fn hide_without_resume(app: &AppHandle) {
   app.state::<QrDetailsState>().set(None);
   if let Some(window) = app.get_webview_window(WindowLabel::QrDetails.as_str()) {
-    let _ = crate::windows::hide(&window);
+    let _ = crate::app_windows::hide(&window);
   }
 }

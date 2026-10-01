@@ -55,7 +55,7 @@ pub(super) fn begin() -> Ticket {
 
 /// A settled move needs no delay. An active move runs this after its last write,
 /// including failure exits, so a failed placement cannot strand the cursor.
-pub(in crate::glide::platform) fn after_current(callback: Callback) {
+pub(in crate::glide::macos) fn after_current(callback: Callback) {
   let current = CURRENT
     .lock()
     .unwrap_or_else(|error| error.into_inner())

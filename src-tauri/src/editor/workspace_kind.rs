@@ -19,10 +19,10 @@ pub enum EditorKind {
 impl EditorKind {
   pub const ALL: [Self; 2] = [Self::Recording, Self::Screenshot];
 
-  pub const fn window_label(self) -> crate::windows::WindowLabel {
+  pub const fn window_label(self) -> crate::app_windows::WindowLabel {
     match self {
-      Self::Recording => crate::windows::WindowLabel::EditorRecording,
-      Self::Screenshot => crate::windows::WindowLabel::EditorScreenshot,
+      Self::Recording => crate::app_windows::WindowLabel::EditorRecording,
+      Self::Screenshot => crate::app_windows::WindowLabel::EditorScreenshot,
     }
   }
 

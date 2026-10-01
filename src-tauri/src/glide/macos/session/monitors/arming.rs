@@ -3,7 +3,7 @@
 
 use super::*;
 
-pub(in crate::glide::platform::session) fn claim_armed(
+pub(in crate::glide::macos::session) fn claim_armed(
   state: &SharedState,
   input: super::super::InputKind,
 ) -> bool {
@@ -23,14 +23,14 @@ pub(in crate::glide::platform::session) fn claim_armed(
   })
 }
 
-pub(in crate::glide::platform::session) fn current_id(state: &SharedState) -> Option<u64> {
+pub(in crate::glide::macos::session) fn current_id(state: &SharedState) -> Option<u64> {
   state
     .lock()
     .ok()
     .and_then(|state| state.session.as_ref().map(|session| session.id))
 }
 
-pub(in crate::glide::platform::session) fn is_armed(state: &SharedState) -> bool {
+pub(in crate::glide::macos::session) fn is_armed(state: &SharedState) -> bool {
   state.lock().is_ok_and(|state| {
     state
       .session
@@ -40,7 +40,7 @@ pub(in crate::glide::platform::session) fn is_armed(state: &SharedState) -> bool
   })
 }
 
-pub(in crate::glide::platform::session) fn arm_preview(app: &AppHandle, id: u64) {
+pub(in crate::glide::macos::session) fn arm_preview(app: &AppHandle, id: u64) {
   crate::glide::core::trace::input("mac-monitor", format!("arm-preview id={id}"));
   if let Some(state) = STATE.get() {
     if state.lock().is_ok_and(|mut state| {
@@ -115,7 +115,7 @@ pub(super) fn publish(app: &AppHandle, id: u64) {
     }) else {
       return;
     };
-    let _ = crate::windows::hide_glide_preview(&main);
+    let _ = crate::app_windows::hide_glide_preview(&main);
     if let Err(error) =
       preview_windows::show_arranged(&main, previews, anchor.x, anchor.y, &offsets)
     {

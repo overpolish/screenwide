@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "session/begin.rs"]
 mod begin;
 pub(super) use begin::begin_capture;
 

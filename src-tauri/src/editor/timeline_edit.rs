@@ -1,16 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "timeline_edit/time_mapping.rs"]
 mod time_mapping;
 pub(crate) use time_mapping::{output_at_us, rate_at, source_to_output_us};
-#[path = "timeline_edit/validation.rs"]
 mod validation;
 use validation::validate;
-#[path = "timeline_edit/initial_edit.rs"]
 mod initial_edit;
 pub(in crate::editor) use initial_edit::persist_initial_annotation_clips;
-#[path = "timeline_edit/stacking.rs"]
 mod stacking;
 
 pub(crate) use time_mapping::source_after_output_duration_us;
@@ -27,7 +23,6 @@ use serde::{Deserialize, Serialize};
 const FORMAT_VERSION: u16 = 2;
 const MAX_SEGMENTS: usize = 100_000;
 
-#[path = "timeline_edit_keyboard.rs"]
 mod keyboard;
 pub use keyboard::{KeyboardShortcutPositionRange, RecordingTimelineKeyboardDeletions};
 
@@ -292,5 +287,4 @@ pub fn sweep_unclaimed(directory: &Path, keep: Option<&Path>) {
 }
 
 #[cfg(test)]
-#[path = "timeline_edit_tests.rs"]
 mod tests;

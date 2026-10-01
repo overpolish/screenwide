@@ -52,7 +52,7 @@ pub fn reveal(app: &AppHandle, session_id: u64) -> Result<(), String> {
           || monitor.fading == Some(session_id)
       });
       if active {
-        if let Err(error) = crate::windows::show_glide_preview(&main_app, blocks_hover) {
+        if let Err(error) = crate::app_windows::show_glide_preview(&main_app, blocks_hover) {
           eprintln!("Could not present Glide: {error}");
         }
       }

@@ -5,7 +5,7 @@ use super::*;
 
 impl SelectionOverlay {
   #[allow(clippy::too_many_arguments)]
-  pub(in crate::editor::preview_platform::surface) fn draw(
+  pub(in crate::editor::preview_platform::surface_windows) fn draw(
     &mut self,
     viewport_size: (u32, u32),
     frame: Option<[f32; 4]>,

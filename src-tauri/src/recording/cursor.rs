@@ -8,26 +8,27 @@
 //! live here so macOS and Windows produce the same sidecar.
 
 #[cfg(target_os = "macos")]
-#[path = "cursor/platform_macos.rs"]
-mod platform;
+mod platform_macos;
+#[cfg(target_os = "macos")]
+use self::platform_macos as platform;
 #[cfg(target_os = "windows")]
-#[path = "cursor/platform_windows.rs"]
-mod platform;
+mod platform_windows;
+#[cfg(target_os = "windows")]
+use self::platform_windows as platform;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-#[path = "cursor/platform_unsupported.rs"]
-mod platform;
+mod platform_unsupported;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+use self::platform_unsupported as platform;
 
 mod format;
 /// What a cursor is, read from its picture where the system does not say.
 #[cfg(any(target_os = "macos", test))]
-#[path = "cursor/shape.rs"]
 mod shape;
 mod visibility;
 pub(crate) use visibility::set_cursor_visibility;
 #[cfg(test)]
 mod tests;
 
-#[path = "cursor/event_writer.rs"]
 mod event_writer;
 
 use std::fs::File;

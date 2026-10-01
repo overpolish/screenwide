@@ -119,7 +119,7 @@ fn hosts_presented(app: &AppHandle) {
   // state up from its first frame.
   crate::recording::cursor::set_cursor_visibility(false, None);
   capture_overlays::emit_lifecycle(app, true);
-  crate::windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
+  crate::app_windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
 }
 
 /// A display change invalidates every host's geometry, so the overlay is

@@ -4,16 +4,15 @@
 //! Transparent selection overlay composed above the preview panes, drawn
 //! through the shared OSC shader.
 
-#[path = "selection/drawing.rs"]
 mod drawing;
 
 use windows::Win32::Graphics::DirectComposition::{IDCompositionDevice, IDCompositionVisual};
 
+use crate::app_windows::overlay_surface::{Frame, VisualSurface};
 use crate::osc::{
   geometry::{Point, Rect, Size},
   gpu::windows::{self as osc_gpu, RenderConstants, Vertex},
 };
-use crate::windows::overlay_surface::{Frame, VisualSurface};
 
 fn logical_rect(rect: [f32; 4], scale: f64) -> Rect {
   Rect::from_xywh(

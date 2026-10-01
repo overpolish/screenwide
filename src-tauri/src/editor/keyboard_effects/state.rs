@@ -7,7 +7,6 @@ mod builder;
 pub(super) use builder::ChainContext;
 
 use super::{clock::AnimationClock, layout::LayoutTrack};
-#[path = "role.rs"]
 mod role_model;
 pub(super) use role_model::{role, VisualRole};
 

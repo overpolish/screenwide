@@ -3,7 +3,7 @@
 
 use super::*;
 
-pub(in crate::glide::platform) fn end(app: &AppHandle, cancelled: bool) {
+pub(in crate::glide::windows) fn end(app: &AppHandle, cancelled: bool) {
   let completion = crate::glide::core::activity::BusyLease::acquire();
   crate::glide::core::trace::input(
     "windows-session",

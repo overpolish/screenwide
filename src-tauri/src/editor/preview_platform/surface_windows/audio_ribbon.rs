@@ -4,8 +4,8 @@
 //! The recording's audio ribbon, drawn on its own composition visual.
 
 use super::super::PreviewSurfaceRect;
+use crate::app_windows::overlay_surface::{Frame, VisualSurface};
 use crate::editor::recording_preview_player::audio_visualizer::AudioRibbonEnvelopes;
-use crate::windows::overlay_surface::{Frame, VisualSurface};
 use windows::Win32::Graphics::DirectComposition::{IDCompositionDevice, IDCompositionVisual};
 
 /// The twin of `Ribbon` in `audio_ribbon.wgsl`.
@@ -38,9 +38,7 @@ pub(super) struct AudioRibbon {
   last_constants: Option<Constants>,
 }
 
-#[path = "audio_ribbon/draw.rs"]
 mod draw;
-#[path = "audio_ribbon/pipeline.rs"]
 mod pipeline;
 
 impl AudioRibbon {

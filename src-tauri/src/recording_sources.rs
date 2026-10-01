@@ -1,11 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "recording_sources/application_metadata.rs"]
 mod application_metadata;
-#[path = "recording_sources/monitor_thumbnails.rs"]
 mod monitor_thumbnails;
-#[path = "recording_sources/window_enumeration.rs"]
 mod window_enumeration;
 use application_metadata::application_details;
 pub(crate) use application_metadata::application_icon_cache_dir;

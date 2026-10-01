@@ -21,7 +21,7 @@ use crate::editor::annotations::reveal::AnnotationReveal;
 use crate::editor::effect_animation::{ease_in_out_cubic, ease_out_cubic};
 
 /// How long a counter takes to arrive. The twin of
-/// `ANNOTATION_COUNTER_DRAW_IN_MS` in `src/features/editor/annotation-kinds.ts`,
+/// `ANNOTATION_COUNTER_DRAW_IN_MS` in `src/features/editor/annotations/annotation-kinds.ts`,
 /// which places a fresh clip this far before the playhead so the counter is
 /// whole by the time the playhead is reached.
 pub(crate) const COUNTER_REVEAL_IN_MS: f32 = 320.0;

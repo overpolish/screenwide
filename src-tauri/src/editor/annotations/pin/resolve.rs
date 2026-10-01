@@ -242,5 +242,4 @@ pub(crate) fn displaced(annotation: &Annotation, placement: &Placement) -> Annot
 }
 
 #[cfg(test)]
-#[path = "resolve_tests.rs"]
 mod tests;

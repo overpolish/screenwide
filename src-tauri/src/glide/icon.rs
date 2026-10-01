@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
-use crate::windows::WindowLabel;
+use crate::app_windows::WindowLabel;
 
 /// What `glide://icon` carries. A miss reports too, so the preview settles on
 /// having no icon rather than waiting for one that is never coming.

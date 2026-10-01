@@ -281,13 +281,10 @@ impl TextTyping {
   }
 }
 
-#[path = "typing_history.rs"]
 mod history;
 
-#[path = "typing_layout.rs"]
 mod layout;
 pub(crate) use layout::TypingLayout;
 
 #[cfg(test)]
-#[path = "typing_tests.rs"]
 mod tests;

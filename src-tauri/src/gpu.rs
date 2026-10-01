@@ -6,22 +6,11 @@
 //! because wgpu's default there, FXC, takes minutes on the larger shaders.
 
 #[cfg(target_os = "windows")]
-#[path = "gpu/bridge_windows.rs"]
-mod bridge_windows;
+mod windows;
 #[cfg(target_os = "windows")]
-#[path = "gpu/dxc_windows.rs"]
-mod dxc_windows;
+pub(crate) use self::windows::bridge::{device_on_gpu_adapter, BridgedTexture, D3d11Bridge};
 #[cfg(target_os = "windows")]
-#[path = "gpu/interop_windows.rs"]
-mod interop_windows;
-#[cfg(target_os = "windows")]
-#[path = "gpu/raw_textures_windows.rs"]
-mod raw_textures_windows;
-#[cfg(target_os = "windows")]
-pub(crate) use bridge_windows::{device_on_gpu_adapter, BridgedTexture, D3d11Bridge};
-#[cfg(target_os = "windows")]
-pub(crate) use interop_windows::{d3d11, D3d11Layer, SharedTexture};
-#[path = "gpu/textures.rs"]
+pub(crate) use self::windows::interop::{d3d11, D3d11Layer, SharedTexture};
 mod textures;
 
 use std::sync::{Arc, LazyLock};
@@ -82,7 +71,7 @@ fn instance_descriptor() -> Result<wgpu::InstanceDescriptor, String> {
   descriptor.backends = wgpu::Backends::DX12;
   descriptor.backend_options.dx12 = wgpu::Dx12BackendOptions {
     shader_compiler: wgpu::Dx12Compiler::DynamicDxc {
-      dxc_path: dxc_windows::library_path()?,
+      dxc_path: self::windows::dxc::library_path()?,
     },
     // Overlay frames are drawn from the pointer's thread, which must never
     // wait on the compositor.

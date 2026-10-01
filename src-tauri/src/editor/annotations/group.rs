@@ -14,7 +14,6 @@ use super::snap::{SnapBox, SnapModifiers, SnapOffset, SnapRequest, SnapResult};
 use super::{Annotation, AnnotationPoint, AnnotationShape};
 
 #[cfg(test)]
-#[path = "group_tests.rs"]
 mod tests;
 
 /// The box round everything an annotation draws, in its source's pixels: the

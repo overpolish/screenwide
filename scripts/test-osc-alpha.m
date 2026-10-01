@@ -4,7 +4,7 @@
 // Offscreen Metal regression using the production OSC pipeline configuration.
 // clang -fobjc-arc -framework AppKit -framework Metal scripts/test-osc-alpha.m
 // -o /tmp/osc-alpha && /tmp/osc-alpha
-#import "../src-tauri/src/editor/osc_gpu_pipeline_macos.m"
+#import "../src-tauri/src/osc/gpu/macos/osc_gpu_pipeline_macos.m"
 #include <assert.h>
 
 // Palette resolution is not exercised by this pipeline-only test.

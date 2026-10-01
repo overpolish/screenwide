@@ -148,5 +148,4 @@ fn source_ratio(position_ms: u64, duration_ms: u64) -> f64 {
 }
 
 #[cfg(test)]
-#[path = "audio_visualizer_tests.rs"]
 mod tests;

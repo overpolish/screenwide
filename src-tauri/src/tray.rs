@@ -6,8 +6,8 @@ use tauri::menu::{IconMenuItemBuilder, Menu, MenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Wry};
 
+use crate::app_windows;
 use crate::recording::RecordingStatus;
-use crate::windows;
 
 mod icons;
 #[cfg(target_os = "windows")]
@@ -289,5 +289,5 @@ fn show_main_window(app: &AppHandle) {
     return;
   }
 
-  let _ = windows::show_recording_ui(app);
+  let _ = app_windows::show_recording_ui(app);
 }

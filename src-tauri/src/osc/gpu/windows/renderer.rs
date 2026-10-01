@@ -5,7 +5,6 @@
 //! It mirrors the shared macOS OSC renderer. Geometry is pure math on top-left
 //! pixel coordinates, so tool surfaces only provide their semantic scene.
 
-#[path = "renderer/geometry.rs"]
 mod geometry;
 pub(crate) use geometry::add_line;
 pub(crate) use geometry::add_quad;
@@ -225,5 +224,4 @@ pub(crate) fn add_magnifier(out: &mut Vec<Vertex>, view: Size, constants: &Rende
 }
 
 #[cfg(test)]
-#[path = "renderer/tests.rs"]
 mod tests;

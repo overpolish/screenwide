@@ -70,7 +70,7 @@ fn rounded_coverage(x: f64, y: f64, left: f64, width: f64, height: f64, radius: 
 }
 
 /// Rasterises the shortcut strip at device pixels per design point.
-pub(in crate::editor::preview_platform::surface) fn rasterize_keyboard(
+pub(in crate::editor::preview_platform::surface_windows) fn rasterize_keyboard(
   labels: &[String],
   light: bool,
   backing_scale: f64,

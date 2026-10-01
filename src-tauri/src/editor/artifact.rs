@@ -127,7 +127,7 @@ pub(super) fn present_new(app: &AppHandle, artifact: EditorArtifact) -> Result<(
   // have finished their job. Keeping this at the shared presentation boundary
   // gives screenshots and recordings the same handoff without affecting
   // clipboard-only screenshots, which never open the editor window.
-  let _ = crate::windows::hide_recording_ui(app.clone());
+  let _ = crate::app_windows::hide_recording_ui(app.clone());
 
   Ok(())
 }
@@ -165,7 +165,7 @@ pub fn present_screenshot(
       drop(artifact);
       emit_snapshot(app, EditorKind::Screenshot);
       window::show(app, EditorKind::Screenshot).map_err(|error| error.to_string())?;
-      let _ = crate::windows::hide_recording_ui(app.clone());
+      let _ = crate::app_windows::hide_recording_ui(app.clone());
       return Ok(());
     }
   }

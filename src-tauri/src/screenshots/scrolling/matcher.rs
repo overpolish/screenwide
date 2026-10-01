@@ -217,5 +217,4 @@ pub(super) fn find_shift(
 }
 
 #[cfg(test)]
-#[path = "matcher_tests.rs"]
 mod tests;

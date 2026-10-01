@@ -292,5 +292,4 @@ impl AnnotationRecorder {
 }
 
 #[cfg(test)]
-#[path = "live_clips_tests.rs"]
 mod tests;

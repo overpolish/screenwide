@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[path = "save/export_command.rs"]
 mod export_command;
 pub use export_command::save_export;
 

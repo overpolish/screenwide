@@ -10,7 +10,7 @@
 #[cfg(target_os = "macos")]
 use tauri::{AppHandle, Manager};
 
-use crate::{editor, windows};
+use crate::{app_windows, editor};
 
 /// Brings the application up. The order matters: settings are loaded before
 /// anything reads them, and native input monitoring starts after the controls
@@ -22,7 +22,7 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   // Before any overlay can be shown: the watch has to be in place by the time
   // another application first takes the foreground over one.
   #[cfg(target_os = "windows")]
-  windows::platform::initialize_band_guard()?;
+  app_windows::platform::initialize_band_guard()?;
   #[cfg(debug_assertions)]
   if let Some(preview_url) = std::env::var_os("SCREENWIDE_STORYBOOK_NATIVE_URL") {
     crate::storybook_native::show(app.handle(), &preview_url.to_string_lossy())?;
@@ -49,22 +49,22 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   // Create panels lazily so conversion cannot order a stale frame onscreen.
   #[cfg(not(target_os = "macos"))]
   {
-    windows::initialize_recording_bar(app.handle())?;
-    windows::initialize_recording_source_selector(app.handle())?;
-    windows::initialize_region_selector(app.handle())?;
-    windows::initialize_standalone_listbox(app.handle())?;
-    windows::initialize_recording_dock(app.handle())?;
+    app_windows::initialize_recording_bar(app.handle())?;
+    app_windows::initialize_recording_source_selector(app.handle())?;
+    app_windows::initialize_region_selector(app.handle())?;
+    app_windows::initialize_standalone_listbox(app.handle())?;
+    app_windows::initialize_recording_dock(app.handle())?;
   }
-  windows::initialize_predefined_windows(app.handle())?;
-  windows::initialize_recording_bar_position(app.handle())?;
-  windows::initialize_topology_management(app.handle());
-  windows::manage_recording_bar_movement(app.handle());
-  windows::manage_recording_dock_movement(app.handle());
+  app_windows::initialize_predefined_windows(app.handle())?;
+  app_windows::initialize_recording_bar_position(app.handle())?;
+  app_windows::initialize_topology_management(app.handle());
+  app_windows::manage_recording_bar_movement(app.handle());
+  app_windows::manage_recording_dock_movement(app.handle());
   editor::initialize(app.handle());
   let has_pending_export = editor::has_pending_workspace(app.handle());
   crate::shortcuts::initialize(app.handle());
   crate::system_accent::initialize(app.handle());
-  windows::manage_transient_popover_dismissal(app.handle());
+  app_windows::manage_transient_popover_dismissal(app.handle());
 
   #[cfg(target_os = "macos")]
   crate::permissions::show_on_launch(
@@ -75,7 +75,7 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
 
   #[cfg(not(target_os = "macos"))]
   if show_recording_bar_on_launch && !has_pending_export {
-    windows::show_recording_ui(app.handle())?;
+    app_windows::show_recording_ui(app.handle())?;
   }
   crate::permissions::start_watcher(app.handle().clone());
 
@@ -92,7 +92,7 @@ fn hide_unrequested_windows(app: &AppHandle) -> tauri::Result<()> {
   let app_handle = app.clone();
   // Recovery may have put an artifact in one workspace; that window is
   // the one presentation the user did ask for, so it alone is spared.
-  let mut labels = vec![windows::WindowLabel::Settings];
+  let mut labels = vec![app_windows::WindowLabel::Settings];
   labels.extend(editor::export_window::LABELS);
   labels.extend(
     editor::EditorKind::ALL
@@ -103,7 +103,7 @@ fn hide_unrequested_windows(app: &AppHandle) -> tauri::Result<()> {
   app.run_on_main_thread(move || {
     for label in &labels {
       if let Some(window) = app_handle.get_webview_window(label.as_str()) {
-        let _ = windows::hide(&window);
+        let _ = app_windows::hide(&window);
       }
     }
   })?;

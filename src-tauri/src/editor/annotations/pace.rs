@@ -5,7 +5,7 @@
 //! long the path is: the pace a clip keeps as `path_ms`.
 //!
 //! The editor paces every clip it writes, in
-//! `src/features/editor/annotation-pace.ts`, which explains the choice of
+//! `src/features/editor/annotations/annotation-pace.ts`, which explains the choice of
 //! curve. This is its twin for the clips made here rather than there - the
 //! live overlay's - so an annotation drawn live arrives at the pace the same
 //! annotation drawn in the editor would. Both hold the same cases in their
@@ -127,5 +127,4 @@ pub(crate) fn travel_ms(length: f64, frame: (u32, u32)) -> f32 {
 }
 
 #[cfg(test)]
-#[path = "pace_tests.rs"]
 mod tests;

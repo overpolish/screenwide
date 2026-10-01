@@ -110,7 +110,7 @@ fn ensure(app: &AppHandle, index: usize) -> tauri::Result<tauri::WebviewWindow> 
   let w = WebviewWindowBuilder::from_config(app, &config)?
     .initialization_script(crate::system_accent::initialization_script())
     .build()?;
-  crate::windows::platform::initialize_glide_preview(&w)?;
+  crate::app_windows::platform::initialize_glide_preview(&w)?;
   Ok(w)
 }
 pub(super) fn show_arranged(
@@ -140,7 +140,7 @@ pub(super) fn show_arranged(
         continue;
       };
       if index >= count {
-        if let Err(error) = crate::windows::platform::hide(&window) {
+        if let Err(error) = crate::app_windows::platform::hide(&window) {
           eprintln!("Could not hide surplus Glide preview {name}: {error}");
         }
       }
@@ -245,7 +245,7 @@ fn render(app: &AppHandle, p: Preview) {
     }
     for latest in session {
       if let Some(w) = main.get_webview_window(&label(latest.index)) {
-        if let Err(error) = crate::windows::platform::show_glide(&w, 1.0, false) {
+        if let Err(error) = crate::app_windows::platform::show_glide(&w, 1.0, false) {
           eprintln!("Could not show Glide preview: {error}");
           return;
         }
@@ -265,7 +265,7 @@ pub(super) fn hide(app: &AppHandle) {
     }
     for (name, w) in main.webview_windows() {
       if name.starts_with("glide-space-") {
-        if let Err(error) = crate::windows::platform::hide(&w) {
+        if let Err(error) = crate::app_windows::platform::hide(&w) {
           eprintln!("Could not hide Glide monitor preview {name}: {error}");
         }
       }

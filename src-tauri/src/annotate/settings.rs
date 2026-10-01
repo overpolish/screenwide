@@ -277,5 +277,4 @@ pub(super) fn store_default_shape(app: &AppHandle, shape: AnnotationKind) -> Res
 }
 
 #[cfg(test)]
-#[path = "settings_tests.rs"]
 mod tests;

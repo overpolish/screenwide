@@ -36,5 +36,4 @@ pub async fn get_recording_content_bounds(
 }
 
 #[cfg(all(test, target_os = "macos"))]
-#[path = "recenter_tests.rs"]
 mod tests;

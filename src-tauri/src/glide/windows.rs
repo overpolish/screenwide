@@ -8,58 +8,32 @@ use std::sync::{
 
 use tauri::AppHandle;
 use windows::Win32::UI::WindowsAndMessaging::SetCursorPos;
-#[path = "windows/center.rs"]
 mod center;
-#[path = "windows/control.rs"]
 mod control;
-#[path = "windows/cursor.rs"]
 mod cursor;
-#[path = "windows/input_kind.rs"]
 mod input_kind;
-#[path = "windows/input_window.rs"]
 mod input_window;
-#[path = "windows/key.rs"]
 mod key;
-#[path = "windows/key_hook.rs"]
 mod key_hook;
-#[path = "windows/keyboard.rs"]
 mod keyboard;
-#[path = "windows/monitors.rs"]
 mod monitors;
-#[path = "windows/mouse_motion.rs"]
 mod mouse_motion;
-#[path = "windows/native_settings.rs"]
 mod native_settings;
-#[path = "windows/native_trackpad.rs"]
 mod native_trackpad;
-#[path = "windows/navigation.rs"]
 mod navigation;
-#[path = "windows/precision_touchpad.rs"]
 mod precision_touchpad;
-#[path = "windows/preview_windows.rs"]
 mod preview_windows;
-#[path = "windows/raw_input.rs"]
 mod raw_input;
-#[path = "windows/release_tracker.rs"]
 mod release_tracker;
-#[path = "windows/session.rs"]
 mod session;
 
-#[path = "windows/spaces.rs"]
 mod spaces;
-#[path = "windows/taps.rs"]
 mod taps;
-#[path = "windows/target.rs"]
 mod target;
-#[path = "windows/titlebar.rs"]
 mod titlebar;
-#[path = "windows/trackpad.rs"]
 mod trackpad;
-#[path = "windows/tween.rs"]
 mod tween;
-#[path = "windows/virtual_desktops.rs"]
 mod virtual_desktops;
-#[path = "windows/wheel_hook.rs"]
 mod wheel_hook;
 
 use input_kind::InputKind;

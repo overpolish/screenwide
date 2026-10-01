@@ -25,7 +25,7 @@ pub(crate) fn reveal(app: &AppHandle, session_id: u64) -> Result<(), String> {
   };
   if let Some(blocks_hover) = blocks_hover {
     cursor::hide_cursor();
-    crate::windows::show_glide_preview(app, blocks_hover).map_err(|error| error.to_string())?;
+    crate::app_windows::show_glide_preview(app, blocks_hover).map_err(|error| error.to_string())?;
   }
   Ok(())
 }

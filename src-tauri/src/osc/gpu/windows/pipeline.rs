@@ -8,7 +8,7 @@ use super::{RenderConstants, Vertex};
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/osc.wgsl"));
 
-use crate::windows::overlay_surface::FORMAT;
+use crate::app_windows::overlay_surface::FORMAT;
 
 pub(crate) fn shader_module(device: &wgpu::Device) -> wgpu::ShaderModule {
   device.create_shader_module(wgpu::ShaderModuleDescriptor {

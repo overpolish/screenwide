@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #[cfg(test)]
-#[path = "encoding/tests.rs"]
 mod tests;
 
 use std::collections::HashMap;

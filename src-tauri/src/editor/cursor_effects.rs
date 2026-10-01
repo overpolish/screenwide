@@ -3,9 +3,7 @@
 
 #![cfg_attr(not(target_os = "macos"), allow(dead_code))]
 
-#[path = "cursor_effects/geometry_helpers.rs"]
 mod geometry_helpers;
-#[path = "cursor_effects/record_ingestion.rs"]
 mod record_ingestion;
 
 #[cfg(test)]
@@ -28,7 +26,6 @@ pub(crate) use gpu_wire::{NativeGpuArtwork, NativeGpuCursor};
 mod raster;
 mod settings;
 #[cfg(test)]
-#[path = "cursor_effects/tests.rs"]
 mod tests;
 mod timing;
 mod visibility;

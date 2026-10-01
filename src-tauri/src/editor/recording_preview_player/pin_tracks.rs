@@ -26,7 +26,6 @@ use crate::editor::annotations::snap::source_per_size;
 use crate::editor::annotations::timing::{AnnotationTrack, RecordingAnnotationClip};
 
 /// Working through the queue on the tracking thread.
-#[path = "pin_tracks_work.rs"]
 mod work;
 
 /// How far a path's progress moves before the timeline is told again.

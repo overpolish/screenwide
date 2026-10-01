@@ -99,7 +99,7 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
           emit_error(&app, "start", &error);
           return;
         }
-        if let Err(error) = windows::show_recording_dock(&app) {
+        if let Err(error) = app_windows::show_recording_dock(&app) {
           emit_error(&app, "start", &error.to_string());
         }
       }

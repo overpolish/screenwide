@@ -18,17 +18,17 @@ use super::{
 use crate::screenshots::ScreenshotOutputSettings;
 
 #[cfg(target_os = "macos")]
-#[path = "cursor_export/native_macos.rs"]
-mod native_macos;
-#[cfg(target_os = "macos")]
-#[path = "cursor_export/platform_macos.rs"]
-mod platform;
+mod macos;
 #[cfg(target_os = "windows")]
-#[path = "cursor_export/platform_windows.rs"]
-mod platform;
+mod windows;
+#[cfg(target_os = "macos")]
+use self::macos::platform;
+#[cfg(target_os = "windows")]
+use self::windows::platform;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-#[path = "cursor_export/platform_unsupported.rs"]
-mod platform;
+mod platform_unsupported;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+use self::platform_unsupported as platform;
 
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(super) struct CursorExportRequest<'a> {

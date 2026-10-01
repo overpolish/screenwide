@@ -6,11 +6,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 static MONITOR_COMMITTED_UNTIL_RELEASE: AtomicBool = AtomicBool::new(false);
 
-pub(in crate::glide::platform) fn next_id() -> u64 {
+pub(in crate::glide::windows) fn next_id() -> u64 {
   NEXT_SESSION_ID.fetch_add(1, Ordering::Relaxed)
 }
 
-pub(in crate::glide::platform) fn promote_scroll_to_contacts() -> bool {
+pub(in crate::glide::windows) fn promote_scroll_to_contacts() -> bool {
   STATE.lock().is_ok_and(|mut state| {
     let Some(session) = state.as_mut() else {
       return false;
@@ -32,25 +32,25 @@ pub(super) fn latch_monitor_commit() {
   MONITOR_COMMITTED_UNTIL_RELEASE.store(true, Ordering::Release);
 }
 
-pub(in crate::glide::platform) fn clear_monitor_commit_if_released() {
+pub(in crate::glide::windows) fn clear_monitor_commit_if_released() {
   let settings = native_settings::snapshot();
   if !native_settings::is_down(settings.monitors_modifier) {
     MONITOR_COMMITTED_UNTIL_RELEASE.store(false, Ordering::Release);
   }
 }
 
-pub(in crate::glide::platform) fn clear_monitor_commit() {
+pub(in crate::glide::windows) fn clear_monitor_commit() {
   MONITOR_COMMITTED_UNTIL_RELEASE.store(false, Ordering::Release);
 }
 
-pub(in crate::glide::platform) fn active_input() -> Option<InputKind> {
+pub(in crate::glide::windows) fn active_input() -> Option<InputKind> {
   STATE
     .lock()
     .ok()
     .and_then(|state| state.as_ref().map(|session| session.input))
 }
 
-pub(in crate::glide::platform) fn revealed() -> bool {
+pub(in crate::glide::windows) fn revealed() -> bool {
   STATE
     .lock()
     .ok()
@@ -58,7 +58,7 @@ pub(in crate::glide::platform) fn revealed() -> bool {
     .unwrap_or(false)
 }
 
-pub(in crate::glide::platform) fn target_hwnd() -> Option<isize> {
+pub(in crate::glide::windows) fn target_hwnd() -> Option<isize> {
   STATE.lock().ok().and_then(|state| {
     state
       .as_ref()
@@ -66,7 +66,7 @@ pub(in crate::glide::platform) fn target_hwnd() -> Option<isize> {
   })
 }
 
-pub(in crate::glide::platform) fn target() -> Option<WindowTarget> {
+pub(in crate::glide::windows) fn target() -> Option<WindowTarget> {
   STATE.lock().ok().and_then(|state| {
     state
       .as_ref()
@@ -75,7 +75,7 @@ pub(in crate::glide::platform) fn target() -> Option<WindowTarget> {
   })
 }
 
-pub(in crate::glide::platform) fn set_icon(id: u64, path: Option<PathBuf>) {
+pub(in crate::glide::windows) fn set_icon(id: u64, path: Option<PathBuf>) {
   if let Ok(mut state) = STATE.lock() {
     if let Some(session) = state.as_mut().filter(|session| session.id == id) {
       session.icon_path = path;
@@ -83,7 +83,7 @@ pub(in crate::glide::platform) fn set_icon(id: u64, path: Option<PathBuf>) {
   }
 }
 
-pub(in crate::glide::platform) fn monitor_mode() -> bool {
+pub(in crate::glide::windows) fn monitor_mode() -> bool {
   STATE.lock().ok().is_some_and(|state| {
     state
       .as_ref()
@@ -91,14 +91,14 @@ pub(in crate::glide::platform) fn monitor_mode() -> bool {
   })
 }
 
-pub(in crate::glide::platform) fn anchor() -> Option<POINT> {
+pub(in crate::glide::windows) fn anchor() -> Option<POINT> {
   STATE
     .lock()
     .ok()
     .and_then(|state| state.as_ref().map(|session| session.anchor))
 }
 
-pub(in crate::glide::platform) fn pointer_displacement() -> Option<f64> {
+pub(in crate::glide::windows) fn pointer_displacement() -> Option<f64> {
   let anchor = STATE.lock().ok().and_then(|state| {
     state
       .as_ref()
@@ -110,7 +110,7 @@ pub(in crate::glide::platform) fn pointer_displacement() -> Option<f64> {
   Some(f64::from(pointer.x.abs_diff(anchor.x)) + f64::from(pointer.y.abs_diff(anchor.y)))
 }
 
-pub(in crate::glide::platform) fn accumulate_pointer_travel(distance: f64) -> f64 {
+pub(in crate::glide::windows) fn accumulate_pointer_travel(distance: f64) -> f64 {
   STATE
     .lock()
     .ok()
