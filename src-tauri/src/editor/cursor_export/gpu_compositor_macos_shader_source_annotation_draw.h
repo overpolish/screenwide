@@ -18,7 +18,7 @@
 /// curves near the pixel are measured once, each over its whole length, and
 /// each sample only asks whether that nearest point lies inside its window -
 /// and where it does not, how far the window's end on that curve is. The
-/// twin of `annotation_draw.hlsl`, and of
+/// twin of `annotation_draw.wgsl`, and of
 /// `freehand::geometry::freehand_distance`, which picks the same line.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_DRAW @R"METAL(
 constant uint annotation_draw_kind = 7u;

@@ -12,13 +12,8 @@ use windows::Graphics::Capture::{
 };
 use windows::Graphics::DirectX::{Direct3D11::IDirect3DDevice, DirectXPixelFormat};
 use windows::Graphics::SizeInt32;
-use windows::Win32::Foundation::{HMODULE, HWND};
-use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
-use windows::Win32::Graphics::Direct3D10::ID3D10Multithread;
-use windows::Win32::Graphics::Direct3D11::{
-  D3D11CreateDevice, ID3D11Device, ID3D11Texture2D, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-  D3D11_SDK_VERSION,
-};
+use windows::Win32::Foundation::HWND;
+use windows::Win32::Graphics::Direct3D11::{ID3D11Device, ID3D11Texture2D};
 use windows::Win32::Graphics::Dxgi::IDXGIDevice;
 use windows::Win32::Graphics::Gdi::HMONITOR;
 use windows::Win32::System::WinRT::Direct3D11::{
@@ -58,26 +53,12 @@ pub(super) fn target_size(target: CaptureTarget) -> Result<(u32, u32), String> {
   Ok((width, height))
 }
 
+/// The device screen capture, the camera and the encoder share: a plain
+/// Direct3D 11 device on the adapter wgpu draws with. Windows.Graphics.Capture
+/// stalls on the D3D11On12 layer, and only a device on wgpu's adapter can hand
+/// frames to the multi-display compositor.
 pub(super) fn create_device() -> Result<ID3D11Device, String> {
-  let mut device = None;
-  unsafe {
-    D3D11CreateDevice(
-      None,
-      D3D_DRIVER_TYPE_HARDWARE,
-      HMODULE::default(),
-      D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-      None,
-      D3D11_SDK_VERSION,
-      Some(&mut device),
-      None,
-      None,
-    )
-  }
-  .map_err(|error| error.to_string())?;
-  let device = device.ok_or_else(|| "Direct3D did not create a recording device".to_owned())?;
-  let multithread: ID3D10Multithread = device.cast().map_err(|error| error.to_string())?;
-  let _ = unsafe { multithread.SetMultithreadProtected(true) };
-  Ok(device)
+  crate::gpu::device_on_gpu_adapter(crate::gpu::shared()?)
 }
 
 pub(super) struct CaptureObjects {

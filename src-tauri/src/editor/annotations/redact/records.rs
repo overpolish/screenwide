@@ -26,10 +26,10 @@ pub(crate) const REDACT_SPOTLIGHT: u32 = 4;
 /// to stay within it.
 const MAX_CELLS: f32 = (1u32 << 20) as f32;
 
-/// One redaction, the twin of the `Redaction` constant buffer in
-/// `redact.hlsl`: 16-byte rows, since a constant buffer packs by them.
+/// One redaction, the twin of the `Redaction` uniform in `redact.wgsl`:
+/// 16-byte rows, since a uniform packs by them.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct RedactRecord {
   /// `[x0, y0, x1, y1)` in whole source pixels.
   pub(crate) bounds: [u32; 4],

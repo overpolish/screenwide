@@ -3,101 +3,99 @@
 
 use super::*;
 
+const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/audio_ribbon.wgsl"));
+
 impl AudioRibbon {
+  /// The ribbon's visual under `root`, hidden until it has levels. The
+  /// caller commits the tree.
   pub(in crate::editor::preview_platform::surface) fn new(
-    device: &ID3D11Device,
-    context: &ID3D11DeviceContext,
-    factory: &IDXGIFactory2,
+    shared: &'static crate::gpu::Gpu,
     composition: &IDCompositionDevice,
     root: &IDCompositionVisual,
   ) -> Result<Self, String> {
-    let desc = DXGI_SWAP_CHAIN_DESC1 {
-      Width: 2,
-      Height: 2,
-      Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-      SampleDesc: DXGI_SAMPLE_DESC {
-        Count: 1,
-        Quality: 0,
-      },
-      BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-      BufferCount: 2,
-      Scaling: DXGI_SCALING_STRETCH,
-      SwapEffect: DXGI_SWAP_EFFECT_FLIP_DISCARD,
-      AlphaMode: DXGI_ALPHA_MODE_PREMULTIPLIED,
-      ..Default::default()
-    };
-    let swap_chain = unsafe { factory.CreateSwapChainForComposition(device, &desc, None) }
-      .and_then(|chain| chain.cast::<IDXGISwapChain3>())
-      .map_err(|e| e.to_string())?;
     let visual = unsafe { composition.CreateVisual() }.map_err(|e| e.to_string())?;
     unsafe {
       visual
         .SetOffsetX2(-100000.0)
-        .and_then(|_| visual.SetContent(&swap_chain))
         .and_then(|_| root.AddVisual(&visual, true, None::<&IDCompositionVisual>))
     }
     .map_err(|e| e.to_string())?;
-    let mut vertex = None;
-    let mut pixel = None;
-    unsafe {
-      device
-        .CreateVertexShader(VS, None, Some(&mut vertex))
-        .and_then(|_| device.CreatePixelShader(PS, None, Some(&mut pixel)))
-    }
-    .map_err(|e| e.to_string())?;
-    let mut constants = None;
-    unsafe {
-      device.CreateBuffer(
-        &D3D11_BUFFER_DESC {
-          ByteWidth: size_of::<Constants>() as u32,
-          Usage: D3D11_USAGE_DEFAULT,
-          BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
-          ..Default::default()
+    let surface = VisualSurface::new(shared, &visual)?;
+    let device = &shared.device;
+    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+      label: Some("Screenwide audio ribbon shader"),
+      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
+    });
+    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+      label: Some("Screenwide audio ribbon bindings"),
+      entries: &[
+        wgpu::BindGroupLayoutEntry {
+          binding: 0,
+          visibility: wgpu::ShaderStages::FRAGMENT,
+          ty: wgpu::BindingType::Buffer {
+            ty: wgpu::BufferBindingType::Uniform,
+            has_dynamic_offset: false,
+            min_binding_size: None,
+          },
+          count: None,
         },
-        None,
-        Some(&mut constants),
-      )
-    }
-    .map_err(|e| e.to_string())?;
-    let mut blend = None;
-    unsafe {
-      device.CreateBlendState(
-        &D3D11_BLEND_DESC {
-          RenderTarget: [
-            D3D11_RENDER_TARGET_BLEND_DESC {
-              BlendEnable: true.into(),
-              SrcBlend: D3D11_BLEND_ONE,
-              DestBlend: D3D11_BLEND_INV_SRC_ALPHA,
-              BlendOp: D3D11_BLEND_OP_ADD,
-              SrcBlendAlpha: D3D11_BLEND_ONE,
-              DestBlendAlpha: D3D11_BLEND_INV_SRC_ALPHA,
-              BlendOpAlpha: D3D11_BLEND_OP_ADD,
-              RenderTargetWriteMask: D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8,
-            },
-            D3D11_RENDER_TARGET_BLEND_DESC::default(),
-            D3D11_RENDER_TARGET_BLEND_DESC::default(),
-            D3D11_RENDER_TARGET_BLEND_DESC::default(),
-            D3D11_RENDER_TARGET_BLEND_DESC::default(),
-            D3D11_RENDER_TARGET_BLEND_DESC::default(),
-            D3D11_RENDER_TARGET_BLEND_DESC::default(),
-            D3D11_RENDER_TARGET_BLEND_DESC::default(),
-          ],
-          ..Default::default()
+        wgpu::BindGroupLayoutEntry {
+          binding: 1,
+          visibility: wgpu::ShaderStages::FRAGMENT,
+          ty: wgpu::BindingType::Texture {
+            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+            view_dimension: wgpu::TextureViewDimension::D2,
+            multisampled: false,
+          },
+          count: None,
         },
-        Some(&mut blend),
-      )
-    }
-    .map_err(|e| e.to_string())?;
+      ],
+    });
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+      label: Some("Screenwide audio ribbon layout"),
+      bind_group_layouts: &[Some(&layout)],
+      immediate_size: 0,
+    });
+    // One draw over a cleared target, so it is written rather than blended.
+    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+      label: Some("Screenwide audio ribbon pipeline"),
+      layout: Some(&pipeline_layout),
+      vertex: wgpu::VertexState {
+        module: &module,
+        entry_point: Some("vs_main"),
+        compilation_options: Default::default(),
+        buffers: &[],
+      },
+      fragment: Some(wgpu::FragmentState {
+        module: &module,
+        entry_point: Some("fs_main"),
+        compilation_options: Default::default(),
+        targets: &[Some(wgpu::ColorTargetState {
+          format: crate::windows::overlay_surface::FORMAT,
+          blend: None,
+          write_mask: wgpu::ColorWrites::ALL,
+        })],
+      }),
+      primitive: Default::default(),
+      depth_stencil: None,
+      multisample: Default::default(),
+      multiview_mask: None,
+      cache: None,
+    });
+    let constants = device.create_buffer(&wgpu::BufferDescriptor {
+      label: Some("Screenwide audio ribbon constants"),
+      size: size_of::<Constants>() as u64,
+      usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+      mapped_at_creation: false,
+    });
     Ok(Self {
-      blend: blend.ok_or("no ribbon blend")?,
-      constants: constants.ok_or("no ribbon constants")?,
-      context: context.clone(),
-      device: device.clone(),
-      pixels: None,
-      pixel: pixel.ok_or("no ribbon pixel shader")?,
-      swap_chain,
+      shared,
+      surface,
+      pipeline,
+      layout,
+      constants,
+      levels: None,
       visual,
-      vertex: vertex.ok_or("no ribbon vertex shader")?,
       viewport: (2, 2),
       composition: composition.clone(),
       offset: (0.0, 0.0),
@@ -108,5 +106,25 @@ impl AudioRibbon {
       points: 0,
       playhead: 0.0,
     })
+  }
+
+  pub(super) fn bindings(&self, levels: &wgpu::TextureView) -> wgpu::BindGroup {
+    self
+      .shared
+      .device
+      .create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("Screenwide audio ribbon bindings"),
+        layout: &self.layout,
+        entries: &[
+          wgpu::BindGroupEntry {
+            binding: 0,
+            resource: self.constants.as_entire_binding(),
+          },
+          wgpu::BindGroupEntry {
+            binding: 1,
+            resource: wgpu::BindingResource::TextureView(levels),
+          },
+        ],
+      })
   }
 }

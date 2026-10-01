@@ -83,7 +83,7 @@ pub(super) fn headless_sources(app: &AppHandle, artifact_id: u64) -> Result<Play
   sources_with_surface(app, artifact_id, None, false)
 }
 
-fn sources_with_surface(
+pub(super) fn sources_with_surface(
   app: &AppHandle,
   artifact_id: u64,
   settings: Option<&PreviewPlayerSettings>,

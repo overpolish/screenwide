@@ -49,7 +49,7 @@ impl Chrome {
   #[allow(clippy::too_many_arguments)]
   pub(crate) fn add_chrome_vertices(
     &mut self,
-    device: &ID3D11Device,
+    device: &Gpu,
     out: &mut Vec<Vertex>,
     segments: &mut Vec<Segment>,
     view: Size,

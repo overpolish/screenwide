@@ -5,30 +5,10 @@ use super::*;
 
 impl Backdrop {
   pub(super) fn new(
+    gpu: &crate::gpu::Gpu,
     composition: &IDCompositionDevice,
-    factory: &IDXGIFactory2,
-    device: &ID3D11Device,
     root: &IDCompositionVisual,
   ) -> Result<Self, String> {
-    let description = DXGI_SWAP_CHAIN_DESC1 {
-      Width: 2,
-      Height: 2,
-      Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-      Stereo: false.into(),
-      SampleDesc: DXGI_SAMPLE_DESC {
-        Count: 1,
-        Quality: 0,
-      },
-      BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-      BufferCount: 2,
-      Scaling: DXGI_SCALING_STRETCH,
-      SwapEffect: DXGI_SWAP_EFFECT_FLIP_DISCARD,
-      AlphaMode: windows::Win32::Graphics::Dxgi::Common::DXGI_ALPHA_MODE_PREMULTIPLIED,
-      Flags: 0,
-    };
-    let swap_chain = unsafe { factory.CreateSwapChainForComposition(device, &description, None) }
-      .and_then(|chain| chain.cast::<IDXGISwapChain3>())
-      .map_err(|error| format!("The Windows preview backstop could not be created: {error}"))?;
     let visual = unsafe { composition.CreateVisual() }.map_err(|error| {
       format!("The Windows preview backstop visual could not be created: {error}")
     })?;
@@ -37,7 +17,6 @@ impl Backdrop {
     })?;
     (|| -> windows::core::Result<()> {
       unsafe {
-        visual.SetContent(&swap_chain)?;
         visual.SetTransform(&scale_transform)?;
         visual.SetOffsetX2(-100_000.0)?;
         // This is the native equivalent of macOS's opaque container layer: it
@@ -47,37 +26,32 @@ impl Backdrop {
       Ok(())
     })()
     .map_err(|error| format!("The Windows preview backstop could not be attached: {error}"))?;
+    // Two pixels square, stretched over the viewport by the scale transform.
+    let surface = VisualSurface::new(gpu, &visual)?;
     Ok(Self {
       scale_transform,
-      swap_chain,
+      surface,
       visual,
     })
   }
 
-  pub(super) fn paint(
-    &self,
-    context: &ID3D11DeviceContext,
-    colour: [f64; 4],
-  ) -> Result<(), String> {
-    let target = unsafe { self.swap_chain.GetBuffer::<ID3D11Texture2D>(0) }
-      .map_err(|error| format!("The Windows preview backstop has no buffer: {error}"))?;
-    let resource: ID3D11Resource = target.cast().map_err(|error| error.to_string())?;
-    let device = unsafe { target.GetDevice() }.map_err(|error| error.to_string())?;
-    let mut view: Option<ID3D11RenderTargetView> = None;
-    unsafe { device.CreateRenderTargetView(&resource, None, Some(&mut view)) }
-      .map_err(|error| format!("The Windows preview backstop could not be painted: {error}"))?;
-    let view = view.ok_or_else(|| "D3D11 created no preview backstop view".to_owned())?;
-    let alpha = colour[3].clamp(0.0, 1.0) as f32;
-    let colour = [
-      colour[0].clamp(0.0, 1.0) as f32 * alpha,
-      colour[1].clamp(0.0, 1.0) as f32 * alpha,
-      colour[2].clamp(0.0, 1.0) as f32 * alpha,
-      alpha,
-    ];
-    unsafe { context.ClearRenderTargetView(&view, &colour) };
-    unsafe { self.swap_chain.Present(0, DXGI_PRESENT(0)) }
-      .ok()
-      .map_err(|error| format!("The Windows preview backstop could not be presented: {error}"))
+  pub(super) fn paint(&self, gpu: &crate::gpu::Gpu, colour: [f64; 4]) -> Result<(), String> {
+    let Frame::Ready(frame) = self.surface.acquire(gpu)? else {
+      return Err("The Windows preview backstop has no frame to paint".to_owned());
+    };
+    let alpha = colour[3].clamp(0.0, 1.0);
+    clear(
+      gpu,
+      &frame.texture,
+      wgpu::Color {
+        r: colour[0].clamp(0.0, 1.0) * alpha,
+        g: colour[1].clamp(0.0, 1.0) * alpha,
+        b: colour[2].clamp(0.0, 1.0) * alpha,
+        a: alpha,
+      },
+    );
+    gpu.queue.present(frame);
+    Ok(())
   }
 
   pub(super) fn set_geometry(&self, rect: PreviewSurfaceRect, scale: f64) {
@@ -111,26 +85,11 @@ impl Backdrop {
 }
 
 impl Pane {
-  pub(super) fn release_drawables(&mut self, context: &ID3D11DeviceContext) -> Result<(), String> {
-    unsafe {
-      let vertex_buffer: Option<ID3D11Buffer> = None;
-      let stride = 0_u32;
-      let offset = 0_u32;
-      context.IASetVertexBuffers(
-        0,
-        1,
-        Some(&raw const vertex_buffer),
-        Some(&raw const stride),
-        Some(&raw const offset),
-      );
-      context.PSSetShaderResources(0, Some(&[None, None, None, None, None]));
-      context.OMSetRenderTargets(None, None);
-      self
-        .swap_chain
-        .ResizeBuffers(2, 2, 2, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SWAP_CHAIN_FLAG(0))
-    }
-    .map_err(|error| format!("The Windows preview pane could not release buffers: {error}"))
-    .inspect(|()| self.buffer_size = (2, 2))
+  /// Gives the surface's memory back while the pane is hidden. A parked
+  /// frame is dropped unshown first: no frame may be held across a resize.
+  pub(super) fn release_drawables(&mut self, gpu: &crate::gpu::Gpu) {
+    self.parked = None;
+    self.surface.resize(gpu, (2, 2));
   }
 
   pub(super) fn update_geometry(&self) -> windows::core::Result<()> {
@@ -165,4 +124,28 @@ impl Pane {
   pub(super) fn hide(&self) {
     let _ = unsafe { self.visual.SetOffsetX2(-100_000.0) };
   }
+}
+
+/// Fills `texture` with `colour` and submits the clear.
+pub(super) fn clear(gpu: &crate::gpu::Gpu, texture: &wgpu::Texture, colour: wgpu::Color) {
+  let view = texture.create_view(&Default::default());
+  let mut encoder = gpu
+    .device
+    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+      label: Some("Screenwide preview clear"),
+    });
+  encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+    label: Some("Screenwide preview clear"),
+    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+      view: &view,
+      depth_slice: None,
+      resolve_target: None,
+      ops: wgpu::Operations {
+        load: wgpu::LoadOp::Clear(colour),
+        store: wgpu::StoreOp::Store,
+      },
+    })],
+    ..Default::default()
+  });
+  gpu.queue.submit([encoder.finish()]);
 }

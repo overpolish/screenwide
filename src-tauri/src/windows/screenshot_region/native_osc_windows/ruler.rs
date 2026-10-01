@@ -33,7 +33,7 @@ use animation::{ease, Animation};
 
 use std::time::{Duration, Instant};
 
-use windows::Win32::Graphics::Direct3D11::{ID3D11Device, ID3D11ShaderResourceView};
+use crate::gpu::Gpu;
 
 use super::ocr::Segment;
 use super::renderer::{self, Vertex};

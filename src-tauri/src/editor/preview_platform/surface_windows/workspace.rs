@@ -74,32 +74,13 @@ impl RecordingPreviewSurface {
     if let Ok(mut state) = self.inner.state.lock() {
       state.camera_source = None;
       state.primary_composition = None;
-      let context = &self.inner.gpu.context;
-      unsafe {
-        let vertex_buffer: Option<ID3D11Buffer> = None;
-        let stride = 0_u32;
-        let offset = 0_u32;
-        context.IASetVertexBuffers(
-          0,
-          1,
-          Some(&raw const vertex_buffer),
-          Some(&raw const stride),
-          Some(&raw const offset),
-        );
-        context.PSSetShaderResources(0, Some(&[None, None, None, None, None]));
-        context.OMSetRenderTargets(None, None);
-      }
       if let Ok(mut selection) = self.inner.gpu.selection.lock() {
-        if let Err(error) = selection.release_drawables(context) {
-          eprintln!("{error}");
-        }
+        selection.release_drawables();
       }
       self.inner.gpu.backdrop.hide();
       for pane in state.panes.iter_mut().flatten() {
         pane.hide();
-        if let Err(error) = pane.release_drawables(context) {
-          eprintln!("{error}");
-        }
+        pane.release_drawables(self.inner.gpu.shared);
         // Windows surfaces live for the editor window, not for one preview
         // session. Reusable screenshot item IDs therefore cannot be allowed
         // to keep the previous session's immutable source texture alive.
@@ -107,7 +88,6 @@ impl RecordingPreviewSurface {
         pane.source_token = None;
         pane.settings = None;
         pane.magnifier = None;
-        pane.pending_present = false;
       }
       state.editor_active = false;
       state.selection = None;

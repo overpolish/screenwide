@@ -6,20 +6,20 @@ use super::*;
 pub(super) struct Gpu {
   pub(super) audio_ribbon: std::sync::Mutex<audio_ribbon::AudioRibbon>,
   pub(super) backdrop: Backdrop,
+  /// Direct3D 11 on the shared device: Media Foundation decodes on it.
+  pub(super) d3d11: &'static D3d11Layer,
   pub(super) compositor: compositor::Compositor,
   pub(super) composition: IDCompositionDevice,
-  pub(super) context: ID3D11DeviceContext,
-  pub(super) device: ID3D11Device,
-  pub(super) factory: IDXGIFactory2,
   pub(super) root: IDCompositionVisual,
   pub(super) selection: Mutex<selection::SelectionOverlay>,
+  pub(super) shared: &'static crate::gpu::Gpu,
   pub(super) _editor_target: IDCompositionTarget,
   pub(super) _target: IDCompositionTarget,
 }
 
 pub(super) struct Backdrop {
   pub(super) scale_transform: IDCompositionScaleTransform,
-  pub(super) swap_chain: IDXGISwapChain3,
+  pub(super) surface: VisualSurface,
   pub(super) visual: IDCompositionVisual,
 }
 
@@ -35,11 +35,10 @@ pub(super) struct Pane {
     Option<(usize, crate::editor::annotations::text::typing::TypingMarks)>,
   /// Stable viewport-local geometry before the shared workspace transform.
   pub(super) base_rect: PreviewSurfaceRect,
-  /// Retained swap-chain allocation; `content_size` is the presented region.
-  pub(super) buffer_size: (u32, u32),
   pub(super) clip: IDCompositionRectangleClip,
   pub(super) clip_edges: (i32, i32, i32, i32),
-  /// The presented region of the buffer - the actual output resolution.
+  /// The presented region of the surface - the actual output resolution.
+  /// The surface itself is kept larger, with headroom.
   pub(super) content_size: (u32, u32),
   pub(super) display_size: (i32, i32),
   /// Geometry waiting to publish atomically with its matching frame.
@@ -52,9 +51,9 @@ pub(super) struct Pane {
   pub(super) settings: Option<ScreenshotOutputSettings>,
   pub(super) magnifier: Option<recenter::CropMagnifier>,
   /// A frame drawn inside an open present batch, waiting for the batch flush
-  /// to call `Present` so every pane's new pixels reach the compositor in the
+  /// to present it so every pane's new pixels reach the compositor in the
   /// same pass.
-  pub(super) pending_present: bool,
+  pub(super) parked: Option<wgpu::SurfaceTexture>,
   pub(super) position: (i32, i32),
   /// The last present changed the composed canvas size. The selection overlay
   /// is fitted to that canvas (`pane_canvas_rect`), so it has to be redrawn
@@ -69,6 +68,6 @@ pub(super) struct Pane {
   pub(super) seen: bool,
   pub(super) source: Option<compositor::SourceTexture>,
   pub(super) source_token: Option<u64>,
-  pub(super) swap_chain: IDXGISwapChain3,
+  pub(super) surface: VisualSurface,
   pub(super) visual: IDCompositionVisual,
 }

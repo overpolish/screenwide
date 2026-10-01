@@ -13,9 +13,8 @@ impl Drop for PresentBatch<'_> {
       return;
     };
     for pane in state.panes.iter_mut().flatten() {
-      if pane.pending_present {
-        pane.pending_present = false;
-        let _ = unsafe { pane.swap_chain.Present(0, DXGI_PRESENT(0)) }.ok();
+      if let Some(frame) = pane.parked.take() {
+        inner.gpu.shared.queue.present(frame);
       }
     }
     let mut selection_stale = false;

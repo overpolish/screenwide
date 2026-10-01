@@ -14,21 +14,8 @@
 
 use std::{
   collections::HashMap,
-  ffi::c_void,
   sync::{Arc, Mutex},
   time::SystemTime,
-};
-
-use windows::{
-  core::Interface,
-  Win32::Graphics::{
-    Direct3D11::{
-      ID3D11Device, ID3D11Resource, ID3D11ShaderResourceView, ID3D11Texture2D,
-      D3D11_BIND_SHADER_RESOURCE, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC,
-      D3D11_USAGE_IMMUTABLE,
-    },
-    Dxgi::Common::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SAMPLE_DESC},
-  },
 };
 
 /// Backgrounds kept resident at once. A workspace composes one picture per
@@ -37,8 +24,7 @@ use windows::{
 const CACHE_ENTRIES: usize = 4;
 
 pub(super) struct BackgroundImage {
-  _texture: ID3D11Texture2D,
-  pub(super) view: ID3D11ShaderResourceView,
+  pub(super) view: wgpu::TextureView,
 }
 
 /// What the cached upload was made from. A picture edited in place keeps its
@@ -67,47 +53,30 @@ fn stamp(path: &str) -> Stamp {
   }
 }
 
-fn upload(device: &ID3D11Device, path: &str) -> Option<BackgroundImage> {
+fn upload(gpu: &crate::gpu::Gpu, path: &str) -> Option<BackgroundImage> {
   let pixels = image::open(path).ok()?.into_rgba8();
   let (width, height) = pixels.dimensions();
-  if width == 0 || height == 0 {
+  // A picture larger than the device takes is treated as unreadable, which
+  // paints the solid colour rather than a device error.
+  let largest = gpu.device.limits().max_texture_dimension_2d;
+  if width == 0 || height == 0 || width > largest || height > largest {
     return None;
   }
-  let description = D3D11_TEXTURE2D_DESC {
-    Width: width,
-    Height: height,
-    MipLevels: 1,
-    ArraySize: 1,
-    Format: DXGI_FORMAT_R8G8B8A8_UNORM,
-    SampleDesc: DXGI_SAMPLE_DESC {
-      Count: 1,
-      Quality: 0,
-    },
-    Usage: D3D11_USAGE_IMMUTABLE,
-    BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
-    ..Default::default()
-  };
-  let data = D3D11_SUBRESOURCE_DATA {
-    pSysMem: pixels.as_raw().as_ptr().cast::<c_void>(),
-    SysMemPitch: width * 4,
-    SysMemSlicePitch: 0,
-  };
-  let mut texture = None;
-  unsafe { device.CreateTexture2D(&description, Some(&data), Some(&mut texture)) }.ok()?;
-  let texture = texture?;
-  let resource: ID3D11Resource = texture.cast().ok()?;
-  let mut view = None;
-  unsafe { device.CreateShaderResourceView(&resource, None, Some(&mut view)) }.ok()?;
+  let texture = gpu.texture_with_pixels(
+    "Screenwide background picture",
+    (width, height, 1),
+    wgpu::TextureFormat::Rgba8Unorm,
+    pixels.as_raw(),
+  );
   Some(BackgroundImage {
-    _texture: texture,
-    view: view?,
+    view: texture.create_view(&Default::default()),
   })
 }
 
 impl BackgroundImageCache {
   /// The uploaded picture behind this canvas, decoded at its own size. The
   /// upload is reused until the path changes or the file behind it does.
-  pub(super) fn resolve(&self, device: &ID3D11Device, path: &str) -> Option<Arc<BackgroundImage>> {
+  pub(super) fn resolve(&self, gpu: &crate::gpu::Gpu, path: &str) -> Option<Arc<BackgroundImage>> {
     let stamp = stamp(path);
     let mut entries = self.entries.lock().ok()?;
     if let Some(entry) = entries.get(path) {
@@ -115,7 +84,7 @@ impl BackgroundImageCache {
         return Some(Arc::clone(&entry.image));
       }
     }
-    let image = Arc::new(upload(device, path)?);
+    let image = Arc::new(upload(gpu, path)?);
     if entries.len() >= CACHE_ENTRIES {
       entries.clear();
     }

@@ -13,7 +13,7 @@
 //! a blunt teardrop, and straight sides would pinch in off the disc instead.
 //! At a radius back the outline is `MapPinPlusInside`, the glyph the counter
 //! tool is drawn with, to within a hundredth of the radius. Every drawing and
-//! picking path - Metal, HLSL and this module - builds it that way.
+//! picking path - Metal, WGSL and this module - builds it that way.
 
 #[cfg(target_os = "macos")]
 use crate::editor::annotations::geometry::ArrowGeometry;

@@ -24,7 +24,7 @@ impl Surface {
     hwnd: HWND,
     display_id: u32,
   ) -> Result<Self, String> {
-    let chain = gpu.shared.create_swap_chain(hwnd)?;
+    let chain = GpuSurface::new(gpu.device(), hwnd)?;
     Ok(Self {
       gpu,
       kind,
@@ -32,6 +32,8 @@ impl Surface {
       chain,
       vertex_buffer: None,
       vertex_capacity: 0,
+      constants_buffer: None,
+      constants_capacity: 0,
       vertices: Vec::new(),
       magnifier_source: None,
       snapshot: None,

@@ -160,7 +160,7 @@ typedef struct {
 @property(nonatomic) NSPoint pinchAnchor;
 @end
 
-@interface ScreenwidePreviewInteractionView (Editor)
+@interface ScreenwidePreviewInteractionView (Cursor)
 - (void)releaseCursorControl;
 @end
 @interface ScreenwidePreviewInteractionView (ContextMenu)

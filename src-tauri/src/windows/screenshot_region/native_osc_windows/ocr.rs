@@ -33,7 +33,7 @@ use drawing::{add_control, push_segment, visual_fills, ControlRender};
 
 use std::time::Instant;
 
-use windows::Win32::Graphics::Direct3D11::{ID3D11Device, ID3D11ShaderResourceView};
+use crate::gpu::Gpu;
 
 use super::renderer::{self, Vertex};
 use super::text::TextCache;
@@ -87,9 +87,9 @@ pub(crate) struct Segment {
   pub action_fills: [[f32; 4]; 2],
   pub chrome: [f32; 4],
   pub chrome_outline: [f32; 4],
-  pub label: Option<ID3D11ShaderResourceView>,
+  pub label: Option<wgpu::TextureView>,
   /// Bound at `t1`. Only the ruler's tolerance notice uses it (kinds 15/37).
-  pub secondary: Option<ID3D11ShaderResourceView>,
+  pub secondary: Option<wgpu::TextureView>,
 }
 
 impl Segment {

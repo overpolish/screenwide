@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Windows preview surface: GPU frames presented by DirectComposition beneath
-//! WebView2's child window. Media Foundation and this surface share one D3D11 device, so live
-//! recording frames never enter system memory or cross Tauri IPC, while transparent webview
-//! regions leave DOM controls above the video.
+//! Windows preview surface: wgpu frames presented by DirectComposition
+//! beneath WebView2's child window. Media Foundation decodes on a Direct3D 11
+//! device on the shared wgpu device's adapter, and each frame is copied into
+//! a texture both devices open, so live recording frames never enter system
+//! memory or cross Tauri IPC, while transparent webview regions leave DOM
+//! controls above the video.
 
 #[path = "surface_windows/annotation.rs"]
 mod annotation;
@@ -56,14 +58,12 @@ mod thread_dispatch;
 mod workspace;
 
 /// The arrow renderer's shareable parts. Live annotation draws the desktop's
-/// arrows with this pipeline: the same prepared geometry, the same structured
-/// buffers and the same shader, in one display's layer pixels rather than in
-/// the canvas's.
+/// arrows from the same prepared geometry through the same shader, in one
+/// display's layer pixels rather than in the canvas's, with buffers and an
+/// atlas of its own.
 pub(crate) mod arrows {
   pub(crate) use super::annotation::placed_arrows;
-  pub(crate) use super::compositor::{
-    PreparedArrows, PreviewArrow, PreviewSample, StructuredBuffer,
-  };
+  pub(crate) use super::compositor::{GpuBuffer, PreparedArrows};
   /// A counter's number is type, so it is rasterised rather than drawn by the
   /// shader. The overlay lays its numbers out in an atlas of its own, the same
   /// way the editor's compositor does.
@@ -109,16 +109,11 @@ use tauri::WebviewWindow;
 use windows::{
   core::Interface,
   Win32::{
-    Foundation::{HMODULE, HWND},
+    Foundation::HWND,
     Graphics::{
-      Direct3D::{D3D_DRIVER_TYPE_HARDWARE, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1},
-      Direct3D10::ID3D10Multithread,
       Direct3D11::{
-        D3D11CreateDevice, ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11RenderTargetView,
-        ID3D11Resource, ID3D11Texture2D, D3D11_BIND_RENDER_TARGET, D3D11_CPU_ACCESS_READ,
-        D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
-        D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_READ, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC,
-        D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING,
+        ID3D11Device, ID3D11Resource, ID3D11Texture2D, D3D11_BIND_RENDER_TARGET,
+        D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT,
       },
       DirectComposition::{
         DCompositionCreateDevice, IDCompositionDevice, IDCompositionRectangleClip,
@@ -127,9 +122,7 @@ use windows::{
       },
       Dxgi::{
         Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
-        IDXGIAdapter, IDXGIDevice, IDXGIFactory2, IDXGISwapChain3, DXGI_PRESENT,
-        DXGI_SCALING_STRETCH, DXGI_SWAP_CHAIN_DESC1, DXGI_SWAP_CHAIN_FLAG,
-        DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        IDXGIDevice,
       },
     },
     System::Threading::GetCurrentThreadId,
@@ -179,7 +172,9 @@ use super::{
   TransformCallback,
 };
 use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
+use crate::gpu::D3d11Layer;
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
+use crate::windows::overlay_surface::{Frame, VisualSurface};
 use view_fit::fit_basis_transform;
 use workspace_layout::{
   apply_workspace_transform, aspect_fit_rect, rebase_workspace_fit, reflow_workspace_panes,
@@ -265,6 +260,8 @@ pub(crate) struct WindowsExportCompositor {
   inner: std::sync::Arc<SurfaceInner>,
   output_size: (u32, u32),
   source: compositor::SourceTexture,
+  /// What each frame is drawn into, which Direct3D 11 copies out of.
+  target: crate::gpu::SharedTexture,
 }
 
 unsafe impl Send for RecordingPreviewSurface {}

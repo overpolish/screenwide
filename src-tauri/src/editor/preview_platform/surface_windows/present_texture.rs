@@ -33,7 +33,7 @@ impl RecordingPreviewSurface {
           .inner
           .gpu
           .compositor
-          .source(&self.inner.gpu.device, size)?,
+          .source(self.inner.gpu.d3d11, size)?,
       );
       pane.source_token = None;
     }
@@ -41,7 +41,10 @@ impl RecordingPreviewSurface {
       .source
       .as_ref()
       .ok_or_else(|| "The preview source texture is unavailable".to_owned())?;
-    compositor::Compositor::copy_source(&self.inner.gpu.context, source, texture, subresource)?;
+    let gpu = &self.inner.gpu;
+    gpu
+      .compositor
+      .copy_source(gpu.d3d11, source, texture, subresource)?;
     pane.source_token = None;
     let staged = self.present_cached_source(pane, settings, composition)?;
     redraw_stale_selection(&self.inner, &mut state);
@@ -75,11 +78,14 @@ impl RecordingPreviewSurface {
             .inner
             .gpu
             .compositor
-            .source(&self.inner.gpu.device, size)?,
+            .source(self.inner.gpu.d3d11, size)?,
         );
       }
       if let Some(camera) = &state.camera_source {
-        compositor::Compositor::copy_source(&self.inner.gpu.context, camera, texture, subresource)?;
+        let gpu = &self.inner.gpu;
+        gpu
+          .compositor
+          .copy_source(gpu.d3d11, camera, texture, subresource)?;
       }
     } else {
       state.primary_composition = Some(composition);
@@ -98,7 +104,7 @@ impl RecordingPreviewSurface {
             .inner
             .gpu
             .compositor
-            .source(&self.inner.gpu.device, size)?,
+            .source(self.inner.gpu.d3d11, size)?,
         );
         pane.source_token = None;
       }
@@ -106,7 +112,10 @@ impl RecordingPreviewSurface {
         .source
         .as_ref()
         .ok_or_else(|| "The preview source texture is unavailable".to_owned())?;
-      compositor::Compositor::copy_source(&self.inner.gpu.context, source, texture, subresource)?;
+      let gpu = &self.inner.gpu;
+      gpu
+        .compositor
+        .copy_source(gpu.d3d11, source, texture, subresource)?;
       pane.source_token = None;
     }
     let Some(camera) = state.camera_source.clone() else {

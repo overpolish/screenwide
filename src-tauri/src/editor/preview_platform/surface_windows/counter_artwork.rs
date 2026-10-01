@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! DirectWrite rasterisation and D3D11 upload of the annotations' type:
-//! counters' numbers and text boxes' lines.
+//! DirectWrite rasterisation of the annotations' type, counters' numbers and
+//! text boxes' lines, into an atlas texture a pipeline keeps.
 //!
 //! The twin of `gpu_compositor_macos_annotation_text.m`: type is drawn by the
 //! text engine rather than approximated by the shader. Where each piece sits
@@ -27,17 +27,6 @@ use crate::editor::annotations::counter::atlas::{
 use crate::editor::annotations::counter::atlas_scale::raster_scale;
 use crate::editor::annotations::AnnotationKind;
 
-use windows::{
-  core::Interface,
-  Win32::Graphics::{
-    Direct3D11::{
-      ID3D11Device, ID3D11DeviceContext, ID3D11Resource, ID3D11ShaderResourceView, ID3D11Texture2D,
-      D3D11_BIND_SHADER_RESOURCE, D3D11_BOX, D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT,
-    },
-    Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
-  },
-};
-
 /// How much of the disc's diameter a digit's cap height takes, and the widest
 /// the number may be drawn, both as shares of the diameter. The twins of
 /// `SCREENWIDE_COUNTER_TEXT_CAP_SHARE` and
@@ -47,24 +36,18 @@ const WIDTH_SHARE: f64 = 0.72;
 /// Inter's cap height, in ems: what turns a wanted cap height into a size.
 const CAP_HEIGHT: f64 = 0.727;
 
-/// The atlas one composition samples: its texture, the texture's size, and
-/// how many atlas pixels it holds per canvas pixel.
+/// The atlas one composition samples: its view, the texture's size, and how
+/// many atlas pixels it holds per canvas pixel.
 pub(crate) struct AtlasBinding {
   pub(crate) size: (u32, u32),
   pub(crate) scale: f32,
-  pub(crate) view: ID3D11ShaderResourceView,
-}
-
-struct Storage {
-  size: (u32, u32),
-  texture: ID3D11Texture2D,
-  view: ID3D11ShaderResourceView,
+  pub(crate) view: wgpu::TextureView,
 }
 
 #[derive(Default)]
 struct State {
   layout: AtlasLayout,
-  storage: Option<Storage>,
+  storage: Option<GpuAtlas>,
   draws: Vec<AtlasDraw>,
 }
 
@@ -84,8 +67,7 @@ impl CounterAtlas {
   /// all. Only type the atlas does not hold yet is rasterised.
   fn resolve(
     &self,
-    device: &ID3D11Device,
-    context: &ID3D11DeviceContext,
+    gpu: &crate::gpu::Gpu,
     types: &[PreparedType],
     scale: f32,
     drawn: f64,
@@ -127,84 +109,38 @@ impl CounterAtlas {
     if placed.fresh
       || storage
         .as_ref()
-        .is_none_or(|storage| storage.size != placed.size)
+        .is_none_or(|storage| storage.size() != placed.size)
     {
-      *storage = Some(create_storage(device, placed.size)?);
+      *storage = Some(GpuAtlas::new(gpu, placed.size));
     }
     let Some(storage) = storage.as_ref() else {
       return Ok(None);
     };
-    let resource: ID3D11Resource = storage.texture.cast().map_err(|error| error.to_string())?;
     for draw in draws.iter() {
       let rect = rects[draw.index];
-      let (left, top) = (rect.x as u32, rect.y as u32);
-      let (width, height) = (rect.width as u32, rect.height as u32);
-      let pixels = draw_cell(&types[draw.index], draw.radius, drawn, (width, height))?;
-      unsafe {
-        context.UpdateSubresource(
-          &resource,
-          0,
-          Some(&D3D11_BOX {
-            left,
-            top,
-            front: 0,
-            right: left + width,
-            bottom: top + height,
-            back: 1,
-          }),
-          pixels.as_ptr().cast(),
-          width * 4,
-          0,
-        );
-      }
+      let origin = (rect.x as u32, rect.y as u32);
+      let size = (rect.width as u32, rect.height as u32);
+      let pixels = draw_cell(&types[draw.index], draw.radius, drawn, size)?;
+      storage.write(gpu, origin, size, &pixels);
     }
     Ok(Some(AtlasBinding {
-      size: storage.size,
+      size: storage.size(),
       scale,
       view: storage.view.clone(),
     }))
   }
 }
 
-/// A texture for a fresh layout. Its contents start undefined, which is safe
-/// because every cell is drawn whole, margin included, before it is sampled,
-/// and the shader reads nowhere else.
-fn create_storage(device: &ID3D11Device, size: (u32, u32)) -> Result<Storage, String> {
-  let description = D3D11_TEXTURE2D_DESC {
-    Width: size.0,
-    Height: size.1,
-    MipLevels: 1,
-    ArraySize: 1,
-    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-    SampleDesc: DXGI_SAMPLE_DESC {
-      Count: 1,
-      Quality: 0,
-    },
-    Usage: D3D11_USAGE_DEFAULT,
-    BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
-    ..Default::default()
-  };
-  let mut texture = None;
-  unsafe { device.CreateTexture2D(&description, None, Some(&mut texture)) }
-    .map_err(|error| error.to_string())?;
-  let texture = texture.ok_or_else(|| "D3D11 created no counter atlas texture".to_owned())?;
-  let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
-  let mut view = None;
-  unsafe { device.CreateShaderResourceView(&resource, None, Some(&mut view)) }
-    .map_err(|error| error.to_string())?;
-  Ok(Storage {
-    size,
-    texture,
-    view: view.ok_or_else(|| "D3D11 created no counter atlas view".to_owned())?,
-  })
-}
-
+/// The atlas's texture.
+#[path = "counter_artwork/gpu_atlas.rs"]
+mod gpu_atlas;
 /// The DirectWrite rasterisation the atlas is drawn by: a counter's number,
 /// and a text box's lines.
 #[path = "counter_artwork/rasterize.rs"]
 mod rasterize;
 #[path = "counter_artwork/text_box.rs"]
 mod text_box;
+use gpu_atlas::GpuAtlas;
 
 /// What the atlas keys a piece of type by: its text, and for a box being
 /// typed into its caret, its selection and the caret's width in atlas pixels
@@ -245,6 +181,10 @@ fn draw_cell(
   text_box::draw(&entry.text, size, drawn, entry.style - 1, entry.marks, cell)
 }
 
+/// The atlas one composition samples, if any type is drawn, and its
+/// annotations with their type rectangles in place.
+pub(crate) type NumberedArrows = (Option<AtlasBinding>, Vec<super::compositor::PreviewArrow>);
+
 /// The atlas one composition needs, and its annotations with the type
 /// rectangles written into the slots a counter or a text box reads them
 /// from.
@@ -254,10 +194,9 @@ fn draw_cell(
 /// annotation rather than across the list.
 pub(crate) fn numbered_arrows(
   atlas: &CounterAtlas,
-  device: &ID3D11Device,
-  context: &ID3D11DeviceContext,
+  gpu: &crate::gpu::Gpu,
   prepared: &super::compositor::PreparedArrows,
-) -> Result<(Option<AtlasBinding>, Vec<super::compositor::PreviewArrow>), String> {
+) -> Result<NumberedArrows, String> {
   let mut rects = Vec::new();
   let pixel_scale = if prepared.pixel_scale > 0.0 {
     prepared.pixel_scale
@@ -272,7 +211,7 @@ pub(crate) fn numbered_arrows(
   let scale = raster_scale(pixel_scale, largest);
   // Atlas pixels per drawn pixel: what a text box's caret is as wide as.
   let drawn = f64::from(scale * pixel_scale);
-  let numbers = atlas.resolve(device, context, &prepared.types, scale, drawn, &mut rects)?;
+  let numbers = atlas.resolve(gpu, &prepared.types, scale, drawn, &mut rects)?;
   let mut arrows = prepared.arrows.clone();
   if numbers.is_some() {
     for (arrow, rect) in arrows.iter_mut().zip(&rects) {

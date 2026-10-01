@@ -6,7 +6,7 @@
 use super::*;
 
 /// Redraws every attached surface. Owning thread only: the child windows and
-/// their swap chains belong to the thread that created the hosts.
+/// their surfaces belong to the thread that created the hosts.
 pub(super) fn draw_all() {
   let mut overlay = overlay();
   let overlay = &mut *overlay;
@@ -25,19 +25,22 @@ impl Renderer {
     let Some(display) = display(surface.display) else {
       return Ok(());
     };
-    let size = surface.fit()?;
+    let size = surface.fit(self.gpu())?;
     if size.0 == 0 || size.1 == 0 {
       return Ok(());
     }
-    let target = surface.chain.back_buffer_view(self.device().device())?;
-    let (underlay, softened) = surface.underlay(self.device().device())?;
+    let (underlay, softened) = surface.underlay(self.gpu())?;
+    let overlay_surface::Frame::Ready(frame) = surface.chain.acquire(self.gpu())? else {
+      return Ok(());
+    };
     self.draw_arrows(
-      &target,
+      &frame.texture.create_view(&Default::default()),
       size,
       &scene::scene(display),
       underlay.as_ref(),
       softened.as_ref(),
     )?;
-    surface.chain.present()
+    self.gpu().queue.present(frame);
+    Ok(())
   }
 }

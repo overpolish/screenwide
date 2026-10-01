@@ -1,25 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::render_test_helpers::{device, read_pixel, target};
-use super::*;
-use crate::editor::preview_platform::ComposedFrame;
+use super::render_test_helpers::{compositor, draw, read_pixel, target, white_source};
 use crate::screenshots::test_output_settings;
+
 #[test]
-#[ignore = "requires a Windows D3D11 hardware adapter"]
+#[ignore = "requires a GPU adapter"]
 fn aurora_background_is_stable_across_cpu_rounding_modes() {
-  let (device, context) = device();
-  let compositor = Compositor::new(&device).expect("D3D11 preview compositor");
-  let source = compositor
-    .screenshot_source(
-      &device,
-      &crate::screenshots::CapturedImage {
-        width: 1920,
-        height: 1080,
-        rgba: vec![255; 1920 * 1080 * 4],
-      },
-    )
-    .expect("source texture");
+  let compositor = compositor();
+  let source = white_source(&compositor, (1920, 1080));
   let mut settings = test_output_settings(1920, 1080);
   settings.background_type = "mesh".to_owned();
   settings.mesh_generator = "aurora".to_owned();
@@ -36,7 +25,7 @@ fn aurora_background_is_stable_across_cpu_rounding_modes() {
   settings.image_y = 400.0;
   settings.crop_x = settings.image_x;
   settings.crop_y = settings.image_y;
-  let target = target(&device);
+  let target = target();
   unsafe fn get_mxcsr() -> u32 {
     let mut value = 0;
     std::arch::asm!("stmxcsr [{value}]", value = in(reg) &mut value, options(nostack, preserves_flags));
@@ -56,24 +45,8 @@ fn aurora_background_is_stable_across_cpu_rounding_modes() {
   let mut pixels = Vec::new();
   for rounding in [0, 0x2000, 0x4000, 0x6000] {
     unsafe { set_mxcsr((original & !0x6000) | rounding) };
-    compositor
-      .draw_with_camera(
-        &context,
-        &target,
-        &source,
-        &settings,
-        ComposedFrame {
-          cursor: None,
-          keyboard: None,
-          foreground_only: false,
-          seconds: 0.0,
-        },
-        None,
-        None,
-        &Default::default(),
-      )
-      .unwrap();
-    pixels.push(read_pixel(&device, &context, &target, 1500, 700));
+    draw(&compositor, &target, &source, &settings);
+    pixels.push(read_pixel(&target, 1500, 700));
   }
   assert!(
     pixels.windows(2).all(|pair| pair[0] == pair[1]),

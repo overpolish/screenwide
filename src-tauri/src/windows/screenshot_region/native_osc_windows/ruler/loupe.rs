@@ -10,7 +10,7 @@ impl Ruler {
   #[allow(clippy::too_many_arguments)]
   pub(super) fn add_loupe(
     &mut self,
-    device: &ID3D11Device,
+    device: &Gpu,
     out: &mut Vec<Vertex>,
     segments: &mut Vec<Segment>,
     view: Size,

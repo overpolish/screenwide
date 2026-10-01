@@ -1,26 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::render_test_helpers::{device, read_pixel, read_top_strip, target, target_size, OUTPUT};
-use super::*;
-use crate::editor::preview_platform::ComposedFrame;
+use super::render_test_helpers::{
+  compositor, draw, read_pixel, read_top_strip, target, target_size, white_source, OUTPUT,
+};
 use crate::screenshots::test_output_settings;
 
 #[test]
-#[ignore = "requires a Windows D3D11 hardware adapter"]
+#[ignore = "requires a GPU adapter"]
 fn aurora_background_survives_moved_foreground() {
-  let (device, context) = device();
-  let compositor = Compositor::new(&device).expect("D3D11 preview compositor");
-  let source = compositor
-    .screenshot_source(
-      &device,
-      &crate::screenshots::CapturedImage {
-        width: 64,
-        height: 64,
-        rgba: vec![255; 64 * 64 * 4],
-      },
-    )
-    .expect("source texture");
+  let compositor = compositor();
+  let source = white_source(&compositor, (64, 64));
   let mut first = test_output_settings(OUTPUT.0, OUTPUT.1);
   first.background_type = "mesh".to_owned();
   first.mesh_generator = "aurora".to_owned();
@@ -39,55 +29,26 @@ fn aurora_background_survives_moved_foreground() {
   let mut second = first.clone();
   second.image_x = 1_200.0;
   second.crop_x = 1_200.0;
-  let first_target = target(&device);
-  compositor
-    .draw_with_camera(
-      &context,
-      &first_target,
-      &source,
-      &first,
-      ComposedFrame {
-        cursor: None,
-        keyboard: None,
-        foreground_only: false,
-        seconds: 0.0,
-      },
-      None,
-      None,
-      &Default::default(),
-    )
-    .unwrap();
-  let first_strip = read_top_strip(&device, &context, &first_target);
+  let first_target = target();
+  draw(&compositor, &first_target, &source, &first);
+  let first_strip = read_top_strip(&first_target);
+  // Row 32: the canvas's top row is its rounded background's edge, which is
+  // smoothed over a pixel and so never fully opaque.
+  let row = 32 * OUTPUT.0 as usize;
   let samples = [
     OUTPUT.0 as usize / 4,
     OUTPUT.0 as usize / 2,
     OUTPUT.0 as usize * 3 / 4,
   ]
-  .map(|x| &first_strip[x * 4..x * 4 + 4]);
+  .map(|x| &first_strip[(row + x) * 4..(row + x) * 4 + 4]);
   assert!(samples.iter().all(|pixel| pixel[3] == u8::MAX));
   assert!(samples
     .iter()
     .all(|pixel| pixel[..3].iter().any(|channel| *channel != 0)));
   assert!(samples.windows(2).any(|pair| pair[0][..3] != pair[1][..3]));
-  let second_target = target(&device);
-  compositor
-    .draw_with_camera(
-      &context,
-      &second_target,
-      &source,
-      &second,
-      ComposedFrame {
-        cursor: None,
-        keyboard: None,
-        foreground_only: false,
-        seconds: 0.0,
-      },
-      None,
-      None,
-      &Default::default(),
-    )
-    .unwrap();
-  let second_strip = read_top_strip(&device, &context, &second_target);
+  let second_target = target();
+  draw(&compositor, &second_target, &source, &second);
+  let second_strip = read_top_strip(&second_target);
   assert_eq!(
     first_strip, second_strip,
     "Aurora background changed when only foreground position moved"
@@ -95,20 +56,10 @@ fn aurora_background_survives_moved_foreground() {
 }
 
 #[test]
-#[ignore = "requires a Windows D3D11 hardware adapter"]
+#[ignore = "requires a GPU adapter"]
 fn aurora_drag_trace_keeps_clear_background_stable() {
-  let (device, context) = device();
-  let compositor = Compositor::new(&device).expect("D3D11 preview compositor");
-  let source = compositor
-    .screenshot_source(
-      &device,
-      &crate::screenshots::CapturedImage {
-        width: 653,
-        height: 367,
-        rgba: vec![255; 653 * 367 * 4],
-      },
-    )
-    .expect("source texture");
+  let compositor = compositor();
+  let source = white_source(&compositor, (653, 367));
   let mut settings = test_output_settings(1920, 1080);
   settings.background_type = "mesh".to_owned();
   settings.mesh_generator = "aurora".to_owned();
@@ -133,25 +84,9 @@ fn aurora_drag_trace_keeps_clear_background_stable() {
     settings.image_y = image_y;
     settings.crop_x = image_x;
     settings.crop_y = image_y;
-    let target = target(&device);
-    compositor
-      .draw_with_camera(
-        &context,
-        &target,
-        &source,
-        &settings,
-        ComposedFrame {
-          cursor: None,
-          keyboard: None,
-          foreground_only: false,
-          seconds: 0.0,
-        },
-        None,
-        None,
-        &Default::default(),
-      )
-      .unwrap();
-    let strip = read_top_strip(&device, &context, &target);
+    let target = target();
+    draw(&compositor, &target, &source, &settings);
+    let strip = read_top_strip(&target);
     let offset = (32 * 1920 + 1440) * 4;
     let pixel = &strip[offset..offset + 4];
     assert_eq!(pixel[3], u8::MAX);
@@ -164,20 +99,10 @@ fn aurora_drag_trace_keeps_clear_background_stable() {
 }
 
 #[test]
-#[ignore = "requires a Windows D3D11 hardware adapter"]
+#[ignore = "requires a GPU adapter"]
 fn aurora_background_survives_long_live_draw_sequence() {
-  let (device, context) = device();
-  let compositor = Compositor::new(&device).expect("D3D11 preview compositor");
-  let source = compositor
-    .screenshot_source(
-      &device,
-      &crate::screenshots::CapturedImage {
-        width: 1920,
-        height: 1080,
-        rgba: vec![255; 1920 * 1080 * 4],
-      },
-    )
-    .expect("source texture");
+  let compositor = compositor();
+  let source = white_source(&compositor, (1920, 1080));
   let mut settings = test_output_settings(1920, 1080);
   settings.background_type = "mesh".to_owned();
   settings.mesh_generator = "aurora".to_owned();
@@ -194,106 +119,28 @@ fn aurora_background_survives_long_live_draw_sequence() {
   settings.image_y = 0.0;
   settings.crop_x = settings.image_x;
   settings.crop_y = settings.image_y;
-  let target = target_size(&device, (2048, 1280));
+  let target = target_size((2048, 1280));
   let positions = [(0.0, 0.0), (1074.86, 0.0), (0.0, 475.39)];
   let mut baseline = None;
-  for draw in 0..500 {
+  for frame in 0..500 {
     settings.mesh_seed = 34_644;
-    let (image_x, image_y) = positions[draw % positions.len()];
+    let (image_x, image_y) = positions[frame % positions.len()];
     settings.image_x = image_x;
     settings.image_y = image_y;
     settings.crop_x = image_x;
     settings.crop_y = image_y;
-    compositor
-      .draw_with_camera(
-        &context,
-        &target,
-        &source,
-        &settings,
-        ComposedFrame {
-          cursor: None,
-          keyboard: None,
-          foreground_only: false,
-          seconds: 0.0,
-        },
-        None,
-        None,
-        &Default::default(),
-      )
-      .unwrap();
-    if draw % 10 == 0 {
-      let pixel = read_pixel(&device, &context, &target, 1500, 700);
+    draw(&compositor, &target, &source, &settings);
+    if frame % 10 == 0 {
+      let pixel = read_pixel(&target, 1500, 700);
       assert_eq!(pixel[3], u8::MAX);
       if let Some(previous) = baseline {
         assert_eq!(
           previous, pixel,
-          "Aurora changed during repeated live draws at draw {draw}"
+          "Aurora changed during repeated live draws at draw {frame}"
         );
       } else {
         baseline = Some(pixel);
       }
     }
   }
-}
-
-#[test]
-#[ignore = "requires a Windows D3D11 hardware adapter"]
-fn compositor_background_ignores_selection_rasterizer_state() {
-  let (device, context) = device();
-  let compositor = Compositor::new(&device).expect("D3D11 preview compositor");
-  let source = compositor
-    .screenshot_source(
-      &device,
-      &crate::screenshots::CapturedImage {
-        width: 64,
-        height: 64,
-        rgba: vec![255; 64 * 64 * 4],
-      },
-    )
-    .expect("source texture");
-  let mut settings = test_output_settings(OUTPUT.0, OUTPUT.1);
-  settings.background_type = "mesh".to_owned();
-  settings.mesh_generator = "aurora".to_owned();
-  settings.mesh_seed = 34_644;
-  settings.mesh_colors = vec!["#8FE3FF".into(), "#FF9BE3".into(), "#C9B8FF".into()];
-  settings.mesh_points.clear();
-  let draw = |target: &ID3D11Texture2D| {
-    compositor
-      .draw_with_camera(
-        &context,
-        target,
-        &source,
-        &settings,
-        ComposedFrame {
-          cursor: None,
-          keyboard: None,
-          foreground_only: false,
-          seconds: 0.0,
-        },
-        None,
-        None,
-        &Default::default(),
-      )
-      .unwrap();
-  };
-  let first = target(&device);
-  draw(&first);
-  let first_pixels = read_top_strip(&device, &context, &first);
-  let mut rasterizer = None;
-  unsafe {
-    device
-      .CreateRasterizerState(
-        &windows::Win32::Graphics::Direct3D11::D3D11_RASTERIZER_DESC {
-          FillMode: windows::Win32::Graphics::Direct3D11::D3D11_FILL_SOLID,
-          CullMode: windows::Win32::Graphics::Direct3D11::D3D11_CULL_NONE,
-          ..Default::default()
-        },
-        Some(&mut rasterizer),
-      )
-      .unwrap();
-    context.RSSetState(rasterizer.as_ref());
-  }
-  let second = target(&device);
-  draw(&second);
-  assert_eq!(first_pixels, read_top_strip(&device, &context, &second));
 }

@@ -97,7 +97,9 @@ impl RecordingPreviewSurface {
     })
   }
 
+  /// The Direct3D 11 device decoders write frames on: the layer over the
+  /// shared wgpu device, so the frames are copied without leaving it.
   pub(crate) fn device(&self) -> ID3D11Device {
-    self.inner.gpu.device.clone()
+    self.inner.gpu.d3d11.device.clone()
   }
 }

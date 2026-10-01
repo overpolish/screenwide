@@ -19,7 +19,7 @@
 //! passes over one corner stray from each other. The shaders hold the only
 //! other copies of [`shape_distance`]:
 //! `gpu_compositor_macos_shader_source_annotation_shape.h` and
-//! `annotation_shape.hlsl`.
+//! `annotation_shape.wgsl`.
 
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 

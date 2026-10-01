@@ -7,8 +7,7 @@ impl Compositor {
   #[allow(clippy::too_many_arguments)]
   pub(in crate::editor::preview_platform::surface) fn draw_with_camera(
     &self,
-    context: &ID3D11DeviceContext,
-    target: &ID3D11Texture2D,
+    target: &wgpu::TextureView,
     source: &SourceTexture,
     settings: &ScreenshotOutputSettings,
     composition: super::super::ComposedFrame,
@@ -117,7 +116,6 @@ impl Compositor {
           .min(margin * 0.45)
       });
     let shortest_crop = placement.crop_width.min(placement.crop_height) as f32;
-    let device = unsafe { target.GetDevice() }.map_err(|error| error.to_string())?;
     // A chosen picture is filled to the canvas by the shader, from a texture
     // uploaded once per file. One that cannot be read leaves the flag clear
     // and the solid colour paints, so a background whose file has moved still
@@ -125,7 +123,7 @@ impl Compositor {
     let picture = (settings.background_type == "image")
       .then_some(settings.background_image_path.as_deref())
       .flatten()
-      .and_then(|path| self.background_cache.resolve(&device, path));
+      .and_then(|path| self.background_cache.resolve(self.gpu, path));
     let values = Constants {
       output_source: [
         settings.width as f32,
@@ -282,8 +280,6 @@ impl Compositor {
       ],
     };
     self.submit(
-      context,
-      &device,
       target,
       source,
       settings,

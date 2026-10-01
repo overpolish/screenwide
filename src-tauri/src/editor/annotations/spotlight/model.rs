@@ -18,7 +18,7 @@ use crate::editor::annotations::{Annotation, AnnotationHead, AnnotationShape, An
 /// How much of the light the shade outside a spotlight takes away. Fixed
 /// rather than a choice: dark enough that the eye goes to the light, light
 /// enough that what is around it can still be read. The twin of
-/// `annotation_spotlight_dim` in the Metal and HLSL spotlight passes.
+/// `annotation_spotlight_dim` in the Metal and WGSL spotlight passes.
 #[cfg(all(test, target_os = "macos"))]
 pub(crate) const SPOTLIGHT_DIM: f32 = 0.4;
 

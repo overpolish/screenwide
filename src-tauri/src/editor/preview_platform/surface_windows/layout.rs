@@ -22,7 +22,7 @@ impl RecordingPreviewSurface {
           .inner
           .gpu
           .backdrop
-          .paint(&self.inner.gpu.context, backdrop)
+          .paint(self.inner.gpu.shared, backdrop)
           .is_ok()
       {
         state.backdrop = backdrop;
@@ -188,7 +188,7 @@ impl RecordingPreviewSurface {
         // A hidden pane has nothing stale to show; drop leftovers so a later
         // flush cannot resurrect it at a parked offset.
         pane.pending_geometry = false;
-        pane.pending_present = false;
+        pane.parked = None;
       }
       draw_selection(&self.inner, &state);
       // An open batch commits for everything on its flush; a second

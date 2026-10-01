@@ -2,34 +2,37 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! GPU composition for Windows regions that cross display boundaries.
+//!
+//! Each display is captured on the recording's own Direct3D 11 device; its
+//! latest frame is copied into a texture wgpu samples, the pieces are drawn
+//! onto the shared canvas in wgpu, and the canvas is copied out to a texture
+//! of its own for the encoder. Fences order each hand-over between the two
+//! devices.
 
-use std::{ffi::c_void, mem::size_of, time::Instant};
+use std::{mem::size_of, time::Instant};
 
 use windows::{
   core::Interface,
   Win32::Graphics::{
-    Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
     Direct3D11::{
-      ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11PixelShader, ID3D11RenderTargetView,
-      ID3D11Resource, ID3D11SamplerState, ID3D11ShaderResourceView, ID3D11Texture2D,
-      ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_RENDER_TARGET,
-      D3D11_BIND_SHADER_RESOURCE, D3D11_BUFFER_DESC, D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-      D3D11_SAMPLER_DESC, D3D11_TEXTURE2D_DESC, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT,
-      D3D11_VIEWPORT,
+      ID3D11Device, ID3D11Resource, ID3D11Texture2D, D3D11_BIND_RENDER_TARGET,
+      D3D11_BIND_SHADER_RESOURCE, D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT,
     },
     Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
   },
 };
 
 use crate::desktop_capture::{CapturePiece, CapturePlan, FrameSynchronizer};
+use crate::gpu::{BridgedTexture, D3d11Bridge, Gpu};
 
-use super::writer::{snapshot_frame, Frame};
+use super::writer::Frame;
 
-const VERTEX_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/desktop_compositor_vs.cso"));
-const PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/desktop_compositor_ps.cso"));
+const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/desktop_compositor.wgsl"));
+const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8Unorm;
 
+/// The twin of `Piece` in `desktop_compositor.wgsl`.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable)]
 struct PieceConstants {
   output_size: [u32; 2],
   source_size: [u32; 2],
@@ -56,17 +59,18 @@ impl PieceConstants {
 
 pub(super) struct DesktopFrameCoordinator {
   compositor: DesktopCompositor,
-  device: ID3D11Device,
-  latest: Vec<Option<Frame>>,
+  /// When each display's latest frame arrived, once one has.
+  latest: Vec<Option<Instant>>,
   pieces: Vec<CapturePiece>,
   synchronizer: FrameSynchronizer,
 }
 
 impl DesktopFrameCoordinator {
-  pub fn new(device: ID3D11Device, plan: &CapturePlan) -> Result<Self, String> {
+  /// Composes on `device`, the capture device, which has to be on wgpu's
+  /// adapter.
+  pub fn new(device: &ID3D11Device, plan: &CapturePlan) -> Result<Self, String> {
     Ok(Self {
-      compositor: DesktopCompositor::new(&device, plan.width, plan.height)?,
-      device,
+      compositor: DesktopCompositor::new(device, plan.width, plan.height, plan.pieces.len())?,
       latest: vec![None; plan.pieces.len()],
       pieces: plan.pieces.clone(),
       synchronizer: FrameSynchronizer::new(plan.pieces.len())?,
@@ -78,103 +82,147 @@ impl DesktopFrameCoordinator {
       .latest
       .get_mut(source_index)
       .ok_or_else(|| "A frame arrived from an unknown desktop source".to_owned())?;
-    let source_100ns = frame.source_100ns;
-    let frame = snapshot_frame(&self.device, frame)?;
-    *slot = Some(frame);
-    let Some(tick) = self.synchronizer.update(source_index, source_100ns)? else {
+    // Taken now: the capture recycles its surface once this callback returns.
+    self.compositor.take(source_index, &frame.texture)?;
+    *slot = Some(frame.wall);
+    let Some(tick) = self.synchronizer.update(source_index, frame.source_100ns)? else {
       return Ok(None);
     };
-    let frames = self
+    let wall = self
       .latest
       .iter()
-      .map(|frame| {
-        frame
-          .as_ref()
-          .expect("the synchronizer waits for every desktop source")
-      })
-      .collect::<Vec<_>>();
-    let wall = frames
-      .iter()
-      .map(|frame| frame.wall)
+      .map(|wall| wall.expect("the synchronizer waits for every desktop source"))
       .max()
       .unwrap_or_else(Instant::now);
     Ok(Some(Frame {
       source_100ns: tick.output_ns,
-      texture: self.compositor.compose(&frames, &self.pieces)?,
+      texture: self.compositor.compose(&self.pieces)?,
       wall,
     }))
   }
 }
 
 struct DesktopCompositor {
-  constants: ID3D11Buffer,
-  context: ID3D11DeviceContext,
+  gpu: &'static Gpu,
   device: ID3D11Device,
-  height: u32,
-  pixel_shader: ID3D11PixelShader,
-  sampler: ID3D11SamplerState,
-  vertex_shader: ID3D11VertexShader,
+  bridge: D3d11Bridge,
   width: u32,
+  height: u32,
+  layout: wgpu::BindGroupLayout,
+  pipeline: wgpu::RenderPipeline,
+  sampler: wgpu::Sampler,
+  /// Every piece's constants, one per dynamic-offset stride.
+  constants: wgpu::Buffer,
+  stride: u64,
+  /// Each display's latest frame, sized like its capture.
+  sources: Vec<Option<BridgedTexture>>,
+  /// The shared canvas the pieces are drawn onto.
+  canvas: BridgedTexture,
 }
 
+mod pipeline;
+#[cfg(test)]
+mod tests;
+
 impl DesktopCompositor {
-  fn new(device: &ID3D11Device, width: u32, height: u32) -> Result<Self, String> {
-    let context = unsafe { device.GetImmediateContext() }.map_err(|error| error.to_string())?;
-    let mut vertex_shader = None;
-    let mut pixel_shader = None;
-    let mut constants = None;
-    let mut sampler = None;
-    unsafe {
-      device
-        .CreateVertexShader(VERTEX_SHADER, None, Some(&mut vertex_shader))
-        .map_err(|error| error.to_string())?;
-      device
-        .CreatePixelShader(PIXEL_SHADER, None, Some(&mut pixel_shader))
-        .map_err(|error| error.to_string())?;
-      device
-        .CreateBuffer(
-          &D3D11_BUFFER_DESC {
-            ByteWidth: size_of::<PieceConstants>() as u32,
-            Usage: D3D11_USAGE_DEFAULT,
-            BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
-            ..Default::default()
-          },
-          None,
-          Some(&mut constants),
-        )
-        .map_err(|error| error.to_string())?;
-      device
-        .CreateSamplerState(
-          &D3D11_SAMPLER_DESC {
-            Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-            AddressU: D3D11_TEXTURE_ADDRESS_CLAMP,
-            AddressV: D3D11_TEXTURE_ADDRESS_CLAMP,
-            AddressW: D3D11_TEXTURE_ADDRESS_CLAMP,
-            MaxLOD: f32::MAX,
-            ..Default::default()
-          },
-          Some(&mut sampler),
-        )
-        .map_err(|error| error.to_string())?;
+  /// Copies a display's frame into the texture its piece is drawn from.
+  fn take(&mut self, index: usize, frame: &ID3D11Texture2D) -> Result<(), String> {
+    let mut description = D3D11_TEXTURE2D_DESC::default();
+    unsafe { frame.GetDesc(&mut description) };
+    let size = (description.Width, description.Height);
+    let slot = self
+      .sources
+      .get_mut(index)
+      .ok_or_else(|| "A frame arrived from an unknown desktop source".to_owned())?;
+    if slot
+      .as_ref()
+      .is_none_or(|source| (source.texture.width(), source.texture.height()) != size)
+    {
+      *slot = Some(
+        self
+          .bridge
+          .shared_texture(self.gpu, size, FORMAT, "desktop source")?,
+      );
     }
-    Ok(Self {
-      constants: constants.ok_or_else(|| "Direct3D created no desktop constants".to_owned())?,
-      context,
-      device: device.clone(),
-      height,
-      pixel_shader: pixel_shader
-        .ok_or_else(|| "Direct3D created no desktop pixel shader".to_owned())?,
-      sampler: sampler.ok_or_else(|| "Direct3D created no desktop sampler".to_owned())?,
-      vertex_shader: vertex_shader
-        .ok_or_else(|| "Direct3D created no desktop vertex shader".to_owned())?,
-      width,
-    })
+    let source = slot.as_ref().expect("the desktop source was just made");
+    let frame: ID3D11Resource = frame.cast().map_err(|error| error.to_string())?;
+    let destination: ID3D11Resource = source.d3d11.cast().map_err(|error| error.to_string())?;
+    unsafe { self.bridge.context.CopyResource(&destination, &frame) };
+    self.bridge.d3d11_to_gpu(self.gpu)
   }
 
-  fn compose(&self, frames: &[&Frame], pieces: &[CapturePiece]) -> Result<ID3D11Texture2D, String> {
-    if frames.len() != pieces.len() {
+  /// Draws every piece onto the canvas and copies it out to a texture of
+  /// its own: Media Foundation keeps a sample's texture until the encoder
+  /// has read it, so the next frame may not draw over it.
+  fn compose(&self, pieces: &[CapturePiece]) -> Result<ID3D11Texture2D, String> {
+    if pieces.len() != self.sources.len() {
       return Err("Desktop frames no longer match the capture plan".to_owned());
     }
+    let gpu = self.gpu;
+    let mut constants = vec![0_u8; (self.stride as usize) * pieces.len()];
+    let mut bindings = Vec::with_capacity(pieces.len());
+    for (index, (piece, source)) in pieces.iter().zip(&self.sources).enumerate() {
+      let source = source
+        .as_ref()
+        .ok_or_else(|| "A desktop source has no frame yet".to_owned())?;
+      let values = PieceConstants::new(
+        [self.width, self.height],
+        [source.texture.width(), source.texture.height()],
+        *piece,
+      );
+      let start = index * self.stride as usize;
+      constants[start..start + size_of::<PieceConstants>()]
+        .copy_from_slice(bytemuck::bytes_of(&values));
+      bindings.push(gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("Screenwide desktop piece"),
+        layout: &self.layout,
+        entries: &[
+          wgpu::BindGroupEntry {
+            binding: 0,
+            resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+              buffer: &self.constants,
+              offset: 0,
+              size: wgpu::BufferSize::new(size_of::<PieceConstants>() as u64),
+            }),
+          },
+          wgpu::BindGroupEntry {
+            binding: 1,
+            resource: wgpu::BindingResource::TextureView(&source.view),
+          },
+          wgpu::BindGroupEntry {
+            binding: 2,
+            resource: wgpu::BindingResource::Sampler(&self.sampler),
+          },
+        ],
+      }));
+    }
+    gpu.queue.write_buffer(&self.constants, 0, &constants);
+    let mut encoder = gpu
+      .device
+      .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("Screenwide desktop compositor"),
+      });
+    {
+      let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("Screenwide desktop compositor"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+          view: &self.canvas.view,
+          depth_slice: None,
+          resolve_target: None,
+          ops: wgpu::Operations {
+            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+            store: wgpu::StoreOp::Store,
+          },
+        })],
+        ..Default::default()
+      });
+      pass.set_pipeline(&self.pipeline);
+      for (index, bindings) in bindings.iter().enumerate() {
+        pass.set_bind_group(0, bindings, &[(index as u64 * self.stride) as u32]);
+        pass.draw(0..6, 0..1);
+      }
+    }
+    gpu.queue.submit([encoder.finish()]);
     let description = D3D11_TEXTURE2D_DESC {
       Width: self.width,
       Height: self.height,
@@ -196,104 +244,19 @@ impl DesktopCompositor {
         .CreateTexture2D(&description, None, Some(&mut texture))
     }
     .map_err(|error| error.to_string())?;
-    let texture = texture.ok_or_else(|| "Direct3D created no desktop canvas".to_owned())?;
-    let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
-    let mut target: Option<ID3D11RenderTargetView> = None;
+    let texture = texture.ok_or_else(|| "Direct3D created no desktop frame".to_owned())?;
+    let destination: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
+    let canvas: ID3D11Resource = self
+      .canvas
+      .d3d11
+      .cast()
+      .map_err(|error| error.to_string())?;
+    // The capture device waits for the canvas drawn above before copying it.
+    self.bridge.gpu_to_d3d11(gpu)?;
     unsafe {
-      self
-        .device
-        .CreateRenderTargetView(&resource, None, Some(&mut target))
-    }
-    .map_err(|error| error.to_string())?;
-    let target = target.ok_or_else(|| "Direct3D created no desktop target".to_owned())?;
-    let constants_resource: ID3D11Resource =
-      self.constants.cast().map_err(|error| error.to_string())?;
-    unsafe {
-      self
-        .context
-        .ClearRenderTargetView(&target, &[0.0, 0.0, 0.0, 1.0]);
-      self.context.OMSetRenderTargets(Some(&[Some(target)]), None);
-      self.context.RSSetViewports(Some(&[D3D11_VIEWPORT {
-        Width: self.width as f32,
-        Height: self.height as f32,
-        MaxDepth: 1.0,
-        ..Default::default()
-      }]));
-      self.context.IASetInputLayout(None);
-      self
-        .context
-        .IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-      self.context.VSSetShader(&self.vertex_shader, None);
-      self.context.PSSetShader(&self.pixel_shader, None);
-      self
-        .context
-        .VSSetConstantBuffers(0, Some(&[Some(self.constants.clone())]));
-      self
-        .context
-        .PSSetSamplers(0, Some(&[Some(self.sampler.clone())]));
-      for (frame, piece) in frames.iter().zip(pieces) {
-        let mut source_description = D3D11_TEXTURE2D_DESC::default();
-        frame.texture.GetDesc(&mut source_description);
-        let source_resource: ID3D11Resource =
-          frame.texture.cast().map_err(|error| error.to_string())?;
-        let mut source: Option<ID3D11ShaderResourceView> = None;
-        self
-          .device
-          .CreateShaderResourceView(&source_resource, None, Some(&mut source))
-          .map_err(|error| error.to_string())?;
-        let source = source.ok_or_else(|| "Direct3D created no desktop source view".to_owned())?;
-        let constants = PieceConstants::new(
-          [self.width, self.height],
-          [source_description.Width, source_description.Height],
-          *piece,
-        );
-        self.context.UpdateSubresource(
-          &constants_resource,
-          0,
-          None,
-          (&raw const constants).cast::<c_void>(),
-          0,
-          0,
-        );
-        self.context.PSSetShaderResources(0, Some(&[Some(source)]));
-        self.context.Draw(6, 0);
-      }
-      self.context.PSSetShaderResources(0, Some(&[None]));
-      self.context.OMSetRenderTargets(None, None);
+      self.bridge.context.CopyResource(&destination, &canvas);
+      self.bridge.context.Flush();
     }
     Ok(texture)
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::desktop_capture::PixelRect;
-
-  #[test]
-  fn constants_keep_monitor_crop_and_canvas_placement_separate() {
-    let constants = PieceConstants::new(
-      [1600, 900],
-      [3840, 2160],
-      CapturePiece {
-        display_id: 7,
-        source_pixels: PixelRect {
-          x: 120,
-          y: 80,
-          width: 1920,
-          height: 1080,
-        },
-        destination: PixelRect {
-          x: 400,
-          y: 0,
-          width: 1200,
-          height: 900,
-        },
-      },
-    );
-    assert_eq!(constants.output_size, [1600, 900]);
-    assert_eq!(constants.source_size, [3840, 2160]);
-    assert_eq!(constants.source_origin, [120, 80]);
-    assert_eq!(constants.destination_origin, [400, 0]);
   }
 }

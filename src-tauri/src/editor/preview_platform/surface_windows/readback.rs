@@ -19,41 +19,15 @@ impl RecordingPreviewSurface {
       .state
       .lock()
       .map_err(|_| "The Windows preview surface is unavailable".to_owned())?;
+    let gpu = &self.inner.gpu;
     let output_size = crate::screenshots::output_dimensions(first_settings)?;
-    let target_description = D3D11_TEXTURE2D_DESC {
-      Width: output_size.0,
-      Height: output_size.1,
-      MipLevels: 1,
-      ArraySize: 1,
-      Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-      SampleDesc: DXGI_SAMPLE_DESC {
-        Count: 1,
-        Quality: 0,
-      },
-      Usage: D3D11_USAGE_DEFAULT,
-      BindFlags: D3D11_BIND_RENDER_TARGET.0 as u32,
-      ..Default::default()
-    };
-    let mut target = None;
-    unsafe {
-      self
-        .inner
-        .gpu
-        .device
-        .CreateTexture2D(&target_description, None, Some(&mut target))
-    }
-    .map_err(|error| format!("The screenshot render target could not be created: {error}"))?;
-    let target = target.ok_or_else(|| "D3D11 created no screenshot render target".to_owned())?;
-
+    let target = readback_target(gpu.shared, output_size);
+    let view = target.create_view(&Default::default());
     for (index, (image, settings)) in layers.iter().enumerate() {
       if crate::screenshots::output_dimensions(settings)? != output_size {
         return Err("The screenshot layers do not share a canvas size".to_owned());
       }
-      let source = self
-        .inner
-        .gpu
-        .compositor
-        .screenshot_source(&self.inner.gpu.device, image)?;
+      let source = gpu.compositor.screenshot_source(image)?;
       let prepared = super::annotation::prepared_arrows(
         &settings.annotations,
         (image.width, image.height),
@@ -63,9 +37,8 @@ impl RecordingPreviewSurface {
         None,
         None,
       )?;
-      self.inner.gpu.compositor.draw_with_camera(
-        &self.inner.gpu.context,
-        &target,
+      gpu.compositor.draw_with_camera(
+        &view,
         &source,
         settings,
         ComposedFrame {
@@ -82,8 +55,7 @@ impl RecordingPreviewSurface {
         &prepared,
       )?;
     }
-    unsafe { self.inner.gpu.context.Flush() };
-    self.readback_bgra(&target, target_description, output_size, "screenshot")
+    read_rgba(gpu.shared, &target)
   }
 
   pub(in crate::editor) fn compose_texture_to_image(
@@ -100,56 +72,23 @@ impl RecordingPreviewSurface {
       .state
       .lock()
       .map_err(|_| "The Windows preview surface is unavailable".to_owned())?;
+    let gpu = &self.inner.gpu;
     let output_size = crate::screenshots::output_dimensions(settings)?;
-    let source = self
-      .inner
-      .gpu
+    let source = gpu.compositor.source(gpu.d3d11, source_size)?;
+    gpu
       .compositor
-      .source(&self.inner.gpu.device, source_size)?;
-    compositor::Compositor::copy_source(&self.inner.gpu.context, &source, texture, subresource)?;
+      .copy_source(gpu.d3d11, &source, texture, subresource)?;
     let camera_source = camera
-      .map(|(_, _, size, _, _, _)| {
-        self
-          .inner
-          .gpu
-          .compositor
-          .source(&self.inner.gpu.device, size)
-      })
+      .map(|(_, _, size, _, _, _)| gpu.compositor.source(gpu.d3d11, size))
       .transpose()?;
     if let (Some(camera_source), Some((texture, subresource, _, _, _, _))) =
       (&camera_source, camera)
     {
-      compositor::Compositor::copy_source(
-        &self.inner.gpu.context,
-        camera_source,
-        texture,
-        subresource,
-      )?;
+      gpu
+        .compositor
+        .copy_source(gpu.d3d11, camera_source, texture, subresource)?;
     }
-    let target_description = D3D11_TEXTURE2D_DESC {
-      Width: output_size.0,
-      Height: output_size.1,
-      MipLevels: 1,
-      ArraySize: 1,
-      Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-      SampleDesc: DXGI_SAMPLE_DESC {
-        Count: 1,
-        Quality: 0,
-      },
-      Usage: D3D11_USAGE_DEFAULT,
-      BindFlags: D3D11_BIND_RENDER_TARGET.0 as u32,
-      ..Default::default()
-    };
-    let mut target = None;
-    unsafe {
-      self
-        .inner
-        .gpu
-        .device
-        .CreateTexture2D(&target_description, None, Some(&mut target))
-    }
-    .map_err(|error| format!("The clipboard render target could not be created: {error}"))?;
-    let target = target.ok_or_else(|| "D3D11 created no clipboard render target".to_owned())?;
+    let target = readback_target(gpu.shared, output_size);
     let prepared = super::annotation::prepared_arrows(
       &settings.annotations,
       source_size,
@@ -158,9 +97,8 @@ impl RecordingPreviewSurface {
       None,
       None,
     )?;
-    self.inner.gpu.compositor.draw_with_camera(
-      &self.inner.gpu.context,
-      &target,
+    gpu.compositor.draw_with_camera(
+      &target.create_view(&Default::default()),
       &source,
       settings,
       composition,
@@ -172,87 +110,36 @@ impl RecordingPreviewSurface {
       None,
       &prepared,
     )?;
-
-    self.readback_bgra(&target, target_description, output_size, "clipboard")
+    read_rgba(gpu.shared, &target)
   }
+}
 
-  pub(super) fn readback_bgra(
-    &self,
-    target: &ID3D11Texture2D,
-    target_description: D3D11_TEXTURE2D_DESC,
-    output_size: (u32, u32),
-    purpose: &str,
-  ) -> Result<CapturedImage, String> {
-    let staging_description = D3D11_TEXTURE2D_DESC {
-      Usage: D3D11_USAGE_STAGING,
-      BindFlags: 0,
-      CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
-      ..target_description
-    };
-    let mut staging = None;
-    unsafe {
-      self
-        .inner
-        .gpu
-        .device
-        .CreateTexture2D(&staging_description, None, Some(&mut staging))
-    }
-    .map_err(|error| format!("The {purpose} readback texture could not be created: {error}"))?;
-    let staging = staging.ok_or_else(|| format!("D3D11 created no {purpose} readback texture"))?;
-    let target_resource: windows::Win32::Graphics::Direct3D11::ID3D11Resource =
-      target.cast().map_err(|error| error.to_string())?;
-    let staging_resource: windows::Win32::Graphics::Direct3D11::ID3D11Resource =
-      staging.cast().map_err(|error| error.to_string())?;
-    unsafe {
-      self
-        .inner
-        .gpu
-        .context
-        .CopyResource(&staging_resource, &target_resource);
-    }
-    let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
-    unsafe {
-      self
-        .inner
-        .gpu
-        .context
-        .Map(&staging_resource, 0, D3D11_MAP_READ, 0, Some(&mut mapped))
-    }
-    .map_err(|error| format!("The {purpose} frame could not be read back: {error}"))?;
-    let row_bytes = output_size.0 as usize * 4;
-    let mut rgba = vec![0_u8; row_bytes * output_size.1 as usize];
-    if mapped.pData.is_null() || mapped.RowPitch < row_bytes as u32 {
-      unsafe { self.inner.gpu.context.Unmap(&staging_resource, 0) };
-      return Err(format!("D3D11 returned invalid {purpose} pixels"));
-    }
-    for row in 0..output_size.1 as usize {
-      let source_row = unsafe {
-        std::slice::from_raw_parts(
-          mapped
-            .pData
-            .cast::<u8>()
-            .add(row * mapped.RowPitch as usize),
-          row_bytes,
-        )
-      };
-      let target_row = &mut rgba[row * row_bytes..(row + 1) * row_bytes];
-      for (source_pixel, target_pixel) in source_row
-        .chunks_exact(4)
-        .zip(target_row.chunks_exact_mut(4))
-      {
-        target_pixel.copy_from_slice(&[
-          source_pixel[2],
-          source_pixel[1],
-          source_pixel[0],
-          source_pixel[3],
-        ]);
-      }
-    }
-    unsafe { self.inner.gpu.context.Unmap(&staging_resource, 0) };
-    Ok(CapturedImage {
-      height: output_size.1,
-      rgba,
-      width: output_size.0,
-    })
+fn readback_target(gpu: &crate::gpu::Gpu, size: (u32, u32)) -> wgpu::Texture {
+  gpu.device.create_texture(&wgpu::TextureDescriptor {
+    label: Some("Screenwide clipboard frame"),
+    size: wgpu::Extent3d {
+      width: size.0,
+      height: size.1,
+      depth_or_array_layers: 1,
+    },
+    mip_level_count: 1,
+    sample_count: 1,
+    dimension: wgpu::TextureDimension::D2,
+    format: wgpu::TextureFormat::Bgra8Unorm,
+    usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+    view_formats: &[],
+  })
+}
+
+/// The BGRA frame drawn into `target`, as RGBA.
+fn read_rgba(gpu: &crate::gpu::Gpu, target: &wgpu::Texture) -> Result<CapturedImage, String> {
+  let mut rgba = gpu.read_texture(target)?;
+  for pixel in rgba.chunks_exact_mut(4) {
+    pixel.swap(0, 2);
   }
+  Ok(CapturedImage {
+    height: target.height(),
+    rgba,
+    width: target.width(),
+  })
 }

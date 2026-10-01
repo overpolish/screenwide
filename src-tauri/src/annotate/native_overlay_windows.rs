@@ -33,22 +33,13 @@ mod underlay;
 #[path = "native_overlay_windows/window_proc.rs"]
 mod window_proc;
 
-use std::ffi::c_void;
-use std::sync::{Arc, LazyLock, Mutex, MutexGuard, OnceLock, RwLock};
+use std::sync::{LazyLock, Mutex, MutexGuard, OnceLock, RwLock};
 
 use tauri::{AppHandle, Manager, WebviewWindow};
 use windows::{
   core::w,
   Win32::{
     Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM},
-    Graphics::{
-      Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-      Direct3D11::{
-        ID3D11Buffer, ID3D11Device, ID3D11PixelShader, ID3D11RenderTargetView,
-        ID3D11ShaderResourceView, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER,
-        D3D11_BUFFER_DESC, D3D11_MAPPED_SUBRESOURCE, D3D11_USAGE_DEFAULT, D3D11_VIEWPORT,
-      },
-    },
     System::Threading::GetCurrentThreadId,
     UI::{
       Input::KeyboardAndMouse::{
@@ -87,8 +78,8 @@ pub(super) struct Display {
   pub scale: f64,
 }
 
-/// The surfaces on screen and the device they share. The device is opened by
-/// the first attach and dropped by the last detach: a session that is not
+/// The surfaces on screen and the renderer they share. The renderer is made
+/// by the first attach and dropped by the last detach: a session that is not
 /// drawing holds no GPU resources.
 #[derive(Default)]
 struct Overlay {
@@ -98,7 +89,7 @@ struct Overlay {
 
 // The COM interfaces and window handles the overlay owns are process-wide
 // tokens. Everything here is reached under this mutex, from the thread that
-// owns the host windows, and the device is multithread protected.
+// owns the host windows.
 unsafe impl Send for Overlay {}
 
 static OVERLAY: LazyLock<Mutex<Overlay>> = LazyLock::new(|| Mutex::new(Overlay::default()));
@@ -153,7 +144,7 @@ pub(super) fn request_redraw(_app: &AppHandle) {
   redraw();
 }
 
-/// Gives one host window its overlay child and swap chain. Owning thread only.
+/// Gives one host window its overlay child and surface. Owning thread only.
 pub(super) fn attach(window: &WebviewWindow, display: u32) -> Result<(), String> {
   let _ = APP.set(window.app_handle().clone());
   let host = host_window(window).ok_or_else(|| "The annotate host has no window".to_owned())?;
@@ -165,13 +156,13 @@ pub(super) fn attach(window: &WebviewWindow, display: u32) -> Result<(), String>
     Some(renderer) => renderer,
     None => overlay.renderer.insert(Renderer::new()?),
   };
-  let surface = Surface::new(renderer.device(), host, display)?;
+  let surface = Surface::new(renderer.gpu(), host, display)?;
   overlay.surfaces.push(surface);
   Ok(())
 }
 
-/// Takes one host window's overlay child away, and the device with it once the
-/// last host is gone. Owning thread only.
+/// Takes one host window's overlay child away, and the renderer with it once
+/// the last host is gone. Owning thread only.
 pub(super) fn detach(window: &WebviewWindow) {
   let Some(host) = host_window(window) else {
     return;

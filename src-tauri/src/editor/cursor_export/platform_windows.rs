@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Windows final-video composition. Media Foundation decodes into the same
-//! D3D11 device used by the live preview, the preview shader draws offscreen,
-//! and the hardware H.264 transform consumes that texture directly.
+//! Windows final-video composition. Media Foundation decodes on the
+//! Direct3D 11 layer over the shared wgpu device, the preview shader draws
+//! offscreen in wgpu, and the hardware H.264 transform consumes the copy.
 
 #[path = "platform_windows/render.rs"]
 mod render;

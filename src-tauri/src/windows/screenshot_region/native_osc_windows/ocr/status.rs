@@ -7,7 +7,7 @@ impl Chrome {
   #[allow(clippy::too_many_arguments)]
   pub(super) fn add_status(
     &mut self,
-    device: &ID3D11Device,
+    device: &Gpu,
     out: &mut Vec<Vertex>,
     segments: &mut Vec<Segment>,
     view: Size,
@@ -72,7 +72,7 @@ impl Chrome {
   #[allow(clippy::too_many_arguments)]
   pub(super) fn add_cancel(
     &mut self,
-    device: &ID3D11Device,
+    device: &Gpu,
     out: &mut Vec<Vertex>,
     segments: &mut Vec<Segment>,
     view: Size,

@@ -13,18 +13,11 @@ impl Surface {
     self.drawables_released = true;
     self.vertex_buffer = None;
     self.vertex_capacity = 0;
+    self.constants_buffer = None;
+    self.constants_capacity = 0;
     self.vertices.clear();
     self.vertices.shrink_to_fit();
-
-    let context = self.gpu.context();
-    unsafe {
-      context.IASetVertexBuffers(0, 1, Some(&None), Some(&0), Some(&0));
-      context.PSSetShaderResources(0, Some(&[None, None, None, None, None]));
-      context.OMSetRenderTargets(None, None);
-    }
-    if let Err(error) = self.chain.resize((2, 2)) {
-      eprintln!("The Windows region OSC could not release swap-chain buffers: {error}");
-    }
+    self.chain.resize(self.gpu.device(), (2, 2));
   }
 
   pub(super) fn submit(
@@ -34,149 +27,138 @@ impl Surface {
     constants: &RenderConstants,
     size: (u32, u32),
   ) -> Result<(), String> {
-    self.chain.resize(size)?;
-    self.write_vertices(vertices)?;
     let gpu = Arc::clone(&self.gpu);
-    let constants_resource: ID3D11Resource = gpu.constants.cast().map_err(|e| e.to_string())?;
-    let target = self.chain.back_buffer_view(gpu.device())?;
+    let shared = gpu.device();
+    self.chain.resize(shared, size);
+    let Frame::Ready(frame) = self.chain.acquire(shared)? else {
+      return Ok(());
+    };
+    self.write_vertices(vertices);
+    let stride = constants_stride(&shared.device);
+    self.write_constants(segments, constants, stride);
     let magnifier = self
       .magnifier_source
       .as_ref()
-      .map_or_else(|| gpu.placeholder.clone(), |source| source.view.clone());
+      .map_or(&gpu.placeholder, |source| &source.view);
     let snapshot = self
       .snapshot
       .as_ref()
-      .map_or_else(|| gpu.placeholder.clone(), |source| source.view.clone());
+      .map_or(&gpu.placeholder, |source| &source.view);
     // macOS puts a non-composited OCR snapshot in an opaque CALayer beneath
     // its transparent Metal layer. Windows folds both into this target, so
-    // every presented snapshot-not only Ruler's composited one-must retain
+    // every presented snapshot - not only Ruler's composited one - must keep
     // opaque destination alpha as translucent shading is drawn over it.
-    let blend = if opaque_snapshot_target(self.snapshot_presented, self.snapshot.is_some()) {
-      &gpu.opaque_blend
+    let pipeline = if opaque_snapshot_target(self.snapshot_presented, self.snapshot.is_some()) {
+      &gpu.opaque_pipeline
     } else {
-      &gpu.blend
+      &gpu.pipeline
     };
-    let context = gpu.context();
-    unsafe {
-      // Flip-discard back buffers are undefined after a present.
-      context.ClearRenderTargetView(&target, &[0.0; 4]);
-      context.OMSetRenderTargets(Some(&[Some(target)]), None);
-      context.OMSetBlendState(blend, Some(&[0.0; 4]), 0xffff_ffff);
-      context.RSSetViewports(Some(&[D3D11_VIEWPORT {
-        Width: size.0 as f32,
-        Height: size.1 as f32,
-        MaxDepth: 1.0,
-        ..Default::default()
-      }]));
-      context.RSSetState(&gpu.rasterizer);
-      context.IASetInputLayout(&gpu.layout);
-      context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-      let stride = size_of::<Vertex>() as u32;
-      let offset = 0_u32;
-      context.IASetVertexBuffers(
-        0,
-        1,
-        Some(&self.vertex_buffer.clone()),
-        Some(&stride),
-        Some(&offset),
-      );
-      context.VSSetShader(&gpu.vertex_shader, None);
-      context.PSSetShader(&gpu.pixel_shader, None);
-      context.PSSetConstantBuffers(0, Some(&[Some(gpu.constants.clone())]));
-      context.PSSetSamplers(
-        0,
-        Some(&[
-          Some(gpu.linear_sampler.clone()),
-          Some(gpu.point_sampler.clone()),
-        ]),
-      );
-      // One draw call per constant-buffer state. The base scene is a single
-      // segment; each folded-in control adds one because its fill, foreground
-      // and label texture are its own.
-      for segment in segments {
-        if segment.count == 0 {
-          continue;
+    let target = frame.texture.create_view(&Default::default());
+    let mut encoder = shared
+      .device
+      .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("Screenwide region OSC frame"),
+      });
+    {
+      let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("Screenwide region OSC pass"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+          view: &target,
+          depth_slice: None,
+          resolve_target: None,
+          // Flip-model back buffers are undefined after a present.
+          ops: wgpu::Operations {
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+            store: wgpu::StoreOp::Store,
+          },
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+      });
+      if let (Some(vertex_buffer), Some(constants_buffer)) =
+        (self.vertex_buffer.as_ref(), self.constants_buffer.as_ref())
+      {
+        pass.set_pipeline(pipeline);
+        pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+        // One draw call per constants block. The base scene is a single
+        // segment; each folded-in control adds one because its fill,
+        // foreground and label texture are its own.
+        for (index, segment) in segments.iter().enumerate() {
+          if segment.count == 0 {
+            continue;
+          }
+          let label = segment.label.as_ref().unwrap_or(&gpu.placeholder);
+          let secondary = segment.secondary.as_ref().unwrap_or(&gpu.placeholder);
+          let bindings = gpu.bindings(constants_buffer, label, secondary, snapshot, magnifier);
+          pass.set_bind_group(0, &bindings, &[(index * stride) as u32]);
+          pass.draw(segment.start..segment.start + segment.count, 0..1);
         }
-        let mut frame = *constants;
-        frame.action_fills = segment.action_fills;
-        frame.chrome = segment.chrome;
-        frame.chrome_outline = segment.chrome_outline;
-        context.UpdateSubresource(
-          &constants_resource,
-          0,
-          None,
-          (&raw const frame).cast::<c_void>(),
-          0,
-          0,
-        );
-        let label = segment
-          .label
-          .clone()
-          .unwrap_or_else(|| gpu.placeholder.clone());
-        let secondary = segment
-          .secondary
-          .clone()
-          .unwrap_or_else(|| gpu.placeholder.clone());
-        context.PSSetShaderResources(
-          0,
-          Some(&[
-            Some(label),
-            Some(secondary),
-            Some(gpu.icons.clone()),
-            Some(snapshot.clone()),
-            Some(magnifier.clone()),
-          ]),
-        );
-        context.Draw(segment.count, segment.start);
       }
-      context.PSSetShaderResources(0, Some(&[None, None, None, None, None]));
-      context.OMSetRenderTargets(None, None);
     }
-    self.chain.present()?;
+    shared.queue.submit([encoder.finish()]);
+    shared.queue.present(frame);
     Ok(())
   }
 
-  pub(super) fn write_vertices(&mut self, vertices: &[Vertex]) -> Result<(), String> {
+  fn write_vertices(&mut self, vertices: &[Vertex]) {
     if vertices.is_empty() {
-      return Ok(());
+      return;
     }
+    let device = &self.gpu.device().device;
     if self.vertex_buffer.is_none() || self.vertex_capacity < vertices.len() {
       let capacity = vertices.len().next_power_of_two().max(512);
-      let mut buffer = None;
-      unsafe {
-        self.gpu.device().CreateBuffer(
-          &D3D11_BUFFER_DESC {
-            ByteWidth: (capacity * size_of::<Vertex>()) as u32,
-            Usage: D3D11_USAGE_DYNAMIC,
-            BindFlags: D3D11_BIND_VERTEX_BUFFER.0 as u32,
-            CPUAccessFlags: D3D11_CPU_ACCESS_WRITE.0 as u32,
-            ..Default::default()
-          },
-          None,
-          Some(&mut buffer),
-        )
-      }
-      .map_err(|error| format!("The Windows region OSC vertex buffer failed: {error}"))?;
-      self.vertex_buffer = buffer;
+      self.vertex_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("Screenwide region OSC vertices"),
+        size: (capacity * size_of::<Vertex>()) as u64,
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+      }));
       self.vertex_capacity = capacity;
     }
-    let buffer = self
-      .vertex_buffer
-      .clone()
-      .ok_or_else(|| "D3D11 created no region OSC vertex buffer".to_owned())?;
-    let resource: ID3D11Resource = buffer.cast().map_err(|error| error.to_string())?;
-    let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
-    let context = self.gpu.context();
-    unsafe { context.Map(&resource, 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&mut mapped)) }
-      .map_err(|error| error.to_string())?;
-    unsafe {
-      std::ptr::copy_nonoverlapping(
-        vertices.as_ptr(),
-        mapped.pData.cast::<Vertex>(),
-        vertices.len(),
-      );
-      context.Unmap(&resource, 0);
+    if let Some(buffer) = &self.vertex_buffer {
+      self
+        .gpu
+        .device()
+        .queue
+        .write_buffer(buffer, 0, bytemuck::cast_slice(vertices));
     }
-    Ok(())
   }
+
+  /// Every segment's constants differ only in its fills and chrome, so the
+  /// frame's block is copied once per segment at the uniform alignment.
+  fn write_constants(&mut self, segments: &[Segment], constants: &RenderConstants, stride: usize) {
+    if segments.is_empty() {
+      return;
+    }
+    let device = &self.gpu.device().device;
+    if self.constants_buffer.is_none() || self.constants_capacity < segments.len() {
+      let capacity = segments.len().next_power_of_two().max(8);
+      self.constants_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("Screenwide region OSC constants"),
+        size: (capacity * stride) as u64,
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+      }));
+      self.constants_capacity = capacity;
+    }
+    let mut bytes = vec![0_u8; segments.len() * stride];
+    for (block, segment) in bytes.chunks_exact_mut(stride).zip(segments) {
+      let mut frame = *constants;
+      frame.action_fills = segment.action_fills;
+      frame.chrome = segment.chrome;
+      frame.chrome_outline = segment.chrome_outline;
+      block[..size_of::<RenderConstants>()].copy_from_slice(bytemuck::bytes_of(&frame));
+    }
+    if let Some(buffer) = &self.constants_buffer {
+      self.gpu.device().queue.write_buffer(buffer, 0, &bytes);
+    }
+  }
+}
+
+/// `RenderConstants` rounded up to the device's dynamic-offset alignment.
+fn constants_stride(device: &wgpu::Device) -> usize {
+  let alignment = device.limits().min_uniform_buffer_offset_alignment as usize;
+  size_of::<RenderConstants>().div_ceil(alignment) * alignment
 }

@@ -56,10 +56,9 @@ fn the_picker_offers_the_generators_this_build_has() {
   assert_eq!(picker_generators(), rust);
 }
 
-/// Every generator source, in the three shading languages. The ports are
-/// meant to stay line for line, so a scan over one has to be a scan over
-/// all three.
-fn generator_sources() -> [(&'static str, &'static str); 6] {
+/// Every generator source, in both shading languages. The ports are meant to
+/// stay line for line, so a scan over one has to be a scan over both.
+fn generator_sources() -> [(&'static str, &'static str); 5] {
   [
     (
       "mesh_generator_common.wgsl",
@@ -81,15 +80,11 @@ fn generator_sources() -> [(&'static str, &'static str); 6] {
       "gpu_compositor_macos_generators_layered.h",
       include_str!("../../editor/cursor_export/gpu_compositor_macos_generators_layered.h"),
     ),
-    (
-      "generators.hlsl",
-      include_str!("../../editor/preview_platform/surface_windows/shaders/generators.hlsl"),
-    ),
   ]
 }
 
-/// The three ports apply the speed at the same point, in a line that reads
-/// the same but for the language's spelling of a local.
+/// The two ports apply the speed at the same point, in a line that reads the
+/// same but for the language's spelling of a local.
 #[test]
 fn every_port_scales_the_seconds_once_at_the_dispatch() {
   let mut dispatches = Vec::new();
@@ -108,9 +103,8 @@ fn every_port_scales_the_seconds_once_at_the_dispatch() {
     [
       "mesh_generators_layered.wgsl",
       "gpu_compositor_macos_generators_layered.h",
-      "generators.hlsl",
     ],
-    "the speed belongs at the three dispatches, one per port"
+    "the speed belongs at the two dispatches, one per port"
   );
 }
 

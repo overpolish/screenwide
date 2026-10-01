@@ -22,11 +22,7 @@ pub(super) fn frame(
   let bounds = inner
     .gpu
     .compositor
-    .keyboard_visible_bounds(
-      &inner.gpu.device,
-      &overlay,
-      (settings.width, settings.height),
-    )
+    .keyboard_visible_bounds(&overlay, (settings.width, settings.height))
     .ok()??;
   selection.x = bounds[0];
   selection.y = bounds[1];

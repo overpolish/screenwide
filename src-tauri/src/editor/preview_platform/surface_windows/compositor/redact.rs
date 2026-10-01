@@ -12,119 +12,119 @@
 //! box drawn over another averages what the first left, as on macOS. Two
 //! targets take turns being that copy.
 
+use super::redact_pipeline::{bind_group_layout, draw, pipeline, records_buffer, RECORD_STRIDE};
 use super::redact_targets::{target, Scratch, Target};
 use super::*;
 use crate::editor::annotations::redact::records::{
   RedactRecord, RedactRecords, REDACT_BLUR, REDACT_MOSAIC, REDACT_SPOTLIGHT,
 };
-use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT, DXGI_FORMAT_R16G16B16A16_FLOAT};
 
-const VERTEX_SHADER: &[u8] =
-  include_bytes!(concat!(env!("OUT_DIR"), "/preview_redact_paint_vs.cso"));
-const CELLS_SHADER: &[u8] =
-  include_bytes!(concat!(env!("OUT_DIR"), "/preview_redact_cells_ps.cso"));
-const ROWS_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/preview_redact_rows_ps.cso"));
-const PAINT_SHADER: &[u8] =
-  include_bytes!(concat!(env!("OUT_DIR"), "/preview_redact_paint_ps.cso"));
+const CELLS_SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/redact_cells.wgsl"));
+const ROWS_SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/redact_rows.wgsl"));
+const PAINT_SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/redact_paint.wgsl"));
 
 /// The two copies redactions take turns drawing over, sized and formatted
 /// like the source, and the last still they redacted.
 struct Work {
   size: (u32, u32),
-  format: DXGI_FORMAT,
+  format: wgpu::TextureFormat,
   copies: [Target; 2],
   /// The retained source the last pass redacted, what it redacted, and the
   /// copy it left the result in. A still redrawn for its chrome keeps it.
-  kept: Option<(ID3D11Texture2D, RedactRecords, usize)>,
+  kept: Option<(wgpu::Texture, RedactRecords, usize)>,
 }
 
 pub(crate) struct Redactor {
-  vertex_shader: ID3D11VertexShader,
-  cells_shader: ID3D11PixelShader,
-  rows_shader: ID3D11PixelShader,
-  paint_shader: ID3D11PixelShader,
-  constants: ID3D11Buffer,
-  zones: StructuredBuffer,
+  layout: wgpu::BindGroupLayout,
+  cells_pipeline: wgpu::RenderPipeline,
+  rows_pipeline: wgpu::RenderPipeline,
+  /// The paint pass for a video frame's BGRA copies and a screenshot's RGBA.
+  paint_pipelines: [(wgpu::TextureFormat, wgpu::RenderPipeline); 2],
+  records: std::sync::Mutex<wgpu::Buffer>,
+  zones: GpuBuffer,
   work: std::sync::Mutex<Option<Work>>,
   /// The cells a classically pixelated box averages, one pixel a cell.
   cells: Scratch,
   /// A blurred box's rows, blurred along and premultiplied, one pixel a pixel
   /// of the box.
   rows: Scratch,
+  /// Bound for the cells or rows a pass does not read.
+  unused: wgpu::TextureView,
 }
 
 impl Redactor {
-  pub(super) fn new(device: &ID3D11Device) -> Result<Self, String> {
-    let (mut vertex_shader, mut cells_shader, mut rows_shader, mut paint_shader) =
-      (None, None, None, None);
-    unsafe {
-      device
-        .CreateVertexShader(VERTEX_SHADER, None, Some(&mut vertex_shader))
-        .and_then(|()| device.CreatePixelShader(CELLS_SHADER, None, Some(&mut cells_shader)))
-        .and_then(|()| device.CreatePixelShader(ROWS_SHADER, None, Some(&mut rows_shader)))
-        .and_then(|()| device.CreatePixelShader(PAINT_SHADER, None, Some(&mut paint_shader)))
-    }
-    .map_err(|error| format!("The redaction shaders could not be created: {error}"))?;
-    let mut constants = None;
-    unsafe {
-      device.CreateBuffer(
-        &D3D11_BUFFER_DESC {
-          ByteWidth: size_of::<RedactRecord>() as u32,
-          Usage: D3D11_USAGE_DEFAULT,
-          BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
-          ..Default::default()
-        },
-        None,
-        Some(&mut constants),
-      )
-    }
-    .map_err(|error| error.to_string())?;
-    Ok(Self {
-      vertex_shader: vertex_shader.ok_or("D3D11 created no redaction vertex shader")?,
-      cells_shader: cells_shader.ok_or("D3D11 created no redaction cells shader")?,
-      rows_shader: rows_shader.ok_or("D3D11 created no redaction rows shader")?,
-      paint_shader: paint_shader.ok_or("D3D11 created no redaction paint shader")?,
-      constants: constants.ok_or("D3D11 created no redaction constant buffer")?,
-      zones: StructuredBuffer::new(device, size_of::<[f32; 2]>(), "redaction zones")?,
+  pub(super) fn new(gpu: &Gpu) -> Self {
+    let device = &gpu.device;
+    let layout = bind_group_layout(device);
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+      label: Some("Screenwide redaction layout"),
+      bind_group_layouts: &[Some(&layout)],
+      immediate_size: 0,
+    });
+    let pipeline = |source, format| pipeline(device, &pipeline_layout, source, format);
+    let cells = Scratch::new(wgpu::TextureFormat::Rgba8Unorm);
+    let rows = Scratch::new(wgpu::TextureFormat::Rgba16Float);
+    let paint = |format| (format, pipeline(PAINT_SHADER, format));
+    Self {
+      cells_pipeline: pipeline(CELLS_SHADER, cells.format()),
+      rows_pipeline: pipeline(ROWS_SHADER, rows.format()),
+      paint_pipelines: [
+        paint(wgpu::TextureFormat::Bgra8Unorm),
+        paint(wgpu::TextureFormat::Rgba8Unorm),
+      ],
+      layout,
+      records: std::sync::Mutex::new(records_buffer(gpu, 8)),
+      zones: GpuBuffer::new(gpu, "Screenwide redaction zones"),
       work: std::sync::Mutex::new(None),
-      cells: Scratch::default(),
-      rows: Scratch::default(),
-    })
+      cells,
+      rows,
+      unused: gpu
+        .texture_with_pixels(
+          "Screenwide redaction placeholder",
+          (1, 1, 1),
+          wgpu::TextureFormat::Rgba8Unorm,
+          &[0; 4],
+        )
+        .create_view(&Default::default()),
+    }
   }
 
-  /// The view the canvas samples `source` through: a redacted copy where
-  /// `redactions` cover anything, else `None` and the source's own.
-  /// `retained` says the source's pixels never change under it, which lets
-  /// a still redrawn with the same redactions reuse the copy it left.
+  /// Records the passes that redact `source` into `encoder`, and answers the
+  /// view the canvas samples it through: a redacted copy where `redactions`
+  /// cover anything, else `None` and the source's own. `retained` says the
+  /// source's pixels never change under it, which lets a still redrawn with
+  /// the same redactions reuse the copy it left.
   pub(super) fn apply(
     &self,
-    device: &ID3D11Device,
-    context: &ID3D11DeviceContext,
+    gpu: &Gpu,
+    encoder: &mut wgpu::CommandEncoder,
     source: &SourceTexture,
     redactions: &RedactRecords,
     retained: bool,
-  ) -> Result<Option<ID3D11ShaderResourceView>, String> {
+  ) -> Result<Option<wgpu::TextureView>, String> {
     if redactions.records.is_empty() {
       return Ok(None);
     }
-    let mut description = D3D11_TEXTURE2D_DESC::default();
-    unsafe { source.texture.GetDesc(&mut description) };
-    let size = (description.Width, description.Height);
+    let format = source.texture.format();
+    let paint = &self
+      .paint_pipelines
+      .iter()
+      .find(|(held, _)| *held == format)
+      .ok_or_else(|| format!("A {format:?} source cannot be redacted"))?
+      .1;
+    let size = source.size;
     let mut work = self
       .work
       .lock()
       .map_err(|_| "The redaction copies are poisoned".to_owned())?;
     if work
       .as_ref()
-      .is_none_or(|work| work.size != size || work.format != description.Format)
+      .is_none_or(|work| work.size != size || work.format != format)
     {
       *work = Some(Work {
         size,
-        format: description.Format,
-        copies: [
-          target(device, size, description.Format)?,
-          target(device, size, description.Format)?,
-        ],
+        format,
+        copies: [target(gpu, size, format), target(gpu, size, format)],
         kept: None,
       });
     }
@@ -136,132 +136,137 @@ impl Redactor {
     }
     // Whatever is kept is about to be drawn over.
     work.kept = None;
-    let zones = self.zones.write(device, context, &redactions.zones)?;
-    let source_resource: ID3D11Resource =
-      source.texture.cast().map_err(|error| error.to_string())?;
-    let mut last = (source_resource, source.view.clone());
+    let records = self.write_records(gpu, &redactions.records)?;
+    let zones = self.zones.write(gpu, &redactions.zones)?;
+    let mut last = (&source.texture, &source.view);
     let mut index = 0;
     for (pass, record) in redactions.records.iter().enumerate() {
       index = pass % 2;
       let copy = &work.copies[index];
-      let copy_resource: ID3D11Resource = copy.texture.cast().map_err(|error| error.to_string())?;
-      unsafe {
-        context.CopyResource(&copy_resource, &last.0);
-        context.UpdateSubresource(
-          &self
-            .constants
-            .cast::<ID3D11Resource>()
-            .map_err(|error| error.to_string())?,
-          0,
-          None,
-          std::ptr::from_ref(record).cast::<c_void>(),
-          0,
-          0,
-        );
-      }
-      let views = self.prepare(device, context, record, &last.1)?;
-      self.paint(context, copy, record, &last.1, &zones, views);
-      last = (copy_resource, copy.view.clone());
+      encoder.copy_texture_to_texture(
+        last.0.as_image_copy(),
+        copy.texture.as_image_copy(),
+        copy.texture.size(),
+      );
+      let offset = (pass as u64 * RECORD_STRIDE) as u32;
+      let [cells, rows] = self.prepare(gpu, encoder, record, &records, offset, &zones, last.1)?;
+      let bindings = self.bind_group(gpu, &records, last.1, &zones, &cells, &rows);
+      let [x0, y0, x1, y1] = record.bounds;
+      draw(
+        encoder,
+        &copy.view,
+        [x0 as f32, y0 as f32, (x1 - x0) as f32, (y1 - y0) as f32],
+        paint,
+        &bindings,
+        offset,
+      );
+      last = (&copy.texture, &copy.view);
     }
     if retained {
       work.kept = Some((source.texture.clone(), redactions.clone(), index));
     }
-    Ok(Some(last.1))
+    Ok(Some(last.1.clone()))
   }
 
-  /// Runs the pass `record` needs before it is painted - a classic
+  /// Records the pass `record` needs before it is painted - a classic
   /// pixelation's cells or a blur's rows - from `from`, and answers the cells
   /// and rows the paint pass reads.
+  #[allow(clippy::too_many_arguments)]
   fn prepare(
     &self,
-    device: &ID3D11Device,
-    context: &ID3D11DeviceContext,
+    gpu: &Gpu,
+    encoder: &mut wgpu::CommandEncoder,
     record: &RedactRecord,
-    from: &ID3D11ShaderResourceView,
-  ) -> Result<[Option<ID3D11ShaderResourceView>; 2], String> {
+    records: &wgpu::Buffer,
+    offset: u32,
+    zones: &wgpu::Buffer,
+    from: &wgpu::TextureView,
+  ) -> Result<[wgpu::TextureView; 2], String> {
     let [x0, y0, x1, y1] = record.bounds;
-    let (scratch, size, format, shader, slot) = match record.mode {
+    let (scratch, size, pipeline) = match record.mode {
       REDACT_MOSAIC => (
         &self.cells,
         (record.grid[0], record.grid[1]),
-        DXGI_FORMAT_R8G8B8A8_UNORM,
-        &self.cells_shader,
-        0,
+        &self.cells_pipeline,
       ),
-      REDACT_BLUR | REDACT_SPOTLIGHT => (
-        &self.rows,
-        (x1 - x0, y1 - y0),
-        DXGI_FORMAT_R16G16B16A16_FLOAT,
-        &self.rows_shader,
-        1,
-      ),
-      _ => return Ok([None, None]),
+      REDACT_BLUR | REDACT_SPOTLIGHT => (&self.rows, (x1 - x0, y1 - y0), &self.rows_pipeline),
+      _ => return Ok([self.unused.clone(), self.unused.clone()]),
     };
-    let view = scratch.draw(device, size, format, |target| {
-      self.draw(
-        context,
-        &target.target,
-        [0.0, 0.0, size.0 as f32, size.1 as f32],
-        shader,
-        [Some(from.clone()), None, None, None],
-      );
-    })?;
-    let mut views = [None, None];
-    views[slot] = Some(view);
-    Ok(views)
-  }
-
-  /// Paints `record`'s box over `copy`, reading what the last pass left
-  /// from `from`, and the cells and rows it averaged or blurred.
-  fn paint(
-    &self,
-    context: &ID3D11DeviceContext,
-    copy: &Target,
-    record: &RedactRecord,
-    from: &ID3D11ShaderResourceView,
-    zones: &ID3D11ShaderResourceView,
-    [cells, rows]: [Option<ID3D11ShaderResourceView>; 2],
-  ) {
-    let [x0, y0, x1, y1] = record.bounds;
-    self.draw(
-      context,
-      &copy.target,
-      [x0 as f32, y0 as f32, (x1 - x0) as f32, (y1 - y0) as f32],
-      &self.paint_shader,
-      [Some(from.clone()), Some(zones.clone()), cells, rows],
+    let view = scratch.view(gpu, size)?;
+    let bindings = self.bind_group(gpu, records, from, zones, &self.unused, &self.unused);
+    draw(
+      encoder,
+      &view,
+      [0.0, 0.0, size.0 as f32, size.1 as f32],
+      pipeline,
+      &bindings,
+      offset,
     );
+    Ok(if record.mode == REDACT_MOSAIC {
+      [view, self.unused.clone()]
+    } else {
+      [self.unused.clone(), view]
+    })
   }
 
-  /// One triangle through `shader` into `target`, over the viewport
-  /// `[x, y, width, height]`, then everything it bound let go again so the
-  /// next pass can copy into or read from what this one wrote.
-  fn draw(
-    &self,
-    context: &ID3D11DeviceContext,
-    target: &ID3D11RenderTargetView,
-    viewport: [f32; 4],
-    shader: &ID3D11PixelShader,
-    views: [Option<ID3D11ShaderResourceView>; 4],
-  ) {
-    unsafe {
-      context.OMSetRenderTargets(Some(&[Some(target.clone())]), None);
-      context.OMSetBlendState(None::<&ID3D11BlendState>, None, u32::MAX);
-      context.RSSetViewports(Some(&[D3D11_VIEWPORT {
-        TopLeftX: viewport[0],
-        TopLeftY: viewport[1],
-        Width: viewport[2],
-        Height: viewport[3],
-        MinDepth: 0.0,
-        MaxDepth: 1.0,
-      }]));
-      context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-      context.VSSetShader(&self.vertex_shader, None);
-      context.PSSetShader(shader, None);
-      context.PSSetConstantBuffers(0, Some(&[Some(self.constants.clone())]));
-      context.PSSetShaderResources(0, Some(&views));
-      context.Draw(3, 0);
-      context.PSSetShaderResources(0, Some(&[None, None, None, None]));
-      context.OMSetRenderTargets(None, None);
+  /// Writes every record at its own stride, growing the buffer first when
+  /// they do not fit.
+  fn write_records(&self, gpu: &Gpu, records: &[RedactRecord]) -> Result<wgpu::Buffer, String> {
+    let mut buffer = self
+      .records
+      .lock()
+      .map_err(|_| "The redaction records are poisoned".to_owned())?;
+    let needed = records.len() as u64 * RECORD_STRIDE;
+    if needed > buffer.size() {
+      *buffer = records_buffer(gpu, records.len().next_power_of_two() as u64);
     }
+    let mut bytes = vec![0_u8; needed as usize];
+    for (index, record) in records.iter().enumerate() {
+      let start = index * RECORD_STRIDE as usize;
+      bytes[start..start + size_of::<RedactRecord>()].copy_from_slice(bytemuck::bytes_of(record));
+    }
+    gpu.queue.write_buffer(&buffer, 0, &bytes);
+    Ok(buffer.clone())
+  }
+
+  fn bind_group(
+    &self,
+    gpu: &Gpu,
+    records: &wgpu::Buffer,
+    source: &wgpu::TextureView,
+    zones: &wgpu::Buffer,
+    cells: &wgpu::TextureView,
+    rows: &wgpu::TextureView,
+  ) -> wgpu::BindGroup {
+    gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+      label: Some("Screenwide redaction bindings"),
+      layout: &self.layout,
+      entries: &[
+        wgpu::BindGroupEntry {
+          binding: 0,
+          resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+            buffer: records,
+            offset: 0,
+            size: wgpu::BufferSize::new(size_of::<RedactRecord>() as u64),
+          }),
+        },
+        wgpu::BindGroupEntry {
+          binding: 1,
+          resource: wgpu::BindingResource::TextureView(source),
+        },
+        wgpu::BindGroupEntry {
+          binding: 2,
+          resource: zones.as_entire_binding(),
+        },
+        wgpu::BindGroupEntry {
+          binding: 3,
+          resource: wgpu::BindingResource::TextureView(cells),
+        },
+        wgpu::BindGroupEntry {
+          binding: 4,
+          resource: wgpu::BindingResource::TextureView(rows),
+        },
+      ],
+    })
   }
 }

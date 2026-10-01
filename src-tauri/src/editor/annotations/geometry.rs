@@ -20,8 +20,8 @@ pub(crate) struct ArrowTriangle {
   pub(crate) c: [f32; 2],
 }
 
-/// One prepared arrow, matching C's `AnnotationArrowGeometry` and the HLSL
-/// structured buffer element byte for byte.
+/// One prepared arrow, matching C's `AnnotationArrowGeometry` and the WGSL
+/// storage buffer element byte for byte.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) struct ArrowGeometry {

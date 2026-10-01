@@ -4,8 +4,8 @@
 //! Region OSC surfaces. The anchor display draws into a
 //! `WS_EX_NOREDIRECTIONBITMAP` child of the Tauri window; every other display
 //! gets a `WS_POPUP` peer, the Win32 twin of the macOS `NSPanel` peers. All of
-//! them share one [`Gpu`] - one D3D11 device, one DirectComposition device and
-//! one pipeline - and own only their window, target, visual and swap chain.
+//! them share one [`Gpu`] - the app's wgpu device and one pipeline - and own
+//! only their window, composition tree and swap chain.
 //!
 //! Port of `screenshot_region_osc_macos.m`'s attach and master frame draw
 //! (`:39-174`), `+desktop.m` and `+snapshot.m`, minus OCR and ruler.
@@ -18,8 +18,6 @@ mod creation;
 mod geometry;
 #[path = "surface/gpu.rs"]
 mod gpu;
-#[path = "surface/pipeline.rs"]
-mod pipeline;
 #[path = "surface/render.rs"]
 mod render;
 #[path = "surface/submit.rs"]
@@ -28,9 +26,9 @@ mod submit;
 mod textures;
 #[path = "surface/window.rs"]
 mod window;
+use crate::osc::gpu::windows::{bind_group_layout, pipeline, sampler, shader_module};
 pub(crate) use crate::windows::overlay_surface::set_capture_affinity;
-use crate::windows::overlay_surface::{self, disable_transitions};
-use pipeline::{blend_state, input_elements, sampler};
+use crate::windows::overlay_surface::{self, disable_transitions, Frame, GpuSurface};
 use textures::upload_icons;
 pub(super) use textures::upload_rgba;
 use window::light_mode;
@@ -40,30 +38,10 @@ use std::ffi::c_void;
 use std::sync::{Arc, OnceLock};
 
 use windows::{
-  core::{s, w, Interface, PCWSTR},
+  core::{w, PCWSTR},
   Win32::{
     Foundation::{COLORREF, ERROR_SUCCESS, HINSTANCE, HWND, POINT, RECT},
-    Graphics::{
-      Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-      Direct3D11::{
-        ID3D11BlendState, ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11InputLayout,
-        ID3D11PixelShader, ID3D11RasterizerState, ID3D11Resource, ID3D11SamplerState,
-        ID3D11ShaderResourceView, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER,
-        D3D11_BIND_SHADER_RESOURCE, D3D11_BIND_VERTEX_BUFFER, D3D11_BLEND_DESC,
-        D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD, D3D11_BLEND_SRC_ALPHA,
-        D3D11_BUFFER_DESC, D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_CPU_ACCESS_WRITE, D3D11_CULL_NONE,
-        D3D11_FILL_SOLID, D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_FILTER_MIN_MAG_MIP_POINT,
-        D3D11_INPUT_ELEMENT_DESC, D3D11_INPUT_PER_VERTEX_DATA, D3D11_MAPPED_SUBRESOURCE,
-        D3D11_MAP_WRITE_DISCARD, D3D11_RASTERIZER_DESC, D3D11_RENDER_TARGET_BLEND_DESC,
-        D3D11_SAMPLER_DESC, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC,
-        D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC, D3D11_VIEWPORT,
-      },
-      Dxgi::Common::{
-        DXGI_FORMAT_R32G32_FLOAT, DXGI_FORMAT_R32_UINT, DXGI_FORMAT_R8G8B8A8_UNORM,
-        DXGI_FORMAT_R8_UNORM, DXGI_SAMPLE_DESC,
-      },
-      Gdi::ScreenToClient,
-    },
+    Graphics::Gdi::ScreenToClient,
     System::{
       LibraryLoader::GetModuleHandleW,
       Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD},
@@ -84,7 +62,7 @@ use windows::{
 
 use super::input;
 use super::ocr::{self, Segment};
-use super::renderer::{self, RenderConstants, Vertex, PIXEL_SHADER, VERTEX_SHADER};
+use super::renderer::{self, RenderConstants, Vertex};
 use super::ruler;
 use crate::osc::geometry::{Point, Rect, Size};
 
@@ -103,45 +81,37 @@ pub(crate) struct MagnifierAnchor {
 }
 
 struct Texture {
-  view: ID3D11ShaderResourceView,
+  view: wgpu::TextureView,
   size: (u32, u32),
 }
 
 /// Everything shared by the anchor surface and its peers, so a peer costs one
 /// window plus one swap chain. macOS shared the `MTLDevice` the same way.
 pub(crate) struct Gpu {
-  shared: Arc<overlay_surface::Device>,
-  vertex_shader: ID3D11VertexShader,
-  pixel_shader: ID3D11PixelShader,
-  layout: ID3D11InputLayout,
-  constants: ID3D11Buffer,
-  rasterizer: ID3D11RasterizerState,
-  blend: ID3D11BlendState,
+  shared: &'static crate::gpu::Gpu,
+  layout: wgpu::BindGroupLayout,
+  pipeline: wgpu::RenderPipeline,
   /// The frozen-desktop variant: `srcA = ONE`, preserving opaque target alpha
   /// while translucent chrome is drawn above the snapshot.
-  opaque_blend: ID3D11BlendState,
-  linear_sampler: ID3D11SamplerState,
-  point_sampler: ID3D11SamplerState,
-  placeholder: ID3D11ShaderResourceView,
-  /// The shared control-icon atlas, bound at t2 for every frame.
-  icons: ID3D11ShaderResourceView,
+  opaque_pipeline: wgpu::RenderPipeline,
+  linear_sampler: wgpu::Sampler,
+  point_sampler: wgpu::Sampler,
+  /// Every texture slot is bound each draw; unused ones read one transparent
+  /// texel.
+  placeholder: wgpu::TextureView,
+  /// The shared control-icon atlas, bound for every frame.
+  icons: wgpu::TextureView,
 }
 
 impl Gpu {
-  pub(super) fn device(&self) -> &ID3D11Device {
-    self.shared.device()
-  }
-
-  fn context(&self) -> &ID3D11DeviceContext {
-    self.shared.context()
+  pub(super) fn device(&self) -> &'static crate::gpu::Gpu {
+    self.shared
   }
 }
 
 // Surfaces are reached through the context registry from the UI thread; the
-// COM interfaces and window handles they own are process-wide tokens guarded
-// by the context mutex, and the device is multithread-protected.
-unsafe impl Send for Gpu {}
-unsafe impl Sync for Gpu {}
+// window handles they own are process-wide tokens guarded by the context
+// mutex.
 unsafe impl Send for Surface {}
 unsafe impl Sync for Surface {}
 
@@ -158,9 +128,12 @@ pub(crate) struct Surface {
   gpu: Arc<Gpu>,
   kind: Kind,
   hwnd: HWND,
-  chain: overlay_surface::CompositionSwapChain,
-  vertex_buffer: Option<ID3D11Buffer>,
+  chain: GpuSurface,
+  vertex_buffer: Option<wgpu::Buffer>,
   vertex_capacity: usize,
+  /// One constants block per draw call, read at a dynamic offset.
+  constants_buffer: Option<wgpu::Buffer>,
+  constants_capacity: usize,
   vertices: Vec<Vertex>,
   magnifier_source: Option<Texture>,
   snapshot: Option<Texture>,
@@ -261,3 +234,7 @@ const fn peer_pointer_style(style: isize, passthrough: bool) -> isize {
 #[cfg(test)]
 #[path = "surface/tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "surface/render_tests.rs"]
+mod render_tests;

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! CPU rasterisation and D3D11 upload of the keyboard-shortcut artwork strip.
+//! CPU rasterisation and GPU upload of the keyboard-shortcut artwork strip.
 //! Mirrors the macOS Core Graphics rasteriser so both backends feed the same
 //! shader geometry: one 20pt-tall strip of rounded key caps, drawn once per
 //! appearance/density/shortcut and animated entirely on the GPU afterwards.
@@ -18,26 +18,18 @@ mod tests;
 use labels::{key_label, prepared_shortcut};
 pub(super) use rasterize::rasterize_keyboard;
 
-use std::{collections::HashMap, ffi::c_void, sync::Mutex};
+use std::{collections::HashMap, sync::Mutex};
 
 use windows::{
-  core::{Interface, PCWSTR},
+  core::PCWSTR,
   Win32::{
     Foundation::COLORREF,
-    Graphics::{
-      Direct3D11::{
-        ID3D11Device, ID3D11Resource, ID3D11ShaderResourceView, ID3D11Texture2D,
-        D3D11_BIND_SHADER_RESOURCE, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC,
-        D3D11_USAGE_IMMUTABLE,
-      },
-      Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC},
-      Gdi::{
-        CreateCompatibleDC, CreateDIBSection, CreateFontW, DeleteDC, DeleteObject,
-        GetTextExtentPoint32W, SelectObject, SetBkMode, SetTextCharacterExtra, SetTextColor,
-        TextOutW, ANTIALIASED_QUALITY, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CLIP_DEFAULT_PRECIS,
-        DEFAULT_CHARSET, DIB_RGB_COLORS, FF_SWISS, FW_NORMAL, OUT_DEFAULT_PRECIS, TRANSPARENT,
-        VARIABLE_PITCH,
-      },
+    Graphics::Gdi::{
+      CreateCompatibleDC, CreateDIBSection, CreateFontW, DeleteDC, DeleteObject,
+      GetTextExtentPoint32W, SelectObject, SetBkMode, SetTextCharacterExtra, SetTextColor,
+      TextOutW, ANTIALIASED_QUALITY, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CLIP_DEFAULT_PRECIS,
+      DEFAULT_CHARSET, DIB_RGB_COLORS, FF_SWISS, FW_NORMAL, OUT_DEFAULT_PRECIS, TRANSPARENT,
+      VARIABLE_PITCH,
     },
   },
 };
@@ -61,8 +53,9 @@ const TEXT_ALPHA: f64 = 0.85;
 const CACHE_ENTRIES: usize = 64;
 const CACHE_BYTES: usize = 64 * 1024 * 1024;
 
+/// The twin of `Keyboard` in `preview.wgsl`.
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct KeyboardConstants {
   pub(super) dimensions: [u32; 4],
   pub(super) animation: [f32; 4],
@@ -96,11 +89,10 @@ pub(super) struct KeyboardRaster {
 }
 
 pub(super) struct KeyboardArtwork {
-  _texture: ID3D11Texture2D,
   bytes: usize,
   keys: Vec<(u32, u32)>,
   size: (u32, u32),
-  pub(super) view: ID3D11ShaderResourceView,
+  pub(super) view: wgpu::TextureView,
 }
 
 #[derive(Default)]

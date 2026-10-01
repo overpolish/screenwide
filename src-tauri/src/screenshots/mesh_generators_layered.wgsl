@@ -243,7 +243,22 @@ fn gen_pixel(
   time: f32,
   speed: f32,
 ) -> vec3<f32> {
-  let shift = gen_seed_shift(seed);
+  return gen_pixel_shifted(generator, pixel, dimensions, palette, gen_seed_shift(seed), time,
+                           speed);
+}
+
+/// `gen_pixel` with the seed's domain shift already resolved. The Windows
+/// preview resolves it on the CPU once per seed, so every draw of a canvas
+/// moves its domain by exactly the same amount whatever the GPU's sine.
+fn gen_pixel_shifted(
+  generator: u32,
+  pixel: vec2<f32>,
+  dimensions: vec2<f32>,
+  palette: GenPalette,
+  shift: vec3<f32>,
+  time: f32,
+  speed: f32,
+) -> vec3<f32> {
   let t = time * speed;
   switch (generator) {
     case 1u: { return gen_silk(pixel, dimensions, palette, shift, t); }

@@ -13,12 +13,6 @@ fn quad_kinds(vertices: &[Vertex]) -> Vec<u32> {
 }
 
 #[test]
-fn shared_osc_shader_is_embedded_as_compiled_bytecode() {
-  assert_eq!(&VERTEX_SHADER[..4], b"DXBC");
-  assert_eq!(&PIXEL_SHADER[..4], b"DXBC");
-}
-
-#[test]
 fn constants_match_the_shader_register_packing() {
   use std::mem::offset_of;
   assert_eq!(size_of::<RenderConstants>(), 432);
@@ -447,7 +441,7 @@ fn magnifier_box_centers_a_ninety_six_point_lens_in_pixels() {
 
   let mut out = Vec::new();
   add_magnifier(&mut out, VIEW, &constants);
-  assert_eq!(quad_kinds(&out), vec![45]);
+  assert_eq!(quad_kinds(&out), vec![49]);
 
   constants.clear_magnifier();
   out.clear();

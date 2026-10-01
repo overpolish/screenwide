@@ -18,7 +18,7 @@ pub(super) fn premultiply(coverage: &[u8], ink: [f32; 3]) -> Vec<u8> {
 }
 
 pub(super) fn build_label(
-  device: &ID3D11Device,
+  device: &Gpu,
   text: &str,
   scale: f64,
   font_size: f64,
@@ -46,7 +46,7 @@ pub(super) fn build_label(
     &premultiply(&coverage, ink),
     pixel_width,
     pixel_height,
-  )?;
+  );
   Some(TextTexture {
     view,
     size: Size {
@@ -57,13 +57,6 @@ pub(super) fn build_label(
   })
 }
 
-pub(super) fn upload(
-  device: &ID3D11Device,
-  rgba: &[u8],
-  width: i32,
-  height: i32,
-) -> Option<ID3D11ShaderResourceView> {
+pub(super) fn upload(device: &Gpu, rgba: &[u8], width: i32, height: i32) -> wgpu::TextureView {
   super::super::surface::upload_rgba(device, rgba, width as u32, height as u32)
-    .inspect_err(|error| eprintln!("The Windows region OSC could not upload text: {error}"))
-    .ok()
 }

@@ -157,7 +157,7 @@ pub(crate) fn prepare_text(
 
 /// How far `point` falls outside a prepared text box, pointer included, in
 /// the space it was prepared in. Negative inside, zero on the edge. The twin
-/// of `annotation_text_distance` in the Metal and HLSL layers.
+/// of `annotation_text_distance` in the Metal and WGSL layers.
 pub(crate) fn text_distance(point: [f32; 2], geometry: &ArrowGeometry) -> f32 {
   let body = rounded_box_distance(point, geometry.a, geometry.b, geometry.rounding);
   if geometry.high <= 0.0 {

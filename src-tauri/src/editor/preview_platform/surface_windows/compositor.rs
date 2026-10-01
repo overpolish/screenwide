@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! One-pass D3D11 preview compositor. Decoded frames remain on the shared GPU;
-//! the CPU only updates this pass's small constant buffer.
+//! One-pass preview compositor on the shared wgpu device. Decoded frames stay
+//! on the GPU: Media Foundation's textures are copied into a texture both
+//! devices open, and the CPU only updates this pass's uniforms and lists.
 
 #[path = "compositor/cursor_artwork.rs"]
 mod cursor_artwork;
@@ -12,6 +13,8 @@ mod draw;
 mod pipeline;
 #[path = "compositor/redact.rs"]
 mod redact;
+#[path = "compositor/redact_pipeline.rs"]
+mod redact_pipeline;
 #[path = "compositor/redact_targets.rs"]
 mod redact_targets;
 #[path = "compositor/source.rs"]
@@ -20,29 +23,13 @@ mod source;
 mod submit;
 use cursor_artwork::native_cursor_pixels;
 
-use std::{ffi::c_void, path::PathBuf};
+use std::path::PathBuf;
 
 use windows::{
-  core::{w, Interface, PCWSTR},
+  core::{w, PCWSTR},
   Win32::Foundation::ERROR_SUCCESS,
   Win32::Graphics::{
-    Direct3D::{D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, D3D_SRV_DIMENSION_BUFFER},
-    Direct3D11::{
-      ID3D11BlendState, ID3D11Buffer, ID3D11Device, ID3D11DeviceContext, ID3D11PixelShader,
-      ID3D11RenderTargetView, ID3D11Resource, ID3D11SamplerState, ID3D11ShaderResourceView,
-      ID3D11Texture2D, ID3D11VertexShader, D3D11_BIND_CONSTANT_BUFFER, D3D11_BIND_SHADER_RESOURCE,
-      D3D11_BLEND_DESC, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD,
-      D3D11_BUFFER_DESC, D3D11_BUFFER_SRV, D3D11_BUFFER_SRV_0, D3D11_BUFFER_SRV_1,
-      D3D11_COLOR_WRITE_ENABLE_ALL, D3D11_CPU_ACCESS_WRITE, D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-      D3D11_MAPPED_SUBRESOURCE, D3D11_MAP_WRITE_DISCARD, D3D11_RENDER_TARGET_BLEND_DESC,
-      D3D11_RESOURCE_MISC_BUFFER_STRUCTURED, D3D11_SAMPLER_DESC, D3D11_SHADER_RESOURCE_VIEW_DESC,
-      D3D11_SHADER_RESOURCE_VIEW_DESC_0, D3D11_SUBRESOURCE_DATA, D3D11_TEXTURE2D_DESC,
-      D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_USAGE_DEFAULT, D3D11_USAGE_DYNAMIC, D3D11_USAGE_IMMUTABLE,
-      D3D11_VIEWPORT,
-    },
-    Dxgi::Common::{
-      DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC,
-    },
+    Direct3D11::ID3D11Texture2D,
     Gdi::{
       CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, SelectObject, BITMAPINFO,
       BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
@@ -64,15 +51,20 @@ use super::keyboard_artwork::{KeyboardArtworkCache, KeyboardConstants};
 use crate::editor::annotations::geometry::{ArrowGeometry, ArrowTriangle};
 use crate::editor::keyboard_effects::KeyboardOverlay;
 use crate::editor::media_preview::BakeGeometry;
+use crate::gpu::{D3d11Layer, Gpu};
 use crate::screenshots::{
   colour_f32, foreground_bounds_f32, generator_palette, mesh_generator, optional_colour_f32,
   output_placement, validate_mesh, ScreenshotOutputSettings,
 };
 
-const VERTEX_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/recording_preview_vs.cso"));
-const PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/recording_preview_ps.cso"));
+const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/preview.wgsl"));
+
+/// Everything the canvas pass composes into and from, as one format.
+pub(super) const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8Unorm;
+
+/// The twin of `Canvas` in `preview.wgsl`; every member is a 16-byte row.
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct Constants {
   output_source: [f32; 4],
   image_rect: [f32; 4],
@@ -111,46 +103,51 @@ struct Constants {
   annotation_options: [u32; 4],
 }
 
-/// The structured-buffer elements the arrow shader reads, and the buffers
+/// The storage-buffer elements the annotation shader reads, and the buffers
 /// that carry them.
 #[path = "compositor/arrows.rs"]
 mod arrows;
 pub(crate) use arrows::{
-  PreparedArrows, PreparedType, PreviewArrow, PreviewSample, StructuredBuffer, MAX_EXPOSURE_SAMPLES,
+  GpuBuffer, PreparedArrows, PreparedType, PreviewArrow, PreviewSample, MAX_EXPOSURE_SAMPLES,
 };
 
 pub(super) struct Compositor {
+  gpu: &'static Gpu,
   background_cache: BackgroundImageCache,
-  /// Prepared arrows, written per draw.
-  annotations: StructuredBuffer,
-  /// Exposure samples for moving annotations, written per draw beside the
-  /// arrows.
-  samples: StructuredBuffer,
-  annotation_points: StructuredBuffer,
-  annotation_text: StructuredBuffer,
-  constants: ID3D11Buffer,
+  /// Prepared annotations, written per draw.
+  annotations: GpuBuffer,
+  /// Exposure samples for moving annotations, written per draw beside them.
+  samples: GpuBuffer,
+  annotation_points: GpuBuffer,
+  annotation_text: GpuBuffer,
+  constants: wgpu::Buffer,
+  keyboard_constants: wgpu::Buffer,
   cursor_hotspots: [[f32; 4]; 8],
-  cursor_view: ID3D11ShaderResourceView,
+  cursor_view: wgpu::TextureView,
   counter_atlas: CounterAtlas,
   keyboard_cache: KeyboardArtworkCache,
-  keyboard_constants: ID3D11Buffer,
-  /// Bound at t3 when no shortcut is on screen and at t4 when the canvas has
-  /// no background picture, mirroring the four-byte fallback buffer the Metal
-  /// compositor binds.
-  fallback_view: ID3D11ShaderResourceView,
-  layer_blend: ID3D11BlendState,
-  pixel_shader: ID3D11PixelShader,
+  /// Bound where no shortcut is on screen, no background picture is chosen,
+  /// no camera is composed or no type was rasterised: one transparent texel.
+  fallback_view: wgpu::TextureView,
+  layout: wgpu::BindGroupLayout,
+  /// The canvas written whole.
+  pipeline: wgpu::RenderPipeline,
+  /// A screenshot layer blended, premultiplied, over the layers under it.
+  layer_pipeline: wgpu::RenderPipeline,
   redactor: redact::Redactor,
-  sampler: ID3D11SamplerState,
-  point_sampler: ID3D11SamplerState,
-  vertex_shader: ID3D11VertexShader,
+  sampler: wgpu::Sampler,
+  point_sampler: wgpu::Sampler,
 }
 
+/// A frame the canvas samples. A decoded frame lives in a texture the
+/// Direct3D 11 device opens too, which the decoder's output is copied into; a
+/// screenshot is uploaded once.
 #[derive(Clone)]
 pub(super) struct SourceTexture {
   pub(super) size: (u32, u32),
-  texture: ID3D11Texture2D,
-  view: ID3D11ShaderResourceView,
+  texture: wgpu::Texture,
+  view: wgpu::TextureView,
+  shared: Option<std::sync::Arc<crate::gpu::SharedTexture>>,
   /// A screenshot's own pixels, which its redactions read their fills from.
   /// A video frame has none: its fills are read from its clip's frames.
   pub(super) picture: Option<std::sync::Arc<crate::screenshots::CapturedImage>>,
@@ -159,22 +156,12 @@ pub(super) struct SourceTexture {
 impl Compositor {
   pub(super) fn keyboard_visible_bounds(
     &self,
-    device: &ID3D11Device,
     overlay: &KeyboardOverlay,
     output: (u32, u32),
   ) -> Result<Option<[f64; 4]>, String> {
-    self.keyboard_cache.visible_bounds(device, overlay, output)
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn preview_shader_is_embedded_as_compiled_bytecode() {
-    assert_eq!(&VERTEX_SHADER[..4], b"DXBC");
-    assert_eq!(&PIXEL_SHADER[..4], b"DXBC");
+    self
+      .keyboard_cache
+      .visible_bounds(self.gpu, overlay, output)
   }
 }
 
@@ -193,9 +180,3 @@ mod render_test_helpers;
 #[cfg(all(test, target_os = "windows"))]
 #[path = "compositor/render_tests.rs"]
 mod render_tests;
-#[cfg(all(test, target_os = "windows"))]
-#[path = "compositor/selection_state_tests.rs"]
-mod selection_state_tests;
-#[cfg(all(test, target_os = "windows"))]
-#[path = "compositor/swapchain_tests.rs"]
-mod swapchain_tests;

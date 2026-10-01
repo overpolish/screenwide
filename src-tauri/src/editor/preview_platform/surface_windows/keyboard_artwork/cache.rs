@@ -6,20 +6,20 @@ use super::*;
 impl KeyboardArtworkCache {
   pub(in crate::editor::preview_platform::surface) fn visible_bounds(
     &self,
-    device: &ID3D11Device,
+    gpu: &crate::gpu::Gpu,
     overlay: &KeyboardOverlay,
     output: (u32, u32),
   ) -> Result<Option<[f64; 4]>, String> {
     Ok(
       self
-        .resolve(device, overlay, output.1)?
+        .resolve(gpu, overlay, output.1)?
         .and_then(|(_, values)| visible_bounds::calculate(&values, output)),
     )
   }
 
   pub(in crate::editor::preview_platform::surface) fn resolve(
     &self,
-    device: &ID3D11Device,
+    gpu: &crate::gpu::Gpu,
     overlay: &KeyboardOverlay,
     output_height: u32,
   ) -> Result<Option<(std::sync::Arc<KeyboardArtwork>, KeyboardConstants)>, String> {
@@ -51,7 +51,7 @@ impl KeyboardArtworkCache {
           overlay.appearance == KeyboardOverlay::APPEARANCE_LIGHT,
           backing_scale,
         )?;
-        let artwork = std::sync::Arc::new(upload(device, &raster)?);
+        let artwork = std::sync::Arc::new(upload(gpu, &raster));
         let cached_bytes = entries.values().map(|entry| entry.bytes).sum::<usize>();
         if entries.len() >= CACHE_ENTRIES || cached_bytes + artwork.bytes > CACHE_BYTES {
           entries.clear();
@@ -73,41 +73,19 @@ impl KeyboardArtworkCache {
   }
 }
 
-fn upload(device: &ID3D11Device, raster: &KeyboardRaster) -> Result<KeyboardArtwork, String> {
-  let description = D3D11_TEXTURE2D_DESC {
-    Width: raster.size.0,
-    Height: raster.size.1,
-    MipLevels: 1,
-    ArraySize: 1,
-    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-    SampleDesc: DXGI_SAMPLE_DESC {
-      Count: 1,
-      Quality: 0,
-    },
-    Usage: D3D11_USAGE_IMMUTABLE,
-    BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
-    ..Default::default()
-  };
-  let initial = D3D11_SUBRESOURCE_DATA {
-    pSysMem: raster.pixels.as_ptr().cast::<c_void>(),
-    SysMemPitch: raster.size.0 * 4,
-    SysMemSlicePitch: 0,
-  };
-  let mut texture = None;
-  unsafe { device.CreateTexture2D(&description, Some(&initial), Some(&mut texture)) }
-    .map_err(|error| error.to_string())?;
-  let texture = texture.ok_or_else(|| "D3D11 created no keyboard artwork texture".to_owned())?;
-  let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
-  let mut view = None;
-  unsafe { device.CreateShaderResourceView(&resource, None, Some(&mut view)) }
-    .map_err(|error| error.to_string())?;
-  Ok(KeyboardArtwork {
-    _texture: texture,
+fn upload(gpu: &crate::gpu::Gpu, raster: &KeyboardRaster) -> KeyboardArtwork {
+  let texture = gpu.texture_with_pixels(
+    "Screenwide keyboard artwork",
+    (raster.size.0, raster.size.1, 1),
+    wgpu::TextureFormat::Bgra8Unorm,
+    &raster.pixels,
+  );
+  KeyboardArtwork {
     bytes: raster.pixels.len(),
     keys: raster.keys.clone(),
     size: raster.size,
-    view: view.ok_or_else(|| "D3D11 created no keyboard artwork view".to_owned())?,
-  })
+    view: texture.create_view(&Default::default()),
+  }
 }
 
 /// Copies the animation state of every prepared key into the shader uniforms.

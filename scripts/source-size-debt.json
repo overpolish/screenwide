@@ -1,6 +1,6 @@
 {
   "src-tauri/src/editor/cursor_export/gpu_compositor_macos+presenter.m": 744,
-  "src-tauri/src/editor/recording_preview_surface_macos+editor.m": 832,
+  "src-tauri/src/editor/recording_preview_surface_macos+editor.m": 775,
   "src-tauri/src/editor/recording_preview_surface_macos+layout.m": 429,
   "src-tauri/src/editor/recording_preview_surface_macos+selection.m": 590,
   "src-tauri/src/editor/recording_preview_surface_macos+workspace.m": 487,

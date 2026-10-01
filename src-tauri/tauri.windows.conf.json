@@ -1,0 +1,9 @@
+{
+  "bundle": {
+    "resources": {
+      "binaries/dxcompiler.dll": "dxcompiler.dll",
+      "binaries/DXC-LICENSE-LLVM.txt": "licenses/DXC-LLVM.txt",
+      "binaries/DXC-LICENSE-MIT.txt": "licenses/DXC-MIT.txt"
+    }
+  }
+}

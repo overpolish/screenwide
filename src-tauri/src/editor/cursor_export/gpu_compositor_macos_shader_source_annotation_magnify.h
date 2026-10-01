@@ -18,7 +18,7 @@
 /// enlarged capture sharp without the stair steps of plain nearest sampling.
 /// The cursor lies on the picture, under the loupe, so the loupe shows it
 /// too, enlarged, where the zoom area covers it. The twin of
-/// `annotation_magnify.hlsl`.
+/// `annotation_magnify.wgsl`.
 #define GPU_COMPOSITOR_MACOS_SHADER_SOURCE_ANNOTATION_MAGNIFY @R"METAL(
 constant uint annotation_magnify_kind = 8u;
 constant uint annotation_magnify_shadow_flag = 1u << 7;

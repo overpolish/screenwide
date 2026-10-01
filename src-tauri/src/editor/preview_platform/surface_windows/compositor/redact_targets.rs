@@ -4,71 +4,58 @@
 //! The textures the redaction passes draw into and read back.
 
 use super::*;
-use windows::Win32::Graphics::Direct3D11::D3D11_BIND_RENDER_TARGET;
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT;
 
 /// A texture a pass draws into and the next one reads.
 pub(super) struct Target {
-  pub(super) texture: ID3D11Texture2D,
-  pub(super) view: ID3D11ShaderResourceView,
-  pub(super) target: ID3D11RenderTargetView,
+  pub(super) texture: wgpu::Texture,
+  pub(super) view: wgpu::TextureView,
 }
 
-pub(super) fn target(
-  device: &ID3D11Device,
-  size: (u32, u32),
-  format: DXGI_FORMAT,
-) -> Result<Target, String> {
-  let description = D3D11_TEXTURE2D_DESC {
-    Width: size.0,
-    Height: size.1,
-    MipLevels: 1,
-    ArraySize: 1,
-    Format: format,
-    SampleDesc: DXGI_SAMPLE_DESC {
-      Count: 1,
-      Quality: 0,
+pub(super) fn target(gpu: &Gpu, size: (u32, u32), format: wgpu::TextureFormat) -> Target {
+  let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+    label: Some("Screenwide redaction target"),
+    size: wgpu::Extent3d {
+      width: size.0.max(1),
+      height: size.1.max(1),
+      depth_or_array_layers: 1,
     },
-    Usage: D3D11_USAGE_DEFAULT,
-    BindFlags: (D3D11_BIND_SHADER_RESOURCE.0 | D3D11_BIND_RENDER_TARGET.0) as u32,
-    ..Default::default()
-  };
-  let mut texture = None;
-  unsafe { device.CreateTexture2D(&description, None, Some(&mut texture)) }
-    .map_err(|error| format!("The redaction target could not be created: {error}"))?;
-  let texture = texture.ok_or_else(|| "D3D11 created no redaction target".to_owned())?;
-  let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
-  let (mut view, mut target) = (None, None);
-  unsafe {
-    device
-      .CreateShaderResourceView(&resource, None, Some(&mut view))
-      .and_then(|()| device.CreateRenderTargetView(&resource, None, Some(&mut target)))
-  }
-  .map_err(|error| error.to_string())?;
-  Ok(Target {
-    texture,
-    view: view.ok_or_else(|| "D3D11 created no redaction view".to_owned())?,
-    target: target.ok_or_else(|| "D3D11 created no redaction target view".to_owned())?,
-  })
+    mip_level_count: 1,
+    sample_count: 1,
+    dimension: wgpu::TextureDimension::D2,
+    format,
+    usage: wgpu::TextureUsages::TEXTURE_BINDING
+      | wgpu::TextureUsages::RENDER_ATTACHMENT
+      | wgpu::TextureUsages::COPY_SRC
+      | wgpu::TextureUsages::COPY_DST,
+    view_formats: &[],
+  });
+  let view = texture.create_view(&Default::default());
+  Target { texture, view }
 }
 
 /// A target a pass draws into before the paint pass reads it, grown to fit
 /// the largest it has been asked for, and never shrunk.
-#[derive(Default)]
-pub(super) struct Scratch(std::sync::Mutex<Option<((u32, u32), Target)>>);
+pub(super) struct Scratch {
+  format: wgpu::TextureFormat,
+  slot: std::sync::Mutex<Option<((u32, u32), wgpu::TextureView)>>,
+}
 
 impl Scratch {
-  /// `draw` into the target, first grown to at least `size` in `format`, and
-  /// its view.
-  pub(super) fn draw(
-    &self,
-    device: &ID3D11Device,
-    size: (u32, u32),
-    format: DXGI_FORMAT,
-    draw: impl FnOnce(&Target),
-  ) -> Result<ID3D11ShaderResourceView, String> {
+  pub(super) fn new(format: wgpu::TextureFormat) -> Self {
+    Self {
+      format,
+      slot: std::sync::Mutex::new(None),
+    }
+  }
+
+  pub(super) fn format(&self) -> wgpu::TextureFormat {
+    self.format
+  }
+
+  /// The target, first grown to at least `size`.
+  pub(super) fn view(&self, gpu: &Gpu, size: (u32, u32)) -> Result<wgpu::TextureView, String> {
     let mut slot = self
-      .0
+      .slot
       .lock()
       .map_err(|_| "A redaction scratch target is poisoned".to_owned())?;
     if slot
@@ -78,10 +65,9 @@ impl Scratch {
       let grown = slot
         .as_ref()
         .map_or(size, |(held, _)| (held.0.max(size.0), held.1.max(size.1)));
-      *slot = Some((grown, target(device, grown, format)?));
+      *slot = Some((grown, target(gpu, grown, self.format).view));
     }
-    let (_, target) = slot.as_ref().expect("the scratch target was just made");
-    draw(target);
-    Ok(target.view.clone())
+    let (_, view) = slot.as_ref().expect("the scratch target was just made");
+    Ok(view.clone())
   }
 }

@@ -7,7 +7,7 @@
 /// selection read, or tint it where no page was read. Goes after
 /// `..._annotation_magnify.h`, whose taps it reads the picture through, and
 /// before `..._annotation_highlight.h`, which lays the bands. The twin of
-/// `highlight_recolour` in `annotation_highlight.hlsl`.
+/// `highlight_recolour` in `annotation_highlight.wgsl`.
 ///
 /// The compositor's textures hold encoded values, but a glyph's anti-aliased
 /// edge is a mix of page and ink in light. Recolouring measures how much of

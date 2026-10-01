@@ -171,8 +171,8 @@ pub(super) fn push_segment(
   action_fills: [[f32; 4]; 2],
   radius: f64,
   outline: [f32; 4],
-  label: Option<ID3D11ShaderResourceView>,
-  secondary: Option<ID3D11ShaderResourceView>,
+  label: Option<wgpu::TextureView>,
+  secondary: Option<wgpu::TextureView>,
 ) {
   if out.len() <= start {
     return;

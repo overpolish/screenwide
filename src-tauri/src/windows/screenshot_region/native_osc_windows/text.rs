@@ -34,15 +34,12 @@ use windows::{
   core::PCWSTR,
   Win32::{
     Foundation::COLORREF,
-    Graphics::{
-      Direct3D11::{ID3D11Device, ID3D11ShaderResourceView},
-      Gdi::{
-        AddFontMemResourceEx, CreateCompatibleDC, CreateDIBSection, CreateFontW, DeleteDC,
-        DeleteObject, GetTextExtentPoint32W, SelectObject, SetBkMode, SetTextColor, TextOutW,
-        ANTIALIASED_QUALITY, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CLIP_DEFAULT_PRECIS,
-        DEFAULT_CHARSET, DIB_RGB_COLORS, FF_MODERN, FF_SWISS, FIXED_PITCH, FW_NORMAL, HDC, HFONT,
-        HGDIOBJ, OUT_DEFAULT_PRECIS, TRANSPARENT, VARIABLE_PITCH,
-      },
+    Graphics::Gdi::{
+      AddFontMemResourceEx, CreateCompatibleDC, CreateDIBSection, CreateFontW, DeleteDC,
+      DeleteObject, GetTextExtentPoint32W, SelectObject, SetBkMode, SetTextColor, TextOutW,
+      ANTIALIASED_QUALITY, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CLIP_DEFAULT_PRECIS,
+      DEFAULT_CHARSET, DIB_RGB_COLORS, FF_MODERN, FF_SWISS, FIXED_PITCH, FW_NORMAL, HDC, HFONT,
+      HGDIOBJ, OUT_DEFAULT_PRECIS, TRANSPARENT, VARIABLE_PITCH,
     },
   },
 };
@@ -50,6 +47,7 @@ use windows::{
 mod atlas;
 use atlas::build_atlas;
 
+use crate::gpu::Gpu;
 use crate::osc::geometry::{Rect, Size};
 
 /// The cells every ruler readout is assembled from. The texture stores them
@@ -141,7 +139,7 @@ impl AtlasMetrics {
 }
 
 pub(crate) struct TextTexture {
-  pub(crate) view: ID3D11ShaderResourceView,
+  pub(crate) view: wgpu::TextureView,
   /// Logical points, the size the vertex builder lays the quad out with.
   pub(crate) size: Size,
   /// Present only for the glyph atlas, which the ruler indexes.

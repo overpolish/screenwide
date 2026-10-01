@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::{mpsc, OnceLock};
+use std::sync::LazyLock;
 
 use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt;
@@ -11,19 +11,9 @@ use super::mesh_generator::MeshGenerator;
 
 const MAX_POINTS: usize = 4;
 
-/// The shader is assembled rather than kept in one file: the ported
-/// generators are pure functions of a pixel and a palette, so they are
-/// declared ahead of the mesh module that calls them and each file stays
-/// readable on its own.
-fn shader_source() -> String {
-  [
-    include_str!("mesh_generator_common.wgsl"),
-    include_str!("mesh_generators.wgsl"),
-    include_str!("mesh_generators_layered.wgsl"),
-    include_str!("mesh.wgsl"),
-  ]
-  .join("\n")
-}
+/// Assembled by `build/wgsl.rs` from the common helpers, the ported
+/// generators and the mesh module that calls them.
+const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/mesh.wgsl"));
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -49,67 +39,46 @@ struct MeshUniforms {
 }
 
 struct Renderer {
-  device: wgpu::Device,
+  gpu: &'static crate::gpu::Gpu,
   pipeline: wgpu::ComputePipeline,
-  queue: wgpu::Queue,
 }
 
-static RENDERER: OnceLock<Result<Renderer, String>> = OnceLock::new();
+static RENDERER: LazyLock<Result<Renderer, String>> = LazyLock::new(Renderer::new);
 
 fn renderer() -> Result<&'static Renderer, String> {
-  RENDERER
-    .get_or_init(|| pollster::block_on(Renderer::new()))
-    .as_ref()
-    .map_err(Clone::clone)
+  RENDERER.as_ref().map_err(Clone::clone)
 }
 
 impl Renderer {
-  async fn new() -> Result<Self, String> {
-    let instance = wgpu::Instance::default();
-    let adapter = instance
-      .request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::HighPerformance,
-        ..Default::default()
-      })
-      .await
-      .map_err(|error| {
-        format!("A graphics adapter is required to render mesh backgrounds: {error}")
-      })?;
-    let (device, queue) = adapter
-      .request_device(&wgpu::DeviceDescriptor {
-        label: Some("Screenwide mesh renderer"),
-        ..Default::default()
-      })
-      .await
-      .map_err(|error| format!("The graphics device could not be opened: {error}"))?;
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide mesh shader"),
-      source: wgpu::ShaderSource::Wgsl(shader_source().into()),
-    });
-    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-      label: Some("Screenwide mesh pipeline"),
-      layout: None,
-      module: &shader,
-      entry_point: Some("main"),
-      compilation_options: Default::default(),
-      cache: None,
-    });
-    Ok(Self {
-      device,
-      pipeline,
-      queue,
-    })
+  fn new() -> Result<Self, String> {
+    let gpu = crate::gpu::shared()?;
+    let shader = gpu
+      .device
+      .create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Screenwide mesh shader"),
+        source: wgpu::ShaderSource::Wgsl(SHADER.into()),
+      });
+    let pipeline = gpu
+      .device
+      .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("Screenwide mesh pipeline"),
+        layout: None,
+        module: &shader,
+        entry_point: Some("main"),
+        compilation_options: Default::default(),
+        cache: None,
+      });
+    Ok(Self { gpu, pipeline })
   }
 
   fn render(&self, width: u32, height: u32, uniforms: &MeshUniforms) -> Result<Vec<u8>, String> {
-    let uniform_buffer = self
-      .device
-      .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Screenwide mesh parameters"),
-        contents: bytemuck::bytes_of(uniforms),
-        usage: wgpu::BufferUsages::UNIFORM,
-      });
-    let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+    let device = &self.gpu.device;
+    let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+      label: Some("Screenwide mesh parameters"),
+      contents: bytemuck::bytes_of(uniforms),
+      usage: wgpu::BufferUsages::UNIFORM,
+    });
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
       label: Some("Screenwide mesh output"),
       size: wgpu::Extent3d {
         width,
@@ -124,7 +93,7 @@ impl Renderer {
       view_formats: &[],
     });
     let view = texture.create_view(&Default::default());
-    let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
       label: Some("Screenwide mesh bindings"),
       layout: &self.pipeline.get_bind_group_layout(0),
       entries: &[
@@ -138,20 +107,9 @@ impl Renderer {
         },
       ],
     });
-    let unpadded_bytes_per_row = width * 4;
-    let bytes_per_row = unpadded_bytes_per_row.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
-      * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    let output = self.device.create_buffer(&wgpu::BufferDescriptor {
-      label: Some("Screenwide mesh readback"),
-      size: u64::from(bytes_per_row) * u64::from(height),
-      usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-      mapped_at_creation: false,
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+      label: Some("Screenwide mesh commands"),
     });
-    let mut encoder = self
-      .device
-      .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Screenwide mesh commands"),
-      });
     {
       let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
         label: Some("Screenwide mesh pass"),
@@ -161,42 +119,8 @@ impl Renderer {
       pass.set_bind_group(0, &bind_group, &[]);
       pass.dispatch_workgroups(width.div_ceil(16), height.div_ceil(16), 1);
     }
-    encoder.copy_texture_to_buffer(
-      texture.as_image_copy(),
-      wgpu::TexelCopyBufferInfo {
-        buffer: &output,
-        layout: wgpu::TexelCopyBufferLayout {
-          offset: 0,
-          bytes_per_row: Some(bytes_per_row),
-          rows_per_image: Some(height),
-        },
-      },
-      texture.size(),
-    );
-    self.queue.submit([encoder.finish()]);
-    let slice = output.slice(..);
-    let (sender, receiver) = mpsc::sync_channel(1);
-    slice.map_async(wgpu::MapMode::Read, move |result| {
-      let _ = sender.send(result);
-    });
-    self
-      .device
-      .poll(wgpu::PollType::wait_indefinitely())
-      .map_err(|error| error.to_string())?;
-    receiver
-      .recv()
-      .map_err(|error| error.to_string())?
-      .map_err(|error| error.to_string())?;
-    let mapped = slice
-      .get_mapped_range()
-      .map_err(|error| error.to_string())?;
-    let mut pixels = Vec::with_capacity((width * height * 4) as usize);
-    for row in mapped.chunks_exact(bytes_per_row as usize) {
-      pixels.extend_from_slice(&row[..unpadded_bytes_per_row as usize]);
-    }
-    drop(mapped);
-    output.unmap();
-    Ok(pixels)
+    self.gpu.queue.submit([encoder.finish()]);
+    self.gpu.read_texture(&texture)
   }
 }
 

@@ -20,7 +20,7 @@ impl TextCache {
   /// carried on the view.
   pub(crate) fn label(
     &mut self,
-    device: &ID3D11Device,
+    device: &Gpu,
     text: &str,
     scale: f64,
     light_mode: bool,
@@ -43,7 +43,7 @@ impl TextCache {
   /// because kind 37 un-premultiplies the sample instead of tinting it.
   pub(crate) fn ink_label(
     &mut self,
-    device: &ID3D11Device,
+    device: &Gpu,
     text: &str,
     scale: f64,
     light_mode: bool,
@@ -64,7 +64,7 @@ impl TextCache {
   #[allow(clippy::too_many_arguments)]
   fn cached(
     &mut self,
-    device: &ID3D11Device,
+    device: &Gpu,
     text: &str,
     scale: f64,
     light_mode: bool,
@@ -107,7 +107,7 @@ impl TextCache {
   /// glyph kind.
   pub(crate) fn hex_atlas(
     &mut self,
-    device: &ID3D11Device,
+    device: &Gpu,
     scale: f64,
     light_mode: bool,
     font_size: f64,

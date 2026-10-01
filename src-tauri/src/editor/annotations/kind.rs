@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 /// The kinds the compositor draws. The numbers are ABI: they are the C
 /// `ScreenwideAnnotationKind`, the `SCREENWIDE_ANNOTATION_*` the Metal
 /// compositor prepares against, and the `kind == 1u` tests in the Metal and
-/// HLSL annotation shaders. They travel inside the native records as they are,
+/// WGSL annotation shaders. They travel inside the native records as they are,
 /// so a value may never be renumbered. The serde names are the `kind` tag of
 /// `AnnotationShape` and what the live overlay's settings store, so a kind
 /// is one word in a document, in settings, and over the native boundary.

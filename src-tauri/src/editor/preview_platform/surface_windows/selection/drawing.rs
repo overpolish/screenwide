@@ -7,8 +7,6 @@ impl SelectionOverlay {
   #[allow(clippy::too_many_arguments)]
   pub(in crate::editor::preview_platform::surface) fn draw(
     &mut self,
-    device: &ID3D11Device,
-    context: &ID3D11DeviceContext,
     viewport_size: (u32, u32),
     frame: Option<[f32; 4]>,
     radius_point: Option<[f32; 2]>,
@@ -41,19 +39,8 @@ impl SelectionOverlay {
     light: bool,
   ) -> Result<(), String> {
     let size = (viewport_size.0.max(2), viewport_size.1.max(2));
-    if size != self.buffer_size {
-      unsafe {
-        self.swap_chain.ResizeBuffers(
-          2,
-          size.0,
-          size.1,
-          DXGI_FORMAT_B8G8R8A8_UNORM,
-          DXGI_SWAP_CHAIN_FLAG(0),
-        )
-      }
-      .map_err(|error| format!("The Windows selection overlay could not resize: {error}"))?;
-      self.buffer_size = size;
-    }
+    let gpu = self.shared;
+    self.surface.resize(gpu, size);
     let scale = scale.max(0.1);
     let view = Size {
       width: f64::from(size.0) / scale,
@@ -183,104 +170,51 @@ impl SelectionOverlay {
         );
       }
     }
-    let mut segments = Vec::with_capacity(1);
+    let Frame::Ready(frame) = self.surface.acquire(gpu)? else {
+      return Ok(());
+    };
+    // Every vertex shares the frame's constants, so the chrome is one draw.
     if !vertices.is_empty() {
-      segments.push(Segment {
-        constants,
-        count: vertices.len() as u32,
-        start: 0,
+      if vertices.len() > self.vertex_capacity {
+        self.vertex_capacity = vertices.len().next_power_of_two().max(256);
+        self.vertex_buffer = vertex_buffer(gpu, self.vertex_capacity);
+      }
+      gpu
+        .queue
+        .write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(&vertices));
+      gpu
+        .queue
+        .write_buffer(&self.constants, 0, bytemuck::bytes_of(&constants));
+    }
+    let target = frame.texture.create_view(&Default::default());
+    let mut encoder = gpu
+      .device
+      .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("Screenwide selection overlay"),
       });
-    }
-    if vertices.len() > self.vertex_capacity {
-      self.vertex_capacity = vertices.len().next_power_of_two().max(256);
-      self.vertex_buffer = create_vertex_buffer(device, self.vertex_capacity)?;
-    }
-    if !vertices.is_empty() {
-      let resource: ID3D11Resource = self.vertex_buffer.cast().map_err(|e| e.to_string())?;
-      let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
-      unsafe { context.Map(&resource, 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&mut mapped)) }
-        .map_err(|error| error.to_string())?;
-      unsafe {
-        std::ptr::copy_nonoverlapping(
-          vertices.as_ptr(),
-          mapped.pData.cast::<Vertex>(),
-          vertices.len(),
-        );
-        context.Unmap(&resource, 0);
-      }
-    }
-    let placeholder = self.placeholder.view.clone();
-    let constant_resource: ID3D11Resource =
-      self.constants.cast().map_err(|error| error.to_string())?;
-    let texture = unsafe { self.swap_chain.GetBuffer::<ID3D11Texture2D>(0) }
-      .map_err(|error| error.to_string())?;
-    let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
-    let mut target: Option<ID3D11RenderTargetView> = None;
-    unsafe { device.CreateRenderTargetView(&resource, None, Some(&mut target)) }
-      .map_err(|error| error.to_string())?;
-    let target = target.ok_or_else(|| "D3D11 created no selection target".to_owned())?;
-    unsafe {
-      context.ClearRenderTargetView(&target, &[0.0; 4]);
-      context.OMSetRenderTargets(Some(&[Some(target)]), None);
-      context.OMSetBlendState(&self.blend, Some(&[0.0; 4]), 0xffff_ffff);
-      context.RSSetViewports(Some(&[D3D11_VIEWPORT {
-        Width: size.0 as f32,
-        Height: size.1 as f32,
-        MaxDepth: 1.0,
+    {
+      let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("Screenwide selection overlay"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+          view: &target,
+          depth_slice: None,
+          resolve_target: None,
+          ops: wgpu::Operations {
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+            store: wgpu::StoreOp::Store,
+          },
+        })],
         ..Default::default()
-      }]));
-      context.RSSetState(&self.rasterizer);
-      context.IASetInputLayout(&self.layout);
-      context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-      let stride = size_of::<Vertex>() as u32;
-      let offset = 0;
-      let vertex_buffer = Some(self.vertex_buffer.clone());
-      context.IASetVertexBuffers(
-        0,
-        1,
-        Some(&raw const vertex_buffer),
-        Some(&stride),
-        Some(&offset),
-      );
-      context.VSSetShader(&self.vertex_shader, None);
-      context.PSSetShader(&self.pixel_shader, None);
-      context.PSSetConstantBuffers(0, Some(&[Some(self.constants.clone())]));
-      context.PSSetSamplers(
-        0,
-        Some(&[
-          Some(self.linear_sampler.clone()),
-          Some(self.point_sampler.clone()),
-        ]),
-      );
-      for segment in &segments {
-        context.UpdateSubresource(
-          &constant_resource,
-          0,
-          None,
-          (&raw const segment.constants).cast::<c_void>(),
-          0,
-          0,
-        );
-        context.PSSetShaderResources(
-          0,
-          Some(&[
-            Some(placeholder.clone()),
-            Some(placeholder.clone()),
-            Some(placeholder.clone()),
-            Some(placeholder.clone()),
-            Some(placeholder.clone()),
-          ]),
-        );
-        context.Draw(segment.count, segment.start);
+      });
+      if !vertices.is_empty() {
+        pass.set_pipeline(&self.pipeline);
+        pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        pass.set_bind_group(0, &self.bindings, &[0]);
+        pass.draw(0..vertices.len() as u32, 0..1);
       }
-      context.PSSetShaderResources(0, Some(&[None, None, None, None, None]));
-      context.OMSetRenderTargets(None, None);
-      self
-        .swap_chain
-        .Present(0, DXGI_PRESENT(0))
-        .ok()
-        .map_err(|error| error.to_string())?;
     }
+    gpu.queue.submit([encoder.finish()]);
+    gpu.queue.present(frame);
     Ok(())
   }
 }

@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[path = "build/wgsl.rs"]
+mod wgsl;
+
 fn main() {
-  #[cfg(windows)]
-  if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
-    compile_windows_preview_shaders();
-  }
+  wgsl::assemble();
   // Build scripts are compiled for the host, so `cfg!(target_os)` here answers
   // "what am I running on", not "what am I building for". Cross-compiling from
   // macOS to Windows must not hand the Objective-C sources to the MSVC target.
@@ -86,6 +86,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+magnifier.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+crop_draw.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+context_menu.m");
+    println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+cursor.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+editor.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+keyboard.m");
     println!("cargo:rerun-if-changed=src/editor/recording_preview_surface_macos+annotation.m");
@@ -233,6 +234,7 @@ fn main() {
       .file("src/editor/recording_preview_surface_macos+magnifier.m")
       .file("src/editor/recording_preview_surface_macos+crop_draw.m")
       .file("src/editor/recording_preview_surface_macos+context_menu.m")
+      .file("src/editor/recording_preview_surface_macos+cursor.m")
       .file("src/editor/recording_preview_surface_macos+editor.m")
       .file("src/editor/recording_preview_surface_macos+keyboard.m")
       .file("src/editor/recording_preview_surface_macos+annotation.m")
@@ -293,118 +295,4 @@ fn main() {
     println!("cargo:rustc-link-lib=framework=MultitouchSupport");
   }
   tauri_build::build()
-}
-
-#[cfg(windows)]
-fn compile_windows_preview_shaders() {
-  compile_shader(
-    "src/editor/preview_platform/surface_windows/shaders/preview.hlsl",
-    "recording_preview",
-  );
-  compile_shader(
-    "src/editor/preview_platform/surface_windows/shaders/audio_ribbon.hlsl",
-    "preview_audio_ribbon",
-  );
-  compile_shader(
-    "src/editor/preview_platform/surface_windows/shaders/redact_cells.hlsl",
-    "preview_redact_cells",
-  );
-  compile_shader(
-    "src/editor/preview_platform/surface_windows/shaders/redact_rows.hlsl",
-    "preview_redact_rows",
-  );
-  compile_shader(
-    "src/editor/preview_platform/surface_windows/shaders/redact_paint.hlsl",
-    "preview_redact_paint",
-  );
-  compile_shader(
-    "src/annotate/shaders/annotate_overlay.hlsl",
-    "annotate_overlay",
-  );
-  compile_shader("src/osc/gpu/windows/shaders/osc.hlsl", "osc_gpu");
-  compile_shader(
-    "src/recording/platform_windows/shaders/desktop_compositor.hlsl",
-    "desktop_compositor",
-  );
-}
-
-/// A shader with its `#include "..."` lines replaced by the files they name,
-/// resolved relative to the including file. `D3DCompile` is handed no include
-/// handler, so the includes have to be resolved before it sees the source.
-#[cfg(windows)]
-fn shader_source(source_path: &std::path::Path) -> String {
-  println!("cargo:rerun-if-changed={}", source_path.display());
-  let source = std::fs::read_to_string(source_path)
-    .unwrap_or_else(|error| panic!("read the shader {}: {error}", source_path.display()));
-  let directory = source_path.parent().map_or_else(
-    || std::path::PathBuf::from("."),
-    std::path::Path::to_path_buf,
-  );
-  let mut resolved = String::with_capacity(source.len());
-  for line in source.lines() {
-    let included = line
-      .trim()
-      .strip_prefix("#include \"")
-      .and_then(|rest| rest.strip_suffix('"'));
-    if let Some(name) = included {
-      resolved.push_str(&shader_source(&directory.join(name)));
-    } else {
-      resolved.push_str(line);
-    }
-    resolved.push('\n');
-  }
-  resolved
-}
-
-#[cfg(windows)]
-fn compile_shader(source_path: &str, output_prefix: &str) {
-  use std::{ffi::CString, path::PathBuf};
-  use windows::{
-    core::PCSTR,
-    Win32::Graphics::Direct3D::{Fxc::D3DCompile, ID3DBlob},
-  };
-
-  let source = shader_source(std::path::Path::new(source_path));
-  let source = source.as_bytes();
-  let output = PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo supplied OUT_DIR"));
-
-  for (entry, target, suffix) in [("vs_main", "vs_4_0", "vs"), ("ps_main", "ps_4_0", "ps")] {
-    let entry = CString::new(entry).expect("valid shader entry");
-    let target = CString::new(target).expect("valid shader target");
-    let mut code: Option<ID3DBlob> = None;
-    let mut errors: Option<ID3DBlob> = None;
-    let result = unsafe {
-      D3DCompile(
-        source.as_ptr().cast(),
-        source.len(),
-        PCSTR::null(),
-        None,
-        None,
-        PCSTR(entry.as_ptr().cast()),
-        PCSTR(target.as_ptr().cast()),
-        0,
-        0,
-        &mut code,
-        Some(&mut errors),
-      )
-    };
-    if let Err(error) = result {
-      let detail = errors.map_or_else(String::new, |blob| unsafe {
-        let bytes =
-          std::slice::from_raw_parts(blob.GetBufferPointer().cast::<u8>(), blob.GetBufferSize());
-        String::from_utf8_lossy(bytes)
-          .trim_matches(char::from(0))
-          .to_owned()
-      });
-      panic!(
-        "Windows preview shader compilation failed for {source_path} ({entry:?}, {target:?}): {error}: {detail}"
-      );
-    }
-    let code = code.expect("D3DCompile returned preview bytecode");
-    let bytes = unsafe {
-      std::slice::from_raw_parts(code.GetBufferPointer().cast::<u8>(), code.GetBufferSize())
-    };
-    std::fs::write(output.join(format!("{output_prefix}_{suffix}.cso")), bytes)
-      .expect("write compiled preview shader");
-  }
 }

@@ -46,18 +46,12 @@ impl Surface {
     if width == 0 || height == 0 || rgba.len() != expected {
       return None;
     }
-    // The caller only lends the buffer for this call, so it is copied into a
-    // texture before returning.
-    match upload_rgba(self.gpu.device(), rgba, width, height) {
-      Ok(view) => Some(Texture {
-        view,
-        size: (width, height),
-      }),
-      Err(error) => {
-        eprintln!("The Windows region OSC could not upload a texture: {error}");
-        None
-      }
-    }
+    // The caller only lends the buffer for this call; the queue copies it
+    // before returning.
+    Some(Texture {
+      view: upload_rgba(self.gpu.device(), rgba, width, height),
+      size: (width, height),
+    })
   }
 
   /// Raises this surface and takes cursor ownership for the pointer.

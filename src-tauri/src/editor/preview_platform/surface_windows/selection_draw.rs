@@ -150,8 +150,6 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     });
   if let Ok(mut overlay) = inner.gpu.selection.lock() {
     let _ = overlay.draw(
-      &inner.gpu.device,
-      &inner.gpu.context,
       (
         (viewport_right - viewport_x).max(2) as u32,
         (viewport_bottom - viewport_y).max(2) as u32,

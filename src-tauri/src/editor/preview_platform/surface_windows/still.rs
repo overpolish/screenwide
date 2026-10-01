@@ -112,11 +112,7 @@ impl RecordingPreviewSurface {
         .as_ref()
         .is_none_or(|texture| texture.size != source_size)
     {
-      let texture = self
-        .inner
-        .gpu
-        .compositor
-        .screenshot_source(&self.inner.gpu.device, source)?;
+      let texture = self.inner.gpu.compositor.screenshot_source(source)?;
       pane.source = Some(texture);
       pane.source_token = Some(source_token);
     }
@@ -162,11 +158,7 @@ impl RecordingPreviewSurface {
         .as_ref()
         .is_none_or(|texture| texture.size != source_size)
     {
-      let mut texture = self
-        .inner
-        .gpu
-        .compositor
-        .screenshot_source(&self.inner.gpu.device, source)?;
+      let mut texture = self.inner.gpu.compositor.screenshot_source(source)?;
       texture.picture = Some(std::sync::Arc::clone(source));
       pane.source = Some(texture);
       pane.source_token = Some(source_token);

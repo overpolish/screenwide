@@ -1,120 +1,126 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The overlay's pipeline: one device, one shader, one buffer per list.
+//! The overlay's pipeline: one shader on the shared device, one buffer per
+//! list.
 
 use super::*;
 
-use windows::core::Interface;
-use windows::Win32::Graphics::Direct3D11::{
-  ID3D11Resource, ID3D11Texture2D, D3D11_BIND_SHADER_RESOURCE, D3D11_SUBRESOURCE_DATA,
-  D3D11_TEXTURE2D_DESC, D3D11_USAGE_IMMUTABLE,
-};
-use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC};
+use crate::gpu::Gpu;
 
-const VERTEX_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/annotate_overlay_vs.cso"));
-const PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/annotate_overlay_ps.cso"));
+const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/annotate_overlay.wgsl"));
 
-/// The shader's own constants. A constant buffer is a multiple of sixteen
-/// bytes wide, which the spare words fill out.
+/// The twin of `Overlay` in `annotate_overlay.wgsl`.
 #[repr(C)]
-#[derive(Clone, Copy)]
-pub(super) struct Constants {
-  pub(super) count: u32,
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct Constants {
+  count: u32,
   /// Half the width an edge is smoothed over, as `composite_annotations`
   /// takes it. The overlay draws at the display's own resolution, so the edge
   /// spans one layer pixel and this is half of one.
-  pub(super) feather: f32,
+  feather: f32,
   /// The size of the texture the counters' numbers were rasterised into, in
   /// pixels, or zeroes when no counter is on screen to rasterise one.
-  pub(super) atlas: [u32; 2],
+  atlas: [u32; 2],
   /// How many atlas pixels that texture holds per layer pixel.
-  pub(super) atlas_scale: f32,
+  atlas_scale: f32,
   /// The target's size in pixels, which the highlights' underlay is read
   /// across.
-  pub(super) target: [f32; 2],
-  pub(super) spare: f32,
+  target: [f32; 2],
+  spare: f32,
 }
 
 const _: () = assert!(std::mem::size_of::<Constants>() == 32);
 
 /// Everything every surface of one session shares.
 pub(super) struct Renderer {
-  device: Arc<overlay_surface::Device>,
-  pub(super) vertex_shader: ID3D11VertexShader,
-  pub(super) pixel_shader: ID3D11PixelShader,
-  pub(super) constants: ID3D11Buffer,
-  arrows: arrows::StructuredBuffer,
-  samples: arrows::StructuredBuffer,
-  /// A highlight's bands, which the shader reads at `t8`.
-  points: arrows::StructuredBuffer,
+  gpu: &'static Gpu,
+  pipeline: wgpu::RenderPipeline,
+  layout: wgpu::BindGroupLayout,
+  constants: wgpu::Buffer,
+  arrows: arrows::GpuBuffer,
+  samples: arrows::GpuBuffer,
+  /// A highlight's bands.
+  points: arrows::GpuBuffer,
+  text: arrows::GpuBuffer,
   /// The counters' numbers, rasterised at the size they are drawn into an
   /// atlas that keeps them, so a frame that redraws an unchanged screen does
   /// no work.
   counters: arrows::CounterAtlas,
-  /// Bound where the numbers go when there is none: a shader resource slot
-  /// left empty is a debug-layer complaint, and the number pass returns on
-  /// the zero atlas size before it would sample this.
-  empty_numbers: ID3D11ShaderResourceView,
-  _empty_texture: ID3D11Texture2D,
+  /// Bound where the numbers, the underlay or its softened copy go when there
+  /// is none: one transparent pixel, which the shader reads as none.
+  empty: wgpu::TextureView,
 }
 
 impl Renderer {
   pub(super) fn new() -> Result<Self, String> {
-    let device = overlay_surface::Device::new()?;
-    let handle = device.device();
-    let mut vertex_shader = None;
-    let mut pixel_shader = None;
-    unsafe {
-      handle
-        .CreateVertexShader(VERTEX_SHADER, None, Some(&mut vertex_shader))
-        .map_err(|error| error.to_string())?;
-      handle
-        .CreatePixelShader(PIXEL_SHADER, None, Some(&mut pixel_shader))
-        .map_err(|error| error.to_string())?;
-    }
-    let mut constants = None;
-    unsafe {
-      handle.CreateBuffer(
-        &D3D11_BUFFER_DESC {
-          ByteWidth: size_of::<Constants>() as u32,
-          Usage: D3D11_USAGE_DEFAULT,
-          BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
-          ..Default::default()
-        },
-        None,
-        Some(&mut constants),
-      )
-    }
-    .map_err(|error| error.to_string())?;
-    let arrows =
-      arrows::StructuredBuffer::new(handle, size_of::<arrows::PreviewArrow>(), "annotate arrow")?;
-    let samples = arrows::StructuredBuffer::new(
-      handle,
-      size_of::<arrows::PreviewSample>(),
-      "annotate arrow exposure",
-    )?;
-    let points =
-      arrows::StructuredBuffer::new(handle, size_of::<[f32; 2]>(), "annotate highlight bands")?;
-    let (empty_texture, empty_numbers) = empty_atlas(handle)?;
+    let gpu = crate::gpu::shared()?;
+    let device = &gpu.device;
+    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+      label: Some("Screenwide annotate overlay shader"),
+      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
+    });
+    let layout = bind_group_layout(device);
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+      label: Some("Screenwide annotate overlay layout"),
+      bind_group_layouts: &[Some(&layout)],
+      immediate_size: 0,
+    });
+    // The result is already premultiplied, so it is written rather than
+    // blended: one pass over a cleared target has nothing to blend with.
+    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+      label: Some("Screenwide annotate overlay pipeline"),
+      layout: Some(&pipeline_layout),
+      vertex: wgpu::VertexState {
+        module: &module,
+        entry_point: Some("vs_main"),
+        compilation_options: Default::default(),
+        buffers: &[],
+      },
+      fragment: Some(wgpu::FragmentState {
+        module: &module,
+        entry_point: Some("fs_main"),
+        compilation_options: Default::default(),
+        targets: &[Some(wgpu::ColorTargetState {
+          format: overlay_surface::FORMAT,
+          blend: None,
+          write_mask: wgpu::ColorWrites::ALL,
+        })],
+      }),
+      primitive: Default::default(),
+      depth_stencil: None,
+      multisample: Default::default(),
+      multiview_mask: None,
+      cache: None,
+    });
     Ok(Self {
-      device,
-      vertex_shader: vertex_shader
-        .ok_or_else(|| "D3D11 created no annotate vertex shader".to_owned())?,
-      pixel_shader: pixel_shader
-        .ok_or_else(|| "D3D11 created no annotate pixel shader".to_owned())?,
-      constants: constants.ok_or_else(|| "D3D11 created no annotate constants".to_owned())?,
-      arrows,
-      samples,
-      points,
+      gpu,
+      pipeline,
+      layout,
+      constants: device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("Screenwide annotate overlay constants"),
+        size: size_of::<Constants>() as u64,
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+      }),
+      arrows: arrows::GpuBuffer::new(gpu, "Screenwide annotate arrows"),
+      samples: arrows::GpuBuffer::new(gpu, "Screenwide annotate exposure"),
+      points: arrows::GpuBuffer::new(gpu, "Screenwide annotate highlight bands"),
+      text: arrows::GpuBuffer::new(gpu, "Screenwide annotate text"),
       counters: arrows::CounterAtlas::default(),
-      empty_numbers,
-      _empty_texture: empty_texture,
+      empty: gpu
+        .texture_with_pixels(
+          "Screenwide annotate placeholder",
+          (1, 1, 1),
+          wgpu::TextureFormat::Rgba8Unorm,
+          &[0; 4],
+        )
+        .create_view(&Default::default()),
     })
   }
 
-  pub(super) fn device(&self) -> &Arc<overlay_surface::Device> {
-    &self.device
+  pub(super) fn gpu(&self) -> &'static Gpu {
+    self.gpu
   }
 
   /// Draws the prepared annotations over a cleared target of `size` physical
@@ -130,24 +136,14 @@ impl Renderer {
   /// spotlight only shades.
   pub(super) fn draw_arrows(
     &self,
-    target: &ID3D11RenderTargetView,
+    target: &wgpu::TextureView,
     size: (u32, u32),
     prepared: &arrows::PreparedArrows,
-    underlay: Option<&ID3D11ShaderResourceView>,
-    softened: Option<&ID3D11ShaderResourceView>,
+    underlay: Option<&wgpu::TextureView>,
+    softened: Option<&wgpu::TextureView>,
   ) -> Result<(), String> {
-    let context = self.device.context();
-    let (numbers, numbered) =
-      arrows::numbered_arrows(&self.counters, self.device.device(), context, prepared)?;
-    let arrow_view = self
-      .arrows
-      .write(self.device.device(), context, &numbered)?;
-    let sample_view = self
-      .samples
-      .write(self.device.device(), context, &prepared.samples)?;
-    let point_view = self
-      .points
-      .write(self.device.device(), context, &prepared.points)?;
+    let gpu = self.gpu;
+    let (numbers, numbered) = arrows::numbered_arrows(&self.counters, gpu, prepared)?;
     let constants = Constants {
       count: numbered.len() as u32,
       feather: 0.5,
@@ -159,107 +155,104 @@ impl Renderer {
       target: [size.0 as f32, size.1 as f32],
       spare: 0.0,
     };
-    unsafe {
-      context.UpdateSubresource(
-        &self.constants,
-        0,
-        None,
-        (&raw const constants).cast::<c_void>(),
-        0,
-        0,
-      );
-      // Flip-discard back buffers are undefined after a present, and the
-      // shader composes over transparent rather than over what was there.
-      context.ClearRenderTargetView(target, &[0.0; 4]);
-      context.OMSetRenderTargets(Some(&[Some(target.clone())]), None);
-      context.RSSetViewports(Some(&[D3D11_VIEWPORT {
-        Width: size.0 as f32,
-        Height: size.1 as f32,
-        MaxDepth: 1.0,
-        ..Default::default()
-      }]));
-      context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-      context.VSSetShader(&self.vertex_shader, None);
-      context.PSSetShader(&self.pixel_shader, None);
-      context.PSSetConstantBuffers(0, Some(&[Some(self.constants.clone())]));
-      // The included shader reads its two lists at t5 and t6, the numbers at
-      // t7 and the highlights' bands at t8, the slots the editor's compositor
-      // binds them at; the underlay is the overlay's own, at t10, and its
-      // softened copy at t11. The empty atlas stands in for either, a single
-      // pixel the shader reads as none.
-      context.PSSetShaderResources(
-        5,
-        Some(&[
-          Some(arrow_view),
-          Some(sample_view),
-          Some(
-            numbers
-              .as_ref()
-              .map_or_else(|| self.empty_numbers.clone(), |atlas| atlas.view.clone()),
-          ),
-          Some(point_view),
-          None,
-          Some(
-            underlay
-              .cloned()
-              .unwrap_or_else(|| self.empty_numbers.clone()),
-          ),
-          Some(
-            softened
-              .cloned()
-              .unwrap_or_else(|| self.empty_numbers.clone()),
-          ),
-        ]),
-      );
-      // The result is already premultiplied, so it is written rather than
-      // blended: one pass over a cleared target has nothing to blend with.
-      context.Draw(3, 0);
-      context.PSSetShaderResources(5, Some(&[None, None, None, None, None, None, None]));
-      context.OMSetRenderTargets(None, None);
+    gpu
+      .queue
+      .write_buffer(&self.constants, 0, bytemuck::bytes_of(&constants));
+    let arrow_buffer = self.arrows.write(gpu, &numbered)?;
+    let sample_buffer = self.samples.write(gpu, &prepared.samples)?;
+    let point_buffer = self.points.write(gpu, &prepared.points)?;
+    let text_buffer = self.text.write(gpu, &prepared.text)?;
+    fn texture(binding: u32, view: &wgpu::TextureView) -> wgpu::BindGroupEntry<'_> {
+      wgpu::BindGroupEntry {
+        binding,
+        resource: wgpu::BindingResource::TextureView(view),
+      }
     }
+    fn buffer(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
+      wgpu::BindGroupEntry {
+        binding,
+        resource: buffer.as_entire_binding(),
+      }
+    }
+    let bindings = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+      label: Some("Screenwide annotate overlay bindings"),
+      layout: &self.layout,
+      entries: &[
+        buffer(0, &self.constants),
+        texture(1, underlay.unwrap_or(&self.empty)),
+        texture(2, softened.unwrap_or(&self.empty)),
+        buffer(7, &arrow_buffer),
+        buffer(8, &sample_buffer),
+        texture(9, numbers.as_ref().map_or(&self.empty, |atlas| &atlas.view)),
+        buffer(10, &point_buffer),
+        buffer(11, &text_buffer),
+      ],
+    });
+    let mut encoder = gpu
+      .device
+      .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("Screenwide annotate overlay"),
+      });
+    {
+      let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("Screenwide annotate overlay"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+          view: target,
+          depth_slice: None,
+          resolve_target: None,
+          ops: wgpu::Operations {
+            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+            store: wgpu::StoreOp::Store,
+          },
+        })],
+        ..Default::default()
+      });
+      pass.set_pipeline(&self.pipeline);
+      pass.set_bind_group(0, &bindings, &[]);
+      pass.draw(0..3, 0..1);
+    }
+    gpu.queue.submit([encoder.finish()]);
     Ok(())
   }
 }
 
-/// A single transparent pixel, bound where the counters' numbers go on a
-/// frame that has none. The shader's number pass returns on the zero atlas
-/// size before it reads this, so what it holds never shows.
-fn empty_atlas(
-  device: &ID3D11Device,
-) -> Result<(ID3D11Texture2D, ID3D11ShaderResourceView), String> {
-  let mut texture = None;
-  unsafe {
-    device.CreateTexture2D(
-      &D3D11_TEXTURE2D_DESC {
-        Width: 1,
-        Height: 1,
-        MipLevels: 1,
-        ArraySize: 1,
-        Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-        SampleDesc: DXGI_SAMPLE_DESC {
-          Count: 1,
-          Quality: 0,
+/// The overlay's own uniform and pictures, then the annotation lists and
+/// atlas at the bindings `annotations.wgsl` declares.
+fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+  let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
+    binding,
+    visibility: wgpu::ShaderStages::FRAGMENT,
+    ty,
+    count: None,
+  };
+  let storage = wgpu::BindingType::Buffer {
+    ty: wgpu::BufferBindingType::Storage { read_only: true },
+    has_dynamic_offset: false,
+    min_binding_size: None,
+  };
+  let texture = wgpu::BindingType::Texture {
+    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+    view_dimension: wgpu::TextureViewDimension::D2,
+    multisampled: false,
+  };
+  device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+    label: Some("Screenwide annotate overlay bindings"),
+    entries: &[
+      entry(
+        0,
+        wgpu::BindingType::Buffer {
+          ty: wgpu::BufferBindingType::Uniform,
+          has_dynamic_offset: false,
+          min_binding_size: None,
         },
-        Usage: D3D11_USAGE_IMMUTABLE,
-        BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
-        ..Default::default()
-      },
-      Some(&D3D11_SUBRESOURCE_DATA {
-        pSysMem: [0_u8; 4].as_ptr().cast::<c_void>(),
-        SysMemPitch: 4,
-        SysMemSlicePitch: 0,
-      }),
-      Some(&mut texture),
-    )
-  }
-  .map_err(|error| error.to_string())?;
-  let texture = texture.ok_or_else(|| "D3D11 created no annotate number texture".to_owned())?;
-  let resource: ID3D11Resource = texture.cast().map_err(|error| error.to_string())?;
-  let mut view = None;
-  unsafe { device.CreateShaderResourceView(&resource, None, Some(&mut view)) }
-    .map_err(|error| error.to_string())?;
-  Ok((
-    texture,
-    view.ok_or_else(|| "D3D11 created no annotate number view".to_owned())?,
-  ))
+      ),
+      entry(1, texture),
+      entry(2, texture),
+      entry(7, storage),
+      entry(8, storage),
+      entry(9, texture),
+      entry(10, storage),
+      entry(11, storage),
+    ],
+  })
 }

@@ -16,7 +16,7 @@
 //! - one `EDITOR_TOOLS` row and one `ANNOTATION_KINDS` row in TypeScript,
 //!   plus its icon;
 //! - the per-platform draw code that cannot be shared: a `geometry.h` twin, a
-//!   Metal layer function and an HLSL layer function.
+//!   Metal layer function and a WGSL layer function.
 
 pub(crate) mod kind;
 pub use kind::AnnotationKind;

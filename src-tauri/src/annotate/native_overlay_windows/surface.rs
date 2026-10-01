@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! One host window's overlay child and the swap chain its pixels arrive
+//! One host window's overlay child and the wgpu surface its pixels arrive
 //! through.
 //!
 //! The child is where the annotations are drawn: the Tauri host owns a WebView2
@@ -21,7 +21,7 @@ pub(super) struct Surface {
   /// Which [`Display`] the annotations are mapped into.
   pub(super) display: u32,
   pub(super) child: HWND,
-  pub(super) chain: overlay_surface::CompositionSwapChain,
+  pub(super) chain: overlay_surface::GpuSurface,
   /// The child's physical size, so a frame that has not changed size neither
   /// moves the window nor reallocates the buffers.
   size: (u32, u32),
@@ -32,11 +32,7 @@ pub(super) struct Surface {
 }
 
 impl Surface {
-  pub(super) fn new(
-    device: &overlay_surface::Device,
-    host: HWND,
-    display: u32,
-  ) -> Result<Self, String> {
+  pub(super) fn new(gpu: &crate::gpu::Gpu, host: HWND, display: u32) -> Result<Self, String> {
     let atom = *CLASS.get_or_init(|| {
       overlay_surface::register_class(
         w!("ScreenwideAnnotate"),
@@ -49,7 +45,7 @@ impl Surface {
     }
     let child = overlay_surface::create_child(host, w!("ScreenwideAnnotate"))?;
     window_proc::set_state(child, display, false);
-    let chain = device.create_swap_chain(child)?;
+    let chain = overlay_surface::GpuSurface::new(gpu, child)?;
     let mut surface = Self {
       host,
       display,
@@ -59,14 +55,14 @@ impl Surface {
       underlay: None,
       softened: None,
     };
-    surface.fit()?;
+    surface.fit(gpu)?;
     Ok(surface)
   }
 
-  /// Matches the child and its buffers to the host's client area, and reports
+  /// Matches the child and its surface to the host's client area, and reports
   /// the physical size a frame draws at. Zero means there is nothing to draw:
   /// the host has no client area yet.
-  pub(super) fn fit(&mut self) -> Result<(u32, u32), String> {
+  pub(super) fn fit(&mut self, gpu: &crate::gpu::Gpu) -> Result<(u32, u32), String> {
     let mut client = RECT::default();
     if unsafe { GetClientRect(self.host, &mut client) }.is_err() {
       return Ok((0, 0));
@@ -98,7 +94,7 @@ impl Surface {
       let _ = unsafe { ShowWindowAsync(self.child, SW_SHOWNOACTIVATE) };
       self.size = size;
     }
-    self.chain.resize(size)?;
+    self.chain.resize(gpu, size);
     Ok(size)
   }
 

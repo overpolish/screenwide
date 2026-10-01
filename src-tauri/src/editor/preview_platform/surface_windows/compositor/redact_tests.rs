@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The redaction pre-pass on real D3D11 hardware: what a secure box shows
-//! is the same whatever it covers, a classic block is the exact average of
-//! what it covers, and a rounded box covers every pixel its outline touches.
+//! The redaction pre-pass on a real GPU: what a secure box shows is the same
+//! whatever it covers, a classic block is the exact average of what it
+//! covers, and a rounded box covers every pixel its outline touches.
 
-use super::render_test_helpers::{device, read_pixel, read_top_strip, target, OUTPUT};
+use super::render_test_helpers::{
+  compositor, gpu, read_pixel, read_top_strip, target, view, OUTPUT,
+};
 use super::*;
 use crate::editor::annotations::redact::new_redact;
 use crate::editor::annotations::redact::records::{
@@ -50,8 +52,6 @@ fn redaction(redaction: AnnotationRedaction) -> Annotation {
 /// The canvas's top rows with `image` drawn at one canvas pixel a source
 /// pixel, under `annotations`.
 fn composed(
-  device: &ID3D11Device,
-  context: &ID3D11DeviceContext,
   compositor: &Compositor,
   image: &CapturedImage,
   annotations: Vec<Annotation>,
@@ -70,7 +70,7 @@ fn composed(
     settings.crop_y,
   ) = (400.0, 0.0, 400.0, 0.0);
   settings.annotations = annotations;
-  let source = compositor.screenshot_source(device, image).unwrap();
+  let source = compositor.screenshot_source(image).unwrap();
   let prepared = super::super::annotation::prepared_arrows(
     &settings.annotations,
     (image.width, image.height),
@@ -80,11 +80,10 @@ fn composed(
     None,
   )
   .unwrap();
-  let output = target(device);
+  let output = target();
   compositor
     .draw_with_camera(
-      context,
-      &output,
+      &view(&output),
       &source,
       &settings,
       ComposedFrame {
@@ -98,14 +97,13 @@ fn composed(
       &prepared,
     )
     .unwrap();
-  read_top_strip(device, context, &output)
+  read_top_strip(&output)
 }
 
 #[test]
-#[ignore = "requires a Windows D3D11 hardware adapter"]
+#[ignore = "requires a GPU adapter"]
 fn a_secure_box_shows_the_same_whatever_it_covers() {
-  let (device, context) = device();
-  let compositor = Compositor::new(&device).unwrap();
+  let compositor = compositor();
   // The same two inks in the same shares, laid out differently: all a
   // secure pixelation may read of what it covers is which inks are there.
   let checks = picture(|x, y| (x + y) % 2 == 0);
@@ -115,34 +113,19 @@ fn a_secure_box_shows_the_same_whatever_it_covers() {
     AnnotationRedaction::Color,
     AnnotationRedaction::Pixelate,
   ] {
-    let over_checks = composed(
-      &device,
-      &context,
-      &compositor,
-      &checks,
-      vec![redaction(mode)],
-    );
-    let over_stripes = composed(
-      &device,
-      &context,
-      &compositor,
-      &stripes,
-      vec![redaction(mode)],
-    );
+    // One box over both: a fresh one carries a fresh seed, and the seed alone
+    // chooses where a pixelation's blocks fall.
+    let redaction = redaction(mode);
+    let over_checks = composed(&compositor, &checks, vec![redaction.clone()]);
+    let over_stripes = composed(&compositor, &stripes, vec![redaction]);
     assert_eq!(over_checks, over_stripes, "{mode:?} shows what it covers");
-    let bare = composed(&device, &context, &compositor, &checks, Vec::new());
+    let bare = composed(&compositor, &checks, Vec::new());
     assert_ne!(over_checks, bare, "{mode:?} covered nothing");
   }
 }
 
 /// A 32 pixel square BGRA source, `colour` giving each pixel's RGBA.
-fn source(
-  device: &ID3D11Device,
-  context: &ID3D11DeviceContext,
-  compositor: &Compositor,
-  colour: impl Fn(u32, u32) -> [u8; 4],
-) -> SourceTexture {
-  let source = compositor.source(device, (32, 32)).unwrap();
+fn source(colour: impl Fn(u32, u32) -> [u8; 4]) -> SourceTexture {
   let bytes: Vec<u8> = (0..32)
     .flat_map(|y| (0..32).map(move |x| (x, y)))
     .flat_map(|(x, y)| {
@@ -150,37 +133,42 @@ fn source(
       [blue, green, red, alpha]
     })
     .collect();
-  let resource: ID3D11Resource = source.texture.cast().unwrap();
-  unsafe { context.UpdateSubresource(&resource, 0, None, bytes.as_ptr().cast(), 32 * 4, 0) };
-  source
+  let texture = gpu().texture_with_pixels("Screenwide test source", (32, 32, 1), FORMAT, &bytes);
+  SourceTexture {
+    size: (32, 32),
+    view: view(&texture),
+    texture,
+    shared: None,
+    picture: None,
+  }
 }
 
 /// `record` applied to `source`, and the copy it left.
 fn redacted(
-  device: &ID3D11Device,
-  context: &ID3D11DeviceContext,
   compositor: &Compositor,
   source: &SourceTexture,
   record: RedactRecord,
-) -> ID3D11Texture2D {
+) -> wgpu::Texture {
   let records = RedactRecords {
     records: vec![record],
     zones: Vec::new(),
   };
+  let gpu = gpu();
+  let mut encoder = gpu.device.create_command_encoder(&Default::default());
   let view = compositor
     .redactor
-    .apply(device, context, source, &records, false)
+    .apply(gpu, &mut encoder, source, &records, false)
     .unwrap()
     .expect("a box covering the source redacts it");
-  unsafe { view.GetResource() }.unwrap().cast().unwrap()
+  gpu.queue.submit([encoder.finish()]);
+  view.texture().clone()
 }
 
 #[test]
-#[ignore = "requires a Windows D3D11 hardware adapter"]
+#[ignore = "requires a GPU adapter"]
 fn a_classic_block_is_the_exact_average_of_what_it_covers() {
-  let (device, context) = device();
-  let compositor = Compositor::new(&device).unwrap();
-  let half = source(&device, &context, &compositor, |x, _| {
+  let compositor = compositor();
+  let half = source(|x, _| {
     if x < 16 {
       [0, 0, 0, 255]
     } else {
@@ -196,22 +184,18 @@ fn a_classic_block_is_the_exact_average_of_what_it_covers() {
     grid: [1, 1],
     ..RedactRecord::default()
   };
-  let copy = redacted(&device, &context, &compositor, &half, record);
+  let copy = redacted(&compositor, &half, record);
   // 127.5 rounds half up, as the Metal pass rounds it.
   for (x, y) in [(2, 2), (30, 30)] {
-    assert_eq!(
-      read_pixel(&device, &context, &copy, x, y),
-      [128, 128, 128, 255]
-    );
+    assert_eq!(read_pixel(&copy, x, y), [128, 128, 128, 255]);
   }
 }
 
 #[test]
-#[ignore = "requires a Windows D3D11 hardware adapter"]
+#[ignore = "requires a GPU adapter"]
 fn a_rounded_box_covers_every_pixel_its_outline_touches() {
-  let (device, context) = device();
-  let compositor = Compositor::new(&device).unwrap();
-  let red = source(&device, &context, &compositor, |_, _| [255, 0, 0, 255]);
+  let compositor = compositor();
+  let red = source(|_, _| [255, 0, 0, 255]);
   let record = RedactRecord {
     bounds: [0, 0, 32, 32],
     source_width: 32,
@@ -220,11 +204,11 @@ fn a_rounded_box_covers_every_pixel_its_outline_touches() {
     radius: 16.0,
     ..RedactRecord::default()
   };
-  let copy = redacted(&device, &context, &compositor, &red, record);
+  let copy = redacted(&compositor, &red, record);
   let blue = [255, 0, 0, 255];
   // Wholly outside the circle: the picture the box never covered.
-  assert_eq!(read_pixel(&device, &context, &copy, 0, 0), [0, 0, 255, 255]);
+  assert_eq!(read_pixel(&copy, 0, 0), [0, 0, 255, 255]);
   // Touched by the outline at the middle of an edge, and the centre.
-  assert_eq!(read_pixel(&device, &context, &copy, 0, 16), blue);
-  assert_eq!(read_pixel(&device, &context, &copy, 16, 16), blue);
+  assert_eq!(read_pixel(&copy, 0, 16), blue);
+  assert_eq!(read_pixel(&copy, 16, 16), blue);
 }

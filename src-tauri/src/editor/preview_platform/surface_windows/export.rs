@@ -9,16 +9,20 @@ impl RecordingPreviewSurface {
     source_size: (u32, u32),
     output_size: (u32, u32),
   ) -> Result<WindowsExportCompositor, String> {
-    let source = self
-      .inner
-      .gpu
-      .compositor
-      .source(&self.inner.gpu.device, source_size)?;
+    let gpu = &self.inner.gpu;
+    let source = gpu.compositor.source(gpu.d3d11, source_size)?;
+    let target = gpu.d3d11.shared_texture(
+      gpu.shared,
+      output_size,
+      wgpu::TextureFormat::Bgra8Unorm,
+      "export target",
+    )?;
     Ok(WindowsExportCompositor {
       camera: None,
       inner: std::sync::Arc::clone(&self.inner),
       output_size,
       source,
+      target,
     })
   }
 
@@ -29,13 +33,8 @@ impl RecordingPreviewSurface {
     output_size: (u32, u32),
   ) -> Result<WindowsExportCompositor, String> {
     let mut compositor = self.export_compositor(source_size, output_size)?;
-    compositor.camera = Some(
-      self
-        .inner
-        .gpu
-        .compositor
-        .source(&self.inner.gpu.device, camera_size)?,
-    );
+    let gpu = &self.inner.gpu;
+    compositor.camera = Some(gpu.compositor.source(gpu.d3d11, camera_size)?);
     Ok(compositor)
   }
 }
@@ -57,21 +56,16 @@ impl WindowsExportCompositor {
       .state
       .lock()
       .map_err(|_| "The Windows GPU compositor is unavailable".to_owned())?;
-    compositor::Compositor::copy_source(
-      &self.inner.gpu.context,
-      &self.source,
-      texture,
-      subresource,
-    )?;
+    let gpu = &self.inner.gpu;
+    gpu
+      .compositor
+      .copy_source(gpu.d3d11, &self.source, texture, subresource)?;
     if let (Some(camera_source), Some((camera_texture, camera_subresource, _, _, _))) =
       (&self.camera, camera)
     {
-      compositor::Compositor::copy_source(
-        &self.inner.gpu.context,
-        camera_source,
-        camera_texture,
-        camera_subresource,
-      )?;
+      gpu
+        .compositor
+        .copy_source(gpu.d3d11, camera_source, camera_texture, camera_subresource)?;
     }
     // Sink Writer retains DXGI surfaces and feeds the hardware encoder
     // asynchronously. A single repainted render target therefore lets a later
@@ -93,16 +87,15 @@ impl WindowsExportCompositor {
       BindFlags: D3D11_BIND_RENDER_TARGET.0 as u32,
       ..Default::default()
     };
-    let mut target = None;
+    let mut copy = None;
     unsafe {
-      self
-        .inner
-        .gpu
+      gpu
+        .d3d11
         .device
-        .CreateTexture2D(&description, None, Some(&mut target))
+        .CreateTexture2D(&description, None, Some(&mut copy))
     }
     .map_err(|error| format!("The Windows export target could not be created: {error}"))?;
-    let target = target.ok_or_else(|| "D3D11 created no Windows export target".to_owned())?;
+    let copy = copy.ok_or_else(|| "D3D11 created no Windows export target".to_owned())?;
     let prepared = super::annotation::prepared_arrows(
       annotations,
       self.source.size,
@@ -111,9 +104,8 @@ impl WindowsExportCompositor {
       None,
       None,
     )?;
-    self.inner.gpu.compositor.draw_with_camera(
-      &self.inner.gpu.context,
-      &target,
+    gpu.compositor.draw_with_camera(
+      &self.target.view,
       &self.source,
       settings,
       composition,
@@ -129,7 +121,14 @@ impl WindowsExportCompositor {
       // the same arrow the preview showed at that moment.
       &prepared,
     )?;
-    unsafe { self.inner.gpu.context.Flush() };
-    Ok(target)
+    // The frame was submitted to the shared queue above, so the copy the
+    // encoder reads, submitted after it, sees it whole.
+    let destination: ID3D11Resource = copy.cast().map_err(|error| error.to_string())?;
+    gpu.d3d11.with(&[&self.target], |context, textures| {
+      let drawn: ID3D11Resource = textures[0].cast().map_err(|error| error.to_string())?;
+      unsafe { context.CopyResource(&destination, &drawn) };
+      Ok::<_, String>(())
+    })??;
+    Ok(copy)
   }
 }

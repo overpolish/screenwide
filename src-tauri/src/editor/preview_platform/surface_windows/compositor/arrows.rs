@@ -1,22 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The structured-buffer elements the arrow shader reads, and the buffers
-//! that carry them. Layouts here are pinned against `annotations.hlsl` by
+//! The storage-buffer elements the annotation shader reads, and the buffers
+//! that carry them. Layouts here are pinned against `annotations.wgsl` by
 //! the asserts beside each struct, so a field added on one side fails the
 //! build rather than drifting silently.
 
 use super::*;
 /// One prepared arrow's geometry as scalars, shared by the annotation and by
-/// each of its exposure samples. The twin of the geometry block in
-/// `annotations.hlsl`.
+/// each of its exposure samples. The twin of `PreviewGeometry` in
+/// `annotations.wgsl`.
 ///
-/// Every member is a scalar on purpose. HLSL refuses to straddle a vector
-/// across a 16-byte boundary and pads to avoid it, so a `[f32; 2]` here would
-/// silently disagree with the shader; scalars pack at four bytes with no such
-/// rule.
+/// Every member is a scalar so the WGSL struct, also all scalars, packs at
+/// four bytes with no alignment padding, exactly as this one does.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct PreviewGeometry {
   pub(crate) ax: f32,
   pub(crate) ay: f32,
@@ -65,14 +63,10 @@ impl PreviewGeometry {
   }
 }
 
-/// One prepared annotation as the pixel shader's structured buffer element.
-///
-/// Every member is a scalar on purpose. HLSL refuses to straddle a vector
-/// across a 16-byte boundary and pads to avoid it, so a `[f32; 2]` here would
-/// silently disagree with the shader; scalars pack at four bytes with no such
-/// rule. The field order is the twin of `PreviewArrow` in `annotations.hlsl`.
+/// One prepared annotation as the shader's storage-buffer element. The field
+/// order is the twin of `PreviewArrow` in `annotations.wgsl`.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct PreviewArrow {
   pub(crate) geometry: PreviewGeometry,
   pub(crate) color: [f32; 4],
@@ -115,7 +109,7 @@ impl PreviewArrow {
 /// One exposure sample: the annotation part way through the interval this frame
 /// covers, and how solid it was then. The twin of `ScreenwideAnnotationSample`.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct PreviewSample {
   pub(crate) geometry: PreviewGeometry,
   pub(crate) opacity: f32,
@@ -172,116 +166,58 @@ pub(crate) struct PreparedArrows {
   pub(crate) cursor_blur: [f32; 2],
 }
 
-/// A CPU-written structured buffer that grows to fit the list it is handed,
-/// with the view the pixel shader reads it through. A list is as long as its
-/// document, so nothing is sized up front: the buffer is replaced by one twice
-/// the size needed whenever a list outgrows it, and kept after that.
-pub(crate) struct StructuredBuffer {
-  stride: usize,
+/// A CPU-written storage buffer that grows to fit the list it is handed. A
+/// list is as long as its document, so nothing is sized up front: the buffer
+/// is replaced by one twice the size needed whenever a list outgrows it, and
+/// kept after that.
+pub(crate) struct GpuBuffer {
   name: &'static str,
-  slot: std::sync::Mutex<(ID3D11Buffer, ID3D11ShaderResourceView, usize)>,
+  slot: std::sync::Mutex<wgpu::Buffer>,
 }
 
-impl StructuredBuffer {
-  pub(crate) fn new(
-    device: &ID3D11Device,
-    stride: usize,
-    name: &'static str,
-  ) -> Result<Self, String> {
-    const FIRST_CAPACITY: usize = 64;
-    let (buffer, view) = structured_buffer(device, stride, FIRST_CAPACITY, name)?;
-    Ok(Self {
-      stride,
+impl GpuBuffer {
+  pub(crate) fn new(gpu: &crate::gpu::Gpu, name: &'static str) -> Self {
+    const FIRST_BYTES: u64 = 4096;
+    Self {
       name,
-      slot: std::sync::Mutex::new((buffer, view, FIRST_CAPACITY)),
-    })
+      slot: std::sync::Mutex::new(storage_buffer(gpu, FIRST_BYTES, name)),
+    }
   }
 
   /// Writes `items` to the front of the buffer, growing it first when they do
-  /// not fit, and returns the view to bind. `items` may be narrower than the
-  /// stride - the text is bytes read four to an element - so room is counted
-  /// in bytes. Nothing is written for an empty list; the shader never reads
-  /// past its counts.
-  pub(crate) fn write<T: Copy>(
+  /// not fit, and returns the buffer to bind. Nothing is written for an empty
+  /// list; the shader never reads past its counts.
+  pub(crate) fn write<T: bytemuck::Pod>(
     &self,
-    device: &ID3D11Device,
-    context: &ID3D11DeviceContext,
+    gpu: &crate::gpu::Gpu,
     items: &[T],
-  ) -> Result<ID3D11ShaderResourceView, String> {
-    let bytes = std::mem::size_of_val(items);
-    let needed = bytes.div_ceil(self.stride);
+  ) -> Result<wgpu::Buffer, String> {
+    let bytes: &[u8] = bytemuck::cast_slice(items);
     let mut slot = self
       .slot
       .lock()
       .map_err(|_| format!("The {} buffer is poisoned", self.name))?;
-    if needed > slot.2 {
-      let capacity = needed.next_power_of_two();
-      let (buffer, view) = structured_buffer(device, self.stride, capacity, self.name)?;
-      *slot = (buffer, view, capacity);
+    // A storage write is a whole number of words; the text is bytes.
+    let padded = (bytes.len() as u64).next_multiple_of(4);
+    if padded > slot.size() {
+      *slot = storage_buffer(gpu, padded.next_power_of_two(), self.name);
     }
-    if bytes > 0 {
-      let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
-      unsafe {
-        context
-          .Map(&slot.0, 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&mut mapped))
-          .map_err(|error| error.to_string())?;
-        std::ptr::copy_nonoverlapping(
-          items.as_ptr().cast::<u8>(),
-          mapped.pData.cast::<u8>(),
-          bytes,
-        );
-        context.Unmap(&slot.0, 0);
-      }
+    if bytes.len() as u64 == padded {
+      gpu.queue.write_buffer(&slot, 0, bytes);
+    } else {
+      let mut words = bytes.to_vec();
+      words.resize(padded as usize, 0);
+      gpu.queue.write_buffer(&slot, 0, &words);
     }
-    Ok(slot.1.clone())
+    Ok(slot.clone())
   }
 }
 
-/// A CPU-written structured buffer of `count` elements of `stride` bytes,
-/// with the view the pixel shader reads it through.
-fn structured_buffer(
-  device: &ID3D11Device,
-  stride: usize,
-  count: usize,
-  name: &str,
-) -> Result<(ID3D11Buffer, ID3D11ShaderResourceView), String> {
-  let mut buffer = None;
-  unsafe {
-    device.CreateBuffer(
-      &D3D11_BUFFER_DESC {
-        ByteWidth: (stride * count) as u32,
-        Usage: D3D11_USAGE_DYNAMIC,
-        BindFlags: D3D11_BIND_SHADER_RESOURCE.0 as u32,
-        CPUAccessFlags: D3D11_CPU_ACCESS_WRITE.0 as u32,
-        MiscFlags: D3D11_RESOURCE_MISC_BUFFER_STRUCTURED.0 as u32,
-        StructureByteStride: stride as u32,
-      },
-      None,
-      Some(&mut buffer),
-    )
-  }
-  .map_err(|error| error.to_string())?;
-  let buffer = buffer.ok_or_else(|| format!("D3D11 created no {name} buffer"))?;
-  let mut view = None;
-  unsafe {
-    device.CreateShaderResourceView(
-      &buffer,
-      Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
-        Format: DXGI_FORMAT_UNKNOWN,
-        ViewDimension: D3D_SRV_DIMENSION_BUFFER,
-        Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
-          Buffer: D3D11_BUFFER_SRV {
-            Anonymous1: D3D11_BUFFER_SRV_0 { FirstElement: 0 },
-            Anonymous2: D3D11_BUFFER_SRV_1 {
-              NumElements: count as u32,
-            },
-          },
-        },
-      }),
-      Some(&mut view),
-    )
-  }
-  .map_err(|error| error.to_string())?;
-  let view = view.ok_or_else(|| format!("D3D11 created no {name} buffer view"))?;
-  Ok((buffer, view))
+fn storage_buffer(gpu: &crate::gpu::Gpu, size: u64, name: &str) -> wgpu::Buffer {
+  gpu.device.create_buffer(&wgpu::BufferDescriptor {
+    label: Some(name),
+    size,
+    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+    mapped_at_creation: false,
+  })
 }

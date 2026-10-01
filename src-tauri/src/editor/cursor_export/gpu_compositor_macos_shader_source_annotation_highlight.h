@@ -4,7 +4,7 @@
 #pragma once
 
 /// The highlight: every band of every highlight on one layer, recoloured
-/// rather than painted over. The twin of `annotation_highlight.hlsl`.
+/// rather than painted over. The twin of `annotation_highlight.wgsl`.
 ///
 /// A highlight reads the pixel under it - `base` - and maps the page to the
 /// highlight's colour and the ink printed on it to a colour that reads on

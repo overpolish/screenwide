@@ -5,11 +5,11 @@ use super::{
   atlas_uv, glyph_count, glyph_index, premultiply, upload, AtlasMetrics, Context, TextTexture,
   ATLAS_CELLS, GUTTER, HEX_GLYPHS, LABEL_ALPHA, LIGHT_INK, SUPERSAMPLE,
 };
+use crate::gpu::Gpu;
 use crate::osc::geometry::Size;
-use windows::Win32::Graphics::Direct3D11::ID3D11Device;
 
 pub(super) fn build_atlas(
-  device: &ID3D11Device,
+  device: &Gpu,
   scale: f64,
   font_size: f64,
   line_height: f64,
@@ -73,7 +73,7 @@ pub(super) fn build_atlas(
     &premultiply(&coverage, ink),
     pixel_width,
     pixel_height,
-  )?;
+  );
   let (u_offset, u_width) = atlas_uv(glyph_pixel_width, pixel_width);
   Some(TextTexture {
     view,

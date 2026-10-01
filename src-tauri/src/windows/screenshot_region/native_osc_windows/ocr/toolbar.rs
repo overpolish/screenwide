@@ -7,7 +7,7 @@ impl Chrome {
   #[allow(clippy::too_many_arguments)]
   pub(super) fn add_toolbar(
     &mut self,
-    device: &ID3D11Device,
+    device: &Gpu,
     out: &mut Vec<Vertex>,
     segments: &mut Vec<Segment>,
     view: Size,

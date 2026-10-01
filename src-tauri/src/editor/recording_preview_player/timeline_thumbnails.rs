@@ -6,7 +6,10 @@ use std::thread;
 use tauri::{image::Image, ipc::Channel, AppHandle};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-use super::{platform, sources::headless_sources};
+use super::{
+  platform,
+  sources::{headless_sources, sources_with_surface},
+};
 use crate::editor::{
   cursor_effects::CursorEffectSettings, keyboard_effects::KeyboardEffectSettings,
   CameraOverlaySettings, RecordingOutputSettings,
@@ -53,7 +56,9 @@ pub async fn copy_recording_preview_frame_to_clipboard(
   mut recording_output: RecordingOutputSettings,
   annotation_clips: Option<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>,
 ) -> Result<(), String> {
-  let sources = headless_sources(&app, artifact_id)?;
+  // Windows composes the frame through the editor window's compositor, which
+  // every session shares; macOS composes it without one.
+  let sources = sources_with_surface(&app, artifact_id, None, cfg!(target_os = "windows"))?;
   recording_output.stamp_captures(sources.captures);
   if let Some(clips) = &annotation_clips {
     crate::editor::annotations::timing::validate_clips(clips)?;

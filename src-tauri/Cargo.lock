@@ -5324,6 +5324,7 @@ dependencies = [
  "getrandom 0.3.4",
  "image",
  "keyboard-types",
+ "naga",
  "nokhwa",
  "objc2",
  "objc2-app-kit",

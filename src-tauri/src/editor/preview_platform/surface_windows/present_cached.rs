@@ -21,34 +21,30 @@ impl RecordingPreviewSurface {
     camera: Option<(&compositor::SourceTexture, BakeGeometry, bool, bool)>,
   ) -> Result<bool, String> {
     crate::screenshots::output_dimensions(settings)?;
-    // Keep one stable output chain for the current preview resolution. The
+    // Keep one stable output surface for the current preview resolution. The
     // source texture is cached separately and edits only redraw this target.
-    // Buffers are only reallocated when the output outgrows them (with
+    // The surface is only reallocated when the output outgrows it (with
     // headroom, so an interactive resize reallocates rarely rather than per
-    // pointer move - per-move ResizeBuffers churn stalls the compositor).
+    // pointer move - per-move reallocation churn stalls the compositor).
     // The visual's scale transform and clip in `update_geometry` map and
     // bound exactly the drawn `content_size` region, so the unused margin of
-    // the larger buffer is never composed. (`SetSourceSize` cannot express
+    // the larger surface is never composed. (`SetSourceSize` cannot express
     // this here: with the mandatory stretch scaling of a composition swap
     // chain it rescales the region to the buffer bounds and warps.)
+    let gpu = self.inner.gpu.shared;
     let output_size = (settings.width, settings.height);
     let resized = pane.content_size != output_size;
-    if pane.buffer_size.0 < output_size.0 || pane.buffer_size.1 < output_size.1 {
-      let buffer = (
-        output_size.0.max(pane.buffer_size.0).next_multiple_of(256),
-        output_size.1.max(pane.buffer_size.1).next_multiple_of(256),
+    let held = pane.surface.size();
+    if held.0 < output_size.0 || held.1 < output_size.1 {
+      // No frame may be held across a resize; a parked one is redrawn below.
+      pane.parked = None;
+      pane.surface.resize(
+        gpu,
+        (
+          output_size.0.max(held.0).next_multiple_of(256),
+          output_size.1.max(held.1).next_multiple_of(256),
+        ),
       );
-      unsafe {
-        pane.swap_chain.ResizeBuffers(
-          2,
-          buffer.0,
-          buffer.1,
-          DXGI_FORMAT_B8G8R8A8_UNORM,
-          DXGI_SWAP_CHAIN_FLAG(0),
-        )
-      }
-      .map_err(|error| format!("The Windows composed preview could not resize: {error}"))?;
-      pane.buffer_size = buffer;
     }
     if resized {
       pane.content_size = output_size;
@@ -62,34 +58,20 @@ impl RecordingPreviewSurface {
       .source
       .as_ref()
       .ok_or_else(|| "The preview source texture is unavailable".to_owned())?;
-    // D3D11 flip-discard rotates the buffer identities after Present; buffer
-    // zero is the writable back buffer for the next draw.
-    let target = unsafe { pane.swap_chain.GetBuffer::<ID3D11Texture2D>(0) }
-      .map_err(|error| format!("The composed preview has no back buffer: {error}"))?;
-    let composed = &target;
-    // A foreground layer blends over the existing target, and a flip-discard
-    // back buffer is undefined after each present: its uncovered pixels must
-    // read as transparent, not as stale frame data.
+    // A frame drawn twice inside one batch is drawn over again rather than
+    // acquiring another; only the last drawing is ever presented.
+    let frame = match pane.parked.take() {
+      Some(frame) => frame,
+      None => match pane.surface.acquire(gpu)? {
+        Frame::Ready(frame) => frame,
+        Frame::Skipped => return Ok(false),
+      },
+    };
+    // A foreground layer blends over the target, and a fresh swap-chain
+    // texture is undefined: its uncovered pixels must read as transparent,
+    // not as stale frame data.
     if composition.foreground_only {
-      let resource: ID3D11Resource = composed.cast().map_err(|error| error.to_string())?;
-      let mut view: Option<ID3D11RenderTargetView> = None;
-      unsafe {
-        self
-          .inner
-          .gpu
-          .device
-          .CreateRenderTargetView(&resource, None, Some(&mut view))
-      }
-      .map_err(|error| format!("The layer preview could not clear its target: {error}"))?;
-      if let Some(view) = view {
-        unsafe {
-          self
-            .inner
-            .gpu
-            .context
-            .ClearRenderTargetView(&view, &[0.0; 4])
-        };
-      }
+      pane::clear(gpu, &frame.texture, wgpu::Color::TRANSPARENT);
     }
     let mut prepared = annotation::prepared_arrows(
       &settings.annotations,
@@ -110,8 +92,7 @@ impl RecordingPreviewSurface {
       1.0
     };
     self.inner.gpu.compositor.draw_with_camera(
-      &self.inner.gpu.context,
-      composed,
+      &frame.texture.create_view(&Default::default()),
       source,
       settings,
       composition,
@@ -119,20 +100,17 @@ impl RecordingPreviewSurface {
       pane.magnifier,
       &prepared,
     )?;
-    unsafe { self.inner.gpu.context.Flush() };
     // Inside an open batch the frame is parked: the closing guard presents
     // every pane and commits every pending geometry in one flush, so sibling
     // layers change on the same compositor pass.
     if self.inner.batch_depth.load(Ordering::Acquire) > 0 {
-      pane.pending_present = true;
+      pane.parked = Some(frame);
       if resized {
         pane.pending_geometry = true;
       }
       return Ok(true);
     }
-    unsafe { pane.swap_chain.Present(0, DXGI_PRESENT(0)) }
-      .ok()
-      .map_err(|error| format!("The composed preview could not present: {error}"))?;
+    gpu.queue.present(frame);
     // Publish resized or deferred geometry only after the replacement frame
     // exists, immediately behind its present so both land in one pass.
     if resized || pane.pending_geometry {

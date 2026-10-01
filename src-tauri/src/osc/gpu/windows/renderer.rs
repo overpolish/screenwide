@@ -18,13 +18,10 @@ use geometry::push_quad_with_aux;
 use crate::osc::geometry::{Point, Rect, Size};
 use crate::osc::style::{control_palette, ocr_palette, overlay_palette, ruler_palette};
 
-pub(crate) const VERTEX_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/osc_gpu_vs.cso"));
-pub(crate) const PIXEL_SHADER: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/osc_gpu_ps.cso"));
-
 /// One triangle-list vertex. `position` is already in NDC: the pixel-to-clip
 /// mapping happens here so the vertex shader stays a pass-through.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct Vertex {
   pub position: [f32; 2],
   pub uv: [f32; 2],
@@ -37,10 +34,11 @@ pub(crate) struct Vertex {
 const _: () = assert!(std::mem::size_of::<Vertex>() == 32);
 
 /// Replaces Metal's nine fragment push-constant slots (b0-b8) with a single
-/// cbuffer. Fields keep the Metal declaration order and every member is a
-/// float4 row, which is what HLSL cbuffer packing gives us for free.
+/// uniform block, the twin of `RenderConstants` in `osc.wgsl`. Fields keep the
+/// Metal declaration order and every member is a 16-byte row, so the uniform
+/// layout needs no padding.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct RenderConstants {
   pub light_mode: [u32; 4],
   pub magnifier_box: [f32; 4],
@@ -206,7 +204,8 @@ pub(crate) use selection::{
   add_annotation_handles, add_crop, add_crop_with_handles, add_group_frame, add_selection,
 };
 
-/// The lens is emitted last as a quad over `magnifier_box`.
+/// The lens is emitted last as a quad over `magnifier_box`. It has its own
+/// kind, 49, because crop corners use Metal's 45.
 pub(crate) fn add_magnifier(out: &mut Vec<Vertex>, view: Size, constants: &RenderConstants) {
   let [x, y, width, height] = constants.magnifier_box;
   if constants.magnifier_flags[1] == 0 || width <= 0.0 || height <= 0.0 {
@@ -221,7 +220,7 @@ pub(crate) fn add_magnifier(out: &mut Vec<Vertex>, view: Size, constants: &Rende
       f64::from(width),
       f64::from(height),
     ),
-    45,
+    49,
   );
 }
 

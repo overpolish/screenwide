@@ -125,10 +125,7 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
     }
   }
   if let Some((plan, show_cursor)) = desktop_plan {
-    let coordinator = Arc::new(Mutex::new(DesktopFrameCoordinator::new(
-      device.clone(),
-      &plan,
-    )?));
+    let coordinator = Arc::new(Mutex::new(DesktopFrameCoordinator::new(&device, &plan)?));
     let failed = Arc::new(AtomicBool::new(false));
     for (source_index, piece) in plan.pieces.iter().enumerate() {
       let piece = *piece;
