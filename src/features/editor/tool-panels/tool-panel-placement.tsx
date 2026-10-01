@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 import { movePopupPanel } from "../../popup-panel/api";
 import { activePopupPanel, usePopupPanelStore } from "../../popup-panel/store";
-import { usePreviewFit } from "../components/preview-fit-context";
+import { usePreviewFit } from "../preview/preview-fit-context";
 import { EditorKind } from "../types";
 
 import { toolPanelGutter } from "./tool-panel-space";

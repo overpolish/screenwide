@@ -18,6 +18,10 @@ import { SidebarNav } from "../../components/base/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../components/shared/window-header/window-header";
 import { WindowShell } from "../../components/shared/window-shell/window-shell";
 
+import { useAnnotateSettingsSave } from "./sections/use-annotate-settings-save";
+import { useGlideSettingsSave } from "./sections/use-glide-settings-save";
+import { useOcrSettingsSave } from "./sections/use-ocr-settings-save";
+import { useRulerSettingsSave } from "./sections/use-ruler-settings-save";
 import { useSettingsApi } from "./settings-api-context";
 import { SettingsPanes } from "./settings-panes";
 import { sectionTitles, type SettingsSection } from "./settings-sections";
@@ -31,10 +35,6 @@ import {
   ShortcutAction,
   ShortcutSettings,
 } from "./types";
-import { useAnnotateSettingsSave } from "./use-annotate-settings-save";
-import { useGlideSettingsSave } from "./use-glide-settings-save";
-import { useOcrSettingsSave } from "./use-ocr-settings-save";
-import { useRulerSettingsSave } from "./use-ruler-settings-save";
 import { useShortcutCapture } from "./use-shortcut-capture";
 
 export function SettingsWindow({

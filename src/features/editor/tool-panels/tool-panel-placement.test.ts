@@ -39,7 +39,7 @@ vi.mock("../../popup-panel/store", () => ({
       },
     }),
 }));
-vi.mock("../components/preview-fit-context", () => ({
+vi.mock("../preview/preview-fit-context", () => ({
   usePreviewFit: () => ({ fitPreview: mocks.fit, setFitBasis: mocks.setBasis }),
 }));
 vi.mock("./tool-panel-space", () => ({ toolPanelGutter: 320 }));

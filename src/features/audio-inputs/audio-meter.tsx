@@ -1,0 +1,230 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { SVGAttributes, useEffect, useRef, useState } from "react";
+
+import { Text } from "../../components/base/text/text";
+
+const decibelToPercentage = (decibel: number): number => {
+  if (decibel < -60) return 0;
+  if (decibel > 0) return 100;
+
+  const normalized = (decibel + 60) / 60;
+  const power = 1.357; // -24 dB map to ~50%
+  return Math.pow(normalized, power) * 100;
+};
+
+let nextMeterId = 0;
+
+const ticksForLength = (length: number) => {
+  const ticks = [-48, -24];
+  if (length > 70) ticks.push(-12);
+  if (length > 95) ticks.push(-3);
+  return ticks;
+};
+
+type TickProps = {
+  tick: number;
+  orientation?: "horizontal" | "vertical";
+};
+/**
+ * Native level indicators draw unlabelled tick marks: a hairline per stop.
+ * Vertical marks are anchored by `bottom`, so centring them shifts downward.
+ */
+const Tick = ({ orientation = "horizontal", tick }: TickProps) => {
+  const percentage = decibelToPercentage(tick);
+  const vertical = orientation === "vertical";
+  return (
+    <div
+      className={`pointer-events-none absolute bg-content-fg-quaternary select-none ${
+        vertical
+          ? "h-px w-control translate-y-1/2"
+          : "h-control w-px -translate-x-1/2"
+      }`}
+      style={
+        vertical
+          ? { bottom: `${percentage.toString()}%` }
+          : { left: `${percentage.toString()}%` }
+      }
+    />
+  );
+};
+
+type AudioMeterProps = {
+  decibels: number;
+  disabled?: boolean;
+  height?: number;
+  hidePeakTick?: boolean;
+  hideTicks?: boolean;
+  orientation?: "horizontal" | "vertical";
+  peak?: number;
+  radius?: number;
+  width?: number | string;
+};
+
+export const AudioMeter = ({
+  decibels,
+  disabled,
+  height,
+  hidePeakTick,
+  hideTicks,
+  orientation = "horizontal",
+  peak = -Infinity,
+  radius = 2,
+  width,
+}: AudioMeterProps) => {
+  const vertical = orientation === "vertical";
+  const meterHeight = height ?? (vertical ? 150 : 10);
+  const meterWidth = width ?? (vertical ? 10 : 150);
+  const idRef = useRef<number | null>(null);
+  idRef.current ??= nextMeterId++;
+  const id = idRef.current;
+  const fillId = `meter-fill-${id.toString()}`;
+  const meterClipId = `meter-clip-${id.toString()}`;
+  const peakClipId = `peak-clip-${id.toString()}`;
+  const percentage = disabled ? 0 : decibelToPercentage(decibels);
+  const peakPercentage = decibelToPercentage(Math.min(peak, -0.5));
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [ticks, setTicks] = useState(() =>
+    ticksForLength(
+      vertical ? meterHeight : typeof meterWidth === "number" ? meterWidth : 0,
+    ),
+  );
+
+  const METER: SVGAttributes<SVGRectElement> = {
+    height: "100%",
+    rx: radius,
+    ry: radius,
+    width: "100%",
+  };
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      setTicks(
+        ticksForLength(
+          vertical ? entry.contentRect.height : entry.contentRect.width,
+        ),
+      );
+    });
+    resizeObserver.observe(svg);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [vertical]);
+
+  return (
+    <div
+      className={`pointer-events-none select-none ${vertical ? "flex items-stretch" : ""}`}
+    >
+      {/* Using SVG due to layering divs with border-radius and linear gradient
+       * causing bleeding */}
+      <svg
+        height={meterHeight}
+        preserveAspectRatio="none"
+        ref={svgRef}
+        viewBox={`0 0 ${typeof meterWidth === "number" ? meterWidth.toString() : "150"} ${meterHeight.toString()}`}
+        width={meterWidth}
+      >
+        <defs>
+          <linearGradient
+            id={fillId}
+            x1="0%"
+            x2={vertical ? "0%" : "100%"}
+            y1={vertical ? "100%" : "0%"}
+            y2="0%"
+          >
+            <stop offset="0%" stopColor="var(--color-success)" />
+            <stop offset="65%" stopColor="var(--color-success)" />
+            <stop offset="85%" stopColor="var(--color-warning)" />
+            <stop offset="93%" stopColor="var(--color-warning)" />
+            <stop offset="96%" stopColor="var(--color-error)" />
+            <stop offset="100%" stopColor="var(--color-error)" />
+          </linearGradient>
+
+          <clipPath id={meterClipId}>
+            {vertical ? (
+              <rect
+                height={`${percentage.toString()}%`}
+                width="100%"
+                y={`${(100 - percentage).toString()}%`}
+              />
+            ) : (
+              <rect height="100%" width={`${percentage.toString()}%`} />
+            )}
+          </clipPath>
+
+          <clipPath id={peakClipId}>
+            {!disabled &&
+              peak >= -60 &&
+              (vertical ? (
+                <rect
+                  height="2px"
+                  transform="translate(0,-1)"
+                  width="100%"
+                  y={`${(100 - peakPercentage).toString()}%`}
+                />
+              ) : (
+                <rect
+                  height="100%"
+                  transform="translate(-1.5,0)"
+                  width="2px"
+                  x={`${peakPercentage.toString()}%`}
+                />
+              ))}
+          </clipPath>
+        </defs>
+
+        <rect className="fill-fill" {...METER} width="100%" />
+        <rect
+          clipPath={`url(#${meterClipId})`}
+          fill={`url(#${fillId})`}
+          {...METER}
+        />
+        <rect
+          clipPath={`url(#${peakClipId})`}
+          fill={`url(#${fillId})`}
+          {...METER}
+        />
+      </svg>
+
+      {(!hideTicks || !hidePeakTick) && (
+        <div
+          className={
+            vertical
+              ? `relative ${hidePeakTick ? "w-control" : "w-8"}`
+              : `relative ${hidePeakTick ? "h-control" : "h-6"}`
+          }
+        >
+          {!hideTicks &&
+            [...ticks].map((tick) => (
+              <Tick key={tick} orientation={orientation} tick={tick} />
+            ))}
+
+          {!hidePeakTick && !disabled && peak >= -60 && (
+            <Text
+              as="span"
+              className={`pointer-events-none absolute tabular-nums select-none ${
+                vertical
+                  ? `translate-y-1/2 ${hideTicks ? "" : "ml-control"}`
+                  : `-translate-x-1/2 ${hideTicks ? "" : "mt-control"}`
+              }`}
+              style={
+                vertical
+                  ? { bottom: `${peakPercentage.toString()}%` }
+                  : { left: `${peakPercentage.toString()}%` }
+              }
+              variant="footnote"
+            >
+              {peak.toFixed(1)}
+            </Text>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};

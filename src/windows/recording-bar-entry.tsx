@@ -4,7 +4,7 @@
 import { EditorSync } from "../features/editor/editor-sync";
 import { PermissionSync } from "../features/permissions/permission-sync";
 import { PopupPanelSync } from "../features/popup-panel/popup-panel-sync";
-import { RecordingBarWindow } from "../features/recording-controls/components/recording-bar-window";
+import { RecordingBarWindow } from "../features/recording-controls/recording-bar/recording-bar-window";
 import { RecordingStateSync } from "../features/recording-controls/recording-state-sync";
 import { RecordingInputSync } from "../features/recording-inputs/recording-input-sync";
 import { RecordingSourceSync } from "../features/recording-sources/recording-source-sync";

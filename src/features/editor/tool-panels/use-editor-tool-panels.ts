@@ -7,22 +7,22 @@ import {
   useAnnotationSelection,
   useAnnotationSelectionCount,
   useCanClearDrawings,
-} from "../annotation-channel";
-import { useRestoreRecordingKeyboardShortcuts } from "../components/use-restore-recording-keyboard-shortcuts";
-import { keyboardMaximumSizePercent } from "../keyboard-effect-geometry";
-import {
-  applyKeyboardShortcutToAll,
-  placeKeyboardShortcut,
-  resetKeyboardShortcut,
-  useKeyboardShortcutSelection,
-} from "../keyboard-shortcut-channel";
-import { RecordingTimelineEdit } from "../recording-timeline-edit";
+} from "../annotations/annotation-channel";
+import { keyboardMaximumSizePercent } from "../keyboard-effect/keyboard-effect-geometry";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
-} from "../screenshot-output";
+} from "../screenshot/screenshot-output";
+import {
+  applyKeyboardShortcutToAll,
+  placeKeyboardShortcut,
+  resetKeyboardShortcut,
+  useKeyboardShortcutSelection,
+} from "../shortcuts/keyboard-shortcut-channel";
+import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
+import { useRestoreRecordingKeyboardShortcuts } from "../timeline/keyboard/use-restore-recording-keyboard-shortcuts";
 import {
   AudioTrackVolume,
   CameraOverlaySettings,
@@ -33,15 +33,15 @@ import {
   RecordingVideoTrackId,
 } from "../types";
 
-import { annotationPanelHandlers } from "./annotation-handlers";
-import { cropPanelHandlers, editorCropTarget } from "./crop-target";
-import { editorFrameTarget, framePanelHandlers } from "./frame-target";
+import { annotationPanelHandlers } from "./annotation/annotation-handlers";
+import { cropPanelHandlers, editorCropTarget } from "./crop/crop-target";
+import { editorFrameTarget, framePanelHandlers } from "./frame/frame-target";
 import {
   audioPanelHandlers,
   editorAudioSelectionTarget,
   editorSelectionTarget,
   selectionPanelHandlers,
-} from "./selection-target";
+} from "./selection/selection-target";
 import { useToolPanelBridge } from "./tool-panel-bridge";
 import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
 

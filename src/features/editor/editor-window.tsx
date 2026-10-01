@@ -13,12 +13,7 @@ import {
   setScreenshotBackgroundRadius,
   setScreenshotRadius,
 } from "./api";
-import {
-  cameraOutputWithCameraOverlay,
-  cameraOverlayWithCameraCrop,
-} from "./camera-overlay-geometry";
-import { EditorPanel } from "./components/editor-panel";
-import { seededExportChoices } from "./recording-export-choices";
+import { seededExportChoices } from "./export/recording-export-choices";
 import {
   cameraExportSettings,
   DEFAULT_COMPRESSION,
@@ -26,8 +21,16 @@ import {
   DEFAULT_KEYBOARD_EFFECTS,
   defaultCameraOverlay,
   recordingSavePlan,
-} from "./recording-export-settings";
-import { recordingOutputForEdit } from "./recording-output-edit";
+} from "./export/recording-export-settings";
+import { useExportProgress } from "./export/use-export-progress";
+import { useRecordingExportEstimate } from "./export/use-recording-export-estimate";
+import { EditorPanel } from "./panel/editor-panel";
+import {
+  cameraOutputWithCameraOverlay,
+  cameraOverlayWithCameraCrop,
+} from "./preview/camera-overlay-geometry";
+import { recordingOutputForEdit } from "./recording/recording-output-edit";
+import { useRecordingEditorPreview } from "./recording/use-recording-editor-preview";
 import { sourceScalePercent } from "./resolution";
 import {
   defaultRecordingOutput,
@@ -36,17 +39,18 @@ import {
   restoredRecordingOutput,
   ScreenshotWorkspaceOutputSettings,
   withScreenshotWorkspaceItemOutput,
-} from "./screenshot-output";
+} from "./screenshot/screenshot-output";
 import {
   seedScreenshotItemOutput,
   seedScreenshotWorkspace,
-} from "./screenshot-seed";
+} from "./screenshot/screenshot-seed";
 import {
   selectArtifact,
   selectDirectory,
   selectSnapshot,
   useEditorStore,
 } from "./store";
+import { useRecordingTimelineEditState } from "./timeline/editing/use-recording-timeline-edit-state";
 import {
   AudioTrackVolume,
   recordingAudioStreamIndex,
@@ -59,10 +63,6 @@ import {
   EditorEditState,
   useEditorEditHistory,
 } from "./use-editor-edit-history";
-import { useExportProgress } from "./use-export-progress";
-import { useRecordingEditorPreview } from "./use-recording-editor-preview";
-import { useRecordingExportEstimate } from "./use-recording-export-estimate";
-import { useRecordingTimelineEditState } from "./use-recording-timeline-edit-state";
 import { currentEditorKind } from "./window-kind";
 
 const EMPTY_AUDIO_TRACK_VOLUMES: AudioTrackVolume[] = [];

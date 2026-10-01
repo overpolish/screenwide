@@ -19,10 +19,10 @@ vi.mock("react", () => ({
   useRef: (value: unknown) =>
     (hooks.refs[hooks.index++] ??= { current: value }),
 }));
-vi.mock("../escape-focus", () => ({
+vi.mock("../shortcuts/escape-focus", () => ({
   preserveEscapeFocus: () => () => undefined,
 }));
-vi.mock("../keyboard-target", () => ({
+vi.mock("../shortcuts/keyboard-target", () => ({
   arrowsOnlyMoveFocus: () => hooks.focusOnly,
   ownsActivationKeys: () => hooks.activation,
   ownsArrowKeys: () => hooks.arrows,
@@ -31,7 +31,7 @@ vi.mock("../keyboard-target", () => ({
 }));
 vi.mock("./tool-panel-store", () => ({ sendToolPanelRequest: hooks.send }));
 
-import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
+import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 
 import { usePanelShortcuts } from "./use-panel-shortcuts";
 

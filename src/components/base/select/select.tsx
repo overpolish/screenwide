@@ -20,7 +20,7 @@ import { tv } from "../../../lib/variants";
 import { ListBox } from "../listbox/listbox";
 import { ScrollArea } from "../scroll-area/scroll-area";
 
-import { ClearButton } from "./components/clear-button";
+import { ClearButton } from "./clear-button";
 
 // In-page fallback when the list is not hosted in its own panel window. Opaque:
 // a backdrop blur is not reliable over a transparent material window. The

@@ -3,24 +3,24 @@
 
 import { Channel, invoke } from "@tauri-apps/api/core";
 
-import { AnnotationStyle } from "./annotations";
+import { AnnotationStyle } from "./annotations/annotations";
 import {
   normalizedCameraOverlay,
   normalizedCursorEffects,
   normalizedKeyboardEffects,
   normalizedAudioTrackVolumes,
-} from "./preview-settings-normalization";
+} from "./preview/preview-settings-normalization";
 import {
   RecordingPreviewPlayerEvent,
   RecordingPreviewPlayerInfo,
-} from "./recording-preview-player-contract";
-import { RecordingTimelineEdit } from "./recording-timeline-edit";
+} from "./recording/recording-preview-player-contract";
 import {
   normalizedScreenshotOutput,
   RecordingOutputSettings,
   ScreenshotWorkspaceOutputSettings,
   normalizedScreenshotWorkspaceOutput,
-} from "./screenshot-output";
+} from "./screenshot/screenshot-output";
+import { RecordingTimelineEdit } from "./timeline/editing/recording-timeline-edit";
 import {
   CameraOverlaySettings,
   AudioTrackVolume,
@@ -67,7 +67,7 @@ export const startRecordingPreviewPlayer = ({
   enabledStreamIndices: number[];
   eventChannel: Channel<RecordingPreviewPlayerEvent>;
   keyboardEffects: KeyboardEffectSettings;
-  keyboardTimeline: import("./recording-keyboard-timeline-api").RecordingPreviewKeyboardDeletions;
+  keyboardTimeline: import("./timeline/keyboard/recording-keyboard-timeline-api").RecordingPreviewKeyboardDeletions;
   recordingOutput: RecordingOutputSettings;
   sessionId: number;
 }) =>
@@ -141,7 +141,8 @@ export const layoutRecordingPreviewSurface = ({
    * the tool and the selection it has to agree with reach the native chrome
    * together: split across two commands, whichever lands first paints the
    * layer's frame for a frame. */
-  annotationTool?: import("./annotation-defaults").AnnotationTool | null;
+  annotationTool?:
+    import("./annotations/annotation-defaults").AnnotationTool | null;
   fitWidth?: number;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
@@ -259,7 +260,7 @@ export const setRecordingPreviewComposition = ({
     sessionId,
   });
 
-export { copyRecordingPreviewFrameToClipboard } from "./recording-frame-api";
+export { copyRecordingPreviewFrameToClipboard } from "./recording/recording-frame-api";
 
 export const startScreenshotPreview = (artifactId: number, sessionId: number) =>
   invoke<null>("start_screenshot_preview", { artifactId, sessionId });
@@ -302,7 +303,7 @@ export const layoutScreenshotPreviewSurface = ({
   /** The annotation tool in hand. "select" hit-tests the annotations already on
    * the layer and lets every other press fall through to it; "arrow" and
    * "counter" also make a new annotation on empty picture. */
-  annotationTool?: import("./annotation-defaults").AnnotationTool;
+  annotationTool?: import("./annotations/annotation-defaults").AnnotationTool;
   fitWidth?: number;
   /** Every annotation chosen on the selected layer. */
   selectedAnnotationIds?: readonly string[];
@@ -482,7 +483,7 @@ export {
   setExportDirectory,
   setScreenshotBackgroundRadius,
   setScreenshotRadius,
-} from "./api/editor-actions";
+} from "./editor-actions";
 
 export const setRecordingPreviewEditorSuspended = (
   sessionId: number,

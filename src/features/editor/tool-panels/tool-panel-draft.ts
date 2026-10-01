@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { SelectionPlacementPatch } from "../selection-placement";
 import { EditorKind } from "../types";
 
+import { SelectionPlacementPatch } from "./selection-placement";
 import { ToolPanelPatch, ToolPanelSnapshot } from "./tool-panel-store";
 
 export type ToolPanelDraft = {

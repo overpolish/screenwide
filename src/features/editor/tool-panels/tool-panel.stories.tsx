@@ -7,7 +7,7 @@ import { toolPanelWidth } from "../../popup-panel/layout";
 import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
-} from "../recording-export-settings";
+} from "../export/recording-export-settings";
 
 import { ToolPanel } from "./tool-panel";
 import { seedToolPanel } from "./tool-panel-story-seed";

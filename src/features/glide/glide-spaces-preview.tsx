@@ -5,8 +5,8 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState } from "react";
 
+import { type GlideRegion } from "./detection/glide-regions";
 import { GlidePreview } from "./glide-preview";
-import { type GlideRegion } from "./glide-regions";
 
 export type GlideSpacePreviewEvent = {
   count: number;

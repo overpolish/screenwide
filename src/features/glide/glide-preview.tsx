@@ -5,12 +5,12 @@ import { Lock } from "lucide-react";
 import { motion, useAnimate } from "motion/react";
 import { useEffect } from "react";
 
-import { type GlideAction } from "./glide-detection";
+import { type GlideAction } from "./detection/glide-detection";
 import {
   describeRegion,
   glideGridRows,
   type GlideRegion,
-} from "./glide-regions";
+} from "./detection/glide-regions";
 
 const percent = (value: number, of: number) =>
   `${((value / of) * 100).toFixed(4)}%`;

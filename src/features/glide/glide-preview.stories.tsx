@@ -3,8 +3,8 @@
 
 import { FeatureStoryStage } from "../../storybook/feature-story-stage";
 
+import { type GlideRegion } from "./detection/glide-regions";
 import { GlidePreview } from "./glide-preview";
-import { type GlideRegion } from "./glide-regions";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 

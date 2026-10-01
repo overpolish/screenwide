@@ -7,14 +7,14 @@ import {
   Background,
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
-import { AnnotationStyle } from "../annotations";
-import { SelectionPlacementPatch } from "../selection-placement";
+import { AnnotationStyle } from "../annotations/annotations";
 import {
   CursorEffectSettings,
   EditorKind,
   KeyboardEffectSettings,
 } from "../types";
 
+import { SelectionPlacementPatch } from "./selection-placement";
 import {
   ToolPanelPatch,
   ToolPanelSnapshot,

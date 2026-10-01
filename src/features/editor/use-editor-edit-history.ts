@@ -10,12 +10,12 @@ import {
   useRef,
 } from "react";
 
-import { ownsTextEditingKeys } from "./keyboard-target";
-import { RecordingTimelineEdit } from "./recording-timeline-edit";
 import {
   RecordingOutputSettings,
   ScreenshotWorkspaceOutputSettings,
-} from "./screenshot-output";
+} from "./screenshot/screenshot-output";
+import { ownsTextEditingKeys } from "./shortcuts/keyboard-target";
+import { RecordingTimelineEdit } from "./timeline/editing/recording-timeline-edit";
 import {
   AudioTrackVolume,
   CameraOverlaySettings,

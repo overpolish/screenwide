@@ -24,7 +24,7 @@ import {
   ToolPanelKind,
   usePopupPanelStore,
 } from "../../popup-panel/store";
-import { usePreviewFit } from "../components/preview-fit-context";
+import { usePreviewFit } from "../preview/preview-fit-context";
 import { EditorKind } from "../types";
 
 import {

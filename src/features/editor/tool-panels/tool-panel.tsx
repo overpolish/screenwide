@@ -6,12 +6,12 @@ import { ReactNode } from "react";
 import { ToolPanelKind } from "../../popup-panel/store";
 import { EditorKind } from "../types";
 
-import { AnnotationPanel } from "./annotation-panel";
-import { CropPanel } from "./crop-panel";
-import { CursorPanel } from "./cursor-panel";
-import { FramePanel } from "./frame-panel";
-import { KeyboardPanel } from "./keyboard-panel";
-import { SelectionPanel } from "./selection-panel";
+import { AnnotationPanel } from "./annotation/annotation-panel";
+import { CropPanel } from "./crop/crop-panel";
+import { CursorPanel } from "./cursor/cursor-panel";
+import { FramePanel } from "./frame/frame-panel";
+import { KeyboardPanel } from "./keyboard/keyboard-panel";
+import { SelectionPanel } from "./selection/selection-panel";
 import { usePanelShortcuts } from "./use-panel-shortcuts";
 
 const toolPanels: Record<

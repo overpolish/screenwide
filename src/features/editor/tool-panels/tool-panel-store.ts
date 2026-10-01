@@ -7,12 +7,11 @@ import {
   Background,
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
-import { AnnotationStyle } from "../annotations";
+import { AnnotationStyle } from "../annotations/annotations";
 import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
-} from "../recording-export-settings";
-import { SelectionPlacementPatch } from "../selection-placement";
+} from "../export/recording-export-settings";
 import {
   CursorEffectSettings,
   EditorKind,
@@ -20,6 +19,7 @@ import {
 } from "../types";
 import { createWorkspaceMirror } from "../workspace-mirror";
 
+import { SelectionPlacementPatch } from "./selection-placement";
 import { ToolPanelFrame } from "./tool-panel-frame";
 import {
   ToolPanelAnnotation,

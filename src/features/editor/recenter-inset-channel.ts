@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from "react";
 
-import { SourceRect } from "./screenshot-geometry";
+import { SourceRect } from "./screenshot/screenshot-geometry";
 import { EditorKind } from "./types";
 
 /**

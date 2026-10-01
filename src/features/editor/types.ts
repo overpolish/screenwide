@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Annotation } from "./annotations";
-import { RecordingTimelineEdit } from "./recording-timeline-edit";
+import { Annotation } from "./annotations/annotations";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
-} from "./screenshot-output";
+} from "./screenshot/screenshot-output";
+import { RecordingTimelineEdit } from "./timeline/editing/recording-timeline-edit";
 
 type EditorArtifactBase = {
   extension: string;

@@ -1,0 +1,47 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import {
+  ScreenshotOutputSettings,
+  screenshotLayout,
+  screenshotOutputDimensions,
+} from "../../screenshot/screenshot-output";
+import { normalizedScreenshotSelection } from "../../screenshot/screenshot-selection";
+
+import { RecordingCanvasTool } from "./recording-crop-toggle";
+
+import type { AnnotationKind } from "../../../../components/shared/annotation-style/types";
+
+type SelectionTool = Exclude<
+  RecordingCanvasTool,
+  AnnotationKind | "canvas" | "marquee" | null
+>;
+
+/** Build the native OSC payload for an ordinary screen/camera output pane. */
+export function normalizedRecordingSelection({
+  mode,
+  output,
+  paneIndex,
+  source,
+}: {
+  mode: SelectionTool;
+  output: ScreenshotOutputSettings;
+  paneIndex: number;
+  source: { height: number; width: number };
+}) {
+  const dimensions = screenshotOutputDimensions(output);
+  const selection = normalizedScreenshotSelection(
+    screenshotLayout(source, output),
+    dimensions,
+    mode,
+  );
+  return {
+    cropMode: mode === "crop",
+    image: selection.image,
+    layerId: paneIndex,
+    paneIndex,
+    radiusPercent: output.radiusPercent,
+    recenterBounds: selection.recenterBounds,
+    rect: selection.rect,
+  };
+}

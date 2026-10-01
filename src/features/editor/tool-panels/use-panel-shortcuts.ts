@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorKind } from "../types";
-import { useEditorWindowShortcuts } from "../use-editor-window-shortcuts";
 
 import { sendToolPanelRequest } from "./tool-panel-store";
 import { drawingToolShortcut } from "./tool-registry";

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnnotationStyle } from "../annotations";
+import { AnnotationStyle } from "../annotations/annotations";
 
 import type { AnnotationKind } from "../../../components/shared/annotation-style/types";
 

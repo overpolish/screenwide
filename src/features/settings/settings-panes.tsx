@@ -3,12 +3,12 @@
 
 import { type ReactNode } from "react";
 
-import { AnnotateSettingsPanel } from "./annotate-settings";
-import { GeneralSettingsPanel } from "./general-settings";
-import { GlideSettingsPanel } from "./glide-settings";
-import { HotkeySettingsPanel } from "./hotkey-settings";
-import { OcrSettingsPanel } from "./ocr-settings";
-import { RulerSettingsPanel } from "./ruler-settings";
+import { AnnotateSettingsPanel } from "./sections/annotate-settings";
+import { GeneralSettingsPanel } from "./sections/general-settings";
+import { GlideSettingsPanel } from "./sections/glide-settings";
+import { HotkeySettingsPanel } from "./sections/hotkey-settings";
+import { OcrSettingsPanel } from "./sections/ocr-settings";
+import { RulerSettingsPanel } from "./sections/ruler-settings";
 
 import type { SettingsSection } from "./settings-sections";
 import type {

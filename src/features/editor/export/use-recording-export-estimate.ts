@@ -1,0 +1,210 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+/* eslint-disable @eslint-react/set-state-in-effect -- Export estimation owns this external lifecycle. */
+
+import { useEffect, useRef, useState } from "react";
+
+import { estimateRecordingExport } from "../api";
+import {
+  defaultScreenshotOutput,
+  RecordingOutputSettings,
+} from "../screenshot/screenshot-output";
+import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
+import {
+  AudioTrackVolume,
+  CameraOverlaySettings,
+  CursorEffectSettings,
+  EditorArtifact,
+  KeyboardEffectSettings,
+} from "../types";
+
+import { mixSignature, VideoExportSettings } from "./recording-export-settings";
+
+const ESTIMATE_DEBOUNCE_MS = 450;
+
+export function useRecordingExportEstimate({
+  artifact,
+  audioTrackVolumes,
+  bakeCamera,
+  camera,
+  cameraOverlay,
+  collapseAudio,
+  compression,
+  cursorEffects,
+  enabledStreamIndices,
+  includeCamera,
+  includePrimaryVideo,
+  keyboardEffects,
+  recordingOutput,
+  recordingTimelineEdit,
+  resolutionScalePercent,
+}: {
+  artifact: EditorArtifact | null;
+  audioTrackVolumes: AudioTrackVolume[];
+  bakeCamera: boolean;
+  camera: VideoExportSettings;
+  cameraOverlay: CameraOverlaySettings;
+  collapseAudio: boolean;
+  compression: number;
+  cursorEffects: CursorEffectSettings;
+  enabledStreamIndices: number[] | null;
+  includeCamera: boolean;
+  includePrimaryVideo: boolean;
+  keyboardEffects: KeyboardEffectSettings;
+  recordingOutput: RecordingOutputSettings;
+  recordingTimelineEdit: RecordingTimelineEdit | null;
+  resolutionScalePercent: number;
+}) {
+  const cacheRef = useRef(new Map<string, number>());
+  const [activeJobs, setActiveJobs] = useState(0);
+  const [state, setState] = useState<{
+    bytes: number | null;
+    isEstimating: boolean;
+    signature: string;
+  } | null>(null);
+  const enabledSignature = enabledStreamIndices
+    ? mixSignature(enabledStreamIndices)
+    : null;
+  const hasExportableContent =
+    includePrimaryVideo ||
+    includeCamera ||
+    (enabledSignature !== null && enabledSignature !== "silent");
+  const signature =
+    artifact?.kind === "recording" &&
+    enabledSignature !== null &&
+    hasExportableContent
+      ? [
+          artifact.id,
+          includePrimaryVideo ? "primary" : "no-primary",
+          includeCamera ? "camera" : "no-camera",
+          bakeCamera ? "baked" : "separate",
+          compression,
+          cursorEffects.bake ? "cursor" : "no-cursor",
+          keyboardEffects.bake ? "keyboard" : "no-keyboard",
+          resolutionScalePercent,
+          camera.compression,
+          camera.resolutionScalePercent,
+          enabledSignature,
+          cameraOverlay.cameraX,
+          cameraOverlay.cameraY,
+          cameraOverlay.cameraWidth,
+          cameraOverlay.frameHeight,
+          cameraOverlay.frameWidth,
+          cameraOverlay.frameX,
+          cameraOverlay.frameY,
+          cameraOverlay.radiusPercent,
+          JSON.stringify(recordingOutput),
+          JSON.stringify(recordingTimelineEdit?.segments ?? null),
+          collapseAudio ? "mix" : "separate",
+          audioTrackVolumes
+            .map(
+              (volume) =>
+                `${volume.streamIndex.toString()}-${volume.decibels.toString()}`,
+            )
+            .join(","),
+        ].join(":")
+      : null;
+
+  // Keyed on the id: a cancelled or failed save re-emits the same recording
+  // as a new object, and its estimates are still good.
+  const artifactId = artifact?.id;
+  useEffect(() => {
+    cacheRef.current.clear();
+    setState(null);
+  }, [artifactId]);
+
+  useEffect(() => {
+    if (
+      artifact?.kind !== "recording" ||
+      enabledSignature === null ||
+      signature === null
+    )
+      return;
+
+    const cached = cacheRef.current.get(signature);
+    if (cached !== undefined) {
+      setState({ bytes: cached, isEstimating: false, signature });
+      return;
+    }
+
+    setState({ bytes: null, isEstimating: true, signature });
+    let disposed = false;
+    const delay =
+      !bakeCamera && compression === 0 && camera.compression === 0
+        ? 0
+        : ESTIMATE_DEBOUNCE_MS;
+    const timer = window.setTimeout(() => {
+      const streamIndices =
+        enabledSignature === "silent"
+          ? []
+          : enabledSignature.split("-").map(Number);
+      setActiveJobs((count) => count + 1);
+      estimateRecordingExport({
+        artifactId: artifact.id,
+        audioTrackVolumes,
+        bakeCamera,
+        cameraCompression: camera.compression,
+        cameraOverlay,
+        cameraResolutionScalePercent: camera.resolutionScalePercent,
+        collapseAudio,
+        compression,
+        cursorEffects,
+        enabledStreamIndices: streamIndices,
+        includeCamera,
+        includePrimaryVideo,
+        keyboardEffects,
+        recordingOutput,
+        resolutionScalePercent,
+        screenshotOutput: { ...defaultScreenshotOutput(1, 1), items: [] },
+        timelineEdit: recordingTimelineEdit,
+      })
+        .then((bytes) => {
+          if (disposed) return;
+          cacheRef.current.set(signature, bytes);
+          setState({ bytes, isEstimating: false, signature });
+        })
+        .catch((cause: unknown) => {
+          if (disposed) return;
+          console.error("Could not estimate the recording size", cause);
+          setState({ bytes: null, isEstimating: false, signature });
+        })
+        .finally(() => {
+          setActiveJobs((count) => Math.max(0, count - 1));
+        });
+    }, delay);
+
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+    };
+  }, [
+    artifact,
+    audioTrackVolumes,
+    bakeCamera,
+    camera.compression,
+    camera.resolutionScalePercent,
+    cameraOverlay,
+    collapseAudio,
+    compression,
+    cursorEffects,
+    keyboardEffects,
+    enabledSignature,
+    includeCamera,
+    includePrimaryVideo,
+    resolutionScalePercent,
+    recordingOutput,
+    recordingTimelineEdit,
+    signature,
+  ]);
+
+  const current =
+    signature !== null && state?.signature === signature ? state : null;
+  return {
+    estimatedSizeBytes: current?.bytes,
+    isEstimatingSize:
+      artifact?.kind === "recording" &&
+      hasExportableContent &&
+      (current === null || current.isEstimating),
+    isPending: activeJobs > 0,
+  };
+}

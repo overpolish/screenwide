@@ -1,0 +1,64 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { RecordingOutputSettings } from "../../screenshot/screenshot-output";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import {
+  AudioTrackVolume,
+  CameraOverlaySettings,
+  CursorEffectSettings,
+  KeyboardEffectSettings,
+  PreparedAudioTrack,
+  RecordingPreviewLayout,
+  RecordingTrackId,
+  RecordingVideoTrackId,
+} from "../../types";
+
+import { NativeRecordingPreview } from "./native-recording-preview";
+
+export type ScrubPreviewProps = {
+  artifactId: number;
+  durationMs: number;
+  previewSourceDimensions: Partial<
+    Record<RecordingVideoTrackId, { height: number; width: number }>
+  >;
+  audioError?: string | null;
+  audioTrackVolumes?: AudioTrackVolume[];
+  audioTracks?: PreparedAudioTrack[];
+  bakeCamera?: boolean;
+  cameraOverlay?: CameraOverlaySettings;
+  cursorEffects?: CursorEffectSettings;
+  enabledStreamIndices?: number[];
+  enabledVideoTracks?: RecordingVideoTrackId[];
+  hasCursorData?: boolean;
+  hasKeyboardData?: boolean;
+  isPreparingAudio?: boolean;
+  isPreparingPreview?: boolean;
+  isSaving?: boolean;
+  isSheetOpen?: boolean;
+  keyboardEffects?: KeyboardEffectSettings;
+  keyboardMaximumWidthUnits?: number | null;
+  onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
+  onEnabledTracksChange?: (streamIndices: number[]) => void;
+  onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;
+  onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
+  onRecordingOutputChange?: (
+    trackId: RecordingVideoTrackId,
+    settings: RecordingOutputSettings[RecordingVideoTrackId],
+  ) => void;
+  onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
+  onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
+  onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
+  previewLayout?: RecordingPreviewLayout;
+  previewOutputDimensions?: Partial<
+    Record<RecordingVideoTrackId, { height: number; width: number }>
+  >;
+  recordingOutput?: RecordingOutputSettings;
+  recordingTimelineEdit?: RecordingTimelineEdit | null;
+  selectedTrack?: RecordingTrackId | null;
+};
+
+/** The native Rust player is the sole recording-preview architecture. */
+export function ScrubPreview(props: ScrubPreviewProps) {
+  return <NativeRecordingPreview {...props} />;
+}

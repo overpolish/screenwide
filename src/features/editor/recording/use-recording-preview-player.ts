@@ -1,0 +1,525 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { Channel } from "@tauri-apps/api/core";
+import { RefObject, useCallback, useEffect, useRef, useState } from "react";
+
+import {
+  pauseRecordingPreview,
+  seekRecordingPreview,
+  startRecordingPreviewPlayer,
+  stopRecordingPreviewPlayer,
+} from "../api";
+import { PreviewZoomRequest } from "../preview/preview-zoom-state";
+import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
+import { recordingPreviewKeyboardDeletions as keyboardDeletionsFor } from "../timeline/keyboard/recording-keyboard-timeline-api";
+import { recordingTimelinePlaybackRangesFrom } from "../timeline/recording-timeline-playback";
+import { SeekHandler, seekSelectionVisible } from "../timeline/timeline-seek";
+import {
+  AudioTrackVolume,
+  CursorEffectSettings,
+  KeyboardEffectSettings,
+  RecordingPreviewLayout,
+} from "../types";
+
+import { playRecordingPreview } from "./recording-preview-playback-api";
+import { RecordingPreviewPlayerEvent } from "./recording-preview-player-contract";
+import {
+  pushRecordingPreviewSessionState,
+  RecordingPreviewSessionSettings,
+  recordingPreviewSessionSettingsKey,
+  settleRecordingPreviewSettings,
+} from "./recording-preview-session-start";
+import { useRecordingPlaybackStatus } from "./use-recording-playback-status";
+import { useRecordingPreviewRate } from "./use-recording-preview-rate";
+import { useRecordingPreviewSettings } from "./use-recording-preview-settings";
+import {
+  type RecordingPreviewSelection,
+  type RecordingSelectionGestureEvent,
+  useRecordingPreviewSurface,
+} from "./use-recording-preview-surface";
+let sessionSequence = 0;
+type PreviewTiming = [durationMs: number, framesPerSecond: number | null];
+export function useRecordingPreviewPlayer({
+  annotationTool,
+  artifactId,
+  audioTrackVolumes,
+  bakeCamera,
+  cameraCanvasRef,
+  cameraOverlay,
+  cursorEffects,
+  enabledStreamIndices,
+  isEditorSuspended,
+  isEnabled,
+  keyboardEffects,
+  nativeEditorOwnsLayout,
+  nativeLayoutHasPanes,
+  nativeLayoutKey,
+  onPosition,
+  onSelectionChange,
+  onSelectionGesture,
+  onZoomChange,
+  recordingOutput,
+  screenCanvasRef,
+  selection,
+  selectionTargets,
+  sourceDurationMs,
+  timelineEdit,
+  zoomRequest,
+}: {
+  artifactId: number;
+  audioTrackVolumes: AudioTrackVolume[];
+  bakeCamera: boolean;
+  cameraCanvasRef: RefObject<HTMLCanvasElement | null>;
+  cameraOverlay: import("../types").CameraOverlaySettings;
+  cursorEffects: CursorEffectSettings;
+  enabledStreamIndices: number[];
+  isEditorSuspended: boolean;
+  isEnabled: boolean;
+  keyboardEffects: KeyboardEffectSettings;
+  nativeEditorOwnsLayout: boolean;
+  nativeLayoutHasPanes: boolean;
+  nativeLayoutKey: string;
+  onPosition: (positionMs: number) => void;
+  recordingOutput: import("../screenshot/screenshot-output").RecordingOutputSettings;
+  screenCanvasRef: RefObject<HTMLCanvasElement | null>;
+  sourceDurationMs: number;
+  /** The annotation tool in hand, when one is. It reaches the native chrome
+   * with the layout that carries the selection it has to agree with. */
+  annotationTool?:
+    import("../annotations/annotation-defaults").AnnotationTool | null;
+  onSelectionChange?: (paneIndex: number | null) => void;
+  onSelectionGesture?: (event: RecordingSelectionGestureEvent) => void;
+  onZoomChange?: (zoomPercent: number) => void;
+  selection?: RecordingPreviewSelection | null;
+  selectionTargets?: RecordingPreviewSelection[] | null;
+  timelineEdit?: RecordingTimelineEdit | null;
+  zoomRequest?: PreviewZoomRequest;
+}) {
+  const playbackStatus = useRecordingPlaybackStatus();
+  const { isPlayingRef, updatePlaying } = playbackStatus;
+  const wantsPlaybackRef = useRef(false);
+  const resumeAfterSeekRef = useRef(false);
+  const scrubFinishedRef = useRef(true);
+  const onPositionRef = useRef(onPosition);
+  const audioTrackVolumesRef = useRef(audioTrackVolumes);
+  const cursorEffectsRef = useRef(cursorEffects);
+  const keyboardEffectsRef = useRef(keyboardEffects);
+  const compositionRef = useRef({ bakeCamera, cameraOverlay, recordingOutput });
+  const enabledStreamIndicesRef = useRef(enabledStreamIndices);
+  const timingRef = useRef<PreviewTiming>([0, null]);
+  const timelineEditRef = useRef(timelineEdit);
+  const positionRef = useRef(0);
+  const seekRequestRef = useRef(0);
+  const lastSentSeekRef = useRef<number | null>(null);
+  const pendingScrubFrameRef = useRef<number | null>(null);
+  const pendingScrubPositionRef = useRef<Parameters<SeekHandler> | null>(null);
+  const pendingResumeRequestRef = useRef<number | null>(null);
+  const settleRequestRef = useRef<number | null>(null);
+  const sessionIdRef = useRef(0);
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+  const startedRef = useRef(false);
+  const editorSuspendedRef = useRef(isEditorSuspended);
+  editorSuspendedRef.current = isEditorSuspended;
+  const [durationMs, setDurationMs] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [layout, setLayout] = useState<RecordingPreviewLayout | null>(null);
+  const [isPreparing, setIsPreparing] = useState(true);
+  const beginPreparing = useCallback(() => {
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
+    setIsPreparing(true);
+  }, []);
+  const finishPreparing = useCallback(() => {
+    setIsPreparing(false);
+  }, []);
+  const applyLayout = useCallback((next: RecordingPreviewLayout) => {
+    setLayout(next);
+    if (next.panes.length === 0) setIsPreparing(false);
+  }, []);
+  onPositionRef.current = onPosition;
+  audioTrackVolumesRef.current = audioTrackVolumes;
+  cursorEffectsRef.current = cursorEffects;
+  keyboardEffectsRef.current = keyboardEffects;
+  compositionRef.current = { bakeCamera, cameraOverlay, recordingOutput };
+  enabledStreamIndicesRef.current = enabledStreamIndices;
+  timelineEditRef.current = timelineEdit;
+  const keyboardDeletions = () =>
+    keyboardDeletionsFor(timelineEditRef.current, sourceDurationMs);
+  // Read from the refs so one snapshot serves a session's start and its
+  // settling alike: by the time an effect runs they hold this render's props.
+  const sessionSettings = (): RecordingPreviewSessionSettings => ({
+    audioTrackVolumes: audioTrackVolumesRef.current,
+    bakeCamera: compositionRef.current.bakeCamera,
+    cameraOverlay: compositionRef.current.cameraOverlay,
+    cursorEffects: cursorEffectsRef.current,
+    enabledStreamIndices: enabledStreamIndicesRef.current,
+    keyboardDeletions: keyboardDeletions(),
+    keyboardEffects: keyboardEffectsRef.current,
+    recordingOutput: compositionRef.current.recordingOutput,
+  });
+  const {
+    playbackRangeFrom,
+    playbackRanges,
+    playbackRate,
+    playbackRateRef,
+    setPlaybackRate,
+  } = useRecordingPreviewRate({
+    isEnabled,
+    isPlayingRef,
+    positionRef,
+    sessionIdRef,
+    setError,
+    setIsPlaying: playbackStatus.setIsPlaying,
+    timelineEditRef,
+    timingRef,
+    wantsPlaybackRef,
+  });
+  useRecordingPreviewSettings({
+    audioTrackVolumes,
+    cursorEffects,
+    isEnabled,
+    keyboardDeletions: keyboardDeletions(),
+    keyboardEffects,
+    sessionIdRef,
+    setError,
+    startedRef,
+  });
+  const previewFit = useRecordingPreviewSurface({
+    annotationTool,
+    bakeCamera,
+    cameraCanvasRef,
+    cameraOverlay,
+    isEditorSuspended,
+    isEnabled,
+    isPlaying: playbackStatus.isPlaying,
+    nativeEditorOwnsLayout,
+    nativeLayoutHasPanes,
+    nativeLayoutKey,
+    onError: setError,
+    onSelectionChange,
+    onSelectionGesture,
+    onZoomChange,
+    recordingOutput,
+    screenCanvasRef,
+    selection,
+    selectionTargets,
+    sessionIdRef,
+    startedRef,
+    zoomRequest,
+  });
+  useEffect(() => {
+    if (!isEnabled) return;
+    let disposed = false;
+    const initialSettingsKey =
+      recordingPreviewSessionSettingsKey(sessionSettings());
+    const sessionId = Date.now() * 1_000 + (++sessionSequence % 1_000);
+    sessionIdRef.current = sessionId;
+    seekRequestRef.current = 0;
+    lastSentSeekRef.current = null;
+    beginPreparing();
+    const eventChannel = new Channel<RecordingPreviewPlayerEvent>();
+    eventChannel.onmessage = (event) => {
+      if (disposed) return;
+      if (event.event === "error") {
+        setError(event.data.message);
+        finishPreparing();
+        return;
+      }
+      if (event.event === "ended") {
+        wantsPlaybackRef.current = false;
+        updatePlaying(false);
+        positionRef.current = timingRef.current[0];
+        onPositionRef.current(timingRef.current[0]);
+        void pauseRecordingPreview(sessionIdRef.current).catch(() => undefined);
+        return;
+      }
+      if (event.event === "rangeEnded") {
+        positionRef.current = event.data.positionMs;
+        onPositionRef.current(event.data.positionMs);
+        const ranges = playbackRanges();
+        const endedIndex = ranges.findIndex(
+          (range) => Math.abs(range.sourceEndMs - event.data.positionMs) < 1,
+        );
+        if (endedIndex < 0 || endedIndex + 1 >= ranges.length) {
+          wantsPlaybackRef.current = false;
+          updatePlaying(false);
+          void pauseRecordingPreview(sessionIdRef.current).catch(
+            () => undefined,
+          );
+          return;
+        }
+        const next = ranges[endedIndex + 1];
+        positionRef.current = next.sourceStartMs;
+        onPositionRef.current(next.sourceStartMs);
+        void playRecordingPreview(
+          sessionIdRef.current,
+          Math.round(next.sourceEndMs),
+          {
+            playbackRanges: recordingTimelinePlaybackRangesFrom(
+              ranges,
+              next.sourceStartMs,
+            ),
+            playbackRate: playbackRateRef.current,
+            startPositionMs: Math.round(next.sourceStartMs),
+          },
+        ).catch((cause: unknown) => {
+          wantsPlaybackRef.current = false;
+          updatePlaying(false);
+          setError(String(cause));
+        });
+        return;
+      }
+      if (event.event === "ready") {
+        if (event.data.requestId < seekRequestRef.current) return;
+        finishPreparing();
+        positionRef.current = event.data.positionMs;
+        onPositionRef.current(event.data.positionMs);
+        if (pendingResumeRequestRef.current === event.data.requestId) {
+          pendingResumeRequestRef.current = null;
+          settleRequestRef.current = null;
+          resumeAfterSeekRef.current = false;
+          scrubFinishedRef.current = true;
+          wantsPlaybackRef.current = true;
+          const { index, ranges } = playbackRangeFrom(event.data.positionMs);
+          void playRecordingPreview(
+            sessionIdRef.current,
+            Math.round(ranges[index]?.sourceEndMs ?? timingRef.current[0]),
+            {
+              playbackRanges: recordingTimelinePlaybackRangesFrom(
+                playbackRanges(),
+                event.data.positionMs,
+              ),
+              playbackRate: playbackRateRef.current,
+            },
+          ).catch((cause: unknown) => {
+            wantsPlaybackRef.current = false;
+            updatePlaying(false);
+            setError(String(cause));
+          });
+        } else if (settleRequestRef.current === event.data.requestId) {
+          settleRequestRef.current = null;
+          scrubFinishedRef.current = true;
+        }
+        return;
+      }
+      // Ignore stale worker positions during a frontend-driven scrub.
+      if (!scrubFinishedRef.current) return;
+      if (event.event === "position" && !isPlayingRef.current) return;
+      positionRef.current = event.data.positionMs;
+      onPositionRef.current(event.data.positionMs);
+      if (event.event === "playing") {
+        // A cancelled startup may still report Playing after Pause won.
+        if (wantsPlaybackRef.current) playbackStatus.confirmPlaying();
+      }
+      if (event.event === "paused" && !wantsPlaybackRef.current)
+        updatePlaying(false);
+    };
+    void startRecordingPreviewPlayer({
+      artifactId,
+      audioTrackVolumes,
+      bakeCamera,
+      cameraOverlay,
+      cursorEffects,
+      enabledStreamIndices,
+      eventChannel,
+      keyboardEffects,
+      keyboardTimeline: keyboardDeletions(),
+      recordingOutput,
+      sessionId,
+    })
+      .then((info) => {
+        if (disposed) return;
+        applyLayout(info.layout);
+        timingRef.current = [info.durationMs, info.framesPerSecond];
+        setDurationMs(info.durationMs);
+        startedRef.current = true;
+        setActiveSessionId(sessionId);
+        pushRecordingPreviewSessionState({
+          // Read live: the suspension can be lifted while the restart is still
+          // in flight, and the captured value would leave native suspended.
+          isEditorSuspended: editorSuspendedRef.current,
+          nativeEditorOwnsLayout,
+          onError: (cause) => {
+            if (!disposed) setError(String(cause));
+          },
+          sessionId,
+          zoomRequest,
+        });
+        settleRecordingPreviewSettings({
+          initialKey: initialSettingsKey,
+          onError: (cause) => {
+            if (!disposed) setError(String(cause));
+          },
+          sessionId,
+          settings: sessionSettings(),
+        });
+      })
+      .catch((cause: unknown) => {
+        if (!disposed) {
+          setError(String(cause));
+          finishPreparing();
+        }
+      });
+    return () => {
+      disposed = true;
+      startedRef.current = false;
+      lastSentSeekRef.current = null;
+      pendingScrubPositionRef.current = null;
+      if (pendingScrubFrameRef.current !== null) {
+        cancelAnimationFrame(pendingScrubFrameRef.current);
+        pendingScrubFrameRef.current = null;
+      }
+      pendingResumeRequestRef.current = null;
+      settleRequestRef.current = null;
+      resumeAfterSeekRef.current = false;
+      wantsPlaybackRef.current = false;
+      scrubFinishedRef.current = true;
+      void stopRecordingPreviewPlayer(sessionId).catch(() => undefined);
+    };
+    // eslint-disable-next-line @eslint-react/exhaustive-deps
+  }, [artifactId, isEnabled]);
+  const play = useCallback(() => {
+    if (!isEnabled) return;
+    resumeAfterSeekRef.current = false;
+    wantsPlaybackRef.current = true;
+    scrubFinishedRef.current = true;
+    lastSentSeekRef.current = null;
+    setError(null);
+    updatePlaying(true);
+    void (async () => {
+      try {
+        const { index, ranges } = playbackRangeFrom(positionRef.current);
+        const range = ranges[index];
+        if (
+          positionRef.current < range.sourceStartMs ||
+          positionRef.current >= range.sourceEndMs
+        ) {
+          positionRef.current = range.sourceStartMs;
+          await seekRecordingPreview({
+            positionMs: Math.round(range.sourceStartMs),
+            requestId: ++seekRequestRef.current,
+            sessionId: sessionIdRef.current,
+          });
+        }
+        await playRecordingPreview(
+          sessionIdRef.current,
+          Math.round(range.sourceEndMs),
+          {
+            playbackRanges: recordingTimelinePlaybackRangesFrom(
+              playbackRanges(),
+              positionRef.current,
+            ),
+            playbackRate: playbackRateRef.current,
+          },
+        );
+      } catch (cause) {
+        wantsPlaybackRef.current = false;
+        updatePlaying(false);
+        setError(String(cause));
+      }
+    })();
+  }, [
+    isEnabled,
+    playbackRangeFrom,
+    playbackRanges,
+    playbackRateRef,
+    updatePlaying,
+  ]);
+  const pause = useCallback(() => {
+    if (!isEnabled) return;
+    resumeAfterSeekRef.current = false;
+    wantsPlaybackRef.current = false;
+    pendingResumeRequestRef.current = null;
+    settleRequestRef.current = null;
+    scrubFinishedRef.current = true;
+    lastSentSeekRef.current = null;
+    updatePlaying(false);
+    void pauseRecordingPreview(sessionIdRef.current).catch((cause: unknown) => {
+      setError(String(cause));
+    });
+  }, [isEnabled, updatePlaying]);
+  const seek: SeekHandler = (positionMs, phase, annotationClips) => {
+    if (!isEnabled) return;
+    const normalized = Math.max(0, Math.round(positionMs));
+    if (phase === "start") {
+      resumeAfterSeekRef.current = isPlayingRef.current;
+      wantsPlaybackRef.current = false;
+      scrubFinishedRef.current = false;
+    }
+    positionRef.current = normalized;
+    // Keep the playing controls visible during a seek that will resume.
+    // The backend still pauses and resumes, without flashing paused chrome.
+    if (!resumeAfterSeekRef.current) updatePlaying(false);
+    const send: SeekHandler = (nextPosition, nextPhase, nextClips) => {
+      // Start/end also carry native OSC visibility, so only movement samples
+      // at the same playhead position are redundant.
+      if (
+        nextPosition === lastSentSeekRef.current &&
+        nextPhase === "move" &&
+        !nextClips
+      )
+        return;
+      lastSentSeekRef.current = nextPosition;
+      const requestId = ++seekRequestRef.current;
+      if (nextPhase === "end") {
+        settleRequestRef.current = requestId;
+        if (resumeAfterSeekRef.current)
+          pendingResumeRequestRef.current = requestId;
+      }
+      void seekRecordingPreview({
+        annotationClips: nextClips,
+        positionMs: nextPosition,
+        requestId,
+        rough: nextPhase !== "end",
+        selectionVisible: seekSelectionVisible(nextPhase),
+        sessionId: sessionIdRef.current,
+      }).catch((cause: unknown) => {
+        if (settleRequestRef.current === requestId) {
+          settleRequestRef.current = null;
+          scrubFinishedRef.current = true;
+        }
+        setError(String(cause));
+      });
+    };
+    // Send the newest pointer position per display tick to avoid a seek backlog.
+    if (phase === "move") {
+      pendingScrubPositionRef.current = [normalized, "move", annotationClips];
+      if (pendingScrubFrameRef.current === null) {
+        pendingScrubFrameRef.current = requestAnimationFrame(() => {
+          pendingScrubFrameRef.current = null;
+          const pending = pendingScrubPositionRef.current;
+          pendingScrubPositionRef.current = null;
+          if (pending !== null) send(...pending);
+        });
+      }
+    } else {
+      if (pendingScrubFrameRef.current !== null) {
+        cancelAnimationFrame(pendingScrubFrameRef.current);
+        pendingScrubFrameRef.current = null;
+      }
+      pendingScrubPositionRef.current = null;
+      send(normalized, phase, annotationClips);
+    }
+    if (phase === "end") {
+      scrubFinishedRef.current = false;
+    }
+  };
+  const getPositionMs = useCallback(() => positionRef.current, []);
+  return {
+    durationMs,
+    error,
+    sessionId:
+      activeSessionId === sessionIdRef.current ? activeSessionId : null,
+    ...previewFit,
+    framesPerSecond: timingRef.current[1],
+    getPositionMs,
+    isPlaying: playbackStatus.isPlaying,
+    isPreparing,
+    layout,
+    pause,
+    play,
+    playbackRate,
+    seek,
+    setPlaybackRate,
+  };
+}

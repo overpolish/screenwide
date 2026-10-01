@@ -5,9 +5,12 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
-import { type GlideAction, type GlideDetection } from "./glide-detection";
+import {
+  type GlideAction,
+  type GlideDetection,
+} from "./detection/glide-detection";
+import { type GlideRegion, sameRegion } from "./detection/glide-regions";
 import { type GlideFit, GlidePreview } from "./glide-preview";
-import { type GlideRegion, sameRegion } from "./glide-regions";
 
 type GlideInputEvent =
   | { detection: GlideDetection; type: "detection" }

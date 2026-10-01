@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_CURSOR_EFFECTS } from "../recording-export-settings";
+import { DEFAULT_CURSOR_EFFECTS } from "../export/recording-export-settings";
 
 import { resolveToolPanelSnapshot, ToolPanelDraft } from "./tool-panel-draft";
 import {
