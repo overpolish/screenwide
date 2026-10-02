@@ -16,10 +16,8 @@
 //!
 //! The distance measures every side and corner of the walk on its own and
 //! keeps the nearest, so wherever the pen went is drawn, however far the
-//! passes over one corner stray from each other. The shaders hold the only
-//! other copies of [`shape_distance`]:
-//! `gpu_compositor_macos_shader_source_annotation_shape.h` and
-//! `annotation_shape.wgsl`.
+//! passes over one corner stray from each other. The shader holds the only
+//! other copy of [`shape_distance`], in `annotation_shape.wgsl`.
 
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 

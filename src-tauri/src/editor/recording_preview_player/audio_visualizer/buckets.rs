@@ -3,8 +3,8 @@
 
 use super::AudioRibbonEnvelopes;
 
-/// Match the Metal ribbon: average four envelope points per track, apply its
-/// gain, then take the loudest track. The shader only places and paints bars.
+/// Average four envelope points per track, apply its gain, then take the
+/// loudest track. The shader only places and paints bars.
 pub(crate) fn bucket_levels(envelopes: &AudioRibbonEnvelopes) -> Vec<f32> {
   if envelopes.tracks == 0 {
     return Vec::new();

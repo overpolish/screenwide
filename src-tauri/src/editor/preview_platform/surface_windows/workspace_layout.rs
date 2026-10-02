@@ -139,7 +139,7 @@ pub(super) fn rebase_workspace_fit(state: &mut SurfaceState, start: &FrameResize
     .fold(first_display, |bounds, (_, rect)| {
       union_rect(bounds, start.transform.apply(state.viewport, *rect))
     });
-  // Match Metal's live resize math: retain the fractional natural size for
+  // Match the macOS live resize math: retain the fractional natural size for
   // the fit rebase, and only round the retained/output dimensions. Rounding
   // before the rebase can turn a sub-pixel drag into an observable zoom jump.
   let natural = start

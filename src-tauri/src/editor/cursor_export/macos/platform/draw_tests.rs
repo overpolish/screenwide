@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The draw tool's strokes, through a real Metal dispatch: the line the
+//! The draw tool's strokes, through a real GPU dispatch: the line the
 //! compositor paints is the one Rust fitted and picks by.
 
 use crate::editor::annotations::freehand::geometry::freehand_distance;

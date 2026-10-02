@@ -25,9 +25,11 @@ pub(crate) struct KeyboardEffectSettings {
   pub animation: KeyboardAnimation,
   pub appearance: KeyboardAppearance,
   pub size_percent: f64,
-  #[serde(default)]
+  // Omitted rather than null when unset: the editor treats a present value,
+  // null included, as a chosen position.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub position_x_percent: Option<f64>,
-  #[serde(default)]
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub position_y_percent: Option<f64>,
 }
 

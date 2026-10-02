@@ -18,13 +18,18 @@ int screenwide_region_osc_set_magnifier_source(
     }
   if (!target)
     return 0;
-  id<MTLBuffer> source =
-      [target.device newBufferWithBytes:rgba
-                                 length:length
-                                options:MTLResourceStorageModeShared];
+  MTLTextureDescriptor *descriptor = [MTLTextureDescriptor
+      texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                   width:width
+                                  height:height
+                               mipmapped:NO];
+  descriptor.usage = MTLTextureUsageShaderRead;
+  id<MTLTexture> source = [target.device newTextureWithDescriptor:descriptor];
+  [source replaceRegion:MTLRegionMake2D(0, 0, width, height)
+            mipmapLevel:0
+              withBytes:rgba
+            bytesPerRow:(NSUInteger)width * 4];
   target.magnifierSource = source;
-  target.magnifierSourceWidth = width;
-  target.magnifierSourceHeight = height;
   screenwide_region_osc_draw(target);
   return source != nil;
 }

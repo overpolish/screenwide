@@ -90,31 +90,5 @@ pub(crate) fn surface_at(entries: &[[f32; 2]], elapsed_ms: f32) -> Option<[f32; 
   Some([0, 1, 2].map(|channel| before[channel] + (colour[channel] - before[channel]) * share))
 }
 
-/// [`surface_at`] for the video export's per-frame pass: `entries` is a
-/// record's timeline in the side buffer, and `out` three floats.
-///
-/// # Safety
-/// `entries` must point at `count` entries, and `out` at three floats.
-#[cfg(target_os = "macos")]
-#[no_mangle]
-pub unsafe extern "C" fn screenwide_redaction_surface_at(
-  entries: *const [f32; 2],
-  count: u32,
-  elapsed_ms: f32,
-  out: *mut f32,
-) -> u32 {
-  if entries.is_null() || out.is_null() || count == 0 {
-    return 0;
-  }
-  let entries = std::slice::from_raw_parts(entries, count as usize);
-  match surface_at(entries, elapsed_ms) {
-    Some(colour) => {
-      std::ptr::copy_nonoverlapping(colour.as_ptr(), out, 3);
-      1
-    }
-    None => 0,
-  }
-}
-
 #[cfg(test)]
 mod tests;

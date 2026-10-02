@@ -3,36 +3,31 @@
 
 use super::*;
 
-/// `uv` carries local distance in fitted pattern pixels; `aux` carries the
-/// edge's cumulative phase and length. This lets the shader shorten only a
-/// dash that crosses a corner and give it a genuine rounded terminal cap.
-#[derive(Clone, Copy)]
-struct PatternEdge {
+/// A marching-ants edge: `uv` runs along it in periods of 12 drawn pixels,
+/// measured from `origin`, so the pattern stays anchored wherever the edge
+/// starts. The twin of `screenwide_region_osc_add_pattern_quad`.
+fn add_pattern_quad(
+  out: &mut Vec<Vertex>,
+  view: Size,
+  rect: Rect,
   kind: u32,
   horizontal: bool,
-  forward: bool,
-  phase: f64,
-  length: f64,
-}
-
-fn add_pattern_quad(out: &mut Vec<Vertex>, view: Size, rect: Rect, edge: PatternEdge) {
-  let (start, end) = if edge.forward {
-    (0.0, edge.length as f32)
+  scale: f64,
+  origin: f64,
+) {
+  let (low, high) = if horizontal {
+    (rect.origin.x, rect.right())
   } else {
-    (edge.length as f32, 0.0)
+    (rect.origin.y, rect.bottom())
   };
-  let uvs = if edge.horizontal {
+  let start = ((low - origin) * scale / 12.0) as f32;
+  let end = ((high - origin) * scale / 12.0) as f32;
+  let uvs = if horizontal {
     [[start, 0.0], [end, 0.0], [end, 1.0], [start, 1.0]]
   } else {
     [[0.0, start], [1.0, start], [1.0, end], [0.0, end]]
   };
-  push_quad_with_aux(
-    out,
-    rect_corners(view, rect),
-    uvs,
-    [edge.phase as f32, edge.length as f32],
-    edge.kind,
-  );
+  push_quad(out, rect_corners(view, rect), uvs, kind);
 }
 
 /// The margin gives the SDF room for its anti-aliased rim.

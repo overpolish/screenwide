@@ -48,7 +48,7 @@ impl Surface {
     let scale = self.scale().max(0.1);
     // Geometry is built in logical points, exactly as the macOS master frame
     // passed `host.bounds.size`; only the magnifier quad works in the physical
-    // pixels its constants and `SV_Position` use.
+    // pixels its constants and the fragment position use.
     let view = Size {
       width: f64::from(width) / scale,
       height: f64::from(height) / scale,

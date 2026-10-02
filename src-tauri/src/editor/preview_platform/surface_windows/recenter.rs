@@ -3,14 +3,6 @@
 
 use super::super::{workspace_editor, PreviewSelection};
 
-#[derive(Clone, Copy)]
-pub(super) struct CropMagnifier {
-  pub(super) bounds: [f32; 4],
-  pub(super) display_box: [f32; 4],
-  pub(super) geometry: [f32; 4],
-  pub(super) options: [f32; 4],
-}
-
 pub(super) fn magnifier_bounds(selection: PreviewSelection) -> [f32; 4] {
   if selection.recenter_width <= 0.0 || selection.recenter_height <= 0.0 {
     return [0.0, 0.0, 1.0, 1.0];

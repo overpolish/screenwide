@@ -116,16 +116,12 @@ fn annotation_counter_exposure(probe: vec2<f32>, annotation: PreviewArrow, feath
   return total / f32(annotation.sample_count);
 }
 
-/// One counter: its silhouette in the annotation's own colour, and its number
-/// in whichever of black or white reads on that colour. The number is clipped
-/// to the silhouette's own coverage, so the two share one antialiased edge.
-fn annotation_counter_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
-                            canvas_point: vec2<f32>, feather: f32, halo: f32,
-                            atlas: AnnotationTextAtlas) -> vec4<f32> {
+/// Where a counter can reach. The disc and tail fit within twice the radius
+/// of the centre. The exposure samples run steadily from last frame's reveal
+/// to this one's, so the first and last hold the largest radius any of them
+/// is drawn at.
+fn annotation_counter_bounds(annotation: PreviewArrow, halo: f32, feather: f32) -> vec4<f32> {
   let counter = annotation_counter(annotation.geometry);
-  // The disc and tail fit within twice the radius of the centre. The exposure
-  // samples run steadily from last frame's reveal to this one's, so the first
-  // and last hold the largest radius any of them is drawn at.
   var radius = counter.radius;
   if (annotation.sample_count > 0u) {
     let last = annotation.sample_first + annotation.sample_count - 1u;
@@ -134,9 +130,19 @@ fn annotation_counter_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color:
         annotation_counter(annotation_samples[last].geometry).radius));
   }
   let reach = radius * 2.0 + halo + feather + 1.0;
-  if (any(canvas_point < counter.center - reach) || any(canvas_point > counter.center + reach)) {
+  return vec4<f32>(counter.center - reach, counter.center + reach);
+}
+
+/// One counter: its silhouette in the annotation's own colour, and its number
+/// in whichever of black or white reads on that colour. The number is clipped
+/// to the silhouette's own coverage, so the two share one antialiased edge.
+fn annotation_counter_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
+                            canvas_point: vec2<f32>, feather: f32, halo: f32,
+                            atlas: AnnotationTextAtlas) -> vec4<f32> {
+  if (annotation_outside(canvas_point, annotation_counter_bounds(annotation, halo, feather))) {
     return rgba_in;
   }
+  let counter = annotation_counter(annotation.geometry);
   let distance = annotation_counter_distance(canvas_point, counter);
   var rgba = annotation_halo(rgba_in, color, distance, halo, feather);
   // A still frame draws the prepared disc directly, its opacity already

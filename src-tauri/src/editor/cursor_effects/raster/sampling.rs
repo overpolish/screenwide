@@ -21,8 +21,8 @@ impl CursorRaster {
     }
     if let (Some(artwork), Some(design)) = (self.system_artwork, self.system_design) {
       // Aspect-preserving fit into the recorded box, anchored by the artwork's
-      // own hotspot. Ported to the GPU by `custom_gpu_artwork` and the shader's
-      // `use_design` path (gpu_compositor_macos.m `cursor_artwork_sample`).
+      // own hotspot. Ported to the GPU by `custom_gpu_artwork` and the design
+      // path of `artwork_sample` in `preview.wgsl`.
       let artwork_scale = (self.width / design.width)
         .min(self.height / design.height)
         .max(0.01);
@@ -74,7 +74,7 @@ impl CursorRaster {
     y: f64,
   ) -> [f64; 4] {
     // The shader supersamples every artwork it places by a design frame
-    // (`cursor_draw_sample`, gpu_compositor_macos.m), because that path clips
+    // (`artwork_draw_sample` in `preview.wgsl`), because that path clips
     // against the frame's hard edge; stretched system artwork carries its own
     // antialiased edge and is sampled once. The preview follows the same split.
     if self.system_artwork.is_some() && self.system_design.is_none() {

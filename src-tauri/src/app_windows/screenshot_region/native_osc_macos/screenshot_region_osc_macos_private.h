@@ -40,15 +40,12 @@
 @property(nonatomic) BOOL ocrToolbarCloseArmed;
 @property(nonatomic) uint64_t ocrToolbarCloseRevision;
 @property(nonatomic) uint64_t ocrToolbarAnimationRevision;
+/// The shared wgpu device and queue: layers and textures are made on it, and
+/// presents are committed to it after the OSC draws.
 @property(nonatomic, strong) id<MTLDevice> device;
 @property(nonatomic, strong) id<MTLCommandQueue> queue;
-@property(nonatomic, strong) id<MTLRenderPipelineState> pipeline;
-@property(nonatomic, strong) id<MTLRenderPipelineState> snapshotPipeline;
-@property(nonatomic, strong) id<MTLComputePipelineState> magnifierPipeline;
-@property(nonatomic, strong) id<MTLTexture> placeholder;
-@property(nonatomic, strong) id<MTLBuffer> magnifierSource;
-@property(nonatomic) uint32_t magnifierSourceWidth;
-@property(nonatomic) uint32_t magnifierSourceHeight;
+/// The frozen desktop the crop magnifier enlarges.
+@property(nonatomic, strong) id<MTLTexture> magnifierSource;
 @property(nonatomic) ScreenwideRegionMagnifier magnifier;
 @property(nonatomic) NSRect region;
 @property(nonatomic) BOOL visible;

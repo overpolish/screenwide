@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! macOS preview backend: AVFoundation decode, Metal composition.
+//! macOS preview backend: AVFoundation decode, shared wgpu composition.
 //!
 //! Playback and stills share one `AVAssetReader` pipeline and one GPU
 //! compositor, so a paused frame is pixel-identical to the playing frame at
@@ -191,7 +191,7 @@ pub(crate) fn source_frame_jpeg(
   thumbnails::source_frame_jpeg(path, position_ms, duration_ms)
 }
 
-/// Renders one clipboard frame through the same Metal still compositor as the
+/// Renders one clipboard frame through the same still compositor as the
 /// live preview, including the baked camera and cursor layer ordering.
 pub(crate) fn composed_frame_image(
   sources: &PlayerSources,

@@ -60,11 +60,24 @@
 //!
 //! # Platform GPU backends
 //!
-//! macOS uses Metal and Windows uses D3D11 with DirectComposition. Another OS
-//! can add its own backend behind this facade without leaking platform texture
-//! formats, coordinate conventions, or window-surface details into shared
-//! preview code.
+//! Shaders are WGSL on the shared wgpu device ([`crate::gpu`]), drawn by the
+//! shared [`compositor`]. Windows presents through DirectComposition and
+//! macOS through Core Animation layers. On macOS the audio ribbon, still
+//! composition and video export run on wgpu; the live preview still drives
+//! Metal directly. Another OS can add its own backend behind this facade
+//! without leaking platform texture formats, coordinate conventions, or
+//! window-surface details into shared preview code.
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) mod annotation_gpu;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod audio_ribbon;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod background_image;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) mod compositor;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod keyboard_artwork;
 pub(crate) mod workspace_editor;
 mod workspace_transform;
 
@@ -78,11 +91,9 @@ mod surface_windows;
 use self::surface_windows as surface;
 
 #[cfg(target_os = "windows")]
-pub(crate) use surface::arrows;
+pub(crate) use compositor::ComposedFrame;
 #[cfg(target_os = "windows")]
 pub(crate) use surface::type_device;
-#[cfg(target_os = "windows")]
-pub(crate) use surface::ComposedFrame;
 pub(crate) use surface::RecordingPreviewSurface;
 #[cfg(target_os = "macos")]
 pub(crate) use surface::{run_on_main_queue, NativeWorkspacePlacement, RecordingWorkspaceLayer};

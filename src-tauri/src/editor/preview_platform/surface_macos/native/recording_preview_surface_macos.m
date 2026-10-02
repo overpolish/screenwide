@@ -8,11 +8,9 @@
 #import <WebKit/WebKit.h>
 #include <math.h>
 
-#import "../../../cursor_export/macos/gpu_compositor/gpu_compositor_macos_presenter.h"
 #import "../../../../osc/gpu/macos/osc_controls.h"
 #import "recording_preview_surface_macos_private.h"
 #import "../../../../osc/gpu/macos/osc_gpu_macos.h"
-#import "recording_preview_audio_ribbon_shader.h"
 
 
 typedef struct {
@@ -26,6 +24,11 @@ typedef struct {
 @end
 
 @implementation ScreenwidePreviewSurface
+// Every block the surface queues holds it, so by the time it is deallocated
+// nothing can draw the scene any more.
+- (void)dealloc {
+  screenwide_workspace_scene_release(_scene);
+}
 @end
 
 
@@ -287,25 +290,6 @@ static void refresh_for_window_display_change(
   screenwide_audio_ribbon_layout(surface);
 }
 
-static NSString *const shader = @R"(
-#include <metal_stdlib>
-using namespace metal;
-kernel void present_rgba(const device uchar4 *source [[buffer(0)]],
-                         constant uint2 &content [[buffer(1)]],
-                         texture2d<float, access::write> output [[texture(0)]],
-                         uint2 gid [[thread_position_in_grid]]) {
-  if (gid.x >= output.get_width() || gid.y >= output.get_height()) return;
-  if (gid.x >= content.x || gid.y >= content.y) {
-    output.write(float4(0.0), gid);
-    return;
-  }
-  uchar4 pixel = source[gid.y * content.x + gid.x];
-  output.write(float4(pixel.r, pixel.g, pixel.b, pixel.a) / 255.0, gid);
-}
-
-
-)";
-
 static void on_main(dispatch_block_t block) {
   if ([NSThread isMainThread]) block();
   else dispatch_sync(dispatch_get_main_queue(), block);
@@ -485,35 +469,20 @@ void screenwide_preview_surface_end_present(void *handle) {
   });
 }
 
-void *screenwide_preview_surface_create(void *host_view) {
-  if (host_view == NULL) return NULL;
+void *screenwide_preview_surface_create(void *host_view, void *device, void *queue,
+                                        const void *scene) {
+  if (host_view == NULL || device == NULL || queue == NULL || scene == NULL) return NULL;
   __block ScreenwidePreviewSurface *surface;
   on_main(^{
     surface = [ScreenwidePreviewSurface new];
+    surface.scene = scene;
     // No arrow is chosen and none is hovered until one is, and zero is a
     // perfectly good arrow index.
     surface.annotationSelected = -1;
     surface.annotationHovered = -1;
     surface.host = (__bridge NSView *)host_view;
-    surface.device = MTLCreateSystemDefaultDevice();
-    surface.queue = [surface.device newCommandQueue];
-    NSError *error = nil;
-    NSString *combinedShader =
-        [[shader stringByAppendingString:screenwide_region_osc_shader_source()]
-            stringByAppendingString:screenwide_audio_bars_shader];
-    id<MTLLibrary> library = [surface.device
-        newLibraryWithSource:combinedShader
-                     options:nil
-                       error:&error];
-    surface.pipeline = [surface.device newComputePipelineStateWithFunction:
-      [library newFunctionWithName:@"present_rgba"] error:&error];
-    surface.selectionPipeline =
-        screenwide_region_osc_make_pipeline(surface.device, library, &error);
-    // The preview overlay draws no text quads, but the shared OSC fragment
-    // function still declares its text slots, so a 1x1 transparent texture
-    // keeps them bound.
-    surface.selectionTexturePlaceholder =
-        screenwide_region_osc_make_placeholder(surface.device);
+    surface.device = (__bridge id<MTLDevice>)device;
+    surface.queue = (__bridge id<MTLCommandQueue>)queue;
     surface.container = [[ScreenwidePreviewView alloc] initWithFrame:NSZeroRect];
     surface.container.wantsLayer = YES;
     surface.container.layer.masksToBounds = YES;
@@ -605,7 +574,7 @@ void *screenwide_preview_surface_create(void *host_view) {
     surface.workspaceTransforms = [NSMutableDictionary dictionary];
     surface.batchDrawables = [NSMutableArray array];
     surface.batchViews = [NSMutableArray array];
-    screenwide_audio_ribbon_attach(surface, library);
+    screenwide_audio_ribbon_attach(surface);
     NSWindow *window = surface.host.window;
     if (window != nil) {
       __weak ScreenwidePreviewSurface *weakSurface = surface;
@@ -628,7 +597,6 @@ void *screenwide_preview_surface_create(void *host_view) {
     }
     install_native_cursor_guard();
   });
-  if (surface.pipeline == nil) return NULL;
   return (__bridge_retained void *)surface;
 }
 
@@ -645,26 +613,10 @@ int screenwide_preview_surface_present(void *handle, uint32_t index,
   layer.drawableSize = CGSizeMake(width, height);
   id<CAMetalDrawable> drawable = [layer nextDrawable];
   if (drawable == nil) return 0;
-  NSUInteger length = (NSUInteger)width * height * 4;
-  id<MTLBuffer> pixels = [surface.device newBufferWithBytes:rgba length:length
-                                                    options:MTLResourceStorageModeShared];
-  id<MTLCommandBuffer> command = [surface.queue commandBuffer];
-  id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
-  [encoder setComputePipelineState:surface.pipeline];
-  [encoder setBuffer:pixels offset:0 atIndex:0];
-  uint32_t content[2] = {width, height};
-  [encoder setBytes:content length:sizeof(content) atIndex:1];
-  [encoder setTexture:drawable.texture atIndex:0];
-  NSUInteger drawable_width = drawable.texture.width;
-  NSUInteger drawable_height = drawable.texture.height;
-  NSUInteger group_width = MIN(surface.pipeline.threadExecutionWidth, drawable_width);
-  NSUInteger group_height = MIN(MAX((NSUInteger)1,
-    surface.pipeline.maxTotalThreadsPerThreadgroup / MAX(group_width, (NSUInteger)1)),
-    drawable_height);
-  [encoder dispatchThreads:MTLSizeMake(drawable_width, drawable_height, 1)
-       threadsPerThreadgroup:MTLSizeMake(group_width, group_height, 1)];
-  [encoder endEncoding];
-  present_in_transaction(surface, view, command, drawable);
+  // The upload is submitted on the shared queue, so this empty command buffer
+  // is scheduled behind it and the present waits for the pixels.
+  screenwide_preview_upload_rgba((__bridge void *)drawable.texture, rgba, width, height);
+  present_in_transaction(surface, view, [surface.queue commandBuffer], drawable);
   return 1;
 }
 
@@ -703,10 +655,6 @@ void screenwide_preview_surface_destroy(void *handle) {
       [notifications removeObserver:surface.windowBackingObserver];
     surface.windowScreenObserver = nil;
     surface.windowBackingObserver = nil;
-    for (ScreenwidePreviewView *view in surface.views) {
-      screenwide_gpu_still_presenter_destroy(view.compositor);
-      view.compositor = NULL;
-    }
     screenwide_audio_ribbon_detach(surface);
     [surface.container removeFromSuperview];
     [surface.interaction removeFromSuperview];

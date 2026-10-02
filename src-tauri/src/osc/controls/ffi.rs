@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! C ABI used by the macOS Metal adapter. The opaque group owns no platform
-//! objects, so the same Rust state machine is used directly by Windows D3D.
+//! C ABI used by the macOS OSC surfaces. The opaque group owns no platform
+//! objects, so the same Rust state machine is used directly on Windows.
 
 use std::ffi::c_void;
 

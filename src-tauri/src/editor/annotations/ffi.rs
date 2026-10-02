@@ -3,17 +3,16 @@
 
 //! A kind's prepared geometry, as the native platforms reach it.
 //!
-//! Both backends prepare an annotation from the same Rust: the D3D11 one calls
-//! each kind's `geometry` module directly, and the Metal compositor and the
-//! macOS chrome call [`screenwide_annotation_prepare`], which dispatches to
-//! those same functions. `geometry.h` declares what is here and carries no
-//! arithmetic of its own, so a kind's draw geometry is written once.
+//! The shared compositor prepares an annotation by calling each kind's
+//! `geometry` module directly, and the macOS chrome calls
+//! [`screenwide_annotation_prepare`], which dispatches to those same
+//! functions. `geometry.h` declares what is here and carries no arithmetic of
+//! its own, so a kind's draw geometry is written once.
 
 use super::arrow::distance::prepared_arrow_distance;
 use super::arrow::geometry::prepare_arrow;
 use super::counter::geometry::prepare_counter;
 use super::counter::silhouette::prepared_counter_distance;
-use super::exposure::{annotation_travel, highlight_travel};
 use super::freehand::geometry::{freehand_body_distance, freehand_distance, prepare_freehand};
 use super::geometry::ArrowGeometry;
 use super::highlight::geometry::{flow_distance, prepare_highlight, HighlightFlow};
@@ -86,59 +85,6 @@ pub unsafe extern "C" fn screenwide_annotation_prepare(
     // through `magnify::ffi::screenwide_magnify_prepare`.
     Some(AnnotationKind::Magnify) | None => ArrowGeometry::default(),
   };
-}
-
-/// The travel one annotation's exposure covers, for the compositor's sample
-/// count. `sx` and `sy` carry a point from the space the points are given in
-/// into the pixels the travel is measured in.
-#[cfg(target_os = "macos")]
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub extern "C" fn screenwide_annotation_travel(
-  kind: u32,
-  p0x: f32,
-  p0y: f32,
-  p1x: f32,
-  p1y: f32,
-  p2x: f32,
-  p2y: f32,
-  sx: f32,
-  sy: f32,
-  width: f32,
-  reveal: AnnotationReveal,
-) -> f32 {
-  match AnnotationKind::from_raw(kind) {
-    Some(kind) => annotation_travel(
-      kind,
-      [p0x, p0y],
-      [p1x, p1y],
-      [p2x, p2y],
-      [sx, sy],
-      width,
-      reveal,
-    ),
-    None => 0.0,
-  }
-}
-
-/// The travel a highlight's exposure covers, for the compositor's sample
-/// count: `p0` and `p1` are its record's source origin and pixel `(1, 1)`,
-/// `sx` and `sy` carry them into the pixels the travel is measured in, and
-/// `sweep` is its record's `params[2]`.
-#[cfg(target_os = "macos")]
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub extern "C" fn screenwide_highlight_travel(
-  p0x: f32,
-  p0y: f32,
-  p1x: f32,
-  p1y: f32,
-  sx: f32,
-  sy: f32,
-  sweep: f32,
-  reveal: AnnotationReveal,
-) -> f32 {
-  highlight_travel([p0x, p0y], [p1x, p1y], [sx, sy], sweep, reveal)
 }
 
 /// How far a point falls from one prepared annotation's drawn shape, in the
@@ -228,19 +174,6 @@ pub unsafe extern "C" fn screenwide_shape_body_distance(
   geometry.as_ref().map_or(f32::INFINITY, |geometry| {
     super::outline::geometry::shape_body_distance([px, py], geometry)
   })
-}
-
-/// The standard deviation of the spotlights' blur over a `width` by `height`
-/// source as it arrives with `strength`: what
-/// `spotlight::native::blur_deviation` works out for Windows.
-#[cfg(target_os = "macos")]
-#[no_mangle]
-pub extern "C" fn screenwide_spotlight_blur_deviation(
-  strength: f32,
-  width: u32,
-  height: u32,
-) -> f32 {
-  super::spotlight::native::blur_deviation(strength, width, height)
 }
 
 /// How far a point falls outside a highlight, from what its grips' record

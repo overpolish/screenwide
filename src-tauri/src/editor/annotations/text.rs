@@ -13,9 +13,8 @@
 /// One box being typed into, from the press that opens it to the commit.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod edit;
-/// Draw-ready geometry and the distance that picks it, prepared for both
-/// backends: the D3D11 one calls this directly, the Metal one through
-/// `geometry.h`.
+/// Draw-ready geometry and the distance that picks it: the compositor calls
+/// this directly, the macOS chrome through `geometry.h`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod geometry;
 /// What moving a text box's grips does to it.
@@ -39,8 +38,10 @@ pub(crate) mod reveal;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod snap;
 /// Typing where the platform has no text view to lay over the box: the
-/// text, the selection and every edit a key makes.
-#[cfg(any(target_os = "windows", test))]
+/// text, the selection and every edit a key makes. macOS types into a native
+/// text view and reads only the marks the shader draws.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+#[cfg_attr(target_os = "macos", allow(dead_code, unused_imports))]
 pub(crate) mod typing;
 
 #[cfg(test)]

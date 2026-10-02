@@ -14,15 +14,13 @@
 //! redaction softens its box. Its record carries every spotlight's hole, four
 //! points each in source pixels - the box's corners, its rounding and fade,
 //! and how present it is beside the blur - so the pass lifts the blur
-//! wherever light falls, by the same rule the shade is lifted by. The twin of
-//! the spotlight record `screenwide_redactions` packs in
-//! `gpu_compositor_macos_redact.m`.
+//! wherever light falls, by the same rule the shade is lifted by.
 
 use super::model::share;
 use crate::editor::annotations::flags::BLUR;
-#[cfg(any(target_os = "windows", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 use crate::editor::annotations::native::NativeAnnotation;
-#[cfg(any(target_os = "windows", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 use crate::editor::annotations::AnnotationKind;
 use crate::editor::annotations::{AnnotationPoint, AnnotationStyle};
 
@@ -54,7 +52,7 @@ pub(crate) fn flags(style: &AnnotationStyle) -> u32 {
 
 /// How present a record is this frame, from its reveal: a still, and a clip
 /// past its fade, is wholly present.
-#[cfg(any(target_os = "windows", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn presence(item: &NativeAnnotation) -> f32 {
   if item.reveal.opacity.is_finite() {
     item.reveal.opacity.clamp(0.0, 1.0)
@@ -66,7 +64,7 @@ pub(crate) fn presence(item: &NativeAnnotation) -> f32 {
 /// How far a record's blur has arrived this frame: its presence, and of
 /// that the share its reveal's `scale` carries, which is less than all of it
 /// only while its light glides from or to a spotlight that does not blur.
-#[cfg(any(target_os = "windows", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 fn blur_presence(item: &NativeAnnotation) -> f32 {
   let share = if item.reveal.scale.is_finite() {
     item.reveal.scale.clamp(0.0, 1.0)
@@ -78,7 +76,7 @@ fn blur_presence(item: &NativeAnnotation) -> f32 {
 
 /// How far the spotlights' blur has arrived among `items`: as present as the
 /// most present spotlight that blurs, and zero where none does.
-#[cfg(any(target_os = "windows", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn blur_strength(items: &[NativeAnnotation]) -> f32 {
   items
     .iter()
@@ -96,7 +94,7 @@ pub(crate) fn blur_strength(items: &[NativeAnnotation]) -> f32 {
 /// presence is measured against the blur's, so a spotlight arriving with its
 /// own blur keeps its light clear throughout. `None` where no spotlight
 /// showing blurs, and there is no pass to run.
-#[cfg(any(target_os = "windows", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn blur_holes(
   items: &[NativeAnnotation],
   width: u32,

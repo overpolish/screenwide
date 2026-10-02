@@ -8,7 +8,7 @@ use crate::editor::annotations::redact::held::HeldFill;
 use crate::editor::annotations::redact::native::{
   draw_points, held_fill, painted_bounds, RedactPicture,
 };
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::editor::annotations::redact::surface_timeline::surface_at;
 use crate::editor::annotations::redact::surface_timeline::{timeline, SAMPLE_MS};
 use crate::editor::annotations::timing::{placed_annotation, RecordingAnnotationClip};
@@ -122,10 +122,8 @@ pub(crate) fn attach_for_export(
 
 /// Each of an export frame's redactions whose fill carries a surface
 /// timeline, holding instead the surface that timeline gives `source_ms`
-/// into the recording. `clips` are the export's clips, matched by id. The
-/// Metal export resolves this in its own frame loop; the Windows one packs
-/// each frame from Rust, so it resolves it here.
-#[cfg(target_os = "windows")]
+/// into the recording. `clips` are the export's clips, matched by id.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) fn resolve_surfaces(
   annotations: &mut [crate::editor::annotations::Annotation],
   clips: &[RecordingAnnotationClip],

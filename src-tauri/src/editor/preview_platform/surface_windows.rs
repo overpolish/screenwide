@@ -34,18 +34,6 @@ mod tests;
 mod thread_dispatch;
 mod workspace;
 
-/// The arrow renderer's shareable parts. Live annotation draws the desktop's
-/// arrows from the same prepared geometry through the same shader, in one
-/// display's layer pixels rather than in the canvas's, with buffers and an
-/// atlas of its own.
-pub(crate) mod arrows {
-  pub(crate) use super::annotation::placed_arrows;
-  pub(crate) use super::compositor::{GpuBuffer, PreparedArrows};
-  /// A counter's number is type, so it is rasterised rather than drawn by the
-  /// shader. The overlay lays its numbers out in an atlas of its own, the same
-  /// way the editor's compositor does.
-  pub(crate) use super::counter_artwork::{numbered_arrows, CounterAtlas};
-}
 /// Inter SemiBold set by DirectWrite, which measures a text box as well as
 /// drawing its type.
 pub(crate) mod type_device;
@@ -106,13 +94,12 @@ use windows::{
 };
 
 mod audio_ribbon;
-mod background_image;
-mod compositor;
-mod counter_artwork;
+mod compositor_source;
+mod cursor_artwork;
 mod editor;
 mod font;
-mod keyboard_artwork;
 mod keyboard_hit;
+pub(crate) mod keyboard_raster;
 use keyboard_hit::{keyboard_transform_start, redraw_keyboard_transform};
 mod recenter;
 mod selection;
@@ -121,6 +108,7 @@ mod view_fit;
 mod window;
 mod workspace_layout;
 
+use super::compositor::{self, ComposedFrame, CropMagnifier};
 use super::{
   workspace_editor::{
     apply_crop_draw, apply_crop_move, apply_crop_resize, crop_magnifier_anchor, hit_test_display,
@@ -132,8 +120,8 @@ use super::{
   SelectionCallback, SelectionGestureCallback, SelectionGestureOperation, SelectionGesturePhase,
   TransformCallback,
 };
-use crate::app_windows::overlay_surface::{Frame, VisualSurface};
 use crate::editor::media_preview::{BakeGeometry, BakedVideoExportOptions, VideoExportOptions};
+use crate::gpu::surface::{Frame, Surface};
 use crate::gpu::D3d11Layer;
 use crate::screenshots::{CapturedImage, ScreenshotOutputSettings};
 use view_fit::fit_basis_transform;
@@ -146,7 +134,7 @@ pub(crate) struct StillOverlay;
 
 const FRAME_LAYER_ID: u32 = u32::MAX;
 const CENTERED_RESIZE_EDGE: u32 = 1 << 16;
-/// Edge bits shared with the Metal backend and both preview managers: an
+/// Edge bits shared with the macOS surface and both preview managers: an
 /// Alt-drag Move grows the canvas around the layer, and releasing Alt
 /// mid-drag accepts that canvas as the origin for the rest of the gesture.
 const AUTO_FIT_MOVE_EDGE: u32 = 1 << 17;
@@ -154,8 +142,8 @@ const AUTO_FIT_COMMIT_EDGE: u32 = 1 << 18;
 
 /// Logical placement of a recording layer in the retained workspace. Windows
 /// keeps the placement in the DirectComposition pane geometry rather than
-/// baking it into an intermediate bitmap, but the type mirrors the Metal
-/// backend so the recording pipeline can submit one platform-independent
+/// baking it into an intermediate bitmap, but the type mirrors the macOS
+/// surface so the recording pipeline can submit one platform-independent
 /// workspace description.
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -188,14 +176,6 @@ pub(crate) struct RecordingWorkspaceLayer<'a> {
   pub overlay: Option<&'a StillOverlay>,
   pub clip_cursor_at_video_edge: bool,
   pub foreground_only: bool,
-}
-
-#[derive(Clone, Copy)]
-pub(crate) struct ComposedFrame {
-  pub cursor: Option<crate::editor::cursor_effects::GpuCursor>,
-  pub keyboard: Option<crate::editor::keyboard_effects::KeyboardOverlay>,
-  pub foreground_only: bool,
-  pub seconds: f64,
 }
 
 type ClipboardCamera<'a> = (

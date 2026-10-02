@@ -142,3 +142,14 @@ export const Crowded: Story = {
     widthClass: "w-[560px]",
   },
 };
+
+/** A keystroke in the recording's last moment: its badge stops at the
+ * timeline's end, rounded, rather than running on past it. */
+export const AtEnd: Story = {
+  args: {
+    items: [
+      ...shortcuts,
+      { endMs: 119_930, id: "escape", label: "Esc", startMs: 119_860 },
+    ],
+  },
+};

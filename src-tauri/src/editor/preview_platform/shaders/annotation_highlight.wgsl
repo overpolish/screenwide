@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The highlight, the twin of
-// `gpu_compositor_macos_shader_source_annotation_highlight.h`: every band of
-// every highlight in a run, recoloured rather than painted over. It reads
-// each glyph's full ink through the magnifier's picture functions.
+// The highlight: every band of every highlight in a run, recoloured rather
+// than painted over. It reads each glyph's full ink through the magnifier's
+// picture functions.
 //
 // A highlight reads the pixel under it - `base` - and maps the page to the
 // highlight's colour and the ink printed on it to a colour that reads on that,
@@ -15,6 +14,18 @@
 // its own share of, starting a little after the line before. A highlight that
 // moved since the shutter opened carries exposure samples, each with its own
 // window, and each line is averaged over them, so its drawing end smears.
+//
+// The compositor's textures hold encoded values, but a glyph's anti-aliased
+// edge is a mix of page and ink in light. Recolouring measures how much of
+// each pixel the ink covers in linear light and lays the new ink over the
+// highlight's colour by the same share, the way type is drawn. Measured and
+// laid in encoded values instead, light text on a dark page comes out bolder
+// once it is dark text on a light highlight.
+//
+// A pixel's brightness alone cannot tell the faint edge of bright text from
+// the solid middle of dim text, so each pixel is measured against the
+// strongest pixel of the glyph around it, read from the picture: dim and
+// coloured text is inked as fully as the brightest on its line.
 
 const annotation_highlight_kind: u32 = 4u;
 const annotation_highlight_hand_drawn: u32 = 1u << 6u;
@@ -111,8 +122,10 @@ fn highlight_encode(light: vec3<f32>) -> vec3<f32> {
 /// How far the strongest pixel around `canvas_point` stands out from `page`,
 /// in linear light and in the direction ink lies, `toward`: the picture
 /// `annotation_magnify_fetch` reads, five by five texels spread over a reach
-/// that grows with the line's height, `line_height` canvas pixels. Negative
-/// where there is no picture. The twin of the Metal `highlight_peak`.
+/// that grows with the line's height, `line_height` canvas pixels. That
+/// reaches the core of a glyph from anywhere on its edge, however soft a
+/// zoomed or blurred capture left it, with taps spaced closer than type of
+/// that size is thick. Negative where there is no picture.
 fn highlight_peak(canvas_point: vec2<f32>, line_height: f32, page: f32, toward: f32) -> f32 {
   let at = annotation_magnify_placement();
   if (any(at.image.zw <= vec2<f32>(0.0)) || any(at.size < vec2<f32>(1.0))) {
@@ -149,13 +162,36 @@ fn highlight_inked(rgb: vec3<f32>, page: f32, toward: f32, own: f32) -> f32 {
   return smoothstep(0.3, 0.6, stands / own);
 }
 
-/// How surely `canvas_point` lies on a fill rather than on type, or on the
-/// type printed on one. Where the band's margins above and below, `rows`
-/// past its line, are both one fill, the column is decided whole: what lies
-/// between them is tinted, and past them what is the fill's own colour.
-/// Otherwise ink in one margin; the pixel itself standing out, or ink to its
-/// left and right; and the fill's colour most of what lies around it. The
-/// twin of the Metal `highlight_fill`, which says why each.
+/// How surely `canvas_point` lies on a fill rather than on type: a cell's
+/// colour, a label or a panel the line is drawn on, or the type printed on
+/// one.
+///
+/// The band, `rows`, reaches past its line's ink by an eighth of its height
+/// either side, which is page wherever the line is printed on the page. Where
+/// the margin above and the margin below are both one fill, at the point's
+/// column and a stroke's width beside it, the line is printed on that fill
+/// here: everything between the two is the fill or its type and is tinted
+/// whole, and past them only what is the fill's own colour. Decided for the
+/// column rather than the pixel, nothing on the fill can fall back to being
+/// recoloured one pixel at a time - a letter's dark edge turning the page's
+/// colour, a speck of the fill turning ink - however the picture is scaled.
+///
+/// Where only one margin reaches a fill, the line is not centred on it, and a
+/// pixel's neighbourhood cannot tell a label from a big glyph. So three
+/// things are asked of the picture, each of which type fails:
+///
+/// - A fill under the line reaches into the margin, above or below, at the
+///   point's column and a stroke's width either side; the width keeps a
+///   neighbouring line's tall glyph from passing for one.
+/// - The point stands out from `page` itself, or has ink to its left and to
+///   its right along its row, as type printed on the fill does and the page
+///   the band reaches over beside a fill does not.
+/// - The fill's colour, the margin's, is most of what lies around the point a
+///   quarter and a half of the band away. Around even the heaviest type, its
+///   colour is the lesser part.
+///
+/// `stands` is how far the point stands out from the page, and `faint` the
+/// least that counts as ink.
 fn highlight_fill(canvas_point: vec2<f32>, rows: vec2<f32>, page: f32, toward: f32, stands: f32,
                   faint: f32) -> f32 {
   let at = annotation_magnify_placement();
@@ -176,6 +212,8 @@ fn highlight_fill(canvas_point: vec2<f32>, rows: vec2<f32>, page: f32, toward: f
     let bottom = highlight_fetch(vec2<f32>(x, span.y));
     margin *= vec2<f32>(highlight_inked(top, page, toward, own),
                         highlight_inked(bottom, page, toward, own));
+    // Measured against the least ink rather than the pixel's own, so every
+    // pixel in the column reads its margins alike.
     let inked = vec2<f32>(highlight_inked(top, page, toward, faint),
                           highlight_inked(bottom, page, toward, faint));
     if (side == 0) {
@@ -224,8 +262,13 @@ fn highlight_fill(canvas_point: vec2<f32>, rows: vec2<f32>, page: f32, toward: f
   return reaches * enclosed * smoothstep(0.3, 0.42, alike / 32.0);
 }
 
-/// `base` under a felt marker in `colour`. The twin of the Metal
-/// `highlight_tint`, which says how.
+/// `base` under a felt marker in `colour`: over light it multiplies, well
+/// short of fully, as the marker's ink does on paper. Multiplied, dark would
+/// stay dark and the highlight would vanish, so dark is lifted a quarter of
+/// the way to the colour instead. Each pixel is weighed by its own
+/// brightness, so mixed content needs no reading of it; dark text on a light
+/// page is lifted with the rest of the dark, to a deep shade of the colour
+/// that still reads against it.
 fn highlight_tint(base: vec3<f32>, colour: vec3<f32>) -> vec3<f32> {
   let dark = 1.0 - saturate((dot(base, highlight_weights) - 0.2) / 0.4);
   let laid = base * mix(vec3<f32>(1.0), colour, 0.7);
@@ -234,12 +277,12 @@ fn highlight_tint(base: vec3<f32>, colour: vec3<f32>) -> vec3<f32> {
 }
 
 /// `base` recoloured under a highlight in `colour`: the page becomes the
-/// highlight's colour and its ink a colour that reads on it, keeping its hue;
-/// where `fills`, a fill the line between `rows` is drawn on is tinted
-/// instead. The twin of `highlight_recolour` in
-/// `gpu_compositor_macos_shader_source_annotation_highlight_ink.h`, which says
-/// why the ink is measured and laid in linear light, against each glyph's own
-/// strongest pixel.
+/// highlight's colour and its ink - whatever stands out from the page - a
+/// colour that reads on it. The ink keeps its hue, pushed dark on a light
+/// highlight and light on a dark one. `tone` is the page's luminance and its
+/// ink's, encoded, read around `canvas_point` on a line whose top and bottom
+/// are `rows`. Where `fills`, a fill the line is drawn on is tinted instead,
+/// type and all, so it reads as the marker laid over it.
 fn highlight_recolour(base: vec3<f32>, colour: vec3<f32>, tone: vec2<f32>,
                       canvas_point: vec2<f32>, rows: vec2<f32>, fills: bool) -> vec3<f32> {
   var span = tone.y - tone.x;
@@ -455,7 +498,8 @@ fn annotation_highlight_layer(rgba_in: vec4<f32>, base: vec4<f32>, annotation: P
 fn composite_highlights(rgba_in: vec4<f32>, base: vec4<f32>, canvas_point: vec2<f32>,
                         first: u32, last: u32, feather: f32) -> vec4<f32> {
   var rgba = rgba_in;
-  for (var index = first; index < last; index++) {
+  for (var index = annotation_next(canvas_point, first, last); index < last;
+       index = annotation_next(canvas_point, index + 1u, last)) {
     let annotation = annotation_arrows[index];
     if (annotation.kind != annotation_highlight_kind) {
       continue;
@@ -463,4 +507,26 @@ fn composite_highlights(rgba_in: vec4<f32>, base: vec4<f32>, canvas_point: vec2<
     rgba = annotation_highlight_layer(rgba, base, annotation, canvas_point, feather);
   }
   return rgba;
+}
+
+/// Where a highlight can reach: every band, each a line height and the halo
+/// beyond its box, as far as `annotation_highlight_layer` looks for a line.
+fn annotation_highlight_bounds(annotation: PreviewArrow, feather: f32) -> vec4<f32> {
+  let pairs = annotation.data_count / 2u;
+  if (annotation.alpha <= 0.0 || pairs == 0u) {
+    return annotation_no_bounds;
+  }
+  let record = annotation.geometry;
+  let origin = vec2<f32>(record.ax, record.ay);
+  let unit = vec2<f32>(record.bx, record.by);
+  let halo = max(annotation.hover, 0.0);
+  var bounds = annotation_no_bounds;
+  for (var row = 0u; row < pairs; row++) {
+    let at = annotation.data_offset + row * 2u;
+    let low = origin + annotation_points[at] * unit;
+    let high = origin + annotation_points[at + 1u] * unit;
+    let reach = abs(high.y - low.y) + halo + feather + 1.0;
+    bounds = annotation_union(bounds, vec4<f32>(min(low, high) - reach, max(low, high) + reach));
+  }
+  return bounds;
 }

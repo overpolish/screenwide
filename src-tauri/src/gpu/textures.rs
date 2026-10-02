@@ -10,7 +10,6 @@ use super::Gpu;
 impl Gpu {
   /// A sampled texture holding `pixels`: `size` is width, height and layers,
   /// and `pixels` the layers one after another, rows tightly packed.
-  #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
   pub(crate) fn texture_with_pixels(
     &self,
     label: &str,

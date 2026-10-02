@@ -1,13 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::editor::annotations::native::NativeAnnotationsView;
 use crate::{
-  editor::{
-    cursor_effects::{GpuCursor, NativeGpuCursor},
-    keyboard_effects::KeyboardOverlay,
-  },
-  screenshots::{CapturedImage, NativeCanvas, ScreenshotOutputSettings, StillOverlay},
+  editor::{cursor_effects::GpuCursor, keyboard_effects::KeyboardOverlay},
+  screenshots::{CapturedImage, ScreenshotOutputSettings, StillOverlay},
 };
 
 #[repr(C)]
@@ -29,35 +25,9 @@ pub(super) struct NativeWorkspacePaneRect {
   pub(super) height: f64,
 }
 
-#[repr(C)]
-pub(super) struct NativeWorkspaceLayer {
-  pub(super) pane_index: u32,
-  pub(super) layer_id: u32,
-  pub(super) source_rgba: *const u8,
-  pub(super) source_pixels: *mut std::ffi::c_void,
-  pub(super) source_kind: u32,
-  pub(super) source_token: u64,
-  pub(super) source_width: u32,
-  pub(super) source_height: u32,
-  pub(super) canvas_width: u32,
-  pub(super) canvas_height: u32,
-  pub(super) canvas: NativeCanvas,
-  pub(super) placement: NativeWorkspacePlacement,
-  pub(super) seconds: f64,
-  pub(super) cursor: NativeGpuCursor,
-  pub(super) keyboard: KeyboardOverlay,
-  pub(super) camera_rgba: *const u8,
-  pub(super) camera_pixels: *mut std::ffi::c_void,
-  pub(super) overlay: StillOverlay,
-  /// The layer's annotations, borrowed for the call: the presenter copies
-  /// them into a store of its own, because it redraws its retained scene
-  /// without Rust and a borrowed list would be gone by the next pan.
-  pub(super) annotations: NativeAnnotationsView,
-}
-
 /// Input for one layer in the retained recording workspace. A decoded RGBA
-/// image or a native CVPixelBuffer may be supplied; optional cursor/camera
-/// buffers and overlay uniforms are composed in the same Metal pass.
+/// image or a native CVPixelBuffer may be supplied, and a camera frame
+/// composed into it beside the cursor and the shortcut strip.
 pub(crate) struct RecordingWorkspaceLayer<'a> {
   pub pane_index: u32,
   pub source_token: u64,

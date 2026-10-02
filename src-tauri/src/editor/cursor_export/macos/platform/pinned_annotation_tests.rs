@@ -44,8 +44,8 @@ fn disc_centre(destination: &std::path::Path, time: &str, width: u32) -> Option<
 
 /// A counter pinned to a scrolling page is exported where the page carried
 /// it, frame by frame, through the whole pipeline: the recording decoded for
-/// tracking, the path worked out, and the Metal export drawing the records
-/// it becomes.
+/// tracking, the path worked out, and the export drawing each frame where
+/// the path puts it.
 #[test]
 fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
   let directory =

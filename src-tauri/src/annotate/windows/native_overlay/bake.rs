@@ -39,13 +39,13 @@ pub(crate) fn bake(
     mip_level_count: 1,
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
-    format: overlay_surface::FORMAT,
+    format: crate::gpu::surface::FORMAT,
     usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
     view_formats: &[],
   });
   // A highlight recolours the still under it, so the still is its underlay,
   // and a blurring spotlight softens the same still.
-  let still = underlay::upload(gpu, image)?;
+  let still = crate::annotate::overlay::upload_underlay(gpu, image)?;
   let blurs = annotations.iter().any(|annotation| {
     annotation.style.blur
       && matches!(
@@ -54,7 +54,7 @@ pub(crate) fn bake(
       )
   });
   let softened = if blurs {
-    Some(underlay::upload(
+    Some(crate::annotate::overlay::upload_underlay(
       gpu,
       &crate::editor::annotations::spotlight::soften::soften(image),
     )?)
@@ -64,7 +64,14 @@ pub(crate) fn bake(
   renderer.draw_arrows(
     &target.create_view(&Default::default()),
     (image.width, image.height),
-    &arrows::placed_arrows(annotations, (0.0, 0.0), (1.0, 1.0), scale, None, None),
+    &crate::editor::preview_platform::annotation_gpu::placed_arrows(
+      annotations,
+      (0.0, 0.0),
+      (1.0, 1.0),
+      scale,
+      None,
+      None,
+    ),
     Some(&still),
     softened.as_ref(),
   )?;

@@ -1,17 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Windows twin of `native_overlay_macos.rs`: the overlay's DirectComposition
+//! Windows twin of `macos/native_overlay.rs`: the overlay's DirectComposition
 //! surfaces.
 //!
 //! One surface per host window, all sharing one device, and each drawing its
-//! display's annotations through the editor's own arrow shader. Nothing is
-//! mirrored: every frame pulls [`super::live_clips`] and the stroke in hand,
-//! so there is no second copy of the document to keep in step.
-//!
-//! macOS is handed a scene callback the compositor pulls through; here a
-//! redraw does the pull itself, so there is no callback to install. Ordering a
-//! host on screen is Tauri's `show`, not ours.
+//! display's frame through [`crate::annotate::overlay`]. Ordering a host on
+//! screen is Tauri's `show`, not ours.
 //!
 //! Every surface belongs to the thread that owns its host window. Callers on
 //! another thread reach it through [`redraw`], which dispatches; the rest are
@@ -20,10 +15,7 @@
 mod bake;
 pub(in super::super) use bake::bake;
 mod frame;
-mod renderer;
-mod scene;
 mod surface;
-mod underlay;
 mod window_proc;
 
 use std::sync::{LazyLock, Mutex, MutexGuard, OnceLock, RwLock};
@@ -53,11 +45,10 @@ use windows::{
   },
 };
 
-use super::super::{geometry, input, live_clips};
+use super::super::input;
 
+use crate::annotate::overlay::Renderer;
 use crate::app_windows::overlay_surface;
-use crate::editor::preview_platform::arrows;
-use renderer::Renderer;
 use surface::Surface;
 
 /// One display the overlay covers: the capture display it is, where it

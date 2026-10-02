@@ -58,7 +58,7 @@ pub fn resize_frame(
   );
 
   // Frame dimensions correspond to output pixels. Round before applying the
-  // safety bounds so Metal and D3D receive identical integer sizes.
+  // safety bounds so macOS and Windows receive identical integer sizes.
   width = width.round().max(FRAME_MIN_SIZE);
   height = height.round().max(FRAME_MIN_SIZE);
   let area = width * height;

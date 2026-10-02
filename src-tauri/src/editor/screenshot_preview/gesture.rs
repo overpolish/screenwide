@@ -45,7 +45,7 @@ impl PreviewManager {
       SelectionGesturePhase::Begin => {
         // The OSC is derived from React's latest layout. Rebase native pixel
         // composition to that exact same snapshot before accepting pointer
-        // deltas so both Metal layers share one gesture origin.
+        // deltas so both preview layers share one gesture origin.
         self.output = Some(current.clone());
         // Crop mode is mirrored by React: selecting another layer must be
         // allowed to replace the display-only uncropped composition before

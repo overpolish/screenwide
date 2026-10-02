@@ -5,10 +5,9 @@
 //!
 //! An annotation that moved during the exposure is drawn at every step it
 //! took and the samples are averaged, so it smears along the path it actually
-//! travelled rather than jumping. How many samples that takes is each
-//! backend's own business - the Metal compositor packs them into a buffer, the
-//! D3D11 one into its own - but how far the annotation went is the
-//! annotation's, and is measured here for both.
+//! travelled rather than jumping. How many samples that takes is the
+//! compositor's business, but how far the annotation went is the
+//! annotation's, and is measured here.
 
 use super::counter::geometry::COUNTER_TAIL_REACH;
 use super::reveal::AnnotationReveal;

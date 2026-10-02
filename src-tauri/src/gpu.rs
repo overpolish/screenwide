@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The one wgpu device every renderer shares. Shaders are WGSL everywhere;
-//! on Windows they run on Direct3D 12 and compile through the bundled DXC,
-//! because wgpu's default there, FXC, takes minutes on the larger shaders.
+//! The one wgpu device every renderer shares. Shaders are WGSL everywhere:
+//! on macOS they run on Metal; on Windows on Direct3D 12, compiled through
+//! the bundled DXC, because wgpu's default there, FXC, takes minutes on the
+//! larger shaders.
 
 #[cfg(target_os = "windows")]
 mod windows;
@@ -11,13 +12,15 @@ mod windows;
 pub(crate) use self::windows::bridge::{device_on_gpu_adapter, BridgedTexture, D3d11Bridge};
 #[cfg(target_os = "windows")]
 pub(crate) use self::windows::interop::{d3d11, D3d11Layer, SharedTexture};
+#[cfg(target_os = "macos")]
+pub(crate) mod macos;
+pub(crate) mod surface;
 mod textures;
 
 use std::sync::{Arc, LazyLock};
 
 pub(crate) struct Gpu {
   /// Surfaces are created from the instance that owns the device.
-  #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
   pub(crate) instance: wgpu::Instance,
   pub(crate) device: wgpu::Device,
   pub(crate) queue: wgpu::Queue,
@@ -81,7 +84,14 @@ fn instance_descriptor() -> Result<wgpu::InstanceDescriptor, String> {
   Ok(descriptor)
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+fn instance_descriptor() -> Result<wgpu::InstanceDescriptor, String> {
+  let mut descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
+  descriptor.backends = wgpu::Backends::METAL;
+  Ok(descriptor)
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn instance_descriptor() -> Result<wgpu::InstanceDescriptor, String> {
   Ok(wgpu::InstanceDescriptor::new_without_display_handle())
 }

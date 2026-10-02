@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The compositor's screenshot annotations, through a real Metal dispatch.
+//! The compositor's screenshot annotations, through a real GPU dispatch.
 
 use crate::editor::annotations::{
   Annotation, AnnotationHead, AnnotationPoint, AnnotationShape, AnnotationStyle,

@@ -12,10 +12,17 @@ pub(super) fn hide_webview(window: &WebviewWindow) -> tauri::Result<()> {
   webview.hide()
 }
 
+/// Hiding the WKWebView took first responder from it. Hand it back directly
+/// before the window becomes key: a window becoming key with no first
+/// responder selects its first key view going forward, and WebKit answers a
+/// forward selection as Tab into the page, focusing and selecting its first
+/// tabbable element - the editor's file name, which then took the space meant
+/// for playback.
 #[cfg(target_os = "macos")]
 pub(super) fn show_webview(window: &WebviewWindow) -> tauri::Result<()> {
   let webview: &tauri::Webview = window.as_ref();
-  webview.show()
+  webview.show()?;
+  webview.set_focus()
 }
 
 pub(crate) fn hide_window(window: &WebviewWindow) -> tauri::Result<()> {

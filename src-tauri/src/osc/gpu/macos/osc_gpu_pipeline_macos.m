@@ -20,37 +20,3 @@ ScreenwideRegionOscRenderState screenwide_region_osc_render_state(
   memcpy(state.ruler_colors, &ruler, sizeof(state.ruler_colors));
   return state;
 }
-
-static id<MTLRenderPipelineState> make_pipeline(
-    id<MTLDevice> device, id<MTLLibrary> library,
-    NSError **error) {
-  MTLRenderPipelineDescriptor *descriptor =
-      [MTLRenderPipelineDescriptor new];
-  descriptor.vertexFunction =
-      [library newFunctionWithName:@"region_osc_vertex_main"];
-  descriptor.fragmentFunction =
-      [library newFunctionWithName:@"region_osc_fragment"];
-  descriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-  descriptor.colorAttachments[0].blendingEnabled = YES;
-  descriptor.colorAttachments[0].sourceRGBBlendFactor =
-      MTLBlendFactorSourceAlpha;
-  descriptor.colorAttachments[0].destinationRGBBlendFactor =
-      MTLBlendFactorOneMinusSourceAlpha;
-  // RGB becomes premultiplied through SourceAlpha above; alpha itself must
-  // use source-over (a + dst.a * (1 - a)), not square the source alpha.
-  // CAMetalLayer composites this premultiplied result over the native material.
-  descriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorOne;
-  descriptor.colorAttachments[0].destinationAlphaBlendFactor =
-      MTLBlendFactorOneMinusSourceAlpha;
-  return [device newRenderPipelineStateWithDescriptor:descriptor error:error];
-}
-
-id<MTLRenderPipelineState> screenwide_region_osc_make_pipeline(
-    id<MTLDevice> device, id<MTLLibrary> library, NSError **error) {
-  return make_pipeline(device, library, error);
-}
-
-id<MTLRenderPipelineState> screenwide_region_osc_make_snapshot_pipeline(
-    id<MTLDevice> device, id<MTLLibrary> library, NSError **error) {
-  return make_pipeline(device, library, error);
-}

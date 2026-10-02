@@ -96,7 +96,7 @@ impl WindowsExportCompositor {
     }
     .map_err(|error| format!("The Windows export target could not be created: {error}"))?;
     let copy = copy.ok_or_else(|| "D3D11 created no Windows export target".to_owned())?;
-    let prepared = super::annotation::prepared_arrows(
+    let prepared = crate::editor::preview_platform::annotation_gpu::prepared_arrows(
       annotations,
       self.source.size,
       settings,

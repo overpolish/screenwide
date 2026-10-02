@@ -47,28 +47,9 @@ void *screenwide_region_osc_attach(void *view_ptr, void *context,
   s.layoutChanged = layout_changed;
   s.showFrame = YES;
   s.showHandles = YES;
-  s.device = MTLCreateSystemDefaultDevice();
-  s.queue = [s.device newCommandQueue];
-  NSError *error = nil;
-  id<MTLLibrary> library =
-      [s.device newLibraryWithSource:screenwide_region_osc_shader_source()
-                             options:nil
-                               error:&error];
-  if (!s.device || !s.queue || !library) {
-    s.rustContext = NULL;
-    s.releaseContext = NULL;
-    if (release)
-      release(context);
-    return NULL;
-  }
-  s.pipeline = screenwide_region_osc_make_pipeline(s.device, library, &error);
-  s.snapshotPipeline =
-      screenwide_region_osc_make_snapshot_pipeline(s.device, library, &error);
-  s.magnifierPipeline =
-      screenwide_region_magnifier_make_pipeline(s.device, library, &error);
-  s.placeholder = screenwide_region_osc_make_placeholder(s.device);
-  if (!s.pipeline || !s.snapshotPipeline || !s.magnifierPipeline ||
-      !s.placeholder) {
+  s.device = (__bridge id<MTLDevice>)screenwide_shared_metal_device();
+  s.queue = (__bridge id<MTLCommandQueue>)screenwide_shared_metal_queue();
+  if (!s.device || !s.queue) {
     s.rustContext = NULL;
     s.releaseContext = NULL;
     if (release)

@@ -35,11 +35,8 @@ static BOOL keyboard_visible_hit_rect(
   if (rect == NULL || !selection_is_keyboard(selection) ||
       !surface.workspaceMode || surface.views.count == 0) return NO;
   double x = 0.0, y = 0.0, width = 0.0, height = 0.0;
-  [surface.workspaceLock lock];
-  int found = screenwide_gpu_still_presenter_workspace_keyboard_bounds(
-      surface.views[0].compositor, selection.pane_index,
-      &x, &y, &width, &height);
-  [surface.workspaceLock unlock];
+  int found = screenwide_workspace_scene_keyboard_bounds(
+      surface.scene, selection.pane_index, &x, &y, &width, &height);
   if (!found) return NO;
   selection.x = x;
   selection.y = y;
@@ -66,10 +63,7 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL keyboard_body_contains(
 SCREENWIDE_PREVIEW_PRIVATE void begin_keyboard_transform(
     ScreenwidePreviewSurface *surface) {
   if (!surface.workspaceMode || surface.views.count == 0) return;
-  [surface.workspaceLock lock];
-  screenwide_gpu_still_presenter_begin_workspace_resize(
-      surface.views[0].compositor);
-  [surface.workspaceLock unlock];
+  screenwide_workspace_scene_begin_resize(surface.scene);
 }
 
 SCREENWIDE_PREVIEW_PRIVATE void update_keyboard_transform(
@@ -77,12 +71,10 @@ SCREENWIDE_PREVIEW_PRIVATE void update_keyboard_transform(
     double scale) {
   if (!surface.workspaceMode || surface.views.count == 0 ||
       !selection_is_keyboard(selection)) return;
-  [surface.workspaceLock lock];
-  screenwide_gpu_still_presenter_update_workspace_keyboard(
-      surface.views[0].compositor, selection.pane_index,
+  screenwide_workspace_scene_update_keyboard(
+      surface.scene, selection.pane_index,
       selection.x + selection.width / 2.0,
       selection.y + selection.height / 2.0, scale);
-  [surface.workspaceLock unlock];
 }
 
 @implementation ScreenwidePreviewInteractionView (Keyboard)

@@ -10,9 +10,9 @@
 
 use super::*;
 
-#[cfg(any(test, target_os = "windows"))]
+#[cfg(any(test, target_os = "macos", target_os = "windows"))]
 mod buckets;
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use buckets::bucket_levels;
 
 /// One row per track, one column per envelope point. Both are clamped here so

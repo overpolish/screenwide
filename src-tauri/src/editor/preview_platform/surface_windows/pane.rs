@@ -27,7 +27,7 @@ impl Backdrop {
     })()
     .map_err(|error| format!("The Windows preview backstop could not be attached: {error}"))?;
     // Two pixels square, stretched over the viewport by the scale transform.
-    let surface = VisualSurface::new(gpu, &visual)?;
+    let surface = Surface::on_visual(gpu, &visual)?;
     Ok(Self {
       scale_transform,
       surface,

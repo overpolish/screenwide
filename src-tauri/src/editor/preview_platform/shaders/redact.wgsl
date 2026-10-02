@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // What the passes that apply one redaction to a copy of the source share,
-// before the canvas samples that copy. The twin of
-// `gpu_compositor_macos_shader_source_redact.h` and `..._redact_paint.h`.
-// The paint pass reads no covered pixel: the fill colour and each pixelated
+// before the canvas samples that copy. The paint pass reads no covered
+// pixel: the fill colour and each pixelated
 // zone's inks come from Rust, and which block of a zone takes which shade
 // comes from a hash of the seed and the block's place in the box. A classic
 // pixelation's blocks are averaged by the cells pass first, and a blur's rows

@@ -5,8 +5,7 @@
 // side's left end - four sides and four corners - and the pen's stroke along
 // a window of that walk with a round pen at each end. Each piece of the walk
 // is measured on its own and the nearest kept, so wherever the pen went is
-// drawn. The twin of `gpu_compositor_macos_shader_source_annotation_shape.h`.
-// Every number it reads was prepared by Rust's
+// drawn. Every number it reads was prepared by Rust's
 // `outline::geometry::prepare_shape`, which also decides a hand-drawn
 // stroke's wander, and `shape_distance` there picks the same stroke.
 
@@ -247,20 +246,29 @@ fn annotation_shape_exposure(probe: vec2<f32>, annotation: PreviewArrow, feather
   return total / f32(annotation.sample_count);
 }
 
+/// Where a shape's stroke can reach: within the pen and its wander of the
+/// clean outline. Every exposure sample shares the box and the wander, so
+/// this covers all of them.
+fn annotation_shape_bounds(shape: PreviewGeometry, halo: f32, feather: f32) -> vec4<f32> {
+  let reach = annotation_shape_reach(shape, halo, feather);
+  return vec4<f32>(vec2<f32>(shape.ax, shape.ay) - reach, vec2<f32>(shape.bx, shape.by) + reach);
+}
+
+fn annotation_shape_reach(shape: PreviewGeometry, halo: f32, feather: f32) -> f32 {
+  return shape.width * 0.5 + abs(shape.start_head_ax) +
+      max(abs(shape.start_head_ay), abs(shape.end_head_ax)) + halo + feather + 1.0;
+}
+
 /// One shape: its stroke in the annotation's own colour.
 fn annotation_shape_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
                           canvas_point: vec2<f32>, feather: f32, halo: f32) -> vec4<f32> {
   let shape = annotation.geometry;
-  // The stroke stays within the pen and its wander of the clean outline.
-  // Every exposure sample shares the box and the wander, so these tests
-  // cover all of them.
-  let reach = shape.width * 0.5 + abs(shape.start_head_ax) +
-      max(abs(shape.start_head_ay), abs(shape.end_head_ax)) + halo + feather + 1.0;
-  let low = vec2<f32>(shape.ax, shape.ay);
-  let high = vec2<f32>(shape.bx, shape.by);
-  if (any(canvas_point < low - reach) || any(canvas_point > high + reach)) {
+  if (annotation_outside(canvas_point, annotation_shape_bounds(shape, halo, feather))) {
     return rgba_in;
   }
+  let reach = annotation_shape_reach(shape, halo, feather);
+  let low = vec2<f32>(shape.ax, shape.ay);
+  let high = vec2<f32>(shape.bx, shape.by);
   let half_size = (high - low) * 0.5;
   let rounding = max(min(shape.rounding, min(half_size.x, half_size.y)), 0.0);
   let q = abs(canvas_point - (low + high) * 0.5) - half_size + rounding;

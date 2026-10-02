@@ -25,12 +25,20 @@ const MODULES: &[(&str, &[&str])] = &[
     ],
   ),
   (
+    "annotation_blur",
+    &["src/editor/preview_platform/shaders/annotation_blur.wgsl"],
+  ),
+  (
     "audio_ribbon",
     &["src/editor/preview_platform/shaders/audio_ribbon.wgsl"],
   ),
   (
+    "camera_thumbnail",
+    &["src/recording/shaders/camera_thumbnail.wgsl"],
+  ),
+  (
     "desktop_compositor",
-    &["src/recording/platform_windows/shaders/desktop_compositor.wgsl"],
+    &["src/recording/shaders/desktop_compositor.wgsl"],
   ),
   (
     "mesh",
@@ -41,7 +49,14 @@ const MODULES: &[(&str, &[&str])] = &[
       "src/screenshots/mesh.wgsl",
     ],
   ),
-  ("osc", &["src/osc/gpu/shaders/osc.wgsl"]),
+  (
+    "osc",
+    &[
+      // First: it carries the module's directive.
+      "src/osc/gpu/shaders/osc.wgsl",
+      "src/osc/gpu/shaders/lens.wgsl",
+    ],
+  ),
   (
     "preview",
     &[
@@ -58,6 +73,8 @@ const MODULES: &[(&str, &[&str])] = &[
       "src/editor/preview_platform/shaders/annotation_spotlight.wgsl",
       "src/editor/preview_platform/shaders/annotation_magnify.wgsl",
       "src/editor/preview_platform/shaders/annotation_highlight.wgsl",
+      "src/editor/preview_platform/shaders/annotation_layers.wgsl",
+      "src/editor/preview_platform/shaders/annotation_tiles.wgsl",
     ],
   ),
   (
@@ -79,6 +96,17 @@ const MODULES: &[(&str, &[&str])] = &[
     &[
       "src/editor/preview_platform/shaders/redact.wgsl",
       "src/editor/preview_platform/shaders/redact_paint.wgsl",
+    ],
+  ),
+  (
+    "video_planes",
+    &["src/editor/preview_platform/shaders/video_planes.wgsl"],
+  ),
+  (
+    "workspace_magnifier",
+    &[
+      "src/editor/preview_platform/shaders/workspace_magnifier.wgsl",
+      "src/osc/gpu/shaders/lens.wgsl",
     ],
   ),
 ];

@@ -46,7 +46,7 @@ pub(super) fn maximum_editor_zoom(state: &SurfaceState) -> f64 {
     })
 }
 
-/// Mirrors the Metal backend's `auto_fit_selection_bounds`: the smallest
+/// Mirrors the macOS surface's `auto_fit_selection_bounds`: the smallest
 /// whole-pixel box, in mouse-down canvas units, holding the canvas and every
 /// layer of the moved layer's pane with the moved layer at `moved`.
 pub(super) fn auto_fit_selection_bounds(
@@ -162,7 +162,7 @@ pub(super) fn display_selection(
 ) -> Option<PreviewSurfaceRect> {
   // A pane the last layout hid (the camera while it is baked into the
   // primary) has no display rect: its stale box must not select or hit-test,
-  // matching the Metal backend's active-pane check.
+  // matching the macOS surface's active-pane check.
   let pane = state
     .panes
     .get(selection.pane_index as usize)?

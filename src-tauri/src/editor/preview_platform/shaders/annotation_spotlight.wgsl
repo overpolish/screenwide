@@ -4,9 +4,8 @@
 // The shade a layer's spotlights cast, and the cursor as the layers see it.
 // Every spotlight showing cuts its hole in one shared shade, which darkens
 // what is under it by a fixed share; `composite_annotation_layers` lays it
-// under every mark, and darkens the cursor by it too. The twin of
-// `gpu_compositor_macos_shader_source_annotation_spotlight.h` and
-// `..._annotation_cursor.h`, and like them the arithmetic is Rust's
+// where the topmost spotlight sits, over the picture and the marks below,
+// and darkens the cursor by it too. The arithmetic is Rust's
 // `spotlight::geometry::{light, shade}`.
 //
 // The cursor lies on the picture: the spotlights' blur is applied to the
@@ -18,7 +17,7 @@ const annotation_spotlight_kind: u32 = 6u;
 // `spotlight::model::SPOTLIGHT_DIM`.
 const annotation_spotlight_dim: f32 = 0.4;
 // The flag a spotlight that blurs carries: `flags::BLUR`.
-const annotation_spotlight_blur: u32 = 1u << 3u;
+const annotation_spotlight_blur_flag: u32 = 1u << 3u;
 
 // How much of one spotlight's light reaches `probe`: all of it well inside
 // the box, none outside it, and a smooth fall over its softness in from the
@@ -48,7 +47,8 @@ fn annotation_spotlight_cover(probe: vec2<f32>, first: u32, last: u32, feather: 
   let pixel = max(2.0 * feather, 1e-4);
   var layer = 0.0;
   var lit = 0.0;
-  for (var index = first; index < last; index++) {
+  for (var index = annotation_next(probe, first, last); index < last;
+       index = annotation_next(probe, index + 1u, last)) {
     let annotation = annotation_arrows[index];
     if (annotation.kind != annotation_spotlight_kind) {
       continue;
@@ -57,7 +57,7 @@ fn annotation_spotlight_cover(probe: vec2<f32>, first: u32, last: u32, feather: 
     if (presence <= 0.0) {
       continue;
     }
-    if (!blurring || (annotation.flags & annotation_spotlight_blur) != 0u) {
+    if (!blurring || (annotation.flags & annotation_spotlight_blur_flag) != 0u) {
       layer = max(layer, presence);
     }
     let shape = annotation.geometry;
@@ -76,7 +76,7 @@ fn annotation_spotlight_cover(probe: vec2<f32>, first: u32, last: u32, feather: 
 // canvas pixels and how far it has arrived - as present as the most present
 // spotlight that blurs - both zero where none showing blurs; and how many
 // prepared annotations the spotlights lifting it are among.
-struct AnnotationCursorBlur {
+struct AnnotationSpotlightBlur {
   deviation: f32,
   strength: f32,
   count: u32,
@@ -85,13 +85,14 @@ struct AnnotationCursorBlur {
 // How much of the pixel at `probe` the spotlights' blur takes: all of it,
 // lifted by each spotlight's light as far as its presence against the
 // blur's. The twin of `redact_spotlight_share`, which blurs the source.
-fn annotation_spotlight_blur_share(probe: vec2<f32>, blur: AnnotationCursorBlur,
+fn annotation_spotlight_blur_share(probe: vec2<f32>, blur: AnnotationSpotlightBlur,
                                    pixel: f32) -> f32 {
   if (blur.strength <= 0.0) {
     return 0.0;
   }
   var lit = 0.0;
-  for (var index = 0u; index < blur.count; index++) {
+  for (var index = annotation_next(probe, 0u, blur.count); index < blur.count;
+       index = annotation_next(probe, index + 1u, blur.count)) {
     let annotation = annotation_arrows[index];
     if (annotation.kind != annotation_spotlight_kind) {
       continue;
@@ -111,37 +112,26 @@ fn annotation_spotlight_blur_share(probe: vec2<f32>, blur: AnnotationCursorBlur,
   return saturate(1.0 - lit);
 }
 
-// How many taps the cursor's blur takes, spiralling out to two deviations.
-const annotation_cursor_blur_taps: u32 = 16u;
-
 // The cursor at `probe`, straight alpha, as the layer shows it: sharp, or
-// softened by the spotlights' blur where that reaches. The blur is a spiral
-// of taps evenly spread over a disc two deviations wide and weighted as a
-// Gaussian. `pixel` is one drawn pixel, which a spotlight's hard edge fades
-// over.
+// softened by the spotlights' blur where that reaches. The soft cursor is the
+// cursor alone blurred as a Gaussian into a layer by
+// `compositor/mark_blur.rs`, which `annotation_cursor_blurred` reads; a pass
+// with no such layer draws the cursor sharp. `pixel` is one drawn pixel,
+// which a spotlight's hard edge fades over.
 fn annotation_cursor_seen(probe: vec2<f32>, pixel: f32) -> vec4<f32> {
-  let sharp = annotation_cursor_sample(probe);
-  let blur = annotation_cursor_blur();
-  if (!(blur.deviation >= 0.5) || blur.strength <= 0.0) {
-    return sharp;
+  let blur = annotation_spotlight_blur();
+  var share = 0.0;
+  if (annotation_cursor_blur_layer() && blur.deviation >= 0.5 && blur.strength > 0.0) {
+    share = annotation_spotlight_blur_share(probe, blur, pixel);
   }
-  let still = vec4<f32>(sharp.rgb * sharp.a, sharp.a);
-  var soft = still;
-  var weights = 1.0;
-  for (var tap = 0u; tap < annotation_cursor_blur_taps; tap++) {
-    let share = (f32(tap) + 0.5) / f32(annotation_cursor_blur_taps);
-    let radius = 2.0 * blur.deviation * sqrt(share);
-    let angle = f32(tap) * 2.39996323;
-    let weight = exp(-2.0 * share);
-    let sample = annotation_cursor_sample(probe + radius * vec2<f32>(cos(angle), sin(angle)));
-    soft += weight * vec4<f32>(sample.rgb * sample.a, sample.a);
-    weights += weight;
+  var seen = vec4<f32>(0.0);
+  if (share < 1.0 && annotation_cursor_near(probe, 1.0)) {
+    let sharp = annotation_cursor_sample(probe);
+    seen = vec4<f32>(sharp.rgb * sharp.a, sharp.a);
   }
-  soft /= weights;
-  if (soft.a <= 0.0 && still.a <= 0.0) {
-    return vec4<f32>(0.0);
+  if (share > 0.0) {
+    seen = mix(seen, annotation_cursor_blurred(probe), share);
   }
-  let seen = mix(still, soft, annotation_spotlight_blur_share(probe, blur, pixel));
   if (seen.a <= 0.0) {
     return vec4<f32>(0.0);
   }

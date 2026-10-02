@@ -78,7 +78,7 @@ fn plan() -> CapturePlan {
 }
 
 #[test]
-fn native_piece_samples_from_the_already_cropped_stream_origin() {
+fn pieces_sample_from_the_already_cropped_stream_origin() {
   let piece = CapturePiece {
     display_id: 1,
     source_pixels: PixelRect {
@@ -94,10 +94,13 @@ fn native_piece_samples_from_the_already_cropped_stream_origin() {
       height: 200,
     },
   };
-  let native = NativePiece::from_cropped_source(piece);
-  assert_eq!((native.source_x, native.source_y), (0, 0));
-  assert_eq!((native.source_width, native.source_height), (800, 400));
-  assert_eq!((native.destination_x, native.destination_y), (25, 10));
+  let cropped = cropped_source(piece);
+  assert_eq!((cropped.source_pixels.x, cropped.source_pixels.y), (0, 0));
+  assert_eq!(
+    (cropped.source_pixels.width, cropped.source_pixels.height),
+    (800, 400)
+  );
+  assert_eq!(cropped.destination, piece.destination);
 }
 
 #[test]
@@ -120,6 +123,52 @@ fn waits_for_every_source_then_composes_the_shared_canvas() {
   let right = unsafe { std::slice::from_raw_parts(base.add(3 * 4), 4) };
   assert_eq!(left, [255, 0, 0, 255]);
   assert_eq!(right, [0, 0, 255, 255]);
+  assert!(unsafe {
+    composed
+      .buffer
+      .unlock_lock_base_addr(cv::pixel_buffer::LockFlags::READ_ONLY)
+  }
+  .is_ok());
+}
+
+/// Where no display reaches, the canvas is opaque black rather than
+/// whatever the new buffer's memory held.
+#[test]
+fn canvas_outside_every_piece_is_opaque_black() {
+  let mut plan = plan();
+  plan.width = 6;
+  plan.desktop_region.width = 6.0;
+  plan.pieces[1].destination.x = 4;
+  let mut coordinator = DesktopFrameCoordinator::new(&plan).unwrap();
+  let white = buffer(2, 2, [255, 255, 255, 255]);
+  coordinator.update(0, 10, &white).unwrap();
+  let mut composed = coordinator.update(1, 10, &white).unwrap().unwrap();
+  assert!(unsafe {
+    composed
+      .buffer
+      .lock_base_addr(cv::pixel_buffer::LockFlags::READ_ONLY)
+  }
+  .is_ok());
+  let stride = composed.buffer.bytes_per_row();
+  let base = unsafe { composed.buffer.base_address() }.cast::<u8>();
+  for y in 0..2 {
+    let row = unsafe { std::slice::from_raw_parts(base.add(y * stride), 6 * 4) };
+    assert_eq!(
+      row[..4],
+      [255, 255, 255, 255],
+      "row {y} starts on the first display"
+    );
+    assert_eq!(
+      row[8..16],
+      [0, 0, 0, 255, 0, 0, 0, 255],
+      "row {y} is black between displays"
+    );
+    assert_eq!(
+      row[16..20],
+      [255, 255, 255, 255],
+      "row {y} ends on the second display"
+    );
+  }
   assert!(unsafe {
     composed
       .buffer

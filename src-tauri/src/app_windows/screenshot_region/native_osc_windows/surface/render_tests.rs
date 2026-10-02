@@ -5,9 +5,9 @@ use super::*;
 
 const SIZE: u32 = 8;
 
-/// Draws one full-target quad of `kind` with the given pipeline over a
-/// transparent target and returns the centre pixel as BGRA bytes.
-fn draw(gpu: &Gpu, opaque: bool, kind: u32, constants: &RenderConstants) -> [u8; 4] {
+/// Draws one full-target quad of `kind` over a transparent target and
+/// returns the centre pixel as BGRA bytes.
+fn draw(gpu: &Gpu, kind: u32, constants: &RenderConstants) -> [u8; 4] {
   let shared = gpu.device();
   let device = &shared.device;
   let view = Size {
@@ -49,7 +49,7 @@ fn draw(gpu: &Gpu, opaque: bool, kind: u32, constants: &RenderConstants) -> [u8;
     mip_level_count: 1,
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
-    format: overlay_surface::FORMAT,
+    format: crate::gpu::surface::FORMAT,
     usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
     view_formats: &[],
   });
@@ -86,11 +86,7 @@ fn draw(gpu: &Gpu, opaque: bool, kind: u32, constants: &RenderConstants) -> [u8;
       occlusion_query_set: None,
       multiview_mask: None,
     });
-    pass.set_pipeline(if opaque {
-      &gpu.opaque_pipeline
-    } else {
-      &gpu.pipeline
-    });
+    pass.set_pipeline(&gpu.pipeline);
     pass.set_vertex_buffer(0, vertex_buffer.slice(..));
     pass.set_bind_group(0, &bindings, &[0]);
     pass.draw(0..vertices.len() as u32, 0..1);
@@ -137,11 +133,9 @@ fn the_osc_shader_blends_straight_colour_over_the_target() {
   constants.overlay_shade = [1.0, 0.0, 0.0, 0.4];
 
   // An opaque control fill lands as itself.
-  assert_eq!(draw(&gpu, false, 12, &constants), [153, 102, 51, 255]);
+  assert_eq!(draw(&gpu, 12, &constants), [153, 102, 51, 255]);
   // Straight source-over: a 40% red over transparent keeps 40% of the colour
-  // and, with the alpha channel weighted by source alpha too, 16% coverage.
-  // The frozen-desktop variant keeps the source alpha whole.
-  assert_eq!(draw(&gpu, false, 6, &constants), [0, 0, 102, 41]);
-  assert_eq!(draw(&gpu, true, 6, &constants), [0, 0, 102, 102]);
+  // and its alpha whole, so the target holds premultiplied colour.
+  assert_eq!(draw(&gpu, 6, &constants), [0, 0, 102, 102]);
   assert!(pollster::block_on(errors.pop()).is_none());
 }

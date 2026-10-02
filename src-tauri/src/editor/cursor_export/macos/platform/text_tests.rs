@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The compositor's text boxes, through a real Metal dispatch.
+//! The compositor's text boxes, through a real GPU dispatch.
 
 use crate::editor::annotations::text::geometry::box_size;
 use crate::editor::annotations::text::metrics::text_block;

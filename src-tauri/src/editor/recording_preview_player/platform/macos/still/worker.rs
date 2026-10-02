@@ -62,7 +62,7 @@ pub(super) fn run(
       &annotation_clips,
     );
     // Paused editing keeps one native-resolution source frame resident. Frame,
-    // crop and OSC gestures then only rerun the Metal composition instead of
+    // crop and OSC gestures then only rerun the GPU composition instead of
     // invalidating the decoder cache for every changing pane size. Live
     // playback still uses pane-sized decode factors in `video.rs`.
     let screen_size = screen.decode_size(1.0);

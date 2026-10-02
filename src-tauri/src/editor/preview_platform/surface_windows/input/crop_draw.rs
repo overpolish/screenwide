@@ -7,7 +7,7 @@ use super::*;
 /// DIPs. Anything shorter is a click, which leaves the crop as it was.
 const DRAW_THRESHOLD: f64 = 4.0;
 /// The shortest side a drawn crop starts with, in DIPs, matching the floor
-/// the Metal backend holds a resized crop to.
+/// the macOS surface holds a resized crop to.
 const MINIMUM_SIZE: f64 = 36.0;
 
 /// The selected pane as it is drawn on screen.

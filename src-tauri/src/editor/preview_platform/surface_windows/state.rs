@@ -61,7 +61,7 @@ pub(super) struct EditorGesture {
 /// Everything a Frame resize needs to stay reversible and drift-free: the
 /// pane rectangles, the workspace transform and the canvas size as they were
 /// when the drag began. Every pointer move re-derives the whole workspace
-/// from these, exactly as the Metal backend re-derives it from
+/// from these, exactly as the macOS surface re-derives it from
 /// `selectionFramePaneStarts` / `selectionFrameZoomStart`, so a rebased zoom
 /// can never feed back into the next move's geometry.
 pub(super) struct FrameResizeStart {

@@ -1,16 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Annotations, the WGSL twin of
-// `gpu_compositor_macos_shader_source_annotation_curve.h` and
-// `gpu_compositor_macos_shader_source_annotations.h`. Geometry arrives already
-// prepared in canvas pixels - `annotations::arrow::geometry::prepare_arrow` on
-// the Rust side is the twin of the C header Metal prepares through - so both
-// backends evaluate the same distances against the same numbers.
+// Annotations. Geometry arrives already prepared in canvas pixels -
+// `annotations::arrow::geometry::prepare_arrow` and each kind's own
+// `geometry` module on the Rust side, which the macOS chrome picks through -
+// so drawing and picking measure the same distances against the same
+// numbers.
 //
 // The shader that includes this defines `annotation_magnify_placement`,
 // `annotation_magnify_fetch`, `annotation_cursor_sample` and
-// `annotation_cursor_blur` over its own source.
+// `annotation_spotlight_blur` over its own source.
 
 // Every member is a scalar, so each element is packed exactly like its Rust
 // twin in `compositor/arrows.rs`, which pins the offsets.
@@ -66,6 +65,23 @@ const annotation_refine_steps: u32 = 10u;
 
 fn annotation_color(annotation: PreviewArrow) -> vec4<f32> {
   return vec4<f32>(annotation.red, annotation.green, annotation.blue, annotation.alpha);
+}
+
+/// Bounds that hold nothing: no point lies inside them.
+const annotation_no_bounds: vec4<f32> = vec4<f32>(1e30, 1e30, -1e30, -1e30);
+/// Bounds that hold everything, for what reaches the whole canvas.
+const annotation_all_bounds: vec4<f32> = vec4<f32>(-1e30, -1e30, 1e30, 1e30);
+
+/// Whether `point` lies outside `bounds`, low in `xy` and high in `zw`. Every
+/// layer turns a pixel away here before measuring anything, and the tiles
+/// are binned against the same bounds, so the two always agree.
+fn annotation_outside(point: vec2<f32>, bounds: vec4<f32>) -> bool {
+  return any(point < bounds.xy) || any(point > bounds.zw);
+}
+
+/// `a` and `b` grown to hold each other.
+fn annotation_union(a: vec4<f32>, b: vec4<f32>) -> vec4<f32> {
+  return vec4<f32>(min(a.xy, b.xy), max(a.zw, b.zw));
 }
 
 /// Lays `color` over `rgba` with `alpha` of coverage.
@@ -238,8 +254,7 @@ fn annotation_edge(distance: f32, feather: f32) -> f32 {
 }
 
 /// Where the annotations' type was rasterised: the atlas's size in pixels and
-/// how many atlas pixels it holds per canvas pixel. The twin of the Metal
-/// kernels' `AnnotationTextAtlas`.
+/// how many atlas pixels it holds per canvas pixel.
 struct AnnotationTextAtlas {
   size: vec2<u32>,
   scale: f32,
@@ -311,7 +326,7 @@ fn annotation_label_tint(color: vec3<f32>) -> vec3<f32> {
 /// is not drawn here, so this is the only thing that finds an erased box on
 /// its own surface: it is white round a dark fill and black round a light
 /// one, and stronger than the halo a coloured shape wears in its own colour.
-/// The twin of `annotation_redact_halo` in the Metal annotation pass.
+/// The twin of the halo `annotation_redact_halo` draws.
 const annotation_redact_halo_alpha: f32 = 0.5;
 
 fn annotation_redact_halo(rgba: vec4<f32>, annotation: PreviewArrow, canvas_point: vec2<f32>,
@@ -321,12 +336,11 @@ fn annotation_redact_halo(rgba: vec4<f32>, annotation: PreviewArrow, canvas_poin
     return rgba;
   }
   let box = annotation.geometry;
-  let low = vec2<f32>(box.ax, box.ay);
-  let high = vec2<f32>(box.bx, box.by);
-  let reach = halo + feather + 1.0;
-  if (any(canvas_point < low - reach) || any(canvas_point > high + reach)) {
+  if (annotation_outside(canvas_point, annotation_redact_halo_bounds(annotation, feather))) {
     return rgba;
   }
+  let low = vec2<f32>(box.ax, box.ay);
+  let high = vec2<f32>(box.bx, box.by);
   let rounding = min(box.rounding, min(high.x - low.x, high.y - low.y) * 0.5);
   let q = abs(canvas_point - (low + high) * 0.5) - ((high - low) * 0.5 - rounding);
   let distance = length(max(q, vec2<f32>(0.0))) + min(max(q.x, q.y), 0.0) - rounding;
@@ -335,6 +349,17 @@ fn annotation_redact_halo(rgba: vec4<f32>, annotation: PreviewArrow, canvas_poin
                       vec3<f32>(0.2126, 0.7152, 0.0722));
   let tone = select(vec3<f32>(1.0), vec3<f32>(0.0), luminance > 0.5);
   return annotation_over(rgba, tone, band * annotation_redact_halo_alpha);
+}
+
+/// Where a redaction's halo can reach: nowhere while it is not hovered.
+fn annotation_redact_halo_bounds(annotation: PreviewArrow, feather: f32) -> vec4<f32> {
+  let halo = max(annotation.hover, 0.0);
+  if (halo <= 0.0) {
+    return annotation_no_bounds;
+  }
+  let box = annotation.geometry;
+  let reach = halo + feather + 1.0;
+  return vec4<f32>(vec2<f32>(box.ax, box.ay) - reach, vec2<f32>(box.bx, box.by) + reach);
 }
 
 /// Draws one spotlight's hover halo or one magnifier, the kinds that act on
@@ -352,16 +377,7 @@ fn annotation_picture_layer(rgba: vec4<f32>, annotation: PreviewArrow, canvas_po
 fn annotation_arrow_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
                           canvas_point: vec2<f32>, feather: f32, halo: f32) -> vec4<f32> {
   let arrow = annotation.geometry;
-  let a = vec2<f32>(arrow.ax, arrow.ay);
-  let b = vec2<f32>(arrow.bx, arrow.by);
-  let c = vec2<f32>(arrow.cx, arrow.cy);
-  // The curve lies inside the hull of its three points; the heads reach
-  // back from a tip and across it. One rectangle covers all of that, and
-  // keeps a long list cheap over most of the canvas.
-  let radius = arrow.width * 0.5;
-  let reach = radius * select(1.0, 9.0, arrow.head != 0u) + halo + feather + 1.0;
-  if (any(canvas_point < min(a, min(b, c)) - reach) ||
-      any(canvas_point > max(a, max(b, c)) + reach)) {
+  if (annotation_outside(canvas_point, annotation_arrow_bounds(arrow, halo, feather))) {
     return rgba_in;
   }
   let distances = annotation_arrow_distance(canvas_point, arrow);
@@ -378,6 +394,18 @@ fn annotation_arrow_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: v
     return rgba;
   }
   return annotation_over(rgba, color.rgb, coverage * color.a);
+}
+
+/// Where an arrow can reach. The curve lies inside the hull of its three
+/// points; the heads reach back from a tip and across it. One rectangle covers
+/// all of that, and keeps a long list cheap over most of the canvas.
+fn annotation_arrow_bounds(arrow: PreviewGeometry, halo: f32, feather: f32) -> vec4<f32> {
+  let a = vec2<f32>(arrow.ax, arrow.ay);
+  let b = vec2<f32>(arrow.bx, arrow.by);
+  let c = vec2<f32>(arrow.cx, arrow.cy);
+  let radius = arrow.width * 0.5;
+  let reach = radius * select(1.0, 9.0, arrow.head != 0u) + halo + feather + 1.0;
+  return vec4<f32>(min(a, min(b, c)) - reach, max(a, max(b, c)) + reach);
 }
 
 /// Draws one prepared annotation over `rgba`, whatever its kind but a
@@ -417,11 +445,17 @@ fn annotation_layer(rgba: vec4<f32>, annotation: PreviewArrow, canvas_point: vec
 }
 
 /// Whether a kind acts on the picture rather than marking it: a spotlight
-/// shades and blurs it, and a magnifier enlarges it. They lie under every
-/// mark, and over the cursor.
+/// shades and blurs it, and a magnifier enlarges it. Each covers the marks
+/// below it, and lies over the cursor.
 fn annotation_acts_on_picture(kind: u32) -> bool {
   return kind == annotation_spotlight_kind || kind == annotation_magnify_kind;
 }
+
+// Each shader that includes this file defines `annotation_next(probe, start,
+// last)`: the first annotation at or after `start`, and before `last`, that
+// may reach `probe`, or `last` where none does. Every pass below walks the
+// list through it, in document order. The preview answers from the tile
+// `probe` lies in; the live overlay, which draws a handful, answers `start`.
 
 /// Draws every annotation in `[first, last)` but the highlights over `rgba`:
 /// the live overlay's pass, which recolours its highlights under everything
@@ -430,7 +464,8 @@ fn annotation_acts_on_picture(kind: u32) -> bool {
 fn composite_annotations(rgba_in: vec4<f32>, canvas_point: vec2<f32>, first: u32, last: u32,
                          feather: f32, number_atlas: AnnotationTextAtlas) -> vec4<f32> {
   var rgba = rgba_in;
-  for (var index = first; index < last; index++) {
+  for (var index = annotation_next(canvas_point, first, last); index < last;
+       index = annotation_next(canvas_point, index + 1u, last)) {
     let annotation = annotation_arrows[index];
     if (annotation.kind == annotation_highlight_kind) {
       continue;
@@ -442,82 +477,4 @@ fn composite_annotations(rgba_in: vec4<f32>, canvas_point: vec2<f32>, first: u32
     }
   }
   return rgba;
-}
-
-/// Draws the prepared annotations in `[first, last)`, and the cursor where
-/// `cursor` says this layer carries it, over `rgba`. First what acts on the
-/// picture, in document order: the spotlights share one shade, laid where
-/// the topmost of them sits among the magnifiers, and a magnifier shows the
-/// picture and the cursor enlarged. Then every mark, in document order, the
-/// first at the bottom, none of them shaded. A highlight recolours the pixel
-/// as every mark under it drew it but the highlights, so overlapping
-/// highlights merge rather than one recolouring the other into its inverse.
-/// Last the cursor, over every mark, but treated as lying on the picture: the
-/// spotlights' shade darkens it and their blur softens it, and a loupe hides
-/// it. The twin of the Metal `composite_annotation_layers`.
-///
-/// The range is how the camera ordering is expressed: Rust sorts the
-/// annotations that sit under the camera ahead of those above it, keeping the
-/// document's order within each, so each pass draws one contiguous run rather
-/// than testing a flag per annotation per pixel.
-fn composite_annotation_layers(rgba_in: vec4<f32>, canvas_point: vec2<f32>, first: u32,
-                               last: u32, feather: f32, number_atlas: AnnotationTextAtlas,
-                               cursor: bool) -> vec4<f32> {
-  var rgba = rgba_in;
-  var shade_at = last;
-  for (var probe = first; probe < last; probe++) {
-    if (annotation_arrows[probe].kind == annotation_spotlight_kind) {
-      shade_at = probe;
-    }
-  }
-  for (var index = first; index < last; index++) {
-    let annotation = annotation_arrows[index];
-    if (!annotation_acts_on_picture(annotation.kind)) {
-      continue;
-    }
-    if (index == shade_at) {
-      let shade = annotation_spotlight_cover(canvas_point, first, last, feather, false);
-      rgba = vec4<f32>(rgba.rgb * (1.0 - annotation_spotlight_dim * shade), rgba.a);
-    }
-    rgba = annotation_picture_layer(rgba, annotation, canvas_point, feather, cursor);
-  }
-  var bare = rgba;
-  var highlighted = false;
-  for (var mark = first; mark < last; mark++) {
-    let annotation = annotation_arrows[mark];
-    if (annotation_acts_on_picture(annotation.kind)) {
-      continue;
-    }
-    if (annotation.kind == annotation_highlight_kind) {
-      let under = rgba;
-      rgba = annotation_highlight_layer(rgba, bare, annotation, canvas_point, feather);
-      highlighted = highlighted || any(rgba != under);
-    } else {
-      // Until a highlight reaches this pixel, `bare` is what is drawn; after,
-      // each mark is drawn on it as well.
-      rgba = annotation_layer(rgba, annotation, canvas_point, feather, number_atlas);
-      if (highlighted) {
-        bare = annotation_layer(bare, annotation, canvas_point, feather, number_atlas);
-      } else {
-        bare = rgba;
-      }
-    }
-  }
-  if (!cursor) {
-    return rgba;
-  }
-  var pointer = annotation_cursor_seen(canvas_point, max(2.0 * feather, 1e-4));
-  if (pointer.a <= 0.0) {
-    return rgba;
-  }
-  pointer = vec4<f32>(pointer.rgb * (1.0 - annotation_spotlight_dim *
-      annotation_spotlight_cover(canvas_point, first, last, feather, false)), pointer.a);
-  var hidden = 0.0;
-  for (var loupe = first; loupe < last; loupe++) {
-    if (annotation_arrows[loupe].kind == annotation_magnify_kind) {
-      hidden = max(hidden, annotation_magnify_cover(annotation_arrows[loupe], canvas_point, feather));
-    }
-  }
-  pointer.a *= 1.0 - hidden;
-  return vec4<f32>(mix(rgba.rgb, pointer.rgb, pointer.a), pointer.a + rgba.a * (1.0 - pointer.a));
 }

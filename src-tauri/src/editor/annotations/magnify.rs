@@ -16,8 +16,8 @@
 //! sized by one grip on its rim, and its zoom is how much bigger that makes
 //! it than the zoom area.
 
-/// The C entry points the Metal compositor and the macOS chrome prepare and
-/// pick a magnifier through.
+/// The C entry points the macOS chrome prepares and picks a magnifier
+/// through.
 #[cfg(target_os = "macos")]
 mod ffi;
 /// Draw-ready geometry and the distances that pick it, for both backends.

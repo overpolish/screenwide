@@ -26,9 +26,7 @@ pub(super) struct Surface {
   /// moves the window nor reallocates the buffers.
   size: (u32, u32),
   /// What this display's highlights are recoloured from, once one is drawn.
-  pub(super) underlay: Option<underlay::HeldUnderlay>,
-  /// The same softened for a spotlight's blur, while one blurs.
-  pub(super) softened: Option<underlay::HeldUnderlay>,
+  pub(super) underlays: crate::annotate::overlay::Underlays,
 }
 
 impl Surface {
@@ -52,8 +50,7 @@ impl Surface {
       child,
       chain,
       size: (0, 0),
-      underlay: None,
-      softened: None,
+      underlays: Default::default(),
     };
     surface.fit(gpu)?;
     Ok(surface)

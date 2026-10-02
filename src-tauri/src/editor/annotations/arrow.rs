@@ -14,8 +14,8 @@ pub(crate) mod bend;
 /// one.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod distance;
-/// Draw-ready geometry, prepared for both backends: the D3D11 one calls this
-/// directly, the Metal one through `geometry.h`.
+/// Draw-ready geometry: the compositor calls this directly, the macOS chrome
+/// through `geometry.h`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod geometry;
 /// What moving one of an arrow's grips does to its shape.

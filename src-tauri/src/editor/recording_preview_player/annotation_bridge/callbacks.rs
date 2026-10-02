@@ -129,7 +129,7 @@ pub(crate) fn install(
       return;
     };
     // Both backends redraw the halo without recomposing: the D3D11 panes
-    // redraw from what they last composed, and the retained Metal scene has
+    // redraw from what they last composed, and the retained macOS scene has
     // the halo set on the annotations it is already holding.
     if let Some(surface) = manager
       .sources

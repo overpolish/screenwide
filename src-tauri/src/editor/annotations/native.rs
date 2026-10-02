@@ -11,7 +11,7 @@ use super::redact::native::RedactSource;
 use super::reveal::AnnotationReveal;
 use super::Annotation;
 use crate::editor::annotations::annotation_colour;
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use crate::editor::annotations::AnnotationKind;
 
 #[repr(C)]
@@ -42,7 +42,7 @@ const _: () = assert!(std::mem::offset_of!(NativeAnnotation, hover) == 88);
 const _: () = assert!(std::mem::offset_of!(NativeAnnotation, animated) == 92);
 const _: () = assert!(std::mem::offset_of!(NativeAnnotation, reveal) == 96);
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 impl NativeAnnotation {
   pub(crate) fn shape_kind(&self) -> AnnotationKind {
     AnnotationKind::from_raw(self.kind).unwrap_or(AnnotationKind::Arrow)
@@ -161,16 +161,6 @@ impl NativeAnnotationData {
     }
     record
   }
-
-  #[cfg(target_os = "macos")]
-  pub(crate) fn view(&self) -> NativeAnnotationDataView {
-    NativeAnnotationDataView {
-      points: self.points.as_ptr(),
-      text: self.text.as_ptr(),
-      point_count: ffi_len(self.points.len()),
-      text_len: ffi_len(self.text.len()),
-    }
-  }
 }
 
 /// One composition's annotations and the side buffers they index.
@@ -178,17 +168,6 @@ impl NativeAnnotationData {
 pub(crate) struct NativeAnnotations {
   pub(crate) items: Vec<NativeAnnotation>,
   pub(crate) data: NativeAnnotationData,
-}
-
-#[cfg(target_os = "macos")]
-impl NativeAnnotations {
-  pub(crate) fn view(&self) -> NativeAnnotationsView {
-    NativeAnnotationsView {
-      items: self.items.as_ptr(),
-      count: ffi_len(self.items.len()),
-      data: self.data.view(),
-    }
-  }
 }
 
 /// One composition's records. `source` is where its redactions read what is
@@ -212,40 +191,6 @@ pub(crate) fn native_annotations(
 fn ffi_len(len: usize) -> u32 {
   u32::try_from(len).unwrap_or(u32::MAX)
 }
-
-/// [`NativeAnnotationData`] as the Metal side reads it: pointers into the
-/// owner's buffers, valid while the owner is neither changed nor dropped.
-/// The twin of `ScreenwideAnnotationData`. The D3D11 backend reads the Rust
-/// lists directly and has no use for one.
-#[cfg(target_os = "macos")]
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub(crate) struct NativeAnnotationDataView {
-  pub(crate) points: *const [f32; 2],
-  pub(crate) text: *const u8,
-  pub(crate) point_count: u32,
-  pub(crate) text_len: u32,
-}
-
-#[cfg(target_os = "macos")]
-const _: () = assert!(std::mem::size_of::<NativeAnnotationDataView>() == 24);
-
-/// [`NativeAnnotations`] as the native side reads it, under the same
-/// lifetime rule as [`NativeAnnotationDataView`]. The twin of
-/// `ScreenwideAnnotations`.
-#[cfg(target_os = "macos")]
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub(crate) struct NativeAnnotationsView {
-  pub(crate) items: *const NativeAnnotation,
-  pub(crate) count: u32,
-  pub(crate) data: NativeAnnotationDataView,
-}
-
-#[cfg(target_os = "macos")]
-const _: () = assert!(std::mem::size_of::<NativeAnnotationsView>() == 40);
-#[cfg(target_os = "macos")]
-const _: () = assert!(std::mem::offset_of!(NativeAnnotationsView, data) == 16);
 
 #[cfg(test)]
 mod tests;

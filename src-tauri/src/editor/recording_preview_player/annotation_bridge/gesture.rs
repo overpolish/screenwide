@@ -239,7 +239,7 @@ impl PreviewPlayerManager {
       );
     }
     self.publish_annotation_handles();
-    // The Metal workspace re-encodes from its retained scene on a restart,
+    // The macOS workspace re-encodes from its retained scene on a restart,
     // which is cheap enough to do per pointer sample. On Windows a restart
     // seeks the still decoder, which puts a decode between the hand and the
     // arrow on every sample; the pane already holds the frame, so it is

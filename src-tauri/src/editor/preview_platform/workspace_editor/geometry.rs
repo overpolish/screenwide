@@ -96,7 +96,7 @@ pub struct LayerGeometry {
 /// Applies one native pointer update to an immutable layer snapshot. `delta`
 /// is the final crop-origin delta already resolved by the platform hit test;
 /// `scale` is the final uniform resize factor. This is intentionally the same
-/// contract used by the existing Metal and D3D gesture callbacks.
+/// contract used by the existing macOS and Windows gesture callbacks.
 pub fn apply_layer_gesture(
   start: LayerGeometry,
   operation: GestureOperation,

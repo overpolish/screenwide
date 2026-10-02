@@ -8,12 +8,11 @@
 
 /// A kind's draw geometry and the distance that picks it. The maths is in
 /// Rust - `src-tauri/src/editor/annotations/ffi.rs` and each kind's own
-/// `geometry` module - so the Metal compositor, the macOS chrome and the
-/// D3D11 backend all draw and pick one geometry. The shaders carry the only
-/// other copies, because a per-pixel SDF belongs in the shader language.
+/// `geometry` module - so the macOS chrome and the compositor draw and pick
+/// one geometry. The shaders carry the only other copies, because a
+/// per-pixel SDF belongs in the shader language.
 
-/// Prepared in the caller's pixel space. Plain float pairs keep the same
-/// four-byte alignment in C and Metal's packed_float2.
+/// Prepared in the caller's pixel space, as plain float pairs.
 typedef struct { float x, y; } AnnotationVector;
 typedef struct { AnnotationVector a, b, c; } AnnotationTriangle;
 typedef struct {
@@ -52,13 +51,6 @@ void screenwide_magnify_prepare(float p0x, float p0y, float p1x, float p1y,
                                 float width, AnnotationReveal reveal,
                                 AnnotationArrowGeometry *out);
 
-/// How far a magnifier's loupe moves between the shutter opening and now, its
-/// points and `size` in the space `sx` and `sy` carry into the pixels the
-/// travel is measured in.
-float screenwide_magnify_travel(float p0x, float p0y, float p1x, float p1y,
-                                float p2x, float p2y, float size, float sx,
-                                float sy, AnnotationReveal reveal);
-
 /// Which part of a prepared magnifier a point is on: 1 for the loupe, 2 for
 /// the zoom area, 0 for neither.
 uint32_t screenwide_magnify_part(float px, float py,
@@ -81,27 +73,6 @@ float screenwide_shape_body_distance(float px, float py,
 float screenwide_freehand_distance(float px, float py, const float *chain, uint32_t count,
                                    float width, uint32_t body, float low_x, float low_y,
                                    float high_x, float high_y);
-
-/// The standard deviation of the spotlights' blur over a `width` by `height`
-/// source as it arrives with `strength`, widening from nothing.
-float screenwide_spotlight_blur_deviation(float strength, uint32_t width, uint32_t height);
-
-/// How far the annotation's picture moves between the shutter opening and
-/// now, which is the length its exposure is sampled along. `sx` and `sy`
-/// carry a point from the space the points are given in into the pixels the
-/// travel is measured in.
-float screenwide_annotation_travel(uint32_t kind, float p0x, float p0y,
-                                   float p1x, float p1y, float p2x, float p2y,
-                                   float sx, float sy, float width,
-                                   AnnotationReveal reveal);
-
-/// How far a highlight's fastest line end moves between the shutter opening
-/// and now. `p0` and `p1` are its record's source origin and pixel `(1, 1)`,
-/// `sx` and `sy` carry them into the pixels the travel is measured in, and
-/// `sweep` is its record's `params[2]`.
-float screenwide_highlight_travel(float p0x, float p0y, float p1x, float p1y,
-                                  float sx, float sy, float sweep,
-                                  AnnotationReveal reveal);
 
 /// How far a point falls outside a highlight, from what its grips' record
 /// carries placed in display points: its first band's top-left corner and

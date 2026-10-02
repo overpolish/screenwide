@@ -8,7 +8,7 @@ mod drawing;
 
 use windows::Win32::Graphics::DirectComposition::{IDCompositionDevice, IDCompositionVisual};
 
-use crate::app_windows::overlay_surface::{Frame, VisualSurface};
+use crate::gpu::surface::{Frame, Surface};
 use crate::osc::{
   geometry::{Point, Rect, Size},
   gpu::windows::{self as osc_gpu, RenderConstants, Vertex},
@@ -25,7 +25,7 @@ fn logical_rect(rect: [f32; 4], scale: f64) -> Rect {
 
 pub(super) struct SelectionOverlay {
   shared: &'static crate::gpu::Gpu,
-  surface: VisualSurface,
+  surface: Surface,
   pipeline: wgpu::RenderPipeline,
   /// The constants block, and transparent texels for every texture the
   /// shader declares, which the overlay's own quads never sample.
@@ -53,11 +53,11 @@ impl SelectionOverlay {
     let visual = unsafe { composition.CreateVisual() }.map_err(|error| error.to_string())?;
     unsafe { root.AddVisual(&visual, true, None::<&IDCompositionVisual>) }
       .map_err(|error| error.to_string())?;
-    let surface = VisualSurface::new(shared, &visual)?;
+    let surface = Surface::on_visual(shared, &visual)?;
     let device = &shared.device;
     let module = osc_gpu::shader_module(device);
     let layout = osc_gpu::bind_group_layout(device);
-    let pipeline = osc_gpu::pipeline(device, &layout, &module, wgpu::BlendFactor::SrcAlpha);
+    let pipeline = osc_gpu::pipeline(device, &layout, &module);
     let constants = device.create_buffer(&wgpu::BufferDescriptor {
       label: Some("Screenwide selection constants"),
       size: size_of::<RenderConstants>() as u64,

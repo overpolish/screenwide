@@ -179,7 +179,7 @@ fn glide(
 }
 
 /// How long clip `index` glides in over, as [`glide`] works it out.
-#[cfg(any(target_os = "macos", test))]
+#[cfg(test)]
 pub(crate) fn glide_ms(
   clips: &[RecordingAnnotationClip],
   links: &[SpotlightLinks],

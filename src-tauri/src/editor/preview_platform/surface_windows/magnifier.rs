@@ -54,7 +54,7 @@ pub(super) fn update_magnifier(state: &mut SurfaceState) {
   let sample_camera = state.camera_source.is_some() && selection.layer_id != selection.pane_index;
   let luminance =
     state.backdrop[0] * 0.2126 + state.backdrop[1] * 0.7152 + state.backdrop[2] * 0.0722;
-  pane.magnifier = Some(recenter::CropMagnifier {
+  pane.magnifier = Some(CropMagnifier {
     bounds: recenter::magnifier_bounds(selection),
     display_box: [
       (display_point.0 - 48.0) as f32,

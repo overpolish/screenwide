@@ -51,22 +51,6 @@ fn a_kind_no_number_owns_prepares_nothing() {
     prepared(8, [220.0, 40.0], 12.0, 2),
     ArrowGeometry::default()
   );
-  assert_eq!(
-    screenwide_annotation_travel(
-      8,
-      100.0,
-      100.0,
-      220.0,
-      40.0,
-      300.0,
-      200.0,
-      1.0,
-      1.0,
-      12.0,
-      AnnotationReveal::WHOLE
-    ),
-    0.0
-  );
 }
 
 #[test]

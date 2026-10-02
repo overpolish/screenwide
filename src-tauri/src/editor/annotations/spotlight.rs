@@ -6,16 +6,17 @@
 //! A spotlight is not a mark on the picture but a hole in a shade over it.
 //! Every spotlight showing at once cuts its hole in one shared shade, so two
 //! of them light two places rather than darkening each other, and the shade
-//! is as dark as the darkest of them. The shade goes over the picture and
-//! darkens the cursor, which lies on it, and goes under every mark, so an
-//! arrow pointing into the light is not dimmed on its way. How dark the shade
-//! is is not a choice: [`model::SPOTLIGHT_DIM`].
+//! is as dark as the darkest of them. The shade lies where the topmost
+//! spotlight sits in the document's order: it darkens the picture, the
+//! cursor, which lies on it, and every mark below it, and leaves every mark
+//! above it bright. How dark the shade is is not a choice:
+//! [`model::SPOTLIGHT_DIM`].
 //!
 //! Blur is the one option beyond the box: what lies outside the light is
 //! also softened. It is applied to the source the way a blurred redaction
 //! is, as one extra pass over the whole picture with every hole cut out of
-//! it, so the crop and the magnifier see it too, and to the cursor by the
-//! same deviation.
+//! it, so the crop and the magnifier see it too, and to the cursor and to
+//! every mark below the shade by the same deviation.
 //!
 //! The box is held and edited exactly as a redaction's or a shape's is,
 //! through [`super::box_gesture`].

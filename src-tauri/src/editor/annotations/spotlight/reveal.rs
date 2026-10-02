@@ -42,24 +42,6 @@ pub(crate) struct SpotlightJoins {
   pub(crate) onward: bool,
 }
 
-#[cfg(target_os = "macos")]
-impl SpotlightJoins {
-  const FROM: u32 = 1;
-  const ONWARD: u32 = 2;
-
-  /// The joins as the bits a timed record carries them in.
-  pub(crate) fn bits(self) -> u32 {
-    (u32::from(self.from) * Self::FROM) | (u32::from(self.onward) * Self::ONWARD)
-  }
-
-  pub(crate) fn from_bits(bits: u32) -> Self {
-    Self {
-      from: bits & Self::FROM != 0,
-      onward: bits & Self::ONWARD != 0,
-    }
-  }
-}
-
 /// The reveal a spotlight's clip is at, `elapsed_ms` into a clip lasting
 /// `duration_ms`, arriving and leaving except at its `joins`, with
 /// `blur_share` of its blur arrived.

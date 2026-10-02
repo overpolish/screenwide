@@ -12,15 +12,6 @@ SCREENWIDE_PREVIEW_PRIVATE void present_in_transaction(
     ScreenwidePreviewSurface *surface, ScreenwidePreviewView *view,
     id<MTLCommandBuffer> command, id<CAMetalDrawable> drawable);
 
-/// Native retained-workspace extension point for timeline and screenshot tools.
-static ScreenwidePresentBlock transaction_presenter(ScreenwidePreviewSurface *surface,
-                                                    ScreenwidePreviewView *view) {
-  return ^(void *command, void *drawable) {
-    present_in_transaction(surface, view, (__bridge id<MTLCommandBuffer>)command,
-                           (__bridge id<CAMetalDrawable>)drawable);
-  };
-}
-
 /// Main thread only. Releases the workspace draw slot and re-runs the redraw
 /// that was coalesced away while this one was in flight.
 static void clear_workspace_draw_in_flight(ScreenwidePreviewSurface *surface) {
@@ -32,42 +23,39 @@ static void clear_workspace_draw_in_flight(ScreenwidePreviewSurface *surface) {
   if (pending) redraw_workspace(surface);
 }
 
-static ScreenwidePresentBlock workspace_transaction_presenter(
-    ScreenwidePreviewSurface *surface) {
-  return ^(void *commandPointer, void *drawablePointer) {
-    id<MTLCommandBuffer> command = (__bridge id<MTLCommandBuffer>)commandPointer;
-    id<CAMetalDrawable> drawable = (__bridge id<CAMetalDrawable>)drawablePointer;
-    // Encode pixels and OSC into one command, then use the same explicit Core
-    // Animation transaction handoff as the proven multi-pane path. Direct
-    // `presentDrawable` completed on the GPU quickly but could remain queued
-    // for seconds before Core Animation displayed it.
-    surface.workspaceEncodingCommand = command;
-    surface.workspaceEncodingTexture = drawable.texture;
-    redraw_selection(surface);
-    surface.workspaceEncodingCommand = nil;
-    surface.workspaceEncodingTexture = nil;
-    ScreenwidePreviewView *workspace = surface.views.firstObject;
-    // SAME-TURN CONSTRAINT: a workspace redraw acquires its drawable and
-    // encodes on the main thread, so the present MUST happen in that same
-    // runloop turn. Deferring it - to this command buffer's completed handler,
-    // or to the batch's group-notify block - leaves the turn holding an
-    // acquired-but-unpresented drawable of a `presentsWithTransaction` layer;
-    // the turn's closing Core Animation flush then blocks waiting for a present
-    // that is itself queued behind that flush on the main queue, and gives up
-    // only at its ~1s watchdog. That is the measured 1-second hang. So hand the
-    // buffer to `present_in_transaction` unconditionally: batched or not, its
-    // main-thread path commits, waits for scheduled and presents inline here.
-    //
-    // Registered before the commit that `present_in_transaction` performs -
-    // Metal rejects completed handlers added after `commit`. This clear re-arms
-    // `workspaceDrawPending` coalescing, so it must stay.
-    [command addCompletedHandler:^(__unused id<MTLCommandBuffer> completed) {
-      dispatch_async(dispatch_get_main_queue(), ^{
-        clear_workspace_draw_in_flight(surface);
-      });
-    }];
-    present_in_transaction(surface, workspace, command, drawable);
-  };
+/// Draws the OSC over the drawn workspace and presents both. Both draws were
+/// submitted on the shared queue before `command`, so it runs after them.
+static void present_workspace_drawable(ScreenwidePreviewSurface *surface,
+                                       id<MTLCommandBuffer> command,
+                                       id<CAMetalDrawable> drawable) {
+  // Pixels and OSC land in one drawable, then use the same explicit Core
+  // Animation transaction handoff as the proven multi-pane path. Direct
+  // `presentDrawable` completed on the GPU quickly but could remain queued
+  // for seconds before Core Animation displayed it.
+  surface.workspaceEncodingTexture = drawable.texture;
+  redraw_selection(surface);
+  surface.workspaceEncodingTexture = nil;
+  ScreenwidePreviewView *workspace = surface.views.firstObject;
+  // SAME-TURN CONSTRAINT: a workspace redraw acquires its drawable and
+  // encodes on the main thread, so the present MUST happen in that same
+  // runloop turn. Deferring it - to this command buffer's completed handler,
+  // or to the batch's group-notify block - leaves the turn holding an
+  // acquired-but-unpresented drawable of a `presentsWithTransaction` layer;
+  // the turn's closing Core Animation flush then blocks waiting for a present
+  // that is itself queued behind that flush on the main queue, and gives up
+  // only at its ~1s watchdog. That is the measured 1-second hang. So hand the
+  // buffer to `present_in_transaction` unconditionally: batched or not, its
+  // main-thread path commits, waits for scheduled and presents inline here.
+  //
+  // Registered before the commit that `present_in_transaction` performs -
+  // Metal rejects completed handlers added after `commit`. This clear re-arms
+  // `workspaceDrawPending` coalescing, so it must stay.
+  [command addCompletedHandler:^(__unused id<MTLCommandBuffer> completed) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      clear_workspace_draw_in_flight(surface);
+    });
+  }];
+  present_in_transaction(surface, workspace, command, drawable);
 }
 
 static ScreenwideWorkspacePlacement workspace_placement(
@@ -88,31 +76,24 @@ static ScreenwideWorkspacePlacement workspace_placement(
 
 SCREENWIDE_PREVIEW_PRIVATE void begin_workspace_frame_resize(ScreenwidePreviewSurface *surface) {
   if (!surface.workspaceMode || surface.views.count == 0) return;
-  ScreenwidePreviewView *workspace = surface.views[0];
   remember_workspace_transform(surface, surface.workspaceNaturalWidth,
                                surface.workspaceNaturalHeight);
   surface.workspaceResizeNaturalWidth = surface.workspaceNaturalWidth;
   surface.workspaceResizeNaturalHeight = surface.workspaceNaturalHeight;
-  [surface.workspaceLock lock];
-  screenwide_gpu_still_presenter_begin_workspace_resize(workspace.compositor);
-  [surface.workspaceLock unlock];
+  screenwide_workspace_scene_begin_resize(surface.scene);
 }
 
 SCREENWIDE_PREVIEW_PRIVATE void update_workspace_frame_resize(
     ScreenwidePreviewSurface *surface, NSRect start, NSRect resized) {
   if (!surface.workspaceMode || surface.views.count == 0 ||
       start.size.width <= 0.0 || start.size.height <= 0.0) return;
-  ScreenwidePreviewView *workspace = surface.views[0];
   double originX = (resized.origin.x - start.origin.x) / start.size.width;
   double originY = (resized.origin.y - start.origin.y) / start.size.height;
   double width = resized.size.width / start.size.width;
   double height = resized.size.height / start.size.height;
   surface.workspaceNaturalWidth = surface.workspaceResizeNaturalWidth * width;
   surface.workspaceNaturalHeight = surface.workspaceResizeNaturalHeight * height;
-  [surface.workspaceLock lock];
-  screenwide_gpu_still_presenter_update_workspace_resize(
-      workspace.compositor, originX, originY, width, height);
-  [surface.workspaceLock unlock];
+  screenwide_workspace_scene_update_resize(surface.scene, originX, originY, width, height);
 }
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL update_workspace_auto_fit_move(
@@ -120,28 +101,21 @@ SCREENWIDE_PREVIEW_PRIVATE BOOL update_workspace_auto_fit_move(
     double move_x, double move_y, NSRect start, NSRect resized) {
   if (!surface.workspaceMode || surface.views.count == 0 ||
       start.size.width <= 0.0 || start.size.height <= 0.0) return NO;
-  ScreenwidePreviewView *workspace = surface.views[0];
   double originX = (resized.origin.x - start.origin.x) / start.size.width;
   double originY = (resized.origin.y - start.origin.y) / start.size.height;
   double width = resized.size.width / start.size.width;
   double height = resized.size.height / start.size.height;
   surface.workspaceNaturalWidth = surface.workspaceResizeNaturalWidth * width;
   surface.workspaceNaturalHeight = surface.workspaceResizeNaturalHeight * height;
-  [surface.workspaceLock lock];
-  int result = screenwide_gpu_still_presenter_update_workspace_auto_fit_move(
-      workspace.compositor, selected_layer, move_x, move_y,
-      originX, originY, width, height);
-  [surface.workspaceLock unlock];
-  return result != 0;
+  return screenwide_workspace_scene_update_auto_fit_move(
+             surface.scene, selected_layer, move_x, move_y, originX, originY, width,
+             height) != 0;
 }
 
 SCREENWIDE_PREVIEW_PRIVATE void end_workspace_frame_resize(
     ScreenwidePreviewSurface *surface, BOOL commit) {
   if (!surface.workspaceMode || surface.views.count == 0) return;
-  ScreenwidePreviewView *workspace = surface.views[0];
-  [surface.workspaceLock lock];
-  screenwide_gpu_still_presenter_end_workspace_resize(
-      workspace.compositor, commit ? 1 : 0);
+  screenwide_workspace_scene_end_resize(surface.scene, commit ? 1 : 0);
   if (!commit) {
     surface.workspaceNaturalWidth = surface.workspaceResizeNaturalWidth;
     surface.workspaceNaturalHeight = surface.workspaceResizeNaturalHeight;
@@ -149,7 +123,40 @@ SCREENWIDE_PREVIEW_PRIVATE void end_workspace_frame_resize(
     remember_workspace_transform(surface, surface.workspaceNaturalWidth,
                                  surface.workspaceNaturalHeight);
   }
-  [surface.workspaceLock unlock];
+}
+
+/// Main thread only, with `workspaceLock` held. Each layer's placement in
+/// drawable pixels: recording panes each where their own pane is laid out,
+/// screenshot layers all on the one workspace canvas.
+static NSMutableData *workspace_placements(ScreenwidePreviewSurface *surface) {
+  ScreenwideWorkspacePlacement placement = workspace_placement(surface);
+  NSMutableData *data = [NSMutableData
+      dataWithLength:sizeof(placement) * surface.workspaceLayerCount];
+  ScreenwideWorkspacePlacement *placements = data.mutableBytes;
+  if (!surface.workspaceExplicitPlacements ||
+      surface.workspacePlacements.length < data.length) {
+    for (uint32_t index = 0; index < surface.workspaceLayerCount; index++)
+      placements[index] = placement;
+    return data;
+  }
+  CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
+  for (uint32_t index = 0; index < surface.workspaceLayerCount; index++) {
+    uint32_t pane_index = surface.workspacePaneIndices[index].unsignedIntValue;
+    if (pane_index >= surface.editorBaseRects.count ||
+        ![surface.workspaceActivePaneIndices containsObject:@(pane_index)]) {
+      placements[index] = (ScreenwideWorkspacePlacement){0};
+      continue;
+    }
+    NSRect transformed = editor_frame(surface,
+                                      surface.editorBaseRects[pane_index].rectValue);
+    placements[index] = (ScreenwideWorkspacePlacement){
+      (int32_t)llround(transformed.origin.x * scale),
+      (int32_t)llround((surface.container.bounds.size.height - NSMaxY(transformed)) * scale),
+      (uint32_t)MAX(llround(transformed.size.width * scale), 1),
+      (uint32_t)MAX(llround(transformed.size.height * scale), 1),
+    };
+  }
+  return data;
 }
 
 SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surface) {
@@ -164,42 +171,21 @@ SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surfa
     return;
   }
   surface.workspaceDrawInFlight = YES;
-  ScreenwideWorkspacePlacement placement = workspace_placement(surface);
-  NSMutableData *data = [NSMutableData
-      dataWithLength:sizeof(placement) * surface.workspaceLayerCount];
-  ScreenwideWorkspacePlacement *placements = data.mutableBytes;
-  if (surface.workspaceExplicitPlacements &&
-      surface.workspacePlacements.length >= sizeof(placement) * surface.workspaceLayerCount) {
-    memcpy(placements, surface.workspacePlacements.bytes,
-           sizeof(placement) * surface.workspaceLayerCount);
-    CGFloat scale = surface.host.window.backingScaleFactor ?: 1.0;
-    for (uint32_t index = 0; index < surface.workspaceLayerCount; index++) {
-      uint32_t pane_index = surface.workspacePaneIndices[index].unsignedIntValue;
-      if (pane_index >= surface.editorBaseRects.count ||
-          ![surface.workspaceActivePaneIndices containsObject:@(pane_index)]) {
-        placements[index] = (ScreenwideWorkspacePlacement){0};
-        continue;
-      }
-      NSRect transformed = editor_frame(surface,
-                                        surface.editorBaseRects[pane_index].rectValue);
-      placements[index] = (ScreenwideWorkspacePlacement){
-        (int32_t)llround(transformed.origin.x * scale),
-        (int32_t)llround((surface.container.bounds.size.height - NSMaxY(transformed)) * scale),
-        (uint32_t)MAX(llround(transformed.size.width * scale), 1),
-        (uint32_t)MAX(llround(transformed.size.height * scale), 1),
-      };
+  BOOL drawn = NO;
+  // A scene that cannot draw is checked before a drawable is taken: one
+  // acquired here must be presented in this turn.
+  if (screenwide_workspace_scene_ready(surface.scene, surface.workspaceLayerCount)) {
+    id<CAMetalDrawable> drawable = [(CAMetalLayer *)workspace.layer nextDrawable];
+    if (drawable != nil) {
+      ScreenwideRegionMagnifier magnifier = surface.workspaceMagnifier;
+      screenwide_workspace_scene_draw(surface.scene, (__bridge void *)drawable.texture,
+                                      workspace_placements(surface).bytes,
+                                      surface.workspaceLayerCount, &magnifier);
+      present_workspace_drawable(surface, [surface.queue commandBuffer], drawable);
+      drawn = YES;
     }
-  } else {
-    for (uint32_t index = 0; index < surface.workspaceLayerCount; index++)
-      placements[index] = placement;
   }
-  CAMetalLayer *layer = (CAMetalLayer *)workspace.layer;
-  ScreenwideRegionMagnifier magnifier = surface.workspaceMagnifier;
-  int result = screenwide_gpu_still_presenter_redraw_workspace(
-      workspace.compositor, (__bridge void *)layer, placements,
-      surface.workspaceLayerCount, &magnifier,
-      workspace_transaction_presenter(surface));
-  if (result == 0) {
+  if (!drawn) {
     surface.workspaceDrawInFlight = NO;
     if (!surface.workspaceRedrawRetried) {
       surface.workspaceRedrawRetried = YES;
@@ -213,10 +199,9 @@ SCREENWIDE_PREVIEW_PRIVATE void redraw_workspace(ScreenwidePreviewSurface *surfa
   [surface.workspaceLock unlock];
 }
 
-int screenwide_preview_surface_present_screenshot_workspace(
-    void *handle, const ScreenwideWorkspaceLayer *layers,
-    uint32_t layer_count) {
-  if (handle == NULL || layers == NULL || layer_count == 0) return 0;
+int screenwide_preview_surface_present_screenshot_workspace(void *handle,
+                                                            uint32_t layer_count) {
+  if (handle == NULL || layer_count == 0) return 0;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   if (!surface.workspaceMode || surface.views.count == 0) return 0;
   ScreenwidePreviewView *workspace = surface.views[0];
@@ -224,21 +209,7 @@ int screenwide_preview_surface_present_screenshot_workspace(
   // present that arrives before it has run is reported as not staged so the
   // caller can come back once the pane exists.
   if (!workspace.active) return 0;
-  ScreenwideWorkspacePlacement placement = workspace_placement(surface);
-  ScreenwideWorkspaceLayer *placed = calloc(layer_count, sizeof(*placed));
-  if (placed == NULL) return 0;
-  for (uint32_t index = 0; index < layer_count; index++) {
-    placed[index] = layers[index];
-    placed[index].placement = placement;
-  }
   [surface.workspaceLock lock];
-  int staged = screenwide_gpu_still_presenter_set_workspace(
-      workspace.compositor, placed, layer_count);
-  free(placed);
-  if (staged == 0) {
-    [surface.workspaceLock unlock];
-    return 0;
-  }
   surface.workspaceLayerCount = layer_count;
   surface.workspaceRedrawRetried = NO;
   surface.workspaceExplicitPlacements = NO;
@@ -258,42 +229,32 @@ int screenwide_preview_surface_present_screenshot_workspace(
   return 1;
 }
 
-/// Presents a retained recording scene whose layers already contain explicit
-/// workspace placements. Unlike the screenshot helper, placements are not
-/// collapsed to the primary canvas: unbaked screen/camera panes remain
-/// independently editable inside one native drawable.
+/// Shows a staged recording scene whose layers carry explicit workspace
+/// placements. Unlike the screenshot helper, placements are not collapsed to
+/// the primary canvas: unbaked screen/camera panes remain independently
+/// editable inside one native drawable.
 int screenwide_preview_surface_present_recording_workspace(
-    void *handle, const ScreenwideWorkspaceLayer *layers,
-    uint32_t layer_count, const ScreenwideCursorArtwork *artworks,
-    uint32_t artwork_count) {
-  if (handle == NULL || layers == NULL || layer_count == 0) return 0;
+    void *handle, const uint32_t *pane_indices,
+    const ScreenwideWorkspacePlacement *layer_placements, uint32_t layer_count) {
+  if (handle == NULL || pane_indices == NULL || layer_placements == NULL ||
+      layer_count == 0) return 0;
   ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
   if (surface.views.count == 0) return 0;
   ScreenwidePreviewView *workspace = surface.views[0];
   [surface.workspaceLock lock];
-  int configured = artwork_count == 0 ||
-      screenwide_gpu_still_presenter_set_cursor_artworks(
-          workspace.compositor, artworks, artwork_count);
-  int staged = configured ? screenwide_gpu_still_presenter_set_workspace(
-      workspace.compositor, layers, layer_count) : 0;
-  if (staged != 0) {
-    surface.workspaceLayerCount = layer_count;
-    surface.workspaceRedrawRetried = NO;
-    surface.workspaceExplicitPlacements = YES;
-    NSMutableArray<NSNumber *> *paneIndices = [NSMutableArray arrayWithCapacity:layer_count];
-    for (uint32_t index = 0; index < layer_count; index++)
-      [paneIndices addObject:@(layers[index].pane_index)];
-    surface.workspacePaneIndices = paneIndices;
-    surface.workspacePlacements = [NSMutableData
-        dataWithLength:sizeof(ScreenwideWorkspacePlacement) * layer_count];
-    ScreenwideWorkspacePlacement *placements = surface.workspacePlacements.mutableBytes;
-    for (uint32_t index = 0; index < layer_count; index++)
-      placements[index] = layers[index].placement;
-  }
+  surface.workspaceLayerCount = layer_count;
+  surface.workspaceRedrawRetried = NO;
+  surface.workspaceExplicitPlacements = YES;
+  NSMutableArray<NSNumber *> *paneIndices = [NSMutableArray arrayWithCapacity:layer_count];
+  for (uint32_t index = 0; index < layer_count; index++)
+    [paneIndices addObject:@(pane_indices[index])];
+  surface.workspacePaneIndices = paneIndices;
+  surface.workspacePlacements = [NSMutableData
+      dataWithBytes:layer_placements
+             length:sizeof(ScreenwideWorkspacePlacement) * layer_count];
   BOOL drawInFlight = surface.workspaceDrawInFlight;
   if (drawInFlight) surface.workspaceDrawPending = YES;
   [surface.workspaceLock unlock];
-  if (staged == 0) return 0;
   if (!drawInFlight) {
     dispatch_async(dispatch_get_main_queue(), ^{
       // A frame decoded for a layout that has since dropped its panes is
@@ -305,85 +266,6 @@ int screenwide_preview_surface_present_recording_workspace(
     });
   }
   return 1;
-}
-
-int screenwide_preview_surface_workspace_source_size(
-    void *handle, uint32_t pane_index, uint32_t *width, uint32_t *height) {
-  if (handle == NULL) return 0;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  if (!surface.workspaceMode || surface.views.count == 0) return 0;
-  ScreenwidePreviewView *workspace = surface.views[0];
-  [surface.workspaceLock lock];
-  int result = screenwide_gpu_still_presenter_workspace_source_size(
-      workspace.compositor, pane_index, width, height);
-  [surface.workspaceLock unlock];
-  return result;
-}
-
-int screenwide_preview_surface_workspace_canvas_size(
-    void *handle, uint32_t pane_index, uint32_t *width, uint32_t *height) {
-  if (handle == NULL) return 0;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  if (!surface.workspaceMode || surface.views.count == 0) return 0;
-  ScreenwidePreviewView *workspace = surface.views[0];
-  [surface.workspaceLock lock];
-  int result = screenwide_gpu_still_presenter_workspace_canvas_size(
-      workspace.compositor, pane_index, width, height);
-  [surface.workspaceLock unlock];
-  return result;
-}
-
-int screenwide_preview_surface_workspace_camera_source_size(
-    void *handle, uint32_t pane_index, uint32_t *width, uint32_t *height) {
-  if (handle == NULL) return 0;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  if (!surface.workspaceMode || surface.views.count == 0) return 0;
-  ScreenwidePreviewView *workspace = surface.views[0];
-  [surface.workspaceLock lock];
-  int result = screenwide_gpu_still_presenter_workspace_camera_source_size(
-      workspace.compositor, pane_index, width, height);
-  [surface.workspaceLock unlock];
-  return result;
-}
-
-int screenwide_preview_surface_update_workspace_canvas(
-    void *handle, uint32_t pane_index, uint32_t canvas_width,
-    uint32_t canvas_height, const ScreenwideCanvas *canvas) {
-  if (handle == NULL || canvas == NULL) return 0;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  if (!surface.workspaceMode || surface.views.count == 0) return 0;
-  ScreenwidePreviewView *workspace = surface.views[0];
-  [surface.workspaceLock lock];
-  int result = screenwide_gpu_still_presenter_update_workspace_canvas(
-      workspace.compositor, pane_index, canvas_width, canvas_height, canvas);
-  [surface.workspaceLock unlock];
-  return result;
-}
-
-int screenwide_preview_surface_set_workspace_annotation_hover(
-    void *handle, uint32_t pane_index, int32_t index, float width) {
-  if (handle == NULL) return 0;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  if (!surface.workspaceMode || surface.views.count == 0) return 0;
-  ScreenwidePreviewView *workspace = surface.views[0];
-  [surface.workspaceLock lock];
-  int result = screenwide_gpu_still_presenter_set_workspace_annotation_hover(
-      workspace.compositor, pane_index, index, width);
-  [surface.workspaceLock unlock];
-  return result;
-}
-
-int screenwide_preview_surface_update_workspace_camera_overlay(
-    void *handle, uint32_t pane_index, const ScreenwideStillOverlay *overlay) {
-  if (handle == NULL || overlay == NULL) return 0;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  if (!surface.workspaceMode || surface.views.count == 0) return 0;
-  ScreenwidePreviewView *workspace = surface.views[0];
-  [surface.workspaceLock lock];
-  int result = screenwide_gpu_still_presenter_update_workspace_camera_overlay(
-      workspace.compositor, pane_index, overlay);
-  [surface.workspaceLock unlock];
-  return result;
 }
 
 int screenwide_preview_surface_redraw_workspace(void *handle) {
@@ -398,60 +280,4 @@ int screenwide_preview_surface_redraw_workspace(void *handle) {
     redraw_workspace(surface);
   });
   return 1;
-}
-
-int screenwide_preview_surface_update_workspace_selected_resize(
-    void *handle, uint32_t selected_layer, double origin_x_ratio,
-    double origin_y_ratio, double width_ratio, double height_ratio) {
-  if (handle == NULL) return 0;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  if (!surface.workspaceMode || surface.views.count == 0) return 0;
-  ScreenwidePreviewView *workspace = surface.views[0];
-  [surface.workspaceLock lock];
-  int result = screenwide_gpu_still_presenter_update_workspace_selected_resize(
-      workspace.compositor, selected_layer, origin_x_ratio, origin_y_ratio,
-      width_ratio, height_ratio);
-  [surface.workspaceLock unlock];
-  if (result != 0) redraw_workspace(surface);
-  return result;
-}
-
-int screenwide_preview_surface_present_composed(
-    void *handle, uint32_t index, uint64_t source_token,
-    const uint8_t *source_rgba, uint32_t source_width, uint32_t source_height,
-    uint32_t output_width, uint32_t output_height,
-    const ScreenwideCanvas *canvas, double seconds, const uint8_t *cursor_rgba,
-    const uint8_t *camera_rgba, const ScreenwideStillOverlay *overlay) {
-  if (handle == NULL || source_rgba == NULL || canvas == NULL) return 0;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  // A composed frame is only ready once it was handed to a live pane. A
-  // missing pane must be retried after layout creates it.
-  if (index >= surface.views.count) return 0;
-  ScreenwidePreviewView *view = surface.views[index];
-  if (!view.active) return 1;
-  CAMetalLayer *layer = (CAMetalLayer *)view.layer;
-  layer.drawableSize = CGSizeMake(MAX(output_width, 2u), MAX(output_height, 2u));
-  return screenwide_gpu_still_presenter_present(
-      view.compositor, (__bridge void *)layer, source_token, source_rgba,
-      source_width, source_height, canvas, seconds, cursor_rgba, camera_rgba,
-      overlay, transaction_presenter(surface, view));
-}
-
-int screenwide_preview_surface_present_composed_pixels(
-    void *handle, uint32_t index, uint64_t source_token, void *source_pixels,
-    uint32_t output_width, uint32_t output_height, const ScreenwideCanvas *canvas,
-    double seconds, const uint8_t *cursor_rgba, const uint8_t *camera_rgba,
-    void *camera_pixels,
-    const ScreenwideStillOverlay *overlay) {
-  if (handle == NULL || source_pixels == NULL || canvas == NULL) return 0;
-  ScreenwidePreviewSurface *surface = (__bridge ScreenwidePreviewSurface *)handle;
-  if (index >= surface.views.count) return 0;
-  ScreenwidePreviewView *view = surface.views[index];
-  if (!view.active) return 1;
-  CAMetalLayer *layer = (CAMetalLayer *)view.layer;
-  layer.drawableSize = CGSizeMake(MAX(output_width, 2u), MAX(output_height, 2u));
-  return screenwide_gpu_still_presenter_present_pixels(
-      view.compositor, (__bridge void *)layer, source_token, source_pixels,
-      canvas, seconds, cursor_rgba, camera_rgba, camera_pixels, overlay,
-      transaction_presenter(surface, view));
 }

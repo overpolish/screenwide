@@ -12,7 +12,7 @@ use super::{abandon, host, is_active, settings, stop_drawing, AnnotateState};
 use crate::capture_overlays;
 
 /// Opens the overlay. Called off the thread that services the event loop: the
-/// windows, their Metal surfaces and the cursor lease are all put in place
+/// windows, their layer surfaces and the cursor lease are all put in place
 /// through it.
 ///
 /// Hosts that are only showing annotations kept from the last session are

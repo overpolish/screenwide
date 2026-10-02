@@ -3,7 +3,7 @@
 
 /// Frame resize edge mask shared by the native input adapters.
 ///
-/// The values intentionally match the existing Metal/D3D gesture protocol:
+/// The values intentionally match the existing macOS/Windows gesture protocol:
 /// left=1, right=2, top=4, bottom=8 and centered=1<<16.
 pub const FRAME_EDGE_LEFT: u32 = 1;
 pub const FRAME_EDGE_RIGHT: u32 = 1 << 1;

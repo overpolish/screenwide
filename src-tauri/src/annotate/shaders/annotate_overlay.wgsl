@@ -74,8 +74,25 @@ fn annotation_cursor_sample(probe: vec2<f32>) -> vec4<f32> {
   return vec4<f32>(0.0);
 }
 
-fn annotation_cursor_blur() -> AnnotationCursorBlur {
-  return AnnotationCursorBlur(0.0, 0.0, 0u);
+fn annotation_spotlight_blur() -> AnnotationSpotlightBlur {
+  return AnnotationSpotlightBlur(0.0, 0.0, 0u);
+}
+
+fn annotation_cursor_blur_layer() -> bool {
+  return false;
+}
+
+fn annotation_cursor_blurred(point: vec2<f32>) -> vec4<f32> {
+  return vec4<f32>(0.0);
+}
+
+fn annotation_cursor_near(probe: vec2<f32>, margin: f32) -> bool {
+  return false;
+}
+
+// The overlay draws a handful of annotations, so every pass walks them all.
+fn annotation_next(probe: vec2<f32>, start: u32, last: u32) -> u32 {
+  return min(start, last);
 }
 
 @vertex

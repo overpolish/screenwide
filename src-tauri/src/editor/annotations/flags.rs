@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Flags carried by native annotation draw records, the twins of the
-//! `SCREENWIDE_ANNOTATION_FLAG_*` defines in
-//! `cursor_export/macos/gpu_compositor/gpu_compositor_macos_annotation_types.h` and of the bit
-//! tests in both annotation shaders. The bits are ABI: never renumber one.
+//! Flags carried by native annotation draw records, the twins of the bit
+//! tests in the annotation shaders. The bits are ABI: never renumber one.
 
 // Reserved so every kind reads the same bits: `FILL` for the rectangle and
 // ellipse tools, unused until those tools land, and `MULTIPLY`, which no kind

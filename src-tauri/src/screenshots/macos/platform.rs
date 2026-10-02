@@ -1,76 +1,24 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::editor::annotations::native::{native_annotations, NativeAnnotationsView};
-use crate::editor::annotations::redact::native::{RedactPicture, RedactSource};
+use crate::editor::preview_platform::compositor::still::{compose_still, StillCamera, StillInputs};
+use crate::editor::preview_platform::compositor::CursorArtwork;
 mod composition;
 pub(crate) use composition::alpha_composite;
 pub(crate) use composition::compose_output_layers;
-pub(crate) use composition::native_canvas;
 
 use cidre::{cg, cv, sc};
-use std::ffi::c_char;
 
 mod desktop_capture;
 mod monitor_thumbnail;
 pub(crate) use monitor_thumbnail::capture_monitor_thumbnail;
 
 use crate::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
-use crate::editor::cursor_effects::{GpuArtwork, GpuCursor, NativeGpuArtwork, NativeGpuCursor};
+use crate::editor::cursor_effects::{GpuArtwork, GpuCursor};
 use crate::editor::keyboard_effects::KeyboardOverlay;
-use crate::screenshots::mesh_generator::{canvas_colors, mesh_generator};
 use crate::screenshots::{
-  output_placement, parse_hex_colour, physical_capture_rect, CapturedImage,
-  ScreenshotOutputSettings, ScreenshotTarget,
+  physical_capture_rect, CapturedImage, ScreenshotOutputSettings, ScreenshotTarget,
 };
-
-#[repr(C)]
-#[derive(Default)]
-pub(crate) struct NativeCanvas {
-  pub(crate) background_color: [f32; 4],
-  pub(crate) recenter_inset_color: [f32; 4],
-  pub(crate) background_radius: u32,
-  pub(crate) crop_x: i32,
-  pub(crate) crop_y: i32,
-  pub(crate) crop_width: u32,
-  pub(crate) crop_height: u32,
-  pub(crate) image_x: f32,
-  pub(crate) image_y: f32,
-  pub(crate) image_width: u32,
-  pub(crate) image_height: u32,
-  pub(crate) source_crop_x: i32,
-  pub(crate) source_crop_y: i32,
-  pub(crate) source_crop_width: u32,
-  pub(crate) source_crop_height: u32,
-  pub(crate) radius: u32,
-  pub(crate) drop_shadow: u32,
-  pub(crate) mesh_enabled: u32,
-  pub(crate) mesh_seed: u32,
-  pub(crate) mesh_warp_percent: f32,
-  pub(crate) mesh_point_count: u32,
-  pub(crate) mesh_generator: u32,
-  pub(crate) mesh_generator_color_count: u32,
-  pub(crate) mesh_points: [[f32; 8]; 4],
-  pub(crate) mesh_colors: [[f32; 4]; 5],
-  pub(crate) clip_cursor_at_video_edge: u32,
-  pub(crate) transparent_background: u32,
-  pub(crate) foreground_only: u32,
-  pub(crate) has_background_image: u32,
-  pub(crate) background_image_id: u32,
-  /// What the canvas seconds are multiplied by before a ported generator
-  /// reads them, from the table in `mesh_generator.rs`. The classic mesh is
-  /// 1.0 and drifts with the seconds as they come.
-  pub(crate) mesh_generator_speed: f32,
-  /// Non-zero while the crop tool previews the whole source: the fields below
-  /// are the cropped layer drawn a second time over that ghost.
-  pub(crate) crop_preview: u32,
-  pub(crate) crop_preview_x: f32,
-  pub(crate) crop_preview_y: f32,
-  pub(crate) crop_preview_width: f32,
-  pub(crate) crop_preview_height: f32,
-  pub(crate) crop_preview_radius: f32,
-  pub(crate) crop_preview_drop_shadow: u32,
-}
 
 #[repr(C)]
 #[derive(Default)]
@@ -94,37 +42,6 @@ pub(crate) struct StillOverlay {
   pub camera_source_height: u32,
   pub camera_drop_shadow: u32,
   pub camera_on_top: u32,
-}
-
-unsafe extern "C" {
-  fn screenwide_gpu_composite_still(
-    source_rgba: *const u8,
-    source_width: u32,
-    source_height: u32,
-    canvas: *const NativeCanvas,
-    output_width: u32,
-    output_height: u32,
-    seconds: f64,
-    cursor: *const NativeGpuCursor,
-    cursor_artworks: *const NativeGpuArtwork,
-    cursor_artwork_count: u32,
-    camera_rgba: *const u8,
-    overlay: *const StillOverlay,
-    keyboard: *const KeyboardOverlay,
-    annotations: *const NativeAnnotationsView,
-    output_rgba: *mut u8,
-    error_text: *mut c_char,
-    error_capacity: usize,
-  ) -> i32;
-  fn screenwide_gpu_alpha_composite(
-    base_rgba: *const u8,
-    overlay_rgba: *const u8,
-    width: u32,
-    height: u32,
-    output_rgba: *mut u8,
-    error_text: *mut c_char,
-    error_capacity: usize,
-  ) -> i32;
 }
 
 async fn capture_filtered(

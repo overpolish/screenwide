@@ -1,12 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A composition's redactions as the Windows compositor's passes read them:
-//! each box in whole source pixels, snapped outward and clipped to the
-//! source, with how it is painted and the grid it draws from, and last the
-//! spotlights' blur over the whole source. The twin of
-//! `screenwide_redactions` in `gpu_compositor_macos_redact.m`, which packs
-//! the same records for Metal.
+//! A composition's redactions as the compositor's passes read them: each box
+//! in whole source pixels, snapped outward and clipped to the source, with
+//! how it is painted and the grid it draws from, and last the spotlights'
+//! blur over the whole source.
 
 use crate::editor::annotations::flags::{BLUR, MOSAIC, PIXELATE};
 use crate::editor::annotations::native::NativeAnnotation;

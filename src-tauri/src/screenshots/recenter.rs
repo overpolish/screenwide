@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[cfg(any(test, not(target_os = "macos")))]
 use super::parse_hex_colour;
+use super::placement::OutputPlacement;
 #[cfg(not(target_os = "macos"))]
-use super::{placement::OutputPlacement, ScreenshotOutputSettings};
+use super::ScreenshotOutputSettings;
 
 #[cfg(not(target_os = "macos"))]
 pub(super) fn output_inset_layer(
@@ -31,7 +31,7 @@ pub(super) fn inset_layer(
   ))
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) fn foreground_bounds(placement: OutputPlacement, inset: bool) -> (f64, f64, f64, f64) {
   let crop_x = f64::from(placement.crop_x);
   let crop_y = f64::from(placement.crop_y);
@@ -53,7 +53,7 @@ pub(crate) fn foreground_bounds(placement: OutputPlacement, inset: bool) -> (f64
   )
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) fn foreground_bounds_f32(
   placement: OutputPlacement,
   inset: bool,
@@ -62,12 +62,12 @@ pub(crate) fn foreground_bounds_f32(
   (left as f32, top as f32, right as f32, bottom as f32)
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) fn optional_colour_f32(colour: Option<&str>) -> Result<[f32; 4], String> {
   colour.map_or(Ok([0.0; 4]), colour_f32)
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) fn colour_f32(value: &str) -> Result<[f32; 4], String> {
   Ok(parse_hex_colour(value)?.map(|channel| f32::from(channel) / 255.0))
 }

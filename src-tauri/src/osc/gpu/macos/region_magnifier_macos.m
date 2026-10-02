@@ -3,13 +3,6 @@
 
 #import "osc_gpu_macos.h"
 
-id<MTLComputePipelineState> screenwide_region_magnifier_make_pipeline(
-    id<MTLDevice> device, id<MTLLibrary> library, NSError **error) {
-  return [device newComputePipelineStateWithFunction:
-                     [library newFunctionWithName:@"region_magnifier"]
-                                           error:error];
-}
-
 NSPoint screenwide_region_magnifier_anchor(NSPoint point, NSRect frame,
                                            uint32_t edges) {
   CGFloat x = (edges & 1) != 0 ? NSMinX(frame)
@@ -52,23 +45,4 @@ ScreenwideRegionMagnifier screenwide_region_magnifier_make(
       .box_width = (uint32_t)size,
       .box_height = (uint32_t)size,
   };
-}
-
-void screenwide_region_magnifier_encode(
-    id<MTLComputeCommandEncoder> encoder,
-    id<MTLComputePipelineState> pipeline, id<MTLBuffer> source,
-    id<MTLTexture> output, const uint32_t source_dimensions[2],
-    ScreenwideRegionMagnifier magnifier) {
-  [encoder setComputePipelineState:pipeline];
-  [encoder setBuffer:source offset:0 atIndex:0];
-  [encoder setTexture:output atIndex:0];
-  [encoder setBytes:source_dimensions
-             length:sizeof(uint32_t) * 2
-            atIndex:1];
-  [encoder setBytes:&magnifier length:sizeof(magnifier) atIndex:2];
-  NSUInteger width = pipeline.threadExecutionWidth;
-  NSUInteger height = MAX(pipeline.maxTotalThreadsPerThreadgroup / width, 1);
-  [encoder dispatchThreads:MTLSizeMake(MAX(magnifier.box_width, 1),
-                                       MAX(magnifier.box_height, 1), 1)
-      threadsPerThreadgroup:MTLSizeMake(width, height, 1)];
 }

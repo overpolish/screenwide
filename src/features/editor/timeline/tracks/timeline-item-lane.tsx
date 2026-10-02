@@ -130,7 +130,12 @@ export function TimelineItemLane<
                 }}
                 style={{
                   ...timedLaneFragmentBox(row),
-                  left: `${(outputStart * 100).toString()}%`,
+                  // A badge at its minimum width that would run past the
+                  // timeline's end is drawn back from it instead, so it ends
+                  // where the timeline does, rounded, rather than cut square.
+                  left: inRun
+                    ? `${(outputStart * 100).toString()}%`
+                    : `min(${(outputStart * 100).toString()}%, 100% - ${minimumItemWidthPx.toString()}px)`,
                   minWidth: inRun ? undefined : minimumItemWidthPx,
                   width: `${((outputEnd - outputStart) * 100).toString()}%`,
                 }}

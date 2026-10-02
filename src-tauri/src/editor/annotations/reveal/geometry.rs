@@ -133,29 +133,3 @@ pub(crate) fn reveal_geometry(
     scale,
   }
 }
-
-/// The prepared reveal for one annotation, called from the compositor's own
-/// preparation so every path - preview, still export and video export -
-/// animates through the same maths.
-///
-/// # Safety
-/// `out` must point at one writable [`AnnotationRevealGeometry`].
-#[cfg(target_os = "macos")]
-#[no_mangle]
-pub unsafe extern "C" fn screenwide_annotation_reveal_geometry(
-  ax: f32,
-  ay: f32,
-  bx: f32,
-  by: f32,
-  cx: f32,
-  cy: f32,
-  stroke: f32,
-  heads: f32,
-  window: AnnotationReveal,
-  out: *mut AnnotationRevealGeometry,
-) {
-  if out.is_null() {
-    return;
-  }
-  *out = reveal_geometry([ax, ay], [bx, by], [cx, cy], stroke, heads, window);
-}

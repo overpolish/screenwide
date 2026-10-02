@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Where the cursor sits among the annotations, through a real Metal
+//! Where the cursor sits among the annotations, through a real GPU
 //! dispatch: over every mark, but lying on the picture as far as a spotlight
 //! and a loupe are concerned.
 
@@ -140,7 +140,7 @@ fn the_cursor_goes_over_a_mark() {
 }
 
 #[test]
-fn a_spotlights_shade_darkens_the_cursor_but_no_mark() {
+fn a_spotlights_shade_darkens_the_cursor_but_no_mark_above_it() {
   let dark = composed(
     vec![
       spotlight(point(50.0, 50.0), point(200.0, 200.0), false),
@@ -182,6 +182,36 @@ fn a_blurring_spotlight_softens_the_cursor_outside_its_light() {
   // Where its light falls, it stays sharp.
   let around = (point(450.0, 350.0), point(600.0, 480.0));
   assert!(beside(true, around.0, around.1).abs_diff(GREY) <= 1);
+}
+
+#[test]
+fn a_blurred_cursor_fades_smoothly_rather_than_in_copies() {
+  let drawn = composed(
+    vec![spotlight(point(50.0, 50.0), point(200.0, 200.0), true)],
+    CURSOR,
+  );
+  // Across the cursor's left edge, from the shaded picture to its middle.
+  let red: Vec<f32> = (480..512)
+    .map(|x| f32::from(pixel(&drawn, x, 412)[0]))
+    .collect();
+  let rises: Vec<f32> = red.windows(2).map(|pair| pair[1] - pair[0]).collect();
+  assert!(
+    rises.iter().all(|&rise| rise >= -1.0),
+    "it never falls back: {red:?}"
+  );
+  // A Gaussian edge rises fastest at one place, its rise growing to there
+  // and shrinking after, give or take the rounding to eight bits; copies of a
+  // sharp edge rise in steps, their rise swinging up and down.
+  let steepest = (0..rises.len())
+    .max_by(|&a, &b| rises[a].total_cmp(&rises[b]))
+    .unwrap();
+  let growing = rises[..=steepest]
+    .windows(2)
+    .all(|pair| pair[1] >= pair[0] - 1.5);
+  let easing = rises[steepest..]
+    .windows(2)
+    .all(|pair| pair[1] <= pair[0] + 1.5);
+  assert!(growing && easing, "one rise, not steps: {red:?}");
 }
 
 #[test]

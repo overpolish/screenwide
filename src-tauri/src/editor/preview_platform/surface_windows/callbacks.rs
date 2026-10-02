@@ -27,7 +27,7 @@ pub(super) fn emit_gesture(
   if let Ok(mut callbacks) = inner.callbacks.lock() {
     if let Some(callback) = callbacks.gesture.as_mut() {
       // Frame gestures address the pane, not the sentinel frame layer id,
-      // matching the Metal backend's `emit_selection_gesture`.
+      // matching the macOS surface's `emit_selection_gesture`.
       let layer_id = if matches!(
         gesture.operation,
         SelectionGestureOperation::FrameResize | SelectionGestureOperation::FrameRadius

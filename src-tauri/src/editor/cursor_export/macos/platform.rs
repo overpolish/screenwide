@@ -8,17 +8,18 @@ use std::{
 };
 
 use super::super::*;
-use crate::editor::cursor_effects::{NativeGpuArtwork, NativeGpuCursor};
 
 mod ffi;
 use ffi::{
-  gpu_progress, gpu_should_cancel, screenwide_gpu_composite_cursor, GpuCallbacks, GpuCameraOverlay,
+  compose_frame, progress, screenwide_video_export, should_cancel, wait_frame, ExportContext,
   GPU_PROGRESS_PERCENT,
 };
 
-mod mux;
+mod frames;
+use frames::FrameComposer;
 
-mod timed_annotations;
+mod frame_grid;
+mod mux;
 
 static GPU_EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
 
@@ -36,23 +37,6 @@ fn gpu_video_path() -> PathBuf {
   ))
 }
 
-/// Flattens the evaluated timeline into the frame array the compositor indexes.
-fn cursor_frames(timeline: &macos::native::CursorTimeline) -> Vec<NativeGpuCursor> {
-  timeline
-    .frames
-    .iter()
-    .map(|cursor| NativeGpuCursor::from(*cursor))
-    .collect()
-}
-
-fn cursor_artworks(timeline: &macos::native::CursorTimeline) -> Vec<NativeGpuArtwork> {
-  timeline
-    .artworks
-    .iter()
-    .map(NativeGpuArtwork::from)
-    .collect()
-}
-
 fn render_gpu_video(
   request: &mut CursorExportRequest<'_>,
   timeline: Option<&macos::native::CursorTimeline>,
@@ -61,88 +45,42 @@ fn render_gpu_video(
 ) -> Result<ExportRunResult, String> {
   crate::screenshots::validate_output_settings(request.width, request.height, request.output)?;
   let screen = c_path(request.screen)?;
-  let cursors = timeline.map(cursor_frames).unwrap_or_default();
-  let artworks = timeline.map(cursor_artworks).unwrap_or_default();
-  let keyboards = keyboard_timeline
-    .map(|timeline| timeline.frames.as_slice())
-    .unwrap_or_default();
-  let (annotations, annotation_data) = timed_annotations::for_request(request);
-  let annotation_data = annotation_data.view();
   let camera = request.camera.map(|(path, _)| c_path(path)).transpose()?;
-  let camera_overlay = request
-    .camera
-    .map(|(_, options)| media_preview::bake_geometry(options))
-    .transpose()?
-    .map(|geometry| {
-      let scale_x = f64::from(request.output.width) / f64::from(geometry.output_width.max(1));
-      let scale_y = f64::from(request.output.height) / f64::from(geometry.output_height.max(1));
-      let scaled = |value: u32, scale: f64| (f64::from(value) * scale).round() as u32;
-      let scaled_position = |value: i32, scale: f64| (f64::from(value) * scale).round() as i32;
-      GpuCameraOverlay {
-        crop_x: geometry.crop_x,
-        crop_y: geometry.crop_y,
-        crop_width: geometry.crop_width,
-        crop_height: geometry.crop_height,
-        frame_x: scaled_position(geometry.frame_x, scale_x),
-        frame_y: scaled_position(geometry.frame_y, scale_y),
-        frame_width: scaled(geometry.frame_width, scale_x),
-        frame_height: scaled(geometry.frame_height, scale_y),
-        radius: scaled(geometry.radius, scale_x.min(scale_y)),
-        drop_shadow: u32::from(
-          request
-            .camera
-            .is_some_and(|(_, options)| options.camera_drop_shadow),
-        ),
-        camera_on_top: u32::from(request.camera_on_top),
-      }
-    });
   let output = c_path(path)?;
   let timeline_ranges = request
     .timeline
     .map_or(&[][..], |timeline| timeline.ranges());
-  let mut canvas =
-    crate::screenshots::native_canvas(request.width, request.height, request.output, false)?;
-  canvas.clip_cursor_at_video_edge = u32::from(request.cursor_effects.clip_at_video_edge);
+  let bitrate = super::super::video_bitrate(
+    request.output.width,
+    request.output.height,
+    request.video.compression,
+  );
+  let composer = FrameComposer::new(request, timeline, keyboard_timeline)?;
   let mut error = vec![0_i8; 2_048];
-  let mut callbacks = GpuCallbacks {
+  let mut context = ExportContext {
     cancelled: request.cancelled,
     duration_ms: request.duration_ms,
     on_progress: request.on_progress,
+    composer,
+    error: None,
   };
   let result = unsafe {
-    screenwide_gpu_composite_cursor(
+    screenwide_video_export(
       screen.as_ptr(),
-      cursors.as_ptr(),
-      cursors.len() as u32,
-      artworks.as_ptr(),
-      artworks.len() as u32,
-      keyboards.as_ptr(),
-      keyboards.len() as u32,
-      annotations.as_ptr(),
-      annotations.len() as u32,
-      &annotation_data,
-      timeline_ranges.as_ptr(),
-      timeline_ranges.len() as u32,
       camera
         .as_ref()
         .map_or(std::ptr::null(), |path| path.as_ptr()),
-      camera_overlay
-        .as_ref()
-        .map_or(std::ptr::null(), std::ptr::from_ref),
-      &canvas,
       output.as_ptr(),
-      request.width,
-      request.height,
+      timeline_ranges.as_ptr(),
+      timeline_ranges.len() as u32,
       request.output.width,
       request.output.height,
-      super::super::video_bitrate(
-        request.output.width,
-        request.output.height,
-        request.video.compression,
-      ),
-      (&mut callbacks as *mut GpuCallbacks<'_>).cast(),
-      gpu_should_cancel,
-      gpu_progress,
+      bitrate,
+      (&mut context as *mut ExportContext<'_>).cast(),
+      should_cancel,
+      progress,
+      compose_frame,
+      wait_frame,
       error.as_mut_ptr(),
       error.len(),
     )
@@ -154,11 +92,11 @@ fn render_gpu_video(
       let message = unsafe { std::ffi::CStr::from_ptr(error.as_ptr()) }
         .to_string_lossy()
         .into_owned();
-      Err(if message.is_empty() {
-        "The Metal cursor compositor failed".to_owned()
+      Err(context.error.unwrap_or(if message.is_empty() {
+        "The video export failed".to_owned()
       } else {
         message
-      })
+      }))
     }
   }
 }

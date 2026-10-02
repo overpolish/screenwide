@@ -24,7 +24,6 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   surface.selectionDrawRevision += 1;
   uint64_t revision = surface.selectionDrawRevision;
   BOOL workspaceEncoding = surface.workspaceMode &&
-      surface.workspaceEncodingCommand != nil &&
       surface.workspaceEncodingTexture != nil;
   if (surface.workspaceMode && !workspaceEncoding) {
     surface.selectionLayer.hidden = YES;
@@ -43,7 +42,7 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
   // the whole visible editor overlay.
   if (!surface.hasSelection || !surface.selectionVisible ||
       !surface.editorEnabled || surface.editorSuspended ||
-      surface.selectionLayer == nil || surface.selectionPipeline == nil ||
+      surface.selectionLayer == nil ||
       surface.selection.pane_index >= surface.editorBaseRects.count ||
       !selectedPaneActive) {
     surface.selectionDrawPending = NO;
@@ -130,27 +129,14 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
         NSMakeRect(0.0, y - half, size.width, half * 2.0),
         surface.selectionSnapGuideYIsObject ? 5 : 4);
   }
+  ScreenwideRegionOscRenderState state =
+      screenwide_region_osc_render_state(lightMode);
   if (workspaceEncoding) {
-    id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
-        surface.device, vertices, count, size, scale);
-    MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
-    pass.colorAttachments[0].texture = surface.workspaceEncodingTexture;
-    pass.colorAttachments[0].loadAction = MTLLoadActionLoad;
-    pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-    id<MTLRenderCommandEncoder> encoder =
-        [surface.workspaceEncodingCommand renderCommandEncoderWithDescriptor:pass];
+    // The loupe was drawn with the workspace; the chrome keeps clear of it.
     ScreenwideRegionMagnifier magnifier = surface.workspaceMagnifier;
-    ScreenwideRegionOscRenderState state =
-        screenwide_region_osc_render_state(lightMode);
-    state.magnifier_box[0] = magnifier.active != 0 ? magnifier.box_x : 0;
-    state.magnifier_box[1] = magnifier.active != 0 ? magnifier.box_y : 0;
-    state.magnifier_box[2] = magnifier.active != 0 ? magnifier.box_width : 0;
-    state.magnifier_box[3] = magnifier.active != 0 ? magnifier.box_height : 0;
-    screenwide_region_osc_encode(
-        encoder, surface.selectionPipeline, buffer, count, state,
-        surface.selectionTexturePlaceholder,
-        surface.selectionTexturePlaceholder);
-    [encoder endEncoding];
+    screenwide_osc_draw_aligned(surface.workspaceEncodingTexture, NO, vertices,
+                                count, size, scale, &state, &magnifier,
+                                ScreenwideOscLensCutout, nil, nil, nil, nil);
     return;
   }
   surface.selectionLayer.frame = surface.interaction.bounds;
@@ -162,22 +148,10 @@ static void redraw_selection_impl(ScreenwidePreviewSurface *surface) {
     surface.selectionDrawInFlight = NO;
     return;
   }
-  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
-      surface.device, vertices, count, size, scale);
-  MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
-  pass.colorAttachments[0].texture = drawable.texture;
-  pass.colorAttachments[0].loadAction = MTLLoadActionClear;
-  pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-  pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
+  screenwide_osc_draw_aligned(drawable.texture, YES, vertices, count, size, scale,
+                              &state, NULL, ScreenwideOscLensNone, nil, nil, nil, nil);
+  // Committed after the draw on the same queue, so it presents the drawn frame.
   id<MTLCommandBuffer> command = [surface.queue commandBuffer];
-  id<MTLRenderCommandEncoder> encoder = [command renderCommandEncoderWithDescriptor:pass];
-  ScreenwideRegionOscRenderState state =
-      screenwide_region_osc_render_state(lightMode);
-  screenwide_region_osc_encode(
-      encoder, surface.selectionPipeline, buffer, count, state,
-      surface.selectionTexturePlaceholder,
-      surface.selectionTexturePlaceholder);
-  [encoder endEncoding];
   [command presentDrawable:drawable];
   [command addCompletedHandler:^(__unused id<MTLCommandBuffer> completed) {
     dispatch_async(dispatch_get_main_queue(), ^{

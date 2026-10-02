@@ -113,9 +113,6 @@ fn present_on_main_thread(app: &AppHandle, hosts: &[WebviewWindow]) -> Result<()
   let Some((anchor, peers)) = hosts.split_first() else {
     return Err("No monitor is available for Annotate".to_owned());
   };
-  // Before the surfaces exist: attaching draws immediately, and the first
-  // frame should already carry whatever is on screen.
-  super::native_overlay::install_scene();
   for (index, host) in hosts.iter().enumerate() {
     super::native_overlay::attach(host, index as u32)?;
     super::cursor::claim(host);

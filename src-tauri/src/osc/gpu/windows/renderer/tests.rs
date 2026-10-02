@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use crate::osc::style::{control_palette, ocr_palette, overlay_palette, ruler_palette};
 
 const VIEW: Size = Size {
   width: 400.0,
@@ -160,7 +161,7 @@ fn pixel_aligned_rect_rounds_logical_edges_to_device_pixels() {
 }
 
 #[test]
-fn marquee_edges_form_one_closed_boundary_aware_pattern() {
+fn marquee_dashes_run_in_twelve_pixel_periods_from_the_crop_corner() {
   let mut out = Vec::new();
   let scale = 2.0;
   let half = 1.5 / scale;
@@ -178,34 +179,21 @@ fn marquee_edges_form_one_closed_boundary_aware_pattern() {
   // Four dim rects precede the four marching-ant edges.
   let ants = &out[4 * 6..8 * 6];
   assert_eq!(quad_kinds(ants), vec![8, 8, 10, 10]);
-  // The marquee is exactly four edge quads. Corner circles would hide an
-  // incorrectly clipped dash instead of giving it a true terminal cap.
   assert_eq!(out.len(), 8 * 6);
   let min_x = snap(100.0, scale);
   let max_x = snap(196.0, scale);
   let min_y = snap(50.0, scale);
-  let max_y = snap(98.0, scale);
-  let width = ((max_x - min_x) * scale) as f32;
-  let height = ((max_y - min_y) * scale) as f32;
-  assert_eq!(ants[0].uv, [0.0, 0.0]);
-  assert_eq!(ants[1].uv, [width, 0.0]);
-  assert_eq!(ants[0].aux, [0.0, width]);
-  assert_eq!(ants[0].position, ndc(VIEW, min_x, min_y - half));
-  assert_eq!(ants[1].position, ndc(VIEW, max_x, min_y - half));
-
-  // The bottom and left run backwards so all four phases follow a single
-  // clockwise perimeter. The final phase is an exact twelve-pixel cycle,
-  // hence a dash cannot be accidentally cut at the closing corner.
-  assert_eq!(ants[6].uv, [width, 0.0]);
-  assert_eq!(ants[7].uv, [0.0, 0.0]);
-  assert_eq!(ants[6].aux, [width + height, width]);
-  assert_eq!(ants[12].uv, [0.0, height]);
-  assert_eq!(ants[14].uv, [1.0, 0.0]);
-  assert_eq!(ants[12].aux, [width * 2.0 + height, height]);
-  assert_eq!(ants[12].position, ndc(VIEW, min_x - half, min_y));
-  assert_eq!(ants[14].position, ndc(VIEW, min_x + half, max_y));
-  assert_eq!(ants[18].aux, [width, height]);
-  assert_eq!((width + height) * 2.0 % 12.0, 0.0);
+  let period = |pixels: f64| (pixels * scale / 12.0) as f32;
+  // Each edge reaches half a stroke past the corner, so its pattern starts
+  // that far before the period the corner anchors.
+  assert_eq!(ants[0].uv, [period(-half), 0.0]);
+  assert_eq!(ants[1].uv, [period(max_x + half - min_x), 0.0]);
+  assert_eq!(ants[0].position, ndc(VIEW, min_x - half, min_y - half));
+  // Opposite edges run the same pattern, so their dashes line up.
+  assert_eq!(ants[6].uv, ants[0].uv);
+  assert_eq!(ants[12].uv, [0.0, period(-half)]);
+  assert_eq!(ants[18].uv, ants[12].uv);
+  assert_eq!(ants[12].position, ndc(VIEW, min_x - half, min_y - half));
 }
 
 #[test]

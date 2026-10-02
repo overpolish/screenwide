@@ -12,7 +12,7 @@
 mod gpu_surface;
 mod window;
 
-pub(crate) use gpu_surface::{Frame, GpuSurface, VisualSurface, FORMAT};
+pub(crate) use gpu_surface::GpuSurface;
 pub(crate) use window::{
   create_child, create_on_owning_thread, disable_transitions, register_class, set_capture_affinity,
 };

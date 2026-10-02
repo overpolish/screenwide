@@ -51,8 +51,8 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let vertical_distance = max(abs(pixel.y - ribbon.geometry.y * 0.5) - straight, 0.0);
   let cross_section = sqrt(max(radius * radius - vertical_distance * vertical_distance, 0.0));
 
-  // Integrate the horizontal capsule slice over the pixel, matching Metal's
-  // coverage. Fractional scrolling preserves brightness instead of flickering.
+  // Integrate the horizontal capsule slice over the pixel for its coverage.
+  // Fractional scrolling preserves brightness instead of flickering.
   let overlap = max(min(pixel.x + pixel_width * 0.5, centre_x + cross_section) -
                     max(pixel.x - pixel_width * 0.5, centre_x - cross_section), 0.0);
   let coverage = saturate(overlap / pixel_width);

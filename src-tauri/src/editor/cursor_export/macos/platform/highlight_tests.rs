@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Highlights through a real Metal dispatch: the still compositor and the
+//! Highlights through a real GPU dispatch: the still compositor and the
 //! video export, over light pages and dark ones.
 
 use super::*;

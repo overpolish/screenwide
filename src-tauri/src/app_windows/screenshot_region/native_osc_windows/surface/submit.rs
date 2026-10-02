@@ -44,15 +44,7 @@ impl Surface {
       .snapshot
       .as_ref()
       .map_or(&gpu.placeholder, |source| &source.view);
-    // macOS puts a non-composited OCR snapshot in an opaque CALayer beneath
-    // its transparent Metal layer. Windows folds both into this target, so
-    // every presented snapshot - not only Ruler's composited one - must keep
-    // opaque destination alpha as translucent shading is drawn over it.
-    let pipeline = if opaque_snapshot_target(self.snapshot_presented, self.snapshot.is_some()) {
-      &gpu.opaque_pipeline
-    } else {
-      &gpu.pipeline
-    };
+    let pipeline = &gpu.pipeline;
     let target = frame.texture.create_view(&Default::default());
     let mut encoder = shared
       .device

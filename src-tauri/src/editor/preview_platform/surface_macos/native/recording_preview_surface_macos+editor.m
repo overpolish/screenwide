@@ -381,12 +381,9 @@
                self.selectionDragStart.pane_index);
       if (directlyEditsWorkspaceLayer &&
           self.surface.workspaceExplicitPlacements) {
-        [self.surface.workspaceLock lock];
-        screenwide_gpu_still_presenter_update_workspace_selected_radius(
-            self.surface.views[0].compositor,
-            self.selectionDragStart.pane_index, radiusPercent,
+        screenwide_workspace_scene_update_selected_radius(
+            self.surface.scene, self.selectionDragStart.pane_index, radiusPercent,
             self.selectionDragOperation == 4 ? 1 : 0);
-        [self.surface.workspaceLock unlock];
         redraw_workspace(self.surface);
       }
       redraw_selection(self.surface);
@@ -433,7 +430,7 @@
         if (centered) top -= movement;
       }
       NSRect resizedFrame = NSMakeRect(left, top, right - left, bottom - top);
-      // A screenshot workspace is composed from one full-canvas Metal pane
+      // A screenshot workspace is composed from one full-canvas pane
       // per source. Frame owns the workspace, so resize every coincident pane
       // together instead of stretching only the selected source layer.
       if (self.surface.workspaceExplicitPlacements) {
@@ -443,12 +440,9 @@
             MAX(start.size.height, 1.0);
         double width = resizedFrame.size.width / MAX(start.size.width, 1.0);
         double height = resizedFrame.size.height / MAX(start.size.height, 1.0);
-        [self.surface.workspaceLock lock];
-        screenwide_gpu_still_presenter_update_workspace_selected_resize(
-            self.surface.views[0].compositor,
-            self.selectionDragStart.pane_index,
+        screenwide_workspace_scene_update_selected_resize(
+            self.surface.scene, self.selectionDragStart.pane_index,
             originX, originY, width, height);
-        [self.surface.workspaceLock unlock];
         reflow_recording_workspace_panes(
             self.surface, self.selectionFramePaneStarts,
             self.selectionDragStart.pane_index, resizedFrame);
@@ -625,13 +619,10 @@
               MAX(start.size.height, 1.0);
           double width = resized.size.width / MAX(start.size.width, 1.0);
           double height = resized.size.height / MAX(start.size.height, 1.0);
-          [self.surface.workspaceLock lock];
-          screenwide_gpu_still_presenter_update_recording_auto_fit_move(
-              self.surface.views[0].compositor,
-              self.selectionDragStart.layer_id,
+          screenwide_workspace_scene_update_recording_auto_fit_move(
+              self.surface.scene, self.selectionDragStart.layer_id,
               self.selectionMoveDeltaX, self.selectionMoveDeltaY,
               originX, originY, width, height);
-          [self.surface.workspaceLock unlock];
           reflow_recording_workspace_panes(
               self.surface, self.selectionFramePaneStarts,
               self.selectionDragStart.pane_index, resized);

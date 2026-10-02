@@ -19,10 +19,6 @@ use std::path::Path;
 
 mod appearance_timeline;
 use appearance_timeline::{fit_to_artwork, normalize_custom_fallback_size, stable_appearances};
-#[cfg(target_os = "macos")]
-mod gpu_wire;
-#[cfg(target_os = "macos")]
-pub(crate) use gpu_wire::{NativeGpuArtwork, NativeGpuCursor};
 mod raster;
 mod settings;
 #[cfg(test)]

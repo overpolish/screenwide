@@ -3,37 +3,21 @@
 
 #pragma once
 
-#import <Metal/Metal.h>
+#include <stdint.h>
 
-#import "gpu_compositor_macos.h"
+/// The most keys one shortcut strip holds; the twin of Rust's `MAX_KEYS`.
+#define SCREENWIDE_KEYBOARD_MAX_KEYS 8
 
-@interface ScreenwideKeyboardArtwork : NSObject
-@property(nonatomic, strong) id<MTLBuffer> pixels;
-@property(nonatomic) ScreenwideKeyboardUniforms uniforms;
-@end
+/// One rasterised shortcut strip; the twin of Rust's `NativeKeyboardRaster`.
+typedef struct {
+  uint8_t *pixels;
+  uint32_t width;
+  uint32_t height;
+  uint32_t key_count;
+  uint32_t key_x[SCREENWIDE_KEYBOARD_MAX_KEYS];
+  uint32_t key_width[SCREENWIDE_KEYBOARD_MAX_KEYS];
+} ScreenwideKeyboardRaster;
 
-ScreenwideKeyboardArtwork *screenwide_keyboard_artwork(
-    id<MTLDevice> device,
-    NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *> *cache,
-    ScreenwideKeyboardOverlay overlay, uint32_t output_height);
-
-void screenwide_bind_keyboard(
-    id<MTLComputeCommandEncoder> encoder, id<MTLDevice> device,
-    NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *> *cache,
-    ScreenwideKeyboardOverlay overlay, uint32_t output_height);
-
-const ScreenwideKeyboardOverlay *screenwide_keyboard_at(
-    const ScreenwideKeyboardOverlay *keyboards, uint32_t count, CMTime pts);
-
-id<MTLComputePipelineState> screenwide_keyboard_pipeline(
-    id<MTLDevice> device, id<MTLLibrary> library, NSString *name,
-    NSError **error);
-
-void screenwide_encode_keyboard_overlay(
-    id<MTLCommandBuffer> command, id<MTLDevice> device,
-    id<MTLComputePipelineState> luma_pipeline,
-    id<MTLComputePipelineState> chroma_pipeline,
-    id<MTLTexture> destination_y, id<MTLTexture> destination_uv,
-    NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *> *cache,
-    const ScreenwideKeyboardOverlay *keyboard, uint32_t output_width,
-    uint32_t output_height);
+int screenwide_keyboard_raster(const uint16_t *codes, uint32_t count, uint32_t light,
+                               double backing_scale, ScreenwideKeyboardRaster *out);
+void screenwide_keyboard_raster_free(ScreenwideKeyboardRaster *raster);

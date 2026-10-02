@@ -4,6 +4,8 @@
 pub(crate) mod clock;
 pub(crate) mod commands;
 pub(crate) mod cursor;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod desktop_canvas;
 mod encoding;
 pub(crate) mod keyboard;
 pub(crate) mod meta_sidecar;

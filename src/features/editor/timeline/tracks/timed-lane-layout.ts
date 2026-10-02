@@ -200,11 +200,14 @@ export function stackTimedLaneFragments<Item extends TimedLaneItem>(
     }
     // The lane will not paint a fragment narrower than `minimumSpan`, so the
     // row it claims extends to what is drawn, not to where its timing ends.
-    // (A fragment at the far right already clips against the lane's overflow;
-    // that pre-existing edge needs no help here.)
+    // One that would then run past the end is drawn back from it.
+    const end = Math.max(
+      fragment.outputEnd,
+      fragment.outputStart + minimumSpan,
+    );
     return {
-      end: Math.max(fragment.outputEnd, fragment.outputStart + minimumSpan),
-      start: fragment.outputStart,
+      end: Math.min(end, Math.max(1, fragment.outputEnd)),
+      start: Math.min(fragment.outputStart, Math.max(0, 1 - minimumSpan)),
     };
   };
   const rowEnds: number[] = [];

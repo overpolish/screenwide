@@ -13,7 +13,6 @@ export function EditableWindowTitle({
   title: string;
 }) {
   const titleRef = useRef<HTMLSpanElement>(null);
-  const originalRef = useRef(title);
   useEffect(() => {
     const blurEditable = () => {
       const active = document.activeElement;
@@ -56,23 +55,22 @@ export function EditableWindowTitle({
         elementFocusVisible,
       )}
       contentEditable="plaintext-only"
+      // Nothing is committed until the edit ends, so `title` is the name as
+      // it stood before this edit - or as it arrived during it, where the
+      // field took focus before the document had a name. An emptied name
+      // keeps it rather than leaving the document nameless.
       onBlur={(event) => {
         const next =
-          event.currentTarget.textContent.replace(/\s+/g, " ").trim() ||
-          originalRef.current;
+          event.currentTarget.textContent.replace(/\s+/g, " ").trim() || title;
         event.currentTarget.textContent = next;
         if (next !== title) onChange(next);
-      }}
-      onFocus={() => {
-        originalRef.current = title;
       }}
       onKeyDown={(event) => {
         if (event.nativeEvent.isComposing) return;
         if (event.key === "Enter" || event.key === "Escape") {
           event.preventDefault();
           event.stopPropagation();
-          if (event.key === "Escape")
-            event.currentTarget.textContent = originalRef.current;
+          if (event.key === "Escape") event.currentTarget.textContent = title;
           event.currentTarget.blur();
         }
       }}

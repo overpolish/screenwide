@@ -4,19 +4,27 @@
 //! macOS preview surface: `CAMetalLayer` panes below the `WKWebView`.
 //!
 //! See the parent module for the contract a new platform has to satisfy. The
-//! pane hierarchy, layout batching and GPU composition live in
-//! `editor/preview_platform/surface_macos/native/recording_preview_surface_macos.m`; this file is only the FFI
-//! boundary around it.
+//! pane hierarchy, layout batching, input and presents live in
+//! `editor/preview_platform/surface_macos/native/recording_preview_surface_macos.m`;
+//! the workspace is drawn by the shared compositor from `workspace_scene`.
 
 mod annotation;
 mod audio_ribbon;
 mod callbacks;
 mod editor;
 mod ffi;
+/// Core Graphics' keyboard-shortcut strip, for the shared compositor.
+pub(crate) mod keyboard_raster;
 mod layout;
 mod native_types;
 mod recording_workspace;
 mod screenshot_workspace;
+/// Inter SemiBold set by Core Text, which measures and draws the annotation
+/// atlas's type.
+pub(crate) mod type_device;
+mod workspace_scene;
+
+use std::sync::Arc;
 
 use tauri::WebviewWindow;
 
@@ -35,6 +43,7 @@ use self::ffi::{
   screenwide_preview_surface_set_selection_gesture_callback,
 };
 pub(crate) use self::native_types::{NativeWorkspacePlacement, RecordingWorkspaceLayer};
+use self::workspace_scene::WorkspaceScene;
 use super::{
   AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, ContextMenuCallback,
   PointerDownCallback, SelectionCallback, SelectionGestureCallback, TransformCallback,
@@ -43,6 +52,7 @@ use crate::screenshots::CapturedImage;
 
 pub(crate) struct RecordingPreviewSurface {
   pub(super) handle: *mut std::ffi::c_void,
+  scene: Arc<WorkspaceScene>,
   pub(super) annotation_gesture_callback: Option<Box<AnnotationGestureCallback>>,
   pub(super) annotation_hover_callback: Option<Box<AnnotationHoverCallback>>,
   pub(super) annotation_text_callback: Option<Box<AnnotationTextCallback>>,
@@ -59,22 +69,28 @@ unsafe impl Sync for RecordingPreviewSurface {}
 impl RecordingPreviewSurface {
   pub(crate) fn from_window(window: &WebviewWindow) -> Result<Self, String> {
     let host_view = window.ns_view().map_err(|error| error.to_string())?;
-    let handle = unsafe { screenwide_preview_surface_create(host_view) };
+    let scene = Arc::new(WorkspaceScene::new()?);
+    let (device, queue) = crate::gpu::macos::metal_device_and_queue(crate::gpu::shared()?)?;
+    // The surface holds its own reference, released when it is deallocated:
+    // main-thread blocks it queued may still draw after this side is dropped.
+    let retained = Arc::into_raw(Arc::clone(&scene)).cast::<std::ffi::c_void>();
+    let handle = unsafe { screenwide_preview_surface_create(host_view, device, queue, retained) };
     if handle.is_null() {
-      Err("The native recording preview surface could not be created".to_owned())
-    } else {
-      Ok(Self {
-        handle,
-        annotation_gesture_callback: None,
-        annotation_hover_callback: None,
-        annotation_text_callback: None,
-        selection_callback: None,
-        pointer_down_callback: None,
-        context_menu_callback: None,
-        transform_callback: None,
-        selection_gesture_callback: None,
-      })
+      drop(unsafe { Arc::from_raw(retained.cast::<WorkspaceScene>()) });
+      return Err("The native recording preview surface could not be created".to_owned());
     }
+    Ok(Self {
+      handle,
+      scene,
+      annotation_gesture_callback: None,
+      annotation_hover_callback: None,
+      annotation_text_callback: None,
+      selection_callback: None,
+      pointer_down_callback: None,
+      context_menu_callback: None,
+      transform_callback: None,
+      selection_gesture_callback: None,
+    })
   }
   pub(crate) fn present(&self, index: u32, image: &CapturedImage) -> bool {
     unsafe {
@@ -154,32 +170,11 @@ impl Drop for PresentBatch<'_> {
 #[cfg(test)]
 mod tests {
   unsafe extern "C" {
-    fn screenwide_gpu_still_presenter_create() -> *mut std::ffi::c_void;
-    fn screenwide_gpu_still_presenter_destroy(handle: *mut std::ffi::c_void);
-    fn screenwide_audio_ribbon_shader_compiles() -> i32;
     fn screenwide_audio_ribbon_accent_is_stable() -> i32;
-    fn screenwide_audio_ribbon_coverage_is_stable() -> i32;
   }
 
   #[test]
   fn audio_bars_accent_uses_host_appearance_in_every_callback() {
     assert_eq!(unsafe { screenwide_audio_ribbon_accent_is_stable() }, 1);
-  }
-
-  #[test]
-  fn audio_bars_brightness_is_stable_at_fractional_pixel_positions() {
-    assert_eq!(unsafe { screenwide_audio_ribbon_coverage_is_stable() }, 1);
-  }
-
-  #[test]
-  fn audio_bars_metal_shader_compiles() {
-    assert_eq!(unsafe { screenwide_audio_ribbon_shader_compiles() }, 1);
-  }
-
-  #[test]
-  fn retained_workspace_metal_shader_compiles() {
-    let presenter = unsafe { screenwide_gpu_still_presenter_create() };
-    assert!(!presenter.is_null());
-    unsafe { screenwide_gpu_still_presenter_destroy(presenter) };
   }
 }

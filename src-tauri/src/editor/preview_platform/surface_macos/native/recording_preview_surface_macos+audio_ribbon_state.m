@@ -4,12 +4,11 @@
 /// The bars' inputs: enabled tracks' envelopes and gains, and the source
 /// position selected by the audio playback clock. Both entry points are called
 /// from Rust off the main thread, so each copies its arguments and applies
-/// them on the main queue.
+/// them on the main queue, where the renderer is used.
 
 #import "recording_preview_surface_macos_private.h"
 
 #include <math.h>
-#include <string.h>
 
 SCREENWIDE_PREVIEW_PRIVATE void on_main_async(dispatch_block_t block);
 
@@ -41,16 +40,8 @@ void screenwide_preview_surface_set_audio_ribbon(
     if (ribbon == nil) return;
     ribbon.trackCount = tracks;
     ribbon.pointCount = points;
-    ribbon.samples = copied;
-    float resolved[SCREENWIDE_AUDIO_RIBBON_MAX_TRACKS] = {0};
-    if (copiedGains.length >= sizeof(float) * (size_t)tracks)
-      memcpy(resolved, copiedGains.bytes, sizeof(float) * (size_t)tracks);
-    for (uint32_t track = 0; track < SCREENWIDE_AUDIO_RIBBON_MAX_TRACKS; track++)
-      ribbon->gains[track] = resolved[track];
-    // A changed track selection or volume must be read again from scratch:
-    // the cached heights belong to the envelopes that produced them.
-    ribbon.levels = nil;
-    ribbon.hasDrawn = NO;
+    screenwide_audio_ribbon_renderer_set_envelopes(
+        ribbon.renderer, copied.bytes, tracks, points, copiedGains.bytes);
     screenwide_audio_ribbon_update_visibility(surface);
     if (tracks > 0) screenwide_audio_ribbon_draw(surface);
   });

@@ -6,9 +6,9 @@
 //!
 //! The record carries the box's corners in `a` and `b`, its corner radius in
 //! `rounding` and how far its edge fades in `width`, all in the pixels it was
-//! prepared in. [`light`] and [`shade`] are the arithmetic the Metal and WGSL
-//! spotlight passes repeat per pixel; they live here so the rule has one
-//! written form the tests hold the shaders to.
+//! prepared in. [`light`] and [`shade`] are the arithmetic the WGSL spotlight
+//! pass repeats per pixel; they live here so the rule has one written form
+//! the tests hold the shader to.
 
 use super::model::share;
 use crate::editor::annotations::geometry::ArrowGeometry;

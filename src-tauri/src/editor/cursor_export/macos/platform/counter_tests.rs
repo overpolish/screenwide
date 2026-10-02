@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The compositor's counter annotations, through a real Metal dispatch.
+//! The compositor's counter annotations, through a real GPU dispatch.
 
 use crate::editor::annotations::counter::new_counter;
 use crate::editor::annotations::counter::reveal::counter_reveal_window;

@@ -1,23 +1,23 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The Rust side of the overlay's Metal surfaces.
+//! The Rust side of the overlay: the displays it covers, and one wgpu surface
+//! per host window on the `CAMetalLayer` native code gives it.
 //!
-//! Native code owns pixels and events; this owns the annotations and the displays
-//! they are drawn on. The native side pulls rather than being pushed: every
-//! frame it asks for the display's annotations, so there is no second copy of the
-//! document to keep in step with [`super::live_clips`].
+//! Native code owns the windows, the layers and the events; this owns the
+//! annotations and draws every frame through [`crate::annotate::overlay`],
+//! pulling them each time, so there is no second copy of the document to
+//! keep in step with [`super::super::live_clips`].
 
-use std::cell::RefCell;
 use std::ffi::c_void;
-use std::sync::{LazyLock, OnceLock, RwLock};
+use std::ptr::NonNull;
+use std::sync::{LazyLock, Mutex, MutexGuard, OnceLock, RwLock};
 
 use objc2_app_kit::NSWindow;
 use tauri::{AppHandle, WebviewWindow};
 
-use crate::editor::annotations::native::{
-  native_annotations, NativeAnnotations, NativeAnnotationsView,
-};
+use crate::annotate::overlay::{Renderer, Underlays};
+use crate::gpu::surface::{Frame, Surface};
 
 /// One display the overlay covers: the capture display it is, where it
 /// starts and how far it reaches in desktop points, and how many pixels one
@@ -30,19 +30,38 @@ pub(in super::super) struct Display {
   pub scale: f64,
 }
 
+/// One host window's layer and the surface drawn into it.
+struct Host {
+  /// The host's view, which is how a surface is found again.
+  view: *mut c_void,
+  /// Which [`Display`] the annotations are mapped into.
+  display: u32,
+  surface: Surface,
+  underlays: Underlays,
+}
+
+/// The surfaces on screen and the renderer they share. The renderer is made
+/// by the first attach and dropped by the last detach: a session that is not
+/// drawing holds no GPU resources.
+#[derive(Default)]
+struct Overlay {
+  renderer: Option<Renderer>,
+  hosts: Vec<Host>,
+}
+
+// The view pointers are only compared, and every surface is reached under
+// this mutex from the main thread.
+unsafe impl Send for Overlay {}
+
+static OVERLAY: LazyLock<Mutex<Overlay>> = LazyLock::new(|| Mutex::new(Overlay::default()));
 static DISPLAYS: LazyLock<RwLock<Vec<Display>>> = LazyLock::new(|| RwLock::new(Vec::new()));
 /// The key callback is a bare C function pointer, so the handle a tool key
 /// needs to write a setting cannot ride along with it.
 static APP: OnceLock<AppHandle> = OnceLock::new();
 
 unsafe extern "C" {
-  fn screenwide_annotate_attach(view: *mut c_void, display: u32) -> u32;
+  fn screenwide_annotate_attach(view: *mut c_void) -> *mut c_void;
   fn screenwide_annotate_detach(view: *mut c_void);
-  fn screenwide_annotate_redraw();
-  fn screenwide_annotate_install_scene(
-    scene: extern "C" fn(u32, *mut NativeAnnotationsView),
-    underlay: extern "C" fn(u32, *mut NativeUnderlay),
-  );
   fn screenwide_annotate_install_input(
     pointer: extern "C" fn(u32, f64, f64),
     key: extern "C" fn(u16, u32) -> u32,
@@ -51,104 +70,46 @@ unsafe extern "C" {
   fn screenwide_annotate_set_text_cursor(text: u32);
 }
 
-thread_local! {
-  /// The list the last [`scene`] call handed out. The native side draws it
-  /// before it asks again, so it lives exactly as long as it is read.
-  static SCENE: RefCell<NativeAnnotations> = RefCell::default();
-  /// The underlay the last [`underlay`] call handed out, under the same rule.
-  static UNDERLAY: RefCell<Option<std::sync::Arc<super::super::highlight::Underlay>>> =
-    RefCell::default();
+fn overlay() -> MutexGuard<'static, Overlay> {
+  OVERLAY.lock().unwrap_or_else(|error| error.into_inner())
 }
 
-/// What a display's highlights are recoloured from, as the native side reads
-/// it: the pixels, their size, and a revision that changes whenever they do;
-/// and while a spotlight blurs, the same softened for its blur. No pixels
-/// where no highlight or blurring spotlight has been drawn on the display.
-/// The twin of `ScreenwideAnnotateUnderlay`.
-#[repr(C)]
-pub(in super::super) struct NativeUnderlay {
-  rgba: *const u8,
-  width: u32,
-  height: u32,
-  revision: u64,
-  soft_rgba: *const u8,
-  soft_width: u32,
-  soft_height: u32,
-}
-
-const _: () = assert!(std::mem::size_of::<NativeUnderlay>() == 40);
-
-/// Fills one display's underlay.
-///
-/// # Safety
-/// `out` must point at one writable [`NativeUnderlay`], whose pixels stay
-/// valid until the next call on this thread.
-extern "C" fn underlay(display: u32, out: *mut NativeUnderlay) {
-  if out.is_null() {
-    return;
-  }
-  UNDERLAY.with_borrow_mut(|held| {
-    *held = super::super::highlight::underlay(display as usize);
-    let mut view = NativeUnderlay {
-      rgba: std::ptr::null(),
-      width: 0,
-      height: 0,
-      revision: 0,
-      soft_rgba: std::ptr::null(),
-      soft_width: 0,
-      soft_height: 0,
-    };
-    if let Some(underlay) = held.as_ref() {
-      (view.rgba, view.width, view.height) = (
-        underlay.image.rgba.as_ptr(),
-        underlay.image.width,
-        underlay.image.height,
-      );
-      view.revision = underlay.revision;
-      if super::super::input::spotlight_blurs() {
-        let soft = underlay.softened();
-        (view.soft_rgba, view.soft_width, view.soft_height) =
-          (soft.rgba.as_ptr(), soft.width, soft.height);
-      }
-    }
-    unsafe { out.write(view) };
-  });
-}
-
-/// Fills one display's annotation list: everything on screen plus the stroke in
-/// hand, in that display's layer pixels.
-///
-/// # Safety
-/// `out` must point at one writable [`NativeAnnotationsView`], which stays
-/// valid until the next call on this thread.
-extern "C" fn scene(display: u32, out: *mut NativeAnnotationsView) {
-  if out.is_null() {
-    return;
-  }
-  let Some(display) = DISPLAYS
+fn display(index: u32) -> Option<Display> {
+  DISPLAYS
     .read()
     .unwrap_or_else(|error| error.into_inner())
-    .get(display as usize)
+    .get(index as usize)
     .copied()
-  else {
-    return;
+}
+
+/// Draws one host's display: its annotations at the display's own
+/// resolution, over what its highlights recolour.
+fn draw(renderer: &Renderer, host: &mut Host) -> Result<(), String> {
+  let Some(display) = display(host.display) else {
+    return Ok(());
   };
-  let drawn: Vec<_> = super::super::live_clips::annotations()
-    .iter()
-    .chain(super::super::input::in_progress().iter())
-    .map(|annotation| {
-      super::super::geometry::display_annotation(annotation, display.origin, display.scale)
-    })
-    .collect();
-  SCENE.with_borrow_mut(|scene| {
-    // Sizes are points, drawn at the display's scale.
-    *scene = native_annotations(
-      &drawn,
-      crate::editor::annotations::redact::native::RedactSource::None,
-      display.scale,
-    );
-    unsafe { out.write(scene.view()) };
-  });
+  let size = (
+    (display.size.0 * display.scale).round() as u32,
+    (display.size.1 * display.scale).round() as u32,
+  );
+  if size.0 == 0 || size.1 == 0 {
+    return Ok(());
+  }
+  let gpu = renderer.gpu();
+  host.surface.resize(gpu, size);
+  let Frame::Ready(frame) = host.surface.acquire(gpu)? else {
+    return Ok(());
+  };
+  renderer.draw_display(
+    &frame.texture.create_view(&Default::default()),
+    size,
+    host.display,
+    display.origin,
+    display.scale,
+    &mut host.underlays,
+  )?;
+  gpu.queue.present(frame);
+  Ok(())
 }
 
 extern "C" fn pointer(phase: u32, x: f64, y: f64) {
@@ -176,26 +137,59 @@ pub(in super::super) fn set_displays(displays: Vec<Display>) {
   *DISPLAYS.write().unwrap_or_else(|error| error.into_inner()) = displays;
 }
 
-/// Gives one host window its Metal layer. Main thread only.
+/// Gives one host window its layer and the surface drawn into it. Main
+/// thread only.
 pub(in super::super) fn attach(window: &WebviewWindow, display: u32) -> Result<(), String> {
   let view = window.ns_view().map_err(|error| error.to_string())?;
-  if unsafe { screenwide_annotate_attach(view.cast(), display) } == 0 {
-    return Err("The annotate overlay could not open a Metal surface".to_owned());
+  let layer = NonNull::new(unsafe { screenwide_annotate_attach(view) })
+    .ok_or_else(|| "The annotate overlay could not open a layer".to_owned())?;
+  let attached = (|| {
+    let mut overlay = overlay();
+    let overlay = &mut *overlay;
+    if overlay.renderer.is_none() {
+      overlay.renderer = Some(Renderer::new()?);
+    }
+    let renderer = overlay
+      .renderer
+      .as_ref()
+      .expect("the renderer was just made");
+    // The layer is the one just added to `view`, which outlives the surface.
+    let surface = unsafe { Surface::on_metal_layer(renderer.gpu(), layer) }?;
+    overlay.hosts.push(Host {
+      view,
+      display,
+      surface,
+      underlays: Underlays::default(),
+    });
+    let host = overlay.hosts.last_mut().expect("the host was just added");
+    draw(renderer, host)
+  })();
+  if attached.is_err() {
+    detach(window);
   }
-  Ok(())
+  attached
 }
 
-/// Takes one host window's Metal layer away. Main thread only.
+/// Takes one host window's layer away, and the renderer with it once the last
+/// host is gone. Main thread only.
 pub(in super::super) fn detach(window: &WebviewWindow) {
-  if let Ok(view) = window.ns_view() {
-    unsafe { screenwide_annotate_detach(view.cast()) };
+  let Ok(view) = window.ns_view() else {
+    return;
+  };
+  {
+    let mut overlay = overlay();
+    overlay.hosts.retain(|host| host.view != view);
+    if overlay.hosts.is_empty() {
+      overlay.renderer = None;
+    }
   }
+  unsafe { screenwide_annotate_detach(view) };
 }
 
-/// Names where the annotations come from. Outlives input: hosts left showing annotations
-/// still draw from it. Main thread only.
-pub(in super::super) fn install_scene() {
-  unsafe { screenwide_annotate_install_scene(scene, underlay) };
+/// Called by the native input after each press, drag and key it routes.
+#[no_mangle]
+extern "C" fn screenwide_annotate_redraw() {
+  redraw();
 }
 
 /// Starts swallowing pointer and key events. Main thread only.
@@ -243,7 +237,16 @@ pub(in super::super) fn set_text_cursor(text: bool) {
 
 /// Redraws every attached display. Main thread only.
 pub(in super::super) fn redraw() {
-  unsafe { screenwide_annotate_redraw() };
+  let mut overlay = overlay();
+  let overlay = &mut *overlay;
+  let Some(renderer) = overlay.renderer.as_ref() else {
+    return;
+  };
+  for host in &mut overlay.hosts {
+    if let Err(error) = draw(renderer, host) {
+      eprintln!("The annotate overlay could not draw a display: {error}");
+    }
+  }
 }
 
 /// Puts a peer host on screen without asking for keyboard focus: only the
@@ -262,27 +265,5 @@ pub(in super::super) fn set_click_through(window: &WebviewWindow, through: bool)
   if let Ok(raw) = window.ns_window() {
     let native: &NSWindow = unsafe { &*raw.cast() };
     native.setIgnoresMouseEvents(through);
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  unsafe extern "C" {
-    fn screenwide_annotate_shader_check(message: *mut std::ffi::c_char, capacity: u32) -> u32;
-  }
-
-  #[test]
-  fn the_overlays_metal_library_builds() {
-    let mut message = [0 as std::ffi::c_char; 1024];
-    let outcome =
-      unsafe { screenwide_annotate_shader_check(message.as_mut_ptr(), message.len() as u32) };
-    if outcome == 2 {
-      // No Metal device: nothing to compile against, and nothing to conclude.
-      return;
-    }
-    let reason = unsafe { std::ffi::CStr::from_ptr(message.as_ptr()) }
-      .to_string_lossy()
-      .into_owned();
-    assert_eq!(outcome, 1, "{reason}");
   }
 }

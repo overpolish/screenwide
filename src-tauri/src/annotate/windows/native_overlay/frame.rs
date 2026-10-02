@@ -14,33 +14,31 @@ pub(super) fn draw_all() {
     return;
   };
   for surface in &mut overlay.surfaces {
-    if let Err(error) = renderer.draw(surface) {
+    if let Err(error) = draw(renderer, surface) {
       eprintln!("The annotate overlay could not draw a display: {error}");
     }
   }
 }
 
-impl Renderer {
-  fn draw(&self, surface: &mut Surface) -> Result<(), String> {
-    let Some(display) = display(surface.display) else {
-      return Ok(());
-    };
-    let size = surface.fit(self.gpu())?;
-    if size.0 == 0 || size.1 == 0 {
-      return Ok(());
-    }
-    let (underlay, softened) = surface.underlay(self.gpu())?;
-    let overlay_surface::Frame::Ready(frame) = surface.chain.acquire(self.gpu())? else {
-      return Ok(());
-    };
-    self.draw_arrows(
-      &frame.texture.create_view(&Default::default()),
-      size,
-      &scene::scene(display),
-      underlay.as_ref(),
-      softened.as_ref(),
-    )?;
-    self.gpu().queue.present(frame);
-    Ok(())
+fn draw(renderer: &Renderer, surface: &mut Surface) -> Result<(), String> {
+  let Some(display) = display(surface.display) else {
+    return Ok(());
+  };
+  let size = surface.fit(renderer.gpu())?;
+  if size.0 == 0 || size.1 == 0 {
+    return Ok(());
   }
+  let crate::gpu::surface::Frame::Ready(frame) = surface.chain.acquire(renderer.gpu())? else {
+    return Ok(());
+  };
+  renderer.draw_display(
+    &frame.texture.create_view(&Default::default()),
+    size,
+    surface.display,
+    display.origin,
+    display.scale,
+    &mut surface.underlays,
+  )?;
+  renderer.gpu().queue.present(frame);
+  Ok(())
 }

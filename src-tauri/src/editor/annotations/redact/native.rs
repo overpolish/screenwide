@@ -94,8 +94,7 @@ pub(crate) fn draw_points(start: AnnotationPoint, end: AnnotationPoint) -> [[f32
 
 /// The whole source pixels the compositor paints for the box, `[x0, y0, x1,
 /// y1)`, read from the same single-precision corners the record carries so
-/// the ring sampled here always lies outside what the kernel covers. The
-/// twin of `screenwide_redactions` in `gpu_compositor_macos_redact.m`.
+/// the ring sampled here always lies outside what the paint pass covers.
 pub(crate) fn painted_bounds(corners: [[f32; 2]; 3], width: u32, height: u32) -> [u32; 4] {
   let clamp = |value: f32, limit: u32| value.max(0.0).min(limit as f32) as u32;
   [

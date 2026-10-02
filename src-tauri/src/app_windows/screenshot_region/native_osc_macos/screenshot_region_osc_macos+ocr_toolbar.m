@@ -107,20 +107,9 @@ static void render_control(ScreenwideRegionOSC *surface, NSUInteger index) {
   id<CAMetalDrawable> drawable = [control.contentLayer nextDrawable];
   if (!drawable)
     return;
-  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
-      surface.device, vertices, count, size, scale);
-  MTLRenderPassDescriptor *pass =
-      [MTLRenderPassDescriptor renderPassDescriptor];
-  pass.colorAttachments[0].texture = drawable.texture;
-  pass.colorAttachments[0].loadAction = MTLLoadActionClear;
-  pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-  pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
-  id<MTLCommandBuffer> command = [surface.queue commandBuffer];
-  id<MTLRenderCommandEncoder> encoder =
-      [command renderCommandEncoderWithDescriptor:pass];
-  screenwide_region_osc_encode(
-      encoder, surface.pipeline, buffer, count, state,
-      label.texture ?: surface.placeholder, surface.placeholder);
+  screenwide_osc_draw_aligned(drawable.texture, YES, vertices, count, size, scale,
+                              &state, NULL, ScreenwideOscLensNone, label.texture,
+                              nil, nil, nil);
   if (index == 3 && surface.ocrToolbarConfirm) {
     ScreenwideOscConfirmLayer layers[2] = {0};
     size_t layerCount = screenwide_osc_confirm_layers(
@@ -136,21 +125,17 @@ static void render_control(ScreenwideRegionOSC *surface, NSUInteger index) {
           iconVertices, &iconCount, size, layer.icon,
           (size.width - iconSize) * 0.5, (size.height - iconSize) * 0.5,
           iconSize);
-      id<MTLBuffer> iconBuffer = screenwide_osc_vertex_buffer(
-          surface.device, iconVertices, iconCount, size, scale);
+      // Each layer of the confirmation is drawn over the last in its own
+      // foreground.
       memcpy(state.action_fills + 4, layer.foreground,
              sizeof(layer.foreground));
       state.action_fills[7] *= layer.opacity;
-      [encoder setFragmentBytes:state.action_fills
-                         length:sizeof(state.action_fills)
-                        atIndex:2];
-      [encoder setVertexBuffer:iconBuffer offset:0 atIndex:0];
-      [encoder drawPrimitives:MTLPrimitiveTypeTriangle
-                  vertexStart:0
-                  vertexCount:iconCount];
+      screenwide_osc_draw_aligned(drawable.texture, NO, iconVertices, iconCount,
+                                  size, scale, &state, NULL,
+                                  ScreenwideOscLensNone, nil, nil, nil, nil);
     }
   }
-  [encoder endEncoding];
+  id<MTLCommandBuffer> command = [surface.queue commandBuffer];
   [command presentDrawable:drawable];
   [command commit];
 }

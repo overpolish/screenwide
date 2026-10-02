@@ -73,7 +73,7 @@ impl RecordingPreviewSurface {
     if composition.foreground_only {
       pane::clear(gpu, &frame.texture, wgpu::Color::TRANSPARENT);
     }
-    let mut prepared = annotation::prepared_arrows(
+    let mut prepared = crate::editor::preview_platform::annotation_gpu::prepared_arrows(
       &settings.annotations,
       source.size,
       settings,

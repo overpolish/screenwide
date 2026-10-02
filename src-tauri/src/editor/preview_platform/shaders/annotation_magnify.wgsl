@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // The magnifier: a loupe showing a zoom area enlarged, the line joining the
-// two, the loupe's rim and its shadow. The twin of
-// `gpu_compositor_macos_shader_source_annotation_magnify.h`; every number it
-// reads was prepared by `magnify::geometry::prepare_magnify`, which documents
-// where the record keeps each part.
+// two, the loupe's rim and its shadow. Every number it reads was prepared by
+// `magnify::geometry::prepare_magnify`, which documents where the record
+// keeps each part.
 //
 // The loupe reads the picture through `annotation_magnify_placement` and
 // `annotation_magnify_fetch`, which each shader that draws annotations
@@ -15,7 +14,9 @@
 // Highlights read them too, to find each glyph's full ink. Each texel is drawn
 // as a crisp square, with only the one drawn pixel across its edge blended.
 // The cursor lies on the picture, under the loupe, so the loupe shows it too,
-// enlarged, through `annotation_cursor_seen`.
+// enlarged, through `annotation_cursor_seen`. In the editor a loupe shows
+// every annotation below it as well, enlarged: `annotation_layers.wgsl`
+// composes what it shows and hands it to `annotation_magnify_draw`.
 
 const annotation_magnify_kind: u32 = 8u;
 // The flag a loupe that casts a shadow carries: `flags::SHADOW`.
@@ -76,17 +77,17 @@ fn annotation_magnify_over(rgba: vec4<f32>, color: vec3<f32>, alpha: f32) -> vec
 
 // Draws one magnifier, as `shape` places it and in `color`, over `rgba`: the
 // loupe's shadow, the zoom area's outline and the line to the loupe in a pen
-// half the rim's, the picture the zoom area covers enlarged into the loupe -
-// and the cursor, which lies on the picture, where `cursor` says the layer
-// carries it - and the rim. The picture is solid throughout: a loupe setting
-// off from its zoom area shows exactly what that covers, at its own size, so
-// it lifts off the picture rather than fading in over it. The shadow is a
-// clip's, and comes with the magnifier's presence; the rest comes with its
-// colour, which carries the presence already. The hover halo hugs the zoom
-// area, the box the chrome holds.
+// half the rim's, `content` in the loupe, and the rim. `content` is what the
+// loupe shows at `probe`, premultiplied: what lies under the magnifier at the
+// matching point of its zoom area, enlarged, as the caller composed it. It
+// is solid throughout: a loupe setting off from its zoom area shows exactly
+// what that covers, at its own size, so it lifts off the picture rather than
+// fading in over it. The shadow is a clip's, and comes with the magnifier's
+// presence; the rest comes with its colour, which carries the presence
+// already. The hover halo hugs the zoom area, the box the chrome holds.
 fn annotation_magnify_draw(rgba_in: vec4<f32>, shape: PreviewGeometry, color: vec4<f32>,
                            flags: u32, probe: vec2<f32>, feather: f32, halo: f32,
-                           cursor: bool) -> vec4<f32> {
+                           content: vec4<f32>) -> vec4<f32> {
   let centre = vec2<f32>(shape.ax, shape.ay);
   let half_size = vec2<f32>(shape.bx, shape.by);
   let area = vec2<f32>(shape.cx, shape.cy);
@@ -136,14 +137,7 @@ fn annotation_magnify_draw(rgba_in: vec4<f32>, shape: PreviewGeometry, color: ve
   }
   rgba = annotation_magnify_over(rgba, color.rgb, annotation_edge(lines, feather) * color.a);
   if (inside > 0.0) {
-    let shrink = area_half / half_size;
-    let seen_at = area + (probe - centre) * shrink;
-    let picture = annotation_magnify_sample(seen_at, shrink * feather * 2.0);
-    rgba = annotation_magnify_over(rgba, picture.rgb, inside * picture.a);
-    if (cursor) {
-      let pointer = annotation_cursor_seen(seen_at, feather * 2.0 * min(shrink.x, shrink.y));
-      rgba = annotation_magnify_over(rgba, pointer.rgb, inside * pointer.a);
-    }
+    rgba = content * inside + rgba * (1.0 - inside * content.a);
   }
   if (stroke > 0.0 && near_loupe) {
     rgba = annotation_magnify_over(rgba, color.rgb,
@@ -152,23 +146,59 @@ fn annotation_magnify_draw(rgba_in: vec4<f32>, shape: PreviewGeometry, color: ve
   return rgba;
 }
 
-// Draws one magnifier over `rgba`. One that moved while the shutter was open
-// is drawn whole at every exposure sample, each at the opacity it had then,
-// and the results averaged: what an open shutter records of a loupe flying
-// out of its zoom area, picture and all.
+// How many canvas pixels of the zoom area one loupe pixel shows, on each
+// axis.
+fn annotation_magnify_shrink(shape: PreviewGeometry) -> vec2<f32> {
+  return vec2<f32>(shape.start_head_cx, shape.start_head_cy) / vec2<f32>(shape.bx, shape.by);
+}
+
+// The point of the zoom area the loupe shows at `probe`.
+fn annotation_magnify_seen_at(shape: PreviewGeometry, probe: vec2<f32>) -> vec2<f32> {
+  return vec2<f32>(shape.cx, shape.cy) +
+      (probe - vec2<f32>(shape.ax, shape.ay)) * annotation_magnify_shrink(shape);
+}
+
+// What a loupe shows at `probe` of the picture alone, premultiplied, and of
+// the cursor lying on it where `cursor` says the layer carries it; nothing
+// outside the loupe.
+fn annotation_magnify_picture(shape: PreviewGeometry, probe: vec2<f32>, feather: f32,
+                              cursor: bool) -> vec4<f32> {
+  if (annotation_magnify_inside(shape, probe, feather) <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  let shrink = annotation_magnify_shrink(shape);
+  let seen_at = annotation_magnify_seen_at(shape, probe);
+  let picture = annotation_magnify_sample(seen_at, shrink * feather * 2.0);
+  var content = vec4<f32>(picture.rgb * picture.a, picture.a);
+  if (cursor) {
+    let pointer = annotation_cursor_seen(seen_at, feather * 2.0 * min(shrink.x, shrink.y));
+    content = annotation_over(content, pointer.rgb, pointer.a);
+  }
+  return content;
+}
+
+// Draws one magnifier over `rgba`, its loupe showing the picture alone. One
+// that moved while the shutter was open is drawn whole at every exposure
+// sample, each at the opacity it had then, and the results averaged: what an
+// open shutter records of a loupe flying out of its zoom area, picture and
+// all.
 fn annotation_magnify_layer(rgba: vec4<f32>, magnifier: PreviewArrow, probe: vec2<f32>,
                             feather: f32, halo: f32, cursor: bool) -> vec4<f32> {
   let color = annotation_color(magnifier);
   if (magnifier.sample_count == 0u) {
     return annotation_magnify_draw(rgba, magnifier.geometry, color, magnifier.flags, probe,
-                                   feather, halo, cursor);
+                                   feather, halo,
+                                   annotation_magnify_picture(magnifier.geometry, probe, feather,
+                                                              cursor));
   }
   var total = vec4<f32>(0.0);
   for (var tap = 0u; tap < magnifier.sample_count; tap++) {
     let sample = annotation_samples[magnifier.sample_first + tap];
     total += annotation_magnify_draw(rgba, sample.geometry,
                                      vec4<f32>(color.rgb, color.a * sample.opacity),
-                                     magnifier.flags, probe, feather, halo, cursor);
+                                     magnifier.flags, probe, feather, halo,
+                                     annotation_magnify_picture(sample.geometry, probe, feather,
+                                                                cursor));
   }
   return total / f32(magnifier.sample_count);
 }
@@ -198,4 +228,43 @@ fn annotation_magnify_cover(magnifier: PreviewArrow, probe: vec2<f32>, feather: 
                                        probe, feather);
   }
   return total / f32(magnifier.sample_count);
+}
+
+/// Where one prepared magnifier can reach: its loupe and the shadow under
+/// it, its zoom area's outline and halo, and the line between them.
+fn annotation_magnify_reach(shape: PreviewGeometry, flags: u32, feather: f32,
+                            halo: f32) -> vec4<f32> {
+  let centre = vec2<f32>(shape.ax, shape.ay);
+  let half_size = vec2<f32>(shape.bx, shape.by);
+  let area = vec2<f32>(shape.cx, shape.cy);
+  let area_half = vec2<f32>(shape.start_head_cx, shape.start_head_cy);
+  if (any(half_size <= vec2<f32>(0.0)) || any(area_half <= vec2<f32>(0.0))) {
+    return annotation_no_bounds;
+  }
+  let stroke = max(shape.width, 0.0);
+  let pen = max(stroke * 0.5, feather * 2.0);
+  let sigma = clamp(min(half_size.x, half_size.y) * 0.11, 2.0, 110.0);
+  let shadowed = (flags & annotation_magnify_shadow_flag) != 0u;
+  let reach = stroke + feather * 2.0 + select(0.0, sigma * 4.0 + sigma * 0.35, shadowed);
+  var bounds = vec4<f32>(centre - half_size - reach, centre + half_size + reach);
+  let outline = area_half + pen + halo + feather * 2.0;
+  bounds = annotation_union(bounds, vec4<f32>(area - outline, area + outline));
+  if (shape.head != 0u) {
+    let start = vec2<f32>(shape.start_head_ax, shape.start_head_ay);
+    let end = vec2<f32>(shape.start_head_bx, shape.start_head_by);
+    let line = pen + feather * 2.0;
+    bounds = annotation_union(bounds, vec4<f32>(min(start, end) - line, max(start, end) + line));
+  }
+  return bounds;
+}
+
+/// Where a magnifier can reach, over its exposure as it is drawn.
+fn annotation_magnify_bounds(magnifier: PreviewArrow, feather: f32) -> vec4<f32> {
+  let halo = max(magnifier.hover, 0.0);
+  var bounds = annotation_magnify_reach(magnifier.geometry, magnifier.flags, feather, halo);
+  for (var tap = 0u; tap < magnifier.sample_count; tap++) {
+    bounds = annotation_union(bounds, annotation_magnify_reach(
+        annotation_samples[magnifier.sample_first + tap].geometry, magnifier.flags, feather, halo));
+  }
+  return bounds;
 }

@@ -34,7 +34,6 @@ SCREENWIDE_PREVIEW_PRIVATE ScreenwidePreviewView *make_preview_view(
   layer.colorspace = srgb;
   CGColorSpaceRelease(srgb);
   view.layer = layer;
-  view.compositor = screenwide_gpu_still_presenter_create();
   view.hidden = YES;
   view.active = NO;
   [surface.container addSubview:view positioned:NSWindowAbove relativeTo:nil];

@@ -43,10 +43,20 @@ static inline void screenwide_osc_align_vertices(
   }
 }
 
-static inline id<MTLBuffer> screenwide_osc_vertex_buffer(
-    id<MTLDevice> device, ScreenwideRegionOscVertex *vertices, NSUInteger count,
-    NSSize size, CGFloat scale) {
+/// Aligns `vertices` to the drawable's pixels and draws them through the
+/// shared OSC renderer into `target`; see `screenwide_osc_draw`.
+static inline int screenwide_osc_draw_aligned(
+    id<MTLTexture> target, BOOL clear, ScreenwideRegionOscVertex *vertices,
+    NSUInteger count, NSSize size, CGFloat scale,
+    const ScreenwideRegionOscRenderState *state,
+    const ScreenwideRegionMagnifier *magnifier, uint32_t lens,
+    id<MTLTexture> label, id<MTLTexture> secondary_label,
+    id<MTLTexture> snapshot, id<MTLTexture> magnifier_source) {
   screenwide_osc_align_vertices(vertices, count, size, scale);
-  return [device newBufferWithBytes:vertices length:count * sizeof(*vertices)
-                           options:MTLResourceStorageModeShared];
+  return screenwide_osc_draw((__bridge void *)target, clear ? 1 : 0, vertices,
+                             (uint32_t)count, state, magnifier, lens,
+                             (__bridge void *)label,
+                             (__bridge void *)secondary_label,
+                             (__bridge void *)snapshot,
+                             (__bridge void *)magnifier_source);
 }

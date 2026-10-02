@@ -5,11 +5,11 @@
 //! with. The twin of the typedefs in `geometry.h`, which carries no
 //! arithmetic of its own.
 //!
-//! Both backends prepare from here, in each kind's own `geometry` module: the
-//! D3D11 one calls it directly and the Metal compositor and the macOS chrome
-//! reach it through `ffi`. Everything is prepared once per annotation before
-//! drawing or picking, never per pixel; the shaders read the record and hold
-//! the only per-pixel copies of a kind's shape.
+//! The compositor prepares from here, in each kind's own `geometry` module,
+//! and the macOS chrome reaches the same functions through `ffi`. Everything
+//! is prepared once per annotation before drawing or picking, never per
+//! pixel; the shaders read the record and hold the only per-pixel copies of a
+//! kind's shape.
 
 /// Three vertices of a head's inner triangle, in the caller's pixel space.
 #[repr(C)]

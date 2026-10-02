@@ -51,17 +51,17 @@ mod edit_tests;
 /// both backends spread their exposure samples along.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod exposure;
-/// The C entry points the Metal compositor and the macOS chrome reach a
-/// kind's prepared geometry through.
+/// The C entry points the macOS chrome reaches a kind's prepared geometry
+/// through.
 #[cfg(target_os = "macos")]
 pub(crate) mod ffi;
 /// The draw tool's own half of the model: a line drawn freehand. Not called
 /// `draw`, which is what every kind's native record is built by.
 pub(crate) mod freehand;
 /// The draw record every kind fills, and the arithmetic it is built with.
-/// Both backends prepare from it: the D3D11 one calls each kind's `geometry`
-/// module, and the Metal compositor and the macOS chrome reach the same
-/// functions through `ffi`.
+/// Both platforms prepare from it: the shared compositor calls each kind's
+/// `geometry` module, and the macOS chrome reaches the same functions
+/// through `ffi`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod geometry;
 #[cfg(any(target_os = "macos", target_os = "windows", test))]

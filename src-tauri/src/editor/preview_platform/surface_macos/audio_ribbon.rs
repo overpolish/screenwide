@@ -3,8 +3,11 @@
 
 //! The audio-only preview's bars, handed their envelopes and their playhead.
 //!
-//! The shape and the colour are native: this is only the boundary that hands
-//! over what they are drawn from.
+//! The layer and the colour are native; the native ribbon draws through the
+//! shared wgpu renderer in [`renderer`]. This is the boundary that hands over
+//! what the bars are drawn from.
+
+mod renderer;
 
 use super::ffi::{
   screenwide_preview_surface_set_audio_ribbon, screenwide_preview_surface_set_audio_ribbon_clock,

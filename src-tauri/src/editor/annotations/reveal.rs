@@ -28,14 +28,13 @@
 //! time, so scrubbing backwards lands on exactly the frame playing forwards
 //! drew. Nothing is integrated across frames.
 //!
-//! The compositor calls [`screenwide_annotation_reveal_geometry`] while it
+//! The compositor calls [`geometry::reveal_geometry`] while it
 //! prepares an annotation, in the canvas pixel space where the stroke's width
-//! and the curve's length are finally comparable, and the video export calls
-//! [`screenwide_annotation_reveal_window`] once per frame per clip. Preview and
-//! export therefore animate through this one implementation.
+//! and the curve's length are finally comparable. Preview and export reveal
+//! every frame's clips through
+//! [`crate::editor::annotations::AnnotationKind::reveal_window`], so they
+//! animate through this one implementation.
 
-#[cfg(target_os = "macos")]
-use crate::editor::annotations::AnnotationKind;
 use crate::editor::effect_animation::ease_in_out_cubic;
 
 /// How long an annotation draws itself in where its clip does not say: a
@@ -232,51 +231,6 @@ pub(crate) fn clip_ms_for_visible(visible_ms: f32, path_ms: Option<f32>) -> f32 
   } else {
     visible_ms / (1.0 - REVEAL_PHASE_SHARE)
   }
-}
-
-/// The reveal window one clip is at, for the video export's per-frame pass. An
-/// annotation that is not animated is drawn whole for the clip's whole length,
-/// and every other one follows its own kind's arrival at its clip's pace,
-/// `path_ms`, which is zero where the clip names none: `kind` is the retained
-/// annotation's, so the export and the preview animate through one
-/// implementation. A spotlight also takes the ends it is joined to its
-/// neighbours at, as `SpotlightJoins` bits, and how far its blur has arrived.
-///
-/// # Safety
-/// `out` must point at one writable [`AnnotationReveal`].
-#[cfg(target_os = "macos")]
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub unsafe extern "C" fn screenwide_annotation_reveal_window(
-  elapsed_ms: f32,
-  duration_ms: f32,
-  frame_ms: f32,
-  animated: u32,
-  kind: u32,
-  path_ms: f32,
-  joins: u32,
-  blur_share: f32,
-  out: *mut AnnotationReveal,
-) {
-  if out.is_null() {
-    return;
-  }
-  // A number no kind owns cannot come from a retained annotation, and the
-  // arrow's window is what such a record drew before the kinds were named.
-  let kind = AnnotationKind::from_raw(kind).unwrap_or(AnnotationKind::Arrow);
-  *out = if animated == 0 {
-    AnnotationReveal::WHOLE
-  } else if kind == AnnotationKind::Spotlight {
-    super::spotlight::reveal::spotlight_reveal_window(
-      elapsed_ms,
-      duration_ms,
-      super::spotlight::reveal::SpotlightJoins::from_bits(joins),
-      blur_share,
-    )
-  } else {
-    let pace = (path_ms > 0.0).then_some(path_ms);
-    kind.reveal_window(elapsed_ms, duration_ms, frame_ms, pace)
-  };
 }
 
 /// Turning a window into drawable geometry needs the curve itself, and only

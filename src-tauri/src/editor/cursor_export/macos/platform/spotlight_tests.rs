@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The compositor's spotlights, through a real Metal dispatch: the shade the
+//! The compositor's spotlights, through a real GPU dispatch: the shade the
 //! canvas pass casts, and the blur the source pass adds.
 
 use crate::editor::annotations::spotlight::geometry::{light, prepare_spotlight, shade};

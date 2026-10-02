@@ -67,22 +67,10 @@ static void render(ScreenwideRegionOSC *surface) {
   id<CAMetalDrawable> drawable = [control.contentLayer nextDrawable];
   if (!drawable)
     return;
-  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
-      surface.device, vertices, count, size, scale);
-  MTLRenderPassDescriptor *pass =
-      [MTLRenderPassDescriptor renderPassDescriptor];
-  pass.colorAttachments[0].texture = drawable.texture;
-  pass.colorAttachments[0].loadAction = MTLLoadActionClear;
-  pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-  pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
+  screenwide_osc_draw_aligned(drawable.texture, YES, vertices, count, size, scale,
+                              &state, NULL, ScreenwideOscLensNone,
+                              surface.ocrCancelLabel.texture, nil, nil, nil);
   id<MTLCommandBuffer> command = [surface.queue commandBuffer];
-  id<MTLRenderCommandEncoder> encoder =
-      [command renderCommandEncoderWithDescriptor:pass];
-  screenwide_region_osc_encode(encoder, surface.pipeline, buffer, count, state,
-                               surface.ocrCancelLabel.texture ?:
-                                   surface.placeholder,
-                               surface.placeholder);
-  [encoder endEncoding];
   [command presentDrawable:drawable];
   [command commit];
 }

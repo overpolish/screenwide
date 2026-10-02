@@ -723,7 +723,7 @@ static void render(ScreenwideRegionOSC *surface) {
                                             &visual, 1) != 1)
     return;
   // Moving the NSVisualEffectView remains synchronous with the latest pointer
-  // sample. Coalesce only its small Metal content so nextDrawable never blocks
+  // sample. Coalesce only its small content layer so nextDrawable never blocks
   // AppKit when pointer events arrive faster than the display refreshes.
   if (surface.rulerDrawInFlight) {
     surface.rulerDrawPending = YES;
@@ -804,22 +804,12 @@ static void render(ScreenwideRegionOSC *surface) {
     surface.rulerDrawInFlight = NO;
     return;
   }
-  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
-      surface.device, vertices, count, size, scale);
-  MTLRenderPassDescriptor *pass =
-      [MTLRenderPassDescriptor renderPassDescriptor];
-  pass.colorAttachments[0].texture = drawable.texture;
-  pass.colorAttachments[0].loadAction = MTLLoadActionClear;
-  pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-  pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
+  screenwide_osc_draw_aligned(drawable.texture, YES, vertices, count, size, scale,
+                              &state, NULL, ScreenwideOscLensNone,
+                              surface.rulerLabel.texture,
+                              toleranceLabel ? toleranceLabel.texture : nil, nil,
+                              nil);
   id<MTLCommandBuffer> command = [surface.queue commandBuffer];
-  id<MTLRenderCommandEncoder> encoder =
-      [command renderCommandEncoderWithDescriptor:pass];
-  screenwide_region_osc_encode(encoder, surface.pipeline, buffer, count,
-                               state, surface.rulerLabel.texture,
-                               toleranceLabel ? toleranceLabel.texture
-                                              : surface.placeholder);
-  [encoder endEncoding];
   [command presentDrawable:drawable];
   [command addCompletedHandler:^(__unused id<MTLCommandBuffer> completed) {
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -1341,7 +1331,7 @@ static void render_measurement_label(ScreenwideRegionOSC *surface,
   control.hidden = NO;
 
   // The material frame follows the latest pointer sample immediately. Its
-  // small Metal content waits until the previous drawable is actually on
+  // small content layer waits until the previous drawable is actually on
   // screen, then redraws only the newest coalesced measurement.
   if (renderState.inFlight) {
     renderState.pending = YES;
@@ -1370,21 +1360,10 @@ static void render_measurement_label(ScreenwideRegionOSC *surface,
     renderState.inFlight = NO;
     return;
   }
-  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
-      surface.device, vertices, count, size, scale);
-  MTLRenderPassDescriptor *pass =
-      [MTLRenderPassDescriptor renderPassDescriptor];
-  pass.colorAttachments[0].texture = drawable.texture;
-  pass.colorAttachments[0].loadAction = MTLLoadActionClear;
-  pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-  pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
+  screenwide_osc_draw_aligned(drawable.texture, YES, vertices, count, size, scale,
+                              &state, NULL, ScreenwideOscLensNone,
+                              surface.rulerLabel.texture, nil, nil, nil);
   id<MTLCommandBuffer> command = [surface.queue commandBuffer];
-  id<MTLRenderCommandEncoder> encoder =
-      [command renderCommandEncoderWithDescriptor:pass];
-  screenwide_region_osc_encode(encoder, surface.pipeline, buffer, count,
-                               state, surface.rulerLabel.texture,
-                               surface.placeholder);
-  [encoder endEncoding];
   __weak ScreenwideRulerLabelRenderState *weakRenderState = renderState;
   [drawable addPresentedHandler:^(__unused id<MTLDrawable> presented) {
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -1570,21 +1549,10 @@ static void render_probe_label(ScreenwideRegionOSC *surface,
     renderState.inFlight = NO;
     return;
   }
-  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
-      surface.device, vertices, count, size, scale);
-  MTLRenderPassDescriptor *pass =
-      [MTLRenderPassDescriptor renderPassDescriptor];
-  pass.colorAttachments[0].texture = drawable.texture;
-  pass.colorAttachments[0].loadAction = MTLLoadActionClear;
-  pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-  pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
+  screenwide_osc_draw_aligned(drawable.texture, YES, vertices, count, size, scale,
+                              &state, NULL, ScreenwideOscLensNone,
+                              surface.rulerLabel.texture, nil, nil, nil);
   id<MTLCommandBuffer> command = [surface.queue commandBuffer];
-  id<MTLRenderCommandEncoder> encoder =
-      [command renderCommandEncoderWithDescriptor:pass];
-  screenwide_region_osc_encode(encoder, surface.pipeline, buffer, count,
-                               state, surface.rulerLabel.texture,
-                               surface.placeholder);
-  [encoder endEncoding];
   __weak ScreenwideRulerLabelRenderState *weakRenderState = renderState;
   [drawable addPresentedHandler:^(__unused id<MTLDrawable> presented) {
     dispatch_async(dispatch_get_main_queue(), ^{

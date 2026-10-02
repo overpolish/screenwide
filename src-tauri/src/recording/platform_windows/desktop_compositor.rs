@@ -9,7 +9,7 @@
 //! of its own for the encoder. Fences order each hand-over between the two
 //! devices.
 
-use std::{mem::size_of, time::Instant};
+use std::time::Instant;
 
 use windows::{
   core::Interface,
@@ -24,38 +24,9 @@ use windows::{
 
 use crate::desktop_capture::{CapturePiece, CapturePlan, FrameSynchronizer};
 use crate::gpu::{BridgedTexture, D3d11Bridge, Gpu};
+use crate::recording::desktop_canvas::{DesktopCanvas, PieceSource, FORMAT};
 
 use super::writer::Frame;
-
-const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/desktop_compositor.wgsl"));
-const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8Unorm;
-
-/// The twin of `Piece` in `desktop_compositor.wgsl`.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable)]
-struct PieceConstants {
-  output_size: [u32; 2],
-  source_size: [u32; 2],
-  source_origin: [u32; 2],
-  source_extent: [u32; 2],
-  destination_origin: [u32; 2],
-  destination_extent: [u32; 2],
-}
-
-const _: () = assert!(size_of::<PieceConstants>().is_multiple_of(16));
-
-impl PieceConstants {
-  fn new(output: [u32; 2], source: [u32; 2], piece: CapturePiece) -> Self {
-    Self {
-      output_size: output,
-      source_size: source,
-      source_origin: [piece.source_pixels.x, piece.source_pixels.y],
-      source_extent: [piece.source_pixels.width, piece.source_pixels.height],
-      destination_origin: [piece.destination.x, piece.destination.y],
-      destination_extent: [piece.destination.width, piece.destination.height],
-    }
-  }
-}
 
 pub(super) struct DesktopFrameCoordinator {
   compositor: DesktopCompositor,
@@ -108,23 +79,33 @@ struct DesktopCompositor {
   bridge: D3d11Bridge,
   width: u32,
   height: u32,
-  layout: wgpu::BindGroupLayout,
-  pipeline: wgpu::RenderPipeline,
-  sampler: wgpu::Sampler,
-  /// Every piece's constants, one per dynamic-offset stride.
-  constants: wgpu::Buffer,
-  stride: u64,
+  drawing: DesktopCanvas,
   /// Each display's latest frame, sized like its capture.
   sources: Vec<Option<BridgedTexture>>,
   /// The shared canvas the pieces are drawn onto.
   canvas: BridgedTexture,
 }
 
-mod pipeline;
 #[cfg(test)]
 mod tests;
 
 impl DesktopCompositor {
+  fn new(capture: &ID3D11Device, width: u32, height: u32, pieces: usize) -> Result<Self, String> {
+    let gpu = crate::gpu::shared()?;
+    let bridge = D3d11Bridge::new(gpu, capture)?;
+    let canvas = bridge.shared_texture(gpu, (width, height), FORMAT, "desktop canvas")?;
+    Ok(Self {
+      gpu,
+      device: capture.clone(),
+      bridge,
+      width,
+      height,
+      drawing: DesktopCanvas::new(gpu, width, height, pieces),
+      sources: (0..pieces).map(|_| None).collect(),
+      canvas,
+    })
+  }
+
   /// Copies a display's frame into the texture its piece is drawn from.
   fn take(&mut self, index: usize, frame: &ID3D11Texture2D) -> Result<(), String> {
     let mut description = D3D11_TEXTURE2D_DESC::default();
@@ -159,70 +140,20 @@ impl DesktopCompositor {
       return Err("Desktop frames no longer match the capture plan".to_owned());
     }
     let gpu = self.gpu;
-    let mut constants = vec![0_u8; (self.stride as usize) * pieces.len()];
-    let mut bindings = Vec::with_capacity(pieces.len());
-    for (index, (piece, source)) in pieces.iter().zip(&self.sources).enumerate() {
-      let source = source
-        .as_ref()
-        .ok_or_else(|| "A desktop source has no frame yet".to_owned())?;
-      let values = PieceConstants::new(
-        [self.width, self.height],
-        [source.texture.width(), source.texture.height()],
-        *piece,
-      );
-      let start = index * self.stride as usize;
-      constants[start..start + size_of::<PieceConstants>()]
-        .copy_from_slice(bytemuck::bytes_of(&values));
-      bindings.push(gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Screenwide desktop piece"),
-        layout: &self.layout,
-        entries: &[
-          wgpu::BindGroupEntry {
-            binding: 0,
-            resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-              buffer: &self.constants,
-              offset: 0,
-              size: wgpu::BufferSize::new(size_of::<PieceConstants>() as u64),
-            }),
-          },
-          wgpu::BindGroupEntry {
-            binding: 1,
-            resource: wgpu::BindingResource::TextureView(&source.view),
-          },
-          wgpu::BindGroupEntry {
-            binding: 2,
-            resource: wgpu::BindingResource::Sampler(&self.sampler),
-          },
-        ],
-      }));
-    }
-    gpu.queue.write_buffer(&self.constants, 0, &constants);
-    let mut encoder = gpu
-      .device
-      .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Screenwide desktop compositor"),
-      });
-    {
-      let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("Screenwide desktop compositor"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-          view: &self.canvas.view,
-          depth_slice: None,
-          resolve_target: None,
-          ops: wgpu::Operations {
-            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-            store: wgpu::StoreOp::Store,
-          },
-        })],
-        ..Default::default()
-      });
-      pass.set_pipeline(&self.pipeline);
-      for (index, bindings) in bindings.iter().enumerate() {
-        pass.set_bind_group(0, bindings, &[(index as u64 * self.stride) as u32]);
-        pass.draw(0..6, 0..1);
-      }
-    }
-    gpu.queue.submit([encoder.finish()]);
+    let sources = pieces
+      .iter()
+      .zip(&self.sources)
+      .map(|(piece, source)| {
+        let source = source
+          .as_ref()
+          .ok_or_else(|| "A desktop source has no frame yet".to_owned())?;
+        Ok(PieceSource {
+          piece: *piece,
+          texture: &source.texture,
+        })
+      })
+      .collect::<Result<Vec<_>, String>>()?;
+    self.drawing.draw(&self.canvas.view, &sources)?;
     let description = D3D11_TEXTURE2D_DESC {
       Width: self.width,
       Height: self.height,

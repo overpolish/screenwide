@@ -56,9 +56,8 @@ fn the_picker_offers_the_generators_this_build_has() {
   assert_eq!(picker_generators(), rust);
 }
 
-/// Every generator source, in both shading languages. The ports are meant to
-/// stay line for line, so a scan over one has to be a scan over both.
-fn generator_sources() -> [(&'static str, &'static str); 5] {
+/// Every generator source. A scan over one has to be a scan over all.
+fn generator_sources() -> [(&'static str, &'static str); 3] {
   [
     (
       "mesh_generator_common.wgsl",
@@ -72,25 +71,12 @@ fn generator_sources() -> [(&'static str, &'static str); 5] {
       "mesh_generators_layered.wgsl",
       include_str!("../mesh_generators_layered.wgsl"),
     ),
-    (
-      "gpu_compositor_macos_generators.h",
-      include_str!(
-        "../../editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_generators.h"
-      ),
-    ),
-    (
-      "gpu_compositor_macos_generators_layered.h",
-      include_str!(
-        "../../editor/cursor_export/macos/gpu_compositor/gpu_compositor_macos_generators_layered.h"
-      ),
-    ),
   ]
 }
 
-/// The two ports apply the speed at the same point, in a line that reads the
-/// same but for the language's spelling of a local.
+/// The speed is applied once, at the dispatch every generator goes through.
 #[test]
-fn every_port_scales_the_seconds_once_at_the_dispatch() {
+fn every_generator_scales_the_seconds_once_at_the_dispatch() {
   let mut dispatches = Vec::new();
   for (name, source) in generator_sources() {
     let applications = source.matches("time * speed").count();
@@ -104,11 +90,8 @@ fn every_port_scales_the_seconds_once_at_the_dispatch() {
   }
   assert_eq!(
     dispatches,
-    [
-      "mesh_generators_layered.wgsl",
-      "gpu_compositor_macos_generators_layered.h",
-    ],
-    "the speed belongs at the two dispatches, one per port"
+    ["mesh_generators_layered.wgsl"],
+    "the speed belongs at the dispatch"
   );
 }
 

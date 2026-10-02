@@ -206,6 +206,29 @@ fn an_exported_spotlight_shades_and_blurs_only_outside_its_light() {
   std::fs::remove_dir_all(directory).unwrap();
 }
 
+/// A two-second recording of one flat mid-grey, where a share of light reads
+/// the same at every pixel.
+fn grey_recording(directory: &Path) -> PathBuf {
+  let path = directory.join("grey.mov");
+  assert!(Command::new(media_preview::ffmpeg_path())
+    .args([
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-f",
+      "lavfi",
+      "-i"
+    ])
+    .arg(format!("color=c=0x808080:s={WIDTH}x{HEIGHT}:r=10:d=2"))
+    .args(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "8"])
+    .arg(&path)
+    .status()
+    .unwrap()
+    .success());
+  path
+}
+
 /// Two spotlights butted up are one light moving on: the shade outside both
 /// holds through the join rather than lifting as the first leaves and
 /// falling again as the second arrives, and the light glides between them.
@@ -214,7 +237,7 @@ fn butted_spotlights_hold_the_shade_through_the_join() {
   let directory =
     std::env::temp_dir().join(format!("screenwide-spotlight-join-{}", std::process::id()));
   std::fs::create_dir_all(&directory).unwrap();
-  let source = recording(&directory, "testsrc2");
+  let source = grey_recording(&directory);
   let plain = exported(&source, &directory.join("plain.mp4"), &[]);
   let joined = exported(
     &source,
@@ -236,10 +259,20 @@ fn butted_spotlights_hold_the_shade_through_the_join() {
     let ratio = mean(&frame(&joined, time), outside) / mean(&frame(&plain, time), outside);
     assert!((ratio - 0.6).abs() < 0.05, "shaded to {ratio} at {time}s");
   }
-  // Halfway through the glide the light is halfway between the boxes, over
-  // a stretch inside neither.
+  // Halfway through the glide, a tenth and a half of a second in, the light
+  // is halfway between the boxes, over a stretch inside neither; once the
+  // glide is done that stretch is shaded again.
   let between = [232, 80, 256, 96];
-  let ratio = mean(&frame(&joined, "1.2"), between) / mean(&frame(&plain, "1.2"), between);
-  assert!(ratio > 0.9, "the light between them is at {ratio}");
+  let ratio = |time| mean(&frame(&joined, time), between) / mean(&frame(&plain, time), between);
+  assert!(
+    ratio("1.15") > 0.95,
+    "the light between them is at {}",
+    ratio("1.15")
+  );
+  assert!(
+    (ratio("1.3") - 0.6).abs() < 0.05,
+    "shaded to {} after the glide",
+    ratio("1.3")
+  );
   std::fs::remove_dir_all(directory).unwrap();
 }

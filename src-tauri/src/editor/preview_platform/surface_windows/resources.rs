@@ -19,7 +19,7 @@ pub(super) struct Gpu {
 
 pub(super) struct Backdrop {
   pub(super) scale_transform: IDCompositionScaleTransform,
-  pub(super) surface: VisualSurface,
+  pub(super) surface: Surface,
   pub(super) visual: IDCompositionVisual,
 }
 
@@ -49,7 +49,7 @@ pub(super) struct Pane {
   /// local redraw (magnifier, geometry) never drops the baked camera for a frame.
   pub(super) last_camera: Option<(BakeGeometry, bool, bool)>,
   pub(super) settings: Option<ScreenshotOutputSettings>,
-  pub(super) magnifier: Option<recenter::CropMagnifier>,
+  pub(super) magnifier: Option<CropMagnifier>,
   /// A frame drawn inside an open present batch, waiting for the batch flush
   /// to present it so every pane's new pixels reach the compositor in the
   /// same pass.
@@ -68,6 +68,6 @@ pub(super) struct Pane {
   pub(super) seen: bool,
   pub(super) source: Option<compositor::SourceTexture>,
   pub(super) source_token: Option<u64>,
-  pub(super) surface: VisualSurface,
+  pub(super) surface: Surface,
   pub(super) visual: IDCompositionVisual,
 }

@@ -3,60 +3,59 @@
 
 //! The recording's audio ribbon, drawn on its own composition visual.
 
+use super::super::audio_ribbon::{AudioRibbonRenderer, RibbonLook};
 use super::super::PreviewSurfaceRect;
-use crate::app_windows::overlay_surface::{Frame, VisualSurface};
 use crate::editor::recording_preview_player::audio_visualizer::AudioRibbonEnvelopes;
+use crate::gpu::surface::Surface;
 use windows::Win32::Graphics::DirectComposition::{IDCompositionDevice, IDCompositionVisual};
 
-/// The twin of `Ribbon` in `audio_ribbon.wgsl`.
-#[repr(C)]
-#[derive(Clone, Copy, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
-struct Constants {
-  color: [f32; 4],
-  flat: [f32; 4],
-  geometry: [f32; 4],
-  style: [f32; 4],
-}
-
 pub(super) struct AudioRibbon {
-  shared: &'static crate::gpu::Gpu,
-  surface: VisualSurface,
-  pipeline: wgpu::RenderPipeline,
-  layout: wgpu::BindGroupLayout,
-  constants: wgpu::Buffer,
-  /// The constants and the bucketed levels, once there are levels to draw.
-  levels: Option<wgpu::BindGroup>,
+  renderer: AudioRibbonRenderer,
   visual: IDCompositionVisual,
-  viewport: (u32, u32),
-  points: u32,
-  playhead: f32,
   composition: IDCompositionDevice,
   offset: (f32, f32),
   scale: f32,
   neutral: f32,
-  dirty: bool,
-  last_constants: Option<Constants>,
+  playhead: f32,
 }
 
-mod draw;
-mod pipeline;
-
 impl AudioRibbon {
+  /// The ribbon's visual under `root`, hidden until it has levels. The
+  /// caller commits the tree.
+  pub(super) fn new(
+    shared: &'static crate::gpu::Gpu,
+    composition: &IDCompositionDevice,
+    root: &IDCompositionVisual,
+  ) -> Result<Self, String> {
+    let visual = unsafe { composition.CreateVisual() }.map_err(|e| e.to_string())?;
+    unsafe {
+      visual
+        .SetOffsetX2(-100000.0)
+        .and_then(|_| root.AddVisual(&visual, true, None::<&IDCompositionVisual>))
+    }
+    .map_err(|e| e.to_string())?;
+    let surface = Surface::on_visual(shared, &visual)?;
+    Ok(Self {
+      renderer: AudioRibbonRenderer::new(shared, surface),
+      visual,
+      composition: composition.clone(),
+      offset: (0.0, 0.0),
+      scale: 1.0,
+      neutral: 1.0,
+      playhead: 0.0,
+    })
+  }
+
   pub(super) fn set_viewport(
     &mut self,
     rect: PreviewSurfaceRect,
     scale: f64,
     backdrop: [f64; 4],
   ) -> Result<(), String> {
-    let size = (
-      (rect.width * scale).round().max(2.0) as u32,
-      (rect.height * scale).round().max(2.0) as u32,
-    );
-    if size != self.viewport {
-      self.surface.resize(self.shared, size);
-      self.viewport = size;
-      self.dirty = true;
-    }
+    self.renderer.set_viewport((
+      (rect.width * scale).round() as u32,
+      (rect.height * scale).round() as u32,
+    ));
     self.offset = ((rect.x * scale) as f32, (rect.y * scale) as f32);
     self.scale = scale.max(0.1) as f32;
     let luminance = backdrop[0] * 0.2126 + backdrop[1] * 0.7152 + backdrop[2] * 0.0722;
@@ -66,35 +65,17 @@ impl AudioRibbon {
   }
 
   pub(super) fn set_envelopes(&mut self, values: &AudioRibbonEnvelopes) -> Result<(), String> {
-    let samples = crate::editor::recording_preview_player::audio_visualizer::bucket_levels(values);
-    self.points = values.points;
-    self.dirty = true;
-    if samples.is_empty() {
-      self.levels = None;
-      self.surface.resize(self.shared, (2, 2));
-      self.viewport = (2, 2);
-      return self.sync_visibility();
-    }
-    let levels = self
-      .shared
-      .texture_with_pixels(
-        "Screenwide audio ribbon levels",
-        (samples.len() as u32, 1, 1),
-        wgpu::TextureFormat::R32Float,
-        bytemuck::cast_slice(&samples),
-      )
-      .create_view(&Default::default());
-    self.levels = Some(self.bindings(&levels));
+    self.renderer.set_envelopes(values);
     self.draw()?;
     self.sync_visibility()
   }
 
   pub(super) fn has_envelopes(&self) -> bool {
-    self.levels.is_some()
+    self.renderer.has_levels()
   }
 
   pub(super) fn set_playhead(&mut self, ratio: f64) -> Result<(), String> {
-    if self.levels.is_none() {
+    if !self.renderer.has_levels() {
       return Ok(());
     }
     self.playhead = ratio.clamp(0.0, 1.0) as f32;
@@ -102,8 +83,21 @@ impl AudioRibbon {
     self.sync_visibility()
   }
 
+  fn draw(&mut self) -> Result<(), String> {
+    let [red, green, blue] = crate::system_accent::accent_rgb();
+    self
+      .renderer
+      .draw(RibbonLook {
+        scale: self.scale,
+        playhead: self.playhead,
+        color: [red, green, blue, 1.0],
+        flat: [self.neutral, self.neutral, self.neutral, 0.25],
+      })
+      .map(|_| ())
+  }
+
   fn sync_visibility(&self) -> Result<(), String> {
-    let x = if self.levels.is_some() {
+    let x = if self.renderer.has_levels() {
       self.offset.0
     } else {
       -100000.0

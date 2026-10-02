@@ -189,58 +189,21 @@ fn deserializes_every_target_the_bar_can_send() {
   assert_eq!(region.position.x, -12.0);
 }
 
-/// The crop tool shows the whole source, and the layer the crop will actually
-/// produce over it.
+/// The editor canvas paints the same generators as the background renderer.
 ///
-/// The ghost underneath has to be flat - rounding and shadowing the uncropped
-/// source would say the wrong thing about the result - so the canvas moves
-/// both onto the second draw, and sizes the radius from the crop rectangle
-/// rather than from the whole image.
-#[cfg(target_os = "macos")]
-#[test]
-fn a_crop_preview_moves_the_rounding_and_the_shadow_onto_the_cropped_layer() {
-  let mut settings = crate::screenshots::test_output_settings(400, 200);
-  settings.drop_shadow = true;
-  settings.radius_percent = 10.0;
-  let plain = platform::native_canvas(2, 1, &settings, true).unwrap();
-  assert!(plain.radius > 0);
-  assert_eq!(plain.drop_shadow, 1);
-  assert_eq!(plain.crop_preview, 0);
-
-  settings.crop_preview = Some(output::CropPreviewRect {
-    height: 80.0,
-    width: 200.0,
-    x: 50.0,
-    y: 40.0,
-  });
-  let cropped = platform::native_canvas(2, 1, &settings, true).unwrap();
-  assert_eq!(cropped.radius, 0);
-  assert_eq!(cropped.drop_shadow, 0);
-  assert_eq!(cropped.crop_preview, 1);
-  assert_eq!(cropped.crop_preview_drop_shadow, 1);
-  assert_eq!(cropped.crop_preview_x, 50.0);
-  assert_eq!(cropped.crop_preview_y, 40.0);
-  assert_eq!(cropped.crop_preview_width, 200.0);
-  assert_eq!(cropped.crop_preview_height, 80.0);
-  // Ten percent of the crop rectangle's shorter side, not of the whole image.
-  assert_eq!(cropped.crop_preview_radius, 8.0);
-}
-
-/// The Metal canvas paints the same generators as the shared renderer.
-///
-/// The two are separate ports of the same reference shaders, so the only way
-/// to know they agree is to render a canvas through each and compare. A
-/// generator that read the wrong uniform, or a line that drifted while being
-/// translated, shows up here rather than as a preview that does not match the
-/// file it exports.
+/// The canvas assembles the generators into its own shader and hands them the
+/// seed its own way, so the only way to know the two agree is to render a
+/// canvas through each and compare. A generator that read the wrong uniform
+/// shows up here rather than as a preview that does not match the file it
+/// exports.
 ///
 /// Both sides are asked for the same moment part way into a clip rather than
 /// for the still at zero, so the animation is compared too: a generator whose
-/// `time` reached one port's maths and not the other's would agree at zero and
-/// only diverge once a recording started playing.
+/// `time` reached one shader's maths and not the other's would agree at zero
+/// and only diverge once a recording started playing.
 #[cfg(target_os = "macos")]
 #[test]
-fn the_native_canvas_paints_the_same_generators_as_the_shared_renderer() {
+fn the_editor_canvas_paints_the_same_generators_as_the_background_renderer() {
   const EDGE: u32 = 64;
   const SECONDS: f64 = 3.5;
   let colors = [
@@ -300,7 +263,7 @@ fn the_native_canvas_paints_the_same_generators_as_the_shared_renderer() {
     // and anything more is a port that drifted.
     assert!(
       worst <= 6,
-      "{} differs between the native canvas and the shared renderer by {worst}",
+      "{} differs between the editor canvas and the background renderer by {worst}",
       generator.name
     );
   }

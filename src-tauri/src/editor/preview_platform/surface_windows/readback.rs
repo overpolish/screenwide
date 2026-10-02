@@ -28,7 +28,7 @@ impl RecordingPreviewSurface {
         return Err("The screenshot layers do not share a canvas size".to_owned());
       }
       let source = gpu.compositor.screenshot_source(image)?;
-      let prepared = super::annotation::prepared_arrows(
+      let prepared = crate::editor::preview_platform::annotation_gpu::prepared_arrows(
         &settings.annotations,
         (image.width, image.height),
         settings,
@@ -89,7 +89,7 @@ impl RecordingPreviewSurface {
         .copy_source(gpu.d3d11, camera_source, texture, subresource)?;
     }
     let target = readback_target(gpu.shared, output_size);
-    let prepared = super::annotation::prepared_arrows(
+    let prepared = crate::editor::preview_platform::annotation_gpu::prepared_arrows(
       &settings.annotations,
       source_size,
       settings,

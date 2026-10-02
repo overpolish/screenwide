@@ -49,8 +49,7 @@ fn sweep(bands: &[HighlightBand]) -> f32 {
 }
 
 /// The share of the reveal each of `lines` lines draws itself in over. The
-/// twin of `share` in `composite_highlights`, in `annotation_highlight.wgsl`
-/// and `gpu_compositor_macos_shader_source_annotation_highlight.h`.
+/// twin of `share` in `composite_highlights`, in `annotation_highlight.wgsl`.
 fn line_share(lines: usize) -> f64 {
   (2.0 / (lines as f64 + 1.0)).clamp(0.35, 1.0)
 }

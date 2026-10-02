@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! CPU vertex builder and render constants for every Windows GPU OSC surface.
-//! It mirrors the shared macOS OSC renderer. Geometry is pure math on top-left
-//! pixel coordinates, so tool surfaces only provide their semantic scene.
+//! CPU vertex builder for every Windows GPU OSC surface. It mirrors the
+//! macOS OSC vertex builders. Geometry is pure math on top-left pixel
+//! coordinates, so tool surfaces only provide their semantic scene.
 
 mod geometry;
 pub(crate) use geometry::add_line;
@@ -12,104 +12,17 @@ pub(crate) use geometry::add_texture_quad;
 use geometry::is_empty;
 use geometry::ndc;
 use geometry::push_quad;
-use geometry::push_quad_with_aux;
 
+use super::{RenderConstants, Vertex};
 use crate::osc::geometry::{Point, Rect, Size};
-use crate::osc::style::{control_palette, ocr_palette, overlay_palette, ruler_palette};
-
-/// One triangle-list vertex. `position` is already in NDC: the pixel-to-clip
-/// mapping happens here so the vertex shader stays a pass-through.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
-pub(crate) struct Vertex {
-  pub position: [f32; 2],
-  pub uv: [f32; 2],
-  /// Pattern phase and edge length for boundary-aware marquee capsules.
-  pub aux: [f32; 2],
-  pub kind: u32,
-  pub padding: u32,
-}
-
-const _: () = assert!(std::mem::size_of::<Vertex>() == 32);
-
-/// Replaces Metal's nine fragment push-constant slots (b0-b8) with a single
-/// uniform block, the twin of `RenderConstants` in `osc.wgsl`. Fields keep the
-/// Metal declaration order and every member is a 16-byte row, so the uniform
-/// layout needs no padding.
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
-pub(crate) struct RenderConstants {
-  pub light_mode: [u32; 4],
-  pub magnifier_box: [f32; 4],
-  pub action_fills: [[f32; 4]; 2],
-  pub control_colors: [[f32; 4]; 2],
-  pub ocr_colors: [[f32; 4]; 8],
-  pub overlay_shade: [f32; 4],
-  pub ruler_colors: [[f32; 4]; 2],
-  pub ruler_sample: [f32; 4],
-  pub ruler_animation: [f32; 4],
-  pub magnifier_source: [f32; 4],
-  pub magnifier_sample: [f32; 4],
-  pub magnifier_source_range: [f32; 4],
-  pub magnifier_flags: [u32; 4],
-  /// Appended for the OCR chrome: `.x` is the plate corner radius. macOS took
-  /// its radius from the material surface's `cornerRadius` mask, which the
-  /// folded-in chrome has no equivalent for.
-  pub chrome: [f32; 4],
-  pub chrome_outline: [f32; 4],
-  /// Physical viewport size and source texel size for the Windows material
-  /// blur sampled from the already-resident frozen desktop texture.
-  pub chrome_backdrop: [f32; 4],
-  /// The snapshot UV window after Ruler pan/zoom.
-  pub chrome_source: [f32; 4],
-}
-
-const _: () = assert!(std::mem::size_of::<RenderConstants>().is_multiple_of(16));
 
 /// Lens edge length in points; the box is this times the display scale.
 pub(crate) const MAGNIFIER_BOX_POINTS: f64 = 96.0;
 
 impl RenderConstants {
-  /// Mirrors `screenwide_region_osc_render_state`: palettes come from the
-  /// platform-neutral Rust tokens, action fills stay zero because OCR controls
-  /// re-push their own pair per draw call.
-  pub(crate) fn new(light_mode: bool) -> Self {
-    let controls = control_palette(light_mode);
-    let ocr = ocr_palette(light_mode);
-    let ruler = ruler_palette(light_mode);
-    Self {
-      light_mode: [u32::from(light_mode), 0, 0, 0],
-      magnifier_box: [0.0; 4],
-      action_fills: [[0.0; 4]; 2],
-      control_colors: [controls.fill, controls.outline],
-      ocr_colors: [
-        ocr.primary_fill,
-        ocr.primary_outline,
-        ocr.qr_fill,
-        ocr.qr_outline,
-        ocr.error_fill,
-        ocr.error_outline,
-        ocr.selection_fill,
-        ocr.selection_outline,
-      ],
-      overlay_shade: overlay_palette().shade,
-      ruler_colors: [ruler.primary, ruler.info],
-      ruler_sample: [0.0; 4],
-      ruler_animation: [0.0; 4],
-      magnifier_source: [0.0; 4],
-      magnifier_sample: [0.0; 4],
-      magnifier_source_range: [0.0, 0.0, 1.0, 1.0],
-      magnifier_flags: [0; 4],
-      chrome: [0.0; 4],
-      chrome_outline: [0.0; 4],
-      chrome_backdrop: [0.0; 4],
-      chrome_source: [0.0, 0.0, 1.0, 1.0],
-    }
-  }
-
   /// Port of `screenwide_region_magnifier_make`. The box is sized and centred
-  /// in physical pixels because the shader reads `SV_Position` directly, the
-  /// way the Metal kernel read its thread position.
+  /// in physical pixels because the shader reads the fragment position
+  /// directly.
   #[allow(clippy::too_many_arguments)]
   pub(crate) fn set_magnifier(
     &mut self,
@@ -204,7 +117,7 @@ pub(crate) use selection::{
 };
 
 /// The lens is emitted last as a quad over `magnifier_box`. It has its own
-/// kind, 49, because crop corners use Metal's 45.
+/// kind, 49, because crop corners use 45.
 pub(crate) fn add_magnifier(out: &mut Vec<Vertex>, view: Size, constants: &RenderConstants) {
   let [x, y, width, height] = constants.magnifier_box;
   if constants.magnifier_flags[1] == 0 || width <= 0.0 || height <= 0.0 {

@@ -129,7 +129,7 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
         current.pane_index != target.pane_index || current.layer_id != target.layer_id
       });
       // A held arrow, or a group held together, counts as a change even on
-      // the same layer, exactly as the Metal view's `changed` does: the press
+      // the same layer, exactly as the macOS view's `changed` does: the press
       // lets it go, and React has to hear about it to clear its own choice.
       let changed =
         layer_changed || state.annotation.selected != -1 || annotation::has_group(&state);

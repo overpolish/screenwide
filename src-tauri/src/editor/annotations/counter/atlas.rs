@@ -13,8 +13,7 @@
 use std::collections::HashMap;
 
 /// Where one number sits, in atlas pixels. A number that is not drawn gets a
-/// zero rectangle, which the kernels skip. The twin of
-/// `ScreenwideAnnotationTextRect`.
+/// zero rectangle, which the shaders skip.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) struct AtlasRect {
@@ -24,9 +23,8 @@ pub(crate) struct AtlasRect {
   pub(crate) height: f32,
 }
 
-/// The largest side the atlas takes: the biggest texture every D3D11 feature
-/// level 11 device accepts. Metal holds the same ceiling so both backends
-/// agree on how many numbers one frame can show.
+/// The largest side the atlas takes: the biggest texture every device the
+/// app runs on accepts, which bounds how many numbers one frame can show.
 const MAX_SIDE: u32 = 16_384;
 const BASE_WIDTH: u32 = 1_024;
 const BASE_HEIGHT: u32 = 256;

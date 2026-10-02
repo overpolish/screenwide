@@ -4,21 +4,13 @@
 use super::ffi::{
   screenwide_preview_surface_present_recording_workspace,
   screenwide_preview_surface_redraw_workspace,
-  screenwide_preview_surface_set_workspace_annotation_hover,
-  screenwide_preview_surface_update_workspace_camera_overlay,
-  screenwide_preview_surface_update_workspace_canvas,
-  screenwide_preview_surface_workspace_camera_source_size,
-  screenwide_preview_surface_workspace_source_size,
 };
-use super::native_types::{NativeWorkspaceLayer, RecordingWorkspaceLayer};
+use super::native_types::RecordingWorkspaceLayer;
+use super::workspace_scene::{LayerPicture, StagedLayer};
 use super::RecordingPreviewSurface;
-use crate::editor::annotations::native::native_annotations;
-use crate::editor::annotations::redact::native::{source_per_capture_point, RedactSource};
-use crate::editor::{
-  cursor_effects::{GpuArtwork, NativeGpuArtwork, NativeGpuCursor},
-  media_preview, CameraOverlaySettings,
-};
-use crate::screenshots::{native_canvas, ScreenshotOutputSettings, StillOverlay};
+use crate::editor::cursor_effects::{GpuArtwork, GpuCursor};
+use crate::editor::{media_preview, CameraOverlaySettings};
+use crate::screenshots::{ScreenshotOutputSettings, StillOverlay};
 
 impl RecordingPreviewSurface {
   /// Presents a retained recording scene with explicit per-layer placements.
@@ -28,218 +20,112 @@ impl RecordingPreviewSurface {
     layers: &[RecordingWorkspaceLayer<'_>],
     artworks: Option<&[GpuArtwork]>,
   ) -> Result<bool, String> {
-    // The views below borrow these lists until the presenter has copied them.
-    // A recording's redactions carry the fills held from their clips' first
-    // frames, so all a frame adds is how large its source is drawn.
-    let annotations: Vec<_> = layers
+    let picture = |image: Option<_>, pixels: Option<(*mut std::ffi::c_void, _)>| {
+      image
+        .map(LayerPicture::Image)
+        .or_else(|| pixels.map(|(pixels, _)| LayerPicture::Pixels(pixels)))
+    };
+    let staged = layers
       .iter()
       .map(|layer| {
-        let size = layer.source.map_or_else(
-          || layer.source_pixels.map_or((0, 0), |(_, size)| size),
-          |source| (source.width, source.height),
-        );
-        native_annotations(
-          &layer.settings.annotations,
-          RedactSource::Video {
-            source_per_point: source_per_capture_point(size.0, layer.settings.capture_width_points),
-          },
-          layer.settings.size_scale(),
-        )
+        Ok(StagedLayer {
+          pane_index: layer.pane_index,
+          layer_id: layer.pane_index,
+          source_token: layer.source_token,
+          source: picture(layer.source, layer.source_pixels)
+            .ok_or_else(|| "Recording workspace layer has no source".to_owned())?,
+          // A recording's redactions carry the fills held from their clips'
+          // first frames, so all a frame adds is how large its source is.
+          redaction_picture: None,
+          settings: &layer.settings,
+          seconds: layer.seconds,
+          cursor: layer.cursor.map(|cursor| GpuCursor {
+            clip_at_video_edge: layer.clip_cursor_at_video_edge,
+            ..cursor
+          }),
+          keyboard: layer.keyboard,
+          camera: picture(layer.camera, layer.camera_pixels),
+          overlay: layer.overlay,
+          foreground_only: layer.foreground_only,
+          // The halo is set on the scene by `redraw_annotation_hover`.
+          hover: None,
+        })
       })
-      .collect();
-    let mut native_layers = Vec::with_capacity(layers.len());
-    for (layer, annotations) in layers.iter().zip(&annotations) {
-      let (source_width, source_height, source_rgba, source_pixels, source_kind) =
-        if let Some(source) = layer.source {
-          (
-            source.width,
-            source.height,
-            source.rgba.as_ptr(),
-            std::ptr::null_mut(),
-            0,
-          )
-        } else if let Some((pixels, size)) = layer.source_pixels {
-          (size.0, size.1, std::ptr::null(), pixels, 1)
-        } else {
-          return Err("Recording workspace layer has no source".to_owned());
-        };
-      let mut canvas = native_canvas(source_width, source_height, &layer.settings, true)?;
-      canvas.clip_cursor_at_video_edge = u32::from(layer.clip_cursor_at_video_edge);
-      canvas.foreground_only = u32::from(layer.foreground_only);
-      let mut overlay = layer
-        .overlay
-        .map_or_else(StillOverlay::default, |overlay| unsafe {
-          std::ptr::read(overlay)
-        });
-      let (camera_rgba, camera_dims) = layer.camera.map_or((std::ptr::null(), (0, 0)), |camera| {
-        (camera.rgba.as_ptr(), (camera.width, camera.height))
-      });
-      let (camera_pixels, camera_pixel_dims) = layer
-        .camera_pixels
-        .map_or((std::ptr::null_mut(), (0, 0)), |(pixels, size)| {
-          (pixels, size)
-        });
-      if overlay.camera_source_width == 0 {
-        overlay.camera_source_width = camera_dims.0;
-      }
-      if overlay.camera_source_height == 0 {
-        overlay.camera_source_height = camera_dims.1;
-      }
-      if overlay.camera_source_width == 0 {
-        overlay.camera_source_width = camera_pixel_dims.0;
-      }
-      if overlay.camera_source_height == 0 {
-        overlay.camera_source_height = camera_pixel_dims.1;
-      }
-      native_layers.push(NativeWorkspaceLayer {
-        pane_index: layer.pane_index,
-        layer_id: layer.pane_index,
-        source_rgba,
-        source_pixels,
-        source_kind,
-        source_token: layer.source_token,
-        source_width,
-        source_height,
-        canvas_width: layer.settings.width,
-        canvas_height: layer.settings.height,
-        canvas,
-        placement: layer.placement,
-        seconds: layer.seconds,
-        cursor: NativeGpuCursor::from(layer.cursor),
-        keyboard: layer.keyboard.unwrap_or_default(),
-        camera_rgba,
-        camera_pixels,
-        overlay,
-        annotations: annotations.view(),
-      });
-    }
-    let native_artworks = artworks
-      .unwrap_or_default()
+      .collect::<Result<Vec<_>, String>>()?;
+    self.scene.stage(&staged, artworks)?;
+    let panes = layers
       .iter()
-      .map(NativeGpuArtwork::from)
+      .map(|layer| layer.pane_index)
+      .collect::<Vec<_>>();
+    let placements = layers
+      .iter()
+      .map(|layer| layer.placement)
       .collect::<Vec<_>>();
     Ok(unsafe {
       screenwide_preview_surface_present_recording_workspace(
         self.handle,
-        native_layers.as_ptr(),
-        native_layers.len().try_into().unwrap_or(u32::MAX),
-        native_artworks.as_ptr(),
-        native_artworks.len().try_into().unwrap_or(u32::MAX),
+        panes.as_ptr(),
+        placements.as_ptr(),
+        panes.len().try_into().unwrap_or(u32::MAX),
       ) != 0
     })
   }
 
-  /// Rebuilds retained layer uniforms against the already resident GPU source
-  /// buffers. This keeps crop/output transitions in the same native draw as
-  /// the OSC without asking the still decoder for identical source pixels.
+  /// Rebuilds the retained layers' canvases over their resident pictures.
+  /// This keeps crop/output transitions in the same native draw as the OSC
+  /// without asking the still decoder for identical source pixels.
   pub(crate) fn recompose_recording_workspace(
     &self,
     panes: &[(u32, &ScreenshotOutputSettings)],
     baked_camera: Option<(CameraOverlaySettings, bool, bool)>,
   ) -> Result<bool, String> {
-    let mut updates = Vec::with_capacity(panes.len());
-    let mut preview_sizes = Vec::with_capacity(panes.len());
+    // The incoming settings are the semantic source of truth once there is no
+    // active native gesture, so each canvas's size and uniforms change
+    // together: reusing a pre-undo size would stretch the restored pixels.
     for (pane_index, settings) in panes {
-      let mut source_width = 0;
-      let mut source_height = 0;
-      let source_found = unsafe {
-        screenwide_preview_surface_workspace_source_size(
-          self.handle,
-          *pane_index,
-          &mut source_width,
-          &mut source_height,
-        ) != 0
-      };
-      if !source_found {
-        return Ok(false);
-      }
-      // The retained layer can still contain the pre-undo frame dimensions.
-      // Reusing those dimensions updates the crop uniforms but stretches the
-      // restored pixels into the stale canvas until another native gesture
-      // happens to resize it. The incoming settings are the semantic source
-      // of truth once there is no active native gesture, so update the canvas
-      // dimensions and uniforms together.
-      let canvas_width = settings.width;
-      let canvas_height = settings.height;
-      let preview_settings = (*settings).clone();
-      preview_sizes.push((*pane_index, canvas_width, canvas_height));
-      updates.push((
-        *pane_index,
-        canvas_width,
-        canvas_height,
-        native_canvas(source_width, source_height, &preview_settings, true)?,
-      ));
-    }
-    for (pane_index, width, height, canvas) in updates {
-      let updated = unsafe {
-        screenwide_preview_surface_update_workspace_canvas(
-          self.handle,
-          pane_index,
-          width,
-          height,
-          &canvas,
-        ) != 0
-      };
-      if !updated {
+      if !self.scene.update_canvas(*pane_index, settings)? {
         return Ok(false);
       }
     }
-    if let Some((settings, drop_shadow, camera_on_top)) = baked_camera {
-      let mut camera_width = 0;
-      let mut camera_height = 0;
-      let found = unsafe {
-        screenwide_preview_surface_workspace_camera_source_size(
-          self.handle,
-          0,
-          &mut camera_width,
-          &mut camera_height,
-        ) != 0
-      };
-      let Some((_, screen_width, screen_height)) =
-        preview_sizes.iter().find(|(index, _, _)| *index == 0)
-      else {
-        return Ok(false);
-      };
-      if !found {
-        return Ok(false);
-      }
-      let geometry = media_preview::bake_geometry(media_preview::BakedVideoExportOptions {
-        camera_drop_shadow: drop_shadow,
-        camera_height,
-        camera_width,
-        overlay: settings,
-        screen_height: *screen_height,
-        screen_width: *screen_width,
-        video: media_preview::VideoExportOptions {
-          compression: 0,
-          resolution_scale_percent: 100,
-          source_scale_percent: 100,
-        },
-      })?;
-      let overlay = StillOverlay {
-        camera_crop_x: geometry.crop_x,
-        camera_crop_y: geometry.crop_y,
-        camera_crop_width: geometry.crop_width,
-        camera_crop_height: geometry.crop_height,
-        camera_frame_x: geometry.frame_x,
-        camera_frame_y: geometry.frame_y,
-        camera_frame_width: geometry.frame_width,
-        camera_frame_height: geometry.frame_height,
-        camera_radius: geometry.radius,
-        camera_source_width: camera_width,
-        camera_source_height: camera_height,
-        camera_drop_shadow: u32::from(drop_shadow),
-        camera_on_top: u32::from(camera_on_top),
-        ..StillOverlay::default()
-      };
-      let updated = unsafe {
-        screenwide_preview_surface_update_workspace_camera_overlay(self.handle, 0, &overlay) != 0
-      };
-      if !updated {
-        return Ok(false);
-      }
-    }
-    Ok(true)
+    let Some((settings, drop_shadow, camera_on_top)) = baked_camera else {
+      return Ok(true);
+    };
+    let Some((_, screen)) = panes.iter().find(|(index, _)| *index == 0) else {
+      return Ok(false);
+    };
+    let Some((camera_width, camera_height)) = self.scene.camera_source_size(0) else {
+      return Ok(false);
+    };
+    let geometry = media_preview::bake_geometry(media_preview::BakedVideoExportOptions {
+      camera_drop_shadow: drop_shadow,
+      camera_height,
+      camera_width,
+      overlay: settings,
+      screen_height: screen.height,
+      screen_width: screen.width,
+      video: media_preview::VideoExportOptions {
+        compression: 0,
+        resolution_scale_percent: 100,
+        source_scale_percent: 100,
+      },
+    })?;
+    let overlay = StillOverlay {
+      camera_crop_x: geometry.crop_x,
+      camera_crop_y: geometry.crop_y,
+      camera_crop_width: geometry.crop_width,
+      camera_crop_height: geometry.crop_height,
+      camera_frame_x: geometry.frame_x,
+      camera_frame_y: geometry.frame_y,
+      camera_frame_width: geometry.frame_width,
+      camera_frame_height: geometry.frame_height,
+      camera_radius: geometry.radius,
+      camera_source_width: camera_width,
+      camera_source_height: camera_height,
+      camera_drop_shadow: u32::from(drop_shadow),
+      camera_on_top: u32::from(camera_on_top),
+      ..StillOverlay::default()
+    };
+    Ok(self.scene.update_camera(0, &overlay))
   }
 
   /// Moves the hover halo on the retained recording scene and redraws it.
@@ -248,15 +134,13 @@ impl RecordingPreviewSurface {
   /// sent round through a fresh composition - which a recording cannot do
   /// from annotations alone, having a decoded frame behind them.
   ///
-  /// `index` is the annotation's place in its own pane's list, or -1 to clear.
+  /// `hover` is the pane, the annotation's place in its own list and the
+  /// halo's width; `None` clears.
   pub(crate) fn redraw_annotation_hover(&self, hover: Option<(u32, usize, f32)>) -> bool {
-    let (pane, index, width) = hover.map_or((0, -1, 0.0), |(pane, index, width)| {
-      (pane, i32::try_from(index).unwrap_or(-1), width)
-    });
-    let moved = unsafe {
-      screenwide_preview_surface_set_workspace_annotation_hover(self.handle, pane, index, width)
-        != 0
-    };
+    let moved = self.scene.set_hover(
+      hover.map_or(0, |(pane, _, _)| pane),
+      hover.map(|(_, index, width)| (index, width)),
+    );
     moved && self.redraw_recording_workspace()
   }
 

@@ -17,6 +17,8 @@ use std::time::{Duration, Instant};
 use super::geometry::{Point, Rect};
 
 pub use confirm::{ConfirmAction, ConfirmActionSpec, ConfirmLayer, ConfirmUpdate};
+#[cfg(target_os = "macos")]
+pub(crate) use icons::icon_atlas;
 pub use icons::ControlIcon;
 #[cfg(target_os = "windows")]
 pub use palette::control_stroke;

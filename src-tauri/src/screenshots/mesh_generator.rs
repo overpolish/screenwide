@@ -7,16 +7,16 @@
 //! still called a mesh. It now names a generator alongside its colours: the
 //! original, which alone reads the blobs and the warp, and eight ported from
 //! the reference shader library, which read their colours, the seed, and the
-//! canvas seconds. The numbers are a wire format shared with three shading
-//! languages, so an id keeps its number for good and new ones are appended.
+//! canvas seconds. The numbers are a wire format shared with the shaders, so
+//! an id keeps its number for good and new ones are appended.
 //!
 //! # How fast each generator drifts
 //!
-//! Every backend hands a generator the same seconds the classic mesh already
-//! drifts with: the Metal canvas's `seconds`, the D3D canvas's `motion.x`, and
-//! the `time` word of the wgpu mesh uniform. The dispatch that switches on the
-//! id scales those seconds once by the generator's `speed` before the
-//! generator sees them, because the reference shaders assume `iTime` at full
+//! Every renderer hands a generator the same seconds the classic mesh already
+//! drifts with: the canvas's `motion.x` and the `time` word of the mesh
+//! uniform. The dispatch that switches on the id scales those seconds once by
+//! the generator's `speed` before the generator sees them, because the
+//! reference shaders assume `iTime` at full
 //! speed and a background behind a recording wants a drift, not a demo. The
 //! shaders carry no factor of their own; this table is the `speed` field, and
 //! the numbers are tuned by eye against the classic mesh, which is the
@@ -118,7 +118,7 @@ pub(crate) fn default_generator() -> String {
   DEFAULT_GENERATOR.to_owned()
 }
 
-/// Resolves a generator seed on the CPU so every D3D11 draw receives
+/// Resolves a generator seed on the CPU so every Direct3D draw receives
 /// stable domain coordinates instead of recalculating a large GPU sine hash.
 #[cfg(target_os = "windows")]
 pub(crate) fn generator_seed_shift(seed: u32) -> [f32; 3] {
@@ -175,28 +175,6 @@ pub(crate) fn generator_palette(colors: &[String]) -> Result<[[f32; 4]; 4], Stri
     *slot = [red, green, blue, 1.0];
   }
   Ok(palette)
-}
-
-/// The colours as the native canvas shaders read them.
-///
-/// The app's own mesh takes one colour per blob with the base behind them,
-/// which is how the settings carry them, so they are handed over as they are.
-/// A ported generator reads its palette off the front instead.
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
-pub(crate) fn canvas_colors(
-  generator: &MeshGenerator,
-  colors: &[String],
-) -> Result<[[f32; 4]; 5], String> {
-  let mut canvas = [[0.0, 0.0, 0.0, 1.0]; 5];
-  if generator.id == 0 {
-    for (index, value) in colors.iter().take(5).enumerate() {
-      let [red, green, blue, _] = super::parse_hex_colour(value)?.map(|c| f32::from(c) / 255.0);
-      canvas[index] = [red, green, blue, 1.0];
-    }
-    return Ok(canvas);
-  }
-  canvas[..4].copy_from_slice(&generator_palette(colors)?);
-  Ok(canvas)
 }
 
 #[cfg(test)]

@@ -213,7 +213,7 @@ impl PreviewManager {
   ) -> Option<AnnotationCommit> {
     // The OSC is derived from React's latest layout: rebase the native pixel
     // composition onto that same snapshot before accepting pointer input so
-    // both Metal layers share one gesture origin.
+    // both preview layers share one gesture origin.
     let base = self.react_output.clone().or_else(|| self.output.clone())?;
     self.output = Some(base);
     let source = self.annotation_source(pane_index)?;

@@ -4,11 +4,10 @@
 //! Draw-ready arrow geometry, prepared once per annotation before drawing or
 //! picking, never per pixel.
 //!
-//! Both backends prepare here: the D3D11 one calls this directly and the
-//! Metal compositor and the macOS chrome reach it through
-//! `screenwide_annotation_prepare`, so the two draw the same pixels from the
-//! same annotation. The shaders hold the only other copy of the shape, as a
-//! per-pixel SDF over the record this fills.
+//! The compositor prepares here directly and the macOS chrome reaches it
+//! through `screenwide_annotation_prepare`, so the two agree on the pixels
+//! drawn from the same annotation. The shaders hold the only other copy of
+//! the shape, as a per-pixel SDF over the record this fills.
 
 use crate::editor::annotations::geometry::{add, bezier, distance, length, scale, subtract};
 use crate::editor::annotations::geometry::{ArrowGeometry, ArrowTriangle};

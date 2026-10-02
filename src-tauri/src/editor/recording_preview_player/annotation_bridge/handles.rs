@@ -35,7 +35,7 @@ impl PreviewPlayerManager {
   /// clips resolve to at `position_ms`, without touching the decoder. Reports
   /// whether there was a frame to redraw; a pane with nothing composed yet has
   /// to be restarted the ordinary way. Only the D3D11 panes can do this - the
-  /// Metal workspace re-encodes from its retained scene instead.
+  /// macOS workspace re-encodes from its retained scene instead.
   #[cfg(target_os = "windows")]
   pub(super) fn redraw_annotation_frame(&self, pane: u32, position_ms: u64) -> bool {
     let Some(sources) = self.sources.as_ref() else {

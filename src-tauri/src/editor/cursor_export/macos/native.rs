@@ -3,10 +3,8 @@
 
 //! Cursor timeline evaluation for the macOS GPU export.
 //!
-//! The export used to CPU-rasterise a motion-blurred cursor movie plus a
-//! positions sidecar before Metal composited it. Only the timeline needs a
-//! CPU: one small [`GpuCursor`] per output frame is all the shader needs to
-//! scale, rotate, blur and blend the cursor itself.
+//! Only the timeline needs a CPU: one small [`GpuCursor`] per output frame is
+//! all the shader needs to scale, rotate, blur and blend the cursor itself.
 
 mod evaluation;
 pub(in super::super) use evaluation::evaluate;

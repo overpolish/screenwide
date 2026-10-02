@@ -16,20 +16,9 @@ pub(super) fn push_quad(
   uvs: [[f32; 2]; 4],
   kind: u32,
 ) {
-  push_quad_with_aux(out, corners, uvs, [0.0; 2], kind);
-}
-
-pub(super) fn push_quad_with_aux(
-  out: &mut Vec<Vertex>,
-  corners: [[f32; 2]; 4],
-  uvs: [[f32; 2]; 4],
-  aux: [f32; 2],
-  kind: u32,
-) {
   let vertex = |index: usize| Vertex {
     position: corners[index],
     uv: uvs[index],
-    aux,
     kind,
     padding: 0,
   };

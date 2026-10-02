@@ -19,7 +19,8 @@ mod submit;
 mod textures;
 mod window;
 pub(crate) use crate::app_windows::overlay_surface::set_capture_affinity;
-use crate::app_windows::overlay_surface::{self, disable_transitions, Frame, GpuSurface};
+use crate::app_windows::overlay_surface::{self, disable_transitions, GpuSurface};
+use crate::gpu::surface::Frame;
 use crate::osc::gpu::windows::{bind_group_layout, pipeline, sampler, shader_module};
 use textures::upload_icons;
 pub(super) use textures::upload_rgba;
@@ -83,9 +84,6 @@ pub(crate) struct Gpu {
   shared: &'static crate::gpu::Gpu,
   layout: wgpu::BindGroupLayout,
   pipeline: wgpu::RenderPipeline,
-  /// The frozen-desktop variant: `srcA = ONE`, preserving opaque target alpha
-  /// while translucent chrome is drawn above the snapshot.
-  opaque_pipeline: wgpu::RenderPipeline,
   linear_sampler: wgpu::Sampler,
   point_sampler: wgpu::Sampler,
   /// Every texture slot is bound each draw; unused ones read one transparent
@@ -178,10 +176,6 @@ impl Drop for Surface {
 /// peer is only ordered on screen while the desktop is presented.
 pub(crate) fn should_show(is_root: bool, visible: bool, desktop_presented: bool) -> bool {
   visible && (is_root || desktop_presented)
-}
-
-fn opaque_snapshot_target(snapshot_presented: bool, has_snapshot: bool) -> bool {
-  snapshot_presented && has_snapshot
 }
 
 pub(crate) fn cursor_position() -> Option<POINT> {

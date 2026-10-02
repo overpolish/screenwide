@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::super::PreviewSelection;
-use super::native_types::{NativeWorkspaceLayer, NativeWorkspacePaneRect};
+use super::native_types::{NativeWorkspacePaneRect, NativeWorkspacePlacement};
 use crate::editor::annotations::group::NativeAnnotationGroupBox;
 use crate::editor::annotations::handles::{NativeAnnotationHandles, NativeAnnotationSnap};
-use crate::editor::cursor_effects::NativeGpuArtwork;
-use crate::screenshots::{NativeCanvas, StillOverlay};
 
 unsafe extern "C" {
+  /// `device` and `queue` are the shared wgpu device's Metal objects, and
+  /// `scene` a strong reference the surface releases when it is deallocated.
   pub(super) fn screenwide_preview_surface_create(
     host_view: *mut std::ffi::c_void,
+    device: *mut std::ffi::c_void,
+    queue: *mut std::ffi::c_void,
+    scene: *const std::ffi::c_void,
   ) -> *mut std::ffi::c_void;
   pub(super) fn screenwide_preview_surface_layout_workspace(
     handle: *mut std::ffi::c_void,
@@ -59,47 +62,19 @@ unsafe extern "C" {
     width: u32,
     height: u32,
   ) -> i32;
+  /// Shows the screenshot layers the scene was just staged with, `layer_count`
+  /// of them all drawn at the workspace canvas's placement.
   pub(super) fn screenwide_preview_surface_present_screenshot_workspace(
     handle: *mut std::ffi::c_void,
-    layers: *const NativeWorkspaceLayer,
     layer_count: u32,
   ) -> i32;
+  /// Shows the recording layers the scene was just staged with: each layer's
+  /// pane, and where it was laid out when the frame was composed.
   pub(super) fn screenwide_preview_surface_present_recording_workspace(
     handle: *mut std::ffi::c_void,
-    layers: *const NativeWorkspaceLayer,
+    pane_indices: *const u32,
+    placements: *const NativeWorkspacePlacement,
     layer_count: u32,
-    artworks: *const NativeGpuArtwork,
-    artwork_count: u32,
-  ) -> i32;
-  pub(super) fn screenwide_preview_surface_workspace_source_size(
-    handle: *mut std::ffi::c_void,
-    pane_index: u32,
-    width: *mut u32,
-    height: *mut u32,
-  ) -> i32;
-  pub(super) fn screenwide_preview_surface_workspace_camera_source_size(
-    handle: *mut std::ffi::c_void,
-    pane_index: u32,
-    width: *mut u32,
-    height: *mut u32,
-  ) -> i32;
-  pub(super) fn screenwide_preview_surface_update_workspace_canvas(
-    handle: *mut std::ffi::c_void,
-    pane_index: u32,
-    canvas_width: u32,
-    canvas_height: u32,
-    canvas: *const NativeCanvas,
-  ) -> i32;
-  pub(super) fn screenwide_preview_surface_update_workspace_camera_overlay(
-    handle: *mut std::ffi::c_void,
-    pane_index: u32,
-    overlay: *const StillOverlay,
-  ) -> i32;
-  pub(super) fn screenwide_preview_surface_set_workspace_annotation_hover(
-    handle: *mut std::ffi::c_void,
-    pane_index: u32,
-    index: i32,
-    width: f32,
   ) -> i32;
   pub(super) fn screenwide_preview_surface_redraw_workspace(handle: *mut std::ffi::c_void) -> i32;
   pub(super) fn screenwide_preview_surface_hide(handle: *mut std::ffi::c_void);

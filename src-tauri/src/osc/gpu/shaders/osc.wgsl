@@ -10,8 +10,8 @@
 // kind, so its quads take one branch and the derivatives are well defined.
 diagnostic(off, derivative_uniformity);
 
-// One uniform for what Metal pushed as nine fragment slots. Every member is a
-// `vec4` row, so Rust's `RenderConstants` lays out the same way.
+// One uniform for every palette and state the OSC draws with. Every member is
+// a `vec4` row, so Rust's `RenderConstants` lays out the same way.
 struct OscGpu {
   light_mode: vec4<u32>, // .x: 0 dark, 1 light
   magnifier_box: vec4<f32>, // x/y/width/height in physical pixels
@@ -43,21 +43,20 @@ struct OscGpu {
 @group(0) @binding(6) var linear_sampler: sampler;
 @group(0) @binding(7) var point_sampler: sampler;
 
+// The layout every OSC vertex builder emits, the macOS one included.
 struct VertexIn {
   @location(0) position: vec2<f32>,
   @location(1) uv: vec2<f32>,
-  @location(2) aux: vec2<f32>,
-  @location(3) kind: u32,
+  @location(2) kind: u32,
 }
 
 struct VertexOut {
   @builtin(position) position: vec4<f32>,
   @location(0) uv: vec2<f32>,
-  @location(1) @interpolate(flat) aux: vec2<f32>,
-  @location(2) @interpolate(flat) kind: u32,
+  @location(1) @interpolate(flat) kind: u32,
 }
 
-// The magnifier lens. Crop corners already own 45, the Metal kind.
+// The magnifier lens. Crop corners already own 45.
 const LENS_KIND: u32 = 49u;
 
 // Positions arrive in NDC: the vertex builder does the pixel-to-clip mapping
@@ -67,7 +66,6 @@ fn vs_main(input: VertexIn) -> VertexOut {
   var output: VertexOut;
   output.position = vec4<f32>(input.position, 0.0, 1.0);
   output.uv = input.uv;
-  output.aux = input.aux;
   output.kind = input.kind;
   return output;
 }
@@ -117,54 +115,21 @@ fn quad_pixels(uv: vec2<f32>) -> vec2<f32> {
   return 1.0 / max(fwidth(uv), vec2<f32>(0.0001));
 }
 
+// The lens the constants describe; `lens.wgsl` draws it.
+fn osc_lens() -> Lens {
+  return Lens(osc.magnifier_box, osc.magnifier_source, osc.magnifier_sample,
+              osc.magnifier_source_range,
+              vec4<u32>(osc.magnifier_flags.xy, osc.light_mode.x, 0u));
+}
+
+// Source-over blending takes the straight alpha, so the lens quad fades into
+// the scene it is drawn over.
 fn lens(position: vec2<f32>) -> vec4<f32> {
-  let box_size = max(osc.magnifier_box.zw, vec2<f32>(1.0));
-  let local = position - osc.magnifier_box.xy;
-  let half_size = box_size * 0.5;
-  // The loupe box is 96 device-independent points wide and its corners are
-  // the control radius, 8, so the backing scale falls out of the box size.
-  let radius = max(box_size.x / 12.0, 1.0);
-  let distance = rounded_distance(local - half_size, half_size, radius);
-  // One device pixel of feathering on the outer edge, the same expression
-  // the cutout in `fs_main` uses.
-  let coverage = 1.0 - smoothstep(-0.5, 0.5, distance);
-  if (coverage <= 0.0) {
+  let color = lens_color(osc_lens(), position, magnifier_texture, point_sampler);
+  if (color.a <= 0.0) {
     discard;
   }
-  let source_dimensions = max(osc.magnifier_source.xy, vec2<f32>(1.0));
-  let source_center = osc.magnifier_sample.xy * source_dimensions;
-  let source_point = source_center + (local / box_size - 0.5) * 40.0;
-  let sample_point = floor(source_point);
-  let sample_uv = source_point / source_dimensions;
-  let in_source = all(sample_point >= vec2<f32>(0.0)) && all(sample_point < source_dimensions) &&
-      all(sample_uv >= osc.magnifier_source_range.xy) &&
-      all(sample_uv <= osc.magnifier_source_range.zw);
-  // Nearest neighbour keeps the magnified desktop pixels square.
-  var pixel = vec4<f32>(0.15, 0.15, 0.16, 1.0);
-  if (in_source) {
-    pixel = textureSampleLevel(
-        magnifier_texture, point_sampler, (sample_point + 0.5) / source_dimensions, 0.0);
-  }
-  let edges = osc.magnifier_flags.x;
-  let shade = ((edges & 1u) != 0u && local.x < half_size.x) ||
-      ((edges & 2u) != 0u && local.x >= half_size.x) ||
-      ((edges & 4u) != 0u && local.y < half_size.y) ||
-      ((edges & 8u) != 0u && local.y >= half_size.y);
-  if (shade) {
-    let shade_color = select(vec3<f32>(1.0), vec3<f32>(0.0), is_light());
-    pixel = vec4<f32>(mix(pixel.rgb, shade_color, 0.1), pixel.a);
-  }
-  // The border is the bounding box's palette: a 1 px white core with a 1 px
-  // dark hairline outside it, so the loupe reads over any desktop content.
-  // Each boundary is feathered over the same one device pixel as the outer
-  // edge, which keeps the corners from stepping.
-  let core = smoothstep(-2.5, -1.5, distance);
-  let hairline = smoothstep(-1.5, -0.5, distance);
-  var rgb = mix(pixel.rgb, vec3<f32>(1.0), core);
-  rgb = mix(rgb, vec3<f32>(0.15, 0.15, 0.16), hairline);
-  // Source-over blending takes the straight alpha, so the lens quad fades
-  // into the scene it is drawn over.
-  return vec4<f32>(rgb, coverage);
+  return color;
 }
 
 fn chrome_plate(uv: vec2<f32>, position: vec2<f32>) -> vec4<f32> {
@@ -272,20 +237,7 @@ fn picked_swatch(uv: vec2<f32>) -> vec4<f32> {
 fn icon(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   let cell = f32(kind - 21u);
   let atlas_uv = vec2<f32>((cell + uv.x) / 6.0, uv.y);
-  // The source cells are 96px so a 14pt toolbar icon is a substantial
-  // minification. A lone bilinear lookup covers only four source texels and
-  // aliases the Lucide strokes; integrate a 4x4 footprint instead.
-  let footprint_x = dpdx(atlas_uv);
-  let footprint_y = dpdy(atlas_uv);
-  var coverage = 0.0;
-  for (var y = 0; y < 4; y++) {
-    for (var x = 0; x < 4; x++) {
-      let offset = footprint_x * ((f32(x) + 0.5) / 4.0 - 0.5) +
-          footprint_y * ((f32(y) + 0.5) / 4.0 - 0.5);
-      coverage += textureSampleLevel(icons, linear_sampler, atlas_uv + offset, 0.0).r;
-    }
-  }
-  coverage *= 1.0 / 16.0;
+  let coverage = textureSampleLevel(icons, linear_sampler, atlas_uv, 0.0).r;
   if (coverage <= 0.002) {
     discard;
   }
@@ -329,32 +281,20 @@ fn ocr_box(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   return color;
 }
 
-fn marquee(kind: u32, uv: vec2<f32>, aux: vec2<f32>) -> vec4<f32> {
+// The crop window's marching ants: a capsule a period, `uv` running along the
+// edge in periods of 12 drawn pixels, so the pattern stays put wherever the
+// edge starts.
+fn marquee(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   let horizontal = kind <= 8u;
   let longitudinal = select(uv.y, uv.x, horizontal);
   let transverse = select(uv.x, uv.y, horizontal);
-  let pixels_per_pattern_unit = 1.0 / max(fwidth(longitudinal), 0.0001);
+  let period = 1.0 / max(fwidth(longitudinal), 0.0001);
   let thickness = 1.0 / max(fwidth(transverse), 0.0001);
-  let edge_start = aux.x;
-  let edge_end = edge_start + aux.y;
-  let pattern_position = edge_start + longitudinal;
-  let cycle_start = floor(pattern_position / 12.0) * 12.0;
-  let segment_start = max(cycle_start, edge_start);
-  let segment_end = min(cycle_start + 9.0, edge_end);
-  if (segment_end <= segment_start) {
-    discard;
-  }
-  let local_start = (segment_start - edge_start) * pixels_per_pattern_unit;
-  let local_end = (segment_end - edge_start) * pixels_per_pattern_unit;
-  let local_position = longitudinal * pixels_per_pattern_unit;
+  var offset = vec2<f32>((fract(longitudinal) - 0.5) * period, (transverse - 0.5) * thickness);
   let radius = thickness * 0.5;
-  let cap_radius = min(radius, (local_end - local_start) * 0.5);
-  let center_start = local_start + cap_radius;
-  let center_end = local_end - cap_radius;
-  let offset = vec2<f32>(
-      local_position - clamp(local_position, center_start, center_end),
-      (transverse - 0.5) * thickness);
-  let distance = length(offset) - cap_radius;
+  let half_segment = 3.0;
+  offset.x -= clamp(offset.x, -half_segment, half_segment);
+  let distance = length(offset) - radius;
   let aa = max(fwidth(distance), 0.0001);
   let coverage = clamp(0.5 - distance / aa, 0.0, 1.0);
   if (coverage <= 0.0) {
@@ -396,28 +336,19 @@ fn handle(kind: u32, uv: vec2<f32>) -> vec4<f32> {
 fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   let kind = input.kind;
   let uv = input.uv;
-  if (kind != LENS_KIND && osc.magnifier_flags.y != 0u && osc.magnifier_box.z > 0.0) {
-    let half_size = osc.magnifier_box.zw * 0.5;
-    let local = input.position.xy - (osc.magnifier_box.xy + half_size);
-    // Same radius and feathered coverage the lens rounds itself with. The
-    // scene keeps drawing wherever the lens is not fully opaque, so the two
-    // edges blend into each other instead of meeting at a hard step.
-    let distance = rounded_distance(local, half_size, max(osc.magnifier_box.z / 12.0, 1.0));
-    if (1.0 - smoothstep(-0.5, 0.5, distance) >= 1.0) {
-      discard;
-    }
-  }
   if (kind == LENS_KIND) {
     return lens(input.position.xy);
   }
   if (kind == 33u) {
     // A frozen desktop is an opaque backing plane. Capture APIs may leave
     // alpha unspecified, and exposing it through a premultiplied composition
-    // swap chain would reveal the live desktop beneath the snapshot. Zoomed
-    // in, the desktop's pixels are magnified as pixels, the way a zoomed
-    // screenshot shows them; at one-to-one the linear sampler resolves the
-    // same texels.
-    let magnified = osc.chrome_source.z < 0.999 || osc.chrome_source.w < 0.999;
+    // would reveal the live desktop beneath the snapshot. Zoomed in, the
+    // desktop's pixels are magnified as pixels, the way a zoomed screenshot
+    // shows them, rather than smeared by bilinear filtering. Magnification is
+    // read off the uv derivatives: fewer than one texel per drawn pixel. At
+    // one-to-one the linear sample resolves the same texels.
+    let texels_per_pixel = fwidth(uv) * vec2<f32>(textureDimensions(snapshot));
+    let magnified = max(texels_per_pixel.x, texels_per_pixel.y) < 0.999;
     var sampled = textureSampleLevel(snapshot, linear_sampler, uv, 0.0);
     if (magnified) {
       sampled = textureSampleLevel(snapshot, point_sampler, uv, 0.0);
@@ -445,6 +376,10 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   }
   if (kind >= 39u && kind <= 41u) {
     return ruler_arc(kind, uv);
+  }
+  // Everything below gives way to the lens, which is drawn over it.
+  if (lens_coverage(osc_lens(), input.position.xy) >= 1.0) {
+    discard;
   }
   if (kind == 37u) {
     let sampled = textureSampleLevel(secondary_label, linear_sampler, uv, 0.0);
@@ -516,7 +451,7 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
     return ocr_box(kind, uv);
   }
   if (kind >= 7u && kind <= 10u) {
-    return marquee(kind, uv, input.aux);
+    return marquee(kind, uv);
   }
   if (kind == 3u || kind == 16u) {
     return handle(kind, uv);

@@ -124,61 +124,36 @@ pub(crate) fn add_crop_with_handles(
   let mid_x = snap((min_x + max_x) / 2.0, scale);
   let mid_y = snap((min_y + max_y) / 2.0, scale);
   let half = 1.5 / scale;
-  let width_pixels = (max_x - min_x) * scale;
-  let height_pixels = (max_y - min_y) * scale;
-  let perimeter = (width_pixels + height_pixels) * 2.0;
-  let cycles = (perimeter / 12.0).round().max(1.0);
-  let pattern_scale = cycles * 12.0 / perimeter.max(1.0);
-  let pattern_width = width_pixels * pattern_scale;
-  let pattern_height = height_pixels * pattern_scale;
-  add_pattern_quad(
-    out,
-    view,
-    Rect::from_xywh(min_x, min_y - half, max_x - min_x, half * 2.0),
-    PatternEdge {
-      kind: 8,
-      horizontal: true,
-      forward: true,
-      phase: 0.0,
-      length: pattern_width,
-    },
-  );
-  add_pattern_quad(
-    out,
-    view,
-    Rect::from_xywh(min_x, max_y - half, max_x - min_x, half * 2.0),
-    PatternEdge {
-      kind: 8,
-      horizontal: true,
-      forward: false,
-      phase: pattern_width + pattern_height,
-      length: pattern_width,
-    },
-  );
-  add_pattern_quad(
-    out,
-    view,
-    Rect::from_xywh(min_x - half, min_y, half * 2.0, max_y - min_y),
-    PatternEdge {
-      kind: 10,
-      horizontal: false,
-      forward: false,
-      phase: pattern_width * 2.0 + pattern_height,
-      length: pattern_height,
-    },
-  );
-  add_pattern_quad(
-    out,
-    view,
-    Rect::from_xywh(max_x - half, min_y, half * 2.0, max_y - min_y),
-    PatternEdge {
-      kind: 10,
-      horizontal: false,
-      forward: true,
-      phase: pattern_width,
-      length: pattern_height,
-    },
-  );
+  let wide = max_x - min_x + half * 2.0;
+  let tall = max_y - min_y + half * 2.0;
+  for (rect, kind, horizontal, origin) in [
+    (
+      Rect::from_xywh(min_x - half, min_y - half, wide, half * 2.0),
+      8,
+      true,
+      min_x,
+    ),
+    (
+      Rect::from_xywh(min_x - half, max_y - half, wide, half * 2.0),
+      8,
+      true,
+      min_x,
+    ),
+    (
+      Rect::from_xywh(min_x - half, min_y - half, half * 2.0, tall),
+      10,
+      false,
+      min_y,
+    ),
+    (
+      Rect::from_xywh(max_x - half, min_y - half, half * 2.0, tall),
+      10,
+      false,
+      min_y,
+    ),
+  ] {
+    add_pattern_quad(out, view, rect, kind, horizontal, scale, origin);
+  }
   if show_handles {
     add_handles(
       out,

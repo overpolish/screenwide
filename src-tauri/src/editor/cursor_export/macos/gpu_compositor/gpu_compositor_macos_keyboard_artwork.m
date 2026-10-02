@@ -8,9 +8,6 @@
 #import "gpu_compositor_macos_keyboard.h"
 #import "gpu_compositor_macos_keyboard_artwork_helpers.h"
 
-@implementation ScreenwideKeyboardArtwork
-@end
-
 static void register_inter_font(void) {
   static dispatch_once_t once;
   dispatch_once(&once, ^{
@@ -53,203 +50,101 @@ static NSString *key_label(uint16_t code) {
   return labels[@(code)] ?: [NSString stringWithFormat:@"Key %u", code];
 }
 
-typedef struct {
-  uint16_t keyCode;
-  ScreenwideKeyboardKey state;
-} ScreenwidePreparedKey;
-
-typedef struct {
-  uint32_t count;
-  ScreenwidePreparedKey keys[SCREENWIDE_KEYBOARD_MAX_KEYS];
-} ScreenwidePreparedShortcut;
-
-static BOOL is_modifier_key(uint16_t code) {
-  return code == 54 || code == 55 || code == 56 || code == 58 ||
-      code == 59 || code == 60 || code == 61 || code == 62 || code == 63;
-}
-
-static void append_prepared(ScreenwidePreparedShortcut *result, uint16_t code,
-                            ScreenwideKeyboardKey state) {
-  if (result->count >= SCREENWIDE_KEYBOARD_MAX_KEYS) return;
-  result->keys[result->count++] = (ScreenwidePreparedKey){code, state};
-}
-
-static ScreenwidePreparedShortcut prepared_shortcut(
-    ScreenwideKeyboardOverlay overlay) {
-  ScreenwidePreparedShortcut result = {0};
-  uint32_t count = MIN(overlay.key_count, SCREENWIDE_KEYBOARD_MAX_KEYS);
-  for (uint32_t index = 0; index < count; ++index) {
-    ScreenwideKeyboardKey state = overlay.keys[index];
-    // Version-one sidecars stored a modifier mask on the final key. Expand it
-    // here so old recordings keep the grouped KBD appearance.
-    if (count == 1 && !is_modifier_key(state.key_code)) {
-      const uint16_t modifierCodes[] = {55, 59, 58, 56, 63};
-      for (uint32_t bit = 0; bit < 5; ++bit)
-        if ((state.modifier_mask & (1u << bit)) != 0)
-          append_prepared(&result, modifierCodes[bit], state);
+/// The strip for `codes`, in the light or dark appearance, at `backingScale`
+/// pixels per design point: premultiplied RGBA rows, top row first, and
+/// where each key cap starts and how wide it is. The pixels are `malloc`ed
+/// and released by `screenwide_keyboard_raster_free`. Returns 0 when nothing
+/// could be drawn.
+int screenwide_keyboard_raster(const uint16_t *codes, uint32_t count, uint32_t light,
+                               double backingScale, ScreenwideKeyboardRaster *out) {
+  if (codes == NULL || out == NULL || count == 0 || count > SCREENWIDE_KEYBOARD_MAX_KEYS)
+    return 0;
+  *out = (ScreenwideKeyboardRaster){0};
+  @autoreleasepool {
+    // Match the React Keyboard's keycap variant from
+    // `src/components/base/keyboard/keyboard.tsx`: `h-5 min-w-5 gap-tight
+    // rounded-sm bg-fill px-control font-sans text-body text-content-fg
+    // tabular-nums`, i.e. Inter regular at 13/16 with tabular figures and no
+    // letter spacing, inside a 20pt-tall cap with 4pt padding and a 4pt radius.
+    register_inter_font();
+    NSDictionary *attributes = @{
+      NSFontAttributeName: keycap_font(),
+      NSForegroundColorAttributeName: keycap_text_color(light != 0),
+    };
+    const CGFloat height = SCREENWIDE_KEYCAP_HEIGHT;
+    const CGFloat inset = SCREENWIDE_KEYCAP_PADDING;
+    const CGFloat gap = SCREENWIDE_KEYCAP_GAP;
+    CGFloat widths[SCREENWIDE_KEYBOARD_MAX_KEYS] = {0};
+    CGFloat width = 0.0;
+    for (uint32_t index = 0; index < count; ++index) {
+      CGFloat contentWidth = modifier_icon(codes[index])
+          ? 12.0 : [key_label(codes[index]) sizeWithAttributes:attributes].width;
+      widths[index] = MAX(SCREENWIDE_KEYCAP_MINIMUM_WIDTH, ceil(contentWidth) + inset * 2.0);
+      width += widths[index];
     }
-    append_prepared(&result, state.key_code, state);
-  }
-  return result;
-}
-
-static void update_uniforms(ScreenwideKeyboardUniforms *uniforms,
-                            ScreenwideKeyboardOverlay overlay,
-                            ScreenwidePreparedShortcut prepared) {
-  uniforms->key_count = prepared.count;
-  uniforms->animation = overlay.animation;
-  uniforms->scale = overlay.scale;
-  uniforms->layout_progress = overlay.progress;
-  uniforms->maximum_width = overlay.maximum_width;
-  uniforms->requested_scale = overlay.requested_scale;
-  uniforms->center_x = overlay.center_x;
-  uniforms->center_y = overlay.center_y;
-  for (uint32_t index = 0; index < prepared.count; ++index) {
-    ScreenwideKeyboardKey state = prepared.keys[index].state;
-    uniforms->keys[index].visible = state.visible;
-    uniforms->keys[index].alpha = state.alpha;
-    uniforms->keys[index].scale = state.scale;
-    uniforms->keys[index].progress = state.progress;
-    uniforms->keys[index].layout_progress = state.layout_progress;
-    uniforms->keys[index].slot = state.slot;
-    uniforms->keys[index].layout_from_mask = state.layout_from_mask;
-    uniforms->keys[index].layout_to_mask = state.layout_to_mask;
-    uniforms->keys[index].center_x = state.center_x;
-    uniforms->keys[index].center_y = state.center_y;
-    uniforms->keys[index].scale_ratio = state.scale_ratio;
-  }
-}
-
-static CGFloat keyboard_backing_scale(uint32_t outputHeight,
-                                      ScreenwideKeyboardOverlay overlay) {
-  // The spring peaks just below 1.073. Cover its complete scale excursion so
-  // animation never enlarges the cached artwork beyond its source pixels.
-  const CGFloat maximumAnimatedScale = 1.08;
-  const CGFloat designHeight = 20.0;
-  CGFloat requestedScale = overlay.requested_scale > 0.0
-      ? overlay.requested_scale : overlay.scale;
-  CGFloat outputPixels = (CGFloat)outputHeight * (60.0 / 1080.0) *
-      MAX(requestedScale, 0.0) * maximumAnimatedScale;
-  return MIN(MAX(ceil(outputPixels / designHeight), 12.0), 64.0);
-}
-
-ScreenwideKeyboardArtwork *screenwide_keyboard_artwork(
-    id<MTLDevice> device,
-    NSMutableDictionary<NSString *, ScreenwideKeyboardArtwork *> *cache,
-    ScreenwideKeyboardOverlay overlay, uint32_t outputHeight) {
-  if (device == nil || cache == nil || overlay.key_count == 0) return nil;
-  ScreenwidePreparedShortcut prepared = prepared_shortcut(overlay);
-  if (prepared.count == 0) return nil;
-  CGFloat backingScale = keyboard_backing_scale(outputHeight, overlay);
-  NSMutableString *key =
-      [NSMutableString stringWithFormat:@"%u|%.0f|", overlay.appearance,
-                                        backingScale];
-  NSMutableArray<NSString *> *labels = [NSMutableArray arrayWithCapacity:prepared.count];
-  for (uint32_t index = 0; index < prepared.count; ++index) {
-    [key appendFormat:@"%u:", prepared.keys[index].keyCode];
-    [labels addObject:key_label(prepared.keys[index].keyCode)];
-  }
-  ScreenwideKeyboardArtwork *known = cache[key];
-  if (known != nil) {
-    ScreenwideKeyboardUniforms uniforms = known.uniforms;
-    update_uniforms(&uniforms, overlay, prepared);
-    known.uniforms = uniforms;
-    return known;
-  }
-
-  // Match the React Keyboard's keycap variant from
-  // `src/components/base/keyboard/keyboard.tsx`: `h-5 min-w-5 gap-tight
-  // rounded-sm bg-fill px-control font-sans text-body text-content-fg
-  // tabular-nums`, i.e. Inter regular at 13/16 with tabular figures and no
-  // letter spacing, inside a 20pt-tall cap with 4pt padding and a 4pt radius.
-  // Artwork is rasterised once at the density its output canvas and animation
-  // require; every subsequent frame remains a GPU-only composition.
-  register_inter_font();
-  BOOL light = overlay.appearance == 1;
-  NSDictionary *attributes = @{
-    NSFontAttributeName: keycap_font(),
-    NSForegroundColorAttributeName: keycap_text_color(light),
-  };
-  const CGFloat height = SCREENWIDE_KEYCAP_HEIGHT;
-  const CGFloat inset = SCREENWIDE_KEYCAP_PADDING;
-  const CGFloat gap = SCREENWIDE_KEYCAP_GAP;
-  NSMutableArray<NSNumber *> *widths = [NSMutableArray arrayWithCapacity:labels.count];
-  CGFloat width = 0.0;
-  for (NSUInteger index = 0; index < labels.count; ++index) {
-    NSString *label = labels[index];
-    CGFloat contentWidth = modifier_icon(prepared.keys[index].keyCode)
-        ? 12.0 : [label sizeWithAttributes:attributes].width;
-    CGFloat keyWidth = MAX(SCREENWIDE_KEYCAP_MINIMUM_WIDTH,
-                           ceil(contentWidth) + inset * 2.0);
-    [widths addObject:@(keyWidth)];
-    width += keyWidth;
-  }
-  width += gap * MAX((NSInteger)labels.count - 1, 0);
-  NSUInteger pixelWidth = MAX((NSUInteger)ceil(width * backingScale), 1u);
-  NSUInteger pixelHeight = MAX((NSUInteger)ceil(height * backingScale), 1u);
-  CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-  CGContextRef context = CGBitmapContextCreate(
-      NULL, pixelWidth, pixelHeight, 8, pixelWidth * 4, space,
-      (CGBitmapInfo)kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
-  CGColorSpaceRelease(space);
-  if (context == NULL) return nil;
-  // Grayscale antialiasing, as the OSC text rasteriser and the frontend use.
-  CGContextSetShouldSmoothFonts(context, false);
-  CGContextScaleCTM(context, backingScale, backingScale);
-  NSGraphicsContext *graphics = [NSGraphicsContext graphicsContextWithCGContext:context
-                                                                        flipped:NO];
-  [NSGraphicsContext saveGraphicsState];
-  [NSGraphicsContext setCurrentContext:graphics];
-  CGFloat x = 0.0;
-  NSColor *background = keycap_fill_color(light);
-  for (NSUInteger index = 0; index < labels.count; ++index) {
-    CGFloat keyWidth = widths[index].doubleValue;
-    NSRect rect = NSMakeRect(x, 0.0, keyWidth, height);
-    [background setFill];
-    [[NSBezierPath bezierPathWithRoundedRect:rect
-                                     xRadius:SCREENWIDE_KEYCAP_RADIUS
-                                     yRadius:SCREENWIDE_KEYCAP_RADIUS] fill];
-    NSString *label = labels[index];
-    if (modifier_icon(prepared.keys[index].keyCode)) {
-      [keycap_text_color(light) setStroke];
-      draw_modifier_icon(prepared.keys[index].keyCode,
-                         NSMakePoint(x + (keyWidth - 12.0) * 0.5,
-                                     (height - 12.0) * 0.5), 12.0);
-    } else {
-      NSSize text = [label sizeWithAttributes:attributes];
-      [label drawAtPoint:NSMakePoint(x + (keyWidth - text.width) / 2.0,
-                                    (height - text.height) / 2.0)
-          withAttributes:attributes];
+    width += gap * (count - 1);
+    size_t pixelWidth = MAX((size_t)ceil(width * backingScale), (size_t)1);
+    size_t pixelHeight = MAX((size_t)ceil(height * backingScale), (size_t)1);
+    uint8_t *pixels = calloc(pixelWidth * pixelHeight, 4);
+    if (pixels == NULL) return 0;
+    CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+    CGContextRef context = CGBitmapContextCreate(
+        pixels, pixelWidth, pixelHeight, 8, pixelWidth * 4, space,
+        (CGBitmapInfo)kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    CGColorSpaceRelease(space);
+    if (context == NULL) {
+      free(pixels);
+      return 0;
     }
-    x += keyWidth + gap;
+    // Grayscale antialiasing, as the OSC text rasteriser and the frontend use.
+    CGContextSetShouldSmoothFonts(context, false);
+    CGContextScaleCTM(context, backingScale, backingScale);
+    NSGraphicsContext *graphics = [NSGraphicsContext graphicsContextWithCGContext:context
+                                                                          flipped:NO];
+    [NSGraphicsContext saveGraphicsState];
+    [NSGraphicsContext setCurrentContext:graphics];
+    CGFloat x = 0.0;
+    NSColor *background = keycap_fill_color(light != 0);
+    for (uint32_t index = 0; index < count; ++index) {
+      CGFloat keyWidth = widths[index];
+      NSRect rect = NSMakeRect(x, 0.0, keyWidth, height);
+      [background setFill];
+      [[NSBezierPath bezierPathWithRoundedRect:rect
+                                       xRadius:SCREENWIDE_KEYCAP_RADIUS
+                                       yRadius:SCREENWIDE_KEYCAP_RADIUS] fill];
+      if (modifier_icon(codes[index])) {
+        [keycap_text_color(light != 0) setStroke];
+        draw_modifier_icon(codes[index],
+                           NSMakePoint(x + (keyWidth - 12.0) * 0.5, (height - 12.0) * 0.5),
+                           12.0);
+      } else {
+        NSString *label = key_label(codes[index]);
+        NSSize text = [label sizeWithAttributes:attributes];
+        [label drawAtPoint:NSMakePoint(x + (keyWidth - text.width) / 2.0,
+                                      (height - text.height) / 2.0)
+            withAttributes:attributes];
+      }
+      x += keyWidth + gap;
+    }
+    [NSGraphicsContext restoreGraphicsState];
+    CGContextRelease(context);
+    out->pixels = pixels;
+    out->width = (uint32_t)pixelWidth;
+    out->height = (uint32_t)pixelHeight;
+    out->key_count = count;
+    CGFloat keyX = 0.0;
+    for (uint32_t index = 0; index < count; ++index) {
+      out->key_x[index] = (uint32_t)llround(keyX * backingScale);
+      out->key_width[index] = (uint32_t)llround(widths[index] * backingScale);
+      keyX += widths[index] + gap;
+    }
+    return 1;
   }
-  [NSGraphicsContext restoreGraphicsState];
-  id<MTLBuffer> pixels = [device newBufferWithBytes:CGBitmapContextGetData(context)
-      length:pixelWidth * pixelHeight * 4 options:MTLResourceStorageModeShared];
-  CGContextRelease(context);
-  if (pixels == nil) return nil;
-  ScreenwideKeyboardArtwork *artwork = [ScreenwideKeyboardArtwork new];
-  artwork.pixels = pixels;
-  ScreenwideKeyboardUniforms uniforms = {0};
-  uniforms.width = (uint32_t)pixelWidth;
-  uniforms.height = (uint32_t)pixelHeight;
-  CGFloat keyX = 0.0;
-  for (uint32_t index = 0; index < prepared.count; ++index) {
-    uniforms.keys[index].x = (uint32_t)llround(keyX * backingScale);
-    uniforms.keys[index].width =
-        (uint32_t)llround(widths[index].doubleValue * backingScale);
-    keyX += widths[index].doubleValue + gap;
-  }
-  update_uniforms(&uniforms, overlay, prepared);
-  artwork.uniforms = uniforms;
-  const NSUInteger cacheLimit = 64u * 1024u * 1024u;
-  __block NSUInteger cacheBytes = 0;
-  [cache enumerateKeysAndObjectsUsingBlock:
-      ^(__unused NSString *cacheKey, ScreenwideKeyboardArtwork *cached,
-        __unused BOOL *stop) { cacheBytes += cached.pixels.length; }];
-  if (cache.count >= 64 ||
-      (cacheBytes > 0 && cacheBytes + pixels.length > cacheLimit))
-    [cache removeAllObjects];
-  cache[key] = artwork;
-  return artwork;
 }
+
+void screenwide_keyboard_raster_free(ScreenwideKeyboardRaster *raster) {
+  if (raster == NULL) return;
+  free(raster->pixels);
+  raster->pixels = NULL;
+}
+

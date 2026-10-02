@@ -24,8 +24,6 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
     s.layer = nil;
     return;
   }
-  if (s.pipeline == nil)
-    return;
   if (s.layer == nil) {
     s.layer = [CAMetalLayer layer];
     s.layer.device = s.device;
@@ -90,43 +88,8 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
     s.drawInFlight = NO;
     return;
   }
-  id<MTLCommandBuffer> command = [s.queue commandBuffer];
-  MTLRenderPassDescriptor *clear =
-      [MTLRenderPassDescriptor renderPassDescriptor];
-  clear.colorAttachments[0].texture = drawable.texture;
-  clear.colorAttachments[0].loadAction = MTLLoadActionClear;
-  clear.colorAttachments[0].storeAction = MTLStoreActionStore;
-  clear.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
-  id<MTLRenderCommandEncoder> clearEncoder =
-      [command renderCommandEncoderWithDescriptor:clear];
-  [clearEncoder endEncoding];
-
   BOOL showMagnifier = s.showFrame && s.magnifier.active != 0 &&
-                       s.magnifierSource != nil &&
-                       s.magnifierPipeline != nil;
-  if (showMagnifier) {
-    uint32_t dimensions[2] = {s.magnifierSourceWidth,
-                              s.magnifierSourceHeight};
-    id<MTLComputeCommandEncoder> magnifierEncoder =
-        [command computeCommandEncoder];
-    screenwide_region_magnifier_encode(
-        magnifierEncoder, s.magnifierPipeline, s.magnifierSource,
-        drawable.texture, dimensions, s.magnifier);
-    [magnifierEncoder endEncoding];
-  }
-
-  id<MTLBuffer> buffer = screenwide_osc_vertex_buffer(
-      s.device, vertices, count, size, scale);
-  free(vertices);
-  MTLRenderPassDescriptor *pass =
-      [MTLRenderPassDescriptor renderPassDescriptor];
-  pass.colorAttachments[0].texture = drawable.texture;
-  pass.colorAttachments[0].loadAction = MTLLoadActionLoad;
-  pass.colorAttachments[0].storeAction = MTLStoreActionStore;
-  id<MTLRenderCommandEncoder> encoder =
-      [command renderCommandEncoderWithDescriptor:pass];
-  id<MTLRenderPipelineState> renderPipeline =
-      s.snapshotComposited ? s.snapshotPipeline : s.pipeline;
+                       s.magnifierSource != nil;
   ScreenwideRegionOscRenderState state =
       screenwide_region_osc_render_state(light_mode(s));
   screenwide_region_osc_ruler_apply_render_state(s, &state);
@@ -134,17 +97,14 @@ void screenwide_region_osc_draw(ScreenwideRegionOSC *s) {
   state.ruler_sample[1] = ((s.rulerColor >> 16) & 0xFF) / 255.0;
   state.ruler_sample[2] = ((s.rulerColor >> 8) & 0xFF) / 255.0;
   state.ruler_sample[3] = (s.rulerColor & 0xFF) / 255.0;
-  if (showMagnifier) {
-    state.magnifier_box[0] = s.magnifier.box_x;
-    state.magnifier_box[1] = s.magnifier.box_y;
-    state.magnifier_box[2] = s.magnifier.box_width;
-    state.magnifier_box[3] = s.magnifier.box_height;
-  }
-  screenwide_region_osc_encode_with_snapshot(
-      encoder, renderPipeline, buffer, count, state,
-      s.rulerLabel.texture ?: s.placeholder, s.placeholder,
-      s.snapshotTexture ?: s.placeholder);
-  [encoder endEncoding];
+  ScreenwideRegionMagnifier magnifier = s.magnifier;
+  screenwide_osc_draw_aligned(
+      drawable.texture, YES, vertices, count, size, scale, &state, &magnifier,
+      showMagnifier ? ScreenwideOscLensDrawn : ScreenwideOscLensNone,
+      s.rulerLabel.texture, nil, s.snapshotTexture, s.magnifierSource);
+  free(vertices);
+  // Committed after the draw on the shared queue, so it presents the frame.
+  id<MTLCommandBuffer> command = [s.queue commandBuffer];
   // Presentation can remain pending when the window closes. The drawable
   // must not keep its owning surface and all of its GPU resources alive.
   __weak ScreenwideRegionOSC *weakSurface = s;

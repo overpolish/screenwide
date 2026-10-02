@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Draw-ready counter geometry, prepared once per annotation for both
-//! backends: the D3D11 one calls this directly, the Metal compositor and the
-//! macOS chrome through `screenwide_annotation_prepare`.
+//! Draw-ready counter geometry, prepared once per annotation: the compositor
+//! calls this directly, the macOS chrome through
+//! `screenwide_annotation_prepare`.
 
 use crate::editor::annotations::geometry::{add, scale, ArrowGeometry};
 use crate::editor::annotations::reveal::AnnotationReveal;

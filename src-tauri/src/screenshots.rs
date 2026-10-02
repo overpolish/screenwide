@@ -47,29 +47,27 @@ pub(crate) use clipboard::open_in_export as open_clipboard_in_export;
 pub use encoding::encode_png;
 pub use encoding::rounded_corners;
 pub(crate) use hex_colour::parse_hex_colour;
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use mesh::validate_mesh;
 #[cfg(test)]
 pub(crate) use mesh::MeshGradientPoint;
 pub(crate) use mesh_generator::default_generator as default_mesh_generator;
 #[cfg(target_os = "windows")]
 pub(crate) use mesh_generator::generator_seed_shift;
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use mesh_generator::{generator_palette, mesh_generator};
 pub use naming::{capture_file_stem, screenshot_directory, unique_path};
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub use output::compose_screenshot;
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use output::output_dimensions;
 #[cfg(all(target_os = "windows", test))]
 pub(crate) use output::CropPreviewRect;
 pub use output::ScreenshotOutputSettings;
-pub(crate) use placement::output_placement;
+pub(crate) use placement::{output_placement, OutputPlacement};
 #[cfg(target_os = "macos")]
-pub(crate) use platform::{
-  alpha_composite, compose_output_layers, native_canvas, NativeCanvas, StillOverlay,
-};
-#[cfg(target_os = "windows")]
+pub(crate) use platform::{alpha_composite, compose_output_layers, StillOverlay};
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use recenter::{colour_f32, foreground_bounds_f32, optional_colour_f32};
 pub(crate) use source_crop::NormalizedSourceRect;
 /// A captured still: straight (non-premultiplied) RGBA8, packed rows, top down.

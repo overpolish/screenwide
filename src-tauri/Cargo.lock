@@ -4015,6 +4015,7 @@ dependencies = [
  "block2",
  "objc2",
  "objc2-foundation",
+ "objc2-io-surface",
 ]
 
 [[package]]
@@ -5329,6 +5330,8 @@ dependencies = [
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
+ "objc2-io-surface",
+ "objc2-metal",
  "plist",
  "png 0.18.1",
  "pollster",

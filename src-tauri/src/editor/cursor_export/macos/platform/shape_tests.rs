@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The compositor's shape annotations, through a real Metal dispatch.
+//! The compositor's shape annotations, through a real GPU dispatch.
 
 use crate::editor::annotations::outline::geometry::{prepare_shape, shape_distance};
 use crate::editor::annotations::outline::model::new_shape;

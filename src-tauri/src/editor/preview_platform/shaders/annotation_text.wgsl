@@ -3,8 +3,7 @@
 
 // The text box: the box and its pointer read out of the slots an arrow fills
 // with its curve, the distance to them, its type sampled from the atlas, and
-// the layer that draws them. The twin of
-// `gpu_compositor_macos_shader_source_annotation_text.h`.
+// the layer that draws them.
 
 /// A text box read out of the slots an arrow fills with its curve. Prepared
 /// once per annotation by Rust's `text::geometry::prepare_text`, which
@@ -131,28 +130,34 @@ fn annotation_text_bounds(box: PreviewTextBox, reach: f32, bounds: vec4<f32>) ->
   return vec4<f32>(low, high);
 }
 
-/// One text box: its box and pointer in the annotation's own colour, and its
-/// type in whichever of black or white reads on that colour, clipped to the
-/// box's own coverage so the two share one antialiased edge.
-fn annotation_text_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
-                         canvas_point: vec2<f32>, feather: f32, halo: f32,
-                         atlas: AnnotationTextAtlas) -> vec4<f32> {
-  let box = annotation_text_box(annotation.geometry);
+/// Where a text box and its pointer can reach. The exposure samples run
+/// steadily from last frame's reveal to this one's, so the first and last
+/// hold every one between: a pointer drawing back in trails past where its
+/// tip is now.
+fn annotation_text_reach(annotation: PreviewArrow, halo: f32, feather: f32) -> vec4<f32> {
   let reach = halo + feather + 1.0;
-  var bounds = annotation_text_bounds(box, reach, vec4<f32>(1e20, 1e20, -1e20, -1e20));
+  var bounds = annotation_text_bounds(annotation_text_box(annotation.geometry), reach,
+                                      annotation_no_bounds);
   if (annotation.sample_count > 0u) {
-    // The exposure samples run steadily from last frame's reveal to this
-    // one's, so the first and last hold every one between: a pointer drawing
-    // back in trails past where its tip is now.
     let last = annotation.sample_first + annotation.sample_count - 1u;
     bounds = annotation_text_bounds(
         annotation_text_box(annotation_samples[annotation.sample_first].geometry), reach, bounds);
     bounds = annotation_text_bounds(annotation_text_box(annotation_samples[last].geometry), reach,
                                     bounds);
   }
-  if (any(canvas_point < bounds.xy) || any(canvas_point > bounds.zw)) {
+  return bounds;
+}
+
+/// One text box: its box and pointer in the annotation's own colour, and its
+/// type in whichever of black or white reads on that colour, clipped to the
+/// box's own coverage so the two share one antialiased edge.
+fn annotation_text_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
+                         canvas_point: vec2<f32>, feather: f32, halo: f32,
+                         atlas: AnnotationTextAtlas) -> vec4<f32> {
+  if (annotation_outside(canvas_point, annotation_text_reach(annotation, halo, feather))) {
     return rgba_in;
   }
+  let box = annotation_text_box(annotation.geometry);
   let distance = annotation_text_distance(canvas_point, box);
   var rgba = annotation_halo(rgba_in, color, distance, halo, feather);
   var coverage: f32;

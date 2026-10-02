@@ -4,20 +4,24 @@
 #import <AppKit/AppKit.h>
 #import <Metal/Metal.h>
 
-// Shared Metal OSC contract. Region and Editor provide scene geometry to this
-// same renderer; tool-specific interaction remains in their surface adapters.
+// Shared OSC contract. Region and Editor build scene geometry here and draw
+// it through the shared WGSL OSC renderer (`osc/gpu/macos.rs`); tool-specific
+// interaction remains in their surface adapters.
 
 typedef struct {
   float x;
   float y;
 } ScreenwideRegionOscPoint;
 
+/// The twin of Rust's OSC `Vertex`.
 typedef struct {
   ScreenwideRegionOscPoint position;
   ScreenwideRegionOscPoint uv;
   uint32_t kind;
   uint32_t padding;
 } ScreenwideRegionOscVertex;
+_Static_assert(sizeof(ScreenwideRegionOscVertex) == 24,
+               "OSC vertices must match the Rust layout");
 
 typedef struct {
   uint32_t active;
@@ -55,6 +59,8 @@ typedef struct {
   float fill[4];
   float outline[4];
 } ScreenwideOscControlPalette;
+_Static_assert(sizeof(ScreenwideOscControlPalette) == 32,
+               "OSC palette must match the Rust FFI layout");
 
 typedef struct {
   float shade[4];
@@ -88,16 +94,35 @@ ScreenwideOscOcrPalette screenwide_osc_ocr_palette(uint32_t light_mode);
 ScreenwideOscRulerPalette screenwide_osc_ruler_palette(uint32_t light_mode);
 ScreenwideRegionOscRenderState screenwide_region_osc_render_state(
     uint32_t light_mode);
-
-NSString *screenwide_region_osc_shader_source(void);
-id<MTLRenderPipelineState> screenwide_region_osc_make_pipeline(
-    id<MTLDevice> device, id<MTLLibrary> library, NSError **error);
-id<MTLRenderPipelineState> screenwide_region_osc_make_snapshot_pipeline(
-    id<MTLDevice> device, id<MTLLibrary> library, NSError **error);
-id<MTLComputePipelineState> screenwide_region_magnifier_make_pipeline(
-    id<MTLDevice> device, id<MTLLibrary> library, NSError **error);
-id<MTLTexture> screenwide_region_osc_make_placeholder(id<MTLDevice> device);
 NSCursor *screenwide_region_resize_cursor(uint32_t edges);
+
+/// The shared wgpu device's Metal device and queue. Every OSC layer and
+/// texture is made on this device, and a command buffer committed to this
+/// queue runs after the OSC draws made before it.
+void *screenwide_shared_metal_device(void);
+void *screenwide_shared_metal_queue(void);
+
+/// What a draw does with its magnifier.
+enum {
+  /// Nothing.
+  ScreenwideOscLensNone = 0,
+  /// Keeps the lens's box clear for a lens drawn before.
+  ScreenwideOscLensCutout = 1,
+  /// Draws the lens last, from the magnifier source.
+  ScreenwideOscLensDrawn = 2,
+};
+
+/// Draws `count` vertices into `target`, a drawable's `id<MTLTexture>`, on
+/// the shared queue, clearing it first when `clear` is set. `label`,
+/// `secondary_label`, `snapshot` and `magnifier_source` are `id<MTLTexture>`s
+/// or NULL. Present with a command buffer from the shared queue committed
+/// afterwards. Answers 0 when nothing was drawn.
+int screenwide_osc_draw(void *target, int clear,
+                        const ScreenwideRegionOscVertex *vertices, uint32_t count,
+                        const ScreenwideRegionOscRenderState *state,
+                        const ScreenwideRegionMagnifier *magnifier, uint32_t lens,
+                        void *label, void *secondary_label, void *snapshot,
+                        void *magnifier_source);
 
 NSPoint screenwide_region_magnifier_anchor(NSPoint point, NSRect frame,
                                            uint32_t edges);
@@ -144,23 +169,5 @@ void screenwide_region_osc_add_crop_with_handles(
     ScreenwideRegionOscVertex *vertices, NSUInteger *count, NSSize view_size,
     NSRect crop, NSRect image, CGFloat scale, double radius_percent,
     BOOL show_frame, BOOL show_handles);
-
-void screenwide_region_osc_encode(
-    id<MTLRenderCommandEncoder> encoder,
-    id<MTLRenderPipelineState> pipeline, id<MTLBuffer> vertices,
-    NSUInteger vertex_count, ScreenwideRegionOscRenderState state,
-    id<MTLTexture> label, id<MTLTexture> secondary_label);
-void screenwide_region_osc_encode_with_snapshot(
-    id<MTLRenderCommandEncoder> encoder,
-    id<MTLRenderPipelineState> pipeline, id<MTLBuffer> vertices,
-    NSUInteger vertex_count, ScreenwideRegionOscRenderState state,
-    id<MTLTexture> label, id<MTLTexture> secondary_label,
-    id<MTLTexture> snapshot);
-id<MTLTexture> screenwide_osc_icon_texture(id<MTLDevice> device);
-void screenwide_region_magnifier_encode(
-    id<MTLComputeCommandEncoder> encoder,
-    id<MTLComputePipelineState> pipeline, id<MTLBuffer> source,
-    id<MTLTexture> output, const uint32_t source_dimensions[2],
-    ScreenwideRegionMagnifier magnifier);
 
 #import "osc_pixel_alignment_macos.h"

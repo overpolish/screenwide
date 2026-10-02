@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Blur and rounded corners through a real Metal dispatch: a blur is a
+//! Blur and rounded corners through a real GPU dispatch: a blur is a
 //! Gaussian over the box's own pixels, and a rounded box covers every pixel
 //! its outline touches whole, blending only pixels wholly outside it.
 

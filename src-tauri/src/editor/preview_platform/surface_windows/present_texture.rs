@@ -169,7 +169,7 @@ impl RecordingPreviewSurface {
   /// the annotations it was last composed with. This is what an arrow drag
   /// needs per pointer sample: the picture has not changed, only the
   /// annotations over it, so asking the decoder for the frame again would put a
-  /// seek between the hand and the arrow. The Metal workspace does the same
+  /// seek between the hand and the arrow. The macOS workspace does the same
   /// through `redraw_recording_workspace`.
   ///
   /// `source` is the full-resolution grid the annotations are authored in; they

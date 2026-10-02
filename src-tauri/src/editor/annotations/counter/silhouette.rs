@@ -13,7 +13,7 @@
 //! a blunt teardrop, and straight sides would pinch in off the disc instead.
 //! At a radius back the outline is `MapPinPlusInside`, the glyph the counter
 //! tool is drawn with, to within a hundredth of the radius. Every drawing and
-//! picking path - Metal, WGSL and this module - builds it that way.
+//! picking path - the WGSL shader and this module - builds it that way.
 
 #[cfg(target_os = "macos")]
 use crate::editor::annotations::geometry::ArrowGeometry;
@@ -27,8 +27,8 @@ use crate::editor::annotations::AnnotationPoint;
 /// The two together are the shape of `MapPinPlusInside`, the glyph the counter
 /// tool is drawn with, so the annotation and its icon read as one thing.
 ///
-/// Placing and picking a counter's grip from its aim is the D3D11 backend's
-/// work; the Metal one and the macOS chrome pick from the prepared record.
+/// Placing and picking a counter's grip from its aim is the Windows chrome's
+/// work; the macOS chrome picks from the prepared record.
 pub(crate) const COUNTER_TAIL_REACH: f64 = 1.5;
 #[cfg(any(target_os = "windows", test))]
 const COUNTER_TIP_SHARE: f64 = 0.125;

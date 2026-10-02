@@ -9,8 +9,7 @@ impl Gpu {
     let device = &shared.device;
     let module = shader_module(device);
     let layout = bind_group_layout(device);
-    let blended = pipeline(device, &layout, &module, wgpu::BlendFactor::SrcAlpha);
-    let opaque = pipeline(device, &layout, &module, wgpu::BlendFactor::One);
+    let pipeline = pipeline(device, &layout, &module);
     let placeholder = upload_rgba(shared, &[0_u8; 4], 1, 1);
     let icons = upload_icons(shared).unwrap_or_else(|error| {
       eprintln!("The Windows region OSC could not upload the icon atlas: {error}");
@@ -19,8 +18,7 @@ impl Gpu {
     Ok(Arc::new(Self {
       shared,
       layout,
-      pipeline: blended,
-      opaque_pipeline: opaque,
+      pipeline,
       linear_sampler: sampler(device, wgpu::FilterMode::Linear),
       point_sampler: sampler(device, wgpu::FilterMode::Nearest),
       placeholder,

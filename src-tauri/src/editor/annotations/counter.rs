@@ -11,14 +11,11 @@
 /// Where the numbers sit in the atlas both backends rasterise them into.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod atlas;
-/// The atlas layout as the Metal compositor reaches it.
-#[cfg(target_os = "macos")]
-pub(crate) mod atlas_ffi;
 /// How finely the atlas rasterises type for where the canvas is drawn.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod atlas_scale;
-/// Draw-ready geometry, prepared for both backends: the D3D11 one calls this
-/// directly, the Metal one through `geometry.h`.
+/// Draw-ready geometry: the compositor calls this directly, the macOS chrome
+/// through `geometry.h`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod geometry;
 /// What moving a counter's grips does to it.

@@ -37,8 +37,8 @@ pub(crate) mod native;
 /// The few colours a pixelated box draws its blocks in.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod palette;
-/// The records the Windows compositor's passes read.
-#[cfg(any(target_os = "windows", test))]
+/// The records the redaction passes read.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod records;
 /// The ramp an animated redaction arrives through.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]

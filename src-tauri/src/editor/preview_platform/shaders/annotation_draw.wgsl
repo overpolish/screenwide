@@ -15,7 +15,6 @@
 // are measured once, each over its whole length, and each sample only asks
 // whether that nearest point lies inside its window - and where it does not,
 // how far the window's end on that curve is. The twin of
-// `gpu_compositor_macos_shader_source_annotation_draw.h`, and of
 // `freehand::geometry::freehand_distance`, which picks the same line.
 
 const annotation_draw_kind: u32 = 7u;
@@ -113,18 +112,27 @@ fn annotation_draw_window(probe: vec2<f32>, annotation: PreviewArrow,
   return nearest - stroke.width * 0.5;
 }
 
+/// Where a stroke can reach: its box, the pen's half-width and its halo out.
+fn annotation_draw_bounds(stroke: PreviewGeometry, halo: f32, feather: f32) -> vec4<f32> {
+  let reach = annotation_draw_reach(stroke, halo, feather);
+  return vec4<f32>(vec2<f32>(stroke.ax, stroke.ay) - reach,
+                   vec2<f32>(stroke.cx, stroke.cy) + reach);
+}
+
+fn annotation_draw_reach(stroke: PreviewGeometry, halo: f32, feather: f32) -> f32 {
+  return stroke.width * 0.5 + halo + feather + 1.0;
+}
+
 // One stroke: its line in the annotation's own colour, haloed while the
 // pointer rests on it, and smeared over the exposure while it draws itself
 // in or out.
 fn annotation_draw_layer(rgba_in: vec4<f32>, annotation: PreviewArrow, color: vec4<f32>,
                          canvas_point: vec2<f32>, feather: f32, halo: f32) -> vec4<f32> {
   let stroke = annotation.geometry;
-  let reach = stroke.width * 0.5 + halo + feather + 1.0;
-  let low = vec2<f32>(stroke.ax, stroke.ay);
-  let high = vec2<f32>(stroke.cx, stroke.cy);
-  if (any(canvas_point < low - reach) || any(canvas_point > high + reach)) {
+  if (annotation_outside(canvas_point, annotation_draw_bounds(stroke, halo, feather))) {
     return rgba_in;
   }
+  let reach = annotation_draw_reach(stroke, halo, feather);
   var near: AnnotationDrawNearList;
   let found = annotation_draw_near(canvas_point, annotation, reach, &near);
   if (found == 0u) {

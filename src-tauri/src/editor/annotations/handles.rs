@@ -69,7 +69,7 @@ pub(crate) const HANDLE_FLAG_GROUPED: u32 = 1;
 
 const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 88);
 
-/// The Metal backend reads a record's kind in Objective-C; only the D3D11
+/// The macOS chrome reads a record's kind in Objective-C; only the Windows
 /// one picks and prepares from it in Rust.
 #[cfg(target_os = "windows")]
 impl NativeAnnotationHandles {

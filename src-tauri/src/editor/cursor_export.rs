@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Final-video cursor composition.
+//! Final-video composition.
 //!
-//! Rust renders only a small transparent cursor movie. On macOS, decoded screen
-//! planes stay in Core Video, Metal copies them and blends only the cursor's
-//! bounds, then VideoToolbox encodes the result. Selected audio is stream-copied
-//! or mixed afterwards without decoding the finished video.
+//! Each frame is drawn on the shared GPU device by the same compositor the
+//! preview and stills use. On macOS, AVFoundation decodes the screen into
+//! Core Video buffers the compositor reads in place and writes the encoder's
+//! buffers in place; on Windows, Media Foundation does the same through
+//! Direct3D 11. Selected audio is stream-copied or mixed afterwards without
+//! decoding the finished video.
 
 use std::{path::Path, sync::atomic::AtomicBool};
 
@@ -17,6 +19,8 @@ use super::{
 };
 use crate::screenshots::ScreenshotOutputSettings;
 
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod frame_annotations;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(target_os = "windows")]

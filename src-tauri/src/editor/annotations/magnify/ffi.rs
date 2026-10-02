@@ -1,13 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A magnifier's prepared geometry, as the Metal compositor and the macOS
-//! chrome reach it. Its loupe's size and its rounding ride beside its three
-//! points rather than among them, so it has an entry point of its own beside
+//! A magnifier's prepared geometry, as the macOS chrome reaches it. Its
+//! loupe's size and its rounding ride beside its three points rather than
+//! among them, so it has an entry point of its own beside
 //! `screenwide_annotation_prepare`.
 
 use super::geometry::{magnify_part, prepare_magnify, MagnifyPart};
-use crate::editor::annotations::exposure::magnify_travel;
 use crate::editor::annotations::geometry::ArrowGeometry;
 use crate::editor::annotations::reveal::AnnotationReveal;
 
@@ -45,27 +44,6 @@ pub unsafe extern "C" fn screenwide_magnify_prepare(
     width,
     reveal,
   );
-}
-
-/// How far a magnifier's loupe moves between the shutter opening and now:
-/// its zoom area from `p0` to `p2` and its loupe centred on `p1`, `size`
-/// along its longer side, all in the space `sx` and `sy` carry into the
-/// pixels the travel is measured in.
-#[no_mangle]
-#[allow(clippy::too_many_arguments)]
-pub extern "C" fn screenwide_magnify_travel(
-  p0x: f32,
-  p0y: f32,
-  p1x: f32,
-  p1y: f32,
-  p2x: f32,
-  p2y: f32,
-  size: f32,
-  sx: f32,
-  sy: f32,
-  reveal: AnnotationReveal,
-) -> f32 {
-  magnify_travel([[p0x, p0y], [p1x, p1y], [p2x, p2y]], size, [sx, sy], reveal)
 }
 
 /// Which part of a prepared magnifier a point is on: 1 for the loupe, 2 for

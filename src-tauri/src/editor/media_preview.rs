@@ -35,7 +35,7 @@ mod windows;
 pub use audio::prepare;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(in crate::editor) use bake::bake_geometry;
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(in crate::editor) use bake::BakeGeometry;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(in crate::editor) use encode::timeline_audio_mapping_args;

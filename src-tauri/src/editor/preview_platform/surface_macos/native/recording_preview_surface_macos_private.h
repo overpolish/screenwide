@@ -9,8 +9,8 @@
 #import <QuartzCore/CAMetalLayer.h>
 #include <stdint.h>
 
-#import "../../../cursor_export/macos/gpu_compositor/gpu_compositor_macos_presenter.h"
 #import "../../../../osc/gpu/macos/osc_gpu_macos.h"
+#import "recording_preview_workspace_scene_macos.h"
 #import "recording_preview_annotation_macos.h"
 #import "recording_preview_audio_ribbon_macos.h"
 
@@ -171,7 +171,6 @@ typedef struct {
 @end
 @interface ScreenwidePreviewView : NSView
 @property(nonatomic) BOOL active;
-@property(nonatomic) void *compositor;
 /// A resize the webview has laid out but whose matching frame has not been
 /// composed yet. Applying it early would show the previous drawable fitted
 /// into the new rect for a display tick; the next present applies it in the
@@ -180,10 +179,13 @@ typedef struct {
 @property(nonatomic) NSRect pendingFrame;
 @end
 @interface ScreenwidePreviewSurface : NSObject
+/// The shared wgpu device's Metal device and queue: the OSC is encoded on
+/// that queue after the scene's draw, so it lands over the drawn workspace.
 @property(nonatomic, strong) id<MTLDevice> device;
 @property(nonatomic, strong) id<MTLCommandQueue> queue;
-@property(nonatomic, strong) id<MTLComputePipelineState> pipeline;
-@property(nonatomic, strong) id<MTLRenderPipelineState> selectionPipeline;
+/// The workspace's retained scene, a strong reference released when the
+/// surface is deallocated.
+@property(nonatomic) const void *scene;
 @property(nonatomic, strong) NSView *host;
 @property(nonatomic, weak) NSView *webview;
 @property(nonatomic, strong) ScreenwidePreviewView *container;
@@ -215,7 +217,6 @@ typedef struct {
 @property(nonatomic) BOOL workspaceDrawPending;
 @property(nonatomic) BOOL workspaceLayoutAwaitsPresent;
 @property(nonatomic, strong) NSLock *workspaceLock;
-@property(nonatomic, strong) id<MTLCommandBuffer> workspaceEncodingCommand;
 @property(nonatomic, strong) id<MTLTexture> workspaceEncodingTexture;
 @property(nonatomic) ScreenwideRegionMagnifier workspaceMagnifier;
 @property(nonatomic, strong) ScreenwidePreviewInteractionView *interaction;
@@ -274,9 +275,6 @@ typedef struct {
 @property(nonatomic) BOOL selectionVisible;
 @property(nonatomic) ScreenwidePreviewSelection selection;
 @property(nonatomic, strong) CAMetalLayer *selectionLayer;
-/// Transparent 1x1 texture bound to the shared OSC fragment interface's text
-/// slots: the preview overlay draws no text quads of its own.
-@property(nonatomic, strong) id<MTLTexture> selectionTexturePlaceholder;
 @property(nonatomic) uint64_t selectionDrawRevision;
 @property(nonatomic) BOOL selectionDrawInFlight;
 @property(nonatomic) BOOL selectionDrawPending;

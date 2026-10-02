@@ -35,8 +35,9 @@ struct Canvas {
   motion: vec4<f32>,
   cursor_geometry: vec4<f32>, // source-space anchor x/y, artwork width/height
   cursor_effects: vec4<f32>, // opacity, reserved y, rotation radians, scale
-  // Source-space frame delta x/y, then the spotlights' blur the cursor takes:
-  // its deviation in output pixels and how far it has arrived.
+  // Source-space frame delta x/y of the cursor, then the spotlights' blur the
+  // cursor and the marks under it take: its deviation in output pixels and
+  // how far it has arrived.
   cursor_blur: vec4<f32>,
   camera_frame: vec4<f32>, // output-space x/y/width/height
   camera_crop: vec4<f32>, // camera source-space x/y/width/height
@@ -51,9 +52,35 @@ struct Canvas {
   // Annotations below the camera are sorted ahead of those above it, so `x` is
   // both the below-camera count and where the above-camera run starts.
   annotation_options: vec4<u32>, // below-camera count, total count, number atlas size
+  // The artwork a cursor handed its own drawings is drawn with (macOS):
+  // the style's bitmap and design size, the hotspot in the recorded cursor
+  // box and the design's origin, and whether the artwork model is in use,
+  // whether the design is used, whether the box clips, and supersampling.
+  // Here `cursor_geometry.xy` is the hotspot in output pixels.
+  cursor_artwork: vec4<f32>,
+  cursor_frame: vec4<f32>,
+  cursor_model: vec4<u32>,
+  // The annotation tiles: side in canvas pixels, grid width and height, and
+  // words a tile's set takes. See `annotation_tiles.wgsl`.
+  annotation_tiles: vec4<u32>,
+  // Where the canvas is drawn in its target: the corner, and the canvas pixels
+  // one target pixel covers. The identity draws it at its own size.
+  placement: vec4<f32>,
+  // The spotlights' blur of the annotations under their shade, which
+  // `compositor/mark_blur.rs` lays into `annotation_blur_layer`: its texels per
+  // canvas pixel, whether this pass draws that layer (1) or reads it (2), and
+  // the index of the spotlight whose shade it lies under.
+  annotation_blur: vec4<f32>,
 }
 
-// The twin of `KeyboardConstants`, which mirrors the Metal `KeyboardUniforms`.
+// False in the lean pipelines a draw showing no annotation uses, whose module
+// is this source with that one line changed: the counts read as zero, so the
+// compiler leaves every annotation pass out rather than keeping its code in a
+// shader that walks empty lists. The cursor and the keyboard overlay are
+// drawn either way.
+const annotations_drawn: bool = true;
+
+// The twin of `KeyboardConstants`.
 struct Keyboard {
   dimensions: vec4<u32>, // artwork width/height, key count, animation
   animation: vec4<f32>, // scale, layout progress, maximum width, requested scale
@@ -74,6 +101,10 @@ struct Keyboard {
 @group(0) @binding(6) var background_image: texture_2d<f32>;
 @group(0) @binding(12) var linear_sampler: sampler;
 @group(0) @binding(13) var point_sampler: sampler;
+// What the annotations under the spotlights' shade add to the canvas, and the
+// cursor alone, each blurred over the whole canvas; see `annotation_blur`.
+@group(0) @binding(15) var annotation_blur_layer: texture_2d<f32>;
+@group(0) @binding(16) var annotation_cursor_layer: texture_2d<f32>;
 
 // Where a magnifier reads the picture it enlarges: the source, after its
 // redactions, placed at `image_rect` and showing where the canvas crop and the
@@ -181,7 +212,7 @@ fn crop_preview_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
 
 fn cursor_sample(source_pixel: vec2<f32>, anchor: vec2<f32>) -> vec4<f32> {
   // The preview's screen-space rotation convention is opposite to the
-  // raster/Metal convention used to calculate the motion lean.
+  // raster convention used to calculate the motion lean.
   var angle = -canvas.cursor_effects.z;
   if (canvas.cursor_options.x == 2u) {
     angle += 1.57079632679;
@@ -202,9 +233,156 @@ fn cursor_sample(source_pixel: vec2<f32>, anchor: vec2<f32>) -> vec4<f32> {
                             canvas.cursor_options.x, 0.0);
 }
 
+// The cursor drawn from the artwork it was handed, as the macOS canvas draws
+// it: a port of `CursorRaster::sample` and `draw_blurred`
+// (editor/cursor_effects/raster.rs) in output pixels.
+
+// One bilinear read of the style's bitmap at `point`, in its own pixels,
+// weighted by alpha so transparent texels lend no colour.
+fn artwork_texel(point_in: vec2<f32>) -> vec4<f32> {
+  let bitmap = max(vec2<u32>(canvas.cursor_artwork.xy), vec2<u32>(1u));
+  let last = vec2<f32>(bitmap - vec2<u32>(1u));
+  let point = clamp(point_in, vec2<f32>(0.0), last);
+  let low = vec2<u32>(floor(point));
+  let high = min(low + vec2<u32>(1u), vec2<u32>(last));
+  let fraction = point - vec2<f32>(low);
+  let layer = i32(canvas.cursor_options.x);
+  let samples = array<vec4<f32>, 4>(
+    textureLoad(native_cursor_images, vec2<i32>(low), layer, 0),
+    textureLoad(native_cursor_images, vec2<i32>(i32(high.x), i32(low.y)), layer, 0),
+    textureLoad(native_cursor_images, vec2<i32>(i32(low.x), i32(high.y)), layer, 0),
+    textureLoad(native_cursor_images, vec2<i32>(high), layer, 0),
+  );
+  let weights = array<f32, 4>(
+    (1.0 - fraction.x) * (1.0 - fraction.y),
+    fraction.x * (1.0 - fraction.y),
+    (1.0 - fraction.x) * fraction.y,
+    fraction.x * fraction.y,
+  );
+  var alpha = 0.0;
+  var colour = vec3<f32>(0.0);
+  for (var index = 0u; index < 4u; index++) {
+    alpha += samples[index].a * weights[index];
+    colour += samples[index].rgb * samples[index].a * weights[index];
+  }
+  if (alpha <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  return vec4<f32>(colour / alpha, alpha);
+}
+
+// The output point turned and scaled into the recorded cursor box, then
+// mapped onto the artwork; drawn fallback artwork keeps its design aspect.
+fn artwork_sample(point: vec2<f32>, anchor: vec2<f32>) -> vec4<f32> {
+  let delta = point - anchor;
+  let cosine = cos(canvas.cursor_effects.z);
+  let sine = sin(canvas.cursor_effects.z);
+  let local = vec2<f32>(cosine * delta.x + sine * delta.y, -sine * delta.x + cosine * delta.y) /
+      max(canvas.cursor_effects.w, 0.0001) + canvas.cursor_frame.xy;
+  let box = canvas.cursor_geometry.zw;
+  if (canvas.cursor_model.z != 0u && (any(local < vec2<f32>(0.0)) || any(local >= box))) {
+    return vec4<f32>(0.0);
+  }
+  let bitmap = canvas.cursor_artwork.xy;
+  if (canvas.cursor_model.y == 0u) {
+    return artwork_texel(local / max(box, vec2<f32>(0.0001)) * bitmap);
+  }
+  let design_size = canvas.cursor_artwork.zw;
+  let artwork_scale = max(min(box.x / design_size.x, box.y / design_size.y), 0.01);
+  let design = local / artwork_scale + canvas.cursor_frame.zw;
+  if (any(design < vec2<f32>(0.0)) || any(design >= design_size)) {
+    return vec4<f32>(0.0);
+  }
+  return artwork_texel(design / design_size * bitmap);
+}
+
+// System artwork already carries an antialiased edge, so only the hard-edged
+// drawn fallback is supersampled over the pixel's 4x4 box.
+fn artwork_draw_sample(point: vec2<f32>, anchor: vec2<f32>) -> vec4<f32> {
+  if (canvas.cursor_model.w == 0u) {
+    return artwork_sample(point, anchor);
+  }
+  let offsets = array<f32, 4>(-0.375, -0.125, 0.125, 0.375);
+  var alpha = 0.0;
+  var colour = vec3<f32>(0.0);
+  for (var y = 0u; y < 4u; y++) {
+    for (var x = 0u; x < 4u; x++) {
+      let sample = artwork_sample(point + vec2<f32>(offsets[x], offsets[y]), anchor);
+      alpha += sample.a;
+      colour += sample.rgb * sample.a;
+    }
+  }
+  if (alpha <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  return vec4<f32>(colour / alpha, alpha / 16.0);
+}
+
+// Whether `point` lies inside a box of `size` rounded by `radius`, judged by
+// the pixel's own centre rather than by coverage.
+fn rounded_pixel_visible(point: vec2<f32>, size: vec2<f32>, radius: f32) -> bool {
+  if (radius <= 0.0) {
+    return true;
+  }
+  let edge = min(point, size - point);
+  let corner = max(vec2<f32>(0.0), vec2<f32>(radius) - edge);
+  return length(corner) <= radius;
+}
+
+// The cursor at an output pixel, straight alpha before its opacity: exposure
+// taps are Gaussian weighted along the frame's travel, no more than two
+// output pixels apart, and a cursor clipped to the video is cut pixel by
+// pixel at the crop's rounded edge.
+fn artwork_cursor(point: vec2<f32>) -> vec4<f32> {
+  if (canvas.cursor_artwork.x <= 0.0 || canvas.cursor_artwork.y <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  let anchor = canvas.cursor_geometry.xy;
+  let delta = canvas.cursor_blur.xy;
+  let travel = length(delta);
+  let distance = min(travel, 80.0);
+  let radius = length(canvas.cursor_geometry.zw) * canvas.cursor_effects.w + distance + 4.0;
+  if (any(abs(point - anchor) > vec2<f32>(radius))) {
+    return vec4<f32>(0.0);
+  }
+  if (canvas.cursor_options.z != 0u) {
+    let crop_point = point - canvas.crop_rect.xy;
+    let crop_size = canvas.crop_rect.zw;
+    if (any(crop_point < vec2<f32>(0.0)) || any(crop_point >= crop_size) ||
+        !rounded_pixel_visible(crop_point, crop_size, canvas.effects.x)) {
+      return vec4<f32>(0.0);
+    }
+  }
+  if (!(distance > 1.25 && travel > 0.0)) {
+    return artwork_draw_sample(point, anchor);
+  }
+  let direction = delta / travel;
+  let count = u32(clamp(ceil(distance / 2.0) + 1.0, 8.0, 48.0));
+  var total_weight = 0.0;
+  var alpha = 0.0;
+  var colour = vec3<f32>(0.0);
+  for (var index = 0u; index < count; index++) {
+    let progress = f32(index) / f32(count - 1u);
+    let centered = (progress - 0.5) / 0.34;
+    let weight = exp(-0.5 * centered * centered);
+    let sample = artwork_draw_sample(point, anchor + direction * ((progress - 0.8) * distance));
+    alpha += sample.a * weight;
+    colour += sample.rgb * sample.a * weight;
+    total_weight += weight;
+  }
+  alpha /= total_weight;
+  if (alpha <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  return vec4<f32>(colour / (total_weight * alpha), alpha);
+}
+
 fn cursor_layer(pixel: vec2<f32>) -> vec4<f32> {
   if (canvas.cursor_options.y == 0u) {
     return vec4<f32>(0.0);
+  }
+  if (canvas.cursor_model.x != 0u) {
+    return artwork_cursor(pixel);
   }
   let image_rect = canvas.image_rect;
   let source_size = canvas.output_source.zw;
@@ -247,7 +425,8 @@ fn cursor_layer(pixel: vec2<f32>) -> vec4<f32> {
 fn annotation_cursor_sample(probe: vec2<f32>) -> vec4<f32> {
   var cursor = cursor_layer(probe);
   cursor.a *= canvas.cursor_effects.x;
-  if (canvas.cursor_options.z != 0u) {
+  // The artwork model clips inside `artwork_cursor`, pixel by pixel.
+  if (canvas.cursor_options.z != 0u && canvas.cursor_model.x == 0u) {
     cursor.a *= rounded_coverage(probe, canvas.crop_rect, canvas.effects.x) *
         rounded_coverage(probe, canvas.image_rect, 0.0) *
         rounded_coverage(probe, canvas.source_crop_rect, 0.0);
@@ -255,9 +434,69 @@ fn annotation_cursor_sample(probe: vec2<f32>) -> vec4<f32> {
   return cursor;
 }
 
-fn annotation_cursor_blur() -> AnnotationCursorBlur {
-  return AnnotationCursorBlur(canvas.cursor_blur.z, canvas.cursor_blur.w,
-                              canvas.annotation_options.y);
+// Whether the cursor may draw within `margin` canvas pixels of `probe`, by
+// the same reach `cursor_layer` turns pixels away at, so a probe farther off
+// samples nothing however far a blur's taps spread.
+fn annotation_cursor_near(probe: vec2<f32>, margin: f32) -> bool {
+  if (canvas.cursor_options.y == 0u) {
+    return false;
+  }
+  let travel = min(length(canvas.cursor_blur.xy), 80.0);
+  let radius = length(canvas.cursor_geometry.zw) * canvas.cursor_effects.w + travel + 4.0;
+  if (canvas.cursor_model.x != 0u) {
+    return all(abs(probe - canvas.cursor_geometry.xy) <= vec2<f32>(radius + margin));
+  }
+  let image_rect = canvas.image_rect;
+  let source_size = canvas.output_source.zw;
+  let source_pixel = (probe - image_rect.xy) / image_rect.zw * source_size;
+  let display_anchor = image_rect.xy + canvas.cursor_geometry.xy / source_size * image_rect.zw;
+  let anchor = (round(display_anchor) - image_rect.xy) / image_rect.zw * source_size;
+  return all(abs(source_pixel - anchor) <= radius + margin * source_size / image_rect.zw);
+}
+
+fn annotation_spotlight_blur() -> AnnotationSpotlightBlur {
+  return AnnotationSpotlightBlur(canvas.cursor_blur.z,
+                                 select(0.0, canvas.cursor_blur.w, annotations_drawn),
+                                 select(0u, canvas.annotation_options.y, annotations_drawn));
+}
+
+// Whether this pass draws the annotations' blur layer (1), draws the cursor's
+// (3), reads them (2), or none of these.
+fn annotation_blur_mode() -> u32 {
+  return u32(canvas.annotation_blur.y);
+}
+
+// Whether the annotations under a shade have a blur layer at all.
+fn annotation_blur_marks() -> bool {
+  return canvas.annotation_blur.z >= 0.0;
+}
+
+// The spotlight whose shade the annotations' blur layer lies under.
+fn annotation_blur_spotlight() -> u32 {
+  return u32(max(canvas.annotation_blur.z, 0.0));
+}
+
+// The point in a blur layer, which covers the canvas, that `point` falls on.
+fn annotation_blur_at(point: vec2<f32>, layer: texture_2d<f32>) -> vec2<f32> {
+  return point * canvas.annotation_blur.x / vec2<f32>(textureDimensions(layer));
+}
+
+// What the annotations under that shade add to the canvas at `point`,
+// blurred.
+fn annotation_marks_blurred(point: vec2<f32>) -> vec4<f32> {
+  return textureSampleLevel(annotation_blur_layer, linear_sampler,
+                            annotation_blur_at(point, annotation_blur_layer), 0.0);
+}
+
+// Whether this pass reads the cursor's blur layer.
+fn annotation_cursor_blur_layer() -> bool {
+  return annotation_blur_mode() == 2u && canvas.annotation_blur.w != 0.0;
+}
+
+// The cursor alone at `point`, blurred, premultiplied.
+fn annotation_cursor_blurred(point: vec2<f32>) -> vec4<f32> {
+  return textureSampleLevel(annotation_cursor_layer, linear_sampler,
+                            annotation_blur_at(point, annotation_cursor_layer), 0.0);
 }
 
 // A chosen picture covers the canvas: it is scaled until both sides reach,
@@ -290,10 +529,15 @@ fn background(pixel: vec2<f32>) -> vec3<f32> {
     let palette = GenPalette(canvas.mesh_colors[0].rgb, canvas.mesh_colors[1].rgb,
                              canvas.mesh_colors[2].rgb, canvas.mesh_colors[3].rgb,
                              canvas.background_options.z);
-    // Ported generators reuse the classic mesh point slot for the CPU-resolved
-    // seed domain shift; only the classic generator reads its point geometry.
+    // Ported generators reuse the classic mesh point slot for the seed's
+    // domain shift, resolved on the CPU unless its last word asks for the
+    // shader's own hash; only the classic generator reads point geometry.
+    var shift = canvas.mesh_points[0].xyz;
+    if (canvas.mesh_points[0].w != 0.0) {
+      shift = gen_seed_shift(canvas.options.x);
+    }
     return gen_pixel_shifted(canvas.background_options.y, pixel, canvas.output_source.xy, palette,
-                             canvas.mesh_points[0].xyz, canvas.motion.x, canvas.motion.y);
+                             shift, canvas.motion.x, canvas.motion.y);
   }
   let shortest = min(canvas.output_source.x, canvas.output_source.y);
   let dimensions = canvas.output_source.xy;
@@ -522,6 +766,27 @@ fn keyboard_layout_offset(index: u32, canvas_dimensions: vec2<f32>, progress_del
   return source_offset * full_width * keyboard_key_ratio(index) / max(artwork.x, 1.0);
 }
 
+// Whether key `index` drawn at up to `scale` may reach `canvas_point`: within
+// half its height of its row's centre, and within three row widths of the
+// row's centre across, which holds the key wherever its layout carries it,
+// spring and all. `keyboard_key_pixel` is transparent everywhere else, so a
+// pixel turned away here composites exactly as one walked through it.
+fn keyboard_key_may_reach(index: u32, canvas_point: vec2<f32>, canvas_dimensions: vec2<f32>,
+                          scale: f32) -> bool {
+  let artwork = vec2<f32>(keyboard.dimensions.xy);
+  let height = canvas_dimensions.y * (60.0 / 1080.0) *
+      keyboard_effective_scale(canvas_dimensions) * keyboard_key_ratio(index);
+  let width = height * artwork.x / max(artwork.y, 1.0);
+  let position_x = keyboard_key_axis(keyboard.key_position[index].x, keyboard.position.x);
+  let position_y = keyboard_key_axis(keyboard.key_position[index].y, keyboard.position.y);
+  let center_x = select(canvas_dimensions.x * 0.5, position_x * canvas_dimensions.x,
+                        position_x >= 0.0);
+  let center_y = select(canvas_dimensions.y - canvas_dimensions.y * 0.055 - height * 0.5,
+                        position_y * canvas_dimensions.y, position_y >= 0.0);
+  let reach = vec2<f32>(width * (3.0 + scale), height * scale * 0.5) + 1.0;
+  return all(abs(canvas_point - vec2<f32>(center_x, center_y)) <= reach);
+}
+
 fn composite_keyboard(rgba_in: vec4<f32>, canvas_point: vec2<f32>,
                       dimensions: vec2<f32>) -> vec4<f32> {
   if (keyboard.dimensions.z == 0u || keyboard.dimensions.x == 0u ||
@@ -536,13 +801,7 @@ fn composite_keyboard(rgba_in: vec4<f32>, canvas_point: vec2<f32>,
     if (geometry.z == 0u || motion.x <= 0.0) {
       continue;
     }
-    var value = vec4<f32>(0.0);
-    var total = 0.0;
-    let layout_offset = keyboard_layout_offset(index, dimensions, 0.0);
-    let previous_offset = keyboard_layout_offset(index, dimensions, 0.12);
-    let layout_delta = previous_offset - layout_offset;
     let pop_blur = keyboard.dimensions.w == 0u && motion.z < 1.0;
-    let layout_blur = abs(layout_delta) > 0.25;
     let requested_scale = select(keyboard.animation.x, keyboard.animation.w,
                                  keyboard.animation.w > 0.0);
     let current_scale = motion.y / max(requested_scale, 0.001);
@@ -550,6 +809,17 @@ fn composite_keyboard(rgba_in: vec4<f32>, canvas_point: vec2<f32>,
                                    geometry.z == 2u);
     let previous_scale = select(current_scale, keyboard_motion_spring(previous_progress),
                                 pop_blur);
+    // Every sample is drawn at a scale between these two.
+    if (!keyboard_key_may_reach(index, canvas_point, dimensions,
+                                max(current_scale, previous_scale))) {
+      continue;
+    }
+    var value = vec4<f32>(0.0);
+    var total = 0.0;
+    let layout_offset = keyboard_layout_offset(index, dimensions, 0.0);
+    let previous_offset = keyboard_layout_offset(index, dimensions, 0.12);
+    let layout_delta = previous_offset - layout_offset;
+    let layout_blur = abs(layout_delta) > 0.25;
     let key_height = dimensions.y * (60.0 / 1080.0) * keyboard_effective_scale(dimensions);
     let key_width = key_height * f32(geometry.y) / max(f32(keyboard.dimensions.y), 1.0);
     let radial_travel = 0.5 * length(vec2<f32>(key_width, key_height)) *
@@ -628,7 +898,15 @@ fn crop_magnifier(result: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
 
 @fragment
 fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
-  let pixel = position.xy;
+  let pixel = (position.xy - canvas.placement.xy) * canvas.placement.zw;
+  if (annotation_blur_mode() == 3u) {
+    // Drawing the cursor's blur layer: the cursor alone, premultiplied.
+    if (!annotation_cursor_near(pixel, 1.0)) {
+      return vec4<f32>(0.0);
+    }
+    let pointer = annotation_cursor_sample(pixel);
+    return vec4<f32>(pointer.rgb * pointer.a, pointer.a);
+  }
   let foreground_only = canvas.cursor_options.w != 0u;
   let background_alpha = rounded_coverage(pixel, vec4<f32>(0.0, 0.0, canvas.output_source.xy),
                                           canvas.effects.y);
@@ -674,21 +952,33 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let annotation_atlas = AnnotationTextAtlas(canvas.annotation_options.zw, canvas.motion.w);
   // The screen layer carries the cursor, over every mark but shaded and
   // hidden by what acts on the picture. The run below the camera is drawn
-  // first, then the camera, then the run above it.
-  let below = canvas.annotation_options.x;
-  let total = canvas.annotation_options.y;
-  result = composite_annotation_layers(result, pixel, 0u, below, annotation_feather,
-                                       annotation_atlas, true);
-  if (canvas.camera_effects.w != 0.0) {
-    result = camera_layer(result, pixel);
-  }
-  if (total > below) {
-    result = composite_annotation_layers(result, pixel, below, total, annotation_feather,
-                                         annotation_atlas, false);
+  // first, then the camera, then the run above it. Both runs go through the
+  // one call: the composite is large, and the GPU compiler inlines every call
+  // site whole, which multiplies how long the pipeline takes to build.
+  let below = select(0u, canvas.annotation_options.x, annotations_drawn);
+  let total = select(0u, canvas.annotation_options.y, annotations_drawn);
+  let runs = select(1u, 2u, total > below);
+  // The canvas before any annotation, which the mark blur's layer is the
+  // difference from.
+  let base = result;
+  for (var run = 0u; run < runs; run++) {
+    let first = select(below, 0u, run == 0u);
+    let last = select(total, below, run == 0u);
+    result = composite_annotation_layers(result, base, pixel, first, last, annotation_feather,
+                                         annotation_atlas, run == 0u);
+    let shade = annotation_blur_spotlight();
+    if (annotation_blur_mode() == 1u && shade >= first && shade < last) {
+      // Drawing the layer: the run stopped under the shade.
+      return result - base;
+    }
+    if (run == 0u && canvas.camera_effects.w != 0.0) {
+      result = camera_layer(result, pixel);
+    }
   }
   result = composite_keyboard(result, pixel, canvas.output_source.xy);
   if (!foreground_only) {
-    result = vec4<f32>(saturate(result.rgb + hash(pixel, 0x9e3779b9u) / 255.0), result.a);
+    // Hashed at the drawn pixel's corner, as every macOS canvas has dithered.
+    result = vec4<f32>(saturate(result.rgb + hash(floor(position.xy), 0x9e3779b9u) / 255.0), result.a);
   }
   result = crop_magnifier(result, pixel);
   // DirectComposition consumes premultiplied alpha. Clip every composed layer

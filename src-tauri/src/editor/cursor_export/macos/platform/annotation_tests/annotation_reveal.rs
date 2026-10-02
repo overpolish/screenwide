@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! An arrow drawing itself in and out, through the same Metal dispatch the
+//! An arrow drawing itself in and out, through the same GPU dispatch the
 //! rest of the suite proves the static shape against.
 
 use super::*;

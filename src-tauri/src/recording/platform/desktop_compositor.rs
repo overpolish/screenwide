@@ -1,30 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::ffi::{c_char, c_void};
+//! GPU composition for macOS regions that cross display boundaries. Each
+//! display's IOSurface-backed frame is sampled in place, and the pieces are
+//! drawn straight into the IOSurface of a new buffer for the encoder.
 
-use cidre::{arc, cv};
+use cidre::{arc, cf, cv};
 
 use crate::desktop_capture::{CapturePiece, CapturePlan, FrameSynchronizer, PixelRect};
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct NativePiece {
-  source_x: u32,
-  source_y: u32,
-  source_width: u32,
-  source_height: u32,
-  destination_x: u32,
-  destination_y: u32,
-  destination_width: u32,
-  destination_height: u32,
-}
-
-#[repr(C)]
-struct NativeFrame {
-  pixels: *const c_void,
-  piece: NativePiece,
-}
+use crate::gpu::Gpu;
+use crate::recording::desktop_canvas::{DesktopCanvas, PieceSource};
 
 pub(super) struct ComposedFrame {
   pub buffer: arc::R<cv::PixelBuf>,
@@ -41,7 +26,7 @@ pub(super) struct DesktopFrameCoordinator {
 impl DesktopFrameCoordinator {
   pub fn new(plan: &CapturePlan) -> Result<Self, String> {
     Ok(Self {
-      compositor: DesktopCompositor::new(plan.width, plan.height)?,
+      compositor: DesktopCompositor::new(plan.width, plan.height, plan.pieces.len())?,
       pieces: plan.pieces.clone(),
       latest: vec![None; plan.pieces.len()],
       synchronizer: FrameSynchronizer::new(plan.pieces.len())?,
@@ -87,13 +72,12 @@ impl DesktopFrameCoordinator {
       .latest
       .iter()
       .zip(&self.pieces)
-      .map(|(frame, piece)| NativeFrame {
-        pixels: frame
+      .map(|(frame, piece)| {
+        let pixels = &frame
           .as_ref()
           .expect("the synchronizer waits for every source")
-          .1
-          .as_ref() as *const cv::PixelBuf as *const c_void,
-        piece: NativePiece::from_cropped_source(*piece),
+          .1;
+        (cropped_source(*piece), &**pixels)
       })
       .collect::<Vec<_>>();
     Ok(Some(ComposedFrame {
@@ -108,93 +92,91 @@ impl DesktopFrameCoordinator {
 // bounded channel and no other thread accesses them afterwards.
 unsafe impl Send for DesktopFrameCoordinator {}
 
-impl NativePiece {
-  fn from_cropped_source(piece: CapturePiece) -> Self {
-    let PixelRect {
-      x: _,
-      y: _,
-      width: source_width,
-      height: source_height,
-    } = piece.source_pixels;
-    let PixelRect {
-      x: destination_x,
-      y: destination_y,
-      width: destination_width,
-      height: destination_height,
-    } = piece.destination;
-    Self {
-      // ScreenCaptureKit has already applied `source_pixels` as its source
-      // rectangle, so the delivered texture begins at this crop's origin.
-      source_x: 0,
-      source_y: 0,
-      source_width,
-      source_height,
-      destination_x,
-      destination_y,
-      destination_width,
-      destination_height,
-    }
+/// ScreenCaptureKit has already applied `source_pixels` as its source
+/// rectangle, so the delivered surface begins at this crop's origin.
+fn cropped_source(piece: CapturePiece) -> CapturePiece {
+  CapturePiece {
+    source_pixels: PixelRect {
+      x: 0,
+      y: 0,
+      ..piece.source_pixels
+    },
+    ..piece
   }
 }
 
-struct DesktopCompositor(*mut c_void);
+struct DesktopCompositor {
+  gpu: &'static Gpu,
+  width: u32,
+  height: u32,
+  drawing: DesktopCanvas,
+}
 
 impl DesktopCompositor {
-  fn new(width: u32, height: u32) -> Result<Self, String> {
-    let mut error = [0 as c_char; 256];
-    let handle = unsafe {
-      screenwide_desktop_compositor_create(width, height, error.as_mut_ptr(), error.len())
-    };
-    if handle.is_null() {
-      return Err(error_text(&error));
+  fn new(width: u32, height: u32, pieces: usize) -> Result<Self, String> {
+    if width == 0 || height == 0 {
+      return Err("The desktop canvas is empty".to_owned());
     }
-    Ok(Self(handle))
+    let gpu = crate::gpu::shared()?;
+    Ok(Self {
+      gpu,
+      width,
+      height,
+      drawing: DesktopCanvas::new(gpu, width, height, pieces),
+    })
   }
 
-  fn compose(&self, frames: &[NativeFrame]) -> Result<arc::R<cv::PixelBuf>, String> {
-    let mut error = [0 as c_char; 256];
-    let pixels = unsafe {
-      screenwide_desktop_compositor_compose(
-        self.0,
-        frames.as_ptr(),
-        frames.len(),
-        error.as_mut_ptr(),
-        error.len(),
-      )
-    };
-    if pixels.is_null() {
-      return Err(error_text(&error));
-    }
-    Ok(unsafe { arc::R::from_raw(pixels.cast::<cv::PixelBuf>()) })
+  /// Draws every piece into a new buffer and waits for the GPU: the encoder
+  /// reads the buffer as soon as it is returned.
+  fn compose(
+    &self,
+    frames: &[(CapturePiece, &cv::PixelBuf)],
+  ) -> Result<arc::R<cv::PixelBuf>, String> {
+    let output = canvas_buffer(self.width, self.height)?;
+    let gpu = self.gpu;
+    let canvas = crate::gpu::macos::bgra_buffer_texture(gpu, &output, "desktop canvas")?;
+    let textures = frames
+      .iter()
+      .map(|(_, pixels)| crate::gpu::macos::bgra_buffer_texture(gpu, pixels, "desktop source"))
+      .collect::<Result<Vec<_>, String>>()?;
+    let sources = frames
+      .iter()
+      .zip(&textures)
+      .map(|((piece, _), texture)| PieceSource {
+        piece: *piece,
+        texture,
+      })
+      .collect::<Vec<_>>();
+    let submission = self
+      .drawing
+      .draw(&canvas.create_view(&Default::default()), &sources)?;
+    gpu
+      .device
+      .poll(wgpu::PollType::Wait {
+        submission_index: Some(submission),
+        timeout: None,
+      })
+      .map_err(|error| format!("The GPU did not finish desktop composition: {error}"))?;
+    Ok(output)
   }
 }
 
-impl Drop for DesktopCompositor {
-  fn drop(&mut self) {
-    unsafe { screenwide_desktop_compositor_destroy(self.0) };
-  }
-}
-
-fn error_text(error: &[c_char]) -> String {
-  let bytes = error.iter().map(|byte| *byte as u8).collect::<Vec<_>>();
-  String::from_utf8_lossy(bytes.split(|byte| *byte == 0).next().unwrap_or_default()).into_owned()
-}
-
-unsafe extern "C" {
-  fn screenwide_desktop_compositor_create(
-    width: u32,
-    height: u32,
-    error_text: *mut c_char,
-    error_capacity: usize,
-  ) -> *mut c_void;
-  fn screenwide_desktop_compositor_compose(
-    compositor: *mut c_void,
-    frames: *const NativeFrame,
-    frame_count: usize,
-    error_text: *mut c_char,
-    error_capacity: usize,
-  ) -> *mut c_void;
-  fn screenwide_desktop_compositor_destroy(compositor: *mut c_void);
+/// A BGRA buffer the GPU can draw into and the encoder can read.
+fn canvas_buffer(width: u32, height: u32) -> Result<arc::R<cv::PixelBuf>, String> {
+  let empty = cf::Dictionary::with_keys_values(&[], &[])
+    .ok_or_else(|| "CoreVideo could not describe the desktop canvas".to_owned())?;
+  let attributes = cf::Dictionary::with_keys_values(
+    &[cv::pixel_buffer::keys::io_surf_props().as_type_ref()],
+    &[empty.as_type_ref()],
+  )
+  .ok_or_else(|| "CoreVideo could not describe the desktop canvas".to_owned())?;
+  cv::PixelBuf::new(
+    width as usize,
+    height as usize,
+    cv::PixelFormat::_32_BGRA,
+    Some(&attributes),
+  )
+  .map_err(|error| format!("CoreVideo could not allocate the desktop canvas: {error:?}"))
 }
 
 #[cfg(test)]

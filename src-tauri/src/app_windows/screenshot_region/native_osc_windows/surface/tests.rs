@@ -1,9 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{
-  opaque_snapshot_target, peer_pointer_style, should_show, WS_EX_LAYERED, WS_EX_TRANSPARENT,
-};
+use super::{peer_pointer_style, should_show, WS_EX_LAYERED, WS_EX_TRANSPARENT};
 
 #[test]
 fn peer_passthrough_preserves_layering_and_every_unrelated_extended_style() {
@@ -23,11 +21,4 @@ fn only_presented_peers_are_ordered_on_screen() {
   assert!(should_show(false, true, true));
   assert!(!should_show(false, true, false));
   assert!(!should_show(false, false, true));
-}
-
-#[test]
-fn every_presented_snapshot_uses_opaque_target_alpha() {
-  assert!(opaque_snapshot_target(true, true));
-  assert!(!opaque_snapshot_target(false, true));
-  assert!(!opaque_snapshot_target(true, false));
 }

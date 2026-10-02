@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Redactions through a real Metal dispatch: erase and colour carry nothing
+//! Redactions through a real GPU dispatch: erase and colour carry nothing
 //! of what is under the box, and pixelate carries its colours but not where
 //! they were, whatever the picture and however it is resampled onto its
 //! canvas.

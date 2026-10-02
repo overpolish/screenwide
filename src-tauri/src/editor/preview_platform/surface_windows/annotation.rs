@@ -3,7 +3,7 @@
 
 //! The annotation tool's half of the Windows preview surface.
 //!
-//! The Metal backend hands this work to its Objective-C interaction view
+//! The macOS surface hands this work to its Objective-C interaction view
 //! (`recording_preview_surface_macos+annotation.m`); DirectComposition has no
 //! such view, so the same picking and the same gesture state machine live
 //! here. Both sides speak the layer's image-normalised space, never source
@@ -209,10 +209,6 @@ impl RecordingPreviewSurface {
 /// A press the chrome has taken, before and after it becomes a drag.
 mod drag;
 use drag::Drag;
-
-/// Turning a layer's annotations into what the compositor draws this frame.
-mod prepare;
-pub(crate) use prepare::{placed_arrows, prepared_arrows};
 
 /// Resolving the picture an annotation is drawn in, and picking the grip or
 /// shaft a press lands on.

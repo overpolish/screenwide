@@ -13,7 +13,7 @@ impl Gpu {
       unsafe { DCompositionCreateDevice(None::<&IDXGIDevice>) }
         .map_err(|error| format!("DirectComposition could not open for the preview: {error}"))?;
     // The non-topmost target is the critical Windows equivalent of inserting
-    // the Metal view immediately below WKWebView: WebView2 remains a child
+    // the macOS preview view immediately below WKWebView: WebView2 remains a child
     // window above this GPU visual tree, so its DOM OSCs paint last.
     let target = unsafe { composition.CreateTargetForHwnd(host, false) }
       .map_err(|error| format!("The Windows preview compositor could not attach: {error}"))?;
@@ -33,7 +33,7 @@ impl Gpu {
       .map_err(|error| format!("The Windows selection visual could not be created: {error}"))?;
     unsafe { editor_target.SetRoot(&editor_root) }
       .map_err(|error| format!("The Windows selection visual could not be attached: {error}"))?;
-    let compositor = compositor::Compositor::new(shared)?;
+    let compositor = compositor::Compositor::new(shared, cursor_artwork::native_cursors()?)?;
     let audio_ribbon = audio_ribbon::AudioRibbon::new(shared, &composition, &root)?;
     let selection = selection::SelectionOverlay::new(shared, &composition, &editor_root)?;
     unsafe { composition.Commit() }
@@ -77,7 +77,7 @@ impl Gpu {
       }
     })()
     .map_err(|error| format!("The Windows preview pane could not be attached: {error}"))?;
-    let surface = VisualSurface::new(self.shared, &visual)?;
+    let surface = Surface::on_visual(self.shared, &visual)?;
     unsafe { self.composition.Commit() }
       .map_err(|error| format!("The Windows preview pane could not be shown: {error}"))?;
     Ok(Pane {
