@@ -15,6 +15,7 @@ fn manager() -> PreviewPlayerManager {
   );
   let sources = PlayerSources {
     annotation_clips: Default::default(),
+    scenes: Default::default(),
     audio_tracks: vec![],
     camera_duration_ms: None,
     camera_path: None,

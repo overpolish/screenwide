@@ -40,6 +40,7 @@ impl PreviewPlayerManager {
       .read()
       .map_err(|_| "The recording preview composition is unavailable".to_owned())?
       .clone();
+    let composition = self.arranged_composition(&composition);
     surface.redraw_still(
       composition.bake_camera && sources.camera_path.is_some(),
       &composition.recording_output.primary,
@@ -62,7 +63,8 @@ impl PreviewPlayerManager {
       .as_ref()
       .and_then(|sources| {
         let surface = sources.preview_surface.as_ref()?;
-        let composition = sources.composition_settings.as_ref()?.read().ok()?.clone();
+        let composition =
+          self.arranged_composition(&sources.composition_settings.as_ref()?.read().ok()?.clone());
         if layer_id != 1 {
           return None;
         }

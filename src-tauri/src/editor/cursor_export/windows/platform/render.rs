@@ -70,6 +70,7 @@ pub(super) fn render_video(
     .unwrap_or(i64::MAX / 10_000)
     .saturating_mul(10_000);
   let clips = super::super::super::frame_annotations::ExportAnnotations::for_request(request);
+  let scenes = super::super::super::frame_scene::ExportScenes::for_request(request);
   loop {
     if request.cancelled.load(Ordering::Acquire) {
       let _ = std::fs::remove_file(path);
@@ -102,6 +103,19 @@ pub(super) fn render_video(
         None => None,
       };
     }
+    // How much source time this frame covers, which is the window a moving
+    // annotation, and a scene's moving panes, smear over.
+    let window_ms = next_pts_100ns.saturating_sub(pts_100ns).max(0) as f32 / 10_000.0;
+    // A frame inside a scene is drawn on its own arrangement; every other
+    // frame keeps the request's composition and the camera placed once.
+    let arranged = scenes.at(request.output, position_ms, window_ms);
+    let output = arranged
+      .as_ref()
+      .map_or(request.output, |(output, _)| output);
+    let geometry = match &arranged {
+      Some((_, Some(options))) => Some(media_preview::bake_geometry(*options)?),
+      _ => camera_geometry,
+    };
     let baked_cursor = cursor.as_mut().and_then(|cursor| {
       cursor.gpu_cursor(
         position_ms,
@@ -114,22 +128,17 @@ pub(super) fn render_video(
         (
           &frame.texture,
           frame.subresource,
-          camera_geometry.expect("camera geometry exists with camera options"),
+          geometry.expect("camera geometry exists with camera options"),
           options.camera_drop_shadow,
           request.camera_on_top,
         )
       })
     });
-    let annotations = clips.at(
-      position_ms,
-      // How much source time this frame covers, which is the window a
-      // moving annotation smears over.
-      next_pts_100ns.saturating_sub(pts_100ns).max(0) as f32 / 10_000.0,
-    );
+    let annotations = clips.at(position_ms, window_ms);
     let texture = compositor.compose_with_camera(
       &current.texture,
       current.subresource,
-      request.output,
+      output,
       ComposedFrame {
         cursor: baked_cursor,
         keyboard: keyboard.as_ref().and_then(|keyboard| {

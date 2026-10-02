@@ -89,6 +89,7 @@ export function useRecordingPreviewCanvasTool({
       magnify: toggle("magnify"),
       marquee: toggle("marquee"),
       redact: toggle("redact"),
+      scene: toggle("scene"),
       select: toggle("select"),
       shape: toggle("shape"),
       spotlight: toggle("spotlight"),

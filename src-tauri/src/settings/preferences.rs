@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
+use crate::editor::scenes::SceneTemplate;
 use crate::settings::background_preset::BackgroundPreset;
 use crate::system_accent::AccentPreference;
 
@@ -31,6 +32,9 @@ pub struct GeneralSettings {
   pub open_location_after_export: bool,
   pub record_screenwide_windows: bool,
   pub show_recording_confidence_checks: bool,
+  /// Custom scene layouts saved from the Scene panel, oldest first, offered
+  /// in every recording.
+  pub scene_templates: Vec<SceneTemplate>,
   pub launch_at_login: bool,
   pub show_recording_bar_on_launch: bool,
   pub recording_countdown_seconds: u8,
@@ -47,6 +51,7 @@ impl Default for GeneralSettings {
       open_location_after_export: true,
       record_screenwide_windows: false,
       show_recording_confidence_checks: true,
+      scene_templates: Vec::new(),
       launch_at_login: false,
       show_recording_bar_on_launch: true,
       recording_countdown_seconds: 0,
@@ -66,11 +71,15 @@ fn path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn read(app: &AppHandle) -> GeneralSettings {
-  path(app)
+  let mut settings: GeneralSettings = path(app)
     .ok()
     .and_then(|path| std::fs::read(path).ok())
     .and_then(|contents| serde_json::from_slice(&contents).ok())
-    .unwrap_or_default()
+    .unwrap_or_default();
+  // A template edited by hand into something no scene can take is dropped
+  // alone, rather than refusing every setting beside it.
+  settings.scene_templates.retain(SceneTemplate::is_valid);
+  settings
 }
 
 fn write(app: &AppHandle, settings: &GeneralSettings) -> Result<(), String> {
@@ -96,6 +105,9 @@ fn validate(settings: &GeneralSettings) -> Result<(), String> {
     if !directory.is_dir() {
       return Err(format!("{} is no longer available", directory.display()));
     }
+  }
+  if !settings.scene_templates.iter().all(SceneTemplate::is_valid) {
+    return Err("A scene template is not valid".to_owned());
   }
   Ok(())
 }

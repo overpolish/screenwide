@@ -10,7 +10,9 @@ use std::collections::VecDeque;
 use cidre::cv;
 
 use super::super::super::frame_annotations::ExportAnnotations;
+use super::super::super::frame_scene::ExportScenes;
 use super::frame_grid::{grid_frame, grid_index};
+use super::frame_placement::{carried_cursor, on_canvas};
 use super::*;
 use crate::editor::cursor_effects::GpuCursor;
 use crate::editor::keyboard_effects::KeyboardOverlay;
@@ -35,6 +37,10 @@ pub(super) struct FrameComposer<'a> {
   /// Where the camera sits, whether it casts a shadow, and whether it is
   /// drawn over the screen's annotations.
   camera: Option<(BakeGeometry, bool, bool)>,
+  /// The scenes that move the screen and the camera frame by frame.
+  scenes: ExportScenes,
+  /// The screen's decoded size, which places the cursors the scenes move.
+  source_size: (u32, u32),
   /// The screen frame as the canvas samples it, made from its planes.
   source: Option<SourceTexture>,
   canvas: wgpu::TextureView,
@@ -88,6 +94,7 @@ impl<'a> FrameComposer<'a> {
       })
       .transpose()?;
     let annotations = ExportAnnotations::for_request(request);
+    let scenes = ExportScenes::for_request(request);
     Ok(Self {
       gpu,
       planes: VideoPlanes::new(gpu),
@@ -97,6 +104,8 @@ impl<'a> FrameComposer<'a> {
       cursors: timeline.map_or(&[][..], |timeline| timeline.frames.as_slice()),
       keyboards: keyboard_timeline.map_or(&[][..], |timeline| timeline.frames.as_slice()),
       camera,
+      scenes,
+      source_size: (request.width, request.height),
       source: None,
       canvas,
       submitted: VecDeque::new(),
@@ -132,8 +141,23 @@ impl<'a> FrameComposer<'a> {
       .planes
       .decode(gpu, &mut encoder, &view(luma), &view(chroma), &source.view);
     gpu.queue.submit([encoder.finish()]);
+    let source_ms = (frame.source_us + 500) / 1_000;
+    // A frame inside a scene is drawn on its own arrangement; every other
+    // frame keeps the request's composition and the camera placed once.
+    let arranged = self.scenes.at(self.settings, source_ms, frame.frame_ms);
+    let settings = arranged
+      .as_ref()
+      .map_or(self.settings, |(settings, _)| settings);
+    let placement = match (&arranged, self.camera) {
+      (Some((settings, Some(options))), Some((_, shadow, on_top))) => Some((
+        on_canvas(media_preview::bake_geometry(*options)?, settings),
+        shadow,
+        on_top,
+      )),
+      _ => self.camera,
+    };
     let camera = unsafe { pixel_buffer(frame.camera) }
-      .zip(self.camera)
+      .zip(placement)
       .map(|(pixels, placement)| {
         let texture = bgra_buffer_texture(gpu, pixels, "export camera")?;
         Ok::<_, String>((
@@ -147,16 +171,23 @@ impl<'a> FrameComposer<'a> {
         ))
       })
       .transpose()?;
-    let source_ms = (frame.source_us + 500) / 1_000;
     let annotations = self.annotations.at(source_ms, frame.frame_ms);
-    let prepared = prepared_arrows(&annotations, source.size, self.settings, None, None, None)?;
+    let prepared = prepared_arrows(&annotations, source.size, settings, None, None, None)?;
     let grid = grid_index(frame.source_us);
     self.compositor.draw_with_camera(
       &self.canvas,
       &source,
-      self.settings,
+      settings,
       ComposedFrame {
-        cursor: grid_frame(self.cursors, grid).flatten(),
+        cursor: match (&arranged, grid_frame(self.cursors, grid).flatten()) {
+          (Some((arranged, _)), Some(cursor)) => Some(carried_cursor(
+            cursor,
+            self.source_size,
+            self.settings,
+            arranged,
+          )?),
+          (_, cursor) => cursor,
+        },
         keyboard: grid_frame(self.keyboards, grid),
         foreground_only: false,
         seconds: frame.source_us as f64 / 1_000_000.0,
@@ -239,24 +270,6 @@ impl<'a> FrameComposer<'a> {
     };
     self.source = Some(source.clone());
     source
-  }
-}
-
-/// `geometry`, placed for its own baked output, carried onto the canvas
-/// `settings` describe.
-fn on_canvas(geometry: BakeGeometry, settings: &ScreenshotOutputSettings) -> BakeGeometry {
-  let scale_x = f64::from(settings.width) / f64::from(geometry.output_width.max(1));
-  let scale_y = f64::from(settings.height) / f64::from(geometry.output_height.max(1));
-  let scaled = |value: u32, scale: f64| (f64::from(value) * scale).round() as u32;
-  BakeGeometry {
-    frame_x: (f64::from(geometry.frame_x) * scale_x).round() as i32,
-    frame_y: (f64::from(geometry.frame_y) * scale_y).round() as i32,
-    frame_width: scaled(geometry.frame_width, scale_x),
-    frame_height: scaled(geometry.frame_height, scale_y),
-    radius: scaled(geometry.radius, scale_x.min(scale_y)),
-    output_width: settings.width,
-    output_height: settings.height,
-    ..geometry
   }
 }
 

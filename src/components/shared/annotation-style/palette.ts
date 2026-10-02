@@ -44,10 +44,6 @@ export const isAnnotationSwatch = (color: string) =>
     sameAnnotationColor(swatch.color, color),
   );
 
-/** How many colours of your own are kept. Past this the oldest is forgotten:
- * the row is a shortcut back to what you have been using, not an archive. */
-const SAVED_COLOR_LIMIT = 12;
-
 /** Two colours are the same colour whatever case their hex arrives in: the
  * palette is written in lower case and AppKit reports upper. */
 export const sameAnnotationColor = (first: string, second: string) =>
@@ -65,7 +61,7 @@ export const withAnnotationColor = (saved: string[], color: string) => {
   if (!/^#[0-9a-f]{6}([0-9a-f]{2})?$/iu.test(color)) return saved;
   if (isAnnotationSwatch(color)) return saved;
   const rest = saved.filter((kept) => !sameAnnotationColor(kept, color));
-  return [...rest, color.toLowerCase()].slice(-SAVED_COLOR_LIMIT);
+  return [...rest, color.toLowerCase()];
 };
 
 /** The saved colours with `color` forgotten. */

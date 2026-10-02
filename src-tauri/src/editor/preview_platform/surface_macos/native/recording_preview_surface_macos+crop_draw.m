@@ -100,7 +100,10 @@ static BOOL crop_is_uncropped(ScreenwidePreviewSelection crop) {
 
 SCREENWIDE_PREVIEW_PRIVATE BOOL crop_draw_starts_at_point(
     ScreenwidePreviewSurface *surface, NSPoint point) {
-  if (!surface.hasSelection || surface.selection.crop_mode == 0) return NO;
+  // A scene's crop window keeps its box's shape, so it is never drawn afresh.
+  if (!surface.hasSelection || surface.selection.crop_mode == 0 ||
+      surface.selection.framed != 0)
+    return NO;
   ScreenwidePreviewSelection active = surface.selection;
   ScreenwidePreviewSelection target;
   uint8_t handle = 0;

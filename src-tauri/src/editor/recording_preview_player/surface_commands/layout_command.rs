@@ -67,14 +67,23 @@ pub async fn layout_recording_preview_surface(
       current.bake_camera != bake_camera,
     )
   };
+  let composition = PreviewCompositionSettings {
+    bake_camera,
+    camera_overlay,
+    recording_output,
+  };
   *settings
     .write()
     .map_err(|_| "The recording preview composition is unavailable".to_owned())? =
-    PreviewCompositionSettings {
-      bake_camera,
-      camera_overlay,
-      recording_output: recording_output.clone(),
-    };
+    composition.clone();
+  // The paused frame is drawn as the layouts have it at the playhead, so the
+  // scene gestures and annotations are placed by, and the retained frame below,
+  // are arranged the same way. What is stored stays as the webview sent it.
+  let PreviewCompositionSettings {
+    camera_overlay,
+    recording_output,
+    ..
+  } = manager.arranged_composition(&composition);
   if composition_changed {
     sources.reattach_pins(manager.position_ms);
   }

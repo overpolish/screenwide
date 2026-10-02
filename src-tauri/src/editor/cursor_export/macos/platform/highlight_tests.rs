@@ -414,6 +414,7 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
       artifact_id: 1,
       next_segment_id: 1,
       keyboard_deletions: Box::default(),
+      scene_clips: Vec::new(),
       annotation_clips: vec![clip],
       segments: vec![RecordingTimelineSegment {
         id: 0,

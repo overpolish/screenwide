@@ -24,6 +24,7 @@ pub(crate) mod recording_preview_player;
 mod recording_sidecar;
 mod recovery;
 pub(crate) mod save;
+pub(crate) mod scenes;
 pub(crate) mod screenshot_preview;
 pub(crate) mod surface_colour;
 mod timeline_edit;

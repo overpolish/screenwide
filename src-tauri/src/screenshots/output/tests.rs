@@ -44,6 +44,8 @@ pub(crate) fn settings(width: u32, height: u32) -> ScreenshotOutputSettings {
     image_x: placed_x,
     image_y: placed_y,
     legacy_mode: None,
+    scene_motion: None,
+    scene_opacity: None,
     mesh_colors: vec![
       "#FF0000".to_owned(),
       "#00FF00".to_owned(),

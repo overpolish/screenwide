@@ -126,6 +126,7 @@ fn test_sources() -> PlayerSources {
     super::super::preview_layout(Some((1_920, 1_080, PreviewPaneKind::Screen)), None, 720);
   PlayerSources {
     annotation_clips: Arc::new(RwLock::new(Vec::new())),
+    scenes: Default::default(),
     audio_tracks: vec![
       RecordingAudioTrack {
         kind: AudioTrackKind::SystemAudio,

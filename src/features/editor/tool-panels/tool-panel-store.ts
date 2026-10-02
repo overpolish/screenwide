@@ -12,6 +12,12 @@ import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
 } from "../export/recording-export-settings";
+import { SceneTemplate } from "../recording/scenes/recording-scene-template";
+import { SceneVariant } from "../recording/scenes/recording-scene-variant";
+import {
+  RecordingScenePreset,
+  SceneFraming,
+} from "../recording/scenes/recording-scenes";
 import {
   CursorEffectSettings,
   EditorKind,
@@ -21,6 +27,7 @@ import { createWorkspaceMirror } from "../workspace-mirror";
 
 import { SelectionPlacementPatch } from "./selection-placement";
 import { ToolPanelFrame } from "./tool-panel-frame";
+import { ToolPanelScene } from "./tool-panel-scene";
 import {
   ToolPanelAnnotation,
   ToolPanelSelection,
@@ -90,6 +97,10 @@ export type ToolPanelSnapshot = {
   /** As big as a shortcut may be drawn in this recording's canvas, in percent:
    * the point past which the widest shortcut would run off the edge. */
   keyboardMaximum: number;
+  /** Null where the recording has no screen and camera to arrange. */
+  scene: ToolPanelScene | null;
+  /** The scene layouts kept for every recording, oldest first. */
+  sceneTemplates: SceneTemplate[];
   /** Null while the workspace has nothing selected to place. */
   selection: ToolPanelSelection | null;
   /** Latest panel request committed with this snapshot. */
@@ -121,12 +132,19 @@ export type ToolPanelPatch = Partial<
   /** Draw the camera into the screen's picture, or carry it as a track of its
    * own. */
   bakeCamera?: boolean;
+  /** Lay the scene under the playhead out as this template. */
+  chooseSceneTemplate?: SceneTemplate;
   /** Take every stroke off the picture being edited. */
   clearDrawings?: true;
   /** Cut a crop of this size, in source pixels, keeping it where it sits. */
   cropSize?: { height?: number; width?: number };
+  /** Make the scene under the playhead custom, its panes kept where it puts
+   * them now, or add a custom scene there where there is none. */
+  customizeScene?: true;
   /** Delete every chosen annotation, in one edit. */
   deleteAnnotations?: true;
+  /** Delete the scene under the playhead. */
+  deleteScene?: true;
   /** Round the output canvas corners by this share of its shorter side. */
   frameRadius?: number;
   /** Size the output canvas, leaving what is in it where it sits. */
@@ -140,6 +158,8 @@ export type ToolPanelPatch = Partial<
   removeAnnotationColor?: string;
   /** Forget a saved background, by its id. */
   removePreset?: string;
+  /** Forget a scene template, by its id. */
+  removeSceneTemplate?: string;
   /** Put every shortcut's own placement away, the global one left as it is. */
   resetAllShortcuts?: true;
   /** Show the whole source again, the committed crop taken away. */
@@ -148,6 +168,8 @@ export type ToolPanelPatch = Partial<
   resetFrame?: true;
   /** Put the shortcuts back where the recording draws them by default. */
   resetKeyboardPosition?: true;
+  /** Show the whole screen and camera again in the scene under the playhead. */
+  resetSceneFraming?: true;
   /** Put the selection's size and position back to its source framing. */
   resetSelection?: true;
   /** Put the selected shortcut back where the recording drew it. */
@@ -161,6 +183,19 @@ export type ToolPanelPatch = Partial<
   saveAnnotationColor?: string;
   /** Keep the background being shown under a name. */
   savePreset?: BackgroundPreset;
+  /** Keep the custom scene under the playhead as a template. */
+  saveSceneTemplate?: true;
+  /** Zoom the scene under the playhead into its selected pane, or move the
+   * part of the pane it shows, a field at a time. */
+  sceneFraming?: Partial<SceneFraming>;
+  /** Give the scene under the playhead this preset, or add a scene there
+   * with it where there is none. */
+  scenePreset?: RecordingScenePreset;
+  /** Round the selected pane's corners in the scene under the playhead by
+   * this share of its shorter side, in percent. */
+  sceneRadius?: number;
+  /** Change the options of the preset under the playhead, a field at a time. */
+  sceneVariant?: SceneVariant;
   /** Cast the selected layer's shadow onto the canvas, or take it away. */
   selectionDropShadow?: boolean;
   /** Pad the selected layer by this many output pixels on each side. */
@@ -206,6 +241,8 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   isLocked: false,
   keyboardEffects: DEFAULT_KEYBOARD_EFFECTS,
   keyboardMaximum: 500,
+  scene: null,
+  sceneTemplates: [],
   selection: null,
 };
 

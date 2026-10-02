@@ -4,6 +4,7 @@
 import { RecordingAnnotationClip } from "../../recording/annotations/recording-annotations";
 import { AnnotationClipPinning } from "../../recording/annotations/use-annotation-clip-menu";
 import { RecordingPinStatus } from "../../recording/annotations/use-recording-pin-status";
+import { RecordingSceneClip } from "../../recording/scenes/recording-scenes";
 import {
   PreparedAudioTrack,
   RecordingKeyboardTimelineItem,
@@ -55,11 +56,25 @@ export type RecordingTrackLanesProps = {
   onAnnotationsPreview?: (clips: RecordingAnnotationClip[] | null) => void;
   /** Choose what a band over the annotation lane swept, alone or added. */
   onAnnotationsSweep?: (ids: string[], additive: boolean) => void;
+  /** A scene clicked rather than dragged: take up the Scene tool. The lane
+   * has already parked the playhead in the middle of it. */
+  onSceneActivate?: () => void;
+  /** Open the Scene panel, from the lane's header. */
+  onScenePanelOpen?: () => void;
+  /** Without it the recording has nothing to arrange, and the lane is not
+   * drawn. */
+  onScenesChange?: (clips: RecordingSceneClip[]) => void;
+  /** Shows a scene drag's draft in the preview while it lasts, or the
+   * committed clips again for null. */
+  onScenesDraftChange?: (clips: RecordingSceneClip[] | null) => void;
   /** Picking a keyboard shortcut puts it in hand: the caller clears the
    * annotation selection and takes up the Select tool, mirroring what the
    * annotation lane's select does. */
   onSelectKeyboardShortcut?: () => void;
   onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
+  sceneClips?: RecordingSceneClip[];
+  /** Whether the camera is not baked in, which leaves the scenes idle. */
+  scenesPaused?: boolean;
   selectedAnnotationIds?: ReadonlySet<string>;
 };
 

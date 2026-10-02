@@ -24,15 +24,15 @@ describe("the colours of your own", () => {
     ]);
   });
 
-  it("forgets the oldest past the cap", () => {
+  it("keeps every colour, however many are saved", () => {
     let kept: string[] = [];
     for (let index = 0; index < 20; index++)
       kept = withAnnotationColor(
         kept,
-        `#0000${index.toString(16).padStart(2, "0")}`,
+        `#1234${index.toString(16).padStart(2, "0")}`,
       );
-    expect(kept).toHaveLength(12);
-    expect(kept[kept.length - 1]).toBe("#000013");
+    expect(kept).toHaveLength(20);
+    expect(kept[0]).toBe("#123400");
   });
 
   it("ignores something that is not a colour", () => {

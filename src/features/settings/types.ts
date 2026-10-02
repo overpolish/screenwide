@@ -6,6 +6,7 @@ import {
   AnnotationKind,
 } from "../../components/shared/annotation-style/types";
 import { BackgroundPreset } from "../../components/shared/background-picker/background";
+import { SceneTemplate } from "../editor/recording/scenes/recording-scene-template";
 
 export type ShortcutAction =
   | "toggleRecordingBar"
@@ -136,6 +137,8 @@ export type GeneralSettings = {
   recordScreenwideWindows: boolean;
   recordingCountdownSeconds: 0 | 3 | 5;
   recordingDirectory: string | null;
+  /** Custom scene layouts saved from the Scene panel, oldest first. */
+  sceneTemplates: SceneTemplate[];
   screenshotDirectory: string | null;
   showRecordingBarOnLaunch: boolean;
   showRecordingConfidenceChecks: boolean;

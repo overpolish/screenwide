@@ -3,7 +3,9 @@
 
 //! Converts the webview's recording selection into the shared native OSC model.
 
-use crate::editor::preview_platform::{PreviewSelection, PreviewSurfaceRect};
+use crate::editor::preview_platform::{
+  PreviewSelection, PreviewSurfaceRect, FRAMED_FIXED, FRAMED_FREE,
+};
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -11,7 +13,12 @@ pub(super) struct RecordingPreviewSelection {
   #[serde(default)]
   crop_mode: bool,
   #[serde(default)]
+  framed: bool,
+  #[serde(default)]
   image: Option<PreviewSurfaceRect>,
+  /// A pane a scene places but leaves free, a custom scene's box.
+  #[serde(default)]
+  in_scene: bool,
   layer_id: Option<u32>,
   #[serde(default)]
   maximum_scale: Option<f64>,
@@ -30,6 +37,13 @@ impl RecordingPreviewSelection {
       .layer_id
       .is_some_and(|layer_id| layer_id == u32::MAX || layer_id == u32::MAX - 1);
     PreviewSelection {
+      framed: if self.framed {
+        FRAMED_FIXED
+      } else if self.in_scene {
+        FRAMED_FREE
+      } else {
+        0
+      },
       recenter_height: self.recenter_bounds.map_or(0.0, |bounds| bounds.height),
       recenter_width: self.recenter_bounds.map_or(0.0, |bounds| bounds.width),
       recenter_x: self.recenter_bounds.map_or(0.0, |bounds| bounds.x),
@@ -66,7 +80,9 @@ mod tests {
   fn selection() -> RecordingPreviewSelection {
     RecordingPreviewSelection {
       crop_mode: false,
+      framed: false,
       image: None,
+      in_scene: false,
       layer_id: None,
       maximum_scale: None,
       minimum_scale: None,

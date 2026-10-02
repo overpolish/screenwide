@@ -41,6 +41,9 @@ pub(crate) mod pin_paths;
 pub(crate) mod pin_tracks;
 mod platform;
 pub(crate) mod recenter;
+mod scene_pane_gesture;
+pub(crate) mod scene_preview;
+pub(crate) mod scene_reframe;
 mod selection_gesture;
 mod selection_preview;
 mod sources;
@@ -111,6 +114,9 @@ struct PreviewCompositionSettings {
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 struct RecordingSelectionGesture {
   snapshot: PreviewCompositionSettings,
+  /// The scenes as the gesture found them, which a reframe of the camera
+  /// inside one is measured from and a cancel puts back.
+  scene_clips: Vec<crate::editor::scenes::RecordingSceneClip>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

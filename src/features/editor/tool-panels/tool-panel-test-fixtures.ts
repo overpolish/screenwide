@@ -33,6 +33,9 @@ const mocks = vi.hoisted(() => ({
   screenshotActive: null as OpenToolPanel,
   setFitBasis: vi.fn(),
   showPopupPanel: vi.fn(() => Promise.resolve()),
+  /** The panel windows Rust reports on screen; `undefined` follows the store,
+   * as it does whenever the two agree. */
+  showing: undefined as string[] | undefined,
 }));
 
 vi.mock("react", () => ({
@@ -58,6 +61,13 @@ vi.mock("@tauri-apps/api/window", () => ({
 vi.mock("../../popup-panel/api", () => ({
   hidePopupPanel: mocks.hidePopupPanel,
   movePopupPanel: mocks.movePopupPanel,
+  openPopupPanels: () =>
+    Promise.resolve(
+      mocks.showing ??
+        Object.entries(panels()).flatMap(([label, open]) =>
+          open ? [label] : [],
+        ),
+    ),
   showPopupPanel: mocks.showPopupPanel,
 }));
 
@@ -145,6 +155,7 @@ const useCursorPanel = () => {
 beforeEach(() => {
   mocks.active = null;
   mocks.screenshotActive = null;
+  mocks.showing = undefined;
   mocks.fitWidth = "";
   mocks.panelByTool = {};
   mocks.resetByTool = {};

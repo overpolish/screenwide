@@ -22,6 +22,7 @@ export function useRecordingPreviewShortcuts({
   canvasTool,
   hasCursorData,
   hasKeyboardData,
+  hasScenes,
   hasVisiblePanes,
   isCropping,
   layout,
@@ -41,6 +42,7 @@ export function useRecordingPreviewShortcuts({
   canvasTool: RecordingCanvasTool;
   hasCursorData: boolean;
   hasKeyboardData: boolean;
+  hasScenes: boolean;
   hasVisiblePanes: boolean;
   isCropping: boolean;
   layout: RecordingPreviewLayout | null;
@@ -90,6 +92,7 @@ export function useRecordingPreviewShortcuts({
     onMarqueeTool: hasVisiblePanes ? toggleTool.marquee : undefined,
     onNudge: canNudgeActiveTrack ? nudgeActiveTrack : undefined,
     onResizeCanvas: canResizeActiveTrack ? toggleTool.canvas : undefined,
+    onSceneTool: hasScenes && hasVisiblePanes ? toggleTool.scene : undefined,
     onSelectTool: hasVisiblePanes ? toggleTool.select : undefined,
     onStep: !canNudgeActiveTrack && layout ? step : undefined,
     onToggleCrop: hasVisiblePanes ? toggleTool.crop : undefined,

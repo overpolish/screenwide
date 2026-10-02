@@ -1,20 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Dispatch,
-  RefObject,
-  SetStateAction,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { Dispatch, RefObject, SetStateAction, useMemo, useRef } from "react";
 
 import { useAnnotationDraft } from "../../annotations/annotation-draft";
 import { KEYBOARD_LAYER_ID } from "../../keyboard-effect/use-recording-keyboard-canvas-gesture";
 import { useRegisterPreviewFit } from "../../preview/preview-fit-context";
 import { usePreviewZoom } from "../../preview/use-preview-zoom";
-import { useRecenterInsetControls } from "../../recenter-inset-channel";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -31,9 +23,12 @@ import {
 import { useToolPanelFollowsTool } from "../../tool-panels/use-tool-panel-follows-tool";
 import { RecordingVideoTrackId } from "../../types";
 import { useRecordingAnnotations } from "../annotations/use-recording-annotations";
+import { useRecordingScenes } from "../scenes/use-recording-scenes";
+import { useSceneReframeDisplay } from "../scenes/use-scene-reframe-display";
 import { useRecordingPreviewPlayer } from "../use-recording-preview-player";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
+import { usePausedPreviewPosition } from "./use-paused-preview-position";
 import { useRecordingCropPreview } from "./use-recording-crop-preview";
 import { useRecordingPreviewPanes } from "./use-recording-preview-panes";
 import { useRecordingPreviewSelection } from "./use-recording-preview-selection";
@@ -57,6 +52,7 @@ export function useRecordingPreviewTransport(
     effectiveRecordingOutput,
     playhead,
     previewPlayingRef,
+    previewPositionMs,
     recenterRefreshRef,
     reportZoom,
     screenCanvasRef,
@@ -74,6 +70,7 @@ export function useRecordingPreviewTransport(
     effectiveRecordingOutput: RecordingOutputSettings;
     playhead: Playhead;
     previewPlayingRef: RefObject<boolean>;
+    previewPositionMs: number;
     recenterRefreshRef: RefObject<
       (crop: ScreenshotOutputSettings["sourceCrop"]) => void
     >;
@@ -134,6 +131,7 @@ export function useRecordingPreviewTransport(
       cameraOverlay,
       canvasTool,
       effectiveRecordingOutput,
+      isFramed: selection.isFramed,
       previewSourceDimensions,
     });
   // The tool the annotation chrome is drawn from. A baked camera layer has no
@@ -213,6 +211,22 @@ export function useRecordingPreviewTransport(
       : null,
   });
   clearAnnotationRef.current = annotations.clearSelection;
+  const scenes = useRecordingScenes({
+    cameraOverlay,
+    edit: annotationEdit,
+    frames: previewSourceDimensions,
+    getPositionMs: player.getPositionMs,
+    isBaked: bakeCamera,
+    isPlaying: player.isPlaying,
+    onEdit: (next) => onRecordingTimelineEditChange?.(next),
+    output: effectiveRecordingOutput.primary,
+    playhead,
+    positionMs: previewPositionMs,
+    selectsCamera: activeVideoTrack === "camera",
+    sessionId: player.sessionId,
+    sourceDurationMs: durationMs,
+  });
+  useSceneReframeDisplay(player.sessionId, selection.reframePane);
   useToolPanelFollowsTool(
     "recording",
     recordingToolId(canvasTool),
@@ -220,40 +234,20 @@ export function useRecordingPreviewTransport(
   );
   useAnnotationDraft("recording", recordingToolId(canvasTool));
   useRegisterPreviewFit(player);
-  const isPlaying = player.isPlaying;
-  const getPlayerPositionMs = player.getPositionMs;
-  previewPlayingRef.current = isPlaying;
-  useEffect(() => {
-    if (isPlaying) return;
-    const frame = requestAnimationFrame(() => {
-      setPreviewPositionMs(getPlayerPositionMs());
-    });
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-  }, [getPlayerPositionMs, isPlaying, setPreviewPositionMs]);
-  const recenter = useRecordingRecenter({
+  previewPlayingRef.current = player.isPlaying;
+  usePausedPreviewPosition({
+    getPositionMs: player.getPositionMs,
+    isPlaying: player.isPlaying,
+    setPreviewPositionMs,
+  });
+  recenterRefreshRef.current = useRecordingRecenter({
     artifactId,
     getPositionMs: player.getPositionMs,
     onOutputChange: (next) => onRecordingOutputChange?.("primary", next),
     output: effectiveRecordingOutput.primary,
+    pause: player.pause,
     source: previewSourceDimensions.primary,
-  });
-  recenterRefreshRef.current = recenter.refresh;
-  // The crop panel's commit and the Select panel's padding controls reach the
-  // same analysis a crop drag ends with. Both read the frame under the
-  // playhead, so the picture is parked before it is read.
-  useRecenterInsetControls("recording", {
-    begin: () => {
-      player.pause();
-      recenter.begin();
-    },
-    prepare: () => {
-      player.pause();
-      recenter.prepare();
-    },
-    refresh: recenter.refresh,
-  });
+  }).refresh;
   const timelineThumbnails = useRecordingTimelineThumbnails({
     artifactId,
     isEnabled: previewLayout === undefined,
@@ -289,6 +283,7 @@ export function useRecordingPreviewTransport(
     clearAnnotationRef,
     layout,
     player,
+    scenes,
     screenPane: layout?.panes[0],
     timelineBlade,
     timelineThumbnails,

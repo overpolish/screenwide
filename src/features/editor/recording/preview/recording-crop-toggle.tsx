@@ -15,7 +15,7 @@ import { ANNOTATION_TOOLS } from "../../tool-panels/tool-registry";
 import type { AnnotationKind } from "../../../../components/shared/annotation-style/types";
 
 export type RecordingCanvasTool =
-  AnnotationKind | "canvas" | "crop" | "marquee" | "select" | null;
+  AnnotationKind | "canvas" | "crop" | "marquee" | "scene" | "select" | null;
 
 export function RecordingCanvasTools({
   isEnabled,

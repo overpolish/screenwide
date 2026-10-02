@@ -25,6 +25,7 @@ pub(in crate::editor) fn persist_initial_annotation_clips(
       annotation_clips,
       artifact_id,
       keyboard_deletions: Box::default(),
+      scene_clips: Vec::new(),
       next_segment_id: 1,
       segments: vec![RecordingTimelineSegment {
         id: 0,

@@ -38,7 +38,8 @@ fn image_rect(selection: PreviewSelection) -> NormalizedRect {
 pub(super) fn start(state: &mut SurfaceState, point: (f64, f64)) -> Option<EditorGesture> {
   let selection = state
     .selection
-    .filter(|selection| selection.crop_mode != 0)
+    // A scene's crop window keeps its box's shape, so it is never drawn afresh.
+    .filter(|selection| selection.crop_mode != 0 && selection.framed == 0)
     .filter(|selection| selection.image_width > 0.0 && selection.image_height > 0.0)?;
   let pane = display_pane(state, selection.pane_index)?;
   let image = image_rect(selection);

@@ -5,6 +5,8 @@ import { Keyboard } from "lucide-react";
 import { memo } from "react";
 
 import { RecordingAnnotationLane } from "../../recording/annotations/recording-annotation-lane";
+import { RecordingSceneLane } from "../../recording/scenes/recording-scene-lane";
+import { RecordingSceneClip } from "../../recording/scenes/recording-scenes";
 import { recordingAudioStreamIndex, recordingAudioTrackId } from "../../types";
 import { ScrubAudioTracks } from "../audio/scrub-audio-tracks";
 import { TimelineAudioMeter } from "../audio/timeline-audio-meter";
@@ -25,6 +27,7 @@ import { TimelineItemLane } from "./timeline-item-lane";
  * lane that carries it so the lane and the meter agree on one number. */
 const KEYBOARD_MINIMUM_ITEM_WIDTH_PX = 48;
 const NO_ANNOTATIONS: ReadonlySet<string> = new Set();
+const NO_SCENES: RecordingSceneClip[] = [];
 
 /** Memoized because pointer-rate canvas settings do not affect this subtree. */
 export const RecordingTrackLanes = memo(function RecordingTrackLanes({
@@ -49,11 +52,17 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   onAnnotationsSweep,
   onEnabledTracksChange,
   onEnabledVideoTracksChange,
+  onSceneActivate,
+  onScenePanelOpen,
+  onScenesChange,
+  onScenesDraftChange,
   onSeek,
   onSelectKeyboardShortcut,
   onSelectedTrackChange,
   onVideoTrackOrderChange,
   playhead,
+  sceneClips = NO_SCENES,
+  scenesPaused = false,
   selectedAnnotationIds = NO_ANNOTATIONS,
   selectedTrack,
   sourceDurationMs,
@@ -119,6 +128,44 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
             />
           }
         >
+          {onScenesChange && onSceneActivate ? (
+            <RecordingSceneLane
+              clips={sceneClips}
+              edit={blade.edit}
+              isPaused={scenesPaused}
+              onActivate={onSceneActivate}
+              onChange={onScenesChange}
+              onDraftChange={onScenesDraftChange}
+              onOpenPanel={onScenePanelOpen}
+              onSeek={onSeek}
+              sourceDurationMs={sourceDurationMs}
+              viewport={timeline.viewport}
+            />
+          ) : null}
+          {keyboardItems.length > 0 ? (
+            <TimelineItemLane
+              edit={blade.edit}
+              hiddenFragmentIds={hiddenKeyboardFragmentIds}
+              hiddenItemIds={hiddenKeyboardItemIds}
+              icon={<Keyboard />}
+              items={keyboardItems}
+              label="Shortcuts"
+              minimumItemWidthPx={KEYBOARD_MINIMUM_ITEM_WIDTH_PX}
+              minimumSpan={keyboardMinimumSpan}
+              onClearSelection={keyboardSelection.onClear}
+              onSelect={(fragment, outputPosition, toggle) => {
+                blade.clearRangeSelection();
+                blade.selectSegment(null);
+                keyboardSelection.onSelect(fragment.fragmentId, toggle);
+                onSelectKeyboardShortcut?.();
+                onSeek(outputPosition, "end");
+              }}
+              selectedFragmentIds={keyboardSelection.ids}
+              sourceDurationMs={sourceDurationMs}
+              viewport={timeline.viewport}
+              warningFragmentIds={adjustedKeyboardFragmentIds}
+            />
+          ) : null}
           <RecordingVideoTrackRows
             blade={blade}
             enabledTracks={enabledTracks}
@@ -145,30 +192,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
               selectedTrack={recordingAudioStreamIndex(selectedTrack)}
               viewport={timeline.viewport}
               volumes={volumes}
-            />
-          ) : null}
-          {keyboardItems.length > 0 ? (
-            <TimelineItemLane
-              edit={blade.edit}
-              hiddenFragmentIds={hiddenKeyboardFragmentIds}
-              hiddenItemIds={hiddenKeyboardItemIds}
-              icon={<Keyboard />}
-              items={keyboardItems}
-              label="Shortcuts"
-              minimumItemWidthPx={KEYBOARD_MINIMUM_ITEM_WIDTH_PX}
-              minimumSpan={keyboardMinimumSpan}
-              onClearSelection={keyboardSelection.onClear}
-              onSelect={(fragment, outputPosition, toggle) => {
-                blade.clearRangeSelection();
-                blade.selectSegment(null);
-                keyboardSelection.onSelect(fragment.fragmentId, toggle);
-                onSelectKeyboardShortcut?.();
-                onSeek(outputPosition, "end");
-              }}
-              selectedFragmentIds={keyboardSelection.ids}
-              sourceDurationMs={sourceDurationMs}
-              viewport={timeline.viewport}
-              warningFragmentIds={adjustedKeyboardFragmentIds}
             />
           ) : null}
           {onAnnotationSelect &&

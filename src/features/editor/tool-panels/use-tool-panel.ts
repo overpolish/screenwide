@@ -11,6 +11,7 @@ import { useCallback } from "react";
 import {
   hidePopupPanel,
   movePopupPanel,
+  openPopupPanels,
   showPopupPanel,
 } from "../../popup-panel/api";
 import {
@@ -89,6 +90,16 @@ export function useToolPanel(workspace: EditorKind) {
     await hidePopupPanel(false, panel);
   }, [panel, setFitBasis]);
 
+  /** Whether this workspace's panel window is on screen. The open-panel map
+   * outlives the app, so after a crash it can name a panel this run never
+   * showed; trusting it would leave that panel's own button and every open
+   * of it treating a hidden window as already up. Rust knows what is shown. */
+  const isShowing = useCallback(
+    async () =>
+      (await openPopupPanels().catch(() => [] as string[])).includes(panel),
+    [panel],
+  );
+
   const openPanel = useCallback(
     async (tool: ToolPanelKind, anchor: DOMRect, fitsView: boolean) => {
       const id = toolPanelId(tool);
@@ -103,7 +114,8 @@ export function useToolPanel(workspace: EditorKind) {
         current?.id === id &&
         current.content.kind === "tool" &&
         current.content.tool === tool &&
-        current.content.workspace === workspace
+        current.content.workspace === workspace &&
+        (await isShowing())
       ) {
         const bounds = previewViewport()?.getBoundingClientRect() ?? anchor;
         await movePopupPanel(
@@ -150,7 +162,7 @@ export function useToolPanel(workspace: EditorKind) {
         triggerId: id,
       });
     },
-    [fitDuringResize, panel, workspace],
+    [fitDuringResize, isShowing, panel, workspace],
   );
 
   /**
@@ -166,14 +178,14 @@ export function useToolPanel(workspace: EditorKind) {
         current?.content.kind === "tool" ? current.content : null;
       const isOpen =
         kind !== undefined && current?.id === toolPanelId(kind) && openContent;
-      if (isOpen || kind === undefined) {
+      if (kind === undefined || (isOpen && (await isShowing()))) {
         await close();
       } else {
         await openPanel(kind, anchor, toolResetsView(tool));
       }
       if (!isOpen && kind === undefined && toolResetsView(tool)) fitPreview();
     },
-    [close, fitPreview, openPanel, panel],
+    [close, fitPreview, isShowing, openPanel, panel],
   );
 
   return { close, openPanel, openTool, toggle };

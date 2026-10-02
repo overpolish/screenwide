@@ -205,7 +205,7 @@ impl PreviewPlayerManager {
     let Some(surface) = &sources.preview_surface else {
       return;
     };
-    let Some(composition) = self.selection_composition() else {
+    let Some(composition) = self.drawn_composition() else {
       return;
     };
     let mut handles = Vec::new();

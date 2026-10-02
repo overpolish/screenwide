@@ -30,6 +30,7 @@ function createPreviewApi(): ContextType<typeof SettingsApiContext> {
     recordScreenwideWindows: true,
     recordingCountdownSeconds: 3,
     recordingDirectory: null,
+    sceneTemplates: [],
     screenshotDirectory: null,
     showRecordingBarOnLaunch: true,
     showRecordingConfidenceChecks: true,

@@ -135,6 +135,8 @@ impl PlayerSources {
       self.annotation_pictures(),
       self.held_fills.as_ref(),
     );
+    drop(ranges);
+    self.arrange_scene(&mut composition, source_ms, 0.0);
     Some(composition)
   }
 }

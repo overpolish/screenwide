@@ -25,6 +25,8 @@ mod selection_resize;
 #[cfg(test)]
 mod tests;
 
+#[cfg(target_os = "windows")]
+pub use crop::apply_framed_crop_resize;
 #[cfg(any(target_os = "windows", test))]
 pub use crop::{apply_crop_draw, apply_crop_move, apply_crop_resize};
 // Preserve the original flat module API while implementations live at their

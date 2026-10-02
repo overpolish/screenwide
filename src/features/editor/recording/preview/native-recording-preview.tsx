@@ -116,6 +116,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     effectiveRecordingOutput,
     playhead,
     previewPlayingRef,
+    previewPositionMs,
     recenterRefreshRef,
     reportZoom,
     screenCanvasRef,
@@ -195,13 +196,14 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     [requestZoom, zoomPercent],
   );
 
-  const { toggleCursorPanel, toggleKeyboardPanel } = useRecordingToolbar({
+  const panelToggles = useRecordingToolbar({
     canEditActiveTrack,
     canResizeActiveTrack,
     canvasTool,
     changeCanvasTool,
     hasCursorData,
     hasKeyboardData,
+    hasScenes: transport.scenes.isAvailable,
     hasVisiblePanes,
   });
   useEffect(() => {
@@ -209,12 +211,14 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   }, [artifactId, playhead]);
 
   useRecordingPreviewShortcuts({
+    ...panelToggles,
     annotations,
     canMoveActiveVideoTrack,
     canResizeActiveTrack,
     canvasTool,
     hasCursorData,
     hasKeyboardData,
+    hasScenes: transport.scenes.isAvailable,
     hasVisiblePanes,
     isCropping,
     layout,
@@ -224,8 +228,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     nudgeActiveTrack: selection.nudgeActiveTrack,
     player,
     step: transport.timelineBlade.step,
-    toggleCursorPanel,
-    toggleKeyboardPanel,
     toggleTool,
   });
   const changeEnabledTracks = useCallback(

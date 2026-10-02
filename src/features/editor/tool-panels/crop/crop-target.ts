@@ -22,7 +22,7 @@ import {
   withScreenshotSourceCrop,
 } from "../../screenshot/screenshot-output-settings";
 import { EditorArtifact, EditorKind, RecordingVideoTrackId } from "../../types";
-import { ToolPanelHandlers } from "../tool-panel-bridge";
+import { ToolPanelHandlers } from "../tool-panel-handlers";
 import { ToolPanelCrop } from "../tool-panel-store";
 
 /**

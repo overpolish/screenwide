@@ -7,6 +7,7 @@ use super::*;
 pub(super) struct PlayerSources {
   pub(super) annotation_clips:
     Arc<RwLock<Vec<crate::editor::annotations::timing::RecordingAnnotationClip>>>,
+  pub(super) scenes: super::scene_preview::PreviewScenes,
   pub(super) audio_tracks: Vec<RecordingAudioTrack>,
   pub(super) camera_duration_ms: Option<u64>,
   pub(super) camera_path: Option<PathBuf>,
@@ -161,11 +162,9 @@ pub(super) fn sources_with_surface(
   let persisted = persisted_edit
     .as_ref()
     .and_then(|edit| crate::editor::timeline_edit::TimelinePlan::from_edit(edit, duration_ms));
-  let annotation_clips = Arc::new(RwLock::new(
-    persisted_edit
-      .map(|edit| edit.annotation_clips)
-      .unwrap_or_default(),
-  ));
+  let (annotation_clips, scene_clips) = persisted_edit
+    .map(|edit| (edit.annotation_clips, edit.scene_clips))
+    .unwrap_or_default();
   // The surface carries no callbacks yet: they name the session that adopts
   // these sources, and on Windows one compositor is shared by every session
   // the editor window ever opens, so a superseded start must not install
@@ -235,7 +234,8 @@ pub(super) fn sources_with_surface(
     .as_ref()
     .map(|_| Arc::new(crate::editor::cursor_effects::gpu_artworks()));
   Ok(PlayerSources {
-    annotation_clips,
+    annotation_clips: Arc::new(RwLock::new(annotation_clips)),
+    scenes: super::scene_preview::PreviewScenes::new(scene_clips),
     audio_tracks,
     camera_duration_ms: camera.as_ref().map(|value| value.duration_ms),
     camera_path: camera.as_ref().map(|value| value.path.clone()),

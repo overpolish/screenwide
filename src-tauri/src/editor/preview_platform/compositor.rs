@@ -16,6 +16,7 @@ mod pipeline;
 mod redact;
 mod redact_pipeline;
 mod redact_targets;
+mod scene_motion;
 mod source;
 #[cfg(target_os = "macos")]
 pub(crate) mod still;
@@ -169,6 +170,20 @@ struct Constants {
   /// texels per canvas pixel, whether this pass draws that layer (1) or reads
   /// it (2), and the index of the spotlight whose shade it lies under.
   annotation_blur: [f32; 4],
+  /// How a scene moved the screen's box while the shutter was open: the scale
+  /// and the shift, in canvas pixels, that carry the box as drawn onto where it
+  /// was, then how many steps the frame averages. One step draws it sharp.
+  scene_motion: [f32; 4],
+  /// The same scale and shift for the screen's image, which a zoom carries
+  /// further than its box.
+  scene_image_motion: [f32; 4],
+  /// The camera's frame when the shutter opened, in canvas pixels, and the
+  /// part of its picture that frame showed, in shares of the picture.
+  camera_motion_frame: [f32; 4],
+  camera_motion_crop: [f32; 4],
+  /// How opaque the screen and the camera are drawn, which a scene fades as
+  /// it hides or shows them; the other two are unused.
+  scene_opacity: [f32; 4],
 }
 
 pub(crate) struct Compositor {

@@ -28,6 +28,7 @@ export type EditorToolId =
   | "frame"
   | "keyboard"
   | "marquee"
+  | "scene"
   | "select";
 
 type ViewTool = {
@@ -126,6 +127,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     panel: "annotation",
     shortcut: "R",
   },
+  scene: { panel: "scene", resetsView: true, shortcut: "L" },
   select: { panel: "selection", resetsView: false, shortcut: "V" },
   shape: {
     drawsOnLayer: true,

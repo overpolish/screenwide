@@ -81,6 +81,7 @@ fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
     annotation_clips: Vec::new(),
     artifact_id,
     keyboard_deletions: Box::default(),
+    scene_clips: Vec::new(),
     next_segment_id: 2,
     segments: vec![
       RecordingTimelineSegment {

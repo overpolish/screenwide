@@ -11,6 +11,7 @@ import {
 import { usePublishKeyboardShortcut } from "../../shortcuts/keyboard-shortcut-channel";
 import { RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
+import { useScenePreviewEditing } from "../scenes/use-scene-preview-editing";
 
 import { RecordingCanvasTool } from "./recording-crop-toggle";
 import {
@@ -20,6 +21,10 @@ import {
 import { useRecordingSelectionGesture } from "./use-recording-selection-gesture";
 import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
 
+import type {
+  RecordingPreviewSelection,
+  RecordingSelectionGestureEvent,
+} from "../use-recording-preview-surface";
 import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
 
 /** A normalized coordinate as the panel's percent field shows it, held to two
@@ -33,7 +38,7 @@ export function useRecordingPreviewSelection(
   {
     activeVideoTrack,
     canPreviewBakedCamera,
-    canvasTool,
+    canvasTool: toolInHand,
     editGesture,
     effectiveRecordingOutput,
     previewPositionMs,
@@ -72,9 +77,13 @@ export function useRecordingPreviewSelection(
     previewSourceDimensions,
     recordingTimelineEdit,
   } = props;
+  // The scene tool picks, moves and resizes the panes the way the select tool
+  // does, with the Scene panel up in place of the Selection panel. The
+  // shortcut layer and the annotations stay the select tool's own.
+  const canvasTool = toolInHand === "scene" ? "select" : toolInHand;
   const keyboardPreview = useRecordingKeyboardPreviewEditing({
     artifactId,
-    canvasTool,
+    canvasTool: toolInHand,
     durationMs,
     edit: recordingTimelineEdit,
     enabled: hasKeyboardData,
@@ -89,14 +98,42 @@ export function useRecordingPreviewSelection(
   const keyboardCanvas = keyboardPreview.canvas;
   const keyboardTimeline = keyboardPreview.timeline;
   const visibleKeyboardFragment = keyboardPreview.visibleFragment;
+  const scene = useScenePreviewEditing({
+    cameraOverlay,
+    cameraSource: previewSourceDimensions.camera,
+    canPreviewBakedCamera,
+    canvasTool,
+    durationMs,
+    edit: recordingTimelineEdit,
+    editGesture,
+    onEditChange: onRecordingTimelineEditChange,
+    output: effectiveRecordingOutput.primary,
+    positionMs: previewPositionMs,
+  });
+  const sceneArrangement = scene.arrangement;
+  const isFramed = scene.isFramed;
+  // The select tool moves and resizes a custom scene's boxes the way it does
+  // the recording's own panes, so neither the selected pane nor the targets
+  // tell the native overlay a scene fixes them.
+  const framesPanes = isFramed && !(scene.isCustom && canvasTool === "select");
+  const selectionCameraOverlay =
+    sceneArrangement?.cameraOverlay ?? cameraOverlay;
+  const selectionOutput = useMemo(
+    () =>
+      sceneArrangement
+        ? { ...effectiveRecordingOutput, primary: sceneArrangement.output }
+        : effectiveRecordingOutput,
+    [effectiveRecordingOutput, sceneArrangement],
+  );
   const videoSelectionOverlay = useMemo(
     () =>
       recordingVideoSelectionOverlay({
         activeVideoTrack,
-        cameraOverlay,
+        cameraOverlay: selectionCameraOverlay,
         canPreviewBakedCamera,
         canvasTool,
-        effectiveRecordingOutput,
+        effectiveRecordingOutput: selectionOutput,
+        isFramed: framesPanes,
         previewSourceDimensions: {
           camera: previewSourceDimensions.camera,
           primary: previewSourceDimensions.primary,
@@ -106,31 +143,34 @@ export function useRecordingPreviewSelection(
     [
       activeVideoTrack,
       canPreviewBakedCamera,
-      cameraOverlay,
       canvasTool,
-      effectiveRecordingOutput,
+      framesPanes,
       previewSourceDimensions.camera,
       previewSourceDimensions.primary,
       selectedVideoTracks,
+      selectionCameraOverlay,
+      selectionOutput,
     ],
   );
   const videoSelectionTargets = useMemo(
     () =>
       recordingVideoSelectionTargets({
-        cameraOverlay,
+        cameraOverlay: selectionCameraOverlay,
         canPreviewBakedCamera,
         canvasTool,
-        effectiveRecordingOutput,
+        effectiveRecordingOutput: selectionOutput,
+        isFramed: framesPanes,
         previewSourceDimensions,
         selectedVideoTracks,
       }),
     [
       canPreviewBakedCamera,
-      cameraOverlay,
       canvasTool,
-      effectiveRecordingOutput,
+      framesPanes,
       previewSourceDimensions,
       selectedVideoTracks,
+      selectionCameraOverlay,
+      selectionOutput,
     ],
   );
   const keyboardSelection = keyboardPreview.selection;
@@ -142,12 +182,47 @@ export function useRecordingPreviewSelection(
       visibleKeyboardFragment?.fragmentId ?? "",
     ),
   );
+  // While the crop tool reframes a scene's pane, its selection is the crop
+  // window over the pane's unzoomed picture. Panes not in hand keep their
+  // boxes, which is what the preview draws for them.
+  const reframe = activeVideoTrack
+    ? scene.reframeSelections?.[activeVideoTrack]
+    : undefined;
+  // A custom scene's box moves and resizes like any layer, but the canvas it
+  // sits on is the scene's to size, so dragging it never grows the canvas.
+  const placedFreely = (selection: RecordingPreviewSelection) =>
+    isFramed &&
+    !selection.framed &&
+    !selection.cropMode &&
+    (selection.layerId ?? selection.paneIndex) <= 1
+      ? { ...selection, inScene: true }
+      : selection;
+  // A pane the scene hides is neither drawn nor picked.
+  const opacity = sceneArrangement?.opacity;
+  const isHidden = (selection: RecordingPreviewSelection) => {
+    const layer = selection.layerId ?? selection.paneIndex;
+    return (
+      opacity !== undefined &&
+      ((layer === 0 && opacity.screen === 0) ||
+        (layer === 1 && canPreviewBakedCamera && opacity.camera === 0))
+    );
+  };
+  const paneOverlay = reframe ?? videoSelectionOverlay;
   const selectionOverlay = hasKeyboardSelection
     ? keyboardSelection
-    : videoSelectionOverlay;
+    : paneOverlay && !isHidden(paneOverlay)
+      ? placedFreely(paneOverlay)
+      : null;
+  const sceneTargets = videoSelectionTargets
+    ?.filter((target) => !isHidden(target))
+    .map((target) =>
+      reframe && target.layerId === reframe.layerId
+        ? reframe
+        : placedFreely(target),
+    );
   const selectionTargets = keyboardSelection
-    ? [...(videoSelectionTargets ?? []), keyboardSelection]
-    : videoSelectionTargets;
+    ? [...(sceneTargets ?? []), keyboardSelection]
+    : sceneTargets;
   // The shortcut in hand, for the Selection panel in the panel window.
   const keyboardGeometry = keyboardPreview.geometry;
   usePublishKeyboardShortcut(
@@ -168,7 +243,9 @@ export function useRecordingPreviewSelection(
   const selectionGesture = useRecordingSelectionGesture({
     cameraOverlay,
     canPreviewBakedCamera,
-    canvasTool,
+    // Inside a scene the crop tool draws the select tool's chrome, so the
+    // corner radius it offers is the select tool's gesture.
+    canvasTool: isFramed && canvasTool === "crop" ? "select" : canvasTool,
     editGesture,
     effectiveRecordingOutput,
     keyboardCanvas,
@@ -179,22 +256,36 @@ export function useRecordingPreviewSelection(
     selectedVideoTracks,
     setCanvasResizeDraft,
   });
+  const sceneGesture = scene.gesture;
+  const applyGesture = (event: RecordingSelectionGestureEvent) => {
+    if (!sceneGesture.applyGesture(event)) selectionGesture.applyGesture(event);
+  };
   const editsBakedCameraOverlay =
     canPreviewBakedCamera && activeVideoTrack === "camera";
   const nudgeActiveTrack = useRecordingSelectionNudge({
     activeTrack: activeVideoTrack,
-    applyGesture: selectionGesture.applyGesture,
+    applyGesture,
     cameraOverlay,
     editsBakedCamera: editsBakedCameraOverlay,
-    gestureAccepted: selectionGesture.gestureAccepted,
+    gestureAccepted: () =>
+      sceneGesture.gestureAccepted() || selectionGesture.gestureAccepted(),
     output: effectiveRecordingOutput,
     outputDimensions: previewOutputDimensions,
   });
   return {
-    applyGesture: selectionGesture.applyGesture,
+    applyGesture,
+    /** Whether a scene places the panes at the playhead. */
+    isFramed,
     keyboardCanvas,
     keyboardTimeline,
     nudgeActiveTrack,
+    /** The pane of the scene the crop tool is reframing, which the preview
+     * draws unzoomed. */
+    reframePane: reframe
+      ? reframe.layerId === 0
+        ? ("screen" as const)
+        : ("camera" as const)
+      : null,
     selectionOverlay,
     selectionTargets,
   };

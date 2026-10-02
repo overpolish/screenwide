@@ -1,8 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod crop_preview;
 #[cfg(test)]
 pub(crate) mod tests;
+
+pub use crop_preview::CropPreviewRect;
 
 use serde::{Deserialize, Serialize};
 
@@ -19,21 +22,6 @@ use super::{mesh::MeshGradientPoint, mesh_generator::default_generator};
 use crate::editor::annotations::Annotation;
 
 const MAX_OUTPUT_PIXELS: u64 = 120_000_000;
-
-/// The crop tool's live result rectangle, in output pixels.
-///
-/// Crop mode previews the whole source so the part being cropped away stays
-/// visible. This is where the cropped layer itself lands inside that canvas,
-/// so the compositor can draw it a second time with its real corner radius
-/// and drop shadow.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CropPreviewRect {
-  pub height: f64,
-  pub width: f64,
-  pub x: f64,
-  pub y: f64,
-}
 
 /// One layer's canvas and its placement in it.
 ///
@@ -96,6 +84,16 @@ pub struct ScreenshotOutputSettings {
   pub image_y: f64,
   #[serde(default, rename = "mode", skip_serializing)]
   pub legacy_mode: Option<String>,
+  /// How far a scene moved this layer while the frame's shutter was open,
+  /// which the compositor blurs it over. Set per drawn frame by the scene
+  /// arrangement; never sent by the webview or saved.
+  #[serde(skip)]
+  pub scene_motion: Option<crate::editor::scenes::SceneMotion>,
+  /// How opaque a scene draws the screen and the camera, which fade as a
+  /// scene hides or shows them. Set per drawn frame by the scene arrangement;
+  /// never sent by the webview or saved. Unset, both are drawn whole.
+  #[serde(skip)]
+  pub scene_opacity: Option<[f32; 2]>,
   pub mesh_colors: Vec<String>,
   /// Which picture the mesh background paints. Settings written before the
   /// ported generators existed carry none, and are the app's own blob mesh.

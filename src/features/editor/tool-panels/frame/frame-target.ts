@@ -11,7 +11,7 @@ import {
   ScreenshotWorkspaceOutputSettings,
 } from "../../screenshot/screenshot-output";
 import { EditorArtifact, RecordingVideoTrackId } from "../../types";
-import { ToolPanelHandlers } from "../tool-panel-bridge";
+import { ToolPanelHandlers } from "../tool-panel-handlers";
 import { ToolPanelFrame } from "../tool-panel-store";
 
 import {

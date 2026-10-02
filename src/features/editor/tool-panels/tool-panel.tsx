@@ -11,6 +11,7 @@ import { CropPanel } from "./crop/crop-panel";
 import { CursorPanel } from "./cursor/cursor-panel";
 import { FramePanel } from "./frame/frame-panel";
 import { KeyboardPanel } from "./keyboard/keyboard-panel";
+import { ScenePanel } from "./scene/scene-panel";
 import { SelectionPanel } from "./selection/selection-panel";
 import { usePanelShortcuts } from "./use-panel-shortcuts";
 
@@ -23,6 +24,7 @@ const toolPanels: Record<
   cursor: CursorPanel,
   frame: FramePanel,
   keyboard: KeyboardPanel,
+  scene: ScenePanel,
   selection: SelectionPanel,
 };
 

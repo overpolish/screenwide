@@ -3,100 +3,15 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import {
-  Background,
-  BackgroundPreset,
-} from "../../../components/shared/background-picker/background";
-import { AnnotationStyle } from "../annotations/annotations";
-import {
-  CursorEffectSettings,
-  EditorKind,
-  KeyboardEffectSettings,
-} from "../types";
+import { EditorKind } from "../types";
 
-import { SelectionPlacementPatch } from "./selection-placement";
+import { ToolPanelHandlers } from "./tool-panel-handlers";
 import {
   ToolPanelPatch,
   ToolPanelSnapshot,
   useToolPanelRequestStore,
   useToolPanelStore,
 } from "./tool-panel-store";
-
-/**
- * What a tool panel can ask for. Each one is an editor handler that already
- * exists, so a control in a panel and the same control in the editor take the
- * identical path through the workspace's state.
- */
-export type ToolPanelHandlers = {
-  /** Draw the chosen annotation in and out over its clip, or leave it standing.
-   */
-  onAnnotationAngleChange?: (angle: number) => void;
-  onAnnotationAnimatedChange?: (animated: boolean) => void;
-  /** Forget a colour of your own. */
-  onAnnotationColorRemove?: (color: string) => void;
-  /** Keep a colour of your own, so it is on offer next time. */
-  onAnnotationColorSave?: (color: string) => void;
-  /** Turn the chosen annotation round, through the same commit path the drag on
-   * the picture uses. */
-  onAnnotationReverse?: () => void;
-  /** Lay the chosen redaction's blocks out again, or draw the chosen
-   * hand-drawn highlight's stroke again, from a fresh seed. */
-  onAnnotationShuffle?: () => void;
-  /** Dress the chosen annotation, a field at a time, through the same commit
-   * path the drag on the picture uses. */
-  onAnnotationStyleChange?: (style: Partial<AnnotationStyle>) => void;
-  /** Delete every chosen annotation, in one edit. */
-  onAnnotationsDelete?: () => void;
-  /** Play the selected audio track this much louder or quieter than it was
-   * recorded, in decibels. */
-  onAudioVolumeChange?: (decibels: number) => void;
-  /** Fill the workspace's canvas with this background. */
-  onBackgroundChange?: (background: Background) => void;
-  onBackgroundPresetRemove?: (id: string) => void;
-  onBackgroundPresetSave?: (preset: BackgroundPreset) => void;
-  /** Draw the camera into the screen's picture, or carry it as a track of its
-   * own. The placement of each is carried across the change. */
-  onBakeCameraChange?: (bake: boolean) => void;
-  /** Show the whole source again, the committed crop taken away. */
-  onCropReset?: () => void;
-  /** Cut a crop of the size a field asked for, in source pixels. */
-  onCropSizeChange?: (size: { height?: number; width?: number }) => void;
-  onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
-  /** Take every stroke off the picture being edited. */
-  onDrawingsClear?: () => void;
-  /** Round the output canvas corners by this share of its shorter side. */
-  onFrameRadiusChange?: (radius: number) => void;
-  onFrameReset?: () => void;
-  /** Size the output canvas to what a field asked for. */
-  onFrameSizeChange?: (size: { height?: number; width?: number }) => void;
-  /** Draw every shortcut with these settings. */
-  onKeyboardEffectsChange?: (settings: Partial<KeyboardEffectSettings>) => void;
-  /** Put the shortcuts back where the recording draws them by default. */
-  onKeyboardPositionReset?: () => void;
-  /** Put every shortcut's own placement away, the global one left as it is. */
-  onKeyboardShortcutsResetAll?: () => void;
-  /** Bring back every shortcut deleted from the timeline. */
-  onKeyboardShortcutsRestore?: () => void;
-  /** Cast the selected layer's shadow onto the canvas, or take it away. */
-  onSelectionDropShadowChange?: (dropShadow: boolean) => void;
-  /** Pad the selected layer by this many output pixels on each side. */
-  onSelectionInsetChange?: (inset: number) => void;
-  /** Place the selection at the size and position a field asked for. */
-  onSelectionPlacementChange?: (placement: SelectionPlacementPatch) => void;
-  /** Round the selected layer's corners by this share of its shorter side. */
-  onSelectionRadiusChange?: (radius: number) => void;
-  /** Put the layer's content in the middle of its padded frame. */
-  onSelectionRecenter?: () => void;
-  onSelectionReset?: () => void;
-  /** Give every shortcut the selected one's size and position. */
-  onShortcutApplyToAll?: () => void;
-  /** Draw the selected shortcut at this size and centre, all in percent. */
-  onShortcutPlacementChange?: (
-    placement: NonNullable<ToolPanelPatch["shortcutPlacement"]>,
-  ) => void;
-  /** Put the selected shortcut back where the recording drew it. */
-  onShortcutReset?: () => void;
-};
 
 /**
  * The last request each workspace has acted on. Module state rather than a
@@ -165,6 +80,21 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   }
   if (values.resetShortcut) on.onShortcutReset?.();
   if (values.applyShortcutToAll) on.onShortcutApplyToAll?.();
+  if (values.scenePreset !== undefined)
+    on.onScenePresetChoose?.(values.scenePreset);
+  if (values.customizeScene) on.onSceneCustomize?.();
+  if (values.sceneFraming !== undefined)
+    on.onSceneFramingChange?.(values.sceneFraming);
+  if (values.sceneRadius !== undefined)
+    on.onSceneRadiusChange?.(values.sceneRadius);
+  if (values.sceneVariant) on.onSceneVariantChange?.(values.sceneVariant);
+  if (values.chooseSceneTemplate)
+    on.onSceneTemplateChoose?.(values.chooseSceneTemplate);
+  if (values.saveSceneTemplate) on.onSceneTemplateSave?.();
+  if (values.removeSceneTemplate !== undefined)
+    on.onSceneTemplateRemove?.(values.removeSceneTemplate);
+  if (values.resetSceneFraming) on.onSceneFramingReset?.();
+  if (values.deleteScene) on.onSceneDelete?.();
 };
 
 /**

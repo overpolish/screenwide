@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { RecordingAnnotationClip } from "../../recording/annotations/recording-annotations";
+import { RecordingSceneClip } from "../../recording/scenes/recording-scenes";
 import {
   RecordingKeyboardTimelineItem,
   RecordingPreviewLayout,
@@ -53,6 +54,30 @@ const counter = (
 export const STORY_ANNOTATION_CLIPS = [
   counter(1, 14_000, 26_000),
   counter(2, 40_000, 58_000),
+];
+
+/** A zoom and a side by side butted together, then a picture in picture on
+ * its own later in the recording. */
+export const STORY_SCENE_CLIPS: RecordingSceneClip[] = [
+  {
+    endMs: 30_000,
+    id: "scene-1",
+    preset: "full",
+    screen: { focusX: 0.3, focusY: 0.4, zoom: 2 },
+    startMs: 20_000,
+  },
+  {
+    endMs: 38_000,
+    id: "scene-2",
+    preset: "split-two-thirds",
+    startMs: 30_000,
+  },
+  {
+    endMs: 96_000,
+    id: "scene-3",
+    preset: "picture-in-picture",
+    startMs: 80_000,
+  },
 ];
 
 export const STORY_LAYOUT: RecordingPreviewLayout = {

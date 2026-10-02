@@ -82,24 +82,34 @@ export function resolveToolPanelSnapshot(
     applyShortcutToAll: _applyShortcutToAll,
     audioVolume,
     bakeCamera,
+    chooseSceneTemplate: _chooseSceneTemplate,
     clearDrawings: _clearDrawings,
     cropSize,
+    customizeScene: _customizeScene,
     deleteAnnotations: _deleteAnnotations,
+    deleteScene: _deleteScene,
     frameRadius,
     frameSize,
     keyboardEffects,
     recenterSelection: _recenterSelection,
     removeAnnotationColor: _removeAnnotationColor,
     removePreset: _removePreset,
+    removeSceneTemplate: _removeSceneTemplate,
     resetAllShortcuts: _resetAllShortcuts,
     resetCrop: _resetCrop,
     resetFrame: _resetFrame,
     resetKeyboardPosition: _resetKeyboardPosition,
+    resetSceneFraming: _resetSceneFraming,
     resetSelection: _resetSelection,
     resetShortcut: _resetShortcut,
     restoreShortcuts: _restoreShortcuts,
     saveAnnotationColor: _saveAnnotationColor,
     savePreset: _savePreset,
+    saveSceneTemplate: _saveSceneTemplate,
+    sceneFraming,
+    scenePreset,
+    sceneRadius,
+    sceneVariant,
     selectionDropShadow,
     selectionInset,
     selectionOutput,
@@ -172,6 +182,29 @@ export function resolveToolPanelSnapshot(
     ...(frameSize ? { frame: sized(resolved.frame, frameSize) } : {}),
     ...(frameRadius !== undefined && resolved.frame
       ? { frame: { ...resolved.frame, radius: frameRadius } }
+      : {}),
+    // A scene chosen or reframed in the panel shows at once, the way the bake
+    // switch flips, until the editor answers with the scene it changed.
+    ...(resolved.scene &&
+    (scenePreset || sceneFraming || sceneRadius !== undefined || sceneVariant)
+      ? {
+          scene: {
+            ...resolved.scene,
+            framing:
+              resolved.scene.framing && sceneFraming
+                ? { ...resolved.scene.framing, ...sceneFraming }
+                : resolved.scene.framing,
+            preset: scenePreset ?? resolved.scene.preset,
+            radius:
+              resolved.scene.radius === null
+                ? null
+                : (sceneRadius ?? resolved.scene.radius),
+            variant:
+              resolved.scene.variant && sceneVariant
+                ? { ...resolved.scene.variant, ...sceneVariant }
+                : resolved.scene.variant,
+          },
+        }
       : {}),
     ...(selectionOutput
       ? { selection: placedSelection(selection, selectionOutput) }

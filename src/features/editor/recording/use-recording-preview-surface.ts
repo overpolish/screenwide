@@ -65,7 +65,13 @@ export type RecordingPreviewSelection = {
   radiusPercent: number;
   rect: { height: number; width: number; x: number; y: number };
   cropMode?: boolean;
+  /** A scene fixes where this pane sits: a move pans its picture and a
+   * resize zooms it, and the outline stays put. */
+  framed?: boolean;
   image?: { height: number; width: number; x: number; y: number };
+  /** A scene places this pane but leaves it free to move and resize, as a
+   * custom scene's box: it moves like any layer but never grows the canvas. */
+  inScene?: boolean;
   layerId?: number;
   maximumScale?: number;
   minimumScale?: number;

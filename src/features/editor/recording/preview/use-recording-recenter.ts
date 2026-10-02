@@ -3,22 +3,30 @@
 
 import { useRef } from "react";
 
+import { useRecenterInsetControls } from "../../recenter-inset-channel";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import {
   getRecordingRecenterAnalysis,
   recenterScreenshotContent,
 } from "../../screenshot/screenshot-recenter";
 
+/**
+ * The recording's content analysis, published for the crop panel's commit and
+ * the Select panel's padding controls. Both read the frame under the
+ * playhead, so the picture is parked before it is read.
+ */
 export function useRecordingRecenter({
   artifactId,
   getPositionMs,
   onOutputChange,
   output,
+  pause,
   source,
 }: {
   artifactId: number;
   getPositionMs: () => number;
   output: ScreenshotOutputSettings;
+  pause: () => void;
   onOutputChange?: (settings: ScreenshotOutputSettings) => void;
   source?: { height: number; width: number };
 }) {
@@ -68,15 +76,20 @@ export function useRecordingRecenter({
         );
       });
   };
-  const begin = () => {
-    analyse(true);
-  };
-  const prepare = () => {
-    analyse(false);
-  };
   const refresh = (sourceCrop: ScreenshotOutputSettings["sourceCrop"]) => {
     analyse(false, sourceCrop, true);
   };
+  useRecenterInsetControls("recording", {
+    begin: () => {
+      pause();
+      analyse(true);
+    },
+    prepare: () => {
+      pause();
+      analyse(false);
+    },
+    refresh,
+  });
 
-  return { begin, prepare, refresh };
+  return { refresh };
 }

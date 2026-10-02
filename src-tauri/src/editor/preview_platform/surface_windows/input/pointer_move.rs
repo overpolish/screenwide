@@ -46,7 +46,16 @@ pub(super) fn pointer_move(
             let dy = (point.1 - gesture.pointer_start.1)
               / (pane.height * state.workspace_transform.zoom).max(1.0);
             let mut selection = gesture.selection_start;
-            if gesture.operation == SelectionGestureOperation::FrameResize {
+            if gesture.selection_start.framed == crate::editor::preview_platform::FRAMED_FIXED
+              && matches!(
+                gesture.operation,
+                SelectionGestureOperation::Move
+                  | SelectionGestureOperation::Resize
+                  | SelectionGestureOperation::CropResize
+              )
+            {
+              super::framed::apply(&mut state, &mut gesture, &mut selection, pane, (dx, dy));
+            } else if gesture.operation == SelectionGestureOperation::FrameResize {
               super::frame_resize::apply(
                 inner,
                 &mut state,

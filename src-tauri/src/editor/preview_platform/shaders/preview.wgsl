@@ -71,6 +71,26 @@ struct Canvas {
   // canvas pixel, whether this pass draws that layer (1) or reads it (2), and
   // the index of the spotlight whose shade it lies under.
   annotation_blur: vec4<f32>,
+  // How a scene moved the screen's box while the shutter was open: the scale
+  // and the shift, in canvas pixels, that carry the box as drawn onto where
+  // it was, then how many steps the frame averages. One step draws it sharp.
+  scene_motion: vec4<f32>,
+  // The same scale and shift for the screen's image, which a zoom carries
+  // further than its box.
+  scene_image_motion: vec4<f32>,
+  // The camera's frame when the shutter opened, in canvas pixels, and the part
+  // of its picture that frame showed, in shares of the picture.
+  camera_motion_frame: vec4<f32>,
+  camera_motion_crop: vec4<f32>,
+  // How opaque the screen and the camera are drawn, which a scene fades as it
+  // hides or shows them.
+  scene_opacity: vec4<f32>,
+}
+
+// How many placements a frame averages while a scene moves its panes; one
+// draws them sharp.
+fn scene_samples() -> u32 {
+  return max(u32(canvas.scene_motion.w), 1u);
 }
 
 // False in the lean pipelines a draw showing no annotation uses, whose module
@@ -167,12 +187,14 @@ fn drop_shadow(distance: f32, sigma: f32) -> f32 {
   return (36.0 / 255.0) * exp(-0.5 * distance * distance / (sigma * sigma));
 }
 
-fn visible_shadow(pixel: vec2<f32>, sigma: f32) -> f32 {
-  let shadow_pixel = pixel - vec2<f32>(0.0, sigma * 0.35);
+// The screen's drop shadow, its box read at `box_pixel` and its image at
+// `image_pixel`: one point while still, two while a zoom carries them apart.
+fn visible_shadow(box_pixel: vec2<f32>, image_pixel: vec2<f32>, sigma: f32) -> f32 {
+  let offset = vec2<f32>(0.0, sigma * 0.35);
   // The foreground is the intersection of the crop window and placed source.
   // A tall crop around a wide source must not cast a tall rectangular shadow.
-  let crop_distance = rounded_distance(shadow_pixel, canvas.crop_rect, canvas.effects.x);
-  let image_distance = rounded_distance(shadow_pixel, canvas.image_rect, 0.0);
+  let crop_distance = rounded_distance(box_pixel - offset, canvas.crop_rect, canvas.effects.x);
+  let image_distance = rounded_distance(image_pixel - offset, canvas.image_rect, 0.0);
   let distance = max(select(max(crop_distance, image_distance), crop_distance,
                             canvas.recenter_inset_color.a > 0.0), 0.0);
   return drop_shadow(distance, sigma);
@@ -578,12 +600,11 @@ fn vs_main(@builtin(vertex_index) id: u32) -> @builtin(position) vec4<f32> {
   return vec4<f32>(position * vec2<f32>(2.0, -2.0) + vec2<f32>(-1.0, 1.0), 0.0, 1.0);
 }
 
-fn camera_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
-  if (canvas.camera_effects.y == 0.0) {
-    return result_in;
-  }
+// The camera drawn in `frame`, in canvas pixels, showing `crop` of its
+// picture, in shares of it.
+fn camera_layer_at(result_in: vec4<f32>, pixel: vec2<f32>, frame: vec4<f32>,
+                   crop: vec4<f32>) -> vec4<f32> {
   var result = result_in;
-  let frame = canvas.camera_frame;
   let camera_alpha = rounded_coverage(pixel, frame, canvas.camera_effects.x);
   let sigma = canvas.camera_effects.z;
   if (sigma > 1.0) {
@@ -595,13 +616,94 @@ fn camera_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
   let camera_local = (pixel - frame.xy) / frame.zw;
   if (camera_alpha > 0.0 && all(camera_local >= vec2<f32>(0.0)) &&
       all(camera_local <= vec2<f32>(1.0))) {
-    let camera_source_pixel = canvas.camera_crop.xy + camera_local * canvas.camera_crop.zw;
-    let camera_uv = camera_source_pixel / vec2<f32>(textureDimensions(camera_image));
-    let camera = textureSample(camera_image, linear_sampler, camera_uv);
+    let camera_uv = crop.xy + camera_local * crop.zw;
+    // Sampled inside the motion's loop as well, so from the one level there is.
+    let camera = textureSampleLevel(camera_image, linear_sampler, camera_uv, 0.0);
     let alpha = camera.a * camera_alpha;
     result = vec4<f32>(mix(result.rgb, camera.rgb, alpha), alpha + result.a * (1.0 - alpha));
   }
   return result;
+}
+
+// The camera, averaged over every step a layout moved it through while the
+// shutter was open. A layout changes its frame's shape, so each step has a
+// frame and a crop of its own rather than one transform of the drawn camera.
+// The camera's drawing is laid over `result_in` as opaque as the scene has it.
+fn camera_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
+  let opacity = canvas.scene_opacity.y;
+  if (canvas.camera_effects.y == 0.0 || opacity <= 0.0) {
+    return result_in;
+  }
+  let picture = vec2<f32>(textureDimensions(camera_image));
+  let drawn_crop = vec4<f32>(canvas.camera_crop.xy / picture, canvas.camera_crop.zw / picture);
+  let samples = scene_samples();
+  if (samples == 1u) {
+    return mix(result_in, camera_layer_at(result_in, pixel, canvas.camera_frame, drawn_crop),
+               opacity);
+  }
+  var sum = vec4<f32>(0.0);
+  for (var index = 0u; index < samples; index++) {
+    let step = f32(index) / f32(samples - 1u);
+    sum += camera_layer_at(result_in, pixel, mix(canvas.camera_motion_frame, canvas.camera_frame, step),
+                           mix(canvas.camera_motion_crop, drawn_crop, step));
+  }
+  return mix(result_in, sum / f32(samples), opacity);
+}
+
+// The screen layer over `result_in`: its shadow, its recentre inset and its
+// picture, its box read at `box_pixel` and its image at `image_pixel`.
+fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f32>,
+                foreground_only: bool) -> vec4<f32> {
+  var result = result_in;
+  let crop_alpha = rounded_coverage(box_pixel, canvas.crop_rect, canvas.effects.x);
+  // Axis-aligned zero-radius source edges are already pixel-exact. Smoothing
+  // them leaks a fractional row of canvas colour around a default crop.
+  let image_rect_alpha = rounded_coverage(image_pixel, canvas.image_rect, 0.0);
+  let image_alpha = crop_alpha * image_rect_alpha *
+      rounded_coverage(image_pixel, canvas.source_crop_rect, 0.0);
+  let inset = canvas.recenter_inset_color;
+  let frame_alpha = select(image_alpha, crop_alpha, inset.a > 0.0);
+  if (canvas.options.w != 0u && canvas.effects.w > 1.0) {
+    let shadow = visible_shadow(box_pixel, image_pixel, canvas.effects.w);
+    if (foreground_only) {
+      result.a = shadow * (1.0 - frame_alpha);
+    } else {
+      result = vec4<f32>(result.rgb * (1.0 - shadow * (1.0 - frame_alpha)), result.a);
+    }
+  }
+  if (inset.a > 0.0) {
+    result = mix(result, vec4<f32>(inset.rgb, 1.0), crop_alpha);
+  }
+  let uv = (image_pixel - canvas.image_rect.xy) / canvas.image_rect.zw;
+  if (image_alpha > 0.0) {
+    // Sampled inside the motion's loop as well, so from the one level there is.
+    let video = textureSampleLevel(source_image, linear_sampler, uv, 0.0);
+    result = mix(result, vec4<f32>(video.rgb, 1.0), video.a * image_alpha);
+  }
+  return result;
+}
+
+// The screen, averaged over every step a scene moved it through while the
+// shutter was open. Its box and its image each only move and scale, so each
+// step reads the drawn screen at the points that step carried here; the
+// background under it stays sharp.
+fn moving_screen_layer(result_in: vec4<f32>, pixel: vec2<f32>, foreground_only: bool)
+    -> vec4<f32> {
+  let samples = scene_samples();
+  if (samples == 1u) {
+    return screen_layer(result_in, pixel, pixel, foreground_only);
+  }
+  var sum = vec4<f32>(0.0);
+  for (var index = 0u; index < samples; index++) {
+    let step = f32(index) / f32(samples - 1u);
+    let box_scale = mix(canvas.scene_motion.x, 1.0, step);
+    let box_shift = mix(canvas.scene_motion.yz, vec2<f32>(0.0), step);
+    let image_scale = mix(canvas.scene_image_motion.x, 1.0, step);
+    let image_shift = mix(canvas.scene_image_motion.yz, vec2<f32>(0.0), step);
+    sum += screen_layer(result_in, (pixel - box_shift) / box_scale,
+                        (pixel - image_shift) / image_scale, foreground_only);
+  }
+  return sum / f32(samples);
 }
 
 fn keyboard_key_count() -> u32 {
@@ -917,29 +1019,11 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   if (canvas.camera_effects.w == 0.0) {
     result = camera_layer(result, pixel);
   }
-  let crop_alpha = rounded_coverage(pixel, canvas.crop_rect, canvas.effects.x);
-  // Axis-aligned zero-radius source edges are already pixel-exact. Smoothing
-  // them leaks a fractional row of canvas colour around a default crop.
-  let image_rect_alpha = rounded_coverage(pixel, canvas.image_rect, 0.0);
-  let image_alpha = crop_alpha * image_rect_alpha *
-      rounded_coverage(pixel, canvas.source_crop_rect, 0.0);
-  let inset = canvas.recenter_inset_color;
-  let frame_alpha = select(image_alpha, crop_alpha, inset.a > 0.0);
-  if (canvas.options.w != 0u && canvas.effects.w > 1.0) {
-    let shadow = visible_shadow(pixel, canvas.effects.w);
-    if (foreground_only) {
-      result.a = shadow * (1.0 - frame_alpha);
-    } else {
-      result = vec4<f32>(result.rgb * (1.0 - shadow * (1.0 - frame_alpha)), result.a);
-    }
-  }
-  if (inset.a > 0.0) {
-    result = mix(result, vec4<f32>(inset.rgb, 1.0), crop_alpha);
-  }
-  let uv = (pixel - canvas.image_rect.xy) / canvas.image_rect.zw;
-  if (image_alpha > 0.0) {
-    let video = textureSample(source_image, linear_sampler, uv);
-    result = mix(result, vec4<f32>(video.rgb, 1.0), video.a * image_alpha);
+  // A scene fades the screen as it hides or shows it, its annotations and
+  // the cursor it carries with it.
+  let screen_opacity = canvas.scene_opacity.x;
+  if (screen_opacity > 0.0) {
+    result = mix(result, moving_screen_layer(result, pixel, foreground_only), screen_opacity);
   }
   result = crop_preview_layer(result, pixel);
   // Every annotation edge feathers over one *drawn* pixel, not one canvas
@@ -964,8 +1048,10 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   for (var run = 0u; run < runs; run++) {
     let first = select(below, 0u, run == 0u);
     let last = select(total, below, run == 0u);
+    let unannotated = result;
     result = composite_annotation_layers(result, base, pixel, first, last, annotation_feather,
                                          annotation_atlas, run == 0u);
+    result = mix(unannotated, result, screen_opacity);
     let shade = annotation_blur_spotlight();
     if (annotation_blur_mode() == 1u && shade >= first && shade < last) {
       // Drawing the layer: the run stopped under the shade.

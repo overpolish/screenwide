@@ -30,6 +30,8 @@ export type EditorToolKeys = {
   /** G: the marquee, on or off. */
   onMarqueeTool?: () => void;
   onResizeCanvas?: () => void;
+  /** L: the scene tool, on or off. */
+  onSceneTool?: () => void;
   onSelectTool?: () => void;
   onToggleBladeTool?: () => void;
   onToggleCrop?: () => void;
@@ -67,6 +69,7 @@ const toolKeyAction = (id: EditorToolId, keys: EditorToolKeys) => {
     frame: keys.onResizeCanvas,
     keyboard: undefined,
     marquee: keys.onMarqueeTool,
+    scene: keys.onSceneTool,
     select: keys.onSelectTool,
   }[id];
 };

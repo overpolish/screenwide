@@ -93,7 +93,10 @@ SCREENWIDE_PREVIEW_PRIVATE void update_keyboard_transform(
     begin_keyboard_transform(self.surface);
     return;
   }
-  if (!self.surface.workspaceMode || self.surface.editorBaseRects.count == 0) {
+  // A pane a scene places has no canvas to grow: the scene owns where it sits
+  // on a canvas of a fixed size, whether it fixes the pane or leaves it free.
+  if (!self.surface.workspaceMode || self.surface.editorBaseRects.count == 0 ||
+      self.surface.selection.framed != 0) {
     self.selectionMoveFrameStart = NSZeroRect;
     return;
   }

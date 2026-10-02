@@ -10,7 +10,7 @@ use crate::{
 };
 use std::process::Command;
 
-fn output(width: u32, height: u32) -> crate::screenshots::ScreenshotOutputSettings {
+pub(super) fn output(width: u32, height: u32) -> crate::screenshots::ScreenshotOutputSettings {
   let mut output = crate::screenshots::test_output_settings(width, height);
   output.background_color = "#000000".to_owned();
   output.mesh_colors.clear();
@@ -271,6 +271,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),
+      scene_clips: Vec::new(),
       next_segment_id: 2,
       segments: vec![
         crate::editor::timeline_edit::RecordingTimelineSegment {

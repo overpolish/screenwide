@@ -78,6 +78,7 @@ pub(super) fn present_native_frame(
           sources.held_fills.as_ref(),
         );
       }
+      sources.arrange_scene(&mut settings, frame.timestamp_ms, frame_ms);
       // Annotations are authored against the full-resolution source; this frame
       // was decoded on its own grid, so the points move with it.
       let track = if index == 0 {

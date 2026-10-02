@@ -15,7 +15,7 @@ import {
   applyClearDrawings,
 } from "../../annotations/annotation-channel";
 import { EditorKind } from "../../types";
-import { ToolPanelHandlers } from "../tool-panel-bridge";
+import { ToolPanelHandlers } from "../tool-panel-handlers";
 
 /**
  * The annotation panel's asks, answered against the annotation `workspace`

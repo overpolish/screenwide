@@ -110,6 +110,12 @@ BOOL crop_draw_mouse_down(ScreenwidePreviewInteractionView *view, NSPoint point,
 BOOL crop_draw_mouse_dragged(ScreenwidePreviewInteractionView *view,
                              NSEvent *event);
 BOOL crop_draw_mouse_up(ScreenwidePreviewInteractionView *view, NSEvent *event);
+/// Drags on a selection a scene has placed, which pan and zoom the picture
+/// inside it rather than moving its outline.
+BOOL framed_selection_mouse_dragged(ScreenwidePreviewInteractionView *view,
+                                    NSEvent *event);
+BOOL framed_selection_mouse_up(ScreenwidePreviewInteractionView *view,
+                               NSEvent *event);
 /// The three grips of the chosen arrow, in the same handle shape the
 /// selection OSC draws its corners with.
 void annotation_add_osc(ScreenwideRegionOscVertex *vertices, NSUInteger *count,

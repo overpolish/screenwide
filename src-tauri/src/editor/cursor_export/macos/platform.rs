@@ -19,6 +19,7 @@ mod frames;
 use frames::FrameComposer;
 
 mod frame_grid;
+mod frame_placement;
 mod mux;
 
 static GPU_EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
@@ -187,6 +188,12 @@ mod redact_classic_tests;
 mod redact_tests;
 #[cfg(test)]
 mod redact_video_tests;
+#[cfg(test)]
+mod scene_custom_video_tests;
+#[cfg(test)]
+mod scene_layout_video_tests;
+#[cfg(test)]
+mod scene_video_tests;
 #[cfg(test)]
 mod shape_tests;
 #[cfg(test)]

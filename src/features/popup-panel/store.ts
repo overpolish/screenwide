@@ -36,7 +36,13 @@ export type PopupPanelItem = {
  * audio panels that follow. "annotation" is the one that belongs to what is
  * selected rather than to a tool: it dresses the arrow or counter in hand. */
 export type ToolPanelKind =
-  "annotation" | "crop" | "cursor" | "frame" | "keyboard" | "selection";
+  | "annotation"
+  | "crop"
+  | "cursor"
+  | "frame"
+  | "keyboard"
+  | "scene"
+  | "selection";
 
 /** A list of choices: the panel as it has always been. */
 export type PopupPanelListContent = {

@@ -283,7 +283,6 @@ fn preview_selection(overlay: ScreenshotSelectionOverlay) -> PreviewSelection {
     image_x: overlay.image.map_or(0.0, |image| image.x),
     image_y: overlay.image.map_or(0.0, |image| image.y),
     layer_id: overlay.layer_id.unwrap_or(overlay.pane_index),
-    radius_disabled: 0,
     #[cfg(target_os = "macos")]
     pane_index: 0,
     #[cfg(not(target_os = "macos"))]
@@ -295,5 +294,6 @@ fn preview_selection(overlay: ScreenshotSelectionOverlay) -> PreviewSelection {
     radius_percent: overlay.radius_percent,
     minimum_scale: 0.0,
     maximum_scale: 0.0,
+    ..PreviewSelection::default()
   }
 }

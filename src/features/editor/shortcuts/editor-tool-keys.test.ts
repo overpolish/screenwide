@@ -15,6 +15,7 @@ describe("the editor's tool keys", () => {
     const keys = {
       onMarqueeTool: vi.fn(),
       onResizeCanvas: vi.fn(),
+      onSceneTool: vi.fn(),
       onSelectTool: vi.fn(),
       onToggleCrop: vi.fn(),
       onTool: vi.fn(),
@@ -32,6 +33,7 @@ describe("the editor's tool keys", () => {
     expect(keys.onSelectTool).toHaveBeenCalledOnce();
     expect(keys.onToggleCrop).toHaveBeenCalledOnce();
     expect(keys.onResizeCanvas).toHaveBeenCalledOnce();
+    expect(keys.onSceneTool).toHaveBeenCalledOnce();
   });
 
   it("gives no two tools the same letter", () => {

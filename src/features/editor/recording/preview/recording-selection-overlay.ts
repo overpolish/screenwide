@@ -100,6 +100,7 @@ export function recordingVideoSelectionOverlay({
   canPreviewBakedCamera,
   canvasTool,
   effectiveRecordingOutput,
+  isFramed,
   previewSourceDimensions,
   selectedVideoTracks,
 }: {
@@ -108,6 +109,9 @@ export function recordingVideoSelectionOverlay({
   canPreviewBakedCamera: boolean;
   canvasTool: RecordingCanvasTool;
   effectiveRecordingOutput: RecordingOutputSettings;
+  /** A scene places the panes: their outlines stay put, and the crop tool
+   * pans and zooms the camera inside its box like the select tool. */
+  isFramed: boolean;
   previewSourceDimensions: VideoSourceDimensions;
   selectedVideoTracks: ReadonlySet<RecordingVideoTrackId>;
 }) {
@@ -137,22 +141,28 @@ export function recordingVideoSelectionOverlay({
   if (!primarySource) return null;
   if (canPreviewBakedCamera) {
     if (activeVideoTrack === "primary") {
-      return normalizedRecordingSelection({
-        mode: selectionChromeTool(canvasTool),
-        output: effectiveRecordingOutput.primary,
-        paneIndex: 0,
-        source: primarySource,
-      });
+      return {
+        ...normalizedRecordingSelection({
+          mode: isFramed ? "select" : selectionChromeTool(canvasTool),
+          output: effectiveRecordingOutput.primary,
+          paneIndex: 0,
+          source: primarySource,
+        }),
+        framed: isFramed,
+      };
     }
     const cameraSource = previewSourceDimensions.camera;
     if (!cameraSource) return null;
-    return bakedCameraSelection({
-      cameraOverlay,
-      cameraSource,
-      isCropping: canvasTool === "crop",
-      output: primaryOutput,
-      primarySource,
-    });
+    return {
+      ...bakedCameraSelection({
+        cameraOverlay,
+        cameraSource,
+        isCropping: canvasTool === "crop" && !isFramed,
+        output: primaryOutput,
+        primarySource,
+      }),
+      framed: isFramed,
+    };
   }
   const paneIndex = activeVideoTrack === "primary" ? 0 : 1;
   const source =
@@ -160,12 +170,17 @@ export function recordingVideoSelectionOverlay({
       ? primarySource
       : previewSourceDimensions.camera;
   if (!source) return null;
-  return normalizedRecordingSelection({
-    mode: selectionChromeTool(canvasTool),
-    output: effectiveRecordingOutput[activeVideoTrack],
-    paneIndex,
-    source,
-  });
+  // With the camera a pane of its own, a scene only places the screen.
+  const framesPane = isFramed && activeVideoTrack === "primary";
+  return {
+    ...normalizedRecordingSelection({
+      mode: framesPane ? "select" : selectionChromeTool(canvasTool),
+      output: effectiveRecordingOutput[activeVideoTrack],
+      paneIndex,
+      source,
+    }),
+    framed: framesPane,
+  };
 }
 
 /**
@@ -177,6 +192,7 @@ export function recordingVideoSelectionTargets({
   canPreviewBakedCamera,
   canvasTool,
   effectiveRecordingOutput,
+  isFramed,
   previewSourceDimensions,
   selectedVideoTracks,
 }: {
@@ -184,6 +200,7 @@ export function recordingVideoSelectionTargets({
   canPreviewBakedCamera: boolean;
   canvasTool: RecordingCanvasTool;
   effectiveRecordingOutput: RecordingOutputSettings;
+  isFramed: boolean;
   previewSourceDimensions: VideoSourceDimensions;
   selectedVideoTracks: ReadonlySet<RecordingVideoTrackId>;
 }) {
@@ -208,6 +225,7 @@ export function recordingVideoSelectionTargets({
       canPreviewBakedCamera,
       canvasTool: "select",
       effectiveRecordingOutput,
+      isFramed,
       previewSourceDimensions,
       selectedVideoTracks,
     });
@@ -218,32 +236,42 @@ export function recordingVideoSelectionTargets({
     if (!primarySource || !cameraSource) return null;
     const output = screenshotOutputDimensions(effectiveRecordingOutput.primary);
     return [
-      normalizedRecordingSelection({
-        mode: canvasTool,
-        output: effectiveRecordingOutput.primary,
-        paneIndex: 0,
-        source: primarySource,
-      }),
-      bakedCameraSelection({
-        cameraOverlay,
-        cameraSource,
-        isCropping: canvasTool === "crop",
-        output,
-        primarySource,
-      }),
+      {
+        ...normalizedRecordingSelection({
+          mode: isFramed ? "select" : canvasTool,
+          output: effectiveRecordingOutput.primary,
+          paneIndex: 0,
+          source: primarySource,
+        }),
+        framed: isFramed,
+      },
+      {
+        ...bakedCameraSelection({
+          cameraOverlay,
+          cameraSource,
+          isCropping: canvasTool === "crop" && !isFramed,
+          output,
+          primarySource,
+        }),
+        framed: isFramed,
+      },
     ];
   }
   return (["primary", "camera"] as const).flatMap((trackId) => {
     if (!selectedVideoTracks.has(trackId)) return [];
     const source = previewSourceDimensions[trackId];
     if (!source) return [];
+    const framesPane = isFramed && trackId === "primary";
     return [
-      normalizedRecordingSelection({
-        mode: canvasTool,
-        output: effectiveRecordingOutput[trackId],
-        paneIndex: trackId === "primary" ? 0 : 1,
-        source,
-      }),
+      {
+        ...normalizedRecordingSelection({
+          mode: framesPane ? "select" : canvasTool,
+          output: effectiveRecordingOutput[trackId],
+          paneIndex: trackId === "primary" ? 0 : 1,
+          source,
+        }),
+        framed: framesPane,
+      },
     ];
   });
 }

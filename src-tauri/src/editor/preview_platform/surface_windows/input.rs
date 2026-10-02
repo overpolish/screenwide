@@ -6,6 +6,7 @@ mod cancel;
 mod context_menu;
 mod crop_draw;
 mod down;
+mod framed;
 mod pointer_move;
 mod up;
 

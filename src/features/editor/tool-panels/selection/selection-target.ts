@@ -16,7 +16,7 @@ import {
   RecordingVideoTrackId,
 } from "../../types";
 import { bakedCameraSelectionTarget } from "../camera/baked-camera-target";
-import { ToolPanelHandlers } from "../tool-panel-bridge";
+import { ToolPanelHandlers } from "../tool-panel-handlers";
 import { ToolPanelAudioSelection } from "../tool-panel-store";
 
 import {

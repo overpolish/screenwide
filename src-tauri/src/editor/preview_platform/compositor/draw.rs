@@ -3,6 +3,7 @@
 
 use super::background::background_constants;
 use super::layer::crop_preview_rect;
+use super::scene_motion::scene_motion_rows;
 use super::*;
 
 impl Compositor {
@@ -111,6 +112,8 @@ impl Compositor {
       .and_then(|path| self.background_cache.resolve(self.gpu, path));
     let (cursor_artwork, cursor_frame, cursor_model) =
       self.cursor_artwork_constants(composition.cursor)?;
+    let [scene_motion, scene_image_motion, camera_motion_frame, camera_motion_crop] =
+      scene_motion_rows(settings, (width, height));
     let values = Constants {
       output_source: [width, height, source.size.0 as f32, source.size.1 as f32],
       image_rect: [
@@ -251,6 +254,14 @@ impl Compositor {
       placement: LayerPlacement::row(layer.placement, geometry.size),
       // Planned in `submit`, which decides whether the layer is drawn.
       annotation_blur: [0.0; 4],
+      scene_motion,
+      scene_image_motion,
+      camera_motion_frame,
+      camera_motion_crop,
+      scene_opacity: {
+        let [screen, camera] = settings.scene_opacity.unwrap_or([1.0, 1.0]);
+        [screen, camera, 0.0, 0.0]
+      },
     };
     self.submit(
       target,

@@ -111,8 +111,9 @@ mod workspace_layout;
 use super::compositor::{self, ComposedFrame, CropMagnifier};
 use super::{
   workspace_editor::{
-    apply_crop_draw, apply_crop_move, apply_crop_resize, crop_magnifier_anchor, hit_test_display,
-    rebase_display_fit_mode, DisplayRect, DisplayTarget, NormalizedRect,
+    apply_crop_draw, apply_crop_move, apply_crop_resize, apply_framed_crop_resize,
+    crop_magnifier_anchor, hit_test_display, rebase_display_fit_mode, DisplayRect, DisplayTarget,
+    NormalizedRect,
   },
   workspace_transform::WorkspaceTransform,
   AnnotationGestureCallback, AnnotationHoverCallback, AnnotationTextCallback, AnnotationTextPhase,

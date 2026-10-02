@@ -63,6 +63,9 @@ pub struct RecordingTimelineEdit {
   pub annotation_clips: Vec<super::annotations::timing::RecordingAnnotationClip>,
   #[serde(flatten)]
   pub keyboard_deletions: Box<RecordingTimelineKeyboardDeletions>,
+  /// Sorted by start, never overlapping; see [`super::scenes`].
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub scene_clips: Vec<super::scenes::RecordingSceneClip>,
   pub next_segment_id: u64,
   pub segments: Vec<RecordingTimelineSegment>,
 }
@@ -82,6 +85,8 @@ pub struct TimelinePlan {
   deleted_keyboard_shortcut_ids: Vec<u64>,
   deleted_keyboard_shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
   keyboard_shortcut_positions: Vec<KeyboardShortcutPositionRange>,
+  /// Read by the export, which arranges each frame as they have it.
+  pub(crate) scene_clips: Vec<super::scenes::RecordingSceneClip>,
   duration_us: u64,
   ranges: Vec<TimelineRange>,
 }
@@ -135,9 +140,11 @@ impl TimelinePlan {
         duration_ms,
       ),
       duration_us,
+      scene_clips: edit.scene_clips.clone(),
       ranges,
     };
     (!plan.annotation_clips.is_empty()
+      || !plan.scene_clips.is_empty()
       || !plan.is_identity(source_duration_us)
       || !plan.deleted_keyboard_shortcut_ids.is_empty()
       || !plan.deleted_keyboard_shortcut_ranges.is_empty()

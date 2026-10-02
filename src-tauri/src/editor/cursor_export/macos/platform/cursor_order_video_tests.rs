@@ -114,6 +114,7 @@ fn brightest_cursor(
       artifact_id: 1,
       next_segment_id: 1,
       keyboard_deletions: Box::default(),
+      scene_clips: Vec::new(),
       annotation_clips: clips.to_vec(),
       segments: vec![RecordingTimelineSegment {
         id: 0,

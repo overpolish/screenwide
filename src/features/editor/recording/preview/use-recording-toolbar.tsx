@@ -6,6 +6,7 @@ import { ButtonGroup } from "../../../../components/base/button-group/button-gro
 import { useProvideEditorToolbarTools } from "../../panel/editor-toolbar-context";
 import { CursorToolToggle } from "../../tool-panels/cursor/cursor-tool-toggle";
 import { KeyboardToolToggle } from "../../tool-panels/keyboard/keyboard-tool-toggle";
+import { SceneToolToggle } from "../../tool-panels/scene/scene-tool-toggle";
 import { useToolPanel } from "../../tool-panels/use-tool-panel";
 
 import {
@@ -19,6 +20,7 @@ export function useRecordingToolbar({
   changeCanvasTool,
   hasCursorData,
   hasKeyboardData,
+  hasScenes,
   hasVisiblePanes,
 }: {
   canEditActiveTrack: boolean;
@@ -27,6 +29,8 @@ export function useRecordingToolbar({
   changeCanvasTool: (tool: RecordingCanvasTool) => void;
   hasCursorData: boolean;
   hasKeyboardData: boolean;
+  /** Whether the recording has a screen and a camera to arrange. */
+  hasScenes: boolean;
   hasVisiblePanes: boolean;
 }) {
   const {
@@ -42,26 +46,25 @@ export function useRecordingToolbar({
   }, [closeToolPanel]);
   // The shortcut opens the panel from the toolbar button's own bounds, the
   // same anchor a press would give it.
+  const togglePanel = useCallback(
+    (panel: "cursor" | "keyboard") => {
+      if (openToolPanel === panel) {
+        dismissToolPanel();
+        return;
+      }
+      const bounds = document
+        .querySelector(`[data-editor-tool=${panel}]`)
+        ?.getBoundingClientRect();
+      if (bounds) void toggleToolPanel(panel, bounds);
+    },
+    [dismissToolPanel, openToolPanel, toggleToolPanel],
+  );
   const toggleCursorPanel = useCallback(() => {
-    if (openToolPanel === "cursor") {
-      dismissToolPanel();
-      return;
-    }
-    const bounds = document
-      .querySelector("[data-editor-tool=cursor]")
-      ?.getBoundingClientRect();
-    if (bounds) void toggleToolPanel("cursor", bounds);
-  }, [dismissToolPanel, openToolPanel, toggleToolPanel]);
+    togglePanel("cursor");
+  }, [togglePanel]);
   const toggleKeyboardPanel = useCallback(() => {
-    if (openToolPanel === "keyboard") {
-      dismissToolPanel();
-      return;
-    }
-    const bounds = document
-      .querySelector("[data-editor-tool=keyboard]")
-      ?.getBoundingClientRect();
-    if (bounds) void toggleToolPanel("keyboard", bounds);
-  }, [dismissToolPanel, openToolPanel, toggleToolPanel]);
+    togglePanel("keyboard");
+  }, [togglePanel]);
   // The tools read the committed `recordingOutput`, never the resize draft, so
   // holding the element keeps the title bar's tools stable mid-gesture. Held as
   // one element so the bar re-renders only when a tool actually changes.
@@ -69,8 +72,16 @@ export function useRecordingToolbar({
     () =>
       hasVisiblePanes ? (
         <>
-          {hasCursorData || hasKeyboardData ? (
+          {hasCursorData || hasKeyboardData || hasScenes ? (
             <ButtonGroup aria-label="Effects" className="gap-control">
+              {hasScenes ? (
+                <SceneToolToggle
+                  isSelected={canvasTool === "scene"}
+                  onSelectedChange={(selected) => {
+                    changeCanvasTool(selected ? "scene" : null);
+                  }}
+                />
+              ) : null}
               {hasCursorData ? (
                 <CursorToolToggle onDismiss={dismissToolPanel} />
               ) : null}
@@ -98,6 +109,7 @@ export function useRecordingToolbar({
       dismissToolPanel,
       hasCursorData,
       hasKeyboardData,
+      hasScenes,
     ],
   );
   // The tools belong to the title bar above, the way a unified toolbar carries

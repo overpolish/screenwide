@@ -104,7 +104,7 @@ typedef void (*screenwide_preview_context_menu_callback)(uint32_t pane_index,
 typedef struct {
   uint32_t pane_index;
   uint32_t layer_id;
-  uint32_t crop_mode, radius_disabled;
+  uint32_t crop_mode, radius_disabled, framed;
   double x, y, width, height;
   double radius_percent;
   double image_x, image_y, image_width, image_height;

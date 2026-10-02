@@ -170,6 +170,24 @@ describe("useToolPanel", () => {
     expect(mocks.movePopupPanel).toHaveBeenCalledOnce();
   });
 
+  // The open-panel map is kept across launches, so after a crash it can name a
+  // panel the new run never showed. Neither the panel's button nor an open of
+  // it may take that stale entry for the window being up.
+  it("shows a panel the store names but the window is not showing", async () => {
+    mocks.active = cursorPanelOpen;
+    mocks.showing = [];
+    mocks.panelByTool.cursor = "cursor";
+    const panel = usePanel("recording");
+
+    await panel.toggle("cursor", anchor);
+    expect(mocks.hidePopupPanel).not.toHaveBeenCalled();
+    expect(mocks.showPopupPanel).toHaveBeenCalledOnce();
+
+    await panel.openPanel("cursor", anchor, false);
+    expect(mocks.showPopupPanel).toHaveBeenCalledTimes(2);
+    expect(mocks.movePopupPanel).not.toHaveBeenCalled();
+  });
+
   it("shows the panel when another workspace's window holds the same tool", async () => {
     mocks.active = cursorPanelOpen;
 

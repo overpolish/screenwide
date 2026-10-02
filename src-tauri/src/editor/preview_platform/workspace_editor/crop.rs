@@ -91,6 +91,65 @@ pub fn apply_crop_resize(
   }
 }
 
+/// Resize a crop window that keeps its shape: the part of a picture a scene's
+/// box shows, which has the box's shape at any zoom. A corner is pulled from
+/// the one opposite it and an edge from the middle of the far one, by however
+/// far the pointer took it along the axis that grew most. The window stays
+/// inside `image` and no smaller than `minimum` on either side.
+#[cfg(any(target_os = "windows", test))]
+pub fn apply_framed_crop_resize(
+  crop: NormalizedRect,
+  image: NormalizedRect,
+  edges: u32,
+  delta: (f64, f64),
+  minimum: (f64, f64),
+) -> NormalizedRect {
+  let width = crop.width.max(f64::EPSILON);
+  let height = crop.height.max(f64::EPSILON);
+  // Where the anchor sits in the window, along each axis, as a share of it.
+  let share = |low: u32, high: u32| {
+    if edges & low != 0 {
+      1.0
+    } else if edges & high != 0 {
+      0.0
+    } else {
+      0.5
+    }
+  };
+  let share_x = share(FRAME_EDGE_LEFT, FRAME_EDGE_RIGHT);
+  let share_y = share(FRAME_EDGE_TOP, FRAME_EDGE_BOTTOM);
+  let grown = |share: f64, delta: f64, length: f64| {
+    (length + if share == 1.0 { -delta } else { delta }) / length
+  };
+  let scale = match (share_x != 0.5, share_y != 0.5) {
+    (true, true) => grown(share_x, delta.0, width).max(grown(share_y, delta.1, height)),
+    (true, false) => grown(share_x, delta.0, width),
+    _ => grown(share_y, delta.1, height),
+  };
+  let anchor_x = crop.x + share_x * width;
+  let anchor_y = crop.y + share_y * height;
+  // The longest the window may run each way from its anchor inside the image.
+  let room = |anchor: f64, share: f64, low: f64, high: f64| {
+    if share == 1.0 {
+      anchor - low
+    } else if share == 0.0 {
+      high - anchor
+    } else {
+      2.0 * (anchor - low).min(high - anchor)
+    }
+  };
+  let largest = (room(anchor_x, share_x, image.x, image.x + image.width) / width)
+    .min(room(anchor_y, share_y, image.y, image.y + image.height) / height);
+  let smallest = (minimum.0 / width).max(minimum.1 / height).min(largest);
+  let scale = scale.max(smallest).min(largest);
+  NormalizedRect {
+    x: anchor_x - share_x * width * scale,
+    y: anchor_y - share_y * height * scale,
+    width: width * scale,
+    height: height * scale,
+  }
+}
+
 /// One sample of a crop window drawn from a press outside the current one.
 /// `delta` is what the gesture reports: the far corner's offset from the
 /// anchor, or the half extents about it when `edges` carries the centered
@@ -185,3 +244,6 @@ pub fn apply_crop_draw(
     edges: horizontal | vertical | if centered { FRAME_EDGE_CENTERED } else { 0 },
   }
 }
+
+#[cfg(test)]
+mod framed_tests;

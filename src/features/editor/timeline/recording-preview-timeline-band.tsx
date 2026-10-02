@@ -43,6 +43,7 @@ export function RecordingPreviewTimelineBand({
   onVideoTrackOrderChange,
   player,
   playhead,
+  scenes,
   selectedTrack,
   selectedVideoTracks,
   timelineBlade,
@@ -61,7 +62,7 @@ export function RecordingPreviewTimelineBand({
 > &
   Pick<
     ReturnType<typeof useRecordingPreviewTransport>,
-    "annotations" | "player" | "timelineBlade" | "timelineThumbnails"
+    "annotations" | "player" | "scenes" | "timelineBlade" | "timelineThumbnails"
   > &
   Pick<
     ReturnType<typeof useRecordingPreviewTracks>,
@@ -82,6 +83,11 @@ export function RecordingPreviewTimelineBand({
     playhead: Playhead;
     zoomControl: ReactNode;
   }) {
+  // The Scene panel follows the scene tool, so the lane takes the tool up and
+  // the panel comes with it, the only tool in hand.
+  const openScenePanel = () => {
+    changeCanvasTool("scene");
+  };
   return (
     <ResizableRecordingTimelineArea
       artifactId={artifactId}
@@ -143,6 +149,18 @@ export function RecordingPreviewTimelineBand({
           }}
           onEnabledTracksChange={changeEnabledTracks}
           onEnabledVideoTracksChange={changeEnabledVideoTracks}
+          // A scene clicked in its lane takes up the Scene tool, the way a
+          // chosen annotation takes up Select: what else was chosen lets go.
+          onSceneActivate={() => {
+            annotations.clearSelection();
+            keyboardTimeline.selection.onClear();
+            timelineBlade.blade.clearRangeSelection();
+            timelineBlade.blade.selectSegment(null);
+            openScenePanel();
+          }}
+          onScenePanelOpen={openScenePanel}
+          onScenesChange={scenes.isAvailable ? scenes.onClipsChange : undefined}
+          onScenesDraftChange={scenes.onDraftChange}
           onSeek={timelineBlade.seek}
           onSelectedTrackChange={changeSelectedTrack}
           onSelectKeyboardShortcut={() => {
@@ -154,6 +172,8 @@ export function RecordingPreviewTimelineBand({
           }}
           onVideoTrackOrderChange={onVideoTrackOrderChange}
           playhead={playhead}
+          sceneClips={scenes.clips}
+          scenesPaused={!scenes.canPlaceCamera}
           selectedAnnotationIds={annotations.selectedIds}
           selectedTrack={annotations.hasSelection ? null : selectedTrack}
           sourceDurationMs={durationMs}

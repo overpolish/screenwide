@@ -272,7 +272,7 @@
 - (void)mouseDragged:(NSEvent *)event {
   NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
   if (annotation_mouse_dragged(self, point)) return;
-  if (crop_draw_mouse_dragged(self, event)) return;
+  if (crop_draw_mouse_dragged(self, event) || framed_selection_mouse_dragged(self, event)) return;
   if (self.selectionDragActive) {
     NSPoint delta = NSMakePoint(point.x - self.selectionDragOrigin.x,
                                 point.y - self.selectionDragOrigin.y);
@@ -684,7 +684,7 @@
   BOOL hadSnapGuides = self.surface.hasSelectionSnapGuideX ||
                        self.surface.hasSelectionSnapGuideY;
   BOOL hadMagnifier = self.surface.workspaceMagnifier.active != 0;
-  if (self.selectionDragActive) {
+  if (self.selectionDragActive && !framed_selection_mouse_up(self, event)) {
     // AppKit can deliver mouse-up at a newer location than the last drag
     // event. Apply that final Frame sample before committing so its OSC,
     // pane geometry and semantic payload share the same endpoint.

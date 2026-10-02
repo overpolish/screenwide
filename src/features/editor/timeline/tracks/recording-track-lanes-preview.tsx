@@ -31,6 +31,7 @@ import {
   STORY_FRAMES_PER_SECOND,
   STORY_KEYBOARD_ITEMS,
   STORY_LAYOUT,
+  STORY_SCENE_CLIPS,
   STORY_THUMBNAILS,
 } from "./recording-track-lanes-preview-fixtures";
 import { selectTimelineItem } from "./timeline-item-selection";
@@ -70,6 +71,7 @@ export function RecordingTrackLanesPreview({
     STORY_ANNOTATION_CLIPS,
   );
   const annotationSelection = useLaneAnnotationSelection(annotationClips);
+  const [sceneClips, setSceneClips] = useState(STORY_SCENE_CLIPS);
   const [isBladeActive, setIsBladeActive] = useState(false);
   const [previewPosition, setPreviewPosition] = useState<number | null>(null);
   const [isRangeActive, setIsRangeActive] = useState(false);
@@ -262,12 +264,15 @@ export function RecordingTrackLanesPreview({
         onAnnotationsSweep={annotationSelection.onSelectSwept}
         onEnabledTracksChange={setEnabledAudio}
         onEnabledVideoTracksChange={setEnabledVideo}
+        onSceneActivate={() => undefined}
+        onScenesChange={setSceneClips}
         onSeek={(ratio) => {
           playheadRatioRef.current = ratio;
           playhead.publish((ratio * timelineDurationMs) / 1_000, ratio);
         }}
         onSelectedTrackChange={setSelectedTrack}
         playhead={playhead}
+        sceneClips={sceneClips}
         selectedAnnotationIds={annotationSelection.selectedIds}
         selectedTrack={selectedTrack}
         sourceDurationMs={STORY_DURATION_MS}

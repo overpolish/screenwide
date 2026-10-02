@@ -95,6 +95,7 @@ fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
       artifact_id: 1,
       next_segment_id: 1,
       keyboard_deletions: Box::default(),
+      scene_clips: Vec::new(),
       annotation_clips: vec![RecordingAnnotationClip {
         path_ms: None,
         annotation: counter,

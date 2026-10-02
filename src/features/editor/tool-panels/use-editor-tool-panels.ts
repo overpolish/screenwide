@@ -9,6 +9,7 @@ import {
   useCanClearDrawings,
 } from "../annotations/annotation-channel";
 import { keyboardMaximumSizePercent } from "../keyboard-effect/keyboard-effect-geometry";
+import { useRecordingSceneSelection } from "../recording/scenes/recording-scene-channel";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -36,6 +37,7 @@ import {
 import { annotationPanelHandlers } from "./annotation/annotation-handlers";
 import { cropPanelHandlers, editorCropTarget } from "./crop/crop-target";
 import { editorFrameTarget, framePanelHandlers } from "./frame/frame-target";
+import { scenePanelHandlers } from "./scene/scene-panel-handlers";
 import {
   audioPanelHandlers,
   editorAudioSelectionTarget,
@@ -117,6 +119,7 @@ export function useEditorToolPanels({
   const setBackgroundPresets = (presets: BackgroundPreset[]) => {
     applyGeneralSettings({ backgroundPresets: presets });
   };
+  const sceneTemplates = general?.sceneTemplates ?? [];
   // Which layer the selection panel is placing, and the handler that commits
   // a new placement for it. Both workspaces already own one; this only says
   // which of them the current selection means.
@@ -181,6 +184,9 @@ export function useEditorToolPanels({
   const annotation = useAnnotationSelection(workspace);
   const annotationCount = useAnnotationSelectionCount(workspace);
   const canClearDrawings = useCanClearDrawings(workspace);
+  // The scene under the playhead lives with the preview, which knows where
+  // the playhead is; it reaches the panel the way the selected shortcut does.
+  const scene = useRecordingSceneSelection(workspace);
   // Restoring and resetting every shortcut is an edit to the timeline the
   // editor already owns, so the panel asks for it here rather than through the
   // preview.
@@ -217,6 +223,8 @@ export function useEditorToolPanels({
               maximumWidthUnits: artifact.keyboardMaximumWidthUnits,
             })
           : DEFAULT_TOOL_PANEL_SNAPSHOT.keyboardMaximum,
+      scene,
+      sceneTemplates,
       // A selected shortcut is what the Select tool has in hand, so it is the
       // selection the panel shows rather than the layer underneath it.
       selection:
@@ -271,6 +279,14 @@ export function useEditorToolPanels({
       ...cropPanelHandlers(cropTarget),
       ...framePanelHandlers(frameTarget),
       ...selectionPanelHandlers(selectionTarget),
+      ...scenePanelHandlers(workspace, {
+        bakeCamera,
+        onBakeCameraChange,
+        saveTemplates: (templates) => {
+          applyGeneralSettings({ sceneTemplates: templates });
+        },
+        sceneTemplates,
+      }),
     },
   );
 }

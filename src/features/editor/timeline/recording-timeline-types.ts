@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { RecordingAnnotationClip } from "../recording/annotations/recording-annotations";
+import { RecordingSceneClip } from "../recording/scenes/recording-scenes";
 
 export type RecordingTimelineSegment = {
   id: number;
@@ -21,6 +22,8 @@ export type RecordingTimelineEdit = {
    * changes; their arrivals and leavings play in output time over what the
    * timeline keeps of each clip. */
   annotationClips?: RecordingAnnotationClip[];
+  /** Sorted by start and never overlapping; see `recording-scenes.ts`. */
+  sceneClips?: RecordingSceneClip[];
 };
 
 export type RecordingTimelineTrimEdge = "end" | "start";

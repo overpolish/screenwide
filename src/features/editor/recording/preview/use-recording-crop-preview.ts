@@ -14,13 +14,16 @@ import type { ScrubPreviewProps } from "./scrub-preview";
 
 /** What the player draws while a crop is in hand. The framed track is shown
  * whole - and a baked camera in the place its overlay holds - so the handles
- * sit on the picture the crop is taken out of. */
+ * sit on the picture the crop is taken out of. Inside a scene the crop tool
+ * pans and zooms the picture within its box instead, so nothing is shown
+ * whole: the scene would arrange the whole picture as if it were the crop. */
 export function useRecordingCropPreview({
   activeVideoTrack,
   bakeCamera,
   cameraOverlay,
   canvasTool,
   effectiveRecordingOutput,
+  isFramed,
   previewSourceDimensions,
 }: {
   activeVideoTrack: RecordingVideoTrackId | null;
@@ -28,14 +31,20 @@ export function useRecordingCropPreview({
   cameraOverlay: CameraOverlaySettings;
   canvasTool: RecordingCanvasTool;
   effectiveRecordingOutput: RecordingOutputSettings;
+  isFramed: boolean;
   previewSourceDimensions: ScrubPreviewProps["previewSourceDimensions"];
 }) {
   const cropSource =
     activeVideoTrack === "primary"
       ? previewSourceDimensions.primary
       : previewSourceDimensions.camera;
+  // With the camera a pane of its own, a scene only places the screen, so the
+  // camera's crop still shows it whole.
+  const isCropping =
+    canvasTool === "crop" &&
+    !(isFramed && (activeVideoTrack === "primary" || bakeCamera));
   const previewRecordingOutput = useMemo(() => {
-    if (canvasTool !== "crop" || !activeVideoTrack || !cropSource)
+    if (!isCropping || !activeVideoTrack || !cropSource)
       return effectiveRecordingOutput;
     if (bakeCamera && activeVideoTrack === "camera")
       return effectiveRecordingOutput;
@@ -49,13 +58,13 @@ export function useRecordingCropPreview({
   }, [
     activeVideoTrack,
     bakeCamera,
-    canvasTool,
     cropSource,
     effectiveRecordingOutput,
+    isCropping,
   ]);
   const previewCameraOverlay = useMemo(() => {
     if (
-      canvasTool !== "crop" ||
+      !isCropping ||
       activeVideoTrack !== "camera" ||
       !bakeCamera ||
       !previewSourceDimensions.camera
@@ -87,8 +96,8 @@ export function useRecordingCropPreview({
     activeVideoTrack,
     bakeCamera,
     cameraOverlay,
-    canvasTool,
     effectiveRecordingOutput.primary,
+    isCropping,
     previewSourceDimensions.camera,
   ]);
   return { previewCameraOverlay, previewRecordingOutput };

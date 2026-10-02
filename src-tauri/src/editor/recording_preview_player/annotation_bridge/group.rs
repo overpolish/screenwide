@@ -26,7 +26,7 @@ impl PreviewPlayerManager {
   /// composition is not known yet.
   pub(super) fn pane_image_widths(&self, pane: u32) -> (f64, f64) {
     self
-      .selection_composition()
+      .drawn_composition()
       .map(|composition| {
         let output = if pane == 1 {
           &composition.recording_output.camera

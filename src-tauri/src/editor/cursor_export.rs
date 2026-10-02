@@ -21,6 +21,8 @@ use crate::screenshots::ScreenshotOutputSettings;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod frame_annotations;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod frame_scene;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(target_os = "windows")]
@@ -174,6 +176,8 @@ mod tests {
       image_x: 0.0,
       image_y: 0.0,
       legacy_mode: None,
+      scene_motion: None,
+      scene_opacity: None,
       mesh_colors: Vec::new(),
       mesh_generator: String::new(),
       mesh_locked_colors: Vec::new(),

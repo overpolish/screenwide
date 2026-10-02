@@ -49,7 +49,10 @@ impl PreviewPlayerManager {
           self.selection_gesture = None;
           return Ok(());
         }
-        self.selection_gesture = Some(RecordingSelectionGesture { snapshot });
+        self.selection_gesture = Some(RecordingSelectionGesture {
+          snapshot,
+          scene_clips: self.scene_clips(),
+        });
         Ok(())
       }
       SelectionGesturePhase::Update | SelectionGesturePhase::End => {
@@ -65,7 +68,10 @@ impl PreviewPlayerManager {
             .read()
             .map_err(|_| "The recording preview composition is unavailable".to_owned())?
             .clone();
-          self.selection_gesture = Some(RecordingSelectionGesture { snapshot });
+          self.selection_gesture = Some(RecordingSelectionGesture {
+            snapshot,
+            scene_clips: self.scene_clips(),
+          });
         }
         if operation == SelectionGestureOperation::Move && edges & AUTO_FIT_COMMIT_EDGE != 0 {
           let current = settings
@@ -81,6 +87,24 @@ impl PreviewPlayerManager {
           return Ok(());
         };
         let snapshot = &gesture.snapshot;
+        if let Some(reframing) = self.scene_gesture(
+          snapshot,
+          &gesture.scene_clips,
+          (layer_id, operation),
+          scale,
+          (delta_x, delta_y),
+        ) {
+          let result = match reframing {
+            Some(clips) => self
+              .set_scene_clips(clips)
+              .and_then(|()| self.refresh_selection_preview(layer_id)),
+            None => Ok(()),
+          };
+          if ending {
+            self.selection_gesture = None;
+          }
+          return result;
+        }
         let mut next = snapshot.clone();
         if matches!(
           operation,
@@ -232,6 +256,7 @@ impl PreviewPlayerManager {
           .write()
           .map_err(|_| "The recording preview composition is unavailable".to_owned())? =
           gesture.snapshot;
+        self.set_scene_clips(gesture.scene_clips)?;
         self.restart(PlaybackMode::InteractiveStill)
       }
     }

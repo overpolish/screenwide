@@ -341,6 +341,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),
+      scene_clips: Vec::new(),
       next_segment_id: 2,
       segments: vec![
         crate::editor::timeline_edit::RecordingTimelineSegment {
@@ -387,6 +388,7 @@ fn estimates_and_compresses_a_real_movie_when_x264_is_available() {
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),
+      scene_clips: Vec::new(),
       next_segment_id: 1,
       segments: vec![crate::editor::timeline_edit::RecordingTimelineSegment {
         id: 0,

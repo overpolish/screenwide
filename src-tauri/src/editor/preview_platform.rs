@@ -211,11 +211,20 @@ pub(crate) struct PreviewSurfaceRect {
   pub y: f64,
 }
 
+/// [`PreviewSelection::framed`] for a rectangle a scene fixes: a move pans
+/// the picture inside it, a resize zooms it, and the outline stays put. The
+/// macOS overlay reads the same values.
+pub(crate) const FRAMED_FIXED: u32 = 1;
+/// [`PreviewSelection::framed`] for a rectangle a scene places but leaves
+/// free, a custom scene's box: it moves and resizes like any layer but never
+/// grows the canvas, whose size the scene does not own.
+pub(crate) const FRAMED_FREE: u32 = 2;
+
 /// A render-only selection overlay in workspace coordinates. The rectangle is
 /// normalized to its pane so the native surface can apply the same pan/zoom
 /// transform as the media without knowing frontend output sizes.
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub(crate) struct PreviewSelection {
   pub pane_index: u32,
   /// Logical editable layer. This is independent of the physical pane: a
@@ -225,6 +234,10 @@ pub(crate) struct PreviewSelection {
   pub crop_mode: u32,
   /// Non-zero when this selection has no corner-radius gesture or OSC.
   pub radius_disabled: u32,
+  /// Where a scene places this rectangle: zero outside every scene,
+  /// [`FRAMED_FIXED`] where the scene fixes it, and [`FRAMED_FREE`] where the
+  /// scene places it but leaves it free to move and resize.
+  pub framed: u32,
   pub x: f64,
   pub y: f64,
   pub width: f64,

@@ -42,6 +42,8 @@ fn identity_settings(
     image_x: 0.0,
     image_y: 0.0,
     legacy_mode: None,
+    scene_motion: None,
+    scene_opacity: None,
     // Never painted on a solid canvas, but the compositor's colour table is
     // filled from these whatever the background is.
     mesh_colors: vec!["#000000".to_owned(); 5],

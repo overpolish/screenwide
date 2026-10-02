@@ -158,8 +158,11 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
         selection_start: selection,
         keyboard_start: keyboard_transform_start(&state, selection),
       };
+      // A pane a scene places never grows the canvas: the scene owns where it
+      // sits on a canvas of a fixed size.
       state.move_auto_fit = (gesture.operation == SelectionGestureOperation::Move
-        && selection.layer_id != u32::MAX - 1)
+        && selection.layer_id != u32::MAX - 1
+        && selection.framed == 0)
         .then(|| MoveAutoFit {
           active: false,
           last_bounds: None,
