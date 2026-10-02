@@ -4,14 +4,10 @@
 import { useMemo } from "react";
 
 import { composedVideoTracks } from "../../export/camera-output";
-import {
-  RecordingOutputSettings,
-  recordingVideoTrackOrder,
-} from "../../screenshot/screenshot-output";
 
 import type { ResolvedScrubPreviewProps } from "../../recording/preview/recording-preview-props";
 
-/** The track sets, volumes and layer order the preview derives from its props.
+/** The track sets and volumes the preview derives from its props.
  * `selectedVideoTracks` are those kept in the export, which the timeline's
  * switches show; `composedVideoTracks` are those the workspace draws and
  * edits, which leave out a camera saved as a separate file.
@@ -19,10 +15,7 @@ import type { ResolvedScrubPreviewProps } from "../../recording/preview/recordin
  * Everything derived here feeds memoized children. A canvas-resize gesture
  * re-renders the preview at pointer rate, so a derived array or Set rebuilt
  * per render would defeat the memo of every subtree it reaches. */
-export function useRecordingPreviewTracks(
-  props: ResolvedScrubPreviewProps,
-  effectiveRecordingOutput: RecordingOutputSettings,
-) {
+export function useRecordingPreviewTracks(props: ResolvedScrubPreviewProps) {
   const {
     audioTrackVolumes,
     audioTracks,
@@ -56,16 +49,6 @@ export function useRecordingPreviewTracks(
       ),
     [audioTrackVolumes],
   );
-  // Resizing never changes layer order, so keep its identity across the drag.
-  const videoTrackOrder = useMemo(
-    () => recordingVideoTrackOrder(effectiveRecordingOutput),
-    // eslint-disable-next-line @eslint-react/exhaustive-deps
-    [effectiveRecordingOutput.cameraOnTop],
-  );
-  const videoTrackOrderList = useMemo(
-    () => [...videoTrackOrder],
-    [videoTrackOrder],
-  );
   return {
     audioVolumeByStream,
     composedVideoTracks: composedTracks,
@@ -74,7 +57,5 @@ export function useRecordingPreviewTracks(
       selectedVideoTracks.has("camera") && !composedTracks.has("camera"),
     selectedStreamIndices,
     selectedVideoTracks,
-    videoTrackOrder,
-    videoTrackOrderList,
   };
 }

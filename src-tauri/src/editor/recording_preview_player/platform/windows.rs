@@ -146,7 +146,7 @@ pub(super) fn present_native_frame(
             &settings.recording_output.primary,
             settings.camera_overlay,
             settings.recording_output.camera.drop_shadow,
-            settings.recording_output.camera_on_top,
+            crate::editor::recording_model::CAMERA_IN_FRONT,
             composed,
           )
           .unwrap_or(false)
@@ -287,7 +287,7 @@ pub(crate) fn composed_frame_image(
           (camera.width, camera.height),
           geometry,
           recording_output.camera.drop_shadow,
-          recording_output.camera_on_top,
+          crate::editor::recording_model::CAMERA_IN_FRONT,
         )
       }),
   )

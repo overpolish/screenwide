@@ -187,7 +187,7 @@ pub(super) fn save_recording_artifact(
       (*width, *height),
       camera_overlay,
       camera_output.drop_shadow,
-      recording_output.camera_on_top,
+      crate::editor::recording_model::CAMERA_IN_FRONT,
       (compression, resolution_scale_percent, *source_scale_percent),
       baked_cursor.map(|cursor| (cursor, cursor_effects)),
       baked_keyboard.map(|keyboard| (keyboard, keyboard_effects)),

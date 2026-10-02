@@ -67,12 +67,14 @@ pub struct RecordingExportOptions {
   pub timeline_edit: Option<timeline_edit::RecordingTimelineEdit>,
 }
 
+/// The camera is drawn in front of the screen. Which layer is in front is
+/// part of a composition's layout, not a setting a recording carries.
+pub(crate) const CAMERA_IN_FRONT: bool = true;
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingOutputSettings {
   pub camera: ScreenshotOutputSettings,
-  #[serde(default = "default_camera_on_top")]
-  pub camera_on_top: bool,
   pub primary: ScreenshotOutputSettings,
 }
 
@@ -122,8 +124,4 @@ impl EditorArtifact {
 pub struct AudioTrackVolume {
   pub decibels: i16,
   pub stream_index: usize,
-}
-
-fn default_camera_on_top() -> bool {
-  true
 }

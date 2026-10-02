@@ -73,7 +73,7 @@ pub async fn set_recording_preview_composition(
               &recording_output.camera,
               camera_overlay,
               recording_output.camera.drop_shadow,
-              recording_output.camera_on_top,
+              crate::editor::recording_model::CAMERA_IN_FRONT,
             )
             .unwrap_or(false)
         });

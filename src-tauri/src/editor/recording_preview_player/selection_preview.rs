@@ -47,7 +47,7 @@ impl PreviewPlayerManager {
       &composition.recording_output.camera,
       composition.camera_overlay,
       composition.recording_output.camera.drop_shadow,
-      composition.recording_output.camera_on_top,
+      crate::editor::recording_model::CAMERA_IN_FRONT,
     )
   }
 
@@ -78,7 +78,7 @@ impl PreviewPlayerManager {
             composition.bake_camera.then_some((
               composition.camera_overlay,
               composition.recording_output.camera.drop_shadow,
-              composition.recording_output.camera_on_top,
+              crate::editor::recording_model::CAMERA_IN_FRONT,
             )),
           )
           .ok()

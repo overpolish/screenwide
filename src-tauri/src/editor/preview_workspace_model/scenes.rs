@@ -57,7 +57,7 @@ pub(crate) fn recording_scene(
           height: camera.frame_height / primary_canvas.1,
         },
         radius_percent: camera.radius_percent,
-        z_index: i32::from(output.camera_on_top),
+        z_index: i32::from(crate::editor::recording_model::CAMERA_IN_FRONT),
       },
     ];
     WorkspaceScene::baked_video(

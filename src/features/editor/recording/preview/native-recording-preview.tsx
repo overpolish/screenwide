@@ -13,7 +13,6 @@ import {
 } from "../../screenshot/screenshot-output";
 import { RecordingPreviewTimelineBand } from "../../timeline/recording-preview-timeline-band";
 import { createPlayhead } from "../../timeline/scrub-playhead";
-import { useRecordingPreviewTrackOrder } from "../../timeline/tracks/use-recording-preview-track-order";
 import { useRecordingPreviewTracks } from "../../timeline/tracks/use-recording-preview-tracks";
 import { useRecordingTrackSelection } from "../../timeline/tracks/use-recording-track-selection";
 import { useCanvasTool } from "../../tool-panels/use-canvas-tool";
@@ -49,7 +48,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     onEnabledTracksChange,
     onEnabledVideoTracksChange,
     onSelectedTrackChange,
-    onVideoTrackOrderChange,
     previewOutputDimensions,
     recordingOutput,
     selectedTrack,
@@ -93,9 +91,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     isCameraSeparate,
     selectedStreamIndices,
     selectedVideoTracks,
-    videoTrackOrder,
-    videoTrackOrderList,
-  } = useRecordingPreviewTracks(props, effectiveRecordingOutput);
+  } = useRecordingPreviewTracks(props);
   const canPreviewBakedCamera =
     bakeCamera &&
     composedVideoTracks.has("primary") &&
@@ -126,8 +122,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     selectedStreamIndices,
     selection,
     setPreviewPositionMs,
-    videoTrackOrder,
-    videoTrackOrderList,
     zoomRequest,
   });
   const {
@@ -147,29 +141,12 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     activeVideoTrack !== null && composedVideoTracks.has(activeVideoTrack);
   const canResizeActiveTrack =
     canEditActiveTrack && (!bakeCamera || canPreviewBakedCamera);
-  const canMoveActiveVideoTrack = canEditActiveTrack;
   const hasVisiblePanes = visiblePaneEntries.length > 0;
-  const {
-    moveActiveVideoTrackBackward,
-    moveActiveVideoTrackForward,
-    moveVideoTrack,
-  } = useRecordingPreviewTrackOrder({
-    activeVideoTrack,
-    onVideoTrackOrderChange,
-    videoTrackOrder,
-  });
   useRecordingCanvasContextMenu({
-    annotations: {
-      clips: annotations.clips,
-      onClipsChange: annotations.onClipsChange,
-      pinning: annotations.pinning,
-      selectedIds: annotations.selectedIds,
-    },
-    canvasTool,
-    moveVideoTrack,
-    onSelectedTrackChange,
-    videoTrackOrderList,
-    visiblePaneEntries,
+    clips: annotations.clips,
+    onClipsChange: annotations.onClipsChange,
+    pinning: annotations.pinning,
+    selectedIds: annotations.selectedIds,
   });
   const { changeCanvasTool, isCropping, leaveCropTool, toggleTool } =
     useRecordingPreviewCanvasTool({
@@ -214,7 +191,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   useRecordingPreviewShortcuts({
     ...panelToggles,
     annotations,
-    canMoveActiveVideoTrack,
+    canEditActiveTrack,
     canResizeActiveTrack,
     canvasTool,
     hasCursorData,
@@ -224,8 +201,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     isCropping,
     layout,
     leaveCropTool,
-    moveActiveVideoTrackBackward,
-    moveActiveVideoTrackForward,
     nudgeActiveTrack: selection.nudgeActiveTrack,
     player,
     step: transport.timelineBlade.step,
@@ -290,7 +265,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
           layout={layout}
           playhead={playhead}
           selectedVideoTracks={selectedVideoTracks}
-          videoTrackOrderList={videoTrackOrderList}
           zoomControl={zoomControl}
         />
       ) : null}

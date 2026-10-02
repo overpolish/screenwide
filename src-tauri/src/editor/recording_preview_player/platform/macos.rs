@@ -241,7 +241,7 @@ pub(crate) fn composed_frame_image(
     camera.as_ref(),
     camera.as_ref().map(|_| camera_overlay),
     recording_output.camera.drop_shadow,
-    recording_output.camera_on_top,
+    crate::editor::recording_model::CAMERA_IN_FRONT,
   )?;
   compose_output_layers(
     &screen,

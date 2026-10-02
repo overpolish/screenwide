@@ -66,19 +66,6 @@ type PopupMenuRequest = {
 };
 
 /**
- * Puts away the menu with this prefix if it is the one showing: a menu opened
- * on something that has since gone away, such as a layer whose tool was put
- * down, must not outlive what it was opened on.
- */
-export const dismissPopupMenu = async (idPrefix: string) => {
-  const state = usePopupPanelStore.getState();
-  const active = activePopupPanel(state, SHARED_POPUP_PANEL);
-  if (!active?.id.startsWith(idPrefix)) return;
-  state.close(SHARED_POPUP_PANEL);
-  await hidePopupPanel(active.focusContents, SHARED_POPUP_PANEL);
-};
-
-/**
  * A context menu drawn in the app's own panel window.
  *
  * The menu opens in the shared listbox with the current window as its parent,

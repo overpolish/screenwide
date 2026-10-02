@@ -60,7 +60,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   onSeek,
   onSelectKeyboardShortcut,
   onSelectedTrackChange,
-  onVideoTrackOrderChange,
   playhead,
   sceneClips = NO_SCENES,
   scenesPaused = false,
@@ -68,7 +67,6 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   selectedTrack,
   sourceDurationMs,
   thumbnails,
-  videoTrackOrder,
   volumes,
 }: RecordingTrackLanesProps) {
   const timeline = useTimelineNavigation(blade.edit.artifactId);
@@ -175,10 +173,8 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
             layout={layout}
             onEnabledVideoTracksChange={onEnabledVideoTracksChange}
             onSelectedTrackChange={onSelectedTrackChange}
-            onVideoTrackOrderChange={onVideoTrackOrderChange}
             selectedTrack={selectedTrack}
             thumbnails={thumbnails}
-            videoTrackOrder={videoTrackOrder}
             viewport={timeline.viewport}
           />
           {audioTracks.length > 0 ? (

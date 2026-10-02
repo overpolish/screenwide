@@ -90,7 +90,6 @@ export const startRecordingPreviewPlayer = ({
       ...keyboardTimeline,
       recordingOutput: {
         camera: normalizedScreenshotOutput(recordingOutput.camera),
-        cameraOnTop: recordingOutput.cameraOnTop,
         primary: normalizedScreenshotOutput(recordingOutput.primary),
       },
     },
@@ -161,7 +160,6 @@ export const layoutRecordingPreviewSurface = ({
       panes,
       recordingOutput: {
         camera: normalizedScreenshotOutput(recordingOutput.camera),
-        cameraOnTop: recordingOutput.cameraOnTop,
         primary: normalizedScreenshotOutput(recordingOutput.primary),
       },
       requestId,
@@ -254,7 +252,6 @@ export const setRecordingPreviewComposition = ({
     ),
     recordingOutput: {
       camera: normalizedScreenshotOutput(recordingOutput.camera),
-      cameraOnTop: recordingOutput.cameraOnTop,
       primary: normalizedScreenshotOutput(recordingOutput.primary),
     },
     sessionId,
@@ -417,7 +414,6 @@ export const estimateRecordingExport = ({
       keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
       recordingOutput: {
         camera: normalizedScreenshotOutput(recordingOutput.camera),
-        cameraOnTop: recordingOutput.cameraOnTop,
         primary: normalizedScreenshotOutput(recordingOutput.primary),
       },
       resolutionScalePercent,
@@ -465,7 +461,6 @@ export const saveExport = ({
       keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
       recordingOutput: {
         camera: normalizedScreenshotOutput(recordingOutput.camera),
-        cameraOnTop: recordingOutput.cameraOnTop,
         primary: normalizedScreenshotOutput(recordingOutput.primary),
       },
       resolutionScalePercent,

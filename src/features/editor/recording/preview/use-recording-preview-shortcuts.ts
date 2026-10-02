@@ -17,7 +17,7 @@ import { useRecordingPreviewSelection } from "./use-recording-preview-selection"
  * toggle the space bar drives. */
 export function useRecordingPreviewShortcuts({
   annotations,
-  canMoveActiveVideoTrack,
+  canEditActiveTrack,
   canResizeActiveTrack,
   canvasTool,
   hasCursorData,
@@ -27,8 +27,6 @@ export function useRecordingPreviewShortcuts({
   isCropping,
   layout,
   leaveCropTool,
-  moveActiveVideoTrackBackward,
-  moveActiveVideoTrackForward,
   nudgeActiveTrack,
   player,
   step,
@@ -37,7 +35,7 @@ export function useRecordingPreviewShortcuts({
   toggleTool,
 }: {
   annotations: ReturnType<typeof useRecordingAnnotations>;
-  canMoveActiveVideoTrack: boolean;
+  canEditActiveTrack: boolean;
   canResizeActiveTrack: boolean;
   canvasTool: RecordingCanvasTool;
   hasCursorData: boolean;
@@ -47,8 +45,6 @@ export function useRecordingPreviewShortcuts({
   isCropping: boolean;
   layout: RecordingPreviewLayout | null;
   leaveCropTool: () => void;
-  moveActiveVideoTrackBackward: () => void;
-  moveActiveVideoTrackForward: () => void;
   nudgeActiveTrack: ReturnType<
     typeof useRecordingPreviewSelection
   >["nudgeActiveTrack"];
@@ -66,22 +62,15 @@ export function useRecordingPreviewShortcuts({
     else play();
   }, [isPlaying, pause, play]);
   const canNudgeActiveTrack =
-    canvasTool === "select" &&
-    canMoveActiveVideoTrack &&
-    !annotations.hasSelection;
+    canvasTool === "select" && canEditActiveTrack && !annotations.hasSelection;
   useEditorWindowShortcuts({
-    // A chosen annotation moves through the drawing order; with none in hand
-    // the active video layer moves, and with two layers the front or the
-    // back is one step away.
-    onArrange:
-      annotations.hasSelection || canMoveActiveVideoTrack
-        ? (move) => {
-            if (annotations.arrangeSelected(move)) return;
-            if (move === "forward" || move === "front")
-              moveActiveVideoTrackForward();
-            else moveActiveVideoTrackBackward();
-          }
-        : undefined,
+    // A chosen annotation moves through the drawing order. The video layers
+    // keep theirs: the camera is always drawn over the screen.
+    onArrange: annotations.hasSelection
+      ? (move) => {
+          annotations.arrangeSelected(move);
+        }
+      : undefined,
     onConfirm: isCropping ? leaveCropTool : undefined,
     onDelete: annotations.canDelete ? annotations.deleteTargeted : undefined,
     onDeselect: annotations.hasSelection

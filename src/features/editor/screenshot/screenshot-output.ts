@@ -88,15 +88,11 @@ export const screenshotWorkspaceItemOutput = (
 export type RecordingOutputSettings = Record<
   "camera" | "primary",
   ScreenshotOutputSettings
-> & {
-  /** Front-to-back order for the two video layers. */
-  cameraOnTop: boolean;
-};
+>;
 
-export const recordingVideoTrackOrder = (settings: RecordingOutputSettings) =>
-  settings.cameraOnTop
-    ? (["camera", "primary"] as const)
-    : (["primary", "camera"] as const);
+/** The two video layers front to back: the camera is always drawn over the
+ * screen. */
+export const RECORDING_VIDEO_TRACK_ORDER = ["camera", "primary"] as const;
 
 export const screenshotOutputDimensions = (
   settings: ScreenshotOutputSettings,
@@ -431,7 +427,6 @@ export const defaultRecordingOutput = ({
     defaultScreenshotOutput(camera?.width ?? 1, camera?.height ?? 1),
     camera ?? { height: 1, width: 1 },
   ),
-  cameraOnTop: true,
   primary: resetScreenshotLayout(
     defaultScreenshotOutput(primary.width, primary.height),
     primary,
@@ -466,9 +461,6 @@ export const restoredRecordingOutput = ({
     );
   return {
     camera: restore("camera", camera ?? { height: 1, width: 1 }),
-    // Layer order belongs to the current recording, not the previous export.
-    // A fresh recording always starts with its camera above the screen.
-    cameraOnTop: true,
     primary: restore("primary", primary),
   };
 };

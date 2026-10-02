@@ -40,7 +40,6 @@ export function RecordingSection({
   onRecordingOutputChange,
   onRecordingTimelineEditChange,
   onSelectedTrackChange,
-  onVideoTrackOrderChange,
   recordingOutput,
   recordingPreviewError,
   recordingPreviewLayout,
@@ -101,7 +100,6 @@ export function RecordingSection({
         onRecordingOutputChange={onRecordingOutputChange}
         onRecordingTimelineEditChange={onRecordingTimelineEditChange}
         onSelectedTrackChange={onSelectedTrackChange}
-        onVideoTrackOrderChange={onVideoTrackOrderChange}
         previewLayout={recordingPreviewLayout}
         previewOutputDimensions={{
           primary: primaryOutputDimensions,

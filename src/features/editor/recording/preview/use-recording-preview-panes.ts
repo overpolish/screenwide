@@ -3,6 +3,7 @@
 
 import { RefObject, useMemo } from "react";
 
+import { RECORDING_VIDEO_TRACK_ORDER } from "../../screenshot/screenshot-output";
 import { RecordingPreviewLayout, RecordingVideoTrackId } from "../../types";
 
 import { RECORDING_PREVIEW_PANE_GAP } from "./recording-preview-layout";
@@ -14,13 +15,11 @@ export function useRecordingPreviewPanes({
   layout,
   screenCanvasRef,
   selectedVideoTracks,
-  videoTrackOrder,
 }: {
   cameraCanvasRef: RefObject<HTMLCanvasElement | null>;
   layout: RecordingPreviewLayout | null;
   screenCanvasRef: RefObject<HTMLCanvasElement | null>;
   selectedVideoTracks: Set<RecordingVideoTrackId>;
-  videoTrackOrder: readonly RecordingVideoTrackId[];
 }) {
   const canvasRefs = useMemo(
     () => [screenCanvasRef, cameraCanvasRef],
@@ -37,10 +36,10 @@ export function useRecordingPreviewPanes({
         .filter(({ trackId }) => selectedVideoTracks.has(trackId))
         .sort(
           (left, right) =>
-            videoTrackOrder.indexOf(left.trackId) -
-            videoTrackOrder.indexOf(right.trackId),
+            RECORDING_VIDEO_TRACK_ORDER.indexOf(left.trackId) -
+            RECORDING_VIDEO_TRACK_ORDER.indexOf(right.trackId),
         ) ?? [],
-    [canvasRefs, layout, selectedVideoTracks, videoTrackOrder],
+    [canvasRefs, layout, selectedVideoTracks],
   );
   const visibleLayout = useMemo(() => {
     if (!layout) return null;

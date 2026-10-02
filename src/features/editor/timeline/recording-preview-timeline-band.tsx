@@ -41,7 +41,6 @@ export function RecordingPreviewTimelineBand({
   keyboardEffects,
   keyboardTimeline,
   layout,
-  onVideoTrackOrderChange,
   player,
   playhead,
   scenes,
@@ -49,7 +48,6 @@ export function RecordingPreviewTimelineBand({
   selectedVideoTracks,
   timelineBlade,
   timelineThumbnails,
-  videoTrackOrderList,
   zoomControl,
 }: Pick<
   ResolvedScrubPreviewProps,
@@ -58,7 +56,6 @@ export function RecordingPreviewTimelineBand({
   | "durationMs"
   | "isPreparingAudio"
   | "keyboardEffects"
-  | "onVideoTrackOrderChange"
   | "selectedTrack"
 > &
   Pick<
@@ -71,7 +68,6 @@ export function RecordingPreviewTimelineBand({
     | "enabledTracks"
     | "isCameraSeparate"
     | "selectedVideoTracks"
-    | "videoTrackOrderList"
   > &
   Pick<ReturnType<typeof useRecordingPreviewSelection>, "keyboardTimeline"> & {
     changeCanvasTool: (tool: RecordingCanvasTool) => void;
@@ -173,7 +169,6 @@ export function RecordingPreviewTimelineBand({
             annotations.clearSelection();
             changeCanvasTool("select");
           }}
-          onVideoTrackOrderChange={onVideoTrackOrderChange}
           playhead={playhead}
           sceneClips={scenes.clips}
           scenesPaused={!scenes.canPlaceCamera}
@@ -181,7 +176,6 @@ export function RecordingPreviewTimelineBand({
           selectedTrack={annotations.hasSelection ? null : selectedTrack}
           sourceDurationMs={durationMs}
           thumbnails={timelineThumbnails}
-          videoTrackOrder={videoTrackOrderList}
           volumes={audioVolumeByStream}
         />
       )}

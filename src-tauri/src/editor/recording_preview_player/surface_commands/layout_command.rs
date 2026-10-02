@@ -198,7 +198,7 @@ pub async fn layout_recording_preview_surface(
       bake_camera.then_some((
         camera_overlay,
         recording_output.camera.drop_shadow,
-        recording_output.camera_on_top,
+        crate::editor::recording_model::CAMERA_IN_FRONT,
       )),
     )?
   } else {

@@ -50,7 +50,6 @@ export const copyRecordingPreviewFrameToClipboard = ({
     positionMs: Math.max(0, Math.round(positionMs)),
     recordingOutput: {
       camera: normalizedScreenshotOutput(recordingOutput.camera),
-      cameraOnTop: recordingOutput.cameraOnTop,
       primary: normalizedScreenshotOutput(recordingOutput.primary),
     },
   });

@@ -4,23 +4,12 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
-import {
-  dismissPopupMenu,
-  pointerAnchor,
-} from "../../../popup-panel/use-popup-menu";
-import {
-  RECORDING_TRACK_MENU_PREFIX,
-  recordingTrackMoves,
-  useRecordingTrackMenu,
-} from "../../timeline/tracks/use-recording-track-menu";
-import { RecordingTrackId, RecordingVideoTrackId } from "../../types";
+import { pointerAnchor } from "../../../popup-panel/use-popup-menu";
 import { RecordingAnnotationClip } from "../annotations/recording-annotations";
 import {
   AnnotationClipPinning,
   useAnnotationClipMenu,
 } from "../annotations/use-annotation-clip-menu";
-
-import { RecordingCanvasTool } from "./recording-crop-toggle";
 
 /** What a right press on an annotation needs: the clips to find it among and
  * to reorder, the pin actions its menu offers, and the choice it may be one
@@ -32,27 +21,15 @@ type CanvasMenuAnnotations = {
   selectedIds: ReadonlySet<string>;
 };
 
-export function useRecordingCanvasContextMenu({
-  annotations,
-  canvasTool,
-  moveVideoTrack,
-  onSelectedTrackChange,
-  videoTrackOrderList,
-  visiblePaneEntries,
-}: {
-  annotations: CanvasMenuAnnotations;
-  canvasTool: RecordingCanvasTool;
-  moveVideoTrack: (
-    track: RecordingVideoTrackId,
-    direction: "backward" | "forward",
-  ) => void;
-  videoTrackOrderList: RecordingVideoTrackId[];
-  visiblePaneEntries: { trackId: RecordingVideoTrackId }[];
-  onSelectedTrackChange?: (track: RecordingTrackId | null) => void;
-}) {
-  // A right press on an annotation opens the menu its timeline clip opens.
-  // The native side has already chosen it, or kept the group it is one of,
-  // and names it here.
+/**
+ * A right press on an annotation in the native canvas opens the menu its
+ * timeline clip opens. The native side has already chosen it, or kept the
+ * group it is one of, and names it here; a right press on a bare pane has no
+ * menu.
+ */
+export function useRecordingCanvasContextMenu(
+  annotations: CanvasMenuAnnotations,
+) {
   const openAnnotationMenu = useAnnotationClipMenu({
     clips: annotations.clips,
     idPrefix: "annotation-canvas:",
@@ -69,35 +46,6 @@ export function useRecordingCanvasContextMenu({
     );
     if (clip) void openAnnotationMenu(pointerAnchor(x, y), clip);
   };
-  // A right click on a pane in the native canvas opens the same layer menu the
-  // timeline row opens. The native side selects the layer it landed on and
-  // reports the point; the menu is drawn here, at the pointer.
-  const openTrackMenu = useRecordingTrackMenu(moveVideoTrack);
-  const openCanvasTrackMenuRef = useRef<
-    (paneIndex: number, x: number, y: number) => void
-  >(() => undefined);
-  openCanvasTrackMenuRef.current = (paneIndex, x, y) => {
-    if (canvasTool !== "select") return;
-    const trackId =
-      paneIndex === 0 ? "primary" : paneIndex === 1 ? "camera" : null;
-    if (
-      !trackId ||
-      !visiblePaneEntries.some((entry) => entry.trackId === trackId)
-    )
-      return;
-    onSelectedTrackChange?.(trackId);
-    void openTrackMenu(
-      { x, y },
-      trackId,
-      recordingTrackMoves(videoTrackOrderList, trackId),
-    );
-  };
-  // The layer menu belongs to the Select tool: putting the tool down takes
-  // the menu with it rather than leaving it open over nothing.
-  useEffect(() => {
-    if (canvasTool !== "select")
-      void dismissPopupMenu(RECORDING_TRACK_MENU_PREFIX);
-  }, [canvasTool]);
   useEffect(() => {
     // The subscription lands after a hop. A cleanup that runs before it
     // lands, as React's development double-mount does, must still let go of
@@ -108,19 +56,12 @@ export function useRecordingCanvasContextMenu({
     void getCurrentWindow()
       .listen<{
         annotationId: string | null;
-        paneIndex: number;
         x: number;
         y: number;
       }>("preview://context-menu", ({ payload }) => {
         if (payload.annotationId !== null)
           openCanvasAnnotationMenuRef.current(
             payload.annotationId,
-            payload.x,
-            payload.y,
-          );
-        else
-          openCanvasTrackMenuRef.current(
-            payload.paneIndex,
             payload.x,
             payload.y,
           );

@@ -661,13 +661,6 @@ export function EditorWindow() {
               );
             });
         }}
-        onVideoTrackOrderChange={(tracks) => {
-          setRecordingOutput((current) => ({
-            ...current,
-            cameraOnTop: tracks.indexOf("camera") < tracks.indexOf("primary"),
-          }));
-          setError(null);
-        }}
         recordingOutput={recordingOutput}
         recordingPreviewError={recordingPreviewError}
         recordingPreviewTracks={recordingPreviewTracks}

@@ -187,7 +187,7 @@ pub(super) fn run(
           .bake_camera
           .then_some(composition.camera_overlay),
         composition.recording_output.camera.drop_shadow,
-        composition.recording_output.camera_on_top,
+        crate::editor::recording_model::CAMERA_IN_FRONT,
       ) {
         Ok(value) => value,
         Err(message) => {

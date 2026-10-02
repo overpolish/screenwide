@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ComponentPropsWithoutRef, ReactNode } from "react";
+import { ReactNode } from "react";
 import { Button } from "react-aria-components";
 
 import { Switch } from "../../../../components/base/switch/switch";
@@ -18,24 +18,6 @@ export type TimelineTrackInclusion = {
   isRequired: boolean;
   onChange: (isIncluded: boolean) => void;
 };
-
-/** Pointer handling a reorderable row hangs off its header. */
-export type TimelineTrackDragProps = Pick<
-  ComponentPropsWithoutRef<"div">,
-  "onPointerCancel" | "onPointerDownCapture" | "onPointerMove" | "onPointerUp"
->;
-
-/**
- * Marks the switch column for the row's own pointer handling to step around.
- *
- * The switch cannot be recognised by its role: React Aria renders the control
- * as a label around a visually hidden input, and `role="switch"` sits on that
- * input, below the element a press actually lands on. A row that captured the
- * pointer for a press on the switch would take the click with it - a captured
- * pointer sends its compatibility click to the capturing element - and the
- * label would never activate its input.
- */
-export const TIMELINE_TRACK_SWITCH_SELECTOR = "[data-timeline-track-switch]";
 
 /**
  * Said on the row rather than on the switch: a disabled control receives no
@@ -55,10 +37,8 @@ const REQUIRED_TOOLTIP = "The export has to keep at least one track";
  * the row's tooltip and accessible name.
  */
 export function TimelineTrackHeader({
-  dragProps,
   icon,
   inclusion,
-  isDragging = false,
   isSelected = false,
   label,
   note,
@@ -66,10 +46,7 @@ export function TimelineTrackHeader({
 }: {
   icon: ReactNode;
   label: string;
-  dragProps?: TimelineTrackDragProps;
   inclusion?: TimelineTrackInclusion;
-  /** True only while this row is being carried to a new place in the order. */
-  isDragging?: boolean;
   isSelected?: boolean;
   note?: { icon: ReactNode; label: string };
   onSelect?: () => void;
@@ -114,21 +91,14 @@ export function TimelineTrackHeader({
         // label keeps its own colour so the switch beside it stays readable.
         isSelected && "bg-primary/15",
         inclusion && !inclusion.isIncluded && "opacity-50",
-        // At rest the row is an ordinary target: the grabbing cursor belongs
-        // to a reorder in progress, not to the possibility of one.
-        isDragging && "cursor-grabbing",
       )}
-      {...dragProps}
     >
       {selectButton}
       {inclusion ? (
-        // The switch acts on the track, not on the row: a press on it must
-        // neither select the row nor start a reorder. The row's drag handling
-        // reads the marker attribute; the bubbling press is stopped here so
-        // no ancestor treats it as a press on the row.
+        // The switch acts on the track, not on the row: the bubbling press is
+        // stopped here so no ancestor treats it as a press on the row.
         <span
           className="flex shrink-0 items-center pr-control-inset"
-          data-timeline-track-switch=""
           onPointerDown={(event) => {
             event.stopPropagation();
           }}

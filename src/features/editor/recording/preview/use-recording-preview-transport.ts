@@ -60,8 +60,6 @@ export function useRecordingPreviewTransport(
     selectedStreamIndices,
     selection,
     setPreviewPositionMs,
-    videoTrackOrder,
-    videoTrackOrderList,
     zoomRequest,
   }: {
     activeVideoTrack: RecordingVideoTrackId | null;
@@ -82,8 +80,6 @@ export function useRecordingPreviewTransport(
     selectedStreamIndices: number[];
     selection: ReturnType<typeof useRecordingPreviewSelection>;
     setPreviewPositionMs: Dispatch<SetStateAction<number>>;
-    videoTrackOrder: readonly RecordingVideoTrackId[];
-    videoTrackOrderList: RecordingVideoTrackId[];
     zoomRequest: ReturnType<typeof usePreviewZoom>["zoomRequest"];
   },
 ) {
@@ -162,7 +158,7 @@ export function useRecordingPreviewTransport(
     keyboardEffects,
     nativeEditorOwnsLayout,
     nativeLayoutHasPanes: composedTrackList.length > 0,
-    nativeLayoutKey: `${bakeCamera ? "baked" : "split"}|${composedTrackList.join(":")}|${videoTrackOrderList.join(":")}`,
+    nativeLayoutKey: `${bakeCamera ? "baked" : "split"}|${composedTrackList.join(":")}`,
     onPosition: (positionMs) => {
       trimPreview.onPosition(positionMs);
       if (!previewPlayingRef.current) setPreviewPositionMs(positionMs);
@@ -280,7 +276,6 @@ export function useRecordingPreviewTransport(
       layout,
       screenCanvasRef,
       selectedVideoTracks: composedVideoTracks,
-      videoTrackOrder,
     });
   return {
     annotations,

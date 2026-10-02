@@ -64,7 +64,6 @@ export type RecordingSectionProps = {
   ) => void;
   onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
-  onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
   recordingOutput?: RecordingOutputSettings;
   recordingPreviewError?: string | null;
   recordingPreviewLayout?: RecordingPreviewLayout;

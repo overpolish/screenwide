@@ -81,7 +81,6 @@ export function EditorPanel({
   onSelectedTrackChange,
   onSelectedTrackVolumeChange,
   onToggleMaximize,
-  onVideoTrackOrderChange,
   recordingOutput,
   recordingPreviewError,
   recordingPreviewLayout,
@@ -253,7 +252,6 @@ export function EditorPanel({
                 onRecordingOutputChange={onRecordingOutputChange}
                 onRecordingTimelineEditChange={onRecordingTimelineEditChange}
                 onSelectedTrackChange={onSelectedTrackChange}
-                onVideoTrackOrderChange={onVideoTrackOrderChange}
                 recordingOutput={recordingOutput}
                 recordingPreviewError={recordingPreviewError}
                 recordingPreviewLayout={recordingPreviewLayout}

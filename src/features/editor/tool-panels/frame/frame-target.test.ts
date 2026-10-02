@@ -76,7 +76,7 @@ describe("frame radius target", () => {
       onRecordingOutputChange: (_track, next) => {
         apply(next);
       },
-      recordingOutput: { camera: output, cameraOnTop: false, primary: output },
+      recordingOutput: { camera: output, primary: output },
       screenshotOutput: null,
       selectedScreenshotItemId: null,
       selectedTrack: "primary",

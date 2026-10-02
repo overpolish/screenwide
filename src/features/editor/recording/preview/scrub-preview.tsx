@@ -48,7 +48,6 @@ export type ScrubPreviewProps = {
   ) => void;
   onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
-  onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
   previewLayout?: RecordingPreviewLayout;
   previewOutputDimensions?: Partial<
     Record<RecordingVideoTrackId, { height: number; width: number }>

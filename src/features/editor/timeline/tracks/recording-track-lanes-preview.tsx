@@ -277,7 +277,6 @@ export function RecordingTrackLanesPreview({
         selectedTrack={selectedTrack}
         sourceDurationMs={STORY_DURATION_MS}
         thumbnails={STORY_THUMBNAILS}
-        videoTrackOrder={["primary"]}
         volumes={new Map()}
       />
     </EditorEditGestureContext>

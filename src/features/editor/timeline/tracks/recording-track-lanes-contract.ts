@@ -40,7 +40,6 @@ export type RecordingTrackLanesProps = {
   selectedTrack: RecordingTrackId | null;
   sourceDurationMs: number;
   thumbnails: RecordingTimelineThumbnails;
-  videoTrackOrder: RecordingVideoTrackId[];
   volumes: AudioTrackVolumes;
   annotationClips?: RecordingAnnotationClip[];
   /** How each pinned annotation's path is coming along, by annotation id. */
@@ -74,7 +73,6 @@ export type RecordingTrackLanesProps = {
    * annotation selection and takes up the Select tool, mirroring what the
    * annotation lane's select does. */
   onSelectKeyboardShortcut?: () => void;
-  onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
   sceneClips?: RecordingSceneClip[];
   /** Whether the camera is not baked in, which leaves the scenes idle. */
   scenesPaused?: boolean;

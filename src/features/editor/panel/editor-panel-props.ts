@@ -77,7 +77,6 @@ export type EditorPanelProps = {
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
   onSelectedTrackVolumeChange?: (decibels: number) => void;
   onToggleMaximize?: () => void;
-  onVideoTrackOrderChange?: (tracks: RecordingVideoTrackId[]) => void;
   recordingOutput?: RecordingOutputSettings;
   recordingPreviewError?: string | null;
   recordingPreviewLayout?: RecordingPreviewLayout;
