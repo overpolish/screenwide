@@ -99,25 +99,6 @@ export function SelectionPanel({ workspace }: { workspace: EditorKind }) {
 
   return (
     <div className="flex flex-col gap-section">
-      {/* The camera is a layer like any other, and baking is what kind of
-          layer it is: drawn into the screen's picture, or carried as a track
-          of its own. It takes both tracks, so it is out of reach with either
-          one left out. */}
-      {selection.kind === "camera" ? (
-        <ControlRow title="Combine with screen">
-          {(controlProps) => (
-            <Switch
-              {...controlProps}
-              isDisabled={isLocked || !selection.canBake}
-              isSelected={Boolean(selection.isBaked)}
-              onChange={(bake) => {
-                change({ bakeCamera: bake });
-              }}
-            />
-          )}
-        </ControlRow>
-      ) : null}
-
       {/* `Dimensions` has no disabled state of its own: a save takes the whole
           group out of reach the way the output controls do. */}
       <div className={isLocked ? "pointer-events-none opacity-50" : ""}>

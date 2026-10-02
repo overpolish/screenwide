@@ -8,6 +8,7 @@ import {
   BackgroundPreset,
 } from "../../../components/shared/background-picker/background";
 import { AnnotationStyle } from "../annotations/annotations";
+import { CameraOutput } from "../export/camera-output";
 import {
   DEFAULT_CURSOR_EFFECTS,
   DEFAULT_KEYBOARD_EFFECTS,
@@ -79,6 +80,8 @@ export type ToolPanelSnapshot = {
   background: Background;
   /** The backgrounds saved from the picker, in the order they were saved. */
   backgroundPresets: BackgroundPreset[];
+  /** One video or separate files; null where there is no choice to make. */
+  cameraOutput: CameraOutput | null;
   /** Whether the picture being edited has any stroke to clear. */
   canClearDrawings: boolean;
   /** Whether any shortcut deleted from the timeline can be brought back. */
@@ -129,7 +132,7 @@ export type ToolPanelPatch = Partial<
   /** Play the selected audio track this much louder or quieter than it was
    * recorded, in decibels. */
   audioVolume?: number;
-  /** Draw the camera into the screen's picture, or carry it as a track of its
+  /** Draw the camera into the screen's video, or save it as a file of its
    * own. */
   bakeCamera?: boolean;
   /** Lay the scene under the playhead out as this template. */
@@ -231,6 +234,7 @@ export const DEFAULT_TOOL_PANEL_SNAPSHOT: ToolPanelSnapshot = {
   annotationCount: 0,
   background: { color: "#171717", kind: "solid" },
   backgroundPresets: [],
+  cameraOutput: null,
   canClearDrawings: false,
   canRestoreShortcuts: false,
   crop: null,

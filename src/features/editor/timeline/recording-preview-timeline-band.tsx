@@ -36,6 +36,7 @@ export function RecordingPreviewTimelineBand({
   copyCurrentFrame,
   durationMs,
   enabledTracks,
+  isCameraSeparate,
   isPreparingAudio,
   keyboardEffects,
   keyboardTimeline,
@@ -68,6 +69,7 @@ export function RecordingPreviewTimelineBand({
     ReturnType<typeof useRecordingPreviewTracks>,
     | "audioVolumeByStream"
     | "enabledTracks"
+    | "isCameraSeparate"
     | "selectedVideoTracks"
     | "videoTrackOrderList"
   > &
@@ -128,6 +130,7 @@ export function RecordingPreviewTimelineBand({
           enabledVideoTracks={selectedVideoTracks}
           hiddenKeyboardFragmentIds={keyboardTimeline.hiddenFragmentIds}
           hiddenKeyboardItemIds={keyboardTimeline.hiddenItemIds}
+          isCameraSeparate={isCameraSeparate}
           // Shortcuts turned off leave nothing to place, so the lane goes
           // with them rather than showing items that are not drawn.
           keyboardItems={keyboardEffects.bake ? keyboardTimeline.items : []}

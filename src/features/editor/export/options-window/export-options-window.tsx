@@ -140,8 +140,8 @@ export function ExportOptionsWindow() {
       contentRef={contentRef}
       form={{
         artifact,
-        bakeCamera: options.bakeCamera,
         cameraCompression: options.cameraCompression,
+        cameraOutput: options.cameraOutput,
         cameraResolutionScalePercent: options.cameraResolutionScalePercent,
         canExport: options.canExport,
         collapseAudio: options.collapseAudio,

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Keyboard, Mic, Monitor } from "lucide-react";
+import { Camera, FileVideoCamera, Keyboard, Mic, Monitor } from "lucide-react";
 import { useState } from "react";
 
 import { TimelineTrackHeader } from "./timeline-track-header";
@@ -9,10 +9,11 @@ import { TimelineTrackHeader } from "./timeline-track-header";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 /**
- * The four row kinds side by side, in the column width they take in the
- * band: a selected video track, an audio track that has been switched out of
- * the export, the last remaining track, whose switch cannot be turned off,
- * and the shortcuts lane, which has nothing to include.
+ * The row kinds side by side, in the column width they take in the band: a
+ * selected video track, a camera saved as its own file, an audio track that
+ * has been switched out of the export, the last remaining track, whose
+ * switch cannot be turned off, and the shortcuts lane, which has nothing to
+ * include.
  */
 function TrackHeaders({ isSelected = true }: { isSelected?: boolean }) {
   const [isScreenIncluded, setIsScreenIncluded] = useState(true);
@@ -29,6 +30,17 @@ function TrackHeaders({ isSelected = true }: { isSelected?: boolean }) {
         }}
         isSelected={isSelected}
         label="Screen"
+        onSelect={() => undefined}
+      />
+      <TimelineTrackHeader
+        icon={<Camera />}
+        inclusion={{
+          isIncluded: true,
+          isRequired: false,
+          onChange: () => undefined,
+        }}
+        label="Camera"
+        note={{ icon: <FileVideoCamera />, label: "Saved as its own file" }}
         onSelect={() => undefined}
       />
       <TimelineTrackHeader

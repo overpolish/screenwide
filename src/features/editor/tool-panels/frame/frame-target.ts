@@ -46,7 +46,9 @@ export type EditorFrameTarget = {
 type FrameTargetInputs = {
   artifact: EditorArtifact | null;
   bakeCamera: boolean;
-  enabledVideoTracks: RecordingVideoTrackId[];
+  /** The video tracks the workspace draws, which leave out a camera saved as
+   * a separate file. */
+  composedVideoTracks: RecordingVideoTrackId[];
   recordingOutput: RecordingOutputSettings | null | undefined;
   screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
   selectedScreenshotItemId: number | null;
@@ -95,13 +97,16 @@ const recordingFrameTarget = (
   if (!output) return null;
   const bakedCamera =
     inputs.bakeCamera &&
-    inputs.enabledVideoTracks.includes("primary") &&
-    inputs.enabledVideoTracks.includes("camera");
-  // The frame is the selected track's own output canvas. A separate camera
-  // has one of its own; a baked camera lives in the screen's, so the screen
-  // canvas is the frame whenever the camera is not separate.
+    inputs.composedVideoTracks.includes("primary") &&
+    inputs.composedVideoTracks.includes("camera");
+  // The frame is the selected track's own output canvas. A camera drawn as
+  // its own pane has one of its own; a baked camera lives in the screen's, so
+  // the screen canvas is the frame whenever the camera is not its own pane.
   const track: RecordingVideoTrackId =
-    inputs.selectedTrack === "camera" && !bakedCamera && artifact.camera
+    inputs.selectedTrack === "camera" &&
+    inputs.composedVideoTracks.includes("camera") &&
+    !bakedCamera &&
+    artifact.camera
       ? "camera"
       : "primary";
   const source =

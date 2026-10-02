@@ -34,8 +34,8 @@ export type ToolPanelScene = {
   /** Whether the recording has a camera for an arrangement to place. */
   hasCamera: boolean;
   hasSceneAtPlayhead: boolean;
-  /** Whether the camera is baked into the picture, without which the scenes
-   * that place it stand idle until one is chosen again. */
+  /** Whether the camera is drawn into the screen's video, without which the
+   * scenes that place it stand idle. */
   isBaked: boolean;
   preset: RecordingScenePreset | null;
   /** The selected pane's corner radius in the scene under the playhead, in

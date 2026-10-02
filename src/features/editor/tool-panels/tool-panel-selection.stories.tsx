@@ -60,8 +60,8 @@ export const Selection: Story = {
   },
 };
 
-/** The camera track of a recording, carried as a picture of its own: baking
- * is off, so it is placed and padded the way any other layer is. */
+/** The camera track of a recording saved as a file of its own: it is placed
+ * and padded the way any other layer is. */
 export const SelectionCamera: Story = {
   args: { tool: "selection", workspace: "recording" },
   beforeEach: () => {
@@ -71,12 +71,10 @@ export const SelectionCamera: Story = {
       hasCursorData: true,
       isLocked: false,
       selection: {
-        canBake: true,
         dropShadow: true,
         height: 720,
         inset: 0,
         insetMaximum: 720,
-        isBaked: false,
         kind: "camera",
         label: "Camera",
         radius: 8,
@@ -101,12 +99,10 @@ export const SelectionBakedCamera: Story = {
       hasCursorData: true,
       isLocked: false,
       selection: {
-        canBake: true,
         dropShadow: true,
         height: 506,
         inset: 0,
         insetMaximum: 0,
-        isBaked: true,
         kind: "camera",
         label: "Camera",
         radius: 8,

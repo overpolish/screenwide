@@ -13,10 +13,7 @@ import {
   EditorArtifact,
   RecordingVideoTrackId,
 } from "../../types";
-import {
-  editorSelectionTarget,
-  selectionPanelHandlers,
-} from "../selection/selection-target";
+import { editorSelectionTarget } from "../selection/selection-target";
 
 const recording: EditorArtifact = {
   audioTracks: [],
@@ -48,13 +45,12 @@ const recording: EditorArtifact = {
 const cameraTargetFor = ({
   bakeCamera = true,
   cameraOverlay = defaultCameraOverlay(recording),
-  enabledVideoTracks = ["primary", "camera"] as RecordingVideoTrackId[],
+  composedVideoTracks = ["primary", "camera"] as RecordingVideoTrackId[],
 }: {
   bakeCamera?: boolean;
   cameraOverlay?: CameraOverlaySettings;
-  enabledVideoTracks?: RecordingVideoTrackId[];
+  composedVideoTracks?: RecordingVideoTrackId[];
 } = {}) => {
-  const bake = vi.fn<(bake: boolean) => void>();
   const overlay = vi.fn<(next: CameraOverlaySettings) => void>();
   const output =
     vi.fn<
@@ -64,8 +60,7 @@ const cameraTargetFor = ({
     artifact: recording,
     bakeCamera,
     cameraOverlay,
-    enabledVideoTracks,
-    onBakeCameraChange: bake,
+    composedVideoTracks,
     onCameraOverlayChange: overlay,
     onRecordingOutputChange: output,
     recordingOutput: defaultRecordingOutput({
@@ -77,18 +72,16 @@ const cameraTargetFor = ({
     selectedTrack: "camera",
   });
   if (!target) throw new Error("Expected a camera selection target");
-  return { bake, output, overlay, target };
+  return { output, overlay, target };
 };
 
 describe("baked camera selection", () => {
-  it("shows the overlay frame, the camera's own source, and that it is baked", () => {
+  it("shows the overlay frame and the camera's own source", () => {
     const overlay = defaultCameraOverlay(recording);
     const { target } = cameraTargetFor();
 
     expect(target.selection).toMatchObject({
-      canBake: true,
       height: Math.round(overlay.frameHeight),
-      isBaked: true,
       kind: "camera",
       label: "Camera",
       radius: overlay.radiusPercent,
@@ -140,27 +133,5 @@ describe("baked camera selection", () => {
     expect(overlay.mock.calls[0][0].radiusPercent).toBe(20);
     expect(output.mock.calls[0][0]).toBe("camera");
     expect(output.mock.calls[0][1].dropShadow).toBe(true);
-  });
-});
-
-describe("the bake switch", () => {
-  it("asks the editor to bake, from either state", () => {
-    const baked = cameraTargetFor();
-    selectionPanelHandlers(baked.target).onBakeCameraChange?.(false);
-    expect(baked.bake).toHaveBeenCalledWith(false);
-
-    const split = cameraTargetFor({ bakeCamera: false });
-    expect(split.target.selection.isBaked).toBe(false);
-    selectionPanelHandlers(split.target).onBakeCameraChange?.(true);
-    expect(split.bake).toHaveBeenCalledWith(true);
-  });
-
-  it("is out of reach while either track is left out", () => {
-    const { target } = cameraTargetFor({
-      bakeCamera: false,
-      enabledVideoTracks: ["camera"],
-    });
-
-    expect(target.selection.canBake).toBe(false);
   });
 });

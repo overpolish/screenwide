@@ -88,7 +88,9 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     });
   const {
     audioVolumeByStream,
+    composedVideoTracks,
     enabledTracks,
+    isCameraSeparate,
     selectedStreamIndices,
     selectedVideoTracks,
     videoTrackOrder,
@@ -96,8 +98,8 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   } = useRecordingPreviewTracks(props, effectiveRecordingOutput);
   const canPreviewBakedCamera =
     bakeCamera &&
-    selectedVideoTracks.has("primary") &&
-    selectedVideoTracks.has("camera");
+    composedVideoTracks.has("primary") &&
+    composedVideoTracks.has("camera");
   const selection = useRecordingPreviewSelection(props, {
     activeVideoTrack,
     canPreviewBakedCamera,
@@ -106,13 +108,14 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     effectiveRecordingOutput,
     previewPositionMs,
     recenterRefreshRef,
-    selectedVideoTracks,
+    selectedVideoTracks: composedVideoTracks,
     setCanvasResizeDraft,
   });
   const transport = useRecordingPreviewTransport(props, {
     activeVideoTrack,
     cameraCanvasRef,
     canvasTool,
+    composedVideoTracks,
     effectiveRecordingOutput,
     playhead,
     previewPlayingRef,
@@ -121,7 +124,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     reportZoom,
     screenCanvasRef,
     selectedStreamIndices,
-    selectedVideoTracks,
     selection,
     setPreviewPositionMs,
     videoTrackOrder,
@@ -142,11 +144,10 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     if (isSheetOpen && isPlaying) pausePlayer();
   }, [isPlaying, isSheetOpen, pausePlayer]);
   const canEditActiveTrack =
-    activeVideoTrack !== null && selectedVideoTracks.has(activeVideoTrack);
+    activeVideoTrack !== null && composedVideoTracks.has(activeVideoTrack);
   const canResizeActiveTrack =
     canEditActiveTrack && (!bakeCamera || canPreviewBakedCamera);
-  const canMoveActiveVideoTrack =
-    activeVideoTrack !== null && selectedVideoTracks.has(activeVideoTrack);
+  const canMoveActiveVideoTrack = canEditActiveTrack;
   const hasVisiblePanes = visiblePaneEntries.length > 0;
   const {
     moveActiveVideoTrackBackward,
@@ -284,6 +285,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
           changeSelectedTrack={changeSelectedTrack}
           copyCurrentFrame={copyCurrentFrame}
           enabledTracks={enabledTracks}
+          isCameraSeparate={isCameraSeparate}
           keyboardTimeline={selection.keyboardTimeline}
           layout={layout}
           playhead={playhead}

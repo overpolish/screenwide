@@ -198,39 +198,24 @@ describe("canvas size while a field is open", () => {
       resolve(placed({ height: 2338, width: 3600, x: 0, y: 0 }), editing),
     ).toMatchObject({ frame: null, selection: { width: 3600 } });
   });
-  it("keeps the bake switch flipped until the editor answers", () => {
+  it("keeps the output choice flipped until the editor answers", () => {
     const flipping: ToolPanelDraft = {
       seq: 7,
       values: { bakeCamera: true },
       workspace: "recording",
     };
-    const camera: ToolPanelSnapshot = {
+    const separate: ToolPanelSnapshot = {
       ...snapshot(100),
-      selection: {
-        canBake: true,
-        dropShadow: true,
-        height: 506,
-        inset: 0,
-        insetMaximum: 0,
-        isBaked: false,
-        kind: "camera",
-        label: "Camera",
-        radius: 8,
-        sourceHeight: 720,
-        sourceWidth: 1280,
-        width: 900,
-        x: 2592,
-        y: 73,
-      },
+      cameraOutput: "separate",
     };
 
-    expect(resolve(camera, flipping).selection).toMatchObject({
-      isBaked: true,
-    });
-    // Once the editor has answered, the switch shows what it committed.
+    expect(resolve(separate, flipping).cameraOutput).toBe("combined");
+    // Once the editor has answered, the row shows what it committed.
     expect(
-      resolve({ ...camera, acknowledgedSeq: 7 }, flipping).selection,
-    ).toMatchObject({ isBaked: false });
+      resolve({ ...separate, acknowledgedSeq: 7 }, flipping).cameraOutput,
+    ).toBe("separate");
+    // Where there is no choice to make, a stray request offers none.
+    expect(resolve(snapshot(100), flipping).cameraOutput).toBeNull();
   });
 
   it("keeps a dragged volume until the editor answers", () => {

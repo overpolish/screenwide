@@ -47,7 +47,9 @@ export type EditorCropTarget = {
 type CropTargetInputs = {
   artifact: EditorArtifact | null;
   bakeCamera: boolean;
-  enabledVideoTracks: RecordingVideoTrackId[];
+  /** The video tracks the workspace draws, which leave out a camera saved as
+   * a separate file. */
+  composedVideoTracks: RecordingVideoTrackId[];
   recordingOutput: RecordingOutputSettings | null | undefined;
   screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
   selectedScreenshotItemId: number | null;
@@ -139,12 +141,15 @@ const recordingCropTarget = (
   if (!output) return null;
   const bakedCamera =
     inputs.bakeCamera &&
-    inputs.enabledVideoTracks.includes("primary") &&
-    inputs.enabledVideoTracks.includes("camera");
-  // The same track a frame edit lands on: a separate camera is cropped in its
-  // own output, and a baked one has none of its own to crop.
+    inputs.composedVideoTracks.includes("primary") &&
+    inputs.composedVideoTracks.includes("camera");
+  // The same track a frame edit lands on: a camera drawn as its own pane is
+  // cropped in its own output, and a baked one has none of its own to crop.
   const track: RecordingVideoTrackId =
-    inputs.selectedTrack === "camera" && !bakedCamera && artifact.camera
+    inputs.selectedTrack === "camera" &&
+    inputs.composedVideoTracks.includes("camera") &&
+    !bakedCamera &&
+    artifact.camera
       ? "camera"
       : "primary";
   const source =

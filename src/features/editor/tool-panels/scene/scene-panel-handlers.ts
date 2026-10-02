@@ -6,30 +6,25 @@ import {
   nextSceneTemplateName,
   SceneTemplate,
 } from "../../recording/scenes/recording-scene-template";
-import { sceneNeedsCamera } from "../../recording/scenes/recording-scenes";
 import { EditorKind } from "../../types";
 import { ToolPanelHandlers } from "../tool-panel-handlers";
 
 /**
  * What the Scene panel's asks do in `workspace`: they reach the preview,
  * which knows the scene under its playhead. An arrangement only places the
- * camera in a baked composition, so with baking off those scenes stand idle;
- * choosing one, new or existing, bakes the camera again in the same edit.
+ * camera when it is drawn into the screen's video, so with separate files
+ * those scenes stand idle; choosing a scene never changes the output.
  * The templates are a preference rather than part of the recording:
  * `sceneTemplates` are those kept now and `saveTemplates` keeps a new list.
  */
 export const scenePanelHandlers = (
   workspace: EditorKind,
   {
-    bakeCamera,
-    onBakeCameraChange,
     saveTemplates,
     sceneTemplates,
   }: {
-    bakeCamera: boolean;
     saveTemplates: (templates: SceneTemplate[]) => void;
     sceneTemplates: SceneTemplate[];
-    onBakeCameraChange?: (bake: boolean) => void;
   },
 ): Pick<
   ToolPanelHandlers,
@@ -57,14 +52,12 @@ export const scenePanelHandlers = (
     recordingSceneControls(workspace)?.resetFraming();
   },
   onScenePresetChoose: (preset) => {
-    if (!bakeCamera && sceneNeedsCamera({ preset })) onBakeCameraChange?.(true);
     recordingSceneControls(workspace)?.choosePreset(preset);
   },
   onSceneRadiusChange: (radius) => {
     recordingSceneControls(workspace)?.setRadius(radius);
   },
   onSceneTemplateChoose: (template) => {
-    if (!bakeCamera && template.boxes.camera) onBakeCameraChange?.(true);
     recordingSceneControls(workspace)?.chooseTemplate(template);
   },
   onSceneTemplateRemove: (id) => {

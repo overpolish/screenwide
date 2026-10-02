@@ -117,8 +117,8 @@ export function recordingVideoSelectionOverlay({
 }) {
   if (canvasTool === "canvas") {
     // Frame is a synthetic selection, just as in the screenshot workspace.
-    // In baked mode it always belongs to the primary output; in split mode
-    // it belongs to the currently selected video frame.
+    // In baked mode it always belongs to the primary output; otherwise it
+    // belongs to the selected video track, the only pane drawn.
     const frameTrack = canPreviewBakedCamera ? "primary" : activeVideoTrack;
     if (!frameTrack || !selectedVideoTracks.has(frameTrack)) return null;
     return {

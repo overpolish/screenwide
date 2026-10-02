@@ -52,6 +52,7 @@ const scene = {
 export const OverZoom: Story = {
   beforeEach: () => {
     seed({
+      cameraOutput: "combined",
       isLocked: false,
       scene: {
         ...scene,
@@ -72,6 +73,7 @@ export const OverZoom: Story = {
 export const InSquareFrame: Story = {
   beforeEach: () => {
     seed({
+      cameraOutput: "combined",
       isLocked: false,
       scene: {
         ...scene,
@@ -95,6 +97,7 @@ export const InSquareFrame: Story = {
 export const Custom: Story = {
   beforeEach: () => {
     seed({
+      cameraOutput: "combined",
       isLocked: false,
       scene: {
         ...scene,
@@ -122,6 +125,7 @@ export const WithTemplates: Story = {
       screen: { height: 0.6, width: 0.6, x: 0.05, y: 0.2 },
     };
     seed({
+      cameraOutput: "combined",
       isLocked: false,
       scene: {
         ...scene,
@@ -155,6 +159,7 @@ export const WithTemplates: Story = {
 export const OverPresetWithCamera: Story = {
   beforeEach: () => {
     seed({
+      cameraOutput: "combined",
       isLocked: false,
       scene: {
         ...scene,
@@ -174,6 +179,7 @@ export const OverPresetWithCamera: Story = {
 export const PictureInPicture: Story = {
   beforeEach: () => {
     seed({
+      cameraOutput: "combined",
       isLocked: false,
       scene: {
         ...scene,
@@ -182,6 +188,27 @@ export const PictureInPicture: Story = {
         preset: "picture-in-picture",
         radius: 12,
         variant: { corner: "top-left", size: "small" },
+      },
+    });
+  },
+};
+
+/** Between scenes while the camera is saved as a file of its own: the output
+ * heads the panel and nothing that places the camera is offered. */
+export const SeparateFiles: Story = {
+  beforeEach: () => {
+    seed({
+      cameraOutput: "separate",
+      isLocked: false,
+      scene: {
+        ...scene,
+        composition: { ...STORY_COMPOSITION, camera: null },
+        framing: null,
+        hasSceneAtPlayhead: false,
+        isBaked: false,
+        preset: null,
+        radius: null,
+        variant: null,
       },
     });
   },

@@ -6,6 +6,7 @@ import { create } from "zustand";
 import { RecordingOutputSettings } from "../../screenshot/screenshot-output";
 import { EditorKind } from "../../types";
 import { createWorkspaceMirror } from "../../workspace-mirror";
+import { CameraOutput } from "../camera-output";
 import { ExportPhase } from "../use-export-progress";
 
 /**
@@ -16,8 +17,9 @@ import { ExportPhase } from "../use-export-progress";
  * the whole capture across `localStorage` on every keystroke.
  */
 export type ExportOptionsSnapshot = {
-  bakeCamera: boolean;
   cameraCompression: number;
+  /** One video or separate files, null where there is no choice to make. */
+  cameraOutput: CameraOutput | null;
   cameraResolutionScalePercent: number;
   canExport: boolean;
   collapseAudio: boolean;
@@ -71,8 +73,8 @@ export type ExportOptionsMessage = {
 };
 
 export const DEFAULT_EXPORT_OPTIONS: ExportOptionsSnapshot = {
-  bakeCamera: false,
   cameraCompression: 0,
+  cameraOutput: null,
   cameraResolutionScalePercent: 100,
   canExport: false,
   collapseAudio: false,

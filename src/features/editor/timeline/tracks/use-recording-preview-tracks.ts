@@ -3,6 +3,7 @@
 
 import { useMemo } from "react";
 
+import { composedVideoTracks } from "../../export/camera-output";
 import {
   RecordingOutputSettings,
   recordingVideoTrackOrder,
@@ -11,6 +12,9 @@ import {
 import type { ResolvedScrubPreviewProps } from "../../recording/preview/recording-preview-props";
 
 /** The track sets, volumes and layer order the preview derives from its props.
+ * `selectedVideoTracks` are those kept in the export, which the timeline's
+ * switches show; `composedVideoTracks` are those the workspace draws and
+ * edits, which leave out a camera saved as a separate file.
  *
  * Everything derived here feeds memoized children. A canvas-resize gesture
  * re-renders the preview at pointer rate, so a derived array or Set rebuilt
@@ -22,6 +26,7 @@ export function useRecordingPreviewTracks(
   const {
     audioTrackVolumes,
     audioTracks,
+    bakeCamera,
     enabledStreamIndices,
     enabledVideoTracks,
   } = props;
@@ -36,6 +41,10 @@ export function useRecordingPreviewTracks(
   const selectedVideoTracks = useMemo(
     () => new Set(enabledVideoTracks),
     [enabledVideoTracks],
+  );
+  const composedTracks = useMemo(
+    () => new Set(composedVideoTracks(enabledVideoTracks, bakeCamera)),
+    [bakeCamera, enabledVideoTracks],
   );
   const audioVolumeByStream = useMemo(
     () =>
@@ -59,7 +68,10 @@ export function useRecordingPreviewTracks(
   );
   return {
     audioVolumeByStream,
+    composedVideoTracks: composedTracks,
     enabledTracks,
+    isCameraSeparate:
+      selectedVideoTracks.has("camera") && !composedTracks.has("camera"),
     selectedStreamIndices,
     selectedVideoTracks,
     videoTrackOrder,

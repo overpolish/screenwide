@@ -3,6 +3,7 @@
 
 import { CircularProgress } from "../../../components/base/circular-progress/circular-progress";
 import { WindowShell } from "../../../components/shared/window-shell/window-shell";
+import { cameraOutputChoice } from "../export/camera-output";
 import { useExportOptionsBridge } from "../export/options-window/use-export-options-bridge";
 import {
   DEFAULT_CURSOR_EFFECTS,
@@ -117,11 +118,16 @@ export function EditorPanel({
   // A save or a sheet over the editor puts its tools out of reach, in the title
   // bar and in the tool panels alike, while leaving them in view.
   const isLocked = Boolean(isSaving) || isSheetOpen;
+  const cameraOutput = cameraOutputChoice({
+    artifact,
+    bakeCamera,
+    enabledVideoTracks,
+  });
   useExportOptionsBridge(
     workspace,
     {
-      bakeCamera,
       cameraCompression,
+      cameraOutput,
       cameraResolutionScalePercent,
       canExport,
       collapseAudio,
@@ -163,6 +169,7 @@ export function EditorPanel({
     artifact,
     audioTrackVolumes,
     bakeCamera,
+    cameraOutput,
     cameraOverlay,
     cursorEffects,
     enabledVideoTracks,

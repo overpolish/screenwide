@@ -50,7 +50,9 @@ const REQUIRED_TOOLTIP = "The export has to keep at least one track";
  * Every row kind uses this - the two video tracks, each audio track and the
  * shortcuts lane - so they share the band's row height and the fill that
  * marks the selected track. The shortcuts lane is the row with nothing to
- * include or exclude, so it comes without a switch.
+ * include or exclude, so it comes without a switch. A `note` says something
+ * about how the track is exported: an icon beside the name, spelled out in
+ * the row's tooltip and accessible name.
  */
 export function TimelineTrackHeader({
   dragProps,
@@ -59,6 +61,7 @@ export function TimelineTrackHeader({
   isDragging = false,
   isSelected = false,
   label,
+  note,
   onSelect,
 }: {
   icon: ReactNode;
@@ -68,11 +71,12 @@ export function TimelineTrackHeader({
   /** True only while this row is being carried to a new place in the order. */
   isDragging?: boolean;
   isSelected?: boolean;
+  note?: { icon: ReactNode; label: string };
   onSelect?: () => void;
 }) {
   const selectButton = (
     <Button
-      aria-label={label}
+      aria-label={note ? `${label}, ${note.label}` : label}
       className={cn(
         "flex h-full min-w-0 grow cursor-[inherit] items-center gap-control-inset",
         "rounded-control px-control-inset text-left select-none",
@@ -90,6 +94,14 @@ export function TimelineTrackHeader({
       <span className="min-w-0 grow truncate text-subheadline text-content-fg">
         {label}
       </span>
+      {note ? (
+        <span
+          aria-hidden
+          className="flex shrink-0 items-center text-content-fg-secondary [&_svg]:size-icon"
+        >
+          {note.icon}
+        </span>
+      ) : null}
     </Button>
   );
 
@@ -138,10 +150,9 @@ export function TimelineTrackHeader({
 
   // The tooltip hangs on the whole row, whose button is what React Aria
   // attaches the trigger to.
-  return inclusion?.isRequired ? (
-    <NativeTooltipTrigger tooltip={REQUIRED_TOOLTIP}>
-      {row}
-    </NativeTooltipTrigger>
+  const tooltip = inclusion?.isRequired ? REQUIRED_TOOLTIP : note?.label;
+  return tooltip ? (
+    <NativeTooltipTrigger tooltip={tooltip}>{row}</NativeTooltipTrigger>
   ) : (
     row
   );

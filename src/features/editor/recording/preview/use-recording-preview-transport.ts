@@ -49,6 +49,7 @@ export function useRecordingPreviewTransport(
     activeVideoTrack,
     cameraCanvasRef,
     canvasTool,
+    composedVideoTracks,
     effectiveRecordingOutput,
     playhead,
     previewPlayingRef,
@@ -57,7 +58,6 @@ export function useRecordingPreviewTransport(
     reportZoom,
     screenCanvasRef,
     selectedStreamIndices,
-    selectedVideoTracks,
     selection,
     setPreviewPositionMs,
     videoTrackOrder,
@@ -67,6 +67,9 @@ export function useRecordingPreviewTransport(
     activeVideoTrack: RecordingVideoTrackId | null;
     cameraCanvasRef: RefObject<HTMLCanvasElement | null>;
     canvasTool: RecordingCanvasTool;
+    /** The video tracks the workspace draws, which leave out a camera saved
+     * as a separate file. */
+    composedVideoTracks: Set<RecordingVideoTrackId>;
     effectiveRecordingOutput: RecordingOutputSettings;
     playhead: Playhead;
     previewPlayingRef: RefObject<boolean>;
@@ -77,7 +80,6 @@ export function useRecordingPreviewTransport(
     reportZoom: ReturnType<typeof usePreviewZoom>["reportZoom"];
     screenCanvasRef: RefObject<HTMLCanvasElement | null>;
     selectedStreamIndices: number[];
-    selectedVideoTracks: Set<RecordingVideoTrackId>;
     selection: ReturnType<typeof useRecordingPreviewSelection>;
     setPreviewPositionMs: Dispatch<SetStateAction<number>>;
     videoTrackOrder: readonly RecordingVideoTrackId[];
@@ -92,7 +94,6 @@ export function useRecordingPreviewTransport(
     cameraOverlay,
     cursorEffects,
     durationMs,
-    enabledVideoTracks,
     isSaving,
     isSheetOpen,
     keyboardEffects,
@@ -135,14 +136,17 @@ export function useRecordingPreviewTransport(
       previewSourceDimensions,
     });
   // The tool the annotation chrome is drawn from. A baked camera layer has no
-  // annotations of its own, so selecting it puts the tool down. One value feeds
-  // both the native chrome (through the layout, beside the selection it has
-  // to agree with) and the editor's own delete shortcut.
+  // annotations of its own, and a camera saved as a separate file is not drawn
+  // at all, so selecting either puts the tool down. One value feeds both the
+  // native chrome (through the layout, beside the selection it has to agree
+  // with) and the editor's own delete shortcut.
   const annotationTool =
-    (bakeCamera && activeVideoTrack === "camera") ||
+    (activeVideoTrack === "camera" &&
+      (bakeCamera || !composedVideoTracks.has("camera"))) ||
     !isAnnotationTool(canvasTool)
       ? null
       : canvasTool;
+  const composedTrackList = [...composedVideoTracks];
   const clearAnnotationRef = useRef(() => {});
   const player = useRecordingPreviewPlayer({
     annotationTool,
@@ -157,8 +161,8 @@ export function useRecordingPreviewTransport(
     isEnabled: previewLayout === undefined,
     keyboardEffects,
     nativeEditorOwnsLayout,
-    nativeLayoutHasPanes: enabledVideoTracks.length > 0,
-    nativeLayoutKey: `${bakeCamera ? "baked" : "split"}|${enabledVideoTracks.join(":")}|${videoTrackOrderList.join(":")}`,
+    nativeLayoutHasPanes: composedTrackList.length > 0,
+    nativeLayoutKey: `${bakeCamera ? "baked" : "split"}|${composedTrackList.join(":")}|${videoTrackOrderList.join(":")}`,
     onPosition: (positionMs) => {
       trimPreview.onPosition(positionMs);
       if (!previewPlayingRef.current) setPreviewPositionMs(positionMs);
@@ -173,7 +177,7 @@ export function useRecordingPreviewTransport(
       }
       keyboardTimeline.selection.onClear();
       const trackId = paneIndex === 0 ? "primary" : "camera";
-      if (selectedVideoTracks.has(trackId)) onSelectedTrackChange?.(trackId);
+      if (composedVideoTracks.has(trackId)) onSelectedTrackChange?.(trackId);
     },
     onSelectionGesture: selection.applyGesture,
     onZoomChange: reportZoom,
@@ -204,11 +208,12 @@ export function useRecordingPreviewTransport(
     sessionId: player.sessionId,
     sourceDurationMs: durationMs,
     tool: annotationTool,
-    trackId: activeVideoTrack
-      ? bakeCamera
-        ? "primary"
-        : activeVideoTrack
-      : null,
+    trackId:
+      activeVideoTrack && composedVideoTracks.has(activeVideoTrack)
+        ? bakeCamera
+          ? "primary"
+          : activeVideoTrack
+        : null,
   });
   clearAnnotationRef.current = annotations.clearSelection;
   const scenes = useRecordingScenes({
@@ -274,7 +279,7 @@ export function useRecordingPreviewTransport(
       cameraCanvasRef,
       layout,
       screenCanvasRef,
-      selectedVideoTracks,
+      selectedVideoTracks: composedVideoTracks,
       videoTrackOrder,
     });
   return {

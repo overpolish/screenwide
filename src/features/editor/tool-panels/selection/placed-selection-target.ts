@@ -32,9 +32,6 @@ const insetSliderMaximum = 1_000;
  * this, and the panel never has to know which it is looking at.
  */
 export type EditorSelectionTarget = {
-  /** Draw the camera into the screen's picture, or carry it as a track of its
-   * own. Only a camera selection has anything to do here. */
-  applyBake: (bake: boolean) => void;
   /** Cast the layer's shadow onto the canvas, or take it away. */
   applyDropShadow: (dropShadow: boolean) => void;
   /** Pad the layer by this many output pixels on each side. */
@@ -76,9 +73,6 @@ export const placedSelectionTarget = ({
   workspace: EditorKind | null;
 }): EditorSelectionTarget => {
   return {
-    applyBake: () => {
-      // A layer carried as its own picture has nothing to bake.
-    },
     // The shadow is the layer's own, cast onto whatever the canvas is wearing,
     // so it travels with the layer's output rather than with the canvas.
     applyDropShadow: (dropShadow) => {

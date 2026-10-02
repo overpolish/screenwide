@@ -145,19 +145,21 @@ export function resolveToolPanelSnapshot(
     rounded && selectionDropShadow !== undefined
       ? { ...rounded, dropShadow: selectionDropShadow }
       : rounded;
-  // The bake switch is the same idea: the flip is shown at once, and the
-  // placement the editor carries across arrives with its answer.
-  const baked =
-    layer?.kind === "camera" && bakeCamera !== undefined
-      ? { ...layer, isBaked: bakeCamera }
-      : layer;
   // A dragged volume is held the same way: the knob stays where it was let go
   // of until the editor answers with the level it committed.
   const heard =
     resolved.selection?.kind === "audio" && audioVolume !== undefined
       ? { ...resolved.selection, decibels: audioVolume }
       : null;
-  const selection = baked ?? heard ?? resolved.selection;
+  const selection = layer ?? heard ?? resolved.selection;
+  // The output choice flips at once, and the placement the editor carries
+  // across arrives with its answer.
+  const cameraOutput: ToolPanelSnapshot["cameraOutput"] =
+    resolved.cameraOutput && bakeCamera !== undefined
+      ? bakeCamera
+        ? "combined"
+        : "separate"
+      : resolved.cameraOutput;
   // A colour being dragged in the system panel shows at once: the mirror
   // catches up an edit later, and the swatch must not blink back meanwhile.
   // The Animate switch and the aim are held the same way, so neither flicks
@@ -177,14 +179,15 @@ export function resolveToolPanelSnapshot(
   return {
     ...resolved,
     annotation,
+    cameraOutput,
     selection,
     ...(cropSize ? { crop: sized(resolved.crop, cropSize) } : {}),
     ...(frameSize ? { frame: sized(resolved.frame, frameSize) } : {}),
     ...(frameRadius !== undefined && resolved.frame
       ? { frame: { ...resolved.frame, radius: frameRadius } }
       : {}),
-    // A scene chosen or reframed in the panel shows at once, the way the bake
-    // switch flips, until the editor answers with the scene it changed.
+    // A scene chosen or reframed in the panel shows at once, the way the
+    // output choice flips, until the editor answers with the scene it changed.
     ...(resolved.scene &&
     (scenePreset || sceneFraming || sceneRadius !== undefined || sceneVariant)
       ? {

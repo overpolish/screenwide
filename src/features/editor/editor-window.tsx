@@ -13,6 +13,10 @@ import {
   setScreenshotBackgroundRadius,
   setScreenshotRadius,
 } from "./api";
+import {
+  cameraOutputChoice,
+  exportedRecordingEdits,
+} from "./export/camera-output";
 import { seededExportChoices } from "./export/recording-export-choices";
 import {
   cameraExportSettings,
@@ -25,10 +29,6 @@ import {
 import { useExportProgress } from "./export/use-export-progress";
 import { useRecordingExportEstimate } from "./export/use-recording-export-estimate";
 import { EditorPanel } from "./panel/editor-panel";
-import {
-  cameraOutputWithCameraOverlay,
-  cameraOverlayWithCameraCrop,
-} from "./preview/camera-overlay-geometry";
 import { recordingOutputForEdit } from "./recording/recording-output-edit";
 import { useRecordingEditorPreview } from "./recording/use-recording-editor-preview";
 import { sourceScalePercent } from "./resolution";
@@ -198,6 +198,23 @@ export function EditorWindow() {
   const includeCamera = enabledVideoTracks.includes("camera");
   const effectiveBakeCamera =
     bakeCamera && includePrimaryVideo && includeCamera;
+  const cameraOutput = cameraOutputChoice({
+    artifact,
+    bakeCamera,
+    enabledVideoTracks,
+  });
+  // Memoized: the estimate re-runs whenever the edits it is handed change
+  // identity, so a copy made on every render would estimate forever.
+  const exportEdits = useMemo(
+    () =>
+      exportedRecordingEdits({
+        artifact,
+        cameraOutput,
+        recordingOutput,
+        timelineEdit: recordingTimelineEdit,
+      }),
+    [artifact, cameraOutput, recordingOutput, recordingTimelineEdit],
+  );
   const effectiveCollapseAudio =
     collapseAudio && (enabledStreamIndices?.length ?? 0) > 1;
   const currentAudioTrackVolumes =
@@ -314,8 +331,8 @@ export function EditorWindow() {
     includeCamera,
     includePrimaryVideo,
     keyboardEffects,
-    recordingOutput,
-    recordingTimelineEdit,
+    recordingOutput: exportEdits.recordingOutput,
+    recordingTimelineEdit: exportEdits.timelineEdit,
     resolutionScalePercent,
   });
 
@@ -430,58 +447,6 @@ export function EditorWindow() {
     saveProgress.reset();
   };
 
-  const handleBakeCameraChange = useCallback(
-    (nextBake: boolean) => {
-      if (
-        nextBake &&
-        artifact?.kind === "recording" &&
-        artifact.camera &&
-        includePrimaryVideo &&
-        includeCamera
-      ) {
-        setCameraOverlay(
-          cameraOverlayWithCameraCrop({
-            cameraOutput: recordingOutput.camera,
-            cameraSource: {
-              height: artifact.camera.height,
-              width: artifact.camera.width,
-            },
-            screenOutput: recordingOutput.primary,
-            settings: cameraOverlay,
-          }),
-        );
-      } else if (
-        !nextBake &&
-        artifact?.kind === "recording" &&
-        artifact.camera &&
-        includePrimaryVideo &&
-        includeCamera
-      ) {
-        const camera = artifact.camera;
-        setRecordingOutput((current) => ({
-          ...current,
-          camera: cameraOutputWithCameraOverlay({
-            cameraOutput: current.camera,
-            cameraSource: {
-              height: camera.height,
-              width: camera.width,
-            },
-            screenOutput: current.primary,
-            settings: cameraOverlay,
-          }),
-        }));
-      }
-      setBakeCamera(nextBake);
-    },
-    [
-      artifact,
-      cameraOverlay,
-      includeCamera,
-      includePrimaryVideo,
-      recordingOutput,
-    ],
-  );
-
   return (
     <EditorEditGestureContext value={editGesture}>
       <EditorPanel
@@ -509,7 +474,7 @@ export function EditorWindow() {
         isPreviewPreparing={isPreparingRecordingPreview}
         isSaving={isSaving}
         keyboardEffects={keyboardEffects}
-        onBakeCameraChange={handleBakeCameraChange}
+        onBakeCameraChange={setBakeCamera}
         onBrowse={() => {
           browseExportDirectory()
             .then(async (chosen) => {
@@ -611,7 +576,7 @@ export function EditorWindow() {
             includePrimaryVideo,
             keyboardEffects,
             originalResolutionScale,
-            recordingOutput,
+            recordingOutput: exportEdits.recordingOutput,
             resolutionScalePercent,
           });
           setIsSaving(true);
@@ -622,7 +587,7 @@ export function EditorWindow() {
             ...plan.options,
             fileStem,
             screenshotOutput,
-            timelineEdit: recordingTimelineEdit,
+            timelineEdit: exportEdits.timelineEdit,
           })
             .then((path) => {
               if (path === null) {

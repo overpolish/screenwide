@@ -10,6 +10,7 @@ import {
   RecordingOutputSettings,
 } from "../../screenshot/screenshot-output";
 import { EditorArtifact } from "../../types";
+import { CameraOutput } from "../camera-output";
 
 import { ExportOptionsWindowView } from "./export-options-window-view";
 import { ExportProgressProps } from "./export-progress";
@@ -40,6 +41,7 @@ const audioRecording: EditorArtifact = {
 /** Story-only wiring: the settings are local state and nothing is saved. */
 function EditorExportPreview({
   artifact,
+  cameraOutput = null,
   enabledAudioTrackCount = 2,
   estimatedSizeBytes = 74_200_000,
   extension,
@@ -48,6 +50,7 @@ function EditorExportPreview({
   recordingOutput,
 }: {
   artifact: EditorArtifact;
+  cameraOutput?: CameraOutput | null;
   enabledAudioTrackCount?: number;
   estimatedSizeBytes?: number | null;
   extension?: string;
@@ -72,6 +75,7 @@ function EditorExportPreview({
       form={{
         artifact,
         cameraCompression,
+        cameraOutput,
         cameraResolutionScalePercent: cameraResolution,
         collapseAudio,
         compression,
@@ -133,14 +137,30 @@ export const Screenshot: Story = {
   args: { artifact: screenshot, estimatedSizeBytes: null },
 };
 
-/** The camera stays a separate output, so it gets its own size and quality. */
+/** The camera saved as a file of its own, so it gets its own size and
+ * quality. */
 export const SeparateCamera: Story = {
-  args: { artifact: cameraRecording, includeCamera: true },
+  args: {
+    artifact: cameraRecording,
+    cameraOutput: "separate",
+    includeCamera: true,
+  },
+};
+
+/** The camera drawn into the screen's video: one file, so one size and one
+ * quality. */
+export const CombinedCamera: Story = {
+  args: {
+    artifact: cameraRecording,
+    cameraOutput: "combined",
+    includeCamera: true,
+  },
 };
 
 export const EditedFrames: Story = {
   args: {
     artifact: cameraRecording,
+    cameraOutput: "separate",
     includeCamera: true,
     recordingOutput: defaultRecordingOutput({
       camera: { height: 1280, width: 720 },

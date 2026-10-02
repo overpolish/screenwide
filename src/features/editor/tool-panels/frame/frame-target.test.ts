@@ -48,7 +48,7 @@ describe("frame radius target", () => {
     const target = editorFrameTarget({
       artifact: screenshotArtifact,
       bakeCamera: false,
-      enabledVideoTracks: [],
+      composedVideoTracks: [],
       onCanvasResize: apply,
       recordingOutput: null,
       screenshotOutput: output,
@@ -72,7 +72,7 @@ describe("frame radius target", () => {
     const target = editorFrameTarget({
       artifact: recordingArtifact,
       bakeCamera: false,
-      enabledVideoTracks: ["primary"],
+      composedVideoTracks: ["primary"],
       onRecordingOutputChange: (_track, next) => {
         apply(next);
       },

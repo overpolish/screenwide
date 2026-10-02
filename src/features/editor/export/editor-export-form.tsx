@@ -13,6 +13,7 @@ import { formatBytes } from "../duration";
 import { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import { EditorArtifact } from "../types";
 
+import { CameraOutput } from "./camera-output";
 import { CompressionSelect, ExportRow } from "./editor-export-dialog-rows";
 import {
   cameraResolutionItems,
@@ -31,8 +32,9 @@ export type EditorExportFormProps = {
   onCancel: () => void;
   onExport: () => void;
   onFileStemChange: (fileStem: string) => void;
-  bakeCamera?: boolean;
   cameraCompression?: number;
+  /** One video or separate files, null where there is no choice to make. */
+  cameraOutput?: CameraOutput | null;
   cameraResolutionScalePercent?: number;
   canExport?: boolean;
   collapseAudio?: boolean;
@@ -61,8 +63,8 @@ export type EditorExportFormProps = {
 /** The host owns the settings; this only presents and reports them. */
 export function EditorExportForm({
   artifact,
-  bakeCamera = false,
   cameraCompression = 0,
+  cameraOutput = null,
   cameraResolutionScalePercent = 100,
   canExport = true,
   collapseAudio = false,
@@ -92,7 +94,9 @@ export function EditorExportForm({
   if (!artifact) return null;
   const recording = artifact.kind === "recording" ? artifact : null;
   const camera =
-    recording && includeCamera && !bakeCamera ? recording.camera : null;
+    recording && includeCamera && cameraOutput !== "combined"
+      ? recording.camera
+      : null;
   const resolutionItems = recording
     ? outputResolutionItems(recording, recordingOutput?.primary)
     : [];
@@ -176,7 +180,14 @@ export function EditorExportForm({
                 {...props}
                 id="export-camera-size"
                 isDisabled={isSaving}
-                items={cameraResolutionItems(camera, recordingOutput?.camera)}
+                // A separate camera file is saved at the camera's own
+                // framing, whatever its canvas was given while it was a pane.
+                items={cameraResolutionItems(
+                  camera,
+                  cameraOutput === "separate"
+                    ? undefined
+                    : recordingOutput?.camera,
+                )}
                 onChange={(value) => {
                   onCameraResolutionScaleChange?.(Number(value));
                 }}

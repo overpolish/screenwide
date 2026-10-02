@@ -48,6 +48,9 @@ export type RecordingTrackLanesProps = {
   /** What an annotation clip's menu does to its pin. Without it, the lane
    * offers no pinning. */
   annotationPinning?: AnnotationClipPinning;
+  /** Whether the camera is saved as a file of its own rather than drawn into
+   * the screen's video, which its row says beside its name. */
+  isCameraSeparate?: boolean;
   /** Choose an annotation alone, or with `toggle`, add or take it away. */
   onAnnotationSelect?: (id: string, toggle: boolean) => void;
   onAnnotationsChange?: (clips: RecordingAnnotationClip[]) => void;

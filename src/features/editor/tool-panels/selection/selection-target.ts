@@ -30,12 +30,13 @@ type SelectionTargetInputs = {
   artifact: EditorArtifact | null;
   bakeCamera: boolean;
   cameraOverlay: CameraOverlaySettings;
-  enabledVideoTracks: RecordingVideoTrackId[];
+  /** The video tracks the workspace draws, which leave out a camera saved as
+   * a separate file. */
+  composedVideoTracks: RecordingVideoTrackId[];
   recordingOutput: RecordingOutputSettings | null | undefined;
   screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
   selectedScreenshotItemId: number | null;
   selectedTrack: string | null;
-  onBakeCameraChange?: (bake: boolean) => void;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onRecordingOutputChange?: (
     track: RecordingVideoTrackId,
@@ -56,14 +57,8 @@ const recordingSelectionTarget = (
       ? inputs.selectedTrack
       : null;
   const output = inputs.recordingOutput;
-  if (!track || !output || !inputs.enabledVideoTracks.includes(track))
+  if (!track || !output || !inputs.composedVideoTracks.includes(track))
     return null;
-  // Baking draws the camera into the screen's picture, so it takes both
-  // tracks; with either one left out the switch has nothing to offer.
-  const canBake =
-    inputs.enabledVideoTracks.includes("primary") &&
-    inputs.enabledVideoTracks.includes("camera") &&
-    artifact.camera !== null;
   // A baked camera is placed by its overlay rather than by an output of its
   // own, so it is read and written there instead.
   if (track === "camera" && inputs.bakeCamera)
@@ -71,7 +66,6 @@ const recordingSelectionTarget = (
       artifact,
       cameraOutput: output.camera,
       cameraOverlay: inputs.cameraOverlay,
-      onBakeCameraChange: inputs.onBakeCameraChange,
       onCameraOverlayChange: inputs.onCameraOverlayChange,
       onRecordingOutputChange: inputs.onRecordingOutputChange,
     });
@@ -80,7 +74,7 @@ const recordingSelectionTarget = (
       ? { height: artifact.height, width: artifact.width }
       : artifact.camera;
   if (!source) return null;
-  const target = placedSelectionTarget({
+  return placedSelectionTarget({
     apply: (next) => {
       inputs.onRecordingOutputChange?.(track, next);
     },
@@ -92,14 +86,6 @@ const recordingSelectionTarget = (
     // one with.
     workspace: track === "primary" ? "recording" : null,
   });
-  if (track !== "camera") return target;
-  return {
-    ...target,
-    applyBake: (bake) => {
-      inputs.onBakeCameraChange?.(bake);
-    },
-    selection: { ...target.selection, canBake, isBaked: false },
-  };
 };
 
 const screenshotSelectionTarget = (
@@ -205,7 +191,6 @@ export const selectionPanelHandlers = (
   target: EditorSelectionTarget | null,
 ): Pick<
   ToolPanelHandlers,
-  | "onBakeCameraChange"
   | "onSelectionDropShadowChange"
   | "onSelectionInsetChange"
   | "onSelectionPlacementChange"
@@ -213,9 +198,6 @@ export const selectionPanelHandlers = (
   | "onSelectionRecenter"
   | "onSelectionReset"
 > => ({
-  onBakeCameraChange: (bake) => {
-    target?.applyBake(bake);
-  },
   onSelectionDropShadowChange: (dropShadow) => {
     target?.applyDropShadow(dropShadow);
   },

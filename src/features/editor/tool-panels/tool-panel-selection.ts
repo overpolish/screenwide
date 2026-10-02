@@ -30,12 +30,6 @@ export type ToolPanelLayerSelection = {
   width: number;
   x: number;
   y: number;
-  /** Camera only: whether baking it in is on the table at all. Baking draws
-   * the camera into the screen's picture, so it needs both tracks kept. */
-  canBake?: boolean;
-  /** Camera only: whether it is drawn into the screen's picture rather than
-   * carried as a track of its own. */
-  isBaked?: boolean;
 };
 
 /**

@@ -14,7 +14,6 @@ type BakedCameraTargetInputs = {
   cameraOutput: ScreenshotOutputSettings;
   /** Where the camera is drawn in the screen's picture, in its output pixels. */
   cameraOverlay: CameraOverlaySettings;
-  onBakeCameraChange?: (bake: boolean) => void;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onRecordingOutputChange?: (
     track: "camera",
@@ -31,22 +30,18 @@ const whole = (value: number) => Math.round(value);
  * panel shows for it is read out of the overlay and written back to it, by the
  * same calls the drag on the overlay in the preview makes. Its shadow is the
  * one exception: the compositor takes that from the camera track's own output
- * in both states, so the switch between them cannot lose it.
+ * in both output modes, so switching between them cannot lose it.
  */
 export const bakedCameraSelectionTarget = ({
   artifact,
   cameraOutput,
   cameraOverlay,
-  onBakeCameraChange,
   onCameraOverlayChange,
   onRecordingOutputChange,
 }: BakedCameraTargetInputs): EditorSelectionTarget | null => {
   const camera = artifact.camera;
   if (!camera) return null;
   return {
-    applyBake: (bake) => {
-      onBakeCameraChange?.(bake);
-    },
     applyDropShadow: (dropShadow) => {
       onRecordingOutputChange?.("camera", { ...cameraOutput, dropShadow });
     },
@@ -69,12 +64,10 @@ export const bakedCameraSelectionTarget = ({
       onCameraOverlayChange?.(defaultCameraOverlay(artifact));
     },
     selection: {
-      canBake: true,
       dropShadow: cameraOutput.dropShadow,
       height: whole(cameraOverlay.frameHeight),
       inset: 0,
       insetMaximum: 0,
-      isBaked: true,
       kind: "camera",
       label: "Camera",
       radius: cameraOverlay.radiusPercent,

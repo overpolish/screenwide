@@ -48,7 +48,7 @@ const targetFor = (output: ScreenshotOutputSettings) => {
     artifact,
     bakeCamera: false,
     cameraOverlay: defaultCameraOverlay(),
-    enabledVideoTracks: [],
+    composedVideoTracks: [],
     onScreenshotOutputChange: apply,
     recordingOutput: null,
     screenshotOutput: workspaceOutput(output),

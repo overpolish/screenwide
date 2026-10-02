@@ -42,6 +42,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
   enabledVideoTracks,
   hiddenKeyboardFragmentIds,
   hiddenKeyboardItemIds,
+  isCameraSeparate = false,
   keyboardItems,
   keyboardSelection,
   layout,
@@ -170,6 +171,7 @@ export const RecordingTrackLanes = memo(function RecordingTrackLanes({
             blade={blade}
             enabledTracks={enabledTracks}
             enabledVideoTracks={enabledVideoTracks}
+            isCameraSeparate={isCameraSeparate}
             layout={layout}
             onEnabledVideoTracksChange={onEnabledVideoTracksChange}
             onSelectedTrackChange={onSelectedTrackChange}

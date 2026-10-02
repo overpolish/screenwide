@@ -8,6 +8,7 @@ import {
   useAnnotationSelectionCount,
   useCanClearDrawings,
 } from "../annotations/annotation-channel";
+import { CameraOutput, composedVideoTracks } from "../export/camera-output";
 import { keyboardMaximumSizePercent } from "../keyboard-effect/keyboard-effect-geometry";
 import { useRecordingSceneSelection } from "../recording/scenes/recording-scene-channel";
 import {
@@ -51,6 +52,7 @@ type EditorToolPanelInputs = {
   artifact: EditorArtifact | null;
   audioTrackVolumes: AudioTrackVolume[];
   bakeCamera: boolean;
+  cameraOutput: CameraOutput | null;
   cameraOverlay: CameraOverlaySettings;
   cursorEffects: CursorEffectSettings;
   enabledVideoTracks: RecordingVideoTrackId[];
@@ -90,6 +92,7 @@ export function useEditorToolPanels({
   artifact,
   audioTrackVolumes,
   bakeCamera,
+  cameraOutput,
   cameraOverlay,
   cursorEffects,
   enabledVideoTracks,
@@ -120,6 +123,9 @@ export function useEditorToolPanels({
     applyGeneralSettings({ backgroundPresets: presets });
   };
   const sceneTemplates = general?.sceneTemplates ?? [];
+  // The targets act on what the workspace draws, so a camera saved as a
+  // separate file, which it leaves out, has nothing to place, crop or frame.
+  const composedTracks = composedVideoTracks(enabledVideoTracks, bakeCamera);
   // Which layer the selection panel is placing, and the handler that commits
   // a new placement for it. Both workspaces already own one; this only says
   // which of them the current selection means.
@@ -127,8 +133,7 @@ export function useEditorToolPanels({
     artifact,
     bakeCamera,
     cameraOverlay,
-    enabledVideoTracks,
-    onBakeCameraChange,
+    composedVideoTracks: composedTracks,
     onCameraOverlayChange,
     onRecordingOutputChange,
     onScreenshotOutputChange,
@@ -151,7 +156,7 @@ export function useEditorToolPanels({
   const cropTarget = editorCropTarget({
     artifact,
     bakeCamera,
-    enabledVideoTracks,
+    composedVideoTracks: composedTracks,
     onRecordingOutputChange,
     onScreenshotOutputChange,
     recordingOutput,
@@ -164,7 +169,7 @@ export function useEditorToolPanels({
   const frameTarget = editorFrameTarget({
     artifact,
     bakeCamera,
-    enabledVideoTracks,
+    composedVideoTracks: composedTracks,
     onCanvasResize,
     onRecordingOutputChange,
     recordingOutput,
@@ -206,6 +211,7 @@ export function useEditorToolPanels({
       background:
         frameTarget?.background ?? DEFAULT_TOOL_PANEL_SNAPSHOT.background,
       backgroundPresets,
+      cameraOutput,
       canClearDrawings,
       canRestoreShortcuts: shortcuts.canRestore,
       crop: cropTarget?.snapshot ?? null,
@@ -250,6 +256,7 @@ export function useEditorToolPanels({
           preset,
         ]);
       },
+      onBakeCameraChange,
       onCursorEffectsChange,
       onKeyboardEffectsChange: (settings) => {
         onKeyboardEffectsChange?.({ ...keyboardEffects, ...settings });
@@ -280,8 +287,6 @@ export function useEditorToolPanels({
       ...framePanelHandlers(frameTarget),
       ...selectionPanelHandlers(selectionTarget),
       ...scenePanelHandlers(workspace, {
-        bakeCamera,
-        onBakeCameraChange,
         saveTemplates: (templates) => {
           applyGeneralSettings({ sceneTemplates: templates });
         },

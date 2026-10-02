@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Camera, Monitor } from "lucide-react";
+import { Camera, FileVideoCamera, Monitor } from "lucide-react";
 
 import { RecordingVideoTrackId } from "../../types";
 import { TimelineViewportState } from "../timeline-viewport";
@@ -17,6 +17,7 @@ type VideoTrackRowsProps = Pick<
   | "blade"
   | "enabledTracks"
   | "enabledVideoTracks"
+  | "isCameraSeparate"
   | "layout"
   | "onEnabledVideoTracksChange"
   | "onSelectedTrackChange"
@@ -30,6 +31,7 @@ export function RecordingVideoTrackRows({
   blade,
   enabledTracks,
   enabledVideoTracks,
+  isCameraSeparate,
   layout,
   onEnabledVideoTracksChange,
   onSelectedTrackChange,
@@ -126,6 +128,14 @@ export function RecordingVideoTrackRows({
               isDragging={drag?.source === trackId}
               isSelected={selectedTrack === trackId}
               label={label}
+              note={
+                trackId === "camera" && isCameraSeparate
+                  ? {
+                      icon: <FileVideoCamera />,
+                      label: "Saved as its own file",
+                    }
+                  : undefined
+              }
               onSelect={() => {
                 onSelectedTrackChange(trackId);
               }}
